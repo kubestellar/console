@@ -59,14 +59,33 @@ type InsightWorker struct {
 	registry    *Registry
 	broadcast   func(msgType string, payload interface{})
 	isEnriching bool
+
+	// shutdownCtx is the worker's lifecycle context, cancelled by Stop()
+	// (#6680). All AI provider calls derive their per-request deadline
+	// from this ctx rather than context.Background() so in-flight
+	// enrichments are cancelled during graceful shutdown.
+	shutdownCtx    context.Context
+	shutdownCancel context.CancelFunc
 }
 
 // NewInsightWorker creates a new InsightWorker
 func NewInsightWorker(registry *Registry, broadcast func(msgType string, payload interface{})) *InsightWorker {
+	ctx, cancel := context.WithCancel(context.Background())
 	return &InsightWorker{
-		cache:     make(map[string]AIInsightEnrichment),
-		registry:  registry,
-		broadcast: broadcast,
+		cache:          make(map[string]AIInsightEnrichment),
+		registry:       registry,
+		broadcast:      broadcast,
+		shutdownCtx:    ctx,
+		shutdownCancel: cancel,
+	}
+}
+
+// Stop cancels the worker's shutdown context so in-flight AI provider
+// calls from callAIProvider return promptly (#6680). Safe to call
+// multiple times because context.CancelFunc is idempotent.
+func (w *InsightWorker) Stop() {
+	if w.shutdownCancel != nil {
+		w.shutdownCancel()
 	}
 }
 
@@ -171,8 +190,16 @@ func (w *InsightWorker) callAIProvider(insights []InsightSummary) ([]AIInsightEn
 	// Build prompt
 	prompt := buildInsightEnrichmentPrompt(insights)
 
-	// Try providers in priority order
-	ctx, cancel := context.WithTimeout(context.Background(), InsightEnrichmentTimeout)
+	// Try providers in priority order. Derive from the worker's shutdown
+	// context so graceful shutdown cancels in-flight enrichments (#6680).
+	parent := w.shutdownCtx
+	if parent == nil {
+		// Defensive: older zero-valued InsightWorker (e.g. test fakes)
+		// may not have called NewInsightWorker; fall back to Background
+		// so we never panic with a nil parent context.
+		parent = context.Background()
+	}
+	ctx, cancel := context.WithTimeout(parent, InsightEnrichmentTimeout)
 	defer cancel()
 
 	for _, name := range providerPriority {

@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -16,6 +17,12 @@ import (
 
 	"github.com/kubestellar/console/pkg/api/v1alpha1"
 )
+
+// errWatchGone is returned from doWatch when the apiserver sends a 410 Gone
+// event on the watch channel (#6687). The caller must re-list to obtain a
+// fresh ResourceVersion and restart the watch — treating 410 as a transient
+// retry leaks events and can loop forever against a stale RV.
+var errWatchGone = fmt.Errorf("watch expired (410 Gone) — must re-list")
 
 // ConsoleResourceEvent represents a change to a console resource
 type ConsoleResourceEvent struct {
@@ -158,11 +165,35 @@ func (w *ConsoleWatcher) watchResource(ctx context.Context, stopCh <-chan struct
 	}
 }
 
-// doWatch performs the actual watch operation
+// doWatch performs the actual watch operation.
+//
+// #6686 — We List first to capture the current ResourceVersion and start
+// the Watch from that RV. Watching without a ResourceVersion causes the
+// apiserver to replay state from an arbitrary point, producing duplicate
+// events on reconnect and (worse) gaps if the watch cache has already
+// compacted past the implicit starting point. By doing List → Watch we
+// get deterministic semantics: any event delivered is strictly newer than
+// what the caller observed from the List result.
+//
+// #6687 — If the apiserver sends a watch.Error event whose Status is 410
+// Gone, the watch cache has compacted past our ResourceVersion. This is a
+// fatal signal: the RV is no longer usable, and re-dialing the same watch
+// would fail again. We surface errWatchGone so the retry loop in
+// watchResource re-runs doWatch (which triggers a fresh List and a new RV),
+// rather than treating it as a transient error.
 func (w *ConsoleWatcher) doWatch(ctx context.Context, stopCh <-chan struct{}, gvr schema.GroupVersionResource, resourceType string) error {
 	slog.Info("[ConsoleWatcher] starting watch for resource", "resourceType", resourceType, "namespace", w.namespace)
 
-	watcher, err := w.client.Resource(gvr).Namespace(w.namespace).Watch(ctx, metav1.ListOptions{})
+	// List first to capture ResourceVersion (#6686).
+	list, err := w.client.Resource(gvr).Namespace(w.namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to list %s for initial ResourceVersion: %w", resourceType, err)
+	}
+	initialRV := list.GetResourceVersion()
+
+	watcher, err := w.client.Resource(gvr).Namespace(w.namespace).Watch(ctx, metav1.ListOptions{
+		ResourceVersion: initialRV,
+	})
 	if err != nil {
 		return fmt.Errorf("failed to create watch: %w", err)
 	}
@@ -190,16 +221,38 @@ func (w *ConsoleWatcher) doWatch(ctx context.Context, stopCh <-chan struct{}, gv
 			}
 
 			if err := w.handleEvent(event, resourceType); err != nil {
+				// #6687 — 410 Gone is fatal: propagate up so the retry
+				// loop re-lists to obtain a fresh ResourceVersion.
+				if err == errWatchGone {
+					slog.Warn("[ConsoleWatcher] watch expired (410 Gone), will re-list",
+						"resourceType", resourceType)
+					return err
+				}
 				slog.Error("[ConsoleWatcher] error handling event", "resourceType", resourceType, "error", err)
 			}
 		}
 	}
 }
 
-// handleEvent processes a watch event
+// handleEvent processes a watch event.
+//
+// #6687 — Inspect watch.Error events for status 410 Gone. Previously all
+// errors collapsed to `watch error event`, so a permanent "watch cache
+// compacted past RV" condition looked identical to a transient hiccup and
+// the retry loop happily reconnected to the same dead RV until the next
+// deploy. Now we return errWatchGone for 410s so the caller knows to
+// re-List; all other error events remain transient.
 func (w *ConsoleWatcher) handleEvent(event watch.Event, resourceType string) error {
 	if event.Type == watch.Error {
-		return fmt.Errorf("watch error event")
+		if status, ok := event.Object.(*metav1.Status); ok {
+			// apierrors.IsGone works on a StatusError wrapping metav1.Status
+			if status.Code == 410 || apierrors.IsGone(&apierrors.StatusError{ErrStatus: *status}) {
+				return errWatchGone
+			}
+			return fmt.Errorf("watch error event: %s (code=%d reason=%s)",
+				status.Message, status.Code, status.Reason)
+		}
+		return fmt.Errorf("watch error event (unknown object type %T)", event.Object)
 	}
 
 	u, ok := event.Object.(*unstructured.Unstructured)

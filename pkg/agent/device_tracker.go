@@ -73,6 +73,11 @@ type DeviceTracker struct {
 
 	mu     sync.RWMutex
 	stopCh chan struct{}
+	// stopOnce guards close(stopCh) against double-Stop panics (#6684).
+	// Shutdown code paths may call Stop() more than once (e.g. graceful
+	// shutdown handler plus defer in tests); close-of-closed-channel
+	// panics the whole process.
+	stopOnce sync.Once
 
 	// Broadcast function for WebSocket updates
 	broadcast          func(msgType string, payload interface{})
@@ -101,9 +106,11 @@ func (t *DeviceTracker) Start() {
 	go t.runLoop()
 }
 
-// Stop stops the device tracker
+// Stop stops the device tracker. Safe to call multiple times (#6684).
 func (t *DeviceTracker) Stop() {
-	close(t.stopCh)
+	t.stopOnce.Do(func() {
+		close(t.stopCh)
+	})
 }
 
 func (t *DeviceTracker) runLoop() {

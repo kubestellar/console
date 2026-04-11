@@ -398,7 +398,24 @@ const (
 	gpuHealthClusterRoleBinding = "gpu-health-checker"
 	gpuHealthDefaultSchedule    = "*/5 * * * *" // every 5 minutes
 	gpuHealthDefaultNS          = "nvidia-gpu-operator"
-	gpuHealthCheckerImage       = "bitnami/kubectl:latest"
+	// Supply-chain hardening (#6693): pin the GPU health checker image by
+	// digest so a compromised or unexpected :latest retag cannot change the
+	// binary that runs as cluster-admin via the configured RBAC.
+	//
+	// NOTE on tag choice: Bitnami only publishes a `latest` tag for
+	// `bitnami/kubectl` on Docker Hub (numeric version tags such as
+	// `1.31.0` return 404 against registry-1.docker.io). The digest below
+	// was resolved from `bitnami/kubectl:latest` on 2026-04-11. Operators
+	// should refresh this digest when rotating to a newer kubectl by
+	// running:
+	//   crane digest bitnami/kubectl:latest
+	// or the equivalent Docker Registry HTTP API lookup used here:
+	//   curl -sI -H "Accept: application/vnd.oci.image.index.v1+json" \
+	//        -H "Authorization: Bearer $TOKEN" \
+	//        https://registry-1.docker.io/v2/bitnami/kubectl/manifests/latest
+	// TODO(#6693): when Bitnami restores semver tags, switch to
+	// bitnami/kubectl:<version>@sha256:<digest> for clearer intent.
+	gpuHealthCheckerImage = "bitnami/kubectl@sha256:59ad45e8bd79e7af7592ff2852b32adcb0da50792bc52ce44679d5c5f1b4d415"
 	gpuHealthConfigMapName      = "gpu-health-results"
 	gpuHealthScriptVersion      = 2 // bump when script changes
 	gpuHealthDefaultTier        = 2 // standard tier by default
@@ -698,13 +715,33 @@ type LimitRangeItem struct {
 	Min            map[string]string `json:"min,omitempty"`
 }
 
-// NewMultiClusterClient creates a new multi-cluster client
+// NewMultiClusterClient creates a new multi-cluster client.
+//
+// Kubeconfig discovery order (#6683):
+//  1. explicit argument
+//  2. $KUBECONFIG environment variable
+//  3. ~/.kube/config — only when os.UserHomeDir() succeeds AND the path
+//     is not "/" or "/root" (which indicates a container with no real
+//     home). Previously os.UserHomeDir() errors were discarded with
+//     `home, _ := os.UserHomeDir()` which produced kubeconfig="/.kube/config"
+//     inside containers, leading to confusing "no such file" errors
+//     instead of falling through to in-cluster config.
+//  4. in-cluster config (handled below via rest.InClusterConfig()).
 func NewMultiClusterClient(kubeconfig string) (*MultiClusterClient, error) {
 	if kubeconfig == "" {
 		kubeconfig = os.Getenv("KUBECONFIG")
 		if kubeconfig == "" {
-			home, _ := os.UserHomeDir()
-			kubeconfig = filepath.Join(home, ".kube", "config")
+			home, err := os.UserHomeDir()
+			if err != nil || home == "" || home == "/" || home == "/root" {
+				// Running in a container without a real home directory.
+				// Leave kubeconfig empty so the os.Stat below fails fast
+				// and we fall through to rest.InClusterConfig().
+				slog.Info("no usable home directory for kubeconfig; will try in-cluster config",
+					"homeErr", err, "home", home)
+				kubeconfig = ""
+			} else {
+				kubeconfig = filepath.Join(home, ".kube", "config")
+			}
 		}
 	}
 
@@ -719,8 +756,17 @@ func NewMultiClusterClient(kubeconfig string) (*MultiClusterClient, error) {
 		slowClusters:   make(map[string]time.Time),
 	}
 
-	// Try to detect if we're running in-cluster
-	if _, err := os.Stat(kubeconfig); os.IsNotExist(err) {
+	// Try to detect if we're running in-cluster.
+	// kubeconfig may be empty when running inside a container without a
+	// real home directory (see #6683); os.Stat("") returns an error that
+	// is NOT os.ErrNotExist, so explicitly check for the empty path too.
+	needInCluster := kubeconfig == ""
+	if !needInCluster {
+		if _, err := os.Stat(kubeconfig); os.IsNotExist(err) {
+			needInCluster = true
+		}
+	}
+	if needInCluster {
 		// No kubeconfig file, try in-cluster config
 		if inClusterConfig, err := rest.InClusterConfig(); err == nil {
 			slog.Info("Using in-cluster config (no kubeconfig file found)")
@@ -973,7 +1019,25 @@ func (m *MultiClusterClient) reloadAndNotify() {
 	// a closed watcher.
 	m.mu.Lock()
 	if m.watching && m.watcher != nil {
-		_ = m.watcher.Remove(m.kubeconfig)
+		// #6692 — Log Remove errors (previously discarded with `_ =`).
+		// fsnotify returns a "can't remove non-existent watcher" error
+		// when the old inode has already been garbage-collected, which
+		// is benign; any other error (EACCES, ENOSPC, …) indicates a
+		// stale inode watch that will silently persist unless we notice.
+		if removeErr := m.watcher.Remove(m.kubeconfig); removeErr != nil {
+			// fsnotify doesn't expose typed errors; match on text.
+			errText := removeErr.Error()
+			isBenign := strings.Contains(errText, "non-existent") ||
+				strings.Contains(errText, "not found") ||
+				strings.Contains(errText, "can't remove")
+			if isBenign {
+				slog.Debug("fsnotify Remove returned benign 'not found'",
+					"path", m.kubeconfig, "error", removeErr)
+			} else {
+				slog.Warn("fsnotify Remove failed; stale inode watch may persist — will attempt Add anyway",
+					"path", m.kubeconfig, "error", removeErr)
+			}
+		}
 		if err := m.watcher.Add(m.kubeconfig); err != nil {
 			slog.Warn("could not re-watch kubeconfig file", "error", err)
 		}

@@ -22,6 +22,24 @@ const (
 	maxPromQLQueryLength = 2048
 )
 
+// writePrometheusError writes a JSON error response and logs the underlying
+// json.Encode error if writing fails (#6691). Previously the three error
+// branches in handlePrometheusQuery silently discarded json.NewEncoder().Encode
+// errors, so when the response body write failed (e.g. client disconnected,
+// broken transport) the operator had no record of it and the caller could
+// receive a malformed/empty body with a 200 status line.
+func writePrometheusError(w http.ResponseWriter, status int, message string) {
+	w.WriteHeader(status)
+	if err := json.NewEncoder(w).Encode(map[string]interface{}{
+		"status": "error",
+		"error":  message,
+	}); err != nil {
+		slog.Error("failed to encode prometheus error response",
+			"status", status, "message", message, "encodeErr", err)
+		// Body may already be partially written; best we can do is log.
+	}
+}
+
 // handlePrometheusQuery proxies a Prometheus query through the K8s API server.
 // It uses the cluster's REST config to authenticate and routes through the
 // API server's service proxy: /api/v1/namespaces/{ns}/services/{svc}:{port}/proxy/api/v1/query
@@ -71,10 +89,8 @@ func (s *Server) handlePrometheusQuery(w http.ResponseWriter, r *http.Request) {
 
 	config, err := s.k8sClient.GetRestConfig(cluster)
 	if err != nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status": "error",
-			"error":  fmt.Sprintf("failed to get cluster config: %v", err),
-		})
+		writePrometheusError(w, http.StatusBadGateway,
+			fmt.Sprintf("failed to get cluster config: %v", err))
 		return
 	}
 
@@ -96,10 +112,8 @@ func (s *Server) handlePrometheusQuery(w http.ResponseWriter, r *http.Request) {
 	// Create an HTTP client with the cluster's TLS/auth config
 	transport, err := rest.TransportFor(config)
 	if err != nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status": "error",
-			"error":  fmt.Sprintf("failed to create transport: %v", err),
-		})
+		writePrometheusError(w, http.StatusInternalServerError,
+			fmt.Sprintf("failed to create transport: %v", err))
 		return
 	}
 
@@ -110,10 +124,8 @@ func (s *Server) handlePrometheusQuery(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := client.Get(fullURL)
 	if err != nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status": "error",
-			"error":  fmt.Sprintf("prometheus query failed: %v", err),
-		})
+		writePrometheusError(w, http.StatusBadGateway,
+			fmt.Sprintf("prometheus query failed: %v", err))
 		return
 	}
 	defer resp.Body.Close()

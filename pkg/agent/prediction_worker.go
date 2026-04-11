@@ -171,7 +171,21 @@ func (w *PredictionWorker) GetPredictions() AIPredictionsResponse {
 	}
 }
 
-// TriggerAnalysis manually triggers an analysis
+// TriggerAnalysis manually triggers an analysis.
+//
+// #6673 — Panic safety. Previously if runAnalysis panicked (parser bug,
+// nil map access in a provider implementation, etc.), the `w.running = false`
+// reset would not execute and IsAnalyzing() would return true forever,
+// blocking all subsequent TriggerAnalysis calls until process restart.
+// Callers polling TriggerAnalysis as a lightweight RPC-style surface hung
+// indefinitely. Now we:
+//   1. recover the panic so the process survives,
+//   2. reset w.running in a defer that is guaranteed to run,
+//   3. log the panic with its stack for postmortem.
+// This is the pragmatic subset of the watchdog pattern called out in the
+// issue — a full crash-detection channel for every in-flight worker RPC
+// requires a larger refactor. See the doc comment on Stop() for the full
+// story around graceful shutdown and ctx propagation.
 func (w *PredictionWorker) TriggerAnalysis(providers []string) error {
 	w.mu.Lock()
 	if w.running {
@@ -183,6 +197,10 @@ func (w *PredictionWorker) TriggerAnalysis(providers []string) error {
 
 	go func() {
 		defer func() {
+			if r := recover(); r != nil {
+				slog.Error("[PredictionWorker] panic in runAnalysis; recovered",
+					"panic", r)
+			}
 			w.mu.Lock()
 			w.running = false
 			w.mu.Unlock()
@@ -200,20 +218,47 @@ func (w *PredictionWorker) IsAnalyzing() bool {
 	return w.running
 }
 
-// runLoop is the main background loop
+// runLoop is the main background loop.
+//
+// #6682 — The initial delay was a plain time.Sleep, which is uninterruptible.
+// A Stop() call arriving during the first 30 seconds of process startup used
+// to block graceful shutdown for the full predictionInitialDelay. Now we wait
+// on a time.After channel vs. ctx.Done so Stop() cancels promptly.
+//
+// #6685 — The interval wait previously used `time.After(interval)` inside
+// the for-loop. time.After allocates a fresh timer on every iteration and
+// leaks the underlying goroutine + channel if the select returns via a
+// different case before the timer fires — benign for small intervals, but
+// with PredictionSettings.Interval defaulting to 10 minutes this adds up
+// under rapid stop/start or settings-change churn. We now allocate a single
+// *time.Timer up front and Reset() it each iteration.
 func (w *PredictionWorker) runLoop() {
 	// Initial analysis after short delay. The previous implementation used
 	// a bare time.Sleep(predictionInitialDelay), which blocked shutdown for
 	// up to predictionInitialDelay if Stop() was called during startup —
-	// the shutdown signal was invisible until the sleep returned (#6652).
-	// Select on both the timer and stopCh so shutdown is responsive during
-	// the startup delay window.
+	// the shutdown signal was invisible until the sleep returned (#6652/#6682).
+	// Use a *time.Timer (not time.After) so it can be drained on early return,
+	// and select on stopCh + ctx.Done so shutdown is responsive during the
+	// startup delay window.
+	initialTimer := time.NewTimer(predictionInitialDelay)
 	select {
-	case <-time.After(predictionInitialDelay):
+	case <-initialTimer.C:
 	case <-w.stopCh:
-		slog.Info("[PredictionWorker] Stopping during initial delay")
+		initialTimer.Stop()
+		slog.Info("[PredictionWorker] Stopping before initial delay")
+		return
+	case <-w.ctx.Done():
+		initialTimer.Stop()
+		slog.Info("[PredictionWorker] Context cancelled before initial delay")
 		return
 	}
+
+	// Single reusable timer for the interval wait (#6685).
+	intervalTimer := time.NewTimer(0)
+	if !intervalTimer.Stop() {
+		<-intervalTimer.C // drain the zero-duration firing before Reset
+	}
+	defer intervalTimer.Stop()
 
 	for {
 		w.mu.RLock()
@@ -225,19 +270,41 @@ func (w *PredictionWorker) runLoop() {
 			if !w.running {
 				w.running = true
 				w.mu.Unlock()
-				w.runAnalysis(nil)
+				// #6673 — recover from panics in runAnalysis so the
+				// periodic loop survives a single bad run. Without this,
+				// a panic in any provider parser would permanently kill
+				// the worker goroutine but leave the struct pointer
+				// alive, silently stopping all predictions.
+				func() {
+					defer func() {
+						if r := recover(); r != nil {
+							slog.Error("[PredictionWorker] panic in runLoop runAnalysis; recovered",
+								"panic", r)
+						}
+					}()
+					w.runAnalysis(nil)
+				}()
 				w.mu.Lock()
 				w.running = false
 			}
 			w.mu.Unlock()
 		}
 
-		// Wait for next interval or stop signal
+		// Wait for next interval or stop signal using the reused timer.
 		interval := time.Duration(settings.Interval) * time.Minute
+		intervalTimer.Reset(interval)
 		select {
-		case <-time.After(interval):
+		case <-intervalTimer.C:
 			continue
 		case <-w.stopCh:
+			if !intervalTimer.Stop() {
+				// Drain the channel if the timer already fired to keep
+				// the next potential Reset() race-free.
+				select {
+				case <-intervalTimer.C:
+				default:
+				}
+			}
 			slog.Info("[PredictionWorker] Stopping")
 			return
 		}

@@ -49,6 +49,16 @@ const (
 	// tool calls (e.g., `drasi init`, `helm install`) that produce no output
 	// for extended periods.
 	missionHeartbeatInterval = 30 * time.Second
+
+	// handleChatMessageTimeout is the hard deadline for the non-streaming
+	// handleChatMessage path (#6678). Previously this path passed
+	// context.Background() to provider.Chat, meaning a hung AI provider
+	// could permanently block the WebSocket read-loop goroutine and
+	// prevent the client from ever receiving an error. 30s is enough for
+	// the short-form non-streaming case while bounding worst-case wedge
+	// time.  Streaming missions continue to use the longer
+	// missionExecutionTimeout because they intentionally run tools.
+	handleChatMessageTimeout = 30 * time.Second
 )
 
 // Version is set by ldflags during build

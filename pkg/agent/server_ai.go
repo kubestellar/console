@@ -303,15 +303,25 @@ func (s *Server) handleKubectlMessage(msg protocol.Message) protocol.Message {
 // handleChatMessageStreaming handles chat messages with streaming support.
 // Runs in a goroutine so the WebSocket read loop stays free to receive cancel messages.
 // writeMu/closed are shared with the read loop for safe concurrent WebSocket writes.
+//
+// #6688 — safeWrite no longer silently discards WriteJSON errors. A write
+// error means the client socket is gone; continuing to call safeWrite just
+// burns CPU encoding messages that can never be delivered. When we detect
+// a write failure we log it, mark the connection closed, and early-out of
+// future safeWrite calls. The caller's outer goroutine sees closed.Load()
+// == true and will finish its work without further WebSocket traffic.
 func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.Message, forceAgent string, writeMu *sync.Mutex, closed *atomic.Bool) {
-	// safeWrite sends a WebSocket message only if the connection is still open and not cancelled
 	safeWrite := func(ctx context.Context, outMsg protocol.Message) {
 		if closed.Load() || ctx.Err() != nil {
 			return
 		}
 		writeMu.Lock()
 		defer writeMu.Unlock()
-		conn.WriteJSON(outMsg)
+		if err := conn.WriteJSON(outMsg); err != nil {
+			slog.Error("[Chat] WebSocket write failed; marking connection closed",
+				"msgID", outMsg.ID, "type", outMsg.Type, "error", err)
+			closed.Store(true)
+		}
 	}
 
 	// Parse payload
@@ -644,14 +654,21 @@ func (s *Server) handleCancelChat(conn *websocket.Conn, msg protocol.Message, wr
 	}
 
 	writeMu.Lock()
-	conn.WriteJSON(protocol.Message{
+	// #6690 — Previously this WriteJSON error was discarded; now log it
+	// structurally so an operator can see when a cancel acknowledgement
+	// fails to reach the client (typically because the connection died
+	// concurrently with the cancel request).
+	if err := conn.WriteJSON(protocol.Message{
 		ID:   msg.ID,
 		Type: protocol.TypeResult,
 		Payload: map[string]interface{}{
 			"cancelled": ok,
 			"sessionId": req.SessionID,
 		},
-	})
+	}); err != nil {
+		slog.Error("[Chat] failed to write cancel ack to WebSocket",
+			"sessionID", req.SessionID, "cancelled", ok, "error", err)
+	}
 	writeMu.Unlock()
 }
 
@@ -782,9 +799,21 @@ func (s *Server) handleChatMessage(msg protocol.Message, forceAgent string) prot
 		History:   history,
 	}
 
-	resp, err := provider.Chat(context.Background(), chatReq)
+	// #6678 — Previously this used context.Background() with no deadline,
+	// which meant a hung AI provider would block the WebSocket goroutine
+	// forever (the caller was a synchronous path from the read loop).
+	// Wrap with a 30s default timeout so a misbehaving provider cannot
+	// permanently wedge the WS reader goroutine. 30s matches the default
+	// used by InsightEnrichmentTimeout for similar short-form AI calls.
+	ctx, cancel := context.WithTimeout(context.Background(), handleChatMessageTimeout)
+	defer cancel()
+	resp, err := provider.Chat(ctx, chatReq)
 	if err != nil {
-		slog.Error("[Chat] execution error", "agent", agentName, "error", err)
+		slog.Error("[Chat] execution error", "agent", agentName, "error", err, "timeout", handleChatMessageTimeout)
+		if ctx.Err() == context.DeadlineExceeded {
+			return s.errorResponse(msg.ID, "timeout",
+				fmt.Sprintf("%s did not respond within %s", agentName, handleChatMessageTimeout))
+		}
 		return s.errorResponse(msg.ID, "execution_error", fmt.Sprintf("Failed to execute %s", agentName))
 	}
 
@@ -936,14 +965,20 @@ func classifyProviderError(err error) (code, message string) {
 // 2. Execution agent (CLI) runs any commands
 // 3. Thinking agent analyzes the results
 func (s *Server) handleMixedModeChat(ctx context.Context, conn *websocket.Conn, msg protocol.Message, req protocol.ChatRequest, thinkingAgent, executionAgent string, sessionID string, writeMu *sync.Mutex, closed *atomic.Bool) {
-	// safeWrite sends a WebSocket message only if the connection is still open and not cancelled
+	// safeWrite mirrors handleChatMessageStreaming.safeWrite (#6688):
+	// WriteJSON errors mark the connection closed so subsequent writes
+	// short-circuit instead of silently failing.
 	safeWrite := func(outMsg protocol.Message) {
 		if closed.Load() || ctx.Err() != nil {
 			return
 		}
 		writeMu.Lock()
 		defer writeMu.Unlock()
-		conn.WriteJSON(outMsg)
+		if err := conn.WriteJSON(outMsg); err != nil {
+			slog.Error("[Chat/MixedMode] WebSocket write failed; marking connection closed",
+				"msgID", outMsg.ID, "type", outMsg.Type, "error", err)
+			closed.Store(true)
+		}
 	}
 
 	thinkingProvider, err := s.registry.Get(thinkingAgent)
