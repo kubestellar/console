@@ -140,7 +140,15 @@ function renderTableSection(
 ) {
   const config = section.config || {}
   const dataKey = config.dataKey as string
-  const tableData = (dataKey ? data[dataKey] : data) as Record<string, unknown>[]
+  // #6718 — `data[dataKey]` can be an object or string (both truthy), so
+  // the previous `tableData || []` fallback didn't protect against non-
+  // array inputs and the downstream table would crash on `.map`. Use an
+  // Array.isArray() check so the empty-state path is always taken for
+  // non-array data.
+  const rawTableData = dataKey ? data[dataKey] : data
+  const tableData: Record<string, unknown>[] = Array.isArray(rawTableData)
+    ? (rawTableData as Record<string, unknown>[])
+    : []
   const columnDefs = config.columns as Array<{
     key: string
     header: string
@@ -158,7 +166,7 @@ function renderTableSection(
 
   return (
     <TableSection
-      data={tableData || []}
+      data={tableData}
       columns={columns}
       emptyMessage={config.emptyMessage as string}
       maxHeight={config.maxHeight as string}
@@ -245,17 +253,35 @@ export function ModalRuntime({
     actions,
     footer } = definition
 
-  // Resolve title with data placeholders
+  // Resolve title with data placeholders.
+  //
+  // #6720 — Use a global regex so repeated occurrences of the same
+  // placeholder (e.g. `{name}` appearing twice in the title) are all
+  // replaced, not just the first. We escape the key since it may contain
+  // regex metacharacters when callers use dotted data paths.
   const resolvedTitle = (() => {
     let resolved = title
     Object.entries(data).forEach(([key, value]) => {
-      resolved = resolved.replace(`{${key}}`, String(value))
+      const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      resolved = resolved.replace(new RegExp(`\\{${escaped}\\}`, 'g'), String(value))
     })
     return resolved
   })()
 
   // Tab state
   const [activeTab, setActiveTab] = useState(tabs?.[0]?.id || '')
+
+  // #6719 — Derive the *effective* active tab id by validating the
+  // stored value against the current tabs list. When tabs change (e.g.
+  // definition swap, dynamic filter), a stale `activeTab` id can no
+  // longer match any tab, leaving the modal body empty. Instead of
+  // resetting state in an effect, derive the effective id at render
+  // time and use that for lookups. The stored `activeTab` only changes
+  // via explicit user clicks (setActiveTab).
+  const effectiveActiveTab =
+    tabs && tabs.length > 0
+      ? (tabs.some((t) => t.id === activeTab) ? activeTab : tabs[0].id)
+      : activeTab
 
   // Icon component
   const Icon = getIcon(icon)
@@ -275,8 +301,8 @@ export function ModalRuntime({
       }
     }
 
-  // Get current tab
-  const currentTab = tabs?.find((t) => t.id === activeTab)
+  // Get current tab — uses the validated effective id (#6719)
+  const currentTab = tabs?.find((t) => t.id === effectiveActiveTab)
 
   // Build tabs for BaseModal.Tabs
   const tabsForComponent = tabs?.map((tab) => ({
@@ -309,7 +335,7 @@ export function ModalRuntime({
       {tabs && tabs.length > 0 && tabsForComponent && (
         <BaseModal.Tabs
           tabs={tabsForComponent}
-          activeTab={activeTab}
+          activeTab={effectiveActiveTab}
           onTabChange={setActiveTab}
         />
       )}
@@ -364,16 +390,27 @@ export function ModalRuntime({
       )}
 
       {/* Footer */}
+      {/*
+        #6721 — Keyboard hints must match what the keydown handler
+        actually listens for. `useModalNavigation` treats Backspace AND
+        Space as back triggers (see useModalNavigation.ts), and Esc as
+        close — so we surface both back keys, and we gate the Esc hint
+        on `keyboard.escape === 'close'` so we never advertise a key
+        that's been disabled via config.
+      */}
       <BaseModal.Footer
         showKeyboardHints={footer?.showKeyboardHints ?? true}
-        keyboardHints={
-          onBack
-            ? [
-                { key: 'Esc', label: 'close' },
-                { key: 'Space', label: 'back' },
-              ]
-            : [{ key: 'Esc', label: 'close' }]
-        }
+        keyboardHints={(() => {
+          const hints: { key: string; label: string }[] = []
+          if (keyboard.escape === 'close') {
+            hints.push({ key: 'Esc', label: 'close' })
+          }
+          if (onBack && keyboard.backspace === 'back') {
+            hints.push({ key: 'Backspace', label: 'back' })
+            hints.push({ key: 'Space', label: 'back' })
+          }
+          return hints
+        })()}
       />
     </BaseModal>
   )

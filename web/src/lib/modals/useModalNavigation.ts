@@ -206,17 +206,24 @@ export function useModal({
     enableBackspace,
     disableBodyScroll })
 
-  // Backdrop close
-  if (backdropRef && enableBackdropClose) {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    useModalBackdropClose(backdropRef, isOpen, onClose)
-  }
-
-  // Focus trap
-  if (modalRef && enableFocusTrap) {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    useModalFocusTrap(modalRef, isOpen)
-  }
+  // #6717 — Always call useModalBackdropClose and useModalFocusTrap
+  // unconditionally so React's rules-of-hooks invariant holds when callers
+  // toggle `enableBackdropClose` / `enableFocusTrap` / ref props across
+  // renders. The behavior is gated inside each hook via the `isOpen` flag:
+  // when `false`, the hook short-circuits and installs no listeners.
+  //
+  // Callers that pass no ref get a stable no-op ref object so the hook
+  // signature is satisfied.
+  const noopRef = { current: null } as React.RefObject<HTMLElement | null>
+  useModalBackdropClose(
+    backdropRef ?? noopRef,
+    isOpen && !!backdropRef && enableBackdropClose,
+    onClose,
+  )
+  useModalFocusTrap(
+    modalRef ?? noopRef,
+    isOpen && !!modalRef && enableFocusTrap,
+  )
 }
 
 /**
