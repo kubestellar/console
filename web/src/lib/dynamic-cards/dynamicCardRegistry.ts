@@ -14,8 +14,20 @@ function notifyListeners() {
   listeners.forEach(fn => fn())
 }
 
-/** Register a dynamic card definition */
+/** Register a dynamic card definition.
+ *
+ * #6712 — Id-based dedup: if a definition with the same id is already
+ * registered AND structurally identical (same serialized shape), skip
+ * the notifyListeners() call. During HMR, modules that register cards at
+ * the top level can otherwise trigger a cascade of listener fires that
+ * remount every consumer of the registry even though nothing changed.
+ */
 export function registerDynamicCard(def: DynamicCardDefinition): void {
+  const existing = registry.get(def.id)
+  if (existing && JSON.stringify(existing) === JSON.stringify(def)) {
+    // No-op replace — avoid remount wave on HMR.
+    return
+  }
   registry.set(def.id, def)
   notifyListeners()
 }
@@ -52,4 +64,13 @@ export function onRegistryChange(listener: RegistryListener): () => void {
 export function clearDynamicCards(): void {
   registry.clear()
   notifyListeners()
+}
+
+// #6712 — HMR self-acceptance. Without this, any module that imports this
+// registry at the top level bubbles HMR updates all the way up to the app
+// root, causing a full tree remount every time a dynamic card source file
+// is edited. Accepting here confines HMR replacement to this module; the
+// id-based dedup in registerDynamicCard then keeps listener churn low.
+if (import.meta.hot) {
+  import.meta.hot.accept()
 }
