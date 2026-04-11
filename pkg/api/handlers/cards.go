@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -221,6 +222,12 @@ func (h *CardHandler) UpdateCard(c *fiber.Ctx) error {
 	}
 
 	if err := h.store.UpdateCard(card); err != nil {
+		// #6610: UpdateCard now returns sql.ErrNoRows when the row was
+		// deleted concurrently (or never existed). Surface that as 404
+		// so the client re-syncs instead of seeing a spurious 500.
+		if errors.Is(err, sql.ErrNoRows) {
+			return fiber.NewError(fiber.StatusNotFound, "Card not found")
+		}
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to update card")
 	}
 
