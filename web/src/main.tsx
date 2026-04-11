@@ -183,9 +183,18 @@ enableMocking()
       Promise.all([
         import('./lib/cards/cardInstallMap'),
         import('./config/cards'),
+        import('./components/cards/cardRegistry'),
       ])
-        .then(([{ validateCardInstallMap }, { getUnifiedCardTypes }]) => {
-          validateCardInstallMap(getUnifiedCardTypes())
+        .then(([{ validateCardInstallMap }, { getUnifiedCardTypes }, { getRegisteredCardTypes }]) => {
+          // #6754 — validateCardInstallMap needs the union of config-based
+          // cards (getUnifiedCardTypes, from CARD_CONFIGS) AND component-only
+          // registered cards (getRegisteredCardTypes, from CARD_COMPONENTS).
+          // Using only config-based types would incorrectly flag component-only
+          // cards as install-map entries without a backing card type.
+          const knownTypes = Array.from(
+            new Set([...getUnifiedCardTypes(), ...getRegisteredCardTypes()]),
+          )
+          validateCardInstallMap(knownTypes)
         })
         .catch(() => { /* ignore — validation is non-critical diagnostic */ })
     }
