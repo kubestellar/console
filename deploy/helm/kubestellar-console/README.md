@@ -21,12 +21,20 @@ The chart has two modes for supplying secret material:
 
 1. **Chart-managed (default, easiest)** — pass values via `--set` or a values
    file; the chart renders a single Kubernetes Secret whose name is the
-   chart fullname (by default `{release-name}-kubestellar-console`, but
-   affected by `fullnameOverride` / `nameOverride` and truncated at 63
-   characters for DNS-label compliance). It holds the JWT secret plus any
-   of the other optional keys (`github-client-id`, `github-client-secret`,
-   `google-drive-api-key`, `claude-api-key`, `feedback-github-token`) you
-   supplied via values.
+   chart `fullname`. Following the standard Helm `fullname` template
+   convention, that resolves to:
+   - `fullnameOverride` if set, else
+   - `.Release.Name` if the release name already contains `kubestellar-console`
+     (e.g. `helm install kubestellar-console ./chart` → Secret name
+     `kubestellar-console`), else
+   - `{.Release.Name}-{nameOverride|kubestellar-console}` (e.g.
+     `helm install kc ./chart` → Secret name `kc-kubestellar-console`).
+   - In all three cases the final name is truncated at 63 characters for
+     DNS-label compliance.
+
+   The Secret holds the JWT secret plus any of the other optional keys
+   (`github-client-id`, `github-client-secret`, `google-drive-api-key`,
+   `claude-api-key`, `feedback-github-token`) you supplied via values.
    - If `jwt.secret` is not set, the chart auto-generates a 64-character
      random value on first install and then **preserves it across `helm
      upgrade`** by looking up the existing Secret ([#6343](https://github.com/kubestellar/console/issues/6343)).
