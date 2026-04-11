@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/kubestellar/console/pkg/models"
+	"github.com/kubestellar/console/pkg/store"
 	"github.com/kubestellar/console/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -57,6 +58,20 @@ func (s *gpuTestStore) CreateGPUReservation(reservation *models.GPUReservation) 
 	s.created = &copy
 	*reservation = copy
 	return nil
+}
+
+// CreateGPUReservationWithCapacity is the atomic variant added for #6612.
+// The test store reuses CreateGPUReservation for the happy path and uses
+// clusterReserved+capacity to mirror the store-level quota check so the
+// TOCTOU test exercises the same decision the real store would make.
+func (s *gpuTestStore) CreateGPUReservationWithCapacity(reservation *models.GPUReservation, capacity int) error {
+	if s.createErr != nil {
+		return s.createErr
+	}
+	if capacity > 0 && s.clusterReserved+reservation.GPUCount > capacity {
+		return store.ErrGPUQuotaExceeded
+	}
+	return s.CreateGPUReservation(reservation)
 }
 
 func (s *gpuTestStore) ListGPUReservations() ([]models.GPUReservation, error) {

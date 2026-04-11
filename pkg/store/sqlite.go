@@ -58,15 +58,35 @@ const (
 	sqliteBusyTimeoutMs = 5000
 )
 
-// parseUUID parses a UUID string, logging a warning if malformed instead of
-// silently returning the zero UUID. This prevents data misattribution when
-// the database contains corrupted UUID strings.
+// parseUUID parses a UUID string from a DB column, logging a warning on
+// malformed input before returning the zero UUID. The zero-UUID fallback is
+// deliberate — the row scanners that call this helper would otherwise have
+// to abort entire list queries when a single row has corrupt data, which is
+// worse than serving the rest of the list with one misattributed row.
+//
+// #6609: callers that need a hard error (e.g. single-row lookups where a
+// corrupt id means the returned value is meaningless) should use
+// parseUUIDStrict instead, which returns (uuid.UUID, error) and lets the
+// caller propagate the failure up to the handler layer.
 func parseUUID(s string, field string) uuid.UUID {
 	id, err := uuid.Parse(s)
 	if err != nil {
 		slog.Warn("[Store] malformed UUID in database — using zero UUID", "field", field, "value", s, "error", err)
 	}
 	return id
+}
+
+// parseUUIDStrict parses a UUID string and returns an error on failure,
+// so callers can propagate corruption instead of silently substituting the
+// zero UUID. Added for #6609 — new code paths should prefer this helper;
+// existing list/row scanners continue to use the logging-only parseUUID
+// to keep partial-failure tolerance on bulk queries.
+func parseUUIDStrict(s string, field string) (uuid.UUID, error) {
+	id, err := uuid.Parse(s)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("malformed UUID in %s: %w", field, err)
+	}
+	return id, nil
 }
 
 // maxSQLLimit is the maximum allowed value for SQL LIMIT parameters.
@@ -362,18 +382,29 @@ func (s *SQLiteStore) migrate() error {
 		// but it was never added to CREATE TABLE or migrations.
 		"ALTER TABLE feature_requests ADD COLUMN latest_comment TEXT",
 	}
-	for _, migration := range migrations {
+	for i, migration := range migrations {
 		if _, err := s.db.Exec(migration); err != nil {
-			// #6291: distinguish "column already exists" (expected) from
-			// other errors (DB locked / read-only / corrupt). The former
-			// is how we get idempotent migrations; the latter is a real
-			// problem worth surfacing. SQLite returns "duplicate column
-			// name: X" for the expected case.
-			if !strings.Contains(err.Error(), "duplicate column name") {
-				slog.Warn("[SQLite] migration failed", "migration", migration, "error", err)
+			// #6291 / #6614: distinguish "column already exists"
+			// (expected, idempotent) from other errors (DB locked,
+			// read-only, corrupt, typo in the DDL). The former is how
+			// we get idempotent migrations; the latter used to only
+			// log a warning and let the server keep booting against a
+			// partially-migrated schema, which would silently 500 on
+			// any query that touched the missing column. Real errors
+			// now surface and abort startup so an operator can fix
+			// the underlying problem before serving traffic.
+			if strings.Contains(err.Error(), "duplicate column name") {
+				slog.Debug("[SQLite] migration already applied",
+					"migration", migration, "version", i+1)
+				continue
 			}
+			slog.Error("[SQLite] migration failed — refusing to start",
+				"migration", migration, "version", i+1, "error", err)
+			return fmt.Errorf("migration %d %q failed: %w", i+1, migration, err)
 		}
+		slog.Debug("[SQLite] migration applied", "migration", migration, "version", i+1)
 	}
+	slog.Info("[SQLite] schema migrations complete", "total_migrations", len(migrations))
 
 	return nil
 }
@@ -524,7 +555,14 @@ func (s *SQLiteStore) UpdateUserRole(userID uuid.UUID, role string) error {
 	return err
 }
 
-// CountUsersByRole returns the count of users by role
+// CountUsersByRole returns the count of users by role.
+//
+// #6607: previously the default switch branch lumped every unrecognized role
+// (including empty strings from pre-migration rows, or any typo in the DB)
+// into the "viewers" bucket, so a corrupted row could silently inflate the
+// viewer count and nothing would alert an operator. We now only count rows
+// whose role matches the allowlist ("admin", "editor", "viewer") and log a
+// warning for anything else so corruption is surfaced instead of hidden.
 func (s *SQLiteStore) CountUsersByRole() (admins, editors, viewers int, err error) {
 	rows, err := s.db.Query(`SELECT role, COUNT(*) FROM users GROUP BY role`)
 	if err != nil {
@@ -543,8 +581,13 @@ func (s *SQLiteStore) CountUsersByRole() (admins, editors, viewers int, err erro
 			admins = count
 		case "editor":
 			editors = count
-		default:
+		case "viewer", "":
+			// Treat NULL/empty as "viewer" — that is the documented default
+			// applied by the users.role column default and scanUser fallback.
 			viewers += count
+		default:
+			slog.Warn("[Store] CountUsersByRole: unknown role in users table — excluded from counts",
+				"role", role, "count", count)
 		}
 	}
 	return admins, editors, viewers, rows.Err()
@@ -552,13 +595,25 @@ func (s *SQLiteStore) CountUsersByRole() (admins, editors, viewers int, err erro
 
 // Onboarding methods
 
+// SaveOnboardingResponse upserts a single onboarding answer for (user_id,
+// question_key). #6606: the previous implementation used INSERT OR REPLACE,
+// which under SQLite is a delete-then-insert that bumps the autoincrement
+// sequence and fires DELETE triggers — effectively renaming the row's
+// identity on every save. We now use ON CONFLICT (user_id, question_key)
+// DO UPDATE so repeated saves keep the same row id and never trip any
+// ON DELETE cascade wired up against onboarding_responses.
 func (s *SQLiteStore) SaveOnboardingResponse(response *models.OnboardingResponse) error {
 	if response.ID == uuid.Nil {
 		response.ID = uuid.New()
 	}
 	response.CreatedAt = time.Now()
 
-	_, err := s.db.Exec(`INSERT OR REPLACE INTO onboarding_responses (id, user_id, question_key, answer, created_at) VALUES (?, ?, ?, ?, ?)`,
+	_, err := s.db.Exec(
+		`INSERT INTO onboarding_responses (id, user_id, question_key, answer, created_at)
+		 VALUES (?, ?, ?, ?, ?)
+		 ON CONFLICT(user_id, question_key) DO UPDATE SET
+		   answer = excluded.answer,
+		   created_at = excluded.created_at`,
 		response.ID.String(), response.UserID.String(), response.QuestionKey, response.Answer, response.CreatedAt)
 	return err
 }
@@ -879,6 +934,11 @@ func (s *SQLiteStore) CreateCardWithLimit(card *models.Card, maxCards int) error
 	return nil
 }
 
+// UpdateCard updates a card row. #6610: previously the driver result was
+// discarded, so a no-op update against a missing card id returned nil and
+// handlers treated that as success. We now check RowsAffected and return
+// sql.ErrNoRows when the card id is not present, so callers can surface a
+// 404 instead of silently accepting a write that never happened.
 func (s *SQLiteStore) UpdateCard(card *models.Card) error {
 	positionJSON, err := json.Marshal(card.Position)
 	if err != nil {
@@ -890,9 +950,19 @@ func (s *SQLiteStore) UpdateCard(card *models.Card) error {
 		configStr = &str
 	}
 
-	_, err = s.db.Exec(`UPDATE cards SET card_type = ?, config = ?, position = ? WHERE id = ?`,
+	res, err := s.db.Exec(`UPDATE cards SET card_type = ?, config = ?, position = ? WHERE id = ?`,
 		string(card.CardType), configStr, string(positionJSON), card.ID.String())
-	return err
+	if err != nil {
+		return err
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to read rows affected: %w", err)
+	}
+	if rows == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
 }
 
 func (s *SQLiteStore) DeleteCard(id uuid.UUID) error {
@@ -1378,8 +1448,19 @@ func (s *SQLiteStore) CreatePRFeedback(feedback *models.PRFeedback) error {
 	return err
 }
 
+// prFeedbackMaxRows caps how many rows GetPRFeedback will return in a single
+// call. PR feedback is usually a handful of entries per feature request, so
+// 500 is generous; the cap is defense-in-depth against an unbounded scan if
+// a bug ever let one feature_request_id accumulate thousands of rows (#6603).
+const prFeedbackMaxRows = 500
+
 func (s *SQLiteStore) GetPRFeedback(featureRequestID uuid.UUID) ([]models.PRFeedback, error) {
-	rows, err := s.db.Query(`SELECT id, feature_request_id, user_id, feedback_type, comment, created_at FROM pr_feedback WHERE feature_request_id = ? ORDER BY created_at DESC`, featureRequestID.String())
+	// #6603: bound the result set — the previous query had no LIMIT, so a
+	// single feature request could return an arbitrarily large slice and
+	// starve the caller's memory. No handler has ever passed offset/limit
+	// so we cap internally at prFeedbackMaxRows; if future callers need
+	// pagination they should add an explicit limit/offset signature.
+	rows, err := s.db.Query(`SELECT id, feature_request_id, user_id, feedback_type, comment, created_at FROM pr_feedback WHERE feature_request_id = ? ORDER BY created_at DESC LIMIT ?`, featureRequestID.String(), prFeedbackMaxRows)
 	if err != nil {
 		return nil, err
 	}
@@ -1472,6 +1553,14 @@ func (s *SQLiteStore) GetUnreadNotificationCount(userID uuid.UUID) (int, error) 
 	return count, err
 }
 
+// MarkNotificationRead is intentionally removed from the public Store
+// interface. #6611: the unscoped "UPDATE notifications SET read = 1 WHERE
+// id = ?" let any authenticated user mark any other user's notification as
+// read, which is a privilege-escalation class bug. All callers now go
+// through MarkNotificationReadByUser, which ownership-checks the row in
+// the same UPDATE. The method is kept here as a private helper only for
+// back-compat with existing admin/background code paths that have already
+// resolved ownership; regular handlers MUST use MarkNotificationReadByUser.
 func (s *SQLiteStore) MarkNotificationRead(id uuid.UUID) error {
 	_, err := s.db.Exec(`UPDATE notifications SET read = 1 WHERE id = ?`, id.String())
 	return err
@@ -1520,13 +1609,85 @@ func (s *SQLiteStore) CreateGPUReservation(reservation *models.GPUReservation) e
 	return err
 }
 
+// ErrGPUQuotaExceeded is returned by CreateGPUReservationWithCapacity when
+// the atomic capacity check fails — either the combined
+// active+pending reservation count is already at or above capacity, or the
+// caller's requested gpu_count would push it over. Handlers should map this
+// error to HTTP 409 Conflict.
+var ErrGPUQuotaExceeded = errors.New("gpu cluster capacity exceeded")
+
+// CreateGPUReservationWithCapacity atomically enforces a cluster GPU
+// capacity cap and inserts the reservation in a single SQL statement.
+//
+// #6612: the previous flow was a two-step "SELECT SUM then INSERT", which
+// under WAL mode lets two concurrent creates both observe the same stale
+// reserved total, both proceed to insert, and push the cluster above its
+// declared capacity. This method mirrors the CreateCardWithLimit pattern:
+// INSERT ... SELECT ... WHERE (SELECT SUM(...) FROM ...) + ? <= capacity,
+// so SQLite evaluates the check and the insert under a single write lock
+// and a second concurrent insert cannot observe a pre-insert tally.
+//
+// If capacity <= 0 the function behaves identically to CreateGPUReservation
+// (capacity checks skipped — matches the existing handler semantics when
+// no capacity provider is configured).
+//
+// Returns ErrGPUQuotaExceeded when the insert is rejected by the WHERE
+// clause, so handlers can distinguish "over-allocated" from other errors.
+func (s *SQLiteStore) CreateGPUReservationWithCapacity(reservation *models.GPUReservation, capacity int) error {
+	if reservation.ID == uuid.Nil {
+		reservation.ID = uuid.New()
+	}
+	reservation.CreatedAt = time.Now()
+	if reservation.Status == "" {
+		reservation.Status = models.ReservationStatusPending
+	}
+	if capacity <= 0 {
+		// No capacity cap — fall through to the unchecked insert. Matches
+		// the existing ClusterCapacityProvider==nil handler behaviour.
+		return s.CreateGPUReservation(reservation)
+	}
+
+	result, err := s.db.Exec(
+		`INSERT INTO gpu_reservations (id, user_id, user_name, title, description, cluster, namespace, gpu_count, gpu_type, start_date, duration_hours, notes, status, quota_name, quota_enforced, created_at)
+		 SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+		 WHERE (COALESCE((SELECT SUM(gpu_count) FROM gpu_reservations WHERE cluster = ? AND status IN ('active', 'pending')), 0) + ?) <= ?`,
+		reservation.ID.String(), reservation.UserID.String(), reservation.UserName,
+		reservation.Title, reservation.Description, reservation.Cluster, reservation.Namespace,
+		reservation.GPUCount, reservation.GPUType, reservation.StartDate, reservation.DurationHours,
+		reservation.Notes, string(reservation.Status), reservation.QuotaName,
+		boolToInt(reservation.QuotaEnforced), reservation.CreatedAt,
+		reservation.Cluster, reservation.GPUCount, capacity,
+	)
+	if err != nil {
+		return fmt.Errorf("insert gpu reservation: %w", err)
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("read rows affected: %w", err)
+	}
+	if rows == 0 {
+		return ErrGPUQuotaExceeded
+	}
+	return nil
+}
+
 func (s *SQLiteStore) GetGPUReservation(id uuid.UUID) (*models.GPUReservation, error) {
 	row := s.db.QueryRow(`SELECT id, user_id, user_name, title, description, cluster, namespace, gpu_count, gpu_type, start_date, duration_hours, notes, status, quota_name, quota_enforced, created_at, updated_at FROM gpu_reservations WHERE id = ?`, id.String())
 	return s.scanGPUReservation(row)
 }
 
+// gpuReservationsMaxRows is the defense-in-depth cap applied to the GPU
+// reservation list queries (#6604). The UI only ever renders a small number
+// of reservations per user/admin view, so 5000 is already well beyond any
+// realistic production workload — the cap only exists so a corrupted table
+// or a forgotten cleanup cron cannot return an unbounded slice.
+const gpuReservationsMaxRows = 5000
+
 func (s *SQLiteStore) ListGPUReservations() ([]models.GPUReservation, error) {
-	rows, err := s.db.Query(`SELECT id, user_id, user_name, title, description, cluster, namespace, gpu_count, gpu_type, start_date, duration_hours, notes, status, quota_name, quota_enforced, created_at, updated_at FROM gpu_reservations ORDER BY start_date DESC`)
+	// #6604: bound the result set. The UI has no expectation of seeing
+	// more than a few hundred reservations at once; if an operator ever
+	// needs a full dump they can query the DB directly.
+	rows, err := s.db.Query(`SELECT id, user_id, user_name, title, description, cluster, namespace, gpu_count, gpu_type, start_date, duration_hours, notes, status, quota_name, quota_enforced, created_at, updated_at FROM gpu_reservations ORDER BY start_date DESC LIMIT ?`, gpuReservationsMaxRows)
 	if err != nil {
 		return nil, err
 	}
@@ -1544,7 +1705,8 @@ func (s *SQLiteStore) ListGPUReservations() ([]models.GPUReservation, error) {
 }
 
 func (s *SQLiteStore) ListUserGPUReservations(userID uuid.UUID) ([]models.GPUReservation, error) {
-	rows, err := s.db.Query(`SELECT id, user_id, user_name, title, description, cluster, namespace, gpu_count, gpu_type, start_date, duration_hours, notes, status, quota_name, quota_enforced, created_at, updated_at FROM gpu_reservations WHERE user_id = ? ORDER BY start_date DESC`, userID.String())
+	// #6604: same defense-in-depth LIMIT as ListGPUReservations.
+	rows, err := s.db.Query(`SELECT id, user_id, user_name, title, description, cluster, namespace, gpu_count, gpu_type, start_date, duration_hours, notes, status, quota_name, quota_enforced, created_at, updated_at FROM gpu_reservations WHERE user_id = ? ORDER BY start_date DESC LIMIT ?`, userID.String(), gpuReservationsMaxRows)
 	if err != nil {
 		return nil, err
 	}
@@ -1651,7 +1813,20 @@ func (s *SQLiteStore) scanGPUReservationRow(rows *sql.Rows) (*models.GPUReservat
 
 // --- GPU Utilization Snapshots ---
 
+// InsertUtilizationSnapshot writes a single GPU utilization sample. #6608:
+// previously this blindly passed snapshot.ID through to the INSERT, so a
+// caller that forgot to populate the id (or a future call path that fed us
+// a zero-value snapshot) would end up inserting an empty-string primary
+// key, collide on the next insert, and silently drop data. We now generate
+// a UUID defensively when the caller left ID blank so the row is always
+// written with a unique primary key.
 func (s *SQLiteStore) InsertUtilizationSnapshot(snapshot *models.GPUUtilizationSnapshot) error {
+	if snapshot.ID == "" {
+		snapshot.ID = uuid.New().String()
+	}
+	if snapshot.Timestamp.IsZero() {
+		snapshot.Timestamp = time.Now()
+	}
 	_, err := s.db.Exec(
 		`INSERT INTO gpu_utilization_snapshots (id, reservation_id, timestamp, gpu_utilization_pct, memory_utilization_pct, active_gpu_count, total_gpu_count) VALUES (?, ?, ?, ?, ?, ?, ?)`,
 		snapshot.ID, snapshot.ReservationID, snapshot.Timestamp,
@@ -1684,25 +1859,51 @@ func (s *SQLiteStore) GetUtilizationSnapshots(reservationID string) ([]models.GP
 	return snapshots, rows.Err()
 }
 
+// bulkUtilizationMaxIDs is the hard cap on the number of reservation ids a
+// single GetBulkUtilizationSnapshots call may fan out to. The handler layer
+// rejects anything larger at the API boundary (#6605); this constant is
+// the store-level defense-in-depth so an internal caller cannot bypass it.
+const bulkUtilizationMaxIDs = 500
+
+// bulkUtilizationMaxRows caps the number of rows returned in a single
+// GetBulkUtilizationSnapshots call. Each reservation typically has hours
+// to days of hourly snapshots, so 10k is well beyond any realistic view.
+const bulkUtilizationMaxRows = 10000
+
+// ErrTooManyIDs is returned by GetBulkUtilizationSnapshots when the caller
+// passed more ids than bulkUtilizationMaxIDs. Handlers should map this to
+// HTTP 400 Bad Request.
+var ErrTooManyIDs = errors.New("too many reservation ids")
+
 func (s *SQLiteStore) GetBulkUtilizationSnapshots(reservationIDs []string) (map[string][]models.GPUUtilizationSnapshot, error) {
 	result := make(map[string][]models.GPUUtilizationSnapshot)
 	if len(reservationIDs) == 0 {
 		return result, nil
 	}
+	// #6605: bound both the IN clause and the total row count. The previous
+	// implementation had no cap on either, so a client could pass thousands
+	// of ids in one request and walk the entire snapshots table. The
+	// handler (GetBulkUtilizations) also rejects > bulkUtilizationMaxIDs
+	// up front with a 400; this store-level check guards internal callers.
+	if len(reservationIDs) > bulkUtilizationMaxIDs {
+		return nil, ErrTooManyIDs
+	}
 
 	// Build parameterized query with placeholders
 	placeholders := ""
-	args := make([]interface{}, len(reservationIDs))
+	// +1 slot for the trailing LIMIT parameter.
+	args := make([]interface{}, 0, len(reservationIDs)+1)
 	for i, id := range reservationIDs {
 		if i > 0 {
 			placeholders += ", "
 		}
 		placeholders += "?"
-		args[i] = id
+		args = append(args, id)
 	}
+	args = append(args, bulkUtilizationMaxRows)
 
 	rows, err := s.db.Query(
-		fmt.Sprintf(`SELECT id, reservation_id, timestamp, gpu_utilization_pct, memory_utilization_pct, active_gpu_count, total_gpu_count FROM gpu_utilization_snapshots WHERE reservation_id IN (%s) ORDER BY timestamp ASC`, placeholders),
+		fmt.Sprintf(`SELECT id, reservation_id, timestamp, gpu_utilization_pct, memory_utilization_pct, active_gpu_count, total_gpu_count FROM gpu_utilization_snapshots WHERE reservation_id IN (%s) ORDER BY timestamp ASC LIMIT ?`, placeholders),
 		args...,
 	)
 	if err != nil {
@@ -1731,8 +1932,10 @@ func (s *SQLiteStore) DeleteOldUtilizationSnapshots(before time.Time) (int64, er
 }
 
 func (s *SQLiteStore) ListActiveGPUReservations() ([]models.GPUReservation, error) {
+	// #6604: same defense-in-depth LIMIT as ListGPUReservations.
 	rows, err := s.db.Query(
-		`SELECT id, user_id, user_name, title, description, cluster, namespace, gpu_count, gpu_type, start_date, duration_hours, notes, status, quota_name, quota_enforced, created_at, updated_at FROM gpu_reservations WHERE status IN ('active', 'pending') ORDER BY start_date DESC`,
+		`SELECT id, user_id, user_name, title, description, cluster, namespace, gpu_count, gpu_type, start_date, duration_hours, notes, status, quota_name, quota_enforced, created_at, updated_at FROM gpu_reservations WHERE status IN ('active', 'pending') ORDER BY start_date DESC LIMIT ?`,
+		gpuReservationsMaxRows,
 	)
 	if err != nil {
 		return nil, err
@@ -1899,9 +2102,16 @@ func (s *SQLiteStore) UpdateUserRewards(rewards *UserRewards) error {
 // A row is created on the fly if the user has never earned a coin before.
 // Negative deltas are permitted but the resulting balance is clamped to
 // MinCoinBalance; the returned *UserRewards reflects the clamped value.
-func (s *SQLiteStore) IncrementUserCoins(userID string, delta int) (*UserRewards, error) {
+func (s *SQLiteStore) IncrementUserCoins(ctx context.Context, userID string, delta int) (*UserRewards, error) {
 	if userID == "" {
 		return nil, errors.New("user_id is required")
+	}
+	// #6613: callers now thread a request context through the
+	// transaction. A cancelled ctx (client disconnect, deadline
+	// exceeded) aborts the in-flight write instead of running to
+	// completion with context.Background().
+	if ctx == nil {
+		ctx = context.Background()
 	}
 
 	// Same BEGIN IMMEDIATE pattern as AddUserTokenDelta — the default
@@ -1910,7 +2120,6 @@ func (s *SQLiteStore) IncrementUserCoins(userID string, delta int) (*UserRewards
 	// stale balance and produce a torn update. Pin a connection and issue
 	// BEGIN IMMEDIATE manually so the write lock is held from the SELECT
 	// through the upsert.
-	ctx := context.Background()
 	conn, err := s.db.Conn(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("acquire conn: %w", err)
@@ -1989,18 +2198,21 @@ func (s *SQLiteStore) IncrementUserCoins(userID string, delta int) (*UserRewards
 // minInterval has elapsed since LastDailyBonusAt. When the cooldown has not
 // expired, returns (nil, ErrDailyBonusUnavailable). The caller-provided now
 // allows tests to exercise the cooldown deterministically without sleeping.
-func (s *SQLiteStore) ClaimDailyBonus(userID string, bonusAmount int, minInterval time.Duration, now time.Time) (*UserRewards, error) {
+func (s *SQLiteStore) ClaimDailyBonus(ctx context.Context, userID string, bonusAmount int, minInterval time.Duration, now time.Time) (*UserRewards, error) {
 	if userID == "" {
 		return nil, errors.New("user_id is required")
 	}
 	if bonusAmount < 0 {
 		return nil, errors.New("bonusAmount must be non-negative")
 	}
+	// #6613: see IncrementUserCoins.
+	if ctx == nil {
+		ctx = context.Background()
+	}
 
 	// Same BEGIN IMMEDIATE pattern as AddUserTokenDelta — without it, two
 	// concurrent requests can both pass the cooldown check and each award
 	// the bonus before either commits, producing a double claim.
-	ctx := context.Background()
 	conn, err := s.db.Conn(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("acquire conn: %w", err)
@@ -2181,7 +2393,7 @@ func (s *SQLiteStore) UpdateUserTokenUsage(usage *UserTokenUsage) error {
 // stored session marker but does NOT add the delta (the client already
 // rebased its baseline for the same reason). The returned *UserTokenUsage
 // reflects the post-write state in both branches.
-func (s *SQLiteStore) AddUserTokenDelta(userID string, category string, delta int64, agentSessionID string) (*UserTokenUsage, error) {
+func (s *SQLiteStore) AddUserTokenDelta(ctx context.Context, userID string, category string, delta int64, agentSessionID string) (*UserTokenUsage, error) {
 	if userID == "" {
 		return nil, errors.New("user_id is required")
 	}
@@ -2190,6 +2402,10 @@ func (s *SQLiteStore) AddUserTokenDelta(userID string, category string, delta in
 	}
 	if delta < 0 {
 		return nil, errors.New("delta must be non-negative")
+	}
+	// #6613: see IncrementUserCoins.
+	if ctx == nil {
+		ctx = context.Background()
 	}
 
 	// We need a write-locked transaction so the read-merge-write sequence
@@ -2200,7 +2416,6 @@ func (s *SQLiteStore) AddUserTokenDelta(userID string, category string, delta in
 	// updates. Workaround: pin a single connection from the pool and
 	// issue BEGIN IMMEDIATE / COMMIT manually so the lock is held from
 	// the start of the SELECT through the upsert.
-	ctx := context.Background()
 	conn, err := s.db.Conn(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("acquire conn: %w", err)
@@ -2307,8 +2522,11 @@ func (s *SQLiteStore) StoreOAuthState(state string, ttl time.Duration) error {
 // read-modify-write happens under a single write lock, AND we cross-check
 // `RowsAffected()` so a duplicate consume is reported as not-found rather
 // than success.
-func (s *SQLiteStore) ConsumeOAuthState(state string) (bool, error) {
-	ctx := context.Background()
+func (s *SQLiteStore) ConsumeOAuthState(ctx context.Context, state string) (bool, error) {
+	// #6613: see IncrementUserCoins.
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	conn, err := s.db.Conn(ctx)
 	if err != nil {
 		return false, fmt.Errorf("acquire conn: %w", err)

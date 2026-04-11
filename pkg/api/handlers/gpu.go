@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -14,6 +15,11 @@ import (
 	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/store"
 )
+
+// bulkUtilizationsMaxIDs caps the number of reservation ids a single
+// GetBulkUtilizations request may ask for. Must stay <= the store-level
+// cap in GetBulkUtilizationSnapshots (#6605).
+const bulkUtilizationsMaxIDs = 500
 
 // ClusterCapacityProvider returns the total GPU capacity for a cluster
 // by querying authoritative server-side data (e.g. k8s node resources).
@@ -61,8 +67,20 @@ func (h *GPUHandler) CreateReservation(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Start date must be RFC 3339 format (e.g. 2024-01-15T09:00:00Z)")
 	}
 
-	// Check over-allocation using server-side cluster capacity (never trust client input).
-	// The client-supplied MaxClusterGPUs is intentionally ignored.
+	// #6612: resolve server-side capacity up front so we can pass it into
+	// the atomic CreateGPUReservationWithCapacity call below. The old
+	// two-step flow (checkOverAllocation THEN CreateGPUReservation) was
+	// TOCTOU-racy: two concurrent requests could both read the same stale
+	// reserved total, both pass the check, and both insert — pushing the
+	// cluster above its declared capacity. Passing the capacity into a
+	// single SQL statement makes the check+insert atomic.
+	capacity := 0
+	if h.clusterCapacity != nil {
+		capacity = h.clusterCapacity(c.Context(), input.Cluster)
+	}
+	// A pre-check is still useful when capacity > 0 so clients get a
+	// descriptive 409 message with available/reserved numbers, but the
+	// authoritative decision is made inside the transaction below.
 	if err := h.checkOverAllocation(c.Context(), input.Cluster, input.GPUCount, nil); err != nil {
 		return err
 	}
@@ -93,7 +111,11 @@ func (h *GPUHandler) CreateReservation(c *fiber.Ctx) error {
 		reservation.DurationHours = 24
 	}
 
-	if err := h.store.CreateGPUReservation(reservation); err != nil {
+	if err := h.store.CreateGPUReservationWithCapacity(reservation, capacity); err != nil {
+		if errors.Is(err, store.ErrGPUQuotaExceeded) {
+			return fiber.NewError(fiber.StatusConflict,
+				fmt.Sprintf("Over-allocation: cluster %q would exceed capacity of %d GPUs", input.Cluster, capacity))
+		}
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to create reservation")
 	}
 
@@ -373,6 +395,14 @@ func (h *GPUHandler) GetBulkUtilizations(c *fiber.Ctx) error {
 	}
 
 	ids := strings.Split(idsParam, ",")
+	// #6605: reject oversized fan-outs at the API boundary. The store
+	// already enforces the same cap as defense-in-depth (ErrTooManyIDs),
+	// but a 400 here surfaces the mistake to the client immediately
+	// without touching the database.
+	if len(ids) > bulkUtilizationsMaxIDs {
+		return fiber.NewError(fiber.StatusBadRequest,
+			fmt.Sprintf("too many reservation ids: %d (max %d)", len(ids), bulkUtilizationsMaxIDs))
+	}
 	// Validate all IDs and check ownership for non-admin users
 	for _, id := range ids {
 		trimmed := strings.TrimSpace(id)
