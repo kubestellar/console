@@ -110,7 +110,10 @@ export const hpaStatusConfig: UnifiedCardConfig = {
   },
 
   // Metadata
-  isDemoData: true,
+  // #6654 — Was `true`, which pinned the card to demo rendering even when
+  // useHPAs returned real data. Match statefulset-status / deployment-status
+  // / pod-status (which use `false`).
+  isDemoData: false,
   isLive: true,
 }
 

@@ -97,7 +97,10 @@ export const replicaSetStatusConfig: UnifiedCardConfig = {
   },
 
   // Metadata
-  isDemoData: true,
+  // #6647 — Was `true`, which pinned the card to demo rendering even when
+  // useReplicaSets returned real data. Match statefulset-status /
+  // deployment-status / pod-status (which use `false`).
+  isDemoData: false,
   isLive: true,
 }
 

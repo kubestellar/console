@@ -104,7 +104,12 @@ export const daemonSetStatusConfig: UnifiedCardConfig = {
   },
 
   // Metadata
-  isDemoData: true,
+  // #6645 — Was `true`, which pinned the card to demo rendering even when
+  // useDaemonSets returned real data, causing a Demo badge + yellow outline
+  // on live data. Match statefulset-status / deployment-status / pod-status
+  // (which use `false`). The hook's own isDemoData signal (when present)
+  // still drives the Demo badge on fallback.
+  isDemoData: false,
   isLive: true,
 }
 
