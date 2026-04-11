@@ -1956,8 +1956,32 @@ func (h *GitOpsHandlers) findReleaseNamespace(ctx context.Context, cluster, rele
 // Helm Write Operations
 // ============================================================================
 
-/** helmWriteTimeout is the timeout for helm write operations (rollback, uninstall, upgrade). */
-const helmWriteTimeout = 60 * time.Second
+// helmOperationTimeout is the server-side ceiling for detached helm write
+// operations. #6592: helm install/upgrade/uninstall/rollback must complete
+// even when the HTTP client disconnects mid-flight, so we run them in a
+// context that's decoupled from the Fiber request context. Must be generous
+// enough for large charts with many hooks/CRDs to finish, yet bounded so a
+// wedged helm subprocess can't run forever.
+const helmOperationTimeout = 10 * time.Minute
+
+// detachedHelmContext returns a context suitable for state-mutating helm
+// subprocesses (install, upgrade, uninstall, rollback). It preserves values
+// from the request context (deadlines-as-values, trace IDs, logging tags)
+// via context.WithoutCancel but drops cancellation propagation — otherwise a
+// user closing their browser tab mid-install would SIGKILL the helm process
+// and orphan the release in `pending-install`, deadlocking future operations
+// on that namespace until the release lock is cleared manually. A fresh
+// WithTimeout using helmOperationTimeout then caps the server-side lifetime.
+//
+// Read-only operations (helm ls, helm get, helm history, helm template) must
+// NOT use this helper — they should remain bound to the request context so a
+// disconnected client cancels the work promptly. See #6592.
+func detachedHelmContext(c *fiber.Ctx) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(
+		context.WithoutCancel(c.UserContext()),
+		helmOperationTimeout,
+	)
+}
 
 // HelmRollbackRequest is the request body for rolling back a release
 type HelmRollbackRequest struct {
@@ -2015,7 +2039,9 @@ func (h *GitOpsHandlers) RollbackHelmRelease(c *fiber.Ctx) error {
 		args = append(args, "--kube-context", req.Cluster)
 	}
 
-	ctx, cancel := context.WithTimeout(c.Context(), helmWriteTimeout)
+	// #6592: detach from the request context so a disconnected client doesn't
+	// SIGKILL helm mid-rollback and leave the release in a broken state.
+	ctx, cancel := detachedHelmContext(c)
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, "helm", args...)
@@ -2068,7 +2094,9 @@ func (h *GitOpsHandlers) UninstallHelmRelease(c *fiber.Ctx) error {
 		args = append(args, "--kube-context", req.Cluster)
 	}
 
-	ctx, cancel := context.WithTimeout(c.Context(), helmWriteTimeout)
+	// #6592: detach from the request context so a disconnected client doesn't
+	// SIGKILL helm mid-uninstall and leave dangling resources / release lock.
+	ctx, cancel := detachedHelmContext(c)
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, "helm", args...)
@@ -2133,7 +2161,9 @@ func (h *GitOpsHandlers) UpgradeHelmRelease(c *fiber.Ctx) error {
 		args = append(args, "--kube-context", req.Cluster)
 	}
 
-	ctx, cancel := context.WithTimeout(c.Context(), helmWriteTimeout)
+	// #6592: detach from the request context so a disconnected client doesn't
+	// SIGKILL helm mid-upgrade and leave the release in `pending-upgrade`.
+	ctx, cancel := detachedHelmContext(c)
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, "helm", args...)
