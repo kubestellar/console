@@ -97,6 +97,17 @@ export function LaunchSequence({
   const [isStarted, setIsStarted] = useState(false)
   const progressRef = useRef<PhaseProgress[]>(state.launchProgress)
   const startedMissions = useRef(new Set<string>())
+  // #6632 — Track mount state so effects scheduled before unmount (phase
+  // initialization, mission monitor, auto-start) can't call onUpdateProgress
+  // or onComplete on a closed dialog. Without this, closing Mission Control
+  // mid-launch fired a cascade of stale progress updates on a dead tree.
+  const isMountedRef = useRef(true)
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
 
   // #6408 — If `state.phases` is empty but the user has assignments, rebuild
   // a single deploy phase from those assignments instead of calling
@@ -131,6 +142,8 @@ export function LaunchSequence({
         status: 'pending' as const })) }))
     progressRef.current = initial
     startedMissions.current = new Set<string>()
+    // #6632 — guard against firing onUpdateProgress on a closed dialog
+    if (!isMountedRef.current) return
     setIsStarted(false)
     onUpdateProgress(initial)
   }, [phaseSignature])
@@ -138,6 +151,8 @@ export function LaunchSequence({
   const updateProgress = (updater: (prev: PhaseProgress[]) => PhaseProgress[]) => {
       const next = updater(progressRef.current)
       progressRef.current = next
+      // #6632 — Never call onUpdateProgress after the dialog has been closed.
+      if (!isMountedRef.current) return
       onUpdateProgress(next)
     }
 
@@ -262,6 +277,8 @@ export function LaunchSequence({
         ...phase,
         status: derivePhaseStatus(phase) }))
       progressRef.current = updated
+      // #6632 — Don't fire onUpdateProgress / onComplete on a closed dialog.
+      if (!isMountedRef.current) return
       onUpdateProgress(updated)
 
       // #6408 — Never call onComplete on an empty progress list. Without
@@ -307,15 +324,22 @@ export function LaunchSequence({
     const isYolo = state.deployMode === 'yolo'
 
     if (isYolo) {
-      // Launch everything at once
+      // Launch everything at once. #6634 — collect the promises and await
+      // them with Promise.allSettled so the yolo path doesn't swallow
+      // rejections or leave unhandled-rejection warnings in the console.
+      // launchProject has its own try/catch around the failing branch, but
+      // any future refactor that throws before that catch would otherwise
+      // go unnoticed.
+      const pending: Promise<void>[] = []
       for (const phase of effectivePhases) {
         for (const projectName of (phase.projectNames || [])) {
           if (!startedMissions.current.has(projectName)) {
             startedMissions.current.add(projectName)
-            launchProject(projectName, phase.phase)
+            pending.push(launchProject(projectName, phase.phase))
           }
         }
       }
+      await Promise.allSettled(pending)
     } else {
       // Phased: launch phase N, wait for completion, then phase N+1 (#5506)
       for (const phase of effectivePhases) {
@@ -454,11 +478,17 @@ export function LaunchSequence({
                     className="h-6 text-xs"
                     icon={<RotateCcw className="w-3 h-3" />}
                     onClick={() => {
+                      // #6634 — Track the retry promises so any rejection
+                      // is observed rather than dropped. Promise.allSettled
+                      // keeps the click handler from becoming `async` in a
+                      // JSX attribute (which confuses React type checks).
+                      const retries: Promise<void>[] = []
                       phase.projects.forEach((p) => {
                         if (p.status === 'failed') {
-                          launchProject(p.name, phase.phase)
+                          retries.push(launchProject(p.name, phase.phase))
                         }
                       })
+                      void Promise.allSettled(retries)
                     }}
                   >
                     Retry Failed

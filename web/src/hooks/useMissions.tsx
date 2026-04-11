@@ -535,6 +535,13 @@ export function MissionProvider({ children }: { children: ReactNode }) {
   // Delay between WebSocket send retries in milliseconds
   const WS_SEND_RETRY_DELAY_MS = 1000
 
+  // #6629 — Track in-flight wsSend retry timers so they can be cleared on
+  // unmount. Without this, a provider unmount while a retry was still
+  // pending would leak the setTimeout handle and could call
+  // `wsRef.current.send` on a dying socket (or worse, call the user-supplied
+  // `onFailure` after the component tree had already gone away).
+  const wsSendRetryTimers = useRef<Set<ReturnType<typeof setTimeout>>>(new Set())
+
   /**
    * Send a message over the WebSocket with retry logic.
    * Makes one immediate attempt, then retries up to WS_SEND_MAX_RETRIES
@@ -550,7 +557,12 @@ export function MissionProvider({ children }: { children: ReactNode }) {
       }
       if (retries < WS_SEND_MAX_RETRIES) {
         retries++
-        setTimeout(trySend, WS_SEND_RETRY_DELAY_MS)
+        // #6629 — ref-tracked so unmount cleanup can cancel pending retries.
+        const handle = setTimeout(() => {
+          wsSendRetryTimers.current.delete(handle)
+          trySend()
+        }, WS_SEND_RETRY_DELAY_MS)
+        wsSendRetryTimers.current.add(handle)
       } else {
         console.error('[Missions] WebSocket send failed after retries — socket not open')
         onFailure?.()
@@ -2532,11 +2544,18 @@ Install the console locally with the KubeStellar Console agent to use AI mission
     const lastStreamTimestampRef = lastStreamTimestamp.current
     const streamSplitCounterRef = streamSplitCounter.current
     const waitingInputTimeoutsRef = waitingInputTimeouts.current
+    const wsSendRetryTimersRef = wsSendRetryTimers.current
     return () => {
       if (wsReconnectTimer.current) {
         clearTimeout(wsReconnectTimer.current)
         wsReconnectTimer.current = null
       }
+      // #6629 — Cancel any in-flight wsSend retry timers so they don't
+      // fire on an unmounted provider or touch a dying socket.
+      for (const handle of wsSendRetryTimersRef) {
+        clearTimeout(handle)
+      }
+      wsSendRetryTimersRef.clear()
       // Clear all cancel acknowledgment timeouts
       for (const timeout of cancelTimeoutsRef.values()) {
         clearTimeout(timeout)
