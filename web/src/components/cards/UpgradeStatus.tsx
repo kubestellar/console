@@ -4,6 +4,7 @@ import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useMissions } from '../../hooks/useMissions'
+import { ConfirmMissionPromptDialog } from '../missions/ConfirmMissionPromptDialog'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
@@ -520,13 +521,22 @@ export function UpgradeStatus({ config: _config }: UpgradeStatusProps) {
     }
   }, [isDemoMode, agentConnected, allClusters])
 
-  const handleStartUpgrade = (clusterName: string, currentVersion: string, targetVersion: string) => {
-    startMission({
-      title: `Upgrade ${clusterName}`,
-      description: `Upgrade from ${currentVersion} to ${targetVersion}`,
-      type: 'upgrade',
-      cluster: clusterName,
-      initialPrompt: `I want to upgrade the Kubernetes cluster "${clusterName}" from version ${currentVersion} to ${targetVersion}.
+  // #6309: show the prompt-confirmation dialog before starting the
+  // upgrade mission. Previously, clicking "Start Upgrade" launched
+  // the AI agent immediately with no chance for the user to review
+  // or edit the prompt — a critical-function click with no gate.
+  // The ConfirmMissionPromptDialog was added in #5913 for exactly
+  // this pattern (installer flows); here we reuse it for upgrades.
+  interface PendingUpgrade {
+    clusterName: string
+    currentVersion: string
+    targetVersion: string
+    prompt: string
+  }
+  const [pendingUpgrade, setPendingUpgrade] = useState<PendingUpgrade | null>(null)
+
+  const buildUpgradePrompt = (clusterName: string, currentVersion: string, targetVersion: string) =>
+    `I want to upgrade the Kubernetes cluster "${clusterName}" from version ${currentVersion} to ${targetVersion}.
 
 Please help me with this upgrade by:
 1. First checking the cluster's current state and any prerequisites
@@ -535,11 +545,33 @@ Please help me with this upgrade by:
 4. Performing the upgrade with proper monitoring
 5. Validating the upgrade was successful
 
-Please proceed step by step and ask for confirmation before making any changes.`,
+Please proceed step by step and ask for confirmation before making any changes.`
+
+  const handleStartUpgrade = (clusterName: string, currentVersion: string, targetVersion: string) => {
+    // Stage the upgrade in pending state — the dialog below will call
+    // confirmStartUpgrade (with the possibly-edited prompt) or cancel.
+    setPendingUpgrade({
+      clusterName,
+      currentVersion,
+      targetVersion,
+      prompt: buildUpgradePrompt(clusterName, currentVersion, targetVersion),
+    })
+  }
+
+  const confirmStartUpgrade = (editedPrompt: string) => {
+    if (!pendingUpgrade) return
+    const { clusterName, currentVersion, targetVersion } = pendingUpgrade
+    startMission({
+      title: `Upgrade ${clusterName}`,
+      description: `Upgrade from ${currentVersion} to ${targetVersion}`,
+      type: 'upgrade',
+      cluster: clusterName,
+      initialPrompt: editedPrompt,
       context: {
         clusterName,
         currentVersion,
         targetVersion } })
+    setPendingUpgrade(null)
   }
 
   // Apply global filters to get clusters, then build version data
@@ -752,6 +784,18 @@ Please proceed step by step and ask for confirmation before making any changes.`
         onPageChange={goToPage}
         needsPagination={needsPagination}
       />
+
+      {/* #6309: confirm prompt before running the upgrade mission. */}
+      {pendingUpgrade && (
+        <ConfirmMissionPromptDialog
+          open={true}
+          missionTitle={`Upgrade ${pendingUpgrade.clusterName}`}
+          missionDescription={`Upgrade from ${pendingUpgrade.currentVersion} to ${pendingUpgrade.targetVersion}`}
+          initialPrompt={pendingUpgrade.prompt}
+          onCancel={() => setPendingUpgrade(null)}
+          onConfirm={confirmStartUpgrade}
+        />
+      )}
     </div>
   )
 }
