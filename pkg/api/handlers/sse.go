@@ -230,9 +230,20 @@ func sseCacheGet(key string) interface{} {
 	}
 	// Expired — upgrade to a write lock to delete. The background evictor
 	// also prunes expired entries, so losing the race here is harmless.
+	//
+	// #6591: Between releasing the RLock and acquiring the write Lock, another
+	// goroutine may have refreshed the entry via sseCacheSet. Re-check under
+	// the write lock and, if the entry is now fresh, return it instead of
+	// dropping a freshly-populated value on the floor (which would force the
+	// caller to re-fetch unnecessarily).
 	sseCacheMu.RUnlock()
 	sseCacheMu.Lock()
-	if e2, ok := sseCache[key]; ok && time.Since(e2.fetchedAt) >= sseCacheTTL {
+	if e2, ok := sseCache[key]; ok {
+		if time.Since(e2.fetchedAt) < sseCacheTTL {
+			data := e2.data
+			sseCacheMu.Unlock()
+			return data
+		}
 		delete(sseCache, key)
 	}
 	sseCacheMu.Unlock()
