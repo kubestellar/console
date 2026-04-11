@@ -152,7 +152,7 @@ Common knobs:
 | `route.enabled` | `false` | OpenShift Route (alternative to Ingress). |
 | `persistence.enabled` | `true` | PVC for the SQLite database. |
 | `backup.enabled` | `true` | SQLite auto-backup CronJob + restore init container. |
-| `securityContext.runAsUser` | `1001` | Must be numeric — see [#6323](https://github.com/kubestellar/console/issues/6323). |
+| `securityContext.runAsUser` | `1001` | Must be numeric for Kind/Minikube — see [#6323](https://github.com/kubestellar/console/issues/6323). On OpenShift, set this (and `runAsGroup`, `runAsNonRoot`) to `null` to let SCC assign the UID — see [#6344](https://github.com/kubestellar/console/issues/6344). |
 
 ## Troubleshooting
 
@@ -170,6 +170,24 @@ so the deployment controller respawns it:
 
 ```bash
 kubectl -n kubestellar-console delete pod -l app.kubernetes.io/name=kubestellar-console
+```
+
+### OpenShift pod stuck `Replicas: 0/1` / `context deadline exceeded`
+
+OpenShift's `restricted` / `restricted-v2` SCC allocates a
+namespace-specific UID range and rejects pods whose `runAsUser` falls
+outside that range ([#6344](https://github.com/kubestellar/console/issues/6344)).
+The chart default (`runAsUser: 1001`) is correct for Kind/Minikube but
+breaks OpenShift silently — the helm upgrade rolls back with no
+container-level error message.
+
+Fix: override the chart defaults to let SCC inject its own values:
+
+```bash
+helm upgrade kc ./deploy/helm/kubestellar-console -n kubestellar-console \
+  --set securityContext.runAsUser=null \
+  --set securityContext.runAsGroup=null \
+  --set securityContext.runAsNonRoot=null
 ```
 
 ### `container has runAsNonRoot and image has non-numeric user (appuser)`
