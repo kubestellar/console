@@ -38,9 +38,18 @@ type Message struct {
 
 // Client represents a WebSocket client
 type Client struct {
-	conn   *websocket.Conn
-	userID uuid.UUID
-	send   chan []byte
+	conn      *websocket.Conn
+	userID    uuid.UUID
+	send      chan []byte
+	closeOnce sync.Once // #6584 — guard against double Close on the underlying conn
+}
+
+// closeConn closes the underlying WebSocket connection exactly once (#6584).
+// Safe to call from any goroutine (DisconnectUser, writer, reader defer).
+func (cl *Client) closeConn() {
+	cl.closeOnce.Do(func() {
+		_ = cl.conn.Close()
+	})
 }
 
 // Hub maintains active WebSocket connections
@@ -54,9 +63,21 @@ type Hub struct {
 	mu           sync.RWMutex
 	done         chan struct{}
 	closeOnce    sync.Once // protects done channel from double-close panic
-	jwtSecret    string    // JWT secret for WebSocket auth
-	devMode      bool      // when true, demo-token bypass is allowed
+	// #6576 — configMu guards jwtSecret and devMode so Set/Get callers
+	// never race. Previously SetJWTSecret and SetDevMode wrote unguarded
+	// fields that were read concurrently by incoming WebSocket handshakes
+	// (HandleConnection runs on Fiber worker goroutines). -race caught the
+	// write/read pair whenever config was set after the hub started.
+	configMu  sync.RWMutex
+	jwtSecret string // JWT secret for WebSocket auth (guarded by configMu)
+	devMode   bool   // when true, demo-token bypass is allowed (guarded by configMu)
 }
+
+// Client.closeOnce ensures the underlying WebSocket connection is closed
+// exactly once (#6584). Without this, DisconnectUser (called from the logout
+// handler) could close the conn while the reader or writer goroutine was
+// also closing it on their own exit paths, racing with the fasthttp
+// WebSocket implementation.
 
 type broadcastMessage struct {
 	userID uuid.UUID
@@ -76,14 +97,27 @@ func NewHub() *Hub {
 	}
 }
 
-// SetJWTSecret sets the JWT secret for WebSocket authentication
+// SetJWTSecret sets the JWT secret for WebSocket authentication (#6576).
 func (h *Hub) SetJWTSecret(secret string) {
+	h.configMu.Lock()
 	h.jwtSecret = secret
+	h.configMu.Unlock()
 }
 
-// SetDevMode enables or disables dev mode (controls demo-token bypass)
+// SetDevMode enables or disables dev mode (controls demo-token bypass).
 func (h *Hub) SetDevMode(devMode bool) {
+	h.configMu.Lock()
 	h.devMode = devMode
+	h.configMu.Unlock()
+}
+
+// config returns a snapshot of the hub's authentication configuration.
+// Read paths in HandleConnection must go through this helper so the
+// race detector never sees an unguarded read (#6576).
+func (h *Hub) config() (jwtSecret string, devMode bool) {
+	h.configMu.RLock()
+	defer h.configMu.RUnlock()
+	return h.jwtSecret, h.devMode
 }
 
 // Run starts the hub
@@ -189,6 +223,14 @@ func (h *Hub) GetTotalConnectionsCount() int {
 
 // DisconnectUser closes all WebSocket connections belonging to the given user.
 // Called by the logout handler to enforce session invalidation (#4906).
+//
+// #6584 — All conn.Close() calls now go through client.closeConn(), which is
+// guarded by sync.Once. Previously this function called conn.Close directly
+// while the writer/reader goroutines also called conn.Close on their exit
+// paths, racing the underlying fasthttp WebSocket implementation. With the
+// Once, whichever goroutine wins performs the close and the others no-op.
+// The reader goroutine will observe the closed conn on its next read,
+// unblock, and deliver the client to the unregister channel via its defer.
 func (h *Hub) DisconnectUser(userID uuid.UUID) {
 	h.mu.RLock()
 	clients := make([]*Client, len(h.userIndex[userID]))
@@ -197,9 +239,11 @@ func (h *Hub) DisconnectUser(userID uuid.UUID) {
 
 	for _, client := range clients {
 		// Send a close message so the client knows the session was terminated.
+		// Best-effort: if the conn is already closed by a peer error, the
+		// write will fail silently.
 		_ = client.conn.WriteMessage(websocket.CloseMessage,
 			websocket.FormatCloseMessage(websocket.CloseNormalClosure, "session invalidated"))
-		client.conn.Close()
+		client.closeConn()
 	}
 	slog.Info("[WebSocket] disconnected all connections for user", "user", userID, "count", len(clients))
 }
@@ -289,6 +333,10 @@ func (h *Hub) HandleConnection(conn *websocket.Conn) {
 	var userID uuid.UUID
 	var authenticated bool
 
+	// #6576 — snapshot hub config under lock so subsequent reads are
+	// race-free even if SetJWTSecret/SetDevMode is called concurrently.
+	jwtSecret, devMode := h.config()
+
 	// Set read deadline for authentication message (5 seconds)
 	conn.SetReadDeadline(time.Now().Add(wsReadDeadline))
 
@@ -317,21 +365,21 @@ func (h *Hub) HandleConnection(conn *websocket.Conn) {
 	}
 
 	// Validate token
-	if authMsg.Token == "demo-token" && h.devMode {
+	if authMsg.Token == "demo-token" && devMode {
 		// Demo mode: accept connection for presence tracking (count only, no user data)
 		// SECURITY: Only allowed when DEV_MODE=true to prevent unauthenticated access in production
 		userID = uuid.Nil
 		authenticated = true
 		slog.Info("Demo-mode WebSocket connection for presence tracking (dev mode)")
-	} else if authMsg.Token == "demo-token" && !h.devMode {
+	} else if authMsg.Token == "demo-token" && !devMode {
 		slog.Warn("SECURITY: Rejected demo-token WebSocket connection (dev mode not enabled)")
 		if wErr := conn.WriteJSON(Message{Type: "error", Data: map[string]string{"message": "demo-token not allowed in production"}}); wErr != nil {
 			slog.Error("[WebSocket] failed to send rejection error", "error", wErr)
 		}
 		conn.Close()
 		return
-	} else if h.jwtSecret != "" {
-		claims, err := middleware.ValidateJWT(authMsg.Token, h.jwtSecret)
+	} else if jwtSecret != "" {
+		claims, err := middleware.ValidateJWT(authMsg.Token, jwtSecret)
 		if err != nil {
 			slog.Warn("[WebSocket] SECURITY: rejected invalid token", "error", err)
 			if wErr := conn.WriteJSON(Message{Type: "error", Data: map[string]string{"message": "invalid token"}}); wErr != nil {
@@ -397,7 +445,7 @@ func (h *Hub) HandleConnection(conn *websocket.Conn) {
 	select {
 	case h.register <- client:
 	case <-h.done:
-		conn.Close()
+		client.closeConn()
 		return
 	}
 
@@ -407,7 +455,8 @@ func (h *Hub) HandleConnection(conn *websocket.Conn) {
 		pingTicker := time.NewTicker(30 * time.Second)
 		defer func() {
 			pingTicker.Stop()
-			conn.Close()
+			// #6584 — close exactly once across all goroutines.
+			client.closeConn()
 		}()
 
 		for {
@@ -436,7 +485,8 @@ func (h *Hub) HandleConnection(conn *websocket.Conn) {
 		case h.unregister <- client:
 		case <-h.done:
 		}
-		conn.Close()
+		// #6584 — close exactly once across all goroutines.
+		client.closeConn()
 	}()
 
 	for {

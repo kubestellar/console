@@ -576,8 +576,18 @@ func (s *Server) setupRoutes() {
 	auth.SetHub(s.hub)
 	s.app.Get("/auth/github", authLimiter, auth.GitHubLogin)
 	s.app.Get("/auth/github/callback", authLimiter, auth.GitHubCallback)
-	s.app.Post("/auth/refresh", authLimiter, auth.RefreshToken)
-	s.app.Post("/auth/logout", authLimiter, auth.Logout)
+	// #6587 — /auth/logout now requires JWTAuth. Previously anyone could
+	// POST /auth/logout with any JWT (even a stolen one) because the route
+	// was registered without the auth middleware. Requiring JWTAuth proves
+	// the caller owns the token it is trying to revoke. The Logout handler
+	// itself still validates the token independently so it can surface an
+	// idempotent 200 when an expired token is presented.
+	//
+	// #6579 — /auth/refresh similarly requires JWTAuth so that a revoked
+	// token is rejected by the middleware before the handler even runs.
+	jwtAuth := middleware.JWTAuth(s.config.JWTSecret)
+	s.app.Post("/auth/refresh", authLimiter, jwtAuth, auth.RefreshToken)
+	s.app.Post("/auth/logout", authLimiter, jwtAuth, auth.Logout)
 
 	// Active users endpoint (public — returns only aggregate counts, no sensitive data)
 	s.app.Get("/api/active-users", func(c *fiber.Ctx) error {
@@ -1308,6 +1318,9 @@ func (s *Server) Shutdown() error {
 			s.gpuUtilWorker.Stop()
 		}
 		s.hub.Close()
+		// #6578 — stop the token revocation cleanup goroutine so tests
+		// and embedded usage don't leak it across Server lifecycles.
+		middleware.ShutdownTokenRevocation()
 		if s.k8sClient != nil {
 			s.k8sClient.StopWatching()
 		}
