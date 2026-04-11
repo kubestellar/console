@@ -601,7 +601,7 @@ export function Sidebar() {
               }
             }}
             aria-expanded={!config.collapsed}
-            className="p-1.5 rounded-full border border-border bg-background text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10 shadow-md transition-colors"
+            className="hidden md:flex items-center justify-center min-h-[44px] min-w-[44px] p-1.5 rounded-full border border-border bg-background text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10 shadow-md transition-colors"
             title={config.collapsed ? t('layout.sidebar.expandSidebar') : t('layout.sidebar.collapseSidebar')}
           >
             {config.collapsed ? <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" /> : <ChevronLeft className="w-3.5 h-3.5" aria-hidden="true" />}

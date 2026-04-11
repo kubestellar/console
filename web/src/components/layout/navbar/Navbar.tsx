@@ -64,7 +64,7 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
         {/* Hamburger menu - mobile only */}
         <button
           onClick={toggleMobileSidebar}
-          className="p-2 md:hidden rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/10"
+          className="p-2 min-w-[44px] min-h-[44px] flex md:hidden items-center justify-center rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/10"
           aria-label={config.isMobileOpen ? t('navbar.closeMenu') : t('navbar.openMenu')}
         >
           {config.isMobileOpen ? (
@@ -86,7 +86,7 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
         <button
           type="button"
           onClick={() => navigate(ROUTES.HOME)}
-          className="hidden lg:flex flex-col leading-tight hover:opacity-80 transition-opacity text-left"
+          className="hidden lg:flex flex-col leading-tight justify-center min-h-[44px] hover:opacity-80 transition-opacity text-left"
           aria-label={t('navbar.goHome')}
         >
           <span className="text-base md:text-lg font-semibold text-foreground">{branding.appName}</span>
@@ -172,7 +172,7 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
           {/* Theme toggle */}
           <button
             onClick={toggleTheme}
-            className="p-2 shrink-0 hover:bg-secondary rounded-lg transition-colors"
+            className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center shrink-0 hover:bg-secondary rounded-lg transition-colors"
             title={t('navbar.themeToggle', { theme })}
           >
             {theme === 'dark' ? (
