@@ -240,3 +240,128 @@ describe('getWidgetFilename', () => {
     expect(getWidgetFilename(config)).toBe('widget.jsx')
   })
 })
+
+// --- Regression tests for #6703, #6704, #6705, #6706 -----------------------
+// These cover:
+//  - #6705: generated JSX must not allow a user-controlled display name to
+//    inject executable markup.
+//  - #6703: template widgets that contain ONLY stats (no cards) must not
+//    produce an invalid curl command.
+//  - #6704: stat data-path extraction must support bracket/index notation.
+//  - #6706: the widget test suite was missing both #6703 and #6704 before
+//    this change.
+
+describe('generator hardening', () => {
+  // Minimal snapshot of the module-under-test so we can inject a hostile
+  // card displayName without touching the shared WIDGET_CARDS registry at
+  // runtime. Using vi.doMock would require isolateModules gymnastics — we
+  // instead exploit the fact that WIDGET_CARDS is mutable at test time.
+  it('does not inject executable <script> into generated JSX when title has HTML (default card branch)', async () => {
+    const { WIDGET_CARDS } = await import('../widgetRegistry')
+    const HOSTILE_TYPE = '__hostile_test_card__'
+    const HOSTILE_TITLE = '</div><script>alert(1)</script>'
+    // Use a card type that falls through to the default render branch in
+    // generateCardRenderFunction — that's the branch that interpolates the
+    // title directly into the JSX source.
+    ;(WIDGET_CARDS as Record<string, unknown>)[HOSTILE_TYPE] = {
+      type: HOSTILE_TYPE,
+      displayName: HOSTILE_TITLE,
+      description: 'test only',
+      apiEndpoints: ['/api/test'],
+    }
+    try {
+      const code = generateCardWidget(HOSTILE_TYPE, 'http://localhost:8080')
+      // Strip every single- and double-quoted string literal and every
+      // line/block comment, then assert the generated source has no live
+      // <script> markup left behind. The hostile title only gets emitted
+      // inside a `{"..."}` JSX expression (JSON.stringify), so after
+      // scrubbing string literals it must be gone. If the implementation
+      // regresses and interpolates the title raw into JSX, the
+      // <script> tag will survive the scrub and this test will catch it.
+      const scrubbed = code
+        // strip block comments
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        // strip line comments
+        .replace(/\/\/.*$/gm, '')
+        // strip double-quoted strings
+        .replace(/"(?:[^"\\]|\\.)*"/g, '""')
+        // strip single-quoted strings
+        .replace(/'(?:[^'\\]|\\.)*'/g, "''")
+        // strip template literals
+        .replace(/`(?:[^`\\]|\\.)*`/g, '``')
+      expect(scrubbed).not.toContain('<script')
+      expect(scrubbed).not.toContain('alert(1)')
+      // And it should round-trip through JSON.stringify inside braces.
+      expect(code).toContain(JSON.stringify(HOSTILE_TITLE))
+    } finally {
+      delete (WIDGET_CARDS as Record<string, unknown>)[HOSTILE_TYPE]
+    }
+  })
+
+  it('throws a clear error when a stats-only template has no resolvable endpoint', async () => {
+    const { WIDGET_TEMPLATES, WIDGET_STATS } = await import('../widgetRegistry')
+    const STATS_ONLY_ID = '__stats_only_no_endpoint__'
+    const BROKEN_STAT_ID = '__broken_stat__'
+    ;(WIDGET_STATS as Record<string, unknown>)[BROKEN_STAT_ID] = {
+      id: BROKEN_STAT_ID,
+      displayName: 'Broken',
+      apiEndpoint: '', // missing endpoint is the failure mode under test
+      dataPath: 'foo',
+      color: '#fff',
+      format: 'number',
+    }
+    ;(WIDGET_TEMPLATES as Record<string, unknown>)[STATS_ONLY_ID] = {
+      id: STATS_ONLY_ID,
+      displayName: 'Stats Only',
+      description: 'test only',
+      cards: [],
+      stats: [BROKEN_STAT_ID],
+      layout: 'row',
+    }
+    try {
+      expect(() => generateTemplateWidget(STATS_ONLY_ID, 'http://localhost:8080'))
+        .toThrow(/no resolvable data endpoint/)
+    } finally {
+      delete (WIDGET_TEMPLATES as Record<string, unknown>)[STATS_ONLY_ID]
+      delete (WIDGET_STATS as Record<string, unknown>)[BROKEN_STAT_ID]
+    }
+  })
+
+  it('generated stat widget extractor supports bracket/index notation for dataPath', async () => {
+    const { WIDGET_STATS } = await import('../widgetRegistry')
+    const BRACKET_STAT_ID = '__bracket_stat__'
+    ;(WIDGET_STATS as Record<string, unknown>)[BRACKET_STAT_ID] = {
+      id: BRACKET_STAT_ID,
+      displayName: 'Bracket Stat',
+      apiEndpoint: '/api/test',
+      dataPath: 'items[0].foo.bar',
+      color: '#fff',
+      format: 'number',
+    }
+    try {
+      const code = generateStatWidget([BRACKET_STAT_ID], 'http://localhost:8080')
+      // The generated getData helper should NOT be the naive split('.')
+      // that would produce src['items[0]'] and always return 0.
+      expect(code).not.toMatch(/path\.split\('\.'\)\.reduce\(/)
+      // It should include the bracket-normalization we introduced.
+      expect(code).toMatch(/replace\(\/\\\[/)
+      // The dataPath must still be passed through literally.
+      expect(code).toContain("getData('items[0].foo.bar', data)")
+
+      // And functionally: evaluate the generated helper to confirm it
+      // walks bracket notation correctly. We extract the helper by name
+      // and eval it in isolation.
+      const helperMatch = code.match(/const getData = \(path, src\) => \{[\s\S]*?\n {2}\};/)
+      expect(helperMatch).toBeTruthy()
+      const getData = new Function(`${helperMatch![0]}; return getData;`)() as (
+        path: string,
+        src: unknown,
+      ) => unknown
+      const sample = { items: [{ foo: { bar: 42 } }] }
+      expect(getData('items[0].foo.bar', sample)).toBe(42)
+      expect(getData('missing.path', sample)).toBe(0)
+    } finally {
+      delete (WIDGET_STATS as Record<string, unknown>)[BRACKET_STAT_ID]
+    }
+  })
+})

@@ -419,20 +419,27 @@ ${wrapOpen}
         </div>${wrapClose}
 };`
 
-    default:
+    default: {
+      // Emit the title as a JSX *text node* (braced string expression) rather
+      // than interpolating it raw into the JSX source. That way, even if a
+      // user-controlled displayName contains markup like
+      // `</div><script>alert(1)</script>`, React renders it as plain text and
+      // escapes it instead of compiling it as live JSX.
+      const safeTitleExpr = `{${JSON.stringify(title)}}`
       return `
 export const render = ({ output }) => {${parseBlock}
 
   if (error) {${wrapOpen}
-        <div style={styles.cardTitle}>${title}</div>
+        <div style={styles.cardTitle}>${safeTitleExpr}</div>
         <span style={{color: styles.colors.error}}>Error: {error}</span>${wrapClose}
   }
 ${wrapOpen}
-        <div style={styles.cardTitle}>${title}</div>
+        <div style={styles.cardTitle}>${safeTitleExpr}</div>
         <pre style={{fontSize: '10px', overflow: 'auto', maxHeight: '100px'}}>
           {JSON.stringify(data, null, 2)}
         </pre>${wrapClose}
 };`
+    }
   }
 }
 
@@ -490,10 +497,23 @@ export const render = ({ output }) => {
     return <div style={styles.row}><span style={{color: styles.colors.error}}>Error</span></div>;
   }
 
-  // Extract values from API responses
+  // Extract values from API responses.
+  // Supports dotted paths ('a.b.c') AND bracket notation for array/numeric
+  // index access ('items[0].foo.bar'). Without the bracket handling, a path
+  // like 'items[0]' would be walked as src['items[0]'] which is always
+  // undefined and silently returns 0, making stat widgets look broken.
   const getData = (path, src) => {
     try {
-      return path.split('.').reduce((o, k) => o[k], src) || 0;
+      const tokens = String(path)
+        .replace(/\\[(\\w+)\\]/g, '.$1')
+        .split('.')
+        .filter(Boolean);
+      let cur = src;
+      for (const t of tokens) {
+        if (cur == null) return 0;
+        cur = cur[t];
+      }
+      return cur ?? 0;
     } catch {
       return 0;
     }
@@ -549,8 +569,19 @@ export function generateTemplateWidget(
     }
   })
 
-  // For templates, use the first endpoint (primary data source)
-  const curlUrl = `${apiEndpoint}${allEndpoints[0]}`
+  // For templates, use the first endpoint (primary data source). Templates
+  // that contain ONLY stats (no cards) and whose stats expose no
+  // apiEndpoint previously produced a curl command of the form
+  // `<apiEndpoint>undefined`, which silently 404'd at runtime. Fall back to
+  // the first stat's endpoint when cards are empty, and throw a clear error
+  // if nothing at all is resolvable so callers see the problem immediately.
+  const firstEndpoint = allEndpoints[0]
+  if (!firstEndpoint) {
+    throw new Error(
+      `Template "${templateId}" has no resolvable data endpoint (no cards and no stat.apiEndpoint)`,
+    )
+  }
+  const curlUrl = `${apiEndpoint}${firstEndpoint}`
 
   return `/**
  * ${template.displayName} Widget
