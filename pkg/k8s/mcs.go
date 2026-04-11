@@ -50,6 +50,11 @@ func (m *MultiClusterClient) ListServiceExports(ctx context.Context) (*v1alpha1.
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	exports := make([]v1alpha1.ServiceExport, 0)
+	// Per-cluster error accumulator — must not silently drop whole clusters
+	// on a real error now that ListServiceExportsForCluster correctly returns
+	// non-CRD-missing errors (#6547). Mirrors the handler-level ClusterErrors
+	// pattern used by /api/service-exports (#6483).
+	clusterErrors := make([]v1alpha1.MCSClusterError, 0)
 
 	for _, clusterName := range clusters {
 		wg.Add(1)
@@ -58,6 +63,13 @@ func (m *MultiClusterClient) ListServiceExports(ctx context.Context) (*v1alpha1.
 
 			clusterExports, err := m.ListServiceExportsForCluster(ctx, cluster, "")
 			if err != nil {
+				mu.Lock()
+				clusterErrors = append(clusterErrors, v1alpha1.MCSClusterError{
+					Cluster:   cluster,
+					ErrorType: "list_failed",
+					Message:   err.Error(),
+				})
+				mu.Unlock()
 				return
 			}
 
@@ -70,8 +82,9 @@ func (m *MultiClusterClient) ListServiceExports(ctx context.Context) (*v1alpha1.
 	wg.Wait()
 
 	return &v1alpha1.ServiceExportList{
-		Items:      exports,
-		TotalCount: len(exports),
+		Items:         exports,
+		TotalCount:    len(exports),
+		ClusterErrors: clusterErrors,
 	}, nil
 }
 
@@ -144,6 +157,8 @@ func (m *MultiClusterClient) ListServiceImports(ctx context.Context) (*v1alpha1.
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	imports := make([]v1alpha1.ServiceImport, 0)
+	// Per-cluster error accumulator — see ListServiceExports for rationale (#6547).
+	clusterErrors := make([]v1alpha1.MCSClusterError, 0)
 
 	for _, clusterName := range clusters {
 		wg.Add(1)
@@ -152,6 +167,13 @@ func (m *MultiClusterClient) ListServiceImports(ctx context.Context) (*v1alpha1.
 
 			clusterImports, err := m.ListServiceImportsForCluster(ctx, cluster, "")
 			if err != nil {
+				mu.Lock()
+				clusterErrors = append(clusterErrors, v1alpha1.MCSClusterError{
+					Cluster:   cluster,
+					ErrorType: "list_failed",
+					Message:   err.Error(),
+				})
+				mu.Unlock()
 				return
 			}
 
@@ -164,8 +186,9 @@ func (m *MultiClusterClient) ListServiceImports(ctx context.Context) (*v1alpha1.
 	wg.Wait()
 
 	return &v1alpha1.ServiceImportList{
-		Items:      imports,
-		TotalCount: len(imports),
+		Items:         imports,
+		TotalCount:    len(imports),
+		ClusterErrors: clusterErrors,
 	}, nil
 }
 

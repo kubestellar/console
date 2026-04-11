@@ -205,14 +205,14 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
                 onClick={() => setShowMobileMore(false)}
               />
               {/* Bottom sheet menu on mobile */}
-              <div className={`fixed ${isMobile ? 'inset-x-0 bottom-0 rounded-t-2xl max-h-[60dvh]' : 'right-4 w-64 rounded-lg'} bg-card border border-border shadow-xl z-modal overflow-hidden`} style={isMobile ? undefined : { top: topOffset + NAVBAR_HEIGHT_PX }}>
+              <div className={`fixed ${isMobile ? 'inset-x-0 bottom-0 rounded-t-2xl max-h-[60vh] max-h-[60dvh]' : 'right-4 w-64 rounded-lg'} bg-card border border-border shadow-xl z-modal overflow-hidden`} style={isMobile ? undefined : { top: topOffset + NAVBAR_HEIGHT_PX }}>
                 {/* Drag handle for mobile */}
                 {isMobile && (
                   <div className="flex justify-center py-2">
                     <div className="w-10 h-1 bg-muted-foreground/30 rounded-full" />
                   </div>
                 )}
-                <div className={`${isMobile ? 'max-h-[calc(60dvh-24px)]' : ''} overflow-y-auto py-2`}>
+                <div className={`${isMobile ? 'max-h-[calc(60vh-24px)] max-h-[calc(60dvh-24px)]' : ''} overflow-y-auto py-2`}>
                   {/* Search on mobile */}
                   <div className="px-3 py-2 sm:hidden">
                     <Suspense fallback={null}><SearchDropdown /></Suspense>

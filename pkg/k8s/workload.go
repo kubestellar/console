@@ -10,6 +10,7 @@ import (
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -479,13 +480,20 @@ func (m *MultiClusterClient) GetWorkload(ctx context.Context, cluster, namespace
 		obj, getErr := dynamicClient.Resource(k.gvr).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
 		if getErr != nil {
 			if apierrors.IsNotFound(getErr) {
-				// Expected — try the next kind.
+				// Expected — this kind doesn't have an object with that name. Try next.
 				continue
 			}
-			// Unexpected error (auth, network, server). Fall back to the
-			// old list-based path so the caller never regresses to a hard
-			// failure just because one kind happened to be unavailable.
-			return m.getWorkloadByList(ctx, cluster, namespace, name)
+			if apimeta.IsNoMatchError(getErr) {
+				// The cluster doesn't know about this GVR (older k8s, CRD missing,
+				// or discovery cache stale). Fall back to the legacy list-based
+				// path which handles kind-availability gracefully. (#6547)
+				return m.getWorkloadByList(ctx, cluster, namespace, name)
+			}
+			// Real error (auth, network, server). Do NOT silently fall through
+			// to the list path — that path logs-and-swallows list errors and
+			// would turn an auth failure into a false "not found". Return it
+			// so callers can surface the underlying problem. (#6547)
+			return nil, fmt.Errorf("get %s/%s in %s: %w", k.gvr.Resource, name, namespace, getErr)
 		}
 		list := &unstructured.UnstructuredList{Items: []unstructured.Unstructured{*obj}}
 		parsed := k.parser(list, cluster)
@@ -691,8 +699,10 @@ func (m *MultiClusterClient) DeployWorkload(ctx context.Context, sourceCluster, 
 						// Genuine "does not exist" — the Create error is authoritative.
 						lastErr = fmt.Errorf("cluster %s: create failed: %w", targetCluster, err)
 					} else {
-						// Non-NotFound Get error (network, auth, server) — surface both.
-						lastErr = fmt.Errorf("cluster %s: create failed: %w; also get failed: %v", targetCluster, err, getErr)
+						// Non-NotFound Get error (network, auth, server) — surface
+						// BOTH errors with %w so callers can errors.Is/As either
+						// one. Go 1.20+ supports multi-error %w. (#6547)
+						lastErr = fmt.Errorf("cluster %s: create failed: %w; also get failed: %w", targetCluster, err, getErr)
 					}
 					mu.Unlock()
 					return

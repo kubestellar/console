@@ -358,7 +358,7 @@ export function Sidebar() {
                   if (e.key === 'Escape') { setEditingItemId(null); setEditingName('') }
                 }}
                 autoFocus
-                className="w-[150px] md:w-full flex-1 flex-shrink bg-transparent border-b border-purple-500 outline-none text-foreground text-sm min-w-0"
+                className="w-[150px] md:w-full md:flex-1 shrink bg-transparent border-b border-purple-500 outline-none text-foreground text-sm min-w-0"
               />
             )}
             {!isCollapsed && <GripVertical className="w-3.5 h-3.5 text-muted-foreground/50 flex-shrink-0" />}

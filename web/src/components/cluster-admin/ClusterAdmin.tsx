@@ -24,24 +24,36 @@ export function ClusterAdmin() {
   const warningEvents = rawWarningEvents || []
   const nodes = rawNodes || []
 
-  // Stale-while-revalidate: remember the last non-zero values for Nodes/Warnings
-  // so refreshes don't flash 0 → final value (issue #6485). During a refresh,
+  // Stale-while-revalidate: remember the last observed values for Nodes/Warnings/Pod
+  // Issues so refreshes don't flash 0 → final value (issue #6485). During a refresh,
   // the underlying hooks briefly return empty arrays before the new fetch resolves.
-  const lastNodeCountRef = useRef(0)
-  const lastWarningCountRef = useRef(0)
-  const lastPodIssueCountRef = useRef(0)
+  //
+  // Copilot fix (#6539): the fallback is ONLY applied while a load is in-flight and
+  // we have a prior non-null value. Once loading completes, we trust the fetch result
+  // even when it is zero — otherwise legitimate "all warnings cleared" / "all pod
+  // issues resolved" transitions are masked by the last non-zero value.
+  const lastNodeCountRef = useRef<number | null>(null)
+  const lastWarningCountRef = useRef<number | null>(null)
+  const lastPodIssueCountRef = useRef<number | null>(null)
   useEffect(() => {
-    if (!isLoadingNodes && nodes.length > 0) lastNodeCountRef.current = nodes.length
+    if (!isLoadingNodes) lastNodeCountRef.current = nodes.length
   }, [isLoadingNodes, nodes.length])
   useEffect(() => {
-    if (!isLoadingWarnings && warningEvents.length > 0) lastWarningCountRef.current = warningEvents.length
+    if (!isLoadingWarnings) lastWarningCountRef.current = warningEvents.length
   }, [isLoadingWarnings, warningEvents.length])
   useEffect(() => {
-    if (!isLoadingPodIssues && podIssues.length > 0) lastPodIssueCountRef.current = podIssues.length
+    if (!isLoadingPodIssues) lastPodIssueCountRef.current = podIssues.length
   }, [isLoadingPodIssues, podIssues.length])
-  const displayNodeCount = nodes.length > 0 ? nodes.length : lastNodeCountRef.current
-  const displayWarningCount = warningEvents.length > 0 ? warningEvents.length : lastWarningCountRef.current
-  const displayPodIssueCount = podIssues.length > 0 ? podIssues.length : lastPodIssueCountRef.current
+  const displayNodeCount =
+    isLoadingNodes && lastNodeCountRef.current != null ? lastNodeCountRef.current : nodes.length
+  const displayWarningCount =
+    isLoadingWarnings && lastWarningCountRef.current != null
+      ? lastWarningCountRef.current
+      : warningEvents.length
+  const displayPodIssueCount =
+    isLoadingPodIssues && lastPodIssueCountRef.current != null
+      ? lastPodIssueCountRef.current
+      : podIssues.length
 
   // Use the centralised health state machine so these counts always agree
   // with the main cluster grid, sidebar stats and filter tabs (#5928).

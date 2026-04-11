@@ -3,7 +3,6 @@ package k8s
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -95,7 +94,11 @@ func TestBuildProbeNamespaces(t *testing.T) {
 		}
 	})
 	t.Run("user namespace dedup with default", func(t *testing.T) {
-		os.Unsetenv(probeNamespacesEnvVar)
+		// Use t.Setenv("") to clear the env var for the duration of this
+		// subtest; Go auto-restores it on cleanup so parallel tests that
+		// read the same variable don't flake (#6547). os.Unsetenv mutated
+		// global process state without restoration.
+		t.Setenv(probeNamespacesEnvVar, "")
 		got := buildProbeNamespaces("default")
 		// "default" should appear only once and be first
 		count := 0

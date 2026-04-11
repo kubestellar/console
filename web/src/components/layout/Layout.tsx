@@ -502,7 +502,11 @@ export function Layout({ children: _children }: LayoutProps) {
           // entire main column past the viewport at narrow breakpoints
           // (issues 6385, 6387, 6394). Individual scrollable children
           // (tables, code blocks) still scroll horizontally inside wrappers.
-          className="relative flex-1 p-4 pb-[calc(6rem+env(safe-area-inset-bottom))] md:p-6 md:pb-[calc(7rem+env(safe-area-inset-bottom))] transition-[margin] duration-300 overflow-y-auto overflow-x-hidden scroll-enhanced min-w-0"
+          // pb-24/pb-28 is the baseline so browsers without env() support
+          // still get valid bottom padding; the calc(...env()) variants
+          // extend it by the safe-area inset when supported. If the whole
+          // calc() value were invalid it would drop padding entirely (#6548).
+          className="relative flex-1 p-4 pb-24 pb-[calc(6rem+env(safe-area-inset-bottom))] md:p-6 md:pb-28 md:pb-[calc(7rem+env(safe-area-inset-bottom))] transition-[margin] duration-300 overflow-y-auto overflow-x-hidden scroll-enhanced min-w-0"
         >
           <NavigationProgress />
           <Suspense fallback={<ContentLoadingSkeleton />}>

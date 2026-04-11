@@ -586,7 +586,9 @@ export function MissionSidebar() {
           "fixed bg-card border-border z-modal flex flex-col overflow-hidden shadow-2xl",
           !isResizing && "transition-[width,top,border,transform] duration-300 ease-in-out",
           // Mobile: bottom sheet
-          isMobile && "inset-x-0 bottom-0 rounded-t-2xl border-t max-h-[80dvh]",
+          // vh fallback before dvh so browsers without dynamic-viewport-unit
+          // support still cap the sheet height (#6548).
+          isMobile && "inset-x-0 bottom-0 rounded-t-2xl border-t max-h-[80vh] max-h-[80dvh]",
           isMobile && !isSidebarOpen && "translate-y-full pointer-events-none",
           isMobile && isSidebarOpen && "translate-y-0",
           // Desktop: right sidebar

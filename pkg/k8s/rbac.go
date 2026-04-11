@@ -771,6 +771,13 @@ type userNamespaceCtxKey struct{}
 // calling into k8s client helpers so namespace probing prefers the user's
 // own namespace (#6512).
 func WithUserNamespace(ctx context.Context, ns string) context.Context {
+	// Guard against a nil parent ctx — context.WithValue panics on nil.
+	// userNamespaceFromContext already tolerates a nil ctx, so stay
+	// symmetric and fall back to a background context if a caller hands
+	// us nil (#6547).
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	if ns == "" {
 		return ctx
 	}

@@ -414,8 +414,10 @@ func (m *MultiClusterClient) GetAllClusterHealth(ctx context.Context) ([]Cluster
 	select {
 	case <-waitCh:
 	case <-deadlineCtx.Done():
-		// Global deadline exceeded — give stragglers a brief grace window so
-		// the goroutine records its own result before we synthesize a timeout.
+		// Global deadline exceeded — any slots still marked !done will be
+		// synthesized as timeout entries in the loop below. We do not wait
+		// any additional grace period here; doing so would extend the caller's
+		// effective timeout beyond deadlineCtx. (#6547)
 	}
 
 	now := time.Now().Format(time.RFC3339)

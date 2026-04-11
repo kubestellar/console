@@ -62,6 +62,8 @@ export default {
        *
        * z-dropdown (100) — Popovers, dropdowns, tooltips, floating panels
        * z-sticky   (200) — Sticky headers, floating action buttons
+       * z-floating (250) — Portaled floating menus that must sit above sticky headers
+       *                    but below non-modal overlays (e.g. agent selector dropdown)
        * z-overlay  (300) — Non-modal backdrops (mobile sidebar, notification dimmer)
        * z-modal    (400) — All modals and dialogs
        * z-toast    (500) — Toast notifications (always on top of modals)
@@ -72,6 +74,7 @@ export default {
       zIndex: {
         dropdown: '100',
         sticky: '200',
+        floating: '250',
         overlay: '300',
         modal: '400',
         toast: '500',
