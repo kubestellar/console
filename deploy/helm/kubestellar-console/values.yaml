@@ -35,6 +35,15 @@ podLabels: {}
 podSecurityContext: {}
 
 securityContext:
+  # #6323/#6324: must be a numeric UID (not `appuser`) so the kubelet
+  # can verify non-root without reading the image manifest. Matches
+  # the Dockerfile's `addgroup -g 1001 … adduser -u 1001 … appuser`
+  # + `USER appuser`. Without an explicit numeric runAsUser,
+  # Kubernetes blocks startup on Kind/Minikube/OpenShift with:
+  #   CreateContainerConfigError: container has runAsNonRoot
+  #   and image has non-numeric user (appuser)
+  runAsUser: 1001
+  runAsGroup: 1001
   runAsNonRoot: true
   readOnlyRootFilesystem: true
   capabilities:

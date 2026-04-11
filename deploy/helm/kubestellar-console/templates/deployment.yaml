@@ -36,6 +36,13 @@ spec:
       initContainers:
         - name: db-restore
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          # #6323/#6324: init container uses the same image as the app
+          # container (`appuser`), so it needs the same numeric UID.
+          # Without this, the init container would also hit
+          # "container has runAsNonRoot and image has non-numeric user"
+          # on clusters enforcing PodSecurity restricted.
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
           command:
             - /bin/sh
             - -c
