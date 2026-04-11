@@ -20,11 +20,35 @@ import { cn } from '../../lib/cn'
 import { Button } from '../ui/Button'
 import { useMissions } from '../../hooks/useMissions'
 import { loadMissionPrompt } from '../cards/multi-tenancy/missionLoader'
-import type { MissionControlState, PhaseProgress, PhaseStatus } from './types'
+import type { DeployPhase, MissionControlState, PhaseProgress, PhaseStatus } from './types'
 import { buildInstallPromptForProject, isSafeProjectName } from './useMissionControl'
 
 /** Terminal statuses that indicate a project is no longer in-flight */
 const TERMINAL_STATUSES: readonly string[] = ['completed', 'failed', 'skipped']
+
+/**
+ * #6408 — Fallback phase builder used when `state.phases` is empty but
+ * assignments still exist. Packs every assigned project into a single
+ * "Phase 1: Deploy" so `LaunchSequence` actually runs something instead of
+ * calling `onComplete()` on an empty list and telling the user the mission
+ * succeeded with zero deployments.
+ */
+function buildFallbackPhasesFromAssignments(
+  state: MissionControlState,
+): DeployPhase[] {
+  const projectNames: string[] = []
+  const seen = new Set<string>()
+  for (const a of state.assignments) {
+    for (const n of a.projectNames || []) {
+      if (!seen.has(n)) {
+        seen.add(n)
+        projectNames.push(n)
+      }
+    }
+  }
+  if (projectNames.length === 0) return []
+  return [{ phase: 1, name: 'Deploy', projectNames }]
+}
 
 interface LaunchSequenceProps {
   state: MissionControlState
@@ -74,10 +98,21 @@ export function LaunchSequence({
   const progressRef = useRef<PhaseProgress[]>(state.launchProgress)
   const startedMissions = useRef(new Set<string>())
 
+  // #6408 — If `state.phases` is empty but the user has assignments, rebuild
+  // a single deploy phase from those assignments instead of calling
+  // `onComplete()` on an empty list (which would congratulate the user for
+  // deploying zero things). If BOTH phases and assignments are empty, we
+  // fall through to the "no projects to deploy" error path below.
+  const effectivePhases = useMemo(() => {
+    if (state.phases.length > 0) return state.phases
+    return buildFallbackPhasesFromAssignments(state)
+  }, [state])
+  const hasNothingToDeploy = effectivePhases.length === 0
+
   /** Content-based signature for phase membership (#5508) */
   const phaseSignature = useMemo(
-    () => computePhaseSignature(state.phases),
-    [state.phases]
+    () => computePhaseSignature(effectivePhases),
+    [effectivePhases]
   )
 
   // Initialize progress from phases — keyed on content signature, not just length (#5508)
@@ -86,9 +121,9 @@ export function LaunchSequence({
       progressRef.current = state.launchProgress
       return
     }
-    if (state.phases.length === 0) return
+    if (effectivePhases.length === 0) return
 
-    const initial: PhaseProgress[] = state.phases.map((phase) => ({
+    const initial: PhaseProgress[] = effectivePhases.map((phase) => ({
       phase: phase.phase,
       status: 'pending' as PhaseStatus,
       projects: (phase.projectNames || []).map((name) => ({
@@ -222,8 +257,13 @@ export function LaunchSequence({
       progressRef.current = updated
       onUpdateProgress(updated)
 
+      // #6408 — Never call onComplete on an empty progress list. Without
+      // this guard, a launch triggered on zero phases (phases === [] and
+      // assignments === []) would fire onComplete immediately and show a
+      // bogus "Mission Complete!" celebration.
+      if (updated.length === 0) return
       // Check if all phases complete
-      if (updated.length > 0 && updated.every((p) => TERMINAL_STATUSES.includes(p.status))) {
+      if (updated.every((p) => TERMINAL_STATUSES.includes(p.status))) {
         onComplete()
       }
     }
@@ -232,6 +272,9 @@ export function LaunchSequence({
   /**
    * Wait for a specific phase to reach a terminal status.
    * Used by phased mode to gate sequential phase execution (#5506).
+   * #6405 — Returns the terminal status so the caller can distinguish
+   * "fully succeeded" from "terminally failed" and block dependent phases
+   * when a failure occurred.
    */
   const waitForPhaseCompletion = useCallback((phaseNum: number): Promise<PhaseStatus> => {
     return new Promise((resolve) => {
@@ -258,7 +301,7 @@ export function LaunchSequence({
 
     if (isYolo) {
       // Launch everything at once
-      for (const phase of (state.phases || [])) {
+      for (const phase of effectivePhases) {
         for (const projectName of (phase.projectNames || [])) {
           if (!startedMissions.current.has(projectName)) {
             startedMissions.current.add(projectName)
@@ -268,7 +311,7 @@ export function LaunchSequence({
       }
     } else {
       // Phased: launch phase N, wait for completion, then phase N+1 (#5506)
-      for (const phase of (state.phases || [])) {
+      for (const phase of effectivePhases) {
         updateProgress((prev) =>
           prev.map((p) =>
             p.phase === phase.phase ? { ...p, status: 'running' } : p
@@ -284,14 +327,24 @@ export function LaunchSequence({
         }
 
         // Wait for this phase to reach a terminal state before starting the next (#5506)
-        await waitForPhaseCompletion(phase.phase)
+        // #6405 — Only advance on a fully-succeeded phase. A `failed` status
+        // means at least one project in this phase is terminally failed and
+        // the user is looking at a "Retry Failed" button — we must NOT
+        // auto-advance to dependent phases from that state.
+        const result = await waitForPhaseCompletion(phase.phase)
+        if (result !== 'completed') {
+          // Block dependent phases. The Retry Failed button will re-invoke
+          // launchProject for the failed entries; if the retry succeeds, the
+          // user can manually proceed via the normal completion path.
+          break
+        }
       }
     }
   }
 
   // Auto-start on mount — keyed on content signature (#5508)
   useEffect(() => {
-    if (!isStarted && state.phases.length > 0) {
+    if (!isStarted && effectivePhases.length > 0) {
       startLaunch()
     }
   }, [phaseSignature])
@@ -301,6 +354,30 @@ export function LaunchSequence({
     (p) => p.status === 'completed' || p.status === 'failed' || p.status === 'skipped'
   )
   const allSuccess = progress.length > 0 && progress.every((p) => p.status === 'completed')
+
+  // #6408 — If the wizard landed on Launch with no phases AND no assignments,
+  // show an explicit error instead of auto-firing onComplete().
+  if (hasNothingToDeploy) {
+    return (
+      <div className="max-w-3xl mx-auto p-6 space-y-6">
+        <div className="text-center">
+          <div className="inline-flex p-3 rounded-2xl bg-amber-500/20 mb-3">
+            <AlertTriangle className="w-8 h-8 text-amber-400" />
+          </div>
+          <h2 className="text-2xl font-bold">No projects to deploy</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Your mission has no cluster assignments. Go back to the Chart
+            Course phase to assign projects before launching.
+          </p>
+        </div>
+        <div className="flex justify-center gap-3 pt-2">
+          <Button variant="secondary" size="sm" onClick={() => onClose ? onClose() : onComplete()}>
+            Close
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="max-w-3xl mx-auto p-6 space-y-6">
@@ -332,14 +409,14 @@ export function LaunchSequence({
         <p className="text-sm text-muted-foreground mt-1">
           {allComplete
             ? 'All deployment phases have finished.'
-            : `Deploying ${state.projects.length} projects in ${state.phases.length} phases`}
+            : `Deploying ${state.projects.length} projects in ${effectivePhases.length} phases`}
         </p>
       </div>
 
       {/* Phase checklist */}
       <div className="space-y-4">
         {progress.map((phase) => {
-          const phaseDef = state.phases.find((p) => p.phase === phase.phase)
+          const phaseDef = effectivePhases.find((p) => p.phase === phase.phase)
           return (
             <motion.div
               key={phase.phase}

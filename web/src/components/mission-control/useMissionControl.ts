@@ -289,11 +289,79 @@ export function useMissionControl() {
   const { releases: helmReleases } = useHelmReleases()
   const { clusters } = useClusters()
   const lastParsedContentRef = useRef('')
+  // #6403 — Stale persisted state can reference clusters that were renamed or
+  // deleted between sessions. When the current cluster list loads, cross-check
+  // every referenced cluster name and drop assignments/targetClusters for
+  // clusters that no longer exist. The removed names are surfaced via
+  // `staleClusterNames` so the UI can show a banner exactly once.
+  const [staleClusterNames, setStaleClusterNames] = useState<string[]>([])
+  const staleReconcileDoneRef = useRef(false)
+  // #6404 — Sequence counter to discard late-arriving AI stream responses
+  // that would otherwise clobber manual assignments. The counter bumps on
+  // every phase change or manual mutation. When we dispatch an AI prompt,
+  // we snapshot the current counter; when the stream completes, we only
+  // apply the result if the counter hasn't advanced.
+  const userMutationGenerationRef = useRef(0)
+  const lastDispatchedGenerationRef = useRef(0)
+  const bumpUserGeneration = () => {
+    userMutationGenerationRef.current += 1
+  }
 
   // Persist on change (debounced via effect)
   useEffect(() => {
     persistState(state)
   }, [state])
+
+  // #6403 — Reconcile persisted cluster references against the current
+  // cluster list. Runs once after clusters have loaded (non-empty list or
+  // explicit empty-after-load). We can't tell "still loading" from "zero
+  // clusters" purely by length, so we gate on the first render where
+  // `clusters` is a non-null array — the first truthy load — and only
+  // reconcile if the persisted state actually references cluster names
+  // (an empty wizard has nothing to reconcile).
+  useEffect(() => {
+    if (staleReconcileDoneRef.current) return
+    if (!clusters) return
+    const hasReferences =
+      state.assignments.length > 0 || state.targetClusters.length > 0
+    if (!hasReferences) {
+      // Nothing to reconcile, but still mark done so we don't re-check.
+      staleReconcileDoneRef.current = true
+      return
+    }
+    const liveNames = new Set(clusters.map((c) => c.name))
+    const staleFromAssignments = state.assignments
+      .filter((a) => !liveNames.has(a.clusterName))
+      .map((a) => a.clusterName)
+    const staleFromTargets = state.targetClusters.filter((n) => !liveNames.has(n))
+    const allStale = Array.from(new Set([...staleFromAssignments, ...staleFromTargets]))
+    if (allStale.length === 0) {
+      staleReconcileDoneRef.current = true
+      return
+    }
+    staleReconcileDoneRef.current = true
+    // Reconciliation is a one-shot synchronization against external data
+    // (the live cluster list), not a react-to-user event, so setState in
+    // this effect is the right tool here. The ref guard above ensures it
+    // runs exactly once per load.
+    /* eslint-disable react-hooks/set-state-in-effect */
+    setStaleClusterNames(allStale)
+    setState((prev) => ({
+      ...prev,
+      assignments: prev.assignments.filter((a) => liveNames.has(a.clusterName)),
+      targetClusters: prev.targetClusters.filter((n) => liveNames.has(n)),
+      // Phases may reference projects on the removed clusters — clear phases
+      // so Flight Plan regenerates them from the surviving assignments.
+      phases: [] }))
+    /* eslint-enable react-hooks/set-state-in-effect */
+    console.warn(
+      `[MissionControl] #6403 — dropped ${allStale.length} stale cluster reference(s) from persisted state: ${allStale.join(', ')}`,
+    )
+  }, [clusters, state.assignments, state.targetClusters])
+
+  const acknowledgeStaleClusters = () => {
+    setStaleClusterNames([])
+  }
 
   // ---------------------------------------------------------------------------
   // AI conversation monitoring
@@ -375,6 +443,18 @@ export function useMissionControl() {
         warnings?: string[]
       }>(latest.content, 'assignments')
       if (parsed?.assignments) {
+        // #6404 — Discard late-arriving AI responses that would clobber
+        // manual assignments. If the user has mutated state (or changed
+        // phase) since this prompt was dispatched, drop the result.
+        if (
+          lastDispatchedGenerationRef.current !== userMutationGenerationRef.current
+        ) {
+          console.warn(
+            '[MissionControl] #6404 — discarding stale AI assignment stream (user mutated state after dispatch)',
+          )
+          lastParsedContentRef.current = latest.content
+          return
+        }
         lastParsedContentRef.current = latest.content
         setState((prev) => {
           const aiAssignments = parsed.assignments!
@@ -481,6 +561,14 @@ export function useMissionControl() {
 
   const askAIForSuggestions = (description: string, existingProjects: PayloadProject[] = []) => {
       const currentState = stateRef.current
+      // #6406 — Guard against rapid-click parallel requests. The button is
+      // already `disabled={aiStreaming}` in the UI, but keyboard users and
+      // rapid double-clicks can still land a second call before the state
+      // updates — so early-return here too (belt-and-suspenders).
+      if (currentState.aiStreaming) {
+        console.warn('[MissionControl] #6406 — askAIForSuggestions called while already streaming; ignoring')
+        return
+      }
       const currentHelmReleases = helmReleasesRef.current
       let missionId = currentState.planningMissionId
 
@@ -601,6 +689,11 @@ Include real CNCF projects only. Consider dependencies between projects.`
   // ---------------------------------------------------------------------------
 
   const askAIForAssignments = (projects: PayloadProject[], clustersJson: string) => {
+      // #6406 — Early return if a planning request is already in flight.
+      if (stateRef.current.aiStreaming) {
+        console.warn('[MissionControl] #6406 — askAIForAssignments called while already streaming; ignoring')
+        return
+      }
       let missionId = stateRef.current.planningMissionId
 
       const prompt = `The user selected these projects for deployment:
@@ -652,6 +745,10 @@ Return a JSON block:
 
 Order phases by dependency — prerequisites first. Each phase completes before the next starts.`
 
+      // #6404 — Snapshot the user-mutation generation at dispatch time so
+      // the parse effect can discard this response if the user has since
+      // mutated state.
+      lastDispatchedGenerationRef.current = userMutationGenerationRef.current
       // If no planning mission exists (user went manual on Phase 1), start one
       // so the AI assign button is not silently a no-op (#5502)
       if (!missionId) {
@@ -673,6 +770,7 @@ Order phases by dependency — prerequisites first. Each phase completes before 
   /** Move a project from one cluster to another (for drag-and-drop in blueprint) */
   const moveProjectToCluster = (projectName: string, fromCluster: string, toCluster: string) => {
       if (fromCluster === toCluster) return
+      bumpUserGeneration() // #6404 — manual mutation invalidates in-flight AI streams
       setState((prev) => ({
         ...prev,
         assignments: prev.assignments.map((a) => {
@@ -689,6 +787,7 @@ Order phases by dependency — prerequisites first. Each phase completes before 
     }
 
   const setAssignment = (clusterName: string, projectName: string, assigned: boolean) => {
+      bumpUserGeneration() // #6404 — manual mutation invalidates in-flight AI streams
       setState((prev) => {
         const assignments = [...prev.assignments]
         const idx = assignments.findIndex((a) => a.clusterName === clusterName)
@@ -724,6 +823,10 @@ Order phases by dependency — prerequisites first. Each phase completes before 
   // ---------------------------------------------------------------------------
 
   const setPhase = (phase: WizardPhase) => {
+    // #6404 — Phase transitions invalidate any in-flight AI stream: a
+    // response dispatched in Phase 2 must not silently overwrite Phase 3
+    // state after the user has advanced.
+    bumpUserGeneration()
     setState((prev) => ({ ...prev, phase }))
   }
 
@@ -876,10 +979,30 @@ Order phases by dependency — prerequisites first. Each phase completes before 
       const newAssignments = new Map<string, string[]>()
       availableClusters.forEach(c => newAssignments.set(c.name, []))
 
-      // Sort projects: required first, then recommended, then optional
-      const priorityOrder = { required: 0, recommended: 1, optional: 2 }
+      // Sort projects: required first, then recommended, then optional.
+      // #6402 — If the AI returns an unknown priority value (e.g.
+      // "highly-recommended"), `priorityOrder[p.priority]` is `undefined` and
+      // any arithmetic with it yields NaN, which makes `Array.sort` order
+      // nondeterministic. Fall back to MAX_SAFE_INTEGER so unknown priorities
+      // sort after all known values, and log a warning once per unknown value.
+      const priorityOrder: Record<string, number> = { required: 0, recommended: 1, optional: 2 }
+      const UNKNOWN_PRIORITY_RANK = Number.MAX_SAFE_INTEGER
+      const warnedUnknownPriorities = new Set<string>()
+      const rankPriority = (priority: string | undefined): number => {
+        const rank = priority !== undefined ? priorityOrder[priority] : undefined
+        if (rank === undefined) {
+          if (priority && !warnedUnknownPriorities.has(priority)) {
+            warnedUnknownPriorities.add(priority)
+            console.warn(
+              `[MissionControl] Unknown priority "${priority}" — treating as lowest (#6402)`,
+            )
+          }
+          return UNKNOWN_PRIORITY_RANK
+        }
+        return rank
+      }
       const sortedProjects = [...state.projects].sort(
-        (a, b) => (priorityOrder[a.priority] ?? 1) - (priorityOrder[b.priority] ?? 1)
+        (a, b) => rankPriority(a.priority) - rankPriority(b.priority)
       )
 
       for (const project of sortedProjects) {
@@ -981,6 +1104,9 @@ Order phases by dependency — prerequisites first. Each phase completes before 
     setGroundControlDashboardId,
     // Planning mission
     planningMission,
+    // #6403 — Stale cluster reconciliation
+    staleClusterNames,
+    acknowledgeStaleClusters,
     // Reset
     reset }
 }

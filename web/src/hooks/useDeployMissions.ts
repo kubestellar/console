@@ -81,8 +81,17 @@ export interface DeployClusterStatus {
   replicas: number
   readyReplicas: number
   logs?: string[]
-  /** Consecutive status-fetch failures — transitions to 'failed' after threshold */
+  /**
+   * Consecutive HTTP 4xx/5xx responses from the status endpoint — after
+   * MAX_STATUS_FAILURES we mark the cluster failed. #6412.
+   */
   consecutiveFailures?: number
+  /**
+   * Consecutive pure network failures (fetch threw, no HTTP response).
+   * Tracked separately so a transient VPN blip can't flip the mission into
+   * a terminal 'failed' state. #6412.
+   */
+  networkFailureCount?: number
 }
 
 export interface DeployMission {
@@ -111,8 +120,21 @@ const POLL_INTERVAL_MS = 5000
 const MAX_MISSIONS = 50
 /** Cache TTL: 5 minutes — stop polling completed missions after this duration */
 const CACHE_TTL_MS = 5 * 60 * 1000
-/** After this many consecutive status-fetch failures a cluster is marked failed */
+/** After this many consecutive HTTP error responses (4xx/5xx) a cluster is marked failed (#6412) */
 const MAX_STATUS_FAILURES = 6
+/**
+ * Separate threshold for pure network failures (no response, DNS failure,
+ * connection reset, TCP abort). #6412 — a 30s VPN blip must not mark a
+ * cluster failed; only a sustained outage should. We use a much higher
+ * threshold because network hiccups are legitimately transient.
+ */
+const MAX_NETWORK_FAILURES = 60
+/**
+ * Minimum time a mission stays in the "deploying" state before we're
+ * allowed to transition it to a terminal status. This gives the underlying
+ * K8s rollout a chance to actually appear in the API (#6409).
+ */
+const MIN_ACTIVE_MS = 10_000
 
 function loadMissions(): DeployMission[] {
   try {
@@ -232,17 +254,41 @@ export function useDeployMissions() {
               // Track consecutive failures from previous poll cycle
               const prevStatus = mission.clusterStatuses.find(cs => cs.cluster === cluster)
               const prevFailures = prevStatus?.consecutiveFailures ?? 0
+              const prevNetworkFailures = prevStatus?.networkFailureCount ?? 0
 
-              // Helper: build a "pending-or-failed" response depending on failure count
+              // Helper: build a "pending-or-failed" response based on HTTP-error failure count.
+              // #6412 — used only for genuine HTTP 4xx/5xx responses, not for
+              // network-level failures. Preserves networkFailureCount so a
+              // concurrent network blip doesn't reset its tally.
               const pendingOrFailed = (): DeployClusterStatus => {
                 const failures = prevFailures + 1
                 if (failures >= MAX_STATUS_FAILURES) {
                   return { cluster, status: 'failed', replicas: 0, readyReplicas: 0,
                     consecutiveFailures: failures,
-                    logs: [`Status unreachable after ${failures} consecutive attempts`] }
+                    networkFailureCount: prevNetworkFailures,
+                    logs: [`Status unreachable after ${failures} consecutive HTTP errors`] }
                 }
                 return { cluster, status: 'pending', replicas: 0, readyReplicas: 0,
-                  consecutiveFailures: failures }
+                  consecutiveFailures: failures,
+                  networkFailureCount: prevNetworkFailures }
+              }
+
+              // Helper: pure-network-failure response. #6412 — these should
+              // NOT count toward MAX_STATUS_FAILURES. We keep the mission
+              // pending through the blip; only a sustained outage
+              // (MAX_NETWORK_FAILURES polls) escalates to 'failed'. Preserves
+              // prevFailures so an HTTP-error streak in progress isn't reset.
+              const networkPending = (): DeployClusterStatus => {
+                const networkFailures = prevNetworkFailures + 1
+                if (networkFailures >= MAX_NETWORK_FAILURES) {
+                  return { cluster, status: 'failed', replicas: 0, readyReplicas: 0,
+                    consecutiveFailures: prevFailures,
+                    networkFailureCount: networkFailures,
+                    logs: [`Network unreachable after ${networkFailures} consecutive attempts`] }
+                }
+                return { cluster, status: 'pending', replicas: 0, readyReplicas: 0,
+                  consecutiveFailures: prevFailures,
+                  networkFailureCount: networkFailures }
               }
 
               // Try agent first (works when backend is down)
@@ -304,12 +350,52 @@ export function useDeployMissions() {
                   { headers: authHeaders(), signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) }
                 )
                 if (!res.ok) {
-                  // Surface auth failures explicitly instead of masking as "unreachable" (#5499)
+                  // Surface auth failures explicitly instead of masking as "unreachable" (#5499).
+                  // #6414 — Distinguish true auth failures (401, or 403 with
+                  // body indicating expired/invalid token) from RBAC denials
+                  // (403 with body describing a user/verb/resource combination).
                   if (res.status === HTTP_UNAUTHORIZED || res.status === HTTP_FORBIDDEN) {
+                    let bodyText = ''
+                    try {
+                      // Use .clone() when available so the body can also be
+                      // re-read elsewhere; fall back to .text() directly.
+                      if (typeof (res as Response).clone === 'function') {
+                        bodyText = await (res as Response).clone().text()
+                      } else if (typeof (res as Response).text === 'function') {
+                        bodyText = await (res as Response).text()
+                      }
+                    } catch { /* body already consumed or unreadable */ }
+                    // Parse a K8s Status object if the body is JSON.
+                    interface K8sStatusBody {
+                      reason?: string
+                      message?: string
+                      kind?: string
+                    }
+                    let parsed: K8sStatusBody | null = null
+                    if (bodyText) {
+                      try {
+                        parsed = JSON.parse(bodyText) as K8sStatusBody
+                      } catch { /* non-JSON body */ }
+                    }
+                    const reason = parsed?.reason ?? ''
+                    const message = parsed?.message ?? bodyText.slice(0, 200)
+                    // Only flag as "RBAC denial" when the body is clearly a
+                    // K8s Forbidden Status object. Without a parseable body
+                    // we fall through to the legacy "token may be expired"
+                    // wording (#5499) so bare-401/403 cases stay untouched.
+                    const looksLikeRBACDeny =
+                      res.status === HTTP_FORBIDDEN &&
+                      parsed !== null &&
+                      (reason === 'Forbidden' ||
+                        /cannot (?:list|get|watch|create|update|delete) /i.test(message))
+                    const logLine = looksLikeRBACDeny
+                      ? `Permission denied (HTTP ${res.status}): ${message || reason || 'forbidden'}`
+                      : `Authentication failed (HTTP ${res.status}) — token may be expired or revoked`
                     return {
                       cluster, status: 'failed' as const, replicas: 0, readyReplicas: 0,
                       consecutiveFailures: prevFailures + 1,
-                      logs: [`Authentication failed (HTTP ${res.status}) — token may be expired or revoked`],
+                      networkFailureCount: prevNetworkFailures,
+                      logs: [logLine],
                     }
                   }
                   return pendingOrFailed()
@@ -374,7 +460,10 @@ export function useDeployMissions() {
                   readyReplicas: data.readyReplicas ?? 0,
                   logs }
               } catch {
-                return pendingOrFailed()
+                // #6412 — fetch threw: network failure (no HTTP response).
+                // Track separately from HTTP errors so a transient VPN blip
+                // can't trip the 6-poll catastrophe threshold.
+                return networkPending()
               }
             })
           )
@@ -393,11 +482,29 @@ export function useDeployMissions() {
             missionStatus = 'partial'
           }
 
-          // Grace period: keep mission in deploying state for at least 10s
+          // Grace period: keep mission in deploying state for at least
+          // MIN_ACTIVE_MS so the backend has a chance to actually register
+          // the rollout. #6409 — if the computed status would be terminal
+          // but we're still inside the grace window, schedule a targeted
+          // re-poll at the exact moment the grace window expires, rather
+          // than waiting up to POLL_INTERVAL_MS for the next regular poll.
+          // This eliminates the observed 0–5s lag between the grace window
+          // closing and the UI flipping to the real status.
           const elapsed = Date.now() - mission.startedAt
-          const MIN_ACTIVE_MS = 10000
           if (isTerminalStatus(missionStatus) && elapsed < MIN_ACTIVE_MS) {
             missionStatus = 'deploying'
+            const remaining = MIN_ACTIVE_MS - elapsed
+            // Small fudge (50ms) so `elapsed` is definitely past MIN_ACTIVE_MS on re-entry
+            const GRACE_REPOLL_FUDGE_MS = 50
+            setTimeout(() => {
+              // Only re-poll if this mission still exists and is still non-terminal.
+              // The regular interval may have already run by now, which is fine
+              // — calling poll() again is idempotent.
+              const latest = missionsRef.current.find(m => m.id === mission.id)
+              if (latest && !isTerminalStatus(latest.status)) {
+                poll()
+              }
+            }, remaining + GRACE_REPOLL_FUDGE_MS)
           }
 
           return {
@@ -411,11 +518,19 @@ export function useDeployMissions() {
         })
       )
 
-      // Sort: active missions first (newest first), completed missions below (newest first)
+      // Sort: active missions first (newest first), completed missions below (newest first).
+      // #6411 — Add a deterministic tiebreaker on mission id. Without it,
+      // two missions with the same `startedAt` epoch ms reshuffle randomly
+      // on every poll because `Array.sort` is not guaranteed stable across
+      // all engines for `0` comparisons.
       const active = updated.filter(m => !isTerminalStatus(m.status))
       const completed = updated.filter(m => isTerminalStatus(m.status))
-      active.sort((a, b) => b.startedAt - a.startedAt)
-      completed.sort((a, b) => (b.completedAt ?? b.startedAt) - (a.completedAt ?? a.startedAt))
+      active.sort((a, b) => (b.startedAt - a.startedAt) || a.id.localeCompare(b.id))
+      completed.sort((a, b) => {
+        const aKey = a.completedAt ?? a.startedAt
+        const bKey = b.completedAt ?? b.startedAt
+        return (bKey - aKey) || a.id.localeCompare(b.id)
+      })
 
       setMissions([...active, ...completed])
     }

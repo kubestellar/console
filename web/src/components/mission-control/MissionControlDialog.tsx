@@ -93,6 +93,20 @@ export function MissionControlDialog({ open, onClose }: MissionControlDialogProp
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [open, handleKeyDown])
 
+  // #6403 — Surface a toast when stale cluster references are dropped from
+  // persisted state. The hook already reconciles the state; we just notify
+  // the user so they don't stare at a mysteriously-shrunk assignment list.
+  useEffect(() => {
+    if (!open) return
+    if (mc.staleClusterNames.length === 0) return
+    const names = mc.staleClusterNames.join(', ')
+    showToast(
+      `Unassigned ${mc.staleClusterNames.length} cluster(s) from your previous session that no longer exist: ${names}`,
+      'warning',
+    )
+    mc.acknowledgeStaleClusters()
+  }, [open, mc.staleClusterNames, showToast, mc])
+
   // Lock body scroll while modal is open so users cannot scroll the page behind it
   useEffect(() => {
     if (!open) return

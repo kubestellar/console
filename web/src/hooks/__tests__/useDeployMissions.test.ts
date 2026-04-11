@@ -1482,6 +1482,101 @@ describe('useDeployMissions', () => {
   })
 
   // =========================================================================
+  // #6414: 403 with an RBAC body surfaces the permission message
+  // =========================================================================
+  it('surfaces RBAC permission message for 403 with a parseable body', async () => {
+    const startedAt = Date.now() - MIN_ACTIVE_MS - 1
+    const missions = [makeMission({
+      id: 'rbac-403', status: 'deploying', startedAt,
+      targetClusters: ['c1'],
+    })]
+    localStorage.setItem(MISSIONS_STORAGE_KEY, JSON.stringify(missions))
+
+    mockClusterCacheRef.clusters = []
+    // Build a Response-like mock with a .clone().text() chain returning a
+    // K8s-style Forbidden Status object. The hook should pull the message
+    // out rather than falling back to the legacy "token expired" line.
+    const rbacBody = JSON.stringify({
+      kind: 'Status',
+      reason: 'Forbidden',
+      message: 'deployments.apps is forbidden: User "alice" cannot list resource "deployments" in namespace "prod"',
+    })
+    const makeCloneable = () => ({
+      ok: false,
+      status: 403,
+      clone: () => ({ text: async () => rbacBody }),
+      text: async () => rbacBody,
+    })
+    global.fetch = vi.fn().mockResolvedValue(makeCloneable())
+
+    const { result } = renderHook(() => useDeployMissions())
+    await advancePastInitialPoll()
+
+    const cs = result.current.missions[0].clusterStatuses[0]
+    expect(cs.status).toBe('failed')
+    expect(cs.logs![0]).toContain('Permission denied')
+    expect(cs.logs![0]).toContain('cannot list')
+  })
+
+  // =========================================================================
+  // #6412: transient network failures do not flip the mission to failed
+  // =========================================================================
+  it('treats repeated pure-network failures as network-pending, not failed', async () => {
+    const missions = [makeMission({
+      id: 'net-blip', status: 'deploying',
+      startedAt: Date.now() - MIN_ACTIVE_MS - 1,
+      targetClusters: ['c1'],
+    })]
+    localStorage.setItem(MISSIONS_STORAGE_KEY, JSON.stringify(missions))
+
+    mockClusterCacheRef.clusters = []
+    // fetch throws on every call — simulates sustained network blackout
+    // that is still SHORT of the network-failure threshold.
+    global.fetch = vi.fn().mockRejectedValue(new Error('Network unreachable'))
+
+    const { result } = renderHook(() => useDeployMissions())
+    await advancePastInitialPoll()
+    // 6 more polls: with the old code this would have marked cluster failed.
+    for (let i = 0; i < 6; i++) await advancePollInterval()
+
+    const cs = result.current.missions[0].clusterStatuses[0]
+    // After 7 polls the HTTP failure count threshold (6) would have
+    // tripped; the network failure count threshold (60) has not.
+    expect(cs.status).toBe('pending')
+    expect(cs.networkFailureCount).toBeGreaterThanOrEqual(6)
+    // Status counter for HTTP errors stays at zero because these are
+    // network-level, not HTTP errors.
+    expect(cs.consecutiveFailures ?? 0).toBe(0)
+  })
+
+  // =========================================================================
+  // #6411: active-mission sort is deterministic for equal startedAt
+  // =========================================================================
+  it('orders missions deterministically when startedAt is identical', async () => {
+    const t = Date.now() - MIN_ACTIVE_MS - 1
+    const missions = [
+      makeMission({ id: 'mm-c', status: 'deploying', startedAt: t, targetClusters: ['c1'] }),
+      makeMission({ id: 'mm-a', status: 'deploying', startedAt: t, targetClusters: ['c1'] }),
+      makeMission({ id: 'mm-b', status: 'deploying', startedAt: t, targetClusters: ['c1'] }),
+    ]
+    localStorage.setItem(MISSIONS_STORAGE_KEY, JSON.stringify(missions))
+
+    mockClusterCacheRef.clusters = []
+    global.fetch = vi.fn().mockRejectedValue(new Error('not available'))
+
+    const { result } = renderHook(() => useDeployMissions())
+    await advancePastInitialPoll()
+
+    // All three share the same startedAt: tiebreaker should sort by id ascending.
+    const ids = result.current.missions.map(m => m.id)
+    expect(ids).toEqual(['mm-a', 'mm-b', 'mm-c'])
+
+    // Re-poll — order must be stable across polls.
+    await advancePollInterval()
+    expect(result.current.missions.map(m => m.id)).toEqual(['mm-a', 'mm-b', 'mm-c'])
+  })
+
+  // =========================================================================
   // 48. #5501: saveMissions preserves logs for partial missions
   // =========================================================================
   it('preserves logs for partial missions when persisting to localStorage', () => {
