@@ -5,10 +5,12 @@ import { renderHook, act, waitFor } from '@testing-library/react'
 // Mocks
 // ---------------------------------------------------------------------------
 
+const mockApiGet = vi.fn()
 const mockApiPost = vi.fn()
 const mockApiDelete = vi.fn()
 vi.mock('../../lib/api', () => ({
   api: {
+    get: (...args: unknown[]) => mockApiGet(...args),
     post: (...args: unknown[]) => mockApiPost(...args),
     delete: (...args: unknown[]) => mockApiDelete(...args),
   },
@@ -582,9 +584,11 @@ describe('useMarketplace', () => {
     expect(result.current.getInstalledDashboardId('dash-1')).toBe('imported-dash-id')
   })
 
-  it('installs a card-preset item and dispatches custom event', async () => {
+  it('installs a card-preset item by POSTing to the default dashboard and dispatching the event', async () => {
     seedCache([makeItem({ id: 'preset-1', type: 'card-preset', downloadUrl: 'https://example.com/preset.json' })])
-    const presetJson = { cardType: 'custom_card', config: {} }
+    // Payload matches the backend card shape — card_type (snake_case) is
+    // what the Go handler and Dashboard.tsx both use.
+    const presetJson = { card_type: 'custom_card', config: { foo: 'bar' }, title: 'Custom Card' }
 
     const eventSpy = vi.fn()
     window.addEventListener('kc-add-card-from-marketplace', eventSpy)
@@ -593,6 +597,10 @@ describe('useMarketplace', () => {
       ok: true,
       json: () => Promise.resolve(presetJson),
     } as Response)
+    // GET /api/dashboards — return a list with a default dashboard.
+    mockApiGet.mockResolvedValueOnce({ data: [{ id: 'dash-default', is_default: true }, { id: 'dash-other' }] })
+    // POST /api/dashboards/:id/cards — success.
+    mockApiPost.mockResolvedValueOnce({ data: { id: 'persisted-card-id' } })
 
     const { result } = renderHook(() => useMarketplace())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
@@ -602,10 +610,50 @@ describe('useMarketplace', () => {
       installResult = await result.current.installItem(result.current.allItems[0])
     })
 
+    // POST was called with the correct dashboard id and a card payload
+    // that carries the card_type and config from the downloaded preset.
+    expect(mockApiGet).toHaveBeenCalledWith('/api/dashboards')
+    expect(mockApiPost).toHaveBeenCalledWith(
+      '/api/dashboards/dash-default/cards',
+      expect.objectContaining({
+        card_type: 'custom_card',
+        config: { foo: 'bar' },
+        title: 'Custom Card',
+        position: expect.objectContaining({ x: 0, y: 0 }),
+      })
+    )
     expect(installResult).toEqual({ type: 'card-preset', data: presetJson })
     expect(eventSpy).toHaveBeenCalled()
     expect(mockEmitInstall).toHaveBeenCalledWith('card-preset', expect.any(String))
     expect(result.current.isInstalled('preset-1')).toBe(true)
+
+    window.removeEventListener('kc-add-card-from-marketplace', eventSpy)
+  })
+
+  it('does not mark card-preset installed when the backend POST fails (#6620)', async () => {
+    seedCache([makeItem({ id: 'preset-fail', type: 'card-preset', downloadUrl: 'https://example.com/preset.json' })])
+    const presetJson = { card_type: 'custom_card', config: {} }
+
+    const eventSpy = vi.fn()
+    window.addEventListener('kc-add-card-from-marketplace', eventSpy)
+
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve(presetJson),
+    } as Response)
+    mockApiGet.mockResolvedValueOnce({ data: [{ id: 'dash-default', is_default: true }] })
+    mockApiPost.mockRejectedValueOnce(new Error('backend exploded'))
+
+    const { result } = renderHook(() => useMarketplace())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    await expect(
+      act(() => result.current.installItem(result.current.allItems[0]))
+    ).rejects.toThrow('backend exploded')
+
+    expect(mockEmitInstallFailed).toHaveBeenCalledWith('card-preset', expect.any(String), 'backend exploded')
+    expect(eventSpy).not.toHaveBeenCalled()
+    expect(result.current.isInstalled('preset-fail')).toBe(false)
 
     window.removeEventListener('kc-add-card-from-marketplace', eventSpy)
   })

@@ -4,8 +4,16 @@ import { addCustomTheme, removeCustomTheme } from '../lib/themes'
 import { emitMarketplaceInstall, emitMarketplaceRemove, emitMarketplaceInstallFailed } from '../lib/analytics'
 import { FETCH_EXTERNAL_TIMEOUT_MS } from '../lib/constants/network'
 import { isCardTypeRegistered } from '../components/cards/cardRegistry'
-import { STORAGE_KEY_MAIN_DASHBOARD_CARDS } from '../lib/constants/storage'
 import { getDefaultCardSize } from '../components/dashboard/dashboardUtils'
+
+// Minimal shape needed from GET /api/dashboards to locate the target
+// dashboard for marketplace card-preset installs. The real DashboardData
+// type is defined in components/dashboard; we only need id + is_default
+// here so we keep the dependency narrow.
+interface DashboardSummary {
+  id: string
+  is_default?: boolean
+}
 
 const REGISTRY_URL = 'https://raw.githubusercontent.com/kubestellar/console-marketplace/main/registry.json'
 const CACHE_KEY = 'kc-marketplace-registry'
@@ -244,27 +252,53 @@ export function useMarketplace() {
     const json = await response.json()
 
     if (item.type === 'card-preset') {
-      // Persist card directly to the main dashboard localStorage so it
-      // survives navigation. Previously this only dispatched a CustomEvent
-      // that was lost if the Dashboard component wasn't mounted (#4780).
-      const { card_type, config, title } = json as { card_type?: string; config?: Record<string, unknown>; title?: string }
-      if (card_type) {
-        const size = getDefaultCardSize(card_type)
-        const newCard = {
-          id: `mp-${Date.now()}`,
-          card_type,
-          config: config || {},
-          title,
-          position: { x: 0, y: 0, ...size } }
-        try {
-          const raw = localStorage.getItem(STORAGE_KEY_MAIN_DASHBOARD_CARDS)
-          const existing = raw ? JSON.parse(raw) : []
-          const cards = Array.isArray(existing) ? existing : []
-          cards.unshift(newCard)
-          localStorage.setItem(STORAGE_KEY_MAIN_DASHBOARD_CARDS, JSON.stringify(cards))
-        } catch { /* localStorage unavailable — card will appear on next dashboard load */ }
+      // Persist the card to the backend so it survives a hard refresh.
+      // Previously this mutated localStorage directly, which worked only
+      // until the Dashboard rehydrated from GET /api/dashboards — at that
+      // point the installed card disappeared because the backend never
+      // heard about it (#6620, reported by @AAdIprog; supersedes the
+      // localStorage workaround from #4780).
+      const { card_type, config, title } = json as {
+        card_type?: string
+        config?: Record<string, unknown>
+        title?: string
       }
-      // Also dispatch event so a mounted Dashboard picks up changes immediately
+      if (!card_type) {
+        const msg = 'card-preset payload missing card_type'
+        emitMarketplaceInstallFailed(item.type, item.name, msg)
+        throw new Error(msg)
+      }
+
+      const size = getDefaultCardSize(card_type)
+      const newCard = {
+        id: `mp-${Date.now()}`,
+        card_type,
+        config: config || {},
+        title,
+        position: { x: 0, y: 0, ...size } }
+
+      // Resolve the target dashboard the same way Dashboard.tsx does in
+      // loadDashboard(): prefer the default dashboard, fall back to the
+      // first one returned. Matching Dashboard's canonical path here is
+      // important so that installed cards land on the same surface the
+      // user sees on the home page.
+      try {
+        const { data: dashboards } = await api.get<DashboardSummary[]>('/api/dashboards')
+        const target = (dashboards || []).find(d => d.is_default) || (dashboards || [])[0]
+        if (!target?.id) {
+          throw new Error('no dashboard available to install card-preset into')
+        }
+        await api.post(`/api/dashboards/${target.id}/cards`, newCard)
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : 'backend persist failed'
+        emitMarketplaceInstallFailed(item.type, item.name, msg)
+        throw e
+      }
+
+      // Notify a mounted Dashboard so it can append the card to its
+      // in-memory state without waiting for the next loadDashboard().
+      // This is fired AFTER the POST succeeds so the dispatched event
+      // always reflects a durable write.
       window.dispatchEvent(new CustomEvent('kc-add-card-from-marketplace', { detail: json }))
       markInstalled(item.id, { installedAt: new Date().toISOString(), type: 'card-preset' })
       emitMarketplaceInstall(item.type, item.name)
