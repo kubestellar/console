@@ -81,27 +81,13 @@ import { NetworkOverview } from '../NetworkOverview'
 describe('NetworkOverview', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    // #6276/#6278/#6280: default both `useDemoMode().isDemoMode` and
-    // the cache hooks' `isDemoFallback` to false. In production,
-    // `useCache` (web/src/lib/cache/index.ts:1324) sets
-    // `isDemoFallback: true` via:
-    //     shouldFallbackToDemo || !effectiveEnabled || showOptimisticDemo
-    // where:
-    //   - shouldFallbackToDemo: live fetch returned an EMPTY array AND
-    //     the hook was created with `demoWhenEmpty: true` (used for
-    //     "demo until X is installed" cards like Kagenti).
-    //   - !effectiveEnabled: caching is disabled. `effectiveEnabled =
-    //     enabled && (!demoMode || liveInDemoMode)`. So this fires when
-    //     demoMode is on AND the hook did NOT opt into liveInDemoMode.
-    //   - showOptimisticDemo: first load while a demoWhenEmpty fetch is
-    //     pending.
-    // The combination `isDemoMode === true && isDemoFallback === false`
-    // IS reachable in production: hooks that pass `liveInDemoMode: true`
-    // (e.g. LLM-d benchmark cards backed by serverless functions) keep
-    // `effectiveEnabled` true while demo mode is on. NetworkOverview
-    // and HelmValuesDiff don't use that opt-in, so for these tests
-    // defaulting to non-demo and overriding `useDemoMode` +
-    // `isDemoFallback` together is the production-faithful state.
+    // #6276+: default to "live mode, nothing cached from demo". Tests
+    // that exercise demo behavior override BOTH `useDemoMode().isDemoMode`
+    // AND the relevant cache hook's `isDemoFallback` to match the
+    // combined state `useCache` produces in production. The exact
+    // conditions under which `useCache` flips `isDemoFallback` are in
+    // `web/src/lib/cache/index.ts` around line 1324 — don't try to
+    // summarize them here (the summary keeps drifting out of sync).
     mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false })
     mockServices.mockReturnValue({ services: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
