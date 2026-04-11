@@ -20,12 +20,28 @@ Helm chart for deploying the KubeStellar Console to a Kubernetes cluster.
 The chart has two modes for supplying secret material:
 
 1. **Chart-managed (default, easiest)** — pass values via `--set` or a values
-   file; the chart renders a Kubernetes Secret named after the release
-   (`{release-name}-kubestellar-console`) containing whatever you supplied.
-   If `jwt.secret` is not set, the chart auto-generates a 64-character
-   random value on first install.
+   file; the chart renders a single Kubernetes Secret named after the release
+   (`{release-name}-kubestellar-console`) that holds the JWT secret plus any
+   of the other optional keys (`github-client-id`, `github-client-secret`,
+   `google-drive-api-key`, `claude-api-key`, `feedback-github-token`) you
+   supplied via values.
+   - If `jwt.secret` is not set, the chart auto-generates a 64-character
+     random value on first install and then **preserves it across `helm
+     upgrade`** by looking up the existing Secret ([#6343](https://github.com/kubestellar/console/issues/6343)).
+     This means JWT session cookies survive chart upgrades without forcing
+     all users to sign in again.
 2. **Bring-your-own** — create Secrets yourself before `helm install` and
    reference them via `*.existingSecret` values.
+   - **Important:** the chart renders its own Secret only when
+     `jwt.existingSecret` is empty. If you're going BYO, set
+     `jwt.existingSecret` AND put every other secret key (github, claude,
+     google-drive, feedback-github-token) in that same Secret — don't mix
+     inline `github.clientId` values with `jwt.existingSecret`, because no
+     chart-managed Secret is rendered in that path and the inline values
+     have nowhere to land.
+   - You can point each `*.existingSecret` at the same Secret; the
+     per-field `existingSecretKey` / `existingSecretKeys.*` values let you
+     override the key name so one Secret can hold all of them.
 
 ### Values that accept secret material
 
