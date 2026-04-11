@@ -1170,14 +1170,6 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
       {/* Top bar: search + filters */}
       {/* ================================================================== */}
       <div className="flex items-center gap-3 px-4 py-3 bg-card border-b border-border">
-        <button
-          onClick={onClose}
-          className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-          title="Close (Esc)"
-        >
-          <X className="w-5 h-5" />
-        </button>
-
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <input
@@ -1232,6 +1224,19 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
             <List className="w-4 h-4" />
           </button>
         </div>
+
+        {/* #6308: close button moved to the RIGHT end of the top bar to
+            match every other modal in the app (BaseModal etc). Having
+            it on the left was a confusing one-off — users trained to
+            close modals via the top-right X were not finding it. */}
+        <button
+          onClick={onClose}
+          className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+          title="Close (Esc)"
+          aria-label="Close mission browser"
+        >
+          <X className="w-5 h-5" />
+        </button>
       </div>
 
       {/* Filter bar — constrained height on mobile with scroll */}
