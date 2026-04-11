@@ -91,9 +91,25 @@ func getDefaultNamespace() string {
 type PersistenceStore struct {
 	configPath string
 	config     *PersistenceConfig
-	mu         sync.RWMutex
+	// mu guards config (read/write access to the in-memory struct) and
+	// is taken as a reader by all the GetXxx helpers. File I/O in Load()
+	// and Save() is deliberately done OUTSIDE mu so a slow disk cannot
+	// stall concurrent readers (#6616).
+	mu sync.RWMutex
+	// saveMu serializes concurrent disk writes from Save() so two callers
+	// cannot interleave their os.WriteFile calls and produce a torn file
+	// on disk. It is separate from mu so readers still observe an
+	// up-to-date in-memory snapshot while Save() is running.
+	saveMu sync.Mutex
 
-	// Cluster health check functions (injected for testability)
+	// healthCheckerMu guards checkClusterHealth so SetClusterHealthChecker
+	// cannot race with concurrent GetStatus readers (#6617). Using a
+	// separate lock keeps the hot path (reads from GetStatus) off the
+	// main config mutex.
+	healthCheckerMu sync.RWMutex
+
+	// Cluster health check functions (injected for testability).
+	// Access must go through getCheckClusterHealth / SetClusterHealthChecker.
 	checkClusterHealth func(ctx context.Context, clusterName string) ClusterHealth
 
 	// Client factory for creating dynamic clients
@@ -108,9 +124,24 @@ func NewPersistenceStore(configPath string) *PersistenceStore {
 	}
 }
 
-// SetClusterHealthChecker sets the function used to check cluster health
+// SetClusterHealthChecker sets the function used to check cluster health.
+// #6617: the previous implementation assigned directly to the struct field
+// without any synchronization, so a writer from bootstrap code could race
+// with a concurrent GetStatus reader observing a half-initialized function
+// pointer under the Go memory model. The setter and every read now go
+// through healthCheckerMu.
 func (p *PersistenceStore) SetClusterHealthChecker(checker func(ctx context.Context, clusterName string) ClusterHealth) {
+	p.healthCheckerMu.Lock()
+	defer p.healthCheckerMu.Unlock()
 	p.checkClusterHealth = checker
+}
+
+// getCheckClusterHealth returns the current health-checker function under
+// a read lock so callers never observe a torn assignment.
+func (p *PersistenceStore) getCheckClusterHealth() func(ctx context.Context, clusterName string) ClusterHealth {
+	p.healthCheckerMu.RLock()
+	defer p.healthCheckerMu.RUnlock()
+	return p.checkClusterHealth
 }
 
 // SetClientFactory sets the function used to get dynamic clients for clusters
@@ -118,63 +149,84 @@ func (p *PersistenceStore) SetClientFactory(factory func(clusterName string) (dy
 	p.getClient = factory
 }
 
-// Load loads the persistence config from disk
+// Load loads the persistence config from disk.
+//
+// #6616: the previous implementation held p.mu (exclusive write lock) for
+// the entire duration of the disk read, which blocked every concurrent
+// reader on a slow disk. We now read the file OUTSIDE the mutex into a
+// local struct, then take the lock only long enough to swap the in-memory
+// pointer. Concurrent GetStatus / GetConfig readers continue to see the
+// old config until the swap completes — they never observe a partial
+// state.
 func (p *PersistenceStore) Load() error {
-	p.mu.Lock()
-	defer p.mu.Unlock()
+	// Read and parse into a local variable without holding p.mu.
+	var loaded *PersistenceConfig
 
 	data, err := os.ReadFile(p.configPath)
 	if os.IsNotExist(err) {
-		// No config file, use defaults
-		p.config = &PersistenceConfig{
+		loaded = &PersistenceConfig{
 			Enabled:   false,
 			Namespace: DefaultNamespace,
 			SyncMode:  "primary-only",
 		}
-		return nil
-	}
-	if err != nil {
+	} else if err != nil {
 		return fmt.Errorf("failed to read persistence config: %w", err)
-	}
-
-	if err := json.Unmarshal(data, &p.config); err != nil {
-		return fmt.Errorf("failed to parse persistence config: %w", err)
-	}
-
-	// #6285: a config file containing literal JSON `null` is valid
-	// JSON and causes json.Unmarshal(data, &p.config) to set p.config
-	// to nil, which would panic on the namespace dereference below.
-	// Reset to defaults when that happens.
-	if p.config == nil {
-		p.config = &PersistenceConfig{
-			Enabled:   false,
-			Namespace: DefaultNamespace,
-			SyncMode:  "primary-only",
+	} else {
+		if err := json.Unmarshal(data, &loaded); err != nil {
+			return fmt.Errorf("failed to parse persistence config: %w", err)
+		}
+		// #6285: a config file containing literal JSON `null` is valid
+		// JSON and causes json.Unmarshal(data, &loaded) to set loaded
+		// to nil. Reset to defaults when that happens so the subsequent
+		// Namespace dereference cannot panic.
+		if loaded == nil {
+			loaded = &PersistenceConfig{
+				Enabled:   false,
+				Namespace: DefaultNamespace,
+				SyncMode:  "primary-only",
+			}
+		}
+		if loaded.Namespace == "" {
+			loaded.Namespace = DefaultNamespace
 		}
 	}
 
-	// Ensure namespace has a default
-	if p.config.Namespace == "" {
-		p.config.Namespace = DefaultNamespace
-	}
-
+	// Brief critical section: swap the in-memory pointer. Everything
+	// above this point runs with no locks held.
+	p.mu.Lock()
+	p.config = loaded
+	p.mu.Unlock()
 	return nil
 }
 
-// Save persists the config to disk
+// Save persists the config to disk.
+//
+// #6616: the previous implementation held p.mu (exclusive write lock)
+// throughout os.WriteFile, stalling every concurrent reader on a slow
+// disk. We now take p.mu briefly to snapshot the in-memory config and
+// stamp LastModified, release it, then do the MarshalIndent + WriteFile
+// under saveMu (which only serializes other Save callers). Readers are
+// unaffected by disk latency.
 func (p *PersistenceStore) Save() error {
-	p.mu.Lock()
-	defer p.mu.Unlock()
+	// Serialize concurrent disk writes so two Save callers cannot
+	// interleave their os.WriteFile calls and leave a torn file.
+	p.saveMu.Lock()
+	defer p.saveMu.Unlock()
 
-	// Ensure directory exists
+	// Ensure directory exists (outside p.mu — the filesystem call does
+	// not need the config mutex).
 	dir := filepath.Dir(p.configPath)
 	if err := os.MkdirAll(dir, configDirMode); err != nil {
 		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 
+	// Brief critical section: stamp the timestamp and snapshot by value.
+	p.mu.Lock()
 	p.config.LastModified = time.Now()
+	snapshot := *p.config
+	p.mu.Unlock()
 
-	data, err := json.MarshalIndent(p.config, "", "  ")
+	data, err := json.MarshalIndent(&snapshot, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal persistence config: %w", err)
 	}
@@ -183,7 +235,10 @@ func (p *PersistenceStore) Save() error {
 		return fmt.Errorf("failed to write persistence config: %w", err)
 	}
 
-	slog.Info("[PersistenceStore] config saved", "enabled", p.config.Enabled, "primary", p.config.PrimaryCluster, "secondary", p.config.SecondaryCluster)
+	slog.Info("[PersistenceStore] config saved",
+		"enabled", snapshot.Enabled,
+		"primary", snapshot.PrimaryCluster,
+		"secondary", snapshot.SecondaryCluster)
 
 	return nil
 }
@@ -195,12 +250,18 @@ func (p *PersistenceStore) GetConfig() PersistenceConfig {
 	return *p.config
 }
 
-// UpdateConfig updates the persistence config
+// UpdateConfig updates the persistence config.
+//
+// #6615: the previous implementation only updated the in-memory struct,
+// so changes were lost on process restart — the next Load() would pull
+// whatever was on disk (usually the pre-edit snapshot) and silently revert
+// the operator's setting. UpdateConfig now writes through to disk via
+// Save() after the in-memory swap, so the persisted file is always the
+// source of truth. Validation failures short-circuit before any state
+// mutation, matching the previous behavior.
 func (p *PersistenceStore) UpdateConfig(config PersistenceConfig) error {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	// Validate
+	// Validate before touching any state so a rejection cannot leave
+	// the in-memory struct partially mutated.
 	if config.Enabled {
 		if config.PrimaryCluster == "" {
 			return fmt.Errorf("primary cluster is required when persistence is enabled")
@@ -215,7 +276,21 @@ func (p *PersistenceStore) UpdateConfig(config PersistenceConfig) error {
 		config.Namespace = DefaultNamespace
 	}
 
+	// Swap the in-memory pointer under mu, then release before doing
+	// disk I/O in Save() — Save takes its own brief mu window.
+	p.mu.Lock()
 	p.config = &config
+	p.mu.Unlock()
+
+	// Persist through to disk so the change survives a restart.
+	// An empty configPath is treated as "in-memory only" (used by unit
+	// tests that exercise validation without touching disk) — skip Save
+	// in that case so tests don't need a temp file for every call.
+	if p.configPath != "" {
+		if err := p.Save(); err != nil {
+			return fmt.Errorf("persist updated config: %w", err)
+		}
+	}
 	return nil
 }
 
@@ -240,14 +315,19 @@ func (p *PersistenceStore) GetStatus(ctx context.Context) PersistenceStatus {
 		return status
 	}
 
+	// Snapshot the health-checker under the dedicated RWMutex so a
+	// concurrent SetClusterHealthChecker cannot race with these reads
+	// (#6617). The snapshot is a plain function value, so subsequent
+	// calls run without any lock held.
+	checker := p.getCheckClusterHealth()
 	// Check primary cluster health
-	if p.checkClusterHealth != nil {
-		status.PrimaryHealth = p.checkClusterHealth(ctx, config.PrimaryCluster)
+	if checker != nil {
+		status.PrimaryHealth = checker(ctx, config.PrimaryCluster)
 	}
 
 	// Check secondary cluster health if configured
-	if config.SecondaryCluster != "" && p.checkClusterHealth != nil {
-		health := p.checkClusterHealth(ctx, config.SecondaryCluster)
+	if config.SecondaryCluster != "" && checker != nil {
+		health := checker(ctx, config.SecondaryCluster)
 		status.SecondaryHealth = &health
 	}
 
