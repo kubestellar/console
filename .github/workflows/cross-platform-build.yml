@@ -1,0 +1,60 @@
+name: Cross-Platform Build
+
+# Cross-platform Go build matrix (ubuntu / windows / macos).
+#
+# Background: kubestellar/console#6361 — contributors on Windows and macOS
+# hit regressions that only show up on those platforms (path separators,
+# platform-specific files like pkg/agent/restart_unix.go vs restart_windows.go).
+#
+# Strategy:
+# - Always run ubuntu-latest (the baseline). Required on PRs.
+# - Also run windows-latest and macos-latest with continue-on-error: true.
+#   These are BEST-EFFORT smoke checks so cross-platform breakage is VISIBLE
+#   in PR checks but NOT BLOCKING. Once the tree is clean on all three, we
+#   can flip continue-on-error off and make them required.
+# - Only builds (no full test suite) to keep runtime minimal.
+
+on:
+  pull_request:
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - 'go.sum'
+      - '.github/workflows/cross-platform-build.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - 'go.sum'
+      - '.github/workflows/cross-platform-build.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    # Windows/macOS are best-effort for now (see header comment).
+    # Ubuntu is the authoritative gate and must not continue-on-error.
+    continue-on-error: ${{ matrix.os != 'ubuntu-latest' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up Go
+        uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5.2.0
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: go build
+        run: go build ./...
+
+      - name: go vet
+        run: go vet ./...
