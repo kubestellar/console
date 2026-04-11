@@ -14,7 +14,6 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
-	"syscall"
 	"time"
 )
 
@@ -735,7 +734,9 @@ func (uc *UpdateChecker) restartViaStartupScript(repoPath string) {
 		cmd.Stdout = logFile
 		cmd.Stderr = logFile
 	}
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	// #6297: Setpgid is Unix-only; routed through a build-tagged helper
+	// (restart_unix.go / restart_windows.go) so kc-agent compiles on Windows.
+	setDetachedProcessGroup(cmd)
 
 	if err := cmd.Start(); err != nil {
 		slog.Error("[AutoUpdate] failed to spawn startup-oauth.sh", "error", err)
@@ -780,11 +781,14 @@ func (uc *UpdateChecker) selfUpdateFallback(repoPath string) {
 		slog.Error("[AutoUpdate] backend restart failed", "error", err)
 	}
 
-	// Re-exec with the same args — replaces this process atomically
-	if err := syscall.Exec(currentBinary, os.Args, os.Environ()); err != nil {
+	// Re-exec with the same args — replaces this process atomically on Unix.
+	// #6297: Windows can't replace the current process image in place;
+	// execReplace returns an error there and kc-agent logs it and keeps
+	// running the old binary until the user restarts manually.
+	if err := execReplace(currentBinary, os.Args, os.Environ()); err != nil {
 		slog.Error("[AutoUpdate] exec into new kc-agent failed", "error", err)
 	}
-	// If exec succeeds, this line is never reached
+	// If exec succeeds on Unix, this line is never reached
 }
 
 func (uc *UpdateChecker) checkReleaseChannel(channel string) {
