@@ -152,6 +152,7 @@ export function ProjectNode({
   return (
     <motion.g
       ref={dragRef}
+      data-testid={`mission-control-project-${name}`}
       initial={{ scale: 0, opacity: 0 }}
       animate={{ scale: 1, opacity: dimmed ? 0.15 : glow ? 1 : overlayDim }}
       transition={{

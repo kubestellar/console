@@ -119,19 +119,21 @@ describe('extractJSON — balanced block extraction (#6382)', () => {
   // issue 6426 — heavy nested backslash escaping should neither hang nor
   // lose characters. The original concern was that `inString` tracking
   // could get confused by sequences like `\\\\` followed by `\\"`.
-  it('handles heavy nested backslash escaping without looping', () => {
+  //
+  // issue 6444(D) — Previously this test asserted `< 100ms` wall-clock
+  // runtime as an infinite-loop guard. That is flaky under CI load. The
+  // vitest default timeout (5s) already catches a true infinite loop,
+  // so we replace the time gate with structural assertions on the parse
+  // result.
+  it('handles heavy nested backslash escaping without losing characters', () => {
     // Construct a JSON string whose `reason` field contains escaped
     // backslashes followed by escaped quotes. In the raw JSON text this
     // is `"reason": "path\\with\\quotes: \"x\""` — JS source escapes
     // each backslash and quote one more level.
     const text =
       '{"reason": "path\\\\with\\\\quotes: \\"x\\"", "name": "falco"}'
-    const start = Date.now()
     const parsed = extractJSON<{ reason: string; name: string }>(text)
-    // Hard upper bound: this should complete in well under 100ms. If the
-    // state machine ever regresses to an infinite loop, vitest's per-test
-    // timeout will fire; this assertion adds a tighter local gate.
-    expect(Date.now() - start).toBeLessThan(100)
+    expect(parsed).not.toBeNull()
     expect(parsed?.name).toBe('falco')
     expect(parsed?.reason).toBe('path\\with\\quotes: "x"')
   })

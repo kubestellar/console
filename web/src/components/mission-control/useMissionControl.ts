@@ -278,7 +278,15 @@ function extractBalancedBlocks(text: string): string[] {
       }
       if (j <= jStart) {
         // Forward progress invariant violated — bail to avoid any chance
-        // of an infinite loop. Should be unreachable.
+        // of an infinite loop. Should be unreachable, but log a warning
+        // (#6444 item C) with a snippet of the offending input so future
+        // debugging can detect that this guard tripped.
+        const snippetStart = Math.max(0, i - 20)
+        const snippetEnd = Math.min(text.length, j + 20)
+        console.warn(
+          `[useMissionControl] extractBalancedBlocks: forward-progress guard tripped at i=${i}, j=${j}, ch=${ch}. ` +
+          `Input snippet: ${JSON.stringify(text.slice(snippetStart, snippetEnd))}`,
+        )
         break
       }
     }
@@ -934,12 +942,18 @@ Order phases by dependency — prerequisites first. Each phase completes before 
       // Note: r.namespace intentionally NOT added. See issue 6428.
     })
 
-    // issue 6428 — Alias expansion is still useful for operator-managed
+    // issue 6428 / 6444(B) — Alias expansion is useful for operator-managed
     // namespaces (a release named `kube-prometheus-stack` exposes prometheus,
-    // grafana, alertmanager). For each helm release whose namespace is a
-    // known shared-operator namespace, also add its aliased project names
-    // to that cluster's set. Plain cluster namespace lists no longer
-    // contribute to project detection.
+    // grafana, alertmanager). But we must NOT mark every aliased project as
+    // installed just because the namespace matches — that's what tripped
+    // Copilot's review on #6441. For example, a release named
+    // `loki` in namespace `monitoring` should not imply `grafana` is
+    // installed.
+    //
+    // Policy: an alias is added ONLY if we have actual evidence (release
+    // name or chart name) that contains the alias token as a substring.
+    // The namespace is treated as a disambiguation hint, not a license to
+    // expand unconditionally.
     helmReleases?.forEach(r => {
       if (!r.namespace) return
       const aliased = NS_ALIASES[r.namespace.toLowerCase()]
@@ -947,7 +961,18 @@ Order phases by dependency — prerequisites first. Each phase completes before 
       const cName = r.cluster || '_unknown'
       if (!clusterNames.has(cName)) clusterNames.set(cName, new Set())
       const names = clusterNames.get(cName)!
-      aliased.forEach(a => names.add(a))
+      const releaseName = (r.name || '').toLowerCase()
+      const chartName = (r.chart || '').toLowerCase()
+      aliased.forEach(a => {
+        // Only expand the alias if the release or chart actually references
+        // it. This turns "monitoring namespace" from a blanket claim into a
+        // disambiguation hint: kube-prometheus-stack → prometheus, grafana,
+        // alertmanager (all substring-matched), but a plain `loki` release
+        // does not pull in prometheus/grafana.
+        if (releaseName.includes(a) || chartName.includes(a)) {
+          names.add(a)
+        }
+      })
     })
 
     // Ensure every cluster has an entry (even if no releases)

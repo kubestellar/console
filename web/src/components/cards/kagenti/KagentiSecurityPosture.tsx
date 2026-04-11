@@ -9,41 +9,62 @@ interface KagentiSecurityPostureProps {
   config?: { cluster?: string }
 }
 
+// issue 6446 — `identityBinding` is a string enum (`'strict' | 'permissive'
+// | 'none'`). Treating any truthy string as "bound" inflates the count
+// because the sentinel value `'none'` is truthy. Only these values count
+// as "bound". Hoisted to module scope so the useMemo dep array stays
+// stable.
+const BOUND_IDENTITY_STATES = new Set(['strict', 'permissive'])
+
 export function KagentiSecurityPosture({ config }: KagentiSecurityPostureProps) {
   const { isDemoMode } = useDemoMode()
   const {
     data: cards,
     isLoading: cardsLoading,
     consecutiveFailures: cardFailures,
+    isDemoFallback: cardsDemoFallback,
   } = useKagentiCards({ cluster: config?.cluster })
 
   const {
     data: agents,
     isLoading: agentsLoading,
     consecutiveFailures: agentFailures,
+    isDemoFallback: agentsDemoFallback,
   } = useKagentiAgents({ cluster: config?.cluster })
 
   const {
     data: tools,
     isLoading: toolsLoading,
     consecutiveFailures: toolFailures,
+    isDemoFallback: toolsDemoFallback,
   } = useKagentiTools({ cluster: config?.cluster })
 
   const isLoading = cardsLoading || agentsLoading || toolsLoading
   const hasAnyData = cards.length > 0 || agents.length > 0 || tools.length > 0
   const maxFailures = Math.max(cardFailures, agentFailures, toolFailures)
 
+  // issue 6447 — Demo state must reflect BOTH global demo mode AND any
+  // per-hook demo fallback (the card shows fallback demo data when the
+  // backend is unreachable). Before this fix, the yellow outline / Demo
+  // badge was missing whenever the global demo mode was off but one of
+  // the hooks had fallen back to demo data. See
+  // memory/console-isDemoData-wiring.md for the canonical pattern.
+  const anyDemoFallback =
+    cardsDemoFallback || agentsDemoFallback || toolsDemoFallback
+
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,
     hasAnyData,
     isFailed: maxFailures >= 3,
     consecutiveFailures: maxFailures,
-    isDemoData: isDemoMode,
+    isDemoData: isDemoMode || anyDemoFallback,
   })
 
   const security = useMemo(() => {
-    const boundCards = cards.filter(c => c.identityBinding)
-    const unboundCards = cards.filter(c => !c.identityBinding)
+    const isBound = (v: string | undefined) =>
+      !!v && BOUND_IDENTITY_STATES.has(v)
+    const boundCards = cards.filter(c => isBound(c.identityBinding))
+    const unboundCards = cards.filter(c => !isBound(c.identityBinding))
     const credentialedTools = tools.filter(t => t.hasCredential)
     const uncredentialedTools = tools.filter(t => !t.hasCredential)
 

@@ -829,15 +829,33 @@ export function MissionProvider({ children }: { children: ReactNode }) {
                   // issue 6429 — Cap at MAX_RESENT_MESSAGES to avoid HTTP 413
                   // against small-context agents. Keep the most recent items;
                   // older turns are dropped with a warning.
+                  //
+                  // issue 6444(A) — Backends (see pkg/agent/provider_claudecode.go
+                  // buildPromptWithHistory) concatenate `history` then append
+                  // `prompt`. If the last user message is included in BOTH
+                  // `history` and `prompt`, it's seen twice by the model.
+                  // Exclude the trailing user turn from `history` so `prompt`
+                  // is the single source of truth for the new message.
                   const fullHistory = mission.messages
                     .filter(msg => msg.role === 'user' || msg.role === 'assistant')
                     .map(msg => ({
                       role: msg.role,
                       content: msg.content }))
-                  const history = fullHistory.slice(-MAX_RESENT_MESSAGES)
-                  if (fullHistory.length > MAX_RESENT_MESSAGES) {
+                  // Drop the trailing user message if it matches the one being
+                  // re-sent as `prompt` (it is, by construction, since we took
+                  // the last user message from the same list).
+                  const historyWithoutLastUser = (() => {
+                    for (let i = fullHistory.length - 1; i >= 0; i--) {
+                      if (fullHistory[i].role === 'user') {
+                        return [...fullHistory.slice(0, i), ...fullHistory.slice(i + 1)]
+                      }
+                    }
+                    return fullHistory
+                  })()
+                  const history = historyWithoutLastUser.slice(-MAX_RESENT_MESSAGES)
+                  if (historyWithoutLastUser.length > MAX_RESENT_MESSAGES) {
                     console.warn(
-                      `[Missions] issue 6429 — truncated reconnect history from ${fullHistory.length} to ${MAX_RESENT_MESSAGES} messages to avoid oversized payload`,
+                      `[Missions] issue 6429 — truncated reconnect history from ${historyWithoutLastUser.length} to ${MAX_RESENT_MESSAGES} messages to avoid oversized payload`,
                     )
                   }
 

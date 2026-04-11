@@ -170,6 +170,7 @@ export function MissionControlDialog({ open, onClose }: MissionControlDialogProp
             role="dialog"
             aria-modal="true"
             aria-label={state.title || 'Mission Control'}
+            data-testid="mission-control-dialog"
             className="fixed z-modal flex flex-col bg-background rounded-xl border border-border shadow-2xl shadow-black/30 overflow-hidden"
             style={{
               inset: `${MODAL_INSET_PX}px`,
@@ -222,6 +223,7 @@ export function MissionControlDialog({ open, onClose }: MissionControlDialogProp
                         <ChevronRight className="w-3 h-3 text-muted-foreground/40 mx-1" />
                       )}
                       <button
+                        data-testid={`mission-control-phase-${i + 1}`}
                         onClick={() => {
                           if (i <= highestReached && !isLaunchOrComplete) mc.setPhase(step.key)
                         }}
@@ -276,6 +278,7 @@ export function MissionControlDialog({ open, onClose }: MissionControlDialogProp
                   variant="ghost"
                   size="sm"
                   onClick={onClose}
+                  data-testid="mission-control-cancel"
                   className="p-1.5 hover:bg-destructive/10 hover:text-destructive"
                   aria-label="Close Mission Control"
                   title="Close (Esc)"
@@ -413,6 +416,7 @@ export function MissionControlDialog({ open, onClose }: MissionControlDialogProp
                       <Button
                         variant="primary"
                         size="sm"
+                        data-testid="mission-control-launch"
                         onClick={() => {
                           mc.setDryRun(false)
                           mc.setPhase('launching')

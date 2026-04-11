@@ -270,6 +270,7 @@ export function ClusterAssignmentPanel({
           <Button
             variant="secondary"
             size="sm"
+            data-testid="mission-control-ask-ai"
             onClick={handleAISuggest}
             disabled={aiStreaming || healthyClusters.length === 0}
             icon={
@@ -335,8 +336,8 @@ export function ClusterAssignmentPanel({
                       ] }
                   : aiAssignment
                 return (
+                <div key={cluster.name} data-testid={`mission-control-cluster-${cluster.name}`}>
                 <ClusterReadinessCard
-                  key={cluster.name}
                   cluster={cluster}
                   assignment={mergedAssignment}
                   onToggleProject={(name, assigned) =>
@@ -348,6 +349,7 @@ export function ClusterAssignmentPanel({
                   )}
                   installedOnCluster={installedOnCluster}
                 />
+                </div>
                 )
               })}
             </div>

@@ -140,7 +140,14 @@ function KagentTopologyInternal({ config }: { config?: Record<string, unknown> }
     return { nodes: nodesArr, edges: edgesArr }
   }, [agents, tools, models])
 
-  if (agentsLoading || toolsLoading || modelsLoading) {
+  // issue 6448 — Stale-while-revalidate: only show the blocking skeleton on
+  // the initial load. Once we have data cached, a background refresh should
+  // keep rendering the cached topology (the cache-level demo/refresh
+  // indicator already communicates that data is updating). Previously this
+  // unconditionally showed the skeleton on any hook `isLoading`, which
+  // hid the cached view during every refresh tick.
+  const anyLoading = agentsLoading || toolsLoading || modelsLoading
+  if (anyLoading && !hasData) {
     return (
       <div className="h-full flex flex-col min-h-card p-4 animate-pulse">
         <div className="flex-1 bg-secondary rounded-lg" />

@@ -450,6 +450,7 @@ export function LaunchSequence({
                   <Button
                     variant="secondary"
                     size="sm"
+                    data-testid="mission-control-retry"
                     className="h-6 text-xs"
                     icon={<RotateCcw className="w-3 h-3" />}
                     onClick={() => {
