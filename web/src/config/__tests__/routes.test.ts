@@ -53,6 +53,19 @@ describe('Route helper functions', () => {
     expect(route).not.toContain(':id')
   })
 
+  // #6695 / #6698 — dashboard ids with URL-reserved characters must be
+  // encoded so they can't break out of the path or inject a query/fragment.
+  it('getCustomDashboardRoute encodes path separators, query, fragment, percent', () => {
+    const route = getCustomDashboardRoute('a/b?c#d%e')
+    expect(route).not.toContain(':id')
+    // Each reserved char should be percent-encoded in the output.
+    expect(route).toContain('a%2Fb%3Fc%23d%25e')
+    // And the raw characters should not leak through.
+    expect(route).not.toContain('a/b')
+    expect(route).not.toContain('?c')
+    expect(route).not.toContain('#d')
+  })
+
   it('getLoginWithError includes encoded error param', () => {
     const route = getLoginWithError('token expired')
     expect(route).toContain('/login?error=')

@@ -105,7 +105,9 @@ export const ROUTES = {
  * Helper function to create a custom dashboard route with ID
  */
 export function getCustomDashboardRoute(id: string): string {
-  return ROUTES.CUSTOM_DASHBOARD.replace(':id', id)
+  // Encode the id so special characters like '/', '?', '#', '%' don't break
+  // the URL or enable path traversal into unrelated routes.
+  return ROUTES.CUSTOM_DASHBOARD.replace(':id', encodeURIComponent(id))
 }
 
 /**
