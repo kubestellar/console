@@ -21,16 +21,13 @@ The chart has two modes for supplying secret material:
 
 1. **Chart-managed (default, easiest)** — pass values via `--set` or a values
    file; the chart renders a single Kubernetes Secret whose name is the
-   chart `fullname`. Following the standard Helm `fullname` template
-   convention, that resolves to:
-   - `fullnameOverride` if set, else
-   - `.Release.Name` if the release name already contains `kubestellar-console`
-     (e.g. `helm install kubestellar-console ./chart` → Secret name
-     `kubestellar-console`), else
-   - `{.Release.Name}-{nameOverride|kubestellar-console}` (e.g.
-     `helm install kc ./chart` → Secret name `kc-kubestellar-console`).
-   - In all three cases the final name is truncated at 63 characters for
-     DNS-label compliance.
+   chart `fullname`. The exact name depends on `fullnameOverride`,
+   `nameOverride`, and whether `.Release.Name` already contains the chart
+   name — the authoritative definition lives in
+   [`templates/_helpers.tpl`](./templates/_helpers.tpl) under
+   `"kubestellar-console.fullname"`. To see the exact name your values
+   produce, run `helm template . | head` and look for the `metadata.name`
+   of the rendered Secret.
 
    The Secret holds the JWT secret plus any of the other optional keys
    (`github-client-id`, `github-client-secret`, `google-drive-api-key`,
