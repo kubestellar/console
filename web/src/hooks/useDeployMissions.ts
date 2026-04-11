@@ -112,6 +112,13 @@ export interface DeployMission {
   dependencies?: DeployedDep[]
   /** Warnings from dependency resolution */
   warnings?: string[]
+  /**
+   * #6415 — Once any logs have been captured for a completed mission, this
+   * counter tracks how many additional poll cycles we've run so that late
+   * error lines (CrashLoopBackOff reasons etc.) can be recovered before the
+   * loop finally stops. Capped at LOG_RECOVERY_EXTRA_POLLS.
+   */
+  logRecoveryPolls?: number
 }
 
 /** Storage key for deploy mission data */
@@ -135,6 +142,15 @@ const MAX_NETWORK_FAILURES = 60
  * K8s rollout a chance to actually appear in the API (#6409).
  */
 const MIN_ACTIVE_MS = 10_000
+/**
+ * #6415 — After a completed mission first sees any logs, continue polling for
+ * this many additional cycles so that late-emitted error lines (e.g. a
+ * CrashLoopBackOff reason that arrives several seconds after the initial event
+ * stream) are captured. Without this grace period the poll loop would
+ * permanently stop the instant hasAnyLogs flips true, locking the UI out of
+ * the very error message the user needs.
+ */
+const LOG_RECOVERY_EXTRA_POLLS = 3
 
 function loadMissions(): DeployMission[] {
   try {
@@ -238,13 +254,27 @@ export function useDeployMissions() {
       const updated = await Promise.all(
         current.map(async (mission) => {
           const isCompleted = isTerminalStatus(mission.status)
-          // Stop polling completed missions after cutoff — unless logs were
-          // never loaded (e.g. restored from localStorage after page reload).
+          // #6415 — Track whether this poll cycle is "within the log-recovery
+          // grace window". When true, we allow the normal poll body to run
+          // below (which refetches logs for each cluster) and bump the
+          // recovery counter at the bottom. We only hard-stop polling when
+          // the budget is exhausted.
+          let inRecoveryWindow = false
           if (isCompleted && mission.completedAt &&
               (Date.now() - mission.completedAt) > CACHE_TTL_MS) {
             const hasAnyLogs = mission.clusterStatuses.some(cs => cs.logs && cs.logs.length > 0)
-            if (hasAnyLogs) return mission
-            // Fall through: do one more poll to recover logs
+            const recoveryPolls = mission.logRecoveryPolls ?? 0
+            if (hasAnyLogs) {
+              if (recoveryPolls >= LOG_RECOVERY_EXTRA_POLLS) {
+                // Grace window exhausted — stop polling for good.
+                return mission
+              }
+              inRecoveryWindow = true
+            }
+            // Else: no logs at all yet (e.g. page-reload case); fall through
+            // to poll once more. Do NOT count this toward the recovery
+            // budget — that budget is only for catching late lines AFTER at
+            // least one log line has arrived.
           }
 
           const pollCount = (mission.pollCount ?? 0) + 1
@@ -514,7 +544,14 @@ export function useDeployMissions() {
             pollCount,
             completedAt: isTerminalStatus(missionStatus)
               ? (mission.completedAt ?? Date.now())
-              : undefined }
+              : undefined,
+            // #6415 — Bump the log-recovery counter whenever we ran this
+            // poll cycle specifically because we were inside the grace
+            // window. Leave it untouched otherwise so a reopened active
+            // mission doesn't inherit a stale counter.
+            logRecoveryPolls: inRecoveryWindow
+              ? (mission.logRecoveryPolls ?? 0) + 1
+              : mission.logRecoveryPolls }
         })
       )
 

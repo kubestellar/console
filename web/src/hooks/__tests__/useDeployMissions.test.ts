@@ -740,9 +740,13 @@ describe('useDeployMissions', () => {
   })
 
   // =========================================================================
-  // 24. Completed mission past CACHE_TTL with logs => skips polling
+  // 24. Completed mission past CACHE_TTL with logs + exhausted recovery budget
+  //     => skips polling. #6415: up to LOG_RECOVERY_EXTRA_POLLS (3) grace
+  //     polls are allowed AFTER logs first arrive so late-emitted error
+  //     lines (e.g. CrashLoopBackOff reasons) can be captured. Once the
+  //     budget is exhausted, polling stops for good.
   // =========================================================================
-  it('skips polling for completed missions past TTL that already have logs', async () => {
+  it('skips polling for completed missions past TTL after log recovery budget exhausted', async () => {
     const completedAt = Date.now() - CACHE_TTL_MS - 1
     const missions = [makeMission({
       id: 'ttl-skip', status: 'orbit',
@@ -752,6 +756,9 @@ describe('useDeployMissions', () => {
         cluster: 'c1', status: 'running', replicas: 1, readyReplicas: 1,
         logs: ['existing log'],
       }],
+      // Simulate 3 prior grace-window polls (the cap defined by
+      // LOG_RECOVERY_EXTRA_POLLS in useDeployMissions.ts).
+      logRecoveryPolls: 3,
     })]
     localStorage.setItem(MISSIONS_STORAGE_KEY, JSON.stringify(missions))
 
@@ -763,6 +770,41 @@ describe('useDeployMissions', () => {
     await advancePastInitialPoll()
 
     expect(fetchSpy).not.toHaveBeenCalled()
+  })
+
+  // =========================================================================
+  // 24b. Completed mission past CACHE_TTL with logs but recovery budget
+  //      NOT yet exhausted => continues polling (#6415).
+  // =========================================================================
+  it('continues polling completed missions within the log-recovery grace window', async () => {
+    const completedAt = Date.now() - CACHE_TTL_MS - 1
+    const missions = [makeMission({
+      id: 'ttl-grace', status: 'orbit',
+      startedAt: completedAt - MIN_ACTIVE_MS, completedAt,
+      targetClusters: ['c1'],
+      clusterStatuses: [{
+        cluster: 'c1', status: 'running', replicas: 1, readyReplicas: 1,
+        logs: ['existing log'],
+      }],
+      // logRecoveryPolls === 0 → first grace poll is still allowed.
+    })]
+    localStorage.setItem(MISSIONS_STORAGE_KEY, JSON.stringify(missions))
+
+    mockClusterCacheRef.clusters = [{ name: 'c1', context: 'ctx-c1' }]
+    const fetchSpy = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({
+        deployments: [{ name: 'nginx', replicas: 1, readyReplicas: 1 }],
+      }),
+    })
+    global.fetch = fetchSpy
+    mockKubectlExec.mockResolvedValue({ exitCode: 1, output: '' })
+
+    renderHook(() => useDeployMissions())
+
+    await advancePastInitialPoll()
+
+    expect(fetchSpy).toHaveBeenCalled()
   })
 
   // =========================================================================
@@ -1285,9 +1327,10 @@ describe('useDeployMissions', () => {
   })
 
   // =========================================================================
-  // 42. #5501: partial mission stops polling after CACHE_TTL when logs exist
+  // 42. #5501 + #6415: partial mission stops polling after CACHE_TTL once
+  //      the log-recovery grace window has been exhausted.
   // =========================================================================
-  it('stops polling partial missions past TTL with existing logs', async () => {
+  it('stops polling partial missions past TTL after log recovery budget exhausted', async () => {
     const completedAt = Date.now() - CACHE_TTL_MS - 1
     const missions = [makeMission({
       id: 'partial-ttl', status: 'partial',
@@ -1297,6 +1340,8 @@ describe('useDeployMissions', () => {
         { cluster: 'c1', status: 'running', replicas: 1, readyReplicas: 1, logs: ['ok'] },
         { cluster: 'c2', status: 'failed', replicas: 1, readyReplicas: 0, logs: ['fail'] },
       ],
+      // #6415: simulate grace window already consumed.
+      logRecoveryPolls: 3,
     })]
     localStorage.setItem(MISSIONS_STORAGE_KEY, JSON.stringify(missions))
 

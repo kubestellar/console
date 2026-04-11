@@ -85,6 +85,27 @@ const WATCHED_PATHS_KEY = 'kc_mission_watched_paths'
 const MISSION_FILE_EXTENSIONS = ['.json', '.yaml', '.yml', '.md'] as const
 const MISSION_FILE_ACCEPT = '.json,.yaml,.yml,.md,application/json,text/yaml,text/markdown'
 
+/**
+ * #6421 — Matches any filesystem entry whose name begins with a dot.
+ * This exhaustively hides ALL dot-prefixed directories and files (the
+ * standard Unix hidden-entry convention) from the mission browser UI.
+ * The previous implementation only hid an enumerated set (.github, .gitkeep,
+ * index.json) which let .gitlab, .assets, .vscode, .well-known, etc. leak
+ * through whenever a new one was added to a source repo.
+ */
+const HIDDEN_ENTRY_REGEX = /^\./
+
+/**
+ * Returns true if an entry should be hidden from the browser listing.
+ * Hides dot-prefixed entries (directories AND files) and the legacy
+ * `index.json` manifest which is internal routing state, not a mission.
+ */
+function isHiddenEntry(name: string): boolean {
+  if (HIDDEN_ENTRY_REGEX.test(name)) return true
+  if (name === 'index.json') return true
+  return false
+}
+
 /** Check if a filename has a supported mission file extension */
 function isMissionFile(name: string): boolean {
   const lower = name.toLowerCase()
@@ -608,10 +629,10 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
           const { data: entries } = await api.get<BrowseEntry[]>(
             `/api/missions/browse?path=${encodeURIComponent(node.path)}`
           )
-          // Backend already filters .gitkeep and index.json, but guard client-side too
-          const HIDDEN_FILES = new Set(['.gitkeep', 'index.json'])
+          // Backend already filters infra/metadata, but guard client-side too.
+          // #6421 — filter ALL dot-prefixed entries (directories AND files).
           children = entries
-            .filter(e => e.type === 'directory' || !HIDDEN_FILES.has(e.name))
+            .filter(e => !isHiddenEntry(e.name))
             .map((e) => ({
               id: `${nodeId}/${e.name}`,
               name: e.name,
@@ -729,11 +750,12 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
           const { data: entries } = await api.get<BrowseEntry[]>(
             `/api/missions/browse?path=${encodeURIComponent(node.path)}`
           )
-          // Hide infrastructure/metadata files that are not missions
-          const HIDDEN_FILES = new Set(['.gitkeep', 'index.json'])
+          // #6421 — Hide dot-prefixed entries and the index.json manifest.
+          // Only mission files or directories may appear in the listing.
           setDirectoryEntries(
             entries.filter(e =>
-              (e.type === 'directory' || isMissionFile(e.name)) && !HIDDEN_FILES.has(e.name)
+              !isHiddenEntry(e.name) &&
+              (e.type === 'directory' || isMissionFile(e.name))
             )
           )
         } else if (node.source === 'github') {
