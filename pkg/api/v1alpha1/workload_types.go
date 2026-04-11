@@ -80,10 +80,21 @@ type ClusterDeployment struct {
 	LastUpdated   time.Time      `json:"lastUpdated"`
 }
 
+// WorkloadClusterError describes a per-cluster failure encountered while
+// listing workloads. It is surfaced alongside successful results so that
+// callers can render partial failures instead of silently dropping whole
+// clusters (#6659).
+type WorkloadClusterError struct {
+	Cluster   string `json:"cluster"`
+	ErrorType string `json:"errorType"`
+	Message   string `json:"message"`
+}
+
 // WorkloadList is a list of Workloads
 type WorkloadList struct {
-	Items      []Workload `json:"items"`
-	TotalCount int        `json:"totalCount"`
+	Items         []Workload             `json:"items"`
+	TotalCount    int                    `json:"totalCount"`
+	ClusterErrors []WorkloadClusterError `json:"clusterErrors,omitempty"`
 }
 
 // DeployRequest represents a request to deploy a workload to clusters

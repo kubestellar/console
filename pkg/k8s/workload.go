@@ -85,6 +85,10 @@ func (m *MultiClusterClient) ListWorkloads(ctx context.Context, cluster, namespa
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	workloads := make([]v1alpha1.Workload, 0)
+	// Per-cluster error accumulator — real failures (auth/network/RBAC)
+	// MUST be surfaced so the UI can render partial failures rather than
+	// silently hiding entire clusters (#6659). Mirrors the MCS/Argo pattern.
+	clusterErrors := make([]v1alpha1.WorkloadClusterError, 0)
 
 	slog.Info("[ListWorkloads] listing workloads", "clusterCount", len(clusterNames), "clusters", clusterNames)
 	for _, clusterName := range clusterNames {
@@ -95,6 +99,13 @@ func (m *MultiClusterClient) ListWorkloads(ctx context.Context, cluster, namespa
 			clusterWorkloads, err := m.ListWorkloadsForCluster(ctx, c, namespace, workloadType)
 			if err != nil {
 				slog.Error("[ListWorkloads] error listing workloads for cluster", "cluster", c, "error", err)
+				mu.Lock()
+				clusterErrors = append(clusterErrors, v1alpha1.WorkloadClusterError{
+					Cluster:   c,
+					ErrorType: classifyError(err.Error()),
+					Message:   err.Error(),
+				})
+				mu.Unlock()
 				return
 			}
 			slog.Info("[ListWorkloads] found workloads in cluster", "count", len(clusterWorkloads), "cluster", c)
@@ -108,12 +119,19 @@ func (m *MultiClusterClient) ListWorkloads(ctx context.Context, cluster, namespa
 	wg.Wait()
 
 	return &v1alpha1.WorkloadList{
-		Items:      workloads,
-		TotalCount: len(workloads),
+		Items:         workloads,
+		TotalCount:    len(workloads),
+		ClusterErrors: clusterErrors,
 	}, nil
 }
 
-// ListWorkloadsForCluster lists workloads in a specific cluster
+// ListWorkloadsForCluster lists workloads in a specific cluster.
+//
+// Real listing errors (auth, network, RBAC) are propagated to the caller so
+// that the aggregate ListWorkloads response can surface partial failures
+// instead of silently dropping the whole cluster (#6659). NotFound/NoMatch
+// errors (type simply not registered on the cluster) are treated as empty
+// lists for that kind, matching the Argo/MCS "CRD not installed" pattern.
 func (m *MultiClusterClient) ListWorkloadsForCluster(ctx context.Context, contextName, namespace, workloadType string) ([]v1alpha1.Workload, error) {
 	dynamicClient, err := m.GetDynamicClient(contextName)
 	if err != nil {
@@ -122,16 +140,34 @@ func (m *MultiClusterClient) ListWorkloadsForCluster(ctx context.Context, contex
 
 	workloads := make([]v1alpha1.Workload, 0)
 
+	// isKindNotRegistered reports whether an error means "this kind simply
+	// isn't registered on this cluster" (benign skip), as opposed to a real
+	// failure that must be surfaced.
+	isKindNotRegistered := func(err error) bool {
+		if err == nil {
+			return false
+		}
+		if apierrors.IsNotFound(err) {
+			return true
+		}
+		msg := err.Error()
+		return strings.Contains(msg, "no matches for") ||
+			strings.Contains(msg, "the server could not find the requested resource")
+	}
+
 	// List Deployments
 	if workloadType == "" || workloadType == "Deployment" {
 		var deployments interface{}
+		var listErr error
 		if namespace == "" {
-			deployments, err = dynamicClient.Resource(gvrDeployments).List(ctx, metav1.ListOptions{})
+			deployments, listErr = dynamicClient.Resource(gvrDeployments).List(ctx, metav1.ListOptions{})
 		} else {
-			deployments, err = dynamicClient.Resource(gvrDeployments).Namespace(namespace).List(ctx, metav1.ListOptions{})
+			deployments, listErr = dynamicClient.Resource(gvrDeployments).Namespace(namespace).List(ctx, metav1.ListOptions{})
 		}
-		if err != nil {
-			slog.Error("[ListWorkloadsForCluster] error listing deployments", "cluster", contextName, "error", err)
+		if listErr != nil {
+			if !isKindNotRegistered(listErr) {
+				return nil, fmt.Errorf("list deployments on %s: %w", contextName, listErr)
+			}
 		} else {
 			parsed := m.parseDeploymentsAsWorkloads(deployments, contextName)
 			workloads = append(workloads, parsed...)
@@ -141,13 +177,16 @@ func (m *MultiClusterClient) ListWorkloadsForCluster(ctx context.Context, contex
 	// List StatefulSets
 	if workloadType == "" || workloadType == "StatefulSet" {
 		var statefulsets interface{}
+		var listErr error
 		if namespace == "" {
-			statefulsets, err = dynamicClient.Resource(gvrStatefulSets).List(ctx, metav1.ListOptions{})
+			statefulsets, listErr = dynamicClient.Resource(gvrStatefulSets).List(ctx, metav1.ListOptions{})
 		} else {
-			statefulsets, err = dynamicClient.Resource(gvrStatefulSets).Namespace(namespace).List(ctx, metav1.ListOptions{})
+			statefulsets, listErr = dynamicClient.Resource(gvrStatefulSets).Namespace(namespace).List(ctx, metav1.ListOptions{})
 		}
-		if err != nil {
-			slog.Error("[ListWorkloadsForCluster] error listing statefulsets", "cluster", contextName, "error", err)
+		if listErr != nil {
+			if !isKindNotRegistered(listErr) {
+				return nil, fmt.Errorf("list statefulsets on %s: %w", contextName, listErr)
+			}
 		} else {
 			parsed := m.parseStatefulSetsAsWorkloads(statefulsets, contextName)
 			workloads = append(workloads, parsed...)
@@ -157,13 +196,16 @@ func (m *MultiClusterClient) ListWorkloadsForCluster(ctx context.Context, contex
 	// List DaemonSets
 	if workloadType == "" || workloadType == "DaemonSet" {
 		var daemonsets interface{}
+		var listErr error
 		if namespace == "" {
-			daemonsets, err = dynamicClient.Resource(gvrDaemonSets).List(ctx, metav1.ListOptions{})
+			daemonsets, listErr = dynamicClient.Resource(gvrDaemonSets).List(ctx, metav1.ListOptions{})
 		} else {
-			daemonsets, err = dynamicClient.Resource(gvrDaemonSets).Namespace(namespace).List(ctx, metav1.ListOptions{})
+			daemonsets, listErr = dynamicClient.Resource(gvrDaemonSets).Namespace(namespace).List(ctx, metav1.ListOptions{})
 		}
-		if err != nil {
-			slog.Error("[ListWorkloadsForCluster] error listing daemonsets", "cluster", contextName, "error", err)
+		if listErr != nil {
+			if !isKindNotRegistered(listErr) {
+				return nil, fmt.Errorf("list daemonsets on %s: %w", contextName, listErr)
+			}
 		} else {
 			parsed := m.parseDaemonSetsAsWorkloads(daemonsets, contextName)
 			workloads = append(workloads, parsed...)
@@ -1137,14 +1179,22 @@ func (m *MultiClusterClient) DeleteWorkload(ctx context.Context, cluster, namesp
 	return fmt.Errorf("workload %s/%s not found in cluster %s (tried Deployment, StatefulSet, DaemonSet)", namespace, name, cluster)
 }
 
-// GetClusterCapabilities returns the capabilities of all clusters
+// GetClusterCapabilities returns the capabilities of all clusters.
+//
+// Uses DeduplicatedClusters instead of the lazy m.clients snapshot so that
+// newly-added kubeconfig contexts appear immediately on hot reload, matching
+// the fix already landed in argocd.go for #6476. Previously, a cluster added
+// after startup whose kubernetes client had not yet been lazily created was
+// silently missing from /workloads/capabilities responses (#6661).
 func (m *MultiClusterClient) GetClusterCapabilities(ctx context.Context) (*v1alpha1.ClusterCapabilityList, error) {
-	m.mu.RLock()
-	clusters := make([]string, 0, len(m.clients))
-	for name := range m.clients {
-		clusters = append(clusters, name)
+	dedupClusters, err := m.DeduplicatedClusters(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list clusters: %w", err)
 	}
-	m.mu.RUnlock()
+	clusters := make([]string, 0, len(dedupClusters))
+	for _, c := range dedupClusters {
+		clusters = append(clusters, c.Name)
+	}
 
 	capabilities := make([]v1alpha1.ClusterCapability, 0, len(clusters))
 

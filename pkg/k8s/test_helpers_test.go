@@ -2,7 +2,28 @@ package k8s
 
 import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/tools/clientcmd/api"
 )
+
+// injectTestClusters populates m.rawConfig with fake kubeconfig entries for
+// each provided context name so that DeduplicatedClusters / ListClusters
+// returns them without attempting to load real kubeconfig from disk. Used
+// by multi-cluster list tests (MCS, Gateway, Workload capability, etc.)
+// that rely on the DeduplicatedClusters hot-reload fix (#6659, #6661–#6663).
+func injectTestClusters(m *MultiClusterClient, names ...string) {
+	cfg := &api.Config{
+		Contexts: map[string]*api.Context{},
+		Clusters: map[string]*api.Cluster{},
+	}
+	for _, name := range names {
+		clusterKey := "cl-" + name
+		cfg.Contexts[name] = &api.Context{Cluster: clusterKey}
+		// Each test cluster gets a unique fake server URL so DeduplicatedClusters
+		// does not collapse them into one entry.
+		cfg.Clusters[clusterKey] = &api.Cluster{Server: "https://" + name + ".example"}
+	}
+	m.rawConfig = cfg
+}
 
 // buildTestGVRMap returns the comprehensive GVR-to-ListKind map needed by
 // fake dynamic clients when tests exercise dependency resolution, monitoring,

@@ -4,24 +4,51 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/kubestellar/console/pkg/api/v1alpha1"
 )
 
+// isGatewayCRDNotInstalled reports whether an error indicates the Gateway API
+// CRDs are simply not installed on the target cluster (a benign "empty list"
+// signal), as opposed to a real failure such as auth/network/RBAC that the
+// caller MUST see. Mirrors the MCS isCRDNotInstalled classifier (#6510, #6660).
+func isGatewayCRDNotInstalled(err error) bool {
+	if err == nil {
+		return false
+	}
+	if apierrors.IsNotFound(err) {
+		return true
+	}
+	msg := strings.ToLower(err.Error())
+	if strings.Contains(msg, "no matches for") ||
+		strings.Contains(msg, "the server could not find the requested resource") {
+		return true
+	}
+	return false
+}
+
 // ListGateways lists all Gateway resources across all clusters.
 // Per-cluster errors are collected and returned alongside any successful results
 // so that callers can surface partial failures instead of silently dropping data.
+//
+// Uses DeduplicatedClusters (not the lazy m.clients snapshot) so newly-added
+// kubeconfig contexts are picked up immediately on hot reload (#6663, same
+// class as #6476).
 func (m *MultiClusterClient) ListGateways(ctx context.Context) (*v1alpha1.GatewayList, error) {
-	m.mu.RLock()
-	clusters := make([]string, 0, len(m.clients))
-	for name := range m.clients {
-		clusters = append(clusters, name)
+	dedupClusters, err := m.DeduplicatedClusters(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list clusters: %w", err)
 	}
-	m.mu.RUnlock()
+	clusters := make([]string, 0, len(dedupClusters))
+	for _, c := range dedupClusters {
+		clusters = append(clusters, c.Name)
+	}
 
 	var wg sync.WaitGroup
 	var mu sync.Mutex
@@ -67,25 +94,29 @@ func (m *MultiClusterClient) ListGatewaysForCluster(ctx context.Context, context
 		return nil, err
 	}
 
-	// Try v1 first, then fall back to v1beta1
+	// Try v1 first, then fall back to v1beta1. Only the "CRDs are not
+	// installed on this cluster" case is a benign empty-list — real errors
+	// (auth/network/RBAC) MUST be propagated so callers can report partial
+	// failures instead of silently dropping whole clusters (#6660).
 	var list interface{}
 	if namespace == "" {
 		list, err = dynamicClient.Resource(v1alpha1.GatewayGVR).List(ctx, metav1.ListOptions{})
-		if err != nil {
-			// Try v1beta1 fallback
+		if err != nil && isGatewayCRDNotInstalled(err) {
 			list, err = dynamicClient.Resource(v1alpha1.GatewayGVRv1beta1).List(ctx, metav1.ListOptions{})
 		}
 	} else {
 		list, err = dynamicClient.Resource(v1alpha1.GatewayGVR).Namespace(namespace).List(ctx, metav1.ListOptions{})
-		if err != nil {
-			// Try v1beta1 fallback
+		if err != nil && isGatewayCRDNotInstalled(err) {
 			list, err = dynamicClient.Resource(v1alpha1.GatewayGVRv1beta1).Namespace(namespace).List(ctx, metav1.ListOptions{})
 		}
 	}
 
 	if err != nil {
-		// Gateway API CRDs might not be installed - return empty list instead of error
-		return []v1alpha1.Gateway{}, nil
+		if isGatewayCRDNotInstalled(err) {
+			// Gateway API CRDs not installed — benign empty list
+			return []v1alpha1.Gateway{}, nil
+		}
+		return nil, err
 	}
 
 	return m.parseGatewaysFromList(list, contextName)
@@ -150,13 +181,18 @@ func (m *MultiClusterClient) parseGatewaysFromList(list interface{}, contextName
 // ListHTTPRoutes lists all HTTPRoute resources across all clusters.
 // Per-cluster errors are collected and returned alongside any successful results
 // so that callers can surface partial failures instead of silently dropping data.
+//
+// Uses DeduplicatedClusters so hot-reloaded kubeconfig contexts are seen
+// immediately instead of waiting for a lazy client to be materialized (#6663).
 func (m *MultiClusterClient) ListHTTPRoutes(ctx context.Context) (*v1alpha1.HTTPRouteList, error) {
-	m.mu.RLock()
-	clusters := make([]string, 0, len(m.clients))
-	for name := range m.clients {
-		clusters = append(clusters, name)
+	dedupClusters, err := m.DeduplicatedClusters(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list clusters: %w", err)
 	}
-	m.mu.RUnlock()
+	clusters := make([]string, 0, len(dedupClusters))
+	for _, c := range dedupClusters {
+		clusters = append(clusters, c.Name)
+	}
 
 	var wg sync.WaitGroup
 	var mu sync.Mutex
@@ -202,25 +238,25 @@ func (m *MultiClusterClient) ListHTTPRoutesForCluster(ctx context.Context, conte
 		return nil, err
 	}
 
-	// Try v1 first, then fall back to v1beta1
+	// Only "CRDs not installed" is benign — real errors propagate (#6660).
 	var list interface{}
 	if namespace == "" {
 		list, err = dynamicClient.Resource(v1alpha1.HTTPRouteGVR).List(ctx, metav1.ListOptions{})
-		if err != nil {
-			// Try v1beta1 fallback
+		if err != nil && isGatewayCRDNotInstalled(err) {
 			list, err = dynamicClient.Resource(v1alpha1.HTTPRouteGVRv1beta1).List(ctx, metav1.ListOptions{})
 		}
 	} else {
 		list, err = dynamicClient.Resource(v1alpha1.HTTPRouteGVR).Namespace(namespace).List(ctx, metav1.ListOptions{})
-		if err != nil {
-			// Try v1beta1 fallback
+		if err != nil && isGatewayCRDNotInstalled(err) {
 			list, err = dynamicClient.Resource(v1alpha1.HTTPRouteGVRv1beta1).Namespace(namespace).List(ctx, metav1.ListOptions{})
 		}
 	}
 
 	if err != nil {
-		// Gateway API CRDs might not be installed - return empty list instead of error
-		return []v1alpha1.HTTPRoute{}, nil
+		if isGatewayCRDNotInstalled(err) {
+			return []v1alpha1.HTTPRoute{}, nil
+		}
+		return nil, err
 	}
 
 	return m.parseHTTPRoutesFromList(list, contextName)

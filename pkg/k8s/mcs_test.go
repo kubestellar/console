@@ -177,6 +177,9 @@ func TestMCS_ListServiceExports(t *testing.T) {
 			m.clients = map[string]kubernetes.Interface{
 				tt.contextName: typedfake.NewSimpleClientset(),
 			}
+			// After #6662, ListServiceExports iterates DeduplicatedClusters
+			// rather than m.clients, so rawConfig must name the test cluster.
+			injectTestClusters(m, tt.contextName)
 
 			// Test ListServiceExports (global list)
 			got, err := m.ListServiceExports(context.Background())
@@ -301,6 +304,8 @@ func TestMCS_ListServiceImports(t *testing.T) {
 
 			m.dynamicClients = map[string]dynamic.Interface{tt.contextName: fakeDyn}
 			m.clients = map[string]kubernetes.Interface{tt.contextName: typedfake.NewSimpleClientset()}
+			// After #6662, ListServiceImports iterates DeduplicatedClusters.
+			injectTestClusters(m, tt.contextName)
 
 			// Test ListServiceImports (global)
 			got, err := m.ListServiceImports(context.Background())
