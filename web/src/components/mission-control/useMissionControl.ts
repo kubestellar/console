@@ -7,6 +7,7 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useMissions } from '../../hooks/useMissions'
+import { useDebouncedValue } from '../../hooks/useDebouncedValue'
 import { useHelmReleases } from '../../hooks/mcp/helm'
 import { useClusters } from '../../hooks/mcp/clusters'
 import { isDemoMode } from '../../lib/demoMode'
@@ -23,6 +24,16 @@ import type {
 const STORAGE_KEY = 'kc_mission_control_state'
 // Wizard state expires after 7 days to avoid persisting abandoned mission drafts
 const WIZARD_STATE_TTL_MS = 7 * 24 * 60 * 60 * 1000
+
+/**
+ * Trailing-debounce window (ms) applied to `latestAssistantContent` before
+ * running `extractJSON`. Phase 1 can stream large JSON blocks at ~50 tokens/s;
+ * without this debounce the heavy balanced-brace scan + JSON.parse fires on
+ * every streamed chunk and locks the main thread (#6372). 250 ms is long
+ * enough to coalesce a burst of chunks but short enough that the parsed
+ * projects appear within one frame of the stream pausing.
+ */
+const STREAM_JSON_DEBOUNCE_MS = 250
 
 // ---------------------------------------------------------------------------
 // Persisted state (survives page reload / accidental close)
@@ -235,8 +246,18 @@ export function useMissionControl() {
     return msgs[msgs.length - 1]?.content ?? ''
   }, [planningMission?.messages])
 
+  // #6372 — Debounce the content feed so the expensive extractJSON pass
+  // (balanced-brace scan + JSON.parse) only fires after the stream pauses.
+  // Feeding it the raw streamed content triggered ~50 parses/second on
+  // large Phase 1 JSON blocks and locked the main thread.
+  const debouncedAssistantContent = useDebouncedValue(latestAssistantContent, STREAM_JSON_DEBOUNCE_MS)
+
   useEffect(() => {
     if (!planningMission) return
+    // Use the debounced content length to gate parsing: when the stream is
+    // actively arriving, `latest.content` races ahead of `debouncedAssistantContent`
+    // and we skip the parse until the stream slows down.
+    if (!debouncedAssistantContent) return
     const assistantMsgs = planningMission.messages.filter((m) => m.role === 'assistant')
     const latest = assistantMsgs[assistantMsgs.length - 1]
     if (!latest) return
@@ -278,7 +299,7 @@ export function useMissionControl() {
         })
       }
     }
-  }, [latestAssistantContent, state.phase, state.planningMissionId, planningMission?.status])
+  }, [debouncedAssistantContent, state.phase, state.planningMissionId, planningMission?.status])
 
   // Update streaming state from mission status
   useEffect(() => {

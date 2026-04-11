@@ -174,6 +174,17 @@ const SELECTED_AGENT_KEY = 'kc_selected_agent'
 
 /** Delay before auto-reconnecting interrupted missions after WS opens */
 const MISSION_RECONNECT_DELAY_MS = 500
+/**
+ * Maximum age (ms) a disconnected mission may have before auto-resume is
+ * considered unsafe (#6371). Agents purge sessions after a short idle
+ * window, so resuming a mission whose last update was hours ago is very
+ * likely to hit a GONE/not_found session on the backend — or worse, land
+ * the user's prompt in a disjointed new thread. Past this threshold the
+ * mission is marked `needsRestart` so the UI can prompt the user instead
+ * of replaying the prompt silently. 30 minutes is conservative: it covers
+ * lunch/meeting gaps while still protecting against overnight reconnects.
+ */
+const MISSION_RECONNECT_MAX_AGE_MS = 30 * 60 * 1000
 /** Initial delay (ms) before auto-reconnecting WebSocket after close */
 const WS_RECONNECT_INITIAL_DELAY_MS = 1_000
 /** Maximum delay (ms) between reconnection attempts (backoff cap) */
@@ -432,6 +443,21 @@ export function MissionProvider({ children }: { children: ReactNode }) {
   const lastStreamTimestamp = useRef<Map<string, number>>(new Map()) // missionId -> timestamp
   // Track cancel acknowledgment timeouts — missionId -> timeout handle
   const cancelTimeouts = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
+  /**
+   * Mission IDs for which cancellation has been requested by the user.
+   *
+   * This ref is set synchronously at the very top of `cancelMission` so that
+   * a terminal WebSocket message (result / stream-done) arriving in the same
+   * event-loop tick can still observe the cancel intent even if React has not
+   * yet committed the 'cancelling' status transition (#6370). Without this
+   * ref, the race between `cancelMission`'s `setMissions` update and the
+   * result handler's `setMissions` update could leave the mission stuck in
+   * 'completed' instead of transitioning cancelling → cancelled.
+   *
+   * Entries are cleared when `finalizeCancellation` runs or when a retry
+   * reuses the mission ID via `executeMission`.
+   */
+  const cancelIntents = useRef<Set<string>>(new Set())
   // Track waiting_input watchdog timers — missionId -> timeout handle (#5936).
   // Prevents missions from getting stuck in 'waiting_input' indefinitely if
   // the backend never delivers a final result message.
@@ -628,6 +654,10 @@ export function MissionProvider({ children }: { children: ReactNode }) {
           // Missions that have already had one reconnect attempt — don't
           // replay the prompt again; fail them instead (#5930).
           const missionsToFailDuplicate: string[] = []
+          // Missions whose last update was so long ago that the backend
+          // session is almost certainly gone. Don't auto-resume these —
+          // mark them as needing a manual restart (#6371).
+          const missionsToMarkStale: string[] = []
 
           setMissions(prev => {
             const candidates = prev.filter(m =>
@@ -637,9 +667,14 @@ export function MissionProvider({ children }: { children: ReactNode }) {
             if (candidates.length > 0) {
               // Split candidates into first-attempt (safe to replay) vs
               // already-attempted (unsafe — would duplicate execution on
-              // non-idempotent agents, see #5930).
+              // non-idempotent agents, see #5930) vs stale (backend session
+              // has very likely expired, see #6371).
+              const now = Date.now()
               for (const m of candidates) {
-                if (m.context?.reconnectAttempted) {
+                const ageMs = now - new Date(m.updatedAt).getTime()
+                if (ageMs > MISSION_RECONNECT_MAX_AGE_MS) {
+                  missionsToMarkStale.push(m.id)
+                } else if (m.context?.reconnectAttempted) {
                   missionsToFailDuplicate.push(m.id)
                 } else {
                   missionsToReconnect.push(m)
@@ -650,6 +685,26 @@ export function MissionProvider({ children }: { children: ReactNode }) {
               // so a subsequent reconnect won't replay the prompt again.
               return prev.map(m => {
                 if (!m.context?.needsReconnect) return m
+                if (missionsToMarkStale.includes(m.id)) {
+                  return {
+                    ...m,
+                    status: 'failed' as MissionStatus,
+                    currentStep: undefined,
+                    updatedAt: new Date(),
+                    context: {
+                      ...m.context,
+                      needsReconnect: false,
+                      needsRestart: true },
+                    messages: [
+                      ...m.messages,
+                      {
+                        id: `msg-reconnect-stale-${m.id}-${Date.now()}`,
+                        role: 'system' as const,
+                        content: `**Mission session expired**\n\nThe connection to the agent was lost more than ${Math.round(MISSION_RECONNECT_MAX_AGE_MS / 60_000)} minutes ago. The agent has likely purged this session, so auto-resume is unsafe — it could crash the agent or land your prompt in a disjointed thread.\n\n**Click Retry Mission** to start a fresh session with the same prompt.`,
+                        timestamp: new Date() }
+                    ]
+                  }
+                }
                 if (missionsToFailDuplicate.includes(m.id)) {
                   return {
                     ...m,
@@ -941,6 +996,8 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
       clearTimeout(timeout)
       cancelTimeouts.current.delete(missionId)
     }
+    // #6370 — clear the cancel intent now that we're finalizing.
+    cancelIntents.current.delete(missionId)
 
     // Purge ALL pending request IDs that map to this mission so that late
     // responses (from earlier failed or in-flight requests) are dropped at
@@ -951,10 +1008,17 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
     lastStreamTimestamp.current.delete(missionId)
     clearWaitingInputTimeout(missionId) // #5936
 
-    setMissions(prev => prev.map(m =>
-      m.id === missionId && m.status === 'cancelling' ? {
+    setMissions(prev => prev.map(m => {
+      if (m.id !== missionId) return m
+      // Accept any non-terminal status here (not just 'cancelling') because
+      // the cancel intent may have been recorded synchronously while the
+      // 'cancelling' state transition was still queued (#6370). We never
+      // overwrite a completed/failed/cancelled mission — those are the
+      // true terminal states.
+      if (m.status === 'completed' || m.status === 'failed' || m.status === 'cancelled') return m
+      return {
         ...m,
-        status: 'cancelled',
+        status: 'cancelled' as MissionStatus,
         currentStep: undefined,
         updatedAt: new Date(),
         messages: [
@@ -965,8 +1029,8 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
             content: message,
             timestamp: new Date() }
         ]
-      } : m
-    ))
+      }
+    }))
   }
 
   // Handle messages from the agent
@@ -1054,6 +1118,27 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
       // (#4499, #5935).
       if (m.status === 'failed' || m.status === 'completed' || m.status === 'cancelled') {
         pendingRequests.current.delete(message.id)
+        return m
+      }
+
+      // #6370 — If cancellation has been REQUESTED (even if the 'cancelling'
+      // state transition has not yet been committed by React), treat any
+      // terminal message as implicit cancel confirmation. Without this the
+      // result handler below could race with `cancelMission`'s state update
+      // and overwrite the cancellation intent with a 'completed' status.
+      if (cancelIntents.current.has(missionId)) {
+        const isTerminalMessage =
+          message.type === 'result' ||
+          message.type === 'error' ||
+          (message.type === 'stream' && (message.payload as { done?: boolean })?.done)
+        if (isTerminalMessage) {
+          pendingRequests.current.delete(message.id)
+          finalizeCancellation(missionId, 'Mission cancelled by user.')
+          return m
+        }
+        // Non-terminal stream chunks while a cancel is in flight: drop them
+        // so we don't flash the latest chunk into the UI right before the
+        // mission transitions to 'cancelled'.
         return m
       }
 
@@ -1594,6 +1679,11 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
     enhancedPrompt: string,
     params: { context?: Record<string, unknown>; type?: string },
   ) => {
+    // A retry may reuse a missionId that had a previous cancel intent;
+    // clear any stale entry so the new run is not immediately treated as
+    // cancelled (#6370).
+    cancelIntents.current.delete(missionId)
+
     // Send to agent
     ensureConnection().then(() => {
       const requestId = `claude-${Date.now()}`
@@ -1864,6 +1954,12 @@ Install the console locally with the KubeStellar Console agent to use AI mission
   const cancelMission = (missionId: string) => {
     // Guard against double-cancel: if already cancelling, don't schedule another timeout
     if (cancelTimeouts.current.has(missionId)) return
+
+    // #6370 — Mark the cancel intent synchronously BEFORE any state update or
+    // backend call. This is the authoritative signal for the message handler:
+    // any terminal message arriving after this point will be routed through
+    // `finalizeCancellation` instead of transitioning to 'completed'.
+    cancelIntents.current.add(missionId)
 
     // Pending missions have never been sent to the backend yet (preflight
     // check is still running, or ensureConnection has not resolved). We can
@@ -2218,6 +2314,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
   // and clear any pending cancel acknowledgment timeouts
   useEffect(() => {
     const cancelTimeoutsRef = cancelTimeouts.current
+    const cancelIntentsRef = cancelIntents.current
     return () => {
       if (wsReconnectTimer.current) {
         clearTimeout(wsReconnectTimer.current)
@@ -2228,6 +2325,8 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         clearTimeout(timeout)
       }
       cancelTimeoutsRef.clear()
+      // Clear any lingering cancel intents (#6370)
+      cancelIntentsRef.clear()
       wsRef.current?.close()
     }
   }, [])
