@@ -503,7 +503,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
       <div
         ref={messagesContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto scroll-enhanced p-4 space-y-4 min-h-0 min-w-0"
+        className="flex-1 overflow-y-auto scroll-enhanced p-4 space-y-4 min-h-[150px] min-w-0"
       >
         {/* Inline Run button + editable mission description/steps for saved missions (#3917, #4273) */}
         {isSavedPreRun && (
@@ -797,7 +797,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
 
       {/* Input / Actions — hidden when Run button is inline above */}
       {!isSavedPreRun && (
-      <div className="p-4 border-t border-border flex-shrink-0 bg-card min-w-0">
+      <div className="p-4 border-t border-border flex-shrink-0 bg-card min-w-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
         {mission.status === 'cancelling' ? (
           <div className="flex items-center justify-center gap-2 py-3">
             <Loader2 className="w-4 h-4 animate-spin text-orange-400" />

@@ -868,7 +868,7 @@ export function FlightPlanBlueprint({
       </div>
 
       {/* Main content: SVG left + Info panel right */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
         {/* SVG Blueprint */}
         <div className="flex-1 p-4 overflow-hidden relative">
           {/* Zoom & sidebar controls */}

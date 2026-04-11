@@ -397,7 +397,7 @@ export function Sidebar() {
               )
             })()}
             {!isCollapsed && (
-              <span className="absolute right-5 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-background/80 backdrop-blur-sm rounded px-1">
+              <span className="absolute right-5 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity bg-background/80 backdrop-blur-sm rounded px-1">
                 {!PROTECTED_SIDEBAR_IDS.includes(item.id) && (
                   <span
                     role="button"
@@ -450,7 +450,7 @@ export function Sidebar() {
           !isMobile && (config.collapsed ? 'p-3' : 'p-4'),
           // Mobile: slide off-screen when closed
           isMobile && 'p-4',
-          isMobile && !config.isMobileOpen && '-translate-x-full',
+          isMobile && !config.isMobileOpen && '-translate-x-full hidden md:flex',
           isMobile && config.isMobileOpen && 'translate-x-0'
         )}
         style={{ width: isMobile ? SIDEBAR_DEFAULT_WIDTH_PX : sidebarWidth }}>
