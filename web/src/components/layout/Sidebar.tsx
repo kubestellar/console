@@ -444,7 +444,7 @@ export function Sidebar() {
         onMouseEnter={handleSidebarMouseEnter}
         onMouseLeave={handleSidebarMouseLeave}
         className={cn(
-          'fixed left-0 top-16 bottom-0 glass border-r border-border/50 overflow-y-auto scroll-enhanced z-40',
+          'fixed left-0 top-16 bottom-0 glass border-r border-border/50 overflow-y-auto scroll-enhanced z-modal',
           !isResizing && 'transition-all duration-300',
           // Desktop: respect collapsed state
           !isMobile && (config.collapsed ? 'p-3' : 'p-4'),
@@ -626,7 +626,7 @@ export function Sidebar() {
         <div
           onMouseDown={handleResizeStart}
           className={cn(
-            "fixed bottom-0 cursor-col-resize z-sticky hover:bg-purple-500/30 transition-colors",
+            "fixed bottom-0 cursor-col-resize z-sticky hover:bg-purple-500/30 transition-colors hidden md:block",
             isResizing && "bg-purple-500/50"
           )}
           style={{ top: 160, left: sidebarWidth - 3, width: 6 }}

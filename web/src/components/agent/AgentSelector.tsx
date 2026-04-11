@@ -402,7 +402,7 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
           ref={panelRef}
           role="listbox"
           aria-label={t('agent.selectAgent')}
-          className="fixed z-dropdown w-96 max-h-[calc(100vh-8rem)] rounded-lg bg-card border border-border shadow-lg overflow-hidden flex flex-col"
+          className="fixed z-[250] w-96 max-h-[calc(100vh-8rem)] rounded-lg bg-card border border-border shadow-lg overflow-hidden flex flex-col"
           style={{ top: dropdownPos.top, right: dropdownPos.right }}
           onKeyDown={(e) => {
             if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return

@@ -31,7 +31,7 @@ export function FeatureHintTooltip({
 }: FeatureHintTooltipProps) {
   return (
     <div
-      className={`absolute z-50 ${PLACEMENT_CLASSES[placement]} animate-in fade-in slide-in-from-top-1 duration-300`}
+      className={`absolute z-toast ${PLACEMENT_CLASSES[placement]} animate-in fade-in slide-in-from-top-1 duration-300`}
       role="tooltip"
     >
       <div className="flex items-center gap-2 px-3 py-2 rounded-lg glass border border-purple-500/30 bg-purple-500/10 shadow-lg w-72">

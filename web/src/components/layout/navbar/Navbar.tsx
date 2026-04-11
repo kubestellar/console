@@ -205,7 +205,7 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
                 onClick={() => setShowMobileMore(false)}
               />
               {/* Bottom sheet menu on mobile */}
-              <div className={`fixed ${isMobile ? 'inset-x-0 bottom-0 rounded-t-2xl max-h-[60vh]' : 'right-4 w-64 rounded-lg'} bg-card border border-border shadow-xl z-50 overflow-hidden`} style={isMobile ? undefined : { top: topOffset + NAVBAR_HEIGHT_PX }}>
+              <div className={`fixed ${isMobile ? 'inset-x-0 bottom-0 rounded-t-2xl max-h-[60vh]' : 'right-4 w-64 rounded-lg'} bg-card border border-border shadow-xl z-modal overflow-hidden`} style={isMobile ? undefined : { top: topOffset + NAVBAR_HEIGHT_PX }}>
                 {/* Drag handle for mobile */}
                 {isMobile && (
                   <div className="flex justify-center py-2">
