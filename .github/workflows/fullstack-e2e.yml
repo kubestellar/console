@@ -1,0 +1,114 @@
+name: Full-Stack E2E Smoke
+
+# Full-stack smoke test — kubestellar/console#6362
+#
+# Closes the "frontend-only" Playwright blind spot: the main Playwright
+# workflow runs against `npm run dev` (Vite only), so Go<->frontend
+# regressions (handler wiring, API shape drift, build tag issues) don't
+# surface until runtime. This workflow builds the Go binary and runs a
+# tiny smoke test against it.
+#
+# Deferred follow-ups (see #6362): kc-agent mocking, OAuth flow coverage,
+# WebSocket stream coverage. This is the 20% fix that catches the 80%.
+
+on:
+  pull_request:
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - 'go.sum'
+      - 'web/src/**'
+      - 'web/e2e/fullstack-smoke.spec.ts'
+      - '.github/workflows/fullstack-e2e.yml'
+
+permissions:
+  contents: read
+
+env:
+  # Dev-only placeholder — must be >= 32 chars for the server to accept it
+  # in non-production mode. Real deployments MUST set JWT_SECRET via env.
+  DEV_JWT_SECRET: 'ci-fullstack-smoke-test-jwt-secret-placeholder-not-a-real-key'
+  # Backend port — must match pkg/api/server.go default (8080).
+  BACKEND_PORT: '8080'
+  # Max time we'll wait for /healthz to respond OK (seconds).
+  HEALTH_TIMEOUT_S: '60'
+
+jobs:
+  fullstack-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up Go
+        uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5.2.0
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Set up Node.js
+        uses: actions/setup-node@1d0ff469b7ec7b3cb9d8673fde0c81c44821de2a # v4.2.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install frontend deps
+        working-directory: web
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: web
+        run: npm run build
+
+      - name: Build Go backend
+        run: go build -o /tmp/console-binary ./cmd/console
+
+      - name: Start Go backend in background
+        env:
+          JWT_SECRET: ${{ env.DEV_JWT_SECRET }}
+          # Dev mode — do not require real OAuth creds
+          CONSOLE_ENV: 'development'
+          PORT: ${{ env.BACKEND_PORT }}
+        run: |
+          /tmp/console-binary > /tmp/console.log 2>&1 &
+          echo $! > /tmp/console.pid
+          echo "Backend PID: $(cat /tmp/console.pid)"
+
+      - name: Wait for /healthz
+        run: |
+          for i in $(seq 1 ${HEALTH_TIMEOUT_S}); do
+            if curl -sf "http://localhost:${BACKEND_PORT}/healthz" > /dev/null; then
+              echo "Backend up after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Backend did not become healthy in ${HEALTH_TIMEOUT_S}s"
+          echo "--- console.log ---"
+          cat /tmp/console.log || true
+          exit 1
+
+      - name: Install Playwright browsers
+        working-directory: web
+        run: npx playwright install --with-deps chromium
+
+      - name: Run full-stack smoke spec
+        working-directory: web
+        env:
+          FULLSTACK_SMOKE: '1'
+          PLAYWRIGHT_BASE_URL: http://localhost:${{ env.BACKEND_PORT }}
+        run: npx playwright test e2e/fullstack-smoke.spec.ts --project=chromium
+
+      - name: Dump backend log on failure
+        if: failure()
+        run: |
+          echo "--- console.log ---"
+          cat /tmp/console.log || true
+
+      - name: Stop backend
+        if: always()
+        run: |
+          if [ -f /tmp/console.pid ]; then
+            kill "$(cat /tmp/console.pid)" || true
+          fi
