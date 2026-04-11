@@ -396,14 +396,17 @@ describe('localStorage persistence', () => {
     expect(cards).toHaveLength(2)
   })
 
-  it('falls back to config cards when localStorage has empty array', () => {
+  it('respects an explicitly empty persisted array (#6710)', () => {
+    // #6710 — An empty array in localStorage represents "user removed
+    // all cards"; we must NOT fall back to config defaults on reload,
+    // otherwise the deletion appears to have been ignored.
     const storageKey = 'empty-arr'
     localStorage.setItem(storageKey, '[]')
     const config = makeConfig({ storageKey })
     render(<UnifiedDashboard config={config} />)
 
     const cards = capturedGridProps.cards as DashboardCardPlacement[]
-    expect(cards).toHaveLength(2)
+    expect(cards).toHaveLength(0)
   })
 
   it('persists cards to localStorage when they change', () => {
