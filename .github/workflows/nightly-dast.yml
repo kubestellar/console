@@ -58,6 +58,20 @@ jobs:
       - name: Parse ZAP Results
         if: always()
         id: zap-results
+        env:
+          # #6321: documented CSP exceptions — intentional 'unsafe-*'
+          # directives that cannot be removed without breaking
+          # load-bearing features (dynamic-cards `new Function()` and
+          # React inline style props). See netlify.toml:148-168 for
+          # full rationale and compensating controls. This filter is
+          # the source of truth for "which CSP alerts are expected";
+          # adding to the list requires a PR review. Matching against
+          # the alert `name` field lets us silence ONLY these two
+          # sub-findings while still catching future CSP regressions
+          # under the same rule id 10055.
+          DOCUMENTED_CSP_EXCEPTIONS: |
+            CSP: script-src unsafe-eval
+            CSP: style-src unsafe-inline
         run: |
           # ZAP baseline outputs a summary to stdout; check for alerts
           ALERT_COUNT=0
@@ -66,10 +80,15 @@ jobs:
           LOW_COUNT=0
 
           if [ -f report_json.json ]; then
-            ALERT_COUNT=$(jq '[.site[].alerts[]] | length' report_json.json 2>/dev/null || echo 0)
-            HIGH_COUNT=$(jq '[.site[].alerts[] | select(.riskcode == "3")] | length' report_json.json 2>/dev/null || echo 0)
-            MEDIUM_COUNT=$(jq '[.site[].alerts[] | select(.riskcode == "2")] | length' report_json.json 2>/dev/null || echo 0)
-            LOW_COUNT=$(jq '[.site[].alerts[] | select(.riskcode == "1")] | length' report_json.json 2>/dev/null || echo 0)
+            # Build a jq filter that excludes each documented exception by name.
+            # We read the exception list from the env var so adding a new
+            # documented exception is a one-line YAML edit, not a jq rewrite.
+            EXCLUDE_JQ='[.site[].alerts[] | select(.name as $n | ($exceptions | split("\n") | map(select(length > 0)) | index($n) | not))]'
+
+            ALERT_COUNT=$(jq  --arg exceptions "$DOCUMENTED_CSP_EXCEPTIONS" "$EXCLUDE_JQ | length" report_json.json 2>/dev/null || echo 0)
+            HIGH_COUNT=$(jq   --arg exceptions "$DOCUMENTED_CSP_EXCEPTIONS" "$EXCLUDE_JQ | map(select(.riskcode == \"3\")) | length" report_json.json 2>/dev/null || echo 0)
+            MEDIUM_COUNT=$(jq --arg exceptions "$DOCUMENTED_CSP_EXCEPTIONS" "$EXCLUDE_JQ | map(select(.riskcode == \"2\")) | length" report_json.json 2>/dev/null || echo 0)
+            LOW_COUNT=$(jq    --arg exceptions "$DOCUMENTED_CSP_EXCEPTIONS" "$EXCLUDE_JQ | map(select(.riskcode == \"1\")) | length" report_json.json 2>/dev/null || echo 0)
           fi
 
           echo "alert_count=$ALERT_COUNT" >> "$GITHUB_OUTPUT"
@@ -86,12 +105,20 @@ jobs:
       - name: Generate Alert Summary
         if: always() && steps.zap-results.outputs.has_findings == 'true'
         id: zap-summary
+        env:
+          # #6321: keep the summary in sync with the parse step — if
+          # we've excluded a documented exception from the count, we
+          # shouldn't render it in the issue body either.
+          DOCUMENTED_CSP_EXCEPTIONS: |
+            CSP: script-src unsafe-eval
+            CSP: style-src unsafe-inline
         run: |
           SUMMARY=""
           if [ -f report_json.json ]; then
-            SUMMARY=$(jq -r '
+            SUMMARY=$(jq -r --arg exceptions "$DOCUMENTED_CSP_EXCEPTIONS" '
               [.site[].alerts[]
                | select(.riskcode == "2" or .riskcode == "3")
+               | select(.name as $n | ($exceptions | split("\n") | map(select(length > 0)) | index($n) | not))
                | "- **\(.riskdesc)**: \(.name) (\(.count) instance(s))"]
               | join("\n")
             ' report_json.json 2>/dev/null || echo "Could not parse alerts")

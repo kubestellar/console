@@ -19,30 +19,18 @@
 10050	IGNORE	Retrieved from Cache
 10109	IGNORE	Modern Web Application
 
-# CSP 'unsafe-eval' / 'unsafe-inline' — DOCUMENTED EXCEPTION (#6318)
+# CSP rule 10055: DO NOT blanket-IGNORE (#6321 follow-up to #6318).
+# The two current findings (script-src unsafe-eval + style-src
+# unsafe-inline) are documented exceptions in netlify.toml:148-168,
+# BUT rule 10055 covers EVERY CSP sub-alert, so IGNOREing it would
+# hide future CSP regressions (e.g. accidentally adding 'unsafe-eval'
+# to style-src, dropping object-src 'none', introducing a broad host
+# wildcard). Keep the rule active — the workflow now filters the two
+# specific finding NAMES in its JSON parse step
+# (.github/workflows/nightly-dast.yml) rather than silencing the
+# rule here. That preserves visibility for new CSP findings while
+# silencing only the documented exceptions.
 #
-# Both unsafe directives are intentional tradeoffs documented in
-# netlify.toml:148-168 and reviewed against the following constraints:
-#
-#   * script-src 'unsafe-eval' is required by the Tier 2 dynamic-cards
-#     feature — web/src/lib/dynamic-cards/compiler.ts uses `new Function()`
-#     to compile user-authored card modules at runtime. Removing
-#     'unsafe-eval' disables dynamic cards entirely.
-#
-#   * style-src 'unsafe-inline' is required because React renders
-#     `style={{}}` props as inline HTML style attributes. Removing it
-#     would require rewriting every inline style across the component
-#     tree (dozens of components).
-#
-# Compensating controls already in place:
-#   - Strict CSP for every other directive — no 'unsafe-*' for
-#     connect-src, img-src, object-src, base-uri, form-action, etc.
-#   - Explicit host allowlists for every third party (no scheme wildcards,
-#     no broad host globs).
-#   - The dynamic cards compiler runs untrusted code in a scoped scope
-#     with module-shape validation before execution.
-#
-# ZAP rule 10055 raises a sub-alert per unsafe directive; IGNORE
-# collapses them. Re-audit annually or whenever the dynamic-cards
-# feature changes. Nightly DAST #6318 was closed under this exception.
-10055	IGNORE	CSP (intentional unsafe-eval/unsafe-inline — see netlify.toml:148-168)
+# The rule is not listed below (no override) so ZAP treats it at its
+# default severity. The workflow filter, not this file, is now the
+# source of truth for "which CSP alerts are expected".
