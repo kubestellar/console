@@ -2880,7 +2880,8 @@
     "removeClusterRemoving": "Removing...",
     "removeClusterSuccess": "Removed cluster \"{{name}}\" from kubeconfig",
     "removeClusterError": "Failed to remove cluster from kubeconfig",
-    "removeClusterNoAgent": "Local agent not connected"
+    "removeClusterNoAgent": "Local agent not connected",
+    "removeClusterAgentTooOld": "kc-agent does not expose /kubeconfig/remove. This route was added in kc-agent PR #5658 — please upgrade your kc-agent binary to the latest release."
   },
   "remediation": {
     "title": "AI Remediation Console",
