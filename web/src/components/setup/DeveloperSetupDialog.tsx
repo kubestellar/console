@@ -60,7 +60,7 @@ export function DeveloperSetupDialog({ isOpen, onClose }: DeveloperSetupDialogPr
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-green-500" />
-                <span className="text-muted-foreground">Go 1.24+</span>
+                <span className="text-muted-foreground">Go 1.25+</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-green-500" />

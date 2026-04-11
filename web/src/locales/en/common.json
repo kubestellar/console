@@ -1610,7 +1610,7 @@
     "providerPrerequisite": "Prerequisite",
     "providerRetry": "Retry",
     "installViaHomebrewMacOS": "# Install via Homebrew (macOS / WSL)",
-    "installLinuxBuildFromSource": "# Linux / WSL: build from source (requires Go 1.24+)"
+    "installLinuxBuildFromSource": "# Linux / WSL: build from source (requires Go 1.25+)"
   },
   "navbar": {
     "closeMenu": "Close menu",
@@ -3089,7 +3089,7 @@
     "remindMeLater": "Remind Me Later",
     "quickInstallMacOS": "Quick Install — macOS / WSL (Homebrew)",
     "linuxInstructions": "Linux / WSL installation instructions",
-    "linuxBuildDesc": "Build from source (recommended for Linux / WSL). Requires Go 1.24+ only:",
+    "linuxBuildDesc": "Build from source (recommended for Linux / WSL). Requires Go 1.25+ only:",
     "linuxBrewAlternative": "Alternative: install Homebrew for Linux / WSL first (https://docs.brew.sh/Homebrew-on-Linux), then: brew tap kubestellar/tap && brew install kc-agent"
   },
   "agentStatus": {

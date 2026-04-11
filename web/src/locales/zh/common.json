@@ -1512,7 +1512,7 @@
     "securityNote": "API keys are stored securely on your local machine and never sent to our servers.",
     "selectAgent": "Select AI agent",
     "installViaHomebrewMacOS": "# Install via Homebrew (macOS / WSL)",
-    "installLinuxBuildFromSource": "# Linux / WSL: build from source (requires Go 1.24+)"
+    "installLinuxBuildFromSource": "# Linux / WSL: build from source (requires Go 1.25+)"
   },
   "navbar": {
     "closeMenu": "Close menu",
@@ -2805,7 +2805,7 @@
     "remindMeLater": "Remind Me Later",
     "quickInstallMacOS": "Quick Install — macOS / WSL (Homebrew)",
     "linuxInstructions": "Linux / WSL installation instructions",
-    "linuxBuildDesc": "Build from source (recommended for Linux / WSL). Requires Go 1.24+:",
+    "linuxBuildDesc": "Build from source (recommended for Linux / WSL). Requires Go 1.25+:",
     "linuxBrewAlternative": "Alternatively, use Linuxbrew (Linux / WSL): brew tap kubestellar/tap && brew install kc-agent"
   },
   "agentStatus": {

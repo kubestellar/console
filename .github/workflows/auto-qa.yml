@@ -43,7 +43,7 @@ env:
   COPILOT_ASSIGNMENT_DELAY_S: 120  # Seconds between Copilot assignments to avoid rate limiting
   ISSUE_PREFIX: "[Auto-QA]"
   NODE_VERSION: "22"
-  GO_VERSION: "1.23"
+  GO_VERSION: "1.25"
 
 permissions: read-all
 

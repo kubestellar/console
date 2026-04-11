@@ -41,7 +41,7 @@ jobs:
       - name: Setup Go 1.23
         uses: actions/setup-go@v5
         with:
-          go-version: "1.23"
+          go-version: "1.25"
           cache-dependency-path: go.sum
 
       - name: Install C build tools (CGO for sqlite3)

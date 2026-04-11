@@ -156,7 +156,7 @@ export function SetupInstructionsDialog({ isOpen, onClose }: SetupInstructionsDi
                         </button>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        Requires Go 1.24+ and Node.js 20+. Compiles from source and starts a Vite dev server on port 5174.
+                        Requires Go 1.25+ and Node.js 20+. Compiles from source and starts a Vite dev server on port 5174.
                       </p>
                     </div>
                   )}
