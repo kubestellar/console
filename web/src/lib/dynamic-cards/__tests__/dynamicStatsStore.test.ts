@@ -54,14 +54,29 @@ describe('loadDynamicStats', () => {
 
   it('registers stats from localStorage', () => {
     const stored = [
-      { type: 'stat-1', blocks: [{ label: 'A' }] },
-      { type: 'stat-2', blocks: [{ label: 'B' }] },
+      { type: 'stat-1', blocks: [{ id: 'a', label: 'A' }] },
+      { type: 'stat-2', blocks: [{ id: 'b', label: 'B' }] },
     ]
     localStorage.setItem(STORAGE_KEY, JSON.stringify(stored))
 
     loadDynamicStats()
 
     expect(registerDynamicStats).toHaveBeenCalledTimes(2)
+  })
+
+  it('drops entries that fail schema validation', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const stored = [
+      { type: 'good', blocks: [{ id: 'a', label: 'A' }] },
+      { type: 'bad', blocks: 'not-an-array' },
+    ]
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(stored))
+
+    loadDynamicStats()
+
+    expect(registerDynamicStats).toHaveBeenCalledTimes(1)
+    expect(warn).toHaveBeenCalled()
+    warn.mockRestore()
   })
 
   it('handles corrupted localStorage gracefully', () => {
@@ -78,17 +93,17 @@ describe('loadDynamicStats', () => {
   // registered in memory.
   it('reconciles removals when storage shrinks between loads', () => {
     const three = [
-      { type: 'a', blocks: [{ label: 'A' }] },
-      { type: 'b', blocks: [{ label: 'B' }] },
-      { type: 'c', blocks: [{ label: 'C' }] },
+      { type: 'a', blocks: [{ id: 'a-block', label: 'A' }] },
+      { type: 'b', blocks: [{ id: 'b-block', label: 'B' }] },
+      { type: 'c', blocks: [{ id: 'c-block', label: 'C' }] },
     ]
     localStorage.setItem(STORAGE_KEY, JSON.stringify(three))
     loadDynamicStats()
     expect(mockStats.size).toBe(3)
 
     const two = [
-      { type: 'a', blocks: [{ label: 'A' }] },
-      { type: 'b', blocks: [{ label: 'B' }] },
+      { type: 'a', blocks: [{ id: 'a-block', label: 'A' }] },
+      { type: 'b', blocks: [{ id: 'b-block', label: 'B' }] },
     ]
     localStorage.setItem(STORAGE_KEY, JSON.stringify(two))
     loadDynamicStats()
@@ -100,7 +115,7 @@ describe('loadDynamicStats', () => {
   })
 
   it('clears the registry when storage has been emptied', () => {
-    const one = [{ type: 'only', blocks: [{ label: 'Only' }] }]
+    const one = [{ type: 'only', blocks: [{ id: 'only-block', label: 'Only' }] }]
     localStorage.setItem(STORAGE_KEY, JSON.stringify(one))
     loadDynamicStats()
     expect(mockStats.size).toBe(1)
@@ -139,9 +154,19 @@ describe('saveDynamicStats', () => {
 
 describe('saveDynamicStatsDefinition', () => {
   it('registers the definition and persists', () => {
-    const def = { type: 'new-stat', blocks: [{ label: 'X' }] }
+    const def = { type: 'new-stat', blocks: [{ id: 'x', label: 'X' }] }
     saveDynamicStatsDefinition(def as never)
     expect(registerDynamicStats).toHaveBeenCalledWith(def)
+  })
+
+  it('throws on invalid definition (unknown field)', () => {
+    const def = { type: 'bad', blocks: [], rogueField: 1 }
+    expect(() => saveDynamicStatsDefinition(def as never)).toThrow(/Invalid dynamic stats/)
+  })
+
+  it('throws on non-array blocks', () => {
+    const def = { type: 'bad', blocks: 'nope' }
+    expect(() => saveDynamicStatsDefinition(def as never)).toThrow(/blocks must be an array/)
   })
 })
 
@@ -177,34 +202,38 @@ describe('exportDynamicStats', () => {
 describe('importDynamicStats', () => {
   it('imports valid stats and returns count', () => {
     const json = JSON.stringify([
-      { type: 'a', blocks: [{ label: 'A' }] },
-      { type: 'b', blocks: [{ label: 'B' }] },
+      { type: 'a', blocks: [{ id: 'a1', label: 'A' }] },
+      { type: 'b', blocks: [{ id: 'b1', label: 'B' }] },
     ])
-    const count = importDynamicStats(json)
-    expect(count).toBe(2)
+    const result = importDynamicStats(json)
+    expect(result.count).toBe(2)
+    expect(result.invalid).toHaveLength(0)
     expect(registerDynamicStats).toHaveBeenCalledTimes(2)
   })
 
-  it('skips entries missing required fields', () => {
+  it('reports invalid entries in the result', () => {
     const json = JSON.stringify([
-      { type: 'valid', blocks: [{ label: 'V' }] },
+      { type: 'valid', blocks: [{ id: 'v', label: 'V' }] },
       { type: 'no-blocks' },
-      { blocks: [{ label: 'no-type' }] },
+      { blocks: [{ id: 'nt', label: 'no-type' }] },
       { type: 'non-array-blocks', blocks: 'invalid' },
     ])
-    const count = importDynamicStats(json)
-    expect(count).toBe(1)
+    const result = importDynamicStats(json)
+    expect(result.count).toBe(1)
+    expect(result.invalid).toHaveLength(3)
   })
 
-  it('returns 0 for invalid JSON', () => {
+  it('returns error result for invalid JSON', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
-    const count = importDynamicStats('not json')
-    expect(count).toBe(0)
+    const result = importDynamicStats('not json')
+    expect(result.count).toBe(0)
+    expect(result.invalid[0].error).toMatch(/Parse error/)
     spy.mockRestore()
   })
 
-  it('returns 0 for empty array', () => {
-    const count = importDynamicStats('[]')
-    expect(count).toBe(0)
+  it('returns empty result for empty array', () => {
+    const result = importDynamicStats('[]')
+    expect(result.count).toBe(0)
+    expect(result.invalid).toHaveLength(0)
   })
 })

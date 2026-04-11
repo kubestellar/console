@@ -6,16 +6,22 @@ import {
   clearDynamicStats,
   toRecord,
 } from './dynamicStatsRegistry'
+import { validateStatsDefinition } from './validator'
+import type { ImportResult } from './dynamicCardStore'
 
 const STORAGE_KEY = 'kc-dynamic-stats'
 
 /**
  * Load dynamic stats definitions from localStorage and register them.
  *
- * #6681 — Previously additive: entries that had been removed from storage
- * since the last load stayed in the in-memory registry. We now perform an
- * atomic replace (clear + re-register from storage) so removals propagate
- * on reload, matching the behaviour of loadDynamicCards.
+ * #6681 — Previously additive: entries removed from storage stayed in
+ * the in-memory registry. We now perform an atomic replace (clear +
+ * re-register from storage) so removals propagate on reload.
+ *
+ * #6679 — Each entry is validated before registration; invalid entries
+ * are dropped with a console warning so a single corrupt entry cannot
+ * prevent the rest from loading and a malicious stored definition cannot
+ * register itself by bypassing schema checks.
  */
 export function loadDynamicStats(): void {
   try {
@@ -24,9 +30,23 @@ export function loadDynamicStats(): void {
       clearDynamicStats()
       return
     }
-    const defs: StatsDefinition[] = JSON.parse(raw)
+    const parsed: unknown = JSON.parse(raw)
+    if (!Array.isArray(parsed)) {
+      console.warn('[DynamicStatsStore] Stored value is not an array; ignoring')
+      return
+    }
+    // Atomic replace: clear then re-register validated entries from storage.
     clearDynamicStats()
-    defs.forEach(def => registerDynamicStats(def))
+    parsed.forEach((entry, i) => {
+      const result = validateStatsDefinition(entry)
+      if (result.valid && result.value) {
+        registerDynamicStats(result.value)
+      } else {
+        console.warn(
+          `[DynamicStatsStore] Dropping invalid stored stats at index ${i}: ${result.error}`,
+        )
+      }
+    })
   } catch (err) {
     console.error('[DynamicStatsStore] Failed to load from localStorage:', err)
   }
@@ -42,9 +62,14 @@ export function saveDynamicStats(): void {
   }
 }
 
-/** Save a single stats definition (register + persist) */
+/** Save a single stats definition (register + persist).
+ *  Validates before registration — throws on invalid input. */
 export function saveDynamicStatsDefinition(def: StatsDefinition): void {
-  registerDynamicStats(def)
+  const result = validateStatsDefinition(def)
+  if (!result.valid || !result.value) {
+    throw new Error(`Invalid dynamic stats definition: ${result.error}`)
+  }
+  registerDynamicStats(result.value)
   saveDynamicStats()
 }
 
@@ -60,21 +85,32 @@ export function exportDynamicStats(): string {
   return JSON.stringify(getAllDynamicStats().map(toRecord), null, 2)
 }
 
-/** Import dynamic stats from JSON string */
-export function importDynamicStats(json: string): number {
+/** Import dynamic stats from JSON string.
+ *  Each entry is schema-validated; invalid entries are reported in
+ *  `invalid` so the UI can surface them to the user. */
+export function importDynamicStats(json: string): ImportResult {
+  const result: ImportResult = { count: 0, invalid: [] }
   try {
-    const defs: StatsDefinition[] = JSON.parse(json)
-    let count = 0
-    defs.forEach(def => {
-      if (def.type && def.blocks && Array.isArray(def.blocks)) {
-        registerDynamicStats(def)
-        count++
+    const parsed: unknown = JSON.parse(json)
+    if (!Array.isArray(parsed)) {
+      result.invalid.push({ index: -1, error: 'Top-level value is not an array' })
+      return result
+    }
+    parsed.forEach((entry, i) => {
+      const v = validateStatsDefinition(entry)
+      if (v.valid && v.value) {
+        registerDynamicStats(v.value)
+        result.count++
+      } else {
+        result.invalid.push({ index: i, error: v.error ?? 'Unknown validation error' })
       }
     })
     saveDynamicStats()
-    return count
+    return result
   } catch (err) {
     console.error('[DynamicStatsStore] Failed to import:', err)
-    return 0
+    const message = err instanceof Error ? err.message : String(err)
+    result.invalid.push({ index: -1, error: `Parse error: ${message}` })
+    return result
   }
 }

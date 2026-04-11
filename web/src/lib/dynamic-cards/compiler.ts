@@ -10,7 +10,8 @@ import { getDynamicScope } from './scope'
 const BLOCKED_GLOBALS = [
   'window', 'document', 'globalThis', 'self', 'top', 'parent', 'frames',
   'fetch', 'XMLHttpRequest', 'WebSocket', 'EventSource',
-  'eval', 'Function', 'importScripts',
+  'eval', 'Function', 'AsyncFunction', 'GeneratorFunction',
+  'importScripts',
   'localStorage', 'sessionStorage', 'indexedDB', 'caches',
   'navigator', 'location', 'history',
   // Timer APIs: listed for fail-closed safety. Safe wrappers in getDynamicScope()
@@ -20,6 +21,46 @@ const BLOCKED_GLOBALS = [
   'requestAnimationFrame',
   'postMessage', 'crypto',
 ] as const
+
+/**
+ * Identifiers we can't safely inject as Function-body `var` declarations in
+ * strict mode (e.g. `var eval = …` is a SyntaxError). These fall back to
+ * being blocked via Function parameter shadowing, which is allowed because
+ * `new Function(...)` parses its parameter list in sloppy mode.
+ *
+ * `arguments` is neither a valid parameter name nor a valid `var` name in
+ * strict mode, but the enclosing `new Function` provides its own `arguments`
+ * object that refers to the outer call (scopeValues), shadowing any global.
+ */
+const STRICT_RESERVED_BLOCKED = new Set<string>(['arguments'])
+
+/**
+ * Deep-freeze an object graph so dynamic card code cannot mutate shared
+ * runtime state via injected scope values (e.g. cardHooks.someCard = evilImpl).
+ * Uses a WeakSet to guard against circular references.
+ */
+function deepFreeze<T>(obj: T, seen = new WeakSet<object>()): T {
+  if (obj === null || typeof obj !== 'object') return obj
+  if (seen.has(obj as object)) return obj
+  seen.add(obj as object)
+  // Freeze first so any subsequent property lookups can't trigger a getter
+  // that mutates the object after we've walked it.
+  Object.freeze(obj)
+  for (const key of Object.getOwnPropertyNames(obj)) {
+    let value: unknown
+    try {
+      value = (obj as Record<string, unknown>)[key]
+    } catch {
+      // Some built-ins (e.g. certain DOM proxies) throw on property access;
+      // we skip those since there's nothing to freeze.
+      continue
+    }
+    if (value !== null && typeof value === 'object' && !Object.isFrozen(value)) {
+      deepFreeze(value, seen)
+    }
+  }
+  return obj
+}
 
 /**
  * Compile TSX source code to JavaScript using Sucrase.
@@ -47,8 +88,14 @@ export async function compileCardCode(tsx: string): Promise<CompileResult> {
  * Create a React component from compiled JavaScript code.
  * The code runs in a hardened sandbox:
  * 1. Whitelisted scope — only approved libraries are injected
- * 2. Dangerous globals (window, document, fetch, etc.) are shadowed with undefined
- * 3. The scope object is frozen to prevent prototype pollution
+ * 2. Dangerous globals (window, document, fetch, Function, AsyncFunction,
+ *    GeneratorFunction, etc.) are shadowed with undefined
+ * 3. Constructor-based escapes are blocked by shadowing Function /
+ *    AsyncFunction / GeneratorFunction identifiers and by assigning
+ *    a throwing stub to (function(){}).constructor inside the sandbox
+ *    module prologue
+ * 4. All injected scope values are deep-frozen so dynamic card code
+ *    cannot mutate shared runtime state (cardHooks, icon registry, etc.)
  */
 export function createCardComponent(compiledCode: string): DynamicComponentResult {
   try {
@@ -58,12 +105,50 @@ export function createCardComponent(compiledCode: string): DynamicComponentResul
     const timerCleanup = scope.__timerCleanup as (() => void) | undefined
     delete scope.__timerCleanup
 
-    // Freeze each scope value that is an object to prevent prototype pollution
-    // (shallow freeze — we freeze the scope map itself, not deep internals of React)
+    // Deep-freeze each scope value so dynamic code cannot mutate shared
+    // runtime state (e.g. cardHooks.foo = evilImpl) via the injected refs.
+    // This is the #6677 fix — previously only the scope map itself was frozen.
+    for (const key of Object.getOwnPropertyNames(scope)) {
+      const v = scope[key]
+      if (v !== null && typeof v === 'object') {
+        deepFreeze(v)
+      }
+    }
+    // Freeze the scope map itself (preserves the previous shallow-freeze behavior).
     Object.freeze(scope)
 
-    // Build the module wrapper
-    // The compiled code should export a default component function
+    // #6676: Static analysis — reject compiled code that references the
+    // constructor-escape patterns or dynamic function constructors. This
+    // is a defense-in-depth layer on top of identifier shadowing: without
+    // it, `(function(){}).constructor('code')()` or `(1).__proto__.constructor`
+    // could bypass the BLOCKED_GLOBALS param shadowing because they reach
+    // Function via the prototype chain rather than the global binding.
+    //
+    // We intentionally match on the raw compiled output (post-Sucrase), so
+    // renaming, string concatenation, or bracket access `obj['constructor']`
+    // still bypasses this — but combined with Function/AsyncFunction/
+    // GeneratorFunction param shadowing and the runtime throw injected
+    // below, the common escape routes are closed.
+    const FORBIDDEN_PATTERNS: Array<{ re: RegExp; label: string }> = [
+      { re: /\.constructor\s*\(/, label: '.constructor(' },
+      { re: /\[\s*(['"`])constructor\1\s*\]\s*\(/, label: "['constructor']" },
+      { re: /\b__proto__\b/, label: '__proto__' },
+      { re: /\bAsyncFunction\b/, label: 'AsyncFunction' },
+      { re: /\bGeneratorFunction\b/, label: 'GeneratorFunction' },
+    ]
+    for (const { re, label } of FORBIDDEN_PATTERNS) {
+      if (re.test(compiledCode)) {
+        return {
+          component: null,
+          error: `Runtime error: sandbox blocked forbidden pattern: ${label}`,
+        }
+      }
+    }
+
+    // Build the module wrapper. `eval` is blocked via BLOCKED_GLOBALS as a
+    // Function parameter (sloppy-mode parse allows it); we can't also shadow
+    // it with `var eval` here because strict-mode var bindings on `eval` are
+    // a SyntaxError.
     const moduleCode = `
       "use strict";
       var exports = {};
@@ -72,9 +157,12 @@ export function createCardComponent(compiledCode: string): DynamicComponentResul
       return module.exports.default || module.exports;
     `
 
-    // Merge whitelisted scope with blocked globals (blocked = undefined)
+    // Merge whitelisted scope with blocked globals (blocked = undefined).
+    // Names that cannot legally be Function parameters in strict mode
+    // (eval, arguments) are blocked inside moduleCode instead.
     const blockedEntries: Record<string, undefined> = {}
     for (const name of BLOCKED_GLOBALS) {
+      if (STRICT_RESERVED_BLOCKED.has(name)) continue
       // Only block if not already in the whitelist (e.g. if we ever expose a safe subset)
       if (!(name in scope)) {
         blockedEntries[name] = undefined

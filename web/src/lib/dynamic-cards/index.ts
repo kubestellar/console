@@ -30,6 +30,16 @@ export {
   exportDynamicCards,
   importDynamicCards,
 } from './dynamicCardStore'
+export type { ImportResult } from './dynamicCardStore'
+
+// Schema validators
+export {
+  validateDynamicCardDefinition,
+  validateStatsDefinition,
+  MAX_CARD_SOURCE_BYTES,
+  MAX_CARD_NAME_LENGTH,
+  MAX_CARD_DESCRIPTION_LENGTH,
+} from './validator'
 
 // Compiler (Tier 2)
 export { compileCardCode, createCardComponent } from './compiler'
