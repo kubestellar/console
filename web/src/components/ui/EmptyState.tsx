@@ -1,4 +1,5 @@
 import { ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import { Plus, LucideIcon } from 'lucide-react'
 
 /**
@@ -12,18 +13,41 @@ import { Plus, LucideIcon } from 'lucide-react'
  *
  * Addresses issues 6391 (inconsistent messages), 6392 (Services empty
  * state lacks CTA), and 6393 (mixed empty-state patterns).
+ *
+ * #6423 (Copilot review follow-up to PR #6413):
+ *  - EmptyStateAction is now a discriminated union so callers cannot
+ *    supply both onClick and href at the same time. TypeScript enforces
+ *    the mutual exclusion at compile time.
+ *  - Internal href targets render as react-router <Link> to preserve SPA
+ *    navigation. External URLs (http(s)) render as plain <a target=_blank>.
  */
 
-export interface EmptyStateAction {
-  /** Label rendered inside the button */
+/** Matches fully-qualified URLs — anything with an http:// or https:// scheme. */
+const EXTERNAL_URL_REGEX = /^https?:\/\//i
+
+interface EmptyStateActionCommon {
+  /** Label rendered inside the action */
   label: string
-  /** Click handler (mutually exclusive with href) */
-  onClick?: () => void
-  /** If provided, renders an anchor instead of a button */
-  href?: string
   /** Optional icon rendered before the label (defaults to Plus) */
   icon?: LucideIcon
 }
+
+interface EmptyStateActionButton extends EmptyStateActionCommon {
+  onClick: () => void
+  href?: never
+}
+
+interface EmptyStateActionLink extends EmptyStateActionCommon {
+  href: string
+  onClick?: never
+}
+
+/**
+ * Discriminated union — an EmptyStateAction is either a button (onClick)
+ * OR a link (href), never both. Enforcing this at the type level fixes
+ * the ambiguity flagged on EmptyState.tsx:26 of PR #6413.
+ */
+export type EmptyStateAction = EmptyStateActionButton | EmptyStateActionLink
 
 export interface EmptyStateProps {
   /** Icon rendered at top of the empty state */
@@ -48,12 +72,26 @@ function ActionButton({ action, variant }: { action: EmptyStateAction, variant: 
     ? 'inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 rounded-lg transition-colors'
     : 'inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground rounded-lg transition-colors'
 
-  if (action.href) {
+  if ('href' in action && action.href) {
+    // #6423 (Copilot comment on EmptyState.tsx:57) — internal href values
+    // were rendering as plain <a>, which triggers a full page reload and
+    // loses React state / SPA routing. Route internal paths through the
+    // react-router Link component; only fall back to a plain anchor for
+    // absolute external URLs (with rel=noopener to avoid window.opener
+    // leaks).
+    if (EXTERNAL_URL_REGEX.test(action.href)) {
+      return (
+        <a href={action.href} className={classes} target="_blank" rel="noopener noreferrer">
+          <Icon className="w-4 h-4" aria-hidden="true" />
+          {action.label}
+        </a>
+      )
+    }
     return (
-      <a href={action.href} className={classes}>
+      <Link to={action.href} className={classes}>
         <Icon className="w-4 h-4" aria-hidden="true" />
         {action.label}
-      </a>
+      </Link>
     )
   }
   return (
