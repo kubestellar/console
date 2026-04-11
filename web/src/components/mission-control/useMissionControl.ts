@@ -686,11 +686,14 @@ Include real CNCF projects only. Consider dependencies between projects.`
     }
 
   const addProject = (project: PayloadProject) => {
+    // Tag every explicit add as user-added so mergeProjects preserves it
+    // across AI refinement cycles (#6465).
+    const tagged: PayloadProject = { ...project, userAdded: true }
     setState((prev) => ({
       ...prev,
-      projects: prev.projects.some((p) => p.name === project.name)
+      projects: prev.projects.some((p) => p.name === tagged.name)
         ? prev.projects
-        : [...prev.projects, project] }))
+        : [...prev.projects, tagged] }))
   }
 
   const removeProject = (name: string) => {
@@ -712,10 +715,18 @@ Include real CNCF projects only. Consider dependencies between projects.`
         const originalName = existing?.originalName ?? oldName
         // If swapping back to the original, clear originalName (no longer "swapped")
         const effectiveOriginalName = newProject.name === originalName ? undefined : originalName
+        // A swap is a user action — mark the result as user-added so a
+        // subsequent AI refinement doesn't silently discard it (#6465).
+        const isSwapBackToOriginal = newProject.name === originalName
         return {
           ...prev,
           projects: prev.projects.map((p) =>
-            p.name === oldName ? { ...newProject, originalName: effectiveOriginalName } : p
+            p.name === oldName
+              ? {
+                  ...newProject,
+                  originalName: effectiveOriginalName,
+                  userAdded: isSwapBackToOriginal ? existing?.userAdded : true }
+              : p
           ),
           // Also update assignments to swap the project name
           assignments: prev.assignments.map((a) => ({
@@ -1198,11 +1209,17 @@ Order phases by dependency — prerequisites first. Each phase completes before 
 
 /**
  * Merge AI-suggested projects with existing ones.
- * On refinement: replace the list with AI's new suggestions, but preserve
- * user customizations (originalName from swaps, manual priority changes).
- * Keep manually-added projects (category === 'Custom') that AI didn't mention.
+ *
+ * On refinement: start from AI's new suggestions, but preserve user
+ * customizations (originalName from swaps, manual priority changes). Also
+ * preserve every user-added project that AI didn't include, whether it was
+ * added via the "Manually add" path (category === 'Custom') OR via a swap /
+ * browser selection (flagged by `userAdded`). Previously only Custom-category
+ * projects survived, so swapped-in CNCF projects were silently dropped on
+ * refinement (#6465). Dedup is by project `name`, with existing entries
+ * taking precedence over new AI suggestions (user wins).
  */
-function mergeProjects(
+export function mergeProjects(
   existing: PayloadProject[],
   incoming: PayloadProject[]
 ): PayloadProject[] {
@@ -1212,17 +1229,20 @@ function mergeProjects(
   for (const p of incoming) {
     const prev = existingMap.get(p.name)
     if (prev) {
-      // Preserve user customizations (originalName, priority if changed)
-      result.push({ ...p, originalName: prev.originalName })
+      // User wins: keep existing entry (and its userAdded/originalName/
+      // priority customizations) rather than overwriting with AI's version.
+      result.push(prev)
     } else {
       result.push(p)
     }
   }
 
-  // Keep manually-added projects that AI didn't include
+  // Preserve any user-added project that AI's new plan dropped. Covers both
+  // manual adds (category === 'Custom') and library/swap adds (userAdded).
   const incomingNames = new Set(incoming.map((p) => p.name))
   for (const p of existing) {
-    if (p.category === 'Custom' && !incomingNames.has(p.name)) {
+    const isUserAdded = p.userAdded === true || p.category === 'Custom'
+    if (isUserAdded && !incomingNames.has(p.name)) {
       result.push(p)
     }
   }

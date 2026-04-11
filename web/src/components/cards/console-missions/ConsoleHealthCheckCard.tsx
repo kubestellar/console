@@ -126,6 +126,11 @@ Please provide:
     ? Math.round((healthyClusters / clusters.length) * 100)
     : 0
 
+  // Gauge size tuned so the card + stats + issues + button all fit the
+  // standard card height (see #6461). Previously size=120 plus mb-4 spacing
+  // on every row pushed the action button off the bottom of the card.
+  const HEALTH_GAUGE_SIZE_PX = 100
+
   return (
     <div className="h-full flex flex-col relative">
       {/* API Key Prompt Modal */}
@@ -135,21 +140,21 @@ Please provide:
         onGoToSettings={goToSettings}
       />
 
-      <div className="flex items-center justify-end mb-4">
-      </div>
-
-      {/* Health Score — horseshoe gauge */}
-      <div className="flex items-center justify-center mb-4">
+      {/* Health Score — horseshoe gauge.
+          semantic="health" inverts the threshold colors so 100% is green,
+          not red (#6461). Utilization gauges still use the default. */}
+      <div className="flex items-center justify-center mb-2">
         <HorseshoeGauge
           value={healthScore}
           maxValue={100}
           label={t('healthCheck.health')}
-          size={120}
+          size={HEALTH_GAUGE_SIZE_PX}
+          semantic="health"
         />
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-3 gap-2 mb-4 text-center">
+      <div className="grid grid-cols-3 gap-2 mb-2 text-center">
         <div
           className={cn(
             "p-2 rounded bg-green-500/10",
@@ -197,7 +202,7 @@ Please provide:
       {/* Issues Summary */}
       {totalIssues > 0 && (
         <div
-          className="mb-4 p-2 rounded bg-red-500/10 border border-red-500/20 cursor-pointer hover:bg-red-500/20 transition-colors"
+          className="mb-2 p-2 rounded bg-red-500/10 border border-red-500/20 cursor-pointer hover:bg-red-500/20 transition-colors"
           onClick={() => {
             if (podIssues.length > 0 && podIssues[0]?.cluster) {
               drillToPod(podIssues[0].cluster, podIssues[0].namespace, podIssues[0].name)
@@ -217,7 +222,7 @@ Please provide:
         onClick={handleStartHealthCheck}
         disabled={!!runningHealthMission}
         className={cn(
-          'w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm transition-all mt-auto',
+          'w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all mt-auto',
           runningHealthMission
             ? 'bg-green-500/20 text-green-400 cursor-wait'
             : 'bg-green-500/20 hover:bg-green-500/30 text-green-400'

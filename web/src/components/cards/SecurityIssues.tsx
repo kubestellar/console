@@ -294,8 +294,10 @@ function SecurityIssuesInternal({ config }: SecurityIssuesProps) {
         className="mb-3"
       />
 
-      {/* Issues list */}
-      <div ref={containerRef} className="flex-1 space-y-3 overflow-y-auto min-h-card-content" style={containerStyle}>
+      {/* Issues list — compact spacing (#6460): space-y-2 between rows,
+          p-2 per row, and suppressed mt-2 on the meta row. This keeps the
+          card within standard card height when rendered at lg grid size. */}
+      <div ref={containerRef} className="flex-1 space-y-2 overflow-y-auto min-h-card-content" style={containerStyle}>
         {issues.map((issue: SecurityIssue, idx: number) => {
           const { icon: Icon, tooltip: iconTooltip } = getIssueIcon(issue.issue, t as unknown as (key: string) => string)
           const colors = getSeverityColor(issue.severity)
@@ -303,21 +305,21 @@ function SecurityIssuesInternal({ config }: SecurityIssuesProps) {
           return (
             <div
               key={`${issue.name}-${issue.issue}-${idx}`}
-              className={`p-3 rounded-lg ${colors.bg} border ${colors.border} cursor-pointer hover:opacity-80 transition-opacity`}
+              className={`p-2 rounded-lg ${colors.bg} border ${colors.border} cursor-pointer hover:opacity-80 transition-opacity`}
               onClick={() => handleIssueClick(issue)}
               title={t('securityIssues.clickViewPod', { name: issue.name, issue: issue.issue })}
             >
-              <div className="flex items-start gap-3 group">
-                <div className={`p-2 rounded-lg ${colors.badge} flex-shrink-0`} title={iconTooltip}>
+              <div className="flex items-start gap-2 group">
+                <div className={`p-1.5 rounded-lg ${colors.badge} flex-shrink-0`} title={iconTooltip}>
                   <Icon className={`w-4 h-4 ${colors.text}`} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-center gap-2 mb-0.5">
                     <ClusterBadge cluster={issue.cluster || 'unknown'} />
                     <span className="text-xs text-muted-foreground" title={`Namespace: ${issue.namespace}`}>{issue.namespace}</span>
                   </div>
                   <p className="text-sm font-medium text-foreground truncate" title={issue.name}>{issue.name}</p>
-                  <div className="flex items-center gap-2 mt-2 flex-wrap">
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
                     <span className={`text-xs px-2 py-0.5 rounded ${colors.badge} ${colors.text}`} title={`Issue type: ${issue.issue}`}>
                       {issue.issue}
                     </span>

@@ -10,8 +10,20 @@ import {
   isSafeProjectName,
   buildInstallPromptForProject,
   extractJSON,
+  mergeProjects,
   PROJECT_NAME_MAX_LENGTH,
 } from '../useMissionControl'
+import type { PayloadProject } from '../types'
+
+const makeProject = (overrides: Partial<PayloadProject>): PayloadProject => ({
+  name: overrides.name ?? 'proj',
+  displayName: overrides.displayName ?? overrides.name ?? 'proj',
+  reason: overrides.reason ?? 'test',
+  category: overrides.category ?? 'Security',
+  priority: overrides.priority ?? 'recommended',
+  dependencies: overrides.dependencies ?? [],
+  ...overrides,
+})
 
 describe('isSafeProjectName (#6379)', () => {
   it('accepts typical CNCF project names', () => {
@@ -136,5 +148,64 @@ describe('extractJSON — balanced block extraction (#6382)', () => {
     expect(parsed).not.toBeNull()
     expect(parsed?.name).toBe('falco')
     expect(parsed?.reason).toBe('path\\with\\quotes: "x"')
+  })
+})
+
+describe('mergeProjects — user-added preservation (#6465)', () => {
+  it('preserves all user-added projects across AI refinement, not just Custom-category ones', () => {
+    // Existing state: two user-added projects (one manual Custom, one
+    // swap-added Security, both flagged userAdded) and one AI-suggested.
+    const existing: PayloadProject[] = [
+      makeProject({ name: 'falco', category: 'Custom', userAdded: true }),
+      makeProject({ name: 'opa', category: 'Security', userAdded: true }),
+      makeProject({ name: 'helm', category: 'Orchestration' }),
+    ]
+    // AI refinement returns a new plan that includes a new project (argo)
+    // and also echoes back one existing project (helm) — dropping both
+    // user-added entries. The buggy merge kept only falco (Custom);
+    // the fix must also keep opa (non-Custom user-added).
+    const incoming: PayloadProject[] = [
+      makeProject({ name: 'argo', category: 'CI/CD' }),
+      makeProject({ name: 'helm', category: 'Orchestration' }),
+    ]
+
+    const merged = mergeProjects(existing, incoming)
+    const names = merged.map((p) => p.name).sort()
+
+    // All 3 user-added survive (falco + opa), plus helm (echoed) and
+    // argo (new AI suggestion) = 4 total.
+    expect(names).toEqual(['argo', 'falco', 'helm', 'opa'])
+  })
+
+  it('dedupes by name and the user-entry wins over AI', () => {
+    // User edited helm's priority to 'required'. AI refinement returns a
+    // new helm entry with priority 'optional'. The user's edit must win.
+    const existing: PayloadProject[] = [
+      makeProject({ name: 'helm', priority: 'required', userAdded: true }),
+    ]
+    const incoming: PayloadProject[] = [
+      makeProject({ name: 'helm', priority: 'optional' }),
+    ]
+
+    const merged = mergeProjects(existing, incoming)
+    expect(merged).toHaveLength(1)
+    expect(merged[0].priority).toBe('required')
+    expect(merged[0].userAdded).toBe(true)
+  })
+
+  it('matches the scenario from the issue: 3 user-added + 2 AI (1 dup) = 4', () => {
+    const existing: PayloadProject[] = [
+      makeProject({ name: 'falco', userAdded: true }),
+      makeProject({ name: 'opa', userAdded: true }),
+      makeProject({ name: 'kyverno', userAdded: true }),
+    ]
+    const incoming: PayloadProject[] = [
+      makeProject({ name: 'falco' }), // duplicate
+      makeProject({ name: 'cilium' }), // new AI suggestion
+    ]
+
+    const merged = mergeProjects(existing, incoming)
+    const names = merged.map((p) => p.name).sort()
+    expect(names).toEqual(['cilium', 'falco', 'kyverno', 'opa'])
   })
 })

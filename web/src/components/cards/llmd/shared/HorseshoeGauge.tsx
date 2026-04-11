@@ -6,6 +6,15 @@
  */
 import { motion } from 'framer-motion'
 
+/**
+ * Color semantic:
+ *  - 'utilization' (default): higher = worse (green -> yellow -> red)
+ *    Used for resource gauges (CPU, memory, GPU %). High values are bad.
+ *  - 'health': higher = better (red -> yellow -> green)
+ *    Used for health/uptime scores. 100% is green, not red. (#6461)
+ */
+export type GaugeSemantic = 'utilization' | 'health'
+
 interface HorseshoeGaugeProps {
   value: number
   maxValue?: number
@@ -14,15 +23,39 @@ interface HorseshoeGaugeProps {
   secondaryLeft?: { value: string; label: string }
   secondaryRight?: { value: string; label: string }
   size?: number
+  semantic?: GaugeSemantic
 }
 
-// Color based on percentage (green -> yellow -> orange -> red)
-const getColor = (pct: number) => {
-  if (pct >= 90) return '#ef4444' // red
-  if (pct >= 70) return '#f59e0b' // amber/orange
-  if (pct >= 50) return '#eab308' // yellow
-  return '#22c55e' // green
+// Utilization thresholds: high values indicate problems.
+const UTILIZATION_HIGH_PCT = 90
+const UTILIZATION_WARN_PCT = 70
+const UTILIZATION_CAUTION_PCT = 50
+
+// Health thresholds: high values are good.
+const HEALTH_GOOD_PCT = 90
+const HEALTH_OK_PCT = 70
+
+// Standard semantic palette (kept in hex for SVG stroke usage).
+const COLOR_RED = '#ef4444'
+const COLOR_ORANGE = '#f59e0b'
+const COLOR_YELLOW = '#eab308'
+const COLOR_GREEN = '#22c55e'
+
+const getUtilizationColor = (pct: number) => {
+  if (pct >= UTILIZATION_HIGH_PCT) return COLOR_RED
+  if (pct >= UTILIZATION_WARN_PCT) return COLOR_ORANGE
+  if (pct >= UTILIZATION_CAUTION_PCT) return COLOR_YELLOW
+  return COLOR_GREEN
 }
+
+const getHealthColor = (pct: number) => {
+  if (pct >= HEALTH_GOOD_PCT) return COLOR_GREEN
+  if (pct >= HEALTH_OK_PCT) return COLOR_YELLOW
+  return COLOR_RED
+}
+
+const getColor = (pct: number, semantic: GaugeSemantic) =>
+  semantic === 'health' ? getHealthColor(pct) : getUtilizationColor(pct)
 
 export function HorseshoeGauge({
   value,
@@ -31,9 +64,10 @@ export function HorseshoeGauge({
   sublabel,
   secondaryLeft,
   secondaryRight,
-  size = 180 }: HorseshoeGaugeProps) {
+  size = 180,
+  semantic = 'utilization' }: HorseshoeGaugeProps) {
   const percentage = maxValue > 0 ? Math.min((value / maxValue) * 100, 100) : 0
-  const color = getColor(percentage)
+  const color = getColor(percentage, semantic)
   const uniqueId = `horseshoe-${Math.random().toString(36).substr(2, 9)}`
 
   const viewSize = 100

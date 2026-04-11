@@ -38,6 +38,14 @@ export interface PayloadProject {
   importedMission?: import('../../lib/missions/types').MissionExport
   /** Whether the user's YAML replaces the AI install mission entirely */
   replacesInstallMission?: boolean
+  /**
+   * True when the user added this project themselves (via manual add OR via
+   * project swap / library selection). mergeProjects preserves every
+   * user-added project across AI refinement cycles (#6465). Distinct from
+   * `category === 'Custom'`, which only flags the "Manually add" path and
+   * loses user-selected CNCF projects on refinement.
+   */
+  userAdded?: boolean
 }
 
 // ---------------------------------------------------------------------------

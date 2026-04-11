@@ -102,7 +102,7 @@ export function NodeConditions() {
 
   if (isLoading && nodes.length === 0) {
     return (
-      <div className="space-y-2 p-1">
+      <div className="space-y-2 p-1 min-h-card">
         {[1, 2, 3, 4].map(i => (
           <div key={i} className="h-10 rounded bg-muted/50 animate-pulse" />
         ))}
@@ -111,7 +111,7 @@ export function NodeConditions() {
   }
 
   return (
-    <div className="space-y-2 p-1">
+    <div className="space-y-2 p-1 min-h-card">
       {/* Confirmation dialog for cordon/uncordon */}
       {confirmAction && (
         <div className="p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-xs space-y-2">
@@ -156,7 +156,11 @@ export function NodeConditions() {
         </div>
       )}
 
-      <div className="flex gap-2 text-xs">
+      {/* Pill container: flex-wrap + overflow-hidden prevents pills from
+          escaping the card when labels are long (translated languages,
+          large counts). Previously pills overflowed horizontally and their
+          native title tooltip rendered outside the card bounds (#6457). */}
+      <div className="flex flex-wrap gap-2 text-xs max-w-full overflow-hidden">
         {(['all', 'healthy', 'cordoned', 'pressure'] as ConditionFilter[]).map(f => {
           const count = f === 'all' ? summary.total : summary[f]
           const colors: Record<ConditionFilter, string> = {
@@ -173,7 +177,8 @@ export function NodeConditions() {
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`px-2 py-1 rounded-full transition-colors ${
+              title={`${filterLabels[f]}: ${count}`}
+              className={`px-2 py-1 rounded-full transition-colors max-w-full truncate ${
                 filter === f ? colors[f] + ' ring-1 ring-current' : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
               }`}
             >
