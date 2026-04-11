@@ -258,6 +258,26 @@ func TestMissions_ShareToGitHub_AllowlistEnvVarExtension(t *testing.T) {
 	assert.False(t, isRepoAllowedForShare("myorg/other-repo"))
 }
 
+// #6453(B) — Allowlist comparison must be case-insensitive. GitHub treats
+// owner/repo slugs as case-insensitive in URLs and API calls, so a request
+// for `Kubestellar/Console-KB` must match the default entry
+// `kubestellar/console-kb`. The previous exact-match check rejected this
+// (stricter than GitHub itself) and produced spurious 400s.
+func TestMissions_ShareToGitHub_AllowlistIsCaseInsensitive(t *testing.T) {
+	// Mixed-case request, lower-case allowlist entry — must match.
+	assert.True(t, isRepoAllowedForShare("Kubestellar/Console-KB"))
+	assert.True(t, isRepoAllowedForShare("KUBESTELLAR/CONSOLE-KB"))
+	assert.True(t, isRepoAllowedForShare("kubestellar/console-kb"))
+
+	// The reverse direction — upper-case env var entry, lower-case request.
+	t.Setenv(allowedShareRepoEnvVar, "MyOrg/My-Missions")
+	assert.True(t, isRepoAllowedForShare("myorg/my-missions"))
+	assert.True(t, isRepoAllowedForShare("MYORG/MY-MISSIONS"))
+
+	// Non-members are still rejected regardless of casing.
+	assert.False(t, isRepoAllowedForShare("Attacker/Evil-Repo"))
+}
+
 func TestMissions_ShareToGitHub_Success(t *testing.T) {
 	requestLog := map[string]int{}
 	mock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

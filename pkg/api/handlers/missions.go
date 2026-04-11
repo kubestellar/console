@@ -111,11 +111,30 @@ func resolveAllowedShareRepos() []string {
 }
 
 // isRepoAllowedForShare reports whether the given `owner/repo` string is on
-// the effective ShareToGitHub allowlist. Comparison is exact (case-sensitive)
-// to match GitHub's own slug handling.
+// the effective ShareToGitHub allowlist.
+//
+// #6453(B) — Comparison is case-INSENSITIVE. GitHub itself treats owner/repo
+// slugs as case-insensitive in both URLs and API calls, so we do the same here
+// to be forgiving of operator casing in KC_ALLOWED_SHARE_REPOS (e.g. a value
+// of `Kubestellar/Console-KB` will still match a request for
+// `kubestellar/console-kb`). Previously the check was exact-match, which was
+// stricter than GitHub's own handling and caused spurious 400s. See also
+// isRepoAllowedForShareWithList for the path that avoids re-parsing the env
+// var on every call.
 func isRepoAllowedForShare(repo string) bool {
-	for _, allowed := range resolveAllowedShareRepos() {
-		if repo == allowed {
+	return isRepoAllowedForShareWithList(repo, resolveAllowedShareRepos())
+}
+
+// isRepoAllowedForShareWithList is the inner, list-accepting form of
+// isRepoAllowedForShare. #6453(A) — ShareToGitHub resolves the allowlist once
+// per request and passes it through to this function for the membership check
+// AND for the error-response payload, avoiding a double call to
+// resolveAllowedShareRepos() (which re-parses KC_ALLOWED_SHARE_REPOS and could
+// observe a different value between calls if the env changes mid-request).
+func isRepoAllowedForShareWithList(repo string, allowed []string) bool {
+	repoLower := strings.ToLower(repo)
+	for _, a := range allowed {
+		if repoLower == strings.ToLower(a) {
 			return true
 		}
 	}
@@ -820,10 +839,18 @@ func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
 	// repositories the caller's PAT can write to. The default allowlist
 	// contains only `kubestellar/console-kb` (the canonical destination for
 	// shared missions); operators can append more via KC_ALLOWED_SHARE_REPOS.
-	if !isRepoAllowedForShare(req.Repo) {
+	//
+	// #6453(A) — Resolve the allowlist exactly ONCE per request and reuse it
+	// for both the membership check and the error-response payload. The
+	// previous version called resolveAllowedShareRepos() twice on the reject
+	// path, duplicating env parsing and creating a small race window where
+	// the error message could disagree with the check if KC_ALLOWED_SHARE_REPOS
+	// changed between the two calls.
+	allowedShareRepos := resolveAllowedShareRepos()
+	if !isRepoAllowedForShareWithList(req.Repo, allowedShareRepos) {
 		return c.Status(400).JSON(fiber.Map{
 			"error":         "repo is not on the share allowlist",
-			"allowed_repos": resolveAllowedShareRepos(),
+			"allowed_repos": allowedShareRepos,
 		})
 	}
 
