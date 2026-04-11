@@ -169,6 +169,14 @@ export interface SavedMissionUpdates {
 const MissionContext = createContext<MissionContextValue | null>(null)
 
 const MISSIONS_STORAGE_KEY = 'kc_missions'
+/**
+ * #6668 — Window (ms) during which a `storage` event for MISSIONS_STORAGE_KEY
+ * is treated as an echo of our own write and ignored. Real browsers do not
+ * fire storage events in the same tab that made the write, so this is only
+ * a guard against test shims / polyfills. Kept tight so genuine cross-tab
+ * writes arriving within a few ms of a local write are still honored.
+ */
+const CROSS_TAB_ECHO_IGNORE_MS = 50
 const UNREAD_MISSIONS_KEY = 'kc_unread_missions'
 const SELECTED_AGENT_KEY = 'kc_selected_agent'
 
@@ -457,6 +465,17 @@ export function MissionProvider({ children }: { children: ReactNode }) {
   const [defaultAgent, setDefaultAgent] = useState<string | null>(null)
   const [agentsLoading, setAgentsLoading] = useState(false)
 
+  // #6667 — Tracks whether the provider has unmounted. All async completion
+  // handlers (WebSocket onclose, scheduled reconnect timers, fetch .then
+  // callbacks, etc.) must check this before calling setState, or React
+  // emits "cannot update state on unmounted component" warnings and in the
+  // worst case schedules a new reconnect setTimeout after the provider has
+  // been torn down. Set to true in the main cleanup effect below.
+  const unmountedRef = useRef(false)
+  // #6668 — Timestamp of the most recent local write to MISSIONS_STORAGE_KEY.
+  // Used by the storage event listener to suppress echoes of our own write
+  // in environments that (incorrectly) deliver same-tab storage events.
+  const lastWrittenAtRef = useRef<number>(0)
   const wsRef = useRef<WebSocket | null>(null)
   const pendingRequests = useRef<Map<string, string>>(new Map()) // requestId -> missionId
   // Track last stream timestamp per mission to detect tool-use gaps (for creating new chat bubbles)
@@ -571,10 +590,45 @@ export function MissionProvider({ children }: { children: ReactNode }) {
     trySend()
   }
 
-  // Save missions whenever they change
+  // Save missions whenever they change.
+  //
+  // #6668 — Cross-tab overwrite guard. Previously, two tabs each running
+  // their own MissionProvider would each unconditionally write their local
+  // state to `kc_missions` on every change. Tab A completes a mission and
+  // writes; Tab B's next render also writes its (older) state, erasing
+  // Tab A's completion. We mark our own writes with `lastWrittenAt` so
+  // the storage listener below can ignore echoes of our own write.
   useEffect(() => {
+    lastWrittenAtRef.current = Date.now()
     saveMissions(missions)
   }, [missions])
+
+  // #6668 — Listen for cross-tab mission updates. When another tab writes
+  // to `kc_missions`, re-load missions from storage so the completion or
+  // dismissal made in that tab is visible here too. The storage event does
+  // NOT fire in the same tab that made the write, so there is no echo
+  // loop. `lastWrittenAtRef` is still consulted as a belt-and-suspenders
+  // guard against pathological environments (test shims, polyfills) that
+  // echo their own writes.
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== MISSIONS_STORAGE_KEY) return
+      if (e.newValue === null) return
+      // Ignore events fired within CROSS_TAB_ECHO_IGNORE_MS of our own
+      // write — guards against environments that echo storage events.
+      const sinceWrite = Date.now() - (lastWrittenAtRef.current ?? 0)
+      if (sinceWrite < CROSS_TAB_ECHO_IGNORE_MS) return
+      if (unmountedRef.current) return
+      try {
+        const reloaded = loadMissions()
+        setMissions(reloaded)
+      } catch (err) {
+        console.warn('[Missions] issue 6668 — failed to reload from cross-tab write:', err)
+      }
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [])
 
   // Save unread IDs whenever they change
   useEffect(() => {
@@ -684,6 +738,14 @@ export function MissionProvider({ children }: { children: ReactNode }) {
     // In demo mode, skip WebSocket connection to avoid console errors
     if (getDemoMode()) {
       return Promise.reject(new Error('Agent unavailable in demo mode'))
+    }
+    // #6667 — Refuse to start a new connection if the provider has already
+    // unmounted. Without this guard, a setAgentsLoading(true) call below
+    // would fire on a torn-down component. Can happen when an `onclose`
+    // handler schedules a reconnect timer just before unmount; the timer
+    // still fires after the cleanup effect has run.
+    if (unmountedRef.current) {
+      return Promise.reject(new Error('MissionProvider unmounted'))
     }
 
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -907,6 +969,13 @@ export function MissionProvider({ children }: { children: ReactNode }) {
         wsRef.current.onclose = () => {
           clearTimeout(timeout)
           wsRef.current = null
+          // #6667 — If the provider has already unmounted, short-circuit
+          // everything below: do NOT set state, do NOT schedule a
+          // reconnect timer. The cleanup effect will have already cleared
+          // timers and nulled handlers, but `onclose` can still fire during
+          // teardown if the close was initiated here and the runtime
+          // delivers the event in the same tick.
+          if (unmountedRef.current) return
           setAgentsLoading(false) // Stop loading spinner on disconnect
           // Don't clear agents - keep them cached for display
           // Users can still see available agents even if temporarily disconnected
@@ -926,6 +995,12 @@ export function MissionProvider({ children }: { children: ReactNode }) {
             )
             wsReconnectTimer.current = setTimeout(() => {
               wsReconnectTimer.current = null
+              // #6667 — Belt-and-suspenders: re-check unmount status when
+              // the timer fires in case the cleanup effect ran between
+              // scheduling and firing. `ensureConnection` also checks
+              // this, but bailing here avoids an extra rejected promise
+              // in the console.
+              if (unmountedRef.current) return
               ensureConnection().catch((err: unknown) => {
                 console.error('[Missions] WebSocket reconnection failed:', err)
               })
@@ -2546,6 +2621,10 @@ Install the console locally with the KubeStellar Console agent to use AI mission
     const waitingInputTimeoutsRef = waitingInputTimeouts.current
     const wsSendRetryTimersRef = wsSendRetryTimers.current
     return () => {
+      // #6667 — Mark provider as unmounted BEFORE clearing timers, so any
+      // in-flight async callback that races cleanup sees this flag and
+      // bails without touching React state.
+      unmountedRef.current = true
       if (wsReconnectTimer.current) {
         clearTimeout(wsReconnectTimer.current)
         wsReconnectTimer.current = null

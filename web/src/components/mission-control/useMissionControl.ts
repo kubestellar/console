@@ -24,6 +24,20 @@ import type {
 const STORAGE_KEY = 'kc_mission_control_state'
 // Wizard state expires after 7 days to avoid persisting abandoned mission drafts
 const WIZARD_STATE_TTL_MS = 7 * 24 * 60 * 60 * 1000
+/**
+ * #6664 — Schema version for persisted Mission Control state. Bump when the
+ * shape of `MissionControlState` changes in a backward-incompatible way.
+ * Mismatched versions are cleared silently on load so stale payloads from
+ * older builds never flow into downstream type-unsafe code paths.
+ */
+const PERSISTED_SCHEMA_VERSION = 1
+/**
+ * #6665 — Key used to surface a "your wizard draft may be lost" banner when
+ * persistState() hits a quota error. Stored as an ephemeral flag in
+ * sessionStorage so the next render of the Mission Control dialog can read
+ * and display it once.
+ */
+const QUOTA_BANNER_KEY = 'kc_mission_control_quota_error'
 
 // ---------------------------------------------------------------------------
 // #6379 — Project-name sanitization (prompt injection defence)
@@ -139,6 +153,20 @@ const MAX_FENCE_BODY = 50_000
 interface PersistedStateEntry {
   state: Partial<MissionControlState>
   savedAt: number
+  /** #6664 — Schema version; missing or mismatched means discard. */
+  schemaVersion?: number
+}
+
+/**
+ * #6664 — Guard predicate for persisted state. A structurally valid JSON
+ * value (`42`, `"null"`, `[]`, etc.) would otherwise slip past the bare
+ * `JSON.parse` check and crash at the `'savedAt' in entry` lookup below
+ * with `TypeError: Cannot use 'in' operator to search for 'savedAt' in 42`.
+ * The surrounding `try/catch` swallowed that error and silently wiped the
+ * user's wizard draft, so we fail explicitly here with a warning.
+ */
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
 function loadPersistedState(): Partial<MissionControlState> | null {
@@ -150,9 +178,38 @@ function loadPersistedState(): Partial<MissionControlState> | null {
       if (isDemoMode()) return getDemoMissionControlState()
       return null
     }
-    const entry = JSON.parse(raw) as PersistedStateEntry | Partial<MissionControlState>
+    const parsedRaw: unknown = JSON.parse(raw)
+    // #6664 — Reject non-object top-level values (numbers, strings, arrays,
+    // null) before the `in` operator is used below. Clear the corrupt key so
+    // a second load doesn't keep hitting this path, and log a warning so
+    // users notice their wizard draft was discarded.
+    if (!isPlainObject(parsedRaw)) {
+      console.warn(
+        `[MissionControl] issue 6664 — persisted state at "${STORAGE_KEY}" is not a plain object ` +
+        `(typeof=${typeof parsedRaw}, isArray=${Array.isArray(parsedRaw)}); clearing.`,
+      )
+      try { localStorage.removeItem(STORAGE_KEY) } catch { /* ignore */ }
+      if (isDemoMode()) return getDemoMissionControlState()
+      return null
+    }
+    const entry = parsedRaw as unknown as PersistedStateEntry | Partial<MissionControlState>
     // Support both new format (with savedAt timestamp) and legacy format (plain state)
     if ('savedAt' in entry && typeof entry.savedAt === 'number') {
+      // #6664 — Schema-version check. Unknown or mismatched versions get
+      // cleared. Legacy entries without schemaVersion are still accepted so
+      // existing sessions don't lose work on the rollout of this fix.
+      if (
+        entry.schemaVersion !== undefined &&
+        entry.schemaVersion !== PERSISTED_SCHEMA_VERSION
+      ) {
+        console.warn(
+          `[MissionControl] issue 6664 — persisted schema version ${entry.schemaVersion} ` +
+          `does not match current ${PERSISTED_SCHEMA_VERSION}; clearing.`,
+        )
+        try { localStorage.removeItem(STORAGE_KEY) } catch { /* ignore */ }
+        if (isDemoMode()) return getDemoMissionControlState()
+        return null
+      }
       // Check TTL — discard wizard state older than WIZARD_STATE_TTL_MS
       if (Date.now() - entry.savedAt > WIZARD_STATE_TTL_MS) {
         localStorage.removeItem(STORAGE_KEY)
@@ -177,12 +234,66 @@ function loadPersistedState(): Partial<MissionControlState> | null {
   }
 }
 
+/**
+ * #6665 — Detect a DOMException that represents a storage quota error.
+ * Matches both the named exception and the legacy numeric code 22 used by
+ * older Safari/WebKit builds. Mirrors the pattern used in `saveMissions`.
+ */
+function isQuotaExceededError(e: unknown): boolean {
+  return (
+    e instanceof DOMException &&
+    (e.name === 'QuotaExceededError' ||
+      e.name === 'NS_ERROR_DOM_QUOTA_REACHED' ||
+      e.code === 22)
+  )
+}
+
 function persistState(state: MissionControlState) {
   try {
-    const entry: PersistedStateEntry = { state, savedAt: Date.now() }
+    const entry: PersistedStateEntry = {
+      state,
+      savedAt: Date.now(),
+      schemaVersion: PERSISTED_SCHEMA_VERSION }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(entry))
+  } catch (e) {
+    // #6665 — Do not silently swallow quota errors. Log a warning naming
+    // the wizard so the user can see which draft was at risk, and surface
+    // an ephemeral flag in sessionStorage so the Mission Control dialog
+    // can show a one-time banner on its next render. sessionStorage is
+    // used (not localStorage) because the flag is only meaningful for the
+    // current tab — and because localStorage is, by construction, the
+    // thing that just failed.
+    if (isQuotaExceededError(e)) {
+      const title = state.title || '(untitled mission)'
+      console.warn(
+        `[MissionControl] issue 6665 — localStorage quota exceeded while ` +
+        `persisting Mission Control wizard state for "${title}". Your ` +
+        `in-progress draft is not being persisted and will be lost on ` +
+        `reload unless space is freed.`,
+      )
+      try {
+        sessionStorage.setItem(QUOTA_BANNER_KEY, title)
+      } catch {
+        // sessionStorage may also be full or unavailable — nothing we can do.
+      }
+    } else {
+      console.error('[MissionControl] Failed to persist state:', e)
+    }
+  }
+}
+
+/**
+ * #6665 — Read and clear the quota-error banner flag. Returns the mission
+ * title that was being persisted when the quota error fired, or `null` if
+ * no banner is pending. Called by the Mission Control dialog on mount.
+ */
+export function consumePersistQuotaBanner(): string | null {
+  try {
+    const v = sessionStorage.getItem(QUOTA_BANNER_KEY)
+    if (v !== null) sessionStorage.removeItem(QUOTA_BANNER_KEY)
+    return v
   } catch {
-    // quota exceeded — silently ignore
+    return null
   }
 }
 
@@ -217,7 +328,7 @@ function makeInitialState(persisted?: Partial<MissionControlState> | null): Miss
  * fenced ```json blocks and returns the first one containing that key.
  * Falls back to the first parseable block otherwise.
  */
-export function extractJSON<T>(text: string, requiredKey?: string): T | null {
+export function extractJSON<T>(text: string, requiredKey?: string, warnKey?: string): T | null {
   // #6727 — Bounded inner repetition prevents catastrophic backtracking on
   // malformed input (e.g. an open fence with tens of thousands of body chars
   // and no close fence). `{0,MAX_FENCE_BODY}` caps the engine's work per
@@ -251,7 +362,7 @@ export function extractJSON<T>(text: string, requiredKey?: string): T | null {
   // for balanced braces, then return the last valid (and largest) parse.
   // This avoids the old greedy regex which grabbed from the first { to the
   // last } and failed when prose contained intermediate braces.  (#5505)
-  const blocks = extractBalancedBlocks(text)
+  const blocks = extractBalancedBlocks(text, warnKey)
   let best: T | null = null
   let bestLen = 0
   for (const block of blocks) {
@@ -276,21 +387,48 @@ export function extractJSON<T>(text: string, requiredKey?: string): T | null {
 }
 
 /**
+ * #6749-D — Deduped warn set for the `extractBalancedBlocks` oversize
+ * guard. During Mission Control streaming, `extractJSON` is re-invoked on
+ * every debounced chunk, so logging the #6723 guard on every call produced
+ * a flood of identical warnings. The set is keyed by caller-supplied
+ * tokens (typically a mission ID) so the warning fires once per mission
+ * instead of once per chunk. Cleared by `reset()` above via
+ * `oversizedWarnedRef`, and by `resetOversizedWarnings()` exported below.
+ */
+const oversizedWarnSet = new Set<string>()
+export function resetOversizedWarnings(): void {
+  oversizedWarnSet.clear()
+}
+
+/**
  * Scan `text` for top-level balanced `{ ... }` and `[ ... ]` blocks.
  * Returns them in order of appearance.  Handles nested braces correctly so
  * `{ "a": { "b": 1 } }` is returned as one block, not two.
+ *
+ * `warnKey` (#6749-D) is an optional de-dup token for the oversized-input
+ * warning path: the same caller (e.g. one mission ID) only logs the guard
+ * message once, not on every streamed chunk. If omitted, a legacy
+ * always-log token is used so existing callers retain their warning.
  */
-function extractBalancedBlocks(text: string): string[] {
+function extractBalancedBlocks(text: string, warnKey?: string): string[] {
   // #6723 — Refuse pathological inputs. The scanner is worst-case O(n²)
   // on inputs with many unclosed openers, which freezes the main thread
   // on 10 MB garbage payloads. Return early with a console warning so
   // upstream callers fall back to their regex path or fenced-block path.
   if (text.length > MAX_BALANCED_BLOCKS_INPUT) {
-    console.warn(
-      `[useMissionControl] extractBalancedBlocks: input too large ` +
-      `(${text.length} chars > ${MAX_BALANCED_BLOCKS_INPUT}), skipping scan ` +
-      `to avoid main-thread block (#6723).`
-    )
+    const key = warnKey ?? '__legacy__'
+    // #6749-D — Only log the first oversized hit per warnKey. Subsequent
+    // calls with the same key (streaming re-parses of the same mission)
+    // silently return [] without spamming the console.
+    if (!oversizedWarnSet.has(key)) {
+      oversizedWarnSet.add(key)
+      console.warn(
+        `[useMissionControl] extractBalancedBlocks: input too large ` +
+        `(${text.length} chars > ${MAX_BALANCED_BLOCKS_INPUT}), skipping scan ` +
+        `to avoid main-thread block (#6723). Further oversized inputs for ` +
+        `key "${key}" will be suppressed until reset.`
+      )
+    }
     return []
   }
 
@@ -367,7 +505,7 @@ export function useMissionControl() {
   const [state, setState] = useState<MissionControlState>(() =>
     makeInitialState(loadPersistedState())
   )
-  const { startMission, sendMessage, missions } = useMissions()
+  const { startMission, sendMessage, missions, dismissMission } = useMissions()
   const { releases: helmReleases } = useHelmReleases()
   const { clusters, isLoading: clustersLoading, lastUpdated: clustersLastUpdated } = useClusters()
   const lastParsedContentRef = useRef('')
@@ -492,6 +630,13 @@ export function useMissionControl() {
 
   useEffect(() => {
     if (!planningMission) return
+    // #6670 — After reset, the wizard's `planningMissionId` is cleared but
+    // the old mission object may still live in the useMissions context and
+    // deliver late streamed messages. If the wizard no longer owns a
+    // planning mission, drop the parse so stale AI output cannot pollute
+    // the fresh wizard state with ghost projects/assignments.
+    if (!state.planningMissionId) return
+    if (planningMission.id !== state.planningMissionId) return
     // #6384 item 3 — Gate the expensive parse on the debounced value being
     // non-empty. While the stream is actively arriving, `useDebouncedValue`
     // keeps returning the stale (possibly empty) value until the stream
@@ -507,7 +652,11 @@ export function useMissionControl() {
 
     // Try to parse structured data from the latest AI message
     if (state.phase === 'define') {
-      const parsed = extractJSON<{ projects?: PayloadProject[] }>(latest.content, 'projects')
+      const parsed = extractJSON<{ projects?: PayloadProject[] }>(
+        latest.content,
+        'projects',
+        state.planningMissionId ?? undefined,
+      )
       // #6725 — Schema guard. The AI occasionally returns
       // `{ "projects": { ... } }` (object) instead of
       // `{ "projects": [ ... ] }` (array). Without this guard, downstream
@@ -559,7 +708,7 @@ export function useMissionControl() {
         assignments?: ClusterAssignment[]
         phases?: DeployPhase[]
         warnings?: string[]
-      }>(latest.content, 'assignments')
+      }>(latest.content, 'assignments', state.planningMissionId ?? undefined)
       // #6726 — Schema guard. Same class of crash as #6725 for projects:
       // the AI can return `{ "assignments": { ... } }` instead of an array,
       // which immediately crashes the `.map(a => a.clusterName)` below.
@@ -600,11 +749,36 @@ export function useMissionControl() {
   }, [debouncedAssistantContent, state.phase, state.planningMissionId, planningMission?.status])
 
   // Update streaming state from mission status
+  //
+  // #6669 — A mission can transition directly to 'failed' / 'cancelled' /
+  // 'blocked' without passing through 'running' first (e.g. immediate
+  // WebSocket error, preflight rejection). Previously the streaming flag
+  // was only cleared when the status was 'running' === false AFTER first
+  // going true; an error right out of the gate left `aiStreaming: true`
+  // for the full AI_SUGGEST_TIMEOUT_MS (30s) while the Phase 1 panel spun
+  // with no visible error. Clear the flag immediately on any terminal
+  // state so the UI surfaces the error in the same tick.
   useEffect(() => {
     if (!planningMission) return
-    const isStreaming = planningMission.status === 'running'
+    const status = planningMission.status
+    const TERMINAL_STATES: ReadonlySet<typeof status> = new Set([
+      'failed',
+      'completed',
+      'cancelled',
+      'blocked',
+    ] as const)
+    const isStreaming = status === 'running'
+    const isTerminal = TERMINAL_STATES.has(status)
     if (isStreaming !== state.aiStreaming) {
       setState((prev) => ({ ...prev, aiStreaming: isStreaming }))
+    } else if (isTerminal && state.aiStreaming) {
+      // Defensive second-pass: if the streaming flag is still true on a
+      // terminal status (no intermediate 'running' ever observed), force it
+      // false. The above branch already handles the common case via the
+      // `isStreaming !== state.aiStreaming` compare, but a status that
+      // skips 'running' entirely means the effect never ran with
+      // `isStreaming === true`, so we clear it explicitly here (#6669).
+      setState((prev) => ({ ...prev, aiStreaming: false }))
     }
   }, [planningMission?.status, state.aiStreaming])
 
@@ -1003,6 +1177,18 @@ Order phases by dependency — prerequisites first. Each phase completes before 
   // ---------------------------------------------------------------------------
 
   const reset = () => {
+    // #6670 — Also dismiss the in-flight planning mission so late stream
+    // responses cannot pollute the freshly reset wizard. Without this, the
+    // old mission object kept delivering assistant messages that the parse
+    // effect above would happily splice into the new wizard state.
+    const prevPlanningMissionId = state.planningMissionId
+    if (prevPlanningMissionId) {
+      try { dismissMission(prevPlanningMissionId) } catch { /* ignore */ }
+    }
+    // #6749-D — Reset the module-level oversized-warning dedupe set so the
+    // next planning mission can log its own first-hit warning instead of
+    // inheriting the suppressed state from a previous mission.
+    resetOversizedWarnings()
     localStorage.removeItem(STORAGE_KEY)
     lastParsedContentRef.current = ''
     setState(makeInitialState())

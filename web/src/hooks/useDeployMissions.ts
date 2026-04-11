@@ -499,7 +499,27 @@ export function useDeployMissions() {
                       logs: [logLine],
                     }
                   }
-                  return pendingOrFailed()
+                  // #6666 — Previously a sustained non-auth error (HTTP 500,
+                  // 502, 503, 504, etc.) would silently downgrade the mission
+                  // to `failed` after MAX_STATUS_FAILURES poll cycles with no
+                  // indication of why. Surface the HTTP status AND a short
+                  // response body excerpt in the cluster logs so operators
+                  // can see that the backend itself is returning errors and
+                  // distinguish "backend down" from "workload missing".
+                  let errBody = ''
+                  try {
+                    if (typeof (res as Response).clone === 'function') {
+                      errBody = (await (res as Response).clone().text()).slice(0, 200)
+                    } else if (typeof (res as Response).text === 'function') {
+                      errBody = (await (res as Response).text()).slice(0, 200)
+                    }
+                  } catch { /* body already consumed or unreadable */ }
+                  const pf = pendingOrFailed()
+                  const logLine = `Backend error HTTP ${res.status}${res.statusText ? ` ${res.statusText}` : ''}${errBody ? `: ${errBody}` : ''} (#6666)`
+                  return {
+                    ...pf,
+                    logs: pf.logs ? [...pf.logs, logLine] : [logLine],
+                  }
                 }
                 const data = await res.json()
                 // #5958 — If the workload no longer exists on the target cluster,
