@@ -102,7 +102,12 @@ export const statefulSetStatusConfig: UnifiedCardConfig = {
   },
 
   // Metadata
-  isDemoData: true,
+  // #6642 — Was `true`, which forced the card to render as demo data even
+  // when real StatefulSets were available. Match deployment-status /
+  // pod-status (which use `false`) so the card shows live data when the
+  // hook returns it and only falls back to demo mode when the hook's own
+  // isDemoData signal flips true.
+  isDemoData: false,
   isLive: true,
 }
 
