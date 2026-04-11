@@ -369,7 +369,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
       <div className="flex flex-col flex-1 min-h-0 min-w-0">
       {/* Header */}
       <div className="p-4 border-b border-border flex-shrink-0">
-        <div className="flex items-center gap-2 mb-2">
+        <div className="flex flex-wrap items-center gap-2 mb-2">
           <TypeIcon className="w-5 h-5 text-primary" />
           {isEditingTitle ? (
             <div className="flex items-center gap-1 flex-1 min-w-0">
@@ -816,7 +816,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
               />
               <button
                 disabled
-                className="flex-shrink-0 px-3 py-2 bg-primary text-primary-foreground rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-shrink-0 px-3 py-3 min-h-[44px] bg-primary text-primary-foreground rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 title={t('missionChat.sendWillQueue')}
               >
                 <Send className="w-4 h-4" />
@@ -825,7 +825,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
             <div className="flex items-center justify-end">
               <button
                 onClick={() => cancelMission(mission.id)}
-                className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 px-2 py-1 rounded hover:bg-red-500/10 transition-colors"
+                className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 py-2.5 px-3 min-h-[44px] rounded hover:bg-red-500/10 transition-colors"
                 data-testid="terminate-session-inline-btn"
               >
                 <StopCircle className="w-3 h-3" />
@@ -935,7 +935,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
               <button
                 onClick={handleSend}
                 disabled={!input.trim()}
-                className="px-3 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-30 transition-colors"
+                className="px-3 py-3 min-h-[44px] rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-30 transition-colors"
               >
                 <Send className="w-4 h-4" />
               </button>
@@ -998,7 +998,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
               <button
                 onClick={handleSend}
                 disabled={!input.trim()}
-                className="flex-shrink-0 px-3 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/80 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-shrink-0 px-3 py-3 min-h-[44px] bg-primary text-primary-foreground rounded-lg hover:bg-primary/80 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Send className="w-4 h-4" />
               </button>
@@ -1026,7 +1026,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
               <button
                 onClick={handleSend}
                 disabled={!input.trim()}
-                className="flex-shrink-0 px-3 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/80 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-shrink-0 px-3 py-3 min-h-[44px] bg-primary text-primary-foreground rounded-lg hover:bg-primary/80 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Send className="w-4 h-4" />
               </button>

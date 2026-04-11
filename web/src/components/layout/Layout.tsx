@@ -462,14 +462,14 @@ export function Layout({ children: _children }: LayoutProps) {
             <div className="flex items-center gap-2 shrink-0">
               <Link
                 to="/settings"
-                className="flex items-center gap-1 text-xs px-2 py-0.5 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 rounded transition-colors whitespace-nowrap"
+                className="flex items-center gap-1 text-xs px-2 py-2 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 rounded transition-colors whitespace-nowrap"
               >
                 <Settings className="w-3 h-3" />
                 <span className="hidden sm:inline">{t('navigation.settings')}</span>
               </Link>
               <button
                 onClick={toggleDemoMode}
-                className="text-xs px-2 py-0.5 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 rounded transition-colors whitespace-nowrap"
+                className="text-xs px-2 py-2 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 rounded transition-colors whitespace-nowrap"
               >
                 <span className="hidden sm:inline">{t('layout.switchTo')} </span>{t('layout.demo')}
               </button>
@@ -502,7 +502,7 @@ export function Layout({ children: _children }: LayoutProps) {
           // entire main column past the viewport at narrow breakpoints
           // (issues 6385, 6387, 6394). Individual scrollable children
           // (tables, code blocks) still scroll horizontally inside wrappers.
-          className="relative flex-1 p-4 pb-24 md:p-6 md:pb-28 transition-[margin] duration-300 overflow-y-auto overflow-x-hidden scroll-enhanced min-w-0"
+          className="relative flex-1 p-4 pb-[calc(6rem+env(safe-area-inset-bottom))] md:p-6 md:pb-[calc(7rem+env(safe-area-inset-bottom))] transition-[margin] duration-300 overflow-y-auto overflow-x-hidden scroll-enhanced min-w-0"
         >
           <NavigationProgress />
           <Suspense fallback={<ContentLoadingSkeleton />}>

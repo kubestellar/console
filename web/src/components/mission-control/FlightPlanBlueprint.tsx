@@ -926,7 +926,7 @@ export function FlightPlanBlueprint({
 
           <div
             ref={svgContainerRef}
-            className="w-full h-full overflow-auto"
+            className="w-full max-w-full h-full overflow-x-auto overflow-y-auto"
             style={{ cursor: zoom > 1 ? 'grab' : 'default' }}
             onMouseDown={handlePanStart}
           >

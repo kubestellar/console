@@ -146,7 +146,7 @@ function StepCard({ step, index, accentColor }: { step: MissionStep; index: numb
             )}
             {block.code && (
               <div className="relative mt-2 mb-2">
-                <pre className="p-3 rounded-lg bg-background text-xs text-foreground font-mono border border-border overflow-x-auto whitespace-pre-wrap">
+                <pre className="max-w-[85vw] p-3 rounded-lg bg-background text-xs text-foreground font-mono border border-border overflow-x-auto whitespace-pre-wrap">
                   {block.code}
                 </pre>
                 <CopyButton text={block.code} />
@@ -159,7 +159,7 @@ function StepCard({ step, index, accentColor }: { step: MissionStep; index: numb
         ))}
         {step.command && (
           <div className="relative mt-2">
-            <pre className="block p-2 rounded bg-background text-xs text-foreground font-mono border border-border whitespace-pre-wrap overflow-x-auto">
+            <pre className="max-w-[85vw] block p-2 rounded bg-background text-xs text-foreground font-mono border border-border whitespace-pre-wrap overflow-x-auto">
               {step.command}
             </pre>
             <CopyButton text={step.command} />
@@ -170,7 +170,7 @@ function StepCard({ step, index, accentColor }: { step: MissionStep; index: numb
             <div className="flex items-center gap-1.5 mb-1">
               <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">YAML</span>
             </div>
-            <pre className="p-3 rounded-lg bg-background text-xs text-foreground font-mono border border-border overflow-x-auto whitespace-pre-wrap">
+            <pre className="max-w-[85vw] p-3 rounded-lg bg-background text-xs text-foreground font-mono border border-border overflow-x-auto whitespace-pre-wrap">
               {step.yaml}
             </pre>
             <CopyButton text={step.yaml} />

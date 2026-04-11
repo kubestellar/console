@@ -172,7 +172,7 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
           {/* Theme toggle */}
           <button
             onClick={toggleTheme}
-            className="p-2 hover:bg-secondary rounded-lg transition-colors"
+            className="p-2 shrink-0 hover:bg-secondary rounded-lg transition-colors"
             title={t('navbar.themeToggle', { theme })}
           >
             {theme === 'dark' ? (
@@ -189,10 +189,10 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
         </div>
 
         {/* Overflow menu — visible below lg for items hidden at narrow widths */}
-        <div className="relative lg:hidden">
+        <div className="relative lg:hidden shrink-0">
           <button
             onClick={() => setShowMobileMore(!showMobileMore)}
-            className="p-2 hover:bg-secondary rounded-lg transition-colors"
+            className="p-2 min-w-[44px] min-h-[44px] hover:bg-secondary rounded-lg transition-colors"
             aria-label={t('navbar.moreOptions')}
           >
             <MoreVertical className="w-5 h-5 text-muted-foreground" />
@@ -205,14 +205,14 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
                 onClick={() => setShowMobileMore(false)}
               />
               {/* Bottom sheet menu on mobile */}
-              <div className={`fixed ${isMobile ? 'inset-x-0 bottom-0 rounded-t-2xl max-h-[60vh]' : 'right-4 w-64 rounded-lg'} bg-card border border-border shadow-xl z-modal overflow-hidden`} style={isMobile ? undefined : { top: topOffset + NAVBAR_HEIGHT_PX }}>
+              <div className={`fixed ${isMobile ? 'inset-x-0 bottom-0 rounded-t-2xl max-h-[60dvh]' : 'right-4 w-64 rounded-lg'} bg-card border border-border shadow-xl z-modal overflow-hidden`} style={isMobile ? undefined : { top: topOffset + NAVBAR_HEIGHT_PX }}>
                 {/* Drag handle for mobile */}
                 {isMobile && (
                   <div className="flex justify-center py-2">
                     <div className="w-10 h-1 bg-muted-foreground/30 rounded-full" />
                   </div>
                 )}
-                <div className={`${isMobile ? 'max-h-[calc(60vh-24px)]' : ''} overflow-y-auto py-2`}>
+                <div className={`${isMobile ? 'max-h-[calc(60dvh-24px)]' : ''} overflow-y-auto py-2`}>
                   {/* Search on mobile */}
                   <div className="px-3 py-2 sm:hidden">
                     <Suspense fallback={null}><SearchDropdown /></Suspense>
@@ -241,8 +241,8 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
                         className="relative flex items-center gap-2 w-full px-3 py-2 text-sm font-medium rounded-lg transition-colors bg-purple-500/10 hover:bg-purple-500/20 text-purple-400"
                         aria-label={t('missionSidebar.openAIMissions')}
                       >
-                        <Sparkles className="w-4 h-4" />
-                        <span>{t('missionSidebar.aiMissions')}</span>
+                        <Sparkles className="w-4 h-4 shrink-0" />
+                        <span className="truncate min-w-0">{t('missionSidebar.aiMissions')}</span>
                         {missionsNeedingAttention > 0 && (
                           <span className="flex items-center justify-center w-5 h-5 text-[10px] font-bold bg-purple-500 text-white rounded-full animate-pulse">
                             {missionsNeedingAttention}

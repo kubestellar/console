@@ -586,7 +586,7 @@ export function MissionSidebar() {
           "fixed bg-card border-border z-modal flex flex-col overflow-hidden shadow-2xl",
           !isResizing && "transition-[width,top,border,transform] duration-300 ease-in-out",
           // Mobile: bottom sheet
-          isMobile && "inset-x-0 bottom-0 rounded-t-2xl border-t max-h-[80vh]",
+          isMobile && "inset-x-0 bottom-0 rounded-t-2xl border-t max-h-[80dvh]",
           isMobile && !isSidebarOpen && "translate-y-full pointer-events-none",
           isMobile && isSidebarOpen && "translate-y-0",
           // Desktop: right sidebar
@@ -723,7 +723,7 @@ export function MissionSidebar() {
             ))}
             <button
               onClick={closeSidebar}
-              className="p-1 rounded transition-colors hover:bg-black/5 dark:hover:bg-white/10"
+              className="min-w-[44px] min-h-[44px] p-2 rounded transition-colors hover:bg-black/5 dark:hover:bg-white/10 flex items-center justify-center"
               title={t('missionSidebar.closeSidebar')}
             >
               <X className="w-5 h-5 text-muted-foreground" />

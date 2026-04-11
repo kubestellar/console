@@ -354,12 +354,14 @@ export function ClusterAssignmentPanel({
               })}
             </div>
           ) : (
-            <AssignmentMatrix
-              projects={state.projects}
-              clusters={healthyClusters}
-              assignments={state.assignments}
-              onToggle={onSetAssignment}
-            />
+            <div className="max-w-full overflow-x-auto">
+              <AssignmentMatrix
+                projects={state.projects}
+                clusters={healthyClusters}
+                assignments={state.assignments}
+                onToggle={onSetAssignment}
+              />
+            </div>
           )}
 
           {/* Phase summary */}
