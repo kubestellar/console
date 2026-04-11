@@ -229,6 +229,7 @@ func (s *SQLiteStore) migrate() error {
 		pr_url TEXT,
 		copilot_session_url TEXT,
 		netlify_preview_url TEXT,
+		latest_comment TEXT,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 		updated_at DATETIME
 	);
@@ -356,6 +357,9 @@ func (s *SQLiteStore) migrate() error {
 		"ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'viewer'",
 		"ALTER TABLE users ADD COLUMN slack_id TEXT",
 		"ALTER TABLE feature_requests ADD COLUMN closed_by_user INTEGER DEFAULT 0",
+		// #6284: UpdateFeatureRequestLatestComment writes to this column
+		// but it was never added to CREATE TABLE or migrations.
+		"ALTER TABLE feature_requests ADD COLUMN latest_comment TEXT",
 	}
 	for _, migration := range migrations {
 		// Ignore errors - column may already exist
@@ -1411,6 +1415,11 @@ func (s *SQLiteStore) CreateNotification(notification *models.Notification) erro
 }
 
 func (s *SQLiteStore) GetUserNotifications(userID uuid.UUID, limit int) ([]models.Notification, error) {
+	// #6286: clamp the limit to safe bounds before passing to SQL.
+	// SQLite treats negative LIMIT as "no limit", which would let a
+	// caller bypass resource controls and return arbitrarily large
+	// result sets. Match the card_history query's hardening.
+	limit = clampLimit(limit)
 	rows, err := s.db.Query(`SELECT id, user_id, feature_request_id, notification_type, title, message, read, created_at FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT ?`, userID.String(), limit)
 	if err != nil {
 		return nil, err

@@ -141,6 +141,18 @@ func (p *PersistenceStore) Load() error {
 		return fmt.Errorf("failed to parse persistence config: %w", err)
 	}
 
+	// #6285: a config file containing literal JSON `null` is valid
+	// JSON and causes json.Unmarshal(data, &p.config) to set p.config
+	// to nil, which would panic on the namespace dereference below.
+	// Reset to defaults when that happens.
+	if p.config == nil {
+		p.config = &PersistenceConfig{
+			Enabled:   false,
+			Namespace: DefaultNamespace,
+			SyncMode:  "primary-only",
+		}
+	}
+
 	// Ensure namespace has a default
 	if p.config.Namespace == "" {
 		p.config.Namespace = DefaultNamespace
