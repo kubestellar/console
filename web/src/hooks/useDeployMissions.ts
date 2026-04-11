@@ -151,6 +151,42 @@ const MIN_ACTIVE_MS = 10_000
  * the very error message the user needs.
  */
 const LOG_RECOVERY_EXTRA_POLLS = 3
+/**
+ * #6640 — Max number of concurrent cluster-status HTTP requests across ALL
+ * active missions. Before this cap, a user with N missions × M target
+ * clusters would fire N*M fetches every POLL_INTERVAL_MS, which can DoS
+ * their own backend (especially when agent+REST fallbacks double up). We
+ * keep a generous ceiling — most users will never hit it — but it bounds
+ * the worst case.
+ */
+const DEPLOY_POLL_MAX_CONCURRENCY = 6
+
+/**
+ * Run async tasks with bounded concurrency. Returns results in the same
+ * order as `tasks`. Used by the deploy poller to cap in-flight HTTP
+ * requests across all missions × clusters. Kept inline to avoid adding a
+ * p-limit dependency for one caller.
+ */
+async function runWithConcurrency<T>(
+  tasks: ReadonlyArray<() => Promise<T>>,
+  limit: number,
+): Promise<T[]> {
+  const results: T[] = new Array(tasks.length)
+  let nextIndex = 0
+  const workerCount = Math.max(1, Math.min(limit, tasks.length))
+  const workers: Promise<void>[] = []
+  for (let w = 0; w < workerCount; w++) {
+    workers.push((async () => {
+      while (true) {
+        const i = nextIndex++
+        if (i >= tasks.length) return
+        results[i] = await tasks[i]()
+      }
+    })())
+  }
+  await Promise.all(workers)
+  return results
+}
 
 function loadMissions(): DeployMission[] {
   try {
@@ -256,8 +292,16 @@ export function useDeployMissions() {
       const current = missionsRef.current
       if (current.length === 0) return
 
-      const updated = await Promise.all(
-        current.map(async (mission) => {
+      // #6640 — Serialize missions and cap per-mission cluster concurrency
+      // via `runWithConcurrency`. Previously this was
+      // `Promise.all(current.map(... Promise.all(clusters.map(...))))`, which
+      // fires N_missions × N_clusters fetches simultaneously every poll
+      // cycle and can DoS the user's own backend under load. Missions are
+      // processed sequentially; clusters within a mission are capped at
+      // DEPLOY_POLL_MAX_CONCURRENCY in-flight at a time.
+      const updated: DeployMission[] = []
+      for (const mission of current) {
+        updated.push(await (async () => {
           const isCompleted = isTerminalStatus(mission.status)
           // #6415 — Track whether this poll cycle is "within the log-recovery
           // grace window". When true, we allow the normal poll body to run
@@ -284,8 +328,10 @@ export function useDeployMissions() {
 
           const pollCount = (mission.pollCount ?? 0) + 1
 
-          const statuses = await Promise.all(
-            mission.targetClusters.map(async (cluster): Promise<DeployClusterStatus> => {
+          // #6640 — Bounded concurrency over clusters. Each cluster task is
+          // wrapped in a thunk so runWithConcurrency can schedule them.
+          const clusterTasks: Array<() => Promise<DeployClusterStatus>> =
+            mission.targetClusters.map((cluster) => async (): Promise<DeployClusterStatus> => {
               // Track consecutive failures from previous poll cycle
               const prevStatus = mission.clusterStatuses.find(cs => cs.cluster === cluster)
               const prevFailures = prevStatus?.consecutiveFailures ?? 0
@@ -501,7 +547,7 @@ export function useDeployMissions() {
                 return networkPending()
               }
             })
-          )
+          const statuses = await runWithConcurrency(clusterTasks, DEPLOY_POLL_MAX_CONCURRENCY)
 
           // Determine overall mission status
           const allRunning = statuses.every(s => s.status === 'running')
@@ -564,8 +610,8 @@ export function useDeployMissions() {
             logRecoveryPolls: inRecoveryWindow
               ? (mission.logRecoveryPolls ?? 0) + 1
               : mission.logRecoveryPolls }
-        })
-      )
+        })())
+      }
 
       // Sort: active missions first (newest first), completed missions below (newest first).
       // #6411 — Add a deterministic tiebreaker on mission id. Without it,
@@ -584,11 +630,48 @@ export function useDeployMissions() {
       setMissions([...active, ...completed])
     }
 
-    // Poll on interval (first poll after 1s delay, then every POLL_INTERVAL_MS)
-    const initialTimeout = setTimeout(() => {
-      poll()
+    // Delay before the first poll fires after mount. Kept small so the UI
+    // updates quickly, but non-zero so the subscribe effect above has a
+    // chance to populate `missionsRef` before the first fetch.
+    const INITIAL_POLL_DELAY_MS = 1000
+    // Poll on interval (first poll after INITIAL_POLL_DELAY_MS, then every
+    // POLL_INTERVAL_MS) — but only while the tab is visible (#6641).
+    const startPolling = () => {
+      if (pollRef.current) return
       pollRef.current = setInterval(poll, POLL_INTERVAL_MS)
-    }, 1000)
+    }
+    const stopPolling = () => {
+      if (pollRef.current) {
+        clearInterval(pollRef.current)
+        pollRef.current = undefined
+      }
+    }
+    const initialTimeout = setTimeout(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+        // Tab started hidden — wait for visibilitychange to start polling.
+        return
+      }
+      poll()
+      startPolling()
+    }, INITIAL_POLL_DELAY_MS)
+
+    // #6641 — Page Visibility integration. When the tab is hidden, tear
+    // down the interval so background timers don't queue up (some browsers
+    // throttle but still accumulate ticks, and resuming the tab then
+    // dumps a burst of deferred poll() calls on the backend). On resume,
+    // fire one immediate poll to catch up, then restart the interval.
+    const onVisibilityChange = () => {
+      if (typeof document === 'undefined') return
+      if (document.visibilityState === 'hidden') {
+        stopPolling()
+      } else {
+        poll()
+        startPolling()
+      }
+    }
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', onVisibilityChange)
+    }
 
     // issue 6427 — Snapshot the grace-repoll map reference inside the
     // effect body so the cleanup closure uses a captured handle rather
@@ -596,6 +679,9 @@ export function useDeployMissions() {
     const graceRepolls = graceRepollsRef.current
     return () => {
       clearTimeout(initialTimeout)
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', onVisibilityChange)
+      }
       if (pollRef.current) clearInterval(pollRef.current)
       // Cancel any outstanding grace-window re-polls so they don't fire
       // on an unmounted hook and call setMissions on a dead tree.
