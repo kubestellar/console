@@ -79,6 +79,10 @@ type PredictionWorker struct {
 	running     bool
 	mu          sync.RWMutex
 	stopCh      chan struct{}
+	// stopOnce guards Stop() so that concurrent / repeated calls do not
+	// panic on "close of closed channel" — same idempotency pattern as
+	// #6478, #6586, #6623 (#6650).
+	stopOnce sync.Once
 	// ctx is the worker's lifecycle context; cancelled when Stop() is called.
 	// All in-flight analysis goroutines derive their context from this so
 	// they are cancelled promptly during graceful shutdown (#4720).
@@ -116,9 +120,13 @@ func (w *PredictionWorker) Start() {
 }
 
 // Stop gracefully shuts down the worker and cancels all in-flight analyses.
+// Safe to call multiple times — only the first call closes stopCh and
+// cancels the lifecycle context (#6650).
 func (w *PredictionWorker) Stop() {
-	w.ctxCancel()
-	close(w.stopCh)
+	w.stopOnce.Do(func() {
+		w.ctxCancel()
+		close(w.stopCh)
+	})
 }
 
 // UpdateSettings updates the worker settings
@@ -194,8 +202,18 @@ func (w *PredictionWorker) IsAnalyzing() bool {
 
 // runLoop is the main background loop
 func (w *PredictionWorker) runLoop() {
-	// Initial analysis after short delay
-	time.Sleep(predictionInitialDelay)
+	// Initial analysis after short delay. The previous implementation used
+	// a bare time.Sleep(predictionInitialDelay), which blocked shutdown for
+	// up to predictionInitialDelay if Stop() was called during startup —
+	// the shutdown signal was invisible until the sleep returned (#6652).
+	// Select on both the timer and stopCh so shutdown is responsive during
+	// the startup delay window.
+	select {
+	case <-time.After(predictionInitialDelay):
+	case <-w.stopCh:
+		slog.Info("[PredictionWorker] Stopping during initial delay")
+		return
+	}
 
 	for {
 		w.mu.RLock()
