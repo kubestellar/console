@@ -514,9 +514,15 @@ func (s *SQLiteStore) UpdateLastLogin(userID uuid.UUID) error {
 	return err
 }
 
-// ListUsers returns all users
-func (s *SQLiteStore) ListUsers() ([]models.User, error) {
-	rows, err := s.db.Query(`SELECT id, github_id, github_login, email, slack_id, avatar_url, role, onboarded, created_at, last_login FROM users ORDER BY created_at DESC`)
+// ListUsers returns a page of users ordered newest first.
+// #6595: limit/offset are required to prevent an unbounded full-table scan.
+// Pass 0 for limit to use the store default (defaultPageLimit). The secondary
+// ORDER BY id DESC is a stable tie-breaker for rows with identical created_at
+// timestamps so pagination is deterministic across calls.
+func (s *SQLiteStore) ListUsers(limit, offset int) ([]models.User, error) {
+	lim := resolvePageLimit(limit, defaultPageLimit)
+	off := resolvePageOffset(offset)
+	rows, err := s.db.Query(`SELECT id, github_id, github_login, email, slack_id, avatar_url, role, onboarded, created_at, last_login FROM users ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?`, lim, off)
 	if err != nil {
 		return nil, err
 	}
@@ -677,8 +683,16 @@ func (s *SQLiteStore) GetDashboard(id uuid.UUID) (*models.Dashboard, error) {
 	return s.scanDashboard(row)
 }
 
-func (s *SQLiteStore) GetUserDashboards(userID uuid.UUID) ([]models.Dashboard, error) {
-	rows, err := s.db.Query(`SELECT id, user_id, name, layout, is_default, created_at, updated_at FROM dashboards WHERE user_id = ? ORDER BY is_default DESC, created_at`, userID.String())
+// GetUserDashboards returns a page of a user's dashboards, default dashboard
+// first, then oldest-first within each group.
+// #6596: limit/offset are required to prevent an unbounded per-user read if a
+// user ever accumulates a pathological number of dashboards. Pass 0 for limit
+// to use the store default. ORDER BY includes an id ASC tie-breaker so rows
+// that share created_at paginate deterministically.
+func (s *SQLiteStore) GetUserDashboards(userID uuid.UUID, limit, offset int) ([]models.Dashboard, error) {
+	lim := resolvePageLimit(limit, defaultPageLimit)
+	off := resolvePageOffset(offset)
+	rows, err := s.db.Query(`SELECT id, user_id, name, layout, is_default, created_at, updated_at FROM dashboards WHERE user_id = ? ORDER BY is_default DESC, created_at ASC, id ASC LIMIT ? OFFSET ?`, userID.String(), lim, off)
 	if err != nil {
 		return nil, err
 	}
@@ -1069,8 +1083,16 @@ func (s *SQLiteStore) GetPendingSwap(id uuid.UUID) (*models.PendingSwap, error) 
 	return s.scanPendingSwap(row)
 }
 
-func (s *SQLiteStore) GetUserPendingSwaps(userID uuid.UUID) ([]models.PendingSwap, error) {
-	rows, err := s.db.Query(`SELECT id, user_id, card_id, new_card_type, new_card_config, reason, swap_at, status, created_at FROM pending_swaps WHERE user_id = ? AND status = 'pending' ORDER BY swap_at`, userID.String())
+// GetUserPendingSwaps returns a page of a user's pending swaps, oldest
+// swap_at first.
+// #6597: limit/offset are required so a user with a large backlog of pending
+// swaps cannot force an unbounded read. Pass 0 for limit to use the store
+// default. ORDER BY includes an id ASC tie-breaker so rows that share
+// swap_at paginate deterministically.
+func (s *SQLiteStore) GetUserPendingSwaps(userID uuid.UUID, limit, offset int) ([]models.PendingSwap, error) {
+	lim := resolvePageLimit(limit, defaultPageLimit)
+	off := resolvePageOffset(offset)
+	rows, err := s.db.Query(`SELECT id, user_id, card_id, new_card_type, new_card_config, reason, swap_at, status, created_at FROM pending_swaps WHERE user_id = ? AND status = 'pending' ORDER BY swap_at ASC, id ASC LIMIT ? OFFSET ?`, userID.String(), lim, off)
 	if err != nil {
 		return nil, err
 	}
@@ -1094,7 +1116,11 @@ func (s *SQLiteStore) GetUserPendingSwaps(userID uuid.UUID) ([]models.PendingSwa
 func (s *SQLiteStore) GetDueSwaps(limit, offset int) ([]models.PendingSwap, error) {
 	lim := resolvePageLimit(limit, defaultPageLimit)
 	off := resolvePageOffset(offset)
-	rows, err := s.db.Query(`SELECT id, user_id, card_id, new_card_type, new_card_config, reason, swap_at, status, created_at FROM pending_swaps WHERE status = 'pending' AND swap_at <= ? ORDER BY swap_at ASC LIMIT ? OFFSET ?`, time.Now(), lim, off)
+	// #6621: id ASC tie-breaker ensures pages are stable when multiple swaps
+	// share the same swap_at (common after batch scheduling). Without it,
+	// OFFSET paging could skip or duplicate rows as SQLite picks arbitrary
+	// tie-break order between calls.
+	rows, err := s.db.Query(`SELECT id, user_id, card_id, new_card_type, new_card_config, reason, swap_at, status, created_at FROM pending_swaps WHERE status = 'pending' AND swap_at <= ? ORDER BY swap_at ASC, id ASC LIMIT ? OFFSET ?`, time.Now(), lim, off)
 	if err != nil {
 		return nil, err
 	}
@@ -1223,7 +1249,10 @@ func (s *SQLiteStore) GetRecentEvents(userID uuid.UUID, since time.Duration, lim
 	cutoff := time.Now().Add(-since)
 	lim := resolvePageLimit(limit, defaultPageLimit)
 	off := resolvePageOffset(offset)
-	rows, err := s.db.Query(`SELECT id, user_id, event_type, card_id, metadata, created_at FROM user_events WHERE user_id = ? AND created_at >= ? ORDER BY created_at DESC LIMIT ? OFFSET ?`, userID.String(), cutoff, lim, off)
+	// #6621: id DESC tie-breaker ensures pages are stable when many events
+	// share the same created_at (common when clients burst-record events in
+	// the same millisecond). Without it, OFFSET paging could skip rows.
+	rows, err := s.db.Query(`SELECT id, user_id, event_type, card_id, metadata, created_at FROM user_events WHERE user_id = ? AND created_at >= ? ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?`, userID.String(), cutoff, lim, off)
 	if err != nil {
 		return nil, err
 	}
@@ -1288,12 +1317,15 @@ func (s *SQLiteStore) GetFeatureRequestByPRNumber(prNumber int) (*models.Feature
 	return s.scanFeatureRequest(row)
 }
 
-// GetUserFeatureRequests returns a user's feature requests, newest first.
+// GetUserFeatureRequests returns a page of a user's feature requests,
+// newest first.
 // #6601: LIMIT/OFFSET prevent unbounded per-user reads.
+// #6621: id DESC tie-breaker ensures OFFSET paging is stable when rows share
+// created_at (e.g. seeded data, bulk imports).
 func (s *SQLiteStore) GetUserFeatureRequests(userID uuid.UUID, limit, offset int) ([]models.FeatureRequest, error) {
 	lim := resolvePageLimit(limit, defaultPageLimit)
 	off := resolvePageOffset(offset)
-	rows, err := s.db.Query(`SELECT id, user_id, title, description, request_type, github_issue_number, status, pr_number, pr_url, copilot_session_url, netlify_preview_url, closed_by_user, latest_comment, created_at, updated_at FROM feature_requests WHERE user_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?`, userID.String(), lim, off)
+	rows, err := s.db.Query(`SELECT id, user_id, title, description, request_type, github_issue_number, status, pr_number, pr_url, copilot_session_url, netlify_preview_url, closed_by_user, latest_comment, created_at, updated_at FROM feature_requests WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?`, userID.String(), lim, off)
 	if err != nil {
 		return nil, err
 	}
@@ -1310,14 +1342,19 @@ func (s *SQLiteStore) GetUserFeatureRequests(userID uuid.UUID, limit, offset int
 	return requests, rows.Err()
 }
 
-// GetAllFeatureRequests returns the full feature_requests table, newest first.
+// GetAllFeatureRequests returns a single page of feature_requests, newest
+// first. Callers that need to walk the full table must page by passing
+// successive offsets; this function never returns more than `limit` rows
+// (clamped to maxSQLLimit) and applies the admin default when limit <= 0.
 // #6602: LIMIT/OFFSET required. The admin dashboard hits this on every load,
 // so the default page size (defaultAdminPageLimit) is intentionally smaller
-// than the generic defaultPageLimit; callers that need more must page.
+// than the generic defaultPageLimit.
+// #6621: id DESC tie-breaker ensures OFFSET paging is stable when rows share
+// created_at (e.g. seeded data, bulk imports).
 func (s *SQLiteStore) GetAllFeatureRequests(limit, offset int) ([]models.FeatureRequest, error) {
 	lim := resolvePageLimit(limit, defaultAdminPageLimit)
 	off := resolvePageOffset(offset)
-	rows, err := s.db.Query(`SELECT id, user_id, title, description, request_type, github_issue_number, status, pr_number, pr_url, copilot_session_url, netlify_preview_url, closed_by_user, latest_comment, created_at, updated_at FROM feature_requests ORDER BY created_at DESC LIMIT ? OFFSET ?`, lim, off)
+	rows, err := s.db.Query(`SELECT id, user_id, title, description, request_type, github_issue_number, status, pr_number, pr_url, copilot_session_url, netlify_preview_url, closed_by_user, latest_comment, created_at, updated_at FROM feature_requests ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?`, lim, off)
 	if err != nil {
 		return nil, err
 	}

@@ -25,7 +25,13 @@ func NewSwapHandler(s store.Store, hub *Hub) *SwapHandler {
 // ListPendingSwaps returns pending swaps for the current user
 func (h *SwapHandler) ListPendingSwaps(c *fiber.Ctx) error {
 	userID := middleware.GetUserID(c)
-	swaps, err := h.store.GetUserPendingSwaps(userID)
+	// #6597: bound the read. Same limit/offset contract as the feedback list
+	// endpoints — absent limit → store default, malformed/oversized → 400.
+	limit, offset, err := parsePageParams(c)
+	if err != nil {
+		return err
+	}
+	swaps, err := h.store.GetUserPendingSwaps(userID, limit, offset)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to list swaps")
 	}

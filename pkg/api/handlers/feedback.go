@@ -34,13 +34,29 @@ const githubAPITimeout = 10 * time.Second
 
 // feedbackMaxClientLimit is the largest page size a client may request on
 // feedback list endpoints. #6601/#6602: the handler rejects anything above
-// this; the store additionally clamps to its own internal ceiling.
-const feedbackMaxClientLimit = 2000
+// this with HTTP 400.
+//
+// #6621: this is intentionally aligned to store.maxSQLLimit. Previously this
+// was 2000 while the store clamped to 1000, so a client could ask for 1500
+// and silently get 1000 rows back with no indication the page had been
+// truncated. Keeping both ceilings at the same value means a request for
+// more rows than the store can return is rejected up front with a clear
+// 400 instead of being silently clamped. If the store ceiling is ever
+// raised, raise this in lockstep.
+const feedbackMaxClientLimit = 1000
 
 // parsePageParams reads `limit` and `offset` query params with defense against
-// malformed or oversized requests. Returns (limit, offset, err). When limit is
-// absent/invalid, 0 is returned so the store applies its default. When limit
-// exceeds feedbackMaxClientLimit, a 400 error is returned. #6598-#6602.
+// malformed or oversized requests. Returns (limit, offset, err).
+//
+// Semantics (#6621):
+//   - limit absent       → returns 0 so the store applies its default.
+//   - limit malformed    → HTTP 400 "invalid limit" (non-integer or negative).
+//   - limit > ceiling    → HTTP 400 "limit too large" (exceeds
+//     feedbackMaxClientLimit, which is aligned to the store ceiling).
+//   - offset absent      → returns 0.
+//   - offset malformed   → HTTP 400 "invalid offset".
+//
+// #6598-#6602.
 func parsePageParams(c *fiber.Ctx) (int, int, error) {
 	limit := 0
 	if raw := c.Query("limit"); raw != "" {

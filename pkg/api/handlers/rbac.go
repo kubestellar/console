@@ -56,7 +56,15 @@ func (h *RBACHandler) ListConsoleUsers(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusForbidden, "Admin access required")
 	}
 
-	users, err := h.store.ListUsers()
+	// #6595: bound the read. ?limit=&offset= follow the same contract as the
+	// feedback list endpoints (see parsePageParams). Absent limit → store
+	// default; malformed/oversized limit → HTTP 400.
+	limit, offset, err := parsePageParams(c)
+	if err != nil {
+		return err
+	}
+
+	users, err := h.store.ListUsers(limit, offset)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to list users")
 	}

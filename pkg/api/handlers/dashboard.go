@@ -46,7 +46,13 @@ func NewDashboardHandler(s store.Store) *DashboardHandler {
 // ListDashboards returns all dashboards for the current user
 func (h *DashboardHandler) ListDashboards(c *fiber.Ctx) error {
 	userID := middleware.GetUserID(c)
-	dashboards, err := h.store.GetUserDashboards(userID)
+	// #6596: bound the read. Same limit/offset contract as the feedback list
+	// endpoints — absent limit → store default, malformed/oversized → 400.
+	limit, offset, err := parsePageParams(c)
+	if err != nil {
+		return err
+	}
+	dashboards, err := h.store.GetUserDashboards(userID, limit, offset)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to list dashboards")
 	}

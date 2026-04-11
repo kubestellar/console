@@ -30,7 +30,7 @@ func (s *rbacTestStore) GetUser(id uuid.UUID) (*models.User, error) {
 	return s.users[id], nil
 }
 
-func (s *rbacTestStore) ListUsers() ([]models.User, error) {
+func (s *rbacTestStore) ListUsers(limit, offset int) ([]models.User, error) {
 	if s.listUsersErr != nil {
 		return nil, s.listUsersErr
 	}

@@ -48,7 +48,7 @@ func (m *MockStore) UpdateLastLogin(userID uuid.UUID) error {
 
 // Implement other methods as needed or with empty mocks
 
-func (m *MockStore) ListUsers() ([]models.User, error)                  { return nil, nil }
+func (m *MockStore) ListUsers(limit, offset int) ([]models.User, error) { return nil, nil }
 func (m *MockStore) DeleteUser(id uuid.UUID) error                      { return nil }
 func (m *MockStore) UpdateUserRole(userID uuid.UUID, role string) error { return nil }
 func (m *MockStore) CountUsersByRole() (int, int, int, error)           { return 0, 0, 0, nil }
@@ -60,7 +60,9 @@ func (m *MockStore) GetOnboardingResponses(userID uuid.UUID) ([]models.Onboardin
 func (m *MockStore) SetUserOnboarded(userID uuid.UUID) error { return nil }
 
 func (m *MockStore) GetDashboard(id uuid.UUID) (*models.Dashboard, error)            { return nil, nil }
-func (m *MockStore) GetUserDashboards(userID uuid.UUID) ([]models.Dashboard, error)  { return nil, nil }
+func (m *MockStore) GetUserDashboards(userID uuid.UUID, limit, offset int) ([]models.Dashboard, error) {
+	return nil, nil
+}
 func (m *MockStore) GetDefaultDashboard(userID uuid.UUID) (*models.Dashboard, error) { return nil, nil }
 func (m *MockStore) CreateDashboard(dashboard *models.Dashboard) error               { return nil }
 func (m *MockStore) UpdateDashboard(dashboard *models.Dashboard) error               { return nil }
@@ -96,7 +98,7 @@ func (m *MockStore) GetUserCardHistory(userID uuid.UUID, limit int) ([]models.Ca
 }
 
 func (m *MockStore) GetPendingSwap(id uuid.UUID) (*models.PendingSwap, error) { return nil, nil }
-func (m *MockStore) GetUserPendingSwaps(userID uuid.UUID) ([]models.PendingSwap, error) {
+func (m *MockStore) GetUserPendingSwaps(userID uuid.UUID, limit, offset int) ([]models.PendingSwap, error) {
 	return nil, nil
 }
 func (m *MockStore) GetDueSwaps(limit, offset int) ([]models.PendingSwap, error) {

@@ -53,7 +53,10 @@ type Store interface {
 	CreateUser(user *models.User) error
 	UpdateUser(user *models.User) error
 	UpdateLastLogin(userID uuid.UUID) error
-	ListUsers() ([]models.User, error)
+	// ListUsers returns a page of users ordered newest first.
+	// #6595: limit/offset are required to prevent unbounded reads.
+	// Pass 0 for limit to use the store default.
+	ListUsers(limit, offset int) ([]models.User, error)
 	DeleteUser(id uuid.UUID) error
 	UpdateUserRole(userID uuid.UUID, role string) error
 	CountUsersByRole() (admins, editors, viewers int, err error)
@@ -65,7 +68,9 @@ type Store interface {
 
 	// Dashboards
 	GetDashboard(id uuid.UUID) (*models.Dashboard, error)
-	GetUserDashboards(userID uuid.UUID) ([]models.Dashboard, error)
+	// GetUserDashboards returns a page of a user's dashboards.
+	// #6596: limit/offset are required. Pass 0 for limit to use the default.
+	GetUserDashboards(userID uuid.UUID, limit, offset int) ([]models.Dashboard, error)
 	GetDefaultDashboard(userID uuid.UUID) (*models.Dashboard, error)
 	CreateDashboard(dashboard *models.Dashboard) error
 	UpdateDashboard(dashboard *models.Dashboard) error
@@ -86,7 +91,9 @@ type Store interface {
 
 	// Pending Swaps
 	GetPendingSwap(id uuid.UUID) (*models.PendingSwap, error)
-	GetUserPendingSwaps(userID uuid.UUID) ([]models.PendingSwap, error)
+	// GetUserPendingSwaps returns a page of a user's pending swaps.
+	// #6597: limit/offset are required. Pass 0 for limit to use the default.
+	GetUserPendingSwaps(userID uuid.UUID, limit, offset int) ([]models.PendingSwap, error)
 	// GetDueSwaps returns pending swaps whose swap_at time has arrived.
 	// #6598: limit/offset are required to prevent unbounded scans when the
 	// swap backlog grows large (e.g. scheduler outage). Pass 0 for limit to

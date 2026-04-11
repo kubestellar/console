@@ -139,7 +139,8 @@ func TestUserCRUD(t *testing.T) {
 		createTestUser(t, s, "gh-list-1", "u1")
 		createTestUser(t, s, "gh-list-2", "u2")
 
-		users, err := s.ListUsers()
+		// #6595: ListUsers now requires limit/offset; 0 means store default.
+		users, err := s.ListUsers(0, 0)
 		require.NoError(t, err)
 		require.Len(t, users, 2)
 	})
@@ -247,7 +248,8 @@ func TestDashboardCRUD(t *testing.T) {
 			}))
 		}
 
-		dashboards, err := s.GetUserDashboards(u.ID)
+		// #6596: GetUserDashboards now requires limit/offset; 0 means default.
+		dashboards, err := s.GetUserDashboards(u.ID, 0, 0)
 		require.NoError(t, err)
 		require.Len(t, dashboards, 3)
 	})
