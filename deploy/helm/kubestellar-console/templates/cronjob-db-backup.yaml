@@ -20,6 +20,8 @@ spec:
         spec:
           restartPolicy: OnFailure
           serviceAccountName: {{ include "kubestellar-console.serviceAccountName" . }}
+          securityContext:
+            {{- toYaml .Values.podSecurityContext | nindent 12 }}
           {{- with .Values.imagePullSecrets }}
           imagePullSecrets:
             {{- toYaml . | nindent 12 }}
@@ -27,6 +29,10 @@ spec:
           containers:
             - name: db-backup
               image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+              # #6334: PodSecurity "restricted" requires the same
+              # container-level securityContext as the main deployment.
+              securityContext:
+                {{- toYaml .Values.securityContext | nindent 16 }}
               command:
                 - /bin/sh
                 - -c

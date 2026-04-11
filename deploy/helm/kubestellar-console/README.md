@@ -9,62 +9,63 @@ Helm chart for deploying the KubeStellar Console to a Kubernetes cluster.
 
 ## Table of contents
 
-- [Required secrets](#required-secrets)
+- [Secrets and configuration](#secrets-and-configuration)
 - [Quickstart: Kind or Minikube](#quickstart-kind-or-minikube)
 - [Installing on a real cluster](#installing-on-a-real-cluster)
 - [Configuration reference](#configuration-reference)
 - [Troubleshooting](#troubleshooting)
 
-## Required secrets
+## Secrets and configuration
 
-The chart depends on **two Kubernetes secrets** that must exist in the target
-namespace **before** running `helm install`. Neither is created by the chart
-itself (by design — secret material should never land in chart values).
+The chart has two modes for supplying secret material:
 
-### 1. `kc-kubestellar-console` (application secret)
+1. **Chart-managed (default, easiest)** — pass values via `--set` or a values
+   file; the chart renders a Kubernetes Secret named after the release
+   (`{release-name}-kubestellar-console`) containing whatever you supplied.
+   If `jwt.secret` is not set, the chart auto-generates a 64-character
+   random value on first install.
+2. **Bring-your-own** — create Secrets yourself before `helm install` and
+   reference them via `*.existingSecret` values.
 
-Holds runtime secrets the Go backend reads at startup:
+### Values that accept secret material
 
-| Key | Required? | Description |
+| Value | Auto-generated if empty? | `existingSecret` alternative |
 |---|---|---|
-| `jwt-secret` | **yes** | HMAC key for signing JWT session tokens. Generate with `openssl rand -hex 32`. |
-| `github-token` | optional | A GitHub PAT used by feedback / mission flows. Can be set later via the Settings page. |
-| `google-drive-api-key` | optional | Only needed for benchmark cards backed by Google Drive. |
+| `jwt.secret` | **yes** (64-char random) | `jwt.existingSecret` + `jwt.existingSecretKey` (default `jwt-secret`) |
+| `github.clientId` / `github.clientSecret` | no — GitHub OAuth simply won't work until set | `github.existingSecret` + `github.existingSecretKeys.clientId` / `.clientSecret` |
+| `googleDrive.apiKey` | no — benchmark cards fall back to demo data | `googleDrive.existingSecret` + `googleDrive.existingSecretKey` |
+| `claude.apiKey` | no — AI features are disabled | `claude.existingSecret` + `claude.existingSecretKey` |
+| `feedbackGithubToken.token` | no — feedback posting is disabled | `feedbackGithubToken.existingSecret` + `feedbackGithubToken.existingSecretKey` |
 
-Create it before installing:
+For a purely local evaluation you can install the chart with no secret values
+at all — the JWT secret is auto-generated and every other feature degrades
+gracefully to demo mode.
+
+### Example: BYO secret for production
+
+If you want to keep all secret material out of your values file, create a
+Secret in the target namespace first (name it whatever you like):
 
 ```bash
 kubectl create namespace kubestellar-console
 
-kubectl -n kubestellar-console create secret generic kc-kubestellar-console \
-  --from-literal=jwt-secret="$(openssl rand -hex 32)"
+kubectl -n kubestellar-console create secret generic kc-console \
+  --from-literal=jwt-secret="$(openssl rand -hex 32)" \
+  --from-literal=github-client-id="YOUR_GH_CLIENT_ID" \
+  --from-literal=github-client-secret="YOUR_GH_CLIENT_SECRET"
 ```
 
-If you miss this step, the pod will crash at startup with a
-`CreateContainerConfigError` or `secret "kc-kubestellar-console" not found`
-(see [Troubleshooting](#troubleshooting) below).
-
-### 2. `kc-oauth-secret` (only if GitHub OAuth is enabled)
-
-Only required when `oauth.enabled=true` (which is the default when you want
-users to sign in with GitHub):
-
-| Key | Required? |
-|---|---|
-| `github-client-id` | **yes** |
-| `github-client-secret` | **yes** |
-
-Create it with values from your GitHub OAuth app
-([github.com/settings/developers](https://github.com/settings/developers)):
+Then point the chart at it:
 
 ```bash
-kubectl -n kubestellar-console create secret generic kc-oauth-secret \
-  --from-literal=github-client-id="YOUR_CLIENT_ID" \
-  --from-literal=github-client-secret="YOUR_CLIENT_SECRET"
+helm install kc ./deploy/helm/kubestellar-console \
+  -n kubestellar-console \
+  --set jwt.existingSecret=kc-console \
+  --set github.existingSecret=kc-console
 ```
 
-To disable OAuth entirely (demo-mode only), install with `--set oauth.enabled=false`
-and skip this secret.
+The release-fullname Secret the chart would otherwise render is skipped when
+`jwt.existingSecret` is set.
 
 ## Quickstart: Kind or Minikube
 
@@ -75,24 +76,18 @@ A minimal local install for evaluation. Tested on Kind v0.27 and Minikube v1.35.
 kind create cluster --name kc-demo
 # or:  minikube start -p kc-demo
 
-# 2. Create the namespace and the required secrets (see above)
+# 2. Install with no secret overrides — the chart auto-generates a JWT
+#    secret and everything else falls back to demo mode.
 kubectl create namespace kubestellar-console
 
-kubectl -n kubestellar-console create secret generic kc-kubestellar-console \
-  --from-literal=jwt-secret="$(openssl rand -hex 32)"
-
-# OAuth is optional on local clusters — skip it for a quick look
 helm install kc ./deploy/helm/kubestellar-console \
-  -n kubestellar-console \
-  --set oauth.enabled=false \
-  --set ingress.enabled=false \
-  --set service.type=ClusterIP
+  -n kubestellar-console
 
-# 3. Port-forward to the pod
+# 3. Port-forward to the service
 kubectl -n kubestellar-console port-forward svc/kc-kubestellar-console 8080:8080
 
 # 4. Open http://localhost:8080 — demo mode is enabled by default when
-#    no real token is configured.
+#    no real GitHub OAuth credentials are configured.
 ```
 
 Teardown:
@@ -106,9 +101,11 @@ kind delete cluster --name kc-demo
 
 For production installs:
 
-1. Create the namespace and both secrets (application + OAuth).
-2. Configure ingress or a LoadBalancer service type in `values.yaml`.
-3. Set `route.enabled=true` + `route.host=<your-fqdn>` on OpenShift.
+1. Create the namespace: `kubectl create namespace kubestellar-console`.
+2. Decide whether you want the chart to render a Secret for you or whether
+   you'll bring your own (see [Secrets and configuration](#secrets-and-configuration)).
+3. Configure `ingress` or `route` (OpenShift) in your values file so the
+   console is reachable from outside the cluster.
 4. Point your GitHub OAuth app's callback URL at
    `https://<your-fqdn>/api/auth/github/callback`.
 5. `helm install kc ./deploy/helm/kubestellar-console -n kubestellar-console -f your-values.yaml`
@@ -122,48 +119,48 @@ Common knobs:
 |---|---|---|
 | `image.repository` | `ghcr.io/kubestellar/console` | |
 | `image.tag` | chart `appVersion` | Pin for reproducible deploys. |
-| `oauth.enabled` | `true` | Set to `false` for demo-only installs. |
+| `github.clientId` / `github.clientSecret` | *(empty)* | GitHub OAuth; leave empty for demo-only. |
+| `github.existingSecret` | *(empty)* | Use an existing Secret instead of inline values. |
+| `jwt.secret` | *(auto-generated)* | Set to use a fixed key across reinstalls. |
+| `jwt.existingSecret` | *(empty)* | When set, chart skips rendering its own Secret. |
 | `ingress.enabled` | `false` | |
 | `route.enabled` | `false` | OpenShift Route (alternative to Ingress). |
+| `persistence.enabled` | `true` | PVC for the SQLite database. |
+| `backup.enabled` | `true` | SQLite auto-backup CronJob + restore init container. |
 | `securityContext.runAsUser` | `1001` | Must be numeric — see [#6323](https://github.com/kubestellar/console/issues/6323). |
-| `backup.enabled` | `false` | SQLite auto-backup + restore init container. |
 
 ## Troubleshooting
 
 Common failures and what to do about them.
 
-### `CreateContainerConfigError: secret "kc-kubestellar-console" not found`
+### `CreateContainerConfigError: secret "<name>" not found`
 
-The application secret is missing. Create it with `kubectl create secret` (see
-[Required secrets](#required-secrets)). If the pod is stuck in this state,
-re-create the secret and delete the pod so the deployment controller respawns
-it:
+You pointed the chart at an `existingSecret` that doesn't exist in the
+release namespace. Either create the Secret first (see
+[Secrets and configuration](#secrets-and-configuration)) or drop the
+`*.existingSecret` override so the chart renders its own Secret.
+
+If the pod is stuck in this state, recreate the secret and delete the pod
+so the deployment controller respawns it:
 
 ```bash
 kubectl -n kubestellar-console delete pod -l app.kubernetes.io/name=kubestellar-console
 ```
 
-### `CreateContainerConfigError: secret "kc-oauth-secret" not found`
-
-Same fix — the OAuth secret wasn't created before install. Either create
-`kc-oauth-secret` or re-install with `--set oauth.enabled=false`.
-
 ### `container has runAsNonRoot and image has non-numeric user (appuser)`
 
-Fixed in chart 0.3.20 ([#6323](https://github.com/kubestellar/console/issues/6323)).
-If you're on an older chart version, upgrade:
+The chart sets `securityContext.runAsUser: 1001` in `values.yaml` to match
+the Dockerfile's numeric UID (see [#6323](https://github.com/kubestellar/console/issues/6323)).
+If you've overridden `securityContext` in your values file and removed
+`runAsUser`, add it back or let the chart default win.
 
-```bash
-helm upgrade kc ./deploy/helm/kubestellar-console -n kubestellar-console
-```
+### `violates PodSecurity "restricted:latest": allowPrivilegeEscalation != false / seccompProfile`
 
-Or patch the release in place:
-
-```bash
-helm upgrade kc ./deploy/helm/kubestellar-console -n kubestellar-console \
-  --set securityContext.runAsUser=1001 \
-  --set securityContext.runAsGroup=1001
-```
+The chart already sets `allowPrivilegeEscalation: false` and a pod-level
+`seccompProfile.type: RuntimeDefault` to satisfy the `restricted` profile
+([#6334](https://github.com/kubestellar/console/issues/6334)). If you've
+overridden `podSecurityContext` or `securityContext` and dropped those
+keys, add them back.
 
 ### Pod stuck `Pending`: `pod has unbound immediate PersistentVolumeClaims`
 
@@ -198,9 +195,10 @@ is hitting. Update the OAuth app's authorization callback URL to
 
 ### `JWT signature verification failed` after upgrade
 
-You rotated `jwt-secret` but existing session cookies were signed with the
-old key. Have users sign out and back in. To force, delete the deployment's
-pods so they pick up the new secret:
+You rotated the JWT secret (either via `jwt.secret` or by recreating the
+backing Secret) but existing session cookies were signed with the old key.
+Have users sign out and back in. To force, delete the deployment's pods so
+they pick up the new secret:
 
 ```bash
 kubectl -n kubestellar-console delete pod -l app.kubernetes.io/name=kubestellar-console
@@ -214,7 +212,9 @@ Linking the issues that motivated each section of this README, for future
 readers who hit the same thing:
 
 - [#6323](https://github.com/kubestellar/console/issues/6323)/[#6324](https://github.com/kubestellar/console/issues/6324) — `runAsUser` fix for Kind/Minikube
-- [#6325](https://github.com/kubestellar/console/issues/6325) — `kc-oauth-secret` documentation
-- [#6326](https://github.com/kubestellar/console/issues/6326) — `JWT_SECRET` / `kc-kubestellar-console` documentation
+- [#6325](https://github.com/kubestellar/console/issues/6325) — GitHub OAuth / existing-secret documentation
+- [#6326](https://github.com/kubestellar/console/issues/6326) — JWT secret documentation
 - [#6327](https://github.com/kubestellar/console/issues/6327) — Kind quickstart section
 - [#6328](https://github.com/kubestellar/console/issues/6328) — troubleshooting section
+- [#6333](https://github.com/kubestellar/console/issues/6333) — README vs. chart-values accuracy fixes
+- [#6334](https://github.com/kubestellar/console/issues/6334) — PodSecurity `restricted` compliance

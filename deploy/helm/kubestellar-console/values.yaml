@@ -32,7 +32,12 @@ rbac:
 podAnnotations: {}
 podLabels: {}
 
-podSecurityContext: {}
+podSecurityContext:
+  # #6334: PodSecurity "restricted" enforcement (used on pok-prod and
+  # vllm-d) requires a non-empty seccompProfile at pod or container
+  # level. Setting it here covers all containers in one place.
+  seccompProfile:
+    type: RuntimeDefault
 
 securityContext:
   # #6323/#6324: must be a numeric UID (not `appuser`) so the kubelet
@@ -46,6 +51,12 @@ securityContext:
   runAsGroup: 1001
   runAsNonRoot: true
   readOnlyRootFilesystem: true
+  # #6334: PodSecurity "restricted" also requires
+  # allowPrivilegeEscalation=false on every container; without this,
+  # the deploy job on pok-prod and vllm-d rolled back with
+  # "violates PodSecurity restricted:latest: allowPrivilegeEscalation
+  # != false".
+  allowPrivilegeEscalation: false
   capabilities:
     drop:
       - ALL
