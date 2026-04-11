@@ -36,12 +36,17 @@ var argoTimestampLayouts = []string{
 // ListArgoApplications lists all ArgoCD Application resources across all clusters.
 // If ArgoCD CRDs are not installed on a cluster, that cluster is silently skipped.
 func (m *MultiClusterClient) ListArgoApplications(ctx context.Context) (*v1alpha1.ArgoApplicationList, error) {
-	m.mu.RLock()
-	clusters := make([]string, 0, len(m.clients))
-	for name := range m.clients {
-		clusters = append(clusters, name)
+	// Use DeduplicatedClusters so newly-added kubeconfig contexts (hot reload)
+	// are picked up immediately, instead of snapshotting m.clients which only
+	// contains contexts whose clients have already been lazily created (#6476).
+	dedupClusters, err := m.DeduplicatedClusters(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list clusters: %w", err)
 	}
-	m.mu.RUnlock()
+	clusters := make([]string, 0, len(dedupClusters))
+	for _, c := range dedupClusters {
+		clusters = append(clusters, c.Name)
+	}
 
 	var wg sync.WaitGroup
 	var mu sync.Mutex
@@ -190,12 +195,17 @@ func parseArgoTimeAgo(timeStr string) string {
 // ListArgoApplicationSets lists all ArgoCD ApplicationSet resources across all clusters.
 // If ArgoCD CRDs are not installed on a cluster, that cluster is silently skipped.
 func (m *MultiClusterClient) ListArgoApplicationSets(ctx context.Context) (*v1alpha1.ArgoApplicationSetList, error) {
-	m.mu.RLock()
-	clusters := make([]string, 0, len(m.clients))
-	for name := range m.clients {
-		clusters = append(clusters, name)
+	// Use DeduplicatedClusters so newly-added kubeconfig contexts (hot reload)
+	// are picked up immediately, instead of snapshotting m.clients which only
+	// contains contexts whose clients have already been lazily created (#6476).
+	dedupClusters, err := m.DeduplicatedClusters(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list clusters: %w", err)
 	}
-	m.mu.RUnlock()
+	clusters := make([]string, 0, len(dedupClusters))
+	for _, c := range dedupClusters {
+		clusters = append(clusters, c.Name)
+	}
 
 	var wg sync.WaitGroup
 	var mu sync.Mutex

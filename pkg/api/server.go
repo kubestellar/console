@@ -15,6 +15,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -147,6 +148,7 @@ type Server struct {
 	shuttingDown        int32        // atomic flag: 1 during graceful shutdown
 	gpuUtilWorker       *GPUUtilizationWorker
 	done                chan struct{} // closed on Shutdown to stop background goroutines
+	shutdownOnce        sync.Once     // ensures Shutdown is idempotent (#6478)
 }
 
 // NewServer creates a new API server. It starts a temporary loading page
@@ -1281,37 +1283,46 @@ func waitForPortRelease(port int, timeout time.Duration) error {
 // Shutdown gracefully shuts down the server.
 // Sets shuttingDown flag first so /health returns "shutting_down"
 // before services are torn down, giving the frontend time to notice.
+//
+// Shutdown is idempotent (#6478): subsequent calls are no-ops. Previously a
+// second call panicked with "close of closed channel" when close(s.done)
+// was invoked a second time.
 func (s *Server) Shutdown() error {
-	atomic.StoreInt32(&s.shuttingDown, 1)
+	var shutdownErr error
+	s.shutdownOnce.Do(func() {
+		atomic.StoreInt32(&s.shuttingDown, 1)
 
-	// Signal background goroutines (orbit scheduler, etc.) to stop.
-	close(s.done)
+		// Signal background goroutines (orbit scheduler, etc.) to stop.
+		close(s.done)
 
-	// If Shutdown is called before Start, the temporary loading server
-	// is still running and holding the port. Shut it down first.
-	if s.loadingSrv != nil {
-		ctx, cancel := context.WithTimeout(context.Background(), serverHealthTimeout)
-		defer cancel()
-		s.loadingSrv.Shutdown(ctx)
-		s.loadingSrv = nil
-	}
-
-	if s.gpuUtilWorker != nil {
-		s.gpuUtilWorker.Stop()
-	}
-	s.hub.Close()
-	if s.k8sClient != nil {
-		s.k8sClient.StopWatching()
-	}
-	if s.bridge != nil {
-		if err := s.bridge.Stop(); err != nil {
-			slog.Error("[Server] MCP bridge shutdown error", "error", err)
+		// If Shutdown is called before Start, the temporary loading server
+		// is still running and holding the port. Shut it down first.
+		if s.loadingSrv != nil {
+			ctx, cancel := context.WithTimeout(context.Background(), serverHealthTimeout)
+			defer cancel()
+			s.loadingSrv.Shutdown(ctx)
+			s.loadingSrv = nil
 		}
-	}
-	if err := s.store.Close(); err != nil {
-		return err
-	}
-	return s.app.Shutdown()
+
+		if s.gpuUtilWorker != nil {
+			s.gpuUtilWorker.Stop()
+		}
+		s.hub.Close()
+		if s.k8sClient != nil {
+			s.k8sClient.StopWatching()
+		}
+		if s.bridge != nil {
+			if err := s.bridge.Stop(); err != nil {
+				slog.Error("[Server] MCP bridge shutdown error", "error", err)
+			}
+		}
+		if err := s.store.Close(); err != nil {
+			shutdownErr = err
+			return
+		}
+		shutdownErr = s.app.Shutdown()
+	})
+	return shutdownErr
 }
 
 func customErrorHandler(c *fiber.Ctx, err error) error {
