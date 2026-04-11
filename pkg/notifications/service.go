@@ -7,12 +7,10 @@ import (
 	"sync"
 )
 
-// defaultSMTPPort is the submission port used when a configured port is
-// invalid. Set to the STARTTLS submission port (587) per RFC 6409.
-const defaultSMTPPort = 587
-
 // minSMTPPort / maxSMTPPort bound a valid TCP port number. Used to reject
 // SMTP port values that were parsed as 0 or out-of-range floats (#6636).
+// #6675 Copilot followup: the previously-declared `defaultSMTPPort` constant
+// was never referenced anywhere in the package and has been removed.
 const (
 	minSMTPPort = 1
 	maxSMTPPort = 65535
@@ -144,6 +142,11 @@ func parseSMTPPortConfig(config map[string]interface{}) (int, error) {
 	var port int
 	switch v := raw.(type) {
 	case float64:
+		// #6675 Copilot followup: reject non-integer floats (e.g. 587.9)
+		// instead of silently truncating to 587.
+		if v != float64(int(v)) {
+			return 0, fmt.Errorf("emailSMTPPort must be an integer (got %v)", v)
+		}
 		port = int(v)
 	case int:
 		port = v

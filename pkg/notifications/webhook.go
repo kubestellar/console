@@ -69,8 +69,16 @@ func NewWebhookNotifier(webhookURL string) (*WebhookNotifier, error) {
 		return nil, err
 	}
 	return &WebhookNotifier{
-		URL:        webhookURL,
-		HTTPClient: &http.Client{Timeout: webhookHTTPTimeout},
+		URL: webhookURL,
+		HTTPClient: &http.Client{
+			Timeout: webhookHTTPTimeout,
+			// #6675 Copilot followup: re-check the allowlist on every
+			// redirect hop. Without this a permitted host could 30x to
+			// an internal endpoint and the request would still be sent.
+			CheckRedirect: func(req *http.Request, _ []*http.Request) error {
+				return checkWebhookHostAllowed(req.URL.Hostname())
+			},
+		},
 	}, nil
 }
 

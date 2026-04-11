@@ -35,16 +35,17 @@ const (
 var dnsLabelRegex = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`)
 
 // dnsSubdomainRegex matches an RFC 1123 DNS subdomain — a series of DNS
-// labels joined by dots. Used for role/clusterrole names which may contain
-// a group prefix (e.g. "system:aggregate-to-admin").
-// Note: Kubernetes role names can also contain ':' for system roles; we
-// accept that too because existing clusters rely on it.
+// labels joined by dots. Used for hostnames/domains. Role names may also
+// contain ':' (e.g. "system:controller:job-controller") but this regex
+// does NOT accept ':' — role-specific validation uses roleNameRegex below.
 var dnsSubdomainRegex = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`)
 
 // roleNameRegex accepts a DNS subdomain OR a system-prefixed role name
-// like "system:admin" or "cluster-admin". Built by hand rather than
-// reusing dnsSubdomainRegex so we can allow a single ':' separator.
-var roleNameRegex = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(:[a-z0-9]([-a-z0-9]*[a-z0-9])?)?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`)
+// with one or more ':' separators. Built-in Kubernetes ClusterRoles like
+// "system:controller:job-controller" have multiple ':' segments, so the
+// previous single-segment pattern incorrectly rejected valid role names.
+// #6675 Copilot followup: allow any number of `:label` segments.
+var roleNameRegex = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(:[a-z0-9]([-a-z0-9]*[a-z0-9])?)*(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`)
 
 // validateDNSLabel checks that s is a non-empty RFC 1123 DNS label suitable
 // for a Kubernetes object name (ServiceAccount, Namespace, RoleBinding, etc).

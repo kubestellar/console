@@ -458,10 +458,13 @@ func (h *RBACHandler) CreateRoleBinding(c *fiber.Ctx) error {
 		if err := validateDNSLabel("subjectName", req.SubjectName); err != nil {
 			return fiber.NewError(fiber.StatusBadRequest, err.Error())
 		}
-		if req.SubjectNS != "" {
-			if err := validateDNSLabel("subjectNamespace", req.SubjectNS); err != nil {
-				return fiber.NewError(fiber.StatusBadRequest, err.Error())
-			}
+		// #6675 Copilot followup: subjectNamespace is REQUIRED for
+		// ServiceAccount subjects per Kubernetes RBAC. Previously we
+		// only validated it when present, so a missing namespace could
+		// slip through and fail later at the apiserver with a generic
+		// error.
+		if err := validateDNSLabel("subjectNamespace", req.SubjectNS); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
 		}
 	} else {
 		if req.SubjectName == "" {
