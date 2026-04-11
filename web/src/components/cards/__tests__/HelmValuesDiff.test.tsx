@@ -88,11 +88,17 @@ import { HelmValuesDiff } from '../HelmValuesDiff'
 describe('HelmValuesDiff', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    // #6276: default to non-demo mode in beforeEach. Tests that
-    // exercise demo behavior override `useDemoMode` and `isDemoFallback`
-    // explicitly. Defaulting to demo here meant `useDemoMode().isDemoMode`
-    // and `useCachedHelm{Releases,Values}().isDemoFallback` disagreed
-    // by default, which doesn't match production.
+    // #6276/#6278: default both `useDemoMode().isDemoMode` and the
+    // cache hooks' `isDemoFallback` to false. In production, `useCache`
+    // (web/src/lib/cache/index.ts:1324) sets `isDemoFallback: true`
+    // whenever the user is being shown demo data instead of live cache
+    // results — that includes ALL of:
+    //   - shouldFallbackToDemo (a real fetch failed)
+    //   - !effectiveEnabled (caching disabled, e.g. demo-mode toggle on)
+    //   - showOptimisticDemo (first load while live fetch is pending)
+    // So `isDemoMode === true` AND `isDemoFallback === false` is not
+    // a state production ever produces. Tests that want demo behavior
+    // override BOTH explicitly.
     mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false })
     mockHelmReleases.mockReturnValue({ releases: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
@@ -112,7 +118,11 @@ describe('HelmValuesDiff', () => {
   })
 
   it('renders correctly in demo mode', () => {
+    // #6278: flip BOTH demo flags so the mock state matches what
+    // production actually produces (see beforeEach comment).
     mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
+    mockHelmReleases.mockReturnValue({ releases: [], isLoading: false, isRefreshing: false, isDemoFallback: true, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
+    mockHelmValues.mockReturnValue({ values: {}, isLoading: false, isRefreshing: false, isDemoFallback: true, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
     const { container } = render(<HelmValuesDiff />)
     expect(container).toBeTruthy()
   })
