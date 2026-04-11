@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { AlertTriangle, AlertCircle, Clock, Scale, CheckCircle } from 'lucide-react'
 import type { TFunction } from 'i18next'
 import { useCachedDeploymentIssues } from '../../hooks/useCachedData'
@@ -28,6 +29,31 @@ const SORT_OPTIONS_KEYS: ReadonlyArray<{ value: SortByOption; labelKey: SortTran
 interface DeploymentIssuesProps {
   config?: Record<string, unknown>
 }
+
+// #6119: hoist to module scope so the reference is stable across renders.
+// Passing an inline filter/sort object into useCardData invalidates its
+// internal useMemo deps every render and caused "Maximum update depth
+// exceeded" on the deployments card. Same pattern as #6232's
+// DeploymentStatus fix.
+const CARD_DATA_FILTER_CONFIG = {
+  searchFields: ['name', 'namespace', 'cluster', 'reason', 'message'] as (keyof DeploymentIssue)[],
+  clusterField: 'cluster' as keyof DeploymentIssue,
+  storageKey: 'deployment-issues',
+} as const
+
+const CARD_DATA_SORT_CONFIG = {
+  defaultField: 'status' as const,
+  defaultDirection: 'asc' as const,
+  comparators: {
+    status: (a: DeploymentIssue, b: DeploymentIssue) =>
+      (a.reason || '').localeCompare(b.reason || ''),
+    name: commonComparators.string<DeploymentIssue>('name'),
+    cluster: (a: DeploymentIssue, b: DeploymentIssue) =>
+      (a.cluster || '').localeCompare(b.cluster || ''),
+  },
+} as const
+
+const DEFAULT_PAGE_LIMIT = 5
 
 const getIssueIcon = (status: string, t: TFunction<readonly ['cards', 'common']>): { icon: typeof AlertCircle; tooltip: string } => {
   if (status.includes('Unavailable')) return { icon: AlertCircle, tooltip: t('deploymentIssues.tooltipUnavailable') }
@@ -64,6 +90,18 @@ function DeploymentIssuesInternal({ config }: DeploymentIssuesProps) {
     isFailed,
     consecutiveFailures })
 
+  // #6119: memoized empty deps — the filter/sort config is hoisted to
+  // module scope, so the outer object is stable across renders. Matches
+  // the #6232 DeploymentStatus fix.
+  const cardDataConfig = useMemo(
+    () => ({
+      filter: CARD_DATA_FILTER_CONFIG,
+      sort: CARD_DATA_SORT_CONFIG,
+      defaultLimit: DEFAULT_PAGE_LIMIT,
+    }),
+    [],
+  )
+
   // Use shared card data hook for filtering, sorting, and pagination
   const {
     items: issues,
@@ -90,19 +128,7 @@ function DeploymentIssuesInternal({ config }: DeploymentIssuesProps) {
       sortDirection,
       setSortDirection },
     containerRef,
-    containerStyle } = useCardData<DeploymentIssue, SortByOption>(rawIssues, {
-    filter: {
-      searchFields: ['name', 'namespace', 'cluster', 'reason', 'message'],
-      clusterField: 'cluster',
-      storageKey: 'deployment-issues' },
-    sort: {
-      defaultField: 'status',
-      defaultDirection: 'asc',
-      comparators: {
-        status: (a, b) => (a.reason || '').localeCompare(b.reason || ''),
-        name: commonComparators.string('name'),
-        cluster: (a, b) => (a.cluster || '').localeCompare(b.cluster || '') } },
-    defaultLimit: 5 })
+    containerStyle } = useCardData<DeploymentIssue, SortByOption>(rawIssues, cardDataConfig)
 
   const handleDeploymentClick = (issue: DeploymentIssue) => {
     if (!issue.cluster) {
