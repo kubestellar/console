@@ -497,9 +497,26 @@ export function UpgradeStatus({ config: _config }: UpgradeStatusProps) {
       }
     }, RETRY_INTERVAL_MS)
 
+    // #6292: re-fetch ALL clusters on VERSION_CACHE_TTL so a successfully
+    // upgraded cluster reflects its new version. Without this loop,
+    // `fetchedClustersRef` kept the old cluster in the "already fetched,
+    // skip" set forever and the card showed the pre-upgrade version
+    // until the user navigated away and came back. Also clears the
+    // per-cluster version cache so `getCachedVersion()` re-fetches.
+    const refreshInterval = setInterval(() => {
+      if (!agentConnected) return
+      fetchedClustersRef.current.clear()
+      for (const c of allClusters) {
+        delete versionCache[c.name]
+      }
+      persistCache()
+      fetchVersions()
+    }, VERSION_CACHE_TTL)
+
     return () => {
       cancelled = true
       clearInterval(retryInterval)
+      clearInterval(refreshInterval)
     }
   }, [isDemoMode, agentConnected, allClusters])
 
