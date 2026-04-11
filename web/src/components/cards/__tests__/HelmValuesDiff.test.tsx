@@ -92,7 +92,7 @@ describe('HelmValuesDiff', () => {
     mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false })
     mockHelmReleases.mockReturnValue({ releases: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
     mockHelmValues.mockReturnValue({ values: {}, isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
-    mockUseClusters.mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: false, isRefreshing: false, error: null, lastRefresh: Date.now() })
+    mockUseClusters.mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: false, isRefreshing: false, error: null, lastRefresh: new Date() })
     mockDrillDown.mockReturnValue({ drillToHelm: vi.fn() })
   })
 
@@ -134,7 +134,7 @@ describe('HelmValuesDiff', () => {
   it('renders with cluster data available', () => {
     mockUseClusters.mockReturnValue({
       clusters: [{ name: 'prod-cluster', healthy: true, reachable: true, nodeCount: 3, podCount: 10, cpuCores: 8, memoryGB: 16, cpuRequestsCores: 4, memoryRequestsGB: 8 }], deduplicatedClusters: [{ name: 'prod-cluster', healthy: true, reachable: true, nodeCount: 3, podCount: 10, cpuCores: 8, memoryGB: 16, cpuRequestsCores: 4, memoryRequestsGB: 8 }],
-      isLoading: false, isRefreshing: false, error: null, lastRefresh: Date.now(),
+      isLoading: false, isRefreshing: false, error: null, lastRefresh: new Date(),
     })
     const { container } = render(<HelmValuesDiff />)
     expect(container).toBeTruthy()
@@ -153,14 +153,14 @@ describe('HelmValuesDiff', () => {
       // Only values is refreshing — combined isRefreshing must still be true
       mockHelmReleases.mockReturnValue({ releases: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
       mockHelmValues.mockReturnValue({ values: {}, isLoading: false, isRefreshing: true, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
-      mockUseClusters.mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: false, isRefreshing: false, error: null, lastRefresh: Date.now() })
+      mockUseClusters.mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: false, isRefreshing: false, error: null, lastRefresh: new Date() })
       render(<HelmValuesDiff />)
       const lastCall = mockUseCardLoadingState.mock.calls[mockUseCardLoadingState.mock.calls.length - 1][0]
       expect(lastCall.isRefreshing).toBe(true)
     })
 
     it('reports isRefreshing=true when clusters source is refreshing', () => {
-      mockUseClusters.mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: false, isRefreshing: true, error: null, lastRefresh: Date.now() })
+      mockUseClusters.mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: false, isRefreshing: true, error: null, lastRefresh: new Date() })
       render(<HelmValuesDiff />)
       const lastCall = mockUseCardLoadingState.mock.calls[mockUseCardLoadingState.mock.calls.length - 1][0]
       expect(lastCall.isRefreshing).toBe(true)
@@ -169,7 +169,7 @@ describe('HelmValuesDiff', () => {
     it('reports isRefreshing=false when all 3 sources are quiet', () => {
       mockHelmReleases.mockReturnValue({ releases: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
       mockHelmValues.mockReturnValue({ values: {}, isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
-      mockUseClusters.mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: false, isRefreshing: false, error: null, lastRefresh: Date.now() })
+      mockUseClusters.mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: false, isRefreshing: false, error: null, lastRefresh: new Date() })
       render(<HelmValuesDiff />)
       const lastCall = mockUseCardLoadingState.mock.calls[mockUseCardLoadingState.mock.calls.length - 1][0]
       expect(lastCall.isRefreshing).toBe(false)
@@ -197,7 +197,7 @@ describe('HelmValuesDiff', () => {
       // Cache holds a fresh-looking lastRefresh from a prior live session — must be hidden
       mockHelmReleases.mockReturnValue({ releases: [], isLoading: false, isRefreshing: false, isDemoFallback: true, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
       mockHelmValues.mockReturnValue({ values: {}, isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
-      mockUseClusters.mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: false, isRefreshing: false, error: null, lastRefresh: Date.now() })
+      mockUseClusters.mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: false, isRefreshing: false, error: null, lastRefresh: new Date() })
       render(<HelmValuesDiff />)
       const props = refreshIndicatorProps.mock.calls[refreshIndicatorProps.mock.calls.length - 1][0]
       expect(props.lastUpdated).toBeNull()
@@ -206,7 +206,7 @@ describe('HelmValuesDiff', () => {
     it('passes isRefreshing=true to RefreshIndicator when values source is refreshing', () => {
       mockHelmReleases.mockReturnValue({ releases: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
       mockHelmValues.mockReturnValue({ values: {}, isLoading: false, isRefreshing: true, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
-      mockUseClusters.mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: false, isRefreshing: false, error: null, lastRefresh: Date.now() })
+      mockUseClusters.mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: false, isRefreshing: false, error: null, lastRefresh: new Date() })
       render(<HelmValuesDiff />)
       const props = refreshIndicatorProps.mock.calls[refreshIndicatorProps.mock.calls.length - 1][0]
       expect(props.isRefreshing).toBe(true)

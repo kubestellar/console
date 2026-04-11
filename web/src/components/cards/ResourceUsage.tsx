@@ -169,10 +169,14 @@ function ResourceUsageInternal() {
             </span>
           )}
           {/* #6217: freshness indicator. #6244: use the OLDER of cluster
-              and GPU timestamps so the indicator reflects the staler source. */}
+              and GPU timestamps so the indicator reflects the staler source.
+              #6273: hide the timestamp in demo mode — useCache preserves
+              lastRefresh from prior live sessions, which would show
+              "Updated X ago" against demo data. */}
           <RefreshIndicator
             isRefreshing={clustersRefreshing || gpuRefreshing}
             lastUpdated={(() => {
+              if (isDemoMode || isDemoFallback) return null
               const cl = typeof clustersLastRefresh === 'number' ? clustersLastRefresh : null
               const gp = typeof gpuLastRefresh === 'number' ? gpuLastRefresh : null
               if (cl !== null && gp !== null) return new Date(Math.min(cl, gp))
