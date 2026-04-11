@@ -76,15 +76,20 @@ func TestClient_Stop_Idempotent(t *testing.T) {
 	}, "third Stop must still not panic")
 }
 
-// TestBridge_Start_RollbackStopsStartedClients simulates a partial Start
-// failure where some clients were successfully assigned and then an error
-// was reported from another goroutine. Start must iterate those assigned
-// clients and call Stop on each one before returning (#6624). Because we
-// can't spawn real MCP binaries in unit tests, we verify the behavior by
-// directly asserting that Bridge.Stop is idempotent-safe on clients that
-// were manually assigned — and that Start's rollback path niles the
-// pointers.
-func TestBridge_Start_RollbackStopsStartedClients(t *testing.T) {
+// TestBridge_Stop_StopsAssignedClients validates the tail of Bridge.Start's
+// rollback path (#6624): once a client has been assigned to the bridge, a
+// subsequent Stop must call Stop on every assigned client and must be safe
+// to invoke repeatedly.
+//
+// #6655: this test was previously named and commented as if it exercised
+// Bridge.Start directly and asserted that the rollback nils out the client
+// pointers. Neither claim was accurate — we can't spawn real MCP binaries
+// in unit tests, Bridge.Stop does not nil client pointers (see bridge.go
+// Stop), and this test never invoked Start. The name and comment have been
+// corrected to describe what is actually asserted: that Stop is Start's
+// rollback primitive, that it tears down every assigned client, and that
+// it is idempotent.
+func TestBridge_Stop_StopsAssignedClients(t *testing.T) {
 	bridge := NewBridge(BridgeConfig{})
 
 	// Simulate two successfully started clients.

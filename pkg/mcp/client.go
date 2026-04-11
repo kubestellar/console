@@ -58,7 +58,12 @@ func idKey(v interface{}) string {
 	case json.Number:
 		return t.String()
 	default:
-		return fmt.Sprintf("%v", t)
+		// #6655: align behavior with the docstring above — unsupported ID
+		// types are treated as "unroutable" and produce an empty key so
+		// callers drop the response instead of routing it via a bogus
+		// fmt.Sprintf key that could never match an outgoing request.
+		_ = t
+		return ""
 	}
 }
 
