@@ -253,7 +253,11 @@ export function ReplicaSetDrillDown({ data }: Props) {
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
-                  <Gauge value={readyReplicas} max={replicas} size="sm" />
+                  {/* #6289: readiness is a health metric where high is good
+                      (100% ready == healthy). Without invertColors the default
+                      thresholds paint ≥90% red, so a perfectly-healthy
+                      ReplicaSet showed a red gauge labeled "100%". */}
+                  <Gauge value={readyReplicas} max={replicas} size="sm" invertColors={true} />
                   <div className="text-right">
                     <div className="text-2xl font-bold text-foreground">{readyReplicas}/{replicas}</div>
                     <div className="text-xs text-muted-foreground">{t('drilldown.fields.replicasReady')}</div>
