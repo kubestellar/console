@@ -208,4 +208,67 @@ describe('mergeProjects — user-added preservation (#6465)', () => {
     const names = merged.map((p) => p.name).sort()
     expect(names).toEqual(['cilium', 'falco', 'kyverno', 'opa'])
   })
+
+  // PR #6574 item C — #6507(A) gated the "keep existing entry verbatim"
+  // branch on `prev.userAdded || prev.category === 'Custom'`, so AI-only
+  // entries (neither flag set) must now ACCEPT incoming AI refinements of
+  // the same name instead of echoing the stale copy. Previously there was
+  // no test for this leg — the fix could silently regress to the old
+  // always-preserve behavior without any red vitest.
+  it('accepts incoming AI refinement of an AI-only project (replaces existing entry)', () => {
+    // Existing state: a single AI-suggested project — not userAdded, not
+    // category:'Custom'. The AI re-asks with an updated version of the
+    // same project (new priority, new category, new notes). The refined
+    // entry must REPLACE the original, not be dropped in favor of it.
+    const existing: PayloadProject[] = [
+      makeProject({
+        name: 'istio',
+        category: 'Service Mesh',
+        priority: 'optional',
+      }),
+    ]
+    const incoming: PayloadProject[] = [
+      makeProject({
+        name: 'istio',
+        category: 'Networking',
+        priority: 'required',
+      }),
+    ]
+
+    const merged = mergeProjects(existing, incoming)
+    expect(merged).toHaveLength(1)
+    // Refinement wins: new category + new priority.
+    expect(merged[0].category).toBe('Networking')
+    expect(merged[0].priority).toBe('required')
+    // And it must NOT have been marked userAdded by the merge itself.
+    expect(merged[0].userAdded).not.toBe(true)
+  })
+
+  it('keeps user-added projects pinned even when AI refines a same-named entry', () => {
+    // Contrast with the test above: same shape, but `userAdded: true`
+    // on the existing entry means the refinement is IGNORED and the
+    // user's version is preserved verbatim.
+    const existing: PayloadProject[] = [
+      makeProject({
+        name: 'istio',
+        category: 'Service Mesh',
+        priority: 'optional',
+        userAdded: true,
+      }),
+    ]
+    const incoming: PayloadProject[] = [
+      makeProject({
+        name: 'istio',
+        category: 'Networking',
+        priority: 'required',
+      }),
+    ]
+
+    const merged = mergeProjects(existing, incoming)
+    expect(merged).toHaveLength(1)
+    // User version wins.
+    expect(merged[0].category).toBe('Service Mesh')
+    expect(merged[0].priority).toBe('optional')
+    expect(merged[0].userAdded).toBe(true)
+  })
 })

@@ -250,9 +250,26 @@ export interface UseFeatureRequestsOptions {
   countOnly?: boolean
 }
 
+/**
+ * PR #6573 item B — Lean shape returned by the `?count_only=true` endpoint.
+ * Only `id` and `status` are present; every other field on FeatureRequest is
+ * guaranteed empty on the wire, so we use a dedicated type instead of
+ * shoehorning the full FeatureRequest type onto a partial payload.
+ */
+export interface FeatureRequestSummary {
+  id: string
+  status: RequestStatus
+}
+
 // Feature Requests Hook
 export function useFeatureRequests(currentUserId?: string, options?: UseFeatureRequestsOptions) {
   const [requests, setRequests] = useState<FeatureRequest[]>([])
+  // PR #6573 item B — countOnly responses get their own lean-typed state
+  // slot instead of being cast into FeatureRequest[]. The wire payload only
+  // carries {id, status}, so every other field would be undefined on the
+  // full type — a footgun for any consumer that wandered in expecting
+  // title/description/etc. to be populated.
+  const [summaries, setSummaries] = useState<FeatureRequestSummary[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -263,22 +280,28 @@ export function useFeatureRequests(currentUserId?: string, options?: UseFeatureR
   const loadRequests = useCallback(async () => {
     // In demo mode, use mock data
     if (isDemoUser()) {
-      const sorted = currentUserId ? sortRequests(DEMO_FEATURE_REQUESTS, currentUserId) : DEMO_FEATURE_REQUESTS
-      setRequests(sorted)
+      if (countOnly) {
+        setSummaries(DEMO_FEATURE_REQUESTS.map(r => ({ id: r.id, status: r.status })))
+      } else {
+        const sorted = currentUserId ? sortRequests(DEMO_FEATURE_REQUESTS, currentUserId) : DEMO_FEATURE_REQUESTS
+        setRequests(sorted)
+      }
       setIsLoading(false)
       return
     }
     try {
       setIsLoading(true)
-      // Fetch from queue endpoint to get all issues. When countOnly is set,
-      // the server returns {id, status} pairs only — enough to compute the
-      // navbar badge (filter notifications by closed request IDs) without
-      // fetching the full queue. See UseFeatureRequestsOptions above.
-      const url = countOnly ? '/api/feedback/queue?count_only=true' : '/api/feedback/queue'
-      const { data } = await api.get<FeatureRequest[]>(url)
-      const safeData = Array.isArray(data) ? data : []
-      const sorted = currentUserId ? sortRequests(safeData, currentUserId) : safeData
-      setRequests(sorted)
+      if (countOnly) {
+        // PR #6573 item B — lean endpoint returns {id, status} only. Type
+        // it that way instead of pretending to hydrate a FeatureRequest[].
+        const { data } = await api.get<FeatureRequestSummary[]>('/api/feedback/queue?count_only=true')
+        setSummaries(Array.isArray(data) ? data : [])
+      } else {
+        const { data } = await api.get<FeatureRequest[]>('/api/feedback/queue')
+        const safeData = Array.isArray(data) ? data : []
+        const sorted = currentUserId ? sortRequests(safeData, currentUserId) : safeData
+        setRequests(sorted)
+      }
       setError(null)
     } catch {
       // Silently fail - backend may be unavailable in demo mode
@@ -353,6 +376,10 @@ export function useFeatureRequests(currentUserId?: string, options?: UseFeatureR
 
   return {
     requests,
+    // PR #6573 item B — populated only when `countOnly` option is set.
+    // Consumers that passed countOnly should read `summaries`; consumers
+    // that need the full queue should read `requests`.
+    summaries,
     isLoading,
     isRefreshing,
     error,

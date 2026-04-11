@@ -2,6 +2,7 @@ package k8s
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
@@ -191,6 +192,12 @@ func TestMultiClusterClient_StartWatching_ConcurrentRace(t *testing.T) {
 	var wg sync.WaitGroup
 	errs := make(chan error, concurrentStartCallers)
 	start := make(chan struct{})
+	// PR #6573 item A — assert that EVERY successful StartWatching caller
+	// observes m.watcher != nil immediately after its own call returns. The
+	// previous impl released the lock before running fsnotify setup, so a
+	// second caller could see watching=true and return nil while m.watcher
+	// was still nil. With the lock now held across setup, any StartWatching
+	// return means setup has fully completed (or cleanly rolled back).
 	for i := 0; i < concurrentStartCallers; i++ {
 		wg.Add(1)
 		go func() {
@@ -198,6 +205,15 @@ func TestMultiClusterClient_StartWatching_ConcurrentRace(t *testing.T) {
 			<-start
 			if e := m.StartWatching(); e != nil {
 				errs <- e
+				return
+			}
+			// Setup must be complete before ANY caller returns nil.
+			m.mu.Lock()
+			wInstalled := m.watcher
+			watching := m.watching
+			m.mu.Unlock()
+			if !watching || wInstalled == nil {
+				errs <- fmt.Errorf("StartWatching returned nil but watcher not yet installed (watching=%v, watcher=%v)", watching, wInstalled != nil)
 			}
 		}()
 	}
@@ -238,6 +254,7 @@ func TestMultiClusterClient_StopStartRace(t *testing.T) {
 
 	var wg sync.WaitGroup
 	const cycles = 25 // kept modest because each cycle does real fsnotify I/O
+	startErrs := make(chan error, cycles)
 	for i := 0; i < cycles; i++ {
 		wg.Add(2)
 		go func() {
@@ -246,10 +263,19 @@ func TestMultiClusterClient_StopStartRace(t *testing.T) {
 		}()
 		go func() {
 			defer wg.Done()
-			_ = m.StartWatching()
+			// PR #6573 item D — assert no fsnotify error escapes. The
+			// previous test swallowed errors with `_ =`, so a resource
+			// exhaustion failure would have let the test pass vacuously.
+			if e := m.StartWatching(); e != nil {
+				startErrs <- e
+			}
 		}()
 	}
 	wg.Wait()
+	close(startErrs)
+	for e := range startErrs {
+		t.Fatalf("StartWatching error during Stop/Start race: %v", e)
+	}
 	m.StopWatching()
 }
 

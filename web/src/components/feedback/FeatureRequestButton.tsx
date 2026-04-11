@@ -19,7 +19,10 @@ export function FeatureRequestButton() {
   // hook fetches the lean `?count_only=true` payload ({id, status} pairs).
   // Consumers that render the full queue (FeatureRequestModal, Updates tab)
   // must NOT pass this flag.
-  const { requests } = useFeatureRequests(undefined, { countOnly: true })
+  // PR #6573 item B — use the lean `summaries` return (typed as
+  // FeatureRequestSummary[]) instead of `requests`. The count_only endpoint
+  // only sends {id, status}, so the full FeatureRequest[] type was a lie.
+  const { summaries } = useFeatureRequests(undefined, { countOnly: true })
 
   // issue 6475 — Unify the navbar badge count with the Updates tab.
   // Previously the navbar used the raw `unreadCount` returned by
@@ -31,13 +34,13 @@ export function FeatureRequestButton() {
   // here so the navbar matches.
   const unreadCount = useMemo(() => {
     const closedIds = new Set(
-      (requests || []).filter(r => r.status === 'closed').map(r => r.id)
+      (summaries || []).filter(r => r.status === 'closed').map(r => r.id)
     )
     return (notifications || [])
       .filter(n => !closedIds.has(n.feature_request_id || ''))
       .filter(n => !n.read)
       .length
-  }, [notifications, requests])
+  }, [notifications, summaries])
 
   // Auto-open modal when navigated from /issue, /feedback, /feature routes
   useEffect(() => {

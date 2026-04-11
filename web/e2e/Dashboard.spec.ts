@@ -367,36 +367,38 @@ test.describe('Dashboard Page', () => {
         timeout: 10000,
       })
 
-      // Look for any element with data-testid containing "cluster-count"
-      // OR any stat-value element that displays the expected number. Use
-      // a pattern rather than an exact testid because cards vary.
-      const countEl = page
-        .locator(
-          `[data-testid*="cluster-count"], [data-testid*="total-clusters"]`
-        )
-        .first()
-
-      const hasCountEl = await countEl.isVisible().catch(() => false)
-      if (hasCountEl) {
-        // #6507(D) — assert the exact text on the count element, not
-        // toContainText. Prevents false positives like "30" matching "3".
-        await expect(countEl).toHaveText(
-          new RegExp(`^\\s*${EXPECTED_CLUSTER_COUNT}\\s*$`)
+      // PR #6574 items A+B — target the StatBlock for `clusters` directly
+      // via the new `stat-block-${id}` testid. Previously this spec looked
+      // for `cluster-count` / `total-clusters` testids that didn't exist
+      // on StatsOverview.tsx at all, so the `hasCountEl` check always fell
+      // through to the structural fallback. Now we address the block
+      // directly and use a word-boundary regex so the count can't
+      // false-positive on substrings (e.g. "3" matching inside "30 nodes").
+      const clusterStatBlock = page.getByTestId('stat-block-clusters').first()
+      const hasStatBlock = await clusterStatBlock.isVisible().catch(() => false)
+      if (hasStatBlock) {
+        // Word-boundary match: the StatBlock wraps the numeric value in a
+        // div with header text ("Clusters") and optional sublabel, so we
+        // can't use toHaveText (which would match the whole block). A
+        // word-bounded regex keeps this precise without requiring a deeper
+        // DOM drill-down into every display mode (numeric/gauge/ring/etc).
+        await expect(clusterStatBlock).toContainText(
+          new RegExp(`\\b${EXPECTED_CLUSTER_COUNT}\\b`)
         )
       } else {
-        // #6507(D) — Structural fallback. Previously this matched freeform
-        // body text, which is vacuously true for phrases like
-        // "3 nodes in 3 clusters" even when the cluster count is wrong.
-        // Instead, locate an element whose aria-label / data-testid / text
-        // is explicitly about cluster count, and assert its exact text.
+        // PR #6574 item B — Structural fallback. If the clusters StatBlock
+        // isn't mounted (e.g. user hid it via StatsConfig), try an aria
+        // role=status element that explicitly labels itself as a cluster
+        // count. Use a word-boundary regex, not toContainText(String(n)),
+        // so "3" can't silently match "30 nodes in 3 clusters".
         const countByLabel = page
           .getByRole('status')
           .filter({ hasText: /cluster/i })
           .first()
         const labelVisible = await countByLabel.isVisible().catch(() => false)
         if (labelVisible) {
-          await expect(countByLabel).toContainText(
-            String(EXPECTED_CLUSTER_COUNT)
+          await expect(countByLabel).toHaveText(
+            new RegExp(`\\b${EXPECTED_CLUSTER_COUNT}\\b`)
           )
         } else {
           // Last-resort: no element identifies itself as a cluster count.
@@ -404,8 +406,7 @@ test.describe('Dashboard Page', () => {
           // all. Fail explicitly with a descriptive message.
           throw new Error(
             'Dashboard did not expose a cluster-count element (no ' +
-              '[data-testid*="cluster-count"], [data-testid*="total-clusters"], ' +
-              'or role=status with "cluster" text).'
+              '[data-testid="stat-block-clusters"] or role=status with "cluster" text).'
           )
         }
       }

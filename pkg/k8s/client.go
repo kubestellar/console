@@ -893,35 +893,31 @@ func (m *MultiClusterClient) RemoveContext(contextName string) error {
 // second watcher goroutine. Previously every call created a fresh
 // fsnotify.Watcher and watchLoop goroutine, orphaning the previous one.
 func (m *MultiClusterClient) StartWatching() error {
-	// PR #6518 item A — hold the lock across the check-and-set so two
-	// concurrent callers can't both see watching=false and both install a
-	// watcher (previous impl dropped the lock, created a fresh fsnotify
-	// watcher, then re-acquired — the loser leaked a watcher + goroutine).
+	// PR #6518 item A + #6573 item A — hold the lock for the ENTIRE setup,
+	// not just the check-and-set. Previous impl set watching=true, released
+	// the lock, then did fsnotify.NewWatcher()+Add. A second caller arriving
+	// during that window saw watching=true and returned nil immediately —
+	// but the first caller's watcher might still fail setup, leaving the
+	// struct in a broken state after the second caller already declared
+	// success. Holding the lock across fsnotify setup is acceptable because
+	// setup is fast (microseconds) and StartWatching is only called at
+	// startup / after a Stop, not on any hot path.
 	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	if m.watching {
-		m.mu.Unlock()
 		slog.Info("kubeconfig watcher already running, skipping StartWatching")
 		return nil
 	}
-	// Reserve ownership immediately. If watcher construction fails below
-	// we roll this back before returning the error.
-	m.watching = true
-	m.mu.Unlock()
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		m.mu.Lock()
-		m.watching = false
-		m.mu.Unlock()
 		return fmt.Errorf("failed to create watcher: %w", err)
 	}
 
 	// Watch the kubeconfig file
 	if err := watcher.Add(m.kubeconfig); err != nil {
 		watcher.Close()
-		m.mu.Lock()
-		m.watching = false
-		m.mu.Unlock()
 		return fmt.Errorf("failed to watch kubeconfig: %w", err)
 	}
 
@@ -931,7 +927,6 @@ func (m *MultiClusterClient) StartWatching() error {
 		slog.Warn("could not watch kubeconfig directory", "error", err)
 	}
 
-	m.mu.Lock()
 	m.watcher = watcher
 	// issue 6472 — Recreate stopWatch and reset the once on every Start so
 	// Stop→Start sequences actually work. Previously Start only initialized
@@ -943,7 +938,11 @@ func (m *MultiClusterClient) StartWatching() error {
 	// concurrent Stop+Start rotates m.stopWatch.
 	stopCh := m.stopWatch
 	w := m.watcher
-	m.mu.Unlock()
+	// Only flip watching=true after setup has fully succeeded. A concurrent
+	// caller arriving before this line sees watching=false and will block
+	// on m.mu until we return; by then setup is complete (or rolled back
+	// via the error path, leaving watching=false for a clean retry).
+	m.watching = true
 
 	go m.watchLoop(stopCh, w)
 	slog.Info("watching kubeconfig for changes", "path", m.kubeconfig)

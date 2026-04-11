@@ -272,6 +272,20 @@ type QueueItem struct {
 	UpdatedAt         string `json:"updated_at,omitempty"`
 }
 
+// QueueItemCount — minimal shape returned by ListAllFeatureRequests when
+// count_only=true. Only the navbar badge (and the closed-request set it
+// filters against) consumes this path, so we serialize just id + status
+// instead of every QueueItem field as empty strings.
+//
+// PR #6573 item E — a standalone struct is preferable to sprinkling
+// ,omitempty on QueueItem because the full QueueItem shape is consumed
+// by the queue UI which DOES want zero-value title/description rendered
+// as "" (blurred placeholder for untriaged items), not omitted entirely.
+type QueueItemCount struct {
+	ID     string `json:"id"`
+	Status string `json:"status"`
+}
+
 // ListAllFeatureRequests returns all issues from GitHub as a queue
 // For untriaged issues that don't belong to the current user, title and description are redacted
 // Frontend will display these with blur effect
@@ -329,7 +343,10 @@ func (h *FeedbackHandler) ListAllFeatureRequests(c *fiber.Ctx) error {
 
 	// Convert to queue items
 	// Note: preview URLs are fetched on-demand via CheckPreviewStatus endpoint
+	// PR #6573 item E — countOnly returns []QueueItemCount (id + status only)
+	// instead of a []QueueItem full of empty strings. See QueueItemCount type.
 	queueItems := make([]QueueItem, 0, len(taggedIssues))
+	queueItemCounts := make([]QueueItemCount, 0, len(taggedIssues))
 	for _, tagged := range taggedIssues {
 		issue := tagged.GitHubIssue
 		// Determine status based on labels
@@ -397,12 +414,12 @@ func (h *FeedbackHandler) ListAllFeatureRequests(c *fiber.Ctx) error {
 		// Check if issue was closed by the current user (the one viewing the queue)
 		closedByUser := issue.State == "closed" && issue.ClosedBy != nil && issue.ClosedBy.Login == currentGitHubLogin
 
-		// PR #6518 item G — count_only responses carry only id + status, no
-		// titles or bodies. The client uses these to compute the navbar
-		// badge (which filters notifications by the set of closed-request
-		// IDs); nothing else is needed for that path.
+		// PR #6518 item G / #6573 item E — count_only responses carry only
+		// id + status, no titles or bodies. The client uses these to compute
+		// the navbar badge (which filters notifications by the set of
+		// closed-request IDs); nothing else is needed for that path.
 		if countOnly {
-			queueItems = append(queueItems, QueueItem{
+			queueItemCounts = append(queueItemCounts, QueueItemCount{
 				ID:     fmt.Sprintf("gh-%s-%d", tagged.TargetRepo, issue.Number),
 				Status: status,
 			})
@@ -428,6 +445,9 @@ func (h *FeedbackHandler) ListAllFeatureRequests(c *fiber.Ctx) error {
 		})
 	}
 
+	if countOnly {
+		return c.JSON(queueItemCounts)
+	}
 	return c.JSON(queueItems)
 }
 

@@ -225,6 +225,12 @@ const StatBlock = memo(function StatBlock({ block, data, hasData, isLoading, his
 
   return (
     <div
+      // PR #6574 item A — stable data-testid hooks for e2e selectors. The
+      // Dashboard spec asserts cluster-count values; without these hooks it
+      // was grepping the page body for digits and false-positiving on
+      // substrings (e.g. "3" matching "30 nodes"). Hook name is scoped by
+      // block id so each stat is individually addressable.
+      data-testid={`stat-block-${block.id}`}
       className={`group relative glass p-4 rounded-lg min-h-[100px] ${isLoading ? 'animate-pulse' : ''} ${isClickable ? 'cursor-pointer hover:bg-secondary/50' : ''} ${isDemo ? 'border border-yellow-500/30 bg-yellow-500/5 shadow-[0_0_12px_rgba(234,179,8,0.15)]' : ''} transition-colors`}
       onClick={() => isClickable && data.onClick?.()}
     >

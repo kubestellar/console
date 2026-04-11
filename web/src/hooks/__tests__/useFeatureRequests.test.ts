@@ -298,6 +298,50 @@ describe('useFeatureRequests', () => {
     expect(result.current.isSubmitting).toBe(false)
   })
 
+  // PR #6573 item C — the navbar button uses `{ countOnly: true }` to fetch
+  // a lean `{id, status}` payload. Verify the hook hits the count_only URL
+  // and exposes the lean list via `summaries`, separately from the full
+  // `requests` state (which must stay empty in count_only mode so nothing
+  // accidentally reads hallucinated title/description fields).
+  it('countOnly option fetches count_only URL and populates summaries, not requests', async () => {
+    localStorage.setItem('kc-auth-token', 'real-jwt-token')
+    const countPayload = [
+      { id: 'gh-console-42', status: 'closed' },
+      { id: 'gh-console-56', status: 'feasibility_study' },
+      { id: 'gh-docs-17', status: 'open' },
+    ]
+    vi.mocked(api.get).mockResolvedValue({ data: countPayload })
+
+    const { result } = renderHook(() => useFeatureRequests(undefined, { countOnly: true }))
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    // Must have hit the lean URL — NOT the full queue URL.
+    expect(api.get).toHaveBeenCalledWith('/api/feedback/queue?count_only=true')
+    // Lean results land in summaries, typed as {id, status}.
+    expect(result.current.summaries).toHaveLength(3)
+    expect(result.current.summaries[0]).toEqual({ id: 'gh-console-42', status: 'closed' })
+    // Full requests stays empty so no consumer reads stale/empty title fields.
+    expect(result.current.requests).toEqual([])
+  })
+
+  it('countOnly derives closed-id set consumers can use for navbar badge filter', async () => {
+    localStorage.setItem('kc-auth-token', 'real-jwt-token')
+    const countPayload = [
+      { id: 'gh-console-1', status: 'closed' },
+      { id: 'gh-console-2', status: 'open' },
+      { id: 'gh-console-3', status: 'closed' },
+    ]
+    vi.mocked(api.get).mockResolvedValue({ data: countPayload })
+
+    const { result } = renderHook(() => useFeatureRequests(undefined, { countOnly: true }))
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    const closedIds = new Set(result.current.summaries.filter(r => r.status === 'closed').map(r => r.id))
+    expect(closedIds.has('gh-console-1')).toBe(true)
+    expect(closedIds.has('gh-console-2')).toBe(false)
+    expect(closedIds.has('gh-console-3')).toBe(true)
+  })
+
   it('closeRequest only updates the matching request, leaves others unchanged', async () => {
     localStorage.setItem('kc-auth-token', 'real-jwt-token')
     const req1 = { id: 'r1', title: 'Keep', description: 'd', request_type: 'bug', user_id: 'u1', status: 'open', created_at: '2024-01-01' }
