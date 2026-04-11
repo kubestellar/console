@@ -2,14 +2,41 @@ package k8s
 
 import (
 	"context"
+	"strings"
 	"sync"
 	"time"
 
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/kubestellar/console/pkg/api/v1alpha1"
 )
+
+// isCRDNotInstalled reports whether the given error indicates that the MCS
+// CRD (ServiceExport / ServiceImport) is not installed on the target cluster,
+// as opposed to a real failure (auth, network, server error). Only this
+// specific case should be treated as an empty-list success — everything else
+// must be surfaced to the caller so the handler can report per-cluster
+// failures rather than silently hiding them (#6510).
+func isCRDNotInstalled(err error) bool {
+	if err == nil {
+		return false
+	}
+	if apimeta.IsNoMatchError(err) {
+		return true
+	}
+	// Discovery returns a NotFound status error for the resource type when
+	// the CRD is absent. We also accept a plain error with the same message
+	// so cluster variants that surface the error via Writer/Transport still
+	// get recognized. Object-level NotFounds (`"foo" not found`) must NOT
+	// match, so we key off the resource-type wording specifically.
+	msg := strings.ToLower(err.Error())
+	if strings.Contains(msg, "the server could not find the requested resource") {
+		return true
+	}
+	return false
+}
 
 // ListServiceExports lists all ServiceExport resources across all clusters
 func (m *MultiClusterClient) ListServiceExports(ctx context.Context) (*v1alpha1.ServiceExportList, error) {
@@ -63,8 +90,13 @@ func (m *MultiClusterClient) ListServiceExportsForCluster(ctx context.Context, c
 	}
 
 	if err != nil {
-		// MCS CRDs might not be installed - return empty list instead of error
-		return []v1alpha1.ServiceExport{}, nil
+		// Only treat "CRD is not installed on this cluster" as a benign empty
+		// list. Real failures (auth, network, server errors) are returned to
+		// the caller so the handler can report per-cluster errors (#6510).
+		if isCRDNotInstalled(err) {
+			return []v1alpha1.ServiceExport{}, nil
+		}
+		return nil, err
 	}
 
 	return m.parseServiceExportsFromList(list, contextName)
@@ -152,8 +184,13 @@ func (m *MultiClusterClient) ListServiceImportsForCluster(ctx context.Context, c
 	}
 
 	if err != nil {
-		// MCS CRDs might not be installed - return empty list instead of error
-		return []v1alpha1.ServiceImport{}, nil
+		// Only treat "CRD is not installed on this cluster" as a benign empty
+		// list. Real failures (auth, network, server errors) are returned to
+		// the caller so the handler can report per-cluster errors (#6510).
+		if isCRDNotInstalled(err) {
+			return []v1alpha1.ServiceImport{}, nil
+		}
+		return nil, err
 	}
 
 	return m.parseServiceImportsFromList(list, contextName)

@@ -434,8 +434,66 @@ func (m *MultiClusterClient) parseDaemonSetsAsWorkloads(list interface{}, contex
 	return workloads
 }
 
-// GetWorkload gets a specific workload
+// GetWorkload gets a specific workload by namespaced name.
+//
+// Previously this made a full ListWorkloadsForCluster call (listing ALL
+// Deployments/StatefulSets/DaemonSets cluster-wide) then linear-searched
+// the result for one name — O(N) in cluster size just to look up a single
+// resource. Now it issues targeted Get calls for each workload kind and
+// returns on the first hit (#6509). The linear-search path is preserved as
+// a fallback in case a Get returns an unexpected non-NotFound error so
+// callers never regress on correctness.
 func (m *MultiClusterClient) GetWorkload(ctx context.Context, cluster, namespace, name string) (*v1alpha1.Workload, error) {
+	if namespace == "" {
+		// Namespaced Get requires a namespace. Fall back to the list path,
+		// which can scan across all namespaces.
+		return m.getWorkloadByList(ctx, cluster, namespace, name)
+	}
+
+	dynamicClient, err := m.GetDynamicClient(cluster)
+	if err != nil {
+		return nil, err
+	}
+
+	// Try each known workload kind in order. The parse* helpers operate on
+	// lists, so we wrap each single-object result in a one-item list.
+	kinds := []struct {
+		gvr    schema.GroupVersionResource
+		parser func(interface{}, string) []v1alpha1.Workload
+	}{
+		{gvrDeployments, m.parseDeploymentsAsWorkloads},
+		{gvrStatefulSets, m.parseStatefulSetsAsWorkloads},
+		{gvrDaemonSets, m.parseDaemonSetsAsWorkloads},
+	}
+
+	for _, k := range kinds {
+		obj, getErr := dynamicClient.Resource(k.gvr).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
+		if getErr != nil {
+			if apierrors.IsNotFound(getErr) {
+				// Expected — try the next kind.
+				continue
+			}
+			// Unexpected error (auth, network, server). Fall back to the
+			// old list-based path so the caller never regresses to a hard
+			// failure just because one kind happened to be unavailable.
+			return m.getWorkloadByList(ctx, cluster, namespace, name)
+		}
+		list := &unstructured.UnstructuredList{Items: []unstructured.Unstructured{*obj}}
+		parsed := k.parser(list, cluster)
+		if len(parsed) == 0 {
+			continue
+		}
+		w := parsed[0]
+		return &w, nil
+	}
+
+	// None of the typed Gets found the object.
+	return nil, nil
+}
+
+// getWorkloadByList is the legacy O(N) path preserved as a fallback for
+// GetWorkload when the direct-Get optimization cannot proceed (#6509).
+func (m *MultiClusterClient) getWorkloadByList(ctx context.Context, cluster, namespace, name string) (*v1alpha1.Workload, error) {
 	workloads, err := m.ListWorkloadsForCluster(ctx, cluster, namespace, "")
 	if err != nil {
 		return nil, err
@@ -610,12 +668,23 @@ func (m *MultiClusterClient) DeployWorkload(ctx context.Context, sourceCluster, 
 
 			_, err = targetClient.Resource(sourceGVR).Namespace(namespace).Create(clusterCtx, objCopy, metav1.CreateOptions{})
 			if err != nil {
-				// If already exists, try update
+				// If already exists, try update. Only fall through to Update when
+				// Get succeeds; if Get itself fails with a non-NotFound error (e.g.
+				// a transient network failure), return BOTH the Create and Get
+				// errors so the operator can see the real cause (#6501). Previously
+				// a Get-level network error was silently replaced with the Create
+				// error message, masking the root failure.
 				existing, getErr := targetClient.Resource(sourceGVR).Namespace(namespace).Get(clusterCtx, name, metav1.GetOptions{})
 				if getErr != nil {
 					mu.Lock()
 					failed = append(failed, targetCluster)
-					lastErr = fmt.Errorf("cluster %s: create failed: %w", targetCluster, err)
+					if apierrors.IsNotFound(getErr) {
+						// Genuine "does not exist" — the Create error is authoritative.
+						lastErr = fmt.Errorf("cluster %s: create failed: %w", targetCluster, err)
+					} else {
+						// Non-NotFound Get error (network, auth, server) — surface both.
+						lastErr = fmt.Errorf("cluster %s: create failed: %w; also get failed: %v", targetCluster, err, getErr)
+					}
 					mu.Unlock()
 					return
 				}

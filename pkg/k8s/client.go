@@ -25,6 +25,15 @@ const (
 	clusterHealthCheckTimeout = 8 * time.Second
 	clusterProbeTimeout       = 5 * time.Second
 	k8sClientTimeout          = 45 * time.Second
+	// totalHealthTimeout bounds the whole multi-cluster health call so a single
+	// slow/unreachable cluster cannot block the aggregate response. Clusters
+	// that have not reported by this deadline are marked as timeout rather than
+	// blocking the caller (#6506).
+	totalHealthTimeout = 20 * time.Second
+	// perClusterHealthTimeout bounds each individual cluster probe inside
+	// GetAllClusterHealth. Must be less than totalHealthTimeout so a single
+	// cluster cannot consume the entire global budget.
+	perClusterHealthTimeout = 10 * time.Second
 	clusterCacheTTL           = 60 * time.Second
 	authFailureCacheTTL       = 10 * time.Minute // longer TTL for auth errors to avoid exec-plugin spam (#3158)
 	podIssueAgeThreshold      = 5 * time.Minute

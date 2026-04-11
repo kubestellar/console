@@ -69,14 +69,27 @@ func TestListServiceExports(t *testing.T) {
 	require.NotEmpty(t, list.Items)
 	assert.Equal(t, "my-svc", list.Items[0].Name)
 
-	// Case 2: Specific cluster failure — error swallowed, returns 200
+	// Case 2: Specific cluster failure — previously the low-level helper
+	// swallowed ALL errors and returned 200 with an empty list, which hid
+	// auth/network failures from the UI (#6510). Now only CRD-not-installed
+	// returns an empty list; real errors propagate so the handler surfaces
+	// them via handleK8sError.
 	dynClient.PrependReactor("list", "*", func(action k8stesting.Action) (bool, runtime.Object, error) {
 		return true, nil, errors.New("export list error")
 	})
 	req2, _ := http.NewRequest("GET", "/api/mcs/exports?cluster=test-cluster", nil)
 	resp2, err := env.App.Test(req2, 5000)
 	require.NoError(t, err)
-	assert.Equal(t, 200, resp2.StatusCode)
+	assert.NotEqual(t, 200, resp2.StatusCode, "arbitrary cluster errors must not be silently swallowed (#6510)")
+
+	// Case 3: CRD not installed — still returns 200 with empty list
+	dynClient.PrependReactor("list", "*", func(action k8stesting.Action) (bool, runtime.Object, error) {
+		return true, nil, errors.New("the server could not find the requested resource")
+	})
+	req3, _ := http.NewRequest("GET", "/api/mcs/exports?cluster=test-cluster", nil)
+	resp3, err := env.App.Test(req3, 5000)
+	require.NoError(t, err)
+	assert.Equal(t, 200, resp3.StatusCode, "CRD-not-installed should still yield an empty list")
 }
 
 func TestGetServiceExport(t *testing.T) {
@@ -110,9 +123,11 @@ func TestGetServiceExport(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 200, resp.StatusCode)
 
-	// Client Error → 404
+	// Client error — previously the helper swallowed errors so the handler
+	// hit its "not found" fallback (404). Now real errors propagate through
+	// handleK8sError (#6510). CRD-not-installed still produces a legit 404.
 	dynClient.PrependReactor("list", "*", func(action k8stesting.Action) (bool, runtime.Object, error) {
-		return true, nil, errors.New("fail")
+		return true, nil, errors.New("the server could not find the requested resource")
 	})
 	req2, _ := http.NewRequest("GET", "/api/mcs/exports/c1/default/target-svc", nil)
 	resp2, err := env.App.Test(req2, 5000)

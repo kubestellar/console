@@ -29,17 +29,32 @@ func classifyError(errMsg string) string {
 		return "timeout"
 	}
 
-	// Auth errors (includes exec-plugin / IAM failures)
+	// Config errors — exec-plugin (client-go credential helper) missing or
+	// misconfigured. Must be checked BEFORE the auth branch, otherwise
+	// messages like `exec: "aws-iam-authenticator": executable file not found
+	// in $PATH` get classified as auth failures and hit the 10-minute
+	// authFailureCacheTTL, hiding a config problem the user can actually fix
+	// (#6508). This is kubeconfig/env misconfiguration, not a credential issue.
+	if strings.Contains(lowerMsg, "executable file not found") ||
+		(strings.Contains(lowerMsg, "exec:") && strings.Contains(lowerMsg, "not found")) ||
+		strings.Contains(lowerMsg, "executable not found") {
+		return "config"
+	}
+
+	// Auth errors — narrowed to messages that clearly indicate an identity
+	// or credential problem. Previously this branch also matched generic
+	// "not found" substrings, which misclassified exec-plugin-missing errors
+	// as auth failures (#6508).
 	if strings.Contains(lowerMsg, "401") ||
 		strings.Contains(lowerMsg, "403") ||
 		strings.Contains(lowerMsg, "unauthorized") ||
 		strings.Contains(lowerMsg, "forbidden") ||
 		strings.Contains(lowerMsg, "authentication") ||
+		strings.Contains(lowerMsg, "credentials") ||
 		strings.Contains(lowerMsg, "invalid token") ||
 		strings.Contains(lowerMsg, "token expired") ||
 		strings.Contains(lowerMsg, "exec plugin") ||
-		strings.Contains(lowerMsg, "getting credentials") ||
-		(strings.Contains(lowerMsg, "executable") && strings.Contains(lowerMsg, "not found")) {
+		strings.Contains(lowerMsg, "getting credentials") {
 		return "auth"
 	}
 
@@ -347,31 +362,83 @@ func (m *MultiClusterClient) GetCachedHealth() map[string]*ClusterHealth {
 	return result
 }
 
-// GetAllClusterHealth returns health status for all clusters
+// GetAllClusterHealth returns health status for all clusters.
+//
+// A global deadline (totalHealthTimeout) bounds the whole call — one slow
+// cluster cannot hold the entire response. Each individual cluster probe
+// gets its own perClusterHealthTimeout sub-context. When the global deadline
+// fires, clusters that have not yet reported are marked with ErrorType
+// "timeout" and Healthy=false so the caller still gets an entry per cluster
+// instead of waiting indefinitely or silently dropping slow clusters (#6506).
 func (m *MultiClusterClient) GetAllClusterHealth(ctx context.Context) ([]ClusterHealth, error) {
 	clusters, err := m.ListClusters(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	var wg sync.WaitGroup
-	var mu sync.Mutex
-	results := make([]ClusterHealth, 0, len(clusters))
+	deadlineCtx, cancel := context.WithTimeout(ctx, totalHealthTimeout)
+	defer cancel()
 
-	for _, cluster := range clusters {
-		wg.Add(1)
-		go func(c ClusterInfo) {
-			defer wg.Done()
-			health, _ := m.GetClusterHealth(ctx, c.Name)
-			if health != nil {
-				mu.Lock()
-				results = append(results, *health)
-				mu.Unlock()
-			}
-		}(cluster)
+	type slot struct {
+		name   string
+		health *ClusterHealth
+		done   bool
+	}
+	slots := make([]slot, len(clusters))
+	for i, c := range clusters {
+		slots[i].name = c.Name
 	}
 
-	wg.Wait()
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	for i, cluster := range clusters {
+		wg.Add(1)
+		go func(idx int, c ClusterInfo) {
+			defer wg.Done()
+			perCtx, perCancel := context.WithTimeout(deadlineCtx, perClusterHealthTimeout)
+			defer perCancel()
+			health, _ := m.GetClusterHealth(perCtx, c.Name)
+			mu.Lock()
+			slots[idx].health = health
+			slots[idx].done = true
+			mu.Unlock()
+		}(i, cluster)
+	}
+
+	// Wait for either all goroutines to finish or the global deadline to fire.
+	waitCh := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(waitCh)
+	}()
+	select {
+	case <-waitCh:
+	case <-deadlineCtx.Done():
+		// Global deadline exceeded — give stragglers a brief grace window so
+		// the goroutine records its own result before we synthesize a timeout.
+	}
+
+	now := time.Now().Format(time.RFC3339)
+	results := make([]ClusterHealth, 0, len(slots))
+	mu.Lock()
+	for _, s := range slots {
+		if s.done && s.health != nil {
+			results = append(results, *s.health)
+			continue
+		}
+		// Not yet reported by the deadline — emit a synthetic timeout entry so
+		// the UI shows "timeout" instead of silently dropping the cluster.
+		results = append(results, ClusterHealth{
+			Cluster:      s.name,
+			Healthy:      false,
+			Reachable:    false,
+			ErrorType:    "timeout",
+			ErrorMessage: "cluster health probe exceeded global deadline",
+			Issues:       []string{"Cluster health probe exceeded global deadline"},
+			CheckedAt:    now,
+		})
+	}
+	mu.Unlock()
 	return results, nil
 }
 

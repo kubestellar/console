@@ -187,13 +187,15 @@ func TestCheckResourceHealth_Variants(t *testing.T) {
 		obj  map[string]interface{}
 		want ResourceHealthStatus
 	}{
-		// Deployment
+		// Deployment — healthy requires updatedReplicas == replicas so a
+		// mid-rollout (where old pods are still ready) is not reported
+		// Healthy (#6511).
 		{
 			kind: "Deployment",
 			obj: map[string]interface{}{
 				"spec": map[string]interface{}{"replicas": int64(3)},
 				"status": map[string]interface{}{
-					"readyReplicas": int64(3), "availableReplicas": int64(3),
+					"readyReplicas": int64(3), "availableReplicas": int64(3), "updatedReplicas": int64(3),
 				},
 			},
 			want: "healthy",

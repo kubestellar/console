@@ -1158,6 +1158,19 @@ func TestClassifyError(t *testing.T) {
 		{"certificate has expired", "certificate"},
 		{"something else", "unknown"},
 		{"", "unknown"},
+
+		// #6508 — exec-plugin missing must NOT be classified as auth, because
+		// auth errors get the 10-minute authFailureCacheTTL which hides a
+		// fixable config problem behind a stale "unreachable" entry.
+		{`exec: "aws-iam-authenticator": executable file not found in $PATH`, "config"},
+		{"exec plugin: executable not found", "config"},
+		{"executable file not found", "config"},
+		// Real auth errors still classify as auth
+		{"getting credentials: token request failed", "auth"},
+		{"credentials not provided", "auth"},
+		// Ensure a generic "not found" for a MISSING resource still hits the
+		// not_found branch (used for missing kubeconfig contexts, #4907)
+		{"context \"foo\" does not exist", "not_found"},
 	}
 
 	for _, tt := range tests {

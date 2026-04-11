@@ -126,12 +126,21 @@ func checkDeploymentHealth(obj *unstructured.Unstructured) (ResourceHealthStatus
 	replicas, _, _ := unstructured.NestedInt64(obj.Object, "spec", "replicas")
 	readyReplicas, _, _ := unstructured.NestedInt64(obj.Object, "status", "readyReplicas")
 	availableReplicas, _, _ := unstructured.NestedInt64(obj.Object, "status", "availableReplicas")
+	// updatedReplicas is the count of pods running the LATEST version of the spec.
+	// During a rolling update, old pods can still be ready+available while the
+	// new version hasn't rolled out yet — without this check we would report
+	// Healthy for a mid-rollout Deployment (#6511).
+	updatedReplicas, _, _ := unstructured.NestedInt64(obj.Object, "status", "updatedReplicas")
 
 	if replicas == 0 {
 		return HealthStatusHealthy, "Scaled to 0"
 	}
-	if readyReplicas == replicas && availableReplicas == replicas {
+	if readyReplicas == replicas && availableReplicas == replicas && updatedReplicas == replicas {
 		return HealthStatusHealthy, fmt.Sprintf("%d/%d ready", readyReplicas, replicas)
+	}
+	if updatedReplicas > 0 && updatedReplicas < replicas {
+		// Rolling update in progress — not yet Healthy even if all "ready".
+		return HealthStatusDegraded, fmt.Sprintf("%d/%d updated", updatedReplicas, replicas)
 	}
 	if readyReplicas > 0 {
 		return HealthStatusDegraded, fmt.Sprintf("%d/%d ready", readyReplicas, replicas)
