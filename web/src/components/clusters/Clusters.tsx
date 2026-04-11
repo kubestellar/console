@@ -185,16 +185,15 @@ export function Clusters() {
       body: JSON.stringify({ context: contextName }),
       signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
     if (!response.ok) {
-      const data = await response.json().catch(() => ({})) as { error?: string; message?: string }
-      // #6288: a 404 specifically means the agent process answered but
-      // doesn't expose `/kubeconfig/remove`. The route was added in
-      // #5658, so the user is running an older kc-agent binary than
-      // the frontend expects. Surface an actionable message rather
-      // than the generic "HTTP 404: Not Found". Same scope as the
-      // #6133 follow-up for the 401 case.
+      // #6293: check for the 404-means-stale-agent case BEFORE attempting
+      // to parse the body. An old kc-agent returns a plain-text Go
+      // default 404 ("404 page not found") which is not JSON — reading
+      // it first would be a wasted round-trip. Same reason #6288 added
+      // the status-specific branch in the first place.
       if (response.status === 404) {
         throw new Error(t('cluster.removeClusterAgentTooOld'))
       }
+      const data = await response.json().catch(() => ({})) as { error?: string; message?: string }
       // Always surface the HTTP status if the body has no structured error,
       // so the user sees "HTTP 401: Unauthorized" instead of the generic
       // fallback — this was the root cause of #6133 being unactionable.
