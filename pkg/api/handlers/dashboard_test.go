@@ -216,3 +216,32 @@ func TestImportDashboard_Success(t *testing.T) {
 	require.NoError(t, json.Unmarshal(respBody, &result))
 	assert.Equal(t, "Imported", result.Name)
 }
+
+// TestImportDashboard_ExceedsCardLimit verifies that an import payload
+// containing more than MaxCardsPerDashboard cards is rejected up-front with
+// a 400 instead of being partially imported (#6553).
+func TestImportDashboard_ExceedsCardLimit(t *testing.T) {
+	userID := uuid.New()
+	app, _, handler := setupDashboardTest(userID)
+	app.Post("/api/dashboards/import", handler.ImportDashboard)
+
+	var sb strings.Builder
+	sb.WriteString(`{"format":"kc-dashboard-v1","name":"TooBig","cards":[`)
+	// MaxCardsPerDashboard+1 minimal card entries
+	for i := 0; i < MaxCardsPerDashboard+1; i++ {
+		if i > 0 {
+			sb.WriteString(",")
+		}
+		sb.WriteString(`{"card_type":"note","position":{"x":0,"y":0,"w":1,"h":1}}`)
+	}
+	sb.WriteString(`]}`)
+
+	req, err := http.NewRequest("POST", "/api/dashboards/import", strings.NewReader(sb.String()))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req, fiberTestTimeout)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+

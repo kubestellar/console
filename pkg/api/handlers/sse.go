@@ -109,23 +109,25 @@ const sseCacheEvictInterval = 30 * time.Second
 // stream start/end) and reads (CancelUserSSEStreams on logout) are both
 // infrequent and always short; an RWMutex would add complexity for no gain.
 var (
-	sseSessionsMu  sync.Mutex
-	sseSessions    = make(map[uuid.UUID]map[int64]context.CancelFunc)
-	sseSessionSeq  int64 // monotonic id generator, guarded by sseSessionsMu
+	sseSessionsMu sync.Mutex
+	sseSessions   = make(map[uuid.UUID]map[uint64]context.CancelFunc)
+	// sseSessionSeq is a monotonic id generator guarded by sseSessionsMu.
+	// uint64 instead of int64 so we don't wrap to negative at MaxInt64.
+	sseSessionSeq uint64
 )
 
 // registerSSESession records cancel under userID and returns the assigned
 // session id. The session id is used by unregisterSSESession to remove the
 // specific entry when the stream ends normally, so the map does not grow
 // unbounded across many streams by the same user.
-func registerSSESession(userID uuid.UUID, cancel context.CancelFunc) int64 {
+func registerSSESession(userID uuid.UUID, cancel context.CancelFunc) uint64 {
 	sseSessionsMu.Lock()
 	defer sseSessionsMu.Unlock()
 	sseSessionSeq++
 	id := sseSessionSeq
 	sessions, ok := sseSessions[userID]
 	if !ok {
-		sessions = make(map[int64]context.CancelFunc)
+		sessions = make(map[uint64]context.CancelFunc)
 		sseSessions[userID] = sessions
 	}
 	sessions[id] = cancel
@@ -136,7 +138,7 @@ func registerSSESession(userID uuid.UUID, cancel context.CancelFunc) int64 {
 // handler's deferred cleanup on normal stream end so the registry stays
 // bounded by the number of concurrently live streams, not the total lifetime
 // count.
-func unregisterSSESession(userID uuid.UUID, id int64) {
+func unregisterSSESession(userID uuid.UUID, id uint64) {
 	sseSessionsMu.Lock()
 	defer sseSessionsMu.Unlock()
 	sessions, ok := sseSessions[userID]
@@ -212,18 +214,29 @@ func startSSECacheEvictor() {
 }
 
 func sseCacheGet(key string) interface{} {
-	sseCacheMu.Lock()
-	defer sseCacheMu.Unlock()
+	// Fast path: take a read lock for the common case (entry exists and is
+	// fresh). Previously this used an exclusive Lock which serialized every
+	// concurrent cache read.
+	sseCacheMu.RLock()
 	e, ok := sseCache[key]
 	if !ok {
+		sseCacheMu.RUnlock()
 		return nil
 	}
-	if time.Since(e.fetchedAt) >= sseCacheTTL {
-		// Delete expired entry on read to bound memory between eviction sweeps.
+	if time.Since(e.fetchedAt) < sseCacheTTL {
+		data := e.data
+		sseCacheMu.RUnlock()
+		return data
+	}
+	// Expired — upgrade to a write lock to delete. The background evictor
+	// also prunes expired entries, so losing the race here is harmless.
+	sseCacheMu.RUnlock()
+	sseCacheMu.Lock()
+	if e2, ok := sseCache[key]; ok && time.Since(e2.fetchedAt) >= sseCacheTTL {
 		delete(sseCache, key)
-		return nil
 	}
-	return e.data
+	sseCacheMu.Unlock()
+	return nil
 }
 
 func sseCacheSet(key string, data interface{}) {

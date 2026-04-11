@@ -351,8 +351,12 @@ func (h *AuthHandler) devModeLogin(c *fiber.Ctx) error {
 		}
 	}
 
-	// Update last login
-	h.store.UpdateLastLogin(user.ID)
+	// Update last login. Failures here are non-fatal — login should succeed
+	// even if the last-login timestamp can't be written.
+	if err := h.store.UpdateLastLogin(user.ID); err != nil {
+		slog.Warn("[Auth] failed to update last-login timestamp (devMode)",
+			"user", user.ID, "error", err)
+	}
 
 	// Generate JWT
 	jwtToken, err := h.generateJWT(user)
@@ -481,8 +485,10 @@ func (h *AuthHandler) GitHubCallback(c *fiber.Ctx) error {
 		return h.oauthErrorRedirect(c, "csrf_validation_failed", "")
 	}
 
-	// Exchange code for token — use a context with timeout for resilience
-	ctx, cancel := context.WithTimeout(context.Background(), githubHTTPTimeout)
+	// Exchange code for token — use a context with timeout derived from the
+	// request context so that a client disconnect cancels the in-flight
+	// OAuth exchange instead of leaking the goroutine until timeout.
+	ctx, cancel := context.WithTimeout(c.UserContext(), githubHTTPTimeout)
 	defer cancel()
 	token, err := h.oauthConfig.Exchange(ctx, code)
 	if err != nil {
@@ -530,8 +536,12 @@ func (h *AuthHandler) GitHubCallback(c *fiber.Ctx) error {
 		}
 	}
 
-	// Update last login
-	h.store.UpdateLastLogin(user.ID)
+	// Update last login. Failures here are non-fatal — login should succeed
+	// even if the last-login timestamp can't be persisted.
+	if err := h.store.UpdateLastLogin(user.ID); err != nil {
+		slog.Warn("[Auth] failed to update last-login timestamp (oauth)",
+			"user", user.ID, "error", err)
+	}
 
 	// Generate JWT
 	jwtToken, err := h.generateJWT(user)

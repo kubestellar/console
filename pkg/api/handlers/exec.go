@@ -42,22 +42,24 @@ const execMaxStdinBytes = 1 * 1024 * 1024 // 1 MB
 // infrequent and always short; an RWMutex would add complexity for no gain.
 var (
 	execSessionsMu sync.Mutex
-	execSessions   = make(map[uuid.UUID]map[int64]context.CancelFunc)
-	execSessionSeq int64 // monotonic id generator, guarded by execSessionsMu
+	execSessions = make(map[uuid.UUID]map[uint64]context.CancelFunc)
+	// execSessionSeq is a monotonic id generator guarded by execSessionsMu.
+	// uint64 so we don't wrap to negative at MaxInt64.
+	execSessionSeq uint64
 )
 
 // registerExecSession records cancel under userID and returns the assigned
 // session id. The session id is used by unregisterExecSession to remove the
 // specific entry when the session ends normally, so the map does not grow
 // unbounded across many sessions by the same user.
-func registerExecSession(userID uuid.UUID, cancel context.CancelFunc) int64 {
+func registerExecSession(userID uuid.UUID, cancel context.CancelFunc) uint64 {
 	execSessionsMu.Lock()
 	defer execSessionsMu.Unlock()
 	execSessionSeq++
 	id := execSessionSeq
 	sessions, ok := execSessions[userID]
 	if !ok {
-		sessions = make(map[int64]context.CancelFunc)
+		sessions = make(map[uint64]context.CancelFunc)
 		execSessions[userID] = sessions
 	}
 	sessions[id] = cancel
@@ -68,7 +70,7 @@ func registerExecSession(userID uuid.UUID, cancel context.CancelFunc) int64 {
 // handler's deferred cleanup on normal session end so the registry stays
 // bounded by the number of concurrently live exec sessions, not the total
 // lifetime count.
-func unregisterExecSession(userID uuid.UUID, id int64) {
+func unregisterExecSession(userID uuid.UUID, id uint64) {
 	execSessionsMu.Lock()
 	defer execSessionsMu.Unlock()
 	sessions, ok := execSessions[userID]
@@ -283,7 +285,7 @@ func (h *ExecHandlers) HandleExec(c *websocket.Conn) {
 	execCtx, execCancel := context.WithCancel(context.Background())
 	defer execCancel()
 
-	var execRegistrationID int64
+	var execRegistrationID uint64
 	if claims.UserID != uuid.Nil {
 		execRegistrationID = registerExecSession(claims.UserID, execCancel)
 		defer unregisterExecSession(claims.UserID, execRegistrationID)
@@ -378,7 +380,12 @@ func (h *ExecHandlers) HandleExec(c *websocket.Conn) {
 	}
 
 	// Send exec_started acknowledgment
-	startMsg, _ := json.Marshal(execMessage{Type: "exec_started"})
+	startMsg, mErr := json.Marshal(execMessage{Type: "exec_started"})
+	if mErr != nil {
+		slog.Error("[Exec] failed to marshal exec_started message", "error", mErr)
+		writeError(c, "internal error: failed to encode exec_started")
+		return
+	}
 	writeMu := &sync.Mutex{}
 	writeMu.Lock()
 	_ = c.WriteMessage(websocket.TextMessage, startMsg)
@@ -463,7 +470,11 @@ func (h *ExecHandlers) HandleExec(c *websocket.Conn) {
 		slog.Error("[Exec] stream ended with error", "error", execErr)
 	}
 
-	exitMsg, _ := json.Marshal(execMessage{Type: "exit", ExitCode: exitCode})
+	exitMsg, mErr := json.Marshal(execMessage{Type: "exit", ExitCode: exitCode})
+	if mErr != nil {
+		slog.Error("[Exec] failed to marshal exit message", "error", mErr, "exit_code", exitCode)
+		return
+	}
 	writeMu.Lock()
 	_ = c.WriteMessage(websocket.TextMessage, exitMsg)
 	writeMu.Unlock()

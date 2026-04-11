@@ -255,23 +255,37 @@ func TestGetHistory_ReturnsOK(t *testing.T) {
 // limit-reached, type-validation, and config-update paths without a real DB.
 type cardMutationStore struct {
 	*test.MockStore
-	dashboard    *models.Dashboard
-	card         *models.Card
-	createErr    error
-	createCalled bool
-	lastCreate   *models.Card
-	lastMaxCards int
-	updateErr    error
-	updateCalled bool
-	lastUpdate   *models.Card
+	dashboard      *models.Dashboard
+	dashboardByID  map[uuid.UUID]*models.Dashboard
+	dashboardCards map[uuid.UUID][]models.Card
+	card           *models.Card
+	createErr      error
+	createCalled   bool
+	lastCreate     *models.Card
+	lastMaxCards   int
+	updateErr      error
+	updateCalled   bool
+	lastUpdate     *models.Card
 }
 
 func (s *cardMutationStore) GetDashboard(id uuid.UUID) (*models.Dashboard, error) {
+	if s.dashboardByID != nil {
+		if d, ok := s.dashboardByID[id]; ok {
+			return d, nil
+		}
+	}
 	return s.dashboard, nil
 }
 
 func (s *cardMutationStore) GetCard(id uuid.UUID) (*models.Card, error) {
 	return s.card, nil
+}
+
+func (s *cardMutationStore) GetDashboardCards(dashboardID uuid.UUID) ([]models.Card, error) {
+	if s.dashboardCards != nil {
+		return s.dashboardCards[dashboardID], nil
+	}
+	return nil, nil
 }
 
 func (s *cardMutationStore) CreateCardWithLimit(card *models.Card, maxCards int) error {
@@ -327,7 +341,67 @@ func newCardMutationApp(
 	app.Post("/api/dashboards/:id/cards", handler.CreateCard)
 	app.Put("/api/cards/:id", handler.UpdateCard)
 	app.Delete("/api/cards/:id", handler.DeleteCard)
+	app.Post("/api/cards/:id/move", handler.MoveCard)
 	return app, wrapper, userID
+}
+
+// TestMoveCard_RejectsWhenTargetAtLimit verifies MoveCard refuses to push a
+// card into a dashboard that is already at MaxCardsPerDashboard (#6569).
+func TestMoveCard_RejectsWhenTargetAtLimit(t *testing.T) {
+	sourceDashID := uuid.New()
+	targetDashID := uuid.New()
+	cardID := uuid.New()
+
+	userID := uuid.New()
+	mockStore := new(test.MockStore)
+	mockStore.On("GetUser", userID).Return(&models.User{
+		ID:   userID,
+		Role: models.UserRoleAdmin,
+	}, nil).Maybe()
+
+	// Build a target dashboard already filled to MaxCardsPerDashboard.
+	fullCards := make([]models.Card, MaxCardsPerDashboard)
+	for i := range fullCards {
+		fullCards[i] = models.Card{ID: uuid.New(), DashboardID: targetDashID}
+	}
+
+	wrapper := &cardMutationStore{
+		MockStore: mockStore,
+		dashboardByID: map[uuid.UUID]*models.Dashboard{
+			sourceDashID: {ID: sourceDashID, UserID: userID},
+			targetDashID: {ID: targetDashID, UserID: userID},
+		},
+		dashboardCards: map[uuid.UUID][]models.Card{
+			targetDashID: fullCards,
+		},
+		card: &models.Card{
+			ID:          cardID,
+			DashboardID: sourceDashID,
+			CardType:    models.CardTypeClusterHealth,
+		},
+	}
+
+	hub := NewHub()
+	go hub.Run()
+	t.Cleanup(func() { hub.Close() })
+
+	handler := NewCardHandler(wrapper, hub)
+	app := fiber.New()
+	app.Use(func(c *fiber.Ctx) error {
+		c.Locals("userID", userID)
+		return c.Next()
+	})
+	app.Post("/api/cards/:id/move", handler.MoveCard)
+
+	body := `{"target_dashboard_id":"` + targetDashID.String() + `"}`
+	req, err := http.NewRequest("POST", "/api/cards/"+cardID.String()+"/move", strings.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req, fiberTestTimeout)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	assert.False(t, wrapper.updateCalled, "store must not be updated when target is at limit")
 }
 
 // --- Viewer denial ---

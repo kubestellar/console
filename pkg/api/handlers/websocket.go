@@ -344,10 +344,15 @@ func (h *Hub) HandleConnection(conn *websocket.Conn) {
 		authenticated = true
 		slog.Info("[WebSocket] authenticated connection", "user", claims.GitHubLogin)
 	} else {
-		// No JWT secret configured - accept connection anyway for dev compatibility
-		userID = uuid.Nil
-		authenticated = true
-		slog.Warn("WARNING: WebSocket connection without JWT validation (JWT secret not configured)")
+		// SECURITY: Fail closed when no JWT secret is configured.
+		// Previously this accepted any connection, which silently disabled
+		// authentication in production if JWT_SECRET was unset.
+		slog.Error("SECURITY: WebSocket connection rejected — JWT secret not configured")
+		if wErr := conn.WriteJSON(Message{Type: "error", Data: map[string]string{"message": "server misconfigured: JWT secret not set"}}); wErr != nil {
+			slog.Error("[WebSocket] failed to send misconfig error", "error", wErr)
+		}
+		conn.Close()
+		return
 	}
 
 	if !authenticated {

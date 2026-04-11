@@ -2,6 +2,9 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -46,6 +49,10 @@ func (h *DashboardHandler) ListDashboards(c *fiber.Ctx) error {
 	dashboards, err := h.store.GetUserDashboards(userID)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to list dashboards")
+	}
+	// Never marshal a Go nil slice as JSON null; clients expect [].
+	if dashboards == nil {
+		dashboards = []models.Dashboard{}
 	}
 	return c.JSON(dashboards)
 }
@@ -138,6 +145,9 @@ func (h *DashboardHandler) UpdateDashboard(c *fiber.Ctx) error {
 	}
 
 	if input.Name != nil {
+		if strings.TrimSpace(*input.Name) == "" {
+			return fiber.NewError(fiber.StatusBadRequest, "Dashboard name cannot be empty")
+		}
 		dashboard.Name = *input.Name
 	}
 	if input.IsDefault != nil {
@@ -237,6 +247,16 @@ func (h *DashboardHandler) ImportDashboard(c *fiber.Ctx) error {
 		input.Name = "Imported Dashboard"
 	}
 
+	// Enforce the per-dashboard card limit BEFORE creating anything.
+	// This avoids a partial import that exceeds MaxCardsPerDashboard and
+	// avoids the need to rollback a large number of card rows.
+	if len(input.Cards) > MaxCardsPerDashboard {
+		return fiber.NewError(
+			fiber.StatusBadRequest,
+			fmt.Sprintf("Import payload contains %d cards, exceeds per-dashboard limit of %d", len(input.Cards), MaxCardsPerDashboard),
+		)
+	}
+
 	dashboard := &models.Dashboard{
 		UserID: userID,
 		Name:   input.Name,
@@ -253,9 +273,14 @@ func (h *DashboardHandler) ImportDashboard(c *fiber.Ctx) error {
 			Config:      ce.Config,
 			Position:    ce.Position,
 		}
-		if err := h.store.CreateCard(card); err != nil {
+		// Use CreateCardWithLimit to keep the invariant consistent with the
+		// regular AddCard path (closes TOCTOU against concurrent creates).
+		if err := h.store.CreateCardWithLimit(card, MaxCardsPerDashboard); err != nil {
 			// Rollback: delete the partially-created dashboard and any cards
 			_ = h.store.DeleteDashboard(dashboard.ID)
+			if errors.Is(err, store.ErrDashboardCardLimitReached) {
+				return fiber.NewError(fiber.StatusRequestEntityTooLarge, "Card limit reached during import")
+			}
 			return fiber.NewError(fiber.StatusInternalServerError, "Failed to create card")
 		}
 	}

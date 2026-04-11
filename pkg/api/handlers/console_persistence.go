@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"strings"
 	"time"
@@ -56,7 +57,15 @@ func (h *ConsolePersistenceHandlers) requireAdmin(c *fiber.Ctx) error {
 	}
 	currentUserID := middleware.GetUserID(c)
 	currentUser, err := h.userStore.GetUser(currentUserID)
-	if err != nil || currentUser == nil || currentUser.Role != "admin" {
+	if err != nil {
+		// Infrastructure failure — don't silently downgrade to a 403 which
+		// would mask a persistent DB outage and make this look like an
+		// authorization issue.
+		slog.Error("[ConsolePersistence] requireAdmin: failed to load user",
+			"user", currentUserID, "error", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "Failed to verify admin role")
+	}
+	if currentUser == nil || currentUser.Role != "admin" {
 		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
 	}
 	return nil
@@ -85,7 +94,10 @@ func (h *ConsolePersistenceHandlers) checkClusterHealth(ctx context.Context, clu
 	return store.ClusterHealthUnknown
 }
 
-// getClusterClient returns a dynamic client for a cluster
+// getClusterClient returns a dynamic client and rest config for a cluster.
+// Previously the second return value was always nil, which would panic any
+// caller that dereferenced it. Return the real *rest.Config so the contract
+// matches the factory signature.
 func (h *ConsolePersistenceHandlers) getClusterClient(clusterName string) (dynamic.Interface, *rest.Config, error) {
 	if h.k8sClient == nil {
 		return nil, nil, fiber.NewError(503, "Kubernetes client not available")
@@ -96,7 +108,12 @@ func (h *ConsolePersistenceHandlers) getClusterClient(clusterName string) (dynam
 		return nil, nil, err
 	}
 
-	return client, nil, nil
+	cfg, err := h.k8sClient.GetRestConfig(clusterName)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get rest config for cluster %q: %w", clusterName, err)
+	}
+
+	return client, cfg, nil
 }
 
 // StartWatcher starts the console resource watcher if persistence is enabled
@@ -241,6 +258,12 @@ func (h *ConsolePersistenceHandlers) GetManagedWorkload(c *fiber.Ctx) error {
 	if err != nil {
 		slog.Error("[ConsolePersistence] internal error", "error", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
+	}
+	// A nil workload with nil error means the resource wasn't found.
+	// Return 404 instead of a 200 + JSON null so clients can distinguish
+	// "no such workload" from "empty payload".
+	if workload == nil {
+		return c.Status(404).JSON(fiber.Map{"error": "managed workload not found"})
 	}
 
 	return c.JSON(workload)
@@ -392,6 +415,10 @@ func (h *ConsolePersistenceHandlers) GetClusterGroup(c *fiber.Ctx) error {
 		slog.Error("[ConsolePersistence] internal error", "error", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
+	// A nil group with nil error means the resource wasn't found.
+	if group == nil {
+		return c.Status(404).JSON(fiber.Map{"error": "cluster group not found"})
+	}
 
 	return c.JSON(group)
 }
@@ -428,7 +455,7 @@ func (h *ConsolePersistenceHandlers) CreateClusterGroup(c *fiber.Ctx) error {
 	group.CreationTimestamp = metav1.Now()
 
 	// Evaluate matched clusters
-	group.Status.MatchedClusters = h.evaluateClusterGroup(&group)
+	group.Status.MatchedClusters = h.evaluateClusterGroup(c.Context(), &group)
 	group.Status.MatchedClusterCount = len(group.Status.MatchedClusters)
 	now := metav1.Now()
 	group.Status.LastEvaluated = &now
@@ -470,7 +497,7 @@ func (h *ConsolePersistenceHandlers) UpdateClusterGroup(c *fiber.Ctx) error {
 	group.Namespace = namespace
 
 	// Re-evaluate matched clusters
-	group.Status.MatchedClusters = h.evaluateClusterGroup(&group)
+	group.Status.MatchedClusters = h.evaluateClusterGroup(c.Context(), &group)
 	group.Status.MatchedClusterCount = len(group.Status.MatchedClusters)
 	now := metav1.Now()
 	group.Status.LastEvaluated = &now
@@ -510,8 +537,11 @@ func (h *ConsolePersistenceHandlers) DeleteClusterGroup(c *fiber.Ctx) error {
 	return c.SendStatus(204)
 }
 
-// evaluateClusterGroup evaluates which clusters match a group's criteria
-func (h *ConsolePersistenceHandlers) evaluateClusterGroup(group *v1alpha1.ClusterGroup) []string {
+// evaluateClusterGroup evaluates which clusters match a group's criteria.
+// The context should be the inbound request context so that k8s calls are
+// cancelled when the client disconnects (previously used context.Background,
+// which leaked goroutines on cancellation).
+func (h *ConsolePersistenceHandlers) evaluateClusterGroup(ctx context.Context, group *v1alpha1.ClusterGroup) []string {
 	matched := make(map[string]bool)
 
 	// Add static members
@@ -521,7 +551,7 @@ func (h *ConsolePersistenceHandlers) evaluateClusterGroup(group *v1alpha1.Cluste
 
 	// Apply dynamic filters
 	if h.k8sClient != nil && len(group.Spec.DynamicFilters) > 0 {
-		clusters, err := h.k8sClient.ListClusters(context.Background())
+		clusters, err := h.k8sClient.ListClusters(ctx)
 		if err == nil {
 			// Get cached health data (no extra network calls).
 			// GetCachedHealth always returns a non-nil map; individual entries
@@ -532,7 +562,7 @@ func (h *ConsolePersistenceHandlers) evaluateClusterGroup(group *v1alpha1.Cluste
 			nodesByCluster := make(map[string][]k8s.NodeInfo)
 			if clusterFilterNeedsNodes(group.Spec.DynamicFilters) {
 				for _, cluster := range clusters {
-					nodes, nodeErr := h.k8sClient.GetNodes(context.Background(), cluster.Name)
+					nodes, nodeErr := h.k8sClient.GetNodes(ctx, cluster.Name)
 					if nodeErr == nil {
 						nodesByCluster[cluster.Name] = nodes
 					}

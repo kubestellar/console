@@ -31,6 +31,23 @@ import (
 // githubAPITimeout is the timeout for HTTP requests to the GitHub API.
 const githubAPITimeout = 10 * time.Second
 
+// resolveGitHubAPIBase returns the API base URL, honoring GITHUB_URL for GHE.
+// Returned value has no trailing slash. For public github.com, returns
+// "https://api.github.com". For GHE (e.g. GITHUB_URL=https://github.example.com),
+// returns "https://github.example.com/api/v3" per GHE conventions.
+func resolveGitHubAPIBase() string {
+	raw := strings.TrimSpace(os.Getenv("GITHUB_URL"))
+	if raw == "" {
+		return githubAPIBase
+	}
+	raw = strings.TrimRight(raw, "/")
+	// If the user already set GITHUB_URL to api.github.com, return as-is.
+	if strings.Contains(raw, "api.github.com") {
+		return raw
+	}
+	return raw + "/api/v3"
+}
+
 // screenshotUploadTimeout is a longer timeout for uploading base64 screenshots
 // to GitHub via the Contents API, which can be slow for large images.
 const screenshotUploadTimeout = 60 * time.Second
@@ -160,13 +177,24 @@ func (h *FeedbackHandler) CreateFeatureRequest(c *fiber.Ctx) error {
 	issueNumber, _, ssResult, err := h.createGitHubIssueInRepo(request, user, h.repoOwner, targetRepoName, input.Screenshots)
 	if err != nil {
 		slog.Error("[Feedback] failed to create GitHub issue", "error", err)
-		// Clean up the orphaned database record
-		h.store.CloseFeatureRequest(request.ID, false)
+		// Clean up the orphaned database record. Log but don't fail the
+		// outer error path on cleanup failure — the upstream GitHub error
+		// is the useful signal to return.
+		if cErr := h.store.CloseFeatureRequest(request.ID, false); cErr != nil {
+			slog.Warn("[Feedback] failed to close orphaned feature request",
+				"request_id", request.ID, "error", cErr)
+		}
 		return fiber.NewError(fiber.StatusBadGateway, fmt.Sprintf("Failed to create GitHub issue: %v", err))
 	}
 	request.GitHubIssueNumber = &issueNumber
 	request.Status = models.RequestStatusOpen
-	h.store.UpdateFeatureRequest(request)
+	// UpdateFeatureRequest writes user-visible state (issue number, status).
+	// A failure here means the client will see stale data — return 500.
+	if err := h.store.UpdateFeatureRequest(request); err != nil {
+		slog.Error("[Feedback] failed to persist GitHub issue number",
+			"request_id", request.ID, "issue", issueNumber, "error", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "Failed to persist feature request state")
+	}
 
 	// Create notification for the user
 	notifTitle := "Request Submitted"
@@ -183,7 +211,10 @@ func (h *FeedbackHandler) CreateFeatureRequest(c *fiber.Ctx) error {
 		Message:          fmt.Sprintf("Your %s request '%s' has been submitted.", request.RequestType, request.Title),
 		ActionURL:        actionURL,
 	}
-	h.store.CreateNotification(notification)
+	if err := h.store.CreateNotification(notification); err != nil {
+		slog.Warn("[Feedback] failed to create issue notification",
+			"user", userID, "request_id", request.ID, "error", err)
+	}
 
 	// Return the request with screenshot upload status so the frontend can
 	// display an accurate message instead of always claiming success.
@@ -444,12 +475,16 @@ func (h *FeedbackHandler) CheckPreviewStatus(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"status": "unavailable", "message": "GitHub not configured"})
 	}
 
-	client := &http.Client{Timeout: githubAPITimeout}
+	// Reuse the shared package-level client (connection pooling, keep-alive).
+	// Previously a new client was created per request which defeated pooling.
+	client := h.httpClient
 
-	// Query GitHub Deployments API for the Netlify deploy preview environment
+	// Query GitHub Deployments API for the Netlify deploy preview environment.
+	// Honor GITHUB_URL for GitHub Enterprise deployments.
 	envName := fmt.Sprintf("deploy-preview-%d", prNumber)
-	deploymentsURL := fmt.Sprintf("https://api.github.com/repos/%s/%s/deployments?environment=%s&per_page=1",
-		h.repoOwner, h.repoName, envName)
+	apiBase := resolveGitHubAPIBase()
+	deploymentsURL := fmt.Sprintf("%s/repos/%s/%s/deployments?environment=%s&per_page=1",
+		apiBase, h.repoOwner, h.repoName, envName)
 
 	req, err := http.NewRequest("GET", deploymentsURL, nil)
 	if err != nil {
@@ -480,8 +515,8 @@ func (h *FeedbackHandler) CheckPreviewStatus(c *fiber.Ctx) error {
 	}
 
 	// Fetch the latest status for this deployment
-	statusesURL := fmt.Sprintf("https://api.github.com/repos/%s/%s/deployments/%d/statuses?per_page=1",
-		h.repoOwner, h.repoName, deployments[0].ID)
+	statusesURL := fmt.Sprintf("%s/repos/%s/%s/deployments/%d/statuses?per_page=1",
+		apiBase, h.repoOwner, h.repoName, deployments[0].ID)
 
 	req2, err := http.NewRequest("GET", statusesURL, nil)
 	if err != nil {
