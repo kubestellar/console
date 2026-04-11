@@ -102,7 +102,12 @@ export const jobStatusConfig: UnifiedCardConfig = {
   },
 
   // Metadata
-  isDemoData: true,
+  // #6689 — Was `true`, which pinned the card to demo rendering even when
+  // useJobs returned real data, causing a Demo badge + yellow outline
+  // on live data. Match daemonset-status / replicaset-status / hpa-status
+  // (which use `false`). The hook's own isDemoData signal (when present)
+  // still drives the Demo badge on fallback.
+  isDemoData: false,
   isLive: true,
 }
 
