@@ -101,6 +101,17 @@ export function buildInstallPromptForProject(
  * projects appear within one frame of the stream pausing.
  */
 const STREAM_JSON_DEBOUNCE_MS = 250
+/**
+ * #6723 — Hard input-length guard for `extractBalancedBlocks`.
+ * The balanced-brace scanner is O(n) in the best case but worst-case O(n²)
+ * when the input contains many unclosed openers (each scan walks to the
+ * end of input before giving up). A 10 MB garbage payload freezes the
+ * main thread for seconds-to-minutes. We refuse to scan inputs larger
+ * than this threshold and log a warning instead. 200 KB is large enough
+ * to accommodate realistic streamed JSON blocks (Phase 1 payloads are
+ * rarely over 50 KB) but small enough that the scan completes in < 16 ms.
+ */
+const MAX_BALANCED_BLOCKS_INPUT = 200_000
 /** #6468 — localStorage persist debounce window (ms). Coalesces bursts of
  * state changes before calling persistState(), which writes to localStorage
  * (see STORAGE_KEY usage below). Earlier revision of this comment said
@@ -239,6 +250,19 @@ export function extractJSON<T>(text: string, requiredKey?: string): T | null {
  * `{ "a": { "b": 1 } }` is returned as one block, not two.
  */
 function extractBalancedBlocks(text: string): string[] {
+  // #6723 — Refuse pathological inputs. The scanner is worst-case O(n²)
+  // on inputs with many unclosed openers, which freezes the main thread
+  // on 10 MB garbage payloads. Return early with a console warning so
+  // upstream callers fall back to their regex path or fenced-block path.
+  if (text.length > MAX_BALANCED_BLOCKS_INPUT) {
+    console.warn(
+      `[useMissionControl] extractBalancedBlocks: input too large ` +
+      `(${text.length} chars > ${MAX_BALANCED_BLOCKS_INPUT}), skipping scan ` +
+      `to avoid main-thread block (#6723).`
+    )
+    return []
+  }
+
   const results: string[] = []
   const openers = new Set(['{', '['])
   const closerFor: Record<string, string> = { '{': '}', '[': ']' }
