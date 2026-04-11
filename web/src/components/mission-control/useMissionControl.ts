@@ -1290,9 +1290,16 @@ export function mergeProjects(
   for (const p of incoming) {
     const prev = existingMap.get(p.name)
     if (prev) {
-      // User wins: keep existing entry (and its userAdded/originalName/
-      // priority customizations) rather than overwriting with AI's version.
-      result.push(prev)
+      // #6507(A) — Only preserve existing entry verbatim when it's user-added
+      // (manual add / swap / library pick). For AI-suggested entries, accept
+      // the incoming AI version so the AI can refine its own prior suggestions
+      // (e.g. priority / category / notes updates) on re-ask.
+      const isUserAdded = prev.userAdded === true || prev.category === 'Custom'
+      if (isUserAdded) {
+        result.push(prev)
+      } else {
+        result.push(p)
+      }
     } else {
       result.push(p)
     }

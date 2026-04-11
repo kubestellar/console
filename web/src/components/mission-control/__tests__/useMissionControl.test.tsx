@@ -172,7 +172,7 @@ describe('mergeProjects — user-added preservation (#6465)', () => {
     const merged = mergeProjects(existing, incoming)
     const names = merged.map((p) => p.name).sort()
 
-    // All 3 user-added survive (falco + opa), plus helm (echoed) and
+    // Both user-added projects survive (falco + opa), plus helm (echoed) and
     // argo (new AI suggestion) = 4 total.
     expect(names).toEqual(['argo', 'falco', 'helm', 'opa'])
   })

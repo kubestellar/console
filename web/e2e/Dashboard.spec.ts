@@ -256,6 +256,14 @@ test.describe('Dashboard Page', () => {
     const EXPECTED_CLUSTER_COUNT = 3
 
     test.beforeEach(async ({ page }) => {
+      // #6507(C) — The outer `Dashboard Page` describe's beforeEach
+      // (setupDashboardTest) already registered handlers for **/api/me and
+      // **/api/mcp/**. Unroute them here so our deterministic payload is the
+      // ONLY source of data for these Data Accuracy tests — otherwise the
+      // outer mock with 2 clusters could race with our EXPECTED_CLUSTER_COUNT.
+      await page.unroute('**/api/me')
+      await page.unroute('**/api/mcp/**')
+
       // Mock authentication
       await page.route('**/api/me', (route) =>
         route.fulfill({
@@ -370,16 +378,36 @@ test.describe('Dashboard Page', () => {
 
       const hasCountEl = await countEl.isVisible().catch(() => false)
       if (hasCountEl) {
-        await expect(countEl).toContainText(String(EXPECTED_CLUSTER_COUNT))
+        // #6507(D) — assert the exact text on the count element, not
+        // toContainText. Prevents false positives like "30" matching "3".
+        await expect(countEl).toHaveText(
+          new RegExp(`^\\s*${EXPECTED_CLUSTER_COUNT}\\s*$`)
+        )
       } else {
-        // Fallback: assert that the exact expected count appears somewhere
-        // on the dashboard page alongside the word "cluster". This still
-        // fails vacuously only if BOTH the count and the word are absent
-        // — in which case the dashboard isn't reporting clusters at all,
-        // which is itself a regression worth catching.
-        const pageText = await page.textContent('body')
-        expect(pageText).toContain(String(EXPECTED_CLUSTER_COUNT))
-        expect((pageText || '').toLowerCase()).toContain('cluster')
+        // #6507(D) — Structural fallback. Previously this matched freeform
+        // body text, which is vacuously true for phrases like
+        // "3 nodes in 3 clusters" even when the cluster count is wrong.
+        // Instead, locate an element whose aria-label / data-testid / text
+        // is explicitly about cluster count, and assert its exact text.
+        const countByLabel = page
+          .getByRole('status')
+          .filter({ hasText: /cluster/i })
+          .first()
+        const labelVisible = await countByLabel.isVisible().catch(() => false)
+        if (labelVisible) {
+          await expect(countByLabel).toContainText(
+            String(EXPECTED_CLUSTER_COUNT)
+          )
+        } else {
+          // Last-resort: no element identifies itself as a cluster count.
+          // That's a regression — the dashboard isn't reporting clusters at
+          // all. Fail explicitly with a descriptive message.
+          throw new Error(
+            'Dashboard did not expose a cluster-count element (no ' +
+              '[data-testid*="cluster-count"], [data-testid*="total-clusters"], ' +
+              'or role=status with "cluster" text).'
+          )
+        }
       }
     })
 
