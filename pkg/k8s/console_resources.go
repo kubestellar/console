@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -260,12 +261,22 @@ func (c *consolePersistenceImpl) DeleteWorkloadDeployment(ctx context.Context, n
 // Helper functions
 // =============================================================================
 
-// EnsureNamespace ensures the console namespace exists
+// EnsureNamespace ensures the console namespace exists.
+//
+// issue 6473 — Previously this treated ANY error from Get as "namespace is
+// missing, create it". That masked real errors (RBAC 403, API server
+// unreachable, timeout, etc.) and made them look like successful creations
+// that then failed with different errors downstream. We now distinguish
+// apierrors.IsNotFound from other errors: only NotFound leads to a Create
+// attempt; everything else is returned to the caller with context.
 func (c *consolePersistenceImpl) EnsureNamespace(ctx context.Context, namespace string) error {
 	nsGVR := schema.GroupVersionResource{Group: "", Version: "v1", Resource: "namespaces"}
 	_, err := c.client.Resource(nsGVR).Get(ctx, namespace, metav1.GetOptions{})
 	if err == nil {
 		return nil // Namespace exists
+	}
+	if !apierrors.IsNotFound(err) {
+		return fmt.Errorf("failed to check namespace %q: %w", namespace, err)
 	}
 
 	// Create the namespace
@@ -281,6 +292,13 @@ func (c *consolePersistenceImpl) EnsureNamespace(ctx context.Context, namespace 
 			},
 		},
 	}
-	_, err = c.client.Resource(nsGVR).Create(ctx, ns, metav1.CreateOptions{})
-	return err
+	if _, err := c.client.Resource(nsGVR).Create(ctx, ns, metav1.CreateOptions{}); err != nil {
+		// Another actor may have created the namespace between our Get and
+		// Create — treat AlreadyExists as success.
+		if apierrors.IsAlreadyExists(err) {
+			return nil
+		}
+		return fmt.Errorf("failed to create namespace %q: %w", namespace, err)
+	}
+	return nil
 }

@@ -101,6 +101,8 @@ export function buildInstallPromptForProject(
  * projects appear within one frame of the stream pausing.
  */
 const STREAM_JSON_DEBOUNCE_MS = 250
+/** #6468 — sessionStorage persist debounce window (ms). Coalesces bursts of state changes. */
+const PERSIST_STATE_DEBOUNCE_MS = 300
 
 // ---------------------------------------------------------------------------
 // Persisted state (survives page reload / accidental close)
@@ -329,10 +331,15 @@ export function useMissionControl() {
     userMutationGenerationRef.current += 1
   }
 
-  // Persist on change (debounced via effect)
+  // issue 6468 — Persist on change, debounced.
+  // Previously this fired on EVERY state change, which during AI streaming
+  // or rapid slider drags caused dozens of sessionStorage writes per second.
+  // Debouncing by 300ms coalesces bursts into a single write while still
+  // surviving accidental tab close within a half second of the last edit.
+  const debouncedState = useDebouncedValue(state, PERSIST_STATE_DEBOUNCE_MS)
   useEffect(() => {
-    persistState(state)
-  }, [state])
+    persistState(debouncedState)
+  }, [debouncedState])
 
   // #6403 — Reconcile persisted cluster references against the current
   // cluster list. Runs once after clusters have actually finished loading,
@@ -924,6 +931,46 @@ Order phases by dependency — prerequisites first. Each phase completes before 
       ingress: ['nginx', 'traefik', 'haproxy', 'ingress-nginx'],
       'gatekeeper-system': ['opa', 'open-policy-agent', 'opa-gatekeeper'] }
 
+    // issue 6466 — Bundle charts install multiple sub-apps under a single
+    // release name. The per-alias substring check below will NOT match
+    // `grafana` or `alertmanager` against `kube-prometheus-stack`, because
+    // neither string is literally a substring of the release name.
+    //
+    // BUNDLE_RELEASES maps a release/chart name (lowercased, substring
+    // matched) to the set of project names it transitively installs. When a
+    // release matches a bundle key, we expand to all bundled project names
+    // directly — no per-alias substring check. Releases that do NOT match
+    // any bundle key fall back to the original substring logic below.
+    const BUNDLE_RELEASES: Record<string, string[]> = {
+      // Prometheus community umbrella chart.
+      'kube-prometheus-stack': ['prometheus', 'grafana', 'alertmanager', 'thanos', 'node-exporter'],
+      // Deprecated Helm stable umbrella, still seen in older clusters.
+      'prometheus-operator': ['prometheus', 'grafana', 'alertmanager'],
+      // Grafana's Loki stack umbrella.
+      'loki-stack': ['loki', 'promtail', 'grafana'],
+      // Elastic ECK / EFK umbrella variants.
+      'elastic-stack': ['elasticsearch', 'kibana', 'logstash', 'filebeat'],
+      // OpenTelemetry collector + operator + demo bundle.
+      'opentelemetry-collector': ['opentelemetry-collector'],
+      'opentelemetry-operator': ['opentelemetry-collector', 'opentelemetry-operator'],
+      // Istio addons chart bundles observability tooling.
+      'istio-addons': ['prometheus', 'grafana', 'jaeger', 'kiali'],
+    }
+
+    /**
+     * If `releaseName` or `chartName` matches a known BUNDLE_RELEASES key
+     * (substring), return the expanded project names. Otherwise return null
+     * so the caller can fall back to the per-alias substring check.
+     */
+    const expandBundle = (releaseName: string, chartName: string): string[] | null => {
+      for (const [bundleKey, projects] of Object.entries(BUNDLE_RELEASES)) {
+        if (releaseName.includes(bundleKey) || chartName.includes(bundleKey)) {
+          return projects
+        }
+      }
+      return null
+    }
+
     // issue 6428 — Build per-cluster name sets from actual Helm releases only.
     // Previously we also added every namespace name on every cluster, which
     // meant that creating an unrelated Deployment in a namespace called
@@ -963,12 +1010,26 @@ Order phases by dependency — prerequisites first. Each phase completes before 
       const names = clusterNames.get(cName)!
       const releaseName = (r.name || '').toLowerCase()
       const chartName = (r.chart || '').toLowerCase()
+
+      // issue 6466 — Bundle charts first. If this release is a known
+      // umbrella (e.g. kube-prometheus-stack), expand to every project
+      // it bundles, intersected with the namespace alias list so we don't
+      // overclaim across unrelated namespaces.
+      const bundled = expandBundle(releaseName, chartName)
+      if (bundled) {
+        bundled.forEach(name => {
+          if (aliased.includes(name)) {
+            names.add(name)
+          }
+        })
+        return
+      }
+
       aliased.forEach(a => {
         // Only expand the alias if the release or chart actually references
         // it. This turns "monitoring namespace" from a blanket claim into a
-        // disambiguation hint: kube-prometheus-stack → prometheus, grafana,
-        // alertmanager (all substring-matched), but a plain `loki` release
-        // does not pull in prometheus/grafana.
+        // disambiguation hint: plain `loki` release does not pull in
+        // prometheus/grafana. Bundle charts go through expandBundle() above.
         if (releaseName.includes(a) || chartName.includes(a)) {
           names.add(a)
         }

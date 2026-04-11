@@ -1,6 +1,6 @@
-import { useEffect, useState, lazy, Suspense } from 'react'
+import { useEffect, useMemo, useState, lazy, Suspense } from 'react'
 import { Bug } from 'lucide-react'
-import { useNotifications } from '../../hooks/useFeatureRequests'
+import { useFeatureRequests, useNotifications } from '../../hooks/useFeatureRequests'
 import type { RequestType } from '../../hooks/useFeatureRequests'
 import { useModalState } from '../../lib/modals'
 
@@ -12,7 +12,26 @@ const FeatureRequestModal = lazy(() =>
 export function FeatureRequestButton() {
   const { isOpen: isModalOpen, open: openModal, close: closeModal } = useModalState()
   const [initialRequestType, setInitialRequestType] = useState<RequestType | undefined>()
-  const { unreadCount } = useNotifications()
+  const { notifications } = useNotifications()
+  const { requests } = useFeatureRequests()
+
+  // issue 6475 — Unify the navbar badge count with the Updates tab.
+  // Previously the navbar used the raw `unreadCount` returned by
+  // useNotifications(), which counts notifications for ALL feature requests
+  // including closed ones. The Updates tab (FeatureRequestModal) computes
+  // its own badge by excluding notifications whose `feature_request_id`
+  // points at a closed request. The two displays disagreed whenever the
+  // user had unread activity on a closed issue. Reuse the modal's filter
+  // here so the navbar matches.
+  const unreadCount = useMemo(() => {
+    const closedIds = new Set(
+      (requests || []).filter(r => r.status === 'closed').map(r => r.id)
+    )
+    return (notifications || [])
+      .filter(n => !closedIds.has(n.feature_request_id || ''))
+      .filter(n => !n.read)
+      .length
+  }, [notifications, requests])
 
   // Auto-open modal when navigated from /issue, /feedback, /feature routes
   useEffect(() => {

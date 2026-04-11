@@ -47,6 +47,13 @@ type MultiClusterClient struct {
 	cacheTime       map[string]time.Time
 	watcher         *fsnotify.Watcher
 	stopWatch       chan struct{}
+	// #6469/#6470 — lifecycle flags guarding StartWatching/StopWatching.
+	// `watching` tracks whether a watchLoop goroutine is active; it is flipped
+	// under `mu` so concurrent Start/Stop calls are serialized. `stopWatchOnce`
+	// ensures we only close `stopWatch` once even if StopWatching is called
+	// multiple times (closing a closed channel panics).
+	watching        bool
+	stopWatchOnce   sync.Once
 	onReload        func()               // Callback when config is reloaded
 	onWatchError    func(error)          // Callback when watchLoop encounters an error (#5569)
 	inClusterConfig *rest.Config         // In-cluster config when running inside k8s
@@ -872,14 +879,23 @@ func (m *MultiClusterClient) RemoveContext(contextName string) error {
 // StartWatching starts watching the kubeconfig file for changes.
 // Uses fsnotify for instant detection plus a polling fallback every 5s
 // to catch changes that fsnotify misses (common on macOS after atomic writes).
+//
+// issue 6470 — Idempotent. Repeated calls return nil without spawning a
+// second watcher goroutine. Previously every call created a fresh
+// fsnotify.Watcher and watchLoop goroutine, orphaning the previous one.
 func (m *MultiClusterClient) StartWatching() error {
+	m.mu.Lock()
+	if m.watching {
+		m.mu.Unlock()
+		slog.Info("kubeconfig watcher already running, skipping StartWatching")
+		return nil
+	}
+	m.mu.Unlock()
+
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return fmt.Errorf("failed to create watcher: %w", err)
 	}
-
-	m.watcher = watcher
-	m.stopWatch = make(chan struct{})
 
 	// Watch the kubeconfig file
 	if err := watcher.Add(m.kubeconfig); err != nil {
@@ -893,7 +909,22 @@ func (m *MultiClusterClient) StartWatching() error {
 		slog.Warn("could not watch kubeconfig directory", "error", err)
 	}
 
-	go m.watchLoop()
+	m.mu.Lock()
+	m.watcher = watcher
+	// issue 6472 — Recreate stopWatch and reset the once on every Start so
+	// Stop→Start sequences actually work. Previously Start only initialized
+	// stopWatch on first call; after StopWatching closed it, a second Start
+	// succeeded but watchLoop exited immediately because stopWatch was closed.
+	m.stopWatch = make(chan struct{})
+	m.stopWatchOnce = sync.Once{}
+	m.watching = true
+	// Snapshot for the goroutine so it reads a stable value even if a
+	// concurrent Stop+Start rotates m.stopWatch.
+	stopCh := m.stopWatch
+	w := m.watcher
+	m.mu.Unlock()
+
+	go m.watchLoop(stopCh, w)
 	slog.Info("watching kubeconfig for changes", "path", m.kubeconfig)
 	return nil
 }
@@ -933,7 +964,10 @@ func (m *MultiClusterClient) reloadAndNotify() {
 	}
 }
 
-func (m *MultiClusterClient) watchLoop() {
+// watchLoop runs until stopCh is closed. stopCh and watcher are passed in
+// rather than read from m.stopWatch / m.watcher so a concurrent Stop→Start
+// that rotates those fields does not race with this goroutine.
+func (m *MultiClusterClient) watchLoop(stopCh <-chan struct{}, watcher *fsnotify.Watcher) {
 	// Debounce timer to avoid reloading multiple times for rapid changes
 	var debounceTimer *time.Timer
 	debounceDelay := clusterEventDebounce
@@ -956,12 +990,12 @@ func (m *MultiClusterClient) watchLoop() {
 
 	for {
 		select {
-		case <-m.stopWatch:
+		case <-stopCh:
 			if debounceTimer != nil {
 				debounceTimer.Stop()
 			}
 			return
-		case event, ok := <-m.watcher.Events:
+		case event, ok := <-watcher.Events:
 			if !ok {
 				return
 			}
@@ -975,11 +1009,21 @@ func (m *MultiClusterClient) watchLoop() {
 					triggerReload()
 				}
 			}
-		case err, ok := <-m.watcher.Errors:
+		case err, ok := <-watcher.Errors:
 			if !ok {
 				return
 			}
 			slog.Error("kubeconfig watcher error", "error", err)
+			// issue 6471 — Fire the public error callback so callers that
+			// registered SetOnWatchError() actually see channel errors.
+			// Previously this log was the only signal, silently breaking
+			// the documented SetOnWatchError contract.
+			m.mu.RLock()
+			errCallback := m.onWatchError
+			m.mu.RUnlock()
+			if errCallback != nil {
+				errCallback(err)
+			}
 		case <-pollTicker.C:
 			// Polling fallback: detect changes that fsnotify missed
 			info, err := os.Stat(m.kubeconfig)
@@ -995,13 +1039,29 @@ func (m *MultiClusterClient) watchLoop() {
 	}
 }
 
-// StopWatching stops watching the kubeconfig file
+// StopWatching stops watching the kubeconfig file.
+//
+// issue 6469 — Safe to call multiple times. Previously a second call
+// panicked because `close(m.stopWatch)` fires on an already-closed channel.
+// The sync.Once guards the close; the watching flag prevents double-close
+// of the fsnotify watcher too.
 func (m *MultiClusterClient) StopWatching() {
-	if m.stopWatch != nil {
-		close(m.stopWatch)
+	m.mu.Lock()
+	if !m.watching {
+		m.mu.Unlock()
+		return
 	}
-	if m.watcher != nil {
-		m.watcher.Close()
+	m.watching = false
+	stopCh := m.stopWatch
+	w := m.watcher
+	once := &m.stopWatchOnce
+	m.mu.Unlock()
+
+	if stopCh != nil {
+		once.Do(func() { close(stopCh) })
+	}
+	if w != nil {
+		w.Close()
 	}
 }
 

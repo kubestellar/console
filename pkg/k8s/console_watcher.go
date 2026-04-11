@@ -52,14 +52,26 @@ func NewConsoleWatcher(client dynamic.Interface, namespace string, handler Conso
 	}
 }
 
-// Start begins watching all console resources
+// Start begins watching all console resources.
+//
+// issue 6472 — Safe to restart after Stop(). Previously Stop() closed
+// stopCh but Start() did not recreate it, so the second Start() succeeded
+// but every watchResource goroutine returned immediately because reading
+// from the closed stopCh always won the select.
 func (w *ConsoleWatcher) Start(ctx context.Context) error {
 	w.mu.Lock()
 	if w.started {
 		w.mu.Unlock()
 		return fmt.Errorf("watcher already started")
 	}
+	// Recreate the stop channel on every Start. A nil or closed stopCh from
+	// a previous lifecycle would make watchResource exit immediately.
+	w.stopCh = make(chan struct{})
 	w.started = true
+	// Snapshot the stop channel for the goroutines so they read a consistent
+	// value even if a subsequent Stop+Start rotates the field concurrently
+	// (race detector flags the bare w.stopCh read otherwise).
+	stopCh := w.stopCh
 	w.mu.Unlock()
 
 	slog.Info("[ConsoleWatcher] starting watch", "namespace", w.namespace)
@@ -75,7 +87,7 @@ func (w *ConsoleWatcher) Start(ctx context.Context) error {
 	}
 
 	for _, r := range gvrs {
-		go w.watchResource(ctx, r.gvr, r.resourceType)
+		go w.watchResource(ctx, stopCh, r.gvr, r.resourceType)
 	}
 
 	return nil
@@ -102,27 +114,30 @@ func (w *ConsoleWatcher) Stop() {
 	slog.Info("[ConsoleWatcher] All watches stopped")
 }
 
-// watchResource watches a single resource type with retry logic
-func (w *ConsoleWatcher) watchResource(ctx context.Context, gvr schema.GroupVersionResource, resourceType string) {
+// watchResource watches a single resource type with retry logic.
+// The stopCh is passed explicitly rather than read from w.stopCh so that
+// a concurrent Stop→Start sequence (which rotates w.stopCh under w.mu)
+// does not race with the goroutine's unprotected reads.
+func (w *ConsoleWatcher) watchResource(ctx context.Context, stopCh <-chan struct{}, gvr schema.GroupVersionResource, resourceType string) {
 	backoff := time.Second
 	maxBackoff := time.Minute
 
 	for {
 		select {
-		case <-w.stopCh:
+		case <-stopCh:
 			return
 		case <-ctx.Done():
 			return
 		default:
 		}
 
-		err := w.doWatch(ctx, gvr, resourceType)
+		err := w.doWatch(ctx, stopCh, gvr, resourceType)
 		if err != nil {
 			slog.Error("[ConsoleWatcher] watch error, retrying", "resourceType", resourceType, "error", err, "retryIn", backoff)
 
 			timer := time.NewTimer(backoff)
 			select {
-			case <-w.stopCh:
+			case <-stopCh:
 				timer.Stop()
 				return
 			case <-ctx.Done():
@@ -144,7 +159,7 @@ func (w *ConsoleWatcher) watchResource(ctx context.Context, gvr schema.GroupVers
 }
 
 // doWatch performs the actual watch operation
-func (w *ConsoleWatcher) doWatch(ctx context.Context, gvr schema.GroupVersionResource, resourceType string) error {
+func (w *ConsoleWatcher) doWatch(ctx context.Context, stopCh <-chan struct{}, gvr schema.GroupVersionResource, resourceType string) error {
 	slog.Info("[ConsoleWatcher] starting watch for resource", "resourceType", resourceType, "namespace", w.namespace)
 
 	watcher, err := w.client.Resource(gvr).Namespace(w.namespace).Watch(ctx, metav1.ListOptions{})
@@ -165,7 +180,7 @@ func (w *ConsoleWatcher) doWatch(ctx context.Context, gvr schema.GroupVersionRes
 
 	for {
 		select {
-		case <-w.stopCh:
+		case <-stopCh:
 			return nil
 		case <-ctx.Done():
 			return nil

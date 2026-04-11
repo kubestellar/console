@@ -76,7 +76,13 @@ async function setupMissionsTest(page: Page) {
   })
 
   // Mock GitHub mission listings used by the missions browser. An empty list
-  // is fine for the dialog-renders test; the project-card test overrides this.
+  // is fine for the dialog-renders test. Tests that need specific mission data
+  // must override this BEFORE setupMissionsTest() runs by using page.unroute()
+  // then re-registering — see the "project card" test below.
+  //
+  // #6474 — Previously we registered a second route handler inline in the
+  // specific test; the second registration does not override the first, so the
+  // empty-list handler won that race and the project-card test was dead.
   await page.route('**/api/missions/list**', (route) =>
     route.fulfill({
       status: 200,
@@ -137,6 +143,12 @@ test.describe('AI Missions', () => {
   test('missions browser renders at least one project card', async ({ page }) => {
     // Override the listing mock to return one known project. The missions
     // browser opens in Phase 1 (project picker) and must surface this entry.
+    //
+    // #6474 — Must unroute() the default handler from setupMissionsTest()
+    // before registering a replacement. A second page.route() for the same
+    // glob does NOT override — it stacks, and the first registration wins
+    // because Playwright matches routes in order.
+    await page.unroute('**/api/missions/list**')
     await page.route('**/api/missions/list**', (route) =>
       route.fulfill({
         status: 200,

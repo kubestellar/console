@@ -447,10 +447,19 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
   // loaded yet — the ref keeps the slug alive for later matching).
   // ============================================================================
 
+  // issue 6467 — Deep-link slug tracking. Previously this updated the ref
+  // only on first render (`if (!deepLinkSlugRef.current)`), so when a user
+  // deep-linked into mission A and then clicked mission B without closing
+  // the browser, the effect below kept trying to match mission A's old
+  // slug. Update the ref whenever `initialMission` changes, and include
+  // `initialMission` in the effect's dep array so the effect re-runs when
+  // a new deep-link arrives.
   const deepLinkSlugRef = useRef<string | null>(null)
-  if (initialMission && !deepLinkSlugRef.current) {
-    deepLinkSlugRef.current = initialMission.toLowerCase()
-  }
+  useEffect(() => {
+    if (initialMission) {
+      deepLinkSlugRef.current = initialMission.toLowerCase()
+    }
+  }, [initialMission])
 
   useEffect(() => {
     const slug = deepLinkSlugRef.current
@@ -539,7 +548,11 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
     if (installerMissions.length === 0 && fixerMissions.length === 0 && activeTab !== 'installers') {
       setActiveTab('installers')
     }
-  }, [initialMission, isOpen, installerMissions, fixerMissions, selectedMission, activeTab, selectCardMission])
+    // `selectCardMission` intentionally omitted — it's re-created every
+    // render and would cause this effect to thrash. We rely on the stable
+    // behavior: when data or `initialMission` changes, the effect runs and
+    // picks the best match using the current closure's selectCardMission.
+  }, [initialMission, isOpen, installerMissions, fixerMissions, selectedMission, activeTab])
 
   // ============================================================================
   // Filtered installer & fixer lists

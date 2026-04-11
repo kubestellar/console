@@ -235,12 +235,14 @@ export function MissionSidebar() {
   }
 
   // Deep-link: open MissionBrowser via ?mission= (specific) or ?browse=missions (explorer)
+  // Deep-link: open MissionControlDialog via ?mission-control=open (#6474)
   // Direct import: ?import= fetches and imports mission directly (no browser popup)
   const [searchParams, setSearchParams] = useSearchParams()
   const location = useLocation()
   const deepLinkMission = searchParams.get('mission')
   const directImportSlug = searchParams.get('import')
   const browseParam = searchParams.get('browse')
+  const missionControlParam = searchParams.get('mission-control')
   /** Mission pre-fetched by MissionLandingPage and passed via navigation state */
   const prefetchedMission = (location.state as { prefetchedMission?: MissionExport } | null)?.prefetchedMission
 
@@ -253,6 +255,18 @@ export function MissionSidebar() {
       setSearchParams(newParams, { replace: true })
     }
   }, [deepLinkMission, browseParam, searchParams, setSearchParams])
+
+  // #6474 — ?mission-control=open opens the MissionControlDialog.
+  // Parallel to the ?browse=missions deep-link above. Gives users a
+  // shareable URL and makes Missions.spec.ts e2e tests actually work.
+  useEffect(() => {
+    if (missionControlParam === 'open') {
+      setShowMissionControl(true)
+      const newParams = new URLSearchParams(searchParams)
+      newParams.delete('mission-control')
+      setSearchParams(newParams, { replace: true })
+    }
+  }, [missionControlParam, searchParams, setSearchParams])
 
   // Direct import from landing page — fetch mission content and import it
   // without opening the MissionBrowser dialog
