@@ -20,6 +20,9 @@ vi.mock('../dynamicCardRegistry', () => ({
     mockCards.delete(id)
     return had
   }),
+  clearDynamicCards: vi.fn(() => {
+    mockCards.clear()
+  }),
 }))
 
 import {
@@ -68,6 +71,43 @@ describe('loadDynamicCards', () => {
     expect(() => loadDynamicCards()).not.toThrow()
     expect(spy).toHaveBeenCalled()
     spy.mockRestore()
+  })
+
+  // #6681: reconcile removals on reload. Previously loadDynamicCards was
+  // additive and left entries that had been removed from storage still
+  // registered in memory.
+  it('reconciles removals when storage shrinks between loads', () => {
+    const three = [
+      { id: 'a', title: 'A', tier: 'tier1' },
+      { id: 'b', title: 'B', tier: 'tier1' },
+      { id: 'c', title: 'C', tier: 'tier1' },
+    ]
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(three))
+    loadDynamicCards()
+    expect(mockCards.size).toBe(3)
+
+    const two = [
+      { id: 'a', title: 'A', tier: 'tier1' },
+      { id: 'b', title: 'B', tier: 'tier1' },
+    ]
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(two))
+    loadDynamicCards()
+
+    expect(mockCards.size).toBe(2)
+    expect(mockCards.has('a')).toBe(true)
+    expect(mockCards.has('b')).toBe(true)
+    expect(mockCards.has('c')).toBe(false)
+  })
+
+  it('clears the registry when storage has been emptied', () => {
+    const one = [{ id: 'only', title: 'Only', tier: 'tier1' }]
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(one))
+    loadDynamicCards()
+    expect(mockCards.size).toBe(1)
+
+    localStorage.removeItem(STORAGE_KEY)
+    loadDynamicCards()
+    expect(mockCards.size).toBe(0)
   })
 })
 

@@ -3,17 +3,29 @@ import {
   registerDynamicStats,
   getAllDynamicStats,
   unregisterDynamicStats,
+  clearDynamicStats,
   toRecord,
 } from './dynamicStatsRegistry'
 
 const STORAGE_KEY = 'kc-dynamic-stats'
 
-/** Load dynamic stats definitions from localStorage and register them */
+/**
+ * Load dynamic stats definitions from localStorage and register them.
+ *
+ * #6681 — Previously additive: entries that had been removed from storage
+ * since the last load stayed in the in-memory registry. We now perform an
+ * atomic replace (clear + re-register from storage) so removals propagate
+ * on reload, matching the behaviour of loadDynamicCards.
+ */
 export function loadDynamicStats(): void {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return
+    if (!raw) {
+      clearDynamicStats()
+      return
+    }
     const defs: StatsDefinition[] = JSON.parse(raw)
+    clearDynamicStats()
     defs.forEach(def => registerDynamicStats(def))
   } catch (err) {
     console.error('[DynamicStatsStore] Failed to load from localStorage:', err)

@@ -19,6 +19,9 @@ vi.mock('../dynamicStatsRegistry', () => ({
     mockStats.delete(type)
     return had
   }),
+  clearDynamicStats: vi.fn(() => {
+    mockStats.clear()
+  }),
   toRecord: vi.fn((def: Record<string, unknown>) => def),
 }))
 
@@ -68,6 +71,43 @@ describe('loadDynamicStats', () => {
     expect(() => loadDynamicStats()).not.toThrow()
     expect(spy).toHaveBeenCalled()
     spy.mockRestore()
+  })
+
+  // #6681: reconcile removals on reload. Previously loadDynamicStats was
+  // additive and left entries that had been removed from storage still
+  // registered in memory.
+  it('reconciles removals when storage shrinks between loads', () => {
+    const three = [
+      { type: 'a', blocks: [{ label: 'A' }] },
+      { type: 'b', blocks: [{ label: 'B' }] },
+      { type: 'c', blocks: [{ label: 'C' }] },
+    ]
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(three))
+    loadDynamicStats()
+    expect(mockStats.size).toBe(3)
+
+    const two = [
+      { type: 'a', blocks: [{ label: 'A' }] },
+      { type: 'b', blocks: [{ label: 'B' }] },
+    ]
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(two))
+    loadDynamicStats()
+
+    expect(mockStats.size).toBe(2)
+    expect(mockStats.has('a')).toBe(true)
+    expect(mockStats.has('b')).toBe(true)
+    expect(mockStats.has('c')).toBe(false)
+  })
+
+  it('clears the registry when storage has been emptied', () => {
+    const one = [{ type: 'only', blocks: [{ label: 'Only' }] }]
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(one))
+    loadDynamicStats()
+    expect(mockStats.size).toBe(1)
+
+    localStorage.removeItem(STORAGE_KEY)
+    loadDynamicStats()
+    expect(mockStats.size).toBe(0)
   })
 })
 

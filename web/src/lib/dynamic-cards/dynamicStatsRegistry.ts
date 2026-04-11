@@ -38,6 +38,22 @@ export function unregisterDynamicStats(type: string): boolean {
   return true
 }
 
+/**
+ * Clear all dynamically-registered stats definitions.
+ *
+ * #6681 — Used by loadDynamicStats to reconcile removed entries: the store
+ * performs an atomic replace (clear then re-register from storage) so that
+ * definitions deleted from localStorage no longer linger in memory.
+ */
+export function clearDynamicStats(): void {
+  if (dynamicTypes.size === 0) return
+  for (const type of Array.from(dynamicTypes)) {
+    unregisterStats(type)
+  }
+  dynamicTypes.clear()
+  notifyListeners()
+}
+
 /** Get a dynamic stats definition */
 export function getDynamicStats(type: string): StatsDefinition | undefined {
   if (!dynamicTypes.has(type)) return undefined
