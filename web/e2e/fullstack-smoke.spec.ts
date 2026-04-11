@@ -36,10 +36,11 @@ test.describe('full-stack smoke (#6362)', () => {
     const res = await request.get(`${FULLSTACK_BASE}/healthz`)
     expect(res.status()).toBe(200)
     const body = await res.json()
-    // Contract: /healthz returns { status: "ok" | "starting" }; we only
-    // fail if it's missing or explicitly not-ok. "starting" is acceptable
-    // on a cold boot.
-    expect(['ok', 'starting']).toContain(body.status)
+    // Contract: pkg/api/server.go /healthz handler returns exactly
+    // { status: "ok" } during normal operation and { status: "shutting_down" }
+    // while draining. There is no "starting" state — the handler is
+    // registered synchronously before the listener comes up.
+    expect(['ok', 'shutting_down']).toContain(body.status)
   })
 
   test('root path serves the built frontend shell', async ({ page }) => {
@@ -55,8 +56,10 @@ test.describe('full-stack smoke (#6362)', () => {
     // the smallest round-trip that proves Go routing + handler wiring
     // without needing a live cluster or OAuth.
     const res = await request.get(`${FULLSTACK_BASE}/api/version`)
-    // 200 (public) or 401 (auth-required) both prove the handler exists;
-    // 404 would mean the route was dropped from Go routing.
-    expect([200, 401]).toContain(res.status())
+    // /api/version is registered before the auth middleware in
+    // pkg/api/server.go, so it is unconditionally public. A 401 here
+    // would mean the route order regressed; a 404 would mean the route
+    // was dropped from Go routing. Only 200 is acceptable.
+    expect(res.status()).toBe(200)
   })
 })

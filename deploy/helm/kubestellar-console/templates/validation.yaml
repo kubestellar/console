@@ -18,15 +18,27 @@
   See: deploy/helm/kubestellar-console/README.md — "Secrets and configuration"
   (Bring-your-own caveat).
 
-  This template intentionally emits no Kubernetes resources: it only calls
-  `fail` on misconfiguration. A bare `{{- if false -}}{{- end -}}` pair
-  at the end keeps the file non-empty but produces zero YAML on success.
+  This template intentionally emits no Kubernetes resources: it only
+  calls `fail` on misconfiguration. On the happy path, every `if` block
+  below evaluates to false and the rendered output is empty, which is
+  what helm expects for a no-op template.
 */ -}}
 
 {{- if .Values.jwt.existingSecret -}}
 
-{{- /* GitHub OAuth inline values with no Secret to land in */ -}}
-{{- if and (or .Values.github.clientId .Values.github.clientSecret) (not .Values.github.existingSecret) -}}
+{{- /*
+  GitHub OAuth inline values with no Secret to land in.
+
+  The Deployment only references the chart-managed Secret's
+  `github-client-id` / `github-client-secret` keys when BOTH
+  `github.clientId` AND `github.clientSecret` are set AND
+  `github.existingSecret` is empty (see templates/deployment.yaml —
+  `else if and .Values.github.clientId .Values.github.clientSecret`).
+  That's the exact combination that breaks when `jwt.existingSecret`
+  suppresses the chart-managed Secret, so we validate the same
+  condition here.
+*/ -}}
+{{- if and (and .Values.github.clientId .Values.github.clientSecret) (not .Values.github.existingSecret) -}}
 {{- fail (printf "kubestellar-console: when jwt.existingSecret is set (%q), the chart does not render its own Secret. Inline github.clientId/github.clientSecret have nowhere to land. Set github.existingSecret to a pre-existing Secret containing the github-client-id and github-client-secret keys. See deploy/helm/kubestellar-console/README.md — 'Secrets and configuration' (Bring-your-own caveat)." .Values.jwt.existingSecret) -}}
 {{- end -}}
 

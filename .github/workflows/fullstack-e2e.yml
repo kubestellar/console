@@ -67,8 +67,10 @@ jobs:
       - name: Start Go backend in background
         env:
           JWT_SECRET: ${{ env.DEV_JWT_SECRET }}
-          # Dev mode — do not require real OAuth creds
-          CONSOLE_ENV: 'development'
+          # Dev mode — do not require real OAuth creds. The Go backend reads
+          # DEV_MODE (see cmd/console/main.go and pkg/api/server.go); the
+          # previous CONSOLE_ENV value was ignored by the binary.
+          DEV_MODE: 'true'
           PORT: ${{ env.BACKEND_PORT }}
         run: |
           /tmp/console-binary > /tmp/console.log 2>&1 &
