@@ -1,8 +1,31 @@
 import { test, expect, Page } from '@playwright/test'
 
 /**
- * Sets up authentication and MCP mocks for missions tests
+ * Missions.spec.ts — E2E coverage for the AI Missions (Mission Control) feature.
+ *
+ * History: This file previously contained only dashboard-UI smoke tests
+ * (page title, cards grid, refresh button, viewport sizing) that matched the
+ * coverage already in Dashboard.spec.ts. Despite the "AI Missions" describe
+ * block, NONE of the old tests exercised any mission-related behavior, so
+ * #6451 flagged the file as dead coverage.
+ *
+ * This version replaces the dashboard smoke tests with real mission checks:
+ *   1. Mission Control dialog can be opened via the ?mission-control=open URL param
+ *      and renders with the correct role/label.
+ *   2. The dialog has a working close control (verifies the dialog is interactive,
+ *      not just painted into the DOM).
+ *   3. At least one mission project card renders when the missions browser is opened
+ *      via the ?browse=missions URL param (Phase 1 project cards).
+ *
+ * TODO(#6450): Once wave6b lands the `data-testid="mission-control-*"` attributes
+ * on MissionControlDialog and project cards, switch the role/name queries below
+ * to getByTestId() for stability. Tracking: https://github.com/kubestellar/console/issues/6450
  */
+
+// Test timing constants — Playwright defaults shadowed here so the intent is explicit.
+const DIALOG_VISIBLE_TIMEOUT_MS = 10_000 // dialogs open async after route hydration
+const CONTROL_VISIBLE_TIMEOUT_MS = 5_000 // interactive controls render after dialog open
+
 async function setupMissionsTest(page: Page) {
   // Mock authentication
   await page.route('**/api/me', (route) =>
@@ -19,7 +42,8 @@ async function setupMissionsTest(page: Page) {
     })
   )
 
-  // Mock MCP endpoints
+  // Mock MCP endpoints — return empty-ish data so mission-control panels don't
+  // error out trying to load cluster/pod state.
   await page.route('**/api/mcp/**', (route) => {
     const url = route.request().url()
     if (url.includes('/clusters')) {
@@ -51,7 +75,17 @@ async function setupMissionsTest(page: Page) {
     }
   })
 
-  // Mock local agent
+  // Mock GitHub mission listings used by the missions browser. An empty list
+  // is fine for the dialog-renders test; the project-card test overrides this.
+  await page.route('**/api/missions/list**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ items: [] }),
+    })
+  )
+
+  // Mock local agent so it does not block the dialog mount.
   await page.route('**/127.0.0.1:8585/**', (route) =>
     route.fulfill({
       status: 200,
@@ -60,15 +94,12 @@ async function setupMissionsTest(page: Page) {
     })
   )
 
-  // Set auth token
+  // Seed auth token + onboarded flag so the app doesn't bounce to /login.
   await page.goto('/login')
   await page.evaluate(() => {
     localStorage.setItem('token', 'test-token')
     localStorage.setItem('demo-user-onboarded', 'true')
   })
-
-  await page.goto('/')
-  await page.waitForLoadState('domcontentloaded')
 }
 
 test.describe('AI Missions', () => {
@@ -76,71 +107,63 @@ test.describe('AI Missions', () => {
     await setupMissionsTest(page)
   })
 
-  test.describe('Dashboard Display', () => {
-    test('displays dashboard page', async ({ page }) => {
-      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
-    })
+  test('Mission Control dialog opens via ?mission-control=open URL param', async ({ page }) => {
+    // Use the deep-link URL param the dialog listens for (see useMissionControl.ts).
+    await page.goto('/?mission-control=open')
+    await page.waitForLoadState('domcontentloaded')
 
-    test('shows cards grid', async ({ page }) => {
-      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
-      await expect(page.getByTestId('dashboard-cards-grid')).toBeVisible({ timeout: 5000 })
-    })
-
-    test('shows dashboard header', async ({ page }) => {
-      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
-      await expect(page.getByTestId('dashboard-header')).toBeVisible({ timeout: 5000 })
-    })
+    // The dialog renders with role="dialog" and an aria-label of "Mission Control"
+    // (or the current mission title if one is already loaded). See
+    // MissionControlDialog.tsx:170-172.
+    const dialog = page.getByRole('dialog', { name: /mission control/i })
+    await expect(dialog).toBeVisible({ timeout: DIALOG_VISIBLE_TIMEOUT_MS })
   })
 
-  test.describe('Dashboard Controls', () => {
-    test('has refresh button', async ({ page }) => {
-      await expect(page.getByTestId('dashboard-refresh-button')).toBeVisible({ timeout: 10000 })
-    })
+  test('Mission Control dialog exposes a close control', async ({ page }) => {
+    await page.goto('/?mission-control=open')
+    await page.waitForLoadState('domcontentloaded')
 
-    test('refresh button is clickable', async ({ page }) => {
-      await expect(page.getByTestId('dashboard-refresh-button')).toBeVisible({ timeout: 10000 })
+    const dialog = page.getByRole('dialog', { name: /mission control/i })
+    await expect(dialog).toBeVisible({ timeout: DIALOG_VISIBLE_TIMEOUT_MS })
 
-      await page.getByTestId('dashboard-refresh-button').click()
-
-      // Button should remain visible after click
-      await expect(page.getByTestId('dashboard-refresh-button')).toBeVisible()
-    })
+    // The dialog must expose an accessible close button (aria-label="Close Mission Control"
+    // on MissionControlDialog.tsx:280). This asserts the dialog is interactive,
+    // not merely mounted — a regression that painted an empty shell would fail here.
+    const closeButton = dialog.getByRole('button', { name: /close mission control/i })
+    await expect(closeButton).toBeVisible({ timeout: CONTROL_VISIBLE_TIMEOUT_MS })
+    await expect(closeButton).toBeEnabled()
   })
 
-  test.describe('Responsive Design', () => {
-    test('adapts to mobile viewport', async ({ page }) => {
-      await page.setViewportSize({ width: 375, height: 667 })
+  test('missions browser renders at least one project card', async ({ page }) => {
+    // Override the listing mock to return one known project. The missions
+    // browser opens in Phase 1 (project picker) and must surface this entry.
+    await page.route('**/api/missions/list**', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          items: [
+            {
+              name: 'sample-mission',
+              path: 'missions/sample-mission.yaml',
+              sha: 'abc123',
+              type: 'file',
+            },
+          ],
+        }),
+      })
+    )
 
-      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
-    })
+    await page.goto('/?browse=missions')
+    await page.waitForLoadState('domcontentloaded')
 
-    test('adapts to tablet viewport', async ({ page }) => {
-      await page.setViewportSize({ width: 768, height: 1024 })
-
-      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
-    })
-  })
-
-  test.describe('Accessibility', () => {
-    test('page is keyboard navigable', async ({ page }) => {
-      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
-
-      // Tab through elements
-      for (let i = 0; i < 5; i++) {
-        await page.keyboard.press('Tab')
-      }
-
-      // Should have a focused element
-      const focused = page.locator(':focus')
-      await expect(focused).toBeVisible()
-    })
-
-    test('buttons have proper accessibility attributes', async ({ page }) => {
-      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
-
-      const accessibleButtons = page.locator('button[title], button[aria-label]')
-      const buttonCount = await accessibleButtons.count()
-      expect(buttonCount).toBeGreaterThanOrEqual(0)
-    })
+    // The missions browser renders each entry as a heading/button containing
+    // the mission name. If the Phase 1 panel regresses and renders no cards,
+    // this locator will fail instead of silently passing.
+    const missionEntry = page
+      .getByRole('dialog')
+      .getByText(/sample-mission/i)
+      .first()
+    await expect(missionEntry).toBeVisible({ timeout: DIALOG_VISIBLE_TIMEOUT_MS })
   })
 })
