@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedPodIssues, useCachedWarningEvents, useCachedNodes } from '../../hooks/useCachedData'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
@@ -12,9 +13,9 @@ const DEFAULT_CARDS = getDefaultCards('cluster-admin')
 
 export function ClusterAdmin() {
   const { clusters: rawClusters, isLoading, isRefreshing, lastUpdated, refetch, error } = useClusters()
-  const { issues: rawPodIssues } = useCachedPodIssues()
-  const { events: rawWarningEvents } = useCachedWarningEvents()
-  const { nodes: rawNodes } = useCachedNodes()
+  const { issues: rawPodIssues, isLoading: isLoadingPodIssues } = useCachedPodIssues()
+  const { events: rawWarningEvents, isLoading: isLoadingWarnings } = useCachedWarningEvents()
+  const { nodes: rawNodes, isLoading: isLoadingNodes } = useCachedNodes()
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
 
   // Guard all arrays against undefined to prevent crashes when APIs return 404/500/empty
@@ -22,6 +23,25 @@ export function ClusterAdmin() {
   const podIssues = rawPodIssues || []
   const warningEvents = rawWarningEvents || []
   const nodes = rawNodes || []
+
+  // Stale-while-revalidate: remember the last non-zero values for Nodes/Warnings
+  // so refreshes don't flash 0 → final value (issue #6485). During a refresh,
+  // the underlying hooks briefly return empty arrays before the new fetch resolves.
+  const lastNodeCountRef = useRef(0)
+  const lastWarningCountRef = useRef(0)
+  const lastPodIssueCountRef = useRef(0)
+  useEffect(() => {
+    if (!isLoadingNodes && nodes.length > 0) lastNodeCountRef.current = nodes.length
+  }, [isLoadingNodes, nodes.length])
+  useEffect(() => {
+    if (!isLoadingWarnings && warningEvents.length > 0) lastWarningCountRef.current = warningEvents.length
+  }, [isLoadingWarnings, warningEvents.length])
+  useEffect(() => {
+    if (!isLoadingPodIssues && podIssues.length > 0) lastPodIssueCountRef.current = podIssues.length
+  }, [isLoadingPodIssues, podIssues.length])
+  const displayNodeCount = nodes.length > 0 ? nodes.length : lastNodeCountRef.current
+  const displayWarningCount = warningEvents.length > 0 ? warningEvents.length : lastWarningCountRef.current
+  const displayPodIssueCount = podIssues.length > 0 ? podIssues.length : lastPodIssueCountRef.current
 
   // Use the centralised health state machine so these counts always agree
   // with the main cluster grid, sidebar stats and filter tabs (#5928).
@@ -38,9 +58,9 @@ export function ClusterAdmin() {
       case 'healthy': return { value: healthy.length, sublabel: 'healthy', isDemo: isDemoData }
       case 'degraded': return { value: degraded.length, sublabel: 'degraded', isDemo: isDemoData }
       case 'offline': return { value: offline.length, sublabel: 'offline', isDemo: isDemoData }
-      case 'nodes': return { value: nodes.length, sublabel: 'total nodes', isDemo: isDemoData }
-      case 'warnings': return { value: warningEvents.length, sublabel: 'warnings', isDemo: isDemoData }
-      case 'pod_issues': return { value: podIssues.length, sublabel: 'pod issues', isDemo: isDemoData }
+      case 'nodes': return { value: displayNodeCount, sublabel: 'total nodes', isDemo: isDemoData }
+      case 'warnings': return { value: displayWarningCount, sublabel: 'warnings', isDemo: isDemoData }
+      case 'pod_issues': return { value: displayPodIssueCount, sublabel: 'pod issues', isDemo: isDemoData }
       default: return { value: '-' }
     }
   }
