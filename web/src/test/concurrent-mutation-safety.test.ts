@@ -79,46 +79,16 @@ const SAFE_MUTATION_IDENTIFIERS = new Set([
  * update the constant.  If it fails because the count *increased*, you
  * introduced a new shared mutation — refactor to return values instead.
  */
-const EXPECTED_MUTATION_COUNT = 10
+const EXPECTED_MUTATION_COUNT = 0
 
 /**
  * Known files with shared-mutation violations.
  * Keyed by path relative to SRC_DIR (POSIX separators).
  * This list MUST ONLY SHRINK — never add new entries.
  */
-const KNOWN_VIOLATIONS: Record<string, string[]> = {
-  'hooks/useCachedData.ts': [
-    'accumulated.push(...tagged)',
-    'failedCount++',
-  ],
-  'hooks/useKyverno.ts': [
-    'allStatuses[cluster] = status',
-  ],
-  'hooks/useTrivy.ts': [
-    'allStatuses[cluster] = status',
-  ],
-  'hooks/useKubescape.ts': [
-    'allStatuses[cluster] = status',
-  ],
-  'hooks/useTrestle.ts': [
-    'allStatuses[cluster] = status',
-  ],
-  'hooks/useRBACFindings.ts': [
-    'allFindings[cluster] = findings',
-  ],
-  'hooks/useDataCompliance.ts': [
-    'aggregated.totalSecrets += data.secrets.total',
-  ],
-  'hooks/useCachedLLMd.ts': [
-    'accumulated.push(...tagged)',
-  ],
-  'contexts/AlertsContext.tsx': [
-    'results[cluster.name] = data.results',
-  ],
-  'hooks/useCachedISO27001.ts': [
-    'findings.push(...clusterFindings)',
-  ],
-}
+// All 10 original violations have been fixed in #6857.
+// Each callback now returns values; aggregation happens after settlement.
+const KNOWN_VIOLATIONS: Record<string, string[]> = {}
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 

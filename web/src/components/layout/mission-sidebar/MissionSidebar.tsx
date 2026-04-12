@@ -756,7 +756,8 @@ export function MissionSidebar() {
                     type: 'custom',
                     title: newMissionPrompt.slice(0, 50) + (newMissionPrompt.length > 50 ? '...' : ''),
                     description: newMissionPrompt,
-                    initialPrompt: newMissionPrompt })
+                    initialPrompt: newMissionPrompt,
+                    skipReview: true })
                   setNewMissionPrompt('')
                   setShowNewMission(false)
                 }
@@ -783,7 +784,8 @@ export function MissionSidebar() {
                         type: 'custom',
                         title: newMissionPrompt.slice(0, 50) + (newMissionPrompt.length > 50 ? '...' : ''),
                         description: newMissionPrompt,
-                        initialPrompt: newMissionPrompt })
+                        initialPrompt: newMissionPrompt,
+                        skipReview: true })
                       setNewMissionPrompt('')
                       setShowNewMission(false)
                     }

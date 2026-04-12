@@ -313,15 +313,11 @@ export async function fetchLLMdServers(
   clusters: string[],
   onProgress?: (partial: LLMdServer[]) => void
 ): Promise<LLMdServer[]> {
-  // useCache prevents calling fetchers in demo mode via effectiveEnabled
-  const accumulated: LLMdServer[] = []
-
+  // (#6857) Each callback returns its own items; aggregation happens after
+  // all tasks settle to avoid shared-mutation hazards.
   const tasks = clusters.map((cluster) => async () => {
     try {
-      const clusterServers = await fetchLLMdServersForCluster(cluster)
-      accumulated.push(...clusterServers)
-      onProgress?.([...accumulated])
-      return clusterServers
+      return await fetchLLMdServersForCluster(cluster)
     } catch (err) {
       // Suppress demo mode errors - they're expected when agent is unavailable
       const errMsg = err instanceof Error ? err.message : String(err)
@@ -332,7 +328,15 @@ export async function fetchLLMdServers(
     }
   })
 
-  await settledWithConcurrency(tasks)
+  const settled = await settledWithConcurrency(tasks)
+
+  const accumulated: LLMdServer[] = []
+  for (const result of settled) {
+    if (result.status === 'fulfilled') {
+      accumulated.push(...result.value)
+      onProgress?.([...accumulated])
+    }
+  }
   return accumulated
 }
 

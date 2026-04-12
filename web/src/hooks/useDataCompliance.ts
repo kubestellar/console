@@ -255,10 +255,18 @@ export function useDataCompliance() {
         totalClusters: allClusters.length,
         reachableClusters: clusters.length }
 
-      const clusterFailures: string[] = []
+      // (#6857) Return data from each callback to avoid shared mutation.
       const tasks = clusters.map(cluster => async () => {
-        try {
-          const data = await fetchClusterCompliance(cluster.name)
+        const data = await fetchClusterCompliance(cluster.name)
+        return { cluster: cluster.name, data }
+      })
+
+      const settled = await settledWithConcurrency(tasks)
+
+      const clusterFailures: string[] = []
+      for (const result of settled) {
+        if (result.status === 'fulfilled') {
+          const { data } = result.value
           aggregated.totalSecrets += data.secrets.total
           aggregated.opaqueSecrets += data.secrets.opaque
           aggregated.tlsSecrets += data.secrets.tls
@@ -268,12 +276,15 @@ export function useDataCompliance() {
           aggregated.roleBindings += data.roleBindings
           aggregated.clusterAdminBindings += data.clusterAdminBindings
           aggregated.totalNamespaces += data.namespaces
-        } catch {
-          clusterFailures.push(cluster.name)
+        } else {
+          // Extract cluster name from the task index — rejected tasks
+          // don't carry their cluster reference, so use the tasks array index
+          const idx = (settled as PromiseSettledResult<{ cluster: string; data: unknown }>[]).indexOf(result)
+          if (idx >= 0 && idx < clusters.length) {
+            clusterFailures.push(clusters[idx].name)
+          }
         }
-      })
-
-      await settledWithConcurrency(tasks)
+      }
 
       setPosture(aggregated)
       saveToCache(aggregated)

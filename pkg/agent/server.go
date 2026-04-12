@@ -134,6 +134,13 @@ type Server struct {
 	activeChatCtxs   map[string]context.CancelFunc
 	activeChatCtxsMu sync.Mutex
 
+	// dryRunSessions tracks session IDs that are in dry-run mode.
+	// When a session is in this set, the kubectl proxy rejects mutating
+	// commands for that session, enforcing dry-run at the server level
+	// regardless of what the AI agent decides to do. (#6442)
+	dryRunSessions   map[string]bool
+	dryRunSessionsMu sync.RWMutex
+
 	// Auto-update system
 	updateChecker *UpdateChecker
 
@@ -206,6 +213,7 @@ func NewServer(cfg Config) (*Server, error) {
 		sessionStart:   now,
 		todayDate:      now.Format("2006-01-02"),
 		activeChatCtxs: make(map[string]context.CancelFunc),
+		dryRunSessions: make(map[string]bool),
 	}
 
 	server.upgrader = websocket.Upgrader{

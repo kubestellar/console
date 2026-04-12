@@ -427,19 +427,22 @@ export function useTrestle() {
       return
     }
 
-    // Real mode: check all clusters with bounded concurrency.
-    // Buffer results and apply a single state update at the end to prevent
-    // the card from flickering through intermediate states (#4266).
-    const allStatuses: Record<string, TrestleClusterStatus> = {}
-    let checked = 0
-
+    // (#6857) Return { cluster, status } from each callback to avoid shared mutation.
     const tasks = (clusterNames || []).map(cluster => async () => {
       const status = await fetchSingleCluster(cluster)
-      allStatuses[cluster] = status
-      checked++
+      return { cluster, status }
     })
 
-    await settledWithConcurrency(tasks)
+    const settled = await settledWithConcurrency(tasks)
+
+    const allStatuses: Record<string, TrestleClusterStatus> = {}
+    let checked = 0
+    for (const result of settled) {
+      if (result.status === 'fulfilled') {
+        allStatuses[result.value.cluster] = result.value.status
+        checked++
+      }
+    }
 
     if (mountedRef.current) {
       // If no cluster has Trestle installed, fall back to demo data so the

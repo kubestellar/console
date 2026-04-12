@@ -43,7 +43,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
     backendUp: false,
   })
   const dropdownRef = useRef<HTMLDivElement>(null)
-  const { totalCoins, awardCoins } = useRewards()
+  const { totalCoins, githubPoints, localCoins, bonusPoints, awardCoins } = useRewards()
   const { channel, installMethod } = useVersionCheck()
   const { t, i18n } = useTranslation()
 
@@ -200,7 +200,15 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
             >
               <Coins className="w-4 h-4 text-yellow-500" />
               <span className="text-muted-foreground">{t('profile.coins')}</span>
-              <span className="text-yellow-400 font-medium">{totalCoins.toLocaleString()}</span>
+              <span
+                className="text-yellow-400 font-medium"
+                title={[
+                  `Console activity: ${localCoins.toLocaleString()}`,
+                  githubPoints > 0 ? `GitHub contributions: ${githubPoints.toLocaleString()}` : null,
+                  bonusPoints > 0 ? `Bonus: ${bonusPoints.toLocaleString()}` : null,
+                  'Note: Docs leaderboard shows GitHub points only',
+                ].filter(Boolean).join('\n')}
+              >{totalCoins.toLocaleString()}</span>
               <span className={`text-2xs px-1.5 py-0.5 rounded-full ${getContributorLevel(totalCoins).current.bgClass} ${getContributorLevel(totalCoins).current.textClass}`}>
                 {getContributorLevel(totalCoins).current.name}
               </span>

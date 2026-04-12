@@ -235,6 +235,30 @@ func (s *Server) handleClustersMessage(msg protocol.Message) protocol.Message {
 	}
 }
 
+// readOnlyKubectlVerbs are kubectl subcommands that do not modify cluster state.
+// Used by the dry-run gate (#6442) to allow observation while blocking mutations.
+var readOnlyKubectlVerbs = map[string]bool{
+	"get":           true,
+	"describe":      true,
+	"logs":          true,
+	"top":           true,
+	"explain":       true,
+	"api-resources": true,
+	"api-versions":  true,
+	"version":       true,
+	"cluster-info":  true,
+	"auth":          true, // can-i, whoami — read-only checks
+}
+
+// isReadOnlyKubectlCommand returns true when the kubectl args represent a
+// read-only operation that is safe to execute even in dry-run mode.
+func isReadOnlyKubectlCommand(args []string) bool {
+	if len(args) == 0 {
+		return false
+	}
+	return readOnlyKubectlVerbs[strings.ToLower(args[0])]
+}
+
 // destructiveKubectlVerbs are kubectl subcommands that modify or destroy resources
 // and require explicit user confirmation before execution.
 var destructiveKubectlVerbs = map[string]bool{
@@ -276,6 +300,25 @@ func (s *Server) handleKubectlMessage(msg protocol.Message) protocol.Message {
 	var req protocol.KubectlRequest
 	if err := json.Unmarshal(payloadBytes, &req); err != nil {
 		return s.errorResponse(msg.ID, "invalid_payload", "Invalid kubectl request format")
+	}
+
+	// Server-enforced dry-run gate (#6442): if this kubectl request is
+	// associated with a session in dry-run mode, reject any mutating command.
+	// Read-only commands (get, describe, logs, etc.) remain allowed.
+	if req.SessionID != "" {
+		s.dryRunSessionsMu.RLock()
+		isDryRun := s.dryRunSessions[req.SessionID]
+		s.dryRunSessionsMu.RUnlock()
+		if isDryRun && !isReadOnlyKubectlCommand(req.Args) {
+			return protocol.Message{
+				ID:   msg.ID,
+				Type: protocol.TypeError,
+				Payload: protocol.ErrorPayload{
+					Code:    "dry_run_rejected",
+					Message: fmt.Sprintf("dry-run mode: mutating command %q not allowed", strings.Join(req.Args, " ")),
+				},
+			}
+		}
 	}
 
 	// Check for destructive commands that require confirmation
@@ -370,6 +413,21 @@ func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.M
 		delete(s.activeChatCtxs, req.SessionID)
 		s.activeChatCtxsMu.Unlock()
 	}()
+
+	// Server-enforced dry-run gate (#6442): when the frontend sends
+	// dryRun=true, register the session so the kubectl proxy rejects
+	// mutating commands for this session regardless of what the AI decides.
+	if req.DryRun {
+		s.dryRunSessionsMu.Lock()
+		s.dryRunSessions[req.SessionID] = true
+		s.dryRunSessionsMu.Unlock()
+		defer func() {
+			s.dryRunSessionsMu.Lock()
+			delete(s.dryRunSessions, req.SessionID)
+			s.dryRunSessionsMu.Unlock()
+		}()
+		slog.Info("[Chat] dry-run mode enforced for session", "sessionID", req.SessionID)
+	}
 
 	// Determine which agent to use
 	agentName := req.Agent

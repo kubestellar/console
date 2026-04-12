@@ -1477,6 +1477,7 @@ export function CardWrapper({
                   type: 'deploy',
                   cluster: clusters.length > 0 ? clusters.join(',') : undefined,
                   initialPrompt: editedPrompt,
+                  skipReview: true,
                 })
                 openSidebar()
               }}

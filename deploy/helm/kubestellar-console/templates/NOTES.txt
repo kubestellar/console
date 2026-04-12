@@ -65,8 +65,8 @@ clear the corresponding `*.existingSecret` value so the chart renders its own).
     # expected key: {{ .Values.jwt.existingSecretKey }}
   {{- end }}
 
-Check rollout status:
-  kubectl rollout status deploy/{{ include "kubestellar-console.fullname" . }} -n {{ .Release.Namespace }}
+Check rollout status (times out after 3 minutes to avoid blocking indefinitely):
+  kubectl rollout status deploy/{{ include "kubestellar-console.fullname" . }} -n {{ .Release.Namespace }} --timeout=180s
 
 If the pod is stuck in CreateContainerConfigError, describe it to see which
 Secret is missing:
@@ -74,8 +74,8 @@ Secret is missing:
 {{- else }}
 
 All secrets for this release are rendered by the chart itself — no external
-Secret objects are required. Check rollout status:
-  kubectl rollout status deploy/{{ include "kubestellar-console.fullname" . }} -n {{ .Release.Namespace }}
+Secret objects are required. Check rollout status (times out after 3 minutes to avoid blocking indefinitely):
+  kubectl rollout status deploy/{{ include "kubestellar-console.fullname" . }} -n {{ .Release.Namespace }} --timeout=180s
 {{- end }}
 
 Docs:   https://kubestellar.io/docs/console/readme

@@ -307,13 +307,10 @@ export function useRBACFindings() {
       }
       setError(null)
 
-      const allFindings: RBACFinding[] = []
-
-      // Check all clusters with bounded concurrency, stream results progressively
+      // (#6857) Return findings from each callback to avoid shared mutation.
       const tasks = clusters.map(cluster => async () => {
         const clusterFindings = await fetchSingleCluster(cluster)
-        allFindings.push(...clusterFindings)
-        // Stream each cluster's results immediately
+        // Stream each cluster's results immediately (React setState is safe)
         setFindings(prev => {
           const otherFindings = prev.filter(f => f.cluster !== cluster)
           return [...otherFindings, ...clusterFindings]
@@ -322,9 +319,17 @@ export function useRBACFindings() {
           initialLoadDone.current = true
           setIsLoading(false)
         }
+        return clusterFindings
       })
 
-      await settledWithConcurrency(tasks)
+      const settled = await settledWithConcurrency(tasks)
+
+      const allFindings: RBACFinding[] = []
+      for (const result of settled) {
+        if (result.status === 'fulfilled') {
+          allFindings.push(...result.value)
+        }
+      }
 
       saveToCache(allFindings)
       initialLoadDone.current = true

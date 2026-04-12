@@ -373,12 +373,12 @@ export function useKyverno() {
     }
     setClustersChecked(0)
 
-    // Check all clusters with bounded concurrency, stream results progressively
-    const allStatuses: Record<string, KyvernoClusterStatus> = {}
-
+    // (#6857) Each callback returns { cluster, status } instead of mutating
+    // a shared allStatuses object. React setState calls inside the callback
+    // are safe (batched by React) but the bracket-assignment was flagged by
+    // concurrent-mutation-safety.test.ts.
     const tasks = (clusters || []).map(cluster => async () => {
       const status = await fetchSingleCluster(cluster)
-      allStatuses[cluster] = status
       // Stream each result immediately — card re-renders progressively
       setStatuses(prev => ({ ...prev, [cluster]: status }))
       setClustersChecked(prev => prev + 1)
@@ -387,9 +387,18 @@ export function useKyverno() {
         initialLoadDone.current = true
         setIsLoading(false)
       }
+      return { cluster, status }
     })
 
-    await settledWithConcurrency(tasks)
+    const settled = await settledWithConcurrency(tasks)
+
+    // Aggregate after all tasks settle — no shared mutation during concurrency
+    const allStatuses: Record<string, KyvernoClusterStatus> = {}
+    for (const result of settled) {
+      if (result.status === 'fulfilled') {
+        allStatuses[result.value.cluster] = result.value.status
+      }
+    }
 
     // Final: save complete cache and clear refresh state
     const allErrored = Object.keys(allStatuses).length > 0 &&

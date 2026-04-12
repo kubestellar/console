@@ -458,10 +458,10 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
       const currentClusters = clustersRef.current
       if (!currentClusters.length) return
 
+      // (#6857) Return { cluster, data } from each callback to avoid shared mutation.
       const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
-      const results: Record<string, GPUHealthCheckResult[]> = {}
 
-      await settledWithConcurrency(
+      const settled = await settledWithConcurrency(
         currentClusters.map((cluster) => async () => {
           try {
             const resp = await fetch(
@@ -471,14 +471,22 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
             if (resp.ok) {
               const data = await resp.json().catch(() => null)
               if (data?.results && data.results.length > 0) {
-                results[cluster.name] = data.results
+                return { cluster: cluster.name, data: data.results as GPUHealthCheckResult[] }
               }
             }
           } catch {
             // Silent — CronJob may not be installed on this cluster
           }
+          return null
         })
       )
+
+      const results: Record<string, GPUHealthCheckResult[]> = {}
+      for (const result of settled) {
+        if (result.status === 'fulfilled' && result.value) {
+          results[result.value.cluster] = result.value.data
+        }
+      }
 
       if (!unmounted) cronJobResultsRef.current = results
     }

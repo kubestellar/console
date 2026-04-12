@@ -151,25 +151,29 @@ async function fetchFromAllClusters<T>(
   if (clusters.length === 0) {
     throw new Error('No clusters available (agent connecting or backend not authenticated)')
   }
-  const accumulated: T[] = []
-  let failedCount = 0
 
-  // Fetch from each cluster with bounded concurrency, progressively reporting results
+  // (#6857) Each callback returns its own tagged items instead of pushing
+  // into a shared accumulator. Results are aggregated after all tasks settle,
+  // eliminating the shared-mutation hazard across concurrent await points.
   const tasks = clusters.map((cluster) => async () => {
-    try {
-      const data = await fetchAPI<Record<string, T[]>>(endpoint, { ...params, cluster })
-      const items = data[resultKey] || []
-      const tagged = addClusterField ? items.map(item => ({ ...item, cluster })) : items
-      accumulated.push(...tagged)
-      onProgress?.([...accumulated])
-      return tagged
-    } catch {
-      failedCount++
-      throw new Error(`Cluster ${cluster} fetch failed`)
-    }
+    const data = await fetchAPI<Record<string, T[]>>(endpoint, { ...params, cluster })
+    const items = data[resultKey] || []
+    return addClusterField ? items.map(item => ({ ...item, cluster })) : items
   })
 
-  await settledWithConcurrency(tasks)
+  const settled = await settledWithConcurrency(tasks)
+
+  // Aggregate fulfilled results and count failures
+  const accumulated: T[] = []
+  let failedCount = 0
+  for (const result of settled) {
+    if (result.status === 'fulfilled') {
+      accumulated.push(...result.value)
+      onProgress?.([...accumulated])
+    } else {
+      failedCount++
+    }
+  }
 
   // If every cluster fetch failed, throw so callers can try agent fallback
   if (accumulated.length === 0 && clusters.length > 0 && failedCount === clusters.length) {

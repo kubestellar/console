@@ -99,6 +99,10 @@ type KubectlRequest struct {
 	Namespace string   `json:"namespace,omitempty"`
 	Args      []string `json:"args"`
 	Confirmed bool     `json:"confirmed,omitempty"` // must be true for destructive commands
+	// SessionID ties this kubectl request to a mission session so the server
+	// can enforce dry-run mode: if the session was started with dryRun=true,
+	// mutating commands are rejected at the server level. (#6442)
+	SessionID string `json:"sessionId,omitempty"`
 }
 
 // KubectlResponse is the response from kubectl commands
@@ -183,6 +187,12 @@ type ChatRequest struct {
 	Prompt    string        `json:"prompt"`
 	SessionID string        `json:"sessionId,omitempty"`
 	History   []ChatMessage `json:"history,omitempty"` // Previous messages for context
+	// DryRun is a server-enforced flag. When true, the kubectl proxy rejects
+	// mutating commands (apply, create, delete, etc.) for this session,
+	// preventing the AI agent from making real changes even if it ignores the
+	// prompt-level dry-run instructions. Read-only commands (get, describe,
+	// logs, etc.) remain allowed. (#6442)
+	DryRun bool `json:"dryRun,omitempty"`
 }
 
 // ChatStreamPayload is a streaming response chunk from chat

@@ -283,23 +283,26 @@ export function useTrivy() {
     }
     setClustersChecked(0)
 
-    // Check all clusters with bounded concurrency, stream results progressively
-    const allStatuses: Record<string, TrivyClusterStatus> = {}
-
+    // (#6857) Return { cluster, status } from each callback to avoid shared mutation.
     const tasks = (clusters || []).map(cluster => async () => {
       const status = await fetchSingleCluster(cluster)
-      allStatuses[cluster] = status
-      // Stream each result immediately — card re-renders progressively
       setStatuses(prev => ({ ...prev, [cluster]: status }))
       setClustersChecked(prev => prev + 1)
-      // Clear loading state once first cluster with data arrives
       if (!initialLoadDone.current && status.installed) {
         initialLoadDone.current = true
         setIsLoading(false)
       }
+      return { cluster, status }
     })
 
-    await settledWithConcurrency(tasks)
+    const settled = await settledWithConcurrency(tasks)
+
+    const allStatuses: Record<string, TrivyClusterStatus> = {}
+    for (const result of settled) {
+      if (result.status === 'fulfilled') {
+        allStatuses[result.value.cluster] = result.value.status
+      }
+    }
 
     // Final: save complete cache and clear refresh state
     saveToCache(allStatuses)
