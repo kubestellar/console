@@ -2,10 +2,12 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
 	"testing"
 
 	"github.com/kubestellar/console/pkg/api/v1alpha1"
+	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/store"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -303,6 +305,152 @@ func TestReconcileDeployment_DeployFailsNilClient(t *testing.T) {
 	assert.Equal(t, "Failed", wd.Status.Phase)
 	assert.NotNil(t, wd.Status.CompletedAt)
 	assert.Contains(t, wd.Status.History[0].Message, "multi-cluster client not configured")
+
+	// Verify per-cluster statuses are Failed, not left in Pending (#6937).
+	require.Len(t, wd.Status.ClusterStatuses, 2)
+	for _, cs := range wd.Status.ClusterStatuses {
+		assert.Equal(t, "Failed", cs.Phase, "cluster %s should be Failed", cs.Cluster)
+		assert.NotNil(t, cs.CompletedAt, "cluster %s should have CompletedAt", cs.Cluster)
+		assert.Contains(t, cs.Message, "not configured")
+	}
+	assert.Equal(t, "0/2 clusters", wd.Status.Progress)
+}
+
+// fakeDeployer implements workloadDeployer for testing per-cluster failure paths.
+type fakeDeployer struct {
+	resp *v1alpha1.DeployResponse
+	err  error
+}
+
+func (f *fakeDeployer) DeployWorkload(_ context.Context, _, _, _ string,
+	_ []string, _ int32, _ *k8s.DeployOptions,
+) (*v1alpha1.DeployResponse, error) {
+	return f.resp, f.err
+}
+
+func TestReconcileDeployment_DeployPerClusterFailures(t *testing.T) {
+	// When DeployWorkload returns per-cluster failures, each ClusterStatus
+	// must reflect the failure and the overall phase should be Failed.
+	mw := &v1alpha1.ManagedWorkload{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: v1alpha1.GroupVersion.String(),
+			Kind:       "ManagedWorkload",
+		},
+		ObjectMeta: metav1.ObjectMeta{Name: "my-app", Namespace: "test-ns"},
+		Spec: v1alpha1.ManagedWorkloadSpec{
+			SourceCluster:   "source-cluster",
+			SourceNamespace: "default",
+			WorkloadRef: v1alpha1.WorkloadReference{
+				Kind: "Deployment",
+				Name: "nginx",
+			},
+		},
+	}
+	mwU, _ := mw.ToUnstructured()
+
+	wd := &v1alpha1.WorkloadDeployment{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: v1alpha1.GroupVersion.String(),
+			Kind:       "WorkloadDeployment",
+		},
+		ObjectMeta: metav1.ObjectMeta{Name: "wd-partial", Namespace: "test-ns"},
+		Spec: v1alpha1.WorkloadDeploymentSpec{
+			WorkloadRef:    v1alpha1.ResourceReference{Name: "my-app"},
+			TargetClusters: []string{"cluster-ok", "cluster-fail"},
+		},
+		Status: v1alpha1.WorkloadDeploymentStatus{
+			Phase: "Pending",
+		},
+	}
+	wdU, _ := wd.ToUnstructured()
+
+	h, _ := setupReconcileEnv(t, mwU, wdU)
+
+	// Inject a fake deployer that reports cluster-fail as failed.
+	h.deployer = &fakeDeployer{
+		resp: &v1alpha1.DeployResponse{
+			DeployedTo:     []string{"cluster-ok"},
+			FailedClusters: []string{"cluster-fail"},
+		},
+		err: fmt.Errorf("partial failure"),
+	}
+
+	h.reconcileDeployment(context.Background(), wd)
+
+	// Overall should be Failed (partial).
+	assert.Equal(t, "Failed", wd.Status.Phase)
+	assert.NotNil(t, wd.Status.CompletedAt)
+	assert.Contains(t, wd.Status.History[0].Message, "1 succeeded")
+	assert.Contains(t, wd.Status.History[0].Message, "1 failed")
+
+	// Per-cluster statuses
+	require.Len(t, wd.Status.ClusterStatuses, 2)
+	statusMap := make(map[string]v1alpha1.ClusterRolloutStatus)
+	for _, cs := range wd.Status.ClusterStatuses {
+		statusMap[cs.Cluster] = cs
+	}
+	assert.Equal(t, "Complete", statusMap["cluster-ok"].Phase)
+	assert.Equal(t, "Failed", statusMap["cluster-fail"].Phase)
+	assert.Equal(t, "1/2 clusters", wd.Status.Progress)
+}
+
+func TestReconcileDeployment_DeployAllClustersFail(t *testing.T) {
+	// When DeployWorkload returns an error with no result, all clusters
+	// should be marked Failed.
+	mw := &v1alpha1.ManagedWorkload{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: v1alpha1.GroupVersion.String(),
+			Kind:       "ManagedWorkload",
+		},
+		ObjectMeta: metav1.ObjectMeta{Name: "my-app", Namespace: "test-ns"},
+		Spec: v1alpha1.ManagedWorkloadSpec{
+			SourceCluster:   "source-cluster",
+			SourceNamespace: "default",
+			WorkloadRef: v1alpha1.WorkloadReference{
+				Kind: "Deployment",
+				Name: "nginx",
+			},
+		},
+	}
+	mwU, _ := mw.ToUnstructured()
+
+	wd := &v1alpha1.WorkloadDeployment{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: v1alpha1.GroupVersion.String(),
+			Kind:       "WorkloadDeployment",
+		},
+		ObjectMeta: metav1.ObjectMeta{Name: "wd-allfail", Namespace: "test-ns"},
+		Spec: v1alpha1.WorkloadDeploymentSpec{
+			WorkloadRef:    v1alpha1.ResourceReference{Name: "my-app"},
+			TargetClusters: []string{"cluster-a", "cluster-b"},
+		},
+		Status: v1alpha1.WorkloadDeploymentStatus{
+			Phase: "Pending",
+		},
+	}
+	wdU, _ := wd.ToUnstructured()
+
+	h, _ := setupReconcileEnv(t, mwU, wdU)
+
+	// Inject a fake deployer that fails entirely (nil result).
+	h.deployer = &fakeDeployer{
+		resp: nil,
+		err:  fmt.Errorf("source cluster unreachable"),
+	}
+
+	h.reconcileDeployment(context.Background(), wd)
+
+	assert.Equal(t, "Failed", wd.Status.Phase)
+	assert.NotNil(t, wd.Status.CompletedAt)
+	assert.Contains(t, wd.Status.History[0].Message, "All 2 clusters failed")
+
+	// Every cluster must be Failed, not Pending.
+	require.Len(t, wd.Status.ClusterStatuses, 2)
+	for _, cs := range wd.Status.ClusterStatuses {
+		assert.Equal(t, "Failed", cs.Phase, "cluster %s should be Failed", cs.Cluster)
+		assert.NotNil(t, cs.CompletedAt, "cluster %s should have CompletedAt", cs.Cluster)
+	}
+	assert.Equal(t, "0/2 clusters", wd.Status.Progress)
 }
 
 func TestSetTerminalStatus(t *testing.T) {

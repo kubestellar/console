@@ -17,6 +17,14 @@ import (
 	"k8s.io/client-go/rest"
 )
 
+// workloadDeployer abstracts the DeployWorkload call so reconciliation can be
+// tested with a fake deployer that returns per-cluster failures.
+type workloadDeployer interface {
+	DeployWorkload(ctx context.Context, sourceCluster, namespace, name string,
+		targetClusters []string, replicas int32, opts *k8s.DeployOptions,
+	) (*v1alpha1.DeployResponse, error)
+}
+
 // ConsolePersistenceHandlers handles console persistence API endpoints
 type ConsolePersistenceHandlers struct {
 	persistenceStore *store.PersistenceStore
@@ -24,6 +32,9 @@ type ConsolePersistenceHandlers struct {
 	watcher          *k8s.ConsoleWatcher
 	hub              *Hub
 	userStore        store.Store
+	// deployer is used by reconcileDeployment. When nil, k8sClient is used.
+	// Tests can inject a fake to exercise per-cluster failure paths.
+	deployer workloadDeployer
 }
 
 // NewConsolePersistenceHandlers creates a new console persistence handlers instance
@@ -860,16 +871,20 @@ func (h *ConsolePersistenceHandlers) reconcileDeployment(ctx context.Context, wd
 	slog.Info("[ConsolePersistence] reconciling deployment",
 		"namespace", wd.Namespace, "name", wd.Name)
 
+	// statusCtx is decoupled from the reconcile context so that status writes
+	// succeed even when reconcileCtx times out or is cancelled.
+	statusCtx := context.WithoutCancel(ctx)
+
 	// Helper: persist status update, logging on error. Captures the returned
 	// resourceVersion so subsequent updates don't conflict.
 	updateStatus := func(wd *v1alpha1.WorkloadDeployment) {
-		client, _, err := h.persistenceStore.GetActiveClient(ctx)
+		client, _, err := h.persistenceStore.GetActiveClient(statusCtx)
 		if err != nil {
 			slog.Error("[reconcile] failed to get client for status update", "error", err)
 			return
 		}
 		persistence := k8s.NewConsolePersistence(client)
-		updated, err := persistence.UpdateWorkloadDeploymentStatus(ctx, wd)
+		updated, err := persistence.UpdateWorkloadDeploymentStatus(statusCtx, wd)
 		if err != nil {
 			slog.Error("[reconcile] failed to update deployment status",
 				"name", wd.Name, "error", err)
@@ -920,8 +935,21 @@ func (h *ConsolePersistenceHandlers) reconcileDeployment(ctx context.Context, wd
 	updateStatus(wd)
 
 	// ---- Step 3: Deploy to each target cluster ----
-	if h.k8sClient == nil {
+	deployer := h.deployer
+	if deployer == nil && h.k8sClient != nil {
+		deployer = h.k8sClient
+	}
+	if deployer == nil {
 		slog.Error("[reconcile] k8sClient is nil, cannot deploy workload", "name", wd.Name)
+		// Mark every cluster as Failed so ClusterStatuses are consistent with
+		// the terminal Failed phase (not left in Pending).
+		now := metav1.Now()
+		for i := range wd.Status.ClusterStatuses {
+			wd.Status.ClusterStatuses[i].Phase = "Failed"
+			wd.Status.ClusterStatuses[i].Message = "Multi-cluster client not configured"
+			wd.Status.ClusterStatuses[i].CompletedAt = &now
+		}
+		wd.Status.Progress = fmt.Sprintf("0/%d clusters", len(targets))
 		h.setTerminalStatus(wd, "Failed", "Internal error: multi-cluster client not configured", updateStatus)
 		return
 	}
@@ -936,7 +964,7 @@ func (h *ConsolePersistenceHandlers) reconcileDeployment(ctx context.Context, wd
 		DeployedBy: "console-reconciler",
 	}
 
-	result, err := h.k8sClient.DeployWorkload(
+	result, err := deployer.DeployWorkload(
 		ctx,
 		workload.Spec.SourceCluster,
 		workload.Spec.SourceNamespace,
