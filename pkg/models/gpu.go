@@ -16,6 +16,39 @@ const (
 	ReservationStatusCancelled ReservationStatus = "cancelled"
 )
 
+// validStatuses enumerates the allowed reservation status values.
+var validStatuses = map[ReservationStatus]bool{
+	ReservationStatusPending:   true,
+	ReservationStatusActive:    true,
+	ReservationStatusCompleted: true,
+	ReservationStatusCancelled: true,
+}
+
+// allowedTransitions defines the legal state-transition graph for reservation
+// status. The key is the current status; the value set contains the statuses
+// it may transition to.
+var allowedTransitions = map[ReservationStatus]map[ReservationStatus]bool{
+	ReservationStatusPending:   {ReservationStatusActive: true, ReservationStatusCancelled: true},
+	ReservationStatusActive:    {ReservationStatusCompleted: true, ReservationStatusCancelled: true},
+	ReservationStatusCompleted: {}, // terminal
+	ReservationStatusCancelled: {}, // terminal
+}
+
+// IsValidStatus returns true when s is one of the four recognised statuses.
+func (s ReservationStatus) IsValid() bool {
+	return validStatuses[s]
+}
+
+// CanTransitionTo returns true when transitioning from s to target is allowed
+// by the state-transition graph.
+func (s ReservationStatus) CanTransitionTo(target ReservationStatus) bool {
+	allowed, ok := allowedTransitions[s]
+	if !ok {
+		return false
+	}
+	return allowed[target]
+}
+
 // GPUReservation represents a GPU reservation submitted by a user
 type GPUReservation struct {
 	ID            uuid.UUID         `json:"id"`

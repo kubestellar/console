@@ -1876,9 +1876,97 @@ func (s *SQLiteStore) UpdateGPUReservation(reservation *models.GPUReservation) e
 	return err
 }
 
+// UpdateGPUReservationWithCapacity atomically enforces a cluster GPU capacity
+// cap when updating a reservation (#6957). The WHERE clause ensures the update
+// only succeeds if the cluster's total reserved GPUs (excluding this
+// reservation) plus the new count stays within the given capacity.
+// Returns ErrGPUQuotaExceeded when the capacity check fails.
+func (s *SQLiteStore) UpdateGPUReservationWithCapacity(reservation *models.GPUReservation, capacity int) error {
+	now := time.Now()
+	reservation.UpdatedAt = &now
+
+	if capacity <= 0 {
+		return s.UpdateGPUReservation(reservation)
+	}
+
+	result, err := s.db.Exec(
+		`UPDATE gpu_reservations
+		 SET user_name = ?, title = ?, description = ?, cluster = ?, namespace = ?,
+		     gpu_count = ?, gpu_type = ?, start_date = ?, duration_hours = ?,
+		     notes = ?, status = ?, quota_name = ?, quota_enforced = ?, updated_at = ?
+		 WHERE id = ?
+		   AND (COALESCE((SELECT SUM(gpu_count) FROM gpu_reservations
+		                   WHERE cluster = ? AND status IN ('active', 'pending') AND id != ?), 0) + ?) <= ?`,
+		reservation.UserName, reservation.Title, reservation.Description,
+		reservation.Cluster, reservation.Namespace, reservation.GPUCount, reservation.GPUType,
+		reservation.StartDate, reservation.DurationHours, reservation.Notes,
+		string(reservation.Status), reservation.QuotaName, boolToInt(reservation.QuotaEnforced),
+		reservation.UpdatedAt, reservation.ID.String(),
+		reservation.Cluster, reservation.ID.String(), reservation.GPUCount, capacity,
+	)
+	if err != nil {
+		return fmt.Errorf("update gpu reservation: %w", err)
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("read rows affected: %w", err)
+	}
+	if rows == 0 {
+		return ErrGPUQuotaExceeded
+	}
+	return nil
+}
+
 func (s *SQLiteStore) DeleteGPUReservation(id uuid.UUID) error {
 	_, err := s.db.Exec(`DELETE FROM gpu_reservations WHERE id = ?`, id.String())
 	return err
+}
+
+// GetGPUReservationsByIDs fetches multiple reservations in a single batched
+// query, avoiding N+1 round-trips for ownership verification (#6963).
+func (s *SQLiteStore) GetGPUReservationsByIDs(ids []uuid.UUID) (map[uuid.UUID]*models.GPUReservation, error) {
+	result := make(map[uuid.UUID]*models.GPUReservation, len(ids))
+	if len(ids) == 0 {
+		return result, nil
+	}
+
+	// Batch in chunks to respect SQLite variable limits.
+	for start := 0; start < len(ids); start += sqliteMaxVars {
+		end := start + sqliteMaxVars
+		if end > len(ids) {
+			end = len(ids)
+		}
+		chunk := ids[start:end]
+
+		placeholders := strings.Repeat("?,", len(chunk))
+		placeholders = placeholders[:len(placeholders)-1]
+
+		args := make([]interface{}, len(chunk))
+		for i, id := range chunk {
+			args[i] = id.String()
+		}
+
+		rows, err := s.db.Query(
+			fmt.Sprintf(`SELECT id, user_id, user_name, title, description, cluster, namespace, gpu_count, gpu_type, start_date, duration_hours, notes, status, quota_name, quota_enforced, created_at, updated_at FROM gpu_reservations WHERE id IN (%s)`, placeholders),
+			args...,
+		)
+		if err != nil {
+			return nil, err
+		}
+		for rows.Next() {
+			r, err := s.scanGPUReservationRow(rows)
+			if err != nil {
+				rows.Close()
+				return nil, err
+			}
+			result[r.ID] = r
+		}
+		rows.Close()
+		if err := rows.Err(); err != nil {
+			return nil, err
+		}
+	}
+	return result, nil
 }
 
 // GetClusterReservedGPUCount returns the total GPU count for active/pending reservations on a cluster.
@@ -2004,10 +2092,11 @@ func (s *SQLiteStore) GetUtilizationSnapshots(reservationID string) ([]models.GP
 // batch size to stay well under that limit (#6888).
 const sqliteMaxVars = 500
 
-// bulkUtilizationMaxRows caps the number of rows returned in a single
-// GetBulkUtilizationSnapshots call. Each reservation typically has hours
-// to days of hourly snapshots, so 10k is well beyond any realistic view.
-const bulkUtilizationMaxRows = 10000
+// bulkUtilizationMaxRowsPerReservation caps the number of snapshot rows
+// returned per reservation in a single GetBulkUtilizationSnapshots call.
+// Each reservation typically has hours to days of hourly snapshots, so 500
+// per reservation is well beyond any realistic view (#6964).
+const bulkUtilizationMaxRowsPerReservation = 500
 
 func (s *SQLiteStore) GetBulkUtilizationSnapshots(reservationIDs []string) (map[string][]models.GPUUtilizationSnapshot, error) {
 	result := make(map[string][]models.GPUUtilizationSnapshot)
@@ -2034,21 +2123,31 @@ func (s *SQLiteStore) GetBulkUtilizationSnapshots(reservationIDs []string) (map[
 
 // queryUtilizationChunk executes a single batched query for a chunk of
 // reservation IDs and merges rows into the provided result map.
+// Uses ROW_NUMBER() to apply a per-reservation row limit so that
+// reservations with many snapshots cannot starve others (#6964).
 func (s *SQLiteStore) queryUtilizationChunk(ids []string, result map[string][]models.GPUUtilizationSnapshot) error {
 	placeholders := strings.Repeat("?,", len(ids))
 	placeholders = placeholders[:len(placeholders)-1] // trim trailing comma
 
-	// +1 slot for the trailing LIMIT parameter.
+	// +1 slot for the per-reservation LIMIT parameter.
 	args := make([]interface{}, 0, len(ids)+1)
 	for _, id := range ids {
 		args = append(args, id)
 	}
-	args = append(args, bulkUtilizationMaxRows)
+	args = append(args, bulkUtilizationMaxRowsPerReservation)
 
-	rows, err := s.db.Query(
-		fmt.Sprintf(`SELECT id, reservation_id, timestamp, gpu_utilization_pct, memory_utilization_pct, active_gpu_count, total_gpu_count FROM gpu_utilization_snapshots WHERE reservation_id IN (%s) ORDER BY timestamp ASC LIMIT ?`, placeholders),
-		args...,
-	)
+	// Use a window function to number rows per reservation, then filter to
+	// only the first N rows per reservation ordered by timestamp.
+	query := fmt.Sprintf(`SELECT id, reservation_id, timestamp, gpu_utilization_pct, memory_utilization_pct, active_gpu_count, total_gpu_count
+		FROM (
+			SELECT *, ROW_NUMBER() OVER (PARTITION BY reservation_id ORDER BY timestamp ASC) AS rn
+			FROM gpu_utilization_snapshots
+			WHERE reservation_id IN (%s)
+		)
+		WHERE rn <= ?
+		ORDER BY reservation_id, timestamp ASC`, placeholders)
+
+	rows, err := s.db.Query(query, args...)
 	if err != nil {
 		return err
 	}

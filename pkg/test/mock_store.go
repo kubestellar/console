@@ -162,7 +162,13 @@ func (m *MockStore) ListUserGPUReservations(userID uuid.UUID) ([]models.GPUReser
 	return nil, nil
 }
 func (m *MockStore) UpdateGPUReservation(reservation *models.GPUReservation) error { return nil }
-func (m *MockStore) DeleteGPUReservation(id uuid.UUID) error                       { return nil }
+func (m *MockStore) UpdateGPUReservationWithCapacity(reservation *models.GPUReservation, capacity int) error {
+	return nil
+}
+func (m *MockStore) DeleteGPUReservation(id uuid.UUID) error { return nil }
+func (m *MockStore) GetGPUReservationsByIDs(ids []uuid.UUID) (map[uuid.UUID]*models.GPUReservation, error) {
+	return nil, nil
+}
 func (m *MockStore) GetClusterReservedGPUCount(cluster string, excludeID *uuid.UUID) (int, error) {
 	return 0, nil
 }

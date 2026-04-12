@@ -154,8 +154,16 @@ type Store interface {
 	ListGPUReservations() ([]models.GPUReservation, error)
 	ListUserGPUReservations(userID uuid.UUID) ([]models.GPUReservation, error)
 	UpdateGPUReservation(reservation *models.GPUReservation) error
+	// UpdateGPUReservationWithCapacity atomically enforces a cluster GPU
+	// capacity cap and updates the reservation in a single SQL statement
+	// so concurrent updates cannot bypass the cap (#6957). A capacity
+	// value of 0 or less skips the check and behaves like UpdateGPUReservation.
+	UpdateGPUReservationWithCapacity(reservation *models.GPUReservation, capacity int) error
 	DeleteGPUReservation(id uuid.UUID) error
 	GetClusterReservedGPUCount(cluster string, excludeID *uuid.UUID) (int, error)
+	// GetGPUReservationsByIDs fetches multiple reservations in a single
+	// batched query, avoiding N+1 round-trips (#6963).
+	GetGPUReservationsByIDs(ids []uuid.UUID) (map[uuid.UUID]*models.GPUReservation, error)
 
 	// GPU Utilization Snapshots
 	InsertUtilizationSnapshot(snapshot *models.GPUUtilizationSnapshot) error
