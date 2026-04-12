@@ -703,8 +703,10 @@ describe('trackRolloutProgress', () => {
     expect(result[0].metrics!.failed).toBe(1)
   })
 
-  it("treats most common image as 'newest' (known behavior)", () => {
-    // Documents the known behavior: during canary, the old image is more common
+  it('treats highest semver image as newest', () => {
+    // PR #6878 switched from frequency-based to semver-based ordering.
+    // v2.0 is the highest semver, so it is "newest" even though v1.0
+    // is deployed to more clusters (the old canary scenario).
     const deps = [
       makeDeployment({ cluster: 'cluster-1', image: 'api:v1.0' }),
       makeDeployment({ cluster: 'cluster-2', image: 'api:v1.0' }),
@@ -712,9 +714,9 @@ describe('trackRolloutProgress', () => {
       makeDeployment({ cluster: 'cluster-4', image: 'api:v2.0' }), // canary
     ]
     const result = trackRolloutProgress(deps)
-    // The 'most common' image (v1.0) is treated as newest
-    expect(result[0].metrics!.completed).toBe(3)
-    expect(result[0].metrics!.pending).toBe(1)
+    // v2.0 is newest by semver — only cluster-4 is completed
+    expect(result[0].metrics!.completed).toBe(1)
+    expect(result[0].metrics!.pending).toBe(3)
   })
 
   it('verifies per-cluster completed/pending/failed breakdown', () => {
@@ -1286,14 +1288,15 @@ describe('trackRolloutProgress — regression', () => {
     expect(result).toHaveLength(1)
     const metrics = result[0].metrics!
 
-    // v1.0 is most common (2 of 3), so treated as "newest"
-    // cluster-1 has v2.0 (not newest, not failed) => pending, progress=50
-    expect(metrics['cluster-1_progress']).toBe(50)
-    expect(metrics['cluster-1_status']).toBe(1) // ROLLOUT_STATUS_IN_PROGRESS
+    // PR #6878: v2.0 is newest by semver (not frequency-based anymore)
+    // cluster-1 has v2.0 (newest) => completed, progress=100
+    expect(metrics['cluster-1_progress']).toBe(100)
+    expect(metrics['cluster-1_status']).toBe(2) // ROLLOUT_STATUS_COMPLETE
 
-    // cluster-2 has v1.0 (newest) => completed, progress=100
+    // cluster-2 has v1.0 (not newest, not failed) => pending
+    // Progress is based on readyReplicas/replicas ratio (3/3 = 100)
     expect(metrics['cluster-2_progress']).toBe(100)
-    expect(metrics['cluster-2_status']).toBe(2) // ROLLOUT_STATUS_COMPLETE
+    expect(metrics['cluster-2_status']).toBe(1) // ROLLOUT_STATUS_IN_PROGRESS
 
     // cluster-3 has status=failed => progress=0, status=3
     expect(metrics['cluster-3_progress']).toBe(0)
@@ -1320,7 +1323,7 @@ describe('trackRolloutProgress — regression', () => {
     const result = trackRolloutProgress(deps)
     expect(result).toHaveLength(1)
     const metrics = result[0].metrics!
-    // v2.0 is most common (2/3), cluster-3 has v1.0 with status=failed
+    // v2.0 is newest by semver, cluster-3 has v1.0 with status=failed
     // pending = deployments with non-newest image AND status !== 'failed' => 0
     expect(metrics.pending).toBe(0)
     expect(metrics.failed).toBe(1)

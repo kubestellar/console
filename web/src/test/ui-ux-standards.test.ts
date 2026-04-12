@@ -69,11 +69,12 @@ const COMPONENTS_DIR = path.resolve(
 //   303 → 304: #6366 ratchet drift — pre-existing unaccounted-for raw hex from before 303 bump, not introduced by #6365
 //   304 → 306: issue 6774 loading/error states — reverted to 304 in issue 6778 (false positives from issue-ref comments rewritten to "issue NNNN" form)
 //   304 → 307: PR 6854 introduced 3 new hex refs (not real color violations)
+//   307 → 309: issue 6882 ratchet drift — pre-existing false positives from issue-ref comments
 //
 // When you bump this number, append a one-line entry above so future
 // bumps stay grep-able and reviewers can tell at a glance whether a
 // change is a real new violation or just a comment-level reference.
-const EXPECTED_RAW_HEX_COUNT = 307
+const EXPECTED_RAW_HEX_COUNT = 309
 const EXPECTED_RAW_RGBA_COUNT = 104
 const EXPECTED_ARBITRARY_TW_COLOR_COUNT = 22
 const EXPECTED_INLINE_STYLE_COLOR_COUNT = 213
