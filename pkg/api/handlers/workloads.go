@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -365,6 +366,10 @@ type ClusterGroup struct {
 const allHealthyClustersGroupName = "all-healthy-clusters"
 
 // In-memory cluster group store (persisted via frontend localStorage; backend is source of truth for labels)
+// validLabelValue matches Kubernetes label values: alphanumeric, '-', '_', '.'
+// up to 63 characters. Used to prevent label selector injection (#7004).
+var validLabelValue = regexp.MustCompile(`^[a-zA-Z0-9]([a-zA-Z0-9._-]{0,61}[a-zA-Z0-9])?$`)
+
 var (
 	clusterGroups   = make(map[string]ClusterGroup)
 	clusterGroupsMu sync.RWMutex
@@ -1094,7 +1099,12 @@ func (h *WorkloadHandlers) GetDeployLogs(c *fiber.Ctx) error {
 	cluster := c.Params("cluster")
 	namespace := c.Params("namespace")
 	name := c.Params("name")
-	tailLines := c.QueryInt("tail", 8)
+	const defaultTailLines = 8
+	tailLines := c.QueryInt("tail", defaultTailLines)
+	// Clamp to a safe range to prevent panic from negative slice indices (#7003).
+	if tailLines <= 0 {
+		tailLines = defaultTailLines
+	}
 
 	client, err := h.k8sClient.GetClient(cluster)
 	if err != nil {
@@ -1103,6 +1113,13 @@ func (h *WorkloadHandlers) GetDeployLogs(c *fiber.Ctx) error {
 
 	ctx, cancel := context.WithTimeout(c.Context(), workloadDeployLogsTimeout)
 	defer cancel()
+
+	// Validate workload name to prevent label selector injection (#7004).
+	// A crafted name like "foo,env=prod" would expand to "app=foo,env=prod"
+	// and match pods from unrelated workloads.
+	if !validLabelValue.MatchString(name) {
+		return c.Status(400).JSON(fiber.Map{"error": "invalid workload name"})
+	}
 
 	// Try label selector first: app=<name>
 	pods, err := client.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
