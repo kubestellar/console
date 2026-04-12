@@ -18,7 +18,7 @@ const TILE_COLORS: Record<number, { bg: string; text: string }> = {
   64: { bg: 'bg-cyan-600/80', text: 'text-white' },
   128: { bg: 'bg-green-500/80', text: 'text-white' },
   256: { bg: 'bg-green-600/80', text: 'text-white' },
-  512: { bg: 'bg-yellow-500/80', text: 'text-black' },
+  512: { bg: 'bg-yellow-500/80', text: 'text-black dark:text-black' },
   1024: { bg: 'bg-orange-500/80', text: 'text-white' },
   2048: { bg: 'bg-purple-500/80', text: 'text-white' },
   4096: { bg: 'bg-purple-500/80', text: 'text-white' },

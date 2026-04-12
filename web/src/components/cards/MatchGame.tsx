@@ -301,7 +301,7 @@ export function MatchGame(_props: CardComponentProps) {
               className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
                 difficulty === d
                   ? 'bg-purple-500 text-white'
-                  : 'bg-white/5 hover:bg-white/10 text-muted-foreground'
+                  : 'bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-muted-foreground'
               }`}
             >
               {d.charAt(0).toUpperCase() + d.slice(1)}
@@ -324,14 +324,14 @@ export function MatchGame(_props: CardComponentProps) {
           <div className="flex gap-1">
             <button
               onClick={togglePause}
-              className="p-0.5 rounded bg-white/5 hover:bg-white/10 transition-colors"
+              className="p-0.5 rounded bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
               title={isPaused ? 'Resume' : 'Pause'}
             >
               {isPaused ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
             </button>
             <button
               onClick={resetGame}
-              className="p-0.5 rounded bg-white/5 hover:bg-white/10 transition-colors"
+              className="p-0.5 rounded bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
               title={t('common.reset')}
             >
               <RotateCcw className="w-3.5 h-3.5" />
@@ -413,7 +413,7 @@ export function MatchGame(_props: CardComponentProps) {
                   
                   {/* Card front */}
                   <div className={`card-face absolute inset-0 backface-hidden rotate-y-180 ${
-                    card.matched ? 'bg-green-500/20 border-green-500/30' : 'bg-white/10 border-white/20'
+                    card.matched ? 'bg-green-500/20 border-green-500/30' : 'bg-black/10 dark:bg-white/10 border-black/20 dark:border-white/20'
                   } border-2 rounded flex items-center justify-center`}>
                     <Icon className={`w-6 h-6 ${icon?.color || 'text-blue-400'}`} />
                   </div>
@@ -432,7 +432,7 @@ export function MatchGame(_props: CardComponentProps) {
             <div className="text-base font-bold">Paused</div>
             <button
               onClick={togglePause}
-              className="mt-2 px-3 py-1.5 text-sm bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
+              className="mt-2 px-3 py-1.5 text-sm bg-black/10 dark:bg-white/10 hover:bg-black/20 dark:hover:bg-white/20 rounded-lg transition-colors"
             >
               Resume
             </button>

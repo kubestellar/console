@@ -18,7 +18,7 @@ function StatusBadge({ status }: { status: string }) {
         ? 'bg-yellow-500/15 text-yellow-400 border-yellow-500/20'
         : status === 'Failed'
           ? 'bg-red-500/15 text-red-400 border-red-500/20'
-          : 'bg-gray-500/15 text-muted-foreground border-gray-500/20'
+          : 'bg-gray-500/15 dark:bg-gray-400/15 text-muted-foreground border-gray-500/20 dark:border-gray-400/20'
   return (
     <span className={`inline-flex items-center px-1.5 py-0.5 text-2xs font-medium rounded border ${classes}`}>
       {status}
@@ -41,12 +41,12 @@ const PROVIDER_COLORS: Record<string, string> = {
   Anthropic: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
   OpenAI: 'bg-green-500/10 text-green-400 border-green-500/20',
   Gemini: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-  Ollama: 'bg-gray-500/10 text-gray-400 border-gray-500/20',
+  Ollama: 'bg-gray-500/10 text-gray-600 dark:text-gray-400 border-gray-500/20',
   AzureOpenAI: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
 }
 
 function ProviderBadge({ provider }: { provider: string }) {
-  const classes = PROVIDER_COLORS[provider] || 'bg-gray-500/10 text-gray-400 border-gray-500/20'
+  const classes = PROVIDER_COLORS[provider] || 'bg-gray-500/10 text-gray-600 dark:text-gray-400 border-gray-500/20'
   return (
     <span className={`inline-flex items-center px-1.5 py-0.5 text-2xs font-medium rounded border ${classes}`}>
       {provider}

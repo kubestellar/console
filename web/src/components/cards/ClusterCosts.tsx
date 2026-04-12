@@ -57,7 +57,7 @@ const SORT_OPTIONS_KEYS: ReadonlyArray<{ value: SortByOption; labelKey: SortTran
 
 // Cloud provider icons (simple text badges for now, could be SVG logos)
 const PROVIDER_ICONS: Record<CloudProvider, { color: string; bg: string; short: string }> = {
-  estimate: { color: 'text-muted-foreground', bg: 'bg-gray-500/20', short: 'EST' },
+  estimate: { color: 'text-muted-foreground', bg: 'bg-gray-500/20 dark:bg-gray-400/15', short: 'EST' },
   aws: { color: 'text-orange-400', bg: 'bg-orange-500/20', short: 'AWS' },
   gcp: { color: 'text-blue-400', bg: 'bg-blue-500/20', short: 'GCP' },
   azure: { color: 'text-blue-400', bg: 'bg-blue-500/20', short: 'AZR' },

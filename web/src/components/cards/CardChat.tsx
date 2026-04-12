@@ -206,7 +206,7 @@ export function CardChat({
                   {message.role === 'assistant' && (
                     <button
                       onClick={() => handleCopy(message.id, message.content)}
-                      className="p-1 rounded hover:bg-white/10"
+                      className="p-1 rounded hover:bg-black/10 dark:hover:bg-white/10"
                     >
                       {copiedId === message.id ? (
                         <CheckCircle className="w-3 h-3 text-green-400" />

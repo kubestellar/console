@@ -19,7 +19,7 @@ function StatusBadge({ status }: { status: string }) {
         ? 'bg-yellow-500/15 text-yellow-400 border-yellow-500/20'
         : status === 'Failed'
           ? 'bg-red-500/15 text-red-400 border-red-500/20'
-          : 'bg-gray-500/15 text-muted-foreground border-gray-500/20'
+          : 'bg-gray-500/15 dark:bg-gray-400/15 text-muted-foreground border-gray-500/20 dark:border-gray-400/20'
   return (
     <span className={`inline-flex items-center px-1.5 py-0.5 text-2xs font-medium rounded border ${classes}`}>
       {status}
@@ -40,11 +40,11 @@ function KindBadge({ kind }: { kind: string }) {
 
 function ProtocolBadge({ protocol }: { protocol: string }) {
   const colorMap: Record<string, string> = {
-    stdio: 'bg-gray-500/10 text-gray-400 border-gray-500/20',
+    stdio: 'bg-gray-500/10 text-gray-600 dark:text-gray-400 border-gray-500/20',
     sse: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
     streamableHTTP: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
   }
-  const classes = colorMap[protocol] || 'bg-gray-500/10 text-gray-400 border-gray-500/20'
+  const classes = colorMap[protocol] || 'bg-gray-500/10 text-gray-600 dark:text-gray-400 border-gray-500/20'
   return (
     <span className={`inline-flex items-center px-1.5 py-0.5 text-2xs font-medium rounded border ${classes}`}>
       {protocol}
@@ -201,7 +201,7 @@ function KagentToolRegistryInternal({ config }: KagentToolRegistryProps) {
               {isExpanded && toolCount > 0 && (
                 <div className="ml-8 mr-2 mb-1 space-y-0.5">
                   {tool.discoveredTools.map(dt => (
-                    <div key={dt.name} className="text-xs text-muted-foreground flex items-center gap-1.5 px-2 py-0.5 rounded bg-white/5">
+                    <div key={dt.name} className="text-xs text-muted-foreground flex items-center gap-1.5 px-2 py-0.5 rounded bg-black/5 dark:bg-white/5">
                       <span className="text-cyan-400/80 font-mono">{dt.name}</span>
                       {dt.description && <span className="truncate">{dt.description}</span>}
                     </div>
