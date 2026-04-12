@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"golang.org/x/sync/singleflight"
 )
 
 var analyticsClient = &http.Client{Timeout: 10 * time.Second}
@@ -37,6 +38,11 @@ const (
 
 	// umamiUpstreamBase is the external Umami instance that the proxy relays to.
 	umamiUpstreamBase = "https://analytics.kubestellar.io"
+
+	// maxProxyResponseBytes is the maximum upstream response body size the proxy
+	// will buffer. Prevents multi-GB memory exhaustion from malicious or
+	// misconfigured upstreams (#7022).
+	maxProxyResponseBytes = 10 * 1024 * 1024 // 10 MB
 )
 
 // gtagCache holds a server-side cache of the gtag.js script to avoid
@@ -48,6 +54,10 @@ var gtagCache struct {
 	fetchedAt   time.Time
 	queryString string // cache key — different measurement IDs get different scripts
 }
+
+// scriptFetchGroup coalesces concurrent cold-cache fetches into a single
+// upstream request, preventing cache stampede on the CDN (#7021).
+var scriptFetchGroup singleflight.Group
 
 // GA4ScriptProxy proxies the gtag.js script through the console's own domain
 // so that ad blockers do not block it. The response is cached server-side
@@ -68,35 +78,48 @@ func GA4ScriptProxy(c *fiber.Ctx) error {
 	}
 	gtagCache.RUnlock()
 
-	// Cache miss — fetch from Google
-	target := "https://www.googletagmanager.com/gtag/js?" + qs
-	resp, err := analyticsClient.Get(target)
+	// Cache miss — use singleflight to coalesce concurrent fetches (#7021)
+	type gtagResult struct {
+		body        []byte
+		contentType string
+		statusCode  int
+	}
+	val, err, _ := scriptFetchGroup.Do("gtag:"+qs, func() (interface{}, error) {
+		target := "https://www.googletagmanager.com/gtag/js?" + qs
+		resp, fetchErr := analyticsClient.Get(target)
+		if fetchErr != nil {
+			slog.Error("[GA4] failed to fetch gtag.js", "error", fetchErr)
+			return nil, fetchErr
+		}
+		defer resp.Body.Close()
+
+		body, readErr := io.ReadAll(io.LimitReader(resp.Body, maxProxyResponseBytes))
+		if readErr != nil {
+			return nil, readErr
+		}
+
+		ct := resp.Header.Get("Content-Type")
+
+		// Update cache on success
+		if resp.StatusCode == http.StatusOK {
+			gtagCache.Lock()
+			gtagCache.body = body
+			gtagCache.contentType = ct
+			gtagCache.fetchedAt = time.Now()
+			gtagCache.queryString = qs
+			gtagCache.Unlock()
+		}
+
+		return &gtagResult{body: body, contentType: ct, statusCode: resp.StatusCode}, nil
+	})
 	if err != nil {
-		slog.Error("[GA4] failed to fetch gtag.js", "error", err)
 		return c.SendStatus(fiber.StatusBadGateway)
 	}
-	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return c.SendStatus(fiber.StatusBadGateway)
-	}
-
-	ct := resp.Header.Get("Content-Type")
-
-	// Update cache
-	if resp.StatusCode == http.StatusOK {
-		gtagCache.Lock()
-		gtagCache.body = body
-		gtagCache.contentType = ct
-		gtagCache.fetchedAt = time.Now()
-		gtagCache.queryString = qs
-		gtagCache.Unlock()
-	}
-
-	c.Set("Content-Type", ct)
+	result := val.(*gtagResult)
+	c.Set("Content-Type", result.contentType)
 	c.Set("Cache-Control", "public, max-age=3600")
-	return c.Status(resp.StatusCode).Send(body)
+	return c.Status(result.statusCode).Send(result.body)
 }
 
 // GA4CollectProxy proxies GA4 event collection requests through the console's
@@ -173,7 +196,7 @@ func GA4CollectProxy(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusBadGateway)
 	}
 	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxProxyResponseBytes))
 	if err != nil {
 		return c.SendStatus(fiber.StatusBadGateway)
 	}
@@ -273,34 +296,47 @@ func UmamiScriptProxy(c *fiber.Ctx) error {
 	}
 	umamiScriptCache.RUnlock()
 
-	// Cache miss — fetch from upstream Umami instance
-	target := umamiUpstreamBase + "/ksc"
-	resp, err := analyticsClient.Get(target)
+	// Cache miss — use singleflight to coalesce concurrent fetches (#7021)
+	type umamiResult struct {
+		body        []byte
+		contentType string
+		statusCode  int
+	}
+	val, err, _ := scriptFetchGroup.Do("umami", func() (interface{}, error) {
+		target := umamiUpstreamBase + "/ksc"
+		resp, fetchErr := analyticsClient.Get(target)
+		if fetchErr != nil {
+			slog.Error("[Umami] failed to fetch tracking script", "error", fetchErr)
+			return nil, fetchErr
+		}
+		defer resp.Body.Close()
+
+		body, readErr := io.ReadAll(io.LimitReader(resp.Body, maxProxyResponseBytes))
+		if readErr != nil {
+			return nil, readErr
+		}
+
+		ct := resp.Header.Get("Content-Type")
+
+		// Update cache on success
+		if resp.StatusCode == http.StatusOK {
+			umamiScriptCache.Lock()
+			umamiScriptCache.body = body
+			umamiScriptCache.contentType = ct
+			umamiScriptCache.fetchedAt = time.Now()
+			umamiScriptCache.Unlock()
+		}
+
+		return &umamiResult{body: body, contentType: ct, statusCode: resp.StatusCode}, nil
+	})
 	if err != nil {
-		slog.Error("[Umami] failed to fetch tracking script", "error", err)
 		return c.SendStatus(fiber.StatusBadGateway)
 	}
-	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return c.SendStatus(fiber.StatusBadGateway)
-	}
-
-	ct := resp.Header.Get("Content-Type")
-
-	// Update cache on success
-	if resp.StatusCode == http.StatusOK {
-		umamiScriptCache.Lock()
-		umamiScriptCache.body = body
-		umamiScriptCache.contentType = ct
-		umamiScriptCache.fetchedAt = time.Now()
-		umamiScriptCache.Unlock()
-	}
-
-	c.Set("Content-Type", ct)
+	result := val.(*umamiResult)
+	c.Set("Content-Type", result.contentType)
 	c.Set("Cache-Control", "public, max-age=3600")
-	return c.Status(resp.StatusCode).Send(body)
+	return c.Status(result.statusCode).Send(result.body)
 }
 
 // UmamiCollectProxy relays Umami event payloads to the upstream instance.
@@ -342,7 +378,7 @@ func UmamiCollectProxy(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusBadGateway)
 	}
 	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxProxyResponseBytes))
 	if err != nil {
 		return c.SendStatus(fiber.StatusBadGateway)
 	}

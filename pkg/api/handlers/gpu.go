@@ -21,6 +21,10 @@ import (
 // handler level; the store now batches IN clauses internally (#6888).
 const bulkUtilizationsMaxIDs = 500
 
+// maxSnapshotQueryLimit caps the ?limit query parameter for utilization
+// snapshots, preventing requests for billions of rows that exhaust memory (#7023).
+const maxSnapshotQueryLimit = 10_000
+
 // maxGPUCountWithoutCapacity is the ceiling on GPUCount when no capacity
 // provider is configured. Prevents absurdly large values from being stored
 // when there is no cluster to validate against (#6962).
@@ -422,6 +426,10 @@ func (h *GPUHandler) GetReservationUtilization(c *fiber.Ctx) error {
 	}
 
 	limit := c.QueryInt("limit", store.DefaultSnapshotQueryLimit)
+	// Clamp to upper bound to prevent unbounded row requests (#7023).
+	if limit <= 0 || limit > maxSnapshotQueryLimit {
+		limit = store.DefaultSnapshotQueryLimit
+	}
 	snapshots, err := h.store.GetUtilizationSnapshots(id, limit)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to get utilization data")

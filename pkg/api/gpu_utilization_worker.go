@@ -152,23 +152,23 @@ func (w *GPUUtilizationWorker) collectForReservation(ctx context.Context, reserv
 		gpuNodeNames[node.Name] = true
 	}
 
-	// Count pods on GPU nodes and GPU resource requests
+	// Count pods with explicit GPU resource requests (#7020).
+	// Only pods that explicitly request GPU resources are counted.
+	// Non-GPU system pods (node-exporter, kube-proxy, etc.) on GPU nodes
+	// are excluded to prevent inflating utilization metrics.
 	var activeGPUCount int
 	for _, pod := range pods {
 		if pod.Status != "Running" {
 			continue
 		}
-		// Check if pod requests GPUs or is on a GPU node
 		podGPUs := 0
 		for _, c := range pod.Containers {
 			podGPUs += c.GPURequested
 		}
 		if podGPUs > 0 {
 			activeGPUCount += podGPUs
-		} else if gpuNodeNames[pod.Node] {
-			// Pod on a GPU node but no explicit GPU request — count as 1 GPU in use
-			activeGPUCount++
 		}
+		// Removed: counting non-GPU pods on GPU nodes as 1 GPU each (#7020)
 	}
 
 	// Cap active count to reservation total
@@ -189,7 +189,7 @@ func (w *GPUUtilizationWorker) collectForReservation(ctx context.Context, reserv
 		ReservationID:        reservation.ID.String(),
 		Timestamp:            time.Now(),
 		GPUUtilizationPct:    gpuUtilPct,
-		MemoryUtilizationPct: gpuUtilPct, // Use same value when no memory metrics available
+		MemoryUtilizationPct: 0, // Memory metrics require a metrics-server; 0 indicates unavailable (#7019)
 		ActiveGPUCount:       activeGPUCount,
 		TotalGPUCount:        totalGPUs,
 	}
