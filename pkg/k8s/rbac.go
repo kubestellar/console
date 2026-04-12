@@ -63,13 +63,14 @@ func (m *MultiClusterClient) ListServiceAccounts(ctx context.Context, contextNam
 		key := sa.Namespace + "/" + sa.Name
 		roles := saRolesMap[key]
 
+		saCreatedAt := sa.CreationTimestamp.Time
 		result = append(result, models.K8sServiceAccount{
 			Name:      sa.Name,
 			Namespace: sa.Namespace,
 			Cluster:   contextName,
 			Secrets:   secrets,
 			Roles:     roles,
-			CreatedAt: sa.CreationTimestamp.Time,
+			CreatedAt: &saCreatedAt,
 		})
 	}
 
@@ -369,11 +370,12 @@ func (m *MultiClusterClient) CreateServiceAccount(ctx context.Context, contextNa
 		return nil, err
 	}
 
+	createdAt := created.CreationTimestamp.Time
 	return &models.K8sServiceAccount{
 		Name:      created.Name,
 		Namespace: created.Namespace,
 		Cluster:   contextName,
-		CreatedAt: created.CreationTimestamp.Time,
+		CreatedAt: &createdAt,
 	}, nil
 }
 
@@ -972,10 +974,12 @@ func parseOpenShiftUser(item unstructured.Unstructured, cluster string) models.O
 		user.Name = name
 	}
 
-	// Get creationTimestamp from metadata (parsed from RFC3339 string; zero value on parse failure)
+	// Get creationTimestamp from metadata (parsed from RFC3339 string).
+	// CreatedAt is a *time.Time so it stays nil on absence or parse failure,
+	// and `omitempty` in the JSON tag then actually omits it. See issue #6759.
 	if createdAt, found, _ := unstructured.NestedString(item.Object, "metadata", "creationTimestamp"); found {
 		if parsed, err := time.Parse(time.RFC3339, createdAt); err == nil {
-			user.CreatedAt = parsed
+			user.CreatedAt = &parsed
 		}
 	}
 

@@ -40,12 +40,15 @@ type K8sUser struct {
 
 // OpenShiftUser represents an OpenShift user (users.user.openshift.io)
 type OpenShiftUser struct {
-	Name       string    `json:"name"`
-	FullName   string    `json:"fullName,omitempty"`
-	Identities []string  `json:"identities,omitempty"`
-	Groups     []string  `json:"groups,omitempty"`
-	Cluster    string    `json:"cluster"`
-	CreatedAt  time.Time `json:"createdAt,omitempty"`
+	Name       string   `json:"name"`
+	FullName   string   `json:"fullName,omitempty"`
+	Identities []string `json:"identities,omitempty"`
+	Groups     []string `json:"groups,omitempty"`
+	Cluster    string   `json:"cluster"`
+	// CreatedAt is a pointer so that `omitempty` actually omits it when unset.
+	// With a value-type time.Time, the JSON encoder never treats a zero-value
+	// struct as empty and would emit "0001-01-01T00:00:00Z". See issue #6759.
+	CreatedAt *time.Time `json:"createdAt,omitempty"`
 }
 
 // K8sRole represents a Kubernetes Role or ClusterRole
@@ -75,12 +78,14 @@ type K8sRoleBinding struct {
 
 // K8sServiceAccount represents a Kubernetes ServiceAccount with its bindings
 type K8sServiceAccount struct {
-	Name      string    `json:"name"`
-	Namespace string    `json:"namespace"`
-	Cluster   string    `json:"cluster"`
-	Secrets   []string  `json:"secrets,omitempty"`
-	Roles     []string  `json:"roles,omitempty"`
-	CreatedAt time.Time `json:"createdAt,omitempty"`
+	Name      string   `json:"name"`
+	Namespace string   `json:"namespace"`
+	Cluster   string   `json:"cluster"`
+	Secrets   []string `json:"secrets,omitempty"`
+	Roles     []string `json:"roles,omitempty"`
+	// CreatedAt is a pointer so that `omitempty` actually omits it when unset.
+	// See OpenShiftUser.CreatedAt and issue #6759.
+	CreatedAt *time.Time `json:"createdAt,omitempty"`
 }
 
 // ClusterPermissions represents current user's permissions on a cluster
