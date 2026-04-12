@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"golang.org/x/time/rate"
 
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/settings"
@@ -21,6 +22,11 @@ const (
 	githubProxyAPIBaseDefault = "https://api.github.com"
 	// maxGitHubProxyPathLen is the maximum allowed path length to prevent abuse.
 	maxGitHubProxyPathLen = 512
+	// githubProxyMaxRequestsPerMinute caps outbound GitHub API calls to protect
+	// the shared server-side PAT from being exhausted by runaway clients.
+	githubProxyMaxRequestsPerMinute = 30
+	// githubProxyBurstSize allows short bursts above the steady-state rate.
+	githubProxyBurstSize = 5
 )
 
 // githubProxyAPIBase is the base URL for proxied GitHub API requests.
@@ -28,6 +34,13 @@ const (
 var githubProxyAPIBase = getEnvOrDefault("GITHUB_API_BASE_URL", githubProxyAPIBaseDefault)
 
 var githubProxyClient = &http.Client{Timeout: githubProxyTimeout}
+
+// githubProxyLimiter enforces a global rate limit on outbound GitHub API calls
+// to prevent a single runaway client from exhausting the shared PAT quota.
+var githubProxyLimiter = rate.NewLimiter(
+	rate.Every(time.Minute/githubProxyMaxRequestsPerMinute),
+	githubProxyBurstSize,
+)
 
 // allowedGitHubPrefixes restricts which GitHub API paths can be proxied.
 // Only read-only endpoints actually needed by the frontend are permitted.
@@ -99,6 +112,14 @@ func (h *GitHubProxyHandler) resolveToken() string {
 // Proxy handles GET /api/github/* by forwarding to api.github.com/*.
 // Only GET requests are allowed (read-only proxy).
 func (h *GitHubProxyHandler) Proxy(c *fiber.Ctx) error {
+	// Rate-limit outbound GitHub API calls to protect the shared PAT quota.
+	if !githubProxyLimiter.Allow() {
+		slog.Warn("[GitHubProxy] rate limit exceeded, rejecting request")
+		return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
+			"error": "GitHub proxy rate limit exceeded — try again shortly",
+		})
+	}
+
 	// Only allow GET — this is a read-only proxy
 	if c.Method() != fiber.MethodGet {
 		return c.Status(fiber.StatusMethodNotAllowed).JSON(fiber.Map{
