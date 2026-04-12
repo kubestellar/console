@@ -268,6 +268,32 @@ export function UnifiedDashboard({
     if (config.storageKey) {
       try {
         localStorage.removeItem(config.storageKey)
+        // #6758 — Also clear per-tab card slots written by the effect
+        // at line ~165. Without this, Reset would restore the flat
+        // `cards` state but leave stale tab-mode placements in
+        // localStorage, which would reseed on the next mount and
+        // silently undo the reset for tab-mode dashboards.
+        const tabSlotPrefix = `${config.storageKey}::tab::`
+        const tabSlotSuffix = '::cards'
+        const keysToRemove: string[] = []
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i)
+          if (k && k.startsWith(tabSlotPrefix) && k.endsWith(tabSlotSuffix)) {
+            keysToRemove.push(k)
+          }
+        }
+        for (const k of keysToRemove) {
+          localStorage.removeItem(k)
+        }
+        // Also clear the in-memory tabCards so the reset is visible
+        // immediately without a reload.
+        if (hasTabs) {
+          const seeded: Record<string, DashboardCardPlacement[]> = {}
+          for (const t of (config.tabs ?? [])) {
+            seeded[t.id] = t.cards ?? []
+          }
+          setTabCards(seeded)
+        }
       } catch {
         // Ignore storage errors
       }

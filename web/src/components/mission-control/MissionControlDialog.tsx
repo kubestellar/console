@@ -28,7 +28,7 @@ import {
 import { cn } from '../../lib/cn'
 import { Button } from '../ui/Button'
 import { useToast } from '../ui/Toast'
-import { useMissionControl } from './useMissionControl'
+import { useMissionControl, consumePersistQuotaBanner } from './useMissionControl'
 import { FixerDefinitionPanel } from './FixerDefinitionPanel'
 import { ClusterAssignmentPanel } from './ClusterAssignmentPanel'
 const FlightPlanBlueprint = lazy(() =>
@@ -111,6 +111,23 @@ export function MissionControlDialog({ open, onClose }: MissionControlDialogProp
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [open, handleKeyDown])
+
+  // #6758 (Copilot on PR #6755) — Surface a toast when a previous
+  // Mission Control session hit a QuotaExceededError while trying to
+  // persist its state. `consumePersistQuotaBanner()` reads and clears
+  // the session-storage flag set by the persistState writer in
+  // #6665, returning the mission title (or the literal `'(untitled)'`)
+  // that was being saved. Without this wiring the helper was dead
+  // code — the flag got written but nobody ever displayed it.
+  useEffect(() => {
+    if (!open) return
+    const pendingTitle = consumePersistQuotaBanner()
+    if (pendingTitle === null) return
+    showToast(
+      `Mission '${pendingTitle}' could not be persisted (browser storage quota exceeded). Your work is preserved in memory but will be lost on reload.`,
+      'warning',
+    )
+  }, [open, showToast])
 
   // #6403 — Surface a toast when stale cluster references are dropped from
   // persisted state. The hook already reconciles the state; we just notify

@@ -613,12 +613,28 @@ export function MissionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
       if (e.key !== MISSIONS_STORAGE_KEY) return
-      if (e.newValue === null) return
       // Ignore events fired within CROSS_TAB_ECHO_IGNORE_MS of our own
       // write — guards against environments that echo storage events.
+      // Applied BEFORE the newValue null-check so our own last-resort
+      // `localStorage.removeItem(kc_missions)` on quota error doesn't
+      // round-trip and clear our in-memory state.
       const sinceWrite = Date.now() - (lastWrittenAtRef.current ?? 0)
       if (sinceWrite < CROSS_TAB_ECHO_IGNORE_MS) return
       if (unmountedRef.current) return
+      // #6758 (Copilot on PR #6755) — When another tab calls
+      // `localStorage.removeItem(kc_missions)` (for example as a
+      // last-resort clear after a QuotaExceededError), `e.newValue` is
+      // `null`. The old code silently dropped that event and left this
+      // tab's local state out of sync with storage. Treat a remote
+      // removal as a remote reset: clear local missions to match.
+      if (e.newValue === null) {
+        try {
+          setMissions([])
+        } catch (err) {
+          console.warn('[Missions] issue 6758 — failed to apply cross-tab reset:', err)
+        }
+        return
+      }
       try {
         const reloaded = loadMissions()
         setMissions(reloaded)

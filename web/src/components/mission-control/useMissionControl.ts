@@ -393,7 +393,9 @@ export function extractJSON<T>(text: string, requiredKey?: string, warnKey?: str
  * a flood of identical warnings. The set is keyed by caller-supplied
  * tokens (typically a mission ID) so the warning fires once per mission
  * instead of once per chunk. Cleared by `reset()` above via
- * `oversizedWarnedRef`, and by `resetOversizedWarnings()` exported below.
+ * `resetOversizedWarnings()` (#6758: the old comment referenced a
+ * nonexistent `oversizedWarnedRef`; the actual mechanism is the exported
+ * helper below).
  */
 const oversizedWarnSet = new Set<string>()
 export function resetOversizedWarnings(): void {
