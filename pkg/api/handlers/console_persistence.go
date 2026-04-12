@@ -769,8 +769,14 @@ func (h *ConsolePersistenceHandlers) CreateWorkloadDeployment(c *fiber.Ctx) erro
 	}
 
 	// Kick off reconciliation in a background goroutine. Use a detached
-	// context so reconciliation survives after the HTTP response is sent.
-	go h.reconcileDeployment(context.Background(), created)
+	// context with a timeout so reconciliation survives after the HTTP
+	// response is sent but cannot block indefinitely.
+	const reconcileTimeout = 5 * time.Minute // max wall-clock for full reconciliation
+	reconcileCtx, reconcileCancel := context.WithTimeout(context.Background(), reconcileTimeout)
+	go func() {
+		defer reconcileCancel()
+		h.reconcileDeployment(reconcileCtx, created)
+	}()
 
 	return c.Status(201).JSON(created)
 }
@@ -849,13 +855,13 @@ func (h *ConsolePersistenceHandlers) DeleteWorkloadDeployment(c *fiber.Ctx) erro
 //  2. Resolves target clusters (from targetGroupRef or targetClusters)
 //  3. Deploys manifests to each target cluster via the multi-cluster client
 //  4. Updates WorkloadDeployment.Status with per-cluster progress
-//  5. Re-queues on transient errors with bounded retries
-//  6. Persists terminal state (Succeeded / Failed)
+//  5. Persists terminal state (Complete / Failed) — no retry on failure
 func (h *ConsolePersistenceHandlers) reconcileDeployment(ctx context.Context, wd *v1alpha1.WorkloadDeployment) {
 	slog.Info("[ConsolePersistence] reconciling deployment",
 		"namespace", wd.Namespace, "name", wd.Name)
 
-	// Helper: persist status update, logging on error.
+	// Helper: persist status update, logging on error. Captures the returned
+	// resourceVersion so subsequent updates don't conflict.
 	updateStatus := func(wd *v1alpha1.WorkloadDeployment) {
 		client, _, err := h.persistenceStore.GetActiveClient(ctx)
 		if err != nil {
@@ -863,10 +869,15 @@ func (h *ConsolePersistenceHandlers) reconcileDeployment(ctx context.Context, wd
 			return
 		}
 		persistence := k8s.NewConsolePersistence(client)
-		if _, err := persistence.UpdateWorkloadDeploymentStatus(ctx, wd); err != nil {
+		updated, err := persistence.UpdateWorkloadDeploymentStatus(ctx, wd)
+		if err != nil {
 			slog.Error("[reconcile] failed to update deployment status",
 				"name", wd.Name, "error", err)
+			return
 		}
+		// Propagate the new resourceVersion so the next update won't hit a
+		// 409 Conflict from the API server.
+		wd.ResourceVersion = updated.ResourceVersion
 	}
 
 	// Transition to InProgress
@@ -909,6 +920,12 @@ func (h *ConsolePersistenceHandlers) reconcileDeployment(ctx context.Context, wd
 	updateStatus(wd)
 
 	// ---- Step 3: Deploy to each target cluster ----
+	if h.k8sClient == nil {
+		slog.Error("[reconcile] k8sClient is nil, cannot deploy workload", "name", wd.Name)
+		h.setTerminalStatus(wd, "Failed", "Internal error: multi-cluster client not configured", updateStatus)
+		return
+	}
+
 	ref := workload.Spec.WorkloadRef
 	replicas := int32(0)
 	if workload.Spec.Replicas != nil {
@@ -964,10 +981,10 @@ func (h *ConsolePersistenceHandlers) reconcileDeployment(ctx context.Context, wd
 			cs.Phase = "Failed"
 			cs.Progress = "0%"
 			if err != nil {
-				cs.Message = err.Error()
-			} else {
-				cs.Message = "Deployment failed"
+				slog.Error("[reconcile] cluster deployment failed",
+					"cluster", cs.Cluster, "name", wd.Name, "error", err)
 			}
+			cs.Message = "Deployment failed"
 			failedCount++
 		} else {
 			// Not in either list — mark as skipped
@@ -980,7 +997,7 @@ func (h *ConsolePersistenceHandlers) reconcileDeployment(ctx context.Context, wd
 
 	// ---- Step 5: Determine terminal phase ----
 	if failedCount == 0 {
-		h.setTerminalStatus(wd, "Succeeded",
+		h.setTerminalStatus(wd, "Complete",
 			fmt.Sprintf("All %d clusters deployed successfully", succeededCount), updateStatus)
 	} else if succeededCount > 0 {
 		// Partial success — still mark as Failed so clients know action is needed,
@@ -988,15 +1005,16 @@ func (h *ConsolePersistenceHandlers) reconcileDeployment(ctx context.Context, wd
 		h.setTerminalStatus(wd, "Failed",
 			fmt.Sprintf("Partial deployment: %d succeeded, %d failed", succeededCount, failedCount), updateStatus)
 	} else {
-		msg := fmt.Sprintf("All %d clusters failed", failedCount)
 		if err != nil {
-			msg = fmt.Sprintf("All %d clusters failed: %v", failedCount, err)
+			slog.Error("[reconcile] all clusters failed",
+				"name", wd.Name, "failedCount", failedCount, "error", err)
 		}
-		h.setTerminalStatus(wd, "Failed", msg, updateStatus)
+		h.setTerminalStatus(wd, "Failed",
+			fmt.Sprintf("All %d clusters failed", failedCount), updateStatus)
 	}
 }
 
-// setTerminalStatus sets the deployment to a terminal phase (Succeeded/Failed),
+// setTerminalStatus sets the deployment to a terminal phase (Complete/Failed),
 // records a completion timestamp and a history entry, then persists the status.
 func (h *ConsolePersistenceHandlers) setTerminalStatus(
 	wd *v1alpha1.WorkloadDeployment,

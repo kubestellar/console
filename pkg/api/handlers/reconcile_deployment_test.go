@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/kubestellar/console/pkg/api/v1alpha1"
-	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/store"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -28,12 +27,13 @@ func setupReconcileEnv(t *testing.T, persistenceObjects ...runtime.Object) (*Con
 	// Build a persistence store that points at "persist-cluster"
 	configPath := filepath.Join(t.TempDir(), "persistence.json")
 	ps := store.NewPersistenceStore(configPath)
-	_ = ps.UpdateConfig(store.PersistenceConfig{
+	err := ps.UpdateConfig(store.PersistenceConfig{
 		Enabled:        true,
 		PrimaryCluster: "persist-cluster",
 		Namespace:      "test-ns",
 		SyncMode:       "primary-only",
 	})
+	require.NoError(t, err)
 	// Wire the client factory to return our fake dynamic client
 	ps.SetClientFactory(func(_ string) (dynamic.Interface, *rest.Config, error) {
 		return fakeDyn, nil, nil
@@ -42,12 +42,12 @@ func setupReconcileEnv(t *testing.T, persistenceObjects ...runtime.Object) (*Con
 		return store.ClusterHealthHealthy
 	})
 
-	// Build a MultiClusterClient (used for the actual deployment step)
-	k8sClient, _ := k8s.NewMultiClusterClient("")
-
+	// k8sClient is nil for unit tests — reconciliation tests exercise the
+	// error/failure paths that result from a nil client, avoiding any
+	// dependency on a real kubeconfig or live cluster.
 	h := &ConsolePersistenceHandlers{
 		persistenceStore: ps,
-		k8sClient:        k8sClient,
+		k8sClient:        nil,
 	}
 
 	return h, fakeDyn
@@ -260,9 +260,9 @@ func TestReconcileDeployment_WorkloadNotFound(t *testing.T) {
 	assert.Contains(t, wd.Status.History[0].Message, "ManagedWorkload")
 }
 
-func TestReconcileDeployment_DeployFailsAllClusters(t *testing.T) {
-	// When the source cluster is unreachable, DeployWorkload fails and all
-	// target clusters should be marked Failed.
+func TestReconcileDeployment_DeployFailsNilClient(t *testing.T) {
+	// When k8sClient is nil (no kubeconfig available), reconciliation should
+	// mark the deployment Failed without panicking.
 	mw := &v1alpha1.ManagedWorkload{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: v1alpha1.GroupVersion.String(),
@@ -302,12 +302,7 @@ func TestReconcileDeployment_DeployFailsAllClusters(t *testing.T) {
 
 	assert.Equal(t, "Failed", wd.Status.Phase)
 	assert.NotNil(t, wd.Status.CompletedAt)
-	// Should have per-cluster statuses
-	assert.Len(t, wd.Status.ClusterStatuses, 2)
-	for _, cs := range wd.Status.ClusterStatuses {
-		assert.Equal(t, "Failed", cs.Phase)
-	}
-	assert.Equal(t, "0/2 clusters", wd.Status.Progress)
+	assert.Contains(t, wd.Status.History[0].Message, "multi-cluster client not configured")
 }
 
 func TestSetTerminalStatus(t *testing.T) {
@@ -327,10 +322,10 @@ func TestSetTerminalStatus(t *testing.T) {
 		updateCalled = true
 	}
 
-	h.setTerminalStatus(wd, "Succeeded", "All done", updateFn)
+	h.setTerminalStatus(wd, "Complete", "All done", updateFn)
 
 	assert.True(t, updateCalled)
-	assert.Equal(t, "Succeeded", wd.Status.Phase)
+	assert.Equal(t, "Complete", wd.Status.Phase)
 	assert.NotNil(t, wd.Status.CompletedAt)
 	assert.Len(t, wd.Status.History, 1)
 	assert.Equal(t, 1, wd.Status.History[0].Revision)
