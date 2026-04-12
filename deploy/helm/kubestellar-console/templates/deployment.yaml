@@ -21,6 +21,7 @@ spec:
       {{- end }}
       labels:
         {{- include "kubestellar-console.labels" . | nindent 8 }}
+        app.kubernetes.io/component: server
         {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -30,6 +31,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       serviceAccountName: {{ include "kubestellar-console.serviceAccountName" . }}
+      automountServiceAccountToken: true
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       {{- if and .Values.backup.enabled .Values.backup.autoRestore }}
@@ -83,7 +85,7 @@ spec:
 
               echo "Restoring from backup: $LATEST (${BACKUP_SIZE} bytes)"
               mkdir -p "$(dirname "$DB_PATH")"
-              cp "$LATEST" "$DB_PATH"
+              cp "$LATEST" "${DB_PATH}.tmp" && mv "${DB_PATH}.tmp" "$DB_PATH"
               echo "Restore complete"
           volumeMounts:
             - name: data
@@ -120,12 +122,14 @@ spec:
               port: http
             initialDelaySeconds: 10
             periodSeconds: 10
+            timeoutSeconds: 5
           readinessProbe:
             httpGet:
               path: {{ if .Values.watchdog.enabled }}/watchdog/ready{{ else }}/healthz{{ end }}
               port: http
             initialDelaySeconds: 5
             periodSeconds: 5
+            timeoutSeconds: 5
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           env:
@@ -137,10 +141,10 @@ spec:
             {{- end }}
             - name: DATABASE_PATH
               value: {{ .Values.database.sqlitePath | quote }}
-            {{- if .Values.route.enabled }}
+            {{- if and .Values.route.enabled .Values.route.host }}
             - name: FRONTEND_URL
               value: "https://{{ .Values.route.host }}"
-            {{- else if .Values.ingress.enabled }}
+            {{- else if and .Values.ingress.enabled .Values.ingress.hosts }}
             - name: FRONTEND_URL
               value: "https://{{ (index .Values.ingress.hosts 0).host }}"
             {{- end }}
@@ -267,6 +271,20 @@ spec:
                   fieldPath: metadata.namespace
             - name: HELM_RELEASE_NAME
               value: {{ .Release.Name | quote }}
+            {{- if .Values.ai.defaultMode }}
+            - name: AI_DEFAULT_MODE
+              value: {{ .Values.ai.defaultMode | quote }}
+            {{- end }}
+            {{- if .Values.ai.tokenLimits.enabled }}
+            - name: AI_TOKEN_LIMITS_ENABLED
+              value: "true"
+            - name: AI_MONTHLY_TOKEN_LIMIT
+              value: {{ .Values.ai.tokenLimits.monthlyLimit | quote }}
+            - name: AI_TOKEN_WARNING_THRESHOLD
+              value: {{ .Values.ai.tokenLimits.warningThreshold | quote }}
+            - name: AI_TOKEN_CRITICAL_THRESHOLD
+              value: {{ .Values.ai.tokenLimits.criticalThreshold | quote }}
+            {{- end }}
             {{- if .Values.selfUpgrade.enabled }}
             - name: SELF_UPGRADE_ENABLED
               value: "true"

@@ -11,5 +11,7 @@ rules:
   - apiGroups: ["apps"]
     resources:
       - deployments
+    resourceNames:
+      - {{ include "kubestellar-console.fullname" . }}
     verbs: ["get", "list", "patch"]
 {{- end }}

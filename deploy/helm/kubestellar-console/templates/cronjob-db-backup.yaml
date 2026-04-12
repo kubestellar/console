@@ -15,7 +15,8 @@ spec:
       template:
         metadata:
           labels:
-            {{- include "kubestellar-console.selectorLabels" . | nindent 12 }}
+            app.kubernetes.io/name: {{ include "kubestellar-console.name" . }}
+            app.kubernetes.io/instance: {{ .Release.Name }}
             app.kubernetes.io/component: db-backup
         spec:
           restartPolicy: OnFailure
@@ -33,6 +34,8 @@ spec:
               # container-level securityContext as the main deployment.
               securityContext:
                 {{- toYaml .Values.securityContext | nindent 16 }}
+              resources:
+                {{- toYaml .Values.backup.resources | nindent 16 }}
               command:
                 - /bin/sh
                 - -c
@@ -45,9 +48,9 @@ spec:
 
                   mkdir -p "$BACKUP_DIR"
 
-                  # Use SQLite .backup for a consistent snapshot (safe even if DB is in use)
+                  # Use SQLite .backup for a consistent, WAL-safe snapshot
                   if [ -f "$DB_PATH" ]; then
-                    cp "$DB_PATH" "$BACKUP_DIR/console-$TIMESTAMP.db"
+                    sqlite3 "$DB_PATH" ".backup '$BACKUP_DIR/console-$TIMESTAMP.db'"
                     echo "Backup created: $BACKUP_DIR/console-$TIMESTAMP.db"
                   else
                     echo "ERROR: Database file not found at $DB_PATH"

@@ -66,7 +66,8 @@ rules:
       - horizontalpodautoscalers
     verbs: ["get", "list", "watch"]
 
-  # RBAC v1 - read-only (for RBAC analysis features)
+  {{- if .Values.rbac.rbacInspectionEnabled }}
+  # RBAC v1 - read-only (for RBAC analysis features, opt-out via rbac.rbacInspectionEnabled)
   - apiGroups: ["rbac.authorization.k8s.io"]
     resources:
       - roles
@@ -74,6 +75,7 @@ rules:
       - rolebindings
       - clusterrolebindings
     verbs: ["get", "list", "watch"]
+  {{- end }}
 
   # Authorization - permission checks
   - apiGroups: ["authorization.k8s.io"]
@@ -149,9 +151,11 @@ rules:
       - serviceimports
     verbs: ["get", "list", "watch"]
 
-  # OpenShift user API - read-only
+  {{- if .Values.rbac.openshiftUserAccess }}
+  # OpenShift user API - read-only (opt-in via rbac.openshiftUserAccess)
   - apiGroups: ["user.openshift.io"]
     resources:
       - users
     verbs: ["get", "list", "watch"]
+  {{- end }}
 {{- end }}

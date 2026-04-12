@@ -2,7 +2,7 @@ replicaCount: 1
 
 image:
   repository: ghcr.io/kubestellar/console
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
   tag: ""  # Defaults to chart appVersion ("latest"); overridden at release time
 
 imagePullSecrets: []
@@ -11,7 +11,7 @@ fullnameOverride: ""
 
 serviceAccount:
   create: true
-  automount: true
+  automount: false
   annotations: {}
   name: ""
 
@@ -28,6 +28,8 @@ rbac:
   create: true
   resourceQuotasReadOnly: false
   namespaceCreationEnabled: false
+  openshiftUserAccess: false
+  rbacInspectionEnabled: true
 
 podAnnotations: {}
 podLabels: {}
@@ -181,6 +183,14 @@ backup:
   failedJobsHistoryLimit: 3
   # Auto-restore: if the main DB is empty or missing, restore from latest backup
   autoRestore: true
+  # Resource limits for backup CronJob container
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
 
 # kubestellar binaries configuration
 kubestellar:
@@ -231,10 +241,16 @@ affinity: {}
 
 networkPolicy:
   enabled: false
+  # Restrict which pods/namespaces can reach the console (from: selector)
+  # Example: [{ namespaceSelector: { matchLabels: { name: ingress } } }]
+  ingressFrom: []
+  # Additional egress rules beyond DNS and HTTPS/API
+  extraEgress: []
 
 podDisruptionBudget:
   enabled: false
-  minAvailable: 1
+  # Use maxUnavailable (safe with single replica) instead of minAvailable
+  maxUnavailable: 1
 
 # Watchdog reverse proxy — serves a branded "Reconnecting..." page when backend is down
 watchdog:
