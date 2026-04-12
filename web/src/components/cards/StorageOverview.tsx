@@ -88,9 +88,10 @@ export function StorageOverview() {
       clustersWithStorage: filteredClusters.filter(c => (c.storageGB || 0) > 0).length }
   }, [filteredClusters, filteredPVCs])
 
-  // Check if we have real data from reachable clusters
+  // Check if we have real data from reachable clusters — storage data is valid
+  // regardless of nodeCount (#6808)
   const hasRealData = !isLoading && filteredClusters.length > 0 &&
-    filteredClusters.some(c => c.reachable !== false && c.storageGB !== undefined && c.nodeCount !== undefined && c.nodeCount > 0)
+    filteredClusters.some(c => c.reachable !== false && c.storageGB !== undefined)
 
   if (showSkeleton) {
     return (

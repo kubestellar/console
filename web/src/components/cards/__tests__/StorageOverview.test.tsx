@@ -168,9 +168,12 @@ describe('StorageOverview', () => {
         consecutiveFailures: 0,
       } as never)
       render(<StorageOverview />)
-      const boundTile = screen.getByText('storageOverview.bound').closest('div')!
-      expect(boundTile.className).toContain('cursor-default')
-      expect(boundTile.className).not.toContain('cursor-pointer')
+      // The text is inside a nested div; walk up to the tile container that carries the cursor class
+      const boundLabel = screen.getByText('storageOverview.bound')
+      // The tile div is the one with border/bg classes — two levels up from the label span
+      const tileDivs = boundLabel.closest('[class*="border"]')!
+      expect(tileDivs.className).toContain('cursor-default')
+      expect(tileDivs.className).not.toContain('cursor-pointer')
     })
   })
 
