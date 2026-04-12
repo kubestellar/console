@@ -627,9 +627,41 @@ export function MissionProvider({ children }: { children: ReactNode }) {
       // `null`. The old code silently dropped that event and left this
       // tab's local state out of sync with storage. Treat a remote
       // removal as a remote reset: clear local missions to match.
+      //
+      // #6762 (Copilot on PR #6760) — A remote reset must also clear
+      // every piece of state that is logically derivative of `missions`;
+      // otherwise stale entries keep pointing at missions that no longer
+      // exist. Specifically:
+      //   - `unreadMissionIds` — IDs here reference mission IDs; leaving
+      //     them populated produces a non-zero `unreadMissionCount` badge
+      //     for missions that were just cleared.
+      //   - `activeMissionId` — a pointer into `missions`; must be
+      //     cleared so the sidebar / detail view doesn't dangle on a
+      //     deleted mission.
+      //   - `cancelTimeouts` (ref) — timeout handles keyed by mission ID
+      //     from in-flight cancel requests; the missions they reference
+      //     are gone, so clear them to avoid leaked timers firing
+      //     against non-existent state.
+      //   - `pendingRequests` (ref) — requestId → missionId map for
+      //     in-flight WS requests; the target missions are gone.
+      //   - `lastStreamTimestamp` (ref) — per-mission streaming gap
+      //     tracker, also keyed by mission ID.
+      //
+      // Persistent UI state (sidebar open / minimized / full-screen,
+      // selected agent, default agent) is intentionally NOT reset — it
+      // is not derivative of `missions` and should survive a remote
+      // mission wipe.
       if (e.newValue === null) {
         try {
           setMissions([])
+          setUnreadMissionIds(new Set())
+          setActiveMissionId(null)
+          for (const timeout of cancelTimeouts.current.values()) {
+            clearTimeout(timeout)
+          }
+          cancelTimeouts.current.clear()
+          pendingRequests.current.clear()
+          lastStreamTimestamp.current.clear()
         } catch (err) {
           console.warn('[Missions] issue 6758 — failed to apply cross-tab reset:', err)
         }
