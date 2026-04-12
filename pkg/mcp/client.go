@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"os/exec"
 	"sync"
 	"sync/atomic"
@@ -397,7 +398,7 @@ func (c *Client) readResponses() {
 				case <-c.done:
 					// Client is stopping; suppress read errors
 				default:
-					fmt.Printf("[%s] read error: %v\n", c.name, err)
+					slog.Error("[MCP] read error", "client", c.name, "error", err)
 				}
 			}
 			return
