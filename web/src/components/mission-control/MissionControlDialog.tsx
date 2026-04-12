@@ -106,10 +106,11 @@ export function MissionControlDialog({ open, onClose }: MissionControlDialogProp
     setHighestReached(prev => Math.max(prev, currentStepIndex))
   }, [currentStepIndex])
 
+  // #6787 — Use capture phase so child stopPropagation cannot swallow Escape
   useEffect(() => {
     if (!open) return
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
+    document.addEventListener('keydown', handleKeyDown, { capture: true })
+    return () => document.removeEventListener('keydown', handleKeyDown, { capture: true })
   }, [open, handleKeyDown])
 
   // #6758 (Copilot on PR #6755) — Surface a toast when a previous

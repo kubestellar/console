@@ -547,6 +547,7 @@ export function useMissionControl() {
   // on `!clustersLoading && clustersLastUpdated != null` so an empty cached
   // state during initial fetch does not wipe valid persisted assignments.
   useEffect(() => {
+    let isMounted = true
     if (staleReconcileDoneRef.current) return
     if (!clusters) return
     // issue 6427 — wait until useClusters() has produced a real load, not
@@ -587,6 +588,8 @@ export function useMissionControl() {
     // (the live cluster list), not a react-to-user event, so setState in
     // this effect is the right tool here. The ref guard above ensures it
     // runs exactly once per load.
+    // #6786 — isMounted guard prevents setState after unmount.
+    if (!isMounted) return
     /* eslint-disable react-hooks/set-state-in-effect */
     setStaleClusterNames(allStale)
     const staleAssignmentNames = new Set(staleFromAssignments)
@@ -603,6 +606,7 @@ export function useMissionControl() {
     console.warn(
       `[MissionControl] issue 6403 — dropped ${allStale.length} stale cluster reference(s) from persisted state: ${allStale.join(', ')}`,
     )
+    return () => { isMounted = false }
   }, [clusters, clustersLoading, clustersLastUpdated, state.assignments, state.targetClusters])
 
   const acknowledgeStaleClusters = () => {

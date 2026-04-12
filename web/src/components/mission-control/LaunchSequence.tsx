@@ -300,24 +300,38 @@ export function LaunchSequence({
    * "fully succeeded" from "terminally failed" and block dependent phases
    * when a failure occurred.
    */
-  const waitForPhaseCompletion = useCallback((phaseNum: number): Promise<PhaseStatus> => {
-    return new Promise((resolve) => {
+  const waitForPhaseCompletion = useCallback((phaseNum: number, signal?: AbortSignal): Promise<PhaseStatus> => {
+    return new Promise((resolve, reject) => {
       /** Poll interval in ms — checks progressRef for phase terminal state */
       const PHASE_POLL_INTERVAL_MS = 500
+      let timer: ReturnType<typeof setTimeout> | null = null
+
+      const onAbort = () => {
+        if (timer !== null) clearTimeout(timer)
+        reject(new DOMException('Phase wait aborted', 'AbortError'))
+      }
+
+      if (signal?.aborted) {
+        onAbort()
+        return
+      }
+      signal?.addEventListener('abort', onAbort, { once: true })
+
       const check = () => {
         const phase = progressRef.current.find((p) => p.phase === phaseNum)
         if (phase && TERMINAL_STATUSES.includes(phase.status)) {
+          signal?.removeEventListener('abort', onAbort)
           resolve(phase.status)
           return
         }
-        setTimeout(check, PHASE_POLL_INTERVAL_MS)
+        timer = setTimeout(check, PHASE_POLL_INTERVAL_MS)
       }
       check()
     })
   }, [])
 
   // Execute the launch sequence
-  const startLaunch = async () => {
+  const startLaunch = async (abortSignal?: AbortSignal) => {
     if (isStarted) return
     setIsStarted(true)
 
@@ -362,7 +376,7 @@ export function LaunchSequence({
         // means at least one project in this phase is terminally failed and
         // the user is looking at a "Retry Failed" button — we must NOT
         // auto-advance to dependent phases from that state.
-        const result = await waitForPhaseCompletion(phase.phase)
+        const result = await waitForPhaseCompletion(phase.phase, abortSignal)
         if (result !== 'completed') {
           // Block dependent phases. The Retry Failed button will re-invoke
           // launchProject for the failed entries; if the retry succeeds, the
@@ -374,10 +388,17 @@ export function LaunchSequence({
   }
 
   // Auto-start on mount — keyed on content signature (#5508)
+  // #6785 — AbortController cancels waitForPhaseCompletion polling on unmount
+  // so leaked timers and stale setState calls cannot occur.
   useEffect(() => {
+    const controller = new AbortController()
     if (!isStarted && effectivePhases.length > 0) {
-      startLaunch()
+      startLaunch(controller.signal).catch((err: unknown) => {
+        if (err instanceof DOMException && err.name === 'AbortError') return
+        throw err
+      })
     }
+    return () => { controller.abort() }
   }, [phaseSignature])
 
   const progress = state.launchProgress.length > 0 ? state.launchProgress : progressRef.current

@@ -501,19 +501,19 @@ export function MissionProvider({ children }: { children: ReactNode }) {
   // Prevents missions from getting stuck in 'waiting_input' indefinitely if
   // the backend never delivers a final result message.
   const waitingInputTimeouts = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
-  // Ref to always hold the latest missions state — avoids stale closure in sendMessage (#3322)
+  // Refs to always hold the latest values — avoids stale closures in callbacks.
+  // #6789 — Ref writes belong in useEffect, not the component body, to avoid
+  // impure render functions in React concurrent mode.
   const missionsRef = useRef<Mission[]>(missions)
-  missionsRef.current = missions
-  // Refs to always hold the latest activeMissionId and isSidebarOpen — avoids stale closures in markMissionAsUnread
   const activeMissionIdRef = useRef(activeMissionId)
-  activeMissionIdRef.current = activeMissionId
   const isSidebarOpenRef = useRef(isSidebarOpen)
-  isSidebarOpenRef.current = isSidebarOpen
-  // Refs to always hold the latest selectedAgent and defaultAgent — avoids stale closures in startMission/executeMission (#4228)
   const selectedAgentRef = useRef(selectedAgent)
-  selectedAgentRef.current = selectedAgent
   const defaultAgentRef = useRef(defaultAgent)
-  defaultAgentRef.current = defaultAgent
+  useEffect(() => { missionsRef.current = missions }, [missions])
+  useEffect(() => { activeMissionIdRef.current = activeMissionId }, [activeMissionId])
+  useEffect(() => { isSidebarOpenRef.current = isSidebarOpen }, [isSidebarOpen])
+  useEffect(() => { selectedAgentRef.current = selectedAgent }, [selectedAgent])
+  useEffect(() => { defaultAgentRef.current = defaultAgent }, [defaultAgent])
   // Ref to always hold the latest handleAgentMessage — avoids reconnecting WebSocket when the handler changes
   const handleAgentMessageRef = useRef<(message: { id: string; type: string; payload?: unknown }) => void>(() => {})
   // Ref to track pending WebSocket reconnection timeout so it can be cleared on unmount (#3318)

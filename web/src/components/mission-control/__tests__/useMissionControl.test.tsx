@@ -5,14 +5,22 @@
  *  - #6383 empty-projects filter in extractJSON
  */
 
-import { describe, it, expect } from 'vitest'
+import { afterEach, describe, it, expect } from 'vitest'
 import {
   isSafeProjectName,
   buildInstallPromptForProject,
   extractJSON,
   mergeProjects,
   PROJECT_NAME_MAX_LENGTH,
+  resetOversizedWarnings,
 } from '../useMissionControl'
+
+// #6788 — Clear module-level singleton between tests to prevent pollution.
+// `oversizedWarnSet` is module-scoped; without this, a test that triggers an
+// oversize warning suppresses the warning in all subsequent tests.
+afterEach(() => {
+  resetOversizedWarnings()
+})
 import type { PayloadProject } from '../types'
 
 const makeProject = (overrides: Partial<PayloadProject>): PayloadProject => ({
