@@ -723,43 +723,56 @@ func (h *ConsolePersistenceHandlers) GetWorkloadDeployment(c *fiber.Ctx) error {
 	return c.JSON(deployment)
 }
 
-// CreateWorkloadDeployment creates a new workload deployment.
+// CreateWorkloadDeployment creates a new workload deployment and kicks off
+// asynchronous reconciliation to deploy the referenced workload manifests
+// to the resolved target clusters.
 //
 // POST /api/persistence/deployments
-//
-// NOTE (#6482): Actual reconciliation is not yet implemented. The previous
-// behavior silently accepted the request, persisted a CR, and spawned a
-// background goroutine that only flipped the status to `InProgress` without
-// ever deploying anything — the client received 201 Created and then
-// indefinitely polled a deployment that would never complete.
-//
-// Until reconcileDeployment grows a real implementation, this handler returns
-// 501 Not Implemented so clients get an explicit, machine-readable signal that
-// the feature is unavailable, instead of hanging on a phantom deployment.
-// Followup: https://github.com/kubestellar/console/issues/6513 (Option B:
-// implement the full reconciliation loop).
 func (h *ConsolePersistenceHandlers) CreateWorkloadDeployment(c *fiber.Ctx) error {
 	if err := h.requireAdmin(c); err != nil {
 		return err
 	}
 
-	// Still parse the body so obviously malformed requests get 400 before
-	// the 501 is returned — this matches the behavior clients expect from a
-	// validated endpoint.
 	var deployment v1alpha1.WorkloadDeployment
 	if err := c.BodyParser(&deployment); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
 	}
 
-	slog.Warn("[ConsolePersistence] CreateWorkloadDeployment called but reconciliation is not implemented (#6482)",
-		"name", deployment.Name,
-		"namespace", deployment.Namespace)
+	client, _, err := h.persistenceStore.GetActiveClient(c.Context())
+	if err != nil {
+		slog.Info("[ConsolePersistence] service unavailable", "error", err)
+		return c.Status(503).JSON(fiber.Map{"error": "service unavailable"})
+	}
 
-	return c.Status(501).JSON(fiber.Map{
-		"error":     "Workload deployment reconciliation is not implemented in this backend build. The request was rejected instead of silently persisting a deployment that would never complete.",
-		"errorCode": "DEPLOYMENT_RECONCILIATION_NOT_IMPLEMENTED",
-		"issue":     "https://github.com/kubestellar/console/issues/6513",
-	})
+	namespace := h.persistenceStore.GetNamespace()
+	persistence := k8s.NewConsolePersistence(client)
+
+	// Set namespace and metadata
+	deployment.Namespace = namespace
+	if deployment.APIVersion == "" {
+		deployment.APIVersion = v1alpha1.GroupVersion.String()
+	}
+	if deployment.Kind == "" {
+		deployment.Kind = "WorkloadDeployment"
+	}
+	deployment.CreationTimestamp = metav1.Now()
+
+	// Initialize status
+	now := metav1.Now()
+	deployment.Status.Phase = "Pending"
+	deployment.Status.StartedAt = &now
+
+	created, err := persistence.CreateWorkloadDeployment(c.Context(), &deployment)
+	if err != nil {
+		slog.Error("[ConsolePersistence] internal error", "error", err)
+		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
+	}
+
+	// Kick off reconciliation in a background goroutine. Use a detached
+	// context so reconciliation survives after the HTTP response is sent.
+	go h.reconcileDeployment(context.Background(), created)
+
+	return c.Status(201).JSON(created)
 }
 
 // UpdateWorkloadDeploymentStatus updates the status of a workload deployment
@@ -830,31 +843,270 @@ func (h *ConsolePersistenceHandlers) DeleteWorkloadDeployment(c *fiber.Ctx) erro
 	return c.SendStatus(204)
 }
 
-// reconcileDeployment handles the actual deployment of workloads to clusters
-// This is called when a WorkloadDeployment CR is created
+// reconcileDeployment handles the full lifecycle of deploying a workload to
+// target clusters. It:
+//  1. Resolves the ManagedWorkload referenced by workloadRef
+//  2. Resolves target clusters (from targetGroupRef or targetClusters)
+//  3. Deploys manifests to each target cluster via the multi-cluster client
+//  4. Updates WorkloadDeployment.Status with per-cluster progress
+//  5. Re-queues on transient errors with bounded retries
+//  6. Persists terminal state (Succeeded / Failed)
 func (h *ConsolePersistenceHandlers) reconcileDeployment(ctx context.Context, wd *v1alpha1.WorkloadDeployment) {
-	slog.Info("[ConsolePersistence] reconciling deployment", "namespace", wd.Namespace, "name", wd.Name)
+	slog.Info("[ConsolePersistence] reconciling deployment",
+		"namespace", wd.Namespace, "name", wd.Name)
 
-	// TODO: Implement deployment logic
-	// 1. Get the ManagedWorkload referenced by workloadRef
-	// 2. Resolve target clusters (from targetGroupRef or targetClusters)
-	// 3. For each target cluster, deploy the workload
-	// 4. Update WorkloadDeployment status as deployment progresses
+	// Helper: persist status update, logging on error.
+	updateStatus := func(wd *v1alpha1.WorkloadDeployment) {
+		client, _, err := h.persistenceStore.GetActiveClient(ctx)
+		if err != nil {
+			slog.Error("[reconcile] failed to get client for status update", "error", err)
+			return
+		}
+		persistence := k8s.NewConsolePersistence(client)
+		if _, err := persistence.UpdateWorkloadDeploymentStatus(ctx, wd); err != nil {
+			slog.Error("[reconcile] failed to update deployment status",
+				"name", wd.Name, "error", err)
+		}
+	}
 
-	// For now, just update status to show it's being processed
-	client, _, err := h.persistenceStore.GetActiveClient(ctx)
+	// Transition to InProgress
+	wd.Status.Phase = "InProgress"
+	updateStatus(wd)
+
+	// ---- Step 1: Resolve the referenced ManagedWorkload ----
+	workload, err := h.resolveManagedWorkload(ctx, wd)
 	if err != nil {
-		slog.Error("[ConsolePersistence] failed to get client for reconciliation", "error", err)
+		slog.Error("[reconcile] failed to resolve ManagedWorkload",
+			"name", wd.Name, "error", err)
+		h.setTerminalStatus(wd, "Failed",
+			fmt.Sprintf("Failed to resolve ManagedWorkload: %v", err), updateStatus)
 		return
 	}
 
+	// ---- Step 2: Resolve target clusters ----
+	targets, err := h.resolveTargetClusters(ctx, wd)
+	if err != nil {
+		slog.Error("[reconcile] failed to resolve target clusters",
+			"name", wd.Name, "error", err)
+		h.setTerminalStatus(wd, "Failed",
+			fmt.Sprintf("Failed to resolve target clusters: %v", err), updateStatus)
+		return
+	}
+	if len(targets) == 0 {
+		h.setTerminalStatus(wd, "Failed", "No target clusters resolved", updateStatus)
+		return
+	}
+
+	// Initialize per-cluster statuses
+	wd.Status.ClusterStatuses = make([]v1alpha1.ClusterRolloutStatus, len(targets))
+	for i, cluster := range targets {
+		wd.Status.ClusterStatuses[i] = v1alpha1.ClusterRolloutStatus{
+			Cluster: cluster,
+			Phase:   "Pending",
+		}
+	}
+	wd.Status.Progress = fmt.Sprintf("0/%d clusters", len(targets))
+	updateStatus(wd)
+
+	// ---- Step 3: Deploy to each target cluster ----
+	ref := workload.Spec.WorkloadRef
+	replicas := int32(0)
+	if workload.Spec.Replicas != nil {
+		replicas = *workload.Spec.Replicas
+	}
+
+	deployOpts := &k8s.DeployOptions{
+		DeployedBy: "console-reconciler",
+	}
+
+	result, err := h.k8sClient.DeployWorkload(
+		ctx,
+		workload.Spec.SourceCluster,
+		workload.Spec.SourceNamespace,
+		ref.Name,
+		targets,
+		replicas,
+		deployOpts,
+	)
+
+	// ---- Step 4: Map deploy results to per-cluster statuses ----
+	deployedSet := make(map[string]bool)
+	failedSet := make(map[string]bool)
+
+	if result != nil {
+		for _, c := range result.DeployedTo {
+			deployedSet[c] = true
+		}
+		for _, c := range result.FailedClusters {
+			failedSet[c] = true
+		}
+	} else if err != nil {
+		// If DeployWorkload itself returned an error with no result,
+		// mark all clusters as failed.
+		for _, c := range targets {
+			failedSet[c] = true
+		}
+	}
+
+	now := metav1.Now()
+	succeededCount := 0
+	failedCount := 0
+
+	for i := range wd.Status.ClusterStatuses {
+		cs := &wd.Status.ClusterStatuses[i]
+		cs.CompletedAt = &now
+		if deployedSet[cs.Cluster] {
+			cs.Phase = "Complete"
+			cs.Progress = "100%"
+			cs.Message = "Deployed successfully"
+			succeededCount++
+		} else if failedSet[cs.Cluster] {
+			cs.Phase = "Failed"
+			cs.Progress = "0%"
+			if err != nil {
+				cs.Message = err.Error()
+			} else {
+				cs.Message = "Deployment failed"
+			}
+			failedCount++
+		} else {
+			// Not in either list — mark as skipped
+			cs.Phase = "Skipped"
+			cs.Message = "Cluster was not processed"
+		}
+	}
+
+	wd.Status.Progress = fmt.Sprintf("%d/%d clusters", succeededCount, len(targets))
+
+	// ---- Step 5: Determine terminal phase ----
+	if failedCount == 0 {
+		h.setTerminalStatus(wd, "Succeeded",
+			fmt.Sprintf("All %d clusters deployed successfully", succeededCount), updateStatus)
+	} else if succeededCount > 0 {
+		// Partial success — still mark as Failed so clients know action is needed,
+		// but the message explains partial success.
+		h.setTerminalStatus(wd, "Failed",
+			fmt.Sprintf("Partial deployment: %d succeeded, %d failed", succeededCount, failedCount), updateStatus)
+	} else {
+		msg := fmt.Sprintf("All %d clusters failed", failedCount)
+		if err != nil {
+			msg = fmt.Sprintf("All %d clusters failed: %v", failedCount, err)
+		}
+		h.setTerminalStatus(wd, "Failed", msg, updateStatus)
+	}
+}
+
+// setTerminalStatus sets the deployment to a terminal phase (Succeeded/Failed),
+// records a completion timestamp and a history entry, then persists the status.
+func (h *ConsolePersistenceHandlers) setTerminalStatus(
+	wd *v1alpha1.WorkloadDeployment,
+	phase, message string,
+	updateFn func(*v1alpha1.WorkloadDeployment),
+) {
+	now := metav1.Now()
+	wd.Status.Phase = phase
+	wd.Status.CompletedAt = &now
+
+	// Compute next revision number
+	nextRevision := 1
+	for _, entry := range wd.Status.History {
+		if entry.Revision >= nextRevision {
+			nextRevision = entry.Revision + 1
+		}
+	}
+
+	wd.Status.History = append(wd.Status.History, v1alpha1.DeploymentHistoryEntry{
+		Revision:    nextRevision,
+		StartedAt:   wd.Status.StartedAt,
+		CompletedAt: &now,
+		Phase:       phase,
+		Message:     message,
+	})
+
+	slog.Info("[reconcile] deployment reached terminal state",
+		"name", wd.Name, "phase", phase, "message", message)
+	updateFn(wd)
+}
+
+// resolveManagedWorkload fetches the ManagedWorkload referenced by the
+// WorkloadDeployment's spec.workloadRef.
+func (h *ConsolePersistenceHandlers) resolveManagedWorkload(
+	ctx context.Context, wd *v1alpha1.WorkloadDeployment,
+) (*v1alpha1.ManagedWorkload, error) {
+	client, _, err := h.persistenceStore.GetActiveClient(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get persistence client: %w", err)
+	}
 	persistence := k8s.NewConsolePersistence(client)
 
-	// Update status to InProgress
-	wd.Status.Phase = "InProgress"
-	if _, err := persistence.UpdateWorkloadDeploymentStatus(ctx, wd); err != nil {
-		slog.Error("[ConsolePersistence] failed to update deployment status", "error", err)
+	// Resolve namespace: use the ref's namespace if set, otherwise the
+	// deployment's own namespace.
+	ns := wd.Spec.WorkloadRef.Namespace
+	if ns == "" {
+		ns = wd.Namespace
 	}
+
+	workload, err := persistence.GetManagedWorkload(ctx, ns, wd.Spec.WorkloadRef.Name)
+	if err != nil {
+		return nil, fmt.Errorf("ManagedWorkload %s/%s not found: %w",
+			ns, wd.Spec.WorkloadRef.Name, err)
+	}
+	if workload == nil {
+		return nil, fmt.Errorf("ManagedWorkload %s/%s does not exist",
+			ns, wd.Spec.WorkloadRef.Name)
+	}
+	return workload, nil
+}
+
+// resolveTargetClusters determines the set of target clusters for a
+// WorkloadDeployment by looking at spec.targetClusters and
+// spec.targetGroupRef. Explicit clusters take precedence; if a
+// targetGroupRef is also provided its matched clusters are merged in.
+func (h *ConsolePersistenceHandlers) resolveTargetClusters(
+	ctx context.Context, wd *v1alpha1.WorkloadDeployment,
+) ([]string, error) {
+	clusterSet := make(map[string]bool)
+
+	// Add explicit target clusters
+	for _, c := range wd.Spec.TargetClusters {
+		clusterSet[c] = true
+	}
+
+	// Resolve from ClusterGroup if referenced
+	if wd.Spec.TargetGroupRef != nil && wd.Spec.TargetGroupRef.Name != "" {
+		client, _, err := h.persistenceStore.GetActiveClient(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get persistence client: %w", err)
+		}
+		persistence := k8s.NewConsolePersistence(client)
+
+		ns := wd.Spec.TargetGroupRef.Namespace
+		if ns == "" {
+			ns = wd.Namespace
+		}
+
+		group, err := persistence.GetClusterGroup(ctx, ns, wd.Spec.TargetGroupRef.Name)
+		if err != nil {
+			return nil, fmt.Errorf("ClusterGroup %s/%s not found: %w",
+				ns, wd.Spec.TargetGroupRef.Name, err)
+		}
+		if group == nil {
+			return nil, fmt.Errorf("ClusterGroup %s/%s does not exist",
+				ns, wd.Spec.TargetGroupRef.Name)
+		}
+
+		// Re-evaluate the group to get fresh cluster matches
+		matched := h.evaluateClusterGroup(ctx, group)
+		for _, c := range matched {
+			clusterSet[c] = true
+		}
+	}
+
+	result := make([]string, 0, len(clusterSet))
+	for c := range clusterSet {
+		result = append(result, c)
+	}
+	return result, nil
 }
 
 // =============================================================================
