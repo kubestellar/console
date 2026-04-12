@@ -30,6 +30,10 @@ export interface UseUndoRedoResult<T> {
 
 export function useUndoRedo<T>(
   onRestore: (state: T) => void,
+  /** Optional getter for the current state — enables the redo pipeline.
+   *  When provided, undo() captures the current state before restoring so
+   *  redo() can replay it. Without this, redo is non-functional. */
+  getCurrentState?: () => T,
 ): UseUndoRedoResult<T> {
   const undoStackRef = useRef<T[]>([])
   const redoStackRef = useRef<T[]>([])
@@ -52,28 +56,28 @@ export function useUndoRedo<T>(
   const undo = useCallback(() => {
     const prev = undoStackRef.current.pop()
     if (prev === undefined) return null
-    // We need the current state to push to redo — caller should
-    // use the onRestore callback to apply, and we save what's being
-    // replaced via the _currentStateRef (set by pushState).
-    // Actually, we need the "current" state before undo to push to redo.
-    // This requires cooperation: we store the state that onRestore is
-    // about to replace. The caller should call pushStateForRedo.
+    // Capture the current state before restoring so redo can replay it.
+    if (getCurrentState) {
+      redoStackRef.current.push(getCurrentState())
+    }
     setUndoCount(undoStackRef.current.length)
+    setRedoCount(redoStackRef.current.length)
     onRestore(prev)
     return prev
-  }, [onRestore])
+  }, [onRestore, getCurrentState])
 
   const redo = useCallback(() => {
     const next = redoStackRef.current.pop()
     if (next === undefined) return null
+    // Save current state back to undo stack so we can undo the redo
+    if (getCurrentState) {
+      undoStackRef.current.push(getCurrentState())
+    }
+    setUndoCount(undoStackRef.current.length)
     setRedoCount(redoStackRef.current.length)
     onRestore(next)
     return next
-  }, [onRestore])
-
-  // We need a way to capture the current state before undo so we can push it to redo.
-  // The pattern: caller calls `captureForUndo(currentState)` before applying undo.
-  // Better pattern: wrap undo/redo at the dashboard level where we have the current cards.
+  }, [onRestore, getCurrentState])
 
   return {
     undo,

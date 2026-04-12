@@ -68,6 +68,39 @@ describe('useUndoRedo', () => {
     })
     expect(result.current.undoCount).toBe(MAX_STACK)
   })
+
+  it('redo works when getCurrentState is provided', () => {
+    let current = 'state-c'
+    const onRestore = vi.fn((s: string) => { current = s })
+    const getCurrentState = () => current
+
+    const { result } = renderHook(() => useUndoRedo<string>(onRestore, getCurrentState))
+
+    // Push two states, then undo — redo should replay
+    act(() => { result.current.pushState('state-a') })
+    act(() => { result.current.pushState('state-b') })
+    // current is 'state-c', undo pops 'state-b' and saves 'state-c' to redo
+    act(() => { result.current.undo() })
+    expect(onRestore).toHaveBeenLastCalledWith('state-b')
+    expect(result.current.canRedo).toBe(true)
+    expect(result.current.redoCount).toBe(1)
+
+    // Redo should restore 'state-c'
+    act(() => { result.current.redo() })
+    expect(onRestore).toHaveBeenLastCalledWith('state-c')
+    expect(result.current.canRedo).toBe(false)
+    // Undo should still work after redo
+    expect(result.current.canUndo).toBe(true)
+  })
+
+  it('redo is non-functional without getCurrentState (backward compat)', () => {
+    const onRestore = vi.fn()
+    const { result } = renderHook(() => useUndoRedo<string>(onRestore))
+    act(() => { result.current.pushState('state-a') })
+    act(() => { result.current.undo() })
+    // Without getCurrentState, nothing is pushed to redo stack
+    expect(result.current.canRedo).toBe(false)
+  })
 })
 
 describe('useDashboardUndoRedo', () => {
