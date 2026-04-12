@@ -654,16 +654,34 @@ export function MissionProvider({ children }: { children: ReactNode }) {
       if (e.newValue === null) {
         try {
           setMissions([])
-          setUnreadMissionIds(new Set())
+          // #6767 — `new Set()` defaults to `Set<any>`; keep type-safety by
+          // matching the `Set<string>` declaration of `unreadMissionIds`.
+          setUnreadMissionIds(new Set<string>())
           setActiveMissionId(null)
+          // #6767 — Clear ALL mission-derived refs, not just the three from
+          // #6762. Any ref keyed by missionId references missions that were
+          // just wiped; leaving them populated leaks timers and/or makes
+          // future messages target stale mission IDs.
           for (const timeout of cancelTimeouts.current.values()) {
             clearTimeout(timeout)
           }
           cancelTimeouts.current.clear()
+          // #6767 — Timeout handles must be cleared individually before
+          // dropping the Map, otherwise the watchdog fires against a
+          // non-existent mission.
+          for (const timeout of waitingInputTimeouts.current.values()) {
+            clearTimeout(timeout)
+          }
+          waitingInputTimeouts.current.clear()
+          cancelIntents.current.clear()
           pendingRequests.current.clear()
           lastStreamTimestamp.current.clear()
+          toolsInFlight.current.clear()
+          streamSplitCounter.current.clear()
         } catch (err) {
-          console.warn('[Missions] issue 6758 — failed to apply cross-tab reset:', err)
+          // #6767 — Message is issue-agnostic; this branch now covers
+          // #6758, #6762, and #6767 follow-ups.
+          console.warn('[Missions] Cross-tab remote reset detected — failed to clear local mission state to match:', err)
         }
         return
       }
