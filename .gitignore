@@ -18,6 +18,7 @@ coverage.out
 .env
 .env.local
 .env.*.local
+.jwt-secret
 
 # IDE
 .idea/

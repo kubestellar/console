@@ -165,13 +165,12 @@ func NewServer(cfg Config) (*Server, error) {
 		}
 	}
 
-	// JWT secret handling — in dev mode, a random secret is generated on each
-	// startup, which means existing JWTs (browser cookies, WebSocket tokens) are
-	// invalidated on restart. Set JWT_SECRET in .env to persist across restarts.
+	// JWT secret handling — in dev mode, generate a random secret and persist
+	// it to .jwt-secret so it survives server restarts and hot-reloads (#6850).
+	// Set JWT_SECRET in .env to use a fixed secret instead.
 	if cfg.JWTSecret == "" {
 		if cfg.DevMode {
-			cfg.JWTSecret = generateDevSecret()
-			slog.Warn("Using auto-generated JWT secret (tokens will not survive restart). Set JWT_SECRET in .env to persist sessions across restarts.")
+			cfg.JWTSecret = loadOrCreateDevSecret()
 		} else {
 			slog.Error("FATAL: JWT_SECRET environment variable is required in production mode. " +
 				"Set JWT_SECRET to a cryptographically secure random string (at least 32 characters).")
@@ -1476,9 +1475,48 @@ func warnDefaultEnvVars(vars map[string]string) {
 // devSecretBytes is the number of random bytes used to generate a dev secret (32 bytes = 256 bits).
 const devSecretBytes = 32
 
-func generateDevSecret() string {
-	// Generate a cryptographically random secret each time the server starts.
-	// This ensures dev instances don't share a well-known secret.
+// devSecretFile is the filename used to persist the auto-generated JWT secret
+// across dev-mode restarts (#6850). The file is created in the working directory
+// and should be gitignored.
+const devSecretFile = ".jwt-secret"
+
+// loadOrCreateDevSecret reads a previously persisted dev secret from .jwt-secret,
+// or generates a new one and writes it to that file. This ensures tokens issued
+// before a dev-mode restart remain valid (#6850).
+func loadOrCreateDevSecret() string {
+	secretPath := filepath.Join(".", devSecretFile)
+
+	// Try to read an existing secret file.
+	data, err := os.ReadFile(secretPath)
+	if err == nil {
+		secret := strings.TrimSpace(string(data))
+		if len(secret) >= devSecretBytes {
+			slog.Info("Loaded persisted dev JWT secret from " + devSecretFile)
+			return secret
+		}
+		// File exists but content is too short / corrupt — regenerate.
+		slog.Warn("Existing " + devSecretFile + " is too short, regenerating")
+	}
+
+	// Generate a new random secret.
+	secret := generateRandomSecret()
+
+	// Persist to file so it survives restarts.
+	// File permissions 0600: owner read/write only.
+	const secretFilePerms = 0o600
+	if wErr := os.WriteFile(secretPath, []byte(secret+"\n"), secretFilePerms); wErr != nil {
+		slog.Warn("Could not persist dev JWT secret to "+devSecretFile+"; tokens will not survive restart",
+			"error", wErr)
+	} else {
+		slog.Info("Generated and persisted dev JWT secret to " + devSecretFile)
+	}
+
+	return secret
+}
+
+// generateRandomSecret produces a cryptographically random hex string for use
+// as a JWT signing secret.
+func generateRandomSecret() string {
 	b := make([]byte, devSecretBytes)
 	if _, err := rand.Read(b); err != nil {
 		// crypto/rand.Read should never fail on supported platforms;
