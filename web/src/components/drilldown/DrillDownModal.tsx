@@ -1,7 +1,7 @@
 import { Component, useEffect, Suspense, type ReactNode, type ErrorInfo } from 'react'
 import { safeLazy } from '../../lib/safeLazy'
 import { useTranslation } from 'react-i18next'
-import { Box, Server, Layers, Rocket, FileText, Zap, Cpu, Lock, User, Bell, Ship, GitBranch, Settings, Shield, Package, DollarSign, AlertTriangle, RefreshCw } from 'lucide-react'
+import { Box, Server, Layers, Rocket, FileText, Zap, Cpu, Lock, User, Bell, Ship, GitBranch, Settings, Shield, Package, DollarSign, AlertTriangle, RefreshCw, HardDrive } from 'lucide-react'
 import { useDrillDown } from '../../hooks/useDrillDown'
 import { useMobile } from '../../hooks/useMobile'
 // Lazy load large components (>300 lines) for better performance
@@ -26,6 +26,7 @@ const BuildpackDrillDown = safeLazy(() => import('./views/BuildpackDrillDown'), 
 const RBACDrillDown = safeLazy(() => import('./views/RBACDrillDown'), 'RBACDrillDown')
 const CostDrillDown = safeLazy(() => import('./views/CostDrillDown'), 'CostDrillDown')
 const ComplianceDrillDown = safeLazy(() => import('./views/ComplianceDrillDown'), 'ComplianceDrillDown')
+const PVCDrillDown = safeLazy(() => import('./views/PVCDrillDown'), 'PVCDrillDown')
 
 const EventsDrillDown = safeLazy(() => import('./views/EventsDrillDown'), 'EventsDrillDown')
 
@@ -127,6 +128,7 @@ const getViewIcon = (type: string) => {
     case 'configmap': return <FileText className="w-4 h-4 text-yellow-400" />
     case 'secret': return <Lock className="w-4 h-4 text-red-400" />
     case 'serviceaccount': return <User className="w-4 h-4 text-purple-400" />
+    case 'pvc': return <HardDrive className="w-4 h-4 text-green-400" />
     case 'node': return <Cpu className="w-4 h-4 text-orange-400" />
     case 'gpu-node': return <Cpu className="w-4 h-4 text-purple-400" />
     case 'gpu-namespace': return <Box className="w-4 h-4 text-purple-400" />
@@ -249,6 +251,8 @@ export function DrillDownModal() {
         return <SecretDrillDown data={data} />
       case 'serviceaccount':
         return <ServiceAccountDrillDown data={data} />
+      case 'pvc':
+        return <PVCDrillDown data={data} />
       // Phase 2 views
       case 'alert':
         return <AlertDrillDown data={data} />
