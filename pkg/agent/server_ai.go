@@ -582,9 +582,11 @@ func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.M
 				}
 			}
 		}()
+		// Defer close so the heartbeat goroutine is always stopped,
+		// even if StreamChatWithProgress panics (#7001).
+		defer close(heartbeatDone)
 
 		resp, err = streamingProvider.StreamChatWithProgress(ctx, chatReq, onChunk, onProgress)
-		close(heartbeatDone)
 		if err != nil {
 			if ctx.Err() != nil {
 				// Distinguish timeout from user-initiated cancel (#2375)
@@ -599,7 +601,10 @@ func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.M
 			}
 			slog.Error("[Chat] streaming execution error", "agent", agentName, "error", err)
 			code, msg2 := classifyProviderError(err)
-			safeWrite(ctx, s.errorResponse(msg.ID, code, msg2))
+			// Use background context so the error reaches the client even if
+			// the mission context expired between the ctx.Err() check above
+			// and this write (#6997).
+			safeWrite(context.Background(), s.errorResponse(msg.ID, code, msg2))
 			return
 		}
 
@@ -624,7 +629,9 @@ func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.M
 			}
 			slog.Error("[Chat] execution error", "agent", agentName, "error", err)
 			code, msg2 := classifyProviderError(err)
-			safeWrite(ctx, s.errorResponse(msg.ID, code, msg2))
+			// Use background context so the error reaches the client even if
+			// the mission context expired (#6997).
+			safeWrite(context.Background(), s.errorResponse(msg.ID, code, msg2))
 			return
 		}
 	}
@@ -1240,6 +1247,17 @@ Command output:
 			"mode":  "mixed",
 		},
 	})
+
+	// Send TypeResult with Done:true so the UI clears the "Thinking..."
+	// spinner and unlocks the input, matching the regular streaming path (#6999).
+	safeWrite(protocol.Message{
+		ID:   msg.ID,
+		Type: protocol.TypeResult,
+		Payload: protocol.ChatStreamPayload{
+			SessionID: sessionID,
+			Done:      true,
+		},
+	})
 }
 
 // promptNeedsToolExecution checks if the prompt or history suggests command execution
@@ -1447,8 +1465,15 @@ func (s *Server) saveTokenUsage() {
 	}
 
 	path := getTokenUsagePath()
-	if err := os.WriteFile(path, data, agentFileMode); err != nil {
-		slog.Warn("could not save token usage", "error", err)
+	// Atomic write: write to a temp file then rename to avoid corruption
+	// when multiple goroutines persist concurrently (#6996).
+	tmpPath := path + ".tmp"
+	if err := os.WriteFile(tmpPath, data, agentFileMode); err != nil {
+		slog.Warn("could not write token usage temp file", "error", err)
+		return
+	}
+	if err := os.Rename(tmpPath, path); err != nil {
+		slog.Warn("could not rename token usage temp file", "error", err)
 	}
 }
 
