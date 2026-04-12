@@ -1,8 +1,7 @@
 import { useMemo } from 'react'
-import { CheckCircle, AlertTriangle, Clock, ChevronRight } from 'lucide-react'
+import { CheckCircle, AlertTriangle, Clock } from 'lucide-react'
 import type { PVC } from '../../hooks/useMCP'
 import { useCachedPVCs } from '../../hooks/useCachedData'
-import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { useCardLoadingState } from './CardDataContext'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
@@ -73,7 +72,6 @@ function getStatusColor(status: string) {
 function PVCStatusInternal() {
   const { t } = useTranslation(['common', 'cards'])
   const { pvcs, isLoading, isRefreshing, error, consecutiveFailures, isFailed, isDemoFallback, lastRefresh } = useCachedPVCs()
-  const { drillToPVC } = useDrillDownActions()
   const { isDemoMode: demoMode } = useDemoMode()
 
   // Report card data state (lastRefresh flows to CardWrapper header "Updated Xm ago")
@@ -256,19 +254,14 @@ function PVCStatusInternal() {
           displayPVCs.map(pvc => (
             <div
               key={`${pvc.cluster}-${pvc.namespace}-${pvc.name}`}
-              onClick={() => drillToPVC(pvc.cluster || '', pvc.namespace || '', pvc.name, {
-                status: pvc.status,
-                capacity: pvc.capacity,
-                storageClass: pvc.storageClass,
-                age: pvc.age,
-              })}
-              className="flex items-center justify-between p-2 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group"
+              className="flex items-center justify-between p-2 rounded-lg bg-secondary/30 transition-colors"
+              title="PVC drilldown not available"
             >
               <div className="flex items-center gap-2 min-w-0">
                 {getStatusIcon(pvc.status)}
                 {pvc.cluster && <ClusterBadge cluster={pvc.cluster} size="sm" />}
                 <div className="min-w-0">
-                  <div className="text-sm text-foreground truncate group-hover:text-purple-400">{pvc.name}</div>
+                  <div className="text-sm text-foreground truncate">{pvc.name}</div>
                   <div className="text-xs text-muted-foreground truncate">
                     {pvc.namespace}
                   </div>
@@ -288,7 +281,6 @@ function PVCStatusInternal() {
                     issues={[{ name: `PVC ${pvc.status}`, message: `PersistentVolumeClaim is in ${pvc.status} state${pvc.storageClass ? ` (storageClass: ${pvc.storageClass})` : ''}` }]}
                   />
                 )}
-                <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
             </div>
           ))

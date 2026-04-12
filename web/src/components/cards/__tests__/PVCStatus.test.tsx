@@ -45,9 +45,8 @@ vi.mock('../../../hooks/useCachedData', () => ({
   useCachedPVCs: () => mockPVCs(),
 }))
 
-const mockDrillDown = vi.fn()
 vi.mock('../../../hooks/useDrillDown', () => ({
-  useDrillDownActions: () => mockDrillDown(),
+  useDrillDownActions: () => ({}),
 }))
 
 vi.mock('../../../lib/cards/cardHooks', () => ({
@@ -69,7 +68,6 @@ describe('PVCStatus', () => {
     mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false })
     mockPVCs.mockReturnValue({ pvcs: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
-    mockDrillDown.mockReturnValue({ drillToPVC: vi.fn() })
   })
 
   it('renders without crashing', () => {

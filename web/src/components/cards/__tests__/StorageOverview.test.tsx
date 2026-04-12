@@ -1,10 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { StorageOverview } from '../StorageOverview'
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
-
-const mockDrillToPVC = vi.fn()
 
 vi.mock('../../../hooks/useMCP', () => ({
   useClusters: () => ({
@@ -30,7 +28,7 @@ vi.mock('../../../hooks/useGlobalFilters', () => ({
 }))
 
 vi.mock('../../../hooks/useDrillDown', () => ({
-  useDrillDownActions: () => ({ drillToPVC: mockDrillToPVC }),
+  useDrillDownActions: () => ({}),
 }))
 
 vi.mock('../CardDataContext', () => ({
@@ -158,8 +156,8 @@ describe('StorageOverview', () => {
     })
   })
 
-  describe('Drill-down', () => {
-    it('calls drillToPVC when bound PVC tile clicked', async () => {
+  describe('PVC tiles', () => {
+    it('PVC status tiles are not clickable (no drilldown view)', async () => {
       const { useCachedPVCs } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedPVCs).mockReturnValue({
         pvcs: [{ cluster: 'cluster-1', namespace: 'default', name: 'pvc-1', status: 'Bound', storageClass: 'gp2' }],
@@ -170,8 +168,9 @@ describe('StorageOverview', () => {
         consecutiveFailures: 0,
       } as never)
       render(<StorageOverview />)
-      fireEvent.click(screen.getByText('storageOverview.bound').closest('div')!)
-      expect(mockDrillToPVC).toHaveBeenCalledWith('cluster-1', 'default', 'pvc-1')
+      const boundTile = screen.getByText('storageOverview.bound').closest('div')!
+      expect(boundTile.className).toContain('cursor-default')
+      expect(boundTile.className).not.toContain('cursor-pointer')
     })
   })
 
