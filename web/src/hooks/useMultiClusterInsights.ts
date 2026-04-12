@@ -416,10 +416,10 @@ export function detectResourceImbalance(clusters: ClusterInfo[]): MultiClusterIn
 
   const insights: MultiClusterInsight[] = []
 
-  // CPU imbalance
+  // CPU imbalance — prefer actual usage over requests when available (#6872)
   const cpuPcts = healthy.map(c => ({
     name: c.name,
-    pct: pct(c.cpuRequestsCores || c.cpuUsageCores, c.cpuCores) }))
+    pct: pct(c.cpuUsageCores || c.cpuRequestsCores, c.cpuCores) }))
   const avgCpu = cpuPcts.reduce((sum, c) => sum + c.pct, 0) / cpuPcts.length
   const overloaded = cpuPcts.filter(c => c.pct - avgCpu > RESOURCE_IMBALANCE_THRESHOLD_PCT)
   const underloaded = cpuPcts.filter(c => avgCpu - c.pct > RESOURCE_IMBALANCE_THRESHOLD_PCT)
@@ -453,7 +453,7 @@ export function detectResourceImbalance(clusters: ClusterInfo[]): MultiClusterIn
     .filter(c => c.memoryGB && c.memoryGB > 0)
     .map(c => ({
       name: c.name,
-      pct: pct(c.memoryRequestsGB || c.memoryUsageGB, c.memoryGB) }))
+      pct: pct(c.memoryUsageGB || c.memoryRequestsGB, c.memoryGB) }))
 
   if (memPcts.length >= 2) {
     const avgMem = memPcts.reduce((sum, c) => sum + c.pct, 0) / memPcts.length
@@ -572,12 +572,35 @@ export function trackRolloutProgress(deployments: Deployment[]): MultiClusterIns
     const images = [...new Set((deps || []).map(d => d.image).filter(Boolean))]
     if (images.length < 2) continue
 
-    // Find the newest image (highest version or most common)
-    const imageCounts = new Map<string, number>()
-    for (const dep of (deps || [])) {
-      if (dep.image) imageCounts.set(dep.image, (imageCounts.get(dep.image) || 0) + 1)
-    }
-    const [newestImage] = Array.from(imageCounts.entries()).sort((a, b) => b[1] - a[1])[0]
+    // Find the newest image by semantic version ordering, falling back to
+    // creation timestamp when versions are not parseable (fixes #6869).
+    const newestImage = (() => {
+      /** Extract numeric version segments from a container image tag */
+      const parseVersion = (img: string): number[] | null => {
+        const match = img.match(/:v?(\d+(?:\.\d+)*)/)
+        if (!match) return null
+        return match[1].split('.').map(Number)
+      }
+      /** Compare two semver-style arrays: positive means a > b */
+      const compareVersions = (a: number[], b: number[]): number => {
+        const len = Math.max(a.length, b.length)
+        for (let k = 0; k < len; k++) {
+          const diff = (a[k] || 0) - (b[k] || 0)
+          if (diff !== 0) return diff
+        }
+        return 0
+      }
+      const uniqueImages = [...new Set((deps || []).map(d => d.image).filter((img): img is string => !!img))]
+      // Try semver ordering first
+      const parsed = uniqueImages.map(img => ({ img, ver: parseVersion(img) }))
+      const withVersion = parsed.filter(p => p.ver !== null) as { img: string; ver: number[] }[]
+      if (withVersion.length > 0) {
+        withVersion.sort((a, b) => compareVersions(b.ver, a.ver))
+        return withVersion[0].img
+      }
+      // Fallback: use lexicographic ordering of image tags (e.g. latest, nightly)
+      return uniqueImages.sort().reverse()[0]
+    })()
 
     const completed = (deps || []).filter(d => d.image === newestImage && d.cluster)
     const pending = (deps || []).filter(d => d.image !== newestImage && d.status !== 'failed' && d.cluster)
@@ -600,7 +623,12 @@ export function trackRolloutProgress(deployments: Deployment[]): MultiClusterIns
         metrics[`${dep.cluster}_progress`] = FULL_PROGRESS
         metrics[`${dep.cluster}_status`] = ROLLOUT_STATUS_COMPLETE
       } else {
-        metrics[`${dep.cluster}_progress`] = PARTIAL_PROGRESS
+        // Use actual readyReplicas/replicas ratio instead of a hardcoded
+        // placeholder, so the rollout tracker reflects real progress (#6871).
+        const actualProgress = dep.replicas > 0
+          ? Math.round((dep.readyReplicas / dep.replicas) * FULL_PROGRESS)
+          : 0
+        metrics[`${dep.cluster}_progress`] = actualProgress
         metrics[`${dep.cluster}_status`] = ROLLOUT_STATUS_IN_PROGRESS
       }
     }

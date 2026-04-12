@@ -304,7 +304,9 @@ export function ClusterMetrics() {
       }
       clusterNames.forEach(name => {
         const clusterData = point.clusters?.[name]
-        entry[name] = clusterData ? clusterData[selectedMetric] : 0
+        // Use null for missing data so the chart renders gaps instead of
+        // artificial zero drops (#6874).
+        entry[name] = clusterData ? clusterData[selectedMetric] : null as unknown as number
       })
       return entry
     })
@@ -313,8 +315,18 @@ export function ClusterMetrics() {
   }, [history, selectedMetric, timeRange, chartMode])
 
   const config = metricConfig[selectedMetric]
-  // Use real current value if available, otherwise use last chart value
-  const currentValue = hasRealData ? realValues[selectedMetric] : (data[data.length - 1]?.value || 0)
+  // Use real current value if non-zero, otherwise fall back to the last
+  // known non-null chart value so the header stays in sync with the chart
+  // instead of showing a misleading 0 during temporary data loss (#6875).
+  const currentValue = (() => {
+    const live = hasRealData ? realValues[selectedMetric] : 0
+    if (live > 0) return live
+    // Walk backwards through chart data to find the last non-null value
+    for (let i = data.length - 1; i >= 0; i--) {
+      if (data[i]?.value != null && data[i].value > 0) return data[i].value
+    }
+    return 0
+  })()
 
   return (
     <div className="h-full flex flex-col">

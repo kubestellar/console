@@ -12,10 +12,8 @@ import { InsightDetailModal } from './InsightDetailModal'
 import type { MultiClusterInsight } from '../../../types/insights'
 
 
-/** Color for cluster A bars */
-const CLUSTER_A_COLOR = '#3b82f6'
-/** Color for cluster B bars */
-const CLUSTER_B_COLOR = '#f59e0b'
+/** Palette for multi-cluster bars (extends beyond 2 clusters, fixes #6873) */
+const CLUSTER_COLORS = ['#3b82f6', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16']
 
 const SIGNIFICANCE_COLORS: Record<string, string> = {
   high: 'border-red-500/30 bg-red-500/5',
@@ -59,16 +57,25 @@ export function ClusterDeltaDetector() {
     )
   })()
 
-  const clusterPair = insight ? [...new Set(insight.affectedClusters)].slice(0, 2) : []
+  // Collect ALL unique cluster names from deltas, not just the first two (#6873)
+  const allClusters = useMemo(() => {
+    if (!insight?.deltas) return []
+    const names = new Set<string>()
+    for (const d of insight.deltas || []) {
+      if (typeof d.clusterA.value === 'number') names.add(d.clusterA.name)
+      if (typeof d.clusterB.value === 'number') names.add(d.clusterB.name)
+    }
+    return Array.from(names)
+  }, [insight])
 
   const chartOption = useMemo(() => {
-    if (numericDeltas.length === 0 || clusterPair.length !== 2) return {}
+    if (numericDeltas.length === 0 || allClusters.length < 2) return {}
     return {
       backgroundColor: 'transparent',
       grid: { left: 30, right: 10, top: 5, bottom: 20 },
       xAxis: {
         type: 'category' as const,
-        data: numericDeltas.map(d => d.dimension),
+        data: [...new Set(numericDeltas.map(d => d.dimension))],
         axisLabel: { fontSize: 9, color: CHART_TICK_COLOR },
         axisTick: { show: false },
         axisLine: { show: false },
@@ -86,22 +93,17 @@ export function ClusterDeltaDetector() {
         borderColor: (CHART_TOOLTIP_CONTENT_STYLE as Record<string, unknown>).borderColor as string,
         textStyle: { color: '#e0e0e0', fontSize: Number(CHART_TOOLTIP_FONT_SIZE_COMPACT.replace('px', '')) },
       },
-      series: [
-        {
-          name: clusterPair[0],
-          type: 'bar',
-          data: numericDeltas.map(d => (d as Record<string, unknown>)[clusterPair[0]]),
-          itemStyle: { color: CLUSTER_A_COLOR, borderRadius: [4, 4, 0, 0] },
-        },
-        {
-          name: clusterPair[1],
-          type: 'bar',
-          data: numericDeltas.map(d => (d as Record<string, unknown>)[clusterPair[1]]),
-          itemStyle: { color: CLUSTER_B_COLOR, borderRadius: [4, 4, 0, 0] },
-        },
-      ],
+      series: allClusters.map((clusterName, idx) => ({
+        name: clusterName,
+        type: 'bar' as const,
+        data: [...new Set(numericDeltas.map(d => d.dimension))].map(dim => {
+          const match = numericDeltas.find(d => d.dimension === dim && (d as Record<string, unknown>)[clusterName] !== undefined)
+          return match ? (match as Record<string, unknown>)[clusterName] as number : null
+        }),
+        itemStyle: { color: CLUSTER_COLORS[idx % CLUSTER_COLORS.length], borderRadius: [4, 4, 0, 0] },
+      })),
     }
-  }, [numericDeltas, clusterPair])
+  }, [numericDeltas, allClusters])
 
   if (!isLoading && deltaInsightsRaw.length === 0) {
     return (
@@ -158,22 +160,20 @@ export function ClusterDeltaDetector() {
             <span className="text-xs text-muted-foreground flex-1">{insight.description}</span>
           </div>
 
-          {/* Legend */}
-          {clusterPair.length === 2 && (
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-1">
-                <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: CLUSTER_A_COLOR }} />
-                <span className="text-2xs text-muted-foreground">{clusterPair[0]}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: CLUSTER_B_COLOR }} />
-                <span className="text-2xs text-muted-foreground">{clusterPair[1]}</span>
-              </div>
+          {/* Legend — show all clusters, not just first two (#6873) */}
+          {allClusters.length >= 2 && (
+            <div className="flex items-center gap-4 flex-wrap">
+              {allClusters.map((name, idx) => (
+                <div key={name} className="flex items-center gap-1">
+                  <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: CLUSTER_COLORS[idx % CLUSTER_COLORS.length] }} />
+                  <span className="text-2xs text-muted-foreground">{name}</span>
+                </div>
+              ))}
             </div>
           )}
 
           {/* Numeric deltas as bar chart */}
-          {numericDeltas.length > 0 && clusterPair.length === 2 && (
+          {numericDeltas.length > 0 && allClusters.length >= 2 && (
             <div className="h-32">
               <ReactECharts
                 option={chartOption}
