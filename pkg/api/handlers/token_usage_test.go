@@ -82,7 +82,8 @@ func TestTokenUsageHandler_PutThenGetRoundTrip(t *testing.T) {
 		LastAgentSessionID: "session-put-1",
 	}
 	raw, _ := json.Marshal(body)
-	req, _ := http.NewRequest(http.MethodPost, "/api/token-usage/me", bytes.NewReader(raw))
+	req, err := http.NewRequest(http.MethodPost, "/api/token-usage/me", bytes.NewReader(raw))
+	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req, testTokenUsageFiberTimeoutMs)
 	require.NoError(t, err)
@@ -94,7 +95,8 @@ func TestTokenUsageHandler_PutThenGetRoundTrip(t *testing.T) {
 	assert.Equal(t, wantDiagnose, got.TokensByCategory["diagnose"])
 
 	// Re-fetch and confirm persistence.
-	getReq, _ := http.NewRequest(http.MethodGet, "/api/token-usage/me", nil)
+	getReq, err := http.NewRequest(http.MethodGet, "/api/token-usage/me", nil)
+	require.NoError(t, err)
 	getResp, err := app.Test(getReq, testTokenUsageFiberTimeoutMs)
 	require.NoError(t, err)
 	got2 := decodeTokenUsageResponse(t, getResp)
@@ -113,7 +115,8 @@ func TestTokenUsageHandler_DeltaIncrementsAtomically(t *testing.T) {
 			Delta:          d,
 			AgentSessionID: "session-delta-1",
 		})
-		req, _ := http.NewRequest(http.MethodPost, "/api/token-usage/delta", bytes.NewReader(body))
+		req, err := http.NewRequest(http.MethodPost, "/api/token-usage/delta", bytes.NewReader(body))
+		require.NoError(t, err)
 		req.Header.Set("Content-Type", "application/json")
 		resp, err := app.Test(req, testTokenUsageFiberTimeoutMs)
 		require.NoError(t, err)
@@ -121,7 +124,8 @@ func TestTokenUsageHandler_DeltaIncrementsAtomically(t *testing.T) {
 		resp.Body.Close()
 	}
 
-	getReq, _ := http.NewRequest(http.MethodGet, "/api/token-usage/me", nil)
+	getReq, err := http.NewRequest(http.MethodGet, "/api/token-usage/me", nil)
+	require.NoError(t, err)
 	getResp, err := app.Test(getReq, testTokenUsageFiberTimeoutMs)
 	require.NoError(t, err)
 	got := decodeTokenUsageResponse(t, getResp)
@@ -141,7 +145,8 @@ func TestTokenUsageHandler_DeltaSessionChangeSkipsAdd(t *testing.T) {
 		Delta:          delta1,
 		AgentSessionID: "session-A",
 	})
-	req1, _ := http.NewRequest(http.MethodPost, "/api/token-usage/delta", bytes.NewReader(body1))
+	req1, err := http.NewRequest(http.MethodPost, "/api/token-usage/delta", bytes.NewReader(body1))
+	require.NoError(t, err)
 	req1.Header.Set("Content-Type", "application/json")
 	resp1, err := app.Test(req1, testTokenUsageFiberTimeoutMs)
 	require.NoError(t, err)
@@ -153,7 +158,8 @@ func TestTokenUsageHandler_DeltaSessionChangeSkipsAdd(t *testing.T) {
 		Delta:          delta2,
 		AgentSessionID: "session-B",
 	})
-	req2, _ := http.NewRequest(http.MethodPost, "/api/token-usage/delta", bytes.NewReader(body2))
+	req2, err := http.NewRequest(http.MethodPost, "/api/token-usage/delta", bytes.NewReader(body2))
+	require.NoError(t, err)
 	req2.Header.Set("Content-Type", "application/json")
 	resp2, err := app.Test(req2, testTokenUsageFiberTimeoutMs)
 	require.NoError(t, err)
@@ -170,7 +176,8 @@ func TestTokenUsageHandler_DeltaRejectsNegative(t *testing.T) {
 		Delta:          -1,
 		AgentSessionID: "session-neg",
 	})
-	req, _ := http.NewRequest(http.MethodPost, "/api/token-usage/delta", bytes.NewReader(body))
+	req, err := http.NewRequest(http.MethodPost, "/api/token-usage/delta", bytes.NewReader(body))
+	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req, testTokenUsageFiberTimeoutMs)
 	require.NoError(t, err)
@@ -186,7 +193,8 @@ func TestTokenUsageHandler_DeltaRejectsOverLimit(t *testing.T) {
 		Delta:          maxTokenDeltaPerRequest + 1,
 		AgentSessionID: "session-big",
 	})
-	req, _ := http.NewRequest(http.MethodPost, "/api/token-usage/delta", bytes.NewReader(body))
+	req, err := http.NewRequest(http.MethodPost, "/api/token-usage/delta", bytes.NewReader(body))
+	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req, testTokenUsageFiberTimeoutMs)
 	require.NoError(t, err)
@@ -206,7 +214,8 @@ func TestTokenUsageHandler_PutRejectsTooManyCategories(t *testing.T) {
 		TokensByCategory:   cats,
 		LastAgentSessionID: "session-many",
 	})
-	req, _ := http.NewRequest(http.MethodPost, "/api/token-usage/me", bytes.NewReader(body))
+	req, err := http.NewRequest(http.MethodPost, "/api/token-usage/me", bytes.NewReader(body))
+	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req, testTokenUsageFiberTimeoutMs)
 	require.NoError(t, err)

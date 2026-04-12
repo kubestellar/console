@@ -92,7 +92,10 @@ func TestDevModeLogin(t *testing.T) {
 // set so the handler does not reject it at the CSRF gate (#6588). Tests
 // that want to exercise the CSRF gate should build requests directly.
 func refreshReq(authHeader string) *http.Request {
-	req, _ := http.NewRequest("POST", "/auth/refresh", nil)
+	req, err := http.NewRequest("POST", "/auth/refresh", nil)
+	if err != nil {
+		panic(err)
+	}
 	req.Header.Set("X-Requested-With", "XMLHttpRequest")
 	if authHeader != "" {
 		req.Header.Set("Authorization", authHeader)
@@ -622,16 +625,20 @@ func TestLogout_RequiresCSRFHeader(t *testing.T) {
 	token, _ := handler.generateJWT(user)
 
 	// Without the CSRF header: 403.
-	req, _ := http.NewRequest("POST", "/auth/logout", nil)
+	req, err := http.NewRequest("POST", "/auth/logout", nil)
+	require.NoError(t, err)
 	req.Header.Set("Authorization", "Bearer "+token)
-	resp, _ := app.Test(req, 5000)
+	resp, err := app.Test(req, 5000)
+	require.NoError(t, err)
 	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
 
 	// With the CSRF header: 200.
-	req2, _ := http.NewRequest("POST", "/auth/logout", nil)
+	req2, err := http.NewRequest("POST", "/auth/logout", nil)
+	require.NoError(t, err)
 	req2.Header.Set("Authorization", "Bearer "+token)
 	req2.Header.Set("X-Requested-With", "XMLHttpRequest")
-	resp2, _ := app.Test(req2, 5000)
+	resp2, err := app.Test(req2, 5000)
+	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp2.StatusCode)
 }
 
@@ -653,10 +660,12 @@ func TestLogout_ExpiredTokenIdempotent(t *testing.T) {
 	tok := jwt.NewWithClaims(jwt.SigningMethodHS256, expClaims)
 	signed, _ := tok.SignedString([]byte("test-secret"))
 
-	req, _ := http.NewRequest("POST", "/auth/logout", nil)
+	req, err := http.NewRequest("POST", "/auth/logout", nil)
+	require.NoError(t, err)
 	req.Header.Set("Authorization", "Bearer "+signed)
 	req.Header.Set("X-Requested-With", "XMLHttpRequest")
-	resp, _ := app.Test(req, 5000)
+	resp, err := app.Test(req, 5000)
+	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 	// The expired JTI must NOT have been added to the revocation store.

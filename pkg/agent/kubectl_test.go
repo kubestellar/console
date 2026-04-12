@@ -678,6 +678,9 @@ current-context: ctx-b
 	}
 
 	ctxB := proxy.config.Contexts["ctx-b"]
+	if ctxB == nil {
+		t.Fatal("ctx-b context not found in config")
+	}
 	if ctxB.AuthInfo == "shared-user" {
 		t.Error("ctx-b should NOT reference the original 'shared-user' (different token)")
 	}
@@ -696,6 +699,9 @@ current-context: ctx-b
 
 	// Original user unchanged
 	origUser := proxy.config.AuthInfos["shared-user"]
+	if origUser == nil {
+		t.Fatal("shared-user AuthInfo not found in config")
+	}
 	if origUser.Token != "token-aaa" {
 		t.Errorf("original user token = %q, want token-aaa", origUser.Token)
 	}
@@ -727,6 +733,9 @@ func TestKubectlProxy_ImportKubeconfig_SameDataNoRename(t *testing.T) {
 
 	// Since data is identical, the context should keep the original name (no rename).
 	ctxB := proxy.config.Contexts["ctx-b"]
+	if ctxB == nil {
+		t.Fatal("ctx-b context not found in config")
+	}
 	if ctxB.Cluster != "shared-cluster" {
 		t.Errorf("ctx-b cluster = %q, want shared-cluster (same data, no rename needed)", ctxB.Cluster)
 	}
