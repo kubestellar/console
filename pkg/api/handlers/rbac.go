@@ -375,6 +375,21 @@ func (h *RBACHandler) GetClusterPermissions(c *fiber.Ctx) error {
 
 // CreateServiceAccount creates a new service account (cluster-admin only)
 func (h *RBACHandler) CreateServiceAccount(c *fiber.Ctx) error {
+	// #6860: Console-level authorization — only admin users may create
+	// service accounts. Without this, any authenticated console user could
+	// create SAs via the backend's privileged kubeconfig identity.
+	userID := middleware.GetUserID(c)
+	currentUser, err := h.store.GetUser(userID)
+	if err != nil || currentUser == nil {
+		return fiber.NewError(fiber.StatusUnauthorized, "Unauthorized")
+	}
+	if currentUser.Role != models.UserRoleAdmin {
+		slog.Warn("[rbac] SECURITY: non-admin attempted to create service account",
+			"user_id", currentUser.ID,
+			"github_login", currentUser.GitHubLogin)
+		return fiber.NewError(fiber.StatusForbidden, "Console admin role required")
+	}
+
 	if h.k8sClient == nil {
 		return fiber.NewError(fiber.StatusServiceUnavailable, "Kubernetes client not available")
 	}
@@ -400,9 +415,9 @@ func (h *RBACHandler) CreateServiceAccount(c *fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(c.Context(), rbacWriteTimeout)
 	defer cancel()
 
-	// Check if user has cluster-admin access
-	isAdmin, err := h.k8sClient.CheckClusterAdminAccess(ctx, req.Cluster)
-	if err != nil || !isAdmin {
+	// Check if user has cluster-admin access via Kubernetes RBAC too
+	isAdmin, kerr := h.k8sClient.CheckClusterAdminAccess(ctx, req.Cluster)
+	if kerr != nil || !isAdmin {
 		return fiber.NewError(fiber.StatusForbidden, "Cluster admin access required")
 	}
 
@@ -417,6 +432,21 @@ func (h *RBACHandler) CreateServiceAccount(c *fiber.Ctx) error {
 
 // CreateRoleBinding creates a new role binding (cluster-admin only)
 func (h *RBACHandler) CreateRoleBinding(c *fiber.Ctx) error {
+	// #6859: Console-level authorization — only admin users may create
+	// role bindings. Without this, any authenticated console user could
+	// escalate privileges via the backend's privileged kubeconfig identity.
+	userID := middleware.GetUserID(c)
+	currentUser, err := h.store.GetUser(userID)
+	if err != nil || currentUser == nil {
+		return fiber.NewError(fiber.StatusUnauthorized, "Unauthorized")
+	}
+	if currentUser.Role != models.UserRoleAdmin {
+		slog.Warn("[rbac] SECURITY: non-admin attempted to create role binding",
+			"user_id", currentUser.ID,
+			"github_login", currentUser.GitHubLogin)
+		return fiber.NewError(fiber.StatusForbidden, "Console admin role required")
+	}
+
 	if h.k8sClient == nil {
 		return fiber.NewError(fiber.StatusServiceUnavailable, "Kubernetes client not available")
 	}

@@ -99,9 +99,11 @@ export function usePermissions() {
   }, [fetchPermissions])
 
   // Check if user is cluster admin for a specific cluster
-  // If permissions data is not available for a cluster, assume admin (don't show warning)
+  // SECURITY: If permissions data is not available (fetch failed, network error),
+  // deny access (fail-closed). Only assume admin when backend is explicitly
+  // unavailable (demo mode) or no token is present.
   const isClusterAdmin = (cluster: string): boolean => {
-    if (!permissions?.clusters?.[cluster]) return true // Assume admin if no data
+    if (!permissions?.clusters?.[cluster]) return false // Fail-closed: deny when no data
     return permissions.clusters[cluster].isClusterAdmin
   }
 
@@ -170,7 +172,7 @@ export function useCanI() {
   const [error, setError] = useState<string | null>(null)
 
   const checkPermission = async (request: CanIRequest): Promise<CanIResponse> => {
-    // Skip if backend is known to be unavailable
+    // Skip if backend is known to be unavailable (demo mode)
     if (isBackendUnavailable()) {
       return { allowed: true } // Assume allowed in demo mode
     }
@@ -190,16 +192,20 @@ export function useCanI() {
         signal: AbortSignal.timeout(5000) })
 
       if (!response.ok) {
-        // Silently fail on error - assume allowed in demo mode
-        return { allowed: true }
+        // SECURITY: fail-closed — deny permission when API returns error
+        const denied: CanIResponse = { allowed: false, reason: 'Permission check failed (API error)' }
+        setResult(denied)
+        return denied
       }
 
       const data: CanIResponse = await response.json()
       setResult(data)
       return data
     } catch {
-      // Silently fail - backend may be unavailable in demo mode
-      return { allowed: true }
+      // SECURITY: fail-closed — deny permission on network/timeout error
+      const denied: CanIResponse = { allowed: false, reason: 'Permission check failed (network error)' }
+      setResult(denied)
+      return denied
     } finally {
       setChecking(false)
     }
