@@ -945,10 +945,19 @@ export function MissionProvider({ children }: { children: ReactNode }) {
             return prev
           })
 
-          // Side effect: schedule reconnection OUTSIDE the state updater
-          if (missionsToReconnect.length > 0) {
+          // Side effect: schedule reconnection OUTSIDE the state updater.
+          // #6832 — Deduplicate by mission ID. React StrictMode may invoke the
+          // state updater twice, pushing the same mission into the array twice.
+          // Without dedup, two wsSend calls fire per reconnecting mission.
+          const seenIds = new Set<string>()
+          const dedupedMissions = missionsToReconnect.filter(m => {
+            if (seenIds.has(m.id)) return false
+            seenIds.add(m.id)
+            return true
+          })
+          if (dedupedMissions.length > 0) {
             setTimeout(() => {
-              missionsToReconnect.forEach(mission => {
+              dedupedMissions.forEach(mission => {
                 // Find the last user message to re-send
                 const userMessages = mission.messages.filter(msg => msg.role === 'user')
                 const lastUserMessage = userMessages[userMessages.length - 1]
@@ -1365,8 +1374,12 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
         : null
       const resolved = persistedAvailable ? persisted : (payload.selected || safeDefaultAgent || bestAvailable)
       setSelectedAgent(resolved)
-      // If we restored a persisted agent that differs from the server's selection, tell the server
+      // If we restored a persisted agent that differs from the server's selection, tell the server.
+      // #6831 — Persist the selection to localStorage at send time (not just on
+      // agent_selected ack) so a connection drop between send and ack doesn't
+      // silently revert the user's preferred agent on the next reconnect.
       if (persistedAvailable && persisted !== payload.selected && wsRef.current?.readyState === WebSocket.OPEN) {
+        localStorage.setItem(SELECTED_AGENT_KEY, persisted)
         wsRef.current.send(JSON.stringify({
           id: `select-agent-${Date.now()}`,
           type: 'select_agent',
@@ -1536,8 +1549,12 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
           lastStreamTimestamp.current.delete(missionId)
         }
 
-        if (lastMsg?.role === 'assistant' && !payload.done && m.status === 'running' && !hasGap) {
-          // Append to existing assistant message mid-stream (no gap detected)
+        if (lastMsg?.role === 'assistant' && !payload.done && (m.status === 'running' || m.status === 'waiting_input') && !hasGap) {
+          // Append to existing assistant message mid-stream (no gap detected).
+          // #6829 — Also allow appending when status is 'waiting_input': if
+          // stream_done arrived before the final content chunk (out-of-order
+          // delivery), the mission is already 'waiting_input' but we must still
+          // append the late chunk instead of creating a split bubble.
           return {
             ...m,
             status: 'running' as MissionStatus,

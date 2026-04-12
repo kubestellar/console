@@ -167,7 +167,14 @@ export function MissionControlDialog({ open, onClose }: MissionControlDialogProp
   const canGoBack =
     state.phase === 'assign' || state.phase === 'blueprint'
 
+  // #6828 — Ref-based guard prevents double-click from skipping a phase.
+  // The guard resets after one React render cycle via useEffect.
+  const phaseAdvancingRef = useRef(false)
+  useEffect(() => { phaseAdvancingRef.current = false }, [state.phase])
+
   const handleNext = () => {
+    if (phaseAdvancingRef.current) return
+    phaseAdvancingRef.current = true
     if (state.phase === 'define') mc.setPhase('assign')
     else if (state.phase === 'assign') mc.setPhase('blueprint')
   }

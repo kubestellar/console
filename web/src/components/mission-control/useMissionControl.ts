@@ -5,7 +5,7 @@
  * console-kb project index lookup, and localStorage persistence.
  */
 
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useMissions } from '../../hooks/useMissions'
 import { useDebouncedValue } from '../../hooks/useDebouncedValue'
 import { useHelmReleases } from '../../hooks/mcp/helm'
@@ -525,9 +525,11 @@ export function useMissionControl() {
   // apply the result if the counter hasn't advanced.
   const userMutationGenerationRef = useRef(0)
   const lastDispatchedGenerationRef = useRef(0)
-  const bumpUserGeneration = () => {
+  // #6833 — Wrap in useCallback so consumers don't re-render on every
+  // parent render. The function only mutates a ref, so it has no deps.
+  const bumpUserGeneration = useCallback(() => {
     userMutationGenerationRef.current += 1
-  }
+  }, [])
 
   // issue 6468 / #6732 — Persist on change, debounced.
   // Previously this fired on EVERY state change, which during AI streaming,
@@ -872,7 +874,11 @@ export function useMissionControl() {
   // captures a stale planningMissionId or targetClusters from a previous render (#4547).
   const stateRef = useRef(state)
   const helmReleasesRef = useRef(helmReleases)
+  // #6834 — Dedicated ref for planningMissionId so askAIForSuggestions always
+  // reads the latest value, even when a prior setState hasn't been committed yet.
+  const planningMissionIdRef = useRef(state.planningMissionId)
   useEffect(() => { stateRef.current = state }, [state])
+  useEffect(() => { planningMissionIdRef.current = state.planningMissionId }, [state.planningMissionId])
   useEffect(() => { helmReleasesRef.current = helmReleases }, [helmReleases])
 
   const askAIForSuggestions = (description: string, existingProjects: PayloadProject[] = []) => {
@@ -886,7 +892,10 @@ export function useMissionControl() {
         return
       }
       const currentHelmReleases = helmReleasesRef.current
-      let missionId = currentState.planningMissionId
+      // #6834 — Read from the dedicated ref instead of stateRef to avoid a
+      // stale null when a prior setState (which set planningMissionId) hasn't
+      // been committed yet. This prevents creating a duplicate planning mission.
+      let missionId = planningMissionIdRef.current ?? currentState.planningMissionId
 
       const existingContext =
         existingProjects.length > 0
@@ -951,6 +960,9 @@ Include real CNCF projects only. Consider dependencies between projects.`
           description: 'AI-assisted fix planning',
           type: 'custom',
           initialPrompt: prompt })
+        // #6834 — Update the ref synchronously so a rapid second click reads
+        // the missionId before React commits the setState below.
+        planningMissionIdRef.current = missionId
         setState((prev) => ({
           ...prev,
           planningMissionId: missionId,
