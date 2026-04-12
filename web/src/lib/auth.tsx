@@ -302,8 +302,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               return
             }
           }
+          // #6930 — A 401/403 from /auth/refresh is a definitive signal that
+          // the server session has expired. Clear the session hint so future
+          // page loads don't keep hitting /auth/refresh in a loop.
+          const HTTP_UNAUTHORIZED = 401
+          const HTTP_FORBIDDEN = 403
+          if (refreshResponse.status === HTTP_UNAUTHORIZED || refreshResponse.status === HTTP_FORBIDDEN) {
+            localStorage.removeItem(STORAGE_KEY_HAS_SESSION)
+          }
         } catch {
-          // Refresh failed — fall through to show login page
+          // Refresh failed (network error / timeout) — fall through to show
+          // login page. Do NOT clear kc-has-session here: the server may be
+          // temporarily unreachable and the session could still be valid.
         }
         // OAuth configured + no valid cookie — show login page
         return
@@ -431,11 +441,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       // Cache is stale or missing — drop to login (clear token so the
       // ProtectedRoute redirects and the user re-authenticates).
+      // #6930 — Do NOT clear STORAGE_KEY_HAS_SESSION here. An /api/me
+      // failure could be a transient network issue; clearing the hint
+      // would prevent silent session recovery on the next page load.
+      // The hint is cleared authoritatively when /auth/refresh returns
+      // 401/403 (definitive proof the server session is gone).
       console.error('Failed to fetch user (cache stale or missing), dropping to login:', error)
       localStorage.removeItem(STORAGE_KEY_TOKEN)
       localStorage.removeItem(AUTH_USER_CACHE_KEY)
       localStorage.removeItem(AUTH_USER_CACHE_VALIDATED_KEY)
-      localStorage.removeItem(STORAGE_KEY_HAS_SESSION)
       setTokenState(null)
       setUser(null)
     }
@@ -531,6 +545,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (data?.token) {
               localStorage.setItem(STORAGE_KEY_TOKEN, data.token)
               setTokenState(data.token)
+            }
+          } else {
+            // #6930 — A definitive auth failure from the banner refresh
+            // should also clear the session hint to prevent stale loops.
+            const HTTP_UNAUTHORIZED = 401
+            const HTTP_FORBIDDEN = 403
+            if (response.status === HTTP_UNAUTHORIZED || response.status === HTTP_FORBIDDEN) {
+              localStorage.removeItem(STORAGE_KEY_HAS_SESSION)
             }
           }
         } catch {
