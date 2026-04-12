@@ -991,11 +991,21 @@ func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
 			}
 		}
 
-		// If this is not the last attempt, wait before retrying
+		// If this is not the last attempt, wait before retrying.
+		// Use select with context cancellation so the retry is
+		// abortable when the client disconnects (#6819).
 		if attempt < forkHeadSHAMaxRetries-1 {
 			slog.Info("[missions] fork HEAD SHA not yet available, retrying",
 				"attempt", attempt+1, "maxRetries", forkHeadSHAMaxRetries, "status", mainRefResp.StatusCode, "backoff", backoff)
-			time.Sleep(backoff)
+			select {
+			case <-time.After(backoff):
+				// backoff elapsed, continue to next attempt
+			case <-c.UserContext().Done():
+				return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+					"error": "request cancelled while waiting for fork to initialize",
+					"code":  "request_cancelled",
+				})
+			}
 			backoff = time.Duration(float64(backoff) * forkHeadSHABackoffMultiplier)
 		}
 	}
