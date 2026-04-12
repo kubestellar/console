@@ -48,14 +48,28 @@ const DESCRIPTIONS: Record<AIMode, string> = {
   high: 'Full AI assistance. Proactive suggestions, automatic issue analysis, card swaps based on cluster activity. Higher token usage.' }
 
 const STORAGE_KEY = 'kubestellar-ai-mode'
+const DEFAULT_AI_MODE: AIMode = 'medium'
+const VALID_AI_MODES: ReadonlySet<string> = new Set<AIMode>(['low', 'medium', 'high'])
+
+/** Validate a persisted value against the known-good AIMode enum. */
+function isValidAIMode(value: string | null): value is AIMode {
+  return value !== null && VALID_AI_MODES.has(value)
+}
 
 export function useAIMode() {
   const [mode, setModeState] = useState<AIMode>(() => {
     if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem(STORAGE_KEY) as AIMode | null
-      return stored || 'medium'
+      const stored = localStorage.getItem(STORAGE_KEY)
+      if (isValidAIMode(stored)) {
+        return stored
+      }
+      // Clear invalid/stale value so it doesn't persist across reloads.
+      if (stored !== null) {
+        localStorage.removeItem(STORAGE_KEY)
+      }
+      return DEFAULT_AI_MODE
     }
-    return 'medium'
+    return DEFAULT_AI_MODE
   })
 
   // Persist mode changes
