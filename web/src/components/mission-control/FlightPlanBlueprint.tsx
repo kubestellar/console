@@ -513,7 +513,7 @@ export function FlightPlanBlueprint({
   onMoveProject,
   installedProjects = new Set() }: FlightPlanBlueprintProps) {
   const svgId = useId().replace(/:/g, '')
-  const { clusters } = useClusters()
+  const { clusters, error: clustersError } = useClusters()
 
   // Filter out explicitly unhealthy clusters and redistribute orphaned projects to healthy ones
   const healthyState = useMemo(() => {
@@ -872,6 +872,14 @@ export function FlightPlanBlueprint({
           <div />
         </div>
       </div>
+
+      {/* Error banner when cluster data fails to load (#6772) */}
+      {clustersError && (
+        <div className="mx-6 mt-2 p-2 rounded-lg bg-red-500/20 border border-red-500/50 flex items-center gap-2 text-xs text-red-400">
+          <Shield className="w-3.5 h-3.5 flex-shrink-0" />
+          <span>Cluster data unavailable: {clustersError}</span>
+        </div>
+      )}
 
       {/* Main content: SVG left + Info panel right */}
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden">

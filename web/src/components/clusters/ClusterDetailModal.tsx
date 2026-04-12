@@ -99,7 +99,7 @@ interface ClusterDetailModalProps {
 
 export function ClusterDetailModal({ clusterName, clusterUser, onClose, onRename, onRemove }: ClusterDetailModalProps) {
   const { t } = useTranslation()
-  const { health, isLoading } = useClusterHealth(clusterName)
+  const { health, isLoading, error: healthError } = useClusterHealth(clusterName)
   const { deduplicatedClusters, clusters: rawClusters } = useClusters()
   const { issues: podIssues } = usePodIssues(clusterName)
   const { issues: deploymentIssues } = useDeploymentIssues(clusterName)
@@ -349,6 +349,14 @@ After I approve, help me execute the repairs step by step.`,
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        {/* Error banner when cluster health fetch fails (#6772) */}
+        {healthError && (
+          <div className="mb-4 p-3 rounded-lg bg-red-500/20 border border-red-500/50 flex items-center gap-2 text-sm text-red-400">
+            <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+            <span>{healthError}</span>
+          </div>
+        )}
 
         {/* Status details — surfaces unreachable reason (#5925),
             external reachability (#5926) and freshness (#5927). */}

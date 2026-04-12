@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, lazy, Suspense } from 'react'
-import { Bug } from 'lucide-react'
+import { Bug, Loader2 } from 'lucide-react'
 import { useFeatureRequests, useNotifications } from '../../hooks/useFeatureRequests'
 import type { RequestType } from '../../hooks/useFeatureRequests'
 import { useModalState } from '../../lib/modals'
@@ -12,7 +12,7 @@ const FeatureRequestModal = lazy(() =>
 export function FeatureRequestButton() {
   const { isOpen: isModalOpen, open: openModal, close: closeModal } = useModalState()
   const [initialRequestType, setInitialRequestType] = useState<RequestType | undefined>()
-  const { notifications } = useNotifications()
+  const { notifications, isLoading: notificationsLoading } = useNotifications()
   // PR #6518 item G — this navbar button only needs the closed-request IDs
   // to filter notifications for the badge count; it does not render any
   // queue items, titles, or descriptions. Pass { countOnly: true } so the
@@ -22,7 +22,8 @@ export function FeatureRequestButton() {
   // PR #6573 item B — use the lean `summaries` return (typed as
   // FeatureRequestSummary[]) instead of `requests`. The count_only endpoint
   // only sends {id, status}, so the full FeatureRequest[] type was a lie.
-  const { summaries } = useFeatureRequests(undefined, { countOnly: true })
+  const { summaries, isLoading: summariesLoading } = useFeatureRequests(undefined, { countOnly: true })
+  const isLoadingFeedback = notificationsLoading || summariesLoading
 
   // issue 6475 — Unify the navbar badge count with the Updates tab.
   // Previously the navbar used the raw `unreadCount` returned by
@@ -64,8 +65,8 @@ export function FeatureRequestButton() {
         }`}
         title={unreadCount > 0 ? `${unreadCount} updates on your feedback` : 'Report a bug or request a feature'}
       >
-        <Bug className="w-5 h-5" />
-        {unreadCount > 0 && (
+        {isLoadingFeedback ? <Loader2 className="w-5 h-5 animate-spin" /> : <Bug className="w-5 h-5" />}
+        {!isLoadingFeedback && unreadCount > 0 && (
           <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center text-2xs font-bold text-white rounded-full bg-purple-500">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>

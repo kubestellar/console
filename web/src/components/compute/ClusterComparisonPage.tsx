@@ -18,7 +18,7 @@ export function ClusterComparisonPage() {
   const { t } = useTranslation()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
-  const { deduplicatedClusters: clusters, isLoading } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading, error: clusterError } = useClusters()
   // Nodes for all clusters — used to resolve the Kubernetes version for each
   // cluster from one of its node's kubeletVersion (issue #6108).
   const { nodes: allNodes } = useNodes()
@@ -80,6 +80,35 @@ export function ClusterComparisonPage() {
           {Array.from({ length: Math.max(clusterNames.length, 2) }).map((_, i) => (
             <Skeleton key={i} variant="rounded" height={400} />
           ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (clusterError && clusters.length === 0) {
+    return (
+      <div className="pt-16">
+        <div className="mb-6">
+          <button
+            onClick={handleBack}
+            className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Compute
+          </button>
+        </div>
+        <div className="glass p-8 rounded-lg text-center">
+          <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold mb-2">Failed to Load Clusters</h2>
+          <p className="text-muted-foreground mb-4">
+            {clusterError}
+          </p>
+          <button
+            onClick={handleBack}
+            className="px-4 py-2 bg-purple-500/20 text-purple-400 rounded-lg hover:bg-purple-500/30 transition-colors"
+          >
+            Go Back
+          </button>
         </div>
       </div>
     )
