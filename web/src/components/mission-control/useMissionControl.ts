@@ -975,22 +975,30 @@ Return a JSON block with this exact structure:
 Include 3-8 projects. Mark the most critical as "required" and nice-to-haves as "recommended" or "optional".
 Include real CNCF projects only. Consider dependencies between projects.`
 
-      if (!missionId) {
-        missionId = startMission({
-          title: 'Mission Control Planning',
-          description: 'AI-assisted fix planning',
-          type: 'custom',
-          initialPrompt: prompt })
-        // #6834 — Update the ref synchronously so a rapid second click reads
-        // the missionId before React commits the setState below.
-        planningMissionIdRef.current = missionId
-        setState((prev) => ({
-          ...prev,
-          planningMissionId: missionId,
-          aiStreaming: true }))
-      } else {
-        sendMessage(missionId, prompt)
-        setState((prev) => ({ ...prev, aiStreaming: true }))
+      // #6811 — Wrap startMission/sendMessage in try/catch so a synchronous
+      // throw (e.g. demo mode, ensureConnection rejection) doesn't leave
+      // aiStreaming stuck true with no mission to clear it.
+      try {
+        if (!missionId) {
+          missionId = startMission({
+            title: 'Mission Control Planning',
+            description: 'AI-assisted fix planning',
+            type: 'custom',
+            initialPrompt: prompt })
+          // #6834 — Update the ref synchronously so a rapid second click reads
+          // the missionId before React commits the setState below.
+          planningMissionIdRef.current = missionId
+          setState((prev) => ({
+            ...prev,
+            planningMissionId: missionId,
+            aiStreaming: true }))
+        } else {
+          sendMessage(missionId, prompt)
+          setState((prev) => ({ ...prev, aiStreaming: true }))
+        }
+      } catch (err) {
+        aiRequestInFlightRef.current = false
+        console.error('[MissionControl] #6811 — askAIForSuggestions failed:', err)
       }
     }
 

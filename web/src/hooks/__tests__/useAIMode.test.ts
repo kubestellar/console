@@ -283,15 +283,14 @@ describe('useAIMode', () => {
 
   // ── Edge cases ────────────────────────────────────────────────────────
 
-  it('crashes when localStorage has an invalid (non-AIMode) value', () => {
+  it('gracefully falls back to "medium" when localStorage has an invalid (non-AIMode) value', () => {
     localStorage.setItem(STORAGE_KEY, 'invalid-mode')
-    // The hook does `stored || 'medium'` — an unrecognised string is truthy,
-    // so it is used as-is. The config lookup `AI_MODE_CONFIGS[mode]` returns
-    // undefined, causing a runtime error when accessing `.features`.
-    // This documents the current (unguarded) behaviour.
-    expect(() => {
-      renderHook(() => useAIMode())
-    }).toThrow()
+    // PR #6868 added validation: invalid values are cleared from localStorage
+    // and the hook falls back to the default 'medium' mode.
+    const { result } = renderHook(() => useAIMode())
+    expect(result.current.mode).toBe('medium')
+    // The invalid value should have been removed from localStorage
+    expect(localStorage.getItem(STORAGE_KEY)).not.toBe('invalid-mode')
   })
 
   it('falls back to "medium" when localStorage value is an empty string', () => {
