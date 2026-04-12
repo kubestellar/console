@@ -48,21 +48,22 @@ interface CRResponse {
 // Pod detection helpers
 // ---------------------------------------------------------------------------
 
-function isKeycloakOperatorPod(pod: BackendPodInfo): boolean {
+// Exported for unit testing.
+export function isKeycloakOperatorPod(pod: BackendPodInfo): boolean {
   const labels = pod.labels ?? {}
   const name = (pod.name ?? '').toLowerCase()
+  // Match only the Keycloak Operator itself, not generic Keycloak workloads
+  // (keycloak-ui, keycloak-proxy, etc.) which share the broad `app=keycloak` label.
   return (
-    labels['app'] === 'keycloak' ||
-    labels['app.kubernetes.io/name'] === 'keycloak' ||
-    labels['app.kubernetes.io/part-of'] === 'keycloak' ||
-    labels['app.kubernetes.io/component'] === 'keycloak' ||
-    // Name-prefix check kept deliberately narrow: only match the operator pod itself,
-    // not unrelated keycloak-adjacent workloads (keycloak-ui, keycloak-proxy, etc.)
+    labels['app'] === 'keycloak-operator' ||
+    labels['app.kubernetes.io/name'] === 'keycloak-operator' ||
+    labels['app.kubernetes.io/part-of'] === 'keycloak-operator' ||
     name.startsWith('keycloak-operator')
   )
 }
 
-function isPodReady(pod: BackendPodInfo): boolean {
+// Exported for unit testing.
+export function isPodReady(pod: BackendPodInfo): boolean {
   const status = (pod.status ?? '').toLowerCase()
   const ready = pod.ready ?? ''
   if (status !== 'running') return false
@@ -90,8 +91,8 @@ async function fetchCR(group: string, version: string, resource: string): Promis
   }
 }
 
-/** Parse a Keycloak CR (keycloak.org/v2alpha1 Keycloak) into a realm-like shape. */
-function parseKeycloakInstance(item: CRItem): KeycloakRealm {
+/** Parse a Keycloak CR (keycloak.org/v2alpha1 Keycloak) into a realm-like shape. Exported for unit testing. */
+export function parseKeycloakInstance(item: CRItem): KeycloakRealm {
   const status = (item.status ?? {}) as Record<string, unknown>
   const conditions = Array.isArray(status.conditions) ? status.conditions : []
 
@@ -146,14 +147,20 @@ async function fetchPods(url: string): Promise<BackendPodInfo[]> {
 // ---------------------------------------------------------------------------
 
 async function fetchKeycloakStatus(): Promise<KeycloakStatus> {
-  // Step 1: Detect Keycloak pods (label-filtered first, then full fallback)
+  // Step 1: Detect Keycloak Operator pods.
+  // First try a targeted label-selector query (fast, low noise). Errors here are
+  // swallowed — an auth/network failure on the narrow query falls through to the
+  // full-list fallback below, which propagates if it also fails so useCache can
+  // surface a proper error state instead of silently showing "not installed".
   const labeledPods = await fetchPods(
-    '/api/mcp/pods?labelSelector=app.kubernetes.io%2Fname%3Dkeycloak',
+    '/api/mcp/pods?labelSelector=app.kubernetes.io%2Fname%3Dkeycloak-operator',
   ).catch(() => [] as BackendPodInfo[])
 
   const keycloakPods = labeledPods.length > 0
     ? labeledPods.filter(isKeycloakOperatorPod)
-    : (await fetchPods('/api/mcp/pods').catch(() => [] as BackendPodInfo[])).filter(isKeycloakOperatorPod)
+    // Fallback: scan all pods — error propagates intentionally so the hook
+    // transitions to isFailed rather than misreporting "not-installed".
+    : (await fetchPods('/api/mcp/pods')).filter(isKeycloakOperatorPod)
 
   if (keycloakPods.length === 0) {
     return {

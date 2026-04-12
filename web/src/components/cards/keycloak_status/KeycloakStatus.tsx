@@ -20,27 +20,26 @@ import type { KeycloakRealm, KeycloakRealmStatus } from './demoData'
 // Helpers
 // ---------------------------------------------------------------------------
 
+// Labels are resolved via t(`keycloak.${status}`) at render time so they go
+// through the i18n pipeline. Keys: keycloak.ready, keycloak.degraded,
+// keycloak.provisioning, keycloak.error — all defined in locales/en/cards.json.
 const STATUS_CONFIG: Record<
   KeycloakRealmStatus,
-  { label: string; color: string; icon: React.ReactNode }
+  { color: string; icon: React.ReactNode }
 > = {
   ready: {
-    label: 'Ready',
     color: 'text-green-400',
     icon: <CheckCircle className="w-3.5 h-3.5 text-green-400" />,
   },
   degraded: {
-    label: 'Degraded',
     color: 'text-yellow-400',
     icon: <AlertTriangle className="w-3.5 h-3.5 text-yellow-400" />,
   },
   provisioning: {
-    label: 'Provisioning',
     color: 'text-blue-400',
     icon: <Loader2 className="w-3.5 h-3.5 text-blue-400 animate-spin" />,
   },
   error: {
-    label: 'Error',
     color: 'text-red-400',
     icon: <XCircle className="w-3.5 h-3.5 text-red-400" />,
   },
@@ -106,7 +105,7 @@ function RealmRow({ realm }: { realm: KeycloakRealm }) {
             </span>
           )}
         </div>
-        <span className={`text-xs shrink-0 ${cfg.color}`}>{cfg.label}</span>
+        <span className={`text-xs shrink-0 ${cfg.color}`}>{t(`keycloak.${realm.status}`)}</span>
       </div>
 
       {/* Row 2: namespace + metrics */}

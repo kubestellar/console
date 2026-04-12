@@ -146,8 +146,8 @@ describe('KeycloakStatus', () => {
       showEmptyState: false,
     })
     render(<KeycloakStatus />)
-    // Health badge
-    expect(screen.getByText('keycloak.degraded')).toBeTruthy()
+    // Health badge — "degraded" also appears on the staging realm row, so use getAllByText
+    expect(screen.getAllByText('keycloak.degraded').length).toBeGreaterThanOrEqual(1)
     // All five demo realms are visible
     expect(screen.getByText('master')).toBeTruthy()
     expect(screen.getByText('platform')).toBeTruthy()
