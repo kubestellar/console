@@ -120,7 +120,7 @@ export function useAlerts() {
       acknowledgeAlerts: () => {},
       resolveAlert: () => {},
       deleteAlert: () => {},
-      runAIDiagnosis: (() => null) as (alertId: string) => string | null,
+      runAIDiagnosis: (() => null) as (alertId: string) => Promise<string | null> | string | null,
       evaluateConditions: () => {},
       isLoadingData: false,
       dataError: null as string | null }

@@ -304,8 +304,9 @@ function loadMissions(): Mission[] {
             timestamp: new Date(msg.timestamp)
           }))
         }
-        // Mark running missions for reconnection - they'll be resumed when WS connects
-        if (mission.status === 'running') {
+        // Mark running/waiting_input missions for reconnection — they'll be
+        // resumed when WS connects (#6912, #6913).
+        if (mission.status === 'running' || mission.status === 'waiting_input') {
           return {
             ...mission,
             currentStep: 'Reconnecting...',
@@ -873,7 +874,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
 
           setMissions(prev => {
             const candidates = prev.filter(m =>
-              m.status === 'running' && m.context?.needsReconnect
+              (m.status === 'running' || m.status === 'waiting_input') && m.context?.needsReconnect
             )
 
             if (candidates.length > 0) {
@@ -947,6 +948,12 @@ export function MissionProvider({ children }: { children: ReactNode }) {
             return prev
           })
 
+          // #6916 — Track which reconnecting missions were in waiting_input
+          // so we can restart their timeout watchdog after resend.
+          const waitingInputMissionIds = new Set(
+            missionsToReconnect.filter(m => m.status === 'waiting_input').map(m => m.id)
+          )
+
           // Side effect: schedule reconnection OUTSIDE the state updater.
           // #6832 — Deduplicate by mission ID. React StrictMode may invoke the
           // state updater twice, pushing the same mission into the array twice.
@@ -971,6 +978,19 @@ export function MissionProvider({ children }: { children: ReactNode }) {
             }
             setTimeout(() => {
               dedupedMissions.forEach(mission => {
+                // #6914 — Check if the mission was cancelled during the
+                // reconnect delay. Without this guard, a user who cancels
+                // during the MISSION_RECONNECT_DELAY_MS window would still
+                // have their prompt resent to the backend.
+                if (cancelIntents.current.has(mission.id)) {
+                  finalizeCancellation(mission.id, 'Mission cancelled by user during reconnect.')
+                  return
+                }
+                const currentState = missionsRef.current.find(m => m.id === mission.id)
+                if (currentState && (currentState.status === 'cancelled' || currentState.status === 'failed' || currentState.status === 'cancelling')) {
+                  return
+                }
+
                 // Find the last user message to re-send
                 const userMessages = mission.messages.filter(msg => msg.role === 'user')
                 const lastUserMessage = userMessages[userMessages.length - 1]
@@ -1037,6 +1057,14 @@ export function MissionProvider({ children }: { children: ReactNode }) {
                       m.id === mId ? { ...m, status: 'failed', currentStep: 'WebSocket reconnect failed' } : m
                     ))
                   })
+
+                  // #6916 — Restart the waiting_input timeout watchdog for
+                  // missions that were in waiting_input before disconnect.
+                  // The original timer was cleared on disconnect; without
+                  // restarting it the mission could hang indefinitely.
+                  if (waitingInputMissionIds.has(mId)) {
+                    startWaitingInputTimeout(mId)
+                  }
                 }
               })
             }, MISSION_RECONNECT_DELAY_MS)
@@ -1125,7 +1153,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
 
 The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and reconnection attempts were exhausted. Please verify the agent is running and reachable, then retry the mission.`
               setMissions(prev => prev.map(m => {
-                if (pendingMissionIds.has(m.id) && m.status === 'running') {
+                if (pendingMissionIds.has(m.id) && (m.status === 'running' || m.status === 'waiting_input')) {
                   return {
                     ...m,
                     status: 'failed',
@@ -1143,11 +1171,11 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
                 return m
               }))
             } else {
-              // Transient disconnect — keep mission in 'running' but mark it
-              // as needing reconnect. The UI will show "Reconnecting..." and
-              // the onopen handler will resume the mission automatically.
+              // Transient disconnect — keep mission in 'running'/'waiting_input'
+              // but mark it as needing reconnect (#6912). The UI will show
+              // "Reconnecting..." and the onopen handler will resume the mission.
               setMissions(prev => prev.map(m => {
-                if (pendingMissionIds.has(m.id) && m.status === 'running') {
+                if (pendingMissionIds.has(m.id) && (m.status === 'running' || m.status === 'waiting_input')) {
                   return {
                     ...m,
                     currentStep: 'Reconnecting...',
