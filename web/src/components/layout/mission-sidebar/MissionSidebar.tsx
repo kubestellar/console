@@ -526,6 +526,42 @@ export function MissionSidebar() {
     })
   }
 
+  /**
+   * Start a rollback mission that attempts to reverse the changes made by
+   * a failed or cancelled mission (#6313). Extracts the original mission's
+   * context (title, type, cluster, message history) and asks the AI to
+   * reverse whatever was partially applied.
+   */
+  const handleRollback = (mission: Mission) => {
+    const agentMessages = (mission.messages || [])
+      .filter(m => m.role === 'assistant' && m.content)
+      .map(m => m.content)
+      .join('\n')
+
+    const rollbackPrompt = [
+      `The following AI mission was interrupted or failed and may have left the cluster in an inconsistent state.`,
+      `Original mission: "${mission.title}"`,
+      mission.cluster ? `Cluster: ${mission.cluster}` : '',
+      `Status: ${mission.status}`,
+      ``,
+      `Here is a summary of what the mission attempted:`,
+      agentMessages.slice(0, 2000),
+      ``,
+      `Please analyze what changes were likely applied and reverse them safely.`,
+      `Check the current state of the cluster first, identify any partially-applied changes,`,
+      `and roll them back. Ask me before making destructive changes.`,
+    ].filter(Boolean).join('\n')
+
+    startMission({
+      title: `Rollback: ${mission.title}`,
+      description: `Reverse changes from interrupted mission "${mission.title}"`,
+      type: 'repair',
+      cluster: mission.cluster,
+      initialPrompt: rollbackPrompt,
+    })
+    openSidebar()
+  }
+
 
   // Minimized sidebar view (thin strip) - desktop only
   if (isSidebarMinimized && !isMobile) {
@@ -1170,6 +1206,7 @@ export function MissionSidebar() {
                   }}
                   onDismiss={() => dismissMission(mission.id)}
                   onTerminate={() => cancelMission(mission.id)}
+                  onRollback={handleRollback}
                   onExpand={() => {
                     setActiveMission(mission.id)
                     setFullScreen(true)

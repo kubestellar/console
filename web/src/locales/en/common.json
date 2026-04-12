@@ -3312,6 +3312,8 @@
       "deleteMissionConfirm": "Are you sure you want to delete this mission? This action cannot be undone.",
       "cancelling": "Cancelling...",
       "terminateSession": "Terminate Session",
+      "rollbackMission": "Rollback Mission",
+      "rollbackMissionConfirm": "This will start a new AI mission to analyze and reverse changes made by the interrupted mission. The AI will check the current cluster state and ask before making any destructive changes.",
       "browseCommunityMissions": "Browse Community Missions",
       "missionControlTitle": "Mission Control — Multi-Cluster Solutions Orchestrator",
       "missionControl": "Mission Control",

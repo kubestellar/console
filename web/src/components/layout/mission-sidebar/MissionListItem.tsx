@@ -7,6 +7,7 @@ import {
   StopCircle,
   Loader2,
   Satellite,
+  Undo2,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { Mission } from '../../../hooks/useMissions'
@@ -14,21 +15,32 @@ import { cn } from '../../../lib/cn'
 import { ConfirmDialog } from '../../../lib/modals'
 import { STATUS_CONFIG, TYPE_ICONS } from './types'
 
-export function MissionListItem({ mission, isActive, onClick, onDismiss, onExpand, onTerminate, isCollapsed, onToggleCollapse }: {
+/** Mission statuses that indicate the mission was interrupted or failed and may need rollback */
+const ROLLBACK_ELIGIBLE_STATUSES = new Set(['failed', 'cancelled'])
+
+export function MissionListItem({ mission, isActive, onClick, onDismiss, onExpand, onTerminate, onRollback, isCollapsed, onToggleCollapse }: {
   mission: Mission
   isActive: boolean
   onClick: () => void
   onDismiss: () => void
   onExpand: () => void
   onTerminate?: () => void
+  /** Start a rollback mission to reverse changes made by this failed/cancelled mission */
+  onRollback?: (mission: Mission) => void
   isCollapsed: boolean
   onToggleCollapse: () => void
 }) {
   const { t } = useTranslation()
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showRollbackConfirm, setShowRollbackConfirm] = useState(false)
   const config = STATUS_CONFIG[mission.status] || STATUS_CONFIG.pending
   const StatusIcon = config.icon
   const TypeIcon = TYPE_ICONS[mission.type] || TYPE_ICONS.custom
+
+  /** Whether this mission is eligible for rollback (failed or cancelled with a non-trivial history) */
+  const canRollback = onRollback &&
+    ROLLBACK_ELIGIBLE_STATUSES.has(mission.status) &&
+    (mission.messages || []).length > 0
 
   return (
     <>
@@ -43,6 +55,18 @@ export function MissionListItem({ mission, isActive, onClick, onDismiss, onExpan
       message={t('layout.missionSidebar.deleteMissionConfirm')}
       confirmLabel={t('common.delete')}
       variant="danger"
+    />
+    <ConfirmDialog
+      isOpen={showRollbackConfirm}
+      onClose={() => setShowRollbackConfirm(false)}
+      onConfirm={() => {
+        setShowRollbackConfirm(false)
+        onRollback?.(mission)
+      }}
+      title={t('layout.missionSidebar.rollbackMission')}
+      message={t('layout.missionSidebar.rollbackMissionConfirm')}
+      confirmLabel="Rollback"
+      variant="warning"
     />
     <div
       className={cn(
@@ -88,6 +112,17 @@ export function MissionListItem({ mission, isActive, onClick, onDismiss, onExpan
             data-testid="terminate-session-list-btn"
           >
             <StopCircle className="w-3.5 h-3.5 text-red-400 hover:text-red-300" />
+          </button>
+        )}
+        {/* Rollback button for failed/cancelled missions (#6313) */}
+        {canRollback && (
+          <button
+            onClick={(e) => { e.stopPropagation(); setShowRollbackConfirm(true) }}
+            className="p-0.5 hover:bg-orange-500/20 rounded transition-colors flex-shrink-0"
+            title={t('layout.missionSidebar.rollbackMission')}
+            data-testid="rollback-mission-btn"
+          >
+            <Undo2 className="w-3.5 h-3.5 text-orange-400 hover:text-orange-300" />
           </button>
         )}
         <button
