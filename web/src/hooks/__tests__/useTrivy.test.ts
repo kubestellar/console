@@ -50,7 +50,7 @@ vi.mock('../../lib/modeTransition', () => ({
 
 vi.mock('../../lib/utils/concurrency', () => ({
   settledWithConcurrency: vi.fn(async (tasks: Array<() => Promise<unknown>>) =>
-    Promise.all(tasks.map((t) => t()))
+    Promise.allSettled(tasks.map((t) => t()))
   ),
 }))
 

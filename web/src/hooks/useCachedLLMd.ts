@@ -394,8 +394,6 @@ export async function fetchLLMdModels(
   onProgress?: (partial: LLMdModel[]) => void
 ): Promise<LLMdModel[]> {
   // useCache prevents calling fetchers in demo mode via effectiveEnabled
-  const accumulated: LLMdModel[] = []
-
   const tasks = clusters.map((cluster) => async () => {
     try {
       const response = await kubectlProxy.exec(['get', 'inferencepools', '-A', '-o', 'json'], { context: cluster, timeout: KUBECTL_EXTENDED_TIMEOUT_MS })
@@ -413,8 +411,6 @@ export async function fetchLLMdModels(
           status: hasAccepted ? 'loaded' : 'stopped',
         })
       }
-      accumulated.push(...clusterModels)
-      onProgress?.([...accumulated])
       return clusterModels
     } catch (err) {
       // Suppress demo mode errors - they're expected when agent is unavailable
@@ -426,7 +422,14 @@ export async function fetchLLMdModels(
     }
   })
 
-  await settledWithConcurrency(tasks)
+  const settled = await settledWithConcurrency(tasks)
+  const accumulated: LLMdModel[] = []
+  for (const result of settled) {
+    if (result.status === 'fulfilled') {
+      accumulated.push(...result.value)
+      onProgress?.([...accumulated])
+    }
+  }
   return accumulated
 }
 

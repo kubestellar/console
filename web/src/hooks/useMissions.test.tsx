@@ -108,6 +108,7 @@ const defaultParams = {
   description: 'Pod crash investigation',
   type: 'troubleshoot' as const,
   initialPrompt: 'Fix the pod crash',
+  skipReview: true,
 }
 
 /** Start a mission and simulate the WebSocket opening so the mission moves to 'running'. */

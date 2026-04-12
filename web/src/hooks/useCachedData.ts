@@ -330,19 +330,22 @@ async function fetchPodIssuesViaAgent(namespace?: string, onProgress?: (partial:
   if (isAgentUnavailable()) return []
   const clusters = getAgentClusters()
   if (clusters.length === 0) return []
-  const accumulated: PodIssue[] = []
 
   const tasks = clusters.map(({ name, context }) => async () => {
     const ctx = context || name
     const issues = await kubectlProxy.getPodIssues(ctx, namespace)
     // Always use the short name — kubectlProxy returns context path as cluster
-    const tagged = issues.map(i => ({ ...i, cluster: name }))
-    accumulated.push(...tagged)
-    onProgress?.([...accumulated])
-    return tagged
+    return issues.map(i => ({ ...i, cluster: name }))
   })
 
-  await settledWithConcurrency(tasks)
+  const settled = await settledWithConcurrency(tasks)
+  const accumulated: PodIssue[] = []
+  for (const result of settled) {
+    if (result.status === 'fulfilled') {
+      accumulated.push(...result.value)
+      onProgress?.([...accumulated])
+    }
+  }
   return accumulated
 }
 
@@ -351,7 +354,6 @@ async function fetchDeploymentsViaAgent(namespace?: string, onProgress?: (partia
   if (isAgentUnavailable()) return []
   const clusters = getAgentClusters()
   if (clusters.length === 0) return []
-  const accumulated: Deployment[] = []
 
   const tasks = clusters.map(({ name, context }) => async () => {
     const params = new URLSearchParams()
@@ -371,15 +373,19 @@ async function fetchDeploymentsViaAgent(namespace?: string, onProgress?: (partia
     const data = await response.json().catch(() => null)
     if (!data) throw new Error('Invalid JSON response from agent')
     // Always use the short name — agent echoes back context path as cluster
-    const tagged = ((data.deployments || []) as Deployment[]).map(d => ({
+    return ((data.deployments || []) as Deployment[]).map(d => ({
       ...d,
       cluster: name }))
-    accumulated.push(...tagged)
-    onProgress?.([...accumulated])
-    return tagged
   })
 
-  await settledWithConcurrency(tasks)
+  const settled = await settledWithConcurrency(tasks)
+  const accumulated: Deployment[] = []
+  for (const result of settled) {
+    if (result.status === 'fulfilled') {
+      accumulated.push(...result.value)
+      onProgress?.([...accumulated])
+    }
+  }
   return accumulated
 }
 
@@ -925,7 +931,6 @@ async function fetchWorkloadsFromAgent(onProgress?: (partial: Workload[]) => voi
   const clusters = clusterCacheRef.clusters
     .filter(c => c.reachable !== false && !c.name.includes('/'))
   if (clusters.length === 0) return null
-  const accumulated: Workload[] = []
 
   const tasks = clusters.map(({ name, context }) => async () => {
     const params = new URLSearchParams()
@@ -941,7 +946,7 @@ async function fetchWorkloadsFromAgent(onProgress?: (partial: Workload[]) => voi
     if (!res.ok) throw new Error(`Agent ${res.status}`)
     const data = await res.json().catch(() => null)
     if (!data) throw new Error('Invalid JSON response from agent')
-    const tagged = ((data.deployments || []) as Array<Record<string, unknown>>).map(d => {
+    return ((data.deployments || []) as Array<Record<string, unknown>>).map(d => {
       const st = String(d.status || 'running')
       let ws: Workload['status'] = 'Running'
       if (st === 'failed') ws = 'Failed'
@@ -959,12 +964,16 @@ async function fetchWorkloadsFromAgent(onProgress?: (partial: Workload[]) => voi
         image: String(d.image || ''),
         createdAt: new Date().toISOString() }
     })
-    accumulated.push(...tagged)
-    onProgress?.([...accumulated])
-    return tagged
   })
 
-  await settledWithConcurrency(tasks)
+  const settled = await settledWithConcurrency(tasks)
+  const accumulated: Workload[] = []
+  for (const result of settled) {
+    if (result.status === 'fulfilled') {
+      accumulated.push(...result.value)
+      onProgress?.([...accumulated])
+    }
+  }
   return accumulated.length > 0 ? accumulated : null
 }
 
@@ -1053,7 +1062,6 @@ async function fetchSecurityIssuesViaKubectl(cluster?: string, namespace?: strin
   if (clusters.length === 0) return []
 
   const severityOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3, info: 4 }
-  const accumulated: SecurityIssue[] = []
 
   const tasks = clusters
     .filter(c => !cluster || c.name === cluster)
@@ -1123,14 +1131,18 @@ async function fetchSecurityIssuesViaKubectl(cluster?: string, namespace?: strin
         }
       }
 
-      accumulated.push(...issues)
-      // Sort accumulated and report progress
-      accumulated.sort((a, b) => (severityOrder[a.severity] || 5) - (severityOrder[b.severity] || 5))
-      onProgress?.([...accumulated])
       return issues
     })
 
-  await settledWithConcurrency(tasks)
+  const settled = await settledWithConcurrency(tasks)
+  const accumulated: SecurityIssue[] = []
+  for (const result of settled) {
+    if (result.status === 'fulfilled') {
+      accumulated.push(...result.value)
+      accumulated.sort((a, b) => (severityOrder[a.severity] || 5) - (severityOrder[b.severity] || 5))
+      onProgress?.([...accumulated])
+    }
+  }
   // Final sort
   return accumulated.sort((a, b) => (severityOrder[a.severity] || 5) - (severityOrder[b.severity] || 5))
 }

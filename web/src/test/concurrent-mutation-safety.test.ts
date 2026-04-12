@@ -435,6 +435,11 @@ describe('Concurrent Mutation Safety Scan', () => {
   })
 
   describe('Shared mutation detection per file', () => {
+    if (violationsByFile.size === 0) {
+      it('no shared mutations detected', () => {
+        expect(violationsByFile.size).toBe(0)
+      })
+    }
     for (const [rel, fileViolations] of violationsByFile) {
       it(`${rel}: shared mutations inside concurrency callbacks`, () => {
         if (KNOWN_VIOLATIONS[rel]) return // grandfathered
