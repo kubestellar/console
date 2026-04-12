@@ -160,10 +160,13 @@ type missionsCacheEntry struct {
 // The cache key is the full request URL. Entries are evicted (oldest-first) when
 // either the entry count exceeds missionsCacheMaxEntries or the total byte size
 // exceeds missionsCacheMaxBytes (#6417).
+// #6841 — insertOrder tracks keys in insertion order for O(1) oldest-key lookup
+// during eviction, replacing the previous O(n) map scan.
 type missionsResponseCache struct {
-	mu         sync.RWMutex
-	entries    map[string]*missionsCacheEntry
-	totalBytes int
+	mu          sync.RWMutex
+	entries     map[string]*missionsCacheEntry
+	insertOrder []string
+	totalBytes  int
 }
 
 // get returns a cached entry if it exists and is within the given TTL.
@@ -198,23 +201,20 @@ func (c *missionsResponseCache) getStale(key string, staleTTL time.Duration) *mi
 
 // evictOldestLocked removes the single oldest entry from the cache. The caller
 // MUST hold c.mu in write mode. Returns true if an entry was evicted.
+// #6841 — Uses the insertOrder slice for O(1) oldest-key lookup instead of
+// scanning the entire map on every eviction.
 func (c *missionsResponseCache) evictOldestLocked() bool {
-	var oldestKey string
-	var oldestTime time.Time
-	for k, v := range c.entries {
-		if oldestKey == "" || v.fetchedAt.Before(oldestTime) {
-			oldestKey = k
-			oldestTime = v.fetchedAt
+	for len(c.insertOrder) > 0 {
+		oldestKey := c.insertOrder[0]
+		c.insertOrder = c.insertOrder[1:]
+		if prev, ok := c.entries[oldestKey]; ok {
+			c.totalBytes -= len(prev.body)
+			delete(c.entries, oldestKey)
+			return true
 		}
+		// Key was already deleted (e.g. overwritten by set); skip to next.
 	}
-	if oldestKey == "" {
-		return false
-	}
-	if prev, ok := c.entries[oldestKey]; ok {
-		c.totalBytes -= len(prev.body)
-	}
-	delete(c.entries, oldestKey)
-	return true
+	return false
 }
 
 // set stores a response in the cache, evicting older entries until both the
@@ -230,6 +230,8 @@ func (c *missionsResponseCache) set(key string, entry *missionsCacheEntry) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	// If the key already exists, account for its old size before replacing.
+	// Note: we do NOT remove from insertOrder here; evictOldestLocked skips
+	// stale entries that are no longer in the map.
 	if prev, ok := c.entries[key]; ok {
 		c.totalBytes -= len(prev.body)
 		delete(c.entries, key)
@@ -241,6 +243,7 @@ func (c *missionsResponseCache) set(key string, entry *missionsCacheEntry) {
 		}
 	}
 	c.entries[key] = entry
+	c.insertOrder = append(c.insertOrder, key)
 	c.totalBytes += entrySize
 }
 
@@ -1029,6 +1032,7 @@ func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
 	}
 	fileReq.Header.Set("Authorization", "Bearer "+token)
 	fileReq.Header.Set("Accept", "application/vnd.github.v3+json")
+	fileReq.Header.Set("Content-Type", "application/json") // #6842 — required by GitHub Contents API
 	fileResp, err := h.httpClient.Do(fileReq)
 	if err != nil {
 		return c.Status(502).JSON(fiber.Map{"error": "failed to commit file"})
