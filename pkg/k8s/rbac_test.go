@@ -4,10 +4,13 @@ import (
 	"context"
 	"testing"
 
+	"time"
+
 	authv1 "k8s.io/api/authorization/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
 	k8stesting "k8s.io/client-go/testing"
@@ -134,4 +137,64 @@ func TestRBAC_CheckClusterAdminAccess(t *testing.T) {
 	if !isAdmin {
 		t.Error("Expected cluster admin access")
 	}
+}
+
+// TestParseOpenShiftUser_CreatedAt verifies that parseOpenShiftUser leaves
+// CreatedAt nil when the creationTimestamp field is missing or unparseable,
+// and sets it to the parsed value on a valid RFC3339 string. See issue #6764.
+func TestParseOpenShiftUser_CreatedAt(t *testing.T) {
+	t.Run("missing creationTimestamp leaves CreatedAt nil", func(t *testing.T) {
+		item := unstructured.Unstructured{
+			Object: map[string]interface{}{
+				"metadata": map[string]interface{}{
+					"name": "alice",
+				},
+			},
+		}
+		user := parseOpenShiftUser(item, "c1")
+		if user.CreatedAt != nil {
+			t.Errorf("expected CreatedAt nil, got %v", user.CreatedAt)
+		}
+		if user.Name != "alice" {
+			t.Errorf("expected name alice, got %q", user.Name)
+		}
+	})
+
+	t.Run("unparseable creationTimestamp leaves CreatedAt nil", func(t *testing.T) {
+		item := unstructured.Unstructured{
+			Object: map[string]interface{}{
+				"metadata": map[string]interface{}{
+					"name":              "bob",
+					"creationTimestamp": "not-a-date",
+				},
+			},
+		}
+		user := parseOpenShiftUser(item, "c1")
+		if user.CreatedAt != nil {
+			t.Errorf("expected CreatedAt nil on parse failure, got %v", user.CreatedAt)
+		}
+	})
+
+	t.Run("valid RFC3339 creationTimestamp is parsed", func(t *testing.T) {
+		const ts = "2024-01-02T03:04:05Z"
+		item := unstructured.Unstructured{
+			Object: map[string]interface{}{
+				"metadata": map[string]interface{}{
+					"name":              "carol",
+					"creationTimestamp": ts,
+				},
+			},
+		}
+		user := parseOpenShiftUser(item, "c1")
+		if user.CreatedAt == nil {
+			t.Fatal("expected CreatedAt non-nil for valid RFC3339 input")
+		}
+		want, err := time.Parse(time.RFC3339, ts)
+		if err != nil {
+			t.Fatalf("setup: time.Parse: %v", err)
+		}
+		if !user.CreatedAt.Equal(want) {
+			t.Errorf("CreatedAt = %v, want %v", user.CreatedAt, want)
+		}
+	})
 }

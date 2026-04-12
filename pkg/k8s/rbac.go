@@ -63,14 +63,21 @@ func (m *MultiClusterClient) ListServiceAccounts(ctx context.Context, contextNam
 		key := sa.Namespace + "/" + sa.Name
 		roles := saRolesMap[key]
 
-		saCreatedAt := sa.CreationTimestamp.Time
+		// Leave CreatedAt nil when CreationTimestamp is zero so the JSON
+		// `omitempty` tag drops the field instead of emitting
+		// "0001-01-01T00:00:00Z" (fake clientset, partial metadata). See #6764.
+		var saCreatedAtPtr *time.Time
+		if !sa.CreationTimestamp.Time.IsZero() {
+			saCreatedAt := sa.CreationTimestamp.Time
+			saCreatedAtPtr = &saCreatedAt
+		}
 		result = append(result, models.K8sServiceAccount{
 			Name:      sa.Name,
 			Namespace: sa.Namespace,
 			Cluster:   contextName,
 			Secrets:   secrets,
 			Roles:     roles,
-			CreatedAt: &saCreatedAt,
+			CreatedAt: saCreatedAtPtr,
 		})
 	}
 
@@ -370,12 +377,19 @@ func (m *MultiClusterClient) CreateServiceAccount(ctx context.Context, contextNa
 		return nil, err
 	}
 
-	createdAt := created.CreationTimestamp.Time
+	// Leave CreatedAt nil when CreationTimestamp is zero so the JSON
+	// `omitempty` tag drops the field instead of emitting
+	// "0001-01-01T00:00:00Z" (fake clientset, partial metadata). See #6764.
+	var createdAtPtr *time.Time
+	if !created.CreationTimestamp.Time.IsZero() {
+		createdAt := created.CreationTimestamp.Time
+		createdAtPtr = &createdAt
+	}
 	return &models.K8sServiceAccount{
 		Name:      created.Name,
 		Namespace: created.Namespace,
 		Cluster:   contextName,
-		CreatedAt: &createdAt,
+		CreatedAt: createdAtPtr,
 	}, nil
 }
 
