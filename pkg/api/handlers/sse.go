@@ -185,6 +185,9 @@ var (
 	sseCache     = map[string]*sseCacheEntry{}
 	sseCacheMu   sync.RWMutex
 	sseCacheOnce sync.Once
+	// sseCacheEvictDone is closed to stop the background evictor goroutine
+	// on server shutdown or in tests, preventing goroutine leaks (#6956).
+	sseCacheEvictDone = make(chan struct{})
 )
 
 type sseCacheEntry struct {
@@ -194,23 +197,40 @@ type sseCacheEntry struct {
 
 // startSSECacheEvictor launches a background goroutine (once) that periodically
 // deletes expired entries from sseCache so memory doesn't grow without bound.
+// The goroutine exits when sseCacheEvictDone is closed (#6956).
 func startSSECacheEvictor() {
 	sseCacheOnce.Do(func() {
 		go func() {
 			ticker := time.NewTicker(sseCacheEvictInterval)
 			defer ticker.Stop()
-			for range ticker.C {
-				now := time.Now()
-				sseCacheMu.Lock()
-				for k, e := range sseCache {
-					if now.Sub(e.fetchedAt) >= sseCacheTTL {
-						delete(sseCache, k)
+			for {
+				select {
+				case <-sseCacheEvictDone:
+					return
+				case <-ticker.C:
+					now := time.Now()
+					sseCacheMu.Lock()
+					for k, e := range sseCache {
+						if now.Sub(e.fetchedAt) >= sseCacheTTL {
+							delete(sseCache, k)
+						}
 					}
+					sseCacheMu.Unlock()
 				}
-				sseCacheMu.Unlock()
 			}
 		}()
 	})
+}
+
+// StopSSECacheEvictor signals the background evictor goroutine to exit.
+// Safe to call multiple times. Intended for server shutdown and tests (#6956).
+func StopSSECacheEvictor() {
+	select {
+	case <-sseCacheEvictDone:
+		// Already closed
+	default:
+		close(sseCacheEvictDone)
+	}
 }
 
 func sseCacheGet(key string) interface{} {
@@ -443,11 +463,14 @@ func streamClusters(
 					// intentionally left unchanged — this is an additive
 					// event type.
 					mu.Lock()
-					completedClusters++
-					emitEvent(sseEventClusterError, fiber.Map{
+					if !emitEvent(sseEventClusterError, fiber.Map{
 						"cluster": clusterName,
 						"error":   fetchErr.Error(),
-					})
+					}) {
+						mu.Unlock()
+						return
+					}
+					completedClusters++
 					mu.Unlock()
 					return
 				}
@@ -460,12 +483,15 @@ func streamClusters(
 				}
 
 				mu.Lock()
-				completedClusters++
-				emitEvent(sseEventClusterData, fiber.Map{
+				if !emitEvent(sseEventClusterData, fiber.Map{
 					"cluster":   clusterName,
 					cfg.demoKey: data,
 					"source":    "k8s",
-				})
+				}) {
+					mu.Unlock()
+					return
+				}
+				completedClusters++
 				mu.Unlock()
 			}(cl.Name, cacheKey)
 		}
@@ -481,9 +507,14 @@ func streamClusters(
 		case <-done:
 			// All healthy clusters finished
 		case <-streamCtx.Done():
-			slog.Info("[SSE] stream context done, sending partial results", "error", streamCtx.Err())
+			slog.Info("[SSE] stream context done, waiting for goroutines", "error", streamCtx.Err())
 			// Cancel all in-flight goroutines immediately.
 			streamCancel()
+			// Wait for goroutines to finish before emitting the done
+			// event or returning from the callback. This prevents:
+			//  - cluster_data events arriving after done (#6952)
+			//  - writes to a recycled response writer (#6953)
+			<-done
 		}
 
 		mu.Lock()
@@ -505,15 +536,20 @@ func streamDemoSSE(c *fiber.Ctx, dataKey string, demoData interface{}) error {
 	c.Set("Connection", "keep-alive")
 
 	c.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
-		writeSSEEvent(w, sseEventClusterData, fiber.Map{
+		if err := writeSSEEvent(w, sseEventClusterData, fiber.Map{
 			"cluster": "demo",
 			dataKey:   demoData,
 			"source":  "demo",
-		})
-		writeSSEEvent(w, sseEventDone, fiber.Map{
+		}); err != nil {
+			slog.Info("[SSE] demo stream write failed", "event", sseEventClusterData, "error", err)
+			return
+		}
+		if err := writeSSEEvent(w, sseEventDone, fiber.Map{
 			"totalClusters":     1,
 			"completedClusters": 1,
-		})
+		}); err != nil {
+			slog.Info("[SSE] demo stream write failed", "event", sseEventDone, "error", err)
+		}
 	})
 
 	return nil
