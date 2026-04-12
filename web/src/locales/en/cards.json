@@ -3081,7 +3081,30 @@
   },
   "intotoSupplyChain": {
     "scanningClusters": "Scanning clusters...",
-    "documentation": "in-toto Documentation"
+    "documentation": "in-toto Documentation",
+    "fetchError": "Failed to fetch supply chain data",
+    "fetchErrorHint": "Check API connectivity or in-toto service status.",
+    "retry": "Retry →",
+    "integrationTitle": "in-toto Integration",
+    "integrationHint": "Install in-toto for supply chain security verification.",
+    "installCta": "Install with an AI Mission →",
+    "noLayoutsTitle": "No Layouts Configured",
+    "noLayoutsHint": "in-toto is installed but has no supply chain layouts.",
+    "deployLayoutsCta": "Deploy sample layouts with AI →",
+    "statsLayouts": "Layouts",
+    "statsVerified": "Verified",
+    "statsFailed": "Failed",
+    "sampleLayouts": "Sample Layouts",
+    "layoutsCount": "{{count}} Layouts",
+    "stepsCount": "{{count}} steps",
+    "featuresTitle": "in-toto Features",
+    "featureStepVerification": "Step Verification",
+    "featureProvenanceTracking": "Provenance Tracking",
+    "featureFunctionarySigning": "Functionary Signing",
+    "featureSlsaCompliance": "SLSA Compliance",
+    "footerDocs": "Documentation",
+    "footerGitHub": "GitHub",
+    "footerSlsa": "SLSA"
   },
   "recommendedPolicies": {
     "scanningClusters": "Scanning clusters..."

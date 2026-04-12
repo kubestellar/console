@@ -83,7 +83,7 @@ function saveToCache(statuses: Record<string, IntotoClusterStatus>): void {
   try {
     // Only cache completed (non-loading, non-error) statuses
     const completed = Object.fromEntries(
-      Object.entries(statuses).filter(([, s]) => !s.loading)
+      Object.entries(statuses).filter(([, s]) => !s.loading && !s.error)
     )
     if (Object.keys(completed).length > 0) {
       localStorage.setItem(STORAGE_KEY_INTOTO_CACHE, JSON.stringify(completed))
@@ -287,7 +287,7 @@ async function fetchSingleCluster(cluster: string): Promise<IntotoClusterStatus>
         if (!step) continue
 
         step.linksFound += 1
-        const isVerified = link.status?.verified !== false
+        const isVerified = link.status?.verified === true
         const newStatus = isVerified ? 'verified' : 'failed'
 
         // Undo the previous counter contribution from this step before
