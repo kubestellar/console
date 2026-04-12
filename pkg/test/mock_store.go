@@ -176,7 +176,7 @@ func (m *MockStore) GetClusterReservedGPUCount(cluster string, excludeID *uuid.U
 func (m *MockStore) InsertUtilizationSnapshot(snapshot *models.GPUUtilizationSnapshot) error {
 	return nil
 }
-func (m *MockStore) GetUtilizationSnapshots(reservationID string) ([]models.GPUUtilizationSnapshot, error) {
+func (m *MockStore) GetUtilizationSnapshots(reservationID string, limit int) ([]models.GPUUtilizationSnapshot, error) {
 	return nil, nil
 }
 func (m *MockStore) GetBulkUtilizationSnapshots(reservationIDs []string) (map[string][]models.GPUUtilizationSnapshot, error) {

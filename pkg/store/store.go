@@ -167,7 +167,7 @@ type Store interface {
 
 	// GPU Utilization Snapshots
 	InsertUtilizationSnapshot(snapshot *models.GPUUtilizationSnapshot) error
-	GetUtilizationSnapshots(reservationID string) ([]models.GPUUtilizationSnapshot, error)
+	GetUtilizationSnapshots(reservationID string, limit int) ([]models.GPUUtilizationSnapshot, error)
 	GetBulkUtilizationSnapshots(reservationIDs []string) (map[string][]models.GPUUtilizationSnapshot, error)
 	DeleteOldUtilizationSnapshots(before time.Time) (int64, error)
 	ListActiveGPUReservations() ([]models.GPUReservation, error)

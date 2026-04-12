@@ -421,7 +421,8 @@ func (h *GPUHandler) GetReservationUtilization(c *fiber.Ctx) error {
 		return authErr
 	}
 
-	snapshots, err := h.store.GetUtilizationSnapshots(id)
+	limit := c.QueryInt("limit", store.DefaultSnapshotQueryLimit)
+	snapshots, err := h.store.GetUtilizationSnapshots(id, limit)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to get utilization data")
 	}

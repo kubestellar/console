@@ -24,13 +24,22 @@ const (
 	fullUtilizationPct = 100.0
 )
 
+const (
+	// perReservationTimeoutDivisor divides the poll interval to derive a
+	// per-reservation collection timeout so that a single slow cluster
+	// cannot starve subsequent reservations (#6967).
+	perReservationTimeoutDivisor = 2
+)
+
 // GPUUtilizationWorker periodically collects GPU utilization data for active reservations
 type GPUUtilizationWorker struct {
-	store     store.Store
-	k8sClient *k8s.MultiClusterClient
-	interval  time.Duration
-	stopCh    chan struct{}
-	stopOnce  sync.Once // protects stopCh from double-close panic
+	store      store.Store
+	k8sClient  *k8s.MultiClusterClient
+	interval   time.Duration
+	stopCh     chan struct{}
+	stopOnce   sync.Once // protects stopCh from double-close panic
+	baseCtx    context.Context
+	baseCancel context.CancelFunc
 }
 
 // NewGPUUtilizationWorker creates a new GPU utilization worker
@@ -42,11 +51,14 @@ func NewGPUUtilizationWorker(s store.Store, k8sClient *k8s.MultiClusterClient) *
 		}
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
 	return &GPUUtilizationWorker{
-		store:     s,
-		k8sClient: k8sClient,
-		interval:  time.Duration(intervalMs) * time.Millisecond,
-		stopCh:    make(chan struct{}),
+		store:      s,
+		k8sClient:  k8sClient,
+		interval:   time.Duration(intervalMs) * time.Millisecond,
+		stopCh:     make(chan struct{}),
+		baseCtx:    ctx,
+		baseCancel: cancel,
 	}
 }
 
@@ -78,6 +90,7 @@ func (w *GPUUtilizationWorker) Start() {
 // only the first call actually closes the stop channel.
 func (w *GPUUtilizationWorker) Stop() {
 	w.stopOnce.Do(func() {
+		w.baseCancel() // cancel all in-flight Kubernetes API calls (#6966)
 		close(w.stopCh)
 	})
 }
@@ -98,12 +111,21 @@ func (w *GPUUtilizationWorker) collectUtilization() {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), w.interval/2)
-	defer cancel()
+	// Per-reservation timeout so a slow cluster cannot starve others (#6967).
+	// Derived from w.baseCtx so Stop() cancels in-flight calls immediately (#6966).
+	perReservationTimeout := w.interval / time.Duration(perReservationTimeoutDivisor)
 
+	var wg sync.WaitGroup
 	for i := range reservations {
-		w.collectForReservation(ctx, &reservations[i])
+		wg.Add(1)
+		go func(r *models.GPUReservation) {
+			defer wg.Done()
+			ctx, cancel := context.WithTimeout(w.baseCtx, perReservationTimeout)
+			defer cancel()
+			w.collectForReservation(ctx, r)
+		}(&reservations[i])
 	}
+	wg.Wait()
 }
 
 // collectForReservation collects utilization for a single reservation

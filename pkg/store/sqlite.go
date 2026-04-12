@@ -2064,10 +2064,13 @@ func (s *SQLiteStore) InsertUtilizationSnapshot(snapshot *models.GPUUtilizationS
 	return err
 }
 
-func (s *SQLiteStore) GetUtilizationSnapshots(reservationID string) ([]models.GPUUtilizationSnapshot, error) {
+func (s *SQLiteStore) GetUtilizationSnapshots(reservationID string, limit int) ([]models.GPUUtilizationSnapshot, error) {
+	if limit <= 0 {
+		limit = DefaultSnapshotQueryLimit
+	}
 	rows, err := s.db.Query(
-		`SELECT id, reservation_id, timestamp, gpu_utilization_pct, memory_utilization_pct, active_gpu_count, total_gpu_count FROM gpu_utilization_snapshots WHERE reservation_id = ? ORDER BY timestamp ASC`,
-		reservationID,
+		`SELECT id, reservation_id, timestamp, gpu_utilization_pct, memory_utilization_pct, active_gpu_count, total_gpu_count FROM gpu_utilization_snapshots WHERE reservation_id = ? ORDER BY timestamp DESC LIMIT ?`,
+		reservationID, limit,
 	)
 	if err != nil {
 		return nil, err
@@ -2086,6 +2089,11 @@ func (s *SQLiteStore) GetUtilizationSnapshots(reservationID string) ([]models.GP
 	}
 	return snapshots, rows.Err()
 }
+
+// DefaultSnapshotQueryLimit caps the number of rows returned by
+// GetUtilizationSnapshots to prevent unbounded result sets for
+// long-lived reservations (#6965). Configurable via the limit parameter.
+const DefaultSnapshotQueryLimit = 500
 
 // sqliteMaxVars is the maximum number of bind variables per SQL statement.
 // SQLite's default SQLITE_MAX_VARIABLE_NUMBER is 999; we use 500 as a safe
