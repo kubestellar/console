@@ -24,6 +24,11 @@ export const STORAGE_KEY_ONBOARDING_RESPONSES = 'demo-onboarding-responses'
 
 // ── User cache ─────────────────────────────────────────────────────────
 export const STORAGE_KEY_USER_CACHE = 'kc-user-cache'
+/** Hint flag set when an authenticated session is established (OAuth callback).
+ *  Used to avoid a spurious /auth/refresh call on initial load when no session
+ *  cookie exists (#6925). HttpOnly cookies are invisible to JS, so this
+ *  localStorage flag acts as a proxy for "we had a session at some point". */
+export const STORAGE_KEY_HAS_SESSION = 'kc-has-session'
 export const STORAGE_KEY_BACKEND_STATUS = 'kc-backend-status'
 export const STORAGE_KEY_SQLITE_MIGRATED = 'kc-sqlite-migrated'
 

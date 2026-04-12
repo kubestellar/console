@@ -5,7 +5,7 @@ import { clearPermissionsCache } from '../hooks/usePermissions'
 import { disconnectPresence } from '../hooks/useActiveUsers'
 import { clearSSECache } from './sseClient'
 import { clearClusterCacheOnLogout } from '../hooks/mcp/shared'
-import { STORAGE_KEY_TOKEN, DEMO_TOKEN_VALUE, STORAGE_KEY_DEMO_MODE, STORAGE_KEY_ONBOARDED, STORAGE_KEY_USER_CACHE, FETCH_DEFAULT_TIMEOUT_MS } from './constants'
+import { STORAGE_KEY_TOKEN, DEMO_TOKEN_VALUE, STORAGE_KEY_DEMO_MODE, STORAGE_KEY_ONBOARDED, STORAGE_KEY_USER_CACHE, STORAGE_KEY_HAS_SESSION, FETCH_DEFAULT_TIMEOUT_MS } from './constants'
 import { emitLogin, emitLogout, setAnalyticsUserId, setAnalyticsUserProperties, emitConversionStep, emitDeveloperSession } from './analytics'
 import { setDemoMode as setGlobalDemoMode } from './demoMode'
 
@@ -198,6 +198,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // can't leak into the next session (#6004).
     localStorage.removeItem(STORAGE_KEY_TOKEN)
     localStorage.removeItem(AUTH_USER_CACHE_KEY)
+    localStorage.removeItem(STORAGE_KEY_HAS_SESSION)
     try {
       sessionStorage.removeItem(STORAGE_KEY_TOKEN)
       sessionStorage.removeItem(AUTH_USER_CACHE_KEY)
@@ -271,6 +272,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (backendUp && oauthConfigured) {
+        // #6925 — Only attempt /auth/refresh if we have evidence of a prior
+        // session. The HttpOnly cookie is invisible to JS, so we check the
+        // kc-has-session localStorage hint set during the OAuth callback.
+        // Without this gate, fresh visitors see a spurious 401 in DevTools.
+        const hadPriorSession = !!localStorage.getItem(STORAGE_KEY_HAS_SESSION)
+        if (!hadPriorSession) {
+          // No prior session — go straight to login page, no network call
+          return
+        }
         // #6066 — If the user has a valid HttpOnly cookie from a previous
         // session, /auth/refresh will mint a new JWT. Try that before showing
         // the login page so a page reload can restore the session silently.
@@ -374,6 +384,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return userData
       })
       cacheUser(userData)
+      // #6925 — Mark that an authenticated session exists so future page
+      // loads know it's worth attempting /auth/refresh from the HttpOnly cookie.
+      try {
+        localStorage.setItem(STORAGE_KEY_HAS_SESSION, 'true')
+      } catch {
+        // localStorage quota — session hint is best-effort
+      }
       // #6067 — record when the cache was last validated so we can bound
       // how long it's trusted if the backend later becomes unreachable.
       try {
@@ -418,6 +435,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem(STORAGE_KEY_TOKEN)
       localStorage.removeItem(AUTH_USER_CACHE_KEY)
       localStorage.removeItem(AUTH_USER_CACHE_VALIDATED_KEY)
+      localStorage.removeItem(STORAGE_KEY_HAS_SESSION)
       setTokenState(null)
       setUser(null)
     }
