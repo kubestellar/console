@@ -406,12 +406,6 @@ export function useDeployMissions() {
                     // Without this guard, res.json() on an HTML body throws
                     // SyntaxError and the agent failure is invisible to the
                     // consecutive-failure counter.
-                    // #6816 — If the agent returns a non-OK response (4xx/5xx
-                    // or a proxy HTML error page), count it as a failure
-                    // instead of silently falling through to the REST path.
-                    // Without this guard, res.json() on an HTML body throws
-                    // SyntaxError and the agent failure is invisible to the
-                    // consecutive-failure counter.
                     if (!res.ok) {
                       return pendingOrFailed()
                     }
@@ -685,7 +679,17 @@ export function useDeployMissions() {
         return (bKey - aKey) || a.id.localeCompare(b.id)
       })
 
-      setMissions([...active, ...completed])
+      const allMissions = [...active, ...completed]
+      setMissions(allMissions)
+
+      // #6840 — If every mission is in a terminal state, stop polling to
+      // avoid wasting network and compute on completed deployments.
+      if (allMissions.length > 0 && allMissions.every(m => isTerminalStatus(m.status))) {
+        if (pollRef.current) {
+          clearInterval(pollRef.current)
+          pollRef.current = undefined
+        }
+      }
     }
 
     // Delay before the first poll fires after mount. Kept small so the UI

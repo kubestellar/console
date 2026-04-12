@@ -1199,9 +1199,9 @@ describe('useDeployMissions', () => {
   })
 
   // =========================================================================
-  // 38. Agent fetch returns not-ok => falls through to REST
+  // 38. Agent fetch returns not-ok => counts as pending/failed (no REST fallback)
   // =========================================================================
-  it('falls to REST when agent fetch returns non-ok response', async () => {
+  it('counts agent non-ok as pending failure without falling to REST', async () => {
     const startedAt = Date.now() - MIN_ACTIVE_MS - 1
     const missions = [makeMission({
       id: 'agent-not-ok', status: 'deploying', startedAt,
@@ -1211,26 +1211,27 @@ describe('useDeployMissions', () => {
 
     mockClusterCacheRef.clusters = [{ name: 'c1', context: 'ctx-c1' }]
 
-    let callCount = 0
-    global.fetch = vi.fn().mockImplementation((url: string) => {
-      callCount++
-      if (callCount === 1) return Promise.resolve({ ok: false, status: 500 })
-      if (typeof url === 'string' && url.includes('/api/workloads/deploy-status/')) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({
-            status: 'Running', replicas: 1, readyReplicas: 1,
-          }),
-        })
-      }
-      return Promise.reject(new Error('unexpected'))
+    global.fetch = vi.fn().mockImplementation(() => {
+      // Agent returns non-OK — should NOT fall through to REST
+      return Promise.resolve({ ok: false, status: 500 })
     })
 
     const { result } = renderHook(() => useDeployMissions())
 
     await advancePastInitialPoll()
 
-    expect(result.current.missions[0].status).toBe('orbit')
+    // #6816 — Agent non-ok now returns pendingOrFailed() immediately;
+    // the cluster stays pending (first failure) and never hits REST.
+    const clusterStatus = result.current.missions[0].clusterStatuses[0]
+    expect(clusterStatus.status).toBe('pending')
+    expect(clusterStatus.consecutiveFailures).toBe(1)
+
+    // Verify no REST call was made (only the agent call)
+    const calls = (global.fetch as ReturnType<typeof vi.fn>).mock.calls
+    const restCalls = calls.filter((c: unknown[]) =>
+      typeof c[0] === 'string' && (c[0] as string).includes('/api/workloads/deploy-status/')
+    )
+    expect(restCalls).toHaveLength(0)
   })
 
   // =========================================================================

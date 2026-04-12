@@ -217,20 +217,13 @@ export function LaunchSequence({
         // that if any future refactor introduces a throw between the two
         // calls, the missionId is still captured in progress (preventing an
         // orphaned mission ref).
-        let missionId: string | undefined
-        try {
-          missionId = startMission({
-            title: `${dryRunPrefix}Install ${uiSafeDisplayName}`,
-            description: `${state.isDryRun ? 'Dry-run validation' : 'Automated install'} of ${uiSafeDisplayName} as part of Mission Control deployment`,
-            type: 'deploy',
-            cluster: clusterName,
-            initialPrompt: prompt + clusterContext,
-            dryRun: state.isDryRun })
-        } catch (startErr) {
-          // If startMission itself throws (e.g. state mutation error), mark
-          // the project failed immediately instead of silently swallowing.
-          throw new Error(`startMission failed for ${projectName}: ${String(startErr)}`)
-        }
+        const missionId = startMission({
+          title: `${dryRunPrefix}Install ${uiSafeDisplayName}`,
+          description: `${state.isDryRun ? 'Dry-run validation' : 'Automated install'} of ${uiSafeDisplayName} as part of Mission Control deployment`,
+          type: 'deploy',
+          cluster: clusterName,
+          initialPrompt: prompt + clusterContext,
+          dryRun: state.isDryRun })
 
         // Update with missionId — placed immediately after startMission in
         // the same try block so the id is always persisted into progressRef.
