@@ -138,7 +138,9 @@ type Store interface {
 	CreateNotification(notification *models.Notification) error
 	GetUserNotifications(userID uuid.UUID, limit int) ([]models.Notification, error)
 	GetUnreadNotificationCount(userID uuid.UUID) (int, error)
-	MarkNotificationRead(id uuid.UUID) error
+	// MarkNotificationRead was intentionally removed from the public interface
+	// (#6950). The unscoped method allows any user to mark any other user's
+	// notification as read. Use MarkNotificationReadByUser instead.
 	MarkNotificationReadByUser(id uuid.UUID, userID uuid.UUID) error
 	MarkAllNotificationsRead(userID uuid.UUID) error
 

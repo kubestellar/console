@@ -356,6 +356,7 @@ func (s *SQLiteStore) migrate() error {
 		title TEXT NOT NULL,
 		message TEXT NOT NULL,
 		read INTEGER DEFAULT 0,
+		action_url TEXT NOT NULL DEFAULT '',
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);
 
@@ -463,6 +464,9 @@ func (s *SQLiteStore) migrate() error {
 		// #6284: UpdateFeatureRequestLatestComment writes to this column
 		// but it was never added to CREATE TABLE or migrations.
 		"ALTER TABLE feature_requests ADD COLUMN latest_comment TEXT",
+		// #6949: ActionURL was declared in the Notification model but never
+		// persisted — the column, INSERT, and SELECT all omitted it.
+		"ALTER TABLE notifications ADD COLUMN action_url TEXT NOT NULL DEFAULT ''",
 	}
 	for i, migration := range migrations {
 		if _, err := s.db.Exec(migration); err != nil {
@@ -1643,10 +1647,10 @@ func (s *SQLiteStore) CreateNotification(notification *models.Notification) erro
 		featureRequestID = &str
 	}
 
-	_, err := s.db.Exec(`INSERT INTO notifications (id, user_id, feature_request_id, notification_type, title, message, read, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+	_, err := s.db.Exec(`INSERT INTO notifications (id, user_id, feature_request_id, notification_type, title, message, read, action_url, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		notification.ID.String(), notification.UserID.String(), featureRequestID,
 		string(notification.NotificationType), notification.Title, notification.Message,
-		boolToInt(notification.Read), notification.CreatedAt)
+		boolToInt(notification.Read), notification.ActionURL, notification.CreatedAt)
 	return err
 }
 
@@ -1656,7 +1660,7 @@ func (s *SQLiteStore) GetUserNotifications(userID uuid.UUID, limit int) ([]model
 	// caller bypass resource controls and return arbitrarily large
 	// result sets. Match the card_history query's hardening.
 	limit = clampLimit(limit)
-	rows, err := s.db.Query(`SELECT id, user_id, feature_request_id, notification_type, title, message, read, created_at FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT ?`, userID.String(), limit)
+	rows, err := s.db.Query(`SELECT id, user_id, feature_request_id, notification_type, title, message, read, action_url, created_at FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT ?`, userID.String(), limit)
 	if err != nil {
 		return nil, err
 	}
@@ -1670,7 +1674,7 @@ func (s *SQLiteStore) GetUserNotifications(userID uuid.UUID, limit int) ([]model
 		var notificationType string
 		var read int
 
-		if err := rows.Scan(&idStr, &userIDStr, &featureRequestID, &notificationType, &n.Title, &n.Message, &read, &n.CreatedAt); err != nil {
+		if err := rows.Scan(&idStr, &userIDStr, &featureRequestID, &notificationType, &n.Title, &n.Message, &read, &n.ActionURL, &n.CreatedAt); err != nil {
 			return nil, err
 		}
 

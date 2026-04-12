@@ -148,7 +148,6 @@ func (m *MockStore) GetUserNotifications(userID uuid.UUID, limit int) ([]models.
 	return nil, nil
 }
 func (m *MockStore) GetUnreadNotificationCount(userID uuid.UUID) (int, error) { return 0, nil }
-func (m *MockStore) MarkNotificationRead(id uuid.UUID) error                         { return nil }
 func (m *MockStore) MarkNotificationReadByUser(id uuid.UUID, userID uuid.UUID) error { return nil }
 func (m *MockStore) MarkAllNotificationsRead(userID uuid.UUID) error                 { return nil }
 

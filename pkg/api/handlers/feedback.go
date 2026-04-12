@@ -1412,7 +1412,10 @@ func (h *FeedbackHandler) handleIssueEvent(payload map[string]interface{}) error
 				return nil
 			}
 
-			h.store.UpdateFeatureRequestStatus(request.ID, info.status)
+			if err := h.store.UpdateFeatureRequestStatus(request.ID, info.status); err != nil {
+				slog.Error("[Webhook] failed to update status", "issue", issueNumber, "error", err)
+				return nil
+			}
 			h.createNotification(
 				request.UserID,
 				&request.ID,
@@ -1462,7 +1465,10 @@ func (h *FeedbackHandler) handleAIProcessingComplete(issueNumber int, issueURL s
 	}
 
 	// Update status to unable to fix (needs human review)
-	h.store.UpdateFeatureRequestStatus(request.ID, models.RequestStatusUnableToFix)
+	if err := h.store.UpdateFeatureRequestStatus(request.ID, models.RequestStatusUnableToFix); err != nil {
+		slog.Error("[Webhook] failed to update unable-to-fix status", "issue", issueNumber, "error", err)
+		return nil
+	}
 
 	// Get the most recent bot comment to summarize the status
 	summary := h.getLatestBotComment(issueNumber, h.resolveRepoName(request.TargetRepo))
@@ -1471,7 +1477,10 @@ func (h *FeedbackHandler) handleAIProcessingComplete(issueNumber int, issueURL s
 	}
 
 	// Store the latest comment on the request
-	h.store.UpdateFeatureRequestLatestComment(request.ID, summary)
+	if err := h.store.UpdateFeatureRequestLatestComment(request.ID, summary); err != nil {
+		slog.Error("[Webhook] failed to update latest comment", "issue", issueNumber, "error", err)
+		return nil
+	}
 
 	// Create notification
 	h.createNotification(
@@ -1499,7 +1508,10 @@ func (h *FeedbackHandler) handleIssueClosed(issueNumber int, issueURL string, is
 	}
 
 	// Update status to closed (closed externally, not by the user via console)
-	h.store.CloseFeatureRequest(request.ID, false)
+	if err := h.store.CloseFeatureRequest(request.ID, false); err != nil {
+		slog.Error("[Webhook] failed to close feature request", "issue", issueNumber, "error", err)
+		return nil
+	}
 
 	// Get close reason from state_reason if available
 	stateReason, _ := issue["state_reason"].(string)
@@ -1646,8 +1658,14 @@ func (h *FeedbackHandler) handlePREvent(payload map[string]interface{}) error {
 	switch action {
 	case "opened", "synchronize", "ready_for_review":
 		// Update request with PR info and set status to fix_ready
-		h.store.UpdateFeatureRequestPR(requestID, prNumber, prURL)
-		h.store.UpdateFeatureRequestStatus(requestID, models.RequestStatusFixReady)
+		if err := h.store.UpdateFeatureRequestPR(requestID, prNumber, prURL); err != nil {
+			slog.Error("[Webhook] failed to update PR info", "pr", prNumber, "error", err)
+			return nil
+		}
+		if err := h.store.UpdateFeatureRequestStatus(requestID, models.RequestStatusFixReady); err != nil {
+			slog.Error("[Webhook] failed to update fix_ready status", "pr", prNumber, "error", err)
+			return nil
+		}
 		if action == "opened" {
 			h.createNotification(request.UserID, &requestID, models.NotificationTypeFixReady,
 				fmt.Sprintf("PR #%d Created", prNumber),
@@ -1658,7 +1676,10 @@ func (h *FeedbackHandler) handlePREvent(payload map[string]interface{}) error {
 	case "closed":
 		merged, _ := pr["merged"].(bool)
 		if merged {
-			h.store.UpdateFeatureRequestStatus(requestID, models.RequestStatusFixComplete)
+			if err := h.store.UpdateFeatureRequestStatus(requestID, models.RequestStatusFixComplete); err != nil {
+				slog.Error("[Webhook] failed to update fix_complete status", "pr", prNumber, "error", err)
+				return nil
+			}
 			h.createNotification(request.UserID, &requestID, models.NotificationTypeFixComplete,
 				fmt.Sprintf("PR #%d Merged", prNumber),
 				fmt.Sprintf("The fix for '%s' has been merged!", request.Title),
