@@ -25,6 +25,14 @@ const execAuthDeadline = 5 * time.Second
 // Messages exceeding this limit are silently dropped to prevent memory exhaustion.
 const execMaxStdinBytes = 1 * 1024 * 1024 // 1 MB
 
+// execPingInterval is how often the server sends a WebSocket ping to detect dead peers.
+const execPingInterval = 30 * time.Second
+
+// execPongTimeout is how long the server waits for a pong reply before declaring
+// the peer dead. Must be greater than execPingInterval so the deadline is always
+// in the future when a new ping is sent.
+const execPongTimeout = 45 * time.Second
+
 // execSessionRegistry tracks active exec sessions per user so that
 // CancelUserExecSessions can tear them down on logout (#6024).
 //
@@ -271,8 +279,14 @@ func (h *ExecHandlers) HandleExec(c *websocket.Conn) {
 		"remote_addr", c.RemoteAddr().String(),
 	)
 
-	// Clear read deadline after successful auth
-	c.SetReadDeadline(time.Time{})
+	// Set up ping/pong heartbeat to detect dead peers (#6891).
+	// The pong handler resets the read deadline each time the client replies,
+	// so a half-open TCP connection (hard power failure, network drop) is
+	// detected within execPongTimeout and ReadMessage unblocks with an error.
+	c.SetReadDeadline(time.Now().Add(execPongTimeout))
+	c.SetPongHandler(func(string) error {
+		return c.SetReadDeadline(time.Now().Add(execPongTimeout))
+	})
 
 	// Create the cancellable context and register it BEFORE any of the long-
 	// running setup (init message read, k8s client lookup, executor build).
@@ -408,6 +422,30 @@ func (h *ExecHandlers) HandleExec(c *websocket.Conn) {
 	// execCtx / execCancel were created up-front (right after JWT validation)
 	// so the registry is populated before any long-running setup. See the
 	// comment above for the race-window rationale (#6075).
+
+	// Start a goroutine that sends periodic WebSocket pings (#6891).
+	// If the client has silently disconnected (half-open TCP), the pong
+	// never arrives, the read deadline expires, ReadMessage returns an
+	// error, and execCancel fires — preventing zombie goroutines.
+	go func() {
+		ticker := time.NewTicker(execPingInterval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				writeMu.Lock()
+				err := c.WriteMessage(websocket.PingMessage, nil)
+				writeMu.Unlock()
+				if err != nil {
+					// Write failed — peer is gone; cancel to unblock stream.
+					execCancel()
+					return
+				}
+			case <-execCtx.Done():
+				return
+			}
+		}
+	}()
 
 	// Start a goroutine to read WebSocket messages and route them
 	done := make(chan struct{})
