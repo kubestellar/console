@@ -1496,8 +1496,13 @@ describe('useDeployMissions', () => {
 
     const cs = result.current.missions[0].clusterStatuses[0]
     expect(cs.status).toBe('pending')
-    // Should NOT have auth error message
-    expect(cs.logs).toBeUndefined()
+    // #6666 — Non-auth HTTP errors now append a "Backend error HTTP ..."
+    // log line so operators can see the backend is returning errors. The
+    // mission still stays in `pending` (not `failed`) and is NOT flagged
+    // as an auth error.
+    expect(cs.logs).toBeDefined()
+    expect(cs.logs?.some(l => /Backend error HTTP 500/.test(l))).toBe(true)
+    expect(cs.logs?.some(l => /Authentication failed/.test(l))).toBe(false)
   })
 
   // =========================================================================
