@@ -108,6 +108,30 @@ func (s *gpuTestStore) UpdateGPUReservation(reservation *models.GPUReservation) 
 	return nil
 }
 
+// UpdateGPUReservationWithCapacity mirrors the atomic update with capacity
+// check for tests (#6957).
+func (s *gpuTestStore) UpdateGPUReservationWithCapacity(reservation *models.GPUReservation, capacity int) error {
+	if s.updateErr != nil {
+		return s.updateErr
+	}
+	if capacity > 0 && s.clusterReserved+reservation.GPUCount > capacity {
+		return store.ErrGPUQuotaExceeded
+	}
+	return s.UpdateGPUReservation(reservation)
+}
+
+// GetGPUReservationsByIDs returns reservations from the test store's
+// reservations map in a single call (#6963).
+func (s *gpuTestStore) GetGPUReservationsByIDs(ids []uuid.UUID) (map[uuid.UUID]*models.GPUReservation, error) {
+	result := make(map[uuid.UUID]*models.GPUReservation, len(ids))
+	for _, id := range ids {
+		if r, ok := s.reservations[id]; ok {
+			result[id] = r
+		}
+	}
+	return result, nil
+}
+
 func (s *gpuTestStore) GetBulkUtilizationSnapshots(ids []string) (map[string][]models.GPUUtilizationSnapshot, error) {
 	if s.bulkSnapshotsErr != nil {
 		return nil, s.bulkSnapshotsErr
@@ -133,11 +157,12 @@ func TestGPUCreateReservation_OverAllocationReturnsConflict(t *testing.T) {
 	env.App.Post("/api/gpu/reservations", handler.CreateReservation)
 
 	body, err := json.Marshal(map[string]any{
-		"title":      "Train model",
-		"cluster":    "cluster-a",
-		"namespace":  "ml",
-		"gpu_count":  3,
-		"start_date": "2026-03-16T00:00:00Z",
+		"title":          "Train model",
+		"cluster":        "cluster-a",
+		"namespace":      "ml",
+		"gpu_count":      3,
+		"start_date":     "2026-03-16T00:00:00Z",
+		"duration_hours": 8,
 	})
 	require.NoError(t, err)
 
@@ -162,11 +187,12 @@ func TestGPUCreateReservation_SetsDefaultDurationAndUserName(t *testing.T) {
 	env.App.Post("/api/gpu/reservations", handler.CreateReservation)
 
 	body, err := json.Marshal(map[string]any{
-		"title":      "Inference batch",
-		"cluster":    "cluster-a",
-		"namespace":  "ml",
-		"gpu_count":  1,
-		"start_date": "2026-03-16T00:00:00Z",
+		"title":          "Inference batch",
+		"cluster":        "cluster-a",
+		"namespace":      "ml",
+		"gpu_count":      1,
+		"start_date":     "2026-03-16T00:00:00Z",
+		"duration_hours": 24,
 	})
 	require.NoError(t, err)
 
