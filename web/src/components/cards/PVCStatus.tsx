@@ -155,7 +155,7 @@ function PVCStatusInternal() {
       total: result.length,
       bound: result.filter(p => p.status === 'Bound').length,
       pending: result.filter(p => p.status === 'Pending').length,
-      failed: result.filter(p => !['Bound', 'Pending'].includes(p.status)).length,
+      failed: result.filter(p => p.status === 'Lost').length,
     }
   }, [pvcs, localClusterFilter, search])
 
