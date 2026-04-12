@@ -13,7 +13,7 @@ import { useDemoMode } from '../../hooks/useDemoMode'
 export function StorageOverview() {
   const { t } = useTranslation(['cards', 'common'])
   const { deduplicatedClusters: clusters, isLoading, isRefreshing: clustersRefreshing } = useClusters()
-  const { pvcs, isLoading: pvcsLoading, isRefreshing: pvcsRefreshing, consecutiveFailures, isFailed, isDemoFallback } = useCachedPVCs()
+  const { pvcs, isLoading: pvcsLoading, isRefreshing: pvcsRefreshing, consecutiveFailures, isFailed, isDemoFallback, error: pvcsError } = useCachedPVCs()
 
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { isDemoMode } = useDemoMode()
@@ -138,6 +138,14 @@ export function StorageOverview() {
 
         </div>
       </div>
+
+      {/* Error banner */}
+      {pvcsError && (
+        <div className="mb-3 p-2 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-400 flex items-center gap-2">
+          <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+          <span>{t('storageOverview.fetchError', { defaultValue: 'Failed to load PVC data: {{error}}', error: pvcsError })}</span>
+        </div>
+      )}
 
       {/* Main stats */}
       <div className="grid grid-cols-2 gap-3 mb-4">

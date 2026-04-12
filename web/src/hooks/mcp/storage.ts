@@ -280,15 +280,13 @@ export function usePVCs(cluster?: string, namespace?: string) {
       setLastUpdated(now)
       setConsecutiveFailures(0)
       setLastRefresh(now)
-    } catch {
+    } catch (err: unknown) {
       if (!isMountedRef.current) return
-      // Keep stale data on error
+      const message = err instanceof Error ? err.message : 'Failed to fetch PVCs'
       setConsecutiveFailures(prev => prev + 1)
       setLastRefresh(new Date())
       if (!silent && !pvcsCache) {
-        // Don't show error - PVCs are optional, some clusters may have none
-        setError(null)
-        setPVCs([])
+        setError(message)
       }
     } finally {
       if (isMountedRef.current) {
@@ -384,12 +382,11 @@ export function usePVs(cluster?: string) {
       setPVs(data.pvs || [])
       setError(null)
       setConsecutiveFailures(0)
-    } catch {
+    } catch (err: unknown) {
       if (isMountedRef.current) {
-        // Don't show error - PVs are optional
-        setError(null)
+        const message = err instanceof Error ? err.message : 'Failed to fetch PVs'
+        setError(message)
         setConsecutiveFailures(prev => prev + 1)
-        setPVs([])
       }
     } finally {
       if (isMountedRef.current) {
