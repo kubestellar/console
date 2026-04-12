@@ -256,6 +256,78 @@ describe('settledWithConcurrency', () => {
       expect(DEFAULT_CLUSTER_CONCURRENCY).toBe(EXPECTED_DEFAULT_CONCURRENCY)
     })
   })
+
+  describe('invalid concurrency inputs (#6851, #6852)', () => {
+    it('concurrency=0 still processes all tasks', async () => {
+      const tasks = Array.from({ length: MIXED_TASK_COUNT }, (_, i) =>
+        delayedTask(i, TICK_DELAY_MS),
+      )
+
+      const results = await settledWithConcurrency(tasks, 0)
+
+      expect(results).toHaveLength(MIXED_TASK_COUNT)
+      for (let i = 0; i < MIXED_TASK_COUNT; i++) {
+        expect(results[i].status).toBe('fulfilled')
+        if (results[i].status === 'fulfilled') {
+          expect(
+            (results[i] as PromiseSettledResult<number> & { status: 'fulfilled' }).value,
+          ).toBe(i)
+        }
+      }
+    })
+
+    it('negative concurrency still processes all tasks', async () => {
+      const tasks = Array.from({ length: MIXED_TASK_COUNT }, (_, i) =>
+        delayedTask(i, TICK_DELAY_MS),
+      )
+
+      const results = await settledWithConcurrency(tasks, -5)
+
+      expect(results).toHaveLength(MIXED_TASK_COUNT)
+      for (const r of results) {
+        expect(r.status).toBe('fulfilled')
+      }
+    })
+
+    it('NaN concurrency still processes all tasks', async () => {
+      const tasks = Array.from({ length: MIXED_TASK_COUNT }, (_, i) =>
+        delayedTask(i, TICK_DELAY_MS),
+      )
+
+      const results = await settledWithConcurrency(tasks, NaN)
+
+      expect(results).toHaveLength(MIXED_TASK_COUNT)
+      for (const r of results) {
+        expect(r.status).toBe('fulfilled')
+      }
+    })
+
+    it('Infinity concurrency still processes all tasks', async () => {
+      const tasks = Array.from({ length: MIXED_TASK_COUNT }, (_, i) =>
+        delayedTask(i, TICK_DELAY_MS),
+      )
+
+      const results = await settledWithConcurrency(tasks, Infinity)
+
+      expect(results).toHaveLength(MIXED_TASK_COUNT)
+      for (const r of results) {
+        expect(r.status).toBe('fulfilled')
+      }
+    })
+
+    it('fractional concurrency (0.5) is clamped to 1 and processes tasks', async () => {
+      const tasks = Array.from({ length: MIXED_TASK_COUNT }, (_, i) =>
+        delayedTask(i, TICK_DELAY_MS),
+      )
+
+      const results = await settledWithConcurrency(tasks, 0.5)
+
+      expect(results).toHaveLength(MIXED_TASK_COUNT)
+      for (const r of results) {
+        expect(r.status).toBe('fulfilled')
+      }
+    })
+  })
 })
 
 describe('mapSettledWithConcurrency', () => {

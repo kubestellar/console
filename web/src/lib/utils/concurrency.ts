@@ -14,6 +14,9 @@
 /** Default maximum number of concurrent requests across clusters */
 export const DEFAULT_CLUSTER_CONCURRENCY = 8
 
+/** Minimum allowed concurrency — at least one worker must run (#6851). */
+const MIN_CONCURRENCY = 1
+
 /**
  * Execute an array of async tasks with bounded concurrency, returning
  * results in the same format as `Promise.allSettled`.
@@ -22,7 +25,8 @@ export const DEFAULT_CLUSTER_CONCURRENCY = 8
  * queue, so fast-completing tasks do not leave workers idle.
  *
  * @param tasks   - Array of zero-arg async functions to execute
- * @param concurrency - Max tasks running at one time (default 8)
+ * @param concurrency - Max tasks running at one time (default 8).
+ *   Values less than 1, NaN, or non-finite are clamped to 1 (#6851).
  * @returns PromiseSettledResult array in the same order as `tasks`
  */
 export async function settledWithConcurrency<T>(
@@ -31,11 +35,17 @@ export async function settledWithConcurrency<T>(
 ): Promise<PromiseSettledResult<T>[]> {
   if (tasks.length === 0) return []
 
+  // Clamp invalid concurrency to a safe minimum so workers are always
+  // created and every task slot is populated (#6851).
+  const safeConcurrency = Number.isFinite(concurrency) && concurrency >= MIN_CONCURRENCY
+    ? Math.floor(concurrency)
+    : MIN_CONCURRENCY
+
   const results: PromiseSettledResult<T>[] = new Array(tasks.length)
   let cursor = 0
 
   const workers = Array.from(
-    { length: Math.min(concurrency, tasks.length) },
+    { length: Math.min(safeConcurrency, tasks.length) },
     async () => {
       while (cursor < tasks.length) {
         const idx = cursor++
