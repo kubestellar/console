@@ -85,6 +85,7 @@ export function ClusterComparisonPage() {
     )
   }
 
+  // TODO: error banner will activate once useClusters() propagates fetch errors
   if (clusterError && clusters.length === 0) {
     return (
       <div className="pt-16">

@@ -67,20 +67,20 @@ export function CardRequestDialog({ missingProjects, onClose }: CardRequestDialo
               {t('orbit.cardRequest', { project })}
             </span>
             {submitted.has(project) ? (
-              <span className="text-[10px] text-green-400 font-medium">Requested</span>
+              <span className="text-[10px] text-green-400 font-medium">{t('orbit.cardRequestRequested')}</span>
             ) : failedProjects.has(project) ? (
               <button
                 onClick={() => handleRequest(project)}
-                disabled={submittingProject !== null}
+                disabled={submittingProject === project}
                 className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-red-400 hover:bg-red-500/10 rounded transition-colors"
               >
                 <Send className="w-2.5 h-2.5" />
-                Retry
+                {t('orbit.cardRequestRetry')}
               </button>
             ) : (
               <button
                 onClick={() => handleRequest(project)}
-                disabled={submittingProject !== null}
+                disabled={submittingProject === project}
                 className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-primary hover:bg-primary/10 rounded transition-colors"
               >
                 {submittingProject === project ? (
@@ -88,7 +88,7 @@ export function CardRequestDialog({ missingProjects, onClose }: CardRequestDialo
                 ) : (
                   <Send className="w-2.5 h-2.5" />
                 )}
-                {submittingProject === project ? 'Sending...' : t('orbit.cardRequestAction')}
+                {submittingProject === project ? t('orbit.cardRequestSending') : t('orbit.cardRequestAction')}
               </button>
             )}
           </div>
