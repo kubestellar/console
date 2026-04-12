@@ -263,6 +263,12 @@ func (s *Server) handleNamespacesHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// SECURITY: Validate token when configured (#7000)
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	if s.k8sClient == nil {
 		writeJSON(w,map[string]interface{}{"namespaces": []interface{}{}, "error": "k8s client not initialized"})
 		return
@@ -294,6 +300,12 @@ func (s *Server) handleDeploymentsHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	// SECURITY: Validate token when configured (#7000)
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -335,6 +347,11 @@ func (s *Server) handleReplicaSetsHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
+	// SECURITY: Validate token when configured (#7000)
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 	if s.k8sClient == nil {
 		writeJSON(w,map[string]interface{}{"replicasets": []interface{}{}, "error": "k8s client not initialized"})
 		return
@@ -362,6 +379,11 @@ func (s *Server) handleStatefulSetsHTTP(w http.ResponseWriter, r *http.Request) 
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
+		return
+	}
+	// SECURITY: Validate token when configured (#7000)
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 	if s.k8sClient == nil {
@@ -393,6 +415,11 @@ func (s *Server) handleDaemonSetsHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
+	// SECURITY: Validate token when configured (#7000)
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 	if s.k8sClient == nil {
 		writeJSON(w,map[string]interface{}{"daemonsets": []interface{}{}, "error": "k8s client not initialized"})
 		return
@@ -420,6 +447,11 @@ func (s *Server) handleCronJobsHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
+		return
+	}
+	// SECURITY: Validate token when configured (#7000)
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 	if s.k8sClient == nil {
@@ -451,6 +483,11 @@ func (s *Server) handleIngressesHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
+	// SECURITY: Validate token when configured (#7000)
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 	if s.k8sClient == nil {
 		writeJSON(w,map[string]interface{}{"ingresses": []interface{}{}, "error": "k8s client not initialized"})
 		return
@@ -478,6 +515,11 @@ func (s *Server) handleNetworkPoliciesHTTP(w http.ResponseWriter, r *http.Reques
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
+		return
+	}
+	// SECURITY: Validate token when configured (#7000)
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 	if s.k8sClient == nil {
@@ -509,6 +551,11 @@ func (s *Server) handleServicesHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
+	// SECURITY: Validate token when configured (#7000)
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 	if s.k8sClient == nil {
 		writeJSON(w,map[string]interface{}{"services": []interface{}{}, "error": "k8s client not initialized"})
 		return
@@ -536,6 +583,11 @@ func (s *Server) handleConfigMapsHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
+		return
+	}
+	// SECURITY: Validate token when configured (#7000)
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 	if s.k8sClient == nil {
@@ -603,6 +655,11 @@ func (s *Server) handleServiceAccountsHTTP(w http.ResponseWriter, r *http.Reques
 		w.WriteHeader(http.StatusOK)
 		return
 	}
+	// SECURITY: Validate token when configured (#7000)
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 	if s.k8sClient == nil {
 		writeJSON(w,map[string]interface{}{"serviceaccounts": []interface{}{}, "error": "k8s client not initialized"})
 		return
@@ -630,6 +687,11 @@ func (s *Server) handleJobsHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
+		return
+	}
+	// SECURITY: Validate token when configured (#7000)
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 	if s.k8sClient == nil {

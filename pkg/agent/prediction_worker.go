@@ -77,7 +77,7 @@ type PredictionWorker struct {
 	predictions []AIPrediction
 	providers   []string
 	lastRun     time.Time
-	running     bool
+	running     atomic.Bool
 	mu          sync.RWMutex
 	stopCh      chan struct{}
 	// stopOnce guards Stop() so that concurrent / repeated calls do not
@@ -192,13 +192,11 @@ func (w *PredictionWorker) GetPredictions() AIPredictionsResponse {
 // requires a larger refactor. See the doc comment on Stop() for the full
 // story around graceful shutdown and ctx propagation.
 func (w *PredictionWorker) TriggerAnalysis(providers []string) error {
-	w.mu.Lock()
-	if w.running {
-		w.mu.Unlock()
+	// Use atomic compare-and-swap to prevent concurrent runAnalysis
+	// executions without an unlocked window (#7002).
+	if !w.running.CompareAndSwap(false, true) {
 		return fmt.Errorf("analysis already in progress")
 	}
-	w.running = true
-	w.mu.Unlock()
 
 	go func() {
 		defer func() {
@@ -206,9 +204,7 @@ func (w *PredictionWorker) TriggerAnalysis(providers []string) error {
 				slog.Error("[PredictionWorker] panic in runAnalysis; recovered",
 					"panic", r)
 			}
-			w.mu.Lock()
-			w.running = false
-			w.mu.Unlock()
+			w.running.Store(false)
 		}()
 		w.runAnalysis(providers)
 	}()
@@ -218,9 +214,7 @@ func (w *PredictionWorker) TriggerAnalysis(providers []string) error {
 
 // IsAnalyzing returns whether analysis is currently running
 func (w *PredictionWorker) IsAnalyzing() bool {
-	w.mu.RLock()
-	defer w.mu.RUnlock()
-	return w.running
+	return w.running.Load()
 }
 
 // runLoop is the main background loop.
@@ -271,10 +265,8 @@ func (w *PredictionWorker) runLoop() {
 		w.mu.RUnlock()
 
 		if settings.AIEnabled {
-			w.mu.Lock()
-			if !w.running {
-				w.running = true
-				w.mu.Unlock()
+			// Use atomic CAS to prevent concurrent runAnalysis (#7002).
+			if w.running.CompareAndSwap(false, true) {
 				// #6673 — recover from panics in runAnalysis so the
 				// periodic loop survives a single bad run. Without this,
 				// a panic in any provider parser would permanently kill
@@ -289,10 +281,8 @@ func (w *PredictionWorker) runLoop() {
 					}()
 					w.runAnalysis(nil)
 				}()
-				w.mu.Lock()
-				w.running = false
+				w.running.Store(false)
 			}
-			w.mu.Unlock()
 		}
 
 		// Wait for next interval or stop signal using the reused timer.
@@ -311,6 +301,17 @@ func (w *PredictionWorker) runLoop() {
 				}
 			}
 			slog.Info("[PredictionWorker] Stopping")
+			return
+		case <-w.ctx.Done():
+			// Handle context cancellation during interval wait, mirroring
+			// the initial-delay select (#6998).
+			if !intervalTimer.Stop() {
+				select {
+				case <-intervalTimer.C:
+				default:
+				}
+			}
+			slog.Info("[PredictionWorker] Context cancelled during interval wait")
 			return
 		}
 	}

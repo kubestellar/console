@@ -106,17 +106,13 @@ func TestPredictionWorker_TriggerAnalysisPanicRecovery(t *testing.T) {
 	// Simulate the panic path: flip running to true, then run the same
 	// deferred machinery TriggerAnalysis installs, then panic.
 	func() {
-		w.mu.Lock()
-		w.running = true
-		w.mu.Unlock()
+		w.running.Store(true)
 		defer func() {
 			if r := recover(); r != nil {
 				// Expected: we panicked on purpose below.
 				_ = r
 			}
-			w.mu.Lock()
-			w.running = false
-			w.mu.Unlock()
+			w.running.Store(false)
 		}()
 		panic("simulated runAnalysis panic")
 	}()
