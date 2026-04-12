@@ -752,6 +752,9 @@ export function useMissionControl() {
         })
       }
     }
+  // NOTE (#6782): `extractJSON` is intentionally omitted from this dependency
+  // array — it is a module-level pure function (not a closure over component
+  // state), so it can never go stale. Adding it would be harmless but noisy.
   }, [debouncedAssistantContent, state.phase, state.planningMissionId, planningMission?.status])
 
   // Update streaming state from mission status
@@ -807,7 +810,12 @@ export function useMissionControl() {
   // Reconcile assignments when projects change (cascade Phase 1 → 2 → 3)
   // ---------------------------------------------------------------------------
 
-  const prevProjectNamesRef = useRef<string>(JSON.stringify(state.projects.map((p) => p.name).sort()))
+  // #6784 — Initialize with empty string instead of a computed snapshot.
+  // useRef's initial value only runs on first render; if state.projects changes
+  // before the reconciliation effect fires, the ref would hold a stale snapshot.
+  // An empty string ensures the very first effect invocation always detects a
+  // difference and syncs the ref to the current project list.
+  const prevProjectNamesRef = useRef<string>('')
 
   useEffect(() => {
     const currentKey = JSON.stringify(state.projects.map((p) => p.name).sort())
@@ -1195,6 +1203,11 @@ Order phases by dependency — prerequisites first. Each phase completes before 
     // next planning mission can log its own first-hit warning instead of
     // inheriting the suppressed state from a previous mission.
     resetOversizedWarnings()
+    // #6783 — Reset the stale-cluster reconciliation guard so a second wizard
+    // run re-checks persisted cluster references against the live cluster list.
+    // Without this, staleReconcileDoneRef stays `true` from the first run and
+    // reconciliation is permanently skipped.
+    staleReconcileDoneRef.current = false
     localStorage.removeItem(STORAGE_KEY)
     lastParsedContentRef.current = ''
     setState(makeInitialState())
