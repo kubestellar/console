@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { ChevronRight, ChevronDown, Server, Box, Layers, Database, Network, HardDrive, Search, AlertTriangle, XCircle } from 'lucide-react'
 import { StatusBadge } from '../../ui/StatusBadge'
-import { useClusterHealth, usePodIssues, useDeploymentIssues, useGPUNodes, useNodes, useNamespaces, useDeployments, useServices, usePVCs, useEvents } from '../../../hooks/useMCP'
+import { useClusterHealth, usePodIssues, useDeploymentIssues, useGPUNodes, useNodes, useNamespaces, useDeployments, useServices, useEvents } from '../../../hooks/useMCP'
+import { useCachedPVCs } from '../../../hooks/useCachedData'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { StatusIndicator } from '../../charts/StatusIndicator'
 import { Gauge } from '../../charts/Gauge'
@@ -46,7 +47,7 @@ export function ClusterDrillDown({ data }: Props) {
   const { namespaces: allNamespaces } = useNamespaces(clusterName)
   const { deployments: allDeployments } = useDeployments(clusterName)
   const { services: allServices } = useServices(clusterName)
-  const { pvcs: allPVCs } = usePVCs(clusterName)
+  const { pvcs: allPVCs } = useCachedPVCs(clusterName)
   const { events: clusterEvents, isLoading: eventsLoading } = useEvents(clusterName, undefined, 10)
 
   // Toggle section expansion

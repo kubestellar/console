@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { ChevronRight, ChevronDown, Box, Layers, Network, List, GitBranch, Activity, Briefcase, Lock, Settings, Loader2, User, HardDrive, AlertCircle } from 'lucide-react'
-import { usePods, useDeployments, useServices, useJobs, useHPAs, useConfigMaps, useSecrets, useServiceAccounts, usePVCs } from '../../../hooks/useMCP'
+import { usePods, useDeployments, useServices, useJobs, useHPAs, useConfigMaps, useSecrets, useServiceAccounts } from '../../../hooks/useMCP'
+import { useCachedPVCs } from '../../../hooks/useCachedData'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../../ui/StatusBadge'
@@ -31,7 +32,7 @@ export function NamespaceResources({ clusterName, namespace, onClose }: Namespac
   const { configmaps, isLoading: configmapsLoading } = useConfigMaps(clusterName, namespace)
   const { secrets, isLoading: secretsLoading } = useSecrets(clusterName, namespace)
   const { serviceAccounts, isLoading: serviceAccountsLoading } = useServiceAccounts(clusterName, namespace)
-  const { pvcs, isLoading: pvcsLoading } = usePVCs(clusterName, namespace)
+  const { pvcs, isLoading: pvcsLoading } = useCachedPVCs(clusterName, namespace)
 
   const {
     drillToPod,

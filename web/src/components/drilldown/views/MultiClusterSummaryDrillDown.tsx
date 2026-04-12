@@ -3,7 +3,7 @@ import { Search, Server, Layers, Rocket, Box, Settings as SettingsIcon, AlertCir
 import { useClusterData } from '../../../hooks/useClusterData'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import type { DrillDownViewType } from '../../../hooks/useDrillDown'
-import { useCachedNodes } from '../../../hooks/useCachedData'
+import { useCachedNodes, useCachedPVCs } from '../../../hooks/useCachedData'
 import { useTranslation } from 'react-i18next'
 import { formatRelativeTime } from '../../../lib/formatters'
 
@@ -159,6 +159,7 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
   const { t } = useTranslation()
   const { clusters, deduplicatedClusters, pods, deployments, events, helmReleases, operatorSubscriptions, securityIssues } = useClusterData()
   const { nodes: rawCachedNodes, lastRefresh: nodesLastRefresh } = useCachedNodes()
+  const { pvcs: cachedPVCs } = useCachedPVCs()
   // Guard against undefined to prevent crashes when APIs return 404/500/empty
   const cachedNodes = rawCachedNodes || []
   // Convert epoch ms to ISO string for the freshness indicator
@@ -172,7 +173,7 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
 
   const {
     drillToCluster, drillToNamespace, drillToDeployment, drillToPod,
-    drillToNode, drillToEvents, drillToHelm, drillToOperator
+    drillToNode, drillToEvents, drillToHelm, drillToOperator, drillToPVC
   } = useDrillDownActions()
 
   const filter = data.filter as string | undefined
@@ -271,14 +272,16 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
             gpuCount: 0, // Placeholder - actual GPU data would come from GPU nodes hook
             status: 'available' }))
       case 'all-storage':
-        // Storage from clusters with storage info
-        return clusters
-          .filter(c => c.storageGB && c.storageGB > 0)
-          .map(c => ({
-            name: `pvc-${c.name}`,
-            cluster: c.name,
-            status: 'Bound',
-            storageGB: c.storageGB }))
+        // Use real PVC data from useCachedPVCs (#6813)
+        return (cachedPVCs || []).map(pvc => ({
+          name: pvc.name,
+          namespace: pvc.namespace,
+          cluster: pvc.cluster || '',
+          status: pvc.status || 'Unknown',
+          capacity: pvc.capacity,
+          storageClass: pvc.storageClass,
+          accessModes: pvc.accessModes,
+          volumeName: pvc.volumeName }))
       case 'all-jobs':
         // Jobs approximation from pods
         return pods
@@ -292,7 +295,7 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
       default:
         return []
     }
-  }, [viewType, clusters, deduplicatedClusters, pods, deployments, events, helmReleases, operatorSubscriptions, securityIssues, cachedNodes])
+  }, [viewType, clusters, deduplicatedClusters, pods, deployments, events, helmReleases, operatorSubscriptions, securityIssues, cachedNodes, cachedPVCs])
 
   // Apply initial filter from data prop
   const preFilteredItems = (() => {
@@ -384,6 +387,9 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
         break
       case 'all-security':
         drillToPod(cluster, namespace, (item.pod as string) || name, item)
+        break
+      case 'all-storage':
+        drillToPVC(cluster, namespace, name, item)
         break
       default:
         // Generic fallback - try pod if nothing else matches

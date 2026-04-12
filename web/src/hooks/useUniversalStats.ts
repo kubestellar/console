@@ -3,7 +3,6 @@ import {
   usePodIssues,
   useDeployments,
   useDeploymentIssues,
-  usePVCs,
   useServices,
   useEvents,
   useWarningEvents,
@@ -12,6 +11,7 @@ import {
   useOperatorSubscriptions,
   useOperators,
   useGPUNodes } from './useMCP'
+import { useCachedPVCs } from './useCachedData'
 import { useAlerts, useAlertRules } from './useAlerts'
 import { StatBlockValue } from '../components/ui/StatsOverview'
 import { useDrillDownActions } from './useDrillDown'
@@ -46,7 +46,7 @@ export function useUniversalStats() {
   const { issues: podIssues } = usePodIssues()
   const { deployments } = useDeployments()
   const { issues: deploymentIssues } = useDeploymentIssues()
-  const { pvcs } = usePVCs()
+  const { pvcs } = useCachedPVCs()
   const { services } = useServices()
   const { events } = useEvents(undefined, undefined, 100)
   const { events: warningEvents } = useWarningEvents(undefined, undefined, 100)

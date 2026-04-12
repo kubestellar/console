@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ChevronRight, Search, Box, Network, HardDrive, Layers, Server } from 'lucide-react'
-import { usePodIssues, useDeploymentIssues, useEvents, useDeployments, useServices, usePVCs, usePods } from '../../../hooks/useMCP'
+import { usePodIssues, useDeploymentIssues, useEvents, useDeployments, useServices, usePods } from '../../../hooks/useMCP'
+import { useCachedPVCs } from '../../../hooks/useCachedData'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { StatusIndicator } from '../../charts/StatusIndicator'
@@ -33,7 +34,7 @@ export function NamespaceDrillDown({ data }: Props) {
   const clusterShort = cluster.split('/').pop() || cluster
   const { deployments: allDeployments } = useDeployments(clusterShort, namespace)
   const { services: allServices } = useServices(clusterShort, namespace)
-  const { pvcs: allPVCs } = usePVCs(clusterShort, namespace)
+  const { pvcs: allPVCs } = useCachedPVCs(clusterShort, namespace)
   const { pods: allPods } = usePods(clusterShort, namespace)
 
   const podIssues = allPodIssues.filter(p => p.namespace === namespace)
