@@ -182,6 +182,20 @@ export function AgentStatusIndicator() {
     ? { bg: 'bg-blue-500/10 text-blue-400 hover:bg-blue-500/20', dot: 'bg-blue-400', label: t('agent.cluster'), Icon: Server, title: t('agent.inClusterModeTitle') }
     : { bg: 'bg-red-500/10 text-red-400 hover:bg-red-500/20', dot: 'bg-red-400', label: t('agent.offline'), Icon: WifiOff, title: t('agent.localAgentDisconnected') }
 
+  // Loading state: show spinner while initial agent status is resolving (#6772)
+  if (stableStatus === 'connecting' && !showAsDemoMode && !isInClusterMode) {
+    return (
+      <div className="relative" ref={agentRef}>
+        <div className={cn('flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg whitespace-nowrap', 'bg-yellow-500/10 text-yellow-400')}>
+          <Loader2 className="w-4 h-4 animate-spin" />
+          <span className="text-xs font-medium hidden sm:inline whitespace-nowrap">
+            {t('agent.connecting')}
+          </span>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="relative" ref={agentRef}>
       <button
