@@ -80,7 +80,6 @@ export const DISCOVERABLE_DASHBOARDS: SidebarItem[] = [
   { id: 'helm', name: 'Helm', icon: 'Package', href: '/helm', type: 'link', order: 8 },
   { id: 'llm-d-benchmarks', name: 'llm-d Benchmarks', icon: 'TrendingUp', href: '/llm-d-benchmarks', type: 'link', order: 9 },
   { id: 'logs', name: 'Logs', icon: 'FileText', href: '/logs', type: 'link', order: 10 },
-  { id: 'multi-tenancy', name: 'Multi-Tenancy', icon: 'Users', href: '/multi-tenancy', type: 'link', order: 10.5 },
   { id: 'network', name: 'Network', icon: 'Globe', href: '/network', type: 'link', order: 11 },
   { id: 'nodes', name: 'Nodes', icon: 'CircuitBoard', href: '/nodes', type: 'link', order: 12 },
   { id: 'operators', name: 'Operators', icon: 'Cog', href: '/operators', type: 'link', order: 13 },
