@@ -333,7 +333,7 @@ Please proceed step by step.`,
       <CardSearchInput
         value={localSearch}
         onChange={setLocalSearch}
-        placeholder={t('common:searchLayouts')}
+        placeholder={t('common:common.searchLayouts')}
       />
 
       {/* Layouts list */}
