@@ -7,10 +7,19 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"sync"
 	"time"
 
 	"k8s.io/client-go/rest"
 )
+
+// promClientCache reuses http.Client instances keyed by cluster API server URL.
+// Creating a new TLS transport per Prometheus query leaks connections and
+// performs redundant TLS handshakes (#7024).
+var promClientCache struct {
+	sync.RWMutex
+	clients map[string]*http.Client
+}
 
 const (
 	prometheusQueryTimeout = 10 * time.Second
@@ -109,17 +118,13 @@ func (s *Server) handlePrometheusQuery(w http.ResponseWriter, r *http.Request) {
 
 	fullURL := fmt.Sprintf("%s%s?%s", config.Host, proxyPath, params.Encode())
 
-	// Create an HTTP client with the cluster's TLS/auth config
-	transport, err := rest.TransportFor(config)
+	// Reuse an HTTP client per cluster API server URL to avoid creating a new
+	// TLS transport (and leaking connections) on every query (#7024).
+	client, err := getOrCreatePromClient(config)
 	if err != nil {
 		writePrometheusError(w, http.StatusInternalServerError,
 			fmt.Sprintf("failed to create transport: %v", err))
 		return
-	}
-
-	client := &http.Client{
-		Transport: transport,
-		Timeout:   prometheusQueryTimeout,
 	}
 
 	resp, err := client.Get(fullURL)
@@ -135,4 +140,43 @@ func (s *Server) handlePrometheusQuery(w http.ResponseWriter, r *http.Request) {
 	if _, copyErr := io.Copy(w, resp.Body); copyErr != nil {
 		slog.Error("failed to stream Prometheus response", "error", copyErr)
 	}
+}
+
+// getOrCreatePromClient returns a cached http.Client for the given REST config,
+// keyed by the API server Host URL. Clients are created once and reused to
+// avoid per-query TLS handshakes and connection leaks (#7024).
+func getOrCreatePromClient(config *rest.Config) (*http.Client, error) {
+	key := config.Host
+
+	promClientCache.RLock()
+	if promClientCache.clients != nil {
+		if c, ok := promClientCache.clients[key]; ok {
+			promClientCache.RUnlock()
+			return c, nil
+		}
+	}
+	promClientCache.RUnlock()
+
+	// Miss — create under write lock (double-check)
+	promClientCache.Lock()
+	defer promClientCache.Unlock()
+
+	if promClientCache.clients == nil {
+		promClientCache.clients = make(map[string]*http.Client)
+	}
+	if c, ok := promClientCache.clients[key]; ok {
+		return c, nil
+	}
+
+	transport, err := rest.TransportFor(config)
+	if err != nil {
+		return nil, err
+	}
+
+	client := &http.Client{
+		Transport: transport,
+		Timeout:   prometheusQueryTimeout,
+	}
+	promClientCache.clients[key] = client
+	return client, nil
 }

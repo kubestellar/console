@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/kubestellar/console/pkg/k8s"
@@ -67,10 +68,11 @@ type MetricsHistory struct {
 	k8sClient          *k8s.MultiClusterClient
 	snapshots          []MetricsSnapshot
 	mu                 sync.RWMutex
+	diskMu             sync.Mutex // serializes saveToDisk calls (#7017)
 	stopCh             chan struct{}
 	dataDir            string
-	loggedClusterError bool  // suppress repeated "no kubeconfig" errors
-	lastPersistError   error // last saveToDisk error, nil on success (#5553)
+	loggedClusterError atomic.Bool // suppress repeated "no kubeconfig" errors (#7015)
+	lastPersistError   error       // last saveToDisk error, nil on success (#5553)
 }
 
 // NewMetricsHistory creates a new metrics history manager
@@ -178,8 +180,8 @@ func (mh *MetricsHistory) captureSnapshot() error {
 	// Get cluster health
 	healthList, err := mh.k8sClient.GetAllClusterHealth(ctx)
 	if err != nil {
-		if !mh.loggedClusterError {
-			mh.loggedClusterError = true
+		if !mh.loggedClusterError.Load() {
+			mh.loggedClusterError.Store(true)
 			slog.Info("[MetricsHistory] cluster data unavailable (will retry silently)", "error", err)
 		}
 	} else {
@@ -202,12 +204,16 @@ func (mh *MetricsHistory) captureSnapshot() error {
 		}
 	}
 
-	// Get pod issues from all clusters
+	// Get pod issues and GPU nodes from all clusters.
+	// If ListClusters fails, skip GPU metrics entirely instead of saving
+	// a zeroed snapshot that masks the error (#7016).
 	clusters, err := mh.k8sClient.ListClusters(ctx)
-	if err == nil {
+	if err != nil {
+		slog.Error("[MetricsHistory] ListClusters failed, skipping pod/GPU metrics for this snapshot", "error", err)
+	} else {
 		for _, cluster := range clusters {
-			pods, err := mh.k8sClient.FindPodIssues(ctx, cluster.Context, "")
-			if err != nil {
+			pods, podErr := mh.k8sClient.FindPodIssues(ctx, cluster.Context, "")
+			if podErr != nil {
 				continue
 			}
 			for _, p := range pods {
@@ -221,7 +227,7 @@ func (mh *MetricsHistory) captureSnapshot() error {
 		}
 	}
 
-	// Get GPU nodes from all clusters
+	// Get GPU nodes from all clusters (only if ListClusters succeeded)
 	for _, cluster := range clusters {
 		gpuNodes, err := mh.k8sClient.GetGPUNodes(ctx, cluster.Context)
 		if err != nil {
@@ -242,12 +248,20 @@ func (mh *MetricsHistory) captureSnapshot() error {
 	mh.mu.Lock()
 	mh.snapshots = append(mh.snapshots, snapshot)
 
-	// Trim old snapshots (keep last 7 days)
+	// Trim old snapshots (keep last 7 days).
+	// Snapshots with unparseable timestamps are kept and logged (#7018)
+	// rather than silently dropped, so historical data is not destroyed.
 	cutoff := time.Now().Add(-time.Duration(snapshotRetentionHrs) * time.Hour)
 	trimmed := make([]MetricsSnapshot, 0, len(mh.snapshots))
 	for _, s := range mh.snapshots {
-		ts, err := time.Parse(time.RFC3339, s.Timestamp)
-		if err == nil && ts.After(cutoff) {
+		ts, parseErr := time.Parse(time.RFC3339, s.Timestamp)
+		if parseErr != nil {
+			slog.Warn("[MetricsHistory] snapshot has unparseable timestamp, keeping data",
+				"timestamp", s.Timestamp, "error", parseErr)
+			trimmed = append(trimmed, s)
+			continue
+		}
+		if ts.After(cutoff) {
 			trimmed = append(trimmed, s)
 		}
 	}
@@ -260,8 +274,10 @@ func (mh *MetricsHistory) captureSnapshot() error {
 	mh.snapshots = trimmed
 	mh.mu.Unlock()
 
-	// Persist to disk
-	go mh.saveToDisk()
+	// Persist to disk synchronously — concurrent goroutines caused JSON
+	// corruption via interleaved writes (#7017). The diskMu serializes
+	// saves without holding mh.mu during the actual file I/O.
+	mh.saveToDisk()
 
 	slog.Info("[MetricsHistory] captured snapshot", "clusters", len(snapshot.Clusters), "podIssues", len(snapshot.PodIssues), "gpuNodes", len(snapshot.GPUNodes))
 
@@ -269,7 +285,12 @@ func (mh *MetricsHistory) captureSnapshot() error {
 }
 
 // saveToDisk persists history to disk and tracks the last error for health checks (#5553).
+// Writes are serialized by diskMu and use atomic file swap (write-to-temp then
+// os.Rename) to prevent corruption from incomplete writes (#7017).
 func (mh *MetricsHistory) saveToDisk() {
+	mh.diskMu.Lock()
+	defer mh.diskMu.Unlock()
+
 	mh.mu.RLock()
 	data, err := json.Marshal(mh.snapshots)
 	mh.mu.RUnlock()
@@ -292,8 +313,39 @@ func (mh *MetricsHistory) saveToDisk() {
 	}
 
 	filePath := filepath.Join(mh.dataDir, metricsHistoryFile)
-	if err := os.WriteFile(filePath, data, metricsFileMode); err != nil {
-		slog.Error("[MetricsHistory] error writing history file", "error", err)
+
+	// Atomic write: write to a temp file, then rename to avoid partial writes.
+	tmpFile, err := os.CreateTemp(mh.dataDir, "metrics_history_*.tmp")
+	if err != nil {
+		slog.Error("[MetricsHistory] error creating temp file", "error", err)
+		mh.mu.Lock()
+		mh.lastPersistError = err
+		mh.mu.Unlock()
+		return
+	}
+	tmpPath := tmpFile.Name()
+
+	if _, err := tmpFile.Write(data); err != nil {
+		tmpFile.Close()
+		os.Remove(tmpPath)
+		slog.Error("[MetricsHistory] error writing temp file", "error", err)
+		mh.mu.Lock()
+		mh.lastPersistError = err
+		mh.mu.Unlock()
+		return
+	}
+	if err := tmpFile.Close(); err != nil {
+		os.Remove(tmpPath)
+		slog.Error("[MetricsHistory] error closing temp file", "error", err)
+		mh.mu.Lock()
+		mh.lastPersistError = err
+		mh.mu.Unlock()
+		return
+	}
+
+	if err := os.Rename(tmpPath, filePath); err != nil {
+		os.Remove(tmpPath)
+		slog.Error("[MetricsHistory] error renaming temp file to history file", "error", err)
 		mh.mu.Lock()
 		mh.lastPersistError = err
 		mh.mu.Unlock()
@@ -330,12 +382,19 @@ func (mh *MetricsHistory) loadFromDisk() {
 		return
 	}
 
-	// Filter out old snapshots
+	// Filter out old snapshots; keep snapshots with unparseable timestamps
+	// and log a warning so operators can investigate (#7018).
 	cutoff := time.Now().Add(-time.Duration(snapshotRetentionHrs) * time.Hour)
 	filtered := make([]MetricsSnapshot, 0)
 	for _, s := range snapshots {
-		ts, err := time.Parse(time.RFC3339, s.Timestamp)
-		if err == nil && ts.After(cutoff) {
+		ts, parseErr := time.Parse(time.RFC3339, s.Timestamp)
+		if parseErr != nil {
+			slog.Warn("[MetricsHistory] loaded snapshot has unparseable timestamp, keeping data",
+				"timestamp", s.Timestamp, "error", parseErr)
+			filtered = append(filtered, s)
+			continue
+		}
+		if ts.After(cutoff) {
 			filtered = append(filtered, s)
 		}
 	}

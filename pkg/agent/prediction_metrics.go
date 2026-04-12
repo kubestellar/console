@@ -115,27 +115,56 @@ func sanitizeLabel(value string, allowed map[string]bool) string {
 	return "other"
 }
 
-// SetActivePredictions updates the gauge of active predictions
+// SetActivePredictions updates the gauge of active predictions.
+// Instead of Reset() + repopulate (which creates a window where all values
+// are zero, causing false alerts on Prometheus scrape), we compute the new
+// label set, delete stale labels, and set updated values atomically (#7025).
 func SetActivePredictions(predictions []AIPrediction) {
-	// Reset all gauges
-	predictionsActive.Reset()
-
 	// Count by type, severity, source — sanitize labels to prevent unbounded cardinality
-	counts := make(map[string]float64)
+	newCounts := make(map[string]float64)
 	for _, p := range predictions {
 		category := sanitizeLabel(p.Category, allowedCategories)
 		severity := sanitizeLabel(p.Severity, allowedSeverities)
 		key := category + "|" + severity + "|ai"
-		counts[key]++
+		newCounts[key]++
 	}
 
-	for key, count := range counts {
+	// Set or update values for current predictions first (before deleting stale).
+	// This ensures a scrape never sees all-zero.
+	for key, count := range newCounts {
 		parts := splitKey(key)
 		if len(parts) == 3 {
 			predictionsActive.WithLabelValues(parts[0], parts[1], parts[2]).Set(count)
 		}
 	}
+
+	// Delete label sets that are no longer present.
+	// Track which label sets existed previously so we can remove stale ones.
+	activePredictionsMu.Lock()
+	previousKeys := activePredictionsKeys
+	activePredictionsKeys = make(map[string]bool, len(newCounts))
+	for key := range newCounts {
+		activePredictionsKeys[key] = true
+	}
+	activePredictionsMu.Unlock()
+
+	for key := range previousKeys {
+		if _, exists := newCounts[key]; !exists {
+			// Remove stale label set
+			parts := splitKey(key)
+			if len(parts) == 3 {
+				predictionsActive.DeleteLabelValues(parts[0], parts[1], parts[2])
+			}
+		}
+	}
 }
+
+// activePredictionsMu protects activePredictionsKeys.
+var activePredictionsMu sync.Mutex
+
+// activePredictionsKeys tracks the label-set keys from the last SetActivePredictions
+// call so stale series can be deleted without a full Reset (#7025).
+var activePredictionsKeys = make(map[string]bool)
 
 // RecordFeedback records prediction feedback in metrics
 func RecordFeedback(feedback, provider string) {
