@@ -19,12 +19,12 @@ interface CardRequestDialogProps {
 export function CardRequestDialog({ missingProjects, onClose }: CardRequestDialogProps) {
   const { t } = useTranslation()
   const { showToast } = useToast()
-  const [submittingProject, setSubmittingProject] = useState<string | null>(null)
+  const [submittingProjects, setSubmittingProjects] = useState<Set<string>>(new Set())
   const [submitted, setSubmitted] = useState<Set<string>>(new Set())
   const [failedProjects, setFailedProjects] = useState<Set<string>>(new Set())
 
   const handleRequest = useCallback(async (project: string) => {
-    setSubmittingProject(project)
+    setSubmittingProjects(prev => new Set(prev).add(project))
     setFailedProjects(prev => { const next = new Set(prev); next.delete(project); return next })
     try {
       await api.post('/api/feedback/requests', {
@@ -39,7 +39,7 @@ export function CardRequestDialog({ missingProjects, onClose }: CardRequestDialo
       setFailedProjects(prev => new Set(prev).add(project))
       showToast('Could not submit request — try opening a GitHub issue directly', 'warning')
     } finally {
-      setSubmittingProject(null)
+      setSubmittingProjects(prev => { const next = new Set(prev); next.delete(project); return next })
     }
   }, [showToast])
 
@@ -71,7 +71,7 @@ export function CardRequestDialog({ missingProjects, onClose }: CardRequestDialo
             ) : failedProjects.has(project) ? (
               <button
                 onClick={() => handleRequest(project)}
-                disabled={submittingProject === project}
+                disabled={submittingProjects.has(project)}
                 className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-red-400 hover:bg-red-500/10 rounded transition-colors"
               >
                 <Send className="w-2.5 h-2.5" />
@@ -80,15 +80,15 @@ export function CardRequestDialog({ missingProjects, onClose }: CardRequestDialo
             ) : (
               <button
                 onClick={() => handleRequest(project)}
-                disabled={submittingProject === project}
+                disabled={submittingProjects.has(project)}
                 className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-primary hover:bg-primary/10 rounded transition-colors"
               >
-                {submittingProject === project ? (
+                {submittingProjects.has(project) ? (
                   <Loader2 className="w-2.5 h-2.5 animate-spin" />
                 ) : (
                   <Send className="w-2.5 h-2.5" />
                 )}
-                {submittingProject === project ? t('orbit.cardRequestSending') : t('orbit.cardRequestAction')}
+                {submittingProjects.has(project) ? t('orbit.cardRequestSending') : t('orbit.cardRequestAction')}
               </button>
             )}
           </div>

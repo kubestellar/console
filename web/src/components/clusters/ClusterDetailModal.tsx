@@ -350,7 +350,7 @@ After I approve, help me execute the repairs step by step.`,
           </button>
         </div>
 
-        {/* Error banner when cluster health fetch fails (#6772) */}
+        {/* Error banner when cluster health fetch fails (issue 6772) */}
         {healthError && (
           <div className="mb-4 p-3 rounded-lg bg-red-500/20 border border-red-500/50 flex items-center gap-2 text-sm text-red-400">
             <AlertTriangle className="w-4 h-4 flex-shrink-0" />

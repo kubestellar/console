@@ -67,12 +67,12 @@ const COMPONENTS_DIR = path.resolve(
 //   301 → 302: #6308 MissionBrowser close button on right issue ref
 //   302 → 303: #6309 upgrade confirm dialog issue ref
 //   303 → 304: #6366 ratchet drift — pre-existing unaccounted-for raw hex from before 303 bump, not introduced by #6365
-//   304 → 306: #6774 loading/error states added error banner hex colors (red/amber) in FlightPlanBlueprint + ClusterComparisonPage
+//   304 → 306: issue 6774 loading/error states — reverted to 304 in issue 6778 (false positives from issue-ref comments rewritten to "issue NNNN" form)
 //
 // When you bump this number, append a one-line entry above so future
 // bumps stay grep-able and reviewers can tell at a glance whether a
 // change is a real new violation or just a comment-level reference.
-const EXPECTED_RAW_HEX_COUNT = 306
+const EXPECTED_RAW_HEX_COUNT = 304
 const EXPECTED_RAW_RGBA_COUNT = 104
 const EXPECTED_ARBITRARY_TW_COLOR_COUNT = 22
 const EXPECTED_INLINE_STYLE_COLOR_COUNT = 213

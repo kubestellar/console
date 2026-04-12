@@ -873,7 +873,7 @@ export function FlightPlanBlueprint({
         </div>
       </div>
 
-      {/* Error banner when cluster data fails to load (#6772) */}
+      {/* Error banner when cluster data fails to load (issue 6772) */}
       {/* TODO: error banner will activate once useClusters() propagates fetch errors */}
       {clustersError && (
         <div className="mx-6 mt-2 p-2 rounded-lg bg-red-500/20 border border-red-500/50 flex items-center gap-2 text-xs text-red-400">
