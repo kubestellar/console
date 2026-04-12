@@ -15,6 +15,12 @@ import (
 	"github.com/kubestellar/console/pkg/store"
 )
 
+// MaxDashboardsPerUser is the hard limit on the number of dashboards a single
+// user may create. Prevents a runaway script from exhausting database storage
+// by creating unlimited dashboards, each of which may hold up to
+// MaxCardsPerDashboard cards (#7010).
+const MaxDashboardsPerUser = 50
+
 // DashboardExport is the portable format for sharing dashboards
 type DashboardExport struct {
 	Format       string             `json:"format"`
@@ -110,6 +116,16 @@ func (h *DashboardHandler) CreateDashboard(c *fiber.Ctx) error {
 
 	if input.Name == "" {
 		input.Name = "New Dashboard"
+	}
+
+	// Enforce per-user dashboard limit (#7010).
+	count, err := h.store.CountUserDashboards(userID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "Failed to check dashboard count")
+	}
+	if count >= MaxDashboardsPerUser {
+		return fiber.NewError(fiber.StatusTooManyRequests,
+			fmt.Sprintf("Dashboard limit reached (%d), maximum is %d per user", count, MaxDashboardsPerUser))
 	}
 
 	dashboard := &models.Dashboard{
@@ -272,6 +288,17 @@ func (h *DashboardHandler) ImportDashboard(c *fiber.Ctx) error {
 	}
 	if err := h.store.CreateDashboard(dashboard); err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to create dashboard")
+	}
+
+	// Validate card types before persisting any cards (#7009). Reject
+	// unknown types upfront so we never need a partial rollback.
+	for i, ce := range input.Cards {
+		if !isValidCardType(models.CardType(ce.CardType)) {
+			// Clean up the dashboard we just created before returning.
+			_ = h.store.DeleteDashboard(dashboard.ID)
+			return fiber.NewError(fiber.StatusBadRequest,
+				fmt.Sprintf("card[%d]: unknown card_type %q", i, ce.CardType))
+		}
 	}
 
 	for _, ce := range input.Cards {

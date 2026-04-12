@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"strings"
 
@@ -11,6 +12,21 @@ import (
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/store"
+)
+
+const (
+	// maxOnboardingResponses is the maximum number of responses accepted in a
+	// single SaveResponses call. Prevents a caller from posting unbounded data
+	// that would exhaust connection pools with individual writes (#7005).
+	maxOnboardingResponses = 50
+
+	// maxQuestionKeyLength is the maximum length of a QuestionKey field in an
+	// onboarding response (#7005).
+	maxQuestionKeyLength = 128
+
+	// maxAnswerLength is the maximum length of an Answer field in an onboarding
+	// response (#7005).
+	maxAnswerLength = 1024
 )
 
 // OnboardingHandler handles onboarding operations
@@ -38,6 +54,28 @@ func (h *OnboardingHandler) SaveResponses(c *fiber.Ctx) error {
 	}
 	if err := c.BodyParser(&responses); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
+	}
+
+	// Cap the number of responses to prevent unbounded writes (#7005).
+	if len(responses) > maxOnboardingResponses {
+		return fiber.NewError(fiber.StatusBadRequest,
+			fmt.Sprintf("Too many responses (%d), maximum is %d", len(responses), maxOnboardingResponses))
+	}
+
+	// Validate field lengths before persisting anything (#7005).
+	for i, r := range responses {
+		if r.QuestionKey == "" {
+			return fiber.NewError(fiber.StatusBadRequest,
+				fmt.Sprintf("response[%d]: question_key is required", i))
+		}
+		if len(r.QuestionKey) > maxQuestionKeyLength {
+			return fiber.NewError(fiber.StatusBadRequest,
+				fmt.Sprintf("response[%d]: question_key exceeds %d characters", i, maxQuestionKeyLength))
+		}
+		if len(r.Answer) > maxAnswerLength {
+			return fiber.NewError(fiber.StatusBadRequest,
+				fmt.Sprintf("response[%d]: answer exceeds %d characters", i, maxAnswerLength))
+		}
 	}
 
 	for _, r := range responses {

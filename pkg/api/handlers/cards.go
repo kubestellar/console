@@ -281,6 +281,13 @@ func (h *CardHandler) DeleteCard(c *fiber.Ctx) error {
 
 // RecordFocus records a card focus event
 func (h *CardHandler) RecordFocus(c *fiber.Ctx) error {
+	// Role check: RecordFocus writes to card_focus and the event log, so
+	// it is a mutating operation that must be restricted to editors/admins,
+	// consistent with CreateCard, UpdateCard, DeleteCard, MoveCard (#7011).
+	if err := h.requireEditorOrAdmin(c); err != nil {
+		return err
+	}
+
 	userID := middleware.GetUserID(c)
 	cardID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
