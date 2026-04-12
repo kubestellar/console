@@ -941,8 +941,8 @@ func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
 		return c.Status(502).JSON(fiber.Map{"error": "failed to decode fork response"})
 	}
 	forkFullName, _ := forkData["full_name"].(string)
-	if forkFullName == "" {
-		return c.Status(502).JSON(fiber.Map{"error": "fork response missing full_name"})
+	if forkFullName == "" || !strings.Contains(forkFullName, "/") {
+		return c.Status(502).JSON(fiber.Map{"error": "fork response missing or malformed full_name"})
 	}
 
 	// Detect the target repo's default branch (e.g. "main", "master", or custom).
@@ -955,6 +955,30 @@ func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
 		}
 	} else if db, ok := forkData["default_branch"].(string); ok && db != "" {
 		defaultBranch = db
+	}
+
+	// #6795 — If neither parent nor fork carried default_branch, query the
+	// upstream repo directly so we don't assume "main" for repos that use
+	// "master", "trunk", etc.
+	if defaultBranch == "main" {
+		upstreamURL := fmt.Sprintf("%s/repos/%s", h.githubAPIURL, req.Repo)
+		upstreamReq, err := http.NewRequest("GET", upstreamURL, nil)
+		if err == nil {
+			upstreamReq.Header.Set("Authorization", "Bearer "+token)
+			upstreamReq.Header.Set("Accept", "application/vnd.github.v3+json")
+			upstreamResp, err := h.httpClient.Do(upstreamReq)
+			if err == nil {
+				defer upstreamResp.Body.Close()
+				if upstreamResp.StatusCode == http.StatusOK {
+					var repoData map[string]interface{}
+					if json.NewDecoder(upstreamResp.Body).Decode(&repoData) == nil {
+						if db, ok := repoData["default_branch"].(string); ok && db != "" {
+							defaultBranch = db
+						}
+					}
+				}
+			}
+		}
 	}
 
 	// Step 2: Get HEAD SHA from fork's default branch, then create new branch ref.
