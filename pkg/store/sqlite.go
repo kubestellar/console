@@ -450,6 +450,12 @@ func (s *SQLiteStore) migrate() error {
 		expires_at DATETIME NOT NULL
 	);
 	CREATE INDEX IF NOT EXISTS idx_oauth_states_expires_at ON oauth_states(expires_at);
+
+	CREATE TABLE IF NOT EXISTS cluster_groups (
+		name TEXT PRIMARY KEY,
+		data BLOB NOT NULL,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	);
 	`
 	_, err := s.db.Exec(schema)
 	if err != nil {
@@ -741,6 +747,14 @@ func (s *SQLiteStore) SetUserOnboarded(userID uuid.UUID) error {
 func (s *SQLiteStore) GetDashboard(id uuid.UUID) (*models.Dashboard, error) {
 	row := s.db.QueryRow(`SELECT id, user_id, name, layout, is_default, created_at, updated_at FROM dashboards WHERE id = ?`, id.String())
 	return s.scanDashboard(row)
+}
+
+// CountUserDashboards returns the total number of dashboards owned by a user.
+// Used to enforce the per-user dashboard limit (#7010).
+func (s *SQLiteStore) CountUserDashboards(userID uuid.UUID) (int, error) {
+	var count int
+	err := s.db.QueryRow(`SELECT COUNT(*) FROM dashboards WHERE user_id = ?`, userID.String()).Scan(&count)
+	return count, err
 }
 
 // GetUserDashboards returns a page of a user's dashboards, default dashboard
@@ -2844,4 +2858,40 @@ func (s *SQLiteStore) CleanupExpiredOAuthStates() (int64, error) {
 		return 0, err
 	}
 	return result.RowsAffected()
+}
+
+// SaveClusterGroup upserts a cluster group definition (#7013).
+func (s *SQLiteStore) SaveClusterGroup(name string, data []byte) error {
+	_, err := s.db.Exec(
+		`INSERT INTO cluster_groups (name, data, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)
+		 ON CONFLICT(name) DO UPDATE SET data = excluded.data, updated_at = CURRENT_TIMESTAMP`,
+		name, data,
+	)
+	return err
+}
+
+// DeleteClusterGroup removes a cluster group definition (#7013).
+func (s *SQLiteStore) DeleteClusterGroup(name string) error {
+	_, err := s.db.Exec(`DELETE FROM cluster_groups WHERE name = ?`, name)
+	return err
+}
+
+// ListClusterGroups returns all persisted cluster group definitions (#7013).
+func (s *SQLiteStore) ListClusterGroups() (map[string][]byte, error) {
+	rows, err := s.db.Query(`SELECT name, data FROM cluster_groups`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	groups := make(map[string][]byte)
+	for rows.Next() {
+		var name string
+		var data []byte
+		if err := rows.Scan(&name, &data); err != nil {
+			return nil, err
+		}
+		groups[name] = data
+	}
+	return groups, rows.Err()
 }

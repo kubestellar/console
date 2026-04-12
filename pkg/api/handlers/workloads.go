@@ -18,6 +18,7 @@ import (
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/store"
+	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -370,6 +371,55 @@ var (
 	clusterGroupsMu sync.RWMutex
 )
 
+// LoadPersistedClusterGroups reloads cluster group definitions from the store
+// into the in-memory map on startup so they survive server restarts (#7013).
+func (h *WorkloadHandlers) LoadPersistedClusterGroups() {
+	if h.store == nil {
+		return
+	}
+	persisted, err := h.store.ListClusterGroups()
+	if err != nil {
+		slog.Error("[Workloads] failed to load persisted cluster groups", "error", err)
+		return
+	}
+	clusterGroupsMu.Lock()
+	defer clusterGroupsMu.Unlock()
+	for name, data := range persisted {
+		var g ClusterGroup
+		if err := json.Unmarshal(data, &g); err != nil {
+			slog.Error("[Workloads] failed to unmarshal persisted cluster group", "name", name, "error", err)
+			continue
+		}
+		clusterGroups[name] = g
+	}
+	slog.Info("[Workloads] loaded persisted cluster groups", "count", len(persisted))
+}
+
+// persistClusterGroup saves a cluster group to the store for durability (#7013).
+func (h *WorkloadHandlers) persistClusterGroup(name string, g ClusterGroup) {
+	if h.store == nil {
+		return
+	}
+	data, err := json.Marshal(g)
+	if err != nil {
+		slog.Error("[Workloads] failed to marshal cluster group for persistence", "name", name, "error", err)
+		return
+	}
+	if err := h.store.SaveClusterGroup(name, data); err != nil {
+		slog.Error("[Workloads] failed to persist cluster group", "name", name, "error", err)
+	}
+}
+
+// deletePersistedClusterGroup removes a cluster group from the store (#7013).
+func (h *WorkloadHandlers) deletePersistedClusterGroup(name string) {
+	if h.store == nil {
+		return
+	}
+	if err := h.store.DeleteClusterGroup(name); err != nil {
+		slog.Error("[Workloads] failed to delete persisted cluster group", "name", name, "error", err)
+	}
+}
+
 // ListClusterGroups returns all cluster groups
 // GET /api/cluster-groups
 func (h *WorkloadHandlers) ListClusterGroups(c *fiber.Ctx) error {
@@ -438,6 +488,9 @@ func (h *WorkloadHandlers) CreateClusterGroup(c *fiber.Ctx) error {
 	clusterGroups[group.Name] = group
 	clusterGroupsMu.Unlock()
 
+	// Persist to store so the group survives server restarts (#7013).
+	h.persistClusterGroup(group.Name, group)
+
 	// Label cluster nodes with group membership
 	if h.k8sClient != nil {
 		ctx, cancel := context.WithTimeout(c.Context(), workloadWriteTimeout)
@@ -488,6 +541,9 @@ func (h *WorkloadHandlers) UpdateClusterGroup(c *fiber.Ctx) error {
 	clusterGroups[name] = group
 	clusterGroupsMu.Unlock()
 
+	// Persist to store so the group survives server restarts (#7013).
+	h.persistClusterGroup(name, group)
+
 	// Remove labels from clusters no longer in the group
 	if existed && h.k8sClient != nil {
 		ctx, cancel := context.WithTimeout(c.Context(), workloadWriteTimeout)
@@ -521,7 +577,9 @@ func (h *WorkloadHandlers) UpdateClusterGroup(c *fiber.Ctx) error {
 			}
 		}
 		if len(labelErrors) > 0 {
-			return c.JSON(fiber.Map{
+			// Return 207 Multi-Status for partial success, consistent with
+			// CreateClusterGroup (#7006).
+			return c.Status(207).JSON(fiber.Map{
 				"group":    group,
 				"warnings": labelErrors,
 			})
@@ -549,6 +607,9 @@ func (h *WorkloadHandlers) DeleteClusterGroup(c *fiber.Ctx) error {
 	delete(clusterGroups, name)
 	clusterGroupsMu.Unlock()
 
+	// Remove from persistent store (#7013).
+	h.deletePersistedClusterGroup(name)
+
 	// Remove labels from all clusters in the deleted group
 	if existed && h.k8sClient != nil {
 		ctx, cancel := context.WithTimeout(c.Context(), workloadWriteTimeout)
@@ -562,7 +623,9 @@ func (h *WorkloadHandlers) DeleteClusterGroup(c *fiber.Ctx) error {
 			}
 		}
 		if len(labelErrors) > 0 {
-			return c.JSON(fiber.Map{
+			// Return 207 Multi-Status for partial success, consistent with
+			// CreateClusterGroup (#7007).
+			return c.Status(207).JSON(fiber.Map{
 				"message":  "Cluster group deleted with warnings",
 				"name":     name,
 				"warnings": labelErrors,
@@ -593,6 +656,11 @@ func (h *WorkloadHandlers) SyncClusterGroups(c *fiber.Ctx) error {
 	}
 
 	clusterGroupsMu.Lock()
+	// Capture old names so we can remove deleted groups from the store.
+	oldNames := make(map[string]bool, len(clusterGroups))
+	for n := range clusterGroups {
+		oldNames[n] = true
+	}
 	clusterGroups = make(map[string]ClusterGroup)
 	for _, g := range groups {
 		if g.Name == allHealthyClustersGroupName {
@@ -600,9 +668,25 @@ func (h *WorkloadHandlers) SyncClusterGroups(c *fiber.Ctx) error {
 		}
 		clusterGroups[g.Name] = g
 	}
+	// Capture count inside the lock to avoid a data race (#7008).
+	syncedCount := len(clusterGroups)
+	// Snapshot for persistence outside the lock.
+	toSave := make(map[string]ClusterGroup, syncedCount)
+	for n, g := range clusterGroups {
+		toSave[n] = g
+	}
 	clusterGroupsMu.Unlock()
 
-	return c.JSON(fiber.Map{"synced": len(clusterGroups)})
+	// Persist the new set and remove stale entries (#7013).
+	for n, g := range toSave {
+		h.persistClusterGroup(n, g)
+		delete(oldNames, n) // still exists
+	}
+	for n := range oldNames {
+		h.deletePersistedClusterGroup(n)
+	}
+
+	return c.JSON(fiber.Map{"synced": syncedCount})
 }
 
 // EvaluateClusterQuery evaluates a dynamic group query against current cluster state
@@ -647,16 +731,28 @@ func (h *WorkloadHandlers) EvaluateClusterQuery(c *fiber.Ctx) error {
 		}
 	}
 
-	// Fetch nodes only for deduplicated clusters
+	// Fetch nodes in parallel using errgroup instead of sequentially (#7012).
 	nodesByCluster := make(map[string][]k8s.NodeInfo)
 	needNodes := query.LabelSelector != "" || hasGPUFilter(query.Filters)
 	if needNodes {
+		var nodesMu sync.Mutex
+		g, gctx := errgroup.WithContext(ctx)
 		for _, cl := range dedupClusters {
-			nodes, err := h.k8sClient.GetNodes(ctx, cl.Name)
-			if err == nil {
-				nodesByCluster[cl.Name] = nodes
-			}
+			clName := cl.Name
+			g.Go(func() error {
+				nodes, err := h.k8sClient.GetNodes(gctx, clName)
+				if err != nil {
+					// Non-fatal: skip clusters that fail, matching original behavior.
+					slog.Warn("[Workloads] failed to get nodes for cluster", "cluster", clName, "error", err)
+					return nil
+				}
+				nodesMu.Lock()
+				nodesByCluster[clName] = nodes
+				nodesMu.Unlock()
+				return nil
+			})
 		}
+		_ = g.Wait() // errors are non-fatal (logged above)
 	}
 
 	matching := make([]string, 0)

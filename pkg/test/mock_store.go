@@ -346,4 +346,27 @@ func (m *MockStore) ConsumeOAuthState(ctx context.Context, state string) (bool, 
 
 func (m *MockStore) CleanupExpiredOAuthStates() (int64, error) { return 0, nil }
 
+func (m *MockStore) CountUserDashboards(userID uuid.UUID) (int, error) {
+	args := m.Called(userID)
+	return args.Int(0), args.Error(1)
+}
+
+func (m *MockStore) SaveClusterGroup(name string, data []byte) error {
+	args := m.Called(name, data)
+	return args.Error(0)
+}
+
+func (m *MockStore) DeleteClusterGroup(name string) error {
+	args := m.Called(name)
+	return args.Error(0)
+}
+
+func (m *MockStore) ListClusterGroups() (map[string][]byte, error) {
+	args := m.Called()
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(map[string][]byte), args.Error(1)
+}
+
 func (m *MockStore) Close() error { return nil }

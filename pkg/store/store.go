@@ -68,6 +68,9 @@ type Store interface {
 
 	// Dashboards
 	GetDashboard(id uuid.UUID) (*models.Dashboard, error)
+	// CountUserDashboards returns the total number of dashboards owned by a
+	// user. Used to enforce the per-user dashboard cap (#7010).
+	CountUserDashboards(userID uuid.UUID) (int, error)
 	// GetUserDashboards returns a page of a user's dashboards.
 	// #6596: limit/offset are required. Pass 0 for limit to use the default.
 	GetUserDashboards(userID uuid.UUID, limit, offset int) ([]models.Dashboard, error)
@@ -235,6 +238,13 @@ type Store interface {
 	// the BEGIN IMMEDIATE transaction if the browser disconnects.
 	ConsumeOAuthState(ctx context.Context, state string) (bool, error)
 	CleanupExpiredOAuthStates() (int64, error)
+
+	// Cluster Groups — persistent storage for cluster group definitions so they
+	// survive server restarts (#7013). The in-memory map is the runtime cache;
+	// these methods keep the SQLite table in sync.
+	SaveClusterGroup(name string, data []byte) error
+	DeleteClusterGroup(name string) error
+	ListClusterGroups() (map[string][]byte, error)
 
 	// Lifecycle
 	Close() error

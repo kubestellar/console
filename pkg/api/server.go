@@ -942,6 +942,8 @@ func (s *Server) setupRoutes() {
 
 	// Workload routes
 	workloadHandlers := handlers.NewWorkloadHandlers(s.k8sClient, s.hub, s.store)
+	// Reload persisted cluster groups on startup (#7013).
+	workloadHandlers.LoadPersistedClusterGroups()
 	api.Get("/workloads", workloadHandlers.ListWorkloads)
 	api.Get("/workloads/capabilities", workloadHandlers.GetClusterCapabilities)
 	api.Get("/workloads/policies", workloadHandlers.ListBindingPolicies)
