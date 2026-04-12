@@ -70,11 +70,12 @@ const COMPONENTS_DIR = path.resolve(
 //   304 → 306: issue 6774 loading/error states — reverted to 304 in issue 6778 (false positives from issue-ref comments rewritten to "issue NNNN" form)
 //   304 → 307: PR 6854 introduced 3 new hex refs (not real color violations)
 //   307 → 309: issue 6882 ratchet drift — pre-existing false positives from issue-ref comments
+//   309 → 313: PR 6977 introduced 4 new hex refs (terminal theme colors, widget export)
 //
 // When you bump this number, append a one-line entry above so future
 // bumps stay grep-able and reviewers can tell at a glance whether a
 // change is a real new violation or just a comment-level reference.
-const EXPECTED_RAW_HEX_COUNT = 309
+const EXPECTED_RAW_HEX_COUNT = 313
 const EXPECTED_RAW_RGBA_COUNT = 104
 const EXPECTED_ARBITRARY_TW_COLOR_COUNT = 22
 const EXPECTED_INLINE_STYLE_COLOR_COUNT = 213
