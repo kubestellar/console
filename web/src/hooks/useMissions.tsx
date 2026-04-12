@@ -299,7 +299,7 @@ function loadMissions(): Mission[] {
           ...m,
           createdAt: new Date(m.createdAt),
           updatedAt: new Date(m.updatedAt),
-          messages: m.messages.map(msg => ({
+          messages: (m.messages ?? []).map(msg => ({
             ...msg,
             timestamp: new Date(msg.timestamp)
           }))
@@ -434,7 +434,9 @@ function loadUnreadMissionIds(): Set<string> {
   try {
     const stored = localStorage.getItem(UNREAD_MISSIONS_KEY)
     if (stored) {
-      return new Set(JSON.parse(stored))
+      const parsed = JSON.parse(stored)
+      if (!Array.isArray(parsed)) return new Set()
+      return new Set(parsed)
     }
   } catch (e) {
     console.error('Failed to load unread missions from localStorage:', e)
@@ -1368,7 +1370,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
       const payload = message.payload as AgentsListPayload
       // Sanitize agent metadata — strip interactive prompt artifacts that leak
       // from terminal-based agents (e.g. copilot-cli) into description fields (#5482).
-      const sanitizedAgents = payload.agents.map(agent => ({
+      const sanitizedAgents = (payload.agents ?? []).map(agent => ({
         ...agent,
         description: stripInteractiveArtifacts(agent.description),
         displayName: stripInteractiveArtifacts(agent.displayName),
@@ -1379,17 +1381,18 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
       // If persisted is 'none' but an agent IS available, auto-select it
       // so AI mode is on by default when the agent is present.
       const persisted = localStorage.getItem(SELECTED_AGENT_KEY)
-      const hasAvailableAgent = payload.agents.some(a => a.available)
-      const persistedAvailable = persisted && persisted !== 'none' && payload.agents.some(a => a.name === persisted && a.available)
+      const agents = payload.agents ?? []
+      const hasAvailableAgent = agents.some(a => a.available)
+      const persistedAvailable = persisted && persisted !== 'none' && agents.some(a => a.name === persisted && a.available)
 
       // When auto-selecting, prefer agents that execute commands directly over
       // agents that only suggest commands (e.g. copilot-cli). Interactive/suggest-only
       // agents produce terminal prompts instead of executing missions (#3609, #5481).
       const INTERACTIVE_AGENTS = new Set(['copilot-cli', 'gh-copilot'])
       const bestAvailable = hasAvailableAgent
-        ? (payload.agents.find(a => a.available && ((a.capabilities ?? 0) & AgentCapabilityToolExec) !== 0 && !INTERACTIVE_AGENTS.has(a.name))?.name
-          || payload.agents.find(a => a.available && !INTERACTIVE_AGENTS.has(a.name))?.name
-          || payload.agents.find(a => a.available)?.name
+        ? (agents.find(a => a.available && ((a.capabilities ?? 0) & AgentCapabilityToolExec) !== 0 && !INTERACTIVE_AGENTS.has(a.name))?.name
+          || agents.find(a => a.available && !INTERACTIVE_AGENTS.has(a.name))?.name
+          || agents.find(a => a.available)?.name
           || null)
         : null
       // Filter the backend's defaultAgent if it is interactive — fall through to

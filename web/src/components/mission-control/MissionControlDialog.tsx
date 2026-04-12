@@ -163,7 +163,7 @@ export function MissionControlDialog({ open, onClose }: MissionControlDialogProp
   const canAdvance =
     (state.phase === 'define' && state.projects.length > 0 && !state.aiStreaming) ||
     (state.phase === 'assign' && (
-      state.assignments.some((a) => a.projectNames.length > 0) ||
+      state.assignments.some((a) => (a.projectNames ?? []).length > 0) ||
       state.targetClusters.length > 0
     )) ||
     state.phase === 'blueprint'

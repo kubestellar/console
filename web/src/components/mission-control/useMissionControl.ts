@@ -626,7 +626,7 @@ export function useMissionControl() {
   // when streaming appends to it (messages.length stays the same during streaming)
   const latestAssistantContent = useMemo(() => {
     if (!planningMission) return ''
-    const msgs = planningMission.messages.filter((m) => m.role === 'assistant')
+    const msgs = (planningMission.messages ?? []).filter((m) => m.role === 'assistant')
     return msgs[msgs.length - 1]?.content ?? ''
   }, [planningMission?.messages])
 
@@ -651,7 +651,7 @@ export function useMissionControl() {
     // pauses for STREAM_JSON_DEBOUNCE_MS, so we effectively skip parsing
     // mid-burst. The old comment referenced a non-existent length check.
     if (!debouncedAssistantContent) return
-    const assistantMsgs = planningMission.messages.filter((m) => m.role === 'assistant')
+    const assistantMsgs = (planningMission.messages ?? []).filter((m) => m.role === 'assistant')
     const latest = assistantMsgs[assistantMsgs.length - 1]
     if (!latest) return
 
