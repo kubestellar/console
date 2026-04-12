@@ -1003,7 +1003,11 @@ func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
 	}
 	defer branchResp.Body.Close()
 	if branchResp.StatusCode < 200 || branchResp.StatusCode >= 300 {
-		// 422 (Unprocessable Entity) means the branch already exists, which is acceptable
+		// 422 (Unprocessable Entity) means the branch already exists, which is acceptable.
+		// #6835 — Eagerly drain the response body so the underlying HTTP/1.1
+		// connection is returned to the pool immediately instead of waiting for
+		// the deferred Close at function return (which may be 3+ HTTP calls later).
+		io.Copy(io.Discard, branchResp.Body) //nolint:errcheck // best-effort drain
 		if branchResp.StatusCode != http.StatusUnprocessableEntity {
 			return c.Status(502).JSON(fiber.Map{"error": fmt.Sprintf("GitHub branch creation failed with status %d", branchResp.StatusCode)})
 		}
