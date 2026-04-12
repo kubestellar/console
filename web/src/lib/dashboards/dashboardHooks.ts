@@ -99,6 +99,8 @@ export interface UseDashboardCardsResult {
   configureCard: (id: string, config: Record<string, unknown>) => void
   /** Update card width */
   updateCardWidth: (id: string, width: number) => void
+  /** Update card height (#6463) */
+  updateCardHeight: (id: string, height: number) => void
   /** Reset to default cards */
   reset: () => void
   /** Whether layout has been customized from defaults */
@@ -277,6 +279,15 @@ export function useDashboardCards(
     ))
   }
 
+  const updateCardHeight = (id: string, height: number) => {
+    snapshot(cardsRef.current)
+    setCards(prev => prev.map(c =>
+      c.id === id
+        ? { ...c, position: { ...(c.position || { w: 4, h: 2 }), h: height } }
+        : c
+    ))
+  }
+
   const reset = () => {
     snapshot(cardsRef.current)
     setCards(defaultCardInstances)
@@ -306,6 +317,7 @@ export function useDashboardCards(
     removeCard,
     configureCard,
     updateCardWidth,
+    updateCardHeight,
     reset,
     isCustomized,
     isSyncing,

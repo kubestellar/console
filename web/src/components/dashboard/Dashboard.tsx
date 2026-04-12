@@ -814,6 +814,32 @@ export function Dashboard() {
     }
   }
 
+  const handleHeightChange = async (cardId: string, newHeight: number) => {
+    snapshot(localCards)
+    setLocalCards((prev) =>
+      prev.map((c) =>
+        c.id === cardId
+          ? { ...c, position: { ...(c.position || { x: 0, y: 0, w: 4, h: 2 }), h: newHeight } }
+          : c
+      )
+    )
+
+    // Persist height change to backend
+    if (dashboard?.id && !cardId.startsWith('demo-') && !cardId.startsWith('new-') && !cardId.startsWith('rec-') && !cardId.startsWith('template-') && !cardId.startsWith('restored-') && !cardId.startsWith('ai-')) {
+      try {
+        const card = localCards.find((c) => c.id === cardId)
+        if (card) {
+          await api.put(`/api/cards/${cardId}`, {
+            position: { ...(card.position || { x: 0, y: 0, w: 4, h: 2 }), h: newHeight }
+          })
+        }
+      } catch (error) {
+        console.error('Failed to update card height:', error)
+        showToast('Failed to update card height', 'error')
+      }
+    }
+  }
+
   const handleCardConfigured = async (cardId: string, newConfig: Record<string, unknown>, newTitle?: string) => {
     const card = localCards.find((c) => c.id === cardId)
     if (card) {
@@ -1100,6 +1126,7 @@ export function Dashboard() {
                 onConfigure={() => handleConfigureCard(card)}
                 onRemove={() => handleRemoveCard(card.id)}
                 onWidthChange={(newWidth) => handleWidthChange(card.id, newWidth)}
+                onHeightChange={(newHeight) => handleHeightChange(card.id, newHeight)}
                 isDragging={activeId === card.id}
                 isRefreshing={isRefreshing}
                 onRefresh={triggerRefresh}

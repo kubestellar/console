@@ -156,6 +156,7 @@ export function DashboardRuntime({
     removeCard,
     configureCard,
     updateCardWidth,
+    updateCardHeight,
     reset,
     isCustomized,
     dnd,
@@ -365,6 +366,7 @@ export function DashboardRuntime({
                       onConfigure={() => openConfigureCard(card.id)}
                       onRemove={() => removeCard(card.id)}
                       onWidthChange={(w) => updateCardWidth(card.id, w)}
+                      onHeightChange={(h) => updateCardHeight(card.id, h)}
                       isDragging={dnd.activeId === card.id}
                       onInsertBefore={() => { setInsertAtIndex(index); setShowAddCard(true) }}
                       onInsertAfter={() => { setInsertAtIndex(index + 1); setShowAddCard(true) }}

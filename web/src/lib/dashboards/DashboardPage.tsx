@@ -129,6 +129,7 @@ export function DashboardPage({
     removeCard,
     configureCard,
     updateCardWidth,
+    updateCardHeight,
     reset,
     isCustomized,
     showAddCard,
@@ -257,6 +258,10 @@ export function DashboardPage({
     updateCardWidth(cardId, newWidth)
   }
 
+  const handleHeightChange = (cardId: string, newHeight: number) => {
+    updateCardHeight(cardId, newHeight)
+  }
+
   const applyTemplate = (template: DashboardTemplate) => {
     const newCards = template.cards.map((card, i) => ({
       id: `card-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 9)}`,
@@ -377,6 +382,7 @@ export function DashboardPage({
                         onConfigure={() => handleConfigureCard(card.id)}
                         onRemove={() => handleRemoveCard(card.id)}
                         onWidthChange={(newWidth) => handleWidthChange(card.id, newWidth)}
+                        onHeightChange={(newHeight) => handleHeightChange(card.id, newHeight)}
                         isDragging={activeId === card.id}
                         isRefreshing={isRefreshing}
                         onRefresh={triggerRefresh}

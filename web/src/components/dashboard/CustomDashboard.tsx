@@ -81,6 +81,7 @@ interface SortableCardProps {
   onConfigure: () => void
   onRemove: () => void
   onWidthChange: (newWidth: number) => void
+  onHeightChange: (newHeight: number) => void
   isDragging?: boolean
   isRefreshing?: boolean
   onRefresh?: () => void
@@ -89,7 +90,7 @@ interface SortableCardProps {
   onInsertAfter?: () => void
 }
 
-function SortableCard({ card, onConfigure, onRemove, onWidthChange, isDragging, isRefreshing, onRefresh, lastUpdated, onInsertBefore: _onInsertBefore, onInsertAfter }: SortableCardProps) {
+function SortableCard({ card, onConfigure, onRemove, onWidthChange, onHeightChange, isDragging, isRefreshing, onRefresh, lastUpdated, onInsertBefore: _onInsertBefore, onInsertAfter }: SortableCardProps) {
   const { t } = useTranslation()
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: card.id })
 
@@ -146,7 +147,9 @@ function SortableCard({ card, onConfigure, onRemove, onWidthChange, isDragging, 
           onConfigure={onConfigure}
           onRemove={onRemove}
           onWidthChange={onWidthChange}
+          onHeightChange={onHeightChange}
           cardWidth={effectiveW}
+          cardHeight={card.position?.h || 2}
           isRefreshing={isRefreshing}
           onRefresh={onRefresh}
           lastUpdated={lastUpdated}
@@ -186,7 +189,9 @@ function SortableCard({ card, onConfigure, onRemove, onWidthChange, isDragging, 
         onConfigure={onConfigure}
         onRemove={onRemove}
         onWidthChange={onWidthChange}
+        onHeightChange={onHeightChange}
         cardWidth={effectiveW}
+        cardHeight={card.position?.h || 2}
         isRefreshing={isRefreshing}
         onRefresh={onRefresh}
         lastUpdated={lastUpdated}
@@ -475,6 +480,13 @@ export function CustomDashboard() {
     ))
   }
 
+  const handleHeightChange = (cardId: string, newHeight: number) => {
+    snapshot(cardsRef.current)
+    setCards(prev => prev.map(c =>
+      c.id === cardId ? { ...c, position: { ...c.position, h: newHeight } } : c
+    ))
+  }
+
   const handleApplyTemplate = async (template: DashboardTemplate) => {
     const templateCards = template.cards.map((tc, index) => ({
       id: `template-${Date.now()}-${index}`,
@@ -669,6 +681,7 @@ export function CustomDashboard() {
                   onConfigure={() => handleConfigureCard(card)}
                   onRemove={() => handleRemoveCard(card.id)}
                   onWidthChange={(w) => handleWidthChange(card.id, w)}
+                  onHeightChange={(h) => handleHeightChange(card.id, h)}
                   isDragging={activeId === card.id}
                   isRefreshing={isRefreshing}
                   onRefresh={triggerRefresh}

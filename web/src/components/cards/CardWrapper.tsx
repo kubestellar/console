@@ -109,6 +109,15 @@ const WIDTH_OPTIONS = [
   { value: 12, labelKey: 'cardWrapper.resizeFull' as const, descKey: 'cardWrapper.resizeFullDesc' as const },
 ]
 
+// Card height options (in grid row spans)
+// labelKey/descKey reference cards.json cardWrapper.height* keys
+const HEIGHT_OPTIONS = [
+  { value: 1, labelKey: 'cardWrapper.heightCompact' as const, descKey: 'cardWrapper.heightCompactDesc' as const },
+  { value: 2, labelKey: 'cardWrapper.heightDefault' as const, descKey: 'cardWrapper.heightDefaultDesc' as const },
+  { value: 3, labelKey: 'cardWrapper.heightTall' as const, descKey: 'cardWrapper.heightTallDesc' as const },
+  { value: 4, labelKey: 'cardWrapper.heightExtraTall' as const, descKey: 'cardWrapper.heightExtraTallDesc' as const },
+]
+
 // Cards that need extra-large expanded modal (for maps, complex visualizations, etc.)
 // These use 95vh height and 7xl width instead of the default 80vh/4xl
 const LARGE_EXPANDED_CARDS = new Set([
@@ -236,6 +245,10 @@ interface CardWrapperProps {
   onRefresh?: () => void
   /** Callback when card width is changed */
   onWidthChange?: (newWidth: number) => void
+  /** Current card height in grid row spans */
+  cardHeight?: number
+  /** Callback when card height is changed */
+  onHeightChange?: (newHeight: number) => void
   onChatMessage?: (message: string) => Promise<ChatMessage>
   onChatMessagesChange?: (messages: ChatMessage[]) => void
   /** Skeleton type to show when loading with no cached data */
@@ -388,6 +401,8 @@ export function CardWrapper({
   onRemove,
   onRefresh,
   onWidthChange,
+  cardHeight,
+  onHeightChange,
   onChatMessage,
   onChatMessagesChange,
   skeletonType,
@@ -607,7 +622,9 @@ export function CardWrapper({
   const [showWidgetExport, setShowWidgetExport] = useState(false)
   const studioContext = useDashboardContextOptional()
   const [showResizeMenu, setShowResizeMenu] = useState(false)
+  const [showHeightMenu, setShowHeightMenu] = useState(false)
   const [resizeMenuOnLeft, setResizeMenuOnLeft] = useState(false)
+  const heightMenuContainerRef = useRef<HTMLDivElement>(null)
   const [__timeRemaining, setTimeRemaining] = useState<number | null>(null)
   // Chat state reserved for future use
   // const [isChatOpen, setIsChatOpen] = useState(false)
@@ -1172,6 +1189,63 @@ export function CardWrapper({
                                   className={cn(
                                     'w-full px-3 py-2 text-left text-sm flex items-center justify-between',
                                     cardWidth === option.value
+                                      ? 'text-purple-400 bg-purple-500/10'
+                                      : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
+                                  )}
+                                  role="menuitem"
+                                >
+                                  <span>{t(option.labelKey)}</span>
+                                  <span className="text-xs opacity-60">{t(option.descKey)}</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {/* Height resize submenu (#6463) */}
+                      {onHeightChange && (
+                        <div className="relative" ref={heightMenuContainerRef}>
+                          <button
+                            onClick={() => setShowHeightMenu(!showHeightMenu)}
+                            className="w-full px-4 py-2 text-left text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 flex items-center justify-between"
+                            role="menuitem"
+                            aria-haspopup="menu"
+                            aria-expanded={showHeightMenu}
+                            title={t('cardWrapper.resizeHeightTooltip')}
+                          >
+                            <span className="flex items-center gap-2">
+                              <MoveHorizontal className="w-4 h-4 rotate-90" aria-hidden="true" />
+                              {t('cardWrapper.resizeHeight')}
+                            </span>
+                            <ChevronRight className={cn('w-4 h-4 transition-transform', showHeightMenu && 'rotate-90')} aria-hidden="true" />
+                          </button>
+                          {showHeightMenu && (
+                            <div
+                              className={cn(
+                                'absolute top-0 w-36 glass rounded-lg py-1 z-20',
+                                resizeMenuOnLeft ? 'right-full mr-1' : 'left-full ml-1'
+                              )}
+                              role="menu"
+                              onKeyDown={(e) => {
+                                if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
+                                e.preventDefault()
+                                const items = e.currentTarget.querySelectorAll<HTMLElement>('button[role="menuitem"]:not([disabled])')
+                                const idx = Array.from(items).indexOf(document.activeElement as HTMLElement)
+                                if (e.key === 'ArrowDown') items[Math.min(idx + 1, items.length - 1)]?.focus()
+                                else items[Math.max(idx - 1, 0)]?.focus()
+                              }}
+                            >
+                              {HEIGHT_OPTIONS.map((option) => (
+                                <button
+                                  key={option.value}
+                                  onClick={() => {
+                                    onHeightChange(option.value)
+                                    setShowHeightMenu(false)
+                                    setShowMenu(false)
+                                  }}
+                                  className={cn(
+                                    'w-full px-3 py-2 text-left text-sm flex items-center justify-between',
+                                    cardHeight === option.value
                                       ? 'text-purple-400 bg-purple-500/10'
                                       : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
                                   )}

@@ -22,6 +22,7 @@ export interface SortableDashboardCardProps {
   onConfigure: () => void
   onRemove: () => void
   onWidthChange: (newWidth: number) => void
+  onHeightChange: (newHeight: number) => void
   isDragging: boolean
   isRefreshing?: boolean
   onRefresh?: () => void
@@ -35,6 +36,7 @@ export const SortableDashboardCard = memo(function SortableDashboardCard({
   onConfigure,
   onRemove,
   onWidthChange,
+  onHeightChange,
   isDragging,
   isRefreshing,
   onRefresh,
@@ -84,9 +86,11 @@ export const SortableDashboardCard = memo(function SortableDashboardCard({
         cardType={card.card_type}
         title={card.title || formatCardTitle(card.card_type)}
         cardWidth={cardWidth}
+        cardHeight={cardHeight}
         onConfigure={onConfigure}
         onRemove={onRemove}
         onWidthChange={onWidthChange}
+        onHeightChange={onHeightChange}
         isDemoData={DEMO_DATA_CARDS.has(card.card_type)}
         isRefreshing={isRefreshing}
         onRefresh={onRefresh}

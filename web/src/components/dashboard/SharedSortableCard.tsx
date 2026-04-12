@@ -29,6 +29,7 @@ interface SortableCardProps {
   onConfigure: () => void
   onRemove: () => void
   onWidthChange: (newWidth: number) => void
+  onHeightChange: (newHeight: number) => void
   isDragging: boolean
   isRefreshing?: boolean
   onRefresh?: () => void
@@ -68,7 +69,7 @@ const NARROW_BREAKPOINT = 1024
 /** Minimum card column span at narrow viewports */
 const MIN_NARROW_COLS = 6
 
-export const SortableCard = memo(function SortableCard({ card, onConfigure, onRemove, onWidthChange, isDragging, isRefreshing, onRefresh, lastUpdated, onKeyDown, registerRef, registerExpandTrigger, onInsertBefore: _onInsertBefore, onInsertAfter, isWorkloadDragActive: _isWorkloadDragActive }: SortableCardProps) {
+export const SortableCard = memo(function SortableCard({ card, onConfigure, onRemove, onWidthChange, onHeightChange, isDragging, isRefreshing, onRefresh, lastUpdated, onKeyDown, registerRef, registerExpandTrigger, onInsertBefore: _onInsertBefore, onInsertAfter, isWorkloadDragActive: _isWorkloadDragActive }: SortableCardProps) {
   const {
     attributes,
     listeners,
@@ -156,12 +157,14 @@ export const SortableCard = memo(function SortableCard({ card, onConfigure, onRe
         isDemoData={DEMO_DATA_CARDS.has(card.card_type)}
         isLive={LIVE_DATA_CARDS.has(card.card_type)}
         cardWidth={card.position?.w || 4}
+        cardHeight={card.position?.h || 2}
         isRefreshing={isRefreshing}
         onRefresh={onRefresh}
         lastUpdated={lastUpdated}
         onConfigure={onConfigure}
         onRemove={onRemove}
         onWidthChange={onWidthChange}
+        onHeightChange={onHeightChange}
         registerExpandTrigger={registerExpandTrigger}
         dragHandle={
           <button

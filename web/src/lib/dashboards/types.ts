@@ -159,6 +159,7 @@ export interface DashboardContextValue {
   removeCard: (id: string) => void
   configureCard: (id: string, config: Record<string, unknown>) => void
   updateCardWidth: (id: string, width: number) => void
+  updateCardHeight: (id: string, height: number) => void
   reorderCards: (activeId: string, overId: string) => void
   /** Reset to default layout */
   reset: () => void
