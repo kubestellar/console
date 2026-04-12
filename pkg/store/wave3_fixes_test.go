@@ -253,17 +253,20 @@ func TestConsumeOAuthState_ContextCancelled(t *testing.T) {
 	require.Error(t, err, "cancelled ctx must surface as an error on ConsumeOAuthState")
 }
 
-// TestGetBulkUtilizationSnapshots_RejectsOversizedBatch pins #6605 at the
-// store level. The handler layer also rejects oversized fan-outs, but the
-// store must refuse them too so internal callers cannot bypass the cap.
-func TestGetBulkUtilizationSnapshots_RejectsOversizedBatch(t *testing.T) {
+// TestGetBulkUtilizationSnapshots_BatchesLargeRequests verifies that the
+// store batches large IN clauses instead of crashing (#6888). Previously
+// this test asserted rejection; now it asserts graceful batching.
+func TestGetBulkUtilizationSnapshots_BatchesLargeRequests(t *testing.T) {
 	s := newTestStore(t)
 
-	// Build an id slice one larger than the cap.
-	ids := make([]string, bulkUtilizationMaxIDs+1)
+	// Build an id slice larger than sqliteMaxVars to exercise batching.
+	ids := make([]string, sqliteMaxVars+1)
 	for i := range ids {
 		ids[i] = uuid.New().String()
 	}
-	_, err := s.GetBulkUtilizationSnapshots(ids)
-	require.ErrorIs(t, err, ErrTooManyIDs)
+	// Should succeed (empty result) rather than error.
+	result, err := s.GetBulkUtilizationSnapshots(ids)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	require.Empty(t, result)
 }

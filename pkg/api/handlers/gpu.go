@@ -17,8 +17,8 @@ import (
 )
 
 // bulkUtilizationsMaxIDs caps the number of reservation ids a single
-// GetBulkUtilizations request may ask for. Must stay <= the store-level
-// cap in GetBulkUtilizationSnapshots (#6605).
+// GetBulkUtilizations API request may ask for. This is a DoS guard at the
+// handler level; the store now batches IN clauses internally (#6888).
 const bulkUtilizationsMaxIDs = 500
 
 // ClusterCapacityProvider returns the total GPU capacity for a cluster
@@ -395,10 +395,9 @@ func (h *GPUHandler) GetBulkUtilizations(c *fiber.Ctx) error {
 	}
 
 	ids := strings.Split(idsParam, ",")
-	// #6605: reject oversized fan-outs at the API boundary. The store
-	// already enforces the same cap as defense-in-depth (ErrTooManyIDs),
-	// but a 400 here surfaces the mistake to the client immediately
-	// without touching the database.
+	// #6605: reject oversized fan-outs at the API boundary as a DoS
+	// guard. The store now batches IN clauses internally (#6888), but
+	// we still cap the API to avoid unbounded work.
 	if len(ids) > bulkUtilizationsMaxIDs {
 		return fiber.NewError(fiber.StatusBadRequest,
 			fmt.Sprintf("too many reservation ids: %d (max %d)", len(ids), bulkUtilizationsMaxIDs))

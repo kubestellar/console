@@ -1943,45 +1943,48 @@ func (s *SQLiteStore) GetUtilizationSnapshots(reservationID string) ([]models.GP
 	return snapshots, rows.Err()
 }
 
-// bulkUtilizationMaxIDs is the hard cap on the number of reservation ids a
-// single GetBulkUtilizationSnapshots call may fan out to. The handler layer
-// rejects anything larger at the API boundary (#6605); this constant is
-// the store-level defense-in-depth so an internal caller cannot bypass it.
-const bulkUtilizationMaxIDs = 500
+// sqliteMaxVars is the maximum number of bind variables per SQL statement.
+// SQLite's default SQLITE_MAX_VARIABLE_NUMBER is 999; we use 500 as a safe
+// batch size to stay well under that limit (#6888).
+const sqliteMaxVars = 500
 
 // bulkUtilizationMaxRows caps the number of rows returned in a single
 // GetBulkUtilizationSnapshots call. Each reservation typically has hours
 // to days of hourly snapshots, so 10k is well beyond any realistic view.
 const bulkUtilizationMaxRows = 10000
 
-// ErrTooManyIDs is returned by GetBulkUtilizationSnapshots when the caller
-// passed more ids than bulkUtilizationMaxIDs. Handlers should map this to
-// HTTP 400 Bad Request.
-var ErrTooManyIDs = errors.New("too many reservation ids")
-
 func (s *SQLiteStore) GetBulkUtilizationSnapshots(reservationIDs []string) (map[string][]models.GPUUtilizationSnapshot, error) {
 	result := make(map[string][]models.GPUUtilizationSnapshot)
 	if len(reservationIDs) == 0 {
 		return result, nil
 	}
-	// #6605: bound both the IN clause and the total row count. The previous
-	// implementation had no cap on either, so a client could pass thousands
-	// of ids in one request and walk the entire snapshots table. The
-	// handler (GetBulkUtilizations) also rejects > bulkUtilizationMaxIDs
-	// up front with a 400; this store-level check guards internal callers.
-	if len(reservationIDs) > bulkUtilizationMaxIDs {
-		return nil, ErrTooManyIDs
-	}
 
-	// Build parameterized query with placeholders
-	placeholders := ""
-	// +1 slot for the trailing LIMIT parameter.
-	args := make([]interface{}, 0, len(reservationIDs)+1)
-	for i, id := range reservationIDs {
-		if i > 0 {
-			placeholders += ", "
+	// #6888: batch the IN clause to respect SQLite's variable limit.
+	// Instead of rejecting requests with > sqliteMaxVars IDs, we chunk
+	// the input and merge results across batches.
+	for start := 0; start < len(reservationIDs); start += sqliteMaxVars {
+		end := start + sqliteMaxVars
+		if end > len(reservationIDs) {
+			end = len(reservationIDs)
 		}
-		placeholders += "?"
+		chunk := reservationIDs[start:end]
+
+		if err := s.queryUtilizationChunk(chunk, result); err != nil {
+			return nil, err
+		}
+	}
+	return result, nil
+}
+
+// queryUtilizationChunk executes a single batched query for a chunk of
+// reservation IDs and merges rows into the provided result map.
+func (s *SQLiteStore) queryUtilizationChunk(ids []string, result map[string][]models.GPUUtilizationSnapshot) error {
+	placeholders := strings.Repeat("?,", len(ids))
+	placeholders = placeholders[:len(placeholders)-1] // trim trailing comma
+
+	// +1 slot for the trailing LIMIT parameter.
+	args := make([]interface{}, 0, len(ids)+1)
+	for _, id := range ids {
 		args = append(args, id)
 	}
 	args = append(args, bulkUtilizationMaxRows)
@@ -1991,7 +1994,7 @@ func (s *SQLiteStore) GetBulkUtilizationSnapshots(reservationIDs []string) (map[
 		args...,
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer rows.Close()
 
@@ -2000,11 +2003,11 @@ func (s *SQLiteStore) GetBulkUtilizationSnapshots(reservationIDs []string) (map[
 		if err := rows.Scan(&snap.ID, &snap.ReservationID, &snap.Timestamp,
 			&snap.GPUUtilizationPct, &snap.MemoryUtilizationPct,
 			&snap.ActiveGPUCount, &snap.TotalGPUCount); err != nil {
-			return nil, err
+			return err
 		}
 		result[snap.ReservationID] = append(result[snap.ReservationID], snap)
 	}
-	return result, rows.Err()
+	return rows.Err()
 }
 
 func (s *SQLiteStore) DeleteOldUtilizationSnapshots(before time.Time) (int64, error) {
