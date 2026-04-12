@@ -66,6 +66,13 @@ const (
 	// Each entry stores a directory listing or file body.
 	missionsCacheMaxEntries = 256
 
+	// missionsValidateMaxBytes is a tighter payload cap for ValidateMission.
+	// Mission JSON documents are small structured metadata — legitimate payloads
+	// are well under 1 MiB. Accepting the full missionsMaxBodyBytes (10 MiB) for
+	// json.Unmarshal invites deeply-nested payloads that stress the decoder.
+	// Reject oversize validate requests early with 413 (#6820).
+	missionsValidateMaxBytes = 1 * 1024 * 1024 // 1 MiB
+
 	// slackMaxTextBytes is the maximum allowed size for the Text field in a
 	// SlackShareRequest. Slack messages are typically short; 10 KB is more
 	// than enough for any legitimate use. Without this cap a caller could
@@ -171,6 +178,9 @@ type missionsResponseCache struct {
 
 // get returns a cached entry if it exists and is within the given TTL.
 // Returns nil if no entry exists or the entry is expired.
+//
+// #6822 — Returns a shallow copy of the entry so callers cannot mutate
+// the shared cache data after the read lock is released.
 func (c *missionsResponseCache) get(key string, ttl time.Duration) *missionsCacheEntry {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -181,11 +191,14 @@ func (c *missionsResponseCache) get(key string, ttl time.Duration) *missionsCach
 	if time.Since(entry.fetchedAt) > ttl {
 		return nil
 	}
-	return entry
+	cp := *entry
+	return &cp
 }
 
 // getStale returns a cached entry even if expired, as long as it is within staleTTL.
 // Used to serve stale data when GitHub rate-limits us — better than an error.
+//
+// #6822 — Returns a shallow copy (same rationale as get).
 func (c *missionsResponseCache) getStale(key string, staleTTL time.Duration) *missionsCacheEntry {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -196,11 +209,20 @@ func (c *missionsResponseCache) getStale(key string, staleTTL time.Duration) *mi
 	if time.Since(entry.fetchedAt) > staleTTL {
 		return nil
 	}
-	return entry
+	cp := *entry
+	return &cp
 }
 
-// evictOldestLocked removes the single oldest entry from the cache. The caller
-// MUST hold c.mu in write mode. Returns true if an entry was evicted.
+// evictOldestLocked removes the single oldest entry from the cache.
+// Returns true if an entry was evicted.
+//
+// REQUIRES: c.mu held in WRITE mode by the caller (#6821).
+//
+// Currently called only from set(), which acquires c.mu.Lock() before
+// invoking this method. Any new call-site MUST hold the write lock —
+// this function reads and modifies c.entries, c.insertOrder, and
+// c.totalBytes without further synchronisation.
+//
 // #6841 — Uses the insertOrder slice for O(1) oldest-key lookup instead of
 // scanning the entire map on every eviction.
 func (c *missionsResponseCache) evictOldestLocked() bool {
@@ -683,7 +705,9 @@ func (h *MissionsHandler) ValidateMission(c *fiber.Ctx) error {
 	if len(body) == 0 {
 		return c.Status(400).JSON(fiber.Map{"valid": false, "errors": []string{"empty body"}})
 	}
-	if len(body) > missionsMaxBodyBytes {
+	// Use the tighter missionsValidateMaxBytes instead of the general
+	// missionsMaxBodyBytes — mission JSON metadata is always small (#6820).
+	if len(body) > missionsValidateMaxBytes {
 		return c.Status(413).JSON(fiber.Map{"valid": false, "errors": []string{"payload too large"}})
 	}
 
