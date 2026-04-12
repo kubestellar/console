@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 // Client is a generic MCP client that communicates with an MCP server via stdio
@@ -20,6 +21,10 @@ type Client struct {
 	stderr io.ReadCloser
 	mu     sync.Mutex
 	idSeq  atomic.Int64
+	// writeMu serializes writes to stdin independently of the main mu,
+	// so a blocking write cannot deadlock callers that only need mu
+	// for the pending map (#6944).
+	writeMu sync.Mutex
 	// pending maps request IDs (as strings) to response channels. IDs are
 	// keyed as strings to avoid Go's JSON decoder returning numeric IDs as
 	// float64 (from interface{} fields) while outgoing IDs are stored as
@@ -27,7 +32,7 @@ type Client struct {
 	// context deadline fired (#6622).
 	pending  map[string]chan *Response
 	tools    []Tool
-	ready    bool
+	ready    atomic.Bool // protected via atomic to avoid data races (#6942)
 	done     chan struct{}
 	stopOnce sync.Once
 }
@@ -210,7 +215,7 @@ func (c *Client) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to list tools from %s: %w", c.name, err)
 	}
 
-	c.ready = true
+	c.ready.Store(true)
 	return nil
 }
 
@@ -253,7 +258,7 @@ func (c *Client) Stop() error {
 
 // IsReady returns whether the client is ready to accept requests
 func (c *Client) IsReady() bool {
-	return c.ready
+	return c.ready.Load()
 }
 
 // Tools returns the list of available tools
@@ -263,7 +268,7 @@ func (c *Client) Tools() []Tool {
 
 // CallTool invokes a tool on the MCP server
 func (c *Client) CallTool(ctx context.Context, name string, args map[string]interface{}) (*CallToolResult, error) {
-	if !c.ready {
+	if !c.ready.Load() {
 		return nil, fmt.Errorf("client not ready")
 	}
 
@@ -304,8 +309,11 @@ func (c *Client) initialize(ctx context.Context) error {
 		return fmt.Errorf("failed to parse initialize result: %w", err)
 	}
 
-	// Send initialized notification
-	c.notify("notifications/initialized", nil)
+	// Send initialized notification — propagate the error so callers
+	// detect a failed write (e.g. child process died) (#6943).
+	if err := c.notify("notifications/initialized", nil); err != nil {
+		return fmt.Errorf("failed to send initialized notification: %w", err)
+	}
 
 	return nil
 }
@@ -371,21 +379,43 @@ func (c *Client) notify(method string, params interface{}) error {
 	return c.send(req)
 }
 
-func (c *Client) send(req Request) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+// stdinWriteTimeout is how long send() waits for a stdin write before
+// giving up. If the child process stops consuming stdin the OS pipe
+// buffer fills and Write blocks; this timeout prevents holding the
+// write lock (and therefore all callers) indefinitely (#6944).
+const stdinWriteTimeout = 30 * time.Second
 
+func (c *Client) send(req Request) error {
 	data, err := json.Marshal(req)
 	if err != nil {
 		return fmt.Errorf("failed to marshal request: %w", err)
 	}
 
 	data = append(data, '\n')
-	if _, err := c.stdin.Write(data); err != nil {
-		return fmt.Errorf("failed to send request: %w", err)
-	}
 
-	return nil
+	// Use a dedicated write mutex so a blocked write cannot starve
+	// callers that only need c.mu for the pending map (#6944).
+	type writeResult struct{ err error }
+	ch := make(chan writeResult, 1)
+
+	c.writeMu.Lock()
+	go func() {
+		defer c.writeMu.Unlock()
+		_, werr := c.stdin.Write(data)
+		ch <- writeResult{err: werr}
+	}()
+
+	select {
+	case res := <-ch:
+		if res.err != nil {
+			return fmt.Errorf("failed to send request: %w", res.err)
+		}
+		return nil
+	case <-time.After(stdinWriteTimeout):
+		return fmt.Errorf("stdin write timed out after %s (child process may have stopped)", stdinWriteTimeout)
+	case <-c.done:
+		return fmt.Errorf("client stopped while writing to stdin")
+	}
 }
 
 func (c *Client) readResponses() {
