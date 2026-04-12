@@ -55,6 +55,10 @@ vi.mock('../useMCP', () => ({
   useGPUNodes: (...args: unknown[]) => mockUseGPUNodes(...args),
 }))
 
+vi.mock('../useCachedData', () => ({
+  useCachedPVCs: (...args: unknown[]) => mockUsePVCs(...args),
+}))
+
 vi.mock('../useAlerts', () => ({
   useAlerts: (...args: unknown[]) => mockUseAlerts(...args),
   useAlertRules: (...args: unknown[]) => mockUseAlertRules(...args),

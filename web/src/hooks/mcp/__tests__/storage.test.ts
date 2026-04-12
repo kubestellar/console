@@ -236,13 +236,13 @@ describe('usePVCs', () => {
     expect(result.current.error).toBeNull()
   })
 
-  it('returns empty PVCs with error: null on fetch failure', async () => {
+  it('returns empty PVCs with error message on fetch failure', async () => {
     mockApiGet.mockRejectedValue(new Error('fetch error'))
 
     const { result } = renderHook(() => usePVCs())
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.error).toBeNull()
+    expect(result.current.error).toBe('fetch error')
   })
 })
 
@@ -310,14 +310,14 @@ describe('usePVs', () => {
     expect(mockApiGet.mock.calls.length).toBe(callsAfterPoll)
   })
 
-  it('returns empty list with error: null on fetch failure', async () => {
+  it('returns empty list with error message on fetch failure', async () => {
     mockApiGet.mockRejectedValue(new Error('network error'))
 
     const { result } = renderHook(() => usePVs())
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.pvs).toEqual([])
-    expect(result.current.error).toBeNull()
+    expect(result.current.error).toBe('network error')
   })
 })
 

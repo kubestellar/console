@@ -462,18 +462,18 @@ describe('rule management', () => {
 // ── Run AI Diagnosis ────────────────────────────────────────────────────────
 
 describe('runAIDiagnosis', () => {
-  it('returns null for non-existent alert id', () => {
+  it('returns null for non-existent alert id', async () => {
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
 
     let missionId: string | null = null
-    act(() => {
-      missionId = result.current.runAIDiagnosis('non-existent')
+    await act(async () => {
+      missionId = await result.current.runAIDiagnosis('non-existent')
     })
 
     expect(missionId).toBeNull()
   })
 
-  it('starts a mission and sets aiDiagnosis on the alert', () => {
+  it('starts a mission and sets aiDiagnosis on the alert', async () => {
     const alert = makeAlert({ id: 'diagnose-me', ruleId: 'rule-1', status: 'firing' })
     // Make sure the rule exists
     const rule: AlertRule = {
@@ -494,8 +494,8 @@ describe('runAIDiagnosis', () => {
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
 
     let missionId: string | null = null
-    act(() => {
-      missionId = result.current.runAIDiagnosis('diagnose-me')
+    await act(async () => {
+      missionId = await result.current.runAIDiagnosis('diagnose-me')
     })
 
     expect(missionId).toBe('mock-mission-id')

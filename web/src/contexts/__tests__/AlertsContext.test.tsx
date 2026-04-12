@@ -37,7 +37,9 @@ vi.mock('../../lib/runbooks/executor', () => ({
 }))
 
 vi.mock('../../lib/utils/concurrency', () => ({
-  settledWithConcurrency: vi.fn((fns: (() => Promise<unknown>)[]) => Promise.all(fns.map(fn => fn()))),
+  settledWithConcurrency: vi.fn((fns: (() => Promise<unknown>)[]) =>
+    Promise.allSettled(fns.map(fn => fn()))
+  ),
 }))
 
 // Stub the lazy-loaded AlertsDataFetcher — calls onData with injected MCP data
@@ -377,7 +379,7 @@ describe('AlertsContext', () => {
 
   // ── 9. AI diagnosis ─────────────────────────────────────────────────
 
-  it('runs AI diagnosis and creates a mission', () => {
+  it('runs AI diagnosis and creates a mission', async () => {
     const seedAlert: Alert = {
       id: 'diag-1',
       ruleId: 'r-diag',
@@ -408,8 +410,8 @@ describe('AlertsContext', () => {
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
 
     let missionId: string | null = null
-    act(() => {
-      missionId = result.current.runAIDiagnosis('diag-1')
+    await act(async () => {
+      missionId = await result.current.runAIDiagnosis('diag-1')
     })
 
     expect(missionId).toBe('mission-123')
@@ -427,12 +429,12 @@ describe('AlertsContext', () => {
     expect(alert.aiDiagnosis!.missionId).toBe('mission-123')
   })
 
-  it('returns null for AI diagnosis on non-existent alert', () => {
+  it('returns null for AI diagnosis on non-existent alert', async () => {
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
 
     let missionId: string | null = null
-    act(() => {
-      missionId = result.current.runAIDiagnosis('non-existent')
+    await act(async () => {
+      missionId = await result.current.runAIDiagnosis('non-existent')
     })
 
     expect(missionId).toBeNull()
@@ -3767,8 +3769,8 @@ describe('AlertsContext — wave 2 deep coverage', () => {
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
 
     let missionId: string | null = null
-    act(() => {
-      missionId = result.current.runAIDiagnosis('rb-diag')
+    await act(async () => {
+      missionId = await result.current.runAIDiagnosis('rb-diag')
     })
 
     expect(missionId).toBe('mission-123')
@@ -3841,8 +3843,8 @@ describe('AlertsContext — wave 2 deep coverage', () => {
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
 
     let missionId: string | null = null
-    act(() => {
-      missionId = result.current.runAIDiagnosis('rb-fail-alert')
+    await act(async () => {
+      missionId = await result.current.runAIDiagnosis('rb-fail-alert')
     })
 
     // Should still create a mission even if runbook fails
