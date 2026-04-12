@@ -28,6 +28,7 @@ import {
 import { cn } from '../../lib/cn'
 import { Button } from '../ui/Button'
 import { useToast } from '../ui/Toast'
+import { ChunkErrorBoundary } from '../ChunkErrorBoundary'
 import { useMissionControl, consumePersistQuotaBanner } from './useMissionControl'
 import { FixerDefinitionPanel } from './FixerDefinitionPanel'
 import { ClusterAssignmentPanel } from './ClusterAssignmentPanel'
@@ -161,7 +162,10 @@ export function MissionControlDialog({ open, onClose }: MissionControlDialogProp
 
   const canAdvance =
     (state.phase === 'define' && state.projects.length > 0 && !state.aiStreaming) ||
-    (state.phase === 'assign' && state.assignments.some((a) => a.projectNames.length > 0)) ||
+    (state.phase === 'assign' && (
+      state.assignments.some((a) => a.projectNames.length > 0) ||
+      state.targetClusters.length > 0
+    )) ||
     state.phase === 'blueprint'
 
   const canGoBack =
@@ -395,15 +399,17 @@ export function MissionControlDialog({ open, onClose }: MissionControlDialogProp
                 )}
                 {state.phase === 'blueprint' && (
                   <PhaseWrapper key="blueprint">
-                    <Suspense fallback={null}>
-                      <FlightPlanBlueprint
-                        state={state}
-                        onOverlayChange={mc.setOverlay}
-                        onDeployModeChange={mc.setDeployMode}
-                        onMoveProject={mc.moveProjectToCluster}
-                        installedProjects={mc.installedProjects}
-                      />
-                    </Suspense>
+                    <ChunkErrorBoundary>
+                      <Suspense fallback={null}>
+                        <FlightPlanBlueprint
+                          state={state}
+                          onOverlayChange={mc.setOverlay}
+                          onDeployModeChange={mc.setDeployMode}
+                          onMoveProject={mc.moveProjectToCluster}
+                          installedProjects={mc.installedProjects}
+                        />
+                      </Suspense>
+                    </ChunkErrorBoundary>
                   </PhaseWrapper>
                 )}
                 {(isLaunching || isComplete) && (
