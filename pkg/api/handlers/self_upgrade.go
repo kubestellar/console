@@ -221,6 +221,13 @@ func (h *SelfUpgradeHandler) TriggerUpgrade(c *fiber.Ctx) error {
 				Error: "unable to verify user role — access denied",
 			})
 		}
+		if user == nil {
+			slog.Warn("[self-upgrade] SECURITY: user not found for role check",
+				"user_id", userID)
+			return c.Status(fiber.StatusForbidden).JSON(SelfUpgradeTriggerResponse{
+				Error: "user not found — access denied",
+			})
+		}
 		if user.Role != models.UserRoleAdmin {
 			slog.Warn("[self-upgrade] SECURITY: non-admin user attempted self-upgrade",
 				"user_id", userID,

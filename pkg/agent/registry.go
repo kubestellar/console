@@ -197,7 +197,10 @@ func (r *Registry) promoteExecutingDefault() {
 
 	// Look for a better agent that actually executes commands
 	for name, provider := range r.providers {
-		if provider.IsAvailable() && !suggestOnlyAgents[name] &&
+		if provider == nil || !provider.IsAvailable() {
+			continue
+		}
+		if !suggestOnlyAgents[name] &&
 			provider.Capabilities().HasCapability(CapabilityToolExec) {
 			r.defaultAgent = name
 			return

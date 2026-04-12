@@ -194,7 +194,7 @@ func (t *DeviceTracker) scanDevices() {
 	}
 
 	if newAlerts && t.broadcast != nil {
-		t.broadcast("device_alerts_updated", t.GetAlerts())
+		t.broadcast("device_alerts_updated", t.GetAlerts()) //nolint:nilaway // broadcast nil-checked above
 	}
 }
 
@@ -418,11 +418,17 @@ func (t *DeviceTracker) checkForBoolDrop(key, nodeName, cluster, deviceType stri
 
 // GetAlerts returns all current device alerts
 func (t *DeviceTracker) GetAlerts() DeviceAlertsResponse {
+	if t == nil {
+		return DeviceAlertsResponse{Alerts: make([]DeviceAlert, 0)}
+	}
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 
 	alerts := make([]DeviceAlert, 0, len(t.alerts))
 	for _, alert := range t.alerts {
+		if alert == nil {
+			continue
+		}
 		alerts = append(alerts, *alert)
 	}
 
@@ -435,6 +441,9 @@ func (t *DeviceTracker) GetAlerts() DeviceAlertsResponse {
 
 // GetNodeHistory returns device count history for a specific node
 func (t *DeviceTracker) GetNodeHistory(cluster, nodeName string) []DeviceSnapshot {
+	if t == nil {
+		return nil
+	}
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 
@@ -464,6 +473,9 @@ type DeviceInventoryResponse struct {
 // GetInventory returns all tracked nodes with their device counts
 // Data is already deduplicated at scan time via DeduplicatedClusters
 func (t *DeviceTracker) GetInventory() DeviceInventoryResponse {
+	if t == nil {
+		return DeviceInventoryResponse{Nodes: make([]NodeDeviceInventory, 0)}
+	}
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 
@@ -501,6 +513,9 @@ func (t *DeviceTracker) GetInventory() DeviceInventoryResponse {
 
 // ClearAlert manually clears an alert (e.g., after power cycle)
 func (t *DeviceTracker) ClearAlert(alertID string) bool {
+	if t == nil {
+		return false
+	}
 	t.mu.Lock()
 	defer t.mu.Unlock()
 

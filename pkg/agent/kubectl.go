@@ -265,10 +265,20 @@ func (k *KubectlProxy) validateArgs(args []string) bool {
 	return true
 }
 
-func (k *KubectlProxy) GetCurrentContext() string { return k.config.CurrentContext }
+func (k *KubectlProxy) GetCurrentContext() string {
+	if k == nil || k.config == nil {
+		return ""
+	}
+	return k.config.CurrentContext
+}
 
 // GetKubeconfigPath returns the path to the kubeconfig file
-func (k *KubectlProxy) GetKubeconfigPath() string { return k.kubeconfig }
+func (k *KubectlProxy) GetKubeconfigPath() string {
+	if k == nil {
+		return ""
+	}
+	return k.kubeconfig
+}
 
 // Reload reloads the kubeconfig from disk
 func (k *KubectlProxy) Reload() {

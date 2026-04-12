@@ -34,6 +34,9 @@ func EffectiveEventTime(e *corev1.Event) time.Time {
 // the fragile lexicographic comparison on mixed-timezone strings used
 // previously. See issue #6043.
 func SortEventsByLastSeenDesc(events []Event) {
+	if len(events) == 0 {
+		return
+	}
 	// Cache parsed times once to avoid O(n log n) reparsing inside the
 	// sort comparator.
 	parsed := make([]time.Time, len(events))
