@@ -294,7 +294,7 @@ const PAGE_ITEMS: SearchItem[] = [
   { id: 'page-clusters', name: 'My Clusters', description: 'Manage Kubernetes clusters', category: 'page', href: '/clusters', keywords: ['kubernetes', 'k8s', 'clusters'] },
   { id: 'page-workloads', name: 'Workloads', description: 'View deployments, pods, and workloads', category: 'page', href: '/workloads', keywords: ['deployment', 'pod', 'replica'] },
   { id: 'page-compute', name: 'Compute', description: 'Nodes, CPUs, GPUs, and compute resources', category: 'page', href: '/compute', keywords: ['node', 'cpu', 'gpu', 'tpu'] },
-  { id: 'page-storage', name: 'Storage', description: 'Persistent volumes and storage classes', category: 'page', href: '/storage', keywords: ['pvc', 'volume', 'disk'] },
+  { id: 'page-storage', name: 'Storage', description: 'PVCs, storage classes, and capacity management', category: 'page', href: '/storage', keywords: ['pvc', 'volume', 'disk'] },
   { id: 'page-network', name: 'Network', description: 'Services, ingress, and network policies', category: 'page', href: '/network', keywords: ['service', 'ingress', 'loadbalancer'] },
   { id: 'page-events', name: 'Events', description: 'Kubernetes cluster events', category: 'page', href: '/events', keywords: ['warning', 'error', 'log'] },
   { id: 'page-security', name: 'Security', description: 'RBAC, roles, and security policies', category: 'page', href: '/security', keywords: ['rbac', 'role', 'policy'] },

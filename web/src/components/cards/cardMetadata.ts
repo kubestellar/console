@@ -351,7 +351,7 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   pod_logs: 'Live tail of container logs for any pod across your clusters.',
   pod_health_trend: 'Historical trend of pod health status over time.',
   resource_trend: 'Resource usage trends showing CPU and memory over time.',
-  storage_overview: 'Persistent volume and storage class overview.',
+  storage_overview: 'PVC and storage class overview across clusters.',
   pvc_status: 'Status of Persistent Volume Claims across clusters.',
   pv_status: 'Status of Persistent Volumes including capacity and binding.',
   resource_quota_status: 'Resource quota utilization and limits across namespaces.',

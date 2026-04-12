@@ -1200,8 +1200,8 @@ describe('useSearchIndex', () => {
   // ── 67. Page items matched via description substring ───────────────────
 
   it('matches page items via description substring', () => {
-    // 'Persistent volumes' is in the Storage page description
-    const { result } = renderHook(() => useSearchIndex('Persistent volumes'))
+    // 'PVCs' is in the Storage page description
+    const { result } = renderHook(() => useSearchIndex('PVCs'))
     const flat = flattenResults(result.current.results)
     const pages = flat.filter(i => i.category === 'page')
     expect(pages.some(i => i.name === 'Storage')).toBe(true)

@@ -179,7 +179,7 @@ export const WIDGET_CARDS: Record<string, WidgetCardDefinition> = {
   storage_overview: {
     cardType: 'storage_overview',
     displayName: 'Storage Overview',
-    description: 'Persistent volume and storage class overview',
+    description: 'PVC and storage class overview across clusters',
     apiEndpoints: ['/api/mcp/storage'],
     supportsTheme: true,
     minRefreshInterval: 60000,

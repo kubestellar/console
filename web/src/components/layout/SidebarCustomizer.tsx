@@ -128,7 +128,7 @@ const KNOWN_ROUTES: KnownRoute[] = [
   { href: '/security-posture', name: 'Security Posture', description: 'Security scanning, vulnerability assessment, and policy enforcement', icon: 'ShieldCheck', category: 'Core Dashboards' },
   { href: '/data-compliance', name: 'Data Compliance', description: 'GDPR, HIPAA, PCI-DSS, and SOC 2 data protection compliance', icon: 'Database', category: 'Core Dashboards' },
   { href: '/gpu-reservations', name: 'GPU Reservations', description: 'Schedule and manage GPU reservations with calendar and quota management', icon: 'Zap', category: 'Core Dashboards' },
-  { href: '/storage', name: 'Storage', description: 'Persistent volumes, storage classes, and capacity management', icon: 'HardDrive', category: 'Core Dashboards' },
+  { href: '/storage', name: 'Storage', description: 'PVCs, storage classes, and capacity management', icon: 'HardDrive', category: 'Core Dashboards' },
   { href: '/network', name: 'Network', description: 'Network policies, ingress, and service mesh configuration', icon: 'Network', category: 'Core Dashboards' },
   { href: '/arcade', name: 'Arcade', description: 'Kubernetes-themed arcade games for taking a break', icon: 'Gamepad2', category: 'Core Dashboards' },
   { href: '/deploy', name: 'KubeStellar Deploy', description: 'Deployment monitoring, GitOps, Helm releases, and ArgoCD', icon: 'Rocket', category: 'Core Dashboards' },

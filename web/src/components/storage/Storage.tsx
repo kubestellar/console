@@ -258,7 +258,7 @@ export function Storage() {
         hasData={hasDataToShow}
         emptyState={{
           title: 'Storage Dashboard',
-          description: 'Add cards to monitor PersistentVolumes, StorageClasses, and storage utilization across your clusters.' }}
+          description: 'Add cards to monitor PVCs, StorageClasses, and storage utilization across your clusters.' }}
       >
         {/* Error Display */}
         {error && (
