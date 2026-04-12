@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"database/sql"
+	"database/sql/driver"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,10 +14,61 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	_ "modernc.org/sqlite"
+	_ "modernc.org/sqlite" // registers the "sqlite" driver
 
 	"github.com/kubestellar/console/pkg/models"
 )
+
+// fkConnector wraps a sql.Driver so that every freshly-opened connection
+// executes PRAGMA foreign_keys = ON before being handed to the pool.
+// DSN-level _pragma parameters are parsed by the modernc driver on each
+// Open(), but connection-pool recycling can theoretically skip the DSN
+// parse on reused file handles.  This connector guarantees enforcement on
+// every physical connection regardless of pool lifecycle (#6905).
+type fkConnector struct {
+	driver driver.Driver
+	dsn    string
+}
+
+func (c *fkConnector) Connect(_ context.Context) (driver.Conn, error) {
+	conn, err := c.driver.Open(c.dsn)
+	if err != nil {
+		return nil, err
+	}
+
+	// Enable foreign-key enforcement on this specific connection.
+	stmt, err := conn.Prepare("PRAGMA foreign_keys = ON")
+	if err != nil {
+		conn.Close()
+		return nil, fmt.Errorf("prepare FK pragma: %w", err)
+	}
+	if _, err := stmt.Exec(nil); err != nil { //nolint:staticcheck // driver.Stmt.Exec([]driver.Value) is the v1 interface
+		stmt.Close()
+		conn.Close()
+		return nil, fmt.Errorf("exec FK pragma: %w", err)
+	}
+	stmt.Close()
+	return conn, nil
+}
+
+func (c *fkConnector) Driver() driver.Driver { return c.driver }
+
+// sqlDriver returns the registered database/sql driver with the given name.
+func sqlDriver(name string) (driver.Driver, error) {
+	for _, d := range sql.Drivers() {
+		if d == name {
+			// Open a throwaway DB just to grab the driver reference.
+			db, err := sql.Open(name, "")
+			if err != nil {
+				return nil, err
+			}
+			drv := db.Driver()
+			db.Close()
+			return drv, nil
+		}
+	}
+	return nil, fmt.Errorf("sql driver %q not registered", name)
+}
 
 // ErrDashboardCardLimitReached is returned by CreateCardWithLimit when the
 // dashboard already contains the maximum number of cards. Handlers should
@@ -160,10 +212,14 @@ func NewSQLiteStore(dbPath string) (*SQLiteStore, error) {
 		"%s?_pragma=foreign_keys(on)&_pragma=journal_mode(WAL)&_pragma=synchronous(NORMAL)&_pragma=busy_timeout(%d)",
 		dbPath, sqliteBusyTimeoutMs,
 	)
-	db, err := sql.Open("sqlite", dsn)
+	// Use sql.OpenDB with a custom connector so that PRAGMA foreign_keys = ON
+	// is executed on every new physical connection, not just the first one.
+	// This prevents ghost-card orphans when the pool recycles connections (#6905).
+	drv, err := sqlDriver("sqlite")
 	if err != nil {
-		return nil, fmt.Errorf("failed to open database: %w", err)
+		return nil, fmt.Errorf("sqlite driver lookup: %w", err)
 	}
+	db := sql.OpenDB(&fkConnector{driver: drv, dsn: dsn})
 
 	// Configure connection pool for resource management under high load
 	db.SetMaxOpenConns(getEnvInt("KC_SQLITE_MAX_OPEN_CONNS", sqliteDefaultMaxOpenConns))
