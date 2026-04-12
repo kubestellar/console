@@ -211,15 +211,29 @@ export function LaunchSequence({
           : project.name
         const dryRunPrefix = state.isDryRun ? '[DRY RUN] ' : ''
         const clusterContext = `\n\n**Target cluster:** ${clusterName}`
-        const missionId = startMission({
-          title: `${dryRunPrefix}Install ${uiSafeDisplayName}`,
-          description: `${state.isDryRun ? 'Dry-run validation' : 'Automated install'} of ${uiSafeDisplayName} as part of Mission Control deployment`,
-          type: 'deploy',
-          cluster: clusterName,
-          initialPrompt: prompt + clusterContext,
-          dryRun: state.isDryRun })
 
-        // Update with missionId
+        // #6815 — startMission is synchronous and returns the missionId
+        // immediately; updateProgress must follow in the same try block so
+        // that if any future refactor introduces a throw between the two
+        // calls, the missionId is still captured in progress (preventing an
+        // orphaned mission ref).
+        let missionId: string | undefined
+        try {
+          missionId = startMission({
+            title: `${dryRunPrefix}Install ${uiSafeDisplayName}`,
+            description: `${state.isDryRun ? 'Dry-run validation' : 'Automated install'} of ${uiSafeDisplayName} as part of Mission Control deployment`,
+            type: 'deploy',
+            cluster: clusterName,
+            initialPrompt: prompt + clusterContext,
+            dryRun: state.isDryRun })
+        } catch (startErr) {
+          // If startMission itself throws (e.g. state mutation error), mark
+          // the project failed immediately instead of silently swallowing.
+          throw new Error(`startMission failed for ${projectName}: ${String(startErr)}`)
+        }
+
+        // Update with missionId — placed immediately after startMission in
+        // the same try block so the id is always persisted into progressRef.
         updateProgress((prev) =>
           prev.map((p) =>
             p.phase === phaseNum

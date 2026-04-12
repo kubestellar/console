@@ -66,6 +66,13 @@ const (
 	// Each entry stores a directory listing or file body.
 	missionsCacheMaxEntries = 256
 
+	// slackMaxTextBytes is the maximum allowed size for the Text field in a
+	// SlackShareRequest. Slack messages are typically short; 10 KB is more
+	// than enough for any legitimate use. Without this cap a caller could
+	// POST up to missionsMaxBodyBytes (10 MiB) of text that gets forwarded
+	// to Slack, buffering the full payload in-process (#6817).
+	slackMaxTextBytes = 10 * 1024 // 10 KB
+
 	// missionsCacheMaxBytes bounds the TOTAL byte size of all cache entries,
 	// not just the entry count. Without this bound an attacker could fill
 	// missionsCacheMaxEntries slots with ~10 MiB file bodies each (the
@@ -488,11 +495,21 @@ func (h *MissionsHandler) BrowseConsoleKB(c *fiber.Ctx) error {
 		return c.Status(resp.StatusCode).JSON(fiber.Map{"error": "GitHub API error", "status": resp.StatusCode, "code": code})
 	}
 
-	// GitHub returns type:"dir", frontend expects type:"directory" — transform
+	// GitHub returns type:"dir", frontend expects type:"directory" — transform.
+	// #6818 — If the path points to a file (not a directory), GitHub returns a
+	// JSON object instead of an array. json.Unmarshal into a slice will fail.
+	// Previously the handler forwarded the raw GitHub body, which has a
+	// different shape ({name, path, type:"file", content, ...}) than the
+	// normalized [{name, path, type, size}] the frontend expects — causing
+	// BrowseMissions to crash when it tries to .map() over an object. Return
+	// a structured 400 error instead, and skip the cache so subsequent
+	// requests with the corrected path aren't penalized.
 	var ghEntries []map[string]interface{}
 	if err := json.Unmarshal(body, &ghEntries); err != nil {
-		c.Set("Content-Type", "application/json")
-		return c.Send(body)
+		return c.Status(400).JSON(fiber.Map{
+			"error": "path is a file, not a directory",
+			"code":  "not_a_directory",
+		})
 	}
 
 	// Files and directories to hide from the browser UI — infrastructure
@@ -768,6 +785,12 @@ func (h *MissionsHandler) ShareToSlack(c *fiber.Ctx) error {
 	if req.Text == "" {
 		return c.Status(400).JSON(fiber.Map{"error": "text is required"})
 	}
+	// #6817 — Cap outbound Slack message size. Without this, a caller can
+	// POST a multi-MB text body that gets serialized into the Slack webhook
+	// payload and buffered in-process.
+	if len(req.Text) > slackMaxTextBytes {
+		return c.Status(400).JSON(fiber.Map{"error": fmt.Sprintf("text exceeds maximum size (%d bytes)", slackMaxTextBytes)})
+	}
 
 	payload, err := json.Marshal(map[string]string{"text": req.Text})
 	if err != nil {
@@ -786,6 +809,10 @@ func (h *MissionsHandler) ShareToSlack(c *fiber.Ctx) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		// #6817 — Drain the response body before returning so the underlying
+		// TCP connection can be reused by the transport pool. defer Close()
+		// alone does not guarantee the body is fully consumed.
+		_, _ = io.Copy(io.Discard, resp.Body)
 		return c.Status(502).JSON(fiber.Map{"error": fmt.Sprintf("slack returned status %d", resp.StatusCode)})
 	}
 	return c.JSON(fiber.Map{"success": true})

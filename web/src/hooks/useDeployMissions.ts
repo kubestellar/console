@@ -400,41 +400,54 @@ export function useDeployMissions() {
                     const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/deployments?${params}`, {
                       signal: ctrl.signal,
                       headers: { Accept: 'application/json' } })
-                    if (res.ok) {
-                      const data = await res.json()
-                      const deployments = (data.deployments || []) as Array<Record<string, unknown>>
-                      const match = deployments.find(
-                        (d) => String(d.name) === mission.workload
-                      )
-                      if (match) {
-                        // #6729 — Safe numeric cast. `Number('foo')` returns
-                        // NaN, which then flows into comparisons like
-                        // `readyReplicas >= replicas` and silently evaluates
-                        // to `false`, leaving missions stuck in "applying".
-                        // Fall back to 0 for non-finite values.
-                        const replicas = safeReplicaCount(match.replicas)
-                        const readyReplicas = safeReplicaCount(match.readyReplicas)
-                        let status: DeployClusterStatus['status'] = 'applying'
-                        // Zero-replica workloads are valid (e.g. scale-to-zero) — treat
-                        // readyReplicas >= replicas as success even when both are zero.
-                        if (readyReplicas >= replicas) {
-                          status = 'running'
-                        } else if (String(match.status) === 'failed') {
-                          status = 'failed'
-                        }
-                        // Fetch K8s events via kubectlProxy
-                        let logs: string[] | undefined
-                        try {
-                          logs = await fetchDeployEventsViaProxy(
-                            clusterInfo.context || cluster, mission.namespace, mission.workload,
-                          )
-                          if (logs.length === 0) logs = undefined
-                        } catch { /* non-critical */ }
-                        return { cluster, status, replicas, readyReplicas, logs }
-                      }
-                      // Workload not found on this cluster yet — still pending (or failed after threshold)
+                    // #6816 — If the agent returns a non-OK response (4xx/5xx
+                    // or a proxy HTML error page), count it as a failure
+                    // instead of silently falling through to the REST path.
+                    // Without this guard, res.json() on an HTML body throws
+                    // SyntaxError and the agent failure is invisible to the
+                    // consecutive-failure counter.
+                    // #6816 — If the agent returns a non-OK response (4xx/5xx
+                    // or a proxy HTML error page), count it as a failure
+                    // instead of silently falling through to the REST path.
+                    // Without this guard, res.json() on an HTML body throws
+                    // SyntaxError and the agent failure is invisible to the
+                    // consecutive-failure counter.
+                    if (!res.ok) {
                       return pendingOrFailed()
                     }
+                    const data = await res.json()
+                    const deployments = (data.deployments || []) as Array<Record<string, unknown>>
+                    const match = deployments.find(
+                      (d) => String(d.name) === mission.workload
+                    )
+                    if (match) {
+                      // #6729 — Safe numeric cast. `Number('foo')` returns
+                      // NaN, which then flows into comparisons like
+                      // `readyReplicas >= replicas` and silently evaluates
+                      // to `false`, leaving missions stuck in "applying".
+                      // Fall back to 0 for non-finite values.
+                      const replicas = safeReplicaCount(match.replicas)
+                      const readyReplicas = safeReplicaCount(match.readyReplicas)
+                      let status: DeployClusterStatus['status'] = 'applying'
+                      // Zero-replica workloads are valid (e.g. scale-to-zero) — treat
+                      // readyReplicas >= replicas as success even when both are zero.
+                      if (readyReplicas >= replicas) {
+                        status = 'running'
+                      } else if (String(match.status) === 'failed') {
+                        status = 'failed'
+                      }
+                      // Fetch K8s events via kubectlProxy
+                      let logs: string[] | undefined
+                      try {
+                        logs = await fetchDeployEventsViaProxy(
+                          clusterInfo.context || cluster, mission.namespace, mission.workload,
+                        )
+                        if (logs.length === 0) logs = undefined
+                      } catch { /* non-critical */ }
+                      return { cluster, status, replicas, readyReplicas, logs }
+                    }
+                    // Workload not found on this cluster yet — still pending (or failed after threshold)
+                    return pendingOrFailed()
                   } finally {
                     // Always clear the abort timer to prevent leak on fetch failure (#5498)
                     clearTimeout(tid)
