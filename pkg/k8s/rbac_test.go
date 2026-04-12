@@ -3,7 +3,6 @@ package k8s
 import (
 	"context"
 	"testing"
-
 	"time"
 
 	authv1 "k8s.io/api/authorization/v1"
@@ -23,19 +22,95 @@ func TestRBAC_ListServiceAccounts(t *testing.T) {
 		Contexts: map[string]*api.Context{"c1": {Cluster: "cl1"}},
 	}
 
-	sa := &corev1.ServiceAccount{
-		ObjectMeta: metav1.ObjectMeta{Name: "sa1", Namespace: "default"},
+	// saWithTS has a real CreationTimestamp — CreatedAt should be non-nil.
+	// saZero has the zero value — CreatedAt should be nil so the JSON
+	// `omitempty` tag drops the field (see #6764, #6769).
+	nonZero := metav1.NewTime(time.Date(2024, 1, 2, 3, 4, 5, 0, time.UTC))
+	saWithTS := &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:              "sa-with-ts",
+			Namespace:         "default",
+			CreationTimestamp: nonZero,
+		},
 	}
-	fakeCS := fake.NewSimpleClientset(sa)
+	saZero := &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{Name: "sa-zero", Namespace: "default"},
+	}
+	fakeCS := fake.NewSimpleClientset(saWithTS, saZero)
 	m.clients["c1"] = fakeCS
 
 	sas, err := m.ListServiceAccounts(context.Background(), "c1", "default")
 	if err != nil {
 		t.Fatalf("ListServiceAccounts failed: %v", err)
 	}
-	if len(sas) != 1 {
-		t.Errorf("Expected 1 SA, got %d", len(sas))
+	if len(sas) != 2 {
+		t.Fatalf("Expected 2 SAs, got %d", len(sas))
 	}
+
+	byName := make(map[string]*time.Time, len(sas))
+	for i := range sas {
+		byName[sas[i].Name] = sas[i].CreatedAt
+	}
+	if got := byName["sa-with-ts"]; got == nil {
+		t.Errorf("expected CreatedAt non-nil for sa-with-ts, got nil")
+	} else if !got.Equal(nonZero.Time) {
+		t.Errorf("CreatedAt = %v, want %v", *got, nonZero.Time)
+	}
+	if got := byName["sa-zero"]; got != nil {
+		t.Errorf("expected CreatedAt nil for sa-zero, got %v", *got)
+	}
+}
+
+// TestRBAC_CreateServiceAccount_CreatedAt verifies that CreateServiceAccount
+// leaves CreatedAt nil when the returned SA has a zero CreationTimestamp and
+// sets it when non-zero. See issue #6769.
+func TestRBAC_CreateServiceAccount_CreatedAt(t *testing.T) {
+	t.Run("zero creation timestamp leaves CreatedAt nil", func(t *testing.T) {
+		m, _ := NewMultiClusterClient("")
+		m.rawConfig = &api.Config{
+			Contexts: map[string]*api.Context{"c1": {Cluster: "cl1"}},
+		}
+		// fake.NewSimpleClientset's default Create reactor does not stamp a
+		// CreationTimestamp, so the returned SA has the zero value.
+		m.clients["c1"] = fake.NewSimpleClientset()
+
+		sa, err := m.CreateServiceAccount(context.Background(), "c1", "default", "new-sa")
+		if err != nil {
+			t.Fatalf("CreateServiceAccount failed: %v", err)
+		}
+		if sa.CreatedAt != nil {
+			t.Errorf("expected CreatedAt nil on zero timestamp, got %v", *sa.CreatedAt)
+		}
+	})
+
+	t.Run("non-zero creation timestamp is preserved", func(t *testing.T) {
+		m, _ := NewMultiClusterClient("")
+		m.rawConfig = &api.Config{
+			Contexts: map[string]*api.Context{"c1": {Cluster: "cl1"}},
+		}
+		stamped := time.Date(2024, 5, 6, 7, 8, 9, 0, time.UTC)
+		fakeCS := fake.NewSimpleClientset()
+		// Stamp CreationTimestamp on the object the Create reactor returns,
+		// mimicking real apiserver behavior.
+		fakeCS.PrependReactor("create", "serviceaccounts", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
+			createAction := action.(k8stesting.CreateAction)
+			obj := createAction.GetObject().(*corev1.ServiceAccount)
+			obj.CreationTimestamp = metav1.NewTime(stamped)
+			return true, obj, nil
+		})
+		m.clients["c1"] = fakeCS
+
+		sa, err := m.CreateServiceAccount(context.Background(), "c1", "default", "new-sa")
+		if err != nil {
+			t.Fatalf("CreateServiceAccount failed: %v", err)
+		}
+		if sa.CreatedAt == nil {
+			t.Fatal("expected CreatedAt non-nil for non-zero timestamp")
+		}
+		if !sa.CreatedAt.Equal(stamped) {
+			t.Errorf("CreatedAt = %v, want %v", *sa.CreatedAt, stamped)
+		}
+	})
 }
 
 func TestRBAC_ListRoles(t *testing.T) {
