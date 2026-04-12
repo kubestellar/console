@@ -956,6 +956,17 @@ export function MissionProvider({ children }: { children: ReactNode }) {
             return true
           })
           if (dedupedMissions.length > 0) {
+            // #6837 — Optimistically seed toolsInFlight for every resumed
+            // mission so the inactivity watchdog knows a tool *may* be
+            // running. Without this, a tool_result arriving for a tool whose
+            // tool_start was lost (pre-reconnect) would decrement from 0,
+            // and the watchdog would be active during a legitimately
+            // long-running tool call. The count resets to the real value
+            // once the first tool_start or tool_result frame arrives.
+            const OPTIMISTIC_TOOLS_IN_FLIGHT = 1
+            for (const mission of dedupedMissions) {
+              toolsInFlight.current.set(mission.id, OPTIMISTIC_TOOLS_IN_FLIGHT)
+            }
             setTimeout(() => {
               dedupedMissions.forEach(mission => {
                 // Find the last user message to re-send
@@ -1087,6 +1098,14 @@ export function MissionProvider({ children }: { children: ReactNode }) {
             )
           }
 
+          // #6836 — Cancel pending wsSend retry timers so they don't fire
+          // on the dead socket. The main unmount effect also clears these,
+          // but onclose fires on transient disconnects (not just unmount).
+          for (const handle of wsSendRetryTimers.current) {
+            clearTimeout(handle)
+          }
+          wsSendRetryTimers.current.clear()
+
           // Transient disconnect handling (#5929): instead of failing running
           // missions immediately, mark them with needsReconnect so that the
           // auto-reconnect loop (above) can resume them once the WebSocket
@@ -1190,6 +1209,12 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
           // branch above wasn't entered. Late responses from the dead
           // socket must not be misattributed.
           pendingRequests.current.clear()
+          // #6836 — Cancel pending wsSend retry timers on error so they
+          // don't fire on the dead/closed socket.
+          for (const handle of wsSendRetryTimers.current) {
+            clearTimeout(handle)
+          }
+          wsSendRetryTimers.current.clear()
           // #6376 — drop any tool-in-flight tracking for the dead socket;
           // the agent will re-report status after the reconnect.
           toolsInFlight.current.clear()

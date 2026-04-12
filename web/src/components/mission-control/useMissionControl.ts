@@ -782,6 +782,9 @@ export function useMissionControl() {
     const isTerminal = TERMINAL_STATES.has(status)
     if (isStreaming !== state.aiStreaming) {
       setState((prev) => ({ ...prev, aiStreaming: isStreaming }))
+      // #6827 — Clear the synchronous guard when streaming ends so a new
+      // request can be initiated.
+      if (!isStreaming) aiRequestInFlightRef.current = false
     } else if (isTerminal && state.aiStreaming) {
       // Defensive second-pass: if the streaming flag is still true on a
       // terminal status (no intermediate 'running' ever observed), force it
@@ -790,6 +793,7 @@ export function useMissionControl() {
       // skips 'running' entirely means the effect never ran with
       // `isStreaming === true`, so we clear it explicitly here (#6669).
       setState((prev) => ({ ...prev, aiStreaming: false }))
+      aiRequestInFlightRef.current = false // #6827
     }
   }, [planningMission?.status, state.aiStreaming])
 
@@ -802,6 +806,7 @@ export function useMissionControl() {
     const timer = setTimeout(() => {
       setState((prev) => {
         if (!prev.aiStreaming) return prev
+        aiRequestInFlightRef.current = false // #6827
         return { ...prev, aiStreaming: false }
       })
     }, AI_SUGGEST_TIMEOUT_MS)
@@ -873,6 +878,11 @@ export function useMissionControl() {
   // Without this, the first click on "Suggest" can be a no-op because the callback
   // captures a stale planningMissionId or targetClusters from a previous render (#4547).
   const stateRef = useRef(state)
+  // #6827 — Synchronous guard to prevent double-invocation of askAIForSuggestions.
+  // The stateRef-based guard (aiStreaming) is updated via useEffect (async), so two
+  // rapid Enter keystrokes within a single frame can both pass it. This ref is set
+  // synchronously at the top of askAIForSuggestions and cleared when streaming ends.
+  const aiRequestInFlightRef = useRef(false)
   const helmReleasesRef = useRef(helmReleases)
   // #6834 — Dedicated ref for planningMissionId so askAIForSuggestions always
   // reads the latest value, even when a prior setState hasn't been committed yet.
@@ -882,12 +892,23 @@ export function useMissionControl() {
   useEffect(() => { helmReleasesRef.current = helmReleases }, [helmReleases])
 
   const askAIForSuggestions = (description: string, existingProjects: PayloadProject[] = []) => {
+      // #6827 — Synchronous ref guard: two rapid Enter keystrokes in a single
+      // frame can both pass the stateRef.current.aiStreaming check below because
+      // that ref is updated via useEffect (runs after render). This ref is set
+      // immediately (synchronously) so the second call sees it and bails.
+      if (aiRequestInFlightRef.current) {
+        console.warn('[MissionControl] #6827 — askAIForSuggestions already in flight (ref guard); ignoring')
+        return
+      }
+      aiRequestInFlightRef.current = true
+
       const currentState = stateRef.current
       // #6406 — Guard against rapid-click parallel requests. The button is
       // already `disabled={aiStreaming}` in the UI, but keyboard users and
       // rapid double-clicks can still land a second call before the state
       // updates — so early-return here too (belt-and-suspenders).
       if (currentState.aiStreaming) {
+        aiRequestInFlightRef.current = false
         console.warn('[MissionControl] issue 6406 — askAIForSuggestions called while already streaming; ignoring')
         return
       }
