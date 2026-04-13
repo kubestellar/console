@@ -70,6 +70,7 @@ type MetricsHistory struct {
 	mu                 sync.RWMutex
 	diskMu             sync.Mutex // serializes saveToDisk calls (#7017)
 	stopCh             chan struct{}
+	stopOnce           sync.Once  // prevents double-close panic on stopCh (#7244)
 	dataDir            string
 	loggedClusterError atomic.Bool // suppress repeated "no kubeconfig" errors (#7015)
 	lastPersistError   error       // last saveToDisk error, nil on success (#5553)
@@ -108,9 +109,12 @@ func (mh *MetricsHistory) Start(interval time.Duration) {
 	go mh.runLoop(interval)
 }
 
-// Stop gracefully shuts down the history manager
+// Stop gracefully shuts down the history manager. It is safe to call
+// multiple times — the channel is only closed once (#7244).
 func (mh *MetricsHistory) Stop() {
-	close(mh.stopCh)
+	mh.stopOnce.Do(func() {
+		close(mh.stopCh)
+	})
 }
 
 // GetSnapshots returns all snapshots

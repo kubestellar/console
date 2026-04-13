@@ -96,11 +96,15 @@ func (cm *ConfigManager) Load() error {
 	return nil
 }
 
-// Save writes the config to disk with secure permissions
+// Save writes the config to disk with secure permissions.
 func (cm *ConfigManager) Save() error {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
+	return cm.saveLocked()
+}
 
+// saveLocked writes config to disk. Caller MUST hold cm.mu.
+func (cm *ConfigManager) saveLocked() error {
 	// Ensure directory exists with secure permissions
 	configDir := filepath.Dir(cm.configPath)
 	if err := os.MkdirAll(configDir, configDirMode); err != nil {
@@ -160,41 +164,33 @@ func (cm *ConfigManager) GetModel(provider, defaultModel string) string {
 	return defaultModel
 }
 
-// SetAPIKey stores an API key for a provider
+// SetAPIKey stores an API key for a provider. The lock is held across
+// both the map mutation and the disk write to prevent lost updates (#7245).
 func (cm *ConfigManager) SetAPIKey(provider, apiKey string) error {
-	func() {
-		cm.mu.Lock()
-		defer cm.mu.Unlock()
-		agentConfig := cm.config.Agents[provider]
-		agentConfig.APIKey = apiKey
-		cm.config.Agents[provider] = agentConfig
-	}()
-
-	return cm.Save()
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+	agentConfig := cm.config.Agents[provider]
+	agentConfig.APIKey = apiKey
+	cm.config.Agents[provider] = agentConfig
+	return cm.saveLocked()
 }
 
-// SetModel stores a model preference for a provider
+// SetModel stores a model preference for a provider.
 func (cm *ConfigManager) SetModel(provider, model string) error {
-	func() {
-		cm.mu.Lock()
-		defer cm.mu.Unlock()
-		agentConfig := cm.config.Agents[provider]
-		agentConfig.Model = model
-		cm.config.Agents[provider] = agentConfig
-	}()
-
-	return cm.Save()
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+	agentConfig := cm.config.Agents[provider]
+	agentConfig.Model = model
+	cm.config.Agents[provider] = agentConfig
+	return cm.saveLocked()
 }
 
-// RemoveAPIKey removes the API key for a provider
+// RemoveAPIKey removes the API key for a provider.
 func (cm *ConfigManager) RemoveAPIKey(provider string) error {
-	func() {
-		cm.mu.Lock()
-		defer cm.mu.Unlock()
-		delete(cm.config.Agents, provider)
-	}()
-
-	return cm.Save()
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+	delete(cm.config.Agents, provider)
+	return cm.saveLocked()
 }
 
 // HasAPIKey checks if a provider has an API key configured (env or config)
@@ -252,19 +248,19 @@ func (cm *ConfigManager) GetDefaultAgent() string {
 	return cm.config.DefaultAgent
 }
 
-// SetDefaultAgent sets the default agent
+// SetDefaultAgent sets the default agent.
 func (cm *ConfigManager) SetDefaultAgent(agent string) error {
-	func() {
-		cm.mu.Lock()
-		defer cm.mu.Unlock()
-		cm.config.DefaultAgent = agent
-	}()
-
-	return cm.Save()
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+	cm.config.DefaultAgent = agent
+	return cm.saveLocked()
 }
 
-// GetConfigPath returns the path to the config file
+// GetConfigPath returns the path to the config file.
+// Reads under lock to avoid a data race with SetConfigPath (#7246).
 func (cm *ConfigManager) GetConfigPath() string {
+	cm.mu.RLock()
+	defer cm.mu.RUnlock()
 	return cm.configPath
 }
 
