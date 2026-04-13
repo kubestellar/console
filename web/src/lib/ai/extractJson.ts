@@ -104,7 +104,14 @@ export function extractJsonFromMarkdown<T = unknown>(text: string): ExtractResul
   }
 
   // Strategy 3: Find ALL JSON objects/arrays in the text via brace depth
-  // matching — try each candidate until one parses successfully
+  // matching. Collect all parseable candidates and prefer the LAST valid
+  // object/array — AI models often provide a corrected or updated JSON
+  // block later in the response (#7191). Additionally, skip bare arrays
+  // that look like prose citations (e.g. `[1]`, `[2, 3]`) to avoid
+  // treating numbered references as JSON data (#7189).
+  let lastObject: T | null = null
+  let lastArray: T | null = null
+
   for (let pos = 0; pos < text.length; pos++) {
     const ch = text[pos]
     if (ch !== '{' && ch !== '[') continue
@@ -113,12 +120,28 @@ export function extractJsonFromMarkdown<T = unknown>(text: string): ExtractResul
     if (candidate) {
       const parsed = tryParse<T>(candidate)
       if (parsed !== null) {
-        return { data: parsed, error: null }
+        if (ch === '{') {
+          lastObject = parsed
+        } else {
+          // #7189 — Skip bare arrays of only primitive numbers/strings that
+          // are likely prose citations like [1], [2, 3], or [a]. Only accept
+          // arrays that contain objects or are reasonably complex.
+          const arr = parsed as unknown[]
+          const isBarePrimitive = Array.isArray(arr) && arr.length > 0 &&
+            arr.every(item => typeof item === 'number' || typeof item === 'string')
+          if (!isBarePrimitive) {
+            lastArray = parsed
+          }
+        }
       }
       // Skip past this candidate and keep searching
       pos += candidate.length - 1
     }
   }
+
+  // Prefer objects over arrays (objects are more likely to be structured data)
+  if (lastObject !== null) return { data: lastObject, error: null }
+  if (lastArray !== null) return { data: lastArray, error: null }
 
   return { data: null, error: 'Could not extract valid JSON from AI response.' }
 }

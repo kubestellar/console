@@ -85,4 +85,31 @@ describe('extractJsonFromMarkdown', () => {
     const result = extractJsonFromMarkdown(text)
     expect(result.data).toEqual({ new: true })
   })
+
+  // #7189 — Bracket citations like [1] should not be treated as JSON
+  it('does not treat prose citation [1] as JSON', () => {
+    const text = 'According to source [1], the answer is {"result":"success"}'
+    const result = extractJsonFromMarkdown(text)
+    expect(result.data).toEqual({ result: 'success' })
+  })
+
+  it('does not treat numbered list references like [2, 3] as JSON', () => {
+    const text = 'See references [2, 3] for details. Here is the config: {"port":8080}'
+    const result = extractJsonFromMarkdown(text)
+    expect(result.data).toEqual({ port: 8080 })
+  })
+
+  it('returns error when only bare citation arrays exist', () => {
+    const text = 'According to [1] and [2], no JSON here.'
+    const result = extractJsonFromMarkdown(text)
+    expect(result.data).toBeNull()
+    expect(result.error).toBeTruthy()
+  })
+
+  // #7191 — Prefer last JSON object when multiple appear in prose
+  it('prefers last JSON object in mixed prose', () => {
+    const text = 'Old config: {"version":1} — Updated config: {"version":2}'
+    const result = extractJsonFromMarkdown(text)
+    expect(result.data).toEqual({ version: 2 })
+  })
 })
