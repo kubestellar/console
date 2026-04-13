@@ -71,9 +71,10 @@ describe('executeRunbook', () => {
 
     await executeRunbook(baseRunbook, baseContext)
 
+    // #7286 — MCP payload uses { name, arguments } not { tool, args }
     const callBody = JSON.parse(mockAuthFetch.mock.calls[0][1]?.body as string)
-    expect(callBody.args.cluster).toBe('prod-cluster')
-    expect(callBody.args.namespace).toBe('default')
+    expect(callBody.arguments.cluster).toBe('prod-cluster')
+    expect(callBody.arguments.namespace).toBe('default')
   })
 
   it('resolves template variables in analysis prompt', async () => {
@@ -247,9 +248,10 @@ describe('executeRunbook', () => {
     const minimalContext: RunbookContext = {}
     await executeRunbook(baseRunbook, minimalContext)
 
+    // #7286 — MCP payload uses { name, arguments } not { tool, args }
     const callBody = JSON.parse(mockAuthFetch.mock.calls[0][1]?.body as string)
-    expect(callBody.args.cluster).toBe('unknown')
-    expect(callBody.args.namespace).toBe('default')
+    expect(callBody.arguments.cluster).toBe('unknown')
+    expect(callBody.arguments.namespace).toBe('default')
   })
 
   it('converts numeric string args to numbers', async () => {
@@ -267,8 +269,9 @@ describe('executeRunbook', () => {
 
     await executeRunbook(runbook, baseContext)
 
+    // #7286 — MCP payload uses { name, arguments } not { tool, args }
     const callBody = JSON.parse(mockAuthFetch.mock.calls[0][1]?.body as string)
-    expect(callBody.args.limit).toBe(20)
-    expect(typeof callBody.args.limit).toBe('number')
+    expect(callBody.arguments.limit).toBe(20)
+    expect(typeof callBody.arguments.limit).toBe('number')
   })
 })

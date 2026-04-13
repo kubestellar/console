@@ -4,12 +4,16 @@ import { renderHook, act } from '@testing-library/react'
 // Mock useMissions before importing the hook
 const mockStartMission = vi.fn(() => 'mission-123')
 const mockSendMessage = vi.fn()
+// Mutable missions store — completeMission() replaces this with a new array
+// so that React detects a reference change and re-triggers the useEffect
+// that drives the diagnosing → proposing-repair transition (#7290).
+let mockMissionsStore: Array<{ id: string; status: string }> = []
 
 vi.mock('../useMissions', () => ({
   useMissions: vi.fn(() => ({
     startMission: mockStartMission,
     sendMessage: mockSendMessage,
-    missions: [],
+    get missions() { return mockMissionsStore },
     activeMission: null,
     isSidebarOpen: false,
     agents: [],
@@ -70,11 +74,25 @@ describe('useDiagnoseRepairLoop', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.useFakeTimers()
+    mockMissionsStore = []
   })
 
   afterEach(() => {
     vi.useRealTimers()
   })
+
+  /**
+   * Simulate mission completion so the useEffect in useDiagnoseRepairLoop
+   * sees a terminal status and transitions from diagnosing to proposing-repair
+   * (or complete for non-repairable mode). After #7290, phase transitions are
+   * driven by mission status, not a fixed 3s timer.
+   *
+   * Assigns a new array reference so React detects the dependency change.
+   */
+  function completeMission(hook: { rerender: () => void }) {
+    mockMissionsStore = [{ id: 'mission-123', status: 'completed' }]
+    hook.rerender()
+  }
 
   it('returns expected shape with all methods and state', () => {
     const { result } = renderHook(() =>
@@ -146,128 +164,130 @@ describe('useDiagnoseRepairLoop', () => {
     expect(callArgs.initialPrompt).toContain('llm-d')
   })
 
-  it('transitions to proposing-repair after 3s delay when repairable', () => {
-    const { result } = renderHook(() =>
+  it('transitions to proposing-repair when mission completes (repairable)', () => {
+    const hook = renderHook(() =>
       useDiagnoseRepairLoop({ monitorType: 'workload', repairable: true })
     )
     const resources = [makeResource()]
     const issues = [makeIssue()]
 
     act(() => {
-      result.current.startDiagnose(resources, issues, {})
+      hook.result.current.startDiagnose(resources, issues, {})
     })
-    expect(result.current.state.phase).toBe('diagnosing')
+    expect(hook.result.current.state.phase).toBe('diagnosing')
 
     act(() => {
-      vi.advanceTimersByTime(3000)
+      completeMission(hook)
     })
-    expect(result.current.state.phase).toBe('proposing-repair')
-    expect(result.current.state.proposedRepairs.length).toBe(1)
+    expect(hook.result.current.state.phase).toBe('proposing-repair')
+    expect(hook.result.current.state.proposedRepairs.length).toBe(1)
   })
 
-  it('transitions to complete after 3s delay when not repairable', () => {
-    const { result } = renderHook(() =>
+  it('transitions to complete when mission completes (not repairable)', () => {
+    const hook = renderHook(() =>
       useDiagnoseRepairLoop({ monitorType: 'workload', repairable: false })
     )
 
     act(() => {
-      result.current.startDiagnose([makeResource()], [makeIssue()], {})
+      hook.result.current.startDiagnose([makeResource()], [makeIssue()], {})
     })
 
     act(() => {
-      vi.advanceTimersByTime(3000)
+      completeMission(hook)
     })
-    expect(result.current.state.phase).toBe('complete')
-    expect(result.current.state.proposedRepairs).toEqual([])
+    expect(hook.result.current.state.phase).toBe('complete')
+    expect(hook.result.current.state.proposedRepairs).toEqual([])
   })
 
   it('approveRepair marks specific repair as approved', () => {
-    const { result } = renderHook(() =>
+    const hook = renderHook(() =>
       useDiagnoseRepairLoop({ monitorType: 'workload' })
     )
 
     act(() => {
-      result.current.startDiagnose(
+      hook.result.current.startDiagnose(
         [makeResource()],
         [makeIssue({ id: 'issue-A' }), makeIssue({ id: 'issue-B' })],
         {}
       )
     })
-    act(() => { vi.advanceTimersByTime(3000) })
+    act(() => { completeMission(hook) })
 
-    const firstRepairId = result.current.state.proposedRepairs[0].id
+    const firstRepairId = hook.result.current.state.proposedRepairs[0].id
     act(() => {
-      result.current.approveRepair(firstRepairId)
+      hook.result.current.approveRepair(firstRepairId)
     })
 
-    expect(result.current.state.phase).toBe('awaiting-approval')
-    const approved = result.current.state.proposedRepairs.find(r => r.id === firstRepairId)
+    expect(hook.result.current.state.phase).toBe('awaiting-approval')
+    const approved = hook.result.current.state.proposedRepairs.find(r => r.id === firstRepairId)
     expect(approved?.approved).toBe(true)
 
     // Second repair should still be unapproved
-    const second = result.current.state.proposedRepairs.find(r => r.id !== firstRepairId)
+    const second = hook.result.current.state.proposedRepairs.find(r => r.id !== firstRepairId)
     expect(second?.approved).toBe(false)
   })
 
   it('approveAllRepairs marks all repairs as approved', () => {
-    const { result } = renderHook(() =>
+    const hook = renderHook(() =>
       useDiagnoseRepairLoop({ monitorType: 'workload' })
     )
 
     act(() => {
-      result.current.startDiagnose(
+      hook.result.current.startDiagnose(
         [makeResource()],
         [makeIssue({ id: 'issue-1' }), makeIssue({ id: 'issue-2' })],
         {}
       )
     })
-    act(() => { vi.advanceTimersByTime(3000) })
+    act(() => { completeMission(hook) })
 
     act(() => {
-      result.current.approveAllRepairs()
+      hook.result.current.approveAllRepairs()
     })
 
-    expect(result.current.state.phase).toBe('awaiting-approval')
-    expect(result.current.state.proposedRepairs.every(r => r.approved)).toBe(true)
+    expect(hook.result.current.state.phase).toBe('awaiting-approval')
+    expect(hook.result.current.state.proposedRepairs.every(r => r.approved)).toBe(true)
   })
 
   it('executeRepairs does nothing when no repairs are approved', () => {
-    const { result } = renderHook(() =>
+    const hook = renderHook(() =>
       useDiagnoseRepairLoop({ monitorType: 'workload' })
     )
 
     act(() => {
-      result.current.startDiagnose([makeResource()], [makeIssue()], {})
+      hook.result.current.startDiagnose([makeResource()], [makeIssue()], {})
     })
-    act(() => { vi.advanceTimersByTime(3000) })
+    act(() => { completeMission(hook) })
 
     // Don't approve any repairs
     act(() => {
-      result.current.executeRepairs()
+      hook.result.current.executeRepairs()
     })
 
     // Phase should still be proposing-repair, not repairing
-    expect(result.current.state.phase).toBe('proposing-repair')
+    expect(hook.result.current.state.phase).toBe('proposing-repair')
   })
 
   it('executeRepairs sends message to mission and transitions to verifying', () => {
-    const { result } = renderHook(() =>
+    const hook = renderHook(() =>
       useDiagnoseRepairLoop({ monitorType: 'workload' })
     )
 
     act(() => {
-      result.current.startDiagnose([makeResource()], [makeIssue()], {})
+      hook.result.current.startDiagnose([makeResource()], [makeIssue()], {})
     })
-    act(() => { vi.advanceTimersByTime(3000) })
-    act(() => { result.current.approveAllRepairs() })
-    act(() => { result.current.executeRepairs() })
+    act(() => { completeMission(hook) })
+    act(() => { hook.result.current.approveAllRepairs() })
+    act(() => { hook.result.current.executeRepairs() })
 
-    expect(result.current.state.phase).toBe('repairing')
+    expect(hook.result.current.state.phase).toBe('repairing')
     expect(mockSendMessage).toHaveBeenCalledWith('mission-123', expect.stringContaining('Execute'))
 
-    act(() => { vi.advanceTimersByTime(5000) })
-    expect(result.current.state.phase).toBe('verifying')
-    expect(result.current.state.completedRepairs.length).toBe(1)
+    /** Safety-net timeout (ms) defined in useDiagnoseRepairLoop for repair completion */
+    const REPAIR_SAFETY_TIMEOUT_MS = 60_000
+    act(() => { vi.advanceTimersByTime(REPAIR_SAFETY_TIMEOUT_MS) })
+    expect(hook.result.current.state.phase).toBe('verifying')
+    expect(hook.result.current.state.completedRepairs.length).toBe(1)
   })
 
   it('reset returns state to initial', () => {
@@ -307,7 +327,7 @@ describe('useDiagnoseRepairLoop', () => {
   })
 
   it('generates correct default repair actions based on resource kind', () => {
-    const { result } = renderHook(() =>
+    const hook = renderHook(() =>
       useDiagnoseRepairLoop({ monitorType: 'workload' })
     )
 
@@ -320,15 +340,15 @@ describe('useDiagnoseRepairLoop', () => {
     })
 
     act(() => {
-      result.current.startDiagnose(
+      hook.result.current.startDiagnose(
         [makeResource(), makeResource({ kind: 'Service' })],
         [deploymentIssue, serviceIssue],
         {}
       )
     })
-    act(() => { vi.advanceTimersByTime(3000) })
+    act(() => { completeMission(hook) })
 
-    const repairs = result.current.state.proposedRepairs
+    const repairs = hook.result.current.state.proposedRepairs
     expect(repairs.length).toBe(2)
     // Deployment with unhealthy status => 'Restart Deployment'
     expect(repairs[0].action).toContain('Deployment')
@@ -337,41 +357,43 @@ describe('useDiagnoseRepairLoop', () => {
   })
 
   it('completes after reaching maxLoops', () => {
-    const { result } = renderHook(() =>
+    const hook = renderHook(() =>
       useDiagnoseRepairLoop({ monitorType: 'workload', maxLoops: 1 })
     )
 
     act(() => {
-      result.current.startDiagnose([makeResource()], [makeIssue()], {})
+      hook.result.current.startDiagnose([makeResource()], [makeIssue()], {})
     })
-    act(() => { vi.advanceTimersByTime(3000) })
-    act(() => { result.current.approveAllRepairs() })
-    act(() => { result.current.executeRepairs() })
-    act(() => { vi.advanceTimersByTime(5000) })
+    act(() => { completeMission(hook) })
+    act(() => { hook.result.current.approveAllRepairs() })
+    act(() => { hook.result.current.executeRepairs() })
+    /** Safety-net timeout (ms) defined in useDiagnoseRepairLoop for repair completion */
+    const REPAIR_SAFETY_TIMEOUT_MS = 60_000
+    act(() => { vi.advanceTimersByTime(REPAIR_SAFETY_TIMEOUT_MS) })
 
     // maxLoops=1 so it should complete instead of verifying
-    expect(result.current.state.phase).toBe('complete')
+    expect(hook.result.current.state.phase).toBe('complete')
   })
 
   it('repair risk is medium for critical severity issues', () => {
-    const { result } = renderHook(() =>
+    const hook = renderHook(() =>
       useDiagnoseRepairLoop({ monitorType: 'workload' })
     )
 
     act(() => {
-      result.current.startDiagnose(
+      hook.result.current.startDiagnose(
         [makeResource()],
         [makeIssue({ severity: 'critical' })],
         {}
       )
     })
-    act(() => { vi.advanceTimersByTime(3000) })
+    act(() => { completeMission(hook) })
 
-    expect(result.current.state.proposedRepairs[0].risk).toBe('medium')
+    expect(hook.result.current.state.proposedRepairs[0].risk).toBe('medium')
   })
 
   it('generates Create action for missing resources', () => {
-    const { result } = renderHook(() =>
+    const hook = renderHook(() =>
       useDiagnoseRepairLoop({ monitorType: 'workload' })
     )
 
@@ -380,10 +402,10 @@ describe('useDiagnoseRepairLoop', () => {
     })
 
     act(() => {
-      result.current.startDiagnose([makeResource()], [missingIssue], {})
+      hook.result.current.startDiagnose([makeResource()], [missingIssue], {})
     })
-    act(() => { vi.advanceTimersByTime(3000) })
+    act(() => { completeMission(hook) })
 
-    expect(result.current.state.proposedRepairs[0].action).toBe('Create ConfigMap')
+    expect(hook.result.current.state.proposedRepairs[0].action).toBe('Create ConfigMap')
   })
 })
