@@ -19,7 +19,8 @@ const MIN_BODY_TEXT_LENGTH = 10
 /** Maximum time to wait for page content to appear */
 const CONTENT_TIMEOUT_MS = 15_000
 
-const ROUTES = [
+/** Dashboard and feature routes */
+const DASHBOARD_ROUTES = [
   '/',
   '/clusters',
   '/nodes',
@@ -42,33 +43,102 @@ const ROUTES = [
   '/missions',
   '/marketplace',
   '/gpu-reservations',
+  '/ai-agents',
+  '/ci-cd',
+  '/logs',
+  '/namespaces',
+  '/history',
 ] as const
 
-test.describe('Deep Links — Route Rendering', () => {
-  for (const route of ROUTES) {
+/** Landing / marketing pages (lightweight shell, no auth) */
+const LANDING_ROUTES = [
+  '/welcome',
+  '/from-lens',
+  '/from-headlamp',
+  '/from-holmesgpt',
+  '/feature-inspektorgadget',
+  '/feature-kagent',
+  '/white-label',
+] as const
+
+/** Mission deep links — specific missions that should render a
+ *  MissionLandingPage with the mission title and steps */
+const MISSION_DEEP_LINKS = [
+  '/missions/install-prometheus',
+  '/missions/install-falco',
+  '/missions/install-submariner',
+  '/missions/install-drasi',
+  '/missions/install-cert-manager',
+  '/missions/install-istio',
+  '/missions/install-opencost',
+  '/missions/install-open-cluster-management',
+] as const
+
+const ALL_ROUTES = [...DASHBOARD_ROUTES, ...LANDING_ROUTES] as const
+
+test.describe('Deep Links — Dashboard Routes', () => {
+  for (const route of DASHBOARD_ROUTES) {
     const label = route === '/' ? 'home' : route.replace('/', '')
 
     test(`${label} renders content (not blank)`, async ({ page }) => {
       await setupDemoAndNavigate(page, route)
-
-      // Wait for meaningful content to appear
       await page.waitForLoadState('domcontentloaded')
 
-      // Assert the page is not blank
       const bodyText = await page.evaluate(() => (document.body.innerText || '').trim())
       expect(
         bodyText.length,
         `Route "${route}" rendered a blank page (body text length: ${bodyText.length})`,
       ).toBeGreaterThan(MIN_BODY_TEXT_LENGTH)
 
-      // No crash indicators
       const crash = page.getByText(/something went wrong|application error|unhandled error/i)
       await expect(crash).not.toBeVisible()
     })
   }
 })
 
-test.describe('Deep Links — Query Params', () => {
+test.describe('Deep Links — Landing Pages', () => {
+  for (const route of LANDING_ROUTES) {
+    const label = route.replace('/', '')
+
+    test(`${label} renders content (not blank)`, async ({ page }) => {
+      // Landing pages use LightweightShell — navigate directly, no demo setup needed
+      await page.goto(route)
+      await page.waitForLoadState('domcontentloaded')
+
+      const bodyText = await page.evaluate(() => (document.body.innerText || '').trim())
+      expect(
+        bodyText.length,
+        `Landing page "${route}" rendered a blank page`,
+      ).toBeGreaterThan(MIN_BODY_TEXT_LENGTH)
+
+      const crash = page.getByText(/something went wrong|application error|unhandled error/i)
+      await expect(crash).not.toBeVisible()
+    })
+  }
+})
+
+test.describe('Deep Links — Mission Deep Links', () => {
+  for (const route of MISSION_DEEP_LINKS) {
+    const missionName = route.replace('/missions/', '')
+
+    test(`mission "${missionName}" renders landing page`, async ({ page }) => {
+      // Mission landing pages are standalone (LightweightShell) — no demo setup
+      await page.goto(route)
+      await page.waitForLoadState('domcontentloaded')
+
+      const bodyText = await page.evaluate(() => (document.body.innerText || '').trim())
+      expect(
+        bodyText.length,
+        `Mission "${missionName}" rendered a blank page`,
+      ).toBeGreaterThan(MIN_BODY_TEXT_LENGTH)
+
+      const crash = page.getByText(/something went wrong|application error|unhandled error/i)
+      await expect(crash).not.toBeVisible()
+    })
+  }
+})
+
+test.describe('Deep Links — Query Params & Special Routes', () => {
   test('/?browse=missions renders missions content', async ({ page }) => {
     await setupDemoAndNavigate(page, '/?browse=missions')
 
