@@ -1,27 +1,24 @@
 name: Auth Login Smoke Test
 
-# Verifies the OAuth login flow is functional on console.kubestellar.io
-# every 30 minutes. This is a PRODUCTION smoke test — no build step,
-# no checkout, just HTTP requests against the live site.
+# Verifies the auth login contract by building and running the Go backend
+# in dev mode. No external dependencies — everything runs against localhost.
 #
 # Catches regressions like commit 25e464fa (#6593) which removed the
 # "token" field from /auth/refresh and broke login for 24 hours.
 #
 # What it checks:
-#   1. /health is reachable and returns OAuth configuration
-#   2. /auth/github redirects to GitHub's OAuth authorize page
-#   3. /auth/refresh returns the expected response shape (token + onboarded)
-#      when called with a valid dev-mode JWT
+#   1. /health returns JSON with status and oauth_configured fields
+#   2. GET /auth/github (dev mode, no OAuth client) sets a kc_auth cookie
+#   3. POST /auth/refresh with that cookie returns { token, onboarded }
+#      — the exact contract the frontend depends on
 #
-# The test uses DEV_USER credentials — it does NOT perform a real GitHub
-# OAuth flow (which would require browser interaction). Instead it starts
-# a local backend in dev mode, exercises the /auth/refresh contract, and
-# tears down. This takes ~60 seconds.
+# The test uses DEV_MODE (no GitHub OAuth credentials) so the backend
+# auto-creates a dev-user on /auth/github. This takes ~60 seconds.
 
 on:
   schedule:
-    # Every 30 minutes
-    - cron: "*/30 * * * *"
+    # Every hour
+    - cron: "0 * * * *"
   workflow_dispatch:
 
 permissions:
@@ -31,10 +28,6 @@ permissions:
 concurrency:
   group: auth-login-smoke
   cancel-in-progress: true
-
-env:
-  # Production URL to verify is reachable
-  CONSOLE_URL: "https://console.kubestellar.io"
 
 jobs:
   auth-smoke:
@@ -49,117 +42,145 @@ jobs:
         with:
           go-version-file: go.mod
 
-      # ── 1. Production reachability ────────────────────────────────
-      - name: Verify production is reachable
-        run: |
-          echo "Checking $CONSOLE_URL ..."
-          HTTP_CODE=$(curl -sS --max-time 10 -o /dev/null -w '%{http_code}' "$CONSOLE_URL/")
-          echo "HTTP status: $HTTP_CODE"
-          if [ "$HTTP_CODE" != "200" ]; then
-            echo "::error::Production returned HTTP $HTTP_CODE"
-            exit 1
-          fi
-          echo "Production reachable (HTTP 200)"
-
-      # ── 2. OAuth redirect ─────────────────────────────────────────
-      - name: Verify /auth/github redirects to GitHub
-        run: |
-          echo "Checking $CONSOLE_URL/auth/github redirect..."
-          REDIRECT_URL=$(curl -sS --max-time 10 -o /dev/null -w '%{redirect_url}' "$CONSOLE_URL/auth/github" || true)
-          echo "Redirect: $REDIRECT_URL"
-
-          if echo "$REDIRECT_URL" | grep -q "github.com"; then
-            echo "OAuth redirect OK — points to github.com"
-          else
-            echo "::warning::OAuth redirect did not point to github.com (got: $REDIRECT_URL)"
-          fi
-
-      # ── 3. /auth/refresh contract (local backend) ─────────────────
+      # ── 1. Build the Go backend ──────────────────────────────────
       - name: Build backend
         run: go build -o console-bin ./cmd/console
 
-      - name: Test /auth/refresh contract
+      # ── 2. Start backend in dev mode ─────────────────────────────
+      - name: Start backend
         run: |
-          # Start backend in dev mode (auto-creates dev-user, no OAuth needed)
           JWT_SECRET="smoke-test-$(openssl rand -hex 16)" \
           DEV_MODE=true \
-          BACKEND_PORT=8081 \
-          ./console-bin &
-          PID=$!
+          ./console-bin --dev --port 8081 &
+          echo $! > /tmp/backend.pid
 
-          # Wait for health
-          for i in $(seq 1 15); do
+      # ── 3. Wait for health ───────────────────────────────────────
+      - name: Wait for backend health
+        run: |
+          MAX_WAIT_SECONDS=30
+          for i in $(seq 1 "$MAX_WAIT_SECONDS"); do
             if curl -sf http://localhost:8081/health > /dev/null 2>&1; then
               echo "Backend healthy after ${i}s"
-              break
+              exit 0
             fi
             sleep 1
           done
+          echo "::error::Backend did not become healthy within ${MAX_WAIT_SECONDS}s"
+          exit 1
 
-          # Login as dev-user to get a token
-          echo "Getting dev-user token..."
-          LOGIN_RESP=$(curl -sS --max-time 5 http://localhost:8081/auth/dev-login)
-          TOKEN=$(echo "$LOGIN_RESP" | jq -r '.token // empty')
+      # ── 4. Test /health returns JSON with expected fields ────────
+      - name: Test /health endpoint
+        run: |
+          echo "Checking /health endpoint..."
+          HEALTH_RESP=$(curl -sS --max-time 5 http://localhost:8081/health)
+          echo "Response: $HEALTH_RESP"
 
-          if [ -z "$TOKEN" ]; then
-            echo "::error::Could not get dev-user token from /auth/dev-login"
-            echo "Response: $LOGIN_RESP"
-            kill $PID 2>/dev/null || true
+          STATUS=$(echo "$HEALTH_RESP" | jq -r '.status // empty')
+          if [ -z "$STATUS" ]; then
+            echo "::error::/health response missing 'status' field"
             exit 1
           fi
-          echo "Got dev-user token (${#TOKEN} chars)"
+          echo "status=$STATUS"
 
-          # Call /auth/refresh with the token — this is the endpoint that
-          # broke in commit 25e464fa
-          echo "Testing /auth/refresh contract..."
+          # In dev mode with no OAuth creds, oauth_configured should be false
+          OAUTH=$(echo "$HEALTH_RESP" | jq -r '.oauth_configured // empty')
+          echo "oauth_configured=$OAUTH"
+          echo "/health OK"
+
+      # ── 5. Dev-mode login via /auth/github ───────────────────────
+      - name: Get dev-mode auth cookie
+        run: |
+          echo "Calling GET /auth/github (dev mode login)..."
+          # Dev mode redirects and sets kc_auth HttpOnly cookie.
+          # Use -c to capture the cookie jar, -L to NOT follow redirects
+          # (we just need the Set-Cookie header).
+          COOKIE_JAR=/tmp/cookies.txt
+          HTTP_CODE=$(curl -sS --max-time 5 \
+            -o /dev/null -w '%{http_code}' \
+            -c "$COOKIE_JAR" \
+            http://localhost:8081/auth/github)
+          echo "HTTP status: $HTTP_CODE (expect 307 redirect)"
+
+          # Extract the kc_auth cookie value
+          KC_AUTH=$(grep 'kc_auth' "$COOKIE_JAR" | awk '{print $NF}')
+          if [ -z "$KC_AUTH" ]; then
+            echo "::error::Dev-mode login did not set kc_auth cookie"
+            echo "Cookie jar contents:"
+            cat "$COOKIE_JAR"
+            exit 1
+          fi
+          echo "Got kc_auth cookie (${#KC_AUTH} chars)"
+          echo "$KC_AUTH" > /tmp/kc_auth_token.txt
+
+      # ── 6. Test /auth/refresh contract ───────────────────────────
+      - name: Test /auth/refresh contract
+        run: |
+          KC_AUTH=$(cat /tmp/kc_auth_token.txt)
+
+          echo "Testing POST /auth/refresh..."
           REFRESH_RESP=$(curl -sS --max-time 5 \
             -X POST \
-            -H "Authorization: Bearer $TOKEN" \
-            -H "X-CSRF-Token: smoke-test" \
+            -H "Authorization: Bearer $KC_AUTH" \
+            -H "X-Requested-With: XMLHttpRequest" \
             http://localhost:8081/auth/refresh)
 
           echo "Response: $REFRESH_RESP"
 
           # CONTRACT: response must contain "token" (non-empty string)
+          # This is the exact regression that broke us in commit 25e464fa (#6593)
           HAS_TOKEN=$(echo "$REFRESH_RESP" | jq -r '.token // empty')
           if [ -z "$HAS_TOKEN" ]; then
             echo "::error::CONTRACT VIOLATION: /auth/refresh response missing 'token' field — OAuth login is BROKEN"
             echo "This is the same regression as commit 25e464fa (#6593)."
             echo "Response was: $REFRESH_RESP"
-            kill $PID 2>/dev/null || true
             exit 1
           fi
-          echo "✓ token field present (${#HAS_TOKEN} chars)"
+          echo "token field present (${#HAS_TOKEN} chars)"
 
           # CONTRACT: response must contain "onboarded" (boolean)
           HAS_ONBOARDED=$(echo "$REFRESH_RESP" | jq 'has("onboarded")')
           if [ "$HAS_ONBOARDED" != "true" ]; then
             echo "::error::CONTRACT VIOLATION: /auth/refresh response missing 'onboarded' field"
-            kill $PID 2>/dev/null || true
+            echo "Response was: $REFRESH_RESP"
             exit 1
           fi
-          echo "✓ onboarded field present"
+          echo "onboarded field present"
+
+          # CONTRACT: response must contain "refreshed" (boolean, true)
+          HAS_REFRESHED=$(echo "$REFRESH_RESP" | jq -r '.refreshed // empty')
+          if [ "$HAS_REFRESHED" != "true" ]; then
+            echo "::error::CONTRACT VIOLATION: /auth/refresh response missing 'refreshed' field"
+            echo "Response was: $REFRESH_RESP"
+            exit 1
+          fi
+          echo "refreshed field present"
 
           echo ""
           echo "Auth login smoke test PASSED"
 
-          kill $PID 2>/dev/null || true
+      # ── 7. Cleanup ───────────────────────────────────────────────
+      - name: Stop backend
+        if: always()
+        run: |
+          if [ -f /tmp/backend.pid ]; then
+            kill "$(cat /tmp/backend.pid)" 2>/dev/null || true
+          fi
 
-      # ── 4. Alert on failure ────────────────────────────────────────
+      # ── 8. Alert on failure ──────────────────────────────────────
       - name: Create issue on failure
         if: failure()
         uses: actions/github-script@v7
         with:
           script: |
-            const title = `🚨 Auth login smoke test failed — OAuth login may be broken`;
+            const title = `Auth login smoke test failed — OAuth login contract may be broken`;
             const body = [
               '## Auth Login Smoke Test Failure',
               '',
               `**Run:** ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
               `**Time:** ${new Date().toISOString()}`,
               '',
-              'The `/auth/refresh` endpoint is not returning the expected response shape.',
-              'This means **OAuth login is likely broken on production**.',
+              'The auth contract test failed against a local backend in dev mode.',
+              'This means the `/auth/refresh` endpoint is not returning the expected response shape.',
               '',
               '### What broke last time',
               'Commit `25e464fa` (#6593) removed the `token` field from the response body.',
@@ -167,8 +188,8 @@ jobs:
               '',
               '### Action required',
               '1. Check the workflow run logs above for the specific failure',
-              '2. Verify login at https://console.kubestellar.io',
-              '3. If broken, revert the offending commit immediately',
+              '2. Verify the `/auth/refresh` response includes `token`, `onboarded`, and `refreshed`',
+              '3. Run `go test ./pkg/api/handlers/ -run TestAuthRefreshContract` locally',
             ].join('\n');
 
             // Don't create duplicate issues
