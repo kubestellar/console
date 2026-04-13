@@ -108,17 +108,50 @@ const DIFFERENTIATORS = [
 ]
 
 /* ------------------------------------------------------------------ */
+/*  Ref parameter sanitization (#7551)                                 */
+/* ------------------------------------------------------------------ */
+
+/** Maximum length for the ref analytics dimension to prevent high-cardinality pollution */
+const REF_MAX_LENGTH = 64
+
+/** Allowed ref values — anything outside this set is normalized to "other" */
+const ALLOWED_REFS = new Set([
+  'direct',
+  'github',
+  'cncf',
+  'kubecon',
+  'twitter',
+  'linkedin',
+  'medium',
+  'docs',
+  'hackernews',
+  'reddit',
+  'youtube',
+])
+
+/** Normalize the raw ?ref= query parameter to a safe analytics value */
+function sanitizeRef(raw: string | null): string {
+  if (!raw) return 'direct'
+  const normalized = raw.toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, REF_MAX_LENGTH)
+  if (!normalized) return 'direct'
+  // Allow known refs and any intern-NN utm_term pattern
+  if (ALLOWED_REFS.has(normalized) || /^intern-\d{1,3}$/.test(normalized)) return normalized
+  return 'other'
+}
+
+/* ------------------------------------------------------------------ */
 /*  Main page component                                                */
 /* ------------------------------------------------------------------ */
 
 export function Welcome() {
   const [searchParams] = useSearchParams()
-  const ref = searchParams.get('ref') || 'direct'
+  const ref = sanitizeRef(searchParams.get('ref'))
 
   useEffect(() => {
     const prevTitle = document.title
     const metaDesc = document.querySelector('meta[name="description"]')
     const prevDescription = metaDesc?.getAttribute('content') ?? ''
+    const createdTag = !metaDesc
 
     document.title = PAGE_TITLE
     if (metaDesc) {
@@ -133,10 +166,18 @@ export function Welcome() {
 
     // Restore previous title and meta description on unmount so they don't
     // leak into other routes during SPA navigation (#7423).
+    // #7553: If we created the tag (none existed before), remove it entirely
+    // instead of leaving an empty description tag behind.
     return () => {
       document.title = prevTitle
       const desc = document.querySelector('meta[name="description"]')
-      if (desc) desc.setAttribute('content', prevDescription)
+      if (desc) {
+        if (createdTag) {
+          desc.remove()
+        } else {
+          desc.setAttribute('content', prevDescription)
+        }
+      }
     }
   }, [ref])
 

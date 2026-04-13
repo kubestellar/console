@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React, { useEffect, useMemo } from 'react'
 import { CardWrapper } from '../components/cards/CardWrapper'
 import { DEMO_DATA_CARDS, getCardComponent, getRegisteredCardTypes } from '../components/cards/cardRegistry'
 import { formatCardTitle } from '../lib/formatCardTitle'
@@ -63,7 +63,11 @@ class CardErrorBoundary extends React.Component<CardErrorBoundaryProps, CardErro
 }
 
 export function AllCardsPerfTest() {
-  const params = new URLSearchParams(window.location.search)
+  // #7554: Guard window access for SSR / Node test paths
+  const params = useMemo(
+    () => new URLSearchParams(typeof window !== 'undefined' ? window.location.search : ''),
+    []
+  )
   const batch = Math.max(0, parsePositiveInt(params.get('batch'), 1) - 1)
   const batchSize = parsePositiveInt(params.get('size'), DEFAULT_BATCH_SIZE)
 
@@ -75,20 +79,25 @@ export function AllCardsPerfTest() {
     []
   )
 
-  const selected = (() => {
+  const selected = useMemo(() => {
     const start = batch * batchSize
     const items = allCardTypes.slice(start, start + batchSize)
     return items.map((cardType, idx) => ({
       cardType,
       cardId: `ttfi-${batch}-${idx}-${cardType}` }))
-  })()
+  }, [batch, batchSize, allCardTypes])
 
-  window.__TTFI_MANIFEST__ = {
-    allCardTypes,
-    totalCards: allCardTypes.length,
-    batch,
-    batchSize,
-    selected }
+  // #7552: Move global mutation into useEffect so it runs once after render
+  // instead of on every render pass (React Strict Mode calls render twice).
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.__TTFI_MANIFEST__ = {
+      allCardTypes,
+      totalCards: allCardTypes.length,
+      batch,
+      batchSize,
+      selected }
+  }, [allCardTypes, batch, batchSize, selected])
 
   return (
     <div className="p-4">
