@@ -244,6 +244,11 @@ func (uc *UpdateChecker) Status() AutoUpdateStatusResponse {
 // If channelOverride is non-empty, it temporarily uses that channel for this check.
 // Returns false if an update is already in progress.
 func (uc *UpdateChecker) TriggerNow(channelOverride string) bool {
+	// Reset the cancellation flag *before* the CAS so that a concurrent
+	// CancelUpdate() call between the CAS and context creation cannot have
+	// its intent silently dropped (#7439).
+	atomic.StoreInt32(&uc.updateCancelled, 0)
+
 	if !atomic.CompareAndSwapInt32(&uc.updating, 0, 1) {
 		slog.Info("[AutoUpdate] Update already in progress, ignoring duplicate trigger")
 		return false
@@ -256,7 +261,6 @@ func (uc *UpdateChecker) TriggerNow(channelOverride string) bool {
 	uc.updateCtx = ctx
 	uc.updateCancel = cancel
 	uc.mu.Unlock()
-	atomic.StoreInt32(&uc.updateCancelled, 0)
 
 	cleanup := func() {
 		atomic.StoreInt32(&uc.updating, 0)
@@ -911,18 +915,44 @@ func (uc *UpdateChecker) executeBinaryUpdate(release *githubReleaseInfo) {
 	}
 
 	// extractTimeout bounds the tar extraction to prevent hanging on corrupt
-	// archives or stalled I/O (#7241).
+	// archives or stalled I/O (#7241). Use uc.updateCtx as the parent so
+	// user cancellation propagates to the extraction process (#7440).
 	const extractTimeout = 5 * time.Minute
-	extractCtx, extractCancel := context.WithTimeout(context.Background(), extractTimeout)
+	parentCtx := uc.updateCtx
+	if parentCtx == nil {
+		parentCtx = context.Background()
+	}
+	extractCtx, extractCancel := context.WithTimeout(parentCtx, extractTimeout)
 	defer extractCancel()
 	extractCmd := exec.CommandContext(extractCtx, "tar", "xzf", tmpFile, "-C", stagingDir)
 	if err := extractCmd.Run(); err != nil {
+		// If cancelled by the user, report as cancellation rather than failure (#7440)
+		if uc.isCancelled() {
+			uc.broadcast("update_progress", UpdateProgressPayload{
+				Status:  "cancelled",
+				Message: "Update cancelled by user during extraction",
+			})
+			os.Remove(tmpFile)
+			os.RemoveAll(stagingDir)
+			return
+		}
 		uc.recordError(fmt.Sprintf("extract failed: %v", err))
 		uc.broadcast("update_progress", UpdateProgressPayload{
 			Status:  "failed",
 			Message: "Extract failed",
 			Error:   err.Error(),
 		})
+		return
+	}
+
+	// Check for cancellation after extraction (#7440, #7443)
+	if uc.isCancelled() {
+		uc.broadcast("update_progress", UpdateProgressPayload{
+			Status:  "cancelled",
+			Message: "Update cancelled by user",
+		})
+		os.Remove(tmpFile)
+		os.RemoveAll(stagingDir)
 		return
 	}
 
@@ -933,9 +963,12 @@ func (uc *UpdateChecker) executeBinaryUpdate(release *githubReleaseInfo) {
 		consolePath = "./console"
 	}
 
-	// Backup current binary
-	if err := os.Rename(consolePath, consolePath+".backup"); err != nil {
-		uc.recordError(fmt.Sprintf("backup rename failed: %v", err))
+	// Backup current binary. On Windows, os.Rename on a running executable
+	// fails with ETXTBSY-equivalent locking (#7444). Use renameOrCopy which
+	// falls back to copy+remove when rename fails.
+	backupPath := consolePath + ".backup"
+	if err := renameOrCopy(consolePath, backupPath); err != nil {
+		uc.recordError(fmt.Sprintf("backup failed: %v", err))
 		uc.broadcast("update_progress", UpdateProgressPayload{
 			Status:  "failed",
 			Message: "Failed to back up current binary",
@@ -944,34 +977,37 @@ func (uc *UpdateChecker) executeBinaryUpdate(release *githubReleaseInfo) {
 		return
 	}
 
+	// Set permissions on the staged binary *before* moving it to the final
+	// location. This prevents a window where power loss leaves a non-executable
+	// binary at consolePath (#7445).
+	stagedBinary := filepath.Join(stagingDir, "console")
+	// fileModeBinary is the permission bits for the installed console binary.
+	const fileModeBinary = 0755
+	if err := os.Chmod(stagedBinary, fileModeBinary); err != nil {
+		if rbErr := renameOrCopy(backupPath, consolePath); rbErr != nil {
+			slog.Error("[AutoUpdate] backup restore failed after chmod error", "error", rbErr)
+		}
+		uc.recordError(fmt.Sprintf("chmod staged binary failed: %v", err))
+		uc.broadcast("update_progress", UpdateProgressPayload{
+			Status:  "failed",
+			Message: "Failed to set binary permissions, rolled back",
+			Error:   err.Error(),
+		})
+		return
+	}
+
 	// Replace with new binary. os.Rename fails with EXDEV when staging
 	// and target are on different filesystems (#7242), so fall back to
 	// copy+sync when rename returns a *os.LinkError.
-	if err := renameOrCopy(filepath.Join(stagingDir, "console"), consolePath); err != nil {
+	if err := renameOrCopy(stagedBinary, consolePath); err != nil {
 		// Attempt to restore the backup before returning
-		if rbErr := os.Rename(consolePath+".backup", consolePath); rbErr != nil {
+		if rbErr := renameOrCopy(backupPath, consolePath); rbErr != nil {
 			slog.Error("[AutoUpdate] backup restore failed after rename error", "error", rbErr)
 		}
 		uc.recordError(fmt.Sprintf("replace rename failed: %v", err))
 		uc.broadcast("update_progress", UpdateProgressPayload{
 			Status:  "failed",
 			Message: "Failed to install new binary, rolled back",
-			Error:   err.Error(),
-		})
-		return
-	}
-
-	// fileModeBinary is the permission bits for the installed console binary.
-	const fileModeBinary = 0755
-	if err := os.Chmod(consolePath, fileModeBinary); err != nil {
-		// Attempt to restore the backup before returning
-		if rbErr := os.Rename(consolePath+".backup", consolePath); rbErr != nil {
-			slog.Error("[AutoUpdate] backup restore failed after chmod error", "error", rbErr)
-		}
-		uc.recordError(fmt.Sprintf("chmod failed: %v", err))
-		uc.broadcast("update_progress", UpdateProgressPayload{
-			Status:  "failed",
-			Message: "Failed to set binary permissions, rolled back",
 			Error:   err.Error(),
 		})
 		return
@@ -986,7 +1022,7 @@ func (uc *UpdateChecker) executeBinaryUpdate(release *githubReleaseInfo) {
 	uc.killBackend()
 	if err := uc.restartBackend(); err != nil {
 		// Rollback
-		if rbErr := os.Rename(consolePath+".backup", consolePath); rbErr != nil {
+		if rbErr := os.Rename(backupPath, consolePath); rbErr != nil {
 			slog.Error("[AutoUpdate] backup restore failed after restart error", "error", rbErr)
 		}
 		uc.recordError(fmt.Sprintf("restart failed: %v", err))
@@ -999,7 +1035,7 @@ func (uc *UpdateChecker) executeBinaryUpdate(release *githubReleaseInfo) {
 	}
 
 	if !waitForBackendHealth() {
-		if rbErr := os.Rename(consolePath+".backup", consolePath); rbErr != nil {
+		if rbErr := os.Rename(backupPath, consolePath); rbErr != nil {
 			slog.Error("[AutoUpdate] backup restore failed after health check failure", "error", rbErr)
 		}
 		uc.killBackend()
@@ -1015,7 +1051,7 @@ func (uc *UpdateChecker) executeBinaryUpdate(release *githubReleaseInfo) {
 	}
 
 	// Cleanup
-	os.Remove(consolePath + ".backup")
+	os.Remove(backupPath)
 	os.Remove(tmpFile)
 	os.RemoveAll(stagingDir)
 
@@ -1051,9 +1087,15 @@ func (uc *UpdateChecker) executeDevReleaseUpdate(release *githubReleaseInfo) {
 		Progress: 10,
 	})
 
+	// Use uc.updateCtx as the parent so cancellation propagates (#7441, #7442, #7443).
+	parentCtx := uc.updateCtx
+	if parentCtx == nil {
+		parentCtx = context.Background()
+	}
+
 	// Fetch and checkout the release tag — use context timeout so a flaky
 	// remote cannot wedge the update subsystem indefinitely (#7280).
-	fetchCtx, fetchCancel := context.WithTimeout(context.Background(), gitPullTimeout)
+	fetchCtx, fetchCancel := context.WithTimeout(parentCtx, gitPullTimeout)
 	defer fetchCancel()
 
 	cmd := exec.CommandContext(fetchCtx, "git", "fetch", "origin", "tag", release.TagName)
@@ -1066,7 +1108,7 @@ func (uc *UpdateChecker) executeDevReleaseUpdate(release *githubReleaseInfo) {
 		return
 	}
 
-	checkoutCtx, checkoutCancel := context.WithTimeout(context.Background(), gitPullTimeout)
+	checkoutCtx, checkoutCancel := context.WithTimeout(parentCtx, gitPullTimeout)
 	defer checkoutCancel()
 
 	cmd = exec.CommandContext(checkoutCtx, "git", "checkout", release.TagName)
@@ -1085,7 +1127,7 @@ func (uc *UpdateChecker) executeDevReleaseUpdate(release *githubReleaseInfo) {
 		Progress: 30,
 	})
 
-	if err := rebuildFrontend(repoPath); err != nil {
+	if err := rebuildFrontendCtx(parentCtx, repoPath); err != nil {
 		uc.recordError(fmt.Sprintf("build failed: %v", err))
 		return
 	}
@@ -1096,7 +1138,7 @@ func (uc *UpdateChecker) executeDevReleaseUpdate(release *githubReleaseInfo) {
 		Progress: 60,
 	})
 
-	if err := rebuildGoBinaries(repoPath); err != nil {
+	if err := rebuildGoBinariesCtx(parentCtx, repoPath); err != nil {
 		uc.recordError(fmt.Sprintf("go build failed: %v", err))
 		return
 	}
@@ -1439,6 +1481,11 @@ func gitStashPop(repoPath string) {
 }
 
 func rebuildFrontend(repoPath string) error {
+	return rebuildFrontendCtx(context.Background(), repoPath)
+}
+
+// rebuildFrontendCtx rebuilds the frontend with context support for cancellation (#7441).
+func rebuildFrontendCtx(ctx context.Context, repoPath string) error {
 	webDir := repoPath + "/web"
 
 	// Resilient npm install with cache recovery (same logic as resilientNpmInstall)
@@ -1447,15 +1494,18 @@ func rebuildFrontend(repoPath string) error {
 		os.Remove(webDir + "/package-lock.json.lock")
 		os.Remove(webDir + "/.package-lock.json")
 
-		npmInstall := exec.Command("npm", "install", "--prefer-offline")
+		npmInstall := exec.CommandContext(ctx, "npm", "install", "--prefer-offline")
 		npmInstall.Dir = webDir
 		npmInstall.Stdout = os.Stdout
 		npmInstall.Stderr = os.Stderr
 		if npmErr = npmInstall.Run(); npmErr == nil {
 			break
 		}
+		if ctx.Err() != nil {
+			return fmt.Errorf("npm install cancelled: %w", ctx.Err())
+		}
 		slog.Error("[AutoUpdate] rebuildFrontend: npm install failed, cleaning cache", "attempt", attempt, "maxRetries", npmInstallMaxRetries)
-		cacheClean := exec.Command("npm", "cache", "clean", "--force")
+		cacheClean := exec.CommandContext(ctx, "npm", "cache", "clean", "--force")
 		cacheClean.Stdout = os.Stdout
 		cacheClean.Stderr = os.Stderr
 		if cleanErr := cacheClean.Run(); cleanErr != nil {
@@ -1469,7 +1519,7 @@ func rebuildFrontend(repoPath string) error {
 		return fmt.Errorf("npm install: %w", npmErr)
 	}
 
-	npmBuild := exec.Command("npm", "run", "build")
+	npmBuild := exec.CommandContext(ctx, "npm", "run", "build")
 	npmBuild.Dir = webDir
 	npmBuild.Stdout = os.Stdout
 	npmBuild.Stderr = os.Stderr
@@ -1481,12 +1531,17 @@ func rebuildFrontend(repoPath string) error {
 }
 
 func rebuildGoBinaries(repoPath string) error {
+	return rebuildGoBinariesCtx(context.Background(), repoPath)
+}
+
+// rebuildGoBinariesCtx rebuilds Go binaries with context support for cancellation (#7442).
+func rebuildGoBinariesCtx(ctx context.Context, repoPath string) error {
 	// Build console binary
 	consolePath, err := exec.LookPath("console")
 	if err != nil {
 		consolePath = filepath.Join(repoPath, "console")
 	}
-	consoleBuild := exec.Command("go", "build", "-o", consolePath, "./cmd/console")
+	consoleBuild := exec.CommandContext(ctx, "go", "build", "-o", consolePath, "./cmd/console")
 	consoleBuild.Dir = repoPath
 	consoleBuild.Env = append(os.Environ(), "GOWORK=off")
 	consoleBuild.Stdout = os.Stdout
@@ -1500,7 +1555,7 @@ func rebuildGoBinaries(repoPath string) error {
 	if err != nil {
 		agentPath = filepath.Join(repoPath, "kc-agent")
 	}
-	agentBuild := exec.Command("go", "build", "-o", agentPath, "./cmd/kc-agent")
+	agentBuild := exec.CommandContext(ctx, "go", "build", "-o", agentPath, "./cmd/kc-agent")
 	agentBuild.Dir = repoPath
 	agentBuild.Env = append(os.Environ(), "GOWORK=off")
 	agentBuild.Stdout = os.Stdout
@@ -1600,7 +1655,14 @@ func (uc *UpdateChecker) runBuildCmd(
 	dir string,
 	env []string,
 ) buildResult {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	// Use uc.updateCtx as the parent context so user cancellation propagates
+	// to running build commands (#7441, #7442). Fall back to Background if
+	// no update context is active (e.g. rollback rebuilds).
+	parentCtx := uc.updateCtx
+	if parentCtx == nil {
+		parentCtx = context.Background()
+	}
+	ctx, cancel := context.WithTimeout(parentCtx, timeout)
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, name, args...)
