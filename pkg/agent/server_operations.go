@@ -1223,6 +1223,13 @@ func (s *Server) handleLocalClusters(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		// SECURITY: Validate cluster name against DNS-1123 to prevent command
+		// injection via crafted names that flow into exec.Command args (#7171).
+		if err := validateDNS1123Label("cluster name", req.Name); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
 		// Create cluster in background and return immediately
 		go func() {
 			defer func() {
@@ -1277,6 +1284,12 @@ func (s *Server) handleLocalClusters(w http.ResponseWriter, r *http.Request) {
 		name := r.URL.Query().Get("name")
 		if tool == "" || name == "" {
 			http.Error(w, "tool and name query parameters are required", http.StatusBadRequest)
+			return
+		}
+
+		// SECURITY: Validate cluster name against DNS-1123 (#7171).
+		if err := validateDNS1123Label("cluster name", name); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
@@ -1364,6 +1377,11 @@ func (s *Server) handleLocalClusterLifecycle(w http.ResponseWriter, r *http.Requ
 	}
 	if req.Tool == "" || req.Name == "" || req.Action == "" {
 		http.Error(w, "tool, name, and action are required", http.StatusBadRequest)
+		return
+	}
+	// SECURITY: Validate cluster name against DNS-1123 (#7171).
+	if err := validateDNS1123Label("cluster name", req.Name); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	if req.Action != "start" && req.Action != "stop" && req.Action != "restart" {
@@ -1481,6 +1499,16 @@ func (s *Server) handleVClusterCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// SECURITY: Validate name and namespace against DNS-1123 (#7171).
+	if err := validateDNS1123Label("vcluster name", req.Name); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if err := validateDNS1123Label("namespace", req.Namespace); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	// Create vCluster in background and return immediately
 	go func() {
 		defer func() {
@@ -1549,6 +1577,15 @@ func (s *Server) handleVClusterConnect(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "name and namespace are required", http.StatusBadRequest)
 		return
 	}
+	// SECURITY: Validate name and namespace against DNS-1123 (#7171).
+	if err := validateDNS1123Label("vcluster name", req.Name); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if err := validateDNS1123Label("namespace", req.Namespace); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	if err := s.localClusters.ConnectVCluster(req.Name, req.Namespace); err != nil {
 		slog.Error("[vCluster] failed to connect to vcluster", "name", req.Name, "error", err)
@@ -1597,6 +1634,15 @@ func (s *Server) handleVClusterDisconnect(w http.ResponseWriter, r *http.Request
 		http.Error(w, "name and namespace are required", http.StatusBadRequest)
 		return
 	}
+	// SECURITY: Validate name and namespace against DNS-1123 (#7171).
+	if err := validateDNS1123Label("vcluster name", req.Name); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if err := validateDNS1123Label("namespace", req.Namespace); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	if err := s.localClusters.DisconnectVCluster(req.Name, req.Namespace); err != nil {
 		slog.Error("[vCluster] failed to disconnect from vcluster", "name", req.Name, "error", err)
@@ -1643,6 +1689,15 @@ func (s *Server) handleVClusterDelete(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.Name == "" || req.Namespace == "" {
 		http.Error(w, "name and namespace are required", http.StatusBadRequest)
+		return
+	}
+	// SECURITY: Validate name and namespace against DNS-1123 (#7171).
+	if err := validateDNS1123Label("vcluster name", req.Name); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if err := validateDNS1123Label("namespace", req.Namespace); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 

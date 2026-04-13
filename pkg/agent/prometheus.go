@@ -80,6 +80,17 @@ func (s *Server) handlePrometheusQuery(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// SECURITY: Validate cluster and namespace against safe character sets to
+	// prevent SSRF and path-traversal via crafted query parameters (#7175).
+	if err := validateKubeContext(cluster); err != nil {
+		writePrometheusError(w, http.StatusBadRequest, fmt.Sprintf("invalid cluster parameter: %v", err))
+		return
+	}
+	if err := validateDNS1123Label("namespace", namespace); err != nil {
+		writePrometheusError(w, http.StatusBadRequest, fmt.Sprintf("invalid namespace parameter: %v", err))
+		return
+	}
+
 	// SECURITY: Length-limit the PromQL query to prevent arbitrarily expensive
 	// queries from consuming excessive Prometheus resources (#4721).
 	if len(query) > maxPromQLQueryLength {
@@ -94,6 +105,11 @@ func (s *Server) handlePrometheusQuery(w http.ResponseWriter, r *http.Request) {
 	serviceName := r.URL.Query().Get("service")
 	if serviceName == "" {
 		serviceName = prometheusServiceName
+	}
+	// SECURITY: Validate service name to prevent path traversal (#7175).
+	if err := validateDNS1123Label("service", serviceName); err != nil {
+		writePrometheusError(w, http.StatusBadRequest, fmt.Sprintf("invalid service parameter: %v", err))
+		return
 	}
 
 	config, err := s.k8sClient.GetRestConfig(cluster)
