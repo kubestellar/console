@@ -36,8 +36,12 @@ const TICK_DELAY_MS = 5
 /** Number of tasks for the concurrency-limit stress test */
 const CONCURRENCY_STRESS_TASK_COUNT = 30
 
-/** Expected default concurrency from the module */
-const EXPECTED_DEFAULT_CONCURRENCY = 8
+/**
+ * Expected default concurrency from the module.
+ * Reduced from 8 to 4 in PR #7765 to leave headroom for browser connection
+ * pool limits (~6 connections per origin for HTTP/1.1).
+ */
+const EXPECTED_DEFAULT_CONCURRENCY = 4
 
 /** Sentinel value returned by successful tasks */
 const SUCCESS_SENTINEL = 'ok'
