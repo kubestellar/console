@@ -1,6 +1,4 @@
-import { useEffect, useRef } from 'react'
 import { useClusters } from '../../hooks/useMCP'
-import { useCachedPodIssues, useCachedWarningEvents, useCachedNodes } from '../../hooks/useCachedData'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards'
@@ -13,47 +11,9 @@ const DEFAULT_CARDS = getDefaultCards('cluster-admin')
 
 export function ClusterAdmin() {
   const { clusters: rawClusters, isLoading, isRefreshing, lastUpdated, refetch, error } = useClusters()
-  const { issues: rawPodIssues, isLoading: isLoadingPodIssues } = useCachedPodIssues()
-  const { events: rawWarningEvents, isLoading: isLoadingWarnings } = useCachedWarningEvents()
-  const { nodes: rawNodes, isLoading: isLoadingNodes } = useCachedNodes()
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
 
-  // Guard all arrays against undefined to prevent crashes when APIs return 404/500/empty
   const clusters = rawClusters || []
-  const podIssues = rawPodIssues || []
-  const warningEvents = rawWarningEvents || []
-  const nodes = rawNodes || []
-
-  // Stale-while-revalidate: remember the last observed values for Nodes/Warnings/Pod
-  // Issues so refreshes don't flash 0 → final value (issue #6485). During a refresh,
-  // the underlying hooks briefly return empty arrays before the new fetch resolves.
-  //
-  // Copilot fix (#6539): the fallback is ONLY applied while a load is in-flight and
-  // we have a prior non-null value. Once loading completes, we trust the fetch result
-  // even when it is zero — otherwise legitimate "all warnings cleared" / "all pod
-  // issues resolved" transitions are masked by the last non-zero value.
-  const lastNodeCountRef = useRef<number | null>(null)
-  const lastWarningCountRef = useRef<number | null>(null)
-  const lastPodIssueCountRef = useRef<number | null>(null)
-  useEffect(() => {
-    if (!isLoadingNodes) lastNodeCountRef.current = nodes.length
-  }, [isLoadingNodes, nodes.length])
-  useEffect(() => {
-    if (!isLoadingWarnings) lastWarningCountRef.current = warningEvents.length
-  }, [isLoadingWarnings, warningEvents.length])
-  useEffect(() => {
-    if (!isLoadingPodIssues) lastPodIssueCountRef.current = podIssues.length
-  }, [isLoadingPodIssues, podIssues.length])
-  const displayNodeCount =
-    isLoadingNodes && lastNodeCountRef.current != null ? lastNodeCountRef.current : nodes.length
-  const displayWarningCount =
-    isLoadingWarnings && lastWarningCountRef.current != null
-      ? lastWarningCountRef.current
-      : warningEvents.length
-  const displayPodIssueCount =
-    isLoadingPodIssues && lastPodIssueCountRef.current != null
-      ? lastPodIssueCountRef.current
-      : podIssues.length
 
   // Use the centralised health state machine so these counts always agree
   // with the main cluster grid, sidebar stats and filter tabs (#5928).
@@ -64,15 +24,15 @@ export function ClusterAdmin() {
   const hasData = clusters.length > 0
   const isDemoData = !hasData && !isLoading
 
+  // Cluster-specific stats computed from the fast useClusters() cache.
+  // nodes, warnings, pod_issues are provided by useUniversalStats (which
+  // reads from the shared cache lazily — no blocking multi-cluster fetch).
   const getDashboardStatValue = (blockId: string): StatBlockValue => {
     switch (blockId) {
       case 'clusters': return { value: reachable.length, sublabel: 'reachable', isDemo: isDemoData }
       case 'healthy': return { value: healthy.length, sublabel: 'healthy', isDemo: isDemoData }
       case 'degraded': return { value: degraded.length, sublabel: 'degraded', isDemo: isDemoData }
       case 'offline': return { value: offline.length, sublabel: 'offline', isDemo: isDemoData }
-      case 'nodes': return { value: displayNodeCount, sublabel: 'total nodes', isDemo: isDemoData }
-      case 'warnings': return { value: displayWarningCount, sublabel: 'warnings', isDemo: isDemoData }
-      case 'pod_issues': return { value: displayPodIssueCount, sublabel: 'pod issues', isDemo: isDemoData }
       default: return { value: '-' }
     }
   }
