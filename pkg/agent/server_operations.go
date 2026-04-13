@@ -325,7 +325,7 @@ func (s *Server) handleGetKeysStatus(w http.ResponseWriter, r *http.Request) {
 // handleSetKey saves a new API key
 func (s *Server) handleSetKey(w http.ResponseWriter, r *http.Request) {
 	var req SetKeyRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := json.NewDecoder(io.LimitReader(r.Body, maxRequestBodyBytes)).Decode(&req); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "invalid_json", Message: "Invalid JSON body"})
 		return
@@ -766,7 +766,7 @@ func (s *Server) handlePredictionsAnalyze(w http.ResponseWriter, r *http.Request
 	// SECURITY: reject malformed JSON instead of silently using zero-value (#4156).
 	var req AIAnalysisRequest
 	if r.Body != nil {
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil && err != io.EOF {
+		if err := json.NewDecoder(io.LimitReader(r.Body, maxRequestBodyBytes)).Decode(&req); err != nil && err != io.EOF {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
 			json.NewEncoder(w).Encode(map[string]string{"error": "invalid JSON body"})
@@ -903,6 +903,12 @@ func (s *Server) handleMetricsHistory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// SECURITY: require auth before returning sensitive metrics (#7223).
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	if s.metricsHistory == nil {
 		json.NewEncoder(w).Encode(MetricsHistoryResponse{
 			Snapshots: []MetricsSnapshot{},
@@ -1019,6 +1025,12 @@ func (s *Server) handleDeviceInventory(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method != "GET" {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// SECURITY: require auth before returning device inventory (#7228).
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -1766,6 +1778,12 @@ func (s *Server) handleInsightsEnrich(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// SECURITY: require auth before triggering AI enrichment (#7231).
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	if s.insightWorker == nil {
 		json.NewEncoder(w).Encode(InsightEnrichmentResponse{
 			Enrichments: []AIInsightEnrichment{},
@@ -1812,6 +1830,12 @@ func (s *Server) handleInsightsAI(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method != "GET" {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// SECURITY: require auth before returning cached AI enrichments (#7233).
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 

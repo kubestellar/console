@@ -151,8 +151,30 @@ func (r *Registry) SetSelectedAgent(sessionID, agentName string) error {
 		return fmt.Errorf("provider %s is not available", agentName)
 	}
 
+	// Evict oldest entries when map exceeds a safety cap to prevent unbounded
+	// growth from sessions that never call RemoveSelectedAgent (#7209).
+	const maxSelectedAgentEntries = 10000
+	if len(r.selectedAgent) >= maxSelectedAgentEntries {
+		// Delete an arbitrary entry (map iteration order is random in Go).
+		for k := range r.selectedAgent {
+			delete(r.selectedAgent, k)
+			break
+		}
+	}
+
 	r.selectedAgent[sessionID] = agentName
 	return nil
+}
+
+// RemoveSelectedAgent cleans up the session entry from the selectedAgent map,
+// preventing unbounded growth when sessions disconnect (#7209).
+func (r *Registry) RemoveSelectedAgent(sessionID string) {
+	if r == nil || sessionID == "" {
+		return
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	delete(r.selectedAgent, sessionID)
 }
 
 // List returns all registered providers

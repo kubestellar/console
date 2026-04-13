@@ -287,6 +287,17 @@ func parseEnrichmentResponse(response string, insights []InsightSummary) ([]AIIn
 		return nil, fmt.Errorf("JSON parse error: %w", err)
 	}
 
+	// If the JSON parsed but the expected "enrichments" key was absent, treat
+	// it as an error so the caller can fall back to rule-based enrichments (#7208).
+	if parsed.Enrichments == nil {
+		const previewLen = 200
+		preview := jsonStr
+		if len(preview) > previewLen {
+			preview = preview[:previewLen] + "..."
+		}
+		return nil, fmt.Errorf("response JSON lacks 'enrichments' key (preview: %s)", preview)
+	}
+
 	return parsed.Enrichments, nil
 }
 

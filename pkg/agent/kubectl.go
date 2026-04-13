@@ -92,9 +92,22 @@ func (k *KubectlProxy) Execute(context, namespace string, args []string) protoco
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
+	// kubectlCommandTimeout prevents a hung kubectl call from blocking
+	// the handler indefinitely (e.g. unreachable apiserver) (#7206).
+	const kubectlCommandTimeout = 30 * time.Second
+	timer := time.AfterFunc(kubectlCommandTimeout, func() {
+		if cmd.Process != nil {
+			cmd.Process.Kill()
+		}
+	})
+
 	err := cmd.Run()
+	timedOut := !timer.Stop()
 	exitCode := 0
 	if err != nil {
+		if timedOut {
+			return protocol.KubectlResponse{ExitCode: 1, Error: fmt.Sprintf("kubectl timed out after %s", kubectlCommandTimeout)}
+		}
 		if exitErr, ok := err.(*exec.ExitError); ok {
 			exitCode = exitErr.ExitCode()
 		} else {
@@ -174,6 +187,18 @@ var allowedScaleResources = map[string]bool{
 	"sts":          true,
 }
 
+// allowedRolloutSubcommands restricts rollout to read-only operations (#7205).
+var allowedRolloutSubcommands = map[string]bool{
+	"status":  true,
+	"history": true,
+}
+
+// allowedAuthSubcommands restricts auth to read-only operations (#7204).
+var allowedAuthSubcommands = map[string]bool{
+	"can-i":  true,
+	"whoami": true,
+}
+
 // blockedConfigSubcommands are config subcommands that modify kubeconfig
 var blockedConfigSubcommands = map[string]bool{
 	"set":             true,
@@ -198,6 +223,28 @@ func (k *KubectlProxy) validateArgs(args []string) bool {
 	allowed, exists := AllowedKubectlCommands[command]
 	if !exists || !allowed {
 		return false
+	}
+
+	// Special case: rollout command - only allow read-only subcommands (#7205)
+	if command == "rollout" {
+		if len(args) < 2 {
+			return false // Need at least "rollout <subcommand>"
+		}
+		subcommand := strings.ToLower(args[1])
+		if !allowedRolloutSubcommands[subcommand] {
+			return false
+		}
+	}
+
+	// Special case: auth command - only allow read-only subcommands (#7204)
+	if command == "auth" {
+		if len(args) < 2 {
+			return false // Need at least "auth <subcommand>"
+		}
+		subcommand := strings.ToLower(args[1])
+		if !allowedAuthSubcommands[subcommand] {
+			return false
+		}
 	}
 
 	// Special case: config command - block mutation subcommands
