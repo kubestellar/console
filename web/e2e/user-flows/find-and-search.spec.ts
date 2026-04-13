@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { setupDemoAndNavigate, ELEMENT_VISIBLE_TIMEOUT_MS } from '../helpers/setup'
-import { assertNoLayoutOverflow, collectConsoleErrors } from '../helpers/ux-assertions'
+import { assertNoLayoutOverflow } from '../helpers/ux-assertions'
 
 /** Viewport dimensions for mobile tests */
 const MOBILE_WIDTH = 375
@@ -15,16 +15,18 @@ const GIBBERISH_QUERY = 'zxqwvbn9876543'
 test.describe('Find and Search — "I need to find something"', () => {
   test('keyboard shortcut opens global search', async ({ page }) => {
     await setupDemoAndNavigate(page, '/')
-    // Try both Ctrl+K (Linux/Windows CI) and Meta+K (Mac) —
-    // whichever the platform supports
+    // global-search-input is always visible in the navbar; we validate the
+    // shortcut by checking that the search dropdown (results panel) becomes
+    // visible after the keypress.
+    const searchResults = page.getByTestId('global-search-results')
+    // Try Ctrl+K (Linux/Windows CI)
     await page.keyboard.press('Control+k')
-    const searchInput = page.getByTestId('global-search-input')
-    const opened = await searchInput.isVisible({ timeout: 2_000 }).catch(() => false)
-    if (!opened) {
+    const openedCtrl = await searchResults.isVisible({ timeout: 2_000 }).catch(() => false)
+    if (!openedCtrl) {
       // Fallback: try Meta+K (Mac)
       await page.keyboard.press('Meta+k')
     }
-    await expect(searchInput).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
+    await expect(searchResults).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
   })
 
   test('clicking search bar focuses input', async ({ page }) => {

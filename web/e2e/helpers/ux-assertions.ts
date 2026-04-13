@@ -149,7 +149,11 @@ export function collectConsoleErrors(page: Page): () => void {
     /Failed to load resource/i,
     /Cross-Origin Request Blocked/i,
     /CORS policy/i,
-    /Access-Control-Allow-Origin/i,
+    // Narrowed: only allow Access-Control errors from known demo/local origins
+    // to avoid masking unrelated issues that mention this header.
+    /Access-Control-Allow-Origin.*localhost/i,
+    /Access-Control-Allow-Origin.*127\.0\.0\.1/i,
+    /Access-Control-Allow-Origin.*kubestellar\.io/i,
     /Notification permission/i,
     /validateDOMNesting/i,
     /act\(\)/i,
