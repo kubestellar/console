@@ -301,11 +301,13 @@ func (h *SelfUpgradeHandler) TriggerUpgrade(c *fiber.Ctx) error {
 		})
 	}
 
-	// Build the new image reference
-	currentImage := ""
-	if len(dep.Spec.Template.Spec.Containers) > 0 {
-		currentImage = dep.Spec.Template.Spec.Containers[0].Image
+	// Build the new image reference — require at least one container.
+	if len(dep.Spec.Template.Spec.Containers) == 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(SelfUpgradeTriggerResponse{
+			Error: fmt.Sprintf("deployment %s has no containers — cannot determine image to patch", dep.Name),
+		})
 	}
+	currentImage := dep.Spec.Template.Spec.Containers[0].Image
 
 	// Extract repository from current image.
 	// Must handle registries with ports (e.g. "registry.internal:5000/console")

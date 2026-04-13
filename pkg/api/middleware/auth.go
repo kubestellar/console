@@ -360,8 +360,10 @@ func JWTAuth(secret string) fiber.Handler {
 		// of a structurally valid header that fails to parse.
 		trimmedHeader := strings.TrimSpace(authHeader)
 		if trimmedHeader != "" {
-			if strings.HasPrefix(trimmedHeader, bearerScheme) {
-				candidate := strings.TrimSpace(strings.TrimPrefix(trimmedHeader, bearerScheme))
+			// RFC 7235 §2.1: auth-scheme comparison is case-insensitive.
+			// Accept "Bearer", "bearer", "BEARER", etc.
+			if len(trimmedHeader) > len(bearerScheme) && strings.EqualFold(trimmedHeader[:len(bearerScheme)], bearerScheme) {
+				candidate := strings.TrimSpace(trimmedHeader[len(bearerScheme):])
 				if candidate != "" {
 					tokenString = candidate
 				}

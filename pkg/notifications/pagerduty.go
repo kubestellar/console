@@ -53,7 +53,12 @@ func (p *PagerDutyNotifier) Send(alert Alert) error {
 		return fmt.Errorf("pagerduty routing key not configured")
 	}
 
+	// Build a dedup key that includes the alert ID when RuleID or Cluster
+	// is empty, preventing unrelated alerts from colliding (#7378).
 	dedupKey := alert.RuleID + "::" + alert.Cluster
+	if alert.RuleID == "" || alert.Cluster == "" {
+		dedupKey = alert.ID + "::" + alert.RuleID + "::" + alert.Cluster
+	}
 
 	event := pagerdutyEvent{
 		RoutingKey: p.RoutingKey,

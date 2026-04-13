@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net"
 	"net/smtp"
+	"strings"
 	"time"
 )
 
@@ -157,7 +158,7 @@ func (e *EmailNotifier) Test() error {
 // buildMessage constructs the full email message with headers
 func (e *EmailNotifier) buildMessage(subject, body string) string {
 	msg := fmt.Sprintf("From: %s\r\n", e.From)
-	msg += fmt.Sprintf("To: %s\r\n", e.To[0])
+	msg += fmt.Sprintf("To: %s\r\n", strings.Join(e.To, ", "))
 	msg += fmt.Sprintf("Subject: %s\r\n", subject)
 	msg += "MIME-Version: 1.0\r\n"
 	msg += "Content-Type: text/html; charset=UTF-8\r\n"

@@ -268,11 +268,21 @@ func isAllowedOrigin(c *fiber.Ctx) bool {
 }
 
 // stripPort removes the port from a hostname (e.g., "localhost:5174" → "localhost").
+// IPv6 addresses (e.g., "::1") are returned unchanged — the colon in an IPv6
+// address is NOT a port separator. net.SplitHostPort is used when the value
+// looks like it contains a port, which handles both IPv4 and IPv6 correctly.
 func stripPort(host string) string {
-	if i := strings.LastIndex(host, ":"); i != -1 {
-		return host[:i]
+	// If the host contains no colon, there is no port to strip.
+	if !strings.Contains(host, ":") {
+		return host
 	}
-	return host
+	// net.SplitHostPort handles "[::1]:port", "host:port", etc.
+	h, _, err := net.SplitHostPort(host)
+	if err != nil {
+		// Not in host:port form — return as-is (bare IPv6 like "::1").
+		return host
+	}
+	return h
 }
 
 // isPrivateIP returns true for loopback, link-local, and RFC-1918 addresses.
