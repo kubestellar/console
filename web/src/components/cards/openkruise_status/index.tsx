@@ -30,10 +30,7 @@ import { useCardLoadingState } from '../CardDataContext'
 import { useDemoMode } from '../../../hooks/useDemoMode'
 import { useGlobalFilters } from '../../../hooks/useGlobalFilters'
 import { useTranslation } from 'react-i18next'
-import {
-  OPENKRUISE_DEMO_DATA,
-  type OpenKruiseDemoData,
-} from './demoData'
+import { useOpenKruiseStatus } from './useOpenKruiseStatus'
 
 interface OpenKruiseStatusProps {
   config?: {
@@ -110,16 +107,11 @@ const BADGE_COLOR_CLASS: Record<string, string> = {
   orange: 'bg-orange-500/20 text-orange-400',
 }
 
-const EMPTY_OPENKRUISE_DATA: OpenKruiseDemoData = {
-  cloneSets: [],
-  advancedStatefulSets: [],
-  advancedDaemonSets: [],
-  sidecarSets: [],
-  broadcastJobs: [],
-  advancedCronJobs: [],
-  controllerVersion: '',
-  totalInjectedPods: 0,
-}
+// Named constants for relative-time formatting (previously magic numbers).
+const MS_PER_SECOND = 1000
+const MS_PER_MINUTE = 60 * MS_PER_SECOND
+const MS_PER_HOUR = 60 * MS_PER_MINUTE
+const MS_PER_DAY = 24 * MS_PER_HOUR
 
 const SORT_OPTIONS_KEYS: ReadonlyArray<{
   value: SortByOption
@@ -151,16 +143,27 @@ export function OpenKruiseStatus({ config: _config }: OpenKruiseStatusProps) {
     '' as CategoryOption,
   )
 
-  // Data source — real OpenKruise hook is not implemented yet, so non-demo
-  // environments get an empty dataset (which flows into the empty state).
-  const isDemoData = isDemoMode
-  const rawData: OpenKruiseDemoData = isDemoData
-    ? OPENKRUISE_DEMO_DATA
-    : EMPTY_OPENKRUISE_DATA
+  // Live data comes from useOpenKruiseStatus (backed by useCache). It falls
+  // back to OPENKRUISE_DEMO_DATA via useCache's demoWhenEmpty path when the
+  // fetcher fails or returns nothing, so the card always has something to
+  // render.
+  const {
+    data: rawData,
+    isLoading: dataLoading,
+    isRefreshing,
+    isFailed,
+    isDemoFallback,
+    consecutiveFailures,
+    lastRefresh,
+  } = useOpenKruiseStatus()
+
+  // isDemoData is true whenever we're showing demo-sourced data — explicit
+  // demo mode or the live fetcher fell back.
+  const isDemoData = isDemoMode || isDemoFallback
 
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading: clustersLoading,
-    isRefreshing: false,
+    isLoading: clustersLoading || dataLoading,
+    isRefreshing,
     hasAnyData:
       rawData.cloneSets.length > 0 ||
       rawData.advancedStatefulSets.length > 0 ||
@@ -168,9 +171,10 @@ export function OpenKruiseStatus({ config: _config }: OpenKruiseStatusProps) {
       rawData.sidecarSets.length > 0 ||
       rawData.broadcastJobs.length > 0 ||
       rawData.advancedCronJobs.length > 0,
-    isFailed: false,
-    consecutiveFailures: 0,
+    isFailed,
+    consecutiveFailures,
     isDemoData,
+    lastRefresh,
   })
 
   // Transform every OpenKruise resource into a unified display item -----
@@ -224,7 +228,7 @@ export function OpenKruiseStatus({ config: _config }: OpenKruiseStatusProps) {
     }
 
     for (const sc of rawData.sidecarSets) {
-      const containers = sc.sidecarContainers.join(', ')
+      const containers = (sc.sidecarContainers || []).join(', ')
       items.push({
         id: `sc-${sc.cluster}-${sc.name}`,
         name: sc.name,
@@ -263,7 +267,7 @@ export function OpenKruiseStatus({ config: _config }: OpenKruiseStatusProps) {
         primaryDetail: `${cj.schedule} \u2022 ${cj.templateKind} \u2022 ${cj.active} ${t('openkruiseStatus.active')}`,
         secondaryDetail: `${cj.successfulRuns} ${t('openkruiseStatus.runs')}, ${cj.failedRuns} ${t('common:common.failed')}`,
         timestamp:
-          cj.lastScheduleTime ?? new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+          cj.lastScheduleTime ?? new Date(Date.now() - MS_PER_HOUR).toISOString(),
       })
     }
 
@@ -420,12 +424,12 @@ export function OpenKruiseStatus({ config: _config }: OpenKruiseStatusProps) {
     const date = new Date(timestamp)
     const now = new Date()
     const diff = now.getTime() - date.getTime()
-    if (diff < 60_000) return `<1m ${t('openkruiseStatus.ago')}`
-    if (diff < 3_600_000)
-      return `${Math.max(1, Math.floor(diff / 60_000))}m ${t('openkruiseStatus.ago')}`
-    if (diff < 86_400_000)
-      return `${Math.floor(diff / 3_600_000)}h ${t('openkruiseStatus.ago')}`
-    return `${Math.floor(diff / 86_400_000)}d ${t('openkruiseStatus.ago')}`
+    if (diff < MS_PER_MINUTE) return `<1m ${t('openkruiseStatus.ago')}`
+    if (diff < MS_PER_HOUR)
+      return `${Math.max(1, Math.floor(diff / MS_PER_MINUTE))}m ${t('openkruiseStatus.ago')}`
+    if (diff < MS_PER_DAY)
+      return `${Math.floor(diff / MS_PER_HOUR)}h ${t('openkruiseStatus.ago')}`
+    return `${Math.floor(diff / MS_PER_DAY)}d ${t('openkruiseStatus.ago')}`
   }
 
   // Summary counts (from global+category filtered set, before search)
