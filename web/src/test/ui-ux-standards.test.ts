@@ -76,7 +76,8 @@ const COMPONENTS_DIR = path.resolve(
 // bumps stay grep-able and reviewers can tell at a glance whether a
 // change is a real new violation or just a comment-level reference.
 //   313 → 319: PR #7085 mission state fixes — issue-ref comments misclassified as hex colors
-const EXPECTED_RAW_HEX_COUNT = 319
+//   319 → 320: PR #7376 batch resolve — one new hex color reference
+const EXPECTED_RAW_HEX_COUNT = 320
 const EXPECTED_RAW_RGBA_COUNT = 104
 const EXPECTED_ARBITRARY_TW_COLOR_COUNT = 22
 const EXPECTED_INLINE_STYLE_COLOR_COUNT = 213

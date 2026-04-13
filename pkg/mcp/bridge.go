@@ -308,14 +308,18 @@ func (b *Bridge) GetDeployTools() []Tool {
 
 // ListClusters returns all discovered clusters
 func (b *Bridge) ListClusters(ctx context.Context) ([]ClusterInfo, error) {
+	// #7393 — Snapshot the client reference under a short RLock so the
+	// potentially long-running RPC does not block Stop() from acquiring
+	// the write lock.
 	b.mu.RLock()
-	defer b.mu.RUnlock()
+	client := b.opsClient
+	b.mu.RUnlock()
 
-	if b.opsClient == nil {
+	if client == nil {
 		return nil, fmt.Errorf("ops client not available")
 	}
 
-	result, err := b.opsClient.CallTool(ctx, "list_clusters", map[string]interface{}{
+	result, err := client.CallTool(ctx, "list_clusters", map[string]interface{}{
 		"source": "all",
 	})
 	if err != nil {
@@ -328,9 +332,10 @@ func (b *Bridge) ListClusters(ctx context.Context) ([]ClusterInfo, error) {
 // GetClusterHealth returns health status for a cluster
 func (b *Bridge) GetClusterHealth(ctx context.Context, cluster string) (*ClusterHealth, error) {
 	b.mu.RLock()
-	defer b.mu.RUnlock()
+	client := b.opsClient
+	b.mu.RUnlock()
 
-	if b.opsClient == nil {
+	if client == nil {
 		return nil, fmt.Errorf("ops client not available")
 	}
 
@@ -339,7 +344,7 @@ func (b *Bridge) GetClusterHealth(ctx context.Context, cluster string) (*Cluster
 		args["cluster"] = cluster
 	}
 
-	result, err := b.opsClient.CallTool(ctx, "get_cluster_health", args)
+	result, err := client.CallTool(ctx, "get_cluster_health", args)
 	if err != nil {
 		return nil, err
 	}
@@ -350,9 +355,10 @@ func (b *Bridge) GetClusterHealth(ctx context.Context, cluster string) (*Cluster
 // GetPods returns pods for a namespace/cluster
 func (b *Bridge) GetPods(ctx context.Context, cluster, namespace, labelSelector string) ([]PodInfo, error) {
 	b.mu.RLock()
-	defer b.mu.RUnlock()
+	client := b.opsClient
+	b.mu.RUnlock()
 
-	if b.opsClient == nil {
+	if client == nil {
 		return nil, fmt.Errorf("ops client not available")
 	}
 
@@ -367,7 +373,7 @@ func (b *Bridge) GetPods(ctx context.Context, cluster, namespace, labelSelector 
 		args["label_selector"] = labelSelector
 	}
 
-	result, err := b.opsClient.CallTool(ctx, "get_pods", args)
+	result, err := client.CallTool(ctx, "get_pods", args)
 	if err != nil {
 		return nil, err
 	}
@@ -378,9 +384,10 @@ func (b *Bridge) GetPods(ctx context.Context, cluster, namespace, labelSelector 
 // FindPodIssues returns pods with issues
 func (b *Bridge) FindPodIssues(ctx context.Context, cluster, namespace string) ([]PodIssue, error) {
 	b.mu.RLock()
-	defer b.mu.RUnlock()
+	client := b.opsClient
+	b.mu.RUnlock()
 
-	if b.opsClient == nil {
+	if client == nil {
 		return nil, fmt.Errorf("ops client not available")
 	}
 
@@ -392,7 +399,7 @@ func (b *Bridge) FindPodIssues(ctx context.Context, cluster, namespace string) (
 		args["namespace"] = namespace
 	}
 
-	result, err := b.opsClient.CallTool(ctx, "find_pod_issues", args)
+	result, err := client.CallTool(ctx, "find_pod_issues", args)
 	if err != nil {
 		return nil, err
 	}
@@ -403,9 +410,10 @@ func (b *Bridge) FindPodIssues(ctx context.Context, cluster, namespace string) (
 // GetEvents returns events from a cluster
 func (b *Bridge) GetEvents(ctx context.Context, cluster, namespace string, limit int) ([]Event, error) {
 	b.mu.RLock()
-	defer b.mu.RUnlock()
+	client := b.opsClient
+	b.mu.RUnlock()
 
-	if b.opsClient == nil {
+	if client == nil {
 		return nil, fmt.Errorf("ops client not available")
 	}
 
@@ -420,7 +428,7 @@ func (b *Bridge) GetEvents(ctx context.Context, cluster, namespace string, limit
 		args["limit"] = limit
 	}
 
-	result, err := b.opsClient.CallTool(ctx, "get_events", args)
+	result, err := client.CallTool(ctx, "get_events", args)
 	if err != nil {
 		return nil, err
 	}
@@ -431,9 +439,10 @@ func (b *Bridge) GetEvents(ctx context.Context, cluster, namespace string, limit
 // GetWarningEvents returns warning events from a cluster
 func (b *Bridge) GetWarningEvents(ctx context.Context, cluster, namespace string, limit int) ([]Event, error) {
 	b.mu.RLock()
-	defer b.mu.RUnlock()
+	client := b.opsClient
+	b.mu.RUnlock()
 
-	if b.opsClient == nil {
+	if client == nil {
 		return nil, fmt.Errorf("ops client not available")
 	}
 
@@ -448,7 +457,7 @@ func (b *Bridge) GetWarningEvents(ctx context.Context, cluster, namespace string
 		args["limit"] = limit
 	}
 
-	result, err := b.opsClient.CallTool(ctx, "get_warning_events", args)
+	result, err := client.CallTool(ctx, "get_warning_events", args)
 	if err != nil {
 		return nil, err
 	}
@@ -459,13 +468,14 @@ func (b *Bridge) GetWarningEvents(ctx context.Context, cluster, namespace string
 // CallOpsTool calls any ops tool by name
 func (b *Bridge) CallOpsTool(ctx context.Context, name string, args map[string]interface{}) (*CallToolResult, error) {
 	b.mu.RLock()
-	defer b.mu.RUnlock()
+	client := b.opsClient
+	b.mu.RUnlock()
 
-	if b.opsClient == nil {
+	if client == nil {
 		return nil, fmt.Errorf("ops client not available")
 	}
 
-	return b.opsClient.CallTool(ctx, name, args)
+	return client.CallTool(ctx, name, args)
 }
 
 // GetGadgetTools returns the list of available gadget tools
@@ -482,25 +492,27 @@ func (b *Bridge) GetGadgetTools() []Tool {
 // CallGadgetTool calls any gadget tool by name
 func (b *Bridge) CallGadgetTool(ctx context.Context, name string, args map[string]interface{}) (*CallToolResult, error) {
 	b.mu.RLock()
-	defer b.mu.RUnlock()
+	client := b.gadgetClient
+	b.mu.RUnlock()
 
-	if b.gadgetClient == nil {
+	if client == nil {
 		return nil, fmt.Errorf("gadget client not available")
 	}
 
-	return b.gadgetClient.CallTool(ctx, name, args)
+	return client.CallTool(ctx, name, args)
 }
 
 // CallDeployTool calls any deploy tool by name
 func (b *Bridge) CallDeployTool(ctx context.Context, name string, args map[string]interface{}) (*CallToolResult, error) {
 	b.mu.RLock()
-	defer b.mu.RUnlock()
+	client := b.deployClient
+	b.mu.RUnlock()
 
-	if b.deployClient == nil {
+	if client == nil {
 		return nil, fmt.Errorf("deploy client not available")
 	}
 
-	return b.deployClient.CallTool(ctx, name, args)
+	return client.CallTool(ctx, name, args)
 }
 
 // Helper functions to parse tool results
@@ -514,12 +526,12 @@ func (b *Bridge) parseClustersResult(result *CallToolResult) ([]ClusterInfo, err
 	}
 
 	// Parse the text content as JSON
+	// #7399 — Surface unmarshal errors instead of silently returning empty slices
 	clusters := make([]ClusterInfo, 0)
 	for _, content := range result.Content {
 		if content.Type == "text" {
 			if err := json.Unmarshal([]byte(content.Text), &clusters); err != nil {
-				slog.Warn("[MCP] failed to parse clusters JSON — returning empty result", "error", err)
-				return b.parseClustersFromText(content.Text), nil
+				return nil, fmt.Errorf("failed to parse clusters response: %w", err)
 			}
 		}
 	}
@@ -562,12 +574,12 @@ func (b *Bridge) parsePodsResult(result *CallToolResult) ([]PodInfo, error) {
 		return nil, fmt.Errorf("tool error: %s", result.Content[0].Text)
 	}
 
+	// #7399 — Surface unmarshal errors instead of silently returning empty slices
 	pods := make([]PodInfo, 0)
 	for _, content := range result.Content {
 		if content.Type == "text" {
 			if err := json.Unmarshal([]byte(content.Text), &pods); err != nil {
-				slog.Warn("[MCP] failed to parse pods JSON — returning empty result", "error", err)
-				return []PodInfo{}, nil
+				return nil, fmt.Errorf("failed to parse pods response: %w", err)
 			}
 		}
 	}
@@ -582,12 +594,12 @@ func (b *Bridge) parsePodIssuesResult(result *CallToolResult) ([]PodIssue, error
 		return nil, fmt.Errorf("tool error: %s", result.Content[0].Text)
 	}
 
+	// #7399 — Surface unmarshal errors instead of silently returning empty slices
 	issues := make([]PodIssue, 0)
 	for _, content := range result.Content {
 		if content.Type == "text" {
 			if err := json.Unmarshal([]byte(content.Text), &issues); err != nil {
-				slog.Warn("[MCP] failed to parse pod issues JSON — returning empty result", "error", err)
-				return []PodIssue{}, nil
+				return nil, fmt.Errorf("failed to parse pod issues response: %w", err)
 			}
 		}
 	}
@@ -602,12 +614,12 @@ func (b *Bridge) parseEventsResult(result *CallToolResult) ([]Event, error) {
 		return nil, fmt.Errorf("tool error: %s", result.Content[0].Text)
 	}
 
+	// #7399 — Surface unmarshal errors instead of silently returning empty slices
 	events := make([]Event, 0)
 	for _, content := range result.Content {
 		if content.Type == "text" {
 			if err := json.Unmarshal([]byte(content.Text), &events); err != nil {
-				slog.Warn("[MCP] failed to parse events JSON — returning empty result", "error", err)
-				return []Event{}, nil
+				return nil, fmt.Errorf("failed to parse events response: %w", err)
 			}
 		}
 	}

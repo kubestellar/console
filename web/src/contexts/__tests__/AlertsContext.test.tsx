@@ -337,12 +337,14 @@ describe('AlertsContext', () => {
   // ── 7. Stats computation ─────────────────────────────────────────────
 
   it('computes correct alert statistics', () => {
+    // #7396 — Each alert needs a unique ruleId so deduplicateAlerts does
+    // not collapse them into a single entry.
     const alerts: Alert[] = [
-      { id: 's1', ruleId: 'r1', ruleName: 'A', severity: 'critical', status: 'firing', message: '', details: {}, firedAt: '2024-01-01T00:00:00Z' },
-      { id: 's2', ruleId: 'r1', ruleName: 'A', severity: 'warning', status: 'firing', message: '', details: {}, firedAt: '2024-01-01T00:00:00Z' },
-      { id: 's3', ruleId: 'r1', ruleName: 'A', severity: 'info', status: 'firing', message: '', details: {}, firedAt: '2024-01-01T00:00:00Z' },
-      { id: 's4', ruleId: 'r1', ruleName: 'A', severity: 'warning', status: 'resolved', message: '', details: {}, firedAt: '2024-01-01T00:00:00Z', resolvedAt: '2024-01-02T00:00:00Z' },
-      { id: 's5', ruleId: 'r1', ruleName: 'A', severity: 'critical', status: 'firing', message: '', details: {}, firedAt: '2024-01-01T00:00:00Z', acknowledgedAt: '2024-01-01T01:00:00Z' },
+      { id: 's1', ruleId: 'r-s1', ruleName: 'A', severity: 'critical', status: 'firing', message: '', details: {}, firedAt: '2024-01-01T00:00:00Z' },
+      { id: 's2', ruleId: 'r-s2', ruleName: 'A', severity: 'warning', status: 'firing', message: '', details: {}, firedAt: '2024-01-01T00:00:00Z' },
+      { id: 's3', ruleId: 'r-s3', ruleName: 'A', severity: 'info', status: 'firing', message: '', details: {}, firedAt: '2024-01-01T00:00:00Z' },
+      { id: 's4', ruleId: 'r-s4', ruleName: 'A', severity: 'warning', status: 'resolved', message: '', details: {}, firedAt: '2024-01-01T00:00:00Z', resolvedAt: '2024-01-02T00:00:00Z' },
+      { id: 's5', ruleId: 'r-s5', ruleName: 'A', severity: 'critical', status: 'firing', message: '', details: {}, firedAt: '2024-01-01T00:00:00Z', acknowledgedAt: '2024-01-01T01:00:00Z' },
     ]
     localStorage.setItem('kc_alerts', JSON.stringify(alerts))
 

@@ -991,12 +991,15 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
       if (diagnosisInFlightRef.current.has(alertId)) return null
       diagnosisInFlightRef.current.add(alertId)
 
-      // Look up matching runbook for this alert condition type
-      const rule = rules.find(r => r.id === alert.ruleId)
-      const conditionType = rule?.condition.type
-      const runbook = conditionType ? findRunbookForCondition(conditionType) : undefined
+      // #7401 — Wrap entire async flow in try/finally so the in-flight
+      // flag is always cleared, even if an unexpected error occurs.
+      try {
+        // Look up matching runbook for this alert condition type
+        const rule = rules.find(r => r.id === alert.ruleId)
+        const conditionType = rule?.condition.type
+        const runbook = conditionType ? findRunbookForCondition(conditionType) : undefined
 
-      const basePrompt = `Please analyze this alert and provide diagnosis with suggestions:
+        const basePrompt = `Please analyze this alert and provide diagnosis with suggestions:
 
 Alert: ${alert.ruleName}
 Severity: ${alert.severity}
@@ -1005,67 +1008,67 @@ Cluster: ${alert.cluster || 'N/A'}
 Resource: ${alert.resource || 'N/A'}
 Details: ${JSON.stringify(alert.details, null, 2)}`
 
-      // #6915 — If a runbook matches, execute it first and include the
-      // gathered evidence directly in the AI prompt so the diagnosis is
-      // grounded in real cluster data, not just the alert metadata.
-      let runbookEvidence = ''
-      if (runbook) {
-        try {
-          const result = await executeRunbook(runbook, {
-            cluster: alert.cluster,
-            namespace: alert.namespace,
-            resource: alert.resource,
-            resourceKind: alert.resourceKind,
-            alertMessage: alert.message })
-          if (result.enrichedPrompt) {
-            runbookEvidence = `\n\n--- Runbook Evidence (${runbook.title}) ---\n${result.enrichedPrompt}`
-            console.debug(`Runbook "${runbook.title}" gathered ${result.stepResults.length} evidence steps`)
+        // #6915 — If a runbook matches, execute it first and include the
+        // gathered evidence directly in the AI prompt so the diagnosis is
+        // grounded in real cluster data, not just the alert metadata.
+        let runbookEvidence = ''
+        if (runbook) {
+          try {
+            const result = await executeRunbook(runbook, {
+              cluster: alert.cluster,
+              namespace: alert.namespace,
+              resource: alert.resource,
+              resourceKind: alert.resourceKind,
+              alertMessage: alert.message })
+            if (result.enrichedPrompt) {
+              runbookEvidence = `\n\n--- Runbook Evidence (${runbook.title}) ---\n${result.enrichedPrompt}`
+              console.debug(`Runbook "${runbook.title}" gathered ${result.stepResults.length} evidence steps`)
+            }
+          } catch {
+            // Silent failure - runbook is best-effort enhancement
           }
-        } catch {
-          // Silent failure - runbook is best-effort enhancement
         }
-      }
 
-      const initialPrompt = `${basePrompt}${runbookEvidence}
+        const initialPrompt = `${basePrompt}${runbookEvidence}
 
 Please provide:
 1. A summary of the issue
 2. The likely root cause
 3. Suggested actions to resolve this alert`
 
-      const missionId = startMission({
-        title: `Diagnose: ${alert.ruleName}`,
-        description: `Analyzing alert on ${alert.cluster || 'cluster'}`,
-        type: 'troubleshoot',
-        cluster: alert.cluster,
-        initialPrompt,
-        context: {
-          alertId,
-          alertType: alert.ruleName,
-          details: alert.details,
-          runbookId: runbook?.id } })
+        const missionId = startMission({
+          title: `Diagnose: ${alert.ruleName}`,
+          description: `Analyzing alert on ${alert.cluster || 'cluster'}`,
+          type: 'troubleshoot',
+          cluster: alert.cluster,
+          initialPrompt,
+          context: {
+            alertId,
+            alertType: alert.ruleName,
+            details: alert.details,
+            runbookId: runbook?.id } })
 
-      setAlerts(prev =>
-        prev.map(a =>
-          a.id === alertId
-            ? {
-                ...a,
-                aiDiagnosis: {
-                  summary: 'AI is analyzing this alert...',
-                  rootCause: '',
-                  suggestions: [],
-                  missionId,
-                  analyzedAt: new Date().toISOString() } }
-            : a
+        setAlerts(prev =>
+          prev.map(a =>
+            a.id === alertId
+              ? {
+                  ...a,
+                  aiDiagnosis: {
+                    summary: 'AI is analyzing this alert...',
+                    rootCause: '',
+                    suggestions: [],
+                    missionId,
+                    analyzedAt: new Date().toISOString() } }
+              : a
+          )
         )
-      )
 
-      // #7341 — Clear in-flight flag once the mission is set up.
-      // The diagnosis placeholder is now in the alert, so the UI will
-      // prevent re-triggering via the missionId check.
-      diagnosisInFlightRef.current.delete(alertId)
-
-      return missionId
+        return missionId
+      } finally {
+        // #7401 — Always clear in-flight flag so the alert is never
+        // permanently locked from future diagnosis attempts.
+        diagnosisInFlightRef.current.delete(alertId)
+      }
     }
 
   // #7337 — Reconcile AI diagnosis results back into alerts when the

@@ -208,14 +208,16 @@ describe('useNodes', () => {
     expect(result.current.error).toBeNull()
   })
 
-  it('falls back to cluster-cache placeholder node data when available', async () => {
+  it('returns empty nodes on SSE failure even when cluster cache has data (#7351)', async () => {
+    // #7396 — After #7351, SSE failure returns empty state instead of
+    // fabricating placeholder nodes from cluster cache.
     mockFetchSSE.mockRejectedValue(new Error('SSE failed'))
     mockClusterCacheRef.clusters = [{ name: 'test-cluster', nodeCount: 3, cpuCores: 12, memoryGB: 48 }]
 
     const { result } = renderHook(() => useNodes('test-cluster'))
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.nodes.length).toBeGreaterThan(0)
+    expect(result.current.nodes).toEqual([])
     expect(result.current.error).toBeNull()
   })
 
@@ -915,7 +917,9 @@ describe('useNodes — empty cluster handling', () => {
     expect(result.current.error).toBeNull()
   })
 
-  it('builds placeholder from cluster cache with cpuCores and memoryGB', async () => {
+  it('returns empty on SSE failure — no placeholder fabrication (#7351)', async () => {
+    // #7396 — After #7351, placeholder node fabrication was removed.
+    // SSE failure returns empty state regardless of cluster cache.
     mockFetchSSE.mockRejectedValue(new Error('SSE failed'))
     mockClusterCacheRef.clusters = [
       { name: 'cached-cluster', nodeCount: 5, cpuCores: 32, memoryGB: 128 },
@@ -924,10 +928,8 @@ describe('useNodes — empty cluster handling', () => {
     const { result } = renderHook(() => useNodes('cached-cluster'))
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.nodes.length).toBe(1)
-    expect(result.current.nodes[0].cpuCapacity).toBe('32')
-    expect(result.current.nodes[0].memoryCapacity).toBe('128Gi')
-    expect(result.current.nodes[0].status).toBe('Ready')
+    expect(result.current.nodes).toEqual([])
+    expect(result.current.error).toBeNull()
   })
 
   it('returns empty when cluster cache has nodeCount=0', async () => {

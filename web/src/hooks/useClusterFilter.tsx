@@ -33,9 +33,13 @@ export function ClusterFilterProvider({ children }: { children: ReactNode }) {
     return [] // Empty means all clusters
   })
 
-  // Persist to localStorage
+  // Persist to localStorage — #7402 guard against restricted environments
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(selectedClusters))
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(selectedClusters))
+    } catch {
+      // Silently ignore — storage may be unavailable in private/sandboxed mode
+    }
   }, [selectedClusters])
 
   const setSelectedClusters = (clusters: string[]) => {

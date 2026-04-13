@@ -186,12 +186,14 @@ describe('initial state', () => {
 
 describe('stats calculation', () => {
   it('computes correct stats from mixed alert states', () => {
+    // #7396 — Each alert needs a unique ruleId (or unique cluster) so
+    // deduplicateAlerts does not collapse them into a single entry.
     const alerts = [
-      makeAlert({ id: 'f1', status: 'firing', severity: 'critical' }),
-      makeAlert({ id: 'f2', status: 'firing', severity: 'warning' }),
-      makeAlert({ id: 'f3', status: 'firing', severity: 'info' }),
-      makeAlert({ id: 'r1', status: 'resolved', severity: 'critical', resolvedAt: new Date().toISOString() }),
-      makeAlert({ id: 'a1', status: 'firing', severity: 'warning', acknowledgedAt: new Date().toISOString() }),
+      makeAlert({ id: 'f1', ruleId: 'r-f1', status: 'firing', severity: 'critical' }),
+      makeAlert({ id: 'f2', ruleId: 'r-f2', status: 'firing', severity: 'warning' }),
+      makeAlert({ id: 'f3', ruleId: 'r-f3', status: 'firing', severity: 'info' }),
+      makeAlert({ id: 'r1', ruleId: 'r-r1', status: 'resolved', severity: 'critical', resolvedAt: new Date().toISOString() }),
+      makeAlert({ id: 'a1', ruleId: 'r-a1', status: 'firing', severity: 'warning', acknowledgedAt: new Date().toISOString() }),
     ]
     localStorage.setItem('kc_alerts', JSON.stringify(alerts))
 

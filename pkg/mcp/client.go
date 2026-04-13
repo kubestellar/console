@@ -231,8 +231,30 @@ func (c *Client) Start(ctx context.Context) error {
 // example, once by Bridge.Start rollback and once by Bridge.Stop (#6623).
 func (c *Client) Stop() error {
 	c.stopOnce.Do(func() {
+		// #7397 — Reset readiness flag so health checks stop reporting the
+		// client as available after the process has been killed.
+		c.ready.Store(false)
+
 		// Signal readResponses goroutine to exit
 		close(c.done)
+
+		// #7398 — Actively fail all in-flight RPC calls so callers unblock
+		// immediately instead of waiting for context timeout.
+		c.mu.Lock()
+		for key, ch := range c.pending {
+			select {
+			case ch <- &Response{
+				JSONRPC: "2.0",
+				Error: &Error{
+					Code:    -32000,
+					Message: "client stopped",
+				},
+			}:
+			default:
+			}
+			delete(c.pending, key)
+		}
+		c.mu.Unlock()
 
 		// Close stdin pipe to send EOF to the server process
 		if c.stdin != nil {
@@ -396,6 +418,10 @@ func (c *Client) send(req Request) error {
 
 	// Use a dedicated write mutex so a blocked write cannot starve
 	// callers that only need c.mu for the pending map (#6944).
+	//
+	// #7395 — If the write blocks past the timeout, close stdin to
+	// unblock the goroutine so it releases writeMu instead of holding
+	// it forever. The goroutine always unlocks writeMu via defer.
 	type writeResult struct{ err error }
 	ch := make(chan writeResult, 1)
 
@@ -413,6 +439,11 @@ func (c *Client) send(req Request) error {
 		}
 		return nil
 	case <-time.After(stdinWriteTimeout):
+		// Close stdin to unblock the stuck Write goroutine — this causes
+		// Write to return with an error, releasing writeMu via defer.
+		if c.stdin != nil {
+			c.stdin.Close()
+		}
 		return fmt.Errorf("stdin write timed out after %s (child process may have stopped)", stdinWriteTimeout)
 	case <-c.done:
 		return fmt.Errorf("client stopped while writing to stdin")
