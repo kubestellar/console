@@ -428,11 +428,12 @@ func (s *Server) setupMiddleware() {
 
 		c.Set("Content-Security-Policy",
 			"default-src 'self'; "+
-				"script-src 'self' 'unsafe-inline' https://www.googletagmanager.com; "+
-				"style-src 'self' 'unsafe-inline'; "+
+				"script-src 'self' 'unsafe-inline' blob: https://www.googletagmanager.com; "+
+				"worker-src 'self' blob:; "+
+				"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "+
 				"img-src 'self' data: https:; "+
 				"connect-src 'self' "+kcAgentLoopback+" "+kcAgentLoopbackWS+" "+kcAgentLocalhost+" "+kcAgentLocalhostWS+" https://www.google-analytics.com https://www.googletagmanager.com wss:; "+
-				"font-src 'self' data:; "+
+				"font-src 'self' data: https://fonts.gstatic.com; "+
 				"object-src 'none'; "+
 				"base-uri 'self'")
 
