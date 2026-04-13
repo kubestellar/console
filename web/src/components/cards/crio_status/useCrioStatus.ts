@@ -142,10 +142,21 @@ async function fetchCrioStatus(): Promise<CrioStatus> {
 
   // Filter for CRI-O nodes only
   const crioNodes = items.filter((n) => isCrioRuntime(n.containerRuntime))
-  const crioNodeNames = new Set(crioNodes.map((node) => node.name).filter(Boolean))
+  // Build a set of CRI-O node names for pod matching.
+  // Use both raw name and the short hostname (before the first dot) so pods
+  // whose node field uses a different identifier format still match (#7356).
+  const crioNodeNames = new Set<string>()
+  for (const node of crioNodes) {
+    if (node.name) {
+      crioNodeNames.add(node.name)
+      const shortName = node.name.split('.')[0]
+      if (shortName) crioNodeNames.add(shortName)
+    }
+  }
   const crioPods = allPods.filter((pod) => {
     const nodeName = pod.node ?? ''
-    return crioNodeNames.has(nodeName)
+    if (!nodeName) return false
+    return crioNodeNames.has(nodeName) || crioNodeNames.has(nodeName.split('.')[0])
   })
 
   if (crioNodes.length === 0) {

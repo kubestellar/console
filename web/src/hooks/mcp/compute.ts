@@ -6,7 +6,7 @@ import { isDemoMode } from '../../lib/demoMode'
 import { useDemoMode } from '../useDemoMode'
 import { registerCacheReset, registerRefetch } from '../../lib/modeTransition'
 import { STORAGE_KEY_TOKEN } from '../../lib/constants'
-import { GPU_POLL_INTERVAL_MS, getEffectiveInterval, LOCAL_AGENT_URL, agentFetch, clusterCacheRef } from './shared'
+import { GPU_POLL_INTERVAL_MS, getEffectiveInterval, LOCAL_AGENT_URL, agentFetch } from './shared'
 import { subscribePolling } from './pollingManager'
 import { MCP_EXTENDED_TIMEOUT_MS, MCP_HOOK_TIMEOUT_MS } from '../../lib/constants/network'
 import type { GPUNode, NodeInfo, NVIDIAOperatorStatus } from './types'
@@ -514,27 +514,10 @@ export function useNodes(cluster?: string) {
       setNodes(allNodes)
       setError(null)
     } catch {
-      // On error, try cluster cache as fallback
-      const cachedCluster = clusterCacheRef.clusters.find(c => c.name === cluster)
-      if (cachedCluster && cachedCluster.nodeCount && cachedCluster.nodeCount > 0) {
-        const placeholderNodes: NodeInfo[] = [{
-          name: `${cluster}-nodes`,
-          cluster: cluster || '',
-          status: 'Ready',
-          roles: ['worker'],
-          kubeletVersion: '',
-          cpuCapacity: cachedCluster.cpuCores ? `${cachedCluster.cpuCores}` : '0',
-          memoryCapacity: cachedCluster.memoryGB ? `${cachedCluster.memoryGB}Gi` : '0',
-          podCapacity: '110',
-          conditions: [],
-          unschedulable: false,
-        }]
-        setNodes(placeholderNodes)
-        setError(null)
-      } else {
-        setError(null)
-        setNodes([])
-      }
+      // On error, show empty state instead of fabricating placeholder nodes
+      // that would masquerade as real Ready nodes (#7351)
+      setError(null)
+      setNodes([])
     } finally {
       setIsLoading(false)
     }

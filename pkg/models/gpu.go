@@ -40,8 +40,12 @@ func (s ReservationStatus) IsValid() bool {
 }
 
 // CanTransitionTo returns true when transitioning from s to target is allowed
-// by the state-transition graph.
+// by the state-transition graph.  Idempotent (same-to-same) transitions are
+// always permitted so that harmless retry/refresh calls do not fail (#7361).
 func (s ReservationStatus) CanTransitionTo(target ReservationStatus) bool {
+	if s == target {
+		return true
+	}
 	allowed, ok := allowedTransitions[s]
 	if !ok {
 		return false

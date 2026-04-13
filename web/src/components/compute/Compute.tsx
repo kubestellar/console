@@ -82,7 +82,7 @@ export function Compute() {
     totalNodes: reachableClusters.reduce((sum, c) => sum + (c.nodeCount || 0), 0),
     totalPods: reachableClusters.reduce((sum, c) => sum + (c.podCount || 0), 0),
     totalGPUs: gpuNodes
-      .filter(node => isAllClustersSelected || globalSelectedClusters.includes(node.cluster.split('/')[0]))
+      .filter(node => isAllClustersSelected || globalSelectedClusters.includes(node.cluster))
       .reduce((sum, node) => sum + node.gpuCount, 0) }
 
   // Check if we have any reachable clusters with actual data (not refreshing).
@@ -98,9 +98,11 @@ export function Compute() {
   // Cache the last known good stats to show during refresh
   const cachedStats = useRef(currentStats)
 
-  // Update cache when we have real data (not all zeros during refresh)
+  // Update cache when we have real data — including valid zero-node states
+  // after scale-down (#7347). The hasActualData guard already ensures nodeCount
+  // has been reported, so a zero value is a real measurement, not a placeholder.
   useEffect(() => {
-    if (hasActualData && (currentStats.totalNodes > 0 || currentStats.totalCPUs > 0)) {
+    if (hasActualData) {
       cachedStats.current = currentStats
     }
   }, [hasActualData, currentStats])

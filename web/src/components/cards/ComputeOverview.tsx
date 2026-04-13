@@ -45,10 +45,16 @@ export function ComputeOverview() {
   const filteredGPUNodes = useMemo(() => {
     let result = gpuNodes
     if (!isAllClustersSelected) {
-      result = result.filter(n => selectedClusters.some(c => (n.cluster ?? '').startsWith(c)))
+      result = result.filter(n => {
+        const clusterName = (n.cluster ?? '').split('/')[0]
+        return selectedClusters.includes(clusterName)
+      })
     }
     if (localClusterFilter.length > 0) {
-      result = result.filter(n => localClusterFilter.some(c => (n.cluster ?? '').startsWith(c)))
+      result = result.filter(n => {
+        const clusterName = (n.cluster ?? '').split('/')[0]
+        return localClusterFilter.includes(clusterName)
+      })
     }
     return result
   }, [gpuNodes, isAllClustersSelected, selectedClusters, localClusterFilter])
@@ -94,8 +100,10 @@ export function ComputeOverview() {
   }, [filteredClusters, filteredGPUNodes])
 
   // Check if we have real data from reachable clusters
+  // A cluster counts as having data as soon as nodeCount is reported — even 0
+  // is a valid value for a newly provisioned cluster (#7354)
   const hasRealData = !isLoading && filteredClusters.length > 0 &&
-    filteredClusters.some(c => c.reachable !== false && c.cpuCores !== undefined && c.nodeCount !== undefined && c.nodeCount > 0)
+    filteredClusters.some(c => c.reachable !== false && c.cpuCores !== undefined && c.nodeCount !== undefined)
 
   // Report state to CardWrapper for refresh animation
   const hasData = clusters.length > 0

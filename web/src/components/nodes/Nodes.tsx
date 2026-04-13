@@ -38,7 +38,7 @@ export function Nodes() {
   const totalMemoryGB = reachableClusters.reduce((sum, c) => sum + (c.memoryGB || 0), 0)
   const totalPods = reachableClusters.reduce((sum, c) => sum + (c.podCount || 0), 0)
   const totalGPUs = gpuNodes
-    .filter(node => isAllClustersSelected || globalSelectedClusters.includes(node.cluster.split('/')[0]))
+    .filter(node => isAllClustersSelected || globalSelectedClusters.includes(node.cluster))
     .reduce((sum, node) => sum + node.gpuCount, 0)
 
   // Calculate utilization
@@ -123,7 +123,7 @@ export function Nodes() {
       isLoading={isLoading}
       isRefreshing={dataRefreshing}
       lastUpdated={lastUpdated}
-      hasData={totalNodes > 0}
+      hasData={reachableClusters.length > 0}
       emptyState={{
         title: t('common:nodes.dashboardTitle'),
         description: t('common:nodes.emptyDescription') }}

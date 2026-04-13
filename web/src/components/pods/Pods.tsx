@@ -76,15 +76,21 @@ export function Pods() {
 
   // Calculate stats
   const stats = useMemo(() => {
-    const totalPods = clusters.reduce((sum, c) => sum + (c.podCount || 0), 0)
+    // Use filtered clusters matching the global selection for pod/cluster counts (#7349)
+    const visibleClusters = clusters.filter(c =>
+      isAllClustersSelected || globalSelectedClusters.includes(c.name)
+    )
+    const totalPods = visibleClusters.reduce((sum, c) => sum + (c.podCount || 0), 0)
+    // Dedup issue rows by pod name to avoid under-counting healthy pods (#7348)
+    const uniqueIssuePods = new Set(filteredPodIssues.map(p => `${p.cluster}/${p.namespace}/${p.name}`))
     const issueCount = filteredPodIssues.length
     const pendingCount = filteredPodIssues.filter(p => p.reason === 'Pending' || p.status === 'Pending').length
     const restartCount = filteredPodIssues.filter(p => (p.restarts || 0) > 5).length
-    const clusterCount = isAllClustersSelected ? clusters.length : globalSelectedClusters.length
+    const clusterCount = visibleClusters.length
 
     return {
       totalPods,
-      healthy: Math.max(0, totalPods - issueCount),
+      healthy: Math.max(0, totalPods - uniqueIssuePods.size),
       issues: issueCount,
       pending: pendingCount,
       restarts: restartCount,

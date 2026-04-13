@@ -215,26 +215,17 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
           type: 'ClusterIP',
           status: 'active' }))
       case 'all-nodes':
-        // Use real node data from the cached nodes hook
-        if (cachedNodes.length > 0) {
-          return cachedNodes.map(n => ({
-            name: n.name,
-            cluster: n.cluster || '',
-            status: n.status || 'Unknown',
-            roles: n.roles,
-            cpuCapacity: n.cpuCapacity,
-            memoryCapacity: n.memoryCapacity,
-            kubeletVersion: n.kubeletVersion,
-            internalIP: n.internalIP }))
-        }
-        // Fallback: approximate from cluster metadata when node data hasn't loaded
-        return clusters.flatMap(c => {
-          const count = c.nodeCount || 0
-          return Array.from({ length: count }, (_, i) => ({
-            name: `${c.name}-node-${i + 1}`,
-            cluster: c.name,
-            status: c.healthy ? 'Ready' : 'NotReady' }))
-        })
+        // Use real node data from the cached nodes hook (#7352)
+        // Never fabricate synthetic nodes — show empty state until real data loads
+        return cachedNodes.map(n => ({
+          name: n.name,
+          cluster: n.cluster || '',
+          status: n.status || 'Unknown',
+          roles: n.roles,
+          cpuCapacity: n.cpuCapacity,
+          memoryCapacity: n.memoryCapacity,
+          kubeletVersion: n.kubeletVersion,
+          internalIP: n.internalIP }))
       case 'all-events':
         return events.map(e => ({
           ...e,
@@ -263,14 +254,9 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
           name: s.name,
           status: s.severity || 'warning' }))
       case 'all-gpu':
-        // GPU nodes - from clusters with GPU info
-        return clusters
-          .filter(c => c.nodeCount && c.nodeCount > 0)
-          .map(c => ({
-            name: `${c.name}-gpu-node`,
-            cluster: c.name,
-            gpuCount: 0, // Placeholder - actual GPU data would come from GPU nodes hook
-            status: 'available' }))
+        // GPU nodes — return empty until real data from GPU nodes hook is available (#7353)
+        // Previously fabricated placeholder entries with gpuCount: 0 that were misleading
+        return []
       case 'all-storage':
         // Use real PVC data from useCachedPVCs (#6813)
         return (cachedPVCs || []).map(pvc => ({
