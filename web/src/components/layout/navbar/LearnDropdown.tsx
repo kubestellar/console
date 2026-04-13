@@ -81,7 +81,7 @@ export function LearnDropdown() {
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-96 max-w-[calc(100vw-1rem)] bg-card border border-border rounded-lg shadow-xl z-50 overflow-hidden">
+        <div className="fixed sm:absolute left-1/2 -translate-x-1/2 sm:left-auto sm:translate-x-0 sm:right-0 top-14 sm:top-full sm:mt-2 w-[calc(100vw-1rem)] sm:w-96 bg-card border border-border rounded-lg shadow-xl z-50 overflow-hidden max-h-[calc(100vh-4rem)] overflow-y-auto">
           {/* Tour */}
           <button
             onClick={handleStartTour}
