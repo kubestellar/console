@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -27,6 +28,10 @@ const (
 	githubProxyMaxRequestsPerMinute = 30
 	// githubProxyBurstSize allows short bursts above the steady-state rate.
 	githubProxyBurstSize = 5
+	// maxGitHubResponseBytes caps the size of GitHub API response bodies that
+	// the proxy will buffer, preventing memory exhaustion from large list
+	// endpoints or crafted query parameters (#7035).
+	maxGitHubResponseBytes = 10 * 1024 * 1024 // 10 MB
 )
 
 // githubProxyAPIBase is the base URL for proxied GitHub API requests.
@@ -35,12 +40,32 @@ var githubProxyAPIBase = getEnvOrDefault("GITHUB_API_BASE_URL", githubProxyAPIBa
 
 var githubProxyClient = &http.Client{Timeout: githubProxyTimeout}
 
-// githubProxyLimiter enforces a global rate limit on outbound GitHub API calls
-// to prevent a single runaway client from exhausting the shared PAT quota.
-var githubProxyLimiter = rate.NewLimiter(
-	rate.Every(time.Minute/githubProxyMaxRequestsPerMinute),
-	githubProxyBurstSize,
-)
+// githubProxyLimiters enforces a per-user rate limit on outbound GitHub API
+// calls so that one user cannot exhaust the shared PAT quota for everyone
+// (#7034). Each user (identified by JWT user ID) gets their own bucket.
+var githubProxyLimiters struct {
+	sync.Mutex
+	m map[string]*rate.Limiter
+}
+
+func init() {
+	githubProxyLimiters.m = make(map[string]*rate.Limiter)
+}
+
+// getGitHubProxyLimiter returns or creates a per-user rate limiter.
+func getGitHubProxyLimiter(userID string) *rate.Limiter {
+	githubProxyLimiters.Lock()
+	defer githubProxyLimiters.Unlock()
+	if lim, ok := githubProxyLimiters.m[userID]; ok {
+		return lim
+	}
+	lim := rate.NewLimiter(
+		rate.Every(time.Minute/githubProxyMaxRequestsPerMinute),
+		githubProxyBurstSize,
+	)
+	githubProxyLimiters.m[userID] = lim
+	return lim
+}
 
 // allowedGitHubPrefixes restricts which GitHub API paths can be proxied.
 // Only read-only endpoints actually needed by the frontend are permitted.
@@ -112,9 +137,15 @@ func (h *GitHubProxyHandler) resolveToken() string {
 // Proxy handles GET /api/github/* by forwarding to api.github.com/*.
 // Only GET requests are allowed (read-only proxy).
 func (h *GitHubProxyHandler) Proxy(c *fiber.Ctx) error {
-	// Rate-limit outbound GitHub API calls to protect the shared PAT quota.
-	if !githubProxyLimiter.Allow() {
-		slog.Warn("[GitHubProxy] rate limit exceeded, rejecting request")
+	// Rate-limit outbound GitHub API calls per user to protect the shared PAT
+	// quota. Each user gets their own 30 req/min bucket (#7034).
+	uid := middleware.GetUserID(c)
+	limiterKey := uid.String()
+	if limiterKey == "00000000-0000-0000-0000-000000000000" {
+		limiterKey = c.IP() // fallback — should not happen behind JWTAuth
+	}
+	if !getGitHubProxyLimiter(limiterKey).Allow() {
+		slog.Warn("[GitHubProxy] rate limit exceeded, rejecting request", "user", limiterKey)
 		return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
 			"error": "GitHub proxy rate limit exceeded — try again shortly",
 		})
@@ -196,7 +227,7 @@ func (h *GitHubProxyHandler) Proxy(c *fiber.Ctx) error {
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxGitHubResponseBytes))
 	if err != nil {
 		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{
 			"error": "Failed to read GitHub API response",
