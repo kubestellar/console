@@ -51,7 +51,7 @@ export function UpdateIndicator() {
           setShowUpdateDropdown(!showUpdateDropdown)
           updateHint.action()
         }}
-        className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors"
+        className="flex items-center gap-2 px-2 py-1.5 h-9 rounded-lg bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors"
         title={isDeveloperUpdate ? updateLabel : t('update.availableTag', { tag: latestRelease?.tag ?? '' })}
       >
         <Download className="w-4 h-4" />

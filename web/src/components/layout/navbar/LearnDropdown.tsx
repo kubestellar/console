@@ -68,7 +68,7 @@ export function LearnDropdown() {
       <button
         onClick={toggle}
         className={cn(
-          'flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors',
+          'flex items-center gap-2 px-3 py-1.5 h-9 rounded-lg text-sm transition-colors',
           hasCompletedTour
             ? 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
             : 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 animate-pulse'

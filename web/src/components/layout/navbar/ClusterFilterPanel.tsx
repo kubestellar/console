@@ -168,7 +168,7 @@ export function ClusterFilterPanel() {
         <button
           onClick={() => toggleDropdown()}
           className={cn(
-            'relative flex items-center justify-center w-8 h-8 rounded-lg transition-colors',
+            'relative flex items-center justify-center w-9 h-9 rounded-lg transition-colors',
             isFiltered
               ? 'bg-purple-500/20 text-purple-400 shadow-[0_0_6px_rgba(139,92,246,0.2)]'
               : 'bg-secondary/50 text-muted-foreground hover:text-foreground'

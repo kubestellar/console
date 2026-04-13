@@ -139,7 +139,7 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
           {!isSidebarOpen && (
             <button
               onClick={openSidebar}
-              className="relative flex items-center gap-1.5 px-3 py-1.5 min-h-[44px] text-sm font-medium rounded-lg transition-colors bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/20"
+              className="relative flex items-center gap-1.5 px-3 py-1.5 h-9 text-sm font-medium rounded-lg transition-colors bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/20"
               aria-label={t('missionSidebar.openAIMissions')}
               title={t('missionSidebar.openAIMissions')}
             >
@@ -172,7 +172,7 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
           {/* Theme toggle */}
           <button
             onClick={toggleTheme}
-            className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center shrink-0 hover:bg-secondary rounded-lg transition-colors"
+            className="p-2 w-9 h-9 flex items-center justify-center shrink-0 hover:bg-secondary rounded-lg transition-colors"
             title={t('navbar.themeToggle', { theme })}
           >
             {theme === 'dark' ? (

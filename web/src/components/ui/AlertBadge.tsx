@@ -258,7 +258,7 @@ export function AlertBadge() {
         variant="ghost"
         size="sm"
         onClick={toggle}
-        className={`relative p-2 ${
+        className={`relative p-2 w-9 h-9 ${
           stats.critical > 0 ? 'text-red-400' : stats.warning > 0 ? 'text-orange-400' : ''
         }`}
         title={stats.firing > 0 ? `${stats.firing} active alerts` : 'No active alerts'}

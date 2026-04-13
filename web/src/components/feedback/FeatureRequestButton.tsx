@@ -60,7 +60,7 @@ export function FeatureRequestButton() {
       <button
         onClick={openModal}
         data-tour="feedback"
-        className={`relative p-2 rounded-lg hover:bg-secondary/50 transition-colors ${
+        className={`relative p-2 w-9 h-9 flex items-center justify-center rounded-lg hover:bg-secondary/50 transition-colors ${
           unreadCount > 0 ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
         }`}
         title={unreadCount > 0 ? `${unreadCount} updates on your feedback` : 'Report a bug or request a feature'}
