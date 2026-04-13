@@ -64,12 +64,12 @@ jobs:
       - name: Build backend
         run: go build -o console-bin ./cmd/console
 
-      - name: Start backend (dev mode)
+      - name: Start backend and run UX journey tests
         run: |
-          # Dev mode: auto-login as dev-user, demo data active, no OAuth needed
+          # Start Go backend in dev mode (background, nohup to survive step shell)
           JWT_SECRET="ux-nightly-$(openssl rand -hex 16)" \
           DEV_MODE=true \
-          ./console-bin &
+          nohup ./console-bin > /tmp/console.log 2>&1 &
 
           # Wait for backend health
           for i in $(seq 1 30); do
@@ -80,9 +80,9 @@ jobs:
             sleep 1
           done
 
-      - name: Run UX journey tests
-        working-directory: web
-        run: npx playwright test e2e/user-flows/ --project=chromium --reporter=list,html,./e2e/helpers/ux-reporter.ts
+          # Run tests from web/ directory
+          cd web
+          npx playwright test e2e/user-flows/ --project=chromium --reporter=list,html,./e2e/helpers/ux-reporter.ts
         env:
           PLAYWRIGHT_BASE_URL: "http://localhost:8080"
 
@@ -106,13 +106,12 @@ jobs:
 
       - name: Post summary
         if: always()
-        working-directory: web
         run: |
           echo "### UX Journey Test Results" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          if [ -f test-results/ux-findings-report.md ]; then
+          if [ -f web/test-results/ux-findings-report.md ]; then
             echo "#### Findings Report" >> "$GITHUB_STEP_SUMMARY"
-            head -20 test-results/ux-findings-report.md >> "$GITHUB_STEP_SUMMARY"
+            head -20 web/test-results/ux-findings-report.md >> "$GITHUB_STEP_SUMMARY"
             echo "" >> "$GITHUB_STEP_SUMMARY"
             echo "*Full report available in artifacts*" >> "$GITHUB_STEP_SUMMARY"
           else
@@ -155,11 +154,11 @@ jobs:
       - name: Build backend
         run: go build -o console-bin ./cmd/console
 
-      - name: Start backend (dev mode)
+      - name: Start backend and run responsive + a11y tests
         run: |
           JWT_SECRET="ux-mobile-$(openssl rand -hex 16)" \
           DEV_MODE=true \
-          ./console-bin &
+          nohup ./console-bin > /tmp/console.log 2>&1 &
 
           for i in $(seq 1 30); do
             if curl -sf http://localhost:8080/health > /dev/null 2>&1; then
@@ -169,9 +168,8 @@ jobs:
             sleep 1
           done
 
-      - name: Run responsive + a11y tests
-        working-directory: web
-        run: npx playwright test e2e/user-flows/responsive-layouts.spec.ts e2e/user-flows/a11y-audit.spec.ts --project=chromium --reporter=list,html
+          cd web
+          npx playwright test e2e/user-flows/responsive-layouts.spec.ts e2e/user-flows/a11y-audit.spec.ts --project=chromium --reporter=list,html
         env:
           PLAYWRIGHT_BASE_URL: "http://localhost:8080"
 
