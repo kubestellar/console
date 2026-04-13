@@ -199,9 +199,12 @@ export function useOperators(cluster?: string) {
           setConsecutiveFailures(0)
           setLastRefresh(Date.now())
         }
-      } catch {
+      } catch (err) {
         if (!controller.signal.aborted) {
-          setError(null)
+          // #7547: Surface the error message so the UI can show it instead
+          // of silently displaying an empty state.
+          const msg = err instanceof Error ? err.message : 'Failed to fetch operators'
+          setError(msg)
           setConsecutiveFailures(prev => prev + 1)
         }
       }
@@ -357,9 +360,12 @@ export function useOperatorSubscriptions(cluster?: string) {
           setConsecutiveFailures(0)
           setLastRefresh(Date.now())
         }
-      } catch {
+      } catch (err) {
         if (!controller.signal.aborted) {
-          setError(null)
+          // #7547: Surface the error message so the UI can show it instead
+          // of silently displaying an empty state.
+          const msg = err instanceof Error ? err.message : 'Failed to fetch subscriptions'
+          setError(msg)
           setConsecutiveFailures(prev => prev + 1)
         }
       }

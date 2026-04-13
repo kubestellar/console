@@ -493,7 +493,10 @@ type OperatorSubscription struct {
 	InstallPlanApproval string `json:"installPlanApproval"`
 	CurrentCSV          string `json:"currentCSV"`
 	InstalledCSV        string `json:"installedCSV,omitempty"`
-	Cluster             string `json:"cluster,omitempty"`
+	// PendingUpgrade is set when installedCSV differs from currentCSV,
+	// indicating an upgrade is waiting for approval (#7548).
+	PendingUpgrade string `json:"pendingUpgrade,omitempty"`
+	Cluster        string `json:"cluster,omitempty"`
 }
 
 // Operator/subscription timeouts — CSV queries take 90-100s for clusters with
@@ -510,6 +513,11 @@ const (
 	gitopsLookupTimeout           = 10 * time.Second
 	gitopsDefaultTimeout          = 30 * time.Second
 )
+
+// operatorCacheEmptyTTL is a shorter cache TTL used for empty results from
+// permanent errors (e.g. "no OLM"). This ensures that after installing OLM
+// the operators appear within 30s instead of waiting the full 5-minute TTL (#7549).
+const operatorCacheEmptyTTL = 30 * time.Second
 
 // operatorCacheEntry holds cached operators for a single cluster.
 type operatorCacheEntry struct {
@@ -533,8 +541,12 @@ func (h *GitOpsHandlers) ListOperators(c *fiber.Ctx) error {
 	if cluster != "" {
 		ctx, cancel := context.WithTimeout(c.Context(), operatorPerClusterTimeout)
 		defer cancel()
-		operators := h.getOperatorsForCluster(ctx, cluster)
-		return c.JSON(fiber.Map{"operators": operators})
+		operators, fetchErr := h.getOperatorsForClusterWithError(ctx, cluster)
+		resp := fiber.Map{"operators": operators}
+		if fetchErr != nil {
+			resp["clusterErrors"] = []string{fmt.Sprintf("%s: %v", cluster, fetchErr)}
+		}
+		return c.JSON(resp)
 	}
 
 	// Query all clusters in parallel — operators are slow, so we wait for all
@@ -549,6 +561,9 @@ func (h *GitOpsHandlers) ListOperators(c *fiber.Ctx) error {
 		var wg sync.WaitGroup
 		var mu sync.Mutex
 		allOperators := make([]Operator, 0)
+		// #7544: Surface per-cluster errors so the frontend can indicate
+		// which clusters failed rather than showing a silent empty state.
+		var clusterErrors []string
 
 		overallCtx, overallCancel := context.WithTimeout(c.Context(), operatorRestOverallTimeout)
 		defer overallCancel()
@@ -562,17 +577,24 @@ func (h *GitOpsHandlers) ListOperators(c *fiber.Ctx) error {
 				ctx, cancel := context.WithTimeout(overallCtx, operatorPerClusterTimeout)
 				defer cancel()
 
-				operators := h.getOperatorsForCluster(ctx, clusterName)
-				if len(operators) > 0 {
-					mu.Lock()
-					allOperators = append(allOperators, operators...)
-					mu.Unlock()
+				operators, fetchErr := h.getOperatorsForClusterWithError(ctx, clusterName)
+				mu.Lock()
+				if fetchErr != nil {
+					clusterErrors = append(clusterErrors, fmt.Sprintf("%s: %v", clusterName, fetchErr))
 				}
+				if len(operators) > 0 {
+					allOperators = append(allOperators, operators...)
+				}
+				mu.Unlock()
 			}(cl.Name)
 		}
 
 		wg.Wait()
-		return c.JSON(fiber.Map{"operators": allOperators})
+		resp := fiber.Map{"operators": allOperators}
+		if len(clusterErrors) > 0 {
+			resp["clusterErrors"] = clusterErrors
+		}
+		return c.JSON(resp)
 	}
 
 	// Fallback to default context
@@ -642,16 +664,23 @@ func (h *GitOpsHandlers) StreamOperators(c *fiber.Ctx) error {
 				ctx, cancel := context.WithTimeout(context.Background(), operatorPerClusterTimeout)
 				defer cancel()
 
-				operators := h.getOperatorsForCluster(ctx, clusterName)
+				operators, fetchErr := h.getOperatorsForClusterWithError(ctx, clusterName)
 				mu.Lock()
 				completedClusters++
-				// Always send cluster_data — even for empty clusters so the
-				// frontend sees progress and knows the stream is alive.
-				writeSSEEvent(w, "cluster_data", fiber.Map{
-					"cluster":   clusterName,
-					"operators": operators,
-					"source":    "k8s",
-				})
+				// #7546: Emit cluster_error when a fetch fails so the frontend
+				// can distinguish "no operators" from "query failed".
+				if fetchErr != nil {
+					writeSSEEvent(w, sseEventClusterError, fiber.Map{
+						"cluster": clusterName,
+						"error":   fetchErr.Error(),
+					})
+				} else {
+					writeSSEEvent(w, "cluster_data", fiber.Map{
+						"cluster":   clusterName,
+						"operators": operators,
+						"source":    "k8s",
+					})
+				}
 				mu.Unlock()
 			}(cl.Name)
 		}
@@ -675,19 +704,26 @@ func (h *GitOpsHandlers) getOperatorsForCluster(ctx context.Context, cluster str
 		cacheKey = "__default__"
 	}
 
-	// Check cache first
+	// Check cache first. Use shorter TTL for empty results so that newly
+	// installed OLM operators appear quickly (#7549, #7550).
 	operatorCacheMu.RLock()
-	if entry, ok := operatorCacheData[cacheKey]; ok && time.Since(entry.fetchedAt) < operatorCacheTTL {
-		operators := entry.operators
-		operatorCacheMu.RUnlock()
-		return operators
+	if entry, ok := operatorCacheData[cacheKey]; ok {
+		ttl := operatorCacheTTL
+		if len(entry.operators) == 0 {
+			ttl = operatorCacheEmptyTTL
+		}
+		if time.Since(entry.fetchedAt) < ttl {
+			operators := entry.operators
+			operatorCacheMu.RUnlock()
+			return operators
+		}
 	}
 	operatorCacheMu.RUnlock()
 
 	// Cache miss — fetch from cluster with retry for transient errors
 	operators, err := h.fetchOperatorsFromCluster(ctx, cluster)
 	if err != nil {
-		// Permanent errors (cluster lacks OLM) — cache empty result
+		// Permanent errors (cluster lacks OLM) — cache empty result with short TTL
 		if _, ok := err.(errPermanent); ok {
 			operatorCacheMu.Lock()
 			operatorCacheData[cacheKey] = &operatorCacheEntry{
@@ -719,6 +755,53 @@ func (h *GitOpsHandlers) getOperatorsForCluster(ctx context.Context, cluster str
 	operatorCacheMu.Unlock()
 
 	return operators
+}
+
+// getOperatorsForClusterWithError returns operators plus any fetch error so
+// callers can surface per-cluster failures (#7544, #7546).
+func (h *GitOpsHandlers) getOperatorsForClusterWithError(ctx context.Context, cluster string) ([]Operator, error) {
+	cacheKey := cluster
+	if cacheKey == "" {
+		cacheKey = "__default__"
+	}
+
+	operatorCacheMu.RLock()
+	if entry, ok := operatorCacheData[cacheKey]; ok {
+		ttl := operatorCacheTTL
+		if len(entry.operators) == 0 {
+			ttl = operatorCacheEmptyTTL
+		}
+		if time.Since(entry.fetchedAt) < ttl {
+			operators := entry.operators
+			operatorCacheMu.RUnlock()
+			return operators, nil
+		}
+	}
+	operatorCacheMu.RUnlock()
+
+	operators, err := h.fetchOperatorsFromCluster(ctx, cluster)
+	if err != nil {
+		if _, ok := err.(errPermanent); ok {
+			operatorCacheMu.Lock()
+			operatorCacheData[cacheKey] = &operatorCacheEntry{operators: []Operator{}, fetchedAt: time.Now()}
+			operatorCacheMu.Unlock()
+			// Permanent (no OLM) is not a user-visible error
+			return []Operator{}, nil
+		}
+		if ctx.Err() == nil {
+			slog.Error("[GitOps] retrying operator fetch after transient error", "cluster", cluster)
+			time.Sleep(gitopsRetryDelay)
+			operators, err = h.fetchOperatorsFromCluster(ctx, cluster)
+		}
+	}
+	if err != nil {
+		return []Operator{}, err
+	}
+
+	operatorCacheMu.Lock()
+	operatorCacheData[cacheKey] = &operatorCacheEntry{operators: operators, fetchedAt: time.Now()}
+	operatorCacheMu.Unlock()
+	return operators, nil
 }
 
 // errPermanent wraps an error to indicate it should be cached (e.g., cluster lacks OLM).
@@ -800,8 +883,12 @@ func (h *GitOpsHandlers) ListOperatorSubscriptions(c *fiber.Ctx) error {
 	if cluster != "" {
 		ctx, cancel := context.WithTimeout(c.Context(), subscriptionPerClusterTimeout)
 		defer cancel()
-		subs := h.getSubscriptionsForCluster(ctx, cluster)
-		return c.JSON(fiber.Map{"subscriptions": subs})
+		subs, fetchErr := h.getSubscriptionsForClusterWithError(ctx, cluster)
+		resp := fiber.Map{"subscriptions": subs}
+		if fetchErr != nil {
+			resp["clusterErrors"] = []string{fmt.Sprintf("%s: %v", cluster, fetchErr)}
+		}
+		return c.JSON(resp)
 	}
 
 	if h.k8sClient != nil {
@@ -814,6 +901,9 @@ func (h *GitOpsHandlers) ListOperatorSubscriptions(c *fiber.Ctx) error {
 		var wg sync.WaitGroup
 		var mu sync.Mutex
 		allSubs := make([]OperatorSubscription, 0)
+		// #7545: Surface per-cluster errors so the frontend can indicate
+		// which clusters failed rather than showing a silent empty state.
+		var clusterErrors []string
 
 		for _, cl := range clusters {
 			wg.Add(1)
@@ -824,17 +914,24 @@ func (h *GitOpsHandlers) ListOperatorSubscriptions(c *fiber.Ctx) error {
 				ctx, cancel := context.WithTimeout(c.Context(), subscriptionPerClusterTimeout)
 				defer cancel()
 
-				subs := h.getSubscriptionsForCluster(ctx, clusterName)
-				if len(subs) > 0 {
-					mu.Lock()
-					allSubs = append(allSubs, subs...)
-					mu.Unlock()
+				subs, fetchErr := h.getSubscriptionsForClusterWithError(ctx, clusterName)
+				mu.Lock()
+				if fetchErr != nil {
+					clusterErrors = append(clusterErrors, fmt.Sprintf("%s: %v", clusterName, fetchErr))
 				}
+				if len(subs) > 0 {
+					allSubs = append(allSubs, subs...)
+				}
+				mu.Unlock()
 			}(cl.Name)
 		}
 
 		wg.Wait()
-		return c.JSON(fiber.Map{"subscriptions": allSubs})
+		resp := fiber.Map{"subscriptions": allSubs}
+		if len(clusterErrors) > 0 {
+			resp["clusterErrors"] = clusterErrors
+		}
+		return c.JSON(resp)
 	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), subscriptionPerClusterTimeout)
@@ -902,14 +999,23 @@ func (h *GitOpsHandlers) StreamOperatorSubscriptions(c *fiber.Ctx) error {
 				ctx, cancel := context.WithTimeout(context.Background(), subscriptionPerClusterTimeout)
 				defer cancel()
 
-				subs := h.getSubscriptionsForCluster(ctx, clusterName)
+				subs, fetchErr := h.getSubscriptionsForClusterWithError(ctx, clusterName)
 				mu.Lock()
 				completedClusters++
-				writeSSEEvent(w, "cluster_data", fiber.Map{
-					"cluster":       clusterName,
-					"subscriptions": subs,
-					"source":        "k8s",
-				})
+				// #7546: Emit cluster_error when a fetch fails so the frontend
+				// can distinguish "no subscriptions" from "query failed".
+				if fetchErr != nil {
+					writeSSEEvent(w, sseEventClusterError, fiber.Map{
+						"cluster": clusterName,
+						"error":   fetchErr.Error(),
+					})
+				} else {
+					writeSSEEvent(w, "cluster_data", fiber.Map{
+						"cluster":       clusterName,
+						"subscriptions": subs,
+						"source":        "k8s",
+					})
+				}
 				mu.Unlock()
 			}(cl.Name)
 		}
@@ -924,8 +1030,25 @@ func (h *GitOpsHandlers) StreamOperatorSubscriptions(c *fiber.Ctx) error {
 	return nil
 }
 
+// getSubscriptionsForClusterWithError wraps getSubscriptionsForCluster and
+// surfaces the fetch error so callers can report per-cluster failures (#7545).
+func (h *GitOpsHandlers) getSubscriptionsForClusterWithError(ctx context.Context, cluster string) ([]OperatorSubscription, error) {
+	subs, err := h.fetchSubscriptionsFromCluster(ctx, cluster)
+	if err != nil {
+		return []OperatorSubscription{}, err
+	}
+	return subs, nil
+}
+
 // getSubscriptionsForCluster gets OLM subscriptions for a specific cluster using jsonpath
 func (h *GitOpsHandlers) getSubscriptionsForCluster(ctx context.Context, cluster string) []OperatorSubscription {
+	subs, _ := h.fetchSubscriptionsFromCluster(ctx, cluster)
+	return subs
+}
+
+// fetchSubscriptionsFromCluster is the underlying implementation that returns
+// both the subscription list and any error encountered.
+func (h *GitOpsHandlers) fetchSubscriptionsFromCluster(ctx context.Context, cluster string) ([]OperatorSubscription, error) {
 	jsonpathExpr := `{range .items[*]}{.metadata.name}{"\t"}{.metadata.namespace}{"\t"}{.spec.channel}{"\t"}{.spec.source}{"\t"}{.spec.installPlanApproval}{"\t"}{.status.currentCSV}{"\t"}{.status.installedCSV}{"\n"}{end}`
 	args := []string{"get", "subscriptions.operators.coreos.com", "-A", "-o", "jsonpath=" + jsonpathExpr}
 	if cluster != "" {
@@ -941,12 +1064,12 @@ func (h *GitOpsHandlers) getSubscriptionsForCluster(ctx context.Context, cluster
 		if ctx.Err() == nil {
 			slog.Error("[GitOps] kubectl get subscriptions failed", "cluster", cluster, "error", err)
 		}
-		return []OperatorSubscription{}
+		return []OperatorSubscription{}, err
 	}
 
 	output := strings.TrimSpace(stdout.String())
 	if output == "" {
-		return []OperatorSubscription{}
+		return []OperatorSubscription{}, nil
 	}
 
 	lines := strings.Split(output, "\n")
@@ -971,11 +1094,16 @@ func (h *GitOpsHandlers) getSubscriptionsForCluster(ctx context.Context, cluster
 		}
 		if len(fields) > 6 {
 			sub.InstalledCSV = fields[6]
+			// #7548: When installedCSV lags behind currentCSV, there is a
+			// pending upgrade waiting for approval (Manual installPlanApproval).
+			if sub.InstalledCSV != "" && sub.InstalledCSV != sub.CurrentCSV {
+				sub.PendingUpgrade = sub.CurrentCSV
+			}
 		}
 		subs = append(subs, sub)
 	}
 
-	return subs
+	return subs, nil
 }
 
 // StreamHelmReleases streams helm releases per cluster via SSE
