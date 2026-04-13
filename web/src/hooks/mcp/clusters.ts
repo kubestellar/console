@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, startTransition } from 'react'
 import { api } from '../../lib/api'
 import { useDemoMode } from '../useDemoMode'
 import { isDemoMode } from '../../lib/demoMode'
@@ -67,12 +67,22 @@ export function useClusters() {
 
   // Subscribe to shared cache updates
   useEffect(() => {
-    // Subscribe to updates
+    // Subscribe to updates.
+    // Wrap setLocalState in startTransition so cluster cache updates (which
+    // fire per-cluster during health checks and on every poll tick) become
+    // low-priority/interruptible. Without this, navigating away from Dashboard
+    // or My Clusters — both of which fan out many useClusters subscribers —
+    // gets starved because each health-check completion triggers a synchronous
+    // urgent re-render on every subscriber, blocking the router's transition.
     const handleUpdate = (cache: ClusterCache) => {
-      setLocalState(cache)
+      startTransition(() => {
+        setLocalState(cache)
+      })
     }
-    // Sync with any updates that happened between initial render and effect
-    handleUpdate(clusterCache)
+    // Sync with any updates that happened between initial render and effect.
+    // This first call is NOT wrapped in startTransition — we want the initial
+    // sync to be urgent so the component hydrates with correct data on mount.
+    setLocalState(clusterCache)
     clusterSubscribers.add(handleUpdate)
 
     return () => {

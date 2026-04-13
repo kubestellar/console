@@ -367,7 +367,6 @@ export function Sidebar() {
           // Normal navigation mode
           <NavLink
             to={item.href}
-            reloadDocument
             onClick={() => emitSidebarNavigated(item.href)}
             onDoubleClick={(e) => handleDoubleClick(item, e)}
             onMouseEnter={() => prefetchDashboard(item.href)}
