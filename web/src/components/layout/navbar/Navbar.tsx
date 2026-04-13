@@ -139,7 +139,7 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
           {!isSidebarOpen && (
             <button
               onClick={openSidebar}
-              className="relative flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/20"
+              className="relative flex items-center gap-1.5 px-3 py-1.5 min-h-[44px] text-sm font-medium rounded-lg transition-colors bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/20"
               aria-label={t('missionSidebar.openAIMissions')}
               title={t('missionSidebar.openAIMissions')}
             >

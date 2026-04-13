@@ -11,6 +11,7 @@ import type { GPUHealthCheckResult } from '../hooks/mcp/types'
 import type { NightlyGuideStatus } from '../lib/llmd/nightlyE2EDemoData'
 import type { AlertsMCPData } from './AlertsDataFetcher'
 import { STORAGE_KEY_AUTH_TOKEN, FETCH_DEFAULT_TIMEOUT_MS, STORAGE_KEY_NOTIFIED_ALERT_KEYS } from '../lib/constants'
+import { safeGet, safeSet, safeRemove, safeGetJSON, safeSetJSON } from '../lib/safeLocalStorage'
 import { INITIAL_FETCH_DELAY_MS, POLL_INTERVAL_SLOW_MS, SECONDARY_FETCH_DELAY_MS, NIGHTLY_E2E_POLL_INTERVAL_MS } from '../lib/constants/network'
 import { PRESET_ALERT_RULES } from '../types/alerts'
 import { sendNotificationWithDeepLink } from '../hooks/useDeepLink'
@@ -253,7 +254,7 @@ const NOTIFICATION_DEDUP_MAX_AGE_MS = 86_400_000 // 24 hours
 /** Load persisted notification dedup map from localStorage (key → timestamp) */
 function loadNotifiedAlertKeys(): Map<string, number> {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY_NOTIFIED_ALERT_KEYS)
+    const stored = safeGet(STORAGE_KEY_NOTIFIED_ALERT_KEYS)
     if (stored) {
       return new Map(JSON.parse(stored) as [string, number][])
     }
@@ -270,7 +271,7 @@ function saveNotifiedAlertKeys(keys: Map<string, number>): void {
     for (const [key, ts] of keys) {
       if (now - ts > NOTIFICATION_DEDUP_MAX_AGE_MS) keys.delete(key)
     }
-    localStorage.setItem(STORAGE_KEY_NOTIFIED_ALERT_KEYS, JSON.stringify([...keys.entries()]))
+    safeSet(STORAGE_KEY_NOTIFIED_ALERT_KEYS, JSON.stringify([...keys.entries()]))
   } catch {
     // localStorage full or unavailable
   }
@@ -278,24 +279,12 @@ function saveNotifiedAlertKeys(keys: Map<string, number>): void {
 
 // Load from localStorage
 function loadFromStorage<T>(key: string, defaultValue: T): T {
-  try {
-    const stored = localStorage.getItem(key)
-    if (stored) {
-      return JSON.parse(stored)
-    }
-  } catch (e) {
-    console.error(`Failed to load ${key} from localStorage:`, e)
-  }
-  return defaultValue
+  return safeGetJSON(key, defaultValue)
 }
 
 // Save to localStorage
 function saveToStorage<T>(key: string, value: T): void {
-  try {
-    localStorage.setItem(key, JSON.stringify(value))
-  } catch (e) {
-    console.error(`Failed to save ${key} to localStorage:`, e)
-  }
+  safeSetJSON(key, value)
 }
 
 // Save alerts to localStorage with a hard cap and quota-exceeded handling.
@@ -313,7 +302,7 @@ function saveAlerts(alerts: Alert[]): void {
   }
 
   try {
-    localStorage.setItem(ALERTS_KEY, JSON.stringify(toSave))
+    safeSet(ALERTS_KEY, JSON.stringify(toSave))
   } catch (e) {
     // QuotaExceededError: DOMException with name 'QuotaExceededError', or legacy
     // browsers that use numeric code 22 instead of the named exception.
@@ -329,10 +318,10 @@ function saveAlerts(alerts: Alert[]): void {
         .slice(0, MAX_RESOLVED_ALERTS_AFTER_PRUNE)
       const pruned = [...firing, ...resolved]
       try {
-        localStorage.setItem(ALERTS_KEY, JSON.stringify(pruned))
+        safeSet(ALERTS_KEY, JSON.stringify(pruned))
       } catch (retryError) {
         console.error('[Alerts] localStorage still full after pruning, clearing alerts', retryError)
-        localStorage.removeItem(ALERTS_KEY)
+        safeRemove(ALERTS_KEY)
       }
     } else {
       console.error(`Failed to save ${ALERTS_KEY} to localStorage:`, e)
@@ -454,7 +443,7 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let unmounted = false
     const fetchCronJobResults = async () => {
-      const token = localStorage.getItem(STORAGE_KEY_AUTH_TOKEN)
+      const token = safeGet(STORAGE_KEY_AUTH_TOKEN)
       if (!token || unmounted) return
       const currentClusters = clustersRef.current
       if (!currentClusters.length) return
@@ -907,7 +896,7 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
   // Send notifications for an alert (best-effort, silent on auth failures)
   const sendNotifications = async (alert: Alert, channels: AlertChannel[]) => {
     try {
-      const token = localStorage.getItem(STORAGE_KEY_AUTH_TOKEN)
+      const token = safeGet(STORAGE_KEY_AUTH_TOKEN)
       // Skip notification if not authenticated - notifications require login
       if (!token) return
 
@@ -942,7 +931,7 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
   const sendBatchedNotifications = async (items: Array<{ alert: Alert; channels: AlertChannel[] }>) => {
     if (items.length === 0) return
     try {
-      const token = localStorage.getItem(STORAGE_KEY_AUTH_TOKEN)
+      const token = safeGet(STORAGE_KEY_AUTH_TOKEN)
       if (!token) return
 
       const API_BASE = import.meta.env.VITE_API_BASE_URL || ''

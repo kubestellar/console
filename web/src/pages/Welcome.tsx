@@ -116,8 +116,11 @@ export function Welcome() {
   const ref = searchParams.get('ref') || 'direct'
 
   useEffect(() => {
-    document.title = PAGE_TITLE
+    const prevTitle = document.title
     const metaDesc = document.querySelector('meta[name="description"]')
+    const prevDescription = metaDesc?.getAttribute('content') ?? ''
+
+    document.title = PAGE_TITLE
     if (metaDesc) {
       metaDesc.setAttribute('content', META_DESCRIPTION)
     } else {
@@ -127,6 +130,14 @@ export function Welcome() {
       document.head.appendChild(meta)
     }
     emitWelcomeViewed(ref)
+
+    // Restore previous title and meta description on unmount so they don't
+    // leak into other routes during SPA navigation (#7423).
+    return () => {
+      document.title = prevTitle
+      const desc = document.querySelector('meta[name="description"]')
+      if (desc) desc.setAttribute('content', prevDescription)
+    }
   }, [ref])
 
   return (

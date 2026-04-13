@@ -112,7 +112,7 @@ const CLUSTER_PORTFORWARD_STEPS: InstallStep[] = [
     title: 'Port-forward and open',
     commands: [
       'kubectl port-forward svc/kc-kubestellar-console 8080:8080',
-      'open http://localhost:8080',
+      '# Then open http://localhost:8080 in your browser',
     ],
     description: 'Access the console locally. Great for evaluation or single-user access.' },
 ]
@@ -231,14 +231,16 @@ function DeploymentSection() {
   }
 
   const copyCommands = async (commands: string[], step: number) => {
-    const text = commands.join('\n')
-    await copyToClipboard(text)
+    const text = commands.filter(c => !c.startsWith('#') && c !== '').join('\n')
+    const ok = await copyToClipboard(text)
+    if (!ok) return
     const key = `${activeTab}-${step}`
     setCopiedStep(key)
     clearTimeout(copiedTimerRef.current)
     copiedTimerRef.current = setTimeout(() => setCopiedStep(null), COPY_FEEDBACK_MS)
-    emitFromLensCommandCopy(activeTab, step, commands[0])
-    emitInstallCommandCopied('from_lens', commands[0])
+    const firstCommand = commands.find(c => !c.startsWith('#') && c !== '') ?? commands[0]
+    emitFromLensCommandCopy(activeTab, step, firstCommand)
+    emitInstallCommandCopied('from_lens', firstCommand)
   }
 
   const steps = activeTab === 'localhost'
