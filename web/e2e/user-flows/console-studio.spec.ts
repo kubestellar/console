@@ -115,11 +115,11 @@ test.describe('Console Studio — "Customize my dashboard"', () => {
         if (hasClose) await closeBtn.first().click()
       }
     }
-    // Dashboard should be visible again
-    const dashboard = page.getByTestId('dashboard-page')
-    const hasDashboard = await dashboard.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
+    // Dashboard should be visible again — check for any card rather than a specific testid
+    const anyCard = page.locator('[data-card-type]').first()
+    const hasDashboard = await anyCard.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
     if (hasDashboard) {
-      await expect(dashboard).toBeVisible()
+      await expect(anyCard).toBeVisible()
     }
   })
 

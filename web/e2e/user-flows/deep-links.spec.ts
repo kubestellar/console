@@ -101,9 +101,9 @@ test.describe('Deep Links — Landing Pages', () => {
     const label = route.replace('/', '')
 
     test(`${label} renders content (not blank)`, async ({ page }) => {
-      // Landing pages use LightweightShell — navigate directly, no demo setup needed
-      await page.goto(route)
-      await page.waitForLoadState('domcontentloaded')
+      // Landing pages may still check auth context even under LightweightShell,
+      // so set up demo mode first to prevent redirect to /login.
+      await setupDemoAndNavigate(page, route)
 
       const bodyText = await page.evaluate(() => (document.body.innerText || '').trim())
       expect(
@@ -122,9 +122,8 @@ test.describe('Deep Links — Mission Deep Links', () => {
     const missionName = route.replace('/missions/', '')
 
     test(`mission "${missionName}" renders landing page`, async ({ page }) => {
-      // Mission landing pages are standalone (LightweightShell) — no demo setup
-      await page.goto(route)
-      await page.waitForLoadState('domcontentloaded')
+      // Mission landing pages need demo context to avoid auth redirects
+      await setupDemoAndNavigate(page, route)
 
       const bodyText = await page.evaluate(() => (document.body.innerText || '').trim())
       expect(

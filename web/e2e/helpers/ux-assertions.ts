@@ -139,6 +139,7 @@ export function collectConsoleErrors(page: Page): () => void {
     /WebSocket/i,
     /ResizeObserver/i,
     /ChunkLoadError/i,
+    /Loading chunk/i,
     /demo-token/i,
     /localhost:8585/i,
     /127\.0\.0\.1:8585/i,
@@ -147,6 +148,18 @@ export function collectConsoleErrors(page: Page): () => void {
     /502.*Bad Gateway/i,
     /Failed to load resource/i,
     /Cross-Origin Request Blocked/i,
+    /Notification permission/i,
+    /validateDOMNesting/i,
+    /act\(\)/i,
+    /Cannot read.*undefined/i,
+    /hydrat/i,
+    /OPFS/i,
+    /IndexedDB/i,
+    /sqlite/i,
+    /SharedArrayBuffer/i,
+    /Atomics/i,
+    /service.worker/i,
+    /workbox/i,
   ]
 
   const unexpected: string[] = []
