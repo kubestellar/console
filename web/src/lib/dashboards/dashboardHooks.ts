@@ -154,12 +154,12 @@ export function useDashboardCards(
 
   const [isSyncing, setIsSyncing] = useState(false)
 
-  // Compute isCustomized by comparing current card types to defaults
+  // Compute isCustomized by comparing current card types AND order to defaults (#7255).
+  // Previous implementation sorted types before comparing, so pure reorder was invisible.
   const isCustomized = (() => {
     if (cards.length !== defaultCardInstances.length) return true
-    const currentTypes = cards.map(c => c.card_type).sort()
-    const defaultTypes = defaultCardInstances.map(c => c.card_type).sort()
-    return currentTypes.some((t, i) => t !== defaultTypes[i])
+    // Compare in order — reordering is a customization
+    return cards.some((c, i) => c.card_type !== defaultCardInstances[i].card_type)
   })()
 
   // On mount, sync with backend if authenticated
@@ -173,7 +173,9 @@ export function useDashboardCards(
       setIsSyncing(true)
       try {
         const backendCards = await dashboardSync.fullSync(storageKey)
-        if (backendCards && backendCards.length > 0) {
+        // null means fetch failed — leave local state alone.
+        // An array (even empty) means backend responded — accept it (#7254).
+        if (backendCards !== null) {
           setCards(backendCards)
         }
       } catch (err) {
@@ -300,7 +302,9 @@ export function useDashboardCards(
     setIsSyncing(true)
     try {
       const backendCards = await dashboardSync.fullSync(storageKey)
-      if (backendCards && backendCards.length > 0) {
+      // null means fetch failed — leave local state alone.
+      // An array (even empty) means backend responded — accept it (#7254).
+      if (backendCards !== null) {
         setCards(backendCards)
       }
     } catch (err) {

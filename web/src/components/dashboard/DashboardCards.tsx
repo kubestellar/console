@@ -83,11 +83,13 @@ export function DashboardCards({
   }
 
   const handleApplyTemplate = (template: DashboardTemplate) => {
+    // Preserve per-card position (w/h) from the template definition (#7253)
     const newCards: DashboardCard[] = template.cards.map((card, idx) => ({
       id: `${card.card_type}-${Date.now()}-${idx}`,
       card_type: card.card_type,
       config: card.config || {},
       title: card.title,
+      position: card.position,
     }))
     onReplaceCards(newCards)
     templatesModal.close()

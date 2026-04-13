@@ -183,10 +183,11 @@ class DashboardSyncService {
         const existingCard = currentCardMap.get(card.id)
 
         if (existingCard) {
-          // Update existing card
+          // Update existing card — include config so backend stays in sync (#7252)
           try {
             await api.put(`/api/cards/${card.id}`, {
               card_type: card.card_type,
+              config: card.config || {},
               position: card.position ? { ...card.position, x: 0, y: 0 } : { w: 4, h: 2, x: 0, y: 0 },
             })
           } catch {
@@ -221,12 +222,15 @@ class DashboardSyncService {
    */
   async fullSync(storageKey: string): Promise<DashboardCard[] | null> {
     const cards = await this.fetchCards(storageKey)
-    if (cards && cards.length > 0) {
-      // Update localStorage with backend data
-      localStorage.setItem(storageKey, JSON.stringify(cards))
-      return cards
+    if (cards === null) {
+      // Fetch failed (network error, not authenticated, etc.) — leave local state alone
+      return null
     }
-    return null
+    // Update localStorage with backend data, even when empty (#7254).
+    // An empty array means the backend dashboard has zero cards — clear local cache
+    // so stale cards do not reappear.
+    localStorage.setItem(storageKey, JSON.stringify(cards))
+    return cards
   }
 
   /**
