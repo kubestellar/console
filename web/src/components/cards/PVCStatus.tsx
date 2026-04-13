@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { CheckCircle, AlertTriangle, Clock } from 'lucide-react'
 import type { PVC } from '../../hooks/useMCP'
 import { useCachedPVCs } from '../../hooks/useCachedData'
+import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { useCardLoadingState } from './CardDataContext'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
@@ -71,8 +72,16 @@ function getStatusColor(status: string) {
 
 function PVCStatusInternal() {
   const { t } = useTranslation(['common', 'cards'])
-  const { pvcs, isLoading, isRefreshing, error, consecutiveFailures, isFailed, isDemoFallback, lastRefresh } = useCachedPVCs()
+  const { pvcs: allPVCs, isLoading, isRefreshing, error, consecutiveFailures, isFailed, isDemoFallback, lastRefresh } = useCachedPVCs()
+  const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { isDemoMode: demoMode } = useDemoMode()
+
+  // Apply global cluster filters so PVC counts match the StorageOverview card (#7457).
+  // Previously this card ignored global filters, causing count discrepancies.
+  const pvcs = useMemo(() => {
+    if (isAllClustersSelected) return allPVCs
+    return allPVCs.filter(p => p.cluster && selectedClusters.includes(p.cluster))
+  }, [allPVCs, selectedClusters, isAllClustersSelected])
 
   // Report card data state (lastRefresh flows to CardWrapper header "Updated Xm ago")
   const hasData = pvcs.length > 0
@@ -151,11 +160,15 @@ function PVCStatusInternal() {
       )
     }
 
+    const bound = result.filter(p => p.status === 'Bound').length
+    const pending = result.filter(p => p.status === 'Pending').length
     return {
       total: result.length,
-      bound: result.filter(p => p.status === 'Bound').length,
-      pending: result.filter(p => p.status === 'Pending').length,
-      failed: result.filter(p => p.status === 'Lost').length,
+      bound,
+      pending,
+      // Count all PVCs that are neither Bound nor Pending as failed (#7464).
+      // Previously only 'Lost' was counted, missing 'Failed' and other error states.
+      failed: result.length - bound - pending,
     }
   }, [pvcs, localClusterFilter, search])
 

@@ -228,6 +228,17 @@ export function Storage() {
           onClick: () => { setPVCModalFilter('Pending'); openPVCModal() },
           isClickable: hasDataToShow && (stats?.pendingPVCs || 0) > 0
         }
+      case 'pvs': {
+        // Count unique PVs from PVC data — each bound PVC references a PV.
+        // This is an approximation: real PV counts require a separate API call,
+        // but bound PVCs are the best proxy available from cached data.
+        const boundPVCount = filteredPVCs.filter(p => p.status === 'Bound').length
+        return {
+          value: formatStatValue(boundPVCount, hasDataToShow),
+          sublabel: 'persistent volumes (bound)',
+          isClickable: false,
+        }
+      }
       case 'storage_classes': {
         // Count unique storage classes from PVCs (shows storage classes in use)
         const uniqueStorageClasses = new Set(filteredPVCs.map(p => p.storageClass).filter(Boolean))
