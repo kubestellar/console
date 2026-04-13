@@ -392,8 +392,8 @@ export function Security() {
       statsType="security"
       getStatValue={getStatValue}
       onRefresh={handleRefresh}
-      isLoading={securityLoading}
-      isRefreshing={dataRefreshing || securityRefreshing}
+      isLoading={false}
+      isRefreshing={securityLoading || dataRefreshing || securityRefreshing}
       lastUpdated={lastUpdated}
       hasData={stats.total > 0 || securityIssues.length > 0}
       beforeCards={tabsSection}
