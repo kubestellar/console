@@ -52,10 +52,19 @@ jobs:
       - name: Build frontend
         run: npm run build
 
+      - name: Start static server
+        run: |
+          npx serve dist -l 8080 -s &
+          # Wait for server to be ready
+          for i in $(seq 1 10); do
+            curl -sf http://localhost:8080 > /dev/null 2>&1 && break
+            sleep 1
+          done
+
       - name: Run UX journey tests
         run: npx playwright test e2e/user-flows/ --project=chromium --reporter=html,./e2e/helpers/ux-reporter.ts
         env:
-          PLAYWRIGHT_BASE_URL: ""
+          PLAYWRIGHT_BASE_URL: "http://localhost:8080"
 
       - name: Upload UX findings report
         if: always()
@@ -117,10 +126,18 @@ jobs:
       - name: Build frontend
         run: npm run build
 
+      - name: Start static server
+        run: |
+          npx serve dist -l 8080 -s &
+          for i in $(seq 1 10); do
+            curl -sf http://localhost:8080 > /dev/null 2>&1 && break
+            sleep 1
+          done
+
       - name: Run responsive + a11y tests
         run: npx playwright test e2e/user-flows/responsive-layouts.spec.ts e2e/user-flows/a11y-audit.spec.ts --project=chromium
         env:
-          PLAYWRIGHT_BASE_URL: ""
+          PLAYWRIGHT_BASE_URL: "http://localhost:8080"
 
       - name: Upload mobile screenshots
         if: always()
