@@ -221,7 +221,7 @@ func (h *RBACHandler) ListK8sServiceAccounts(c *fiber.Ctx) error {
 		// Get SAs from specific cluster
 		sas, err := h.k8sClient.ListServiceAccounts(ctx, cluster, namespace)
 		if err != nil {
-			slog.Error("[RBAC] failed to list service accounts", "error", err)
+			slog.Warn("[RBAC] failed to list service accounts", "error", err)
 			return fiber.NewError(fiber.StatusInternalServerError, "internal server error")
 		}
 		return c.JSON(sas)
@@ -423,7 +423,7 @@ func (h *RBACHandler) CreateServiceAccount(c *fiber.Ctx) error {
 
 	sa, err := h.k8sClient.CreateServiceAccount(ctx, req.Cluster, req.Namespace, req.Name)
 	if err != nil {
-		slog.Error("[RBAC] failed to create service account", "error", err)
+		slog.Warn("[RBAC] failed to create service account", "error", err)
 		return fiber.NewError(fiber.StatusInternalServerError, "internal server error")
 	}
 
@@ -515,7 +515,7 @@ func (h *RBACHandler) CreateRoleBinding(c *fiber.Ctx) error {
 	}
 
 	if err := h.k8sClient.CreateRoleBinding(ctx, req); err != nil {
-		slog.Error("[RBAC] failed to create role binding", "error", err)
+		slog.Warn("[RBAC] failed to create role binding", "error", err)
 		return fiber.NewError(fiber.StatusInternalServerError, "internal server error")
 	}
 
@@ -591,7 +591,7 @@ func (h *RBACHandler) ListOpenShiftUsers(c *fiber.Ctx) error {
 
 	users, err := h.k8sClient.ListOpenShiftUsers(ctx, cluster)
 	if err != nil {
-		slog.Error("[RBAC] failed to list openshift users", "error", err)
+		slog.Warn("[RBAC] failed to list openshift users", "error", err)
 		return fiber.NewError(fiber.StatusInternalServerError, "internal server error")
 	}
 
@@ -624,7 +624,7 @@ func (h *RBACHandler) GetPermissionsSummary(c *fiber.Ctx) error {
 
 	summaries, err := h.k8sClient.GetAllPermissionsSummaries(ctx)
 	if err != nil {
-		slog.Error("[RBAC] failed to get permissions summary", "error", err)
+		slog.Warn("[RBAC] failed to get permissions summary", "error", err)
 		return fiber.NewError(fiber.StatusInternalServerError, "internal server error")
 	}
 
@@ -674,7 +674,7 @@ func (h *RBACHandler) CheckCanI(c *fiber.Ctx) error {
 
 	result, err := h.k8sClient.CheckCanI(ctx, req.Cluster, req)
 	if err != nil {
-		slog.Error("[RBAC] failed to check permission", "error", err)
+		slog.Warn("[RBAC] failed to check permission", "error", err)
 		return fiber.NewError(fiber.StatusInternalServerError, "internal server error")
 	}
 

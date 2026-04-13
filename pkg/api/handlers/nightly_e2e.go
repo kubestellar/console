@@ -210,11 +210,11 @@ func (h *NightlyE2EHandler) prewarm() {
 	select {
 	case <-done:
 		if fetchErr != nil {
-			slog.Error("[NightlyE2E] prewarm failed", "error", fetchErr)
+			slog.Warn("[NightlyE2E] prewarm failed", "error", fetchErr)
 			return
 		}
 	case <-ctx.Done():
-		slog.Error("[NightlyE2E] prewarm timed out", "timeout", prewarmTimeout)
+		slog.Warn("[NightlyE2E] prewarm timed out", "timeout", prewarmTimeout)
 		return
 	}
 
@@ -791,7 +791,7 @@ func (h *NightlyE2EHandler) GetRunLogs(c *fiber.Ctx) error {
 
 	req, err := http.NewRequest("GET", jobsURL, nil)
 	if err != nil {
-		slog.Error("[NightlyE2E] internal error", "error", err)
+		slog.Warn("[NightlyE2E] internal error", "error", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "internal server error"})
 	}
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
@@ -801,7 +801,7 @@ func (h *NightlyE2EHandler) GetRunLogs(c *fiber.Ctx) error {
 
 	resp, err := h.httpClient.Do(req)
 	if err != nil {
-		slog.Error("[NightlyE2E] bad gateway", "error", err)
+		slog.Warn("[NightlyE2E] bad gateway", "error", err)
 		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": "bad gateway"})
 	}
 	defer resp.Body.Close()
@@ -825,7 +825,7 @@ func (h *NightlyE2EHandler) GetRunLogs(c *fiber.Ctx) error {
 		} `json:"jobs"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&jobData); err != nil {
-		slog.Error("[NightlyE2E] internal error", "error", err)
+		slog.Warn("[NightlyE2E] internal error", "error", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "internal server error"})
 	}
 

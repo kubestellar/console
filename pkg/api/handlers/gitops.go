@@ -277,7 +277,7 @@ func (h *GitOpsHandlers) ListHelmReleases(c *fiber.Ctx) error {
 
 		clusters, _, err := h.k8sClient.HealthyClusters(hcCtx)
 		if err != nil {
-			slog.Error("[GitOps] error listing healthy clusters for releases", "error", err)
+			slog.Warn("[GitOps] error listing healthy clusters for releases", "error", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error", "releases": []HelmRelease{}})
 		}
 
@@ -333,13 +333,13 @@ func (h *GitOpsHandlers) getHelmReleasesForCluster(ctx context.Context, cluster 
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
-		slog.Error("[GitOps] helm ls failed", "cluster", cluster, "error", err, "stderr", stderr.String())
+		slog.Warn("[GitOps] helm ls failed", "cluster", cluster, "error", err, "stderr", stderr.String())
 		return []HelmRelease{}
 	}
 
 	releases := make([]HelmRelease, 0)
 	if err := json.Unmarshal(stdout.Bytes(), &releases); err != nil {
-		slog.Error("[GitOps] failed to parse helm ls output", "cluster", cluster, "error", err)
+		slog.Warn("[GitOps] failed to parse helm ls output", "cluster", cluster, "error", err)
 		return []HelmRelease{}
 	}
 
@@ -368,7 +368,7 @@ func (h *GitOpsHandlers) ListKustomizations(c *fiber.Ctx) error {
 	if h.k8sClient != nil {
 		clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 		if err != nil {
-			slog.Error("[GitOps] error listing healthy clusters for kustomizations", "error", err)
+			slog.Warn("[GitOps] error listing healthy clusters for kustomizations", "error", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error", "kustomizations": []Kustomization{}})
 		}
 
@@ -423,7 +423,7 @@ func (h *GitOpsHandlers) getKustomizationsForCluster(ctx context.Context, cluste
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
-		slog.Error("[GitOps] kubectl get kustomizations failed", "cluster", cluster, "error", err, "stderr", stderr.String())
+		slog.Warn("[GitOps] kubectl get kustomizations failed", "cluster", cluster, "error", err, "stderr", stderr.String())
 		return []Kustomization{}
 	}
 
@@ -452,7 +452,7 @@ func (h *GitOpsHandlers) getKustomizationsForCluster(ctx context.Context, cluste
 	}
 
 	if err := json.Unmarshal(stdout.Bytes(), &result); err != nil {
-		slog.Error("[GitOps] failed to parse kustomizations", "cluster", cluster, "error", err)
+		slog.Warn("[GitOps] failed to parse kustomizations", "cluster", cluster, "error", err)
 		return []Kustomization{}
 	}
 
@@ -554,7 +554,7 @@ func (h *GitOpsHandlers) ListOperators(c *fiber.Ctx) error {
 	if h.k8sClient != nil {
 		clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 		if err != nil {
-			slog.Error("[GitOps] error listing healthy clusters for operators", "error", err)
+			slog.Warn("[GitOps] error listing healthy clusters for operators", "error", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error", "operators": []Operator{}})
 		}
 
@@ -735,7 +735,7 @@ func (h *GitOpsHandlers) getOperatorsForCluster(ctx context.Context, cluster str
 		}
 		// Retry once for transient errors (HTTP/2 stream errors, connection resets)
 		if ctx.Err() == nil {
-			slog.Error("[GitOps] retrying operator fetch after transient error", "cluster", cluster)
+			slog.Warn("[GitOps] retrying operator fetch after transient error", "cluster", cluster)
 			time.Sleep(gitopsRetryDelay)
 			operators, err = h.fetchOperatorsFromCluster(ctx, cluster)
 		}
@@ -789,7 +789,7 @@ func (h *GitOpsHandlers) getOperatorsForClusterWithError(ctx context.Context, cl
 			return []Operator{}, nil
 		}
 		if ctx.Err() == nil {
-			slog.Error("[GitOps] retrying operator fetch after transient error", "cluster", cluster)
+			slog.Warn("[GitOps] retrying operator fetch after transient error", "cluster", cluster)
 			time.Sleep(gitopsRetryDelay)
 			operators, err = h.fetchOperatorsFromCluster(ctx, cluster)
 		}
@@ -824,7 +824,7 @@ func (h *GitOpsHandlers) fetchOperatorsFromCluster(ctx context.Context, cluster 
 	if err := cmd.Run(); err != nil {
 		stderrStr := stderr.String()
 		if ctx.Err() == nil {
-			slog.Error("[GitOps] kubectl get csv failed", "cluster", cluster, "error", err, "stderr", stderrStr)
+			slog.Warn("[GitOps] kubectl get csv failed", "cluster", cluster, "error", err, "stderr", stderrStr)
 		} else {
 			slog.Info("[GitOps] kubectl get csv timed out", "cluster", cluster)
 		}
@@ -853,7 +853,7 @@ func (h *GitOpsHandlers) fetchOperatorsFromCluster(ctx context.Context, cluster 
 	}
 
 	if err := json.Unmarshal(stdout.Bytes(), &result); err != nil {
-		slog.Error("[GitOps] failed to parse operators JSON", "cluster", cluster, "error", err)
+		slog.Warn("[GitOps] failed to parse operators JSON", "cluster", cluster, "error", err)
 		return nil, err
 	}
 
@@ -894,7 +894,7 @@ func (h *GitOpsHandlers) ListOperatorSubscriptions(c *fiber.Ctx) error {
 	if h.k8sClient != nil {
 		clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 		if err != nil {
-			slog.Error("[GitOps] error listing healthy clusters for subscriptions", "error", err)
+			slog.Warn("[GitOps] error listing healthy clusters for subscriptions", "error", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error", "subscriptions": []OperatorSubscription{}})
 		}
 
@@ -1062,7 +1062,7 @@ func (h *GitOpsHandlers) fetchSubscriptionsFromCluster(ctx context.Context, clus
 
 	if err := cmd.Run(); err != nil {
 		if ctx.Err() == nil {
-			slog.Error("[GitOps] kubectl get subscriptions failed", "cluster", cluster, "error", err)
+			slog.Warn("[GitOps] kubectl get subscriptions failed", "cluster", cluster, "error", err)
 		}
 		return []OperatorSubscription{}, err
 	}
@@ -1234,7 +1234,7 @@ func (h *GitOpsHandlers) DetectDrift(c *fiber.Ctx) error {
 			h.rememberDrift(req, result)
 			return c.JSON(result)
 		}
-		slog.Error("[GitOps] MCP detect_drift failed, falling back to kubectl", "error", err)
+		slog.Warn("[GitOps] MCP detect_drift failed, falling back to kubectl", "error", err)
 	}
 
 	// Fall back to kubectl diff
@@ -1454,7 +1454,7 @@ func (h *GitOpsHandlers) Sync(c *fiber.Ctx) error {
 		if err == nil {
 			return c.JSON(result)
 		}
-		slog.Error("[GitOps] MCP sync failed, falling back to kubectl", "error", err)
+		slog.Warn("[GitOps] MCP sync failed, falling back to kubectl", "error", err)
 	}
 
 	// Fall back to kubectl apply
@@ -1786,7 +1786,7 @@ func cleanupTempDir(dir string) {
 
 	// Use os.RemoveAll instead of shell command for safety
 	if err := os.RemoveAll(dir); err != nil {
-		slog.Error("[GitOps] failed to cleanup temp directory", "dir", dir, "error", err)
+		slog.Warn("[GitOps] failed to cleanup temp directory", "dir", dir, "error", err)
 	}
 }
 
@@ -1997,13 +1997,13 @@ func (h *GitOpsHandlers) ListHelmHistory(c *fiber.Ctx) error {
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
-		slog.Error("[GitOps] helm history failed", "release", release, "error", err, "stderr", stderr.String())
+		slog.Warn("[GitOps] helm history failed", "release", release, "error", err, "stderr", stderr.String())
 		return c.JSON(fiber.Map{"history": []HelmHistoryEntry{}, "error": stderr.String()})
 	}
 
 	history := make([]HelmHistoryEntry, 0)
 	if err := json.Unmarshal(stdout.Bytes(), &history); err != nil {
-		slog.Error("[GitOps] failed to parse helm history output", "release", release, "error", err)
+		slog.Warn("[GitOps] failed to parse helm history output", "release", release, "error", err)
 		return c.JSON(fiber.Map{"history": []HelmHistoryEntry{}, "error": "failed to parse history"})
 	}
 
@@ -2051,7 +2051,7 @@ func (h *GitOpsHandlers) GetHelmValues(c *fiber.Ctx) error {
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
-		slog.Error("[GitOps] helm get values failed", "release", release, "error", err, "stderr", stderr.String())
+		slog.Warn("[GitOps] helm get values failed", "release", release, "error", err, "stderr", stderr.String())
 		return c.JSON(fiber.Map{"values": map[string]interface{}{}, "error": stderr.String()})
 	}
 
@@ -2194,7 +2194,7 @@ func (h *GitOpsHandlers) RollbackHelmRelease(c *fiber.Ctx) error {
 	slog.Info("[GitOps] helm rollback", "release", req.Release, "revision", req.Revision, "cluster", req.Cluster, "namespace", req.Namespace)
 
 	if err := cmd.Run(); err != nil {
-		slog.Error("[GitOps] helm rollback failed", "release", req.Release, "error", err, "stderr", stderr.String())
+		slog.Warn("[GitOps] helm rollback failed", "release", req.Release, "error", err, "stderr", stderr.String())
 		return c.Status(500).JSON(fiber.Map{
 			"error":  "rollback failed",
 			"detail": stderr.String(),
@@ -2249,7 +2249,7 @@ func (h *GitOpsHandlers) UninstallHelmRelease(c *fiber.Ctx) error {
 	slog.Info("[GitOps] helm uninstall", "release", req.Release, "cluster", req.Cluster, "namespace", req.Namespace)
 
 	if err := cmd.Run(); err != nil {
-		slog.Error("[GitOps] helm uninstall failed", "release", req.Release, "error", err, "stderr", stderr.String())
+		slog.Warn("[GitOps] helm uninstall failed", "release", req.Release, "error", err, "stderr", stderr.String())
 		return c.Status(500).JSON(fiber.Map{
 			"error":  "uninstall failed",
 			"detail": stderr.String(),
@@ -2337,7 +2337,7 @@ func (h *GitOpsHandlers) UpgradeHelmRelease(c *fiber.Ctx) error {
 	slog.Info("[GitOps] helm upgrade", "release", req.Release, "chart", req.Chart, "cluster", req.Cluster, "namespace", req.Namespace)
 
 	if err := cmd.Run(); err != nil {
-		slog.Error("[GitOps] helm upgrade failed", "release", req.Release, "error", err, "stderr", stderr.String())
+		slog.Warn("[GitOps] helm upgrade failed", "release", req.Release, "error", err, "stderr", stderr.String())
 		return c.Status(500).JSON(fiber.Map{
 			"error":  "upgrade failed",
 			"detail": stderr.String(),
@@ -2597,7 +2597,7 @@ func (h *GitOpsHandlers) TriggerArgoSync(c *fiber.Ctx) error {
 					}
 					slog.Warn("[ArgoCD] API sync returned error status, falling back", "status", resp.StatusCode)
 				} else {
-					slog.Error("[ArgoCD] API sync failed, falling back", "error", err)
+					slog.Warn("[ArgoCD] API sync failed, falling back", "error", err)
 				}
 			}
 		}
@@ -2612,7 +2612,7 @@ func (h *GitOpsHandlers) TriggerArgoSync(c *fiber.Ctx) error {
 		)
 		output, err := cmd.CombinedOutput()
 		if err != nil {
-			slog.Error("[ArgoCD] CLI sync failed, falling back to annotation patching", "error", err, "output", string(output))
+			slog.Warn("[ArgoCD] CLI sync failed, falling back to annotation patching", "error", err, "output", string(output))
 		} else {
 			return c.JSON(fiber.Map{
 				"success": true,
@@ -2684,7 +2684,7 @@ func (h *GitOpsHandlers) TriggerArgoSync(c *fiber.Ctx) error {
 func (h *GitOpsHandlers) discoverArgoServerURL(ctx context.Context, cluster string) string {
 	clientset, err := h.k8sClient.GetClient(cluster)
 	if err != nil {
-		slog.Error("[ArgoCD] server discovery failed: cannot get client", "cluster", cluster, "error", err)
+		slog.Warn("[ArgoCD] server discovery failed: cannot get client", "cluster", cluster, "error", err)
 		return ""
 	}
 

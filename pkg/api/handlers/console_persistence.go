@@ -72,7 +72,7 @@ func (h *ConsolePersistenceHandlers) requireAdmin(c *fiber.Ctx) error {
 		// Infrastructure failure — don't silently downgrade to a 403 which
 		// would mask a persistent DB outage and make this look like an
 		// authorization issue.
-		slog.Error("[ConsolePersistence] requireAdmin: failed to load user",
+		slog.Warn("[ConsolePersistence] requireAdmin: failed to load user",
 			"user", currentUserID, "error", err)
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to verify admin role")
 	}
@@ -136,7 +136,7 @@ func (h *ConsolePersistenceHandlers) StartWatcher(ctx context.Context) error {
 
 	activeCluster, err := h.persistenceStore.GetActiveCluster(ctx)
 	if err != nil {
-		slog.Error("[ConsolePersistence] cannot start watcher", "error", err)
+		slog.Warn("[ConsolePersistence] cannot start watcher", "error", err)
 		return err
 	}
 
@@ -212,7 +212,7 @@ func (h *ConsolePersistenceHandlers) UpdateConfig(c *fiber.Ctx) error {
 	h.StopWatcher()
 	if config.Enabled {
 		if err := h.StartWatcher(context.Background()); err != nil {
-			slog.Error("[ConsolePersistence] failed to start watcher", "error", err)
+			slog.Warn("[ConsolePersistence] failed to start watcher", "error", err)
 		}
 	}
 
@@ -235,7 +235,7 @@ func (h *ConsolePersistenceHandlers) GetStatus(c *fiber.Ctx) error {
 func (h *ConsolePersistenceHandlers) ListManagedWorkloads(c *fiber.Ctx) error {
 	client, _, err := h.persistenceStore.GetActiveClient(c.Context())
 	if err != nil {
-		slog.Error("[ConsolePersistence] service unavailable", "error", err)
+		slog.Warn("[ConsolePersistence] service unavailable", "error", err)
 		return c.Status(503).JSON(fiber.Map{"error": "service unavailable"})
 	}
 
@@ -244,7 +244,7 @@ func (h *ConsolePersistenceHandlers) ListManagedWorkloads(c *fiber.Ctx) error {
 
 	workloads, err := persistence.ListManagedWorkloads(c.Context(), namespace)
 	if err != nil {
-		slog.Error("[ConsolePersistence] internal error", "error", err)
+		slog.Warn("[ConsolePersistence] internal error", "error", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 
@@ -258,7 +258,7 @@ func (h *ConsolePersistenceHandlers) GetManagedWorkload(c *fiber.Ctx) error {
 
 	client, _, err := h.persistenceStore.GetActiveClient(c.Context())
 	if err != nil {
-		slog.Error("[ConsolePersistence] service unavailable", "error", err)
+		slog.Warn("[ConsolePersistence] service unavailable", "error", err)
 		return c.Status(503).JSON(fiber.Map{"error": "service unavailable"})
 	}
 
@@ -267,7 +267,7 @@ func (h *ConsolePersistenceHandlers) GetManagedWorkload(c *fiber.Ctx) error {
 
 	workload, err := persistence.GetManagedWorkload(c.Context(), namespace, name)
 	if err != nil {
-		slog.Error("[ConsolePersistence] internal error", "error", err)
+		slog.Warn("[ConsolePersistence] internal error", "error", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 	// A nil workload with nil error means the resource wasn't found.
@@ -294,7 +294,7 @@ func (h *ConsolePersistenceHandlers) CreateManagedWorkload(c *fiber.Ctx) error {
 
 	client, _, err := h.persistenceStore.GetActiveClient(c.Context())
 	if err != nil {
-		slog.Error("[ConsolePersistence] service unavailable", "error", err)
+		slog.Warn("[ConsolePersistence] service unavailable", "error", err)
 		return c.Status(503).JSON(fiber.Map{"error": "service unavailable"})
 	}
 
@@ -313,7 +313,7 @@ func (h *ConsolePersistenceHandlers) CreateManagedWorkload(c *fiber.Ctx) error {
 
 	created, err := persistence.CreateManagedWorkload(c.Context(), &workload)
 	if err != nil {
-		slog.Error("[ConsolePersistence] internal error", "error", err)
+		slog.Warn("[ConsolePersistence] internal error", "error", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 
@@ -336,7 +336,7 @@ func (h *ConsolePersistenceHandlers) UpdateManagedWorkload(c *fiber.Ctx) error {
 
 	client, _, err := h.persistenceStore.GetActiveClient(c.Context())
 	if err != nil {
-		slog.Error("[ConsolePersistence] service unavailable", "error", err)
+		slog.Warn("[ConsolePersistence] service unavailable", "error", err)
 		return c.Status(503).JSON(fiber.Map{"error": "service unavailable"})
 	}
 
@@ -349,7 +349,7 @@ func (h *ConsolePersistenceHandlers) UpdateManagedWorkload(c *fiber.Ctx) error {
 
 	updated, err := persistence.UpdateManagedWorkload(c.Context(), &workload)
 	if err != nil {
-		slog.Error("[ConsolePersistence] internal error", "error", err)
+		slog.Warn("[ConsolePersistence] internal error", "error", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 
@@ -367,7 +367,7 @@ func (h *ConsolePersistenceHandlers) DeleteManagedWorkload(c *fiber.Ctx) error {
 
 	client, _, err := h.persistenceStore.GetActiveClient(c.Context())
 	if err != nil {
-		slog.Error("[ConsolePersistence] service unavailable", "error", err)
+		slog.Warn("[ConsolePersistence] service unavailable", "error", err)
 		return c.Status(503).JSON(fiber.Map{"error": "service unavailable"})
 	}
 
@@ -375,7 +375,7 @@ func (h *ConsolePersistenceHandlers) DeleteManagedWorkload(c *fiber.Ctx) error {
 	persistence := k8s.NewConsolePersistence(client)
 
 	if err := persistence.DeleteManagedWorkload(c.Context(), namespace, name); err != nil {
-		slog.Error("[ConsolePersistence] internal error", "error", err)
+		slog.Warn("[ConsolePersistence] internal error", "error", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 
@@ -391,7 +391,7 @@ func (h *ConsolePersistenceHandlers) DeleteManagedWorkload(c *fiber.Ctx) error {
 func (h *ConsolePersistenceHandlers) ListClusterGroups(c *fiber.Ctx) error {
 	client, _, err := h.persistenceStore.GetActiveClient(c.Context())
 	if err != nil {
-		slog.Error("[ConsolePersistence] service unavailable", "error", err)
+		slog.Warn("[ConsolePersistence] service unavailable", "error", err)
 		return c.Status(503).JSON(fiber.Map{"error": "service unavailable"})
 	}
 
@@ -400,7 +400,7 @@ func (h *ConsolePersistenceHandlers) ListClusterGroups(c *fiber.Ctx) error {
 
 	groups, err := persistence.ListClusterGroups(c.Context(), namespace)
 	if err != nil {
-		slog.Error("[ConsolePersistence] internal error", "error", err)
+		slog.Warn("[ConsolePersistence] internal error", "error", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 
@@ -414,7 +414,7 @@ func (h *ConsolePersistenceHandlers) GetClusterGroup(c *fiber.Ctx) error {
 
 	client, _, err := h.persistenceStore.GetActiveClient(c.Context())
 	if err != nil {
-		slog.Error("[ConsolePersistence] service unavailable", "error", err)
+		slog.Warn("[ConsolePersistence] service unavailable", "error", err)
 		return c.Status(503).JSON(fiber.Map{"error": "service unavailable"})
 	}
 
@@ -423,7 +423,7 @@ func (h *ConsolePersistenceHandlers) GetClusterGroup(c *fiber.Ctx) error {
 
 	group, err := persistence.GetClusterGroup(c.Context(), namespace, name)
 	if err != nil {
-		slog.Error("[ConsolePersistence] internal error", "error", err)
+		slog.Warn("[ConsolePersistence] internal error", "error", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 	// A nil group with nil error means the resource wasn't found.
@@ -448,7 +448,7 @@ func (h *ConsolePersistenceHandlers) CreateClusterGroup(c *fiber.Ctx) error {
 
 	client, _, err := h.persistenceStore.GetActiveClient(c.Context())
 	if err != nil {
-		slog.Error("[ConsolePersistence] service unavailable", "error", err)
+		slog.Warn("[ConsolePersistence] service unavailable", "error", err)
 		return c.Status(503).JSON(fiber.Map{"error": "service unavailable"})
 	}
 
@@ -473,7 +473,7 @@ func (h *ConsolePersistenceHandlers) CreateClusterGroup(c *fiber.Ctx) error {
 
 	created, err := persistence.CreateClusterGroup(c.Context(), &group)
 	if err != nil {
-		slog.Error("[ConsolePersistence] internal error", "error", err)
+		slog.Warn("[ConsolePersistence] internal error", "error", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 
@@ -496,7 +496,7 @@ func (h *ConsolePersistenceHandlers) UpdateClusterGroup(c *fiber.Ctx) error {
 
 	client, _, err := h.persistenceStore.GetActiveClient(c.Context())
 	if err != nil {
-		slog.Error("[ConsolePersistence] service unavailable", "error", err)
+		slog.Warn("[ConsolePersistence] service unavailable", "error", err)
 		return c.Status(503).JSON(fiber.Map{"error": "service unavailable"})
 	}
 
@@ -515,7 +515,7 @@ func (h *ConsolePersistenceHandlers) UpdateClusterGroup(c *fiber.Ctx) error {
 
 	updated, err := persistence.UpdateClusterGroup(c.Context(), &group)
 	if err != nil {
-		slog.Error("[ConsolePersistence] internal error", "error", err)
+		slog.Warn("[ConsolePersistence] internal error", "error", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 
@@ -533,7 +533,7 @@ func (h *ConsolePersistenceHandlers) DeleteClusterGroup(c *fiber.Ctx) error {
 
 	client, _, err := h.persistenceStore.GetActiveClient(c.Context())
 	if err != nil {
-		slog.Error("[ConsolePersistence] service unavailable", "error", err)
+		slog.Warn("[ConsolePersistence] service unavailable", "error", err)
 		return c.Status(503).JSON(fiber.Map{"error": "service unavailable"})
 	}
 
@@ -541,7 +541,7 @@ func (h *ConsolePersistenceHandlers) DeleteClusterGroup(c *fiber.Ctx) error {
 	persistence := k8s.NewConsolePersistence(client)
 
 	if err := persistence.DeleteClusterGroup(c.Context(), namespace, name); err != nil {
-		slog.Error("[ConsolePersistence] internal error", "error", err)
+		slog.Warn("[ConsolePersistence] internal error", "error", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 
@@ -695,7 +695,7 @@ func clusterFilterNeedsNodes(filters []v1alpha1.ClusterFilter) bool {
 func (h *ConsolePersistenceHandlers) ListWorkloadDeployments(c *fiber.Ctx) error {
 	client, _, err := h.persistenceStore.GetActiveClient(c.Context())
 	if err != nil {
-		slog.Error("[ConsolePersistence] service unavailable", "error", err)
+		slog.Warn("[ConsolePersistence] service unavailable", "error", err)
 		return c.Status(503).JSON(fiber.Map{"error": "service unavailable"})
 	}
 
@@ -704,7 +704,7 @@ func (h *ConsolePersistenceHandlers) ListWorkloadDeployments(c *fiber.Ctx) error
 
 	deployments, err := persistence.ListWorkloadDeployments(c.Context(), namespace)
 	if err != nil {
-		slog.Error("[ConsolePersistence] internal error", "error", err)
+		slog.Warn("[ConsolePersistence] internal error", "error", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 
@@ -718,7 +718,7 @@ func (h *ConsolePersistenceHandlers) GetWorkloadDeployment(c *fiber.Ctx) error {
 
 	client, _, err := h.persistenceStore.GetActiveClient(c.Context())
 	if err != nil {
-		slog.Error("[ConsolePersistence] service unavailable", "error", err)
+		slog.Warn("[ConsolePersistence] service unavailable", "error", err)
 		return c.Status(503).JSON(fiber.Map{"error": "service unavailable"})
 	}
 
@@ -727,7 +727,7 @@ func (h *ConsolePersistenceHandlers) GetWorkloadDeployment(c *fiber.Ctx) error {
 
 	deployment, err := persistence.GetWorkloadDeployment(c.Context(), namespace, name)
 	if err != nil {
-		slog.Error("[ConsolePersistence] internal error", "error", err)
+		slog.Warn("[ConsolePersistence] internal error", "error", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 
@@ -751,7 +751,7 @@ func (h *ConsolePersistenceHandlers) CreateWorkloadDeployment(c *fiber.Ctx) erro
 
 	client, _, err := h.persistenceStore.GetActiveClient(c.Context())
 	if err != nil {
-		slog.Error("[ConsolePersistence] service unavailable", "error", err)
+		slog.Warn("[ConsolePersistence] service unavailable", "error", err)
 		return c.Status(503).JSON(fiber.Map{"error": "service unavailable"})
 	}
 
@@ -775,7 +775,7 @@ func (h *ConsolePersistenceHandlers) CreateWorkloadDeployment(c *fiber.Ctx) erro
 
 	created, err := persistence.CreateWorkloadDeployment(c.Context(), &deployment)
 	if err != nil {
-		slog.Error("[ConsolePersistence] internal error", "error", err)
+		slog.Warn("[ConsolePersistence] internal error", "error", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 
@@ -808,7 +808,7 @@ func (h *ConsolePersistenceHandlers) UpdateWorkloadDeploymentStatus(c *fiber.Ctx
 
 	client, _, err := h.persistenceStore.GetActiveClient(c.Context())
 	if err != nil {
-		slog.Error("[ConsolePersistence] service unavailable", "error", err)
+		slog.Warn("[ConsolePersistence] service unavailable", "error", err)
 		return c.Status(503).JSON(fiber.Map{"error": "service unavailable"})
 	}
 
@@ -818,7 +818,7 @@ func (h *ConsolePersistenceHandlers) UpdateWorkloadDeploymentStatus(c *fiber.Ctx
 	// Get existing deployment
 	deployment, err := persistence.GetWorkloadDeployment(c.Context(), namespace, name)
 	if err != nil {
-		slog.Error("[ConsolePersistence] internal error", "error", err)
+		slog.Warn("[ConsolePersistence] internal error", "error", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 
@@ -827,7 +827,7 @@ func (h *ConsolePersistenceHandlers) UpdateWorkloadDeploymentStatus(c *fiber.Ctx
 
 	updated, err := persistence.UpdateWorkloadDeploymentStatus(c.Context(), deployment)
 	if err != nil {
-		slog.Error("[ConsolePersistence] internal error", "error", err)
+		slog.Warn("[ConsolePersistence] internal error", "error", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 
@@ -845,7 +845,7 @@ func (h *ConsolePersistenceHandlers) DeleteWorkloadDeployment(c *fiber.Ctx) erro
 
 	client, _, err := h.persistenceStore.GetActiveClient(c.Context())
 	if err != nil {
-		slog.Error("[ConsolePersistence] service unavailable", "error", err)
+		slog.Warn("[ConsolePersistence] service unavailable", "error", err)
 		return c.Status(503).JSON(fiber.Map{"error": "service unavailable"})
 	}
 
@@ -853,7 +853,7 @@ func (h *ConsolePersistenceHandlers) DeleteWorkloadDeployment(c *fiber.Ctx) erro
 	persistence := k8s.NewConsolePersistence(client)
 
 	if err := persistence.DeleteWorkloadDeployment(c.Context(), namespace, name); err != nil {
-		slog.Error("[ConsolePersistence] internal error", "error", err)
+		slog.Warn("[ConsolePersistence] internal error", "error", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 
