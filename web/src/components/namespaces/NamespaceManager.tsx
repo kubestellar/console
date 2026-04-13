@@ -242,7 +242,7 @@ export function NamespaceManager() {
   const fetchAccess = useCallback(async (namespace: NamespaceDetails) => {
     setAccessLoading(true)
     try {
-      const response = await api.get<{ bindings: typeof accessEntries }>(`/api/namespaces/${namespace.name}/access?cluster=${namespace.cluster}`)
+      const response = await api.get<{ bindings: typeof accessEntries }>(`/api/namespaces/${encodeURIComponent(namespace.name)}/access?cluster=${encodeURIComponent(namespace.cluster)}`)
       setAccessEntries(response.data?.bindings || [])
     } catch (err) {
       console.error('Failed to fetch access:', err)
@@ -303,7 +303,7 @@ export function NamespaceManager() {
     if (!namespaceToDelete) return
 
     try {
-      await api.delete(`/api/namespaces/${namespaceToDelete.name}?cluster=${namespaceToDelete.cluster}`)
+      await api.delete(`/api/namespaces/${encodeURIComponent(namespaceToDelete.name)}?cluster=${encodeURIComponent(namespaceToDelete.cluster)}`)
       // Clear cache for this cluster and refresh
       namespaceCache.delete(namespaceToDelete.cluster)
       fetchNamespaces(true)
@@ -326,7 +326,7 @@ export function NamespaceManager() {
     }
 
     try {
-      await api.delete(`/api/namespaces/${selectedNamespace.name}/access/${binding.bindingName}?cluster=${selectedNamespace.cluster}`)
+      await api.delete(`/api/namespaces/${encodeURIComponent(selectedNamespace.name)}/access/${encodeURIComponent(binding.bindingName)}?cluster=${encodeURIComponent(selectedNamespace.cluster)}`)
       fetchAccess(selectedNamespace)
     } catch (err) {
       console.error('Failed to revoke access:', err)

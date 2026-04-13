@@ -2,6 +2,8 @@ package k8s
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"strings"
@@ -1033,10 +1035,14 @@ func (m *MultiClusterClient) GrantNamespaceAccess(ctx context.Context, contextNa
 	}
 	// Otherwise, use the role name as-is (custom role)
 
-	// Generate binding name
-	bindingName := fmt.Sprintf("%s-%s-%s", req.SubjectName, roleName, namespace)
-	// Sanitize the binding name (remove special characters)
-	bindingName = sanitizeK8sName(bindingName)
+	// Generate binding name with a hash suffix to avoid collisions after sanitization (#7608).
+	// Different inputs (e.g. "admin@foo.com" vs "admin-foo-com") can normalize to the same
+	// sanitized string, so we append a short hash of the raw components.
+	rawBindingKey := fmt.Sprintf("%s-%s-%s", req.SubjectName, roleName, namespace)
+	hashSuffixLen := 8 // Length of the hex hash suffix appended to binding names
+	hash := sha256.Sum256([]byte(rawBindingKey))
+	hashSuffix := hex.EncodeToString(hash[:])[:hashSuffixLen]
+	bindingName := sanitizeK8sName(rawBindingKey) + "-" + hashSuffix
 
 	subject := rbacv1.Subject{
 		Kind: req.SubjectKind,

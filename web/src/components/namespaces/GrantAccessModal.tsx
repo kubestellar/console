@@ -67,7 +67,7 @@ export function GrantAccessModal({ namespace, existingAccess, onClose, onGranted
     setError(null)
 
     try {
-      await api.post(`/api/namespaces/${namespace.name}/access`, {
+      await api.post(`/api/namespaces/${encodeURIComponent(namespace.name)}/access`, {
         cluster: namespace.cluster,
         subjectKind,
         subjectName,
@@ -239,7 +239,7 @@ export function GrantAccessModal({ namespace, existingAccess, onClose, onGranted
             variant="primary"
             size="lg"
             onClick={handleGrant}
-            disabled={!subjectName || granting}
+            disabled={!subjectName || granting || (subjectKind === 'ServiceAccount' && !subjectNS.trim())}
             icon={granting ? <Loader2 className="w-4 h-4 animate-spin" /> : undefined}
           >
             {granting ? 'Granting...' : 'Grant Access'}

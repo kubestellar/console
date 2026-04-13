@@ -109,7 +109,7 @@ export function CreateNamespaceModal({ clusters, onClose, onCreated }: CreateNam
   }
 
   const handleClose = () => {
-    if (name.trim() !== '' || teamLabel.trim() !== '') {
+    if (name.trim() !== '' || teamLabel.trim() !== '' || initialAccess.length > 0) {
       setShowDiscardConfirm(true)
       return
     }
