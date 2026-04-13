@@ -545,7 +545,22 @@ func (s *Server) Start() error {
 		}
 	}
 
-	return http.ListenAndServe(addr, mux)
+	// Use explicit timeouts to prevent Slowloris-style DoS attacks (#7262).
+	const (
+		serverReadHeaderTimeout = 10 * time.Second
+		serverReadTimeout       = 30 * time.Second
+		serverWriteTimeout      = 60 * time.Second
+		serverIdleTimeout       = 120 * time.Second
+	)
+	srv := &http.Server{
+		Addr:              addr,
+		Handler:           mux,
+		ReadHeaderTimeout: serverReadHeaderTimeout,
+		ReadTimeout:       serverReadTimeout,
+		WriteTimeout:      serverWriteTimeout,
+		IdleTimeout:       serverIdleTimeout,
+	}
+	return srv.ListenAndServe()
 }
 
 // handleHealth handles HTTP health checks

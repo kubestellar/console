@@ -1,10 +1,12 @@
 package agent
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -27,11 +29,16 @@ func fakeExecCommand(command string, args ...string) *exec.Cmd {
 		"GO_WANT_HELPER_PROCESS=1",
 		"MOCK_STDOUT=" + mockStdout,
 		"MOCK_STDERR=" + mockStderr,
-		fmt.Sprintf("MOCK_EXIT_CODE=%d", mockExitCode),
+		"MOCK_EXIT_CODE=" + strconv.Itoa(mockExitCode),
 		// Prevent coverage warning from polluting stderr
 		"GOCOVERDIR=" + os.TempDir(),
 	}
 	return cmd
+}
+
+// fakeExecCommandContext mimics exec.CommandContext for testing (#7258)
+func fakeExecCommandContext(_ context.Context, command string, args ...string) *exec.Cmd {
+	return fakeExecCommand(command, args...)
 }
 
 // TestHelperProcess is the function executed by the fake command
@@ -56,8 +63,9 @@ func TestHelperProcess(t *testing.T) {
 
 func TestKubectlProxy_Execute(t *testing.T) {
 	// Restore original execCommand after tests
-	defer func() { execCommand = exec.Command }()
+	defer func() { execCommand = exec.Command; execCommandContext = exec.CommandContext }()
 	execCommand = fakeExecCommand
+	execCommandContext = fakeExecCommandContext
 
 	tests := []struct {
 		name          string
@@ -234,8 +242,9 @@ func TestKubectlProxy_ListContexts(t *testing.T) {
 
 func TestKubectlProxy_RenameContext(t *testing.T) {
 	// Restore original execCommand after tests
-	defer func() { execCommand = exec.Command }()
+	defer func() { execCommand = exec.Command; execCommandContext = exec.CommandContext }()
 	execCommand = fakeExecCommand
+	execCommandContext = fakeExecCommandContext
 
 	proxy := &KubectlProxy{
 		kubeconfig: "/tmp/fake-config",
@@ -260,8 +269,9 @@ func TestKubectlProxy_RenameContext(t *testing.T) {
 
 func TestKubectlProxy_Execute_Flags(t *testing.T) {
 	// Restore original execCommand after tests
-	defer func() { execCommand = exec.Command }()
+	defer func() { execCommand = exec.Command; execCommandContext = exec.CommandContext }()
 	execCommand = fakeExecCommand
+	execCommandContext = fakeExecCommandContext
 
 	proxy := &KubectlProxy{
 		kubeconfig: "/tmp/config",

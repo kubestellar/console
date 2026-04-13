@@ -27,6 +27,14 @@ func writeJSON(w http.ResponseWriter, v interface{}) {
 	}
 }
 
+// writeJSONError writes an error response with the appropriate HTTP status code.
+// Use this instead of writeJSON for error cases to ensure clients see a non-200
+// status (#7275). The response body includes an "error" field with the message.
+func writeJSONError(w http.ResponseWriter, statusCode int, msg string) {
+	w.WriteHeader(statusCode)
+	writeJSON(w, map[string]string{"error": msg})
+}
+
 func (s *Server) handleClustersHTTP(w http.ResponseWriter, r *http.Request) {
 	s.setCORSHeaders(w, r)
 	w.Header().Set("Content-Type", "application/json")
@@ -1212,13 +1220,16 @@ func (s *Server) killBackendProcess() bool {
 		return true
 	}
 
-	// Fallback: find only the LISTEN process on port 8080 (not connected clients)
-	// Using -sTCP:LISTEN ensures we only kill the server, not browsers/proxies
+	// Fallback: find only the LISTEN process on port 8080 (not connected clients).
+	// Using -sTCP:LISTEN ensures we only kill the server, not browsers/proxies.
+	// NOTE: lsof is Unix-only; on Windows this falls through to return false (#7263).
 	out, err := exec.Command("lsof", "-ti", ":8080", "-sTCP:LISTEN").Output()
 	if err != nil || len(strings.TrimSpace(string(out))) == 0 {
+		// No process found — return false so callers know nothing was killed (#7264)
 		return false
 	}
 
+	killed := false
 	for _, pidStr := range strings.Fields(strings.TrimSpace(string(out))) {
 		pid, err := strconv.Atoi(pidStr)
 		if err != nil {
@@ -1226,17 +1237,35 @@ func (s *Server) killBackendProcess() bool {
 		}
 		if proc, err := os.FindProcess(pid); err == nil {
 			proc.Kill()
+			killed = true
 		}
+	}
+
+	if !killed {
+		return false
 	}
 
 	time.Sleep(startupDelay)
 	return true
 }
 
-// startBackendProcess starts the backend via `go run ./cmd/console`
+// startBackendProcess restarts the backend process.
+// Uses os.Executable() to re-exec the running binary so it works in non-dev
+// deployments where the Go toolchain is not available (#7265).
+// Falls back to "go run" only when KC_DEV_MODE=1 is set.
 func (s *Server) startBackendProcess() error {
-	cmd := exec.Command("go", "run", "./cmd/console")
-	cmd.Env = append(os.Environ(), "GOWORK=off")
+	var cmd *exec.Cmd
+	if os.Getenv("KC_DEV_MODE") == "1" {
+		cmd = exec.Command("go", "run", "./cmd/console")
+		cmd.Env = append(os.Environ(), "GOWORK=off")
+	} else {
+		execPath, err := os.Executable()
+		if err != nil {
+			return fmt.Errorf("failed to determine executable path: %w", err)
+		}
+		cmd = exec.Command(execPath)
+		cmd.Env = os.Environ()
+	}
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
@@ -1310,6 +1339,8 @@ func (s *Server) handleAutoUpdateConfig(w http.ResponseWriter, r *http.Request) 
 		})
 
 	case "POST":
+		// Limit request body to prevent OOM from oversized payloads (#7268)
+		r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)
 		var req AutoUpdateConfigRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			w.WriteHeader(http.StatusBadRequest)

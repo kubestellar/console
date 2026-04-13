@@ -17,6 +17,10 @@ import (
 	"github.com/kubestellar/console/pkg/agent/protocol"
 )
 
+// maxWSGoroutines limits concurrent chat/kubectl goroutines per connection
+// to prevent resource exhaustion from bursty or malicious traffic (#7277).
+const maxWSGoroutines = 20
+
 func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	// Handle CORS preflight for Private Network Access (required by Chrome 104+)
 	if r.Method == http.MethodOptions {
@@ -66,6 +70,9 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	// closed is set when the read loop exits; goroutines check it before writing
 	var closed atomic.Bool
 
+	// Semaphore to limit concurrent work goroutines per connection (#7277)
+	sem := make(chan struct{}, maxWSGoroutines)
+
 	// --- Ping/pong keepalive to detect dead connections ---
 	// Set initial read deadline; each pong resets it.
 	conn.SetReadDeadline(time.Now().Add(wsPongTimeout))
@@ -108,13 +115,16 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		// Reset read deadline after each successful read (active client)
 		conn.SetReadDeadline(time.Now().Add(wsPongTimeout))
 
-		// For chat messages, run in a goroutine so cancel messages can be received
+		// For chat messages, run in a goroutine so cancel messages can be received.
+		// Goroutine count is bounded by a semaphore to prevent resource exhaustion (#7277).
 		if msg.Type == protocol.TypeChat || msg.Type == protocol.TypeClaude {
 			forceAgent := ""
 			if msg.Type == protocol.TypeClaude {
 				forceAgent = "claude"
 			}
+			sem <- struct{}{} // acquire slot
 			go func(m protocol.Message, fa string) {
+				defer func() { <-sem }() // release slot
 				defer func() {
 					if r := recover(); r != nil {
 						slog.Info("[Chat] recovered from panic in streaming handler", "panic", r)
@@ -139,7 +149,10 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		} else if msg.Type == protocol.TypeKubectl {
 			// Handle kubectl messages concurrently so one slow cluster
 			// doesn't block the entire WebSocket message loop.
+			// Bounded by semaphore (#7277).
+			sem <- struct{}{} // acquire slot
 			go func(m protocol.Message) {
+				defer func() { <-sem }() // release slot
 				defer func() {
 					if r := recover(); r != nil {
 						slog.Info("[Kubectl] recovered from panic in message handler", "panic", r)
@@ -166,14 +179,29 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				}
 			}(msg)
 		} else {
-			response := s.handleMessage(msg)
-			writeMu.Lock()
-			err := conn.WriteJSON(response)
-			writeMu.Unlock()
-			if err != nil {
-				slog.Error("write error", "error", err)
-				break
-			}
+			// Wrap synchronous handleMessage with recover() so a panic
+			// doesn't kill the entire WebSocket read loop (#7267).
+			func() {
+				defer func() {
+					if r := recover(); r != nil {
+						slog.Info("[WS] recovered from panic in synchronous handler", "panic", r, "msgType", msg.Type)
+						writeMu.Lock()
+						_ = conn.WriteJSON(protocol.Message{
+							ID:   msg.ID,
+							Type: protocol.TypeError,
+							Payload: protocol.ErrorPayload{Code: "panic", Message: "Internal server error"},
+						})
+						writeMu.Unlock()
+					}
+				}()
+				response := s.handleMessage(msg)
+				writeMu.Lock()
+				err := conn.WriteJSON(response)
+				writeMu.Unlock()
+				if err != nil {
+					slog.Error("write error", "error", err)
+				}
+			}()
 		}
 	}
 	closed.Store(true)

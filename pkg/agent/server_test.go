@@ -170,8 +170,9 @@ func TestServer_HandleRenameContextHTTP(t *testing.T) {
 	// Important: We need to coordinate concurrent access if tests run in parallel.
 	// We are not using t.Parallel(), so it's safeish, but defer restore is critical.
 
-	defer func() { execCommand = exec.Command }()
+	defer func() { execCommand = exec.Command; execCommandContext = exec.CommandContext }()
 	execCommand = fakeExecCommand
+	execCommandContext = fakeExecCommandContext
 
 	// Setup proxy
 	proxy := &KubectlProxy{
@@ -219,8 +220,9 @@ func TestServer_HandleRenameContextHTTP(t *testing.T) {
 
 func TestServer_ResourceHandlers(t *testing.T) {
 	// Setup generic mock proxy
-	defer func() { execCommand = exec.Command }()
+	defer func() { execCommand = exec.Command; execCommandContext = exec.CommandContext }()
 	execCommand = fakeExecCommand
+	execCommandContext = fakeExecCommandContext
 
 	config := &api.Config{
 		CurrentContext: "ctx-1",
@@ -1184,8 +1186,9 @@ func TestServer_HandleRenameContextHTTP_WrongMethod(t *testing.T) {
 }
 
 func TestServer_HandleRenameContextHTTP_MissingNames(t *testing.T) {
-	defer func() { execCommand = exec.Command }()
+	defer func() { execCommand = exec.Command; execCommandContext = exec.CommandContext }()
 	execCommand = fakeExecCommand
+	execCommandContext = fakeExecCommandContext
 
 	server := &Server{
 		kubectl: &KubectlProxy{
