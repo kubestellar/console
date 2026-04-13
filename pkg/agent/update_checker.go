@@ -193,10 +193,10 @@ func (uc *UpdateChecker) Configure(enabled bool, channel string) {
 }
 
 // Status returns the current auto-update status for the API.
+// Reads cached state under the lock, then performs network operations (git fetch)
+// outside the lock so concurrent callers are not serialized behind a 15s fetch (#7282).
 func (uc *UpdateChecker) Status() AutoUpdateStatusResponse {
 	uc.mu.Lock()
-	defer uc.mu.Unlock()
-
 	resp := AutoUpdateStatusResponse{
 		InstallMethod:         uc.installMethod,
 		RepoPath:              uc.repoPath,
@@ -213,18 +213,23 @@ func (uc *UpdateChecker) Status() AutoUpdateStatusResponse {
 	if uc.lastUpdateError != "" {
 		resp.LastUpdateResult = uc.lastUpdateError
 	}
+	repoPath := uc.repoPath
+	uc.mu.Unlock()
 
-	// Re-read current SHA from repo (may have changed if someone pulled locally)
-	if uc.repoPath != "" {
-		if freshSHA := detectCurrentSHA(uc.repoPath); freshSHA != "" {
+	// Re-read current SHA from repo (may have changed if someone pulled locally).
+	// These git operations run outside the lock to avoid blocking other callers.
+	if repoPath != "" {
+		if freshSHA := detectCurrentSHA(repoPath); freshSHA != "" {
 			resp.CurrentSHA = freshSHA
+			uc.mu.Lock()
 			uc.currentSHA = freshSHA
+			uc.mu.Unlock()
 		}
 	}
 
 	// Fetch latest SHA from origin/main (uses git fetch, no rate limits)
-	if uc.repoPath != "" {
-		if sha, err := fetchLatestMainSHAWithRepo(uc.repoPath); err == nil {
+	if repoPath != "" {
+		if sha, err := fetchLatestMainSHAWithRepo(repoPath); err == nil {
 			resp.LatestSHA = sha
 			resp.HasUpdate = sha != resp.CurrentSHA && resp.CurrentSHA != ""
 		} else {
@@ -1046,8 +1051,12 @@ func (uc *UpdateChecker) executeDevReleaseUpdate(release *githubReleaseInfo) {
 		Progress: 10,
 	})
 
-	// Fetch and checkout the release tag
-	cmd := exec.Command("git", "fetch", "origin", "tag", release.TagName)
+	// Fetch and checkout the release tag — use context timeout so a flaky
+	// remote cannot wedge the update subsystem indefinitely (#7280).
+	fetchCtx, fetchCancel := context.WithTimeout(context.Background(), gitPullTimeout)
+	defer fetchCancel()
+
+	cmd := exec.CommandContext(fetchCtx, "git", "fetch", "origin", "tag", release.TagName)
 	cmd.Dir = repoPath
 	if err := cmd.Run(); err != nil {
 		uc.recordError(fmt.Sprintf("git fetch tag failed: %v", err))
@@ -1057,7 +1066,10 @@ func (uc *UpdateChecker) executeDevReleaseUpdate(release *githubReleaseInfo) {
 		return
 	}
 
-	cmd = exec.Command("git", "checkout", release.TagName)
+	checkoutCtx, checkoutCancel := context.WithTimeout(context.Background(), gitPullTimeout)
+	defer checkoutCancel()
+
+	cmd = exec.CommandContext(checkoutCtx, "git", "checkout", release.TagName)
 	cmd.Dir = repoPath
 	if err := cmd.Run(); err != nil {
 		uc.recordError(fmt.Sprintf("git checkout failed: %v", err))
@@ -1197,8 +1209,13 @@ func detectAgentInstallMethod() string {
 	return "binary"
 }
 
+// gitStartupTimeout bounds git commands run during agent startup (#7281).
+const gitStartupTimeout = 5 * time.Second
+
 func detectRepoPath() string {
-	cmd := exec.Command("git", "rev-parse", "--show-toplevel")
+	ctx, cancel := context.WithTimeout(context.Background(), gitStartupTimeout)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "git", "rev-parse", "--show-toplevel")
 	out, err := cmd.Output()
 	if err != nil {
 		return ""
@@ -1210,7 +1227,9 @@ func detectCurrentSHA(repoPath string) string {
 	if repoPath == "" {
 		return ""
 	}
-	cmd := exec.Command("git", "rev-parse", "HEAD")
+	ctx, cancel := context.WithTimeout(context.Background(), gitStartupTimeout)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "git", "rev-parse", "HEAD")
 	cmd.Dir = repoPath
 	out, err := cmd.Output()
 	if err != nil {

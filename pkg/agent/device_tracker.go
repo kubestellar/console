@@ -185,13 +185,34 @@ func (t *DeviceTracker) scanDevices() {
 		close(snapshotCh)
 	}()
 
-	// Process snapshots as they stream in — broadcast after each cluster's batch
+	// Process snapshots as they stream in — broadcast after each cluster's batch.
+	// Track observed keys so we can evict deleted nodes afterward (#7274).
 	newAlerts := false
+	observedKeys := make(map[string]bool)
 	for snapshot := range snapshotCh {
+		key := snapshot.Cluster + "/" + snapshot.NodeName
+		observedKeys[key] = true
 		if t.processSnapshot(snapshot) {
 			newAlerts = true
 		}
 	}
+
+	// Evict entries for nodes that no longer appear in the API response (#7274).
+	// This prevents unbounded map growth on autoscaling clusters.
+	t.mu.Lock()
+	for key := range t.history {
+		if !observedKeys[key] {
+			delete(t.history, key)
+			delete(t.maxCounts, key)
+			// Clean up any alerts for this node
+			for alertKey := range t.alerts {
+				if strings.HasPrefix(alertKey, key+"/") {
+					delete(t.alerts, alertKey)
+				}
+			}
+		}
+	}
+	t.mu.Unlock()
 
 	if newAlerts && t.broadcast != nil {
 		t.broadcast("device_alerts_updated", t.GetAlerts()) //nolint:nilaway // broadcast nil-checked above

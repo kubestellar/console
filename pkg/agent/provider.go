@@ -71,6 +71,16 @@ type ChatResponse struct {
 
 	// Done indicates if the response is complete (for streaming)
 	Done bool `json:"done"`
+
+	// ExitCode is populated by CLI-based providers when the child process
+	// exits with a non-zero code. A non-zero value signals that the
+	// provider's command failed, even if partial output was captured (#7273).
+	ExitCode int `json:"exitCode,omitempty"`
+
+	// Truncated is set to true when the CLI output scanner hit an error
+	// (e.g. buffer overflow, read error) before the stream completed.
+	// Consumers should treat the Content as potentially incomplete (#7278).
+	Truncated bool `json:"truncated,omitempty"`
 }
 
 // ProviderTokenUsage tracks token consumption for a request

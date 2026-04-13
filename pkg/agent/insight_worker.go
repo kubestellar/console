@@ -10,11 +10,16 @@ import (
 	"time"
 )
 
-// InsightEnrichmentCacheTTL is how long enrichments are cached before re-requesting
+// InsightEnrichmentCacheTTL is how long individual enrichments are cached
+// before being considered stale and re-requested (#7270).
 const InsightEnrichmentCacheTTL = 5 * time.Minute
 
 // InsightEnrichmentTimeout is the max time for an enrichment request to the AI provider
 const InsightEnrichmentTimeout = 30 * time.Second
+
+// insightCacheMaxEntries caps the insight cache to prevent unbounded memory
+// growth from churning insight IDs (e.g. rolling pod names) (#7269).
+const insightCacheMaxEntries = 500
 
 // InsightEnrichmentRequest is the payload from the frontend
 type InsightEnrichmentRequest struct {
@@ -51,10 +56,17 @@ type InsightEnrichmentResponse struct {
 	Timestamp   string                `json:"timestamp"`
 }
 
+// insightCacheEntry wraps an enrichment with a per-entry timestamp
+// so stale entries can be individually refreshed (#7270).
+type insightCacheEntry struct {
+	enrichment AIInsightEnrichment
+	cachedAt   time.Time
+}
+
 // InsightWorker manages AI enrichment of heuristic insights
 type InsightWorker struct {
 	mu          sync.RWMutex
-	cache       map[string]AIInsightEnrichment
+	cache       map[string]insightCacheEntry
 	cacheTime   time.Time
 	registry    *Registry
 	broadcast   func(msgType string, payload interface{})
@@ -72,7 +84,7 @@ type InsightWorker struct {
 func NewInsightWorker(registry *Registry, broadcast func(msgType string, payload interface{})) *InsightWorker {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &InsightWorker{
-		cache:          make(map[string]AIInsightEnrichment),
+		cache:          make(map[string]insightCacheEntry),
 		registry:       registry,
 		broadcast:      broadcast,
 		shutdownCtx:    ctx,
@@ -95,8 +107,8 @@ func (w *InsightWorker) GetEnrichments() InsightEnrichmentResponse {
 	defer w.mu.RUnlock()
 
 	enrichments := make([]AIInsightEnrichment, 0, len(w.cache))
-	for _, e := range w.cache {
-		enrichments = append(enrichments, e)
+	for _, entry := range w.cache {
+		enrichments = append(enrichments, entry.enrichment)
 	}
 
 	return InsightEnrichmentResponse{
@@ -131,11 +143,13 @@ func (w *InsightWorker) Enrich(req InsightEnrichmentRequest) (*InsightEnrichment
 		w.mu.Unlock()
 	}()
 
-	// Check which insights need enrichment (not already cached)
+	// Check which insights need enrichment (not already cached or stale per-entry TTL #7270)
+	now := time.Now()
 	w.mu.RLock()
 	needsEnrichment := make([]InsightSummary, 0)
 	for _, insight := range req.Insights {
-		if _, exists := w.cache[insight.ID]; !exists {
+		entry, exists := w.cache[insight.ID]
+		if !exists || now.Sub(entry.cachedAt) >= InsightEnrichmentCacheTTL {
 			needsEnrichment = append(needsEnrichment, insight)
 		}
 	}
@@ -163,12 +177,34 @@ func (w *InsightWorker) Enrich(req InsightEnrichmentRequest) (*InsightEnrichment
 		}
 	}
 
-	// Update cache
+	// Update cache with per-entry timestamps (#7270).
+	// Evict oldest entries if the cache exceeds the size cap (#7269).
+	cacheNow := time.Now()
 	w.mu.Lock()
 	for _, e := range enrichments {
-		w.cache[e.InsightID] = e
+		w.cache[e.InsightID] = insightCacheEntry{enrichment: e, cachedAt: cacheNow}
 	}
-	w.cacheTime = time.Now()
+	// Evict entries beyond the size cap — delete the oldest entries first
+	if len(w.cache) > insightCacheMaxEntries {
+		var oldestKey string
+		var oldestTime time.Time
+		for len(w.cache) > insightCacheMaxEntries {
+			oldestKey = ""
+			oldestTime = cacheNow
+			for k, v := range w.cache {
+				if v.cachedAt.Before(oldestTime) {
+					oldestKey = k
+					oldestTime = v.cachedAt
+				}
+			}
+			if oldestKey != "" {
+				delete(w.cache, oldestKey)
+			} else {
+				break
+			}
+		}
+	}
+	w.cacheTime = cacheNow
 	w.mu.Unlock()
 
 	// Broadcast to WebSocket clients
@@ -269,21 +305,30 @@ func buildInsightEnrichmentPrompt(insights []InsightSummary) string {
 	return b.String()
 }
 
-// parseEnrichmentResponse parses the AI provider's JSON response
+// parseEnrichmentResponse parses the AI provider's JSON response.
+// Uses json.Decoder which tolerates leading/trailing prose text around the
+// JSON object, avoiding the fragile outer-brace slicing approach (#7272).
 func parseEnrichmentResponse(response string, insights []InsightSummary) ([]AIInsightEnrichment, error) {
-	// Try to extract JSON from the response
-	jsonStart := strings.Index(response, "{")
-	jsonEnd := strings.LastIndex(response, "}")
-	if jsonStart < 0 || jsonEnd < 0 || jsonEnd <= jsonStart {
-		return nil, fmt.Errorf("no JSON found in response")
+	// First try: look for ```json fenced code block
+	if start := strings.Index(response, "```json"); start >= 0 {
+		after := response[start+len("```json"):]
+		if end := strings.Index(after, "```"); end >= 0 {
+			response = strings.TrimSpace(after[:end])
+		}
 	}
 
-	jsonStr := response[jsonStart : jsonEnd+1]
+	// Find the first '{' and use json.Decoder which stops at the end of
+	// the first complete JSON value (ignoring trailing text).
+	jsonStart := strings.Index(response, "{")
+	if jsonStart < 0 {
+		return nil, fmt.Errorf("no JSON found in response")
+	}
 
 	var parsed struct {
 		Enrichments []AIInsightEnrichment `json:"enrichments"`
 	}
-	if err := json.Unmarshal([]byte(jsonStr), &parsed); err != nil {
+	dec := json.NewDecoder(strings.NewReader(response[jsonStart:]))
+	if err := dec.Decode(&parsed); err != nil {
 		return nil, fmt.Errorf("JSON parse error: %w", err)
 	}
 
@@ -291,7 +336,7 @@ func parseEnrichmentResponse(response string, insights []InsightSummary) ([]AIIn
 	// it as an error so the caller can fall back to rule-based enrichments (#7208).
 	if parsed.Enrichments == nil {
 		const previewLen = 200
-		preview := jsonStr
+		preview := response[jsonStart:]
 		if len(preview) > previewLen {
 			preview = preview[:previewLen] + "..."
 		}

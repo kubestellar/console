@@ -172,7 +172,8 @@ func (c *CopilotCLIProvider) StreamChatWithProgress(ctx context.Context, req *Ch
 		}
 	}
 
-	if scanErr := scanner.Err(); scanErr != nil {
+	scanErr := scanner.Err()
+	if scanErr != nil {
 		slog.Error("[CopilotCLI] scanner error", "error", scanErr)
 	}
 
@@ -211,9 +212,15 @@ func (c *CopilotCLIProvider) StreamChatWithProgress(ctx context.Context, req *Ch
 		})
 	}
 
-	return &ChatResponse{
-		Content: content,
-		Agent:   c.Name(),
-		Done:    true,
-	}, nil
+	resp := &ChatResponse{
+		Content:   content,
+		Agent:     c.Name(),
+		Done:      true,
+		Truncated: scanErr != nil, // scanner hit error — output may be incomplete (#7278)
+	}
+	// Populate exit code so callers can detect CLI failures (#7273)
+	if exitErr, ok := waitErr.(*exec.ExitError); ok {
+		resp.ExitCode = exitErr.ExitCode()
+	}
+	return resp, nil
 }
