@@ -64,6 +64,13 @@ func ensureKeyFile(path string) ([]byte, error) {
 		os.Remove(tmpPath)
 		return nil, fmt.Errorf("failed to chmod temp keyfile %s: %w", tmpPath, chmodErr)
 	}
+	// Flush data to stable storage before the atomic rename so that a crash
+	// between write and rename cannot leave a truncated key file (#7752).
+	if syncErr := tmpFile.Sync(); syncErr != nil {
+		tmpFile.Close()
+		os.Remove(tmpPath)
+		return nil, fmt.Errorf("failed to fsync temp keyfile %s: %w", tmpPath, syncErr)
+	}
 	tmpFile.Close()
 
 	// Use os.Link + os.Remove for atomic creation (fails if target already exists on most filesystems).

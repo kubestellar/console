@@ -888,7 +888,9 @@ func (s *SQLiteStore) GetCard(id uuid.UUID) (*models.Card, error) {
 }
 
 func (s *SQLiteStore) GetDashboardCards(dashboardID uuid.UUID) ([]models.Card, error) {
-	rows, err := s.db.Query(`SELECT id, dashboard_id, card_type, config, position, last_summary, last_focus, created_at FROM cards WHERE dashboard_id = ? ORDER BY created_at`, dashboardID.String())
+	// Defense-in-depth LIMIT matching the per-dashboard cap enforced at insert time (#7733).
+	const maxCardsLimit = 200
+	rows, err := s.db.Query(`SELECT id, dashboard_id, card_type, config, position, last_summary, last_focus, created_at FROM cards WHERE dashboard_id = ? ORDER BY created_at LIMIT ?`, dashboardID.String(), maxCardsLimit)
 	if err != nil {
 		return nil, err
 	}
@@ -1292,7 +1294,7 @@ func (s *SQLiteStore) UpdateSwapStatus(id uuid.UUID, status models.SwapStatus) e
 }
 
 func (s *SQLiteStore) SnoozeSwap(id uuid.UUID, newSwapAt time.Time) error {
-	_, err := s.db.Exec(`UPDATE pending_swaps SET swap_at = ?, status = 'snoozed' WHERE id = ?`, newSwapAt, id.String())
+	_, err := s.db.Exec(`UPDATE pending_swaps SET swap_at = ?, status = ? WHERE id = ?`, newSwapAt, string(models.SwapStatusSnoozed), id.String())
 	return err
 }
 
@@ -2257,7 +2259,7 @@ func boolToInt(b bool) int {
 // RevokeToken persists a revoked token JTI with its expiration time.
 func (s *SQLiteStore) RevokeToken(jti string, expiresAt time.Time) error {
 	_, err := s.db.Exec(
-		`INSERT OR REPLACE INTO revoked_tokens (jti, expires_at) VALUES (?, ?)`,
+		`INSERT OR IGNORE INTO revoked_tokens (jti, expires_at) VALUES (?, ?)`,
 		jti, expiresAt,
 	)
 	return err
@@ -2893,7 +2895,9 @@ func (s *SQLiteStore) DeleteClusterGroup(name string) error {
 
 // ListClusterGroups returns all persisted cluster group definitions (#7013).
 func (s *SQLiteStore) ListClusterGroups() (map[string][]byte, error) {
-	rows, err := s.db.Query(`SELECT name, data FROM cluster_groups`)
+	// Cap the number of cluster groups loaded per call to prevent memory exhaustion (#7734).
+	const maxClusterGroupsLimit = 500
+	rows, err := s.db.Query(`SELECT name, data FROM cluster_groups LIMIT ?`, maxClusterGroupsLimit)
 	if err != nil {
 		return nil, err
 	}
