@@ -947,9 +947,19 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
 
   const handleScanComplete = (result: FileScanResult) => {
     // Use ref to avoid stale closure — pendingImport state may not have
-    // updated yet when scan completes synchronously after async fetch
+    // updated yet when scan completes synchronously after async fetch.
+    // #7151/#7158 — Guard against dismissed scans: if pendingImportRef was
+    // cleared by handleScanDismiss (user closed the overlay), do NOT proceed
+    // with the import even if the scan result is valid. Without this check,
+    // a dismissed scan that completed asynchronously would still trigger the
+    // import, ignoring the user's dismiss action.
     const mission = pendingImportRef.current
-    if (result.valid && mission) {
+    if (!mission) {
+      // Scan was dismissed — ignore the result
+      setIsScanning(false)
+      return
+    }
+    if (result.valid) {
       emitFixerImported(mission.title, mission.cncfProject)
       onImport(mission)
       onClose()
@@ -958,6 +968,10 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
   }
 
   const handleScanDismiss = () => {
+    // #7151/#7158 — Clear the pending import ref FIRST so any in-flight
+    // async scan that completes after dismiss sees null and bails out.
+    // This is the cancellation token for scan/import operations.
+    pendingImportRef.current = null
     setIsScanning(false)
     setScanResult(null)
     setPendingImport(null)
