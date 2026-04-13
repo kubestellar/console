@@ -74,7 +74,17 @@ vi.mock('../../lib/constants/network', async (importOriginal) => {
 } })
 
 vi.mock('../../lib/utils/concurrency', () => ({
-  settledWithConcurrency: (...args: unknown[]) => mockSettledWithConcurrency(...args),
+  settledWithConcurrency: async (...args: unknown[]) => {
+    const result = await mockSettledWithConcurrency(...args)
+    // Invoke the onSettled callback (3rd arg) so the production code's
+    // accumulation logic runs.  Without this, tests that use mockResolvedValue
+    // silently skip the callback and return empty results.
+    const onSettled = args[2] as ((r: PromiseSettledResult<unknown>, i: number) => void) | undefined
+    if (onSettled && Array.isArray(result)) {
+      result.forEach((r: PromiseSettledResult<unknown>, i: number) => onSettled(r, i))
+    }
+    return result
+  },
 }))
 
 vi.mock('../useCachedProw', () => ({

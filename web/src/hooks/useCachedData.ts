@@ -167,7 +167,7 @@ async function fetchFromAllClusters<T>(
   const accumulated: T[] = []
   let failedCount = 0
 
-  const settled = await settledWithConcurrency(tasks, undefined, (result) => {
+  await settledWithConcurrency(tasks, undefined, (result) => {
     if (result.status === 'fulfilled') {
       accumulated.push(...result.value)
       onProgress?.([...accumulated])
@@ -175,17 +175,6 @@ async function fetchFromAllClusters<T>(
       failedCount++
     }
   })
-
-  // Final aggregation pass for callers that don't use onProgress
-  if (accumulated.length === 0) {
-    for (const result of settled) {
-      if (result.status === 'fulfilled') {
-        accumulated.push(...result.value)
-      } else {
-        failedCount++
-      }
-    }
-  }
 
   // If every cluster fetch failed, throw so callers can try agent fallback
   if (accumulated.length === 0 && clusters.length > 0 && failedCount === clusters.length) {
