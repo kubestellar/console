@@ -62,7 +62,7 @@ jobs:
           done
 
       - name: Run UX journey tests
-        run: npx playwright test e2e/user-flows/ --project=chromium --reporter=html,./e2e/helpers/ux-reporter.ts
+        run: npx playwright test e2e/user-flows/ --project=chromium --reporter=list,html,./e2e/helpers/ux-reporter.ts
         env:
           PLAYWRIGHT_BASE_URL: "http://localhost:8080"
 
@@ -135,7 +135,7 @@ jobs:
           done
 
       - name: Run responsive + a11y tests
-        run: npx playwright test e2e/user-flows/responsive-layouts.spec.ts e2e/user-flows/a11y-audit.spec.ts --project=chromium
+        run: npx playwright test e2e/user-flows/responsive-layouts.spec.ts e2e/user-flows/a11y-audit.spec.ts --project=chromium --reporter=list,html
         env:
           PLAYWRIGHT_BASE_URL: "http://localhost:8080"
 

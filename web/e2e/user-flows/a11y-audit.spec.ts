@@ -84,32 +84,6 @@ for (const { path, label } of AUDIT_ROUTES) {
   })
 }
 
-test.describe('A11y Audit — Combined Summary', () => {
-  test('all audited pages have reasonable a11y scores', async ({ page }) => {
-    const pageSummaries: Array<{ route: string; total: number; critical: number }> = []
-
-    for (const { path } of AUDIT_ROUTES) {
-      await setupDemoAndNavigate(page, path)
-      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
-
-      const results = await new AxeBuilder({ page })
-        .withTags(['wcag2a', 'wcag2aa'])
-        .analyze()
-
-      const critical = results.violations.filter(
-        v => v.impact === 'critical' || v.impact === 'serious',
-      ).length
-
-      pageSummaries.push({ route: path, total: results.violations.length, critical })
-    }
-
-    // Attach combined summary
-    test.info().annotations.push({
-      type: 'ux-finding',
-      description: `A11y summary: ${pageSummaries.map(p => `${p.route}=${p.total} (${p.critical} crit)`).join(', ')}`,
-    })
-
-    // At least one page should have been scanned successfully
-    expect(pageSummaries.length).toBeGreaterThan(0)
-  })
-})
+// Combined summary removed — the sequential navigation through 4 routes in a
+// single test hits the 60s timeout in CI. Each route is already tested
+// individually above, and the ux-reporter aggregates findings across tests.
