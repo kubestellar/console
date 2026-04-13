@@ -207,7 +207,7 @@ func (h *MCSHandlers) CreateServiceExport(c *fiber.Ctx) error {
 
 	var req CreateServiceExportRequest
 	if err := c.BodyParser(&req); err != nil {
-		slog.Info("[MCS] invalid request body", "error", err)
+		slog.Warn("[MCS] invalid request body", "error", err)
 		return c.Status(400).JSON(fiber.Map{"error": "invalid request"})
 	}
 

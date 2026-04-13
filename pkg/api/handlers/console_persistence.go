@@ -136,7 +136,7 @@ func (h *ConsolePersistenceHandlers) StartWatcher(ctx context.Context) error {
 
 	activeCluster, err := h.persistenceStore.GetActiveCluster(ctx)
 	if err != nil {
-		slog.Info("[ConsolePersistence] cannot start watcher", "error", err)
+		slog.Error("[ConsolePersistence] cannot start watcher", "error", err)
 		return err
 	}
 
@@ -197,7 +197,7 @@ func (h *ConsolePersistenceHandlers) UpdateConfig(c *fiber.Ctx) error {
 	}
 
 	if err := h.persistenceStore.UpdateConfig(config); err != nil {
-		slog.Info("[ConsolePersistence] bad request", "error", err)
+		slog.Warn("[ConsolePersistence] bad request", "error", err)
 		return c.Status(400).JSON(fiber.Map{"error": "invalid request"})
 	}
 
@@ -235,7 +235,7 @@ func (h *ConsolePersistenceHandlers) GetStatus(c *fiber.Ctx) error {
 func (h *ConsolePersistenceHandlers) ListManagedWorkloads(c *fiber.Ctx) error {
 	client, _, err := h.persistenceStore.GetActiveClient(c.Context())
 	if err != nil {
-		slog.Info("[ConsolePersistence] service unavailable", "error", err)
+		slog.Error("[ConsolePersistence] service unavailable", "error", err)
 		return c.Status(503).JSON(fiber.Map{"error": "service unavailable"})
 	}
 
@@ -258,7 +258,7 @@ func (h *ConsolePersistenceHandlers) GetManagedWorkload(c *fiber.Ctx) error {
 
 	client, _, err := h.persistenceStore.GetActiveClient(c.Context())
 	if err != nil {
-		slog.Info("[ConsolePersistence] service unavailable", "error", err)
+		slog.Error("[ConsolePersistence] service unavailable", "error", err)
 		return c.Status(503).JSON(fiber.Map{"error": "service unavailable"})
 	}
 
@@ -294,7 +294,7 @@ func (h *ConsolePersistenceHandlers) CreateManagedWorkload(c *fiber.Ctx) error {
 
 	client, _, err := h.persistenceStore.GetActiveClient(c.Context())
 	if err != nil {
-		slog.Info("[ConsolePersistence] service unavailable", "error", err)
+		slog.Error("[ConsolePersistence] service unavailable", "error", err)
 		return c.Status(503).JSON(fiber.Map{"error": "service unavailable"})
 	}
 
@@ -336,7 +336,7 @@ func (h *ConsolePersistenceHandlers) UpdateManagedWorkload(c *fiber.Ctx) error {
 
 	client, _, err := h.persistenceStore.GetActiveClient(c.Context())
 	if err != nil {
-		slog.Info("[ConsolePersistence] service unavailable", "error", err)
+		slog.Error("[ConsolePersistence] service unavailable", "error", err)
 		return c.Status(503).JSON(fiber.Map{"error": "service unavailable"})
 	}
 
@@ -367,7 +367,7 @@ func (h *ConsolePersistenceHandlers) DeleteManagedWorkload(c *fiber.Ctx) error {
 
 	client, _, err := h.persistenceStore.GetActiveClient(c.Context())
 	if err != nil {
-		slog.Info("[ConsolePersistence] service unavailable", "error", err)
+		slog.Error("[ConsolePersistence] service unavailable", "error", err)
 		return c.Status(503).JSON(fiber.Map{"error": "service unavailable"})
 	}
 
@@ -391,7 +391,7 @@ func (h *ConsolePersistenceHandlers) DeleteManagedWorkload(c *fiber.Ctx) error {
 func (h *ConsolePersistenceHandlers) ListClusterGroups(c *fiber.Ctx) error {
 	client, _, err := h.persistenceStore.GetActiveClient(c.Context())
 	if err != nil {
-		slog.Info("[ConsolePersistence] service unavailable", "error", err)
+		slog.Error("[ConsolePersistence] service unavailable", "error", err)
 		return c.Status(503).JSON(fiber.Map{"error": "service unavailable"})
 	}
 
@@ -414,7 +414,7 @@ func (h *ConsolePersistenceHandlers) GetClusterGroup(c *fiber.Ctx) error {
 
 	client, _, err := h.persistenceStore.GetActiveClient(c.Context())
 	if err != nil {
-		slog.Info("[ConsolePersistence] service unavailable", "error", err)
+		slog.Error("[ConsolePersistence] service unavailable", "error", err)
 		return c.Status(503).JSON(fiber.Map{"error": "service unavailable"})
 	}
 
@@ -448,7 +448,7 @@ func (h *ConsolePersistenceHandlers) CreateClusterGroup(c *fiber.Ctx) error {
 
 	client, _, err := h.persistenceStore.GetActiveClient(c.Context())
 	if err != nil {
-		slog.Info("[ConsolePersistence] service unavailable", "error", err)
+		slog.Error("[ConsolePersistence] service unavailable", "error", err)
 		return c.Status(503).JSON(fiber.Map{"error": "service unavailable"})
 	}
 
@@ -496,7 +496,7 @@ func (h *ConsolePersistenceHandlers) UpdateClusterGroup(c *fiber.Ctx) error {
 
 	client, _, err := h.persistenceStore.GetActiveClient(c.Context())
 	if err != nil {
-		slog.Info("[ConsolePersistence] service unavailable", "error", err)
+		slog.Error("[ConsolePersistence] service unavailable", "error", err)
 		return c.Status(503).JSON(fiber.Map{"error": "service unavailable"})
 	}
 
@@ -533,7 +533,7 @@ func (h *ConsolePersistenceHandlers) DeleteClusterGroup(c *fiber.Ctx) error {
 
 	client, _, err := h.persistenceStore.GetActiveClient(c.Context())
 	if err != nil {
-		slog.Info("[ConsolePersistence] service unavailable", "error", err)
+		slog.Error("[ConsolePersistence] service unavailable", "error", err)
 		return c.Status(503).JSON(fiber.Map{"error": "service unavailable"})
 	}
 
@@ -695,7 +695,7 @@ func clusterFilterNeedsNodes(filters []v1alpha1.ClusterFilter) bool {
 func (h *ConsolePersistenceHandlers) ListWorkloadDeployments(c *fiber.Ctx) error {
 	client, _, err := h.persistenceStore.GetActiveClient(c.Context())
 	if err != nil {
-		slog.Info("[ConsolePersistence] service unavailable", "error", err)
+		slog.Error("[ConsolePersistence] service unavailable", "error", err)
 		return c.Status(503).JSON(fiber.Map{"error": "service unavailable"})
 	}
 
@@ -718,7 +718,7 @@ func (h *ConsolePersistenceHandlers) GetWorkloadDeployment(c *fiber.Ctx) error {
 
 	client, _, err := h.persistenceStore.GetActiveClient(c.Context())
 	if err != nil {
-		slog.Info("[ConsolePersistence] service unavailable", "error", err)
+		slog.Error("[ConsolePersistence] service unavailable", "error", err)
 		return c.Status(503).JSON(fiber.Map{"error": "service unavailable"})
 	}
 
@@ -751,7 +751,7 @@ func (h *ConsolePersistenceHandlers) CreateWorkloadDeployment(c *fiber.Ctx) erro
 
 	client, _, err := h.persistenceStore.GetActiveClient(c.Context())
 	if err != nil {
-		slog.Info("[ConsolePersistence] service unavailable", "error", err)
+		slog.Error("[ConsolePersistence] service unavailable", "error", err)
 		return c.Status(503).JSON(fiber.Map{"error": "service unavailable"})
 	}
 
@@ -808,7 +808,7 @@ func (h *ConsolePersistenceHandlers) UpdateWorkloadDeploymentStatus(c *fiber.Ctx
 
 	client, _, err := h.persistenceStore.GetActiveClient(c.Context())
 	if err != nil {
-		slog.Info("[ConsolePersistence] service unavailable", "error", err)
+		slog.Error("[ConsolePersistence] service unavailable", "error", err)
 		return c.Status(503).JSON(fiber.Map{"error": "service unavailable"})
 	}
 
@@ -845,7 +845,7 @@ func (h *ConsolePersistenceHandlers) DeleteWorkloadDeployment(c *fiber.Ctx) erro
 
 	client, _, err := h.persistenceStore.GetActiveClient(c.Context())
 	if err != nil {
-		slog.Info("[ConsolePersistence] service unavailable", "error", err)
+		slog.Error("[ConsolePersistence] service unavailable", "error", err)
 		return c.Status(503).JSON(fiber.Map{"error": "service unavailable"})
 	}
 

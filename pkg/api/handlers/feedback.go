@@ -2127,7 +2127,7 @@ func (h *FeedbackHandler) addPRComment(request *models.FeatureRequest, feedback 
 		if readErr != nil {
 			body = []byte("(failed to read response body)")
 		}
-		slog.Info("[Feedback] GitHub API error adding PR comment", "status", resp.StatusCode, "body", string(body))
+		slog.Warn("[Feedback] GitHub API error adding PR comment", "status", resp.StatusCode, "body", string(body))
 	}
 }
 

@@ -2,6 +2,7 @@ package agent
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sync"
@@ -47,6 +48,7 @@ func GetConfigManager() *ConfigManager {
 	configManagerOnce.Do(func() {
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
+			slog.Warn("[AgentConfig] HOME directory unavailable, falling back to current directory for config", "error", err)
 			homeDir = "."
 		}
 		configPath := filepath.Join(homeDir, configDirName, configFileName)

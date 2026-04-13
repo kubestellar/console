@@ -277,7 +277,7 @@ func (h *GitOpsHandlers) ListHelmReleases(c *fiber.Ctx) error {
 
 		clusters, _, err := h.k8sClient.HealthyClusters(hcCtx)
 		if err != nil {
-			slog.Info("[GitOps] error listing healthy clusters for releases", "error", err)
+			slog.Error("[GitOps] error listing healthy clusters for releases", "error", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error", "releases": []HelmRelease{}})
 		}
 
@@ -368,7 +368,7 @@ func (h *GitOpsHandlers) ListKustomizations(c *fiber.Ctx) error {
 	if h.k8sClient != nil {
 		clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 		if err != nil {
-			slog.Info("[GitOps] error listing healthy clusters for kustomizations", "error", err)
+			slog.Error("[GitOps] error listing healthy clusters for kustomizations", "error", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error", "kustomizations": []Kustomization{}})
 		}
 
@@ -554,7 +554,7 @@ func (h *GitOpsHandlers) ListOperators(c *fiber.Ctx) error {
 	if h.k8sClient != nil {
 		clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 		if err != nil {
-			slog.Info("[GitOps] error listing healthy clusters for operators", "error", err)
+			slog.Error("[GitOps] error listing healthy clusters for operators", "error", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error", "operators": []Operator{}})
 		}
 
@@ -894,7 +894,7 @@ func (h *GitOpsHandlers) ListOperatorSubscriptions(c *fiber.Ctx) error {
 	if h.k8sClient != nil {
 		clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 		if err != nil {
-			slog.Info("[GitOps] error listing healthy clusters for subscriptions", "error", err)
+			slog.Error("[GitOps] error listing healthy clusters for subscriptions", "error", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error", "subscriptions": []OperatorSubscription{}})
 		}
 
@@ -2595,7 +2595,7 @@ func (h *GitOpsHandlers) TriggerArgoSync(c *fiber.Ctx) error {
 							"method":  "api",
 						})
 					}
-					slog.Info("[ArgoCD] API sync returned error status, falling back", "status", resp.StatusCode)
+					slog.Warn("[ArgoCD] API sync returned error status, falling back", "status", resp.StatusCode)
 				} else {
 					slog.Error("[ArgoCD] API sync failed, falling back", "error", err)
 				}

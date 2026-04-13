@@ -84,7 +84,7 @@ func (s *Server) handleGPUNodesHTTP(w http.ResponseWriter, r *http.Request) {
 	if cluster != "" {
 		nodes, err := s.k8sClient.GetGPUNodes(ctx, cluster)
 		if err != nil {
-			slog.Info("error fetching nodes", "error", err)
+			slog.Warn("error fetching nodes", "error", err)
 			writeJSON(w,map[string]interface{}{"nodes": []interface{}{}, "error": "internal server error"})
 			return
 		}
@@ -93,7 +93,7 @@ func (s *Server) handleGPUNodesHTTP(w http.ResponseWriter, r *http.Request) {
 		// Query all clusters
 		clusters, err := s.k8sClient.ListClusters(ctx)
 		if err != nil {
-			slog.Info("error fetching nodes", "error", err)
+			slog.Warn("error fetching nodes", "error", err)
 			writeJSON(w,map[string]interface{}{"nodes": []interface{}{}, "error": "internal server error"})
 			return
 		}
@@ -155,7 +155,7 @@ func (s *Server) handleNodesHTTP(w http.ResponseWriter, r *http.Request) {
 		// Query specific cluster
 		nodes, err := s.k8sClient.GetNodes(ctx, cluster)
 		if err != nil {
-			slog.Info("error fetching nodes", "error", err)
+			slog.Warn("error fetching nodes", "error", err)
 			writeJSON(w,map[string]interface{}{"nodes": []interface{}{}, "error": "internal server error"})
 			return
 		}
@@ -164,7 +164,7 @@ func (s *Server) handleNodesHTTP(w http.ResponseWriter, r *http.Request) {
 		// Query all clusters
 		clusters, err := s.k8sClient.ListClusters(ctx)
 		if err != nil {
-			slog.Info("error fetching nodes", "error", err)
+			slog.Warn("error fetching nodes", "error", err)
 			writeJSON(w,map[string]interface{}{"nodes": []interface{}{}, "error": "internal server error"})
 			return
 		}
@@ -242,7 +242,7 @@ func (s *Server) handleEventsHTTP(w http.ResponseWriter, r *http.Request) {
 	// Get events from the cluster
 	events, err := s.k8sClient.GetEvents(ctx, cluster, namespace, limit)
 	if err != nil {
-		slog.Info("error fetching events", "error", err)
+		slog.Warn("error fetching events", "error", err)
 		writeJSON(w,map[string]interface{}{"events": []interface{}{}, "error": "internal server error"})
 		return
 	}
@@ -293,7 +293,7 @@ func (s *Server) handleNamespacesHTTP(w http.ResponseWriter, r *http.Request) {
 
 	namespaces, err := s.k8sClient.ListNamespacesWithDetails(ctx, cluster)
 	if err != nil {
-		slog.Info("error fetching namespaces", "error", err)
+		slog.Warn("error fetching namespaces", "error", err)
 		writeJSON(w,map[string]interface{}{"namespaces": []interface{}{}, "error": "internal server error"})
 		return
 	}
@@ -339,7 +339,7 @@ func (s *Server) handleDeploymentsHTTP(w http.ResponseWriter, r *http.Request) {
 
 	deployments, err := s.k8sClient.GetDeployments(ctx, cluster, namespace)
 	if err != nil {
-		slog.Info("error fetching deployments", "error", err)
+		slog.Warn("error fetching deployments", "error", err)
 		writeJSON(w,map[string]interface{}{"deployments": []interface{}{}, "error": "internal server error"})
 		return
 	}
@@ -374,7 +374,7 @@ func (s *Server) handleReplicaSetsHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	replicasets, err := s.k8sClient.GetReplicaSets(ctx, cluster, namespace)
 	if err != nil {
-		slog.Info("error fetching replicasets", "error", err)
+		slog.Warn("error fetching replicasets", "error", err)
 		writeJSON(w,map[string]interface{}{"replicasets": []interface{}{}, "error": "internal server error"})
 		return
 	}
@@ -408,7 +408,7 @@ func (s *Server) handleStatefulSetsHTTP(w http.ResponseWriter, r *http.Request) 
 	defer cancel()
 	statefulsets, err := s.k8sClient.GetStatefulSets(ctx, cluster, namespace)
 	if err != nil {
-		slog.Info("error fetching statefulsets", "error", err)
+		slog.Warn("error fetching statefulsets", "error", err)
 		writeJSON(w,map[string]interface{}{"statefulsets": []interface{}{}, "error": "internal server error"})
 		return
 	}
@@ -442,7 +442,7 @@ func (s *Server) handleDaemonSetsHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	daemonsets, err := s.k8sClient.GetDaemonSets(ctx, cluster, namespace)
 	if err != nil {
-		slog.Info("error fetching daemonsets", "error", err)
+		slog.Warn("error fetching daemonsets", "error", err)
 		writeJSON(w,map[string]interface{}{"daemonsets": []interface{}{}, "error": "internal server error"})
 		return
 	}
@@ -476,7 +476,7 @@ func (s *Server) handleCronJobsHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	cronjobs, err := s.k8sClient.GetCronJobs(ctx, cluster, namespace)
 	if err != nil {
-		slog.Info("error fetching cronjobs", "error", err)
+		slog.Warn("error fetching cronjobs", "error", err)
 		writeJSON(w,map[string]interface{}{"cronjobs": []interface{}{}, "error": "internal server error"})
 		return
 	}
@@ -510,7 +510,7 @@ func (s *Server) handleIngressesHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	ingresses, err := s.k8sClient.GetIngresses(ctx, cluster, namespace)
 	if err != nil {
-		slog.Info("error fetching ingresses", "error", err)
+		slog.Warn("error fetching ingresses", "error", err)
 		writeJSON(w,map[string]interface{}{"ingresses": []interface{}{}, "error": "internal server error"})
 		return
 	}
@@ -544,7 +544,7 @@ func (s *Server) handleNetworkPoliciesHTTP(w http.ResponseWriter, r *http.Reques
 	defer cancel()
 	policies, err := s.k8sClient.GetNetworkPolicies(ctx, cluster, namespace)
 	if err != nil {
-		slog.Info("error fetching networkpolicies", "error", err)
+		slog.Warn("error fetching networkpolicies", "error", err)
 		writeJSON(w,map[string]interface{}{"networkpolicies": []interface{}{}, "error": "internal server error"})
 		return
 	}
@@ -578,7 +578,7 @@ func (s *Server) handleServicesHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	services, err := s.k8sClient.GetServices(ctx, cluster, namespace)
 	if err != nil {
-		slog.Info("error fetching services", "error", err)
+		slog.Warn("error fetching services", "error", err)
 		writeJSON(w,map[string]interface{}{"services": []interface{}{}, "error": "internal server error"})
 		return
 	}
@@ -612,7 +612,7 @@ func (s *Server) handleConfigMapsHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	configmaps, err := s.k8sClient.GetConfigMaps(ctx, cluster, namespace)
 	if err != nil {
-		slog.Info("error fetching configmaps", "error", err)
+		slog.Warn("error fetching configmaps", "error", err)
 		writeJSON(w,map[string]interface{}{"configmaps": []interface{}{}, "error": "internal server error"})
 		return
 	}
@@ -648,7 +648,7 @@ func (s *Server) handleSecretsHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	secrets, err := s.k8sClient.GetSecrets(ctx, cluster, namespace)
 	if err != nil {
-		slog.Info("error fetching secrets", "error", err)
+		slog.Warn("error fetching secrets", "error", err)
 		writeJSON(w,map[string]interface{}{"secrets": []interface{}{}, "error": "internal server error"})
 		return
 	}
@@ -682,7 +682,7 @@ func (s *Server) handleServiceAccountsHTTP(w http.ResponseWriter, r *http.Reques
 	defer cancel()
 	serviceaccounts, err := s.k8sClient.GetServiceAccounts(ctx, cluster, namespace)
 	if err != nil {
-		slog.Info("error fetching serviceaccounts", "error", err)
+		slog.Warn("error fetching serviceaccounts", "error", err)
 		writeJSON(w,map[string]interface{}{"serviceaccounts": []interface{}{}, "error": "internal server error"})
 		return
 	}
@@ -716,7 +716,7 @@ func (s *Server) handleJobsHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	jobs, err := s.k8sClient.GetJobs(ctx, cluster, namespace)
 	if err != nil {
-		slog.Info("error fetching jobs", "error", err)
+		slog.Warn("error fetching jobs", "error", err)
 		writeJSON(w,map[string]interface{}{"jobs": []interface{}{}, "error": "internal server error"})
 		return
 	}
@@ -745,7 +745,7 @@ func (s *Server) handleHPAsHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	hpas, err := s.k8sClient.GetHPAs(ctx, cluster, namespace)
 	if err != nil {
-		slog.Info("error fetching hpas", "error", err)
+		slog.Warn("error fetching hpas", "error", err)
 		writeJSON(w,map[string]interface{}{"hpas": []interface{}{}, "error": "internal server error"})
 		return
 	}
@@ -774,7 +774,7 @@ func (s *Server) handlePVCsHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	pvcs, err := s.k8sClient.GetPVCs(ctx, cluster, namespace)
 	if err != nil {
-		slog.Info("error fetching pvcs", "error", err)
+		slog.Warn("error fetching pvcs", "error", err)
 		writeJSON(w,map[string]interface{}{"pvcs": []interface{}{}, "error": "internal server error"})
 		return
 	}
@@ -803,7 +803,7 @@ func (s *Server) handleRolesHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	roles, err := s.k8sClient.ListRoles(ctx, cluster, namespace)
 	if err != nil {
-		slog.Info("error fetching roles", "error", err)
+		slog.Warn("error fetching roles", "error", err)
 		writeJSON(w,map[string]interface{}{"roles": []interface{}{}, "error": "internal server error"})
 		return
 	}
@@ -832,7 +832,7 @@ func (s *Server) handleRoleBindingsHTTP(w http.ResponseWriter, r *http.Request) 
 	defer cancel()
 	bindings, err := s.k8sClient.ListRoleBindings(ctx, cluster, namespace)
 	if err != nil {
-		slog.Info("error fetching rolebindings", "error", err)
+		slog.Warn("error fetching rolebindings", "error", err)
 		writeJSON(w,map[string]interface{}{"rolebindings": []interface{}{}, "error": "internal server error"})
 		return
 	}
@@ -861,7 +861,7 @@ func (s *Server) handleResourceQuotasHTTP(w http.ResponseWriter, r *http.Request
 	defer cancel()
 	quotas, err := s.k8sClient.GetResourceQuotas(ctx, cluster, namespace)
 	if err != nil {
-		slog.Info("error fetching resourcequotas", "error", err)
+		slog.Warn("error fetching resourcequotas", "error", err)
 		writeJSON(w,map[string]interface{}{"resourcequotas": []interface{}{}, "error": "internal server error"})
 		return
 	}
@@ -890,7 +890,7 @@ func (s *Server) handleLimitRangesHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	ranges, err := s.k8sClient.GetLimitRanges(ctx, cluster, namespace)
 	if err != nil {
-		slog.Info("error fetching limitranges", "error", err)
+		slog.Warn("error fetching limitranges", "error", err)
 		writeJSON(w,map[string]interface{}{"limitranges": []interface{}{}, "error": "internal server error"})
 		return
 	}
@@ -929,7 +929,7 @@ func (s *Server) handleResolveDepsHTTP(w http.ResponseWriter, r *http.Request) {
 
 	kind, bundle, err := s.k8sClient.ResolveWorkloadDependencies(ctx, cluster, namespace, name)
 	if err != nil {
-		slog.Info("error resolving dependencies", "namespace", namespace, "name", name, "cluster", cluster, "error", err)
+		slog.Warn("error resolving dependencies", "namespace", namespace, "name", name, "cluster", cluster, "error", err)
 		writeJSON(w,map[string]interface{}{
 			"workload":     name,
 			"kind":         "Deployment",
@@ -1045,7 +1045,7 @@ func (s *Server) handleScaleHTTP(w http.ResponseWriter, r *http.Request) {
 
 	result, err := s.k8sClient.ScaleWorkload(ctx, namespace, name, []string{cluster}, replicas)
 	if err != nil {
-		slog.Info("error scaling resource", "namespace", namespace, "name", name, "cluster", cluster, "error", err)
+		slog.Warn("error scaling resource", "namespace", namespace, "name", name, "cluster", cluster, "error", err)
 		writeJSON(w,map[string]interface{}{
 			"success": false,
 			"error":   err.Error(),
@@ -1095,7 +1095,7 @@ func (s *Server) handlePodsHTTP(w http.ResponseWriter, r *http.Request) {
 
 	pods, err := s.k8sClient.GetPods(ctx, cluster, namespace)
 	if err != nil {
-		slog.Info("error fetching pods", "error", err)
+		slog.Warn("error fetching pods", "error", err)
 		writeJSON(w,map[string]interface{}{"pods": []interface{}{}, "error": "internal server error"})
 		return
 	}
