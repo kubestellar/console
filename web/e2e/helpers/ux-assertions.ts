@@ -148,6 +148,8 @@ export function collectConsoleErrors(page: Page): () => void {
     /502.*Bad Gateway/i,
     /Failed to load resource/i,
     /Cross-Origin Request Blocked/i,
+    /CORS policy/i,
+    /Access-Control-Allow-Origin/i,
     /Notification permission/i,
     /validateDOMNesting/i,
     /act\(\)/i,

@@ -87,21 +87,27 @@ test.describe('Keyboard Navigation', () => {
   })
 
   test('Escape closes open modal (search)', async ({ page }) => {
-    // Open command palette / search
-    await page.keyboard.press('Meta+k')
-
-    const dialog = page.getByRole('dialog')
-      .or(page.getByTestId('global-search'))
-      .or(page.getByPlaceholder(/search/i))
-
-    const hasDialog = await dialog.first().isVisible({ timeout: MODAL_TIMEOUT_MS }).catch(() => false)
-    if (!hasDialog) {
-      test.info().annotations.push({ type: 'ux-finding', description: 'Cmd+K did not open a modal — cannot test Escape' })
-      return
+    // Try both Ctrl+K and Meta+K to open search (platform-dependent)
+    await page.keyboard.press('Control+k')
+    const searchInput = page.getByTestId('global-search-input')
+    let opened = await searchInput.isVisible({ timeout: 2_000 }).catch(() => false)
+    if (!opened) {
+      await page.keyboard.press('Meta+k')
+      opened = await searchInput.isVisible({ timeout: 2_000 }).catch(() => false)
     }
+    if (!opened) {
+      // Fallback: click the search area directly
+      const searchArea = page.getByTestId('global-search')
+      const hasSearch = await searchArea.isVisible({ timeout: 2_000 }).catch(() => false)
+      if (hasSearch) {
+        await searchArea.click()
+        opened = await searchInput.isVisible({ timeout: 2_000 }).catch(() => false)
+      }
+    }
+    if (!opened) { test.skip(true, 'Could not open search via keyboard or click'); return }
 
     await page.keyboard.press('Escape')
-    await expect(dialog.first()).not.toBeVisible({ timeout: MODAL_TIMEOUT_MS })
+    await expect(searchInput).not.toBeVisible({ timeout: MODAL_TIMEOUT_MS })
   })
 
   test('Escape closes settings modal', async ({ page }) => {
