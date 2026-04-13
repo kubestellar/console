@@ -59,3 +59,12 @@ dev:
 ## lint: Run frontend linter
 lint:
 	cd web && npm run lint
+
+## test: Run all Go tests with a hard 5-minute timeout per package
+## Prevents zombie agent.test process leaks from ad-hoc test runs
+test:
+	go test -timeout 5m ./...
+
+## test-agent: Run agent tests only (most likely to leak subprocesses)
+test-agent:
+	go test -timeout 5m -v ./pkg/agent/...
