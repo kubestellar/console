@@ -1232,9 +1232,11 @@ export function useCache<T>({
       // interval), skip the immediate fetch — the auto-refresh timer will
       // update it in the background. This prevents dashboard navigation from
       // blocking on multi-cluster fetches that hit unreachable clusters.
+      // The isRefreshing guard ensures hydrated-from-storage data (which starts
+      // with isRefreshing=true) always triggers a real fetch on first mount.
       const lastRefresh = state.lastRefresh
       const dataAge = lastRefresh ? Date.now() - lastRefresh : Infinity
-      const hasFreshData = !state.isLoading && dataAge < baseInterval
+      const hasFreshData = !state.isLoading && !state.isRefreshing && dataAge < baseInterval
       if (!hasFreshData) {
         refetch().catch(() => { /* errors handled inside CacheStore.fetch */ })
       }
