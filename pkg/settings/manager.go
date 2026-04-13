@@ -459,7 +459,8 @@ func (sm *SettingsManager) ImportEncrypted(data []byte) error {
 	}
 
 	// Import plaintext settings, then merge defaults for any missing nested
-	// values so that an incomplete import doesn't zero-out intended defaults (#7372).
+	// values so that an incomplete import doesn't zero-out intended defaults
+	// (#7372, #7501).
 	sm.settings.Settings = imported.Settings
 	defaults := DefaultSettings()
 	if sm.settings.Settings.AIMode == "" {
@@ -470,6 +471,47 @@ func (sm *SettingsManager) ImportEncrypted(data []byte) error {
 	}
 	if sm.settings.Settings.Widget.SelectedWidget == "" {
 		sm.settings.Settings.Widget.SelectedWidget = defaults.Settings.Widget.SelectedWidget
+	}
+
+	// Merge nested Prediction defaults when the imported file omits them (#7501)
+	dp := defaults.Settings.Predictions
+	p := &sm.settings.Settings.Predictions
+	if p.Interval == 0 {
+		p.Interval = dp.Interval
+	}
+	if p.MinConfidence == 0 {
+		p.MinConfidence = dp.MinConfidence
+	}
+	if p.MaxPredictions == 0 {
+		p.MaxPredictions = dp.MaxPredictions
+	}
+	if p.Thresholds.HighRestartCount == 0 {
+		p.Thresholds.HighRestartCount = dp.Thresholds.HighRestartCount
+	}
+	if p.Thresholds.CPUPressure == 0 {
+		p.Thresholds.CPUPressure = dp.Thresholds.CPUPressure
+	}
+	if p.Thresholds.MemoryPressure == 0 {
+		p.Thresholds.MemoryPressure = dp.Thresholds.MemoryPressure
+	}
+	if p.Thresholds.GPUMemoryPressure == 0 {
+		p.Thresholds.GPUMemoryPressure = dp.Thresholds.GPUMemoryPressure
+	}
+
+	// Merge nested TokenUsage defaults when the imported file omits them (#7501)
+	dt := defaults.Settings.TokenUsage
+	t := &sm.settings.Settings.TokenUsage
+	if t.Limit == 0 {
+		t.Limit = dt.Limit
+	}
+	if t.WarningThreshold == 0 {
+		t.WarningThreshold = dt.WarningThreshold
+	}
+	if t.CriticalThreshold == 0 {
+		t.CriticalThreshold = dt.CriticalThreshold
+	}
+	if t.StopThreshold == 0 {
+		t.StopThreshold = dt.StopThreshold
 	}
 
 	// Import encrypted fields only if the key fingerprint matches
