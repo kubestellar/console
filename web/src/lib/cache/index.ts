@@ -1227,10 +1227,17 @@ export function useCache<T>({
     // Only fetch immediately on initial mount or page navigation, NOT when
     // the effect re-fires due to consecutiveFailures/backoff interval changes.
     if (!isModeTransition && !initialFetchDoneRef.current && keepAliveActive) {
-      // Initial mount or page navigation remount — fetch immediately.
-      // Only mark done when we actually started a fetch (#5891).
       initialFetchDoneRef.current = true
-      refetch().catch(() => { /* errors handled inside CacheStore.fetch */ })
+      // If the shared cache already has fresh data (fetched within the refresh
+      // interval), skip the immediate fetch — the auto-refresh timer will
+      // update it in the background. This prevents dashboard navigation from
+      // blocking on multi-cluster fetches that hit unreachable clusters.
+      const lastRefresh = state.lastRefresh
+      const dataAge = lastRefresh ? Date.now() - lastRefresh : Infinity
+      const hasFreshData = !state.isLoading && dataAge < baseInterval
+      if (!hasFreshData) {
+        refetch().catch(() => { /* errors handled inside CacheStore.fetch */ })
+      }
     }
     // else: mode transition — triggerAllRefetches() will call refetch after skeleton timer
     // else: backoff re-fire — let the interval handle the next retry
