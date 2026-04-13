@@ -864,8 +864,8 @@ func (uc *UpdateChecker) executeBinaryUpdate(release *githubReleaseInfo) {
 		return
 	}
 
-	// Download to temp file
-	tmpFile := fmt.Sprintf("/tmp/kc-update-%s.tar.gz", release.TagName)
+	// Download to temp file — use os.TempDir() for cross-platform support (#7239).
+	tmpFile := filepath.Join(os.TempDir(), fmt.Sprintf("kc-update-%s.tar.gz", release.TagName))
 	if err := downloadFile(assetURL, tmpFile); err != nil {
 		uc.recordError(fmt.Sprintf("download failed: %v", err))
 		uc.broadcast("update_progress", UpdateProgressPayload{
@@ -882,12 +882,35 @@ func (uc *UpdateChecker) executeBinaryUpdate(release *githubReleaseInfo) {
 		Progress: 50,
 	})
 
-	// Extract to staging directory
-	stagingDir := "/tmp/kc-update-staging"
-	os.RemoveAll(stagingDir)
-	os.MkdirAll(stagingDir, 0755)
+	// Extract to staging directory — use os.TempDir() for cross-platform support (#7239).
+	stagingDir := filepath.Join(os.TempDir(), "kc-update-staging")
+	if err := os.RemoveAll(stagingDir); err != nil {
+		uc.recordError(fmt.Sprintf("failed to clean staging dir: %v", err))
+		uc.broadcast("update_progress", UpdateProgressPayload{
+			Status:  "failed",
+			Message: "Failed to prepare staging directory",
+			Error:   err.Error(),
+		})
+		return
+	}
+	// stagingDirMode is the permission bits for the update staging directory.
+	const stagingDirMode = 0755
+	if err := os.MkdirAll(stagingDir, stagingDirMode); err != nil {
+		uc.recordError(fmt.Sprintf("failed to create staging dir: %v", err))
+		uc.broadcast("update_progress", UpdateProgressPayload{
+			Status:  "failed",
+			Message: "Failed to prepare staging directory",
+			Error:   err.Error(),
+		})
+		return
+	}
 
-	extractCmd := exec.Command("tar", "xzf", tmpFile, "-C", stagingDir)
+	// extractTimeout bounds the tar extraction to prevent hanging on corrupt
+	// archives or stalled I/O (#7241).
+	const extractTimeout = 5 * time.Minute
+	extractCtx, extractCancel := context.WithTimeout(context.Background(), extractTimeout)
+	defer extractCancel()
+	extractCmd := exec.CommandContext(extractCtx, "tar", "xzf", tmpFile, "-C", stagingDir)
 	if err := extractCmd.Run(); err != nil {
 		uc.recordError(fmt.Sprintf("extract failed: %v", err))
 		uc.broadcast("update_progress", UpdateProgressPayload{
@@ -916,8 +939,10 @@ func (uc *UpdateChecker) executeBinaryUpdate(release *githubReleaseInfo) {
 		return
 	}
 
-	// Replace with new binary
-	if err := os.Rename(stagingDir+"/console", consolePath); err != nil {
+	// Replace with new binary. os.Rename fails with EXDEV when staging
+	// and target are on different filesystems (#7242), so fall back to
+	// copy+sync when rename returns a *os.LinkError.
+	if err := renameOrCopy(filepath.Join(stagingDir, "console"), consolePath); err != nil {
 		// Attempt to restore the backup before returning
 		if rbErr := os.Rename(consolePath+".backup", consolePath); rbErr != nil {
 			slog.Error("[AutoUpdate] backup restore failed after rename error", "error", rbErr)
@@ -1281,6 +1306,53 @@ func fetchGitHubReleases() ([]githubReleaseInfo, error) {
 	return releases, nil
 }
 
+// renameOrCopy attempts os.Rename first. When that fails with EXDEV
+// (cross-device link — common when /tmp is tmpfs), it falls back to a
+// copy-then-remove strategy so auto-update works regardless of filesystem
+// layout (#7242).
+func renameOrCopy(src, dst string) error {
+	err := os.Rename(src, dst)
+	if err == nil {
+		return nil
+	}
+	// If not a cross-device error, return immediately.
+	if !strings.Contains(err.Error(), "cross-device") &&
+		!strings.Contains(err.Error(), "invalid cross-device link") {
+		return err
+	}
+
+	slog.Info("[AutoUpdate] rename failed with EXDEV, falling back to copy", "src", src, "dst", dst)
+
+	in, openErr := os.Open(src)
+	if openErr != nil {
+		return fmt.Errorf("copy fallback: open source: %w", openErr)
+	}
+	defer in.Close()
+
+	// copyBinaryMode is the permission bits for the copied binary during update.
+	const copyBinaryMode = 0755
+	out, createErr := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, copyBinaryMode)
+	if createErr != nil {
+		return fmt.Errorf("copy fallback: create dest: %w", createErr)
+	}
+
+	if _, cpErr := io.Copy(out, in); cpErr != nil {
+		out.Close()
+		return fmt.Errorf("copy fallback: copy data: %w", cpErr)
+	}
+	if syncErr := out.Sync(); syncErr != nil {
+		out.Close()
+		return fmt.Errorf("copy fallback: sync: %w", syncErr)
+	}
+	if closeErr := out.Close(); closeErr != nil {
+		return fmt.Errorf("copy fallback: close: %w", closeErr)
+	}
+
+	// Best-effort cleanup of the source file.
+	os.Remove(src)
+	return nil
+}
+
 func hasUncommittedChanges(repoPath string) bool {
 	if repoPath == "" {
 		return false
@@ -1292,16 +1364,6 @@ func hasUncommittedChanges(repoPath string) bool {
 		return true // assume dirty on error
 	}
 	return len(strings.TrimSpace(string(out))) > 0
-}
-
-func runGitPull(repoPath string) error {
-	// Use --ff-only instead of --rebase to avoid "Cannot rebase onto multiple branches"
-	// error when git worktrees exist (common with Claude Code users).
-	cmd := exec.Command("git", "pull", "--ff-only", "origin", "main")
-	cmd.Dir = repoPath
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
 }
 
 // runGitPullWithTimeout runs git pull with a hard timeout to prevent hanging on network issues.
