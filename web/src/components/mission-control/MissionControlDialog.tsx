@@ -440,8 +440,8 @@ export function MissionControlDialog({ open, onClose }: MissionControlDialogProp
                   )}
                   {state.assignments.length > 0 && (
                     <span>
-                      → {state.assignments.filter((a) => a.projectNames.length > 0).length} cluster
-                      {state.assignments.filter((a) => a.projectNames.length > 0).length !== 1
+                      → {state.assignments.filter((a) => (a.projectNames ?? []).length > 0).length} cluster
+                      {state.assignments.filter((a) => (a.projectNames ?? []).length > 0).length !== 1
                         ? 's'
                         : ''}
                     </span>

@@ -757,7 +757,9 @@ export function useMissionControl() {
   // NOTE (#6782): `extractJSON` is intentionally omitted from this dependency
   // array — it is a module-level pure function (not a closure over component
   // state), so it can never go stale. Adding it would be harmless but noisy.
-  }, [debouncedAssistantContent, state.phase, state.planningMissionId, planningMission?.status])
+  // #7113 — `planningMission?.messages?.length` triggers re-parse when a new
+  // message is appended but debounced content hasn't changed (final-token stall).
+  }, [debouncedAssistantContent, state.phase, state.planningMissionId, planningMission?.status, planningMission?.messages?.length])
 
   // Update streaming state from mission status
   //
@@ -1003,6 +1005,7 @@ Include real CNCF projects only. Consider dependencies between projects.`
     }
 
   const addProject = (project: PayloadProject) => {
+    bumpUserGeneration() // #7112 — invalidate in-flight AI streams on manual CRUD
     // Tag every explicit add as user-added so mergeProjects preserves it
     // across AI refinement cycles (#6465).
     const tagged: PayloadProject = { ...project, userAdded: true }
@@ -1014,18 +1017,21 @@ Include real CNCF projects only. Consider dependencies between projects.`
   }
 
   const removeProject = (name: string) => {
+    bumpUserGeneration() // #7112 — invalidate in-flight AI streams on manual CRUD
     setState((prev) => ({
       ...prev,
       projects: prev.projects.filter((p) => p.name !== name) }))
   }
 
   const updateProjectPriority = (name: string, priority: PayloadProject['priority']) => {
+      bumpUserGeneration() // #7112 — invalidate in-flight AI streams on manual CRUD
       setState((prev) => ({
         ...prev,
         projects: prev.projects.map((p) => (p.name === name ? { ...p, priority } : p)) }))
     }
 
   const replaceProject = (oldName: string, newProject: PayloadProject) => {
+      bumpUserGeneration() // #7112 — invalidate in-flight AI streams on manual CRUD
       setState((prev) => {
         // Preserve the original AI-suggested name for swap tracking
         const existing = prev.projects.find((p) => p.name === oldName)
@@ -1057,8 +1063,17 @@ Include real CNCF projects only. Consider dependencies between projects.`
   // ---------------------------------------------------------------------------
 
   const askAIForAssignments = (projects: PayloadProject[], clustersJson: string) => {
+      // #7111 — Synchronous ref guard (mirrors askAIForSuggestions). Two rapid
+      // clicks within one frame both pass the aiStreaming state check because
+      // that flag updates asynchronously via useEffect.
+      if (aiRequestInFlightRef.current) {
+        console.warn('[MissionControl] #7111 — askAIForAssignments already in flight (ref guard); ignoring')
+        return
+      }
+      aiRequestInFlightRef.current = true
       // #6406 — Early return if a planning request is already in flight.
       if (stateRef.current.aiStreaming) {
+        aiRequestInFlightRef.current = false
         console.warn('[MissionControl] issue 6406 — askAIForAssignments called while already streaming; ignoring')
         return
       }
@@ -1117,21 +1132,28 @@ Order phases by dependency — prerequisites first. Each phase completes before 
       // the parse effect can discard this response if the user has since
       // mutated state.
       lastDispatchedGenerationRef.current = userMutationGenerationRef.current
-      // If no planning mission exists (user went manual on Phase 1), start one
-      // so the AI assign button is not silently a no-op (#5502)
-      if (!missionId) {
-        missionId = startMission({
-          title: 'Mission Control Planning',
-          description: 'AI-assisted cluster assignment',
-          type: 'custom',
-          initialPrompt: prompt })
-        setState((prev) => ({
-          ...prev,
-          planningMissionId: missionId,
-          aiStreaming: true }))
-      } else {
-        sendMessage(missionId, prompt)
-        setState((prev) => ({ ...prev, aiStreaming: true }))
+      // #7117 — Wrap in try/catch (mirrors askAIForSuggestions #6811) so a
+      // synchronous throw doesn't leave aiStreaming stuck true.
+      try {
+        // If no planning mission exists (user went manual on Phase 1), start one
+        // so the AI assign button is not silently a no-op (#5502)
+        if (!missionId) {
+          missionId = startMission({
+            title: 'Mission Control Planning',
+            description: 'AI-assisted cluster assignment',
+            type: 'custom',
+            initialPrompt: prompt })
+          setState((prev) => ({
+            ...prev,
+            planningMissionId: missionId,
+            aiStreaming: true }))
+        } else {
+          sendMessage(missionId, prompt)
+          setState((prev) => ({ ...prev, aiStreaming: true }))
+        }
+      } catch (err) {
+        aiRequestInFlightRef.current = false
+        console.error('[MissionControl] #7117 — askAIForAssignments failed:', err)
       }
     }
 
