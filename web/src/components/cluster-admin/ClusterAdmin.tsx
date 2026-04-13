@@ -26,14 +26,15 @@ export function ClusterAdmin() {
 
   // Cluster-specific stats computed from the fast useClusters() cache.
   // nodes, warnings, pod_issues are provided by useUniversalStats (which
-  // reads from the shared cache lazily — no blocking multi-cluster fetch).
+  // shares a module-level cache with other dashboards — data is fetched
+  // once and reused, avoiding redundant multi-cluster requests).
   const getDashboardStatValue = (blockId: string): StatBlockValue => {
     switch (blockId) {
       case 'clusters': return { value: reachable.length, sublabel: 'reachable', isDemo: isDemoData }
       case 'healthy': return { value: healthy.length, sublabel: 'healthy', isDemo: isDemoData }
       case 'degraded': return { value: degraded.length, sublabel: 'degraded', isDemo: isDemoData }
       case 'offline': return { value: offline.length, sublabel: 'offline', isDemo: isDemoData }
-      default: return { value: '-' }
+      default: return { value: '-', isDemo: isDemoData }
     }
   }
 
