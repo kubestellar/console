@@ -128,9 +128,15 @@ describe('useCachedData', () => {
     mockUseCache.mockImplementation((opts: { initialData: unknown }) =>
       makeCacheResult(opts.initialData)
     )
-    // Default settledWithConcurrency: run tasks and return settled results
-    mockSettledWithConcurrency.mockImplementation(async (tasks: Array<() => Promise<unknown>>) => {
-      return Promise.allSettled(tasks.map(t => t()))
+    // Default settledWithConcurrency: run tasks, invoke onSettled for each, and return settled results
+    mockSettledWithConcurrency.mockImplementation(async (
+      tasks: Array<() => Promise<unknown>>,
+      _concurrency?: number,
+      onSettled?: (result: PromiseSettledResult<unknown>, index: number) => void,
+    ) => {
+      const results = await Promise.allSettled(tasks.map(t => t()))
+      results.forEach((result, index) => onSettled?.(result, index))
+      return results
     })
   })
 
@@ -6452,8 +6458,14 @@ describe('useCachedData', () => {
         .mockRejectedValue(new Error('network error'))
       )
       // Run tasks so failedCount gets incremented inside fetchFromAllClusters
-      mockSettledWithConcurrency.mockImplementation(async (tasks: Array<() => Promise<unknown>>) => {
-        return Promise.allSettled(tasks.map(t => t()))
+      mockSettledWithConcurrency.mockImplementation(async (
+        tasks: Array<() => Promise<unknown>>,
+        _concurrency?: number,
+        onSettled?: (result: PromiseSettledResult<unknown>, index: number) => void,
+      ) => {
+        const results = await Promise.allSettled(tasks.map(t => t()))
+        results.forEach((result, index) => onSettled?.(result, index))
+        return results
       })
 
       let capturedOpts: Record<string, unknown> = {}

@@ -166,8 +166,10 @@ async function fetchFromAllClusters<T>(
   // unreachable ones with long timeouts) to complete.
   const accumulated: T[] = []
   let failedCount = 0
+  let usedOnSettled = false
 
   const settled = await settledWithConcurrency(tasks, undefined, (result) => {
+    usedOnSettled = true
     if (result.status === 'fulfilled') {
       accumulated.push(...result.value)
       onProgress?.([...accumulated])
@@ -176,8 +178,9 @@ async function fetchFromAllClusters<T>(
     }
   })
 
-  // Final aggregation pass for callers that don't use onProgress
-  if (accumulated.length === 0) {
+  // Final aggregation pass — only needed when onSettled was not invoked
+  // (e.g. the mock didn't call it). Avoids double-counting failedCount.
+  if (!usedOnSettled) {
     for (const result of settled) {
       if (result.status === 'fulfilled') {
         accumulated.push(...result.value)

@@ -186,10 +186,18 @@ describe('useCachedISO27001Audit', () => {
       { name: 'c1', reachable: true },
       { name: 'c2', reachable: true },
     ]
-    mockSettledWithConcurrency.mockResolvedValue([
-      { status: 'fulfilled', value: [{ checkId: 'rbac-1', cluster: 'c1' }] },
-      { status: 'fulfilled', value: [{ checkId: 'rbac-1', cluster: 'c2' }] },
-    ])
+    const settledResults = [
+      { status: 'fulfilled' as const, value: [{ checkId: 'rbac-1', cluster: 'c1' }] },
+      { status: 'fulfilled' as const, value: [{ checkId: 'rbac-1', cluster: 'c2' }] },
+    ]
+    mockSettledWithConcurrency.mockImplementation(async (
+      _tasks: unknown,
+      _concurrency?: number,
+      onSettled?: (result: PromiseSettledResult<unknown>, index: number) => void,
+    ) => {
+      settledResults.forEach((r, i) => onSettled?.(r, i))
+      return settledResults
+    })
 
     renderHook(() => useCachedISO27001Audit())
     const config = mockUseCache.mock.calls[0][0]
@@ -204,10 +212,18 @@ describe('useCachedISO27001Audit', () => {
       { name: 'c1', reachable: true },
       { name: 'c2', reachable: true },
     ]
-    mockSettledWithConcurrency.mockResolvedValue([
+    const settledResults: PromiseSettledResult<unknown>[] = [
       { status: 'fulfilled', value: [{ checkId: 'rbac-1', cluster: 'c1' }] },
       { status: 'rejected', reason: new Error('fail') },
-    ])
+    ]
+    mockSettledWithConcurrency.mockImplementation(async (
+      _tasks: unknown,
+      _concurrency?: number,
+      onSettled?: (result: PromiseSettledResult<unknown>, index: number) => void,
+    ) => {
+      settledResults.forEach((r, i) => onSettled?.(r, i))
+      return settledResults
+    })
 
     renderHook(() => useCachedISO27001Audit())
     const config = mockUseCache.mock.calls[0][0]
@@ -219,9 +235,17 @@ describe('useCachedISO27001Audit', () => {
 
   it('fetcher throws when all cluster audits return empty results', async () => {
     mockClusterCacheRef.clusters = [{ name: 'c1', reachable: true }]
-    mockSettledWithConcurrency.mockResolvedValue([
-      { status: 'fulfilled', value: [] },
-    ])
+    const settledResults = [
+      { status: 'fulfilled' as const, value: [] },
+    ]
+    mockSettledWithConcurrency.mockImplementation(async (
+      _tasks: unknown,
+      _concurrency?: number,
+      onSettled?: (result: PromiseSettledResult<unknown>, index: number) => void,
+    ) => {
+      settledResults.forEach((r, i) => onSettled?.(r, i))
+      return settledResults
+    })
 
     renderHook(() => useCachedISO27001Audit())
     const config = mockUseCache.mock.calls[0][0]
@@ -236,8 +260,13 @@ describe('useCachedISO27001Audit', () => {
       { name: 'reachable', reachable: true },
       { name: 'unreachable', reachable: false },
     ]
-    mockSettledWithConcurrency.mockImplementation(async (tasks: Array<() => Promise<unknown>>) => {
+    mockSettledWithConcurrency.mockImplementation(async (
+      tasks: Array<() => Promise<unknown>>,
+      _concurrency?: number,
+      onSettled?: (result: PromiseSettledResult<unknown>, index: number) => void,
+    ) => {
       const results = await Promise.allSettled(tasks.map(t => t()))
+      results.forEach((result, index) => onSettled?.(result, index))
       return results
     })
     mockKubectlProxy.exec.mockResolvedValue(kubectlError())
@@ -258,8 +287,13 @@ describe('useCachedISO27001Audit', () => {
     mockClusterCacheRef.clusters = [
       { name: 'pending', reachable: undefined },
     ]
-    mockSettledWithConcurrency.mockImplementation(async (tasks: Array<() => Promise<unknown>>) => {
+    mockSettledWithConcurrency.mockImplementation(async (
+      tasks: Array<() => Promise<unknown>>,
+      _concurrency?: number,
+      onSettled?: (result: PromiseSettledResult<unknown>, index: number) => void,
+    ) => {
       const results = await Promise.allSettled(tasks.map(t => t()))
+      results.forEach((result, index) => onSettled?.(result, index))
       return results
     })
     mockKubectlProxy.exec.mockResolvedValue(kubectlError())
@@ -279,8 +313,13 @@ describe('useCachedISO27001Audit', () => {
       { name: 'short-name', reachable: true },
       { name: 'default/api-fmaas-vllm-d-server:6443/admin', reachable: true },
     ]
-    mockSettledWithConcurrency.mockImplementation(async (tasks: Array<() => Promise<unknown>>) => {
+    mockSettledWithConcurrency.mockImplementation(async (
+      tasks: Array<() => Promise<unknown>>,
+      _concurrency?: number,
+      onSettled?: (result: PromiseSettledResult<unknown>, index: number) => void,
+    ) => {
       const results = await Promise.allSettled(tasks.map(t => t()))
+      results.forEach((result, index) => onSettled?.(result, index))
       return results
     })
     mockKubectlProxy.exec.mockResolvedValue(kubectlError())
@@ -300,8 +339,14 @@ describe('useCachedISO27001Audit', () => {
     mockClusterCacheRef.clusters = [{ name: 'c1', reachable: true }]
 
     // Execute through the real task runner
-    mockSettledWithConcurrency.mockImplementation(async (tasks: Array<() => Promise<unknown>>) => {
-      return Promise.allSettled(tasks.map(t => t()))
+    mockSettledWithConcurrency.mockImplementation(async (
+      tasks: Array<() => Promise<unknown>>,
+      _concurrency?: number,
+      onSettled?: (result: PromiseSettledResult<unknown>, index: number) => void,
+    ) => {
+      const results = await Promise.allSettled(tasks.map(t => t()))
+      results.forEach((result, index) => onSettled?.(result, index))
+      return results
     })
 
     // CRBs: only kube-system cluster-admin
@@ -340,8 +385,14 @@ describe('useCachedISO27001Audit', () => {
 
   it('fetcher produces rbac-1 fail when cluster-admin exists outside kube-system', async () => {
     mockClusterCacheRef.clusters = [{ name: 'c1', reachable: true }]
-    mockSettledWithConcurrency.mockImplementation(async (tasks: Array<() => Promise<unknown>>) => {
-      return Promise.allSettled(tasks.map(t => t()))
+    mockSettledWithConcurrency.mockImplementation(async (
+      tasks: Array<() => Promise<unknown>>,
+      _concurrency?: number,
+      onSettled?: (result: PromiseSettledResult<unknown>, index: number) => void,
+    ) => {
+      const results = await Promise.allSettled(tasks.map(t => t()))
+      results.forEach((result, index) => onSettled?.(result, index))
+      return results
     })
 
     mockKubectlProxy.exec.mockImplementation(async (args: string[]) => {
@@ -374,8 +425,14 @@ describe('useCachedISO27001Audit', () => {
 
   it('fetcher produces rbac-3 fail when > 2 wildcard ClusterRoles exist', async () => {
     mockClusterCacheRef.clusters = [{ name: 'c1', reachable: true }]
-    mockSettledWithConcurrency.mockImplementation(async (tasks: Array<() => Promise<unknown>>) => {
-      return Promise.allSettled(tasks.map(t => t()))
+    mockSettledWithConcurrency.mockImplementation(async (
+      tasks: Array<() => Promise<unknown>>,
+      _concurrency?: number,
+      onSettled?: (result: PromiseSettledResult<unknown>, index: number) => void,
+    ) => {
+      const results = await Promise.allSettled(tasks.map(t => t()))
+      results.forEach((result, index) => onSettled?.(result, index))
+      return results
     })
 
     const wildcardRole = { rules: [{ verbs: ['*'], resources: ['pods'] }] }
@@ -404,8 +461,14 @@ describe('useCachedISO27001Audit', () => {
 
   it('fetcher produces pod-2 fail for privileged containers', async () => {
     mockClusterCacheRef.clusters = [{ name: 'c1', reachable: true }]
-    mockSettledWithConcurrency.mockImplementation(async (tasks: Array<() => Promise<unknown>>) => {
-      return Promise.allSettled(tasks.map(t => t()))
+    mockSettledWithConcurrency.mockImplementation(async (
+      tasks: Array<() => Promise<unknown>>,
+      _concurrency?: number,
+      onSettled?: (result: PromiseSettledResult<unknown>, index: number) => void,
+    ) => {
+      const results = await Promise.allSettled(tasks.map(t => t()))
+      results.forEach((result, index) => onSettled?.(result, index))
+      return results
     })
 
     const privilegedPod = {
@@ -436,8 +499,14 @@ describe('useCachedISO27001Audit', () => {
 
   it('fetcher produces img-4 warning for :latest images', async () => {
     mockClusterCacheRef.clusters = [{ name: 'c1', reachable: true }]
-    mockSettledWithConcurrency.mockImplementation(async (tasks: Array<() => Promise<unknown>>) => {
-      return Promise.allSettled(tasks.map(t => t()))
+    mockSettledWithConcurrency.mockImplementation(async (
+      tasks: Array<() => Promise<unknown>>,
+      _concurrency?: number,
+      onSettled?: (result: PromiseSettledResult<unknown>, index: number) => void,
+    ) => {
+      const results = await Promise.allSettled(tasks.map(t => t()))
+      results.forEach((result, index) => onSettled?.(result, index))
+      return results
     })
 
     const latestPod = {
@@ -468,8 +537,14 @@ describe('useCachedISO27001Audit', () => {
 
   it('fetcher detects untagged images (no colon in image ref)', async () => {
     mockClusterCacheRef.clusters = [{ name: 'c1', reachable: true }]
-    mockSettledWithConcurrency.mockImplementation(async (tasks: Array<() => Promise<unknown>>) => {
-      return Promise.allSettled(tasks.map(t => t()))
+    mockSettledWithConcurrency.mockImplementation(async (
+      tasks: Array<() => Promise<unknown>>,
+      _concurrency?: number,
+      onSettled?: (result: PromiseSettledResult<unknown>, index: number) => void,
+    ) => {
+      const results = await Promise.allSettled(tasks.map(t => t()))
+      results.forEach((result, index) => onSettled?.(result, index))
+      return results
     })
 
     const untaggedPod = {
@@ -499,8 +574,14 @@ describe('useCachedISO27001Audit', () => {
 
   it('fetcher produces node-2 warning for hostNetwork pods', async () => {
     mockClusterCacheRef.clusters = [{ name: 'c1', reachable: true }]
-    mockSettledWithConcurrency.mockImplementation(async (tasks: Array<() => Promise<unknown>>) => {
-      return Promise.allSettled(tasks.map(t => t()))
+    mockSettledWithConcurrency.mockImplementation(async (
+      tasks: Array<() => Promise<unknown>>,
+      _concurrency?: number,
+      onSettled?: (result: PromiseSettledResult<unknown>, index: number) => void,
+    ) => {
+      const results = await Promise.allSettled(tasks.map(t => t()))
+      results.forEach((result, index) => onSettled?.(result, index))
+      return results
     })
 
     const hostNetPod = {
@@ -532,8 +613,14 @@ describe('useCachedISO27001Audit', () => {
 
   it('fetcher produces pod-5 fail for hostPath volumes', async () => {
     mockClusterCacheRef.clusters = [{ name: 'c1', reachable: true }]
-    mockSettledWithConcurrency.mockImplementation(async (tasks: Array<() => Promise<unknown>>) => {
-      return Promise.allSettled(tasks.map(t => t()))
+    mockSettledWithConcurrency.mockImplementation(async (
+      tasks: Array<() => Promise<unknown>>,
+      _concurrency?: number,
+      onSettled?: (result: PromiseSettledResult<unknown>, index: number) => void,
+    ) => {
+      const results = await Promise.allSettled(tasks.map(t => t()))
+      results.forEach((result, index) => onSettled?.(result, index))
+      return results
     })
 
     const hostPathPod = {
@@ -568,8 +655,14 @@ describe('useCachedISO27001Audit', () => {
 
   it('fetcher produces net-1 pass when all namespaces have NetworkPolicies', async () => {
     mockClusterCacheRef.clusters = [{ name: 'c1', reachable: true }]
-    mockSettledWithConcurrency.mockImplementation(async (tasks: Array<() => Promise<unknown>>) => {
-      return Promise.allSettled(tasks.map(t => t()))
+    mockSettledWithConcurrency.mockImplementation(async (
+      tasks: Array<() => Promise<unknown>>,
+      _concurrency?: number,
+      onSettled?: (result: PromiseSettledResult<unknown>, index: number) => void,
+    ) => {
+      const results = await Promise.allSettled(tasks.map(t => t()))
+      results.forEach((result, index) => onSettled?.(result, index))
+      return results
     })
 
     mockKubectlProxy.exec.mockImplementation(async (args: string[]) => {
@@ -596,8 +689,14 @@ describe('useCachedISO27001Audit', () => {
 
   it('fetcher produces net-1 fail when namespaces are missing NetworkPolicies', async () => {
     mockClusterCacheRef.clusters = [{ name: 'c1', reachable: true }]
-    mockSettledWithConcurrency.mockImplementation(async (tasks: Array<() => Promise<unknown>>) => {
-      return Promise.allSettled(tasks.map(t => t()))
+    mockSettledWithConcurrency.mockImplementation(async (
+      tasks: Array<() => Promise<unknown>>,
+      _concurrency?: number,
+      onSettled?: (result: PromiseSettledResult<unknown>, index: number) => void,
+    ) => {
+      const results = await Promise.allSettled(tasks.map(t => t()))
+      results.forEach((result, index) => onSettled?.(result, index))
+      return results
     })
 
     mockKubectlProxy.exec.mockImplementation(async (args: string[]) => {
@@ -622,8 +721,14 @@ describe('useCachedISO27001Audit', () => {
 
   it('fetcher skips kube-* namespaces from network policy coverage check', async () => {
     mockClusterCacheRef.clusters = [{ name: 'c1', reachable: true }]
-    mockSettledWithConcurrency.mockImplementation(async (tasks: Array<() => Promise<unknown>>) => {
-      return Promise.allSettled(tasks.map(t => t()))
+    mockSettledWithConcurrency.mockImplementation(async (
+      tasks: Array<() => Promise<unknown>>,
+      _concurrency?: number,
+      onSettled?: (result: PromiseSettledResult<unknown>, index: number) => void,
+    ) => {
+      const results = await Promise.allSettled(tasks.map(t => t()))
+      results.forEach((result, index) => onSettled?.(result, index))
+      return results
     })
 
     mockKubectlProxy.exec.mockImplementation(async (args: string[]) => {
@@ -654,8 +759,14 @@ describe('useCachedISO27001Audit', () => {
 
   it('fetcher produces sec-2 warning when ConfigMap contains suspicious data', async () => {
     mockClusterCacheRef.clusters = [{ name: 'c1', reachable: true }]
-    mockSettledWithConcurrency.mockImplementation(async (tasks: Array<() => Promise<unknown>>) => {
-      return Promise.allSettled(tasks.map(t => t()))
+    mockSettledWithConcurrency.mockImplementation(async (
+      tasks: Array<() => Promise<unknown>>,
+      _concurrency?: number,
+      onSettled?: (result: PromiseSettledResult<unknown>, index: number) => void,
+    ) => {
+      const results = await Promise.allSettled(tasks.map(t => t()))
+      results.forEach((result, index) => onSettled?.(result, index))
+      return results
     })
 
     mockKubectlProxy.exec.mockImplementation(async (args: string[]) => {
@@ -684,8 +795,14 @@ describe('useCachedISO27001Audit', () => {
 
   it('fetcher produces sec-2 pass when ConfigMap values are clean', async () => {
     mockClusterCacheRef.clusters = [{ name: 'c1', reachable: true }]
-    mockSettledWithConcurrency.mockImplementation(async (tasks: Array<() => Promise<unknown>>) => {
-      return Promise.allSettled(tasks.map(t => t()))
+    mockSettledWithConcurrency.mockImplementation(async (
+      tasks: Array<() => Promise<unknown>>,
+      _concurrency?: number,
+      onSettled?: (result: PromiseSettledResult<unknown>, index: number) => void,
+    ) => {
+      const results = await Promise.allSettled(tasks.map(t => t()))
+      results.forEach((result, index) => onSettled?.(result, index))
+      return results
     })
 
     mockKubectlProxy.exec.mockImplementation(async (args: string[]) => {
@@ -714,8 +831,14 @@ describe('useCachedISO27001Audit', () => {
 
   it('fetcher produces pod-3 warning for 1-3 pods missing runAsNonRoot', async () => {
     mockClusterCacheRef.clusters = [{ name: 'c1', reachable: true }]
-    mockSettledWithConcurrency.mockImplementation(async (tasks: Array<() => Promise<unknown>>) => {
-      return Promise.allSettled(tasks.map(t => t()))
+    mockSettledWithConcurrency.mockImplementation(async (
+      tasks: Array<() => Promise<unknown>>,
+      _concurrency?: number,
+      onSettled?: (result: PromiseSettledResult<unknown>, index: number) => void,
+    ) => {
+      const results = await Promise.allSettled(tasks.map(t => t()))
+      results.forEach((result, index) => onSettled?.(result, index))
+      return results
     })
 
     const podMissingRunAs = {
@@ -744,8 +867,14 @@ describe('useCachedISO27001Audit', () => {
 
   it('fetcher skips system namespace pods (kube-*, local-path-storage)', async () => {
     mockClusterCacheRef.clusters = [{ name: 'c1', reachable: true }]
-    mockSettledWithConcurrency.mockImplementation(async (tasks: Array<() => Promise<unknown>>) => {
-      return Promise.allSettled(tasks.map(t => t()))
+    mockSettledWithConcurrency.mockImplementation(async (
+      tasks: Array<() => Promise<unknown>>,
+      _concurrency?: number,
+      onSettled?: (result: PromiseSettledResult<unknown>, index: number) => void,
+    ) => {
+      const results = await Promise.allSettled(tasks.map(t => t()))
+      results.forEach((result, index) => onSettled?.(result, index))
+      return results
     })
 
     const systemPod = {
@@ -785,8 +914,14 @@ describe('useCachedISO27001Audit', () => {
       { name: 'c1', reachable: true },
       { name: 'c2', reachable: true },
     ]
-    mockSettledWithConcurrency.mockImplementation(async (tasks: Array<() => Promise<unknown>>) => {
-      return Promise.allSettled(tasks.map(t => t()))
+    mockSettledWithConcurrency.mockImplementation(async (
+      tasks: Array<() => Promise<unknown>>,
+      _concurrency?: number,
+      onSettled?: (result: PromiseSettledResult<unknown>, index: number) => void,
+    ) => {
+      const results = await Promise.allSettled(tasks.map(t => t()))
+      results.forEach((result, index) => onSettled?.(result, index))
+      return results
     })
     mockKubectlProxy.exec.mockResolvedValue(kubectlError())
 
@@ -803,8 +938,14 @@ describe('useCachedISO27001Audit', () => {
 
   it('fetcher gracefully handles cluster audit failure (returns [] for that cluster)', async () => {
     mockClusterCacheRef.clusters = [{ name: 'c1', reachable: true }]
-    mockSettledWithConcurrency.mockImplementation(async (tasks: Array<() => Promise<unknown>>) => {
-      return Promise.allSettled(tasks.map(t => t()))
+    mockSettledWithConcurrency.mockImplementation(async (
+      tasks: Array<() => Promise<unknown>>,
+      _concurrency?: number,
+      onSettled?: (result: PromiseSettledResult<unknown>, index: number) => void,
+    ) => {
+      const results = await Promise.allSettled(tasks.map(t => t()))
+      results.forEach((result, index) => onSettled?.(result, index))
+      return results
     })
 
     // Make kubectl throw an unexpected error
@@ -820,8 +961,14 @@ describe('useCachedISO27001Audit', () => {
 
   it('fetcher handles malformed JSON from kubectl gracefully', async () => {
     mockClusterCacheRef.clusters = [{ name: 'c1', reachable: true }]
-    mockSettledWithConcurrency.mockImplementation(async (tasks: Array<() => Promise<unknown>>) => {
-      return Promise.allSettled(tasks.map(t => t()))
+    mockSettledWithConcurrency.mockImplementation(async (
+      tasks: Array<() => Promise<unknown>>,
+      _concurrency?: number,
+      onSettled?: (result: PromiseSettledResult<unknown>, index: number) => void,
+    ) => {
+      const results = await Promise.allSettled(tasks.map(t => t()))
+      results.forEach((result, index) => onSettled?.(result, index))
+      return results
     })
 
     // Return valid exitCode but invalid JSON
@@ -838,8 +985,14 @@ describe('useCachedISO27001Audit', () => {
 
   it('fetcher uses cluster name as context fallback when context is empty', async () => {
     mockClusterCacheRef.clusters = [{ name: 'my-cluster', reachable: true }]
-    mockSettledWithConcurrency.mockImplementation(async (tasks: Array<() => Promise<unknown>>) => {
-      return Promise.allSettled(tasks.map(t => t()))
+    mockSettledWithConcurrency.mockImplementation(async (
+      tasks: Array<() => Promise<unknown>>,
+      _concurrency?: number,
+      onSettled?: (result: PromiseSettledResult<unknown>, index: number) => void,
+    ) => {
+      const results = await Promise.allSettled(tasks.map(t => t()))
+      results.forEach((result, index) => onSettled?.(result, index))
+      return results
     })
     mockKubectlProxy.exec.mockResolvedValue(kubectlError())
 
@@ -857,8 +1010,14 @@ describe('useCachedISO27001Audit', () => {
 
   it('fetcher uses explicit context when provided by cluster cache', async () => {
     mockClusterCacheRef.clusters = [{ name: 'alias', context: 'real-ctx', reachable: true }]
-    mockSettledWithConcurrency.mockImplementation(async (tasks: Array<() => Promise<unknown>>) => {
-      return Promise.allSettled(tasks.map(t => t()))
+    mockSettledWithConcurrency.mockImplementation(async (
+      tasks: Array<() => Promise<unknown>>,
+      _concurrency?: number,
+      onSettled?: (result: PromiseSettledResult<unknown>, index: number) => void,
+    ) => {
+      const results = await Promise.allSettled(tasks.map(t => t()))
+      results.forEach((result, index) => onSettled?.(result, index))
+      return results
     })
     mockKubectlProxy.exec.mockResolvedValue(kubectlError())
 

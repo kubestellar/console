@@ -132,11 +132,16 @@ describe('useCachedLLMd', () => {
       makeCacheResult(opts.initialData),
     )
 
-    // Default settledWithConcurrency: run tasks and return settled results
-    mockSettledWithConcurrency.mockImplementation(
-      async (tasks: Array<() => Promise<unknown>>) =>
-        Promise.allSettled(tasks.map(t => t())),
-    )
+    // Default settledWithConcurrency: run tasks, invoke onSettled for each, and return settled results
+    mockSettledWithConcurrency.mockImplementation(async (
+      tasks: Array<() => Promise<unknown>>,
+      _concurrency?: number,
+      onSettled?: (result: PromiseSettledResult<unknown>, index: number) => void,
+    ) => {
+      const results = await Promise.allSettled(tasks.map(t => t()))
+      results.forEach((result, index) => onSettled?.(result, index))
+      return results
+    })
   })
 
   afterEach(() => {
