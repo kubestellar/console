@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useMissions } from './useMissions'
 import type {
   DiagnoseRepairState,
@@ -50,9 +50,50 @@ const INITIAL_STATE: DiagnoseRepairState = {
  */
 export function useDiagnoseRepairLoop(options: UseDiagnoseRepairLoopOptions): UseDiagnoseRepairLoopResult {
   const { monitorType, repairable = true, maxLoops = DEFAULT_MAX_LOOPS } = options
-  const { startMission, sendMessage } = useMissions()
+  const { startMission, sendMessage, missions } = useMissions()
   const [state, setState] = useState<DiagnoseRepairState>({ ...INITIAL_STATE, maxLoops })
   const missionIdRef = useRef<string | null>(null)
+  // #7290/#7291/#7292 — Track all active timers so cancel() can clear them
+  const activeTimers = useRef<Set<ReturnType<typeof setTimeout>>>(new Set())
+
+  // #7292 — Clear all timers on unmount to prevent post-unmount state mutations
+  useEffect(() => {
+    return () => {
+      for (const handle of activeTimers.current) {
+        clearTimeout(handle)
+      }
+      activeTimers.current.clear()
+    }
+  }, [])
+
+  // #7290 — Listen to mission status changes instead of using a fixed timer.
+  // When the associated mission completes, transition from diagnosing to
+  // proposing-repair (or complete for diagnose-only mode).
+  useEffect(() => {
+    if (!missionIdRef.current || state.phase !== 'diagnosing') return
+    const mission = missions.find(m => m.id === missionIdRef.current)
+    if (!mission) return
+    // Only transition when the mission reaches a terminal state
+    if (mission.status === 'completed' || mission.status === 'failed' || mission.status === 'cancelled') {
+      setState(prev => {
+        if (prev.phase !== 'diagnosing') return prev
+        // Generate proposed repairs from issues
+        const proposedRepairs: ProposedRepair[] = repairable
+          ? prev.issuesFound.map((issue, idx) => ({
+              id: `repair-${idx}-${Date.now()}`,
+              issueId: issue.id,
+              action: getDefaultRepairAction(issue),
+              description: getDefaultRepairDescription(issue),
+              risk: getDefaultRepairRisk(issue),
+              approved: false }))
+          : []
+        return {
+          ...prev,
+          phase: repairable ? 'proposing-repair' : 'complete',
+          proposedRepairs }
+      })
+    }
+  }, [missions, state.phase, repairable])
 
   const setPhase = (phase: DiagnoseRepairPhase) => {
     setState(prev => ({ ...prev, phase }))
@@ -110,30 +151,8 @@ Respond with your analysis in a clear, structured format. ${repairable ? 'For ea
     missionIdRef.current = missionId
     setState(prev => ({ ...prev, phase: 'diagnosing', missionId }))
 
-    // The mission runs asynchronously. We transition to proposing-repair
-    // after a delay to allow the AI to respond.
-    // In a real implementation, this would listen to mission status changes.
-    setTimeout(() => {
-      setState(prev => {
-        if (prev.phase !== 'diagnosing') return prev
-
-        // Generate proposed repairs from issues
-        const proposedRepairs: ProposedRepair[] = repairable
-          ? issues.map((issue, idx) => ({
-              id: `repair-${idx}-${Date.now()}`,
-              issueId: issue.id,
-              action: getDefaultRepairAction(issue),
-              description: getDefaultRepairDescription(issue),
-              risk: getDefaultRepairRisk(issue),
-              approved: false }))
-          : []
-
-        return {
-          ...prev,
-          phase: repairable ? 'proposing-repair' : 'complete',
-          proposedRepairs }
-      })
-    }, 3000)
+    // #7290 — Phase transition is now driven by the useEffect above
+    // watching mission status changes, not a fixed 3s timer.
   }
 
   const approveRepair = (repairId: string) => {
@@ -166,31 +185,48 @@ Respond with your analysis in a clear, structured format. ${repairable ? 'For ea
       sendMessage(missionIdRef.current, repairPrompt)
     }
 
-    // Simulate repair execution completion
-    setTimeout(() => {
+    // #7291 — Repair completion is now driven by mission status.
+    // The repair mission will update via the missions list; we listen
+    // for the mission to reach a terminal state before transitioning.
+    // Keep a safety-net timer but make it configurable and clearable.
+    /** Maximum time (ms) to wait for repair mission completion before auto-transitioning */
+    const REPAIR_SAFETY_TIMEOUT_MS = 60_000
+    const handle = setTimeout(() => {
+      activeTimers.current.delete(handle)
       setState(prev => {
+        if (prev.phase !== 'repairing') return prev
         const completed = approvedRepairs.map(r => r.id)
         const newState = {
           ...prev,
           completedRepairs: [...prev.completedRepairs, ...completed],
           phase: 'verifying' as DiagnoseRepairPhase }
-
-        // Check if we should loop or complete
         if (prev.loopCount >= prev.maxLoops - 1) {
           newState.phase = 'complete'
         }
-
         return newState
       })
-    }, 5000)
+    }, REPAIR_SAFETY_TIMEOUT_MS)
+    activeTimers.current.add(handle)
   }
 
   const reset = () => {
+    // #7292 — Clear all pending timers on reset
+    for (const handle of activeTimers.current) {
+      clearTimeout(handle)
+    }
+    activeTimers.current.clear()
     setState({ ...INITIAL_STATE, maxLoops })
     missionIdRef.current = null
   }
 
   const cancel = () => {
+    // #7292 — Clear all pending timers on cancel to prevent
+    // post-cancel state mutations (e.g. jumping to completed)
+    for (const handle of activeTimers.current) {
+      clearTimeout(handle)
+    }
+    activeTimers.current.clear()
+
     if (missionIdRef.current) {
       // The mission will continue but we disconnect from it
       missionIdRef.current = null

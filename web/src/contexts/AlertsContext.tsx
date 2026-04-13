@@ -971,10 +971,21 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  // #7297 — In-flight diagnosis guard: prevents duplicate missions when
+  // the user rapidly clicks "Analyze" for the same alert.
+  const diagnosisInFlightRef = useRef<Set<string>>(new Set())
+
   // Run AI diagnosis on an alert (#6915 — include runbook evidence in prompt)
   const runAIDiagnosis = async (alertId: string) => {
       const alert = alerts.find(a => a.id === alertId)
       if (!alert) return null
+
+      // #7297 — Prevent duplicate diagnosis missions for the same alert
+      if (diagnosisInFlightRef.current.has(alertId)) {
+        console.debug(`[Alerts] Diagnosis already in-flight for alert ${alertId}, skipping`)
+        return null
+      }
+      diagnosisInFlightRef.current.add(alertId)
 
       // Look up matching runbook for this alert condition type
       const rule = rules.find(r => r.id === alert.ruleId)
@@ -1006,8 +1017,23 @@ Details: ${JSON.stringify(alert.details, null, 2)}`
             runbookEvidence = `\n\n--- Runbook Evidence (${runbook.title}) ---\n${result.enrichedPrompt}`
             console.debug(`Runbook "${runbook.title}" gathered ${result.stepResults.length} evidence steps`)
           }
-        } catch {
-          // Silent failure - runbook is best-effort enhancement
+          // #7289 — Write runbook results back to the alert so they persist
+          // after the diagnosis completes, not just in the AI prompt.
+          if (result.stepResults.length > 0) {
+            setAlerts(prev =>
+              prev.map(a =>
+                a.id === alertId
+                  ? { ...a, details: { ...a.details, runbookResults: result.stepResults } }
+                  : a
+              )
+            )
+          }
+        } catch (err) {
+          // #7287 — Surface runbook failures in the diagnosis so the user
+          // knows evidence collection failed, rather than silently proceeding.
+          const errorMsg = err instanceof Error ? err.message : 'Unknown runbook error'
+          runbookEvidence = `\n\n--- Runbook Evidence (${runbook.title}) ---\nEvidence collection failed: ${errorMsg}`
+          console.warn(`[Alerts] Runbook "${runbook.title}" failed for alert ${alertId}:`, errorMsg)
         }
       }
 
@@ -1044,6 +1070,9 @@ Please provide:
             : a
         )
       )
+
+      // #7297 — Clear the in-flight guard once the mission is started
+      diagnosisInFlightRef.current.delete(alertId)
 
       return missionId
     }
