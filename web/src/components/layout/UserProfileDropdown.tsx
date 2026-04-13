@@ -127,7 +127,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
       {/* Trigger button */}
       <button
         onClick={toggleDropdown}
-        className="flex items-center gap-2 pl-3 border-l border-border hover:bg-secondary rounded-lg p-1.5 h-9 transition-colors"
+        className="flex items-center gap-2 border-l border-border hover:bg-secondary rounded-lg px-3 py-1.5 h-9 transition-colors"
       >
         {user.avatar_url ? (
           <img
