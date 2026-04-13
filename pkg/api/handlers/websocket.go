@@ -42,13 +42,21 @@ type Client struct {
 	userID    uuid.UUID
 	send      chan []byte
 	closeOnce sync.Once // #6584 — guard against double Close on the underlying conn
+	// #7306 — writeMu serializes conn.WriteMessage and conn.Close so that
+	// DisconnectUser's closeConn() cannot race with the writer goroutine's
+	// WriteMessage call. gorilla/websocket documents that Close must not be
+	// called concurrently with Write.
+	writeMu sync.Mutex
 }
 
 // closeConn closes the underlying WebSocket connection exactly once (#6584).
 // Safe to call from any goroutine (DisconnectUser, writer, reader defer).
+// #7306 — Acquires writeMu to prevent racing with a concurrent WriteMessage.
 func (cl *Client) closeConn() {
 	cl.closeOnce.Do(func() {
+		cl.writeMu.Lock()
 		_ = cl.conn.Close()
+		cl.writeMu.Unlock()
 	})
 }
 
@@ -492,16 +500,26 @@ func (h *Hub) HandleConnection(conn *websocket.Conn) {
 				// #7041 — nil sentinel from DisconnectUser: send a close frame
 				// from the writer goroutine (single-writer semantics) and exit.
 				if msg == nil {
+					client.writeMu.Lock()
 					_ = conn.WriteMessage(websocket.CloseMessage,
 						websocket.FormatCloseMessage(websocket.CloseNormalClosure, "session invalidated"))
+					client.writeMu.Unlock()
 					return
 				}
-				if err := conn.WriteMessage(websocket.TextMessage, msg); err != nil {
+				// #7306 — Hold writeMu during WriteMessage so closeConn() cannot
+				// race with an in-flight write.
+				client.writeMu.Lock()
+				err := conn.WriteMessage(websocket.TextMessage, msg)
+				client.writeMu.Unlock()
+				if err != nil {
 					slog.Error("[WebSocket] write error", "error", err)
 					return
 				}
 			case <-pingTicker.C:
-				if err := conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				client.writeMu.Lock()
+				err := conn.WriteMessage(websocket.PingMessage, nil)
+				client.writeMu.Unlock()
+				if err != nil {
 					return
 				}
 			}

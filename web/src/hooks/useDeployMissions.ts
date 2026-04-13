@@ -303,7 +303,21 @@ export function useDeployMissions() {
 
   // Poll deploy status for missions using ref to avoid re-render loop
   useEffect(() => {
+    // #7307 — Guard against concurrent poll() calls. The grace-period repoll
+    // timeout can fire while a regular setInterval poll is already running,
+    // causing two concurrent bursts that exceed DEPLOY_POLL_MAX_CONCURRENCY.
+    let pollInProgress = false
+
     const poll = async () => {
+      if (pollInProgress) return
+      pollInProgress = true
+      try {
+        await pollInner()
+      } finally {
+        pollInProgress = false
+      }
+    }
+    const pollInner = async () => {
       const current = missionsRef.current
       if (current.length === 0) return
       // #7142 — If every mission is already terminal, skip the poll and
@@ -708,7 +722,7 @@ export function useDeployMissions() {
           pollRef.current = undefined
         }
       }
-    }
+    } // end pollInner
 
     // Delay before the first poll fires after mount. Kept small so the UI
     // updates quickly, but non-zero so the subscribe effect above has a

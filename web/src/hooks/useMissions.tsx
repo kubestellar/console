@@ -645,6 +645,9 @@ export function MissionProvider({ children }: { children: ReactNode }) {
   const wsSend = (data: string, onFailure?: () => void): void => {
     let retries = 0
     const trySend = () => {
+      // #7305 — Guard against sending on a closed socket after unmount.
+      // A retry timer can fire across the unmount boundary.
+      if (unmountedRef.current) return
       if (wsRef.current?.readyState === WebSocket.OPEN) {
         wsRef.current.send(data)
         return
@@ -805,7 +808,15 @@ export function MissionProvider({ children }: { children: ReactNode }) {
               merged.push(remote)
             }
           }
-          return merged
+          // #7309 — Enforce the completed-missions cap after merge so cross-tab
+          // syncing cannot re-introduce a mission that was trimmed by the other tab.
+          // Keep all active missions unconditionally; only trim completed/failed.
+          const active = merged.filter(m => !INACTIVE_MISSION_STATUSES.has(m.status))
+          const inactive = merged
+            .filter(m => INACTIVE_MISSION_STATUSES.has(m.status))
+            .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+            .slice(0, MAX_COMPLETED_MISSIONS)
+          return [...active, ...inactive]
         })
         // #7105 — Reconcile derived state against the reloaded mission list.
         const reloadedIds = new Set(reloaded.map(m => m.id))
@@ -1636,8 +1647,10 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
     // a different ID format (cancel-*) so it won't be in pendingRequests. Match
     // the session ID from the payload instead.
     if (message.type === 'cancel_ack' || message.type === 'cancel_confirmed') {
-      const payload = message.payload as { sessionId?: string; success?: boolean; message?: string }
-      const cancelledMissionId = payload.sessionId
+      const payload = message.payload as { sessionId?: string; id?: string; success?: boolean; message?: string }
+      // #7310 — Backend may send `id` instead of `sessionId` in the cancel_ack
+      // payload. Check both fields to avoid a permanent cancelling state lock.
+      const cancelledMissionId = payload.sessionId || payload.id
       if (cancelledMissionId) {
         if (payload.success === false) {
           finalizeCancellation(cancelledMissionId, payload.message || 'Mission cancellation failed — the backend reported an error.')
@@ -2316,6 +2329,11 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
      
   }
 
+  // #7304 — Track missions currently being sent to the agent to prevent
+  // duplicate WS requests from double-clicks or rapid keyboard input
+  // during the preflight resolution window.
+  const executingMissions = useRef<Set<string>>(new Set())
+
   /**
    * Internal: send mission to agent after preflight passes.
    * Extracted from startMission to allow reuse from retryPreflight.
@@ -2334,6 +2352,14 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
       finalizeCancellation(missionId, 'Mission cancelled by user before execution started.')
       return
     }
+    // #7304 — Prevent duplicate execution: if this mission is already being
+    // sent to the agent (e.g. double-click during preflight window), bail out.
+    if (executingMissions.current.has(missionId)) {
+      console.debug(`[Missions] executeMission already in-flight for ${missionId}, skipping duplicate`)
+      return
+    }
+    executingMissions.current.add(missionId)
+
     // A retry may reuse a missionId that had a previous cancel intent;
     // only clear stale entries once we've confirmed no cancel is pending
     // (#6370). `retryPreflight` and `runSavedMission` route back through
@@ -2343,6 +2369,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
 
     // Send to agent
     ensureConnection().then(() => {
+      executingMissions.current.delete(missionId)
       const requestId = generateRequestId()
       pendingRequests.current.set(requestId, missionId)
 
@@ -2405,6 +2432,8 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
       }, STATUS_PROCESSING_DELAY_MS)
       timers.add(processingHandle)
     }).catch(() => {
+      // #7304 — Clean up the executing guard on connection failure
+      executingMissions.current.delete(missionId)
       const errorContent = `**Local Agent Not Connected**
 
 Install the console locally with the KubeStellar Console agent to use AI missions.`
@@ -2721,6 +2750,8 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId: missionId }) }).then(async response => {
+        // #7303 — Guard against post-unmount finalization from HTTP fallback
+        if (unmountedRef.current) return
         if (response.ok) {
           // Check the `cancelled` flag in the response body — HTTP 200 alone
           // does not guarantee the session was actually cancelled (e.g. if the
@@ -2739,6 +2770,8 @@ Install the console locally with the KubeStellar Console agent to use AI mission
           finalizeCancellation(missionId, 'Mission cancellation failed — backend returned an error. The mission may still be running.')
         }
       }).catch(() => {
+        // #7303 — Guard against post-unmount finalization
+        if (unmountedRef.current) return
         // Both WS and HTTP failed — finalize with a warning
         finalizeCancellation(missionId, 'Mission cancelled by user (backend unreachable — cancellation may not have taken effect).')
       })
@@ -2975,6 +3008,10 @@ Install the console locally with the KubeStellar Console agent to use AI mission
   // Special value for "no AI agent" — agent data only, no AI processing
   const NONE_AGENT = 'none'
 
+  // #7308 — Track the pending selectAgent connection to prevent concurrent
+  // handshakes when the user rapidly swaps agents.
+  const selectAgentPending = useRef<string | null>(null)
+
   // Select an AI agent
   const selectAgent = (agentName: string) => {
     // Persist immediately so the choice survives page refresh
@@ -2982,15 +3019,26 @@ Install the console locally with the KubeStellar Console agent to use AI mission
     setSelectedAgent(agentName)
     // Skip WebSocket message for 'none' — no backend agent to select
     if (agentName === NONE_AGENT) return
+    // #7308 — If a previous selectAgent call is still connecting, skip
+    // this one. The latest agent name is already persisted above and will
+    // be sent on the next explicit action.
+    if (selectAgentPending.current !== null) {
+      selectAgentPending.current = agentName
+      return
+    }
+    selectAgentPending.current = agentName
     ensureConnection().then(() => {
+      const agentToSend = selectAgentPending.current ?? agentName
+      selectAgentPending.current = null
       wsSend(JSON.stringify({
         id: `select-agent-${Date.now()}`,
         type: 'select_agent',
-        payload: { agent: agentName }
+        payload: { agent: agentToSend }
       }), () => {
         console.error('[Missions] Failed to send agent selection after retries')
       })
     }).catch(err => {
+      selectAgentPending.current = null
       console.error('[Missions] Failed to select agent:', err)
     })
   }
