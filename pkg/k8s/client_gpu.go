@@ -31,7 +31,10 @@ func (m *MultiClusterClient) GetGPUNodes(ctx context.Context, contextName string
 
 	// Fetch all pods once upfront to calculate accelerator allocations per node
 	// This is much faster than querying pods per-node for large clusters
-	allPods, _ := client.CoreV1().Pods("").List(ctx, metav1.ListOptions{})
+	allPods, podListErr := client.CoreV1().Pods("").List(ctx, metav1.ListOptions{})
+	if podListErr != nil {
+		slog.Warn("[GPU] failed to list pods for accelerator allocation; GPU utilization may be inaccurate", "error", podListErr)
+	}
 	// Track allocations by node and accelerator type
 	gpuAllocationByNode := make(map[string]int) // GPU allocations
 	tpuAllocationByNode := make(map[string]int) // TPU allocations
@@ -326,13 +329,19 @@ func (m *MultiClusterClient) GetGPUNodeHealth(ctx context.Context, contextName s
 	}
 
 	// 4. Find non-running pods for stuck pod detection (exclude Succeeded/Running)
-	allPods, _ := client.CoreV1().Pods("").List(ctx, metav1.ListOptions{})
+	allPods, podErr := client.CoreV1().Pods("").List(ctx, metav1.ListOptions{})
+	if podErr != nil {
+		slog.Warn("[GPU] failed to list pods for stuck-pod detection", "error", podErr)
+	}
 
 	// 5. Get warning events from the last hour for GPU reset detection
 	oneHourAgo := time.Now().Add(-1 * time.Hour)
-	events, _ := client.CoreV1().Events("").List(ctx, metav1.ListOptions{
+	events, evtErr := client.CoreV1().Events("").List(ctx, metav1.ListOptions{
 		FieldSelector: "type=Warning",
 	})
+	if evtErr != nil {
+		slog.Warn("[GPU] failed to list warning events for GPU reset detection", "error", evtErr)
+	}
 
 	// 6. Build health status for each GPU node
 	checkedAt := time.Now().UTC().Format(time.RFC3339)
