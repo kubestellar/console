@@ -197,7 +197,7 @@ describe('DashboardSyncService', () => {
   })
 
   describe('fullSync', () => {
-    it('returns null when fetch returns empty', async () => {
+    it('returns empty array when fetch returns empty (#7254)', async () => {
       localStorage.setItem('auth-token', 'token')
       const mockDashboard: BackendDashboard = {
         id: 'dash-1',
@@ -212,7 +212,9 @@ describe('DashboardSyncService', () => {
         .mockResolvedValueOnce({ data: { dashboard: mockDashboard, cards: [] } })
 
       const result = await dashboardSync.fullSync('test-key')
-      expect(result).toBeNull()
+      // #7254 — Empty array means the backend dashboard has zero cards.
+      // fullSync now returns [] (not null) and clears localStorage to match.
+      expect(result).toEqual([])
     })
 
     it('updates localStorage with backend data', async () => {

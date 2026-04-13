@@ -357,14 +357,16 @@ describe('useDashboardCards', () => {
     consoleSpy.mockRestore()
   })
 
-  it('keeps defaults when backend returns empty array', async () => {
+  it('accepts empty array from backend (#7254)', async () => {
     mockIsAuthenticated.mockReturnValue(true)
     mockFullSync.mockResolvedValue([])
 
     const { result } = renderHook(() => useDashboardCards(STORAGE_KEY, DEFAULT_PLACEMENTS))
     await act(async () => { await vi.runAllTimersAsync() })
 
-    expect(result.current.cards).toEqual(expectedDefaultCards())
+    // #7254 — An empty array from the backend means zero cards; the UI
+    // should accept it rather than falling back to defaults.
+    expect(result.current.cards).toEqual([])
   })
 
   it('keeps defaults when backend returns null', async () => {

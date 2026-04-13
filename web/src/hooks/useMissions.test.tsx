@@ -1459,7 +1459,7 @@ describe('startMission cluster targeting', () => {
     )
     const prompt = JSON.parse(chatCall![0]).payload.prompt
     expect(prompt).toContain('Target clusters: cluster-a, cluster-b')
-    expect(prompt).toContain('Perform the following on each cluster')
+    expect(prompt).toContain('Perform the following on EACH cluster')
   })
 
   it('adds non-interactive warnings for deploy-type missions', async () => {
@@ -5091,9 +5091,9 @@ describe('runSavedMission edge cases', () => {
       (call: string[]) => JSON.parse(call[0]).type === 'chat',
     )
     const prompt = JSON.parse(chatCall![0]).payload.prompt
-    // Multi-cluster targeting uses "respective kubectl contexts" instead of --context= flags
+    // Multi-cluster targeting includes context flags for each cluster
     expect(prompt).toContain('Target clusters: cluster-a, cluster-b')
-    expect(prompt).toContain('respective kubectl contexts')
+    expect(prompt).toContain('respective kubectl context')
   })
 
   it('opens sidebar and sets active mission when running saved mission', () => {
