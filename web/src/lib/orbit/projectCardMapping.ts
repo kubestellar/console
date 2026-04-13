@@ -117,7 +117,7 @@ export function getMonitoringCardsForProject(
   cncfProject?: string,
   category?: string,
 ): ProjectCardMappingResult {
-  const projectKey = cncfProject?.toLowerCase().replace(/\s+/g, '-')
+  const projectKey = cncfProject?.trim().toLowerCase().replace(/\s+/g, '-')
   const directCards = projectKey ? PROJECT_TO_CARDS[projectKey] : undefined
 
   if (directCards) {
@@ -125,7 +125,12 @@ export function getMonitoringCardsForProject(
     return { cards: merged, hasDirectMapping: true }
   }
 
-  const categoryCards = category ? CATEGORY_TO_CARDS[category] : undefined
+  // Case-insensitive category lookup (#7230): find the canonical key that
+  // matches the input regardless of casing.
+  const categoryKey = category
+    ? Object.keys(CATEGORY_TO_CARDS).find(k => k.toLowerCase() === category.toLowerCase())
+    : undefined
+  const categoryCards = categoryKey ? CATEGORY_TO_CARDS[categoryKey] : undefined
   if (categoryCards) {
     const merged = [...new Set([...BASELINE_CARDS, ...categoryCards])]
     return { cards: merged, hasDirectMapping: false }

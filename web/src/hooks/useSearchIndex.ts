@@ -370,7 +370,9 @@ function matchesQuery(item: SearchItem, query: string): boolean {
 export function useSearchIndex(query: string) {
   const { clusters } = useClusters()
   const { deployments } = useDeployments()
-  const { pods } = usePods(undefined, undefined, 'name', 50)
+  // Search should index all available pods, not just a small subset (#7217).
+  const SEARCH_POD_LIMIT = 500
+  const { pods } = usePods(undefined, undefined, 'name', SEARCH_POD_LIMIT)
   const { services } = useServices()
   const { nodes } = useNodes()
   const { releases } = useHelmReleases()

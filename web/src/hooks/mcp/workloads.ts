@@ -233,7 +233,8 @@ function savePodsCacheToStorage() {
 // ---------------------------------------------------------------------------
 
 export function usePods(cluster?: string, namespace?: string, sortBy: 'restarts' | 'name' = 'restarts', limit = 10) {
-  const cacheKey = `pods:${cluster || 'all'}:${namespace || 'all'}`
+  // Include sortBy and limit in cache key to prevent cross-view stale data (#7218)
+  const cacheKey = `pods:${cluster || 'all'}:${namespace || 'all'}:${sortBy}:${limit}`
 
   // Initialize from cache if available
   const getCachedData = () => {

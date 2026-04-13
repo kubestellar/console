@@ -128,8 +128,10 @@ export const ORBIT_TEMPLATES: OrbitTemplate[] = [
  * or match any of the provided categories.
  */
 export function getApplicableOrbitTemplates(categories: string[]): OrbitTemplate[] {
-  return ORBIT_TEMPLATES.filter(template =>
-    template.applicableCategories.includes('*') ||
-    (categories || []).some(cat => template.applicableCategories.includes(cat))
-  )
+  return ORBIT_TEMPLATES.filter(template => {
+    if (template.applicableCategories.includes('*')) return true
+    // Case-insensitive category matching (#7232)
+    const lowerApplicable = template.applicableCategories.map(c => c.toLowerCase())
+    return (categories || []).some(cat => lowerApplicable.includes(cat.toLowerCase()))
+  })
 }
