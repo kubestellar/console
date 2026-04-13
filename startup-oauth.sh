@@ -381,7 +381,12 @@ if [ "$USE_DEV_SERVER" = true ]; then
     if [ "$WATCHDOG_RUNNING" = false ]; then
         write_stage "watchdog"
         echo -e "${GREEN}Starting watchdog on port 8080...${NC}"
-        GOWORK=off go run ./cmd/console --watchdog --backend-port "$BACKEND_LISTEN_PORT" &
+        TLS_FLAG=""
+if [ "${TLS_ENABLED:-}" = "true" ]; then
+    TLS_FLAG="--tls"
+    echo -e "${GREEN}  HTTPS/H2 enabled (TLS_ENABLED=true)${NC}"
+fi
+GOWORK=off go run ./cmd/console --watchdog $TLS_FLAG --backend-port "$BACKEND_LISTEN_PORT" &
         WATCHDOG_PID=$!
         sleep 1
     fi
@@ -418,7 +423,12 @@ else
     if [ "$WATCHDOG_RUNNING" = false ]; then
         write_stage "watchdog"
         echo -e "${GREEN}Starting watchdog on port 8080...${NC}"
-        GOWORK=off go run ./cmd/console --watchdog --backend-port "$BACKEND_LISTEN_PORT" &
+        TLS_FLAG=""
+if [ "${TLS_ENABLED:-}" = "true" ]; then
+    TLS_FLAG="--tls"
+    echo -e "${GREEN}  HTTPS/H2 enabled (TLS_ENABLED=true)${NC}"
+fi
+GOWORK=off go run ./cmd/console --watchdog $TLS_FLAG --backend-port "$BACKEND_LISTEN_PORT" &
         WATCHDOG_PID=$!
         sleep 1
     fi

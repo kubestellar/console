@@ -2,15 +2,23 @@ package main
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"log/slog"
+	"math/big"
 	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -37,10 +45,18 @@ const (
 	watchdogStageFile           = "/tmp/.kc-startup-stage"
 )
 
+const (
+	watchdogTLSDir      = "./data/tls"
+	watchdogTLSCertFile = "cert.pem"
+	watchdogTLSKeyFile  = "key.pem"
+	watchdogTLSCertLife = 365 * 24 * time.Hour // 1 year
+)
+
 // WatchdogConfig holds configuration for the watchdog reverse proxy.
 type WatchdogConfig struct {
 	ListenPort  int
 	BackendPort int
+	TLS         bool
 }
 
 // runWatchdog starts the watchdog reverse proxy. It proxies all traffic to the
@@ -81,6 +97,11 @@ func runWatchdog(cfg WatchdogConfig) error {
 		MaxIdleConnsPerHost:   watchdogMaxIdleConnsPerHost,
 		IdleConnTimeout:       watchdogIdleConnTimeout,
 	}
+
+	// Flush SSE events immediately instead of buffering.
+	// Without this, Server-Sent Events are held in the proxy buffer
+	// and only forwarded when the buffer fills or the connection closes.
+	proxy.FlushInterval = -1
 
 	// Custom error handler: serve fallback page on connection failures.
 	// Only mark backend unhealthy on hard connection errors (refused, reset, EOF).
@@ -190,11 +211,97 @@ func runWatchdog(cfg WatchdogConfig) error {
 		srv.Shutdown(shutdownCtx)
 	}()
 
-	slog.Info("[Watchdog] listening", "addr", addr, "backend", backendURL.String())
-	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		return fmt.Errorf("watchdog listen error: %w", err)
+	if cfg.TLS {
+		certFile, keyFile, tlsErr := ensureTLSCert()
+		if tlsErr != nil {
+			return fmt.Errorf("TLS cert generation failed: %w", tlsErr)
+		}
+		slog.Info("[Watchdog] listening (HTTPS/H2)", "addr", addr, "backend", backendURL.String())
+		if err := srv.ListenAndServeTLS(certFile, keyFile); err != nil && err != http.ErrServerClosed {
+			return fmt.Errorf("watchdog TLS listen error: %w", err)
+		}
+	} else {
+		slog.Info("[Watchdog] listening (HTTP/1.1)", "addr", addr, "backend", backendURL.String())
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			return fmt.Errorf("watchdog listen error: %w", err)
+		}
 	}
 	return nil
+}
+
+// ensureTLSCert returns paths to a TLS cert and key. Order of precedence:
+//  1. TLS_CERT_FILE / TLS_KEY_FILE env vars (user-supplied cert)
+//  2. Existing cert in ./data/tls/ (reuse previous auto-generated cert)
+//  3. Auto-generate a self-signed ECDSA P-256 cert for localhost
+func ensureTLSCert() (certFile, keyFile string, err error) {
+	// Allow user-supplied certs via environment variables
+	if envCert := os.Getenv("TLS_CERT_FILE"); envCert != "" {
+		envKey := os.Getenv("TLS_KEY_FILE")
+		if envKey == "" {
+			return "", "", fmt.Errorf("TLS_CERT_FILE set but TLS_KEY_FILE is missing")
+		}
+		slog.Info("[Watchdog] using user-supplied TLS cert", "cert", envCert, "key", envKey)
+		return envCert, envKey, nil
+	}
+
+	certFile = filepath.Join(watchdogTLSDir, watchdogTLSCertFile)
+	keyFile = filepath.Join(watchdogTLSDir, watchdogTLSKeyFile)
+
+	// Reuse existing cert if present
+	if _, statErr := os.Stat(certFile); statErr == nil {
+		if _, statErr2 := os.Stat(keyFile); statErr2 == nil {
+			slog.Info("[Watchdog] reusing existing TLS cert", "cert", certFile)
+			return certFile, keyFile, nil
+		}
+	}
+
+	slog.Info("[Watchdog] generating self-signed TLS cert for localhost")
+	if mkdirErr := os.MkdirAll(watchdogTLSDir, 0700); mkdirErr != nil {
+		return "", "", mkdirErr
+	}
+
+	key, genErr := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if genErr != nil {
+		return "", "", genErr
+	}
+
+	serial, _ := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
+	template := &x509.Certificate{
+		SerialNumber: serial,
+		Subject:      pkix.Name{Organization: []string{"KubeStellar Console (dev)"}},
+		NotBefore:    time.Now(),
+		NotAfter:     time.Now().Add(watchdogTLSCertLife),
+		KeyUsage:     x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		DNSNames:     []string{"localhost"},
+		IPAddresses:  []net.IP{net.ParseIP("127.0.0.1"), net.ParseIP("::1")},
+	}
+
+	certDER, certErr := x509.CreateCertificate(rand.Reader, template, template, &key.PublicKey, key)
+	if certErr != nil {
+		return "", "", certErr
+	}
+
+	certOut, fileErr := os.Create(certFile)
+	if fileErr != nil {
+		return "", "", fileErr
+	}
+	pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: certDER})
+	certOut.Close()
+
+	keyDER, marshalErr := x509.MarshalECPrivateKey(key)
+	if marshalErr != nil {
+		return "", "", marshalErr
+	}
+	keyOut, fileErr2 := os.Create(keyFile)
+	if fileErr2 != nil {
+		return "", "", fileErr2
+	}
+	pem.Encode(keyOut, &pem.Block{Type: "EC PRIVATE KEY", Bytes: keyDER})
+	keyOut.Close()
+
+	slog.Info("[Watchdog] TLS cert generated", "cert", certFile, "key", keyFile)
+	return certFile, keyFile, nil
 }
 
 // checkBackendHealth performs a single health check against the backend.

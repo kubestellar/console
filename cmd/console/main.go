@@ -31,6 +31,7 @@ func main() {
 	dbPath := flag.String("db", "", "Database path (default: ./data/console.db)")
 	watchdog := flag.Bool("watchdog", false, "Run as watchdog reverse proxy (serves fallback page when backend is down)")
 	backendPort := flag.Int("backend-port", watchdogDefaultBackendPort, "Backend port for watchdog to proxy to")
+	tlsEnabled := flag.Bool("tls", false, "Enable HTTPS/HTTP2 on watchdog (auto-generates self-signed cert)")
 	version := flag.Bool("version", false, "Print version and exit")
 	flag.Parse()
 
@@ -48,6 +49,7 @@ func main() {
 		cfg := WatchdogConfig{
 			ListenPort:  listenPort,
 			BackendPort: *backendPort,
+			TLS:         *tlsEnabled,
 		}
 		if err := runWatchdog(cfg); err != nil {
 			slog.Error("watchdog error", "error", err)
