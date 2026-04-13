@@ -41,9 +41,10 @@ func (h *EventHandler) RecordEvent(c *fiber.Ctx) error {
 
 	if input.CardID != "" {
 		cardID, err := uuid.Parse(input.CardID)
-		if err == nil {
-			event.CardID = &cardID
+		if err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, "invalid card_id: must be a valid UUID")
 		}
+		event.CardID = &cardID
 	}
 
 	if input.Metadata != nil {

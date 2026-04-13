@@ -362,6 +362,7 @@ func (h *MCPHandlers) GetServices(c *fiber.Ctx) error {
 
 					services, err := h.k8sClient.GetServices(ctx, clusterName, namespace)
 					if err != nil {
+						slog.Warn("[GetServices] failed to fetch services for cluster", "cluster", clusterName, "error", err)
 						return
 					}
 					mu.Lock()

@@ -59,8 +59,8 @@ type CRDListResponse struct {
 	IsDemoData bool         `json:"isDemoData"`
 }
 
-// HTTP status code for service unavailable
-const statusServiceUnavailableCRD = 503
+// statusServiceUnavailableCRD uses fiber's standard constant for 503 responses.
+const statusServiceUnavailableCRD = fiber.StatusServiceUnavailable
 
 // ListCRDs returns all CRDs across clusters
 // GET /api/crds
@@ -80,7 +80,7 @@ func (h *CRDHandlers) ListCRDs(c *fiber.Ctx) error {
 		var listErr error
 		clusters, listErr = h.k8sClient.ListClusters(ctx)
 		if listErr != nil {
-			return c.Status(500).JSON(fiber.Map{"error": "cluster discovery failed", "isDemoData": false})
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": "cluster discovery failed", "isDemoData": false})
 		}
 	}
 	allCRDs := make([]CRDSummary, 0)

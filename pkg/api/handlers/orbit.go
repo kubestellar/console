@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"log/slog"
 	"os"
@@ -10,6 +12,20 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 )
+
+// orbitSuffixBytes is the number of random bytes used to generate a unique
+// suffix for orbit mission IDs, producing a 4-character hex string.
+const orbitSuffixBytes = 2
+
+// generateOrbitSuffix returns a short random hex string for mission ID uniqueness.
+func generateOrbitSuffix() string {
+	b := make([]byte, orbitSuffixBytes)
+	if _, err := rand.Read(b); err != nil {
+		// Fallback: use nanosecond component if crypto/rand fails
+		return time.Now().Format("0000")
+	}
+	return hex.EncodeToString(b)
+}
 
 // ─── Constants ──────────────────────────────────────────────────────
 
@@ -134,7 +150,9 @@ func (h *OrbitHandler) CreateMission(c *fiber.Ctx) error {
 	}
 
 	if m.ID == "" {
-		m.ID = "orbit-" + time.Now().Format("20060102150405")
+		// Use millisecond-precision timestamp plus a random suffix to avoid
+		// collisions when two missions are created in the same second (#7800).
+		m.ID = "orbit-" + time.Now().Format("20060102150405.000") + "-" + generateOrbitSuffix()
 	}
 	if m.CreatedAt == "" {
 		m.CreatedAt = time.Now().UTC().Format(time.RFC3339)

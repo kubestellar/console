@@ -402,7 +402,11 @@ func (h *ExecHandlers) HandleExec(c *websocket.Conn) {
 	}
 	writeMu := &sync.Mutex{}
 	writeMu.Lock()
-	_ = c.WriteMessage(websocket.TextMessage, startMsg)
+	if writeErr := c.WriteMessage(websocket.TextMessage, startMsg); writeErr != nil {
+		writeMu.Unlock()
+		slog.Error("[Exec] failed to send exec_started to client", "error", writeErr)
+		return
+	}
 	writeMu.Unlock()
 
 	// Set up stdin reader, stdout/stderr writers, and resize queue
@@ -501,14 +505,16 @@ func (h *ExecHandlers) HandleExec(c *websocket.Conn) {
 
 	execErr := executor.StreamWithContext(execCtx, streamOpts)
 
+	// #7048 — Wait for the reader goroutine to finish before closing the
+	// size queue channel. The reader goroutine may still be writing to
+	// sizeQueue.ch (via resize messages); closing it first causes a
+	// send-on-closed-channel panic (#7778).
+	<-done
+
 	// #7047 — Close the terminal size queue channel so the SPDY executor's
 	// internal goroutine calling Next() receives nil and terminates.
+	// Safe now because the reader goroutine (the only writer) has exited.
 	close(sizeQueue.ch)
-
-	// #7048 — Wait for the reader goroutine to finish before writing the
-	// exit message, ensuring cleanup ordering (close(stdinCh), execCancel)
-	// happens before the handler returns.
-	<-done
 
 	// Send exit message
 	exitCode := 0

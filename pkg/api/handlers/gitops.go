@@ -19,6 +19,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"golang.org/x/sync/singleflight"
 
 	"github.com/kubestellar/console/pkg/api/v1alpha1"
 	"github.com/kubestellar/console/pkg/k8s"
@@ -529,9 +530,13 @@ type operatorCacheEntry struct {
 // operatorCache is a per-cluster in-memory cache for slow CSV queries.
 // Protected by operatorCacheMu. Background refresh populates the cache
 // so that subsequent page loads are instant.
+// operatorFetchGroup coalesces concurrent cache-miss fetches for the same
+// cluster into a single request, preventing the check-then-act race where
+// two goroutines both see an empty cache and fetch in parallel (#7783).
 var (
-	operatorCacheMu   sync.RWMutex
-	operatorCacheData = make(map[string]*operatorCacheEntry)
+	operatorCacheMu    sync.RWMutex
+	operatorCacheData  = make(map[string]*operatorCacheEntry)
+	operatorFetchGroup singleflight.Group
 )
 
 // ListOperators returns OLM-managed operators (ClusterServiceVersions)
@@ -724,45 +729,65 @@ func (h *GitOpsHandlers) getOperatorsForCluster(ctx context.Context, cluster str
 	}
 	operatorCacheMu.RUnlock()
 
-	// Cache miss — fetch from cluster with retry for transient errors
-	operators, err := h.fetchOperatorsFromCluster(ctx, cluster)
-	if err != nil {
-		// Permanent errors (cluster lacks OLM) — cache empty result with short TTL
-		if _, ok := err.(errPermanent); ok {
-			operatorCacheMu.Lock()
-			operatorCacheData[cacheKey] = &operatorCacheEntry{
-				operators: []Operator{},
-				fetchedAt: time.Now(),
+	// Cache miss — use singleflight to coalesce concurrent fetches for the
+	// same cluster, preventing the check-then-act race (#7783).
+	type fetchResult struct {
+		operators []Operator
+	}
+	val, _, _ := operatorFetchGroup.Do(cacheKey, func() (interface{}, error) {
+		// Double-check cache inside singleflight in case another goroutine
+		// populated it between our RUnlock and the singleflight call.
+		operatorCacheMu.RLock()
+		if entry, ok := operatorCacheData[cacheKey]; ok {
+			ttl := operatorCacheTTL
+			if len(entry.operators) == 0 {
+				ttl = operatorCacheEmptyTTL
 			}
-			operatorCacheMu.Unlock()
-			return []Operator{}
+			if time.Since(entry.fetchedAt) < ttl {
+				result := make([]Operator, len(entry.operators))
+				copy(result, entry.operators)
+				operatorCacheMu.RUnlock()
+				return &fetchResult{operators: result}, nil
+			}
 		}
-		// Retry once for transient errors (HTTP/2 stream errors, connection resets)
-		if ctx.Err() == nil {
-			slog.Warn("[GitOps] retrying operator fetch after transient error", "cluster", cluster)
-			time.Sleep(gitopsRetryDelay)
-			operators, err = h.fetchOperatorsFromCluster(ctx, cluster)
+		operatorCacheMu.RUnlock()
+
+		operators, err := h.fetchOperatorsFromCluster(ctx, cluster)
+		if err != nil {
+			if _, ok := err.(errPermanent); ok {
+				operatorCacheMu.Lock()
+				operatorCacheData[cacheKey] = &operatorCacheEntry{
+					operators: []Operator{},
+					fetchedAt: time.Now(),
+				}
+				operatorCacheMu.Unlock()
+				return &fetchResult{operators: []Operator{}}, nil
+			}
+			if ctx.Err() == nil {
+				slog.Warn("[GitOps] retrying operator fetch after transient error", "cluster", cluster)
+				time.Sleep(gitopsRetryDelay)
+				operators, err = h.fetchOperatorsFromCluster(ctx, cluster)
+			}
 		}
-	}
+		if err != nil {
+			return &fetchResult{operators: []Operator{}}, nil
+		}
 
-	if err != nil {
-		// Transient failure — do NOT cache so next request retries
-		return []Operator{}
-	}
+		operatorCacheMu.Lock()
+		operatorCacheData[cacheKey] = &operatorCacheEntry{
+			operators: operators,
+			fetchedAt: time.Now(),
+		}
+		operatorCacheMu.Unlock()
+		return &fetchResult{operators: operators}, nil
+	})
 
-	// Store in cache
-	operatorCacheMu.Lock()
-	operatorCacheData[cacheKey] = &operatorCacheEntry{
-		operators: operators,
-		fetchedAt: time.Now(),
-	}
-	operatorCacheMu.Unlock()
-
-	return operators
+	return val.(*fetchResult).operators
 }
 
 // getOperatorsForClusterWithError returns operators plus any fetch error so
 // callers can surface per-cluster failures (#7544, #7546).
+// Uses singleflight to prevent check-then-act double-fetch race (#7783).
 func (h *GitOpsHandlers) getOperatorsForClusterWithError(ctx context.Context, cluster string) ([]Operator, error) {
 	cacheKey := cluster
 	if cacheKey == "" {
@@ -786,29 +811,54 @@ func (h *GitOpsHandlers) getOperatorsForClusterWithError(ctx context.Context, cl
 	}
 	operatorCacheMu.RUnlock()
 
-	operators, err := h.fetchOperatorsFromCluster(ctx, cluster)
-	if err != nil {
-		if _, ok := err.(errPermanent); ok {
-			operatorCacheMu.Lock()
-			operatorCacheData[cacheKey] = &operatorCacheEntry{operators: []Operator{}, fetchedAt: time.Now()}
-			operatorCacheMu.Unlock()
-			// Permanent (no OLM) is not a user-visible error
-			return []Operator{}, nil
-		}
-		if ctx.Err() == nil {
-			slog.Warn("[GitOps] retrying operator fetch after transient error", "cluster", cluster)
-			time.Sleep(gitopsRetryDelay)
-			operators, err = h.fetchOperatorsFromCluster(ctx, cluster)
-		}
+	// Use singleflight to coalesce concurrent cache-miss fetches (#7783).
+	type fetchResult struct {
+		operators []Operator
+		err       error
 	}
-	if err != nil {
-		return []Operator{}, err
-	}
+	val, _, _ := operatorFetchGroup.Do("err:"+cacheKey, func() (interface{}, error) {
+		// Double-check cache inside singleflight.
+		operatorCacheMu.RLock()
+		if entry, ok := operatorCacheData[cacheKey]; ok {
+			ttl := operatorCacheTTL
+			if len(entry.operators) == 0 {
+				ttl = operatorCacheEmptyTTL
+			}
+			if time.Since(entry.fetchedAt) < ttl {
+				result := make([]Operator, len(entry.operators))
+				copy(result, entry.operators)
+				operatorCacheMu.RUnlock()
+				return &fetchResult{operators: result}, nil
+			}
+		}
+		operatorCacheMu.RUnlock()
 
-	operatorCacheMu.Lock()
-	operatorCacheData[cacheKey] = &operatorCacheEntry{operators: operators, fetchedAt: time.Now()}
-	operatorCacheMu.Unlock()
-	return operators, nil
+		operators, err := h.fetchOperatorsFromCluster(ctx, cluster)
+		if err != nil {
+			if _, ok := err.(errPermanent); ok {
+				operatorCacheMu.Lock()
+				operatorCacheData[cacheKey] = &operatorCacheEntry{operators: []Operator{}, fetchedAt: time.Now()}
+				operatorCacheMu.Unlock()
+				return &fetchResult{operators: []Operator{}}, nil
+			}
+			if ctx.Err() == nil {
+				slog.Warn("[GitOps] retrying operator fetch after transient error", "cluster", cluster)
+				time.Sleep(gitopsRetryDelay)
+				operators, err = h.fetchOperatorsFromCluster(ctx, cluster)
+			}
+		}
+		if err != nil {
+			return &fetchResult{operators: []Operator{}, err: err}, nil
+		}
+
+		operatorCacheMu.Lock()
+		operatorCacheData[cacheKey] = &operatorCacheEntry{operators: operators, fetchedAt: time.Now()}
+		operatorCacheMu.Unlock()
+		return &fetchResult{operators: operators}, nil
+	})
+
+	result := val.(*fetchResult)
+	return result.operators, result.err
 }
 
 // errPermanent wraps an error to indicate it should be cached (e.g., cluster lacks OLM).

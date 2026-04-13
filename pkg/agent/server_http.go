@@ -85,7 +85,7 @@ func (s *Server) handleGPUNodesHTTP(w http.ResponseWriter, r *http.Request) {
 		nodes, err := s.k8sClient.GetGPUNodes(ctx, cluster)
 		if err != nil {
 			slog.Warn("error fetching nodes", "error", err)
-			writeJSON(w,map[string]interface{}{"nodes": []interface{}{}, "error": "internal server error"})
+			writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 			return
 		}
 		allNodes = nodes
@@ -94,7 +94,7 @@ func (s *Server) handleGPUNodesHTTP(w http.ResponseWriter, r *http.Request) {
 		clusters, err := s.k8sClient.ListClusters(ctx)
 		if err != nil {
 			slog.Warn("error fetching nodes", "error", err)
-			writeJSON(w,map[string]interface{}{"nodes": []interface{}{}, "error": "internal server error"})
+			writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 			return
 		}
 
@@ -161,7 +161,7 @@ func (s *Server) handleNodesHTTP(w http.ResponseWriter, r *http.Request) {
 		nodes, err := s.k8sClient.GetNodes(ctx, cluster)
 		if err != nil {
 			slog.Warn("error fetching nodes", "error", err)
-			writeJSON(w,map[string]interface{}{"nodes": []interface{}{}, "error": "internal server error"})
+			writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 			return
 		}
 		allNodes = nodes
@@ -170,7 +170,7 @@ func (s *Server) handleNodesHTTP(w http.ResponseWriter, r *http.Request) {
 		clusters, err := s.k8sClient.ListClusters(ctx)
 		if err != nil {
 			slog.Warn("error fetching nodes", "error", err)
-			writeJSON(w,map[string]interface{}{"nodes": []interface{}{}, "error": "internal server error"})
+			writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 			return
 		}
 
@@ -248,7 +248,7 @@ func (s *Server) handleEventsHTTP(w http.ResponseWriter, r *http.Request) {
 	events, err := s.k8sClient.GetEvents(ctx, cluster, namespace, limit)
 	if err != nil {
 		slog.Warn("error fetching events", "error", err)
-		writeJSON(w,map[string]interface{}{"events": []interface{}{}, "error": "internal server error"})
+		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}
 
@@ -299,7 +299,7 @@ func (s *Server) handleNamespacesHTTP(w http.ResponseWriter, r *http.Request) {
 	namespaces, err := s.k8sClient.ListNamespacesWithDetails(ctx, cluster)
 	if err != nil {
 		slog.Warn("error fetching namespaces", "error", err)
-		writeJSON(w,map[string]interface{}{"namespaces": []interface{}{}, "error": "internal server error"})
+		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}
 
@@ -345,7 +345,7 @@ func (s *Server) handleDeploymentsHTTP(w http.ResponseWriter, r *http.Request) {
 	deployments, err := s.k8sClient.GetDeployments(ctx, cluster, namespace)
 	if err != nil {
 		slog.Warn("error fetching deployments", "error", err)
-		writeJSON(w,map[string]interface{}{"deployments": []interface{}{}, "error": "internal server error"})
+		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}
 
@@ -380,7 +380,7 @@ func (s *Server) handleReplicaSetsHTTP(w http.ResponseWriter, r *http.Request) {
 	replicasets, err := s.k8sClient.GetReplicaSets(ctx, cluster, namespace)
 	if err != nil {
 		slog.Warn("error fetching replicasets", "error", err)
-		writeJSON(w,map[string]interface{}{"replicasets": []interface{}{}, "error": "internal server error"})
+		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}
 	writeJSON(w,map[string]interface{}{"replicasets": replicasets, "source": "agent"})
@@ -414,7 +414,7 @@ func (s *Server) handleStatefulSetsHTTP(w http.ResponseWriter, r *http.Request) 
 	statefulsets, err := s.k8sClient.GetStatefulSets(ctx, cluster, namespace)
 	if err != nil {
 		slog.Warn("error fetching statefulsets", "error", err)
-		writeJSON(w,map[string]interface{}{"statefulsets": []interface{}{}, "error": "internal server error"})
+		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}
 	writeJSON(w,map[string]interface{}{"statefulsets": statefulsets, "source": "agent"})
@@ -448,7 +448,7 @@ func (s *Server) handleDaemonSetsHTTP(w http.ResponseWriter, r *http.Request) {
 	daemonsets, err := s.k8sClient.GetDaemonSets(ctx, cluster, namespace)
 	if err != nil {
 		slog.Warn("error fetching daemonsets", "error", err)
-		writeJSON(w,map[string]interface{}{"daemonsets": []interface{}{}, "error": "internal server error"})
+		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}
 	writeJSON(w,map[string]interface{}{"daemonsets": daemonsets, "source": "agent"})
@@ -482,7 +482,7 @@ func (s *Server) handleCronJobsHTTP(w http.ResponseWriter, r *http.Request) {
 	cronjobs, err := s.k8sClient.GetCronJobs(ctx, cluster, namespace)
 	if err != nil {
 		slog.Warn("error fetching cronjobs", "error", err)
-		writeJSON(w,map[string]interface{}{"cronjobs": []interface{}{}, "error": "internal server error"})
+		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}
 	writeJSON(w,map[string]interface{}{"cronjobs": cronjobs, "source": "agent"})
@@ -516,7 +516,7 @@ func (s *Server) handleIngressesHTTP(w http.ResponseWriter, r *http.Request) {
 	ingresses, err := s.k8sClient.GetIngresses(ctx, cluster, namespace)
 	if err != nil {
 		slog.Warn("error fetching ingresses", "error", err)
-		writeJSON(w,map[string]interface{}{"ingresses": []interface{}{}, "error": "internal server error"})
+		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}
 	writeJSON(w,map[string]interface{}{"ingresses": ingresses, "source": "agent"})
@@ -550,7 +550,7 @@ func (s *Server) handleNetworkPoliciesHTTP(w http.ResponseWriter, r *http.Reques
 	policies, err := s.k8sClient.GetNetworkPolicies(ctx, cluster, namespace)
 	if err != nil {
 		slog.Warn("error fetching networkpolicies", "error", err)
-		writeJSON(w,map[string]interface{}{"networkpolicies": []interface{}{}, "error": "internal server error"})
+		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}
 	writeJSON(w,map[string]interface{}{"networkpolicies": policies, "source": "agent"})
@@ -584,7 +584,7 @@ func (s *Server) handleServicesHTTP(w http.ResponseWriter, r *http.Request) {
 	services, err := s.k8sClient.GetServices(ctx, cluster, namespace)
 	if err != nil {
 		slog.Warn("error fetching services", "error", err)
-		writeJSON(w,map[string]interface{}{"services": []interface{}{}, "error": "internal server error"})
+		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}
 	writeJSON(w,map[string]interface{}{"services": services, "source": "agent"})
@@ -618,7 +618,7 @@ func (s *Server) handleConfigMapsHTTP(w http.ResponseWriter, r *http.Request) {
 	configmaps, err := s.k8sClient.GetConfigMaps(ctx, cluster, namespace)
 	if err != nil {
 		slog.Warn("error fetching configmaps", "error", err)
-		writeJSON(w,map[string]interface{}{"configmaps": []interface{}{}, "error": "internal server error"})
+		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}
 	writeJSON(w,map[string]interface{}{"configmaps": configmaps, "source": "agent"})
@@ -654,7 +654,7 @@ func (s *Server) handleSecretsHTTP(w http.ResponseWriter, r *http.Request) {
 	secrets, err := s.k8sClient.GetSecrets(ctx, cluster, namespace)
 	if err != nil {
 		slog.Warn("error fetching secrets", "error", err)
-		writeJSON(w,map[string]interface{}{"secrets": []interface{}{}, "error": "internal server error"})
+		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}
 	writeJSON(w,map[string]interface{}{"secrets": secrets, "source": "agent"})
@@ -688,7 +688,7 @@ func (s *Server) handleServiceAccountsHTTP(w http.ResponseWriter, r *http.Reques
 	serviceaccounts, err := s.k8sClient.GetServiceAccounts(ctx, cluster, namespace)
 	if err != nil {
 		slog.Warn("error fetching serviceaccounts", "error", err)
-		writeJSON(w,map[string]interface{}{"serviceaccounts": []interface{}{}, "error": "internal server error"})
+		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}
 	writeJSON(w,map[string]interface{}{"serviceaccounts": serviceaccounts, "source": "agent"})
@@ -722,7 +722,7 @@ func (s *Server) handleJobsHTTP(w http.ResponseWriter, r *http.Request) {
 	jobs, err := s.k8sClient.GetJobs(ctx, cluster, namespace)
 	if err != nil {
 		slog.Warn("error fetching jobs", "error", err)
-		writeJSON(w,map[string]interface{}{"jobs": []interface{}{}, "error": "internal server error"})
+		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}
 	writeJSON(w,map[string]interface{}{"jobs": jobs, "source": "agent"})
@@ -751,7 +751,7 @@ func (s *Server) handleHPAsHTTP(w http.ResponseWriter, r *http.Request) {
 	hpas, err := s.k8sClient.GetHPAs(ctx, cluster, namespace)
 	if err != nil {
 		slog.Warn("error fetching hpas", "error", err)
-		writeJSON(w,map[string]interface{}{"hpas": []interface{}{}, "error": "internal server error"})
+		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}
 	writeJSON(w,map[string]interface{}{"hpas": hpas, "source": "agent"})
@@ -780,7 +780,7 @@ func (s *Server) handlePVCsHTTP(w http.ResponseWriter, r *http.Request) {
 	pvcs, err := s.k8sClient.GetPVCs(ctx, cluster, namespace)
 	if err != nil {
 		slog.Warn("error fetching pvcs", "error", err)
-		writeJSON(w,map[string]interface{}{"pvcs": []interface{}{}, "error": "internal server error"})
+		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}
 	writeJSON(w,map[string]interface{}{"pvcs": pvcs, "source": "agent"})
@@ -809,7 +809,7 @@ func (s *Server) handleRolesHTTP(w http.ResponseWriter, r *http.Request) {
 	roles, err := s.k8sClient.ListRoles(ctx, cluster, namespace)
 	if err != nil {
 		slog.Warn("error fetching roles", "error", err)
-		writeJSON(w,map[string]interface{}{"roles": []interface{}{}, "error": "internal server error"})
+		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}
 	writeJSON(w,map[string]interface{}{"roles": roles, "source": "agent"})
@@ -838,7 +838,7 @@ func (s *Server) handleRoleBindingsHTTP(w http.ResponseWriter, r *http.Request) 
 	bindings, err := s.k8sClient.ListRoleBindings(ctx, cluster, namespace)
 	if err != nil {
 		slog.Warn("error fetching rolebindings", "error", err)
-		writeJSON(w,map[string]interface{}{"rolebindings": []interface{}{}, "error": "internal server error"})
+		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}
 	writeJSON(w,map[string]interface{}{"rolebindings": bindings, "source": "agent"})
@@ -867,7 +867,7 @@ func (s *Server) handleResourceQuotasHTTP(w http.ResponseWriter, r *http.Request
 	quotas, err := s.k8sClient.GetResourceQuotas(ctx, cluster, namespace)
 	if err != nil {
 		slog.Warn("error fetching resourcequotas", "error", err)
-		writeJSON(w,map[string]interface{}{"resourcequotas": []interface{}{}, "error": "internal server error"})
+		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}
 	writeJSON(w,map[string]interface{}{"resourcequotas": quotas, "source": "agent"})
@@ -896,7 +896,7 @@ func (s *Server) handleLimitRangesHTTP(w http.ResponseWriter, r *http.Request) {
 	ranges, err := s.k8sClient.GetLimitRanges(ctx, cluster, namespace)
 	if err != nil {
 		slog.Warn("error fetching limitranges", "error", err)
-		writeJSON(w,map[string]interface{}{"limitranges": []interface{}{}, "error": "internal server error"})
+		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}
 	writeJSON(w,map[string]interface{}{"limitranges": ranges, "source": "agent"})
@@ -1101,7 +1101,7 @@ func (s *Server) handlePodsHTTP(w http.ResponseWriter, r *http.Request) {
 	pods, err := s.k8sClient.GetPods(ctx, cluster, namespace)
 	if err != nil {
 		slog.Warn("error fetching pods", "error", err)
-		writeJSON(w,map[string]interface{}{"pods": []interface{}{}, "error": "internal server error"})
+		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}
 
@@ -1143,7 +1143,7 @@ func (s *Server) handleClusterHealthHTTP(w http.ResponseWriter, r *http.Request)
 	health, err := s.k8sClient.GetClusterHealth(ctx, cluster)
 	if err != nil {
 		slog.Error("request error", "error", err)
-		writeJSON(w,map[string]interface{}{"error": "internal server error"})
+		writeJSONError(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 

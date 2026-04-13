@@ -156,7 +156,7 @@ func (h *MCPHandlers) GetGPUHealthCronJobStatus(c *fiber.Ctx) error {
 
 	cluster := c.Query("cluster")
 	if cluster == "" {
-		return c.Status(400).JSON(fiber.Map{"error": "cluster parameter is required"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cluster parameter is required"})
 	}
 	if err := mcpValidateName("cluster", cluster); err != nil {
 		return err
@@ -198,15 +198,15 @@ func (h *MCPHandlers) InstallGPUHealthCronJob(c *fiber.Ctx) error {
 		Tier      int    `json:"tier"`
 	}
 	if err := c.BodyParser(&body); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
 	}
 	if body.Cluster == "" {
-		return c.Status(400).JSON(fiber.Map{"error": "cluster is required"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cluster is required"})
 	}
 
 	// Validate cron schedule format (5-field standard cron expression)
 	if body.Schedule != "" && !isValidCronSchedule(body.Schedule) {
-		return c.Status(400).JSON(fiber.Map{"error": "invalid cron schedule format — expected 5-field cron expression (e.g. '*/15 * * * *')"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid cron schedule format — expected 5-field cron expression (e.g. '*/15 * * * *')"})
 	}
 
 	// Validate tier range.
@@ -216,7 +216,7 @@ func (h *MCPHandlers) InstallGPUHealthCronJob(c *fiber.Ctx) error {
 	const minTier = 1
 	const maxTier = 4
 	if body.Tier < minTier || body.Tier > maxTier {
-		return c.Status(400).JSON(fiber.Map{"error": fmt.Sprintf("tier must be between %d and %d", minTier, maxTier)})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": fmt.Sprintf("tier must be between %d and %d", minTier, maxTier)})
 	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), mcpExtendedTimeout)
@@ -249,10 +249,10 @@ func (h *MCPHandlers) UninstallGPUHealthCronJob(c *fiber.Ctx) error {
 		Namespace string `json:"namespace"`
 	}
 	if err := c.BodyParser(&body); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
 	}
 	if body.Cluster == "" {
-		return c.Status(400).JSON(fiber.Map{"error": "cluster is required"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cluster is required"})
 	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
@@ -274,7 +274,7 @@ func (h *MCPHandlers) GetGPUHealthCronJobResults(c *fiber.Ctx) error {
 
 	cluster := c.Query("cluster")
 	if cluster == "" {
-		return c.Status(400).JSON(fiber.Map{"error": "cluster parameter is required"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cluster parameter is required"})
 	}
 	if err := mcpValidateName("cluster", cluster); err != nil {
 		return err
@@ -852,11 +852,11 @@ func (h *MCPHandlers) CreateOrUpdateResourceQuota(c *fiber.Ctx) error {
 	}
 
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
 	}
 
 	if req.Cluster == "" || req.Name == "" || req.Namespace == "" {
-		return c.Status(400).JSON(fiber.Map{"error": "cluster, name, and namespace are required"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cluster, name, and namespace are required"})
 	}
 	if err := mcpValidateClusterAndNamespace(req.Cluster, req.Namespace); err != nil {
 		return err
@@ -866,7 +866,7 @@ func (h *MCPHandlers) CreateOrUpdateResourceQuota(c *fiber.Ctx) error {
 	}
 
 	if len(req.Hard) == 0 {
-		return c.Status(400).JSON(fiber.Map{"error": "At least one resource limit is required in 'hard'"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "At least one resource limit is required in 'hard'"})
 	}
 
 	if h.k8sClient != nil {
@@ -912,7 +912,7 @@ func (h *MCPHandlers) DeleteResourceQuota(c *fiber.Ctx) error {
 	name := c.Query("name")
 
 	if cluster == "" || namespace == "" || name == "" {
-		return c.Status(400).JSON(fiber.Map{"error": "cluster, namespace, and name are required"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cluster, namespace, and name are required"})
 	}
 	if err := mcpValidateClusterAndNamespace(cluster, namespace); err != nil {
 		return err
@@ -950,7 +950,7 @@ func (h *MCPHandlers) GetPodLogs(c *fiber.Ctx) error {
 	tailLines := c.QueryInt("tail", 100)
 
 	if cluster == "" || namespace == "" || pod == "" {
-		return c.Status(400).JSON(fiber.Map{"error": "cluster, namespace, and pod are required"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cluster, namespace, and pod are required"})
 	}
 	if err := mcpValidateClusterAndNamespace(cluster, namespace); err != nil {
 		return err
@@ -1108,7 +1108,7 @@ func (h *MCPHandlers) CallOpsTool(c *fiber.Ctx) error {
 
 	var req CallToolRequest
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "invalid request body"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
 	}
 
 	// SECURITY: Validate tool name against whitelist
@@ -1135,7 +1135,7 @@ func (h *MCPHandlers) CallDeployTool(c *fiber.Ctx) error {
 
 	var req CallToolRequest
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "invalid request body"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
 	}
 
 	// SECURITY: Validate tool name against whitelist

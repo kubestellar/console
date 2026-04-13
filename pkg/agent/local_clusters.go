@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -78,17 +79,22 @@ func NewLocalClusterManager(broadcast func(string, interface{})) *LocalClusterMa
 	return &LocalClusterManager{broadcast: broadcast}
 }
 
-// broadcastProgress sends a progress update to all connected clients
+// broadcastProgress sends a progress update to all connected clients.
+// If no broadcast function is configured, a debug-level log is emitted
+// so progress events are traceable rather than silently swallowed (#7782).
 func (m *LocalClusterManager) broadcastProgress(tool, name, status, message string, progress int) {
-	if m.broadcast != nil {
-		m.broadcast("local_cluster_progress", map[string]interface{}{
-			"tool":     tool,
-			"name":     name,
-			"status":   status,
-			"message":  message,
-			"progress": progress,
-		})
+	if m.broadcast == nil {
+		slog.Debug("[LocalCluster] no broadcast listener, progress event dropped",
+			"tool", tool, "name", name, "status", status, "progress", progress)
+		return
 	}
+	m.broadcast("local_cluster_progress", map[string]interface{}{
+		"tool":     tool,
+		"name":     name,
+		"status":   status,
+		"message":  message,
+		"progress": progress,
+	})
 }
 
 // checkDockerRunning verifies the Docker daemon is reachable (required by kind/k3d)
@@ -725,7 +731,9 @@ func runWithTimeout(cmd *exec.Cmd, timeout time.Duration) error {
 		return err
 	case <-ctx.Done():
 		if cmd.Process != nil {
-			cmd.Process.Kill()
+			if killErr := cmd.Process.Kill(); killErr != nil {
+				slog.Warn("[runWithTimeout] failed to kill timed-out process, possible zombie", "error", killErr)
+			}
 		}
 		return fmt.Errorf("command timed out after %s", timeout)
 	}

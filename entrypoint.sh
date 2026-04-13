@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # Container entrypoint: starts backend on port 8081 with watchdog on port 8080.
 # The watchdog serves a "Reconnecting..." page if the backend crashes or restarts.
 # The shell stays as PID 1 so the signal trap can cleanly stop both processes.

@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"strings"
+
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/api/middleware"
@@ -51,6 +53,9 @@ func (h *UserHandler) UpdateCurrentUser(c *fiber.Ctx) error {
 	}
 
 	if updates.Email != "" {
+		if !strings.Contains(updates.Email, "@") {
+			return fiber.NewError(fiber.StatusBadRequest, "invalid email format")
+		}
 		user.Email = updates.Email
 	}
 	if updates.SlackID != "" {

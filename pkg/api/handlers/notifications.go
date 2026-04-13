@@ -119,13 +119,9 @@ func (h *NotificationHandler) SendAlertNotification(c *fiber.Ctx) error {
 // GetNotificationConfig gets the notification configuration for a user
 // GET /api/notifications/config
 func (h *NotificationHandler) GetNotificationConfig(c *fiber.Ctx) error {
-	// Get user from context (set by auth middleware)
-	userID := c.Locals("userID")
-	if userID == nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": "Unauthorized",
-		})
-	}
+	// Use middleware.GetUserID for consistency with other handlers (#7799).
+	userID := middleware.GetUserID(c)
+	_ = userID // reserved for future server-side config lookup
 
 	// Return empty config - actual config is stored client-side
 	// This endpoint exists for future server-side config storage
@@ -135,13 +131,9 @@ func (h *NotificationHandler) GetNotificationConfig(c *fiber.Ctx) error {
 // SaveNotificationConfig saves the notification configuration for a user
 // POST /api/notifications/config
 func (h *NotificationHandler) SaveNotificationConfig(c *fiber.Ctx) error {
-	// Get user from context (set by auth middleware)
-	userID := c.Locals("userID")
-	if userID == nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": "Unauthorized",
-		})
-	}
+	// Use middleware.GetUserID for consistency with other handlers (#7799).
+	userID := middleware.GetUserID(c)
+	_ = userID // reserved for future server-side config storage
 
 	var config notifications.NotificationConfig
 	if err := c.BodyParser(&config); err != nil {
