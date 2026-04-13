@@ -104,9 +104,27 @@ const ALL_CHECKS: MaliciousCheck[] = [
     message: 'Dangerous hostPath mount detected (root filesystem)',
     fields: 'all',
     check: (text) => {
+      // #7312 — Replaced backtracking [\s\S]*? pattern with a bounded
+      // lookahead to prevent ReDoS on crafted payloads.
       if (!/hostPath:/i.test(text)) return null
-      const m = text.match(/hostPath:[\s\S]*?path:\s*\/\s*(?:[\n\r}\s]|$)/m)
-      return m ? m[0].trim() : null
+      // Match hostPath blocks where path is "/" (root filesystem).
+      // Use line-based matching to avoid catastrophic backtracking.
+      const lines = text.split('\n')
+      let inHostPath = false
+      for (const line of lines) {
+        if (/hostPath:/i.test(line)) {
+          inHostPath = true
+          continue
+        }
+        if (inHostPath && /^\s*path:\s*\/\s*$/.test(line)) {
+          return `hostPath: path: /`
+        }
+        // Exit hostPath block when we hit a non-indented line
+        if (inHostPath && /^\S/.test(line)) {
+          inHostPath = false
+        }
+      }
+      return null
     },
   },
   {

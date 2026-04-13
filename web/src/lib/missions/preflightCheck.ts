@@ -47,7 +47,12 @@ export function classifyKubectlError(
   stdout: string,
   exitCode: number,
 ): PreflightError {
-  const combined = `${stderr} ${stdout}`.toLowerCase()
+  // #7321 — Guard against undefined/null inputs from cross-realm errors
+  // where err.message can be undefined, resulting in the literal string
+  // "undefined" being passed here.
+  const safeStderr = (stderr && stderr !== 'undefined') ? stderr : ''
+  const safeStdout = (stdout && stdout !== 'undefined') ? stdout : ''
+  const combined = `${safeStderr} ${safeStdout}`.toLowerCase()
 
   // --- Missing credentials / kubeconfig ---
   if (
@@ -158,7 +163,7 @@ export function classifyKubectlError(
   // --- Fallback ---
   return {
     code: 'UNKNOWN_EXECUTION_FAILURE',
-    message: stderr.trim() || stdout.trim() || 'An unknown error occurred while checking cluster access.',
+    message: safeStderr.trim() || safeStdout.trim() || 'An unknown error occurred while checking cluster access.',
   }
 }
 
@@ -411,7 +416,13 @@ export async function runPreflightCheck(
     return { ok: true, context }
   } catch (err) {
     // Connection-level failures (WebSocket down, agent unavailable)
-    const message = err instanceof Error ? err.message : String(err)
+    // #7317 — Guard against cross-realm Error objects where instanceof fails
+    // and err.message may be undefined, resulting in the string "undefined"
+    // being passed to classifyKubectlError.
+    const errObj = err as { message?: unknown }
+    const message = typeof errObj?.message === 'string' && errObj.message
+      ? errObj.message
+      : err instanceof Error ? err.message : String(err ?? 'Unknown execution error')
 
     // Classify the error message itself
     const error = classifyKubectlError(message, '', 1)

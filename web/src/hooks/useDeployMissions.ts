@@ -321,9 +321,18 @@ export function useDeployMissions() {
       const current = missionsRef.current
       if (current.length === 0) return
       // #7142 — If every mission is already terminal, skip the poll and
-      // stop the interval immediately. This prevents overrun where a queued
-      // interval callback fires network requests for fully-resolved missions.
-      if (current.every(m => isTerminalStatus(m.status))) {
+      // Stop the interval when all missions are terminal AND none need
+      // log recovery. Previously this exited before the per-mission recovery
+      // logic could run, breaking log recovery for completed missions (#7343).
+      const allTerminal = current.every(m => isTerminalStatus(m.status))
+      const anyNeedsRecovery = allTerminal && current.some(m => {
+        if (!m.completedAt || (Date.now() - m.completedAt) <= CACHE_TTL_MS) return false
+        const hasAnyLogs = m.clusterStatuses.some(cs => cs.logs && cs.logs.length > 0)
+        const recoveryPolls = m.logRecoveryPolls ?? 0
+        // Still needs recovery if: has logs but under budget, OR has no logs at all
+        return !hasAnyLogs || recoveryPolls < LOG_RECOVERY_EXTRA_POLLS
+      })
+      if (allTerminal && !anyNeedsRecovery) {
         if (pollRef.current) {
           clearInterval(pollRef.current)
           pollRef.current = undefined

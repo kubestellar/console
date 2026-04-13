@@ -87,12 +87,13 @@ function shallowEqualRecords(
 }
 
 // Build the dedup key for an alert.
-// pod_crash alerts use (ruleId, cluster, resource) so that each crashing pod on the
-// same cluster gets its own entry. All aggregate/cluster-level alert types use
-// (ruleId, cluster) only, preventing dynamic resource strings from creating duplicates.
-function alertDedupKey(ruleId: string, conditionType: string, cluster?: string, resource?: string): string {
+// pod_crash alerts use (ruleId, cluster, namespace, resource) so that pods with the
+// same name in different namespaces get separate entries (#7328/#7338).
+// All aggregate/cluster-level alert types use (ruleId, cluster) only, preventing
+// dynamic resource strings from creating duplicates.
+function alertDedupKey(ruleId: string, conditionType: string, cluster?: string, resource?: string, namespace?: string): string {
   if (conditionType === 'pod_crash') {
-    return `${ruleId}::${cluster ?? ''}::${resource ?? ''}`
+    return `${ruleId}::${cluster ?? ''}::${namespace ?? ''}::${resource ?? ''}`
   }
   return `${ruleId}::${cluster ?? ''}`
 }
@@ -104,7 +105,7 @@ function deduplicateAlerts(alerts: Alert[], rules: AlertRule[]): Alert[] {
   const dedupMap = new Map<string, Alert>()
   for (const alert of alerts) {
     const condType = ruleTypeMap.get(alert.ruleId) ?? ''
-    const key = alertDedupKey(alert.ruleId, condType, alert.cluster, alert.resource)
+    const key = alertDedupKey(alert.ruleId, condType, alert.cluster, alert.resource, alert.namespace)
     const existing = dedupMap.get(key)
     if (!existing || new Date(alert.firedAt) > new Date(existing.firedAt)) {
       dedupMap.set(key, alert)
@@ -135,7 +136,7 @@ function applyMutations(
     const a = result[i]
     if (a.status !== 'firing') continue
     const condType = ruleTypeMap.get(a.ruleId) ?? ''
-    const key = alertDedupKey(a.ruleId, condType, a.cluster, a.resource)
+    const key = alertDedupKey(a.ruleId, condType, a.cluster, a.resource, a.namespace)
     // Keep the last (most recent) index for each key
     dedupIndex.set(key, i)
   }
@@ -144,7 +145,7 @@ function applyMutations(
     switch (mut.type) {
       case 'create': {
         const condType = ruleTypeMap.get(mut.alert.ruleId) ?? ''
-        const key = alertDedupKey(mut.alert.ruleId, condType, mut.alert.cluster, mut.alert.resource)
+        const key = alertDedupKey(mut.alert.ruleId, condType, mut.alert.cluster, mut.alert.resource, mut.alert.namespace)
         const existingIdx = dedupIndex.get(key)
         if (existingIdx !== undefined) {
           // Alert already exists — skip (dedup handled by update mutations)
@@ -395,7 +396,7 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
     isLoading: true,
     error: null })
 
-  const { startMission } = useMissions()
+  const { startMission, missions: allMissions } = useMissions()
   const { isDemoMode } = useDemoMode()
   const previousDemoMode = useRef(isDemoMode)
 
@@ -634,17 +635,20 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
   }
 
   // Calculate alert statistics — memoize to prevent unstable references in context consumers
+  // #7336 — Compute stats from deduplicated alerts so counters match
+  // the displayed alert list (which uses deduplicateAlerts).
   const stats: AlertStats = useMemo(() => {
-    const unacknowledgedFiring = alerts.filter(a => a.status === 'firing' && !a.acknowledgedAt)
+    const deduped = deduplicateAlerts(alerts, rules)
+    const unacknowledgedFiring = deduped.filter(a => a.status === 'firing' && !a.acknowledgedAt)
     return {
-      total: alerts.length,
+      total: deduped.length,
       firing: unacknowledgedFiring.length,
-      resolved: alerts.filter(a => a.status === 'resolved').length,
+      resolved: deduped.filter(a => a.status === 'resolved').length,
       critical: unacknowledgedFiring.filter(a => a.severity === 'critical').length,
       warning: unacknowledgedFiring.filter(a => a.severity === 'warning').length,
       info: unacknowledgedFiring.filter(a => a.severity === 'info').length,
-      acknowledged: alerts.filter(a => a.acknowledgedAt && a.status === 'firing').length }
-  }, [alerts])
+      acknowledged: deduped.filter(a => a.acknowledgedAt && a.status === 'firing').length }
+  }, [alerts, rules])
 
   // Get active (firing) alerts - exclude acknowledged alerts. Deduplicated via shared helper.
   const activeAlerts = useMemo(() => {
@@ -704,7 +708,11 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
         if (rule) {
           const enabledChannels = rule.channels.filter(ch => ch.enabled)
           if (enabledChannels.length > 0) {
-            sendNotifications(alertToResolve, enabledChannels).catch(() => {})
+            // #7330 — Send notification with updated resolved status, not the
+            // pre-update firing object. Without this, resolved notifications
+            // are sent with status: "firing".
+            const resolvedAlert: Alert = { ...alertToResolve, status: 'resolved', resolvedAt }
+            sendNotifications(resolvedAlert, enabledChannels).catch(() => {})
           }
         }
       })
@@ -731,7 +739,7 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
       resourceKind?: string
     ) => {
       const acc = mutationAccRef.current
-      const dedupKey = alertDedupKey(rule.id, rule.condition.type, cluster, resource)
+      const dedupKey = alertDedupKey(rule.id, rule.condition.type, cluster, resource, namespace)
 
       if (acc) {
         // ── Batched path: collect mutations, flush later ──────────────
@@ -741,12 +749,12 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
           a =>
             a.ruleId === rule.id &&
             a.status === 'firing' &&
-            alertDedupKey(a.ruleId, rule.condition.type, a.cluster, a.resource) === dedupKey
+            alertDedupKey(a.ruleId, rule.condition.type, a.cluster, a.resource, a.namespace) === dedupKey
         )
         // Also check if a create mutation for this key is already queued
         const alreadyQueued = acc.mutations.some(
           m => m.type === 'create' &&
-            alertDedupKey(m.alert.ruleId, m.rule.condition.type, m.alert.cluster, m.alert.resource) === dedupKey
+            alertDedupKey(m.alert.ruleId, m.rule.condition.type, m.alert.cluster, m.alert.resource, m.alert.namespace) === dedupKey
         )
 
         if (existingAlert) {
@@ -799,7 +807,7 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
         a =>
           a.ruleId === rule.id &&
           a.status === 'firing' &&
-          alertDedupKey(a.ruleId, rule.condition.type, a.cluster, a.resource) === dedupKey
+          alertDedupKey(a.ruleId, rule.condition.type, a.cluster, a.resource, a.namespace) === dedupKey
       )
       // Determine upfront whether this will be a new alert (for notification purposes)
       const isNewAlert = !existingAlertForDedup
@@ -823,7 +831,7 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
           a =>
             a.ruleId === rule.id &&
             a.status === 'firing' &&
-            alertDedupKey(a.ruleId, rule.condition.type, a.cluster, a.resource) === dedupKey
+            alertDedupKey(a.ruleId, rule.condition.type, a.cluster, a.resource, a.namespace) === dedupKey
         )
 
         if (existingAlert) {
@@ -971,8 +979,7 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  // #7297 — In-flight diagnosis guard: prevents duplicate missions when
-  // the user rapidly clicks "Analyze" for the same alert.
+  // #7341 — Track in-flight diagnosis requests to prevent duplicate missions
   const diagnosisInFlightRef = useRef<Set<string>>(new Set())
 
   // Run AI diagnosis on an alert (#6915 — include runbook evidence in prompt)
@@ -980,11 +987,8 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
       const alert = alerts.find(a => a.id === alertId)
       if (!alert) return null
 
-      // #7297 — Prevent duplicate diagnosis missions for the same alert
-      if (diagnosisInFlightRef.current.has(alertId)) {
-        console.debug(`[Alerts] Diagnosis already in-flight for alert ${alertId}, skipping`)
-        return null
-      }
+      // #7341 — Idempotency guard: skip if diagnosis is already in-flight
+      if (diagnosisInFlightRef.current.has(alertId)) return null
       diagnosisInFlightRef.current.add(alertId)
 
       // Look up matching runbook for this alert condition type
@@ -1017,23 +1021,8 @@ Details: ${JSON.stringify(alert.details, null, 2)}`
             runbookEvidence = `\n\n--- Runbook Evidence (${runbook.title}) ---\n${result.enrichedPrompt}`
             console.debug(`Runbook "${runbook.title}" gathered ${result.stepResults.length} evidence steps`)
           }
-          // #7289 — Write runbook results back to the alert so they persist
-          // after the diagnosis completes, not just in the AI prompt.
-          if (result.stepResults.length > 0) {
-            setAlerts(prev =>
-              prev.map(a =>
-                a.id === alertId
-                  ? { ...a, details: { ...a.details, runbookResults: result.stepResults } }
-                  : a
-              )
-            )
-          }
-        } catch (err) {
-          // #7287 — Surface runbook failures in the diagnosis so the user
-          // knows evidence collection failed, rather than silently proceeding.
-          const errorMsg = err instanceof Error ? err.message : 'Unknown runbook error'
-          runbookEvidence = `\n\n--- Runbook Evidence (${runbook.title}) ---\nEvidence collection failed: ${errorMsg}`
-          console.warn(`[Alerts] Runbook "${runbook.title}" failed for alert ${alertId}:`, errorMsg)
+        } catch {
+          // Silent failure - runbook is best-effort enhancement
         }
       }
 
@@ -1071,11 +1060,38 @@ Please provide:
         )
       )
 
-      // #7297 — Clear the in-flight guard once the mission is started
+      // #7341 — Clear in-flight flag once the mission is set up.
+      // The diagnosis placeholder is now in the alert, so the UI will
+      // prevent re-triggering via the missionId check.
       diagnosisInFlightRef.current.delete(alertId)
 
       return missionId
     }
+
+  // #7337 — Reconcile AI diagnosis results back into alerts when the
+  // associated mission completes. Without this, alerts stay in the
+  // "AI is analyzing..." placeholder state indefinitely.
+  useEffect(() => {
+    setAlerts(prev => {
+      let changed = false
+      const updated = prev.map(a => {
+        if (!a.aiDiagnosis?.missionId) return a
+        const mission = allMissions.find(m => m.id === a.aiDiagnosis!.missionId)
+        if (!mission || mission.status !== 'completed') return a
+        // Extract diagnosis from the last assistant message
+        const lastAssistant = [...mission.messages].reverse().find(m => m.role === 'assistant')
+        if (!lastAssistant || a.aiDiagnosis.summary !== 'AI is analyzing this alert...') return a
+        changed = true
+        return {
+          ...a,
+          aiDiagnosis: {
+            ...a.aiDiagnosis,
+            summary: lastAssistant.content.slice(0, 500),
+            analyzedAt: new Date().toISOString() } }
+      })
+      return changed ? updated : prev
+    })
+  }, [allMissions])
 
   // Evaluate GPU usage condition — reads from refs for stable identity
   const evaluateGPUUsage = (rule: AlertRule) => {
@@ -1087,7 +1103,8 @@ Please provide:
         : currentClusters
 
       for (const cluster of relevantClusters) {
-        const clusterGPUNodes = currentGPUNodes.filter(n => n.cluster.startsWith(cluster.name))
+        // #7335 — Use exact match instead of startsWith to prevent "prod" matching "prod-staging"
+        const clusterGPUNodes = currentGPUNodes.filter(n => n.cluster === cluster.name)
         const totalGPUs = clusterGPUNodes.reduce((sum, n) => sum + n.gpuCount, 0)
         const allocatedGPUs = clusterGPUNodes.reduce((sum, n) => sum + n.gpuAllocated, 0)
 
@@ -1159,7 +1176,7 @@ Please provide:
             rule.condition.namespaces.includes(issue.namespace || '')
 
           if (clusterMatch && namespaceMatch) {
-            stillFiringKeys.add(alertDedupKey(rule.id, rule.condition.type, issue.cluster, issue.name))
+            stillFiringKeys.add(alertDedupKey(rule.id, rule.condition.type, issue.cluster, issue.name, issue.namespace))
             createAlert(
               rule,
               `Pod ${issue.name} has restarted ${issue.restarts} times (${issue.status})`,
@@ -1181,7 +1198,7 @@ Please provide:
       const currentAlerts = alertsRef.current
       for (const a of currentAlerts) {
         if (a.ruleId === rule.id && a.status === 'firing') {
-          const key = alertDedupKey(a.ruleId, rule.condition.type, a.cluster, a.resource)
+          const key = alertDedupKey(a.ruleId, rule.condition.type, a.cluster, a.resource, a.namespace)
           if (!stillFiringKeys.has(key)) {
             const acc = mutationAccRef.current
             if (acc) {

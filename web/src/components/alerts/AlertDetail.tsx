@@ -92,23 +92,17 @@ export function AlertDetail({ alert, onClose }: AlertDetailProps) {
   const handleRunDiagnosis = async () => {
     diagnosisAtStartRef.current = alert.aiDiagnosis // snapshot before starting
     setIsRunningDiagnosis(true)
-    // #7296 — Await the diagnosis call so fast failures (rejected promise,
-    // null return) immediately clear the spinner instead of waiting for timeout.
+    try {
+      await runAIDiagnosis(alert.id)
+    } catch {
+      // #7334 — Clear spinner on failure instead of letting it persist
+      setIsRunningDiagnosis(false)
+      return
+    }
+    // Safety-net timeout: clear loading after 60s even if diagnosis never completes (#5714)
     const AI_DIAGNOSIS_SAFETY_TIMEOUT_MS = 60_000
     clearTimeout(diagnosisTimerRef.current) // clear any previous timer (Copilot followup)
     diagnosisTimerRef.current = window.setTimeout(() => setIsRunningDiagnosis(false), AI_DIAGNOSIS_SAFETY_TIMEOUT_MS)
-    try {
-      const result = await runAIDiagnosis(alert.id)
-      if (result === null) {
-        // #7296 — Diagnosis returned null (e.g. alert not found, duplicate guard)
-        setIsRunningDiagnosis(false)
-        clearTimeout(diagnosisTimerRef.current)
-      }
-    } catch {
-      // #7296 — Diagnosis threw — clear spinner immediately
-      setIsRunningDiagnosis(false)
-      clearTimeout(diagnosisTimerRef.current)
-    }
   }
 
   // Clear loading state when a NEW diagnosis result arrives (#5714, Copilot followup)
@@ -233,7 +227,9 @@ export function AlertDetail({ alert, onClose }: AlertDetailProps) {
               <Bot className="w-4 h-4 text-purple-400" />
               <span className="text-sm font-medium text-foreground">{t('alerts.aiDiagnosis')}</span>
             </div>
-            {!alert.aiDiagnosis?.missionId && (
+            {/* #7333 — Allow re-running diagnosis when the mission no longer exists,
+                not just when missionId is unset */}
+            {(!alert.aiDiagnosis?.missionId || !associatedMission) && (
               <Button
                 variant="accent"
                 size="sm"

@@ -32,8 +32,12 @@ export default function AlertsDataFetcher({ onData }: Props) {
     const isLoading = isGPULoading || isPodIssuesLoading || isClustersLoading
     const errors = [gpuError, podIssuesError, clustersError].filter(Boolean)
     const errorStr = errors.length > 0 ? (errors || []).join('; ') : null
-    // Fingerprint to skip no-op updates
-    const fp = `${(gpuNodes||[]).length}:${(podIssues||[]).length}:${(clusters||[]).length}:${isLoading}:${errorStr}`
+    // Fingerprint to skip no-op updates — include content hash so data changes
+    // that don't alter array length still trigger an update (#7329/#7339).
+    const gpuHash = (gpuNodes || []).map(n => `${n.cluster}:${n.gpuCount}:${n.gpuAllocated}`).join(',')
+    const podHash = (podIssues || []).map(p => `${p.name}:${p.cluster}:${p.namespace}:${p.restarts}:${p.status}`).join(',')
+    const clusterHash = (clusters || []).map(c => `${c.name}:${c.healthy}:${c.nodeCount}`).join(',')
+    const fp = `${gpuHash}|${podHash}|${clusterHash}|${isLoading}|${errorStr}`
     if (fp === prevRef.current) return
     prevRef.current = fp
     onData({

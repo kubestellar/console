@@ -236,6 +236,18 @@ function generateRequestId(prefix = 'claude'): string {
   return `${prefix}-${Date.now()}-${requestIdCounter}-${Math.random().toString(36).substr(2, 6)}`
 }
 
+/**
+ * #7311 — Monotonic counter for generating unique message IDs.
+ * Replaces bare `msg-${Date.now()}` which collides when two messages
+ * are created in the same millisecond (e.g., rapid stream splits,
+ * system messages added back-to-back).
+ */
+let messageIdCounter = 0
+function generateMessageId(suffix = ''): string {
+  messageIdCounter += 1
+  return `msg-${Date.now()}-${messageIdCounter}${suffix ? `-${suffix}` : ''}`
+}
+
 /** Delay before auto-reconnecting interrupted missions after WS opens */
 const MISSION_RECONNECT_DELAY_MS = 500
 /**
@@ -512,8 +524,18 @@ function saveUnreadMissionIds(ids: Set<string>) {
 
 export function MissionProvider({ children }: { children: ReactNode }) {
   const [missions, setMissions] = useState<Mission[]>(() => loadMissions())
-  const [activeMissionId, setActiveMissionId] = useState<string | null>(null)
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  // #7313 — Restore the active mission ID from localStorage so a reload
+  // while a mission is running keeps the sidebar view open.
+  const ACTIVE_MISSION_STORAGE_KEY = 'kc_active_mission_id'
+  const [activeMissionId, setActiveMissionId] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem(ACTIVE_MISSION_STORAGE_KEY) || null
+    } catch { return null }
+  })
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+    // #7313 — If there's a persisted active mission, open the sidebar on load
+    try { return !!localStorage.getItem(ACTIVE_MISSION_STORAGE_KEY) } catch { return false }
+  })
   const [isSidebarMinimized, setIsSidebarMinimized] = useState(false)
   const [isFullScreen, setIsFullScreen] = useState(false)
 
@@ -540,6 +562,9 @@ export function MissionProvider({ children }: { children: ReactNode }) {
   // Used by the storage event listener to suppress echoes of our own write
   // in environments that (incorrectly) deliver same-tab storage events.
   const lastWrittenAtRef = useRef<number>(0)
+  // #7323 — Guard against storage event bounce loops. When set, the save
+  // effect skips writing to localStorage (the data came from another tab).
+  const suppressNextSaveRef = useRef(false)
   const wsRef = useRef<WebSocket | null>(null)
   const pendingRequests = useRef<Map<string, string>>(new Map()) // requestId -> missionId
   // Track last stream timestamp per mission to detect tool-use gaps (for creating new chat bubbles)
@@ -574,7 +599,17 @@ export function MissionProvider({ children }: { children: ReactNode }) {
   const selectedAgentRef = useRef(selectedAgent)
   const defaultAgentRef = useRef(defaultAgent)
   useEffect(() => { missionsRef.current = missions }, [missions])
-  useEffect(() => { activeMissionIdRef.current = activeMissionId }, [activeMissionId])
+  useEffect(() => {
+    activeMissionIdRef.current = activeMissionId
+    // #7313 — Persist active mission ID so reloads restore the sidebar view
+    try {
+      if (activeMissionId) {
+        localStorage.setItem(ACTIVE_MISSION_STORAGE_KEY, activeMissionId)
+      } else {
+        localStorage.removeItem(ACTIVE_MISSION_STORAGE_KEY)
+      }
+    } catch { /* localStorage unavailable */ }
+  }, [activeMissionId])
   useEffect(() => { isSidebarOpenRef.current = isSidebarOpen }, [isSidebarOpen])
   useEffect(() => { selectedAgentRef.current = selectedAgent }, [selectedAgent])
   useEffect(() => { defaultAgentRef.current = defaultAgent }, [defaultAgent])
@@ -644,6 +679,11 @@ export function MissionProvider({ children }: { children: ReactNode }) {
    */
   const wsSend = (data: string, onFailure?: () => void): void => {
     let retries = 0
+    // #7327 — Extended retries for CONNECTING state so messages aren't
+    // dropped during network flapping. When the socket is actively
+    // connecting we use a shorter retry interval.
+    const WS_SEND_CONNECTING_RETRY_DELAY_MS = 250
+    const WS_SEND_CONNECTING_MAX_RETRIES = 12 // 12 * 250ms = 3s
     const trySend = () => {
       // #7305 — Guard against sending on a closed socket after unmount.
       // A retry timer can fire across the unmount boundary.
@@ -652,13 +692,16 @@ export function MissionProvider({ children }: { children: ReactNode }) {
         wsRef.current.send(data)
         return
       }
-      if (retries < WS_SEND_MAX_RETRIES) {
+      const isConnecting = wsRef.current?.readyState === WebSocket.CONNECTING
+      const maxRetries = isConnecting ? WS_SEND_CONNECTING_MAX_RETRIES : WS_SEND_MAX_RETRIES
+      const delay = isConnecting ? WS_SEND_CONNECTING_RETRY_DELAY_MS : WS_SEND_RETRY_DELAY_MS
+      if (retries < maxRetries) {
         retries++
         // #6629 — ref-tracked so unmount cleanup can cancel pending retries.
         const handle = setTimeout(() => {
           wsSendRetryTimers.current.delete(handle)
           trySend()
-        }, WS_SEND_RETRY_DELAY_MS)
+        }, delay)
         wsSendRetryTimers.current.add(handle)
       } else {
         console.error('[Missions] WebSocket send failed after retries — socket not open')
@@ -683,6 +726,12 @@ export function MissionProvider({ children }: { children: ReactNode }) {
   // Tab A's completion. We mark our own writes with `lastWrittenAt` so
   // the storage listener below can ignore echoes of our own write.
   useEffect(() => {
+    // #7323 — Skip save if the state update came from a cross-tab storage event
+    // to prevent bouncing writes between tabs.
+    if (suppressNextSaveRef.current) {
+      suppressNextSaveRef.current = false
+      return
+    }
     lastWrittenAtRef.current = Date.now()
     saveMissions(missions)
   }, [missions])
@@ -784,6 +833,9 @@ export function MissionProvider({ children }: { children: ReactNode }) {
         // add missions that only exist in remote; keep local-only missions
         // that are actively running (the remote tab may not know about them).
         const reloaded = loadMissions()
+        // #7323 — Suppress the save effect for this setMissions call
+        // since the data came from another tab's write.
+        suppressNextSaveRef.current = true
         // #7088 — Smart merge by updatedAt instead of full replace
         setMissions(prev => {
           const remoteById = new Map(reloaded.map(m => [m.id, m]))
@@ -1324,7 +1376,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
                     messages: [
                       ...m.messages,
                       {
-                        id: `msg-${Date.now()}-${m.id}`,
+                        id: generateMessageId(m.id),
                         role: 'system',
                         content: errorContent,
                         timestamp: new Date() }
@@ -1386,7 +1438,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
                 if (!affectedMissionIds.has(m.id)) return m
                 if (m.status !== 'running' && m.status !== 'waiting_input') return m
                 return { ...m, status: 'failed' as MissionStatus, currentStep: 'Connection failed',
-                  messages: [...m.messages, { id: `msg-${Date.now()}-ws-error`, role: 'system' as const, content: errorContent, timestamp: new Date() }] }
+                  messages: [...m.messages, { id: generateMessageId('ws-error'), role: 'system' as const, content: errorContent, timestamp: new Date() }] }
               }))
             } else {
               setMissions(prev => prev.map(m => {
@@ -1554,7 +1606,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
         messages: [
           ...m.messages,
           {
-            id: `msg-${Date.now()}`,
+            id: generateMessageId(),
             role: 'system',
             content: message,
             timestamp: new Date() }
@@ -1780,10 +1832,13 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
           ...m,
           currentStep: payload.step || m.currentStep,
           progress: payload.progress ?? m.progress,
+          // #7314 — Only overwrite tokenUsage fields when the new value is
+          // positive. A zero or NaN total from a payload that omits tokens
+          // should not erase historic totals.
           tokenUsage: payload.tokens ? {
-            input: !Number.isNaN(safeInput) ? safeInput : (m.tokenUsage?.input ?? 0),
-            output: !Number.isNaN(safeOutput) ? safeOutput : (m.tokenUsage?.output ?? 0),
-            total: !Number.isNaN(safeTotal) ? safeTotal : (m.tokenUsage?.total ?? 0) } : m.tokenUsage,
+            input: !Number.isNaN(safeInput) && safeInput > 0 ? safeInput : (m.tokenUsage?.input ?? 0),
+            output: !Number.isNaN(safeOutput) && safeOutput > 0 ? safeOutput : (m.tokenUsage?.output ?? 0),
+            total: !Number.isNaN(safeTotal) && safeTotal > 0 ? safeTotal : (m.tokenUsage?.total ?? 0) } : m.tokenUsage,
           updatedAt: new Date() }
       } else if (message.type === 'stream') {
         // Streaming response from agent
@@ -1844,7 +1899,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
             messages: [
               ...m.messages,
               {
-                id: `msg-${Date.now()}-s${splitIndex}`,
+                id: generateMessageId(`s${splitIndex}`),
                 role: 'assistant' as const,
                 content: payload.content,
                 timestamp: new Date(),
@@ -1916,15 +1971,25 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
         // event (#6016 — per-operation tracking keyed by missionId).
         clearActiveTokenCategory(missionId)
         if (m.status === 'running') {
-          emitMissionCompleted(m.type, Math.round((Date.now() - m.createdAt.getTime()) / 1000))
+          // #7326 — Cap duration at 24 hours to prevent numeric overflow
+          // from clock skew or backgrounded tabs.
+          const MAX_MISSION_DURATION_SEC = 86_400 // 24 hours
+          const rawDuration = Math.round((Date.now() - m.createdAt.getTime()) / 1000)
+          const clampedDuration = Math.min(Math.max(rawDuration, 0), MAX_MISSION_DURATION_SEC)
+          emitMissionCompleted(m.type, clampedDuration)
         }
 
         const resultContent = chatPayload.content || (payload as { output?: string }).output || 'Task completed.'
         // Check ALL assistant messages since the last user message for streamed content
         // (streaming may split into multiple bubbles due to tool-use gaps)
         const lastUserIdx = m.messages.map(msg => msg.role).lastIndexOf('user')
+        // #7320 — When no user messages exist (system-generated missions),
+        // limit the lookback to the last MAX_DEDUP_LOOKBACK messages to prevent
+        // memory spikes on massive histories.
+        const MAX_DEDUP_LOOKBACK = 50
+        const sliceStart = lastUserIdx >= 0 ? lastUserIdx + 1 : Math.max(0, m.messages.length - MAX_DEDUP_LOOKBACK)
         const streamedSinceUser = m.messages
-          .slice(lastUserIdx + 1)
+          .slice(sliceStart)
           .filter(msg => msg.role === 'assistant')
           .map(msg => msg.content)
           .join('')
@@ -1971,7 +2036,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
           messages: alreadyStreamed ? m.messages : [
             ...m.messages,
             {
-              id: `msg-${Date.now()}`,
+              id: generateMessageId(),
               role: 'assistant' as const,
               content: resultContent,
               timestamp: new Date(),
@@ -2041,7 +2106,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
           messages: [
             ...m.messages,
             {
-              id: `msg-${Date.now()}`,
+              id: generateMessageId(),
               role: 'system' as const,
               content: errorContent,
               timestamp: new Date() }
@@ -2154,7 +2219,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
     // Warn the user that interactive terminal input is not supported (#3767)
     if (isInstallMission) {
       messages.push({
-        id: `msg-${Date.now()}-nointeractive`,
+        id: generateMessageId('nointeractive'),
         role: 'system',
         content: '**Non-interactive mode:** This terminal does not support interactive input. ' +
           'If a tool requires browser-based login or manual confirmation, the agent will ask you to run that step in your own terminal first.',
@@ -2168,7 +2233,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
       ).join('\n')
 
       messages.push({
-        id: `msg-${Date.now()}-resolutions`,
+        id: generateMessageId('resolutions'),
         role: 'system',
         content: `🔍 **Found ${matchedResolutions.length} similar resolution${matchedResolutions.length > 1 ? 's' : ''} from your knowledge base:**\n\n${resolutionNames}\n\n_This context has been automatically provided to the AI to help solve the problem faster._`,
         timestamp: new Date() })
@@ -2215,7 +2280,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
             messages: [
               ...m.messages,
               {
-                id: `msg-${Date.now()}-preflight`,
+                id: generateMessageId('preflight'),
                 role: 'system' as const,
                 content: `**Preflight Check Failed**\n\nThe mission cannot proceed because cluster access verification failed. See the details below for how to fix this.\n\nError: ${preflight.error?.message || 'Unknown error'}`,
                 timestamp: new Date() }
@@ -2257,7 +2322,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
           messages: [
             ...m.messages,
             {
-              id: `msg-${Date.now()}-preflight-error`,
+              id: generateMessageId('preflight-error'),
               role: 'system' as const,
               content: `**Preflight Check Error**\n\nThe preflight check encountered an unexpected error. The mission has been blocked to prevent unvalidated execution.\n\nError: ${err instanceof Error ? err.message : 'Unknown error'}`,
               timestamp: new Date() }
@@ -2293,7 +2358,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
     // Build initial messages
     const initialMessages: MissionMessage[] = [
       {
-        id: `msg-${Date.now()}`,
+        id: generateMessageId(),
         role: 'user',
         content: params.initialPrompt, // Show original prompt in UI
         timestamp: new Date() },
@@ -2446,7 +2511,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
           messages: [
             ...m.messages,
             {
-              id: `msg-${Date.now()}`,
+              id: generateMessageId(),
               role: 'system',
               content: errorContent,
               timestamp: new Date() }
@@ -2509,7 +2574,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
             messages: [
               ...m.messages,
               {
-                id: `msg-${Date.now()}-preflight-retry`,
+                id: generateMessageId('preflight-retry'),
                 role: 'system' as const,
                 content: `**Preflight Check Still Failing**\n\nError: ${preflight.error?.message || 'Unknown error'}`,
                 timestamp: new Date() }
@@ -2544,7 +2609,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
           messages: [
             ...m.messages,
             {
-              id: `msg-${Date.now()}-preflight-ok`,
+              id: generateMessageId('preflight-ok'),
               role: 'system' as const,
               content: '**Preflight check passed** — proceeding with mission execution.',
               timestamp: new Date() }
@@ -2621,7 +2686,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
           ...m,
           status: 'failed' as const,
           messages: [...m.messages, {
-            id: `msg-${Date.now()}`,
+            id: generateMessageId(),
             role: 'system' as const,
             content: `**Mission blocked:** Imported mission contains potentially unsafe content:\n\n${findings.map(f => `- ${f.message}: \`${f.match}\` (in ${f.location})`).join('\n')}\n\nPlease review and edit the mission before running.`,
             timestamp: new Date() }]
@@ -2659,7 +2724,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         matchedResolutions: matchedResolutions.length > 0 ? matchedResolutions : undefined,
         messages: [
           {
-            id: `msg-${Date.now()}`,
+            id: generateMessageId(),
             role: 'user' as const,
             content: basePrompt, // Show original prompt in UI (not cluster prefix)
             timestamp: new Date() },
@@ -2787,7 +2852,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         messages: [
           ...m.messages,
           {
-            id: `msg-${Date.now()}`,
+            id: generateMessageId(),
             role: 'system',
             content: 'Cancellation requested — waiting for backend confirmation...',
             timestamp: new Date() }
@@ -2848,7 +2913,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         messages: [
           ...m.messages,
           {
-            id: `msg-${Date.now()}`,
+            id: generateMessageId(),
             role: 'user',
             content,
             timestamp: new Date() }
@@ -2900,7 +2965,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
           messages: [
             ...m.messages,
             {
-              id: `msg-${Date.now()}`,
+              id: generateMessageId(),
               role: 'system',
               content: 'Lost connection to local agent. Please ensure the agent is running and try again.',
               timestamp: new Date() }
