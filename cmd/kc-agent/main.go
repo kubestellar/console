@@ -33,15 +33,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	fmt.Printf(`
- _  __   ____
-| |/ /  / ___|
-| ' /  | |
-| . \  | |___
-|_|\_\  \____|
-
-KubeStellar Console - Local Agent v%s
-`, agent.Version)
+	slog.Info("KubeStellar Console - Local Agent starting", "version", agent.Version)
 
 	// Parse comma-separated allowed origins from flag
 	var origins []string
@@ -67,7 +59,7 @@ KubeStellar Console - Local Agent v%s
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-sigChan
-		fmt.Println("\nShutting down...")
+		slog.Info("Shutting down")
 		os.Exit(0)
 	}()
 

@@ -2,6 +2,7 @@ package agent
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"sync"
 )
@@ -311,7 +312,7 @@ func InitializeProviders() error {
 	if defaultAgent := os.Getenv("DEFAULT_AGENT"); defaultAgent != "" {
 		if err := registry.SetDefault(defaultAgent); err != nil {
 			// Log warning but don't fail - will use first available
-			fmt.Printf("Warning: Could not set default agent %s: %v\n", defaultAgent, err)
+			slog.Warn("[Registry] could not set default agent", "agent", defaultAgent, "error", err)
 		}
 	}
 

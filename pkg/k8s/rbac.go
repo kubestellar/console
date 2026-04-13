@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 	"sync"
@@ -544,7 +545,8 @@ func (m *MultiClusterClient) CountServiceAccountsAllClusters(ctx context.Context
 			defer wg.Done()
 			count, err := m.countServiceAccountsInCluster(ctx, name)
 			if err != nil {
-				return // skip unreachable clusters, same as before
+				slog.Warn("[RBAC] service account count skipped for unreachable cluster", "cluster", name, "error", err)
+				return
 			}
 			mu.Lock()
 			total += count

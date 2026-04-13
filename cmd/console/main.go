@@ -35,9 +35,11 @@ func main() {
 	flag.Parse()
 
 	if *version {
-		fmt.Printf("console version %s\n", api.Version)
+		fmt.Printf("console version %s\n", api.Version) //nolint:forbidigo // CLI --version flag output
 		os.Exit(0)
 	}
+
+	slog.Info("console starting", "version", api.Version)
 
 	// Watchdog mode: lightweight reverse proxy, no DB/k8s/MCP initialization
 	if *watchdog {

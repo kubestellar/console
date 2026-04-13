@@ -801,7 +801,7 @@ func (h *NightlyE2EHandler) GetRunLogs(c *fiber.Ctx) error {
 
 	resp, err := h.httpClient.Do(req)
 	if err != nil {
-		slog.Info("[NightlyE2E] bad gateway", "error", err)
+		slog.Error("[NightlyE2E] bad gateway", "error", err)
 		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": "bad gateway"})
 	}
 	defer resp.Body.Close()

@@ -106,7 +106,7 @@ func (s *Server) handleGPUNodesHTTP(w http.ResponseWriter, r *http.Request) {
 				defer wg.Done()
 				defer func() {
 					if r := recover(); r != nil {
-						slog.Info("[GPUNodes] recovered from panic", "cluster", clusterName, "panic", r)
+						slog.Error("[GPUNodes] recovered from panic", "cluster", clusterName, "panic", r)
 					}
 				}()
 				clusterCtx, clusterCancel := context.WithTimeout(ctx, agentDefaultTimeout)
@@ -178,7 +178,7 @@ func (s *Server) handleNodesHTTP(w http.ResponseWriter, r *http.Request) {
 				defer wg.Done()
 				defer func() {
 					if r := recover(); r != nil {
-						slog.Info("[Nodes] recovered from panic", "cluster", clusterName, "panic", r)
+						slog.Error("[Nodes] recovered from panic", "cluster", clusterName, "panic", r)
 					}
 				}()
 				clusterCtx, clusterCancel := context.WithTimeout(ctx, agentDefaultTimeout)
@@ -1279,7 +1279,7 @@ func (s *Server) startBackendProcess() error {
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				slog.Info("[Backend] recovered from panic in process reaper", "panic", r)
+				slog.Error("[Backend] recovered from panic in process reaper", "panic", r)
 			}
 		}()
 		cmd.Wait()

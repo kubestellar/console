@@ -609,7 +609,7 @@ func (s *Server) handleProvidersHealth(w http.ResponseWriter, r *http.Request) {
 			defer wg.Done()
 			defer func() {
 				if r := recover(); r != nil {
-					slog.Info("[ProviderHealth] recovered from panic checking provider", "provider", providerID, "panic", r)
+					slog.Error("[ProviderHealth] recovered from panic checking provider", "provider", providerID, "panic", r)
 				}
 			}()
 			status := checkStatuspageHealth(client, url)
@@ -626,7 +626,7 @@ func (s *Server) handleProvidersHealth(w http.ResponseWriter, r *http.Request) {
 			defer wg.Done()
 			defer func() {
 				if r := recover(); r != nil {
-					slog.Info("[ProviderHealth] recovered from panic pinging provider", "provider", providerID, "panic", r)
+					slog.Error("[ProviderHealth] recovered from panic pinging provider", "provider", providerID, "panic", r)
 				}
 			}()
 			status := checkPingHealth(client, url)
@@ -1084,7 +1084,7 @@ func (s *Server) sendNativeNotification(alerts []DeviceAlert) {
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				slog.Info("[DeviceTracker] recovered from panic in notification", "panic", r)
+				slog.Error("[DeviceTracker] recovered from panic in notification", "panic", r)
 			}
 		}()
 
@@ -1254,7 +1254,7 @@ func (s *Server) handleLocalClusters(w http.ResponseWriter, r *http.Request) {
 		go func() {
 			defer func() {
 				if r := recover(); r != nil {
-					slog.Info("[LocalClusters] recovered from panic creating cluster", "cluster", req.Name, "panic", r)
+					slog.Error("[LocalClusters] recovered from panic creating cluster", "cluster", req.Name, "panic", r)
 				}
 			}()
 			if err := s.localClusters.CreateCluster(req.Tool, req.Name); err != nil {
@@ -1317,7 +1317,7 @@ func (s *Server) handleLocalClusters(w http.ResponseWriter, r *http.Request) {
 		go func() {
 			defer func() {
 				if r := recover(); r != nil {
-					slog.Info("[LocalClusters] recovered from panic deleting cluster", "cluster", name, "panic", r)
+					slog.Error("[LocalClusters] recovered from panic deleting cluster", "cluster", name, "panic", r)
 				}
 			}()
 			if err := s.localClusters.DeleteCluster(tool, name); err != nil {
@@ -1412,7 +1412,7 @@ func (s *Server) handleLocalClusterLifecycle(w http.ResponseWriter, r *http.Requ
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				slog.Info("[LocalClusters] recovered from panic during lifecycle action", "action", req.Action, "cluster", req.Name, "panic", r)
+				slog.Error("[LocalClusters] recovered from panic during lifecycle action", "action", req.Action, "cluster", req.Name, "panic", r)
 			}
 		}()
 
@@ -1533,7 +1533,7 @@ func (s *Server) handleVClusterCreate(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				slog.Info("[vCluster] recovered from panic creating vcluster", "name", req.Name, "panic", r)
+				slog.Error("[vCluster] recovered from panic creating vcluster", "name", req.Name, "panic", r)
 			}
 		}()
 		if err := s.localClusters.CreateVCluster(req.Name, req.Namespace); err != nil {
@@ -1725,7 +1725,7 @@ func (s *Server) handleVClusterDelete(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				slog.Info("[vCluster] recovered from panic deleting vcluster", "name", req.Name, "panic", r)
+				slog.Error("[vCluster] recovered from panic deleting vcluster", "name", req.Name, "panic", r)
 			}
 		}()
 		if err := s.localClusters.DeleteVCluster(req.Name, req.Namespace); err != nil {

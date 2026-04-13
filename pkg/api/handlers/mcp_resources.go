@@ -1459,7 +1459,7 @@ func (h *MCPHandlers) GetPodNetworkStats(c *fiber.Ctx) error {
 							continue
 						}
 					}
-					slog.Info("[MCP] network stats: list pods failed", "app", label, "cluster", clusterName, "error", listErr)
+					slog.Warn("[MCP] network stats: list pods failed", "app", label, "cluster", clusterName, "error", listErr)
 					continue
 				}
 

@@ -732,7 +732,7 @@ func (uc *UpdateChecker) restartViaStartupScript(repoPath string) {
 	logPath := repoPath + "/data/auto-update-restart.log"
 	logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
-		slog.Info("[AutoUpdate] cannot create restart log", "path", logPath, "error", err)
+		slog.Warn("[AutoUpdate] cannot create restart log", "path", logPath, "error", err)
 		logFile = nil
 	}
 
@@ -778,7 +778,7 @@ func (uc *UpdateChecker) restartViaStartupScript(repoPath string) {
 func (uc *UpdateChecker) selfUpdateFallback(repoPath string) {
 	currentBinary, err := os.Executable()
 	if err != nil {
-		slog.Info("[AutoUpdate] cannot determine kc-agent binary path", "error", err)
+		slog.Warn("[AutoUpdate] cannot determine kc-agent binary path", "error", err)
 		return
 	}
 
