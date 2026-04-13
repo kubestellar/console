@@ -240,13 +240,15 @@ function DeploymentSection() {
 
   const copyCommands = async (commands: string[], step: number) => {
     const text = commands.filter(c => !c.startsWith('#') && c !== '').join('\n')
-    await copyToClipboard(text)
+    const ok = await copyToClipboard(text)
+    if (!ok) return
     const key = `${activeTab}-${step}`
     setCopiedStep(key)
     clearTimeout(copiedTimerRef.current)
     copiedTimerRef.current = setTimeout(() => setCopiedStep(null), COPY_FEEDBACK_MS)
-    emitWhiteLabelCommandCopy(activeTab, step, commands[0])
-    emitInstallCommandCopied('white_label', commands[0])
+    const firstCommand = commands.find(c => !c.startsWith('#') && c !== '') ?? commands[0]
+    emitWhiteLabelCommandCopy(activeTab, step, firstCommand)
+    emitInstallCommandCopied('white_label', firstCommand)
   }
 
   const steps = activeTab === 'binary'

@@ -191,12 +191,14 @@ export function FromHolmesGPT() {
   }, [])
 
   const copyCommands = async (commands: string[], step: number) => {
-    const text = commands.join('\n')
-    await copyToClipboard(text)
+    const text = commands.filter(c => !c.startsWith('#') && c !== '').join('\n')
+    const ok = await copyToClipboard(text)
+    if (!ok) return
     setCopiedStep(`step-${step}`)
     clearTimeout(copiedTimerRef.current)
     copiedTimerRef.current = setTimeout(() => setCopiedStep(null), COPY_FEEDBACK_MS)
-    emitInstallCommandCopied('from_holmesgpt', commands[0])
+    const firstCommand = commands.find(c => !c.startsWith('#') && c !== '') ?? commands[0]
+    emitInstallCommandCopied('from_holmesgpt', firstCommand)
   }
 
   return (

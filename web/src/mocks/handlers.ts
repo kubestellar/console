@@ -186,9 +186,23 @@ const currentUser = {
   onboarded: true,
 }
 
-// Stored card configurations for sharing tests
+// Stored card configurations for sharing tests.
+// Capped to prevent unbounded memory growth in long-running sessions (#7418).
+/** Maximum number of entries in each in-memory share registry */
+const MAX_SHARE_REGISTRY_ENTRIES = 500
 const savedCards: Record<string, unknown> = {}
 const sharedDashboards: Record<string, unknown> = {}
+
+/** Evict oldest entries when registry exceeds MAX_SHARE_REGISTRY_ENTRIES */
+function pruneRegistry(registry: Record<string, unknown>) {
+  const keys = Object.keys(registry)
+  if (keys.length > MAX_SHARE_REGISTRY_ENTRIES) {
+    const excess = keys.length - MAX_SHARE_REGISTRY_ENTRIES
+    for (let i = 0; i < excess; i++) {
+      delete registry[keys[i]]
+    }
+  }
+}
 
 export const handlers = [
   // ── Analytics passthrough ─────────────────────────────────────────
@@ -463,6 +477,7 @@ export const handlers = [
     const body = (await request.json()) as { id: string; config: unknown }
     const shareId = `card-${Date.now()}`
     savedCards[shareId] = body
+    pruneRegistry(savedCards)
     return HttpResponse.json({
       success: true,
       shareId,
@@ -492,6 +507,7 @@ export const handlers = [
     const body = (await request.json()) as { name: string; config: unknown }
     const shareId = `dashboard-${Date.now()}`
     sharedDashboards[shareId] = body
+    pruneRegistry(sharedDashboards)
     return HttpResponse.json({
       success: true,
       shareId,
