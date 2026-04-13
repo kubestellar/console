@@ -7,6 +7,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -713,9 +714,12 @@ func (h *GitOpsHandlers) getOperatorsForCluster(ctx context.Context, cluster str
 			ttl = operatorCacheEmptyTTL
 		}
 		if time.Since(entry.fetchedAt) < ttl {
-			operators := entry.operators
+			// Return a copy so callers cannot mutate the cache's backing array (#7748).
+			src := entry.operators
+			cpy := make([]Operator, len(src))
+			copy(cpy, src)
 			operatorCacheMu.RUnlock()
-			return operators
+			return cpy
 		}
 	}
 	operatorCacheMu.RUnlock()
@@ -1042,7 +1046,10 @@ func (h *GitOpsHandlers) getSubscriptionsForClusterWithError(ctx context.Context
 
 // getSubscriptionsForCluster gets OLM subscriptions for a specific cluster using jsonpath
 func (h *GitOpsHandlers) getSubscriptionsForCluster(ctx context.Context, cluster string) []OperatorSubscription {
-	subs, _ := h.fetchSubscriptionsFromCluster(ctx, cluster)
+	subs, err := h.fetchSubscriptionsFromCluster(ctx, cluster)
+	if err != nil {
+		slog.Warn("[GitOps] failed to fetch subscriptions for cluster", "cluster", cluster, "error", err)
+	}
 	return subs
 }
 
@@ -2328,7 +2335,9 @@ func (h *GitOpsHandlers) UpgradeHelmRelease(c *fiber.Ctx) error {
 		tmpFile.Close()
 
 		args = append(args, "-f", tmpFile.Name())
-		// Rebuild command with values file
+		// Rebuild command with values file; reset buffers to avoid mixed output (#7747).
+		stdout.Reset()
+		stderr.Reset()
 		cmd = exec.CommandContext(ctx, "helm", args...)
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -2595,6 +2604,8 @@ func (h *GitOpsHandlers) TriggerArgoSync(c *fiber.Ctx) error {
 							"method":  "api",
 						})
 					}
+					// Drain body so the HTTP connection can be returned to the pool (#7746).
+					io.Copy(io.Discard, resp.Body)
 					slog.Warn("[ArgoCD] API sync returned error status, falling back", "status", resp.StatusCode)
 				} else {
 					slog.Error("[ArgoCD] API sync failed, falling back", "error", err)
