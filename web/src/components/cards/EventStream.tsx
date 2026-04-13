@@ -260,7 +260,7 @@ function EventStreamInternal({ config }: { config?: EventStreamConfig }) {
 
             return (
               <div
-                key={`${event.cluster || 'unknown'}-${event.object}-${event.lastSeen || event.firstSeen || ''}-${event.reason}`}
+                key={`${event.cluster || 'unknown'}-${event.object}-${event.lastSeen || event.firstSeen || ''}-${event.reason}-${idx}`}
                 className={`flex items-start gap-3 p-3 rounded-lg hover:bg-secondary/40 transition-colors cursor-pointer group ${idx % 2 === 0 ? 'bg-secondary/10' : 'bg-secondary/25'}`}
                 onClick={() => handleEventClick(event)}
                 title={`Click to view details for ${event.object}`}

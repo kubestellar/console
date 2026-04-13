@@ -645,8 +645,9 @@ export function Dashboard() {
         // ALWAYS preserve local-only cards (not yet persisted to backend)
         // This prevents losing cards when cache expires or user navigates back
         setLocalCards((prevCards) => {
-          // Keep local-only cards that aren't in the API response
-          const localOnlyCards = prevCards.filter(c => isLocalOnlyCard(c.id))
+          // Keep local-only cards that aren't already in the API response
+          const apiCardIds = new Set(apiCards.map(c => c.id))
+          const localOnlyCards = prevCards.filter(c => isLocalOnlyCard(c.id) && !apiCardIds.has(c.id))
           // If we have local-only cards, merge them with API cards
           if (localOnlyCards.length > 0) {
             return [...localOnlyCards, ...apiCards]
