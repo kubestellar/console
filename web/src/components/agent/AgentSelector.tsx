@@ -199,12 +199,25 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
   }, [closeDropdown])
 
   // Compute dropdown position when opened (portal needs absolute screen coords)
+  // Recompute on resize/scroll so the menu stays attached to its trigger
   useEffect(() => {
-    if (isOpen && buttonRef.current) {
+    if (!isOpen) return
+
+    const updatePosition = () => {
+      if (!buttonRef.current) return
       const rect = buttonRef.current.getBoundingClientRect()
+      const DROPDOWN_GAP_PX = 4
       setDropdownPos({
-        top: rect.bottom + 4, // 4px gap (mt-1 equivalent)
+        top: rect.bottom + DROPDOWN_GAP_PX,
         right: window.innerWidth - rect.right })
+    }
+
+    updatePosition()
+    window.addEventListener('resize', updatePosition)
+    window.addEventListener('scroll', updatePosition, true)
+    return () => {
+      window.removeEventListener('resize', updatePosition)
+      window.removeEventListener('scroll', updatePosition, true)
     }
   }, [isOpen])
 

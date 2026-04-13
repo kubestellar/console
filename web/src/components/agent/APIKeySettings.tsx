@@ -171,8 +171,14 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
       })
 
       if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.message || t('agent.failedToSaveKey'))
+        let message = t('agent.failedToSaveKey')
+        try {
+          const data = await response.json()
+          message = data.message || message
+        } catch {
+          // Response body was not JSON — use default message
+        }
+        throw new Error(message)
       }
 
       // Success - refresh status and close edit mode
@@ -198,8 +204,14 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
       })
 
       if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.message || t('agent.failedToDeleteKey'))
+        let message = t('agent.failedToDeleteKey')
+        try {
+          const data = await response.json()
+          message = data.message || message
+        } catch {
+          // Response body was not JSON — use default message
+        }
+        throw new Error(message)
       }
 
       await fetchKeysStatus()
@@ -342,15 +354,17 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
                           <Trash2 className="w-4 h-4" />
                         </button>
                       )}
-                      <a
-                        href={PROVIDER_INFO[key.provider]?.docsUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-1.5 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-foreground"
-                        title={t('agent.getApiKey')}
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                      </a>
+                      {PROVIDER_INFO[key.provider]?.docsUrl && (
+                        <a
+                          href={PROVIDER_INFO[key.provider].docsUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-1.5 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-foreground"
+                          title={t('agent.getApiKey')}
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                        </a>
+                      )}
                     </div>
                   </div>
 

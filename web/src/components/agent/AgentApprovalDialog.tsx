@@ -5,21 +5,25 @@ import { AgentIcon } from './AgentIcon'
 
 const APPROVED_KEY = 'kc_agents_approved'
 
+/** In-memory fallback when localStorage is unavailable or full */
+let sessionApproved = false
+
 /** Check whether the user has already approved agent access. */
 export function hasApprovedAgents(): boolean {
   try {
-    return localStorage.getItem(APPROVED_KEY) === 'true'
+    return localStorage.getItem(APPROVED_KEY) === 'true' || sessionApproved
   } catch {
-    return false
+    return sessionApproved
   }
 }
 
 /** Record that the user has approved agent access. */
 export function setAgentsApproved(): void {
+  sessionApproved = true
   try {
     localStorage.setItem(APPROVED_KEY, 'true')
   } catch {
-    // storage full — treat as approved for this session
+    // storage full — sessionApproved already set above as fallback
   }
 }
 

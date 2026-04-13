@@ -29,24 +29,30 @@ export function buildVisibleAgents(
   }
 
   const { kagentAvailable, kagentiAvailable, selectedKagentAgent, selectedKagentiAgent } = backend
-  const inCluster: AgentInfo[] = [
-    {
+  const inCluster: AgentInfo[] = []
+
+  // Only add kagenti/kagent if not already present from the backend agent list
+  if (!merged.some(a => a.provider === 'kagenti')) {
+    inCluster.push({
       name: 'kagenti',
       displayName: selectedKagentiAgent ? `Kagenti (${selectedKagentiAgent.name})` : 'Kagenti',
       description: kagentiAvailable ? 'In-cluster AI agent via kagenti' : 'Install kagenti for in-cluster AI agents',
       provider: 'kagenti',
       available: kagentiAvailable,
       installMissionId: kagentiAvailable ? undefined : 'install-kagenti',
-    },
-    {
+    })
+  }
+  if (!merged.some(a => a.provider === 'kagent')) {
+    inCluster.push({
       name: 'kagent',
       displayName: selectedKagentAgent ? `Kagent (${selectedKagentAgent.name})` : 'Kagent',
       description: kagentAvailable ? 'In-cluster AI agent via kagent' : 'Install kagent for in-cluster AI agents',
       provider: 'kagent',
       available: kagentAvailable,
       installMissionId: kagentAvailable ? undefined : 'install-kagent',
-    },
-  ]
+    })
+  }
+
   return [...merged, ...inCluster]
 }
 

@@ -337,7 +337,7 @@ export function getContributorLevel(totalCoins: number): {
   const rangeEnd = next.minCoins
   const coinsInRange = totalCoins - rangeStart
   const rangeSize = rangeEnd - rangeStart
-  const progress = Math.min(100, Math.round((coinsInRange / rangeSize) * 100))
+  const progress = Math.max(0, Math.min(100, Math.round((coinsInRange / rangeSize) * 100)))
   const coinsToNext = rangeEnd - totalCoins
 
   return { current, next, progress, coinsToNext }

@@ -314,7 +314,7 @@ export function formatCondition(condition: AlertCondition): string {
     case 'cpu_pressure':
       return `CPU usage > ${condition.threshold}%`
     case 'disk_pressure':
-      return `Disk usage > ${condition.threshold}%`
+      return condition.threshold != null ? `Disk usage > ${condition.threshold}%` : 'Node reporting DiskPressure condition'
     case 'dns_failure':
       return 'CoreDNS pods not ready or crashing'
     case 'certificate_error':
