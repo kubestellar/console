@@ -50,11 +50,13 @@ export function NamespaceResources({ clusterName, namespace, onClose }: Namespac
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
   const [loadingTimedOut, setLoadingTimedOut] = useState(false)
 
-  // Timeout after 10 seconds to prevent infinite loading
+  // Reset timeout state when cluster or namespace changes, then re-arm
+  const LOADING_TIMEOUT_THRESHOLD_MS = 10_000 // Max wait before showing timed-out state
   useEffect(() => {
+    setLoadingTimedOut(false)
     const timer = setTimeout(() => {
       setLoadingTimedOut(true)
-    }, 10000)
+    }, LOADING_TIMEOUT_THRESHOLD_MS)
     return () => clearTimeout(timer)
   }, [clusterName, namespace])
 

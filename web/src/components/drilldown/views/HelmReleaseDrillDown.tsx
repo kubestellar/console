@@ -664,7 +664,7 @@ Please:
               </div>
             ) : releaseHistory && releaseHistory.length > 0 ? (
               <div className="space-y-2">
-                {releaseHistory.sort((a, b) => b.revision - a.revision).map((rev) => {
+                {[...releaseHistory].sort((a, b) => b.revision - a.revision).map((rev) => {
                   const revStatus = getStatusStyle(rev.status)
                   return (
                     <div

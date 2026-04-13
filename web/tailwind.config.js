@@ -6,6 +6,13 @@ export default {
     "./.storybook/**/*.{ts,tsx}",
   ],
   darkMode: 'class',
+  // Safelist dynamic severity color classes built at runtime via template strings
+  // (e.g. bg-${color}-500/10, border-${color}-500/50, text-${color}-400)
+  safelist: [
+    { pattern: /^bg-(red|orange|blue|green|yellow|purple)-500\/\d+$/ },
+    { pattern: /^border-(red|orange|blue|green|yellow|purple)-500\/\d+$/ },
+    { pattern: /^text-(red|orange|blue|green|yellow|purple)-400$/ },
+  ],
   theme: {
     extend: {
       fontSize: {

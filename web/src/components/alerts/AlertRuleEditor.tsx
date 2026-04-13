@@ -58,8 +58,8 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
   const [conditionType, setAlertConditionType] = useState<AlertConditionType>(
     rule?.condition.type || 'gpu_usage'
   )
-  const [threshold, setThreshold] = useState(rule?.condition.threshold || 90)
-  const [duration, setDuration] = useState(rule?.condition.duration || 60)
+  const [threshold, setThreshold] = useState(rule?.condition.threshold ?? 90)
+  const [duration, setDuration] = useState(rule?.condition.duration ?? 60)
   const [selectedClusters, setSelectedClusters] = useState<string[]>(
     rule?.condition.clusters || []
   )
@@ -71,8 +71,8 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
   const [weatherCondition, setWeatherCondition] = useState<'severe_storm' | 'extreme_heat' | 'heavy_rain' | 'snow' | 'high_wind'>(
     rule?.condition.weatherCondition || 'severe_storm'
   )
-  const [temperatureThreshold, setTemperatureThreshold] = useState(rule?.condition.temperatureThreshold || 100)
-  const [windSpeedThreshold, setWindSpeedThreshold] = useState(rule?.condition.windSpeedThreshold || 40)
+  const [temperatureThreshold, setTemperatureThreshold] = useState(rule?.condition.temperatureThreshold ?? 100)
+  const [windSpeedThreshold, setWindSpeedThreshold] = useState(rule?.condition.windSpeedThreshold ?? 40)
 
   // Channels state
   const [channels, setChannels] = useState<AlertChannel[]>(
@@ -95,11 +95,16 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
          severity !== rule.severity || enabled !== rule.enabled ||
          aiDiagnose !== (rule.aiDiagnose ?? true) ||
          conditionType !== rule.condition.type ||
-         threshold !== (rule.condition.threshold || 90) ||
-         duration !== (rule.condition.duration || 60) ||
+         threshold !== (rule.condition.threshold ?? 90) ||
+         duration !== (rule.condition.duration ?? 60) ||
+         weatherCondition !== (rule.condition.weatherCondition || 'severe_storm') ||
+         temperatureThreshold !== (rule.condition.temperatureThreshold ?? 100) ||
+         windSpeedThreshold !== (rule.condition.windSpeedThreshold ?? 40) ||
          JSON.stringify(selectedClusters) !== JSON.stringify(rule.condition.clusters || []) ||
          JSON.stringify(channels) !== JSON.stringify(rule.channels || []))
-      : (name.trim() !== '' || description.trim() !== '')
+      : (name.trim() !== '' || description.trim() !== '' ||
+         severity !== 'warning' || conditionType !== 'gpu_usage' ||
+         selectedClusters.length > 0)
     if (hasChanges) {
       setShowDiscardConfirm(true)
       return

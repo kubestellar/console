@@ -227,6 +227,13 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
     setConnectStep(step)
   }
 
+  // Clear stale close timers when the dialog is closed (#7593)
+  useEffect(() => {
+    if (!open) {
+      clearTimeout(closeTimerRef.current)
+    }
+  }, [open])
+
   if (!open) return null
 
   const tabs: { id: TabId; label: string; icon: React.ReactNode; disabled?: boolean }[] = [

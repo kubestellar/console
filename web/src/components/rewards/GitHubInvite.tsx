@@ -26,7 +26,10 @@ interface Invite {
 function loadInvites(): Invite[] {
   try {
     const stored = safeGetItem(INVITES_STORAGE_KEY)
-    return stored ? JSON.parse(stored) : []
+    if (!stored) return []
+    const parsed: unknown = JSON.parse(stored)
+    // Validate parsed data is actually an array (#7601)
+    return Array.isArray(parsed) ? parsed as Invite[] : []
   } catch {
     return []
   }
@@ -59,13 +62,15 @@ export function GitHubInviteModal({ isOpen, onClose }: GitHubInviteProps) {
     setError('')
 
     try {
+      // Trim first, then validate (#7600)
+      const trimmedUsername = username.trim()
+
       // Validate GitHub username format
-      if (!/^[a-zA-Z0-9](?:[a-zA-Z0-9]|-(?=[a-zA-Z0-9])){0,38}$/.test(username)) {
+      if (!/^[a-zA-Z0-9](?:[a-zA-Z0-9]|-(?=[a-zA-Z0-9])){0,38}$/.test(trimmedUsername)) {
         throw new Error('Invalid GitHub username format')
       }
 
       // Save the invite
-      const trimmedUsername = username.trim()
       saveInvite(trimmedUsername)
 
       // Award coins (one-time only)

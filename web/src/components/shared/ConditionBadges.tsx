@@ -36,6 +36,11 @@ export function ConditionBadges({ conditions, className }: ConditionBadgesProps)
   )
 }
 
+/** Well-known node pressure conditions that indicate problems when True or Unknown */
+const PRESSURE_CONDITIONS = new Set([
+  'DiskPressure', 'MemoryPressure', 'PIDPressure', 'NetworkUnavailable',
+])
+
 /**
  * Get the appropriate style class for a condition badge
  */
@@ -48,12 +53,13 @@ export function getConditionStyle(condition: Condition): string {
       : 'bg-red-500/20 text-red-400'
   }
 
-  // Pressure conditions (DiskPressure, MemoryPressure, PIDPressure, NetworkUnavailable)
-  // These are bad when True
-  if (status === 'True') {
-    return 'bg-orange-500/20 text-orange-400'
+  // Pressure conditions are bad when True, and Unknown should be treated as a warning
+  if (PRESSURE_CONDITIONS.has(type)) {
+    if (status === 'True') return 'bg-orange-500/20 text-orange-400'
+    if (status === 'Unknown') return 'bg-yellow-500/20 text-yellow-400'
   }
 
+  // Non-pressure conditions with True status are not inherently problematic
   return 'bg-secondary text-muted-foreground'
 }
 
@@ -63,9 +69,7 @@ export function getConditionStyle(condition: Condition): string {
 export function hasConditionIssues(conditions: Condition[]): boolean {
   return conditions.some(c =>
     (c.type === 'Ready' && c.status !== 'True') ||
-    ((c.type === 'DiskPressure' || c.type === 'MemoryPressure' ||
-      c.type === 'PIDPressure' || c.type === 'NetworkUnavailable') &&
-      c.status === 'True')
+    (PRESSURE_CONDITIONS.has(c.type) && (c.status === 'True' || c.status === 'Unknown'))
   )
 }
 
@@ -76,9 +80,7 @@ export function getConditionIssuesSummary(conditions: Condition[]): string {
   return conditions
     .filter(c =>
       (c.type === 'Ready' && c.status !== 'True') ||
-      ((c.type === 'DiskPressure' || c.type === 'MemoryPressure' ||
-        c.type === 'PIDPressure' || c.type === 'NetworkUnavailable') &&
-        c.status === 'True')
+      (PRESSURE_CONDITIONS.has(c.type) && (c.status === 'True' || c.status === 'Unknown'))
     )
     .map(c => `${c.type}: ${c.status}${c.message ? ` - ${c.message}` : ''}`)
     .join(', ') || 'Unknown issues'

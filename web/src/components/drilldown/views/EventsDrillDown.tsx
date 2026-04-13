@@ -6,7 +6,7 @@ import { getDemoMode } from '../../../hooks/useDemoMode'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { useTranslation } from 'react-i18next'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants'
-import { POLL_INTERVAL_MS, UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
+import { POLL_INTERVAL_MS, UI_FEEDBACK_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../../../lib/constants/network'
 import { copyToClipboard } from '../../../lib/clipboard'
 
 interface ClusterEvent {
@@ -93,7 +93,7 @@ export function EventsDrillDown({ data }: Props) {
       }
       params.append('limit', '100')
 
-      const response = await fetch(`http://127.0.0.1:8585/events?${params}`, {
+      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/events?${params}`, {
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
       if (response.ok) {

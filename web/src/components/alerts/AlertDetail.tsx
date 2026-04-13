@@ -68,11 +68,12 @@ export function AlertDetail({ alert, onClose }: AlertDetailProps) {
     ? missions.find(m => m.id === alert.aiDiagnosis?.missionId)
     : null
 
-  // Cleanup timeouts on unmount
+  // Cleanup all timeouts (including diagnosis timer) on unmount
   useEffect(() => {
     return () => {
       timeoutsRef.current.forEach(clearTimeout)
       timeoutsRef.current = []
+      clearTimeout(diagnosisTimerRef.current)
     }
   }, [])
 
