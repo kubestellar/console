@@ -593,6 +593,10 @@ export function MissionProvider({ children }: { children: ReactNode }) {
   // `wsRef.current.send` on a dying socket (or worse, call the user-supplied
   // `onFailure` after the component tree had already gone away).
   const wsSendRetryTimers = useRef<Set<ReturnType<typeof setTimeout>>>(new Set())
+  // #7106 — Track per-mission status-update timers (STATUS_WAITING_DELAY_MS,
+  // STATUS_PROCESSING_DELAY_MS) so they can be cleared when a mission is
+  // cancelled, dismissed, or the provider unmounts.
+  const missionStatusTimers = useRef<Map<string, Set<ReturnType<typeof setTimeout>>>>(new Map())
 
   /**
    * Send a message over the WebSocket with retry logic.
@@ -717,6 +721,13 @@ export function MissionProvider({ children }: { children: ReactNode }) {
           lastStreamTimestamp.current.clear()
           toolsInFlight.current.clear()
           streamSplitCounter.current.clear()
+          // #7106 — Clear all per-mission status-update timers
+          for (const timers of missionStatusTimers.current.values()) {
+            for (const handle of timers) {
+              clearTimeout(handle)
+            }
+          }
+          missionStatusTimers.current.clear()
         } catch (err) {
           // #6767 — Message is issue-agnostic; this branch now covers
           // #6758, #6762, and #6767 follow-ups.
@@ -727,6 +738,16 @@ export function MissionProvider({ children }: { children: ReactNode }) {
       try {
         const reloaded = loadMissions()
         setMissions(reloaded)
+        // #7105 — Reconcile derived state against the reloaded mission list.
+        // A cross-tab deletion could leave activeMissionId pointing at a
+        // mission that no longer exists, or unreadMissionIds containing IDs
+        // for deleted missions (stale badge count).
+        const reloadedIds = new Set(reloaded.map(m => m.id))
+        setActiveMissionId(prev => (prev && !reloadedIds.has(prev) ? null : prev))
+        setUnreadMissionIds(prev => {
+          const next = new Set([...prev].filter(id => reloadedIds.has(id)))
+          return next.size === prev.size ? prev : next
+        })
       } catch (err) {
         console.warn('[Missions] issue 6668 — failed to reload from cross-tab write:', err)
       }
@@ -856,12 +877,6 @@ export function MissionProvider({ children }: { children: ReactNode }) {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       return Promise.resolve()
     }
-
-    // #7075 — Reset the reconnect counter when a new explicit connection is
-    // requested (e.g. user interaction after giveup). Without this, the first
-    // subsequent disconnect after a giveup instantly hits the max-retries
-    // threshold and the auto-reconnect is permanently locked out for the session.
-    wsReconnectAttempts.current = 0
 
     return new Promise<void>((resolve, reject) => {
       // Show loading state while connecting
@@ -1330,6 +1345,13 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
           waitingInputTimeouts.current.clear()
           lastStreamTimestamp.current.clear()
           streamSplitCounter.current.clear()
+          // #7106 — Clear status-update timers on WS error
+          for (const timers of missionStatusTimers.current.values()) {
+            for (const handle of timers) {
+              clearTimeout(handle)
+            }
+          }
+          missionStatusTimers.current.clear()
           setAgentsLoading(false)
           reject(new Error('CONNECTION_FAILED'))
         }
@@ -1350,6 +1372,17 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
         next.add(missionId)
         return next
       })
+    }
+  }
+
+  // #7106 — Clear tracked status-update timers for a mission.
+  const clearMissionStatusTimers = (missionId: string) => {
+    const timers = missionStatusTimers.current.get(missionId)
+    if (timers) {
+      for (const handle of timers) {
+        clearTimeout(handle)
+      }
+      missionStatusTimers.current.delete(missionId)
     }
   }
 
@@ -1426,6 +1459,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
     streamSplitCounter.current.delete(missionId) // #6410 — terminal state cleanup
     toolsInFlight.current.delete(missionId) // #6410 — terminal state cleanup
     clearWaitingInputTimeout(missionId) // #5936
+    clearMissionStatusTimers(missionId) // #7106 — cancel status-update timers
 
     setMissions(prev => prev.map(m => {
       if (m.id !== missionId) return m
@@ -2253,23 +2287,37 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
         ))
       })
 
+      // #7106 — Track status-update timers so they can be cleared on
+      // cancel/dismiss/unmount. Without this, delayed callbacks mutate
+      // state after the mission lifecycle has ended.
+      if (!missionStatusTimers.current.has(missionId)) {
+        missionStatusTimers.current.set(missionId, new Set())
+      }
+      const timers = missionStatusTimers.current.get(missionId)!
+
       // Update status after message is sent
-      setTimeout(() => {
+      const waitingHandle = setTimeout(() => {
+        timers.delete(waitingHandle)
+        if (unmountedRef.current) return
         setMissions(prev => prev.map(m =>
           m.id === missionId && m.currentStep === 'Connecting to agent...'
             ? { ...m, currentStep: 'Waiting for response...' }
             : m
         ))
       }, STATUS_WAITING_DELAY_MS)
+      timers.add(waitingHandle)
 
       // Update status while AI is processing
-      setTimeout(() => {
+      const processingHandle = setTimeout(() => {
+        timers.delete(processingHandle)
+        if (unmountedRef.current) return
         setMissions(prev => prev.map(m =>
           m.id === missionId && m.currentStep === 'Waiting for response...'
             ? { ...m, currentStep: `Processing with ${selectedAgentRef.current || 'AI'}...` }
             : m
         ))
       }, STATUS_PROCESSING_DELAY_MS)
+      timers.add(processingHandle)
     }).catch(() => {
       const errorContent = `**Local Agent Not Connected**
 
@@ -2726,6 +2774,8 @@ Install the console locally with the KubeStellar Console agent to use AI mission
     // #6410 — mission is being removed from UI; drop per-mission tracking.
     streamSplitCounter.current.delete(missionId)
     toolsInFlight.current.delete(missionId)
+    // #7106 — Clear status-update timers to prevent stale mutations
+    clearMissionStatusTimers(missionId)
     setMissions(prev => prev.filter(m => m.id !== missionId))
     if (activeMissionId === missionId) {
       setActiveMissionId(null)
@@ -2830,6 +2880,10 @@ Install the console locally with the KubeStellar Console agent to use AI mission
 
   // Connect to agent (for AgentSelector in navbar)
   const connectToAgent = () => {
+    // #7075 — Reset the reconnect counter on explicit user-initiated
+    // connection requests (e.g. clicking "Reconnect" after giveup).
+    // Moved from ensureConnection so auto-reconnect preserves backoff.
+    wsReconnectAttempts.current = 0
     ensureConnection().catch(err => {
       console.error('[Missions] Failed to connect to agent:', err)
     })
@@ -2867,6 +2921,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
     const streamSplitCounterRef = streamSplitCounter.current
     const waitingInputTimeoutsRef = waitingInputTimeouts.current
     const wsSendRetryTimersRef = wsSendRetryTimers.current
+    const missionStatusTimersRef = missionStatusTimers.current
     return () => {
       // #6667 — Mark provider as unmounted BEFORE clearing timers, so any
       // in-flight async callback that races cleanup sees this flag and
@@ -2902,6 +2957,13 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         clearTimeout(t)
       }
       waitingInputTimeoutsRef.clear()
+      // #7106 — Clear all per-mission status-update timers
+      for (const timers of missionStatusTimersRef.values()) {
+        for (const handle of timers) {
+          clearTimeout(handle)
+        }
+      }
+      missionStatusTimersRef.clear()
       // #6410 — nullify handlers BEFORE close(). `onclose` is what schedules
       // reconnection (see `wsReconnectTimer.current = setTimeout(...)` in
       // ensureConnection); if we don't detach it, an unmounted provider can
