@@ -1138,14 +1138,11 @@ Please proceed step by step and ask for confirmation before making any changes.`
       setSecrets(Array.from(secretRefs))
 
       // Extract PVC references from volumes
+      // Use a K8s-valid name pattern to avoid capturing quotes or YAML artifacts
+      const K8S_NAME_PATTERN = '[a-z0-9][a-z0-9._-]*[a-z0-9]|[a-z0-9]'
       const pvcRefs = new Set<string>()
-      const pvcMatches = podYaml.matchAll(/persistentVolumeClaim:\s*\n\s*claimName:\s*(\S+)/g)
+      const pvcMatches = podYaml.matchAll(new RegExp(`claimName:\\s*"?(${K8S_NAME_PATTERN})"?`, 'g'))
       for (const match of pvcMatches) {
-        if (match[1]) pvcRefs.add(match[1])
-      }
-      // Also check direct claimName pattern
-      const claimNameMatches = podYaml.matchAll(/claimName:\s*(\S+)/g)
-      for (const match of claimNameMatches) {
         if (match[1]) pvcRefs.add(match[1])
       }
       setPvcs(Array.from(pvcRefs))

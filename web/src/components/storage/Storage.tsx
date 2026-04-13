@@ -158,9 +158,10 @@ export function Storage() {
     pendingPVCs: filteredPVCs.filter(p => p.status === 'Pending').length }
 
   // Check if we have actual data (not just loading state) — storage data is valid
-  // regardless of nodeCount (#6808)
+  // regardless of nodeCount (#6808). Use filteredPVCs (not global pvcs) so that
+  // clusters with no PVCs in the current selection show empty state (#7478)
   const hasActualData = filteredClusters.some(c =>
-    c.reachable !== false && (c.storageGB !== undefined || pvcs.length > 0)
+    c.reachable !== false && (c.storageGB !== undefined || filteredPVCs.length > 0)
   )
 
   // Cache the last known good stats to show during refresh

@@ -51,7 +51,7 @@ export function StorageOverview() {
     return globalFilteredClusters.filter(c => localClusterFilter.includes(c.name))
   })()
 
-  // Filter PVCs by selection
+  // Filter PVCs by selection and reachability (must match Storage page logic)
   const filteredPVCs = (() => {
     let result = pvcs
     if (!isAllClustersSelected) {
@@ -60,6 +60,11 @@ export function StorageOverview() {
     if (localClusterFilter.length > 0) {
       result = result.filter(p => p.cluster && localClusterFilter.includes(p.cluster))
     }
+    // Exclude PVCs from unreachable clusters to match Storage page totals (#7479)
+    result = result.filter(p => {
+      const cluster = clusters.find(c => c.name === p.cluster)
+      return cluster?.reachable !== false
+    })
     return result
   })()
 
