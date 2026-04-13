@@ -351,6 +351,9 @@ func (h *GPUHandler) UpdateReservation(c *fiber.Ctx) error {
 		}
 		// Atomic capacity-checked update (#6957).
 		if err := h.store.UpdateGPUReservationWithCapacity(existing, capacity); err != nil {
+			if errors.Is(err, store.ErrGPUReservationNotFound) {
+				return fiber.NewError(fiber.StatusNotFound, "Reservation not found")
+			}
 			if errors.Is(err, store.ErrGPUQuotaExceeded) {
 				return fiber.NewError(fiber.StatusConflict,
 					fmt.Sprintf("Over-allocation: cluster %q would exceed capacity of %d GPUs", existing.Cluster, capacity))

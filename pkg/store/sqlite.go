@@ -316,7 +316,8 @@ func (s *SQLiteStore) migrate() error {
 	CREATE INDEX IF NOT EXISTS idx_dashboards_user ON dashboards(user_id);
 	CREATE INDEX IF NOT EXISTS idx_cards_dashboard ON cards(dashboard_id);
 	CREATE INDEX IF NOT EXISTS idx_events_user_time ON user_events(user_id, created_at);
-	CREATE INDEX IF NOT EXISTS idx_pending_swaps_due ON pending_swaps(swap_at, status);
+	CREATE INDEX IF NOT EXISTS idx_card_history_user ON card_history(user_id, swapped_out_at DESC);
+	CREATE INDEX IF NOT EXISTS idx_pending_swaps_due ON pending_swaps(status, swap_at);
 
 	-- Feature requests from users (bugs/features submitted via console)
 	CREATE TABLE IF NOT EXISTS feature_requests (
@@ -333,6 +334,7 @@ func (s *SQLiteStore) migrate() error {
 		copilot_session_url TEXT,
 		netlify_preview_url TEXT,
 		latest_comment TEXT,
+		closed_by_user INTEGER DEFAULT 0,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 		updated_at DATETIME
 	);
@@ -362,6 +364,8 @@ func (s *SQLiteStore) migrate() error {
 
 	CREATE INDEX IF NOT EXISTS idx_feature_requests_user ON feature_requests(user_id);
 	CREATE INDEX IF NOT EXISTS idx_feature_requests_status ON feature_requests(status);
+	CREATE INDEX IF NOT EXISTS idx_feature_requests_issue ON feature_requests(github_issue_number);
+	CREATE INDEX IF NOT EXISTS idx_feature_requests_pr ON feature_requests(pr_number);
 	CREATE INDEX IF NOT EXISTS idx_pr_feedback_request ON pr_feedback(feature_request_id);
 	CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, read);
 
@@ -1774,6 +1778,10 @@ func (s *SQLiteStore) CreateGPUReservation(reservation *models.GPUReservation) e
 // error to HTTP 409 Conflict.
 var ErrGPUQuotaExceeded = errors.New("gpu cluster capacity exceeded")
 
+// ErrGPUReservationNotFound is returned when an update targets a
+// reservation ID that does not exist, so callers can return HTTP 404.
+var ErrGPUReservationNotFound = errors.New("gpu reservation not found")
+
 // CreateGPUReservationWithCapacity atomically enforces a cluster GPU
 // capacity cap and inserts the reservation in a single SQL statement.
 //
@@ -1930,6 +1938,13 @@ func (s *SQLiteStore) UpdateGPUReservationWithCapacity(reservation *models.GPURe
 		return fmt.Errorf("read rows affected: %w", err)
 	}
 	if rows == 0 {
+		// Distinguish "row not found" from "capacity exceeded": if the
+		// reservation does not exist at all, return ErrGPUReservationNotFound
+		// so the caller can map it to HTTP 404 instead of 409.
+		var exists int
+		if err := s.db.QueryRow(`SELECT 1 FROM gpu_reservations WHERE id = ?`, reservation.ID.String()).Scan(&exists); err != nil {
+			return ErrGPUReservationNotFound
+		}
 		return ErrGPUQuotaExceeded
 	}
 	return nil
