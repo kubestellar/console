@@ -11,6 +11,7 @@ import {
   useOperatorSubscriptions,
   useOperators,
   useGPUNodes } from './useMCP'
+import { useIngresses } from './mcp/networking'
 import { useCachedPVCs } from './useCachedData'
 import { useAlerts, useAlertRules } from './useAlerts'
 import { StatBlockValue } from '../components/ui/StatsOverview'
@@ -55,6 +56,7 @@ export function useUniversalStats() {
   const { subscriptions: operatorSubscriptions } = useOperatorSubscriptions()
   const { operators } = useOperators()
   const { nodes: gpuNodes } = useGPUNodes()
+  const { ingresses } = useIngresses()
   const { stats: alertStats } = useAlerts()
   const { rules: alertRules } = useAlertRules()
 
@@ -226,10 +228,17 @@ export function useUniversalStats() {
         return { value: npCount, sublabel: 'node-level access', onClick: () => drillToAllServices('NodePort'), isClickable: npCount > 0 }
       case 'clusterip':
         return { value: cipCount, sublabel: 'internal only', onClick: () => drillToAllServices('ClusterIP'), isClickable: cipCount > 0 }
-      case 'ingresses':
-        return { value: '-', sublabel: 'ingresses', isClickable: false }
-      case 'endpoints':
-        return { value: allServices.length, sublabel: 'endpoints', isClickable: false }
+      case 'ingresses': {
+        const allIngresses = ingresses || []
+        return { value: allIngresses.length, sublabel: 'ingresses', isClickable: false }
+      }
+      case 'endpoints': {
+        // Sum actual ready endpoints across services (#7514) — not service count
+        const totalEndpoints = allServices.reduce(
+          (sum, s) => sum + (s.endpoints ?? 0), 0
+        )
+        return { value: totalEndpoints, sublabel: 'endpoints', isClickable: false }
+      }
 
       // ══════════════════════════════════════════
       // Security stats

@@ -1,6 +1,7 @@
 import { AlertCircle, Server } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useClusters, useServices } from '../../hooks/useMCP'
+import { useIngresses } from '../../hooks/mcp/networking'
 import { ROUTES } from '../../config/routes'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -19,6 +20,7 @@ export function Services() {
   const navigate = useNavigate()
   const { clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch, error: clustersError } = useClusters()
   const { services, error: servicesError } = useServices()
+  const { ingresses } = useIngresses()
   const error = clustersError || servicesError
 
   const { drillToAllServices, drillToAllClusters } = useDrillDownActions()
@@ -66,8 +68,13 @@ export function Services() {
         return { value: nodePortServices, sublabel: 'NodePort', onClick: () => drillToAllServices('nodeport'), isClickable: nodePortServices > 0 }
       case 'clusterip':
         return { value: clusterIPServices, sublabel: 'ClusterIP', onClick: () => drillToAllServices('clusterip'), isClickable: clusterIPServices > 0 }
-      case 'ingresses':
-        return { value: 0, sublabel: 'ingresses', isClickable: false }
+      case 'ingresses': {
+        // Show actual ingress count instead of hardcoded 0 (#7517)
+        const allIngresses = (ingresses || []).filter(i =>
+          isAllClustersSelected || globalSelectedClusters.includes(i.cluster || '')
+        )
+        return { value: allIngresses.length, sublabel: 'ingresses', isClickable: false }
+      }
       case 'endpoints':
         return { value: totalEndpoints, sublabel: 'endpoints', onClick: () => drillToAllServices(), isClickable: totalEndpoints > 0 }
       default:

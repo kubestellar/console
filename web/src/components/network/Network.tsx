@@ -1,5 +1,6 @@
 import { AlertCircle } from 'lucide-react'
 import { useServices } from '../../hooks/useMCP'
+import { useIngresses } from '../../hooks/mcp/networking'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -16,6 +17,7 @@ const DEFAULT_NETWORK_CARDS = getDefaultCards('network')
 
 export function Network() {
   const { services, isLoading: servicesLoading, isRefreshing: servicesRefreshing, lastUpdated, refetch, error } = useServices()
+  const { ingresses } = useIngresses()
 
   const {
     selectedClusters: globalSelectedClusters,
@@ -27,6 +29,11 @@ export function Network() {
   // Filter services based on global cluster selection
   const filteredServices = services.filter(s =>
     isAllClustersSelected || (s.cluster && globalSelectedClusters.includes(s.cluster))
+  )
+
+  // Filter ingresses based on global cluster selection (#7518)
+  const filteredIngresses = (ingresses || []).filter(i =>
+    isAllClustersSelected || (i.cluster && globalSelectedClusters.includes(i.cluster))
   )
 
   // Calculate service stats
@@ -73,7 +80,7 @@ export function Network() {
       case 'clusterip':
         return { value: clusterIPServices, sublabel: 'internal only', onClick: drillToClusterIP, isClickable: clusterIPServices > 0 }
       case 'ingresses':
-        return { value: '-', sublabel: 'ingresses', isClickable: false }
+        return { value: filteredIngresses.length, sublabel: 'ingresses', isClickable: false }
       case 'endpoints': {
         // Sum actual ready endpoints across services (#7126) — not just service count
         const totalEndpoints = filteredServices.reduce(

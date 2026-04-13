@@ -30,7 +30,7 @@ export const ingressStatusConfig: UnifiedCardConfig = {
       field: 'search',
       type: 'text',
       placeholder: 'Search ingresses...',
-      searchFields: ['name', 'namespace', 'cluster', 'host'],
+      searchFields: ['name', 'namespace', 'cluster', 'hosts'],
       storageKey: 'ingress-status',
     },
     {
@@ -65,7 +65,7 @@ export const ingressStatusConfig: UnifiedCardConfig = {
         render: 'truncate',
       },
       {
-        field: 'host',
+        field: 'hosts',
         header: 'Host',
         render: 'text',
         width: 150,
