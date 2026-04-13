@@ -49,7 +49,7 @@ export default defineConfig({
         ['junit', { outputFile: 'test-results/junit.xml' }],
         ['github'],
       ]
-    : [['html', { open: 'never' }]],
+    : [['html', { open: 'never' }], ['./e2e/helpers/ux-reporter.ts']],
 
   // Global timeout per test
   timeout: 60000,

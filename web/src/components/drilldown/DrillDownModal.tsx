@@ -307,11 +307,12 @@ export function DrillDownModal() {
   }
 
   return (
-    <div 
+    <div
       className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-modal p-2 md:p-4"
       onClick={close}
     >
       <div
+        data-testid="drilldown-modal"
         className="glass w-full md:w-[90vw] max-w-[1200px] h-[95vh] md:h-[80vh] rounded-xl flex flex-col overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
@@ -331,7 +332,7 @@ export function DrillDownModal() {
             </button>
 
             {/* Breadcrumbs */}
-            <nav className="flex items-center gap-1 min-w-0 overflow-x-auto">
+            <nav data-testid="drilldown-tabs" className="flex items-center gap-1 min-w-0 overflow-x-auto">
               {state.stack.map((view, index) => {
                 const isLast = index === state.stack.length - 1
                 const isPod = view.type === 'pod'
@@ -369,6 +370,7 @@ export function DrillDownModal() {
 
           {/* Close button */}
           <button
+            data-testid="drilldown-close"
             onClick={close}
             className="p-2 rounded-lg hover:bg-card/50 text-muted-foreground hover:text-foreground transition-colors"
           >

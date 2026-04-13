@@ -1,0 +1,131 @@
+name: Nightly UX Journey Tests
+
+# Journey-oriented Playwright tests that exercise every major user
+# interaction in demo mode and produce a UX findings report. These tests
+# don't gate PRs — they surface UX improvement opportunities.
+#
+# Runs nightly at 05:00 UTC and on manual dispatch.
+# Artifacts: HTML report, UX findings markdown, screenshots.
+
+on:
+  schedule:
+    - cron: "0 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: nightly-ux-journeys
+  cancel-in-progress: true
+
+env:
+  CI: true
+  NODE_VERSION: "22"
+
+jobs:
+  ux-journeys:
+    if: github.repository == 'kubestellar/console'
+    name: UX Journey Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Run UX journey tests
+        run: npx playwright test e2e/user-flows/ --project=chromium --reporter=html,./e2e/helpers/ux-reporter.ts
+        env:
+          PLAYWRIGHT_BASE_URL: ""
+
+      - name: Upload UX findings report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ux-findings-report
+          path: |
+            web/test-results/ux-findings-report.md
+            web/test-results/ux/
+          retention-days: 30
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-ux-report
+          path: web/playwright-report/
+          retention-days: 14
+
+      - name: Post summary
+        if: always()
+        run: |
+          echo "### UX Journey Test Results" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          if [ -f test-results/ux-findings-report.md ]; then
+            echo "#### Findings Report" >> "$GITHUB_STEP_SUMMARY"
+            head -20 test-results/ux-findings-report.md >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "*Full report available in artifacts*" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No UX findings report generated." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  # Run responsive tests on mobile viewport
+  ux-mobile:
+    if: github.repository == 'kubestellar/console'
+    name: UX Mobile Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Run responsive + a11y tests
+        run: npx playwright test e2e/user-flows/responsive-layouts.spec.ts e2e/user-flows/a11y-audit.spec.ts --project=chromium
+        env:
+          PLAYWRIGHT_BASE_URL: ""
+
+      - name: Upload mobile screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-responsive-screenshots
+          path: web/test-results/ux/
+          retention-days: 30

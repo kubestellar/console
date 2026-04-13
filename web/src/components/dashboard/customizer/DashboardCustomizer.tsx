@@ -101,14 +101,14 @@ export function DashboardCustomizer({
         showBack={false}
       />
 
-      <div className="flex flex-1 min-h-0 overflow-hidden">
+      <div data-testid="console-studio" className="flex flex-1 min-h-0 overflow-hidden">
         <DashboardCustomizerSidebar
           activeSection={activeSection}
           onSectionChange={setUserSelectedSection}
         />
 
         {/* Main content — fixed height, sections fill this space */}
-        <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
+        <div data-testid="studio-preview" className="flex-1 min-w-0 flex flex-col overflow-hidden">
           {activeSection === 'cards' && (
             <UnifiedCardsSection
               existingCardTypes={existingCardTypes}

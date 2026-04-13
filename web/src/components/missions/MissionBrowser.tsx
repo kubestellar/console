@@ -1218,7 +1218,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
 
   return (
     <div className="fixed inset-0 z-modal flex items-center justify-center bg-black/60 backdrop-blur-sm">
-    <div className="w-[94vw] h-[90vh] bg-background rounded-xl shadow-2xl border border-border flex flex-col overflow-hidden">
+    <div data-testid="mission-browser" className="w-[94vw] h-[90vh] bg-background rounded-xl shadow-2xl border border-border flex flex-col overflow-hidden">
       {/* ================================================================== */}
       {/* Top bar: search + filters */}
       {/* ================================================================== */}
@@ -1231,6 +1231,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={activeTab === 'installers' ? 'Search installers… (AND logic: "argo events" = argo AND events)' : activeTab === 'fixes' ? 'Search fixes…' : 'Search missions by name, tag, or description…'}
             className="w-full pl-10 pr-4 py-2 bg-secondary border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/40"
+            data-testid="mission-search"
             autoFocus
           />
         </div>
@@ -1524,6 +1525,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
       <div className="flex-1 flex overflow-hidden">
         {/* Left sidebar — file tree (hidden on mobile, shown on md+) */}
         <div
+          data-testid="mission-tree"
           className="hidden md:flex flex-col border-r border-border bg-card overflow-y-auto"
           style={{ width: SIDEBAR_WIDTH, minWidth: SIDEBAR_WIDTH }}
         >
@@ -1668,7 +1670,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
         </div>
 
         {/* Right panel */}
-        <div className="flex-1 flex flex-col overflow-hidden relative bg-background">
+        <div data-testid="mission-grid" className="flex-1 flex flex-col overflow-hidden relative bg-background">
           {/* Scan overlay */}
           <ScanProgressOverlay
             isScanning={isScanning}

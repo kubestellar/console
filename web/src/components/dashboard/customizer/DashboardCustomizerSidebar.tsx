@@ -15,7 +15,7 @@ export function DashboardCustomizerSidebar({
   onSectionChange,
 }: DashboardCustomizerSidebarProps) {
   return (
-    <div className="w-56 border-r border-border flex flex-col h-full bg-secondary/20">
+    <div data-testid="studio-sidebar" className="w-56 border-r border-border flex flex-col h-full bg-secondary/20">
       <nav className="flex-1 py-2">
         {CUSTOMIZER_NAV.map((item) => {
           const Icon = item.icon

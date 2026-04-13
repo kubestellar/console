@@ -86,7 +86,7 @@ export function ClusterFilterDropdown({
       )}
 
       {/* Cluster filter dropdown */}
-      <div ref={clusterFilterRef} className="relative">
+      <div ref={clusterFilterRef} data-testid="cluster-filter" className="relative">
         <Button
           ref={buttonRef}
           variant="ghost"
@@ -162,6 +162,7 @@ export function ClusterFilterDropdown({
                 return (
                   <Button
                     key={cluster.name}
+                    data-testid="cluster-filter-option"
                     variant="ghost"
                     size="sm"
                     role="option"
