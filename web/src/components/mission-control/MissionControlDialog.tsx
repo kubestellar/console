@@ -92,10 +92,16 @@ export function MissionControlDialog({ open, onClose }: MissionControlDialogProp
     }
   }, [open])
 
-  // Escape to close
+  // #7150 — Escape to close. Uses capture phase (registered below) so
+  // child stopPropagation cannot swallow the Escape key. stopImmediatePropagation
+  // prevents other capture-phase handlers from interfering.
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { e.stopImmediatePropagation(); onClose() }
+      if (e.key === 'Escape') {
+        e.stopImmediatePropagation()
+        e.preventDefault()
+        onClose()
+      }
     },
     [onClose]
   )
@@ -414,15 +420,17 @@ export function MissionControlDialog({ open, onClose }: MissionControlDialogProp
                 )}
                 {(isLaunching || isComplete) && (
                   <PhaseWrapper key="launch">
-                    <LaunchSequence
-                      state={state}
-                      onUpdateProgress={mc.updateLaunchProgress}
-                      onComplete={(dashboardId) => {
-                        if (dashboardId) mc.setGroundControlDashboardId(dashboardId)
-                        mc.setPhase('complete')
-                      }}
-                      onClose={onClose}
-                    />
+                    <ChunkErrorBoundary>
+                      <LaunchSequence
+                        state={state}
+                        onUpdateProgress={mc.updateLaunchProgress}
+                        onComplete={(dashboardId) => {
+                          if (dashboardId) mc.setGroundControlDashboardId(dashboardId)
+                          mc.setPhase('complete')
+                        }}
+                        onClose={onClose}
+                      />
+                    </ChunkErrorBoundary>
                   </PhaseWrapper>
                 )}
               </AnimatePresence>

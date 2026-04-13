@@ -5,7 +5,7 @@
  * console-kb project index lookup, and localStorage persistence.
  */
 
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } from 'react'
 import { useMissions } from '../../hooks/useMissions'
 import { useDebouncedValue } from '../../hooks/useDebouncedValue'
 import { useHelmReleases } from '../../hooks/mcp/helm'
@@ -554,7 +554,7 @@ export function useMissionControl() {
   // line ~901) always holds the latest state; we reference it here via the
   // effect closure. The listener is registered once and cleaned up on unmount.
   const stateRefForFlush = useRef(state)
-  useEffect(() => { stateRefForFlush.current = state }, [state])
+  useLayoutEffect(() => { stateRefForFlush.current = state }, [state])
   useEffect(() => {
     const onBeforeUnload = () => {
       persistState(stateRefForFlush.current)
@@ -918,9 +918,14 @@ export function useMissionControl() {
   // #6834 — Dedicated ref for planningMissionId so askAIForSuggestions always
   // reads the latest value, even when a prior setState hasn't been committed yet.
   const planningMissionIdRef = useRef(state.planningMissionId)
-  useEffect(() => { stateRef.current = state }, [state])
-  useEffect(() => { planningMissionIdRef.current = state.planningMissionId }, [state.planningMissionId])
-  useEffect(() => { helmReleasesRef.current = helmReleases }, [helmReleases])
+  // #7146 — Use useLayoutEffect for ref syncs to prevent render tearing.
+  // With useEffect, concurrent render runs can read stale ref values because
+  // the sync fires asynchronously after paint. useLayoutEffect fires
+  // synchronously after DOM mutations but before paint, ensuring callbacks
+  // always see the latest state during the same render cycle.
+  useLayoutEffect(() => { stateRef.current = state }, [state])
+  useLayoutEffect(() => { planningMissionIdRef.current = state.planningMissionId }, [state.planningMissionId])
+  useLayoutEffect(() => { helmReleasesRef.current = helmReleases }, [helmReleases])
 
   const askAIForSuggestions = (description: string, existingProjects: PayloadProject[] = []) => {
       // #6827 — Synchronous ref guard: two rapid Enter keystrokes in a single
@@ -1279,9 +1284,14 @@ Order phases by dependency — prerequisites first. Each phase completes before 
   // Launch
   // ---------------------------------------------------------------------------
 
-  const updateLaunchProgress = (progress: PhaseProgress[]) => {
+  // #7148 — Wrap in useCallback to prevent identity changes from causing
+  // cascading re-renders in LaunchSequence. The mission-monitor effect in
+  // LaunchSequence lists onUpdateProgress in its dependency array; without
+  // a stable reference, every parent re-render creates a new function
+  // identity, re-triggering the effect and causing a double-render loop.
+  const updateLaunchProgress = useCallback((progress: PhaseProgress[]) => {
     setState((prev) => ({ ...prev, launchProgress: progress }))
-  }
+  }, [])
 
   const setGroundControlDashboardId = (id: string) => {
     setState((prev) => ({ ...prev, groundControlDashboardId: id }))

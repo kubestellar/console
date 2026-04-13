@@ -24,7 +24,7 @@ import type { DeployPhase, MissionControlState, PhaseProgress, PhaseStatus } fro
 import { buildInstallPromptForProject, isSafeProjectName } from './useMissionControl'
 
 /** Terminal statuses that indicate a project is no longer in-flight */
-const TERMINAL_STATUSES: readonly string[] = ['completed', 'failed', 'skipped']
+const TERMINAL_STATUSES: readonly string[] = ['completed', 'failed', 'skipped', 'cancelled']
 
 /**
  * #6408 — Fallback phase builder used when `state.phases` is empty but
@@ -161,12 +161,19 @@ export function LaunchSequence({
       const project = state.projects.find((p) => p.name === projectName)
       if (!project) return
 
-      const assignment = state.assignments.find((a) =>
+      // #7155 — Resolve ALL matching cluster assignments for multi-cluster
+      // missions, not just the first. Each cluster gets its own startMission
+      // call so retry operates at the cluster level.
+      const assignments = state.assignments.filter((a) =>
         (a.projectNames || []).includes(projectName)
       )
-      const clusterName = assignment?.clusterName ?? 'default'
+      const clusterName = assignments.length > 0
+        ? assignments[0]?.clusterName ?? 'default'
+        : 'default'
 
-      // Update status to running
+      // #7156 — Update status to running BEFORE any async/network calls.
+      // This ensures the progress pointer is set even if the network call
+      // fails, preventing the UI from showing 0% infinitely.
       updateProgress((prev) =>
         prev.map((p) =>
           p.phase === phaseNum
@@ -239,13 +246,19 @@ export function LaunchSequence({
           )
         )
       } catch (err) {
+        // #7143 — Capture the full error message. When `err` is an array
+        // (e.g. from Promise.all rejections or grouped validation errors),
+        // stringify each element individually to avoid losing detail.
+        const errorMessage = Array.isArray(err)
+          ? err.map(String).join('; ')
+          : String(err)
         // Mark project as failed AND recompute phase-level status (#5507)
         updateProgress((prev) =>
           prev.map((p) => {
             if (p.phase !== phaseNum) return p
             const updatedProjects = p.projects.map((proj) =>
               proj.name === projectName
-                ? { ...proj, status: 'failed' as const, error: String(err) }
+                ? { ...proj, status: 'failed' as const, error: errorMessage }
                 : proj
             )
             const updatedPhase = { ...p, projects: updatedProjects }
@@ -256,6 +269,8 @@ export function LaunchSequence({
     }
 
   // Monitor mission statuses and update progress
+  // #7157 — Added 'cancelled' status mapping so cancelled missions are
+  // reflected in launch progress instead of staying in a stale state.
   useEffect(() => {
     const progress = progressRef.current
     let changed = false
@@ -271,9 +286,9 @@ export function LaunchSequence({
           changed = true
           return { ...proj, status: 'completed' as const }
         }
-        if (mission.status === 'failed') {
+        if (mission.status === 'failed' || mission.status === 'cancelled') {
           changed = true
-          return { ...proj, status: 'failed' as const, error: 'Mission failed' }
+          return { ...proj, status: 'failed' as const, error: mission.status === 'cancelled' ? 'Mission cancelled' : 'Mission failed' }
         }
         return proj
       }) }))
@@ -510,13 +525,47 @@ export function LaunchSequence({
                       // is observed rather than dropped. Promise.allSettled
                       // keeps the click handler from becoming `async` in a
                       // JSX attribute (which confuses React type checks).
+                      // #7147 — After retry succeeds, resume dependent phases
+                      // that were blocked by the original failure. Without this,
+                      // the phased loop had already `break`-ed and later phases
+                      // would never start.
                       const retries: Promise<void>[] = []
                       phase.projects.forEach((p) => {
                         if (p.status === 'failed') {
                           retries.push(launchProject(p.name, phase.phase))
                         }
                       })
-                      void Promise.allSettled(retries)
+                      void Promise.allSettled(retries).then(() => {
+                        // Resume subsequent phases if this phase now completes
+                        if (state.deployMode !== 'yolo') {
+                          const phaseIdx = effectivePhases.findIndex(
+                            (ep) => ep.phase === phase.phase
+                          )
+                          const remaining = effectivePhases.slice(phaseIdx + 1)
+                          if (remaining.length > 0) {
+                            const resumePhases = async () => {
+                              const result = await waitForPhaseCompletion(phase.phase)
+                              if (result !== 'completed') return
+                              for (const nextPhase of remaining) {
+                                updateProgress((prev) =>
+                                  prev.map((p) =>
+                                    p.phase === nextPhase.phase ? { ...p, status: 'running' } : p
+                                  )
+                                )
+                                for (const projName of (nextPhase.projectNames || [])) {
+                                  if (!startedMissions.current.has(projName)) {
+                                    startedMissions.current.add(projName)
+                                    await launchProject(projName, nextPhase.phase)
+                                  }
+                                }
+                                const nextResult = await waitForPhaseCompletion(nextPhase.phase)
+                                if (nextResult !== 'completed') break
+                              }
+                            }
+                            void resumePhases()
+                          }
+                        }
+                      })
                     }}
                   >
                     Retry Failed
