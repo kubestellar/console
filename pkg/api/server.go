@@ -1319,6 +1319,10 @@ func (s *Server) Shutdown() error {
 			s.gpuUtilWorker.Stop()
 		}
 		s.hub.Close()
+		// #7043 — stop the SSE cache evictor goroutine that was started
+		// lazily by sseCacheSet. Without this the goroutine leaks after
+		// server shutdown.
+		handlers.StopSSECacheEvictor()
 		// #6578 — stop the token revocation cleanup goroutine so tests
 		// and embedded usage don't leak it across Server lifecycles.
 		middleware.ShutdownTokenRevocation()

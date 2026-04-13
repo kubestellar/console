@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/k8s"
+	"golang.org/x/sync/singleflight"
 )
 
 // defaultWarningEventsLimit is the fallback row limit used by
@@ -62,13 +64,19 @@ type sseClusterStreamConfig struct {
 
 // writeSSEEvent writes one SSE event to the buffered writer and flushes.
 // Returns an error if the write or flush fails (e.g., client disconnected).
+//
+// #7050 — eventName is sanitized by stripping \n and \r to prevent SSE frame
+// injection if a future caller inadvertently passes user-controlled input.
 func writeSSEEvent(w *bufio.Writer, eventName string, data interface{}) error {
+	// Sanitize eventName: strip characters that would break the SSE wire format.
+	sanitized := strings.NewReplacer("\n", "", "\r", "").Replace(eventName)
+
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		slog.Error("[SSE] marshal error", "error", err)
 		return fmt.Errorf("marshal: %w", err)
 	}
-	if _, err := fmt.Fprintf(w, "event: %s\ndata: %s\n\n", eventName, jsonData); err != nil {
+	if _, err := fmt.Fprintf(w, "event: %s\ndata: %s\n\n", sanitized, jsonData); err != nil {
 		return fmt.Errorf("write: %w", err)
 	}
 	if err := w.Flush(); err != nil {
@@ -188,6 +196,9 @@ var (
 	// sseCacheEvictDone is closed to stop the background evictor goroutine
 	// on server shutdown or in tests, preventing goroutine leaks (#6956).
 	sseCacheEvictDone = make(chan struct{})
+	// #7045 — singleflight group coalesces concurrent cold-cache fetches for
+	// the same cache key into a single Kubernetes API call.
+	sseFetchGroup singleflight.Group
 )
 
 type sseCacheEntry struct {
@@ -411,10 +422,10 @@ func streamClusters(
 		// Spawn goroutines only for healthy/unknown clusters
 		var wg sync.WaitGroup
 		for _, cl := range healthy {
-			// Include namespace in cache key to prevent cross-namespace
-			// data leakage when the same cluster is queried for different
-			// namespaces (#4151).
-			cacheKey := cfg.demoKey + ":" + cl.Name + ":" + cfg.namespace
+			// #7044 — Include user ID in cache key to prevent cross-user data
+			// leakage between different roles (e.g. admin vs viewer).
+			// Also includes namespace to prevent cross-namespace data leakage (#4151).
+			cacheKey := userID.String() + ":" + cfg.demoKey + ":" + cl.Name + ":" + cfg.namespace
 
 			// Check response cache — serve instantly if fresh
 			if cached := sseCacheGet(cacheKey); cached != nil {
@@ -448,7 +459,15 @@ func streamClusters(
 				defer cancel()
 
 				start := time.Now()
-				data, fetchErr := fetchFn(ctx, clusterName)
+				// #7045 — Use singleflight to coalesce concurrent cold-cache
+				// fetches for the same cache key into one Kubernetes API call.
+				v, fetchErr, _ := sseFetchGroup.Do(cKey, func() (interface{}, error) {
+					return fetchFn(ctx, clusterName)
+				})
+				var data interface{}
+				if fetchErr == nil {
+					data = v
+				}
 				elapsed := time.Since(start)
 
 				if fetchErr != nil {
@@ -638,7 +657,14 @@ func (h *MCPHandlers) GetEventsStream(c *fiber.Ctx) error {
 	}
 
 	namespace := c.Query("namespace")
-	limit := c.QueryInt("limit", 50)
+	limit := c.QueryInt("limit", defaultWarningEventsLimit)
+	// #7046 — Clamp to maxWarningEventsLimit to prevent unbounded result sets.
+	if limit <= 0 {
+		limit = defaultWarningEventsLimit
+	}
+	if limit > maxWarningEventsLimit {
+		limit = maxWarningEventsLimit
+	}
 
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "events",

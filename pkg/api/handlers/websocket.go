@@ -153,8 +153,13 @@ func (h *Hub) Run() {
 			slog.Info("[WebSocket] client disconnected", "user", client.userID)
 
 		case msg := <-h.broadcast:
+			// #7049 — Copy the slice contents under the lock so concurrent
+			// unregister/DisconnectUser mutations cannot modify the underlying
+			// array while we iterate.
 			h.mu.RLock()
-			clients := h.userIndex[msg.userID]
+			orig := h.userIndex[msg.userID]
+			clients := make([]*Client, len(orig))
+			copy(clients, orig)
 			h.mu.RUnlock()
 
 			for _, client := range clients {
@@ -173,9 +178,22 @@ func (h *Hub) Run() {
 
 // Close shuts down the hub. It is safe to call multiple times;
 // only the first call actually closes the done channel.
+//
+// #7042 — Close every client.send channel so writer goroutines unblock
+// immediately instead of waiting for TCP connections to be forcibly closed.
+// Previously only Run's unregister case closed send channels, but Run exits
+// as soon as h.done is closed — leaving every writer goroutine stranded.
 func (h *Hub) Close() {
 	h.closeOnce.Do(func() {
 		close(h.done)
+
+		h.mu.Lock()
+		for client := range h.clients {
+			close(client.send)
+			delete(h.clients, client)
+		}
+		h.userIndex = make(map[uuid.UUID][]*Client)
+		h.mu.Unlock()
 	})
 }
 
@@ -238,12 +256,18 @@ func (h *Hub) DisconnectUser(userID uuid.UUID) {
 	h.mu.RUnlock()
 
 	for _, client := range clients {
-		// Send a close message so the client knows the session was terminated.
-		// Best-effort: if the conn is already closed by a peer error, the
-		// write will fail silently.
-		_ = client.conn.WriteMessage(websocket.CloseMessage,
-			websocket.FormatCloseMessage(websocket.CloseNormalClosure, "session invalidated"))
-		client.closeConn()
+		// #7041 — Send a sentinel value through the client's send channel so the
+		// writer goroutine sends the close frame itself, maintaining single-writer
+		// semantics. Previously DisconnectUser called conn.WriteMessage directly,
+		// racing the writer goroutine and violating gorilla/websocket's
+		// one-concurrent-writer rule.
+		select {
+		case client.send <- nil: // nil sentinel triggers close in writer
+		default:
+			// Channel full — force-close the connection so the reader/writer
+			// goroutines exit on their next I/O call.
+			client.closeConn()
+		}
 	}
 	slog.Info("[WebSocket] disconnected all connections for user", "user", userID, "count", len(clients))
 }
@@ -463,6 +487,13 @@ func (h *Hub) HandleConnection(conn *websocket.Conn) {
 			select {
 			case msg, ok := <-client.send:
 				if !ok {
+					return
+				}
+				// #7041 — nil sentinel from DisconnectUser: send a close frame
+				// from the writer goroutine (single-writer semantics) and exit.
+				if msg == nil {
+					_ = conn.WriteMessage(websocket.CloseMessage,
+						websocket.FormatCloseMessage(websocket.CloseNormalClosure, "session invalidated"))
 					return
 				}
 				if err := conn.WriteMessage(websocket.TextMessage, msg); err != nil {
