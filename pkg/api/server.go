@@ -47,6 +47,14 @@ const (
 	portReleasePollInterval = 50 * time.Millisecond
 	defaultDevFrontendURL   = "http://localhost:5174"
 	defaultProdFrontendURL  = "http://localhost:8080"
+
+	// apiDefaultBodyLimit is the per-route body-size limit enforced by the
+	// bodyGuard middleware on all API routes except feedback screenshot uploads.
+	apiDefaultBodyLimit = 1 * 1024 * 1024 // 1 MB — sufficient for JSON API requests
+
+	// feedbackBodyLimit is the global Fiber BodyLimit, elevated to support
+	// base64-encoded screenshot uploads in POST /api/feedback/requests.
+	feedbackBodyLimit = 20 * 1024 * 1024 // 20 MB — base64 screenshot uploads
 )
 
 // Version is the build version, injected via ldflags at build time.
@@ -200,19 +208,38 @@ func NewServer(cfg Config) (*Server, error) {
 	middleware.InitTokenRevocation(db)
 
 	// Create Fiber app
-	// feedbackBodyLimit is elevated globally to 20 MB to support base64-encoded
-	// screenshot uploads in the POST /api/feedback/requests endpoint. Non-feedback
-	// POST routes are protected by a tighter per-route body-size middleware
-	// (apiDefaultBodyLimit) to limit memory pressure from oversized requests.
-	const feedbackBodyLimit = 20 * 1024 * 1024 // 20 MB — base64 screenshot uploads
+	// trustedProxyCIDRs are the RFC-1918 and link-local ranges typical of
+	// Kubernetes ingress controllers, cloud load-balancers, and service meshes.
+	// When EnableTrustedProxyCheck is true, Fiber only honours X-Forwarded-For /
+	// X-Real-Ip from source IPs within these CIDRs, so c.IP() returns the real
+	// client IP instead of the proxy's IP (#7028).
+	trustedProxyCIDRs := []string{
+		"10.0.0.0/8",     // RFC-1918 Class A private
+		"172.16.0.0/12",  // RFC-1918 Class B private
+		"192.168.0.0/16", // RFC-1918 Class C private
+		"fc00::/7",       // IPv6 ULA
+		"127.0.0.0/8",    // loopback
+		"::1/128",        // IPv6 loopback
+	}
+
+	// BodyLimit is set to feedbackBodyLimit (20 MB) because the feedback endpoint
+	// accepts base64-encoded screenshot uploads. Per-route enforcement is done by
+	// bodyGuard middleware (1 MB for most routes) and analyticsBodyGuard (64 KB).
+	// Fiber buffers up to BodyLimit before middleware runs, so a concurrent flood
+	// of max-size bodies can still cause memory pressure (#7039). ReadTimeout (30s)
+	// bounds the buffering window; for stricter enforcement, deploy behind an
+	// ingress controller with its own body-size limit (e.g. nginx client_max_body_size).
 	app := fiber.New(fiber.Config{
-		ErrorHandler:    customErrorHandler,
-		ReadBufferSize:  16384,
-		WriteBufferSize: 16384,
-		BodyLimit:       feedbackBodyLimit,
-		ReadTimeout:     30 * time.Second,
-		WriteTimeout:    5 * time.Minute, // large static assets on slow networks
-		IdleTimeout:     2 * time.Minute,
+		ErrorHandler:            customErrorHandler,
+		ReadBufferSize:          16384,
+		WriteBufferSize:         16384,
+		BodyLimit:               feedbackBodyLimit,
+		ReadTimeout:             30 * time.Second,
+		WriteTimeout:            5 * time.Minute, // large static assets on slow networks
+		IdleTimeout:             2 * time.Minute,
+		EnableTrustedProxyCheck: true,
+		TrustedProxies:          trustedProxyCIDRs,
+		ProxyHeader:             "X-Forwarded-For",
 	})
 
 	// WebSocket hub
@@ -372,13 +399,36 @@ func (s *Server) setupMiddleware() {
 		AllowCredentials: true,
 	}))
 
-	// Security headers
+	// Security headers (#7037 CSP, #7038 HSTS)
 	s.app.Use(func(c *fiber.Ctx) error {
 		c.Set("X-Content-Type-Options", "nosniff")
 		c.Set("X-Frame-Options", "DENY")
 		c.Set("X-XSS-Protection", "0") // Disabled per OWASP — modern browsers don't need it and it can introduce vulnerabilities
 		c.Set("Referrer-Policy", "strict-origin-when-cross-origin")
 		c.Set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+
+		// Content-Security-Policy: restrict script/style sources to self and
+		// known analytics/CDN origins. 'unsafe-inline' is required for Vite
+		// dev mode injected styles and inline event handlers in the SPA.
+		c.Set("Content-Security-Policy",
+			"default-src 'self'; "+
+				"script-src 'self' 'unsafe-inline' https://www.googletagmanager.com; "+
+				"style-src 'self' 'unsafe-inline'; "+
+				"img-src 'self' data: https:; "+
+				"connect-src 'self' https://www.google-analytics.com https://www.googletagmanager.com wss:; "+
+				"font-src 'self' data:; "+
+				"object-src 'none'; "+
+				"base-uri 'self'")
+
+		// Strict-Transport-Security: instruct browsers to always use HTTPS.
+		// Only emitted when the request arrived over TLS (or via a TLS-terminating
+		// proxy) to avoid breaking local HTTP development (#7038).
+		if c.Protocol() == "https" {
+			const hstsMaxAgeSec = 63072000 // 2 years in seconds
+			c.Set("Strict-Transport-Security",
+				fmt.Sprintf("max-age=%d; includeSubDomains", hstsMaxAgeSec))
+		}
+
 		return c.Next()
 	})
 }
@@ -568,6 +618,7 @@ func (s *Server) setupRoutes() {
 			return c.IP()
 		},
 		LimitReached: func(c *fiber.Ctx) error {
+			c.Set("Retry-After", strconv.Itoa(int(authLimiterWindow.Seconds()))) // #7040
 			return c.Status(429).JSON(fiber.Map{"error": "too many requests, try again later"})
 		},
 	})
@@ -588,8 +639,34 @@ func (s *Server) setupRoutes() {
 	s.app.Post("/auth/refresh", authLimiter, jwtAuth, auth.RefreshToken)
 	s.app.Post("/auth/logout", authLimiter, jwtAuth, auth.Logout)
 
+	// Public endpoint rate limiter — loose limit to prevent DoS on unauthenticated
+	// routes (active-users, ping, nightly-e2e, youtube, medium, analytics) (#7029).
+	publicLimiterMaxRequests := 60        // max requests per window per IP
+	publicLimiterWindow := 1 * time.Minute // sliding window duration
+	publicLimiter := limiter.New(limiter.Config{
+		Max:        publicLimiterMaxRequests,
+		Expiration: publicLimiterWindow,
+		KeyGenerator: func(c *fiber.Ctx) string {
+			return c.IP()
+		},
+		LimitReached: func(c *fiber.Ctx) error {
+			c.Set("Retry-After", strconv.Itoa(int(publicLimiterWindow.Seconds()))) // #7040
+			return c.Status(429).JSON(fiber.Map{"error": "too many requests, try again later"})
+		},
+	})
+
+	// analyticsBodyLimit constrains analytics proxy POST bodies at the Fiber level
+	// so oversized payloads are rejected before full buffering (#7030).
+	const analyticsBodyLimit = 64 * 1024 // 64 KB — analytics payloads are small JSON/query strings
+	analyticsBodyGuard := func(c *fiber.Ctx) error {
+		if len(c.Body()) > analyticsBodyLimit {
+			return fiber.ErrRequestEntityTooLarge
+		}
+		return c.Next()
+	}
+
 	// Active users endpoint (public — returns only aggregate counts, no sensitive data)
-	s.app.Get("/api/active-users", func(c *fiber.Ctx) error {
+	s.app.Get("/api/active-users", publicLimiter, func(c *fiber.Ctx) error {
 		wsUsers := s.hub.GetActiveUsersCount()
 		demoSessions := s.hub.GetDemoSessionCount()
 		wsTotalConns := s.hub.GetTotalConnectionsCount()
@@ -613,7 +690,7 @@ func (s *Server) setupRoutes() {
 	// Active users heartbeat endpoint (for demo mode session counting)
 	// This is unauthenticated telemetry — session IDs are validated for length
 	// and the total number of unique sessions is capped to prevent inflation.
-	s.app.Post("/api/active-users", func(c *fiber.Ctx) error {
+	s.app.Post("/api/active-users", publicLimiter, func(c *fiber.Ctx) error {
 		var body struct {
 			SessionID string `json:"sessionId"`
 		}
@@ -633,19 +710,20 @@ func (s *Server) setupRoutes() {
 	// Public API routes (no auth — only non-sensitive, publicly-available data)
 	// Nightly E2E status is public GitHub Actions data, safe for desktop widgets
 	nightlyE2EPublic := handlers.NewNightlyE2EHandler(s.config.GitHubToken)
-	s.app.Get("/api/public/nightly-e2e/runs", nightlyE2EPublic.GetRuns)
-	s.app.Get("/api/public/nightly-e2e/run-logs", nightlyE2EPublic.GetRunLogs)
+	s.app.Get("/api/public/nightly-e2e/runs", publicLimiter, nightlyE2EPublic.GetRuns)
+	s.app.Get("/api/public/nightly-e2e/run-logs", publicLimiter, nightlyE2EPublic.GetRunLogs)
 
 	// Analytics proxies (public — no auth required, have their own origin validation)
-	// MUST be registered before the /api group so JWTAuth middleware doesn't intercept them
-	s.app.All("/api/m", handlers.GA4CollectProxy)
-	s.app.Get("/api/gtag", handlers.GA4ScriptProxy)
-	s.app.Get("/api/ksc", handlers.UmamiScriptProxy)
-	s.app.Post("/api/send", handlers.UmamiCollectProxy)
+	// MUST be registered before the /api group so JWTAuth middleware doesn't intercept them.
+	// Protected by publicLimiter (#7029) and analyticsBodyGuard (#7030).
+	s.app.All("/api/m", publicLimiter, analyticsBodyGuard, handlers.GA4CollectProxy)
+	s.app.Get("/api/gtag", publicLimiter, handlers.GA4ScriptProxy)
+	s.app.Get("/api/ksc", publicLimiter, handlers.UmamiScriptProxy)
+	s.app.Post("/api/send", publicLimiter, analyticsBodyGuard, handlers.UmamiCollectProxy)
 
 	// Network ping proxy (public — lightweight server-side HTTP HEAD for latency measurement)
 	// Avoids browser no-cors limitations that produce unreliable results
-	s.app.Get("/api/ping", handlers.PingHandler)
+	s.app.Get("/api/ping", publicLimiter, handlers.PingHandler)
 
 	// MCP handlers (used in protected routes below)
 	mcpHandlers := handlers.NewMCPHandlers(s.bridge, s.k8sClient)
@@ -654,17 +732,23 @@ func (s *Server) setupRoutes() {
 	// NOT authentication requirements
 
 	// YouTube playlist (public — proxies to YouTube RSS feed, cached 1h)
-	s.app.Get("/api/youtube/playlist", handlers.YouTubePlaylistHandler)
-	s.app.Get("/api/youtube/thumbnail/:id", handlers.YouTubeThumbnailProxy)
+	s.app.Get("/api/youtube/playlist", publicLimiter, handlers.YouTubePlaylistHandler)
+	s.app.Get("/api/youtube/thumbnail/:id", publicLimiter, handlers.YouTubeThumbnailProxy)
 
 	// Medium blog (public — proxies to Medium RSS feed, cached 1h)
-	s.app.Get("/api/medium/blog", handlers.MediumBlogHandler)
+	s.app.Get("/api/medium/blog", publicLimiter, handlers.MediumBlogHandler)
 
 	// Mission knowledge base browse/file (public — proxies to public GitHub repo)
 	missions := handlers.NewMissionsHandler()
 	missions.RegisterPublicRoutes(s.app.Group("/api/missions"))
 
 	// API routes (protected) — with rate limiting
+	//
+	// NOTE (#7033): Both authLimiter and apiLimiter use Fiber's default in-process
+	// memory storage. In a multi-replica Kubernetes deployment each pod maintains
+	// an independent counter, so the effective limit is `max × N` where N is the
+	// pod count. A shared Redis/Valkey storage backend is recommended for strict
+	// enforcement across replicas but is out of scope for this change.
 	apiLimiterMaxRequests := 200        // max requests per window per IP
 	apiLimiterWindow := 1 * time.Minute // sliding window duration
 	apiLimiter := limiter.New(limiter.Config{
@@ -674,16 +758,14 @@ func (s *Server) setupRoutes() {
 			return c.IP()
 		},
 		LimitReached: func(c *fiber.Ctx) error {
+			c.Set("Retry-After", strconv.Itoa(int(apiLimiterWindow.Seconds()))) // #7040
 			return c.Status(429).JSON(fiber.Map{"error": "too many requests, try again later"})
 		},
 	})
-	// Body-size guard: enforce a 1 MB limit on all API routes except the
-	// feedback creation endpoint which accepts large base64 screenshot payloads
-	// (up to the global 20 MB Fiber BodyLimit).
-	const apiDefaultBodyLimit = 1 * 1024 * 1024 // 1 MB — sufficient for JSON API requests
+	// bodyGuard: enforce apiDefaultBodyLimit (1 MB) on all API routes except the
+	// feedback creation endpoint which accepts large base64 screenshot payloads.
 	bodyGuard := func(c *fiber.Ctx) error {
 		if c.Method() == fiber.MethodPost && c.Path() == "/api/feedback/requests" {
-			// Allow the elevated feedbackBodyLimit (checked by Fiber global config)
 			return c.Next()
 		}
 		if len(c.Body()) > apiDefaultBodyLimit {
