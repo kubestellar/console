@@ -561,7 +561,10 @@ func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.M
 		// frontend's stream-inactivity timer from firing during long-running
 		// tool calls (e.g., `drasi init` which deploys Kubernetes components
 		// and can take several minutes with no output).
-		heartbeatDone := make(chan struct{})
+		// Use a buffered channel so close() never races with a pending
+		// send, preventing "send on closed channel" panics (#7179).
+		heartbeatDone := make(chan struct{}, 1)
+		var heartbeatOnce sync.Once
 		go func() {
 			ticker := time.NewTicker(missionHeartbeatInterval)
 			defer ticker.Stop()
@@ -584,7 +587,8 @@ func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.M
 		}()
 		// Defer close so the heartbeat goroutine is always stopped,
 		// even if StreamChatWithProgress panics (#7001).
-		defer close(heartbeatDone)
+		// sync.Once ensures close is called exactly once (#7179).
+		defer heartbeatOnce.Do(func() { close(heartbeatDone) })
 
 		resp, err = streamingProvider.StreamChatWithProgress(ctx, chatReq, onChunk, onProgress)
 		if err != nil {

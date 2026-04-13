@@ -8,7 +8,7 @@ import { detectIssueSignature, findSimilarResolutionsStandalone, generateResolut
 import { LOCAL_AGENT_WS_URL, LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 import { emitMissionStarted, emitMissionCompleted, emitMissionError, emitMissionRated } from '../lib/analytics'
 import { scanForMaliciousContent } from '../lib/missions/scanner/malicious'
-import { runPreflightCheck, type PreflightError } from '../lib/missions/preflightCheck'
+import { runPreflightCheck, type PreflightError, type PreflightResult } from '../lib/missions/preflightCheck'
 import { kubectlProxy } from '../lib/kubectlProxy'
 import { ConfirmMissionPromptDialog } from '../components/missions/ConfirmMissionPromptDialog'
 
@@ -2169,12 +2169,20 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
     params: { cluster?: string; context?: Record<string, unknown>; type?: string },
   ) => {
     const missionNeedsCluster = !!params.cluster || ['deploy', 'repair', 'upgrade'].includes(params.type || '')
-    const preflightPromise = missionNeedsCluster
-      ? runPreflightCheck(
-          (args, opts) => kubectlProxy.exec(args, opts),
-          params.cluster?.split(',')[0]?.trim(),
-        )
-      : Promise.resolve({ ok: true } as { ok: true })
+    // Run preflight on ALL target clusters, not just the first one (#7177).
+    const clusterContexts = params.cluster?.split(',').map(c => c.trim()).filter(Boolean) || []
+    const preflightPromise = missionNeedsCluster && clusterContexts.length > 0
+      ? Promise.all(
+          clusterContexts.map(ctx =>
+            runPreflightCheck((args, opts) => kubectlProxy.exec(args, opts), ctx)
+          )
+        ).then(results => {
+          const failed = results.find(r => !r.ok)
+          return failed || { ok: true as const }
+        })
+      : missionNeedsCluster
+        ? runPreflightCheck((args, opts) => kubectlProxy.exec(args, opts))
+        : Promise.resolve({ ok: true } as PreflightResult)
 
     preflightPromise.then(preflight => {
       if (!preflight.ok && 'error' in preflight && preflight.error) {
