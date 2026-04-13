@@ -573,6 +573,13 @@ export function MissionProvider({ children }: { children: ReactNode }) {
    * `msg-${Date.now()}` and caused React key warnings + rendering glitches.
    */
   const streamSplitCounter = useRef<Map<string, number>>(new Map())
+  /**
+   * #7082 — Monotonic counter incremented on every WS open. The reconnect
+   * timeout captures the current value and bails if the counter has changed
+   * by the time it fires. This prevents React StrictMode double-invocation
+   * of the onopen handler from dispatching duplicate chat_request payloads.
+   */
+  const wsOpenEpoch = useRef(0)
   const STREAM_GAP_THRESHOLD_MS = 8000 // If >8s gap between stream chunks, create new message bubble (tool-use gap)
 
   // Maximum number of WebSocket send retries before giving up
@@ -610,7 +617,13 @@ export function MissionProvider({ children }: { children: ReactNode }) {
         wsSendRetryTimers.current.add(handle)
       } else {
         console.error('[Missions] WebSocket send failed after retries — socket not open')
-        onFailure?.()
+        // #7077 — Guard against post-unmount failure callback execution.
+        // wsSend retries via setTimeout; if the component unmounts before a
+        // retry fires, onFailure holds a stale closure over setMissions and
+        // would trigger "cannot update unmounted component" errors.
+        if (!unmountedRef.current) {
+          onFailure?.()
+        }
       }
     }
     trySend()
@@ -844,6 +857,12 @@ export function MissionProvider({ children }: { children: ReactNode }) {
       return Promise.resolve()
     }
 
+    // #7075 — Reset the reconnect counter when a new explicit connection is
+    // requested (e.g. user interaction after giveup). Without this, the first
+    // subsequent disconnect after a giveup instantly hits the max-retries
+    // threshold and the auto-reconnect is permanently locked out for the session.
+    wsReconnectAttempts.current = 0
+
     return new Promise<void>((resolve, reject) => {
       // Show loading state while connecting
       setAgentsLoading(true)
@@ -878,6 +897,10 @@ export function MissionProvider({ children }: { children: ReactNode }) {
           // upgrade frame, causing onopen → onclose in the same event-loop
           // tick. The backoff is reset in handleAgentMessage on the first
           // real application-layer frame (#6375).
+          // #7082 — Bump the open epoch. The reconnect timeout below captures
+          // this value and bails if it has changed, preventing duplicate sends
+          // when React StrictMode double-invokes the onopen handler.
+          const epoch = ++wsOpenEpoch.current
           // Fetch available agents on connect
           fetchAgents()
 
@@ -894,6 +917,16 @@ export function MissionProvider({ children }: { children: ReactNode }) {
           // session is almost certainly gone. Don't auto-resume these —
           // mark them as needing a manual restart (#6371).
           const missionsToMarkStale: string[] = []
+
+          // #7074 — Build the waiting_input set SYNCHRONOUSLY from the ref
+          // before entering the state updater. If React batches or delays the
+          // setMissions commit, the set built inside the updater could be
+          // empty, causing watchdogs to never restart for hanging missions.
+          const waitingInputMissionIds = new Set(
+            (missionsRef.current || [])
+              .filter(m => m.status === 'waiting_input' && m.context?.needsReconnect)
+              .map(m => m.id)
+          )
 
           setMissions(prev => {
             const candidates = prev.filter(m =>
@@ -971,12 +1004,6 @@ export function MissionProvider({ children }: { children: ReactNode }) {
             return prev
           })
 
-          // #6916 — Track which reconnecting missions were in waiting_input
-          // so we can restart their timeout watchdog after resend.
-          const waitingInputMissionIds = new Set(
-            missionsToReconnect.filter(m => m.status === 'waiting_input').map(m => m.id)
-          )
-
           // Side effect: schedule reconnection OUTSIDE the state updater.
           // #6832 — Deduplicate by mission ID. React StrictMode may invoke the
           // state updater twice, pushing the same mission into the array twice.
@@ -1000,6 +1027,11 @@ export function MissionProvider({ children }: { children: ReactNode }) {
               toolsInFlight.current.set(mission.id, OPTIMISTIC_TOOLS_IN_FLIGHT)
             }
             setTimeout(() => {
+              // #7082 — If the WS epoch has changed since onopen fired,
+              // another connection cycle has started (e.g. StrictMode
+              // double-invoke or rapid reconnect). Skip this batch to
+              // avoid duplicate chat_request payloads.
+              if (wsOpenEpoch.current !== epoch) return
               dedupedMissions.forEach(mission => {
                 // #6914 — Check if the mission was cancelled during the
                 // reconnect delay. Without this guard, a user who cancels
@@ -1076,6 +1108,14 @@ export function MissionProvider({ children }: { children: ReactNode }) {
                       resumeKey: resumeKey,
                       isResume: true }
                   }), () => {
+                    // #7076 — Clear stale optimistic toolsInFlight entry on
+                    // failure. Without this, the paused watchdog is never
+                    // un-paused if the mission ID is later reused.
+                    toolsInFlight.current.delete(mId)
+                    // #7077 — Guard against post-unmount setState. The retry
+                    // timer in wsSend can fire after the component unmounts,
+                    // reaching onFailure with a stale closure over setMissions.
+                    if (unmountedRef.current) return
                     setMissions(prev => prev.map(m =>
                       m.id === mId ? { ...m, status: 'failed', currentStep: 'WebSocket reconnect failed' } : m
                     ))
@@ -1150,6 +1190,14 @@ export function MissionProvider({ children }: { children: ReactNode }) {
               'Will retry on next user interaction.',
             )
           }
+
+          // #7073 — Clear cancelTimeouts on WS close. Without this, orphaned
+          // timeout handles leak and fire later against a reconnected or
+          // dismissed mission, causing state corruption or memory leaks.
+          for (const handle of cancelTimeouts.current.values()) {
+            clearTimeout(handle)
+          }
+          cancelTimeouts.current.clear()
 
           // #6836 — Cancel pending wsSend retry timers so they don't fire
           // on the dead socket. The main unmount effect also clears these,
@@ -1453,6 +1501,14 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
         : null
       const resolved = persistedAvailable ? persisted : (payload.selected || safeDefaultAgent || bestAvailable)
       setSelectedAgent(resolved)
+      // #7081 — Always persist the resolved agent preference to localStorage
+      // so it survives WS drops. Previously, if the resolved agent came from
+      // payload.selected or auto-selection (not the persisted value), a WS
+      // disconnect before agent_selected ack would revert to the default on
+      // the next handshake because localStorage had no entry.
+      if (resolved) {
+        localStorage.setItem(SELECTED_AGENT_KEY, resolved)
+      }
       // If we restored a persisted agent that differs from the server's selection, tell the server.
       // #6831 — Persist the selection to localStorage at send time (not just on
       // agent_selected ack) so a connection drop between send and ack doesn't
@@ -1514,9 +1570,16 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
         if (progressPayload.output) {
           // Tool completed — decrement.
           const prevCount = toolsInFlight.current.get(missionId) ?? 0
-          const next = Math.max(0, prevCount - 1)
-          if (next === 0) toolsInFlight.current.delete(missionId)
-          else toolsInFlight.current.set(missionId, next)
+          // #7078 — Ignore tool_result if prevCount is already 0. An
+          // out-of-order or late frame (e.g. dropped tool_start on
+          // reconnect) would decrement past zero, breaking future sequence
+          // tracking and causing the watchdog to fire prematurely on
+          // subsequent legitimate tool calls.
+          if (prevCount > 0) {
+            const next = prevCount - 1
+            if (next === 0) toolsInFlight.current.delete(missionId)
+            else toolsInFlight.current.set(missionId, next)
+          }
         } else {
           // Tool started — increment.
           const prevCount = toolsInFlight.current.get(missionId) ?? 0
@@ -1628,7 +1691,12 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
           lastStreamTimestamp.current.delete(missionId)
         }
 
-        if (lastMsg?.role === 'assistant' && !payload.done && (m.status === 'running' || m.status === 'waiting_input') && !hasGap) {
+        // #7079 — Also allow appending when the message ID is still in
+        // pendingRequests, even if status has shifted to waiting_input due
+        // to a premature stream_done. Without this, a late content chunk
+        // would create a split bubble instead of being appended.
+        const isActiveRequest = pendingRequests.current.has(message.id)
+        if (lastMsg?.role === 'assistant' && !payload.done && (m.status === 'running' || m.status === 'waiting_input' || isActiveRequest) && !hasGap) {
           // Append to existing assistant message mid-stream (no gap detected).
           // #6829 — Also allow appending when status is 'waiting_input': if
           // stream_done arrived before the final content chunk (out-of-order
@@ -2425,8 +2493,10 @@ Install the console locally with the KubeStellar Console agent to use AI mission
   // Sets status to 'cancelling' immediately, then waits for backend acknowledgment
   // before transitioning to final 'failed' state. Falls back to a timeout if no ack.
   const cancelMission = (missionId: string) => {
-    // Guard against double-cancel: if already cancelling, don't schedule another timeout
-    if (cancelTimeouts.current.has(missionId)) return
+    // #7080 — Idempotency guard: if a cancel is already in flight (either a
+    // timeout is pending or the intent was already recorded), bail out to
+    // prevent duplicate setTimeout handles and overlapping finalization.
+    if (cancelTimeouts.current.has(missionId) || cancelIntents.current.has(missionId)) return
 
     // #6370 — Mark the cancel intent synchronously BEFORE any state update or
     // backend call. This is the authoritative signal for the message handler:
