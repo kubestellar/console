@@ -89,7 +89,7 @@ func (h *SwapHandler) SnoozeSwap(c *fiber.Ctx) error {
 	})
 
 	return c.JSON(fiber.Map{
-		"status":  "snoozed",
+		"status":  string(models.SwapStatusSnoozed),
 		"swap_at": newSwapAt,
 	})
 }

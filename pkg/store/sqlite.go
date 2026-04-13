@@ -327,7 +327,10 @@ func (s *SQLiteStore) migrate() error {
 		description TEXT NOT NULL,
 		request_type TEXT NOT NULL,
 		github_issue_number INTEGER,
-		github_issue_url TEXT,
+		-- NOTE: github_issue_url was removed (#7735) — it was never
+		-- populated or read by any INSERT/SELECT/UPDATE query.  The
+		-- handler's QueueItem.GitHubIssueURL is populated from the
+		-- live GitHub API, not from this table.
 		status TEXT DEFAULT 'submitted',
 		pr_number INTEGER,
 		pr_url TEXT,
@@ -887,8 +890,11 @@ func (s *SQLiteStore) GetCard(id uuid.UUID) (*models.Card, error) {
 	return s.scanCard(row)
 }
 
+// maxDashboardCards is the upper bound on cards returned per dashboard (#7733).
+const maxDashboardCards = 500
+
 func (s *SQLiteStore) GetDashboardCards(dashboardID uuid.UUID) ([]models.Card, error) {
-	rows, err := s.db.Query(`SELECT id, dashboard_id, card_type, config, position, last_summary, last_focus, created_at FROM cards WHERE dashboard_id = ? ORDER BY created_at`, dashboardID.String())
+	rows, err := s.db.Query(`SELECT id, dashboard_id, card_type, config, position, last_summary, last_focus, created_at FROM cards WHERE dashboard_id = ? ORDER BY created_at LIMIT ?`, dashboardID.String(), maxDashboardCards)
 	if err != nil {
 		return nil, err
 	}
@@ -1292,7 +1298,7 @@ func (s *SQLiteStore) UpdateSwapStatus(id uuid.UUID, status models.SwapStatus) e
 }
 
 func (s *SQLiteStore) SnoozeSwap(id uuid.UUID, newSwapAt time.Time) error {
-	_, err := s.db.Exec(`UPDATE pending_swaps SET swap_at = ?, status = 'snoozed' WHERE id = ?`, newSwapAt, id.String())
+	_, err := s.db.Exec(`UPDATE pending_swaps SET swap_at = ?, status = ? WHERE id = ?`, newSwapAt, string(models.SwapStatusSnoozed), id.String())
 	return err
 }
 
@@ -2255,9 +2261,11 @@ func boolToInt(b bool) int {
 // Token Revocation methods
 
 // RevokeToken persists a revoked token JTI with its expiration time.
+// INSERT OR IGNORE ensures re-revoking a token cannot silently extend
+// its expiry — the first revocation is authoritative (#7731).
 func (s *SQLiteStore) RevokeToken(jti string, expiresAt time.Time) error {
 	_, err := s.db.Exec(
-		`INSERT OR REPLACE INTO revoked_tokens (jti, expires_at) VALUES (?, ?)`,
+		`INSERT OR IGNORE INTO revoked_tokens (jti, expires_at) VALUES (?, ?)`,
 		jti, expiresAt,
 	)
 	return err
@@ -2891,9 +2899,12 @@ func (s *SQLiteStore) DeleteClusterGroup(name string) error {
 	return err
 }
 
+// maxClusterGroups is the upper bound on cluster groups returned (#7734).
+const maxClusterGroups = 200
+
 // ListClusterGroups returns all persisted cluster group definitions (#7013).
 func (s *SQLiteStore) ListClusterGroups() (map[string][]byte, error) {
-	rows, err := s.db.Query(`SELECT name, data FROM cluster_groups`)
+	rows, err := s.db.Query(`SELECT name, data FROM cluster_groups LIMIT ?`, maxClusterGroups)
 	if err != nil {
 		return nil, err
 	}
