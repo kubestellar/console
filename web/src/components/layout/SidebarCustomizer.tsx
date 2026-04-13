@@ -140,6 +140,7 @@ const KNOWN_ROUTES: KnownRoute[] = [
   { href: '/karmada-ops', name: 'Karmada Ops', description: 'Multi-cluster orchestration, AI inference, and data platform operations', icon: 'Globe', category: 'Core Dashboards' },
   { href: '/cluster-admin', name: 'Cluster Admin', description: 'Multi-cluster operations, control plane health, node debugging, and infrastructure management', icon: 'ShieldAlert', category: 'Core Dashboards' },
   { href: '/multi-tenancy', name: 'Multi-Tenancy', description: 'Tenant isolation with OVN-Kubernetes, KubeFlex, K3s, and KubeVirt', icon: 'Users', category: 'Core Dashboards' },
+  { href: '/drasi', name: 'Drasi', description: 'Reactive data pipelines — sources, continuous queries, reactions, and live results', icon: 'GitBranch', category: 'Core Dashboards' },
   // Resource Pages
   { href: '/namespaces', name: 'Namespaces', description: 'Namespace management and resource allocation', icon: 'FolderTree', category: 'Resources' },
   { href: '/nodes', name: 'Nodes', description: 'Cluster node health and resource usage', icon: 'HardDrive', category: 'Resources' },

@@ -44,7 +44,7 @@ const HREF_TO_DASHBOARD_ID: Record<string, string> = {
   '/logs': 'logs', '/data-compliance': 'data-compliance', '/arcade': 'arcade',
   '/deploy': 'deploy', '/ai-agents': 'ai-agents',
   '/llm-d-benchmarks': 'llm-d-benchmarks', '/cluster-admin': 'cluster-admin',
-  '/insights': 'insights' }
+  '/insights': 'insights', '/drasi': 'drasi' }
 
 /** Prefix for custom dashboard routes */
 const CUSTOM_DASHBOARD_PREFIX = '/custom-dashboard/'

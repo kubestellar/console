@@ -214,6 +214,10 @@ const KagentAgentDiscovery = safeLazy(() => _kagentBundle, 'KagentAgentDiscovery
 const KagentSecurity = safeLazy(() => _kagentBundle, 'KagentSecurity')
 const KagentTopology = safeLazy(() => _kagentBundle, 'KagentTopology')
 
+// Drasi reactive pipeline cards — barrel import
+const _drasiBundle = import('./drasi').catch(() => undefined as never)
+const DrasiReactiveGraph = safeLazy(() => _drasiBundle, 'DrasiReactiveGraph')
+
 const CrossplaneManagedResources = safeLazy(() => import('./crossplane-status/CrossplaneManagedResources'), 'CrossplaneManagedResources')
 // Cloud Native Buildpacks card
 // ISO 27001 Security Audit checklist card
@@ -576,6 +580,9 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   process_trace: ProcessTraceCard,
   security_audit: SecurityAuditCard,
 
+  // Drasi reactive pipeline cards
+  drasi_reactive_graph: DrasiReactiveGraph,
+
   // LLM-d stunning visualization cards
   llmd_flow: LLMdFlow,
   kvcache_monitor: KVCacheMonitor,
@@ -888,6 +895,8 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   prow_ci_monitor: () => import('./workload-monitor'),
   github_ci_monitor: () => import('./workload-monitor'),
   cluster_health_monitor: () => import('./workload-monitor'),
+  // Drasi — barrel import
+  drasi_reactive_graph: () => import('./drasi'),
   // LLM-d visualization — barrel import loads all 7 cards in one module graph
   // resolution instead of 7 separate requests, reducing Vite transform overhead
   llmd_flow: () => import('./llmd'),
@@ -1244,6 +1253,9 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   kagent_agent_discovery: 4,
   kagent_security: 4,
   kagent_topology: 8,
+
+  // Drasi reactive pipeline cards
+  drasi_reactive_graph: 12,  // Full-width reactive graph
 
   // LLM-d stunning visualization cards
   llmd_flow: 8,           // Hero animated flow diagram

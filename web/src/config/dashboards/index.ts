@@ -42,6 +42,7 @@ import { llmdBenchmarksDashboardConfig } from './llmd-benchmarks'
 import { clusterAdminDashboardConfig } from './cluster-admin'
 import { insightsDashboardConfig } from './insights'
 import { multiTenancyDashboardConfig } from './multi-tenancy'
+import { drasiDashboardConfig } from './drasi'
 
 /**
  * Registry of all unified dashboard configurations
@@ -78,6 +79,7 @@ export const DASHBOARD_CONFIGS: DashboardConfigRegistry = {
   'cluster-admin': clusterAdminDashboardConfig,
   insights: insightsDashboardConfig,
   'multi-tenancy': multiTenancyDashboardConfig,
+  drasi: drasiDashboardConfig,
 }
 
 /**
@@ -184,4 +186,5 @@ export {
   clusterAdminDashboardConfig,
   insightsDashboardConfig,
   multiTenancyDashboardConfig,
+  drasiDashboardConfig,
 }

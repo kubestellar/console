@@ -78,6 +78,7 @@ const ClusterAdmin = safeLazy(() => import('./components/cluster-admin/ClusterAd
 const CICD = safeLazy(() => import('./components/cicd/CICD'), 'CICD')
 const Insights = safeLazy(() => import('./components/insights/Insights'), 'Insights')
 const MultiTenancy = safeLazy(() => import('./components/multi-tenancy/MultiTenancy'), 'MultiTenancy')
+const Drasi = safeLazy(() => import('./components/drasi/Drasi'), 'Drasi')
 const Marketplace = safeLazy(() => import('./components/marketplace/Marketplace'), 'Marketplace')
 const MiniDashboard = safeLazy(() => import('./components/widget/MiniDashboard'), 'MiniDashboard')
 const Welcome = safeLazy(() => import('./pages/Welcome'), 'Welcome')
@@ -326,6 +327,7 @@ const ROUTE_TITLES: Record<string, string> = {
   '/karmada-ops': 'Karmada Ops',
   '/llm-d-benchmarks': 'llm-d Benchmarks',
   '/multi-tenancy': 'Multi-Tenancy',
+  '/drasi': 'Drasi',
   '/arcade': 'Arcade',
   '/marketplace': 'Marketplace',
   '/missions': 'Missions',
@@ -564,6 +566,7 @@ function FullDashboardApp() {
           <Route path={ROUTES.CI_CD} element={<SuspenseRoute><CICD /></SuspenseRoute>} />
           <Route path={ROUTES.INSIGHTS} element={<SuspenseRoute><Insights /></SuspenseRoute>} />
           <Route path={ROUTES.MULTI_TENANCY} element={<SuspenseRoute><MultiTenancy /></SuspenseRoute>} />
+          <Route path={ROUTES.DRASI} element={<SuspenseRoute><Drasi /></SuspenseRoute>} />
           <Route path={ROUTES.MARKETPLACE} element={<SuspenseRoute><Marketplace /></SuspenseRoute>} />
           {/* Dev test routes for unified framework validation */}
           <Route path={ROUTES.TEST_UNIFIED_CARD} element={<UnifiedCardTest />} />

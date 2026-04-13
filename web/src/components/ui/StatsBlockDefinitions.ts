@@ -56,6 +56,7 @@ export type DashboardStatsType =
   | 'multi-tenancy'
   | 'ci-cd'
   | 'karmada-ops'
+  | 'drasi'
 
 /**
  * Default stat blocks for the Clusters dashboard
@@ -331,6 +332,15 @@ export const MULTI_TENANCY_STAT_BLOCKS: StatBlockConfig[] = [
 ]
 
 /**
+ * Default stat blocks for the Drasi dashboard
+ */
+export const DRASI_STAT_BLOCKS: StatBlockConfig[] = [
+  { id: 'sources', name: 'Sources', icon: 'Database', visible: true, color: 'blue' },
+  { id: 'queries', name: 'Queries', icon: 'Search', visible: true, color: 'cyan' },
+  { id: 'reactions', name: 'Reactions', icon: 'Radio', visible: true, color: 'green' },
+]
+
+/**
  * Get all stat blocks across all dashboard types
  */
 export const ALL_STAT_BLOCKS: StatBlockConfig[] = (() => {
@@ -354,6 +364,7 @@ export const ALL_STAT_BLOCKS: StatBlockConfig[] = (() => {
     ...KAGENTI_STAT_BLOCKS,
     ...CLUSTER_ADMIN_STAT_BLOCKS,
     ...MULTI_TENANCY_STAT_BLOCKS,
+    ...DRASI_STAT_BLOCKS,
   ]
 
   // Deduplicate by ID
@@ -435,6 +446,8 @@ export function getDefaultStatBlocks(dashboardType: DashboardStatsType): StatBlo
       return MULTI_TENANCY_STAT_BLOCKS
     case 'ci-cd':
       return GITOPS_STAT_BLOCKS
+    case 'drasi':
+      return DRASI_STAT_BLOCKS
     default:
       return []
   }

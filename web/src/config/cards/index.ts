@@ -177,6 +177,7 @@ import { fleetComplianceHeatmapConfig } from './fleet-compliance-heatmap'
 import { complianceDriftConfig } from './compliance-drift'
 import { crossClusterPolicyComparisonConfig } from './cross-cluster-policy-comparison'
 import { recommendedPoliciesConfig } from './recommended-policies'
+import { drasiReactiveGraphConfig } from './drasi-reactive-graph'
 
 export const CARD_CONFIGS: CardConfigRegistry = {
   active_alerts: activeAlertsConfig,
@@ -344,6 +345,8 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   compliance_drift: complianceDriftConfig,
   cross_cluster_policy_comparison: crossClusterPolicyComparisonConfig,
   recommended_policies: recommendedPoliciesConfig,
+  // Drasi cards
+  drasi_reactive_graph: drasiReactiveGraphConfig,
 }
 
 /**

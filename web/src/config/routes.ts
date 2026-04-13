@@ -93,6 +93,9 @@ export const ROUTES = {
   // Multi-Tenancy
   MULTI_TENANCY: '/multi-tenancy',
 
+  // Drasi
+  DRASI: '/drasi',
+
   // Dev / test routes
   TEST_UNIFIED_CARD: '/test/unified-card',
   TEST_UNIFIED_STATS: '/test/unified-stats',

@@ -40,6 +40,7 @@ export type CardCategory =
   | 'ci-cd'
   | 'events'
   | 'insights'
+  | 'drasi'
 
 export interface CardDefinition {
   /** Unique card type identifier */
