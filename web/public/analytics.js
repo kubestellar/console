@@ -923,6 +923,85 @@
       }
     }
 
+    // ── ACCM Projection Helpers ──────────────────────────────────────
+    // The current (incomplete) week always shows a dip because only a
+    // fraction of the 7 days have elapsed. These helpers compute a
+    // projected full-week pace so charts convey "on track" rather than
+    // "declining".
+
+    /** ISO day of week: Monday=1 … Sunday=7 */
+    function isoDayOfWeek(d) { return d.getDay() === 0 ? 7 : d.getDay(); }
+
+    /** Days elapsed in the current ISO week (Mon=day 1). */
+    const DAYS_ELAPSED_THIS_WEEK = isoDayOfWeek(new Date());
+    /** Multiplier to project a partial week to a full 7-day pace. */
+    const PACE_FACTOR = 7 / DAYS_ELAPSED_THIS_WEEK;
+
+    /** Project the last value in an array to a full-week pace.
+     *  Returns the projected value (or the original if the week is complete). */
+    function projectLastWeek(val) {
+      return DAYS_ELAPSED_THIS_WEEK >= 7 ? val : Math.round(val * PACE_FACTOR);
+    }
+
+    /** Build a "projected pace" dataset for a line chart. The dataset is
+     *  null everywhere except the last two points: second-to-last anchors
+     *  the line at the real value, last shows the projected value. Renders
+     *  as a dashed extension from the actual line to the projected level. */
+    function buildPaceLineDataset(label, actualData, borderColor) {
+      if (DAYS_ELAPSED_THIS_WEEK >= 7 || actualData.length < 2) return null;
+      const lastVal = actualData[actualData.length - 1] || 0;
+      const projected = projectLastWeek(lastVal);
+      if (projected <= lastVal) return null;
+      const data = actualData.map(() => null);
+      data[data.length - 2] = actualData[data.length - 2]; // anchor
+      data[data.length - 1] = projected;
+      return {
+        label: label + ' (pace)',
+        data,
+        borderColor,
+        borderDash: [6, 4],
+        backgroundColor: 'transparent',
+        fill: false,
+        tension: 0.3,
+        pointStyle: 'rectRot',
+        pointRadius: [0, 5],
+        spanGaps: true,
+      };
+    }
+
+    /** Build projected-remainder bar datasets for the stacked bar chart.
+     *  Returns one dataset per input dataset, each null except the last
+     *  bar which shows (projected − actual) with reduced opacity. */
+    function buildPaceBarDatasets(datasets) {
+      if (DAYS_ELAPSED_THIS_WEEK >= 7) return [];
+      return datasets.map(ds => {
+        const data = ds.data.map(() => null);
+        const lastVal = ds.data[ds.data.length - 1] || 0;
+        const remainder = Math.max(0, projectLastWeek(lastVal) - lastVal);
+        data[data.length - 1] = remainder;
+        // Parse the base color and add transparency
+        const baseColor = ds.backgroundColor || '#888';
+        return {
+          label: ds.label + ' (pace)',
+          data,
+          backgroundColor: baseColor + '55', // ~33% opacity hex suffix
+          stack: ds.stack,
+          borderWidth: 0,
+          // Hide from legend — the dashed bars are self-explanatory
+          hidden: false,
+        };
+      });
+    }
+
+    /** Relabel the last week on the x-axis to indicate it's in progress. */
+    function labelCurrentWeek(labels) {
+      if (DAYS_ELAPSED_THIS_WEEK >= 7 || labels.length === 0) return labels;
+      const copy = [...labels];
+      const last = copy[copy.length - 1];
+      copy[copy.length - 1] = last + '*';
+      return copy;
+    }
+
     // ── ACCM Metrics Section ─────────────────────────────────────────
     function renderACCMSection(accm) {
       const content = document.getElementById('content');
@@ -980,7 +1059,11 @@
         html += '<div class="chart-card"><h3>Contributor Growth</h3><div class="chart-wrapper"><canvas id="accmContribChart"></canvas></div></div>';
       }
 
-      html += '<div style="margin-top:8px;font-size:11px;color:var(--text-muted);text-align:center">ACCM data sourced from GitHub API. Supports the <a href="https://kubestellar.io/blog/accm" style="color:var(--accent-light)">AI Codebase Maturity Model</a> paper.</div>';
+      html += '<div style="margin-top:8px;font-size:11px;color:var(--text-muted);text-align:center">';
+      if (DAYS_ELAPSED_THIS_WEEK < 7) {
+        html += `* Current week (day ${DAYS_ELAPSED_THIS_WEEK}/7) — dashed lines and translucent bars show projected full-week pace. `;
+      }
+      html += 'ACCM data sourced from GitHub API. Supports the <a href="https://arxiv.org/abs/2604.09388" style="color:var(--accent-light)">AI Codebase Maturity Model</a> paper.</div>';
 
       content.insertAdjacentHTML('beforeend', html);
 
@@ -996,63 +1079,92 @@
         },
       };
 
-      // Activity chart — stacked bar
+      // Activity chart — stacked bar (with projected pace on current week)
       if (accm.weeklyActivity && accm.weeklyActivity.length > 0) {
         const ctx = document.getElementById('accmActivityChart');
         if (ctx) {
+          const actualDatasets = [
+            { label: 'PRs Merged', data: accm.weeklyActivity.map(w => w.prsMerged || 0), backgroundColor: '#22c55e', stack: 'prs' },
+            { label: 'PRs Opened', data: accm.weeklyActivity.map(w => (w.prsOpened || 0) - (w.prsMerged || 0)), backgroundColor: '#3b82f6', stack: 'prs' },
+            { label: 'Issues Closed', data: accm.weeklyActivity.map(w => w.issuesClosed || 0), backgroundColor: '#a855f7', stack: 'issues' },
+            { label: 'Issues Opened', data: accm.weeklyActivity.map(w => (w.issuesOpened || 0) - (w.issuesClosed || 0)), backgroundColor: '#f97316', stack: 'issues' },
+          ];
+          const paceDatasets = buildPaceBarDatasets(actualDatasets);
           new Chart(ctx, {
             type: 'bar',
             data: {
-              labels: accm.weeklyActivity.map(w => w.week),
-              datasets: [
-                { label: 'PRs Merged', data: accm.weeklyActivity.map(w => w.prsMerged || 0), backgroundColor: '#22c55e', stack: 'prs' },
-                { label: 'PRs Opened', data: accm.weeklyActivity.map(w => (w.prsOpened || 0) - (w.prsMerged || 0)), backgroundColor: '#3b82f6', stack: 'prs' },
-                { label: 'Issues Closed', data: accm.weeklyActivity.map(w => w.issuesClosed || 0), backgroundColor: '#a855f7', stack: 'issues' },
-                { label: 'Issues Opened', data: accm.weeklyActivity.map(w => (w.issuesOpened || 0) - (w.issuesClosed || 0)), backgroundColor: '#f97316', stack: 'issues' },
-              ],
+              labels: labelCurrentWeek(accm.weeklyActivity.map(w => w.week)),
+              datasets: [...actualDatasets, ...paceDatasets],
             },
-            options: { ...chartOpts, scales: { ...chartOpts.scales, x: { ...chartOpts.scales.x, stacked: true }, y: { ...chartOpts.scales.y, stacked: true, title: { display: true, text: 'Count', color: '#9ca3af' } } } },
+            options: {
+              ...chartOpts,
+              plugins: {
+                ...chartOpts.plugins,
+                legend: {
+                  ...chartOpts.plugins.legend,
+                  labels: { ...chartOpts.plugins.legend.labels, filter: (item) => !item.text.includes('(pace)') },
+                },
+              },
+              scales: { ...chartOpts.scales, x: { ...chartOpts.scales.x, stacked: true }, y: { ...chartOpts.scales.y, stacked: true, title: { display: true, text: 'Count', color: '#9ca3af' } } },
+            },
           });
         }
       }
 
-      // AI vs Human PRs — stacked area
+      // AI vs Human PRs — stacked area (with projected pace)
       if (accm.weeklyActivity && accm.weeklyActivity.length > 0) {
         const ctx = document.getElementById('accmAiPrChart');
         if (ctx) {
+          const aiPrData = accm.weeklyActivity.map(w => w.aiPrs || 0);
+          const humanPrData = accm.weeklyActivity.map(w => w.humanPrs || 0);
+          const datasets = [
+            { label: 'AI PRs', data: aiPrData, borderColor: '#a855f7', backgroundColor: 'rgba(168, 85, 247, 0.2)', fill: true, tension: 0.3 },
+            { label: 'Human PRs', data: humanPrData, borderColor: '#06b6d4', backgroundColor: 'rgba(6, 182, 212, 0.2)', fill: true, tension: 0.3 },
+          ];
+          const aiPace = buildPaceLineDataset('AI PRs', aiPrData, '#a855f7');
+          const humanPace = buildPaceLineDataset('Human PRs', humanPrData, '#06b6d4');
+          if (aiPace) datasets.push(aiPace);
+          if (humanPace) datasets.push(humanPace);
           new Chart(ctx, {
             type: 'line',
-            data: {
-              labels: accm.weeklyActivity.map(w => w.week),
-              datasets: [
-                { label: 'AI PRs', data: accm.weeklyActivity.map(w => w.aiPrs || 0), borderColor: '#a855f7', backgroundColor: 'rgba(168, 85, 247, 0.2)', fill: true, tension: 0.3 },
-                { label: 'Human PRs', data: accm.weeklyActivity.map(w => w.humanPrs || 0), borderColor: '#06b6d4', backgroundColor: 'rgba(6, 182, 212, 0.2)', fill: true, tension: 0.3 },
-              ],
+            data: { labels: labelCurrentWeek(accm.weeklyActivity.map(w => w.week)), datasets },
+            options: {
+              ...chartOpts,
+              plugins: { ...chartOpts.plugins, legend: { ...chartOpts.plugins.legend, labels: { ...chartOpts.plugins.legend.labels, filter: (item) => !item.text.includes('(pace)') } } },
+              scales: { ...chartOpts.scales, y: { ...chartOpts.scales.y, stacked: true, title: { display: true, text: 'PRs', color: '#9ca3af' } } },
             },
-            options: { ...chartOpts, scales: { ...chartOpts.scales, y: { ...chartOpts.scales.y, stacked: true, title: { display: true, text: 'PRs', color: '#9ca3af' } } } },
           });
         }
       }
 
-      // AI vs Human Issues — stacked area
+      // AI vs Human Issues — stacked area (with projected pace)
       if (accm.weeklyActivity && accm.weeklyActivity.length > 0) {
         const ctx = document.getElementById('accmAiIssueChart');
         if (ctx) {
+          const aiIssData = accm.weeklyActivity.map(w => w.aiIssues || 0);
+          const humanIssData = accm.weeklyActivity.map(w => w.humanIssues || 0);
+          const datasets = [
+            { label: 'AI Issues', data: aiIssData, borderColor: '#a855f7', backgroundColor: 'rgba(168, 85, 247, 0.2)', fill: true, tension: 0.3 },
+            { label: 'Human Issues', data: humanIssData, borderColor: '#06b6d4', backgroundColor: 'rgba(6, 182, 212, 0.2)', fill: true, tension: 0.3 },
+          ];
+          const aiPace = buildPaceLineDataset('AI Issues', aiIssData, '#a855f7');
+          const humanPace = buildPaceLineDataset('Human Issues', humanIssData, '#06b6d4');
+          if (aiPace) datasets.push(aiPace);
+          if (humanPace) datasets.push(humanPace);
           new Chart(ctx, {
             type: 'line',
-            data: {
-              labels: accm.weeklyActivity.map(w => w.week),
-              datasets: [
-                { label: 'AI Issues', data: accm.weeklyActivity.map(w => w.aiIssues || 0), borderColor: '#a855f7', backgroundColor: 'rgba(168, 85, 247, 0.2)', fill: true, tension: 0.3 },
-                { label: 'Human Issues', data: accm.weeklyActivity.map(w => w.humanIssues || 0), borderColor: '#06b6d4', backgroundColor: 'rgba(6, 182, 212, 0.2)', fill: true, tension: 0.3 },
-              ],
+            data: { labels: labelCurrentWeek(accm.weeklyActivity.map(w => w.week)), datasets },
+            options: {
+              ...chartOpts,
+              plugins: { ...chartOpts.plugins, legend: { ...chartOpts.plugins.legend, labels: { ...chartOpts.plugins.legend.labels, filter: (item) => !item.text.includes('(pace)') } } },
+              scales: { ...chartOpts.scales, y: { ...chartOpts.scales.y, stacked: true, title: { display: true, text: 'Issues', color: '#9ca3af' } } },
             },
-            options: { ...chartOpts, scales: { ...chartOpts.scales, y: { ...chartOpts.scales.y, stacked: true, title: { display: true, text: 'Issues', color: '#9ca3af' } } } },
           });
         }
       }
 
-      // CI Pass Rates — line
+      // CI Pass Rates — line (current week label annotated but no projection
+      // since pass rates are percentages, not cumulative counts)
       if (accm.ciPassRates && accm.ciPassRates.length > 0) {
         const ctx = document.getElementById('accmCIChart');
         if (ctx) {
@@ -1066,28 +1178,35 @@
           if (datasets.length > 0) {
             new Chart(ctx, {
               type: 'line',
-              data: { labels: accm.ciPassRates.map(w => w.week), datasets },
+              data: { labels: labelCurrentWeek(accm.ciPassRates.map(w => w.week)), datasets },
               options: { ...chartOpts, scales: { ...chartOpts.scales, y: { ...chartOpts.scales.y, min: 0, max: 100, title: { display: true, text: 'Pass Rate %', color: '#9ca3af' } } } },
             });
           }
         }
       }
 
-      // Contributor Growth — line + bar combo
+      // Contributor Growth — line + bar combo (with projected pace on new/week bar)
       if (accm.contributorGrowth && accm.contributorGrowth.weekly && accm.contributorGrowth.weekly.length > 0) {
         const ctx = document.getElementById('accmContribChart');
         if (ctx) {
+          const newData = accm.contributorGrowth.weekly.map(w => w.newContributors);
+          const actualDatasets = [
+            { label: 'New Contributors', data: newData, backgroundColor: '#a855f7', type: 'bar', yAxisID: 'y' },
+          ];
+          const paceDatasets = buildPaceBarDatasets(actualDatasets);
           new Chart(ctx, {
             type: 'bar',
             data: {
-              labels: accm.contributorGrowth.weekly.map(w => w.week),
+              labels: labelCurrentWeek(accm.contributorGrowth.weekly.map(w => w.week)),
               datasets: [
-                { label: 'New Contributors', data: accm.contributorGrowth.weekly.map(w => w.newContributors), backgroundColor: '#a855f7', type: 'bar', yAxisID: 'y' },
+                ...actualDatasets,
+                ...paceDatasets,
                 { label: 'Total Contributors', data: accm.contributorGrowth.weekly.map(w => w.totalToDate), borderColor: '#06b6d4', type: 'line', tension: 0.3, pointRadius: 3, yAxisID: 'y1', fill: false },
               ],
             },
             options: {
               ...chartOpts,
+              plugins: { ...chartOpts.plugins, legend: { ...chartOpts.plugins.legend, labels: { ...chartOpts.plugins.legend.labels, filter: (item) => !item.text.includes('(pace)') } } },
               scales: {
                 x: chartOpts.scales.x,
                 y: { ...chartOpts.scales.y, position: 'left', title: { display: true, text: 'New/Week', color: '#9ca3af' } },
