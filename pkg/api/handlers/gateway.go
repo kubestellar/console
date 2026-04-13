@@ -58,7 +58,7 @@ func (h *GatewayHandlers) ListGateways(c *fiber.Ctx) error {
 	if err != nil {
 		// If we got partial results alongside errors, log and return what we have
 		if list != nil && len(list.Items) > 0 {
-			slog.Info("partial gateway list failure", "error", err)
+			slog.Warn("partial gateway list failure", "error", err)
 			return c.JSON(list)
 		}
 		return handleK8sError(c, err)
@@ -99,7 +99,7 @@ func (h *GatewayHandlers) ListHTTPRoutes(c *fiber.Ctx) error {
 	if err != nil {
 		// If we got partial results alongside errors, log and return what we have
 		if list != nil && len(list.Items) > 0 {
-			slog.Info("partial httproute list failure", "error", err)
+			slog.Warn("partial httproute list failure", "error", err)
 			return c.JSON(list)
 		}
 		return handleK8sError(c, err)

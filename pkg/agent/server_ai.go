@@ -127,7 +127,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				defer func() { <-sem }() // release slot
 				defer func() {
 					if r := recover(); r != nil {
-						slog.Info("[Chat] recovered from panic in streaming handler", "panic", r)
+						slog.Error("[Chat] recovered from panic in streaming handler", "panic", r)
 						// Send error frame to the client so the frontend
 						// can display an error state instead of spinning forever.
 						if !closed.Load() {
@@ -157,7 +157,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				defer func() { <-sem }() // release slot
 				defer func() {
 					if r := recover(); r != nil {
-						slog.Info("[Kubectl] recovered from panic in message handler", "panic", r)
+						slog.Error("[Kubectl] recovered from panic in message handler", "panic", r)
 						// Notify the client about the panic so the UI can show an error
 						if !closed.Load() {
 							writeMu.Lock()
@@ -190,7 +190,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			func() {
 				defer func() {
 					if r := recover(); r != nil {
-						slog.Info("[WS] recovered from panic in synchronous handler", "panic", r, "msgType", msg.Type)
+						slog.Error("[WS] recovered from panic in synchronous handler", "panic", r, "msgType", msg.Type)
 						writeMu.Lock()
 						conn.SetWriteDeadline(time.Now().Add(wsWriteTimeout))
 						_ = conn.WriteJSON(protocol.Message{

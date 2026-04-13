@@ -275,7 +275,7 @@ func NewServer(cfg Config) (*Server, error) {
 
 	// Initialize AI providers
 	if err := agent.InitializeProviders(); err != nil {
-		slog.Info("AI features disabled — add API keys in Settings to enable")
+		slog.Warn("AI features disabled — add API keys in Settings to enable", "error", err)
 	}
 
 	// Initialize MCP bridge (starts in background)
@@ -291,7 +291,7 @@ func NewServer(cfg Config) (*Server, error) {
 			defer cancel()
 			if err := bridge.Start(ctx); err != nil {
 				// MCP tools not installed — expected for local binary quickstart
-				slog.Info("MCP bridge not available (install kubestellar-ops/deploy plugins to enable)")
+				slog.Warn("MCP bridge not available (install kubestellar-ops/deploy plugins to enable)", "error", err)
 			} else {
 				slog.Info("MCP bridge started successfully")
 			}

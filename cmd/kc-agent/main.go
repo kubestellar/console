@@ -29,19 +29,11 @@ func main() {
 	flag.Parse()
 
 	if *version {
-		fmt.Printf("kc-agent version %s\n", agent.Version)
+		slog.Info("kc-agent version", "version", agent.Version)
 		os.Exit(0)
 	}
 
-	fmt.Printf(`
- _  __   ____
-| |/ /  / ___|
-| ' /  | |
-| . \  | |___
-|_|\_\  \____|
-
-KubeStellar Console - Local Agent v%s
-`, agent.Version)
+	slog.Info("KubeStellar Console - Local Agent starting", "version", agent.Version)
 
 	// Parse comma-separated allowed origins from flag
 	var origins []string

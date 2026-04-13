@@ -184,12 +184,16 @@ func (h *RBACHandler) GetUserManagementSummary(c *fiber.Ctx) error {
 		if err == nil {
 			summary.K8sServiceAccounts.Total = total
 			summary.K8sServiceAccounts.Clusters = clusters
+		} else {
+			slog.Warn("[RBAC] failed to count service accounts", "error", err)
 		}
 
 		// Get current user permissions
 		perms, err := h.k8sClient.GetAllClusterPermissions(ctx)
 		if err == nil {
 			summary.CurrentUserPermissions = perms
+		} else {
+			slog.Warn("[RBAC] failed to get cluster permissions", "error", err)
 		}
 	}
 

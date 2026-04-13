@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -35,7 +34,7 @@ func main() {
 	flag.Parse()
 
 	if *version {
-		fmt.Printf("console version %s\n", api.Version)
+		slog.Info("console version", "version", api.Version)
 		os.Exit(0)
 	}
 
