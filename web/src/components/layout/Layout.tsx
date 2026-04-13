@@ -2,7 +2,6 @@ import { ReactNode, Suspense, lazy, useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation } from 'react-router-dom'
 import { Box, Wifi, WifiOff, X, Settings, Rocket, RotateCcw, Check, Loader2, RefreshCw, Plug } from 'lucide-react'
-import { abortAllFetches } from '../../hooks/useCachedData'
 import { Button } from '../ui/Button'
 import { Navbar } from './navbar/index'
 import { Sidebar } from './Sidebar'
@@ -63,9 +62,6 @@ function NavigationProgress() {
 
   useEffect(() => {
     if (location.pathname !== prevPath.current) {
-      // Abort all in-flight cluster fetches so browser connections are
-      // freed immediately for the new page's lazy chunk and data.
-      abortAllFetches()
       setIsNavigating(true)
       prevPath.current = location.pathname
       const timer = setTimeout(() => setIsNavigating(false), CLOSE_ANIMATION_MS)
