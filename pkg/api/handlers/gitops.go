@@ -7,6 +7,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -713,9 +714,12 @@ func (h *GitOpsHandlers) getOperatorsForCluster(ctx context.Context, cluster str
 			ttl = operatorCacheEmptyTTL
 		}
 		if time.Since(entry.fetchedAt) < ttl {
-			operators := entry.operators
+			// #7748: Return a defensive copy so callers cannot mutate
+			// the cache's backing array.
+			result := make([]Operator, len(entry.operators))
+			copy(result, entry.operators)
 			operatorCacheMu.RUnlock()
-			return operators
+			return result
 		}
 	}
 	operatorCacheMu.RUnlock()
@@ -772,9 +776,12 @@ func (h *GitOpsHandlers) getOperatorsForClusterWithError(ctx context.Context, cl
 			ttl = operatorCacheEmptyTTL
 		}
 		if time.Since(entry.fetchedAt) < ttl {
-			operators := entry.operators
+			// #7748: Return a defensive copy so callers cannot mutate
+			// the cache's backing array.
+			result := make([]Operator, len(entry.operators))
+			copy(result, entry.operators)
 			operatorCacheMu.RUnlock()
-			return operators, nil
+			return result, nil
 		}
 	}
 	operatorCacheMu.RUnlock()
@@ -1040,9 +1047,14 @@ func (h *GitOpsHandlers) getSubscriptionsForClusterWithError(ctx context.Context
 	return subs, nil
 }
 
-// getSubscriptionsForCluster gets OLM subscriptions for a specific cluster using jsonpath
+// getSubscriptionsForCluster gets OLM subscriptions for a specific cluster using jsonpath.
+// #7749: Errors are logged instead of silently discarded so cluster failures
+// are distinguishable from empty results in server logs.
 func (h *GitOpsHandlers) getSubscriptionsForCluster(ctx context.Context, cluster string) []OperatorSubscription {
-	subs, _ := h.fetchSubscriptionsFromCluster(ctx, cluster)
+	subs, err := h.fetchSubscriptionsFromCluster(ctx, cluster)
+	if err != nil {
+		slog.Warn("[GitOps] subscription fetch failed for cluster", "cluster", cluster, "error", err)
+	}
 	return subs
 }
 
@@ -2328,8 +2340,12 @@ func (h *GitOpsHandlers) UpgradeHelmRelease(c *fiber.Ctx) error {
 		tmpFile.Close()
 
 		args = append(args, "-f", tmpFile.Name())
-		// Rebuild command with values file
+		// Rebuild command with values file.
+		// #7747: Create fresh buffers — the previous stdout/stderr were
+		// assigned to the old cmd instance and must not be reused.
 		cmd = exec.CommandContext(ctx, "helm", args...)
+		stdout.Reset()
+		stderr.Reset()
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
 	}
@@ -2587,7 +2603,12 @@ func (h *GitOpsHandlers) TriggerArgoSync(c *fiber.Ctx) error {
 				}
 				resp, err := client.Do(httpReq)
 				if err == nil {
-					defer resp.Body.Close()
+					// #7746: Drain the response body before closing to avoid
+					// HTTP connection pool exhaustion from partially-read bodies.
+					defer func() {
+						_, _ = io.Copy(io.Discard, resp.Body)
+						resp.Body.Close()
+					}()
 					if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 						return c.JSON(fiber.Map{
 							"success": true,

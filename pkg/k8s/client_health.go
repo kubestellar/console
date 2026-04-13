@@ -395,6 +395,15 @@ func (m *MultiClusterClient) GetAllClusterHealth(ctx context.Context) ([]Cluster
 		wg.Add(1)
 		go func(idx int, c ClusterInfo) {
 			defer wg.Done()
+			// #7751: Check for context cancellation before starting an
+			// expensive health probe. Without this, goroutines that haven't
+			// begun probing yet still launch full k8s API calls even after
+			// the global deadline fires, leaking until the probe completes.
+			select {
+			case <-deadlineCtx.Done():
+				return
+			default:
+			}
 			perCtx, perCancel := context.WithTimeout(deadlineCtx, perClusterHealthTimeout)
 			defer perCancel()
 			health, _ := m.GetClusterHealth(perCtx, c.Name)

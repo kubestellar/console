@@ -64,6 +64,14 @@ func ensureKeyFile(path string) ([]byte, error) {
 		os.Remove(tmpPath)
 		return nil, fmt.Errorf("failed to chmod temp keyfile %s: %w", tmpPath, chmodErr)
 	}
+	// #7752: fsync before close/link so the key data is durable on disk.
+	// Without this, a crash between write and link could leave a zero-length
+	// or corrupt key file that breaks all encrypted settings on next start.
+	if syncErr := tmpFile.Sync(); syncErr != nil {
+		tmpFile.Close()
+		os.Remove(tmpPath)
+		return nil, fmt.Errorf("failed to fsync temp keyfile %s: %w", tmpPath, syncErr)
+	}
 	tmpFile.Close()
 
 	// Use os.Link + os.Remove for atomic creation (fails if target already exists on most filesystems).

@@ -112,7 +112,12 @@ func (s *Server) handleGPUNodesHTTP(w http.ResponseWriter, r *http.Request) {
 				clusterCtx, clusterCancel := context.WithTimeout(ctx, agentDefaultTimeout)
 				defer clusterCancel()
 				nodes, err := s.k8sClient.GetGPUNodes(clusterCtx, clusterName)
-				if err == nil && len(nodes) > 0 {
+				if err != nil {
+					// #7750: Log per-cluster errors so GPU metric gaps are diagnosable.
+					slog.Warn("[GPUNodes] failed to list GPU nodes for cluster", "cluster", clusterName, "error", err)
+					return
+				}
+				if len(nodes) > 0 {
 					mu.Lock()
 					allNodes = append(allNodes, nodes...)
 					mu.Unlock()
