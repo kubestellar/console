@@ -69,6 +69,10 @@ const CACHE_VERSION = 4
 const SS_PREFIX = 'kcc:'
 const META_PREFIX = 'kc_meta:'
 
+/** Offset (ms) to make seeded cache data older than any refresh interval,
+ *  ensuring the initial fetch is NOT skipped by the fresh-data guard (#7653). */
+const STALE_AGE_MS = 600_000
+
 async function importFresh() {
   vi.resetModules()
   return import('../index')
@@ -153,7 +157,7 @@ describe('clearAllInMemoryCaches', () => {
 describe('CacheStore.fetch() with merge function', () => {
   it('merges old and new data when merge is provided and cache exists', async () => {
     // Seed cache so store has cached data
-    seedSessionStorage('merge-test', [1, 2], Date.now())
+    seedSessionStorage('merge-test', [1, 2], Date.now() - STALE_AGE_MS)
 
     const { useCache } = await importFresh()
     const fetcher = vi.fn().mockResolvedValue([3, 4])
@@ -249,7 +253,7 @@ describe('CacheStore.fetch() with progressive fetcher', () => {
 
   it('saves partial data on progressive fetcher error', async () => {
     // Seed to give hasCachedData = true via session snapshot
-    seedSessionStorage('prog-error', [99], Date.now())
+    seedSessionStorage('prog-error', [99], Date.now() - STALE_AGE_MS)
 
     const { useCache } = await importFresh()
 
@@ -363,7 +367,7 @@ describe('CacheStore.fetch() error handling', () => {
 
 describe('CacheStore.fetch() empty data guard', () => {
   it('keeps cached data when fetcher returns empty and cache exists', async () => {
-    seedSessionStorage('empty-guard', [1, 2], Date.now())
+    seedSessionStorage('empty-guard', [1, 2], Date.now() - STALE_AGE_MS)
     const { useCache } = await importFresh()
 
     const fetcher = vi.fn().mockResolvedValue([])
@@ -409,7 +413,7 @@ describe('CacheStore.fetch() empty data guard', () => {
 
 describe('clearAndRefetch', () => {
   it('clears cache and triggers a new fetch', async () => {
-    seedSessionStorage('clear-refetch', [1], Date.now())
+    seedSessionStorage('clear-refetch', [1], Date.now() - STALE_AGE_MS)
     const { useCache } = await importFresh()
 
     let fetchCount = 0

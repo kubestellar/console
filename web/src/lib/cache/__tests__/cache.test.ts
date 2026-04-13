@@ -45,6 +45,10 @@ vi.mock('../workerRpc', () => ({
 // Helpers
 // ---------------------------------------------------------------------------
 
+/** Offset (ms) to make seeded cache data older than any refresh interval,
+ *  ensuring the initial fetch is NOT skipped by the fresh-data guard (#7653). */
+const STALE_AGE_MS = 600_000
+
 async function importFresh() {
   vi.resetModules()
   return import('../index')
@@ -1901,7 +1905,7 @@ describe('cache module', () => {
       const mod = await importFresh()
 
       const cachedData = ['existing-item']
-      seedSessionStorage('prog-empty', cachedData, Date.now())
+      seedSessionStorage('prog-empty', cachedData, Date.now() - STALE_AGE_MS)
 
       const fetcher = vi.fn().mockResolvedValue(['final-item'])
       const progressiveFetcher = vi.fn(async (onProgress: (d: string[]) => void) => {
@@ -1935,7 +1939,7 @@ describe('cache module', () => {
       setDemoMode(false)
       const mod = await importFresh()
 
-      seedSessionStorage('merge-test', ['old-1'], Date.now())
+      seedSessionStorage('merge-test', ['old-1'], Date.now() - STALE_AGE_MS)
 
       const fetcher = vi.fn().mockResolvedValue(['new-1'])
       const merge = vi.fn((old: string[], new_: string[]) => [...old, ...new_])
@@ -3041,7 +3045,7 @@ describe('cache module', () => {
       const mod = await importFresh()
 
       // Seed cache with existing data
-      seedSessionStorage('sse-empty-guard-1', ['cached-data'], Date.now())
+      seedSessionStorage('sse-empty-guard-1', ['cached-data'], Date.now() - STALE_AGE_MS)
 
       const progressiveFetcher = vi.fn(async (onProgress: (d: string[]) => void) => {
         // Push an empty array (should be ignored by isEquivalentToInitial guard)
