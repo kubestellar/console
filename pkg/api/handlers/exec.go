@@ -501,6 +501,15 @@ func (h *ExecHandlers) HandleExec(c *websocket.Conn) {
 
 	execErr := executor.StreamWithContext(execCtx, streamOpts)
 
+	// #7047 — Close the terminal size queue channel so the SPDY executor's
+	// internal goroutine calling Next() receives nil and terminates.
+	close(sizeQueue.ch)
+
+	// #7048 — Wait for the reader goroutine to finish before writing the
+	// exit message, ensuring cleanup ordering (close(stdinCh), execCancel)
+	// happens before the handler returns.
+	<-done
+
 	// Send exit message
 	exitCode := 0
 	if execErr != nil {
