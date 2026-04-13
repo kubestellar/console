@@ -151,6 +151,14 @@ const prCacheTTL = 5 * time.Minute
 // maxPRPages is the maximum number of pages to fetch per PR state to bound API usage.
 const maxPRPages = 5
 
+// maxIssuePages is the maximum number of pages to fetch for user issues.
+// GitHub returns up to issuesPerPage results per page; users with >50 issues
+// need pagination to avoid truncated counts (#7642).
+const maxIssuePages = 5
+
+// issuesPerPage is the number of issues requested per GitHub API call.
+const issuesPerPage = 50
+
 // FeedbackHandler handles feature requests and feedback
 type FeedbackHandler struct {
 	store         store.Store
@@ -828,7 +836,10 @@ func (h *FeedbackHandler) fetchGitHubIssues(githubLogin string) ([]GitHubIssue, 
 	return h.fetchGitHubIssuesFromRepo(githubLogin, h.repoName)
 }
 
-// fetchGitHubIssuesFromRepo fetches issues created by the given user from a specific repo
+// fetchGitHubIssuesFromRepo fetches issues created by the given user from a
+// specific repo, paginating through all results up to maxIssuePages pages.
+// #7642: the previous implementation fetched only per_page=50 with no
+// pagination, so users with >50 issues saw truncated counts.
 func (h *FeedbackHandler) fetchGitHubIssuesFromRepo(githubLogin string, repoName string) ([]GitHubIssue, error) {
 	if h.getEffectiveToken() == "" || h.repoOwner == "" || repoName == "" {
 		return nil, fmt.Errorf("GitHub not configured")
@@ -837,51 +848,65 @@ func (h *FeedbackHandler) fetchGitHubIssuesFromRepo(githubLogin string, repoName
 		return nil, fmt.Errorf("GitHub login not available")
 	}
 
-	// Fetch all issues created by the logged-in user.
-	// #7058: use resolveGitHubAPIBase() for GitHub Enterprise support.
-	apiBase := resolveGitHubAPIBase()
-	url := fmt.Sprintf("%s/repos/%s/%s/issues?state=all&creator=%s&per_page=50&sort=updated&direction=desc",
-		apiBase, h.repoOwner, repoName, githubLogin)
-
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Set("Authorization", "Bearer "+h.getEffectiveToken())
-	req.Header.Set("Accept", "application/vnd.github.v3+json")
-
 	// #7059: reuse shared HTTP client for connection pooling.
 	client := h.httpClient
 	if client == nil {
 		client = &http.Client{Timeout: githubAPITimeout}
 	}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
 
-	// #7063: limit response body to prevent memory exhaustion from
-	// abnormally large GitHub API responses.
-	body, err := io.ReadAll(io.LimitReader(resp.Body, maxGitHubResponseBytes))
-	if err != nil {
-		return nil, fmt.Errorf("failed to read GitHub response body: %w", err)
-	}
+	apiBase := resolveGitHubAPIBase()
+	allIssues := make([]GitHubIssue, 0)
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("GitHub API returned %d: %s", resp.StatusCode, string(body))
-	}
+	for page := 1; page <= maxIssuePages; page++ {
+		pageURL := fmt.Sprintf(
+			"%s/repos/%s/%s/issues?state=all&creator=%s&per_page=%d&sort=updated&direction=desc&page=%d",
+			apiBase, h.repoOwner, repoName, githubLogin, issuesPerPage, page)
 
-	var issues []GitHubIssue
-	if err := json.Unmarshal(body, &issues); err != nil {
-		return nil, err
+		req, err := http.NewRequest("GET", pageURL, nil)
+		if err != nil {
+			break
+		}
+		req.Header.Set("Authorization", "Bearer "+h.getEffectiveToken())
+		req.Header.Set("Accept", "application/vnd.github.v3+json")
+
+		resp, err := client.Do(req)
+		if err != nil {
+			break
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			resp.Body.Close()
+			// First page failure is a hard error; subsequent pages are best-effort.
+			if page == 1 {
+				return nil, fmt.Errorf("GitHub API returned %d", resp.StatusCode)
+			}
+			break
+		}
+
+		// #7063: limit response body to prevent memory exhaustion.
+		body, err := io.ReadAll(io.LimitReader(resp.Body, maxGitHubResponseBytes))
+		resp.Body.Close()
+		if err != nil {
+			break
+		}
+
+		var issues []GitHubIssue
+		if err := json.Unmarshal(body, &issues); err != nil {
+			break
+		}
+
+		allIssues = append(allIssues, issues...)
+
+		// Fewer results than a full page means we've fetched everything.
+		if len(issues) < issuesPerPage {
+			break
+		}
 	}
 
 	// Filter out pull requests — GitHub's issues API returns PRs as issues.
 	// The PullRequest field is non-nil when the item is actually a PR.
-	filtered := make([]GitHubIssue, 0, len(issues))
-	for _, issue := range issues {
+	filtered := make([]GitHubIssue, 0, len(allIssues))
+	for _, issue := range allIssues {
 		if issue.PullRequest == nil {
 			filtered = append(filtered, issue)
 		}
