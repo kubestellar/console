@@ -73,6 +73,17 @@ const AGENT_HTTP_TIMEOUT_MS = 5_000
 /** Maximum number of pods to return from a prefetch query */
 const MAX_PREFETCH_PODS = 100
 
+// Global AbortController for all in-flight fetchAPI requests.
+// Aborting this cancels every pending cluster fetch, freeing browser
+// connections instantly so navigation and lazy chunks can load.
+let globalFetchController = new AbortController()
+
+/** Abort all in-flight fetchAPI requests (e.g. on route change). */
+export function abortAllFetches(): void {
+  globalFetchController.abort()
+  globalFetchController = new AbortController()
+}
+
 async function fetchAPI<T>(
   endpoint: string,
   params?: Record<string, string | number | undefined>
@@ -92,12 +103,18 @@ async function fetchAPI<T>(
   }
 
   const url = `/api/mcp/${endpoint}?${searchParams}`
+  // Combine the global abort signal with a per-request timeout.
+  // AbortSignal.any() fires if either signal triggers.
+  const signal = AbortSignal.any([
+    globalFetchController.signal,
+    AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+  ])
   const response = await fetch(url, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}` },
-    signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
+    signal })
 
   if (!response.ok) {
     throw new Error(`API error: ${response.status}`)

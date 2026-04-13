@@ -11,8 +11,15 @@
  * overwhelmed.
  */
 
-/** Default maximum number of concurrent requests across clusters */
-export const DEFAULT_CLUSTER_CONCURRENCY = 8
+/**
+ * Default maximum number of concurrent requests across clusters.
+ *
+ * Browsers limit HTTP/1.1 connections to ~6 per origin. Setting this
+ * higher than 4 causes cluster fetches to exhaust the connection pool,
+ * blocking lazy chunk downloads, navigation, and SSE streams.
+ * Keep at 4 to leave headroom for page navigation and static assets.
+ */
+export const DEFAULT_CLUSTER_CONCURRENCY = 4
 
 /** Minimum allowed concurrency — at least one worker must run (#6851). */
 const MIN_CONCURRENCY = 1
