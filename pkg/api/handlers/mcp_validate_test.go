@@ -12,7 +12,7 @@ import (
 
 func TestMCPValidation_InvalidClusterNameRejects(t *testing.T) {
 	env := setupTestEnv(t)
-	handler := NewMCPHandlers(nil, env.K8sClient)
+	handler := NewMCPHandlers(nil, env.K8sClient, nil)
 	env.App.Get("/api/mcp/pods", handler.GetPods)
 
 	// Special characters in cluster name should be rejected
@@ -30,7 +30,7 @@ func TestMCPValidation_InvalidClusterNameRejects(t *testing.T) {
 
 func TestMCPValidation_InvalidNamespaceRejects(t *testing.T) {
 	env := setupTestEnv(t)
-	handler := NewMCPHandlers(nil, env.K8sClient)
+	handler := NewMCPHandlers(nil, env.K8sClient, nil)
 	env.App.Get("/api/mcp/pods", handler.GetPods)
 
 	// Namespace with uppercase letters should be rejected
@@ -48,7 +48,7 @@ func TestMCPValidation_InvalidNamespaceRejects(t *testing.T) {
 
 func TestMCPValidation_ValidClusterAccepted(t *testing.T) {
 	env := setupTestEnv(t)
-	handler := NewMCPHandlers(nil, env.K8sClient)
+	handler := NewMCPHandlers(nil, env.K8sClient, nil)
 	env.App.Get("/api/mcp/pods", handler.GetPods)
 
 	// Valid k8s name should work normally
@@ -62,7 +62,7 @@ func TestMCPValidation_ValidClusterAccepted(t *testing.T) {
 
 func TestMCPValidation_EmptyParamsAccepted(t *testing.T) {
 	env := setupTestEnv(t)
-	handler := NewMCPHandlers(nil, env.K8sClient)
+	handler := NewMCPHandlers(nil, env.K8sClient, nil)
 	env.App.Get("/api/mcp/pods", handler.GetPods)
 
 	// No cluster/namespace params (query all) should work
@@ -76,7 +76,7 @@ func TestMCPValidation_EmptyParamsAccepted(t *testing.T) {
 
 func TestMCPValidation_InvalidWorkloadTypeRejects(t *testing.T) {
 	env := setupTestEnv(t)
-	handler := NewMCPHandlers(nil, env.K8sClient)
+	handler := NewMCPHandlers(nil, env.K8sClient, nil)
 	env.App.Get("/api/mcp/workloads", handler.GetWorkloads)
 
 	req, err := http.NewRequest("GET", "/api/mcp/workloads?type=InvalidType", nil)
@@ -93,7 +93,7 @@ func TestMCPValidation_InvalidWorkloadTypeRejects(t *testing.T) {
 
 func TestMCPValidation_ValidWorkloadTypeAccepted(t *testing.T) {
 	env := setupTestEnv(t)
-	handler := NewMCPHandlers(nil, env.K8sClient)
+	handler := NewMCPHandlers(nil, env.K8sClient, nil)
 	env.App.Get("/api/mcp/workloads", handler.GetWorkloads)
 
 	for _, wt := range []string{"", "Deployment", "StatefulSet", "DaemonSet"} {
@@ -113,7 +113,7 @@ func TestMCPValidation_ValidWorkloadTypeAccepted(t *testing.T) {
 
 func TestMCPValidation_InvalidLabelSelectorRejects(t *testing.T) {
 	env := setupTestEnv(t)
-	handler := NewMCPHandlers(nil, env.K8sClient)
+	handler := NewMCPHandlers(nil, env.K8sClient, nil)
 	env.App.Get("/api/mcp/pods", handler.GetPods)
 
 	// Semicolons should be rejected
@@ -131,7 +131,7 @@ func TestMCPValidation_InvalidLabelSelectorRejects(t *testing.T) {
 
 func TestMCPValidation_EventsLimitTooHighRejects(t *testing.T) {
 	env := setupTestEnv(t)
-	handler := NewMCPHandlers(nil, env.K8sClient)
+	handler := NewMCPHandlers(nil, env.K8sClient, nil)
 	env.App.Get("/api/mcp/events", handler.GetEvents)
 
 	req, err := http.NewRequest("GET", "/api/mcp/events?limit=99999", nil)
@@ -148,7 +148,7 @@ func TestMCPValidation_EventsLimitTooHighRejects(t *testing.T) {
 
 func TestMCPValidation_DemoModeBypassesValidation(t *testing.T) {
 	env := setupTestEnv(t)
-	handler := NewMCPHandlers(nil, env.K8sClient)
+	handler := NewMCPHandlers(nil, env.K8sClient, nil)
 	env.App.Get("/api/mcp/pods", handler.GetPods)
 
 	// Even with invalid params, demo mode should succeed (validation runs after demo check)
@@ -167,7 +167,7 @@ func TestMCPValidation_DemoModeBypassesValidation(t *testing.T) {
 
 func TestMCPValidation_ClusterWithDotsAccepted(t *testing.T) {
 	env := setupTestEnv(t)
-	handler := NewMCPHandlers(nil, env.K8sClient)
+	handler := NewMCPHandlers(nil, env.K8sClient, nil)
 	env.App.Get("/api/mcp/nodes", handler.GetNodes)
 
 	// Cluster names with dots (e.g. "api.cluster.example.com") should be valid

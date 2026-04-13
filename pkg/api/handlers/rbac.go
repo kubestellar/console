@@ -650,6 +650,12 @@ func (h *RBACHandler) GetPermissionsSummary(c *fiber.Ctx) error {
 
 // CheckCanI checks if the current user can perform an action
 func (h *RBACHandler) CheckCanI(c *fiber.Ctx) error {
+	// SECURITY (#7488): permission checks require a valid console role to
+	// prevent unauthenticated probing of backend capabilities.
+	if err := requireViewerOrAbove(c, h.store); err != nil {
+		return err
+	}
+
 	if h.k8sClient == nil {
 		return fiber.NewError(fiber.StatusServiceUnavailable, "Kubernetes client not available")
 	}

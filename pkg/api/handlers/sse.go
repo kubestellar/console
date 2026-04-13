@@ -887,6 +887,12 @@ func (h *MCPHandlers) GetConfigMapsStream(c *fiber.Ctx) error {
 
 // GetSecretsStream streams secrets per cluster via SSE.
 func (h *MCPHandlers) GetSecretsStream(c *fiber.Ctx) error {
+	// SECURITY (#7486): secrets stream exposes continuous secret metadata;
+	// require a valid console role (viewer or above).
+	if err := requireViewerOrAbove(c, h.store); err != nil {
+		return err
+	}
+
 	if isDemoMode(c) {
 		return streamDemoSSE(c, "secrets", getDemoSecrets())
 	}

@@ -73,7 +73,7 @@ func TestWaitWithDeadline_CancelledOnDeadline(t *testing.T) {
 
 func TestMCPGetPods_DemoModeReturnsDemoData(t *testing.T) {
 	env := setupTestEnv(t)
-	handler := NewMCPHandlers(nil, env.K8sClient)
+	handler := NewMCPHandlers(nil, env.K8sClient, nil)
 	env.App.Get("/api/mcp/pods", handler.GetPods)
 
 	req, err := http.NewRequest("GET", "/api/mcp/pods", nil)
@@ -99,7 +99,7 @@ func TestMCPGetPods_DemoModeReturnsDemoData(t *testing.T) {
 
 func TestMCPGetPods_NoClusterAccessReturns503(t *testing.T) {
 	env := setupTestEnv(t)
-	handler := NewMCPHandlers(nil, nil)
+	handler := NewMCPHandlers(nil, nil, nil)
 	env.App.Get("/api/mcp/pods", handler.GetPods)
 
 	req, err := http.NewRequest("GET", "/api/mcp/pods", nil)
@@ -116,7 +116,7 @@ func TestMCPGetPods_NoClusterAccessReturns503(t *testing.T) {
 
 func TestMCPGetPods_SingleClusterEmptyIsArray(t *testing.T) {
 	env := setupTestEnv(t)
-	handler := NewMCPHandlers(nil, env.K8sClient)
+	handler := NewMCPHandlers(nil, env.K8sClient, nil)
 	env.App.Get("/api/mcp/pods", handler.GetPods)
 
 	req, err := http.NewRequest("GET", "/api/mcp/pods?cluster=test-cluster", nil)
@@ -137,7 +137,7 @@ func TestMCPGetPods_SingleClusterEmptyIsArray(t *testing.T) {
 
 func TestMCPGetPods_InternalErrorIsSanitized(t *testing.T) {
 	env := setupTestEnv(t)
-	handler := NewMCPHandlers(nil, env.K8sClient)
+	handler := NewMCPHandlers(nil, env.K8sClient, nil)
 	env.App.Get("/api/mcp/pods", handler.GetPods)
 
 	k8sClient, err := env.K8sClient.GetClient("test-cluster")
@@ -166,7 +166,7 @@ func TestMCPGetPods_InternalErrorIsSanitized(t *testing.T) {
 
 func TestMCPGetPods_NetworkErrorReturnsUnavailable(t *testing.T) {
 	env := setupTestEnv(t)
-	handler := NewMCPHandlers(nil, env.K8sClient)
+	handler := NewMCPHandlers(nil, env.K8sClient, nil)
 	env.App.Get("/api/mcp/pods", handler.GetPods)
 
 	k8sClient, err := env.K8sClient.GetClient("test-cluster")
@@ -196,7 +196,7 @@ func TestMCPGetPods_NetworkErrorReturnsUnavailable(t *testing.T) {
 
 func TestMCPGetDaemonSets_SingleClusterEmptyIsArray(t *testing.T) {
 	env := setupTestEnv(t)
-	handler := NewMCPHandlers(nil, env.K8sClient)
+	handler := NewMCPHandlers(nil, env.K8sClient, nil)
 	env.App.Get("/api/mcp/daemonsets", handler.GetDaemonSets)
 
 	req, err := http.NewRequest("GET", "/api/mcp/daemonsets?cluster=test-cluster", nil)
@@ -217,7 +217,7 @@ func TestMCPGetDaemonSets_SingleClusterEmptyIsArray(t *testing.T) {
 
 func TestMCPGetEvents_SingleClusterEmptyIsArray(t *testing.T) {
 	env := setupTestEnv(t)
-	handler := NewMCPHandlers(nil, env.K8sClient)
+	handler := NewMCPHandlers(nil, env.K8sClient, nil)
 	env.App.Get("/api/mcp/events", handler.GetEvents)
 
 	req, err := http.NewRequest("GET", "/api/mcp/events?cluster=test-cluster&limit=10", nil)
@@ -239,7 +239,7 @@ func TestMCPGetEvents_SingleClusterEmptyIsArray(t *testing.T) {
 
 func TestMCPGetEvents_NetworkErrorReturnsUnavailable(t *testing.T) {
 	env := setupTestEnv(t)
-	handler := NewMCPHandlers(nil, env.K8sClient)
+	handler := NewMCPHandlers(nil, env.K8sClient, nil)
 	env.App.Get("/api/mcp/events", handler.GetEvents)
 
 	k8sClient, err := env.K8sClient.GetClient("test-cluster")
@@ -268,7 +268,7 @@ func TestMCPGetEvents_NetworkErrorReturnsUnavailable(t *testing.T) {
 
 func TestMCPGetNodes_NetworkErrorReturnsUnavailable(t *testing.T) {
 	env := setupTestEnv(t)
-	handler := NewMCPHandlers(nil, env.K8sClient)
+	handler := NewMCPHandlers(nil, env.K8sClient, nil)
 	env.App.Get("/api/mcp/nodes", handler.GetNodes)
 
 	k8sClient, err := env.K8sClient.GetClient("test-cluster")
@@ -297,7 +297,7 @@ func TestMCPGetNodes_NetworkErrorReturnsUnavailable(t *testing.T) {
 
 func TestMCPGetPods_AuthErrorReturnsUnavailable(t *testing.T) {
 	env := setupTestEnv(t)
-	handler := NewMCPHandlers(nil, env.K8sClient)
+	handler := NewMCPHandlers(nil, env.K8sClient, nil)
 	env.App.Get("/api/mcp/pods", handler.GetPods)
 
 	k8sClient, err := env.K8sClient.GetClient("test-cluster")

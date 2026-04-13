@@ -40,6 +40,12 @@ type CustomResourceResponse struct {
 // Kubernetes RBAC controls access — if the user's kubeconfig cannot list the
 // resource, the per-cluster query silently returns zero items.
 func (h *MCPHandlers) GetCustomResources(c *fiber.Ctx) error {
+	// SECURITY (#7487): custom resource listing can expose sensitive spec/status
+	// data; require a valid console role (viewer or above).
+	if err := requireViewerOrAbove(c, h.store); err != nil {
+		return err
+	}
+
 	if isDemoMode(c) {
 		return c.JSON(CustomResourceResponse{Items: []CustomResourceItem{}, IsDemoData: true})
 	}

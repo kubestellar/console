@@ -74,7 +74,7 @@ func TestGetWarningEventsStream_AppliesClusterFilter(t *testing.T) {
 	injectTypedCluster(env, "cluster-a", seedWarningEvent("from-a", "default"))
 	injectTypedCluster(env, "cluster-b", seedWarningEvent("from-b", "default"))
 
-	handler := NewMCPHandlers(nil, env.K8sClient)
+	handler := NewMCPHandlers(nil, env.K8sClient, nil)
 	env.App.Get("/api/mcp/events/warnings/stream", handler.GetWarningEventsStream)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/mcp/events/warnings/stream?cluster=cluster-a", nil)
@@ -97,7 +97,7 @@ func TestGetWarningEventsStream_UnknownClusterReturns404(t *testing.T) {
 	env := setupTestEnv(t)
 	injectTypedCluster(env, "cluster-a")
 
-	handler := NewMCPHandlers(nil, env.K8sClient)
+	handler := NewMCPHandlers(nil, env.K8sClient, nil)
 	env.App.Get("/api/mcp/events/warnings/stream", handler.GetWarningEventsStream)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/mcp/events/warnings/stream?cluster=does-not-exist", nil)
@@ -149,7 +149,7 @@ func TestStreamClusters_EmitsClusterErrorOnFailure(t *testing.T) {
 		return true, nil, errors.New("forced list error")
 	})
 
-	handler := NewMCPHandlers(nil, env.K8sClient)
+	handler := NewMCPHandlers(nil, env.K8sClient, nil)
 	env.App.Get("/api/mcp/events/warnings/stream", handler.GetWarningEventsStream)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/mcp/events/warnings/stream", nil)

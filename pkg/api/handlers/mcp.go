@@ -10,6 +10,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/mcp"
+	"github.com/kubestellar/console/pkg/store"
 )
 
 // maxResponseDeadline is the maximum time any multi-cluster REST handler will
@@ -144,13 +145,15 @@ func (t *clusterErrorTracker) annotate(resp fiber.Map) fiber.Map {
 type MCPHandlers struct {
 	bridge    *mcp.Bridge
 	k8sClient *k8s.MultiClusterClient
+	store     store.Store
 }
 
 // NewMCPHandlers creates a new MCP handlers instance
-func NewMCPHandlers(bridge *mcp.Bridge, k8sClient *k8s.MultiClusterClient) *MCPHandlers {
+func NewMCPHandlers(bridge *mcp.Bridge, k8sClient *k8s.MultiClusterClient, s store.Store) *MCPHandlers {
 	return &MCPHandlers{
 		bridge:    bridge,
 		k8sClient: k8sClient,
+		store:     s,
 	}
 }
 

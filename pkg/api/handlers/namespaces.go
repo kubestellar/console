@@ -32,6 +32,12 @@ func NewNamespaceHandler(s store.Store, k8sClient *k8s.MultiClusterClient) *Name
 
 // ListNamespaces returns namespaces for a cluster
 func (h *NamespaceHandler) ListNamespaces(c *fiber.Ctx) error {
+	// SECURITY (#7485): namespace listing exposes cluster structure; require a
+	// valid console role (viewer or above).
+	if err := requireViewerOrAbove(c, h.store); err != nil {
+		return err
+	}
+
 	if h.k8sClient == nil {
 		return fiber.NewError(fiber.StatusServiceUnavailable, "Kubernetes client not available")
 	}

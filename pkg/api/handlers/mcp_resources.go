@@ -178,6 +178,11 @@ func (h *MCPHandlers) GetGPUHealthCronJobStatus(c *fiber.Ctx) error {
 
 // InstallGPUHealthCronJob installs the GPU health check CronJob on a cluster
 func (h *MCPHandlers) InstallGPUHealthCronJob(c *fiber.Ctx) error {
+	// SECURITY (#7493): mutating endpoint requires editor or admin role.
+	if err := requireEditorOrAdmin(c, h.store); err != nil {
+		return err
+	}
+
 	if isDemoMode(c) {
 		return c.JSON(fiber.Map{"success": true, "message": "CronJob installed (demo mode)"})
 	}
@@ -226,6 +231,11 @@ func (h *MCPHandlers) InstallGPUHealthCronJob(c *fiber.Ctx) error {
 
 // UninstallGPUHealthCronJob removes the GPU health check CronJob from a cluster
 func (h *MCPHandlers) UninstallGPUHealthCronJob(c *fiber.Ctx) error {
+	// SECURITY (#7494): destructive endpoint requires editor or admin role.
+	if err := requireEditorOrAdmin(c, h.store); err != nil {
+		return err
+	}
+
 	if isDemoMode(c) {
 		return c.JSON(fiber.Map{"success": true, "message": "CronJob removed (demo mode)"})
 	}
@@ -824,6 +834,13 @@ func (h *MCPHandlers) GetLimitRanges(c *fiber.Ctx) error {
 
 // CreateOrUpdateResourceQuota creates or updates a ResourceQuota
 func (h *MCPHandlers) CreateOrUpdateResourceQuota(c *fiber.Ctx) error {
+	// SECURITY (#7490, #7492): mutating endpoint requires editor or admin role.
+	// This also covers the ensure_namespace path (#7492) since the whole handler
+	// is gated before any namespace or quota creation occurs.
+	if err := requireEditorOrAdmin(c, h.store); err != nil {
+		return err
+	}
+
 	var req struct {
 		Cluster         string            `json:"cluster"`
 		Name            string            `json:"name"`
@@ -885,6 +902,11 @@ func (h *MCPHandlers) CreateOrUpdateResourceQuota(c *fiber.Ctx) error {
 
 // DeleteResourceQuota deletes a ResourceQuota
 func (h *MCPHandlers) DeleteResourceQuota(c *fiber.Ctx) error {
+	// SECURITY (#7491): destructive endpoint requires editor or admin role.
+	if err := requireEditorOrAdmin(c, h.store); err != nil {
+		return err
+	}
+
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 	name := c.Query("name")
@@ -1074,6 +1096,12 @@ func validateToolName(name string, allowedTools map[string]bool) error {
 
 // CallOpsTool calls a kubestellar-ops tool
 func (h *MCPHandlers) CallOpsTool(c *fiber.Ctx) error {
+	// SECURITY (#7495): tool-call endpoint can expose sensitive cluster data;
+	// require at least editor role to invoke tools.
+	if err := requireEditorOrAdmin(c, h.store); err != nil {
+		return err
+	}
+
 	if h.bridge == nil {
 		return c.Status(503).JSON(fiber.Map{"error": "MCP bridge not available"})
 	}

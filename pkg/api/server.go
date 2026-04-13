@@ -726,7 +726,7 @@ func (s *Server) setupRoutes() {
 	s.app.Get("/api/ping", publicLimiter, handlers.PingHandler)
 
 	// MCP handlers (used in protected routes below)
-	mcpHandlers := handlers.NewMCPHandlers(s.bridge, s.k8sClient)
+	mcpHandlers := handlers.NewMCPHandlers(s.bridge, s.k8sClient, s.store)
 	// SECURITY FIX: All MCP routes are now protected regardless of dev mode
 	// Dev mode only affects things like frontend URLs and default users,
 	// NOT authentication requirements

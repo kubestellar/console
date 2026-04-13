@@ -21,7 +21,7 @@ const podLogsTestTimeoutMS = 5000
 // visitor opens the site without a real cluster (issue #6045).
 func TestMCPGetPodLogs_DemoModeReturnsDemoData(t *testing.T) {
 	env := setupTestEnv(t)
-	handler := NewMCPHandlers(nil, env.K8sClient)
+	handler := NewMCPHandlers(nil, env.K8sClient, nil)
 	env.App.Get("/api/mcp/pods/logs", handler.GetPodLogs)
 
 	req, err := http.NewRequest("GET", "/api/mcp/pods/logs", nil)
@@ -49,7 +49,7 @@ func TestMCPGetPodLogs_DemoModeReturnsDemoData(t *testing.T) {
 // refuses requests missing any of cluster/namespace/pod.
 func TestMCPGetPodLogs_MissingParamsReturns400(t *testing.T) {
 	env := setupTestEnv(t)
-	handler := NewMCPHandlers(nil, env.K8sClient)
+	handler := NewMCPHandlers(nil, env.K8sClient, nil)
 	env.App.Get("/api/mcp/pods/logs", handler.GetPodLogs)
 
 	req, err := http.NewRequest("GET", "/api/mcp/pods/logs?cluster=test-cluster", nil)
@@ -68,7 +68,7 @@ func TestMCPGetPodLogs_MissingParamsReturns400(t *testing.T) {
 // returns 503 when there is no k8s client at all (degraded mode).
 func TestMCPGetPodLogs_NoClusterAccessReturns503(t *testing.T) {
 	env := setupTestEnv(t)
-	handler := NewMCPHandlers(nil, nil)
+	handler := NewMCPHandlers(nil, nil, nil)
 	env.App.Get("/api/mcp/pods/logs", handler.GetPodLogs)
 
 	req, err := http.NewRequest(
@@ -94,7 +94,7 @@ func TestMCPGetPodLogs_NoClusterAccessReturns503(t *testing.T) {
 // `{logs, source: "k8s"}` so the frontend can parse it.
 func TestMCPGetPodLogs_FakeClientReturnsLogs(t *testing.T) {
 	env := setupTestEnv(t)
-	handler := NewMCPHandlers(nil, env.K8sClient)
+	handler := NewMCPHandlers(nil, env.K8sClient, nil)
 	env.App.Get("/api/mcp/pods/logs", handler.GetPodLogs)
 
 	req, err := http.NewRequest(
@@ -122,7 +122,7 @@ func TestMCPGetPodLogs_FakeClientReturnsLogs(t *testing.T) {
 // ever called.
 func TestMCPGetPodLogs_TailExceedsMaxReturns400(t *testing.T) {
 	env := setupTestEnv(t)
-	handler := NewMCPHandlers(nil, env.K8sClient)
+	handler := NewMCPHandlers(nil, env.K8sClient, nil)
 	env.App.Get("/api/mcp/pods/logs", handler.GetPodLogs)
 
 	// mcpMaxTailLines is 10_000 — request 10x that.
