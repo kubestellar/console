@@ -212,37 +212,59 @@ func ga4RealMeasurementID() string {
 	return id
 }
 
+// isAllowedNetlifyHost returns true if host is a KubeStellar Netlify preview
+// deployment. Only the project's own deploy-preview subdomains are accepted;
+// the blanket *.netlify.app wildcard is intentionally NOT used because any
+// attacker-controlled Netlify site would pass that check (#7032).
+func isAllowedNetlifyHost(host string) bool {
+	// Production: kubestellar-console.netlify.app
+	if host == "kubestellar-console.netlify.app" {
+		return true
+	}
+	// Deploy previews: deploy-preview-<N>--kubestellar-console.netlify.app
+	if strings.HasSuffix(host, "--kubestellar-console.netlify.app") {
+		return true
+	}
+	return false
+}
+
 // isAllowedOrigin checks if the request comes from an allowed hostname.
 // In addition to the explicit allowlist, same-origin requests are always
 // permitted — this ensures OpenShift and other dynamic deployments work
 // without maintaining an exhaustive hostname list.
+//
+// Security: only the Origin header is checked — Referer is not used because
+// it is trivially forgeable by non-browser HTTP clients (#7031).
 func isAllowedOrigin(c *fiber.Ctx) bool {
-	requestHost := stripPort(c.Hostname())
-
 	origin := c.Get("Origin")
-	if origin != "" {
-		if u, err := url.Parse(origin); err == nil {
-			host := stripPort(u.Hostname())
-			if allowedOrigins[host] || strings.HasSuffix(host, ".netlify.app") || host == requestHost {
-				return true
-			}
-		}
+	if origin == "" {
+		// Reject requests without an Origin header. Browsers always send Origin
+		// for XHR/fetch cross-origin requests. Requests without it are likely
+		// from non-browser clients attempting to bypass origin checks (#7031).
+		return false
 	}
 
-	referer := c.Get("Referer")
-	if referer != "" {
-		if u, err := url.Parse(referer); err == nil {
-			host := stripPort(u.Hostname())
-			if allowedOrigins[host] || strings.HasSuffix(host, ".netlify.app") || host == requestHost {
-				return true
-			}
-		}
+	u, err := url.Parse(origin)
+	if err != nil {
+		return false
+	}
+	host := stripPort(u.Hostname())
+
+	// Explicit allowlist
+	if allowedOrigins[host] {
+		return true
 	}
 
-	// Reject requests with neither Origin nor Referer — browsers always send
-	// at least one for XHR/fetch. Requests without either are likely from
-	// non-browser clients bypassing origin checks.
-	return false
+	// KubeStellar Netlify previews only (#7032)
+	if isAllowedNetlifyHost(host) {
+		return true
+	}
+
+	// Same-origin: the Origin host matches the request's Host header.
+	// This ensures OpenShift and other dynamic deployments work without
+	// maintaining an exhaustive hostname list.
+	requestHost := stripPort(c.Hostname())
+	return host == requestHost
 }
 
 // stripPort removes the port from a hostname (e.g., "localhost:5174" → "localhost").
