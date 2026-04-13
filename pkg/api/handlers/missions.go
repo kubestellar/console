@@ -259,7 +259,15 @@ func (c *missionsResponseCache) set(key string, entry *missionsCacheEntry) {
 		delete(c.entries, key)
 	}
 	// Evict oldest entries until both caps will be satisfied after insertion.
+	// #7132 — Guard against infinite loops: if len(entries)==0 but totalBytes
+	// somehow remains above the threshold (e.g. all 0-byte payloads), break
+	// immediately instead of spinning on an empty map.
 	for len(c.entries) >= missionsCacheMaxEntries || c.totalBytes+entrySize > missionsCacheMaxBytes {
+		if len(c.entries) == 0 {
+			// Nothing left to evict — reset totalBytes as a safety net.
+			c.totalBytes = 0
+			break
+		}
 		if !c.evictOldestLocked() {
 			break
 		}
@@ -532,12 +540,21 @@ func (h *MissionsHandler) BrowseConsoleKB(c *fiber.Ctx) error {
 	// BrowseMissions to crash when it tries to .map() over an object. Return
 	// a structured 400 error instead, and skip the cache so subsequent
 	// requests with the corrected path aren't penalized.
+	// #7134 — GitHub returns a JSON object for single files and a JSON array
+	// for directories. Previously the handler returned a 400 error when the
+	// response was an object, crashing frontend iterators. Now we attempt to
+	// unmarshal as an array first; if that fails, try a single object and wrap
+	// it in an array so the frontend always receives a consistent shape.
 	var ghEntries []map[string]interface{}
 	if err := json.Unmarshal(body, &ghEntries); err != nil {
-		return c.Status(400).JSON(fiber.Map{
-			"error": "path is a file, not a directory",
-			"code":  "not_a_directory",
-		})
+		var single map[string]interface{}
+		if singleErr := json.Unmarshal(body, &single); singleErr != nil {
+			return c.Status(400).JSON(fiber.Map{
+				"error": "path is a file, not a directory",
+				"code":  "not_a_directory",
+			})
+		}
+		ghEntries = []map[string]interface{}{single}
 	}
 
 	// Files and directories to hide from the browser UI — infrastructure
@@ -927,6 +944,7 @@ func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
 	}
 	forkReq.Header.Set("Authorization", "Bearer "+token)
 	forkReq.Header.Set("Accept", "application/vnd.github.v3+json")
+	forkReq.Header.Set("Content-Type", "application/json") // #7133 — required by GitHub API
 	forkResp, err := h.httpClient.Do(forkReq)
 	if err != nil {
 		return c.Status(502).JSON(fiber.Map{"error": "failed to fork repo"})
@@ -934,6 +952,8 @@ func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
 	defer forkResp.Body.Close()
 
 	if forkResp.StatusCode < 200 || forkResp.StatusCode >= 300 {
+		// #7137 — Drain response body so the TCP connection returns to the pool.
+		io.Copy(io.Discard, forkResp.Body) //nolint:errcheck // best-effort drain
 		return c.Status(502).JSON(fiber.Map{"error": fmt.Sprintf("GitHub fork failed with status %d", forkResp.StatusCode)})
 	}
 	var forkData map[string]interface{}
@@ -957,10 +977,13 @@ func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
 		defaultBranch = db
 	}
 
-	// #6795 — If neither parent nor fork carried default_branch, query the
-	// upstream repo directly so we don't assume "main" for repos that use
-	// "master", "trunk", etc.
-	if defaultBranch == "main" {
+	// #7135 — Always query the upstream repo for its default branch. The fork
+	// response's parent.default_branch or default_branch fields may disagree
+	// with the actual upstream value (e.g. a fork created before a rename from
+	// "master" to "main"). Querying the upstream is the only reliable source.
+	// Previously this only fired when defaultBranch == "main", missing repos
+	// that use "master", "trunk", or other non-default names (#6795).
+	{
 		upstreamURL := fmt.Sprintf("%s/repos/%s", h.githubAPIURL, req.Repo)
 		upstreamReq, err := http.NewRequest("GET", upstreamURL, nil)
 		if err == nil {
@@ -976,6 +999,9 @@ func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
 							defaultBranch = db
 						}
 					}
+				} else {
+					// #7137 — Drain on non-200 so TCP connection is reused.
+					io.Copy(io.Discard, upstreamResp.Body) //nolint:errcheck
 				}
 			}
 		}
@@ -1061,6 +1087,7 @@ func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
 	}
 	refReq.Header.Set("Authorization", "Bearer "+token)
 	refReq.Header.Set("Accept", "application/vnd.github.v3+json")
+	refReq.Header.Set("Content-Type", "application/json") // #7133 — required by GitHub API
 	branchResp, err := h.httpClient.Do(refReq)
 	if err != nil {
 		return c.Status(502).JSON(fiber.Map{"error": "failed to create branch ref"})
@@ -1102,6 +1129,8 @@ func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
 
 	// Validate commit response status (#2384) and content (#2381)
 	if fileResp.StatusCode < 200 || fileResp.StatusCode >= 300 {
+		// #7137 — Drain response body so the TCP connection returns to the pool.
+		io.Copy(io.Discard, fileResp.Body) //nolint:errcheck // best-effort drain
 		return c.Status(502).JSON(fiber.Map{"error": fmt.Sprintf("GitHub commit failed with status %d", fileResp.StatusCode)})
 	}
 	var commitData map[string]interface{}
@@ -1119,7 +1148,7 @@ func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
 	prURL := fmt.Sprintf("%s/repos/%s/pulls", h.githubAPIURL, req.Repo)
 	prPayload, err := json.Marshal(map[string]interface{}{
 		"title": req.Message,
-		"head":  strings.Split(forkFullName, "/")[0] + ":" + req.Branch,
+		"head":  strings.SplitN(forkFullName, "/", 2)[0] + ":" + req.Branch, // #7138 — SplitN guards against missing "/"
 		"base":  defaultBranch,
 		"body":  "Mission shared via KubeStellar Console",
 	})
@@ -1132,6 +1161,7 @@ func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
 	}
 	prReq.Header.Set("Authorization", "Bearer "+token)
 	prReq.Header.Set("Accept", "application/vnd.github.v3+json")
+	prReq.Header.Set("Content-Type", "application/json") // #7133 — required by GitHub API
 	prResp, err := h.httpClient.Do(prReq)
 	if err != nil {
 		return c.Status(502).JSON(fiber.Map{"error": "failed to create PR"})
@@ -1140,6 +1170,8 @@ func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
 
 	// Validate PR creation response (#2384)
 	if prResp.StatusCode < 200 || prResp.StatusCode >= 300 {
+		// #7137 — Drain response body so the TCP connection returns to the pool.
+		io.Copy(io.Discard, prResp.Body) //nolint:errcheck // best-effort drain
 		return c.Status(502).JSON(fiber.Map{"error": fmt.Sprintf("GitHub PR creation failed with status %d", prResp.StatusCode)})
 	}
 	var prData map[string]interface{}
