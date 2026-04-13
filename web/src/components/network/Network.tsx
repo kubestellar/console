@@ -74,8 +74,13 @@ export function Network() {
         return { value: clusterIPServices, sublabel: 'internal only', onClick: drillToClusterIP, isClickable: clusterIPServices > 0 }
       case 'ingresses':
         return { value: '-', sublabel: 'ingresses', isClickable: false }
-      case 'endpoints':
-        return { value: filteredServices.length, sublabel: 'endpoints', isClickable: false }
+      case 'endpoints': {
+        // Sum actual ready endpoints across services (#7126) — not just service count
+        const totalEndpoints = filteredServices.reduce(
+          (sum, s) => sum + (s.endpoints ?? 0), 0
+        )
+        return { value: totalEndpoints, sublabel: 'endpoints', isClickable: false }
+      }
       default:
         return { value: '-', sublabel: '' }
     }

@@ -386,25 +386,48 @@ class KubectlProxy {
   /**
    * Get services from a cluster
    */
-  async getServices(context: string, namespace?: string): Promise<{ name: string; namespace: string; type: string; clusterIP: string; ports: string }[]> {
+  async getServices(context: string, namespace?: string): Promise<KubectlServiceResult[]> {
     const nsArg = namespace ? ['-n', namespace] : ['-A']
     const response = await this.exec(['get', 'services', ...nsArg, '-o', 'json'], { context, timeout: KUBECTL_EXTENDED_TIMEOUT_MS })
     if (response.exitCode !== 0) {
       throw new Error(response.error || 'Failed to get services')
     }
-    let data: { items?: Array<{ metadata: { name: string; namespace: string }; spec: { type: string; clusterIP: string; ports?: { port: number; protocol: string }[] } }> }
+    let data: { items?: KubeService[] }
     try {
       data = JSON.parse(response.output)
     } catch {
       throw new Error('Failed to parse kubectl output as JSON')
     }
-    return (data.items || []).map((svc: { metadata: { name: string; namespace: string }; spec: { type: string; clusterIP: string; ports?: { port: number; protocol: string }[] } }) => ({
-      name: svc.metadata.name,
-      namespace: svc.metadata.namespace,
-      type: svc.spec.type,
-      clusterIP: svc.spec.clusterIP || '',
-      ports: (svc.spec.ports || []).map(p => `${p.port}/${p.protocol}`).join(', '),
-    }))
+    return (data.items || []).map((svc: KubeService) => {
+      // Collect ALL external IPs from both spec.externalIPs and status.loadBalancer.ingress (#7124)
+      const allExternalIPs: string[] = []
+      if (svc.spec.externalIPs) {
+        allExternalIPs.push(...svc.spec.externalIPs)
+      }
+      const ingress = svc.status?.loadBalancer?.ingress || []
+      for (const entry of ingress) {
+        if (entry.ip) allExternalIPs.push(entry.ip)
+        else if (entry.hostname) allExternalIPs.push(entry.hostname)
+      }
+
+      // Determine LB status (#7123)
+      let lbStatus = ''
+      if (svc.spec.type === 'LoadBalancer') {
+        lbStatus = ingress.length > 0 ? 'Ready' : 'Provisioning'
+      }
+
+      return {
+        name: svc.metadata.name,
+        namespace: svc.metadata.namespace,
+        type: svc.spec.type,
+        clusterIP: svc.spec.clusterIP || '',
+        ports: (svc.spec.ports || []).map(p => `${p.port}/${p.protocol}`).join(', '),
+        externalIP: allExternalIPs.join(', '),
+        externalIPs: allExternalIPs,
+        lbStatus,
+        selector: svc.spec.selector,
+      }
+    })
   }
 
   /**
@@ -860,6 +883,40 @@ interface KubeEvent {
   count?: number
   firstTimestamp?: string
   lastTimestamp?: string
+}
+
+/** Shape of a Kubernetes Service object from `kubectl get services -o json` */
+interface KubeService {
+  metadata: { name: string; namespace: string; labels?: Record<string, string> }
+  spec: {
+    type: string
+    clusterIP: string
+    externalIPs?: string[]
+    ports?: Array<{ port: number; protocol: string; nodePort?: number; name?: string }>
+    selector?: Record<string, string>
+  }
+  status?: {
+    loadBalancer?: {
+      ingress?: Array<{ ip?: string; hostname?: string }>
+    }
+  }
+}
+
+/** Result of getServices — includes LB fields for schema parity (#7127) */
+export interface KubectlServiceResult {
+  name: string
+  namespace: string
+  type: string
+  clusterIP: string
+  ports: string
+  /** Comma-separated list of all external IPs/hostnames */
+  externalIP: string
+  /** Array of all external IPs/hostnames (#7124 — not truncated to first) */
+  externalIPs: string[]
+  /** 'Ready' | 'Provisioning' | '' — LoadBalancer provisioning state (#7123) */
+  lbStatus: string
+  /** Label selector for backing pods (#7127 — schema parity) */
+  selector?: Record<string, string>
 }
 
 interface KubeDeployment {

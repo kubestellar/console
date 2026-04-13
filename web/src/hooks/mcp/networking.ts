@@ -8,7 +8,7 @@ import { kubectlProxy } from '../../lib/kubectlProxy'
 import { STORAGE_KEY_TOKEN } from '../../lib/constants'
 import { REFRESH_INTERVAL_MS, MIN_REFRESH_INDICATOR_MS, getEffectiveInterval, LOCAL_AGENT_URL, agentFetch, clusterCacheRef } from './shared'
 import { subscribePolling } from './pollingManager'
-import { MCP_HOOK_TIMEOUT_MS, DEPLOY_ABORT_TIMEOUT_MS } from '../../lib/constants/network'
+import { MCP_HOOK_TIMEOUT_MS, DEPLOY_ABORT_TIMEOUT_MS, SERVICES_CACHE_TTL_MS } from '../../lib/constants/network'
 import type { Service, Ingress, NetworkPolicy } from './types'
 
 // ---------------------------------------------------------------------------
@@ -55,6 +55,13 @@ function loadServicesCacheFromStorage(cacheKey: string): { data: Service[], time
       const parsed = JSON.parse(stored)
       if (parsed.key === cacheKey && parsed.data && parsed.data.length > 0) {
         const timestamp = parsed.timestamp ? new Date(parsed.timestamp) : new Date()
+        // Enforce cache TTL — discard stale entries so stale data is never
+        // served after a fetch failure (#7125)
+        const cacheAgeMs = Date.now() - timestamp.getTime()
+        if (cacheAgeMs > SERVICES_CACHE_TTL_MS) {
+          try { localStorage.removeItem(SERVICES_CACHE_KEY) } catch { /* ignore */ }
+          return null
+        }
         servicesCache = { data: parsed.data, timestamp, key: cacheKey }
         return { data: parsed.data, timestamp }
       }
@@ -205,14 +212,17 @@ export function useServices(cluster?: string, namespace?: string) {
 
         if (svcData && svcData.length >= 0) {
           const now = new Date()
-          // Map to Service format
+          // Map to Service format — include LB fields for schema parity (#7123, #7124, #7127)
           const mappedServices: Service[] = svcData.map(s => ({
             name: s.name,
             namespace: s.namespace,
             cluster: cluster,
             type: s.type,
             clusterIP: s.clusterIP,
+            externalIP: s.externalIP || undefined,
             ports: s.ports ? s.ports.split(', ') : [],
+            lbStatus: s.lbStatus || undefined,
+            selector: s.selector,
           }))
           servicesCache = { data: mappedServices, timestamp: now, key: cacheKey }
           setServices(mappedServices)
@@ -516,7 +526,7 @@ function getDemoServices(): Service[] {
     { name: 'redis', namespace: 'data', cluster: 'prod-east', type: 'ClusterIP', clusterIP: '10.96.30.20', ports: ['6379/TCP'], endpoints: 3, age: '40d' },
     { name: 'prometheus', namespace: 'monitoring', cluster: 'staging', type: 'ClusterIP', clusterIP: '10.96.40.10', ports: ['9090/TCP'], endpoints: 2, age: '20d' },
     { name: 'grafana', namespace: 'monitoring', cluster: 'staging', type: 'NodePort', clusterIP: '10.96.40.20', ports: ['3000:30300/TCP'], endpoints: 1, age: '20d' },
-    { name: 'ml-inference', namespace: 'ml', cluster: 'vllm-d', type: 'LoadBalancer', clusterIP: '10.96.50.10', externalIP: '34.56.78.90', ports: ['8080/TCP'], endpoints: 8, lbStatus: 'Ready', age: '15d' },
+    { name: 'ml-inference', namespace: 'ml', cluster: 'vllm-d', type: 'LoadBalancer', clusterIP: '10.96.50.10', externalIP: '34.56.78.90, 34.56.78.91', ports: ['8080/TCP'], endpoints: 8, lbStatus: 'Ready', age: '15d' },
     // A LoadBalancer service that is still provisioning — shows the
     // "Provisioning" label in the Services drawer instead of a blank
     // external IP (issue #6153).
