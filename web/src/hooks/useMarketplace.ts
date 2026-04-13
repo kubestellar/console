@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo, useSyncExternalStore } from 'react'
 import { api } from '../lib/api'
 import { addCustomTheme, removeCustomTheme } from '../lib/themes'
 import { emitMarketplaceInstall, emitMarketplaceRemove, emitMarketplaceInstallFailed } from '../lib/analytics'
@@ -142,6 +142,32 @@ function saveInstalled(map: InstalledMap): void {
   }
 }
 
+// ── Cross-tab sync (#7542) ────────────────────────────────────────────
+// Listeners are notified whenever the installed-items map changes so that
+// other browser tabs (or multiple useMarketplace mounts) stay in sync.
+let installedSnapshot = loadInstalled()
+const installedListeners = new Set<() => void>()
+
+function subscribeInstalled(cb: () => void) {
+  installedListeners.add(cb)
+  return () => { installedListeners.delete(cb) }
+}
+
+function getInstalledSnapshot(): InstalledMap { return installedSnapshot }
+const emptyInstalledMap: InstalledMap = {}
+
+function notifyInstalledChange() {
+  installedSnapshot = loadInstalled()
+  installedListeners.forEach(cb => cb())
+}
+
+// Listen for cross-tab localStorage changes (#7542)
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (e) => {
+    if (e.key === INSTALLED_KEY) notifyInstalledChange()
+  })
+}
+
 export interface InstallResult {
   type: MarketplaceItemType
   data?: unknown
@@ -155,7 +181,8 @@ export function useMarketplace() {
   const [selectedTag, setSelectedTag] = useState<string | null>(null)
   const [selectedType, setSelectedType] = useState<MarketplaceItemType | null>(null)
   const [showHelpWanted, setShowHelpWanted] = useState(false)
-  const [installedItems, setInstalledItems] = useState<InstalledMap>(loadInstalled)
+  // Use cross-tab-aware external store for installed items (#7542)
+  const installedItems: InstalledMap = useSyncExternalStore(subscribeInstalled, getInstalledSnapshot, () => emptyInstalledMap)
 
   const fetchRegistry = useCallback(async (skipCache = false) => {
     setIsLoading(true)
@@ -199,32 +226,65 @@ export function useMarketplace() {
         // Cache write failed — non-critical
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load marketplace')
-      setItems([])
+      // #7543: On fetch failure, keep cached/current items with a stale indicator
+      // instead of clearing to empty which falsely implies no items exist.
+      const staleMsg = err instanceof Error ? err.message : 'Failed to load marketplace'
+      setError(staleMsg)
+      // Only fall back to empty if we truly have nothing to show
+      if (items.length === 0) {
+        try {
+          const cached = localStorage.getItem(CACHE_KEY)
+          if (cached) {
+            const parsed: CachedRegistry = JSON.parse(cached)
+            setItems(mergeRegistryItems(parsed.data))
+          }
+        } catch { /* no cached fallback available */ }
+      }
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [items.length])
 
   useEffect(() => {
     fetchRegistry()
   }, [fetchRegistry])
 
+  // #7539: Reconcile installed-dashboard state against the backend so items
+  // deleted outside the marketplace are no longer shown as "installed".
+  const reconcileRef = useRef(false)
+  useEffect(() => {
+    if (reconcileRef.current) return
+    reconcileRef.current = true
+
+    const dashboardEntries = (Object.entries(installedItems) as [string, InstalledEntry][]).filter(
+      ([, entry]) => entry.type === 'dashboard' && entry.dashboardId
+    )
+    if (dashboardEntries.length === 0) return
+
+    api.get<{ id: string }[]>('/api/dashboards').then(({ data: dashboards }) => {
+      const ids = new Set((dashboards || []).map(d => d.id))
+      let changed = false
+      for (const [itemId, entry] of dashboardEntries) {
+        if (entry.dashboardId && !ids.has(entry.dashboardId)) {
+          markUninstalled(itemId)
+          changed = true
+        }
+      }
+      if (changed) notifyInstalledChange()
+    }).catch(() => { /* reconciliation is best-effort */ })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   const markInstalled = (itemId: string, entry: InstalledEntry) => {
-    setInstalledItems(prev => {
-      const next = { ...prev, [itemId]: entry }
-      saveInstalled(next)
-      return next
-    })
+    const next = { ...installedSnapshot, [itemId]: entry }
+    saveInstalled(next)
+    notifyInstalledChange()
   }
 
   const markUninstalled = (itemId: string) => {
-    setInstalledItems(prev => {
-      const next = { ...prev }
-      delete next[itemId]
-      saveInstalled(next)
-      return next
-    })
+    const next = { ...installedSnapshot }
+    delete next[itemId]
+    saveInstalled(next)
+    notifyInstalledChange()
   }
 
   const isInstalled = (itemId: string): boolean => {
@@ -328,7 +388,14 @@ export function useMarketplace() {
     if (!entry) return
 
     if (entry.type === 'dashboard' && entry.dashboardId) {
-      await api.delete(`/api/dashboards/${entry.dashboardId}`)
+      // #7540: Gracefully handle already-deleted resources — treat 404 as success
+      try {
+        await api.delete(`/api/dashboards/${entry.dashboardId}`)
+      } catch (e: unknown) {
+        const is404 = e instanceof Error && e.message.includes('404')
+        if (!is404) throw e
+        // Resource already gone — proceed with local cleanup
+      }
     }
 
     if (entry.type === 'theme') {
@@ -336,6 +403,7 @@ export function useMarketplace() {
       window.dispatchEvent(new Event('kc-custom-themes-changed'))
     }
 
+    // #7541: Always clear local state regardless of dashboardId presence
     markUninstalled(item.id)
     emitMarketplaceRemove(item.type)
   }
