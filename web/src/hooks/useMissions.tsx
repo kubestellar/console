@@ -114,13 +114,19 @@ interface MissionContextValue {
   isAIDisabled: boolean
 
   /**
-   * Pending review state (#6455): when a mission is started without
-   * skipReview, it is stashed here so the UI can show the
-   * ConfirmMissionPromptDialog. Call `confirmPendingReview` with the
-   * (possibly edited) prompt to proceed, or `cancelPendingReview` to
-   * discard.
+   * Pending review state (#6455, #7087/#7101): when a mission is started
+   * without skipReview, it is stashed here so the UI can show the
+   * ConfirmMissionPromptDialog. Changed from a single slot to a queue so
+   * concurrent mission requests don't overwrite each other. Call
+   * `confirmPendingReview` with the (possibly edited) prompt to proceed,
+   * or `cancelPendingReview` to discard the front of the queue.
+   *
+   * #7086/#7094/#7100 — Each queued entry includes a pre-generated
+   * `missionId` so callers receive a valid ID synchronously, even before
+   * the user confirms the review dialog.
    */
-  pendingReview: StartMissionParams | null
+  pendingReview: PendingReviewEntry | null
+  pendingReviewQueue: PendingReviewEntry[]
   confirmPendingReview: (editedPrompt: string) => void
   cancelPendingReview: () => void
 
@@ -165,6 +171,19 @@ interface StartMissionParams {
   skipReview?: boolean
 }
 
+/**
+ * #7086/#7087/#7094/#7100/#7101 — A queued pending-review entry. Each entry
+ * carries a pre-generated `missionId` so callers receive a valid ID
+ * synchronously, even before the user confirms the review dialog. The queue
+ * replaces the old single-slot `pendingReview` to support concurrent
+ * mission requests without overwriting each other.
+ */
+interface PendingReviewEntry {
+  params: StartMissionParams
+  /** Pre-generated mission ID returned to the caller immediately */
+  missionId: string
+}
+
 interface SaveMissionParams {
   title: string
   description: string
@@ -192,12 +211,30 @@ const MISSIONS_STORAGE_KEY = 'kc_missions'
  * #6668 — Window (ms) during which a `storage` event for MISSIONS_STORAGE_KEY
  * is treated as an echo of our own write and ignored. Real browsers do not
  * fire storage events in the same tab that made the write, so this is only
- * a guard against test shims / polyfills. Kept tight so genuine cross-tab
- * writes arriving within a few ms of a local write are still honored.
+ * a guard against test shims / polyfills.
+ *
+ * #7095 — Reduced from 50ms to 5ms. The original 50ms window was wide enough
+ * that two tabs interacting simultaneously could blind each other's state
+ * changes (split-brain). 5ms is still sufficient to suppress same-tab echoes
+ * from test shims/polyfills but tight enough that genuine cross-tab writes
+ * arriving within a few ms of a local write are still honored.
  */
-const CROSS_TAB_ECHO_IGNORE_MS = 50
+const CROSS_TAB_ECHO_IGNORE_MS = 5
 const UNREAD_MISSIONS_KEY = 'kc_unread_missions'
 const SELECTED_AGENT_KEY = 'kc_selected_agent'
+
+/**
+ * #7089 — Monotonic counter for generating unique request IDs. The previous
+ * `claude-${Date.now()}` pattern could collide when two requests were sent
+ * in the same millisecond (rapid sends, concurrent tabs). A monotonic counter
+ * combined with a random suffix guarantees uniqueness within the same tab,
+ * and the random suffix provides uniqueness across tabs.
+ */
+let requestIdCounter = 0
+function generateRequestId(prefix = 'claude'): string {
+  requestIdCounter += 1
+  return `${prefix}-${Date.now()}-${requestIdCounter}-${Math.random().toString(36).substr(2, 6)}`
+}
 
 /** Delay before auto-reconnecting interrupted missions after WS opens */
 const MISSION_RECONNECT_DELAY_MS = 500
@@ -480,9 +517,10 @@ export function MissionProvider({ children }: { children: ReactNode }) {
   const [isSidebarMinimized, setIsSidebarMinimized] = useState(false)
   const [isFullScreen, setIsFullScreen] = useState(false)
 
-  // Pending review state (#6455): stash mission params here when the user
-  // needs to review/edit the prompt before the mission actually starts.
-  const [pendingReview, setPendingReview] = useState<StartMissionParams | null>(null)
+  // #7087/#7101 — Pending review queue: stash mission params here when the
+  // user needs to review/edit the prompt. Changed from a single slot to a
+  // queue so concurrent mission requests don't overwrite each other.
+  const [pendingReviewQueue, setPendingReviewQueue] = useState<PendingReviewEntry[]>([])
   const [unreadMissionIds, setUnreadMissionIds] = useState<Set<string>>(() => loadUnreadMissionIds())
 
   // Agent state
@@ -736,12 +774,40 @@ export function MissionProvider({ children }: { children: ReactNode }) {
         return
       }
       try {
+        // #7088 — Merge instead of replace. The old code did a full replace,
+        // causing last-write-wins data loss when two tabs updated different
+        // missions concurrently. The merge strategy: for missions present in
+        // both local and remote, keep the version with the later updatedAt;
+        // add missions that only exist in remote; keep local-only missions
+        // that are actively running (the remote tab may not know about them).
         const reloaded = loadMissions()
-        setMissions(reloaded)
+        // #7088 — Smart merge by updatedAt instead of full replace
+        setMissions(prev => {
+          const remoteById = new Map(reloaded.map(m => [m.id, m]))
+          const merged: Mission[] = []
+          const seen = new Set<string>()
+
+          for (const local of prev) {
+            seen.add(local.id)
+            const remote = remoteById.get(local.id)
+            if (!remote) {
+              if (!INACTIVE_MISSION_STATUSES.has(local.status)) {
+                merged.push(local)
+              }
+              continue
+            }
+            const localTime = new Date(local.updatedAt).getTime()
+            const remoteTime = new Date(remote.updatedAt).getTime()
+            merged.push(remoteTime >= localTime ? remote : local)
+          }
+          for (const remote of reloaded) {
+            if (!seen.has(remote.id)) {
+              merged.push(remote)
+            }
+          }
+          return merged
+        })
         // #7105 — Reconcile derived state against the reloaded mission list.
-        // A cross-tab deletion could leave activeMissionId pointing at a
-        // mission that no longer exists, or unreadMissionIds containing IDs
-        // for deleted missions (stale badge count).
         const reloadedIds = new Set(reloaded.map(m => m.id))
         setActiveMissionId(prev => (prev && !reloadedIds.has(prev) ? null : prev))
         setUnreadMissionIds(prev => {
@@ -1074,7 +1140,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
                   // de-duplicate on this key and avoid replaying actions
                   // that were already (partially) processed (#5930).
                   const resumeKey = `resume-${mission.id}`
-                  const requestId = `claude-reconnect-${Date.now()}-${mission.id}`
+                  const requestId = generateRequestId('claude-reconnect')
                   pendingRequests.current.set(requestId, mission.id)
 
                   // Build history from all messages except system messages.
@@ -2176,18 +2242,24 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
   }
 
   const startMission = (params: StartMissionParams): string => {
-    // (#6455) When skipReview is not set, stash the params so the UI can
-    // show ConfirmMissionPromptDialog for ALL mission types, not just
-    // install missions.  Callers that already present their own review
-    // dialog (e.g. CardWrapper install CTA) pass skipReview: true.
-    if (!params.skipReview) {
-      setPendingReview(params)
-      // Return empty — the real mission ID is generated when the user
-      // confirms via confirmPendingReview.
-      return ''
+    // #7086/#7094/#7100 — Use pre-generated ID from confirmPendingReview if
+    // available, otherwise generate a new one. This ensures the ID returned
+    // to callers before review confirmation stays valid after confirmation.
+    const preGenId = params.context?.__preGeneratedMissionId as string | undefined
+    const missionId = preGenId || `mission-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    // Strip the internal marker from context before persisting
+    if (preGenId && params.context) {
+      const { __preGeneratedMissionId: _, ...cleanContext } = params.context
+      params = { ...params, context: Object.keys(cleanContext).length > 0 ? cleanContext : undefined }
     }
 
-    const missionId = `mission-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    // (#6455, #7087/#7101) When skipReview is not set, queue the params so
+    // the UI can show ConfirmMissionPromptDialog. Changed from single-slot
+    // to a queue so concurrent requests don't overwrite each other.
+    if (!params.skipReview) {
+      setPendingReviewQueue(prev => [...prev, { params, missionId }])
+      return missionId
+    }
 
     const { enhancedPrompt, matchedResolutions, isInstallMission } = buildEnhancedPrompt(params)
 
@@ -2257,7 +2329,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
 
     // Send to agent
     ensureConnection().then(() => {
-      const requestId = `claude-${Date.now()}`
+      const requestId = generateRequestId()
       pendingRequests.current.set(requestId, missionId)
 
       setMissions(prev => prev.map(m =>
@@ -2385,17 +2457,23 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         return
       }
 
-      // Preflight passed — build prompt and execute
+      // #7091 — Preflight passed — rebuild prompt using the full enhancement
+      // pipeline (cluster targeting, dry-run, non-interactive, resolution
+      // matching) instead of ad-hoc partial reconstruction. The old code
+      // only prepended cluster context, losing dry-run instructions,
+      // resolution context, and non-interactive handling from the original
+      // enriched prompt.
       const lastUserMsg = mission.messages.find(m => m.role === 'user')
-      let prompt = lastUserMsg?.content || mission.description
-      if (mission.cluster) {
-        const clusterList = mission.cluster.split(',').map(c => c.trim()).filter(Boolean)
-        if (clusterList.length === 1) {
-          prompt = `Target cluster: ${clusterList[0]}\nIMPORTANT: All kubectl commands MUST use --context=${clusterList[0]}\n\n${prompt}`
-        } else {
-          prompt = `Target clusters: ${clusterList.join(', ')}\nIMPORTANT: Perform the following on each cluster using their respective kubectl contexts.\n\n${prompt}`
-        }
+      const retryParams: StartMissionParams = {
+        title: mission.title,
+        description: mission.description,
+        type: mission.type,
+        cluster: mission.cluster,
+        initialPrompt: lastUserMsg?.content || mission.description,
+        context: mission.context,
+        dryRun: !!mission.context?.dryRun,
       }
+      const { enhancedPrompt: prompt } = buildEnhancedPrompt(retryParams)
 
       setMissions(prev => prev.map(m =>
         m.id === missionId ? {
@@ -2707,7 +2785,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
     }))
 
     ensureConnection().then(() => {
-      const requestId = `claude-${Date.now()}`
+      const requestId = generateRequestId()
       pendingRequests.current.set(requestId, missionId)
 
       // Read from missionsRef to get the latest state including the message
@@ -2981,14 +3059,29 @@ Install the console locally with the KubeStellar Console agent to use AI mission
     }
   }, [])
 
-  // (#6455) Confirm or cancel the pending prompt review.
+  // (#6455, #7087/#7094/#7100/#7101) Confirm or cancel the front of the
+  // pending review queue. confirmPendingReview now reuses the pre-generated
+  // missionId so the caller's reference stays valid.
   const confirmPendingReview = (editedPrompt: string) => {
-    if (!pendingReview) return
-    const params = { ...pendingReview, initialPrompt: editedPrompt, skipReview: true }
-    setPendingReview(null)
+    const front = pendingReviewQueue[0]
+    if (!front) return
+    // Dequeue the front entry
+    setPendingReviewQueue(prev => prev.slice(1))
+    // Reuse the pre-generated missionId — callers already hold this ID.
+    // Pass skipReview: true and inject the pre-generated ID via context so
+    // startMission uses it instead of generating a new one.
+    const params: StartMissionParams = {
+      ...front.params,
+      initialPrompt: editedPrompt,
+      skipReview: true,
+      context: { ...front.params.context, __preGeneratedMissionId: front.missionId },
+    }
     startMission(params)
   }
-  const cancelPendingReview = () => setPendingReview(null)
+  const cancelPendingReview = () => {
+    // #7087/#7101 — Discard only the front entry, not the entire queue
+    setPendingReviewQueue(prev => prev.slice(1))
+  }
 
   // #6730 — Memoize the context value so consumers of MissionContext don't
   // re-render on every render of MissionProvider. Prior to this fix, the
@@ -3075,7 +3168,10 @@ Install the console locally with the KubeStellar Console agent to use AI mission
     defaultAgent,
     agentsLoading,
     isAIDisabled: selectedAgent === 'none' || !selectedAgent,
-    pendingReview,
+    // #7087/#7101 — Expose the front of the queue as pendingReview for
+    // backward-compatible consumers, plus the full queue.
+    pendingReview: pendingReviewQueue[0] ?? null,
+    pendingReviewQueue,
     ...stableHandlers,
   }), [
     missions,
@@ -3088,21 +3184,22 @@ Install the console locally with the KubeStellar Console agent to use AI mission
     selectedAgent,
     defaultAgent,
     agentsLoading,
-    pendingReview,
+    pendingReviewQueue,
     stableHandlers,
   ])
 
   return (
     <MissionContext.Provider value={contextValue}>
       {children}
-      {/* Global prompt-review dialog (#6455): shown for every mission that
-          does not opt out via skipReview: true. */}
-      {pendingReview && (
+      {/* #7087/#7101 — Global prompt-review dialog: shows the front of the
+          pending review queue. When confirmed/cancelled, the next entry in
+          the queue (if any) is shown automatically. */}
+      {pendingReviewQueue.length > 0 && (
         <ConfirmMissionPromptDialog
-          open={!!pendingReview}
-          missionTitle={pendingReview.title}
-          missionDescription={pendingReview.description}
-          initialPrompt={pendingReview.initialPrompt}
+          open={pendingReviewQueue.length > 0}
+          missionTitle={pendingReviewQueue[0].params.title}
+          missionDescription={pendingReviewQueue[0].params.description}
+          initialPrompt={pendingReviewQueue[0].params.initialPrompt}
           onCancel={cancelPendingReview}
           onConfirm={confirmPendingReview}
         />
@@ -3134,6 +3231,7 @@ const MISSIONS_FALLBACK: MissionContextValue = {
   agentsLoading: false,
   isAIDisabled: true,
   pendingReview: null,
+  pendingReviewQueue: [],
   confirmPendingReview: () => {},
   cancelPendingReview: () => {},
   startMission: () => '',
