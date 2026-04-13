@@ -306,6 +306,16 @@ export function useDeployMissions() {
     const poll = async () => {
       const current = missionsRef.current
       if (current.length === 0) return
+      // #7142 — If every mission is already terminal, skip the poll and
+      // stop the interval immediately. This prevents overrun where a queued
+      // interval callback fires network requests for fully-resolved missions.
+      if (current.every(m => isTerminalStatus(m.status))) {
+        if (pollRef.current) {
+          clearInterval(pollRef.current)
+          pollRef.current = undefined
+        }
+        return
+      }
 
       // #6640 — Serialize missions and cap per-mission cluster concurrency
       // via `runWithConcurrency`. Previously this was
@@ -409,7 +419,15 @@ export function useDeployMissions() {
                     if (!res.ok) {
                       return pendingOrFailed()
                     }
-                    const data = await res.json()
+                    // #7141 — Guard against non-JSON responses (e.g. HTML error
+                    // pages from reverse proxies returning 200). Without this,
+                    // res.json() throws SyntaxError and the failure is invisible.
+                    let data: Record<string, unknown>
+                    try {
+                      data = await res.json()
+                    } catch {
+                      return pendingOrFailed()
+                    }
                     const deployments = (data.deployments || []) as Array<Record<string, unknown>>
                     const match = deployments.find(
                       (d) => String(d.name) === mission.workload

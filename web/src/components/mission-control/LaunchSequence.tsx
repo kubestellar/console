@@ -325,6 +325,13 @@ export function LaunchSequence({
       signal?.addEventListener('abort', onAbort, { once: true })
 
       const check = () => {
+        // #7140 — Stop polling when the component unmounts to prevent ghost
+        // tasks consuming CPU after the dialog is closed.
+        if (!isMountedRef.current) {
+          signal?.removeEventListener('abort', onAbort)
+          reject(new DOMException('Component unmounted', 'AbortError'))
+          return
+        }
         const phase = progressRef.current.find((p) => p.phase === phaseNum)
         if (phase && TERMINAL_STATUSES.includes(phase.status)) {
           signal?.removeEventListener('abort', onAbort)
