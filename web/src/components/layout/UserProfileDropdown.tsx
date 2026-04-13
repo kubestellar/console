@@ -127,17 +127,17 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
       {/* Trigger button */}
       <button
         onClick={toggleDropdown}
-        className="flex items-center gap-3 pl-3 border-l border-border hover:bg-secondary rounded-lg p-2 transition-colors"
+        className="flex items-center gap-2 pl-3 border-l border-border hover:bg-secondary rounded-lg p-1.5 h-9 transition-colors"
       >
         {user.avatar_url ? (
           <img
             src={user.avatar_url}
             alt={user.github_login}
-            className="w-8 h-8 rounded-full"
+            className="w-6 h-6 rounded-full"
           />
         ) : (
-          <div className="w-8 h-8 rounded-full bg-purple-900 flex items-center justify-center">
-            <User className="w-4 h-4 text-purple-400" />
+          <div className="w-6 h-6 rounded-full bg-purple-900 flex items-center justify-center">
+            <User className="w-3.5 h-3.5 text-purple-400" />
           </div>
         )}
         <div className="hidden sm:block text-left">
