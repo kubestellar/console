@@ -1,0 +1,39 @@
+name: Route & Modal Smoke Test
+
+on:
+  schedule:
+    # Run hourly to catch regressions early
+    - cron: '0 * * * *'
+  pull_request:
+    paths:
+      - 'web/src/components/**'
+      - 'web/src/pages/**'
+      - 'web/src/App.tsx'
+      - 'web/src/config/routes.ts'
+      - 'web/src/lib/modals/**'
+      - 'web/src/test/route-smoke.test.ts'
+  workflow_dispatch:
+
+# Least-privilege: read-only by default
+permissions: read-all
+
+jobs:
+  route-smoke:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - run: npm ci
+
+      - name: Run route & modal smoke tests
+        run: npx vitest run src/test/route-smoke.test.ts
