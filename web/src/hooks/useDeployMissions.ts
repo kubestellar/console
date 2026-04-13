@@ -698,8 +698,16 @@ export function useDeployMissions() {
     const INITIAL_POLL_DELAY_MS = 1000
     // Poll on interval (first poll after INITIAL_POLL_DELAY_MS, then every
     // POLL_INTERVAL_MS) — but only while the tab is visible (#6641).
+    // #7159 — Always clear any existing interval before starting a new one.
+    // The old code checked `if (pollRef.current) return` which prevented
+    // double-start, but the visibility-change handler could call startPolling
+    // after stopPolling in rapid succession, and if a race between the
+    // clearInterval and setInterval occurred, the old handle would be
+    // abandoned (leaked), compounding polling frequency exponentially.
     const startPolling = () => {
-      if (pollRef.current) return
+      if (pollRef.current) {
+        clearInterval(pollRef.current)
+      }
       pollRef.current = setInterval(poll, POLL_INTERVAL_MS)
     }
     const stopPolling = () => {

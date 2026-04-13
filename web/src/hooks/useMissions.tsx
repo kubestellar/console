@@ -2430,12 +2430,31 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         preflightError: undefined } : m
     ))
 
-    const clusterContext = mission.cluster?.split(',')[0]?.trim()
+    // #7145 — Validate ALL clusters in a multi-cluster mission, not just the
+    // first. The cluster field is comma-separated; the old code split on ','
+    // and only checked [0], giving a false recovery state when later clusters
+    // were still failing.
+    const clusterContexts = (mission.cluster || '')
+      .split(',')
+      .map(c => c.trim())
+      .filter(Boolean)
 
-    runPreflightCheck(
-      (args, opts) => kubectlProxy.exec(args, opts),
-      clusterContext,
-    ).then(preflight => {
+    // Run preflight on every cluster context. If any fails, block the mission.
+    const preflightForCluster = clusterContexts.length > 0
+      ? clusterContexts
+      : [undefined] // No cluster specified — run default preflight once
+
+    Promise.all(
+      preflightForCluster.map(ctx =>
+        runPreflightCheck(
+          (args, opts) => kubectlProxy.exec(args, opts),
+          ctx,
+        ).then(result => ({ ctx, result }))
+      )
+    ).then(results => {
+      // Find first failing cluster
+      const failing = results.find(r => !r.result.ok && 'error' in r.result && r.result.error)
+      const preflight = failing ? failing.result : results[0].result
       if (!preflight.ok && 'error' in preflight && preflight.error) {
         // Still failing — re-block
         setMissions(prev => prev.map(m =>
@@ -2642,12 +2661,18 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         if (mId === missionId) pendingRequests.current.delete(reqId)
       }
       lastStreamTimestamp.current.delete(missionId)
+      clearMissionStatusTimers(missionId) // #7144 — clean up pending timers
+      cancelIntents.current.delete(missionId) // #7144 — clear intent after handling
 
+      // #7144/#7153 — Pre-start missions should be marked 'cancelled', not
+      // 'failed'. The user explicitly cancelled; 'failed' misrepresents
+      // intent and corrupts mission history.
       setMissions(prev => prev.map(m =>
         m.id === missionId ? {
           ...m,
-          status: 'failed' as MissionStatus,
+          status: 'cancelled' as MissionStatus,
           currentStep: undefined,
+          preflightError: undefined,
           updatedAt: new Date(),
           messages: [
             ...m.messages,
