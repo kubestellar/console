@@ -106,6 +106,24 @@ func (sm *SettingsManager) Load() error {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
+	// Detect missing boolean fields in older settings files (#7572).
+	// Booleans deserialize to false when absent, which silently disables
+	// features whose default is true. We probe the raw JSON to distinguish
+	// "explicitly false" from "missing" and restore defaults only for
+	// the latter.
+	var rawSettings struct {
+		Settings json.RawMessage `json:"settings"`
+	}
+	var rawPredictions map[string]json.RawMessage
+	if json.Unmarshal(data, &rawSettings) == nil && rawSettings.Settings != nil {
+		var inner map[string]json.RawMessage
+		if json.Unmarshal(rawSettings.Settings, &inner) == nil {
+			if pRaw, ok := inner["predictions"]; ok {
+				_ = json.Unmarshal(pRaw, &rawPredictions)
+			}
+		}
+	}
+
 	// Merge with defaults for forward compatibility (new fields get defaults).
 	// Covers all nested structures so older settings files don't zero-out
 	// intended defaults (#7370).
@@ -118,6 +136,10 @@ func (sm *SettingsManager) Load() error {
 	}
 	if sf.Settings.Widget.SelectedWidget == "" {
 		sf.Settings.Widget.SelectedWidget = defaults.Settings.Widget.SelectedWidget
+	}
+	// Backfill boolean fields that default to true when absent from older files (#7572).
+	if _, found := rawPredictions["aiEnabled"]; !found {
+		sf.Settings.Predictions.AIEnabled = defaults.Settings.Predictions.AIEnabled
 	}
 	// Prediction defaults — backfill zero-valued nested fields
 	if sf.Settings.Predictions.Interval == 0 {
@@ -224,6 +246,8 @@ func (sm *SettingsManager) GetAll() (*AllSettings, error) {
 		Accessibility:       sm.settings.Settings.Accessibility,
 		Profile:             sm.settings.Settings.Profile,
 		Widget:              sm.settings.Settings.Widget,
+		AutoUpdateEnabled:   sm.settings.Settings.AutoUpdateEnabled,
+		AutoUpdateChannel:   sm.settings.Settings.AutoUpdateChannel,
 		APIKeys:             make(map[string]APIKeyEntry),
 		FeedbackGitHubToken: "",
 		Notifications:       NotificationSecrets{},
@@ -305,6 +329,8 @@ func (sm *SettingsManager) SaveAll(all *AllSettings) error {
 	sm.settings.Settings.Accessibility = all.Accessibility
 	sm.settings.Settings.Profile = all.Profile
 	sm.settings.Settings.Widget = all.Widget
+	sm.settings.Settings.AutoUpdateEnabled = all.AutoUpdateEnabled
+	sm.settings.Settings.AutoUpdateChannel = all.AutoUpdateChannel
 
 	// Encrypt API keys (only if non-empty)
 	if len(all.APIKeys) > 0 {

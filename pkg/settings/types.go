@@ -26,6 +26,10 @@ type PlaintextSettings struct {
 	Accessibility AccessibilitySettings `json:"accessibility"`
 	Profile       ProfileSettings       `json:"profile"`
 	Widget        WidgetSettings        `json:"widget"`
+
+	// Auto-update configuration — persisted so user changes survive restarts (#7571).
+	AutoUpdateEnabled bool   `json:"autoUpdateEnabled"`
+	AutoUpdateChannel string `json:"autoUpdateChannel"`
 }
 
 // PredictionSettings mirrors the frontend PredictionSettings type

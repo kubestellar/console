@@ -209,10 +209,20 @@ func (h *CardProxyHandler) Proxy(c *fiber.Ctx) error {
 	// Log successful proxy requests for audit trail
 	slog.Info("[CardProxy] proxied request", "clientIP", c.IP(), "host", host, "status", resp.StatusCode, "bytes", len(body))
 
-	// Forward Content-Type
-	if ct := resp.Header.Get("Content-Type"); ct != "" {
-		c.Set("Content-Type", ct)
+	// Sanitize Content-Type to prevent reflected XSS (#7573).
+	// If the upstream returns HTML/XML/SVG, override to application/octet-stream
+	// so the browser never interprets attacker-controlled markup under our origin.
+	ct := resp.Header.Get("Content-Type")
+	if ct != "" {
+		ctLower := strings.ToLower(ct)
+		if strings.Contains(ctLower, "html") || strings.Contains(ctLower, "xml") || strings.Contains(ctLower, "svg") || strings.Contains(ctLower, "javascript") {
+			c.Set("Content-Type", "application/octet-stream")
+		} else {
+			c.Set("Content-Type", ct)
+		}
 	}
+	// Prevent MIME sniffing to block browsers from guessing a dangerous content type.
+	c.Set("X-Content-Type-Options", "nosniff")
 
 	// Forward CORS-safe headers that cards might need
 	for _, header := range []string{

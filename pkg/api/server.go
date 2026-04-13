@@ -373,15 +373,17 @@ func (s *Server) setupMiddleware() {
 	// Recovery middleware
 	s.app.Use(recover.New())
 
-	// Gzip/Brotli compression for API responses only — static assets are pre-compressed at build time
+	// Gzip/Brotli compression for API responses only — static assets are pre-compressed at build time.
+	// The handler is created once and reused across requests (#7575).
+	compressHandler := compress.New(compress.Config{
+		Level: compress.LevelBestCompression,
+	})
 	s.app.Use(func(c *fiber.Ctx) error {
 		p := c.Path()
 		if strings.HasSuffix(p, ".js") || strings.HasSuffix(p, ".css") || strings.HasSuffix(p, ".wasm") || strings.HasSuffix(p, ".json") || strings.HasSuffix(p, ".svg") || strings.HasSuffix(p, ".woff2") {
 			return c.Next() // skip compress middleware — served pre-compressed with Content-Length
 		}
-		return compress.New(compress.Config{
-			Level: compress.LevelBestCompression,
-		})(c)
+		return compressHandler(c)
 	})
 
 	// Logger
