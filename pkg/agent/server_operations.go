@@ -826,7 +826,7 @@ func (s *Server) handlePredictionsFeedback(w http.ResponseWriter, r *http.Reques
 	}
 
 	var req PredictionFeedbackRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := json.NewDecoder(io.LimitReader(r.Body, maxRequestBodyBytes)).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
@@ -983,7 +983,7 @@ func (s *Server) handleDeviceAlertsClear(w http.ResponseWriter, r *http.Request)
 	var req struct {
 		AlertID string `json:"alertId"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := json.NewDecoder(io.LimitReader(r.Body, maxRequestBodyBytes)).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
@@ -1092,9 +1092,17 @@ func (s *Server) sendNativeNotification(alerts []DeviceAlert) {
 			}
 		}
 
-		// Fallback: osascript (no click-to-open support on macOS)
+		// Fallback: osascript (no click-to-open support on macOS).
+		// Sanitize inputs to prevent AppleScript injection via crafted
+		// Kubernetes labels (#7238). Backslash and double-quote are the
+		// only characters that can escape an AppleScript string literal.
+		sanitize := func(s string) string {
+			s = strings.ReplaceAll(s, `\`, `\\`)
+			s = strings.ReplaceAll(s, `"`, `\"`)
+			return s
+		}
 		script := fmt.Sprintf(`display notification "%s" with title "%s" sound name "Glass"`,
-			message, title)
+			sanitize(message), sanitize(title))
 		cmd := exec.Command("osascript", "-e", script)
 		if err := cmd.Run(); err != nil {
 			slog.Error("[DeviceTracker] failed to send notification", "error", err)

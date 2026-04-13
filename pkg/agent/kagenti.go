@@ -134,6 +134,7 @@ func (s *Server) handleKagentiAgents(w http.ResponseWriter, r *http.Request) {
 	cluster := r.URL.Query().Get("cluster")
 	namespace := r.URL.Query().Get("namespace")
 	if cluster == "" {
+		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]any{"agents": []any{}, "error": "cluster parameter required"})
 		return
 	}
@@ -144,6 +145,7 @@ func (s *Server) handleKagentiAgents(w http.ResponseWriter, r *http.Request) {
 	dynClient, err := s.k8sClient.GetDynamicClient(cluster)
 	if err != nil {
 		slog.Info("error fetching agents", "error", err)
+		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]any{"agents": []any{}, "error": "internal server error"})
 		return
 	}
@@ -216,6 +218,7 @@ func (s *Server) handleKagentiBuilds(w http.ResponseWriter, r *http.Request) {
 	cluster := r.URL.Query().Get("cluster")
 	namespace := r.URL.Query().Get("namespace")
 	if cluster == "" {
+		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]any{"builds": []any{}, "error": "cluster parameter required"})
 		return
 	}
@@ -226,6 +229,7 @@ func (s *Server) handleKagentiBuilds(w http.ResponseWriter, r *http.Request) {
 	dynClient, err := s.k8sClient.GetDynamicClient(cluster)
 	if err != nil {
 		slog.Info("error fetching builds", "error", err)
+		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]any{"builds": []any{}, "error": "internal server error"})
 		return
 	}
@@ -293,6 +297,7 @@ func (s *Server) handleKagentiCards(w http.ResponseWriter, r *http.Request) {
 	cluster := r.URL.Query().Get("cluster")
 	namespace := r.URL.Query().Get("namespace")
 	if cluster == "" {
+		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]any{"cards": []any{}, "error": "cluster parameter required"})
 		return
 	}
@@ -303,6 +308,7 @@ func (s *Server) handleKagentiCards(w http.ResponseWriter, r *http.Request) {
 	dynClient, err := s.k8sClient.GetDynamicClient(cluster)
 	if err != nil {
 		slog.Info("error fetching cards", "error", err)
+		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]any{"cards": []any{}, "error": "internal server error"})
 		return
 	}
@@ -368,6 +374,7 @@ func (s *Server) handleKagentiTools(w http.ResponseWriter, r *http.Request) {
 	cluster := r.URL.Query().Get("cluster")
 	namespace := r.URL.Query().Get("namespace")
 	if cluster == "" {
+		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]any{"tools": []any{}, "error": "cluster parameter required"})
 		return
 	}
@@ -378,6 +385,7 @@ func (s *Server) handleKagentiTools(w http.ResponseWriter, r *http.Request) {
 	dynClient, err := s.k8sClient.GetDynamicClient(cluster)
 	if err != nil {
 		slog.Info("error fetching tools", "error", err)
+		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]any{"tools": []any{}, "error": "internal server error"})
 		return
 	}
@@ -440,6 +448,7 @@ func (s *Server) handleKagentiSummary(w http.ResponseWriter, r *http.Request) {
 
 	cluster := r.URL.Query().Get("cluster")
 	if cluster == "" {
+		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]any{"error": "cluster parameter required"})
 		return
 	}
@@ -450,6 +459,7 @@ func (s *Server) handleKagentiSummary(w http.ResponseWriter, r *http.Request) {
 	dynClient, err := s.k8sClient.GetDynamicClient(cluster)
 	if err != nil {
 		slog.Info("error fetching kagenti summary", "error", err)
+		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]any{
 			"agentCount": 0, "readyAgents": 0, "buildCount": 0,
 			"activeBuilds": 0, "toolCount": 0, "cardCount": 0,

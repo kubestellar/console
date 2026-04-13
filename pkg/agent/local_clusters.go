@@ -307,8 +307,30 @@ func (m *LocalClusterManager) listMinikubeClusters() []LocalCluster {
 	return clusters
 }
 
+// dns1123LabelRegexp matches valid DNS-1123 labels (RFC 1123 section 2.1).
+// Max 63 chars, lowercase alphanumeric, may contain hyphens but not at
+// start or end.
+var dns1123LabelRegexp = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$`)
+
+// validateClusterName ensures the name is a valid DNS-1123 label before
+// any exec call runs, preventing orphaned Docker containers from partial
+// creates and flag-injection edge cases (#7249).
+func validateClusterName(name string) error {
+	if name == "" {
+		return fmt.Errorf("cluster name must not be empty")
+	}
+	if !dns1123LabelRegexp.MatchString(name) {
+		return fmt.Errorf("cluster name %q is not a valid DNS-1123 label (lowercase alphanumeric and hyphens, 1-63 chars, no leading/trailing hyphens)", name)
+	}
+	return nil
+}
+
 // CreateCluster creates a new local cluster with phased progress broadcasting
 func (m *LocalClusterManager) CreateCluster(tool, name string) error {
+	if err := validateClusterName(name); err != nil {
+		return err
+	}
+
 	// Phase 1: Validating prerequisites
 	m.broadcastProgress(tool, name, "validating", "Checking prerequisites...", progressValidating)
 
@@ -366,6 +388,9 @@ func (m *LocalClusterManager) createMinikubeCluster(name string) error {
 
 // StartCluster starts a stopped local cluster with phased progress broadcasting
 func (m *LocalClusterManager) StartCluster(tool, name string) error {
+	if err := validateClusterName(name); err != nil {
+		return err
+	}
 	m.broadcastProgress(tool, name, "validating", fmt.Sprintf("Preparing to start cluster '%s'...", name), progressValidating)
 
 	m.broadcastProgress(tool, name, "starting", fmt.Sprintf("Starting %s cluster '%s'...", tool, name), progressCreating)
@@ -428,6 +453,9 @@ func (m *LocalClusterManager) startMinikubeCluster(name string) error {
 
 // StopCluster stops a running local cluster with phased progress broadcasting
 func (m *LocalClusterManager) StopCluster(tool, name string) error {
+	if err := validateClusterName(name); err != nil {
+		return err
+	}
 	m.broadcastProgress(tool, name, "validating", fmt.Sprintf("Preparing to stop cluster '%s'...", name), progressValidating)
 
 	m.broadcastProgress(tool, name, "stopping", fmt.Sprintf("Stopping %s cluster '%s'...", tool, name), progressCreating)
@@ -490,6 +518,9 @@ func (m *LocalClusterManager) stopMinikubeCluster(name string) error {
 
 // DeleteCluster deletes a local cluster with phased progress broadcasting
 func (m *LocalClusterManager) DeleteCluster(tool, name string) error {
+	if err := validateClusterName(name); err != nil {
+		return err
+	}
 	// Phase 1: Validating
 	m.broadcastProgress(tool, name, "validating", fmt.Sprintf("Preparing to delete cluster '%s'...", name), progressValidating)
 

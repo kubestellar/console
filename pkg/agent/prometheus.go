@@ -1,6 +1,8 @@
 package agent
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -162,7 +164,10 @@ func (s *Server) handlePrometheusQuery(w http.ResponseWriter, r *http.Request) {
 // keyed by the API server Host URL. Clients are created once and reused to
 // avoid per-query TLS handshakes and connection leaks (#7024).
 func getOrCreatePromClient(config *rest.Config) (*http.Client, error) {
-	key := config.Host
+	// Key on a hash of identity-bearing fields so two kubeconfigs pointing
+	// at the same Host but carrying different credentials get distinct
+	// cached clients (#7248).
+	key := promCacheKey(config)
 
 	promClientCache.RLock()
 	if promClientCache.clients != nil {
@@ -195,4 +200,21 @@ func getOrCreatePromClient(config *rest.Config) (*http.Client, error) {
 	}
 	promClientCache.clients[key] = client
 	return client, nil
+}
+
+// promCacheKey builds a stable cache key from identity-bearing fields of a
+// rest.Config. Using only Host would collide when two kubeconfigs point at
+// the same API server with different credentials (#7248).
+func promCacheKey(config *rest.Config) string {
+	h := sha256.New()
+	h.Write([]byte(config.Host))
+	h.Write([]byte{0}) // separator
+	h.Write([]byte(config.BearerToken))
+	h.Write([]byte{0})
+	h.Write(config.TLSClientConfig.CertData)
+	h.Write([]byte{0})
+	h.Write(config.TLSClientConfig.CAData)
+	h.Write([]byte{0})
+	h.Write([]byte(config.Impersonate.UserName))
+	return config.Host + "/" + hex.EncodeToString(h.Sum(nil))[:16]
 }
