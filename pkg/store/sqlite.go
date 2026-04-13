@@ -246,7 +246,7 @@ func (s *SQLiteStore) migrate() error {
 		email TEXT,
 		slack_id TEXT,
 		avatar_url TEXT,
-		role TEXT DEFAULT 'viewer',
+		role TEXT DEFAULT 'viewer' CHECK(role IN ('admin', 'editor', 'viewer')),
 		onboarded INTEGER DEFAULT 0,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 		last_login DATETIME
@@ -285,7 +285,7 @@ func (s *SQLiteStore) migrate() error {
 	CREATE TABLE IF NOT EXISTS card_history (
 		id TEXT PRIMARY KEY,
 		user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-		original_card_id TEXT,
+		original_card_id TEXT REFERENCES cards(id) ON DELETE SET NULL,
 		card_type TEXT NOT NULL,
 		config TEXT,
 		swapped_out_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -296,7 +296,7 @@ func (s *SQLiteStore) migrate() error {
 		id TEXT PRIMARY KEY,
 		user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
 		event_type TEXT NOT NULL,
-		card_id TEXT,
+		card_id TEXT REFERENCES cards(id) ON DELETE SET NULL,
 		metadata TEXT,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);
@@ -309,14 +309,18 @@ func (s *SQLiteStore) migrate() error {
 		new_card_config TEXT,
 		reason TEXT,
 		swap_at DATETIME NOT NULL,
-		status TEXT DEFAULT 'pending',
+		status TEXT DEFAULT 'pending' CHECK(status IN ('pending', 'snoozed', 'completed', 'cancelled')),
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);
 
 	CREATE INDEX IF NOT EXISTS idx_dashboards_user ON dashboards(user_id);
 	CREATE INDEX IF NOT EXISTS idx_cards_dashboard ON cards(dashboard_id);
 	CREATE INDEX IF NOT EXISTS idx_events_user_time ON user_events(user_id, created_at);
-	CREATE INDEX IF NOT EXISTS idx_pending_swaps_due ON pending_swaps(swap_at, status);
+	-- #7716: index card_history by user_id for fast per-user history lookups
+	CREATE INDEX IF NOT EXISTS idx_card_history_user_id ON card_history(user_id, swapped_out_at DESC);
+	-- #7718: column order (status, swap_at) matches the query pattern
+	-- WHERE status = 'pending' AND swap_at <= ?
+	CREATE INDEX IF NOT EXISTS idx_pending_swaps_status_due ON pending_swaps(status, swap_at);
 
 	-- Feature requests from users (bugs/features submitted via console)
 	CREATE TABLE IF NOT EXISTS feature_requests (
@@ -338,13 +342,15 @@ func (s *SQLiteStore) migrate() error {
 	);
 
 	-- PR feedback from users (thumbs up/down on AI-generated fixes)
+	-- #7724: UNIQUE(feature_request_id, user_id) prevents duplicate votes
 	CREATE TABLE IF NOT EXISTS pr_feedback (
 		id TEXT PRIMARY KEY,
 		feature_request_id TEXT NOT NULL REFERENCES feature_requests(id) ON DELETE CASCADE,
 		user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
 		feedback_type TEXT NOT NULL,
 		comment TEXT,
-		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		UNIQUE(feature_request_id, user_id)
 	);
 
 	-- User notifications for feature request status updates
@@ -362,10 +368,19 @@ func (s *SQLiteStore) migrate() error {
 
 	CREATE INDEX IF NOT EXISTS idx_feature_requests_user ON feature_requests(user_id);
 	CREATE INDEX IF NOT EXISTS idx_feature_requests_status ON feature_requests(status);
+	-- #7717: indexes for webhook processing lookups by issue/PR number
+	CREATE INDEX IF NOT EXISTS idx_feature_requests_issue ON feature_requests(github_issue_number);
+	CREATE INDEX IF NOT EXISTS idx_feature_requests_pr ON feature_requests(pr_number);
 	CREATE INDEX IF NOT EXISTS idx_pr_feedback_request ON pr_feedback(feature_request_id);
+	-- #7724: unique index for one feedback per user per feature request
+	CREATE UNIQUE INDEX IF NOT EXISTS idx_pr_feedback_user_unique ON pr_feedback(feature_request_id, user_id);
 	CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, read);
 
 	-- GPU reservations
+	-- #7719: start_date is TEXT (not DATETIME) — values must be ISO 8601
+	-- date strings (e.g. "2024-03-15") for compatibility with the reservation
+	-- calendar UI which stores date-only values. Changing to DATETIME would
+	-- break existing rows.
 	CREATE TABLE IF NOT EXISTS gpu_reservations (
 		id TEXT PRIMARY KEY,
 		user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -374,12 +389,12 @@ func (s *SQLiteStore) migrate() error {
 		description TEXT DEFAULT '',
 		cluster TEXT NOT NULL,
 		namespace TEXT NOT NULL,
-		gpu_count INTEGER NOT NULL,
+		gpu_count INTEGER NOT NULL CHECK(gpu_count > 0),
 		gpu_type TEXT DEFAULT '',
 		start_date TEXT NOT NULL,
 		duration_hours INTEGER DEFAULT 24,
 		notes TEXT DEFAULT '',
-		status TEXT DEFAULT 'pending',
+		status TEXT DEFAULT 'pending' CHECK(status IN ('pending', 'active', 'completed', 'cancelled')),
 		quota_name TEXT DEFAULT '',
 		quota_enforced INTEGER DEFAULT 0,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -474,6 +489,28 @@ func (s *SQLiteStore) migrate() error {
 		// persisted — the column, INSERT, and SELECT all omitted it.
 		"ALTER TABLE notifications ADD COLUMN action_url TEXT NOT NULL DEFAULT ''",
 	}
+	// Index migrations run separately — they use CREATE INDEX IF NOT EXISTS
+	// which is idempotent, so "already exists" errors never happen. These are
+	// kept outside the column-migration loop because that loop has special
+	// handling for "duplicate column name" errors that is not needed here.
+	//
+	// #7716: card_history(user_id) for per-user history lookups
+	// #7717: feature_requests(github_issue_number) and (pr_number) for webhooks
+	// #7718: replace (swap_at, status) with (status, swap_at) to match query
+	// #7724: unique index on pr_feedback(feature_request_id, user_id)
+	indexMigrations := []string{
+		"CREATE INDEX IF NOT EXISTS idx_card_history_user_id ON card_history(user_id, swapped_out_at DESC)",
+		"CREATE INDEX IF NOT EXISTS idx_pending_swaps_status_due ON pending_swaps(status, swap_at)",
+		"CREATE INDEX IF NOT EXISTS idx_feature_requests_issue ON feature_requests(github_issue_number)",
+		"CREATE INDEX IF NOT EXISTS idx_feature_requests_pr ON feature_requests(pr_number)",
+		"CREATE UNIQUE INDEX IF NOT EXISTS idx_pr_feedback_user_unique ON pr_feedback(feature_request_id, user_id)",
+	}
+	// Drop the old wrong-order index after the replacement is created.
+	// DROP INDEX IF EXISTS is idempotent — safe on fresh installs where the
+	// old index never existed.
+	indexDrops := []string{
+		"DROP INDEX IF EXISTS idx_pending_swaps_due",
+	}
 	for i, migration := range migrations {
 		if _, err := s.db.Exec(migration); err != nil {
 			// #6291 / #6614: distinguish "column already exists"
@@ -496,7 +533,23 @@ func (s *SQLiteStore) migrate() error {
 		}
 		slog.Debug("[SQLite] migration applied", "migration", migration, "version", i+1)
 	}
-	slog.Info("[SQLite] schema migrations complete", "total_migrations", len(migrations))
+	slog.Info("[SQLite] column migrations complete", "total_migrations", len(migrations))
+
+	// Apply index migrations (idempotent via IF NOT EXISTS / IF EXISTS).
+	for _, stmt := range indexMigrations {
+		if _, err := s.db.Exec(stmt); err != nil {
+			slog.Error("[SQLite] index migration failed", "statement", stmt, "error", err)
+			return fmt.Errorf("index migration %q failed: %w", stmt, err)
+		}
+	}
+	for _, stmt := range indexDrops {
+		if _, err := s.db.Exec(stmt); err != nil {
+			slog.Error("[SQLite] index drop failed", "statement", stmt, "error", err)
+			return fmt.Errorf("index drop %q failed: %w", stmt, err)
+		}
+	}
+	slog.Info("[SQLite] index migrations complete",
+		"created", len(indexMigrations), "dropped", len(indexDrops))
 
 	return nil
 }
