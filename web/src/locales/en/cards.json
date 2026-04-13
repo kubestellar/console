@@ -2962,7 +2962,9 @@
     "noClusters": "No clusters available",
     "footer": "{{count}} resources \u2022 controller v{{version}} \u2022 {{scope}}",
     "nClustersScope": "{{count}} clusters",
-    "docs": "Docs"
+    "docs": "Docs",
+    "issueName": "{{category}} {{status}}",
+    "issueMessage": "OpenKruise {{category}} {{name}} is in {{status}} state"
   },
   "ovnStatus": {
     "fetchError": "Failed to fetch OVN-Kubernetes status",

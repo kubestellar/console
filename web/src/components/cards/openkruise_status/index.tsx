@@ -91,6 +91,36 @@ const STATUS_ORDER: Record<string, number> = {
   healthy: 5,
 }
 
+// Static Tailwind class maps so the JIT can statically detect the classes.
+const ICON_COLOR_CLASS: Record<string, string> = {
+  green: 'text-green-400',
+  red: 'text-red-400',
+  blue: 'text-blue-400',
+  yellow: 'text-yellow-400',
+  gray: 'text-gray-400',
+  orange: 'text-orange-400',
+}
+
+const BADGE_COLOR_CLASS: Record<string, string> = {
+  green: 'bg-green-500/20 text-green-400',
+  red: 'bg-red-500/20 text-red-400',
+  blue: 'bg-blue-500/20 text-blue-400',
+  yellow: 'bg-yellow-500/20 text-yellow-400',
+  gray: 'bg-gray-500/20 text-gray-400',
+  orange: 'bg-orange-500/20 text-orange-400',
+}
+
+const EMPTY_OPENKRUISE_DATA: OpenKruiseDemoData = {
+  cloneSets: [],
+  advancedStatefulSets: [],
+  advancedDaemonSets: [],
+  sidecarSets: [],
+  broadcastJobs: [],
+  advancedCronJobs: [],
+  controllerVersion: '',
+  totalInjectedPods: 0,
+}
+
 const SORT_OPTIONS_KEYS: ReadonlyArray<{
   value: SortByOption
   labelKey: SortTranslationKey
@@ -121,10 +151,12 @@ export function OpenKruiseStatus({ config: _config }: OpenKruiseStatusProps) {
     '' as CategoryOption,
   )
 
-  // Data source — demo data until a real OpenKruise data hook exists
-  // (mirrors the rationale used by KubeflowStatus).
+  // Data source — real OpenKruise hook is not implemented yet, so non-demo
+  // environments get an empty dataset (which flows into the empty state).
   const isDemoData = isDemoMode
-  const rawData: OpenKruiseDemoData = OPENKRUISE_DEMO_DATA
+  const rawData: OpenKruiseDemoData = isDemoData
+    ? OPENKRUISE_DEMO_DATA
+    : EMPTY_OPENKRUISE_DATA
 
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: clustersLoading,
@@ -493,6 +525,7 @@ export function OpenKruiseStatus({ config: _config }: OpenKruiseStatusProps) {
           }
           className="w-full px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground"
           title={t('openkruiseStatus.filterByResource')}
+          aria-label={t('openkruiseStatus.filterByResource')}
         >
           <option value="">{t('openkruiseStatus.allResources')}</option>
           <option value="cloneset">
@@ -615,7 +648,7 @@ export function OpenKruiseStatus({ config: _config }: OpenKruiseStatusProps) {
                     <div className="flex items-center gap-2">
                       <span title={`${t('common:common.status')}: ${item.status}`}>
                         <StatusIcon
-                          className={`w-4 h-4 text-${color}-400`}
+                          className={`w-4 h-4 ${ICON_COLOR_CLASS[color] ?? ICON_COLOR_CLASS.orange}`}
                         />
                       </span>
                       <span
@@ -637,14 +670,23 @@ export function OpenKruiseStatus({ config: _config }: OpenKruiseStatusProps) {
                           }}
                           issues={[
                             {
-                              name: `${getCategoryLabel(item.category)} ${item.status}`,
-                              message: `OpenKruise ${getCategoryLabel(item.category).toLowerCase()} ${item.name} is in ${item.status} state`,
+                              name: t('openkruiseStatus.issueName', {
+                                category: getCategoryLabel(item.category),
+                                status: item.status,
+                              }),
+                              message: t('openkruiseStatus.issueMessage', {
+                                category: getCategoryLabel(
+                                  item.category,
+                                ).toLowerCase(),
+                                name: item.name,
+                                status: item.status,
+                              }),
                             },
                           ]}
                         />
                       )}
                       <span
-                        className={`text-xs px-1.5 py-0.5 rounded bg-${color}-500/20 text-${color}-400`}
+                        className={`text-xs px-1.5 py-0.5 rounded ${BADGE_COLOR_CLASS[color] ?? BADGE_COLOR_CLASS.orange}`}
                         title={`${t('common:common.status')}: ${item.status}`}
                       >
                         {item.status}
@@ -712,7 +754,10 @@ export function OpenKruiseStatus({ config: _config }: OpenKruiseStatusProps) {
                 localClusterFilter.length === 1
                   ? localClusterFilter[0]
                   : t('openkruiseStatus.nClustersScope', {
-                      count: availableClusters.length,
+                      count:
+                        localClusterFilter.length > 1
+                          ? localClusterFilter.length
+                          : availableClusters.length,
                     }),
             })}
             <a
