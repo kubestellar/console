@@ -32,6 +32,58 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # ── Auth contract smoke test ──────────────────────────────────────
+  # Verifies /auth/refresh returns the "token" and "onboarded" fields
+  # that AuthCallback.tsx depends on. Catches regressions like commit
+  # 25e464fa which removed the token field and broke login for 24h.
+  auth-contract:
+    if: github.repository == 'kubestellar/console'
+    name: Auth Login Contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build backend
+        run: go build -o console-bin ./cmd/console
+
+      - name: Test /auth/refresh contract
+        run: |
+          JWT_SECRET="nightly-smoke-$(openssl rand -hex 16)" \
+          DEV_MODE=true BACKEND_PORT=8081 ./console-bin &
+          PID=$!
+          for i in $(seq 1 15); do
+            curl -sf http://localhost:8081/health > /dev/null 2>&1 && break
+            sleep 1
+          done
+          LOGIN_RESP=$(curl -sS --max-time 5 http://localhost:8081/auth/dev-login)
+          TOKEN=$(echo "$LOGIN_RESP" | jq -r '.token // empty')
+          if [ -z "$TOKEN" ]; then
+            echo "::error::Could not get dev-user token"
+            kill $PID 2>/dev/null; exit 1
+          fi
+          REFRESH_RESP=$(curl -sS --max-time 5 -X POST \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "X-CSRF-Token: nightly" \
+            http://localhost:8081/auth/refresh)
+          HAS_TOKEN=$(echo "$REFRESH_RESP" | jq -r '.token // empty')
+          if [ -z "$HAS_TOKEN" ]; then
+            echo "::error::CONTRACT VIOLATION: /auth/refresh missing 'token' — login is BROKEN"
+            kill $PID 2>/dev/null; exit 1
+          fi
+          HAS_ONBOARDED=$(echo "$REFRESH_RESP" | jq 'has("onboarded")')
+          if [ "$HAS_ONBOARDED" != "true" ]; then
+            echo "::error::CONTRACT VIOLATION: /auth/refresh missing 'onboarded'"
+            kill $PID 2>/dev/null; exit 1
+          fi
+          echo "Auth contract OK"
+          kill $PID 2>/dev/null || true
+
+  # ── Dashboard health checks ──────────────────────────────────────
   health-check:
     if: github.repository == 'kubestellar/console'
     name: Dashboard Health Check
