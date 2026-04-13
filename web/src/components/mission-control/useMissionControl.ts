@@ -206,6 +206,13 @@ function loadPersistedState(): Partial<MissionControlState> | null {
           `[MissionControl] issue 6664 — persisted schema version ${entry.schemaVersion} ` +
           `does not match current ${PERSISTED_SCHEMA_VERSION}; clearing.`,
         )
+        // #7093 — Surface the schema-mismatch reset to the user via the
+        // same sessionStorage banner mechanism used for quota errors. Without
+        // this, the user sees Phase 1 with no explanation after a frontend
+        // feature rollout that bumps the schema version.
+        try {
+          sessionStorage.setItem(QUOTA_BANNER_KEY, 'schema_mismatch')
+        } catch { /* sessionStorage may also be unavailable */ }
         try { localStorage.removeItem(STORAGE_KEY) } catch { /* ignore */ }
         if (isDemoMode()) return getDemoMissionControlState()
         return null
@@ -542,6 +549,20 @@ export function useMissionControl() {
     persistState(debouncedState)
   }, [debouncedState])
 
+  // #7092 — Flush the latest state synchronously on tab close so the
+  // debounce window doesn't lose the final edit. `stateRef` (defined below,
+  // line ~901) always holds the latest state; we reference it here via the
+  // effect closure. The listener is registered once and cleaned up on unmount.
+  const stateRefForFlush = useRef(state)
+  useEffect(() => { stateRefForFlush.current = state }, [state])
+  useEffect(() => {
+    const onBeforeUnload = () => {
+      persistState(stateRefForFlush.current)
+    }
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => window.removeEventListener('beforeunload', onBeforeUnload)
+  }, [])
+
   // #6403 — Reconcile persisted cluster references against the current
   // cluster list. Runs once after clusters have actually finished loading,
   // NOT on the initial `clusters: []` render that useClusters() emits while
@@ -873,7 +894,15 @@ export function useMissionControl() {
   }
 
   const setTargetClusters = (targetClusters: string[]) => {
-    setState((prev) => ({ ...prev, targetClusters }))
+    setState((prev) => {
+      const next = { ...prev, targetClusters }
+      // #7096 — Structural array changes must persist synchronously, not
+      // through the debounce window. Otherwise a rapid setPhase + setTargetClusters
+      // sequence within one debounce window saves phase: assign without the
+      // matching assignments, producing missing state on reload.
+      persistState(next)
+      return next
+    })
   }
 
   // Use refs for the latest state to avoid stale closures in askAIForSuggestions.
@@ -1209,7 +1238,10 @@ Order phases by dependency — prerequisites first. Each phase completes before 
               storageHeadroomPercent: 50,
               overallScore: 50 } })
         }
-        return { ...prev, assignments }
+        const next = { ...prev, assignments }
+        // #7096 — Structural array changes persist synchronously
+        persistState(next)
+        return next
       })
     }
 
@@ -1222,7 +1254,13 @@ Order phases by dependency — prerequisites first. Each phase completes before 
     // response dispatched in Phase 2 must not silently overwrite Phase 3
     // state after the user has advanced.
     bumpUserGeneration()
-    setState((prev) => ({ ...prev, phase }))
+    setState((prev) => {
+      const next = { ...prev, phase }
+      // #7096 — Phase transitions are structural changes that must persist
+      // synchronously (see setTargetClusters comment for rationale).
+      persistState(next)
+      return next
+    })
   }
 
   const setOverlay = (overlay: OverlayMode) => {
@@ -1271,6 +1309,15 @@ Order phases by dependency — prerequisites first. Each phase completes before 
     // Without this, staleReconcileDoneRef stays `true` from the first run and
     // reconciliation is permanently skipped.
     staleReconcileDoneRef.current = false
+    // #7099 — Reset the project-names ref so the reconciliation effect detects
+    // changes on the next wizard run. Without this, a stale string from the
+    // previous mission could match the new project list and skip reconciliation
+    // of valid manual additions.
+    prevProjectNamesRef.current = ''
+    // #7097 — Reset mutation generation counters so late-arriving AI streams
+    // from the previous mission are properly discarded.
+    userMutationGenerationRef.current = 0
+    lastDispatchedGenerationRef.current = 0
     localStorage.removeItem(STORAGE_KEY)
     lastParsedContentRef.current = ''
     setState(makeInitialState())
