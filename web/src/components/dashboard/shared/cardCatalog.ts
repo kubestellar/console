@@ -320,6 +320,7 @@ export const CARD_CATALOG = {
     { type: 'keda_status', title: 'KEDA', description: 'KEDA autoscaler status, scaled object metrics, and trigger queue depths', visualization: 'status' },
     { type: 'kubevela_status', title: 'KubeVela', description: 'KubeVela application delivery, component status, and workflow progress', visualization: 'status' },
     { type: 'karmada_status', title: 'Karmada', description: 'Karmada multi-cluster resource propagation status, member clusters, and policy health', visualization: 'status' },
+    { type: 'openkruise_status', title: 'OpenKruise', description: 'OpenKruise advanced workload status (CloneSet, Advanced StatefulSet/DaemonSet) and SidecarSet injection across clusters', visualization: 'status' },
     { type: 'kuberay_fleet', title: 'KubeRay Fleet', description: 'KubeRay fleet monitoring — RayCluster, RayService, and RayJob status across all clusters with GPU allocation tracking', visualization: 'status' },
     { type: 'failover_timeline', title: 'Failover Timeline', description: 'Cross-region failover forensics — Karmada ResourceBinding transitions, cluster outages, and recovery events', visualization: 'timeline' },
     { type: 'trino_gateway', title: 'Trino Gateway', description: 'Trino coordinator/worker fleet status with gateway routing health and per-cluster query metrics', visualization: 'status' },

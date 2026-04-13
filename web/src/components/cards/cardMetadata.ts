@@ -268,6 +268,8 @@ export const CARD_TITLES: Record<string, string> = {
   thanos_status: 'Thanos',
   // OpenFeature feature-flag management
   openfeature_status: 'OpenFeature',
+  // OpenKruise advanced workloads
+  openkruise_status: 'OpenKruise',
 
   // KubeVela application delivery
   kubevela_status: 'KubeVela',
@@ -498,6 +500,8 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   thanos_status: 'Thanos distributed metrics store, compactor, and query health.',
   // OpenFeature feature-flag management
   openfeature_status: 'OpenFeature feature flag provider status and flag evaluation metrics.',
+  // OpenKruise advanced workloads
+  openkruise_status: 'OpenKruise advanced workload status (CloneSet, Advanced StatefulSet/DaemonSet) and SidecarSet injection.',
 
   // Benchmark cards
   nightly_e2e_status: 'Nightly end-to-end test results and pass/fail trends.',

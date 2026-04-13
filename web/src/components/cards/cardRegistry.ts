@@ -255,6 +255,8 @@ const TrinoGateway = safeLazy(() => import('./trino_gateway'), 'TrinoGateway')
 const ThanosStatus = safeLazy(() => import('./thanos_status'), 'ThanosStatus')
 // OpenFeature feature-flag management card
 const OpenFeatureStatus = safeLazy(() => import('./openfeature_status'), 'OpenFeatureStatus')
+// OpenKruise advanced workloads + sidecar injection card
+const OpenKruiseStatus = safeLazy(() => import('./openkruise_status'), 'OpenKruiseStatus')
 
 // Inspektor Gadget cards
 const NetworkTraceCard = safeLazy(() => import('./gadget/NetworkTraceCard'), 'NetworkTraceCard')
@@ -573,6 +575,8 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   thanos_status: ThanosStatus,
   // OpenFeature feature-flag management
   openfeature_status: OpenFeatureStatus,
+  // OpenKruise advanced workloads + sidecar injection
+  openkruise_status: OpenKruiseStatus,
 
   // Inspektor Gadget cards
   network_trace: NetworkTraceCard,
@@ -977,6 +981,8 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   thanos_status: () => import('./thanos_status'),
   // OpenFeature feature-flag management
   openfeature_status: () => import('./openfeature_status'),
+  // OpenKruise advanced workloads + sidecar injection
+  openkruise_status: () => import('./openkruise_status'),
   // Flatcar Container Linux
   flatcar_status: () => import('./flatcar_status'),
   // CoreDNS
@@ -1312,6 +1318,8 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   thanos_status: 6,
   // OpenFeature feature-flag management
   openfeature_status: 6,
+  // OpenKruise advanced workloads + sidecar injection
+  openkruise_status: 6,
 
   // Multi-cluster insights cards
   cross_cluster_event_correlation: 6,
