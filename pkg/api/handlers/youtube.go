@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"golang.org/x/sync/singleflight"
 )
 
 // YouTubePlaylistHandler fetches videos from a YouTube playlist RSS feed
@@ -24,7 +25,15 @@ const (
 
 	// playlistFetchTimeout is the HTTP timeout for fetching the RSS feed.
 	playlistFetchTimeout = 10 * time.Second
+
+	// maxYouTubeResponseBytes caps external YouTube/RSS response reads to
+	// prevent memory exhaustion from unexpectedly large responses. #7064.
+	maxYouTubeResponseBytes = 5 * 1024 * 1024 // 5 MB
 )
+
+// youtubeHTTPClient is a package-level shared HTTP client for YouTube
+// fetches so TCP connections are reused across requests. #7065.
+var youtubeHTTPClient = &http.Client{Timeout: playlistFetchTimeout}
 
 // PlaylistVideo is the JSON shape returned to the frontend.
 type PlaylistVideo struct {
@@ -57,11 +66,15 @@ type playlistCache struct {
 
 var cache = &playlistCache{}
 
+// playlistSingleflight coalesces concurrent cold-cache fetches into a
+// single external API call to prevent cache stampede. #7066.
+var playlistSingleflight singleflight.Group
+
 func fetchPlaylistFromYouTube() ([]PlaylistVideo, error) {
 	url := fmt.Sprintf("https://www.youtube.com/feeds/videos.xml?playlist_id=%s", playlistID)
 
-	client := &http.Client{Timeout: playlistFetchTimeout}
-	resp, err := client.Get(url)
+	// #7065: reuse shared HTTP client for connection pooling.
+	resp, err := youtubeHTTPClient.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch playlist feed: %w", err)
 	}
@@ -71,7 +84,8 @@ func fetchPlaylistFromYouTube() ([]PlaylistVideo, error) {
 		return nil, fmt.Errorf("YouTube returned status %d", resp.StatusCode)
 	}
 
-	body, err := io.ReadAll(resp.Body)
+	// #7064: limit response body to prevent memory exhaustion.
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxYouTubeResponseBytes))
 	if err != nil {
 		return nil, fmt.Errorf("failed to read feed body: %w", err)
 	}
@@ -103,25 +117,42 @@ func getPlaylistVideos() ([]PlaylistVideo, error) {
 	}
 	cache.mu.RUnlock()
 
-	videos, err := fetchPlaylistFromYouTube()
-	if err != nil {
-		// Return stale cache if available
+	// #7066: use singleflight to coalesce concurrent cold-cache fetches.
+	result, err, _ := playlistSingleflight.Do("playlist", func() (interface{}, error) {
+		// Re-check cache inside singleflight — another caller may have
+		// already populated it.
 		cache.mu.RLock()
-		if cache.videos != nil {
-			stale := cache.videos
+		if time.Since(cache.fetchedAt) < playlistCacheTTL && cache.videos != nil {
+			videos := cache.videos
 			cache.mu.RUnlock()
-			return stale, nil
+			return videos, nil
 		}
 		cache.mu.RUnlock()
+
+		videos, fetchErr := fetchPlaylistFromYouTube()
+		if fetchErr != nil {
+			// Return stale cache if available
+			cache.mu.RLock()
+			if cache.videos != nil {
+				stale := cache.videos
+				cache.mu.RUnlock()
+				return stale, nil
+			}
+			cache.mu.RUnlock()
+			return nil, fetchErr
+		}
+
+		cache.mu.Lock()
+		cache.videos = videos
+		cache.fetchedAt = time.Now()
+		cache.mu.Unlock()
+
+		return videos, nil
+	})
+	if err != nil {
 		return nil, err
 	}
-
-	cache.mu.Lock()
-	cache.videos = videos
-	cache.fetchedAt = time.Now()
-	cache.mu.Unlock()
-
-	return videos, nil
+	return result.([]PlaylistVideo), nil
 }
 
 // YouTubePlaylistHandler returns the videos in the KubeStellar Console
@@ -173,8 +204,8 @@ func YouTubeThumbnailProxy(c *fiber.Ctx) error {
 
 	thumbURL := fmt.Sprintf("https://img.youtube.com/vi/%s/mqdefault.jpg", videoID)
 
-	client := &http.Client{Timeout: playlistFetchTimeout}
-	resp, err := client.Get(thumbURL)
+	// #7065: reuse shared HTTP client for connection pooling.
+	resp, err := youtubeHTTPClient.Get(thumbURL)
 	if err != nil {
 		return c.Status(fiber.StatusBadGateway).SendString("failed to fetch thumbnail")
 	}
@@ -184,7 +215,8 @@ func YouTubeThumbnailProxy(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "thumbnail not found"})
 	}
 
-	body, err := io.ReadAll(resp.Body)
+	// #7064: limit response body to prevent memory exhaustion.
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxYouTubeResponseBytes))
 	if err != nil {
 		return c.Status(fiber.StatusBadGateway).SendString("failed to read thumbnail")
 	}

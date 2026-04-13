@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"golang.org/x/sync/singleflight"
 )
 
 // MediumBlogHandler fetches the latest blog posts from the KubeStellar
@@ -35,7 +36,15 @@ const (
 	// mediumCutoffDate is the earliest publish date for posts to include.
 	// Only posts on or after 2026-04-07 are returned.
 	mediumCutoffDate = "2026-04-07"
+
+	// maxMediumResponseBytes caps external Medium/RSS response reads to
+	// prevent memory exhaustion from unexpectedly large responses. #7064.
+	maxMediumResponseBytes = 5 * 1024 * 1024 // 5 MB
 )
+
+// mediumHTTPClient is a package-level shared HTTP client for Medium
+// fetches so TCP connections are reused across requests. #7065.
+var mediumHTTPClient = &http.Client{Timeout: mediumFetchTimeout}
 
 // MediumPost is the JSON shape returned to the frontend.
 type MediumPost struct {
@@ -47,7 +56,7 @@ type MediumPost struct {
 
 // mediumRSSFeed represents the Medium RSS/XML feed structure.
 type mediumRSSFeed struct {
-	XMLName xml.Name       `xml:"rss"`
+	XMLName xml.Name         `xml:"rss"`
 	Channel mediumRSSChannel `xml:"channel"`
 }
 
@@ -70,6 +79,10 @@ type mediumBlogCache struct {
 }
 
 var blogCache = &mediumBlogCache{}
+
+// mediumSingleflight coalesces concurrent cold-cache fetches into a
+// single external API call to prevent cache stampede. #7066.
+var mediumSingleflight singleflight.Group
 
 // stripHTML removes HTML tags and returns plain text, trimmed to maxLen.
 func stripHTML(html string, maxLen int) string {
@@ -98,8 +111,8 @@ func stripHTML(html string, maxLen int) string {
 }
 
 func fetchMediumBlog() ([]MediumPost, error) {
-	client := &http.Client{Timeout: mediumFetchTimeout}
-	resp, err := client.Get(mediumFeedURL)
+	// #7065: reuse shared HTTP client for connection pooling.
+	resp, err := mediumHTTPClient.Get(mediumFeedURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch Medium feed: %w", err)
 	}
@@ -109,7 +122,8 @@ func fetchMediumBlog() ([]MediumPost, error) {
 		return nil, fmt.Errorf("Medium returned status %d", resp.StatusCode)
 	}
 
-	body, err := io.ReadAll(resp.Body)
+	// #7064: limit response body to prevent memory exhaustion.
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxMediumResponseBytes))
 	if err != nil {
 		return nil, fmt.Errorf("failed to read feed body: %w", err)
 	}
@@ -168,25 +182,42 @@ func getMediumPosts() ([]MediumPost, error) {
 	}
 	blogCache.mu.RUnlock()
 
-	posts, err := fetchMediumBlog()
-	if err != nil {
-		// Return stale cache if available
+	// #7066: use singleflight to coalesce concurrent cold-cache fetches.
+	result, err, _ := mediumSingleflight.Do("medium", func() (interface{}, error) {
+		// Re-check cache inside singleflight — another caller may have
+		// already populated it.
 		blogCache.mu.RLock()
-		if blogCache.posts != nil {
-			stale := blogCache.posts
+		if time.Since(blogCache.fetchedAt) < mediumCacheTTL && blogCache.posts != nil {
+			posts := blogCache.posts
 			blogCache.mu.RUnlock()
-			return stale, nil
+			return posts, nil
 		}
 		blogCache.mu.RUnlock()
+
+		posts, fetchErr := fetchMediumBlog()
+		if fetchErr != nil {
+			// Return stale cache if available
+			blogCache.mu.RLock()
+			if blogCache.posts != nil {
+				stale := blogCache.posts
+				blogCache.mu.RUnlock()
+				return stale, nil
+			}
+			blogCache.mu.RUnlock()
+			return nil, fetchErr
+		}
+
+		blogCache.mu.Lock()
+		blogCache.posts = posts
+		blogCache.fetchedAt = time.Now()
+		blogCache.mu.Unlock()
+
+		return posts, nil
+	})
+	if err != nil {
 		return nil, err
 	}
-
-	blogCache.mu.Lock()
-	blogCache.posts = posts
-	blogCache.fetchedAt = time.Now()
-	blogCache.mu.Unlock()
-
-	return posts, nil
+	return result.([]MediumPost), nil
 }
 
 // MediumBlogHandler returns the latest blog posts from the KubeStellar
@@ -200,8 +231,8 @@ func MediumBlogHandler(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{
-		"posts":   posts,
-		"feedUrl": mediumFeedURL,
+		"posts":      posts,
+		"feedUrl":    mediumFeedURL,
 		"channelUrl": "https://medium.com/@kubestellar",
 	})
 }
