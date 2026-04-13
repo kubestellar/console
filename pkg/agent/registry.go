@@ -210,6 +210,9 @@ var suggestOnlyAgents = map[string]bool{
 // commands (e.g. copilot-cli) and, if so, promotes the first available agent
 // that can actually execute commands to be the default (#3609).
 func (r *Registry) promoteExecutingDefault() {
+	if r == nil {
+		return
+	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
