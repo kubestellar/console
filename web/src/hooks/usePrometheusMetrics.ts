@@ -151,7 +151,11 @@ export function usePrometheusMetrics(
       setMetrics(null)
       setError(e instanceof Error ? e.message : 'Unknown error')
     } finally {
-      if (!controller.signal.aborted) {
+      // Reset loading if this controller is still the active one.
+      // If a newer fetchMetrics call superseded us, abortRef.current
+      // points to the new controller — skip to avoid clearing its loading state.
+      // If cleanup aborted us (unmount), still clear loading to avoid stuck state (#7787).
+      if (abortRef.current === controller || controller.signal.aborted) {
         setLoading(false)
       }
     }

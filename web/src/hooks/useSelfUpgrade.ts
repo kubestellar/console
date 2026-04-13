@@ -43,6 +43,9 @@ export function useSelfUpgrade() {
   const [restartElapsed, setRestartElapsed] = useState(0)
 
   const pollAbortRef = useRef<AbortController | null>(null)
+  /** Track active polling interval IDs to prevent duplicate loops (#7789) */
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const tickIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   /** Fetch self-upgrade availability from the backend */
   const checkStatus = useCallback(async () => {
@@ -65,8 +68,16 @@ export function useSelfUpgrade() {
     }
   }, [])
 
+  /** Elapsed-seconds tick interval (ms) */
+  const ELAPSED_TICK_MS = 1_000
+
   /** Poll /health until the backend responds, then reload the page */
   const pollForRestart = () => {
+    // Clear any existing polling loops before starting new ones (#7789)
+    if (pollIntervalRef.current) { clearInterval(pollIntervalRef.current); pollIntervalRef.current = null }
+    if (tickIntervalRef.current) { clearInterval(tickIntervalRef.current); tickIntervalRef.current = null }
+    pollAbortRef.current?.abort()
+
     setIsRestarting(true)
     setRestartComplete(false)
     setRestartError(null)
@@ -77,47 +88,50 @@ export function useSelfUpgrade() {
 
     const startTime = Date.now()
 
-    const tick = setInterval(() => {
-      setRestartElapsed(Math.floor((Date.now() - startTime) / 1000))
-    }, 1000)
+    tickIntervalRef.current = setInterval(() => {
+      setRestartElapsed(Math.floor((Date.now() - startTime) / ELAPSED_TICK_MS))
+    }, ELAPSED_TICK_MS)
 
-    const poll = setInterval(async () => {
+    // Use a non-async wrapper to prevent unhandled promise rejections from setInterval (#7788)
+    pollIntervalRef.current = setInterval(() => {
       if (controller.signal.aborted) {
-        clearInterval(poll)
-        clearInterval(tick)
+        if (pollIntervalRef.current) { clearInterval(pollIntervalRef.current); pollIntervalRef.current = null }
+        if (tickIntervalRef.current) { clearInterval(tickIntervalRef.current); tickIntervalRef.current = null }
         return
       }
 
       // Timed out waiting
       if (Date.now() - startTime > RESTART_POLL_MAX_MS) {
-        clearInterval(poll)
-        clearInterval(tick)
+        if (pollIntervalRef.current) { clearInterval(pollIntervalRef.current); pollIntervalRef.current = null }
+        if (tickIntervalRef.current) { clearInterval(tickIntervalRef.current); tickIntervalRef.current = null }
         setIsRestarting(false)
         setRestartError('The console did not come back within the expected time. Try refreshing manually.')
         return
       }
 
-      try {
-        const resp = await fetch('/health', {
-          signal: AbortSignal.timeout(RESTART_HEALTH_TIMEOUT_MS) })
-        if (resp.ok) {
-          clearInterval(poll)
-          clearInterval(tick)
-          setIsRestarting(false)
-          setRestartComplete(true)
-          // Auto-reload after a brief pause so the user sees the success state
-          setTimeout(() => window.location.reload(), RELOAD_DELAY_MS)
+      void (async () => {
+        try {
+          const resp = await fetch('/health', {
+            signal: AbortSignal.timeout(RESTART_HEALTH_TIMEOUT_MS) })
+          if (resp.ok) {
+            if (pollIntervalRef.current) { clearInterval(pollIntervalRef.current); pollIntervalRef.current = null }
+            if (tickIntervalRef.current) { clearInterval(tickIntervalRef.current); tickIntervalRef.current = null }
+            setIsRestarting(false)
+            setRestartComplete(true)
+            // Auto-reload after a brief pause so the user sees the success state
+            setTimeout(() => window.location.reload(), RELOAD_DELAY_MS)
+          }
+        } catch {
+          // Expected — pod is still restarting
         }
-      } catch {
-        // Expected — pod is still restarting
-      }
+      })()
     }, RESTART_POLL_INTERVAL_MS)
 
     // Cleanup on unmount
     return () => {
       controller.abort()
-      clearInterval(poll)
-      clearInterval(tick)
+      if (pollIntervalRef.current) { clearInterval(pollIntervalRef.current); pollIntervalRef.current = null }
+      if (tickIntervalRef.current) { clearInterval(tickIntervalRef.current); tickIntervalRef.current = null }
     }
   }
 
@@ -163,6 +177,8 @@ export function useSelfUpgrade() {
   /** Cancel restart polling (e.g. user navigates away) */
   const cancelRestartPoll = () => {
     pollAbortRef.current?.abort()
+    if (pollIntervalRef.current) { clearInterval(pollIntervalRef.current); pollIntervalRef.current = null }
+    if (tickIntervalRef.current) { clearInterval(tickIntervalRef.current); tickIntervalRef.current = null }
     setIsRestarting(false)
   }
 
@@ -175,6 +191,8 @@ export function useSelfUpgrade() {
   useEffect(() => {
     return () => {
       pollAbortRef.current?.abort()
+      if (pollIntervalRef.current) { clearInterval(pollIntervalRef.current); pollIntervalRef.current = null }
+      if (tickIntervalRef.current) { clearInterval(tickIntervalRef.current); tickIntervalRef.current = null }
     }
   }, [])
 

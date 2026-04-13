@@ -53,6 +53,8 @@ const stateSubscribers = new Set<(state: { loading?: boolean; error?: boolean })
 let presenceWs: WebSocket | null = null
 let presenceStarted = false
 let presencePingInterval: ReturnType<typeof setInterval> | null = null
+/** Pending reconnect timer for the presence WebSocket — prevents duplicate connections (#7784) */
+let presenceReconnectTimer: ReturnType<typeof setTimeout> | null = null
 
 // Netlify heartbeat state (serverless mode)
 let heartbeatStarted = false
@@ -76,6 +78,7 @@ export function __resetForTest(): void {
   subscribers.clear()
   stateSubscribers.clear()
   if (presencePingInterval) { clearInterval(presencePingInterval); presencePingInterval = null }
+  if (presenceReconnectTimer) { clearTimeout(presenceReconnectTimer); presenceReconnectTimer = null }
   if (presenceWs) { presenceWs.onclose = null; presenceWs.close(); presenceWs = null }
   presenceStarted = false
   if (heartbeatTimeoutId) { clearTimeout(heartbeatTimeoutId); heartbeatTimeoutId = null }
@@ -140,6 +143,10 @@ function stopHeartbeat() {
 
 // Tear down presence WebSocket connection
 function stopPresenceConnection() {
+  if (presenceReconnectTimer) {
+    clearTimeout(presenceReconnectTimer)
+    presenceReconnectTimer = null
+  }
   if (presencePingInterval) {
     clearInterval(presencePingInterval)
     presencePingInterval = null
@@ -199,8 +206,11 @@ function startPresenceConnection() {
 
     presenceWs.onclose = () => {
       if (presencePingInterval) clearInterval(presencePingInterval)
+      // Clear any pending reconnect before scheduling a new one (#7784)
+      if (presenceReconnectTimer) clearTimeout(presenceReconnectTimer)
       // Reconnect after delay
-      setTimeout(() => {
+      presenceReconnectTimer = setTimeout(() => {
+        presenceReconnectTimer = null
         if (presenceStarted && localStorage.getItem(STORAGE_KEY_TOKEN)) connect()
       }, WS_RECONNECT_DELAY)
     }

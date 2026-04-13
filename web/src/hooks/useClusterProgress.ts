@@ -30,11 +30,15 @@ export interface ClusterProgress {
 export function useClusterProgress() {
   const [progress, setProgress] = useState<ClusterProgress | null>(null)
   const wsRef = useRef<WebSocket | null>(null)
+  /** Track reconnect timer in a ref so cleanup can clear timers scheduled by onclose (#7785) */
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
-    let reconnectTimer: ReturnType<typeof setTimeout>
+    let unmounted = false
 
     function connect() {
+      if (unmounted) return
+
       try {
         const ws = new WebSocket(LOCAL_AGENT_WS_URL)
         wsRef.current = ws
@@ -52,7 +56,8 @@ export function useClusterProgress() {
 
         ws.onclose = () => {
           wsRef.current = null
-          reconnectTimer = setTimeout(connect, WS_RECONNECT_DELAY_MS)
+          if (unmounted) return
+          reconnectTimerRef.current = setTimeout(connect, WS_RECONNECT_DELAY_MS)
         }
 
         ws.onerror = () => {
@@ -60,14 +65,19 @@ export function useClusterProgress() {
         }
       } catch {
         // Agent not available, retry later
-        reconnectTimer = setTimeout(connect, WS_RECONNECT_DELAY_MS)
+        if (unmounted) return
+        reconnectTimerRef.current = setTimeout(connect, WS_RECONNECT_DELAY_MS)
       }
     }
 
     connect()
 
     return () => {
-      clearTimeout(reconnectTimer)
+      unmounted = true
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current)
+        reconnectTimerRef.current = null
+      }
       if (wsRef.current) {
         wsRef.current.close()
         wsRef.current = null

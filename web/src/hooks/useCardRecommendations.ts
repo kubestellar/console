@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { usePodIssues, useDeploymentIssues, useWarningEvents, useGPUNodes, useClusters, useSecurityIssues } from './useMCP'
 import { useAIMode } from './useAIMode'
 import { RECOMMENDATION_INTERVAL_MS } from '../lib/constants/network'
@@ -164,14 +164,11 @@ export function useCardRecommendations(currentCardTypes: string[]) {
     securityIssues,
   ])
 
-  // Re-analyze when data changes — use ref to prevent loops from
-  // hook data returning new array references on every render
-  const recInitRef = useRef(false)
+  // Re-analyze immediately when dependencies change.
+  // useCallback ensures analyzeAndRecommend has a stable identity unless
+  // its captured data actually changes, so this won't loop (#7786).
   useEffect(() => {
-    if (!recInitRef.current) {
-      recInitRef.current = true
-      analyzeAndRecommend()
-    }
+    analyzeAndRecommend()
   }, [analyzeAndRecommend])
 
   // Re-analyze periodically
