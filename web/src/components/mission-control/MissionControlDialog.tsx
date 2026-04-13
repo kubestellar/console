@@ -504,6 +504,15 @@ export function MissionControlDialog({ open, onClose }: MissionControlDialogProp
                         size="sm"
                         data-testid="mission-control-launch"
                         onClick={() => {
+                          // #7190 — Block launch when no clusters have project assignments.
+                          // This can happen when the user excludes all clusters in Phase 2.
+                          const hasAssignedClusters = state.assignments.some(
+                            (a) => (a.projectNames ?? []).length > 0
+                          )
+                          if (!hasAssignedClusters) {
+                            showToast('No clusters have project assignments. Go back to Chart Course to assign projects before launching.', 'warning')
+                            return
+                          }
                           mc.setDryRun(false)
                           mc.setPhase('launching')
                         }}
@@ -516,6 +525,14 @@ export function MissionControlDialog({ open, onClose }: MissionControlDialogProp
                         variant="secondary"
                         size="sm"
                         onClick={() => {
+                          // #7190 — Same validation as Deploy button above
+                          const hasAssignedClusters = state.assignments.some(
+                            (a) => (a.projectNames ?? []).length > 0
+                          )
+                          if (!hasAssignedClusters) {
+                            showToast('No clusters have project assignments. Go back to Chart Course to assign projects before launching.', 'warning')
+                            return
+                          }
                           mc.setDryRun(true)
                           mc.setPhase('launching')
                         }}

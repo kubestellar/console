@@ -2061,7 +2061,13 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
       if (clusterList.length === 1) {
         enhancedPrompt = `Target cluster: ${clusterList[0]}\nIMPORTANT: All kubectl commands MUST use --context=${clusterList[0]}\n\n${enhancedPrompt}`
       } else {
-        enhancedPrompt = `Target clusters: ${clusterList.join(', ')}\nIMPORTANT: Perform the following on each cluster using their respective kubectl contexts.\n\n${enhancedPrompt}`
+        // #7188/#7198 — Inject explicit per-cluster context instructions so
+        // the agent uses the correct kubectl context for each cluster instead
+        // of defaulting to the first one.
+        const perClusterInstructions = clusterList
+          .map((c, i) => `  ${i + 1}. Cluster "${c}": use --context=${c}`)
+          .join('\n')
+        enhancedPrompt = `Target clusters: ${clusterList.join(', ')}\nIMPORTANT: Perform the following on EACH cluster using its respective kubectl context:\n${perClusterInstructions}\n\n${enhancedPrompt}`
       }
     }
 

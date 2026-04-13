@@ -1015,9 +1015,12 @@ func (h *ConsolePersistenceHandlers) reconcileDeployment(ctx context.Context, wd
 			cs.Message = "Deployment failed"
 			failedCount++
 		} else {
-			// Not in either list — mark as skipped
-			cs.Phase = "Skipped"
-			cs.Message = "Cluster was not processed"
+			// Not in either list — cluster was in targets but not reported by
+			// DeployWorkload in either deployedTo or failedClusters. Flag as
+			// NotProcessed (distinct from intentional skip) so operators can
+			// investigate why deployment logic missed this cluster (#7186).
+			cs.Phase = "NotProcessed"
+			cs.Message = "Cluster was targeted but not processed by deployer — possible deployment logic gap"
 		}
 	}
 
@@ -1116,6 +1119,16 @@ func (h *ConsolePersistenceHandlers) resolveTargetClusters(
 	// Add explicit target clusters
 	for _, c := range wd.Spec.TargetClusters {
 		clusterSet[c] = true
+	}
+
+	// #7180/#7199 — Warn when both targetClusters and targetGroupRef are
+	// specified. The two sources are merged silently which can lead to
+	// unexpected clusters being included in the deployment.
+	if len(wd.Spec.TargetClusters) > 0 && wd.Spec.TargetGroupRef != nil && wd.Spec.TargetGroupRef.Name != "" {
+		slog.Warn("[reconcile] WorkloadDeployment specifies both targetClusters and targetGroupRef — clusters will be merged",
+			"name", wd.Name, "namespace", wd.Namespace,
+			"explicitClusters", strings.Join(wd.Spec.TargetClusters, ","),
+			"groupRef", wd.Spec.TargetGroupRef.Name)
 	}
 
 	// Resolve from ClusterGroup if referenced
