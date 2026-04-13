@@ -412,12 +412,24 @@ func (s *Server) setupMiddleware() {
 		// Content-Security-Policy: restrict script/style sources to self and
 		// known analytics/CDN origins. 'unsafe-inline' is required for Vite
 		// dev mode injected styles and inline event handlers in the SPA.
+		//
+		// connect-src includes the local kc-agent (port 8585) for both HTTP
+		// and WebSocket on 127.0.0.1 and localhost. Without these, the
+		// browser blocks all frontend→agent communication because the agent
+		// runs on a different port than the backend (cross-origin).
+		// See: web/src/lib/constants/network.ts (LOCAL_AGENT_HTTP_URL,
+		// LOCAL_AGENT_WS_URL) for the exact URLs the frontend uses.
+		const kcAgentLoopback = "http://127.0.0.1:8585"    // kc-agent HTTP on loopback IP
+		const kcAgentLoopbackWS = "ws://127.0.0.1:8585"    // kc-agent WebSocket on loopback IP
+		const kcAgentLocalhost = "http://localhost:8585"    // kc-agent HTTP on localhost
+		const kcAgentLocalhostWS = "ws://localhost:8585"    // kc-agent WebSocket on localhost
+
 		c.Set("Content-Security-Policy",
 			"default-src 'self'; "+
 				"script-src 'self' 'unsafe-inline' https://www.googletagmanager.com; "+
 				"style-src 'self' 'unsafe-inline'; "+
 				"img-src 'self' data: https:; "+
-				"connect-src 'self' https://www.google-analytics.com https://www.googletagmanager.com wss:; "+
+				"connect-src 'self' "+kcAgentLoopback+" "+kcAgentLoopbackWS+" "+kcAgentLocalhost+" "+kcAgentLocalhostWS+" https://www.google-analytics.com https://www.googletagmanager.com wss:; "+
 				"font-src 'self' data:; "+
 				"object-src 'none'; "+
 				"base-uri 'self'")
