@@ -4,6 +4,10 @@ name: Nightly UX Journey Tests
 # interaction in demo mode and produce a UX findings report. These tests
 # don't gate PRs — they surface UX improvement opportunities.
 #
+# Uses the real Go backend in dev mode so MSW/demo data is fully active
+# and all card interactions (drilldown, expand, search, tour) work exactly
+# as they do for real users.
+#
 # Runs nightly at 05:00 UTC and on manual dispatch.
 # Artifacts: HTML report, UX findings markdown, screenshots.
 
@@ -30,11 +34,13 @@ jobs:
     name: UX Journey Tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    defaults:
-      run:
-        working-directory: web
     steps:
       - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -44,24 +50,38 @@ jobs:
           cache-dependency-path: web/package-lock.json
 
       - name: Install dependencies
+        working-directory: web
         run: npm ci
 
       - name: Install Playwright browsers
+        working-directory: web
         run: npx playwright install --with-deps chromium
 
       - name: Build frontend
+        working-directory: web
         run: npm run build
 
-      - name: Start static server
+      - name: Build backend
+        run: go build -o console-bin ./cmd/console
+
+      - name: Start backend (dev mode)
         run: |
-          npx serve dist -l 8080 -s &
-          # Wait for server to be ready
-          for i in $(seq 1 10); do
-            curl -sf http://localhost:8080 > /dev/null 2>&1 && break
+          # Dev mode: auto-login as dev-user, demo data active, no OAuth needed
+          JWT_SECRET="ux-nightly-$(openssl rand -hex 16)" \
+          DEV_MODE=true \
+          ./console-bin &
+
+          # Wait for backend health
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8080/health > /dev/null 2>&1; then
+              echo "Backend healthy after ${i}s"
+              break
+            fi
             sleep 1
           done
 
       - name: Run UX journey tests
+        working-directory: web
         run: npx playwright test e2e/user-flows/ --project=chromium --reporter=list,html,./e2e/helpers/ux-reporter.ts
         env:
           PLAYWRIGHT_BASE_URL: "http://localhost:8080"
@@ -86,6 +106,7 @@ jobs:
 
       - name: Post summary
         if: always()
+        working-directory: web
         run: |
           echo "### UX Journey Test Results" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
@@ -98,17 +119,19 @@ jobs:
             echo "No UX findings report generated." >> "$GITHUB_STEP_SUMMARY"
           fi
 
-  # Run responsive tests on mobile viewport
+  # Run responsive + a11y tests (also with Go backend for full demo data)
   ux-mobile:
     if: github.repository == 'kubestellar/console'
     name: UX Mobile Tests
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    defaults:
-      run:
-        working-directory: web
     steps:
       - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -118,23 +141,36 @@ jobs:
           cache-dependency-path: web/package-lock.json
 
       - name: Install dependencies
+        working-directory: web
         run: npm ci
 
       - name: Install Playwright browsers
+        working-directory: web
         run: npx playwright install --with-deps chromium
 
       - name: Build frontend
+        working-directory: web
         run: npm run build
 
-      - name: Start static server
+      - name: Build backend
+        run: go build -o console-bin ./cmd/console
+
+      - name: Start backend (dev mode)
         run: |
-          npx serve dist -l 8080 -s &
-          for i in $(seq 1 10); do
-            curl -sf http://localhost:8080 > /dev/null 2>&1 && break
+          JWT_SECRET="ux-mobile-$(openssl rand -hex 16)" \
+          DEV_MODE=true \
+          ./console-bin &
+
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8080/health > /dev/null 2>&1; then
+              echo "Backend healthy after ${i}s"
+              break
+            fi
             sleep 1
           done
 
       - name: Run responsive + a11y tests
+        working-directory: web
         run: npx playwright test e2e/user-flows/responsive-layouts.spec.ts e2e/user-flows/a11y-audit.spec.ts --project=chromium --reporter=list,html
         env:
           PLAYWRIGHT_BASE_URL: "http://localhost:8080"
