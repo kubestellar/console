@@ -236,6 +236,12 @@ func (s *Service) SendAlertToChannels(alert Alert, channels []NotificationChanne
 			} else {
 				slog.Info("sent alert notification", "channelType", channel.Type, "channelID", channelID)
 			}
+		} else {
+			// Channel is enabled but required config is missing — report rather
+			// than silently dropping the alert (#7377).
+			errMsg := fmt.Sprintf("enabled %s channel %s has incomplete config — alert not sent", channel.Type, channelID)
+			slog.Warn("notification channel has incomplete config", "channelType", channel.Type, "channelID", channelID)
+			errors = append(errors, errMsg)
 		}
 	}
 
