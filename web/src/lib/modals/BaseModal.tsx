@@ -38,7 +38,7 @@
  * ```
  */
 
-import { ReactNode, useRef } from 'react'
+import { ReactNode, createContext, useContext, useId, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { X, ChevronLeft } from 'lucide-react'
 import { useModalNavigation, useModalFocusTrap } from './useModalNavigation'
@@ -71,6 +71,9 @@ const HEIGHT_CLASSES: Record<ModalSize, string> = {
   full: 'min-h-[95vh] max-h-[calc(100vh-2rem)]',
 }
 
+// React Context so ModalHeader can receive the generated title ID
+const ModalTitleIdContext = createContext<string | undefined>(undefined)
+
 // ============================================================================
 // BaseModal Component
 // ============================================================================
@@ -87,6 +90,7 @@ export function BaseModal({
 }: BaseModalProps) {
   const backdropRef = useRef<HTMLDivElement>(null)
   const modalRef = useRef<HTMLDivElement>(null)
+  const titleId = useId()
 
   // Set up keyboard navigation (ESC and Space/Backspace to close)
   useModalNavigation({
@@ -125,10 +129,13 @@ export function BaseModal({
           ref={modalRef}
           role="dialog"
           aria-modal="true"
+          aria-labelledby={titleId}
           className={`glass w-full ${SIZE_CLASSES[size]} ${HEIGHT_CLASSES[size]} rounded-xl flex flex-col overflow-hidden ${className}`}
           onClick={(e) => e.stopPropagation()}
         >
-          {children}
+          <ModalTitleIdContext.Provider value={titleId}>
+            {children}
+          </ModalTitleIdContext.Provider>
         </div>
       </div>
     </div>,
@@ -151,6 +158,8 @@ function ModalHeader({
   extra,
   children,
 }: ModalHeaderProps) {
+  const titleId = useContext(ModalTitleIdContext)
+
   return (
     <div className="flex flex-col border-b border-border">
       {/* Main header row */}
@@ -177,7 +186,7 @@ function ModalHeader({
 
           {/* Title and description */}
           <div className="min-w-0 flex-1">
-            <h2 className="text-lg font-semibold text-foreground truncate">
+            <h2 id={titleId} className="text-lg font-semibold text-foreground truncate">
               {title}
             </h2>
             {description && (

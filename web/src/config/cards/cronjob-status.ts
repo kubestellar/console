@@ -100,8 +100,9 @@ export const cronJobStatusConfig: UnifiedCardConfig = {
     showSearch: true,
   },
 
-  // Metadata
-  isDemoData: true,
+  // Metadata — isDemoData is NOT hardcoded; the unified card system derives it
+  // from the data source hook at runtime. Hardcoding it caused the Demo badge to
+  // always appear even when live cluster data was fetched (#7791).
   isLive: true,
 }
 

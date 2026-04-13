@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { setupDemoAndNavigate, ELEMENT_VISIBLE_TIMEOUT_MS } from '../helpers/setup'
-import { assertNoLayoutOverflow, collectConsoleErrors } from '../helpers/ux-assertions'
+import { assertNoLayoutOverflow } from '../helpers/ux-assertions'
 
 /** Viewport dimensions for mobile tests */
 const MOBILE_WIDTH = 375

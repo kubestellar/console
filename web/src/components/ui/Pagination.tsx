@@ -141,8 +141,9 @@ export function Pagination({
         {/* Items per page selector */}
         {showItemsPerPage && onItemsPerPageChange && (
           <div className="flex items-center gap-2">
-            <span className="text-muted-foreground">{t('pagination.perPage')}</span>
+            <label htmlFor="pagination-per-page" className="text-muted-foreground">{t('pagination.perPage')}</label>
             <select
+              id="pagination-per-page"
               value={itemsPerPage}
               onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
               className="px-2 py-1 rounded bg-secondary border border-border text-foreground text-sm"

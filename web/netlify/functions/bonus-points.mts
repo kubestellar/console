@@ -17,6 +17,9 @@ const BONUS_TITLE_REGEX = /^\[bonus\]\s+@(\S+)\s+\+(\d+)\s*(.*)/i;
 /** Cache TTL — 15 minutes */
 const CACHE_TTL_MS = 15 * 60 * 1000;
 
+/** Timeout for GitHub API requests */
+const GITHUB_API_TIMEOUT_MS = 10_000;
+
 interface BonusEntry {
   issue_number: number;
   points: number;
@@ -60,7 +63,14 @@ async function fetchAllBonusIssues(): Promise<Record<string, BonusEntry[]>> {
   }
 
   const url = `https://api.github.com/repos/${BONUS_REPO}/issues?labels=${BONUS_LABEL}&state=all&per_page=100&creator=${BONUS_AUTHORIZED_USER}`;
-  const res = await fetch(url, { headers });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), GITHUB_API_TIMEOUT_MS);
+  let res: Response;
+  try {
+    res = await fetch(url, { headers, signal: controller.signal });
+  } finally {
+    clearTimeout(timeoutId);
+  }
   if (!res.ok) {
     throw new Error(`GitHub API ${res.status}`);
   }

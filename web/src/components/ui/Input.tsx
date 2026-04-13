@@ -1,4 +1,4 @@
-import { type InputHTMLAttributes, type ReactNode, type Ref } from 'react'
+import { type InputHTMLAttributes, type ReactNode, type Ref, useId } from 'react'
 import { cn } from '../../lib/cn'
 
 type InputSize = 'sm' | 'md' | 'lg'
@@ -32,6 +32,8 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   trailingIcon?: ReactNode
   /** When true, applies red border and focus ring to indicate a validation error */
   error?: boolean
+  /** Error message displayed below the input and linked via aria-describedby */
+  errorMessage?: string
   ref?: Ref<HTMLInputElement>
 }
 
@@ -40,49 +42,62 @@ export function Input({
   leadingIcon,
   trailingIcon,
   error,
+  errorMessage,
   disabled,
   className,
   ref,
   ...props
 }: InputProps) {
+  const generatedId = useId()
+  const errorId = errorMessage ? `${generatedId}-error` : undefined
+
   return (
-    <div className="relative">
-      {leadingIcon && (
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2.5 text-muted-foreground"
-        >
-          {leadingIcon}
-        </span>
-      )}
-
-      <input
-        ref={ref}
-        disabled={disabled}
-        aria-invalid={error ? true : undefined}
-        className={cn(
-          'w-full rounded-lg border bg-secondary text-foreground transition-colors',
-          'placeholder:text-muted-foreground',
-          'focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background',
-          'disabled:opacity-50 disabled:cursor-not-allowed',
-          error
-            ? 'border-red-500 focus:ring-red-500'
-            : 'border-border focus:ring-ring',
-          SIZE_MAP[inputSize],
-          leadingIcon && ICON_LEFT_PADDING[inputSize],
-          trailingIcon && ICON_RIGHT_PADDING[inputSize],
-          className,
+    <div>
+      <div className="relative">
+        {leadingIcon && (
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2.5 text-muted-foreground"
+          >
+            {leadingIcon}
+          </span>
         )}
-        {...props}
-      />
 
-      {trailingIcon && (
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-muted-foreground"
-        >
-          {trailingIcon}
-        </span>
+        <input
+          ref={ref}
+          disabled={disabled}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={errorId}
+          className={cn(
+            'w-full rounded-lg border bg-secondary text-foreground transition-colors',
+            'placeholder:text-muted-foreground',
+            'focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background',
+            'disabled:opacity-50 disabled:cursor-not-allowed',
+            error
+              ? 'border-red-500 focus:ring-red-500'
+              : 'border-border focus:ring-ring',
+            SIZE_MAP[inputSize],
+            leadingIcon && ICON_LEFT_PADDING[inputSize],
+            trailingIcon && ICON_RIGHT_PADDING[inputSize],
+            className,
+          )}
+          {...props}
+        />
+
+        {trailingIcon && (
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-muted-foreground"
+          >
+            {trailingIcon}
+          </span>
+        )}
+      </div>
+
+      {errorMessage && (
+        <p id={errorId} className="mt-1 text-xs text-red-500" role="alert">
+          {errorMessage}
+        </p>
       )}
     </div>
   )

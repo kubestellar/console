@@ -105,6 +105,8 @@ const ALWAYS_PREFETCH = new Set(['dashboard', 'settings', 'clusters', 'cluster-a
 if (typeof window !== 'undefined') {
   const PREFETCH_BATCH_SIZE = 8
   const PREFETCH_BATCH_DELAY = 50
+  /** Max wait (ms) for the enabled-dashboards list before prefetching all chunks */
+  const PREFETCH_DASHBOARD_TIMEOUT_MS = 2_000
 
   const prefetchRoutes = async () => {
     // Wait for the enabled dashboards list from /health so we only
@@ -112,9 +114,12 @@ if (typeof window !== 'undefined') {
     // and prefetch all chunks — better to over-prefetch than leave
     // chunks uncached and block navigation.
     try {
+      let timeoutId: ReturnType<typeof setTimeout> | undefined
       await Promise.race([
-        fetchEnabledDashboards(),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 2000)),
+        fetchEnabledDashboards().finally(() => clearTimeout(timeoutId)),
+        new Promise<never>((_, reject) => {
+          timeoutId = setTimeout(() => reject(new Error('timeout')), PREFETCH_DASHBOARD_TIMEOUT_MS)
+        }),
       ])
     } catch {
       // Timeout or error — fall through to prefetch all

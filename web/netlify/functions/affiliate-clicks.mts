@@ -72,9 +72,15 @@ async function fetchAffiliateClicks(): Promise<Record<string, AffiliateData>> {
   }
 
   // Decode base64 service account JSON
-  const credentials = JSON.parse(
-    Buffer.from(serviceAccountB64, "base64").toString("utf-8")
-  );
+  let credentials: Record<string, unknown>;
+  try {
+    credentials = JSON.parse(
+      Buffer.from(serviceAccountB64, "base64").toString("utf-8")
+    );
+  } catch {
+    console.error("GA4_SERVICE_ACCOUNT_JSON is not valid base64-encoded JSON");
+    return {};
+  }
   const auth = new google.auth.GoogleAuth({
     credentials,
     scopes: ["https://www.googleapis.com/auth/analytics.readonly"],

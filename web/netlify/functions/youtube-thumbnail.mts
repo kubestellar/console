@@ -14,6 +14,9 @@ const YOUTUBE_VIDEO_ID_LEN = 11;
  */
 const DEFAULT_THUMBNAIL_MAX_BYTES = 1200;
 
+/** Timeout for fetching thumbnails from YouTube CDN */
+const YOUTUBE_CDN_TIMEOUT_MS = 10_000;
+
 export default async (req: Request) => {
   const url = new URL(req.url);
   const videoId = url.pathname.split("/").pop() || "";
@@ -28,9 +31,17 @@ export default async (req: Request) => {
   }
 
   try {
-    const resp = await fetch(
-      `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`
-    );
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), YOUTUBE_CDN_TIMEOUT_MS);
+    let resp: Response;
+    try {
+      resp = await fetch(
+        `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`,
+        { signal: controller.signal }
+      );
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     if (!resp.ok) {
       return new Response("thumbnail not found", { status: 404 });

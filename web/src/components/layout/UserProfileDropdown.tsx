@@ -127,6 +127,9 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
       {/* Trigger button */}
       <button
         onClick={toggleDropdown}
+        aria-expanded={isOpen}
+        aria-haspopup="true"
+        aria-controls="profile-dropdown-menu"
         className="flex items-center gap-2 border-l border-border hover:bg-secondary rounded-lg px-3 py-1.5 h-9 transition-colors"
       >
         {user.avatar_url ? (
@@ -148,7 +151,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
 
       {/* Dropdown menu */}
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-72 max-w-[calc(100vw-1rem)] bg-card border border-border rounded-xl shadow-2xl overflow-hidden z-50">
+        <div id="profile-dropdown-menu" role="menu" className="absolute right-0 top-full mt-2 w-72 max-w-[calc(100vw-1rem)] bg-card border border-border rounded-xl shadow-2xl overflow-hidden z-50">
           {/* Header with avatar and name */}
           <div className="p-4 bg-secondary border-b border-border">
             <div className="flex items-center gap-3">

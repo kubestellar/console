@@ -105,10 +105,11 @@ function CreateDashboardModalInner({
 
         {/* Dashboard name input */}
         <div className="mb-4">
-          <label className="block text-sm font-medium text-foreground mb-2">
+          <label htmlFor="create-dashboard-name" className="block text-sm font-medium text-foreground mb-2">
             {t('dashboard.create.nameLabel')}
           </label>
           <input
+            id="create-dashboard-name"
             ref={inputRef}
             type="text"
             value={name}
@@ -121,10 +122,11 @@ function CreateDashboardModalInner({
 
         {/* Description input (optional) */}
         <div className="mb-6">
-          <label className="block text-sm font-medium text-foreground mb-2">
+          <label htmlFor="create-dashboard-description" className="block text-sm font-medium text-foreground mb-2">
             {t('dashboard.create.descriptionLabel')} <span className="text-muted-foreground font-normal">{t('dashboard.create.optional')}</span>
           </label>
           <textarea
+            id="create-dashboard-description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder={t('dashboard.create.descriptionPlaceholder')}
