@@ -37,10 +37,10 @@ h1{font-size:1.25rem;font-weight:500;margin-bottom:.25rem}
 .retry-btn:hover{background:rgba(99,102,241,.2);border-color:rgba(99,102,241,.4)}
 
 /* Tip section (#5899) */
-.tip{margin-top:1.5rem;padding:.75rem 1rem;background:rgba(99,102,241,.05);border:1px solid rgba(99,102,241,.15);border-radius:.5rem;font-size:.75rem;color:#94a3b8;line-height:1.5;text-align:left;min-height:3rem;display:flex;align-items:center;gap:.5rem;opacity:0;animation:tipFadeIn .5s ease forwards .8s}
+.elapsed{min-height:1.5rem}
+.tip{margin-top:1.5rem;padding:.75rem 1rem;background:rgba(99,102,241,.05);border:1px solid rgba(99,102,241,.15);border-radius:.5rem;font-size:.75rem;color:#94a3b8;line-height:1.5;text-align:left;min-height:3rem;display:flex;align-items:center;gap:.5rem}
 .tip-label{color:#818cf8;font-weight:600;flex-shrink:0}
 .tip-text{flex:1;transition:opacity .4s ease}
-@keyframes tipFadeIn{to{opacity:1}}
 
 .stars{position:fixed;inset:0;pointer-events:none}
 .star{position:absolute;width:2px;height:2px;background:#fff;border-radius:50%;opacity:.3;animation:twinkle 3s ease-in-out infinite}
@@ -50,7 +50,7 @@ h1{font-size:1.25rem;font-weight:500;margin-bottom:.25rem}
 @media (prefers-reduced-motion: reduce){
   .star{animation:none;opacity:.4}
   .step.active .step-icon{animation:none;border-top-color:#6366f1}
-  .tip{animation:none;opacity:1}
+  .tip{}
   .tip-text{transition:none}
 }
 </style>
