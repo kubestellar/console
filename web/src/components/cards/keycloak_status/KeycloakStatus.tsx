@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import {
   CheckCircle,
   AlertTriangle,
@@ -13,6 +12,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import { Skeleton, SkeletonStats, SkeletonList } from '../../ui/Skeleton'
 import { CardSearchInput } from '../../../lib/cards/CardComponents'
+import { useCardData } from '../../../lib/cards/cardHooks'
 import { useKeycloakStatus } from './useKeycloakStatus'
 import type { KeycloakRealm, KeycloakRealmStatus } from './demoData'
 
@@ -43,6 +43,15 @@ const STATUS_CONFIG: Record<
     color: 'text-red-400',
     icon: <XCircle className="w-3.5 h-3.5 text-red-400" />,
   },
+}
+
+type RealmSortKey = 'status' | 'name'
+
+const STATUS_SORT_ORDER: Record<KeycloakRealmStatus, number> = {
+  error: 0,
+  degraded: 1,
+  provisioning: 2,
+  ready: 3,
 }
 
 function useFormatRelativeTime() {
@@ -101,7 +110,7 @@ function RealmRow({ realm }: { realm: KeycloakRealm }) {
           <span className="text-xs font-medium truncate">{realm.name}</span>
           {!realm.enabled && (
             <span className="text-xs text-muted-foreground/60 shrink-0">
-              ({t('keycloak.disabled', 'disabled')})
+              ({t('keycloak.disabled')})
             </span>
           )}
         </div>
@@ -140,29 +149,35 @@ export function KeycloakStatus() {
   const { t } = useTranslation('cards')
   const formatRelativeTime = useFormatRelativeTime()
   const { data, isRefreshing, error, showSkeleton, showEmptyState } = useKeycloakStatus()
-  const [search, setSearch] = useState('')
 
   const realms = data.realms || []
   const operatorPods = data.operatorPods || { ready: 0, total: 0 }
 
-  // Derived stats
-  const stats = (() => {
-    return {
-      ready: realms.filter(r => r.status === 'ready').length,
-      issues: realms.filter(r => r.status === 'degraded' || r.status === 'error').length,
-    }
-  })()
+  // Derived stats are always computed from all realms, not the filtered slice
+  const stats = {
+    ready: realms.filter(r => r.status === 'ready').length,
+    issues: realms.filter(r => r.status === 'degraded' || r.status === 'error').length,
+  }
 
-  // Filtered list (local search)
-  const filteredRealms = (() => {
-    if (!search.trim()) return realms
-    const q = search.toLowerCase()
-    return realms.filter(
-      r =>
-        r.name.toLowerCase().includes(q) ||
-        r.namespace.toLowerCase().includes(q),
-    )
-  })()
+  const {
+    items: filteredRealms,
+    filters: { search, setSearch },
+  } = useCardData<KeycloakRealm, RealmSortKey>(realms, {
+    filter: {
+      searchFields: ['name', 'namespace'],
+      storageKey: 'keycloak-status',
+    },
+    sort: {
+      defaultField: 'status',
+      defaultDirection: 'asc',
+      comparators: {
+        status: (a, b) =>
+          (STATUS_SORT_ORDER[a.status] ?? 4) - (STATUS_SORT_ORDER[b.status] ?? 4),
+        name: (a, b) => a.name.localeCompare(b.name),
+      },
+    },
+    defaultLimit: 'unlimited',
+  })
 
   // ── Loading ───────────────────────────────────────────────────────────────
   if (showSkeleton) {
@@ -185,7 +200,7 @@ export function KeycloakStatus() {
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2">
         <AlertTriangle className="w-6 h-6 text-red-400" />
         <p className="text-sm text-red-400">
-          {t('keycloak.fetchError', 'Failed to fetch Keycloak status')}
+          {t('keycloak.fetchError')}
         </p>
       </div>
     )
@@ -197,13 +212,10 @@ export function KeycloakStatus() {
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2">
         <Shield className="w-6 h-6 text-muted-foreground/50" />
         <p className="text-sm font-medium">
-          {t('keycloak.notInstalled', 'Keycloak not detected')}
+          {t('keycloak.notInstalled')}
         </p>
         <p className="text-xs text-center max-w-xs">
-          {t(
-            'keycloak.notInstalledHint',
-            'No Keycloak operator pods found. Deploy the Keycloak Operator to manage realms and SSO.',
-          )}
+          {t('keycloak.notInstalledHint')}
         </p>
       </div>
     )
@@ -228,13 +240,13 @@ export function KeycloakStatus() {
               <AlertTriangle className="w-4 h-4" />
             )}
             {isHealthy
-              ? t('keycloak.healthy', 'Healthy')
-              : t('keycloak.degraded', 'Degraded')}
+              ? t('keycloak.healthy')
+              : t('keycloak.degraded')}
           </div>
           <span className="text-xs text-muted-foreground flex items-center gap-1">
             <Shield className="w-3 h-3" />
             {operatorPods.ready}/{operatorPods.total}{' '}
-            {t('keycloak.pods', 'pods')}
+            {t('keycloak.pods')}
           </span>
         </div>
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -248,28 +260,28 @@ export function KeycloakStatus() {
         <div className="grid grid-cols-4 gap-2">
           <StatTile
             icon={<Globe className="w-4 h-4 text-blue-400" />}
-            label={t('keycloak.realms', 'Realms')}
+            label={t('keycloak.realms')}
             value={realms.length}
             colorClass="text-blue-400"
             borderClass="border-blue-500/20"
           />
           <StatTile
             icon={<CheckCircle className="w-4 h-4 text-green-400" />}
-            label={t('keycloak.ready', 'Ready')}
+            label={t('keycloak.ready')}
             value={stats.ready}
             colorClass="text-green-400"
             borderClass="border-green-500/20"
           />
           <StatTile
             icon={<Users className="w-4 h-4 text-cyan-400" />}
-            label={t('keycloak.sessions', 'Sessions')}
+            label={t('keycloak.sessions')}
             value={data.totalActiveSessions}
             colorClass="text-cyan-400"
             borderClass="border-cyan-500/20"
           />
           <StatTile
             icon={<AlertTriangle className="w-4 h-4 text-red-400" />}
-            label={t('keycloak.issues', 'Issues')}
+            label={t('keycloak.issues')}
             value={stats.issues}
             colorClass="text-red-400"
             borderClass="border-red-500/20"
@@ -282,7 +294,7 @@ export function KeycloakStatus() {
         <CardSearchInput
           value={search}
           onChange={setSearch}
-          placeholder={t('keycloak.searchPlaceholder', 'Search realms…')}
+          placeholder={t('keycloak.searchPlaceholder')}
         />
       )}
 
@@ -295,17 +307,14 @@ export function KeycloakStatus() {
         ) : realms.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-1 py-6">
             <Shield className="w-6 h-6 opacity-40" />
-            <p className="text-sm">{t('keycloak.noRealms', 'Operator running')}</p>
+            <p className="text-sm">{t('keycloak.noRealms')}</p>
             <p className="text-xs text-center">
-              {t(
-                'keycloak.noRealmsHint',
-                'Realm data requires the Keycloak CRD API.',
-              )}
+              {t('keycloak.noRealmsHint')}
             </p>
           </div>
         ) : (
           <div className="flex items-center justify-center py-6 text-xs text-muted-foreground">
-            {t('keycloak.noSearchResults', 'No realms match your search.')}
+            {t('keycloak.noSearchResults')}
           </div>
         )}
       </div>
@@ -314,10 +323,10 @@ export function KeycloakStatus() {
       {realms.length > 0 && (
         <div className="pt-2 border-t border-border/50 text-xs text-muted-foreground flex gap-4">
           <span>
-            {data.totalUsers.toLocaleString()} {t('keycloak.users', 'users')}
+            {data.totalUsers.toLocaleString()} {t('keycloak.users')}
           </span>
           <span>
-            {data.totalClients} {t('keycloak.clients', 'clients')}
+            {data.totalClients} {t('keycloak.clients')}
           </span>
         </div>
       )}

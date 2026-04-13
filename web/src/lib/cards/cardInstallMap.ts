@@ -103,6 +103,8 @@ export const CARD_INSTALL_MAP: Record<string, CardInstallInfo> = {
 
   // OpenKruise
   openkruise_status: { project: 'OpenKruise', missionKey: 'install-openkruise', kbPaths: ['fixes/cncf-install/install-openkruise.json'] },
+  // Keycloak
+  keycloak_status: { project: 'Keycloak', missionKey: 'install-keycloak', kbPaths: ['fixes/cncf-install/install-keycloak.json'] },
 }
 
 /**
