@@ -12,6 +12,9 @@ export default {
     { pattern: /^bg-(red|orange|blue|green|yellow|purple)-500\/\d+$/ },
     { pattern: /^border-(red|orange|blue|green|yellow|purple)-500\/\d+$/ },
     { pattern: /^text-(red|orange|blue|green|yellow|purple)-400$/ },
+    { pattern: /^bg-(red|orange|blue|green|yellow|purple)-500\/\d+$/, variants: ['hover'] },
+    { pattern: /^border-(red|orange|blue|green|yellow|purple)-500\/\d+$/, variants: ['hover'] },
+    { pattern: /^text-(red|orange|blue|green|yellow|purple)-400$/, variants: ['hover'] },
   ],
   theme: {
     extend: {

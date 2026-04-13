@@ -72,19 +72,14 @@ export function useModalNavigation({
         return
       }
 
-      // Don't handle other keys if user is interacting with an input or interactive control
+      // Don't handle other keys if user is interacting with an input or interactive control.
+      // Use closest() so child elements (e.g. <span>/<svg> inside a <button>) are caught too.
       if (
         e.target instanceof HTMLInputElement ||
         e.target instanceof HTMLTextAreaElement ||
         (e.target instanceof HTMLElement && (
           e.target.isContentEditable ||
-          e.target.tagName === 'BUTTON' ||
-          e.target.tagName === 'A' ||
-          e.target.tagName === 'SELECT' ||
-          e.target.getAttribute('role') === 'button' ||
-          e.target.getAttribute('role') === 'link' ||
-          e.target.getAttribute('role') === 'option' ||
-          e.target.getAttribute('role') === 'menuitem'
+          (e.target as HTMLElement).closest('button, a, select, [role="button"], [role="link"], [role="option"], [role="menuitem"]')
         ))
       ) {
         return

@@ -1039,10 +1039,22 @@ func (m *MultiClusterClient) GrantNamespaceAccess(ctx context.Context, contextNa
 	// Different inputs (e.g. "admin@foo.com" vs "admin-foo-com") can normalize to the same
 	// sanitized string, so we append a short hash of the raw components.
 	rawBindingKey := fmt.Sprintf("%s-%s-%s", req.SubjectName, roleName, namespace)
-	hashSuffixLen := 8 // Length of the hex hash suffix appended to binding names
+	const hashSuffixLen = 8  // Length of the hex hash suffix appended to binding names
+	const k8sNameMaxLen = 63 // Maximum length of a Kubernetes resource name
 	hash := sha256.Sum256([]byte(rawBindingKey))
 	hashSuffix := hex.EncodeToString(hash[:])[:hashSuffixLen]
-	bindingName := sanitizeK8sName(rawBindingKey) + "-" + hashSuffix
+	sanitized := sanitizeK8sName(rawBindingKey)
+	// Leave room for "-" separator + hash suffix so the final name stays within k8sNameMaxLen
+	hashSuffixTotalLen := 1 + hashSuffixLen // dash separator + hex hash
+	maxBaseLen := k8sNameMaxLen - hashSuffixTotalLen
+	if len(sanitized) > maxBaseLen {
+		sanitized = sanitized[:maxBaseLen]
+		// Trim trailing dashes/dots left by truncation
+		for len(sanitized) > 0 && (sanitized[len(sanitized)-1] == '-' || sanitized[len(sanitized)-1] == '.') {
+			sanitized = sanitized[:len(sanitized)-1]
+		}
+	}
+	bindingName := sanitized + "-" + hashSuffix
 
 	subject := rbacv1.Subject{
 		Kind: req.SubjectKind,

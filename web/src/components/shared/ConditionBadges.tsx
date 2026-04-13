@@ -14,8 +14,9 @@ interface ConditionBadgesProps {
 
 /**
  * Displays Kubernetes resource conditions as colored badges.
- * Ready=True is green, pressure conditions with True are orange warnings,
- * and Ready=False or other issues are red.
+ * Ready=True is green, Ready=False is red.
+ * Pressure conditions (DiskPressure, MemoryPressure, etc.): True=orange, Unknown=yellow.
+ * Non-pressure/non-Ready conditions use a muted style.
  */
 export function ConditionBadges({ conditions, className }: ConditionBadgesProps) {
   return (

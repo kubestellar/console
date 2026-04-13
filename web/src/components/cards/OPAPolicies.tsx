@@ -731,7 +731,7 @@ Let's start by discussing what kind of policy I need.`,
               <button
                 key={cluster.name}
                 onClick={() => status?.installed && !isOffline && handleShowViolations(cluster.name)}
-                disabled={isOffline || !status?.installed || isInitialLoading}
+                disabled={isOffline || isInitialLoading}
                 className={`w-full text-left p-2.5 rounded-lg bg-secondary/30 transition-colors ${
                   !isOffline && status?.installed && !isInitialLoading
                     ? 'hover:bg-secondary/50 cursor-pointer group'

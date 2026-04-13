@@ -21,6 +21,12 @@ const TEMPERATURE_MAX = 150 // Maximum temperature in Fahrenheit
 const WIND_SPEED_MIN = 1 // Minimum wind speed in mph
 const WIND_SPEED_MAX = 200 // Maximum wind speed in mph
 
+// Default values for new alert rules (used in unsaved-changes detection)
+const DEFAULT_THRESHOLD = 90 // Default GPU/memory threshold percentage
+const DEFAULT_DURATION_SECS = 60 // Default condition duration in seconds
+const DEFAULT_TEMPERATURE_F = 100 // Default temperature threshold in Fahrenheit
+const DEFAULT_WIND_SPEED_MPH = 40 // Default wind speed threshold in mph
+
 interface AlertRuleEditorProps {
   isOpen?: boolean
   rule?: AlertRule // If editing existing rule
@@ -58,8 +64,8 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
   const [conditionType, setAlertConditionType] = useState<AlertConditionType>(
     rule?.condition.type || 'gpu_usage'
   )
-  const [threshold, setThreshold] = useState(rule?.condition.threshold ?? 90)
-  const [duration, setDuration] = useState(rule?.condition.duration ?? 60)
+  const [threshold, setThreshold] = useState(rule?.condition.threshold ?? DEFAULT_THRESHOLD)
+  const [duration, setDuration] = useState(rule?.condition.duration ?? DEFAULT_DURATION_SECS)
   const [selectedClusters, setSelectedClusters] = useState<string[]>(
     rule?.condition.clusters || []
   )
@@ -71,8 +77,8 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
   const [weatherCondition, setWeatherCondition] = useState<'severe_storm' | 'extreme_heat' | 'heavy_rain' | 'snow' | 'high_wind'>(
     rule?.condition.weatherCondition || 'severe_storm'
   )
-  const [temperatureThreshold, setTemperatureThreshold] = useState(rule?.condition.temperatureThreshold ?? 100)
-  const [windSpeedThreshold, setWindSpeedThreshold] = useState(rule?.condition.windSpeedThreshold ?? 40)
+  const [temperatureThreshold, setTemperatureThreshold] = useState(rule?.condition.temperatureThreshold ?? DEFAULT_TEMPERATURE_F)
+  const [windSpeedThreshold, setWindSpeedThreshold] = useState(rule?.condition.windSpeedThreshold ?? DEFAULT_WIND_SPEED_MPH)
 
   // Channels state
   const [channels, setChannels] = useState<AlertChannel[]>(
@@ -95,16 +101,21 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
          severity !== rule.severity || enabled !== rule.enabled ||
          aiDiagnose !== (rule.aiDiagnose ?? true) ||
          conditionType !== rule.condition.type ||
-         threshold !== (rule.condition.threshold ?? 90) ||
-         duration !== (rule.condition.duration ?? 60) ||
+         threshold !== (rule.condition.threshold ?? DEFAULT_THRESHOLD) ||
+         duration !== (rule.condition.duration ?? DEFAULT_DURATION_SECS) ||
          weatherCondition !== (rule.condition.weatherCondition || 'severe_storm') ||
-         temperatureThreshold !== (rule.condition.temperatureThreshold ?? 100) ||
-         windSpeedThreshold !== (rule.condition.windSpeedThreshold ?? 40) ||
+         temperatureThreshold !== (rule.condition.temperatureThreshold ?? DEFAULT_TEMPERATURE_F) ||
+         windSpeedThreshold !== (rule.condition.windSpeedThreshold ?? DEFAULT_WIND_SPEED_MPH) ||
          JSON.stringify(selectedClusters) !== JSON.stringify(rule.condition.clusters || []) ||
          JSON.stringify(channels) !== JSON.stringify(rule.channels || []))
       : (name.trim() !== '' || description.trim() !== '' ||
-         severity !== 'warning' || conditionType !== 'gpu_usage' ||
-         selectedClusters.length > 0)
+         severity !== 'warning' || !enabled || aiDiagnose !== true ||
+         conditionType !== 'gpu_usage' ||
+         threshold !== DEFAULT_THRESHOLD || duration !== DEFAULT_DURATION_SECS ||
+         weatherCondition !== 'severe_storm' ||
+         temperatureThreshold !== DEFAULT_TEMPERATURE_F ||
+         windSpeedThreshold !== DEFAULT_WIND_SPEED_MPH ||
+         selectedClusters.length > 0 || channels.length > 0)
     if (hasChanges) {
       setShowDiscardConfirm(true)
       return
