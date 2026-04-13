@@ -22,6 +22,7 @@ vi.mock('../../../hooks/useDemoMode', () => ({
 vi.mock('../../../lib/analytics', () => ({
   emitNavigate: vi.fn(), emitLogin: vi.fn(), emitEvent: vi.fn(), analyticsReady: Promise.resolve(),
   emitAddCardModalOpened: vi.fn(), emitCardExpanded: vi.fn(), emitCardRefreshed: vi.fn(), markErrorReported: vi.fn(),
+  emitError: vi.fn(),
 }))
 
 vi.mock('../../../hooks/useTokenUsage', () => ({
@@ -47,6 +48,10 @@ vi.mock('../../../hooks/useCachedData', () => ({
 
 vi.mock('../../../hooks/useDrillDown', () => ({
   useDrillDownActions: () => ({}),
+}))
+
+vi.mock('../../../hooks/useGlobalFilters', () => ({
+  useGlobalFilters: () => ({ selectedClusters: [], isAllClustersSelected: true }),
 }))
 
 vi.mock('../../../lib/cards/cardHooks', () => ({

@@ -250,6 +250,7 @@ export function FlappyPod(_props: CardComponentProps) {
           onClick={startGame}
           className="p-1.5 rounded hover:bg-secondary"
           title="New Game"
+          aria-label="New Game"
         >
           <RotateCcw className="w-4 h-4" />
         </button>

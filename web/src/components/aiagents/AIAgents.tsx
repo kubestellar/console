@@ -62,6 +62,8 @@ export function AIAgents() {
           key={tab.id}
           onClick={() => !tab.disabled && setActiveTab(tab.id)}
           disabled={tab.disabled}
+          role="tab"
+          aria-selected={activeTab === tab.id}
           className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
             activeTab === tab.id
               ? 'border-purple-500 text-foreground'

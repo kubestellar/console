@@ -723,6 +723,7 @@ export function Checkers(_props: CardComponentProps) {
             onClick={newGame}
             className="p-1.5 rounded hover:bg-secondary"
             title={t('checkers.newGame')}
+            aria-label={t('checkers.newGame')}
           >
             <RotateCcw className="w-4 h-4" />
           </button>

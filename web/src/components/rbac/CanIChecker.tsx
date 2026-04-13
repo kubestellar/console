@@ -347,6 +347,7 @@ export function CanIChecker() {
                   <button
                     onClick={() => toggleUserGroup(group)}
                     className="hover:text-blue-200"
+                    aria-label={`Remove group ${group}`}
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -409,6 +410,7 @@ export function CanIChecker() {
           type="button"
           onClick={() => setShowAdvanced(!showAdvanced)}
           className="text-sm text-muted-foreground hover:text-foreground"
+          aria-expanded={showAdvanced}
         >
           {showAdvanced ? t('rbac.hideAdvanced') : t('rbac.showAdvanced')}
         </button>

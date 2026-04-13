@@ -59,6 +59,12 @@ vi.mock('../useCachedData', () => ({
   useCachedPVCs: (...args: unknown[]) => mockUsePVCs(...args),
 }))
 
+const mockUseIngresses = vi.fn(() => ({ ingresses: [] as unknown[], isLoading: false }))
+
+vi.mock('../mcp/networking', () => ({
+  useIngresses: (...args: unknown[]) => mockUseIngresses(...args),
+}))
+
 vi.mock('../useAlerts', () => ({
   useAlerts: (...args: unknown[]) => mockUseAlerts(...args),
   useAlertRules: (...args: unknown[]) => mockUseAlertRules(...args),
@@ -513,11 +519,25 @@ describe('useUniversalStats', () => {
       expect(getStatValue('clusterip')?.value).toBe(3)
     })
 
-    it('returns dash for ingresses (not implemented)', () => {
-      expect(getStatValue('ingresses')?.value).toBe('-')
+    it('returns ingress count from useIngresses hook', () => {
+      mockUseIngresses.mockReturnValue({ ingresses: [{ name: 'ing-1' }, { name: 'ing-2' }], isLoading: false })
+      expect(getStatValue('ingresses')?.value).toBe(2)
     })
 
-    it('endpoints mirrors total services count', () => {
+    it('returns zero ingresses when none exist', () => {
+      mockUseIngresses.mockReturnValue({ ingresses: [], isLoading: false })
+      expect(getStatValue('ingresses')?.value).toBe(0)
+    })
+
+    it('endpoints sums service endpoint counts', () => {
+      mockUseServices.mockReturnValue({
+        services: [
+          { type: 'ClusterIP', endpoints: 3 },
+          { type: 'ClusterIP', endpoints: 2 },
+          { type: 'NodePort', endpoints: 1 },
+        ],
+        isLoading: false,
+      })
       expect(getStatValue('endpoints')?.value).toBe(6)
     })
 

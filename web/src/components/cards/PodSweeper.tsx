@@ -278,6 +278,7 @@ function PodSweeperInternal(_props: CardComponentProps) {
             onClick={() => newGame()}
             className="p-1.5 rounded hover:bg-secondary"
             title="New Game"
+            aria-label="New Game"
           >
             <RotateCcw className="w-4 h-4" />
           </button>

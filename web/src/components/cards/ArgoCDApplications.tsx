@@ -279,6 +279,7 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
           <button
             onClick={() => setSelectedFilter('all')}
             className="text-xs px-2 py-0.5 rounded bg-purple-500/20 text-purple-400 flex items-center gap-1"
+            aria-label={`Clear filter: ${selectedFilter === 'outOfSync' ? t('argoCDApplications.outOfSync') : t('argoCDApplications.unhealthy')}`}
           >
             {selectedFilter === 'outOfSync' ? t('argoCDApplications.outOfSync') : t('argoCDApplications.unhealthy')}
             <XCircle className="w-3 h-3" />

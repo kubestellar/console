@@ -11,7 +11,7 @@ import type { GPUHealthCheckResult } from '../hooks/mcp/types'
 import type { NightlyGuideStatus } from '../lib/llmd/nightlyE2EDemoData'
 import type { AlertsMCPData } from './AlertsDataFetcher'
 import { STORAGE_KEY_AUTH_TOKEN, FETCH_DEFAULT_TIMEOUT_MS, STORAGE_KEY_NOTIFIED_ALERT_KEYS } from '../lib/constants'
-import { safeGet, safeSet, safeRemove, safeGetJSON, safeSetJSON } from '../lib/safeLocalStorage'
+import { safeGet, safeSet, safeRemove, safeGetJSON } from '../lib/safeLocalStorage'
 import { INITIAL_FETCH_DELAY_MS, POLL_INTERVAL_SLOW_MS, SECONDARY_FETCH_DELAY_MS, NIGHTLY_E2E_POLL_INTERVAL_MS } from '../lib/constants/network'
 import { PRESET_ALERT_RULES } from '../types/alerts'
 import { sendNotificationWithDeepLink } from '../hooks/useDeepLink'
@@ -282,9 +282,15 @@ function loadFromStorage<T>(key: string, defaultValue: T): T {
   return safeGetJSON(key, defaultValue)
 }
 
-// Save to localStorage
+// Save to localStorage with error logging (#7576).
+// Uses localStorage directly instead of safeSetJSON so errors are
+// observable rather than silently swallowed.
 function saveToStorage<T>(key: string, value: T): void {
-  safeSetJSON(key, value)
+  try {
+    localStorage.setItem(key, JSON.stringify(value))
+  } catch (e) {
+    console.error(`Failed to save ${key} to localStorage:`, e)
+  }
 }
 
 // Save alerts to localStorage with a hard cap and quota-exceeded handling.
@@ -301,8 +307,10 @@ function saveAlerts(alerts: Alert[]): void {
     toSave = [...firing, ...resolved]
   }
 
+  // Use localStorage.setItem directly instead of safeSet so that
+  // QuotaExceededError propagates to our own catch block (#7576).
   try {
-    safeSet(ALERTS_KEY, JSON.stringify(toSave))
+    localStorage.setItem(ALERTS_KEY, JSON.stringify(toSave))
   } catch (e) {
     // QuotaExceededError: DOMException with name 'QuotaExceededError', or legacy
     // browsers that use numeric code 22 instead of the named exception.
@@ -318,7 +326,7 @@ function saveAlerts(alerts: Alert[]): void {
         .slice(0, MAX_RESOLVED_ALERTS_AFTER_PRUNE)
       const pruned = [...firing, ...resolved]
       try {
-        safeSet(ALERTS_KEY, JSON.stringify(pruned))
+        localStorage.setItem(ALERTS_KEY, JSON.stringify(pruned))
       } catch (retryError) {
         console.error('[Alerts] localStorage still full after pruning, clearing alerts', retryError)
         safeRemove(ALERTS_KEY)

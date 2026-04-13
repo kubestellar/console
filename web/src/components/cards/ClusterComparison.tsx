@@ -167,6 +167,8 @@ function ClusterComparisonInternal({ config }: ClusterComparisonProps) {
                 : 'bg-secondary/50 text-muted-foreground hover:text-foreground'
             }`}
             title={c.name}
+            aria-label={`Toggle cluster ${c.name}`}
+            aria-pressed={selectedClusters.includes(c.name)}
           >
             {c.name}
           </button>

@@ -332,11 +332,15 @@ const getStoredPosition = () => {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) return JSON.parse(stored);
-  } catch (e) {}
+  } catch (e) {
+    console.warn('[Widget] failed to load stored position:', e);
+  }
   return { top: 20, left: 20 };
 };
 const savePosition = (pos) => {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(pos)); } catch (e) {}
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(pos)); } catch (e) {
+    console.warn('[Widget] failed to save position:', e);
+  }
 };
 let widgetPosition = getStoredPosition();
 

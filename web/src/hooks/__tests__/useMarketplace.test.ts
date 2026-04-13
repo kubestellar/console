@@ -84,6 +84,16 @@ function seedCache(items: MarketplaceItem[], presets?: MarketplaceItem[]) {
 
 function seedInstalledItems(map: Record<string, unknown>) {
   localStorage.setItem(INSTALLED_KEY, JSON.stringify(map))
+  // Trigger the cross-tab sync listener so the module-level
+  // installedSnapshot is refreshed from localStorage (#7574).
+  window.dispatchEvent(new StorageEvent('storage', { key: INSTALLED_KEY }))
+  // Mock the dashboards API so reconciliation doesn't remove seeded entries (#7574).
+  const dashboardIds = Object.values(map)
+    .filter((e: Record<string, unknown>) => e.dashboardId)
+    .map((e: Record<string, unknown>) => ({ id: e.dashboardId }))
+  if (dashboardIds.length > 0) {
+    mockApiGet.mockResolvedValue({ data: dashboardIds })
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -94,6 +104,8 @@ describe('useMarketplace', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     localStorage.clear()
+    // Default: api.get resolves with empty data so reconciliation doesn't throw (#7574)
+    mockApiGet.mockResolvedValue({ data: [] })
     // Default: fetch rejects so tests that don't need network don't hang
     vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('not available'))
   })
@@ -598,7 +610,8 @@ describe('useMarketplace', () => {
       json: () => Promise.resolve(presetJson),
     } as Response)
     // GET /api/dashboards — return a list with a default dashboard.
-    mockApiGet.mockResolvedValueOnce({ data: [{ id: 'dash-default', is_default: true }, { id: 'dash-other' }] })
+    // Set as the persistent default so both reconciliation and installItem get the same data.
+    mockApiGet.mockResolvedValue({ data: [{ id: 'dash-default', is_default: true }, { id: 'dash-other' }] })
     // POST /api/dashboards/:id/cards — success.
     mockApiPost.mockResolvedValueOnce({ data: { id: 'persisted-card-id' } })
 
@@ -641,7 +654,8 @@ describe('useMarketplace', () => {
       ok: true,
       json: () => Promise.resolve(presetJson),
     } as Response)
-    mockApiGet.mockResolvedValueOnce({ data: [{ id: 'dash-default', is_default: true }] })
+    // Set as persistent default so both reconciliation and installItem get the same data.
+    mockApiGet.mockResolvedValue({ data: [{ id: 'dash-default', is_default: true }] })
     mockApiPost.mockRejectedValueOnce(new Error('backend exploded'))
 
     const { result } = renderHook(() => useMarketplace())
