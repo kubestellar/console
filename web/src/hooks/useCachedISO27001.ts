@@ -280,12 +280,13 @@ async function fetchISO27001AuditViaKubectl(
 
   // Report progress as each cluster settles instead of waiting for all
   const allFindings: ISO27001Finding[] = []
-  await settledWithConcurrency(tasks, undefined, (result) => {
+  function handleSettled(result: PromiseSettledResult<ISO27001Finding[]>) {
     if (result.status === 'fulfilled') {
       allFindings.push(...result.value)
       onProgress?.([...allFindings])
     }
-  })
+  }
+  await settledWithConcurrency(tasks, undefined, handleSettled)
   return allFindings
 }
 

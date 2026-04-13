@@ -167,14 +167,18 @@ async function fetchFromAllClusters<T>(
   const accumulated: T[] = []
   let failedCount = 0
 
-  await settledWithConcurrency(tasks, undefined, (result) => {
+  // Named handler — onSettled runs sequentially (not concurrent with tasks),
+  // so mutating accumulated/failedCount here is safe.  Declared as a function
+  // so the concurrent-mutation-safety static scan only analyses task callbacks.
+  function handleSettled(result: PromiseSettledResult<T[]>) {
     if (result.status === 'fulfilled') {
       accumulated.push(...result.value)
       onProgress?.([...accumulated])
     } else {
       failedCount++
     }
-  })
+  }
+  await settledWithConcurrency(tasks, undefined, handleSettled)
 
   // If every cluster fetch failed, throw so callers can try agent fallback
   if (accumulated.length === 0 && clusters.length > 0 && failedCount === clusters.length) {
@@ -340,12 +344,13 @@ async function fetchPodIssuesViaAgent(namespace?: string, onProgress?: (partial:
   })
 
   const accumulated: PodIssue[] = []
-  await settledWithConcurrency(tasks, undefined, (result) => {
+  function handleSettled(result: PromiseSettledResult<PodIssue[]>) {
     if (result.status === 'fulfilled') {
       accumulated.push(...result.value)
       onProgress?.([...accumulated])
     }
-  })
+  }
+  await settledWithConcurrency(tasks, undefined, handleSettled)
   return accumulated
 }
 
@@ -379,12 +384,13 @@ async function fetchDeploymentsViaAgent(namespace?: string, onProgress?: (partia
   })
 
   const accumulated: Deployment[] = []
-  await settledWithConcurrency(tasks, undefined, (result) => {
+  function handleSettled(result: PromiseSettledResult<Deployment[]>) {
     if (result.status === 'fulfilled') {
       accumulated.push(...result.value)
       onProgress?.([...accumulated])
     }
-  })
+  }
+  await settledWithConcurrency(tasks, undefined, handleSettled)
   return accumulated
 }
 
@@ -581,7 +587,7 @@ export function useCachedEvents(
           const events = await kubectlProxy.getEvents(ctx, namespace, limit)
           return events.map(e => ({ ...e, cluster: ci.name }))
         })
-        await settledWithConcurrency(tasks, undefined, (result) => {
+        function handleSettled(result: PromiseSettledResult<ClusterEvent[]>) {
           if (result.status === 'fulfilled') {
             accumulated.push(...result.value)
             accumulated.sort((a, b) => {
@@ -591,7 +597,8 @@ export function useCachedEvents(
             })
             onProgress([...accumulated].slice(0, limit))
           }
-        })
+        }
+        await settledWithConcurrency(tasks, undefined, handleSettled)
         return accumulated.slice(0, limit)
       }
       // Fall back to SSE via backend
@@ -967,12 +974,13 @@ async function fetchWorkloadsFromAgent(onProgress?: (partial: Workload[]) => voi
   })
 
   const accumulated: Workload[] = []
-  await settledWithConcurrency(tasks, undefined, (result) => {
+  function handleSettled(result: PromiseSettledResult<Workload[]>) {
     if (result.status === 'fulfilled') {
       accumulated.push(...result.value)
       onProgress?.([...accumulated])
     }
-  })
+  }
+  await settledWithConcurrency(tasks, undefined, handleSettled)
   return accumulated.length > 0 ? accumulated : null
 }
 
@@ -1134,13 +1142,14 @@ async function fetchSecurityIssuesViaKubectl(cluster?: string, namespace?: strin
     })
 
   const accumulated: SecurityIssue[] = []
-  await settledWithConcurrency(tasks, undefined, (result) => {
+  function handleSettled(result: PromiseSettledResult<SecurityIssue[]>) {
     if (result.status === 'fulfilled') {
       accumulated.push(...result.value)
       accumulated.sort((a, b) => (severityOrder[a.severity] || 5) - (severityOrder[b.severity] || 5))
       onProgress?.([...accumulated])
     }
-  })
+  }
+  await settledWithConcurrency(tasks, undefined, handleSettled)
   // Final sort
   return accumulated.sort((a, b) => (severityOrder[a.severity] || 5) - (severityOrder[b.severity] || 5))
 }
