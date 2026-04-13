@@ -132,11 +132,13 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 						// can display an error state instead of spinning forever.
 						if !closed.Load() {
 							writeMu.Lock()
+							conn.SetWriteDeadline(time.Now().Add(wsWriteTimeout))
 							_ = conn.WriteJSON(protocol.Message{
 								ID:      m.ID,
 								Type:    protocol.TypeError,
 								Payload: protocol.ErrorPayload{Code: "panic", Message: "Internal server error during chat streaming"},
 							})
+							conn.SetWriteDeadline(time.Time{})
 							writeMu.Unlock()
 						}
 					}
@@ -159,11 +161,13 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 						// Notify the client about the panic so the UI can show an error
 						if !closed.Load() {
 							writeMu.Lock()
+							conn.SetWriteDeadline(time.Now().Add(wsWriteTimeout))
 							_ = conn.WriteJSON(protocol.Message{
 								ID:      m.ID,
 								Type:    protocol.TypeError,
 								Payload: protocol.ErrorPayload{Code: "panic", Message: "Internal server error during kubectl execution"},
 							})
+							conn.SetWriteDeadline(time.Time{})
 							writeMu.Unlock()
 						}
 					}
@@ -174,9 +178,11 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				}
 				writeMu.Lock()
 				defer writeMu.Unlock()
+				conn.SetWriteDeadline(time.Now().Add(wsWriteTimeout))
 				if err := conn.WriteJSON(response); err != nil {
 					slog.Error("write error", "error", err)
 				}
+				conn.SetWriteDeadline(time.Time{})
 			}(msg)
 		} else {
 			// Wrap synchronous handleMessage with recover() so a panic
@@ -186,17 +192,21 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 					if r := recover(); r != nil {
 						slog.Info("[WS] recovered from panic in synchronous handler", "panic", r, "msgType", msg.Type)
 						writeMu.Lock()
+						conn.SetWriteDeadline(time.Now().Add(wsWriteTimeout))
 						_ = conn.WriteJSON(protocol.Message{
 							ID:   msg.ID,
 							Type: protocol.TypeError,
 							Payload: protocol.ErrorPayload{Code: "panic", Message: "Internal server error"},
 						})
+						conn.SetWriteDeadline(time.Time{})
 						writeMu.Unlock()
 					}
 				}()
 				response := s.handleMessage(msg)
 				writeMu.Lock()
+				conn.SetWriteDeadline(time.Now().Add(wsWriteTimeout))
 				err := conn.WriteJSON(response)
+				conn.SetWriteDeadline(time.Time{})
 				writeMu.Unlock()
 				if err != nil {
 					slog.Error("write error", "error", err)
@@ -388,7 +398,12 @@ func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.M
 		}
 		writeMu.Lock()
 		defer writeMu.Unlock()
-		if err := conn.WriteJSON(outMsg); err != nil {
+		// #7429 — Set a write deadline so a hung client (TCP zero-window) cannot
+		// block this goroutine indefinitely, starving the pinger and leaking FDs.
+		conn.SetWriteDeadline(time.Now().Add(wsWriteTimeout))
+		err := conn.WriteJSON(outMsg)
+		conn.SetWriteDeadline(time.Time{}) // clear deadline
+		if err != nil {
 			slog.Error("[Chat] WebSocket write failed; marking connection closed",
 				"msgID", outMsg.ID, "type", outMsg.Type, "error", err)
 			closed.Store(true)
@@ -734,17 +749,20 @@ func (s *Server) handleCancelChat(conn *websocket.Conn, msg protocol.Message, wr
 		return
 	}
 
+	// #7432 — Extract cancelFn and delete entry under the lock, but call
+	// cancelFn() AFTER releasing the mutex. Context cancellation can
+	// propagate across goroutine boundaries; if the provider's cleanup
+	// path attempts to re-lock activeChatCtxsMu, calling cancelFn inside
+	// the lock causes a deadlock.
 	s.activeChatCtxsMu.Lock()
 	cancelFn, ok := s.activeChatCtxs[req.SessionID]
 	if ok {
-		// Call cancelFn inside the lock to prevent a concurrent goroutine from
-		// deleting or overwriting the entry between unlock and the call (#4717).
-		cancelFn()
 		delete(s.activeChatCtxs, req.SessionID)
 	}
 	s.activeChatCtxsMu.Unlock()
 
 	if ok {
+		cancelFn()
 		slog.Info("[Chat] cancelled chat", "sessionID", req.SessionID)
 	} else {
 		slog.Info("[Chat] no active chat to cancel", "sessionID", req.SessionID)
@@ -755,6 +773,8 @@ func (s *Server) handleCancelChat(conn *websocket.Conn, msg protocol.Message, wr
 	// structurally so an operator can see when a cancel acknowledgement
 	// fails to reach the client (typically because the connection died
 	// concurrently with the cancel request).
+	// #7429 — Write deadline prevents blocking on hung clients.
+	conn.SetWriteDeadline(time.Now().Add(wsWriteTimeout))
 	if err := conn.WriteJSON(protocol.Message{
 		ID:   msg.ID,
 		Type: protocol.TypeResult,
@@ -766,6 +786,7 @@ func (s *Server) handleCancelChat(conn *websocket.Conn, msg protocol.Message, wr
 		slog.Error("[Chat] failed to write cancel ack to WebSocket",
 			"sessionID", req.SessionID, "cancelled", ok, "error", err)
 	}
+	conn.SetWriteDeadline(time.Time{}) // clear deadline
 	writeMu.Unlock()
 }
 
@@ -803,17 +824,17 @@ func (s *Server) handleCancelChatHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// #7432 — Same deadlock fix as handleCancelChat: extract cancelFn under
+	// the lock but invoke it after releasing the mutex.
 	s.activeChatCtxsMu.Lock()
 	cancelFn, ok := s.activeChatCtxs[req.SessionID]
 	if ok {
-		// Call cancelFn inside the lock to prevent a concurrent goroutine from
-		// deleting or overwriting the entry between unlock and the call (#4717).
-		cancelFn()
 		delete(s.activeChatCtxs, req.SessionID)
 	}
 	s.activeChatCtxsMu.Unlock()
 
 	if ok {
+		cancelFn()
 		slog.Info("[Chat] cancelled chat via HTTP", "sessionID", req.SessionID)
 	} else {
 		slog.Info("[Chat] no active chat to cancel via HTTP", "sessionID", req.SessionID)
@@ -1071,7 +1092,11 @@ func (s *Server) handleMixedModeChat(ctx context.Context, conn *websocket.Conn, 
 		}
 		writeMu.Lock()
 		defer writeMu.Unlock()
-		if err := conn.WriteJSON(outMsg); err != nil {
+		// #7429 — Set a write deadline so a hung client cannot block indefinitely.
+		conn.SetWriteDeadline(time.Now().Add(wsWriteTimeout))
+		err := conn.WriteJSON(outMsg)
+		conn.SetWriteDeadline(time.Time{}) // clear deadline
+		if err != nil {
 			slog.Error("[Chat/MixedMode] WebSocket write failed; marking connection closed",
 				"msgID", outMsg.ID, "type", outMsg.Type, "error", err)
 			closed.Store(true)

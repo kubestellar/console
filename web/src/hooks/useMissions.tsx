@@ -786,6 +786,10 @@ export function MissionProvider({ children }: { children: ReactNode }) {
       // mission wipe.
       if (e.newValue === null) {
         try {
+          // #7430 — Suppress the save effect so clearing missions doesn't
+          // write `[]` back to localStorage and bounce an event to the
+          // other tab, creating an infinite cross-tab wipe loop.
+          suppressNextSaveRef.current = true
           setMissions([])
           // #6767 — `new Set()` defaults to `Set<any>`; keep type-safety by
           // matching the `Set<string>` declaration of `unreadMissionIds`.

@@ -174,7 +174,17 @@ func (h *Hub) Run() {
 				select {
 				case client.send <- msg.data:
 				default:
-					// Client buffer full, skip
+					// #7434 — Disconnect slow clients whose buffers are
+					// full to force a reconnect and state resync.
+					slog.Warn("[WebSocket] slow client buffer full, disconnecting",
+						"user", client.userID)
+					go func(c *Client) {
+						select {
+						case h.unregister <- c:
+						default:
+						}
+						c.closeConn()
+					}(client)
 				}
 			}
 
@@ -352,7 +362,22 @@ func (h *Hub) BroadcastAll(msg Message) {
 		select {
 		case client.send <- data:
 		default:
-			// Client buffer full, skip
+			// #7434 — Log when a broadcast is dropped because the client's
+			// send buffer is full. For reliable system events (e.g.
+			// settings_updated) a silent drop causes permanent state desync.
+			// Closing the client via the unregister channel forces a
+			// reconnect, which re-fetches current state.
+			slog.Warn("[WebSocket] slow client buffer full, disconnecting",
+				"user", client.userID, "type", msg.Type)
+			go func(c *Client) {
+				// Non-blocking send to unregister; if the channel is full
+				// the hub loop will pick it up eventually.
+				select {
+				case h.unregister <- c:
+				default:
+				}
+				c.closeConn()
+			}(client)
 		}
 	}
 }
