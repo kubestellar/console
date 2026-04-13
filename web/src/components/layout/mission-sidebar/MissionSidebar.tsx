@@ -486,23 +486,24 @@ export function MissionSidebar() {
 
   const pendingMission = pendingRunMissionId ? missions.find(m => m.id === pendingRunMissionId) : null
 
-  // Escape key: exit fullscreen first, then close sidebar
+  // Escape key: exit fullscreen first, then close sidebar.
+  // Skip when an overlay (MissionBrowser or MissionControlDialog) is open —
+  // those handle their own Escape and closing the sidebar behind them is wrong.
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        if (isFullScreen) {
-          setFullScreen(false)
-          // Only exit fullscreen — don't close sidebar (second Escape will close it)
-        } else if (isSidebarOpen) {
-          closeSidebar()
-        }
+      if (e.key !== 'Escape') return
+      if (showBrowser || showMissionControl) return
+      if (isFullScreen) {
+        setFullScreen(false)
+      } else if (isSidebarOpen) {
+        closeSidebar()
       }
     }
     if (isSidebarOpen) {
       document.addEventListener('keydown', handleEscape)
       return () => document.removeEventListener('keydown', handleEscape)
     }
-  }, [isSidebarOpen, isFullScreen, setFullScreen, closeSidebar])
+  }, [isSidebarOpen, isFullScreen, showBrowser, showMissionControl, setFullScreen, closeSidebar])
 
   // Count missions needing attention
   // Blocked missions are stuck waiting on user action (preflight failure,
