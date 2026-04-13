@@ -2,6 +2,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -14,19 +15,23 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"golang.org/x/sync/singleflight"
 )
 
 const (
 	nightlyCacheIdleTTL   = 5 * time.Minute  // cache when no jobs running
 	nightlyCacheActiveTTL = 2 * time.Minute  // cache when jobs are in progress
 	imageCacheTTL         = 30 * time.Minute // image tags change less frequently
-	nightlyRunsPerPage    = 7
-	githubAPIBase         = "https://api.github.com"
+	nightlyRunsPerPage = 7
 
 	failureReasonGPU  = "gpu_unavailable"
 	failureReasonTest = "test_failure"
 
-	maxLogBytes     = 200_000          // 200KB tail per job log
+	// maxErrorBodyBytes is the maximum number of bytes to read from GitHub error
+	// response bodies. Prevents unbounded memory consumption on large HTML error
+	// pages during outages (#7055).
+	maxErrorBodyBytes = 10_000 // 10 KB
+	maxLogBytes       = 200_000 // 200KB tail per job log
 	logCacheTTL     = 10 * time.Minute // immutable once run completes
 	maxLogFetchJobs = 5                // limit concurrent job log fetches
 
@@ -120,6 +125,9 @@ type NightlyE2EHandler struct {
 	mu       sync.RWMutex
 	cache    *NightlyE2EResponse
 	cacheExp time.Time
+	// #7053 — singleflight group coalesces concurrent cold-cache GetRuns
+	// callers into a single fetchAll call.
+	fetchGroup singleflight.Group
 
 	logMu       sync.RWMutex
 	logCache    map[string]*RunLogsResponse // key: "repo/runId"
@@ -185,17 +193,17 @@ func NewNightlyE2EHandler(githubToken string) *NightlyE2EHandler {
 }
 
 func (h *NightlyE2EHandler) prewarm() {
-	// Use a timeout to prevent this goroutine from blocking indefinitely
-	// if the GitHub API is slow or unreachable.
-	timer := time.NewTimer(prewarmTimeout)
-	defer timer.Stop()
+	// #7052 — Use a cancellable context so that on timeout, all goroutines
+	// spawned by fetchAll are cancelled instead of abandoned.
+	ctx, cancel := context.WithTimeout(context.Background(), prewarmTimeout)
+	defer cancel()
 
 	done := make(chan struct{})
 	var resp *NightlyE2EResponse
 	var fetchErr error
 
 	go func() {
-		resp, fetchErr = h.fetchAll()
+		resp, fetchErr = h.fetchAllWithContext(ctx)
 		close(done)
 	}()
 
@@ -205,7 +213,7 @@ func (h *NightlyE2EHandler) prewarm() {
 			slog.Error("[NightlyE2E] prewarm failed", "error", fetchErr)
 			return
 		}
-	case <-timer.C:
+	case <-ctx.Done():
 		slog.Error("[NightlyE2E] prewarm timed out", "timeout", prewarmTimeout)
 		return
 	}
@@ -233,13 +241,17 @@ func (h *NightlyE2EHandler) GetRuns(c *fiber.Ctx) error {
 	}
 	h.mu.RUnlock()
 
-	// Fetch fresh data
-	resp, err := h.fetchAll()
+	// #7053 — Use singleflight to coalesce concurrent cold-cache fetches
+	// into a single fetchAll call, preventing N × 17+ goroutine fan-out.
+	v, err, _ := h.fetchGroup.Do("runs", func() (interface{}, error) {
+		return h.fetchAll()
+	})
 	if err != nil {
 		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{
 			"error": fmt.Sprintf("failed to fetch nightly E2E data: %v", err),
 		})
 	}
+	resp := v.(*NightlyE2EResponse)
 
 	// Use shorter cache TTL when any jobs are in progress
 	ttl := nightlyCacheIdleTTL
@@ -257,16 +269,31 @@ func (h *NightlyE2EHandler) GetRuns(c *fiber.Ctx) error {
 }
 
 func (h *NightlyE2EHandler) fetchAll() (*NightlyE2EResponse, error) {
+	return h.fetchAllWithContext(context.Background())
+}
+
+// fetchAllWithContext is the context-aware version of fetchAll (#7052).
+// When ctx is cancelled, HTTP requests made by sub-goroutines will be
+// interrupted instead of running to completion.
+func (h *NightlyE2EHandler) fetchAllWithContext(ctx context.Context) (*NightlyE2EResponse, error) {
 	type result struct {
 		idx  int
 		runs []NightlyRun
 		err  error
 	}
 
-	// Fetch workflow runs and guide images concurrently
+	// Fetch workflow runs and guide images concurrently.
+	// #7052 — Check context before spawning goroutines and bail early on
+	// cancellation so prewarm timeouts don't leave goroutines running.
 	ch := make(chan result, len(nightlyWorkflows))
 	for i, wf := range nightlyWorkflows {
 		go func(idx int, wf NightlyWorkflow) {
+			select {
+			case <-ctx.Done():
+				ch <- result{idx: idx, err: ctx.Err()}
+				return
+			default:
+			}
 			runs, err := h.fetchWorkflowRuns(wf)
 			ch <- result{idx: idx, runs: runs, err: err}
 		}(i, wf)
@@ -333,7 +360,7 @@ func (h *NightlyE2EHandler) fetchAll() (*NightlyE2EResponse, error) {
 
 func (h *NightlyE2EHandler) fetchWorkflowRuns(wf NightlyWorkflow) ([]NightlyRun, error) {
 	url := fmt.Sprintf("%s/repos/%s/actions/workflows/%s/runs?per_page=%d",
-		githubAPIBase, wf.Repo, wf.WorkflowFile, nightlyRunsPerPage)
+		resolveGitHubAPIBase(), wf.Repo, wf.WorkflowFile, nightlyRunsPerPage)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -355,7 +382,8 @@ func (h *NightlyE2EHandler) fetchWorkflowRuns(wf NightlyWorkflow) ([]NightlyRun,
 		return []NightlyRun{}, nil
 	}
 	if resp.StatusCode != http.StatusOK {
-		body, readErr := io.ReadAll(resp.Body)
+		// #7055 — Use LimitReader to prevent unbounded memory on large error pages.
+		body, readErr := io.ReadAll(io.LimitReader(resp.Body, maxErrorBodyBytes))
 		if readErr != nil {
 			body = []byte("(failed to read response body)")
 		}
@@ -405,16 +433,24 @@ func (h *NightlyE2EHandler) fetchWorkflowRuns(wf NightlyWorkflow) ([]NightlyRun,
 	return runs, nil
 }
 
+// maxConcurrentClassify limits concurrent detectGPUFailure calls to prevent
+// unbounded goroutine fan-out when many runs fail simultaneously (#7056).
+const maxConcurrentClassify = 5
+
 // classifyFailures fetches jobs for failed runs and sets FailureReason.
+// #7056 — Uses a semaphore to cap concurrent GitHub API calls.
 func (h *NightlyE2EHandler) classifyFailures(repo string, runs []NightlyRun) {
 	var wg sync.WaitGroup
+	sem := make(chan struct{}, maxConcurrentClassify)
 	for i := range runs {
 		if runs[i].Conclusion == nil || *runs[i].Conclusion != "failure" {
 			continue
 		}
 		wg.Add(1)
+		sem <- struct{}{}
 		go func(idx int) {
 			defer wg.Done()
+			defer func() { <-sem }()
 			runs[idx].FailureReason = h.detectGPUFailure(repo, runs[idx].ID)
 		}(i)
 	}
@@ -424,7 +460,7 @@ func (h *NightlyE2EHandler) classifyFailures(repo string, runs []NightlyRun) {
 // detectGPUFailure checks if a run failed due to GPU unavailability.
 func (h *NightlyE2EHandler) detectGPUFailure(repo string, runID int64) string {
 	url := fmt.Sprintf("%s/repos/%s/actions/runs/%d/jobs?per_page=30",
-		githubAPIBase, repo, runID)
+		resolveGitHubAPIBase(), repo, runID)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -565,7 +601,7 @@ type treeEntry struct {
 // fetchGuideYAMLFiles fetches the repo tree and returns YAML files under guides/
 // that are likely to contain image references (values.yaml, decode.yaml, etc.).
 func (h *NightlyE2EHandler) fetchGuideYAMLFiles() []treeEntry {
-	url := fmt.Sprintf("%s/repos/%s/git/trees/main?recursive=1", githubAPIBase, imageRepo)
+	url := fmt.Sprintf("%s/repos/%s/git/trees/main?recursive=1", resolveGitHubAPIBase(), imageRepo)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -621,7 +657,7 @@ func (h *NightlyE2EHandler) fetchGuideYAMLFiles() []treeEntry {
 
 // fetchBlob fetches a git blob's content by SHA and returns it decoded.
 func (h *NightlyE2EHandler) fetchBlob(sha string) string {
-	url := fmt.Sprintf("%s/repos/%s/git/blobs/%s", githubAPIBase, imageRepo, sha)
+	url := fmt.Sprintf("%s/repos/%s/git/blobs/%s", resolveGitHubAPIBase(), imageRepo, sha)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -751,7 +787,7 @@ func (h *NightlyE2EHandler) GetRunLogs(c *fiber.Ctx) error {
 
 	// Fetch jobs for this run
 	jobsURL := fmt.Sprintf("%s/repos/%s/actions/runs/%d/jobs?per_page=30",
-		githubAPIBase, repo, runID)
+		resolveGitHubAPIBase(), repo, runID)
 
 	req, err := http.NewRequest("GET", jobsURL, nil)
 	if err != nil {
@@ -771,7 +807,8 @@ func (h *NightlyE2EHandler) GetRunLogs(c *fiber.Ctx) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, readErr := io.ReadAll(resp.Body)
+		// #7055 — Use LimitReader to prevent unbounded memory on large error pages.
+		body, readErr := io.ReadAll(io.LimitReader(resp.Body, maxErrorBodyBytes))
 		if readErr != nil {
 			body = []byte("(failed to read response body)")
 		}
@@ -838,7 +875,7 @@ func (h *NightlyE2EHandler) GetRunLogs(c *fiber.Ctx) error {
 // fetchJobLog fetches the plain-text log for a single GitHub Actions job,
 // truncated to the last maxLogBytes bytes (failure info is at the tail).
 func (h *NightlyE2EHandler) fetchJobLog(repo string, jobID int64) string {
-	logURL := fmt.Sprintf("%s/repos/%s/actions/jobs/%d/logs", githubAPIBase, repo, jobID)
+	logURL := fmt.Sprintf("%s/repos/%s/actions/jobs/%d/logs", resolveGitHubAPIBase(), repo, jobID)
 
 	req, err := http.NewRequest("GET", logURL, nil)
 	if err != nil {

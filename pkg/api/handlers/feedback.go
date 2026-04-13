@@ -22,6 +22,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"golang.org/x/sync/singleflight"
 
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/models"
@@ -31,6 +32,10 @@ import (
 
 // githubAPITimeout is the timeout for HTTP requests to the GitHub API.
 const githubAPITimeout = 10 * time.Second
+
+// githubAPIBase is the default public GitHub API base URL.
+// Used as the fallback by resolveGitHubAPIBase() when GITHUB_URL is unset.
+const githubAPIBase = "https://api.github.com"
 
 // maxClientPageLimit is the largest page size a client may request on any
 // list endpoint that routes through parsePageParams (feedback, RBAC user
@@ -158,6 +163,8 @@ type FeedbackHandler struct {
 	prCacheMu   sync.RWMutex
 	prCache     []GitHubPR
 	prCacheTime time.Time
+	// #7057 — singleflight group coalesces concurrent cold-cache PR fetches.
+	prFetchGroup singleflight.Group
 }
 
 // FeedbackConfig holds configuration for the feedback handler
@@ -731,6 +738,9 @@ func (h *FeedbackHandler) fetchLinkedPRs(issues []GitHubIssue) map[int]GitHubPR 
 
 // getCachedOrFetchPRs returns cached PR data if fresh, otherwise fetches
 // from the GitHub API with pagination and caches the result.
+//
+// #7057 — Uses singleflight to coalesce concurrent cold-cache fetches into
+// a single set of paginated GitHub PR API calls.
 func (h *FeedbackHandler) getCachedOrFetchPRs() []GitHubPR {
 	h.prCacheMu.RLock()
 	if h.prCache != nil && time.Since(h.prCacheTime) < prCacheTTL {
@@ -740,24 +750,31 @@ func (h *FeedbackHandler) getCachedOrFetchPRs() []GitHubPR {
 	}
 	h.prCacheMu.RUnlock()
 
-	var allPRs []GitHubPR
-	for _, state := range []string{"open", "closed"} {
-		prs := h.fetchPRPages(state)
-		allPRs = append(allPRs, prs...)
-	}
+	v, _, _ := h.prFetchGroup.Do("prs", func() (interface{}, error) {
+		var allPRs []GitHubPR
+		for _, state := range []string{"open", "closed"} {
+			prs := h.fetchPRPages(state)
+			allPRs = append(allPRs, prs...)
+		}
 
-	h.prCacheMu.Lock()
-	// Re-check: another goroutine may have populated the cache while we fetched.
-	if h.prCache != nil && time.Since(h.prCacheTime) < prCacheTTL {
-		cached := h.prCache
+		h.prCacheMu.Lock()
+		// Re-check: another goroutine may have populated the cache while we fetched.
+		if h.prCache != nil && time.Since(h.prCacheTime) < prCacheTTL {
+			cached := h.prCache
+			h.prCacheMu.Unlock()
+			return cached, nil
+		}
+		h.prCache = allPRs
+		h.prCacheTime = time.Now()
 		h.prCacheMu.Unlock()
-		return cached
-	}
-	h.prCache = allPRs
-	h.prCacheTime = time.Now()
-	h.prCacheMu.Unlock()
 
-	return allPRs
+		return allPRs, nil
+	})
+
+	if prs, ok := v.([]GitHubPR); ok {
+		return prs
+	}
+	return nil
 }
 
 // fetchPRPages fetches up to maxPRPages pages of PRs for the given state,
