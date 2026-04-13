@@ -97,7 +97,7 @@ const CompliancePerfTest = safeLazy(() => import('./pages/CompliancePerfTest'), 
 import { DASHBOARD_CHUNKS } from './lib/dashboardChunks'
 
 // Always prefetched regardless of enabled dashboards
-const ALWAYS_PREFETCH = new Set(['dashboard', 'settings', 'clusters'])
+const ALWAYS_PREFETCH = new Set(['dashboard', 'settings', 'clusters', 'cluster-admin', 'security', 'deploy'])
 
 // Prefetch lazy route chunks after initial page load.
 // Batched to avoid overwhelming the Vite dev server with simultaneous
@@ -108,8 +108,17 @@ if (typeof window !== 'undefined') {
 
   const prefetchRoutes = async () => {
     // Wait for the enabled dashboards list from /health so we only
-    // prefetch chunks the user will actually see.
-    await fetchEnabledDashboards()
+    // prefetch chunks the user will actually see. Timeout after 2s
+    // and prefetch all chunks — better to over-prefetch than leave
+    // chunks uncached and block navigation.
+    try {
+      await Promise.race([
+        fetchEnabledDashboards(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 2000)),
+      ])
+    } catch {
+      // Timeout or error — fall through to prefetch all
+    }
     const enabledIds = getEnabledDashboardIds()
 
     // null = show all dashboards, otherwise only enabled + always-needed
