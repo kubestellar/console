@@ -48,7 +48,13 @@ func (o *OpsGenieNotifier) Send(alert Alert) error {
 		return fmt.Errorf("opsgenie API key not configured")
 	}
 
+	// Build a dedup alias that includes the alert ID when RuleID or Cluster
+	// is empty, preventing unrelated alerts from sharing the same alias and
+	// causing incorrect deduplication or resolving the wrong incident (#7536).
 	alias := alert.RuleID + "::" + alert.Cluster
+	if alert.RuleID == "" || alert.Cluster == "" {
+		alias = alert.ID + "::" + alert.RuleID + "::" + alert.Cluster
+	}
 
 	if alert.Status == "resolved" {
 		return o.closeAlert(alias)

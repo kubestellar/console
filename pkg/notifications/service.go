@@ -76,9 +76,18 @@ func (s *Service) RegisterOpsGenieNotifier(id, apiKey string) {
 	}
 }
 
-// RegisterEmailNotifier registers an email notifier
+// RegisterEmailNotifier registers an email notifier.
+// The SMTP port is validated against [minSMTPPort, maxSMTPPort] to catch
+// misconfiguration at registration time rather than deferring failure
+// until send time (#7537).
 func (s *Service) RegisterEmailNotifier(id, smtpHost string, smtpPort int, username, password, from, to string) {
 	if smtpHost != "" && from != "" && to != "" {
+		if smtpPort < minSMTPPort || smtpPort > maxSMTPPort {
+			slog.Warn("email notifier not registered: invalid SMTP port",
+				"id", id, "port", smtpPort,
+				"validRange", fmt.Sprintf("%d-%d", minSMTPPort, maxSMTPPort))
+			return
+		}
 		recipients := splitAndCleanRecipients(to)
 		if len(recipients) == 0 {
 			slog.Warn("email notifier not registered: no valid recipients after trimming", "id", id)

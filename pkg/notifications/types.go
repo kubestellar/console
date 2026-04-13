@@ -56,8 +56,8 @@ type NotificationConfig struct {
 	EmailUsername   string `json:"emailUsername,omitempty"`
 	EmailPassword   string `json:"emailPassword,omitempty"`
 	WebhookURL          string `json:"webhookUrl,omitempty"`
-	PagerDutyRoutingKey string `json:"pagerDutyRoutingKey,omitempty"`
-	OpsGenieAPIKey      string `json:"opsGenieApiKey,omitempty"`
+	PagerDutyRoutingKey string `json:"pagerdutyRoutingKey,omitempty"`
+	OpsGenieAPIKey      string `json:"opsgenieApiKey,omitempty"`
 }
 
 // Notifier is the interface for sending notifications

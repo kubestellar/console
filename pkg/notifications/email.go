@@ -155,11 +155,27 @@ func (e *EmailNotifier) Test() error {
 	return e.Send(testAlert)
 }
 
-// buildMessage constructs the full email message with headers
+// sanitizeHeaderValue strips CR/LF characters from a value destined for an
+// SMTP header. Without this, attacker-controlled content in From, To, or
+// Subject could inject additional headers or alter message structure (#7535).
+func sanitizeHeaderValue(v string) string {
+	r := strings.NewReplacer("\r", "", "\n", "")
+	return r.Replace(v)
+}
+
+// buildMessage constructs the full email message with headers.
+// All dynamic values are sanitized to prevent header injection (#7535).
 func (e *EmailNotifier) buildMessage(subject, body string) string {
-	msg := fmt.Sprintf("From: %s\r\n", e.From)
-	msg += fmt.Sprintf("To: %s\r\n", strings.Join(e.To, ", "))
-	msg += fmt.Sprintf("Subject: %s\r\n", subject)
+	safeFrom := sanitizeHeaderValue(e.From)
+	safeTo := make([]string, len(e.To))
+	for i, addr := range e.To {
+		safeTo[i] = sanitizeHeaderValue(addr)
+	}
+	safeSubject := sanitizeHeaderValue(subject)
+
+	msg := fmt.Sprintf("From: %s\r\n", safeFrom)
+	msg += fmt.Sprintf("To: %s\r\n", strings.Join(safeTo, ", "))
+	msg += fmt.Sprintf("Subject: %s\r\n", safeSubject)
 	msg += "MIME-Version: 1.0\r\n"
 	msg += "Content-Type: text/html; charset=UTF-8\r\n"
 	msg += "\r\n"
