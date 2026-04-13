@@ -20,7 +20,7 @@ export function NetworkOverview() {
   const { services, isLoading: servicesLoading, isRefreshing, isDemoFallback, consecutiveFailures, isFailed, lastRefresh: servicesLastRefresh } = useCachedServices()
 
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
-  const { drillToService } = useDrillDownActions()
+  const { drillToService, drillToAllServices } = useDrillDownActions()
 
   // Report card data state.
   // #6267: include clustersRefreshing so the card-level state matches
@@ -225,12 +225,13 @@ export function NetworkOverview() {
         <div
           className={`p-2 rounded-lg bg-blue-500/10 border border-blue-500/20 ${stats.loadBalancers > 0 ? 'cursor-pointer hover:bg-blue-500/20' : 'cursor-default'} transition-colors`}
           onClick={() => {
-            const svc = filteredServices.find(s => s.type === 'LoadBalancer')
-            if (svc?.cluster && svc?.namespace) {
-              drillToService(svc.cluster, svc.namespace, svc.name)
+            if (stats.loadBalancers > 0) {
+              drillToAllServices('LoadBalancer', {
+                services: filteredServices.filter(s => s.type === 'LoadBalancer'),
+              })
             }
           }}
-          title={stats.loadBalancers > 0 ? `${stats.loadBalancers} LoadBalancer service${stats.loadBalancers !== 1 ? 's' : ''} - Click to view` : 'No LoadBalancer services'}
+          title={stats.loadBalancers > 0 ? `${stats.loadBalancers} LoadBalancer service${stats.loadBalancers !== 1 ? 's' : ''} - Click to view all` : 'No LoadBalancer services'}
         >
           <div className="flex items-center gap-1.5 mb-1">
             <Globe className="w-3 h-3 text-blue-400" />
@@ -241,12 +242,13 @@ export function NetworkOverview() {
         <div
           className={`p-2 rounded-lg bg-purple-500/10 border border-purple-500/20 ${stats.nodePort > 0 ? 'cursor-pointer hover:bg-purple-500/20' : 'cursor-default'} transition-colors`}
           onClick={() => {
-            const svc = filteredServices.find(s => s.type === 'NodePort')
-            if (svc?.cluster && svc?.namespace) {
-              drillToService(svc.cluster, svc.namespace, svc.name)
+            if (stats.nodePort > 0) {
+              drillToAllServices('NodePort', {
+                services: filteredServices.filter(s => s.type === 'NodePort'),
+              })
             }
           }}
-          title={stats.nodePort > 0 ? `${stats.nodePort} NodePort service${stats.nodePort !== 1 ? 's' : ''} - Click to view` : 'No NodePort services'}
+          title={stats.nodePort > 0 ? `${stats.nodePort} NodePort service${stats.nodePort !== 1 ? 's' : ''} - Click to view all` : 'No NodePort services'}
         >
           <div className="flex items-center gap-1.5 mb-1">
             <Server className="w-3 h-3 text-purple-400" />
@@ -257,12 +259,13 @@ export function NetworkOverview() {
         <div
           className={`p-2 rounded-lg bg-green-500/10 border border-green-500/20 ${stats.clusterIP > 0 ? 'cursor-pointer hover:bg-green-500/20' : 'cursor-default'} transition-colors`}
           onClick={() => {
-            const svc = filteredServices.find(s => s.type === 'ClusterIP')
-            if (svc?.cluster && svc?.namespace) {
-              drillToService(svc.cluster, svc.namespace, svc.name)
+            if (stats.clusterIP > 0) {
+              drillToAllServices('ClusterIP', {
+                services: filteredServices.filter(s => s.type === 'ClusterIP'),
+              })
             }
           }}
-          title={stats.clusterIP > 0 ? `${stats.clusterIP} ClusterIP service${stats.clusterIP !== 1 ? 's' : ''} - Click to view` : 'No ClusterIP services'}
+          title={stats.clusterIP > 0 ? `${stats.clusterIP} ClusterIP service${stats.clusterIP !== 1 ? 's' : ''} - Click to view all` : 'No ClusterIP services'}
         >
           <div className="flex items-center gap-1.5 mb-1">
             <Server className="w-3 h-3 text-green-400" />
@@ -273,12 +276,13 @@ export function NetworkOverview() {
         <div
           className={`p-2 rounded-lg bg-orange-500/10 border border-orange-500/20 ${stats.externalName > 0 ? 'cursor-pointer hover:bg-orange-500/20' : 'cursor-default'} transition-colors`}
           onClick={() => {
-            const svc = filteredServices.find(s => s.type === 'ExternalName')
-            if (svc?.cluster && svc?.namespace) {
-              drillToService(svc.cluster, svc.namespace, svc.name)
+            if (stats.externalName > 0) {
+              drillToAllServices('ExternalName', {
+                services: filteredServices.filter(s => s.type === 'ExternalName'),
+              })
             }
           }}
-          title={stats.externalName > 0 ? `${stats.externalName} ExternalName service${stats.externalName !== 1 ? 's' : ''} - Click to view` : 'No ExternalName services'}
+          title={stats.externalName > 0 ? `${stats.externalName} ExternalName service${stats.externalName !== 1 ? 's' : ''} - Click to view all` : 'No ExternalName services'}
         >
           <div className="flex items-center gap-1.5 mb-1">
             <ExternalLink className="w-3 h-3 text-orange-400" />

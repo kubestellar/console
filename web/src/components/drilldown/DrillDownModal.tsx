@@ -23,6 +23,7 @@ const ArgoAppDrillDown = safeLazy(() => import('./views/ArgoAppDrillDown'), 'Arg
 const HelmReleaseDrillDown = safeLazy(() => import('./views/HelmReleaseDrillDown'), 'HelmReleaseDrillDown')
 const ConfigMapDrillDown = safeLazy(() => import('./views/ConfigMapDrillDown'), 'ConfigMapDrillDown')
 const BuildpackDrillDown = safeLazy(() => import('./views/BuildpackDrillDown'), 'BuildpackDrillDown')
+const ServiceDrillDown = safeLazy(() => import('./views/ServiceDrillDown'), 'default')
 const RBACDrillDown = safeLazy(() => import('./views/RBACDrillDown'), 'RBACDrillDown')
 const CostDrillDown = safeLazy(() => import('./views/CostDrillDown'), 'CostDrillDown')
 const ComplianceDrillDown = safeLazy(() => import('./views/ComplianceDrillDown'), 'ComplianceDrillDown')
@@ -128,6 +129,7 @@ const getViewIcon = (type: string) => {
     case 'configmap': return <FileText className="w-4 h-4 text-yellow-400" />
     case 'secret': return <Lock className="w-4 h-4 text-red-400" />
     case 'serviceaccount': return <User className="w-4 h-4 text-purple-400" />
+    case 'service': return <Layers className="w-4 h-4 text-cyan-400" />
     case 'pvc': return <HardDrive className="w-4 h-4 text-green-400" />
     case 'node': return <Cpu className="w-4 h-4 text-orange-400" />
     case 'gpu-node': return <Cpu className="w-4 h-4 text-purple-400" />
@@ -253,6 +255,8 @@ export function DrillDownModal() {
         return <ServiceAccountDrillDown data={data} />
       case 'pvc':
         return <PVCDrillDown data={data} />
+      case 'service':
+        return <ServiceDrillDown data={data} />
       // Phase 2 views
       case 'alert':
         return <AlertDrillDown data={data} />

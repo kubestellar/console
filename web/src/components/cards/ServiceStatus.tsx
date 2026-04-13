@@ -345,6 +345,10 @@ export function ServiceStatus() {
                 type: service.type,
                 ports: service.ports,
                 clusterIP: service.clusterIP,
+                externalIP: service.externalIP,
+                endpoints: service.endpoints,
+                lbStatus: service.lbStatus,
+                selector: service.selector,
               })}
               className="flex items-center justify-between p-2 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group gap-2"
             >
