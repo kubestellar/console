@@ -279,7 +279,8 @@ jobs:
             --set route.host=kc.apps.fmaas-vllm-d.fmaas.res.ibm.com \
             --set clusterName=vllm-d \
             --set-string enabledDashboards="dashboard\,clusters\,gpu-reservations\,llm-d-benchmarks\,ai-ml\,arcade" \
-            --set persistence.storageClass=ocs-storagecluster-cephfs \
+            --set persistence.storageClass=ibmc-vpc-block-10iops-tier \
+            --set backup.storageClass=ibmc-vpc-block-10iops-tier \
             --set rbac.namespaceCreationEnabled=true \
             --set securityContext.runAsUser=null \
             --set securityContext.runAsGroup=null \
