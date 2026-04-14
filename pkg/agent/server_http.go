@@ -736,6 +736,11 @@ func (s *Server) handleHPAsHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
+	// SECURITY: Validate token for HPAs endpoint
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 	if s.k8sClient == nil {
 		writeJSON(w,map[string]interface{}{"hpas": []interface{}{}, "error": "k8s client not initialized"})
 		return
@@ -763,6 +768,11 @@ func (s *Server) handlePVCsHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
+		return
+	}
+	// SECURITY: Validate token for PVCs endpoint
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 	if s.k8sClient == nil {
@@ -794,6 +804,11 @@ func (s *Server) handleRolesHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
+	// SECURITY: Validate token for Roles endpoint
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 	if s.k8sClient == nil {
 		writeJSON(w,map[string]interface{}{"roles": []interface{}{}, "error": "k8s client not initialized"})
 		return
@@ -821,6 +836,11 @@ func (s *Server) handleRoleBindingsHTTP(w http.ResponseWriter, r *http.Request) 
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
+		return
+	}
+	// SECURITY: Validate token for RoleBindings endpoint
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 	if s.k8sClient == nil {
@@ -852,6 +872,11 @@ func (s *Server) handleResourceQuotasHTTP(w http.ResponseWriter, r *http.Request
 		w.WriteHeader(http.StatusOK)
 		return
 	}
+	// SECURITY: Validate token for ResourceQuotas endpoint
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 	if s.k8sClient == nil {
 		writeJSON(w,map[string]interface{}{"resourcequotas": []interface{}{}, "error": "k8s client not initialized"})
 		return
@@ -879,6 +904,11 @@ func (s *Server) handleLimitRangesHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
+		return
+	}
+	// SECURITY: Validate token for LimitRanges endpoint
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 	if s.k8sClient == nil {
@@ -909,6 +939,11 @@ func (s *Server) handleResolveDepsHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
+		return
+	}
+	// SECURITY: Validate token for ResolveDeps endpoint
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 	if s.k8sClient == nil {
