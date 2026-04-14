@@ -75,9 +75,13 @@ const COMPONENTS_DIR = path.resolve(
 // When you bump this number, append a one-line entry above so future
 // bumps stay grep-able and reviewers can tell at a glance whether a
 // change is a real new violation or just a comment-level reference.
-//   313 → 319: PR #7085 mission state fixes — issue-ref comments misclassified as hex colors
-//   319 → 320: PR #7376 batch resolve — one new hex color reference
-const EXPECTED_RAW_HEX_COUNT = 320
+//   313 → 319: PR 7085 mission state fixes — issue-ref comments misclassified as hex colors
+//   319 → 320: PR 7376 batch resolve — one new hex color reference
+//   320 → 265: issue 8000 — detector now skips comment lines outright,
+//              eliminating all issue-ref false positives like "issue #7865"
+//              that incremented the ratchet over many previous bumps. The
+//              new baseline is the count of real `#RRGGBB` literals only.
+const EXPECTED_RAW_HEX_COUNT = 265
 const EXPECTED_RAW_RGBA_COUNT = 104
 const EXPECTED_ARBITRARY_TW_COLOR_COUNT = 22
 // Inline style color ratchet — bump history:
@@ -224,8 +228,9 @@ function isInCanvasContext(line: string): boolean {
 
 /**
  * Detect raw hex color values (#xxx, #xxxxxx, #xxxxxxxx).
- * Skips SVG contexts, canvas contexts, CSS var declarations, and string
- * template expressions.
+ * Skips SVG contexts, canvas contexts, CSS var declarations, string
+ * template expressions, and comments (which commonly contain issue
+ * refs like "#7865" that look like 4-digit hex colors — issue 8000).
  */
 function detectRawHex(line: string): ViolationCategory | null {
   const stripped = line.trim()
@@ -233,6 +238,21 @@ function detectRawHex(line: string): ViolationCategory | null {
   // Skip SVG and canvas contexts
   if (isInSvgContext(stripped)) return null
   if (isInCanvasContext(stripped)) return null
+
+  // Skip comment lines outright (line comments, block-comment openers,
+  // block-comment continuation lines that start with `*`, and JSX
+  // `{/* ... */}` comments). Issue refs of the form `#NNNN` match the
+  // hex regex by accident and produced false-positive violations
+  // throughout the codebase — the detector should only police colors
+  // in live code, not prose (issue 8000).
+  if (
+    stripped.startsWith('//') ||
+    stripped.startsWith('/*') ||
+    stripped.startsWith('*') ||
+    stripped.startsWith('{/*')
+  ) {
+    return null
+  }
 
   // Skip className attributes (Tailwind classes may contain color names, not hex)
   if (/className\s*=/.test(stripped) && !/#[0-9a-fA-F]{3,8}/.test(stripped)) return null
