@@ -1119,6 +1119,213 @@ func (s *Server) handleScaleHTTP(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// handleDeployWorkloadHTTP deploys a workload from a source cluster to one or
+// more target clusters via the shared pkg/k8s MultiClusterClient.DeployWorkload
+// method. The agent uses the user's kubeconfig rather than the backend's pod
+// ServiceAccount, so this endpoint is the user-kubeconfig path for
+// `/api/workloads/deploy` (#7993 Phase 1 PR B).
+//
+// Only POST with a JSON body is accepted; GET-based mutations are rejected to
+// prevent CSRF-style attacks (#4150 pattern, same as handleScaleHTTP).
+func (s *Server) handleDeployWorkloadHTTP(w http.ResponseWriter, r *http.Request) {
+	s.setCORSHeaders(w, r)
+	w.Header().Set("Content-Type", "application/json")
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	// SECURITY: Require auth — deploying is a mutating operation.
+	if !s.validateToken(r) {
+		w.WriteHeader(http.StatusUnauthorized)
+		writeJSON(w, map[string]string{"error": "unauthorized"})
+		return
+	}
+
+	// SECURITY: Only allow POST — GET mutations enable CSRF.
+	if r.Method != "POST" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		writeJSON(w, map[string]interface{}{
+			"success": false,
+			"error":   "POST required",
+		})
+		return
+	}
+
+	if s.k8sClient == nil {
+		writeJSON(w, map[string]interface{}{
+			"success": false,
+			"error":   "k8s client not initialized",
+		})
+		return
+	}
+
+	// Matches the backend's DeployWorkload request shape so the frontend can
+	// send the same payload to either endpoint during migration.
+	var req struct {
+		WorkloadName   string   `json:"workloadName"`
+		Namespace      string   `json:"namespace"`
+		SourceCluster  string   `json:"sourceCluster"`
+		TargetClusters []string `json:"targetClusters"`
+		Replicas       int32    `json:"replicas,omitempty"`
+		GroupName      string   `json:"groupName,omitempty"`
+		// Optional informational annotation. The agent runs under the user's
+		// own kubeconfig so the "deployedBy" label is not security-relevant;
+		// it's only used to annotate created resources. If unset, falls back
+		// to the anonymous marker used by MultiClusterClient.DeployWorkload.
+		DeployedBy string `json:"deployedBy,omitempty"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{
+			"success": false,
+			"error":   "invalid request body",
+		})
+		return
+	}
+
+	if req.WorkloadName == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": "workloadName is required"})
+		return
+	}
+	if req.Namespace == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": "namespace is required"})
+		return
+	}
+	if req.SourceCluster == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": "sourceCluster is required"})
+		return
+	}
+	if len(req.TargetClusters) == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": "at least one targetCluster is required"})
+		return
+	}
+
+	opts := &k8s.DeployOptions{
+		DeployedBy: req.DeployedBy,
+		GroupName:  req.GroupName,
+	}
+	if opts.DeployedBy == "" {
+		opts.DeployedBy = deployedByAnonymousMarker
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), agentExtendedTimeout)
+	defer cancel()
+
+	result, err := s.k8sClient.DeployWorkload(ctx, req.SourceCluster, req.Namespace, req.WorkloadName, req.TargetClusters, req.Replicas, opts)
+	if err != nil {
+		slog.Warn("error deploying workload", "namespace", req.Namespace, "name", req.WorkloadName, "sourceCluster", req.SourceCluster, "targetClusters", req.TargetClusters, "error", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		writeJSON(w, map[string]interface{}{
+			"success": false,
+			"error":   err.Error(),
+			"source":  "agent",
+		})
+		return
+	}
+
+	writeJSON(w, map[string]interface{}{
+		"success":        result.Success,
+		"message":        result.Message,
+		"deployedTo":     result.DeployedTo,
+		"failedClusters": result.FailedClusters,
+		"source":         "agent",
+	})
+}
+
+// handleDeleteWorkloadHTTP deletes a workload (Deployment / StatefulSet /
+// DaemonSet) from a single managed cluster via the shared pkg/k8s
+// MultiClusterClient.DeleteWorkload method. Runs under the user's kubeconfig
+// instead of the backend's pod ServiceAccount (#7993 Phase 1 PR B).
+//
+// Only POST with a JSON body is accepted. The backend previously used
+// `DELETE /api/workloads/:cluster/:namespace/:name`, but kc-agent's convention
+// is POST-with-body for all mutations (same as /scale), so the frontend sends
+// a POST with {cluster, namespace, name} in the body.
+func (s *Server) handleDeleteWorkloadHTTP(w http.ResponseWriter, r *http.Request) {
+	s.setCORSHeaders(w, r)
+	w.Header().Set("Content-Type", "application/json")
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	// SECURITY: Require auth — delete is a destructive mutating operation.
+	if !s.validateToken(r) {
+		w.WriteHeader(http.StatusUnauthorized)
+		writeJSON(w, map[string]string{"error": "unauthorized"})
+		return
+	}
+
+	// SECURITY: Only allow POST — GET mutations enable CSRF.
+	if r.Method != "POST" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		writeJSON(w, map[string]interface{}{
+			"success": false,
+			"error":   "POST required",
+		})
+		return
+	}
+
+	if s.k8sClient == nil {
+		writeJSON(w, map[string]interface{}{
+			"success": false,
+			"error":   "k8s client not initialized",
+		})
+		return
+	}
+
+	var req struct {
+		Cluster   string `json:"cluster"`
+		Namespace string `json:"namespace"`
+		Name      string `json:"name"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{
+			"success": false,
+			"error":   "invalid request body",
+		})
+		return
+	}
+
+	if req.Cluster == "" || req.Namespace == "" || req.Name == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{
+			"success": false,
+			"error":   "cluster, namespace, and name are required",
+		})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), agentExtendedTimeout)
+	defer cancel()
+
+	if err := s.k8sClient.DeleteWorkload(ctx, req.Cluster, req.Namespace, req.Name); err != nil {
+		slog.Warn("error deleting workload", "cluster", req.Cluster, "namespace", req.Namespace, "name", req.Name, "error", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		writeJSON(w, map[string]interface{}{
+			"success": false,
+			"error":   err.Error(),
+			"source":  "agent",
+		})
+		return
+	}
+
+	writeJSON(w, map[string]interface{}{
+		"success":   true,
+		"message":   "Workload deleted successfully",
+		"cluster":   req.Cluster,
+		"namespace": req.Namespace,
+		"name":      req.Name,
+		"source":    "agent",
+	})
+}
+
 // handlePodsHTTP returns pods for a cluster/namespace
 func (s *Server) handlePodsHTTP(w http.ResponseWriter, r *http.Request) {
 	s.setCORSHeaders(w, r)

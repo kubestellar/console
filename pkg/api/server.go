@@ -1069,10 +1069,10 @@ func (s *Server) setupRoutes() {
 	api.Get("/workloads/resolve-deps/:cluster/:namespace/:name", workloadHandlers.ResolveDependencies)
 	api.Get("/workloads/monitor/:cluster/:namespace/:name", workloadHandlers.MonitorWorkload)
 	api.Get("/workloads/:cluster/:namespace/:name", workloadHandlers.GetWorkload)
-	api.Post("/workloads/deploy", workloadHandlers.DeployWorkload)
-	// NOTE: /workloads/scale moved to kc-agent (#7993 Phase 1 PR A).
-	// The agent uses the user's kubeconfig instead of the backend pod SA.
-	api.Delete("/workloads/:cluster/:namespace/:name", workloadHandlers.DeleteWorkload)
+	// NOTE: /workloads/deploy, /workloads/scale, and the DELETE
+	// /workloads/:cluster/:namespace/:name route all moved to kc-agent
+	// (#7993 Phase 1 PRs A and B). The agent uses the user's kubeconfig
+	// instead of the backend pod SA for those mutating operations.
 
 	// Cluster Group routes
 	api.Get("/cluster-groups", workloadHandlers.ListClusterGroups)

@@ -130,71 +130,9 @@ func TestGetWorkload(t *testing.T) {
 	assert.Equal(t, 404, respNotFound.StatusCode)
 }
 
-func TestDeployWorkload(t *testing.T) {
-	env := setupTestEnv(t)
-	handler := NewWorkloadHandlers(env.K8sClient, env.Hub, env.Store)
-	env.App.Post("/api/workloads/deploy", handler.DeployWorkload)
-
-	scheme := newK8sScheme()
-
-	// Source Deployment
-	srcDep := &appsv1.Deployment{
-		TypeMeta: metav1.TypeMeta{Kind: "Deployment", APIVersion: "apps/v1"},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "src-app",
-			Namespace: "default",
-		},
-		Spec: appsv1.DeploymentSpec{
-			Replicas: func(i int32) *int32 { return &i }(1),
-			Template: corev1.PodTemplateSpec{
-				Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "c", Image: "nginx"}}},
-			},
-		},
-	}
-
-	injectDynamicClusterWithObjects(env, "source-cluster", scheme, []runtime.Object{srcDep})
-	targetDyn := injectDynamicClusterWithObjects(env, "target-cluster", scheme, nil)
-
-	// Payload
-	payload := map[string]interface{}{
-		"workloadName":   "src-app",
-		"namespace":      "default",
-		"sourceCluster":  "source-cluster",
-		"targetClusters": []string{"target-cluster"},
-		"replicas":       3,
-	}
-
-	data, _ := json.Marshal(payload)
-
-	req, err := http.NewRequest("POST", "/api/workloads/deploy", bytes.NewReader(data))
-	require.NoError(t, err)
-	require.NotNil(t, req)
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := env.App.Test(req, 5000)
-	require.NoError(t, err)
-	require.NotNil(t, resp)
-	if resp.StatusCode != 200 {
-		body, _ := io.ReadAll(resp.Body)
-		t.Fatalf("Deploy returned %d: %s", resp.StatusCode, string(body))
-	}
-	assert.Equal(t, 200, resp.StatusCode)
-
-	// Verify result body
-	var result map[string]interface{}
-	json.NewDecoder(resp.Body).Decode(&result)
-	assert.Equal(t, true, result["success"])
-
-	// Verify deployment created in target
-	gvr := appsv1.SchemeGroupVersion.WithResource("deployments")
-	dep, err := targetDyn.Resource(gvr).Namespace("default").Get(context.Background(), "src-app", metav1.GetOptions{})
-	require.NoError(t, err)
-	assert.Equal(t, "src-app", dep.GetName())
-
-	// Check Replicas (int64 for unstructured)
-	spec := dep.Object["spec"].(map[string]interface{})
-	assert.Equal(t, int64(3), spec["replicas"])
-}
+// TestDeployWorkload was removed when /api/workloads/deploy moved to kc-agent
+// (#7993 Phase 1 PR B). Coverage of the underlying deploy logic is provided
+// by pkg/k8s workload tests exercising MultiClusterClient.DeployWorkload.
 
 func TestGetDeployStatus(t *testing.T) {
 	env := setupTestEnv(t)
@@ -231,28 +169,10 @@ func TestGetDeployStatus(t *testing.T) {
 // package (pkg/agent) which exercises handleScaleHTTP against the shared
 // pkg/k8s MultiClusterClient.ScaleWorkload method.
 
-func TestDeleteWorkload(t *testing.T) {
-	env := setupTestEnv(t)
-	handler := NewWorkloadHandlers(env.K8sClient, env.Hub, env.Store)
-	env.App.Delete("/api/workloads/:cluster/:namespace/:name", handler.DeleteWorkload)
-
-	// Inject a dynamic client for cluster "c1" with a deployment matching the
-	// delete request so the handler can resolve the cluster and find the resource.
-	scheme := newK8sScheme()
-	dep := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{Name: "del-app", Namespace: "default"},
-	}
-	injectDynamicClusterWithObjects(env, "c1", scheme, []runtime.Object{dep})
-
-	req, err := http.NewRequest("DELETE", "/api/workloads/c1/default/del-app", nil)
-	require.NoError(t, err)
-	require.NotNil(t, req)
-	resp, err := env.App.Test(req, 5000)
-
-	require.NoError(t, err)
-	require.NotNil(t, resp)
-	assert.Equal(t, 200, resp.StatusCode)
-}
+// TestDeleteWorkload was removed when the DELETE /api/workloads/... route
+// moved to kc-agent (#7993 Phase 1 PR B). Coverage of the underlying delete
+// logic is provided by pkg/k8s workload tests exercising
+// MultiClusterClient.DeleteWorkload.
 
 func TestClusterGroupsCRUD(t *testing.T) {
 	env := setupTestEnv(t)

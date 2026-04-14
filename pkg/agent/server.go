@@ -47,6 +47,12 @@ const (
 	maxQueryLimit       = 1000    // Upper bound for client-supplied limit query parameter
 	maxRequestBodyBytes = 1 << 20 // 1MB upper bound for request body reads
 
+	// deployedByAnonymousMarker is the default value recorded on workloads
+	// created via kc-agent when the caller did not supply a "deployedBy"
+	// identifier. Matches pkg/k8s/workload.go DeployOptions default
+	// ("anonymous") so resources created via either path look identical.
+	deployedByAnonymousMarker = "anonymous"
+
 	// missionExecutionTimeout is the maximum wall-clock time a single mission
 	// chat execution (AI provider call) is allowed to run before the context
 	// is cancelled and the frontend receives a timeout error.  This prevents
@@ -393,6 +399,10 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/limitranges", s.handleLimitRangesHTTP)
 	mux.HandleFunc("/resolve-deps", s.handleResolveDepsHTTP)
 	mux.HandleFunc("/scale", s.handleScaleHTTP)
+	// Workload deploy and delete routes moved to kc-agent (#7993 Phase 1 PR B).
+	// These run under the user's kubeconfig instead of the backend pod SA.
+	mux.HandleFunc("/workloads/deploy", s.handleDeployWorkloadHTTP)
+	mux.HandleFunc("/workloads/delete", s.handleDeleteWorkloadHTTP)
 
 	// Rename context endpoint
 	mux.HandleFunc("/rename-context", s.handleRenameContextHTTP)

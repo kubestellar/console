@@ -319,7 +319,10 @@ export function useDeployWorkload() {
     setError(null)
 
     try {
-      const res = await fetch('/api/workloads/deploy', {
+      // Deploy is a user-initiated mutation on managed clusters, so it must
+      // run under the user's kubeconfig via kc-agent, not the backend pod SA.
+      // See #7993 Phase 1 PR B.
+      const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/workloads/deploy`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(request),
@@ -413,9 +416,19 @@ export function useDeleteWorkload() {
     setError(null)
 
     try {
-      const res = await fetch(`/api/workloads/${params.cluster}/${params.namespace}/${params.name}`, {
-        method: 'DELETE',
-        headers: authHeaders(),
+      // Delete is a destructive mutation on a managed cluster, so it must
+      // run under the user's kubeconfig via kc-agent, not the backend pod SA.
+      // kc-agent convention is POST-with-body (same as /scale) — the method
+      // verb moves from DELETE-with-params to POST-with-body here.
+      // See #7993 Phase 1 PR B.
+      const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/workloads/delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({
+          cluster: params.cluster,
+          namespace: params.namespace,
+          name: params.name,
+        }),
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (!res.ok) {
         const errorData = await res.json()

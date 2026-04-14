@@ -120,89 +120,10 @@ func (h *WorkloadHandlers) GetWorkload(c *fiber.Ctx) error {
 	return c.JSON(workload)
 }
 
-// DeployWorkload deploys a workload to specified clusters
-// POST /api/workloads/deploy
-func (h *WorkloadHandlers) DeployWorkload(c *fiber.Ctx) error {
-	// Workload mutations require console admin (#5974).
-	if err := h.requireAdmin(c); err != nil {
-		return err
-	}
-
-	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "Kubernetes client not available"})
-	}
-
-	type DeployRequest struct {
-		WorkloadName   string   `json:"workloadName"`
-		Namespace      string   `json:"namespace"`
-		SourceCluster  string   `json:"sourceCluster"`
-		TargetClusters []string `json:"targetClusters"`
-		Replicas       int32    `json:"replicas,omitempty"`
-		GroupName      string   `json:"groupName,omitempty"`
-	}
-
-	var req DeployRequest
-	if err := c.BodyParser(&req); err != nil {
-		slog.Info("[Workloads] invalid request body", "error", err)
-		return c.Status(400).JSON(fiber.Map{"error": "invalid request"})
-	}
-
-	// Validate required fields
-	if req.WorkloadName == "" {
-		return c.Status(400).JSON(fiber.Map{"error": "workloadName is required"})
-	}
-	if req.Namespace == "" {
-		return c.Status(400).JSON(fiber.Map{"error": "namespace is required"})
-	}
-	if req.SourceCluster == "" {
-		// #5957 — reject missing sourceCluster with a clear 400 rather than
-		// letting it fall through and surface as a confusing downstream error.
-		return c.Status(400).JSON(fiber.Map{"error": "sourceCluster is required"})
-	}
-	if err := validateK8sName(req.SourceCluster, "sourceCluster"); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
-	}
-	if len(req.TargetClusters) == 0 {
-		return c.Status(400).JSON(fiber.Map{"error": "at least one targetCluster is required"})
-	}
-	// Verify sourceCluster is actually known to the multi-cluster client (#5957).
-	// Catches typos and stale UI state before we attempt to read from the source.
-	if h.k8sClient != nil {
-		known := false
-		if clusters, _, cerr := h.k8sClient.HealthyClusters(c.Context()); cerr == nil {
-			for _, cl := range clusters {
-				if cl.Name == req.SourceCluster || cl.Context == req.SourceCluster {
-					known = true
-					break
-				}
-			}
-		}
-		if !known {
-			return c.Status(400).JSON(fiber.Map{"error": fmt.Sprintf("sourceCluster %q is not a known cluster", req.SourceCluster)})
-		}
-	}
-
-	// Extract authenticated user
-	deployedBy := "anonymous"
-	if login := middleware.GetGitHubLogin(c); login != "" {
-		deployedBy = login
-	}
-
-	opts := &k8s.DeployOptions{
-		DeployedBy: deployedBy,
-		GroupName:  req.GroupName,
-	}
-
-	ctx, cancel := context.WithTimeout(c.Context(), workloadWriteTimeout)
-	defer cancel()
-
-	result, err := h.k8sClient.DeployWorkload(ctx, req.SourceCluster, req.Namespace, req.WorkloadName, req.TargetClusters, req.Replicas, opts)
-	if err != nil {
-		return handleK8sError(c, err)
-	}
-
-	return c.JSON(result)
-}
+// NOTE: DeployWorkload moved to kc-agent (#7993 Phase 1 PR B).
+// The agent (pkg/agent/server_http.go handleDeployWorkloadHTTP) runs under
+// the user's kubeconfig instead of the backend pod SA and calls the same
+// shared pkg/k8s MultiClusterClient.DeployWorkload method.
 
 // ResolveDependencies returns the dependency tree for a workload without deploying (dry-run).
 // GET /api/workloads/resolve-deps/:cluster/:namespace/:name
@@ -1073,36 +994,10 @@ func buildClusterContextForAI(healthData []k8s.ClusterHealth) string {
 	return sb.String()
 }
 
-// DeleteWorkload deletes a workload from specified clusters
-// DELETE /api/workloads/:cluster/:namespace/:name
-func (h *WorkloadHandlers) DeleteWorkload(c *fiber.Ctx) error {
-	// Workload mutations require console admin (#5974).
-	if err := h.requireAdmin(c); err != nil {
-		return err
-	}
-
-	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "Kubernetes client not available"})
-	}
-
-	cluster := c.Params("cluster")
-	namespace := c.Params("namespace")
-	name := c.Params("name")
-
-	ctx, cancel := context.WithTimeout(c.Context(), workloadWriteTimeout)
-	defer cancel()
-
-	if err := h.k8sClient.DeleteWorkload(ctx, cluster, namespace, name); err != nil {
-		return handleK8sError(c, err)
-	}
-
-	return c.JSON(fiber.Map{
-		"message":   "Workload deleted successfully",
-		"cluster":   cluster,
-		"namespace": namespace,
-		"name":      name,
-	})
-}
+// NOTE: DeleteWorkload moved to kc-agent (#7993 Phase 1 PR B).
+// The agent (pkg/agent/server_http.go handleDeleteWorkloadHTTP) runs under
+// the user's kubeconfig instead of the backend pod SA and calls the same
+// shared pkg/k8s MultiClusterClient.DeleteWorkload method.
 
 // GetClusterCapabilities returns the capabilities of all clusters
 // GET /api/workloads/capabilities
