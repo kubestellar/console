@@ -509,7 +509,21 @@ export function Layout({ children: _children }: LayoutProps) {
           className="relative flex-1 p-4 pb-24 pb-[calc(6rem+env(safe-area-inset-bottom))] md:p-6 md:pb-28 md:pb-[calc(7rem+env(safe-area-inset-bottom))] transition-[margin] duration-300 overflow-y-auto overflow-x-hidden scroll-enhanced min-w-0"
         >
           <NavigationProgress />
-          <Outlet />
+          {/*
+            Key the Outlet by location.pathname so route changes are a clean
+            unmount/mount instead of a transition. React 18's startTransition
+            (used internally by React Router for navigation) keeps the OLD
+            route visible until the new one is "ready" — but on cluster-heavy
+            source pages (Dashboard, My Clusters) the steady trickle of
+            cluster cache / per-card data updates keeps the transition's
+            "ready" check from ever passing, so the new route never commits
+            (the "needs 2 clicks" symptom from issue #7865). The key forces
+            React to discard the old subtree synchronously when the URL
+            changes, sidestepping the transition entirely.
+          */}
+          <div key={location.pathname} className="contents">
+            <Outlet />
+          </div>
         </main>
       </div>
 
