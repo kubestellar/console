@@ -153,10 +153,27 @@ function loadClusterCacheFromStorage(): ClusterInfo[] {
   return []
 }
 
-function saveClusterCacheToStorage(clusters: ClusterInfo[]) {
+// Throttled storage save. Per-cluster health checks fire constantly during
+// polling (every few seconds, fanned out by HEALTH_CHECK_CONCURRENCY) and
+// each one used to call saveClusterCacheToStorage immediately — a
+// JSON.stringify of the entire cluster cache plus a synchronous localStorage
+// write. With 24+ clusters that's a heavy main-thread cost firing several
+// times per second, which starves the JS event loop: async fetches start
+// timing out, React Router's navigation transition can't commit (so the user
+// sees URL change but content stays — the "needs 2 clicks" symptom), and
+// even the agent-detection /health probe fails. Throttling to once per
+// CLUSTER_STORAGE_SAVE_THROTTLE_MS window collapses many writes into one
+// while still capturing the latest data after each burst.
+const CLUSTER_STORAGE_SAVE_THROTTLE_MS = 2000
+let pendingClustersForSave: ClusterInfo[] | null = null
+let saveTimer: ReturnType<typeof setTimeout> | null = null
+
+function flushClusterStorageSave() {
+  saveTimer = null
+  const clusters = pendingClustersForSave
+  pendingClustersForSave = null
+  if (!clusters) return
   try {
-    // Only save clusters with meaningful data
-    // Filter out long context-path duplicates before saving
     const toSave = clusters.filter(c => c.name && !c.name.includes("/")).map(c => ({
       name: c.name,
       context: c.context,
@@ -187,6 +204,15 @@ function saveClusterCacheToStorage(clusters: ClusterInfo[]) {
   } catch {
     // Ignore storage errors
   }
+}
+
+function saveClusterCacheToStorage(clusters: ClusterInfo[]) {
+  // Always overwrite the pending snapshot with the latest, then schedule a
+  // single flush. Coalesces the storm of per-cluster updates into one save
+  // per throttle window.
+  pendingClustersForSave = clusters
+  if (saveTimer) return
+  saveTimer = setTimeout(flushClusterStorageSave, CLUSTER_STORAGE_SAVE_THROTTLE_MS)
 }
 
 // Merge stored cluster data with fresh cluster list (preserves cached metrics)
