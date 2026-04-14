@@ -80,7 +80,10 @@ const COMPONENTS_DIR = path.resolve(
 const EXPECTED_RAW_HEX_COUNT = 320
 const EXPECTED_RAW_RGBA_COUNT = 104
 const EXPECTED_ARBITRARY_TW_COLOR_COUNT = 22
-const EXPECTED_INLINE_STYLE_COLOR_COUNT = 213
+// Inline style color ratchet — bump history:
+//   213 → 215: Drasi reactive graph (PRs #7832, #7857) — two new
+//              echarts/flow-node inline colors not covered by theming utils.
+const EXPECTED_INLINE_STYLE_COLOR_COUNT = 215
 const EXPECTED_RAW_FONT_SIZE_COUNT = 80
 
 /** Max snippet length for readable output */
