@@ -3,15 +3,17 @@
  *
  * Visualizes the Drasi reactive data pipeline:
  * Sources (HTTP, Postgres) → Continuous Queries (Cypher) → Reactions (SSE)
- * with animated data flow connections and a live results table.
+ * with an SVG-based trunk/branch flow topology, animated data flow dots,
+ * dashed/solid connection styles, and a results table nested inside the
+ * selected query node.
  *
  * Uses live Drasi API data when available, demo data when in demo mode.
  */
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import {
-  Database, Globe, Search, Radio, ArrowRight,
-  Activity, TrendingDown, TrendingUp,
+  Database, Globe, Search, Radio,
+  TrendingDown, TrendingUp, Maximize2, Pin, Square,
 } from 'lucide-react'
 import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
 import { useCardExpanded } from '../CardWrapper'
@@ -21,12 +23,14 @@ import { useDrasiResources } from '../../../hooks/useDrasiResources'
 // Constants
 // ---------------------------------------------------------------------------
 
-/** How often to refresh animated data flow in ms */
+/** How often to refresh demo data values (animation-safe in-place update) */
 const FLOW_ANIMATION_INTERVAL_MS = 3000
-/** Maximum rows shown in the live results table */
-const MAX_LIVE_RESULT_ROWS = 7
-/** Number of animated flow dots per connection */
+/** Maximum rows shown in the results table */
+const MAX_RESULT_ROWS = 7
+/** Number of dots flowing along each active connection line */
 const FLOW_DOT_COUNT = 3
+/** Flow dot animation cycle duration (ms) */
+const FLOW_DOT_CYCLE_MS = 2000
 
 // ---------------------------------------------------------------------------
 // Types
@@ -45,9 +49,8 @@ interface DrasiSource {
 interface DrasiQuery {
   id: string
   name: string
-  language: string // e.g. "CYPHER QUERY"
+  language: string
   status: 'ready' | 'error' | 'pending'
-  /** IDs of sources this query reads from */
   sourceIds: string[]
 }
 
@@ -56,7 +59,6 @@ interface DrasiReaction {
   name: string
   kind: ReactionKind
   status: 'ready' | 'error' | 'pending'
-  /** IDs of queries this reaction subscribes to */
   queryIds: string[]
 }
 
@@ -73,16 +75,23 @@ interface DrasiPipelineData {
   queries: DrasiQuery[]
   reactions: DrasiReaction[]
   liveResults: LiveResultRow[]
-  selectedQueryId: string | null
 }
 
 // ---------------------------------------------------------------------------
 // Demo data
 // ---------------------------------------------------------------------------
 
-function generateDemoData(): DrasiPipelineData {
-  const wave = Math.sin(Date.now() / 5000)
+const DEMO_STOCKS: Omit<LiveResultRow, 'changePercent' | 'price'>[] = [
+  { name: 'UnitedHealth Group', previousClose: 536.88, symbol: 'UNH' },
+  { name: 'Visa Inc.', previousClose: 272.19, symbol: 'V' },
+  { name: 'Chevron', previousClose: 144.75, symbol: 'CVX' },
+  { name: 'Caterpillar', previousClose: 288.47, symbol: 'CAT' },
+  { name: 'NVIDIA Corporation', previousClose: 851.30, symbol: 'NVDA' },
+  { name: 'Intel Corporation', previousClose: 32.78, symbol: 'INTC' },
+  { name: 'Nike Inc.', previousClose: 101.58, symbol: 'NKE' },
+]
 
+function generateDemoData(): DrasiPipelineData {
   const sources: DrasiSource[] = [
     { id: 'src-price-feed', name: 'price-feed', kind: 'HTTP', status: 'ready' },
     { id: 'src-postgres-stocks', name: 'postgres-stocks', kind: 'POSTGRES', status: 'ready' },
@@ -100,228 +109,195 @@ function generateDemoData(): DrasiPipelineData {
     { id: 'rx-sse', name: 'sse-stream', kind: 'SSE', status: 'ready', queryIds: ['q-watchlist', 'q-portfolio', 'q-top-gainers', 'q-top-losers'] },
   ]
 
-  const baseStocks: Omit<LiveResultRow, 'changePercent' | 'price'>[] = [
-    { name: 'Constellation Energy', previousClose: 131.46, symbol: 'CEG' },
-    { name: 'Visa Inc.', previousClose: 370.28, symbol: 'V' },
-    { name: 'Chevron', previousClose: 167.67, symbol: 'CVX' },
-    { name: 'Caterpillar', previousClose: 381.26, symbol: 'CAT' },
-    { name: 'NVIDIA Corporation', previousClose: 124.28, symbol: 'NVDA' },
-    { name: 'Intel Corporation', previousClose: 44.37, symbol: 'INTC' },
-    { name: 'Apple Inc.', previousClose: 184.36, symbol: 'AAPL' },
-  ]
-
-  const liveResults: LiveResultRow[] = baseStocks.map(stock => {
-    const changePercent = parseFloat((-4 + Math.random() * 3 + wave * 2).toFixed(2))
+  const liveResults: LiveResultRow[] = DEMO_STOCKS.map(stock => {
+    const changePercent = parseFloat((-6 + Math.random() * 5).toFixed(2))
     const price = parseFloat((stock.previousClose * (1 + changePercent / 100)).toFixed(2))
     return { ...stock, changePercent, price }
   })
-
-  // Sort by changePercent ascending (top losers)
   liveResults.sort((a, b) => a.changePercent - b.changePercent)
-
-  return {
-    sources,
-    queries,
-    reactions,
-    liveResults,
-    selectedQueryId: 'q-top-losers',
-  }
+  return { sources, queries, reactions, liveResults }
 }
 
 // ---------------------------------------------------------------------------
-// Sub-components
+// Node card sub-components
 // ---------------------------------------------------------------------------
 
-/** Status indicator dot */
+/** Status pill that pulses when active */
 function StatusDot({ status }: { status: 'ready' | 'error' | 'pending' }) {
-  const colors: Record<string, string> = {
-    ready: 'bg-green-400',
-    error: 'bg-red-400',
-    pending: 'bg-yellow-400',
-  }
+  const color = status === 'ready' ? 'bg-green-400' : status === 'error' ? 'bg-red-400' : 'bg-yellow-400'
   return (
     <motion.div
-      className={`w-2.5 h-2.5 rounded-full ${colors[status] || colors.pending}`}
+      className={`w-2 h-2 rounded-full ${color}`}
       animate={status === 'ready' ? { scale: [1, 1.3, 1] } : {}}
       transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
     />
   )
 }
 
-/** Icon for source type */
-function SourceIcon({ kind }: { kind: SourceKind }) {
-  switch (kind) {
-    case 'HTTP': return <Globe className="w-4 h-4 text-cyan-400" />
-    case 'POSTGRES': return <Database className="w-4 h-4 text-blue-400" />
-    case 'COSMOSDB': return <Database className="w-4 h-4 text-purple-400" />
-    default: return <Database className="w-4 h-4 text-slate-400" />
-  }
-}
-
-/** Icon for reaction type */
-function ReactionIcon({ kind }: { kind: ReactionKind }) {
-  switch (kind) {
-    case 'SSE': return <Radio className="w-4 h-4 text-emerald-400" />
-    case 'SIGNALR': return <Activity className="w-4 h-4 text-blue-400" />
-    case 'WEBHOOK': return <ArrowRight className="w-4 h-4 text-orange-400" />
-    default: return <Radio className="w-4 h-4 text-slate-400" />
-  }
-}
-
-/** Source node card */
-function SourceNode({ source }: { source: DrasiSource }) {
+/** Drasi-style node controls: stop, expand, pin (visual affordance, read-only) */
+function NodeControls() {
   return (
-    <motion.div
-      className="bg-slate-800/80 border border-emerald-500/30 rounded-lg p-3 min-w-[140px]"
-      whileHover={{ scale: 1.03, borderColor: 'rgba(16,185,129,0.6)' }}
-      initial={{ opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
-    >
-      <div className="flex items-center gap-2 mb-1">
-        <SourceIcon kind={source.kind} />
-        <span className="text-white text-sm font-medium truncate">{source.name}</span>
-        <StatusDot status={source.status} />
-      </div>
-      <span className="text-xs text-muted-foreground uppercase tracking-wider">{source.kind}</span>
-    </motion.div>
-  )
-}
-
-/** Query node card */
-function QueryNode({ query, isSelected, onClick }: { query: DrasiQuery; isSelected: boolean; onClick: () => void }) {
-  return (
-    <motion.div
-      className={`bg-slate-800/80 border rounded-lg p-3 min-w-[140px] cursor-pointer transition-colors ${
-        isSelected ? 'border-cyan-400/60 ring-1 ring-cyan-400/30' : 'border-slate-600/40'
-      }`}
-      whileHover={{ scale: 1.03 }}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      onClick={onClick}
-    >
-      <div className="flex items-center gap-2 mb-1">
-        <Search className="w-4 h-4 text-cyan-400" />
-        <span className="text-white text-sm font-medium truncate">{query.name}</span>
-        <StatusDot status={query.status} />
-      </div>
-      <span className="text-xs text-muted-foreground uppercase tracking-wider">{query.language}</span>
-    </motion.div>
-  )
-}
-
-/** Reaction node card */
-function ReactionNode({ reaction }: { reaction: DrasiReaction }) {
-  return (
-    <motion.div
-      className="bg-slate-800/80 border border-emerald-500/30 rounded-lg p-3 min-w-[120px]"
-      whileHover={{ scale: 1.03, borderColor: 'rgba(16,185,129,0.6)' }}
-      initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0 }}
-    >
-      <div className="flex items-center gap-2 mb-1">
-        <ReactionIcon kind={reaction.kind} />
-        <span className="text-white text-sm font-medium truncate">{reaction.name}</span>
-        <StatusDot status={reaction.status} />
-      </div>
-      <span className="text-xs text-muted-foreground uppercase tracking-wider">{reaction.kind}</span>
-    </motion.div>
-  )
-}
-
-/** Animated connection line between nodes */
-function FlowConnection({ direction }: { direction: 'horizontal' | 'vertical' }) {
-  const isHorizontal = direction === 'horizontal'
-  return (
-    <div className={`flex ${isHorizontal ? 'flex-row items-center' : 'flex-col items-center'} gap-0`}>
-      {Array.from({ length: FLOW_DOT_COUNT }).map((_, i) => (
-        <motion.div
-          key={i}
-          className="w-1.5 h-1.5 rounded-full bg-emerald-400"
-          animate={{
-            opacity: [0.2, 1, 0.2],
-            scale: [0.6, 1.2, 0.6],
-          }}
-          transition={{
-            repeat: Infinity,
-            duration: 1.5,
-            delay: i * 0.3,
-            ease: 'easeInOut',
-          }}
-        />
-      ))}
-      <ArrowRight className={`w-3 h-3 text-emerald-400/60 ${isHorizontal ? '' : 'rotate-90'}`} />
+    <div className="flex items-center gap-1.5 mt-1.5">
+      <button
+        type="button"
+        className="w-5 h-5 flex items-center justify-center rounded bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 transition-colors"
+        aria-label="Stop"
+      >
+        <Square className="w-2.5 h-2.5 text-red-400 fill-red-400" />
+      </button>
+      <button
+        type="button"
+        className="w-5 h-5 flex items-center justify-center rounded bg-slate-700/40 hover:bg-slate-700/60 border border-slate-600/40 transition-colors"
+        aria-label="Expand"
+      >
+        <Maximize2 className="w-2.5 h-2.5 text-slate-400" />
+      </button>
+      <button
+        type="button"
+        className="w-5 h-5 flex items-center justify-center rounded bg-slate-700/40 hover:bg-slate-700/60 border border-slate-600/40 transition-colors"
+        aria-label="Pin"
+      >
+        <Pin className="w-2.5 h-2.5 text-slate-400" />
+      </button>
     </div>
   )
 }
 
-/** Live results table for selected query */
-function LiveResultsTable({ results }: { results: LiveResultRow[] }) {
-  const displayResults = results.slice(0, MAX_LIVE_RESULT_ROWS)
-  const totalRows = results.length
+function SourceIcon({ kind }: { kind: SourceKind }) {
+  if (kind === 'HTTP') return <Globe className="w-3.5 h-3.5 text-emerald-400" />
+  return <Database className="w-3.5 h-3.5 text-emerald-400" />
+}
+
+function ReactionIcon({ kind }: { kind: ReactionKind }) {
+  if (kind === 'SSE') return <Radio className="w-3.5 h-3.5 text-emerald-400" />
+  return <Radio className="w-3.5 h-3.5 text-emerald-400" />
+}
+
+interface NodeCardProps {
+  title: string
+  subtitle: string
+  icon: React.ReactNode
+  status: 'ready' | 'error' | 'pending'
+  accentColor: 'emerald' | 'cyan'
+  isSelected?: boolean
+  onClick?: () => void
+  children?: React.ReactNode
+}
+
+function NodeCard({ title, subtitle, icon, status, accentColor, isSelected, onClick, children }: NodeCardProps) {
+  const borderClass = isSelected
+    ? accentColor === 'cyan' ? 'border-cyan-400/70 ring-1 ring-cyan-400/30' : 'border-emerald-400/70 ring-1 ring-emerald-400/30'
+    : accentColor === 'cyan' ? 'border-cyan-500/30' : 'border-emerald-500/30'
 
   return (
     <motion.div
-      className="bg-slate-900/90 border border-slate-600/40 rounded-lg overflow-hidden"
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
+      className={`bg-slate-900/80 border rounded-lg p-2.5 ${borderClass} ${onClick ? 'cursor-pointer' : ''}`}
+      whileHover={onClick ? { scale: 1.02 } : {}}
+      onClick={onClick}
     >
-      {/* Header */}
-      <div className="px-3 py-2 border-b border-slate-700/50 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-cyan-400 uppercase">Live Results</span>
+      <div className="flex items-center gap-1.5">
+        {icon}
+        <span className="text-white text-xs font-semibold truncate flex-1">{title}</span>
+        <StatusDot status={status} />
+      </div>
+      <div className="text-[10px] text-muted-foreground uppercase tracking-wider mt-0.5">{subtitle}</div>
+      <NodeControls />
+      {children}
+    </motion.div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// SVG flow line with animated dots
+// ---------------------------------------------------------------------------
+
+interface FlowLineProps {
+  d: string
+  dashed?: boolean
+  active?: boolean
+  delay?: number
+}
+
+/** One SVG path with optional animated dots flowing along it */
+function FlowLine({ d, dashed, active = true, delay = 0 }: FlowLineProps) {
+  return (
+    <>
+      <path
+        d={d}
+        fill="none"
+        stroke="rgb(16 185 129)"
+        strokeOpacity={dashed ? 0.4 : 0.7}
+        strokeWidth={1.5}
+        strokeDasharray={dashed ? '4 4' : undefined}
+      />
+      {active && !dashed && Array.from({ length: FLOW_DOT_COUNT }).map((_, i) => (
+        <circle key={i} r={2.5} fill="rgb(52 211 153)">
+          <animateMotion
+            dur={`${FLOW_DOT_CYCLE_MS}ms`}
+            repeatCount="indefinite"
+            begin={`${delay + (i * FLOW_DOT_CYCLE_MS) / FLOW_DOT_COUNT}ms`}
+            path={d}
+          />
+        </circle>
+      ))}
+    </>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Results table
+// ---------------------------------------------------------------------------
+
+function ResultsTable({ results, isDemo }: { results: LiveResultRow[]; isDemo: boolean }) {
+  const displayResults = results.slice(0, MAX_RESULT_ROWS)
+  const totalRows = results.length
+  const label = isDemo ? 'Demo Results' : 'Live Results'
+
+  return (
+    <div className="mt-2 bg-slate-950/80 border border-slate-700/40 rounded overflow-hidden">
+      <div className="px-2 py-1 border-b border-slate-700/50 flex items-center justify-between">
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] font-medium text-cyan-400 uppercase tracking-wider">{label}</span>
           <motion.div
             className="w-1.5 h-1.5 rounded-full bg-emerald-400"
             animate={{ opacity: [1, 0.3, 1] }}
             transition={{ repeat: Infinity, duration: 1.5 }}
           />
         </div>
-        <span className="text-xs text-muted-foreground">{totalRows} rows</span>
+        <span className="text-[10px] text-muted-foreground">{totalRows} rows</span>
       </div>
-
-      {/* Table */}
       <div className="overflow-x-auto">
-        <table className="w-full text-xs">
+        <table className="w-full text-[10px]">
           <thead>
-            <tr className="border-b border-slate-700/30">
-              <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">changePercent</th>
-              <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">name</th>
-              <th className="text-right px-3 py-1.5 text-muted-foreground font-medium">previousClose</th>
-              <th className="text-right px-3 py-1.5 text-muted-foreground font-medium">price</th>
-              <th className="text-right px-3 py-1.5 text-muted-foreground font-medium">symbol</th>
+            <tr className="border-b border-slate-800/50">
+              <th className="text-left px-2 py-1 text-muted-foreground font-medium">changePercent</th>
+              <th className="text-left px-2 py-1 text-muted-foreground font-medium">name</th>
+              <th className="text-right px-2 py-1 text-muted-foreground font-medium">previousClose</th>
+              <th className="text-right px-2 py-1 text-muted-foreground font-medium">price</th>
+              <th className="text-right px-2 py-1 text-muted-foreground font-medium">symbol</th>
             </tr>
           </thead>
           <tbody>
-            <AnimatePresence mode="popLayout">
-              {displayResults.map((row, i) => (
-                <motion.tr
-                  key={`${row.symbol}-${i}`}
-                  className="border-b border-slate-800/50 hover:bg-slate-800/40"
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 10 }}
-                  transition={{ delay: i * 0.05 }}
-                >
-                  <td className="px-3 py-1.5">
-                    <span className={`font-mono flex items-center gap-1 ${
-                      row.changePercent < 0 ? 'text-red-400' : 'text-green-400'
-                    }`}>
-                      {row.changePercent < 0
-                        ? <TrendingDown className="w-3 h-3" />
-                        : <TrendingUp className="w-3 h-3" />}
-                      {row.changePercent.toFixed(2)}
-                    </span>
-                  </td>
-                  <td className="px-3 py-1.5 text-white truncate max-w-[160px]">{row.name}</td>
-                  <td className="px-3 py-1.5 text-muted-foreground font-mono text-right">{row.previousClose.toFixed(2)}</td>
-                  <td className="px-3 py-1.5 text-white font-mono text-right">{row.price.toFixed(2)}</td>
-                  <td className="px-3 py-1.5 text-cyan-400 font-mono text-right">{row.symbol}</td>
-                </motion.tr>
-              ))}
-            </AnimatePresence>
+            {displayResults.map(row => (
+              <tr key={row.symbol} className="border-b border-slate-800/30 hover:bg-slate-800/30">
+                <td className="px-2 py-1">
+                  <span className={`font-mono flex items-center gap-1 ${
+                    row.changePercent < 0 ? 'text-red-400' : 'text-green-400'
+                  }`}>
+                    {row.changePercent < 0 ? <TrendingDown className="w-2.5 h-2.5" /> : <TrendingUp className="w-2.5 h-2.5" />}
+                    {row.changePercent.toFixed(2)}
+                  </span>
+                </td>
+                <td className="px-2 py-1 text-white truncate max-w-[120px]">{row.name}</td>
+                <td className="px-2 py-1 text-muted-foreground font-mono text-right">{row.previousClose.toFixed(2)}</td>
+                <td className="px-2 py-1 text-white font-mono text-right">{row.price.toFixed(2)}</td>
+                <td className="px-2 py-1 text-cyan-400 font-mono text-right">{row.symbol}</td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
-    </motion.div>
+    </div>
   )
 }
 
@@ -332,11 +308,8 @@ function LiveResultsTable({ results }: { results: LiveResultRow[] }) {
 export function DrasiReactiveGraph() {
   const { shouldUseDemoData: isDemoMode, showDemoBadge } = useCardDemoState({ requires: 'none' })
   const { isExpanded } = useCardExpanded()
-
-  // Live Drasi API data
   const { data: liveData, isLoading, error } = useDrasiResources()
 
-  // Report demo state
   useReportCardDataState({
     isDemoData: showDemoBadge || (!liveData && !isLoading),
     isFailed: !!error,
@@ -344,10 +317,9 @@ export function DrasiReactiveGraph() {
     hasData: true,
   })
 
-  const [selectedQueryId, setSelectedQueryId] = useState<string | null>('q-top-losers')
+  const [selectedQueryId, setSelectedQueryId] = useState<string>('q-top-losers')
   const [demoData, setDemoData] = useState<DrasiPipelineData>(generateDemoData)
 
-  // Refresh demo data periodically for animation
   useEffect(() => {
     if (!isDemoMode && liveData) return
     const interval = setInterval(() => {
@@ -356,93 +328,114 @@ export function DrasiReactiveGraph() {
     return () => clearInterval(interval)
   }, [isDemoMode, liveData])
 
-  // Choose data source
+  const isLive = !!liveData && !isDemoMode
   const pipelineData = useMemo<DrasiPipelineData>(() => {
-    if (liveData && !isDemoMode) {
-      return {
-        sources: liveData.sources,
-        queries: liveData.queries,
-        reactions: liveData.reactions,
-        liveResults: liveData.liveResults,
-        selectedQueryId: selectedQueryId || (liveData.queries[0]?.id ?? null),
-      }
-    }
-    return { ...demoData, selectedQueryId: selectedQueryId || demoData.selectedQueryId }
-  }, [liveData, isDemoMode, demoData, selectedQueryId])
+    if (isLive && liveData) return liveData
+    return demoData
+  }, [isLive, liveData, demoData])
 
   const { sources, queries, reactions, liveResults } = pipelineData
 
-  const selectedQuery = queries.find(q => q.id === selectedQueryId)
+  // Keep selected query valid across data source switches
+  useEffect(() => {
+    if (queries.length > 0 && !queries.find(q => q.id === selectedQueryId)) {
+      setSelectedQueryId(queries[0].id)
+    }
+  }, [queries, selectedQueryId])
 
   const handleQueryClick = useCallback((queryId: string) => {
-    setSelectedQueryId(prev => prev === queryId ? null : queryId)
+    setSelectedQueryId(queryId)
   }, [])
 
   return (
-    <div className={`h-full flex flex-col gap-3 p-4 ${isExpanded ? 'max-w-6xl mx-auto' : ''}`}>
-      {/* Pipeline graph */}
-      <div className="flex-1 min-h-0">
-        <div className="flex items-stretch gap-3 h-full">
+    <div className={`h-full w-full flex flex-col p-3 ${isExpanded ? 'max-w-4xl mx-auto' : ''} overflow-hidden`}>
+      <div className="relative flex-1 min-h-0">
+        {/* SVG flow lines layer — positioned behind nodes */}
+        <svg
+          className="absolute inset-0 w-full h-full pointer-events-none"
+          viewBox="0 0 100 100"
+          preserveAspectRatio="none"
+        >
+          {/* Vertical trunk between sources and queries (x=34) */}
+          <FlowLine d="M 34 6 L 34 78" />
+          {/* Vertical trunk between queries and reactions (x=66) */}
+          <FlowLine d="M 66 6 L 66 78" />
+
+          {/* Horizontal branches: sources (x=22) → trunk1 (x=34) */}
+          <FlowLine d="M 22 8 L 34 8" active delay={0} />
+          <FlowLine d="M 22 22 L 34 22" active delay={400} />
+          <FlowLine d="M 22 36 L 34 36" dashed />
+
+          {/* Horizontal branches: trunk1 (x=34) → queries (x=38) */}
+          <FlowLine d="M 34 8 L 38 8" active delay={200} />
+          <FlowLine d="M 34 22 L 38 22" dashed />
+          <FlowLine d="M 34 36 L 38 36" dashed />
+          <FlowLine d="M 34 56 L 38 56" active delay={600} />
+
+          {/* Horizontal branches: queries (x=62) → trunk2 (x=66) */}
+          <FlowLine d="M 62 8 L 66 8" active delay={300} />
+          <FlowLine d="M 62 22 L 66 22" dashed />
+          <FlowLine d="M 62 36 L 66 36" dashed />
+          <FlowLine d="M 62 56 L 66 56" active delay={800} />
+
+          {/* Trunk2 → reaction (x=78) via curve up to top */}
+          <FlowLine d="M 66 8 L 78 8" active delay={500} />
+        </svg>
+
+        {/* Node grid — 3 columns */}
+        <div className="relative grid grid-cols-[22%_44%_22%] gap-x-[6%] h-full">
           {/* Sources column */}
-          <div className="flex flex-col gap-3 justify-center min-w-[150px]">
-            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Sources</div>
-            {sources.map(source => (
-              <SourceNode key={source.id} source={source} />
-            ))}
-          </div>
-
-          {/* Flow arrows: sources → queries */}
-          <div className="flex flex-col justify-center gap-3">
-            {sources.map(source => (
-              <FlowConnection key={`flow-s-${source.id}`} direction="horizontal" />
-            ))}
-          </div>
-
-          {/* Queries column */}
-          <div className="flex flex-col gap-3 justify-center min-w-[150px]">
-            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Continuous Queries</div>
-            {queries.map(query => (
-              <QueryNode
-                key={query.id}
-                query={query}
-                isSelected={query.id === selectedQueryId}
-                onClick={() => handleQueryClick(query.id)}
+          <div className="flex flex-col gap-3">
+            <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Sources</div>
+            {sources.slice(0, 3).map(source => (
+              <NodeCard
+                key={source.id}
+                title={source.name}
+                subtitle={source.kind}
+                icon={<SourceIcon kind={source.kind} />}
+                status={source.status}
+                accentColor="emerald"
               />
             ))}
           </div>
 
-          {/* Flow arrows: queries → reactions */}
-          <div className="flex flex-col justify-center gap-3">
-            {reactions.map(reaction => (
-              <FlowConnection key={`flow-r-${reaction.id}`} direction="horizontal" />
+          {/* Queries column */}
+          <div className="flex flex-col gap-3">
+            <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Continuous Queries</div>
+            {queries.map(query => (
+              <NodeCard
+                key={query.id}
+                title={query.name}
+                subtitle={query.language}
+                icon={<Search className="w-3.5 h-3.5 text-cyan-400" />}
+                status={query.status}
+                accentColor="cyan"
+                isSelected={query.id === selectedQueryId}
+                onClick={() => handleQueryClick(query.id)}
+              >
+                {query.id === selectedQueryId && liveResults.length > 0 && (
+                  <ResultsTable results={liveResults} isDemo={!isLive} />
+                )}
+              </NodeCard>
             ))}
           </div>
 
           {/* Reactions column */}
-          <div className="flex flex-col gap-3 justify-center min-w-[120px]">
-            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Reactions</div>
+          <div className="flex flex-col gap-3">
+            <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Reactions</div>
             {reactions.map(reaction => (
-              <ReactionNode key={reaction.id} reaction={reaction} />
+              <NodeCard
+                key={reaction.id}
+                title={reaction.name}
+                subtitle={reaction.kind}
+                icon={<ReactionIcon kind={reaction.kind} />}
+                status={reaction.status}
+                accentColor="emerald"
+              />
             ))}
           </div>
         </div>
       </div>
-
-      {/* Live results table (shown when a query is selected) */}
-      {selectedQuery && liveResults.length > 0 && (
-        <div className="flex-shrink-0">
-          <LiveResultsTable
-            results={liveResults}
-          />
-        </div>
-      )}
-
-      {/* Empty state when no query selected */}
-      {!selectedQuery && (
-        <div className="flex-shrink-0 text-center py-4 text-sm text-muted-foreground">
-          Click a query node to view live results
-        </div>
-      )}
     </div>
   )
 }

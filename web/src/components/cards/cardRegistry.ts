@@ -1255,7 +1255,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   kagent_topology: 8,
 
   // Drasi reactive pipeline cards
-  drasi_reactive_graph: 12,  // Full-width reactive graph
+  drasi_reactive_graph: 6,  // Portrait reactive graph (vertical flow)
 
   // LLM-d stunning visualization cards
   llmd_flow: 8,           // Hero animated flow diagram
