@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import { useClusters } from '../../../hooks/useMCP'
 import { Skeleton } from '../../ui/Skeleton'
+import { Select } from '../../ui/Select'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import {
   CardSearchInput,
@@ -266,8 +267,7 @@ export function OpenKruiseStatus({ config: _config }: OpenKruiseStatusProps) {
         status: cj.status,
         primaryDetail: `${cj.schedule} \u2022 ${cj.templateKind} \u2022 ${cj.active} ${t('openkruiseStatus.active')}`,
         secondaryDetail: `${cj.successfulRuns} ${t('openkruiseStatus.runs')}, ${cj.failedRuns} ${t('common:common.failed')}`,
-        timestamp:
-          cj.lastScheduleTime ?? new Date(Date.now() - MS_PER_HOUR).toISOString(),
+        timestamp: cj.lastScheduleTime ?? rawData.lastCheckTime,
       })
     }
 
@@ -522,12 +522,12 @@ export function OpenKruiseStatus({ config: _config }: OpenKruiseStatusProps) {
 
       {/* Resource type selector */}
       <div className="mb-4">
-        <select
+        <Select
           value={selectedCategory}
           onChange={e =>
             setSelectedCategory(e.target.value as CategoryOption)
           }
-          className="w-full px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground"
+          className="w-full"
           title={t('openkruiseStatus.filterByResource')}
           aria-label={t('openkruiseStatus.filterByResource')}
         >
@@ -550,7 +550,7 @@ export function OpenKruiseStatus({ config: _config }: OpenKruiseStatusProps) {
           <option value="cronjob">
             {t('openkruiseStatus.advancedCronJobs')}
           </option>
-        </select>
+        </Select>
       </div>
 
       {availableClusters.length === 0 ? (
