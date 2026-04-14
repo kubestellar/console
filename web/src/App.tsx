@@ -1,4 +1,4 @@
-import { Suspense, useState, useEffect, useRef } from 'react'
+import { Suspense, useState, useEffect, useRef, useSyncExternalStore } from 'react'
 import { Routes, Route, Navigate, useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { CardHistoryEntry } from './hooks/useCardHistory'
 import { Layout } from './components/layout/Layout'
@@ -461,11 +461,46 @@ function LightweightShell({ children }: { children: React.ReactNode }) {
   )
 }
 
+// Live pathname subscriber — bypasses React Router's useLocation, whose
+// state update is wrapped in startTransition and can be perpetually
+// interrupted on cluster-heavy pages (the "needs 2 clicks" symptom from
+// issue #7865). Polls window.location.pathname and notifies React via
+// useSyncExternalStore, which guarantees a synchronous (non-deferrable)
+// update. We pass this value to <Routes location={...}> below so route
+// matching uses the real URL, not React Router's stale internal state.
+const LIVE_PATH_POLL_MS = 60
+function useLivePathname(): string {
+  return useSyncExternalStore(
+    (notify) => {
+      let last = window.location.pathname
+      const tick = () => {
+        const cur = window.location.pathname
+        if (cur !== last) { last = cur; notify() }
+      }
+      const interval = setInterval(tick, LIVE_PATH_POLL_MS)
+      const handler = () => notify()
+      window.addEventListener('popstate', handler)
+      return () => {
+        clearInterval(interval)
+        window.removeEventListener('popstate', handler)
+      }
+    },
+    () => window.location.pathname,
+    () => '/'
+  )
+}
+
 function App() {
+  const livePath = useLivePathname()
+  // Build a synthetic Location object so <Routes location={...}> matches
+  // against the real URL. React Router's matcher only reads pathname for
+  // path matching; search/hash are non-functional here, so leaving them
+  // empty is safe. state/key are inert for matching purposes.
+  const liveLocation = { pathname: livePath, search: window.location.search, hash: window.location.hash, state: null, key: 'default' }
   return (
     <BrandingProvider>
     <ThemeProvider>
-    <Routes>
+    <Routes location={liveLocation}>
       {/* ── Lightweight routes ─────────────────────────────────────────
           Mission landing pages load WITHOUT the heavy dashboard provider
           stack (no DashboardProvider, AlertsProvider, MissionProvider,
@@ -501,6 +536,8 @@ function App() {
 
 /** Full dashboard app with all providers — loaded only for non-mission routes */
 function FullDashboardApp() {
+  const livePath = useLivePathname()
+  const liveLocation = { pathname: livePath, search: window.location.search, hash: window.location.hash, state: null, key: 'default' }
   return (
     <AuthProvider>
     <SettingsSyncInit />
@@ -520,7 +557,7 @@ function FullDashboardApp() {
       <NPSSurvey />
       <OrbitAutoRunner />
       <ChunkErrorBoundary>
-      <Routes>
+      <Routes location={liveLocation}>
         <Route path={ROUTES.LOGIN} element={<SuspenseRoute><Login /></SuspenseRoute>} />
         <Route path={ROUTES.AUTH_CALLBACK} element={<SuspenseRoute><AuthCallback /></SuspenseRoute>} />
         {/* PWA Mini Dashboard - lightweight widget mode (no auth required for local monitoring) */}

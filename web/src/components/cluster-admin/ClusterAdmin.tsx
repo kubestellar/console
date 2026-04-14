@@ -10,10 +10,16 @@ const STORAGE_KEY = 'kubestellar-cluster-admin-cards'
 const DEFAULT_CARDS = getDefaultCards('cluster-admin')
 
 export function ClusterAdmin() {
-  const { clusters: rawClusters, isLoading, isRefreshing, lastUpdated, refetch, error } = useClusters()
+  // Use deduplicatedClusters so the stat blocks count physical clusters, not
+  // kubeconfig contexts. Multiple contexts (long path + short alias + per-user
+  // SA variants) commonly point to the same server — the raw list double-counts
+  // (e.g. the user sees "22 reachable" from 24 contexts when there are only
+  // 12 unique cluster servers). My Clusters already uses the deduplicated set;
+  // both pages must agree.
+  const { deduplicatedClusters, isLoading, isRefreshing, lastUpdated, refetch, error } = useClusters()
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
 
-  const clusters = rawClusters || []
+  const clusters = deduplicatedClusters || []
 
   // Use the centralised health state machine so these counts always agree
   // with the main cluster grid, sidebar stats and filter tabs (#5928).
