@@ -38,6 +38,43 @@ interface GameState {
   enPassantTarget: { row: number; col: number } | null
   halfMoveClock: number
   fullMoveNumber: number
+  /**
+   * FIDE threefold-repetition tracking (#7890). Each entry is a canonical
+   * position key (board + side-to-move + castling rights + en-passant target).
+   * When any key appears here 3+ times the game is a draw by repetition.
+   */
+  positionHistory: string[]
+}
+
+/**
+ * Minimum number of times a position must appear in history for the
+ * FIDE threefold-repetition draw rule to trigger.
+ */
+const THREEFOLD_REPETITION_COUNT = 3
+
+/**
+ * Build the canonical position key for FIDE threefold-repetition. Per the
+ * rules, two positions are "the same" iff board layout, side to move,
+ * castling availability, and en-passant target square all match. The
+ * half-move clock and full-move number are intentionally excluded.
+ */
+function positionKey(state: {
+  board: Board
+  turn: Color
+  castlingRights: GameState['castlingRights']
+  enPassantTarget: GameState['enPassantTarget']
+}): string {
+  const boardStr = state.board
+    .map(row => row.map(p => (p ? `${p.color[0]}${p.type}` : '-')).join(''))
+    .join('/')
+  const castling = [
+    state.castlingRights.white.kingside ? 'K' : '',
+    state.castlingRights.white.queenside ? 'Q' : '',
+    state.castlingRights.black.kingside ? 'k' : '',
+    state.castlingRights.black.queenside ? 'q' : ''
+  ].join('') || '-'
+  const ep = state.enPassantTarget ? `${state.enPassantTarget.row},${state.enPassantTarget.col}` : '-'
+  return `${boardStr}|${state.turn}|${castling}|${ep}`
 }
 
 // Piece symbols for display
@@ -104,17 +141,21 @@ function createInitialBoard(): Board {
 }
 
 function createInitialState(): GameState {
+  const board = createInitialBoard()
+  const castlingRights = {
+    white: { kingside: true, queenside: true },
+    black: { kingside: true, queenside: true }
+  }
+  const enPassantTarget: { row: number; col: number } | null = null
   return {
-    board: createInitialBoard(),
+    board,
     turn: 'white',
     moveHistory: [],
-    castlingRights: {
-      white: { kingside: true, queenside: true },
-      black: { kingside: true, queenside: true }
-    },
-    enPassantTarget: null,
+    castlingRights,
+    enPassantTarget,
     halfMoveClock: 0,
-    fullMoveNumber: 1
+    fullMoveNumber: 1,
+    positionHistory: [positionKey({ board, turn: 'white', castlingRights, enPassantTarget })]
   }
 }
 
@@ -370,14 +411,31 @@ function makeMove(state: GameState, from: { row: number; col: number }, to: { ro
     enPassant: enPassantCapture
   }
 
+  const newTurn: Color = state.turn === 'white' ? 'black' : 'white'
+  // Pawn moves and captures are "irreversible" — they reset both the
+  // halfMoveClock (fifty-move rule) and flush the repetition history
+  // (FIDE: repetitions only count when they occur in the same game
+  // continuation with no pawn move or capture in between).
+  const isIrreversible = !!captured || piece.type === 'P'
+  const newKey = positionKey({
+    board: newBoard,
+    turn: newTurn,
+    castlingRights: newCastlingRights,
+    enPassantTarget: newEnPassantTarget
+  })
+  const newPositionHistory = isIrreversible
+    ? [newKey]
+    : [...(state.positionHistory || []), newKey]
+
   return {
     board: newBoard,
-    turn: state.turn === 'white' ? 'black' : 'white',
+    turn: newTurn,
     moveHistory: [...state.moveHistory, move],
     castlingRights: newCastlingRights,
     enPassantTarget: newEnPassantTarget,
-    halfMoveClock: captured || piece.type === 'P' ? 0 : state.halfMoveClock + 1,
-    fullMoveNumber: state.turn === 'black' ? state.fullMoveNumber + 1 : state.fullMoveNumber
+    halfMoveClock: isIrreversible ? 0 : state.halfMoveClock + 1,
+    fullMoveNumber: state.turn === 'black' ? state.fullMoveNumber + 1 : state.fullMoveNumber,
+    positionHistory: newPositionHistory
   }
 }
 
@@ -404,11 +462,20 @@ function getAllLegalMoves(state: GameState, color: Color): { from: { row: number
   return moves
 }
 
-// Check for checkmate or stalemate
-function getGameResult(state: GameState): 'checkmate' | 'stalemate' | 'ongoing' {
+// Check for checkmate, stalemate, or draw by threefold repetition (#7890)
+function getGameResult(state: GameState): 'checkmate' | 'stalemate' | 'repetition' | 'ongoing' {
   const legalMoves = getAllLegalMoves(state, state.turn)
   if (legalMoves.length === 0) {
     return isInCheck(state.board, state.turn, state) ? 'checkmate' : 'stalemate'
+  }
+  // FIDE threefold-repetition: any position occurring 3+ times in the
+  // current irreversible segment ends the game in a draw.
+  const history = state.positionHistory || []
+  const counts = new Map<string, number>()
+  for (const key of history) {
+    const next = (counts.get(key) || 0) + 1
+    if (next >= THREEFOLD_REPETITION_COUNT) return 'repetition'
+    counts.set(key, next)
   }
   return 'ongoing'
 }
@@ -613,7 +680,7 @@ function KubeChessInternal() {
   // Update stats on game end
   useEffect(() => {
     if (gameResult !== 'ongoing') {
-      if (gameResult === 'stalemate') {
+      if (gameResult === 'stalemate' || gameResult === 'repetition') {
         setStats((prev: typeof stats) => ({ ...prev, draws: prev.draws + 1 }))
         emitGameEnded('chess', 'draw', 0)
       } else {
@@ -783,6 +850,7 @@ function KubeChessInternal() {
               {isThinking ? 'AI thinking...' : (
                 gameResult !== 'ongoing' ? (
                   gameResult === 'checkmate' ? `Checkmate! ${gameState.turn === 'white' ? 'Black' : 'White'} wins!` :
+                  gameResult === 'repetition' ? 'Draw by threefold repetition!' :
                   'Stalemate - Draw!'
                 ) : (
                   inCheck ? 'Check!' : `${gameState.turn}'s turn`
