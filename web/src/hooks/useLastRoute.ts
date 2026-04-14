@@ -74,12 +74,16 @@ export function useLastRoute() {
   // Save scroll position for a given path immediately (no debounce).
   // Snaps to the nearest card top boundary so restoration shows full cards.
   // Also saves the card title for robust restore across layout shifts.
-  const saveScrollPositionNow = useCallback((path: string) => {
+  //
+  // `scrollTopOverride` lets callers (e.g. pathname-change cleanup) supply a
+  // known-good scroll value captured before KeepAlive hid the content. The
+  // live container.scrollTop can clamp to 0 while the DOM is being hidden.
+  const saveScrollPositionNow = useCallback((path: string, scrollTopOverride?: number) => {
     try {
       if (isRestoringRef.current) return
       const container = getScrollContainer()
       if (!container) return
-      const scrollTop = container.scrollTop
+      const scrollTop = scrollTopOverride ?? container.scrollTop
 
       const positions = getScrollPositions()
 
@@ -94,26 +98,37 @@ export function useLastRoute() {
       // Find the first card visible at the viewport top.
       // Cards are in a grid so multiple cards can share the same row.
       // We want the first card (left-most in DOM) on the row nearest
-      // the viewport top, using a 20px tolerance for breathing room.
-      //
-      // OPTIMIZATION: Only check the first few cards to avoid forced reflow
-      // on every card. Most users don't scroll past the first ~10 cards.
+      // the viewport top, using a tolerance for breathing room.
+      const CARD_ROW_TOLERANCE_PX = 20
+      const CARD_BREATHING_ROOM_PX = 12
+      const CARD_ROW_EPSILON_PX = 2
+      // Cap iterations so a pathological dashboard can't stall the save.
+      // The loop early-exits at the first card past scrollTop, so this only
+      // bounds the degenerate case where every visible card is above the fold.
+      const MAX_CARDS_TO_CHECK = 100
       let snapped = scrollTop
       let cardTitle: string | undefined
       const cards = container.querySelectorAll('[data-tour="card"]')
-      const maxCardsToCheck = Math.min(cards.length, 12) // Only check first 12 cards
-      if (maxCardsToCheck > 0) {
+      if (cards.length > 0) {
         const containerRect = container.getBoundingClientRect()
         // Find the last row whose top is at or above the viewport top + tolerance.
         // Then pick the FIRST card on that row (first in DOM order).
         let bestRowTop = -1
         let bestCard: Element | null = null
-        for (let i = 0; i < maxCardsToCheck; i++) {
+        // `bestCardHidden` flags the KeepAlive case: getBoundingClientRect
+        // returns zeros for display:none elements, so we may have "matched"
+        // a hidden card at position 0. In that case, fall back to the saved
+        // cardTitle preserved by the caller rather than wiping it.
+        let anyMeasurable = false
+        const upperBound = Math.min(cards.length, MAX_CARDS_TO_CHECK)
+        for (let i = 0; i < upperBound; i++) {
           const cardRect = cards[i].getBoundingClientRect()
+          if (cardRect.height === 0 && cardRect.width === 0) continue
+          anyMeasurable = true
           const cardAbsTop = cardRect.top - containerRect.top + scrollTop
-          if (cardAbsTop <= scrollTop + 20) {
-            // New row detected (position differs by more than 2px from last row)
-            if (Math.abs(cardAbsTop - bestRowTop) > 2) {
+          if (cardAbsTop <= scrollTop + CARD_ROW_TOLERANCE_PX) {
+            // New row detected (differs by more than epsilon from last row)
+            if (Math.abs(cardAbsTop - bestRowTop) > CARD_ROW_EPSILON_PX) {
               bestRowTop = cardAbsTop
               bestCard = cards[i] // first card on this new row
             }
@@ -123,9 +138,16 @@ export function useLastRoute() {
           }
         }
         if (bestCard && bestRowTop >= 0) {
-          snapped = Math.max(0, bestRowTop - 12) // 12px breathing room above card
+          snapped = Math.max(0, bestRowTop - CARD_BREATHING_ROOM_PX)
           const titleEl = bestCard.querySelector('h3')
           if (titleEl) cardTitle = titleEl.textContent?.trim()
+        } else if (!anyMeasurable) {
+          // Cards are all hidden (KeepAlive). Preserve prior cardTitle so
+          // the next visit can restore by title instead of by stale pixel.
+          const existing = positions[path]
+          if (typeof existing === 'object' && existing) {
+            cardTitle = existing.cardTitle
+          }
         }
       }
 
@@ -231,17 +253,14 @@ export function useLastRoute() {
     // On cleanup (path change), save scroll position of the page being left.
     // Use the ref value — KeepAlive sets display:none on old content before
     // cleanup runs, which clamps container.scrollTop. The ref has the real value.
+    // We route through saveScrollPositionNow so the cardTitle snap is preserved:
+    // without it, the entry loses its title and the next restore falls back to
+    // a pixel value that drifts as content above the cards lazy-loads (#7944).
     const scrollRef = scrollTopByPathRef.current
     return () => {
       const refScroll = scrollRef[location.pathname]
       if (refScroll !== undefined && refScroll > 0) {
-        try {
-          const positions = getScrollPositions()
-          positions[location.pathname] = { position: refScroll }
-          localStorage.setItem(SCROLL_POSITIONS_KEY, JSON.stringify(positions))
-        } catch {
-          // Ignore localStorage errors
-        }
+        saveScrollPositionNow(location.pathname, refScroll)
       } else {
         saveScrollPositionNow(location.pathname)
       }
