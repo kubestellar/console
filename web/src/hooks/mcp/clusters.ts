@@ -66,9 +66,6 @@ export function useClusters() {
   const { isDemoMode } = useDemoMode()
 
   // Subscribe to shared cache updates.
-  // The setLocalState call here is an urgent setState, but notifyClusterSubscribers()
-  // wraps the fan-out in startTransition, so in practice every call to this
-  // handler is already inside a transition scope.
   useEffect(() => {
     const handleUpdate = (cache: ClusterCache) => {
       setLocalState(cache)

@@ -1,4 +1,3 @@
-import { startTransition } from 'react'
 import { api, isBackendUnavailable } from '../../lib/api'
 import { reportAgentDataError, reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
 import { isDemoMode, isNetlifyDeployment, isDemoToken, subscribeDemoMode } from '../../lib/demoMode'
@@ -253,23 +252,9 @@ export let clusterCache: ClusterCache = {
 type ClusterSubscriber = (cache: ClusterCache) => void
 export const clusterSubscribers = new Set<ClusterSubscriber>()
 
-// Notify all subscribers of state change.
-//
-// Wrap the fan-out in React.startTransition so every subscriber's setState
-// becomes a transition-priority (interruptible) update. The cluster cache
-// fires many times per second under normal operation — every poll tick, every
-// per-cluster health-check completion, every WebSocket kubeconfig notification
-// — and without this wrap, each fan-out produces a burst of urgent renders
-// across every component using useClusters(). On pages with many cluster-aware
-// cards (Dashboard, My Clusters), that burst starves React Router's navigation
-// transition: the URL updates via history.push, but <Outlet> never commits the
-// new route because the tree is always busy re-rendering cluster subscribers.
-// Wrapping here (at the notify source) covers every subscriber uniformly so
-// individual hooks don't each have to remember to wrap their own setState.
+// Notify all subscribers of state change
 export function notifyClusterSubscribers() {
-  startTransition(() => {
-    clusterSubscribers.forEach(subscriber => subscriber(clusterCache))
-  })
+  clusterSubscribers.forEach(subscriber => subscriber(clusterCache))
 }
 
 /**
