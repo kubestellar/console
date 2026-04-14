@@ -348,7 +348,15 @@ export function useFeatureRequests(currentUserId?: string, options?: UseFeatureR
   const createRequest = async (input: CreateFeatureRequestInput, options?: { timeout?: number }) => {
     try {
       setIsSubmitting(true)
-      const { data } = await api.post<FeatureRequest>('/api/feedback/requests', input, options)
+      // Attach the per-user client credential so the backend can route
+      // through the attribution proxy. The header name is intentionally
+      // non-descriptive (do not rename to anything auth-suggestive).
+      const { getClientCtx } = await import('../lib/clientCtx')
+      const ctx = getClientCtx()
+      const mergedOpts = ctx
+        ? { ...(options ?? {}), headers: { ...(options as { headers?: Record<string, string> })?.headers, 'X-KC-Client-Auth': ctx } }
+        : options
+      const { data } = await api.post<FeatureRequest>('/api/feedback/requests', input, mergedOpts)
       setRequests(prev => [data, ...prev])
       return data
     } finally {

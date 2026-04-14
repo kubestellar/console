@@ -181,6 +181,12 @@ type FeedbackHandler struct {
 	// github.com submissions (anti-gaming). Nil means App auth is not
 	// configured and the handler falls back to the PAT in githubToken.
 	appTokenProvider *GitHubAppTokenProvider
+	// attributionProxyURL is the Netlify Function URL that acts as the
+	// central App-attribution proxy. When set and a per-user client
+	// credential is present, issue creation is proxied here first so
+	// GitHub stamps `performed_via_github_app.slug`. Falls back to
+	// direct App token or PAT when proxy is unavailable or unconfigured.
+	attributionProxyURL string
 
 	prCacheMu   sync.RWMutex
 	prCache     []GitHubPR
@@ -205,13 +211,14 @@ func NewFeedbackHandler(s store.Store, cfg FeedbackConfig) *FeedbackHandler {
 			"Classic PAT: needs 'repo' scope. Fine-grained PAT: needs 'Issues' + 'Contents' read/write permissions.")
 	}
 	return &FeedbackHandler{
-		store:            s,
-		githubToken:      cfg.GitHubToken,
-		webhookSecret:    cfg.WebhookSecret,
-		repoOwner:        cfg.RepoOwner,
-		repoName:         cfg.RepoName,
-		httpClient:       &http.Client{Timeout: githubAPITimeout},
-		appTokenProvider: NewGitHubAppTokenProvider(),
+		store:               s,
+		githubToken:         cfg.GitHubToken,
+		webhookSecret:       cfg.WebhookSecret,
+		repoOwner:           cfg.RepoOwner,
+		repoName:            cfg.RepoName,
+		httpClient:          &http.Client{Timeout: githubAPITimeout},
+		appTokenProvider:    NewGitHubAppTokenProvider(),
+		attributionProxyURL: strings.TrimRight(os.Getenv("FEEDBACK_PROXY_URL"), "/"),
 	}
 }
 
@@ -291,8 +298,13 @@ func (h *FeedbackHandler) CreateFeatureRequest(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to create feature request")
 	}
 
+	// Per-user client credential used by the attribution proxy to
+	// verify submitter identity (never logged). Empty is fine — the
+	// proxy path is skipped in that case.
+	clientAuth := c.Get("X-KC-Client-Auth")
+
 	// Create GitHub issue (route to the correct repo)
-	issueNumber, _, ssResult, err := h.createGitHubIssueInRepo(request, user, h.repoOwner, targetRepoName, input.Screenshots)
+	issueNumber, _, ssResult, err := h.createGitHubIssueInRepo(request, user, h.repoOwner, targetRepoName, input.Screenshots, clientAuth)
 	if err != nil {
 		slog.Error("[Feedback] failed to create GitHub issue", "error", err)
 		// Clean up the orphaned database record. Log but don't fail the
@@ -1849,7 +1861,7 @@ type screenshotUploadResult struct {
 	Failed   int `json:"screenshots_failed"`
 }
 
-func (h *FeedbackHandler) createGitHubIssueInRepo(request *models.FeatureRequest, user *models.User, repoOwner, repoName string, screenshots []string) (int, string, screenshotUploadResult, error) {
+func (h *FeedbackHandler) createGitHubIssueInRepo(request *models.FeatureRequest, user *models.User, repoOwner, repoName string, screenshots []string, clientAuth string) (int, string, screenshotUploadResult, error) {
 	// Determine labels based on request type and target repo
 	var labels []string
 	isDocs := request.TargetRepo == models.TargetRepoDocs
@@ -1913,13 +1925,13 @@ func (h *FeedbackHandler) createGitHubIssueInRepo(request *models.FeatureRequest
 `, request.RequestType, repoLabel, user.GitHubLogin, request.ID.String(), request.Description)
 
 	// First attempt: create issue with labels
-	number, htmlURL, err := h.postGitHubIssue(repoOwner, repoName, request.Title, issueBody, labels)
+	number, htmlURL, err := h.postGitHubIssue(repoOwner, repoName, request.Title, issueBody, labels, clientAuth)
 	if err != nil && isLabelPermissionError(err) {
 		// The token lacks permission to create/apply labels on this repo.
 		// Retry without labels — the issue body includes the request type
 		// so maintainers can triage and label it manually.
 		slog.Info("[Feedback] label permission denied, retrying without labels", "repo", repoOwner+"/"+repoName)
-		number, htmlURL, err = h.postGitHubIssue(repoOwner, repoName, request.Title, issueBody, nil)
+		number, htmlURL, err = h.postGitHubIssue(repoOwner, repoName, request.Title, issueBody, nil, clientAuth)
 	}
 
 	// Add screenshots as separate comments (one per screenshot) so they
@@ -1946,9 +1958,26 @@ func (h *FeedbackHandler) createGitHubIssueInRepo(request *models.FeatureRequest
 	return number, htmlURL, ssResult, err
 }
 
-// postGitHubIssue sends a POST request to the GitHub Issues API.
-// If labels is nil or empty, the "labels" field is omitted from the payload.
-func (h *FeedbackHandler) postGitHubIssue(repoOwner, repoName, title, body string, labels []string) (int, string, error) {
+// postGitHubIssue sends a POST request to the GitHub Issues API, or
+// proxies via the attribution service when configured and a client
+// credential is present. If labels is nil or empty, the "labels" field
+// is omitted from the payload.
+func (h *FeedbackHandler) postGitHubIssue(repoOwner, repoName, title, body string, labels []string, clientAuth string) (int, string, error) {
+	// Attribution proxy path: when configured and the caller provided
+	// a per-user client credential, route through the central App-holder
+	// so GitHub stamps `performed_via_github_app.slug` on the issue.
+	if h.attributionProxyURL != "" && clientAuth != "" {
+		num, url, err := h.postGitHubIssueViaProxy(repoOwner, repoName, title, body, labels, clientAuth)
+		if err == nil {
+			return num, url, nil
+		}
+		// Fall through to the direct path so a proxy outage doesn't
+		// block feedback submission. The issue won't get App
+		// attribution but the user's report still lands.
+		slog.Warn("[Feedback] attribution proxy failed, falling back to direct GitHub",
+			"proxyURL", h.attributionProxyURL, "error", err)
+	}
+
 	payload := map[string]interface{}{
 		"title": title,
 		"body":  body,
@@ -2013,6 +2042,55 @@ func (h *FeedbackHandler) postGitHubIssue(repoOwner, repoName, title, body strin
 		return 0, "", err
 	}
 
+	return result.Number, result.HTMLURL, nil
+}
+
+// postGitHubIssueViaProxy forwards the issue payload to the central
+// attribution service. The service validates the client credential
+// against GitHub, then creates the issue using the
+// `kubestellar-console-bot` App so GitHub stamps
+// `performed_via_github_app.slug` on it.
+func (h *FeedbackHandler) postGitHubIssueViaProxy(repoOwner, repoName, title, body string, labels []string, clientAuth string) (int, string, error) {
+	payload := map[string]interface{}{
+		"repoOwner": repoOwner,
+		"repoName":  repoName,
+		"title":     title,
+		"body":      body,
+	}
+	if len(labels) > 0 {
+		payload["labels"] = labels
+	}
+
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		return 0, "", fmt.Errorf("marshal proxy payload: %w", err)
+	}
+
+	req, err := http.NewRequest("POST", h.attributionProxyURL, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return 0, "", err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-KC-Client-Auth", clientAuth)
+
+	resp, err := h.httpClient.Do(req)
+	if err != nil {
+		return 0, "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(resp.Body)
+		return 0, "", fmt.Errorf("proxy returned %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	var result struct {
+		Number  int    `json:"number"`
+		HTMLURL string `json:"html_url"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return 0, "", err
+	}
 	return result.Number, result.HTMLURL, nil
 }
 

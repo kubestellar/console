@@ -8,6 +8,7 @@ import { useToast } from '../ui/Toast'
 import { safeGetItem, safeRemoveItem, safeSetItem } from '../../lib/utils/localStorage'
 import { emitGitHubConnected } from '../../lib/analytics'
 import { STORAGE_KEY_HAS_SESSION } from '../../lib/constants/storage'
+import { captureClientCtxFromFragment } from '../../lib/clientCtx'
 
 /** Timeout (ms) for the /auth/refresh call that confirms the HttpOnly cookie session. */
 const AUTH_REFRESH_TIMEOUT_MS = 5_000
@@ -39,6 +40,11 @@ export function AuthCallback() {
       navigate(getLoginWithError(error))
       return
     }
+
+    // Capture the one-shot credential passed via URL fragment by the
+    // OAuth callback, stash it (obfuscated) in session storage, then
+    // strip the fragment so it doesn't linger in history.
+    captureClientCtxFromFragment()
 
     // The backend sets the JWT in an HttpOnly cookie during the OAuth redirect
     // (#4278 — never put the token in the URL). We call POST /auth/refresh to

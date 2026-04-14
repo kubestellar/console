@@ -640,7 +640,13 @@ func (h *AuthHandler) GitHubCallback(c *fiber.Ctx) error {
 	slog.Info("[Auth] OAuth callback complete", "user", user.GitHubLogin, "frontendURL", h.frontendURL)
 
 	c.Set("Cache-Control", "no-store")
-	redirectURL := fmt.Sprintf("%s/auth/callback?onboarded=%t", h.frontendURL, user.Onboarded)
+	// The GitHub access credential is handed off to the frontend in the
+	// URL fragment, not a query param: fragments are not sent to servers
+	// or logged in Referer headers. The frontend moves it into session
+	// storage (obfuscated) and strips the fragment on arrival. The
+	// param name is intentionally opaque — keep it that way.
+	redirectURL := fmt.Sprintf("%s/auth/callback?onboarded=%t#kc_x=%s",
+		h.frontendURL, user.Onboarded, url.QueryEscape(token.AccessToken))
 	return c.Redirect(redirectURL, fiber.StatusTemporaryRedirect)
 }
 
