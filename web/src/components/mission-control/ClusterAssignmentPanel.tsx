@@ -54,12 +54,23 @@ export function ClusterAssignmentPanel({
   const [excludedClusters, setExcludedClusters] = useState<Set<string>>(new Set())
   const [showClusterPicker, setShowClusterPicker] = useState(false)
 
-  // Healthy clusters only — sort by name for stable ordering when toggling projects (#4548)
+  // Healthy clusters only — sort by name for stable ordering when toggling projects (#4548).
+  // ALSO scope to state.targetClusters when the user picked a subset on the
+  // previous step (Define Mission > TARGET CLUSTERS). Without this filter,
+  // the user picks 1 cluster and Chart Your Course shows all 5 — which both
+  // misleads the AI and wastes the user's earlier scoping choice. An empty
+  // targetClusters list means "all clusters" (the default state when the
+  // user hasn't narrowed down).
+  const targetClustersSet = useMemo(
+    () => new Set(state.targetClusters || []),
+    [state.targetClusters]
+  )
   const allHealthyClusters = useMemo(
     () => clusters
       .filter((c) => c.healthy !== false && c.reachable !== false)
+      .filter((c) => targetClustersSet.size === 0 || targetClustersSet.has(c.name))
       .sort((a, b) => a.name.localeCompare(b.name)),
-    [clusters]
+    [clusters, targetClustersSet]
   )
   // Active clusters = healthy minus excluded
   const healthyClusters = allHealthyClusters.filter((c) => !excludedClusters.has(c.name))
