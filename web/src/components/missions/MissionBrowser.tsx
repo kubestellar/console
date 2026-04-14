@@ -672,8 +672,12 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
               source: 'github' as const,
               loaded: false,
               description: r.full_name }))
-          } else if (isDemoMode() && (nodeId === 'kubara' || nodeId.startsWith('kubara/'))) {
-            // Demo mode: static Kubara catalog (cached, no API calls)
+          } else if (nodeId === 'kubara' || nodeId.startsWith('kubara/')) {
+            // Static Kubara catalog (cached, no API calls). Used in demo mode
+            // AND in real mode — the list is curated and doesn't change often,
+            // and the live GitHub Contents API path requires a per-user
+            // GitHub OAuth token that not every user has wired up. Without
+            // this branch the node was empty for non-demo users.
             if (nodeId === 'kubara') {
               children = [
                 'kube-prometheus-stack', 'cert-manager', 'kyverno', 'kyverno-policies',
@@ -812,7 +816,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
           content = data
         } else if (node.source === 'github') {
           // In demo mode for Kubara files, return demo content
-          if (isDemoMode() && node.id.startsWith('kubara/')) {
+          if (node.id.startsWith('kubara/')) {
             const chartName = node.id.split('/')[1] || 'chart'
             if (node.name === 'Chart.yaml') {
               content = `apiVersion: v2\nname: ${chartName}\ndescription: Production-tested ${chartName} Helm chart from Kubara\nversion: 1.0.0\ntype: application\nappVersion: "latest"\nmaintainers:\n  - name: kubara-io\n    url: https://github.com/kubara-io/kubara`

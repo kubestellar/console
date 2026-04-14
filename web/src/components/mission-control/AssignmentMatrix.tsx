@@ -104,6 +104,13 @@ export function AssignmentMatrix({
                     key={cluster.name}
                     className="p-2 border-b border-border/50 text-center"
                   >
+                    {/*
+                      Reserve space for the status dot in every cell so
+                      checkbox columns line up vertically regardless of
+                      whether a particular row has a dot. Without the
+                      placeholder span, rows with no dot let the checkbox
+                      drift to the cell center, misaligning columns.
+                    */}
                     <div className="flex items-center justify-center gap-1.5">
                       <Button
                         variant="ghost"
@@ -118,12 +125,14 @@ export function AssignmentMatrix({
                         title={assigned ? 'Unassign project' : 'Assign project'}
                         icon={<Check className="w-3.5 h-3.5" />}
                       />
-                      {dot && (
-                        <span
-                          className={cn('w-2 h-2 rounded-full flex-shrink-0', dot.color)}
-                          title={dot.title}
-                        />
-                      )}
+                      <span
+                        className={cn(
+                          'w-2 h-2 rounded-full flex-shrink-0',
+                          dot ? dot.color : 'bg-transparent'
+                        )}
+                        title={dot?.title}
+                        aria-hidden={dot ? undefined : true}
+                      />
                     </div>
                   </td>
                 )
@@ -132,6 +141,18 @@ export function AssignmentMatrix({
           ))}
         </tbody>
       </table>
+      {/*
+        Status legend matches the dot palette in STATUS_DOT. Mirrors the
+        Flight Plan's legend pattern so users learn the colors once.
+      */}
+      <div className="mt-3 pt-3 border-t border-border/50 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-muted-foreground">
+        <span className="font-medium uppercase tracking-wider text-[10px]">Status:</span>
+        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-400" /> Already installed</span>
+        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-400" /> Warning</span>
+        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-red-400" /> Error / conflict</span>
+        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-slate-500" /> Not installed</span>
+        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full border border-border/60" /> No data</span>
+      </div>
     </div>
   )
 }
