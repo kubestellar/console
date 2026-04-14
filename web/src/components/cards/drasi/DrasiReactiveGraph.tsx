@@ -30,7 +30,7 @@ const MAX_RESULT_ROWS = 7
 /** Number of dots flowing along each active connection line */
 const FLOW_DOT_COUNT = 3
 /** Flow dot animation cycle duration (seconds) */
-const FLOW_DOT_CYCLE_S = 2
+const FLOW_DOT_CYCLE_S = 5
 /** SVG stroke width in pixels */
 const LINE_STROKE_WIDTH_PX = 1.2
 /** Flow dot radius in pixels */
@@ -888,9 +888,18 @@ export function DrasiReactiveGraph() {
         : Math.max(...queryRects.map(r => r.right))
       const rxLeft = Math.min(...reactionRects.map(r => r.left))
       const trunk2X = (qRight + rxLeft) / 2
-      const trunk2Top = Math.min(queryRects[0].centerY, reactionRects[0].centerY)
+      // trunk2 runs only through the non-spanning queries' rows so it
+      // doesn't drop into the tall spanning card's interior.
+      const nonSpanningQueryRects = queries
+        .filter(q => q.id !== spanningQueryId)
+        .map(q => rects.queries[q.id])
+        .filter(Boolean)
+      const trunk2RefRects = nonSpanningQueryRects.length > 0
+        ? nonSpanningQueryRects
+        : queryRects
+      const trunk2Top = Math.min(trunk2RefRects[0].centerY, reactionRects[0].centerY)
       const trunk2Bottom = Math.max(
-        queryRects[queryRects.length - 1].centerY,
+        trunk2RefRects[trunk2RefRects.length - 1].centerY,
         reactionRects[reactionRects.length - 1].centerY,
       )
       items.push({ key: 'trunk2', d: `M ${trunk2X} ${trunk2Top} L ${trunk2X} ${trunk2Bottom}`, dashed: false, active: false, delay: 0 })
@@ -999,7 +1008,9 @@ export function DrasiReactiveGraph() {
               <div
                 key={query.id}
                 style={{
-                  gridColumn: hasResults ? '3 / 6' : 3,
+                  // Span col 3 → 5 (queries + right trunk) but NOT into
+                  // the reactions column so it stays visually distinct.
+                  gridColumn: hasResults ? '3 / 5' : 3,
                   gridRow: i + 2,
                 }}
               >
