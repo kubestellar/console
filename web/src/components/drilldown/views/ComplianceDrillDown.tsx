@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next'
 import {
   Shield, CheckCircle, XCircle, AlertCircle, Info,
   ChevronUp, ChevronDown, ChevronLeft, ChevronRight,
+  ChevronsLeft, ChevronsRight,
   Search, X, Filter } from 'lucide-react'
 import { useTrestle, type OscalControlResult } from '../../../hooks/useTrestle'
 import { useGlobalFilters } from '../../../hooks/useGlobalFilters'
@@ -418,20 +419,24 @@ export function ComplianceDrillDown({ data }: Props) {
             Showing {page * PAGE_SIZE + 1}--{Math.min((page + 1) * PAGE_SIZE, sortedRows.length)} of {sortedRows.length} controls
           </span>
           <div className="flex items-center gap-1">
+            {/* First/Last use the single-glyph ChevronsLeft/ChevronsRight (double-chevron)
+                instead of two overlapping single chevrons — reads as one control instead of
+                two arrows side-by-side. Fixes #7895. */}
             <button
               onClick={() => setPage(0)}
               disabled={page === 0}
               className="p-1.5 rounded hover:bg-card/50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               title="First page"
+              aria-label="First page"
             >
-              <ChevronLeft className="w-4 h-4" />
-              <ChevronLeft className="w-4 h-4 -ml-3" />
+              <ChevronsLeft className="w-4 h-4" />
             </button>
             <button
               onClick={() => setPage(p => Math.max(0, p - 1))}
               disabled={page === 0}
               className="p-1.5 rounded hover:bg-card/50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               title="Previous page"
+              aria-label="Previous page"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
@@ -443,6 +448,7 @@ export function ComplianceDrillDown({ data }: Props) {
               disabled={page >= totalPages - 1}
               className="p-1.5 rounded hover:bg-card/50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               title="Next page"
+              aria-label="Next page"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -451,9 +457,9 @@ export function ComplianceDrillDown({ data }: Props) {
               disabled={page >= totalPages - 1}
               className="p-1.5 rounded hover:bg-card/50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               title="Last page"
+              aria-label="Last page"
             >
-              <ChevronRight className="w-4 h-4" />
-              <ChevronRight className="w-4 h-4 -ml-3" />
+              <ChevronsRight className="w-4 h-4" />
             </button>
           </div>
         </div>
