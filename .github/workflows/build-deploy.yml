@@ -245,9 +245,6 @@ jobs:
             --from-literal=jwt-secret=${{ secrets.KSC_JWT_SECRET }} \
             --from-literal=github-token=${{ secrets.KSC_GITHUB_TOKEN }} \
             --from-literal=google-drive-api-key=${{ secrets.KSC_GOOGLE_DRIVE_API_KEY }} \
-            --from-literal=console-app-id="${{ secrets.KUBESTELLAR_CONSOLE_APP_ID }}" \
-            --from-literal=console-app-installation-id="${{ secrets.KUBESTELLAR_CONSOLE_APP_INSTALLATION_ID }}" \
-            --from-literal=console-app-private-key="${{ secrets.KUBESTELLAR_CONSOLE_APP_PRIVATE_KEY }}" \
             --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Recover stuck Helm release
@@ -278,7 +275,6 @@ jobs:
             --set jwt.existingSecret=kc-secrets \
             --set githubToken.existingSecret=kc-secrets \
             --set googleDrive.existingSecret=kc-secrets \
-            --set consoleApp.existingSecret=kc-secrets \
             --set route.enabled=true \
             --set route.host=kc.apps.fmaas-vllm-d.fmaas.res.ibm.com \
             --set clusterName=vllm-d \
@@ -342,9 +338,6 @@ jobs:
             --from-literal=jwt-secret=${{ secrets.KSC_JWT_SECRET }} \
             --from-literal=github-token=${{ secrets.KSC_GITHUB_TOKEN }} \
             --from-literal=google-drive-api-key=${{ secrets.KSC_GOOGLE_DRIVE_API_KEY }} \
-            --from-literal=console-app-id="${{ secrets.KUBESTELLAR_CONSOLE_APP_ID }}" \
-            --from-literal=console-app-installation-id="${{ secrets.KUBESTELLAR_CONSOLE_APP_INSTALLATION_ID }}" \
-            --from-literal=console-app-private-key="${{ secrets.KUBESTELLAR_CONSOLE_APP_PRIVATE_KEY }}" \
             --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Recover stuck Helm release
@@ -371,7 +364,6 @@ jobs:
             --set jwt.existingSecret=kc-kubestellar-console \
             --set githubToken.existingSecret=kc-kubestellar-console \
             --set googleDrive.existingSecret=kc-kubestellar-console \
-            --set consoleApp.existingSecret=kc-kubestellar-console \
             --set route.enabled=true \
             --set route.host=kc-kubestellar-console-kubestellar-console.apps.pokprod001.ete14.res.ibm.com \
             --set clusterName=pok-prod-001 \
