@@ -83,6 +83,13 @@ fi
 
 cd "$SCRIPT_DIR"
 
+# Install frontend dependencies if they haven't been installed yet
+if [ -d "$SCRIPT_DIR/web" ] && [ ! -d "$SCRIPT_DIR/web/node_modules" ]; then
+    echo "Installing frontend dependencies..."
+    (cd web && npm install)
+    echo ""
+fi
+
 # Load shared port cleanup utilities (kill_project_port, verify_port_free)
 source "$SCRIPT_DIR/scripts/port-cleanup.sh"
 
