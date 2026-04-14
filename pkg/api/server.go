@@ -431,13 +431,26 @@ func (s *Server) setupMiddleware() {
 		const kcAgentLocalhost = "http://localhost:8585"    // kc-agent HTTP on localhost
 		const kcAgentLocalhostWS = "ws://localhost:8585"    // kc-agent WebSocket on localhost
 
+		// script-src includes 'wasm-unsafe-eval' because the SQLite cache
+		// worker compiles a WebAssembly module at runtime; without it the
+		// worker aborts, logs a noisy CompileError, and forces an IndexedDB
+		// fallback on every page load. 'wasm-unsafe-eval' is a narrower
+		// permission than 'unsafe-eval' — it allows WebAssembly.instantiate
+		// but still blocks JS eval/Function.
+		//
+		// connect-src includes https://cdn.jsdelivr.net because the login
+		// page's Three.js globe renders cluster labels via troika-three-text,
+		// which fetches a unicode font resolver from jsdelivr at runtime.
+		// Without it the font lookup throws, labels fail to render, and the
+		// globe initialization aborts — leaving the right side of the login
+		// page blank.
 		c.Set("Content-Security-Policy",
 			"default-src 'self'; "+
-				"script-src 'self' 'unsafe-inline' blob: https://www.googletagmanager.com; "+
+				"script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob: https://www.googletagmanager.com; "+
 				"worker-src 'self' blob:; "+
 				"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "+
 				"img-src 'self' data: https:; "+
-				"connect-src 'self' "+kcAgentLoopback+" "+kcAgentLoopbackWS+" "+kcAgentLocalhost+" "+kcAgentLocalhostWS+" https://www.google-analytics.com https://www.googletagmanager.com wss:; "+
+				"connect-src 'self' "+kcAgentLoopback+" "+kcAgentLoopbackWS+" "+kcAgentLocalhost+" "+kcAgentLocalhostWS+" https://www.google-analytics.com https://www.googletagmanager.com https://cdn.jsdelivr.net wss:; "+
 				"font-src 'self' data: https://fonts.gstatic.com; "+
 				"object-src 'none'; "+
 				"base-uri 'self'")
