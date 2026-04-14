@@ -179,7 +179,11 @@ export function NodeConditions() {
               onClick={() => setFilter(f)}
               title={`${filterLabels[f]}: ${count}`}
               className={`px-2 py-1 rounded-full transition-colors max-w-full truncate ${
-                filter === f ? colors[f] + ' ring-1 ring-current' : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
+                // ring-inset keeps the selected-state ring inside the pill's
+                // border-box so the parent `overflow-hidden` (kept to guard
+                // against long translated labels overflowing the card per
+                // #6457) doesn't clip the top/bottom 1px of the ring (#7881).
+                filter === f ? colors[f] + ' ring-1 ring-inset ring-current' : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
               }`}
             >
               {filterLabels[f]}: {count}
