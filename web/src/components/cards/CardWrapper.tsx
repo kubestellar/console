@@ -624,6 +624,7 @@ export function CardWrapper({
   const [showResizeMenu, setShowResizeMenu] = useState(false)
   const [showHeightMenu, setShowHeightMenu] = useState(false)
   const [resizeMenuOnLeft, setResizeMenuOnLeft] = useState(false)
+  const [heightMenuOnLeft, setHeightMenuOnLeft] = useState(false)
   const heightMenuContainerRef = useRef<HTMLDivElement>(null)
   const [__timeRemaining, setTimeRemaining] = useState<number | null>(null)
   // Chat state reserved for future use
@@ -801,10 +802,11 @@ export function CardWrapper({
     }
   }
 
-  // Close resize submenu when main menu closes
+  // Close resize/height submenus when main menu closes (#7869)
   useEffect(() => {
     if (!showMenu) {
       setShowResizeMenu(false)
+      setShowHeightMenu(false)
       setMenuPosition(null)
     }
   }, [showMenu])
@@ -881,16 +883,27 @@ export function CardWrapper({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showMenu])
 
-  // Calculate if resize submenu should be on the left side
+  // Calculate if Resize/Height submenu should flip to the left side.
+  // Height uses its own state so opening Height after Width recomputes position (#7869).
+  /** Submenu width — matches w-36 tailwind class (9rem = 144px). */
+  const SUBMENU_WIDTH_PX = 144
+  /** Right-edge margin before flipping submenu to the left side. */
+  const SUBMENU_EDGE_MARGIN_PX = 20
   useEffect(() => {
     if (showResizeMenu && menuContainerRef.current) {
       const rect = menuContainerRef.current.getBoundingClientRect()
-      const submenuWidth = 144 // w-36 = 9rem = 144px
-      const margin = 20
-      const shouldBeOnLeft = rect.right + submenuWidth + margin > window.innerWidth
+      const shouldBeOnLeft = rect.right + SUBMENU_WIDTH_PX + SUBMENU_EDGE_MARGIN_PX > window.innerWidth
       setResizeMenuOnLeft(shouldBeOnLeft)
     }
   }, [showResizeMenu])
+
+  useEffect(() => {
+    if (showHeightMenu && heightMenuContainerRef.current) {
+      const rect = heightMenuContainerRef.current.getBoundingClientRect()
+      const shouldBeOnLeft = rect.right + SUBMENU_WIDTH_PX + SUBMENU_EDGE_MARGIN_PX > window.innerWidth
+      setHeightMenuOnLeft(shouldBeOnLeft)
+    }
+  }, [showHeightMenu])
 
   // Silence unused variable warnings for future chat implementation
   void messages
@@ -1229,7 +1242,7 @@ export function CardWrapper({
                             <div
                               className={cn(
                                 'absolute top-0 w-36 glass rounded-lg py-1 z-20',
-                                resizeMenuOnLeft ? 'right-full mr-1' : 'left-full ml-1'
+                                heightMenuOnLeft ? 'right-full mr-1' : 'left-full ml-1'
                               )}
                               role="menu"
                               onKeyDown={(e) => {
