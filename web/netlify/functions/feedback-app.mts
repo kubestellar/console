@@ -167,8 +167,65 @@ async function getInstallationCred(): Promise<string> {
 async function verifyClientAuth(
   credential: string,
 ): Promise<{ login: string; id: number }> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), GH_TIMEOUT_MS);
+  // Step 1: confirm the credential was issued BY the console's OAuth
+  // App. GitHub's token-introspection endpoint uses Basic auth with
+  // the OAuth app's client_id:client_secret and returns the token's
+  // metadata if (and only if) the token belongs to that app. Without
+  // this check, anyone could present a valid-but-unrelated GitHub
+  // token (a PAT, a different app's OAuth token) and look legitimate.
+  const clientId = process.env.CONSOLE_OAUTH_CLIENT_ID;
+  const clientSecret = process.env.CONSOLE_OAUTH_CLIENT_SECRET;
+  if (!clientId || !clientSecret) {
+    throw new Error("OAuth app credentials not configured in Netlify env");
+  }
+
+  const basicAuth = Buffer.from(`${clientId}:${clientSecret}`).toString(
+    "base64",
+  );
+  const introspectController = new AbortController();
+  const introspectTimeout = setTimeout(
+    () => introspectController.abort(),
+    GH_TIMEOUT_MS,
+  );
+  let user: { login: string; id: number };
+  try {
+    const resp = await fetch(
+      `${GITHUB_API}/applications/${clientId}/token`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${basicAuth}`,
+          Accept: "application/vnd.github+json",
+          "Content-Type": "application/json",
+          "X-GitHub-Api-Version": "2022-11-28",
+          "User-Agent": "KubeStellar-Console-FeedbackApp",
+        },
+        body: JSON.stringify({ access_token: credential }),
+        signal: introspectController.signal,
+      },
+    );
+    if (resp.status === 404 || resp.status === 422) {
+      throw new Error("credential not issued by console OAuth app");
+    }
+    if (!resp.ok) {
+      throw new Error(`introspection HTTP ${resp.status}`);
+    }
+    const data = (await resp.json()) as {
+      user?: { login?: string; id?: number };
+    };
+    if (!data.user?.login || typeof data.user.id !== "number") {
+      throw new Error("introspection response missing user");
+    }
+    user = { login: data.user.login, id: data.user.id };
+  } finally {
+    clearTimeout(introspectTimeout);
+  }
+
+  // Step 2: confirm the token still works against /user. Introspection
+  // can succeed for a token that was later revoked by the user; /user
+  // fails in that case. This is cheap and catches the race.
+  const liveController = new AbortController();
+  const liveTimeout = setTimeout(() => liveController.abort(), GH_TIMEOUT_MS);
   try {
     const resp = await fetch(`${GITHUB_API}/user`, {
       headers: {
@@ -176,17 +233,16 @@ async function verifyClientAuth(
         Accept: "application/vnd.github+json",
         "User-Agent": "KubeStellar-Console-FeedbackApp",
       },
-      signal: controller.signal,
+      signal: liveController.signal,
     });
     if (!resp.ok) {
-      throw new Error(`client-auth verification HTTP ${resp.status}`);
+      throw new Error(`liveness check HTTP ${resp.status}`);
     }
-    const data = (await resp.json()) as { login: string; id: number };
-    if (!data.login) throw new Error("client-auth response missing login");
-    return { login: data.login, id: data.id };
   } finally {
-    clearTimeout(timeout);
+    clearTimeout(liveTimeout);
   }
+
+  return user;
 }
 
 export default async function handler(request: Request): Promise<Response> {

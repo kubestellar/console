@@ -64,6 +64,16 @@
   to = "/.netlify/functions/presence"
   status = 200
 
+# Feedback App attribution proxy — creates issues via the
+# kubestellar-console-bot GitHub App. Holds the App private key in
+# Netlify env; consumer consoles (localhost + cluster) POST here with
+# a per-user client credential so GitHub stamps
+# performed_via_github_app.slug on every console-submitted issue.
+[[redirects]]
+  from = "/api/feedback-app"
+  to = "/.netlify/functions/feedback-app"
+  status = 200
+
 # Missions API — proxy to Netlify Function (console-kb knowledge base)
 [[redirects]]
   from = "/api/missions/file"
