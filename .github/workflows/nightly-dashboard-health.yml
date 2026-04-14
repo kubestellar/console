@@ -60,19 +60,32 @@ jobs:
           # The previous /health poll could succeed before Fiber had fully
           # bound the listener, so the subsequent curl returned empty/non-JSON
           # and jq died with a parse error (#7897). Waiting on the real
-          # endpoint avoids the race and keeps retries bounded to 30s.
+          # endpoint avoids the race (#7941).
+          #
+          # Retry budget: MAX_TRIES * (CURL_MAX_TIME + SLEEP_SECONDS) = worst case.
+          # 10 * (2 + 1) = 30s total, matching the original intent.
+          MAX_TRIES=10         # number of poll attempts
+          CURL_MAX_TIME=2      # seconds per curl attempt
+          SLEEP_SECONDS=1      # seconds between attempts
+          MAX_RESP_CHARS=200   # chars of last response to echo in error message
           LOGIN_RESP=""
           TOKEN=""
-          for i in $(seq 1 30); do
-            LOGIN_RESP=$(curl -sS --max-time 2 http://localhost:8081/auth/dev-login 2>/dev/null || true)
+          for i in $(seq 1 "$MAX_TRIES"); do
+            # Keep stderr so curl errors surface in the diagnostic line below.
+            # (-S is dropped intentionally: previously "curl -sS ... 2>/dev/null"
+            # silently discarded the very output -S was meant to emit.)
+            LOGIN_RESP=$(curl -s --max-time "$CURL_MAX_TIME" http://localhost:8081/auth/dev-login || true)
             if [ -n "$LOGIN_RESP" ] && [ "${LOGIN_RESP:0:1}" = "{" ]; then
               TOKEN=$(echo "$LOGIN_RESP" | jq -r '.token // empty' 2>/dev/null || true)
               if [ -n "$TOKEN" ]; then break; fi
             fi
-            sleep 1
+            sleep "$SLEEP_SECONDS"
           done
           if [ -z "$TOKEN" ]; then
-            echo "::error::Could not get dev-user token after 30s (last response: ${LOGIN_RESP:0:200})"
+            # Sanitize for GitHub Actions log commands: strip CR/LF and
+            # percent-encode '%' so ::error:: is not mangled by HTML responses.
+            SAFE_RESP=$(printf '%s' "${LOGIN_RESP:0:$MAX_RESP_CHARS}" | tr -d '\r\n' | sed 's/%/%25/g')
+            echo "::error::Could not get dev-user token after ${MAX_TRIES} tries (~30s) (last response: ${SAFE_RESP})"
             kill $PID 2>/dev/null; exit 1
           fi
           REFRESH_RESP=$(curl -sS --max-time 5 -X POST \
