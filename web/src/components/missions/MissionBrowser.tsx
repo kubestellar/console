@@ -815,7 +815,9 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
           )
           content = data
         } else if (node.source === 'github') {
-          // In demo mode for Kubara files, return demo content
+          // Serve canned sample content for kubara/* nodes instead of hitting
+          // the GitHub Contents API — avoids per-file rate-limit burn when a
+          // user expands a chart tree.
           if (node.id.startsWith('kubara/')) {
             const chartName = node.id.split('/')[1] || 'chart'
             if (node.name === 'Chart.yaml') {
