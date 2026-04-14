@@ -34,7 +34,13 @@ export function Kubectl() {
   // #6226: useToast for download error feedback.
   const { showToast } = useToast()
   const { execute } = useKubectl()
-  const { deduplicatedClusters: clusters, isLoading } = useClusters()
+  const { deduplicatedClusters: allClusters, isLoading } = useClusters()
+  // Filter to only reachable & healthy clusters — running kubectl against an
+  // unreachable cluster just hangs and frustrates the user. The status of
+  // every kubeconfig context is already known from the cluster cache, so we
+  // can hide the unhealthy ones from the picker entirely. (A cluster is
+  // considered usable if it is both reachable and not explicitly unhealthy.)
+  const clusters = allClusters.filter(c => c.reachable !== false && c.healthy !== false)
   const { isDemoMode } = useDemoMode()
   const [selectedContext, setSelectedContext] = useState<string>('')
 
