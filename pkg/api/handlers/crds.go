@@ -80,7 +80,7 @@ func (h *CRDHandlers) ListCRDs(c *fiber.Ctx) error {
 		var listErr error
 		clusters, listErr = h.k8sClient.ListClusters(ctx)
 		if listErr != nil {
-			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": "cluster discovery failed", "isDemoData": false})
+			return c.Status(statusServiceUnavailableCRD).JSON(fiber.Map{"error": "cluster discovery failed", "isDemoData": false})
 		}
 	}
 	allCRDs := make([]CRDSummary, 0)

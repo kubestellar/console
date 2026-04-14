@@ -145,3 +145,34 @@ func TestUpdateCurrentUser_InvalidBody(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 }
+
+// TestUpdateCurrentUser_InvalidEmail verifies that a missing "@" in the email
+// payload returns 400 and does NOT call UpdateUser on the store (#7855 / #7815).
+func TestUpdateCurrentUser_InvalidEmail(t *testing.T) {
+	userID := uuid.New()
+	app, mockStore, handler := setupUserTest(userID)
+	app.Put("/api/user", handler.UpdateCurrentUser)
+
+	existingUser := &models.User{
+		ID:          userID,
+		GitHubLogin: "testuser",
+		Email:       "old@example.com",
+	}
+	mockStore.On("GetUser", userID).Return(existingUser, nil).Once()
+	// Deliberately do NOT register a UpdateUser expectation — the handler
+	// must bail out before calling the store.
+
+	payload := `{"email":"not-an-email"}`
+	req, err := http.NewRequest("PUT", "/api/user", strings.NewReader(payload))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req, fiberTestTimeout)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+	// AssertExpectations fails the test if any unexpected call (e.g. UpdateUser)
+	// was made, which is exactly what we want to verify.
+	mockStore.AssertExpectations(t)
+	mockStore.AssertNotCalled(t, "UpdateUser")
+}

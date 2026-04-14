@@ -79,6 +79,34 @@ func TestEventRecordEvent_InvalidBody(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 }
 
+// TestEventRecordEvent_InvalidCardID verifies that POST /api/events with a
+// non-UUID card_id returns 400 and does NOT insert anything into the store
+// (#7855 / #7815).
+func TestEventRecordEvent_InvalidCardID(t *testing.T) {
+	env := setupTestEnv(t)
+	store := &eventsTestStore{}
+	handler := NewEventHandler(store)
+	env.App.Post("/api/events", handler.RecordEvent)
+
+	body, err := json.Marshal(map[string]any{
+		"event_type": string(models.EventTypeCardAction),
+		"card_id":    "not-a-uuid",
+	})
+	require.NoError(t, err)
+
+	req, err := http.NewRequest(http.MethodPost, "/api/events", bytes.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := env.App.Test(req, 5000)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+	// Critical: RecordEvent must not have been called — otherwise a junk
+	// row would land in user_events with a nil CardID.
+	assert.Nil(t, store.recordedEvent, "RecordEvent should not be called when card_id is invalid")
+}
+
 func TestEventRecordEvent_StoreError(t *testing.T) {
 	env := setupTestEnv(t)
 	store := &eventsTestStore{recordErr: errors.New("write failed")}

@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -17,12 +18,18 @@ import (
 // suffix for orbit mission IDs, producing a 4-character hex string.
 const orbitSuffixBytes = 2
 
+// orbitSuffixNanoMask masks the low 16 bits of a nanosecond timestamp so the
+// crypto/rand fallback still produces a 4-char hex suffix with variable bits.
+const orbitSuffixNanoMask = 0xffff
+
 // generateOrbitSuffix returns a short random hex string for mission ID uniqueness.
 func generateOrbitSuffix() string {
 	b := make([]byte, orbitSuffixBytes)
 	if _, err := rand.Read(b); err != nil {
-		// Fallback: use nanosecond component if crypto/rand fails
-		return time.Now().Format("0000")
+		// Fallback: derive from nanosecond timestamp if crypto/rand fails.
+		// time.Format("0000") would return the literal string "0000" because
+		// "0" is not a reference layout token — use Sprintf to get real bits.
+		return fmt.Sprintf("%04x", time.Now().UnixNano()&orbitSuffixNanoMask)
 	}
 	return hex.EncodeToString(b)
 }

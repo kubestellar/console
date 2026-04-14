@@ -752,7 +752,14 @@ func (h *GitOpsHandlers) getOperatorsForCluster(ctx context.Context, cluster str
 		}
 		operatorCacheMu.RUnlock()
 
-		operators, err := h.fetchOperatorsFromCluster(ctx, cluster)
+		// Detach from the caller's ctx so client disconnect does not abort the
+		// shared fetch for other waiters stuck in singleflight (#7855).
+		// WithoutCancel preserves values but strips cancellation; we then
+		// apply our own timeout so the fetch can't hang forever.
+		fetchCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), operatorPerClusterTimeout)
+		defer cancel()
+
+		operators, err := h.fetchOperatorsFromCluster(fetchCtx, cluster)
 		if err != nil {
 			if _, ok := err.(errPermanent); ok {
 				operatorCacheMu.Lock()
@@ -763,10 +770,10 @@ func (h *GitOpsHandlers) getOperatorsForCluster(ctx context.Context, cluster str
 				operatorCacheMu.Unlock()
 				return &fetchResult{operators: []Operator{}}, nil
 			}
-			if ctx.Err() == nil {
+			if fetchCtx.Err() == nil {
 				slog.Warn("[GitOps] retrying operator fetch after transient error", "cluster", cluster)
 				time.Sleep(gitopsRetryDelay)
-				operators, err = h.fetchOperatorsFromCluster(ctx, cluster)
+				operators, err = h.fetchOperatorsFromCluster(fetchCtx, cluster)
 			}
 		}
 		if err != nil {
@@ -833,7 +840,12 @@ func (h *GitOpsHandlers) getOperatorsForClusterWithError(ctx context.Context, cl
 		}
 		operatorCacheMu.RUnlock()
 
-		operators, err := h.fetchOperatorsFromCluster(ctx, cluster)
+		// Detach from the caller's ctx so client disconnect does not abort the
+		// shared fetch for other waiters stuck in singleflight (#7855).
+		fetchCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), operatorPerClusterTimeout)
+		defer cancel()
+
+		operators, err := h.fetchOperatorsFromCluster(fetchCtx, cluster)
 		if err != nil {
 			if _, ok := err.(errPermanent); ok {
 				operatorCacheMu.Lock()
@@ -841,10 +853,10 @@ func (h *GitOpsHandlers) getOperatorsForClusterWithError(ctx context.Context, cl
 				operatorCacheMu.Unlock()
 				return &fetchResult{operators: []Operator{}}, nil
 			}
-			if ctx.Err() == nil {
+			if fetchCtx.Err() == nil {
 				slog.Warn("[GitOps] retrying operator fetch after transient error", "cluster", cluster)
 				time.Sleep(gitopsRetryDelay)
-				operators, err = h.fetchOperatorsFromCluster(ctx, cluster)
+				operators, err = h.fetchOperatorsFromCluster(fetchCtx, cluster)
 			}
 		}
 		if err != nil {
