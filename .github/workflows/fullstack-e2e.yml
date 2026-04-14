@@ -67,12 +67,15 @@ jobs:
       - name: Start Go backend in background
         env:
           JWT_SECRET: ${{ env.DEV_JWT_SECRET }}
-          # Dev mode — do not require real OAuth creds. The Go backend reads
-          # DEV_MODE (see cmd/console/main.go and pkg/api/server.go); the
-          # previous CONSOLE_ENV value was ignored by the binary.
-          DEV_MODE: 'true'
           PORT: ${{ env.BACKEND_PORT }}
         run: |
+          # Intentionally NOT setting DEV_MODE=true — the whole point of
+          # fullstack-smoke is to exercise the production serving path where
+          # the Go binary serves ./web/dist/index.html directly (see
+          # pkg/api/server.go:1221-1240). With DEV_MODE=true the root route
+          # 307-redirects to FrontendURL (Vite), which isn't running in CI,
+          # so the Playwright page.goto on '/' sees ERR_CONNECTION_REFUSED
+          # while the /healthz + /api/version tests still pass (#6362).
           /tmp/console-binary > /tmp/console.log 2>&1 &
           echo $! > /tmp/console.pid
           echo "Backend PID: $(cat /tmp/console.pid)"
