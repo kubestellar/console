@@ -1,7 +1,6 @@
 package agent
 
 import (
-	"os"
 	"testing"
 	"time"
 
@@ -19,11 +18,13 @@ func TestMetricsHistory(t *testing.T) {
 	})
 	m.InjectClient("c1", fakek8s.NewSimpleClientset())
 
-	// 2. Setup MetricsHistory with temp dir
-	tmpDir := "/tmp/metrics-test"
-	os.RemoveAll(tmpDir)
-	os.MkdirAll(tmpDir, 0700)
-	defer os.RemoveAll(tmpDir)
+	// 2. Setup MetricsHistory with per-test temp dir.
+	// Previously this used a hardcoded "/tmp/metrics-test" which collided with
+	// concurrent CI runs and leftover state from prior jobs, producing
+	// intermittent `invalid character 'o' in literal null` parse errors when
+	// loadFromDisk read a partially-written or foreign JSON file. t.TempDir()
+	// is unique per test and auto-cleaned. Fixes #7898 / #7899.
+	tmpDir := t.TempDir()
 
 	mh := NewMetricsHistory(m, tmpDir)
 
