@@ -161,6 +161,14 @@ type ContentItem struct {
 	Text string `json:"text,omitempty"`
 }
 
+// mcpMaxResponseBytes is the largest single JSON-RPC response line we will
+// accept from an MCP child process. #7959 — previously readResponses used an
+// unbounded bufio.Reader.ReadBytes('\n'), so a buggy or malicious child that
+// wrote an unterminated line could force the parent to accumulate bytes in
+// memory until OOM. 1 MiB is far larger than any legitimate tool response
+// and bounds worst-case memory per message.
+const mcpMaxResponseBytes = 1 << 20 // 1 MiB
+
 // NewClient creates a new MCP client for the given binary
 func NewClient(name, binaryPath string, args ...string) (*Client, error) {
 	cmd := exec.Command(binaryPath, args...)
@@ -203,6 +211,13 @@ func (c *Client) Start(ctx context.Context) error {
 
 	// Start reading responses
 	go c.readResponses()
+
+	// #7960 — Drain the child's stderr on a dedicated goroutine. Linux
+	// pipe buffers default to 64 KiB; once a chatty MCP server fills it,
+	// every further stderr write blocks and the child stalls. Logging the
+	// drained lines via slog.Debug preserves diagnostics for operators
+	// without blocking the child.
+	go c.drainStderr()
 
 	// Initialize the connection
 	if err := c.initialize(ctx); err != nil {
@@ -284,9 +299,16 @@ func (c *Client) IsReady() bool {
 	return c.ready.Load()
 }
 
-// Tools returns the list of available tools
+// Tools returns the list of available tools. #7974 — returns a defensive
+// copy so callers that append or mutate the slice cannot race with the
+// bridge's refresh goroutine or corrupt internal state.
 func (c *Client) Tools() []Tool {
-	return c.tools
+	if len(c.tools) == 0 {
+		return nil
+	}
+	out := make([]Tool, len(c.tools))
+	copy(out, c.tools)
+	return out
 }
 
 // CallTool invokes a tool on the MCP server
@@ -451,22 +473,32 @@ func (c *Client) send(req Request) error {
 }
 
 func (c *Client) readResponses() {
-	for {
-		line, err := c.stdout.ReadBytes('\n')
-		if err != nil {
-			if err != io.EOF {
-				select {
-				case <-c.done:
-					// Client is stopping; suppress read errors
-				default:
-					slog.Error("[MCP] read error", "client", c.name, "error", err)
-				}
-			}
-			return
-		}
+	// #7959 — Use bufio.Scanner with a bounded buffer so a child that writes
+	// an unterminated line cannot force unbounded growth. The initial buffer
+	// is small; Scanner will grow it up to mcpMaxResponseBytes on demand and
+	// return bufio.ErrTooLong if a single line exceeds the cap.
+	scanner := bufio.NewScanner(c.stdout)
+	scanner.Buffer(make([]byte, 0, 64*1024), mcpMaxResponseBytes)
+
+	for scanner.Scan() {
+		line := scanner.Bytes()
 
 		var resp Response
 		if err := json.Unmarshal(line, &resp); err != nil {
+			// #7975 — Surface malformed responses at Warn so operators can
+			// diagnose a broken plugin. Include a bounded prefix of the
+			// offending line to aid triage without dumping the whole thing
+			// into logs.
+			const mcpWarnLinePrefix = 256 // bytes of the offending line logged for triage
+			prefix := line
+			if len(prefix) > mcpWarnLinePrefix {
+				prefix = prefix[:mcpWarnLinePrefix]
+			}
+			slog.Warn("[MCP] malformed JSON response",
+				"client", c.name,
+				"error", err,
+				"len", len(line),
+				"prefix", string(prefix))
 			continue
 		}
 
@@ -486,6 +518,41 @@ func (c *Client) readResponses() {
 					return
 				}
 			}
+		}
+	}
+
+	// Scanner terminated — either clean EOF, a read error, or the line
+	// exceeded mcpMaxResponseBytes (bufio.ErrTooLong).
+	if err := scanner.Err(); err != nil {
+		select {
+		case <-c.done:
+			// Client is stopping; suppress read errors.
+		default:
+			slog.Error("[MCP] read error", "client", c.name, "error", err)
+		}
+	}
+}
+
+// drainStderr continuously reads stderr from the MCP child and forwards
+// each line to slog.Debug. #7960 — without this, the child blocks once the
+// OS pipe buffer (64 KiB on Linux) fills with log output.
+func (c *Client) drainStderr() {
+	if c.stderr == nil {
+		return
+	}
+	scanner := bufio.NewScanner(c.stderr)
+	// Match the stdout reader's cap so a pathological child cannot force
+	// unbounded growth on the stderr path either.
+	scanner.Buffer(make([]byte, 0, 64*1024), mcpMaxResponseBytes)
+	for scanner.Scan() {
+		slog.Debug("[MCP] stderr", "client", c.name, "line", scanner.Text())
+	}
+	if err := scanner.Err(); err != nil {
+		select {
+		case <-c.done:
+			// Client is stopping; suppress stderr read errors.
+		default:
+			slog.Debug("[MCP] stderr drain ended", "client", c.name, "error", err)
 		}
 	}
 }
