@@ -37,6 +37,10 @@ const FLOW_DOT_RADIUS_PX = 3
 const NODE_MAX_WIDTH_PX = 220
 /** Max width for the queries column (wider to fit nested results table) */
 const QUERY_MAX_WIDTH_PX = 300
+/** Dedicated column width that houses the trunk2 vertical line — wide enough
+ *  to be visibly outside every query card but narrow enough not to feel like
+ *  its own panel. */
+const TRUNK2_WIDTH_PX = 50
 
 // ---------------------------------------------------------------------------
 // Types
@@ -874,7 +878,8 @@ export function DrasiReactiveGraph() {
       sourceRects[sourceRects.length - 1].centerY,
       queryRects[queryRects.length - 1].centerY,
     )
-    items.push({ key: 'trunk1', d: `M ${trunk1X} ${trunk1Top} L ${trunk1X} ${trunk1Bottom}`, dashed: false, active: false, delay: 0 })
+    // trunk1 carries source→query flow — dots travel top→bottom.
+    items.push({ key: 'trunk1', d: `M ${trunk1X} ${trunk1Top} L ${trunk1X} ${trunk1Bottom}`, dashed: false, active: true, delay: 0 })
 
     sources.forEach((s, i) => {
       const r = rects.sources[s.id]
@@ -917,7 +922,10 @@ export function DrasiReactiveGraph() {
         queryRects[queryRects.length - 1].centerY,
         reactionRects[reactionRects.length - 1].centerY,
       )
-      items.push({ key: 'trunk2', d: `M ${trunk2X} ${trunk2Top} L ${trunk2X} ${trunk2Bottom}`, dashed: false, active: false, delay: 0 })
+      // trunk2 carries query→reaction flow — dots travel bottom→top
+      // (draw path bottom-to-top so animateMotion's natural forward
+      // direction matches the data-flow direction).
+      items.push({ key: 'trunk2', d: `M ${trunk2X} ${trunk2Bottom} L ${trunk2X} ${trunk2Top}`, dashed: false, active: true, delay: 0 })
 
       // Every query — including the spanning top-losers — connects to
       // trunk2 via its own horizontal branch. trunk2 then carries the
@@ -978,15 +986,18 @@ export function DrasiReactiveGraph() {
         <div
           className="relative grid h-full gap-y-3"
           style={{
-            // 5 columns: [source block] [trunk gap] [query block] [trunk gap] [reaction block].
-            // Blocks are capped at explicit max widths so the 1fr trunk columns
-            // absorb the remaining width. The query that's showing results spans
-            // columns 3 → 5 so its nested results table has extra horizontal room
-            // and visually anchors the pipeline output, matching the Drasi UI.
+            // 6 columns:
+            //   1 source block
+            //   2 left trunk area (1fr — absorbs slack + houses trunk1)
+            //   3 query block
+            //   4 query extension (1fr — spanning query expands here)
+            //   5 right trunk column (fixed width — dedicated home for trunk2
+            //     so the spanning query cannot overlap it)
+            //   6 reaction block
             gridTemplateColumns:
               `minmax(0, ${NODE_MAX_WIDTH_PX}px) minmax(40px, 1fr) ` +
               `minmax(0, ${QUERY_MAX_WIDTH_PX}px) minmax(40px, 1fr) ` +
-              `minmax(0, ${NODE_MAX_WIDTH_PX}px)`,
+              `${TRUNK2_WIDTH_PX}px minmax(0, ${NODE_MAX_WIDTH_PX}px)`,
             gridAutoRows: 'min-content',
             zIndex: 1,
           }}
@@ -994,7 +1005,7 @@ export function DrasiReactiveGraph() {
           {/* Column headers (row 1) */}
           <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider" style={{ gridColumn: 1, gridRow: 1 }}>Sources</div>
           <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider" style={{ gridColumn: 3, gridRow: 1 }}>Continuous Queries</div>
-          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider" style={{ gridColumn: 5, gridRow: 1 }}>Reactions</div>
+          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider" style={{ gridColumn: 6, gridRow: 1 }}>Reactions</div>
 
           {/* Sources — col 1, rows 2..n */}
           {sources.slice(0, 3).map((source, i) => (
@@ -1015,15 +1026,16 @@ export function DrasiReactiveGraph() {
             </div>
           ))}
 
-          {/* Queries — selected-with-results query spans col 3→5, others stay in col 3 */}
+          {/* Queries — selected-with-results query spans col 3→5; others stay in col 3 */}
           {queries.map((query, i) => {
             const hasResults = query.id === selectedQueryId && !stoppedNodeIds.has(query.id) && liveResults.length > 0
             return (
               <div
                 key={query.id}
                 style={{
-                  // Span col 3 → 5 (queries + right trunk) but NOT into
-                  // the reactions column so it stays visually distinct.
+                  // Span col 3 → 5 = cols 3 + 4 (queries + extension area),
+                  // stopping BEFORE col 5 (trunk2) so the vertical trunk
+                  // line stays outside every query card.
                   gridColumn: hasResults ? '3 / 5' : 3,
                   gridRow: i + 2,
                 }}
@@ -1052,9 +1064,9 @@ export function DrasiReactiveGraph() {
             )
           })}
 
-          {/* Reactions — col 5, rows 2..n */}
+          {/* Reactions — col 6, rows 2..n */}
           {reactions.map((reaction, i) => (
-            <div key={reaction.id} style={{ gridColumn: 5, gridRow: i + 2 }}>
+            <div key={reaction.id} style={{ gridColumn: 6, gridRow: i + 2 }}>
               <NodeCard
                 nodeRef={setReactionEl(reaction.id)}
                 title={reaction.name}
