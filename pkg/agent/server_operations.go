@@ -509,7 +509,7 @@ func validateOpenAIKey(ctx context.Context, apiKey string) (bool, error) {
 		return true, nil
 	}
 	if resp.StatusCode == http.StatusUnauthorized {
-		return false, fmt.Errorf("invalid API key")
+		return false, nil // Invalid key - no error so it gets cached by ValidateAllKeys
 	}
 	body, readErr := io.ReadAll(resp.Body)
 	if readErr != nil {
@@ -537,7 +537,7 @@ func validateGeminiKey(ctx context.Context, apiKey string) (bool, error) {
 		return true, nil
 	}
 	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
-		return false, fmt.Errorf("invalid API key")
+		return false, nil // Invalid key - no error so it gets cached by ValidateAllKeys
 	}
 	body, readErr := io.ReadAll(resp.Body)
 	if readErr != nil {
