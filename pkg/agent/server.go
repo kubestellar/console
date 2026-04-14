@@ -31,10 +31,21 @@ const (
 	stabilizationDelay    = 3 * time.Second
 	startupDelay          = 500 * time.Millisecond
 	metricsHistoryTick    = 10 * time.Minute
-	agentFileMode         = 0600
-	defaultHealthCheckURL = "http://127.0.0.1:8080/health"
-	maxQueryLimit         = 1000    // Upper bound for client-supplied limit query parameter
-	maxRequestBodyBytes   = 1 << 20 // 1MB upper bound for request body reads
+	agentFileMode = 0600
+
+	// Backend port resolution constants (see resolveBackendPort in server_http.go).
+	// These are duplicated from cmd/console/watchdog.go because pkg/agent cannot
+	// import the main package. Keep them in sync with watchdog.go.
+	backendPortWatchdogMode  = 8081               // watchdog (8080) proxies -> backend (8081)
+	backendPortLegacyDefault = 8080               // no-watchdog deployments: backend binds 8080 directly
+	watchdogPidFilePath      = "/tmp/.kc-watchdog.pid"
+	backendHealthScheme      = "http"
+	backendHealthHost        = "127.0.0.1"
+	backendHealthPath        = "/health"
+	backendPortEnvVar        = "BACKEND_PORT"
+
+	maxQueryLimit       = 1000    // Upper bound for client-supplied limit query parameter
+	maxRequestBodyBytes = 1 << 20 // 1MB upper bound for request body reads
 
 	// missionExecutionTimeout is the maximum wall-clock time a single mission
 	// chat execution (AI provider call) is allowed to run before the context

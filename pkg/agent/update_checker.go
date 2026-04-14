@@ -1584,8 +1584,11 @@ func rollbackGit(repoPath, sha string) {
 
 func waitForBackendHealth() bool {
 	client := &http.Client{Timeout: healthCheckTimeout}
+	// URL is resolved once per poll so that a BACKEND_PORT env var change
+	// mid-run (e.g. an operator re-running startup-oauth.sh) is picked up.
+	healthURL := backendHealthURL()
 	for i := 0; i < healthCheckRetries; i++ {
-		resp, err := client.Get(defaultHealthCheckURL)
+		resp, err := client.Get(healthURL)
 		if err == nil && resp.StatusCode == http.StatusOK {
 			resp.Body.Close()
 			return true
