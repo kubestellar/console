@@ -77,6 +77,15 @@ function positionKey(state: {
   // when the side-to-move actually has a pawn that can legally capture on
   // it. Otherwise two positions that are identical apart from a "dangling"
   // EP square must be counted as the same position (#7894).
+  //
+  // We use a geometric "a side-to-move pawn sits diagonally behind the EP
+  // square" check. This matches the approximation used by Stockfish-style
+  // Zobrist hashing and is correct for every EP-capture that isn't blocked
+  // by a pin. Strict FIDE would also require that the capture doesn't
+  // leave own king in check; we accept that approximation to keep
+  // positionKey allocation-free and O(1) per call (#7901). The divergence
+  // is reachable only in contrived pin positions and won't change
+  // threefold detection in any realistic game.
   let ep = '-'
   if (state.enPassantTarget) {
     const { row: er, col: ec } = state.enPassantTarget
@@ -566,7 +575,12 @@ function minimax(state: GameState, depth: number, alpha: number, beta: number, m
   if (result === 'checkmate') {
     return maximizing ? -10000 + state.moveHistory.length : 10000 - state.moveHistory.length
   }
-  if (result === 'stalemate' || result === 'repetition') {
+  // `getGameResult` can only return `'repetition'` when `positionHistory` has
+  // accumulated three matching keys, but `makeMove` calls inside minimax run
+  // with `trackHistory=false` for perf — so the search tree never sees a
+  // repetition draw. Only `'stalemate'` is reachable here. Keeping the
+  // comment here so the omission is deliberate, not accidental (#7901).
+  if (result === 'stalemate') {
     return 0
   }
 
