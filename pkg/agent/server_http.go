@@ -1040,10 +1040,22 @@ func (s *Server) handleScaleHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// The frontend (useWorkloads.useScaleWorkload) sends:
+	//   { workloadName, namespace, targetClusters: []string, replicas }
+	// Older agent callers used { cluster, namespace, name, replicas }.
+	// Accept both shapes so we remain backward compatible while migrating
+	// /api/workloads/scale off the backend pod SA (#7993 Phase 1 PR A).
 	var req struct {
-		Cluster   string `json:"cluster"`
+		// New shape (frontend → agent)
+		WorkloadName   string   `json:"workloadName"`
+		TargetClusters []string `json:"targetClusters"`
+
+		// Legacy shape (kept for backward compat with existing direct agent callers)
+		Cluster string `json:"cluster"`
+		Name    string `json:"name"`
+
+		// Shared fields
 		Namespace string `json:"namespace"`
-		Name      string `json:"name"`
 		Replicas  int32  `json:"replicas"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -1055,13 +1067,17 @@ func (s *Server) handleScaleHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var cluster, namespace, name string
-	var replicas int32
-
-	cluster = req.Cluster
-	namespace = req.Namespace
-	name = req.Name
-	replicas = req.Replicas
+	// Normalize the two shapes to a single (name, targetClusters) pair.
+	name := req.WorkloadName
+	if name == "" {
+		name = req.Name
+	}
+	targetClusters := req.TargetClusters
+	if len(targetClusters) == 0 && req.Cluster != "" {
+		targetClusters = []string{req.Cluster}
+	}
+	namespace := req.Namespace
+	replicas := req.Replicas
 
 	if replicas < 0 {
 		w.WriteHeader(http.StatusBadRequest)
@@ -1072,10 +1088,10 @@ func (s *Server) handleScaleHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if cluster == "" || namespace == "" || name == "" {
+	if name == "" || namespace == "" {
 		writeJSON(w,map[string]interface{}{
 			"success": false,
-			"error":   "cluster, namespace, and name are required",
+			"error":   "workloadName and namespace are required",
 		})
 		return
 	}
@@ -1083,9 +1099,9 @@ func (s *Server) handleScaleHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), agentExtendedTimeout)
 	defer cancel()
 
-	result, err := s.k8sClient.ScaleWorkload(ctx, namespace, name, []string{cluster}, replicas)
+	result, err := s.k8sClient.ScaleWorkload(ctx, namespace, name, targetClusters, replicas)
 	if err != nil {
-		slog.Warn("error scaling resource", "namespace", namespace, "name", name, "cluster", cluster, "error", err)
+		slog.Warn("error scaling resource", "namespace", namespace, "name", name, "targetClusters", targetClusters, "error", err)
 		writeJSON(w,map[string]interface{}{
 			"success": false,
 			"error":   err.Error(),

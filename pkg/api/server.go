@@ -1070,7 +1070,8 @@ func (s *Server) setupRoutes() {
 	api.Get("/workloads/monitor/:cluster/:namespace/:name", workloadHandlers.MonitorWorkload)
 	api.Get("/workloads/:cluster/:namespace/:name", workloadHandlers.GetWorkload)
 	api.Post("/workloads/deploy", workloadHandlers.DeployWorkload)
-	api.Post("/workloads/scale", workloadHandlers.ScaleWorkload)
+	// NOTE: /workloads/scale moved to kc-agent (#7993 Phase 1 PR A).
+	// The agent uses the user's kubeconfig instead of the backend pod SA.
 	api.Delete("/workloads/:cluster/:namespace/:name", workloadHandlers.DeleteWorkload)
 
 	// Cluster Group routes

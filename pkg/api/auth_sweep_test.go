@@ -68,7 +68,7 @@ func TestProtectedRoutes_UnauthenticatedReturn401(t *testing.T) {
 		{"GET", "/api/workloads"},
 		{"GET", "/api/workloads/capabilities"},
 		{"POST", "/api/workloads/deploy"},
-		{"POST", "/api/workloads/scale"},
+		// NOTE: /api/workloads/scale moved to kc-agent (#7993 Phase 1 PR A).
 		// Gateway / MCS / GitOps read
 		{"GET", "/api/gateway/gateways"},
 		{"GET", "/api/gateway/httproutes"},

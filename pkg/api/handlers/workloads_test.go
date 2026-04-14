@@ -226,51 +226,10 @@ func TestGetDeployStatus(t *testing.T) {
 	assert.Equal(t, float64(3), status["readyReplicas"])
 }
 
-func TestScaleWorkload(t *testing.T) {
-	env := setupTestEnv(t)
-	handler := NewWorkloadHandlers(env.K8sClient, env.Hub, env.Store)
-	env.App.Post("/api/workloads/scale", handler.ScaleWorkload)
-
-	scheme := newK8sScheme()
-
-	// Inject a dynamic client with a Deployment so ScaleWorkload can find and patch it.
-	deploy := &appsv1.Deployment{
-		TypeMeta:   metav1.TypeMeta{Kind: "Deployment", APIVersion: "apps/v1"},
-		ObjectMeta: metav1.ObjectMeta{Name: "scale-app", Namespace: "default"},
-		Spec: appsv1.DeploymentSpec{
-			Replicas: func(i int32) *int32 { return &i }(1),
-			Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "scale"}},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"app": "scale"}},
-				Spec:       corev1.PodSpec{Containers: []corev1.Container{{Name: "c", Image: "nginx"}}},
-			},
-		},
-	}
-	injectDynamicClusterWithObjects(env, "scale-cluster", scheme, []runtime.Object{deploy})
-
-	// Payload
-	payload := map[string]interface{}{
-		"workloadName":   "scale-app",
-		"namespace":      "default",
-		"targetClusters": []string{"scale-cluster"},
-		"replicas":       10,
-	}
-
-	data, _ := json.Marshal(payload)
-	req, err := http.NewRequest("POST", "/api/workloads/scale", bytes.NewReader(data))
-	require.NoError(t, err)
-	require.NotNil(t, req)
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := env.App.Test(req, 5000)
-	require.NoError(t, err)
-	require.NotNil(t, resp)
-	assert.Equal(t, 200, resp.StatusCode)
-
-	var result map[string]interface{}
-	json.NewDecoder(resp.Body).Decode(&result)
-	assert.Equal(t, true, result["success"])
-}
+// TestScaleWorkload was removed when /api/workloads/scale moved to kc-agent
+// (#7993 Phase 1 PR A). The equivalent coverage now lives in the agent
+// package (pkg/agent) which exercises handleScaleHTTP against the shared
+// pkg/k8s MultiClusterClient.ScaleWorkload method.
 
 func TestDeleteWorkload(t *testing.T) {
 	env := setupTestEnv(t)

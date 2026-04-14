@@ -365,7 +365,10 @@ export function useScaleWorkload() {
     setError(null)
 
     try {
-      const res = await fetch('/api/workloads/scale', {
+      // Scaling is a user-initiated mutation on managed clusters, so it must
+      // go through kc-agent (user's kubeconfig), not the backend's pod SA.
+      // See #7993 Phase 1 PR A.
+      const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/scale`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(request),

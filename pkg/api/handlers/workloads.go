@@ -1073,50 +1073,6 @@ func buildClusterContextForAI(healthData []k8s.ClusterHealth) string {
 	return sb.String()
 }
 
-// ScaleWorkload scales a workload in specified clusters
-// POST /api/workloads/scale
-func (h *WorkloadHandlers) ScaleWorkload(c *fiber.Ctx) error {
-	// Workload mutations require console admin (#5974).
-	if err := h.requireAdmin(c); err != nil {
-		return err
-	}
-
-	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "Kubernetes client not available"})
-	}
-
-	type ScaleRequest struct {
-		WorkloadName   string   `json:"workloadName"`
-		Namespace      string   `json:"namespace"`
-		TargetClusters []string `json:"targetClusters,omitempty"`
-		Replicas       int32    `json:"replicas"`
-	}
-
-	var req ScaleRequest
-	if err := c.BodyParser(&req); err != nil {
-		slog.Info("[Workloads] invalid request body", "error", err)
-		return c.Status(400).JSON(fiber.Map{"error": "invalid request"})
-	}
-
-	// Validate required fields
-	if req.WorkloadName == "" {
-		return c.Status(400).JSON(fiber.Map{"error": "workloadName is required"})
-	}
-	if req.Namespace == "" {
-		return c.Status(400).JSON(fiber.Map{"error": "namespace is required"})
-	}
-
-	ctx, cancel := context.WithTimeout(c.Context(), workloadWriteTimeout)
-	defer cancel()
-
-	result, err := h.k8sClient.ScaleWorkload(ctx, req.Namespace, req.WorkloadName, req.TargetClusters, req.Replicas)
-	if err != nil {
-		return handleK8sError(c, err)
-	}
-
-	return c.JSON(result)
-}
-
 // DeleteWorkload deletes a workload from specified clusters
 // DELETE /api/workloads/:cluster/:namespace/:name
 func (h *WorkloadHandlers) DeleteWorkload(c *fiber.Ctx) error {
