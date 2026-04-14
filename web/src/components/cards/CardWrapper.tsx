@@ -1149,7 +1149,10 @@ export function CardWrapper({
                       {onWidthChange && (
                         <div className="relative" ref={menuContainerRef}>
                           <button
-                            onClick={() => setShowResizeMenu(!showResizeMenu)}
+                            onClick={() => {
+                              setShowResizeMenu(!showResizeMenu)
+                              setShowHeightMenu(false)
+                            }}
                             className="w-full px-4 py-2 text-left text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 flex items-center justify-between"
                             role="menuitem"
                             aria-haspopup="menu"
@@ -1206,7 +1209,10 @@ export function CardWrapper({
                       {onHeightChange && (
                         <div className="relative" ref={heightMenuContainerRef}>
                           <button
-                            onClick={() => setShowHeightMenu(!showHeightMenu)}
+                            onClick={() => {
+                              setShowHeightMenu(!showHeightMenu)
+                              setShowResizeMenu(false)
+                            }}
                             className="w-full px-4 py-2 text-left text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 flex items-center justify-between"
                             role="menuitem"
                             aria-haspopup="menu"
