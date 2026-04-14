@@ -297,7 +297,10 @@ export function useLocalClusterTools() {
         signal: AbortSignal.timeout(VCLUSTER_LIST_TIMEOUT_MS) })
       if (response.ok) {
         const data = await response.json()
-        setVclusterInstances(data.instances || [])
+        // Backend returns `{ vclusters: [...] }` (pkg/agent/server_operations.go
+        // handleVClusterList). Historically this read `data.instances`, which
+        // was always undefined — live data silently fell back to [] (#7914).
+        setVclusterInstances(data.vclusters || [])
         setError(null)
       }
     } catch (err) {

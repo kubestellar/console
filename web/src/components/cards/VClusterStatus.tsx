@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { CheckCircle2, Clock, XCircle, AlertCircle, Pause, Server } from 'lucide-react'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { Skeleton } from '../ui/Skeleton'
@@ -5,6 +6,9 @@ import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../li
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
+import { useLocalClusterTools, type VClusterInstance } from '../../hooks/useLocalClusterTools'
+import { useLocalAgent } from '../../hooks/useLocalAgent'
+import { useDemoMode } from '../../hooks/useDemoMode'
 
 type VClusterStatusType = 'Running' | 'Paused' | 'Failed' | 'Unknown'
 
@@ -32,7 +36,28 @@ const DEMO_VCLUSTERS: VCluster[] = [
   { name: 'qa-vcluster', namespace: 'vcluster-qa', hostCluster: 'on-prem-dc1', status: 'Running', k8sVersion: 'v1.30.2', createdAt: new Date(Date.now() - DEMO_AGE_QA_DAYS * MS_PER_DAY).toISOString() },
 ]
 
-const DEMO_STATS = { totalVClusters: 5, runningCount: 3, pausedCount: 1, failedCount: 1 }
+const UNKNOWN_HOST_CLUSTER = 'local'
+const UNKNOWN_K8S_VERSION = '—'
+
+/** Map the agent's VClusterInstance shape to the card's VCluster row shape.
+ * The backend (pkg/agent/local_clusters.go ListVClusters) does not expose
+ * hostCluster or k8sVersion, so we derive hostCluster from the kubeconfig
+ * context when available and leave version unknown. */
+function toVCluster(instance: VClusterInstance): VCluster {
+  const rawStatus = instance.status
+  const normalized: VClusterStatusType =
+    rawStatus === 'Running' || rawStatus === 'Paused' || rawStatus === 'Failed'
+      ? rawStatus
+      : 'Unknown'
+  return {
+    name: instance.name,
+    namespace: instance.namespace,
+    hostCluster: instance.context || UNKNOWN_HOST_CLUSTER,
+    status: normalized,
+    k8sVersion: UNKNOWN_K8S_VERSION,
+    createdAt: '',
+  }
+}
 
 const getStatusIcon = (status: VClusterStatusType) => {
   switch (status) {
@@ -71,16 +96,37 @@ interface VClusterStatusProps { config?: Record<string, unknown> }
 export function VClusterStatus({ config: _config }: VClusterStatusProps) {
   const { t } = useTranslation(['cards', 'common'])
   const SORT_OPTIONS = SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) }))
+  const { isConnected } = useLocalAgent()
+  const { isDemoMode } = useDemoMode()
+  const { vclusterInstances } = useLocalClusterTools()
+
+  // Use live agent data when connected and not in demo mode. When the agent
+  // is connected but returns zero vclusters, we still treat that as live
+  // data (empty state) rather than falling back to demo (#7914).
+  const isLive = isConnected && !isDemoMode
+  const vclusters: VCluster[] = useMemo(() => {
+    if (!isLive) return DEMO_VCLUSTERS
+    return vclusterInstances.map(toVCluster)
+  }, [isLive, vclusterInstances])
+
+  const stats = useMemo(() => {
+    const total = vclusters.length
+    const running = vclusters.filter(v => v.status === 'Running').length
+    const paused = vclusters.filter(v => v.status === 'Paused').length
+    const failed = vclusters.filter(v => v.status === 'Failed').length
+    return { totalVClusters: total, runningCount: running, pausedCount: paused, failedCount: failed }
+  }, [vclusters])
+
   const isLoading = false
   const hasError = false
-  useCardLoadingState({ isLoading: false, hasAnyData: DEMO_VCLUSTERS.length > 0, isDemoData: true })
+  useCardLoadingState({ isLoading: false, hasAnyData: vclusters.length > 0, isDemoData: !isLive })
   const {
     items: paginatedVClusters, totalItems, currentPage, totalPages, itemsPerPage,
     goToPage, needsPagination, setItemsPerPage,
     filters: { search: localSearch, setSearch: setLocalSearch, localClusterFilter, toggleClusterFilter, clearClusterFilter, availableClusters, showClusterFilter, setShowClusterFilter, clusterFilterRef },
     sorting: { sortBy, setSortBy, sortDirection, setSortDirection },
     containerRef, containerStyle,
-  } = useCardData<VCluster, SortByOption>(DEMO_VCLUSTERS, {
+  } = useCardData<VCluster, SortByOption>(vclusters, {
     filter: { searchFields: ['name', 'namespace', 'hostCluster', 'status', 'k8sVersion'], clusterField: 'hostCluster', storageKey: 'vcluster-status' },
     sort: { defaultField: 'name', defaultDirection: 'asc', comparators: VCLUSTER_SORT_COMPARATORS },
     defaultLimit: DEFAULT_PAGE_SIZE,
@@ -105,14 +151,14 @@ export function VClusterStatus({ config: _config }: VClusterStatusProps) {
       </div>
       <CardSearchInput value={localSearch} onChange={setLocalSearch} placeholder={t('vclusterStatus.searchPlaceholder')} className="mb-3" />
       <div className="grid grid-cols-3 gap-2 mb-3">
-        <div className="p-2 rounded-lg bg-purple-500/10 border border-purple-500/20 text-center"><p className="text-2xs text-purple-400">{t('vclusterStatus.total')}</p><p className="text-lg font-bold text-foreground">{DEMO_STATS.totalVClusters}</p></div>
-        <div className="p-2 rounded-lg bg-green-500/10 border border-green-500/20 text-center"><p className="text-2xs text-green-400">{t('vclusterStatus.running')}</p><p className="text-lg font-bold text-foreground">{DEMO_STATS.runningCount}</p></div>
-        <div className="p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-center"><p className="text-2xs text-yellow-400">{t('vclusterStatus.paused')}</p><p className="text-lg font-bold text-foreground">{DEMO_STATS.pausedCount}</p></div>
+        <div className="p-2 rounded-lg bg-purple-500/10 border border-purple-500/20 text-center"><p className="text-2xs text-purple-400">{t('vclusterStatus.total')}</p><p className="text-lg font-bold text-foreground">{stats.totalVClusters}</p></div>
+        <div className="p-2 rounded-lg bg-green-500/10 border border-green-500/20 text-center"><p className="text-2xs text-green-400">{t('vclusterStatus.running')}</p><p className="text-lg font-bold text-foreground">{stats.runningCount}</p></div>
+        <div className="p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-center"><p className="text-2xs text-yellow-400">{t('vclusterStatus.paused')}</p><p className="text-lg font-bold text-foreground">{stats.pausedCount}</p></div>
       </div>
-      {DEMO_STATS.failedCount > 0 && (
+      {stats.failedCount > 0 && (
         <div className="flex items-start gap-2 p-2 mb-3 rounded-lg bg-red-500/10 border border-red-500/20 text-xs">
           <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
-          <div><p className="text-red-400 font-medium">{t('vclusterStatus.healthWarning')}</p><p className="text-muted-foreground">{t('vclusterStatus.failedCount', { count: DEMO_STATS.failedCount })}</p></div>
+          <div><p className="text-red-400 font-medium">{t('vclusterStatus.healthWarning')}</p><p className="text-muted-foreground">{t('vclusterStatus.failedCount', { count: stats.failedCount })}</p></div>
         </div>
       )}
       <div ref={containerRef} className="flex-1 overflow-y-auto space-y-2" style={containerStyle}>
