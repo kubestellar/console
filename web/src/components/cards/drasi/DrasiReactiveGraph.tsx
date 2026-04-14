@@ -17,7 +17,6 @@ import {
   TrendingDown, TrendingUp, Maximize2, Pin, Square, X, Settings,
 } from 'lucide-react'
 import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
-import { useCardExpanded } from '../CardWrapper'
 import { useDrasiResources } from '../../../hooks/useDrasiResources'
 
 // ---------------------------------------------------------------------------
@@ -606,7 +605,6 @@ function QueryConfigModal({
 
 export function DrasiReactiveGraph() {
   const { shouldUseDemoData: isDemoMode, showDemoBadge } = useCardDemoState({ requires: 'none' })
-  const { isExpanded } = useCardExpanded()
   const { data: liveData, isLoading, error } = useDrasiResources()
 
   useReportCardDataState({
@@ -737,10 +735,21 @@ export function DrasiReactiveGraph() {
     measure()
     const observer = new ResizeObserver(measure)
     if (containerRef.current) observer.observe(containerRef.current)
+    // Observe every node — any column height change shifts row centers
+    for (const ref of Object.values(sourceRefs.current)) {
+      if (ref.current) observer.observe(ref.current)
+    }
     for (const ref of Object.values(queryRefs.current)) {
       if (ref.current) observer.observe(ref.current)
     }
-    return () => observer.disconnect()
+    for (const ref of Object.values(reactionRefs.current)) {
+      if (ref.current) observer.observe(ref.current)
+    }
+    window.addEventListener('resize', measure)
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', measure)
+    }
   }, [sources, queries, reactions, selectedQueryId, liveResults.length])
 
   // --- Compute paths from measured rects ------------------------------------
@@ -833,14 +842,22 @@ export function DrasiReactiveGraph() {
   }, [sources, queries, reactions, rects, stoppedNodeIds])
 
   return (
-    <div className={`h-full w-full flex flex-col p-3 ${isExpanded ? 'max-w-4xl mx-auto' : ''} overflow-hidden relative`}>
+    <div className="h-full w-full flex flex-col p-3 overflow-hidden relative">
       <div ref={containerRef} className="relative flex-1 min-h-0">
         <svg
-          className="absolute inset-0 pointer-events-none"
-          style={{ zIndex: 0 }}
+          className="absolute pointer-events-none"
+          style={{
+            zIndex: 0,
+            top: 0,
+            left: 0,
+            width: rects.container.width || 0,
+            height: rects.container.height || 0,
+            overflow: 'visible',
+          }}
           width={rects.container.width || 0}
           height={rects.container.height || 0}
           viewBox={`0 0 ${rects.container.width || 1} ${rects.container.height || 1}`}
+          preserveAspectRatio="xMidYMid meet"
         >
           {paths.map(p => (
             <FlowLine key={p.key} d={p.d} dashed={p.dashed} active={p.active} delay={p.delay} />

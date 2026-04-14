@@ -11,7 +11,7 @@ export const drasiDashboardConfig: UnifiedDashboardConfig = {
   subtitle: 'Reactive data pipelines and continuous queries',
   route: '/drasi',
   cards: [
-    { id: 'drasi-reactive-graph-1', cardType: 'drasi_reactive_graph', title: 'Drasi Reactive Graph', position: { w: 6, h: 8 } },
+    { id: 'drasi-reactive-graph-1', cardType: 'drasi_reactive_graph', title: 'Drasi Reactive Graph', position: { w: 12, h: 8 } },
   ],
   features: {
     dragDrop: true,

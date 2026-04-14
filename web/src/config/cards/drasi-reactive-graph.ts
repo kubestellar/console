@@ -10,7 +10,7 @@ export const drasiReactiveGraphConfig: UnifiedCardConfig = {
   description: 'Reactive data pipeline visualization — sources, continuous queries, reactions, and live results',
   icon: 'GitBranch',
   iconColor: 'text-emerald-400',
-  defaultWidth: 6,
+  defaultWidth: 12,
   defaultHeight: 8,
   dataSource: { type: 'hook', hook: 'useDrasiResources' },
   content: { type: 'custom' },

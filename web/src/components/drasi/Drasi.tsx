@@ -63,7 +63,7 @@ export function Drasi() {
       statsType="drasi"
       getStatValue={getStatValue}
       isLoading={isLoading}
-      hasData={hasRealData}
+      hasData={hasRealData || isDemoData}
       isDemoData={isDemoData}
       emptyState={{
         title: 'No Drasi Pipelines',
