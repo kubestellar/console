@@ -10,7 +10,7 @@
  *
  * Uses live Drasi API data when available, demo data when in demo mode.
  */
-import { useState, useEffect, useMemo, useCallback, useRef, useLayoutEffect } from 'react'
+import React, { useState, useEffect, useMemo, useCallback, useRef, useLayoutEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Database, Globe, Search, Radio,
@@ -91,6 +91,38 @@ interface NodeRect {
   top: number
   bottom: number
   centerY: number
+}
+
+interface MeasuredRects {
+  sources: Record<string, NodeRect>
+  queries: Record<string, NodeRect>
+  reactions: Record<string, NodeRect>
+  container: { width: number; height: number }
+}
+
+function nodeRectEqual(a: NodeRect | undefined, b: NodeRect | undefined): boolean {
+  if (a === b) return true
+  if (!a || !b) return false
+  return a.left === b.left && a.right === b.right && a.top === b.top && a.bottom === b.bottom && a.centerY === b.centerY
+}
+
+function nodeMapEqual(a: Record<string, NodeRect>, b: Record<string, NodeRect>): boolean {
+  const aKeys = Object.keys(a)
+  if (aKeys.length !== Object.keys(b).length) return false
+  for (const k of aKeys) {
+    if (!nodeRectEqual(a[k], b[k])) return false
+  }
+  return true
+}
+
+function rectsEqual(a: MeasuredRects, b: MeasuredRects): boolean {
+  return (
+    a.container.width === b.container.width &&
+    a.container.height === b.container.height &&
+    nodeMapEqual(a.sources, b.sources) &&
+    nodeMapEqual(a.queries, b.queries) &&
+    nodeMapEqual(a.reactions, b.reactions)
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -240,7 +272,7 @@ function ReactionIconEl({ kind }: { kind: ReactionKind }) {
 // ---------------------------------------------------------------------------
 
 interface NodeCardProps {
-  nodeRef: React.RefObject<HTMLDivElement | null>
+  nodeRef: (el: HTMLDivElement | null) => void
   title: string
   subtitle: string
   icon: React.ReactNode
@@ -388,6 +420,58 @@ function ResultsTable({ results, isDemo }: { results: LiveResultRow[]; isDemo: b
 }
 
 // ---------------------------------------------------------------------------
+// Modal shell — dialog semantics + escape-to-close for the three overlays
+// below. A light wrapper rather than full BaseModal because these modals are
+// scoped inside the card container (absolute inset-0), not portaled to body
+// (#7872). Adds role="dialog", aria-modal, aria-labelledby + ESC handler.
+// ---------------------------------------------------------------------------
+
+function ModalShell({
+  labelledBy,
+  onClose,
+  panelClassName,
+  children,
+}: {
+  labelledBy: string
+  onClose: () => void
+  panelClassName: string
+  children: React.ReactNode
+}) {
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        e.stopPropagation()
+        onClose()
+      }
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  return (
+    <motion.div
+      className="absolute inset-0 z-30 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-6"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
+    >
+      <motion.div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={labelledBy}
+        className={panelClassName}
+        initial={{ scale: 0.95 }}
+        animate={{ scale: 1 }}
+        onClick={e => e.stopPropagation()}
+      >
+        {children}
+      </motion.div>
+    </motion.div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Expand modal — read-only node details
 // ---------------------------------------------------------------------------
 
@@ -401,45 +485,37 @@ interface ExpandedNodeDetails {
 
 function ExpandModal({ node, onClose }: { node: ExpandedNodeDetails | null; onClose: () => void }) {
   if (!node) return null
+  const titleId = `drasi-expand-title-${node.id}`
   return (
-    <motion.div
-      className="absolute inset-0 z-30 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-6"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      onClick={onClose}
+    <ModalShell
+      labelledBy={titleId}
+      onClose={onClose}
+      panelClassName="bg-slate-900 border border-slate-600/50 rounded-lg max-w-md w-full p-4"
     >
-      <motion.div
-        className="bg-slate-900 border border-slate-600/50 rounded-lg max-w-md w-full p-4"
-        initial={{ scale: 0.95 }}
-        animate={{ scale: 1 }}
-        onClick={e => e.stopPropagation()}
-      >
-        <div className="flex items-start justify-between mb-3">
-          <div>
-            <div className="text-white font-semibold text-sm">{node.name}</div>
-            <div className="text-muted-foreground text-xs uppercase tracking-wider mt-0.5">
-              {node.type} · {node.kind}
-            </div>
+      <div className="flex items-start justify-between mb-3">
+        <div>
+          <div id={titleId} className="text-white font-semibold text-sm">{node.name}</div>
+          <div className="text-muted-foreground text-xs uppercase tracking-wider mt-0.5">
+            {node.type} · {node.kind}
           </div>
-          <button type="button" onClick={onClose} className="w-6 h-6 flex items-center justify-center rounded hover:bg-slate-800 text-slate-400" aria-label="Close">
-            <X className="w-4 h-4" />
-          </button>
         </div>
-        <div className="space-y-1.5 text-xs">
-          <div className="flex justify-between text-slate-300">
-            <span className="text-muted-foreground">ID:</span>
-            <span className="font-mono">{node.id}</span>
+        <button type="button" onClick={onClose} className="w-6 h-6 flex items-center justify-center rounded hover:bg-slate-800 text-slate-400" aria-label="Close">
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+      <div className="space-y-1.5 text-xs">
+        <div className="flex justify-between text-slate-300">
+          <span className="text-muted-foreground">ID:</span>
+          <span className="font-mono">{node.id}</span>
+        </div>
+        {node.extra && Object.entries(node.extra).map(([k, v]) => (
+          <div key={k} className="flex justify-between text-slate-300 gap-3">
+            <span className="text-muted-foreground whitespace-nowrap">{k}:</span>
+            <span className="font-mono truncate text-right">{v}</span>
           </div>
-          {node.extra && Object.entries(node.extra).map(([k, v]) => (
-            <div key={k} className="flex justify-between text-slate-300 gap-3">
-              <span className="text-muted-foreground whitespace-nowrap">{k}:</span>
-              <span className="font-mono truncate text-right">{v}</span>
-            </div>
-          ))}
-        </div>
-      </motion.div>
-    </motion.div>
+        ))}
+      </div>
+    </ModalShell>
   )
 }
 
@@ -469,57 +545,49 @@ function SourceConfigModal({
 }) {
   const [name, setName] = useState(source.name)
   const [kind, setKind] = useState<SourceKind>(source.kind)
+  const titleId = `drasi-source-config-title-${source.id}`
 
   return (
-    <motion.div
-      className="absolute inset-0 z-30 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-6"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      onClick={onClose}
+    <ModalShell
+      labelledBy={titleId}
+      onClose={onClose}
+      panelClassName="bg-slate-900 border border-slate-600/50 rounded-lg max-w-md w-full p-4"
     >
-      <motion.div
-        className="bg-slate-900 border border-slate-600/50 rounded-lg max-w-md w-full p-4"
-        initial={{ scale: 0.95 }}
-        animate={{ scale: 1 }}
-        onClick={e => e.stopPropagation()}
-      >
-        <div className="flex items-start justify-between mb-3">
-          <div>
-            <div className="text-white font-semibold text-sm">Configure Source</div>
-            <div className="text-muted-foreground text-xs uppercase tracking-wider mt-0.5">Source · {source.kind}</div>
-          </div>
-          <button type="button" onClick={onClose} className="w-6 h-6 flex items-center justify-center rounded hover:bg-slate-800 text-slate-400" aria-label="Close">
-            <X className="w-4 h-4" />
-          </button>
+      <div className="flex items-start justify-between mb-3">
+        <div>
+          <div id={titleId} className="text-white font-semibold text-sm">Configure Source</div>
+          <div className="text-muted-foreground text-xs uppercase tracking-wider mt-0.5">Source · {source.kind}</div>
         </div>
-        <div className="space-y-3">
-          <div>
-            <label className="block text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Name</label>
-            <input
-              type="text"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              className="w-full px-2 py-1.5 text-xs bg-slate-950 border border-slate-700 rounded text-white focus:border-cyan-500 focus:outline-none"
-            />
-          </div>
-          <div>
-            <label className="block text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Source Type</label>
-            <select
-              value={kind}
-              onChange={e => setKind(e.target.value as SourceKind)}
-              className="w-full px-2 py-1.5 text-xs bg-slate-950 border border-slate-700 rounded text-white focus:border-cyan-500 focus:outline-none"
-            >
-              {SOURCE_KINDS.map(k => <option key={k} value={k}>{k}</option>)}
-            </select>
-          </div>
+        <button type="button" onClick={onClose} className="w-6 h-6 flex items-center justify-center rounded hover:bg-slate-800 text-slate-400" aria-label="Close">
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+      <div className="space-y-3">
+        <div>
+          <label className="block text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Name</label>
+          <input
+            type="text"
+            value={name}
+            onChange={e => setName(e.target.value)}
+            className="w-full px-2 py-1.5 text-xs bg-slate-950 border border-slate-700 rounded text-white focus:border-cyan-500 focus:outline-none"
+          />
         </div>
-        <div className="flex justify-end gap-2 mt-4">
-          <button type="button" onClick={onClose} className="px-3 py-1.5 text-xs rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700">Cancel</button>
-          <button type="button" onClick={() => { onSave({ name, kind }); onClose() }} className="px-3 py-1.5 text-xs rounded bg-cyan-600 hover:bg-cyan-500 text-white">Save</button>
+        <div>
+          <label className="block text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Source Type</label>
+          <select
+            value={kind}
+            onChange={e => setKind(e.target.value as SourceKind)}
+            className="w-full px-2 py-1.5 text-xs bg-slate-950 border border-slate-700 rounded text-white focus:border-cyan-500 focus:outline-none"
+          >
+            {SOURCE_KINDS.map(k => <option key={k} value={k}>{k}</option>)}
+          </select>
         </div>
-      </motion.div>
-    </motion.div>
+      </div>
+      <div className="flex justify-end gap-2 mt-4">
+        <button type="button" onClick={onClose} className="px-3 py-1.5 text-xs rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700">Cancel</button>
+        <button type="button" onClick={() => { onSave({ name, kind }); onClose() }} className="px-3 py-1.5 text-xs rounded bg-cyan-600 hover:bg-cyan-500 text-white">Save</button>
+      </div>
+    </ModalShell>
   )
 }
 
@@ -535,67 +603,59 @@ function QueryConfigModal({
   const [name, setName] = useState(query.name)
   const [language, setLanguage] = useState(query.language)
   const [queryText, setQueryText] = useState(query.queryText || '')
+  const titleId = `drasi-query-config-title-${query.id}`
 
   return (
-    <motion.div
-      className="absolute inset-0 z-30 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-6"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      onClick={onClose}
+    <ModalShell
+      labelledBy={titleId}
+      onClose={onClose}
+      panelClassName="bg-slate-900 border border-slate-600/50 rounded-lg max-w-lg w-full p-4"
     >
-      <motion.div
-        className="bg-slate-900 border border-slate-600/50 rounded-lg max-w-lg w-full p-4"
-        initial={{ scale: 0.95 }}
-        animate={{ scale: 1 }}
-        onClick={e => e.stopPropagation()}
-      >
-        <div className="flex items-start justify-between mb-3">
-          <div>
-            <div className="text-white font-semibold text-sm">Configure Continuous Query</div>
-            <div className="text-muted-foreground text-xs uppercase tracking-wider mt-0.5">Query · {query.language}</div>
-          </div>
-          <button type="button" onClick={onClose} className="w-6 h-6 flex items-center justify-center rounded hover:bg-slate-800 text-slate-400" aria-label="Close">
-            <X className="w-4 h-4" />
-          </button>
+      <div className="flex items-start justify-between mb-3">
+        <div>
+          <div id={titleId} className="text-white font-semibold text-sm">Configure Continuous Query</div>
+          <div className="text-muted-foreground text-xs uppercase tracking-wider mt-0.5">Query · {query.language}</div>
         </div>
-        <div className="space-y-3">
-          <div>
-            <label className="block text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Name</label>
-            <input
-              type="text"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              className="w-full px-2 py-1.5 text-xs bg-slate-950 border border-slate-700 rounded text-white focus:border-cyan-500 focus:outline-none"
-            />
-          </div>
-          <div>
-            <label className="block text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Query Type</label>
-            <select
-              value={language}
-              onChange={e => setLanguage(e.target.value)}
-              className="w-full px-2 py-1.5 text-xs bg-slate-950 border border-slate-700 rounded text-white focus:border-cyan-500 focus:outline-none"
-            >
-              {QUERY_LANGUAGES.map(l => <option key={l} value={l}>{l}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Query</label>
-            <textarea
-              value={queryText}
-              onChange={e => setQueryText(e.target.value)}
-              rows={5}
-              className="w-full px-2 py-1.5 text-xs font-mono bg-slate-950 border border-slate-700 rounded text-white focus:border-cyan-500 focus:outline-none resize-none"
-              placeholder="MATCH (n) RETURN n"
-            />
-          </div>
+        <button type="button" onClick={onClose} className="w-6 h-6 flex items-center justify-center rounded hover:bg-slate-800 text-slate-400" aria-label="Close">
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+      <div className="space-y-3">
+        <div>
+          <label className="block text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Name</label>
+          <input
+            type="text"
+            value={name}
+            onChange={e => setName(e.target.value)}
+            className="w-full px-2 py-1.5 text-xs bg-slate-950 border border-slate-700 rounded text-white focus:border-cyan-500 focus:outline-none"
+          />
         </div>
-        <div className="flex justify-end gap-2 mt-4">
-          <button type="button" onClick={onClose} className="px-3 py-1.5 text-xs rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700">Cancel</button>
-          <button type="button" onClick={() => { onSave({ name, language, queryText }); onClose() }} className="px-3 py-1.5 text-xs rounded bg-cyan-600 hover:bg-cyan-500 text-white">Save</button>
+        <div>
+          <label className="block text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Query Type</label>
+          <select
+            value={language}
+            onChange={e => setLanguage(e.target.value)}
+            className="w-full px-2 py-1.5 text-xs bg-slate-950 border border-slate-700 rounded text-white focus:border-cyan-500 focus:outline-none"
+          >
+            {QUERY_LANGUAGES.map(l => <option key={l} value={l}>{l}</option>)}
+          </select>
         </div>
-      </motion.div>
-    </motion.div>
+        <div>
+          <label className="block text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Query</label>
+          <textarea
+            value={queryText}
+            onChange={e => setQueryText(e.target.value)}
+            rows={5}
+            className="w-full px-2 py-1.5 text-xs font-mono bg-slate-950 border border-slate-700 rounded text-white focus:border-cyan-500 focus:outline-none resize-none"
+            placeholder="MATCH (n) RETURN n"
+          />
+        </div>
+      </div>
+      <div className="flex justify-end gap-2 mt-4">
+        <button type="button" onClick={onClose} className="px-3 py-1.5 text-xs rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700">Cancel</button>
+        <button type="button" onClick={() => { onSave({ name, language, queryText }); onClose() }} className="px-3 py-1.5 text-xs rounded bg-cyan-600 hover:bg-cyan-500 text-white">Save</button>
+      </div>
+    </ModalShell>
   )
 }
 
@@ -685,20 +745,27 @@ export function DrasiReactiveGraph() {
   // --- Dynamic line positioning --------------------------------------------
 
   const containerRef = useRef<HTMLDivElement | null>(null)
-  const sourceRefs = useRef<Record<string, React.RefObject<HTMLDivElement | null>>>({})
-  const queryRefs = useRef<Record<string, React.RefObject<HTMLDivElement | null>>>({})
-  const reactionRefs = useRef<Record<string, React.RefObject<HTMLDivElement | null>>>({})
+  // Callback-ref maps: React calls the setter with (el) on mount and (null) on
+  // unmount, so entries for removed nodes are dropped automatically without
+  // touching ref values during render (#7872).
+  const sourceEls = useRef<Record<string, HTMLDivElement | null>>({})
+  const queryEls = useRef<Record<string, HTMLDivElement | null>>({})
+  const reactionEls = useRef<Record<string, HTMLDivElement | null>>({})
 
-  sources.forEach(s => { if (!sourceRefs.current[s.id]) sourceRefs.current[s.id] = { current: null } })
-  queries.forEach(q => { if (!queryRefs.current[q.id]) queryRefs.current[q.id] = { current: null } })
-  reactions.forEach(r => { if (!reactionRefs.current[r.id]) reactionRefs.current[r.id] = { current: null } })
+  const setSourceEl = useCallback((id: string) => (el: HTMLDivElement | null) => {
+    if (el) sourceEls.current[id] = el
+    else delete sourceEls.current[id]
+  }, [])
+  const setQueryEl = useCallback((id: string) => (el: HTMLDivElement | null) => {
+    if (el) queryEls.current[id] = el
+    else delete queryEls.current[id]
+  }, [])
+  const setReactionEl = useCallback((id: string) => (el: HTMLDivElement | null) => {
+    if (el) reactionEls.current[id] = el
+    else delete reactionEls.current[id]
+  }, [])
 
-  const [rects, setRects] = useState<{
-    sources: Record<string, NodeRect>
-    queries: Record<string, NodeRect>
-    reactions: Record<string, NodeRect>
-    container: { width: number; height: number }
-  }>({ sources: {}, queries: {}, reactions: {}, container: { width: 0, height: 0 } })
+  const [rects, setRects] = useState<MeasuredRects>({ sources: {}, queries: {}, reactions: {}, container: { width: 0, height: 0 } })
 
   useLayoutEffect(() => {
     function measure() {
@@ -715,35 +782,37 @@ export function DrasiReactiveGraph() {
           centerY: (r.top + r.bottom) / 2 - cRect.top,
         }
       }
-      const newRects = {
-        sources: {} as Record<string, NodeRect>,
-        queries: {} as Record<string, NodeRect>,
-        reactions: {} as Record<string, NodeRect>,
+      const newRects: MeasuredRects = {
+        sources: {},
+        queries: {},
+        reactions: {},
         container: { width: cRect.width, height: cRect.height },
       }
-      for (const [id, ref] of Object.entries(sourceRefs.current)) {
-        if (ref.current) newRects.sources[id] = toNodeRect(ref.current)
+      for (const [id, el] of Object.entries(sourceEls.current)) {
+        if (el) newRects.sources[id] = toNodeRect(el)
       }
-      for (const [id, ref] of Object.entries(queryRefs.current)) {
-        if (ref.current) newRects.queries[id] = toNodeRect(ref.current)
+      for (const [id, el] of Object.entries(queryEls.current)) {
+        if (el) newRects.queries[id] = toNodeRect(el)
       }
-      for (const [id, ref] of Object.entries(reactionRefs.current)) {
-        if (ref.current) newRects.reactions[id] = toNodeRect(ref.current)
+      for (const [id, el] of Object.entries(reactionEls.current)) {
+        if (el) newRects.reactions[id] = toNodeRect(el)
       }
-      setRects(newRects)
+      // Skip setState when the measurement hasn't actually changed — otherwise
+      // ResizeObserver can drive avoidable rerenders during window resizes (#7872).
+      setRects(prev => (rectsEqual(prev, newRects) ? prev : newRects))
     }
     measure()
     const observer = new ResizeObserver(measure)
     if (containerRef.current) observer.observe(containerRef.current)
     // Observe every node — any column height change shifts row centers
-    for (const ref of Object.values(sourceRefs.current)) {
-      if (ref.current) observer.observe(ref.current)
+    for (const el of Object.values(sourceEls.current)) {
+      if (el) observer.observe(el)
     }
-    for (const ref of Object.values(queryRefs.current)) {
-      if (ref.current) observer.observe(ref.current)
+    for (const el of Object.values(queryEls.current)) {
+      if (el) observer.observe(el)
     }
-    for (const ref of Object.values(reactionRefs.current)) {
-      if (ref.current) observer.observe(ref.current)
+    for (const el of Object.values(reactionEls.current)) {
+      if (el) observer.observe(el)
     }
     window.addEventListener('resize', measure)
     return () => {
@@ -877,17 +946,17 @@ export function DrasiReactiveGraph() {
             {sources.slice(0, 3).map(source => (
               <NodeCard
                 key={source.id}
-                nodeRef={sourceRefs.current[source.id]}
+                nodeRef={setSourceEl(source.id)}
                 title={source.name}
                 subtitle={source.kind}
                 icon={<SourceIconEl kind={source.kind} />}
                 status={source.status}
                 accentColor="emerald"
                 isStopped={stoppedNodeIds.has(source.id)}
-                showGear
+                showGear={!isLive}
                 onStop={() => toggleStopped(source.id)}
                 onExpand={() => setExpandedNode({ id: source.id, name: source.name, kind: source.kind, type: 'source', extra: { status: source.status } })}
-                onConfigure={() => setConfiguringSource(source)}
+                onConfigure={!isLive ? () => setConfiguringSource(source) : undefined}
               />
             ))}
           </div>
@@ -898,7 +967,7 @@ export function DrasiReactiveGraph() {
             {queries.map(query => (
               <NodeCard
                 key={query.id}
-                nodeRef={queryRefs.current[query.id]}
+                nodeRef={setQueryEl(query.id)}
                 title={query.name}
                 subtitle={query.language}
                 icon={<Search className="w-3.5 h-3.5 text-cyan-400" />}
@@ -908,12 +977,12 @@ export function DrasiReactiveGraph() {
                 isStopped={stoppedNodeIds.has(query.id)}
                 isPinned={pinnedQueryId === query.id}
                 showPin
-                showGear
+                showGear={!isLive}
                 onClick={() => handleQueryClick(query.id)}
                 onStop={() => toggleStopped(query.id)}
                 onPin={() => togglePin(query.id)}
                 onExpand={() => setExpandedNode({ id: query.id, name: query.name, kind: query.language, type: 'query', extra: { sources: query.sourceIds.join(', ') || '(none)' } })}
-                onConfigure={() => setConfiguringQuery(query)}
+                onConfigure={!isLive ? () => setConfiguringQuery(query) : undefined}
               >
                 {query.id === selectedQueryId && !stoppedNodeIds.has(query.id) && liveResults.length > 0 && (
                   <ResultsTable results={liveResults} isDemo={!isLive} />
@@ -928,7 +997,7 @@ export function DrasiReactiveGraph() {
             {reactions.map(reaction => (
               <NodeCard
                 key={reaction.id}
-                nodeRef={reactionRefs.current[reaction.id]}
+                nodeRef={setReactionEl(reaction.id)}
                 title={reaction.name}
                 subtitle={reaction.kind}
                 icon={<ReactionIconEl kind={reaction.kind} />}
