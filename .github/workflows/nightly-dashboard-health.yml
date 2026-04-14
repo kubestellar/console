@@ -56,14 +56,23 @@ jobs:
           JWT_SECRET="nightly-smoke-$(openssl rand -hex 16)" \
           DEV_MODE=true BACKEND_PORT=8081 ./console-bin &
           PID=$!
-          for i in $(seq 1 15); do
-            curl -sf http://localhost:8081/health > /dev/null 2>&1 && break
+          # Poll /auth/dev-login until it returns a JSON body with a token.
+          # The previous /health poll could succeed before Fiber had fully
+          # bound the listener, so the subsequent curl returned empty/non-JSON
+          # and jq died with a parse error (#7897). Waiting on the real
+          # endpoint avoids the race and keeps retries bounded to 30s.
+          LOGIN_RESP=""
+          TOKEN=""
+          for i in $(seq 1 30); do
+            LOGIN_RESP=$(curl -sS --max-time 2 http://localhost:8081/auth/dev-login 2>/dev/null || true)
+            if [ -n "$LOGIN_RESP" ] && [ "${LOGIN_RESP:0:1}" = "{" ]; then
+              TOKEN=$(echo "$LOGIN_RESP" | jq -r '.token // empty' 2>/dev/null || true)
+              if [ -n "$TOKEN" ]; then break; fi
+            fi
             sleep 1
           done
-          LOGIN_RESP=$(curl -sS --max-time 5 http://localhost:8081/auth/dev-login)
-          TOKEN=$(echo "$LOGIN_RESP" | jq -r '.token // empty')
           if [ -z "$TOKEN" ]; then
-            echo "::error::Could not get dev-user token"
+            echo "::error::Could not get dev-user token after 30s (last response: ${LOGIN_RESP:0:200})"
             kill $PID 2>/dev/null; exit 1
           fi
           REFRESH_RESP=$(curl -sS --max-time 5 -X POST \
