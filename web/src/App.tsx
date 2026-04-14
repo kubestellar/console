@@ -464,7 +464,7 @@ function LightweightShell({ children }: { children: React.ReactNode }) {
 // Live pathname subscriber — bypasses React Router's useLocation, whose
 // state update is wrapped in startTransition and can be perpetually
 // interrupted on cluster-heavy pages (the "needs 2 clicks" symptom from
-// issue #7865). Polls window.location.pathname and notifies React via
+// issue 7865). Polls window.location.pathname and notifies React via
 // useSyncExternalStore, which guarantees a synchronous (non-deferrable)
 // update. We pass this value to <Routes location={...}> below so route
 // matching uses the real URL, not React Router's stale internal state.

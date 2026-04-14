@@ -517,7 +517,7 @@ export function Layout({ children: _children }: LayoutProps) {
             source pages (Dashboard, My Clusters) the steady trickle of
             cluster cache / per-card data updates keeps the transition's
             "ready" check from ever passing, so the new route never commits
-            (the "needs 2 clicks" symptom from issue #7865). The key forces
+            (the "needs 2 clicks" symptom from issue 7865). The key forces
             React to discard the old subtree synchronously when the URL
             changes, sidestepping the transition entirely.
           */}
