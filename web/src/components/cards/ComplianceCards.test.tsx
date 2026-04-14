@@ -394,9 +394,11 @@ describe('ComplianceScoreBreakdownModal', () => {
     expect(tabs[1]).toHaveTextContent('82%')
     expect(tabs[2]).toHaveTextContent('78%')
 
-    // Overview tab content: per-tool bars
-    expect(screen.getByText('Kubescape')).toBeInTheDocument()
-    expect(screen.getByText('Kyverno')).toBeInTheDocument()
+    // Overview tab content: per-tool bars. "Kubescape" and "Kyverno" each appear
+    // twice now — once as the tab label and once in the per-tool bar list — so
+    // use getAllByText.
+    expect(screen.getAllByText('Kubescape').length).toBeGreaterThanOrEqual(2)
+    expect(screen.getAllByText('Kyverno').length).toBeGreaterThanOrEqual(2)
   })
 
   it('renders Kubescape tab with controls stats and framework scores', async () => {
@@ -463,8 +465,8 @@ describe('ComplianceScoreBreakdownModal', () => {
     expect(screen.getByText(/Based on 4 violations across 20 policies/)).toBeInTheDocument()
   })
 
-  it('shows fallback message when tool data is not provided', async () => {
-    const _user = userEvent.setup()
+  it('shows fallback message when tool data is not provided (after clicking tool tab)', async () => {
+    const user = userEvent.setup()
 
     render(
       <ComplianceScoreBreakdownModal
@@ -476,13 +478,18 @@ describe('ComplianceScoreBreakdownModal', () => {
       />,
     )
 
-    // With only one tool, no Overview tab — Kubescape tab is active by default
-    // Since kubescapeData is undefined, should show fallback
+    // Since #7893, Overview is always the default landing tab — so the
+    // fallback for the Kubescape tool is only reached after the user clicks
+    // the Kubescape tab explicitly.
+    const kubescapeTab = screen.getByRole('tab', { name: /Kubescape/ })
+    await user.click(kubescapeTab)
+
+    // With kubescapeData undefined, the tool tab renders the fallback
     expect(screen.getByText('Kubescape data not available')).toBeInTheDocument()
     expect(screen.getByText('No data from connected clusters')).toBeInTheDocument()
   })
 
-  it('renders single-tool modal without Overview tab', () => {
+  it('renders single-tool modal with Overview + tool tabs (Overview landing)', () => {
     render(
       <ComplianceScoreBreakdownModal
         isOpen={true}
@@ -493,11 +500,16 @@ describe('ComplianceScoreBreakdownModal', () => {
       />,
     )
 
-    // Only 1 tool => no tabs rendered (tabs.length === 1 means no Overview added, and tabs only show if > 1)
-    expect(screen.queryByRole('tab')).not.toBeInTheDocument()
+    // Since #7893, Overview is always present — so a single-tool modal has
+    // 2 tabs (Overview + Kubescape), not 0.
+    const tabs = screen.getAllByRole('tab')
+    expect(tabs).toHaveLength(2)
+    expect(tabs[0]).toHaveTextContent('Overview')
+    expect(tabs[1]).toHaveTextContent('Kubescape')
 
-    // Content should show Kubescape data directly
-    expect(screen.getByText('Total Controls')).toBeInTheDocument()
+    // Overview tab is active by default — it shows aggregate stats derived
+    // from kubescapeData (100 controls / 82 passed / 18 failed).
+    expect(screen.getByText('Total Checks')).toBeInTheDocument()
     expect(screen.getByText('100')).toBeInTheDocument()
   })
 
