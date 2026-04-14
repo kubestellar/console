@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"os"
 	"sync"
 	"time"
 
@@ -212,13 +213,28 @@ func (h *RewardsHandler) fetchUserRewards(login, token string) (*GitHubRewardsRe
 
 // searchItem is the subset of GitHub Search issue/PR item we care about.
 type searchItem struct {
-	Title       string        `json:"title"`
-	HTMLURL     string        `json:"html_url"`
-	Number      int           `json:"number"`
+	Title   string        `json:"title"`
+	HTMLURL string        `json:"html_url"`
+	Number  int           `json:"number"`
+	// CreatedAt is ISO-8601 — parsed by the rewards classifier to decide
+	// whether to enforce GitHub App attribution (issues created before
+	// the enforcement cutoff are grandfathered to keep the pre-App
+	// reward tier).
 	CreatedAt   string        `json:"created_at"`
 	Labels      []searchLabel `json:"labels"`
 	PullRequest *searchPRRef  `json:"pull_request,omitempty"`
 	RepoURL     string        `json:"repository_url"` // e.g. https://api.github.com/repos/kubestellar/console
+	// PerformedViaGitHubApp is GitHub-set and identifies which App (if
+	// any) authored the issue. Unforgeable by regular users — GitHub
+	// populates it server-side based on the credentials that made the
+	// create call. For console-submitted issues, slug is
+	// DefaultConsoleAppSlug (see github_app_auth.go). For issues opened
+	// directly on github.com, this field is nil.
+	PerformedViaGitHubApp *searchApp `json:"performed_via_github_app,omitempty"`
+}
+
+type searchApp struct {
+	Slug string `json:"slug"`
 }
 
 type searchLabel struct {
@@ -287,19 +303,83 @@ func (h *RewardsHandler) searchItems(login, itemType, token string) ([]searchIte
 	return allItems, nil
 }
 
-// classifyIssue determines the issue type based on labels.
+// attributionEnforcementCutoffEnv is the env var that flips on GitHub
+// App attribution enforcement for the rewards classifier. The value is
+// an RFC 3339 timestamp; only issues created STRICTLY AFTER this time
+// require performed_via_github_app.slug == kubestellar-console-bot to
+// get the console-tier reward (300/100 pts). Issues created before the
+// cutoff are grandfathered at their label-derived points.
+//
+// Rollout:
+//   Phase 1 (this PR, post-merge): leave env var unset. Behavior is
+//     identical to before — every bug label = 300 pts, every feature
+//     label = 100 pts, regardless of where the issue was created.
+//     Console issues start getting App attribution baked in.
+//   Phase 2 (after soak time): set CONSOLE_APP_ATTRIBUTION_CUTOFF to
+//     the merge timestamp. From that moment forward, new github.com
+//     issues drop to 50 pts; new console issues stay at 300/100.
+const attributionEnforcementCutoffEnv = "CONSOLE_APP_ATTRIBUTION_CUTOFF"
+
+// isConsoleAppSubmitted returns true when the issue was created by the
+// kubestellar-console-bot GitHub App. GitHub sets
+// performed_via_github_app server-side based on the credentials that
+// made the create call — unforgeable by regular users.
+func isConsoleAppSubmitted(item searchItem) bool {
+	if item.PerformedViaGitHubApp == nil {
+		return false
+	}
+	return item.PerformedViaGitHubApp.Slug == ExpectedAppSlug()
+}
+
+// requiresAppAttribution reports whether this issue is subject to the
+// App-attribution gate. Returns false for issues created before the
+// cutoff (grandfathered) and when the cutoff is not configured
+// (Phase 1 rollout: no enforcement).
+func requiresAppAttribution(createdAt string) bool {
+	cutoffStr := os.Getenv(attributionEnforcementCutoffEnv)
+	if cutoffStr == "" {
+		return false
+	}
+	cutoff, err := time.Parse(time.RFC3339, cutoffStr)
+	if err != nil {
+		slog.Warn("[rewards] invalid "+attributionEnforcementCutoffEnv+" — enforcement disabled", "value", cutoffStr, "error", err)
+		return false
+	}
+	created, err := time.Parse(time.RFC3339, createdAt)
+	if err != nil {
+		// Malformed issue timestamps are rare but non-fatal; default to
+		// grandfathering so we don't accidentally drop points on legit issues.
+		return false
+	}
+	return created.After(cutoff)
+}
+
+// classifyIssue determines the issue type and point value. After the
+// App-attribution cutoff, bug/feature labels only award console-tier
+// points when the issue was authored by the kubestellar-console-bot App.
+// Before the cutoff, all labels are awarded at their full rate.
 func classifyIssue(item searchItem) GitHubContribution {
 	typ := "issue_other"
 	points := pointsOtherIssue
+
+	// Attribution gate: after the cutoff, only App-created issues get
+	// the console-tier point values. See requiresAppAttribution.
+	enforce := requiresAppAttribution(item.CreatedAt)
+	consoleSubmitted := isConsoleAppSubmitted(item)
 
 	for _, label := range item.Labels {
 		switch label.Name {
 		case "bug", "kind/bug", "type/bug":
 			typ = "issue_bug"
-			points = pointsBugIssue
+			if !enforce || consoleSubmitted {
+				points = pointsBugIssue
+			}
+			// else: keep pointsOtherIssue (50) — github.com submission after cutoff
 		case "enhancement", "feature", "kind/feature", "type/feature":
 			typ = "issue_feature"
-			points = pointsFeatureIssue
+			if !enforce || consoleSubmitted {
+				points = pointsFeatureIssue
+			}
 		}
 	}
 

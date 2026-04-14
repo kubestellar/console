@@ -167,6 +167,12 @@ type FeedbackHandler struct {
 	repoOwner     string
 	repoName      string
 	httpClient    *http.Client // shared HTTP client for connection reuse
+	// appTokenProvider is the kubestellar-console-bot GitHub App. When
+	// configured, issues are created authenticated as the App so the
+	// rewards classifier can distinguish console submissions from
+	// github.com submissions (anti-gaming). Nil means App auth is not
+	// configured and the handler falls back to the PAT in githubToken.
+	appTokenProvider *GitHubAppTokenProvider
 
 	prCacheMu   sync.RWMutex
 	prCache     []GitHubPR
@@ -191,12 +197,13 @@ func NewFeedbackHandler(s store.Store, cfg FeedbackConfig) *FeedbackHandler {
 			"Classic PAT: needs 'repo' scope. Fine-grained PAT: needs 'Issues' + 'Contents' read/write permissions.")
 	}
 	return &FeedbackHandler{
-		store:         s,
-		githubToken:   cfg.GitHubToken,
-		webhookSecret: cfg.WebhookSecret,
-		repoOwner:     cfg.RepoOwner,
-		repoName:      cfg.RepoName,
-		httpClient:    &http.Client{Timeout: githubAPITimeout},
+		store:            s,
+		githubToken:      cfg.GitHubToken,
+		webhookSecret:    cfg.WebhookSecret,
+		repoOwner:        cfg.RepoOwner,
+		repoName:         cfg.RepoName,
+		httpClient:       &http.Client{Timeout: githubAPITimeout},
+		appTokenProvider: NewGitHubAppTokenProvider(),
 	}
 }
 
@@ -1946,7 +1953,22 @@ func (h *FeedbackHandler) postGitHubIssue(repoOwner, repoName, title, body strin
 		return 0, "", err
 	}
 
-	req.Header.Set("Authorization", "Bearer "+h.getEffectiveToken())
+	// Prefer GitHub App installation token when available so the created
+	// issue is attributable via performed_via_github_app (anti-gaming on
+	// the rewards leaderboard). Falls back to the PAT if App auth isn't
+	// configured — see github_app_auth.go.
+	authToken := ""
+	if h.appTokenProvider != nil {
+		if tok, tokErr := h.appTokenProvider.Token(req.Context()); tokErr == nil {
+			authToken = tok
+		} else {
+			slog.Warn("[Feedback] GitHub App token unavailable — falling back to PAT", "error", tokErr)
+		}
+	}
+	if authToken == "" {
+		authToken = h.getEffectiveToken()
+	}
+	req.Header.Set("Authorization", "Bearer "+authToken)
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	req.Header.Set("Content-Type", "application/json")
 
