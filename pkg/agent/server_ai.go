@@ -716,8 +716,13 @@ func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.M
 		totalTokens = resp.TokenUsage.TotalTokens
 	}
 
-	// Send final result
-	safeWrite(ctx, protocol.Message{
+	// Send final result. Use context.Background() rather than the mission ctx
+	// because the mission's deadline can fire in the narrow window between the
+	// ctx.Err() check above and this write, silently dropping the final
+	// TypeResult message and leaving the client's chat bubble stuck in a
+	// "thinking" state (#7925). The error paths above already use
+	// context.Background() for the same reason — this matches that pattern.
+	safeWrite(context.Background(), protocol.Message{
 		ID:   msg.ID,
 		Type: protocol.TypeResult,
 		Payload: protocol.ChatStreamPayload{
