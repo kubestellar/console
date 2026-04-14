@@ -73,7 +73,26 @@ function positionKey(state: {
     state.castlingRights.black.kingside ? 'k' : '',
     state.castlingRights.black.queenside ? 'q' : ''
   ].join('') || '-'
-  const ep = state.enPassantTarget ? `${state.enPassantTarget.row},${state.enPassantTarget.col}` : '-'
+  // FIDE repetition: the en-passant target only differentiates positions
+  // when the side-to-move actually has a pawn that can legally capture on
+  // it. Otherwise two positions that are identical apart from a "dangling"
+  // EP square must be counted as the same position (#7894).
+  let ep = '-'
+  if (state.enPassantTarget) {
+    const { row: er, col: ec } = state.enPassantTarget
+    // Side-to-move pawn that captures onto the EP square would sit
+    // diagonally behind it (white captures up, black captures down).
+    const captureFromRow = state.turn === 'white' ? er + 1 : er - 1
+    if (captureFromRow >= 0 && captureFromRow < 8) {
+      const canCaptureEP = [-1, 1].some(dc => {
+        const cc = ec + dc
+        if (cc < 0 || cc >= 8) return false
+        const p = state.board[captureFromRow][cc]
+        return !!p && p.type === 'P' && p.color === state.turn
+      })
+      if (canCaptureEP) ep = `${er},${ec}`
+    }
+  }
   return `${boardStr}|${state.turn}|${castling}|${ep}`
 }
 
@@ -351,7 +370,17 @@ function isInCheck(board: Board, color: Color, state: GameState): boolean {
 }
 
 // Make a move and return the new state
-function makeMove(state: GameState, from: { row: number; col: number }, to: { row: number; col: number }, promotion?: PieceType): GameState {
+/**
+ * Apply a move to the given state.
+ *
+ * `trackHistory` defaults to `false` because the overwhelming majority of
+ * calls come from search/legality checks (`getAllLegalMoves`, `minimax`,
+ * UI hover validation) where spreading `positionHistory` on every simulated
+ * move is unnecessary O(n) work (#7894). Only the three UI-commit call
+ * sites (user click, promotion, AI-commit) pass `trackHistory = true` to
+ * actually extend the repetition record.
+ */
+function makeMove(state: GameState, from: { row: number; col: number }, to: { row: number; col: number }, promotion?: PieceType, trackHistory = false): GameState {
   const newBoard = state.board.map(row => [...row])
   const piece = newBoard[from.row][from.col]!
   const captured = newBoard[to.row][to.col]
@@ -417,15 +446,23 @@ function makeMove(state: GameState, from: { row: number; col: number }, to: { ro
   // (FIDE: repetitions only count when they occur in the same game
   // continuation with no pawn move or capture in between).
   const isIrreversible = !!captured || piece.type === 'P'
-  const newKey = positionKey({
-    board: newBoard,
-    turn: newTurn,
-    castlingRights: newCastlingRights,
-    enPassantTarget: newEnPassantTarget
-  })
-  const newPositionHistory = isIrreversible
-    ? [newKey]
-    : [...(state.positionHistory || []), newKey]
+  // Only compute + append the new position key when the caller asked to
+  // track history (UI commits). In search paths we pass through the parent
+  // reference unchanged so minimax doesn't allocate per simulated move.
+  let newPositionHistory: string[]
+  if (trackHistory) {
+    const newKey = positionKey({
+      board: newBoard,
+      turn: newTurn,
+      castlingRights: newCastlingRights,
+      enPassantTarget: newEnPassantTarget
+    })
+    newPositionHistory = isIrreversible
+      ? [newKey]
+      : [...(state.positionHistory || []), newKey]
+  } else {
+    newPositionHistory = state.positionHistory || []
+  }
 
   return {
     board: newBoard,
@@ -529,7 +566,7 @@ function minimax(state: GameState, depth: number, alpha: number, beta: number, m
   if (result === 'checkmate') {
     return maximizing ? -10000 + state.moveHistory.length : 10000 - state.moveHistory.length
   }
-  if (result === 'stalemate') {
+  if (result === 'stalemate' || result === 'repetition') {
     return 0
   }
 
@@ -610,7 +647,22 @@ function KubeChessInternal() {
   const [gameState, setGameState] = useState<GameState>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY)
-      if (saved) return JSON.parse(saved)
+      if (saved) {
+        const parsed = JSON.parse(saved) as GameState
+        // Migrate older saves that pre-date threefold-repetition tracking.
+        // Seed the history with the loaded position so it counts as
+        // occurrence 1 — otherwise the current position would need to
+        // appear 3 MORE times (total 4) to trigger the draw (#7894).
+        if (!parsed.positionHistory || parsed.positionHistory.length === 0) {
+          parsed.positionHistory = [positionKey({
+            board: parsed.board,
+            turn: parsed.turn,
+            castlingRights: parsed.castlingRights,
+            enPassantTarget: parsed.enPassantTarget
+          })]
+        }
+        return parsed
+      }
     } catch { /* ignore */ }
     return createInitialState()
   })
@@ -661,7 +713,8 @@ function KubeChessInternal() {
           const bestMove = findBestMove(gameState, depth)
 
           if (bestMove) {
-            setGameState(prev => makeMove(prev, bestMove.from, bestMove.to))
+            // UI commit: track repetition history.
+            setGameState(prev => makeMove(prev, bestMove.from, bestMove.to, undefined, true))
           }
         } finally {
           // Always clear thinking state, even if computation errors
@@ -714,7 +767,8 @@ function KubeChessInternal() {
         if (movingPiece?.type === 'P' && (row === 0 || row === 7)) {
           setPromotionPending({ from: selectedSquare, to: { row, col } })
         } else {
-          setGameState(prev => makeMove(prev, selectedSquare, { row, col }))
+          // UI commit: track repetition history.
+          setGameState(prev => makeMove(prev, selectedSquare, { row, col }, undefined, true))
         }
 
         setSelectedSquare(null)
@@ -750,7 +804,8 @@ function KubeChessInternal() {
   // Handle promotion
   const handlePromotion = (pieceType: PieceType) => {
     if (promotionPending) {
-      setGameState(prev => makeMove(prev, promotionPending.from, promotionPending.to, pieceType))
+      // UI commit: track repetition history.
+      setGameState(prev => makeMove(prev, promotionPending.from, promotionPending.to, pieceType, true))
       setPromotionPending(null)
     }
   }
@@ -896,13 +951,17 @@ function KubeChessInternal() {
             <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
               <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-xl text-center">
                 <Crown className={`w-12 h-12 mx-auto mb-2 ${
-                  gameResult === 'stalemate' ? 'text-yellow-500' :
+                  // Draws (stalemate/repetition) get the neutral yellow;
+                  // checkmate is colored by who won (#7894).
+                  gameResult === 'stalemate' || gameResult === 'repetition' ? 'text-yellow-500' :
                   (gameState.turn !== playerColor ? 'text-green-500' : 'text-red-500')
                 }`} />
                 <p className="text-lg font-bold mb-3">
-                  {gameResult === 'checkmate' ? (
-                    gameState.turn !== playerColor ? 'You Win!' : 'You Lose!'
-                  ) : 'Stalemate!'}
+                  {gameResult === 'checkmate'
+                    ? (gameState.turn !== playerColor ? 'You Win!' : 'You Lose!')
+                    : gameResult === 'repetition'
+                      ? 'Draw by threefold repetition!'
+                      : 'Stalemate!'}
                 </p>
                 <button
                   onClick={resetGame}
