@@ -122,9 +122,11 @@ export function VClusterStatus({ config: _config }: VClusterStatusProps) {
   // arrives), and the error UI when the fetch fails with no cached instances.
   // Once we have data, keep showing it while background refreshes happen
   // (SWR-style) to avoid flicker (#7929 Copilot review on PR #7916).
-  const isLoading = isLive && isVClustersLoading && vclusterInstances.length === 0
+  const isVClusterLoading = isLive && isVClustersLoading
+  const hasData = vclusters.length > 0
+  const isLoading = isVClusterLoading && vclusterInstances.length === 0
   const hasError = isLive && !!vclustersError && vclusterInstances.length === 0
-  useCardLoadingState({ isLoading, hasAnyData: vclusters.length > 0, isDemoData: !isLive })
+  useCardLoadingState({ isLoading: isVClusterLoading && !hasData, hasAnyData: hasData, isDemoData: !isLive })
   const {
     items: paginatedVClusters, totalItems, currentPage, totalPages, itemsPerPage,
     goToPage, needsPagination, setItemsPerPage,
