@@ -184,8 +184,13 @@ func (s *Server) handleKagentiAgents(w http.ResponseWriter, r *http.Request) {
 			a.Framework = nestedString(specMap, "framework")
 			a.Protocol = nestedString(specMap, "protocol")
 			a.Image = nestedString(specMap, "image")
-			a.Replicas = nestedInt64(specMap, "replicas")
-			if a.Replicas == 0 {
+			// Distinguish "field absent" (operator defaults to 1) from
+			// "field explicitly set to 0" (agent intentionally paused).
+			// nestedInt64 collapses both into 0, so call the underlying
+			// helper directly and respect the found flag. See issue #7943.
+			if replicas, found, err := unstructured.NestedInt64(specMap, "replicas"); err == nil && found {
+				a.Replicas = replicas
+			} else {
 				a.Replicas = 1
 			}
 		}
