@@ -36,7 +36,13 @@ export function ClusterAdmin() {
   // once and reused, avoiding redundant multi-cluster requests).
   const getDashboardStatValue = (blockId: string): StatBlockValue => {
     switch (blockId) {
-      case 'clusters': return { value: reachable.length, sublabel: 'reachable', isDemo: isDemoData }
+      // Show TOTAL cluster count here to match Dashboard and My Clusters.
+      // The reachable/offline breakdown is already shown in the 'healthy' and
+      // 'offline' stat blocks — repeating it on the main 'clusters' block
+      // made the sidebar disagree with itself (ClusterAdmin showed 10 while
+      // My Clusters and Dashboard showed 12 for the same 12 physical clusters
+      // with 2 offline).
+      case 'clusters': return { value: clusters.length, sublabel: 'total', isDemo: isDemoData }
       case 'healthy': return { value: healthy.length, sublabel: 'healthy', isDemo: isDemoData }
       case 'degraded': return { value: degraded.length, sublabel: 'degraded', isDemo: isDemoData }
       case 'offline': return { value: offline.length, sublabel: 'offline', isDemo: isDemoData }
