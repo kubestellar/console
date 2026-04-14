@@ -2,10 +2,12 @@ package handlers
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubestellar/console/pkg/k8s"
+	"golang.org/x/sync/errgroup"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -13,6 +15,16 @@ import (
 
 // webhookListTimeout is the timeout for listing webhooks across all clusters.
 const webhookListTimeout = 30 * time.Second
+
+// defaultClusterFanoutConcurrency bounds how many clusters a handler fans out
+// to in parallel. 4 matches the HTTP/1.1 keep-alive connection budget that
+// PR #7765 established (MaxConnsPerHost=4 per cluster transport): going wider
+// than 4 simultaneous list calls against the same kube-apiserver just queues
+// on the pooled TCP connections and provides no speedup while risking control
+// plane saturation on large fleets. The same budget is reused for every
+// per-cluster fanout (admission_webhooks, rbac service accounts, custom
+// resources) so we never double-book the transport pool.
+const defaultClusterFanoutConcurrency = 4
 
 // GVRs for webhook configurations
 var (
@@ -50,10 +62,14 @@ type WebhookSummary struct {
 	Cluster       string `json:"cluster"`
 }
 
-// WebhookListResponse is the response for GET /api/admission-webhooks
+// WebhookListResponse is the response for GET /api/admission-webhooks.
+// Errors maps cluster name -> error message for clusters whose webhook list
+// failed; the UI surfaces partial errors alongside successful results so a
+// single dead cluster no longer silently disappears from the view (#7967).
 type WebhookListResponse struct {
-	Webhooks   []WebhookSummary `json:"webhooks"`
-	IsDemoData bool             `json:"isDemoData"`
+	Webhooks   []WebhookSummary  `json:"webhooks"`
+	Errors     map[string]string `json:"errors,omitempty"`
+	IsDemoData bool              `json:"isDemoData"`
 }
 
 // statusServiceUnavailableWebhook uses fiber's standard constant for 503 responses.
@@ -82,40 +98,75 @@ func (h *WebhookHandlers) ListWebhooks(c *fiber.Ctx) error {
 	}
 
 	allWebhooks := make([]WebhookSummary, 0)
+	clusterErrors := make(map[string]string)
+	var mu sync.Mutex
+
+	// Fan out across clusters in parallel (#7966). errgroup.SetLimit bounds
+	// concurrency to the shared per-cluster HTTP/1.1 connection budget so
+	// we do not oversubscribe the transport pool established in PR #7765.
+	g, gctx := errgroup.WithContext(ctx)
+	g.SetLimit(defaultClusterFanoutConcurrency)
 
 	for _, cluster := range clusters {
-		client, err := h.k8sClient.GetDynamicClient(cluster.Name)
-		if err != nil {
-			continue
-		}
+		clusterName := cluster.Name
+		g.Go(func() error {
+			client, err := h.k8sClient.GetDynamicClient(clusterName)
+			if err != nil {
+				mu.Lock()
+				clusterErrors[clusterName] = err.Error()
+				mu.Unlock()
+				return nil
+			}
 
-		// Fetch validating webhooks
-		valList, err := client.Resource(validatingWebhookGVR).List(ctx, metav1.ListOptions{})
-		if err == nil {
-			for _, item := range valList.Items {
-				wh := parseWebhookFromUnstructured(&item, cluster.Name, "validating")
-				if wh != nil {
-					allWebhooks = append(allWebhooks, *wh)
+			localWebhooks := make([]WebhookSummary, 0)
+
+			// Fetch validating webhooks — per-cluster errors are collected
+			// into clusterErrors (#7967) instead of silently swallowed.
+			valList, valErr := client.Resource(validatingWebhookGVR).List(gctx, metav1.ListOptions{})
+			if valErr == nil {
+				for _, item := range valList.Items {
+					wh := parseWebhookFromUnstructured(&item, clusterName, "validating")
+					if wh != nil {
+						localWebhooks = append(localWebhooks, *wh)
+					}
 				}
 			}
-		}
 
-		// Fetch mutating webhooks
-		mutList, err := client.Resource(mutatingWebhookGVR).List(ctx, metav1.ListOptions{})
-		if err == nil {
-			for _, item := range mutList.Items {
-				wh := parseWebhookFromUnstructured(&item, cluster.Name, "mutating")
-				if wh != nil {
-					allWebhooks = append(allWebhooks, *wh)
+			// Fetch mutating webhooks
+			mutList, mutErr := client.Resource(mutatingWebhookGVR).List(gctx, metav1.ListOptions{})
+			if mutErr == nil {
+				for _, item := range mutList.Items {
+					wh := parseWebhookFromUnstructured(&item, clusterName, "mutating")
+					if wh != nil {
+						localWebhooks = append(localWebhooks, *wh)
+					}
 				}
 			}
-		}
+
+			mu.Lock()
+			defer mu.Unlock()
+			allWebhooks = append(allWebhooks, localWebhooks...)
+			switch {
+			case valErr != nil && mutErr != nil:
+				clusterErrors[clusterName] = "validating: " + valErr.Error() + "; mutating: " + mutErr.Error()
+			case valErr != nil:
+				clusterErrors[clusterName] = "validating: " + valErr.Error()
+			case mutErr != nil:
+				clusterErrors[clusterName] = "mutating: " + mutErr.Error()
+			}
+			return nil
+		})
 	}
+	_ = g.Wait() // per-cluster errors are non-fatal and collected in clusterErrors.
 
-	return c.JSON(WebhookListResponse{
+	resp := WebhookListResponse{
 		Webhooks:   allWebhooks,
 		IsDemoData: false,
-	})
+	}
+	if len(clusterErrors) > 0 {
+		resp.Errors = clusterErrors
+	}
+	return c.JSON(resp)
 }
 
 // parseWebhookFromUnstructured extracts webhook info from an unstructured object

@@ -3,10 +3,12 @@ package handlers
 import (
 	"context"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/k8s"
@@ -234,15 +236,50 @@ func (h *RBACHandler) ListK8sServiceAccounts(c *fiber.Ctx) error {
 	}
 
 	allSAs := make([]models.K8sServiceAccount, 0)
-	for _, cl := range clusters {
-		sas, err := h.k8sClient.ListServiceAccounts(ctx, cl.Name, namespace)
-		if err != nil {
-			continue // Skip clusters we can't access
-		}
-		allSAs = append(allSAs, sas...)
-	}
+	clusterErrors := make(map[string]string)
+	var mu sync.Mutex
 
-	return c.JSON(allSAs)
+	// Fan out across clusters in parallel (#7969). Concurrency is bounded by
+	// the shared per-cluster HTTP/1.1 connection budget established in
+	// PR #7765 so we do not oversubscribe the transport pool.
+	g, gctx := errgroup.WithContext(ctx)
+	g.SetLimit(defaultClusterFanoutConcurrency)
+
+	for _, cl := range clusters {
+		clusterName := cl.Name
+		g.Go(func() error {
+			sas, err := h.k8sClient.ListServiceAccounts(gctx, clusterName, namespace)
+			if err != nil {
+				mu.Lock()
+				clusterErrors[clusterName] = err.Error()
+				mu.Unlock()
+				return nil
+			}
+			mu.Lock()
+			allSAs = append(allSAs, sas...)
+			mu.Unlock()
+			return nil
+		})
+	}
+	_ = g.Wait() // per-cluster errors are non-fatal and collected in clusterErrors.
+
+	// Match the WebhookListResponse shape from admission_webhooks.go (#7967):
+	// include per-cluster errors alongside successful results so the UI can
+	// surface partial failures instead of silently dropping clusters.
+	return c.JSON(fiber.Map{
+		"serviceAccounts": allSAs,
+		"errors":          clusterErrorsOrNil(clusterErrors),
+	})
+}
+
+// clusterErrorsOrNil returns nil when the map is empty so JSON callers get
+// `null` (omitted by `omitempty`) instead of `{}`, matching the
+// WebhookListResponse.Errors convention in admission_webhooks.go.
+func clusterErrorsOrNil(m map[string]string) map[string]string {
+	if len(m) == 0 {
+		return nil
+	}
+	return m
 }
 
 // ListK8sRoles returns roles from clusters.
