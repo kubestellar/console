@@ -27,9 +27,7 @@ import { useDrasiResources } from '../../../hooks/useDrasiResources'
 const FLOW_ANIMATION_INTERVAL_MS = 3000
 /** Maximum rows shown in the results table */
 const MAX_RESULT_ROWS = 7
-/** Number of dots flowing along each active connection line */
-const FLOW_DOT_COUNT = 3
-/** Flow dot animation cycle duration (seconds) */
+/** Flow dot animation cycle duration (seconds) — base before per-line jitter */
 const FLOW_DOT_CYCLE_S = 5
 /** SVG stroke width in pixels */
 const LINE_STROKE_WIDTH_PX = 1.2
@@ -340,8 +338,38 @@ interface FlowLineProps {
   delay?: number
 }
 
-function FlowLine({ d, dashed, active = true, delay = 0 }: FlowLineProps) {
+// Deterministic 0..1 pseudo-random seeded by a string key, so each flow
+// line gets stable timing variation that doesn't jitter on every re-render.
+function seededRand(key: string, salt: number): number {
+  let h = salt
+  for (let i = 0; i < key.length; i++) {
+    h = Math.imul(h ^ key.charCodeAt(i), 2654435761)
+  }
+  return ((h >>> 0) % 10000) / 10000
+}
+
+/**
+ * Traffic pattern templates. Each entry gives normalized start offsets
+ * (0..1 of the cycle) so the dot distribution varies between lines —
+ * some carry a lone scout, some a tight burst, some an even stream.
+ */
+const TRAFFIC_PATTERNS: ReadonlyArray<ReadonlyArray<number>> = [
+  [0.5],                      // solo: single dot
+  [0.45, 0.55],               // pair: two dots close
+  [0.40, 0.50, 0.60],         // cluster: tight triple
+  [0.00, 0.33, 0.67],         // even: metronomic triple
+  [0.15, 0.55, 0.85],         // uneven: irregular triple
+  [0.20, 0.70],               // spaced pair
+  [0.10, 0.20, 0.55, 0.90],   // burst + trail (4 dots)
+]
+
+function FlowLine({ d, dashed, active = true, delay = 0, lineKey = '' }: FlowLineProps & { lineKey?: string }) {
   const isAnimated = active && !dashed
+  // Per-line cycle duration varies so flows aren't synchronized.
+  const lineDur = FLOW_DOT_CYCLE_S + seededRand(lineKey, 1) * 3  // 5s–8s
+  // Pick a traffic pattern deterministically from the line key.
+  const patternIdx = Math.floor(seededRand(lineKey, 2) * TRAFFIC_PATTERNS.length)
+  const pattern = TRAFFIC_PATTERNS[patternIdx]
   return (
     <>
       <path
@@ -353,16 +381,19 @@ function FlowLine({ d, dashed, active = true, delay = 0 }: FlowLineProps) {
         strokeDasharray={dashed ? '4 4' : undefined}
         vectorEffect="non-scaling-stroke"
       />
-      {isAnimated && Array.from({ length: FLOW_DOT_COUNT }).map((_, i) => (
-        <circle key={i} r={FLOW_DOT_RADIUS_PX} fill="rgb(52 211 153)" fillOpacity={0.9}>
-          <animateMotion
-            dur={`${FLOW_DOT_CYCLE_S}s`}
-            repeatCount="indefinite"
-            begin={`${delay + (i * FLOW_DOT_CYCLE_S) / FLOW_DOT_COUNT}s`}
-            path={d}
-          />
-        </circle>
-      ))}
+      {isAnimated && pattern.map((offset, i) => {
+        const begin = delay + offset * lineDur
+        return (
+          <circle key={i} r={FLOW_DOT_RADIUS_PX} fill="rgb(52 211 153)" fillOpacity={0.9}>
+            <animateMotion
+              dur={`${lineDur}s`}
+              repeatCount="indefinite"
+              begin={`${Math.max(0, begin)}s`}
+              path={d}
+            />
+          </circle>
+        )
+      })}
     </>
   )
 }
@@ -872,45 +903,28 @@ export function DrasiReactiveGraph() {
     })
 
     if (reactionRects.length > 0) {
-      // Compute trunk2 using only non-spanning queries. The spanning query
-      // (selected with results) is wider and sits in col 3→5, so including
-      // its right edge would push trunk2 into the reaction column.
-      const spanningQueryId = queries.find(q =>
-        q.id === selectedQueryId && !stoppedNodeIds.has(q.id) && liveResults.length > 0,
-      )?.id
-      const nonSpanningRights = queries
-        .filter(q => q.id !== spanningQueryId)
-        .map(q => rects.queries[q.id])
-        .filter(Boolean)
-        .map(r => r.right)
-      const qRight = nonSpanningRights.length > 0
-        ? Math.max(...nonSpanningRights)
-        : Math.max(...queryRects.map(r => r.right))
       const rxLeft = Math.min(...reactionRects.map(r => r.left))
-      const trunk2X = (qRight + rxLeft) / 2
-      // trunk2 runs only through the non-spanning queries' rows so it
-      // doesn't drop into the tall spanning card's interior.
-      const nonSpanningQueryRects = queries
-        .filter(q => q.id !== spanningQueryId)
-        .map(q => rects.queries[q.id])
-        .filter(Boolean)
-      const trunk2RefRects = nonSpanningQueryRects.length > 0
-        ? nonSpanningQueryRects
-        : queryRects
-      const trunk2Top = Math.min(trunk2RefRects[0].centerY, reactionRects[0].centerY)
+      // Place trunk2 ~12px to the right of whichever query extends the
+      // farthest right (incl. the spanning query), but always at least
+      // 12px to the left of the reactions column. This keeps trunk2
+      // outside every query card so all queries — including the wide
+      // spanning one — connect via a forward-going q-out branch.
+      const allRights = queries.map(q => rects.queries[q.id]).filter(Boolean).map(r => r.right)
+      const qRight = allRights.length > 0 ? Math.max(...allRights) : rxLeft - 24
+      const trunk2X = Math.min(qRight + 12, rxLeft - 12)
+      const trunk2Top = Math.min(queryRects[0].centerY, reactionRects[0].centerY)
       const trunk2Bottom = Math.max(
-        trunk2RefRects[trunk2RefRects.length - 1].centerY,
+        queryRects[queryRects.length - 1].centerY,
         reactionRects[reactionRects.length - 1].centerY,
       )
       items.push({ key: 'trunk2', d: `M ${trunk2X} ${trunk2Top} L ${trunk2X} ${trunk2Bottom}`, dashed: false, active: false, delay: 0 })
 
+      // Every query — including the spanning top-losers — connects to
+      // trunk2 via its own horizontal branch. trunk2 then carries the
+      // flow up to sse-stream.
       queries.forEach((q, i) => {
         const r = rects.queries[q.id]
         if (!r) return
-        // Skip the q-out branch for the spanning query — trunk2 passes
-        // through its row naturally; drawing a branch from its right edge
-        // would draw backwards (its right edge is past trunk2X).
-        if (q.id === spanningQueryId) return
         const isActive = !stoppedNodeIds.has(q.id) && q.status === 'ready'
         items.push({
           key: `q-out-${q.id}`,
@@ -957,7 +971,7 @@ export function DrasiReactiveGraph() {
           preserveAspectRatio="xMidYMid meet"
         >
           {paths.map(p => (
-            <FlowLine key={p.key} d={p.d} dashed={p.dashed} active={p.active} delay={p.delay} />
+            <FlowLine key={p.key} lineKey={p.key} d={p.d} dashed={p.dashed} active={p.active} delay={p.delay} />
           ))}
         </svg>
 
