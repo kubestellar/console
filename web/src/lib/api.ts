@@ -413,9 +413,19 @@ class ApiClient {
       clearTimeout(timeoutId)
 
       if (!response.ok) {
-        // Handle 401 Unauthorized - token is invalid or expired
-        if (response.status === 401) {
+        // Handle 401 Unauthorized - token is invalid or expired.
+        // EXCLUDE per-feature endpoints whose 401 means a third-party token
+        // (e.g. GitHub OAuth) is missing/expired, NOT that the user's app
+        // session is dead. Logging the user out of the whole console because
+        // their GitHub token expired is a confusing dead end (e.g. clicking
+        // the "kubara" repo in the Mission Browser triggered a full logout).
+        // For these paths, surface the 401 to the caller so the feature can
+        // show its own auth prompt.
+        if (response.status === 401 && !path.startsWith('/api/github/')) {
           handle401()
+          throw new UnauthorizedError()
+        }
+        if (response.status === 401) {
           throw new UnauthorizedError()
         }
         const errorText = await response.text().catch(() => '')
@@ -461,9 +471,15 @@ class ApiClient {
       clearTimeout(timeoutId)
 
       if (!response.ok) {
-        // Handle 401 Unauthorized - token is invalid or expired
-        if (response.status === 401) {
+        // Handle 401 Unauthorized - token is invalid or expired.
+        // EXCLUDE per-feature endpoints (see GET handler comment) so a
+        // GitHub-OAuth-token expiry on /api/github/* doesn't log the user
+        // out of the entire console.
+        if (response.status === 401 && !path.startsWith('/api/github/')) {
           handle401()
+          throw new UnauthorizedError()
+        }
+        if (response.status === 401) {
           throw new UnauthorizedError()
         }
         const errorText = await response.text().catch(() => '')
@@ -507,9 +523,15 @@ class ApiClient {
       clearTimeout(timeoutId)
 
       if (!response.ok) {
-        // Handle 401 Unauthorized - token is invalid or expired
-        if (response.status === 401) {
+        // Handle 401 Unauthorized - token is invalid or expired.
+        // EXCLUDE per-feature endpoints (see GET handler comment) so a
+        // GitHub-OAuth-token expiry on /api/github/* doesn't log the user
+        // out of the entire console.
+        if (response.status === 401 && !path.startsWith('/api/github/')) {
           handle401()
+          throw new UnauthorizedError()
+        }
+        if (response.status === 401) {
           throw new UnauthorizedError()
         }
         const errorText = await response.text().catch(() => '')
@@ -552,9 +574,15 @@ class ApiClient {
       clearTimeout(timeoutId)
 
       if (!response.ok) {
-        // Handle 401 Unauthorized - token is invalid or expired
-        if (response.status === 401) {
+        // Handle 401 Unauthorized - token is invalid or expired.
+        // EXCLUDE per-feature endpoints (see GET handler comment) so a
+        // GitHub-OAuth-token expiry on /api/github/* doesn't log the user
+        // out of the entire console.
+        if (response.status === 401 && !path.startsWith('/api/github/')) {
           handle401()
+          throw new UnauthorizedError()
+        }
+        if (response.status === 401) {
           throw new UnauthorizedError()
         }
         const errorText = await response.text().catch(() => '')

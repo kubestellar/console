@@ -515,9 +515,16 @@ export function FlightPlanBlueprint({
   const svgId = useId().replace(/:/g, '')
   const { clusters, error: clustersError } = useClusters()
 
-  // Filter out explicitly unhealthy clusters and redistribute orphaned projects to healthy ones
+  // Filter out explicitly unhealthy clusters and redistribute orphaned projects to healthy ones.
+  // Also scope to state.targetClusters when set — without this, assignments from
+  // clusters the user later removed from TARGET CLUSTERS still appear in the
+  // Flight Plan (e.g. user picks prow + waldorf in Define Mission but ks-docs-oci
+  // — left over from a prior session — still shows up as a third lane).
   const healthyState = useMemo(() => {
-    let assignments = state.assignments
+    const targetSet = new Set(state.targetClusters || [])
+    let assignments = targetSet.size === 0
+      ? state.assignments
+      : state.assignments.filter(a => targetSet.has(a.clusterName))
     // Only build the unhealthy set from clusters that are explicitly marked unhealthy/unreachable.
     // Clusters not present in the clusters list (e.g. not yet loaded) are left alone so that
     // user-assigned projects are never silently dropped.
