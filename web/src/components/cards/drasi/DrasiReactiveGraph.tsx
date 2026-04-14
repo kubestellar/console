@@ -872,7 +872,20 @@ export function DrasiReactiveGraph() {
     })
 
     if (reactionRects.length > 0) {
-      const qRight = Math.max(...queryRects.map(r => r.right))
+      // Compute trunk2 using only non-spanning queries. The spanning query
+      // (selected with results) is wider and sits in col 3→5, so including
+      // its right edge would push trunk2 into the reaction column.
+      const spanningQueryId = queries.find(q =>
+        q.id === selectedQueryId && !stoppedNodeIds.has(q.id) && liveResults.length > 0,
+      )?.id
+      const nonSpanningRights = queries
+        .filter(q => q.id !== spanningQueryId)
+        .map(q => rects.queries[q.id])
+        .filter(Boolean)
+        .map(r => r.right)
+      const qRight = nonSpanningRights.length > 0
+        ? Math.max(...nonSpanningRights)
+        : Math.max(...queryRects.map(r => r.right))
       const rxLeft = Math.min(...reactionRects.map(r => r.left))
       const trunk2X = (qRight + rxLeft) / 2
       const trunk2Top = Math.min(queryRects[0].centerY, reactionRects[0].centerY)
@@ -885,6 +898,10 @@ export function DrasiReactiveGraph() {
       queries.forEach((q, i) => {
         const r = rects.queries[q.id]
         if (!r) return
+        // Skip the q-out branch for the spanning query — trunk2 passes
+        // through its row naturally; drawing a branch from its right edge
+        // would draw backwards (its right edge is past trunk2X).
+        if (q.id === spanningQueryId) return
         const isActive = !stoppedNodeIds.has(q.id) && q.status === 'ready'
         items.push({
           key: `q-out-${q.id}`,
@@ -910,7 +927,7 @@ export function DrasiReactiveGraph() {
     }
 
     return items
-  }, [sources, queries, reactions, rects, stoppedNodeIds])
+  }, [sources, queries, reactions, rects, stoppedNodeIds, selectedQueryId, liveResults.length])
 
   return (
     <div className="h-full w-full flex flex-col p-3 overflow-hidden relative">
@@ -936,24 +953,30 @@ export function DrasiReactiveGraph() {
         </svg>
 
         <div
-          className="relative grid h-full"
+          className="relative grid h-full gap-y-3"
           style={{
-            // Blocks are capped at explicit max widths so the 1fr trunk
-            // columns absorb the remaining width — gives the SVG flow
-            // lines + animated dots plenty of horizontal room.
+            // 5 columns: [source block] [trunk gap] [query block] [trunk gap] [reaction block].
+            // Blocks are capped at explicit max widths so the 1fr trunk columns
+            // absorb the remaining width. The query that's showing results spans
+            // columns 3 → 5 so its nested results table has extra horizontal room
+            // and visually anchors the pipeline output, matching the Drasi UI.
             gridTemplateColumns:
               `minmax(0, ${NODE_MAX_WIDTH_PX}px) minmax(40px, 1fr) ` +
               `minmax(0, ${QUERY_MAX_WIDTH_PX}px) minmax(40px, 1fr) ` +
               `minmax(0, ${NODE_MAX_WIDTH_PX}px)`,
+            gridAutoRows: 'min-content',
             zIndex: 1,
           }}
         >
-          {/* Sources */}
-          <div className="flex flex-col gap-3 col-start-1">
-            <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Sources</div>
-            {sources.slice(0, 3).map(source => (
+          {/* Column headers (row 1) */}
+          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider" style={{ gridColumn: 1, gridRow: 1 }}>Sources</div>
+          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider" style={{ gridColumn: 3, gridRow: 1 }}>Continuous Queries</div>
+          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider" style={{ gridColumn: 5, gridRow: 1 }}>Reactions</div>
+
+          {/* Sources — col 1, rows 2..n */}
+          {sources.slice(0, 3).map((source, i) => (
+            <div key={source.id} style={{ gridColumn: 1, gridRow: i + 2 }}>
               <NodeCard
-                key={source.id}
                 nodeRef={setSourceEl(source.id)}
                 title={source.name}
                 subtitle={source.kind}
@@ -966,45 +989,48 @@ export function DrasiReactiveGraph() {
                 onExpand={() => setExpandedNode({ id: source.id, name: source.name, kind: source.kind, type: 'source', extra: { status: source.status } })}
                 onConfigure={!isLive ? () => setConfiguringSource(source) : undefined}
               />
-            ))}
-          </div>
+            </div>
+          ))}
 
-          {/* Queries */}
-          <div className="flex flex-col gap-3 col-start-3">
-            <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Continuous Queries</div>
-            {queries.map(query => (
-              <NodeCard
+          {/* Queries — selected-with-results query spans col 3→5, others stay in col 3 */}
+          {queries.map((query, i) => {
+            const hasResults = query.id === selectedQueryId && !stoppedNodeIds.has(query.id) && liveResults.length > 0
+            return (
+              <div
                 key={query.id}
-                nodeRef={setQueryEl(query.id)}
-                title={query.name}
-                subtitle={query.language}
-                icon={<Search className="w-3.5 h-3.5 text-cyan-400" />}
-                status={query.status}
-                accentColor="cyan"
-                isSelected={query.id === selectedQueryId}
-                isStopped={stoppedNodeIds.has(query.id)}
-                isPinned={pinnedQueryId === query.id}
-                showPin
-                showGear={!isLive}
-                onClick={() => handleQueryClick(query.id)}
-                onStop={() => toggleStopped(query.id)}
-                onPin={() => togglePin(query.id)}
-                onExpand={() => setExpandedNode({ id: query.id, name: query.name, kind: query.language, type: 'query', extra: { sources: query.sourceIds.join(', ') || '(none)' } })}
-                onConfigure={!isLive ? () => setConfiguringQuery(query) : undefined}
+                style={{
+                  gridColumn: hasResults ? '3 / 6' : 3,
+                  gridRow: i + 2,
+                }}
               >
-                {query.id === selectedQueryId && !stoppedNodeIds.has(query.id) && liveResults.length > 0 && (
-                  <ResultsTable results={liveResults} isDemo={!isLive} />
-                )}
-              </NodeCard>
-            ))}
-          </div>
+                <NodeCard
+                  nodeRef={setQueryEl(query.id)}
+                  title={query.name}
+                  subtitle={query.language}
+                  icon={<Search className="w-3.5 h-3.5 text-cyan-400" />}
+                  status={query.status}
+                  accentColor="cyan"
+                  isSelected={query.id === selectedQueryId}
+                  isStopped={stoppedNodeIds.has(query.id)}
+                  isPinned={pinnedQueryId === query.id}
+                  showPin
+                  showGear={!isLive}
+                  onClick={() => handleQueryClick(query.id)}
+                  onStop={() => toggleStopped(query.id)}
+                  onPin={() => togglePin(query.id)}
+                  onExpand={() => setExpandedNode({ id: query.id, name: query.name, kind: query.language, type: 'query', extra: { sources: query.sourceIds.join(', ') || '(none)' } })}
+                  onConfigure={!isLive ? () => setConfiguringQuery(query) : undefined}
+                >
+                  {hasResults && <ResultsTable results={liveResults} isDemo={!isLive} />}
+                </NodeCard>
+              </div>
+            )
+          })}
 
-          {/* Reactions */}
-          <div className="flex flex-col gap-3 col-start-5">
-            <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Reactions</div>
-            {reactions.map(reaction => (
+          {/* Reactions — col 5, rows 2..n */}
+          {reactions.map((reaction, i) => (
+            <div key={reaction.id} style={{ gridColumn: 5, gridRow: i + 2 }}>
               <NodeCard
-                key={reaction.id}
                 nodeRef={setReactionEl(reaction.id)}
                 title={reaction.name}
                 subtitle={reaction.kind}
@@ -1015,8 +1041,8 @@ export function DrasiReactiveGraph() {
                 onStop={() => toggleStopped(reaction.id)}
                 onExpand={() => setExpandedNode({ id: reaction.id, name: reaction.name, kind: reaction.kind, type: 'reaction', extra: { queries: reaction.queryIds.join(', ') || '(none)' } })}
               />
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
 
         <AnimatePresence>
