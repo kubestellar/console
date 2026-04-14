@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen} from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ComplianceScore } from './ComplianceCards'
 import { ComplianceScoreBreakdownModal } from './compliance/ComplianceScoreBreakdownModal'
@@ -394,11 +394,15 @@ describe('ComplianceScoreBreakdownModal', () => {
     expect(tabs[1]).toHaveTextContent('82%')
     expect(tabs[2]).toHaveTextContent('78%')
 
-    // Overview tab content: per-tool bars. "Kubescape" and "Kyverno" each appear
-    // twice now — once as the tab label and once in the per-tool bar list — so
-    // use getAllByText.
-    expect(screen.getAllByText('Kubescape').length).toBeGreaterThanOrEqual(2)
-    expect(screen.getAllByText('Kyverno').length).toBeGreaterThanOrEqual(2)
+    // Overview tab content: per-tool bars. Scope the assertion to the "By tool"
+    // section so it survives refactors that change other parts of the modal
+    // (#7908 — Copilot review on #7905 flagged the prior getAllByText as too
+    // broad). The `<h4>By tool</h4>` heading sits next to the bar list inside
+    // the same parent container.
+    const byToolHeading = screen.getByText('By tool')
+    const byToolSection = byToolHeading.parentElement!
+    expect(within(byToolSection).getByText('Kubescape')).toBeInTheDocument()
+    expect(within(byToolSection).getByText('Kyverno')).toBeInTheDocument()
   })
 
   it('renders Kubescape tab with controls stats and framework scores', async () => {
@@ -508,9 +512,13 @@ describe('ComplianceScoreBreakdownModal', () => {
     expect(tabs[1]).toHaveTextContent('Kubescape')
 
     // Overview tab is active by default — it shows aggregate stats derived
-    // from kubescapeData (100 controls / 82 passed / 18 failed).
-    expect(screen.getByText('Total Checks')).toBeInTheDocument()
-    expect(screen.getByText('100')).toBeInTheDocument()
+    // from kubescapeData (100 controls / 82 passed / 18 failed). Assert the
+    // value-label pairing inside the Total Checks StatBox rather than a bare
+    // `getByText('100')` (#7908 — Copilot review on #7905 flagged the bare
+    // match as too broad; many elements could render "100").
+    const totalChecksLabel = screen.getByText('Total Checks')
+    const totalChecksStatBox = totalChecksLabel.parentElement!
+    expect(within(totalChecksStatBox).getByText('100')).toBeInTheDocument()
   })
 
   it('does not render anything when isOpen is false', () => {
