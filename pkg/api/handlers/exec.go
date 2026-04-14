@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/gofiber/contrib/websocket"
@@ -32,6 +33,21 @@ const execPingInterval = 30 * time.Second
 // the peer dead. Must be greater than execPingInterval so the deadline is always
 // in the future when a new ping is sent.
 const execPongTimeout = 45 * time.Second
+
+// execStdinDropCount counts stdin frames that were silently discarded because
+// stdinCh was full. #7995 — telemetry-first pass: we don't know how often this
+// actually fires in production, so observe before escalating the handling
+// (block-then-error-close is the planned follow-up if this counter is non-zero
+// in real traffic). Exposed via GetExecStdinDropCount for tests and any future
+// stats endpoint.
+var execStdinDropCount atomic.Uint64
+
+// GetExecStdinDropCount returns the cumulative number of stdin frames that
+// were dropped due to a full stdinCh buffer since process start. Exported for
+// tests and future stats reporting.
+func GetExecStdinDropCount() uint64 {
+	return execStdinDropCount.Load()
+}
 
 // execSessionRegistry tracks active exec sessions per user so that
 // CancelUserExecSessions can tear them down on logout (#6024).
@@ -477,7 +493,17 @@ func (h *ExecHandlers) HandleExec(c *websocket.Conn) {
 				select {
 				case stdinCh <- []byte(m.Data):
 				default:
-					// Drop if channel full
+					// #7995 — stdinCh is full, meaning the pod's stdin drain
+					// has fallen behind. Silently dropping the frame is the
+					// current behavior and can truncate pasted commands or
+					// scripts at arbitrary byte boundaries. Record telemetry
+					// so we can observe whether this actually fires in
+					// production before escalating to block-then-error-close.
+					dropped := execStdinDropCount.Add(1)
+					slog.Warn("[Exec] dropping stdin frame — channel full",
+						"bytes", len(m.Data),
+						"buffer", cap(stdinCh),
+						"total_drops", dropped)
 				}
 			case "resize":
 				if m.Cols > 0 && m.Rows > 0 {
