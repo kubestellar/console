@@ -82,10 +82,12 @@ function positionKey(state: {
   // square" check. This matches the approximation used by Stockfish-style
   // Zobrist hashing and is correct for every EP-capture that isn't blocked
   // by a pin. Strict FIDE would also require that the capture doesn't
-  // leave own king in check; we accept that approximation to keep
-  // positionKey allocation-free and O(1) per call (#7901). The divergence
-  // is reachable only in contrived pin positions and won't change
-  // threefold detection in any realistic game.
+  // leave own king in check; we accept that approximation to avoid running
+  // a full legality simulation inside positionKey (#7901, #7906). The
+  // function still does a small amount of allocation (board.map/join), so
+  // it's O(1) w.r.t. board size, not literally allocation-free. The
+  // divergence from strict FIDE is reachable only in contrived pin
+  // positions and won't change threefold detection in any realistic game.
   let ep = '-'
   if (state.enPassantTarget) {
     const { row: er, col: ec } = state.enPassantTarget
@@ -571,20 +573,22 @@ function minimax(state: GameState, depth: number, alpha: number, beta: number, m
     return evaluateBoard(state.board, state)
   }
 
-  const result = getGameResult(state)
-  if (result === 'checkmate') {
-    return maximizing ? -10000 + state.moveHistory.length : 10000 - state.moveHistory.length
-  }
-  // `getGameResult` can only return `'repetition'` when `positionHistory` has
-  // accumulated three matching keys, but `makeMove` calls inside minimax run
-  // with `trackHistory=false` for perf — so the search tree never sees a
-  // repetition draw. Only `'stalemate'` is reachable here. Keeping the
-  // comment here so the omission is deliberate, not accidental (#7901).
-  if (result === 'stalemate') {
-    return 0
-  }
-
+  // Inline terminal checks using a single legal-move generation: calling
+  // `getGameResult` here and then `getAllLegalMoves` below would double the
+  // move-generation cost per search node (#7906). Generate once, then
+  // derive checkmate / stalemate from `moves.length === 0`.
+  //
+  // Repetition ('threefold draw') is NOT reachable from inside the search
+  // tree because `makeMove` calls in minimax run with `trackHistory=false`
+  // for perf — `positionHistory` never accumulates matching keys here.
+  // That's why we don't need the `getGameResult === 'repetition'` branch;
+  // the omission is deliberate (#7901).
   const moves = getAllLegalMoves(state, state.turn)
+  if (moves.length === 0) {
+    return isInCheck(state.board, state.turn, state)
+      ? (maximizing ? -10000 + state.moveHistory.length : 10000 - state.moveHistory.length)
+      : 0 // stalemate
+  }
 
   // Sort moves by capture value for better alpha-beta pruning
   moves.sort((a, b) => {
