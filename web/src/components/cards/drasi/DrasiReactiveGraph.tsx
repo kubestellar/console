@@ -227,15 +227,16 @@ function FlowLine({ d, dashed, active = true, delay = 0 }: FlowLineProps) {
         fill="none"
         stroke="rgb(16 185 129)"
         strokeOpacity={dashed ? 0.4 : 0.7}
-        strokeWidth={1.5}
-        strokeDasharray={dashed ? '4 4' : undefined}
+        strokeWidth={0.4}
+        strokeDasharray={dashed ? '1.2 1.2' : undefined}
+        vectorEffect="non-scaling-stroke"
       />
       {active && !dashed && Array.from({ length: FLOW_DOT_COUNT }).map((_, i) => (
-        <circle key={i} r={2.5} fill="rgb(52 211 153)">
+        <circle key={i} r={0.6} fill="rgb(52 211 153)" fillOpacity={0.9}>
           <animateMotion
-            dur={`${FLOW_DOT_CYCLE_MS}ms`}
+            dur={`${FLOW_DOT_CYCLE_MS / 1000}s`}
             repeatCount="indefinite"
-            begin={`${delay + (i * FLOW_DOT_CYCLE_MS) / FLOW_DOT_COUNT}ms`}
+            begin={`${(delay + (i * FLOW_DOT_CYCLE_MS) / FLOW_DOT_COUNT) / 1000}s`}
             path={d}
           />
         </circle>
