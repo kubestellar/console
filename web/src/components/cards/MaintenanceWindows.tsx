@@ -1,6 +1,9 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useClusters } from '../../hooks/useMCP'
+
+/** Two-click delete confirm window — matches AlertRules #5591 pattern */
+const DELETE_CONFIRM_TIMEOUT_MS = 3000
 
 interface MaintenanceWindow {
   id: string
@@ -94,10 +97,29 @@ export function MaintenanceWindows() {
     setFormData({ cluster: '', description: '', startTime: '', endTime: '', type: 'maintenance' })
   }
 
+  // Two-click delete: first click shows "Confirm?", second click deletes.
+  // Prevents accidental loss of scheduled maintenance windows (#7932).
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
+  const deleteTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+  useEffect(() => () => clearTimeout(deleteTimerRef.current), [])
+
   const handleDelete = (id: string) => {
-    const updated = windows.filter(w => w.id !== id)
-    setWindows(updated)
-    saveWindows(updated)
+    if (pendingDeleteId === id) {
+      // Second click — confirmed
+      clearTimeout(deleteTimerRef.current)
+      setPendingDeleteId(null)
+      const updated = windows.filter(w => w.id !== id)
+      setWindows(updated)
+      saveWindows(updated)
+    } else {
+      // First click — enter confirm state with auto-reset
+      setPendingDeleteId(id)
+      clearTimeout(deleteTimerRef.current)
+      deleteTimerRef.current = setTimeout(
+        () => setPendingDeleteId(prev => prev === id ? null : prev),
+        DELETE_CONFIRM_TIMEOUT_MS
+      )
+    }
   }
 
   const typeColors: Record<string, string> = {
@@ -208,9 +230,15 @@ export function MaintenanceWindows() {
               </div>
               <button
                 onClick={() => handleDelete(w.id)}
-                className="opacity-0 group-hover:opacity-100 text-xs text-red-400 hover:text-red-300 px-1 transition-opacity"
+                title={pendingDeleteId === w.id ? 'Click again to confirm delete' : 'Delete maintenance window'}
+                aria-label={pendingDeleteId === w.id ? 'Confirm delete maintenance window' : 'Delete maintenance window'}
+                className={
+                  pendingDeleteId === w.id
+                    ? 'opacity-100 text-xs font-medium text-red-500 hover:text-red-400 px-1.5 py-0.5 rounded bg-red-500/10 border border-red-500/40 transition-opacity'
+                    : 'opacity-0 group-hover:opacity-100 text-xs text-red-400 hover:text-red-300 px-1 transition-opacity'
+                }
               >
-                ✕
+                {pendingDeleteId === w.id ? 'Confirm?' : '✕'}
               </button>
             </div>
           ))
