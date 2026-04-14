@@ -11,7 +11,7 @@
  * Uses live Drasi API data when available, demo data when in demo mode.
  */
 import React, { useState, useEffect, useMemo, useCallback, useRef, useLayoutEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import {
   Database, Globe, Search, Radio,
   TrendingDown, TrendingUp, Maximize2, Pin, Square, X, Settings,
@@ -364,7 +364,11 @@ const TRAFFIC_PATTERNS: ReadonlyArray<ReadonlyArray<number>> = [
 ]
 
 function FlowLine({ d, dashed, active = true, delay = 0, lineKey = '' }: FlowLineProps & { lineKey?: string }) {
-  const isAnimated = active && !dashed
+  // SVG SMIL <animateMotion> is NOT controlled by the global
+  // `@media (prefers-reduced-motion: reduce)` CSS rules, so we must gate
+  // the animated flow dots behind a JS check of the user preference (#7885).
+  const prefersReducedMotion = useReducedMotion()
+  const isAnimated = active && !dashed && !prefersReducedMotion
   // Per-line cycle duration varies so flows aren't synchronized.
   const lineDur = FLOW_DOT_CYCLE_S + seededRand(lineKey, 1) * 3  // 5s–8s
   // Pick a traffic pattern deterministically from the line key.
