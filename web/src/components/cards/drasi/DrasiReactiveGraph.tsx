@@ -35,8 +35,10 @@ const FLOW_DOT_CYCLE_S = 2
 const LINE_STROKE_WIDTH_PX = 1.2
 /** Flow dot radius in pixels */
 const FLOW_DOT_RADIUS_PX = 3
-/** Horizontal gap reserved for trunk lines between columns (px) */
-const TRUNK_GAP_PX = 42
+/** Max node-card width so the trunk/branch lines have breathing room */
+const NODE_MAX_WIDTH_PX = 220
+/** Max width for the queries column (wider to fit nested results table) */
+const QUERY_MAX_WIDTH_PX = 300
 
 // ---------------------------------------------------------------------------
 // Types
@@ -936,7 +938,13 @@ export function DrasiReactiveGraph() {
         <div
           className="relative grid h-full"
           style={{
-            gridTemplateColumns: `minmax(0, 1fr) ${TRUNK_GAP_PX}px minmax(0, 2fr) ${TRUNK_GAP_PX}px minmax(0, 1fr)`,
+            // Blocks are capped at explicit max widths so the 1fr trunk
+            // columns absorb the remaining width — gives the SVG flow
+            // lines + animated dots plenty of horizontal room.
+            gridTemplateColumns:
+              `minmax(0, ${NODE_MAX_WIDTH_PX}px) minmax(40px, 1fr) ` +
+              `minmax(0, ${QUERY_MAX_WIDTH_PX}px) minmax(40px, 1fr) ` +
+              `minmax(0, ${NODE_MAX_WIDTH_PX}px)`,
             zIndex: 1,
           }}
         >
