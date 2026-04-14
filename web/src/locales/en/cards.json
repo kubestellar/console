@@ -3097,7 +3097,12 @@
   },
   "maintenanceWindows": {
     "maintenance": "Maintenance",
-    "patching": "Patching"
+    "patching": "Patching",
+    "deleteTitle": "Delete maintenance window",
+    "deleteAria": "Delete maintenance window",
+    "clickAgainToConfirm": "Click again to confirm delete",
+    "confirmDeleteAria": "Confirm delete maintenance window",
+    "confirmLabel": "Confirm?"
   },
   "kagentAgentPicker": {
     "noAgentsAvailable": "No kagent agents available"

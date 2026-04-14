@@ -1,9 +1,9 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useClusters } from '../../hooks/useMCP'
-
-/** Two-click delete confirm window — matches AlertRules #5591 pattern */
-const DELETE_CONFIRM_TIMEOUT_MS = 3000
+// Shared two-click delete-confirm window (also used by ResolutionHistoryPanel)
+// — keep a single source of truth for delete-confirm timing (#7935).
+import { DELETE_CONFIRM_TIMEOUT_MS } from '../../lib/constants/network'
 
 interface MaintenanceWindow {
   id: string
@@ -38,7 +38,7 @@ function saveWindows(windows: MaintenanceWindow[]) {
 }
 
 export function MaintenanceWindows() {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['common', 'cards'])
   const { clusters } = useClusters()
   const [windows, setWindows] = useState<MaintenanceWindow[]>(loadWindows)
   const [showForm, setShowForm] = useState(false)
@@ -101,7 +101,22 @@ export function MaintenanceWindows() {
   // Prevents accidental loss of scheduled maintenance windows (#7932).
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
   const deleteTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const confirmButtonRef = useRef<HTMLButtonElement | null>(null)
   useEffect(() => () => clearTimeout(deleteTimerRef.current), [])
+
+  // Outside-click cancels the pending-confirm state, matching the PR #7934
+  // test-plan promise that clicking away resets the confirm pill (#7935).
+  useEffect(() => {
+    if (!pendingDeleteId) return
+    const onPointerDown = (e: PointerEvent) => {
+      const btn = confirmButtonRef.current
+      if (btn && e.target instanceof Node && btn.contains(e.target)) return
+      clearTimeout(deleteTimerRef.current)
+      setPendingDeleteId(null)
+    }
+    document.addEventListener('pointerdown', onPointerDown)
+    return () => document.removeEventListener('pointerdown', onPointerDown)
+  }, [pendingDeleteId])
 
   const handleDelete = (id: string) => {
     if (pendingDeleteId === id) {
@@ -229,16 +244,25 @@ export function MaintenanceWindows() {
                 </div>
               </div>
               <button
+                ref={pendingDeleteId === w.id ? confirmButtonRef : undefined}
                 onClick={() => handleDelete(w.id)}
-                title={pendingDeleteId === w.id ? 'Click again to confirm delete' : 'Delete maintenance window'}
-                aria-label={pendingDeleteId === w.id ? 'Confirm delete maintenance window' : 'Delete maintenance window'}
+                title={pendingDeleteId === w.id
+                  ? t('cards:maintenanceWindows.clickAgainToConfirm')
+                  : t('cards:maintenanceWindows.deleteTitle')}
+                aria-label={pendingDeleteId === w.id
+                  ? t('cards:maintenanceWindows.confirmDeleteAria')
+                  : t('cards:maintenanceWindows.deleteAria')}
+                // Keyboard users need the button visible when focused — the
+                // opacity-0 default hides it (and its focus ring) entirely
+                // without a pointer hover (#7935). group-focus-within and
+                // focus-visible reveal it for keyboard/assistive tech.
                 className={
                   pendingDeleteId === w.id
                     ? 'opacity-100 text-xs font-medium text-red-500 hover:text-red-400 px-1.5 py-0.5 rounded bg-red-500/10 border border-red-500/40 transition-opacity'
-                    : 'opacity-0 group-hover:opacity-100 text-xs text-red-400 hover:text-red-300 px-1 transition-opacity'
+                    : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-red-400 text-xs text-red-400 hover:text-red-300 px-1 rounded transition-opacity'
                 }
               >
-                {pendingDeleteId === w.id ? 'Confirm?' : '✕'}
+                {pendingDeleteId === w.id ? t('cards:maintenanceWindows.confirmLabel') : '✕'}
               </button>
             </div>
           ))
