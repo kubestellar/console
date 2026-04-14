@@ -556,10 +556,18 @@ describe('useDeleteWorkload', () => {
     expect(result.current.isLoading).toBe(false)
     expect(result.current.error).toBeNull()
 
-    // Verify the URL includes cluster/namespace/name path segments
+    // After #8013, delete goes through kc-agent as POST with JSON body
     const fetchSpy = globalThis.fetch as ReturnType<typeof vi.fn>
     const callUrl = fetchSpy.mock.calls[0]?.[0] as string
-    expect(callUrl).toBe('/api/workloads/prod/production/api-server')
+    expect(callUrl).toBe('http://127.0.0.1:8585/workloads/delete')
+
+    const callOpts = fetchSpy.mock.calls[0]?.[1] as RequestInit
+    expect(callOpts.method).toBe('POST')
+    expect(JSON.parse(callOpts.body as string)).toEqual({
+      cluster: 'prod',
+      namespace: 'production',
+      name: 'api-server',
+    })
   })
 
   it('handles delete failure with error body', async () => {
