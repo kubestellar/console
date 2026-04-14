@@ -505,12 +505,14 @@ export function MissionSidebar() {
     }
   }, [isSidebarOpen, isFullScreen, showBrowser, showMissionControl, setFullScreen, closeSidebar])
 
-  // Count missions needing attention
-  // Blocked missions are stuck waiting on user action (preflight failure,
-  // missing credentials, RBAC denial). Surfacing them in the attention
-  // indicator ensures the user sees the required action (#5933).
+  // Count missions needing attention — statuses where the user must act.
+  // Blocked missions are stuck on preflight failure / missing credentials /
+  // RBAC denial (#5933). `failed` is deliberately excluded (#7918): failed
+  // missions are terminal and are filtered out of the active list by
+  // `isActiveMission`, so including them here produced a badge count the
+  // user could not reconcile with the visible active list.
   const needsAttention = missions.filter(m =>
-    m.status === 'waiting_input' || m.status === 'failed' || m.status === 'blocked'
+    m.status === 'waiting_input' || m.status === 'blocked'
   ).length
 
   const runningCount = missions.filter(m => m.status === 'running').length
@@ -1347,11 +1349,13 @@ export function MissionSidebarToggle() {
   const { missions, isSidebarOpen, openSidebar } = useMissions()
   const { isMobile } = useMobile()
 
-  // Blocked missions are stuck waiting on user action (preflight failure,
-  // missing credentials, RBAC denial). Surfacing them in the attention
-  // indicator ensures the user sees the required action (#5933).
+  // Blocked missions are stuck on preflight failure / missing credentials /
+  // RBAC denial (#5933). `failed` is deliberately excluded (#7918): failed
+  // missions are terminal and are filtered out of the active list by
+  // `isActiveMission`, so including them here produced a badge count the
+  // user could not reconcile with the visible active list.
   const needsAttention = missions.filter(m =>
-    m.status === 'waiting_input' || m.status === 'failed' || m.status === 'blocked'
+    m.status === 'waiting_input' || m.status === 'blocked'
   ).length
 
   const runningCount = missions.filter(m => m.status === 'running').length

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"sync"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -14,6 +15,11 @@ import (
 
 const (
 	kagentiTimeout = 30 * time.Second
+	// kagentiSummaryPerCallTimeout is the per-call timeout used when the
+	// summary handler fans out its CRD queries concurrently. It mirrors
+	// kagentCRDPerCallTimeout so a single slow CRD cannot starve the
+	// others inside one shared 30-second budget (#7915).
+	kagentiSummaryPerCallTimeout = 15 * time.Second
 )
 
 // Kagenti CRD Group/Version/Resource definitions
@@ -453,9 +459,6 @@ func (s *Server) handleKagentiSummary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), kagentiTimeout)
-	defer cancel()
-
 	dynClient, err := s.k8sClient.GetDynamicClient(cluster)
 	if err != nil {
 		slog.Warn("error fetching kagenti summary", "error", err)
@@ -468,11 +471,32 @@ func (s *Server) handleKagentiSummary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var agentCount, readyAgents, buildCount, activeBuilds, toolCount, cardCount int
-	frameworks := map[string]int{}
+	// Fan the 4 CRD list calls out concurrently, each with its own
+	// per-call timeout, so a slow/unavailable CRD cannot starve the
+	// others within one shared 30-second context budget. This matches
+	// handleKagentCRDSummary's pattern (#7915).
+	var (
+		mu                                                       sync.Mutex
+		agentCount, readyAgents, buildCount, activeBuilds        int
+		toolCount, cardCount                                     int
+		frameworks                                               = map[string]int{}
+		wg                                                       sync.WaitGroup
+	)
+	const numKagentiCRDQueries = 4
+	wg.Add(numKagentiCRDQueries)
 
-	// Count agents
-	if agentList, err := dynClient.Resource(kagentiAgentGVR).List(ctx, metav1.ListOptions{}); err == nil {
+	// Count agents + collect frameworks
+	go func() {
+		defer wg.Done()
+		ctx, cancel := context.WithTimeout(r.Context(), kagentiSummaryPerCallTimeout)
+		defer cancel()
+		agentList, listErr := dynClient.Resource(kagentiAgentGVR).List(ctx, metav1.ListOptions{})
+		if listErr != nil {
+			slog.Warn("kagenti summary: agents query failed", "error", listErr)
+			return
+		}
+		mu.Lock()
+		defer mu.Unlock()
 		agentCount = len(agentList.Items)
 		for _, item := range agentList.Items {
 			statusMap, _ := item.Object["status"].(map[string]any)
@@ -490,10 +514,20 @@ func (s *Server) handleKagentiSummary(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
-	}
+	}()
 
 	// Count builds
-	if buildList, err := dynClient.Resource(kagentiBuildGVR).List(ctx, metav1.ListOptions{}); err == nil {
+	go func() {
+		defer wg.Done()
+		ctx, cancel := context.WithTimeout(r.Context(), kagentiSummaryPerCallTimeout)
+		defer cancel()
+		buildList, listErr := dynClient.Resource(kagentiBuildGVR).List(ctx, metav1.ListOptions{})
+		if listErr != nil {
+			slog.Warn("kagenti summary: builds query failed", "error", listErr)
+			return
+		}
+		mu.Lock()
+		defer mu.Unlock()
 		buildCount = len(buildList.Items)
 		for _, item := range buildList.Items {
 			statusMap, _ := item.Object["status"].(map[string]any)
@@ -504,17 +538,39 @@ func (s *Server) handleKagentiSummary(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
-	}
+	}()
 
 	// Count tools
-	if toolList, err := dynClient.Resource(kagentiToolGVR).List(ctx, metav1.ListOptions{}); err == nil {
+	go func() {
+		defer wg.Done()
+		ctx, cancel := context.WithTimeout(r.Context(), kagentiSummaryPerCallTimeout)
+		defer cancel()
+		toolList, listErr := dynClient.Resource(kagentiToolGVR).List(ctx, metav1.ListOptions{})
+		if listErr != nil {
+			slog.Warn("kagenti summary: tools query failed", "error", listErr)
+			return
+		}
+		mu.Lock()
+		defer mu.Unlock()
 		toolCount = len(toolList.Items)
-	}
+	}()
 
 	// Count cards
-	if cardList, err := dynClient.Resource(kagentiCardGVR).List(ctx, metav1.ListOptions{}); err == nil {
+	go func() {
+		defer wg.Done()
+		ctx, cancel := context.WithTimeout(r.Context(), kagentiSummaryPerCallTimeout)
+		defer cancel()
+		cardList, listErr := dynClient.Resource(kagentiCardGVR).List(ctx, metav1.ListOptions{})
+		if listErr != nil {
+			slog.Warn("kagenti summary: cards query failed", "error", listErr)
+			return
+		}
+		mu.Lock()
+		defer mu.Unlock()
 		cardCount = len(cardList.Items)
-	}
+	}()
+
+	wg.Wait()
 
 	json.NewEncoder(w).Encode(map[string]any{
 		"agentCount":   agentCount,

@@ -674,12 +674,38 @@ func (m *LocalClusterManager) ConnectVCluster(name, namespace string) error {
 	return nil
 }
 
-// DisconnectVCluster disconnects from a vCluster
+// DisconnectVCluster disconnects from a vCluster by removing its kubeconfig
+// context entry. The plain `vcluster disconnect` command operates on the
+// current-context (last connected) regardless of arguments, so a user asking
+// to disconnect vCluster B could end up disconnecting A if A was the current
+// context (#7921).
+//
+// To disconnect a specific instance we look it up in `vcluster list --output
+// json` (which populates VClusterInstance.Context for connected entries),
+// then run `kubectl config delete-context <context>` on that exact entry.
+// This matches the ConnectVCluster path, which adds a context entry via
+// `vcluster connect --update-current=false` without changing current-context.
 func (m *LocalClusterManager) DisconnectVCluster(name, namespace string) error {
 	m.broadcastProgress("vcluster", name, "disconnecting",
 		fmt.Sprintf("Disconnecting from vCluster '%s'...", name), progressConnecting)
 
-	cmd := execCommand("vcluster", "disconnect")
+	instances, err := m.ListVClusters()
+	if err != nil {
+		return fmt.Errorf("vcluster disconnect failed: could not list vclusters to find target context: %w", err)
+	}
+
+	var targetContext string
+	for _, inst := range instances {
+		if inst.Name == name && inst.Namespace == namespace {
+			targetContext = inst.Context
+			break
+		}
+	}
+	if targetContext == "" {
+		return fmt.Errorf("vcluster disconnect failed: vcluster %q in namespace %q has no kubeconfig context (already disconnected?)", name, namespace)
+	}
+
+	cmd := execCommand("kubectl", "config", "delete-context", targetContext)
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 
