@@ -69,7 +69,7 @@ function defaultConnectedFetch(url: RequestInfo | URL): Promise<Response> {
     return Promise.resolve(jsonResponse({ tools: [] }))
   }
   if (urlStr.includes('/vcluster/list')) {
-    return Promise.resolve(jsonResponse({ instances: [] }))
+    return Promise.resolve(jsonResponse({ vclusters: [] }))
   }
   if (urlStr.includes('/local-clusters')) {
     return Promise.resolve(jsonResponse({ clusters: [] }))
@@ -412,7 +412,7 @@ describe('useLocalClusterTools', () => {
         if (urlStr.includes('/local-cluster-tools')) {
           return Promise.resolve(jsonResponse({ tools: MOCK_TOOLS }))
         }
-        return Promise.resolve(jsonResponse({ clusters: [], instances: [] }))
+        return Promise.resolve(jsonResponse({ clusters: [], vclusters: [] }))
       })
 
       const { result } = renderHook(() => useLocalClusterTools())
@@ -431,7 +431,7 @@ describe('useLocalClusterTools', () => {
           return Promise.resolve(jsonResponse({ tools: [] }))
         }
         if (urlStr.includes('/vcluster/list')) {
-          return Promise.resolve(jsonResponse({ instances: [] }))
+          return Promise.resolve(jsonResponse({ vclusters: [] }))
         }
         if (urlStr.includes('/local-clusters')) {
           return Promise.resolve(jsonResponse({ clusters: MOCK_CLUSTERS }))
@@ -451,7 +451,7 @@ describe('useLocalClusterTools', () => {
       vi.mocked(fetch).mockImplementation((url) => {
         const urlStr = String(url)
         if (urlStr.includes('/vcluster/list')) {
-          return Promise.resolve(jsonResponse({ instances: MOCK_VCLUSTER_INSTANCES }))
+          return Promise.resolve(jsonResponse({ vclusters: MOCK_VCLUSTER_INSTANCES }))
         }
         return Promise.resolve(jsonResponse({ tools: [], clusters: [] }))
       })
@@ -470,7 +470,7 @@ describe('useLocalClusterTools', () => {
         if (urlStr.includes('/local-cluster-tools')) {
           return Promise.resolve(jsonResponse({ tools: MOCK_TOOLS }))
         }
-        return Promise.resolve(jsonResponse({ clusters: [], instances: [] }))
+        return Promise.resolve(jsonResponse({ clusters: [], vclusters: [] }))
       })
 
       const { result } = renderHook(() => useLocalClusterTools())
@@ -1254,7 +1254,7 @@ describe('useLocalClusterTools', () => {
           return Promise.resolve(jsonResponse({ tools: MOCK_TOOLS }))
         }
         if (urlStr.includes('/vcluster/list')) {
-          return Promise.resolve(jsonResponse({ instances: [] }))
+          return Promise.resolve(jsonResponse({ vclusters: [] }))
         }
         if (urlStr.includes('/local-clusters')) {
           return Promise.resolve(jsonResponse({ clusters: MOCK_CLUSTERS }))
@@ -1293,7 +1293,7 @@ describe('useLocalClusterTools', () => {
           return Promise.resolve(jsonResponse({ clusters: MOCK_CLUSTERS }))
         }
         if (urlStr.includes('/vcluster/list')) {
-          return Promise.resolve(jsonResponse({ instances: [] }))
+          return Promise.resolve(jsonResponse({ vclusters: [] }))
         }
         return Promise.resolve(jsonResponse({ tools: [] }))
       })
@@ -1322,7 +1322,7 @@ describe('useLocalClusterTools', () => {
           return Promise.resolve(jsonResponse({ tools: MOCK_TOOLS }))
         }
         if (urlStr.includes('/vcluster/list')) {
-          return Promise.resolve(jsonResponse({ instances: MOCK_VCLUSTER_INSTANCES }))
+          return Promise.resolve(jsonResponse({ vclusters: MOCK_VCLUSTER_INSTANCES }))
         }
         if (urlStr.includes('/local-clusters')) {
           return Promise.resolve(jsonResponse({ clusters: MOCK_CLUSTERS }))

@@ -98,7 +98,7 @@ export function VClusterStatus({ config: _config }: VClusterStatusProps) {
   const SORT_OPTIONS = SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) }))
   const { isConnected } = useLocalAgent()
   const { isDemoMode } = useDemoMode()
-  const { vclusterInstances } = useLocalClusterTools()
+  const { vclusterInstances, isVClustersLoading, vclustersError } = useLocalClusterTools()
 
   // Use live agent data when connected and not in demo mode. When the agent
   // is connected but returns zero vclusters, we still treat that as live
@@ -117,9 +117,14 @@ export function VClusterStatus({ config: _config }: VClusterStatusProps) {
     return { totalVClusters: total, runningCount: running, pausedCount: paused, failedCount: failed }
   }, [vclusters])
 
-  const isLoading = false
-  const hasError = false
-  useCardLoadingState({ isLoading: false, hasAnyData: vclusters.length > 0, isDemoData: !isLive })
+  // Only surface loading/error for live fetches — demo mode is sync. Render
+  // the skeleton during the initial /vcluster/list fetch (before any data
+  // arrives), and the error UI when the fetch fails with no cached instances.
+  // Once we have data, keep showing it while background refreshes happen
+  // (SWR-style) to avoid flicker (#7929 Copilot review on PR #7916).
+  const isLoading = isLive && isVClustersLoading && vclusterInstances.length === 0
+  const hasError = isLive && !!vclustersError && vclusterInstances.length === 0
+  useCardLoadingState({ isLoading, hasAnyData: vclusters.length > 0, isDemoData: !isLive })
   const {
     items: paginatedVClusters, totalItems, currentPage, totalPages, itemsPerPage,
     goToPage, needsPagination, setItemsPerPage,

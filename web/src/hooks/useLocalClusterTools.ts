@@ -82,6 +82,11 @@ export function useLocalClusterTools() {
   // vCluster state
   const [vclusterInstances, setVclusterInstances] = useState<VClusterInstance[]>([])
   const [vclusterClusterStatus, setVclusterClusterStatus] = useState<VClusterClusterStatus[]>([])
+  // Dedicated loading/error state for /vcluster/list so the card can show a
+  // skeleton on initial fetch and surface agent failures instead of silently
+  // displaying stale or empty data (#7929 Copilot review on PR #7916).
+  const [isVClustersLoading, setIsVClustersLoading] = useState(false)
+  const [vclustersError, setVClustersError] = useState<string | null>(null)
   const [isConnecting, setIsConnecting] = useState<string | null>(null) // vcluster name being connected
   const [isDisconnecting, setIsDisconnecting] = useState<string | null>(null) // vcluster name being disconnected
 
@@ -283,15 +288,18 @@ export function useLocalClusterTools() {
     // In demo mode (without agent connected), show demo vcluster instances
     if (isDemoMode && !isConnected) {
       setVclusterInstances(DEMO_VCLUSTER_INSTANCES)
+      setVClustersError(null)
       setError(null)
       return
     }
 
     if (!isConnected) {
       setVclusterInstances([])
+      setVClustersError(null)
       return
     }
 
+    setIsVClustersLoading(true)
     try {
       const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/vcluster/list`, {
         signal: AbortSignal.timeout(VCLUSTER_LIST_TIMEOUT_MS) })
@@ -301,11 +309,25 @@ export function useLocalClusterTools() {
         // handleVClusterList). Historically this read `data.instances`, which
         // was always undefined — live data silently fell back to [] (#7914).
         setVclusterInstances(data.vclusters || [])
+        setVClustersError(null)
         setError(null)
+      } else {
+        // Non-2xx: clear stale instances and surface the failure so the card
+        // can render an error state instead of silently showing empty or
+        // stale data (#7929 Copilot review).
+        const message = `vCluster list failed: HTTP ${response.status}`
+        console.error(message)
+        setVclusterInstances([])
+        setVClustersError(message)
       }
     } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to fetch vCluster instances'
       console.error('Failed to fetch vCluster instances:', err)
+      setVclusterInstances([])
+      setVClustersError(message)
       setError('Failed to fetch vCluster instances')
+    } finally {
+      setIsVClustersLoading(false)
     }
   }, [isConnected, isDemoMode])
 
@@ -578,6 +600,8 @@ export function useLocalClusterTools() {
     // vCluster state and actions
     vclusterInstances,
     vclusterClusterStatus,
+    isVClustersLoading,
+    vclustersError,
     checkVClusterOnCluster,
     isConnecting,
     isDisconnecting,
