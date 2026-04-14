@@ -141,9 +141,17 @@ func (h *KagentiProviderProxyHandler) CallTool(c *fiber.Ctx) error {
 	}
 	defer stream.Close()
 
-	body, err := io.ReadAll(stream)
+	// #7964 — bound the agent response so one runaway invocation cannot
+	// force unbounded allocations. Shares maxAgentResponseBytes with the
+	// kagent proxy since both expose the same A2A surface.
+	body, err := io.ReadAll(io.LimitReader(stream, maxAgentResponseBytes+1))
 	if err != nil {
 		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": "failed to read agent response"})
+	}
+	if int64(len(body)) > maxAgentResponseBytes {
+		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{
+			"error": fmt.Sprintf("agent response exceeded max size of %d bytes", maxAgentResponseBytes),
+		})
 	}
 
 	return c.JSON(fiber.Map{
