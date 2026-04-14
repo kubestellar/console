@@ -1,0 +1,164 @@
+name: Console App Smoke
+
+# Verifies that the kubestellar-console-bot GitHub App credentials are
+# valid and usable by minting a JWT and exchanging it for a short-lived
+# installation token. Does NOT create any issues — purely a credential
+# health check.
+#
+# Also runs the rewards classifier unit tests so any change to the
+# attribution logic is caught before it hits the leaderboard.
+#
+# Runs every 30 minutes. Opens a priority/critical + ai-needs-human
+# issue on failure (deduplicated by label). Catches:
+#   - App private key rotation not propagated to the repo secret
+#   - Installation revoked on the target account
+#   - Permissions removed (e.g. Issues:write)
+#   - GitHub API format changes
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: console-app-smoke
+  cancel-in-progress: true
+
+jobs:
+  # ── 1. GitHub App credential health ──────────────────────────────
+  credential-smoke:
+    if: github.repository == 'kubestellar/console'
+    name: App Credential Smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pyjwt (for signing App JWT)
+        run: pip install --quiet pyjwt cryptography
+
+      - name: Mint App JWT and exchange for installation token
+        env:
+          APP_ID: ${{ secrets.KUBESTELLAR_CONSOLE_APP_ID }}
+          INSTALLATION_ID: ${{ secrets.KUBESTELLAR_CONSOLE_APP_INSTALLATION_ID }}
+          PRIVATE_KEY: ${{ secrets.KUBESTELLAR_CONSOLE_APP_PRIVATE_KEY }}
+        run: |
+          if [ -z "$APP_ID" ] || [ -z "$INSTALLATION_ID" ] || [ -z "$PRIVATE_KEY" ]; then
+            echo "::error::One or more App secrets missing"
+            exit 1
+          fi
+
+          # Sign a short-lived App JWT with the private key.
+          JWT=$(python3 <<'PY'
+          import jwt, os, time
+          key = os.environ["PRIVATE_KEY"]
+          now = int(time.time())
+          token = jwt.encode(
+              {"iat": now - 60, "exp": now + 540, "iss": os.environ["APP_ID"]},
+              key, algorithm="RS256",
+          )
+          print(token)
+          PY
+          )
+
+          # Exchange JWT for an installation access token.
+          RESP=$(curl -sS -o /tmp/app-token.json -w "%{http_code}" -X POST \
+            -H "Authorization: Bearer $JWT" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/app/installations/$INSTALLATION_ID/access_tokens")
+
+          if [ "$RESP" != "201" ]; then
+            echo "::error::Installation token request returned HTTP $RESP"
+            cat /tmp/app-token.json
+            exit 1
+          fi
+
+          # Verify the token has the expected permissions.
+          PERMS=$(python3 -c "import json; d=json.load(open('/tmp/app-token.json')); print(','.join(d.get('permissions', {}).keys()))")
+          echo "Granted permissions: $PERMS"
+          if ! echo "$PERMS" | grep -q "issues"; then
+            echo "::error::Installation token lacks 'issues' permission"
+            exit 1
+          fi
+
+          # Verify the token actually works by calling a trivial endpoint.
+          TOKEN=$(python3 -c "import json; print(json.load(open('/tmp/app-token.json'))['token'])")
+          HTTP=$(curl -sS -o /dev/null -w "%{http_code}" \
+            -H "Authorization: Bearer $TOKEN" \
+            "https://api.github.com/installation/repositories")
+          if [ "$HTTP" != "200" ]; then
+            echo "::error::Token did not authenticate /installation/repositories — got HTTP $HTTP"
+            exit 1
+          fi
+
+          echo "✓ App credentials healthy"
+
+      - name: Create issue on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'console-app-smoke-failure',
+              per_page: 1,
+            });
+            if (existing.data.length > 0) {
+              console.log(`Issue already open: #${existing.data[0].number}`);
+              return;
+            }
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🚨 kubestellar-console-bot App credentials failed health check`,
+              body: [
+                '## Console App Credential Failure',
+                '',
+                `**Run:** ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+                `**Time:** ${new Date().toISOString()}`,
+                '',
+                'The \`kubestellar-console-bot\` GitHub App credentials could not be exchanged for a valid installation token.',
+                '',
+                '### Likely causes',
+                '- Private key rotated, repo secret not updated',
+                '- App installation revoked on the target account',
+                '- Required permissions removed from the App',
+                '- GitHub API outage',
+                '',
+                '### Effect',
+                'While this is broken, **console-submitted issues will not get App attribution** — the backend falls back to the PAT (\`FEEDBACK_GITHUB_TOKEN\`). Rewards will continue to award points but without the anti-gaming guarantee.',
+              ].join('\n'),
+              labels: ['console-app-smoke-failure', 'priority/critical', 'ai-needs-human'],
+            });
+
+  # ── 2. Rewards classifier unit tests ────────────────────────────
+  classifier-contract:
+    if: github.repository == 'kubestellar/console'
+    name: Rewards Classifier Contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Run classifier + attribution tests
+        run: |
+          go test -timeout 60s -v -run \
+            'TestNewGitHubApp|TestExpectedApp|TestIsConsoleApp|TestRequiresApp|TestClassifyIssue' \
+            ./pkg/api/handlers/...

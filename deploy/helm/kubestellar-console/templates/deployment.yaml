@@ -189,6 +189,33 @@ spec:
                   name: {{ .Values.feedbackGithubToken.existingSecret | default (include "kubestellar-console.fullname" .) }}
                   key: {{ .Values.feedbackGithubToken.existingSecretKey | default "feedback-github-token" }}
             {{- end }}
+            {{- /* kubestellar-console-bot GitHub App credentials (anti-gaming on rewards leaderboard).
+                   All three must be set together — the backend's token provider treats any missing
+                   value as "App auth disabled" and silently falls back to FEEDBACK_GITHUB_TOKEN. */}}
+            {{- if .Values.consoleApp.existingSecret }}
+            - name: KUBESTELLAR_CONSOLE_APP_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.consoleApp.existingSecret }}
+                  key: {{ .Values.consoleApp.existingSecretAppIDKey | default "console-app-id" }}
+                  optional: true
+            - name: KUBESTELLAR_CONSOLE_APP_INSTALLATION_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.consoleApp.existingSecret }}
+                  key: {{ .Values.consoleApp.existingSecretInstallationIDKey | default "console-app-installation-id" }}
+                  optional: true
+            - name: KUBESTELLAR_CONSOLE_APP_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.consoleApp.existingSecret }}
+                  key: {{ .Values.consoleApp.existingSecretPrivateKeyKey | default "console-app-private-key" }}
+                  optional: true
+            {{- end }}
+            {{- if .Values.consoleApp.attributionCutoff }}
+            - name: CONSOLE_APP_ATTRIBUTION_CUTOFF
+              value: {{ .Values.consoleApp.attributionCutoff | quote }}
+            {{- end }}
             {{- if or .Values.googleDrive.existingSecret .Values.googleDrive.apiKey }}
             - name: GOOGLE_DRIVE_API_KEY
               valueFrom:

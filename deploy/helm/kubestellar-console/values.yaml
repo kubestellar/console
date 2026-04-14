@@ -120,6 +120,27 @@ googleDrive:
   existingSecretKey: google-drive-api-key
   folderId: "1r2Z2Xp1L0KonUlvQHvEzed8AO9Xj8IPm"
 
+# kubestellar-console-bot GitHub App — used to create feedback issues with
+# GitHub-stamped attribution (anti-gaming on the rewards leaderboard).
+# All three secret keys must exist in existingSecret. If existingSecret is
+# unset or any key is missing, the backend falls back to feedbackGithubToken
+# (PAT) and console-submitted issues will not receive App attribution.
+# See pkg/api/handlers/github_app_auth.go.
+consoleApp:
+  # Name of the Kubernetes Secret holding the three App credentials.
+  # When empty, App auth is disabled and the backend uses the PAT.
+  existingSecret: ""
+  # Keys within existingSecret. Defaults match the deploy workflow
+  # that populates kc-secrets from the GitHub repo secrets.
+  existingSecretAppIDKey: console-app-id
+  existingSecretInstallationIDKey: console-app-installation-id
+  existingSecretPrivateKeyKey: console-app-private-key
+  # RFC 3339 timestamp. Once set, issues created AFTER this date must
+  # have performed_via_github_app.slug = kubestellar-console-bot to earn
+  # the 300/100-pt console-tier reward. Pre-cutoff issues grandfathered.
+  # Leave empty during rollout (Phase 1) to keep existing scoring.
+  attributionCutoff: ""
+
 # Claude AI configuration (optional)
 claude:
   apiKey: ""

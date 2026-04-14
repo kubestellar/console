@@ -1,0 +1,203 @@
+name: Console App Roundtrip
+
+# End-to-end test that creates a real issue via the kubestellar-console-bot
+# App and verifies GitHub stamps performed_via_github_app.slug correctly.
+# This catches:
+#   - App loses repo access
+#   - GitHub stops returning performed_via_github_app on search results
+#   - Ops drift between what the App can do and what the backend assumes
+#
+# Creates one issue per run, immediately closes and locks it with a
+# dedicated label (test/auto-delete) so it's easy to bulk-clean later.
+# Runs daily at 06:00 UTC. Opens a priority/critical + ai-needs-human
+# failure issue on contract violation.
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: console-app-roundtrip
+  cancel-in-progress: true
+
+env:
+  TEST_REPO_OWNER: "kubestellar"
+  TEST_REPO_NAME: "console"
+  TEST_LABEL: "test/auto-delete"
+
+jobs:
+  roundtrip:
+    if: github.repository == 'kubestellar/console'
+    name: App Roundtrip
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pyjwt
+        run: pip install --quiet pyjwt cryptography
+
+      - name: Create + verify + cleanup test issue
+        env:
+          APP_ID: ${{ secrets.KUBESTELLAR_CONSOLE_APP_ID }}
+          INSTALLATION_ID: ${{ secrets.KUBESTELLAR_CONSOLE_APP_INSTALLATION_ID }}
+          PRIVATE_KEY: ${{ secrets.KUBESTELLAR_CONSOLE_APP_PRIVATE_KEY }}
+          EXPECTED_SLUG: "kubestellar-console-bot"
+        run: |
+          set -e
+
+          # 1. Mint App JWT
+          JWT=$(python3 <<'PY'
+          import jwt, os, time
+          key = os.environ["PRIVATE_KEY"]
+          now = int(time.time())
+          print(jwt.encode(
+              {"iat": now - 60, "exp": now + 540, "iss": os.environ["APP_ID"]},
+              key, algorithm="RS256"))
+          PY
+          )
+
+          # 2. Exchange for installation token
+          TOKEN=$(curl -sS -X POST \
+            -H "Authorization: Bearer $JWT" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/app/installations/$INSTALLATION_ID/access_tokens" \
+            | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
+
+          if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+            echo "::error::Failed to obtain installation token"
+            exit 1
+          fi
+
+          # 3. Create a test issue. Body includes run metadata so it is
+          #    obvious which nightly created it if anyone spots it.
+          RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          TITLE="[auto-test] App roundtrip $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          BODY=$(cat <<EOF
+          Automated end-to-end test of the kubestellar-console-bot GitHub App.
+
+          This issue was created by the Console App Roundtrip workflow
+          to verify that issues created via the App's installation token
+          are correctly attributed by GitHub (performed_via_github_app.slug).
+
+          **Run:** ${RUN_URL}
+          **Created at:** $(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+          Safe to ignore — the workflow will close and lock this issue
+          immediately after verifying the attribution field.
+          EOF
+          )
+
+          echo "Creating test issue..."
+          CREATE_RESP=$(curl -sS -X POST \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            -d "$(python3 -c "
+          import json, os
+          print(json.dumps({
+              'title': '''$TITLE''',
+              'body': '''$BODY''',
+              'labels': ['${TEST_LABEL}']
+          }))
+          ")" \
+            "https://api.github.com/repos/${TEST_REPO_OWNER}/${TEST_REPO_NAME}/issues")
+
+          ISSUE_NUMBER=$(echo "$CREATE_RESP" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('number',''))")
+          if [ -z "$ISSUE_NUMBER" ]; then
+            echo "::error::Issue creation failed"
+            echo "$CREATE_RESP"
+            exit 1
+          fi
+          echo "Created issue #$ISSUE_NUMBER"
+
+          # 4. Fetch the issue back and verify attribution. Use a
+          #    different token (GITHUB_TOKEN) for the read to mirror
+          #    what the rewards classifier sees in production.
+          sleep 3  # small settle time for GitHub indexing
+          READ_RESP=$(curl -sS \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${TEST_REPO_OWNER}/${TEST_REPO_NAME}/issues/${ISSUE_NUMBER}")
+
+          ACTUAL_SLUG=$(echo "$READ_RESP" | python3 -c "
+          import sys, json
+          d = json.load(sys.stdin)
+          app = d.get('performed_via_github_app') or {}
+          print(app.get('slug') or '')
+          ")
+
+          # 5. Clean up FIRST so a verify failure still closes the issue.
+          echo "Closing + locking test issue #$ISSUE_NUMBER..."
+          curl -sS -X PATCH \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -d '{"state":"closed","state_reason":"not_planned"}' \
+            "https://api.github.com/repos/${TEST_REPO_OWNER}/${TEST_REPO_NAME}/issues/${ISSUE_NUMBER}" \
+            > /dev/null
+          curl -sS -X PUT \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -d '{"lock_reason":"resolved"}' \
+            "https://api.github.com/repos/${TEST_REPO_OWNER}/${TEST_REPO_NAME}/issues/${ISSUE_NUMBER}/lock" \
+            > /dev/null
+
+          # 6. Assert the attribution slug matches.
+          if [ "$ACTUAL_SLUG" != "$EXPECTED_SLUG" ]; then
+            echo "::error::Attribution contract violated — expected '$EXPECTED_SLUG', got '$ACTUAL_SLUG'"
+            echo "performed_via_github_app block:"
+            echo "$READ_RESP" | python3 -c "import sys,json; print(json.dumps(json.load(sys.stdin).get('performed_via_github_app'), indent=2))"
+            exit 1
+          fi
+
+          echo "✓ Roundtrip passed: issue #$ISSUE_NUMBER authored by '$ACTUAL_SLUG'"
+
+      - name: Create issue on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'console-app-roundtrip-failure',
+              per_page: 1,
+            });
+            if (existing.data.length > 0) {
+              console.log(`Issue already open: #${existing.data[0].number}`);
+              return;
+            }
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🚨 kubestellar-console-bot roundtrip failed — attribution contract broken`,
+              body: [
+                '## Console App Roundtrip Failure',
+                '',
+                `**Run:** ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+                `**Time:** ${new Date().toISOString()}`,
+                '',
+                'The roundtrip workflow tried to create a test issue via the \`kubestellar-console-bot\` App and GitHub did NOT stamp \`performed_via_github_app.slug = kubestellar-console-bot\` on the result.',
+                '',
+                '### Effect',
+                '**The rewards classifier gate is broken.** All console-submitted issues created today will score as web-UI submissions (50 pts) instead of console submissions (300/100 pts).',
+                '',
+                '### Likely causes',
+                '- App permissions changed (re-check Settings → GitHub Apps → kubestellar-console-bot)',
+                '- App installation revoked on target account',
+                '- GitHub temporarily dropped \`performed_via_github_app\` from API responses',
+                '- App renamed (update \`KUBESTELLAR_CONSOLE_APP_SLUG\` env var)',
+              ].join('\n'),
+              labels: ['console-app-roundtrip-failure', 'priority/critical', 'ai-needs-human'],
+            });
