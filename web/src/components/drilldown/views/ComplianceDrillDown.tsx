@@ -421,7 +421,7 @@ export function ComplianceDrillDown({ data }: Props) {
           <div className="flex items-center gap-1">
             {/* First/Last use the single-glyph ChevronsLeft/ChevronsRight (double-chevron)
                 instead of two overlapping single chevrons — reads as one control instead of
-                two arrows side-by-side. Fixes #7895. */}
+                two arrows side-by-side. */}
             <button
               onClick={() => setPage(0)}
               disabled={page === 0}

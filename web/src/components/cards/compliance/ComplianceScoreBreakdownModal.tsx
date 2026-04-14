@@ -189,7 +189,7 @@ function OverviewTab({ score, breakdown, scoreCtx, kubescapeData, kyvernoData }:
         <p className="text-xs text-muted-foreground mt-0.5">{scoreCtx.description}</p>
       </div>
 
-      {/* Aggregate stats — makes the Overview tab informative even when a single tool is connected. Fixes #7893. */}
+      {/* Aggregate stats — makes the Overview tab informative even when a single tool is connected. */}
       {totalChecks > 0 && (
         <div className="grid grid-cols-3 gap-3">
           <StatBox label="Total Checks" value={totalChecks} />
