@@ -9,7 +9,7 @@
 import { useCache } from '../../../lib/cache'
 import { useCardLoadingState } from '../CardDataContext'
 import { authFetch } from '../../../lib/api'
-import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants/network'
+import { FETCH_DEFAULT_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../../../lib/constants/network'
 import {
   TRINO_GATEWAY_DEMO_DATA,
   type TrinoGatewayData,
@@ -192,9 +192,9 @@ function aggregateGateways(
 
 async function fetchTrinoGatewayData(): Promise<TrinoGatewayData> {
   const [coordinators, workers, gatewayPods] = await Promise.all([
-    fetchPods(`/api/mcp/pods?labelSelector=${LABEL_TRINO_COORDINATOR}`),
-    fetchPods(`/api/mcp/pods?labelSelector=${LABEL_TRINO_WORKER}`),
-    fetchPods(`/api/mcp/pods?labelSelector=${LABEL_TRINO_GATEWAY}`),
+    fetchPods(`${LOCAL_AGENT_HTTP_URL}/pods?labelSelector=${LABEL_TRINO_COORDINATOR}`),
+    fetchPods(`${LOCAL_AGENT_HTTP_URL}/pods?labelSelector=${LABEL_TRINO_WORKER}`),
+    fetchPods(`${LOCAL_AGENT_HTTP_URL}/pods?labelSelector=${LABEL_TRINO_GATEWAY}`),
   ])
 
   const detected = coordinators.length > 0 || workers.length > 0 || gatewayPods.length > 0

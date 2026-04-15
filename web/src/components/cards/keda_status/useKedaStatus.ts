@@ -3,6 +3,7 @@ import { useCardLoadingState } from '../CardDataContext'
 import { KEDA_DEMO_DATA, type KedaDemoData, type KedaScaledObject, type KedaTriggerType } from './demoData'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants'
 import { authFetch } from '../../../lib/api'
+import { LOCAL_AGENT_HTTP_URL } from '../../../lib/constants/network'
 
 export type KedaStatus = KedaDemoData
 
@@ -74,7 +75,7 @@ function isPodReady(pod: BackendPodInfo): boolean {
 async function fetchCR(group: string, version: string, resource: string): Promise<CRItem[]> {
   try {
     const params = new URLSearchParams({ group, version, resource })
-    const resp = await authFetch(`/api/mcp/custom-resources?${params}`, {
+    const resp = await authFetch(`${LOCAL_AGENT_HTTP_URL}/custom-resources?${params}`, {
       headers: { Accept: 'application/json' },
       signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
     })
@@ -172,11 +173,11 @@ async function fetchPods(url: string): Promise<BackendPodInfo[]> {
 async function fetchKedaStatus(): Promise<KedaStatus> {
   // Step 1: Detect operator pods (label-filtered first, then unfiltered fallback)
   const labeledPods = await fetchPods(
-    '/api/mcp/pods?labelSelector=app.kubernetes.io%2Fpart-of%3Dkeda-operator',
+    `${LOCAL_AGENT_HTTP_URL}/pods?labelSelector=app.kubernetes.io%2Fpart-of%3Dkeda-operator`,
   )
   const kedaPods = labeledPods.length > 0
     ? labeledPods.filter(isKedaOperatorPod)
-    : (await fetchPods('/api/mcp/pods')).filter(isKedaOperatorPod)
+    : (await fetchPods(`${LOCAL_AGENT_HTTP_URL}/pods`)).filter(isKedaOperatorPod)
 
   if (kedaPods.length === 0) {
     return {

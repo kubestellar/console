@@ -3,6 +3,7 @@ import { useCardLoadingState } from '../CardDataContext'
 import { FLUENTD_DEMO_DATA, type FluentdDemoData } from './demoData'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants'
 import { authFetch } from '../../../lib/api'
+import { LOCAL_AGENT_HTTP_URL } from '../../../lib/constants/network'
 
 export type FluentdStatus = FluentdDemoData
 
@@ -174,7 +175,7 @@ async function fetchPods(url: string): Promise<BackendPodInfo[]> {
 
 async function fetchDaemonSets(namespace?: string): Promise<BackendDaemonSetInfo[]> {
   const query = namespace ? `?namespace=${encodeURIComponent(namespace)}` : ''
-  const resp = await authFetch(`/api/mcp/daemonsets${query}`, {
+  const resp = await authFetch(`${LOCAL_AGENT_HTTP_URL}/daemonsets${query}`, {
     headers: { Accept: 'application/json' },
     signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
   })
@@ -194,7 +195,7 @@ async function fetchEvents(namespace: string): Promise<BackendEventInfo[]> {
       limit: String(EVENT_SAMPLE_LIMIT),
     })
 
-    const resp = await authFetch(`/api/mcp/events?${params}`, {
+    const resp = await authFetch(`${LOCAL_AGENT_HTTP_URL}/events?${params}`, {
       headers: { Accept: 'application/json' },
       signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
     })
@@ -212,7 +213,7 @@ async function fetchEvents(namespace: string): Promise<BackendEventInfo[]> {
 
 async function fetchFluentdStatus(): Promise<FluentdStatus> {
   const [labeledPods, daemonSets, events] = await Promise.all([
-    fetchPods('/api/mcp/pods?labelSelector=app.kubernetes.io%2Fname%3Dfluentd').catch(() => []),
+    fetchPods(`${LOCAL_AGENT_HTTP_URL}/pods?labelSelector=app.kubernetes.io%2Fname%3Dfluentd`).catch(() => []),
     fetchDaemonSets(LOGGING_NAMESPACE).catch(() => []),
     fetchEvents(LOGGING_NAMESPACE),
   ])
@@ -221,7 +222,7 @@ async function fetchFluentdStatus(): Promise<FluentdStatus> {
   const fluentdDaemonSets = (daemonSets || []).filter(isFluentdDaemonSet)
 
   if ((fluentdPods || []).length === 0 && (fluentdDaemonSets || []).length === 0) {
-    const fallbackPods = (await fetchPods('/api/mcp/pods?labelSelector=app%3Dfluentd')).filter(isFluentdPod)
+    const fallbackPods = (await fetchPods(`${LOCAL_AGENT_HTTP_URL}/pods?labelSelector=app%3Dfluentd`)).filter(isFluentdPod)
     if (fallbackPods.length === 0) {
       return {
         ...INITIAL_DATA,

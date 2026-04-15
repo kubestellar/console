@@ -1,7 +1,7 @@
 import { useCache } from '../../../lib/cache'
 import { useCardLoadingState } from '../CardDataContext'
 import { authFetch } from '../../../lib/api'
-import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants/network'
+import { FETCH_DEFAULT_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../../../lib/constants/network'
 import {
   FAILOVER_TIMELINE_DEMO_DATA,
   type FailoverTimelineData,
@@ -69,7 +69,7 @@ function getArray(val: unknown): unknown[] {
 async function fetchCR(group: string, version: string, resource: string): Promise<CRItem[]> {
   try {
     const params = new URLSearchParams({ group, version, resource })
-    const resp = await authFetch(`/api/mcp/custom-resources?${params}`, {
+    const resp = await authFetch(`${LOCAL_AGENT_HTTP_URL}/custom-resources?${params}`, {
       headers: { Accept: 'application/json' },
       signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
     })

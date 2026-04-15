@@ -1,7 +1,7 @@
 import { useCache } from '../../../lib/cache'
 import { useCardLoadingState } from '../CardDataContext'
 import { authFetch } from '../../../lib/api'
-import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants/network'
+import { FETCH_DEFAULT_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../../../lib/constants/network'
 import {
   KARMADA_DEMO_DATA,
   type KarmadaDemoData,
@@ -106,7 +106,7 @@ function isPodReady(pod: BackendPodInfo): boolean {
 async function fetchCR(group: string, version: string, resource: string): Promise<CRItem[]> {
   try {
     const params = new URLSearchParams({ group, version, resource })
-    const resp = await authFetch(`/api/mcp/custom-resources?${params}`, {
+    const resp = await authFetch(`${LOCAL_AGENT_HTTP_URL}/custom-resources?${params}`, {
       headers: { Accept: 'application/json' },
       signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
     })
@@ -262,11 +262,11 @@ async function fetchPods(url: string): Promise<BackendPodInfo[]> {
 async function fetchKarmadaStatus(): Promise<KarmadaStatus> {
   // Step 1: Detect Karmada controller pods via label selector, fallback to all pods
   const labeledPods = await fetchPods(
-    '/api/mcp/pods?labelSelector=app.kubernetes.io%2Fname%3Dkarmada',
+    `${LOCAL_AGENT_HTTP_URL}/pods?labelSelector=app.kubernetes.io%2Fname%3Dkarmada`,
   )
   const karmadaPods = labeledPods.length > 0
     ? labeledPods.filter(isKarmadaControllerPod)
-    : (await fetchPods('/api/mcp/pods?namespace=karmada-system')).filter(isKarmadaControllerPod)
+    : (await fetchPods(`${LOCAL_AGENT_HTTP_URL}/pods?namespace=karmada-system`)).filter(isKarmadaControllerPod)
 
   if (karmadaPods.length === 0) {
     return {

@@ -15,6 +15,7 @@ import type { ComponentHealth } from '../shared'
 import type { UdnInfo } from './helpers'
 import { isOvnPod, extractUdns, summarizeOvnPods } from './helpers'
 import { OVN_DEMO_DATA, type OvnStatusDemoData } from './demoData'
+import { LOCAL_AGENT_HTTP_URL } from '../../../../lib/constants/network'
 
 // ============================================================================
 // Data Interface
@@ -71,7 +72,7 @@ interface BackendPodInfo {
  * infrastructure pods via label selectors.
  */
 async function fetchOvnStatus(): Promise<OvnStatus> {
-  const podsResp = await fetch('/api/mcp/pods', {
+  const podsResp = await fetch(`${LOCAL_AGENT_HTTP_URL}/pods`, {
     headers: { Accept: 'application/json' },
     signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
   })

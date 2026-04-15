@@ -3,7 +3,7 @@
  *
  * Queries the OpenKruise CRDs (CloneSet, Advanced StatefulSet, Advanced
  * DaemonSet, SidecarSet, BroadcastJob, AdvancedCronJob) across connected
- * clusters through the `/api/mcp/custom-resources` endpoint and maps the
+ * clusters through the `${LOCAL_AGENT_HTTP_URL}/custom-resources` endpoint and maps the
  * results into the OpenKruiseDemoData shape consumed by the card.
  *
  * Falls back to OPENKRUISE_DEMO_DATA via useCache's built-in demo fallback
@@ -12,7 +12,7 @@
 
 import { useCache } from '../../../lib/cache'
 import { authFetch } from '../../../lib/api'
-import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants/network'
+import { FETCH_DEFAULT_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../../../lib/constants/network'
 import {
   OPENKRUISE_DEMO_DATA,
   type OpenKruiseDemoData,
@@ -62,7 +62,7 @@ async function fetchCR(
 ): Promise<CRItem[]> {
   try {
     const params = new URLSearchParams({ group, version, resource })
-    const resp = await authFetch(`/api/mcp/custom-resources?${params}`, {
+    const resp = await authFetch(`${LOCAL_AGENT_HTTP_URL}/custom-resources?${params}`, {
       headers: { Accept: 'application/json' },
       signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
     })

@@ -1,7 +1,7 @@
 import { useCache } from '../../../lib/cache'
 import { useCardLoadingState } from '../CardDataContext'
 import { CRIO_DEMO_DATA, type CrioStatusDemoData } from './demoData'
-import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants/network'
+import { FETCH_DEFAULT_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../../../lib/constants/network'
 import {
   buildRecentImagePulls,
   extractCrioVersion,
@@ -109,15 +109,15 @@ interface BackendEventInfo {
  */
 async function fetchCrioStatus(): Promise<CrioStatus> {
   const [nodesResp, podsResp, eventsResp] = await Promise.all([
-    fetch('/api/mcp/nodes', {
+    fetch(`${LOCAL_AGENT_HTTP_URL}/nodes`, {
       headers: { Accept: 'application/json' },
       signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
     }),
-    fetch('/api/mcp/pods', {
+    fetch(`${LOCAL_AGENT_HTTP_URL}/pods`, {
       headers: { Accept: 'application/json' },
       signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
     }),
-    fetch('/api/mcp/events?limit=200', {
+    fetch(`${LOCAL_AGENT_HTTP_URL}/events?limit=200`, {
       headers: { Accept: 'application/json' },
       signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
     }).catch(() => undefined),

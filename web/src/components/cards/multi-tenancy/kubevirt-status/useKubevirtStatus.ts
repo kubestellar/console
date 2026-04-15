@@ -21,6 +21,7 @@ import {
 } from './helpers'
 import type { KubevirtPodInfo } from './helpers'
 import { KUBEVIRT_DEMO_DATA, type VmInfo, type ClusterKubevirtInfo, type KubevirtStatusDemoData } from './demoData'
+import { LOCAL_AGENT_HTTP_URL } from '../../../../lib/constants/network'
 
 // ============================================================================
 // Data Interface
@@ -81,7 +82,7 @@ interface BackendPodInfo {
 // ============================================================================
 
 async function fetchKubevirtStatus(): Promise<KubevirtStatus> {
-  const podsResp = await fetch('/api/mcp/pods', {
+  const podsResp = await fetch(`${LOCAL_AGENT_HTTP_URL}/pods`, {
     headers: { Accept: 'application/json' },
     signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
   })
