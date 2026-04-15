@@ -4,6 +4,7 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { Plus, ChevronLeft, ChevronRight, CheckCircle2, AlertTriangle, WifiOff, GripVertical, X, User, Pin, PinOff, Satellite } from 'lucide-react'
 import { iconRegistry } from '../../lib/icons'
 import { cn } from '../../lib/cn'
+import { Tooltip } from '../ui/Tooltip'
 import { SnoozedCards } from './SnoozedCards'
 import { useSidebarConfig, SidebarItem, PROTECTED_SIDEBAR_IDS, SIDEBAR_COLLAPSED_WIDTH_PX, SIDEBAR_DEFAULT_WIDTH_PX } from '../../hooks/useSidebarConfig'
 import { useMobile } from '../../hooks/useMobile'
@@ -322,10 +323,22 @@ export function Sidebar() {
 
   const renderNavItem = (item: SidebarItem, section: 'primary' | 'secondary') => {
     const isEditing = editingItemId === item.id
+    // Only show the shared Tooltip in collapsed mode — when expanded, the
+    // full item label is already visible, so the tooltip would be redundant.
+    const showTooltip = isCollapsed && !isEditing
+    const tooltipContent = showTooltip
+      ? `${item.name} — ${t('help.sidebarNavItem')}`
+      : ''
 
     return (
-      <div
+      <Tooltip
         key={item.id}
+        content={tooltipContent}
+        side="right"
+        disabled={!showTooltip}
+        wrapperClassName="block w-full"
+      >
+      <div
         draggable={!isCollapsed && !isEditing}
         onDragStart={(e) => handleDragStart(e, item.id, section)}
         onDragEnd={handleDragEnd}
@@ -334,7 +347,7 @@ export function Sidebar() {
         onDragOver={handleDragOver}
         onDrop={(e) => handleDrop(e, item.id, section)}
         className={cn(
-          'group relative transition-all duration-150',
+          'group relative transition-all duration-150 w-full',
           dragOverItem === item.id && dragSection === section && 'before:absolute before:inset-x-0 before:-top-0.5 before:h-0.5 before:bg-purple-500 before:rounded-full',
           draggedItem === item.id && 'opacity-50'
         )}
@@ -425,6 +438,7 @@ export function Sidebar() {
           </NavLink>
         )}
       </div>
+      </Tooltip>
     )
   }
 

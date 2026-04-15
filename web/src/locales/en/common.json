@@ -1,4 +1,11 @@
 {
+  "help": {
+    "sidebarNavItem": "Click to navigate. Hover a collapsed icon to see its name and what it opens.",
+    "themeToggle": "Switch between dark, light, and system themes. Your choice is saved across sessions.",
+    "aiMissions": "AI Missions are assistant-driven tasks that monitor your clusters and propose fixes.",
+    "viewDocs": "Open the KubeStellar docs site in a new tab for guides, tutorials, and reference.",
+    "globalClusterFilter": "Filter every card on this dashboard to a subset of your clusters, severities, or statuses."
+  },
   "navigation": {
     "dashboard": "Dashboard",
     "clusters": "My Clusters",

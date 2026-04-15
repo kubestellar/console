@@ -5,6 +5,7 @@ import { AlertCircle, CheckCircle2 } from 'lucide-react'
 import { useGlobalFilters, SEVERITY_LEVELS, SEVERITY_CONFIG, STATUS_LEVELS, STATUS_CONFIG } from '../../../hooks/useGlobalFilters'
 import { useModalState } from '../../../lib/modals'
 import { cn } from '../../../lib/cn'
+import { Tooltip } from '../../ui/Tooltip'
 
 /** Color palette for saved filter sets */
 const FILTER_SET_COLORS = ['#8B5CF6', '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#EC4899']
@@ -165,25 +166,27 @@ export function ClusterFilterPanel() {
       {/* Filter icon button — isolate creates a stacking context to prevent
            the glow shadow from bleeding into adjacent header controls (#4380) */}
       <div className="relative isolate" ref={dropdownRef}>
-        <button
-          onClick={() => toggleDropdown()}
-          className={cn(
-            'relative flex items-center justify-center w-9 h-9 rounded-lg transition-colors',
-            isFiltered
-              ? 'bg-purple-500/20 text-purple-400 shadow-[0_0_6px_rgba(139,92,246,0.2)]'
-              : 'bg-secondary/50 text-muted-foreground hover:text-foreground'
-          )}
-          title={isFiltered ? t('layout.navbar.filtersActive') : t('layout.navbar.noFilters')}
-        >
-          <Filter className="w-4 h-4" />
-          {/* Color dot from active filter set, or generic purple dot */}
-          {isFiltered && (
-            <span
-              className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border border-card"
-              style={{ backgroundColor: activeSet?.color || '#a78bfa' }}
-            />
-          )}
-        </button>
+        <Tooltip content={t('help.globalClusterFilter')} side="bottom">
+          <button
+            onClick={() => toggleDropdown()}
+            className={cn(
+              'relative flex items-center justify-center w-9 h-9 rounded-lg transition-colors',
+              isFiltered
+                ? 'bg-purple-500/20 text-purple-400 shadow-[0_0_6px_rgba(139,92,246,0.2)]'
+                : 'bg-secondary/50 text-muted-foreground hover:text-foreground'
+            )}
+            aria-label={isFiltered ? t('layout.navbar.filtersActive') : t('layout.navbar.noFilters')}
+          >
+            <Filter className="w-4 h-4" />
+            {/* Color dot from active filter set, or generic purple dot */}
+            {isFiltered && (
+              <span
+                className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border border-card"
+                style={{ backgroundColor: activeSet?.color || '#a78bfa' }}
+              />
+            )}
+          </button>
+        </Tooltip>
 
         {/* Filter dropdown */}
         {showDropdown && (

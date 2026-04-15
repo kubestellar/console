@@ -9,6 +9,7 @@ import { useMobile } from '../../../hooks/useMobile'
 import { useBranding } from '../../../hooks/useBranding'
 import { LearnDropdown } from './LearnDropdown'
 import { LogoWithStar } from '../../ui/LogoWithStar'
+import { Tooltip } from '../../ui/Tooltip'
 import { UserProfileDropdown } from '../UserProfileDropdown'
 import { AlertBadge } from '../../ui/AlertBadge'
 import { FeatureRequestButton } from '../../feedback'
@@ -97,16 +98,17 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
             DEV
           </span>
         )}
-        <a
-          href={branding.docsUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="hidden lg:flex items-center p-1.5 hover:bg-secondary rounded-md transition-colors"
-          aria-label={t('navbar.viewDocs')}
-          title={t('navbar.viewDocs')}
-        >
-          <ExternalLink className="w-3.5 h-3.5 text-muted-foreground" />
-        </a>
+        <Tooltip content={t('help.viewDocs')} side="bottom">
+          <a
+            href={branding.docsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden lg:flex items-center p-1.5 hover:bg-secondary rounded-md transition-colors"
+            aria-label={t('navbar.viewDocs')}
+          >
+            <ExternalLink className="w-3.5 h-3.5 text-muted-foreground" />
+          </a>
+        </Tooltip>
       </div>
 
       {/* Search - hidden on small mobile; min-w-0 prevents layout overflow
@@ -137,20 +139,21 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
 
           {/* AI Missions — opens the mission sidebar */}
           {!isSidebarOpen && (
-            <button
-              onClick={openSidebar}
-              className="relative flex items-center gap-1.5 px-3 py-1.5 h-9 text-sm font-medium rounded-lg transition-colors bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/20"
-              aria-label={t('missionSidebar.openAIMissions')}
-              title={t('missionSidebar.openAIMissions')}
-            >
-              <Sparkles className="w-4 h-4" />
-              <span>{t('missionSidebar.aiMissions')}</span>
-              {missionsNeedingAttention > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center w-5 h-5 text-[10px] font-bold bg-purple-500 text-white rounded-full animate-pulse">
-                  {missionsNeedingAttention}
-                </span>
-              )}
-            </button>
+            <Tooltip content={t('help.aiMissions')} side="bottom">
+              <button
+                onClick={openSidebar}
+                className="relative flex items-center gap-1.5 px-3 py-1.5 h-9 text-sm font-medium rounded-lg transition-colors bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/20"
+                aria-label={t('missionSidebar.openAIMissions')}
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>{t('missionSidebar.aiMissions')}</span>
+                {missionsNeedingAttention > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center w-5 h-5 text-[10px] font-bold bg-purple-500 text-white rounded-full animate-pulse">
+                    {missionsNeedingAttention}
+                  </span>
+                )}
+              </button>
+            </Tooltip>
           )}
 
           {/* Visit Streak */}
@@ -170,19 +173,21 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
           <LearnDropdown />
 
           {/* Theme toggle */}
-          <button
-            onClick={toggleTheme}
-            className="p-2 w-9 h-9 flex items-center justify-center shrink-0 hover:bg-secondary rounded-lg transition-colors"
-            title={t('navbar.themeToggle', { theme })}
-          >
-            {theme === 'dark' ? (
-              <Moon className="w-5 h-5 text-muted-foreground" />
-            ) : theme === 'light' ? (
-              <Sun className="w-5 h-5 text-amber-600 dark:text-yellow-400" />
-            ) : (
-              <Monitor className="w-5 h-5 text-muted-foreground" />
-            )}
-          </button>
+          <Tooltip content={t('help.themeToggle')} side="bottom">
+            <button
+              onClick={toggleTheme}
+              className="p-2 w-9 h-9 flex items-center justify-center shrink-0 hover:bg-secondary rounded-lg transition-colors"
+              aria-label={t('navbar.themeToggle', { theme })}
+            >
+              {theme === 'dark' ? (
+                <Moon className="w-5 h-5 text-muted-foreground" />
+              ) : theme === 'light' ? (
+                <Sun className="w-5 h-5 text-amber-600 dark:text-yellow-400" />
+              ) : (
+                <Monitor className="w-5 h-5 text-muted-foreground" />
+              )}
+            </button>
+          </Tooltip>
 
           {/* Alerts */}
           <AlertBadge />
