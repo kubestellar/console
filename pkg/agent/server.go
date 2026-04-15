@@ -410,6 +410,14 @@ func (s *Server) Start() error {
 	// available for future MCS-export UI work.
 	mux.HandleFunc("/serviceexports", s.handleServiceExportsHTTP)
 
+	// Helm mutating operations moved to kc-agent (#7993 Phase 3a). These shell
+	// `helm rollback` / `helm uninstall` / `helm upgrade` under the user's
+	// kubeconfig instead of the backend pod SA. Backend handlers are still
+	// present until Phase 4 deletes them — routes in pkg/agent/server_helm.go.
+	mux.HandleFunc("/helm/rollback", s.handleHelmRollback)
+	mux.HandleFunc("/helm/uninstall", s.handleHelmUninstall)
+	mux.HandleFunc("/helm/upgrade", s.handleHelmUpgrade)
+
 	// Rename context endpoint
 	mux.HandleFunc("/rename-context", s.handleRenameContextHTTP)
 
