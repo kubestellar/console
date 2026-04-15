@@ -2,6 +2,7 @@ package k8s
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -15,6 +16,11 @@ import (
 	k8stesting "k8s.io/client-go/testing"
 	"k8s.io/client-go/tools/clientcmd/api"
 )
+
+// errSARReactor is a sentinel error used by the SubjectAccessReview tests to
+// simulate an apiserver failure (network error, RBAC denial to create SARs,
+// etc.). Declared at package scope so the reactor closure stays trivial.
+var errSARReactor = errors.New("simulated SAR apiserver failure")
 
 func TestRBAC_ListServiceAccounts(t *testing.T) {
 	m, _ := NewMultiClusterClient("")
@@ -270,6 +276,152 @@ func TestParseOpenShiftUser_CreatedAt(t *testing.T) {
 		}
 		if !user.CreatedAt.Equal(want) {
 			t.Errorf("CreatedAt = %v, want %v", user.CreatedAt, want)
+		}
+	})
+}
+
+// TestCheckPodExecPermissionForUser covers the SubjectAccessReview path added
+// for #8120. The /ws/exec handler relies on this function to fail-closed if
+// the caller (a) has no identity, (b) the apiserver says not allowed, or
+// (c) the SAR call errors out. All three branches are exercised here, plus
+// the happy path that verifies the SAR payload carries the exact tuple
+// kubelet enforces on pods/exec.
+func TestCheckPodExecPermissionForUser(t *testing.T) {
+	const (
+		testContext   = "c1"
+		testUser      = "github:alice"
+		testNamespace = "team-a"
+		testPod       = "hot-pod"
+	)
+
+	t.Run("allowed", func(t *testing.T) {
+		m, _ := NewMultiClusterClient("")
+		m.rawConfig = &api.Config{
+			Contexts: map[string]*api.Context{testContext: {Cluster: "cl1"}},
+		}
+		fakeCS := fake.NewSimpleClientset()
+
+		var seenReview *authv1.SubjectAccessReview
+		fakeCS.PrependReactor("create", "subjectaccessreviews", func(action k8stesting.Action) (bool, runtime.Object, error) {
+			createAction := action.(k8stesting.CreateAction)
+			seenReview = createAction.GetObject().(*authv1.SubjectAccessReview)
+			return true, &authv1.SubjectAccessReview{
+				Status: authv1.SubjectAccessReviewStatus{Allowed: true},
+			}, nil
+		})
+		m.clients[testContext] = fakeCS
+
+		allowed, reason, err := m.CheckPodExecPermissionForUser(
+			context.Background(), testContext, testUser, nil, testNamespace, testPod,
+		)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !allowed {
+			t.Fatalf("expected allowed=true, got false (reason=%q)", reason)
+		}
+		if seenReview == nil {
+			t.Fatal("expected SubjectAccessReview to be created")
+		}
+		attrs := seenReview.Spec.ResourceAttributes
+		if attrs == nil {
+			t.Fatal("expected ResourceAttributes to be set")
+		}
+		if seenReview.Spec.User != testUser {
+			t.Errorf("Spec.User = %q, want %q", seenReview.Spec.User, testUser)
+		}
+		if attrs.Verb != podExecVerb || attrs.Resource != podExecResource || attrs.Subresource != podExecSubresource {
+			t.Errorf("SAR tuple mismatch: verb=%q resource=%q subresource=%q; want %q/%q/%q",
+				attrs.Verb, attrs.Resource, attrs.Subresource,
+				podExecVerb, podExecResource, podExecSubresource)
+		}
+		if attrs.Namespace != testNamespace || attrs.Name != testPod {
+			t.Errorf("SAR target mismatch: ns=%q name=%q; want %q/%q",
+				attrs.Namespace, attrs.Name, testNamespace, testPod)
+		}
+	})
+
+	t.Run("denied", func(t *testing.T) {
+		m, _ := NewMultiClusterClient("")
+		m.rawConfig = &api.Config{
+			Contexts: map[string]*api.Context{testContext: {Cluster: "cl1"}},
+		}
+		fakeCS := fake.NewSimpleClientset()
+		fakeCS.PrependReactor("create", "subjectaccessreviews", func(action k8stesting.Action) (bool, runtime.Object, error) {
+			return true, &authv1.SubjectAccessReview{
+				Status: authv1.SubjectAccessReviewStatus{
+					Allowed: false,
+					Reason:  "no RBAC binding",
+				},
+			}, nil
+		})
+		m.clients[testContext] = fakeCS
+
+		allowed, reason, err := m.CheckPodExecPermissionForUser(
+			context.Background(), testContext, testUser, nil, testNamespace, testPod,
+		)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if allowed {
+			t.Fatal("expected allowed=false for denied SAR")
+		}
+		if reason == "" {
+			t.Error("expected reason to be populated from SAR status")
+		}
+	})
+
+	t.Run("sar error is returned fail-closed", func(t *testing.T) {
+		m, _ := NewMultiClusterClient("")
+		m.rawConfig = &api.Config{
+			Contexts: map[string]*api.Context{testContext: {Cluster: "cl1"}},
+		}
+		fakeCS := fake.NewSimpleClientset()
+		fakeCS.PrependReactor("create", "subjectaccessreviews", func(action k8stesting.Action) (bool, runtime.Object, error) {
+			return true, nil, errSARReactor
+		})
+		m.clients[testContext] = fakeCS
+
+		allowed, _, err := m.CheckPodExecPermissionForUser(
+			context.Background(), testContext, testUser, nil, testNamespace, testPod,
+		)
+		if err == nil {
+			t.Fatal("expected error from SAR failure, got nil")
+		}
+		if allowed {
+			t.Fatal("expected allowed=false on SAR error")
+		}
+	})
+
+	t.Run("missing identity is rejected without calling sar", func(t *testing.T) {
+		m, _ := NewMultiClusterClient("")
+		m.rawConfig = &api.Config{
+			Contexts: map[string]*api.Context{testContext: {Cluster: "cl1"}},
+		}
+		fakeCS := fake.NewSimpleClientset()
+		sarCalled := false
+		fakeCS.PrependReactor("create", "subjectaccessreviews", func(action k8stesting.Action) (bool, runtime.Object, error) {
+			sarCalled = true
+			return true, &authv1.SubjectAccessReview{
+				Status: authv1.SubjectAccessReviewStatus{Allowed: true},
+			}, nil
+		})
+		m.clients[testContext] = fakeCS
+
+		allowed, reason, err := m.CheckPodExecPermissionForUser(
+			context.Background(), testContext, "", nil, testNamespace, testPod,
+		)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if allowed {
+			t.Fatal("missing username must never authorize exec")
+		}
+		if reason == "" {
+			t.Error("expected reason to explain the denial")
+		}
+		if sarCalled {
+			t.Error("SAR must not be called when identity is missing — that would falsely succeed on an allow-by-default fake")
 		}
 	})
 }

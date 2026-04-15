@@ -35,6 +35,20 @@ const execPingInterval = 30 * time.Second
 // in the future when a new ping is sent.
 const execPongTimeout = 45 * time.Second
 
+// execAuthzTimeout bounds how long we wait for the target cluster's apiserver
+// to answer the pods/exec SubjectAccessReview (#8120). Short enough that an
+// unreachable cluster fails the WebSocket quickly instead of hanging the
+// client, long enough for a healthy apiserver to respond comfortably.
+const execAuthzTimeout = 5 * time.Second
+
+// execUserSubjectPrefix is the subject prefix used when asking the target
+// cluster whether the console user is allowed to open a pod shell (#8120).
+// Cluster administrators bind RBAC to "github:<login>" subjects so that the
+// same principal the console authenticated via GitHub OAuth maps directly to
+// a Kubernetes user for SubjectAccessReview. Centralised to avoid drift
+// between the handler and any operator docs.
+const execUserSubjectPrefix = "github:"
+
 // execStdinDropCount counts stdin frames that were discarded because
 // stdinCh was full. PR 7995 added the counter and a rate-limited WARN log
 // so drops are no longer silent — the first drop in a session logs, then
@@ -140,19 +154,36 @@ func CancelUserExecSessions(userID uuid.UUID) {
 	slog.Info("[Exec] cancelled exec sessions for user", "user", userID, "count", len(cancels))
 }
 
+// execAuthorizer is the minimal surface HandleExec needs from the k8s layer
+// for the pods/exec authorization check (#8120). Defining this as an
+// interface instead of calling *k8s.MultiClusterClient directly lets tests
+// inject a fake that records the SubjectAccessReview call and returns a
+// canned allow/deny/error result, without having to stand up a full
+// MultiClusterClient or fake clientset inside handler tests.
+type execAuthorizer interface {
+	CheckPodExecPermissionForUser(
+		ctx context.Context,
+		contextName, username string,
+		groups []string,
+		namespace, podName string,
+	) (bool, string, error)
+}
+
 // ExecHandlers handles pod exec API endpoints
 type ExecHandlers struct {
-	k8sClient *k8s.MultiClusterClient
-	jwtSecret string
-	devMode   bool
+	k8sClient  *k8s.MultiClusterClient
+	authorizer execAuthorizer
+	jwtSecret  string
+	devMode    bool
 }
 
 // NewExecHandlers creates a new exec handlers instance
 func NewExecHandlers(k8sClient *k8s.MultiClusterClient, jwtSecret string, devMode bool) *ExecHandlers {
 	return &ExecHandlers{
-		k8sClient: k8sClient,
-		jwtSecret: jwtSecret,
-		devMode:   devMode,
+		k8sClient:  k8sClient,
+		authorizer: k8sClient,
+		jwtSecret:  jwtSecret,
+		devMode:    devMode,
 	}
 }
 
@@ -287,13 +318,12 @@ func (h *ExecHandlers) HandleExec(c *websocket.Conn) {
 		return
 	}
 
-	// SECURITY WARNING (#5406): This handler validates authentication (JWT) but
-	// does NOT perform authorization. Any authenticated user can open a shell to
-	// any pod in any cluster. Full RBAC scoping requires checking the user's
-	// Kubernetes RBAC permissions (SubjectAccessReview with "create" verb on
-	// "pods/exec" in the target namespace/cluster) before establishing the exec
-	// session. This is a known limitation tracked in issue #5406.
-	slog.Warn("[Exec] SECURITY: pod exec session opened — no authorization check performed",
+	// SECURITY (#8120): JWT is validated above; Kubernetes RBAC for pods/exec
+	// is enforced below — after we know the target cluster/namespace/pod from
+	// the init message — via a SubjectAccessReview against the target cluster.
+	// The authorization decision intentionally happens *before* the exec
+	// stream is opened, not after.
+	slog.Info("[Exec] authenticated user connected",
 		"user", claims.GitHubLogin,
 		"user_id", claims.UserID,
 		"remote_addr", c.RemoteAddr().String(),
@@ -353,8 +383,8 @@ func (h *ExecHandlers) HandleExec(c *websocket.Conn) {
 		return
 	}
 
-	// SECURITY: Log exec target details for audit trail (#5406)
-	slog.Warn("[Exec] SECURITY: exec session targeting pod",
+	// SECURITY: Log exec target details for audit trail (#5406, #8120)
+	slog.Info("[Exec] exec session targeting pod",
 		"user", claims.GitHubLogin,
 		"user_id", claims.UserID,
 		"cluster", init.Cluster,
@@ -362,6 +392,69 @@ func (h *ExecHandlers) HandleExec(c *websocket.Conn) {
 		"pod", init.Pod,
 		"container", init.Container,
 		"command", init.Command,
+	)
+
+	// SECURITY (#8120): Enforce Kubernetes RBAC for pods/exec BEFORE opening
+	// any stream. The backend's clientset talks to the cluster as the pod's
+	// ServiceAccount, so a SelfSubjectAccessReview would reflect the SA's
+	// permissions — which is exactly the privilege-escalation path described
+	// in the bug report. Instead, we run a SubjectAccessReview with the end
+	// user's identity derived from the JWT, and let the target cluster's
+	// apiserver make the authorization decision using its own RBAC bindings.
+	//
+	// Fail-closed on every branch: if the user has no resolvable identity,
+	// if the SAR returns allowed=false, or if the SAR call errors out, we
+	// MUST deny the exec and return before touching the executor.
+	if h.authorizer == nil {
+		slog.Error("[Exec] SECURITY: authorizer not configured — denying exec", "user", claims.GitHubLogin)
+		writeError(c, "server misconfiguration: authorization unavailable")
+		return
+	}
+
+	userSubject := execUserSubjectPrefix + claims.GitHubLogin
+	if claims.GitHubLogin == "" {
+		slog.Warn("[Exec] SECURITY: denying exec — JWT has no GitHub login", "user_id", claims.UserID)
+		writeError(c, "user is not authorized to exec into this pod")
+		return
+	}
+
+	authzCtx, authzCancel := context.WithTimeout(execCtx, execAuthzTimeout)
+	allowed, reason, authzErr := h.authorizer.CheckPodExecPermissionForUser(
+		authzCtx,
+		init.Cluster,
+		userSubject,
+		nil, // no extra group memberships today; policy is purely user-based
+		init.Namespace,
+		init.Pod,
+	)
+	authzCancel()
+	if authzErr != nil {
+		slog.Error("[Exec] SECURITY: pods/exec SubjectAccessReview failed — denying exec (fail-closed)",
+			"user", claims.GitHubLogin,
+			"cluster", init.Cluster,
+			"namespace", init.Namespace,
+			"pod", init.Pod,
+			"error", authzErr,
+		)
+		writeError(c, "failed to verify exec permission; request denied")
+		return
+	}
+	if !allowed {
+		slog.Warn("[Exec] SECURITY: pods/exec denied by RBAC",
+			"user", claims.GitHubLogin,
+			"cluster", init.Cluster,
+			"namespace", init.Namespace,
+			"pod", init.Pod,
+			"reason", reason,
+		)
+		writeError(c, "user is not authorized to exec into this pod")
+		return
+	}
+	slog.Info("[Exec] pods/exec authorized by RBAC",
+		"user", claims.GitHubLogin,
+		"cluster", init.Cluster,
+		"namespace", init.Namespace,
+		"pod", init.Pod,
 	)
 
 	// Default command

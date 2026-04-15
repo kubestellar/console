@@ -336,6 +336,78 @@ func (m *MultiClusterClient) CheckPermission(ctx context.Context, contextName, v
 	return result.Status.Allowed, nil
 }
 
+// podExecResource, podExecSubresource, and podExecVerb describe the
+// Kubernetes RBAC tuple required to open a shell inside a pod. Centralised so
+// the authorization check for the /ws/exec handler (#8120) and any future
+// caller stay in lockstep with the kubelet's own RBAC enforcement for
+// `pods/exec`. Do not inline these as string literals — see CLAUDE.md "No
+// Magic Numbers/Strings" rule.
+const (
+	podExecResource    = "pods"
+	podExecSubresource = "exec"
+	podExecVerb        = "create"
+)
+
+// CheckPodExecPermissionForUser runs a SubjectAccessReview against the target
+// cluster's apiserver asking whether the end user (identified by `username`
+// plus optional group memberships) is allowed to `create` on
+// `pods/exec` for a specific pod in a namespace.
+//
+// Why SAR (not SelfSAR):
+// The backend's clientset authenticates to the target cluster as the pod
+// ServiceAccount (or whatever identity the loaded kubeconfig carries), not as
+// the logged-in console user. A SelfSubjectAccessReview therefore reflects
+// the pod SA's permissions, which is exactly the privilege-escalation path
+// described in issue #8120. SubjectAccessReview lets us ask the apiserver
+// about a *different* user — the end user whose JWT we just validated — so
+// the authorization decision is made by Kubernetes RBAC against the user's
+// own subject, not against the backend SA.
+//
+// Fail-closed semantics: the caller MUST treat (false, nil) AND any non-nil
+// error as a denial. A SAR request that errors out (apiserver unreachable,
+// permission to create SARs denied, etc.) is returned verbatim so the caller
+// can log it; the caller must not open the exec stream in either case.
+func (m *MultiClusterClient) CheckPodExecPermissionForUser(
+	ctx context.Context,
+	contextName, username string,
+	groups []string,
+	namespace, podName string,
+) (bool, string, error) {
+	if username == "" {
+		// Fail-closed: a missing user identity must never authorize an exec.
+		return false, "missing user identity", nil
+	}
+	if namespace == "" || podName == "" {
+		return false, "missing namespace or pod name", nil
+	}
+
+	client, err := m.GetClient(contextName)
+	if err != nil {
+		return false, "", err
+	}
+
+	review := &authv1.SubjectAccessReview{
+		Spec: authv1.SubjectAccessReviewSpec{
+			User:   username,
+			Groups: groups,
+			ResourceAttributes: &authv1.ResourceAttributes{
+				Verb:        podExecVerb,
+				Resource:    podExecResource,
+				Subresource: podExecSubresource,
+				Namespace:   namespace,
+				Name:        podName,
+			},
+		},
+	}
+
+	result, err := client.AuthorizationV1().SubjectAccessReviews().Create(ctx, review, metav1.CreateOptions{})
+	if err != nil {
+		return false, "", fmt.Errorf("failed to perform pods/exec SubjectAccessReview: %w", err)
+	}
+
+	return result.Status.Allowed, result.Status.Reason, nil
+}
+
 // GetClusterPermissions returns the current user's permissions on a cluster
 func (m *MultiClusterClient) GetClusterPermissions(ctx context.Context, contextName string) (*models.ClusterPermissions, error) {
 	perms := &models.ClusterPermissions{
