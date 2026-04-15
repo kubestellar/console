@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { Tooltip } from '../Tooltip'
 
@@ -78,6 +78,29 @@ describe('Tooltip', () => {
       </Tooltip>,
     )
     expect(screen.queryByRole('tooltip')).toBeNull()
+  })
+
+  it('passes through React.Fragment children without cloning (no React warning)', () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      const { getByRole } = render(
+        <Tooltip content="Help">
+          <>
+            <button>A</button>
+            <button>B</button>
+          </>
+        </Tooltip>,
+      )
+      // Bubble still renders
+      expect(getByRole('tooltip')).toBeInTheDocument()
+      // No React warning about invalid prop on Fragment
+      expect(errorSpy).not.toHaveBeenCalledWith(
+        expect.stringContaining('Invalid prop'),
+        expect.anything(),
+      )
+    } finally {
+      errorSpy.mockRestore()
+    }
   })
 
   it('renders on all four sides with the correct position classes', () => {

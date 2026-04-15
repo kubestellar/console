@@ -3,13 +3,14 @@
  *
  * CSS-only hover/focus implementation using Tailwind group utilities so
  * tooltips work without JS state or portal wiring. When `children` is a
- * valid React element, the child is cloned and receives an
- * `aria-describedby` attribute pointing at the floating bubble so screen
- * readers announce the help text when the focusable trigger is focused.
- * If the child is not a valid element (string, fragment, array), we fall
- * back to rendering the bubble without wiring `aria-describedby` — in that
- * case screen-reader description is not guaranteed, but visual hover still
- * works. Callers should prefer a single focusable child element.
+ * valid React element (and not a `React.Fragment`), the child is cloned
+ * and receives an `aria-describedby` attribute pointing at the floating
+ * bubble so screen readers announce the help text when the focusable
+ * trigger is focused. Non-element and fragment children (strings, numbers,
+ * fragments, arrays) pass through without `aria-describedby` wiring — the
+ * tooltip bubble is still visible on hover but screen readers won't
+ * announce the description to the focused trigger. Callers should prefer
+ * a single focusable child element.
  *
  * Motion is handled via a Tailwind `transition-opacity` that respects the
  * global `.reduce-motion` class defined in `index.css` (which zeroes all
@@ -101,7 +102,14 @@ export function Tooltip({
   // trigger instead of the wrapper — screen readers only announce the
   // description when the focused element carries the attribute. If the
   // child already has an `aria-describedby`, preserve it by space-joining.
-  const childWithAria = React.isValidElement(children)
+  // `React.Fragment` is a valid element but cloning it with an
+  // `aria-describedby` prop triggers a React warning ("Invalid prop
+  // `aria-describedby` supplied to `React.Fragment`"), so we skip the
+  // clone for fragments and pass them through unchanged.
+  const isCloneable =
+    React.isValidElement(children) &&
+    (children as React.ReactElement).type !== React.Fragment
+  const childWithAria = isCloneable
     ? React.cloneElement(
         children as React.ReactElement<{ 'aria-describedby'?: string }>,
         {
