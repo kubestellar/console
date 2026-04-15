@@ -130,12 +130,19 @@ export function GPUUsageTrend() {
     if (!isFailed && consecutiveFailures === 0) {
       return []
     }
-    const nowBucketed = stalenessTick * STALENESS_TICK_MS
+    // Use real `Date.now()` for the age computation so a snapshot that just
+    // crossed the staleness threshold is measured against true elapsed time
+    // rather than the start of the current minute bucket (which can be up to
+    // `STALENESS_TICK_MS - 1` ms smaller than real time and would effectively
+    // extend the staleness window). `stalenessTick` is still in the memo deps
+    // so the recompute fires on each bucket boundary.
+    void stalenessTick
+    const now = Date.now()
     for (let i = metricsHistory.length - 1; i >= 0; i -= 1) {
       const snap = metricsHistory[i]
       const snapNodes = snap?.gpuNodes || []
       if (snapNodes.length === 0) continue
-      const age = nowBucketed - new Date(snap.timestamp).getTime()
+      const age = now - new Date(snap.timestamp).getTime()
       if (age > GPU_SNAPSHOT_STALENESS_MS) {
         // History is ordered oldest→newest, so every earlier snapshot is
         // even older — we can stop scanning.

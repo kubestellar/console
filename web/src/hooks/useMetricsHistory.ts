@@ -179,8 +179,19 @@ function useSnapshotSubscription(): MetricsSnapshot[] {
     subscribers.add(handleUpdate)
     // Resync once right after subscribing: if the singleton received an
     // update between the initial lazy `useState` snapshot and this effect
-    // running, we'd otherwise miss it until the next notify.
-    setHistory([...snapshots])
+    // running, we'd otherwise miss it until the next notify. Use a functional
+    // update that bails out (returns the previous reference) when the snapshot
+    // set hasn't actually changed, so React skips the rerender on every mount
+    // in the common case where nothing landed between init and subscribe.
+    setHistory(prev => {
+      if (
+        prev.length === snapshots.length &&
+        prev.every((s, i) => s === snapshots[i])
+      ) {
+        return prev
+      }
+      return [...snapshots]
+    })
 
     return () => {
       subscribers.delete(handleUpdate)
