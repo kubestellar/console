@@ -60,6 +60,38 @@ export interface IntotoClusterStatus {
   missingSteps: number
 }
 
+export interface IntotoStats {
+  totalLayouts: number
+  totalSteps: number
+  verifiedSteps: number
+  failedSteps: number
+  missingSteps: number
+}
+
+/**
+ * Pure function to compute aggregate statistics for in-toto layouts.
+ * Used for both per-cluster status and global component-level statistics.
+ */
+export function computeIntotoStats(layouts: IntotoLayout[]): IntotoStats {
+  const stats = {
+    totalLayouts: layouts.length,
+    totalSteps: 0,
+    verifiedSteps: 0,
+    failedSteps: 0,
+    missingSteps: 0,
+  }
+
+  for (const layout of layouts) {
+    stats.totalSteps += layout.steps.length
+    stats.verifiedSteps += layout.verifiedSteps
+    stats.failedSteps += layout.failedSteps
+  }
+
+  stats.missingSteps = stats.totalSteps - stats.verifiedSteps - stats.failedSteps
+  return stats
+}
+
+
 interface CacheData {
   statuses: Record<string, IntotoClusterStatus>
   timestamp: number
@@ -152,19 +184,13 @@ function getDemoLayouts(cluster: string): IntotoLayout[] {
 
 function getDemoStatus(cluster: string): IntotoClusterStatus {
   const layouts = getDemoLayouts(cluster)
-  const totalSteps = layouts.reduce((s, l) => s + l.steps.length, 0)
-  const verifiedSteps = layouts.reduce((s, l) => s + l.verifiedSteps, 0)
-  const failedSteps = layouts.reduce((s, l) => s + l.failedSteps, 0)
+  const stats = computeIntotoStats(layouts)
   return {
     cluster,
     installed: true,
     loading: false,
     layouts,
-    totalLayouts: layouts.length,
-    totalSteps,
-    verifiedSteps,
-    failedSteps,
-    missingSteps: totalSteps - verifiedSteps - failedSteps,
+    ...stats,
   }
 }
 
@@ -238,7 +264,7 @@ async function fetchSingleCluster(cluster: string): Promise<IntotoClusterStatus>
     if (layoutResult.exitCode !== 0) {
       return emptyStatus(
         cluster, true,
-        layoutResult.output?.trim() || 'Failed to fetch in-toto layouts'
+        layoutResult.output?.trim() || 'intoto_supply_chain.fetchErrorLayouts'
       )
     }
 
@@ -310,20 +336,14 @@ async function fetchSingleCluster(cluster: string): Promise<IntotoClusterStatus>
       }
     }
 
-    const totalSteps = layouts.reduce((s, l) => s + l.steps.length, 0)
-    const verifiedSteps = layouts.reduce((s, l) => s + l.verifiedSteps, 0)
-    const failedSteps = layouts.reduce((s, l) => s + l.failedSteps, 0)
+    const stats = computeIntotoStats(layouts)
 
     return {
       cluster,
       installed: true,
       loading: false,
       layouts,
-      totalLayouts: layouts.length,
-      totalSteps,
-      verifiedSteps,
-      failedSteps,
-      missingSteps: totalSteps - verifiedSteps - failedSteps,
+      ...stats,
     }
   } catch (err) {
     const isDemoError = err instanceof Error && err.message.includes('demo mode')
@@ -332,7 +352,7 @@ async function fetchSingleCluster(cluster: string): Promise<IntotoClusterStatus>
     }
     return emptyStatus(
       cluster, false,
-      err instanceof Error ? err.message : 'Connection failed'
+      err instanceof Error ? err.message : 'intoto_supply_chain.connectionFailed'
     )
   }
 }

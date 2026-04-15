@@ -99,7 +99,7 @@ const ComplianceDrift = safeLazy(() => import('./ComplianceDrift'), 'ComplianceD
 const CrossClusterPolicyComparison = safeLazy(() => import('./CrossClusterPolicyComparison'), 'CrossClusterPolicyComparison')
 const RecommendedPolicies = safeLazy(() => import('./RecommendedPolicies'), 'RecommendedPolicies')
 const KyvernoPolicies = safeLazy(() => import('./KyvernoPolicies'), 'KyvernoPolicies')
-const IntotoSupplyChain = safeLazy(() => import('./IntotoSupplyChain'), 'IntotoSupplyChain')
+const IntotoSupplyChain = safeLazy(() => import('./intoto_supply_chain'), 'IntotoSupplyChain')
 // Eagerly import demo-only compliance cards — they're tiny (~255 lines total),
 // contain only hardcoded demo data, and lazy loading them causes blank cards
 // while heavier modules (OPA) saturate the dev server's transform pipeline.
@@ -857,7 +857,7 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   // Policy & compliance (shared modules)
   opa_policies: () => import('./OPAPolicies'),
   kyverno_policies: () => import('./KyvernoPolicies'),
-  intoto_supply_chain: () => import('./IntotoSupplyChain'),
+  intoto_supply_chain: () => import('./intoto_supply_chain'),
   falco_alerts: () => import('./ComplianceCards'),
   iso27001_audit: () => import('./ISO27001Audit'),
   trestle_scan: () => import('./TrestleScan'),
@@ -1152,6 +1152,7 @@ export const LIVE_DATA_CARDS = new Set([
   'cluster_health_monitor',
   // GPU node health monitoring
   'gpu_node_health',
+  'intoto_supply_chain',
   // Node status - live data from useNodes with demo fallback
   'node_status',
   // Nightly E2E status card

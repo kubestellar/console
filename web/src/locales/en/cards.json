@@ -3079,11 +3079,13 @@
     "scanningClusters": "Scanning clusters...",
     "documentation": "Kyverno Documentation"
   },
-  "intotoSupplyChain": {
+  "intoto_supply_chain": {
     "scanningClusters": "Scanning clusters...",
     "documentation": "in-toto Documentation",
     "fetchError": "Failed to fetch supply chain data",
     "fetchErrorHint": "Check API connectivity or in-toto service status.",
+    "fetchErrorLayouts": "Failed to fetch in-toto layouts",
+    "connectionFailed": "Connection failed",
     "retry": "Retry →",
     "integrationTitle": "in-toto Integration",
     "integrationHint": "Install in-toto for supply chain security verification.",

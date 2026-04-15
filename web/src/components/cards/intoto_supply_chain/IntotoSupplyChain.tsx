@@ -18,19 +18,19 @@ import {
   Link2,
   Loader2,
 } from 'lucide-react'
-import { ProgressRing } from '../ui/ProgressRing'
-import { CardSearchInput } from '../../lib/cards/CardComponents'
-import { useCardLoadingState } from './CardDataContext'
+import { ProgressRing } from '../../ui/ProgressRing'
+import { CardSearchInput } from '../../../lib/cards/CardComponents'
+import { useCardLoadingState } from '../CardDataContext'
 import { useTranslation } from 'react-i18next'
-import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
-import { useIntoto } from '../../hooks/useIntoto'
-import { useMissions } from '../../hooks/useMissions'
-import { StatusBadge } from '../ui/StatusBadge'
-import { RefreshIndicator } from '../ui/RefreshIndicator'
-import { CardControls } from '../ui/CardControls'
-import { Pagination } from '../ui/Pagination'
-import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
-import type { IntotoLayout, IntotoStep } from '../../hooks/useIntoto'
+import { DynamicCardErrorBoundary } from '../DynamicCardErrorBoundary'
+import { useIntoto } from '../../../hooks/useIntoto'
+import { useMissions } from '../../../hooks/useMissions'
+import { StatusBadge } from '../../ui/StatusBadge'
+import { RefreshIndicator } from '../../ui/RefreshIndicator'
+import { CardControls } from '../../ui/CardControls'
+import { Pagination } from '../../ui/Pagination'
+import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
+import type { IntotoLayout, IntotoStep } from '../../../hooks/useIntoto'
 
 /** Default page size for the layouts list */
 const DEFAULT_PAGE_SIZE = 5
@@ -214,12 +214,17 @@ Please proceed step by step.`,
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-1">
           <RefreshIndicator isRefreshing={isRefreshing} lastUpdated={lastRefresh} size="xs" />
+          {isDemoData && (
+            <StatusBadge color="purple" size="xs">
+              Demo
+            </StatusBadge>
+          )}
           <a
             href="https://in-toto.io/"
             target="_blank"
             rel="noopener noreferrer"
             className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-cyan-400"
-            title={t('cards:intotoSupplyChain.documentation')}
+            title={t('cards:intoto_supply_chain.documentation')}
           >
             <ExternalLink className="w-4 h-4" />
           </a>
@@ -234,15 +239,32 @@ Please proceed step by step.`,
         />
       </div>
 
-      {/* Inline progress ring while scanning */}
-      {(isLoading || isRefreshing) && !installed && !isDemoData && (
+      {/* Initial loading skeleton */}
+      {isLoading && !hasData && (
+        <div className="space-y-3 animate-pulse">
+          <div className="h-10 bg-secondary/50 rounded-lg" />
+          <div className="grid grid-cols-3 gap-2">
+            <div className="h-12 bg-secondary/50 rounded-lg" />
+            <div className="h-12 bg-secondary/50 rounded-lg" />
+            <div className="h-12 bg-secondary/50 rounded-lg" />
+          </div>
+          <div className="h-8 bg-secondary/50 rounded-lg" />
+          <div className="space-y-2">
+            <div className="h-16 bg-secondary/50 rounded-lg" />
+            <div className="h-16 bg-secondary/50 rounded-lg" />
+          </div>
+        </div>
+      )}
+
+      {/* Inline progress ring while scanning/refreshing (only if not initial load) */}
+      {!isLoading && (isLoading || isRefreshing) && !installed && !isDemoData && (
         <div className="flex items-center gap-2 mb-3 text-xs text-muted-foreground">
           {totalClusters > 0 ? (
             <ProgressRing progress={clustersChecked / totalClusters} size={14} strokeWidth={1.5} />
           ) : (
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
           )}
-          <span>{t('intotoSupplyChain.scanningClusters')}</span>
+          <span>{t('intoto_supply_chain.scanningClusters')}</span>
         </div>
       )}
 
@@ -251,11 +273,16 @@ Please proceed step by step.`,
         <div className="flex items-start gap-2 p-2 mb-3 rounded-lg bg-red-500/10 border border-red-500/20 text-xs">
           <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="text-red-400 font-medium">{t('cards:intotoSupplyChain.fetchError')}</p>
-            <p className="text-muted-foreground">
-              {t('cards:intotoSupplyChain.fetchErrorHint')}{' '}
-              <button onClick={() => refetch()} className="text-red-400 hover:underline">
-                {t('cards:intotoSupplyChain.retry')}
+            <p className="text-red-400 font-medium">{t('cards:intoto_supply_chain.fetchError')}</p>
+            <p className="mt-1 text-red-400/80 leading-relaxed">
+              {Object.values(statuses).find(s => s.error)?.error?.includes('.') 
+                ? t(`cards:${Object.values(statuses).find(s => s.error)?.error}`) 
+                : t('cards:intoto_supply_chain.fetchErrorHint')}{' '}
+              <button
+                onClick={() => window.location.reload()}
+                className="text-red-400 underline hover:text-red-300 transition-colors"
+              >
+                {t('cards:intoto_supply_chain.retry')}
               </button>
             </p>
           </div>
@@ -267,11 +294,11 @@ Please proceed step by step.`,
         <div className="flex items-start gap-2 p-2 mb-3 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-xs">
           <AlertCircle className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="text-cyan-400 font-medium">{t('cards:intotoSupplyChain.integrationTitle')}</p>
+            <p className="text-cyan-400 font-medium">{t('cards:intoto_supply_chain.integrationTitle')}</p>
             <p className="text-muted-foreground">
-              {t('cards:intotoSupplyChain.integrationHint')}{' '}
+              {t('cards:intoto_supply_chain.integrationHint')}{' '}
               <button onClick={handleInstall} className="text-cyan-400 hover:underline">
-                {t('cards:intotoSupplyChain.installCta')}
+                {t('cards:intoto_supply_chain.installCta')}
               </button>
             </p>
           </div>
@@ -298,15 +325,15 @@ Please proceed step by step.`,
         <div className="flex items-start gap-2 p-2 mb-3 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-xs">
           <Link2 className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="text-cyan-400 font-medium">{t('cards:intotoSupplyChain.noLayoutsTitle')}</p>
+            <p className="text-cyan-400 font-medium">{t('cards:intoto_supply_chain.noLayoutsTitle')}</p>
             <p className="text-muted-foreground">
-              {t('cards:intotoSupplyChain.noLayoutsHint')}{' '}
+              {t('cards:intoto_supply_chain.noLayoutsHint')}{' '}
               <button
                 onClick={handleDeploySampleLayouts}
                 disabled={isLoading}
                 className="text-cyan-400 hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {t('cards:intotoSupplyChain.deployLayoutsCta')}
+                {t('cards:intoto_supply_chain.deployLayoutsCta')}
               </button>
             </p>
           </div>
@@ -316,15 +343,15 @@ Please proceed step by step.`,
       {/* Stats */}
       <div className="grid grid-cols-3 gap-2 mb-3">
         <div className="p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-center">
-          <p className="text-2xs text-cyan-400">{t('cards:intotoSupplyChain.statsLayouts')}</p>
+          <p className="text-2xs text-cyan-400">{t('cards:intoto_supply_chain.statsLayouts')}</p>
           <p className="text-lg font-bold text-foreground">{stats.totalLayouts}</p>
         </div>
         <div className="p-2 rounded-lg bg-green-500/10 border border-green-500/20 text-center">
-          <p className="text-2xs text-green-400">{t('cards:intotoSupplyChain.statsVerified')}</p>
+          <p className="text-2xs text-green-400">{t('cards:intoto_supply_chain.statsVerified')}</p>
           <p className="text-lg font-bold text-foreground">{stats.verifiedSteps}</p>
         </div>
         <div className="p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-center">
-          <p className="text-2xs text-red-400">{t('cards:intotoSupplyChain.statsFailed')}</p>
+          <p className="text-2xs text-red-400">{t('cards:intoto_supply_chain.statsFailed')}</p>
           <p className="text-lg font-bold text-foreground">{stats.failedSteps}</p>
         </div>
       </div>
@@ -341,8 +368,8 @@ Please proceed step by step.`,
         <p className="text-xs text-muted-foreground font-medium flex items-center gap-1 mb-2">
           <ShieldCheck className="w-3 h-3" />
           {isDemoData
-            ? t('cards:intotoSupplyChain.sampleLayouts')
-            : t('cards:intotoSupplyChain.layoutsCount', { count: totalItems })}
+            ? t('cards:intoto_supply_chain.sampleLayouts')
+            : t('cards:intoto_supply_chain.layoutsCount', { count: totalItems })}
         </p>
 
         {(displayedLayouts || []).map((layout, i) => {
@@ -380,7 +407,7 @@ Please proceed step by step.`,
                   </div>
                 </div>
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>{t('cards:intotoSupplyChain.stepsCount', { count: layout.steps.length })}</span>
+                  <span>{t('cards:intoto_supply_chain.stepsCount', { count: layout.steps.length })}</span>
                   <span className="text-2xs">{layout.cluster}</span>
                 </div>
               </button>
@@ -429,23 +456,23 @@ Please proceed step by step.`,
 
       {/* Features highlight */}
       <div className="mt-3 pt-3 border-t border-border/50">
-        <p className="text-2xs text-muted-foreground font-medium mb-2">{t('cards:intotoSupplyChain.featuresTitle')}</p>
+        <p className="text-2xs text-muted-foreground font-medium mb-2">{t('cards:intoto_supply_chain.featuresTitle')}</p>
         <div className="grid grid-cols-2 gap-1.5 text-2xs">
           <div className="flex items-center gap-1 text-muted-foreground">
             <CheckCircle className="w-3 h-3 text-green-400" />
-            {t('cards:intotoSupplyChain.featureStepVerification')}
+            {t('cards:intoto_supply_chain.featureStepVerification')}
           </div>
           <div className="flex items-center gap-1 text-muted-foreground">
             <CheckCircle className="w-3 h-3 text-green-400" />
-            {t('cards:intotoSupplyChain.featureProvenanceTracking')}
+            {t('cards:intoto_supply_chain.featureProvenanceTracking')}
           </div>
           <div className="flex items-center gap-1 text-muted-foreground">
             <CheckCircle className="w-3 h-3 text-green-400" />
-            {t('cards:intotoSupplyChain.featureFunctionarySigning')}
+            {t('cards:intoto_supply_chain.featureFunctionarySigning')}
           </div>
           <div className="flex items-center gap-1 text-muted-foreground">
             <CheckCircle className="w-3 h-3 text-green-400" />
-            {t('cards:intotoSupplyChain.featureSlsaCompliance')}
+            {t('cards:intoto_supply_chain.featureSlsaCompliance')}
           </div>
         </div>
       </div>
@@ -458,7 +485,7 @@ Please proceed step by step.`,
           rel="noopener noreferrer"
           className="text-muted-foreground hover:text-cyan-400 transition-colors"
         >
-          {t('cards:intotoSupplyChain.footerDocs')}
+          {t('cards:intoto_supply_chain.footerDocs')}
         </a>
         <span className="text-muted-foreground/30">·</span>
         <a
@@ -467,7 +494,7 @@ Please proceed step by step.`,
           rel="noopener noreferrer"
           className="text-muted-foreground hover:text-cyan-400 transition-colors"
         >
-          {t('cards:intotoSupplyChain.footerGitHub')}
+          {t('cards:intoto_supply_chain.footerGitHub')}
         </a>
         <span className="text-muted-foreground/30">·</span>
         <a
@@ -476,7 +503,7 @@ Please proceed step by step.`,
           rel="noopener noreferrer"
           className="text-muted-foreground hover:text-cyan-400 transition-colors"
         >
-          {t('cards:intotoSupplyChain.footerSlsa')}
+          {t('cards:intoto_supply_chain.footerSlsa')}
         </a>
       </div>
     </div>

@@ -229,6 +229,7 @@ export const CARD_CATALOG = {
     { type: 'iso27001_audit', title: 'ISO 27001 Audit', description: 'Interactive ISO 27001 compliance checklist with 70 Kubernetes security controls', visualization: 'status' },
     { type: 'opa_policies', title: 'OPA Gatekeeper', description: 'Policy enforcement with OPA Gatekeeper - shows installed status per cluster', visualization: 'status' },
     { type: 'kyverno_policies', title: 'Kyverno Policies', description: 'Kubernetes-native policy management with Kyverno', visualization: 'status' },
+    { type: 'intoto_supply_chain', title: 'in-toto Supply Chain', description: 'Monitor supply chain security and verify layout steps across clusters', visualization: 'status' },
     { type: 'falco_alerts', title: 'Falco Alerts', description: 'Runtime security monitoring - syscall anomalies, container escapes, privilege escalation', visualization: 'events' },
     { type: 'trivy_scan', title: 'Trivy Scanner', description: 'Vulnerability scanning for container images, IaC, and secrets', visualization: 'table' },
     { type: 'kubescape_scan', title: 'Kubescape', description: 'Security posture management and NSA/CISA hardening compliance', visualization: 'status' },
