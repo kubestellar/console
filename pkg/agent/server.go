@@ -418,6 +418,13 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/helm/uninstall", s.handleHelmUninstall)
 	mux.HandleFunc("/helm/upgrade", s.handleHelmUpgrade)
 
+	// GitOps drift detection + kubectl sync moved to kc-agent (#7993 Phase 3b).
+	// These shell `kubectl diff` / `kubectl apply` under the user's kubeconfig.
+	// Backend handlers are still present until Phase 4 deletes them — routes
+	// in pkg/agent/server_gitops.go.
+	mux.HandleFunc("/gitops/detect-drift", s.handleDetectDrift)
+	mux.HandleFunc("/gitops/sync", s.handleGitopsSync)
+
 	// Rename context endpoint
 	mux.HandleFunc("/rename-context", s.handleRenameContextHTTP)
 
