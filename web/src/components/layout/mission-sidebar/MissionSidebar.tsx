@@ -897,7 +897,7 @@ export function MissionSidebar() {
        * `missionSearchQuery` is excluded so a failed search still surfaces the
        * "no search results" branch below instead of this full-panel empty state.
        */}
-      {listTotalMissions === 0 && !missionSearchQuery && !activeMission ? (
+      {listTotalMissions === 0 && !missionSearchQuery.trim() && !activeMission ? (
         <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
           <Sparkles className="w-10 h-10 text-purple-400/60 mb-4" />
           <p className="text-muted-foreground">{t('missionSidebar.noActiveMissions')}</p>
