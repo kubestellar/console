@@ -171,6 +171,8 @@ export GOOGLE_API_KEY=...             # Gemini  (note: GOOGLE_API_KEY, not GEMIN
 
 **If no key is configured**, AI-powered features fall back to deterministic / rule-based behavior. The card suggestions, missions, and dashboards remain fully usable.
 
+**Security model, air-gapped deployments, and local / self-hosted LLMs** are covered in [`docs/security/SECURITY-MODEL.md`](docs/security/SECURITY-MODEL.md). That document explains the data flow between browser, Go backend, kc-agent, and AI providers; how to run the console with no external AI access; and how to point an OpenAI-compatible local LLM (Ollama, vLLM, LM Studio, internal gateway) at kc-agent via `GROQ_BASE_URL` / `OPENROUTER_BASE_URL` / `OPEN_WEBUI_URL`.
+
 ## How It Works
 
 1. **Onboarding** — Sign in with GitHub, answer role questions, get a personalized dashboard
