@@ -58,18 +58,29 @@ type SortField = 'severity' | 'time'
 
 export function ActiveAlerts() {
   const { t } = useTranslation('cards')
-  const { activeAlerts, acknowledgedAlerts, stats, acknowledgeAlert, runAIDiagnosis } = useAlerts()
+  const {
+    activeAlerts,
+    acknowledgedAlerts,
+    stats,
+    acknowledgeAlert,
+    runAIDiagnosis,
+    isLoadingData,
+    dataError,
+  } = useAlerts()
   const { selectedSeverities, isAllSeveritiesSelected, customFilter } = useGlobalFilters()
   const { isDemoMode } = useDemoMode()
 
-  // Report state to CardWrapper for refresh animation and demo badge
+  // Report real fetch state so CardWrapper shows the refresh spinner on reload (#8011)
+  // and the error badge when the underlying MCP data bridge fails (#8014).
+  const hasAnyData = activeAlerts.length > 0 || acknowledgedAlerts.length > 0
   useCardLoadingState({
-    isLoading: false,
-    isRefreshing: false,
-    hasAnyData: activeAlerts.length > 0 || acknowledgedAlerts.length > 0,
+    isLoading: isLoadingData && !hasAnyData,
+    isRefreshing: isLoadingData && hasAnyData,
+    hasAnyData,
     isDemoData: isDemoMode,
-    isFailed: false,
-    consecutiveFailures: 0,
+    isFailed: Boolean(dataError),
+    consecutiveFailures: dataError ? 1 : 0,
+    errorMessage: dataError ?? undefined,
   })
   const { drillToAlert } = useDrillDownActions()
   const { missions, setActiveMission, openSidebar } = useMissions()

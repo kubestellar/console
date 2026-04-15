@@ -1,5 +1,6 @@
-import { Suspense, useState, useEffect, useRef, useSyncExternalStore } from 'react'
+import { Suspense, useState, useEffect, useMemo, useRef, useSyncExternalStore } from 'react'
 import { Routes, Route, Navigate, useNavigate, useLocation, useSearchParams } from 'react-router-dom'
+import type { Location } from 'react-router-dom'
 import { CardHistoryEntry } from './hooks/useCardHistory'
 import { Layout } from './components/layout/Layout'
 import { AuthProvider, useAuth, isJWTExpired } from './lib/auth'
@@ -492,11 +493,17 @@ function useLivePathname(): string {
 
 function App() {
   const livePath = useLivePathname()
-  // Build a synthetic Location object so <Routes location={...}> matches
-  // against the real URL. React Router's matcher only reads pathname for
-  // path matching; search/hash are non-functional here, so leaving them
-  // empty is safe. state/key are inert for matching purposes.
-  const liveLocation = { pathname: livePath, search: window.location.search, hash: window.location.hash, state: null, key: 'default' }
+  // Merge the real router location (which carries search/hash/state and —
+  // critically — a real `key` that changes on every navigation) with the
+  // live pathname. Hardcoding `key: 'default'` breaks effects across the
+  // app that fire on `location.key` change (Dashboard, Clusters, Compute
+  // re-fetch; Settings distinguishes direct load vs in-app nav via
+  // `location.key !== 'default'`).
+  const routerLocation = useLocation()
+  const liveLocation = useMemo(
+    () => ({ ...routerLocation, pathname: livePath }),
+    [routerLocation, livePath],
+  )
   return (
     <BrandingProvider>
     <ThemeProvider>
@@ -527,7 +534,7 @@ function App() {
 
       {/* ── Full dashboard routes ─────────────────────────────────────
           Everything else gets the full provider stack. */}
-      <Route path="*" element={<FullDashboardApp />} />
+      <Route path="*" element={<FullDashboardApp liveLocation={liveLocation} />} />
     </Routes>
     </ThemeProvider>
     </BrandingProvider>
@@ -535,9 +542,7 @@ function App() {
 }
 
 /** Full dashboard app with all providers — loaded only for non-mission routes */
-function FullDashboardApp() {
-  const livePath = useLivePathname()
-  const liveLocation = { pathname: livePath, search: window.location.search, hash: window.location.hash, state: null, key: 'default' }
+function FullDashboardApp({ liveLocation }: { liveLocation: Location }) {
   return (
     <AuthProvider>
     <SettingsSyncInit />

@@ -431,13 +431,26 @@ func (s *Server) setupMiddleware() {
 		const kcAgentLocalhost = "http://localhost:8585"    // kc-agent HTTP on localhost
 		const kcAgentLocalhostWS = "ws://localhost:8585"    // kc-agent WebSocket on localhost
 
+		// script-src includes 'wasm-unsafe-eval' because the SQLite cache
+		// worker compiles a WebAssembly module at runtime; without it the
+		// worker aborts, logs a noisy CompileError, and forces an IndexedDB
+		// fallback on every page load. 'wasm-unsafe-eval' is a narrower
+		// permission than 'unsafe-eval' — it allows WebAssembly.instantiate
+		// but still blocks JS eval/Function.
+		//
+		// connect-src includes https://cdn.jsdelivr.net because the login
+		// page's Three.js globe renders cluster labels via troika-three-text,
+		// which fetches a unicode font resolver from jsdelivr at runtime.
+		// Without it the font lookup throws, labels fail to render, and the
+		// globe initialization aborts — leaving the right side of the login
+		// page blank.
 		c.Set("Content-Security-Policy",
 			"default-src 'self'; "+
-				"script-src 'self' 'unsafe-inline' blob: https://www.googletagmanager.com; "+
+				"script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob: https://www.googletagmanager.com; "+
 				"worker-src 'self' blob:; "+
 				"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "+
 				"img-src 'self' data: https:; "+
-				"connect-src 'self' "+kcAgentLoopback+" "+kcAgentLoopbackWS+" "+kcAgentLocalhost+" "+kcAgentLocalhostWS+" https://www.google-analytics.com https://www.googletagmanager.com wss:; "+
+				"connect-src 'self' "+kcAgentLoopback+" "+kcAgentLoopbackWS+" "+kcAgentLocalhost+" "+kcAgentLocalhostWS+" https://www.google-analytics.com https://www.googletagmanager.com https://cdn.jsdelivr.net wss:; "+
 				"font-src 'self' data: https://fonts.gstatic.com; "+
 				"object-src 'none'; "+
 				"base-uri 'self'")
@@ -872,19 +885,21 @@ func (s *Server) setupRoutes() {
 	api.Get("/rbac/roles", rbac.ListK8sRoles)
 	api.Get("/rbac/bindings", rbac.ListK8sRoleBindings)
 	api.Get("/rbac/permissions", rbac.GetClusterPermissions)
-	api.Post("/rbac/service-accounts", rbac.CreateServiceAccount)
-	api.Post("/rbac/bindings", rbac.CreateRoleBinding)
+	// NOTE: POST /api/rbac/service-accounts and POST /api/rbac/bindings moved
+	// to kc-agent (#7993 Phase 1.5 PR A). The frontend now POSTs to
+	// ${LOCAL_AGENT_HTTP_URL}/serviceaccounts and
+	// ${LOCAL_AGENT_HTTP_URL}/rolebindings so the mutation runs under the
+	// user's kubeconfig instead of the backend pod's ServiceAccount.
 	api.Get("/permissions/summary", rbac.GetPermissionsSummary)
 	api.Post("/rbac/can-i", rbac.CheckCanI)
 
-	// Namespace management routes (admin only)
+	// Namespace management routes (admin only).
+	// POST/DELETE /namespaces and POST/DELETE /namespaces/:name/access were
+	// migrated to kc-agent in #7993 Phases 1.5 and 2 — they now run under the
+	// user's kubeconfig instead of the backend pod ServiceAccount.
 	namespaces := handlers.NewNamespaceHandler(s.store, s.k8sClient)
 	api.Get("/namespaces", namespaces.ListNamespaces)
-	api.Post("/namespaces", namespaces.CreateNamespace)
-	api.Delete("/namespaces/:name", namespaces.DeleteNamespace)
 	api.Get("/namespaces/:name/access", namespaces.GetNamespaceAccess)
-	api.Post("/namespaces/:name/access", namespaces.GrantNamespaceAccess)
-	api.Delete("/namespaces/:name/access/:binding", namespaces.RevokeNamespaceAccess)
 
 	// Mission knowledge base routes (validate, share — protected)
 	missions.RegisterRoutes(api.Group("/missions"))
@@ -1015,8 +1030,9 @@ func (s *Server) setupRoutes() {
 	api.Get("/mcs/status", mcsHandlers.GetMCSStatus)
 	api.Get("/mcs/exports", mcsHandlers.ListServiceExports)
 	api.Get("/mcs/exports/:cluster/:namespace/:name", mcsHandlers.GetServiceExport)
-	api.Post("/mcs/exports", mcsHandlers.CreateServiceExport)
-	api.Delete("/mcs/exports/:cluster/:namespace/:name", mcsHandlers.DeleteServiceExport)
+	// Create/Delete ServiceExport routes removed in #7993 Phase 1.5 PR B.
+	// User-initiated mutations now run via kc-agent /serviceexports under
+	// the user's kubeconfig. The backend handlers had no frontend consumer.
 	api.Get("/mcs/imports", mcsHandlers.ListServiceImports)
 	api.Get("/mcs/imports/:cluster/:namespace/:name", mcsHandlers.GetServiceImport)
 
@@ -1056,9 +1072,10 @@ func (s *Server) setupRoutes() {
 	api.Get("/workloads/resolve-deps/:cluster/:namespace/:name", workloadHandlers.ResolveDependencies)
 	api.Get("/workloads/monitor/:cluster/:namespace/:name", workloadHandlers.MonitorWorkload)
 	api.Get("/workloads/:cluster/:namespace/:name", workloadHandlers.GetWorkload)
-	api.Post("/workloads/deploy", workloadHandlers.DeployWorkload)
-	api.Post("/workloads/scale", workloadHandlers.ScaleWorkload)
-	api.Delete("/workloads/:cluster/:namespace/:name", workloadHandlers.DeleteWorkload)
+	// NOTE: /workloads/deploy, /workloads/scale, and the DELETE
+	// /workloads/:cluster/:namespace/:name route all moved to kc-agent
+	// (#7993 Phase 1 PRs A and B). The agent uses the user's kubeconfig
+	// instead of the backend pod SA for those mutating operations.
 
 	// Cluster Group routes
 	api.Get("/cluster-groups", workloadHandlers.ListClusterGroups)

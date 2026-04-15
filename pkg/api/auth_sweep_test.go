@@ -54,21 +54,23 @@ func TestProtectedRoutes_UnauthenticatedReturn401(t *testing.T) {
 		{"POST", "/api/mcp/tools/ops/call"},
 		{"POST", "/api/mcp/tools/deploy/call"},
 		// RBAC read + mutate
+		// NOTE: POST /api/rbac/service-accounts and POST /api/rbac/bindings
+		// moved to kc-agent (#7993 Phase 1.5 PR A).
 		{"GET", "/api/rbac/users"},
 		{"GET", "/api/rbac/roles"},
 		{"GET", "/api/rbac/bindings"},
 		{"GET", "/api/rbac/permissions"},
-		{"POST", "/api/rbac/service-accounts"},
-		{"POST", "/api/rbac/bindings"},
 		{"POST", "/api/rbac/can-i"},
-		// Namespace lifecycle
+		// Namespace lifecycle.
+		// NOTE: POST /api/namespaces and DELETE /api/namespaces/:name moved to
+		// kc-agent (#7993 Phase 2). Only the read endpoint remains here.
 		{"GET", "/api/namespaces"},
-		{"POST", "/api/namespaces"},
 		// Workloads
 		{"GET", "/api/workloads"},
 		{"GET", "/api/workloads/capabilities"},
-		{"POST", "/api/workloads/deploy"},
-		{"POST", "/api/workloads/scale"},
+		// NOTE: /api/workloads/deploy and /api/workloads/scale, and the DELETE
+		// /api/workloads/:cluster/:namespace/:name route all moved to kc-agent
+		// (#7993 Phase 1 PRs A and B).
 		// Gateway / MCS / GitOps read
 		{"GET", "/api/gateway/gateways"},
 		{"GET", "/api/gateway/httproutes"},

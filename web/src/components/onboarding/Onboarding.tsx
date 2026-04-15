@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { ChevronRight, ChevronLeft, Check, GripVertical, ArrowUp, ArrowDown } from 'lucide-react'
 import { api } from '../../lib/api'
 import { useAuth } from '../../lib/auth'
@@ -14,6 +15,14 @@ interface Question {
   description?: string
   options: string[]
   rankedChoice?: boolean
+}
+
+// English option strings below are the stable IDs stored in `answers` and
+// posted to /api/onboarding/responses — they must NOT change. Display labels
+// are looked up in cards.json via slugOption() so translations can override
+// them without touching the stored value (#8017).
+function slugOption(option: string): string {
+  return option.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')
 }
 
 const questions: Question[] = [
@@ -63,12 +72,23 @@ const questions: Question[] = [
 export function Onboarding() {
   const navigate = useNavigate()
   const { refreshUser } = useAuth()
+  const { t } = useTranslation('cards')
   const [currentStep, setCurrentStep] = useState(0)
   const [answers, setAnswers] = useState<Record<string, string | string[]>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const currentQuestion = questions[currentStep]
   const progress = ((currentStep + 1) / questions.length) * 100
+
+  // Translate a question option using slug-based keys with English fallback.
+  const tOption = (questionKey: string, option: string) =>
+    t(`onboarding.questions.${questionKey}.options.${slugOption(option)}`, { defaultValue: option })
+  const tQuestion = (q: Question) =>
+    t(`onboarding.questions.${q.key}.question`, { defaultValue: q.question })
+  const tDescription = (q: Question) =>
+    q.description
+      ? t(`onboarding.questions.${q.key}.description`, { defaultValue: q.description })
+      : undefined
 
   // Initialize ranked choice answers with default order
   const getRankedOrder = (): string[] => {
@@ -148,7 +168,7 @@ export function Onboarding() {
         navigate(ROUTES.HOME)
       } else {
         // Real user: show error message so they are not stranded
-        const message = err instanceof Error ? err.message : 'Failed to complete onboarding. Please try again.'
+        const message = err instanceof Error ? err.message : t('onboarding.errorFallback')
         setErrorMessage(message)
       }
     } finally {
@@ -160,7 +180,7 @@ export function Onboarding() {
   const canProceed = currentQuestion.rankedChoice || answers[currentQuestion.key]
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
       {/* Star field */}
       <div className="star-field">
         {Array.from({ length: 30 }).map((_, i) => (
@@ -187,7 +207,7 @@ export function Onboarding() {
         <div className="mb-8">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm text-muted-foreground">
-              Step {currentStep + 1} of {questions.length}
+              {t('onboarding.stepProgress', { current: currentStep + 1, total: questions.length })}
             </span>
             <span className="text-sm text-muted-foreground">{Math.round(progress)}%</span>
           </div>
@@ -201,9 +221,9 @@ export function Onboarding() {
 
         {/* Question card */}
         <div className="glass rounded-2xl p-8 animate-fade-in-up">
-          <h2 className="text-2xl font-bold text-foreground mb-2">{currentQuestion.question}</h2>
+          <h2 className="text-2xl font-bold text-foreground mb-2">{tQuestion(currentQuestion)}</h2>
           {currentQuestion.description && (
-            <div className="text-muted-foreground mb-6">{currentQuestion.description}</div>
+            <div className="text-muted-foreground mb-6">{tDescription(currentQuestion)}</div>
           )}
 
           {/* Options - Single select or Ranked Choice */}
@@ -220,7 +240,7 @@ export function Onboarding() {
                       {index + 1}
                     </span>
                   </div>
-                  <span className="flex-1 text-foreground">{option}</span>
+                  <span className="flex-1 text-foreground">{tOption(currentQuestion.key, option)}</span>
                   <div className="flex gap-1">
                     <Button
                       variant="ghost"
@@ -228,7 +248,7 @@ export function Onboarding() {
                       onClick={() => handleRankMove(index, 'up')}
                       disabled={index === 0}
                       icon={<ArrowUp className="w-4 h-4 text-muted-foreground" aria-hidden="true" />}
-                      aria-label={`Move ${option} up`}
+                      aria-label={t('onboarding.moveUp', { option: tOption(currentQuestion.key, option) })}
                     />
                     <Button
                       variant="ghost"
@@ -236,7 +256,7 @@ export function Onboarding() {
                       onClick={() => handleRankMove(index, 'down')}
                       disabled={index === getRankedOrder().length - 1}
                       icon={<ArrowDown className="w-4 h-4 text-muted-foreground" aria-hidden="true" />}
-                      aria-label={`Move ${option} down`}
+                      aria-label={t('onboarding.moveDown', { option: tOption(currentQuestion.key, option) })}
                     />
                   </div>
                 </div>
@@ -244,26 +264,29 @@ export function Onboarding() {
             </div>
           ) : (
             <div className="grid gap-3">
-              {currentQuestion.options.map((option) => (
-                <button
-                  key={option}
-                  onClick={() => handleSelect(option)}
-                  className={`w-full p-4 rounded-xl text-left transition-all duration-200 ${
-                    answers[currentQuestion.key] === option
-                      ? 'bg-purple-500/20 border-2 border-purple-500 text-foreground'
-                      : 'bg-secondary/50 border-2 border-transparent hover:bg-secondary hover:border-purple-500/30 text-muted-foreground'
-                  }`}
-                  aria-label={`Select ${option}`}
-                  aria-pressed={answers[currentQuestion.key] === option}
-                >
-                  <div className="flex items-center justify-between">
-                    <span>{option}</span>
-                    {answers[currentQuestion.key] === option && (
-                      <Check className="w-5 h-5 text-purple-400" />
-                    )}
-                  </div>
-                </button>
-              ))}
+              {currentQuestion.options.map((option) => {
+                const label = tOption(currentQuestion.key, option)
+                return (
+                  <button
+                    key={option}
+                    onClick={() => handleSelect(option)}
+                    className={`w-full p-4 rounded-xl text-left transition-all duration-200 ${
+                      answers[currentQuestion.key] === option
+                        ? 'bg-purple-500/20 border-2 border-purple-500 text-foreground'
+                        : 'bg-secondary/50 border-2 border-transparent hover:bg-secondary hover:border-purple-500/30 text-muted-foreground'
+                    }`}
+                    aria-label={t('onboarding.selectOption', { option: label })}
+                    aria-pressed={answers[currentQuestion.key] === option}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span>{label}</span>
+                      {answers[currentQuestion.key] === option && (
+                        <Check className="w-5 h-5 text-purple-400" />
+                      )}
+                    </div>
+                  </button>
+                )
+              })}
             </div>
           )}
 
@@ -283,7 +306,7 @@ export function Onboarding() {
               disabled={currentStep === 0}
               icon={<ChevronLeft className="w-4 h-4" />}
             >
-              Back
+              {t('onboarding.back')}
             </Button>
 
             {isLastStep ? (
@@ -295,7 +318,7 @@ export function Onboarding() {
                 loading={isSubmitting}
                 iconRight={!isSubmitting ? <Check className="w-4 h-4" /> : undefined}
               >
-                {isSubmitting ? 'Creating dashboard...' : 'Complete Setup'}
+                {isSubmitting ? t('onboarding.creating') : t('onboarding.complete')}
               </Button>
             ) : (
               <Button
@@ -305,7 +328,7 @@ export function Onboarding() {
                 disabled={!canProceed}
                 iconRight={<ChevronRight className="w-4 h-4" />}
               >
-                Continue
+                {t('onboarding.continue')}
               </Button>
             )}
           </div>

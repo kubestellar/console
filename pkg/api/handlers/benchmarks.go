@@ -16,6 +16,14 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// maxBenchmarkReportBytes caps the size of a single benchmark report we will
+// buffer from Google Drive. #7963 — previously downloadDriveFile called
+// io.ReadAll directly on the upstream body, so a huge or malicious file id
+// could OOM the server. 50 MiB is far larger than any real report (typical
+// reports are <1 MiB) but small enough to bound worst-case memory per
+// download.
+const maxBenchmarkReportBytes = 50 * 1024 * 1024 // 50 MiB
+
 // ---------------------------------------------------------------------------
 // v0.2 output structs — match the TypeScript BenchmarkReport interface
 // ---------------------------------------------------------------------------
@@ -876,14 +884,27 @@ func (h *BenchmarkHandlers) downloadDriveFile(fileID string) ([]byte, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		body, readErr := io.ReadAll(resp.Body)
+		// #7963 — bound error-body reads too, so a non-200 status can't be
+		// used to force the parent to buffer an unbounded body.
+		body, readErr := io.ReadAll(io.LimitReader(resp.Body, maxBenchmarkReportBytes))
 		if readErr != nil {
 			body = []byte("(failed to read response body)")
 		}
 		return nil, fmt.Errorf("Drive download returned %d: %s", resp.StatusCode, string(body))
 	}
 
-	return io.ReadAll(resp.Body)
+	// #7963 — cap the download at maxBenchmarkReportBytes. io.LimitReader
+	// silently truncates, so pair with ReadAll and (below) explicitly check
+	// whether we hit the cap so callers see a real error rather than a
+	// partially-decoded report.
+	data, err := io.ReadAll(io.LimitReader(resp.Body, maxBenchmarkReportBytes+1))
+	if err != nil {
+		return nil, err
+	}
+	if int64(len(data)) > maxBenchmarkReportBytes {
+		return nil, fmt.Errorf("Drive download exceeded max size of %d bytes", maxBenchmarkReportBytes)
+	}
+	return data, nil
 }
 
 // ---------------------------------------------------------------------------

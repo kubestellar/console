@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"io"
@@ -173,97 +172,7 @@ func TestListServiceImports(t *testing.T) {
 	assert.NotEmpty(t, list.Items)
 }
 
-func TestCreateServiceExport(t *testing.T) {
-	env := setupTestEnv(t)
-	handler := NewMCSHandlers(env.K8sClient, env.Hub)
-	env.App.Post("/api/mcs/exports", handler.CreateServiceExport)
-
-	dynClient := injectDynamicCluster(env, "c1", serviceExportGVRs())
-
-	// Success reactor
-	dynClient.PrependReactor("create", "*", func(action k8stesting.Action) (bool, runtime.Object, error) {
-		return true, &unstructured.Unstructured{}, nil
-	})
-
-	// Case 1: Success
-	payload := map[string]string{
-		"cluster":     "c1",
-		"namespace":   "default",
-		"serviceName": "my-svc",
-	}
-	body, _ := json.Marshal(payload)
-	req, err := http.NewRequest("POST", "/api/mcs/exports", bytes.NewReader(body))
-	require.NoError(t, err)
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := env.App.Test(req, 5000)
-	require.NoError(t, err)
-	require.NotNil(t, resp)
-	assert.Equal(t, 201, resp.StatusCode)
-
-	// Verify creation via actions
-	found := false
-	for _, action := range dynClient.Actions() {
-		if action.GetVerb() == "create" && action.GetResource().Resource == "serviceexports" {
-			found = true
-			break
-		}
-	}
-	assert.True(t, found, "Create action not found")
-
-	// Case 2: Validation Error (missing serviceName)
-	payloadInvalid := map[string]string{
-		"cluster":   "c1",
-		"namespace": "default",
-	}
-	bodyInvalid, _ := json.Marshal(payloadInvalid)
-	reqInvalid, err := http.NewRequest("POST", "/api/mcs/exports", bytes.NewReader(bodyInvalid))
-	require.NoError(t, err)
-	reqInvalid.Header.Set("Content-Type", "application/json")
-
-	respInvalid, err := env.App.Test(reqInvalid, 5000)
-	require.NoError(t, err)
-	require.NotNil(t, respInvalid)
-	assert.Equal(t, 400, respInvalid.StatusCode)
-
-	// Case 3: Client Error → 500
-	dynClient.PrependReactor("create", "*", func(action k8stesting.Action) (bool, runtime.Object, error) {
-		return true, nil, errors.New("create failed")
-	})
-	reqFail, err := http.NewRequest("POST", "/api/mcs/exports", bytes.NewReader(body))
-	require.NoError(t, err)
-	reqFail.Header.Set("Content-Type", "application/json")
-
-	respFail, err := env.App.Test(reqFail)
-	require.NoError(t, err)
-	require.NotNil(t, respFail)
-	assert.Equal(t, 500, respFail.StatusCode)
-}
-
-func TestDeleteServiceExport(t *testing.T) {
-	env := setupTestEnv(t)
-	handler := NewMCSHandlers(env.K8sClient, env.Hub)
-	env.App.Delete("/api/mcs/exports/:cluster/:namespace/:name", handler.DeleteServiceExport)
-
-	dynClient := injectDynamicCluster(env, "c1", serviceExportGVRs())
-
-	// Success reactor
-	dynClient.PrependReactor("delete", "*", func(action k8stesting.Action) (bool, runtime.Object, error) {
-		return true, nil, nil
-	})
-
-	// Case 1: Success
-	req, _ := http.NewRequest("DELETE", "/api/mcs/exports/c1/default/svc1", nil)
-	resp, err := env.App.Test(req, 5000)
-	require.NoError(t, err)
-	assert.Equal(t, 200, resp.StatusCode)
-
-	// Case 2: Client Error → 500
-	dynClient.PrependReactor("delete", "*", func(action k8stesting.Action) (bool, runtime.Object, error) {
-		return true, nil, errors.New("delete failed")
-	})
-	reqFail, _ := http.NewRequest("DELETE", "/api/mcs/exports/c1/default/svc1", nil)
-	respFail, err := env.App.Test(reqFail, 5000)
-	require.NoError(t, err)
-	assert.Equal(t, 500, respFail.StatusCode)
-}
+// TestCreateServiceExport and TestDeleteServiceExport were removed in #7993
+// Phase 1.5 PR B. Those backend handlers were deleted (no frontend consumer)
+// and the user-initiated mutations now run via kc-agent /serviceexports. The
+// equivalent kc-agent handler tests cover the create/delete path.

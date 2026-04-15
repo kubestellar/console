@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/gofiber/contrib/websocket"
@@ -22,7 +23,8 @@ import (
 const execAuthDeadline = 5 * time.Second
 
 // execMaxStdinBytes is the maximum allowed size of a single stdin message.
-// Messages exceeding this limit are silently dropped to prevent memory exhaustion.
+// Messages exceeding this limit are dropped (with a WARN log at the drop
+// site) to prevent memory exhaustion.
 const execMaxStdinBytes = 1 * 1024 * 1024 // 1 MB
 
 // execPingInterval is how often the server sends a WebSocket ping to detect dead peers.
@@ -32,6 +34,24 @@ const execPingInterval = 30 * time.Second
 // the peer dead. Must be greater than execPingInterval so the deadline is always
 // in the future when a new ping is sent.
 const execPongTimeout = 45 * time.Second
+
+// execStdinDropCount counts stdin frames that were discarded because
+// stdinCh was full. PR 7995 added the counter and a rate-limited WARN log
+// so drops are no longer silent — the first drop in a session logs, then
+// further drops increment the counter and log only on power-of-two
+// boundaries to avoid log storms under sustained backpressure.
+// Telemetry-first pass: observe before escalating the handling
+// (block-then-error-close is the planned follow-up if this counter is
+// non-zero in real traffic). Exposed via GetExecStdinDropCount for tests
+// and any future stats endpoint.
+var execStdinDropCount atomic.Uint64
+
+// GetExecStdinDropCount returns the cumulative number of stdin frames that
+// were dropped due to a full stdinCh buffer since process start. Exported for
+// tests and future stats reporting.
+func GetExecStdinDropCount() uint64 {
+	return execStdinDropCount.Load()
+}
 
 // execSessionRegistry tracks active exec sessions per user so that
 // CancelUserExecSessions can tear them down on logout (#6024).
@@ -453,6 +473,13 @@ func (h *ExecHandlers) HandleExec(c *websocket.Conn) {
 
 	// Start a goroutine to read WebSocket messages and route them
 	done := make(chan struct{})
+	// Per-session stdin-drop counter. Used to rate-limit the WARN log at
+	// the drop site so a backpressure burst doesn't flood the journal
+	// (Copilot review on issue 8002). Log the first drop, then log only on
+	// power-of-two boundaries (2, 4, 8, 16, ...) thereafter. The global
+	// execStdinDropCount is still incremented on every drop for accurate
+	// telemetry — only the per-line log is throttled.
+	var sessionStdinDrops uint64
 	go func() {
 		defer close(done)
 		defer close(stdinCh)
@@ -477,7 +504,28 @@ func (h *ExecHandlers) HandleExec(c *websocket.Conn) {
 				select {
 				case stdinCh <- []byte(m.Data):
 				default:
-					// Drop if channel full
+					// stdinCh is full, meaning the pod's stdin drain has
+					// fallen behind. Dropping the frame here can truncate
+					// pasted commands or scripts at arbitrary byte
+					// boundaries — PR 7995 added this counter + WARN so the
+					// drop is observable. Throttle the log to the first
+					// drop in a session and power-of-two session counts
+					// thereafter (Copilot review on issue 8002) so a
+					// sustained backpressure burst doesn't flood the
+					// journal. Telemetry-first pass: observe before
+					// escalating to block-then-error-close.
+					totalDrops := execStdinDropCount.Add(1)
+					sessionStdinDrops++
+					// Log when sessionStdinDrops is a power of two (1, 2,
+					// 4, 8, ...). `x & (x-1) == 0` is the standard
+					// power-of-two check.
+					if sessionStdinDrops&(sessionStdinDrops-1) == 0 {
+						slog.Warn("[Exec] dropping stdin frame — channel full",
+							"bytes", len(m.Data),
+							"buffer", cap(stdinCh),
+							"session_drops", sessionStdinDrops,
+							"total_drops", totalDrops)
+					}
 				}
 			case "resize":
 				if m.Cols > 0 && m.Rows > 0 {

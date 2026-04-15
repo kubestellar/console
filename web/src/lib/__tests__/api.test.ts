@@ -362,6 +362,25 @@ describe('api.ts', () => {
       expect(localStorage.getItem(STORAGE_KEY_USER_CACHE)).toBeNull()
     })
 
+    // A 401 from /api/github/* means the GitHub OAuth token is missing or
+    // expired — NOT that the user's console session is dead. The caller
+    // (e.g. Mission Browser) needs to handle it with a feature-local prompt
+    // instead of the whole app logging out. See api.ts:418-427.
+    it('does not clear auth state on 401 from /api/github/*', async () => {
+      localStorage.setItem(STORAGE_KEY_TOKEN, 'valid-token')
+      localStorage.setItem(STORAGE_KEY_USER_CACHE, '{"id":1}')
+
+      vi.mocked(fetch)
+        .mockResolvedValueOnce(makeResponse({ status: 'ok' })) // health
+        .mockResolvedValueOnce(makeResponse({}, { status: 401 })) // 401 on github path
+
+      const { api, UnauthorizedError } = await importFresh()
+      await expect(api.get('/api/github/repos/foo/bar/contents/x')).rejects.toThrow(UnauthorizedError)
+
+      expect(localStorage.getItem(STORAGE_KEY_TOKEN)).toBe('valid-token')
+      expect(localStorage.getItem(STORAGE_KEY_USER_CACHE)).toBe('{"id":1}')
+    })
+
     it('handles 500 with error text', async () => {
       localStorage.setItem(STORAGE_KEY_TOKEN, 'valid-token')
       vi.mocked(fetch)

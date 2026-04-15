@@ -654,10 +654,19 @@ describe('useK8sServiceAccounts', () => {
     )
   })
 
-  it('createServiceAccount calls POST and appends to local state', async () => {
+  it('createServiceAccount POSTs to kc-agent and appends to local state', async () => {
+    // #7993 Phase 1.5 PR A: createServiceAccount routes through kc-agent
+    // (POST ${LOCAL_AGENT_HTTP_URL}/serviceaccounts) so the mutation runs
+    // under the user's kubeconfig, not the backend pod SA. The old
+    // api.post('/api/rbac/service-accounts', ...) call is gone.
     mockGet.mockResolvedValue({ data: [] })
     const newSA = { name: 'new-sa', namespace: 'default', cluster: 'prod' }
-    mockPost.mockResolvedValue({ data: newSA })
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(newSA), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    )
 
     const { useK8sServiceAccounts } = await getHooks()
     const { result } = renderHook(() => useK8sServiceAccounts('prod'))
@@ -673,11 +682,9 @@ describe('useK8sServiceAccounts', () => {
       expect(created).toEqual(newSA)
     })
 
-    expect(mockPost).toHaveBeenCalledWith('/api/rbac/service-accounts', {
-      name: 'new-sa',
-      namespace: 'default',
-      cluster: 'prod',
-    })
+    expect(fetchSpy).toHaveBeenCalled()
+    const callUrl = fetchSpy.mock.calls[0]?.[0] as string
+    expect(callUrl).toContain('/serviceaccounts')
     expect(result.current.serviceAccounts).toHaveLength(1)
     expect(result.current.serviceAccounts[0].name).toBe('new-sa')
   })
@@ -924,7 +931,10 @@ describe('useK8sRoleBindings', () => {
     expect(result.current.bindings).toEqual([])
   })
 
-  it('createRoleBinding calls POST and refetches', async () => {
+  it('createRoleBinding POSTs to kc-agent and refetches', async () => {
+    // #7993 Phase 1.5 PR A: createRoleBinding routes through kc-agent
+    // (POST ${LOCAL_AGENT_HTTP_URL}/rolebindings) so the mutation runs under
+    // the user's kubeconfig, not the backend pod SA.
     const initialBindings = [
       {
         name: 'existing',
@@ -950,7 +960,12 @@ describe('useK8sRoleBindings', () => {
           },
         ],
       })
-    mockPost.mockResolvedValue({ data: {} })
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ success: true }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    )
 
     const { useK8sRoleBindings } = await getHooks()
     const { result } = renderHook(() => useK8sRoleBindings('prod'))
@@ -971,13 +986,9 @@ describe('useK8sRoleBindings', () => {
       expect(ok).toBe(true)
     })
 
-    expect(mockPost).toHaveBeenCalledWith(
-      '/api/rbac/bindings',
-      expect.objectContaining({
-        name: 'new-binding',
-        cluster: 'prod',
-      }),
-    )
+    expect(fetchSpy).toHaveBeenCalled()
+    const callUrl = fetchSpy.mock.calls[0]?.[0] as string
+    expect(callUrl).toContain('/rolebindings')
 
     await waitFor(() => expect(result.current.bindings).toHaveLength(2))
   })
@@ -1313,9 +1324,15 @@ describe('useK8sRoleBindings — additional coverage', () => {
     expect(mockGet).not.toHaveBeenCalled()
   })
 
-  it('createRoleBinding calls POST and refetches bindings', async () => {
+  it('createRoleBinding POSTs to kc-agent and refetches bindings', async () => {
+    // #7993 Phase 1.5 PR A: createRoleBinding routes through kc-agent.
     mockGet.mockResolvedValue({ data: [] })
-    mockPost.mockResolvedValue({ data: {} })
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ success: true }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    )
 
     const { useK8sRoleBindings } = await getHooks()
     const { result } = renderHook(() => useK8sRoleBindings('prod'))
@@ -1334,10 +1351,16 @@ describe('useK8sRoleBindings — additional coverage', () => {
       expect(ok).toBe(true)
     })
 
-    expect(mockPost).toHaveBeenCalledWith('/api/rbac/bindings', expect.objectContaining({
+    expect(fetchSpy).toHaveBeenCalled()
+    const callUrl = fetchSpy.mock.calls[0]?.[0] as string
+    expect(callUrl).toContain('/rolebindings')
+    // Verify the body was POSTed as JSON with the original fields preserved.
+    const callInit = fetchSpy.mock.calls[0]?.[1] as RequestInit | undefined
+    expect(callInit?.method).toBe('POST')
+    expect(JSON.parse(String(callInit?.body))).toMatchObject({
       name: 'test-binding',
       roleName: 'edit',
-    }))
+    })
   })
 
   it('silently fails on API error', async () => {

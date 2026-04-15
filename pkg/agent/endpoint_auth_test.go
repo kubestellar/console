@@ -62,6 +62,12 @@ const (
 	// endpointScale scales a deployment (sensitive — mutating).
 	endpointScale = "/scale"
 
+	// endpointWorkloadsDeploy deploys a workload to target clusters (sensitive — mutating).
+	endpointWorkloadsDeploy = "/workloads/deploy"
+
+	// endpointWorkloadsDelete deletes a workload from a cluster (sensitive — destructive mutation).
+	endpointWorkloadsDelete = "/workloads/delete"
+
 	// endpointProviderCheck checks provider availability (sensitive — reveals config).
 	endpointProviderCheck = "/provider-check"
 
@@ -116,6 +122,27 @@ const (
 	// endpointDeviceAlertsClear clears a device alert (sensitive — mutating).
 	endpointDeviceAlertsClear = "/device/alerts/clear"
 
+	// endpointHPAs lists HorizontalPodAutoscalers (sensitive — reveals infra).
+	endpointHPAs = "/hpas"
+
+	// endpointPVCs lists PersistentVolumeClaims (sensitive — reveals infra).
+	endpointPVCs = "/pvcs"
+
+	// endpointRoles lists Kubernetes Roles (sensitive — RBAC posture).
+	endpointRoles = "/roles"
+
+	// endpointRoleBindings lists Kubernetes RoleBindings (sensitive — RBAC posture).
+	endpointRoleBindings = "/rolebindings"
+
+	// endpointResourceQuotas lists ResourceQuotas (sensitive — reveals infra).
+	endpointResourceQuotas = "/resourcequotas"
+
+	// endpointLimitRanges lists LimitRanges (sensitive — reveals infra).
+	endpointLimitRanges = "/limitranges"
+
+	// endpointResolveDeps resolves workload dependencies (sensitive — walks RBAC/pods).
+	endpointResolveDeps = "/resolve-deps"
+
 	// testTokenValue is the shared secret used to configure auth in tests.
 	testTokenValue = "test-secret-token-42"
 
@@ -153,6 +180,8 @@ var sensitiveEndpoints = []struct {
 	{endpointPods, "GET"},
 	{endpointNodes, "GET"},
 	{endpointScale, "POST"},
+	{endpointWorkloadsDeploy, "POST"},
+	{endpointWorkloadsDelete, "POST"},
 	{endpointProviderCheck, "GET"},
 	{endpointAutoUpdateStatus, "GET"},
 	{endpointKagentiAgents, "GET"},
@@ -171,6 +200,13 @@ var sensitiveEndpoints = []struct {
 	{endpointPredictionsStats, "GET"},
 	{endpointDeviceAlerts, "GET"},
 	{endpointDeviceAlertsClear, "POST"},
+	{endpointHPAs, "GET"},
+	{endpointPVCs, "GET"},
+	{endpointRoles, "GET"},
+	{endpointRoleBindings, "GET"},
+	{endpointResourceQuotas, "GET"},
+	{endpointLimitRanges, "GET"},
+	{endpointResolveDeps, "GET"},
 }
 
 // endpointsLackingAuth are endpoints that SHOULD require auth but currently
@@ -530,6 +566,8 @@ func resolveEndpointHandler(s *Server, path string) func(http.ResponseWriter, *h
 		endpointPods:               s.handlePodsHTTP,
 		endpointNodes:              s.handleNodesHTTP,
 		endpointScale:              s.handleScaleHTTP,
+		endpointWorkloadsDeploy:    s.handleDeployWorkloadHTTP,
+		endpointWorkloadsDelete:    s.handleDeleteWorkloadHTTP,
 		endpointProviderCheck:      s.handleProviderCheck,
 		endpointAutoUpdateStatus:   s.handleAutoUpdateStatus,
 		endpointKagentiAgents:      s.handleKagentiAgents,

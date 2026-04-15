@@ -1151,6 +1151,120 @@ func TestServer_HandleRestartBackend_WrongMethod(t *testing.T) {
 	}
 }
 
+// TestResolveBackendPort exercises the three resolution branches documented
+// in resolveBackendPort: explicit env var, watchdog PID file present, and
+// neither (legacy default). Regression guard for #7945.
+func TestResolveBackendPort(t *testing.T) {
+	// Save and restore the global stat hook so parallel tests don't clash.
+	origStat := watchdogPidFileStat
+	defer func() { watchdogPidFileStat = origStat }()
+
+	// Default: no env var, PID file stat returns ENOENT -> legacy 8080.
+	t.Run("legacy default", func(t *testing.T) {
+		t.Setenv(backendPortEnvVar, "")
+		watchdogPidFileStat = func(string) (os.FileInfo, error) {
+			return nil, os.ErrNotExist
+		}
+		if got := resolveBackendPort(); got != backendPortLegacyDefault {
+			t.Errorf("legacy default: got %d, want %d", got, backendPortLegacyDefault)
+		}
+	})
+
+	// Watchdog PID file present, no env var -> watchdog-mode port 8081.
+	t.Run("watchdog pid file present", func(t *testing.T) {
+		t.Setenv(backendPortEnvVar, "")
+		watchdogPidFileStat = func(string) (os.FileInfo, error) {
+			return fakeFileInfo{}, nil
+		}
+		if got := resolveBackendPort(); got != backendPortWatchdogMode {
+			t.Errorf("watchdog: got %d, want %d", got, backendPortWatchdogMode)
+		}
+	})
+
+	// Explicit env var wins over PID file.
+	t.Run("env var overrides", func(t *testing.T) {
+		const customPort = 9090 // arbitrary valid port for the test
+		t.Setenv(backendPortEnvVar, fmt.Sprintf("%d", customPort))
+		watchdogPidFileStat = func(string) (os.FileInfo, error) {
+			return fakeFileInfo{}, nil // even with watchdog, env wins
+		}
+		if got := resolveBackendPort(); got != customPort {
+			t.Errorf("env override: got %d, want %d", got, customPort)
+		}
+	})
+
+	// Garbage env var falls through to the next tier.
+	t.Run("garbage env var falls through", func(t *testing.T) {
+		t.Setenv(backendPortEnvVar, "not-a-number")
+		watchdogPidFileStat = func(string) (os.FileInfo, error) {
+			return nil, os.ErrNotExist
+		}
+		if got := resolveBackendPort(); got != backendPortLegacyDefault {
+			t.Errorf("garbage env: got %d, want %d", got, backendPortLegacyDefault)
+		}
+	})
+}
+
+// TestBackendHealthURL confirms the /health URL is assembled from the resolved
+// port, not a stale constant (#7945).
+func TestBackendHealthURL(t *testing.T) {
+	origStat := watchdogPidFileStat
+	defer func() { watchdogPidFileStat = origStat }()
+
+	const customPort = 9091 // arbitrary valid port for the test
+	t.Setenv(backendPortEnvVar, fmt.Sprintf("%d", customPort))
+	watchdogPidFileStat = func(string) (os.FileInfo, error) { return nil, os.ErrNotExist }
+
+	want := fmt.Sprintf("http://127.0.0.1:%d/health", customPort)
+	if got := backendHealthURL(); got != want {
+		t.Errorf("backendHealthURL: got %q, want %q", got, want)
+	}
+}
+
+// TestEnvWithBackendPort verifies that BACKEND_PORT is always set exactly once
+// in the returned env slice — no duplicate entries even when the parent
+// environment already had one (#7945 guards against Env-slice drift).
+func TestEnvWithBackendPort(t *testing.T) {
+	origStat := watchdogPidFileStat
+	defer func() { watchdogPidFileStat = origStat }()
+
+	const stalePort = 9092  // pretend this was inherited from the parent env
+	const parentPort = 9093 // what the child should actually see
+	t.Setenv(backendPortEnvVar, fmt.Sprintf("%d", parentPort))
+	_ = stalePort // referenced via env
+	watchdogPidFileStat = func(string) (os.FileInfo, error) { return nil, os.ErrNotExist }
+
+	env := envWithBackendPort()
+	count := 0
+	var lastValue string
+	prefix := backendPortEnvVar + "="
+	for _, kv := range env {
+		if strings.HasPrefix(kv, prefix) {
+			count++
+			lastValue = kv
+		}
+	}
+	if count != 1 {
+		t.Errorf("expected exactly 1 BACKEND_PORT entry, got %d (env=%v)", count, env)
+	}
+	wantKV := fmt.Sprintf("%s=%d", backendPortEnvVar, parentPort)
+	if lastValue != wantKV {
+		t.Errorf("expected %q, got %q", wantKV, lastValue)
+	}
+}
+
+// fakeFileInfo is a minimal os.FileInfo stub for the resolveBackendPort tests.
+// Only the existence of the file is checked (via the error returned by stat),
+// so these methods can return zero values.
+type fakeFileInfo struct{}
+
+func (fakeFileInfo) Name() string       { return "" }
+func (fakeFileInfo) Size() int64        { return 0 }
+func (fakeFileInfo) Mode() os.FileMode  { return 0 }
+func (fakeFileInfo) ModTime() time.Time { return time.Time{} }
+func (fakeFileInfo) IsDir() bool        { return false }
+func (fakeFileInfo) Sys() interface{}   { return nil }
+
 func TestServer_HandleRenameContextHTTP_Unauthorized(t *testing.T) {
 	server := &Server{
 		kubectl:        &KubectlProxy{config: &api.Config{}},

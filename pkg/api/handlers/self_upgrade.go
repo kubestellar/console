@@ -211,32 +211,44 @@ func (h *SelfUpgradeHandler) TriggerUpgrade(c *fiber.Ctx) error {
 	// SECURITY (#5409): Only admin users may trigger a self-upgrade. Without
 	// this check any authenticated user could roll the console to an arbitrary
 	// image tag using the in-cluster service account's RBAC permissions.
+	//
+	// SECURITY (#7950): fail CLOSED when the store is unavailable. The prior
+	// form `if h.store != nil { /* admin check */ }` was fail-open: if the
+	// handler was constructed without a store (missing dependency, init
+	// failure, or test fixture), every authenticated user became effectively
+	// admin for self-upgrade. Flip the guard so a nil store produces a clear
+	// 503 instead of silently allowing the upgrade.
 	userID := middleware.GetUserID(c)
-	if h.store != nil {
-		user, err := h.store.GetUser(userID)
-		if err != nil {
-			slog.Warn("[self-upgrade] SECURITY: failed to look up user for role check",
-				"user_id", userID, "error", err)
-			return c.Status(fiber.StatusForbidden).JSON(SelfUpgradeTriggerResponse{
-				Error: "unable to verify user role — access denied",
-			})
-		}
-		if user == nil {
-			slog.Warn("[self-upgrade] SECURITY: user not found for role check",
-				"user_id", userID)
-			return c.Status(fiber.StatusForbidden).JSON(SelfUpgradeTriggerResponse{
-				Error: "user not found — access denied",
-			})
-		}
-		if user.Role != models.UserRoleAdmin {
-			slog.Warn("[self-upgrade] SECURITY: non-admin user attempted self-upgrade",
-				"user_id", userID,
-				"github_login", middleware.GetGitHubLogin(c),
-				"role", user.Role)
-			return c.Status(fiber.StatusForbidden).JSON(SelfUpgradeTriggerResponse{
-				Error: "self-upgrade requires admin role",
-			})
-		}
+	if h.store == nil {
+		slog.Warn("[self-upgrade] SECURITY: self-upgrade requested but store is not configured — refusing fail-open",
+			"user_id", userID)
+		return c.Status(fiber.StatusServiceUnavailable).JSON(SelfUpgradeTriggerResponse{
+			Error: "self-upgrade unavailable — user store is not configured",
+		})
+	}
+	user, err := h.store.GetUser(userID)
+	if err != nil {
+		slog.Warn("[self-upgrade] SECURITY: failed to look up user for role check",
+			"user_id", userID, "error", err)
+		return c.Status(fiber.StatusForbidden).JSON(SelfUpgradeTriggerResponse{
+			Error: "unable to verify user role — access denied",
+		})
+	}
+	if user == nil {
+		slog.Warn("[self-upgrade] SECURITY: user not found for role check",
+			"user_id", userID)
+		return c.Status(fiber.StatusForbidden).JSON(SelfUpgradeTriggerResponse{
+			Error: "user not found — access denied",
+		})
+	}
+	if user.Role != models.UserRoleAdmin {
+		slog.Warn("[self-upgrade] SECURITY: non-admin user attempted self-upgrade",
+			"user_id", userID,
+			"github_login", middleware.GetGitHubLogin(c),
+			"role", user.Role)
+		return c.Status(fiber.StatusForbidden).JSON(SelfUpgradeTriggerResponse{
+			Error: "self-upgrade requires admin role",
+		})
 	}
 	slog.Info("[self-upgrade] admin user triggering upgrade",
 		"user_id", userID,
@@ -314,9 +326,20 @@ func (h *SelfUpgradeHandler) TriggerUpgrade(c *fiber.Ctx) error {
 	// where the colon is NOT a tag separator.  A tag colon always appears
 	// after the last slash, so we only strip a ":tag" suffix from the segment
 	// after the final "/".
+	//
+	// #7951: preserve the `@sha256:...` digest if the current image was
+	// pinned by digest. A hardened install deliberately pins the backend
+	// image by digest for supply-chain integrity; rewriting to a pure
+	// tag-based reference would silently loosen that gate every time the
+	// user triggers an upgrade. We keep the digest on the rewritten image
+	// so the admin still has to opt into a tag-only reference.
 	repo := currentImage
-	// Handle @sha256 digests first (e.g. "ghcr.io/console@sha256:abc123")
+	digest := "" // e.g. "@sha256:abc123..." — empty when image is tag-based.
+	// Handle @sha256 digests first (e.g. "ghcr.io/console@sha256:abc123" or
+	// "ghcr.io/console:v1@sha256:abc123"). Capture the suffix so we can
+	// reattach it to the rewritten image reference.
 	if idx := strings.LastIndex(repo, "@"); idx > 0 {
+		digest = repo[idx:]
 		repo = repo[:idx]
 	}
 	// Strip tag — only look for ":" after the last "/"
@@ -331,7 +354,7 @@ func (h *SelfUpgradeHandler) TriggerUpgrade(c *fiber.Ctx) error {
 			repo = repo[:colonIdx]
 		}
 	}
-	newImage := repo + ":" + req.ImageTag
+	newImage := repo + ":" + req.ImageTag + digest
 
 	slog.Info("[self-upgrade] upgrading deployment", "namespace", namespace, "deployment", dep.Name, "from", currentImage, "to", newImage)
 

@@ -31,10 +31,27 @@ const (
 	stabilizationDelay    = 3 * time.Second
 	startupDelay          = 500 * time.Millisecond
 	metricsHistoryTick    = 10 * time.Minute
-	agentFileMode         = 0600
-	defaultHealthCheckURL = "http://127.0.0.1:8080/health"
-	maxQueryLimit         = 1000    // Upper bound for client-supplied limit query parameter
-	maxRequestBodyBytes   = 1 << 20 // 1MB upper bound for request body reads
+	agentFileMode = 0600
+
+	// Backend port resolution constants (see resolveBackendPort in server_http.go).
+	// These are duplicated from cmd/console/watchdog.go because pkg/agent cannot
+	// import the main package. Keep them in sync with watchdog.go.
+	backendPortWatchdogMode  = 8081               // watchdog (8080) proxies -> backend (8081)
+	backendPortLegacyDefault = 8080               // no-watchdog deployments: backend binds 8080 directly
+	watchdogPidFilePath      = "/tmp/.kc-watchdog.pid"
+	backendHealthScheme      = "http"
+	backendHealthHost        = "127.0.0.1"
+	backendHealthPath        = "/health"
+	backendPortEnvVar        = "BACKEND_PORT"
+
+	maxQueryLimit       = 1000    // Upper bound for client-supplied limit query parameter
+	maxRequestBodyBytes = 1 << 20 // 1MB upper bound for request body reads
+
+	// deployedByAnonymousMarker is the default value recorded on workloads
+	// created via kc-agent when the caller did not supply a "deployedBy"
+	// identifier. Matches pkg/k8s/workload.go DeployOptions default
+	// ("anonymous") so resources created via either path look identical.
+	deployedByAnonymousMarker = "anonymous"
 
 	// missionExecutionTimeout is the maximum wall-clock time a single mission
 	// chat execution (AI provider call) is allowed to run before the context
@@ -382,6 +399,31 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/limitranges", s.handleLimitRangesHTTP)
 	mux.HandleFunc("/resolve-deps", s.handleResolveDepsHTTP)
 	mux.HandleFunc("/scale", s.handleScaleHTTP)
+	// Workload deploy and delete routes moved to kc-agent (#7993 Phase 1 PR B).
+	// These run under the user's kubeconfig instead of the backend pod SA.
+	mux.HandleFunc("/workloads/deploy", s.handleDeployWorkloadHTTP)
+	mux.HandleFunc("/workloads/delete", s.handleDeleteWorkloadHTTP)
+
+	// MCS ServiceExport create/delete moved to kc-agent (#7993 Phase 1.5 PR B).
+	// The backend had Create/DeleteServiceExport handlers with no frontend
+	// consumer; they've been removed. This route keeps the capability
+	// available for future MCS-export UI work.
+	mux.HandleFunc("/serviceexports", s.handleServiceExportsHTTP)
+
+	// Helm mutating operations moved to kc-agent (#7993 Phase 3a). These shell
+	// `helm rollback` / `helm uninstall` / `helm upgrade` under the user's
+	// kubeconfig instead of the backend pod SA. Backend handlers are still
+	// present until Phase 4 deletes them — routes in pkg/agent/server_helm.go.
+	mux.HandleFunc("/helm/rollback", s.handleHelmRollback)
+	mux.HandleFunc("/helm/uninstall", s.handleHelmUninstall)
+	mux.HandleFunc("/helm/upgrade", s.handleHelmUpgrade)
+
+	// GitOps drift detection + kubectl sync moved to kc-agent (#7993 Phase 3b).
+	// These shell `kubectl diff` / `kubectl apply` under the user's kubeconfig.
+	// Backend handlers are still present until Phase 4 deletes them — routes
+	// in pkg/agent/server_gitops.go.
+	mux.HandleFunc("/gitops/detect-drift", s.handleDetectDrift)
+	mux.HandleFunc("/gitops/sync", s.handleGitopsSync)
 
 	// Rename context endpoint
 	mux.HandleFunc("/rename-context", s.handleRenameContextHTTP)

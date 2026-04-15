@@ -42,6 +42,19 @@ export const EXPECTED_ERROR_PATTERNS = [
   /net::ERR_/i, // Any network-level Chrome error in demo mode
   /502.*Bad Gateway/i, // Reverse proxy errors when backend not running
   /Failed to load resource/i, // Generic resource load failures in demo mode
+  // SQLite WASM cache worker — webkit/Safari can't streaming-compile the
+  // sqlite3 wasm, and the worker has a documented IndexedDB fallback path
+  // (see lib/cache/worker.ts). These errors emit from the sqlite-wasm loader
+  // before our catch block runs, so they must be filtered here.
+  /wasm streaming compile failed/i,
+  /failed to asynchronously prepare wasm/i,
+  /Aborted\(NetworkError/i,
+  /Exception loading sqlite3 module/i,
+  // Firefox aborts in-flight requests when page.goto() is called again before
+  // previous navigation settles. These NS_BINDING_ABORTED errors do not
+  // indicate a real page failure — they're test harness cleanup noise.
+  /NS_BINDING_ABORTED/i,
+  /NS_ERROR_FAILURE/i,
 ]
 
 function isExpectedError(message: string): boolean {

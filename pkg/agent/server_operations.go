@@ -509,7 +509,10 @@ func validateOpenAIKey(ctx context.Context, apiKey string) (bool, error) {
 		return true, nil
 	}
 	if resp.StatusCode == http.StatusUnauthorized {
-		return false, fmt.Errorf("invalid API key")
+		// Invalid key — return (false, nil) so ValidateAllKeys caches the
+		// result and doesn't re-fire a live /v1/models request on every
+		// kc-agent startup (#7923). Matches validateClaudeKey behavior.
+		return false, nil
 	}
 	body, readErr := io.ReadAll(resp.Body)
 	if readErr != nil {
@@ -537,7 +540,10 @@ func validateGeminiKey(ctx context.Context, apiKey string) (bool, error) {
 		return true, nil
 	}
 	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
-		return false, fmt.Errorf("invalid API key")
+		// Invalid key — return (false, nil) so ValidateAllKeys caches the
+		// result instead of re-firing a live ListModels request on every
+		// kc-agent startup (#7923). Matches validateClaudeKey behavior.
+		return false, nil
 	}
 	body, readErr := io.ReadAll(resp.Body)
 	if readErr != nil {

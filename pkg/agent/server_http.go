@@ -16,6 +16,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/agent/protocol"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/settings"
 )
 
@@ -266,7 +267,15 @@ func (s *Server) handleEventsHTTP(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w,map[string]interface{}{"events": events, "source": "agent"})
 }
 
-// handleNamespacesHTTP returns namespaces for a cluster
+// handleNamespacesHTTP serves namespace operations for a cluster. GET lists
+// namespaces (existing behavior). POST creates a namespace and DELETE removes
+// one — both are user-initiated mutations that run under the user's kubeconfig
+// via kc-agent instead of the backend's pod ServiceAccount (#7993 Phase 2).
+//
+// The GPU-reservation namespace-create path is NOT served here — it stays on
+// the backend at `/mcp/resourcequotas` with `ensure_namespace: true` (see
+// pkg/api/handlers/mcp_resources.go#CreateOrUpdateResourceQuota) because the
+// reservation operator owns quota semantics and needs pod-SA access.
 func (s *Server) handleNamespacesHTTP(w http.ResponseWriter, r *http.Request) {
 	s.setCORSHeaders(w, r)
 	w.Header().Set("Content-Type", "application/json")
@@ -283,13 +292,23 @@ func (s *Server) handleNamespacesHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if s.k8sClient == nil {
-		writeJSON(w,map[string]interface{}{"namespaces": []interface{}{}, "error": "k8s client not initialized"})
+		writeJSON(w, map[string]interface{}{"namespaces": []interface{}{}, "error": "k8s client not initialized"})
 		return
 	}
 
+	switch r.Method {
+	case http.MethodPost:
+		s.createNamespaceHTTP(w, r)
+		return
+	case http.MethodDelete:
+		s.deleteNamespaceHTTP(w, r)
+		return
+	}
+
+	// Default: GET list.
 	cluster := r.URL.Query().Get("cluster")
 	if cluster == "" {
-		writeJSON(w,map[string]interface{}{"namespaces": []interface{}{}, "error": "cluster parameter required"})
+		writeJSON(w, map[string]interface{}{"namespaces": []interface{}{}, "error": "cluster parameter required"})
 		return
 	}
 
@@ -303,7 +322,70 @@ func (s *Server) handleNamespacesHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w,map[string]interface{}{"namespaces": namespaces, "source": "agent"})
+	writeJSON(w, map[string]interface{}{"namespaces": namespaces, "source": "agent"})
+}
+
+// createNamespaceHTTP handles POST /namespaces. Body shape matches the legacy
+// backend NamespaceHandler.CreateNamespace request so the frontend can migrate
+// with a pure URL swap.
+func (s *Server) createNamespaceHTTP(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Cluster string            `json:"cluster"`
+		Name    string            `json:"name"`
+		Labels  map[string]string `json:"labels,omitempty"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": "invalid request body"})
+		return
+	}
+	if req.Cluster == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": "cluster is required"})
+		return
+	}
+	if req.Name == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": "name is required"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), agentExtendedTimeout)
+	defer cancel()
+
+	ns, err := s.k8sClient.CreateNamespace(ctx, req.Cluster, req.Name, req.Labels)
+	if err != nil {
+		slog.Warn("error creating namespace", "cluster", req.Cluster, "name", req.Name, "error", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error(), "source": "agent"})
+		return
+	}
+	writeJSON(w, map[string]interface{}{"success": true, "namespace": ns, "source": "agent"})
+}
+
+// deleteNamespaceHTTP handles DELETE /namespaces. Takes `cluster` and `name`
+// query parameters — kc-agent uses net/http mux so path params are not
+// available (matches the legacy `DELETE /api/namespaces/:name?cluster=<c>`
+// shape otherwise).
+func (s *Server) deleteNamespaceHTTP(w http.ResponseWriter, r *http.Request) {
+	cluster := r.URL.Query().Get("cluster")
+	name := r.URL.Query().Get("name")
+	if cluster == "" || name == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": "cluster and name query parameters are required"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), agentExtendedTimeout)
+	defer cancel()
+
+	if err := s.k8sClient.DeleteNamespace(ctx, cluster, name); err != nil {
+		slog.Warn("error deleting namespace", "cluster", cluster, "name", name, "error", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error(), "source": "agent"})
+		return
+	}
+	writeJSON(w, map[string]interface{}{"success": true, "cluster": cluster, "name": name, "source": "agent"})
 }
 
 // handleDeploymentsHTTP returns deployments for a cluster/namespace
@@ -660,7 +742,11 @@ func (s *Server) handleSecretsHTTP(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w,map[string]interface{}{"secrets": secrets, "source": "agent"})
 }
 
-// handleServiceAccountsHTTP returns service accounts for a cluster/namespace
+// handleServiceAccountsHTTP serves ServiceAccount operations for a
+// cluster/namespace. GET reads the list (existing behavior). POST creates a
+// new ServiceAccount, and DELETE removes one — both are user-initiated
+// mutations that run under the user's kubeconfig via kc-agent rather than the
+// backend's pod ServiceAccount (#7993 Phase 1.5 PR A).
 func (s *Server) handleServiceAccountsHTTP(w http.ResponseWriter, r *http.Request) {
 	s.setCORSHeaders(w, r)
 	w.Header().Set("Content-Type", "application/json")
@@ -674,13 +760,22 @@ func (s *Server) handleServiceAccountsHTTP(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	if s.k8sClient == nil {
-		writeJSON(w,map[string]interface{}{"serviceaccounts": []interface{}{}, "error": "k8s client not initialized"})
+		writeJSON(w, map[string]interface{}{"serviceaccounts": []interface{}{}, "error": "k8s client not initialized"})
 		return
 	}
+	switch r.Method {
+	case http.MethodPost:
+		s.createServiceAccountHTTP(w, r)
+		return
+	case http.MethodDelete:
+		s.deleteServiceAccountHTTP(w, r)
+		return
+	}
+	// Default: GET list
 	cluster := r.URL.Query().Get("cluster")
 	namespace := r.URL.Query().Get("namespace")
 	if cluster == "" {
-		writeJSON(w,map[string]interface{}{"serviceaccounts": []interface{}{}, "error": "cluster parameter required"})
+		writeJSON(w, map[string]interface{}{"serviceaccounts": []interface{}{}, "error": "cluster parameter required"})
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), agentDefaultTimeout)
@@ -691,7 +786,171 @@ func (s *Server) handleServiceAccountsHTTP(w http.ResponseWriter, r *http.Reques
 		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}
-	writeJSON(w,map[string]interface{}{"serviceaccounts": serviceaccounts, "source": "agent"})
+	writeJSON(w, map[string]interface{}{"serviceaccounts": serviceaccounts, "source": "agent"})
+}
+
+// createServiceAccountHTTP handles POST /serviceaccounts. The request body
+// shape matches pkg/models.CreateServiceAccountRequest so the frontend
+// migration from POST /api/rbac/service-accounts to
+// POST ${LOCAL_AGENT_HTTP_URL}/serviceaccounts is a pure URL swap.
+// Returns the created ServiceAccount as JSON on success.
+func (s *Server) createServiceAccountHTTP(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Name      string `json:"name"`
+		Namespace string `json:"namespace"`
+		Cluster   string `json:"cluster"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": "invalid request body"})
+		return
+	}
+	if req.Cluster == "" || req.Namespace == "" || req.Name == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": "cluster, namespace, and name are required"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), agentExtendedTimeout)
+	defer cancel()
+
+	sa, err := s.k8sClient.CreateServiceAccount(ctx, req.Cluster, req.Namespace, req.Name)
+	if err != nil {
+		slog.Warn("error creating service account", "cluster", req.Cluster, "namespace", req.Namespace, "name", req.Name, "error", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error(), "source": "agent"})
+		return
+	}
+	writeJSON(w, sa)
+}
+
+// deleteServiceAccountHTTP handles DELETE /serviceaccounts. The cluster,
+// namespace, and name are read from the query string (e.g.
+// DELETE /serviceaccounts?cluster=prod&namespace=default&name=my-sa).
+func (s *Server) deleteServiceAccountHTTP(w http.ResponseWriter, r *http.Request) {
+	cluster := r.URL.Query().Get("cluster")
+	namespace := r.URL.Query().Get("namespace")
+	name := r.URL.Query().Get("name")
+	if cluster == "" || namespace == "" || name == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": "cluster, namespace, and name query parameters are required"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), agentExtendedTimeout)
+	defer cancel()
+
+	if err := s.k8sClient.DeleteServiceAccount(ctx, cluster, namespace, name); err != nil {
+		slog.Warn("error deleting service account", "cluster", cluster, "namespace", namespace, "name", name, "error", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error(), "source": "agent"})
+		return
+	}
+	writeJSON(w, map[string]interface{}{"success": true, "cluster": cluster, "namespace": namespace, "name": name, "source": "agent"})
+}
+
+// handleServiceExportsHTTP serves MCS ServiceExport operations for a
+// cluster/namespace. POST creates a new ServiceExport exporting an existing
+// service across the ClusterSet; DELETE removes one. Both are user-initiated
+// mutations that must run under the user's kubeconfig via kc-agent rather
+// than the backend's pod ServiceAccount (#7993 Phase 1.5 PR B).
+//
+// The backend CreateServiceExport / DeleteServiceExport handlers had no
+// frontend consumer and have been removed — any future UI that adds MCS
+// export management should call this route.
+func (s *Server) handleServiceExportsHTTP(w http.ResponseWriter, r *http.Request) {
+	s.setCORSHeaders(w, r)
+	w.Header().Set("Content-Type", "application/json")
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	if s.k8sClient == nil {
+		writeJSONError(w, http.StatusServiceUnavailable, "k8s client not initialized")
+		return
+	}
+	switch r.Method {
+	case http.MethodPost:
+		s.createServiceExportHTTP(w, r)
+	case http.MethodDelete:
+		s.deleteServiceExportHTTP(w, r)
+	default:
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// createServiceExportHTTP handles POST /serviceexports. Body shape matches
+// the legacy backend CreateServiceExportRequest so the migration is a pure
+// URL swap when a frontend consumer is added.
+func (s *Server) createServiceExportHTTP(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Cluster     string `json:"cluster"`
+		Namespace   string `json:"namespace"`
+		ServiceName string `json:"serviceName"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": "invalid request body"})
+		return
+	}
+	if req.Cluster == "" || req.Namespace == "" || req.ServiceName == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": "cluster, namespace, and serviceName are required"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), agentExtendedTimeout)
+	defer cancel()
+
+	if err := s.k8sClient.CreateServiceExport(ctx, req.Cluster, req.Namespace, req.ServiceName); err != nil {
+		slog.Warn("error creating service export", "cluster", req.Cluster, "namespace", req.Namespace, "serviceName", req.ServiceName, "error", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error(), "source": "agent"})
+		return
+	}
+	w.WriteHeader(http.StatusCreated)
+	writeJSON(w, map[string]interface{}{
+		"success":     true,
+		"message":     "ServiceExport created successfully",
+		"cluster":     req.Cluster,
+		"namespace":   req.Namespace,
+		"serviceName": req.ServiceName,
+		"source":      "agent",
+	})
+}
+
+// deleteServiceExportHTTP handles DELETE /serviceexports?cluster=...&namespace=...&name=...
+// Uses query parameters so the route can share the path with POST.
+func (s *Server) deleteServiceExportHTTP(w http.ResponseWriter, r *http.Request) {
+	cluster := r.URL.Query().Get("cluster")
+	namespace := r.URL.Query().Get("namespace")
+	name := r.URL.Query().Get("name")
+	if cluster == "" || namespace == "" || name == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": "cluster, namespace, and name query parameters are required"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), agentExtendedTimeout)
+	defer cancel()
+
+	if err := s.k8sClient.DeleteServiceExport(ctx, cluster, namespace, name); err != nil {
+		slog.Warn("error deleting service export", "cluster", cluster, "namespace", namespace, "name", name, "error", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error(), "source": "agent"})
+		return
+	}
+	writeJSON(w, map[string]interface{}{
+		"success":   true,
+		"cluster":   cluster,
+		"namespace": namespace,
+		"name":      name,
+		"source":    "agent",
+	})
 }
 
 // handleJobsHTTP returns jobs for a cluster/namespace
@@ -736,6 +995,11 @@ func (s *Server) handleHPAsHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
+	// SECURITY: Validate token for HPAs endpoint
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 	if s.k8sClient == nil {
 		writeJSON(w,map[string]interface{}{"hpas": []interface{}{}, "error": "k8s client not initialized"})
 		return
@@ -763,6 +1027,11 @@ func (s *Server) handlePVCsHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
+		return
+	}
+	// SECURITY: Validate token for PVCs endpoint
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 	if s.k8sClient == nil {
@@ -794,6 +1063,11 @@ func (s *Server) handleRolesHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
+	// SECURITY: Validate token for Roles endpoint
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 	if s.k8sClient == nil {
 		writeJSON(w,map[string]interface{}{"roles": []interface{}{}, "error": "k8s client not initialized"})
 		return
@@ -815,7 +1089,11 @@ func (s *Server) handleRolesHTTP(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w,map[string]interface{}{"roles": roles, "source": "agent"})
 }
 
-// handleRoleBindingsHTTP returns RoleBindings for a cluster/namespace
+// handleRoleBindingsHTTP serves RoleBinding operations for a
+// cluster/namespace. GET reads the list (existing behavior). POST creates a
+// new RoleBinding or ClusterRoleBinding, and DELETE removes one — both are
+// user-initiated mutations that run under the user's kubeconfig via kc-agent
+// rather than the backend's pod ServiceAccount (#7993 Phase 1.5 PR A).
 func (s *Server) handleRoleBindingsHTTP(w http.ResponseWriter, r *http.Request) {
 	s.setCORSHeaders(w, r)
 	w.Header().Set("Content-Type", "application/json")
@@ -823,14 +1101,28 @@ func (s *Server) handleRoleBindingsHTTP(w http.ResponseWriter, r *http.Request) 
 		w.WriteHeader(http.StatusOK)
 		return
 	}
-	if s.k8sClient == nil {
-		writeJSON(w,map[string]interface{}{"rolebindings": []interface{}{}, "error": "k8s client not initialized"})
+	// SECURITY: Validate token for RoleBindings endpoint
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
+	if s.k8sClient == nil {
+		writeJSON(w, map[string]interface{}{"rolebindings": []interface{}{}, "error": "k8s client not initialized"})
+		return
+	}
+	switch r.Method {
+	case http.MethodPost:
+		s.createRoleBindingHTTP(w, r)
+		return
+	case http.MethodDelete:
+		s.deleteRoleBindingHTTP(w, r)
+		return
+	}
+	// Default: GET list
 	cluster := r.URL.Query().Get("cluster")
 	namespace := r.URL.Query().Get("namespace")
 	if cluster == "" {
-		writeJSON(w,map[string]interface{}{"rolebindings": []interface{}{}, "error": "cluster parameter required"})
+		writeJSON(w, map[string]interface{}{"rolebindings": []interface{}{}, "error": "cluster parameter required"})
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), agentDefaultTimeout)
@@ -841,7 +1133,138 @@ func (s *Server) handleRoleBindingsHTTP(w http.ResponseWriter, r *http.Request) 
 		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}
-	writeJSON(w,map[string]interface{}{"rolebindings": bindings, "source": "agent"})
+	writeJSON(w, map[string]interface{}{"rolebindings": bindings, "source": "agent"})
+}
+
+// createRoleBindingHTTP handles POST /rolebindings. The body shape matches
+// pkg/models.CreateRoleBindingRequest so frontend callers migrate from
+// POST /api/rbac/bindings to POST ${LOCAL_AGENT_HTTP_URL}/rolebindings with a
+// pure URL swap.
+//
+// It also accepts the GrantNamespaceAccess shape used by
+// NamespaceManager/GrantAccessModal (cluster, subjectKind, subjectName,
+// subjectNamespace, role, namespace) so namespace-access grants route
+// through the same endpoint. Namespace-access bodies are normalized into a
+// full RoleBinding spec before delegating to the shared pkg/k8s
+// MultiClusterClient.CreateRoleBinding method.
+func (s *Server) createRoleBindingHTTP(w http.ResponseWriter, r *http.Request) {
+	// Accept a union of both shapes. Fields common to both (cluster,
+	// namespace, subjectName, subjectNamespace) are shared; shape-specific
+	// fields are read from dedicated fields. The grant-access path sets
+	// `role` and leaves `name`/`roleName` unset; the rbac/bindings path sets
+	// `name`/`roleName`/`roleKind`/`subjectKind` and may omit `role`.
+	var req struct {
+		Name        string `json:"name,omitempty"`
+		Namespace   string `json:"namespace,omitempty"`
+		Cluster     string `json:"cluster"`
+		IsCluster   bool   `json:"isCluster,omitempty"`
+		RoleName    string `json:"roleName,omitempty"`
+		RoleKind    string `json:"roleKind,omitempty"`
+		SubjectKind string `json:"subjectKind"`
+		SubjectName string `json:"subjectName"`
+		SubjectNS   string `json:"subjectNamespace,omitempty"`
+		// Role is only set by GrantNamespaceAccess callers; shortcut
+		// ("admin"/"edit"/"view") or a custom role name. Ignored when
+		// roleName is supplied.
+		Role string `json:"role,omitempty"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": "invalid request body"})
+		return
+	}
+	if req.Cluster == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": "cluster is required"})
+		return
+	}
+	if req.SubjectKind == "" || req.SubjectName == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": "subjectKind and subjectName are required"})
+		return
+	}
+
+	// Fill in defaults for the grant-namespace-access shape.
+	roleName := req.RoleName
+	if roleName == "" {
+		roleName = req.Role
+	}
+	roleKind := req.RoleKind
+	if roleKind == "" {
+		// grant-access shortcuts ("admin"/"edit"/"view") map to
+		// ClusterRoles in stock Kubernetes; custom role names default to
+		// ClusterRole as well since GrantNamespaceAccess historically used
+		// ClusterRole (see pkg/k8s/rbac.go GrantNamespaceAccess).
+		roleKind = "ClusterRole"
+	}
+	if roleName == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": "roleName (or role) is required"})
+		return
+	}
+
+	// Synthesize a binding name when the caller didn't provide one (the
+	// grant-access shape doesn't include it). Format mirrors what the
+	// backend GrantNamespaceAccess used: <subject>-<role>-<namespace>.
+	bindingName := req.Name
+	if bindingName == "" {
+		bindingName = fmt.Sprintf("%s-%s-%s", req.SubjectName, roleName, req.Namespace)
+	}
+
+	k8sReq := models.CreateRoleBindingRequest{
+		Name:        bindingName,
+		Namespace:   req.Namespace,
+		Cluster:     req.Cluster,
+		IsCluster:   req.IsCluster,
+		RoleName:    roleName,
+		RoleKind:    roleKind,
+		SubjectKind: models.K8sSubjectKind(req.SubjectKind),
+		SubjectName: req.SubjectName,
+		SubjectNS:   req.SubjectNS,
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), agentExtendedTimeout)
+	defer cancel()
+
+	if err := s.k8sClient.CreateRoleBinding(ctx, k8sReq); err != nil {
+		slog.Warn("error creating role binding", "cluster", req.Cluster, "namespace", req.Namespace, "name", bindingName, "error", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error(), "source": "agent"})
+		return
+	}
+	writeJSON(w, map[string]interface{}{"success": true, "roleBinding": bindingName, "source": "agent"})
+}
+
+// deleteRoleBindingHTTP handles DELETE /rolebindings. Cluster, namespace,
+// name, and an optional isCluster flag are read from the query string.
+// When isCluster=true the handler deletes a ClusterRoleBinding and namespace
+// is ignored.
+func (s *Server) deleteRoleBindingHTTP(w http.ResponseWriter, r *http.Request) {
+	cluster := r.URL.Query().Get("cluster")
+	namespace := r.URL.Query().Get("namespace")
+	name := r.URL.Query().Get("name")
+	isCluster := r.URL.Query().Get("isCluster") == "true"
+	if cluster == "" || name == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": "cluster and name query parameters are required"})
+		return
+	}
+	if !isCluster && namespace == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": "namespace query parameter is required for non-cluster bindings"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), agentExtendedTimeout)
+	defer cancel()
+
+	if err := s.k8sClient.DeleteRoleBinding(ctx, cluster, namespace, name, isCluster); err != nil {
+		slog.Warn("error deleting role binding", "cluster", cluster, "namespace", namespace, "name", name, "isCluster", isCluster, "error", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error(), "source": "agent"})
+		return
+	}
+	writeJSON(w, map[string]interface{}{"success": true, "cluster": cluster, "namespace": namespace, "name": name, "isCluster": isCluster, "source": "agent"})
 }
 
 // handleResourceQuotasHTTP returns ResourceQuotas for a cluster/namespace
@@ -850,6 +1273,11 @@ func (s *Server) handleResourceQuotasHTTP(w http.ResponseWriter, r *http.Request
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
+		return
+	}
+	// SECURITY: Validate token for ResourceQuotas endpoint
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 	if s.k8sClient == nil {
@@ -881,6 +1309,11 @@ func (s *Server) handleLimitRangesHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
+	// SECURITY: Validate token for LimitRanges endpoint
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 	if s.k8sClient == nil {
 		writeJSON(w,map[string]interface{}{"limitranges": []interface{}{}, "error": "k8s client not initialized"})
 		return
@@ -909,6 +1342,11 @@ func (s *Server) handleResolveDepsHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
+		return
+	}
+	// SECURITY: Validate token for ResolveDeps endpoint
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 	if s.k8sClient == nil {
@@ -974,6 +1412,10 @@ func (s *Server) handleResolveDepsHTTP(w http.ResponseWriter, r *http.Request) {
 // GET-based mutations are rejected to prevent CSRF-style attacks (#4150).
 func (s *Server) handleScaleHTTP(w http.ResponseWriter, r *http.Request) {
 	s.setCORSHeaders(w, r)
+	// setCORSHeaders defaults Access-Control-Allow-Methods to "GET, OPTIONS".
+	// This is a mutating POST endpoint — browsers would otherwise reject the
+	// cross-origin POST preflight (#8019, #8021).
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
@@ -997,20 +1439,26 @@ func (s *Server) handleScaleHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if s.k8sClient == nil {
-		writeJSON(w,map[string]interface{}{
-			"success": false,
-			"error":   "k8s client not initialized",
-		})
-		return
-	}
-
+	// The frontend (useWorkloads.useScaleWorkload) sends:
+	//   { workloadName, namespace, targetClusters: []string, replicas }
+	// Older agent callers used { cluster, namespace, name, replicas }.
+	// Accept both shapes so we remain backward compatible while migrating
+	// /api/workloads/scale off the backend pod SA (#7993 Phase 1 PR A).
 	var req struct {
-		Cluster   string `json:"cluster"`
+		// New shape (frontend → agent)
+		WorkloadName   string   `json:"workloadName"`
+		TargetClusters []string `json:"targetClusters"`
+
+		// Legacy shape (kept for backward compat with existing direct agent callers)
+		Cluster string `json:"cluster"`
+		Name    string `json:"name"`
+
+		// Shared fields
 		Namespace string `json:"namespace"`
-		Name      string `json:"name"`
 		Replicas  int32  `json:"replicas"`
 	}
+	// Cap request body to avoid OOM from oversized payloads (#8021).
+	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w,map[string]interface{}{
@@ -1020,13 +1468,17 @@ func (s *Server) handleScaleHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var cluster, namespace, name string
-	var replicas int32
-
-	cluster = req.Cluster
-	namespace = req.Namespace
-	name = req.Name
-	replicas = req.Replicas
+	// Normalize the two shapes to a single (name, targetClusters) pair.
+	name := req.WorkloadName
+	if name == "" {
+		name = req.Name
+	}
+	targetClusters := req.TargetClusters
+	if len(targetClusters) == 0 && req.Cluster != "" {
+		targetClusters = []string{req.Cluster}
+	}
+	namespace := req.Namespace
+	replicas := req.Replicas
 
 	if replicas < 0 {
 		w.WriteHeader(http.StatusBadRequest)
@@ -1037,10 +1489,52 @@ func (s *Server) handleScaleHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if cluster == "" || namespace == "" || name == "" {
+	if name == "" || namespace == "" {
+		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w,map[string]interface{}{
 			"success": false,
-			"error":   "cluster, namespace, and name are required",
+			"error":   "workloadName and namespace are required",
+		})
+		return
+	}
+
+	// Require at least one target cluster. An empty targetClusters used to
+	// be interpreted by MultiClusterClient.ScaleWorkload as "scale in every
+	// known cluster", which is surprising and dangerous for a mutating call
+	// driven by user input (#8019).
+	if len(targetClusters) == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w,map[string]interface{}{
+			"success": false,
+			"error":   "at least one targetCluster (or legacy 'cluster') is required",
+		})
+		return
+	}
+
+	if err := validateDNS1123Label("namespace", namespace); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w,map[string]interface{}{"success": false, "error": err.Error()})
+		return
+	}
+	if err := validateDNS1123Label("workloadName", name); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w,map[string]interface{}{"success": false, "error": err.Error()})
+		return
+	}
+	for _, tc := range targetClusters {
+		if err := validateKubeContext(tc); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			writeJSON(w,map[string]interface{}{"success": false, "error": fmt.Sprintf("targetCluster: %v", err)})
+			return
+		}
+	}
+
+	if s.k8sClient == nil {
+		// 503 so fetch callers hit their !res.ok branch (#8021).
+		w.WriteHeader(http.StatusServiceUnavailable)
+		writeJSON(w,map[string]interface{}{
+			"success": false,
+			"error":   "k8s client not initialized",
 		})
 		return
 	}
@@ -1048,9 +1542,9 @@ func (s *Server) handleScaleHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), agentExtendedTimeout)
 	defer cancel()
 
-	result, err := s.k8sClient.ScaleWorkload(ctx, namespace, name, []string{cluster}, replicas)
+	result, err := s.k8sClient.ScaleWorkload(ctx, namespace, name, targetClusters, replicas)
 	if err != nil {
-		slog.Warn("error scaling resource", "namespace", namespace, "name", name, "cluster", cluster, "error", err)
+		slog.Warn("error scaling resource", "namespace", namespace, "name", name, "targetClusters", targetClusters, "error", err)
 		writeJSON(w,map[string]interface{}{
 			"success": false,
 			"error":   err.Error(),
@@ -1065,6 +1559,264 @@ func (s *Server) handleScaleHTTP(w http.ResponseWriter, r *http.Request) {
 		"deployedTo":     result.DeployedTo,
 		"failedClusters": result.FailedClusters,
 		"source":         "agent",
+	})
+}
+
+// handleDeployWorkloadHTTP deploys a workload from a source cluster to one or
+// more target clusters via the shared pkg/k8s MultiClusterClient.DeployWorkload
+// method. The agent uses the user's kubeconfig rather than the backend's pod
+// ServiceAccount, so this endpoint is the user-kubeconfig path for
+// `/api/workloads/deploy` (#7993 Phase 1 PR B).
+//
+// Only POST with a JSON body is accepted; GET-based mutations are rejected to
+// prevent CSRF-style attacks (#4150 pattern, same as handleScaleHTTP).
+func (s *Server) handleDeployWorkloadHTTP(w http.ResponseWriter, r *http.Request) {
+	s.setCORSHeaders(w, r)
+	// setCORSHeaders defaults Methods to "GET, OPTIONS"; override for POST (#8021).
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	w.Header().Set("Content-Type", "application/json")
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	// SECURITY: Require auth — deploying is a mutating operation.
+	if !s.validateToken(r) {
+		w.WriteHeader(http.StatusUnauthorized)
+		writeJSON(w, map[string]string{"error": "unauthorized"})
+		return
+	}
+
+	// SECURITY: Only allow POST — GET mutations enable CSRF.
+	if r.Method != "POST" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		writeJSON(w, map[string]interface{}{
+			"success": false,
+			"error":   "POST required",
+		})
+		return
+	}
+
+	// Matches the backend's DeployWorkload request shape so the frontend can
+	// send the same payload to either endpoint during migration.
+	var req struct {
+		WorkloadName   string   `json:"workloadName"`
+		Namespace      string   `json:"namespace"`
+		SourceCluster  string   `json:"sourceCluster"`
+		TargetClusters []string `json:"targetClusters"`
+		Replicas       int32    `json:"replicas,omitempty"`
+		GroupName      string   `json:"groupName,omitempty"`
+		// Optional informational annotation. The agent runs under the user's
+		// own kubeconfig so the "deployedBy" label is not security-relevant;
+		// it's only used to annotate created resources. If unset, falls back
+		// to the anonymous marker used by MultiClusterClient.DeployWorkload.
+		DeployedBy string `json:"deployedBy,omitempty"`
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{
+			"success": false,
+			"error":   "invalid request body",
+		})
+		return
+	}
+
+	if req.WorkloadName == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": "workloadName is required"})
+		return
+	}
+	if req.Namespace == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": "namespace is required"})
+		return
+	}
+	if req.SourceCluster == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": "sourceCluster is required"})
+		return
+	}
+	if len(req.TargetClusters) == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": "at least one targetCluster is required"})
+		return
+	}
+
+	if err := validateDNS1123Label("workloadName", req.WorkloadName); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error()})
+		return
+	}
+	if err := validateDNS1123Label("namespace", req.Namespace); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error()})
+		return
+	}
+	if err := validateKubeContext(req.SourceCluster); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": fmt.Sprintf("sourceCluster: %v", err)})
+		return
+	}
+	for _, tc := range req.TargetClusters {
+		if err := validateKubeContext(tc); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			writeJSON(w, map[string]interface{}{"success": false, "error": fmt.Sprintf("targetCluster: %v", err)})
+			return
+		}
+	}
+
+	if s.k8sClient == nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		writeJSON(w, map[string]interface{}{
+			"success": false,
+			"error":   "k8s client not initialized",
+		})
+		return
+	}
+
+	opts := &k8s.DeployOptions{
+		DeployedBy: req.DeployedBy,
+		GroupName:  req.GroupName,
+	}
+	if opts.DeployedBy == "" {
+		opts.DeployedBy = deployedByAnonymousMarker
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), agentExtendedTimeout)
+	defer cancel()
+
+	result, err := s.k8sClient.DeployWorkload(ctx, req.SourceCluster, req.Namespace, req.WorkloadName, req.TargetClusters, req.Replicas, opts)
+	if err != nil {
+		slog.Warn("error deploying workload", "namespace", req.Namespace, "name", req.WorkloadName, "sourceCluster", req.SourceCluster, "targetClusters", req.TargetClusters, "error", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		writeJSON(w, map[string]interface{}{
+			"success": false,
+			"error":   err.Error(),
+			"source":  "agent",
+		})
+		return
+	}
+
+	// Preserve dependencies and warnings from the MultiClusterClient response —
+	// the UI surfaces deploy warnings and dependency-action links (#8021).
+	writeJSON(w, map[string]interface{}{
+		"success":        result.Success,
+		"message":        result.Message,
+		"deployedTo":     result.DeployedTo,
+		"failedClusters": result.FailedClusters,
+		"dependencies":   result.Dependencies,
+		"warnings":       result.Warnings,
+		"source":         "agent",
+	})
+}
+
+// handleDeleteWorkloadHTTP deletes a workload (Deployment / StatefulSet /
+// DaemonSet) from a single managed cluster via the shared pkg/k8s
+// MultiClusterClient.DeleteWorkload method. Runs under the user's kubeconfig
+// instead of the backend's pod ServiceAccount (#7993 Phase 1 PR B).
+//
+// Only POST with a JSON body is accepted. The backend previously used
+// `DELETE /api/workloads/:cluster/:namespace/:name`, but kc-agent's convention
+// is POST-with-body for all mutations (same as /scale), so the frontend sends
+// a POST with {cluster, namespace, name} in the body.
+func (s *Server) handleDeleteWorkloadHTTP(w http.ResponseWriter, r *http.Request) {
+	s.setCORSHeaders(w, r)
+	// setCORSHeaders defaults Methods to "GET, OPTIONS"; override for POST (#8021).
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	w.Header().Set("Content-Type", "application/json")
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	// SECURITY: Require auth — delete is a destructive mutating operation.
+	if !s.validateToken(r) {
+		w.WriteHeader(http.StatusUnauthorized)
+		writeJSON(w, map[string]string{"error": "unauthorized"})
+		return
+	}
+
+	// SECURITY: Only allow POST — GET mutations enable CSRF.
+	if r.Method != "POST" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		writeJSON(w, map[string]interface{}{
+			"success": false,
+			"error":   "POST required",
+		})
+		return
+	}
+
+	var req struct {
+		Cluster   string `json:"cluster"`
+		Namespace string `json:"namespace"`
+		Name      string `json:"name"`
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{
+			"success": false,
+			"error":   "invalid request body",
+		})
+		return
+	}
+
+	if req.Cluster == "" || req.Namespace == "" || req.Name == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{
+			"success": false,
+			"error":   "cluster, namespace, and name are required",
+		})
+		return
+	}
+
+	if err := validateKubeContext(req.Cluster); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": fmt.Sprintf("cluster: %v", err)})
+		return
+	}
+	if err := validateDNS1123Label("namespace", req.Namespace); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error()})
+		return
+	}
+	if err := validateDNS1123Label("name", req.Name); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error()})
+		return
+	}
+
+	if s.k8sClient == nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		writeJSON(w, map[string]interface{}{
+			"success": false,
+			"error":   "k8s client not initialized",
+		})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), agentExtendedTimeout)
+	defer cancel()
+
+	if err := s.k8sClient.DeleteWorkload(ctx, req.Cluster, req.Namespace, req.Name); err != nil {
+		slog.Warn("error deleting workload", "cluster", req.Cluster, "namespace", req.Namespace, "name", req.Name, "error", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		writeJSON(w, map[string]interface{}{
+			"success": false,
+			"error":   err.Error(),
+			"source":  "agent",
+		})
+		return
+	}
+
+	writeJSON(w, map[string]interface{}{
+		"success":   true,
+		"message":   "Workload deleted successfully",
+		"cluster":   req.Cluster,
+		"namespace": req.Namespace,
+		"name":      req.Name,
+		"source":    "agent",
 	})
 }
 
@@ -1161,7 +1913,44 @@ func (s *Server) setCORSHeaders(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
 }
 
-// handleRestartBackend kills the existing backend on port 8080 and starts a new one
+// watchdogPidFileStat is indirected through a package variable so unit tests
+// can substitute a fake stat without touching the real /tmp path. Production
+// callers always use os.Stat.
+var watchdogPidFileStat = func(path string) (os.FileInfo, error) {
+	return os.Stat(path)
+}
+
+// resolveBackendPort returns the port the backend is actually listening on.
+//
+// Resolution priority (highest first):
+//  1. BACKEND_PORT env var (set by startup-oauth.sh when the watchdog is in use).
+//  2. backendPortWatchdogMode (8081) if the watchdog PID file exists on disk.
+//  3. backendPortLegacyDefault (8080) for no-watchdog deployments.
+//
+// Historically this file hard-coded 8080 for both the kill and health-check
+// paths (#7945). That was correct before the watchdog landed, but after the
+// watchdog architecture (cmd/console/watchdog.go) port 8080 became the
+// reverse-proxy listener and the real backend moved to 8081. The old code
+// therefore killed the watchdog instead of the backend on restart, leaving
+// the real backend alive — the exact opposite of the intent.
+func resolveBackendPort() int {
+	if v := os.Getenv(backendPortEnvVar); v != "" {
+		if p, err := strconv.Atoi(v); err == nil && p > 0 {
+			return p
+		}
+	}
+	if _, err := watchdogPidFileStat(watchdogPidFilePath); err == nil {
+		return backendPortWatchdogMode
+	}
+	return backendPortLegacyDefault
+}
+
+// backendHealthURL returns the /health URL for the currently resolved backend port.
+func backendHealthURL() string {
+	return fmt.Sprintf("%s://%s:%d%s", backendHealthScheme, backendHealthHost, resolveBackendPort(), backendHealthPath)
+}
+
+// handleRestartBackend kills the existing backend on its resolved listen port and starts a new one.
 func (s *Server) handleRestartBackend(w http.ResponseWriter, r *http.Request) {
 	origin := r.Header.Get("Origin")
 	if s.isAllowedOrigin(origin) {
@@ -1215,7 +2004,9 @@ func (s *Server) handleRestartBackend(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// killBackendProcess finds and kills the process listening on port 8080
+// killBackendProcess finds and kills the process listening on the backend's
+// resolved listen port. See resolveBackendPort for how the port is chosen —
+// in watchdog deployments this is 8081, not 8080 (#7945).
 func (s *Server) killBackendProcess() bool {
 	// If we have a tracked process, kill it
 	if s.backendCmd != nil && s.backendCmd.Process != nil {
@@ -1225,10 +2016,12 @@ func (s *Server) killBackendProcess() bool {
 		return true
 	}
 
-	// Fallback: find only the LISTEN process on port 8080 (not connected clients).
-	// Using -sTCP:LISTEN ensures we only kill the server, not browsers/proxies.
+	// Fallback: find only the LISTEN process on the resolved backend port
+	// (not connected clients). Using -sTCP:LISTEN ensures we only kill the
+	// server, not browsers/proxies.
 	// NOTE: lsof is Unix-only; on Windows this falls through to return false (#7263).
-	out, err := exec.Command("lsof", "-ti", ":8080", "-sTCP:LISTEN").Output()
+	portArg := fmt.Sprintf(":%d", resolveBackendPort())
+	out, err := exec.Command("lsof", "-ti", portArg, "-sTCP:LISTEN").Output()
 	if err != nil || len(strings.TrimSpace(string(out))) == 0 {
 		// No process found — return false so callers know nothing was killed (#7264)
 		return false
@@ -1254,22 +2047,105 @@ func (s *Server) killBackendProcess() bool {
 	return true
 }
 
+// consoleBinaryEnvVar lets operators override the path to the `console` backend
+// binary used when restarting the backend from kc-agent. Needed for non-standard
+// installs where the binary is not next to kc-agent or on $PATH.
+const consoleBinaryEnvVar = "KC_CONSOLE_BINARY"
+
+// consoleBinaryName is the canonical filename of the backend binary produced by
+// `go build ./cmd/console`.
+const consoleBinaryName = "console"
+
+// resolveConsoleBinary locates the `console` backend binary for startBackendProcess.
+//
+// The previous implementation re-execed `os.Executable()` which, in the
+// kc-agent process, returns the kc-agent binary — NOT `cmd/console`. That
+// spawned a second kc-agent that failed to bind port 8585 and never restored
+// the backend (#7945). Search order:
+//  1. KC_CONSOLE_BINARY env var if set.
+//  2. A `console` binary next to os.Executable() — brew installs put both
+//     binaries side-by-side under $(brew --prefix)/bin/.
+//  3. `console` on $PATH (exec.LookPath).
+//
+// Returns an error if none resolve; callers must NOT fall back to self-exec
+// because that silently restarts the wrong process.
+func resolveConsoleBinary() (string, error) {
+	if v := os.Getenv(consoleBinaryEnvVar); v != "" {
+		return v, nil
+	}
+	if execPath, err := os.Executable(); err == nil {
+		candidate := execPath[:len(execPath)-len(filepathBase(execPath))] + consoleBinaryName
+		if info, err := os.Stat(candidate); err == nil && !info.IsDir() {
+			return candidate, nil
+		}
+	}
+	if p, err := exec.LookPath(consoleBinaryName); err == nil {
+		return p, nil
+	}
+	return "", fmt.Errorf("console binary not found — cannot restart backend; please restart via startup-oauth.sh or your package manager")
+}
+
+// filepathBase is a tiny inlined replacement for filepath.Base to avoid adding
+// a new import in this file — it only handles Unix-style separators because
+// kc-agent's restart-backend path is Unix-only (lsof fallback already gates
+// Windows out in killBackendProcess).
+func filepathBase(p string) string {
+	for i := len(p) - 1; i >= 0; i-- {
+		if p[i] == '/' || p[i] == '\\' {
+			return p[i+1:]
+		}
+	}
+	return p
+}
+
+// envWithBackendPort returns a copy of the current environment with
+// BACKEND_PORT set to the resolved backend port. If BACKEND_PORT is already
+// present it is replaced in place (no duplicate entries, per the Go docs on
+// exec.Cmd.Env where the last value wins but duplicates are discouraged).
+func envWithBackendPort(extra ...string) []string {
+	backendPortKV := fmt.Sprintf("%s=%d", backendPortEnvVar, resolveBackendPort())
+	src := os.Environ()
+	out := make([]string, 0, len(src)+1+len(extra))
+	prefix := backendPortEnvVar + "="
+	replaced := false
+	for _, kv := range src {
+		if strings.HasPrefix(kv, prefix) {
+			out = append(out, backendPortKV)
+			replaced = true
+			continue
+		}
+		out = append(out, kv)
+	}
+	if !replaced {
+		out = append(out, backendPortKV)
+	}
+	out = append(out, extra...)
+	return out
+}
+
 // startBackendProcess restarts the backend process.
-// Uses os.Executable() to re-exec the running binary so it works in non-dev
-// deployments where the Go toolchain is not available (#7265).
-// Falls back to "go run" only when KC_DEV_MODE=1 is set.
+//
+// When KC_DEV_MODE=1 is set, runs `go run ./cmd/console` (dev path). Otherwise
+// it locates the prebuilt `console` binary (see resolveConsoleBinary) and
+// execs it. The resolved BACKEND_PORT is injected into the child environment
+// so the child binds the same port the watchdog proxies to.
+//
+// Historically (#7265) this function re-execed os.Executable() on the
+// assumption that kc-agent and the backend were the same binary. They are
+// not — fixed in #7945.
 func (s *Server) startBackendProcess() error {
 	var cmd *exec.Cmd
 	if os.Getenv("KC_DEV_MODE") == "1" {
 		cmd = exec.Command("go", "run", "./cmd/console")
-		cmd.Env = append(os.Environ(), "GOWORK=off")
+		cmd.Env = envWithBackendPort("GOWORK=off")
 	} else {
-		execPath, err := os.Executable()
+		binary, err := resolveConsoleBinary()
 		if err != nil {
-			return fmt.Errorf("failed to determine executable path: %w", err)
+			slog.Error("[Backend] cannot locate console binary for restart", "error", err)
+			return err
 		}
-		cmd = exec.Command(execPath)
-		cmd.Env = os.Environ()
+		cmd = exec.Command(binary)
+		cmd.Env = envWithBackendPort()
 	}
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -1298,10 +2174,13 @@ func (s *Server) startBackendProcess() error {
 	return nil
 }
 
-// checkBackendHealth verifies the backend is responding on port 8080
+// checkBackendHealth verifies the backend is responding on its resolved
+// listen port (see resolveBackendPort). Previously this was pinned to 8080,
+// which in watchdog deployments is the reverse proxy and NOT the real
+// backend, yielding false-positive health results after a restart (#7945).
 func (s *Server) checkBackendHealth() bool {
 	client := &http.Client{Timeout: healthCheckTimeout}
-	resp, err := client.Get(defaultHealthCheckURL)
+	resp, err := client.Get(backendHealthURL())
 	if err != nil {
 		return false
 	}
