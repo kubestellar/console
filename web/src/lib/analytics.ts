@@ -189,6 +189,15 @@ const ENGAGEMENT_IDLE_MS = 60_000      // Consider user idle after 60s of no int
 
 let engagementStartMs = 0          // Timestamp when current active period began
 let accumulatedEngagementMs = 0    // Total accumulated engagement time for current page
+// Cumulative engagement across the whole session (not reset between page_views).
+// Used to drive the engaged-session flag so a user who clicks through several
+// routes — each with under 10s dwell — still gets counted as engaged once
+// their total time crosses the threshold. Reset only on new session.
+let sessionEngagementMs = 0
+// Count of page_views in the current session. Drives the engaged-session
+// flag via GA4's "2+ pageviews" rule so SPA route-nav shows up as
+// engaged even if the per-page engagement accumulator is short.
+let sessionPageViewCount = 0
 let lastInteractionMs = 0          // Timestamp of last user interaction
 let isUserActive = false           // Whether user is currently considered active
 let heartbeatTimer: ReturnType<typeof setInterval> | null = null
@@ -209,7 +218,9 @@ function checkEngagement() {
   const now = Date.now()
   if (now - lastInteractionMs > ENGAGEMENT_IDLE_MS) {
     // User went idle — accumulate time up to last interaction
-    accumulatedEngagementMs += lastInteractionMs - engagementStartMs
+    const delta = lastInteractionMs - engagementStartMs
+    accumulatedEngagementMs += delta
+    sessionEngagementMs += delta
     isUserActive = false
   }
 }
@@ -223,12 +234,28 @@ function peekEngagementMs(): number {
   return total
 }
 
+/** Session-wide engagement total including any currently-active time. */
+function peekSessionEngagementMs(): number {
+  let total = sessionEngagementMs
+  if (isUserActive) {
+    total += Date.now() - engagementStartMs
+  }
+  return total
+}
+
 /** Get total engagement time in ms and reset the accumulator.
  *  Only called for user_engagement events — GA4 calculates Engaged Sessions
  *  and Average Engagement Time exclusively from _et on user_engagement hits.
- *  Other events get a non-resetting peek so the accumulator isn't drained. */
+ *  Other events get a non-resetting peek so the accumulator isn't drained.
+ *
+ *  Note: the PER-PAGE accumulator is reset, but the SESSION-wide counter
+ *  (sessionEngagementMs) keeps growing so the engaged-session gate can fire
+ *  even for users who click through many short-dwell routes. */
 function getAndResetEngagementMs(): number {
   const total = peekEngagementMs()
+  // Fold the drained total into the session counter so engaged-session
+  // checks see cumulative time, not just the current page's time.
+  sessionEngagementMs += total
   accumulatedEngagementMs = 0
   if (isUserActive) {
     engagementStartMs = Date.now()
@@ -420,13 +447,36 @@ function sendViaProxy(
   if (isNew) {
     p.set('_ss', '1')
     p.set('_nsi', '1')
+    // Reset all session-scoped engagement state on new session.
     sessionEngaged = false
+    sessionEngagementMs = 0
+    sessionPageViewCount = 0
   }
   if (sc === 1 && isNew) {
     p.set('_fv', '1')
   }
 
-  if (!sessionEngaged && peekEngagementMs() >= ENGAGED_SESSION_THRESHOLD_MS) {
+  // Bump pageview counter *before* the engaged-session check so the
+  // very event that satisfies the 2-pageview rule gets seg=1 on it.
+  if (eventName === 'page_view') {
+    sessionPageViewCount += 1
+  }
+
+  // GA4 considers a session engaged when ANY of:
+  //   - cumulative session engagement ≥ 10s
+  //   - ≥ 2 page_views in the session
+  //   - a conversion event
+  // Previously we only checked per-page engagement via peekEngagementMs(),
+  // so a user who clicked through 5 short-dwell routes (8s each → 40s
+  // total) never flipped engaged — each page's accumulator reset on flush
+  // before crossing 10s. Use the session-wide counter + pageview rule so
+  // SPA route-nav gets credited properly. Today's GA4 showed 3/40
+  // engaged sessions despite ~18min average session duration because of
+  // this bug.
+  if (!sessionEngaged && (
+    peekSessionEngagementMs() >= ENGAGED_SESSION_THRESHOLD_MS ||
+    sessionPageViewCount >= 2
+  )) {
     sessionEngaged = true
   }
   if (sessionEngaged) {
