@@ -300,11 +300,43 @@ func InitializeProviders() error {
 	// so it should only be the default when no other agent is available (#3609).
 	registry.Register(NewCopilotCLIProvider())
 
-	// NOTE: API-only agents (Claude API, OpenAI, Gemini) and IDE-based agents
-	// (Cursor, Windsurf, Cline, etc.) are intentionally not registered.
-	// They cannot execute commands to diagnose/repair clusters, which is the
-	// primary value of AI Missions. Only CLI-based agents that can take action
-	// are registered above.
+	// Register chat-only local LLM providers AFTER the tool-capable CLI agents.
+	// Rationale: missions need to execute cluster commands, so they must route
+	// to an agent that returns CapabilityToolExec. The local-LLM HTTP runners
+	// below return CapabilityChat only, so missions still prefer the CLI
+	// agents above (order matters — promoteExecutingDefault() below keeps a
+	// tool-capable agent as default whenever one is available). Registering
+	// the HTTP runners here makes them selectable in the agent-selector
+	// dropdown for chat and analysis workflows without breaking missions.
+	//
+	// Each provider is only advertised as Available when its URL env var is
+	// set (or a sensible loopback default applies, for Ollama and LM Studio).
+	// See docs/security/SECURITY-MODEL.md §3 for the posture these runners
+	// unlock.
+	registry.Register(NewOllamaProvider())
+	registry.Register(NewLlamaCppProvider())
+	registry.Register(NewLocalAIProvider())
+	registry.Register(NewVLLMProvider())
+	registry.Register(NewLMStudioProvider())
+	registry.Register(NewRHAIISProvider())
+
+	// Register the OpenAI-compatible gateway and frontend providers. These
+	// have existed in the codebase but were previously unregistered because
+	// they are chat-only. With the capability-aware mission routing above,
+	// registering them is safe and lets operators pick a remote
+	// OpenAI-compatible endpoint from the dropdown (Groq LPU, OpenRouter
+	// gateway, or a self-hosted Open WebUI behind their own model).
+	registry.Register(NewGroqProvider())
+	registry.Register(NewOpenRouterProvider())
+	registry.Register(NewOpenWebUIProvider())
+
+	// NOTE: API-only vendor agents (Claude API, OpenAI direct, Gemini API) and
+	// IDE-based agents (Cursor, Windsurf, Cline, etc.) remain intentionally
+	// unregistered. They cannot execute cluster commands AND they route
+	// traffic out of the cluster to a specific vendor endpoint that the
+	// operator has no say over, which is the opposite of what the local-LLM
+	// providers above offer. Only CLI-based tool-capable agents and
+	// operator-controlled OpenAI-compatible HTTP endpoints are registered.
 
 	// Set default agent based on environment or availability
 	if defaultAgent := os.Getenv("DEFAULT_AGENT"); defaultAgent != "" {

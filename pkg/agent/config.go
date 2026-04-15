@@ -308,6 +308,22 @@ func getEnvKeyForProvider(provider string) string {
 		return "GROQ_API_KEY"
 	case "goose":
 		return "GOOSE_PROVIDER"
+	// Local LLM runners — the "API key" env var is only consulted when the
+	// operator has enabled authentication on the runner. Most local runners
+	// are unauthenticated and rely on the sentinel seeded by
+	// ensureLocalLLMPlaceholderKey in provider_local_openai_compat.go.
+	case "ollama":
+		return "OLLAMA_API_KEY"
+	case "llamacpp":
+		return "LLAMACPP_API_KEY"
+	case "localai":
+		return "LOCALAI_API_KEY"
+	case "vllm":
+		return "VLLM_API_KEY"
+	case "lm-studio":
+		return "LM_STUDIO_API_KEY"
+	case "rhaiis":
+		return "RHAIIS_API_KEY"
 	default:
 		return ""
 	}
@@ -333,6 +349,18 @@ func getModelEnvKeyForProvider(provider string) string {
 		return "GROQ_MODEL"
 	case "goose":
 		return "GOOSE_MODEL"
+	case "ollama":
+		return "OLLAMA_MODEL"
+	case "llamacpp":
+		return "LLAMACPP_MODEL"
+	case "localai":
+		return "LOCALAI_MODEL"
+	case "vllm":
+		return "VLLM_MODEL"
+	case "lm-studio":
+		return "LM_STUDIO_MODEL"
+	case "rhaiis":
+		return "RHAIIS_MODEL"
 	default:
 		return ""
 	}

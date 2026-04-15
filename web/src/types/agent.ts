@@ -25,6 +25,12 @@ export type AgentProvider =
   | 'github-cli'      // GitHub Copilot CLI
   | 'kagent'          // Kagent (in-cluster)
   | 'kagenti'         // Kagenti (in-cluster)
+  | 'ollama'          // Ollama - local LLM runtime
+  | 'llamacpp'        // llama.cpp server
+  | 'localai'         // LocalAI - self-hosted OpenAI-compatible runtime
+  | 'vllm'            // vLLM - high-throughput GPU inference
+  | 'lm-studio'       // LM Studio - workstation GUI runner
+  | 'rhaiis'          // Red Hat AI Inference Server
 
 // Capability flags matching backend ProviderCapability
 export const AgentCapabilityChat = 1

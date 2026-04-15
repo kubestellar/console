@@ -3,6 +3,24 @@ import type { AgentInfo, AgentProvider } from '../../types/agent'
 // Providers that are cluster-based (rendered in bottom section)
 export const CLUSTER_PROVIDER_KEYS: AgentProvider[] = ['kagent', 'kagenti']
 
+// Local LLM runners. Each is registered in the backend agent registry but only
+// reports Available=true when its URL env var is set (or a loopback default
+// applies for Ollama / LM Studio). When they are NOT available, we still want
+// the dropdown to surface them with a link to their install mission so the
+// operator can get from "not set up" to "chatting with a local LLM" without
+// leaving the Console. Keep this map in sync with the provider keys in
+// pkg/agent/provider_local_openai_compat.go.
+export const LOCAL_LLM_INSTALL_MISSIONS: Readonly<Record<string, string>> = Object.freeze({
+  ollama: 'install-ollama',
+  llamacpp: 'install-llama-cpp',
+  localai: 'install-localai',
+  vllm: 'install-vllm',
+  'lm-studio': 'install-lm-studio',
+  rhaiis: 'install-rhaiis',
+  'open-webui': 'install-open-webui',
+  'claude-desktop': 'install-claude-desktop',
+})
+
 export interface KagentBackendInfo {
   kagentAvailable: boolean
   kagentiAvailable: boolean
@@ -20,7 +38,16 @@ export function buildVisibleAgents(
   alwaysShowCli: AgentInfo[],
   backend: KagentBackendInfo,
 ): AgentInfo[] {
-  const merged = agents.filter(a => a.name !== 'bob' || a.available)
+  const merged = agents
+    .filter(a => a.name !== 'bob' || a.available)
+    // Enrich local LLM providers with their install mission IDs so the
+    // dropdown can link to install missions when the runner is not yet
+    // configured. Real install missions live in kubestellar/console-kb.
+    .map(a => {
+      if (a.available || a.installMissionId) return a
+      const missionId = LOCAL_LLM_INSTALL_MISSIONS[a.name]
+      return missionId ? { ...a, installMissionId: missionId } : a
+    })
 
   for (const stub of alwaysShowCli) {
     if (!merged.some(a => a.name === stub.name || a.provider === stub.provider)) {

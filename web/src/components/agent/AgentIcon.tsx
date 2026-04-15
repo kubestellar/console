@@ -241,6 +241,74 @@ export function AgentIcon({ provider, className = 'w-5 h-5' }: AgentIconProps) {
           <path d="M1 21.5c2-1 4-1 6 0s4 1 6 0 4-1 6 0 4 1 5 0" stroke="#38BDF8" strokeWidth="1" strokeLinecap="round" fill="none" opacity="0.5" />
         </svg>
       )
+    case 'ollama':
+      return (
+        <svg className={className} viewBox="0 0 24 24" fill="none">
+          {/* Ollama - stylized llama silhouette */}
+          <path d="M7 4c-0.5 1 0 3 1 4v3c-2 1-3 3-3 6v5h4v-4c0-1 0.5-2 1.5-2h3c1 0 1.5 1 1.5 2v4h4v-5c0-3-1-5-3-6V8c1-1 1.5-3 1-4" className="fill-slate-600 dark:fill-slate-300" />
+          <circle cx="9" cy="7" r="0.8" fill="white" />
+          <circle cx="15" cy="7" r="0.8" fill="white" />
+        </svg>
+      )
+    case 'llamacpp':
+      return (
+        <svg className={className} viewBox="0 0 24 24" fill="none">
+          {/* llama.cpp - llama head in a code bracket background */}
+          <circle cx="12" cy="12" r="10" className="fill-amber-100 dark:fill-amber-950" />
+          <path d="M9 7c0 1 0 2 0.5 3H8l0.5 5h7L16 10h-1.5c0.5-1 0.5-2 0.5-3" className="fill-amber-600" />
+          <circle cx="10" cy="9" r="0.7" className="fill-gray-900 dark:fill-gray-100" />
+          <circle cx="14" cy="9" r="0.7" className="fill-gray-900 dark:fill-gray-100" />
+          <path d="M4 16 L2 19 L4 22" className="stroke-amber-700" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+          <path d="M20 16 L22 19 L20 22" className="stroke-amber-700" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        </svg>
+      )
+    case 'localai':
+      return (
+        <svg className={className} viewBox="0 0 24 24" fill="none">
+          {/* LocalAI - server rack with AI spark */}
+          <rect x="3" y="4" width="18" height="16" rx="2" className="fill-emerald-600" />
+          <rect x="5" y="6" width="14" height="3" rx="0.5" className="fill-emerald-800" />
+          <rect x="5" y="11" width="14" height="3" rx="0.5" className="fill-emerald-800" />
+          <rect x="5" y="16" width="14" height="2" rx="0.5" className="fill-emerald-800" />
+          <circle cx="7" cy="7.5" r="0.6" className="fill-emerald-300" />
+          <circle cx="9" cy="7.5" r="0.6" className="fill-emerald-300" />
+          <circle cx="7" cy="12.5" r="0.6" className="fill-emerald-300" />
+          <circle cx="9" cy="12.5" r="0.6" className="fill-emerald-300" />
+          <path d="M17 2 L17.8 3.7 L19.5 4.5 L17.8 5.3 L17 7 L16.2 5.3 L14.5 4.5 L16.2 3.7 Z" className="fill-yellow-400" />
+        </svg>
+      )
+    case 'vllm':
+      return (
+        <svg className={className} viewBox="0 0 24 24" fill="none">
+          {/* vLLM - stylized vL with GPU dot */}
+          <rect x="0" y="0" width="24" height="24" rx="5" className="fill-violet-600" />
+          <path d="M4 6 L8 16 L10 16 L6 6 Z" className="fill-white" />
+          <path d="M11 6 L11 17 L19 17 L19 15 L13 15 L13 6 Z" className="fill-white" />
+          <circle cx="20" cy="6" r="2.5" className="fill-yellow-300" />
+        </svg>
+      )
+    case 'lm-studio':
+      return (
+        <svg className={className} viewBox="0 0 24 24" fill="none">
+          {/* LM Studio - monitor with LM text */}
+          <rect x="2" y="3" width="20" height="14" rx="2" className="fill-blue-700" />
+          <rect x="4" y="5" width="16" height="10" rx="1" className="fill-blue-950" />
+          <text x="12" y="13" textAnchor="middle" className="fill-blue-200" fontSize="7" fontWeight="bold" fontFamily="sans-serif">LM</text>
+          <rect x="9" y="17" width="6" height="3" className="fill-blue-700" />
+          <rect x="6" y="20" width="12" height="1.5" rx="0.5" className="fill-blue-700" />
+        </svg>
+      )
+    case 'rhaiis':
+      return (
+        <svg className={className} viewBox="0 0 24 24" fill="none">
+          {/* Red Hat AI Inference Server - red hat with AI spark */}
+          <path d="M3 14 C3 14 5 8 12 8 C19 8 21 14 21 14 L21 17 L3 17 Z" className="fill-red-600" />
+          <path d="M3 17 L21 17 L21 19 L3 19 Z" className="fill-red-800" />
+          <rect x="9" y="4" width="6" height="5" rx="1" className="fill-red-700" />
+          <circle cx="18" cy="5" r="3" className="fill-yellow-300" />
+          <text x="18" y="7" textAnchor="middle" className="fill-red-900" fontSize="4" fontWeight="bold">AI</text>
+        </svg>
+      )
     default:
       // Generic AI/robot icon
       return (
