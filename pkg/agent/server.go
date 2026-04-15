@@ -425,6 +425,14 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/gitops/detect-drift", s.handleDetectDrift)
 	mux.HandleFunc("/gitops/sync", s.handleGitopsSync)
 
+	// ArgoCD application sync moved to kc-agent (#7993 Phase 3c). The
+	// annotation-patch fallback strategy now runs under the user's kubeconfig
+	// instead of the backend pod ServiceAccount. The REST-API and CLI
+	// strategies are environment-side and behave identically. Backend handler
+	// is still present until Phase 4 deletes it — route in
+	// pkg/agent/server_argocd.go.
+	mux.HandleFunc("/argocd/sync", s.handleArgoCDSync)
+
 	// Rename context endpoint
 	mux.HandleFunc("/rename-context", s.handleRenameContextHTTP)
 
