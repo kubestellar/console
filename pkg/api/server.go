@@ -1228,12 +1228,12 @@ func (s *Server) setupRoutes() {
 		s.hub.HandleConnection(c)
 	}))
 
-	// WebSocket for pod exec terminal — uses first-message JWT auth (same pattern as /ws hub)
-	execHandlers := handlers.NewExecHandlers(s.k8sClient, s.config.JWTSecret, s.config.DevMode)
-	s.app.Use("/ws/exec", middleware.WebSocketUpgrade())
-	s.app.Get("/ws/exec", websocket.New(func(c *websocket.Conn) {
-		execHandlers.HandleExec(c)
-	}))
+	// Pod exec WebSocket moved to kc-agent (#7993 Phase 3d, closes #5406).
+	// kc-agent runs the SPDY exec stream under the user's kubeconfig so the
+	// target apiserver enforces RBAC natively — no SubjectAccessReview
+	// workaround required. The frontend now connects to kc-agent's
+	// /ws/exec route via LOCAL_AGENT_WS_URL. See pkg/agent/server_exec.go
+	// and web/src/hooks/useExecSession.ts for the replacement.
 
 	// Serve static files in production
 	if !s.config.DevMode {

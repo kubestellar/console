@@ -543,6 +543,12 @@ func (s *Server) Start() error {
 
 	// WebSocket endpoint
 	mux.HandleFunc("/ws", s.handleWebSocket)
+	// Pod exec WebSocket moved to kc-agent (#7993 Phase 3d-A). Runs the
+	// SPDY exec stream under the user's kubeconfig so the target cluster's
+	// apiserver enforces RBAC natively — no SubjectAccessReview dance is
+	// needed, unlike pkg/api/handlers/exec.go which uses the pod SA and
+	// has to simulate the user identity. Handler in server_exec.go.
+	mux.HandleFunc("/ws/exec", s.handleExec)
 
 	// CORS preflight - uses isAllowedOrigin() instead of wildcard to restrict access
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {

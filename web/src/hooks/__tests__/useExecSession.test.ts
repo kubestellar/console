@@ -130,17 +130,16 @@ describe('useExecSession', () => {
     expect(result.current.status).toBe('connecting')
   })
 
-  it('sends auth and exec_init messages on WebSocket open', () => {
+  it('sends exec_init as the first WebSocket message on open', () => {
+    // #7993 Phase 3d: kc-agent validates the token on the HTTP upgrade
+    // (Authorization header or ?token= query param), so the first JSON
+    // frame we send is exec_init directly — no auth preamble.
     const { result } = renderHook(() => useExecSession())
     act(() => { result.current.connect(DEFAULT_CONFIG) })
     act(() => { mockWs.triggerOpen() })
 
-    expect(mockWs.sentMessages.length).toBe(2)
-    const auth = JSON.parse(mockWs.sentMessages[0])
-    expect(auth.type).toBe('auth')
-    expect(auth.token).toBe('test-jwt')
-
-    const init = JSON.parse(mockWs.sentMessages[1])
+    expect(mockWs.sentMessages.length).toBe(1)
+    const init = JSON.parse(mockWs.sentMessages[0])
     expect(init.type).toBe('exec_init')
     expect(init.cluster).toBe('prod')
     expect(init.pod).toBe('my-pod')
@@ -162,7 +161,8 @@ describe('useExecSession', () => {
     act(() => { result.current.connect(config) })
     act(() => { mockWs.triggerOpen() })
 
-    const init = JSON.parse(mockWs.sentMessages[1])
+    // #7993 Phase 3d: exec_init is the first (and only) pre-stream frame.
+    const init = JSON.parse(mockWs.sentMessages[0])
     expect(init.command).toEqual(['/bin/bash'])
     expect(init.tty).toBe(false)
     expect(init.cols).toBe(120)
@@ -253,15 +253,12 @@ describe('useExecSession', () => {
     expect(result.current.error).toBe('Unknown server error')
   })
 
-  // --- No token error ---
-  it('sets error when no auth token on connect', () => {
-    localStorage.removeItem('kc-auth-token')
-    const { result } = renderHook(() => useExecSession())
-    act(() => { result.current.connect(DEFAULT_CONFIG) })
-    act(() => { mockWs.triggerOpen() })
-    expect(result.current.status).toBe('error')
-    expect(result.current.error).toContain('Not authenticated')
-  })
+  // #7993 Phase 3d: the old "no auth token on connect" test was removed.
+  // kc-agent validates tokens on the HTTP upgrade path (Authorization
+  // header or ?token= query param), not via a first-message dance, so the
+  // absence of a JWT no longer produces a frontend-side error — it produces
+  // a 401 on upgrade, which is already covered by the "WebSocket constructor
+  // throwing" test below.
 
   // --- WebSocket creation failure ---
   it('handles WebSocket constructor throwing', () => {
@@ -529,7 +526,8 @@ describe('useExecSession', () => {
     act(() => { result.current.connect(config) })
     act(() => { mockWs.triggerOpen() })
 
-    const init = JSON.parse(mockWs.sentMessages[1])
+    // #7993 Phase 3d: exec_init is the first frame.
+    const init = JSON.parse(mockWs.sentMessages[0])
     expect(init.namespace).toBe('kube-system')
     expect(init.container).toBe('coredns')
     expect(init.cluster).toBe('staging')

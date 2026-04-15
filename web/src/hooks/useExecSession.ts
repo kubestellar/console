@@ -18,7 +18,7 @@
  */
 
 import { useRef, useCallback, useEffect, useState } from 'react'
-import { STORAGE_KEY_TOKEN } from '../lib/constants'
+import { LOCAL_AGENT_WS_URL } from '../lib/constants/network'
 
 // ============================================================================
 // Constants
@@ -224,10 +224,15 @@ export function useExecSession(): UseExecSessionResult {
     updateStatus('connecting')
     setError(null)
 
-    // Build WebSocket URL -- token is sent as first message, NOT in the URL
-    // (keeps JWT out of server logs, browser history, and proxy logs)
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const wsUrl = `${protocol}//${window.location.host}/ws/exec`
+    // Build WebSocket URL — routes through kc-agent on 127.0.0.1:8585 so the
+    // SPDY exec stream runs under the user's own kubeconfig (#7993 Phase 3d).
+    // The apiserver enforces RBAC natively against the caller's identity,
+    // which is why the kc-agent exec handler doesn't need the #8120/#5406
+    // SubjectAccessReview that the backend handler had to simulate.
+    //
+    // LOCAL_AGENT_WS_URL is `ws://127.0.0.1:8585/ws` (or a disabled sentinel
+    // on Netlify) — we swap the trailing segment to /ws/exec.
+    const wsUrl = LOCAL_AGENT_WS_URL.replace(/\/ws$/, '/ws/exec')
 
     let ws: WebSocket
     try {
@@ -243,16 +248,13 @@ export function useExecSession(): UseExecSessionResult {
     wsRef.current = ws
 
     ws.onopen = () => {
-      // Step 1: Send auth message with JWT token
-      const token = localStorage.getItem(STORAGE_KEY_TOKEN)
-      if (!token) {
-        updateStatus('error', 'Not authenticated. Please log in again.')
-        ws.close()
-        return
-      }
-      ws.send(JSON.stringify({ type: 'auth', token }))
-
-      // Step 2: Send the exec_init message
+      // #7993 Phase 3d: kc-agent validates the token on the HTTP upgrade
+      // (Authorization header or ?token= query param fallback) rather than
+      // via a first-message JWT dance the way the backend handler did. The
+      // first message the kc-agent exec handler reads is exec_init, so we
+      // send that directly without the auth preamble. If kc-agent's
+      // agentToken is configured (hardened install), the WebSocket upgrade
+      // would have been rejected before reaching this handler.
       const initMsg: ExecMessage & { cluster: string; namespace: string; pod: string; container: string; command: string[]; tty: boolean } = {
         type: 'exec_init',
         cluster: config.cluster,
