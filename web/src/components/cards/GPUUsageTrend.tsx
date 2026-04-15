@@ -5,6 +5,7 @@ import ReactECharts from 'echarts-for-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedGPUNodes } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
+import { useMetricsHistory } from '../../hooks/useMetricsHistory'
 import { Skeleton, SkeletonStats } from '../ui/Skeleton'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
@@ -21,6 +22,19 @@ interface GPUDataPoint {
   available: number
   allocated: number
   free: number
+}
+
+// Shape we pass through the card's filter/aggregation pipeline. This matches
+// the live GPUNode shape for the fields we actually use (cluster, gpuType,
+// gpuCount, gpuAllocated). We normalize here so we can transparently fall
+// back to a recent metrics-history snapshot whose field name is `gpuTotal`
+// instead of `gpuCount` — see snapshot fallback below.
+interface EffectiveGPUNode {
+  name: string
+  cluster: string
+  gpuType?: string
+  gpuCount: number
+  gpuAllocated: number
 }
 
 type TimeRange = '15m' | '1h' | '6h' | '24h'
@@ -50,9 +64,43 @@ export function GPUUsageTrend() {
     consecutiveFailures } = useCachedGPUNodes()
   const { deduplicatedClusters: clusters } = useClusters()
   const { isDemoMode } = useDemoMode()
+  // Use the shared metrics-history snapshots as a last-known-good fallback
+  // when the live GPU-nodes fetch returns empty (intermittent API failure
+  // against a cluster that does have GPUs). Without this the card shows
+  // "No GPU Nodes" whenever a single poll fails — see GPU Inventory History
+  // card which already reads this same history and stays populated.
+  const { history: metricsHistory } = useMetricsHistory()
 
-  // Only show skeleton when no cached data exists
-  const hasData = gpuNodes.length > 0
+  // Fall back to the most recent snapshot's GPU nodes if the live list is
+  // empty. Snapshots use `gpuTotal`; we remap to `gpuCount` so downstream
+  // aggregation (currentTotals, filteredNodes) stays unchanged.
+  const effectiveGPUNodes: EffectiveGPUNode[] = useMemo(() => {
+    if (gpuNodes.length > 0) {
+      return gpuNodes.map(n => ({
+        name: n.name,
+        cluster: n.cluster,
+        gpuType: n.gpuType,
+        gpuCount: n.gpuCount,
+        gpuAllocated: n.gpuAllocated }))
+    }
+    // Search most-recent-first for a snapshot that actually has GPU data.
+    for (let i = metricsHistory.length - 1; i >= 0; i -= 1) {
+      const snap = metricsHistory[i]
+      const snapNodes = snap?.gpuNodes || []
+      if (snapNodes.length > 0) {
+        return snapNodes.map(g => ({
+          name: g.name,
+          cluster: g.cluster,
+          gpuType: g.gpuType,
+          gpuCount: g.gpuTotal,
+          gpuAllocated: g.gpuAllocated }))
+      }
+    }
+    return []
+  }, [gpuNodes, metricsHistory])
+
+  // Only show skeleton when no cached data exists (live OR snapshot fallback)
+  const hasData = effectiveGPUNodes.length > 0
   const isLoading = hookLoading && !hasData
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
 
@@ -105,7 +153,7 @@ export function GPUUsageTrend() {
 
   // Get reachable clusters (those with GPU nodes)
   const gpuClusters = (() => {
-    const clusterNames = new Set(gpuNodes.map(n => normalizeClusterName(n.cluster)))
+    const clusterNames = new Set(effectiveGPUNodes.map(n => normalizeClusterName(n.cluster)))
     return clusters.filter(c => clusterNames.has(normalizeClusterName(c.name)) && c.reachable !== false)
   })()
 
@@ -115,7 +163,7 @@ export function GPUUsageTrend() {
   })()
 
   const filteredNodes = useMemo(() => {
-    let filtered = gpuNodes
+    let filtered: EffectiveGPUNode[] = effectiveGPUNodes
     if (!isAllClustersSelected) {
       filtered = filtered.filter(node => {
         const normalizedNodeCluster = normalizeClusterName(node.cluster)
@@ -139,7 +187,7 @@ export function GPUUsageTrend() {
       })
     }
     return filtered
-  }, [gpuNodes, selectedClusters, isAllClustersSelected, localClusterFilter])
+  }, [effectiveGPUNodes, selectedClusters, isAllClustersSelected, localClusterFilter])
 
   const toggleClusterFilter = (clusterName: string) => {
     setLocalClusterFilter(prev => {
@@ -271,7 +319,7 @@ export function GPUUsageTrend() {
     )
   }
 
-  if (gpuNodes.length === 0) {
+  if (effectiveGPUNodes.length === 0) {
     return (
       <div className="h-full flex flex-col content-loaded">
         <div className="flex items-center justify-end mb-3" />

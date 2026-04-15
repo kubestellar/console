@@ -120,7 +120,8 @@ export function useNamespaces(cluster?: string, forceLive = false) {
           timerId = setTimeout(() => resolve(null), NAMESPACE_FETCH_TIMEOUT_MS)
         })
         const nsData = await Promise.race([nsPromise, timeoutPromise])
-        // Clear the stray timer if nsPromise won the race.
+        // Clear the timer unconditionally. If nsPromise won, this cancels the
+        // pending timer; if the timer already fired, clearTimeout is a safe no-op.
         if (timerId !== null) clearTimeout(timerId)
 
         if (nsData && nsData.length > 0) {

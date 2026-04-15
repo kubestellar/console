@@ -54,6 +54,11 @@ vi.mock('../../../hooks/useGlobalFilters', () => ({
   useGlobalFilters: () => ({ selectedClusters: [], isAllClustersSelected: true, selectedSeverities: [], isAllSeveritiesSelected: true, customFilter: '' }),
 }))
 
+const mockUseMetricsHistory = vi.fn()
+vi.mock('../../../hooks/useMetricsHistory', () => ({
+  useMetricsHistory: () => mockUseMetricsHistory(),
+}))
+
 import { GPUUsageTrend } from '../GPUUsageTrend'
 
 describe('GPUUsageTrend', () => {
@@ -63,6 +68,7 @@ describe('GPUUsageTrend', () => {
     mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false })
     mockGPUNodes.mockReturnValue({ nodes: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
     mockUseClusters.mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: false, isRefreshing: false, error: null, lastRefresh: Date.now() })
+    mockUseMetricsHistory.mockReturnValue({ history: [], captureNow: vi.fn(), clearHistory: vi.fn(), getClusterTrend: () => 'stable', getPodRestartTrend: () => 'stable', snapshotCount: 0 })
   })
 
   it('renders without crashing', () => {
@@ -113,6 +119,33 @@ describe('GPUUsageTrend', () => {
     mockGPUNodes.mockReturnValue({ nodes: [], isLoading: false, isRefreshing: false, isDemoFallback: true, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
     render(<GPUUsageTrend />)
     expect(mockUseCardLoadingState).toHaveBeenCalled()
+  })
+
+  // Regression: when the live fetch returns zero nodes (intermittent failure)
+  // the card should fall back to the most-recent metrics-history snapshot so
+  // it stays populated instead of flashing "No GPU Nodes".
+  it('uses metrics-history snapshot fallback when live GPU nodes are empty', () => {
+    mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
+    mockGPUNodes.mockReturnValue({ nodes: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: true, consecutiveFailures: 2, error: 'boom', lastRefresh: Date.now() })
+    mockUseMetricsHistory.mockReturnValue({
+      history: [
+        {
+          timestamp: new Date().toISOString(),
+          clusters: [],
+          podIssues: [],
+          gpuNodes: [
+            { name: 'node-a', cluster: 'vllm-d', gpuType: 'NVIDIA H100', gpuAllocated: 2, gpuTotal: 8 },
+          ],
+        },
+      ],
+      captureNow: vi.fn(),
+      clearHistory: vi.fn(),
+      getClusterTrend: () => 'stable',
+      getPodRestartTrend: () => 'stable',
+      snapshotCount: 1 })
+    const { container } = render(<GPUUsageTrend />)
+    // Card should NOT show the empty-state message when fallback data exists.
+    expect(container.textContent).not.toContain('No GPU Nodes')
   })
 
 })
