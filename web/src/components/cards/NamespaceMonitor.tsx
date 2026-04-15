@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import {
   Layers, ChevronRight, ChevronDown, Server, Box, Network, HardDrive,
   FileText, FileKey, Clock, Container, RefreshCw, Plus, Minus,
@@ -101,6 +101,10 @@ const ChangeAnimations: Record<Exclude<ChangeType, null>, string> = {
  * below the list tells the user to use the search box to narrow down.
  */
 const MAX_NAMESPACES_RENDERED_PER_CLUSTER = 30
+
+// Shared empty result for clusters that aren't the selected one — avoids
+// allocating a fresh Map on every render of every non-selected cluster row.
+const EMPTY_NAMESPACE_DATA: Map<string, NamespaceData> = new Map()
 
 export function NamespaceMonitor({ config: _config }: CardComponentProps) {
   const { isDemoMode } = useDemoMode()
@@ -378,11 +382,11 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
     })
   }
 
-  // Build namespace data for a cluster
-  const getNamespaceData = (clusterName: string): Map<string, NamespaceData> => {
-    if (clusterName !== selectedCluster) return new Map()
-
-    const nsData = new Map<string, NamespaceData>()
+  // Build namespace data map for the currently selected cluster.
+  // One pass over each source array builds a Map<namespace, T[]> index, then
+  // each namespace does an O(1) lookup instead of an O(M) Array.filter().
+  const selectedClusterNamespaceData = useMemo<Map<string, NamespaceData>>(() => {
+    if (!selectedCluster) return new Map()
 
     // Filter namespaces by search
     let filteredNs = namespaces || []
@@ -391,39 +395,76 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
       filteredNs = filteredNs.filter(ns => ns.toLowerCase().includes(query))
     }
 
-    // Initialize namespaces
-    filteredNs.forEach(ns => {
-      const nsPods: PodItem[] = (pods || []).filter(p => p.namespace === ns).map(p => ({
-        name: p.name,
-        namespace: p.namespace,
-        status: p.status,
-        restarts: p.restarts }))
-      const nsDeps: DeploymentItem[] = (deployments || []).filter(d => d.namespace === ns).map(d => ({
+    const podsByNs = new Map<string, PodItem[]>()
+    for (const p of (pods || [])) {
+      const item: PodItem = { name: p.name, namespace: p.namespace, status: p.status, restarts: p.restarts }
+      const arr = podsByNs.get(p.namespace)
+      if (arr) arr.push(item)
+      else podsByNs.set(p.namespace, [item])
+    }
+
+    const depsByNs = new Map<string, DeploymentItem[]>()
+    for (const d of (deployments || [])) {
+      const item: DeploymentItem = {
         name: d.name,
         namespace: d.namespace,
         replicas: d.replicas,
         readyReplicas: d.readyReplicas,
-        status: d.status }))
-      const nsSvcs: ServiceItem[] = (services || []).filter(s => s.namespace === ns).map(s => ({
-        name: s.name,
-        namespace: s.namespace,
-        type: s.type }))
-      const nsCms: ConfigMapItem[] = (configmaps || []).filter(c => c.namespace === ns).map(c => ({
-        name: c.name,
-        namespace: c.namespace,
-        dataCount: c.dataCount }))
-      const nsSecrets: SecretItem[] = (secrets || []).filter(s => s.namespace === ns).map(s => ({
-        name: s.name,
-        namespace: s.namespace,
-        type: s.type }))
-      const nsPvcs: PVCItem[] = (pvcs || []).filter(p => p.namespace === ns).map(p => ({
-        name: p.name,
-        namespace: p.namespace,
-        status: p.status }))
-      const nsJobs: JobItem[] = (jobs || []).filter(j => j.namespace === ns).map(j => ({
-        name: j.name,
-        namespace: j.namespace,
-        status: j.status }))
+        status: d.status }
+      const arr = depsByNs.get(d.namespace)
+      if (arr) arr.push(item)
+      else depsByNs.set(d.namespace, [item])
+    }
+
+    const svcsByNs = new Map<string, ServiceItem[]>()
+    for (const s of (services || [])) {
+      const item: ServiceItem = { name: s.name, namespace: s.namespace, type: s.type }
+      const arr = svcsByNs.get(s.namespace)
+      if (arr) arr.push(item)
+      else svcsByNs.set(s.namespace, [item])
+    }
+
+    const cmsByNs = new Map<string, ConfigMapItem[]>()
+    for (const c of (configmaps || [])) {
+      const item: ConfigMapItem = { name: c.name, namespace: c.namespace, dataCount: c.dataCount }
+      const arr = cmsByNs.get(c.namespace)
+      if (arr) arr.push(item)
+      else cmsByNs.set(c.namespace, [item])
+    }
+
+    const secretsByNs = new Map<string, SecretItem[]>()
+    for (const s of (secrets || [])) {
+      const item: SecretItem = { name: s.name, namespace: s.namespace, type: s.type }
+      const arr = secretsByNs.get(s.namespace)
+      if (arr) arr.push(item)
+      else secretsByNs.set(s.namespace, [item])
+    }
+
+    const pvcsByNs = new Map<string, PVCItem[]>()
+    for (const p of (pvcs || [])) {
+      const item: PVCItem = { name: p.name, namespace: p.namespace, status: p.status }
+      const arr = pvcsByNs.get(p.namespace)
+      if (arr) arr.push(item)
+      else pvcsByNs.set(p.namespace, [item])
+    }
+
+    const jobsByNs = new Map<string, JobItem[]>()
+    for (const j of (jobs || [])) {
+      const item: JobItem = { name: j.name, namespace: j.namespace, status: j.status }
+      const arr = jobsByNs.get(j.namespace)
+      if (arr) arr.push(item)
+      else jobsByNs.set(j.namespace, [item])
+    }
+
+    const nsData = new Map<string, NamespaceData>()
+    filteredNs.forEach(ns => {
+      const nsPods = podsByNs.get(ns) || []
+      const nsDeps = depsByNs.get(ns) || []
+      const nsSvcs = svcsByNs.get(ns) || []
+      const nsCms = cmsByNs.get(ns) || []
+      const nsSecrets = secretsByNs.get(ns) || []
+      const nsPvcs = pvcsByNs.get(ns) || []
+      const nsJobs = jobsByNs.get(ns) || []
 
       const hasIssues = nsPods.some(p => p.status !== 'Running' && p.status !== 'Succeeded') ||
                        nsDeps.some(d => d.readyReplicas < d.replicas)
@@ -440,6 +481,11 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
     })
 
     return nsData
+  }, [selectedCluster, namespaces, pods, deployments, services, configmaps, secrets, pvcs, jobs, searchFilter])
+
+  const getNamespaceData = (clusterName: string): Map<string, NamespaceData> => {
+    if (clusterName !== selectedCluster) return EMPTY_NAMESPACE_DATA
+    return selectedClusterNamespaceData
   }
 
   // Count recent changes by type
