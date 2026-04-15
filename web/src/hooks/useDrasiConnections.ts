@@ -136,9 +136,14 @@ function loadState(): StoredState {
       ...c,
       createdAt: now + i,
     }))
-    // Do NOT auto-activate a demo seed — the card should stay in demo mode
-    // until the user explicitly selects one (which still won't go live
-    // because isDemoSeed short-circuits the fetch).
+    // Auto-activate the first demo seed so the header selector matches
+    // the themed pipeline the card is actually rendering. useDrasiResources
+    // short-circuits the fetch when isDemoSeed is set, so the card stays
+    // in demo mode — it just no longer reads "No connection" while a full
+    // pipeline is visible underneath.
+    if (!loaded.activeId) {
+      loaded.activeId = loaded.connections[0].id
+    }
   }
 
   return loaded
