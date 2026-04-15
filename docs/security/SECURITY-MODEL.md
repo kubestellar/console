@@ -101,15 +101,19 @@ Consequences:
 | AI API keys | no (never sent to browser) | no | **yes** (in `~/.kc/config.yaml` or env) | used as `Authorization` header |
 | GitHub OAuth client secret | no | **yes** (env var only) | no | no |
 
-Key consequence: **the kubeconfig, raw secrets, and cluster credentials never cross the process boundary from kc-agent.** The only thing kc-agent sends outward is the HTTP chat payload to the configured AI provider, which contains the conversation the user has been having (system prompt + message history + current prompt — see `pkg/agent/provider_openai.go:207-238` for the exact OpenAI shape).
+Key consequence: **the kubeconfig, raw secrets, and cluster credentials never cross the process boundary from kc-agent as direct credential uploads.** However, the data that can leave the machine depends on which kind of AI agent is configured:
+
+- **CLI tool agents** (for example `claude-code`, `codex`, `gemini-cli`) run an external CLI locally. These agents can execute tools such as `kubectl` and `helm`, and the external CLI may send tool output or other cluster-derived context to its upstream LLM depending on the agent's behavior and the prompt. In the current build, `InitializeProviders` (`pkg/agent/registry.go:283`) registers **only** CLI-based tool-capable agents — `claude-code`, `bob`, `codex`, `gemini-cli`, `antigravity`, `goose`, and `copilot-cli`.
+- **Direct HTTP providers** (for example OpenAI-compatible/API-key providers) construct an HTTP chat payload in `pkg/agent/provider_*.go`. For those providers, the outbound data is the request body built by the provider implementation (for example, system prompt + message history + current prompt; see `pkg/agent/provider_openai.go:207-238` for the OpenAI shape). **These API-only HTTP providers are intentionally not registered by `InitializeProviders` in the current build** (see the comment at `pkg/agent/registry.go:303-307`) and are therefore not selectable at runtime.
 
 ### What kc-agent does **not** send to AI providers
 
 - It does not upload `~/.kube/config`.
 - It does not upload cluster bearer tokens, client certificates, or any other credential material.
-- It does not auto-attach arbitrary cluster objects. The conversation context is whatever the user chose to type or paste, plus the system prompt defined in the provider implementation (`DefaultSystemPrompt`).
+- It does not auto-attach arbitrary cluster objects on its own. For direct HTTP providers, the conversation context is whatever the user chose to type or paste, plus the system prompt defined in the provider implementation (`DefaultSystemPrompt`).
+- For CLI tool agents, be aware that cluster data can still leave the machine indirectly if the agent runs commands (for example via `kubectl` or `helm`) and the external CLI includes that output in requests to the upstream model.
 
-If you need to audit what leaves the machine, the provider files under `pkg/agent/provider_*.go` each contain exactly one outbound HTTP call site per request type (`Chat` and `StreamChat`). Those are the only places any AI traffic originates.
+If you need to audit what leaves the machine, distinguish the two paths: for **direct HTTP providers**, inspect the outbound request construction and HTTP call sites in `pkg/agent/provider_*.go`; for **CLI tool agents**, audit the external CLI invocation plus whatever tool output and prompts that CLI may forward upstream. The `provider_*.go` call sites are therefore the AI egress points only for the direct HTTP provider path, not for every configured agent type.
 
 ### Authentication and transport
 
@@ -151,8 +155,10 @@ The loopback bind is the primary defense against network-level access. The CORS 
 
 If you deploy the console inside a cluster with `deploy.sh`, outbound traffic from the **backend pod** is limited to:
 
-- GitHub API calls for OAuth exchange and update checks (`update_checker.go`). These can be disabled.
+- GitHub API calls for OAuth exchange. These can be disabled by leaving `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` unset.
 - Nothing else in the core install. No telemetry, no AI calls. AI calls originate from the user's **local** kc-agent, not from the pod.
+
+Note on update checks: the GitHub update polling lives in `pkg/agent/update_checker.go` and runs inside the **local kc-agent** binary on the user's machine, not inside the in-cluster backend pod. An in-cluster backend deployment does not poll GitHub from the server pod for update checks.
 
 ---
 
@@ -166,13 +172,13 @@ Everything enabled: GitHub OAuth, AI via a hosted provider, update checks, card 
 
 ### Posture B — restricted egress (no AI provider)
 
-All cluster-management features continue to work. **AI is optional.** If no key is configured for any provider, `IsKeyAvailable()` returns `false` (`pkg/agent/config.go:235-244`), and AI-driven features fall back to deterministic / rule-based behavior. The README covers this under *AI configuration*: "If no key is configured, AI-powered features fall back to deterministic / rule-based behavior."
+All cluster-management features continue to work. **AI is optional.** In the current runtime, AI features are gated by the availability of a registered AI agent/provider, and the active registry is CLI-based. API-key-based providers are recognized in configuration, but they are not currently wired into the runtime provider registry/status path, so setting `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_API_KEY`, `GROQ_API_KEY`, `OPENROUTER_API_KEY`, or `OPEN_WEBUI_API_KEY` does **not** by itself enable AI features. When no supported CLI-backed AI agent/provider is available, AI-driven features fall back to deterministic / rule-based behavior.
 
 To run without AI:
 
-1. Do **not** set `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_API_KEY`, `GROQ_API_KEY`, `OPENROUTER_API_KEY`, or `OPEN_WEBUI_API_KEY` (`pkg/agent/config.go:277-314` lists every recognized variable).
-2. Leave the Settings → API Keys modal empty (no entries in `~/.kc/config.yaml`).
-3. Optionally block outbound DNS/HTTP to `api.anthropic.com`, `api.openai.com`, `generativelanguage.googleapis.com`, `api.groq.com`, and `openrouter.ai` at your egress.
+1. Do **not** configure or run any supported CLI-backed AI agent/provider for kc-agent.
+2. Treat the Settings → API Keys modal and related `*_API_KEY` variables as non-operative for current runtime enablement; leaving them empty is fine, but their presence alone does not activate AI.
+3. Optionally block outbound DNS/HTTP to known hosted AI endpoints such as `api.anthropic.com`, `api.openai.com`, `generativelanguage.googleapis.com`, `api.groq.com`, and `openrouter.ai` at your egress as defense in depth.
 
 ### Posture C — fully air-gapped
 
@@ -237,20 +243,32 @@ Nothing else is mandatory. The console does not phone home.
 
 The AI layer is a set of pluggable providers under `pkg/agent/provider_*.go`. Each provider maps to one API key env var (listed in `pkg/agent/config.go:277-314`) and, in some cases, a base-URL override.
 
-### Supported providers and env vars
+### Important: current registration status
 
-| Provider | `provider` name | API key env var | Model env var | Base URL overridable? | Base URL env var | Source |
+The provider implementations for **Groq**, **OpenRouter**, and **Open WebUI** (and the other API-key HTTP providers such as Claude API, OpenAI, and Gemini) exist in `pkg/agent/provider_*.go`, **but they are not registered by `InitializeProviders`** in the current build. They are explicitly excluded as "API-only agents" (see `pkg/agent/registry.go:303-307`) because the active runtime registry only registers CLI-based tool-capable agents (`claude-code`, `bob`, `codex`, `gemini-cli`, `antigravity`, `goose`, `copilot-cli`). As a result, **these HTTP providers cannot currently be selected via the runtime provider registry**, and their `*_BASE_URL` environment variables are parsed by the provider source files but are **not** wired into a selectable provider at runtime.
+
+The currently supported self-hosted path is therefore the CLI tool-agent path: install one of the supported local CLIs (for example `claude-code`, `codex`, or `gemini-cli`) on the machine that runs kc-agent, and it will be picked up by `InitializeProviders`.
+
+### Provider source files and env vars (reference)
+
+The table below documents the provider implementations that exist in the source tree and the env vars they parse. Rows marked "Registered?" as **no** are not currently selectable at runtime.
+
+| Provider | `provider` name | API key env var | Model env var | Base URL env var | Registered? | Source |
 |---|---|---|---|---|---|---|
-| Anthropic Claude | `claude` / `anthropic` | `ANTHROPIC_API_KEY` | `CLAUDE_MODEL` | no (fixed to Anthropic) | — | `pkg/agent/provider_claude.go` |
-| OpenAI (ChatGPT) | `openai` | `OPENAI_API_KEY` | `OPENAI_MODEL` | no (fixed to `api.openai.com`) | — | `pkg/agent/provider_openai.go:15` |
-| Google Gemini | `gemini` / `google` | `GOOGLE_API_KEY` | `GEMINI_MODEL` | no | — | `pkg/agent/provider_gemini.go:15` |
-| Groq (OpenAI-compatible) | `groq` | `GROQ_API_KEY` | `GROQ_MODEL` | **yes** | `GROQ_BASE_URL` | `pkg/agent/provider_groq.go:22-51` |
-| OpenRouter (OpenAI-compatible) | `openrouter` | `OPENROUTER_API_KEY` | `OPENROUTER_MODEL` | **yes** | `OPENROUTER_BASE_URL` | `pkg/agent/provider_openrouter.go:23-58` |
-| Open WebUI (OpenAI-compatible) | `open-webui` | `OPEN_WEBUI_API_KEY` | `OPEN_WEBUI_MODEL` | **yes** | `OPEN_WEBUI_URL` | `pkg/agent/provider_openwebui.go:16,39` |
+| Anthropic Claude (HTTP) | `claude` / `anthropic` | `ANTHROPIC_API_KEY` | `CLAUDE_MODEL` | — | no | `pkg/agent/provider_claude.go` |
+| OpenAI (ChatGPT, HTTP) | `openai` | `OPENAI_API_KEY` | `OPENAI_MODEL` | — | no | `pkg/agent/provider_openai.go:15` |
+| Google Gemini (HTTP) | `gemini` / `google` | `GOOGLE_API_KEY` | `GEMINI_MODEL` | — | no | `pkg/agent/provider_gemini.go:15` |
+| Groq (OpenAI-compatible, HTTP) | `groq` | `GROQ_API_KEY` | `GROQ_MODEL` | `GROQ_BASE_URL` (parsed, not wired) | no | `pkg/agent/provider_groq.go:22-51` |
+| OpenRouter (OpenAI-compatible, HTTP) | `openrouter` | `OPENROUTER_API_KEY` | `OPENROUTER_MODEL` | `OPENROUTER_BASE_URL` (parsed, not wired) | no | `pkg/agent/provider_openrouter.go:23-58` |
+| Open WebUI (OpenAI-compatible, HTTP) | `open-webui` | `OPEN_WEBUI_API_KEY` | `OPEN_WEBUI_MODEL` | `OPEN_WEBUI_URL` (parsed, not wired) | no | `pkg/agent/provider_openwebui.go:16,39` |
 
-Note the asymmetry: **the upstream OpenAI provider does not currently honor an `OPENAI_BASE_URL` override.** The hostname is a package-level variable in `pkg/agent/provider_openai.go:15`, but it is not re-read from the environment. If you want to point an OpenAI-compatible local server at the console today, use one of the three providers whose base URLs *are* overridable: **Groq, OpenRouter, or Open WebUI**. All three speak the OpenAI chat-completions wire format.
+Note the asymmetry: the upstream OpenAI provider source file hard-codes its hostname as a package-level variable in `pkg/agent/provider_openai.go:15` (no `OPENAI_BASE_URL` override). Groq, OpenRouter, and Open WebUI do parse base-URL env vars, but because those providers are not registered at runtime today, setting those env vars does not actually route AI traffic through a local endpoint.
 
-### Routing a local LLM through an overridable provider slot
+### Planned follow-up: wire up OpenAI-compatible local LLMs
+
+The diagrams and examples below describe the **planned** configuration shape once the base-URL-overridable HTTP providers are registered in `InitializeProviders`. They are **not operative in the current build** — treat them as forward-looking documentation. If/when the providers are wired in, this section will be promoted back to a supported recipe.
+
+#### Planned: routing a local LLM through an overridable provider slot
 
 ```mermaid
 flowchart LR
@@ -267,45 +285,48 @@ flowchart LR
     class OLLA,VLLM,LM,GW override_path
 ```
 
-Setting `GROQ_BASE_URL` redirects every chat-completion call made by the Groq provider to your own endpoint. The request payload is unchanged — it's the OpenAI wire format — so any OpenAI-compatible local runner works without the console knowing or caring which one.
+Once the provider is registered, setting `GROQ_BASE_URL` would redirect every chat-completion call made by the Groq provider to your own endpoint. The request payload is unchanged — it's the OpenAI wire format — so any OpenAI-compatible local runner would work without the console knowing or caring which one. Today, however, the Groq provider is excluded from `InitializeProviders` (see "Current registration status" above), so this flow is documented but not active.
 
-### Local LLM as a security posture (not a feature gap)
+#### Local LLM as a security posture (intended direction)
 
-Using a local / on-prem LLM is the strongest way to keep prompts and conversation history inside your trust boundary. When the base URL points at something running on your own network, the AI traffic never leaves the machine (for a loopback endpoint) or never leaves your perimeter (for an internal gateway). This is the right choice for operators in regulated, air-gapped, or high-sensitivity environments — not because the console is broken without a public provider, but because the security posture matches what those environments need.
+Using a local / on-prem LLM would be the strongest way to keep prompts and conversation history inside your trust boundary. When the base URL points at something running on your own network, the AI traffic never leaves the machine (for a loopback endpoint) or never leaves your perimeter (for an internal gateway). This is the intended direction for operators in regulated, air-gapped, or high-sensitivity environments — not because the console is broken without a public provider, but because the security posture matches what those environments need. Until the HTTP providers are wired into the runtime registry, the supported air-gapped path is to run without AI (Posture B) or to use a CLI tool agent whose upstream endpoint you control.
 
 See `pkg/agent/provider_groq.go`, `pkg/agent/provider_openrouter.go`, and `pkg/agent/provider_openwebui.go` for the three overridable slots.
 
-### Example: Ollama via the Groq provider slot
+#### Planned: Ollama via the Groq provider slot
 
-[Ollama](https://ollama.com) exposes an OpenAI-compatible endpoint at `http://localhost:11434/v1`. Since `GROQ_BASE_URL` is honored verbatim, you can repurpose the Groq provider to point at Ollama:
+[Ollama](https://ollama.com) exposes an OpenAI-compatible endpoint at `http://localhost:11434/v1`. Once the Groq provider is registered, `GROQ_BASE_URL` would be honored verbatim and you could repurpose the Groq provider to point at Ollama:
 
 ```bash
+# PLANNED — not yet wired at runtime
 export GROQ_API_KEY=unused-but-nonempty     # kc-agent only checks for non-empty
 export GROQ_BASE_URL=http://localhost:11434/v1
 export GROQ_MODEL=llama3.1:8b
 ./bin/kc-agent
 ```
 
-kc-agent will call `http://localhost:11434/v1/chat/completions` (see `pkg/agent/provider_groq.go` where `baseURL + groqChatCompletionsPath` is assembled) with the standard OpenAI request shape. Ollama handles it natively.
+kc-agent would then call `http://localhost:11434/v1/chat/completions` (see `pkg/agent/provider_groq.go` where `baseURL + groqChatCompletionsPath` is assembled) with the standard OpenAI request shape. Ollama would handle it natively.
 
-The same recipe works for any other OpenAI-compatible local runner (vLLM, LM Studio, LocalAI, text-generation-webui with OpenAI mode) — set `GROQ_BASE_URL` to the server's `/v1` endpoint.
+The same recipe is intended to work for any other OpenAI-compatible local runner (vLLM, LM Studio, LocalAI, text-generation-webui with OpenAI mode) — set `GROQ_BASE_URL` to the server's `/v1` endpoint once the provider is registered.
 
-### Example: OpenRouter or an internal OpenAI-compatible gateway
+#### Planned: OpenRouter or an internal OpenAI-compatible gateway
 
 ```bash
+# PLANNED — not yet wired at runtime
 export OPENROUTER_API_KEY=<your key>
 export OPENROUTER_BASE_URL=https://llm-gateway.internal.example.com/v1
 export OPENROUTER_MODEL=mixtral-8x7b
 ./bin/kc-agent
 ```
 
-This is the recommended path for a corporate LLM gateway — OpenRouter's provider implementation sets sensible defaults but honors the override (`pkg/agent/provider_openrouter.go:57-58`).
+This is the intended path for a corporate LLM gateway — OpenRouter's provider implementation already sets sensible defaults and honors the override (`pkg/agent/provider_openrouter.go:57-58`), but the provider itself is not currently registered.
 
-### Example: Open WebUI
+#### Planned: Open WebUI
 
-If you already run [Open WebUI](https://openwebui.com) as your internal LLM front-end:
+If you already run [Open WebUI](https://openwebui.com) as your internal LLM front-end, the planned configuration would be:
 
 ```bash
+# PLANNED — not yet wired at runtime
 export OPEN_WEBUI_API_KEY=<token>
 export OPEN_WEBUI_URL=http://open-webui.llm.svc:3000
 export OPEN_WEBUI_MODEL=llama3.1
@@ -354,7 +375,8 @@ The provider request body is the system prompt, message history, and current pro
 | `CLAUDE_MODEL` / `OPENAI_MODEL` / `GEMINI_MODEL` / `GROQ_MODEL` / `OPENROUTER_MODEL` / `OPEN_WEBUI_MODEL` | kc-agent | Model override per provider |
 | `KC_AGENT_TOKEN` | kc-agent | Optional shared secret for browser→agent auth |
 | `KC_ALLOWED_ORIGINS` | kc-agent | Extra allowed origins (comma-separated) |
-| `KC_DEV_MODE` | kc-agent | Development mode toggle (`1` to enable) |
+| `DEV_MODE` | kc-agent | General kc-agent development/logging mode toggle |
+| `KC_DEV_MODE` | kc-agent | Used for the backend-driven agent restart/dev path; not the general kc-agent dev-mode toggle |
 | `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | Go backend | GitHub OAuth (optional) |
 | `GITHUB_REPO` | kc-agent | Override update-check repo |
 
