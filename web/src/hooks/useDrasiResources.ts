@@ -31,6 +31,7 @@
  * `DrasiReactiveGraph.tsx` is oblivious to which mode is active.
  */
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useDrasiConnections } from './useDrasiConnections'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -38,10 +39,6 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 
 /** Polling interval for Drasi resource refresh */
 const DRASI_POLL_INTERVAL_MS = 10_000
-/** Configured drasi-server URL (mode 1+2). Frontend env var. */
-const DRASI_SERVER_URL = import.meta.env.VITE_DRASI_SERVER_URL as string | undefined
-/** Configured drasi-platform cluster context (mode 3). Frontend env var. */
-const DRASI_PLATFORM_CLUSTER = import.meta.env.VITE_DRASI_PLATFORM_CLUSTER as string | undefined
 /** Maximum result rows pulled into the live results table per query. */
 const MAX_LIVE_RESULTS_PER_QUERY = 50
 
@@ -349,6 +346,7 @@ export interface UseDrasiResourcesResult {
 }
 
 export function useDrasiResources(): UseDrasiResourcesResult {
+  const { activeConnection } = useDrasiConnections()
   const [data, setData] = useState<DrasiResourceData | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -359,18 +357,21 @@ export function useDrasiResources(): UseDrasiResourcesResult {
     const controller = new AbortController()
     abortRef.current = controller
 
-    if (!DRASI_SERVER_URL && !DRASI_PLATFORM_CLUSTER) {
-      // Nothing configured — leave data null so the card drops to demo mode.
+    if (!activeConnection || activeConnection.isDemoSeed) {
+      // No active connection, or the active one is a demo seed (fake URL
+      // that points nowhere) — leave data null so the card stays in demo
+      // mode without triggering failing fetches.
+      setData(null)
       return
     }
 
     setIsLoading(true)
     try {
       let next: DrasiResourceData | null = null
-      if (DRASI_SERVER_URL) {
-        next = await fetchViaDrasiServer(DRASI_SERVER_URL, controller.signal)
-      } else if (DRASI_PLATFORM_CLUSTER) {
-        next = await fetchViaDrasiPlatform(DRASI_PLATFORM_CLUSTER, controller.signal)
+      if (activeConnection.mode === 'server' && activeConnection.url) {
+        next = await fetchViaDrasiServer(activeConnection.url, controller.signal)
+      } else if (activeConnection.mode === 'platform' && activeConnection.cluster) {
+        next = await fetchViaDrasiPlatform(activeConnection.cluster, controller.signal)
       }
       setData(next)
       setError(null)
@@ -382,7 +383,7 @@ export function useDrasiResources(): UseDrasiResourcesResult {
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [activeConnection])
 
   useEffect(() => {
     fetchOnce()
