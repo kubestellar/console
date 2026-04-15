@@ -361,33 +361,41 @@ func (w *InsightWorker) generateRuleBasedEnrichments(insights []InsightSummary) 
 		case "event-correlation":
 			e.Description = fmt.Sprintf("Correlated warning events detected across %d clusters: %s. Events in %s are occurring simultaneously, suggesting a shared underlying cause.",
 				len(insight.AffectedClusters), strings.Join(insight.AffectedClusters, ", "), insight.Title)
+			e.RootCause = "Multiple clusters reporting similar warning events simultaneously — likely shared infrastructure (DNS, storage, network), a synchronized change, or a common upstream dependency."
 			e.Remediation = "Investigate shared dependencies (DNS, storage, network) across the affected clusters. Check if a recent change was deployed to all clusters simultaneously."
 		case "cascade-impact":
 			e.Description = fmt.Sprintf("Cascading failure pattern detected: %s. Issues in one cluster are propagating to others, potentially through shared services or configuration.",
 				insight.Title)
+			e.RootCause = "Failure originating in one cluster is propagating via shared services or cross-cluster dependencies."
 			e.Remediation = "Identify the origin cluster and stabilize it first. Check circuit breakers and retry policies in cross-cluster communication."
 		case "config-drift":
 			e.Description = fmt.Sprintf("Configuration drift detected: %s. Workloads across clusters have diverged from their expected configuration, which can lead to inconsistent behavior.",
 				insight.Title)
+			e.RootCause = "Workloads have diverged from the intended configuration — manual changes, partial rollouts, or missing GitOps reconciliation."
 			e.Remediation = "Use GitOps tools (ArgoCD, Flux) to reconcile configurations. Compare current configs against the source of truth and plan a synchronized rollout."
 		case "resource-imbalance":
 			e.Description = fmt.Sprintf("Resource utilization imbalance detected across clusters. %s shows significant variation that may indicate scheduling or capacity issues.",
 				insight.Title)
+			e.RootCause = "Uneven scheduling or capacity across clusters — likely caused by autoscaler thresholds, node taints, or workload placement constraints."
 			e.Remediation = "Review cluster autoscaler settings and workload placement policies. Consider rebalancing workloads or adjusting resource quotas."
 		case "restart-correlation":
 			e.Description = fmt.Sprintf("Pod restart pattern detected: %s. The correlation suggests either an application-level bug or an infrastructure issue rather than isolated incidents.",
 				insight.Title)
+			e.RootCause = "Repeated restarts correlated in time — either an application bug triggered by shared input, or a node-level infrastructure issue."
 			e.Remediation = "Check pod logs for crash reasons. If the same workload restarts across clusters, investigate application bugs. If different workloads restart in one cluster, investigate node health."
 		case "cluster-delta":
 			e.Description = fmt.Sprintf("Significant differences detected between clusters: %s. These deltas may indicate inconsistent deployments or configuration drift.",
 				insight.Title)
+			e.RootCause = "Clusters are out of sync — deployment pipelines or manual operations have introduced divergence."
 			e.Remediation = "Review deployment pipelines to ensure all clusters receive the same updates. Check for manual changes that bypassed the standard deployment process."
 		case "rollout-tracker":
 			e.Description = fmt.Sprintf("Deployment rollout in progress: %s. Tracking progress across clusters to detect stuck or failed rollouts.",
 				insight.Title)
+			e.RootCause = "A deployment rollout is in progress and has not yet reached steady state across all clusters."
 			e.Remediation = "Monitor rollout progress. If any cluster is stuck, check pod events and resource availability. Consider pausing the rollout if failures are detected."
 		default:
 			e.Description = insight.Description
+			e.RootCause = "Rule-based pattern match — AI analysis unavailable, so the specific cause could not be determined."
 			e.Remediation = "Review the affected resources and clusters for potential issues."
 		}
 
