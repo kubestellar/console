@@ -5,10 +5,10 @@ import { render, screen, waitFor } from '@testing-library/react'
 
 import '../../test/utils/setupMocks'
 
-// Expected endpoint hit by the component (regression for #6159 — the test
-// previously mocked `api.post`, but SyncDialog uses `fetch` directly, so the
-// mock was never exercised).
-const DETECT_DRIFT_ENDPOINT = '/api/gitops/detect-drift'
+// Expected endpoint hit by the component. #7993 Phase 4 moved drift detection
+// to kc-agent, so the component now fetches ${LOCAL_AGENT_HTTP_URL}/gitops/detect-drift.
+// We match on the path suffix to stay agnostic of the exact agent host.
+const DETECT_DRIFT_PATH_SUFFIX = '/gitops/detect-drift'
 // Wait budget for async state transitions inside the component.
 const ASYNC_WAIT_TIMEOUT_MS = 2000
 
@@ -82,8 +82,9 @@ describe('SyncDialog Component', () => {
   })
 
   // #6159 — substantive integration test: calls the real fetch endpoint the
-  // component actually uses (NOT `api.post`).
-  it('calls /api/gitops/detect-drift via fetch on open (success path)', async () => {
+  // component actually uses (NOT `api.post`). Updated for #7993 Phase 4:
+  // the component now targets kc-agent's /gitops/detect-drift route.
+  it('calls kc-agent /gitops/detect-drift via fetch on open (success path)', async () => {
     render(<SyncDialog {...defaultProps} />)
     await waitFor(
       () => {
@@ -92,7 +93,7 @@ describe('SyncDialog Component', () => {
       { timeout: ASYNC_WAIT_TIMEOUT_MS }
     )
     const calledUrl = fetchMock.mock.calls[0][0] as string
-    expect(calledUrl).toBe(DETECT_DRIFT_ENDPOINT)
+    expect(calledUrl).toContain(DETECT_DRIFT_PATH_SUFFIX)
     const init = fetchMock.mock.calls[0][1] as RequestInit
     expect(init.method).toBe('POST')
     const body = JSON.parse(init.body as string)

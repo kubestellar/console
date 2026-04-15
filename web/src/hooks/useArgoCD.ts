@@ -13,7 +13,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useClusters } from './useMCP'
 import { useGlobalFilters } from './useGlobalFilters'
-import { STORAGE_KEY_TOKEN } from '../lib/constants'
+import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN } from '../lib/constants'
 import { FETCH_DEFAULT_TIMEOUT_MS, MOCK_SYNC_DELAY_MS } from '../lib/constants/network'
 
 // Cache expiry time (5 minutes)
@@ -275,12 +275,18 @@ async function fetchArgoSync(): Promise<{ stats: ArgoSyncData; isDemoData: boole
   }
 }
 
-/** Trigger an ArgoCD sync via backend API */
+/** Trigger an ArgoCD sync via kc-agent.
+ *
+ * #7993 Phase 4: this used to POST to `/api/gitops/argocd/sync` on the
+ * backend. It now POSTs to ``${LOCAL_AGENT_HTTP_URL}/argocd/sync`` so the
+ * annotation-patch fallback runs under the user's own kubeconfig instead of
+ * the backend pod ServiceAccount. The request body shape is identical.
+ */
 async function triggerArgoSyncAPI(appName: string, namespace: string, cluster: string): Promise<{ success: boolean; error?: string }> {
   const ctrl = new AbortController()
   const tid = setTimeout(() => ctrl.abort(), FETCH_DEFAULT_TIMEOUT_MS)
   try {
-    const res = await fetch('/api/gitops/argocd/sync', {
+    const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/argocd/sync`, {
       method: 'POST',
       signal: ctrl.signal,
       headers: { ...authHeaders(), 'Content-Type': 'application/json' },

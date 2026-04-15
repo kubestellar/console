@@ -103,7 +103,7 @@ describe('useHelmActions', () => {
   // Rollback
   // =========================================================================
 
-  it('rollback sends POST to /api/gitops/helm-rollback with correct body', async () => {
+  it('rollback sends POST to kc-agent /helm/rollback with correct body', async () => {
     mockFetch.mockResolvedValue(successResponse({ message: 'Rolled back' }))
 
     const { result } = renderHook(() => useHelmActions())
@@ -112,11 +112,12 @@ describe('useHelmActions', () => {
       await result.current.rollback(ROLLBACK_PARAMS)
     })
 
+    // #7993 Phase 4: helm operations moved to kc-agent's /helm/* routes.
     expect(mockFetch).toHaveBeenCalledWith(
-      '/api/gitops/helm-rollback',
+      expect.stringContaining('/helm/rollback'),
       expect.objectContaining({
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: expect.objectContaining({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(ROLLBACK_PARAMS),
         signal: expect.anything(),
       }),
@@ -166,7 +167,7 @@ describe('useHelmActions', () => {
   // Uninstall
   // =========================================================================
 
-  it('uninstall sends POST to /api/gitops/helm-uninstall', async () => {
+  it('uninstall sends POST to kc-agent /helm/uninstall', async () => {
     mockFetch.mockResolvedValue(successResponse({ message: 'Uninstalled' }))
 
     const { result } = renderHook(() => useHelmActions())
@@ -175,8 +176,9 @@ describe('useHelmActions', () => {
       await result.current.uninstall(UNINSTALL_PARAMS)
     })
 
+    // #7993 Phase 4: helm operations moved to kc-agent's /helm/* routes.
     expect(mockFetch).toHaveBeenCalledWith(
-      '/api/gitops/helm-uninstall',
+      expect.stringContaining('/helm/uninstall'),
       expect.objectContaining({
         method: 'POST',
         body: JSON.stringify(UNINSTALL_PARAMS),
@@ -205,7 +207,7 @@ describe('useHelmActions', () => {
   // Upgrade
   // =========================================================================
 
-  it('upgrade sends POST to /api/gitops/helm-upgrade with full params', async () => {
+  it('upgrade sends POST to kc-agent /helm/upgrade with full params', async () => {
     mockFetch.mockResolvedValue(successResponse({ message: 'Upgraded' }))
 
     const { result } = renderHook(() => useHelmActions())
@@ -214,8 +216,9 @@ describe('useHelmActions', () => {
       await result.current.upgrade(UPGRADE_PARAMS)
     })
 
+    // #7993 Phase 4: helm operations moved to kc-agent's /helm/* routes.
     expect(mockFetch).toHaveBeenCalledWith(
-      '/api/gitops/helm-upgrade',
+      expect.stringContaining('/helm/upgrade'),
       expect.objectContaining({
         method: 'POST',
         body: JSON.stringify(UPGRADE_PARAMS),

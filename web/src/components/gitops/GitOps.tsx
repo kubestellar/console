@@ -8,7 +8,8 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { RefreshCw, GitBranch, FolderGit, Box, Loader2 } from 'lucide-react'
 import { SyncDialog } from './SyncDialog'
-import { api } from '../../lib/api'
+import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN } from '../../lib/constants'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants/network'
 import { getDemoMode } from '../../hooks/useDemoMode'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
@@ -193,23 +194,41 @@ export function GitOps() {
 
       // Run drift checks in parallel with individual timeouts instead of
       // sequential requests, reducing total latency significantly.
+      // #7993 Phase 4: drift detection moved to kc-agent — calls go to the
+      // local agent process running under the user's kubeconfig.
+      const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+      const agentAuthHeaders: Record<string, string> = {
+        'Content-Type': 'application/json',
+      }
+      if (token) agentAuthHeaders['Authorization'] = `Bearer ${token}`
       const promises = configs.map(async (appConfig) => {
         try {
-          const response = await api.post<{
+          const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/gitops/detect-drift`, {
+            method: 'POST',
+            headers: agentAuthHeaders,
+            body: JSON.stringify({
+              repoUrl: appConfig.repoUrl,
+              path: appConfig.path,
+              namespace: appConfig.namespace,
+              cluster: appConfig.cluster || undefined,
+            }),
+            signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+          })
+          if (!res.ok) {
+            const errBody = await res.json().catch(() => ({}))
+            throw new Error(errBody.error || `detect-drift failed (HTTP ${res.status})`)
+          }
+          const data = (await res.json()) as {
             drifted: boolean
             resources: DriftResult['resources']
             rawDiff?: string
-          }>('/api/gitops/detect-drift', {
-            repoUrl: appConfig.repoUrl,
-            path: appConfig.path,
-            namespace: appConfig.namespace,
-            cluster: appConfig.cluster || undefined })
+          }
           return {
             name: appConfig.name,
             result: {
               status: 'ok' as const,
-              drifted: response.data.drifted,
-              resources: response.data.resources || [] } satisfies DriftResult }
+              drifted: data.drifted,
+              resources: data.resources || [] } satisfies DriftResult }
         } catch (e) {
           // #6156 — Failed drift checks MUST NOT be coerced to
           // `drifted: false` — that rendered as "synced + healthy" (false

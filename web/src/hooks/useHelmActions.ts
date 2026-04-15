@@ -7,6 +7,18 @@
 
 import { useState } from 'react'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
+import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN } from '../lib/constants'
+
+// #7993 Phase 4: helm rollback/uninstall/upgrade moved from the backend to
+// kc-agent. The agent runs `helm` under the user's own kubeconfig instead of
+// the backend pod ServiceAccount. The request bodies are identical — only
+// the URL changes.
+function helmAgentAuthHeaders(): Record<string, string> {
+  const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (token) headers['Authorization'] = `Bearer ${token}`
+  return headers
+}
 
 // ============================================================================
 // Types
@@ -71,7 +83,7 @@ export function useHelmActions(): UseHelmActionsResult {
     try {
       const response = await fetch(endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: helmAgentAuthHeaders(),
         body: JSON.stringify(body),
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
 
@@ -106,15 +118,15 @@ export function useHelmActions(): UseHelmActionsResult {
   }
 
   const rollback = async (params: HelmRollbackParams) => {
-    return executeAction('/api/gitops/helm-rollback', params)
+    return executeAction(`${LOCAL_AGENT_HTTP_URL}/helm/rollback`, params)
   }
 
   const uninstall = async (params: HelmUninstallParams) => {
-    return executeAction('/api/gitops/helm-uninstall', params)
+    return executeAction(`${LOCAL_AGENT_HTTP_URL}/helm/uninstall`, params)
   }
 
   const upgrade = async (params: HelmUpgradeParams) => {
-    return executeAction('/api/gitops/helm-upgrade', params)
+    return executeAction(`${LOCAL_AGENT_HTTP_URL}/helm/upgrade`, params)
   }
 
   return {

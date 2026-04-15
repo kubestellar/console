@@ -605,9 +605,10 @@ describe('useArgoCDTriggerSync', () => {
     expect(result.current.lastResult).toEqual({ success: true })
     expect(result.current.isSyncing).toBe(false)
 
-    // Verify POST was made with correct body
+    // Verify POST was made with correct body. #7993 Phase 4: sync moved to
+    // kc-agent at /argocd/sync (under LOCAL_AGENT_HTTP_URL).
     const callArgs = vi.mocked(fetch).mock.calls[0]
-    expect(callArgs[0]).toBe('/api/gitops/argocd/sync')
+    expect(callArgs[0] as string).toContain('/argocd/sync')
     expect(callArgs[1]?.method).toBe('POST')
     const body = JSON.parse(callArgs[1]?.body as string)
     expect(body.appName).toBe('my-app')

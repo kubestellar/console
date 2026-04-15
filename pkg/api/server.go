@@ -1006,12 +1006,10 @@ func (s *Server) setupRoutes() {
 	api.Get("/gitops/operator-subscriptions", gitopsHandlers.ListOperatorSubscriptions)
 	api.Get("/gitops/operator-subscriptions/stream", gitopsHandlers.StreamOperatorSubscriptions)
 	api.Get("/gitops/helm-releases/stream", gitopsHandlers.StreamHelmReleases)
-	api.Post("/gitops/detect-drift", gitopsHandlers.DetectDrift)
-	api.Post("/gitops/sync", gitopsHandlers.Sync)
-	// Helm write operations (rollback, uninstall, upgrade)
-	api.Post("/gitops/helm-rollback", gitopsHandlers.RollbackHelmRelease)
-	api.Post("/gitops/helm-uninstall", gitopsHandlers.UninstallHelmRelease)
-	api.Post("/gitops/helm-upgrade", gitopsHandlers.UpgradeHelmRelease)
+	// POST /gitops/detect-drift, /gitops/sync, /gitops/helm-rollback,
+	// /gitops/helm-uninstall, and /gitops/helm-upgrade moved to kc-agent in
+	// #7993 Phase 4 (agent-side added in 3a/3b). They run under the user's
+	// kubeconfig instead of the backend pod ServiceAccount.
 	// Helm self-upgrade (in-cluster Deployment patch)
 	selfUpgradeHandler := handlers.NewSelfUpgradeHandler(s.k8sClient, s.hub, s.store)
 	api.Get("/self-upgrade/status", selfUpgradeHandler.GetStatus)
@@ -1022,7 +1020,8 @@ func (s *Server) setupRoutes() {
 	api.Get("/gitops/argocd/health", gitopsHandlers.GetArgoHealthSummary)
 	api.Get("/gitops/argocd/sync", gitopsHandlers.GetArgoSyncSummary)
 	api.Get("/gitops/argocd/status", gitopsHandlers.GetArgoStatus)
-	api.Post("/gitops/argocd/sync", gitopsHandlers.TriggerArgoSync)
+	// POST /gitops/argocd/sync moved to kc-agent in #7993 Phase 4 (agent-side
+	// added in Phase 3c). Runs under the user's kubeconfig.
 	// Frontend compatibility alias
 	api.Get("/mcp/operator-subscriptions", gitopsHandlers.ListOperatorSubscriptions)
 

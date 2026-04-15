@@ -4,13 +4,9 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log/slog"
-	"net/http"
-	"net/url"
 	"os"
 	"os/exec"
 	"strings"
@@ -1278,58 +1274,12 @@ func getDemoHelmReleasesForStreaming() []HelmRelease {
 	}
 }
 
-// DetectDrift detects drift between git and cluster state
-func (h *GitOpsHandlers) DetectDrift(c *fiber.Ctx) error {
-	// #6022 — drift detection is read-oriented (it diffs git vs. live cluster)
-	// so it is gated as "viewer-or-above" rather than admin-only. This still
-	// blocks anonymous/unknown callers and any user who isn't registered in
-	// the console user store, but allows editors and viewers to see drift
-	// reports without needing the admin role.
-	if err := requireViewerOrAbove(c, h.userStore); err != nil {
-		return err
-	}
-
-	var req DetectDriftRequest
-	if err := c.BodyParser(&req); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "invalid request body"})
-	}
-
-	if req.RepoURL == "" {
-		return c.Status(400).JSON(fiber.Map{"error": "repoUrl is required"})
-	}
-
-	ctx, cancel := context.WithTimeout(c.Context(), gitopsDefaultTimeout)
-	defer cancel()
-
-	// Try MCP bridge first (detect_drift tool from kubestellar-ops)
-	if h.bridge != nil {
-		result, err := h.detectDriftViaMCP(ctx, req)
-		if err == nil {
-			h.rememberDrift(req, result)
-			return c.JSON(result)
-		}
-		slog.Warn("[GitOps] MCP detect_drift failed, falling back to kubectl", "error", err)
-	}
-
-	// Fall back to kubectl diff
-	result, err := h.detectDriftViaKubectl(ctx, req)
-	if err != nil {
-		// #5959 — Invalid YAML in the GitOps repo was previously masked as a
-		// generic "internal error". Surface a structured parse error with the
-		// raw kubectl stderr so users can fix their manifests.
-		if yamlErr := extractYAMLParseError(err); yamlErr != "" {
-			return c.Status(422).JSON(fiber.Map{
-				"error":     "invalid YAML in GitOps source",
-				"errorType": "yaml_parse",
-				"details":   yamlErr,
-			})
-		}
-		return handleK8sError(c, err)
-	}
-
-	h.rememberDrift(req, result)
-	return c.JSON(result)
-}
+// DetectDrift was removed in #7993 Phase 4 — this user-initiated operation
+// now runs through kc-agent at POST /gitops/detect-drift under the user's
+// kubeconfig. See pkg/agent/server_gitops.go. The read-only GET ListDrifts
+// endpoint that backs the UI drift card stays, but the cache it reads from
+// is no longer populated by this backend process (kc-agent instances populate
+// their own local caches where applicable).
 
 // extractYAMLParseError pattern-matches kubectl/yaml parser error messages
 // and returns a cleaned-up description, or "" if the error does not look
@@ -1499,46 +1449,9 @@ func (h *GitOpsHandlers) detectDriftViaKubectl(ctx context.Context, req DetectDr
 	return response, nil
 }
 
-// Sync applies manifests from git to the cluster
-func (h *GitOpsHandlers) Sync(c *fiber.Ctx) error {
-	// #6022 — GitOps sync mutates cluster state via kubectl apply (or MCP
-	// deploy). Viewers must be blocked, but editors are expected to drive
-	// day-to-day sync operations so the gate is editor-or-admin (not
-	// admin-only). Anonymous callers and users missing from the store are
-	// rejected with 403 by the shared helper.
-	if err := requireEditorOrAdmin(c, h.userStore); err != nil {
-		return err
-	}
-
-	var req SyncRequest
-	if err := c.BodyParser(&req); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "invalid request body"})
-	}
-
-	if req.RepoURL == "" {
-		return c.Status(400).JSON(fiber.Map{"error": "repoUrl is required"})
-	}
-
-	ctx, cancel := context.WithTimeout(c.Context(), gitopsDefaultTimeout)
-	defer cancel()
-
-	// Try MCP bridge first
-	if h.bridge != nil {
-		result, err := h.syncViaMCP(ctx, req)
-		if err == nil {
-			return c.JSON(result)
-		}
-		slog.Warn("[GitOps] MCP sync failed, falling back to kubectl", "error", err)
-	}
-
-	// Fall back to kubectl apply
-	result, err := h.syncViaKubectl(ctx, req)
-	if err != nil {
-		return handleK8sError(c, err)
-	}
-
-	return c.JSON(result)
-}
+// Sync was removed in #7993 Phase 4 — this user-initiated operation now runs
+// through kc-agent at POST /gitops/sync under the user's kubeconfig. See
+// pkg/agent/server_gitops.go#handleGitopsSync.
 
 // syncViaMCP uses kubestellar-deploy for sync
 func (h *GitOpsHandlers) syncViaMCP(ctx context.Context, req SyncRequest) (*SyncResponse, error) {
@@ -2199,236 +2112,13 @@ func detachedHelmContext(c *fiber.Ctx) (context.Context, context.CancelFunc) {
 	)
 }
 
-// HelmRollbackRequest is the request body for rolling back a release
-type HelmRollbackRequest struct {
-	Release   string `json:"release"`
-	Namespace string `json:"namespace"`
-	Cluster   string `json:"cluster"`
-	Revision  int    `json:"revision"`
-}
-
-// HelmUninstallRequest is the request body for uninstalling a release
-type HelmUninstallRequest struct {
-	Release   string `json:"release"`
-	Namespace string `json:"namespace"`
-	Cluster   string `json:"cluster"`
-}
-
-// HelmUpgradeRequest is the request body for upgrading a release
-type HelmUpgradeRequest struct {
-	Release     string `json:"release"`
-	Namespace   string `json:"namespace"`
-	Cluster     string `json:"cluster"`
-	Chart       string `json:"chart"`
-	Version     string `json:"version,omitempty"`
-	Values      string `json:"values,omitempty"` // YAML string of override values
-	ReuseValues bool   `json:"reuseValues,omitempty"`
-}
-
-// RollbackHelmRelease rolls back a Helm release to a specific revision
-func (h *GitOpsHandlers) RollbackHelmRelease(c *fiber.Ctx) error {
-	// Helm rollback mutates cluster state; gated as editor-or-admin (#6022).
-	if err := requireEditorOrAdmin(c, h.userStore); err != nil {
-		return err
-	}
-	var req HelmRollbackRequest
-	if err := c.BodyParser(&req); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "invalid request body"})
-	}
-
-	if req.Release == "" || req.Namespace == "" {
-		return c.Status(400).JSON(fiber.Map{"error": "release and namespace are required"})
-	}
-	if req.Revision <= 0 {
-		return c.Status(400).JSON(fiber.Map{"error": "revision must be a positive integer"})
-	}
-
-	// SECURITY: Validate all user-supplied params before passing to helm CLI
-	for field, val := range map[string]string{"cluster": req.Cluster, "release": req.Release, "namespace": req.Namespace} {
-		if err := validateK8sName(val, field); err != nil {
-			return c.Status(400).JSON(fiber.Map{"error": err.Error()})
-		}
-	}
-
-	args := []string{"rollback", req.Release, fmt.Sprintf("%d", req.Revision), "-n", req.Namespace}
-	if req.Cluster != "" {
-		args = append(args, "--kube-context", req.Cluster)
-	}
-
-	// #6592: detach from the request context so a disconnected client doesn't
-	// SIGKILL helm mid-rollback and leave the release in a broken state.
-	ctx, cancel := detachedHelmContext(c)
-	defer cancel()
-
-	cmd := exec.CommandContext(ctx, "helm", args...)
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	slog.Info("[GitOps] helm rollback", "release", req.Release, "revision", req.Revision, "cluster", req.Cluster, "namespace", req.Namespace)
-
-	if err := cmd.Run(); err != nil {
-		slog.Warn("[GitOps] helm rollback failed", "release", req.Release, "error", err, "stderr", stderr.String())
-		return c.Status(500).JSON(fiber.Map{
-			"error":  "rollback failed",
-			"detail": stderr.String(),
-		})
-	}
-
-	slog.Info("[GitOps] helm rollback succeeded", "release", req.Release, "revision", req.Revision)
-	return c.JSON(fiber.Map{
-		"success": true,
-		"message": fmt.Sprintf("Rolled back %s to revision %d", req.Release, req.Revision),
-		"output":  stdout.String(),
-	})
-}
-
-// UninstallHelmRelease uninstalls a Helm release
-func (h *GitOpsHandlers) UninstallHelmRelease(c *fiber.Ctx) error {
-	// Helm uninstall destroys cluster resources; gated as editor-or-admin (#6022).
-	if err := requireEditorOrAdmin(c, h.userStore); err != nil {
-		return err
-	}
-	var req HelmUninstallRequest
-	if err := c.BodyParser(&req); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "invalid request body"})
-	}
-
-	if req.Release == "" || req.Namespace == "" {
-		return c.Status(400).JSON(fiber.Map{"error": "release and namespace are required"})
-	}
-
-	// SECURITY: Validate all user-supplied params before passing to helm CLI
-	for field, val := range map[string]string{"cluster": req.Cluster, "release": req.Release, "namespace": req.Namespace} {
-		if err := validateK8sName(val, field); err != nil {
-			return c.Status(400).JSON(fiber.Map{"error": err.Error()})
-		}
-	}
-
-	args := []string{"uninstall", req.Release, "-n", req.Namespace}
-	if req.Cluster != "" {
-		args = append(args, "--kube-context", req.Cluster)
-	}
-
-	// #6592: detach from the request context so a disconnected client doesn't
-	// SIGKILL helm mid-uninstall and leave dangling resources / release lock.
-	ctx, cancel := detachedHelmContext(c)
-	defer cancel()
-
-	cmd := exec.CommandContext(ctx, "helm", args...)
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	slog.Info("[GitOps] helm uninstall", "release", req.Release, "cluster", req.Cluster, "namespace", req.Namespace)
-
-	if err := cmd.Run(); err != nil {
-		slog.Warn("[GitOps] helm uninstall failed", "release", req.Release, "error", err, "stderr", stderr.String())
-		return c.Status(500).JSON(fiber.Map{
-			"error":  "uninstall failed",
-			"detail": stderr.String(),
-		})
-	}
-
-	slog.Info("[GitOps] helm uninstall succeeded", "release", req.Release)
-	return c.JSON(fiber.Map{
-		"success": true,
-		"message": fmt.Sprintf("Uninstalled release %s", req.Release),
-		"output":  stdout.String(),
-	})
-}
-
-// UpgradeHelmRelease upgrades a Helm release
-func (h *GitOpsHandlers) UpgradeHelmRelease(c *fiber.Ctx) error {
-	// Helm upgrade mutates cluster state; gated as editor-or-admin (#6022).
-	if err := requireEditorOrAdmin(c, h.userStore); err != nil {
-		return err
-	}
-	var req HelmUpgradeRequest
-	if err := c.BodyParser(&req); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "invalid request body"})
-	}
-
-	if req.Release == "" || req.Namespace == "" || req.Chart == "" {
-		return c.Status(400).JSON(fiber.Map{"error": "release, namespace, and chart are required"})
-	}
-
-	// SECURITY: Validate all user-supplied params before passing to helm CLI
-	for field, val := range map[string]string{"cluster": req.Cluster, "release": req.Release, "namespace": req.Namespace} {
-		if err := validateK8sName(val, field); err != nil {
-			return c.Status(400).JSON(fiber.Map{"error": err.Error()})
-		}
-	}
-	if err := validateHelmChart(req.Chart); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
-	}
-	if err := validateHelmVersion(req.Version); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
-	}
-
-	args := []string{"upgrade", req.Release, req.Chart, "-n", req.Namespace}
-	if req.Version != "" {
-		args = append(args, "--version", req.Version)
-	}
-	if req.ReuseValues {
-		args = append(args, "--reuse-values")
-	}
-	if req.Cluster != "" {
-		args = append(args, "--kube-context", req.Cluster)
-	}
-
-	// #6592: detach from the request context so a disconnected client doesn't
-	// SIGKILL helm mid-upgrade and leave the release in `pending-upgrade`.
-	ctx, cancel := detachedHelmContext(c)
-	defer cancel()
-
-	cmd := exec.CommandContext(ctx, "helm", args...)
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	// If values provided, write to temp file and pass via -f
-	if req.Values != "" {
-		tmpFile, err := os.CreateTemp("", "helm-values-*.yaml")
-		if err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": "failed to create temp values file"})
-		}
-		defer os.Remove(tmpFile.Name())
-
-		if _, err := tmpFile.WriteString(req.Values); err != nil {
-			tmpFile.Close()
-			return c.Status(500).JSON(fiber.Map{"error": "failed to write values"})
-		}
-		tmpFile.Close()
-
-		args = append(args, "-f", tmpFile.Name())
-		// Rebuild command with values file.
-		// #7747: Create fresh buffers — the previous stdout/stderr were
-		// assigned to the old cmd instance and must not be reused.
-		cmd = exec.CommandContext(ctx, "helm", args...)
-		stdout.Reset()
-		stderr.Reset()
-		cmd.Stdout = &stdout
-		cmd.Stderr = &stderr
-	}
-
-	slog.Info("[GitOps] helm upgrade", "release", req.Release, "chart", req.Chart, "cluster", req.Cluster, "namespace", req.Namespace)
-
-	if err := cmd.Run(); err != nil {
-		slog.Warn("[GitOps] helm upgrade failed", "release", req.Release, "error", err, "stderr", stderr.String())
-		return c.Status(500).JSON(fiber.Map{
-			"error":  "upgrade failed",
-			"detail": stderr.String(),
-		})
-	}
-
-	slog.Info("[GitOps] helm upgrade succeeded", "release", req.Release)
-	return c.JSON(fiber.Map{
-		"success": true,
-		"message": fmt.Sprintf("Upgraded release %s", req.Release),
-		"output":  stdout.String(),
-	})
-}
+// RollbackHelmRelease, UninstallHelmRelease, and UpgradeHelmRelease were
+// removed in #7993 Phase 4 — these user-initiated helm operations now run
+// through kc-agent at /helm/rollback, /helm/uninstall, /helm/upgrade under
+// the user's kubeconfig instead of the backend pod ServiceAccount. See
+// pkg/agent/server_helm.go. The associated request-body types
+// (HelmRollbackRequest, HelmUninstallRequest, HelmUpgradeRequest) were
+// backend-private and went with the handlers.
 
 // ============================================================================
 // ArgoCD Endpoints
@@ -2578,190 +2268,9 @@ func (h *GitOpsHandlers) GetArgoSyncSummary(c *fiber.Ctx) error {
 	})
 }
 
-// TriggerArgoSync triggers a sync operation for an ArgoCD Application.
-// Tries ArgoCD REST API first (if ARGOCD_AUTH_TOKEN is set), then CLI, then annotation patching.
-// POST /api/gitops/argocd/sync
-func (h *GitOpsHandlers) TriggerArgoSync(c *fiber.Ctx) error {
-	// #6022 — ArgoCD sync forces reconciliation against the target cluster
-	// and is equivalent to any other mutating sync operation. Gated as
-	// editor-or-admin: editors drive routine sync operations, viewers are
-	// blocked because they should only observe state, not force changes.
-	if err := requireEditorOrAdmin(c, h.userStore); err != nil {
-		return err
-	}
-
-	var req struct {
-		AppName   string `json:"appName"`
-		Namespace string `json:"namespace"`
-		Cluster   string `json:"cluster"`
-	}
-	if err := c.BodyParser(&req); err != nil {
-		return c.Status(400).JSON(fiber.Map{
-			"error":   "Invalid request body",
-			"success": false,
-		})
-	}
-
-	// Body-shape validation runs BEFORE the k8s client availability check
-	// so RBAC + body-shape errors surface to the caller even when the
-	// cluster connection is unavailable. Mirrors the Sync /
-	// UpgradeHelmRelease ordering and is what the #6022 RBAC tests assume.
-	if req.AppName == "" || req.Cluster == "" {
-		return c.Status(400).JSON(fiber.Map{
-			"error":   "appName and cluster are required",
-			"success": false,
-		})
-	}
-
-	if err := validateK8sName(req.AppName, "appName"); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": err.Error(), "success": false})
-	}
-	if err := validateK8sName(req.Cluster, "cluster"); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": err.Error(), "success": false})
-	}
-
-	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{
-			"error":   "Kubernetes client not configured",
-			"success": false,
-		})
-	}
-
-	// Default namespace for ArgoCD applications
-	namespace := req.Namespace
-	if namespace == "" {
-		namespace = "argocd"
-	} else if err := validateK8sName(namespace, "namespace"); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": err.Error(), "success": false})
-	}
-
-	slog.Info("[ArgoCD] triggering sync", "namespace", namespace, "app", req.AppName, "cluster", req.Cluster)
-
-	// Strategy 1: Try ArgoCD REST API if auth token is configured
-	argoToken := os.Getenv("ARGOCD_AUTH_TOKEN")
-	if argoToken != "" {
-		argoServerURL := h.discoverArgoServerURL(c.Context(), req.Cluster)
-		if argoServerURL != "" {
-			syncURL := fmt.Sprintf("%s/api/v1/applications/%s/sync", argoServerURL, url.PathEscape(req.AppName))
-			syncBody := []byte(`{"prune":true}`)
-
-			httpReq, err := http.NewRequestWithContext(c.Context(), "POST", syncURL, bytes.NewReader(syncBody))
-			if err == nil {
-				httpReq.Header.Set("Authorization", "Bearer "+argoToken)
-				httpReq.Header.Set("Content-Type", "application/json")
-
-				skipVerify := os.Getenv("ARGOCD_TLS_INSECURE") == "true"
-				if skipVerify {
-					argoInsecureWarning.Do(func() {
-						slog.Warn("WARNING: ARGOCD_TLS_INSECURE=true — TLS certificate verification disabled for ArgoCD API calls. " +
-							"This should only be used in development/test environments with self-signed certificates.")
-					})
-				}
-				client := &http.Client{
-					Timeout: argocdQueryTimeout,
-					Transport: &http.Transport{
-						TLSClientConfig: &tls.Config{InsecureSkipVerify: skipVerify}, // #nosec G402 -- intentionally env-var-gated (ARGOCD_TLS_INSECURE) for self-signed certs in dev/test
-					},
-				}
-				resp, err := client.Do(httpReq)
-				if err == nil {
-					// #7746: Drain the response body before closing to avoid
-					// HTTP connection pool exhaustion from partially-read bodies.
-					defer func() {
-						_, _ = io.Copy(io.Discard, resp.Body)
-						resp.Body.Close()
-					}()
-					if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-						return c.JSON(fiber.Map{
-							"success": true,
-							"message": "Sync triggered via ArgoCD REST API",
-							"method":  "api",
-						})
-					}
-					slog.Warn("[ArgoCD] API sync returned error status, falling back", "status", resp.StatusCode)
-				} else {
-					slog.Warn("[ArgoCD] API sync failed, falling back", "error", err)
-				}
-			}
-		}
-	}
-
-	// Strategy 2: Use argocd CLI if available
-	if _, err := exec.LookPath("argocd"); err == nil {
-		cmd := exec.CommandContext(c.Context(), "argocd", "app", "sync", req.AppName,
-			"--namespace", namespace,
-			"--prune",
-			"--timeout", "30",
-		)
-		output, err := cmd.CombinedOutput()
-		if err != nil {
-			slog.Warn("[ArgoCD] CLI sync failed, falling back to annotation patching", "error", err, "output", string(output))
-		} else {
-			return c.JSON(fiber.Map{
-				"success": true,
-				"message": "Sync triggered via ArgoCD CLI",
-				"method":  "cli",
-			})
-		}
-	}
-
-	// Strategy 3: Fallback — annotate the Application to trigger a refresh
-	dynamicClient, err := h.k8sClient.GetDynamicClient(req.Cluster)
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{
-			"error":   fmt.Sprintf("Failed to get dynamic client: %v", err),
-			"success": false,
-		})
-	}
-
-	// Fetch the current Application to patch it
-	ctx, cancel := context.WithTimeout(c.Context(), argocdQueryTimeout)
-	defer cancel()
-
-	app, err := dynamicClient.Resource(v1alpha1.ArgoApplicationGVR).Namespace(namespace).Get(ctx, req.AppName, metav1.GetOptions{})
-	if err != nil {
-		return c.Status(404).JSON(fiber.Map{
-			"error":   fmt.Sprintf("Application %s not found in %s/%s: %v", req.AppName, req.Cluster, namespace, err),
-			"success": false,
-		})
-	}
-
-	// Set the refresh annotation to trigger ArgoCD's reconciliation
-	annotations := app.GetAnnotations()
-	if annotations == nil {
-		annotations = make(map[string]string)
-	}
-	annotations["argocd.argoproj.io/refresh"] = "hard"
-	app.SetAnnotations(annotations)
-
-	// Also set the operation field to trigger a sync
-	content := app.UnstructuredContent()
-	operation := map[string]interface{}{
-		"initiatedBy": map[string]interface{}{
-			"username":  "kubestellar-console",
-			"automated": false,
-		},
-		"sync": map[string]interface{}{
-			"prune": true,
-		},
-	}
-	content["operation"] = operation
-	app.SetUnstructuredContent(content)
-
-	_, err = dynamicClient.Resource(v1alpha1.ArgoApplicationGVR).Namespace(namespace).Update(ctx, app, metav1.UpdateOptions{})
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{
-			"error":   fmt.Sprintf("Failed to trigger sync: %v", err),
-			"success": false,
-		})
-	}
-
-	return c.JSON(fiber.Map{
-		"success": true,
-		"message": "Sync triggered via Application resource annotation",
-		"method":  "annotation",
-	})
-}
+// TriggerArgoSync was removed in #7993 Phase 4 — this user-initiated
+// operation now runs through kc-agent at POST /argocd/sync under the user's
+// kubeconfig. See pkg/agent/server_argocd.go#handleArgoCDSync.
 
 // discoverArgoServerURL discovers the ArgoCD API server URL via K8s Service lookup
 func (h *GitOpsHandlers) discoverArgoServerURL(ctx context.Context, cluster string) string {
