@@ -674,8 +674,8 @@ export function GPUInventoryHistory() {
   // ── Loading state ──────────────────────────────────────────────────
   if (isLoading) {
     return (
-      <div className="h-full flex flex-col min-h-card">
-        <div className="flex items-center justify-between mb-2">
+      <div className="h-full w-full min-w-0 flex flex-col min-h-card">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
           <Skeleton variant="text" width={120} height={16} />
           <Skeleton variant="rounded" width={28} height={28} />
         </div>
@@ -688,7 +688,7 @@ export function GPUInventoryHistory() {
   // ── Empty state ────────────────────────────────────────────────────
   if ((gpuNodes || []).length === 0 && (history || []).length === 0 && !showDemo) {
     return (
-      <div className="h-full flex flex-col content-loaded">
+      <div className="h-full w-full min-w-0 flex flex-col content-loaded">
         <div className="flex-1 flex flex-col items-center justify-center text-center">
           <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center mb-3">
             <Cpu className="w-6 h-6 text-muted-foreground" />
@@ -701,17 +701,21 @@ export function GPUInventoryHistory() {
   }
 
   // ── Main render ────────────────────────────────────────────────────
+  // Header uses flex-wrap so controls reflow onto a second line when the card
+  // is narrow, preventing overlap and ensuring the snapshots label stays
+  // visible. w-full + min-w-0 on the root and inner flex containers ensures
+  // the card fills its grid column without forcing horizontal overflow.
   return (
-    <div className="h-full flex flex-col content-loaded">
+    <div className="h-full w-full min-w-0 flex flex-col content-loaded">
       {/* Header with controls */}
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <Clock className="w-3.5 h-3.5 text-muted-foreground" />
-          <span className="text-xs text-muted-foreground">
+      <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 mb-2">
+        <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
+          <Clock className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+          <span className="text-xs text-muted-foreground truncate">
             {(chartData || []).length} {t('cards:gpuInventoryHistory.snapshots', 'snapshots')}
           </span>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5 min-w-0">
           {/* GPU Type filter dropdown */}
           {availableGPUTypes.length > 1 && (
             <div className="relative" ref={typeDropdownRef}>
@@ -842,8 +846,8 @@ export function GPUInventoryHistory() {
         </div>
       </div>
 
-      {/* Stats row */}
-      <div className="grid grid-cols-4 gap-2 mb-3">
+      {/* Stats row — 2 columns on narrow widths, 4 columns from sm (>=640px) */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
         <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/20" title={`${currentTotals.total} total GPUs`}>
           <div className="flex items-center gap-1 mb-1">
             <Cpu className="w-3 h-3 text-blue-400" />
@@ -875,7 +879,7 @@ export function GPUInventoryHistory() {
       </div>
 
       {/* Main content area */}
-      <div className="flex-1 min-h-[160px]">
+      <div className="flex-1 min-w-0 min-h-[160px]">
         {viewMode === 'chart' ? (
           <>
             {/* Chart mode toggle (aggregate vs by-type) */}
