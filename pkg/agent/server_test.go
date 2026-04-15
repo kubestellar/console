@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -2219,6 +2220,49 @@ func TestCheckStatuspageHealth(t *testing.T) {
 				t.Errorf("checkStatuspageHealth() = %s, want %s", result, tt.expected)
 			}
 		})
+	}
+}
+
+// TestCheckStatuspageHealth_DrainsBody verifies that checkStatuspageHealth
+// reads the entire response body even when the JSON decoder only consumes
+// the `status` field. Without draining, the underlying TCP connection is
+// held open until the HTTP client timeout, slowly exhausting the pool.
+func TestCheckStatuspageHealth_DrainsBody(t *testing.T) {
+	// Deliberately include extra fields AFTER `status` so the JSON decoder
+	// stops reading before EOF. If the body isn't drained, the bytes
+	// after `status` remain in the socket buffer.
+	response := `{"status":{"indicator":"none"},"components":[],"incidents":[],"scheduled_maintenances":[],"page":{"id":"x","name":"y","url":"z"}}`
+
+	var readCount int64
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		n, _ := io.WriteString(w, response)
+		atomic.StoreInt64(&readCount, int64(n))
+	}))
+	defer srv.Close()
+
+	client := srv.Client()
+	result := checkStatuspageHealth(client, srv.URL)
+	if result != "operational" {
+		t.Fatalf("checkStatuspageHealth() = %s, want operational", result)
+	}
+
+	// Issue a second request on the same client. If the first response's
+	// body was drained, the client should reuse the connection without
+	// waiting for a timeout. We assert the second call completes promptly
+	// as a proxy for the connection being returned to the pool.
+	start := time.Now()
+	result = checkStatuspageHealth(client, srv.URL)
+	elapsed := time.Since(start)
+	if result != "operational" {
+		t.Fatalf("second call: checkStatuspageHealth() = %s, want operational", result)
+	}
+	if elapsed > 2*time.Second {
+		t.Errorf("second call took %s; expected connection reuse (<2s)", elapsed)
+	}
+
+	if atomic.LoadInt64(&readCount) == 0 {
+		t.Error("server never wrote a response — test setup bug")
 	}
 }
 

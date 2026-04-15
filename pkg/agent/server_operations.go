@@ -708,6 +708,11 @@ func checkStatuspageHealth(client *http.Client, apiURL string) string {
 	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
 		return "unknown"
 	}
+	// Drain any unread portion of the body so the underlying TCP connection
+	// can be returned to the pool instead of held open until the HTTP client
+	// timeout fires. Statuspage payloads include fields we don't decode,
+	// which left the decoder stopped mid-stream.
+	_, _ = io.Copy(io.Discard, resp.Body)
 
 	switch data.Status.Indicator {
 	case "none":
