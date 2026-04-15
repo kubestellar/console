@@ -318,7 +318,9 @@ func (s *Server) handleEventsHTTP(w http.ResponseWriter, r *http.Request) {
 // pkg/api/handlers/mcp_resources.go#CreateOrUpdateResourceQuota) because the
 // reservation operator owns quota semantics and needs pod-SA access.
 func (s *Server) handleNamespacesHTTP(w http.ResponseWriter, r *http.Request) {
-	s.setCORSHeaders(w, r)
+	// #8201: GET list, POST create, DELETE remove — preflight must advertise all
+	// three so browsers don't reject cross-origin POST/DELETE.
+	s.setCORSHeaders(w, r, http.MethodGet, http.MethodPost, http.MethodDelete, http.MethodOptions)
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method == "OPTIONS" {
@@ -793,7 +795,9 @@ func (s *Server) handleSecretsHTTP(w http.ResponseWriter, r *http.Request) {
 // mutations that run under the user's kubeconfig via kc-agent rather than the
 // backend's pod ServiceAccount (#7993 Phase 1.5 PR A).
 func (s *Server) handleServiceAccountsHTTP(w http.ResponseWriter, r *http.Request) {
-	s.setCORSHeaders(w, r)
+	// #8201: GET list, POST create, DELETE remove — preflight must advertise all
+	// three so browsers don't reject cross-origin POST/DELETE.
+	s.setCORSHeaders(w, r, http.MethodGet, http.MethodPost, http.MethodDelete, http.MethodOptions)
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
@@ -904,7 +908,8 @@ func (s *Server) deleteServiceAccountHTTP(w http.ResponseWriter, r *http.Request
 // frontend consumer and have been removed — any future UI that adds MCS
 // export management should call this route.
 func (s *Server) handleServiceExportsHTTP(w http.ResponseWriter, r *http.Request) {
-	s.setCORSHeaders(w, r)
+	// #8201: POST create, DELETE remove — preflight must advertise both.
+	s.setCORSHeaders(w, r, http.MethodPost, http.MethodDelete, http.MethodOptions)
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
@@ -1140,7 +1145,9 @@ func (s *Server) handleRolesHTTP(w http.ResponseWriter, r *http.Request) {
 // user-initiated mutations that run under the user's kubeconfig via kc-agent
 // rather than the backend's pod ServiceAccount (#7993 Phase 1.5 PR A).
 func (s *Server) handleRoleBindingsHTTP(w http.ResponseWriter, r *http.Request) {
-	s.setCORSHeaders(w, r)
+	// #8201: GET list, POST create, DELETE remove — preflight must advertise all
+	// three so browsers don't reject cross-origin POST/DELETE.
+	s.setCORSHeaders(w, r, http.MethodGet, http.MethodPost, http.MethodDelete, http.MethodOptions)
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
@@ -1461,11 +1468,9 @@ func (s *Server) handleResolveDepsHTTP(w http.ResponseWriter, r *http.Request) {
 // replica count via the Kubernetes API. Only POST with a JSON body is accepted;
 // GET-based mutations are rejected to prevent CSRF-style attacks (#4150).
 func (s *Server) handleScaleHTTP(w http.ResponseWriter, r *http.Request) {
-	s.setCORSHeaders(w, r)
-	// setCORSHeaders defaults Access-Control-Allow-Methods to "GET, OPTIONS".
-	// This is a mutating POST endpoint — browsers would otherwise reject the
-	// cross-origin POST preflight (#8019, #8021).
-	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	// POST-only mutating endpoint — preflight must advertise POST so browsers
+	// don't reject the cross-origin request (#8019, #8021, #8201).
+	s.setCORSHeaders(w, r, http.MethodPost, http.MethodOptions)
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
@@ -1621,9 +1626,8 @@ func (s *Server) handleScaleHTTP(w http.ResponseWriter, r *http.Request) {
 // Only POST with a JSON body is accepted; GET-based mutations are rejected to
 // prevent CSRF-style attacks (#4150 pattern, same as handleScaleHTTP).
 func (s *Server) handleDeployWorkloadHTTP(w http.ResponseWriter, r *http.Request) {
-	s.setCORSHeaders(w, r)
-	// setCORSHeaders defaults Methods to "GET, OPTIONS"; override for POST (#8021).
-	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	// POST-only deploy endpoint — preflight must advertise POST (#8021, #8201).
+	s.setCORSHeaders(w, r, http.MethodPost, http.MethodOptions)
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
@@ -1771,9 +1775,8 @@ func (s *Server) handleDeployWorkloadHTTP(w http.ResponseWriter, r *http.Request
 // is POST-with-body for all mutations (same as /scale), so the frontend sends
 // a POST with {cluster, namespace, name} in the body.
 func (s *Server) handleDeleteWorkloadHTTP(w http.ResponseWriter, r *http.Request) {
-	s.setCORSHeaders(w, r)
-	// setCORSHeaders defaults Methods to "GET, OPTIONS"; override for POST (#8021).
-	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	// POST-only delete endpoint — preflight must advertise POST (#8021, #8201).
+	s.setCORSHeaders(w, r, http.MethodPost, http.MethodOptions)
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
@@ -1963,6 +1966,12 @@ const defaultCORSAllowedMethods = "GET, OPTIONS"
 // Access-Control-Allow-Methods value — this is required for POST/PUT/DELETE
 // endpoints so browser preflight requests succeed. When no methods are
 // supplied the header defaults to defaultCORSAllowedMethods.
+//
+// Audit rule (#8201): every handler that serves any method other than GET
+// MUST pass an explicit method list including OPTIONS, e.g.
+// setCORSHeaders(w, r, http.MethodPost, http.MethodOptions). Handlers that
+// rely on the default and silently advertise "GET, OPTIONS" will fail
+// browser preflight for cross-origin POST/DELETE requests.
 func (s *Server) setCORSHeaders(w http.ResponseWriter, r *http.Request, methods ...string) {
 	origin := r.Header.Get("Origin")
 	if s.isAllowedOrigin(origin) {
@@ -2254,11 +2263,11 @@ func (s *Server) checkBackendHealth() bool {
 
 // handleAutoUpdateConfig handles GET/POST for auto-update configuration.
 func (s *Server) handleAutoUpdateConfig(w http.ResponseWriter, r *http.Request) {
-	s.setCORSHeaders(w, r)
+	// #8201: GET reads config, POST writes config — preflight must advertise both.
+	s.setCORSHeaders(w, r, http.MethodGet, http.MethodPost, http.MethodOptions)
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method == "OPTIONS" {
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 		w.WriteHeader(http.StatusOK)
 		return
 	}
@@ -2352,11 +2361,11 @@ func (s *Server) handleAutoUpdateStatus(w http.ResponseWriter, r *http.Request) 
 
 // handleAutoUpdateTrigger triggers an immediate update check.
 func (s *Server) handleAutoUpdateTrigger(w http.ResponseWriter, r *http.Request) {
-	s.setCORSHeaders(w, r)
+	// POST-only trigger endpoint — preflight must advertise POST (#8201).
+	s.setCORSHeaders(w, r, http.MethodPost, http.MethodOptions)
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method == "OPTIONS" {
-		w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
 		w.WriteHeader(http.StatusOK)
 		return
 	}
@@ -2403,11 +2412,11 @@ func (s *Server) handleAutoUpdateTrigger(w http.ResponseWriter, r *http.Request)
 // honored, and the update cannot be cancelled once the restart step has begun
 // (startup-oauth.sh is spawned as a detached process).
 func (s *Server) handleAutoUpdateCancel(w http.ResponseWriter, r *http.Request) {
-	s.setCORSHeaders(w, r)
+	// POST-only cancel endpoint — preflight must advertise POST (#8201).
+	s.setCORSHeaders(w, r, http.MethodPost, http.MethodOptions)
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method == "OPTIONS" {
-		w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
 		w.WriteHeader(http.StatusOK)
 		return
 	}
@@ -2618,8 +2627,8 @@ type kubeconfigAddResponse struct {
 
 // handleKubeconfigRemoveHTTP removes a cluster context from the kubeconfig (#5658).
 func (s *Server) handleKubeconfigRemoveHTTP(w http.ResponseWriter, r *http.Request) {
-	s.setCORSHeaders(w, r)
-	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS") // Copilot: setCORSHeaders defaults to GET
+	// POST-only kubeconfig removal — preflight must advertise POST (#8201).
+	s.setCORSHeaders(w, r, http.MethodPost, http.MethodOptions)
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method == "OPTIONS" {

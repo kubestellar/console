@@ -68,7 +68,8 @@ func (s *Server) resolveConsoleCRTarget(w http.ResponseWriter, r *http.Request) 
 // CRs. POST creates with a body-supplied spec. PUT updates by name (name
 // also in query). DELETE removes by name.
 func (s *Server) handleConsoleCRManagedWorkloads(w http.ResponseWriter, r *http.Request) {
-	s.setCORSHeaders(w, r)
+	// #8201: POST create, PUT update, DELETE remove — preflight must advertise all.
+	s.setCORSHeaders(w, r, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions)
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusOK)
@@ -150,7 +151,8 @@ func (s *Server) handleConsoleCRManagedWorkloads(w http.ResponseWriter, r *http.
 
 // handleConsoleCRClusterGroups serves POST/PUT/DELETE for ClusterGroup CRs.
 func (s *Server) handleConsoleCRClusterGroups(w http.ResponseWriter, r *http.Request) {
-	s.setCORSHeaders(w, r)
+	// #8201: POST create, PUT update, DELETE remove — preflight must advertise all.
+	s.setCORSHeaders(w, r, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions)
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusOK)
@@ -235,7 +237,8 @@ func (s *Server) handleConsoleCRClusterGroups(w http.ResponseWriter, r *http.Req
 // exposed status updates (see handleConsoleCRWorkloadDeploymentStatus), and
 // spec updates are reserved for the system-internal reconciler.
 func (s *Server) handleConsoleCRWorkloadDeployments(w http.ResponseWriter, r *http.Request) {
-	s.setCORSHeaders(w, r)
+	// #8201: POST create, DELETE remove — preflight must advertise both.
+	s.setCORSHeaders(w, r, http.MethodPost, http.MethodDelete, http.MethodOptions)
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusOK)
@@ -299,7 +302,8 @@ func (s *Server) handleConsoleCRWorkloadDeployments(w http.ResponseWriter, r *ht
 // of WorkloadDeployment CRs. The frontend sends a partial spec containing only
 // the status field, merged with the current resource on the apiserver side.
 func (s *Server) handleConsoleCRWorkloadDeploymentStatus(w http.ResponseWriter, r *http.Request) {
-	s.setCORSHeaders(w, r)
+	// PUT-only status update — preflight must advertise PUT (#8201).
+	s.setCORSHeaders(w, r, http.MethodPut, http.MethodOptions)
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusOK)

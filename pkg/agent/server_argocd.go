@@ -51,11 +51,8 @@ type agentArgoSyncRequest struct {
 // ServiceAccount on the backend; on kc-agent it runs under the user's
 // kubeconfig (#7993 Phase 3c).
 func (s *Server) handleArgoCDSync(w http.ResponseWriter, r *http.Request) {
-	s.setCORSHeaders(w, r)
-	// #8040: setCORSHeaders defaults Access-Control-Allow-Methods to
-	// "GET, OPTIONS" (pkg/agent/server_http.go). This endpoint is POST-only,
-	// so browsers would reject the CORS preflight without this override.
-	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	// POST-only ArgoCD sync — preflight must advertise POST (#8040, #8201).
+	s.setCORSHeaders(w, r, http.MethodPost, http.MethodOptions)
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)

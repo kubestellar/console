@@ -141,7 +141,8 @@ type helmUpgradeRequest struct {
 // Part of #7993 Phase 3a — the backend handler is still present until
 // Phase 4 deletes it.
 func (s *Server) handleHelmRollback(w http.ResponseWriter, r *http.Request) {
-	s.setCORSHeaders(w, r)
+	// POST-only Helm rollback — preflight must advertise POST (#8201).
+	s.setCORSHeaders(w, r, http.MethodPost, http.MethodOptions)
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
@@ -218,7 +219,8 @@ func (s *Server) handleHelmRollback(w http.ResponseWriter, r *http.Request) {
 // handleHelmUninstall is the kc-agent version of the legacy backend
 // /api/gitops/helm-uninstall endpoint.
 func (s *Server) handleHelmUninstall(w http.ResponseWriter, r *http.Request) {
-	s.setCORSHeaders(w, r)
+	// POST-only Helm uninstall — preflight must advertise POST (#8201).
+	s.setCORSHeaders(w, r, http.MethodPost, http.MethodOptions)
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
@@ -290,7 +292,8 @@ func (s *Server) handleHelmUninstall(w http.ResponseWriter, r *http.Request) {
 // handleHelmUpgrade is the kc-agent version of the legacy backend
 // /api/gitops/helm-upgrade endpoint.
 func (s *Server) handleHelmUpgrade(w http.ResponseWriter, r *http.Request) {
-	s.setCORSHeaders(w, r)
+	// POST-only Helm upgrade — preflight must advertise POST (#8201).
+	s.setCORSHeaders(w, r, http.MethodPost, http.MethodOptions)
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)

@@ -280,7 +280,8 @@ func gitopsParseApplyOutput(output string) []string {
 // portable to kc-agent — this handler always uses the kubectl path, matching
 // the backend's fallback behavior when `h.bridge` is nil (#7993 Phase 3b).
 func (s *Server) handleDetectDrift(w http.ResponseWriter, r *http.Request) {
-	s.setCORSHeaders(w, r)
+	// POST-only drift detection — preflight must advertise POST (#8201).
+	s.setCORSHeaders(w, r, http.MethodPost, http.MethodOptions)
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
@@ -391,7 +392,8 @@ func (s *Server) handleDetectDrift(w http.ResponseWriter, r *http.Request) {
 // user's kubeconfig. Backend had an MCP-first path; kc-agent always uses
 // kubectl (#7993 Phase 3b).
 func (s *Server) handleGitopsSync(w http.ResponseWriter, r *http.Request) {
-	s.setCORSHeaders(w, r)
+	// POST-only gitops sync — preflight must advertise POST (#8201).
+	s.setCORSHeaders(w, r, http.MethodPost, http.MethodOptions)
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)

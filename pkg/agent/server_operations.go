@@ -1285,7 +1285,8 @@ func (s *Server) handleLocalClusterTools(w http.ResponseWriter, r *http.Request)
 
 // handleLocalClusters handles local cluster operations (list, create, delete)
 func (s *Server) handleLocalClusters(w http.ResponseWriter, r *http.Request) {
-	s.setCORSHeaders(w, r)
+	// #8201: GET list, POST create, DELETE remove — preflight must advertise all.
+	s.setCORSHeaders(w, r, http.MethodGet, http.MethodPost, http.MethodDelete, http.MethodOptions)
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method == "OPTIONS" {
@@ -1446,7 +1447,8 @@ func (s *Server) handleLocalClusters(w http.ResponseWriter, r *http.Request) {
 
 // handleLocalClusterLifecycle handles start/stop/restart for local clusters
 func (s *Server) handleLocalClusterLifecycle(w http.ResponseWriter, r *http.Request) {
-	s.setCORSHeaders(w, r)
+	// POST-only lifecycle action — preflight must advertise POST (#8201).
+	s.setCORSHeaders(w, r, http.MethodPost, http.MethodOptions)
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method == "OPTIONS" {
@@ -1566,7 +1568,8 @@ func (s *Server) handleVClusterList(w http.ResponseWriter, r *http.Request) {
 
 // handleVClusterCreate creates a new vCluster
 func (s *Server) handleVClusterCreate(w http.ResponseWriter, r *http.Request) {
-	s.setCORSHeaders(w, r)
+	// POST-only vCluster create — preflight must advertise POST (#8201).
+	s.setCORSHeaders(w, r, http.MethodPost, http.MethodOptions)
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method == "OPTIONS" {
@@ -1645,7 +1648,8 @@ func (s *Server) handleVClusterCreate(w http.ResponseWriter, r *http.Request) {
 
 // handleVClusterConnect connects to an existing vCluster
 func (s *Server) handleVClusterConnect(w http.ResponseWriter, r *http.Request) {
-	s.setCORSHeaders(w, r)
+	// POST-only vCluster connect — preflight must advertise POST (#8201).
+	s.setCORSHeaders(w, r, http.MethodPost, http.MethodOptions)
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method == "OPTIONS" {
@@ -1702,7 +1706,8 @@ func (s *Server) handleVClusterConnect(w http.ResponseWriter, r *http.Request) {
 
 // handleVClusterDisconnect disconnects from a vCluster
 func (s *Server) handleVClusterDisconnect(w http.ResponseWriter, r *http.Request) {
-	s.setCORSHeaders(w, r)
+	// POST-only vCluster disconnect — preflight must advertise POST (#8201).
+	s.setCORSHeaders(w, r, http.MethodPost, http.MethodOptions)
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method == "OPTIONS" {
@@ -1759,7 +1764,8 @@ func (s *Server) handleVClusterDisconnect(w http.ResponseWriter, r *http.Request
 
 // handleVClusterDelete deletes a vCluster
 func (s *Server) handleVClusterDelete(w http.ResponseWriter, r *http.Request) {
-	s.setCORSHeaders(w, r)
+	// POST-only vCluster delete — preflight must advertise POST (#8201).
+	s.setCORSHeaders(w, r, http.MethodPost, http.MethodOptions)
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method == "OPTIONS" {

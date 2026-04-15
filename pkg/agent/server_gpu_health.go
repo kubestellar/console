@@ -58,7 +58,8 @@ func isValidCronScheduleAgent(schedule string) bool {
 // s.k8sClient (MultiClusterClient) which, in kc-agent, uses the user's
 // kubeconfig.
 func (s *Server) handleGPUHealthCronJob(w http.ResponseWriter, r *http.Request) {
-	s.setCORSHeaders(w, r)
+	// #8201: POST install, DELETE uninstall — preflight must advertise both.
+	s.setCORSHeaders(w, r, http.MethodPost, http.MethodDelete, http.MethodOptions)
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method == "OPTIONS" {
