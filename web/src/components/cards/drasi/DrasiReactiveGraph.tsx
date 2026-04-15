@@ -1423,7 +1423,16 @@ export function DrasiReactiveGraph() {
       observer.disconnect()
       window.removeEventListener('resize', measure)
     }
-  }, [sources, queries, reactions, selectedQueryId, liveResults.length])
+    // Depend on lengths, not array references. `sources/queries/reactions`
+    // are recreated every render by useMemo consumers in pipelineData, so
+    // including the arrays themselves triggered this effect every render
+    // and drove React's update-depth limit — see GA4 error
+    // "Maximum update depth exceeded" on / from 2026-04-14. The effect
+    // only needs to re-run when the *set* of nodes changes (so new
+    // children mount and their refs become observable); a length change
+    // is a safe proxy for that, and `selectedQueryId` catches active-path
+    // changes that share the same node count.
+  }, [sources.length, queries.length, reactions.length, selectedQueryId, liveResults.length])
 
   // --- Compute paths from measured rects ------------------------------------
 
