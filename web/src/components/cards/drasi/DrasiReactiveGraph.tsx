@@ -18,6 +18,11 @@ import {
 } from 'lucide-react'
 import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
 import { useDrasiResources } from '../../../hooks/useDrasiResources'
+import { useDrasiQueryStream } from '../../../hooks/useDrasiQueryStream'
+
+/** drasi-server URL configured for the live integration. Empty when running
+ *  against drasi-platform or in demo mode. */
+const DRASI_SERVER_URL = import.meta.env.VITE_DRASI_SERVER_URL as string | undefined
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -74,13 +79,11 @@ interface DrasiReaction {
   queryIds: string[]
 }
 
-interface LiveResultRow {
-  changePercent: number
-  name: string
-  previousClose: number
-  price: number
-  symbol: string
-}
+// Drasi continuous-query result rows are arbitrary key/value maps — each
+// query returns its own schema. The card's results table renders columns
+// dynamically from the first row's keys instead of hardcoding the stock
+// schema we use for demo mode.
+type LiveResultRow = Record<string, string | number | boolean | null>
 
 interface DrasiPipelineData {
   sources: DrasiSource[]
@@ -133,7 +136,10 @@ function rectsEqual(a: MeasuredRects, b: MeasuredRects): boolean {
 // Demo data
 // ---------------------------------------------------------------------------
 
-const DEMO_STOCKS: Omit<LiveResultRow, 'changePercent' | 'price'>[] = [
+// Stock-ticker shape used by the demo result rows. Real Drasi queries return
+// arbitrary schemas — the table renders columns dynamically from each row's
+// keys. This array is just the seed values for the demo schema.
+const DEMO_STOCKS: Array<{ name: string; previousClose: number; symbol: string }> = [
   { name: 'UnitedHealth Group', previousClose: 536.88, symbol: 'UNH' },
   { name: 'Visa Inc.', previousClose: 272.19, symbol: 'V' },
   { name: 'Chevron', previousClose: 144.75, symbol: 'CVX' },
@@ -170,7 +176,7 @@ function generateDemoData(): DrasiPipelineData {
     const price = parseFloat((stock.previousClose * (1 + changePercent / 100)).toFixed(2))
     return { ...stock, changePercent, price }
   })
-  liveResults.sort((a, b) => a.changePercent - b.changePercent)
+  liveResults.sort((a, b) => Number(a.changePercent ?? 0) - Number(b.changePercent ?? 0))
   return { sources, queries, reactions, liveResults }
 }
 
@@ -410,10 +416,35 @@ function FlowLine({ d, dashed, active = true, delay = 0, lineKey = '' }: FlowLin
 // Results table
 // ---------------------------------------------------------------------------
 
+/** Format a single cell value for the dynamic results table. */
+function formatCell(value: LiveResultRow[string]): React.ReactNode {
+  if (value === null || value === undefined) return ''
+  if (typeof value === 'number') {
+    // Render numbers with up to 2 decimals; ints render plain.
+    return Number.isInteger(value) ? String(value) : value.toFixed(2)
+  }
+  if (typeof value === 'boolean') return value ? 'true' : 'false'
+  return String(value)
+}
+
+/** Pick a percentage-like column for the leading ▲/▼ trend indicator, if any. */
+function findTrendColumn(columns: string[]): string | null {
+  return (
+    columns.find(c => c === 'changePercent' || c === 'change_percent' || c === 'change') ||
+    null
+  )
+}
+
 function ResultsTable({ results, isDemo }: { results: LiveResultRow[]; isDemo: boolean }) {
   const displayResults = results.slice(0, MAX_RESULT_ROWS)
   const totalRows = results.length
   const label = isDemo ? 'Demo Results' : 'Live Results'
+
+  // Derive columns from the first row's keys so the table works for any
+  // continuous-query schema, not just the stock-ticker shape we use in demo.
+  const columns: string[] = displayResults[0] ? Object.keys(displayResults[0]) : []
+  const trendCol = findTrendColumn(columns)
+
   return (
     <div className="mt-2 bg-slate-950/80 border border-slate-700/40 rounded overflow-hidden">
       <div className="px-2 py-1 border-b border-slate-700/50 flex items-center justify-between">
@@ -431,26 +462,56 @@ function ResultsTable({ results, isDemo }: { results: LiveResultRow[]; isDemo: b
         <table className="w-full text-[10px]">
           <thead>
             <tr className="border-b border-slate-800/50">
-              <th className="text-left px-2 py-1 text-muted-foreground font-medium">changePercent</th>
-              <th className="text-left px-2 py-1 text-muted-foreground font-medium">name</th>
-              <th className="text-right px-2 py-1 text-muted-foreground font-medium">previousClose</th>
-              <th className="text-right px-2 py-1 text-muted-foreground font-medium">price</th>
-              <th className="text-right px-2 py-1 text-muted-foreground font-medium">symbol</th>
+              {columns.map(col => (
+                <th
+                  key={col}
+                  className={`px-2 py-1 text-muted-foreground font-medium ${
+                    typeof displayResults[0]?.[col] === 'number' ? 'text-right' : 'text-left'
+                  }`}
+                >
+                  {col}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
-            {displayResults.map(row => (
-              <tr key={row.symbol} className="border-b border-slate-800/30 hover:bg-slate-800/30">
-                <td className="px-2 py-1">
-                  <span className={`font-mono flex items-center gap-1 ${row.changePercent < 0 ? 'text-red-400' : 'text-green-400'}`}>
-                    {row.changePercent < 0 ? <TrendingDown className="w-2.5 h-2.5" /> : <TrendingUp className="w-2.5 h-2.5" />}
-                    {row.changePercent.toFixed(2)}
-                  </span>
-                </td>
-                <td className="px-2 py-1 text-white truncate max-w-[120px]">{row.name}</td>
-                <td className="px-2 py-1 text-muted-foreground font-mono text-right">{row.previousClose.toFixed(2)}</td>
-                <td className="px-2 py-1 text-white font-mono text-right">{row.price.toFixed(2)}</td>
-                <td className="px-2 py-1 text-cyan-400 font-mono text-right">{row.symbol}</td>
+            {displayResults.map((row, idx) => (
+              <tr key={idx} className="border-b border-slate-800/30 hover:bg-slate-800/30">
+                {columns.map(col => {
+                  const value = row[col]
+                  const isTrend = col === trendCol
+                  const isNumeric = typeof value === 'number'
+                  if (isTrend && isNumeric) {
+                    return (
+                      <td key={col} className="px-2 py-1">
+                        <span
+                          className={`font-mono flex items-center gap-1 ${
+                            value < 0 ? 'text-red-400' : 'text-green-400'
+                          }`}
+                        >
+                          {value < 0 ? (
+                            <TrendingDown className="w-2.5 h-2.5" />
+                          ) : (
+                            <TrendingUp className="w-2.5 h-2.5" />
+                          )}
+                          {value.toFixed(2)}
+                        </span>
+                      </td>
+                    )
+                  }
+                  return (
+                    <td
+                      key={col}
+                      className={`px-2 py-1 ${
+                        isNumeric
+                          ? 'text-white font-mono text-right'
+                          : 'text-white truncate max-w-[160px]'
+                      }`}
+                    >
+                      {formatCell(value)}
+                    </td>
+                  )
+                })}
               </tr>
             ))}
           </tbody>
@@ -738,9 +799,31 @@ export function DrasiReactiveGraph() {
   }, [isDemoMode, liveData])
 
   const isLive = !!liveData && !isDemoMode
+
+  // Subscribe to the selected query's SSE event stream when running against
+  // a real drasi-server. Falls through to the demo regen / static results
+  // path when in demo mode or running against drasi-platform.
+  const streamSubscription = useDrasiQueryStream({
+    mode: isLive ? (liveData?.mode ?? null) : null,
+    drasiServerUrl: DRASI_SERVER_URL,
+    instanceId: liveData?.instanceId ?? null,
+    queryId: isLive ? selectedQueryId : null,
+    paused: stoppedNodeIds.has(selectedQueryId),
+  })
+
   const pipelineData = useMemo<DrasiPipelineData>(
-    () => (isLive && liveData ? liveData : demoData),
-    [isLive, liveData, demoData],
+    () => {
+      if (isLive && liveData) {
+        // Prefer the rolling streamed results when the SSE subscription is
+        // live; otherwise use the snapshot the REST adapter returned.
+        const liveResults = streamSubscription.results.length > 0
+          ? streamSubscription.results
+          : liveData.liveResults
+        return { ...liveData, liveResults }
+      }
+      return demoData
+    },
+    [isLive, liveData, demoData, streamSubscription.results],
   )
   const { sources, queries, reactions, liveResults } = pipelineData
 
@@ -769,19 +852,71 @@ export function DrasiReactiveGraph() {
     setSelectedQueryId(queryId)
   }, [])
 
-  const saveSourceConfig = useCallback((sourceId: string, config: SourceConfig) => {
+  const { refetch: refetchDrasi } = useDrasiResources()
+
+  const saveSourceConfig = useCallback(async (sourceId: string, config: SourceConfig) => {
+    if (isLive && liveData) {
+      // Real Drasi mutation. drasi-server uses POST /api/v1/sources, drasi-platform
+      // uses PUT /v1/sources/{id} — both routed through the backend proxy.
+      const proxyBase = '/api/drasi/proxy'
+      const targetParams =
+        liveData.mode === 'server' && DRASI_SERVER_URL
+          ? `target=server&url=${encodeURIComponent(DRASI_SERVER_URL)}`
+          : `target=platform&cluster=${encodeURIComponent(import.meta.env.VITE_DRASI_PLATFORM_CLUSTER || '')}`
+      const path =
+        liveData.mode === 'server'
+          ? `/api/v1/sources/${encodeURIComponent(sourceId)}`
+          : `/v1/sources/${encodeURIComponent(sourceId)}`
+      try {
+        await fetch(`${proxyBase}${path}?${targetParams}`, {
+          method: 'PUT',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ id: config.name, spec: { kind: config.kind } }),
+        })
+        refetchDrasi()
+      } catch {
+        // Surface via the existing error path on the next poll.
+      }
+      return
+    }
+    // Demo mode — local-state only.
     setDemoData(prev => ({
       ...prev,
       sources: prev.sources.map(s => s.id === sourceId ? { ...s, name: config.name, kind: config.kind } : s),
     }))
-  }, [])
+  }, [isLive, liveData, refetchDrasi])
 
-  const saveQueryConfig = useCallback((queryId: string, config: QueryConfig) => {
+  const saveQueryConfig = useCallback(async (queryId: string, config: QueryConfig) => {
+    if (isLive && liveData) {
+      const proxyBase = '/api/drasi/proxy'
+      const targetParams =
+        liveData.mode === 'server' && DRASI_SERVER_URL
+          ? `target=server&url=${encodeURIComponent(DRASI_SERVER_URL)}`
+          : `target=platform&cluster=${encodeURIComponent(import.meta.env.VITE_DRASI_PLATFORM_CLUSTER || '')}`
+      const path =
+        liveData.mode === 'server'
+          ? `/api/v1/queries/${encodeURIComponent(queryId)}`
+          : `/v1/continuousQueries/${encodeURIComponent(queryId)}`
+      try {
+        await fetch(`${proxyBase}${path}?${targetParams}`, {
+          method: 'PUT',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            id: config.name,
+            spec: { mode: config.language.replace(/ QUERY$/, ''), query: config.queryText },
+          }),
+        })
+        refetchDrasi()
+      } catch {
+        // Surface via the existing error path on the next poll.
+      }
+      return
+    }
     setDemoData(prev => ({
       ...prev,
       queries: prev.queries.map(q => q.id === queryId ? { ...q, name: config.name, language: config.language, queryText: config.queryText } : q),
     }))
-  }, [])
+  }, [isLive, liveData, refetchDrasi])
 
   // --- Dynamic line positioning --------------------------------------------
 

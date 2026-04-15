@@ -958,6 +958,10 @@ func (s *Server) setupRoutes() {
 	api.Get("/mcp/wasmcloud/hosts", mcpHandlers.GetWasmCloudHosts)
 	api.Get("/mcp/wasmcloud/actors", mcpHandlers.GetWasmCloudActors)
 	api.Get("/mcp/custom-resources", mcpHandlers.GetCustomResources)
+	// Drasi reverse proxy — forwards to drasi-server (mode 1+2) or drasi-platform
+	// (mode 3) so the `/drasi` dashboard speaks the same client code to either.
+	// See pkg/api/handlers/drasi_proxy.go for the protocol detection contract.
+	api.All("/drasi/proxy/*", mcpHandlers.ProxyDrasi)
 	api.Get("/mcp/replicasets", mcpHandlers.GetReplicaSets)
 	api.Get("/mcp/statefulsets", mcpHandlers.GetStatefulSets)
 	api.Get("/mcp/daemonsets", mcpHandlers.GetDaemonSets)
