@@ -279,7 +279,7 @@ cleanup() {
     kill $AGENT_LOOP_PID 2>/dev/null || true
     kill $AGENT_PID 2>/dev/null || true
     kill $WATCHDOG_PID 2>/dev/null || true
-    rm -f "$SHUTDOWN_FLAG" "$STAGE_FILE"
+    rm -f "$SHUTDOWN_FLAG" "$STAGE_FILE" "${AGENT_PID_FILE:-}"
     exit 0
 }
 trap cleanup SIGINT SIGTERM EXIT
@@ -346,6 +346,11 @@ AGENT_PID=""
 AGENT_LOOP_PID=""
 if [ -n "$KC_AGENT_BIN" ]; then
     echo -e "${GREEN}Starting kc-agent ($KC_AGENT_BIN)...${NC}"
+    # Pidfile written by the restart loop so the parent shell can target the
+    # exact kc-agent process instead of whoever happens to be on port 8585.
+    # Fixes #8127 — an unrelated process listening on :8585 was killed on Ctrl+C.
+    AGENT_PID_FILE="/tmp/.kc-agent-pid-$$"
+    : > "$AGENT_PID_FILE"
     (
         # Pass KUBECONFIG from .env / environment as --kubeconfig flag
         KC_AGENT_ARGS=()
@@ -355,6 +360,7 @@ if [ -n "$KC_AGENT_BIN" ]; then
         while true; do
             "$KC_AGENT_BIN" "${KC_AGENT_ARGS[@]}" &
             CHILD=$!
+            echo "$CHILD" > "$AGENT_PID_FILE"
             echo "[kc-agent] Started (PID $CHILD)"
             wait $CHILD
             EXIT_CODE=$?
@@ -366,8 +372,14 @@ if [ -n "$KC_AGENT_BIN" ]; then
         done
     ) &
     AGENT_LOOP_PID=$!
-    sleep 2
-    AGENT_PID=$(lsof -i :8585 -t 2>/dev/null | head -1)
+    # Give the loop a moment to spawn the child and write the pidfile.
+    AGENT_PID_WAIT_ATTEMPTS=10
+    AGENT_PID_WAIT_SLEEP_SECONDS=0.2
+    for _ in $(seq 1 $AGENT_PID_WAIT_ATTEMPTS); do
+        if [ -s "$AGENT_PID_FILE" ]; then break; fi
+        sleep "$AGENT_PID_WAIT_SLEEP_SECONDS"
+    done
+    AGENT_PID=$(cat "$AGENT_PID_FILE" 2>/dev/null || true)
 else
     echo -e "${YELLOW}Warning: kc-agent not found. Run 'make build' or install via brew.${NC}"
 fi

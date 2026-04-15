@@ -467,11 +467,8 @@ func (s *Server) handleDeploymentsHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), agentDefaultTimeout)
 	defer cancel()
 
-	// If namespace not specified, get deployments from all namespaces
-	if namespace == "" {
-		namespace = ""
-	}
-
+	// An empty namespace is passed through to client-go's Deployments("")
+	// call, which lists deployments across all namespaces (#8121).
 	deployments, err := s.k8sClient.GetDeployments(ctx, cluster, namespace)
 	if err != nil {
 		slog.Warn("error fetching deployments", "error", err)
