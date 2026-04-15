@@ -358,16 +358,12 @@ func (h *SelfUpgradeHandler) TriggerUpgrade(c *fiber.Ctx) error {
 
 	slog.Info("[self-upgrade] upgrading deployment", "namespace", namespace, "deployment", dep.Name, "from", currentImage, "to", newImage)
 
-	// Broadcast progress to all WebSocket clients
-	h.hub.BroadcastAll(Message{
-		Type: "update_progress",
-		Data: map[string]any{
-			"status":   "running",
-			"step":     1,
-			"progress": 20,
-			"message":  fmt.Sprintf("Patching deployment image to %s", req.ImageTag),
-		},
-	})
+	// #7976: Do NOT broadcast a progress event here. Earlier versions emitted
+	// `progress: 20` with a "Patching deployment image to X" message BEFORE
+	// the Patch call, which gave clients a false "something already happened"
+	// signal when the patch subsequently failed (RBAC, API server error,
+	// etc.). Progress events must only fire after the state they describe is
+	// actually true — so we wait until Patch returns successfully.
 
 	// Build JSON patch to update the container image
 	patch := []map[string]any{
@@ -394,6 +390,9 @@ func (h *SelfUpgradeHandler) TriggerUpgrade(c *fiber.Ctx) error {
 	)
 	if err != nil {
 		slog.Error("[self-upgrade] patch failed", "error", err)
+		// Terminal error — no intermediate progress was claimed, so clients
+		// transition directly from "idle" to "failed" without a misleading
+		// 20% checkpoint.
 		h.hub.BroadcastAll(Message{
 			Type: "update_progress",
 			Data: map[string]any{
@@ -409,6 +408,19 @@ func (h *SelfUpgradeHandler) TriggerUpgrade(c *fiber.Ctx) error {
 
 	slog.Info("[self-upgrade] Deployment patched successfully, rollout starting")
 
+	// Broadcast progress: the patch has actually been applied. We emit step 1
+	// (image patched) and step 2 (waiting for rollout) back-to-back so the UI
+	// still sees a smooth progression, but neither event is sent unless the
+	// underlying state it describes is true.
+	h.hub.BroadcastAll(Message{
+		Type: "update_progress",
+		Data: map[string]any{
+			"status":   "running",
+			"step":     1,
+			"progress": 20,
+			"message":  fmt.Sprintf("Deployment image patched to %s", req.ImageTag),
+		},
+	})
 	// Broadcast success — the pod will be terminated shortly by the rollout
 	h.hub.BroadcastAll(Message{
 		Type: "update_progress",
