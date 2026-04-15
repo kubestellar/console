@@ -693,6 +693,14 @@ export function connectSharedWebSocket() {
     return
   }
 
+  // Playwright nightly runs the built bundle against `vite preview` (port 4173)
+  // with no backend — so /ws has no listener. Firefox's retry behavior on the
+  // failed connection cascades into NS_BINDING_ABORTED on subsequent page.goto
+  // calls. All Playwright/Selenium-class drivers set navigator.webdriver=true.
+  if (typeof navigator !== 'undefined' && navigator.webdriver) {
+    return
+  }
+
   // Set connecting flag FIRST to prevent race conditions (JS is single-threaded but
   // multiple React hook instances can call this in quick succession during initial render)
   if (sharedWebSocket.connecting || sharedWebSocket.ws?.readyState === WebSocket.OPEN) {

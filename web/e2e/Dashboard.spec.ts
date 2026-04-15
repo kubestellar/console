@@ -53,13 +53,18 @@ test.describe('Dashboard Page', () => {
   })
 
   test.describe('Layout and Structure', () => {
-    test('displays dashboard with sidebar', async ({ page }) => {
+    // On mobile viewports the sidebar is hidden by design (`-translate-x-full
+    // hidden md:flex`) — the hamburger menu opens it on demand. These tests
+    // assume desktop layout, so skip them on the mobile-* Playwright projects.
+    test('displays dashboard with sidebar', async ({ page }, testInfo) => {
+      test.skip(testInfo.project.name.startsWith('mobile-'), 'sidebar is hidden by design on mobile breakpoints')
       // Check for main layout elements using data-testid
       await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
       await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: 5000 })
     })
 
-    test('displays navigation items in sidebar', async ({ page }) => {
+    test('displays navigation items in sidebar', async ({ page }, testInfo) => {
+      test.skip(testInfo.project.name.startsWith('mobile-'), 'sidebar is hidden by design on mobile breakpoints')
       // Sidebar should have navigation
       await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: 5000 })
       await expect(page.getByTestId('sidebar-primary-nav')).toBeVisible()
@@ -118,14 +123,16 @@ test.describe('Dashboard Page', () => {
   })
 
   test.describe('Card Management', () => {
-    test('has add card button in sidebar', async ({ page }) => {
+    test('has add card button in sidebar', async ({ page }, testInfo) => {
+      test.skip(testInfo.project.name.startsWith('mobile-'), 'sidebar is hidden by design on mobile breakpoints')
       await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: 5000 })
 
       // Add card button should be visible (when sidebar is expanded)
       await expect(page.getByTestId('sidebar-add-card')).toBeVisible()
     })
 
-    test('clicking add card opens modal', async ({ page }) => {
+    test('clicking add card opens modal', async ({ page }, testInfo) => {
+      test.skip(testInfo.project.name.startsWith('mobile-'), 'sidebar is hidden by design on mobile breakpoints')
       await expect(page.getByTestId('sidebar-add-card')).toBeVisible({ timeout: 5000 })
 
       // Click add card button
