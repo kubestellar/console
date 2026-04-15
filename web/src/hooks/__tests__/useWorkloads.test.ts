@@ -537,7 +537,7 @@ describe('useScaleWorkload', () => {
 // ---------------------------------------------------------------------------
 
 describe('useDeleteWorkload', () => {
-  it('sends DELETE request and calls onSuccess', async () => {
+  it('sends POST to kc-agent /workloads/delete and calls onSuccess', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
       new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } })
     )
@@ -556,10 +556,18 @@ describe('useDeleteWorkload', () => {
     expect(result.current.isLoading).toBe(false)
     expect(result.current.error).toBeNull()
 
-    // Verify the URL includes cluster/namespace/name path segments
+    // Phase 1 PR B (#7993/#8013) moved delete off the backend REST path
+    // and onto kc-agent to run under the user's kubeconfig. The verb is
+    // now POST-with-body (mirroring /scale), not DELETE-with-params.
     const fetchSpy = globalThis.fetch as ReturnType<typeof vi.fn>
-    const callUrl = fetchSpy.mock.calls[0]?.[0] as string
-    expect(callUrl).toBe('/api/workloads/prod/production/api-server')
+    const [callUrl, callInit] = fetchSpy.mock.calls[0] as [string, RequestInit]
+    expect(callUrl).toBe('http://127.0.0.1:8585/workloads/delete')
+    expect(callInit.method).toBe('POST')
+    expect(JSON.parse(callInit.body as string)).toEqual({
+      cluster: 'prod',
+      namespace: 'production',
+      name: 'api-server',
+    })
   })
 
   it('handles delete failure with error body', async () => {

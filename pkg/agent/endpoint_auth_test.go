@@ -116,6 +116,27 @@ const (
 	// endpointDeviceAlertsClear clears a device alert (sensitive — mutating).
 	endpointDeviceAlertsClear = "/device/alerts/clear"
 
+	// endpointHPAs lists HorizontalPodAutoscalers (sensitive — reveals infra).
+	endpointHPAs = "/hpas"
+
+	// endpointPVCs lists PersistentVolumeClaims (sensitive — reveals infra).
+	endpointPVCs = "/pvcs"
+
+	// endpointRoles lists Kubernetes Roles (sensitive — RBAC posture).
+	endpointRoles = "/roles"
+
+	// endpointRoleBindings lists Kubernetes RoleBindings (sensitive — RBAC posture).
+	endpointRoleBindings = "/rolebindings"
+
+	// endpointResourceQuotas lists ResourceQuotas (sensitive — reveals infra).
+	endpointResourceQuotas = "/resourcequotas"
+
+	// endpointLimitRanges lists LimitRanges (sensitive — reveals infra).
+	endpointLimitRanges = "/limitranges"
+
+	// endpointResolveDeps resolves workload dependencies (sensitive — walks RBAC/pods).
+	endpointResolveDeps = "/resolve-deps"
+
 	// testTokenValue is the shared secret used to configure auth in tests.
 	testTokenValue = "test-secret-token-42"
 
@@ -171,6 +192,13 @@ var sensitiveEndpoints = []struct {
 	{endpointPredictionsStats, "GET"},
 	{endpointDeviceAlerts, "GET"},
 	{endpointDeviceAlertsClear, "POST"},
+	{endpointHPAs, "GET"},
+	{endpointPVCs, "GET"},
+	{endpointRoles, "GET"},
+	{endpointRoleBindings, "GET"},
+	{endpointResourceQuotas, "GET"},
+	{endpointLimitRanges, "GET"},
+	{endpointResolveDeps, "GET"},
 }
 
 // endpointsLackingAuth are endpoints that SHOULD require auth but currently
