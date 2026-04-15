@@ -229,28 +229,324 @@ const DEMO_QUERY_TEXT: Record<string, string> = {
   'q-top-losers': 'MATCH (s:Stock) WHERE s.changePercent < 0 RETURN s ORDER BY s.changePercent ASC LIMIT 10',
 }
 
-function generateDemoData(): DrasiPipelineData {
-  const sources: DrasiSource[] = [
-    { id: 'src-price-feed', name: 'price-feed', kind: 'HTTP', status: 'ready' },
-    { id: 'src-postgres-stocks', name: 'postgres-stocks', kind: 'POSTGRES', status: 'ready' },
-    { id: 'src-postgres-broker', name: 'postgres-broker', kind: 'POSTGRES', status: 'ready' },
-  ]
-  const queries: DrasiQuery[] = [
-    { id: 'q-watchlist', name: 'watchlist-query', language: 'CYPHER QUERY', status: 'ready', sourceIds: ['src-price-feed', 'src-postgres-stocks'], queryText: DEMO_QUERY_TEXT['q-watchlist'] },
-    { id: 'q-portfolio', name: 'portfolio-query', language: 'CYPHER QUERY', status: 'ready', sourceIds: ['src-postgres-stocks', 'src-postgres-broker'], queryText: DEMO_QUERY_TEXT['q-portfolio'] },
-    { id: 'q-top-gainers', name: 'top-gainers-query', language: 'CYPHER QUERY', status: 'ready', sourceIds: ['src-postgres-broker'], queryText: DEMO_QUERY_TEXT['q-top-gainers'] },
-    { id: 'q-top-losers', name: 'top-losers-query', language: 'CYPHER QUERY', status: 'ready', sourceIds: ['src-price-feed', 'src-postgres-stocks', 'src-postgres-broker'], queryText: DEMO_QUERY_TEXT['q-top-losers'] },
-  ]
-  const reactions: DrasiReaction[] = [
-    { id: 'rx-sse', name: 'sse-stream', kind: 'SSE', status: 'ready', queryIds: ['q-watchlist', 'q-portfolio', 'q-top-gainers', 'q-top-losers'] },
-  ]
-  const liveResults: LiveResultRow[] = DEMO_STOCKS.map(stock => {
-    const changePercent = parseFloat((-6 + Math.random() * 5).toFixed(2))
-    const price = parseFloat((stock.previousClose * (1 + changePercent / 100)).toFixed(2))
-    return { ...stock, changePercent, price }
-  })
-  liveResults.sort((a, b) => Number(a.changePercent ?? 0) - Number(b.changePercent ?? 0))
-  return { sources, queries, reactions, liveResults }
+// ---------------------------------------------------------------------------
+// Flow discovery — Drasi has no first-class "flow" concept. A pipeline is
+// implicit in the edges between sources ← queries → reactions. We derive
+// flows as connected components of that tripartite graph: any query plus
+// every source it reads and every reaction subscribed to it forms one
+// component, and two queries belong to the same flow if they share any
+// source or any reaction subscriber. The user picks a flow from a dropdown
+// in the card header to focus the view on one pipeline at a time.
+// ---------------------------------------------------------------------------
+
+/** Sentinel value used in the flow dropdown to mean "don't filter anything". */
+const FLOW_ID_ALL = '__all__'
+
+/** A derived flow — one connected component of the drasi graph. */
+interface Flow {
+  /** Stable id derived from the sorted member IDs so the value survives
+   *  array order changes between polls. */
+  id: string
+  /** Human label — first query name, or a fallback if there are zero
+   *  queries in the component. */
+  label: string
+  sourceIds: Set<string>
+  queryIds: Set<string>
+  reactionIds: Set<string>
+}
+
+/** Derive flows from the current source/query/reaction graph via a simple
+ *  union-find. Queries are the "hub" nodes — edges go query→source (via
+ *  `query.sourceIds`) and reaction→query (via `reaction.queryIds`). */
+function computeFlows(
+  sources: DrasiSource[],
+  queries: DrasiQuery[],
+  reactions: DrasiReaction[],
+): Flow[] {
+  // node id schema: 's:'+sourceId, 'q:'+queryId, 'r:'+reactionId — prefixed
+  // so two resource kinds with the same id don't collide in the DSU map.
+  const parent = new Map<string, string>()
+  const find = (k: string): string => {
+    let cur = k
+    while (parent.get(cur) !== cur) {
+      const p = parent.get(cur)
+      if (p === undefined) { parent.set(cur, cur); return cur }
+      parent.set(cur, parent.get(p) ?? p)
+      cur = parent.get(cur) as string
+    }
+    return cur
+  }
+  const union = (a: string, b: string) => {
+    const ra = find(a)
+    const rb = find(b)
+    if (ra !== rb) parent.set(ra, rb)
+  }
+
+  for (const s of sources) parent.set(`s:${s.id}`, `s:${s.id}`)
+  for (const q of queries) parent.set(`q:${q.id}`, `q:${q.id}`)
+  for (const r of reactions) parent.set(`r:${r.id}`, `r:${r.id}`)
+
+  for (const q of queries) {
+    for (const sid of q.sourceIds) {
+      if (parent.has(`s:${sid}`)) union(`q:${q.id}`, `s:${sid}`)
+    }
+  }
+  for (const r of reactions) {
+    for (const qid of r.queryIds) {
+      if (parent.has(`q:${qid}`)) union(`r:${r.id}`, `q:${qid}`)
+    }
+  }
+
+  // Bucket by root. Each bucket becomes one Flow.
+  const buckets = new Map<string, Flow>()
+  const ensure = (root: string): Flow => {
+    let flow = buckets.get(root)
+    if (!flow) {
+      flow = { id: '', label: '', sourceIds: new Set(), queryIds: new Set(), reactionIds: new Set() }
+      buckets.set(root, flow)
+    }
+    return flow
+  }
+  for (const s of sources) ensure(find(`s:${s.id}`)).sourceIds.add(s.id)
+  for (const q of queries) ensure(find(`q:${q.id}`)).queryIds.add(q.id)
+  for (const r of reactions) ensure(find(`r:${r.id}`)).reactionIds.add(r.id)
+
+  // Finalize: label + stable id.
+  const flows: Flow[] = []
+  let flowIndex = 0
+  for (const flow of buckets.values()) {
+    // Label preference: first query name, else first source name, else fallback.
+    flowIndex += 1
+    const firstQ = queries.find(q => flow.queryIds.has(q.id))
+    const firstS = sources.find(s => flow.sourceIds.has(s.id))
+    flow.label = firstQ?.name ?? firstS?.name ?? `Flow ${flowIndex}`
+    // Deterministic id from sorted member list — survives poll re-ordering.
+    const members = [
+      ...[...flow.sourceIds].map(id => `s:${id}`),
+      ...[...flow.queryIds].map(id => `q:${id}`),
+      ...[...flow.reactionIds].map(id => `r:${id}`),
+    ].sort()
+    flow.id = `flow:${members.join('|')}`
+    flows.push(flow)
+  }
+  // Sort by label for stable dropdown ordering.
+  flows.sort((a, b) => a.label.localeCompare(b.label))
+  return flows
+}
+
+// ---------------------------------------------------------------------------
+// Themed demo pipelines — one per demo-seed connection so switching servers
+// in the header dropdown swaps in a different graph. Each theme is designed
+// to have 3 **disjoint** flows (no shared sources / queries / reactions) so
+// the Flow dropdown has something meaningful to pick from.
+// ---------------------------------------------------------------------------
+
+/** Demo theme id = the Drasi connection seed id it's paired with. Plus
+ *  `stocks` for the no-connection default. */
+type DemoThemeId =
+  | 'stocks'
+  | 'demo-seed-retail'
+  | 'demo-seed-iot'
+  | 'demo-seed-fraud'
+  | 'demo-seed-supply'
+
+/** Static shape of a themed demo pipeline (queries + static row generator). */
+interface DemoTheme {
+  sources: DrasiSource[]
+  queries: DrasiQuery[]
+  reactions: DrasiReaction[]
+  /** Row generator — called on every demo regen tick for fresh values. */
+  rows: () => LiveResultRow[]
+}
+
+/** Small helpers for theme row generators — kept local so a theme can
+ *  fabricate plausible values without dragging in a full faker dep. */
+function randInt(min: number, max: number): number {
+  return Math.floor(min + Math.random() * (max - min + 1))
+}
+function randFloat(min: number, max: number, decimals = 2): number {
+  return parseFloat((min + Math.random() * (max - min)).toFixed(decimals))
+}
+function pick<T>(arr: readonly T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)]
+}
+
+const DEMO_THEMES: Record<DemoThemeId, DemoTheme> = {
+  // Default "stocks" theme — keeps the original 4-query spanning-results
+  // layout that matches the screenshot the Drasi PM shared. All four
+  // queries share sources and the same reaction, so this theme collapses
+  // to ONE flow — the Flow dropdown shows "All resources" + that one.
+  stocks: {
+    sources: [
+      { id: 'src-price-feed', name: 'price-feed', kind: 'HTTP', status: 'ready' },
+      { id: 'src-postgres-stocks', name: 'postgres-stocks', kind: 'POSTGRES', status: 'ready' },
+      { id: 'src-postgres-broker', name: 'postgres-broker', kind: 'POSTGRES', status: 'ready' },
+    ],
+    queries: [
+      { id: 'q-watchlist', name: 'watchlist-query', language: 'CYPHER QUERY', status: 'ready', sourceIds: ['src-price-feed', 'src-postgres-stocks'], queryText: DEMO_QUERY_TEXT['q-watchlist'] },
+      { id: 'q-portfolio', name: 'portfolio-query', language: 'CYPHER QUERY', status: 'ready', sourceIds: ['src-postgres-stocks', 'src-postgres-broker'], queryText: DEMO_QUERY_TEXT['q-portfolio'] },
+      { id: 'q-top-gainers', name: 'top-gainers-query', language: 'CYPHER QUERY', status: 'ready', sourceIds: ['src-postgres-broker'], queryText: DEMO_QUERY_TEXT['q-top-gainers'] },
+      { id: 'q-top-losers', name: 'top-losers-query', language: 'CYPHER QUERY', status: 'ready', sourceIds: ['src-price-feed', 'src-postgres-stocks', 'src-postgres-broker'], queryText: DEMO_QUERY_TEXT['q-top-losers'] },
+    ],
+    reactions: [
+      { id: 'rx-sse', name: 'sse-stream', kind: 'SSE', status: 'ready', queryIds: ['q-watchlist', 'q-portfolio', 'q-top-gainers', 'q-top-losers'] },
+    ],
+    rows: () => {
+      const rows = DEMO_STOCKS.map(stock => {
+        const changePercent = parseFloat((-6 + Math.random() * 5).toFixed(2))
+        const price = parseFloat((stock.previousClose * (1 + changePercent / 100)).toFixed(2))
+        return { ...stock, changePercent, price } as LiveResultRow
+      })
+      rows.sort((a, b) => Number(a.changePercent ?? 0) - Number(b.changePercent ?? 0))
+      return rows
+    },
+  },
+
+  // retail-analytics — three disjoint retail pipelines.
+  //   Flow 1: orders   → abandoned-carts → email-marketing
+  //   Flow 2: catalog  → low-stock       → slack-ops
+  //   Flow 3: customers → vip-activity   → webhook-crm
+  'demo-seed-retail': {
+    sources: [
+      { id: 'src-orders', name: 'orders-db', kind: 'POSTGRES', status: 'ready' },
+      { id: 'src-catalog', name: 'catalog-db', kind: 'POSTGRES', status: 'ready' },
+      { id: 'src-customers', name: 'customers-api', kind: 'HTTP', status: 'ready' },
+    ],
+    queries: [
+      { id: 'q-abandoned-carts', name: 'abandoned-carts', language: 'CYPHER QUERY', status: 'ready', sourceIds: ['src-orders'], queryText: 'MATCH (c:Cart) WHERE c.status = "pending" AND c.updated < datetime() - duration("PT1H") RETURN c.id, c.user, c.total' },
+      { id: 'q-low-stock', name: 'low-stock-alerts', language: 'CYPHER QUERY', status: 'ready', sourceIds: ['src-catalog'], queryText: 'MATCH (p:Product) WHERE p.stock < p.reorderLevel RETURN p.sku, p.name, p.stock' },
+      { id: 'q-vip-activity', name: 'vip-customer-activity', language: 'CYPHER QUERY', status: 'ready', sourceIds: ['src-customers'], queryText: 'MATCH (u:Customer) WHERE u.tier = "VIP" AND u.lastAction > datetime() - duration("PT5M") RETURN u.id, u.name, u.lastAction' },
+    ],
+    reactions: [
+      { id: 'rx-email-marketing', name: 'email-marketing', kind: 'WEBHOOK', status: 'ready', queryIds: ['q-abandoned-carts'] },
+      { id: 'rx-slack-ops', name: 'slack-ops', kind: 'WEBHOOK', status: 'ready', queryIds: ['q-low-stock'] },
+      { id: 'rx-webhook-crm', name: 'webhook-crm', kind: 'WEBHOOK', status: 'ready', queryIds: ['q-vip-activity'] },
+    ],
+    rows: () => {
+      const users = ['alice@ex.com', 'bob@ex.com', 'carol@ex.com', 'dave@ex.com', 'eve@ex.com', 'frank@ex.com']
+      return Array.from({ length: 6 }, (_, i) => ({
+        cartId: `cart-${1000 + i}`,
+        user: pick(users),
+        items: randInt(1, 8),
+        total: randFloat(15, 450),
+        minutesStale: randInt(65, 240),
+      }))
+    },
+  },
+
+  // iot-telemetry — three disjoint IoT pipelines.
+  //   Flow 1: temp-sensors  → temp-alerts       → pagerduty
+  //   Flow 2: vibration-bus → bearing-wear      → kafka-ml
+  //   Flow 3: power-meters  → energy-spikes     → signalr-dashboard
+  'demo-seed-iot': {
+    sources: [
+      { id: 'src-temp-sensors', name: 'temp-sensors', kind: 'HTTP', status: 'ready' },
+      { id: 'src-vibration-bus', name: 'vibration-bus', kind: 'HTTP', status: 'ready' },
+      { id: 'src-power-meters', name: 'power-meters', kind: 'HTTP', status: 'ready' },
+    ],
+    queries: [
+      { id: 'q-temp-alerts', name: 'temp-threshold-alerts', language: 'CYPHER QUERY', status: 'ready', sourceIds: ['src-temp-sensors'], queryText: 'MATCH (s:Sensor) WHERE s.tempC > 85 RETURN s.id, s.zone, s.tempC' },
+      { id: 'q-bearing-wear', name: 'bearing-wear-model', language: 'CYPHER QUERY', status: 'ready', sourceIds: ['src-vibration-bus'], queryText: 'MATCH (v:VibReading) WHERE v.rmsG > 3.5 RETURN v.machine, v.axis, v.rmsG' },
+      { id: 'q-energy-spikes', name: 'energy-spike-detector', language: 'CYPHER QUERY', status: 'ready', sourceIds: ['src-power-meters'], queryText: 'MATCH (m:Meter) WHERE m.kwDelta > 12 RETURN m.site, m.circuit, m.kwDelta' },
+    ],
+    reactions: [
+      { id: 'rx-pagerduty', name: 'pagerduty-oncall', kind: 'WEBHOOK', status: 'ready', queryIds: ['q-temp-alerts'] },
+      { id: 'rx-kafka-ml', name: 'kafka-ml-pipeline', kind: 'KAFKA', status: 'ready', queryIds: ['q-bearing-wear'] },
+      { id: 'rx-signalr-dashboard', name: 'signalr-dashboard', kind: 'SIGNALR', status: 'ready', queryIds: ['q-energy-spikes'] },
+    ],
+    rows: () => {
+      const zones = ['Plant-A-N', 'Plant-A-S', 'Plant-B-E', 'Plant-B-W', 'Warehouse-1', 'Warehouse-2']
+      return Array.from({ length: 6 }, (_, i) => ({
+        sensorId: `TMP-${2001 + i}`,
+        zone: pick(zones),
+        tempC: randFloat(82, 98, 1),
+        changePercent: randFloat(-3, 12, 2),
+      }))
+    },
+  },
+
+  // fraud-detection — three disjoint fraud signal pipelines.
+  //   Flow 1: transactions → velocity-check     → block-card
+  //   Flow 2: login-events → brute-force-detect → email-alert
+  //   Flow 3: geo-events   → impossible-travel  → sms-alert
+  'demo-seed-fraud': {
+    sources: [
+      { id: 'src-transactions', name: 'transactions-stream', kind: 'POSTGRES', status: 'ready' },
+      { id: 'src-login-events', name: 'login-events', kind: 'HTTP', status: 'ready' },
+      { id: 'src-geo-events', name: 'geo-ip-events', kind: 'HTTP', status: 'ready' },
+    ],
+    queries: [
+      { id: 'q-velocity-check', name: 'velocity-check', language: 'CYPHER QUERY', status: 'ready', sourceIds: ['src-transactions'], queryText: 'MATCH (t:Tx)-[:ON]->(c:Card) WITH c, count(t) AS n WHERE n > 5 RETURN c.id, n' },
+      { id: 'q-brute-force', name: 'brute-force-detect', language: 'CYPHER QUERY', status: 'ready', sourceIds: ['src-login-events'], queryText: 'MATCH (l:Login) WHERE l.failures > 10 RETURN l.user, l.ip, l.failures' },
+      { id: 'q-impossible-travel', name: 'impossible-travel', language: 'CYPHER QUERY', status: 'ready', sourceIds: ['src-geo-events'], queryText: 'MATCH (e1:Event)-[:NEXT]->(e2:Event) WHERE distance(e1.loc, e2.loc) > 500 AND duration.between(e1.t, e2.t) < duration("PT1H") RETURN e1.user, e1.loc, e2.loc' },
+    ],
+    reactions: [
+      { id: 'rx-block-card', name: 'block-card-webhook', kind: 'WEBHOOK', status: 'ready', queryIds: ['q-velocity-check'] },
+      { id: 'rx-email-alert', name: 'email-alert', kind: 'WEBHOOK', status: 'ready', queryIds: ['q-brute-force'] },
+      { id: 'rx-sms-alert', name: 'sms-alert', kind: 'WEBHOOK', status: 'ready', queryIds: ['q-impossible-travel'] },
+    ],
+    rows: () => {
+      const cards = ['**** 4242', '**** 1717', '**** 9000', '**** 5555', '**** 8888', '**** 0101']
+      return Array.from({ length: 6 }, () => ({
+        cardId: pick(cards),
+        txCount: randInt(6, 14),
+        totalAmount: randFloat(300, 8000, 2),
+        changePercent: randFloat(-2, 15, 2),
+      }))
+    },
+  },
+
+  // supply-chain — three disjoint supply-chain pipelines.
+  //   Flow 1: shipments → delayed-delivery → slack-notify
+  //   Flow 2: warehouses → capacity-alert   → email-ops
+  //   Flow 3: vendors   → vendor-slo-watch → webhook-erp
+  'demo-seed-supply': {
+    sources: [
+      { id: 'src-shipments', name: 'shipments-db', kind: 'POSTGRES', status: 'ready' },
+      { id: 'src-warehouses', name: 'warehouse-api', kind: 'HTTP', status: 'ready' },
+      { id: 'src-vendors', name: 'vendor-edi', kind: 'HTTP', status: 'ready' },
+    ],
+    queries: [
+      { id: 'q-delayed-delivery', name: 'delayed-delivery', language: 'CYPHER QUERY', status: 'ready', sourceIds: ['src-shipments'], queryText: 'MATCH (s:Shipment) WHERE s.eta < datetime() AND s.status <> "delivered" RETURN s.id, s.route, s.eta' },
+      { id: 'q-capacity-alert', name: 'warehouse-capacity', language: 'CYPHER QUERY', status: 'ready', sourceIds: ['src-warehouses'], queryText: 'MATCH (w:Warehouse) WHERE w.utilization > 0.9 RETURN w.id, w.utilization' },
+      { id: 'q-vendor-slo', name: 'vendor-slo-watch', language: 'CYPHER QUERY', status: 'ready', sourceIds: ['src-vendors'], queryText: 'MATCH (v:Vendor)-[:DELIVERS]->(s:Shipment) WITH v, avg(s.leadHours) AS lh WHERE lh > v.slaHours RETURN v.id, lh' },
+    ],
+    reactions: [
+      { id: 'rx-slack-notify', name: 'slack-supply-notify', kind: 'WEBHOOK', status: 'ready', queryIds: ['q-delayed-delivery'] },
+      { id: 'rx-email-ops', name: 'email-ops', kind: 'WEBHOOK', status: 'ready', queryIds: ['q-capacity-alert'] },
+      { id: 'rx-webhook-erp', name: 'webhook-erp', kind: 'WEBHOOK', status: 'ready', queryIds: ['q-vendor-slo'] },
+    ],
+    rows: () => {
+      const routes = ['SEA→LAX', 'NYC→ORD', 'DFW→ATL', 'PHX→DEN', 'SFO→SEA', 'LAX→JFK']
+      return Array.from({ length: 6 }, (_, i) => ({
+        shipmentId: `SHP-${7000 + i}`,
+        route: pick(routes),
+        delayHours: randInt(1, 36),
+        changePercent: randFloat(-5, 18, 2),
+      }))
+    },
+  },
+}
+
+/** Generate a themed demo pipeline. Defaults to the stocks theme. */
+function generateDemoData(themeId: DemoThemeId = 'stocks'): DrasiPipelineData {
+  const theme = DEMO_THEMES[themeId] ?? DEMO_THEMES.stocks
+  return {
+    sources: theme.sources,
+    queries: theme.queries,
+    reactions: theme.reactions,
+    liveResults: theme.rows(),
+  }
+}
+
+/** Map a Drasi connection id to its demo theme. Any non-seed id falls back
+ *  to the stocks theme so the card always has something to show. */
+function demoThemeForConnection(connectionId: string | undefined): DemoThemeId {
+  if (connectionId === 'demo-seed-retail') return 'demo-seed-retail'
+  if (connectionId === 'demo-seed-iot') return 'demo-seed-iot'
+  if (connectionId === 'demo-seed-fraud') return 'demo-seed-fraud'
+  if (connectionId === 'demo-seed-supply') return 'demo-seed-supply'
+  return 'stocks'
 }
 
 // ---------------------------------------------------------------------------
@@ -1567,21 +1863,6 @@ export function DrasiReactiveGraph() {
   // Clicked results-table row — opens the right-side detail drawer.
   const [selectedRow, setSelectedRow] = useState<LiveResultRow | null>(null)
   const navigate = useNavigate()
-  const [demoData, setDemoData] = useState<DrasiPipelineData>(generateDemoData)
-
-  // Periodically regenerate demo results so the table values change
-  useEffect(() => {
-    if (!isDemoMode && liveData) return
-    const interval = setInterval(() => {
-      setDemoData(prev => {
-        // Keep existing sources/queries/reactions (user may have edited them);
-        // only regenerate the result rows for animation.
-        const fresh = generateDemoData()
-        return { ...prev, liveResults: fresh.liveResults }
-      })
-    }, FLOW_ANIMATION_INTERVAL_MS)
-    return () => clearInterval(interval)
-  }, [isDemoMode, liveData])
 
   const {
     connections: drasiConnections,
@@ -1591,9 +1872,42 @@ export function DrasiReactiveGraph() {
     removeConnection,
     setActive,
   } = useDrasiConnections()
+
+  // Pick the demo theme that matches the currently-active connection. Demo
+  // seeds each have their own thematic pipeline; non-seed (or no active)
+  // falls back to the original "stocks" theme.
+  const demoThemeId = useMemo(
+    () => demoThemeForConnection(activeConnection?.isDemoSeed ? activeConnection.id : undefined),
+    [activeConnection],
+  )
+  const [demoData, setDemoData] = useState<DrasiPipelineData>(() => generateDemoData(demoThemeId))
+
+  // Reset demo graph when the user switches demo-seed servers so the whole
+  // pipeline swaps in (not just the row values). Only fires on theme change.
+  useEffect(() => {
+    setDemoData(generateDemoData(demoThemeId))
+  }, [demoThemeId])
+
+  // Periodically regenerate demo results so the table values change
+  useEffect(() => {
+    if (!isDemoMode && liveData) return
+    const interval = setInterval(() => {
+      setDemoData(prev => {
+        // Keep existing sources/queries/reactions (user may have edited them);
+        // only regenerate the result rows for animation.
+        const fresh = generateDemoData(demoThemeId)
+        return { ...prev, liveResults: fresh.liveResults }
+      })
+    }, FLOW_ANIMATION_INTERVAL_MS)
+    return () => clearInterval(interval)
+  }, [isDemoMode, liveData, demoThemeId])
   const isLive = !!liveData && !isDemoMode
   const [showConnectionsModal, setShowConnectionsModal] = useState(false)
   const [showStreamSamples, setShowStreamSamples] = useState(false)
+  // Selected flow (connected component) — FLOW_ID_ALL means show the full
+  // graph (no filter). Reset automatically if the selected id disappears
+  // after a poll (e.g. the user deleted a resource in the active flow).
+  const [selectedFlowId, setSelectedFlowId] = useState<string>(FLOW_ID_ALL)
 
   // Subscribe to the selected query's SSE event stream when running against
   // a real drasi-server. Falls through to the demo regen / static results
@@ -1606,7 +1920,7 @@ export function DrasiReactiveGraph() {
     paused: stoppedNodeIds.has(selectedQueryId),
   })
 
-  const pipelineData = useMemo<DrasiPipelineData>(
+  const rawPipelineData = useMemo<DrasiPipelineData>(
     () => {
       if (isLive && liveData) {
         // Prefer the rolling streamed results when the SSE subscription is
@@ -1620,7 +1934,38 @@ export function DrasiReactiveGraph() {
     },
     [isLive, liveData, demoData, streamSubscription.results],
   )
+
+  // Derive flows (connected components) from the raw graph. Recomputes on
+  // every poll; the `id` field is deterministic (sorted member list) so
+  // stable across re-computations as long as membership hasn't changed.
+  const flows = useMemo(
+    () => computeFlows(rawPipelineData.sources, rawPipelineData.queries, rawPipelineData.reactions),
+    [rawPipelineData.sources, rawPipelineData.queries, rawPipelineData.reactions],
+  )
+
+  // Filter the pipeline to the currently selected flow, or pass through if
+  // "All" is selected or the id no longer exists after a refresh.
+  const pipelineData = useMemo<DrasiPipelineData>(() => {
+    if (selectedFlowId === FLOW_ID_ALL) return rawPipelineData
+    const flow = flows.find(f => f.id === selectedFlowId)
+    if (!flow) return rawPipelineData
+    return {
+      ...rawPipelineData,
+      sources: rawPipelineData.sources.filter(s => flow.sourceIds.has(s.id)),
+      queries: rawPipelineData.queries.filter(q => flow.queryIds.has(q.id)),
+      reactions: rawPipelineData.reactions.filter(r => flow.reactionIds.has(r.id)),
+    }
+  }, [rawPipelineData, flows, selectedFlowId])
+
   const { sources, queries, reactions, liveResults } = pipelineData
+
+  // If the selected flow id disappeared after a refresh (e.g. the last query
+  // in it was deleted), fall back to "All" rather than leaving the card empty.
+  useEffect(() => {
+    if (selectedFlowId !== FLOW_ID_ALL && !flows.some(f => f.id === selectedFlowId)) {
+      setSelectedFlowId(FLOW_ID_ALL)
+    }
+  }, [flows, selectedFlowId])
 
   useEffect(() => {
     if (queries.length > 0 && !queries.find(q => q.id === selectedQueryId)) {
@@ -2144,10 +2489,10 @@ export function DrasiReactiveGraph() {
 
   return (
     <div className="h-full w-full flex flex-col p-3 overflow-hidden relative">
-      {/* Drasi connection selector — top strip. Always visible so the user
-          can switch between configured Drasi installs without rebuilding.
-          Gear icon opens the connections modal for CRUD. */}
-      <div className="flex-shrink-0 mb-2 flex items-center gap-2">
+      {/* Drasi connection selector + flow selector — top strip. Always
+          visible so the user can switch between configured Drasi installs
+          (gear opens CRUD modal) and focus on a single flow at a time. */}
+      <div className="flex-shrink-0 mb-4 flex items-center gap-2">
         <Server className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
         <select
           value={activeConnection?.id ?? ''}
@@ -2172,6 +2517,25 @@ export function DrasiReactiveGraph() {
         >
           <Settings className="w-3 h-3" />
         </button>
+        {/* Flow (connected component) selector — derived from the graph, not
+            fetched. Only visible when there's more than one flow OR when one
+            is already selected (so the user can clear it). */}
+        {(flows.length > 1 || selectedFlowId !== FLOW_ID_ALL) && (
+          <>
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground shrink-0 ml-1">{t('drasi.flowLabel')}</span>
+            <select
+              value={selectedFlowId}
+              onChange={e => setSelectedFlowId(e.target.value)}
+              className="shrink-0 max-w-[180px] px-2 py-1 text-[11px] bg-slate-950 border border-slate-700 rounded text-white focus:border-cyan-500 focus:outline-none"
+              aria-label={t('drasi.flowLabel')}
+            >
+              <option value={FLOW_ID_ALL}>{t('drasi.flowAllResources')}</option>
+              {flows.map(f => (
+                <option key={f.id} value={f.id}>{f.label}</option>
+              ))}
+            </select>
+          </>
+        )}
       </div>
       {/* Install Drasi CTA — shown only when no live connection is active.
           Deep-links to the existing console-kb install mission. */}

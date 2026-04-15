@@ -1545,7 +1545,9 @@
     "streamDemoHint": "Demo mode — replace the URL with your own Drasi reaction endpoint.",
     "copySnippet": "Copy snippet",
     "copy": "Copy",
-    "copied": "Copied"
+    "copied": "Copied",
+    "flowLabel": "Flow",
+    "flowAllResources": "All resources"
   },
   "missionChat": {
     "saveTranscript": "Save transcript",
