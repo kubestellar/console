@@ -1782,6 +1782,52 @@ describe('cancelling mission receives terminal messages', () => {
     expect(result.current.missions.find(m => m.id === missionId)?.status).toBe('cancelled')
   })
 
+  // #8106 — The Go backend's handleCancelChat actually emits
+  // `type: "result"` with `{cancelled, sessionId}`. The frontend must accept
+  // this shape as a cancel acknowledgement; otherwise the mission stays stuck
+  // in `cancelling` until the client-side fallback timeout fires.
+  it('finalizes cancellation on result message with cancelled:true (handleCancelChat shape)', async () => {
+    const { result } = renderHook(() => useMissions(), { wrapper })
+    const { missionId } = await startMissionWithConnection(result)
+
+    act(() => { result.current.cancelMission(missionId) })
+    expect(result.current.missions.find(m => m.id === missionId)?.status).toBe('cancelling')
+
+    // Backend replies with the real handleCancelChat shape: a `result`
+    // message carrying `{cancelled, sessionId}` and keyed by the cancel
+    // request's own id (which is NOT in pendingRequests).
+    act(() => {
+      MockWebSocket.lastInstance?.simulateMessage({
+        id: `cancel-${Date.now()}`,
+        type: 'result',
+        payload: { cancelled: true, sessionId: missionId },
+      })
+    })
+
+    const mission = result.current.missions.find(m => m.id === missionId)
+    expect(mission?.status).toBe('cancelled')
+    expect(mission?.messages.some(m => m.content.includes('cancelled by user'))).toBe(true)
+  })
+
+  it('finalizes cancellation on result message with cancelled:false as failure', async () => {
+    const { result } = renderHook(() => useMissions(), { wrapper })
+    const { missionId } = await startMissionWithConnection(result)
+
+    act(() => { result.current.cancelMission(missionId) })
+
+    act(() => {
+      MockWebSocket.lastInstance?.simulateMessage({
+        id: `cancel-${Date.now()}`,
+        type: 'result',
+        payload: { cancelled: false, sessionId: missionId, message: 'no active session' },
+      })
+    })
+
+    const mission = result.current.missions.find(m => m.id === missionId)
+    expect(mission?.status).toBe('cancelled')
+    expect(mission?.messages.some(m => m.content.includes('cancellation failed') || m.content.includes('no active session'))).toBe(true)
+  })
+
   it('ignores non-terminal messages while cancelling (e.g., progress)', async () => {
     const { result } = renderHook(() => useMissions(), { wrapper })
     const { missionId, requestId } = await startMissionWithConnection(result)

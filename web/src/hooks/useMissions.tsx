@@ -308,6 +308,17 @@ const MISSION_INACTIVITY_TIMEOUT_MS = 90_000 // 90 seconds of stream silence
  * frontend transitions the mission from 'cancelling' to 'failed' as a safety net.
  */
 const CANCEL_ACK_TIMEOUT_MS = 10_000 // 10 seconds
+
+/**
+ * WebSocket message types the frontend accepts as a dedicated cancel
+ * acknowledgement (#8106). Kept as named constants to avoid magic strings
+ * and to make the protocol contract easy to audit. The backend currently
+ * emits `result` messages with `{cancelled, sessionId}` shape instead, which
+ * is handled as a compatibility path in the message router.
+ */
+const CANCEL_ACK_MESSAGE_TYPE = 'cancel_ack'
+const CANCEL_CONFIRMED_MESSAGE_TYPE = 'cancel_confirmed'
+
 /**
  * Maximum time (ms) a mission may sit in 'waiting_input' with no new
  * assistant/result message before the frontend treats it as stuck and
@@ -1702,17 +1713,50 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
     // Handle cancel acknowledgment from backend — the cancel_chat request uses
     // a different ID format (cancel-*) so it won't be in pendingRequests. Match
     // the session ID from the payload instead.
-    if (message.type === 'cancel_ack' || message.type === 'cancel_confirmed') {
-      const payload = message.payload as { sessionId?: string; id?: string; success?: boolean; message?: string }
+    //
+    // #8106 — The WebSocket protocol is inconsistent here: the Go backend's
+    // `handleCancelChat` responds with `type: "result"` and payload
+    // `{ cancelled, sessionId }` rather than a dedicated `cancel_ack` type.
+    // Accept both shapes so missions transition out of `cancelling` immediately
+    // regardless of which message type the backend emits. Without this, cancel
+    // confirmations fall through to the generic result handler and get dropped
+    // (their `id` is `cancel-<ts>`, which is never registered in
+    // pendingRequests), leaving the mission stuck in `cancelling` until the
+    // client-side fallback timeout fires.
+    const isDedicatedCancelAck =
+      message.type === CANCEL_ACK_MESSAGE_TYPE ||
+      message.type === CANCEL_CONFIRMED_MESSAGE_TYPE
+    const isCancelResultMessage =
+      message.type === 'result' &&
+      !!message.payload &&
+      typeof message.payload === 'object' &&
+      'cancelled' in (message.payload as Record<string, unknown>) &&
+      'sessionId' in (message.payload as Record<string, unknown>)
+    if (isDedicatedCancelAck || isCancelResultMessage) {
+      const payload = message.payload as {
+        sessionId?: string
+        id?: string
+        success?: boolean
+        cancelled?: boolean
+        message?: string
+      }
       // #7310 — Backend may send `id` instead of `sessionId` in the cancel_ack
       // payload. Check both fields to avoid a permanent cancelling state lock.
       const cancelledMissionId = payload.sessionId || payload.id
       if (cancelledMissionId) {
-        if (payload.success === false) {
+        // Treat either `success === false` (cancel_ack shape) or
+        // `cancelled === false` (result shape from handleCancelChat) as a
+        // failed cancellation. Any other value means the backend confirmed
+        // the cancel.
+        const cancelFailed = payload.success === false || payload.cancelled === false
+        if (cancelFailed) {
           finalizeCancellation(cancelledMissionId, payload.message || 'Mission cancellation failed — the backend reported an error.')
         } else {
           finalizeCancellation(cancelledMissionId, 'Mission cancelled by user.')
         }
+        // Drop the pending request entry so the generic result handler below
+        // doesn't double-process this message.
+        pendingRequests.current.delete(message.id)
       }
       return
     }
