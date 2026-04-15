@@ -294,28 +294,36 @@ interface NodeCardProps {
   isPinned?: boolean
   showPin?: boolean
   showGear?: boolean
+  /** When true, the card is faded because another node is being hovered. */
+  isDimmed?: boolean
   onClick?: () => void
   onStop: () => void
   onPin?: () => void
   onExpand: () => void
   onConfigure?: () => void
+  onHoverEnter?: () => void
+  onHoverLeave?: () => void
   children?: React.ReactNode
 }
 
 function NodeCard({
   nodeRef, title, subtitle, icon, status, accentColor,
-  isSelected, isStopped, isPinned, showPin, showGear,
-  onClick, onStop, onPin, onExpand, onConfigure, children,
+  isSelected, isStopped, isPinned, showPin, showGear, isDimmed,
+  onClick, onStop, onPin, onExpand, onConfigure, onHoverEnter, onHoverLeave, children,
 }: NodeCardProps) {
   const borderClass = isSelected
     ? accentColor === 'cyan' ? 'border-cyan-400/70 ring-1 ring-cyan-400/30' : 'border-emerald-400/70 ring-1 ring-emerald-400/30'
     : accentColor === 'cyan' ? 'border-cyan-500/30' : 'border-emerald-500/30'
+  // Dim wins over stopped — the user explicitly hovered a different node.
+  const opacityClass = isDimmed ? 'opacity-25' : isStopped ? 'opacity-60' : ''
   return (
     <motion.div
       ref={nodeRef}
-      className={`bg-slate-900/80 border rounded-lg p-2.5 ${borderClass} ${isStopped ? 'opacity-60' : ''} ${onClick ? 'cursor-pointer' : ''}`}
+      className={`bg-slate-900/80 border rounded-lg p-2.5 transition-opacity ${borderClass} ${opacityClass} ${onClick ? 'cursor-pointer' : ''}`}
       whileHover={onClick ? { scale: 1.02 } : {}}
       onClick={onClick}
+      onMouseEnter={onHoverEnter}
+      onMouseLeave={onHoverLeave}
     >
       <div className="flex items-center gap-1.5">
         {icon}
@@ -342,11 +350,40 @@ function NodeCard({
 // SVG flow line with animated dots
 // ---------------------------------------------------------------------------
 
+/**
+ * Flow line state — drives the stroke color, dot color, and whether the
+ * dots animate at all. Mapped from the connected node's status:
+ *   active  → both endpoints ready, normal flow
+ *   idle    → connected but no traffic (a query that hasn't fired yet)
+ *   stopped → user hit Stop on either endpoint
+ *   error   → either endpoint reports an error
+ */
+type FlowLineState = 'active' | 'idle' | 'stopped' | 'error'
+
 interface FlowLineProps {
   d: string
   dashed?: boolean
   active?: boolean
   delay?: number
+  /** Connected-node state. Defaults to 'active' for backwards compat. */
+  state?: FlowLineState
+  /** When true (something else is hovered), the line fades out. */
+  dimmed?: boolean
+}
+
+/** Map a flow state to its stroke + dot colors. Pulled from CSS vars in
+ *  index.css so the palette stays consistent with status badges elsewhere. */
+function flowStateColors(state: FlowLineState): { stroke: string; dot: string; opacity: number } {
+  switch (state) {
+    case 'active':
+      return { stroke: 'rgb(16 185 129)', dot: 'rgb(52 211 153)', opacity: 0.7 }
+    case 'idle':
+      return { stroke: 'rgb(148 163 184)', dot: 'rgb(148 163 184)', opacity: 0.45 }
+    case 'stopped':
+      return { stroke: 'rgb(100 116 139)', dot: 'rgb(100 116 139)', opacity: 0.35 }
+    case 'error':
+      return { stroke: 'rgb(239 68 68)', dot: 'rgb(248 113 113)', opacity: 0.7 }
+  }
 }
 
 // Deterministic 0..1 pseudo-random seeded by a string key, so each flow
@@ -374,32 +411,38 @@ const TRAFFIC_PATTERNS: ReadonlyArray<ReadonlyArray<number>> = [
   [0.10, 0.20, 0.55, 0.90],   // burst + trail (4 dots)
 ]
 
-function FlowLine({ d, dashed, active = true, delay = 0, lineKey = '' }: FlowLineProps & { lineKey?: string }) {
+function FlowLine({ d, dashed, active = true, delay = 0, lineKey = '', state = 'active', dimmed = false }: FlowLineProps & { lineKey?: string }) {
   // SVG SMIL <animateMotion> is NOT controlled by the global
   // `@media (prefers-reduced-motion: reduce)` CSS rules, so we must gate
   // the animated flow dots behind a JS check of the user preference (#7885).
   const prefersReducedMotion = useReducedMotion()
-  const isAnimated = active && !dashed && !prefersReducedMotion
+  // Stopped / error / dashed lines get no animated dots.
+  const isAnimated = active && !dashed && !prefersReducedMotion && state === 'active'
   // Per-line cycle duration varies so flows aren't synchronized.
   const lineDur = FLOW_DOT_CYCLE_S + seededRand(lineKey, 1) * 3  // 5s–8s
   // Pick a traffic pattern deterministically from the line key.
   const patternIdx = Math.floor(seededRand(lineKey, 2) * TRAFFIC_PATTERNS.length)
   const pattern = TRAFFIC_PATTERNS[patternIdx]
+  const colors = flowStateColors(state)
+  // Hovering a node fades every disconnected line down to ~15% — keeps the
+  // graph context visible while highlighting the focused subgraph.
+  const dimMultiplier = dimmed ? 0.2 : 1
   return (
     <>
       <path
         d={d}
         fill="none"
-        stroke="rgb(16 185 129)"
-        strokeOpacity={dashed ? 0.35 : 0.7}
+        stroke={colors.stroke}
+        strokeOpacity={(dashed ? 0.35 : colors.opacity) * dimMultiplier}
         strokeWidth={LINE_STROKE_WIDTH_PX}
         strokeDasharray={dashed ? '4 4' : undefined}
         vectorEffect="non-scaling-stroke"
+        style={{ transition: 'stroke-opacity 200ms ease' }}
       />
       {isAnimated && pattern.map((offset, i) => {
         const begin = delay + offset * lineDur
         return (
-          <circle key={i} r={FLOW_DOT_RADIUS_PX} fill="rgb(52 211 153)" fillOpacity={0.9}>
+          <circle key={i} r={FLOW_DOT_RADIUS_PX} fill={colors.dot} fillOpacity={0.9 * dimMultiplier}>
             <animateMotion
               dur={`${lineDur}s`}
               repeatCount="indefinite"
@@ -433,6 +476,17 @@ function findTrendColumn(columns: string[]): string | null {
   return (
     columns.find(c => c === 'changePercent' || c === 'change_percent' || c === 'change') ||
     null
+  )
+}
+
+/** Compact at-a-glance KPI box for the strip above the graph. */
+function KPIBox({ label, value, accent }: { label: string; value: number; accent: 'emerald' | 'cyan' }) {
+  const accentClass = accent === 'cyan' ? 'text-cyan-400' : 'text-emerald-400'
+  return (
+    <div className="bg-slate-900/80 border border-slate-700/40 rounded px-3 py-1.5 flex items-center justify-between">
+      <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{label}</span>
+      <span className={`text-sm font-mono font-semibold ${accentClass}`}>{value}</span>
+    </div>
   )
 }
 
@@ -782,6 +836,9 @@ export function DrasiReactiveGraph() {
   const [selectedQueryId, setSelectedQueryId] = useState<string>('q-top-losers')
   const [pinnedQueryId, setPinnedQueryId] = useState<string | null>(null)
   const [stoppedNodeIds, setStoppedNodeIds] = useState<Set<string>>(new Set())
+  // Hover state — when set, lines connected to this node stay bright while
+  // every other line dims. Mirrors ServiceTopology.tsx's hoveredNode pattern.
+  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null)
   const [expandedNode, setExpandedNode] = useState<ExpandedNodeDetails | null>(null)
   const [configuringSource, setConfiguringSource] = useState<DrasiSource | null>(null)
   const [configuringQuery, setConfiguringQuery] = useState<DrasiQuery | null>(null)
@@ -1102,8 +1159,157 @@ export function DrasiReactiveGraph() {
     return items
   }, [sources, queries, reactions, rects, stoppedNodeIds, selectedQueryId, liveResults.length])
 
+  // --- Connected-node lookup (for hover dimming on cards) -----------------
+  // Given a hovered node ID, return the set of OTHER node IDs that should
+  // stay bright (the upstream + downstream subgraph). Inverse-applied: any
+  // node not in this set + not the hovered node itself gets dimmed.
+  const connectedNodeIds = useCallback(
+    (hoverId: string): Set<string> => {
+      const keep = new Set<string>()
+      const src = sources.find(s => s.id === hoverId)
+      if (src) {
+        for (const q of queries) {
+          if (q.sourceIds.includes(src.id)) {
+            keep.add(q.id)
+            for (const r of reactions) {
+              if (r.queryIds.includes(q.id)) keep.add(r.id)
+            }
+          }
+        }
+        return keep
+      }
+      const q = queries.find(qq => qq.id === hoverId)
+      if (q) {
+        for (const sid of q.sourceIds) keep.add(sid)
+        for (const r of reactions) {
+          if (r.queryIds.includes(q.id)) keep.add(r.id)
+        }
+        return keep
+      }
+      const rx = reactions.find(rr => rr.id === hoverId)
+      if (rx) {
+        for (const qid of rx.queryIds) {
+          keep.add(qid)
+          const target = queries.find(qq => qq.id === qid)
+          if (target) {
+            for (const sid of target.sourceIds) keep.add(sid)
+          }
+        }
+        return keep
+      }
+      return keep
+    },
+    [sources, queries, reactions],
+  )
+
+  // --- Connected-line lookup (for hover dimming) ---------------------------
+  // Given a hovered node ID, return the set of path keys that should stay
+  // bright. Lines NOT in this set get the dimmed treatment.
+  const connectedLineKeys = useMemo<Set<string> | null>(() => {
+    if (!hoveredNodeId) return null
+    const keep = new Set<string>()
+    // Sources: the node's outbound branch + trunk1
+    const src = sources.find(s => s.id === hoveredNodeId)
+    if (src) {
+      keep.add(`s-${src.id}`)
+      keep.add('trunk1')
+      // Plus the inbound branches into queries that subscribe to this source
+      for (const q of queries) {
+        if (q.sourceIds.includes(src.id)) keep.add(`q-in-${q.id}`)
+      }
+      return keep
+    }
+    // Queries: in-branch, out-branch, both trunks, and any reactions subscribed
+    const q = queries.find(qq => qq.id === hoveredNodeId)
+    if (q) {
+      keep.add(`q-in-${q.id}`)
+      keep.add(`q-out-${q.id}`)
+      keep.add('trunk1')
+      keep.add('trunk2')
+      // Plus the source branches that feed this query
+      for (const sid of q.sourceIds) {
+        if (sources.some(s => s.id === sid)) keep.add(`s-${sid}`)
+      }
+      // Plus reactions subscribed to this query
+      for (const r of reactions) {
+        if (r.queryIds.includes(q.id)) keep.add(`r-${r.id}`)
+      }
+      return keep
+    }
+    // Reactions: the inbound branch + trunk2
+    const rx = reactions.find(rr => rr.id === hoveredNodeId)
+    if (rx) {
+      keep.add(`r-${rx.id}`)
+      keep.add('trunk2')
+      // Plus the queries this reaction subscribes to and their out-branches
+      for (const qid of rx.queryIds) {
+        if (queries.some(qq => qq.id === qid)) keep.add(`q-out-${qid}`)
+      }
+      return keep
+    }
+    return null
+  }, [hoveredNodeId, sources, queries, reactions])
+
+  // --- Per-line state lookup -----------------------------------------------
+  // The state of a line is a function of its endpoints' status + stopped set.
+  function lineStateFor(pathKey: string): FlowLineState {
+    // Trunks always show 'active' if any non-stopped query exists.
+    if (pathKey === 'trunk1' || pathKey === 'trunk2') {
+      const anyActive = queries.some(q => !stoppedNodeIds.has(q.id) && q.status === 'ready')
+      return anyActive ? 'active' : 'idle'
+    }
+    if (pathKey.startsWith('s-')) {
+      const id = pathKey.slice(2)
+      const src = sources.find(s => s.id === id)
+      if (!src) return 'idle'
+      if (stoppedNodeIds.has(id)) return 'stopped'
+      if (src.status === 'error') return 'error'
+      return src.status === 'ready' ? 'active' : 'idle'
+    }
+    if (pathKey.startsWith('q-in-') || pathKey.startsWith('q-out-')) {
+      const id = pathKey.replace(/^q-(in|out)-/, '')
+      const q = queries.find(qq => qq.id === id)
+      if (!q) return 'idle'
+      if (stoppedNodeIds.has(id)) return 'stopped'
+      if (q.status === 'error') return 'error'
+      return q.status === 'ready' ? 'active' : 'idle'
+    }
+    if (pathKey.startsWith('r-')) {
+      const id = pathKey.slice(2)
+      const rx = reactions.find(rr => rr.id === id)
+      if (!rx) return 'idle'
+      if (stoppedNodeIds.has(id)) return 'stopped'
+      if (rx.status === 'error') return 'error'
+      return rx.status === 'ready' ? 'active' : 'idle'
+    }
+    return 'active'
+  }
+
+  // --- Pipeline KPIs --------------------------------------------------------
+  // Three at-a-glance counters above the graph: events/sec, match rate,
+  // active reactions. In live mode these come from the SSE stream's row
+  // arrival rate; in demo mode they're derived from the rolling result set.
+  const kpis = useMemo(() => {
+    const total = liveResults.length
+    const sourceCount = sources.length
+    const reactionCount = reactions.filter(r => !stoppedNodeIds.has(r.id) && r.status === 'ready').length
+    return {
+      eventsPerSec: isLive ? streamSubscription.results.length : Math.max(1, Math.round(total / 3)),
+      matchRate: total,
+      activeReactions: reactionCount,
+      activeSources: sourceCount,
+    }
+  }, [liveResults.length, sources, reactions, stoppedNodeIds, isLive, streamSubscription.results.length])
+
   return (
     <div className="h-full w-full flex flex-col p-3 overflow-hidden relative">
+      {/* Pipeline KPIs strip */}
+      <div className="flex-shrink-0 grid grid-cols-4 gap-2 mb-2">
+        <KPIBox label="Events/s" value={kpis.eventsPerSec} accent="emerald" />
+        <KPIBox label="Result Rows" value={kpis.matchRate} accent="cyan" />
+        <KPIBox label="Sources" value={kpis.activeSources} accent="emerald" />
+        <KPIBox label="Reactions" value={kpis.activeReactions} accent="emerald" />
+      </div>
       <div ref={containerRef} className="relative flex-1 min-h-0">
         <svg
           className="absolute pointer-events-none"
@@ -1120,9 +1326,22 @@ export function DrasiReactiveGraph() {
           viewBox={`0 0 ${rects.container.width || 1} ${rects.container.height || 1}`}
           preserveAspectRatio="xMidYMid meet"
         >
-          {paths.map(p => (
-            <FlowLine key={p.key} lineKey={p.key} d={p.d} dashed={p.dashed} active={p.active} delay={p.delay} />
-          ))}
+          {paths.map(p => {
+            const state = lineStateFor(p.key)
+            const dimmed = connectedLineKeys !== null && !connectedLineKeys.has(p.key)
+            return (
+              <FlowLine
+                key={p.key}
+                lineKey={p.key}
+                d={p.d}
+                dashed={p.dashed}
+                active={p.active}
+                delay={p.delay}
+                state={state}
+                dimmed={dimmed}
+              />
+            )
+          })}
         </svg>
 
         <div
@@ -1160,10 +1379,13 @@ export function DrasiReactiveGraph() {
                 status={source.status}
                 accentColor="emerald"
                 isStopped={stoppedNodeIds.has(source.id)}
+                isDimmed={hoveredNodeId !== null && hoveredNodeId !== source.id && !connectedNodeIds(hoveredNodeId).has(source.id)}
                 showGear={!isLive}
                 onStop={() => toggleStopped(source.id)}
                 onExpand={() => setExpandedNode({ id: source.id, name: source.name, kind: source.kind, type: 'source', extra: { status: source.status } })}
                 onConfigure={!isLive ? () => setConfiguringSource(source) : undefined}
+                onHoverEnter={() => setHoveredNodeId(source.id)}
+                onHoverLeave={() => setHoveredNodeId(null)}
               />
             </div>
           ))}
@@ -1192,6 +1414,7 @@ export function DrasiReactiveGraph() {
                   isSelected={query.id === selectedQueryId}
                   isStopped={stoppedNodeIds.has(query.id)}
                   isPinned={pinnedQueryId === query.id}
+                  isDimmed={hoveredNodeId !== null && hoveredNodeId !== query.id && !connectedNodeIds(hoveredNodeId).has(query.id)}
                   showPin
                   showGear={!isLive}
                   onClick={() => handleQueryClick(query.id)}
@@ -1199,6 +1422,8 @@ export function DrasiReactiveGraph() {
                   onPin={() => togglePin(query.id)}
                   onExpand={() => setExpandedNode({ id: query.id, name: query.name, kind: query.language, type: 'query', extra: { sources: query.sourceIds.join(', ') || '(none)' } })}
                   onConfigure={!isLive ? () => setConfiguringQuery(query) : undefined}
+                  onHoverEnter={() => setHoveredNodeId(query.id)}
+                  onHoverLeave={() => setHoveredNodeId(null)}
                 >
                   {hasResults && <ResultsTable results={liveResults} isDemo={!isLive} />}
                 </NodeCard>
@@ -1217,8 +1442,11 @@ export function DrasiReactiveGraph() {
                 status={reaction.status}
                 accentColor="emerald"
                 isStopped={stoppedNodeIds.has(reaction.id)}
+                isDimmed={hoveredNodeId !== null && hoveredNodeId !== reaction.id && !connectedNodeIds(hoveredNodeId).has(reaction.id)}
                 onStop={() => toggleStopped(reaction.id)}
                 onExpand={() => setExpandedNode({ id: reaction.id, name: reaction.name, kind: reaction.kind, type: 'reaction', extra: { queries: reaction.queryIds.join(', ') || '(none)' } })}
+                onHoverEnter={() => setHoveredNodeId(reaction.id)}
+                onHoverLeave={() => setHoveredNodeId(null)}
               />
             </div>
           ))}
