@@ -161,14 +161,22 @@ describe('useExecSession — expanded edge cases', () => {
     expect(result.current.reconnectAttempt).toBe(0)
   })
 
-  // 7. WebSocket URL uses wss: for https: protocol
-  it('builds wss: URL when page uses https', () => {
+  // 7. WebSocket URL routes through the local kc-agent regardless of page protocol.
+  //
+  // Pre-#8168 (phase3d) this hook built the URL from `window.location`
+  // (e.g. `wss://<page-host>/ws/exec`). After the exec migration to kc-agent
+  // (#7993 / #8168), the SPDY exec stream runs under the user's own kubeconfig
+  // via a local WebSocket to `LOCAL_AGENT_WS_URL` — always ws://127.0.0.1:8585
+  // in the non-Netlify build. The page protocol no longer affects the URL,
+  // so this test asserts the new, stable target (see useExecSession.ts:235).
+  it('builds kc-agent /ws/exec URL regardless of page protocol', () => {
     // Save original
-    const originalProtocol = window.location.protocol
-    // Mock protocol
+    const originalLocation = window.location
+    // Mock protocol — the URL builder must ignore this post-#8168.
     Object.defineProperty(window, 'location', {
       value: { protocol: 'https:', host: 'example.com' },
       writable: true,
+      configurable: true,
     })
 
     const constructorSpy = vi.fn().mockReturnValue(mockWs)
@@ -178,12 +186,13 @@ describe('useExecSession — expanded edge cases', () => {
 
     const { result } = renderHook(() => useExecSession())
     act(() => { result.current.connect(DEFAULT_CONFIG) })
-    expect(constructorSpy).toHaveBeenCalledWith('wss://example.com/ws/exec')
+    expect(constructorSpy).toHaveBeenCalledWith('ws://127.0.0.1:8585/ws/exec')
 
     // Restore
     Object.defineProperty(window, 'location', {
-      value: { protocol: originalProtocol, host: window.location.host },
+      value: originalLocation,
       writable: true,
+      configurable: true,
     })
   })
 
