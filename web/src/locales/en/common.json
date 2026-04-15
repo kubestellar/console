@@ -1521,7 +1521,12 @@
     "deleteConfirm": "Delete \"{{name}}\"? This cannot be undone.",
     "installDrasiTitle": "No live Drasi install detected",
     "installDrasiDescription": "Showing demo data. Install Drasi to visualize your reactive pipelines live.",
-    "installDrasiButton": "Install Drasi"
+    "installDrasiButton": "Install Drasi",
+    "rowDetailTitle": "Row Detail",
+    "enableLiveResults": "Enable live results",
+    "enableLiveResultsHint": "Create a Result reaction to stream query deltas",
+    "demoResultsLabel": "Demo Results",
+    "liveResultsLabel": "Live Results"
   },
   "missionChat": {
     "saveTranscript": "Save transcript",

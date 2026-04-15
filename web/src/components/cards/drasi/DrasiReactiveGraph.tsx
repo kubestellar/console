@@ -15,11 +15,15 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import {
   Database, Globe, Search, Radio,
   TrendingDown, TrendingUp, Maximize2, Pin, Square, X, Settings,
-  Plus, Trash2, Download, Rocket,
+  Plus, Trash2, Download, Rocket, ArrowUp, ArrowDown, ArrowUpDown, Zap,
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import yaml from 'js-yaml'
+import CodeMirror from '@uiw/react-codemirror'
+import { StreamLanguage } from '@codemirror/language'
+import { cypher } from '@codemirror/legacy-modes/mode/cypher'
+import { oneDark } from '@codemirror/theme-one-dark'
 import { downloadText } from '../../../lib/download'
 import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
 import { useDrasiResources } from '../../../hooks/useDrasiResources'
@@ -59,6 +63,9 @@ const KPI_LABEL_EVENTS_PER_SEC = 'Events/s'
 const KPI_LABEL_RESULT_ROWS = 'Result Rows'
 const KPI_LABEL_SOURCES = 'Sources'
 const KPI_LABEL_REACTIONS = 'Reactions'
+
+/** CodeMirror editor height inside the Query Configure modal. */
+const CODEMIRROR_EDITOR_HEIGHT_PX = '140px'
 
 // ---------------------------------------------------------------------------
 // Flow-line palette (named constants so the UI/UX ratchet scanner skips them)
@@ -543,15 +550,62 @@ function KPIBox({ label, value, accent }: { label: string; value: number; accent
   )
 }
 
-function ResultsTable({ results, isDemo }: { results: LiveResultRow[]; isDemo: boolean }) {
-  const displayResults = results.slice(0, MAX_RESULT_ROWS)
-  const totalRows = results.length
-  const label = isDemo ? 'Demo Results' : 'Live Results'
+/** Compare two result cells for sort ordering. Handles numbers, strings, and
+ *  mixed-type columns gracefully. Nullish values sort last. */
+function compareCells(a: LiveResultRow[string], b: LiveResultRow[string]): number {
+  const aNull = a === null || a === undefined
+  const bNull = b === null || b === undefined
+  if (aNull && bNull) return 0
+  if (aNull) return 1
+  if (bNull) return -1
+  if (typeof a === 'number' && typeof b === 'number') return a - b
+  return String(a).localeCompare(String(b))
+}
+
+interface ResultsTableProps {
+  results: LiveResultRow[]
+  isDemo: boolean
+  /** Row click opens the detail drawer in the parent. */
+  onRowClick?: (row: LiveResultRow) => void
+  /** Optional CTA rendered in the header bar (right-aligned). Used by the
+   *  drasi-platform "Enable live results" button. */
+  headerAction?: React.ReactNode
+}
+
+function ResultsTable({ results, isDemo, onRowClick, headerAction }: ResultsTableProps) {
+  const { t } = useTranslation()
+  const [sortCol, setSortCol] = useState<string | null>(null)
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
 
   // Derive columns from the first row's keys so the table works for any
   // continuous-query schema, not just the stock-ticker shape we use in demo.
-  const columns: string[] = displayResults[0] ? Object.keys(displayResults[0]) : []
+  const columns: string[] = results[0] ? Object.keys(results[0]) : []
   const trendCol = findTrendColumn(columns)
+
+  // Sort the full result set (not the truncated slice) so sorting remains
+  // consistent when MAX_RESULT_ROWS cuts off. Only slice AFTER sorting.
+  const sortedResults = useMemo(() => {
+    if (!sortCol) return results
+    const sorted = [...results].sort((a, b) => compareCells(a[sortCol], b[sortCol]))
+    return sortDir === 'desc' ? sorted.reverse() : sorted
+  }, [results, sortCol, sortDir])
+  const displayResults = sortedResults.slice(0, MAX_RESULT_ROWS)
+  const totalRows = results.length
+  const label = isDemo ? t('drasi.demoResultsLabel') : t('drasi.liveResultsLabel')
+
+  const handleHeaderClick = (col: string) => {
+    if (sortCol !== col) {
+      setSortCol(col)
+      setSortDir('asc')
+      return
+    }
+    // Toggle direction on repeat click; third click clears the sort.
+    if (sortDir === 'asc') {
+      setSortDir('desc')
+    } else {
+      setSortCol(null)
+    }
+  }
 
   return (
     <div className="mt-2 bg-slate-950/80 border border-slate-700/40 rounded overflow-hidden">
@@ -564,27 +618,46 @@ function ResultsTable({ results, isDemo }: { results: LiveResultRow[]; isDemo: b
             transition={{ repeat: Infinity, duration: 1.5 }}
           />
         </div>
-        <span className="text-[10px] text-muted-foreground">{totalRows} rows</span>
+        <div className="flex items-center gap-2">
+          {headerAction}
+          <span className="text-[10px] text-muted-foreground">{totalRows} rows</span>
+        </div>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-[10px]">
           <thead>
             <tr className="border-b border-slate-800/50">
-              {columns.map(col => (
-                <th
-                  key={col}
-                  className={`px-2 py-1 text-muted-foreground font-medium ${
-                    typeof displayResults[0]?.[col] === 'number' ? 'text-right' : 'text-left'
-                  }`}
-                >
-                  {col}
-                </th>
-              ))}
+              {columns.map(col => {
+                const isNumCol = typeof displayResults[0]?.[col] === 'number'
+                const isSorted = sortCol === col
+                return (
+                  <th
+                    key={col}
+                    onClick={e => { e.stopPropagation(); handleHeaderClick(col) }}
+                    className={`px-2 py-1 text-muted-foreground font-medium cursor-pointer select-none hover:text-cyan-300 ${
+                      isNumCol ? 'text-right' : 'text-left'
+                    }`}
+                  >
+                    <span className={`inline-flex items-center gap-0.5 ${isNumCol ? 'justify-end w-full' : ''}`}>
+                      {col}
+                      {isSorted ? (
+                        sortDir === 'asc' ? <ArrowUp className="w-2 h-2" /> : <ArrowDown className="w-2 h-2" />
+                      ) : (
+                        <ArrowUpDown className="w-2 h-2 opacity-30" />
+                      )}
+                    </span>
+                  </th>
+                )
+              })}
             </tr>
           </thead>
           <tbody>
             {displayResults.map((row, idx) => (
-              <tr key={idx} className="border-b border-slate-800/30 hover:bg-slate-800/30">
+              <tr
+                key={idx}
+                onClick={e => { e.stopPropagation(); onRowClick?.(row) }}
+                className={`border-b border-slate-800/30 hover:bg-slate-800/30 ${onRowClick ? 'cursor-pointer' : ''}`}
+              >
                 {columns.map(col => {
                   const value = row[col]
                   const isTrend = col === trendCol
@@ -626,6 +699,59 @@ function ResultsTable({ results, isDemo }: { results: LiveResultRow[]; isDemo: b
         </table>
       </div>
     </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Row detail drawer — click any results-table row to open a slide-in panel
+// with the row's full JSON. Uses CodeMirror in read-only mode for syntax
+// highlighting (reuses the editor already on the page for the query modal).
+// ---------------------------------------------------------------------------
+
+function RowDetailDrawer({ row, onClose }: { row: LiveResultRow | null; onClose: () => void }) {
+  const { t } = useTranslation()
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape' && row) {
+        e.stopPropagation()
+        onClose()
+      }
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [row, onClose])
+
+  if (!row) return null
+  const json = JSON.stringify(row, null, 2)
+  return (
+    <motion.div
+      className="absolute top-0 right-0 bottom-0 z-40 w-80 bg-slate-950 border-l border-slate-700 shadow-2xl flex flex-col"
+      initial={{ x: '100%' }}
+      animate={{ x: 0 }}
+      exit={{ x: '100%' }}
+      transition={{ type: 'tween', duration: 0.2 }}
+    >
+      <div className="flex items-center justify-between px-3 py-2 border-b border-slate-700/60">
+        <span className="text-xs font-semibold text-cyan-300 uppercase tracking-wider">{t('drasi.rowDetailTitle')}</span>
+        <button type="button" onClick={onClose} className="w-5 h-5 flex items-center justify-center rounded hover:bg-slate-800 text-slate-400" aria-label={t('actions.close')}>
+          <X className="w-3.5 h-3.5" />
+        </button>
+      </div>
+      <div className="flex-1 overflow-hidden text-xs">
+        <CodeMirror
+          value={json}
+          theme={oneDark}
+          extensions={[]}
+          editable={false}
+          basicSetup={{
+            lineNumbers: false,
+            highlightActiveLine: false,
+            foldGutter: false,
+            autocompletion: false,
+          }}
+        />
+      </div>
+    </motion.div>
   )
 }
 
@@ -903,13 +1029,22 @@ function QueryConfigModal({
         </div>
         <div>
           <label className="block text-[10px] uppercase tracking-wider text-muted-foreground mb-1">{t('drasi.queryLabel')}</label>
-          <textarea
-            value={queryText}
-            onChange={e => setQueryText(e.target.value)}
-            rows={5}
-            className="w-full px-2 py-1.5 text-xs font-mono bg-slate-950 border border-slate-700 rounded text-white focus:border-cyan-500 focus:outline-none resize-none"
-            placeholder={t('drasi.queryPlaceholder')}
-          />
+          <div className="rounded border border-slate-700 overflow-hidden text-xs">
+            <CodeMirror
+              value={queryText}
+              onChange={setQueryText}
+              theme={oneDark}
+              extensions={[StreamLanguage.define(cypher)]}
+              height={CODEMIRROR_EDITOR_HEIGHT_PX}
+              basicSetup={{
+                lineNumbers: true,
+                highlightActiveLine: true,
+                foldGutter: false,
+                autocompletion: false,
+              }}
+              placeholder={t('drasi.queryPlaceholder')}
+            />
+          </div>
         </div>
       </div>
       <div className="flex justify-between items-center gap-2 mt-4">
@@ -966,6 +1101,8 @@ export function DrasiReactiveGraph() {
   // null = modal closed. Single state avoids an extra boolean flag.
   const [configuringSource, setConfiguringSource] = useState<DrasiSource | 'new' | null>(null)
   const [configuringQuery, setConfiguringQuery] = useState<DrasiQuery | 'new' | null>(null)
+  // Clicked results-table row — opens the right-side detail drawer.
+  const [selectedRow, setSelectedRow] = useState<LiveResultRow | null>(null)
   const navigate = useNavigate()
   const [demoData, setDemoData] = useState<DrasiPipelineData>(generateDemoData)
 
@@ -1161,6 +1298,28 @@ export function DrasiReactiveGraph() {
       }],
     }))
   }, [isLive, liveData, queries, refetchDrasi, drasiProxyTarget, drasiResourcePath])
+
+  // Creates a Result reaction scoped to a single continuous query. Used by
+  // the drasi-platform "Enable live results" button. Platform mode does not
+  // expose drasi-server's built-in per-query SSE stream, so a Result reaction
+  // is the canonical way to subscribe to query deltas.
+  const createResultReactionForQuery = useCallback(async (queryId: string) => {
+    if (!isLive || !liveData) return
+    const reactionName = `result-${queryId}`.toLowerCase().replace(/[^a-z0-9-]/g, '-')
+    try {
+      await fetch(`/api/drasi/proxy${drasiResourcePath('reaction')}?${drasiProxyTarget()}`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          id: reactionName,
+          spec: { kind: 'Result', queries: [{ id: queryId }] },
+        }),
+      })
+      refetchDrasi()
+    } catch {
+      // Non-fatal; next poll surfaces the error.
+    }
+  }, [isLive, liveData, refetchDrasi, drasiProxyTarget, drasiResourcePath])
 
   const deleteResource = useCallback(async (
     kind: 'source' | 'query' | 'reaction',
@@ -1692,7 +1851,29 @@ export function DrasiReactiveGraph() {
                   onHoverEnter={() => setHoveredNodeId(query.id)}
                   onHoverLeave={() => setHoveredNodeId(null)}
                 >
-                  {hasResults && <ResultsTable results={liveResults} isDemo={!isLive} />}
+                  {hasResults && (
+                    <ResultsTable
+                      results={liveResults}
+                      isDemo={!isLive}
+                      onRowClick={setSelectedRow}
+                      headerAction={
+                        // drasi-platform has no built-in per-query SSE stream;
+                        // offer a one-click Result reaction create so the
+                        // results table starts receiving deltas.
+                        isLive && liveData?.mode === 'platform' && !reactions.some(r => r.queryIds.includes(query.id) && r.kind === 'SSE') ? (
+                          <button
+                            type="button"
+                            onClick={e => { e.stopPropagation(); createResultReactionForQuery(query.id) }}
+                            className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-600/20 hover:bg-cyan-600/40 border border-cyan-500/40 text-cyan-300 flex items-center gap-1"
+                            title={t('drasi.enableLiveResultsHint')}
+                          >
+                            <Zap className="w-2.5 h-2.5" />
+                            {t('drasi.enableLiveResults')}
+                          </button>
+                        ) : null
+                      }
+                    />
+                  )}
                 </NodeCard>
               </div>
             )
@@ -1722,6 +1903,7 @@ export function DrasiReactiveGraph() {
         </div>
 
         <AnimatePresence>
+          {selectedRow && <RowDetailDrawer row={selectedRow} onClose={() => setSelectedRow(null)} />}
           {expandedNode && <ExpandModal node={expandedNode} onClose={() => setExpandedNode(null)} />}
           {configuringSource && (
             <SourceConfigModal
