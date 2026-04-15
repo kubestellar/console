@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"log/slog"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -11,9 +10,6 @@ import (
 
 // mcsDefaultTimeout is the per-cluster timeout for MCS API queries.
 const mcsDefaultTimeout = 15 * time.Second
-
-// mcsWriteTimeout is the timeout for MCS write operations (create/delete).
-const mcsWriteTimeout = 15 * time.Second
 
 // MCSHandlers handles Multi-Cluster Service API endpoints
 type MCSHandlers struct {
@@ -191,77 +187,10 @@ func (h *MCSHandlers) GetServiceImport(c *fiber.Ctx) error {
 	return c.Status(404).JSON(fiber.Map{"error": "ServiceImport not found"})
 }
 
-// CreateServiceExportRequest represents the request body for creating a ServiceExport
-type CreateServiceExportRequest struct {
-	Cluster     string `json:"cluster"`
-	Namespace   string `json:"namespace"`
-	ServiceName string `json:"serviceName"`
-}
-
-// CreateServiceExport creates a new ServiceExport to export an existing service
-// POST /api/mcs/exports
-func (h *MCSHandlers) CreateServiceExport(c *fiber.Ctx) error {
-	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "Kubernetes client not available"})
-	}
-
-	var req CreateServiceExportRequest
-	if err := c.BodyParser(&req); err != nil {
-		slog.Warn("[MCS] invalid request body", "error", err)
-		return c.Status(400).JSON(fiber.Map{"error": "invalid request"})
-	}
-
-	// Validate required fields
-	if req.Cluster == "" {
-		return c.Status(400).JSON(fiber.Map{"error": "cluster is required"})
-	}
-	if req.Namespace == "" {
-		return c.Status(400).JSON(fiber.Map{"error": "namespace is required"})
-	}
-	if req.ServiceName == "" {
-		return c.Status(400).JSON(fiber.Map{"error": "serviceName is required"})
-	}
-
-	ctx, cancel := context.WithTimeout(c.Context(), mcsWriteTimeout)
-	defer cancel()
-
-	// Create the ServiceExport
-	if err := h.k8sClient.CreateServiceExport(ctx, req.Cluster, req.Namespace, req.ServiceName); err != nil {
-		slog.Error("[MCS] failed to create serviceexport", "error", err)
-		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
-	}
-
-	return c.Status(201).JSON(fiber.Map{
-		"message":     "ServiceExport created successfully",
-		"cluster":     req.Cluster,
-		"namespace":   req.Namespace,
-		"serviceName": req.ServiceName,
-	})
-}
-
-// DeleteServiceExport deletes a ServiceExport
-// DELETE /api/mcs/exports/:cluster/:namespace/:name
-func (h *MCSHandlers) DeleteServiceExport(c *fiber.Ctx) error {
-	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "Kubernetes client not available"})
-	}
-
-	cluster := c.Params("cluster")
-	namespace := c.Params("namespace")
-	name := c.Params("name")
-
-	ctx, cancel := context.WithTimeout(c.Context(), mcsWriteTimeout)
-	defer cancel()
-
-	if err := h.k8sClient.DeleteServiceExport(ctx, cluster, namespace, name); err != nil {
-		slog.Error("[MCS] failed to delete serviceexport", "error", err)
-		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
-	}
-
-	return c.JSON(fiber.Map{
-		"message":   "ServiceExport deleted successfully",
-		"cluster":   cluster,
-		"namespace": namespace,
-		"name":      name,
-	})
-}
+// CreateServiceExport and DeleteServiceExport were removed in #7993 Phase 1.5
+// PR B. These handlers ran via the backend pod ServiceAccount, violating the
+// architectural rule that user-initiated k8s mutations must run under the
+// caller's own kubeconfig. They had no frontend consumer (grep confirmed),
+// so removing them is a clean delete. The equivalent kc-agent route is
+// POST/DELETE /serviceexports (see pkg/agent/server_http.go
+// handleServiceExportsHTTP) for any future MCS export management UI.

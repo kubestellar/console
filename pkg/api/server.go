@@ -1031,8 +1031,9 @@ func (s *Server) setupRoutes() {
 	api.Get("/mcs/status", mcsHandlers.GetMCSStatus)
 	api.Get("/mcs/exports", mcsHandlers.ListServiceExports)
 	api.Get("/mcs/exports/:cluster/:namespace/:name", mcsHandlers.GetServiceExport)
-	api.Post("/mcs/exports", mcsHandlers.CreateServiceExport)
-	api.Delete("/mcs/exports/:cluster/:namespace/:name", mcsHandlers.DeleteServiceExport)
+	// Create/Delete ServiceExport routes removed in #7993 Phase 1.5 PR B.
+	// User-initiated mutations now run via kc-agent /serviceexports under
+	// the user's kubeconfig. The backend handlers had no frontend consumer.
 	api.Get("/mcs/imports", mcsHandlers.ListServiceImports)
 	api.Get("/mcs/imports/:cluster/:namespace/:name", mcsHandlers.GetServiceImport)
 

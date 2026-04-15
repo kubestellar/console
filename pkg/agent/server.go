@@ -404,6 +404,12 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/workloads/deploy", s.handleDeployWorkloadHTTP)
 	mux.HandleFunc("/workloads/delete", s.handleDeleteWorkloadHTTP)
 
+	// MCS ServiceExport create/delete moved to kc-agent (#7993 Phase 1.5 PR B).
+	// The backend had Create/DeleteServiceExport handlers with no frontend
+	// consumer; they've been removed. This route keeps the capability
+	// available for future MCS-export UI work.
+	mux.HandleFunc("/serviceexports", s.handleServiceExportsHTTP)
+
 	// Rename context endpoint
 	mux.HandleFunc("/rename-context", s.handleRenameContextHTTP)
 

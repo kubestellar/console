@@ -768,6 +768,110 @@ func (s *Server) deleteServiceAccountHTTP(w http.ResponseWriter, r *http.Request
 	writeJSON(w, map[string]interface{}{"success": true, "cluster": cluster, "namespace": namespace, "name": name, "source": "agent"})
 }
 
+// handleServiceExportsHTTP serves MCS ServiceExport operations for a
+// cluster/namespace. POST creates a new ServiceExport exporting an existing
+// service across the ClusterSet; DELETE removes one. Both are user-initiated
+// mutations that must run under the user's kubeconfig via kc-agent rather
+// than the backend's pod ServiceAccount (#7993 Phase 1.5 PR B).
+//
+// The backend CreateServiceExport / DeleteServiceExport handlers had no
+// frontend consumer and have been removed — any future UI that adds MCS
+// export management should call this route.
+func (s *Server) handleServiceExportsHTTP(w http.ResponseWriter, r *http.Request) {
+	s.setCORSHeaders(w, r)
+	w.Header().Set("Content-Type", "application/json")
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	if s.k8sClient == nil {
+		writeJSONError(w, http.StatusServiceUnavailable, "k8s client not initialized")
+		return
+	}
+	switch r.Method {
+	case http.MethodPost:
+		s.createServiceExportHTTP(w, r)
+	case http.MethodDelete:
+		s.deleteServiceExportHTTP(w, r)
+	default:
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// createServiceExportHTTP handles POST /serviceexports. Body shape matches
+// the legacy backend CreateServiceExportRequest so the migration is a pure
+// URL swap when a frontend consumer is added.
+func (s *Server) createServiceExportHTTP(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Cluster     string `json:"cluster"`
+		Namespace   string `json:"namespace"`
+		ServiceName string `json:"serviceName"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": "invalid request body"})
+		return
+	}
+	if req.Cluster == "" || req.Namespace == "" || req.ServiceName == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": "cluster, namespace, and serviceName are required"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), agentExtendedTimeout)
+	defer cancel()
+
+	if err := s.k8sClient.CreateServiceExport(ctx, req.Cluster, req.Namespace, req.ServiceName); err != nil {
+		slog.Warn("error creating service export", "cluster", req.Cluster, "namespace", req.Namespace, "serviceName", req.ServiceName, "error", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error(), "source": "agent"})
+		return
+	}
+	w.WriteHeader(http.StatusCreated)
+	writeJSON(w, map[string]interface{}{
+		"success":     true,
+		"message":     "ServiceExport created successfully",
+		"cluster":     req.Cluster,
+		"namespace":   req.Namespace,
+		"serviceName": req.ServiceName,
+		"source":      "agent",
+	})
+}
+
+// deleteServiceExportHTTP handles DELETE /serviceexports?cluster=...&namespace=...&name=...
+// Uses query parameters so the route can share the path with POST.
+func (s *Server) deleteServiceExportHTTP(w http.ResponseWriter, r *http.Request) {
+	cluster := r.URL.Query().Get("cluster")
+	namespace := r.URL.Query().Get("namespace")
+	name := r.URL.Query().Get("name")
+	if cluster == "" || namespace == "" || name == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": "cluster, namespace, and name query parameters are required"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), agentExtendedTimeout)
+	defer cancel()
+
+	if err := s.k8sClient.DeleteServiceExport(ctx, cluster, namespace, name); err != nil {
+		slog.Warn("error deleting service export", "cluster", cluster, "namespace", namespace, "name", name, "error", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error(), "source": "agent"})
+		return
+	}
+	writeJSON(w, map[string]interface{}{
+		"success":   true,
+		"cluster":   cluster,
+		"namespace": namespace,
+		"name":      name,
+		"source":    "agent",
+	})
+}
+
 // handleJobsHTTP returns jobs for a cluster/namespace
 func (s *Server) handleJobsHTTP(w http.ResponseWriter, r *http.Request) {
 	s.setCORSHeaders(w, r)
