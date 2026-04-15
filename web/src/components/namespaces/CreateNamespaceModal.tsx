@@ -2,8 +2,18 @@ import { useState } from 'react'
 import { Folder, UserPlus, Shield, X, Loader2 } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { BaseModal, ConfirmDialog } from '../../lib/modals'
-import { api } from '../../lib/api'
 import { useTranslation } from 'react-i18next'
+import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN } from '../../lib/constants'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants/network'
+
+// #7993 Phase 2: namespace create is a user-initiated write that must run
+// under the user's kubeconfig via kc-agent, not the backend pod ServiceAccount.
+function agentAuthHeaders(): Record<string, string> {
+  const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (token) headers['Authorization'] = `Bearer ${token}`
+  return headers
+}
 
 const AVAILABLE_USERS = [
   'admin@example.com',
@@ -78,12 +88,24 @@ export function CreateNamespaceModal({ clusters, onClose, onCreated }: CreateNam
         labels['team'] = teamLabel
       }
 
-      await api.post('/api/namespaces', {
-        cluster,
-        name,
-        labels: Object.keys(labels).length > 0 ? labels : undefined,
-        initialAccess: initialAccess.length > 0 ? initialAccess : undefined,
+      // #7993 Phase 2: POST to kc-agent so the operation runs under the
+      // user's kubeconfig. kc-agent does not accept the `initialAccess` field;
+      // the legacy backend silently ignored it too, so no behavior is lost.
+      // Grants still flow through GrantAccessModal's POST /rolebindings call.
+      const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/namespaces`, {
+        method: 'POST',
+        headers: agentAuthHeaders(),
+        body: JSON.stringify({
+          cluster,
+          name,
+          labels: Object.keys(labels).length > 0 ? labels : undefined,
+        }),
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        throw new Error(errorData.error || `Failed to create namespace (HTTP ${res.status})`)
+      }
       onCreated(cluster)
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to create namespace'

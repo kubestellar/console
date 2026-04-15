@@ -312,7 +312,22 @@ export function NamespaceManager() {
     if (!namespaceToDelete) return
 
     try {
-      await api.delete(`/api/namespaces/${encodeURIComponent(namespaceToDelete.name)}?cluster=${encodeURIComponent(namespaceToDelete.cluster)}`)
+      // #7993 Phase 2: namespace delete goes through kc-agent under the
+      // user's kubeconfig. kc-agent takes `name` as a query parameter since
+      // it uses the net/http mux (no URL path parameters).
+      const params = new URLSearchParams({
+        cluster: namespaceToDelete.cluster,
+        name: namespaceToDelete.name,
+      })
+      const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/namespaces?${params}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', ...agentAuthHeaders() },
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+      })
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'unknown error' }))
+        throw new Error(errorData.error || 'Failed to delete namespace')
+      }
       // Clear cache for this cluster and refresh
       namespaceCache.delete(namespaceToDelete.cluster)
       fetchNamespaces(true)

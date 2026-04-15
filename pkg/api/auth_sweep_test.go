@@ -61,9 +61,10 @@ func TestProtectedRoutes_UnauthenticatedReturn401(t *testing.T) {
 		{"GET", "/api/rbac/bindings"},
 		{"GET", "/api/rbac/permissions"},
 		{"POST", "/api/rbac/can-i"},
-		// Namespace lifecycle
+		// Namespace lifecycle.
+		// NOTE: POST /api/namespaces and DELETE /api/namespaces/:name moved to
+		// kc-agent (#7993 Phase 2). Only the read endpoint remains here.
 		{"GET", "/api/namespaces"},
-		{"POST", "/api/namespaces"},
 		// Workloads
 		{"GET", "/api/workloads"},
 		{"GET", "/api/workloads/capabilities"},

@@ -893,14 +893,13 @@ func (s *Server) setupRoutes() {
 	api.Get("/permissions/summary", rbac.GetPermissionsSummary)
 	api.Post("/rbac/can-i", rbac.CheckCanI)
 
-	// Namespace management routes (admin only)
+	// Namespace management routes (admin only).
+	// POST/DELETE /namespaces and POST/DELETE /namespaces/:name/access were
+	// migrated to kc-agent in #7993 Phases 1.5 and 2 — they now run under the
+	// user's kubeconfig instead of the backend pod ServiceAccount.
 	namespaces := handlers.NewNamespaceHandler(s.store, s.k8sClient)
 	api.Get("/namespaces", namespaces.ListNamespaces)
-	api.Post("/namespaces", namespaces.CreateNamespace)
-	api.Delete("/namespaces/:name", namespaces.DeleteNamespace)
 	api.Get("/namespaces/:name/access", namespaces.GetNamespaceAccess)
-	api.Post("/namespaces/:name/access", namespaces.GrantNamespaceAccess)
-	api.Delete("/namespaces/:name/access/:binding", namespaces.RevokeNamespaceAccess)
 
 	// Mission knowledge base routes (validate, share — protected)
 	missions.RegisterRoutes(api.Group("/missions"))

@@ -267,7 +267,15 @@ func (s *Server) handleEventsHTTP(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w,map[string]interface{}{"events": events, "source": "agent"})
 }
 
-// handleNamespacesHTTP returns namespaces for a cluster
+// handleNamespacesHTTP serves namespace operations for a cluster. GET lists
+// namespaces (existing behavior). POST creates a namespace and DELETE removes
+// one — both are user-initiated mutations that run under the user's kubeconfig
+// via kc-agent instead of the backend's pod ServiceAccount (#7993 Phase 2).
+//
+// The GPU-reservation namespace-create path is NOT served here — it stays on
+// the backend at `/mcp/resourcequotas` with `ensure_namespace: true` (see
+// pkg/api/handlers/mcp_resources.go#CreateOrUpdateResourceQuota) because the
+// reservation operator owns quota semantics and needs pod-SA access.
 func (s *Server) handleNamespacesHTTP(w http.ResponseWriter, r *http.Request) {
 	s.setCORSHeaders(w, r)
 	w.Header().Set("Content-Type", "application/json")
@@ -284,13 +292,23 @@ func (s *Server) handleNamespacesHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if s.k8sClient == nil {
-		writeJSON(w,map[string]interface{}{"namespaces": []interface{}{}, "error": "k8s client not initialized"})
+		writeJSON(w, map[string]interface{}{"namespaces": []interface{}{}, "error": "k8s client not initialized"})
 		return
 	}
 
+	switch r.Method {
+	case http.MethodPost:
+		s.createNamespaceHTTP(w, r)
+		return
+	case http.MethodDelete:
+		s.deleteNamespaceHTTP(w, r)
+		return
+	}
+
+	// Default: GET list.
 	cluster := r.URL.Query().Get("cluster")
 	if cluster == "" {
-		writeJSON(w,map[string]interface{}{"namespaces": []interface{}{}, "error": "cluster parameter required"})
+		writeJSON(w, map[string]interface{}{"namespaces": []interface{}{}, "error": "cluster parameter required"})
 		return
 	}
 
@@ -304,7 +322,70 @@ func (s *Server) handleNamespacesHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w,map[string]interface{}{"namespaces": namespaces, "source": "agent"})
+	writeJSON(w, map[string]interface{}{"namespaces": namespaces, "source": "agent"})
+}
+
+// createNamespaceHTTP handles POST /namespaces. Body shape matches the legacy
+// backend NamespaceHandler.CreateNamespace request so the frontend can migrate
+// with a pure URL swap.
+func (s *Server) createNamespaceHTTP(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Cluster string            `json:"cluster"`
+		Name    string            `json:"name"`
+		Labels  map[string]string `json:"labels,omitempty"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": "invalid request body"})
+		return
+	}
+	if req.Cluster == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": "cluster is required"})
+		return
+	}
+	if req.Name == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": "name is required"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), agentExtendedTimeout)
+	defer cancel()
+
+	ns, err := s.k8sClient.CreateNamespace(ctx, req.Cluster, req.Name, req.Labels)
+	if err != nil {
+		slog.Warn("error creating namespace", "cluster", req.Cluster, "name", req.Name, "error", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error(), "source": "agent"})
+		return
+	}
+	writeJSON(w, map[string]interface{}{"success": true, "namespace": ns, "source": "agent"})
+}
+
+// deleteNamespaceHTTP handles DELETE /namespaces. Takes `cluster` and `name`
+// query parameters — kc-agent uses net/http mux so path params are not
+// available (matches the legacy `DELETE /api/namespaces/:name?cluster=<c>`
+// shape otherwise).
+func (s *Server) deleteNamespaceHTTP(w http.ResponseWriter, r *http.Request) {
+	cluster := r.URL.Query().Get("cluster")
+	name := r.URL.Query().Get("name")
+	if cluster == "" || name == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": "cluster and name query parameters are required"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), agentExtendedTimeout)
+	defer cancel()
+
+	if err := s.k8sClient.DeleteNamespace(ctx, cluster, name); err != nil {
+		slog.Warn("error deleting namespace", "cluster", cluster, "name", name, "error", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error(), "source": "agent"})
+		return
+	}
+	writeJSON(w, map[string]interface{}{"success": true, "cluster": cluster, "name": name, "source": "agent"})
 }
 
 // handleDeploymentsHTTP returns deployments for a cluster/namespace
