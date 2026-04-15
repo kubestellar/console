@@ -3392,5 +3392,86 @@
     "prs": "PRs",
     "refresh": "Refresh",
     "showingDemo": "showing demo data"
+  },
+  "onboarding": {
+    "stepProgress": "Step {{current}} of {{total}}",
+    "back": "Back",
+    "continue": "Continue",
+    "complete": "Complete Setup",
+    "creating": "Creating dashboard...",
+    "errorFallback": "Failed to complete onboarding. Please try again.",
+    "moveUp": "Move {{option}} up",
+    "moveDown": "Move {{option}} down",
+    "selectOption": "Select {{option}}",
+    "questions": {
+      "role": {
+        "question": "What's your primary role?",
+        "description": "This helps us customize your dashboard",
+        "options": {
+          "sre": "SRE",
+          "devops": "DevOps",
+          "platform_engineer": "Platform Engineer",
+          "developer": "Developer",
+          "dba": "DBA",
+          "network_engineer": "Network Engineer"
+        }
+      },
+      "focus_layer": {
+        "question": "Which layer do you focus on most?",
+        "description": "We'll prioritize relevant information",
+        "options": {
+          "infrastructure_nodes_storage": "Infrastructure (nodes, storage)",
+          "platform_k8s_operators": "Platform (K8s, operators)",
+          "application": "Application",
+          "database": "Database",
+          "network": "Network"
+        }
+      },
+      "cluster_count": {
+        "question": "How many clusters do you typically manage?",
+        "options": {
+          "1_3": "1-3",
+          "4_10": "4-10",
+          "10_50": "10-50",
+          "50": "50+"
+        }
+      },
+      "daily_challenges": {
+        "question": "Rank your daily challenges by priority",
+        "description": "Drag to reorder - most important at top",
+        "options": {
+          "troubleshooting_issues": "Troubleshooting issues",
+          "deployments": "Deployments",
+          "capacity_planning": "Capacity planning",
+          "security_compliance": "Security/compliance",
+          "upgrades": "Upgrades"
+        }
+      },
+      "gitops": {
+        "question": "Do you use GitOps?",
+        "options": {
+          "yes_heavily": "Yes, heavily",
+          "sometimes": "Sometimes",
+          "no": "No"
+        }
+      },
+      "monitoring_priorities": {
+        "question": "Rank what monitoring matters most",
+        "description": "Drag to reorder - most important at top",
+        "options": {
+          "availability": "Availability",
+          "performance": "Performance",
+          "cost": "Cost",
+          "security": "Security"
+        }
+      },
+      "gpu_workloads": {
+        "question": "Do you manage GPU workloads?",
+        "options": {
+          "yes": "Yes",
+          "no": "No"
+        }
+      }
+    }
   }
 }

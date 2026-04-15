@@ -44,7 +44,9 @@ const DEMO_NAMESPACE_COSTS: NamespaceCost[] = [
 function OpenCostOverviewInternal({ config: _config }: OpenCostOverviewProps) {
   const { t } = useTranslation('common')
   const { drillToCost } = useDrillDownActions()
-  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: false })
+  // No live OpenCost integration yet — the card always renders DEMO_NAMESPACE_COSTS,
+  // so flag it as demo data to get the yellow outline + Demo badge (#8012).
+  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: true })
 
   const {
     items: filteredCosts,
