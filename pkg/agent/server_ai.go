@@ -21,6 +21,16 @@ import (
 // to prevent resource exhaustion from bursty or malicious traffic (#7277).
 const maxWSGoroutines = 20
 
+// wsMaxMessageBytes caps the size of any single WebSocket frame the agent
+// will accept from a client. Without this, an authenticated client could
+// send arbitrarily large prompts that get forwarded to paid LLM APIs.
+const wsMaxMessageBytes = 1 << 20 // 1 MB
+
+// maxPromptChars caps the per-request prompt length forwarded to LLM
+// providers. Set well above interactive use but below the WebSocket frame
+// limit to keep cost and latency bounded.
+const maxPromptChars = 100_000
+
 func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	// Handle CORS preflight for Private Network Access (required by Chrome 104+)
 	if r.Method == http.MethodOptions {
@@ -48,6 +58,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer conn.Close()
+	conn.SetReadLimit(wsMaxMessageBytes)
 
 	wsc := &wsClient{}
 	s.clientsMux.Lock()
@@ -431,6 +442,12 @@ func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.M
 
 	if req.Prompt == "" {
 		safeWrite(context.Background(), s.errorResponse(msg.ID, "empty_prompt", "Prompt cannot be empty"))
+		return
+	}
+
+	if len(req.Prompt) > maxPromptChars {
+		safeWrite(context.Background(), s.errorResponse(msg.ID, "prompt_too_large",
+			fmt.Sprintf("Prompt exceeds maximum length of %d characters", maxPromptChars)))
 		return
 	}
 

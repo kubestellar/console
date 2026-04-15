@@ -285,11 +285,17 @@ func (s *Server) handleEventsHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Filter by object name if specified
+	// Filter by object name if specified. e.Object is formatted as
+	// "Kind/Name" (see pkg/k8s/client_resources.go); compare the Name
+	// segment exactly so a query like "my-app" does not match "my-app-v2".
 	if objectName != "" {
-		var filtered []k8s.Event
+		filtered := make([]k8s.Event, 0, len(events))
 		for _, e := range events {
-			if strings.Contains(e.Object, objectName) {
+			name := e.Object
+			if idx := strings.Index(name, "/"); idx >= 0 {
+				name = name[idx+1:]
+			}
+			if name == objectName {
 				filtered = append(filtered, e)
 			}
 		}

@@ -174,12 +174,12 @@ try {
  * @param forceCheck - If true, ignores cache and always checks (used by login)
  */
 export async function checkBackendAvailability(forceCheck = false): Promise<boolean> {
-  // If we already know the status and it was checked recently, return it
+  // If we already know the status and it was checked recently, return it.
+  // The TTL gate must always run so a previously-available backend is
+  // re-probed periodically instead of being cached forever.
   if (!forceCheck && backendAvailable !== null) {
     const now = Date.now()
-    // If backend was already determined available, return immediately
-    // If unavailable, allow re-check after interval
-    if (backendAvailable || now - backendLastCheckTime < BACKEND_CHECK_INTERVAL) {
+    if (now - backendLastCheckTime < BACKEND_CHECK_INTERVAL) {
       return backendAvailable
     }
   }

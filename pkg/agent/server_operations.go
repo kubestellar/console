@@ -694,7 +694,10 @@ func checkStatuspageHealth(client *http.Client, apiURL string) string {
 	if err != nil {
 		return "unknown"
 	}
-	defer resp.Body.Close()
+	defer func() {
+		io.Copy(io.Discard, resp.Body)
+		resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return "unknown"

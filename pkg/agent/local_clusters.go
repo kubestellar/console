@@ -481,27 +481,44 @@ func (m *LocalClusterManager) StartCluster(tool, name string) error {
 }
 
 func (m *LocalClusterManager) startKindCluster(name string) error {
-	// kind clusters run as Docker containers — start all containers with the cluster label
-	cmd := execCommand("docker", "start", name+"-control-plane")
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to start kind cluster containers: %s", stderr.String())
+	containers, err := listKindContainers(name)
+	if err != nil {
+		return fmt.Errorf("failed to list kind cluster containers: %w", err)
 	}
-	// Also start any worker nodes
-	for i := 1; i <= 10; i++ {
-		workerName := fmt.Sprintf("%s-worker%s", name, func() string {
-			if i == 1 {
-				return ""
-			}
-			return fmt.Sprintf("%d", i)
-		}())
-		cmd := execCommand("docker", "start", workerName)
+	if len(containers) == 0 {
+		return fmt.Errorf("no containers found for kind cluster %q", name)
+	}
+	for _, c := range containers {
+		cmd := execCommand("docker", "start", c)
+		var stderr bytes.Buffer
+		cmd.Stderr = &stderr
 		if err := cmd.Run(); err != nil {
-			break // No more workers
+			return fmt.Errorf("failed to start container %q: %s", c, stderr.String())
 		}
 	}
 	return nil
+}
+
+// listKindContainers returns all Docker container names that belong to the
+// given kind cluster, by querying the kind cluster label. This avoids the
+// previous fixed-loop limit of 10 worker nodes.
+func listKindContainers(name string) ([]string, error) {
+	labelFilter := fmt.Sprintf("label=io.x-k8s.kind.cluster=%s", name)
+	cmd := execCommand("docker", "ps", "-a", "--filter", labelFilter, "--format", "{{.Names}}")
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return nil, fmt.Errorf("docker ps failed: %s", stderr.String())
+	}
+	var names []string
+	for _, line := range strings.Split(strings.TrimSpace(stdout.String()), "\n") {
+		line = strings.TrimSpace(line)
+		if line != "" {
+			names = append(names, line)
+		}
+	}
+	return names, nil
 }
 
 func (m *LocalClusterManager) startK3dCluster(name string) error {
@@ -546,24 +563,19 @@ func (m *LocalClusterManager) StopCluster(tool, name string) error {
 }
 
 func (m *LocalClusterManager) stopKindCluster(name string) error {
-	// kind clusters run as Docker containers — stop all containers with the cluster label
-	cmd := execCommand("docker", "stop", name+"-control-plane")
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to stop kind cluster containers: %s", stderr.String())
+	containers, err := listKindContainers(name)
+	if err != nil {
+		return fmt.Errorf("failed to list kind cluster containers: %w", err)
 	}
-	// Also stop any worker nodes
-	for i := 1; i <= 10; i++ {
-		workerName := fmt.Sprintf("%s-worker%s", name, func() string {
-			if i == 1 {
-				return ""
-			}
-			return fmt.Sprintf("%d", i)
-		}())
-		cmd := execCommand("docker", "stop", workerName)
+	if len(containers) == 0 {
+		return fmt.Errorf("no containers found for kind cluster %q", name)
+	}
+	for _, c := range containers {
+		cmd := execCommand("docker", "stop", c)
+		var stderr bytes.Buffer
+		cmd.Stderr = &stderr
 		if err := cmd.Run(); err != nil {
-			break // No more workers
+			return fmt.Errorf("failed to stop container %q: %s", c, stderr.String())
 		}
 	}
 	return nil

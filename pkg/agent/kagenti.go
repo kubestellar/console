@@ -5,13 +5,33 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
+
+// isCRDNotInstalledErr reports whether err indicates that the requested
+// custom resource definition is not installed on the target cluster.
+// This is the only "not an error" condition the kagenti handlers should
+// suppress — every other failure (RBAC denied, timeout, etc.) must be
+// surfaced to the caller.
+func isCRDNotInstalledErr(err error) bool {
+	if err == nil {
+		return false
+	}
+	if _, ok := err.(*meta.NoKindMatchError); ok {
+		return true
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "the server could not find the requested resource") ||
+		strings.Contains(msg, "no matches for kind")
+}
 
 const (
 	kagentiTimeout = 30 * time.Second
@@ -163,8 +183,13 @@ func (s *Server) handleKagentiAgents(w http.ResponseWriter, r *http.Request) {
 		list, err = dynClient.Resource(kagentiAgentGVR).List(ctx, metav1.ListOptions{})
 	}
 	if err != nil {
-		// CRD not installed is expected — return empty list, not error
-		json.NewEncoder(w).Encode(map[string]any{"agents": []any{}})
+		if apierrors.IsNotFound(err) || isCRDNotInstalledErr(err) {
+			json.NewEncoder(w).Encode(map[string]any{"agents": []any{}})
+			return
+		}
+		slog.Warn("error listing kagenti agents", "cluster", cluster, "error", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]any{"agents": []any{}, "error": err.Error()})
 		return
 	}
 
@@ -252,7 +277,13 @@ func (s *Server) handleKagentiBuilds(w http.ResponseWriter, r *http.Request) {
 		list, err = dynClient.Resource(kagentiBuildGVR).List(ctx, metav1.ListOptions{})
 	}
 	if err != nil {
-		json.NewEncoder(w).Encode(map[string]any{"builds": []any{}})
+		if apierrors.IsNotFound(err) || isCRDNotInstalledErr(err) {
+			json.NewEncoder(w).Encode(map[string]any{"builds": []any{}})
+			return
+		}
+		slog.Warn("error listing kagenti builds", "cluster", cluster, "error", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]any{"builds": []any{}, "error": err.Error()})
 		return
 	}
 
@@ -331,7 +362,13 @@ func (s *Server) handleKagentiCards(w http.ResponseWriter, r *http.Request) {
 		list, err = dynClient.Resource(kagentiCardGVR).List(ctx, metav1.ListOptions{})
 	}
 	if err != nil {
-		json.NewEncoder(w).Encode(map[string]any{"cards": []any{}})
+		if apierrors.IsNotFound(err) || isCRDNotInstalledErr(err) {
+			json.NewEncoder(w).Encode(map[string]any{"cards": []any{}})
+			return
+		}
+		slog.Warn("error listing kagenti cards", "cluster", cluster, "error", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]any{"cards": []any{}, "error": err.Error()})
 		return
 	}
 
@@ -408,7 +445,13 @@ func (s *Server) handleKagentiTools(w http.ResponseWriter, r *http.Request) {
 		list, err = dynClient.Resource(kagentiToolGVR).List(ctx, metav1.ListOptions{})
 	}
 	if err != nil {
-		json.NewEncoder(w).Encode(map[string]any{"tools": []any{}})
+		if apierrors.IsNotFound(err) || isCRDNotInstalledErr(err) {
+			json.NewEncoder(w).Encode(map[string]any{"tools": []any{}})
+			return
+		}
+		slog.Warn("error listing kagenti tools", "cluster", cluster, "error", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]any{"tools": []any{}, "error": err.Error()})
 		return
 	}
 
