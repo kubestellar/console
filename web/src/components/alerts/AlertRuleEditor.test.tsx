@@ -90,8 +90,10 @@ describe('AlertRuleEditor Component', () => {
           />,
         )
         // The i18n mock returns the key verbatim, so the label's visible text
-        // is the key itself. getByLabelText should succeed via htmlFor -> id.
-        const field = screen.getByLabelText(new RegExp(`^${labelKey}`))
+        // is the key itself (optionally followed by a required marker like ' *').
+        // Use a plain substring match so i18n keys containing '.' aren't
+        // interpreted as regex wildcards.
+        const field = screen.getByLabelText(labelKey, { exact: false })
         expect(field).toHaveAttribute('id', expectedId)
       },
     )
