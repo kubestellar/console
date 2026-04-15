@@ -32,7 +32,10 @@ import type { MissionExport, MissionStep } from '../../lib/missions/types'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
 import { copyToClipboard } from '../../lib/clipboard'
 
-type TabId = 'install' | 'uninstall' | 'upgrade' | 'troubleshooting'
+type TabId = 'install' | 'uninstall' | 'upgrade' | 'troubleshooting' | 'security'
+
+/** GitHub URL for the overall Console security model doc. Linked from the Security tab fallback / footer. */
+const SECURITY_MODEL_DOC_URL = 'https://github.com/kubestellar/console/blob/main/docs/security/SECURITY-MODEL.md'
 
 interface TabDef {
   id: TabId
@@ -249,6 +252,13 @@ export function MissionDetailView({
       steps: mission.troubleshooting || [],
       emptyMessage: t('missions.detail.tabs.troubleshootingEmpty'),
       color: 'bg-yellow-500/20 text-yellow-400' },
+    {
+      id: 'security',
+      label: t('missions.detail.tabs.security'),
+      icon: Shield,
+      steps: mission.security || [],
+      emptyMessage: t('missions.detail.tabs.securityEmpty'),
+      color: 'bg-purple-500/20 text-purple-400' },
   ]
 
   const [activeTab, setActiveTab] = useState<TabId>('install')
@@ -581,14 +591,66 @@ export function MissionDetailView({
                 </div>
               ))
             ) : activeTabDef.steps.length > 0 ? (
-              activeTabDef.steps.map((step, i) => (
-                <StepCard
-                  key={`${activeTab}-${i}`}
-                  step={step}
-                  index={i}
-                  accentColor={activeTabDef.color}
-                />
-              ))
+              <>
+                {activeTabDef.steps.map((step, i) => (
+                  <StepCard
+                    key={`${activeTab}-${i}`}
+                    step={step}
+                    index={i}
+                    accentColor={activeTabDef.color}
+                  />
+                ))}
+                {activeTab === 'security' && (
+                  <div className="mt-4 p-4 rounded-lg border border-purple-500/20 bg-purple-500/5 text-xs text-muted-foreground">
+                    The bullets above are specific to this mission. For the Console's overall security model — how kc-agent binds,
+                    where AI keys live, what leaves your machine, and how to run air-gapped — read the
+                    {' '}
+                    <a
+                      href={SECURITY_MODEL_DOC_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-purple-400 hover:text-purple-300"
+                    >
+                      KubeStellar Console Security Model
+                      <ExternalLink className="w-3 h-3" />
+                    </a>.
+                  </div>
+                )}
+              </>
+            ) : activeTab === 'security' ? (
+              <div className="py-6 px-4 rounded-lg border border-purple-500/20 bg-purple-500/5 text-sm text-muted-foreground space-y-3">
+                <div className="flex items-start gap-3">
+                  <Shield className="w-5 h-5 text-purple-400 flex-shrink-0 mt-0.5" />
+                  <div className="space-y-2">
+                    <p className="font-medium text-foreground">No mission-specific security notes yet</p>
+                    <p>
+                      This mission does not yet include a <code className="font-mono text-foreground/70">security</code> section
+                      in its definition. The Console's overall security posture — kc-agent loopback bind, user-kubeconfig RBAC,
+                      AI-key storage, air-gapped and local-LLM options — applies regardless:
+                    </p>
+                    <p>
+                      <a
+                        href={SECURITY_MODEL_DOC_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-purple-400 hover:text-purple-300"
+                      >
+                        Read the KubeStellar Console Security Model
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </p>
+                    {onImprove && (
+                      <button
+                        onClick={onImprove}
+                        className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-purple-500/30 text-purple-400 hover:bg-purple-500/10 transition-colors"
+                      >
+                        <MessageSquarePlus className="w-3.5 h-3.5" />
+                        Suggest security notes for this mission
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
             ) : (
               <div className="py-8 text-center">
                 <AlertTriangle className="w-8 h-8 text-muted-foreground/40 mx-auto mb-3" />

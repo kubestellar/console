@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Rocket, Copy, Check, Terminal, ExternalLink, ChevronDown, ChevronRight, KeyRound, Server } from 'lucide-react'
+import { Rocket, Copy, Check, Terminal, ExternalLink, ChevronDown, ChevronRight, KeyRound, Server, Shield } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import { useTranslation } from 'react-i18next'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
@@ -15,6 +15,7 @@ interface SetupInstructionsDialogProps {
 
 const REPO_URL = 'https://github.com/kubestellar/console'
 const DOCS_URL = 'https://console-docs.kubestellar.io'
+const SECURITY_DOC_URL = 'https://github.com/kubestellar/console/blob/main/docs/security/SECURITY-MODEL.md'
 const CURL_BASE = 'https://raw.githubusercontent.com/kubestellar/console/main'
 
 const QUICKSTART_CMD = `curl -sSL ${CURL_BASE}/start.sh | bash`
@@ -39,6 +40,7 @@ export function SetupInstructionsDialog({ isOpen, onClose }: SetupInstructionsDi
   const [showOAuthGuide, setShowOAuthGuide] = useState(false)
   const [showDevGuide, setShowDevGuide] = useState(false)
   const [showK8sGuide, setShowK8sGuide] = useState(false)
+  const [showSecurity, setShowSecurity] = useState(false)
   const copiedTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   useEffect(() => {
@@ -200,6 +202,77 @@ export function SetupInstructionsDialog({ isOpen, onClose }: SetupInstructionsDi
                       <p className="text-xs text-muted-foreground">
                         Supports <code className="font-mono text-foreground/70">--context</code>, <code className="font-mono text-foreground/70">--openshift</code>, <code className="font-mono text-foreground/70">--ingress &lt;host&gt;</code>, and <code className="font-mono text-foreground/70">--github-oauth</code> flags.
                       </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Security guide */}
+                <div className="mt-2">
+                  <button
+                    onClick={() => setShowSecurity(!showSecurity)}
+                    className="flex items-center gap-1.5 text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                  >
+                    {showSecurity ? (
+                      <ChevronDown className="w-3.5 h-3.5" />
+                    ) : (
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    )}
+                    <Shield className="w-3.5 h-3.5" />
+                    Security posture — what runs where, what leaves your machine
+                  </button>
+                  {showSecurity && (
+                    <div className="mt-2 rounded-lg border border-blue-500/20 bg-blue-500/5 p-3 space-y-3 text-xs text-muted-foreground">
+                      <div>
+                        <p className="font-medium text-foreground mb-1">kc-agent runs on your machine, not ours</p>
+                        <p>
+                          kc-agent binds <code className="font-mono text-foreground/70">127.0.0.1:8585</code> only
+                          (hardcoded loopback, not configurable). It reads{' '}
+                          <code className="font-mono text-foreground/70">~/.kube/config</code> and executes every
+                          cluster operation as <em>you</em> — the apiserver enforces your real RBAC on every call.
+                          Set <code className="font-mono text-foreground/70">KC_AGENT_TOKEN</code> for an additional
+                          shared-secret gate against other local processes.
+                        </p>
+                      </div>
+                      <div>
+                        <p className="font-medium text-foreground mb-1">AI keys never leave your machine</p>
+                        <p>
+                          API keys are stored at{' '}
+                          <code className="font-mono text-foreground/70">~/.kc/config.yaml</code> with mode{' '}
+                          <code className="font-mono text-foreground/70">0600</code>. The browser never holds the
+                          keys; kc-agent calls the provider directly. No API key reaches the console's servers or
+                          the hosted demo at console.kubestellar.io.
+                        </p>
+                      </div>
+                      <div>
+                        <p className="font-medium text-foreground mb-1">What does leave your machine</p>
+                        <p>
+                          Your AI chat history and prompts are sent to whichever LLM provider you configured —
+                          cloud (Anthropic, OpenAI, Gemini) or self-hosted. Your kubeconfig, cluster tokens, and
+                          secrets are <em>not</em> auto-attached; only what you paste into the chat. Analytics
+                          (page views, feature-use events) can be opted out in Settings.
+                        </p>
+                      </div>
+                      <div>
+                        <p className="font-medium text-foreground mb-1">Air-gapped / high-security environments</p>
+                        <p>
+                          Point kc-agent at a local LLM (Ollama, vLLM, LM Studio, corporate gateway) by overriding{' '}
+                          <code className="font-mono text-foreground/70">GROQ_BASE_URL</code>,{' '}
+                          <code className="font-mono text-foreground/70">OPENROUTER_BASE_URL</code>, or{' '}
+                          <code className="font-mono text-foreground/70">OPEN_WEBUI_URL</code>. AI traffic then
+                          never leaves your perimeter. The core cluster-management UX works with no AI at all.
+                        </p>
+                      </div>
+                      <div className="pt-1">
+                        <a
+                          href={SECURITY_DOC_URL}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-purple-400 hover:text-purple-300"
+                        >
+                          Read the full security model
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </div>
                     </div>
                   )}
                 </div>

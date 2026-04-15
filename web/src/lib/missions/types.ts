@@ -70,6 +70,8 @@ export interface MissionExport {
   uninstall?: MissionStep[]
   upgrade?: MissionStep[]
   troubleshooting?: MissionStep[]
+  /** Security considerations for the install: cluster-scoped changes, privileged access, outbound calls, upstream policy links, hardening options. */
+  security?: MissionStep[]
   /** Orbit (recurring maintenance) configuration — present when missionClass is 'orbit' */
   orbitConfig?: OrbitConfig
   resolution?: {

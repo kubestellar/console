@@ -3406,7 +3406,9 @@
         "upgrade": "Update / Upgrade",
         "upgradeEmpty": "Upgrade steps not yet available for this mission.",
         "troubleshooting": "Troubleshooting",
-        "troubleshootingEmpty": "Troubleshooting steps not yet available for this mission."
+        "troubleshootingEmpty": "Troubleshooting steps not yet available for this mission.",
+        "security": "Security",
+        "securityEmpty": "Security notes not yet available for this mission."
       }
     }
   },
