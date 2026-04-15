@@ -393,21 +393,29 @@ echo ""
 echo "Waiting for console to start..."
 MAX_WAIT=60
 WAITED=0
+CONSOLE_READY=0
 while [ $WAITED -lt $MAX_WAIT ]; do
-    # Poll the root path — returns 200 only when Fiber is fully started and
-    # serving the SPA frontend (web/dist/index.html). The warmup phase may
-    # start a temporary listener that returns 404 for / before Fiber is ready.
+    # Any response that proves Fiber is up and routing is sufficient:
+    # - 200 from dev mode SPA (web/dist/index.html)
+    # - 301/302 → /login when OAuth is enabled
+    # - 401/403 if middleware rejects without redirect
+    # Note: 404 is NOT accepted — the warmup phase may start a temporary
+    # listener that returns 404 for / before Fiber is fully ready.
+    # 000 (connection refused/error) or 5xx also mean not ready.
     HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' "http://localhost:${PORT}/" 2>/dev/null || echo "000")
-    if [ "$HTTP_CODE" = "200" ]; then
-        break
-    fi
+    case "$HTTP_CODE" in
+        200|301|302|401|403)
+            CONSOLE_READY=1
+            break
+            ;;
+    esac
     sleep 2
     WAITED=$((WAITED + 2))
     printf "  %ds..." "$WAITED"
 done
 echo ""
 
-if [ "$HTTP_CODE" = "200" ]; then
+if [ "$CONSOLE_READY" = "1" ]; then
     echo ""
     echo "=== KubeStellar Console is running ==="
     echo ""
