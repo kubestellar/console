@@ -48,12 +48,37 @@ import (
 	"k8s.io/client-go/tools/clientcmd/api"
 )
 
-// PrivilegedClient is an alias for MultiClusterClient with semantic intent
-// documented at the package level (see above). New code in pkg/api/handlers
-// that legitimately needs the pod SA should use this alias so the name
-// matches the privileged-client lint rule in
-// .github/workflows/privileged-client-lint.yml. Existing MultiClusterClient
-// usage stays put — this is an intent-signalling alias, not a rename.
+// PrivilegedClient is an alias for MultiClusterClient whose sole purpose is
+// to mark — at the type name — that a handler field carries the pod
+// ServiceAccount's privileges (see the package doc above for the three
+// legitimate pod-SA exceptions).
+//
+// This alias is a documentation / code-review signal for human readers. It
+// is NOT what the privileged-client lint rule actually checks. The lint in
+// .github/workflows/privileged-client-lint.yml is call-pattern based: it
+// greps pkg/api/handlers/ for mutation-method calls of the form
+//
+//	h.k8sClient.(Create|Update|Delete|Patch)<Name>(
+//	s.k8sClient.(Create|Update|Delete|Patch)<Name>(
+//	persistence.(Create|Update|Delete)<Name>(
+//
+// and fails the PR if any such call site lives outside the file allowlist
+// in .github/allowlist-privileged-client-callers.txt. The lint never looks
+// at the field's declared Go type, so declaring a field as PrivilegedClient
+// neither satisfies nor trips the rule on its own.
+//
+// Practical guidance for new privileged handlers:
+//  1. If the handler legitimately needs to mutate a managed cluster via the
+//     pod SA, declare the field as *PrivilegedClient to flag intent for
+//     reviewers, AND add the handler's file basename to
+//     .github/allowlist-privileged-client-callers.txt in the same PR with a
+//     short justification.
+//  2. If the handler is user-initiated work, it must go through kc-agent
+//     with the caller's kubeconfig instead — neither the type alias nor an
+//     allowlist entry is appropriate.
+//
+// Existing MultiClusterClient fields stay put; this is an intent-signalling
+// alias, not a rename.
 type PrivilegedClient = MultiClusterClient
 
 const (
