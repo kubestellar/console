@@ -48,6 +48,14 @@ const QUERY_MAX_WIDTH_PX = 300
  *  its own panel. */
 const TRUNK2_WIDTH_PX = 50
 
+/** Pipeline KPI strip labels. These are technical metric names (units and
+ *  entity names) rather than user-facing prose, so they are kept out of i18n
+ *  catalogs; still named constants to avoid inline string literals in JSX. */
+const KPI_LABEL_EVENTS_PER_SEC = 'Events/s'
+const KPI_LABEL_RESULT_ROWS = 'Result Rows'
+const KPI_LABEL_SOURCES = 'Sources'
+const KPI_LABEL_REACTIONS = 'Reactions'
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -1305,10 +1313,10 @@ export function DrasiReactiveGraph() {
     <div className="h-full w-full flex flex-col p-3 overflow-hidden relative">
       {/* Pipeline KPIs strip */}
       <div className="flex-shrink-0 grid grid-cols-4 gap-2 mb-2">
-        <KPIBox label="Events/s" value={kpis.eventsPerSec} accent="emerald" />
-        <KPIBox label="Result Rows" value={kpis.matchRate} accent="cyan" />
-        <KPIBox label="Sources" value={kpis.activeSources} accent="emerald" />
-        <KPIBox label="Reactions" value={kpis.activeReactions} accent="emerald" />
+        <KPIBox label={KPI_LABEL_EVENTS_PER_SEC} value={kpis.eventsPerSec} accent="emerald" />
+        <KPIBox label={KPI_LABEL_RESULT_ROWS} value={kpis.matchRate} accent="cyan" />
+        <KPIBox label={KPI_LABEL_SOURCES} value={kpis.activeSources} accent="emerald" />
+        <KPIBox label={KPI_LABEL_REACTIONS} value={kpis.activeReactions} accent="emerald" />
       </div>
       <div ref={containerRef} className="relative flex-1 min-h-0">
         <svg
