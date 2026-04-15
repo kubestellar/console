@@ -14,51 +14,55 @@ Everything below is grounded in the current source tree. File and line reference
 
 ### Component diagram
 
-```
-                      ┌──────────────────────────────┐
-                      │          Browser (you)       │
-                      │   console.kubestellar.io OR  │
-                      │   http://localhost:8080      │
-                      └──────────────┬───────────────┘
-                                     │
-            ┌────────────────────────┼────────────────────────┐
-            │                        │                        │
-            ▼                        ▼                        ▼
-  ┌──────────────────┐    ┌──────────────────┐    ┌──────────────────────┐
-  │  Go backend      │    │  kc-agent        │    │  Third-party APIs    │
-  │  :8080           │    │  127.0.0.1:8585  │    │  (GitHub, ArgoCD,    │
-  │  (self-hosted)   │    │  (user's laptop) │    │   Prometheus, etc.)  │
-  │                  │    │                  │    └──────────────────────┘
-  │ - serves UI      │    │ - uses user's    │
-  │ - console state  │    │   ~/.kube/config │
-  │ - GPU reserve    │    │ - AI provider    │
-  │ - self-upgrade   │    │   calls          │
-  └────────┬─────────┘    └─────────┬────────┘
-           │                        │
-           │                        ▼
-           │              ┌──────────────────┐
-           │              │  Kubernetes      │
-           │              │  API servers     │
-           │              │  (your clusters) │
-           │              └──────────────────┘
-           │
-           ▼
-      ┌──────────────────┐
-      │  pod SA only for │
-      │  the managed     │
-      │  cluster the     │
-      │  console runs in │
-      └──────────────────┘
-```
+The three-process architecture: a browser, a Go backend (serves UI, bootstrap-only identity), and kc-agent running on the user's own laptop (identity is the user's kubeconfig). Every cluster mutation flows through kc-agent.
 
 ```mermaid
 flowchart LR
-    B[Browser] -->|REST/WS<br/>port 8080| GB[Go backend]
-    B -->|REST/WS<br/>127.0.0.1:8585| KA[kc-agent]
-    KA -->|kubectl via<br/>user kubeconfig| K8S[Kubernetes<br/>API servers]
-    KA -->|HTTPS| AI[AI providers<br/>Anthropic / OpenAI /<br/>Gemini / Groq /<br/>OpenRouter]
-    GB -->|pod SA<br/>bootstrap only| GSA[Own pod SA<br/>deployment + GPU<br/>reserve + self-upgrade]
+    subgraph User["User machine"]
+        B[Browser]
+        KA[kc-agent<br/>127.0.0.1:8585<br/>loopback only]
+        KC[~/.kube/config]
+        CFG[~/.kc/config.yaml<br/>AI keys, mode 0600]
+    end
+
+    subgraph Console["Console deployment<br/>(self-hosted cluster or SaaS)"]
+        GB[Go backend<br/>:8080]
+        POD[(Pod SA)]
+    end
+
+    subgraph Clusters["Your managed clusters"]
+        K8S[Kubernetes API servers]
+    end
+
+    subgraph AI["AI providers (optional)"]
+        ANTH[Anthropic]
+        OAI[OpenAI]
+        GEM[Gemini]
+        GRQ[Groq / OpenRouter /<br/>Open WebUI]
+    end
+
+    B -->|HTTP/WS :8080<br/>serves UI, OAuth| GB
+    B -->|HTTP/WS :8585<br/>all cluster ops| KA
+    KA -->|reads on disk| KC
+    KA -->|reads on disk| CFG
+    KA -->|kubectl as<br/>user identity| K8S
+    KA -.->|HTTPS chat<br/>prompts only| ANTH
+    KA -.->|HTTPS chat<br/>prompts only| OAI
+    KA -.->|HTTPS chat<br/>prompts only| GEM
+    KA -.->|HTTPS chat<br/>prompts only| GRQ
+    GB -->|bootstrap /<br/>GPU reserve /<br/>self-upgrade ONLY| POD
+
+    classDef userbox fill:#0b3d0b,stroke:#0f0,color:#fff
+    classDef consolebox fill:#0a2a4a,stroke:#08f,color:#fff
+    classDef clusterbox fill:#3d0b0b,stroke:#f44,color:#fff
+    classDef aibox fill:#3d2a0b,stroke:#fa0,color:#fff
+    class User userbox
+    class Console consolebox
+    class Clusters clusterbox
+    class AI aibox
 ```
+
+Dashed lines are optional: AI provider calls only happen when a key is configured. Solid lines with arrows are mandatory for full cluster-management functionality.
 
 ### Who is who
 
@@ -114,6 +118,35 @@ If you need to audit what leaves the machine, the provider files under `pkg/agen
 - **CORS / allowed origins**: the backend and kc-agent maintain an allow-list; additional origins can be added via `KC_ALLOWED_ORIGINS` (comma-separated) to `kc-agent` (`pkg/agent/server.go:191`).
 - **CSP**: the backend's Content-Security-Policy explicitly includes `http://127.0.0.1:8585` and `http://localhost:8585` in `connect-src` so the browser can reach a local kc-agent (`pkg/api/server.go:429-432`).
 
+```mermaid
+flowchart LR
+    RB[Remote browser<br/>any other LAN host]
+    LB[Local browser<br/>127.0.0.1]
+
+    subgraph Gates["kc-agent defense in depth"]
+        direction TB
+        BIND[Bind check<br/>127.0.0.1 only<br/>server.go:578]
+        CORS[Origin allow-list<br/>strict match<br/>server.go:92-100]
+        REB[DNS-rebinding guard<br/>matchOrigin<br/>server.go:799-822]
+        TOK["Token check<br/>(optional, off by default)<br/>server.go:214-218"]
+        KA[kc-agent handlers<br/>kubectl via user kubeconfig]
+    end
+
+    RB -.rejected at OS<br/>socket layer.-> BIND
+    LB --> BIND
+    BIND --> CORS
+    CORS --> REB
+    REB --> TOK
+    TOK --> KA
+
+    classDef rejected stroke:#f44,stroke-width:2px
+    classDef allowed stroke:#0f0,stroke-width:2px
+    class RB rejected
+    class LB,BIND,CORS,REB,TOK,KA allowed
+```
+
+The loopback bind is the primary defense against network-level access. The CORS allow-list, DNS-rebinding guard, and optional token are layered defenses against local attackers — rogue browser tabs or other local processes that could reach `127.0.0.1:8585` if loopback alone were the only gate. Setting `KC_AGENT_TOKEN` adds the fourth layer, which is recommended when the user cannot assume that all local processes are trusted.
+
 ### What actually leaves the cluster (when self-hosted in-cluster)
 
 If you deploy the console inside a cluster with `deploy.sh`, outbound traffic from the **backend pod** is limited to:
@@ -152,6 +185,41 @@ Core requirements:
 
 Card proxies that call third-party APIs (ArgoCD, Prometheus, etc.) are only used by the specific cards that consume them. If you do not add those cards to your dashboard, no outbound calls are made.
 
+### Posture comparison
+
+```mermaid
+flowchart TB
+    subgraph A["Posture A — fully online (default)"]
+        direction LR
+        A_KA[kc-agent] --> A_K8S[Kubernetes]
+        A_KA --> A_AI[Public AI provider]
+        A_GB[Go backend] --> A_GH[GitHub OAuth]
+        A_GB --> A_UP[Update checks]
+    end
+
+    subgraph B["Posture B — restricted egress (no AI)"]
+        direction LR
+        B_KA[kc-agent] --> B_K8S[Kubernetes]
+        B_KA -.blocked.-> B_AI[Public AI provider]
+        B_GB[Go backend] --> B_GH[GitHub OAuth]
+    end
+
+    subgraph C["Posture C — fully air-gapped"]
+        direction LR
+        C_KA[kc-agent] --> C_K8S[Kubernetes]
+        C_KA --> C_LLM[Local LLM<br/>optional]
+        C_KA -.blocked.-> C_AI[Public AI provider]
+        C_GB[Go backend] -.blocked.-> C_GH[GitHub OAuth]
+    end
+
+    classDef allowed stroke:#0f0,stroke-width:2px
+    classDef blocked stroke:#f44,stroke-width:2px,color:#f88
+    class A_KA,A_K8S,A_AI,A_GB,A_GH,A_UP,B_KA,B_K8S,B_GB,B_GH,C_KA,C_K8S,C_LLM allowed
+    class B_AI,C_AI,C_GH blocked
+```
+
+Dotted arrows are explicitly blocked at the egress (firewall or network policy). Every arrow that remains is an outbound call that must succeed for the feature on that arrow to work.
+
 ### What must exist inside your perimeter
 
 | Requirement | Why |
@@ -181,6 +249,31 @@ The AI layer is a set of pluggable providers under `pkg/agent/provider_*.go`. Ea
 | Open WebUI (OpenAI-compatible) | `open-webui` | `OPEN_WEBUI_API_KEY` | `OPEN_WEBUI_MODEL` | **yes** | `OPEN_WEBUI_URL` | `pkg/agent/provider_openwebui.go:16,39` |
 
 Note the asymmetry: **the upstream OpenAI provider does not currently honor an `OPENAI_BASE_URL` override.** The hostname is a package-level variable in `pkg/agent/provider_openai.go:15`, but it is not re-read from the environment. If you want to point an OpenAI-compatible local server at the console today, use one of the three providers whose base URLs *are* overridable: **Groq, OpenRouter, or Open WebUI**. All three speak the OpenAI chat-completions wire format.
+
+### Routing a local LLM through an overridable provider slot
+
+```mermaid
+flowchart LR
+    KA[kc-agent] -->|provider: groq<br/>GROQ_BASE_URL=...| SLOT[Groq provider slot<br/>pkg/agent/provider_groq.go]
+    SLOT -.default.-> GRQ[api.groq.com/v1]
+    SLOT -->|override| OLLA[Ollama<br/>localhost:11434/v1]
+    SLOT -->|override| VLLM[vLLM<br/>local:8000/v1]
+    SLOT -->|override| LM[LM Studio<br/>local:1234/v1]
+    SLOT -->|override| GW[Corporate LLM gateway<br/>llm.internal/v1]
+
+    classDef default_path stroke:#888,stroke-width:1px
+    classDef override_path stroke:#0f0,stroke-width:2px
+    class GRQ default_path
+    class OLLA,VLLM,LM,GW override_path
+```
+
+Setting `GROQ_BASE_URL` redirects every chat-completion call made by the Groq provider to your own endpoint. The request payload is unchanged — it's the OpenAI wire format — so any OpenAI-compatible local runner works without the console knowing or caring which one.
+
+### Local LLM as a security posture (not a feature gap)
+
+Using a local / on-prem LLM is the strongest way to keep prompts and conversation history inside your trust boundary. When the base URL points at something running on your own network, the AI traffic never leaves the machine (for a loopback endpoint) or never leaves your perimeter (for an internal gateway). This is the right choice for operators in regulated, air-gapped, or high-sensitivity environments — not because the console is broken without a public provider, but because the security posture matches what those environments need.
+
+See `pkg/agent/provider_groq.go`, `pkg/agent/provider_openrouter.go`, and `pkg/agent/provider_openwebui.go` for the three overridable slots.
 
 ### Example: Ollama via the Groq provider slot
 
