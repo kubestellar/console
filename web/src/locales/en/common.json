@@ -16,6 +16,7 @@
     "save": "Save",
     "cancel": "Cancel",
     "close": "Close",
+    "clear": "Clear",
     "refresh": "Refresh",
     "configure": "Configure",
     "replace": "Replace",
@@ -1479,10 +1480,35 @@
     "clusterRole": "Cluster Role",
     "roleBinding": "Role Binding",
     "clusterRoleBinding": "Cluster Role Binding",
-    "selectCommonGroups": "Select common groups..."
+    "selectCommonGroups": "Select common groups...",
+    "addCustomGroupPlaceholder": "Add custom group...",
+    "removeGroup": "Remove group {{group}}",
+    "commonApiGroupsTitle": "Common API Groups:",
+    "apiGroupCoreDesc": "Core API (pods, services, secrets, configmaps, namespaces)",
+    "apiGroupAppsDesc": "Deployments, StatefulSets, DaemonSets, ReplicaSets",
+    "apiGroupRbacDesc": "Roles, ClusterRoles, Bindings",
+    "apiGroupBatchDesc": "Jobs, CronJobs",
+    "apiGroupNetworkingDesc": "Ingresses, NetworkPolicies"
   },
   "compute": {
-    "clusterComparison": "Cluster Comparison"
+    "clusterComparison": "Cluster Comparison",
+    "countSelected": "{{count}} selected",
+    "compareWithCount": "Compare ({{count}})",
+    "selectForComparison": "Select {{name}} for comparison",
+    "deselectForComparison": "Deselect {{name}} for comparison",
+    "noClustersAvailable": "No clusters available"
+  },
+  "drasi": {
+    "configureSource": "Configure Source",
+    "configureContinuousQuery": "Configure Continuous Query",
+    "nameLabel": "Name",
+    "sourceTypeLabel": "Source Type",
+    "queryTypeLabel": "Query Type",
+    "queryLabel": "Query",
+    "queryPlaceholder": "MATCH (n) RETURN n",
+    "idLabel": "ID:",
+    "sourceKindLabel": "Source · {{kind}}",
+    "queryLanguageLabel": "Query · {{language}}"
   },
   "missionChat": {
     "saveTranscript": "Save transcript",

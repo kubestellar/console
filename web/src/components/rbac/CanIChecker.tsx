@@ -347,7 +347,7 @@ export function CanIChecker() {
                   <button
                     onClick={() => toggleUserGroup(group)}
                     className="hover:text-blue-200"
-                    aria-label={`Remove group ${group}`}
+                    aria-label={t('rbac.removeGroup', { group })}
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -388,7 +388,7 @@ export function CanIChecker() {
                   addCustomUserGroup()
                 }
               }}
-              placeholder="Add custom group..."
+              placeholder={t('rbac.addCustomGroupPlaceholder')}
               className="flex-1 p-2 rounded-lg bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <Button
@@ -417,13 +417,13 @@ export function CanIChecker() {
 
         {showAdvanced && (
           <div className="text-xs text-muted-foreground p-3 bg-secondary/30 rounded-lg">
-            <p className="font-medium mb-2">Common API Groups:</p>
+            <p className="font-medium mb-2">{t('rbac.commonApiGroupsTitle')}</p>
             <ul className="space-y-1">
-              <li><code className="text-blue-400">""</code> - Core API (pods, services, secrets, configmaps, namespaces)</li>
-              <li><code className="text-blue-400">apps</code> - Deployments, StatefulSets, DaemonSets, ReplicaSets</li>
-              <li><code className="text-blue-400">rbac.authorization.k8s.io</code> - Roles, ClusterRoles, Bindings</li>
-              <li><code className="text-blue-400">batch</code> - Jobs, CronJobs</li>
-              <li><code className="text-blue-400">networking.k8s.io</code> - Ingresses, NetworkPolicies</li>
+              <li><code className="text-blue-400">""</code> - {t('rbac.apiGroupCoreDesc')}</li>
+              <li><code className="text-blue-400">apps</code> - {t('rbac.apiGroupAppsDesc')}</li>
+              <li><code className="text-blue-400">rbac.authorization.k8s.io</code> - {t('rbac.apiGroupRbacDesc')}</li>
+              <li><code className="text-blue-400">batch</code> - {t('rbac.apiGroupBatchDesc')}</li>
+              <li><code className="text-blue-400">networking.k8s.io</code> - {t('rbac.apiGroupNetworkingDesc')}</li>
             </ul>
           </div>
         )}

@@ -210,13 +210,13 @@ export function Compute() {
         {selectedForComparison.length > 0 && (
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">
-              {selectedForComparison.length} selected
+              {t('compute.countSelected', { count: selectedForComparison.length })}
             </span>
             <button
               onClick={clearSelection}
               className="text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
-              Clear
+              {t('actions.clear')}
             </button>
             {selectedForComparison.length >= 2 && (
               <Button
@@ -225,7 +225,7 @@ export function Compute() {
                 onClick={handleCompare}
                 icon={<GitCompare className="w-4 h-4" />}
               >
-                Compare ({selectedForComparison.length})
+                {t('compute.compareWithCount', { count: selectedForComparison.length })}
               </Button>
             )}
           </div>
@@ -250,7 +250,9 @@ export function Compute() {
                       ? 'opacity-50 cursor-not-allowed'
                       : 'hover:bg-secondary/50'
                 }`}
-                aria-label={`${isSelected ? 'Deselect' : 'Select'} ${cluster.context || cluster.name} for comparison`}
+                aria-label={isSelected
+                  ? t('compute.deselectForComparison', { name: cluster.context || cluster.name })
+                  : t('compute.selectForComparison', { name: cluster.context || cluster.name })}
                 aria-pressed={isSelected}
               >
                 <div className="flex items-start gap-3">
@@ -292,7 +294,7 @@ export function Compute() {
 
       {showClusterList && filteredClusters.length === 0 && (
         <div className="glass p-8 rounded-lg text-center">
-          <p className="text-muted-foreground">No clusters available</p>
+          <p className="text-muted-foreground">{t('compute.noClustersAvailable')}</p>
         </div>
       )}
     </div>
