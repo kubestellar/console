@@ -93,11 +93,14 @@ describe('Tooltip', () => {
       )
       // Bubble still renders
       expect(getByRole('tooltip')).toBeInTheDocument()
-      // No React warning about invalid prop on Fragment
-      expect(errorSpy).not.toHaveBeenCalledWith(
-        expect.stringContaining('Invalid prop'),
-        expect.anything(),
-      )
+      // React logs Fragment warnings via console.error with variable arg shape
+      // (format string + substitutions). Flatten every call's args into a single
+      // string and assert the warning text isn't present anywhere.
+      const warningsText = errorSpy.mock.calls
+        .map(args => args.map(a => (typeof a === 'string' ? a : '')).join(' '))
+        .join('\n')
+      expect(warningsText).not.toMatch(/Invalid prop.*Fragment/i)
+      expect(warningsText).not.toMatch(/React\.Fragment can only have/i)
     } finally {
       errorSpy.mockRestore()
     }
