@@ -232,10 +232,12 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
           {/* Basic Info */}
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">
+              <label htmlFor="alertRuleName" className="block text-sm font-medium text-foreground mb-1">
                 {t('alerts.ruleName')} *
               </label>
               <input
+                id="alertRuleName"
+                name="alertRuleName"
                 type="text"
                 value={name}
                 onChange={e => setName(e.target.value)}
@@ -250,10 +252,12 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">
+              <label htmlFor="alertRuleDescription" className="block text-sm font-medium text-foreground mb-1">
                 {t('alerts.description')}
               </label>
               <textarea
+                id="alertRuleDescription"
+                name="alertRuleDescription"
                 value={description}
                 onChange={e => setDescription(e.target.value)}
                 placeholder={t('alerts.descriptionPlaceholder')}
@@ -336,11 +340,13 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
             {/* Threshold input */}
             {['gpu_usage', 'memory_pressure'].includes(conditionType) && (
               <div>
-                <label className="block text-xs text-muted-foreground mb-1">
+                <label htmlFor="alertRuleThreshold" className="block text-xs text-muted-foreground mb-1">
                   {t('alerts.thresholdPercent')}
                 </label>
                 <div className="flex items-center gap-2">
                   <input
+                    id="alertRuleThreshold"
+                    name="alertRuleThreshold"
                     type="number"
                     min={1}
                     max={100}
@@ -360,11 +366,13 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
 
             {conditionType === 'pod_crash' && (
               <div>
-                <label className="block text-xs text-muted-foreground mb-1">
+                <label htmlFor="alertRuleRestartThreshold" className="block text-xs text-muted-foreground mb-1">
                   {t('alerts.restartCountThreshold')}
                 </label>
                 <div className="flex items-center gap-2">
                   <input
+                    id="alertRuleRestartThreshold"
+                    name="alertRuleRestartThreshold"
                     type="number"
                     min={1}
                     max={100}
@@ -383,10 +391,12 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
             {conditionType === 'weather_alerts' && (
               <div className="space-y-3">
                 <div>
-                  <label className="block text-xs text-muted-foreground mb-1">
+                  <label htmlFor="alertRuleWeatherCondition" className="block text-xs text-muted-foreground mb-1">
                     {t('alerts.weatherCondition')}
                   </label>
                   <select
+                    id="alertRuleWeatherCondition"
+                    name="alertRuleWeatherCondition"
                     value={weatherCondition}
                     onChange={e => setWeatherCondition(e.target.value as typeof weatherCondition)}
                     className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
@@ -401,11 +411,13 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
 
                 {weatherCondition === 'extreme_heat' && (
                   <div>
-                    <label className="block text-xs text-muted-foreground mb-1">
+                    <label htmlFor="alertRuleTemperatureThreshold" className="block text-xs text-muted-foreground mb-1">
                       {t('alerts.temperatureThreshold')}
                     </label>
                     <div className="flex items-center gap-2">
                       <input
+                        id="alertRuleTemperatureThreshold"
+                        name="alertRuleTemperatureThreshold"
                         type="number"
                         min={-50}
                         max={150}
@@ -425,11 +437,13 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
 
                 {weatherCondition === 'high_wind' && (
                   <div>
-                    <label className="block text-xs text-muted-foreground mb-1">
+                    <label htmlFor="alertRuleWindSpeedThreshold" className="block text-xs text-muted-foreground mb-1">
                       {t('alerts.windSpeedThreshold')}
                     </label>
                     <div className="flex items-center gap-2">
                       <input
+                        id="alertRuleWindSpeedThreshold"
+                        name="alertRuleWindSpeedThreshold"
                         type="number"
                         min={1}
                         max={200}
@@ -451,11 +465,13 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
 
             {/* Duration */}
             <div>
-              <label className="block text-xs text-muted-foreground mb-1">
+              <label htmlFor="alertRuleDuration" className="block text-xs text-muted-foreground mb-1">
                 {t('alerts.durationSeconds')}
               </label>
               <div className="flex items-center gap-2">
                 <input
+                  id="alertRuleDuration"
+                  name="alertRuleDuration"
                   type="number"
                   min={0}
                   max={3600}
@@ -588,7 +604,12 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
 
                   {channel.type === 'slack' && (
                     <div className="space-y-2">
+                      <label htmlFor={`alertRuleSlackWebhookUrl-${index}`} className="sr-only">
+                        Slack Webhook URL
+                      </label>
                       <input
+                        id={`alertRuleSlackWebhookUrl-${index}`}
+                        name={`alertRuleSlackWebhookUrl-${index}`}
                         type="text"
                         placeholder="Slack Webhook URL"
                         value={channel.config.slackWebhookUrl || ''}
@@ -599,7 +620,12 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
                         }
                         className="w-full px-3 py-1.5 text-sm rounded bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
                       />
+                      <label htmlFor={`alertRuleSlackChannel-${index}`} className="sr-only">
+                        Slack Channel
+                      </label>
                       <input
+                        id={`alertRuleSlackChannel-${index}`}
+                        name={`alertRuleSlackChannel-${index}`}
                         type="text"
                         placeholder="#channel (optional)"
                         value={channel.config.slackChannel || ''}
@@ -614,45 +640,66 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
                   )}
 
                   {channel.type === 'webhook' && (
-                    <input
-                      type="text"
-                      placeholder="Webhook URL"
-                      value={channel.config.webhookUrl || ''}
-                      onChange={e =>
-                        updateChannel(index, {
-                          config: { ...channel.config, webhookUrl: e.target.value },
-                        })
-                      }
-                      className="w-full px-3 py-1.5 text-sm rounded bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    />
+                    <>
+                      <label htmlFor={`alertRuleWebhookUrl-${index}`} className="sr-only">
+                        Webhook URL
+                      </label>
+                      <input
+                        id={`alertRuleWebhookUrl-${index}`}
+                        name={`alertRuleWebhookUrl-${index}`}
+                        type="text"
+                        placeholder="Webhook URL"
+                        value={channel.config.webhookUrl || ''}
+                        onChange={e =>
+                          updateChannel(index, {
+                            config: { ...channel.config, webhookUrl: e.target.value },
+                          })
+                        }
+                        className="w-full px-3 py-1.5 text-sm rounded bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      />
+                    </>
                   )}
 
                   {channel.type === 'pagerduty' && (
-                    <input
-                      type="password"
-                      placeholder="PagerDuty Routing Key"
-                      value={channel.config.pagerdutyRoutingKey || ''}
-                      onChange={e =>
-                        updateChannel(index, {
-                          config: { ...channel.config, pagerdutyRoutingKey: e.target.value },
-                        })
-                      }
-                      className="w-full px-3 py-1.5 text-sm rounded bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    />
+                    <>
+                      <label htmlFor={`alertRulePagerdutyRoutingKey-${index}`} className="sr-only">
+                        PagerDuty Routing Key
+                      </label>
+                      <input
+                        id={`alertRulePagerdutyRoutingKey-${index}`}
+                        name={`alertRulePagerdutyRoutingKey-${index}`}
+                        type="password"
+                        placeholder="PagerDuty Routing Key"
+                        value={channel.config.pagerdutyRoutingKey || ''}
+                        onChange={e =>
+                          updateChannel(index, {
+                            config: { ...channel.config, pagerdutyRoutingKey: e.target.value },
+                          })
+                        }
+                        className="w-full px-3 py-1.5 text-sm rounded bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      />
+                    </>
                   )}
 
                   {channel.type === 'opsgenie' && (
-                    <input
-                      type="password"
-                      placeholder="OpsGenie API Key"
-                      value={channel.config.opsgenieApiKey || ''}
-                      onChange={e =>
-                        updateChannel(index, {
-                          config: { ...channel.config, opsgenieApiKey: e.target.value },
-                        })
-                      }
-                      className="w-full px-3 py-1.5 text-sm rounded bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    />
+                    <>
+                      <label htmlFor={`alertRuleOpsgenieApiKey-${index}`} className="sr-only">
+                        OpsGenie API Key
+                      </label>
+                      <input
+                        id={`alertRuleOpsgenieApiKey-${index}`}
+                        name={`alertRuleOpsgenieApiKey-${index}`}
+                        type="password"
+                        placeholder="OpsGenie API Key"
+                        value={channel.config.opsgenieApiKey || ''}
+                        onChange={e =>
+                          updateChannel(index, {
+                            config: { ...channel.config, opsgenieApiKey: e.target.value },
+                          })
+                        }
+                        className="w-full px-3 py-1.5 text-sm rounded bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      />
+                    </>
                   )}
                 </div>
               ))}
