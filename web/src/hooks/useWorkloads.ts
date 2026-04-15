@@ -60,6 +60,19 @@ function authHeaders(): Record<string, string> {
   return headers
 }
 
+// kc-agent mutating endpoints live on the user's local agent, not the hosted
+// Netlify backend. On console.kubestellar.io LOCAL_AGENT_HTTP_URL is an empty
+// string, which would turn `${LOCAL_AGENT_HTTP_URL}/workloads/delete` into a
+// relative path and 404 (plus a confusing non-JSON response). Throw early with
+// a clear message so the UI can surface "local agent required" instead of a
+// cryptic 404 (#8021).
+function requireLocalAgentHttp(action: string): string {
+  if (!LOCAL_AGENT_HTTP_URL) {
+    throw new Error(`${action} requires the local kc-agent; this browser is not connected to one.`)
+  }
+  return LOCAL_AGENT_HTTP_URL
+}
+
 
 function getDemoWorkloads(cluster?: string, namespace?: string): Workload[] {
   const workloads: Workload[] = [
@@ -322,7 +335,8 @@ export function useDeployWorkload() {
       // Deploy is a user-initiated mutation on managed clusters, so it must
       // run under the user's kubeconfig via kc-agent, not the backend pod SA.
       // See #7993 Phase 1 PR B.
-      const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/workloads/deploy`, {
+      const agentBase = requireLocalAgentHttp('Deploying workloads')
+      const res = await fetch(`${agentBase}/workloads/deploy`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(request),
@@ -371,7 +385,8 @@ export function useScaleWorkload() {
       // Scaling is a user-initiated mutation on managed clusters, so it must
       // go through kc-agent (user's kubeconfig), not the backend's pod SA.
       // See #7993 Phase 1 PR A.
-      const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/scale`, {
+      const agentBase = requireLocalAgentHttp('Scaling workloads')
+      const res = await fetch(`${agentBase}/scale`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(request),
@@ -421,7 +436,8 @@ export function useDeleteWorkload() {
       // kc-agent convention is POST-with-body (same as /scale) — the method
       // verb moves from DELETE-with-params to POST-with-body here.
       // See #7993 Phase 1 PR B.
-      const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/workloads/delete`, {
+      const agentBase = requireLocalAgentHttp('Deleting workloads')
+      const res = await fetch(`${agentBase}/workloads/delete`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({

@@ -62,6 +62,12 @@ const (
 	// endpointScale scales a deployment (sensitive — mutating).
 	endpointScale = "/scale"
 
+	// endpointWorkloadsDeploy deploys a workload to target clusters (sensitive — mutating).
+	endpointWorkloadsDeploy = "/workloads/deploy"
+
+	// endpointWorkloadsDelete deletes a workload from a cluster (sensitive — destructive mutation).
+	endpointWorkloadsDelete = "/workloads/delete"
+
 	// endpointProviderCheck checks provider availability (sensitive — reveals config).
 	endpointProviderCheck = "/provider-check"
 
@@ -174,6 +180,8 @@ var sensitiveEndpoints = []struct {
 	{endpointPods, "GET"},
 	{endpointNodes, "GET"},
 	{endpointScale, "POST"},
+	{endpointWorkloadsDeploy, "POST"},
+	{endpointWorkloadsDelete, "POST"},
 	{endpointProviderCheck, "GET"},
 	{endpointAutoUpdateStatus, "GET"},
 	{endpointKagentiAgents, "GET"},
@@ -558,6 +566,8 @@ func resolveEndpointHandler(s *Server, path string) func(http.ResponseWriter, *h
 		endpointPods:               s.handlePodsHTTP,
 		endpointNodes:              s.handleNodesHTTP,
 		endpointScale:              s.handleScaleHTTP,
+		endpointWorkloadsDeploy:    s.handleDeployWorkloadHTTP,
+		endpointWorkloadsDelete:    s.handleDeleteWorkloadHTTP,
 		endpointProviderCheck:      s.handleProviderCheck,
 		endpointAutoUpdateStatus:   s.handleAutoUpdateStatus,
 		endpointKagentiAgents:      s.handleKagentiAgents,

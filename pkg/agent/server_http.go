@@ -1227,6 +1227,10 @@ func (s *Server) handleResolveDepsHTTP(w http.ResponseWriter, r *http.Request) {
 // GET-based mutations are rejected to prevent CSRF-style attacks (#4150).
 func (s *Server) handleScaleHTTP(w http.ResponseWriter, r *http.Request) {
 	s.setCORSHeaders(w, r)
+	// setCORSHeaders defaults Access-Control-Allow-Methods to "GET, OPTIONS".
+	// This is a mutating POST endpoint — browsers would otherwise reject the
+	// cross-origin POST preflight (#8019, #8021).
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
@@ -1250,14 +1254,6 @@ func (s *Server) handleScaleHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if s.k8sClient == nil {
-		writeJSON(w,map[string]interface{}{
-			"success": false,
-			"error":   "k8s client not initialized",
-		})
-		return
-	}
-
 	// The frontend (useWorkloads.useScaleWorkload) sends:
 	//   { workloadName, namespace, targetClusters: []string, replicas }
 	// Older agent callers used { cluster, namespace, name, replicas }.
@@ -1276,6 +1272,8 @@ func (s *Server) handleScaleHTTP(w http.ResponseWriter, r *http.Request) {
 		Namespace string `json:"namespace"`
 		Replicas  int32  `json:"replicas"`
 	}
+	// Cap request body to avoid OOM from oversized payloads (#8021).
+	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w,map[string]interface{}{
@@ -1307,9 +1305,51 @@ func (s *Server) handleScaleHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if name == "" || namespace == "" {
+		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w,map[string]interface{}{
 			"success": false,
 			"error":   "workloadName and namespace are required",
+		})
+		return
+	}
+
+	// Require at least one target cluster. An empty targetClusters used to
+	// be interpreted by MultiClusterClient.ScaleWorkload as "scale in every
+	// known cluster", which is surprising and dangerous for a mutating call
+	// driven by user input (#8019).
+	if len(targetClusters) == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w,map[string]interface{}{
+			"success": false,
+			"error":   "at least one targetCluster (or legacy 'cluster') is required",
+		})
+		return
+	}
+
+	if err := validateDNS1123Label("namespace", namespace); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w,map[string]interface{}{"success": false, "error": err.Error()})
+		return
+	}
+	if err := validateDNS1123Label("workloadName", name); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w,map[string]interface{}{"success": false, "error": err.Error()})
+		return
+	}
+	for _, tc := range targetClusters {
+		if err := validateKubeContext(tc); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			writeJSON(w,map[string]interface{}{"success": false, "error": fmt.Sprintf("targetCluster: %v", err)})
+			return
+		}
+	}
+
+	if s.k8sClient == nil {
+		// 503 so fetch callers hit their !res.ok branch (#8021).
+		w.WriteHeader(http.StatusServiceUnavailable)
+		writeJSON(w,map[string]interface{}{
+			"success": false,
+			"error":   "k8s client not initialized",
 		})
 		return
 	}
@@ -1347,6 +1387,8 @@ func (s *Server) handleScaleHTTP(w http.ResponseWriter, r *http.Request) {
 // prevent CSRF-style attacks (#4150 pattern, same as handleScaleHTTP).
 func (s *Server) handleDeployWorkloadHTTP(w http.ResponseWriter, r *http.Request) {
 	s.setCORSHeaders(w, r)
+	// setCORSHeaders defaults Methods to "GET, OPTIONS"; override for POST (#8021).
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
@@ -1370,14 +1412,6 @@ func (s *Server) handleDeployWorkloadHTTP(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if s.k8sClient == nil {
-		writeJSON(w, map[string]interface{}{
-			"success": false,
-			"error":   "k8s client not initialized",
-		})
-		return
-	}
-
 	// Matches the backend's DeployWorkload request shape so the frontend can
 	// send the same payload to either endpoint during migration.
 	var req struct {
@@ -1393,6 +1427,7 @@ func (s *Server) handleDeployWorkloadHTTP(w http.ResponseWriter, r *http.Request
 		// to the anonymous marker used by MultiClusterClient.DeployWorkload.
 		DeployedBy string `json:"deployedBy,omitempty"`
 	}
+	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{
@@ -1423,6 +1458,38 @@ func (s *Server) handleDeployWorkloadHTTP(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	if err := validateDNS1123Label("workloadName", req.WorkloadName); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error()})
+		return
+	}
+	if err := validateDNS1123Label("namespace", req.Namespace); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error()})
+		return
+	}
+	if err := validateKubeContext(req.SourceCluster); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": fmt.Sprintf("sourceCluster: %v", err)})
+		return
+	}
+	for _, tc := range req.TargetClusters {
+		if err := validateKubeContext(tc); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			writeJSON(w, map[string]interface{}{"success": false, "error": fmt.Sprintf("targetCluster: %v", err)})
+			return
+		}
+	}
+
+	if s.k8sClient == nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		writeJSON(w, map[string]interface{}{
+			"success": false,
+			"error":   "k8s client not initialized",
+		})
+		return
+	}
+
 	opts := &k8s.DeployOptions{
 		DeployedBy: req.DeployedBy,
 		GroupName:  req.GroupName,
@@ -1446,11 +1513,15 @@ func (s *Server) handleDeployWorkloadHTTP(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	// Preserve dependencies and warnings from the MultiClusterClient response —
+	// the UI surfaces deploy warnings and dependency-action links (#8021).
 	writeJSON(w, map[string]interface{}{
 		"success":        result.Success,
 		"message":        result.Message,
 		"deployedTo":     result.DeployedTo,
 		"failedClusters": result.FailedClusters,
+		"dependencies":   result.Dependencies,
+		"warnings":       result.Warnings,
 		"source":         "agent",
 	})
 }
@@ -1466,6 +1537,8 @@ func (s *Server) handleDeployWorkloadHTTP(w http.ResponseWriter, r *http.Request
 // a POST with {cluster, namespace, name} in the body.
 func (s *Server) handleDeleteWorkloadHTTP(w http.ResponseWriter, r *http.Request) {
 	s.setCORSHeaders(w, r)
+	// setCORSHeaders defaults Methods to "GET, OPTIONS"; override for POST (#8021).
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
@@ -1489,19 +1562,12 @@ func (s *Server) handleDeleteWorkloadHTTP(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if s.k8sClient == nil {
-		writeJSON(w, map[string]interface{}{
-			"success": false,
-			"error":   "k8s client not initialized",
-		})
-		return
-	}
-
 	var req struct {
 		Cluster   string `json:"cluster"`
 		Namespace string `json:"namespace"`
 		Name      string `json:"name"`
 	}
+	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{
@@ -1516,6 +1582,31 @@ func (s *Server) handleDeleteWorkloadHTTP(w http.ResponseWriter, r *http.Request
 		writeJSON(w, map[string]interface{}{
 			"success": false,
 			"error":   "cluster, namespace, and name are required",
+		})
+		return
+	}
+
+	if err := validateKubeContext(req.Cluster); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": fmt.Sprintf("cluster: %v", err)})
+		return
+	}
+	if err := validateDNS1123Label("namespace", req.Namespace); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error()})
+		return
+	}
+	if err := validateDNS1123Label("name", req.Name); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error()})
+		return
+	}
+
+	if s.k8sClient == nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		writeJSON(w, map[string]interface{}{
+			"success": false,
+			"error":   "k8s client not initialized",
 		})
 		return
 	}
