@@ -605,13 +605,13 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
                   {channel.type === 'slack' && (
                     <div className="space-y-2">
                       <label htmlFor={`alertRuleSlackWebhookUrl-${index}`} className="sr-only">
-                        Slack Webhook URL
+                        {t('alerts.slackWebhookUrl')}
                       </label>
                       <input
                         id={`alertRuleSlackWebhookUrl-${index}`}
                         name={`alertRuleSlackWebhookUrl-${index}`}
                         type="text"
-                        placeholder="Slack Webhook URL"
+                        placeholder={t('alerts.slackWebhookUrlPlaceholder')}
                         value={channel.config.slackWebhookUrl || ''}
                         onChange={e =>
                           updateChannel(index, {
@@ -621,13 +621,13 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
                         className="w-full px-3 py-1.5 text-sm rounded bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
                       />
                       <label htmlFor={`alertRuleSlackChannel-${index}`} className="sr-only">
-                        Slack Channel
+                        {t('alerts.slackChannel')}
                       </label>
                       <input
                         id={`alertRuleSlackChannel-${index}`}
                         name={`alertRuleSlackChannel-${index}`}
                         type="text"
-                        placeholder="#channel (optional)"
+                        placeholder={t('alerts.slackChannelPlaceholder')}
                         value={channel.config.slackChannel || ''}
                         onChange={e =>
                           updateChannel(index, {
@@ -642,13 +642,13 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
                   {channel.type === 'webhook' && (
                     <>
                       <label htmlFor={`alertRuleWebhookUrl-${index}`} className="sr-only">
-                        Webhook URL
+                        {t('alerts.webhookUrl')}
                       </label>
                       <input
                         id={`alertRuleWebhookUrl-${index}`}
                         name={`alertRuleWebhookUrl-${index}`}
                         type="text"
-                        placeholder="Webhook URL"
+                        placeholder={t('alerts.webhookUrlPlaceholder')}
                         value={channel.config.webhookUrl || ''}
                         onChange={e =>
                           updateChannel(index, {
@@ -663,13 +663,13 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
                   {channel.type === 'pagerduty' && (
                     <>
                       <label htmlFor={`alertRulePagerdutyRoutingKey-${index}`} className="sr-only">
-                        PagerDuty Routing Key
+                        {t('alerts.pagerdutyRoutingKey')}
                       </label>
                       <input
                         id={`alertRulePagerdutyRoutingKey-${index}`}
                         name={`alertRulePagerdutyRoutingKey-${index}`}
                         type="password"
-                        placeholder="PagerDuty Routing Key"
+                        placeholder={t('alerts.pagerdutyRoutingKeyPlaceholder')}
                         value={channel.config.pagerdutyRoutingKey || ''}
                         onChange={e =>
                           updateChannel(index, {
@@ -684,13 +684,13 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
                   {channel.type === 'opsgenie' && (
                     <>
                       <label htmlFor={`alertRuleOpsgenieApiKey-${index}`} className="sr-only">
-                        OpsGenie API Key
+                        {t('alerts.opsgenieApiKey')}
                       </label>
                       <input
                         id={`alertRuleOpsgenieApiKey-${index}`}
                         name={`alertRuleOpsgenieApiKey-${index}`}
                         type="password"
-                        placeholder="OpsGenie API Key"
+                        placeholder={t('alerts.opsgenieApiKeyPlaceholder')}
                         value={channel.config.opsgenieApiKey || ''}
                         onChange={e =>
                           updateChannel(index, {
