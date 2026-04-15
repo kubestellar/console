@@ -1766,7 +1766,10 @@ function StreamSampleDrawer({ endpoint, isDemo, onClose }: StreamSampleDrawerPro
 
   return (
     <motion.div
-      className="absolute top-0 right-0 bottom-0 z-40 w-[480px] bg-slate-950 border-l border-slate-700 shadow-2xl flex flex-col"
+      // Drawer capped at min(75% of card, 720px) so code snippets get
+      // breathing room without wall-to-walling the whole card on wide
+      // viewports. Was a flat 480px — too cramped for Go / C# samples.
+      className="absolute top-0 right-0 bottom-0 z-40 w-[min(75%,720px)] min-w-[520px] bg-slate-950 border-l border-slate-700 shadow-2xl flex flex-col"
       initial={{ x: '100%' }}
       animate={{ x: 0 }}
       exit={{ x: '100%' }}
