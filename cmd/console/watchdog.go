@@ -19,6 +19,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"strconv"
@@ -47,7 +48,31 @@ const (
 	watchdogDefaultBackendPort  = 8081
 	watchdogDefaultListenPort   = 8080
 	watchdogStageFile           = "/tmp/.kc-startup-stage"
+	// watchdogGitShortHashLen is the number of hex chars shown for the commit
+	// hash in the watchdog fallback footer (matches typical `git rev-parse --short` output).
+	watchdogGitShortHashLen = 7
+	// watchdogGitLookupTimeout bounds the one-shot `git rev-parse` fallback used
+	// when debug.ReadBuildInfo() doesn't populate VCSRevision (e.g. under `go run`).
+	watchdogGitLookupTimeout = 2 * time.Second
 )
+
+// cachedGitCommitShort is the short git hash resolved once at watchdog startup
+// and reused for every fallback render. Empty if resolution failed.
+var cachedGitCommitShort string
+
+// resolveGitCommitShort runs `git rev-parse --short HEAD` against the process
+// working directory. Used as a fallback when debug.ReadBuildInfo() doesn't
+// expose vcs.revision (which happens under `go run` in some Go versions).
+func resolveGitCommitShort() string {
+	ctx, cancel := context.WithTimeout(context.Background(), watchdogGitLookupTimeout)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "git", "rev-parse", "--short="+strconv.Itoa(watchdogGitShortHashLen), "HEAD")
+	out, err := cmd.Output()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(out))
+}
 
 const (
 	watchdogTLSDir      = "./data/tls"
@@ -72,6 +97,19 @@ func runWatchdog(cfg WatchdogConfig) error {
 		slog.Warn("[Watchdog] could not write PID file", "error", err)
 	}
 	defer os.Remove(watchdogPidFile)
+
+	// Resolve the short git hash once at startup so the fallback page can show
+	// it from the very first render (even before the backend finishes compiling).
+	// debug.ReadBuildInfo() doesn't reliably populate vcs.revision under `go run`,
+	// so we shell out to git as a fallback.
+	if rev := api.GetBuildInfo().VCSRevision; rev != "" {
+		if len(rev) > watchdogGitShortHashLen {
+			rev = rev[:watchdogGitShortHashLen]
+		}
+		cachedGitCommitShort = rev
+	} else {
+		cachedGitCommitShort = resolveGitCommitShort()
+	}
 
 	backendURL := &url.URL{
 		Scheme: "http",
@@ -474,10 +512,16 @@ func serveFallback(w http.ResponseWriter, r *http.Request) {
 	if strings.Contains(accept, "text/html") || accept == "" || accept == "*/*" {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.WriteHeader(http.StatusServiceUnavailable)
-		// Inject version info into the HTML template
-		commitShort := api.GetBuildInfo().VCSRevision
-		if len(commitShort) > 7 {
-			commitShort = commitShort[:7]
+		// Inject version info into the HTML template. Prefer the hash resolved
+		// at watchdog startup (cachedGitCommitShort) so the footer shows the
+		// commit even under `go run`, where debug.ReadBuildInfo may not expose
+		// vcs.revision.
+		commitShort := cachedGitCommitShort
+		if commitShort == "" {
+			commitShort = api.GetBuildInfo().VCSRevision
+			if len(commitShort) > watchdogGitShortHashLen {
+				commitShort = commitShort[:watchdogGitShortHashLen]
+			}
 		}
 		versionText := "v" + api.Version
 		if commitShort != "" {
