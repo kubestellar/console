@@ -136,7 +136,7 @@ func TestAuthorizePodExec_Allow(t *testing.T) {
 	fa := &fakeExecAuthorizer{allowed: true}
 	h := &ExecHandlers{authorizer: fa}
 
-	err := h.authorizePodExec(
+	res, err := h.authorizePodExec(
 		context.Background(),
 		testAuthorizePodExecCluster,
 		testAuthorizePodExecNamespace,
@@ -144,6 +144,7 @@ func TestAuthorizePodExec_Allow(t *testing.T) {
 		testAuthorizePodExecLogin,
 	)
 	require.NoError(t, err)
+	assert.Empty(t, res.reason, "allow path must not populate reason")
 	assert.Equal(t, 1, fa.calls)
 	assert.Equal(t, execUserSubjectPrefix+testAuthorizePodExecLogin, fa.calledUser)
 	assert.Equal(t, testAuthorizePodExecCluster, fa.calledContext)
@@ -153,14 +154,18 @@ func TestAuthorizePodExec_Allow(t *testing.T) {
 }
 
 // TestAuthorizePodExec_Deny verifies that allowed=false from the SAR maps to
-// errExecRBACDenied. The deny reason from the apiserver is surfaced in the
-// error string so operators can debug RBAC bindings.
+// errExecRBACDenied. The deny reason from the apiserver is surfaced BOTH in
+// the error string (for the wrapped error chain) AND on the separate
+// execAuthzResult.reason field (for the structured `"reason"` log attribute
+// #8140). Operators query logs by the `reason` key, so having it as a
+// dedicated field — not just an embedded substring of the error — is
+// load-bearing.
 func TestAuthorizePodExec_Deny(t *testing.T) {
 	const denyReason = "no RBAC binding"
 	fa := &fakeExecAuthorizer{allowed: false, reason: denyReason}
 	h := &ExecHandlers{authorizer: fa}
 
-	err := h.authorizePodExec(
+	res, err := h.authorizePodExec(
 		context.Background(),
 		testAuthorizePodExecCluster,
 		testAuthorizePodExecNamespace,
@@ -170,7 +175,30 @@ func TestAuthorizePodExec_Deny(t *testing.T) {
 	require.Error(t, err)
 	assert.ErrorIs(t, err, errExecRBACDenied)
 	assert.Contains(t, err.Error(), denyReason)
+	assert.Equal(t, denyReason, res.reason, "deny path must surface the reason on the result struct so HandleExec can log it as a structured attribute (#8140)")
+	assert.NotEmpty(t, res.reason, "deny path must produce a non-empty reason string distinct from the error (#8140)")
 	assert.Equal(t, 1, fa.calls, "the authorizer must still be consulted in the deny case")
+}
+
+// TestAuthorizePodExec_DenyNoReason verifies the deny branch where the
+// apiserver returned allowed=false but no reason string. In this case
+// authorizePodExec must still fail-closed with errExecRBACDenied, and the
+// result.reason field stays empty (callers cannot log a reason that does
+// not exist). Covers the `reason == ""` path that the non-empty case can't.
+func TestAuthorizePodExec_DenyNoReason(t *testing.T) {
+	fa := &fakeExecAuthorizer{allowed: false, reason: ""}
+	h := &ExecHandlers{authorizer: fa}
+
+	res, err := h.authorizePodExec(
+		context.Background(),
+		testAuthorizePodExecCluster,
+		testAuthorizePodExecNamespace,
+		testAuthorizePodExecPod,
+		testAuthorizePodExecLogin,
+	)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, errExecRBACDenied)
+	assert.Empty(t, res.reason, "empty apiserver reason must stay empty — callers must not synthesize one")
 }
 
 // TestAuthorizePodExec_NilAuthorizer verifies fail-closed when the
@@ -180,7 +208,7 @@ func TestAuthorizePodExec_Deny(t *testing.T) {
 func TestAuthorizePodExec_NilAuthorizer(t *testing.T) {
 	h := &ExecHandlers{authorizer: nil}
 
-	err := h.authorizePodExec(
+	res, err := h.authorizePodExec(
 		context.Background(),
 		testAuthorizePodExecCluster,
 		testAuthorizePodExecNamespace,
@@ -189,18 +217,21 @@ func TestAuthorizePodExec_NilAuthorizer(t *testing.T) {
 	)
 	require.Error(t, err)
 	assert.ErrorIs(t, err, errExecAuthorizerUnavailable)
+	assert.Empty(t, res.reason, "non-deny branches must not populate reason")
 }
 
 // TestAuthorizePodExec_SARError verifies fail-closed when the SAR call
 // errors out (apiserver unreachable, RBAC denies creating SARs, etc.).
-// The sentinel error is wrapped so both errExecSARFailed and the underlying
-// error are recoverable via errors.Is.
+// The sentinel error is double-%w-wrapped so BOTH errExecSARFailed AND the
+// underlying SAR error are recoverable via errors.Is — Copilot review on
+// #8139 caught that the pre-fix `%v` form silently broke the
+// recoverable-underlying-error contract this test documents.
 func TestAuthorizePodExec_SARError(t *testing.T) {
 	sentinel := errors.New("apiserver down")
 	fa := &fakeExecAuthorizer{err: sentinel}
 	h := &ExecHandlers{authorizer: fa}
 
-	err := h.authorizePodExec(
+	res, err := h.authorizePodExec(
 		context.Background(),
 		testAuthorizePodExecCluster,
 		testAuthorizePodExecNamespace,
@@ -208,8 +239,12 @@ func TestAuthorizePodExec_SARError(t *testing.T) {
 		testAuthorizePodExecLogin,
 	)
 	require.Error(t, err)
-	assert.ErrorIs(t, err, errExecSARFailed)
+	// Both the sentinel and the underlying SAR error must be recoverable
+	// via errors.Is — this is the double-%w contract (#8140).
+	require.ErrorIs(t, err, errExecSARFailed)
+	require.ErrorIs(t, err, sentinel, "underlying SAR error must be recoverable via errors.Is — double-%%w wrap (#8140)")
 	assert.Contains(t, err.Error(), sentinel.Error(), "underlying SAR error text should be surfaced for operator debugging")
+	assert.Empty(t, res.reason, "SAR-error branch must not populate reason")
 	assert.Equal(t, 1, fa.calls)
 }
 
@@ -221,7 +256,7 @@ func TestAuthorizePodExec_EmptyLogin(t *testing.T) {
 	fa := &fakeExecAuthorizer{allowed: true}
 	h := &ExecHandlers{authorizer: fa}
 
-	err := h.authorizePodExec(
+	res, err := h.authorizePodExec(
 		context.Background(),
 		testAuthorizePodExecCluster,
 		testAuthorizePodExecNamespace,
@@ -230,6 +265,7 @@ func TestAuthorizePodExec_EmptyLogin(t *testing.T) {
 	)
 	require.Error(t, err)
 	assert.ErrorIs(t, err, errExecMissingUserSubject)
+	assert.Empty(t, res.reason, "non-deny branches must not populate reason")
 	assert.Equal(t, 0, fa.calls, "empty login must fail-closed BEFORE the SAR call")
 }
 

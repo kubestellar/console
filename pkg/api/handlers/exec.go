@@ -199,22 +199,44 @@ var (
 	errExecRBACDenied = errors.New("exec denied by RBAC")
 )
 
+// execAuthzResult carries side information from authorizePodExec that the
+// caller needs to log, separately from the error return. Today the only
+// field is the deny reason, which is populated ONLY on errExecRBACDenied so
+// HandleExec can emit a structured `"reason"` log attribute (Copilot review
+// on #8139): pre-#8139 the deny reason was a dedicated slog key and
+// operators queried logs by it; #8139 accidentally embedded the reason in
+// the error string and lost the queryable attribute. Surfacing reason as a
+// separate field restores that contract without re-parsing error strings.
+//
+// reason is empty for all non-deny branches (nil error, missing subject,
+// nil authorizer, SAR call failure); callers must not rely on reason being
+// set unless errors.Is(err, errExecRBACDenied) is true.
+type execAuthzResult struct {
+	// reason is the human-readable deny explanation surfaced by the target
+	// cluster's apiserver (the `status.reason` field of the
+	// SubjectAccessReview response). Populated ONLY when the SAR returned
+	// allowed=false AND the apiserver supplied a reason string.
+	reason string
+}
+
 // authorizePodExec runs the pods/exec SubjectAccessReview against the target
-// cluster and returns nil if the user is allowed, or one of the sentinel
-// errors above on any fail-closed branch. The decision is intentionally
-// extracted from HandleExec so unit tests can exercise every branch against a
-// fake execAuthorizer without a live websocket (#8137, Copilot review on
-// #8134). HandleExec calls this after parsing the init message and writes
-// the appropriate websocket error frame on non-nil return.
+// cluster and returns a zero execAuthzResult with nil error if the user is
+// allowed, or one of the sentinel errors above on any fail-closed branch.
+// The decision is intentionally extracted from HandleExec so unit tests can
+// exercise every branch against a fake execAuthorizer without a live
+// websocket (#8137, Copilot review on #8134). HandleExec calls this after
+// parsing the init message and writes the appropriate websocket error frame
+// on non-nil return, and additionally logs result.reason under a structured
+// `"reason"` key on the deny branch (#8140).
 func (h *ExecHandlers) authorizePodExec(
 	ctx context.Context,
 	cluster, namespace, pod, githubLogin string,
-) error {
+) (execAuthzResult, error) {
 	if h.authorizer == nil {
-		return errExecAuthorizerUnavailable
+		return execAuthzResult{}, errExecAuthorizerUnavailable
 	}
 	if githubLogin == "" {
-		return errExecMissingUserSubject
+		return execAuthzResult{}, errExecMissingUserSubject
 	}
 
 	authzCtx, authzCancel := context.WithTimeout(ctx, execAuthzTimeout)
@@ -230,15 +252,20 @@ func (h *ExecHandlers) authorizePodExec(
 		pod,
 	)
 	if err != nil {
-		return fmt.Errorf("%w: %v", errExecSARFailed, err)
+		// Double-%w wrap (Go 1.20+) so callers can recover BOTH the
+		// errExecSARFailed sentinel AND the underlying SAR error via
+		// errors.Is — Copilot review on #8139 flagged that the pre-fix
+		// `%v` form silently broke the recoverable-underlying-error
+		// contract the surrounding tests documented.
+		return execAuthzResult{}, fmt.Errorf("%w: %w", errExecSARFailed, err)
 	}
 	if !allowed {
 		if reason == "" {
-			return errExecRBACDenied
+			return execAuthzResult{}, errExecRBACDenied
 		}
-		return fmt.Errorf("%w: %s", errExecRBACDenied, reason)
+		return execAuthzResult{reason: reason}, fmt.Errorf("%w: %s", errExecRBACDenied, reason)
 	}
-	return nil
+	return execAuthzResult{}, nil
 }
 
 // ExecHandlers handles pod exec API endpoints
@@ -491,7 +518,8 @@ func (h *ExecHandlers) HandleExec(c *websocket.Conn) {
 	// MUST deny the exec and return before touching the executor. The
 	// decision itself lives in authorizePodExec (#8137) so each branch has
 	// a dedicated unit test.
-	if err := h.authorizePodExec(execCtx, init.Cluster, init.Namespace, init.Pod, claims.GitHubLogin); err != nil {
+	authzResult, err := h.authorizePodExec(execCtx, init.Cluster, init.Namespace, init.Pod, claims.GitHubLogin)
+	if err != nil {
 		switch {
 		case errors.Is(err, errExecAuthorizerUnavailable):
 			slog.Error("[Exec] SECURITY: authorizer not configured — denying exec", "user", claims.GitHubLogin)
@@ -509,11 +537,16 @@ func (h *ExecHandlers) HandleExec(c *websocket.Conn) {
 			)
 			writeError(c, "failed to verify exec permission; request denied")
 		case errors.Is(err, errExecRBACDenied):
+			// Emit the deny reason under the structured `"reason"` key in
+			// addition to the wrapped error string (#8140). Operators query
+			// logs by the `reason` attribute; #8139 accidentally moved it
+			// into the error string only, which broke those queries.
 			slog.Warn("[Exec] SECURITY: pods/exec denied by RBAC",
 				"user", claims.GitHubLogin,
 				"cluster", init.Cluster,
 				"namespace", init.Namespace,
 				"pod", init.Pod,
+				"reason", authzResult.reason,
 				"error", err,
 			)
 			writeError(c, "user is not authorized to exec into this pod")
