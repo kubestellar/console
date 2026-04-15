@@ -204,7 +204,6 @@ func (r *Registry) List() []ProviderInfo {
 // than executing them. They should not be the default when better options exist.
 var suggestOnlyAgents = map[string]bool{
 	"copilot-cli": true,
-	"gh-copilot":  true,
 }
 
 // promoteExecutingDefault checks if the current default agent only suggests
@@ -300,7 +299,6 @@ func InitializeProviders() error {
 	// copilot-cli suggests commands as text rather than executing them,
 	// so it should only be the default when no other agent is available (#3609).
 	registry.Register(NewCopilotCLIProvider())
-	// GHCopilot is deprecated — the gh-copilot extension runs but executes no commands
 
 	// NOTE: API-only agents (Claude API, OpenAI, Gemini) and IDE-based agents
 	// (Cursor, Windsurf, Cline, etc.) are intentionally not registered.

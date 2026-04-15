@@ -1665,7 +1665,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
       // When auto-selecting, prefer agents that execute commands directly over
       // agents that only suggest commands (e.g. copilot-cli). Interactive/suggest-only
       // agents produce terminal prompts instead of executing missions (#3609, #5481).
-      const INTERACTIVE_AGENTS = new Set(['copilot-cli', 'gh-copilot'])
+      const INTERACTIVE_AGENTS = new Set(['copilot-cli'])
       const bestAvailable = hasAvailableAgent
         ? (agents.find(a => a.available && ((a.capabilities ?? 0) & AgentCapabilityToolExec) !== 0 && !INTERACTIVE_AGENTS.has(a.name))?.name
           || agents.find(a => a.available && !INTERACTIVE_AGENTS.has(a.name))?.name

@@ -1426,7 +1426,7 @@ func (s *Server) findToolCapableAgent() string {
 	// Priority order: agents that execute commands directly first,
 	// then agents that may only suggest commands.
 	preferredOrder := []string{"claude-code", "codex", "gemini-cli", "antigravity", "bob"}
-	suggestOnlyAgents := []string{"copilot-cli", "gh-copilot"}
+	suggestOnlyAgents := []string{"copilot-cli"}
 
 	allProviders := s.registry.List()
 

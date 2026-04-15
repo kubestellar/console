@@ -5296,7 +5296,6 @@ describe('agent selection: only suggest-only agents', () => {
         payload: {
           agents: [
             { name: 'copilot-cli', displayName: 'Copilot CLI', description: '', provider: 'github-cli', available: true, capabilities: 1 },
-            { name: 'gh-copilot', displayName: 'GH Copilot', description: '', provider: 'github', available: true, capabilities: 1 },
           ],
           defaultAgent: '',
           selected: '',
@@ -5304,8 +5303,8 @@ describe('agent selection: only suggest-only agents', () => {
       })
     })
 
-    // Should fall back to the first non-suggest-only agent, but since both are suggest-only,
-    // it should fall through to the last fallback: first available agent
+    // Should fall back to the first non-suggest-only agent, but since copilot-cli is
+    // suggest-only, it should fall through to the last fallback: first available agent
     expect(result.current.selectedAgent).toBe('copilot-cli')
   })
 
