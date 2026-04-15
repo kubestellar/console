@@ -280,6 +280,13 @@ The provider request body is the system prompt, message history, and current pro
 ### Related documents
 
 - [`SECURITY.md`](../../SECURITY.md) — vulnerability reporting
+- [`docs/security/SECURITY-AI.md`](SECURITY-AI.md) — AI automation threat model (LLM-specific: prompt injection, supply chain, agent drift, token isolation)
 - [`docs/security/SELF-ASSESSMENT.md`](SELF-ASSESSMENT.md) — CNCF security self-assessment
 - [`docs/ARCHITECTURE.md`](../ARCHITECTURE.md) — broader architecture overview
 - [`README.md` § AI configuration](../../README.md#ai-configuration) — BYOK quick start
+
+## 5. AI / Automation Surface
+
+The runtime model above (backend, kc-agent, browser) is only part of the picture. The repo also runs LLM-backed GitHub workflows — Claude Code review on every PR, auto-qa and auto-qa-tuner on a cron, a GA4 → GitHub issue pipeline, and the kc-agent itself. These bring threat surfaces that don't look like classic web attacks (prompt injection, supply chain, agent drift, token isolation).
+
+See **[`SECURITY-AI.md`](SECURITY-AI.md)** for the AI-specific threat model — six threat categories, current mitigations, and an audit checklist for adding new LLM-calling workflows.

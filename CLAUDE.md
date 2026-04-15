@@ -196,6 +196,9 @@ This applies to timeouts, intervals, percentages, retries, pixel values — ever
 ### No Secrets in Code
 NEVER hardcode API keys, tokens, or credentials. Use environment variables only (`os.Getenv()` in Go, `import.meta.env.VITE_*` in frontend). Secrets come from `.env` (gitignored) or runtime env vars.
 
+### AI / LLM Surfaces
+Before adding a new workflow or handler that calls an LLM, read [`docs/security/SECURITY-AI.md`](docs/security/SECURITY-AI.md) — it covers prompt injection, supply chain, agent drift, and the audit checklist for LLM-calling code. The six threat categories and exotic-attack notes (Unicode steganography, temporal split-payload, zero-trust between agents) apply to every new LLM surface.
+
 ### Netlify Functions
 The production site (console.kubestellar.io) uses Netlify Functions, NOT the Go backend. API routes are proxied to `web/netlify/functions/*.mts`. When adding Go API handlers, update Netlify Functions separately. See `netlify.toml` for redirect mapping.
 
