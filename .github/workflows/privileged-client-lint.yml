@@ -81,7 +81,11 @@ jobs:
           PATTERN='(h\.k8sClient|s\.k8sClient)\.(Create|Update|Delete|Patch)[A-Z][A-Za-z0-9_]*\(|persistence\.(Create|Update|Delete)[A-Z][A-Za-z0-9_]*\('
 
           # List candidate matches across the handler dir, excluding tests.
-          CANDIDATES=$(grep -rEn "$PATTERN" "$HANDLER_DIR" --include='*.go' | grep -v '_test\.go' || true)
+          # Use -E (ERE) explicitly, pass --include as an option before the
+          # path, and use -e to pass the pattern so ERE metacharacters like
+          # (...) and | are interpreted correctly and the include filter is
+          # always honored regardless of grep flavor.
+          CANDIDATES=$(grep -REn --include='*.go' -e "$PATTERN" "$HANDLER_DIR" | grep -v '_test\.go' || true)
 
           if [ -z "$CANDIDATES" ]; then
             echo "PASS: no privileged-client mutations found in $HANDLER_DIR"
