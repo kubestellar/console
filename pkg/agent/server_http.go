@@ -14,11 +14,43 @@ import (
 	"sync"
 	"time"
 
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+
 	"github.com/kubestellar/console/pkg/agent/protocol"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/settings"
 )
+
+// mapK8sErrorToHTTP translates a Kubernetes API error into the appropriate
+// HTTP status + sanitized user-facing message. Opaque 500s leak apiserver
+// internals; instead we map the well-known StatusError kinds so callers can
+// render sensible UI (e.g. "already exists" -> 409 with a friendly message).
+// Non-status errors fall through to 500 with a generic message — the real
+// error is still logged by the caller via slog.Warn. #8034 Copilot followup
+// to PR #8028.
+func mapK8sErrorToHTTP(err error) (int, string) {
+	switch {
+	case k8serrors.IsAlreadyExists(err):
+		return http.StatusConflict, err.Error()
+	case k8serrors.IsForbidden(err):
+		return http.StatusForbidden, err.Error()
+	case k8serrors.IsInvalid(err):
+		return http.StatusBadRequest, err.Error()
+	case k8serrors.IsNotFound(err):
+		return http.StatusNotFound, err.Error()
+	case k8serrors.IsUnauthorized(err):
+		return http.StatusUnauthorized, err.Error()
+	case k8serrors.IsConflict(err):
+		return http.StatusConflict, err.Error()
+	case k8serrors.IsTimeout(err), k8serrors.IsServerTimeout(err):
+		return http.StatusGatewayTimeout, err.Error()
+	case k8serrors.IsServiceUnavailable(err):
+		return http.StatusServiceUnavailable, err.Error()
+	default:
+		return http.StatusInternalServerError, "internal server error"
+	}
+}
 
 // writeJSON encodes v as JSON to w and logs any encoding error.
 // After headers have been written, the only safe action is to log the failure.
@@ -339,14 +371,19 @@ func (s *Server) createNamespaceHTTP(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, map[string]interface{}{"success": false, "error": "invalid request body"})
 		return
 	}
-	if req.Cluster == "" {
+	// #8034 Copilot followup: field-level validation. Previously cluster+name
+	// were only checked for emptiness and every other failure returned an
+	// opaque 500. Reject malformed input at the HTTP boundary so the UI can
+	// render a specific error and so we don't lean on the apiserver for
+	// validation.
+	if err := validateKubeContext(req.Cluster); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		writeJSON(w, map[string]interface{}{"success": false, "error": "cluster is required"})
+		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error()})
 		return
 	}
-	if req.Name == "" {
+	if err := validateDNS1123Label("name", req.Name); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		writeJSON(w, map[string]interface{}{"success": false, "error": "name is required"})
+		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error()})
 		return
 	}
 
@@ -356,8 +393,9 @@ func (s *Server) createNamespaceHTTP(w http.ResponseWriter, r *http.Request) {
 	ns, err := s.k8sClient.CreateNamespace(ctx, req.Cluster, req.Name, req.Labels)
 	if err != nil {
 		slog.Warn("error creating namespace", "cluster", req.Cluster, "name", req.Name, "error", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error(), "source": "agent"})
+		status, msg := mapK8sErrorToHTTP(err)
+		w.WriteHeader(status)
+		writeJSON(w, map[string]interface{}{"success": false, "error": msg, "source": "agent"})
 		return
 	}
 	writeJSON(w, map[string]interface{}{"success": true, "namespace": ns, "source": "agent"})
@@ -381,8 +419,9 @@ func (s *Server) deleteNamespaceHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if err := s.k8sClient.DeleteNamespace(ctx, cluster, name); err != nil {
 		slog.Warn("error deleting namespace", "cluster", cluster, "name", name, "error", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error(), "source": "agent"})
+		status, msg := mapK8sErrorToHTTP(err)
+		w.WriteHeader(status)
+		writeJSON(w, map[string]interface{}{"success": false, "error": msg, "source": "agent"})
 		return
 	}
 	writeJSON(w, map[string]interface{}{"success": true, "cluster": cluster, "name": name, "source": "agent"})
@@ -1173,9 +1212,12 @@ func (s *Server) createRoleBindingHTTP(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, map[string]interface{}{"success": false, "error": "invalid request body"})
 		return
 	}
-	if req.Cluster == "" {
+	// #8034 Copilot followup: validate cluster context at the HTTP boundary
+	// so we return a specific 400 instead of passing empty/malformed values
+	// down to the apiserver and getting back an opaque 500.
+	if err := validateKubeContext(req.Cluster); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		writeJSON(w, map[string]interface{}{"success": false, "error": "cluster is required"})
+		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error()})
 		return
 	}
 	if req.SubjectKind == "" || req.SubjectName == "" {
@@ -1228,8 +1270,9 @@ func (s *Server) createRoleBindingHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if err := s.k8sClient.CreateRoleBinding(ctx, k8sReq); err != nil {
 		slog.Warn("error creating role binding", "cluster", req.Cluster, "namespace", req.Namespace, "name", bindingName, "error", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error(), "source": "agent"})
+		status, msg := mapK8sErrorToHTTP(err)
+		w.WriteHeader(status)
+		writeJSON(w, map[string]interface{}{"success": false, "error": msg, "source": "agent"})
 		return
 	}
 	writeJSON(w, map[string]interface{}{"success": true, "roleBinding": bindingName, "source": "agent"})
@@ -1260,8 +1303,9 @@ func (s *Server) deleteRoleBindingHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if err := s.k8sClient.DeleteRoleBinding(ctx, cluster, namespace, name, isCluster); err != nil {
 		slog.Warn("error deleting role binding", "cluster", cluster, "namespace", namespace, "name", name, "isCluster", isCluster, "error", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error(), "source": "agent"})
+		status, msg := mapK8sErrorToHTTP(err)
+		w.WriteHeader(status)
+		writeJSON(w, map[string]interface{}{"success": false, "error": msg, "source": "agent"})
 		return
 	}
 	writeJSON(w, map[string]interface{}{"success": true, "cluster": cluster, "namespace": namespace, "name": name, "isCluster": isCluster, "source": "agent"})

@@ -24,20 +24,11 @@ import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { DashboardHeader } from '../shared/DashboardHeader'
 import { RotatingTip } from '../ui/RotatingTip'
-import { api } from '../../lib/api'
+import { api, authFetch } from '../../lib/api'
 import { useToast } from '../ui/Toast'
 import { useTranslation } from 'react-i18next'
-import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN } from '../../lib/constants'
-import { FETCH_DEFAULT_TIMEOUT_MS, NAMESPACE_ABORT_TIMEOUT_MS } from '../../lib/constants/network'
-
-// Bearer token header builder for local-agent requests. Mirrors the
-// per-file helpers in useWorkloads.ts and useUsers.ts. See #7993 Phase 1.5.
-function agentAuthHeaders(): Record<string, string> {
-  const token = localStorage.getItem(STORAGE_KEY_TOKEN)
-  const headers: Record<string, string> = {}
-  if (token) headers['Authorization'] = `Bearer ${token}`
-  return headers
-}
+import { LOCAL_AGENT_HTTP_URL } from '../../lib/constants'
+import { NAMESPACE_ABORT_TIMEOUT_MS } from '../../lib/constants/network'
 import { NamespaceCard, NamespaceCardSkeleton } from './NamespaceCard'
 import { DeleteConfirmModal } from './DeleteConfirmModal'
 import { CreateNamespaceModal } from './CreateNamespaceModal'
@@ -319,10 +310,12 @@ export function NamespaceManager() {
         cluster: namespaceToDelete.cluster,
         name: namespaceToDelete.name,
       })
-      const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/namespaces?${params}`, {
+      // #8034 Copilot followup: use authFetch() which already injects the
+      // Bearer token (skipping DEMO_TOKEN_VALUE) and applies the default
+      // fetch timeout, instead of a per-file agentAuthHeaders() helper.
+      const res = await authFetch(`${LOCAL_AGENT_HTTP_URL}/namespaces?${params}`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json', ...agentAuthHeaders() },
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+        headers: { 'Content-Type': 'application/json' },
       })
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({ error: 'unknown error' }))
@@ -361,10 +354,10 @@ export function NamespaceManager() {
         namespace: selectedNamespace.name,
         name: binding.bindingName,
       })
-      const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/rolebindings?${params}`, {
+      // #8034 Copilot followup: use authFetch() which already injects the
+      // Bearer token and applies the default fetch timeout.
+      const res = await authFetch(`${LOCAL_AGENT_HTTP_URL}/rolebindings?${params}`, {
         method: 'DELETE',
-        headers: agentAuthHeaders(),
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({ error: 'unknown error' }))

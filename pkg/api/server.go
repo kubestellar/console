@@ -893,7 +893,9 @@ func (s *Server) setupRoutes() {
 	api.Get("/permissions/summary", rbac.GetPermissionsSummary)
 	api.Post("/rbac/can-i", rbac.CheckCanI)
 
-	// Namespace management routes (admin only).
+	// Namespace read routes. GET /namespaces is viewer-or-above (see
+	// ListNamespaces's requireViewerOrAbove check) and
+	// GET /namespaces/:name/access is admin-only (see GetNamespaceAccess).
 	// POST/DELETE /namespaces and POST/DELETE /namespaces/:name/access were
 	// migrated to kc-agent in #7993 Phases 1.5 and 2 — they now run under the
 	// user's kubeconfig instead of the backend pod ServiceAccount.

@@ -3,18 +3,9 @@ import { Shield, Loader2 } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { BaseModal, ConfirmDialog } from '../../lib/modals'
 import { useTranslation } from 'react-i18next'
-import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN } from '../../lib/constants'
-import { FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants/network'
+import { LOCAL_AGENT_HTTP_URL } from '../../lib/constants'
+import { authFetch } from '../../lib/api'
 import type { NamespaceDetails, NamespaceAccessEntry } from './types'
-
-// Bearer token header builder for local-agent requests. Mirrors the
-// per-file helpers in useWorkloads.ts and useUsers.ts. See #7993 Phase 1.5.
-function agentAuthHeaders(): Record<string, string> {
-  const token = localStorage.getItem(STORAGE_KEY_TOKEN)
-  const headers: Record<string, string> = {}
-  if (token) headers['Authorization'] = `Bearer ${token}`
-  return headers
-}
 
 const COMMON_SUBJECTS = {
   User: [
@@ -85,9 +76,12 @@ export function GrantAccessModal({ namespace, existingAccess, onClose, onGranted
       // this switches the only caller over. The agent's /rolebindings POST
       // handler accepts this shape directly and normalizes it into a full
       // CreateRoleBindingRequest before calling the shared pkg/k8s method.
-      const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/rolebindings`, {
+      // #8034 Copilot followup: use authFetch() which already injects the
+      // Bearer token and applies the default fetch timeout, instead of a
+      // per-file agentAuthHeaders() helper.
+      const res = await authFetch(`${LOCAL_AGENT_HTTP_URL}/rolebindings`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...agentAuthHeaders() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           cluster: namespace.cluster,
           namespace: namespace.name,
@@ -96,7 +90,6 @@ export function GrantAccessModal({ namespace, existingAccess, onClose, onGranted
           subjectNamespace: subjectKind === 'ServiceAccount' ? subjectNS : undefined,
           role,
         }),
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({ error: 'Failed to grant access' }))
