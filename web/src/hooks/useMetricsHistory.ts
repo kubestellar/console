@@ -177,6 +177,10 @@ function useSnapshotSubscription(): MetricsSnapshot[] {
       setHistory([...newSnapshots])
     }
     subscribers.add(handleUpdate)
+    // Resync once right after subscribing: if the singleton received an
+    // update between the initial lazy `useState` snapshot and this effect
+    // running, we'd otherwise miss it until the next notify.
+    setHistory([...snapshots])
 
     return () => {
       subscribers.delete(handleUpdate)

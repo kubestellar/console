@@ -27,6 +27,16 @@ import {
  */
 const GPU_SNAPSHOT_STALENESS_MS = 30 * 60 * 1000 // 30 min
 
+/**
+ * Bucket size for the staleness-tick that forces the fallback memo to
+ * re-evaluate as time passes. Without this, a snapshot accepted as fresh
+ * can remain displayed indefinitely because the memo's deps never change.
+ * Rounding `Date.now()` to this bucket means the memo only recomputes when
+ * the bucket boundary crosses — roughly once per minute — which is plenty
+ * of precision for a 30-minute staleness window.
+ */
+const STALENESS_TICK_MS = 60_000
+
 interface GPUDataPoint {
   time: string
   available: number
@@ -86,11 +96,20 @@ export function GPUUsageTrend() {
   // History) and publishes updates through the shared singleton.
   const { history: metricsHistory } = useMetricsHistoryReadOnly()
 
-  // Fall back to the most recent snapshot's GPU nodes only when the live
-  // fetch has actually tried and come up empty (not during the initial
-  // loading skeleton), and only for snapshots within the staleness window.
-  // Snapshots use `gpuTotal`; we remap to `gpuCount` so downstream
-  // aggregation (currentTotals, filteredNodes) stays unchanged.
+  // Staleness-tick: a time-bucket derived from Date.now() rounded to
+  // STALENESS_TICK_MS. Included in the `effectiveGPUNodes` memo deps so the
+  // memo re-evaluates on every bucket boundary, which lets a snapshot that
+  // was "fresh" when first shown transition to "stale" as the clock advances.
+  const [stalenessTick, setStalenessTick] = useState<number>(
+    () => Math.floor(Date.now() / STALENESS_TICK_MS),
+  )
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setStalenessTick(Math.floor(Date.now() / STALENESS_TICK_MS))
+    }, STALENESS_TICK_MS)
+    return () => clearInterval(intervalId)
+  }, [])
+
   const effectiveGPUNodes: EffectiveGPUNode[] = useMemo(() => {
     if (gpuNodes.length > 0) {
       return gpuNodes.map(n => ({
@@ -101,21 +120,22 @@ export function GPUUsageTrend() {
         gpuAllocated: n.gpuAllocated }))
     }
     // Don't fall back during the initial load — the card will show its
-    // skeleton while `hookLoading` is true. We only want the fallback once
-    // the hook has settled into an empty / failed state.
+    // skeleton while `hookLoading` is true.
     if (hookLoading && !isFailed && consecutiveFailures === 0) {
       return []
     }
-    // Search most-recent-first for a snapshot that actually has GPU data
-    // AND is within the staleness window. Older snapshots are skipped so
-    // we never surface days-old inventory as "current".
-    // eslint-disable-next-line react-hooks/purity -- Date.now() is required to compute snapshot age; this memo re-runs whenever metricsHistory updates so staleness stays accurate.
-    const now = Date.now()
+    // Only fall back when the live fetch actually failed. A successful fetch
+    // that returned an empty list is a legitimate "cluster has no GPUs" state
+    // and must NOT be masked by stale history.
+    if (!isFailed && consecutiveFailures === 0) {
+      return []
+    }
+    const nowBucketed = stalenessTick * STALENESS_TICK_MS
     for (let i = metricsHistory.length - 1; i >= 0; i -= 1) {
       const snap = metricsHistory[i]
       const snapNodes = snap?.gpuNodes || []
       if (snapNodes.length === 0) continue
-      const age = now - new Date(snap.timestamp).getTime()
+      const age = nowBucketed - new Date(snap.timestamp).getTime()
       if (age > GPU_SNAPSHOT_STALENESS_MS) {
         // History is ordered oldest→newest, so every earlier snapshot is
         // even older — we can stop scanning.
@@ -129,7 +149,7 @@ export function GPUUsageTrend() {
         gpuAllocated: g.gpuAllocated }))
     }
     return []
-  }, [gpuNodes, metricsHistory, hookLoading, isFailed, consecutiveFailures])
+  }, [gpuNodes, metricsHistory, hookLoading, isFailed, consecutiveFailures, stalenessTick])
 
   // Only show skeleton when no cached data exists (live OR snapshot fallback)
   const hasData = effectiveGPUNodes.length > 0

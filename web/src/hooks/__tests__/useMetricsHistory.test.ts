@@ -1202,6 +1202,82 @@ describe('useMetricsHistory', () => {
     })
   })
 
+  describe('useMetricsHistoryReadOnly', () => {
+    const INITIAL_CAPTURE_DELAY_MS = 5000
+    const TEN_MINUTES_MS = 10 * 60 * 1000
+
+    it('does not start a capture timer (read-only)', async () => {
+      mockClusters.push({
+        name: 'readonly-cluster',
+        cpuCores: 4,
+        cpuUsageCores: 2,
+        memoryGB: 8,
+        memoryUsageGB: 4,
+        nodeCount: 1,
+        healthy: true,
+      })
+
+      const { useMetricsHistoryReadOnly } = await importFresh()
+      const { result } = renderHook(() => useMetricsHistoryReadOnly())
+
+      const startTime = Date.now()
+      act(() => {
+        vi.setSystemTime(startTime + INITIAL_CAPTURE_DELAY_MS + TEN_MINUTES_MS)
+        vi.advanceTimersByTime(INITIAL_CAPTURE_DELAY_MS + TEN_MINUTES_MS)
+      })
+
+      // Singleton snapshot count stays at 0 — the read-only hook is not
+      // driving the capture interval.
+      expect(result.current.history).toHaveLength(0)
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
+      expect(stored).toHaveLength(0)
+    })
+
+    it('stays in sync with the singleton when the driver captures a snapshot', async () => {
+      mockClusters.push({
+        name: 'driver-cluster',
+        cpuCores: 4,
+        cpuUsageCores: 2,
+        memoryGB: 8,
+        memoryUsageGB: 4,
+        nodeCount: 1,
+        healthy: true,
+      })
+
+      const { useMetricsHistory, useMetricsHistoryReadOnly } = await importFresh()
+      const { result: driver } = renderHook(() => useMetricsHistory())
+      const { result: reader } = renderHook(() => useMetricsHistoryReadOnly())
+
+      expect(reader.current.history).toHaveLength(0)
+
+      act(() => {
+        driver.current.captureNow()
+      })
+
+      // Read-only hook must reflect the driver's snapshot via the subscriber
+      // pattern, without doing any MCP polling or capture of its own.
+      expect(reader.current.history.length).toBeGreaterThanOrEqual(1)
+      expect(driver.current.history.length).toBe(reader.current.history.length)
+    })
+
+    it('reflects HISTORY_CHANGED_EVENT updates (cross-tab sync)', async () => {
+      const { useMetricsHistoryReadOnly } = await importFresh()
+      const { result } = renderHook(() => useMetricsHistoryReadOnly())
+
+      expect(result.current.history).toHaveLength(0)
+
+      // Simulate another tab writing to localStorage and firing the event.
+      const snap = makeSnapshot({ timestamp: new Date().toISOString() })
+      localStorage.setItem(STORAGE_KEY, JSON.stringify([snap]))
+
+      act(() => {
+        window.dispatchEvent(new Event(HISTORY_CHANGED_EVENT))
+      })
+
+      expect(result.current.history).toHaveLength(1)
+    })
+  })
+
   describe('cleanup on unmount', () => {
     it('removes subscriber on unmount to prevent memory leaks', async () => {
       const { useMetricsHistory } = await importFresh()
