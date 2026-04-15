@@ -26,6 +26,7 @@ import {
   setHealthCheckFailures } from './shared'
 import type { ClusterInfo } from './types'
 import { subscribePolling } from './pollingManager'
+import { LOCAL_AGENT_HTTP_URL } from '../../lib/constants/network'
 
 /** Data slice returned by useClusters — heavy, arrives via startTransition. */
 interface ClusterDataSlice {
@@ -52,7 +53,7 @@ export function useMCPStatus() {
   useEffect(() => {
     const fetchStatus = async () => {
       try {
-        const { data } = await api.get<MCPStatus>('/api/mcp/status')
+        const { data } = await api.get<MCPStatus>(`${LOCAL_AGENT_HTTP_URL}/status`)
         setStatus(data)
         setError(null)
       } catch {

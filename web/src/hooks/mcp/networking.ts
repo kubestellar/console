@@ -8,7 +8,7 @@ import { kubectlProxy } from '../../lib/kubectlProxy'
 import { STORAGE_KEY_TOKEN } from '../../lib/constants'
 import { REFRESH_INTERVAL_MS, MIN_REFRESH_INDICATOR_MS, getEffectiveInterval, LOCAL_AGENT_URL, agentFetch, clusterCacheRef } from './shared'
 import { subscribePolling } from './pollingManager'
-import { MCP_HOOK_TIMEOUT_MS, DEPLOY_ABORT_TIMEOUT_MS, SERVICES_CACHE_TTL_MS } from '../../lib/constants/network'
+import { MCP_HOOK_TIMEOUT_MS, DEPLOY_ABORT_TIMEOUT_MS, SERVICES_CACHE_TTL_MS, LOCAL_AGENT_HTTP_URL } from '../../lib/constants/network'
 import type { Service, Ingress, NetworkPolicy } from './types'
 
 // ---------------------------------------------------------------------------
@@ -247,7 +247,7 @@ export function useServices(cluster?: string, namespace?: string) {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
-      const url = `/api/mcp/services?${params}`
+      const url = `${LOCAL_AGENT_HTTP_URL}/services?${params}`
 
       // Use direct fetch with timeout to prevent hanging
       const token = localStorage.getItem(STORAGE_KEY_TOKEN)
@@ -395,7 +395,7 @@ export function useIngresses(cluster?: string, namespace?: string) {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
-      const { data } = await api.get<{ ingresses: Ingress[] }>(`/api/mcp/ingresses?${params}`)
+      const { data } = await api.get<{ ingresses: Ingress[] }>(`${LOCAL_AGENT_HTTP_URL}/ingresses?${params}`)
       setIngresses(data.ingresses || [])
       setError(null)
       setConsecutiveFailures(0)
@@ -476,7 +476,7 @@ export function useNetworkPolicies(cluster?: string, namespace?: string) {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
-      const { data } = await api.get<{ networkpolicies: NetworkPolicy[] }>(`/api/mcp/networkpolicies?${params}`)
+      const { data } = await api.get<{ networkpolicies: NetworkPolicy[] }>(`${LOCAL_AGENT_HTTP_URL}/networkpolicies?${params}`)
       setNetworkPolicies(data.networkpolicies || [])
       setError(null)
       setConsecutiveFailures(0)

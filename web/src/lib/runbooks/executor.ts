@@ -34,7 +34,7 @@ function resolveArgs(args: Record<string, string>, context: RunbookContext): Rec
 /**
  * Execute a single evidence step via MCP or Gadget API.
  *
- * #7285 — Fixed MCP route from `/api/mcp/ops/call` to `/api/mcp/tools/ops/call`
+ * #7285 — Fixed MCP route from `${LOCAL_AGENT_HTTP_URL}/ops/call` to `${LOCAL_AGENT_HTTP_URL}/tools/ops/call`
  * to match the backend route registered in server.go.
  *
  * #7286 — Fixed MCP payload schema from `{ tool, args }` to `{ name, arguments }`

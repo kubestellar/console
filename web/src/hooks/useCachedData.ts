@@ -102,7 +102,7 @@ async function fetchAPI<T>(
     })
   }
 
-  const url = `/api/mcp/${endpoint}?${searchParams}`
+  const url = `${LOCAL_AGENT_HTTP_URL}/${endpoint}?${searchParams}`
   // Combine the global abort signal with a per-request timeout.
   // AbortSignal.any() fires if either signal triggers.
   const signal = AbortSignal.any([
@@ -263,7 +263,7 @@ async function fetchViaSSE<T>(
     // cluster would silently resolve to [] and flap the UI.
     let clusterErrorCount = 0
     const result = await fetchSSE<T>({
-      url: `/api/mcp/${endpoint}/stream`,
+      url: `${LOCAL_AGENT_HTTP_URL}/${endpoint}/stream`,
       params,
       itemsKey: resultKey,
       onClusterData: (_cluster, items) => {
@@ -1258,7 +1258,7 @@ export function useCachedSecurityIssues(
           const params = new URLSearchParams()
           if (cluster) params.append('cluster', cluster)
           if (namespace) params.append('namespace', namespace)
-          const response = await authFetch(`/api/mcp/security-issues?${params}`, {
+          const response = await authFetch(`${LOCAL_AGENT_HTTP_URL}/security-issues?${params}`, {
             method: 'GET',
             headers: {
               'Content-Type': 'application/json',
@@ -1661,7 +1661,7 @@ export const coreFetchers = {
     }
     const token = getToken()
     if (token && token !== 'demo-token' && !isBackendUnavailable()) {
-      const response = await authFetch('/api/mcp/security-issues', {
+      const response = await authFetch(`${LOCAL_AGENT_HTTP_URL}/security-issues`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

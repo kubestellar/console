@@ -1074,7 +1074,7 @@ export async function fetchSingleClusterHealth(clusterName: string, kubectlConte
   const token = localStorage.getItem(STORAGE_KEY_TOKEN)
   try {
     const response = await fetch(
-      `/api/mcp/clusters/${encodeURIComponent(clusterName)}/health`,
+      `${LOCAL_AGENT_HTTP_URL}/clusters/${encodeURIComponent(clusterName)}/health`,
       {
         signal: AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS),
         headers: token ? { 'Authorization': `Bearer ${token}` } : {},
@@ -1202,7 +1202,7 @@ async function detectClusterDistribution(clusterName: string, kubectlContext?: s
   // Try pods endpoint first
   try {
     const response = await fetch(
-      `/api/mcp/pods?cluster=${encodeURIComponent(clusterName)}&limit=500`,
+      `${LOCAL_AGENT_HTTP_URL}/pods?cluster=${encodeURIComponent(clusterName)}&limit=500`,
       { signal: AbortSignal.timeout(METRICS_SERVER_TIMEOUT_MS), headers }
     )
     if (response.ok) {
@@ -1224,7 +1224,7 @@ async function detectClusterDistribution(clusterName: string, kubectlContext?: s
   // Fallback: try events endpoint
   try {
     const response = await fetch(
-      `/api/mcp/events?cluster=${encodeURIComponent(clusterName)}&limit=200`,
+      `${LOCAL_AGENT_HTTP_URL}/events?cluster=${encodeURIComponent(clusterName)}&limit=200`,
       { signal: AbortSignal.timeout(METRICS_SERVER_TIMEOUT_MS), headers }
     )
     if (response.ok) {
@@ -1246,7 +1246,7 @@ async function detectClusterDistribution(clusterName: string, kubectlContext?: s
   // Fallback: try deployments endpoint
   try {
     const response = await fetch(
-      `/api/mcp/deployments?cluster=${encodeURIComponent(clusterName)}`,
+      `${LOCAL_AGENT_HTTP_URL}/deployments?cluster=${encodeURIComponent(clusterName)}`,
       { signal: AbortSignal.timeout(METRICS_SERVER_TIMEOUT_MS), headers }
     )
     if (response.ok) {
@@ -1594,7 +1594,7 @@ export async function fullFetchClusters() {
     }
 
     // Fall back to backend API
-    const { data } = await api.get<{ clusters: ClusterInfo[] }>('/api/mcp/clusters')
+    const { data } = await api.get<{ clusters: ClusterInfo[] }>(`${LOCAL_AGENT_HTTP_URL}/clusters`)
     // Merge new cluster list with existing cached data (preserve distribution, health, etc.)
     const existingClusters = clusterCache.clusters
     const mergedClusters = (data.clusters || []).map(newCluster => {

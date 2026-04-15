@@ -5,6 +5,7 @@ import { kubectlProxy } from '../../lib/kubectlProxy'
 import { isDemoMode } from '../../lib/demoMode'
 import { LOCAL_AGENT_URL, agentFetch, clusterCacheRef } from './shared'
 import type { PodInfo, NamespaceStats } from './types'
+import { LOCAL_AGENT_HTTP_URL } from '../../lib/constants/network'
 
 // Large clusters (100+ namespaces) can take 30s+ to list all namespaces.
 // Use a generous timeout to avoid aborting valid but slow requests.
@@ -142,7 +143,7 @@ export function useNamespaces(cluster?: string, forceLive = false) {
     try {
       const podNs: string[] = []
       try {
-        const { data } = await api.get<{ pods: PodInfo[] }>(`/api/mcp/pods?cluster=${encodeURIComponent(cluster)}`)
+        const { data } = await api.get<{ pods: PodInfo[] }>(`${LOCAL_AGENT_HTTP_URL}/pods?cluster=${encodeURIComponent(cluster)}`)
         for (const pod of (data.pods || [])) {
           if (pod.namespace) podNs.push(pod.namespace)
         }
@@ -193,7 +194,7 @@ export function useNamespaceStats(cluster?: string) {
     setIsLoading(true)
     try {
       // Fetch all pods for the cluster (no limit)
-      const { data } = await api.get<{ pods: PodInfo[] }>(`/api/mcp/pods?cluster=${encodeURIComponent(cluster)}&limit=1000`)
+      const { data } = await api.get<{ pods: PodInfo[] }>(`${LOCAL_AGENT_HTTP_URL}/pods?cluster=${encodeURIComponent(cluster)}&limit=1000`)
 
       // Group pods by namespace and calculate stats
       const nsMap: Record<string, NamespaceStats> = {}

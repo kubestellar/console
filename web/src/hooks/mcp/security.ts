@@ -6,7 +6,7 @@ import { registerRefetch, registerCacheReset } from '../../lib/modeTransition'
 import { STORAGE_KEY_TOKEN } from '../../lib/constants'
 import { MIN_REFRESH_INDICATOR_MS, REFRESH_INTERVAL_MS, getEffectiveInterval } from './shared'
 import { subscribePolling } from './pollingManager'
-import { MCP_HOOK_TIMEOUT_MS } from '../../lib/constants/network'
+import { MCP_HOOK_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../../lib/constants/network'
 import type { SecurityIssue, GitOpsDrift } from './types'
 
 // LocalStorage cache keys
@@ -98,7 +98,7 @@ export function useSecurityIssues(cluster?: string, namespace?: string) {
       if (namespace) sseParams.namespace = namespace
 
       const allIssues = await fetchSSE<SecurityIssue>({
-        url: '/api/mcp/security-issues/stream',
+        url: `${LOCAL_AGENT_HTTP_URL}/security-issues/stream`,
         params: sseParams,
         itemsKey: 'issues',
         onClusterData: (_clusterName, items) => {

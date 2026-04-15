@@ -14,7 +14,7 @@ const LOGS_CARDS_KEY = 'kubestellar-logs-cards'
 //
 // Fixes #6045: the Logs dashboard historically only surfaced Kubernetes
 // Events (via `useCachedEvents()`).  The new `pod_logs` card wires the
-// existing `/api/mcp/pods/logs` backend endpoint to the dashboard so users
+// existing `${LOCAL_AGENT_HTTP_URL}/pods/logs` backend endpoint to the dashboard so users
 // can actually tail container logs — not just events — from this page.
 const DEFAULT_LOGS_CARDS = [
   { type: 'pod_logs', title: 'Pod Logs', position: { w: 12, h: 4 } },

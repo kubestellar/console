@@ -163,7 +163,7 @@ export function NamespaceManager() {
         if (clusterNamespaces.length === 0) {
           try {
             const response = await api.get<{ pods: Array<{ namespace: string; status: string }> }>(
-              `/api/mcp/pods?cluster=${encodeURIComponent(cluster)}&limit=1000`
+              `${LOCAL_AGENT_HTTP_URL}/pods?cluster=${encodeURIComponent(cluster)}&limit=1000`
             )
 
             // Extract unique namespaces from pods

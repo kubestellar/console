@@ -8,7 +8,7 @@ import { kubectlProxy } from '../../lib/kubectlProxy'
 import { STORAGE_KEY_TOKEN } from '../../lib/constants'
 import { REFRESH_INTERVAL_MS, MIN_REFRESH_INDICATOR_MS, getEffectiveInterval, LOCAL_AGENT_URL, clusterCacheRef, fetchWithRetry } from './shared'
 import { subscribePolling } from './pollingManager'
-import { MCP_HOOK_TIMEOUT_MS } from '../../lib/constants/network'
+import { MCP_HOOK_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../../lib/constants/network'
 import type { PodInfo, PodIssue, Deployment, DeploymentIssue, Job, HPA, ReplicaSet, StatefulSet, DaemonSet, CronJob } from './types'
 
 // ---------------------------------------------------------------------------
@@ -315,7 +315,7 @@ export function usePods(cluster?: string, namespace?: string, sortBy: 'restarts'
       if (namespace) sseParams.namespace = namespace
 
       const allPods = await fetchSSE<PodInfo>({
-        url: '/api/mcp/pods/stream',
+        url: `${LOCAL_AGENT_HTTP_URL}/pods/stream`,
         params: sseParams,
         itemsKey: 'pods',
         signal: abortController.signal,
@@ -476,7 +476,7 @@ export function useAllPods(cluster?: string, namespace?: string, forceLive = fal
       if (namespace) sseParams.namespace = namespace
 
       const allPods = await fetchSSE<PodInfo>({
-        url: '/api/mcp/pods/stream',
+        url: `${LOCAL_AGENT_HTTP_URL}/pods/stream`,
         params: sseParams,
         itemsKey: 'pods',
         signal: abortController.signal,
@@ -668,7 +668,7 @@ export function usePodIssues(cluster?: string, namespace?: string) {
       if (namespace) sseParams.namespace = namespace
 
       const allIssues = await fetchSSE<PodIssue>({
-        url: '/api/mcp/pod-issues/stream',
+        url: `${LOCAL_AGENT_HTTP_URL}/pod-issues/stream`,
         params: sseParams,
         itemsKey: 'issues',
         signal: abortController.signal,
@@ -830,7 +830,7 @@ export function useDeploymentIssues(cluster?: string, namespace?: string) {
       if (namespace) sseParams.namespace = namespace
 
       const allIssues = await fetchSSE<DeploymentIssue>({
-        url: '/api/mcp/deployment-issues/stream',
+        url: `${LOCAL_AGENT_HTTP_URL}/deployment-issues/stream`,
         params: sseParams,
         itemsKey: 'issues',
         signal: abortController.signal,
@@ -1072,7 +1072,7 @@ export function useDeployments(cluster?: string, namespace?: string) {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
-      const url = `/api/mcp/deployments?${params}`
+      const url = `${LOCAL_AGENT_HTTP_URL}/deployments?${params}`
 
       if (isDemoMode()) {
         setDeployments([])
@@ -1217,7 +1217,7 @@ export function useJobs(cluster?: string, namespace?: string) {
       if (cluster) sseParams.cluster = cluster
       if (namespace) sseParams.namespace = namespace
       const result = await fetchSSE<Job>({
-        url: '/api/mcp/jobs/stream',
+        url: `${LOCAL_AGENT_HTTP_URL}/jobs/stream`,
         params: sseParams,
         itemsKey: 'jobs',
         signal: abortController.signal,
@@ -1291,7 +1291,7 @@ export function useHPAs(cluster?: string, namespace?: string) {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
-      const { data } = await api.get<{ hpas: HPA[] }>(`/api/mcp/hpas?${params}`)
+      const { data } = await api.get<{ hpas: HPA[] }>(`${LOCAL_AGENT_HTTP_URL}/hpas?${params}`)
       setHPAs(data.hpas || [])
       setError(null)
       setConsecutiveFailures(0)
@@ -1356,7 +1356,7 @@ export function useReplicaSets(cluster?: string, namespace?: string) {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
-      const { data } = await api.get<{ replicasets: ReplicaSet[] }>(`/api/mcp/replicasets?${params}`)
+      const { data } = await api.get<{ replicasets: ReplicaSet[] }>(`${LOCAL_AGENT_HTTP_URL}/replicasets?${params}`)
       setReplicaSets(data.replicasets || [])
       setError(null)
       setConsecutiveFailures(0)
@@ -1419,7 +1419,7 @@ export function useStatefulSets(cluster?: string, namespace?: string) {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
-      const { data } = await api.get<{ statefulsets: StatefulSet[] }>(`/api/mcp/statefulsets?${params}`)
+      const { data } = await api.get<{ statefulsets: StatefulSet[] }>(`${LOCAL_AGENT_HTTP_URL}/statefulsets?${params}`)
       setStatefulSets(data.statefulsets || [])
       setError(null)
       setConsecutiveFailures(0)
@@ -1482,7 +1482,7 @@ export function useDaemonSets(cluster?: string, namespace?: string) {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
-      const { data } = await api.get<{ daemonsets: DaemonSet[] }>(`/api/mcp/daemonsets?${params}`)
+      const { data } = await api.get<{ daemonsets: DaemonSet[] }>(`${LOCAL_AGENT_HTTP_URL}/daemonsets?${params}`)
       setDaemonSets(data.daemonsets || [])
       setError(null)
       setConsecutiveFailures(0)
@@ -1545,7 +1545,7 @@ export function useCronJobs(cluster?: string, namespace?: string) {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
-      const { data } = await api.get<{ cronjobs: CronJob[] }>(`/api/mcp/cronjobs?${params}`)
+      const { data } = await api.get<{ cronjobs: CronJob[] }>(`${LOCAL_AGENT_HTTP_URL}/cronjobs?${params}`)
       setCronJobs(data.cronjobs || [])
       setError(null)
       setConsecutiveFailures(0)
@@ -1598,7 +1598,7 @@ export function usePodLogs(cluster: string, namespace: string, pod: string, cont
       params.append('pod', pod)
       if (container) params.append('container', container)
       params.append('tail', tail.toString())
-      const { data } = await api.get<{ logs: string }>(`/api/mcp/pods/logs?${params}`)
+      const { data } = await api.get<{ logs: string }>(`${LOCAL_AGENT_HTTP_URL}/pods/logs?${params}`)
       setLogs(data.logs || '')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch logs')

@@ -16,7 +16,7 @@
 import { STORAGE_KEY_TOKEN } from './constants'
 
 export interface SSEFetchOptions<T> {
-  /** SSE endpoint URL path (e.g. '/api/mcp/pods/stream') */
+  /** SSE endpoint URL path (e.g. `${LOCAL_AGENT_HTTP_URL}/pods/stream`) */
   url: string
   /** Query parameters appended to the URL */
   params?: Record<string, string | number | undefined>

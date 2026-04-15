@@ -2,7 +2,7 @@
  * Pod Logs Card Configuration
  *
  * Renders container logs via a custom component (PodLogs.tsx) that wires
- * cluster/namespace/pod/container selectors to the `/api/mcp/pods/logs`
+ * cluster/namespace/pod/container selectors to the `${LOCAL_AGENT_HTTP_URL}/pods/logs`
  * endpoint through the `usePodLogs` hook.
  */
 
