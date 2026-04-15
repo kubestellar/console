@@ -34,8 +34,12 @@ env:
   MIN_MOBILE_PCT: 5
   # Number of consecutive low-mobile days before alerting
   CONSECUTIVE_DAYS_THRESHOLD: 3
-  # Minimum total sessions/day to consider (skip very low-traffic days)
-  MIN_DAILY_SESSIONS: 10
+  # Minimum total sessions/day to consider (skip very low-traffic days).
+  # At <200 sessions/day, the 5% mobile threshold is dominated by sample-size
+  # noise — 1-2 users moves the percentage by 1-2 points, so the monitor flaps
+  # open/close daily. See issue #8136 for the data that motivated raising this
+  # floor from 10 to 200.
+  MIN_DAILY_SESSIONS: 200
   LOOKBACK_DAYS: 7
 
 permissions:
@@ -136,8 +140,12 @@ jobs:
             for (const date of sortedDates) {
               const day = dailyData.get(date);
               if (day.total < minDailySessions) {
-                // Skip low-traffic days (weekends, etc.)
+                // Skip low-traffic days: sample size too small to trust the
+                // mobile %. Reset the consecutive-low streak so skipped days
+                // do not silently chain together low-volume days that are
+                // actually noise (see #8136).
                 dailyReport.push({ date, mobilePct: null, sessions: day.total, skipped: true });
+                consecutiveLowDays = 0;
                 continue;
               }
 
@@ -166,7 +174,7 @@ jobs:
             console.log('─'.repeat(60));
             for (const d of dailyReport) {
               if (d.skipped) {
-                console.log(`  ${d.date}: skipped (${d.sessions} sessions < ${minDailySessions} threshold)`);
+                console.log(`  ${d.date}: skipped — ${d.sessions} sessions below ${minDailySessions} sample-size floor (mobile % unreliable)`);
               } else {
                 const flag = d.isLow ? ' ⚠️' : ' ✓';
                 console.log(`  ${d.date}: ${d.mobilePct}% mobile (${d.mobile}/${d.sessions})${flag}`);
