@@ -96,6 +96,11 @@ import {
   useCachedSecurityIssues,
   useCachedNodes,
 } from './useCachedData'
+// Import the same (mocked) constant the hook uses so URL assertions track
+// kc-agent migration automatically (phase 4.5b, #7993 / #8173). The vi.mock
+// of '../lib/constants' above overrides LOCAL_AGENT_HTTP_URL to the test
+// value, and this import resolves through that mock.
+import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -192,7 +197,7 @@ describe('fetchAPI internals (via useCachedPods)', () => {
     await capturedFetcher()
 
     expect(globalThis.fetch).toHaveBeenCalledWith(
-      expect.stringContaining('/api/mcp/pods?'),
+      expect.stringContaining(`${LOCAL_AGENT_HTTP_URL}/pods?`),
       expect.any(Object),
     )
     const url = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string
@@ -575,7 +580,7 @@ describe('useCachedServices', () => {
     await capturedFetcher()
 
     const url = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string
-    expect(url).toContain('/api/mcp/services')
+    expect(url).toContain(`${LOCAL_AGENT_HTTP_URL}/services`)
     expect(url).toContain('cluster=my-cluster')
     expect(url).toContain('namespace=default')
   })
@@ -906,7 +911,7 @@ describe('useCachedWarningEvents', () => {
     await capturedFetcher()
 
     const url = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string
-    expect(url).toContain('/api/mcp/events/warnings')
+    expect(url).toContain(`${LOCAL_AGENT_HTTP_URL}/events/warnings`)
     expect(url).toContain('cluster=prod-east')
   })
 })

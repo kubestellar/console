@@ -75,6 +75,9 @@ import {
   useEvents,
   useWarningEvents,
 } from '../events'
+// Import the same constant the source hooks use so URL assertions track
+// kc-agent migration automatically (phase 4.5b, #7993 / #8173).
+import { LOCAL_AGENT_HTTP_URL } from '../../../lib/constants/network'
 
 // ---------------------------------------------------------------------------
 // Setup / teardown
@@ -262,7 +265,7 @@ describe('useEvents', () => {
     renderHook(() => useEvents())
     await waitFor(() => expect(mockFetchSSE).toHaveBeenCalled())
     const callArgs = mockFetchSSE.mock.calls[0][0] as { url: string }
-    expect(callArgs.url).toBe('/api/mcp/events/stream')
+    expect(callArgs.url).toBe(`${LOCAL_AGENT_HTTP_URL}/events/stream`)
   })
 
   it('applies default limit of 20 when none is provided', async () => {
@@ -591,7 +594,7 @@ describe('useWarningEvents', () => {
 
     await waitFor(() => expect(mockFetchSSE).toHaveBeenCalled())
     const callArgs = mockFetchSSE.mock.calls[0][0] as { url: string }
-    expect(callArgs.url).toBe('/api/mcp/events/warnings/stream')
+    expect(callArgs.url).toBe(`${LOCAL_AGENT_HTTP_URL}/events/warnings/stream`)
   })
 
   it('forwards cluster, namespace, and limit when provided', async () => {

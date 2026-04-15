@@ -106,6 +106,9 @@ import {
   GPU_RESOURCE_TYPES,
   COMMON_RESOURCE_TYPES,
 } from '../storage'
+// Import the same constant the source hooks use so URL assertions track
+// kc-agent migration automatically (phase 4.5b, #7993 / #8173).
+import { LOCAL_AGENT_HTTP_URL } from '../../../lib/constants/network'
 
 // ---------------------------------------------------------------------------
 // Setup / teardown
@@ -882,7 +885,7 @@ describe('createOrUpdateResourceQuota', () => {
 
     const result = await createOrUpdateResourceQuota(spec)
 
-    expect(mockApiPost).toHaveBeenCalledWith('/api/mcp/resourcequotas', spec)
+    expect(mockApiPost).toHaveBeenCalledWith(`${LOCAL_AGENT_HTTP_URL}/resourcequotas`, spec)
     expect(result).toEqual(createdQuota)
   })
 
@@ -909,7 +912,7 @@ describe('deleteResourceQuota', () => {
     await deleteResourceQuota('prod-east', 'default', 'compute-quota')
 
     expect(mockApiDelete).toHaveBeenCalledWith(
-      '/api/mcp/resourcequotas?cluster=prod-east&namespace=default&name=compute-quota'
+      `${LOCAL_AGENT_HTTP_URL}/resourcequotas?cluster=prod-east&namespace=default&name=compute-quota`
     )
   })
 
@@ -1239,7 +1242,7 @@ describe('deleteResourceQuota', () => {
   it('calls DELETE with correct params', async () => {
     await deleteResourceQuota('cluster-x', 'namespace-y', 'quota-z')
     expect(mockApiDelete).toHaveBeenCalledWith(
-      '/api/mcp/resourcequotas?cluster=cluster-x&namespace=namespace-y&name=quota-z'
+      `${LOCAL_AGENT_HTTP_URL}/resourcequotas?cluster=cluster-x&namespace=namespace-y&name=quota-z`
     )
   })
 

@@ -64,6 +64,9 @@ vi.mock('../../../lib/constants', async (importOriginal) => {
 // ---------------------------------------------------------------------------
 
 import { useSecurityIssues, useGitOpsDrifts } from '../security'
+// Import the same constant the source hooks use so URL assertions track
+// kc-agent migration automatically (phase 4.5b, #7993 / #8173).
+import { LOCAL_AGENT_HTTP_URL } from '../../../lib/constants/network'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -250,7 +253,7 @@ describe('useSecurityIssues', () => {
 
     await waitFor(() => expect(mockFetchSSE).toHaveBeenCalled())
     const callArgs = mockFetchSSE.mock.calls[0][0] as { url: string; itemsKey: string }
-    expect(callArgs.url).toBe('/api/mcp/security-issues/stream')
+    expect(callArgs.url).toBe(`${LOCAL_AGENT_HTTP_URL}/security-issues/stream`)
     expect(callArgs.itemsKey).toBe('issues')
   })
 

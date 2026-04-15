@@ -73,6 +73,9 @@ vi.mock('../../../lib/constants', async (importOriginal) => {
 // ---------------------------------------------------------------------------
 
 import { useConfigMaps, useSecrets, useServiceAccounts } from '../config'
+// Import the same constant the source hooks use so URL assertions track
+// kc-agent migration automatically (phase 4.5b, #7993 / #8173).
+import { LOCAL_AGENT_HTTP_URL } from '../../../lib/constants/network'
 
 // ---------------------------------------------------------------------------
 // Setup / teardown
@@ -577,7 +580,7 @@ describe('useConfigMaps — SSE streaming', () => {
       itemsKey: string
       params: Record<string, string>
     }
-    expect(sseArg.url).toBe('/api/mcp/configmaps/stream')
+    expect(sseArg.url).toBe(`${LOCAL_AGENT_HTTP_URL}/configmaps/stream`)
     expect(sseArg.itemsKey).toBe('configmaps')
   })
 
@@ -648,7 +651,7 @@ describe('useSecrets — SSE streaming', () => {
       url: string
       itemsKey: string
     }
-    expect(sseArg.url).toBe('/api/mcp/secrets/stream')
+    expect(sseArg.url).toBe(`${LOCAL_AGENT_HTTP_URL}/secrets/stream`)
     expect(sseArg.itemsKey).toBe('secrets')
   })
 
@@ -735,7 +738,7 @@ describe('useConfigMaps — REST fallback', () => {
 
     await waitFor(() => expect(mockApiGet).toHaveBeenCalled())
     const url: string = mockApiGet.mock.calls[0][0]
-    expect(url).toContain('/api/mcp/configmaps')
+    expect(url).toContain(`${LOCAL_AGENT_HTTP_URL}/configmaps`)
     expect(url).toContain('cluster=prod-east')
     expect(url).toContain('namespace=monitoring')
   })
@@ -776,7 +779,7 @@ describe('useSecrets — REST fallback', () => {
 
     await waitFor(() => expect(mockApiGet).toHaveBeenCalled())
     const url: string = mockApiGet.mock.calls[0][0]
-    expect(url).toContain('/api/mcp/secrets')
+    expect(url).toContain(`${LOCAL_AGENT_HTTP_URL}/secrets`)
     expect(url).toContain('cluster=prod-east')
     expect(url).toContain('namespace=monitoring')
   })
@@ -813,7 +816,7 @@ describe('useServiceAccounts — REST fallback', () => {
 
     await waitFor(() => expect(mockApiGet).toHaveBeenCalled())
     const url: string = mockApiGet.mock.calls[0][0]
-    expect(url).toContain('/api/mcp/serviceaccounts')
+    expect(url).toContain(`${LOCAL_AGENT_HTTP_URL}/serviceaccounts`)
     expect(url).toContain('cluster=prod-east')
     expect(url).toContain('namespace=monitoring')
   })

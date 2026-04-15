@@ -1285,7 +1285,10 @@ describe('fullFetchClusters', () => {
 
     await fullFetchClusters()
 
-    expect(mockApiGet).toHaveBeenCalledWith('/api/mcp/clusters')
+    // LOCAL_AGENT_URL is re-exported from shared.ts as LOCAL_AGENT_HTTP_URL —
+    // using it here keeps the assertion tracking the kc-agent migration
+    // (phase 4.5b, #7993 / #8173) instead of re-hardcoding the REST path.
+    expect(mockApiGet).toHaveBeenCalledWith(`${LOCAL_AGENT_URL}/clusters`)
     expect(clusterCache.isLoading).toBe(false)
     expect(clusterCache.clusters.some(c => c.name === 'backend-cluster')).toBe(true)
   })
