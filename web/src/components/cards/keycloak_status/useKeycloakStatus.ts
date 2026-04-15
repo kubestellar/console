@@ -28,6 +28,7 @@ interface BackendPodInfo {
   status?: string
   ready?: string
   labels?: Record<string, string>
+  cluster?: string
 }
 
 interface CRItem {
@@ -120,6 +121,7 @@ export function parseKeycloakInstance(item: CRItem): KeycloakRealm {
   return {
     name: item.name,
     namespace: item.namespace ?? '',
+    cluster: item.cluster ?? '',
     status: realmStatus,
     enabled: true,
     clients: 0,
@@ -133,7 +135,7 @@ export function parseKeycloakInstance(item: CRItem): KeycloakRealm {
 // ---------------------------------------------------------------------------
 
 async function fetchPods(url: string): Promise<BackendPodInfo[]> {
-  const resp = await fetch(url, {
+  const resp = await authFetch(url, {
     headers: { Accept: 'application/json' },
     signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
   })
@@ -197,12 +199,28 @@ async function fetchKeycloakStatus(): Promise<KeycloakStatus> {
 // Hook
 // ---------------------------------------------------------------------------
 
+/**
+ * Hook return contract for the Keycloak status card.
+ *
+ * Follows the canonical "Caching Contract" shape documented in CLAUDE.md:
+ * `{ data, isLoading, isRefreshing, isDemoData, isFailed,
+ *    consecutiveFailures, lastRefresh, refetch }`.
+ *
+ * `showSkeleton` and `showEmptyState` are card-local helpers derived from
+ * `useCardLoadingState` — retained so the component doesn't have to
+ * re-compute them — but they are additive to, not replacements for, the
+ * canonical contract above.
+ */
 export interface UseKeycloakStatusResult {
   data: KeycloakStatus
-  loading: boolean
+  isLoading: boolean
   isRefreshing: boolean
-  error: boolean
+  isDemoData: boolean
+  isFailed: boolean
   consecutiveFailures: number
+  lastRefresh: number | null
+  refetch: () => Promise<void>
+  // card-local helpers (derived from useCardLoadingState)
   showSkeleton: boolean
   showEmptyState: boolean
 }
@@ -215,6 +233,8 @@ export function useKeycloakStatus(): UseKeycloakStatusResult {
     isFailed,
     consecutiveFailures,
     isDemoFallback,
+    lastRefresh,
+    refetch,
   } = useCache<KeycloakStatus>({
     key: CACHE_KEY,
     category: 'default',
@@ -241,14 +261,18 @@ export function useKeycloakStatus(): UseKeycloakStatusResult {
     isFailed,
     consecutiveFailures,
     isDemoData: effectiveIsDemoData,
+    lastRefresh,
   })
 
   return {
     data,
-    loading: isLoading,
+    isLoading,
     isRefreshing,
-    error: isFailed && !hasAnyData,
+    isDemoData: effectiveIsDemoData,
+    isFailed: isFailed && !hasAnyData,
     consecutiveFailures,
+    lastRefresh,
+    refetch,
     showSkeleton,
     showEmptyState,
   }

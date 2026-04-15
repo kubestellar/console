@@ -3542,6 +3542,8 @@
     "syncedHoursAgo": "{{count}}h ago",
     "syncedDaysAgo": "{{count}}d ago",
     "provisioning": "Provisioning",
-    "error": "Error"
+    "error": "Error",
+    "sortByStatus": "Status",
+    "sortByName": "Name"
   }
 }

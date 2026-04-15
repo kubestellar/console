@@ -21,6 +21,8 @@ export type KeycloakRealmStatus = 'ready' | 'provisioning' | 'degraded' | 'error
 export interface KeycloakRealm {
   name: string
   namespace: string
+  /** Cluster the Keycloak instance runs on. Empty string when unknown. */
+  cluster: string
   status: KeycloakRealmStatus
   /** Whether the realm is enabled for login */
   enabled: boolean
@@ -54,6 +56,7 @@ export const KEYCLOAK_DEMO_DATA: KeycloakDemoData = {
       // The built-in admin realm — always present in every Keycloak installation
       name: 'master',
       namespace: 'keycloak',
+      cluster: 'prod-cluster',
       status: 'ready',
       enabled: true,
       clients: 12,
@@ -64,6 +67,7 @@ export const KEYCLOAK_DEMO_DATA: KeycloakDemoData = {
       // Primary production SSO realm serving the platform's end users
       name: 'platform',
       namespace: 'keycloak',
+      cluster: 'prod-cluster',
       status: 'ready',
       enabled: true,
       clients: 24,
@@ -74,6 +78,7 @@ export const KEYCLOAK_DEMO_DATA: KeycloakDemoData = {
       // Staging realm — degraded due to misconfigured identity provider
       name: 'staging',
       namespace: 'keycloak-staging',
+      cluster: 'staging-cluster',
       status: 'degraded',
       enabled: true,
       clients: 8,
@@ -84,6 +89,7 @@ export const KEYCLOAK_DEMO_DATA: KeycloakDemoData = {
       // New dev realm currently being provisioned; login disabled until ready
       name: 'dev-sandbox',
       namespace: 'keycloak-dev',
+      cluster: 'dev-cluster',
       status: 'provisioning',
       enabled: false,
       clients: 3,
@@ -94,6 +100,7 @@ export const KEYCLOAK_DEMO_DATA: KeycloakDemoData = {
       // Legacy SSO realm in error state — database backend unreachable
       name: 'legacy-sso',
       namespace: 'keycloak',
+      cluster: 'prod-cluster',
       status: 'error',
       enabled: true,
       clients: 5,

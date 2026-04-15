@@ -91,60 +91,56 @@ const INITIAL_DATA = {
 // Tests
 // ---------------------------------------------------------------------------
 
+// Factory for the canonical hook return shape, per CLAUDE.md Caching Contract.
+// Individual tests override only the fields they care about.
+function makeHookResult(overrides: Partial<ReturnType<typeof useKeycloakStatus>>) {
+  return {
+    data: INITIAL_DATA,
+    isLoading: false,
+    isRefreshing: false,
+    isDemoData: false,
+    isFailed: false,
+    consecutiveFailures: 0,
+    lastRefresh: null,
+    refetch: vi.fn(async () => {}),
+    showSkeleton: false,
+    showEmptyState: false,
+    ...overrides,
+  } as ReturnType<typeof useKeycloakStatus>
+}
+
 describe('KeycloakStatus', () => {
   it('renders skeleton while loading', () => {
-    vi.mocked(useKeycloakStatus).mockReturnValue({
-      data: INITIAL_DATA,
-      loading: true,
-      isRefreshing: false,
-      error: false,
-      consecutiveFailures: 0,
-      showSkeleton: true,
-      showEmptyState: false,
-    })
+    vi.mocked(useKeycloakStatus).mockReturnValue(
+      makeHookResult({ isLoading: true, showSkeleton: true }),
+    )
     const { container } = render(<KeycloakStatus />)
     // Skeleton renders pulsing divs, not realm rows
     expect(container.querySelector('.animate-pulse')).toBeTruthy()
   })
 
   it('renders not-installed state when Keycloak is absent', () => {
-    vi.mocked(useKeycloakStatus).mockReturnValue({
-      data: INITIAL_DATA,
-      loading: false,
-      isRefreshing: false,
-      error: false,
-      consecutiveFailures: 0,
-      showSkeleton: false,
-      showEmptyState: false,
-    })
+    vi.mocked(useKeycloakStatus).mockReturnValue(makeHookResult({}))
     render(<KeycloakStatus />)
     expect(screen.getByText('keycloak.notInstalled')).toBeTruthy()
   })
 
   it('renders error state when fetch fails and there is no data', () => {
-    vi.mocked(useKeycloakStatus).mockReturnValue({
-      data: INITIAL_DATA,
-      loading: false,
-      isRefreshing: false,
-      error: true,
-      consecutiveFailures: 3,
-      showSkeleton: false,
-      showEmptyState: true,
-    })
+    vi.mocked(useKeycloakStatus).mockReturnValue(
+      makeHookResult({
+        isFailed: true,
+        consecutiveFailures: 3,
+        showEmptyState: true,
+      }),
+    )
     render(<KeycloakStatus />)
     expect(screen.getByText('keycloak.fetchError')).toBeTruthy()
   })
 
   it('renders live data with health badge and realm list', () => {
-    vi.mocked(useKeycloakStatus).mockReturnValue({
-      data: KEYCLOAK_DEMO_DATA,
-      loading: false,
-      isRefreshing: false,
-      error: false,
-      consecutiveFailures: 0,
-      showSkeleton: false,
-      showEmptyState: false,
-    })
+    vi.mocked(useKeycloakStatus).mockReturnValue(
+      makeHookResult({ data: KEYCLOAK_DEMO_DATA }),
+    )
     render(<KeycloakStatus />)
     // Health badge — "degraded" also appears on the staging realm row, so use getAllByText
     expect(screen.getAllByText('keycloak.degraded').length).toBeGreaterThanOrEqual(1)
@@ -157,15 +153,9 @@ describe('KeycloakStatus', () => {
   })
 
   it('renders without crashing', () => {
-    vi.mocked(useKeycloakStatus).mockReturnValue({
-      data: KEYCLOAK_DEMO_DATA,
-      loading: false,
-      isRefreshing: false,
-      error: false,
-      consecutiveFailures: 0,
-      showSkeleton: false,
-      showEmptyState: false,
-    })
+    vi.mocked(useKeycloakStatus).mockReturnValue(
+      makeHookResult({ data: KEYCLOAK_DEMO_DATA }),
+    )
     const { container } = render(<KeycloakStatus />)
     expect(container).toBeTruthy()
   })

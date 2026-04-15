@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import {
   CheckCircle,
   AlertTriangle,
@@ -11,10 +12,18 @@ import {
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Skeleton, SkeletonStats, SkeletonList } from '../../ui/Skeleton'
-import { CardSearchInput } from '../../../lib/cards/CardComponents'
+import {
+  CardSearchInput,
+  CardControlsRow,
+  CardPaginationFooter,
+} from '../../../lib/cards/CardComponents'
 import { useCardData } from '../../../lib/cards/cardHooks'
 import { useKeycloakStatus } from './useKeycloakStatus'
 import type { KeycloakRealm, KeycloakRealmStatus } from './demoData'
+
+// Default page size for the paginated realm list. Named constant per
+// CLAUDE.md "No magic numbers" rule.
+const REALMS_PER_PAGE = 10
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -148,7 +157,8 @@ function RealmRow({ realm }: { realm: KeycloakRealm }) {
 export function KeycloakStatus() {
   const { t } = useTranslation('cards')
   const formatRelativeTime = useFormatRelativeTime()
-  const { data, isRefreshing, error, showSkeleton, showEmptyState } = useKeycloakStatus()
+  const { data, isRefreshing, isFailed, showSkeleton, showEmptyState } =
+    useKeycloakStatus()
 
   const realms = data.realms || []
   const operatorPods = data.operatorPods || { ready: 0, total: 0 }
@@ -159,12 +169,43 @@ export function KeycloakStatus() {
     issues: realms.filter(r => r.status === 'degraded' || r.status === 'error').length,
   }
 
+  // Sort options for CardControls — labels resolved through i18n. Memoized so
+  // the reference stays stable across renders.
+  const SORT_OPTIONS = useMemo(
+    () => [
+      { value: 'status' as const, label: String(t('keycloak.sortByStatus')) },
+      { value: 'name' as const, label: String(t('keycloak.sortByName')) },
+    ],
+    [t],
+  )
+
   const {
-    items: filteredRealms,
-    filters: { search, setSearch },
+    items: displayRealms,
+    totalItems,
+    currentPage,
+    totalPages,
+    itemsPerPage,
+    goToPage,
+    needsPagination,
+    setItemsPerPage,
+    filters: {
+      search,
+      setSearch,
+      localClusterFilter,
+      toggleClusterFilter,
+      clearClusterFilter,
+      availableClusters,
+      showClusterFilter,
+      setShowClusterFilter,
+      clusterFilterRef,
+    },
+    sorting: { sortBy, setSortBy, sortDirection, setSortDirection },
+    containerRef,
+    containerStyle,
   } = useCardData<KeycloakRealm, RealmSortKey>(realms, {
     filter: {
       searchFields: ['name', 'namespace'],
+      clusterField: 'cluster' as keyof KeycloakRealm,
       storageKey: 'keycloak-status',
     },
     sort: {
@@ -176,7 +217,7 @@ export function KeycloakStatus() {
         name: (a, b) => a.name.localeCompare(b.name),
       },
     },
-    defaultLimit: 'unlimited',
+    defaultLimit: REALMS_PER_PAGE,
   })
 
   // ── Loading ───────────────────────────────────────────────────────────────
@@ -195,7 +236,7 @@ export function KeycloakStatus() {
   }
 
   // ── Error ─────────────────────────────────────────────────────────────────
-  if (error && showEmptyState) {
+  if (isFailed && showEmptyState) {
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2">
         <AlertTriangle className="w-6 h-6 text-red-400" />
@@ -289,20 +330,50 @@ export function KeycloakStatus() {
         </div>
       )}
 
-      {/* ── Search ── */}
+      {/* ── Search + unified controls (sort, limit, cluster filter) ── */}
       {realms.length > 0 && (
-        <CardSearchInput
-          value={search}
-          onChange={setSearch}
-          placeholder={t('keycloak.searchPlaceholder')}
-        />
+        <>
+          <CardSearchInput
+            value={search}
+            onChange={setSearch}
+            placeholder={t('keycloak.searchPlaceholder')}
+          />
+          <CardControlsRow
+            clusterFilter={{
+              availableClusters,
+              selectedClusters: localClusterFilter,
+              onToggle: toggleClusterFilter,
+              onClear: clearClusterFilter,
+              isOpen: showClusterFilter,
+              setIsOpen: setShowClusterFilter,
+              containerRef: clusterFilterRef,
+              minClusters: 1,
+            }}
+            cardControls={{
+              limit: itemsPerPage,
+              onLimitChange: setItemsPerPage,
+              sortBy,
+              sortOptions: SORT_OPTIONS,
+              onSortChange: v => setSortBy(v as RealmSortKey),
+              sortDirection,
+              onSortDirectionChange: setSortDirection,
+            }}
+          />
+        </>
       )}
 
       {/* ── Realm list ── */}
-      <div className="flex-1 space-y-2 overflow-y-auto">
-        {filteredRealms.length > 0 ? (
-          filteredRealms.map(realm => (
-            <RealmRow key={`${realm.namespace}/${realm.name}`} realm={realm} />
+      <div
+        ref={containerRef}
+        className="flex-1 space-y-2 overflow-y-auto"
+        style={containerStyle}
+      >
+        {displayRealms.length > 0 ? (
+          displayRealms.map(realm => (
+            <RealmRow
+              key={`${realm.cluster}/${realm.namespace}/${realm.name}`}
+              realm={realm}
+            />
           ))
         ) : realms.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-1 py-6">
@@ -318,6 +389,16 @@ export function KeycloakStatus() {
           </div>
         )}
       </div>
+
+      {/* ── Pagination ── */}
+      <CardPaginationFooter
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={totalItems}
+        itemsPerPage={typeof itemsPerPage === 'number' ? itemsPerPage : REALMS_PER_PAGE}
+        onPageChange={goToPage}
+        needsPagination={needsPagination && itemsPerPage !== 'unlimited'}
+      />
 
       {/* ── Footer: totals ── */}
       {realms.length > 0 && (
