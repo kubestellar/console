@@ -376,12 +376,19 @@ export function MissionSidebar() {
     return m.title.toLowerCase().includes(q) || m.description.toLowerCase().includes(q)
   }
   const savedMissions = missions.filter(m => m.status === 'saved' && matchesSearch(m))
-  // #5946 — "Active" missions must exclude completed, failed, and cancelled
-  // missions. Previously this filter only excluded 'saved', which caused
-  // terminal missions to still appear under the active list and inflate the
-  // count.
+  // issue 8143 — The sidebar list MUST show terminal (completed / failed /
+  // cancelled) missions so users can find their mission history. Issue 5946
+  // tightened this filter to isActiveMission, which correctly excludes
+  // terminal entries from the MissionSidebarToggle count badge but was
+  // mistakenly applied to the list too — and with no "History" section to
+  // catch the excluded entries, every finished mission simply vanished
+  // from the sidebar. The list filter only excludes 'saved' (which has its
+  // own section above); the toggle-badge count below still uses
+  // isActiveMission so the badge stays accurate. Named `activeMissions`
+  // for historical continuity with the many references below, but the
+  // contents are now "all non-library missions".
   const activeMissions = missions
-    .filter(m => isActiveMission(m) && matchesSearch(m))
+    .filter(m => m.status !== 'saved' && matchesSearch(m))
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
 
   /** Paginated slice of active missions for rendering (#4778) */
@@ -389,12 +396,13 @@ export function MissionSidebar() {
   const hasMoreMissions = activeMissions.length > visibleMissionCount
 
   /**
-   * Total missions actually rendered in the list view (saved + active).
-   * Used so the list header count and the chat view's "Back to missions"
-   * label agree on the same source of truth (#6134, #6135, #6136, #6137).
-   * Previously the chat button used `missions.length` (which included
-   * terminal completed/failed/cancelled missions that the list filters
-   * out via isActiveMission), producing a mismatch like "21 vs 24".
+   * Total missions actually rendered in the list view (saved + the
+   * non-library bucket). Used so the list header count and the chat
+   * view's "Back to missions" label agree on the same source of truth
+   * (issues 6134, 6135, 6136, 6137). After issue 8143 the non-library
+   * bucket includes terminal missions again so the sidebar shows
+   * history, so this total now equals `missions.length` unless a search
+   * filter is active.
    */
   const listTotalMissions = savedMissions.length + activeMissions.length
 
