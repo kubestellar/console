@@ -8,6 +8,11 @@ vi.mock('../../lib/constants', async (importOriginal) => {
 
 import { useExecSession } from '../useExecSession'
 import type { ExecSessionConfig } from '../useExecSession'
+import { LOCAL_AGENT_WS_URL } from '../../lib/constants/network'
+
+// Expected exec WS URL built from the same constant the source uses
+// (see useExecSession.ts — it replaces the trailing /ws with /ws/exec).
+const EXPECTED_EXEC_WS_URL = LOCAL_AGENT_WS_URL.replace(/\/ws$/, '/ws/exec')
 
 // ---------- WebSocket mock ----------
 
@@ -170,30 +175,34 @@ describe('useExecSession — expanded edge cases', () => {
   // in the non-Netlify build. The page protocol no longer affects the URL,
   // so this test asserts the new, stable target (see useExecSession.ts:235).
   it('builds kc-agent /ws/exec URL regardless of page protocol', () => {
-    // Save original
+    // Save original so we can restore it even if an expectation throws.
     const originalLocation = window.location
-    // Mock protocol — the URL builder must ignore this post-#8168.
-    Object.defineProperty(window, 'location', {
-      value: { protocol: 'https:', host: 'example.com' },
-      writable: true,
-      configurable: true,
-    })
+    try {
+      // Mock protocol — the URL builder must ignore this post-#8168.
+      Object.defineProperty(window, 'location', {
+        value: { protocol: 'https:', host: 'example.com' },
+        writable: true,
+        configurable: true,
+      })
 
-    const constructorSpy = vi.fn().mockReturnValue(mockWs)
-    vi.stubGlobal('WebSocket', Object.assign(constructorSpy, {
-      CONNECTING: 0, OPEN: 1, CLOSING: 2, CLOSED: 3,
-    }))
+      const constructorSpy = vi.fn().mockReturnValue(mockWs)
+      vi.stubGlobal('WebSocket', Object.assign(constructorSpy, {
+        CONNECTING: 0, OPEN: 1, CLOSING: 2, CLOSED: 3,
+      }))
 
-    const { result } = renderHook(() => useExecSession())
-    act(() => { result.current.connect(DEFAULT_CONFIG) })
-    expect(constructorSpy).toHaveBeenCalledWith('ws://127.0.0.1:8585/ws/exec')
-
-    // Restore
-    Object.defineProperty(window, 'location', {
-      value: originalLocation,
-      writable: true,
-      configurable: true,
-    })
+      const { result } = renderHook(() => useExecSession())
+      act(() => { result.current.connect(DEFAULT_CONFIG) })
+      // Build expected URL from the same constant the source uses, so the
+      // assertion tracks any future change to LOCAL_AGENT_WS_URL.
+      expect(constructorSpy).toHaveBeenCalledWith(EXPECTED_EXEC_WS_URL)
+    } finally {
+      // Always restore window.location so subsequent tests see the real object.
+      Object.defineProperty(window, 'location', {
+        value: originalLocation,
+        writable: true,
+        configurable: true,
+      })
+    }
   })
 
   // 8. Error clears on new connect
