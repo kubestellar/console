@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -169,6 +170,77 @@ type execAuthorizer interface {
 	) (bool, string, error)
 }
 
+// Sentinel errors returned by (*ExecHandlers).authorizePodExec.
+//
+// Extracted from the inline block in HandleExec (#8137, Copilot review on
+// #8134) so the allow/deny/error decision can be unit-tested against a fake
+// authorizer without standing up a WebSocket. HandleExec uses errors.Is on
+// the return value to decide which fail-closed websocket error frame to
+// write; a nil return means "allowed, proceed".
+var (
+	// errExecAuthorizerUnavailable is returned when h.authorizer is nil.
+	// This is a server misconfiguration (see NewExecHandlers #8137) and must
+	// deny the exec the same way a RBAC deny does.
+	errExecAuthorizerUnavailable = errors.New("exec authorizer not configured")
+
+	// errExecMissingUserSubject is returned when the JWT claims have no
+	// GitHub login. Without a subject the SAR can't bind to a real user,
+	// so we fail-closed before making the call.
+	errExecMissingUserSubject = errors.New("exec user subject missing")
+
+	// errExecSARFailed is returned when the SubjectAccessReview call itself
+	// errored (apiserver unreachable, permission to create SARs denied,
+	// etc.). Wraps the underlying error for log context.
+	errExecSARFailed = errors.New("exec SubjectAccessReview failed")
+
+	// errExecRBACDenied is returned when the SAR succeeded but RBAC denied
+	// the user. The human-readable reason from the apiserver is wrapped in
+	// the error string for operator debugging.
+	errExecRBACDenied = errors.New("exec denied by RBAC")
+)
+
+// authorizePodExec runs the pods/exec SubjectAccessReview against the target
+// cluster and returns nil if the user is allowed, or one of the sentinel
+// errors above on any fail-closed branch. The decision is intentionally
+// extracted from HandleExec so unit tests can exercise every branch against a
+// fake execAuthorizer without a live websocket (#8137, Copilot review on
+// #8134). HandleExec calls this after parsing the init message and writes
+// the appropriate websocket error frame on non-nil return.
+func (h *ExecHandlers) authorizePodExec(
+	ctx context.Context,
+	cluster, namespace, pod, githubLogin string,
+) error {
+	if h.authorizer == nil {
+		return errExecAuthorizerUnavailable
+	}
+	if githubLogin == "" {
+		return errExecMissingUserSubject
+	}
+
+	authzCtx, authzCancel := context.WithTimeout(ctx, execAuthzTimeout)
+	defer authzCancel()
+
+	userSubject := execUserSubjectPrefix + githubLogin
+	allowed, reason, err := h.authorizer.CheckPodExecPermissionForUser(
+		authzCtx,
+		cluster,
+		userSubject,
+		nil, // no extra group memberships today; policy is purely user-based
+		namespace,
+		pod,
+	)
+	if err != nil {
+		return fmt.Errorf("%w: %v", errExecSARFailed, err)
+	}
+	if !allowed {
+		if reason == "" {
+			return errExecRBACDenied
+		}
+		return fmt.Errorf("%w: %s", errExecRBACDenied, reason)
+	}
+	return nil
+}
+
 // ExecHandlers handles pod exec API endpoints
 type ExecHandlers struct {
 	k8sClient  *k8s.MultiClusterClient
@@ -177,11 +249,23 @@ type ExecHandlers struct {
 	devMode    bool
 }
 
-// NewExecHandlers creates a new exec handlers instance
+// NewExecHandlers creates a new exec handlers instance.
+//
+// SECURITY (#8137): the authorizer field is an interface, and assigning a
+// nil *k8s.MultiClusterClient directly would produce a typed-nil interface
+// value — an interface that compares non-nil via `== nil` but panics on any
+// method call. HandleExec's fail-closed guard is `h.authorizer == nil`, so a
+// typed-nil would bypass the guard and then blow up (or worse, silently
+// proceed) when CheckPodExecPermissionForUser is invoked. Explicitly leaving
+// authorizer as untyped nil when k8sClient is nil keeps the guard truthful.
 func NewExecHandlers(k8sClient *k8s.MultiClusterClient, jwtSecret string, devMode bool) *ExecHandlers {
+	var authz execAuthorizer
+	if k8sClient != nil {
+		authz = k8sClient
+	}
 	return &ExecHandlers{
 		k8sClient:  k8sClient,
-		authorizer: k8sClient,
+		authorizer: authz,
 		jwtSecret:  jwtSecret,
 		devMode:    devMode,
 	}
@@ -404,50 +488,44 @@ func (h *ExecHandlers) HandleExec(c *websocket.Conn) {
 	//
 	// Fail-closed on every branch: if the user has no resolvable identity,
 	// if the SAR returns allowed=false, or if the SAR call errors out, we
-	// MUST deny the exec and return before touching the executor.
-	if h.authorizer == nil {
-		slog.Error("[Exec] SECURITY: authorizer not configured — denying exec", "user", claims.GitHubLogin)
-		writeError(c, "server misconfiguration: authorization unavailable")
-		return
-	}
-
-	userSubject := execUserSubjectPrefix + claims.GitHubLogin
-	if claims.GitHubLogin == "" {
-		slog.Warn("[Exec] SECURITY: denying exec — JWT has no GitHub login", "user_id", claims.UserID)
-		writeError(c, "user is not authorized to exec into this pod")
-		return
-	}
-
-	authzCtx, authzCancel := context.WithTimeout(execCtx, execAuthzTimeout)
-	allowed, reason, authzErr := h.authorizer.CheckPodExecPermissionForUser(
-		authzCtx,
-		init.Cluster,
-		userSubject,
-		nil, // no extra group memberships today; policy is purely user-based
-		init.Namespace,
-		init.Pod,
-	)
-	authzCancel()
-	if authzErr != nil {
-		slog.Error("[Exec] SECURITY: pods/exec SubjectAccessReview failed — denying exec (fail-closed)",
-			"user", claims.GitHubLogin,
-			"cluster", init.Cluster,
-			"namespace", init.Namespace,
-			"pod", init.Pod,
-			"error", authzErr,
-		)
-		writeError(c, "failed to verify exec permission; request denied")
-		return
-	}
-	if !allowed {
-		slog.Warn("[Exec] SECURITY: pods/exec denied by RBAC",
-			"user", claims.GitHubLogin,
-			"cluster", init.Cluster,
-			"namespace", init.Namespace,
-			"pod", init.Pod,
-			"reason", reason,
-		)
-		writeError(c, "user is not authorized to exec into this pod")
+	// MUST deny the exec and return before touching the executor. The
+	// decision itself lives in authorizePodExec (#8137) so each branch has
+	// a dedicated unit test.
+	if err := h.authorizePodExec(execCtx, init.Cluster, init.Namespace, init.Pod, claims.GitHubLogin); err != nil {
+		switch {
+		case errors.Is(err, errExecAuthorizerUnavailable):
+			slog.Error("[Exec] SECURITY: authorizer not configured — denying exec", "user", claims.GitHubLogin)
+			writeError(c, "server misconfiguration: authorization unavailable")
+		case errors.Is(err, errExecMissingUserSubject):
+			slog.Warn("[Exec] SECURITY: denying exec — JWT has no GitHub login", "user_id", claims.UserID)
+			writeError(c, "user is not authorized to exec into this pod")
+		case errors.Is(err, errExecSARFailed):
+			slog.Error("[Exec] SECURITY: pods/exec SubjectAccessReview failed — denying exec (fail-closed)",
+				"user", claims.GitHubLogin,
+				"cluster", init.Cluster,
+				"namespace", init.Namespace,
+				"pod", init.Pod,
+				"error", err,
+			)
+			writeError(c, "failed to verify exec permission; request denied")
+		case errors.Is(err, errExecRBACDenied):
+			slog.Warn("[Exec] SECURITY: pods/exec denied by RBAC",
+				"user", claims.GitHubLogin,
+				"cluster", init.Cluster,
+				"namespace", init.Namespace,
+				"pod", init.Pod,
+				"error", err,
+			)
+			writeError(c, "user is not authorized to exec into this pod")
+		default:
+			// Defensive: any unclassified error from authorizePodExec must
+			// still fail-closed.
+			slog.Error("[Exec] SECURITY: unexpected error from authorizePodExec — denying exec",
+				"user", claims.GitHubLogin,
+				"error", err,
+			)
+			writeError(c, "failed to verify exec permission; request denied")
+		}
 		return
 	}
 	slog.Info("[Exec] pods/exec authorized by RBAC",

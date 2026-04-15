@@ -102,27 +102,135 @@ func TestExecAuthorizerSeam_DeniedAndError(t *testing.T) {
 	})
 }
 
-// TestExecHandlers_AuthorizerWired confirms that NewExecHandlers plumbs the
-// provided MultiClusterClient into the authorizer seam. This is a regression
-// guard: if a future refactor drops the seam assignment, HandleExec would
-// hit the nil-authorizer branch (which is itself fail-closed, but silently
-// losing the real check would be a regression the issue explicitly warned
-// about). The nil-k8sClient case is exercised separately via the existing
-// "No Kubernetes client available" early return in HandleExec.
+// TestExecHandlers_AuthorizerWired confirms NewExecHandlers' nil-safety
+// contract: when k8sClient is nil, authorizer MUST also be a true untyped
+// nil so that HandleExec's `h.authorizer == nil` fail-closed guard sees it
+// (#8137, Copilot review on #8134).
+//
+// Before #8137 the constructor did `authorizer: k8sClient` unconditionally,
+// which in the nil case stores a typed-nil interface — a value that compares
+// non-nil via `== nil` but panics on any method call. HandleExec's nil guard
+// would silently pass and the first SAR call would blow up. The fix is to
+// leave authorizer as a zero-value interface (untyped nil) when k8sClient is
+// nil; this test locks that in.
 func TestExecHandlers_AuthorizerWired(t *testing.T) {
 	h := NewExecHandlers(nil, "secret", false)
-	// authorizer defaults to the k8sClient argument — which is nil here. The
-	// important invariant is that NewExecHandlers does not leave authorizer
-	// as a zero value of a different type; an interface holding a typed nil
-	// is still distinguishable from an untyped nil by HandleExec's
-	// `h.authorizer == nil` guard.
 	require.Nil(t, h.k8sClient)
-	// When k8sClient is nil, authorizer is a typed-nil interface holding
-	// (*k8s.MultiClusterClient)(nil). HandleExec's early "No Kubernetes
-	// client available" check fires before the authorizer is consulted, so
-	// the typed-nil is never invoked in practice. We assert the k8sClient
-	// nil-check guard exists upstream by not dereferencing authorizer here.
-	_ = h.authorizer
+	require.Nil(t, h.authorizer, "authorizer must be true untyped nil when k8sClient is nil, otherwise HandleExec's nil guard silently fails")
+}
+
+// testAuthorizePodExecCluster / Namespace / Pod / Login are shared across
+// the authorizePodExec unit tests to keep the fakeExecAuthorizer call-site
+// parameters consistent and make diffs in the assertions obvious.
+const (
+	testAuthorizePodExecCluster   = "cluster-a"
+	testAuthorizePodExecNamespace = "ns-x"
+	testAuthorizePodExecPod       = "pod-y"
+	testAuthorizePodExecLogin     = "alice"
+)
+
+// TestAuthorizePodExec_Allow verifies the happy path: authorizer says
+// allowed=true, authorizePodExec returns nil, and the fake was called with
+// the github:-prefixed subject, the exact namespace/pod, and no groups.
+func TestAuthorizePodExec_Allow(t *testing.T) {
+	fa := &fakeExecAuthorizer{allowed: true}
+	h := &ExecHandlers{authorizer: fa}
+
+	err := h.authorizePodExec(
+		context.Background(),
+		testAuthorizePodExecCluster,
+		testAuthorizePodExecNamespace,
+		testAuthorizePodExecPod,
+		testAuthorizePodExecLogin,
+	)
+	require.NoError(t, err)
+	assert.Equal(t, 1, fa.calls)
+	assert.Equal(t, execUserSubjectPrefix+testAuthorizePodExecLogin, fa.calledUser)
+	assert.Equal(t, testAuthorizePodExecCluster, fa.calledContext)
+	assert.Equal(t, testAuthorizePodExecNamespace, fa.calledNamespace)
+	assert.Equal(t, testAuthorizePodExecPod, fa.calledPod)
+	assert.Nil(t, fa.calledGroups)
+}
+
+// TestAuthorizePodExec_Deny verifies that allowed=false from the SAR maps to
+// errExecRBACDenied. The deny reason from the apiserver is surfaced in the
+// error string so operators can debug RBAC bindings.
+func TestAuthorizePodExec_Deny(t *testing.T) {
+	const denyReason = "no RBAC binding"
+	fa := &fakeExecAuthorizer{allowed: false, reason: denyReason}
+	h := &ExecHandlers{authorizer: fa}
+
+	err := h.authorizePodExec(
+		context.Background(),
+		testAuthorizePodExecCluster,
+		testAuthorizePodExecNamespace,
+		testAuthorizePodExecPod,
+		testAuthorizePodExecLogin,
+	)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, errExecRBACDenied)
+	assert.Contains(t, err.Error(), denyReason)
+	assert.Equal(t, 1, fa.calls, "the authorizer must still be consulted in the deny case")
+}
+
+// TestAuthorizePodExec_NilAuthorizer verifies fail-closed when the
+// authorizer seam is nil — this can happen in the NewExecHandlers(nil, ...)
+// path (#8137). The SAR must NOT be called, and the caller must see
+// errExecAuthorizerUnavailable.
+func TestAuthorizePodExec_NilAuthorizer(t *testing.T) {
+	h := &ExecHandlers{authorizer: nil}
+
+	err := h.authorizePodExec(
+		context.Background(),
+		testAuthorizePodExecCluster,
+		testAuthorizePodExecNamespace,
+		testAuthorizePodExecPod,
+		testAuthorizePodExecLogin,
+	)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, errExecAuthorizerUnavailable)
+}
+
+// TestAuthorizePodExec_SARError verifies fail-closed when the SAR call
+// errors out (apiserver unreachable, RBAC denies creating SARs, etc.).
+// The sentinel error is wrapped so both errExecSARFailed and the underlying
+// error are recoverable via errors.Is.
+func TestAuthorizePodExec_SARError(t *testing.T) {
+	sentinel := errors.New("apiserver down")
+	fa := &fakeExecAuthorizer{err: sentinel}
+	h := &ExecHandlers{authorizer: fa}
+
+	err := h.authorizePodExec(
+		context.Background(),
+		testAuthorizePodExecCluster,
+		testAuthorizePodExecNamespace,
+		testAuthorizePodExecPod,
+		testAuthorizePodExecLogin,
+	)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, errExecSARFailed)
+	assert.Contains(t, err.Error(), sentinel.Error(), "underlying SAR error text should be surfaced for operator debugging")
+	assert.Equal(t, 1, fa.calls)
+}
+
+// TestAuthorizePodExec_EmptyLogin verifies fail-closed when the JWT carries
+// no GitHub login. Without a subject the SAR can't bind to a real user, so
+// we MUST deny before making the call — the fake authorizer's call count
+// stays at zero.
+func TestAuthorizePodExec_EmptyLogin(t *testing.T) {
+	fa := &fakeExecAuthorizer{allowed: true}
+	h := &ExecHandlers{authorizer: fa}
+
+	err := h.authorizePodExec(
+		context.Background(),
+		testAuthorizePodExecCluster,
+		testAuthorizePodExecNamespace,
+		testAuthorizePodExecPod,
+		"",
+	)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, errExecMissingUserSubject)
+	assert.Equal(t, 0, fa.calls, "empty login must fail-closed BEFORE the SAR call")
 }
 
 // testExecCancelWait is how long tests wait for CancelUserExecSessions to
