@@ -1,9 +1,10 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook } from '@testing-library/react'
 
 const mockUseAlerts = vi.fn()
 const mockUseClusters = vi.fn()
 const mockUsePodIssues = vi.fn()
+const mockUseBackendHealth = vi.fn()
 
 vi.mock('../useAlerts', () => ({
   useAlerts: () => mockUseAlerts(),
@@ -13,6 +14,16 @@ vi.mock('../useMCP', () => ({
   useClusters: () => mockUseClusters(),
   usePodIssues: () => mockUsePodIssues(),
 }))
+
+vi.mock('../useBackendHealth', () => ({
+  useBackendHealth: () => mockUseBackendHealth(),
+}))
+
+// Default all tests to a "connected" backend so pre-existing cases stay
+// healthy. Individual tests override this for disconnected scenarios.
+beforeEach(() => {
+  mockUseBackendHealth.mockReturnValue({ status: 'connected' })
+})
 
 import { useDashboardHealth } from '../useDashboardHealth'
 
@@ -103,6 +114,30 @@ describe('useDashboardHealth', () => {
     const { result } = renderHook(() => useDashboardHealth())
     expect(result.current.warningCount).toBe(2)
     expect(result.current.details).toContain('2 pods failing')
+  })
+
+  it('flags disconnected backend as critical (issue #8162)', () => {
+    mockUseBackendHealth.mockReturnValue({ status: 'disconnected' })
+    mockUseAlerts.mockReturnValue({ activeAlerts: [] })
+    mockUseClusters.mockReturnValue({ deduplicatedClusters: [], isLoading: false })
+    mockUsePodIssues.mockReturnValue({ issues: [], isLoading: false })
+
+    const { result } = renderHook(() => useDashboardHealth())
+    expect(result.current.status).toBe('critical')
+    expect(result.current.criticalCount).toBe(1)
+    expect(result.current.details).toContain('Backend API unreachable')
+    expect(result.current.navigateTo).toBe('/alerts')
+  })
+
+  it('ignores connecting backend status (not yet confirmed down)', () => {
+    mockUseBackendHealth.mockReturnValue({ status: 'connecting' })
+    mockUseAlerts.mockReturnValue({ activeAlerts: [] })
+    mockUseClusters.mockReturnValue({ deduplicatedClusters: [{ healthy: true, reachable: true }], isLoading: false })
+    mockUsePodIssues.mockReturnValue({ issues: [], isLoading: false })
+
+    const { result } = renderHook(() => useDashboardHealth())
+    expect(result.current.status).toBe('healthy')
+    expect(result.current.criticalCount).toBe(0)
   })
 
   it('skips cluster/pod checks while loading', () => {

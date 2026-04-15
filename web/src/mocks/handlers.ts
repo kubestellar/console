@@ -717,6 +717,39 @@ export const handlers = [
     ])
   }),
 
+  // ── Optional feature status endpoints (issue #8162) ──────────────
+  // These endpoints probe for optional in-cluster integrations. In demo
+  // mode the integrations are not installed, so we return a success (200)
+  // response with `available: false`. Returning 200 here (instead of
+  // letting the catch-all return 503) keeps the DevTools network tab
+  // clean for demo visitors and avoids the MSW "unhandled request"
+  // warning. Source callers already branch on `available` so semantics
+  // are unchanged. See web/src/lib/kagentBackend.ts and related files.
+  http.get('/api/kagent/status', () => {
+    return HttpResponse.json({ available: false, reason: 'not configured in demo mode' })
+  }),
+  http.get('/api/kagent/agents', () => {
+    return HttpResponse.json({ agents: [] })
+  }),
+  http.get('/api/kagenti-provider/status', () => {
+    return HttpResponse.json({ available: false, reason: 'not configured in demo mode' })
+  }),
+  http.get('/api/kagenti-provider/agents', () => {
+    return HttpResponse.json({ agents: [] })
+  }),
+  http.get('/api/gadget/status', () => {
+    return HttpResponse.json({ available: false, reason: 'not configured in demo mode' })
+  }),
+  http.get('/api/mcs/status', () => {
+    return HttpResponse.json({ available: false, reason: 'not configured in demo mode' })
+  }),
+  http.get('/api/persistence/status', () => {
+    return HttpResponse.json({ available: false, reason: 'not configured in demo mode' })
+  }),
+  http.get('/api/self-upgrade/status', () => {
+    return HttpResponse.json({ available: false, reason: 'not configured in demo mode' })
+  }),
+
   // ── Catch-all for unmocked API routes ────────────────────────────
   // On Netlify, unhandled /api/* and /health requests fall through to the SPA
   // catch-all which returns index.html (200 OK, text/html). Code calling

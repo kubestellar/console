@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { useAlerts } from './useAlerts'
+import { useBackendHealth } from './useBackendHealth'
 import { useClusters, usePodIssues } from './useMCP'
 
 export type DashboardHealthStatus = 'healthy' | 'warning' | 'critical'
@@ -15,17 +16,36 @@ export interface DashboardHealthInfo {
 
 /**
  * Hook to aggregate health status across the dashboard
- * Checks alerts, cluster health, and pod issues
+ * Checks alerts, cluster health, pod issues, and backend connectivity.
+ *
+ * Backend connectivity (issue #8162): persistent failures of the root
+ * `/health` endpoint — which also indicate that downstream API calls
+ * such as `/api/kagent/status`, `/api/kagenti-provider/status`, and
+ * various `/api/.../runs` and `/api/.../stream` endpoints are likely
+ * returning 503 — are surfaced as a critical dashboard health state so
+ * the UI does not appear "healthy" while backend services are down.
  */
 export function useDashboardHealth(): DashboardHealthInfo {
   const { activeAlerts } = useAlerts()
   const { deduplicatedClusters, isLoading: clustersLoading } = useClusters()
   const { issues: podIssues, isLoading: podsLoading } = usePodIssues()
+  const { status: backendStatus } = useBackendHealth()
 
   return useMemo(() => {
     const details: string[] = []
     let criticalCount = 0
     let warningCount = 0
+
+    // Backend connectivity check (issue #8162).
+    // `useBackendHealth` only flips to 'disconnected' after a debounced
+    // number of consecutive failures on /health (see FAILURE_THRESHOLD in
+    // useBackendHealth.ts), so this is a persistent-failure signal, not a
+    // transient one. When demo mode is active on Netlify, /health is
+    // mocked (web/src/mocks/handlers.ts) and this branch stays inactive.
+    if (backendStatus === 'disconnected') {
+      criticalCount += 1
+      details.push('Backend API unreachable')
+    }
 
     // Count critical and warning alerts
     const criticalAlerts = activeAlerts.filter(a => a.severity === 'critical').length
@@ -98,5 +118,5 @@ export function useDashboardHealth(): DashboardHealthInfo {
       warningCount,
       navigateTo,
     }
-  }, [activeAlerts, deduplicatedClusters, clustersLoading, podIssues, podsLoading])
+  }, [activeAlerts, deduplicatedClusters, clustersLoading, podIssues, podsLoading, backendStatus])
 }
