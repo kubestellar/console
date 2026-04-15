@@ -887,16 +887,16 @@ export function MissionSidebar() {
       )}
 
       {/*
-        #8143 — Empty-state gate uses `listTotalMissions` (saved + active) rather
-        than raw `missions.length`. Previously users whose mission history only
-        contained terminal entries (completed / failed / cancelled) fell through
-        this branch into the list view, which renders sections only for saved
-        and active missions. The result was a panel with no list items, no
-        empty-state message, and no CTA — i.e. "AI Missions list not visible"
-        (#8143). Gate on the visible-list total so those users see the CTA.
-        `missionSearchQuery` is excluded so a failed search still surfaces the
-        "no search results" branch below instead of this full-panel empty state.
-      */}
+       * Issue 8143 — Empty-state gate uses `listTotalMissions` (saved + active)
+       * rather than raw `missions.length`. Previously users whose mission history
+       * only contained terminal entries (completed / failed / cancelled) fell
+       * through this branch into the list view, which renders sections only for
+       * saved and active missions. The result was a panel with no list items, no
+       * empty-state message, and no CTA — i.e. "AI Missions list not visible".
+       * Gate on the visible-list total so those users see the CTA.
+       * `missionSearchQuery` is excluded so a failed search still surfaces the
+       * "no search results" branch below instead of this full-panel empty state.
+       */}
       {listTotalMissions === 0 && !missionSearchQuery && !activeMission ? (
         <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
           <Sparkles className="w-10 h-10 text-purple-400/60 mb-4" />
