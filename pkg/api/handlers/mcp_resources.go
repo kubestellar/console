@@ -176,94 +176,13 @@ func (h *MCPHandlers) GetGPUHealthCronJobStatus(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"status": status})
 }
 
-// InstallGPUHealthCronJob installs the GPU health check CronJob on a cluster
-func (h *MCPHandlers) InstallGPUHealthCronJob(c *fiber.Ctx) error {
-	// SECURITY (#7493): mutating endpoint requires editor or admin role.
-	if err := requireEditorOrAdmin(c, h.store); err != nil {
-		return err
-	}
-
-	if isDemoMode(c) {
-		return c.JSON(fiber.Map{"success": true, "message": "CronJob installed (demo mode)"})
-	}
-
-	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "No cluster access"})
-	}
-
-	var body struct {
-		Cluster   string `json:"cluster"`
-		Namespace string `json:"namespace"`
-		Schedule  string `json:"schedule"`
-		Tier      int    `json:"tier"`
-	}
-	if err := c.BodyParser(&body); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
-	}
-	if body.Cluster == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cluster is required"})
-	}
-
-	// Validate cron schedule format (5-field standard cron expression)
-	if body.Schedule != "" && !isValidCronSchedule(body.Schedule) {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid cron schedule format — expected 5-field cron expression (e.g. '*/15 * * * *')"})
-	}
-
-	// Validate tier range.
-	// Tier 1 — Critical, Tier 2 — Standard, Tier 3 — Full, Tier 4 — Deep (privileged).
-	// Must stay in sync with the frontend TIER_OPTIONS in ProactiveGPUNodeHealthMonitor.tsx
-	// and with InstallGPUHealthCronJob in pkg/k8s/client_gpu.go (issue #6110).
-	const minTier = 1
-	const maxTier = 4
-	if body.Tier < minTier || body.Tier > maxTier {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": fmt.Sprintf("tier must be between %d and %d", minTier, maxTier)})
-	}
-
-	ctx, cancel := context.WithTimeout(c.Context(), mcpExtendedTimeout)
-	defer cancel()
-
-	if err := h.k8sClient.InstallGPUHealthCronJob(ctx, body.Cluster, body.Namespace, body.Schedule, body.Tier); err != nil {
-		return handleK8sError(c, err)
-	}
-
-	return c.JSON(fiber.Map{"success": true, "message": fmt.Sprintf("GPU health CronJob installed on %s (tier %d)", body.Cluster, body.Tier)})
-}
-
-// UninstallGPUHealthCronJob removes the GPU health check CronJob from a cluster
-func (h *MCPHandlers) UninstallGPUHealthCronJob(c *fiber.Ctx) error {
-	// SECURITY (#7494): destructive endpoint requires editor or admin role.
-	if err := requireEditorOrAdmin(c, h.store); err != nil {
-		return err
-	}
-
-	if isDemoMode(c) {
-		return c.JSON(fiber.Map{"success": true, "message": "CronJob removed (demo mode)"})
-	}
-
-	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "No cluster access"})
-	}
-
-	var body struct {
-		Cluster   string `json:"cluster"`
-		Namespace string `json:"namespace"`
-	}
-	if err := c.BodyParser(&body); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
-	}
-	if body.Cluster == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cluster is required"})
-	}
-
-	ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
-	defer cancel()
-
-	if err := h.k8sClient.UninstallGPUHealthCronJob(ctx, body.Cluster, body.Namespace); err != nil {
-		return handleK8sError(c, err)
-	}
-
-	return c.JSON(fiber.Map{"success": true, "message": fmt.Sprintf("GPU health CronJob removed from %s", body.Cluster)})
-}
+// InstallGPUHealthCronJob and UninstallGPUHealthCronJob were removed in #7993
+// Phase 3e — these user-initiated tooling installs now go through kc-agent at
+// `/gpu-health-cronjob` (POST/DELETE), which runs under the user's own
+// kubeconfig instead of the backend pod ServiceAccount. The shared
+// pkg/k8s.MultiClusterClient.InstallGPUHealthCronJob /
+// UninstallGPUHealthCronJob methods stay — kc-agent calls them. See
+// pkg/agent/server_gpu_health.go.
 
 // GetGPUHealthCronJobResults returns the latest health check results from the ConfigMap.
 // This is the endpoint used by the AlertsContext to evaluate gpu_health_cronjob conditions.

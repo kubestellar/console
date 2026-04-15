@@ -928,8 +928,9 @@ func (s *Server) setupRoutes() {
 	api.Get("/mcp/gpu-nodes", mcpHandlers.GetGPUNodes)
 	api.Get("/mcp/gpu-nodes/health", mcpHandlers.GetGPUNodeHealth)
 	api.Get("/mcp/gpu-nodes/health/cronjob", mcpHandlers.GetGPUHealthCronJobStatus)
-	api.Post("/mcp/gpu-nodes/health/cronjob", mcpHandlers.InstallGPUHealthCronJob)
-	api.Delete("/mcp/gpu-nodes/health/cronjob", mcpHandlers.UninstallGPUHealthCronJob)
+	// POST and DELETE /mcp/gpu-nodes/health/cronjob moved to kc-agent
+	// (#7993 Phase 3e). The agent exposes /gpu-health-cronjob with the same
+	// body shape, running under the user's kubeconfig.
 	api.Get("/mcp/gpu-nodes/health/cronjob/results", mcpHandlers.GetGPUHealthCronJobResults)
 	api.Get("/mcp/nvidia-operators", mcpHandlers.GetNVIDIAOperatorStatus)
 	api.Get("/mcp/nodes", mcpHandlers.GetNodes)

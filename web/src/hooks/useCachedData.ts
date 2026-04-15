@@ -1420,7 +1420,10 @@ export function useGPUHealthCronJob(cluster?: string) {
     try {
       const token = getToken()
       if (!token) throw new Error('No authentication token')
-      const response = await authFetch('/api/mcp/gpu-nodes/health/cronjob', {
+      // #7993 Phase 3e: GPU health cronjob install is a user-initiated
+      // tooling install. It runs through kc-agent under the user's own
+      // kubeconfig instead of the backend pod ServiceAccount.
+      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/gpu-health-cronjob`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1450,7 +1453,9 @@ export function useGPUHealthCronJob(cluster?: string) {
     try {
       const token = getToken()
       if (!token) throw new Error('No authentication token')
-      const response = await authFetch('/api/mcp/gpu-nodes/health/cronjob', {
+      // #7993 Phase 3e: GPU health cronjob uninstall goes through kc-agent
+      // under the user's own kubeconfig.
+      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/gpu-health-cronjob`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',

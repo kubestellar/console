@@ -4109,10 +4109,14 @@ describe('useCachedData', () => {
       vi.unstubAllGlobals()
     })
 
-    it('install calls authFetch with POST and refetches', async () => {
+    // #7993 Phase 3e: GPU health cronjob install/uninstall routes through
+    // kc-agent (global `fetch` with LOCAL_AGENT_HTTP_URL), not the backend
+    // `authFetch`. Tests mock `global.fetch` accordingly.
+    it('install calls kc-agent with POST and refetches', async () => {
       const mockRefetch = vi.fn().mockResolvedValue(undefined)
       mockUseCache.mockReturnValue(makeCacheResult(null, { refetch: mockRefetch }))
-      mockAuthFetch.mockResolvedValue({ ok: true })
+      const fetchMock = vi.fn().mockResolvedValue({ ok: true })
+      vi.stubGlobal('fetch', fetchMock)
 
       const { renderHook, act } = await import('@testing-library/react')
       const { useGPUHealthCronJob } = await loadModule()
@@ -4122,8 +4126,8 @@ describe('useCachedData', () => {
         await result.current.install({ namespace: 'gpu-health', schedule: '*/5 * * * *', tier: 3 })
       })
 
-      expect(mockAuthFetch).toHaveBeenCalledWith(
-        '/api/mcp/gpu-nodes/health/cronjob',
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining('/gpu-health-cronjob'),
         expect.objectContaining({ method: 'POST' })
       )
       expect(mockRefetch).toHaveBeenCalled()
@@ -4133,11 +4137,12 @@ describe('useCachedData', () => {
     it('install sets error on non-ok response', async () => {
       const mockRefetch = vi.fn()
       mockUseCache.mockReturnValue(makeCacheResult(null, { refetch: mockRefetch }))
-      mockAuthFetch.mockResolvedValue({
+      const fetchMock = vi.fn().mockResolvedValue({
         ok: false,
         status: 500,
         text: vi.fn().mockResolvedValue('Server Error'),
       })
+      vi.stubGlobal('fetch', fetchMock)
 
       const { renderHook, act } = await import('@testing-library/react')
       const { useGPUHealthCronJob } = await loadModule()
@@ -4147,13 +4152,15 @@ describe('useCachedData', () => {
         await result.current.install()
       })
 
-      expect(mockAuthFetch).toHaveBeenCalled()
+      expect(fetchMock).toHaveBeenCalled()
       expect(result.current.error).toBe('Server Error')
       unmount()
     })
 
     it('install does nothing when no cluster', async () => {
       mockUseCache.mockReturnValue(makeCacheResult(null, { refetch: vi.fn() }))
+      const fetchMock = vi.fn()
+      vi.stubGlobal('fetch', fetchMock)
 
       const { renderHook, act } = await import('@testing-library/react')
       const { useGPUHealthCronJob } = await loadModule()
@@ -4163,14 +4170,15 @@ describe('useCachedData', () => {
         await result.current.install()
       })
 
-      expect(mockAuthFetch).not.toHaveBeenCalled()
+      expect(fetchMock).not.toHaveBeenCalled()
       unmount()
     })
 
-    it('uninstall calls authFetch with DELETE', async () => {
+    it('uninstall calls kc-agent with DELETE', async () => {
       const mockRefetch = vi.fn().mockResolvedValue(undefined)
       mockUseCache.mockReturnValue(makeCacheResult(null, { refetch: mockRefetch }))
-      mockAuthFetch.mockResolvedValue({ ok: true })
+      const fetchMock = vi.fn().mockResolvedValue({ ok: true })
+      vi.stubGlobal('fetch', fetchMock)
 
       const { renderHook, act } = await import('@testing-library/react')
       const { useGPUHealthCronJob } = await loadModule()
@@ -4180,8 +4188,8 @@ describe('useCachedData', () => {
         await result.current.uninstall({ namespace: 'gpu-health' })
       })
 
-      expect(mockAuthFetch).toHaveBeenCalledWith(
-        '/api/mcp/gpu-nodes/health/cronjob',
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining('/gpu-health-cronjob'),
         expect.objectContaining({ method: 'DELETE' })
       )
       expect(mockRefetch).toHaveBeenCalled()
@@ -4190,11 +4198,12 @@ describe('useCachedData', () => {
 
     it('uninstall sets error on non-ok response', async () => {
       mockUseCache.mockReturnValue(makeCacheResult(null, { refetch: vi.fn() }))
-      mockAuthFetch.mockResolvedValue({
+      const fetchMock = vi.fn().mockResolvedValue({
         ok: false,
         status: 400,
         text: vi.fn().mockResolvedValue('Bad Request'),
       })
+      vi.stubGlobal('fetch', fetchMock)
 
       const { renderHook, act } = await import('@testing-library/react')
       const { useGPUHealthCronJob } = await loadModule()
@@ -4204,13 +4213,15 @@ describe('useCachedData', () => {
         await result.current.uninstall()
       })
 
-      expect(mockAuthFetch).toHaveBeenCalled()
+      expect(fetchMock).toHaveBeenCalled()
       expect(result.current.error).toBe('Bad Request')
       unmount()
     })
 
     it('uninstall does nothing when no cluster', async () => {
       mockUseCache.mockReturnValue(makeCacheResult(null, { refetch: vi.fn() }))
+      const fetchMock = vi.fn()
+      vi.stubGlobal('fetch', fetchMock)
 
       const { renderHook, act } = await import('@testing-library/react')
       const { useGPUHealthCronJob } = await loadModule()
@@ -4220,13 +4231,15 @@ describe('useCachedData', () => {
         await result.current.uninstall()
       })
 
-      expect(mockAuthFetch).not.toHaveBeenCalled()
+      expect(fetchMock).not.toHaveBeenCalled()
       unmount()
     })
 
     it('install handles missing token', async () => {
       mockUseCache.mockReturnValue(makeCacheResult(null, { refetch: vi.fn() }))
       localStorage.removeItem('kc_token')
+      const fetchMock = vi.fn()
+      vi.stubGlobal('fetch', fetchMock)
 
       const { renderHook, act } = await import('@testing-library/react')
       const { useGPUHealthCronJob } = await loadModule()
@@ -4236,8 +4249,8 @@ describe('useCachedData', () => {
         await result.current.install()
       })
 
-      // Should not call authFetch because getToken() returns null -> throws
-      expect(mockAuthFetch).not.toHaveBeenCalled()
+      // Should not call fetch because getToken() returns null -> throws.
+      expect(fetchMock).not.toHaveBeenCalled()
       expect(result.current.error).toBe('No authentication token')
       unmount()
     })
