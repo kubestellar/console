@@ -30,6 +30,7 @@ import { go } from '@codemirror/legacy-modes/mode/go'
 import { shell } from '@codemirror/legacy-modes/mode/shell'
 import { oneDark } from '@codemirror/theme-one-dark'
 import { downloadText } from '../../../lib/download'
+import { ConfirmDialog } from '../../../lib/modals'
 import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
 import { useDrasiResources } from '../../../hooks/useDrasiResources'
 import { useDrasiQueryStream } from '../../../hooks/useDrasiQueryStream'
@@ -1411,12 +1412,14 @@ interface ConnectionsModalProps {
   onSelect: (id: string) => void
   onAdd: (conn: Omit<DrasiConnection, 'id' | 'createdAt'>) => void
   onUpdate: (id: string, patch: Partial<Omit<DrasiConnection, 'id' | 'createdAt'>>) => void
-  onRemove: (id: string) => void
+  /** Parent handles confirm UX + runs the actual removal — we just fire
+   *  the request so the parent's ConfirmDialog is what the user sees. */
+  onRequestRemove: (id: string, name: string) => void
   onClose: () => void
 }
 
 function ConnectionsModal({
-  connections, activeId, onSelect, onAdd, onUpdate, onRemove, onClose,
+  connections, activeId, onSelect, onAdd, onUpdate, onRequestRemove, onClose,
 }: ConnectionsModalProps) {
   const { t } = useTranslation()
   // null = list view. 'new' = create form. string id = edit form.
@@ -1509,7 +1512,7 @@ function ConnectionsModal({
                 </button>
                 <button
                   type="button"
-                  onClick={() => { if (window.confirm(t('drasi.deleteConnectionConfirm', { name: conn.name }))) onRemove(conn.id) }}
+                  onClick={() => onRequestRemove(conn.id, conn.name)}
                   className="w-6 h-6 flex items-center justify-center rounded hover:bg-red-500/20 text-slate-400 hover:text-red-300"
                   aria-label={t('actions.delete')}
                   title={t('actions.delete')}
@@ -1904,6 +1907,14 @@ export function DrasiReactiveGraph() {
   const isLive = !!liveData && !isDemoMode
   const [showConnectionsModal, setShowConnectionsModal] = useState(false)
   const [showStreamSamples, setShowStreamSamples] = useState(false)
+  // Shared confirm-dialog state for every destructive action in the card.
+  // Replaces window.confirm() so delete flows go through the themed
+  // ConfirmDialog (user does not want browser-chrome alerts).
+  const [pendingConfirm, setPendingConfirm] = useState<{
+    title: string
+    message: string
+    onConfirm: () => void
+  } | null>(null)
   // Selected flow (connected component) — FLOW_ID_ALL means show the full
   // graph (no filter). Reset automatically if the selected id disappears
   // after a poll (e.g. the user deleted a resource in the active flow).
@@ -2139,28 +2150,32 @@ export function DrasiReactiveGraph() {
     }
   }, [isLive, liveData, refetchDrasi, drasiProxyTarget, drasiResourcePath])
 
-  const deleteResource = useCallback(async (
+  const deleteResource = useCallback((
     kind: 'source' | 'query' | 'reaction',
     id: string,
     name: string,
   ) => {
-    // eslint-disable-next-line no-alert
-    if (!window.confirm(t('drasi.deleteConfirm', { name }))) return
-    if (isLive && liveData) {
-      try {
-        await fetch(`/api/drasi/proxy${drasiResourcePath(kind)}/${encodeURIComponent(id)}?${drasiProxyTarget()}`, {
-          method: 'DELETE',
+    setPendingConfirm({
+      title: t('drasi.deleteConfirmTitle'),
+      message: t('drasi.deleteConfirm', { name }),
+      onConfirm: async () => {
+        if (isLive && liveData) {
+          try {
+            await fetch(`/api/drasi/proxy${drasiResourcePath(kind)}/${encodeURIComponent(id)}?${drasiProxyTarget()}`, {
+              method: 'DELETE',
+            })
+            refetchDrasi()
+          } catch {
+            // Non-fatal; next poll surfaces the error.
+          }
+          return
+        }
+        setDemoData(prev => {
+          if (kind === 'source') return { ...prev, sources: prev.sources.filter(s => s.id !== id) }
+          if (kind === 'query') return { ...prev, queries: prev.queries.filter(q => q.id !== id) }
+          return { ...prev, reactions: prev.reactions.filter(r => r.id !== id) }
         })
-        refetchDrasi()
-      } catch {
-        // Non-fatal; next poll surfaces the error.
-      }
-      return
-    }
-    setDemoData(prev => {
-      if (kind === 'source') return { ...prev, sources: prev.sources.filter(s => s.id !== id) }
-      if (kind === 'query') return { ...prev, queries: prev.queries.filter(q => q.id !== id) }
-      return { ...prev, reactions: prev.reactions.filter(r => r.id !== id) }
+      },
     })
   }, [isLive, liveData, refetchDrasi, drasiProxyTarget, drasiResourcePath, t])
 
@@ -2500,13 +2515,16 @@ export function DrasiReactiveGraph() {
     <div className="h-full w-full flex flex-col p-3 overflow-hidden relative">
       {/* Drasi connection selector + flow selector — top strip. Always
           visible so the user can switch between configured Drasi installs
-          (gear opens CRUD modal) and focus on a single flow at a time. */}
-      <div className="flex-shrink-0 mb-4 flex items-center gap-2">
+          (gear opens CRUD modal) and focus on a single flow at a time.
+          Server select is capped in width so the Flow select + Consume
+          button stay anchored to the left-hand group and don't disappear
+          off the right edge of wide cards. */}
+      <div className="flex-shrink-0 mb-4 flex items-center gap-2 flex-wrap">
         <Server className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
         <select
           value={activeConnection?.id ?? ''}
           onChange={e => setActive(e.target.value)}
-          className="flex-1 min-w-0 px-2 py-1 text-[11px] bg-slate-950 border border-slate-700 rounded text-white focus:border-cyan-500 focus:outline-none"
+          className="min-w-[160px] max-w-[260px] px-2 py-1 text-[11px] bg-slate-950 border border-slate-700 rounded text-white focus:border-cyan-500 focus:outline-none"
           aria-label={t('drasi.connectionsTitle')}
         >
           <option value="">{t('drasi.noActiveConnection')}</option>
@@ -2535,7 +2553,7 @@ export function DrasiReactiveGraph() {
             <select
               value={selectedFlowId}
               onChange={e => setSelectedFlowId(e.target.value)}
-              className="shrink-0 max-w-[180px] px-2 py-1 text-[11px] bg-slate-950 border border-slate-700 rounded text-white focus:border-cyan-500 focus:outline-none"
+              className="shrink-0 min-w-[140px] max-w-[220px] px-2 py-1 text-[11px] bg-slate-950 border border-slate-700 rounded text-white focus:border-cyan-500 focus:outline-none"
               aria-label={t('drasi.flowLabel')}
             >
               <option value={FLOW_ID_ALL}>{t('drasi.flowAllResources')}</option>
@@ -2545,6 +2563,19 @@ export function DrasiReactiveGraph() {
             </select>
           </>
         )}
+        {/* "Consume stream" lives in the header strip as well as each
+            query's results-table header — the in-table placement is easy
+            to miss, so this gives it a guaranteed discoverable home. */}
+        <button
+          type="button"
+          onClick={() => setShowStreamSamples(true)}
+          className="shrink-0 ml-auto px-2 py-1 text-[10px] rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-cyan-300 flex items-center gap-1.5"
+          aria-label={t('drasi.consumeStreamTitle')}
+          title={t('drasi.consumeStreamTitle')}
+        >
+          <Code2 className="w-3 h-3" />
+          {t('drasi.consumeStream')}
+        </button>
       </div>
       {/* Install Drasi CTA — shown only when no live connection is active.
           Deep-links to the existing console-kb install mission. */}
@@ -2664,8 +2695,10 @@ export function DrasiReactiveGraph() {
             </button>
           </div>
 
-          {/* Sources — col 1, rows 2..n */}
-          {sources.slice(0, 3).map((source, i) => (
+          {/* Sources — col 1, rows 2..n. No slice: the grid expands
+              vertically as the user adds sources, matching the queries
+              and reactions columns. */}
+          {sources.map((source, i) => (
             <div key={source.id} style={{ gridColumn: 1, gridRow: i + 2 }}>
               <NodeCard
                 nodeRef={setSourceEl(source.id)}
@@ -2805,7 +2838,11 @@ export function DrasiReactiveGraph() {
               onSelect={id => { setActive(id); setShowConnectionsModal(false) }}
               onAdd={addConnection}
               onUpdate={updateConnection}
-              onRemove={removeConnection}
+              onRequestRemove={(id, name) => setPendingConfirm({
+                title: t('drasi.deleteConnectionTitle'),
+                message: t('drasi.deleteConnectionConfirm', { name }),
+                onConfirm: () => removeConnection(id),
+              })}
               onClose={() => setShowConnectionsModal(false)}
             />
           )}
@@ -2825,6 +2862,20 @@ export function DrasiReactiveGraph() {
             />
           )}
         </AnimatePresence>
+        {/* Themed confirm dialog — shared by every destructive action in
+            the card. Replaces the browser-chrome window.confirm() calls. */}
+        <ConfirmDialog
+          isOpen={pendingConfirm !== null}
+          title={pendingConfirm?.title ?? ''}
+          message={pendingConfirm?.message ?? ''}
+          confirmLabel={t('actions.delete')}
+          variant="danger"
+          onConfirm={() => {
+            pendingConfirm?.onConfirm()
+            setPendingConfirm(null)
+          }}
+          onClose={() => setPendingConfirm(null)}
+        />
       </div>
     </div>
   )
