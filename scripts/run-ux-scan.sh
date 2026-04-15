@@ -11,10 +11,14 @@ FINDINGS_JSON="${UX_DIR}/ux-findings.json"
 SUMMARY_MD="${UX_DIR}/ux-summary.md"
 LEGACY_RAW_JSON="${WEB_DIR}/e2e/user-flows/test-results/ux-scan/ux-raw-results.json"
 
-BASE_URL="${PLAYWRIGHT_BASE_URL:-http://localhost:5174}"
+DEFAULT_BASE_URL="http://localhost:8080"
+WAIT_ON_TIMEOUT_MS=120000
+
+BASE_URL="${PLAYWRIGHT_BASE_URL:-${DEFAULT_BASE_URL}}"
 STORAGE_STATE="${PLAYWRIGHT_STORAGE_STATE:-auth.json}"
 AUTO_START_SERVER="${UX_SCAN_AUTOSTART_SERVER:-true}"
 PREVIEW_PID=""
+PREVIEW_LOG=""
 
 mkdir -p "${UX_DIR}"
 
@@ -24,7 +28,9 @@ cleanup() {
   if [[ -n "${PREVIEW_PID}" ]]; then
     kill "${PREVIEW_PID}" >/dev/null 2>&1 || true
   fi
-  rm -f /tmp/ux-scan-preview.log
+  if [[ -n "${PREVIEW_LOG}" ]]; then
+    rm -f "${PREVIEW_LOG}" || true
+  fi
 }
 
 trap cleanup EXIT
@@ -42,13 +48,14 @@ if ! curl -fsS "${BASE_URL}" >/dev/null 2>&1; then
   if [[ "${AUTO_START_SERVER:-true}" == "true" ]] && [[ "${BASE_HOST}" == "localhost" || "${BASE_HOST}" == "127.0.0.1" ]]; then
     echo "Base URL ${BASE_URL} is not reachable. Building and starting local preview server..."
     npm run build
-    npm run preview -- --host "${BASE_HOST}" --port "${BASE_PORT}" >/tmp/ux-scan-preview.log 2>&1 &
+    PREVIEW_LOG="$(mktemp -t ux-scan-preview.XXXXXX.log)"
+    npm run preview -- --host "${BASE_HOST}" --port "${BASE_PORT}" >"${PREVIEW_LOG}" 2>&1 &
     PREVIEW_PID=$!
 
-    if ! npx wait-on "${BASE_URL}" --timeout 120000; then
+    if ! npx wait-on "${BASE_URL}" --timeout "${WAIT_ON_TIMEOUT_MS}"; then
       echo "Timed out waiting for preview server at ${BASE_URL}"
       echo "Preview logs:"
-      cat /tmp/ux-scan-preview.log || true
+      cat "${PREVIEW_LOG}" || true
       exit 1
     fi
   else

@@ -56,12 +56,15 @@ Use this shape for each issue:
 - assertion/navigation/visibility failures => `medium`
 - cosmetic-only regressions => `low`
 4. Deduplicate by issue title + source file + line.
-5. Append results to the "Reported Issues" section in this file.
+5. Write results to `web/test-results/ux-scan/reported-issues.md`.
+
+Do not modify this brief file. It is checked into git and should remain stable.
 
 
 ## Reported Issues
 
-Append new findings below this line.
+This section is intentionally left as an example template.
+Write real run output to `web/test-results/ux-scan/reported-issues.md`.
 
 ---
 

@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { collectConsoleErrors } from '../helpers/ux-assertions'
+import { setMode } from '../mocks/liveMocks'
 
 const BASE_URL =
   (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env
@@ -24,12 +25,8 @@ function routeMatcher(path: string): RegExp {
 async function loginAndOpenInitialDashboard(page: Page) {
   await page.goto(`${BASE_URL}/login`, { waitUntil: 'domcontentloaded' })
 
-  // Simulate the post-login auth state in a backend-independent way.
-  await page.evaluate(() => {
-    localStorage.setItem('token', 'demo-token')
-    localStorage.setItem('kc-demo-mode', 'true')
-    localStorage.setItem('demo-user-onboarded', 'true')
-  })
+  // Simulate post-login auth state in a backend-independent way.
+  await setMode(page, 'demo')
 
   await page.goto(`${BASE_URL}/`, { waitUntil: 'domcontentloaded' })
 
