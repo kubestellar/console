@@ -668,10 +668,68 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
   )
 }
 
+// Default returned when a consumer renders outside the provider — e.g. cards
+// pulled into a LightweightShell route, or a brief mid-transition frame where
+// `useLivePathname` flips the root <Routes> between FullDashboardApp and
+// LightweightShell. Throwing would bubble up to AppErrorBoundary and show a
+// crash screen on lightweight pages that don't need filtering at all. A
+// no-op fallback lets those pages render while still behaving correctly
+// (no clusters selected means "all", setters are no-ops, filter functions
+// return items untouched).
+const DEFAULT_GLOBAL_FILTERS: GlobalFiltersContextType = {
+  selectedClusters: [],
+  setSelectedClusters: () => {},
+  toggleCluster: () => {},
+  selectAllClusters: () => {},
+  deselectAllClusters: () => {},
+  isAllClustersSelected: true,
+  isClustersFiltered: false,
+  availableClusters: [],
+  clusterInfoMap: {},
+
+  clusterGroups: [],
+  addClusterGroup: () => {},
+  updateClusterGroup: () => {},
+  deleteClusterGroup: () => {},
+  selectClusterGroup: () => {},
+
+  selectedSeverities: [],
+  setSelectedSeverities: () => {},
+  toggleSeverity: () => {},
+  selectAllSeverities: () => {},
+  deselectAllSeverities: () => {},
+  isAllSeveritiesSelected: true,
+  isSeveritiesFiltered: false,
+
+  selectedStatuses: [],
+  setSelectedStatuses: () => {},
+  toggleStatus: () => {},
+  selectAllStatuses: () => {},
+  deselectAllStatuses: () => {},
+  isAllStatusesSelected: true,
+  isStatusesFiltered: false,
+
+  customFilter: '',
+  setCustomFilter: () => {},
+  clearCustomFilter: () => {},
+  hasCustomFilter: false,
+
+  isFiltered: false,
+  clearAllFilters: () => {},
+
+  savedFilterSets: [],
+  saveCurrentFilters: () => {},
+  applySavedFilterSet: () => {},
+  deleteSavedFilterSet: () => {},
+  activeFilterSetId: null,
+
+  filterByCluster: items => items,
+  filterBySeverity: items => items,
+  filterByStatus: items => items,
+  filterByCustomText: items => items,
+  filterItems: items => items,
+}
+
 export function useGlobalFilters() {
-  const context = useContext(GlobalFiltersContext)
-  if (!context) {
-    throw new Error('useGlobalFilters must be used within a GlobalFiltersProvider')
-  }
-  return context
+  return useContext(GlobalFiltersContext) ?? DEFAULT_GLOBAL_FILTERS
 }
