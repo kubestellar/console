@@ -110,14 +110,40 @@ describe('exported constants', () => {
 })
 
 // ===========================================================================
-// Provider requirement
+// Provider requirement — see PR #8211: useGlobalFilters now returns no-op
+// defaults when used outside a provider instead of throwing, so that cards
+// rendered outside the dashboard shell (e.g. in isolated previews) degrade
+// gracefully. The behaviour test below locks in that contract.
 // ===========================================================================
 describe('useGlobalFilters without provider', () => {
-  it('throws when used outside GlobalFiltersProvider', () => {
+  it('returns safe no-op defaults when used outside GlobalFiltersProvider', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
-    expect(() => renderHook(() => useGlobalFilters())).toThrow(
-      'useGlobalFilters must be used within a GlobalFiltersProvider',
-    )
+    const { result } = renderHook(() => useGlobalFilters())
+
+    // All-selected / unfiltered state
+    expect(result.current.selectedClusters).toEqual([])
+    expect(result.current.isAllClustersSelected).toBe(true)
+    expect(result.current.isClustersFiltered).toBe(false)
+    expect(result.current.isAllSeveritiesSelected).toBe(true)
+    expect(result.current.isSeveritiesFiltered).toBe(false)
+    expect(result.current.isAllStatusesSelected).toBe(true)
+    expect(result.current.isStatusesFiltered).toBe(false)
+    expect(result.current.hasCustomFilter).toBe(false)
+    expect(result.current.isFiltered).toBe(false)
+
+    // Setter/action methods are no-ops (do not throw)
+    expect(() => result.current.toggleCluster('cluster-a')).not.toThrow()
+    expect(() => result.current.selectAllClusters()).not.toThrow()
+    expect(() => result.current.clearAllFilters()).not.toThrow()
+
+    // Filter helpers pass items through unchanged
+    const sampleItems = [{ id: 1 }, { id: 2 }]
+    expect(result.current.filterByCluster(sampleItems)).toBe(sampleItems)
+    expect(result.current.filterBySeverity(sampleItems)).toBe(sampleItems)
+    expect(result.current.filterByStatus(sampleItems)).toBe(sampleItems)
+    expect(result.current.filterByCustomText(sampleItems)).toBe(sampleItems)
+    expect(result.current.filterItems(sampleItems)).toBe(sampleItems)
+
     spy.mockRestore()
   })
 })
