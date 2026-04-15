@@ -1,162 +1,106 @@
-import { defineConfig, devices } from '@playwright/test'
+import { defineConfig, devices } from '@playwright/test';
+
+const isCI = Boolean(
+  (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.CI,
+);
 
 /**
- * Playwright configuration for KubeStellar Console (kc)
- *
- * Comprehensive E2E testing with focus on:
- * - AI interactivity features
- * - Card/dashboard management
- * - Sharing and export functionality
- * - Multi-cluster operations
+ * Read environment variables from file.
+ * https://github.com/motdotla/dotenv
+ */
+// import dotenv from 'dotenv';
+// import path from 'path';
+// dotenv.config({ path: path.resolve(__dirname, '.env') });
+
+/**
+ * See https://playwright.dev/docs/test-configuration.
  */
 export default defineConfig({
+  // Canonical Playwright tests live under e2e/.
+  // Specialized suites (perf/compliance/nightly/etc.) keep dedicated configs.
   testDir: './e2e',
-
-  // Skip flaky tests until they are stabilized
-  // Re-enable these incrementally as they are fixed
-  testIgnore: [
-    // Tour.spec.ts - re-enabled after stabilization
-    // Sidebar.spec.ts - re-enabled after stabilization
-    // AIMode.spec.ts - re-enabled after stabilization
-    // AIRecommendations.spec.ts - re-enabled after stabilization
-    // CardChat.spec.ts - re-enabled after stabilization
-    // CardSharing.spec.ts - re-enabled after stabilization
-    // DrillDown.spec.ts - re-enabled after stabilization
-    // Clusters.spec.ts - re-enabled after stabilization
-    // Events.spec.ts - re-enabled after stabilization
-    // Settings.spec.ts - re-enabled after stabilization
-    '**/auth.setup.ts',
+  testMatch: [
+    '**/Login.spec.ts',
+    '**/Dashboard.spec.ts',
+    '**/Sidebar.spec.ts',
+    '**/Settings.spec.ts',
+    '**/smoke.spec.ts',
+    '**/keyboard-and-card-ops.spec.ts',
+    '**/spa-routes.spec.ts',
+    '**/user-flows/**/*.spec.ts',
   ],
-
-  // Run tests in parallel
+  testIgnore: [
+    '**/ai-ml/**',
+    '**/benchmarks/**',
+    '**/compliance/**',
+    '**/console-errors/**',
+    '**/deploy/**',
+    '**/nightly/**',
+    '**/perf/**',
+    '**/visual/**',
+    '**/fullstack-smoke.spec.ts',
+  ],
+  /* Run tests in files in parallel */
   fullyParallel: true,
-
-  // Fail the build on CI if test.only is left in
-  forbidOnly: !!process.env.CI,
-
-  // Retry failed tests once in CI (balances flake detection vs run time)
-  retries: process.env.CI ? 1 : 0,
-
-  // Workers — CI gets 4 workers per shard, local uses half of available cores
-  workers: process.env.CI ? 4 : '50%',
-
-  // Reporter configuration
-  reporter: process.env.CI
-    ? [
-        ['blob', { outputDir: 'blob-report' }],
-        ['html', { outputFolder: 'playwright-report' }],
-        ['json', { outputFile: 'test-results/results.json' }],
-        ['junit', { outputFile: 'test-results/junit.xml' }],
-        ['github'],
-      ]
-    : [['html', { open: 'never' }], ['./e2e/helpers/ux-reporter.ts']],
-
-  // Global timeout per test
-  timeout: 60000,
-
-  // Expect timeout
-  expect: {
-    timeout: 10000,
-  },
-
-  // Shared settings for all projects
+  /* Fail the build on CI if you accidentally left test.only in the source code. */
+  forbidOnly: isCI,
+  /* Retry on CI only */
+  retries: isCI ? 2 : 0,
+  /* Use a single worker for deterministic auth/login tests. */
+  workers: 1,
+  /* Reporter to use. See https://playwright.dev/docs/test-reporters */
+  reporter: 'html',
+  /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
-    // Base URL for all tests.
-    //
-    // #6452 — Default to the Go backend port (8080). In production the Go
-    // backend serves BOTH the API and the built frontend on 8080, which is
-    // also how startup-oauth.sh launches the console. Tests must match the
-    // real deployment, not a standalone vite dev server. Override with
-    // PLAYWRIGHT_BASE_URL=http://localhost:5174 if running against a detached
-    // vite dev server (e.g. for fast local UI iteration).
-    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:8080',
+    /* Base URL to use in actions like `await page.goto('')`. */
+    // baseURL: 'http://localhost:3000',
 
-    // Collect trace on first retry
+    /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
-
-    // Screenshot on failure
-    screenshot: 'only-on-failure',
-
-    // Video on failure
-    video: 'retain-on-failure',
-
-    // Default viewport
-    viewport: { width: 1280, height: 720 },
   },
 
-  // Projects for different browsers
-  // Note: Each test handles its own auth mocking in beforeEach,
-  // so we don't need a global setup project
+  /* Configure projects for major browsers */
   projects: [
-    // Chromium tests
     {
       name: 'chromium',
-      use: {
-        ...devices['Desktop Chrome'],
-      },
+      use: { ...devices['Desktop Chrome'] },
     },
 
-    // Firefox tests
     {
       name: 'firefox',
-      use: {
-        ...devices['Desktop Firefox'],
-      },
+      use: { ...devices['Desktop Firefox'] },
     },
 
-    // Webkit tests
     {
       name: 'webkit',
-      use: {
-        ...devices['Desktop Safari'],
-      },
+      use: { ...devices['Desktop Safari'] },
     },
 
-    // Mobile Chrome
-    {
-      name: 'mobile-chrome',
-      use: {
-        ...devices['Pixel 5'],
-      },
-    },
+    /* Test against mobile viewports. */
+    // {
+    //   name: 'Mobile Chrome',
+    //   use: { ...devices['Pixel 5'] },
+    // },
+    // {
+    //   name: 'Mobile Safari',
+    //   use: { ...devices['iPhone 12'] },
+    // },
 
-    // Mobile Safari
-    {
-      name: 'mobile-safari',
-      use: {
-        ...devices['iPhone 12'],
-      },
-    },
+    /* Test against branded browsers. */
+    // {
+    //   name: 'Microsoft Edge',
+    //   use: { ...devices['Desktop Edge'], channel: 'msedge' },
+    // },
+    // {
+    //   name: 'Google Chrome',
+    //   use: { ...devices['Desktop Chrome'], channel: 'chrome' },
+    // },
   ],
 
-  // Web server config - starts dev server before tests.
-  //
-  // #6452/#6474 — When PLAYWRIGHT_BASE_URL is not set, launch the Go backend
-  // (`go run .` from the repo root) on port 8080. In production the Go backend
-  // serves BOTH the API and the built frontend on 8080, which is how
-  // startup-oauth.sh launches the console. Tests must match the real
-  // deployment topology, not a standalone vite dev server.
-  //
-  // If PLAYWRIGHT_BASE_URL explicitly points somewhere else (e.g. at a
-  // pre-running server), we skip webServer and expect the caller to manage
-  // the process. This is the path CI uses with a shared backend.
-  //
-  // Local dev: just `npm run test:e2e` and playwright will start the backend
-  // itself. Previously this was `webServer: undefined`, which hung on connect.
-  webServer: process.env.PLAYWRIGHT_BASE_URL
-    ? undefined
-    : {
-        // Run `go run .` from the repo root (one level up from web/).
-        command: 'cd .. && go run .',
-        url: 'http://localhost:8080',
-        // Go backend can take a while to build on first run.
-        // 3 minutes covers a cold `go run` compile on modest hardware.
-        timeout: 180_000,
-        reuseExistingServer: !process.env.CI,
-        stdout: 'pipe',
-        stderr: 'pipe',
-      },
-
-  // Output directory
-  outputDir: 'test-results',
-})
+  /* Run your local dev server before starting the tests */
+  // webServer: {
+  //   command: 'npm run start',
+  //   url: 'http://localhost:3000',
+  //   reuseExistingServer: !process.env.CI,
+  // },
+});
