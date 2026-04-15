@@ -234,6 +234,7 @@ interface NodeControlsProps {
 }
 
 function NodeControls({ isStopped, isPinned = false, showPin = false, showGear = false, showDelete = false, onStop, onPin, onExpand, onConfigure, onDelete }: NodeControlsProps) {
+  const { t } = useTranslation()
   const handle = (fn?: () => void) => (e: React.MouseEvent) => {
     e.stopPropagation()
     fn?.()
@@ -293,8 +294,8 @@ function NodeControls({ isStopped, isPinned = false, showPin = false, showGear =
           type="button"
           onClick={handle(onDelete)}
           className="w-5 h-5 flex items-center justify-center rounded bg-slate-700/40 hover:bg-red-500/40 border border-slate-600/40 hover:border-red-500/60 text-slate-400 hover:text-red-300 transition-colors"
-          aria-label="Delete"
-          title="Delete"
+          aria-label={t('actions.delete')}
+          title={t('actions.delete')}
         >
           <Trash2 className="w-2.5 h-2.5" />
         </button>
