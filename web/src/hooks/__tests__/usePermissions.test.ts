@@ -177,7 +177,8 @@ describe('usePermissions', () => {
     await waitFor(() => expect(fetchSpy).toHaveBeenCalled())
 
     const [url, options] = fetchSpy.mock.calls[0] as [string, RequestInit]
-    expect(url).toContain('/api/permissions/summary')
+    // #7993 Phase 6: routed through kc-agent (LOCAL_AGENT_HTTP_URL)
+    expect(url).toContain('/permissions/summary')
     const headers = options.headers as Record<string, string>
     expect(headers['Authorization']).toBe('Bearer real-jwt-token-abc123')
   })
@@ -398,7 +399,7 @@ describe('useCanI', () => {
     expect(result.current.checking).toBe(false)
   })
 
-  it('sends POST to /api/rbac/can-i with correct body and returns result', async () => {
+  it('sends POST to kc-agent /rbac/can-i with correct body and returns result', async () => {
     vi.mocked(isBackendUnavailable).mockReturnValue(false)
     localStorage.setItem(MOCKED_TOKEN_KEY, 'real-token')
 
@@ -424,7 +425,8 @@ describe('useCanI', () => {
 
     // Verify the request was sent correctly
     const [url, options] = fetchSpy.mock.calls[0] as [string, RequestInit]
-    expect(url).toContain('/api/rbac/can-i')
+    // #7993 Phase 6: routed through kc-agent (LOCAL_AGENT_HTTP_URL)
+    expect(url).toContain('/rbac/can-i')
     expect(options.method).toBe('POST')
     const body = JSON.parse(options.body as string)
     expect(body.cluster).toBe('prod')

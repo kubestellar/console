@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { isBackendUnavailable } from '../lib/api'
 import { STORAGE_KEY_TOKEN } from '../lib/constants'
+import { LOCAL_AGENT_HTTP_URL } from '../lib/constants/network'
 
 export interface ClusterPermissions {
   isClusterAdmin: boolean
@@ -34,7 +35,8 @@ export interface CanIResponse {
 
 /** Cache TTL: 1 minute */
 const CACHE_TTL_MS = 60_000
-const API_BASE = import.meta.env.VITE_API_URL || ''
+/** Per-request timeout for permission checks (ms) */
+const PERMISSION_REQUEST_TIMEOUT_MS = 5000
 
 // Cache for permissions to avoid repeated API calls
 let permissionsCache: PermissionsSummary | null = null
@@ -69,11 +71,14 @@ export function usePermissions() {
     setError(null)
 
     try {
-      const response = await fetch(`${API_BASE}/api/permissions/summary`, {
+      // #7993 Phase 6: route permissions summary through kc-agent so the
+      // SelfSubjectAccessReviews run under the user's kubeconfig rather than
+      // the backend pod ServiceAccount when console is deployed in-cluster.
+      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/permissions/summary`, {
         headers: {
           'Authorization': token ? `Bearer ${token}` : '',
           'Content-Type': 'application/json' },
-        signal: AbortSignal.timeout(5000) })
+        signal: AbortSignal.timeout(PERMISSION_REQUEST_TIMEOUT_MS) })
 
       if (!response.ok) {
         // Don't throw on 500 - just silently fail
@@ -183,13 +188,16 @@ export function useCanI() {
 
     try {
       const token = localStorage.getItem(STORAGE_KEY_TOKEN)
-      const response = await fetch(`${API_BASE}/api/rbac/can-i`, {
+      // #7993 Phase 6: SelfSubjectAccessReview must run under the caller's
+      // kubeconfig, not the backend pod ServiceAccount — otherwise in-cluster
+      // it answers "can the pod SA do X?" instead of "can the user do X?".
+      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/rbac/can-i`, {
         method: 'POST',
         headers: {
           'Authorization': token ? `Bearer ${token}` : '',
           'Content-Type': 'application/json' },
         body: JSON.stringify(request),
-        signal: AbortSignal.timeout(5000) })
+        signal: AbortSignal.timeout(PERMISSION_REQUEST_TIMEOUT_MS) })
 
       if (!response.ok) {
         // SECURITY: fail-closed — deny permission when API returns error

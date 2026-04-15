@@ -452,6 +452,15 @@ func (s *Server) Start() error {
 	// Route in pkg/agent/server_gpu_health.go.
 	mux.HandleFunc("/gpu-health-cronjob", s.handleGPUHealthCronJob)
 
+	// RBAC / permissions introspection moved to kc-agent (#7993 Phase 6).
+	// SelfSubjectAccessReview must be issued under the caller's identity, not
+	// the backend pod ServiceAccount — otherwise in-cluster the answer
+	// reflects the pod SA's permissions instead of the user's. Routes in
+	// pkg/agent/server_rbac.go. Backend handlers are deleted in the same PR.
+	mux.HandleFunc("/rbac/can-i", s.handleCanIHTTP)
+	mux.HandleFunc("/rbac/permissions", s.handleClusterPermissionsHTTP)
+	mux.HandleFunc("/permissions/summary", s.handlePermissionsSummaryHTTP)
+
 	// Rename context endpoint
 	mux.HandleFunc("/rename-context", s.handleRenameContextHTTP)
 

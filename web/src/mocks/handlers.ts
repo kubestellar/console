@@ -296,9 +296,13 @@ export const handlers = [
   }),
 
   // Permissions
+  // #7993 Phase 6: Permissions endpoints (/permissions/summary, /rbac/can-i,
+  // /rbac/permissions) moved to kc-agent. The frontend hooks short-circuit
+  // via isBackendUnavailable() in demo mode, so no MSW handler is required.
+  // Keeping a no-op stub for legacy `/api/permissions/summary` callers in
+  // case any are added during demo flows.
   http.get('/api/permissions/summary', async () => {
     await delay(50)
-    // Return proper PermissionsSummary structure with clusters map
     const clusterPermissions = {
       isClusterAdmin: true,
       canListNodes: true,

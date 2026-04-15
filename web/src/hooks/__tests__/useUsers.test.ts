@@ -17,6 +17,7 @@ vi.mock('../../lib/api', () => ({
     post: (...args: unknown[]) => mockPost(...args),
     delete: (...args: unknown[]) => mockDelete(...args),
   },
+  isBackendUnavailable: () => false,
 }))
 
 vi.mock('../../lib/constants', async (importOriginal) => {
@@ -1010,6 +1011,14 @@ describe('useK8sRoleBindings', () => {
 // =========================================================================
 
 describe('useClusterPermissions', () => {
+  // #7993 Phase 6: useClusterPermissions now calls kc-agent
+  // (LOCAL_AGENT_HTTP_URL/rbac/permissions) directly via fetch instead of
+  // routing through the backend's `api.get` wrapper, so SelfSubjectAccessReviews
+  // run under the user's kubeconfig instead of the backend pod ServiceAccount.
+  // The tests below mock global fetch accordingly.
+  const mockFetchOk = (data: unknown) => () =>
+    Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(data) }) as unknown as Promise<Response>
+
   it('fetches permissions for a specific cluster', async () => {
     const perms = {
       cluster: 'prod',
@@ -1018,7 +1027,7 @@ describe('useClusterPermissions', () => {
       canManageRBAC: true,
       canViewSecrets: true,
     }
-    mockGet.mockResolvedValue({ data: perms })
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(mockFetchOk(perms))
 
     const { useClusterPermissions } = await getHooks()
     const { result } = renderHook(() => useClusterPermissions('prod'))
@@ -1027,7 +1036,8 @@ describe('useClusterPermissions', () => {
 
     // Single object is wrapped in array
     expect(result.current.permissions).toEqual([perms])
-    expect(mockGet).toHaveBeenCalledWith('/api/rbac/permissions?cluster=prod')
+    const [url] = fetchSpy.mock.calls[0] as [string, RequestInit]
+    expect(url).toContain('/rbac/permissions?cluster=prod')
   })
 
   it('fetches all cluster permissions when no cluster specified', async () => {
@@ -1047,7 +1057,7 @@ describe('useClusterPermissions', () => {
         canViewSecrets: false,
       },
     ]
-    mockGet.mockResolvedValue({ data: permsArr })
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(mockFetchOk(permsArr))
 
     const { useClusterPermissions } = await getHooks()
     const { result } = renderHook(() => useClusterPermissions())
@@ -1056,11 +1066,13 @@ describe('useClusterPermissions', () => {
 
     // Array stays as array
     expect(result.current.permissions).toEqual(permsArr)
-    expect(mockGet).toHaveBeenCalledWith('/api/rbac/permissions')
+    const [url] = fetchSpy.mock.calls[0] as [string, RequestInit]
+    expect(url).toContain('/rbac/permissions')
+    expect(url).not.toContain('?cluster=')
   })
 
-  it('silently fails on API error', async () => {
-    mockGet.mockRejectedValue(new Error('auth error'))
+  it('silently fails on fetch error', async () => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('network error'))
 
     const { useClusterPermissions } = await getHooks()
     const { result } = renderHook(() => useClusterPermissions('c1'))
@@ -1078,7 +1090,7 @@ describe('useClusterPermissions', () => {
       canManageRBAC: false,
       canViewSecrets: false,
     }
-    mockGet.mockResolvedValue({ data: perms })
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(mockFetchOk(perms))
 
     const { useClusterPermissions } = await getHooks()
     const { result } = renderHook(() => useClusterPermissions('c1'))
@@ -1086,7 +1098,7 @@ describe('useClusterPermissions', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     const updatedPerms = { ...perms, isClusterAdmin: true }
-    mockGet.mockResolvedValue({ data: updatedPerms })
+    fetchSpy.mockImplementation(mockFetchOk(updatedPerms))
 
     await act(async () => {
       await result.current.refetch()

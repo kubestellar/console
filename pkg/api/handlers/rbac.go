@@ -380,32 +380,11 @@ func (h *RBACHandler) ListK8sRoleBindings(c *fiber.Ctx) error {
 	return c.JSON(bindings)
 }
 
-// GetClusterPermissions returns current user's permissions on clusters
-func (h *RBACHandler) GetClusterPermissions(c *fiber.Ctx) error {
-	if h.k8sClient == nil {
-		return fiber.NewError(fiber.StatusServiceUnavailable, "Kubernetes client not available")
-	}
-
-	ctx, cancel := context.WithTimeout(c.Context(), rbacDefaultTimeout)
-	defer cancel()
-
-	cluster := c.Query("cluster")
-
-	if cluster != "" {
-		perms, err := h.k8sClient.GetClusterPermissions(ctx, cluster)
-		if err != nil {
-			return fiber.NewError(fiber.StatusInternalServerError, "Failed to get permissions")
-		}
-		return c.JSON(perms)
-	}
-
-	// Get permissions for all clusters
-	perms, err := h.k8sClient.GetAllClusterPermissions(ctx)
-	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "Failed to get permissions")
-	}
-	return c.JSON(perms)
-}
+// NOTE: GetClusterPermissions moved to kc-agent (#7993 Phase 6). The frontend
+// now GETs ${LOCAL_AGENT_HTTP_URL}/rbac/permissions so the
+// SelfSubjectAccessReview runs under the user's kubeconfig instead of the
+// backend pod ServiceAccount when console is deployed in-cluster. Route in
+// pkg/agent/server_rbac.go.
 
 // NOTE: CreateServiceAccount and CreateRoleBinding moved to kc-agent
 // (#7993 Phase 1.5 PR A). The frontend now POSTs to
@@ -491,88 +470,8 @@ func (h *RBACHandler) ListOpenShiftUsers(c *fiber.Ctx) error {
 	return c.JSON(users)
 }
 
-// GetPermissionsSummary returns permission summaries for all clusters.
-// SECURITY: Restricted to admin users to prevent non-admin users from
-// reading per-cluster permission summaries (#5465).
-func (h *RBACHandler) GetPermissionsSummary(c *fiber.Ctx) error {
-	userID := middleware.GetUserID(c)
-	currentUser, err := h.store.GetUser(userID)
-	if err != nil || currentUser == nil {
-		return fiber.NewError(fiber.StatusUnauthorized, "Unauthorized")
-	}
-
-	if currentUser.Role != models.UserRoleAdmin {
-		slog.Warn("[rbac] SECURITY: non-admin attempted to read permissions summary",
-			"user_id", currentUser.ID,
-			"github_login", currentUser.GitHubLogin)
-		return fiber.NewError(fiber.StatusForbidden, "Admin access required")
-	}
-
-	if h.k8sClient == nil {
-		return fiber.NewError(fiber.StatusServiceUnavailable, "Kubernetes client not available")
-	}
-
-	ctx, cancel := context.WithTimeout(c.Context(), rbacAnalysisTimeout)
-	defer cancel()
-
-	summaries, err := h.k8sClient.GetAllPermissionsSummaries(ctx)
-	if err != nil {
-		slog.Warn("[RBAC] failed to get permissions summary", "error", err)
-		return fiber.NewError(fiber.StatusInternalServerError, "internal server error")
-	}
-
-	// Convert to map format for API response
-	response := models.PermissionsSummaryResponse{
-		Clusters: make(map[string]models.ClusterPermissionsSummary),
-	}
-
-	for _, summary := range summaries {
-		response.Clusters[summary.Cluster] = models.ClusterPermissionsSummary{
-			IsClusterAdmin:       summary.IsClusterAdmin,
-			CanListNodes:         summary.CanListNodes,
-			CanListNamespaces:    summary.CanListNamespaces,
-			CanCreateNamespaces:  summary.CanCreateNamespaces,
-			CanManageRBAC:        summary.CanManageRBAC,
-			CanViewSecrets:       summary.CanViewSecrets,
-			AccessibleNamespaces: summary.AccessibleNamespaces,
-		}
-	}
-
-	return c.JSON(response)
-}
-
-// CheckCanI checks if the current user can perform an action
-func (h *RBACHandler) CheckCanI(c *fiber.Ctx) error {
-	// SECURITY (#7488): permission checks require a valid console role to
-	// prevent unauthenticated probing of backend capabilities.
-	if err := requireViewerOrAbove(c, h.store); err != nil {
-		return err
-	}
-
-	if h.k8sClient == nil {
-		return fiber.NewError(fiber.StatusServiceUnavailable, "Kubernetes client not available")
-	}
-
-	var req models.CanIRequest
-	if err := c.BodyParser(&req); err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
-	}
-
-	if req.Cluster == "" || req.Verb == "" || req.Resource == "" {
-		return fiber.NewError(fiber.StatusBadRequest, "Cluster, verb, and resource are required")
-	}
-
-	ctx, cancel := context.WithTimeout(c.Context(), rbacDefaultTimeout)
-	defer cancel()
-
-	result, err := h.k8sClient.CheckCanI(ctx, req.Cluster, req)
-	if err != nil {
-		slog.Warn("[RBAC] failed to check permission", "error", err)
-		return fiber.NewError(fiber.StatusInternalServerError, "internal server error")
-	}
-
-	return c.JSON(models.CanIResponse{
-		Allowed: result.Allowed,
-		Reason:  result.Reason,
-	})
-}
+// NOTE: GetPermissionsSummary and CheckCanI moved to kc-agent (#7993 Phase 6).
+// The frontend now calls ${LOCAL_AGENT_HTTP_URL}/permissions/summary and
+// ${LOCAL_AGENT_HTTP_URL}/rbac/can-i so SelfSubjectAccessReviews run under
+// the user's kubeconfig instead of the backend pod ServiceAccount when
+// console is deployed in-cluster. Routes in pkg/agent/server_rbac.go.

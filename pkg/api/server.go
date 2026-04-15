@@ -884,14 +884,19 @@ func (s *Server) setupRoutes() {
 	api.Get("/rbac/service-accounts", rbac.ListK8sServiceAccounts)
 	api.Get("/rbac/roles", rbac.ListK8sRoles)
 	api.Get("/rbac/bindings", rbac.ListK8sRoleBindings)
-	api.Get("/rbac/permissions", rbac.GetClusterPermissions)
 	// NOTE: POST /api/rbac/service-accounts and POST /api/rbac/bindings moved
 	// to kc-agent (#7993 Phase 1.5 PR A). The frontend now POSTs to
 	// ${LOCAL_AGENT_HTTP_URL}/serviceaccounts and
 	// ${LOCAL_AGENT_HTTP_URL}/rolebindings so the mutation runs under the
 	// user's kubeconfig instead of the backend pod's ServiceAccount.
-	api.Get("/permissions/summary", rbac.GetPermissionsSummary)
-	api.Post("/rbac/can-i", rbac.CheckCanI)
+	//
+	// NOTE: GET /api/rbac/permissions, GET /api/permissions/summary, and
+	// POST /api/rbac/can-i moved to kc-agent (#7993 Phase 6). The frontend
+	// now calls ${LOCAL_AGENT_HTTP_URL}/rbac/permissions,
+	// ${LOCAL_AGENT_HTTP_URL}/permissions/summary, and
+	// ${LOCAL_AGENT_HTTP_URL}/rbac/can-i so SelfSubjectAccessReviews run
+	// under the user's kubeconfig instead of the backend pod ServiceAccount
+	// when console is deployed in-cluster.
 
 	// Namespace read routes. GET /namespaces is viewer-or-above (see
 	// ListNamespaces's requireViewerOrAbove check) and
