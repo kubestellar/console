@@ -18,12 +18,34 @@ interface GlobeAnimationProps {
 /** Simulated loading delay before revealing the 3-D globe in milliseconds */
 const GLOBE_LOAD_DELAY_MS = 1000
 
-/** Check if WebGL is available — returns false in headless browsers and CI */
+/** Delay between WebGL context acquisition retries in milliseconds.
+ *  In containerized production environments the GPU rendering context
+ *  can be momentarily unavailable while the page is hydrating and
+ *  lazy chunks are still resolving, so we poll for a short window
+ *  before giving up and showing the static fallback. */
+const WEBGL_RETRY_INTERVAL_MS = 100
+
+/** Maximum number of WebGL detection attempts before falling back.
+ *  WEBGL_RETRY_INTERVAL_MS * WEBGL_MAX_RETRIES = total wait window. */
+const WEBGL_MAX_RETRIES = 20
+
+/** WebGL detection result. */
+type WebGLState = "checking" | "available" | "unavailable"
+
+/** Check if WebGL is available — returns false in headless browsers and CI.
+ *  We intentionally do NOT use `instanceof WebGLRenderingContext` because in
+ *  some containerized/SSR-hydrated environments the global constructor is
+ *  briefly undefined or comes from a different realm than the context object,
+ *  which causes the check to return false even when WebGL is functional. */
 function isWebGLAvailable(): boolean {
   try {
-    const canvas = document.createElement('canvas')
-    const gl = canvas.getContext('webgl2') || canvas.getContext('webgl') || canvas.getContext('experimental-webgl')
-    return gl instanceof WebGLRenderingContext || gl instanceof WebGL2RenderingContext
+    if (typeof document === "undefined") return false
+    const canvas = document.createElement("canvas")
+    const gl =
+      canvas.getContext("webgl2") ||
+      canvas.getContext("webgl") ||
+      canvas.getContext("experimental-webgl")
+    return gl !== null && typeof gl === "object"
   } catch {
     return false
   }
@@ -40,17 +62,51 @@ const GlobeAnimation = ({
   style = {},
 }: GlobeAnimationProps) => {
   const [isLoaded, setIsLoaded] = useState(false)
-  const [hasWebGL] = useState(isWebGLAvailable)
+  const [webGLState, setWebGLState] = useState<WebGLState>("checking")
+
+  // Poll for WebGL availability after mount. Retries handle the production
+  // race where the canvas/GPU context is not ready on the first tick after
+  // hydration in containerized deployments.
+  useEffect(() => {
+    let attempts = 0
+    let cancelled = false
+
+    const check = () => {
+      if (cancelled) return
+      if (isWebGLAvailable()) {
+        setWebGLState("available")
+        return
+      }
+      attempts += 1
+      if (attempts >= WEBGL_MAX_RETRIES) {
+        setWebGLState("unavailable")
+        return
+      }
+      window.setTimeout(check, WEBGL_RETRY_INTERVAL_MS)
+    }
+
+    check()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
-    if (!hasWebGL) return
+    if (webGLState !== "available") return
     // Simulate loading delay to show progressive animation
     const timer = setTimeout(() => {
       setIsLoaded(true)
     }, GLOBE_LOAD_DELAY_MS)
 
     return () => clearTimeout(timer)
-  }, [hasWebGL])
+  }, [webGLState])
+
+  const hasWebGL = webGLState === "available"
+  const webGLFailed = webGLState === "unavailable"
+  // Hide the loader once the globe is loaded OR once we've decided to show
+  // the static fallback — otherwise the spinner sits forever on top of the
+  // gradient fallback circle in production.
+  const showLoaderNow = showLoader && !isLoaded && !webGLFailed
 
   return (
     <div
@@ -58,15 +114,19 @@ const GlobeAnimation = ({
       style={{ width, height, ...style }}
     >
       {/* Loader */}
-      {showLoader && !isLoaded && (
+      {showLoaderNow && (
         <div className="absolute inset-0 flex items-center justify-center bg-transparent z-10">
           <GlobeLoader />
         </div>
       )}
 
-      {/* Three.js Canvas — skipped when WebGL is unavailable (headless browsers, CI) */}
-      {!hasWebGL ? (
-        <div className="absolute inset-0 flex items-center justify-center">
+      {/* Static fallback — shown whenever WebGL is unavailable after retries
+          (headless browsers, CI, GPU-less containers, denied contexts). */}
+      {webGLFailed ? (
+        <div
+          className="absolute inset-0 flex items-center justify-center"
+          data-testid="globe-fallback"
+        >
           <div className="w-32 h-32 rounded-full bg-gradient-to-br from-purple-500/20 to-blue-500/20 border border-purple-500/30" />
         </div>
       ) : null}
