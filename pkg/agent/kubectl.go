@@ -28,6 +28,14 @@ const (
 
 	// kubectlRenameTimeout bounds the kubectl config rename-context command. (#7279)
 	kubectlRenameTimeout = 30 * time.Second
+
+	// kubectlReloadMinInterval is the minimum time between kubeconfig file
+	// re-reads driven by ReloadIfStale. handleClustersHTTP is polled by the
+	// frontend and previously called Reload() on every request, which does a
+	// full disk read + YAML parse. Two seconds is short enough to feel
+	// responsive after the user adds a context, long enough to absorb bursty
+	// polling. (#8075)
+	kubectlReloadMinInterval = 2 * time.Second
 )
 
 // execCommand allows mocking exec.Command for testing
@@ -40,6 +48,7 @@ type KubectlProxy struct {
 	mu         sync.RWMutex // guards config against concurrent read/write (#7259)
 	kubeconfig string
 	config     *api.Config
+	lastReload time.Time // wall time of last successful Reload, for ReloadIfStale (#8075)
 }
 
 func NewKubectlProxy(kubeconfig string) (*KubectlProxy, error) {
@@ -366,8 +375,36 @@ func (k *KubectlProxy) Reload() {
 	if err == nil {
 		k.mu.Lock()
 		k.config = config
+		k.lastReload = time.Now()
 		k.mu.Unlock()
 	}
+}
+
+// ReloadIfStale reloads the kubeconfig from disk only if the previous reload
+// was more than minInterval ago. This absorbs bursty polling from frontend
+// callers (e.g. handleClustersHTTP) without skipping updates after the user
+// adds a context. Returns true if a fresh load was performed. (#8075)
+func (k *KubectlProxy) ReloadIfStale(minInterval time.Duration) bool {
+	k.mu.RLock()
+	fresh := !k.lastReload.IsZero() && time.Since(k.lastReload) < minInterval
+	k.mu.RUnlock()
+	if fresh {
+		return false
+	}
+	config, err := clientcmd.LoadFromFile(k.kubeconfig)
+	if err != nil {
+		// Record the attempt even on failure so a broken kubeconfig doesn't
+		// cause a hot loop of LoadFromFile calls on every request.
+		k.mu.Lock()
+		k.lastReload = time.Now()
+		k.mu.Unlock()
+		return false
+	}
+	k.mu.Lock()
+	k.config = config
+	k.lastReload = time.Now()
+	k.mu.Unlock()
+	return true
 }
 
 // reloadLocked reloads the kubeconfig from disk without acquiring the mutex.

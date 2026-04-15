@@ -784,6 +784,20 @@ func (m *LocalClusterManager) DisconnectVCluster(name, namespace string) error {
 		return fmt.Errorf("vcluster disconnect failed: vcluster %q in namespace %q has no kubeconfig context (already disconnected?)", name, namespace)
 	}
 
+	// If the target context is currently active, unset current-context before
+	// deleting. Otherwise kubectl is left pointing at a stale reference and
+	// subsequent commands fail with `current-context is "<deleted>", but does
+	// not exist`. This happens when a user manually ran `kubectl config
+	// use-context <vcluster-ctx>` between connect and disconnect. (#8076)
+	currentCmd := execCommand("kubectl", "config", "current-context")
+	currentOut, currentErr := currentCmd.Output()
+	if currentErr == nil && strings.TrimSpace(string(currentOut)) == targetContext {
+		unsetCmd := execCommand("kubectl", "config", "unset", "current-context")
+		// Best-effort: a failure here shouldn't block the delete, the user
+		// can always re-pick a context manually.
+		_ = unsetCmd.Run()
+	}
+
 	cmd := execCommand("kubectl", "config", "delete-context", targetContext)
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr

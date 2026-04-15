@@ -2470,8 +2470,27 @@ func TestServer_PromptNeedsToolExecution(t *testing.T) {
 		{"I understand now", false},
 		{"good job", false},
 		{"", false},
-		// Note: "explain deployments" and "how does helm work?" would return true
-		// because they contain "deploy" and "helm" substrings
+
+		// Question-prefix prompts must short-circuit to false even if they
+		// contain execution keywords as substrings. Regression for #8074
+		// where "How do I delete a namespace?" was routed to a tool-capable
+		// agent because it contained "delete".
+		{"How do I delete a namespace?", false},
+		{"how can I scale a deployment?", false},
+		{"what is the difference between delete and force-delete?", false},
+		{"why is my pod stuck?", false},
+		{"explain how rollout restart works", false},
+		{"tell me about kubectl get pods", false},
+
+		// Imperative commands must still route to tool execution.
+		{"delete namespace foo", true},
+		{"kubectl get pods", true},
+
+		// Exact retry keyword "yes" still routes, but "yesterday" must not.
+		// Regression for #8074 where retryKeywords used Contains, so any
+		// sentence with "yes" as a substring (e.g. "yesterday") matched.
+		{"yesterday the pod crashed", false},
+		{"yes, please do", true},
 	}
 
 	for _, tt := range tests {

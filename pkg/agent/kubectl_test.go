@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"k8s.io/client-go/tools/clientcmd/api"
 )
@@ -943,5 +944,57 @@ func TestKubectlProxy_TestClusterConnection_Unreachable(t *testing.T) {
 	}
 	if result.Error == "" {
 		t.Error("Expected error message for unreachable server")
+	}
+}
+
+// TestKubectlProxy_ReloadIfStale verifies that repeated calls within the TTL
+// window skip the disk read, while a call after the TTL performs one. (#8075)
+func TestKubectlProxy_ReloadIfStale(t *testing.T) {
+	dir := t.TempDir()
+	kubeconfigPath := filepath.Join(dir, "config")
+	// Minimal valid kubeconfig — just enough for clientcmd.LoadFromFile
+	// to succeed and populate k.config.
+	const minimalKubeconfig = `apiVersion: v1
+kind: Config
+clusters:
+- name: c1
+  cluster:
+    server: https://example.invalid
+users:
+- name: u1
+  user: {}
+contexts:
+- name: ctx1
+  context:
+    cluster: c1
+    user: u1
+current-context: ctx1
+`
+	if err := os.WriteFile(kubeconfigPath, []byte(minimalKubeconfig), 0o600); err != nil {
+		t.Fatalf("write kubeconfig: %v", err)
+	}
+
+	proxy, err := NewKubectlProxy(kubeconfigPath)
+	if err != nil {
+		t.Fatalf("NewKubectlProxy: %v", err)
+	}
+
+	// First call with a nonzero TTL should perform the reload because
+	// lastReload is zero-valued on a fresh proxy.
+	const testTTL = 50 * time.Millisecond
+	if !proxy.ReloadIfStale(testTTL) {
+		t.Errorf("first ReloadIfStale returned false; expected true (lastReload is zero)")
+	}
+
+	// Second call immediately after should skip — within TTL window.
+	if proxy.ReloadIfStale(testTTL) {
+		t.Errorf("second ReloadIfStale returned true; expected false (within TTL window)")
+	}
+
+	// With a zero/negative TTL, the throttle should always expire, i.e. a
+	// fresh load is performed. This also guards against a regression where
+	// lastReload == now skips forever due to a non-strict comparison.
+	if !proxy.ReloadIfStale(0) {
+		t.Errorf("ReloadIfStale(0) returned false; expected true")
 	}
 }

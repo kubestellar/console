@@ -1339,9 +1339,35 @@ Command output:
 	})
 }
 
-// promptNeedsToolExecution checks if the prompt or history suggests command execution
+// promptNeedsToolExecution checks if the prompt or history suggests command execution.
+//
+// This is a cheap heuristic used to decide whether to route a chat message to a
+// tool-capable agent (claude-code, codex, gemini-cli) or a plain conversational
+// agent. A previous implementation relied on `strings.Contains` of a flat
+// keyword list, which misrouted declarative/interrogative prompts like
+// "How do I delete a namespace?" (contains "delete") and "yes, that is correct"
+// (retry-keyword "yes" matched via Contains). See #8074.
 func (s *Server) promptNeedsToolExecution(prompt string) bool {
 	prompt = strings.ToLower(prompt)
+	trimmed := strings.TrimSpace(prompt)
+
+	// Declarative/interrogative prefixes that indicate an explanatory question,
+	// not a tool-execution request. Return false regardless of later keywords
+	// so "How do I delete a namespace?" is not routed to a tool-capable agent
+	// just because it contains the word "delete". (#8074)
+	questionPrefixes := []string{
+		"how do", "how can", "how should", "how to",
+		"what is", "what are", "what does", "what's the",
+		"why ", "when ", "where ", "which ",
+		"explain ", "tell me ", "describe how", "describe what",
+		"can you explain", "could you explain",
+	}
+	for _, prefix := range questionPrefixes {
+		if strings.HasPrefix(trimmed, prefix) {
+			return false
+		}
+	}
+
 	// Keywords that suggest command execution is needed
 	executionKeywords := []string{
 		"run ", "execute", "kubectl", "helm", "check ", "show me", "get ",
@@ -1355,10 +1381,28 @@ func (s *Server) promptNeedsToolExecution(prompt string) bool {
 			return true
 		}
 	}
-	// Also check for retry/continuation requests which imply tool execution
-	retryKeywords := []string{"try again", "retry", "do it", "run it", "execute it", "yes", "proceed", "go ahead", "please do"}
+
+	// Retry/continuation requests that imply tool execution. These must match
+	// as whole tokens rather than substrings so "yes" does not match
+	// "yesterday" and "do it" does not match "do itemize". We check exact-match
+	// on the trimmed prompt plus a space-bounded Contains check for phrases
+	// embedded in longer sentences ("try again please"). (#8074)
+	retryKeywords := []string{
+		"try again", "retry", "do it", "run it", "execute it",
+		"yes", "proceed", "go ahead", "please do",
+	}
+	paddedPrompt := " " + trimmed + " "
 	for _, keyword := range retryKeywords {
-		if strings.Contains(prompt, keyword) {
+		if trimmed == keyword {
+			return true
+		}
+		if strings.Contains(paddedPrompt, " "+keyword+" ") {
+			return true
+		}
+		if strings.Contains(paddedPrompt, " "+keyword+",") {
+			return true
+		}
+		if strings.Contains(paddedPrompt, " "+keyword+".") {
 			return true
 		}
 	}

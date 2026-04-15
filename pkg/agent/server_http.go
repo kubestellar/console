@@ -83,7 +83,10 @@ func (s *Server) handleClustersHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.kubectl.Reload()
+	// Throttled reload: the frontend polls this endpoint and a full disk read
+	// per request was wasteful. ReloadIfStale skips the load when the in-memory
+	// snapshot is younger than kubectlReloadMinInterval. (#8075)
+	s.kubectl.ReloadIfStale(kubectlReloadMinInterval)
 	clusters, current := s.kubectl.ListContexts()
 	writeJSON(w, protocol.ClustersPayload{Clusters: clusters, Current: current})
 }
