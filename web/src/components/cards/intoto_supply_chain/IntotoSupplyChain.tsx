@@ -70,7 +70,6 @@ function IntotoSupplyChainInternal({ config: _config }: IntotoSupplyChainProps) 
     isDemoData,
     isFailed,
     consecutiveFailures,
-    refetch,
     clustersChecked,
     totalClusters,
   } = useIntoto()
