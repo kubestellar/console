@@ -167,7 +167,12 @@ jobs:
           echo "refreshed field present"
 
           # #6590 CONTRACT: Set-Cookie must refresh the kc_auth cookie.
-          REFRESHED_KC_AUTH=$(grep -E '^[^#].*\skc_auth\s' "$REFRESH_COOKIE_JAR" 2>/dev/null | awk '{print $NF}' | tail -n1)
+          # curl writes Netscape-format cookie jars. HttpOnly cookies are prefixed
+          # with "#HttpOnly_" on the line (e.g. "#HttpOnly_localhost\tFALSE\t/\tTRUE\t...\tkc_auth\t<token>").
+          # We WANT the HttpOnly form — it proves the HttpOnly flag is set — so we
+          # match the cookie name as a tab-separated field regardless of leading
+          # host/HttpOnly prefix, then separately assert the HttpOnly line exists.
+          REFRESHED_KC_AUTH=$(grep -E $'(^|\t)kc_auth\t' "$REFRESH_COOKIE_JAR" 2>/dev/null | awk -F'\t' '{print $NF}' | tail -n1)
           if [ -z "$REFRESHED_KC_AUTH" ]; then
             echo "::error::CONTRACT VIOLATION: /auth/refresh did not set a new kc_auth cookie. The refreshed JWT must be delivered exclusively via the HttpOnly cookie."
             echo "Cookie jar contents:"
@@ -175,6 +180,18 @@ jobs:
             exit 1
           fi
           echo "kc_auth cookie refreshed (${#REFRESHED_KC_AUTH} chars)"
+
+          # #6590 CONTRACT: the refreshed kc_auth cookie must be HttpOnly.
+          # curl's Netscape jar encodes this by prefixing the line with "#HttpOnly_".
+          # Assert that a line starting with "#HttpOnly_" contains "kc_auth" — this
+          # proves the Set-Cookie response included HttpOnly (the #8107 XSS fix).
+          if ! grep -E '^#HttpOnly_.*[[:space:]]kc_auth[[:space:]]' "$REFRESH_COOKIE_JAR" >/dev/null 2>&1; then
+            echo "::error::CONTRACT VIOLATION: refreshed kc_auth cookie is NOT HttpOnly. The #8107 XSS fix requires Set-Cookie: kc_auth=...; HttpOnly."
+            echo "Cookie jar contents:"
+            cat "$REFRESH_COOKIE_JAR" || true
+            exit 1
+          fi
+          echo "kc_auth cookie is HttpOnly (correct)"
 
           echo ""
           echo "Auth login smoke test PASSED"

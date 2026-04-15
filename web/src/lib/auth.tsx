@@ -678,7 +678,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     if (authInitRef.current) return
     authInitRef.current = true
-    console.log('[AUTH DEBUG] running refreshUser (first time)')
     refreshUser().finally(() => setIsLoading(false))
   }, [refreshUser])
 
