@@ -16,6 +16,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/agent/protocol"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/settings"
 )
 
@@ -660,7 +661,11 @@ func (s *Server) handleSecretsHTTP(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w,map[string]interface{}{"secrets": secrets, "source": "agent"})
 }
 
-// handleServiceAccountsHTTP returns service accounts for a cluster/namespace
+// handleServiceAccountsHTTP serves ServiceAccount operations for a
+// cluster/namespace. GET reads the list (existing behavior). POST creates a
+// new ServiceAccount, and DELETE removes one — both are user-initiated
+// mutations that run under the user's kubeconfig via kc-agent rather than the
+// backend's pod ServiceAccount (#7993 Phase 1.5 PR A).
 func (s *Server) handleServiceAccountsHTTP(w http.ResponseWriter, r *http.Request) {
 	s.setCORSHeaders(w, r)
 	w.Header().Set("Content-Type", "application/json")
@@ -674,13 +679,22 @@ func (s *Server) handleServiceAccountsHTTP(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	if s.k8sClient == nil {
-		writeJSON(w,map[string]interface{}{"serviceaccounts": []interface{}{}, "error": "k8s client not initialized"})
+		writeJSON(w, map[string]interface{}{"serviceaccounts": []interface{}{}, "error": "k8s client not initialized"})
 		return
 	}
+	switch r.Method {
+	case http.MethodPost:
+		s.createServiceAccountHTTP(w, r)
+		return
+	case http.MethodDelete:
+		s.deleteServiceAccountHTTP(w, r)
+		return
+	}
+	// Default: GET list
 	cluster := r.URL.Query().Get("cluster")
 	namespace := r.URL.Query().Get("namespace")
 	if cluster == "" {
-		writeJSON(w,map[string]interface{}{"serviceaccounts": []interface{}{}, "error": "cluster parameter required"})
+		writeJSON(w, map[string]interface{}{"serviceaccounts": []interface{}{}, "error": "cluster parameter required"})
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), agentDefaultTimeout)
@@ -691,7 +705,67 @@ func (s *Server) handleServiceAccountsHTTP(w http.ResponseWriter, r *http.Reques
 		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}
-	writeJSON(w,map[string]interface{}{"serviceaccounts": serviceaccounts, "source": "agent"})
+	writeJSON(w, map[string]interface{}{"serviceaccounts": serviceaccounts, "source": "agent"})
+}
+
+// createServiceAccountHTTP handles POST /serviceaccounts. The request body
+// shape matches pkg/models.CreateServiceAccountRequest so the frontend
+// migration from POST /api/rbac/service-accounts to
+// POST ${LOCAL_AGENT_HTTP_URL}/serviceaccounts is a pure URL swap.
+// Returns the created ServiceAccount as JSON on success.
+func (s *Server) createServiceAccountHTTP(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Name      string `json:"name"`
+		Namespace string `json:"namespace"`
+		Cluster   string `json:"cluster"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": "invalid request body"})
+		return
+	}
+	if req.Cluster == "" || req.Namespace == "" || req.Name == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": "cluster, namespace, and name are required"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), agentExtendedTimeout)
+	defer cancel()
+
+	sa, err := s.k8sClient.CreateServiceAccount(ctx, req.Cluster, req.Namespace, req.Name)
+	if err != nil {
+		slog.Warn("error creating service account", "cluster", req.Cluster, "namespace", req.Namespace, "name", req.Name, "error", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error(), "source": "agent"})
+		return
+	}
+	writeJSON(w, sa)
+}
+
+// deleteServiceAccountHTTP handles DELETE /serviceaccounts. The cluster,
+// namespace, and name are read from the query string (e.g.
+// DELETE /serviceaccounts?cluster=prod&namespace=default&name=my-sa).
+func (s *Server) deleteServiceAccountHTTP(w http.ResponseWriter, r *http.Request) {
+	cluster := r.URL.Query().Get("cluster")
+	namespace := r.URL.Query().Get("namespace")
+	name := r.URL.Query().Get("name")
+	if cluster == "" || namespace == "" || name == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": "cluster, namespace, and name query parameters are required"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), agentExtendedTimeout)
+	defer cancel()
+
+	if err := s.k8sClient.DeleteServiceAccount(ctx, cluster, namespace, name); err != nil {
+		slog.Warn("error deleting service account", "cluster", cluster, "namespace", namespace, "name", name, "error", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error(), "source": "agent"})
+		return
+	}
+	writeJSON(w, map[string]interface{}{"success": true, "cluster": cluster, "namespace": namespace, "name": name, "source": "agent"})
 }
 
 // handleJobsHTTP returns jobs for a cluster/namespace
@@ -830,7 +904,11 @@ func (s *Server) handleRolesHTTP(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w,map[string]interface{}{"roles": roles, "source": "agent"})
 }
 
-// handleRoleBindingsHTTP returns RoleBindings for a cluster/namespace
+// handleRoleBindingsHTTP serves RoleBinding operations for a
+// cluster/namespace. GET reads the list (existing behavior). POST creates a
+// new RoleBinding or ClusterRoleBinding, and DELETE removes one — both are
+// user-initiated mutations that run under the user's kubeconfig via kc-agent
+// rather than the backend's pod ServiceAccount (#7993 Phase 1.5 PR A).
 func (s *Server) handleRoleBindingsHTTP(w http.ResponseWriter, r *http.Request) {
 	s.setCORSHeaders(w, r)
 	w.Header().Set("Content-Type", "application/json")
@@ -844,13 +922,22 @@ func (s *Server) handleRoleBindingsHTTP(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	if s.k8sClient == nil {
-		writeJSON(w,map[string]interface{}{"rolebindings": []interface{}{}, "error": "k8s client not initialized"})
+		writeJSON(w, map[string]interface{}{"rolebindings": []interface{}{}, "error": "k8s client not initialized"})
 		return
 	}
+	switch r.Method {
+	case http.MethodPost:
+		s.createRoleBindingHTTP(w, r)
+		return
+	case http.MethodDelete:
+		s.deleteRoleBindingHTTP(w, r)
+		return
+	}
+	// Default: GET list
 	cluster := r.URL.Query().Get("cluster")
 	namespace := r.URL.Query().Get("namespace")
 	if cluster == "" {
-		writeJSON(w,map[string]interface{}{"rolebindings": []interface{}{}, "error": "cluster parameter required"})
+		writeJSON(w, map[string]interface{}{"rolebindings": []interface{}{}, "error": "cluster parameter required"})
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), agentDefaultTimeout)
@@ -861,7 +948,138 @@ func (s *Server) handleRoleBindingsHTTP(w http.ResponseWriter, r *http.Request) 
 		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}
-	writeJSON(w,map[string]interface{}{"rolebindings": bindings, "source": "agent"})
+	writeJSON(w, map[string]interface{}{"rolebindings": bindings, "source": "agent"})
+}
+
+// createRoleBindingHTTP handles POST /rolebindings. The body shape matches
+// pkg/models.CreateRoleBindingRequest so frontend callers migrate from
+// POST /api/rbac/bindings to POST ${LOCAL_AGENT_HTTP_URL}/rolebindings with a
+// pure URL swap.
+//
+// It also accepts the GrantNamespaceAccess shape used by
+// NamespaceManager/GrantAccessModal (cluster, subjectKind, subjectName,
+// subjectNamespace, role, namespace) so namespace-access grants route
+// through the same endpoint. Namespace-access bodies are normalized into a
+// full RoleBinding spec before delegating to the shared pkg/k8s
+// MultiClusterClient.CreateRoleBinding method.
+func (s *Server) createRoleBindingHTTP(w http.ResponseWriter, r *http.Request) {
+	// Accept a union of both shapes. Fields common to both (cluster,
+	// namespace, subjectName, subjectNamespace) are shared; shape-specific
+	// fields are read from dedicated fields. The grant-access path sets
+	// `role` and leaves `name`/`roleName` unset; the rbac/bindings path sets
+	// `name`/`roleName`/`roleKind`/`subjectKind` and may omit `role`.
+	var req struct {
+		Name        string `json:"name,omitempty"`
+		Namespace   string `json:"namespace,omitempty"`
+		Cluster     string `json:"cluster"`
+		IsCluster   bool   `json:"isCluster,omitempty"`
+		RoleName    string `json:"roleName,omitempty"`
+		RoleKind    string `json:"roleKind,omitempty"`
+		SubjectKind string `json:"subjectKind"`
+		SubjectName string `json:"subjectName"`
+		SubjectNS   string `json:"subjectNamespace,omitempty"`
+		// Role is only set by GrantNamespaceAccess callers; shortcut
+		// ("admin"/"edit"/"view") or a custom role name. Ignored when
+		// roleName is supplied.
+		Role string `json:"role,omitempty"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": "invalid request body"})
+		return
+	}
+	if req.Cluster == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": "cluster is required"})
+		return
+	}
+	if req.SubjectKind == "" || req.SubjectName == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": "subjectKind and subjectName are required"})
+		return
+	}
+
+	// Fill in defaults for the grant-namespace-access shape.
+	roleName := req.RoleName
+	if roleName == "" {
+		roleName = req.Role
+	}
+	roleKind := req.RoleKind
+	if roleKind == "" {
+		// grant-access shortcuts ("admin"/"edit"/"view") map to
+		// ClusterRoles in stock Kubernetes; custom role names default to
+		// ClusterRole as well since GrantNamespaceAccess historically used
+		// ClusterRole (see pkg/k8s/rbac.go GrantNamespaceAccess).
+		roleKind = "ClusterRole"
+	}
+	if roleName == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": "roleName (or role) is required"})
+		return
+	}
+
+	// Synthesize a binding name when the caller didn't provide one (the
+	// grant-access shape doesn't include it). Format mirrors what the
+	// backend GrantNamespaceAccess used: <subject>-<role>-<namespace>.
+	bindingName := req.Name
+	if bindingName == "" {
+		bindingName = fmt.Sprintf("%s-%s-%s", req.SubjectName, roleName, req.Namespace)
+	}
+
+	k8sReq := models.CreateRoleBindingRequest{
+		Name:        bindingName,
+		Namespace:   req.Namespace,
+		Cluster:     req.Cluster,
+		IsCluster:   req.IsCluster,
+		RoleName:    roleName,
+		RoleKind:    roleKind,
+		SubjectKind: models.K8sSubjectKind(req.SubjectKind),
+		SubjectName: req.SubjectName,
+		SubjectNS:   req.SubjectNS,
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), agentExtendedTimeout)
+	defer cancel()
+
+	if err := s.k8sClient.CreateRoleBinding(ctx, k8sReq); err != nil {
+		slog.Warn("error creating role binding", "cluster", req.Cluster, "namespace", req.Namespace, "name", bindingName, "error", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error(), "source": "agent"})
+		return
+	}
+	writeJSON(w, map[string]interface{}{"success": true, "roleBinding": bindingName, "source": "agent"})
+}
+
+// deleteRoleBindingHTTP handles DELETE /rolebindings. Cluster, namespace,
+// name, and an optional isCluster flag are read from the query string.
+// When isCluster=true the handler deletes a ClusterRoleBinding and namespace
+// is ignored.
+func (s *Server) deleteRoleBindingHTTP(w http.ResponseWriter, r *http.Request) {
+	cluster := r.URL.Query().Get("cluster")
+	namespace := r.URL.Query().Get("namespace")
+	name := r.URL.Query().Get("name")
+	isCluster := r.URL.Query().Get("isCluster") == "true"
+	if cluster == "" || name == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": "cluster and name query parameters are required"})
+		return
+	}
+	if !isCluster && namespace == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": "namespace query parameter is required for non-cluster bindings"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), agentExtendedTimeout)
+	defer cancel()
+
+	if err := s.k8sClient.DeleteRoleBinding(ctx, cluster, namespace, name, isCluster); err != nil {
+		slog.Warn("error deleting role binding", "cluster", cluster, "namespace", namespace, "name", name, "isCluster", isCluster, "error", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error(), "source": "agent"})
+		return
+	}
+	writeJSON(w, map[string]interface{}{"success": true, "cluster": cluster, "namespace": namespace, "name": name, "isCluster": isCluster, "source": "agent"})
 }
 
 // handleResourceQuotasHTTP returns ResourceQuotas for a cluster/namespace

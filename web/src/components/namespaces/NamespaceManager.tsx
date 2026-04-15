@@ -27,8 +27,17 @@ import { RotatingTip } from '../ui/RotatingTip'
 import { api } from '../../lib/api'
 import { useToast } from '../ui/Toast'
 import { useTranslation } from 'react-i18next'
-import { LOCAL_AGENT_HTTP_URL } from '../../lib/constants'
-import { NAMESPACE_ABORT_TIMEOUT_MS } from '../../lib/constants/network'
+import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN } from '../../lib/constants'
+import { FETCH_DEFAULT_TIMEOUT_MS, NAMESPACE_ABORT_TIMEOUT_MS } from '../../lib/constants/network'
+
+// Bearer token header builder for local-agent requests. Mirrors the
+// per-file helpers in useWorkloads.ts and useUsers.ts. See #7993 Phase 1.5.
+function agentAuthHeaders(): Record<string, string> {
+  const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+  const headers: Record<string, string> = {}
+  if (token) headers['Authorization'] = `Bearer ${token}`
+  return headers
+}
 import { NamespaceCard, NamespaceCardSkeleton } from './NamespaceCard'
 import { DeleteConfirmModal } from './DeleteConfirmModal'
 import { CreateNamespaceModal } from './CreateNamespaceModal'
@@ -326,7 +335,26 @@ export function NamespaceManager() {
     }
 
     try {
-      await api.delete(`/api/namespaces/${encodeURIComponent(selectedNamespace.name)}/access/${encodeURIComponent(binding.bindingName)}?cluster=${encodeURIComponent(selectedNamespace.cluster)}`)
+      // Revoking namespace access deletes a RoleBinding on a managed cluster,
+      // so it must run under the user's kubeconfig via kc-agent, not the
+      // backend pod ServiceAccount. See #7993 Phase 1.5 PR A. The backend
+      // DELETE /api/namespaces/:name/access/:binding route still exists and
+      // will be removed as part of Phase 2 once all frontend callers are
+      // migrated — this switches the only caller over.
+      const params = new URLSearchParams({
+        cluster: selectedNamespace.cluster,
+        namespace: selectedNamespace.name,
+        name: binding.bindingName,
+      })
+      const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/rolebindings?${params}`, {
+        method: 'DELETE',
+        headers: agentAuthHeaders(),
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+      })
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'unknown error' }))
+        throw new Error(errorData.error || 'Failed to revoke access')
+      }
       fetchAccess(selectedNamespace)
     } catch (err) {
       console.error('Failed to revoke access:', err)

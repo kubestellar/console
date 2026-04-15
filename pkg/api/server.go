@@ -885,8 +885,11 @@ func (s *Server) setupRoutes() {
 	api.Get("/rbac/roles", rbac.ListK8sRoles)
 	api.Get("/rbac/bindings", rbac.ListK8sRoleBindings)
 	api.Get("/rbac/permissions", rbac.GetClusterPermissions)
-	api.Post("/rbac/service-accounts", rbac.CreateServiceAccount)
-	api.Post("/rbac/bindings", rbac.CreateRoleBinding)
+	// NOTE: POST /api/rbac/service-accounts and POST /api/rbac/bindings moved
+	// to kc-agent (#7993 Phase 1.5 PR A). The frontend now POSTs to
+	// ${LOCAL_AGENT_HTTP_URL}/serviceaccounts and
+	// ${LOCAL_AGENT_HTTP_URL}/rolebindings so the mutation runs under the
+	// user's kubeconfig instead of the backend pod's ServiceAccount.
 	api.Get("/permissions/summary", rbac.GetPermissionsSummary)
 	api.Post("/rbac/can-i", rbac.CheckCanI)
 

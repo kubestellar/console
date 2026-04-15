@@ -54,12 +54,12 @@ func TestProtectedRoutes_UnauthenticatedReturn401(t *testing.T) {
 		{"POST", "/api/mcp/tools/ops/call"},
 		{"POST", "/api/mcp/tools/deploy/call"},
 		// RBAC read + mutate
+		// NOTE: POST /api/rbac/service-accounts and POST /api/rbac/bindings
+		// moved to kc-agent (#7993 Phase 1.5 PR A).
 		{"GET", "/api/rbac/users"},
 		{"GET", "/api/rbac/roles"},
 		{"GET", "/api/rbac/bindings"},
 		{"GET", "/api/rbac/permissions"},
-		{"POST", "/api/rbac/service-accounts"},
-		{"POST", "/api/rbac/bindings"},
 		{"POST", "/api/rbac/can-i"},
 		// Namespace lifecycle
 		{"GET", "/api/namespaces"},

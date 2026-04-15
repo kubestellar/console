@@ -2,9 +2,19 @@ import { useState } from 'react'
 import { Shield, Loader2 } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { BaseModal, ConfirmDialog } from '../../lib/modals'
-import { api } from '../../lib/api'
 import { useTranslation } from 'react-i18next'
+import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN } from '../../lib/constants'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants/network'
 import type { NamespaceDetails, NamespaceAccessEntry } from './types'
+
+// Bearer token header builder for local-agent requests. Mirrors the
+// per-file helpers in useWorkloads.ts and useUsers.ts. See #7993 Phase 1.5.
+function agentAuthHeaders(): Record<string, string> {
+  const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+  const headers: Record<string, string> = {}
+  if (token) headers['Authorization'] = `Bearer ${token}`
+  return headers
+}
 
 const COMMON_SUBJECTS = {
   User: [
@@ -67,13 +77,31 @@ export function GrantAccessModal({ namespace, existingAccess, onClose, onGranted
     setError(null)
 
     try {
-      await api.post(`/api/namespaces/${encodeURIComponent(namespace.name)}/access`, {
-        cluster: namespace.cluster,
-        subjectKind,
-        subjectName,
-        subjectNamespace: subjectKind === 'ServiceAccount' ? subjectNS : undefined,
-        role,
+      // Granting namespace access creates a RoleBinding on a managed cluster,
+      // so it must run under the user's kubeconfig via kc-agent, not the
+      // backend pod ServiceAccount. See #7993 Phase 1.5 PR A. The backend
+      // POST /api/namespaces/:name/access route still exists and will be
+      // removed as part of Phase 2 once all frontend callers are migrated —
+      // this switches the only caller over. The agent's /rolebindings POST
+      // handler accepts this shape directly and normalizes it into a full
+      // CreateRoleBindingRequest before calling the shared pkg/k8s method.
+      const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/rolebindings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...agentAuthHeaders() },
+        body: JSON.stringify({
+          cluster: namespace.cluster,
+          namespace: namespace.name,
+          subjectKind,
+          subjectName,
+          subjectNamespace: subjectKind === 'ServiceAccount' ? subjectNS : undefined,
+          role,
+        }),
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Failed to grant access' }))
+        throw new Error(errorData.error || 'Failed to grant access')
+      }
       onGranted()
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to grant access'

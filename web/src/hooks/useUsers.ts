@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { api } from '../lib/api'
 import { mapSettledWithConcurrency } from '../lib/utils/concurrency'
 import { getDemoMode } from './useDemoMode'
+import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN } from '../lib/constants'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import type {
   ConsoleUser,
   K8sServiceAccount,
@@ -14,6 +16,18 @@ import type {
   UserRole,
   CreateServiceAccountRequest,
   CreateRoleBindingRequest } from '../types/users'
+
+// agentAuthHeaders attaches the local-agent Bearer token when one is stored.
+// The token is optional — the agent accepts unauthenticated requests from
+// allowed origins when KC_AGENT_TOKEN is unset — so we simply omit the
+// Authorization header when no token is configured. Mirrors authHeaders() in
+// useWorkloads.ts.
+function agentAuthHeaders(): Record<string, string> {
+  const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+  const headers: Record<string, string> = {}
+  if (token) headers['Authorization'] = `Bearer ${token}`
+  return headers
+}
 
 // Demo data for console users
 function getDemoConsoleUsers(): ConsoleUser[] {
@@ -477,7 +491,20 @@ export function useK8sServiceAccounts(cluster?: string, namespace?: string) {
   }, [fetchServiceAccounts])
 
   const createServiceAccount = async (req: CreateServiceAccountRequest) => {
-    const { data } = await api.post<K8sServiceAccount>('/api/rbac/service-accounts', req)
+    // Creating a ServiceAccount is a user-initiated mutation on a managed
+    // cluster, so it must run under the user's kubeconfig via kc-agent, not
+    // the backend pod ServiceAccount. See #7993 Phase 1.5 PR A.
+    const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/serviceaccounts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...agentAuthHeaders() },
+      body: JSON.stringify(req),
+      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+    })
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({ error: 'unknown error' }))
+      throw new Error(errorData.error || 'Failed to create service account')
+    }
+    const data = (await res.json()) as K8sServiceAccount
     setServiceAccounts((prev) => [...prev, data])
     return data
   }
@@ -627,7 +654,19 @@ export function useK8sRoleBindings(cluster: string, namespace?: string, includeS
   }, [fetchBindings])
 
   const createRoleBinding = async (req: CreateRoleBindingRequest) => {
-    await api.post('/api/rbac/bindings', req)
+    // Creating a RoleBinding is a user-initiated RBAC mutation, so it must
+    // run under the user's kubeconfig via kc-agent, not the backend pod
+    // ServiceAccount. See #7993 Phase 1.5 PR A.
+    const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/rolebindings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...agentAuthHeaders() },
+      body: JSON.stringify(req),
+      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+    })
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({ error: 'unknown error' }))
+      throw new Error(errorData.error || 'Failed to create role binding')
+    }
     await fetchBindings()
     return true
   }
