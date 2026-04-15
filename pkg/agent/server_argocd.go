@@ -52,6 +52,10 @@ type agentArgoSyncRequest struct {
 // kubeconfig (#7993 Phase 3c).
 func (s *Server) handleArgoCDSync(w http.ResponseWriter, r *http.Request) {
 	s.setCORSHeaders(w, r)
+	// #8040: setCORSHeaders defaults Access-Control-Allow-Methods to
+	// "GET, OPTIONS" (pkg/agent/server_http.go). This endpoint is POST-only,
+	// so browsers would reject the CORS preflight without this override.
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
@@ -70,7 +74,8 @@ func (s *Server) handleArgoCDSync(w http.ResponseWriter, r *http.Request) {
 	var req agentArgoSyncRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		writeJSON(w, map[string]interface{}{"error": "invalid request body", "success": false})
+		// #8040: match backend TriggerArgoSync error string casing exactly.
+		writeJSON(w, map[string]interface{}{"error": "Invalid request body", "success": false})
 		return
 	}
 
@@ -115,11 +120,12 @@ func (s *Server) handleArgoCDSync(w http.ResponseWriter, r *http.Request) {
 		argoServerURL := s.discoverArgoServerURL(r.Context(), req.Cluster)
 		if argoServerURL != "" {
 			if ok := tryArgoRESTSync(r.Context(), argoServerURL, argoToken, req.AppName); ok {
+				// #8040: success response shape mirrors backend TriggerArgoSync
+				// exactly — no extra `source` field.
 				writeJSON(w, map[string]interface{}{
 					"success": true,
 					"message": "Sync triggered via ArgoCD REST API",
 					"method":  "api",
-					"source":  "agent",
 				})
 				return
 			}
@@ -137,11 +143,11 @@ func (s *Server) handleArgoCDSync(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			slog.Warn("[agent ArgoCD] CLI sync failed, falling back to annotation patching", "error", err, "output", string(output))
 		} else {
+			// #8040: success response shape mirrors backend TriggerArgoSync.
 			writeJSON(w, map[string]interface{}{
 				"success": true,
 				"message": "Sync triggered via ArgoCD CLI",
 				"method":  "cli",
-				"source":  "agent",
 			})
 			return
 		}
@@ -194,11 +200,11 @@ func (s *Server) handleArgoCDSync(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// #8040: success response shape mirrors backend TriggerArgoSync.
 	writeJSON(w, map[string]interface{}{
 		"success": true,
 		"message": "Sync triggered via Application resource annotation",
 		"method":  "annotation",
-		"source":  "agent",
 	})
 }
 
@@ -249,10 +255,24 @@ func tryArgoRESTSync(ctx context.Context, argoServerURL, argoToken, appName stri
 }
 
 // discoverArgoServerURL is the kc-agent equivalent of
-// pkg/api/handlers/gitops.go#discoverArgoServerURL. Walks the well-known
-// ArgoCD namespaces looking for the `argocd-server` service and returns its
-// in-cluster DNS URL, or "" if not found.
+// pkg/api/handlers/gitops.go#discoverArgoServerURL.
+//
+// #8040: kc-agent runs on the user's localhost (README notes 127.0.0.1:8585),
+// so the in-cluster DNS name (`argocd-server.<ns>.svc`) returned by the
+// backend-equivalent discovery is not reachable. Callers must therefore be
+// able to override the URL. Order of precedence:
+//  1. ARGOCD_SERVER_URL env var — explicit override, always wins when set.
+//  2. Walks the well-known ArgoCD namespaces for the `argocd-server` service
+//     and returns its in-cluster DNS URL (works when kc-agent is itself
+//     running inside the cluster or when a side-channel makes the DNS
+//     resolvable, e.g. kubectl port-forward or a mesh).
+//  3. Empty string if neither is available — the caller falls back to the
+//     CLI / annotation-patch strategies.
 func (s *Server) discoverArgoServerURL(ctx context.Context, cluster string) string {
+	if override := os.Getenv("ARGOCD_SERVER_URL"); override != "" {
+		return override
+	}
+
 	clientset, err := s.k8sClient.GetClient(cluster)
 	if err != nil {
 		slog.Warn("[agent ArgoCD] server discovery failed: cannot get client", "cluster", cluster, "error", err)
@@ -266,11 +286,14 @@ func (s *Server) discoverArgoServerURL(ctx context.Context, cluster string) stri
 		svc, err := clientset.CoreV1().Services(ns).Get(ctx, "argocd-server", metav1.GetOptions{})
 		if err == nil {
 			if len(svc.Spec.Ports) > 0 {
-				return fmt.Sprintf("https://%s.%s.svc:%d", svc.Name, svc.Namespace, svc.Spec.Ports[0].Port)
+				inClusterURL := fmt.Sprintf("https://%s.%s.svc:%d", svc.Name, svc.Namespace, svc.Spec.Ports[0].Port)
+				slog.Info("[agent ArgoCD] server discovery: found in-cluster service; set ARGOCD_SERVER_URL to override when running kc-agent on localhost",
+					"cluster", cluster, "url", inClusterURL)
+				return inClusterURL
 			}
 			slog.Warn("[agent ArgoCD] server discovery: argocd-server service has no ports", "namespace", ns)
 		}
 	}
-	slog.Info("[agent ArgoCD] server discovery: argocd-server service not found", "cluster", cluster)
+	slog.Info("[agent ArgoCD] server discovery: argocd-server service not found; set ARGOCD_SERVER_URL to point kc-agent at a reachable URL", "cluster", cluster)
 	return ""
 }

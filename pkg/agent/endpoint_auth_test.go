@@ -143,6 +143,10 @@ const (
 	// endpointResolveDeps resolves workload dependencies (sensitive — walks RBAC/pods).
 	endpointResolveDeps = "/resolve-deps"
 
+	// endpointArgoCDSync triggers an ArgoCD Application sync (sensitive —
+	// mutating, editor-or-admin gated). Moved to kc-agent in #7993 Phase 3c.
+	endpointArgoCDSync = "/argocd/sync"
+
 	// testTokenValue is the shared secret used to configure auth in tests.
 	testTokenValue = "test-secret-token-42"
 
@@ -207,6 +211,7 @@ var sensitiveEndpoints = []struct {
 	{endpointResourceQuotas, "GET"},
 	{endpointLimitRanges, "GET"},
 	{endpointResolveDeps, "GET"},
+	{endpointArgoCDSync, "POST"},
 }
 
 // endpointsLackingAuth are endpoints that SHOULD require auth but currently
@@ -586,6 +591,7 @@ func resolveEndpointHandler(s *Server, path string) func(http.ResponseWriter, *h
 		endpointPredictionsStats:   s.handlePredictionsStats,
 		endpointDeviceAlerts:       s.handleDeviceAlerts,
 		endpointDeviceAlertsClear:  s.handleDeviceAlertsClear,
+		endpointArgoCDSync:         s.handleArgoCDSync,
 	}
 
 	return handlers[path]
