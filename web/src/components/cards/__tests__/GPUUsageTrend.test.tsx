@@ -57,6 +57,11 @@ vi.mock('../../../hooks/useGlobalFilters', () => ({
 const mockUseMetricsHistory = vi.fn()
 vi.mock('../../../hooks/useMetricsHistory', () => ({
   useMetricsHistory: () => mockUseMetricsHistory(),
+  // GPUUsageTrend uses the read-only variant to avoid duplicate MCP polling
+  // and stacked capture intervals. We expose the same mock data for both so
+  // existing tests that seed `mockUseMetricsHistory` continue to cover the
+  // card's fallback path.
+  useMetricsHistoryReadOnly: () => ({ history: mockUseMetricsHistory().history }),
 }))
 
 import { GPUUsageTrend } from '../GPUUsageTrend'

@@ -156,23 +156,20 @@ function applyGPUCarryForward(
 }
 
 /**
- * Hook to manage metrics history for trend detection
- * Automatically captures snapshots every 10 minutes (configurable)
+ * Internal: subscribes a React state setter to the singleton `snapshots`
+ * array and to `HISTORY_CHANGED_EVENT` / `storage` cross-tab updates.
+ *
+ * Used by both `useMetricsHistory` (the driver that also captures snapshots)
+ * and `useMetricsHistoryReadOnly` (the passive reader that does not poll
+ * MCP or run a capture interval). Keeping the subscription code in one place
+ * ensures both variants stay in sync when the singleton is updated.
  */
-export function useMetricsHistory() {
-  const [history, setHistory] = useState<MetricsSnapshot[]>(snapshots)
-  const { deduplicatedClusters: clusters } = useClusters()
-  const { issues: podIssues } = usePodIssues()
-  const { nodes: gpuNodes } = useGPUNodes()
-  const lastSnapshotRef = useRef<number>(0)
-
-  // Keep volatile data in refs so the interval effect doesn't reset (#5781)
-  const clustersRef = useRef(clusters)
-  const podIssuesRef = useRef(podIssues)
-  const gpuNodesRef = useRef(gpuNodes)
-  clustersRef.current = clusters
-  podIssuesRef.current = podIssues
-  gpuNodesRef.current = gpuNodes
+function useSnapshotSubscription(): MetricsSnapshot[] {
+  // Initialize lazily from the current singleton so we pick up any captures
+  // that happened before this hook mounted (e.g., module-load from
+  // localStorage, or another hook instance already running). The subscribe
+  // effect below keeps us in sync after that.
+  const [history, setHistory] = useState<MetricsSnapshot[]>(() => [...snapshots])
 
   // Subscribe to shared state updates
   useEffect(() => {
@@ -180,7 +177,6 @@ export function useMetricsHistory() {
       setHistory([...newSnapshots])
     }
     subscribers.add(handleUpdate)
-    setHistory([...snapshots])
 
     return () => {
       subscribers.delete(handleUpdate)
@@ -212,6 +208,34 @@ export function useMetricsHistory() {
       window.removeEventListener('storage', handleStorage)
     }
   }, [])
+
+  return history
+}
+
+/**
+ * Hook to manage metrics history for trend detection
+ * Automatically captures snapshots every 10 minutes (configurable)
+ *
+ * This is the "driver" variant: it polls MCP for clusters, pod issues, and
+ * GPU nodes and runs a capture `setInterval` per instance. Use this in ONE
+ * place per app (e.g., GPU Inventory History) — additional consumers should
+ * use `useMetricsHistoryReadOnly()` to avoid duplicate polling and stacked
+ * capture intervals.
+ */
+export function useMetricsHistory() {
+  const history = useSnapshotSubscription()
+  const { deduplicatedClusters: clusters } = useClusters()
+  const { issues: podIssues } = usePodIssues()
+  const { nodes: gpuNodes } = useGPUNodes()
+  const lastSnapshotRef = useRef<number>(0)
+
+  // Keep volatile data in refs so the interval effect doesn't reset (#5781)
+  const clustersRef = useRef(clusters)
+  const podIssuesRef = useRef(podIssues)
+  const gpuNodesRef = useRef(gpuNodes)
+  clustersRef.current = clusters
+  podIssuesRef.current = podIssues
+  gpuNodesRef.current = gpuNodes
 
   // Auto-capture snapshots at configured interval.
   // Reads volatile data from refs so the interval stays stable across MCP polls (#5781).
@@ -377,6 +401,27 @@ export function useMetricsHistory() {
     getClusterTrend,
     getPodRestartTrend,
     snapshotCount: history.length }
+}
+
+/**
+ * Read-only variant of `useMetricsHistory`.
+ *
+ * Subscribes to the singleton snapshots state (so it reflects updates from
+ * whichever component hosts the driver `useMetricsHistory()`), but:
+ *   - Does NOT call `useClusters`, `usePodIssues`, or `useGPUNodes` (no
+ *     duplicate MCP polling).
+ *   - Does NOT set up a capture `setInterval` (no stacked timers).
+ *
+ * Use this in secondary consumers (e.g., cards that want a last-known-good
+ * GPU-node snapshot as a fallback) so they can share history with the
+ * driver instance without doubling up on polling or captures.
+ *
+ * Returns `{ history }` only — callers that need `captureNow`, trend helpers,
+ * or `clearHistory` must use the driver hook `useMetricsHistory()` instead.
+ */
+export function useMetricsHistoryReadOnly(): { history: MetricsSnapshot[] } {
+  const history = useSnapshotSubscription()
+  return { history }
 }
 
 /**

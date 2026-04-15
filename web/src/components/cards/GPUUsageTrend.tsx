@@ -5,7 +5,7 @@ import ReactECharts from 'echarts-for-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedGPUNodes } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
-import { useMetricsHistory } from '../../hooks/useMetricsHistory'
+import { useMetricsHistoryReadOnly } from '../../hooks/useMetricsHistory'
 import { Skeleton, SkeletonStats } from '../ui/Skeleton'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
@@ -16,6 +16,16 @@ import {
   CHART_AXIS_STROKE,
   CHART_TOOLTIP_CONTENT_STYLE,
   CHART_TICK_COLOR } from '../../lib/constants'
+
+/**
+ * Maximum age of a metrics-history snapshot we're willing to use as a
+ * fallback when the live GPU-nodes fetch returns empty. Snapshots older than
+ * this are treated as stale and skipped (the card will render its empty
+ * state instead of showing days-old inventory). 30 minutes matches the
+ * `MAX_AGE_MS` used by this card's own on-screen chart history so the two
+ * windows stay consistent.
+ */
+const GPU_SNAPSHOT_STALENESS_MS = 30 * 60 * 1000 // 30 min
 
 interface GPUDataPoint {
   time: string
@@ -69,10 +79,17 @@ export function GPUUsageTrend() {
   // against a cluster that does have GPUs). Without this the card shows
   // "No GPU Nodes" whenever a single poll fails — see GPU Inventory History
   // card which already reads this same history and stays populated.
-  const { history: metricsHistory } = useMetricsHistory()
+  //
+  // We use the read-only variant here so this card does NOT add a second
+  // round of MCP polling (useGPUNodes) or a second capture `setInterval`.
+  // The driver `useMetricsHistory()` is hosted elsewhere (GPU Inventory
+  // History) and publishes updates through the shared singleton.
+  const { history: metricsHistory } = useMetricsHistoryReadOnly()
 
-  // Fall back to the most recent snapshot's GPU nodes if the live list is
-  // empty. Snapshots use `gpuTotal`; we remap to `gpuCount` so downstream
+  // Fall back to the most recent snapshot's GPU nodes only when the live
+  // fetch has actually tried and come up empty (not during the initial
+  // loading skeleton), and only for snapshots within the staleness window.
+  // Snapshots use `gpuTotal`; we remap to `gpuCount` so downstream
   // aggregation (currentTotals, filteredNodes) stays unchanged.
   const effectiveGPUNodes: EffectiveGPUNode[] = useMemo(() => {
     if (gpuNodes.length > 0) {
@@ -83,21 +100,36 @@ export function GPUUsageTrend() {
         gpuCount: n.gpuCount,
         gpuAllocated: n.gpuAllocated }))
     }
-    // Search most-recent-first for a snapshot that actually has GPU data.
+    // Don't fall back during the initial load — the card will show its
+    // skeleton while `hookLoading` is true. We only want the fallback once
+    // the hook has settled into an empty / failed state.
+    if (hookLoading && !isFailed && consecutiveFailures === 0) {
+      return []
+    }
+    // Search most-recent-first for a snapshot that actually has GPU data
+    // AND is within the staleness window. Older snapshots are skipped so
+    // we never surface days-old inventory as "current".
+    // eslint-disable-next-line react-hooks/purity -- Date.now() is required to compute snapshot age; this memo re-runs whenever metricsHistory updates so staleness stays accurate.
+    const now = Date.now()
     for (let i = metricsHistory.length - 1; i >= 0; i -= 1) {
       const snap = metricsHistory[i]
       const snapNodes = snap?.gpuNodes || []
-      if (snapNodes.length > 0) {
-        return snapNodes.map(g => ({
-          name: g.name,
-          cluster: g.cluster,
-          gpuType: g.gpuType,
-          gpuCount: g.gpuTotal,
-          gpuAllocated: g.gpuAllocated }))
+      if (snapNodes.length === 0) continue
+      const age = now - new Date(snap.timestamp).getTime()
+      if (age > GPU_SNAPSHOT_STALENESS_MS) {
+        // History is ordered oldest→newest, so every earlier snapshot is
+        // even older — we can stop scanning.
+        break
       }
+      return snapNodes.map(g => ({
+        name: g.name,
+        cluster: g.cluster,
+        gpuType: g.gpuType,
+        gpuCount: g.gpuTotal,
+        gpuAllocated: g.gpuAllocated }))
     }
     return []
-  }, [gpuNodes, metricsHistory])
+  }, [gpuNodes, metricsHistory, hookLoading, isFailed, consecutiveFailures])
 
   // Only show skeleton when no cached data exists (live OR snapshot fallback)
   const hasData = effectiveGPUNodes.length > 0
