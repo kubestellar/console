@@ -4,6 +4,7 @@ import {
   BarChart3, Table2, ChevronDown, ArrowUpDown } from 'lucide-react'
 import ReactECharts from 'echarts-for-react'
 import { useMetricsHistory } from '../../hooks/useMetricsHistory'
+import type { MetricsSnapshot } from '../../types/predictions'
 import { useCachedGPUNodes } from '../../hooks/useCachedData'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -461,7 +462,7 @@ export function GPUInventoryHistory() {
       return generateDemoData()
     }
 
-    return (history || []).map(snapshot => {
+    const points = (history || []).map(snapshot => {
       const filtered = filterGPUNodes(snapshot.gpuNodes || [])
       const allocated = filtered.reduce((sum, g) => sum + (g.gpuAllocated || 0), 0)
       const total = filtered.reduce((sum, g) => sum + (g.gpuTotal || 0), 0)
@@ -488,6 +489,19 @@ export function GPUInventoryHistory() {
 
       return point
     })
+
+    // Defensive filter: if any point in the series has a non-zero total, drop
+    // points whose total is zero. A zero-total point next to non-zero points
+    // is almost always a transient GPU-fetch glitch that slipped through
+    // carry-forward protection in useMetricsHistory. Keeps the chart,
+    // stats, and trend math from showing misleading flapping zero bars.
+    // If EVERY point has total === 0 (legitimate no-GPU state) we leave the
+    // series alone so the empty-state paths still fire correctly.
+    const anyNonZero = points.some(p => p.total > 0)
+    if (anyNonZero) {
+      return points.filter(p => p.total > 0)
+    }
+    return points
   }, [history, showDemo, filterGPUNodes, chartMode])
 
   /** All GPU type keys present in chart data */
@@ -559,15 +573,24 @@ export function GPUInventoryHistory() {
 
   // ── Churn metrics ──────────────────────────────────────────────────
   const churnMetrics = useMemo<ChurnMetrics | null>(() => {
-    if (showDemo || (history || []).length < MIN_CHURN_SNAPSHOTS) return null
+    // Drop snapshots with zero total GPUs before diffing so transient empty
+    // captures don't show up as massive departure/arrival churn.
+    const churnHistory = (history || []).filter(s => {
+      const nodes = s.gpuNodes || []
+      if (nodes.length === 0) return false
+      const total = nodes.reduce((sum, g) => sum + (g.gpuTotal || 0), 0)
+      return total > 0
+    })
+
+    if (showDemo || churnHistory.length < MIN_CHURN_SNAPSHOTS) return null
 
     let totalArrivals = 0
     let totalDepartures = 0
     let diffCount = 0
 
-    for (let i = 1; i < (history || []).length; i++) {
-      const prev = filterGPUNodes((history || [])[i - 1].gpuNodes || [])
-      const curr = filterGPUNodes((history || [])[i].gpuNodes || [])
+    for (let i = 1; i < churnHistory.length; i++) {
+      const prev = filterGPUNodes(churnHistory[i - 1].gpuNodes || [])
+      const curr = filterGPUNodes(churnHistory[i].gpuNodes || [])
 
       // Per-node diffing captures churn even when allocations and frees cancel at aggregate level
       const prevMap: Record<string, number> = {}
@@ -631,7 +654,24 @@ export function GPUInventoryHistory() {
   const tableRows = (() => {
     if (showDemo) return generateDemoTableRows()
 
-    const latestSnapshot = (history || []).length > 0 ? (history || [])[(history || []).length - 1] : null
+    // Walk history from the end and pick the most recent snapshot whose
+    // total GPU count is non-zero. Falls back to the literal latest (even if
+    // zero) so genuine no-GPU clusters still render an empty table rather
+    // than a stale one.
+    let latestSnapshot: MetricsSnapshot | null = null
+    const hist = history || []
+    for (let i = hist.length - 1; i >= 0; i--) {
+      const s = hist[i]
+      const nodes = s.gpuNodes || []
+      const total = nodes.reduce((sum, g) => sum + (g.gpuTotal || 0), 0)
+      if (total > 0) {
+        latestSnapshot = s
+        break
+      }
+    }
+    if (!latestSnapshot && hist.length > 0) {
+      latestSnapshot = hist[hist.length - 1]
+    }
     if (!latestSnapshot) return []
 
     const filtered = filterGPUNodes(latestSnapshot.gpuNodes || [])

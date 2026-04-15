@@ -49,7 +49,8 @@ vi.mock('../../../hooks/useGlobalFilters', () => ({
   useGlobalFilters: () => ({ selectedClusters: [], isAllClustersSelected: true, selectedSeverities: [], isAllSeveritiesSelected: true, customFilter: '' }),
 }))
 
-vi.mock('../../../hooks/useMetricsHistory', () => ({ useMetricsHistory: () => ({ history: [], isLoading: false }) }))
+const mockUseMetricsHistory = vi.fn(() => ({ history: [], isLoading: false }))
+vi.mock('../../../hooks/useMetricsHistory', () => ({ useMetricsHistory: () => mockUseMetricsHistory() }))
 
 import { GPUInventoryHistory } from '../GPUInventoryHistory'
 
@@ -59,6 +60,7 @@ describe('GPUInventoryHistory', () => {
     mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false })
     mockGPUNodes.mockReturnValue({ nodes: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
+    mockUseMetricsHistory.mockReturnValue({ history: [], isLoading: false })
   })
 
   it('renders without crashing', () => {
@@ -100,6 +102,29 @@ describe('GPUInventoryHistory', () => {
     mockGPUNodes.mockReturnValue({ nodes: [], isLoading: false, isRefreshing: false, isDemoFallback: true, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
     render(<GPUInventoryHistory />)
     expect(mockUseCardLoadingState).toHaveBeenCalled()
+  })
+
+  it('renders without crashing when history contains a zero-total snapshot mixed with real data', () => {
+    // Regression guard for the flapping-zeros bug: a transient empty capture
+    // slipping through carry-forward should be filtered visually so the
+    // component still renders cleanly.
+    mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
+    mockGPUNodes.mockReturnValue({
+      nodes: [{ name: 'node-a', cluster: 'cl-1', gpuType: 'H100', gpuAllocated: 2, gpuCount: 8 }],
+      isLoading: false, isRefreshing: false, isDemoFallback: false,
+      isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now(),
+    })
+    mockUseMetricsHistory.mockReturnValue({
+      history: [
+        { timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(), clusters: [], podIssues: [], gpuNodes: [{ name: 'node-a', cluster: 'cl-1', gpuType: 'H100', gpuAllocated: 2, gpuCount: 8, gpuTotal: 8, gpuAllocated_: 2 }] },
+        // Transient zero snapshot — must be filtered out of chart/stats
+        { timestamp: new Date(Date.now() - 20 * 60 * 1000).toISOString(), clusters: [], podIssues: [], gpuNodes: [] },
+        { timestamp: new Date(Date.now() - 10 * 60 * 1000).toISOString(), clusters: [], podIssues: [], gpuNodes: [{ name: 'node-a', cluster: 'cl-1', gpuType: 'H100', gpuAllocated: 3, gpuCount: 8, gpuTotal: 8, gpuAllocated_: 3 }] },
+      ],
+      isLoading: false,
+    })
+    const { container } = render(<GPUInventoryHistory />)
+    expect(container).toBeTruthy()
   })
 
 })

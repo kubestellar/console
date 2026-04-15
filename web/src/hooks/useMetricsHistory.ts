@@ -10,10 +10,24 @@ const MAX_SNAPSHOTS = 1008 // 7 days at 10-min intervals (6 per hour * 24 hours 
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000
 /** Maximum number of increasing-restart pods to include in AI context */
 const MAX_INCREASING_RESTART_PODS = 10
+/**
+ * Maximum consecutive snapshots whose empty GPU data will be carried-forward
+ * from the last known non-empty gpuNodes list. Prevents a transient GPU fetch
+ * glitch (SSE race, partial cluster reachability) from being persisted as a
+ * zero-total snapshot in GPU Inventory History while still allowing truly
+ * removed GPUs to reflect after ~2 intervals.
+ */
+const MAX_GPU_CARRY_FORWARD = 2
 
 // Singleton state - shared across all hook instances
 let snapshots: MetricsSnapshot[] = []
 const subscribers = new Set<(snapshots: MetricsSnapshot[]) => void>()
+/**
+ * Tracks how many consecutive captures have had an empty gpuNodes list while
+ * the last persisted snapshot still had GPU inventory. Used to carry-forward
+ * the last known gpuNodes for up to MAX_GPU_CARRY_FORWARD captures.
+ */
+let consecutiveEmptyGPUCaptures = 0
 
 // Initialize from localStorage
 if (typeof window !== 'undefined') {
@@ -97,6 +111,51 @@ function addSnapshot(snapshot: MetricsSnapshot) {
 }
 
 /**
+ * Applies carry-forward protection against transient empty gpuNodes results.
+ *
+ * When the current capture has an empty gpuNodes list but the most recent
+ * persisted snapshot still had GPU inventory, replace the empty list with the
+ * previous snapshot's gpuNodes — up to MAX_GPU_CARRY_FORWARD consecutive
+ * captures. This prevents transient fetch glitches from being persisted as
+ * zero-total snapshots that then render as flapping zero bars in GPU
+ * Inventory History.
+ *
+ * Returns the gpuNodes to use for the new snapshot.
+ */
+function applyGPUCarryForward(
+  currentGpuNodes: MetricsSnapshot['gpuNodes'],
+): MetricsSnapshot['gpuNodes'] {
+  // Non-empty current: no carry-forward needed, reset counter.
+  if (currentGpuNodes.length > 0) {
+    consecutiveEmptyGPUCaptures = 0
+    return currentGpuNodes
+  }
+
+  // Empty current. Look at the most recent persisted snapshot.
+  const lastSnapshot = snapshots.length > 0 ? snapshots[snapshots.length - 1] : null
+  const lastHadGPUs = !!lastSnapshot && (lastSnapshot.gpuNodes || []).length > 0
+
+  // No previous GPU data to carry forward — this is a legitimate "no GPUs"
+  // state (either a non-GPU cluster or the zero has already been persisted).
+  if (!lastHadGPUs) {
+    consecutiveEmptyGPUCaptures = 0
+    return currentGpuNodes
+  }
+
+  // Previous snapshot had GPUs, current is empty — likely a transient flap.
+  // Carry forward the previous gpuNodes, but only for a bounded number of
+  // consecutive captures so truly-removed GPUs eventually reflect in history.
+  if (consecutiveEmptyGPUCaptures < MAX_GPU_CARRY_FORWARD) {
+    consecutiveEmptyGPUCaptures += 1
+    return lastSnapshot.gpuNodes
+  }
+
+  // Exceeded the carry-forward window — accept the empty state as truth.
+  consecutiveEmptyGPUCaptures = 0
+  return currentGpuNodes
+}
+
+/**
  * Hook to manage metrics history for trend detection
  * Automatically captures snapshots every 10 minutes (configurable)
  */
@@ -176,6 +235,13 @@ export function useMetricsHistory() {
         return
       }
 
+      const mappedGpuNodes = (currentGpuNodes || []).map(g => ({
+        name: g.name,
+        cluster: g.cluster,
+        gpuType: g.gpuType || '',
+        gpuAllocated: g.gpuAllocated,
+        gpuTotal: g.gpuCount }))
+
       const snapshot: MetricsSnapshot = {
         timestamp: new Date().toISOString(),
         clusters: currentClusters.map(c => ({
@@ -190,12 +256,9 @@ export function useMetricsHistory() {
           cluster: p.cluster || '',
           restarts: p.restarts || 0,
           status: p.status || '' })),
-        gpuNodes: (currentGpuNodes || []).map(g => ({
-          name: g.name,
-          cluster: g.cluster,
-          gpuType: g.gpuType || '',
-          gpuAllocated: g.gpuAllocated,
-          gpuTotal: g.gpuCount })) }
+        // Apply carry-forward to smooth transient empty-GPU fetch results
+        // (see applyGPUCarryForward docstring).
+        gpuNodes: applyGPUCarryForward(mappedGpuNodes) }
 
       addSnapshot(snapshot)
       lastSnapshotRef.current = now
@@ -221,6 +284,13 @@ export function useMetricsHistory() {
   const captureNow = () => {
     if (clusters.length === 0) return
 
+    const mappedGpuNodes = (gpuNodes || []).map(g => ({
+      name: g.name,
+      cluster: g.cluster,
+      gpuType: g.gpuType || '',
+      gpuAllocated: g.gpuAllocated,
+      gpuTotal: g.gpuCount }))
+
     const snapshot: MetricsSnapshot = {
       timestamp: new Date().toISOString(),
       clusters: clusters.map(c => ({
@@ -234,12 +304,7 @@ export function useMetricsHistory() {
         cluster: p.cluster || '',
         restarts: p.restarts || 0,
         status: p.status || '' })),
-      gpuNodes: (gpuNodes || []).map(g => ({
-        name: g.name,
-        cluster: g.cluster,
-        gpuType: g.gpuType || '',
-        gpuAllocated: g.gpuAllocated,
-        gpuTotal: g.gpuCount })) }
+      gpuNodes: applyGPUCarryForward(mappedGpuNodes) }
 
     addSnapshot(snapshot)
     lastSnapshotRef.current = Date.now()
@@ -248,6 +313,7 @@ export function useMetricsHistory() {
   // Clear history
   const clearHistory = () => {
     snapshots = []
+    consecutiveEmptyGPUCaptures = 0
     notifySubscribers()
     persistSnapshots()
   }
