@@ -15,8 +15,12 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import {
   Database, Globe, Search, Radio,
   TrendingDown, TrendingUp, Maximize2, Pin, Square, X, Settings,
+  Plus, Trash2, Download, Rocket,
 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import yaml from 'js-yaml'
+import { downloadText } from '../../../lib/download'
 import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
 import { useDrasiResources } from '../../../hooks/useDrasiResources'
 import { useDrasiQueryStream } from '../../../hooks/useDrasiQueryStream'
@@ -221,13 +225,15 @@ interface NodeControlsProps {
   isPinned?: boolean
   showPin?: boolean
   showGear?: boolean
+  showDelete?: boolean
   onStop: () => void
   onPin?: () => void
   onExpand: () => void
   onConfigure?: () => void
+  onDelete?: () => void
 }
 
-function NodeControls({ isStopped, isPinned = false, showPin = false, showGear = false, onStop, onPin, onExpand, onConfigure }: NodeControlsProps) {
+function NodeControls({ isStopped, isPinned = false, showPin = false, showGear = false, showDelete = false, onStop, onPin, onExpand, onConfigure, onDelete }: NodeControlsProps) {
   const handle = (fn?: () => void) => (e: React.MouseEvent) => {
     e.stopPropagation()
     fn?.()
@@ -282,6 +288,17 @@ function NodeControls({ isStopped, isPinned = false, showPin = false, showGear =
           <Settings className="w-2.5 h-2.5" />
         </button>
       )}
+      {showDelete && (
+        <button
+          type="button"
+          onClick={handle(onDelete)}
+          className="w-5 h-5 flex items-center justify-center rounded bg-slate-700/40 hover:bg-red-500/40 border border-slate-600/40 hover:border-red-500/60 text-slate-400 hover:text-red-300 transition-colors"
+          aria-label="Delete"
+          title="Delete"
+        >
+          <Trash2 className="w-2.5 h-2.5" />
+        </button>
+      )}
     </div>
   )
 }
@@ -325,6 +342,7 @@ interface NodeCardProps {
   isPinned?: boolean
   showPin?: boolean
   showGear?: boolean
+  showDelete?: boolean
   /** When true, the card is faded because another node is being hovered. */
   isDimmed?: boolean
   onClick?: () => void
@@ -332,6 +350,7 @@ interface NodeCardProps {
   onPin?: () => void
   onExpand: () => void
   onConfigure?: () => void
+  onDelete?: () => void
   onHoverEnter?: () => void
   onHoverLeave?: () => void
   children?: React.ReactNode
@@ -339,8 +358,8 @@ interface NodeCardProps {
 
 function NodeCard({
   nodeRef, title, subtitle, icon, status, accentColor,
-  isSelected, isStopped, isPinned, showPin, showGear, isDimmed,
-  onClick, onStop, onPin, onExpand, onConfigure, onHoverEnter, onHoverLeave, children,
+  isSelected, isStopped, isPinned, showPin, showGear, showDelete, isDimmed,
+  onClick, onStop, onPin, onExpand, onConfigure, onDelete, onHoverEnter, onHoverLeave, children,
 }: NodeCardProps) {
   const borderClass = isSelected
     ? accentColor === 'cyan' ? 'border-cyan-400/70 ring-1 ring-cyan-400/30' : 'border-emerald-400/70 ring-1 ring-emerald-400/30'
@@ -367,10 +386,12 @@ function NodeCard({
         isPinned={isPinned}
         showPin={showPin}
         showGear={showGear}
+        showDelete={showDelete}
         onStop={onStop}
         onPin={onPin}
         onExpand={onExpand}
         onConfigure={onConfigure}
+        onDelete={onDelete}
       />
       {children}
     </motion.div>
@@ -728,14 +749,22 @@ interface QueryConfig {
 function SourceConfigModal({
   source, onSave, onClose,
 }: {
-  source: DrasiSource
+  /** When null, the modal is in create mode. */
+  source: DrasiSource | null
   onSave: (config: SourceConfig) => void
   onClose: () => void
 }) {
   const { t } = useTranslation()
-  const [name, setName] = useState(source.name)
-  const [kind, setKind] = useState<SourceKind>(source.kind)
-  const titleId = `drasi-source-config-title-${source.id}`
+  const isCreate = source === null
+  const [name, setName] = useState(source?.name ?? '')
+  const [kind, setKind] = useState<SourceKind>(source?.kind ?? 'HTTP')
+  const titleId = `drasi-source-config-title-${source?.id ?? 'new'}`
+
+  const handleDownloadYaml = () => {
+    if (!source) return
+    const doc = { apiVersion: 'v1', kind: 'Source', name: source.name, spec: { kind: source.kind } }
+    downloadText(`${source.name}.yaml`, yaml.dump(doc), 'text/yaml')
+  }
 
   return (
     <ModalShell
@@ -745,8 +774,10 @@ function SourceConfigModal({
     >
       <div className="flex items-start justify-between mb-3">
         <div>
-          <div id={titleId} className="text-white font-semibold text-sm">{t('drasi.configureSource')}</div>
-          <div className="text-muted-foreground text-xs uppercase tracking-wider mt-0.5">{t('drasi.sourceKindLabel', { kind: source.kind })}</div>
+          <div id={titleId} className="text-white font-semibold text-sm">{isCreate ? t('drasi.createSource') : t('drasi.configureSource')}</div>
+          <div className="text-muted-foreground text-xs uppercase tracking-wider mt-0.5">
+            {isCreate ? t('drasi.newSourceSubtitle') : t('drasi.sourceKindLabel', { kind: source!.kind })}
+          </div>
         </div>
         <button type="button" onClick={onClose} className="w-6 h-6 flex items-center justify-center rounded hover:bg-slate-800 text-slate-400" aria-label={t('actions.close')}>
           <X className="w-4 h-4" />
@@ -773,9 +804,28 @@ function SourceConfigModal({
           </select>
         </div>
       </div>
-      <div className="flex justify-end gap-2 mt-4">
-        <button type="button" onClick={onClose} className="px-3 py-1.5 text-xs rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700">{t('actions.cancel')}</button>
-        <button type="button" onClick={() => { onSave({ name, kind }); onClose() }} className="px-3 py-1.5 text-xs rounded bg-cyan-600 hover:bg-cyan-500 text-white">{t('actions.save')}</button>
+      <div className="flex justify-between items-center gap-2 mt-4">
+        {!isCreate ? (
+          <button
+            type="button"
+            onClick={handleDownloadYaml}
+            className="px-3 py-1.5 text-xs rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 flex items-center gap-1.5"
+          >
+            <Download className="w-3 h-3" />
+            {t('drasi.downloadYaml')}
+          </button>
+        ) : <div />}
+        <div className="flex gap-2">
+          <button type="button" onClick={onClose} className="px-3 py-1.5 text-xs rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700">{t('actions.cancel')}</button>
+          <button
+            type="button"
+            disabled={!name.trim()}
+            onClick={() => { onSave({ name: name.trim(), kind }); onClose() }}
+            className="px-3 py-1.5 text-xs rounded bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-700 disabled:text-slate-500 text-white"
+          >
+            {t('actions.save')}
+          </button>
+        </div>
       </div>
     </ModalShell>
   )
@@ -786,15 +836,32 @@ const QUERY_LANGUAGES = ['CYPHER QUERY', 'GREMLIN QUERY', 'SQL QUERY']
 function QueryConfigModal({
   query, onSave, onClose,
 }: {
-  query: DrasiQuery
+  /** When null, the modal is in create mode. */
+  query: DrasiQuery | null
   onSave: (config: QueryConfig) => void
   onClose: () => void
 }) {
   const { t } = useTranslation()
-  const [name, setName] = useState(query.name)
-  const [language, setLanguage] = useState(query.language)
-  const [queryText, setQueryText] = useState(query.queryText || '')
-  const titleId = `drasi-query-config-title-${query.id}`
+  const isCreate = query === null
+  const [name, setName] = useState(query?.name ?? '')
+  const [language, setLanguage] = useState(query?.language ?? 'CYPHER QUERY')
+  const [queryText, setQueryText] = useState(query?.queryText ?? '')
+  const titleId = `drasi-query-config-title-${query?.id ?? 'new'}`
+
+  const handleDownloadYaml = () => {
+    if (!query) return
+    const doc = {
+      apiVersion: 'v1',
+      kind: 'ContinuousQuery',
+      name: query.name,
+      spec: {
+        mode: query.language.replace(/ QUERY$/, ''),
+        query: query.queryText || '',
+        sources: query.sourceIds.map(id => ({ id })),
+      },
+    }
+    downloadText(`${query.name}.yaml`, yaml.dump(doc), 'text/yaml')
+  }
 
   return (
     <ModalShell
@@ -804,8 +871,10 @@ function QueryConfigModal({
     >
       <div className="flex items-start justify-between mb-3">
         <div>
-          <div id={titleId} className="text-white font-semibold text-sm">{t('drasi.configureContinuousQuery')}</div>
-          <div className="text-muted-foreground text-xs uppercase tracking-wider mt-0.5">{t('drasi.queryLanguageLabel', { language: query.language })}</div>
+          <div id={titleId} className="text-white font-semibold text-sm">{isCreate ? t('drasi.createContinuousQuery') : t('drasi.configureContinuousQuery')}</div>
+          <div className="text-muted-foreground text-xs uppercase tracking-wider mt-0.5">
+            {isCreate ? t('drasi.newQuerySubtitle') : t('drasi.queryLanguageLabel', { language: query!.language })}
+          </div>
         </div>
         <button type="button" onClick={onClose} className="w-6 h-6 flex items-center justify-center rounded hover:bg-slate-800 text-slate-400" aria-label={t('actions.close')}>
           <X className="w-4 h-4" />
@@ -842,9 +911,28 @@ function QueryConfigModal({
           />
         </div>
       </div>
-      <div className="flex justify-end gap-2 mt-4">
-        <button type="button" onClick={onClose} className="px-3 py-1.5 text-xs rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700">{t('actions.cancel')}</button>
-        <button type="button" onClick={() => { onSave({ name, language, queryText }); onClose() }} className="px-3 py-1.5 text-xs rounded bg-cyan-600 hover:bg-cyan-500 text-white">{t('actions.save')}</button>
+      <div className="flex justify-between items-center gap-2 mt-4">
+        {!isCreate ? (
+          <button
+            type="button"
+            onClick={handleDownloadYaml}
+            className="px-3 py-1.5 text-xs rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 flex items-center gap-1.5"
+          >
+            <Download className="w-3 h-3" />
+            {t('drasi.downloadYaml')}
+          </button>
+        ) : <div />}
+        <div className="flex gap-2">
+          <button type="button" onClick={onClose} className="px-3 py-1.5 text-xs rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700">{t('actions.cancel')}</button>
+          <button
+            type="button"
+            disabled={!name.trim()}
+            onClick={() => { onSave({ name: name.trim(), language, queryText }); onClose() }}
+            className="px-3 py-1.5 text-xs rounded bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-700 disabled:text-slate-500 text-white"
+          >
+            {t('actions.save')}
+          </button>
+        </div>
       </div>
     </ModalShell>
   )
@@ -855,6 +943,7 @@ function QueryConfigModal({
 // ---------------------------------------------------------------------------
 
 export function DrasiReactiveGraph() {
+  const { t } = useTranslation()
   const { shouldUseDemoData: isDemoMode, showDemoBadge } = useCardDemoState({ requires: 'none' })
   const { data: liveData, isLoading, error } = useDrasiResources()
 
@@ -872,8 +961,11 @@ export function DrasiReactiveGraph() {
   // every other line dims. Mirrors ServiceTopology.tsx's hoveredNode pattern.
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null)
   const [expandedNode, setExpandedNode] = useState<ExpandedNodeDetails | null>(null)
-  const [configuringSource, setConfiguringSource] = useState<DrasiSource | null>(null)
-  const [configuringQuery, setConfiguringQuery] = useState<DrasiQuery | null>(null)
+  // 'new' sentinel = create mode; a DrasiSource/Query object = edit mode;
+  // null = modal closed. Single state avoids an extra boolean flag.
+  const [configuringSource, setConfiguringSource] = useState<DrasiSource | 'new' | null>(null)
+  const [configuringQuery, setConfiguringQuery] = useState<DrasiQuery | 'new' | null>(null)
+  const navigate = useNavigate()
   const [demoData, setDemoData] = useState<DrasiPipelineData>(generateDemoData)
 
   // Periodically regenerate demo results so the table values change
@@ -946,22 +1038,41 @@ export function DrasiReactiveGraph() {
 
   const { refetch: refetchDrasi } = useDrasiResources()
 
-  const saveSourceConfig = useCallback(async (sourceId: string, config: SourceConfig) => {
+  // Build the query-string that targets whichever Drasi mode is active.
+  // Consolidated so create/update/delete all route through the same proxy.
+  const drasiProxyTarget = useCallback((): string => {
+    if (!liveData) return ''
+    if (liveData.mode === 'server' && DRASI_SERVER_URL) {
+      return `target=server&url=${encodeURIComponent(DRASI_SERVER_URL)}`
+    }
+    return `target=platform&cluster=${encodeURIComponent(import.meta.env.VITE_DRASI_PLATFORM_CLUSTER || '')}`
+  }, [liveData])
+
+  // Resource-kind → REST path root for each Drasi mode. drasi-server and
+  // drasi-platform diverge on both prefix (`/api/v1` vs `/v1`) and the query
+  // resource name (`queries` vs `continuousQueries`).
+  const drasiResourcePath = useCallback(
+    (kind: 'source' | 'query' | 'reaction'): string => {
+      if (!liveData) return ''
+      const isServer = liveData.mode === 'server'
+      const prefix = isServer ? '/api/v1' : '/v1'
+      switch (kind) {
+        case 'source': return `${prefix}/sources`
+        case 'query': return `${prefix}/${isServer ? 'queries' : 'continuousQueries'}`
+        case 'reaction': return `${prefix}/reactions`
+      }
+    },
+    [liveData],
+  )
+
+  const saveSourceConfig = useCallback(async (sourceId: string | null, config: SourceConfig) => {
     if (isLive && liveData) {
-      // Real Drasi mutation. drasi-server uses POST /api/v1/sources, drasi-platform
-      // uses PUT /v1/sources/{id} — both routed through the backend proxy.
-      const proxyBase = '/api/drasi/proxy'
-      const targetParams =
-        liveData.mode === 'server' && DRASI_SERVER_URL
-          ? `target=server&url=${encodeURIComponent(DRASI_SERVER_URL)}`
-          : `target=platform&cluster=${encodeURIComponent(import.meta.env.VITE_DRASI_PLATFORM_CLUSTER || '')}`
-      const path =
-        liveData.mode === 'server'
-          ? `/api/v1/sources/${encodeURIComponent(sourceId)}`
-          : `/v1/sources/${encodeURIComponent(sourceId)}`
+      const basePath = drasiResourcePath('source')
+      const isCreate = sourceId === null
+      const path = isCreate ? basePath : `${basePath}/${encodeURIComponent(sourceId)}`
       try {
-        await fetch(`${proxyBase}${path}?${targetParams}`, {
-          method: 'PUT',
+        await fetch(`/api/drasi/proxy${path}?${drasiProxyTarget()}`, {
+          method: isCreate ? 'POST' : 'PUT',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ id: config.name, spec: { kind: config.kind } }),
         })
@@ -972,26 +1083,27 @@ export function DrasiReactiveGraph() {
       return
     }
     // Demo mode — local-state only.
+    if (sourceId === null) {
+      setDemoData(prev => ({
+        ...prev,
+        sources: [...prev.sources, { id: config.name, name: config.name, kind: config.kind, status: 'ready' }],
+      }))
+      return
+    }
     setDemoData(prev => ({
       ...prev,
       sources: prev.sources.map(s => s.id === sourceId ? { ...s, name: config.name, kind: config.kind } : s),
     }))
-  }, [isLive, liveData, refetchDrasi])
+  }, [isLive, liveData, refetchDrasi, drasiProxyTarget, drasiResourcePath])
 
-  const saveQueryConfig = useCallback(async (queryId: string, config: QueryConfig) => {
+  const saveQueryConfig = useCallback(async (queryId: string | null, config: QueryConfig) => {
     if (isLive && liveData) {
-      const proxyBase = '/api/drasi/proxy'
-      const targetParams =
-        liveData.mode === 'server' && DRASI_SERVER_URL
-          ? `target=server&url=${encodeURIComponent(DRASI_SERVER_URL)}`
-          : `target=platform&cluster=${encodeURIComponent(import.meta.env.VITE_DRASI_PLATFORM_CLUSTER || '')}`
-      const path =
-        liveData.mode === 'server'
-          ? `/api/v1/queries/${encodeURIComponent(queryId)}`
-          : `/v1/continuousQueries/${encodeURIComponent(queryId)}`
+      const basePath = drasiResourcePath('query')
+      const isCreate = queryId === null
+      const path = isCreate ? basePath : `${basePath}/${encodeURIComponent(queryId)}`
       try {
-        await fetch(`${proxyBase}${path}?${targetParams}`, {
-          method: 'PUT',
+        await fetch(`/api/drasi/proxy${path}?${drasiProxyTarget()}`, {
+          method: isCreate ? 'POST' : 'PUT',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({
             id: config.name,
@@ -1004,11 +1116,75 @@ export function DrasiReactiveGraph() {
       }
       return
     }
+    if (queryId === null) {
+      setDemoData(prev => ({
+        ...prev,
+        queries: [...prev.queries, {
+          id: config.name, name: config.name, language: config.language,
+          status: 'ready', sourceIds: [], queryText: config.queryText,
+        }],
+      }))
+      return
+    }
     setDemoData(prev => ({
       ...prev,
       queries: prev.queries.map(q => q.id === queryId ? { ...q, name: config.name, language: config.language, queryText: config.queryText } : q),
     }))
-  }, [isLive, liveData, refetchDrasi])
+  }, [isLive, liveData, refetchDrasi, drasiProxyTarget, drasiResourcePath])
+
+  // Reactions: Wave A ships create-as-default-SSE + delete; the full gear
+  // modal is deferred to Wave B along with the CodeMirror query editor.
+  const createDefaultReaction = useCallback(async () => {
+    const defaultName = `reaction-${Date.now().toString(36).slice(-5)}`
+    if (isLive && liveData) {
+      try {
+        await fetch(`/api/drasi/proxy${drasiResourcePath('reaction')}?${drasiProxyTarget()}`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            id: defaultName,
+            spec: { kind: 'SSE', queries: queries.map(q => ({ id: q.id })) },
+          }),
+        })
+        refetchDrasi()
+      } catch {
+        // Non-fatal; next poll surfaces the error.
+      }
+      return
+    }
+    setDemoData(prev => ({
+      ...prev,
+      reactions: [...prev.reactions, {
+        id: defaultName, name: defaultName, kind: 'SSE',
+        status: 'ready', queryIds: prev.queries.map(q => q.id),
+      }],
+    }))
+  }, [isLive, liveData, queries, refetchDrasi, drasiProxyTarget, drasiResourcePath])
+
+  const deleteResource = useCallback(async (
+    kind: 'source' | 'query' | 'reaction',
+    id: string,
+    name: string,
+  ) => {
+    // eslint-disable-next-line no-alert
+    if (!window.confirm(t('drasi.deleteConfirm', { name }))) return
+    if (isLive && liveData) {
+      try {
+        await fetch(`/api/drasi/proxy${drasiResourcePath(kind)}/${encodeURIComponent(id)}?${drasiProxyTarget()}`, {
+          method: 'DELETE',
+        })
+        refetchDrasi()
+      } catch {
+        // Non-fatal; next poll surfaces the error.
+      }
+      return
+    }
+    setDemoData(prev => {
+      if (kind === 'source') return { ...prev, sources: prev.sources.filter(s => s.id !== id) }
+      if (kind === 'query') return { ...prev, queries: prev.queries.filter(q => q.id !== id) }
+      return { ...prev, reactions: prev.reactions.filter(r => r.id !== id) }
+    })
+  }, [isLive, liveData, refetchDrasi, drasiProxyTarget, drasiResourcePath, t])
 
   // --- Dynamic line positioning --------------------------------------------
 
@@ -1335,6 +1511,25 @@ export function DrasiReactiveGraph() {
 
   return (
     <div className="h-full w-full flex flex-col p-3 overflow-hidden relative">
+      {/* Install Drasi CTA — shown only when neither a drasi-server URL nor
+          a drasi-platform cluster is configured. Deep-links to the existing
+          console-kb install mission. */}
+      {!isLive && (
+        <div className="flex-shrink-0 mb-2 p-2 rounded border border-cyan-500/30 bg-cyan-500/5 flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-xs font-semibold text-cyan-300 truncate">{t('drasi.installDrasiTitle')}</div>
+            <div className="text-[10px] text-muted-foreground truncate">{t('drasi.installDrasiDescription')}</div>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/missions/install-drasi')}
+            className="shrink-0 px-2.5 py-1 text-[11px] rounded bg-cyan-600 hover:bg-cyan-500 text-white flex items-center gap-1.5"
+          >
+            <Rocket className="w-3 h-3" />
+            {t('drasi.installDrasiButton')}
+          </button>
+        </div>
+      )}
       {/* Pipeline KPIs strip */}
       <div className="flex-shrink-0 grid grid-cols-4 gap-2 mb-2">
         <KPIBox label={KPI_LABEL_EVENTS_PER_SEC} value={kpis.eventsPerSec} accent="emerald" />
@@ -1395,10 +1590,45 @@ export function DrasiReactiveGraph() {
             zIndex: 1,
           }}
         >
-          {/* Column headers (row 1) */}
-          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider" style={{ gridColumn: 1, gridRow: 1 }}>Sources</div>
-          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider" style={{ gridColumn: 3, gridRow: 1 }}>Continuous Queries</div>
-          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider" style={{ gridColumn: 6, gridRow: 1 }}>Reactions</div>
+          {/* Column headers (row 1) — each has an inline "+" button that
+              opens the matching create modal (or, for reactions, creates a
+              default SSE reaction inline). */}
+          <div className="flex items-center gap-1.5" style={{ gridColumn: 1, gridRow: 1 }}>
+            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Sources</span>
+            <button
+              type="button"
+              onClick={() => setConfiguringSource('new')}
+              className="w-4 h-4 flex items-center justify-center rounded bg-slate-700/40 hover:bg-emerald-500/30 border border-slate-600/40 hover:border-emerald-500/50 text-slate-400 hover:text-emerald-300 transition-colors"
+              aria-label={t('drasi.addSource')}
+              title={t('drasi.addSource')}
+            >
+              <Plus className="w-2.5 h-2.5" />
+            </button>
+          </div>
+          <div className="flex items-center gap-1.5" style={{ gridColumn: 3, gridRow: 1 }}>
+            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Continuous Queries</span>
+            <button
+              type="button"
+              onClick={() => setConfiguringQuery('new')}
+              className="w-4 h-4 flex items-center justify-center rounded bg-slate-700/40 hover:bg-cyan-500/30 border border-slate-600/40 hover:border-cyan-500/50 text-slate-400 hover:text-cyan-300 transition-colors"
+              aria-label={t('drasi.addQuery')}
+              title={t('drasi.addQuery')}
+            >
+              <Plus className="w-2.5 h-2.5" />
+            </button>
+          </div>
+          <div className="flex items-center gap-1.5" style={{ gridColumn: 6, gridRow: 1 }}>
+            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Reactions</span>
+            <button
+              type="button"
+              onClick={createDefaultReaction}
+              className="w-4 h-4 flex items-center justify-center rounded bg-slate-700/40 hover:bg-emerald-500/30 border border-slate-600/40 hover:border-emerald-500/50 text-slate-400 hover:text-emerald-300 transition-colors"
+              aria-label={t('drasi.addReaction')}
+              title={t('drasi.addReaction')}
+            >
+              <Plus className="w-2.5 h-2.5" />
+            </button>
+          </div>
 
           {/* Sources — col 1, rows 2..n */}
           {sources.slice(0, 3).map((source, i) => (
@@ -1412,10 +1642,12 @@ export function DrasiReactiveGraph() {
                 accentColor="emerald"
                 isStopped={stoppedNodeIds.has(source.id)}
                 isDimmed={hoveredNodeId !== null && hoveredNodeId !== source.id && !connectedNodeIds(hoveredNodeId).has(source.id)}
-                showGear={!isLive}
+                showGear
+                showDelete
                 onStop={() => toggleStopped(source.id)}
                 onExpand={() => setExpandedNode({ id: source.id, name: source.name, kind: source.kind, type: 'source', extra: { status: source.status } })}
-                onConfigure={!isLive ? () => setConfiguringSource(source) : undefined}
+                onConfigure={() => setConfiguringSource(source)}
+                onDelete={() => deleteResource('source', source.id, source.name)}
                 onHoverEnter={() => setHoveredNodeId(source.id)}
                 onHoverLeave={() => setHoveredNodeId(null)}
               />
@@ -1448,12 +1680,14 @@ export function DrasiReactiveGraph() {
                   isPinned={pinnedQueryId === query.id}
                   isDimmed={hoveredNodeId !== null && hoveredNodeId !== query.id && !connectedNodeIds(hoveredNodeId).has(query.id)}
                   showPin
-                  showGear={!isLive}
+                  showGear
+                  showDelete
                   onClick={() => handleQueryClick(query.id)}
                   onStop={() => toggleStopped(query.id)}
                   onPin={() => togglePin(query.id)}
                   onExpand={() => setExpandedNode({ id: query.id, name: query.name, kind: query.language, type: 'query', extra: { sources: query.sourceIds.join(', ') || '(none)' } })}
-                  onConfigure={!isLive ? () => setConfiguringQuery(query) : undefined}
+                  onConfigure={() => setConfiguringQuery(query)}
+                  onDelete={() => deleteResource('query', query.id, query.name)}
                   onHoverEnter={() => setHoveredNodeId(query.id)}
                   onHoverLeave={() => setHoveredNodeId(null)}
                 >
@@ -1475,8 +1709,10 @@ export function DrasiReactiveGraph() {
                 accentColor="emerald"
                 isStopped={stoppedNodeIds.has(reaction.id)}
                 isDimmed={hoveredNodeId !== null && hoveredNodeId !== reaction.id && !connectedNodeIds(hoveredNodeId).has(reaction.id)}
+                showDelete
                 onStop={() => toggleStopped(reaction.id)}
                 onExpand={() => setExpandedNode({ id: reaction.id, name: reaction.name, kind: reaction.kind, type: 'reaction', extra: { queries: reaction.queryIds.join(', ') || '(none)' } })}
+                onDelete={() => deleteResource('reaction', reaction.id, reaction.name)}
                 onHoverEnter={() => setHoveredNodeId(reaction.id)}
                 onHoverLeave={() => setHoveredNodeId(null)}
               />
@@ -1488,15 +1724,15 @@ export function DrasiReactiveGraph() {
           {expandedNode && <ExpandModal node={expandedNode} onClose={() => setExpandedNode(null)} />}
           {configuringSource && (
             <SourceConfigModal
-              source={configuringSource}
-              onSave={config => saveSourceConfig(configuringSource.id, config)}
+              source={configuringSource === 'new' ? null : configuringSource}
+              onSave={config => saveSourceConfig(configuringSource === 'new' ? null : configuringSource.id, config)}
               onClose={() => setConfiguringSource(null)}
             />
           )}
           {configuringQuery && (
             <QueryConfigModal
-              query={configuringQuery}
-              onSave={config => saveQueryConfig(configuringQuery.id, config)}
+              query={configuringQuery === 'new' ? null : configuringQuery}
+              onSave={config => saveQueryConfig(configuringQuery === 'new' ? null : configuringQuery.id, config)}
               onClose={() => setConfiguringQuery(null)}
             />
           )}

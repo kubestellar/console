@@ -1502,6 +1502,8 @@
   "drasi": {
     "configureSource": "Configure Source",
     "configureContinuousQuery": "Configure Continuous Query",
+    "createSource": "Create Source",
+    "createContinuousQuery": "Create Continuous Query",
     "nameLabel": "Name",
     "sourceTypeLabel": "Source Type",
     "queryTypeLabel": "Query Type",
@@ -1509,7 +1511,17 @@
     "queryPlaceholder": "MATCH (n) RETURN n",
     "idLabel": "ID:",
     "sourceKindLabel": "Source · {{kind}}",
-    "queryLanguageLabel": "Query · {{language}}"
+    "queryLanguageLabel": "Query · {{language}}",
+    "newSourceSubtitle": "New source",
+    "newQuerySubtitle": "New continuous query",
+    "downloadYaml": "Download YAML",
+    "addSource": "Add Source",
+    "addQuery": "Add Query",
+    "addReaction": "Add Reaction",
+    "deleteConfirm": "Delete \"{{name}}\"? This cannot be undone.",
+    "installDrasiTitle": "No live Drasi install detected",
+    "installDrasiDescription": "Showing demo data. Install Drasi to visualize your reactive pipelines live.",
+    "installDrasiButton": "Install Drasi"
   },
   "missionChat": {
     "saveTranscript": "Save transcript",
