@@ -221,6 +221,92 @@ func TestGPUReservation_JSONSerialization(t *testing.T) {
 	require.Equal(t, "active", m["status"])
 }
 
+// TestGPUReservation_NormalizeGPUTypes_LegacyPromotion pins the back-compat
+// path used for reservations created before #8144 — the migration
+// leaves gpu_types empty and the scan must promote gpu_type into a
+// one-element list so callers always see a populated GPUTypes slice.
+func TestGPUReservation_NormalizeGPUTypes_LegacyPromotion(t *testing.T) {
+	r := GPUReservation{GPUType: "NVIDIA A100"}
+	r.NormalizeGPUTypes()
+	require.Equal(t, []string{"NVIDIA A100"}, r.GPUTypes)
+	require.Equal(t, "NVIDIA A100", r.GPUType)
+}
+
+// TestGPUReservation_NormalizeGPUTypes_MultiMirrors pins the forward path:
+// once a multi-type reservation is created, the legacy singular field
+// must mirror GPUTypes[0] so pre-migration clients keep reading a
+// meaningful value.
+func TestGPUReservation_NormalizeGPUTypes_MultiMirrors(t *testing.T) {
+	r := GPUReservation{GPUTypes: []string{"NVIDIA A100", "NVIDIA H100"}}
+	r.NormalizeGPUTypes()
+	require.Equal(t, []string{"NVIDIA A100", "NVIDIA H100"}, r.GPUTypes)
+	require.Equal(t, "NVIDIA A100", r.GPUType)
+}
+
+// TestGPUReservation_NormalizeGPUTypes_Dedup ensures duplicate and empty
+// entries in the incoming list are scrubbed while preserving first-seen
+// order — required so GPUType stays stable across normalize calls.
+func TestGPUReservation_NormalizeGPUTypes_Dedup(t *testing.T) {
+	r := GPUReservation{GPUTypes: []string{"A100", "", "A100", "H100", ""}}
+	r.NormalizeGPUTypes()
+	require.Equal(t, []string{"A100", "H100"}, r.GPUTypes)
+	require.Equal(t, "A100", r.GPUType)
+}
+
+// TestGPUReservation_NormalizeGPUTypes_Empty covers the "no preference"
+// case: neither singular nor multi is set. Both fields should stay
+// zero-valued and the reservation must behave as any-GPU-acceptable.
+func TestGPUReservation_NormalizeGPUTypes_Empty(t *testing.T) {
+	r := GPUReservation{}
+	r.NormalizeGPUTypes()
+	require.Empty(t, r.GPUTypes)
+	require.Equal(t, "", r.GPUType)
+	// Any-type reservation matches every node.
+	require.True(t, r.MatchesNodeGPUType("NVIDIA A100"))
+	require.True(t, r.MatchesNodeGPUType(""))
+}
+
+// TestGPUReservation_MatchesNodeGPUType exercises the node-matching
+// contract for the #8144 multi-type case: a reservation listing
+// {A100, H100} must accept a node advertising either, but reject a
+// node advertising a third type.
+func TestGPUReservation_MatchesNodeGPUType(t *testing.T) {
+	r := GPUReservation{GPUTypes: []string{"NVIDIA A100", "NVIDIA H100"}}
+	r.NormalizeGPUTypes()
+	require.True(t, r.MatchesNodeGPUType("NVIDIA A100-SXM4-80GB"))
+	require.True(t, r.MatchesNodeGPUType("NVIDIA H100 PCIe"))
+	require.False(t, r.MatchesNodeGPUType("NVIDIA V100"))
+	require.False(t, r.MatchesNodeGPUType("AMD MI250"))
+}
+
+// TestGPUReservation_JSONRoundTrip_MultiType pins the wire format: a
+// reservation with two types must serialize with both fields and
+// deserialize back into the same shape so frontend and Netlify
+// consumers can rely on gpu_types being present.
+func TestGPUReservation_JSONRoundTrip_MultiType(t *testing.T) {
+	original := GPUReservation{
+		UserName:      "alice",
+		Title:         "Multi-type Training",
+		Cluster:       "gpu-cluster-1",
+		Namespace:     "ml",
+		GPUCount:      4,
+		GPUType:       "NVIDIA A100",
+		GPUTypes:      []string{"NVIDIA A100", "NVIDIA H100"},
+		DurationHours: 24,
+		Status:        ReservationStatusPending,
+	}
+	original.NormalizeGPUTypes()
+
+	data, err := json.Marshal(original)
+	require.NoError(t, err)
+
+	var decoded GPUReservation
+	require.NoError(t, json.Unmarshal(data, &decoded))
+
+	require.Equal(t, []string{"NVIDIA A100", "NVIDIA H100"}, decoded.GPUTypes)
+	require.Equal(t, "NVIDIA A100", decoded.GPUType)
+}
+
 func TestK8sSubjectKind_Constants(t *testing.T) {
 	require.Equal(t, K8sSubjectKind("User"), K8sSubjectUser)
 	require.Equal(t, K8sSubjectKind("Group"), K8sSubjectGroup)

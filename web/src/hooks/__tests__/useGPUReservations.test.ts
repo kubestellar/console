@@ -29,7 +29,7 @@ vi.mock('../useBackendHealth', () => ({
   isInClusterMode: vi.fn(() => false),
 }))
 
-import { useGPUReservations } from '../useGPUReservations'
+import { useGPUReservations, normalizeGpuTypes } from '../useGPUReservations'
 import type { GPUReservation, CreateGPUReservationInput } from '../useGPUReservations'
 
 // ============================================================================
@@ -328,5 +328,31 @@ describe('useGPUReservations', () => {
     mockGet.mockResolvedValue({ data: [] })
     await act(async () => { result.current.refetch() })
     await waitFor(() => expect(result.current.error).toBeNull())
+  })
+})
+
+// #8144: multi-type GPU reservations. These tests pin the front-end
+// reconciliation helper used everywhere the UI needs to know the
+// canonical list of accepted GPU types for a reservation.
+describe('normalizeGpuTypes (#8144)', () => {
+  it('returns the multi-type list when gpu_types is populated', () => {
+    const r = { gpu_type: 'NVIDIA A100', gpu_types: ['NVIDIA A100', 'NVIDIA H100'] }
+    expect(normalizeGpuTypes(r)).toEqual(['NVIDIA A100', 'NVIDIA H100'])
+  })
+
+  it('promotes legacy gpu_type to a one-element list when gpu_types is missing', () => {
+    const r = { gpu_type: 'NVIDIA A100', gpu_types: undefined }
+    expect(normalizeGpuTypes(r)).toEqual(['NVIDIA A100'])
+  })
+
+  it('returns an empty array when neither field is set', () => {
+    expect(normalizeGpuTypes({ gpu_type: '', gpu_types: undefined })).toEqual([])
+    expect(normalizeGpuTypes(null)).toEqual([])
+    expect(normalizeGpuTypes(undefined)).toEqual([])
+  })
+
+  it('deduplicates entries while preserving first-seen order', () => {
+    const r = { gpu_type: '', gpu_types: ['A100', '', 'A100', 'H100', 'A100'] }
+    expect(normalizeGpuTypes(r)).toEqual(['A100', 'H100'])
   })
 })

@@ -383,6 +383,11 @@ func (s *SQLiteStore) migrate() error {
 		namespace TEXT NOT NULL,
 		gpu_count INTEGER NOT NULL,
 		gpu_type TEXT DEFAULT '',
+		-- #8144: JSON-encoded []string of acceptable GPU types. Empty
+		-- string means "no preference" (any type); a one-element list is
+		-- equivalent to the legacy single-type behaviour. The legacy
+		-- gpu_type column is kept alongside and mirrors gpu_types[0].
+		gpu_types TEXT NOT NULL DEFAULT '',
 		start_date TEXT NOT NULL,
 		duration_hours INTEGER DEFAULT 24,
 		notes TEXT DEFAULT '',
@@ -480,6 +485,12 @@ func (s *SQLiteStore) migrate() error {
 		// #6949: ActionURL was declared in the Notification model but never
 		// persisted — the column, INSERT, and SELECT all omitted it.
 		"ALTER TABLE notifications ADD COLUMN action_url TEXT NOT NULL DEFAULT ''",
+		// #8144: multi-type GPU reservations. gpu_types is a JSON-encoded
+		// []string of acceptable GPU types. The legacy gpu_type column is
+		// still populated (mirrors gpu_types[0]) so pre-migration clients
+		// continue to read meaningful values, and pre-migration rows are
+		// transparently promoted to a one-element list on read.
+		"ALTER TABLE gpu_reservations ADD COLUMN gpu_types TEXT NOT NULL DEFAULT ''",
 	}
 	for i, migration := range migrations {
 		if _, err := s.db.Exec(migration); err != nil {
@@ -1759,6 +1770,42 @@ func (s *SQLiteStore) MarkAllNotificationsRead(userID uuid.UUID) error {
 
 // GPU Reservation methods
 
+// encodeGPUTypes serializes the multi-type preference list into the JSON
+// form persisted in the gpu_reservations.gpu_types column (#8144). An
+// empty or nil list becomes an empty string, which is what the schema
+// default emits for pre-migration rows — this keeps the round trip
+// idempotent and lets a NULL/empty column decode back to "no preference".
+func encodeGPUTypes(types []string) string {
+	if len(types) == 0 {
+		return ""
+	}
+	b, err := json.Marshal(types)
+	if err != nil {
+		// Marshaling a []string cannot realistically fail, but if it
+		// does we fall back to an empty encoding rather than
+		// corrupting the row. The legacy gpu_type column still
+		// carries the primary type as a safety net.
+		return ""
+	}
+	return string(b)
+}
+
+// decodeGPUTypes is the inverse of encodeGPUTypes. Empty/whitespace/
+// non-JSON values decode to nil so callers can rely on
+// NormalizeGPUTypes to promote the legacy gpu_type column into a
+// single-element list on read.
+func decodeGPUTypes(raw string) []string {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return nil
+	}
+	var out []string
+	if err := json.Unmarshal([]byte(trimmed), &out); err != nil {
+		return nil
+	}
+	return out
+}
+
 func (s *SQLiteStore) CreateGPUReservation(reservation *models.GPUReservation) error {
 	if reservation.ID == uuid.Nil {
 		reservation.ID = uuid.New()
@@ -1767,11 +1814,13 @@ func (s *SQLiteStore) CreateGPUReservation(reservation *models.GPUReservation) e
 	if reservation.Status == "" {
 		reservation.Status = models.ReservationStatusPending
 	}
+	reservation.NormalizeGPUTypes()
+	gpuTypesEncoded := encodeGPUTypes(reservation.GPUTypes)
 
-	_, err := s.db.Exec(`INSERT INTO gpu_reservations (id, user_id, user_name, title, description, cluster, namespace, gpu_count, gpu_type, start_date, duration_hours, notes, status, quota_name, quota_enforced, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+	_, err := s.db.Exec(`INSERT INTO gpu_reservations (id, user_id, user_name, title, description, cluster, namespace, gpu_count, gpu_type, gpu_types, start_date, duration_hours, notes, status, quota_name, quota_enforced, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		reservation.ID.String(), reservation.UserID.String(), reservation.UserName,
 		reservation.Title, reservation.Description, reservation.Cluster, reservation.Namespace,
-		reservation.GPUCount, reservation.GPUType, reservation.StartDate, reservation.DurationHours,
+		reservation.GPUCount, reservation.GPUType, gpuTypesEncoded, reservation.StartDate, reservation.DurationHours,
 		reservation.Notes, string(reservation.Status), reservation.QuotaName,
 		boolToInt(reservation.QuotaEnforced), reservation.CreatedAt)
 	return err
@@ -1818,14 +1867,16 @@ func (s *SQLiteStore) CreateGPUReservationWithCapacity(reservation *models.GPURe
 		// the existing ClusterCapacityProvider==nil handler behaviour.
 		return s.CreateGPUReservation(reservation)
 	}
+	reservation.NormalizeGPUTypes()
+	gpuTypesEncoded := encodeGPUTypes(reservation.GPUTypes)
 
 	result, err := s.db.Exec(
-		`INSERT INTO gpu_reservations (id, user_id, user_name, title, description, cluster, namespace, gpu_count, gpu_type, start_date, duration_hours, notes, status, quota_name, quota_enforced, created_at)
-		 SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+		`INSERT INTO gpu_reservations (id, user_id, user_name, title, description, cluster, namespace, gpu_count, gpu_type, gpu_types, start_date, duration_hours, notes, status, quota_name, quota_enforced, created_at)
+		 SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
 		 WHERE (COALESCE((SELECT SUM(gpu_count) FROM gpu_reservations WHERE cluster = ? AND status IN ('active', 'pending')), 0) + ?) <= ?`,
 		reservation.ID.String(), reservation.UserID.String(), reservation.UserName,
 		reservation.Title, reservation.Description, reservation.Cluster, reservation.Namespace,
-		reservation.GPUCount, reservation.GPUType, reservation.StartDate, reservation.DurationHours,
+		reservation.GPUCount, reservation.GPUType, gpuTypesEncoded, reservation.StartDate, reservation.DurationHours,
 		reservation.Notes, string(reservation.Status), reservation.QuotaName,
 		boolToInt(reservation.QuotaEnforced), reservation.CreatedAt,
 		reservation.Cluster, reservation.GPUCount, capacity,
@@ -1844,7 +1895,7 @@ func (s *SQLiteStore) CreateGPUReservationWithCapacity(reservation *models.GPURe
 }
 
 func (s *SQLiteStore) GetGPUReservation(id uuid.UUID) (*models.GPUReservation, error) {
-	row := s.db.QueryRow(`SELECT id, user_id, user_name, title, description, cluster, namespace, gpu_count, gpu_type, start_date, duration_hours, notes, status, quota_name, quota_enforced, created_at, updated_at FROM gpu_reservations WHERE id = ?`, id.String())
+	row := s.db.QueryRow(`SELECT id, user_id, user_name, title, description, cluster, namespace, gpu_count, gpu_type, gpu_types, start_date, duration_hours, notes, status, quota_name, quota_enforced, created_at, updated_at FROM gpu_reservations WHERE id = ?`, id.String())
 	return s.scanGPUReservation(row)
 }
 
@@ -1859,7 +1910,7 @@ func (s *SQLiteStore) ListGPUReservations() ([]models.GPUReservation, error) {
 	// #6604: bound the result set. The UI has no expectation of seeing
 	// more than a few hundred reservations at once; if an operator ever
 	// needs a full dump they can query the DB directly.
-	rows, err := s.db.Query(`SELECT id, user_id, user_name, title, description, cluster, namespace, gpu_count, gpu_type, start_date, duration_hours, notes, status, quota_name, quota_enforced, created_at, updated_at FROM gpu_reservations ORDER BY start_date DESC LIMIT ?`, gpuReservationsMaxRows)
+	rows, err := s.db.Query(`SELECT id, user_id, user_name, title, description, cluster, namespace, gpu_count, gpu_type, gpu_types, start_date, duration_hours, notes, status, quota_name, quota_enforced, created_at, updated_at FROM gpu_reservations ORDER BY start_date DESC LIMIT ?`, gpuReservationsMaxRows)
 	if err != nil {
 		return nil, err
 	}
@@ -1878,7 +1929,7 @@ func (s *SQLiteStore) ListGPUReservations() ([]models.GPUReservation, error) {
 
 func (s *SQLiteStore) ListUserGPUReservations(userID uuid.UUID) ([]models.GPUReservation, error) {
 	// #6604: same defense-in-depth LIMIT as ListGPUReservations.
-	rows, err := s.db.Query(`SELECT id, user_id, user_name, title, description, cluster, namespace, gpu_count, gpu_type, start_date, duration_hours, notes, status, quota_name, quota_enforced, created_at, updated_at FROM gpu_reservations WHERE user_id = ? ORDER BY start_date DESC LIMIT ?`, userID.String(), gpuReservationsMaxRows)
+	rows, err := s.db.Query(`SELECT id, user_id, user_name, title, description, cluster, namespace, gpu_count, gpu_type, gpu_types, start_date, duration_hours, notes, status, quota_name, quota_enforced, created_at, updated_at FROM gpu_reservations WHERE user_id = ? ORDER BY start_date DESC LIMIT ?`, userID.String(), gpuReservationsMaxRows)
 	if err != nil {
 		return nil, err
 	}
@@ -1898,10 +1949,12 @@ func (s *SQLiteStore) ListUserGPUReservations(userID uuid.UUID) ([]models.GPURes
 func (s *SQLiteStore) UpdateGPUReservation(reservation *models.GPUReservation) error {
 	now := time.Now()
 	reservation.UpdatedAt = &now
+	reservation.NormalizeGPUTypes()
+	gpuTypesEncoded := encodeGPUTypes(reservation.GPUTypes)
 
-	_, err := s.db.Exec(`UPDATE gpu_reservations SET user_name = ?, title = ?, description = ?, cluster = ?, namespace = ?, gpu_count = ?, gpu_type = ?, start_date = ?, duration_hours = ?, notes = ?, status = ?, quota_name = ?, quota_enforced = ?, updated_at = ? WHERE id = ?`,
+	_, err := s.db.Exec(`UPDATE gpu_reservations SET user_name = ?, title = ?, description = ?, cluster = ?, namespace = ?, gpu_count = ?, gpu_type = ?, gpu_types = ?, start_date = ?, duration_hours = ?, notes = ?, status = ?, quota_name = ?, quota_enforced = ?, updated_at = ? WHERE id = ?`,
 		reservation.UserName, reservation.Title, reservation.Description,
-		reservation.Cluster, reservation.Namespace, reservation.GPUCount, reservation.GPUType,
+		reservation.Cluster, reservation.Namespace, reservation.GPUCount, reservation.GPUType, gpuTypesEncoded,
 		reservation.StartDate, reservation.DurationHours, reservation.Notes,
 		string(reservation.Status), reservation.QuotaName, boolToInt(reservation.QuotaEnforced),
 		reservation.UpdatedAt, reservation.ID.String())
@@ -1920,17 +1973,19 @@ func (s *SQLiteStore) UpdateGPUReservationWithCapacity(reservation *models.GPURe
 	if capacity <= 0 {
 		return s.UpdateGPUReservation(reservation)
 	}
+	reservation.NormalizeGPUTypes()
+	gpuTypesEncoded := encodeGPUTypes(reservation.GPUTypes)
 
 	result, err := s.db.Exec(
 		`UPDATE gpu_reservations
 		 SET user_name = ?, title = ?, description = ?, cluster = ?, namespace = ?,
-		     gpu_count = ?, gpu_type = ?, start_date = ?, duration_hours = ?,
+		     gpu_count = ?, gpu_type = ?, gpu_types = ?, start_date = ?, duration_hours = ?,
 		     notes = ?, status = ?, quota_name = ?, quota_enforced = ?, updated_at = ?
 		 WHERE id = ?
 		   AND (COALESCE((SELECT SUM(gpu_count) FROM gpu_reservations
 		                   WHERE cluster = ? AND status IN ('active', 'pending') AND id != ?), 0) + ?) <= ?`,
 		reservation.UserName, reservation.Title, reservation.Description,
-		reservation.Cluster, reservation.Namespace, reservation.GPUCount, reservation.GPUType,
+		reservation.Cluster, reservation.Namespace, reservation.GPUCount, reservation.GPUType, gpuTypesEncoded,
 		reservation.StartDate, reservation.DurationHours, reservation.Notes,
 		string(reservation.Status), reservation.QuotaName, boolToInt(reservation.QuotaEnforced),
 		reservation.UpdatedAt, reservation.ID.String(),
@@ -1986,7 +2041,7 @@ func (s *SQLiteStore) GetGPUReservationsByIDs(ids []uuid.UUID) (map[uuid.UUID]*m
 		}
 
 		rows, err := s.db.Query(
-			fmt.Sprintf(`SELECT id, user_id, user_name, title, description, cluster, namespace, gpu_count, gpu_type, start_date, duration_hours, notes, status, quota_name, quota_enforced, created_at, updated_at FROM gpu_reservations WHERE id IN (%s)`, placeholders),
+			fmt.Sprintf(`SELECT id, user_id, user_name, title, description, cluster, namespace, gpu_count, gpu_type, gpu_types, start_date, duration_hours, notes, status, quota_name, quota_enforced, created_at, updated_at FROM gpu_reservations WHERE id IN (%s)`, placeholders),
 			args...,
 		)
 		if err != nil {
@@ -2032,9 +2087,10 @@ func (s *SQLiteStore) scanGPUReservation(row *sql.Row) (*models.GPUReservation, 
 	var idStr, userIDStr, status string
 	var quotaEnforced int
 	var updatedAt sql.NullTime
+	var gpuTypesRaw string
 
 	err := row.Scan(&idStr, &userIDStr, &r.UserName, &r.Title, &r.Description,
-		&r.Cluster, &r.Namespace, &r.GPUCount, &r.GPUType, &r.StartDate,
+		&r.Cluster, &r.Namespace, &r.GPUCount, &r.GPUType, &gpuTypesRaw, &r.StartDate,
 		&r.DurationHours, &r.Notes, &status, &r.QuotaName, &quotaEnforced,
 		&r.CreatedAt, &updatedAt)
 	if err == sql.ErrNoRows {
@@ -2051,6 +2107,11 @@ func (s *SQLiteStore) scanGPUReservation(row *sql.Row) (*models.GPUReservation, 
 	if updatedAt.Valid {
 		r.UpdatedAt = &updatedAt.Time
 	}
+	// #8144: decode multi-type list and promote legacy single-type
+	// reservations to a one-element list so callers always see a
+	// populated GPUTypes slice.
+	r.GPUTypes = decodeGPUTypes(gpuTypesRaw)
+	r.NormalizeGPUTypes()
 	return &r, nil
 }
 
@@ -2059,9 +2120,10 @@ func (s *SQLiteStore) scanGPUReservationRow(rows *sql.Rows) (*models.GPUReservat
 	var idStr, userIDStr, status string
 	var quotaEnforced int
 	var updatedAt sql.NullTime
+	var gpuTypesRaw string
 
 	err := rows.Scan(&idStr, &userIDStr, &r.UserName, &r.Title, &r.Description,
-		&r.Cluster, &r.Namespace, &r.GPUCount, &r.GPUType, &r.StartDate,
+		&r.Cluster, &r.Namespace, &r.GPUCount, &r.GPUType, &gpuTypesRaw, &r.StartDate,
 		&r.DurationHours, &r.Notes, &status, &r.QuotaName, &quotaEnforced,
 		&r.CreatedAt, &updatedAt)
 	if err != nil {
@@ -2075,6 +2137,9 @@ func (s *SQLiteStore) scanGPUReservationRow(rows *sql.Rows) (*models.GPUReservat
 	if updatedAt.Valid {
 		r.UpdatedAt = &updatedAt.Time
 	}
+	// #8144: see scanGPUReservation — same normalization logic.
+	r.GPUTypes = decodeGPUTypes(gpuTypesRaw)
+	r.NormalizeGPUTypes()
 	return &r, nil
 }
 
@@ -2223,7 +2288,7 @@ func (s *SQLiteStore) DeleteOldUtilizationSnapshots(before time.Time) (int64, er
 func (s *SQLiteStore) ListActiveGPUReservations() ([]models.GPUReservation, error) {
 	// #6604: same defense-in-depth LIMIT as ListGPUReservations.
 	rows, err := s.db.Query(
-		`SELECT id, user_id, user_name, title, description, cluster, namespace, gpu_count, gpu_type, start_date, duration_hours, notes, status, quota_name, quota_enforced, created_at, updated_at FROM gpu_reservations WHERE status IN ('active', 'pending') ORDER BY start_date DESC LIMIT ?`,
+		`SELECT id, user_id, user_name, title, description, cluster, namespace, gpu_count, gpu_type, gpu_types, start_date, duration_hours, notes, status, quota_name, quota_enforced, created_at, updated_at FROM gpu_reservations WHERE status IN ('active', 'pending') ORDER BY start_date DESC LIMIT ?`,
 		gpuReservationsMaxRows,
 	)
 	if err != nil {

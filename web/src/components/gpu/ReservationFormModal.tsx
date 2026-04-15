@@ -14,6 +14,7 @@ import {
   COMMON_RESOURCE_TYPES } from '../../hooks/useMCP'
 import type { GPUNode } from '../../hooks/useMCP'
 import type { GPUReservation, CreateGPUReservationInput, UpdateGPUReservationInput } from '../../hooks/useGPUReservations'
+import { normalizeGpuTypes } from '../../hooks/useGPUReservations'
 import { cn } from '../../lib/cn'
 
 // GPU resource keys used to identify GPU quotas
@@ -136,7 +137,15 @@ export function ReservationFormModal({
   const [title, setTitle] = useState(editingReservation?.title || '')
   const [description, setDescription] = useState(editingReservation?.description || '')
   const [gpuCount, setGpuCount] = useState(editingReservation ? String(editingReservation.gpu_count) : '')
-  const [gpuPreference, setGpuPreference] = useState(editingReservation?.gpu_type || '')
+  // #8144: multi-type preference. `gpuPreferences` holds the list of
+  // acceptable GPU types for this reservation — an empty array is
+  // "no preference" (any type is acceptable), a one-element array is
+  // the legacy single-type behaviour, and two or more entries implement
+  // the feature requested in kubestellar/console#8144 by
+  // @MikeSpreitzer. Seeded from both the legacy `gpu_type` string and
+  // the new `gpu_types` array via `normalizeGpuTypes` so edits of
+  // existing pre-migration reservations keep their type.
+  const [gpuPreferences, setGpuPreferences] = useState<string[]>(() => normalizeGpuTypes(editingReservation))
   const [startDate, setStartDate] = useState(
     toDateInputValue(editingReservation?.start_date) || prefillDate || new Date().toISOString().split('T')[0],
   )
@@ -159,7 +168,10 @@ export function ReservationFormModal({
       title: editingReservation?.title || '',
       description: editingReservation?.description || '',
       gpuCount: editingReservation ? String(editingReservation.gpu_count) : '',
-      gpuPreference: editingReservation?.gpu_type || '',
+      // #8144: snapshot the multi-type preference list so dirty
+      // detection can see a type-only edit. Sorted so order churn
+      // does not trip a false positive.
+      gpuPreferences: [...normalizeGpuTypes(editingReservation)].sort(),
       startDate: toDateInputValue(editingReservation?.start_date) || prefillDate || new Date().toISOString().split('T')[0],
       durationHours: editingReservation ? String(editingReservation.duration_hours) : '',
       notes: editingReservation?.notes || '' }),
@@ -184,7 +196,14 @@ export function ReservationFormModal({
     if (title !== initialSnapshot.title) return true
     if (description !== initialSnapshot.description) return true
     if (gpuCount !== initialSnapshot.gpuCount) return true
-    if (gpuPreference !== initialSnapshot.gpuPreference) return true
+    // #8144: compare the sorted multi-type list. Order is intentionally
+    // ignored because the form renders the same set regardless of
+    // toggle order — only membership matters for dirty detection.
+    const currentGpuPrefSorted = [...gpuPreferences].sort()
+    if (currentGpuPrefSorted.length !== initialSnapshot.gpuPreferences.length) return true
+    for (let i = 0; i < currentGpuPrefSorted.length; i++) {
+      if (currentGpuPrefSorted[i] !== initialSnapshot.gpuPreferences[i]) return true
+    }
     if (startDate !== initialSnapshot.startDate) return true
     if (durationHours !== initialSnapshot.durationHours) return true
     if (notes !== initialSnapshot.notes) return true
@@ -286,6 +305,20 @@ export function ReservationFormModal({
       // Backend requires RFC 3339; <input type="date"> only emits YYYY-MM-DD,
       // so normalize to midnight UTC before sending.
       const rfc3339StartDate = toRFC3339StartDate(startDate)
+      // #8144: canonical list of accepted GPU types. An empty list is
+      // "no preference" (server-side: any GPU acceptable). If the user
+      // left every type toggled off but the cluster only has one type,
+      // fall back to that single type so the back-compat path with
+      // older clusters stays unchanged.
+      const gpuTypesList =
+        gpuPreferences.length > 0
+          ? gpuPreferences
+          : clusterGPUTypes.length === 1 && clusterGPUTypes[0]?.type
+          ? [clusterGPUTypes[0].type]
+          : []
+      // Legacy singular mirror — kept for pre-#8144 clients still
+      // reading `gpu_type`. See CLAUDE.md back-compat rule.
+      const primaryGpuType = gpuTypesList[0] || ''
       if (editingReservation) {
         // Partial update
         const input: UpdateGPUReservationInput = {
@@ -294,7 +327,8 @@ export function ReservationFormModal({
           cluster,
           namespace,
           gpu_count: count,
-          gpu_type: gpuPreference || clusterGPUTypes[0]?.type || '',
+          gpu_type: primaryGpuType,
+          gpu_types: gpuTypesList,
           start_date: rfc3339StartDate,
           duration_hours: parseInt(durationHours) || DEFAULT_RESERVATION_DURATION_HOURS,
           notes,
@@ -310,7 +344,8 @@ export function ReservationFormModal({
           cluster,
           namespace,
           gpu_count: count,
-          gpu_type: gpuPreference || clusterGPUTypes[0]?.type || '',
+          gpu_type: primaryGpuType,
+          gpu_types: gpuTypesList,
           start_date: rfc3339StartDate,
           duration_hours: parseInt(durationHours) || DEFAULT_RESERVATION_DURATION_HOURS,
           notes,
@@ -432,7 +467,7 @@ export function ReservationFormModal({
           {/* Cluster (GPU-only, with counts) */}
           <div>
             <label className="block text-sm font-medium text-muted-foreground mb-1">{t('gpuReservations.form.fields.clusterLabel')}</label>
-            <select value={cluster} onChange={e => { setCluster(e.target.value); setNamespace(''); setIsNewNamespace(false); setGpuPreference('') }}
+            <select value={cluster} onChange={e => { setCluster(e.target.value); setNamespace(''); setIsNewNamespace(false); setGpuPreferences([]) }}
               disabled={!!editingReservation}
               className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground disabled:opacity-50">
               <option value="">{t('gpuReservations.form.fields.selectCluster')}</option>
@@ -513,25 +548,55 @@ export function ReservationFormModal({
               className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground" />
           </div>
 
-          {/* GPU Type Selection (only when cluster has multiple types) */}
+          {/* GPU Type Selection — #8144: multi-select. Toggling a type
+              adds or removes it from the accepted-types list. Selecting
+              none means "no preference" (server accepts any type);
+              selecting two or more implements the feature requested by
+              @MikeSpreitzer in kubestellar/console#8144 so a developer
+              can reserve "any sufficiently powerful GPU". */}
           {clusterGPUTypes.length > 1 && (
             <div>
               <label className="block text-sm font-medium text-muted-foreground mb-2">{t('gpuReservations.form.fields.gpuTypeLabel')}</label>
               <div className="flex flex-wrap gap-2">
-                {clusterGPUTypes.map(gt => (
-                  <button key={gt.type} type="button"
-                    onClick={() => setGpuPreference(gt.type)}
-                    className={cn(
-                      'flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm transition-colors',
-                      gpuPreference === gt.type
-                        ? 'border-purple-500 bg-purple-500/10 text-purple-400'
-                        : 'border-border bg-secondary text-muted-foreground hover:text-foreground'
-                    )}>
-                    <Zap className="w-3.5 h-3.5" />
-                    {gt.type}
-                    <span className="text-xs opacity-70">{t('gpuReservations.form.fields.gpuTypeAvailability', { available: gt.available, total: gt.total })}</span>
-                  </button>
-                ))}
+                {clusterGPUTypes.map(gt => {
+                  const isSelected = gpuPreferences.includes(gt.type)
+                  return (
+                    <button
+                      key={gt.type}
+                      type="button"
+                      aria-pressed={isSelected}
+                      onClick={() => {
+                        setGpuPreferences(prev =>
+                          prev.includes(gt.type)
+                            ? prev.filter(t => t !== gt.type)
+                            : [...prev, gt.type],
+                        )
+                      }}
+                      className={cn(
+                        'flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm transition-colors',
+                        isSelected
+                          ? 'border-purple-500 bg-purple-500/10 text-purple-400'
+                          : 'border-border bg-secondary text-muted-foreground hover:text-foreground',
+                      )}
+                    >
+                      <Zap className="w-3.5 h-3.5" />
+                      {gt.type}
+                      <span className="text-xs opacity-70">{t('gpuReservations.form.fields.gpuTypeAvailability', { available: gt.available, total: gt.total })}</span>
+                    </button>
+                  )
+                })}
+              </div>
+              <div className="mt-1 text-xs text-muted-foreground">
+                {/* #8144: helper copy for the multi-type selector.
+                    Kept as plain English for now — a follow-up PR
+                    will add i18n keys to all locale bundles once the
+                    base feature lands and @MikeSpreitzer approves
+                    the UX. */}
+                {gpuPreferences.length === 0
+                  ? 'No type selected — any GPU will be accepted.'
+                  : gpuPreferences.length === 1
+                  ? '1 type accepted'
+                  : `${gpuPreferences.length} types accepted`}
               </div>
             </div>
           )}

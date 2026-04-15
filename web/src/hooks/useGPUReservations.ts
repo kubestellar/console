@@ -16,7 +16,26 @@ export interface GPUReservation {
   cluster: string
   namespace: string
   gpu_count: number
+  /**
+   * Legacy single-type field kept for backwards compatibility with
+   * pre-#8144 reservations and external readers. New UI code should
+   * prefer `gpu_types`; the backend guarantees `gpu_type` always
+   * mirrors `gpu_types[0]` (or is empty when any type is acceptable).
+   */
   gpu_type: string
+  /**
+   * #8144: list of acceptable GPU types for this reservation. An empty
+   * list means "any GPU is acceptable"; a one-element list behaves
+   * like the legacy single-type reservation; two or more entries
+   * implement the multi-type-preference feature requested by
+   * @MikeSpreitzer in issue #8144.
+   *
+   * Optional on the wire for back-compat with any cached client that
+   * was populated before the column existed. Helpers in this module
+   * use `normalizeGpuTypes()` to reconcile the two fields into a
+   * single canonical array.
+   */
+  gpu_types?: string[]
   start_date: string
   duration_hours: number
   notes: string
@@ -27,13 +46,41 @@ export interface GPUReservation {
   updated_at?: string
 }
 
+/**
+ * Reconcile the legacy `gpu_type` and new `gpu_types` fields on a
+ * `GPUReservation` fetched from the API (#8144). Returns the canonical
+ * acceptable-types list: the `gpu_types` array when present and
+ * non-empty, otherwise a one-element list wrapping `gpu_type`, or an
+ * empty array when neither is set. Safe to call on partial objects.
+ */
+export function normalizeGpuTypes(r: Pick<GPUReservation, 'gpu_type' | 'gpu_types'> | null | undefined): string[] {
+  if (!r) return []
+  if (r.gpu_types && r.gpu_types.length > 0) {
+    // De-duplicate while preserving first-seen order so the "primary"
+    // type (index 0) stays stable across re-renders.
+    const seen = new Set<string>()
+    const out: string[] = []
+    for (const t of r.gpu_types) {
+      if (!t || seen.has(t)) continue
+      seen.add(t)
+      out.push(t)
+    }
+    return out
+  }
+  if (r.gpu_type) return [r.gpu_type]
+  return []
+}
+
 export interface CreateGPUReservationInput {
   title: string
   description?: string
   cluster: string
   namespace: string
   gpu_count: number
+  /** Legacy single-type; prefer `gpu_types` for new reservations. */
   gpu_type?: string
+  /** #8144: acceptable GPU types; empty/omitted means any type. */
+  gpu_types?: string[]
   start_date: string
   duration_hours?: number
   notes?: string
@@ -48,7 +95,10 @@ export interface UpdateGPUReservationInput {
   cluster?: string
   namespace?: string
   gpu_count?: number
+  /** Legacy single-type; prefer `gpu_types` for new reservations. */
   gpu_type?: string
+  /** #8144: acceptable GPU types; empty array explicitly clears. */
+  gpu_types?: string[]
   start_date?: string
   duration_hours?: number
   notes?: string
@@ -70,6 +120,7 @@ const DEMO_RESERVATIONS: GPUReservation[] = [
     namespace: 'ml-training',
     gpu_count: 8,
     gpu_type: 'NVIDIA A100',
+    gpu_types: ['NVIDIA A100'],
     start_date: new Date().toISOString().split('T')[0],
     duration_hours: 48,
     notes: 'Priority training run for Q1 release',
@@ -87,6 +138,9 @@ const DEMO_RESERVATIONS: GPUReservation[] = [
     namespace: 'benchmarks',
     gpu_count: 4,
     gpu_type: 'NVIDIA H100',
+    // #8144: demo data showing multi-type preference — this
+    // reservation accepts either H100 or A100 nodes.
+    gpu_types: ['NVIDIA H100', 'NVIDIA A100'],
     start_date: new Date(Date.now() + 86400000).toISOString().split('T')[0],
     duration_hours: 24,
     notes: '',
@@ -104,6 +158,7 @@ const DEMO_RESERVATIONS: GPUReservation[] = [
     namespace: 'ml-training',
     gpu_count: 16,
     gpu_type: 'NVIDIA A100',
+    gpu_types: ['NVIDIA A100'],
     start_date: new Date(Date.now() - 172800000).toISOString().split('T')[0],
     duration_hours: 72,
     notes: 'Completed successfully',

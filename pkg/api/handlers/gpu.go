@@ -121,12 +121,18 @@ func (h *GPUHandler) CreateReservation(c *fiber.Ctx) error {
 		Namespace:     input.Namespace,
 		GPUCount:      input.GPUCount,
 		GPUType:       input.GPUType,
+		GPUTypes:      input.GPUTypes,
 		StartDate:     input.StartDate,
 		DurationHours: input.DurationHours,
 		Notes:         input.Notes,
 		QuotaName:     input.QuotaName,
 		QuotaEnforced: input.QuotaEnforced,
 	}
+	// #8144: reconcile legacy single + new multi fields. NormalizeGPUTypes
+	// is idempotent and handles all combinations (legacy-only, multi-only,
+	// both, neither) uniformly. Called here so validation and capacity
+	// checks see the canonical shape before the store call below.
+	reservation.NormalizeGPUTypes()
 
 	if err := h.store.CreateGPUReservationWithCapacity(reservation, capacity); err != nil {
 		if errors.Is(err, store.ErrGPUQuotaExceeded) {
@@ -298,7 +304,22 @@ func (h *GPUHandler) UpdateReservation(c *fiber.Ctx) error {
 	}
 	if input.GPUType != nil {
 		existing.GPUType = *input.GPUType
+		// Legacy singular write clears any previously-stored multi list
+		// so the two fields cannot drift out of sync. If the caller
+		// also sent GPUTypes, the block below re-overwrites with the
+		// authoritative list.
+		existing.GPUTypes = nil
 	}
+	if input.GPUTypes != nil {
+		// #8144: copy-by-value so later caller mutations of the input
+		// slice cannot retroactively change the stored reservation.
+		copied := make([]string, len(*input.GPUTypes))
+		copy(copied, *input.GPUTypes)
+		existing.GPUTypes = copied
+	}
+	// Normalize after any type-related write so GPUType and GPUTypes
+	// stay in lock-step before the store call.
+	existing.NormalizeGPUTypes()
 	if input.StartDate != nil {
 		if _, err := time.Parse(time.RFC3339, *input.StartDate); err != nil {
 			return fiber.NewError(fiber.StatusBadRequest, "Start date must be RFC 3339 format (e.g. 2024-01-15T09:00:00Z)")

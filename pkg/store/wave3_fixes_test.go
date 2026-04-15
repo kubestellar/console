@@ -150,6 +150,87 @@ func TestCreateGPUReservationWithCapacity_AtomicQuotaCheck(t *testing.T) {
 		"stored reserved total must never exceed cluster capacity (#6612)")
 }
 
+// gpuMultiTypeA100 and gpuMultiTypeH100 are the two GPU types used by the
+// #8144 round-trip tests. Named constants instead of inline literals so
+// the "reservation accepts A100 OR H100" assertions read clearly.
+const (
+	gpuMultiTypeA100 = "NVIDIA A100"
+	gpuMultiTypeH100 = "NVIDIA H100"
+	gpuMultiTypeV100 = "NVIDIA V100"
+)
+
+// TestGPUReservation_MultiType_RoundTrip exercises the #8144 schema
+// change: a reservation created with two accepted GPU types must
+// round-trip through SQLite and come back as the same two-element list,
+// and the legacy single-type field must mirror the primary type so
+// pre-migration clients still see a meaningful value.
+func TestGPUReservation_MultiType_RoundTrip(t *testing.T) {
+	s := newTestStore(t)
+	owner := createTestUser(t, s, "multi-type-owner", "multi-type")
+
+	r := &models.GPUReservation{
+		UserID:        owner.ID,
+		UserName:      owner.GitHubLogin,
+		Title:         "Multi-type training",
+		Cluster:       "cluster-multi",
+		Namespace:     "ml",
+		GPUCount:      2,
+		GPUTypes:      []string{gpuMultiTypeA100, gpuMultiTypeH100},
+		StartDate:     time.Now().Format(time.RFC3339),
+		DurationHours: 1,
+	}
+	require.NoError(t, s.CreateGPUReservation(r))
+	require.NotEqual(t, uuid.Nil, r.ID)
+
+	// Read back through the same path the API handler uses.
+	fetched, err := s.GetGPUReservation(r.ID)
+	require.NoError(t, err)
+	require.NotNil(t, fetched)
+	assert.Equal(t, []string{gpuMultiTypeA100, gpuMultiTypeH100}, fetched.GPUTypes,
+		"both accepted GPU types must survive the round trip (#8144)")
+	assert.Equal(t, gpuMultiTypeA100, fetched.GPUType,
+		"legacy singular field must mirror GPUTypes[0] for pre-migration clients")
+
+	// Matching: nodes advertising either accepted type must pass, a node
+	// advertising a third type must be rejected.
+	assert.True(t, fetched.MatchesNodeGPUType(gpuMultiTypeA100),
+		"reservation accepts a node with its first accepted type")
+	assert.True(t, fetched.MatchesNodeGPUType(gpuMultiTypeH100),
+		"reservation accepts a node with its second accepted type")
+	assert.False(t, fetched.MatchesNodeGPUType(gpuMultiTypeV100),
+		"reservation rejects a node whose type is not in the accepted list")
+}
+
+// TestGPUReservation_LegacySingleType_BackCompat pins the migration's
+// back-compat guarantee: a reservation written via the legacy singular
+// GPUType field (simulating a pre-#8144 row) must read back as a
+// one-element GPUTypes list so new frontend code can rely on
+// GPUTypes always being populated.
+func TestGPUReservation_LegacySingleType_BackCompat(t *testing.T) {
+	s := newTestStore(t)
+	owner := createTestUser(t, s, "legacy-owner", "legacy")
+
+	r := &models.GPUReservation{
+		UserID:        owner.ID,
+		UserName:      owner.GitHubLogin,
+		Title:         "Legacy single type",
+		Cluster:       "cluster-legacy",
+		Namespace:     "ml",
+		GPUCount:      1,
+		GPUType:       gpuMultiTypeA100, // legacy singular; no GPUTypes
+		StartDate:     time.Now().Format(time.RFC3339),
+		DurationHours: 1,
+	}
+	require.NoError(t, s.CreateGPUReservation(r))
+
+	fetched, err := s.GetGPUReservation(r.ID)
+	require.NoError(t, err)
+	require.NotNil(t, fetched)
+	assert.Equal(t, []string{gpuMultiTypeA100}, fetched.GPUTypes,
+		"legacy gpu_type must be promoted to a one-element GPUTypes list")
+	assert.Equal(t, gpuMultiTypeA100, fetched.GPUType)
+}
+
 // TestCreateGPUReservationWithCapacity_ZeroCapacityFallsThrough pins the
 // documented behaviour: when the capacity provider is unavailable (nil or
 // returns zero), CreateGPUReservationWithCapacity must behave identically

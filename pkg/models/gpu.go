@@ -1,6 +1,7 @@
 package models
 
 import (
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -53,7 +54,22 @@ func (s ReservationStatus) CanTransitionTo(target ReservationStatus) bool {
 	return allowed[target]
 }
 
-// GPUReservation represents a GPU reservation submitted by a user
+// GPUReservation represents a GPU reservation submitted by a user.
+//
+// #8144: GPUType (singular) is the legacy single-type field kept for
+// backwards compatibility with existing rows and external consumers.
+// GPUTypes (plural) is the authoritative list of acceptable GPU types for
+// a reservation — an empty list means "any GPU is acceptable", a single
+// entry behaves exactly like the old single-type reservation, and two
+// or more entries implement the multi-type-preference request from
+// issue #8144 (Mike Spreitzer).
+//
+// Serialization & migration rules:
+//   - On write, GPUType mirrors GPUTypes[0] (or "" when GPUTypes is empty)
+//     so pre-#8144 readers still see a meaningful value.
+//   - On read from persistent storage, if GPUTypes is empty but GPUType
+//     is set, GPUTypes is synthesized as []string{GPUType}. This keeps
+//     existing rows usable without a destructive migration.
 type GPUReservation struct {
 	ID            uuid.UUID         `json:"id"`
 	UserID        uuid.UUID         `json:"user_id"`
@@ -63,7 +79,8 @@ type GPUReservation struct {
 	Cluster       string            `json:"cluster"`
 	Namespace     string            `json:"namespace"`
 	GPUCount      int               `json:"gpu_count"`
-	GPUType       string            `json:"gpu_type"`
+	GPUType       string            `json:"gpu_type"`  // legacy single-type (mirrors GPUTypes[0]).
+	GPUTypes      []string          `json:"gpu_types"` // #8144: acceptable GPU types.
 	StartDate     string            `json:"start_date"`
 	DurationHours int               `json:"duration_hours"`
 	Notes         string            `json:"notes"`
@@ -74,20 +91,87 @@ type GPUReservation struct {
 	UpdatedAt     *time.Time        `json:"updated_at,omitempty"`
 }
 
-// CreateGPUReservationInput is the input for creating a GPU reservation
+// NormalizeGPUTypes reconciles the legacy single-type field (GPUType) with
+// the multi-type field (GPUTypes) added in #8144. It is idempotent and
+// safe to call on any GPUReservation value regardless of whether the
+// caller populated one, both, or neither field:
+//
+//   - If GPUTypes is non-empty, GPUType is set to GPUTypes[0] so legacy
+//     consumers keep working.
+//   - If GPUTypes is empty but GPUType is non-empty, GPUTypes is seeded
+//     with the single legacy value.
+//   - Duplicate and empty-string entries are removed while preserving
+//     first-seen order so the "primary" type stays stable.
+func (r *GPUReservation) NormalizeGPUTypes() {
+	if len(r.GPUTypes) == 0 && r.GPUType != "" {
+		r.GPUTypes = []string{r.GPUType}
+	}
+	if len(r.GPUTypes) == 0 {
+		r.GPUType = ""
+		return
+	}
+	seen := make(map[string]bool, len(r.GPUTypes))
+	deduped := make([]string, 0, len(r.GPUTypes))
+	for _, t := range r.GPUTypes {
+		if t == "" || seen[t] {
+			continue
+		}
+		seen[t] = true
+		deduped = append(deduped, t)
+	}
+	r.GPUTypes = deduped
+	if len(r.GPUTypes) > 0 {
+		r.GPUType = r.GPUTypes[0]
+	} else {
+		r.GPUType = ""
+	}
+}
+
+// MatchesNodeGPUType returns true when a node advertising the given GPU
+// type satisfies this reservation's type preference. An empty GPUTypes
+// list is treated as "any type is acceptable" — this preserves the
+// original single-type behaviour for reservations that never specified
+// a type. When GPUTypes is populated, the node type must match at
+// least one entry (case-insensitive substring match, mirroring how the
+// frontend renders type labels like "NVIDIA A100-SXM4-80GB").
+func (r *GPUReservation) MatchesNodeGPUType(nodeGPUType string) bool {
+	if len(r.GPUTypes) == 0 {
+		return true
+	}
+	needle := strings.ToLower(nodeGPUType)
+	for _, t := range r.GPUTypes {
+		if t == "" {
+			continue
+		}
+		hay := strings.ToLower(t)
+		if hay == needle || strings.Contains(needle, hay) || strings.Contains(hay, needle) {
+			return true
+		}
+	}
+	return false
+}
+
+// CreateGPUReservationInput is the input for creating a GPU reservation.
+//
+// Both GPUType (legacy single) and GPUTypes (#8144 multi) are accepted
+// so existing API clients continue to work unchanged. If both are set,
+// GPUTypes takes precedence; if only GPUType is set, it is promoted to
+// a one-element GPUTypes. See NormalizeGPUTypes for the canonical
+// reconciliation rule.
 type CreateGPUReservationInput struct {
-	Title          string `json:"title" validate:"required,min=3,max=200"`
-	Description    string `json:"description" validate:"max=2000"`
-	Cluster        string `json:"cluster" validate:"required"`
-	Namespace      string `json:"namespace" validate:"required"`
-	GPUCount       int    `json:"gpu_count" validate:"required,min=1"`
-	GPUType        string `json:"gpu_type"`
-	StartDate      string `json:"start_date" validate:"required"`
-	DurationHours  int    `json:"duration_hours" validate:"min=1"`
-	Notes          string `json:"notes" validate:"max=2000"`
-	QuotaName      string `json:"quota_name"`
-	QuotaEnforced  bool   `json:"quota_enforced"`
-	MaxClusterGPUs int    `json:"max_cluster_gpus"`
+	Title          string   `json:"title" validate:"required,min=3,max=200"`
+	Description    string   `json:"description" validate:"max=2000"`
+	Cluster        string   `json:"cluster" validate:"required"`
+	Namespace      string   `json:"namespace" validate:"required"`
+	GPUCount       int      `json:"gpu_count" validate:"required,min=1"`
+	GPUType        string   `json:"gpu_type"`
+	GPUTypes       []string `json:"gpu_types"`
+	StartDate      string   `json:"start_date" validate:"required"`
+	DurationHours  int      `json:"duration_hours" validate:"min=1"`
+	Notes          string   `json:"notes" validate:"max=2000"`
+	QuotaName      string   `json:"quota_name"`
+	QuotaEnforced  bool     `json:"quota_enforced"`
+	MaxClusterGPUs int      `json:"max_cluster_gpus"`
 }
 
 // GPUUtilizationSnapshot records a point-in-time GPU usage measurement for a reservation
@@ -101,7 +185,13 @@ type GPUUtilizationSnapshot struct {
 	TotalGPUCount        int       `json:"total_gpu_count"`
 }
 
-// UpdateGPUReservationInput is the input for updating a GPU reservation
+// UpdateGPUReservationInput is the input for updating a GPU reservation.
+//
+// #8144: GPUTypes is a pointer to a slice so the handler can distinguish
+// "caller did not send this field" (nil) from "caller explicitly sent
+// an empty list meaning any-type" (non-nil but empty). Both GPUType and
+// GPUTypes are accepted; when both are supplied, GPUTypes takes
+// precedence. See NormalizeGPUTypes.
 type UpdateGPUReservationInput struct {
 	Title          *string            `json:"title,omitempty"`
 	Description    *string            `json:"description,omitempty"`
@@ -109,6 +199,7 @@ type UpdateGPUReservationInput struct {
 	Namespace      *string            `json:"namespace,omitempty"`
 	GPUCount       *int               `json:"gpu_count,omitempty"`
 	GPUType        *string            `json:"gpu_type,omitempty"`
+	GPUTypes       *[]string          `json:"gpu_types,omitempty"`
 	StartDate      *string            `json:"start_date,omitempty"`
 	DurationHours  *int               `json:"duration_hours,omitempty"`
 	Notes          *string            `json:"notes,omitempty"`
