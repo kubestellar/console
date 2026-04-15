@@ -140,9 +140,9 @@ export function CreateNamespaceModal({ clusters, onClose, onCreated }: CreateNam
           </div>
 
           {/* #8034 Copilot followup: the initial-access UI was removed in the
-             namespace refactor (#8028) because kc-agent's POST /namespaces
-             handler does not accept an initialAccess field. Grants now flow
-             through GrantAccessModal after the namespace is created. */}
+            * namespace refactor (#8028) because kc-agent's POST /namespaces
+            * handler does not accept an initialAccess field. Grants now flow
+            * through GrantAccessModal after the namespace is created. */}
         </div>
       </BaseModal.Content>
 
