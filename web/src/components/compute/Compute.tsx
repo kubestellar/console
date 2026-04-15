@@ -204,7 +204,7 @@ export function Compute() {
           aria-controls="cluster-comparison-list"
         >
           <GitCompare className="w-4 h-4" />
-          <span>Cluster Comparison</span>
+          <span>{t('compute.clusterComparison')}</span>
           {showClusterList ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
         </button>
         {selectedForComparison.length > 0 && (

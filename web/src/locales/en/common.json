@@ -1478,7 +1478,11 @@
     "binding": "Binding",
     "clusterRole": "Cluster Role",
     "roleBinding": "Role Binding",
-    "clusterRoleBinding": "Cluster Role Binding"
+    "clusterRoleBinding": "Cluster Role Binding",
+    "selectCommonGroups": "Select common groups..."
+  },
+  "compute": {
+    "clusterComparison": "Cluster Comparison"
   },
   "missionChat": {
     "saveTranscript": "Save transcript",

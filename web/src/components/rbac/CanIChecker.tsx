@@ -368,7 +368,7 @@ export function CanIChecker() {
               className="w-full p-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none pr-8"
               data-testid="can-i-user-groups"
             >
-              <option value="">Select common groups...</option>
+              <option value="">{t('rbac.selectCommonGroups')}</option>
               {COMMON_USER_GROUPS.filter(g => !selectedUserGroups.includes(g.value)).map((group) => (
                 <option key={group.value} value={group.value}>{group.label}</option>
               ))}

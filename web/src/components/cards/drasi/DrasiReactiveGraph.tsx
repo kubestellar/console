@@ -16,6 +16,7 @@ import {
   Database, Globe, Search, Radio,
   TrendingDown, TrendingUp, Maximize2, Pin, Square, X, Settings,
 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
 import { useDrasiResources } from '../../../hooks/useDrasiResources'
 
@@ -584,6 +585,7 @@ function SourceConfigModal({
   onSave: (config: SourceConfig) => void
   onClose: () => void
 }) {
+  const { t } = useTranslation()
   const [name, setName] = useState(source.name)
   const [kind, setKind] = useState<SourceKind>(source.kind)
   const titleId = `drasi-source-config-title-${source.id}`
@@ -625,8 +627,8 @@ function SourceConfigModal({
         </div>
       </div>
       <div className="flex justify-end gap-2 mt-4">
-        <button type="button" onClick={onClose} className="px-3 py-1.5 text-xs rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700">Cancel</button>
-        <button type="button" onClick={() => { onSave({ name, kind }); onClose() }} className="px-3 py-1.5 text-xs rounded bg-cyan-600 hover:bg-cyan-500 text-white">Save</button>
+        <button type="button" onClick={onClose} className="px-3 py-1.5 text-xs rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700">{t('actions.cancel')}</button>
+        <button type="button" onClick={() => { onSave({ name, kind }); onClose() }} className="px-3 py-1.5 text-xs rounded bg-cyan-600 hover:bg-cyan-500 text-white">{t('actions.save')}</button>
       </div>
     </ModalShell>
   )
@@ -641,6 +643,7 @@ function QueryConfigModal({
   onSave: (config: QueryConfig) => void
   onClose: () => void
 }) {
+  const { t } = useTranslation()
   const [name, setName] = useState(query.name)
   const [language, setLanguage] = useState(query.language)
   const [queryText, setQueryText] = useState(query.queryText || '')
@@ -693,8 +696,8 @@ function QueryConfigModal({
         </div>
       </div>
       <div className="flex justify-end gap-2 mt-4">
-        <button type="button" onClick={onClose} className="px-3 py-1.5 text-xs rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700">Cancel</button>
-        <button type="button" onClick={() => { onSave({ name, language, queryText }); onClose() }} className="px-3 py-1.5 text-xs rounded bg-cyan-600 hover:bg-cyan-500 text-white">Save</button>
+        <button type="button" onClick={onClose} className="px-3 py-1.5 text-xs rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700">{t('actions.cancel')}</button>
+        <button type="button" onClick={() => { onSave({ name, language, queryText }); onClose() }} className="px-3 py-1.5 text-xs rounded bg-cyan-600 hover:bg-cyan-500 text-white">{t('actions.save')}</button>
       </div>
     </ModalShell>
   )
