@@ -1,3 +1,30 @@
+// Package k8s provides the multi-cluster k8s client used by both the Go
+// backend (cmd/console) and kc-agent (cmd/kc-agent). The underlying type
+// is MultiClusterClient; post-#7993 it is ALSO exported as PrivilegedClient
+// to signal — at the type name — that in the Go backend's context it
+// carries the pod ServiceAccount's privileges and must only be used for
+// the three legitimate pod-SA exceptions:
+//
+//  1. GPU reservation (pkg/api/handlers/mcp_resources.go ResourceQuota
+//     handlers): users cannot create namespaces or set quotas themselves;
+//     the console is the authorized policy layer.
+//  2. Self-upgrade (pkg/api/handlers/self_upgrade.go): the console pod
+//     patches its own Deployment. No other identity could perform a
+//     self-upgrade.
+//  3. The system-internal persistence reconciler
+//     (pkg/api/handlers/console_persistence.go): reacts to CR state
+//     changes without a human in the loop. User-initiated CR writes go
+//     through kc-agent at /console-cr/* per #7993 Phase 2.5.
+//
+// Every other k8s operation against a managed cluster must go through
+// kc-agent with the caller's own kubeconfig. The architectural rule is
+// enforced on every PR by .github/workflows/privileged-client-lint.yml
+// (added in #7993 Phase 5).
+//
+// In kc-agent, the same type carries the USER's identity via their
+// kubeconfig, so the name "PrivilegedClient" is a slight overstatement
+// there — but the type alias is only a hint, not a runtime check, and
+// kc-agent's only k8s surface is user-initiated work anyway.
 package k8s
 
 import (
@@ -20,6 +47,14 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 )
+
+// PrivilegedClient is an alias for MultiClusterClient with semantic intent
+// documented at the package level (see above). New code in pkg/api/handlers
+// that legitimately needs the pod SA should use this alias so the name
+// matches the privileged-client lint rule in
+// .github/workflows/privileged-client-lint.yml. Existing MultiClusterClient
+// usage stays put — this is an intent-signalling alias, not a rename.
+type PrivilegedClient = MultiClusterClient
 
 const (
 	clusterHealthCheckTimeout = 8 * time.Second
