@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { usePersistence } from './usePersistence'
-import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
+import { FETCH_DEFAULT_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../lib/constants/network'
 
 // =============================================================================
 // Types
@@ -177,17 +177,43 @@ interface Condition {
 // Generic CRUD hook factory
 // =============================================================================
 
+// consoleCRAgentEndpoint maps the legacy backend endpoint segment ("workloads",
+// "groups", "deployments") to the corresponding kc-agent route segment added
+// in #7993 Phase 2.5. Reads still go to the backend until Phase 4.5 migrates
+// the list/get handlers; writes go through the agent so they run under the
+// user's kubeconfig instead of the backend pod SA.
+const consoleCRAgentEndpoint: Record<string, string> = {
+  workloads: 'workloads',
+  groups: 'groups',
+  deployments: 'deployments' }
+
 function useConsoleCR<T extends { metadata: { name: string } }>(
   resourceType: string,
   endpoint: string
 ) {
-  const { isEnabled, isActive } = usePersistence()
+  const { isEnabled, isActive, activeCluster, config } = usePersistence()
   const [items, setItems] = useState<T[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const isMounted = useRef(true)
 
   const shouldUseCRs = isEnabled && isActive
+  const persistenceNamespace = config.namespace
+
+  // agentWriteURL composes the kc-agent URL for a CR write. Cluster and
+  // namespace are query parameters so kc-agent can resolve the user's
+  // kubeconfig context for the persistence cluster. #7993 Phase 2.5.
+  const agentWriteURL = useCallback(
+    (extraPath = '', extraParams: Record<string, string> = {}) => {
+      const base = `${LOCAL_AGENT_HTTP_URL}/console-cr/${consoleCRAgentEndpoint[endpoint] ?? endpoint}${extraPath}`
+      const params = new URLSearchParams({
+        cluster: activeCluster,
+        namespace: persistenceNamespace,
+        ...extraParams })
+      return `${base}?${params.toString()}`
+    },
+    [endpoint, activeCluster, persistenceNamespace]
+  )
 
   // Fetch all items
   const fetchItems = useCallback(async () => {
@@ -236,12 +262,16 @@ function useConsoleCR<T extends { metadata: { name: string } }>(
     return null
   }
 
-  // Create item
+  // Create item — routed through kc-agent (#7993 Phase 2.5).
   const createItem = async (item: Omit<T, 'metadata'> & { metadata: { name: string } }): Promise<T | null> => {
     if (!shouldUseCRs) return null
+    if (!activeCluster || !persistenceNamespace) {
+      console.error(`[useConsoleCR] cannot create ${resourceType}: persistence cluster or namespace not set`)
+      return null
+    }
 
     try {
-      const response = await fetch(`/api/persistence/${endpoint}`, {
+      const response = await fetch(agentWriteURL(), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(item),
@@ -258,12 +288,16 @@ function useConsoleCR<T extends { metadata: { name: string } }>(
     return null
   }
 
-  // Update item
+  // Update item — routed through kc-agent (#7993 Phase 2.5).
   const updateItem = async (name: string, item: Partial<T>): Promise<T | null> => {
     if (!shouldUseCRs) return null
+    if (!activeCluster || !persistenceNamespace) {
+      console.error(`[useConsoleCR] cannot update ${resourceType}: persistence cluster or namespace not set`)
+      return null
+    }
 
     try {
-      const response = await fetch(`/api/persistence/${endpoint}/${name}`, {
+      const response = await fetch(agentWriteURL('', { name }), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(item),
@@ -280,12 +314,16 @@ function useConsoleCR<T extends { metadata: { name: string } }>(
     return null
   }
 
-  // Delete item
+  // Delete item — routed through kc-agent (#7993 Phase 2.5).
   const deleteItem = async (name: string): Promise<boolean> => {
     if (!shouldUseCRs) return false
+    if (!activeCluster || !persistenceNamespace) {
+      console.error(`[useConsoleCR] cannot delete ${resourceType}: persistence cluster or namespace not set`)
+      return false
+    }
 
     try {
-      const response = await fetch(`/api/persistence/${endpoint}/${name}`, {
+      const response = await fetch(agentWriteURL('', { name }), {
         method: 'DELETE',
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (response.ok || response.status === 204) {
@@ -336,18 +374,25 @@ export function useClusterGroups() {
 
 export function useWorkloadDeployments() {
   const base = useConsoleCR<WorkloadDeployment>('WorkloadDeployment', 'deployments')
-  const { isEnabled, isActive } = usePersistence()
+  const { isEnabled, isActive, activeCluster, config } = usePersistence()
   const shouldUseCRs = isEnabled && isActive
+  const persistenceNamespace = config.namespace
 
-  // Additional status update method
+  // Additional status update method — routed through kc-agent (#7993 Phase 2.5).
   const updateStatus = async (
     name: string,
     status: WorkloadDeploymentStatus
   ): Promise<WorkloadDeployment | null> => {
     if (!shouldUseCRs) return null
+    if (!activeCluster || !persistenceNamespace) {
+      console.error('[useWorkloadDeployments] cannot update status: persistence cluster or namespace not set')
+      return null
+    }
 
     try {
-      const response = await fetch(`/api/persistence/deployments/${name}/status`, {
+      const params = new URLSearchParams({ cluster: activeCluster, namespace: persistenceNamespace, name })
+      const url = `${LOCAL_AGENT_HTTP_URL}/console-cr/deployments/status?${params.toString()}`
+      const response = await fetch(url, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(status),

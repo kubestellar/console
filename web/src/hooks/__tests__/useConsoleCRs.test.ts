@@ -13,7 +13,16 @@ import { renderHook, act, waitFor } from '@testing-library/react'
 // Mocks
 // ---------------------------------------------------------------------------
 
-const mockUsePersistence = vi.fn(() => ({ isEnabled: true, isActive: true }))
+// #7993 Phase 2.5: useConsoleCR now destructures activeCluster and
+// config.namespace from usePersistence() so it can target the kc-agent
+// /console-cr routes with the correct persistence cluster + namespace query
+// parameters. Tests pass both fields so the mutation helpers actually fire.
+const mockUsePersistence = vi.fn(() => ({
+  isEnabled: true,
+  isActive: true,
+  activeCluster: 'wds1',
+  config: { namespace: 'kubestellar-console' },
+}))
 vi.mock('../usePersistence', () => ({
   usePersistence: () => mockUsePersistence(),
 }))
@@ -79,7 +88,12 @@ describe('useConsoleCRs', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockFetch.mockReset()
-    mockUsePersistence.mockReturnValue({ isEnabled: true, isActive: true })
+    mockUsePersistence.mockReturnValue({
+      isEnabled: true,
+      isActive: true,
+      activeCluster: 'wds1',
+      config: { namespace: 'kubestellar-console' },
+    })
   })
 
   afterEach(() => {
@@ -103,7 +117,7 @@ describe('useConsoleCRs', () => {
     })
 
     it('skips fetch and sets loading=false when persistence is disabled', async () => {
-      mockUsePersistence.mockReturnValue({ isEnabled: false, isActive: false })
+      mockUsePersistence.mockReturnValue({ isEnabled: false, isActive: false, activeCluster: "", config: { namespace: "" } })
 
       const { result } = renderHook(() => useManagedWorkloads())
 
@@ -163,7 +177,7 @@ describe('useConsoleCRs', () => {
     })
 
     it('getItem returns null when persistence is disabled', async () => {
-      mockUsePersistence.mockReturnValue({ isEnabled: false, isActive: false })
+      mockUsePersistence.mockReturnValue({ isEnabled: false, isActive: false, activeCluster: "", config: { namespace: "" } })
 
       const { result } = renderHook(() => useManagedWorkloads())
       await waitFor(() => expect(result.current.loading).toBe(false))
@@ -214,7 +228,7 @@ describe('useConsoleCRs', () => {
     })
 
     it('createItem returns null when persistence is disabled', async () => {
-      mockUsePersistence.mockReturnValue({ isEnabled: false, isActive: false })
+      mockUsePersistence.mockReturnValue({ isEnabled: false, isActive: false, activeCluster: "", config: { namespace: "" } })
 
       const { result } = renderHook(() => useManagedWorkloads())
       await waitFor(() => expect(result.current.loading).toBe(false))
@@ -263,7 +277,7 @@ describe('useConsoleCRs', () => {
     })
 
     it('updateItem returns null when persistence is disabled', async () => {
-      mockUsePersistence.mockReturnValue({ isEnabled: false, isActive: false })
+      mockUsePersistence.mockReturnValue({ isEnabled: false, isActive: false, activeCluster: "", config: { namespace: "" } })
 
       const { result } = renderHook(() => useManagedWorkloads())
       await waitFor(() => expect(result.current.loading).toBe(false))
@@ -300,7 +314,7 @@ describe('useConsoleCRs', () => {
     })
 
     it('deleteItem returns false when persistence is disabled', async () => {
-      mockUsePersistence.mockReturnValue({ isEnabled: false, isActive: false })
+      mockUsePersistence.mockReturnValue({ isEnabled: false, isActive: false, activeCluster: "", config: { namespace: "" } })
 
       const { result } = renderHook(() => useManagedWorkloads())
       await waitFor(() => expect(result.current.loading).toBe(false))
@@ -380,12 +394,17 @@ describe('useConsoleCRs', () => {
         (c) => typeof c[0] === 'string' && c[0].includes('/status')
       )
       expect(statusCall).toBeDefined()
-      expect(statusCall![0]).toBe('/api/persistence/deployments/dep1/status')
+      // #7993 Phase 2.5: status updates go through kc-agent with the
+      // persistence cluster + namespace + name as query parameters.
+      expect(statusCall![0] as string).toMatch(/\/console-cr\/deployments\/status\?/)
+      expect(statusCall![0] as string).toContain('cluster=wds1')
+      expect(statusCall![0] as string).toContain('namespace=kubestellar-console')
+      expect(statusCall![0] as string).toContain('name=dep1')
       expect(statusCall![1].method).toBe('PUT')
     })
 
     it('updateStatus returns null when persistence is disabled', async () => {
-      mockUsePersistence.mockReturnValue({ isEnabled: false, isActive: false })
+      mockUsePersistence.mockReturnValue({ isEnabled: false, isActive: false, activeCluster: "", config: { namespace: "" } })
 
       const { result } = renderHook(() => useWorkloadDeployments())
       await waitFor(() => expect(result.current.loading).toBe(false))

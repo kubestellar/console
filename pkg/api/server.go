@@ -1201,24 +1201,19 @@ func (s *Server) setupRoutes() {
 	api.Get("/persistence/status", persistenceHandler.GetStatus)
 	api.Post("/persistence/sync", persistenceHandler.SyncNow)
 	api.Post("/persistence/test", persistenceHandler.TestConnection)
-	// ManagedWorkload endpoints
+	// ManagedWorkload endpoints — writes moved to kc-agent /console-cr/workloads
+	// (#7993 Phase 2.5). They run under the user's kubeconfig instead of the
+	// backend pod SA. List/Get remain until Phase 4.5.
 	api.Get("/persistence/workloads", persistenceHandler.ListManagedWorkloads)
 	api.Get("/persistence/workloads/:name", persistenceHandler.GetManagedWorkload)
-	api.Post("/persistence/workloads", persistenceHandler.CreateManagedWorkload)
-	api.Put("/persistence/workloads/:name", persistenceHandler.UpdateManagedWorkload)
-	api.Delete("/persistence/workloads/:name", persistenceHandler.DeleteManagedWorkload)
-	// ClusterGroup endpoints
+	// ClusterGroup endpoints — writes moved to kc-agent /console-cr/groups (#7993 Phase 2.5).
 	api.Get("/persistence/groups", persistenceHandler.ListClusterGroups)
 	api.Get("/persistence/groups/:name", persistenceHandler.GetClusterGroup)
-	api.Post("/persistence/groups", persistenceHandler.CreateClusterGroup)
-	api.Put("/persistence/groups/:name", persistenceHandler.UpdateClusterGroup)
-	api.Delete("/persistence/groups/:name", persistenceHandler.DeleteClusterGroup)
-	// WorkloadDeployment endpoints
+	// WorkloadDeployment endpoints — writes (including the status subresource)
+	// moved to kc-agent /console-cr/deployments and
+	// /console-cr/deployments/status (#7993 Phase 2.5).
 	api.Get("/persistence/deployments", persistenceHandler.ListWorkloadDeployments)
 	api.Get("/persistence/deployments/:name", persistenceHandler.GetWorkloadDeployment)
-	api.Post("/persistence/deployments", persistenceHandler.CreateWorkloadDeployment)
-	api.Put("/persistence/deployments/:name/status", persistenceHandler.UpdateWorkloadDeploymentStatus)
-	api.Delete("/persistence/deployments/:name", persistenceHandler.DeleteWorkloadDeployment)
 
 	// GitHub webhook (public endpoint, uses signature verification)
 	s.app.Post("/webhooks/github", feedback.HandleGitHubWebhook)

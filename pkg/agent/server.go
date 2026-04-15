@@ -418,6 +418,18 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/helm/uninstall", s.handleHelmUninstall)
 	mux.HandleFunc("/helm/upgrade", s.handleHelmUpgrade)
 
+	// ConsoleResource CR writes moved to kc-agent (#7993 Phase 2.5).
+	// ManagedWorkload / ClusterGroup / WorkloadDeployment creates, updates,
+	// and deletes now run under the user's kubeconfig. The backend still
+	// hosts the reconciler (console_persistence.go StartWatcher /
+	// reconcileDeployment) because that's system-internal — it reacts to
+	// CR state changes without a human in the loop and legitimately runs
+	// as the pod SA.
+	mux.HandleFunc("/console-cr/workloads", s.handleConsoleCRManagedWorkloads)
+	mux.HandleFunc("/console-cr/groups", s.handleConsoleCRClusterGroups)
+	mux.HandleFunc("/console-cr/deployments", s.handleConsoleCRWorkloadDeployments)
+	mux.HandleFunc("/console-cr/deployments/status", s.handleConsoleCRWorkloadDeploymentStatus)
+
 	// GitOps drift detection + kubectl sync moved to kc-agent (#7993 Phase 3b).
 	// These shell `kubectl diff` / `kubectl apply` under the user's kubeconfig.
 	// Backend handlers are still present until Phase 4 deletes them — routes

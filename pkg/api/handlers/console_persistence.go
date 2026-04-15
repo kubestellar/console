@@ -159,17 +159,46 @@ func (h *ConsolePersistenceHandlers) StopWatcher() {
 	}
 }
 
-// handleResourceEvent broadcasts resource changes to connected clients
+// handleResourceEvent broadcasts resource changes to connected clients and,
+// for newly created WorkloadDeployment resources, kicks off reconciliation.
+//
+// The reconcile-on-ADDED path is the Phase 2.5 replacement for the inline
+// reconcileDeployment goroutine that CreateWorkloadDeployment used to fire
+// directly (#7993). The CR write itself is now handled by kc-agent under the
+// user's kubeconfig; the backend sees the new resource via the watcher and
+// reconciles it as a proper controller. The reconciler still uses the pod SA
+// because it's system-internal (not user-initiated).
 func (h *ConsolePersistenceHandlers) handleResourceEvent(event k8s.ConsoleResourceEvent) {
-	if h.hub == nil {
-		return
+	if h.hub != nil {
+		msg := Message{
+			Type: "console_resource_changed",
+			Data: event,
+		}
+		h.hub.BroadcastAll(msg)
 	}
 
-	msg := Message{
-		Type: "console_resource_changed",
-		Data: event,
+	// Trigger reconciliation on newly observed WorkloadDeployment CRs.
+	// Only act on ADDED events — MODIFIED covers status updates from the
+	// reconciler itself and would cause reconcile loops, DELETED is a no-op.
+	if event.Type != "ADDED" || event.ResourceType != "WorkloadDeployment" {
+		return
 	}
-	h.hub.BroadcastAll(msg)
+	wd, ok := event.Resource.(*v1alpha1.WorkloadDeployment)
+	if !ok {
+		slog.Warn("[ConsolePersistence] watcher returned non-WorkloadDeployment resource",
+			"type", event.ResourceType, "name", event.Name)
+		return
+	}
+	// Use a detached context with a wall-clock bound so reconciliation
+	// survives independently of the watcher's event dispatch goroutine and
+	// cannot run forever. 5 minutes matches the prior CreateWorkloadDeployment
+	// detached timeout.
+	const reconcileTimeout = 5 * time.Minute
+	reconcileCtx, reconcileCancel := context.WithTimeout(context.Background(), reconcileTimeout)
+	go func() {
+		defer reconcileCancel()
+		h.reconcileDeployment(reconcileCtx, wd)
+	}()
 }
 
 // =============================================================================
@@ -280,107 +309,12 @@ func (h *ConsolePersistenceHandlers) GetManagedWorkload(c *fiber.Ctx) error {
 	return c.JSON(workload)
 }
 
-// CreateManagedWorkload creates a new managed workload
-// POST /api/persistence/workloads
-func (h *ConsolePersistenceHandlers) CreateManagedWorkload(c *fiber.Ctx) error {
-	if err := h.requireAdmin(c); err != nil {
-		return err
-	}
-
-	var workload v1alpha1.ManagedWorkload
-	if err := c.BodyParser(&workload); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
-	}
-
-	client, _, err := h.persistenceStore.GetActiveClient(c.Context())
-	if err != nil {
-		slog.Warn("[ConsolePersistence] service unavailable", "error", err)
-		return c.Status(503).JSON(fiber.Map{"error": "service unavailable"})
-	}
-
-	namespace := h.persistenceStore.GetNamespace()
-	persistence := k8s.NewConsolePersistence(client)
-
-	// Set namespace and metadata
-	workload.Namespace = namespace
-	if workload.APIVersion == "" {
-		workload.APIVersion = v1alpha1.GroupVersion.String()
-	}
-	if workload.Kind == "" {
-		workload.Kind = "ManagedWorkload"
-	}
-	workload.CreationTimestamp = metav1.Now()
-
-	created, err := persistence.CreateManagedWorkload(c.Context(), &workload)
-	if err != nil {
-		slog.Warn("[ConsolePersistence] internal error", "error", err)
-		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
-	}
-
-	return c.Status(201).JSON(created)
-}
-
-// UpdateManagedWorkload updates an existing managed workload
-// PUT /api/persistence/workloads/:name
-func (h *ConsolePersistenceHandlers) UpdateManagedWorkload(c *fiber.Ctx) error {
-	if err := h.requireAdmin(c); err != nil {
-		return err
-	}
-
-	name := c.Params("name")
-
-	var workload v1alpha1.ManagedWorkload
-	if err := c.BodyParser(&workload); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
-	}
-
-	client, _, err := h.persistenceStore.GetActiveClient(c.Context())
-	if err != nil {
-		slog.Warn("[ConsolePersistence] service unavailable", "error", err)
-		return c.Status(503).JSON(fiber.Map{"error": "service unavailable"})
-	}
-
-	namespace := h.persistenceStore.GetNamespace()
-	persistence := k8s.NewConsolePersistence(client)
-
-	// Ensure name matches
-	workload.Name = name
-	workload.Namespace = namespace
-
-	updated, err := persistence.UpdateManagedWorkload(c.Context(), &workload)
-	if err != nil {
-		slog.Warn("[ConsolePersistence] internal error", "error", err)
-		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
-	}
-
-	return c.JSON(updated)
-}
-
-// DeleteManagedWorkload deletes a managed workload
-// DELETE /api/persistence/workloads/:name
-func (h *ConsolePersistenceHandlers) DeleteManagedWorkload(c *fiber.Ctx) error {
-	if err := h.requireAdmin(c); err != nil {
-		return err
-	}
-
-	name := c.Params("name")
-
-	client, _, err := h.persistenceStore.GetActiveClient(c.Context())
-	if err != nil {
-		slog.Warn("[ConsolePersistence] service unavailable", "error", err)
-		return c.Status(503).JSON(fiber.Map{"error": "service unavailable"})
-	}
-
-	namespace := h.persistenceStore.GetNamespace()
-	persistence := k8s.NewConsolePersistence(client)
-
-	if err := persistence.DeleteManagedWorkload(c.Context(), namespace, name); err != nil {
-		slog.Warn("[ConsolePersistence] internal error", "error", err)
-		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
-	}
-
-	return c.SendStatus(204)
-}
+// CreateManagedWorkload / UpdateManagedWorkload / DeleteManagedWorkload were
+// removed in #7993 Phase 2.5. These user-initiated CR writes now go through
+// kc-agent's /console-cr/workloads route so they run under the caller's own
+// kubeconfig rather than the backend pod ServiceAccount. The reconciler
+// (reconcileDeployment below) still runs here because it's system-internal
+// and legitimately uses the pod SA.
 
 // =============================================================================
 // ClusterGroup endpoints
@@ -434,119 +368,13 @@ func (h *ConsolePersistenceHandlers) GetClusterGroup(c *fiber.Ctx) error {
 	return c.JSON(group)
 }
 
-// CreateClusterGroup creates a new cluster group
-// POST /api/persistence/groups
-func (h *ConsolePersistenceHandlers) CreateClusterGroup(c *fiber.Ctx) error {
-	if err := h.requireAdmin(c); err != nil {
-		return err
-	}
-
-	var group v1alpha1.ClusterGroup
-	if err := c.BodyParser(&group); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
-	}
-
-	client, _, err := h.persistenceStore.GetActiveClient(c.Context())
-	if err != nil {
-		slog.Warn("[ConsolePersistence] service unavailable", "error", err)
-		return c.Status(503).JSON(fiber.Map{"error": "service unavailable"})
-	}
-
-	namespace := h.persistenceStore.GetNamespace()
-	persistence := k8s.NewConsolePersistence(client)
-
-	// Set namespace and metadata
-	group.Namespace = namespace
-	if group.APIVersion == "" {
-		group.APIVersion = v1alpha1.GroupVersion.String()
-	}
-	if group.Kind == "" {
-		group.Kind = "ClusterGroup"
-	}
-	group.CreationTimestamp = metav1.Now()
-
-	// Evaluate matched clusters
-	group.Status.MatchedClusters = h.evaluateClusterGroup(c.Context(), &group)
-	group.Status.MatchedClusterCount = len(group.Status.MatchedClusters)
-	now := metav1.Now()
-	group.Status.LastEvaluated = &now
-
-	created, err := persistence.CreateClusterGroup(c.Context(), &group)
-	if err != nil {
-		slog.Warn("[ConsolePersistence] internal error", "error", err)
-		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
-	}
-
-	return c.Status(201).JSON(created)
-}
-
-// UpdateClusterGroup updates an existing cluster group
-// PUT /api/persistence/groups/:name
-func (h *ConsolePersistenceHandlers) UpdateClusterGroup(c *fiber.Ctx) error {
-	if err := h.requireAdmin(c); err != nil {
-		return err
-	}
-
-	name := c.Params("name")
-
-	var group v1alpha1.ClusterGroup
-	if err := c.BodyParser(&group); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
-	}
-
-	client, _, err := h.persistenceStore.GetActiveClient(c.Context())
-	if err != nil {
-		slog.Warn("[ConsolePersistence] service unavailable", "error", err)
-		return c.Status(503).JSON(fiber.Map{"error": "service unavailable"})
-	}
-
-	namespace := h.persistenceStore.GetNamespace()
-	persistence := k8s.NewConsolePersistence(client)
-
-	// Ensure name matches
-	group.Name = name
-	group.Namespace = namespace
-
-	// Re-evaluate matched clusters
-	group.Status.MatchedClusters = h.evaluateClusterGroup(c.Context(), &group)
-	group.Status.MatchedClusterCount = len(group.Status.MatchedClusters)
-	now := metav1.Now()
-	group.Status.LastEvaluated = &now
-
-	updated, err := persistence.UpdateClusterGroup(c.Context(), &group)
-	if err != nil {
-		slog.Warn("[ConsolePersistence] internal error", "error", err)
-		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
-	}
-
-	return c.JSON(updated)
-}
-
-// DeleteClusterGroup deletes a cluster group
-// DELETE /api/persistence/groups/:name
-func (h *ConsolePersistenceHandlers) DeleteClusterGroup(c *fiber.Ctx) error {
-	if err := h.requireAdmin(c); err != nil {
-		return err
-	}
-
-	name := c.Params("name")
-
-	client, _, err := h.persistenceStore.GetActiveClient(c.Context())
-	if err != nil {
-		slog.Warn("[ConsolePersistence] service unavailable", "error", err)
-		return c.Status(503).JSON(fiber.Map{"error": "service unavailable"})
-	}
-
-	namespace := h.persistenceStore.GetNamespace()
-	persistence := k8s.NewConsolePersistence(client)
-
-	if err := persistence.DeleteClusterGroup(c.Context(), namespace, name); err != nil {
-		slog.Warn("[ConsolePersistence] internal error", "error", err)
-		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
-	}
-
-	return c.SendStatus(204)
-}
+// CreateClusterGroup / UpdateClusterGroup / DeleteClusterGroup were removed
+// in #7993 Phase 2.5 and now live in kc-agent at /console-cr/groups. The
+// evaluateClusterGroup pre-population of Status.MatchedClusters that those
+// handlers used to do is now handled by the reconciler below on its next
+// reconcile pass — kc-agent creates the CR with just the spec, and the
+// reconciler (which is system-internal and legitimately uses the pod SA)
+// fills in the evaluated status on the next cycle.
 
 // evaluateClusterGroup evaluates which clusters match a group's criteria.
 // The context should be the inbound request context so that k8s calls are
@@ -738,127 +566,13 @@ func (h *ConsolePersistenceHandlers) GetWorkloadDeployment(c *fiber.Ctx) error {
 // asynchronous reconciliation to deploy the referenced workload manifests
 // to the resolved target clusters.
 //
-// POST /api/persistence/deployments
-func (h *ConsolePersistenceHandlers) CreateWorkloadDeployment(c *fiber.Ctx) error {
-	if err := h.requireAdmin(c); err != nil {
-		return err
-	}
-
-	var deployment v1alpha1.WorkloadDeployment
-	if err := c.BodyParser(&deployment); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
-	}
-
-	client, _, err := h.persistenceStore.GetActiveClient(c.Context())
-	if err != nil {
-		slog.Warn("[ConsolePersistence] service unavailable", "error", err)
-		return c.Status(503).JSON(fiber.Map{"error": "service unavailable"})
-	}
-
-	namespace := h.persistenceStore.GetNamespace()
-	persistence := k8s.NewConsolePersistence(client)
-
-	// Set namespace and metadata
-	deployment.Namespace = namespace
-	if deployment.APIVersion == "" {
-		deployment.APIVersion = v1alpha1.GroupVersion.String()
-	}
-	if deployment.Kind == "" {
-		deployment.Kind = "WorkloadDeployment"
-	}
-	deployment.CreationTimestamp = metav1.Now()
-
-	// Initialize status
-	now := metav1.Now()
-	deployment.Status.Phase = "Pending"
-	deployment.Status.StartedAt = &now
-
-	created, err := persistence.CreateWorkloadDeployment(c.Context(), &deployment)
-	if err != nil {
-		slog.Warn("[ConsolePersistence] internal error", "error", err)
-		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
-	}
-
-	// Kick off reconciliation in a background goroutine. Use a detached
-	// context with a timeout so reconciliation survives after the HTTP
-	// response is sent but cannot block indefinitely.
-	const reconcileTimeout = 5 * time.Minute // max wall-clock for full reconciliation
-	reconcileCtx, reconcileCancel := context.WithTimeout(context.Background(), reconcileTimeout)
-	go func() {
-		defer reconcileCancel()
-		h.reconcileDeployment(reconcileCtx, created)
-	}()
-
-	return c.Status(201).JSON(created)
-}
-
-// UpdateWorkloadDeploymentStatus updates the status of a workload deployment
-// PUT /api/persistence/deployments/:name/status
-func (h *ConsolePersistenceHandlers) UpdateWorkloadDeploymentStatus(c *fiber.Ctx) error {
-	if err := h.requireAdmin(c); err != nil {
-		return err
-	}
-
-	name := c.Params("name")
-
-	var status v1alpha1.WorkloadDeploymentStatus
-	if err := c.BodyParser(&status); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
-	}
-
-	client, _, err := h.persistenceStore.GetActiveClient(c.Context())
-	if err != nil {
-		slog.Warn("[ConsolePersistence] service unavailable", "error", err)
-		return c.Status(503).JSON(fiber.Map{"error": "service unavailable"})
-	}
-
-	namespace := h.persistenceStore.GetNamespace()
-	persistence := k8s.NewConsolePersistence(client)
-
-	// Get existing deployment
-	deployment, err := persistence.GetWorkloadDeployment(c.Context(), namespace, name)
-	if err != nil {
-		slog.Warn("[ConsolePersistence] internal error", "error", err)
-		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
-	}
-
-	// Update status
-	deployment.Status = status
-
-	updated, err := persistence.UpdateWorkloadDeploymentStatus(c.Context(), deployment)
-	if err != nil {
-		slog.Warn("[ConsolePersistence] internal error", "error", err)
-		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
-	}
-
-	return c.JSON(updated)
-}
-
-// DeleteWorkloadDeployment deletes a workload deployment
-// DELETE /api/persistence/deployments/:name
-func (h *ConsolePersistenceHandlers) DeleteWorkloadDeployment(c *fiber.Ctx) error {
-	if err := h.requireAdmin(c); err != nil {
-		return err
-	}
-
-	name := c.Params("name")
-
-	client, _, err := h.persistenceStore.GetActiveClient(c.Context())
-	if err != nil {
-		slog.Warn("[ConsolePersistence] service unavailable", "error", err)
-		return c.Status(503).JSON(fiber.Map{"error": "service unavailable"})
-	}
-
-	namespace := h.persistenceStore.GetNamespace()
-	persistence := k8s.NewConsolePersistence(client)
-
-	if err := persistence.DeleteWorkloadDeployment(c.Context(), namespace, name); err != nil {
-		slog.Warn("[ConsolePersistence] internal error", "error", err)
-		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
-	}
-
-	return c.SendStatus(204)
-}
+// CreateWorkloadDeployment / UpdateWorkloadDeploymentStatus /
+// DeleteWorkloadDeployment were removed in #7993 Phase 2.5. User-initiated CR
+// writes now go through kc-agent at /console-cr/deployments and
+// /console-cr/deployments/status. The reconciler that used to be kicked off
+// inline from the old CreateWorkloadDeployment handler now fires from
+// handleResourceEvent above when the watcher observes an ADDED event for a
+// WorkloadDeployment — the proper controller pattern.
 
 // reconcileDeployment handles the full lifecycle of deploying a workload to
 // target clusters. It:
