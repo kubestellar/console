@@ -117,34 +117,38 @@ describe('exported constants', () => {
 // ===========================================================================
 describe('useGlobalFilters without provider', () => {
   it('returns safe no-op defaults when used outside GlobalFiltersProvider', () => {
+    // Wrapped in try/finally so the spy is always restored, even if an
+    // assertion below throws — otherwise the mock leaks into subsequent tests.
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
-    const { result } = renderHook(() => useGlobalFilters())
+    try {
+      const { result } = renderHook(() => useGlobalFilters())
 
-    // All-selected / unfiltered state
-    expect(result.current.selectedClusters).toEqual([])
-    expect(result.current.isAllClustersSelected).toBe(true)
-    expect(result.current.isClustersFiltered).toBe(false)
-    expect(result.current.isAllSeveritiesSelected).toBe(true)
-    expect(result.current.isSeveritiesFiltered).toBe(false)
-    expect(result.current.isAllStatusesSelected).toBe(true)
-    expect(result.current.isStatusesFiltered).toBe(false)
-    expect(result.current.hasCustomFilter).toBe(false)
-    expect(result.current.isFiltered).toBe(false)
+      // All-selected / unfiltered state
+      expect(result.current.selectedClusters).toEqual([])
+      expect(result.current.isAllClustersSelected).toBe(true)
+      expect(result.current.isClustersFiltered).toBe(false)
+      expect(result.current.isAllSeveritiesSelected).toBe(true)
+      expect(result.current.isSeveritiesFiltered).toBe(false)
+      expect(result.current.isAllStatusesSelected).toBe(true)
+      expect(result.current.isStatusesFiltered).toBe(false)
+      expect(result.current.hasCustomFilter).toBe(false)
+      expect(result.current.isFiltered).toBe(false)
 
-    // Setter/action methods are no-ops (do not throw)
-    expect(() => result.current.toggleCluster('cluster-a')).not.toThrow()
-    expect(() => result.current.selectAllClusters()).not.toThrow()
-    expect(() => result.current.clearAllFilters()).not.toThrow()
+      // Setter/action methods are no-ops (do not throw)
+      expect(() => result.current.toggleCluster('cluster-a')).not.toThrow()
+      expect(() => result.current.selectAllClusters()).not.toThrow()
+      expect(() => result.current.clearAllFilters()).not.toThrow()
 
-    // Filter helpers pass items through unchanged
-    const sampleItems = [{ id: 1 }, { id: 2 }]
-    expect(result.current.filterByCluster(sampleItems)).toBe(sampleItems)
-    expect(result.current.filterBySeverity(sampleItems)).toBe(sampleItems)
-    expect(result.current.filterByStatus(sampleItems)).toBe(sampleItems)
-    expect(result.current.filterByCustomText(sampleItems)).toBe(sampleItems)
-    expect(result.current.filterItems(sampleItems)).toBe(sampleItems)
-
-    spy.mockRestore()
+      // Filter helpers pass items through unchanged
+      const sampleItems = [{ id: 1 }, { id: 2 }]
+      expect(result.current.filterByCluster(sampleItems)).toBe(sampleItems)
+      expect(result.current.filterBySeverity(sampleItems)).toBe(sampleItems)
+      expect(result.current.filterByStatus(sampleItems)).toBe(sampleItems)
+      expect(result.current.filterByCustomText(sampleItems)).toBe(sampleItems)
+      expect(result.current.filterItems(sampleItems)).toBe(sampleItems)
+    } finally {
+      spy.mockRestore()
+    }
   })
 })
 
@@ -893,30 +897,33 @@ describe('cluster groups', () => {
 
   it('deleteClusterGroup removes a group by id', () => {
     let now = 1000
+    // Wrapped in try/finally so the Date.now spy is always restored, even if
+    // an assertion below throws — otherwise the mock leaks into subsequent tests.
     const dateSpy = vi.spyOn(Date, 'now').mockImplementation(() => now++)
+    try {
+      const { result } = renderHook(() => useGlobalFilters(), { wrapper })
 
-    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+      act(() => {
+        result.current.addClusterGroup({ name: 'group1', clusters: ['cluster-a'] })
+      })
 
-    act(() => {
-      result.current.addClusterGroup({ name: 'group1', clusters: ['cluster-a'] })
-    })
+      act(() => {
+        result.current.addClusterGroup({ name: 'group2', clusters: ['cluster-b'] })
+      })
 
-    act(() => {
-      result.current.addClusterGroup({ name: 'group2', clusters: ['cluster-b'] })
-    })
+      expect(result.current.clusterGroups).toHaveLength(2)
 
-    expect(result.current.clusterGroups).toHaveLength(2)
+      const idToDelete = result.current.clusterGroups[0].id
 
-    const idToDelete = result.current.clusterGroups[0].id
+      act(() => {
+        result.current.deleteClusterGroup(idToDelete)
+      })
 
-    act(() => {
-      result.current.deleteClusterGroup(idToDelete)
-    })
-
-    expect(result.current.clusterGroups).toHaveLength(1)
-    expect(result.current.clusterGroups[0].name).toBe('group2')
-
-    dateSpy.mockRestore()
+      expect(result.current.clusterGroups).toHaveLength(1)
+      expect(result.current.clusterGroups[0].name).toBe('group2')
+    } finally {
+      dateSpy.mockRestore()
+    }
   })
 
   it('deleteClusterGroup does nothing for non-existent id', () => {
@@ -2410,27 +2417,30 @@ describe('localStorage persistence with complex scenarios', () => {
 
   it('persists cluster groups to localStorage after delete', () => {
     let now = 2000
+    // Wrapped in try/finally so the Date.now spy is always restored, even if
+    // an assertion below throws — otherwise the mock leaks into subsequent tests.
     const dateSpy = vi.spyOn(Date, 'now').mockImplementation(() => now++)
+    try {
+      const { result } = renderHook(() => useGlobalFilters(), { wrapper })
 
-    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+      act(() => {
+        result.current.addClusterGroup({ name: 'group1', clusters: ['cluster-a'] })
+      })
+      act(() => {
+        result.current.addClusterGroup({ name: 'group2', clusters: ['cluster-b'] })
+      })
 
-    act(() => {
-      result.current.addClusterGroup({ name: 'group1', clusters: ['cluster-a'] })
-    })
-    act(() => {
-      result.current.addClusterGroup({ name: 'group2', clusters: ['cluster-b'] })
-    })
+      const id = result.current.clusterGroups[0].id
+      act(() => {
+        result.current.deleteClusterGroup(id)
+      })
 
-    const id = result.current.clusterGroups[0].id
-    act(() => {
-      result.current.deleteClusterGroup(id)
-    })
-
-    const stored = JSON.parse(localStorage.getItem('globalFilter:clusterGroups')!)
-    expect(stored).toHaveLength(1)
-    expect(stored[0].name).toBe('group2')
-
-    dateSpy.mockRestore()
+      const stored = JSON.parse(localStorage.getItem('globalFilter:clusterGroups')!)
+      expect(stored).toHaveLength(1)
+      expect(stored[0].name).toBe('group2')
+    } finally {
+      dateSpy.mockRestore()
+    }
   })
 
   it('handles corrupt localStorage for custom text filter', () => {
