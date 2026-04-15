@@ -23,7 +23,8 @@ import (
 const execAuthDeadline = 5 * time.Second
 
 // execMaxStdinBytes is the maximum allowed size of a single stdin message.
-// Messages exceeding this limit are silently dropped to prevent memory exhaustion.
+// Messages exceeding this limit are dropped (with a WARN log at the drop
+// site) to prevent memory exhaustion.
 const execMaxStdinBytes = 1 * 1024 * 1024 // 1 MB
 
 // execPingInterval is how often the server sends a WebSocket ping to detect dead peers.
