@@ -204,7 +204,7 @@ describe('IntotoSupplyChain', () => {
     })
 
     render(<IntotoSupplyChain />)
-    expect(screen.getByText('cards:intoto_supply_chain.noLayoutsTitle')).toBeTruthy()
+    expect(screen.getByText('intoto_supply_chain.noLayoutsTitle')).toBeTruthy()
   })
 
   it('renders error state', () => {
@@ -237,8 +237,8 @@ describe('IntotoSupplyChain', () => {
     })
 
     render(<IntotoSupplyChain />)
-    expect(screen.getByText('cards:intoto_supply_chain.fetchError')).toBeTruthy()
-    expect(screen.getByText('cards:intoto_supply_chain.fetchErrorLayouts')).toBeTruthy()
+    expect(screen.getByText('intoto_supply_chain.fetchError')).toBeInTheDocument()
+    expect(screen.getByText('intoto_supply_chain.fetchErrorLayouts')).toBeInTheDocument()
   })
 
   it('propagates isDemoData flag to UI', () => {
