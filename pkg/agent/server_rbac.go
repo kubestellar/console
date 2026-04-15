@@ -5,8 +5,15 @@ package agent
 // These endpoints are the kc-agent side of Phase 6 of #7993: user-facing
 // permission checks (SelfSubjectAccessReview + permission summaries) must
 // run under the user's kubeconfig, not the backend pod ServiceAccount.
-// Otherwise the pod SA's permissions answer the question, not the caller's,
-// which is both wrong and a privilege-escalation vector.
+//
+// Before #8185 the backend's CheckCanI / GetClusterPermissions /
+// GetAllPermissionsSummaries paths executed against the pod ServiceAccount,
+// so the UI displayed the pod SA's permissions instead of the caller's —
+// a misleading RBAC display, not a real privilege-escalation vector
+// (mutations already flowed through kc-agent under the user's identity).
+// The practical impact was cosmetic/UX: users saw permission summaries
+// that didn't match what they could actually do. Routing these reads
+// through kc-agent makes the displayed permissions reflect the caller.
 //
 // kc-agent loads `s.k8sClient` from the user's kubeconfig at startup, so
 // calling the existing pkg/k8s.MultiClusterClient methods here is already
@@ -36,7 +43,10 @@ const rbacAnalysisTimeout = 60 * time.Second
 // the user whose kubeconfig kc-agent was started with — which is what the
 // UI actually wants to show.
 func (s *Server) handleCanIHTTP(w http.ResponseWriter, r *http.Request) {
-	s.setCORSHeaders(w, r)
+	// This is a POST endpoint, so we must advertise POST in
+	// Access-Control-Allow-Methods or browser preflight requests will fail.
+	// setCORSHeaders defaults to "GET, OPTIONS" when no methods are supplied.
+	s.setCORSHeaders(w, r, http.MethodPost, http.MethodOptions)
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusOK)

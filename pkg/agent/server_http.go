@@ -1952,14 +1952,28 @@ func (s *Server) handleClusterHealthHTTP(w http.ResponseWriter, r *http.Request)
 	writeJSON(w,health)
 }
 
-// setCORSHeaders sets common CORS headers for HTTP endpoints
-func (s *Server) setCORSHeaders(w http.ResponseWriter, r *http.Request) {
+// defaultCORSAllowedMethods is the Access-Control-Allow-Methods value used
+// when a caller of setCORSHeaders does not supply an explicit method list.
+// Historically this helper hard-coded "GET, OPTIONS", so this preserves
+// back-compat for every GET-only handler that still passes no methods.
+const defaultCORSAllowedMethods = "GET, OPTIONS"
+
+// setCORSHeaders sets common CORS headers for HTTP endpoints. An optional
+// list of HTTP methods may be supplied to override the default
+// Access-Control-Allow-Methods value — this is required for POST/PUT/DELETE
+// endpoints so browser preflight requests succeed. When no methods are
+// supplied the header defaults to defaultCORSAllowedMethods.
+func (s *Server) setCORSHeaders(w http.ResponseWriter, r *http.Request, methods ...string) {
 	origin := r.Header.Get("Origin")
 	if s.isAllowedOrigin(origin) {
 		w.Header().Set("Access-Control-Allow-Origin", origin)
 	}
 	w.Header().Set("Access-Control-Allow-Private-Network", "true")
-	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	allowed := defaultCORSAllowedMethods
+	if len(methods) > 0 {
+		allowed = strings.Join(methods, ", ")
+	}
+	w.Header().Set("Access-Control-Allow-Methods", allowed)
 	w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
 }
 

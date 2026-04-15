@@ -698,12 +698,13 @@ export function useClusterPermissions(cluster?: string) {
     try {
       // #7993 Phase 6: route through kc-agent so SelfSubjectAccessReviews run
       // under the user's kubeconfig instead of the backend pod ServiceAccount.
+      // Reuse agentAuthHeaders() so the Authorization header is omitted when
+      // no token is configured (agent accepts unauthenticated requests from
+      // allowed origins when KC_AGENT_TOKEN is unset). Sending an empty
+      // Authorization header would fail token validation on the agent side.
       const params = cluster ? `?cluster=${cluster}` : ''
-      const token = localStorage.getItem(STORAGE_KEY_TOKEN)
       const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/rbac/permissions${params}`, {
-        headers: {
-          'Authorization': token ? `Bearer ${token}` : '',
-          'Content-Type': 'application/json' },
+        headers: agentAuthHeaders(),
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (!response.ok) {
         setIsLoading(false)
