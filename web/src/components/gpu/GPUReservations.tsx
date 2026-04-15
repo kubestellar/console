@@ -231,6 +231,21 @@ export function GPUReservations() {
     return Object.values(clusterMap).filter(c => c.totalGPUs > 0)
   })()
 
+  // Namespaces known to have existing reservations, grouped by cluster.
+  // Fallback source for the Create Reservation dropdown when useNamespaces()
+  // can't surface a namespace (e.g. user lacks cluster-wide list RBAC AND
+  // the namespace has no running pods, so neither health-check discovery
+  // nor the /api/mcp/pods-based REST fallback sees it). See #3945.
+  const knownNamespacesByCluster = useMemo(() => {
+    const out: Record<string, string[]> = {}
+    for (const r of (allReservations || [])) {
+      if (!r.cluster || !r.namespace) continue
+      if (!out[r.cluster]) out[r.cluster] = []
+      if (!out[r.cluster].includes(r.namespace)) out[r.cluster].push(r.namespace)
+    }
+    return out
+  }, [allReservations])
+
   // GPU stats
   const stats = useMemo(() => {
     const totalGPUs = nodes.reduce((sum, n) => sum + n.gpuCount, 0)
@@ -652,6 +667,7 @@ export function GPUReservations() {
         user={user}
         prefillDate={prefillDate}
         forceLive={gpuLiveMode}
+        knownNamespacesByCluster={knownNamespacesByCluster}
         onSave={async (input) => {
           if (editingReservation) {
             await apiUpdateReservation(editingReservation.id, input as UpdateGPUReservationInput)

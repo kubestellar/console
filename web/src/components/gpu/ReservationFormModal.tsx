@@ -101,6 +101,7 @@ export function ReservationFormModal({
   user,
   prefillDate,
   forceLive,
+  knownNamespacesByCluster,
   onSave,
   onActivate,
   onSaved,
@@ -114,6 +115,15 @@ export function ReservationFormModal({
   prefillDate?: string | null
   /** When true, skip demo mode fallback for namespace list */
   forceLive?: boolean
+  /**
+   * Map of cluster name → namespaces known to have existing reservations.
+   * Provided by GPUReservations as a belt-and-suspenders fallback for
+   * #3945: even if `useNamespaces()` misses a namespace (because the
+   * user lacks cluster-wide list RBAC and it has no running pods), any
+   * namespace the user has previously reserved in will still surface in
+   * the dropdown.
+   */
+  knownNamespacesByCluster?: Record<string, string[]>
   onSave: (input: CreateGPUReservationInput | UpdateGPUReservationInput) => Promise<string | void>
   onActivate: (id: string) => Promise<void>
   onSaved: () => void
@@ -194,10 +204,18 @@ export function ReservationFormModal({
 
   const { namespaces: rawNamespaces } = useNamespaces(cluster || undefined, forceLive)
 
+  // Union the hook result with namespaces from existing reservations on
+  // this cluster. See `knownNamespacesByCluster` prop doc (#3945).
+  const mergedRawNamespaces = (() => {
+    const knownForCluster = (cluster && knownNamespacesByCluster?.[cluster]) || []
+    if (knownForCluster.length === 0) return rawNamespaces
+    return Array.from(new Set<string>([...rawNamespaces, ...knownForCluster])).sort()
+  })()
+
   // Filter out system namespaces from the dropdown
   const FILTERED_NS_PREFIXES = ['openshift-', 'kube-']
   const FILTERED_NS_EXACT = ['default', 'kube-system', 'kube-public', 'kube-node-lease']
-  const clusterNamespaces = rawNamespaces.filter(ns =>
+  const clusterNamespaces = mergedRawNamespaces.filter(ns =>
       !FILTERED_NS_PREFIXES.some(prefix => ns.startsWith(prefix)) &&
       !FILTERED_NS_EXACT.includes(ns)
     )

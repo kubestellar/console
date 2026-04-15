@@ -131,6 +131,46 @@ describe('useNamespaces', () => {
     expect(result.current.namespaces).toContain('monitoring')
   })
 
+  // #3945 regression: agent tier must also merge with cluster cache so
+  // namespaces discovered via health-check fallbacks (pods/events/deploys)
+  // still appear when the agent returns an incomplete list (e.g. user
+  // lacks cluster-wide `list namespaces` RBAC on some cluster).
+  it('merges cluster cache namespaces with local agent response (#3945)', async () => {
+    mockIsAgentUnavailable.mockReturnValue(false)
+    mockClusterCacheRef.clusters = [
+      { name: 'my-cluster', context: 'ctx', namespaces: ['cache-only-ns', 'fma-mspreitz'] },
+    ]
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ namespaces: [{ name: 'agent-seen-ns' }] }),
+    })
+
+    const { result } = renderHook(() => useNamespaces('my-cluster'))
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    // Union of agent response and cached namespaces
+    expect(result.current.namespaces).toContain('agent-seen-ns')
+    expect(result.current.namespaces).toContain('cache-only-ns')
+    expect(result.current.namespaces).toContain('fma-mspreitz')
+  })
+
+  // #3945 regression: kubectl proxy tier must also merge with cluster cache.
+  it('merges cluster cache namespaces with kubectl proxy response (#3945)', async () => {
+    mockIsAgentUnavailable.mockReturnValue(false)
+    // Agent fails → tier 2 (kubectl proxy) runs
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('agent error'))
+    mockClusterCacheRef.clusters = [
+      { name: 'my-cluster', context: 'ctx', namespaces: ['fma-mspreitz'] },
+    ]
+    mockKubectlProxy.getNamespaces.mockResolvedValue(['proxy-ns-1'])
+
+    const { result } = renderHook(() => useNamespaces('my-cluster'))
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.namespaces).toContain('proxy-ns-1')
+    expect(result.current.namespaces).toContain('fma-mspreitz')
+  })
+
   it('falls back to REST API when agent fails', async () => {
     mockIsAgentUnavailable.mockReturnValue(true)
     const fakePods = [
