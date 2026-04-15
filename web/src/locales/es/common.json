@@ -1437,7 +1437,7 @@
     "degradedTitle": "Local Agent degraded ({{count}} errors)",
     "degradedTitle_one": "Local Agent degraded ({{count}} error)",
     "degradedTitle_other": "Local Agent degraded ({{count}} errors)",
-    "aiLabel": "AI",
+    "aiLabel": "Agent",
     "liveLabel": "Live",
     "liveMode": "Live mode — agent connected, AI disabled",
     "noneAgent": "None",
