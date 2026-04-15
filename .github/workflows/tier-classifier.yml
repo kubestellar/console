@@ -1,0 +1,207 @@
+name: Tier Classifier
+
+# Labels PRs with exactly one tier/* label based on the set of file paths
+# touched. The tier system is a graduated-autonomy model adapted from the
+# fullsend-ai/fullsend research framework — safe changes (dep bumps, docs,
+# generated files) can move fast; risky changes (workflows, auth, RBAC)
+# need multi-maintainer sign-off.
+#
+# This workflow only LABELS — it does not enforce approval rules yet. A
+# follow-up PR will wire up auto-merge for tier/0-automatic once we've
+# validated the classifier against real PRs for a week.
+#
+# Rules live in .github/tier-classifier-rules.yml so they can be tweaked
+# without editing the workflow itself.
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  classify:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.head.repo.full_name != ''
+    steps:
+      - name: Checkout rules file
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            .github/tier-classifier-rules.yml
+          sparse-checkout-cone-mode: false
+
+      - name: Classify and apply tier label
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            // -----------------------------------------------------------------
+            // Load the rules file
+            // -----------------------------------------------------------------
+            const rulesPath = '.github/tier-classifier-rules.yml';
+            if (!fs.existsSync(rulesPath)) {
+              core.setFailed(`Rules file missing: ${rulesPath}`);
+              return;
+            }
+            const rulesText = fs.readFileSync(rulesPath, 'utf8');
+
+            // Tiny YAML subset parser — we only need top-level tier keys
+            // each followed by a list of glob patterns (one per line, indented).
+            // Using a hand-parser avoids pulling in a yaml dep for ~30 lines.
+            const rules = {};
+            let currentTier = null;
+            for (const rawLine of rulesText.split('\n')) {
+              const line = rawLine.replace(/#.*$/, '').trimEnd();
+              if (!line.trim()) continue;
+              const tierMatch = line.match(/^(tier\/[0-9a-z-]+):\s*$/);
+              if (tierMatch) {
+                currentTier = tierMatch[1];
+                rules[currentTier] = [];
+                continue;
+              }
+              const itemMatch = line.match(/^\s*-\s*(?:"([^"]+)"|'([^']+)'|(.+))\s*$/);
+              if (itemMatch && currentTier) {
+                const pattern = (itemMatch[1] || itemMatch[2] || itemMatch[3] || '').trim();
+                if (pattern) rules[currentTier].push(pattern);
+              }
+            }
+
+            core.info(`Loaded tiers: ${Object.keys(rules).join(', ')}`);
+
+            // -----------------------------------------------------------------
+            // Fetch changed files for this PR
+            // -----------------------------------------------------------------
+            const pr = context.payload.pull_request;
+            const files = await github.paginate(
+              github.rest.pulls.listFiles,
+              { owner: context.repo.owner, repo: context.repo.repo, pull_number: pr.number, per_page: 100 }
+            );
+            const paths = files.map(f => f.filename);
+            core.info(`PR #${pr.number} touches ${paths.length} files`);
+
+            // -----------------------------------------------------------------
+            // Match-glob helper — supports *, **, ? and leading/trailing /
+            // -----------------------------------------------------------------
+            function globToRegex(glob) {
+              // Escape regex specials, then translate glob syntax.
+              let re = '';
+              let i = 0;
+              while (i < glob.length) {
+                const c = glob[i];
+                if (c === '*' && glob[i + 1] === '*') {
+                  re += '.*';
+                  i += 2;
+                  if (glob[i] === '/') i++;
+                } else if (c === '*') {
+                  re += '[^/]*';
+                  i++;
+                } else if (c === '?') {
+                  re += '[^/]';
+                  i++;
+                } else if ('.+^$()|[]{}\\'.includes(c)) {
+                  re += '\\' + c;
+                  i++;
+                } else {
+                  re += c;
+                  i++;
+                }
+              }
+              return new RegExp('^' + re + '$');
+            }
+            function matchAny(filePath, patterns) {
+              return patterns.some(p => globToRegex(p).test(filePath));
+            }
+
+            // -----------------------------------------------------------------
+            // Classify — evaluate tiers from most-restrictive to least.
+            // A PR is classified to the HIGHEST tier any of its files matches.
+            // Default (no match anywhere) = tier/2-standard.
+            // -----------------------------------------------------------------
+            const tierOrder = [
+              'tier/3-restricted',
+              'tier/2-standard',
+              'tier/1-lightweight',
+              'tier/0-automatic',
+            ];
+
+            // For tier/3: ANY matching file pulls the whole PR up to tier 3.
+            const tier3Patterns = rules['tier/3-restricted'] || [];
+            const hasTier3 = paths.some(p => matchAny(p, tier3Patterns));
+
+            // For tier/0 and tier/1: EVERY file must match (and no tier/3 hits).
+            const tier0Patterns = rules['tier/0-automatic'] || [];
+            const tier1Patterns = rules['tier/1-lightweight'] || [];
+            const allTier0 = paths.length > 0 && paths.every(p => matchAny(p, tier0Patterns));
+            const allTier1 = paths.length > 0 && paths.every(p => matchAny(p, [...tier0Patterns, ...tier1Patterns]));
+
+            let classified;
+            if (hasTier3) classified = 'tier/3-restricted';
+            else if (allTier0) classified = 'tier/0-automatic';
+            else if (allTier1) classified = 'tier/1-lightweight';
+            else classified = 'tier/2-standard';
+
+            core.info(`Classified PR #${pr.number} as ${classified}`);
+
+            // -----------------------------------------------------------------
+            // Apply: remove any other tier/* labels, add the classified one
+            // -----------------------------------------------------------------
+            const currentLabels = pr.labels.map(l => l.name);
+            const toRemove = currentLabels.filter(l => l.startsWith('tier/') && l !== classified);
+            for (const name of toRemove) {
+              try {
+                await github.rest.issues.removeLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: pr.number,
+                  name,
+                });
+              } catch (e) {
+                core.warning(`Could not remove label ${name}: ${e.message}`);
+              }
+            }
+            if (!currentLabels.includes(classified)) {
+              try {
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: pr.number,
+                  labels: [classified],
+                });
+              } catch (e) {
+                // Label may not exist yet — create it and retry.
+                core.warning(`addLabels failed: ${e.message}. Creating label and retrying.`);
+                const colors = {
+                  'tier/0-automatic': '0e8a16', // green
+                  'tier/1-lightweight': 'a2eeef', // light blue
+                  'tier/2-standard': 'fbca04', // yellow
+                  'tier/3-restricted': 'd93f0b', // red
+                };
+                const descriptions = {
+                  'tier/0-automatic': 'Safe changes (deps, docs, generated) — future auto-merge candidate',
+                  'tier/1-lightweight': 'Single-concern changes, lightweight review',
+                  'tier/2-standard': 'Default classification — standard review required',
+                  'tier/3-restricted': 'Touches security-sensitive paths — needs multi-maintainer sign-off',
+                };
+                await github.rest.issues.createLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: classified,
+                  color: colors[classified] || 'ededed',
+                  description: descriptions[classified] || '',
+                }).catch(() => {}); // Ignore if it was created by another run in parallel.
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: pr.number,
+                  labels: [classified],
+                });
+              }
+            }
+
+            core.info(`PR #${pr.number} now labeled ${classified}`);

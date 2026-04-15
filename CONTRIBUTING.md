@@ -55,6 +55,25 @@ Starts backend on `:8080` and frontend on `:5174` with a mock `dev-user` account
 
 - Sign all commits with DCO: `git commit -s`
 
+## Change Tiers
+
+Every PR gets automatically labeled with exactly one `tier/*` label when it opens. The tier classifies how much review scrutiny the change needs based on which files it touches. Rules live in [`.github/tier-classifier-rules.yml`](.github/tier-classifier-rules.yml); logic runs in [`.github/workflows/tier-classifier.yml`](.github/workflows/tier-classifier.yml).
+
+| Label | Meaning | What it covers |
+|---|---|---|
+| `tier/0-automatic` | Safe — safe to fast-track | Lockfiles, `go.sum`, docs-only, `*.md`, i18n files, snapshots, generated artifacts |
+| `tier/1-lightweight` | Single-concern, low risk | Test-only changes, editor config (`.editorconfig`, `.prettierrc`, etc.) |
+| `tier/2-standard` | Default — standard review | Everything not matched by another tier |
+| `tier/3-restricted` | Touches security-sensitive paths | `CODEOWNERS`, `.github/workflows/**`, `pkg/auth/**`, `pkg/api/middleware/**`, `docs/security/**`, Helm RBAC templates, GoReleaser config |
+
+**Classification rules.** A PR is tier 3 if *any* of its files match a tier-3 path. Otherwise it's tier 0 only if *every* file is a tier-0 match; tier 1 only if every file is a tier-0 or tier-1 match; otherwise tier 2.
+
+**Today:** labels are informational. Reviewers can use them to prioritize their queue.
+
+**Future (separate PR):** `tier/0-automatic` PRs with CI green will auto-merge via admin squash. Rolling out after a week of label-only observation to confirm the rules don't produce false positives.
+
+This system is adapted from fullsend-ai/fullsend's tier-based change classification — see [`SECURITY-AI.md`](docs/security/SECURITY-AI.md) for the broader context.
+
 ## Getting Help
 
 - [Documentation](https://console-docs.kubestellar.io)
