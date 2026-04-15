@@ -2,11 +2,13 @@
  * Cross-Stack Auth Contract Test
  *
  * Verifies that the Go backend and TypeScript frontend agree on the
- * /auth/refresh response shape. If either side changes the field name,
- * this test fails BEFORE the code ships.
+ * /auth/refresh response shape (#6590 contract). The refreshed JWT is
+ * delivered EXCLUSIVELY via the HttpOnly kc_auth cookie — it must NOT
+ * appear in the JSON response body. The body carries only
+ * { refreshed: true, onboarded: bool }.
  *
- * See: commit 25e464fa (broke the contract), commit be946db9 (fixed it).
- * DO NOT remove this test without coordinating both sides.
+ * See: #6590 (established contract), #8087/#8091/#8092 (regression fix
+ * after the contract was temporarily reversed).
  *
  * Run: npx vitest run src/test/auth-contract.test.ts
  */
@@ -29,9 +31,20 @@ const AUTH_CALLBACK_PATH = path.join(
   'web/src/components/auth/AuthCallback.tsx',
 )
 
+// ── Helpers ─────────────────────────────────────────────────────────────────
+
+/** Extract the body of the RefreshToken function from auth.go source. */
+function getRefreshTokenBody(authGo: string): string {
+  const refreshFnStart = authGo.indexOf('func (h *AuthHandler) RefreshToken')
+  if (refreshFnStart < 0) return ''
+  const afterFn = authGo.slice(refreshFnStart)
+  const nextFuncIdx = afterFn.indexOf('\nfunc ', 1)
+  return nextFuncIdx > 0 ? afterFn.slice(0, nextFuncIdx) : afterFn
+}
+
 // ── Tests ───────────────────────────────────────────────────────────────────
 
-describe('Cross-stack /auth/refresh contract', () => {
+describe('Cross-stack /auth/refresh contract (#6590)', () => {
   it('both files exist', () => {
     expect(
       fs.existsSync(AUTH_HANDLER_PATH),
@@ -43,49 +56,49 @@ describe('Cross-stack /auth/refresh contract', () => {
     ).toBe(true)
   })
 
-  it('backend RefreshToken returns "token" in the JSON response', () => {
+  it('backend RefreshToken does NOT return "token" in the JSON body (#6590)', () => {
     const authGo = fs.readFileSync(AUTH_HANDLER_PATH, 'utf-8')
+    const fnBody = getRefreshTokenBody(authGo)
+    expect(fnBody.length).toBeGreaterThan(0)
 
-    // The RefreshToken handler uses fiber.Map{ "token": newToken, ... }
-    // We verify the string "token" appears in a fiber.Map near RefreshToken.
-    const refreshFnStart = authGo.indexOf('func (h *AuthHandler) RefreshToken')
-    expect(refreshFnStart).toBeGreaterThan(-1)
+    // The fiber.Map returned by RefreshToken must NOT contain a "token" key.
+    // Strip Go comments (// ...) so commentary that mentions "token" doesn't
+    // false-positive against the assertion.
+    const codeOnly = fnBody.replace(/\/\/[^\n]*/g, '')
+    expect(
+      codeOnly,
+      'CONTRACT VIOLATION (#6590): RefreshToken must NOT include a "token" key ' +
+      'in its fiber.Map response — the refreshed JWT is delivered exclusively ' +
+      'via the HttpOnly kc_auth cookie.',
+    ).not.toMatch(/"token"\s*:/)
+  })
 
-    // Grab the function body (until the next top-level func or EOF)
-    const afterFn = authGo.slice(refreshFnStart)
-    const nextFuncIdx = afterFn.indexOf('\nfunc ', 1)
-    const fnBody = nextFuncIdx > 0
-      ? afterFn.slice(0, nextFuncIdx)
-      : afterFn
+  it('backend RefreshToken returns "refreshed" and "onboarded" in the JSON body', () => {
+    const authGo = fs.readFileSync(AUTH_HANDLER_PATH, 'utf-8')
+    const fnBody = getRefreshTokenBody(authGo)
+    expect(fnBody).toMatch(/"refreshed"\s*:/)
+    expect(fnBody).toMatch(/"onboarded"\s*:/)
+  })
 
-    // The response MUST include "token" in a fiber.Map
+  it('backend RefreshToken still sets the HttpOnly cookie via setJWTCookie', () => {
+    const authGo = fs.readFileSync(AUTH_HANDLER_PATH, 'utf-8')
+    const fnBody = getRefreshTokenBody(authGo)
     expect(
       fnBody,
-      'CONTRACT VIOLATION: RefreshToken must return "token" in fiber.Map — ' +
-      'AuthCallback.tsx depends on data.token for OAuth login',
-    ).toMatch(/"token"/)
+      'RefreshToken must call setJWTCookie to deliver the new JWT via the ' +
+      'HttpOnly cookie — without this, the user has no way to authenticate ' +
+      'after refresh.',
+    ).toMatch(/setJWTCookie/)
   })
 
-  it('frontend AuthCallback reads data.token from the response', () => {
+  it('frontend AuthCallback reads data.refreshed from the response', () => {
     const callbackTsx = fs.readFileSync(AUTH_CALLBACK_PATH, 'utf-8')
-
-    // AuthCallback must reference data.token (the field from /auth/refresh)
+    // AuthCallback must reference data.refreshed (the success signal from
+    // /auth/refresh). It must NOT depend on data.token any more.
     expect(
       callbackTsx,
-      'CONTRACT VIOLATION: AuthCallback must read data.token — ' +
-      'this is the JWT returned by /auth/refresh',
-    ).toMatch(/data\.token/)
-  })
-
-  it('frontend AuthCallback throws when token is missing', () => {
-    const callbackTsx = fs.readFileSync(AUTH_CALLBACK_PATH, 'utf-8')
-
-    // AuthCallback must have a guard like: if (!token) throw ...
-    // This ensures a missing token field is treated as an error, not silently ignored.
-    expect(
-      callbackTsx,
-      'AuthCallback must throw/reject when token is missing from response',
-    ).toMatch(/(!token|token.*throw|No token)/)
+      'AuthCallback must read data.refreshed (the cookie-only success signal)',
+    ).toMatch(/data\.refreshed|\.refreshed/)
   })
 
   it('backend and frontend agree on the "onboarded" field', () => {

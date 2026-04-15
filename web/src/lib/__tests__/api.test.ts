@@ -412,20 +412,28 @@ describe('api.ts', () => {
       expect(isBackendUnavailable()).toBe(true)
     })
 
-    it('triggers token refresh when X-Token-Refresh header is present', async () => {
+    it('triggers silent token refresh when X-Token-Refresh header is present', async () => {
       localStorage.setItem(STORAGE_KEY_TOKEN, 'old-token')
       vi.mocked(fetch)
         .mockResolvedValueOnce(makeResponse({ status: 'ok' })) // health
         .mockResolvedValueOnce(makeResponse({ data: 'ok' }, { headers: { 'X-Token-Refresh': 'true' } })) // response with refresh header
-        .mockResolvedValueOnce(makeResponse({ token: 'new-token' })) // refresh endpoint
+        .mockResolvedValueOnce(makeResponse({ refreshed: true, onboarded: true })) // refresh endpoint (#6590 — no token in body)
 
       const { api } = await importFresh()
       await api.get('/api/data')
 
       // Wait for the async refresh to complete
       await vi.runAllTimersAsync()
-      // The token should be updated (refresh call happens in background)
-      expect(localStorage.getItem(STORAGE_KEY_TOKEN)).toBe('new-token')
+      // #6590 — /auth/refresh delivers the new JWT exclusively via the
+      // HttpOnly kc_auth cookie (not visible to this test's localStorage
+      // mock). The Bearer token in localStorage intentionally stays put —
+      // subsequent API requests send the fresh cookie automatically, and
+      // the stale-bearer-fallback in the auth middleware (#6026) handles
+      // the transition until localStorage catches up on next page load.
+      expect(localStorage.getItem(STORAGE_KEY_TOKEN)).toBe('old-token')
+      // Silent refresh also marks the persistent session hint so reloads
+      // know to attempt cookie restoration.
+      expect(localStorage.getItem('kc-has-session')).toBe('true')
     })
   })
 

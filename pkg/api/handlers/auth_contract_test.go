@@ -11,12 +11,24 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestAuthRefreshContract_TokenInResponseBody is a CONTRACT test.
-// The AuthCallback frontend component requires the "token" field in
-// the /auth/refresh response. Removing it breaks OAuth login.
-// See: commit 25e464fa (broke it), commit be946db9 (fixed it).
-// DO NOT remove this test without updating AuthCallback.tsx.
-func TestAuthRefreshContract_TokenInResponseBody(t *testing.T) {
+// TestAuthRefreshContract_TokenNotInResponseBody is a CONTRACT test enforcing
+// the security invariant established by #6590: the refreshed JWT MUST NOT
+// appear in the JSON response body. The token is delivered EXCLUSIVELY via
+// the HttpOnly kc_auth cookie so JavaScript (and any XSS-injected script or
+// browser extension content script) can never read it.
+//
+// Previously this test was inverted (asserting the token MUST be in the body)
+// to defend a frontend-driven workaround that re-leaked the token via the
+// JSON response. That defeated the purpose of HttpOnly and was the root cause
+// of issues #8087, #8091, and #8092 — TestRefreshToken/Valid_token_refresh
+// failed every nightly release because it correctly enforced #6590's contract.
+//
+// The frontend OAuth callback flow now bootstraps the session from the
+// HttpOnly cookie via /api/me (which the JWTAuth middleware already accepts
+// from the kc_auth cookie), so no token-in-body workaround is needed.
+//
+// DO NOT re-introduce a "token" field in the /auth/refresh JSON body.
+func TestAuthRefreshContract_TokenNotInResponseBody(t *testing.T) {
 	app, mockStore, handler := setupAuthTest()
 	app.Post("/auth/refresh", handler.RefreshToken)
 
@@ -41,30 +53,40 @@ func TestAuthRefreshContract_TokenInResponseBody(t *testing.T) {
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body),
 		"response body must be valid JSON")
 
-	// CONTRACT: "token" field must be present and non-empty.
-	// AuthCallback.tsx does: const token = data.token
-	// If this assertion fails, OAuth login is broken.
-	tokenVal, hasToken := body["token"]
-	assert.True(t, hasToken,
-		"CONTRACT VIOLATION: response must contain 'token' field — "+
-			"AuthCallback.tsx depends on it for OAuth login")
-	tokenStr, ok := tokenVal.(string)
-	assert.True(t, ok && tokenStr != "",
-		"CONTRACT VIOLATION: 'token' must be a non-empty string")
+	// CONTRACT (#6590): the JSON body must NOT include the token. It is
+	// delivered exclusively via the HttpOnly kc_auth cookie.
+	_, hasToken := body["token"]
+	assert.False(t, hasToken,
+		"CONTRACT VIOLATION (#6590): response must NOT contain 'token' field — "+
+			"the refreshed JWT is delivered exclusively via the HttpOnly kc_auth cookie")
 
-	// CONTRACT: "onboarded" field must be present and boolean.
-	// AuthCallback.tsx does: const isOnboarded = data.onboarded ?? onboarded
+	// CONTRACT: "refreshed" field is the JS-visible success signal.
+	assert.Equal(t, true, body["refreshed"],
+		"response must contain 'refreshed: true' as the success signal")
+
+	// CONTRACT: "onboarded" field must be present and boolean — the frontend
+	// uses it to skip the onboarding flow on a successful re-auth.
 	onboardedVal, hasOnboarded := body["onboarded"]
 	assert.True(t, hasOnboarded,
-		"CONTRACT VIOLATION: response must contain 'onboarded' field — "+
-			"AuthCallback.tsx depends on it")
+		"response must contain 'onboarded' field for AuthCallback")
 	_, isBool := onboardedVal.(bool)
-	assert.True(t, isBool,
-		"CONTRACT VIOLATION: 'onboarded' must be a boolean")
+	assert.True(t, isBool, "'onboarded' must be a boolean")
+
+	// CONTRACT: the new JWT must be set on the kc_auth cookie.
+	var cookieFound bool
+	for _, ck := range resp.Cookies() {
+		if ck.Name == "kc_auth" && ck.Value != "" {
+			cookieFound = true
+			break
+		}
+	}
+	assert.True(t, cookieFound,
+		"refreshed JWT must be set on the HttpOnly kc_auth cookie")
 }
 
 // TestAuthRefreshContract_OnboardedFalse verifies the contract holds when
-// the user has NOT completed onboarding (onboarded=false).
+// the user has NOT completed onboarding (onboarded=false). The token must
+// still be cookie-only, never returned in the JSON body.
 func TestAuthRefreshContract_OnboardedFalse(t *testing.T) {
 	app, mockStore, handler := setupAuthTest()
 	app.Post("/auth/refresh", handler.RefreshToken)
@@ -84,11 +106,10 @@ func TestAuthRefreshContract_OnboardedFalse(t *testing.T) {
 	var body map[string]interface{}
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
 
-	// Token must still be present regardless of onboarded status.
-	tokenVal, hasToken := body["token"]
-	assert.True(t, hasToken, "token must be in response even when onboarded=false")
-	tokenStr, ok := tokenVal.(string)
-	assert.True(t, ok && tokenStr != "", "token must be non-empty")
+	// CONTRACT (#6590): no token in body regardless of onboarding state.
+	_, hasToken := body["token"]
+	assert.False(t, hasToken,
+		"token must NOT appear in response body even when onboarded=false (#6590)")
 
 	assert.Equal(t, false, body["onboarded"],
 		"onboarded must reflect user's actual status")

@@ -5,10 +5,11 @@ import { getLastRoute } from '../../hooks/useLastRoute'
 import { ROUTES, getLoginWithError } from '../../config/routes'
 import { useTranslation } from 'react-i18next'
 import { useToast } from '../ui/Toast'
-import { safeGetItem, safeRemoveItem } from '../../lib/utils/localStorage'
+import { safeGetItem, safeRemoveItem, safeSetItem } from '../../lib/utils/localStorage'
 import { emitGitHubConnected } from '../../lib/analytics'
+import { STORAGE_KEY_HAS_SESSION } from '../../lib/constants/storage'
 
-/** Timeout (ms) for the /auth/refresh call that exchanges the HttpOnly cookie for a token. */
+/** Timeout (ms) for the /auth/refresh call that confirms the HttpOnly cookie session. */
 const AUTH_REFRESH_TIMEOUT_MS = 5_000
 
 /** Short delay (ms) before navigating after a partial failure. */
@@ -18,7 +19,7 @@ export function AuthCallback() {
   const { t } = useTranslation('common')
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const { setToken, refreshUser } = useAuth()
+  const { refreshUser } = useAuth()
   const { showToast } = useToast()
   // Initial status reflects the work the effect is about to do, so we can
   // skip calling setStatus synchronously inside the effect body
@@ -39,9 +40,12 @@ export function AuthCallback() {
       return
     }
 
-    // The backend sets the JWT in an HttpOnly cookie during the OAuth redirect.
-    // We call POST /auth/refresh (which reads that cookie) to obtain the token
-    // for localStorage, avoiding JWT exposure in the URL (#4278).
+    // The backend sets the JWT in an HttpOnly cookie during the OAuth redirect
+    // (#4278 — never put the token in the URL). We call POST /auth/refresh to
+    // confirm the cookie is valid and to mint a fresh JWT — but the token is
+    // delivered EXCLUSIVELY via the cookie (#6590), never via the JSON body.
+    // After confirming, we mark the session and let refreshUser() bootstrap
+    // the user via /api/me using cookie auth.
     const onboarded = searchParams.get('onboarded') === 'true'
 
     // Check for a return-to URL saved by ProtectedRoute (deep-link through OAuth),
@@ -75,16 +79,28 @@ export function AuthCallback() {
         if (!res.ok) throw new Error(`refresh failed: ${res.status}`)
         return res.json()
       })
-      .then((data: { token?: string; onboarded?: boolean }) => {
-        const token = data.token
-        if (!token) throw new Error('No token in refresh response')
+      .then((data: { refreshed?: boolean; onboarded?: boolean }) => {
+        // #6590 — /auth/refresh delivers the JWT exclusively via the
+        // HttpOnly kc_auth cookie. The body carries only the success
+        // signal and onboarding state. The JWT is intentionally NOT
+        // returned in JSON so JavaScript / XSS / extensions cannot read it.
+        if (!data.refreshed) {
+          throw new Error('refresh did not return refreshed:true')
+        }
 
-        const isOnboarded = data.onboarded ?? onboarded
-        setToken(token, isOnboarded)
+        // Persist the "we have a session" hint so future page loads attempt
+        // /auth/refresh from the cookie rather than going straight to login.
+        safeSetItem(STORAGE_KEY_HAS_SESSION, 'true')
+
         emitGitHubConnected()
         tokenExchangeSucceeded = true
 
-        return refreshUser(token)
+        // Bootstrap the user via /api/me using the cookie. refreshUser()
+        // will fall through to the cookie-only path because no JS-readable
+        // token exists.
+        const _isOnboarded = data.onboarded ?? onboarded
+        void _isOnboarded // reserved for future onboarding routing
+        return refreshUser()
       })
       .then(() => {
         if (cancelled) return
@@ -115,7 +131,7 @@ export function AuthCallback() {
       clearTimeout(timeoutId)
       clearTimeout(errorTimerRef.current)
     }
-  }, [searchParams, setToken, refreshUser, navigate, showToast, t])
+  }, [searchParams, refreshUser, navigate, showToast, t])
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">

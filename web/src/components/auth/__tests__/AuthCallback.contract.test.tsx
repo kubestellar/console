@@ -1,12 +1,14 @@
 /**
- * AuthCallback CONTRACT tests
+ * AuthCallback CONTRACT tests (#6590)
  *
  * These tests verify that AuthCallback correctly handles the /auth/refresh
- * response contract. The backend MUST return { token: string, onboarded: boolean }
- * for OAuth login to work.
+ * response contract: the backend returns { refreshed: true, onboarded: boolean }
+ * and delivers the JWT EXCLUSIVELY via the HttpOnly kc_auth cookie. The token
+ * MUST NOT appear in the JSON body — see #6590, #8087, #8091, #8092.
  *
- * See: commit 25e464fa (broke the contract), commit be946db9 (restored it).
- * DO NOT remove these tests without also updating the backend RefreshToken handler.
+ * AuthCallback bootstraps the user via refreshUser() which calls /api/me with
+ * cookie credentials. setToken is no longer called from this flow because no
+ * JS-readable JWT exists.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, waitFor } from '@testing-library/react'
@@ -56,6 +58,7 @@ vi.mock('../../../lib/analytics', () => ({
 
 vi.mock('../../../lib/utils/localStorage', () => ({
   safeGetItem: () => null,
+  safeSetItem: vi.fn(),
   safeRemoveItem: vi.fn(),
 }))
 
@@ -95,29 +98,33 @@ afterEach(() => {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('AuthCallback /auth/refresh contract', () => {
-  it('navigates to home when response has { token, onboarded: true }', async () => {
+describe('AuthCallback /auth/refresh contract (#6590)', () => {
+  it('navigates to home when response has { refreshed: true, onboarded: true }', async () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ token: 'jwt-xxx', onboarded: true }),
+      json: () => Promise.resolve({ refreshed: true, onboarded: true }),
     })
     vi.stubGlobal('fetch', mockFetch)
 
     renderAuthCallback()
 
+    // #6590 — setToken is intentionally NOT called: there is no JS-readable
+    // JWT in the response. The cookie-only session is bootstrapped by
+    // refreshUser(), which calls /api/me with cookie credentials.
     await waitFor(() => {
-      expect(mockSetToken).toHaveBeenCalledWith('jwt-xxx', true)
+      expect(mockRefreshUser).toHaveBeenCalled()
     })
+    expect(mockSetToken).not.toHaveBeenCalled()
 
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith('/')
     })
   })
 
-  it('navigates to login error when response has { refreshed: true } but no token', async () => {
+  it('navigates to login error when response is missing the refreshed flag', async () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ refreshed: true }),
+      json: () => Promise.resolve({}),
     })
     vi.stubGlobal('fetch', mockFetch)
 
@@ -156,17 +163,18 @@ describe('AuthCallback /auth/refresh contract', () => {
     })
   })
 
-  it('passes onboarded=false correctly when user is not onboarded', async () => {
+  it('handles onboarded=false from the response without crashing', async () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ token: 'jwt-new-user', onboarded: false }),
+      json: () => Promise.resolve({ refreshed: true, onboarded: false }),
     })
     vi.stubGlobal('fetch', mockFetch)
 
     renderAuthCallback()
 
     await waitFor(() => {
-      expect(mockSetToken).toHaveBeenCalledWith('jwt-new-user', false)
+      expect(mockRefreshUser).toHaveBeenCalled()
     })
+    expect(mockSetToken).not.toHaveBeenCalled()
   })
 })

@@ -809,15 +809,17 @@ func (h *AuthHandler) RefreshToken(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to generate token")
 	}
 
-	// Update HttpOnly cookie with the fresh token.
+	// Update HttpOnly cookie with the fresh token. The token is delivered
+	// EXCLUSIVELY via the HttpOnly kc_auth cookie (#6590) so JavaScript can
+	// never read it. Returning the token in the JSON body would defeat the
+	// purpose of HttpOnly: any XSS or browser-extension content script could
+	// scrape it from `fetch().then(r => r.json())`. The cookie is enough —
+	// JWTAuth middleware reads kc_auth on every subsequent API request, and
+	// the stale-bearer-fallback path (#6026) handles in-flight requests that
+	// still carry the previous token in their Authorization header.
 	h.setJWTCookie(c, newToken)
 
-	// Return the token in the JSON body so AuthCallback can pass it to
-	// setToken() and refreshUser(). The cookie is HttpOnly (JS can't read
-	// it directly), so the token must also be in the response for the
-	// initial OAuth callback flow.
 	return c.JSON(fiber.Map{
-		"token":     newToken,
 		"refreshed": true,
 		"onboarded": user.Onboarded,
 	})

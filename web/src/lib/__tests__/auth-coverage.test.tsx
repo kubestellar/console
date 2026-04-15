@@ -372,7 +372,7 @@ describe('token expiry timer', () => {
     })
   })
 
-  it('clicking Refresh Now calls /auth/refresh and updates token on success', async () => {
+  it('clicking Refresh Now calls /auth/refresh and refreshes the cookie session on success', async () => {
     const MS_PER_SECOND = 1000
     const MINUTES_15 = 15
     const nowSec = Math.floor(Date.now() / MS_PER_SECOND)
@@ -382,7 +382,6 @@ describe('token expiry timer', () => {
     const cachedUser = { id: 'u1', github_id: '1', github_login: 'test', onboarded: true }
     localStorage.setItem(AUTH_USER_CACHE_KEY, JSON.stringify(cachedUser))
 
-    const newToken = 'new-refreshed-jwt'
     const mockFetch = vi.fn()
     // First call: /api/me
     mockFetch.mockResolvedValueOnce({
@@ -391,17 +390,20 @@ describe('token expiry timer', () => {
     })
     vi.stubGlobal('fetch', mockFetch)
 
-    const { result } = await renderWithAuthProvider()
+    await renderWithAuthProvider()
     await vi.advanceTimersByTimeAsync(100)
 
     await waitFor(() => {
       expect(document.getElementById('session-expiry-warning')).not.toBeNull()
     })
 
-    // Setup the /auth/refresh response
+    // #6590 — /auth/refresh delivers the new JWT exclusively via the
+    // HttpOnly kc_auth cookie. The JSON body carries only
+    // { refreshed: true, onboarded } — never the token itself.
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: vi.fn().mockResolvedValue({ token: newToken }),
+      status: 200,
+      json: vi.fn().mockResolvedValue({ refreshed: true, onboarded: true }),
     })
 
     // Click the "Refresh Now" button
@@ -415,8 +417,11 @@ describe('token expiry timer', () => {
     // Banner should be removed
     expect(document.getElementById('session-expiry-warning')).toBeNull()
 
-    // Token should be updated
-    expect(localStorage.getItem(STORAGE_KEY_TOKEN)).toBe(newToken)
+    // The localStorage token (Bearer) is intentionally NOT mutated by the
+    // banner refresh — the refreshed JWT lives in the HttpOnly cookie now.
+    // The original Bearer token remains in localStorage as a fallback for
+    // legacy code paths that still send Authorization headers.
+    expect(localStorage.getItem(STORAGE_KEY_TOKEN)).toBe(nearExpiryToken)
   })
 
   it('clicking Refresh Now handles /auth/refresh failure gracefully', async () => {
