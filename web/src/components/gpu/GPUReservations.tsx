@@ -235,14 +235,23 @@ export function GPUReservations() {
   // Fallback source for the Create Reservation dropdown when useNamespaces()
   // can't surface a namespace (e.g. user lacks cluster-wide list RBAC AND
   // the namespace has no running pods, so neither health-check discovery
-  // nor the /api/mcp/pods-based REST fallback sees it). See #3945.
+  // nor the /api/mcp/pods-based REST fallback sees it).
   const knownNamespacesByCluster = useMemo(() => {
-    const out: Record<string, string[]> = {}
+    // Use a Map<string, Set<string>> to dedupe in O(1) per entry.
+    const byCluster = new Map<string, Set<string>>()
     for (const r of (allReservations || [])) {
       if (!r.cluster || !r.namespace) continue
-      if (!out[r.cluster]) out[r.cluster] = []
-      if (!out[r.cluster].includes(r.namespace)) out[r.cluster].push(r.namespace)
+      let set = byCluster.get(r.cluster)
+      if (!set) {
+        set = new Set<string>()
+        byCluster.set(r.cluster, set)
+      }
+      set.add(r.namespace)
     }
+    const out: Record<string, string[]> = {}
+    byCluster.forEach((set, cluster) => {
+      out[cluster] = Array.from(set)
+    })
     return out
   }, [allReservations])
 

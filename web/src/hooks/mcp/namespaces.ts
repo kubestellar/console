@@ -110,24 +110,28 @@ export function useNamespaces(cluster?: string, forceLive = false) {
 
     // Try kubectl proxy as fallback
     if (!isAgentUnavailable()) {
+      let timerId: ReturnType<typeof setTimeout> | null = null
       try {
         const clusterInfo = clusterCacheRef.clusters.find(c => c.name === cluster)
         const kubectlContext = clusterInfo?.context || cluster
 
         const nsPromise = kubectlProxy.getNamespaces(kubectlContext)
-        const timeoutPromise = new Promise<null>((resolve) =>
-          setTimeout(() => resolve(null), NAMESPACE_FETCH_TIMEOUT_MS)
-        )
+        const timeoutPromise = new Promise<null>((resolve) => {
+          timerId = setTimeout(() => resolve(null), NAMESPACE_FETCH_TIMEOUT_MS)
+        })
         const nsData = await Promise.race([nsPromise, timeoutPromise])
+        // Clear the stray timer if nsPromise won the race.
+        if (timerId !== null) clearTimeout(timerId)
 
         if (nsData && nsData.length > 0) {
-          // Merge with cluster cache — see mergeWithClusterCache (#3945).
+          // Merge with cluster cache — see mergeWithClusterCache.
           setNamespaces(mergeWithClusterCache(nsData, cluster))
           setError(null)
           setIsLoading(false)
           return
         }
       } catch (err) {
+        if (timerId !== null) clearTimeout(timerId)
         console.error(`[useNamespaces] kubectl proxy failed for ${cluster}:`, err)
       }
     }

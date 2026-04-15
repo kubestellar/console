@@ -117,11 +117,11 @@ export function ReservationFormModal({
   forceLive?: boolean
   /**
    * Map of cluster name → namespaces known to have existing reservations.
-   * Provided by GPUReservations as a belt-and-suspenders fallback for
-   * #3945: even if `useNamespaces()` misses a namespace (because the
-   * user lacks cluster-wide list RBAC and it has no running pods), any
-   * namespace the user has previously reserved in will still surface in
-   * the dropdown.
+   * Union'd with the `useNamespaces()` result as a fallback when the fetch
+   * tiers don't return them (e.g. user lacks cluster-wide list RBAC and the
+   * namespace has no running pods). System namespaces (default, kube-system,
+   * kube-*, openshift-*, etc.) are still filtered out of the dropdown
+   * regardless of what this prop contains.
    */
   knownNamespacesByCluster?: Record<string, string[]>
   onSave: (input: CreateGPUReservationInput | UpdateGPUReservationInput) => Promise<string | void>
@@ -205,12 +205,12 @@ export function ReservationFormModal({
   const { namespaces: rawNamespaces } = useNamespaces(cluster || undefined, forceLive)
 
   // Union the hook result with namespaces from existing reservations on
-  // this cluster. See `knownNamespacesByCluster` prop doc (#3945).
-  const mergedRawNamespaces = (() => {
+  // this cluster. Memoized to avoid re-allocating on every keystroke.
+  const mergedRawNamespaces = useMemo(() => {
     const knownForCluster = (cluster && knownNamespacesByCluster?.[cluster]) || []
     if (knownForCluster.length === 0) return rawNamespaces
     return Array.from(new Set<string>([...rawNamespaces, ...knownForCluster])).sort()
-  })()
+  }, [rawNamespaces, cluster, knownNamespacesByCluster])
 
   // Filter out system namespaces from the dropdown
   const FILTERED_NS_PREFIXES = ['openshift-', 'kube-']
