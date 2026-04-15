@@ -410,6 +410,8 @@ func (s *Server) validateAPIKeyValue(provider, apiKey string) (bool, error) {
 		return validateOpenAIKey(ctx, apiKey)
 	case "gemini", "google":
 		return validateGeminiKey(ctx, apiKey)
+	case "openrouter":
+		return validateOpenRouterKey(ctx, apiKey)
 	default:
 		// For IDE/app providers (cursor, windsurf, cline, etc.)
 		// we accept the key without validation since we don't have
@@ -433,7 +435,7 @@ func (s *Server) refreshProviderAvailability() {
 // This should be called on server startup to detect invalid keys early
 func (s *Server) ValidateAllKeys() {
 	cm := GetConfigManager()
-	providers := []string{"claude", "openai", "gemini", "cursor", "vscode", "windsurf", "cline", "jetbrains", "zed", "continue", "raycast", "open-webui"}
+	providers := []string{"claude", "openai", "gemini", "openrouter", "cursor", "vscode", "windsurf", "cline", "jetbrains", "zed", "continue", "raycast", "open-webui"}
 
 	for _, provider := range providers {
 		if cm.HasAPIKey(provider) {
@@ -512,6 +514,41 @@ func validateOpenAIKey(ctx context.Context, apiKey string) (bool, error) {
 		// Invalid key — return (false, nil) so ValidateAllKeys caches the
 		// result and doesn't re-fire a live /v1/models request on every
 		// kc-agent startup (#7923). Matches validateClaudeKey behavior.
+		return false, nil
+	}
+	body, readErr := io.ReadAll(resp.Body)
+	if readErr != nil {
+		body = []byte("(failed to read response body)")
+	}
+	return false, fmt.Errorf("API error: %s", string(body))
+}
+
+// openRouterValidationURL is the OpenRouter models listing endpoint. It
+// returns 200 for any valid API key and 401 otherwise, so it's a cheap way
+// to check credentials without spending tokens on a chat completion.
+const openRouterValidationURL = "https://openrouter.ai/api/v1/models"
+
+// validateOpenRouterKey tests an OpenRouter API key by hitting the models
+// listing endpoint. Mirrors validateOpenAIKey semantics: a 200 means valid,
+// 401 means invalid (cached as (false, nil) so we don't re-fire on every
+// startup — see #7923).
+func validateOpenRouterKey(ctx context.Context, apiKey string) (bool, error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", openRouterValidationURL, nil)
+	if err != nil {
+		return false, err
+	}
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return false, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusOK {
+		return true, nil
+	}
+	if resp.StatusCode == http.StatusUnauthorized {
 		return false, nil
 	}
 	body, readErr := io.ReadAll(resp.Body)

@@ -140,6 +140,19 @@ export function AgentIcon({ provider, className = 'w-5 h-5' }: AgentIconProps) {
           <circle cx="12" cy="11" r="2" fill="white" />
         </svg>
       )
+    case 'openrouter':
+      return (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          {/* OpenRouter icon - stylized router / fan-out (multiple model destinations) */}
+          <circle cx="4" cy="12" r="2" className="fill-sky-500 stroke-sky-500" />
+          <circle cx="20" cy="5" r="2" className="fill-sky-400 stroke-sky-400" />
+          <circle cx="20" cy="12" r="2" className="fill-sky-400 stroke-sky-400" />
+          <circle cx="20" cy="19" r="2" className="fill-sky-400 stroke-sky-400" />
+          <path d="M6 12 L18 5" className="stroke-sky-500" />
+          <path d="M6 12 L18 12" className="stroke-sky-500" />
+          <path d="M6 12 L18 19" className="stroke-sky-500" />
+        </svg>
+      )
     case 'bob':
       return (
         <svg className={className} viewBox="0 0 100 100" fill="none">

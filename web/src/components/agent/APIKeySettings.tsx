@@ -82,6 +82,10 @@ const PROVIDER_INFO: Record<string, { docsUrl: string; placeholder: string }> = 
     docsUrl: AI_PROVIDER_DOCS['open-webui'],
     placeholder: 'owui-...',
   },
+  openrouter: {
+    docsUrl: AI_PROVIDER_DOCS.openrouter,
+    placeholder: 'sk-or-...',
+  },
 }
 
 // Map backend provider key names to AgentIcon provider values
@@ -99,6 +103,7 @@ function providerToIconMap(provider: string): string {
     continue: 'continue',
     raycast: 'raycast',
     'open-webui': 'open-webui',
+    openrouter: 'openrouter',
   }
   return map[provider] || provider
 }

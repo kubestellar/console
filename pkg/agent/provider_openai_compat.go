@@ -11,20 +11,35 @@ import (
 	"strings"
 )
 
-// chatViaOpenAICompatible sends a chat request to an OpenAI-compatible endpoint
+// openAICompatMaxTokens is the default max_tokens value for non-streaming and
+// streaming chat requests against OpenAI-compatible endpoints. Chosen to match
+// the original hardcoded value used by the OpenAI, OpenWebUI and other OpenAI-
+// compatible providers.
+const openAICompatMaxTokens = 4096
+
+// chatViaOpenAICompatible sends a chat request to an OpenAI-compatible endpoint.
+// For endpoints that need extra request headers (e.g. OpenRouter's HTTP-Referer
+// and X-Title) or a default model, use chatViaOpenAICompatibleWithHeaders.
 func chatViaOpenAICompatible(ctx context.Context, req *ChatRequest, providerKey, endpoint, agentName string) (*ChatResponse, error) {
+	return chatViaOpenAICompatibleWithHeaders(ctx, req, providerKey, endpoint, agentName, "", nil)
+}
+
+// chatViaOpenAICompatibleWithHeaders is like chatViaOpenAICompatible but lets
+// the caller inject a default model (used when neither env nor config sets
+// one) and additional request headers such as HTTP-Referer / X-Title.
+func chatViaOpenAICompatibleWithHeaders(ctx context.Context, req *ChatRequest, providerKey, endpoint, agentName, defaultModel string, extraHeaders map[string]string) (*ChatResponse, error) {
 	cm := GetConfigManager()
 	apiKey := cm.GetAPIKey(providerKey)
 	if apiKey == "" {
 		return nil, fmt.Errorf("API key not configured for provider %s", providerKey)
 	}
-	model := cm.GetModel(providerKey, "")
+	model := cm.GetModel(providerKey, defaultModel)
 
 	messages := buildOpenAIMessages(req)
 
 	body := map[string]any{
 		"messages":   messages,
-		"max_tokens": 4096,
+		"max_tokens": openAICompatMaxTokens,
 	}
 	if model != "" {
 		body["model"] = model
@@ -41,6 +56,12 @@ func chatViaOpenAICompatible(ctx context.Context, req *ChatRequest, providerKey,
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Authorization", "Bearer "+apiKey)
+	for k, v := range extraHeaders {
+		if k == "" || v == "" {
+			continue
+		}
+		httpReq.Header.Set(k, v)
+	}
 
 	resp, err := newAIProviderHTTPClient().Do(httpReq)
 	if err != nil {
@@ -86,20 +107,28 @@ func chatViaOpenAICompatible(ctx context.Context, req *ChatRequest, providerKey,
 	}, nil
 }
 
-// streamViaOpenAICompatible streams a chat response from an OpenAI-compatible endpoint
+// streamViaOpenAICompatible streams a chat response from an OpenAI-compatible
+// endpoint. For endpoints that need extra request headers or a default model,
+// use streamViaOpenAICompatibleWithHeaders.
 func streamViaOpenAICompatible(ctx context.Context, req *ChatRequest, providerKey, endpoint, agentName string, onChunk func(chunk string)) (*ChatResponse, error) {
+	return streamViaOpenAICompatibleWithHeaders(ctx, req, providerKey, endpoint, agentName, "", onChunk, nil)
+}
+
+// streamViaOpenAICompatibleWithHeaders is like streamViaOpenAICompatible but
+// lets the caller inject a default model and additional request headers.
+func streamViaOpenAICompatibleWithHeaders(ctx context.Context, req *ChatRequest, providerKey, endpoint, agentName, defaultModel string, onChunk func(chunk string), extraHeaders map[string]string) (*ChatResponse, error) {
 	cm := GetConfigManager()
 	apiKey := cm.GetAPIKey(providerKey)
 	if apiKey == "" {
 		return nil, fmt.Errorf("API key not configured for provider %s", providerKey)
 	}
-	model := cm.GetModel(providerKey, "")
+	model := cm.GetModel(providerKey, defaultModel)
 
 	messages := buildOpenAIMessages(req)
 
 	body := map[string]any{
 		"messages":   messages,
-		"max_tokens": 4096,
+		"max_tokens": openAICompatMaxTokens,
 		"stream":     true,
 	}
 	if model != "" {
@@ -117,6 +146,12 @@ func streamViaOpenAICompatible(ctx context.Context, req *ChatRequest, providerKe
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Authorization", "Bearer "+apiKey)
+	for k, v := range extraHeaders {
+		if k == "" || v == "" {
+			continue
+		}
+		httpReq.Header.Set(k, v)
+	}
 
 	resp, err := newAIProviderHTTPClient().Do(httpReq)
 	if err != nil {
