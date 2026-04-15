@@ -71,8 +71,10 @@ import (
 //  1. If the handler legitimately needs to mutate a managed cluster via the
 //     pod SA, declare the field as *PrivilegedClient to flag intent for
 //     reviewers, AND add the handler's file basename to
-//     .github/allowlist-privileged-client-callers.txt in the same PR with a
-//     short justification.
+//     .github/allowlist-privileged-client-callers.txt in the same PR. The
+//     allowlist file itself takes only plain basenames (no inline
+//     justifications); explain the rationale for the new exception in the
+//     PR description, as the lint workflow's failure message instructs.
 //  2. If the handler is user-initiated work, it must go through kc-agent
 //     with the caller's kubeconfig instead — neither the type alias nor an
 //     allowlist entry is appropriate.
