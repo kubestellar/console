@@ -1,39 +1,72 @@
 import type { ClusterDataCache, NamespaceResources, TreeLens, IssueCounts } from './types'
 
 /**
+ * Default restart count used when seeding a pod row from the podIssues
+ * endpoint, which does not report restart counts. Keeping this as a named
+ * constant avoids a magic number in the merge logic below.
+ */
+const POD_ISSUE_DEFAULT_RESTARTS = 0
+
+/** Factory that returns an empty NamespaceResources record. */
+function createEmptyNamespaceResources(): NamespaceResources {
+  return {
+    deployments: [],
+    services: [],
+    pvcs: [],
+    pods: [],
+    configmaps: [],
+    secrets: [],
+    serviceaccounts: [],
+    jobs: [],
+    hpas: [],
+    replicasets: [],
+    statefulsets: [],
+    daemonsets: [],
+    cronjobs: [],
+    ingresses: [],
+    networkpolicies: [],
+  }
+}
+
+/**
+ * Returns true when a pod row represents an issue (not Running/Succeeded).
+ * Centralizing this keeps the "what counts as a pod issue" definition in
+ * sync between the namespace filter and the namespace badge.
+ */
+function isPodIssueStatus(status: string): boolean {
+  return status !== 'Running' && status !== 'Succeeded'
+}
+
+/**
  * Build a map of namespace -> resources from cached cluster data.
  * Optionally filters namespaces by a search query.
+ *
+ * Pods from clusterData.podIssues (a separate API endpoint than the bulk
+ * pods list) are merged into each namespace's pods so the Issues lens and
+ * the top-of-card issues badge stay in sync. Without this merge, the badge
+ * could report "1 issue" while the tree collapsed to an empty state when
+ * the issue-bearing pod was not present in the limited bulk pods response.
  */
 export function buildNamespaceResources(clusterData: ClusterDataCache, searchFilter: string): Map<string, NamespaceResources> {
   const map = new Map<string, NamespaceResources>()
 
-  // Filter namespaces based on search
-  let namespaces = clusterData.namespaces || []
-  if (searchFilter) {
-    const query = searchFilter.toLowerCase()
-    namespaces = namespaces.filter((ns: string) => ns.toLowerCase().includes(query))
-  }
+  const query = searchFilter ? searchFilter.toLowerCase() : ''
+  const matchesSearch = (ns: string): boolean => !query || ns.toLowerCase().includes(query)
 
-  // Initialize all namespaces
+  // Filter namespaces based on search, then initialize records
+  const namespaces = (clusterData.namespaces || []).filter(matchesSearch)
   namespaces.forEach((ns: string) => {
-    map.set(ns, {
-      deployments: [],
-      services: [],
-      pvcs: [],
-      pods: [],
-      configmaps: [],
-      secrets: [],
-      serviceaccounts: [],
-      jobs: [],
-      hpas: [],
-      replicasets: [],
-      statefulsets: [],
-      daemonsets: [],
-      cronjobs: [],
-      ingresses: [],
-      networkpolicies: [],
-    })
+    map.set(ns, createEmptyNamespaceResources())
   })
+
+  // Ensure namespaces that appear only in podIssues are still represented.
+  // Otherwise a pod issue in a namespace missing from the bulk namespace
+  // listing would silently disappear from the Issues lens.
+  for (const p of clusterData.podIssues || []) {
+    if (!map.has(p.namespace) && matchesSearch(p.namespace)) {
+      map.set(p.namespace, createEmptyNamespaceResources())
+    }
+  }
 
   // Group deployments
   for (const d of clusterData.deployments) {
@@ -70,6 +103,25 @@ export function buildNamespaceResources(clusterData: ClusterDataCache, searchFil
         restarts: p.restarts,
       })
     }
+  }
+
+  // Merge podIssues into namespace pods. The bulk pods list is capped per
+  // request and may omit pods that are included in the dedicated podIssues
+  // endpoint. Dedupe by (namespace, name) so we do not double-count pods
+  // that exist in both lists.
+  for (const issue of clusterData.podIssues || []) {
+    const nsData = map.get(issue.namespace)
+    if (!nsData) continue
+    const alreadyPresent = nsData.pods.some(
+      existing => existing.name === issue.name,
+    )
+    if (alreadyPresent) continue
+    nsData.pods.push({
+      name: issue.name,
+      namespace: issue.namespace,
+      status: issue.status,
+      restarts: POD_ISSUE_DEFAULT_RESTARTS,
+    })
   }
 
   // Group ConfigMaps
@@ -207,7 +259,7 @@ export function getVisibleNamespaces(
   if (activeLens === 'issues') {
     filtered = filtered.filter(ns => {
       const resources = namespaceResources.get(ns)!
-      return resources.pods.some(p => p.status !== 'Running' && p.status !== 'Succeeded') ||
+      return resources.pods.some(p => isPodIssueStatus(p.status)) ||
              resources.deployments.some(d => d.readyReplicas < d.replicas) ||
              resources.pvcs.some(p => p.status !== 'Bound')
     })

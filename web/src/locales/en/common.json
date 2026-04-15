@@ -1291,6 +1291,7 @@
     "loadingResources": "Loading resources...",
     "viewClusterDetails": "View cluster details →",
     "noClustersMatch": "No clusters match the current filter",
+    "noIssuesFound": "No resources with issues in this cluster",
     "nodesCount": "{{count}} nodes",
     "nodesCount_one": "{{count}} node",
     "nodesCount_other": "{{count}} nodes",
