@@ -678,6 +678,114 @@ describe('AlertsContext', () => {
     expect(resolved?.status).toBe('resolved')
   })
 
+  it('evaluateConditions: node_not_ready does not fire for unreachable clusters', async () => {
+    // Regression for the "20 unreachable clusters → 40 spurious alerts"
+    // report. When a cluster is unreachable we can't observe node state,
+    // so the per-node alert is misleading noise on top of the single
+    // Cluster Unreachable alert. See the commit message for upstream
+    // issue numbers.
+    const rule: AlertRule = {
+      id: 'nnr-skip-unreachable',
+      name: 'Node Not Ready',
+      description: '',
+      enabled: true,
+      condition: { type: 'node_not_ready' },
+      severity: 'warning',
+      channels: [],
+      aiDiagnose: false,
+      createdAt: '2024-01-01T00:00:00Z',
+      updatedAt: '2024-01-01T00:00:00Z',
+    }
+    localStorage.setItem('kc_alert_rules', JSON.stringify([rule]))
+    localStorage.setItem('kc_alerts', JSON.stringify([]))
+
+    // Unreachable cluster with cached healthy=false (stale data) and 3 nodes.
+    // The real-user scenario: last-known-good state indicates problems but
+    // we can no longer verify them because the cluster is offline.
+    mockMCPData = {
+      gpuNodes: [],
+      podIssues: [],
+      clusters: [{
+        name: 'offline-cluster',
+        healthy: false,
+        reachable: false,
+        nodeCount: 3,
+        errorType: 'timeout',
+        errorMessage: 'dial tcp: i/o timeout',
+      }],
+      isLoading: false,
+      error: null,
+    }
+
+    const { result } = renderHook(() => useAlertsContext(), { wrapper })
+    await act(async () => { vi.advanceTimersByTime(0) })
+
+    await act(async () => {
+      result.current.evaluateConditions()
+    })
+
+    // Zero Node Not Ready alerts for the unreachable cluster.
+    const nodeAlerts = result.current.alerts.filter(
+      a => a.ruleId === 'nnr-skip-unreachable' && a.status === 'firing'
+    )
+    expect(nodeAlerts.length).toBe(0)
+  })
+
+  it('evaluateConditions: node_not_ready auto-resolves stale alert when cluster becomes unreachable', async () => {
+    // A cluster that was previously firing a Node Not Ready alert becomes
+    // unreachable — the stale firing alert should auto-resolve so the user
+    // sees only the Cluster Unreachable entry.
+    const rule: AlertRule = {
+      id: 'nnr-stale-resolve',
+      name: 'Node Not Ready',
+      description: '',
+      enabled: true,
+      condition: { type: 'node_not_ready' },
+      severity: 'warning',
+      channels: [],
+      aiDiagnose: false,
+      createdAt: '2024-01-01T00:00:00Z',
+      updatedAt: '2024-01-01T00:00:00Z',
+    }
+    const firingAlert: Alert = {
+      id: 'nnr-pre-unreachable',
+      ruleId: 'nnr-stale-resolve',
+      ruleName: 'Node Not Ready',
+      severity: 'warning',
+      status: 'firing',
+      message: 'Cluster formerly-healthy has nodes not in Ready state',
+      details: {},
+      firedAt: '2024-01-01T00:00:00Z',
+      cluster: 'formerly-healthy',
+    }
+    localStorage.setItem('kc_alert_rules', JSON.stringify([rule]))
+    localStorage.setItem('kc_alerts', JSON.stringify([firingAlert]))
+
+    mockMCPData = {
+      gpuNodes: [],
+      podIssues: [],
+      clusters: [{
+        name: 'formerly-healthy',
+        healthy: false,
+        reachable: false,
+        nodeCount: 3,
+        errorType: 'network',
+      }],
+      isLoading: false,
+      error: null,
+    }
+
+    const { result } = renderHook(() => useAlertsContext(), { wrapper })
+    await act(async () => { vi.advanceTimersByTime(0) })
+
+    await act(async () => {
+      result.current.evaluateConditions()
+    })
+
+    const resolved = result.current.alerts.find(a => a.id === 'nnr-pre-unreachable')
+    expect(resolved?.status).toBe('resolved')
+  })
+
   // ── 15. Alert deduplication ──────────────────────────────────────────
 
   it('deduplicates alerts keeping the most recently fired entry', () => {

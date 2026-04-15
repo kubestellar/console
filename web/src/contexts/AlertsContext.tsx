@@ -248,6 +248,19 @@ const NOTIFICATION_COOLDOWN_MS = 300_000 // 5 minutes
  *  no 5-minute cooldown repeat for ongoing connectivity failures. */
 const PERSISTENT_CLUSTER_CONDITIONS = new Set(['certificate_error', 'cluster_unreachable'])
 
+/**
+ * When a cluster is unreachable we cannot observe its node / disk / memory
+ * state — any cached values are stale, last-known-good at best. Firing
+ * per-node alerts ("Node Not Ready", "Disk Pressure", "Memory Pressure")
+ * for such clusters produces misleading noise on top of the single
+ * authoritative "Cluster Unreachable" alert. This helper centralizes the
+ * reachability check so every node / cluster-health evaluator can skip
+ * unreachable clusters uniformly. See upstream bug report for the real-world
+ * "20 unreachable clusters → 40 spurious alerts" scenario. */
+function isClusterUnreachable(cluster: { reachable?: boolean }): boolean {
+  return cluster.reachable === false
+}
+
 /** Maximum age (ms) for dedup entries — evict stale entries older than this */
 const NOTIFICATION_DEDUP_MAX_AGE_MS = 86_400_000 // 24 hours
 
@@ -1132,7 +1145,14 @@ Please provide:
       }
     }
 
-  // Evaluate node ready condition — reads from refs for stable identity
+  // Evaluate node ready condition — reads from refs for stable identity.
+  //
+  // Unreachable clusters are skipped: their node state is unknown (we only
+  // have stale cached values) and pairing every "Cluster Unreachable" alert
+  // with a redundant "Node Not Ready" alert was reported as spurious noise
+  // by a user running 20+ offline clusters. Any already-firing node_ready
+  // alert for an unreachable cluster is auto-resolved so the list clears
+  // down to just the single authoritative Cluster Unreachable entry.
   const evaluateNodeReady = (rule: AlertRule) => {
       const currentClusters = clustersRef.current
       const relevantClusters = rule.condition.clusters?.length
@@ -1140,6 +1160,10 @@ Please provide:
         : currentClusters
 
       for (const cluster of relevantClusters) {
+        if (isClusterUnreachable(cluster)) {
+          queueAutoResolve(rule.id, cluster.name)
+          continue
+        }
         if (cluster.healthy === false) {
           createAlert(
             rule,
@@ -1347,6 +1371,12 @@ Please provide:
         : currentClusters
 
       for (const cluster of relevantClusters) {
+        // Skip unreachable clusters — cached issues are stale and pairing
+        // them with a Cluster Unreachable alert is misleading noise.
+        if (isClusterUnreachable(cluster)) {
+          queueAutoResolve(rule.id, cluster.name)
+          continue
+        }
         const diskPressureIssue = (cluster.issues || []).find(issue =>
           typeof issue === 'string' && issue.includes('DiskPressure')
         )
@@ -1402,6 +1432,12 @@ Please provide:
         : currentClusters
 
       for (const cluster of relevantClusters) {
+        // Skip unreachable clusters — cached issues are stale and pairing
+        // them with a Cluster Unreachable alert is misleading noise.
+        if (isClusterUnreachable(cluster)) {
+          queueAutoResolve(rule.id, cluster.name)
+          continue
+        }
         const memPressureIssue = (cluster.issues || []).find(issue =>
           typeof issue === 'string' && issue.includes('MemoryPressure')
         )

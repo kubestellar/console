@@ -1,4 +1,5 @@
 import { Component, useEffect, Suspense, type ReactNode, type ErrorInfo } from 'react'
+import { createPortal } from 'react-dom'
 import { safeLazy } from '../../lib/safeLazy'
 import { useTranslation } from 'react-i18next'
 import { Box, Server, Layers, Rocket, FileText, Zap, Cpu, Lock, User, Bell, Ship, GitBranch, Settings, Shield, Package, DollarSign, AlertTriangle, RefreshCw, HardDrive } from 'lucide-react'
@@ -306,7 +307,15 @@ export function DrillDownModal() {
     }
   }
 
-  return (
+  // Render the modal at document.body so it sits after the Layout sidebar
+  // in DOM order. Both the sidebar and drill-down use z-modal; with equal
+  // z-index the later sibling paints on top. Without the portal, the
+  // sidebar (rendered inside Layout, which mounts after DrillDownModal in
+  // the React tree) visually overlaps the drill-down's left edge — e.g.
+  // hiding the back button and the start of the breadcrumb on a narrow
+  // window. The portal guarantees drill-downs always render after the
+  // chrome regardless of where the component is mounted in the tree.
+  return createPortal(
     <div
       className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-modal p-2 md:p-4"
       onClick={close}
@@ -406,6 +415,7 @@ export function DrillDownModal() {
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
