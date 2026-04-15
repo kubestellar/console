@@ -10,7 +10,8 @@ import {
   CLUSTER_POLL_INTERVAL_MS,
   getEffectiveInterval,
   clusterCache,
-  clusterSubscribers,
+  subscribeClusterData,
+  subscribeClusterUI,
   connectSharedWebSocket,
   fullFetchClusters,
   initialFetchStarted,
@@ -23,8 +24,24 @@ import {
   clearClusterFailure,
   setInitialFetchStarted,
   setHealthCheckFailures } from './shared'
-import type { ClusterCache } from './shared'
+import type { ClusterInfo } from './types'
 import { subscribePolling } from './pollingManager'
+
+/** Data slice returned by useClusters — heavy, arrives via startTransition. */
+interface ClusterDataSlice {
+  clusters: ClusterInfo[]
+  lastUpdated: Date | null
+  consecutiveFailures: number
+  isFailed: boolean
+}
+
+/** UI-indicator slice returned by useClusters — small, arrives urgently. */
+interface ClusterUISlice {
+  isLoading: boolean
+  isRefreshing: boolean
+  error: string | null
+  lastRefresh: Date | null
+}
 
 // Hook to get MCP status
 export function useMCPStatus() {
@@ -60,22 +77,52 @@ export function useMCPStatus() {
 }
 
 export function useClusters() {
-  // Local state that syncs with shared cache
-  const [localState, setLocalState] = useState<ClusterCache>(clusterCache)
+  // Split local state into data + UI slices (#7865).
+  // Data updates arrive via startTransition (interruptible) and drive the
+  // heavy re-render; UI updates arrive urgently so the refresh spinner
+  // commits on every fetch tick. Merged back into a single return value
+  // below for consumer backward compatibility.
+  const [dataState, setDataState] = useState<ClusterDataSlice>(() => ({
+    clusters: clusterCache.clusters,
+    lastUpdated: clusterCache.lastUpdated,
+    consecutiveFailures: clusterCache.consecutiveFailures,
+    isFailed: clusterCache.isFailed,
+  }))
+  const [uiState, setUIState] = useState<ClusterUISlice>(() => ({
+    isLoading: clusterCache.isLoading,
+    isRefreshing: clusterCache.isRefreshing,
+    error: clusterCache.error,
+    lastRefresh: clusterCache.lastRefresh,
+  }))
   // Track demo mode to re-fetch when it changes
   const { isDemoMode } = useDemoMode()
 
-  // Subscribe to shared cache updates.
+  // Subscribe to shared cache updates — two subscriptions, one per slice.
   useEffect(() => {
-    const handleUpdate = (cache: ClusterCache) => {
-      setLocalState(cache)
+    const handleData = (cache: typeof clusterCache) => {
+      setDataState({
+        clusters: cache.clusters,
+        lastUpdated: cache.lastUpdated,
+        consecutiveFailures: cache.consecutiveFailures,
+        isFailed: cache.isFailed,
+      })
+    }
+    const handleUI = (cache: typeof clusterCache) => {
+      setUIState({
+        isLoading: cache.isLoading,
+        isRefreshing: cache.isRefreshing,
+        error: cache.error,
+        lastRefresh: cache.lastRefresh,
+      })
     }
     // Sync with any updates that happened between initial render and effect.
-    handleUpdate(clusterCache)
-    clusterSubscribers.add(handleUpdate)
-
+    handleData(clusterCache)
+    handleUI(clusterCache)
+    const unsubData = subscribeClusterData(handleData)
+    const unsubUI = subscribeClusterUI(handleUI)
     return () => {
-      clusterSubscribers.delete(handleUpdate)
+      unsubData()
+      unsubUI()
     }
   }, [])
 
@@ -153,7 +200,7 @@ export function useClusters() {
   // Use this for metrics, stats, and counts to avoid double-counting
   const deduplicatedClusters = (() => {
     // First share metrics between clusters with same server (so short names get metrics from long names)
-    const sharedMetricsClusters = shareMetricsBetweenSameServerClusters(localState.clusters)
+    const sharedMetricsClusters = shareMetricsBetweenSameServerClusters(dataState.clusters)
     const result = deduplicateClustersByServer(sharedMetricsClusters)
 
     return result
@@ -185,20 +232,20 @@ export function useClusters() {
 
   return {
     // Raw clusters - all contexts including duplicates pointing to same server
-    clusters: localState.clusters,
+    clusters: dataState.clusters,
     // Deduplicated clusters - single cluster per server with aliases
     // Use this for metrics, stats, and aggregations to avoid double-counting
     deduplicatedClusters,
     // Completeness metadata for aggregated metrics (issue #6114)
     metricsCompleteness,
-    isLoading: localState.isLoading,
-    isRefreshing: localState.isRefreshing,
-    lastUpdated: localState.lastUpdated,
-    error: localState.error,
+    isLoading: uiState.isLoading,
+    isRefreshing: uiState.isRefreshing,
+    lastUpdated: dataState.lastUpdated,
+    error: uiState.error,
     refetch,
-    consecutiveFailures: localState.consecutiveFailures,
-    isFailed: localState.isFailed,
-    lastRefresh: localState.lastRefresh }
+    consecutiveFailures: dataState.consecutiveFailures,
+    isFailed: dataState.isFailed,
+    lastRefresh: uiState.lastRefresh }
 }
 
 // Hook to get cluster health - uses kubectl proxy for direct cluster access

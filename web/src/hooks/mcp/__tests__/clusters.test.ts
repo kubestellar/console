@@ -34,6 +34,12 @@ vi.mock('../shared', async () => {
     get clusterSubscribers() {
       return m.clusterSubscribers
     },
+    get dataSubscribers() {
+      return m.dataSubscribers
+    },
+    get uiSubscribers() {
+      return m.uiSubscribers
+    },
     get sharedWebSocket() {
       return m.sharedWebSocket
     },
@@ -61,6 +67,10 @@ vi.mock('../shared', async () => {
     clearClusterFailure: m.clearClusterFailure,
     cleanupSharedWebSocket: m.cleanupSharedWebSocket,
     subscribeClusterCache: m.subscribeClusterCache,
+    subscribeClusterData: m.subscribeClusterData,
+    subscribeClusterUI: m.subscribeClusterUI,
+    notifyClusterDataSubscribers: m.notifyClusterDataSubscribers,
+    notifyClusterUISubscribers: m.notifyClusterUISubscribers,
     clusterCacheRef: m.clusterCacheRef,
     // Stubbed to prevent real network calls
     fetchSingleClusterHealth: mockFetchSingleClusterHealth,
@@ -98,6 +108,8 @@ vi.mock('../../useLocalAgent', () => ({
 import { useMCPStatus, useClusters, useClusterHealth } from '../clusters'
 import {
   clusterSubscribers,
+  dataSubscribers,
+  uiSubscribers,
   updateClusterCache,
   setInitialFetchStarted,
   sharedWebSocket,
@@ -130,6 +142,8 @@ const EMPTY_CACHE = {
 function resetSharedState() {
   localStorage.clear()
   clusterSubscribers.clear()
+  dataSubscribers.clear()
+  uiSubscribers.clear()
   setInitialFetchStarted(false)
   sharedWebSocket.ws = null
   sharedWebSocket.connecting = false
@@ -142,6 +156,8 @@ function resetSharedState() {
   updateClusterCache({ ...EMPTY_CACHE })
   // Clear subscriptions that updateClusterCache may have notified
   clusterSubscribers.clear()
+  dataSubscribers.clear()
+  uiSubscribers.clear()
 }
 
 // ===========================================================================
@@ -451,17 +467,24 @@ describe('Shared cache / pub-sub', () => {
   })
 
   it('subscriber count matches mounted hook instances', () => {
-    expect(clusterSubscribers.size).toBe(0)
+    // After the data/UI split (#7865), each useClusters instance registers
+    // one data subscriber AND one UI subscriber, so the per-slice count
+    // equals the number of mounted hooks.
+    expect(dataSubscribers.size).toBe(0)
+    expect(uiSubscribers.size).toBe(0)
 
     const { unmount: u1 } = renderHook(() => useClusters())
     const { unmount: u2 } = renderHook(() => useClusters())
-    expect(clusterSubscribers.size).toBe(2)
+    expect(dataSubscribers.size).toBe(2)
+    expect(uiSubscribers.size).toBe(2)
 
     u1()
-    expect(clusterSubscribers.size).toBe(1)
+    expect(dataSubscribers.size).toBe(1)
+    expect(uiSubscribers.size).toBe(1)
 
     u2()
-    expect(clusterSubscribers.size).toBe(0)
+    expect(dataSubscribers.size).toBe(0)
+    expect(uiSubscribers.size).toBe(0)
   })
 })
 
