@@ -331,10 +331,16 @@ class ApiClient {
     if (this.refreshInProgress) return
     this.refreshInProgress = (async () => {
       try {
+        // #8108 — /auth/refresh must NOT receive the Authorization header.
+        // Backend RefreshToken revokes the JTI of whatever bearer is presented
+        // before minting the replacement. Sending the stale localStorage token
+        // would revoke a token we still rely on for the rest of the session
+        // and race against the cookie delivery. Cookie-only flow: send the
+        // HttpOnly kc_auth cookie via credentials + CSRF header only.
         const response = await fetch(`${API_BASE}/auth/refresh`, {
           method: 'POST',
           headers: {
-            ...this.getHeaders(),
+            'Content-Type': 'application/json',
             // #6588 — CSRF gate on /auth/refresh
             'X-Requested-With': 'XMLHttpRequest',
           },

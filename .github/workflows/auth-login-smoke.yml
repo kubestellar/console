@@ -3,14 +3,18 @@ name: Auth Login Smoke Test
 # Verifies the auth login contract by building and running the Go backend
 # in dev mode. No external dependencies — everything runs against localhost.
 #
-# Catches regressions like commit 25e464fa (#6593) which removed the
-# "token" field from /auth/refresh and broke login for 24 hours.
+# #6590 contract (enforced by #8107): the refreshed JWT is delivered
+# EXCLUSIVELY via the HttpOnly `kc_auth` cookie. The JSON body carries
+# only `{ refreshed: true, onboarded }` — any `token` field in the body
+# would be an XSS/extension-readable leak and must fail the smoke test.
 #
 # What it checks:
 #   1. /health returns JSON with status and oauth_configured fields
 #   2. GET /auth/github (dev mode, no OAuth client) sets a kc_auth cookie
-#   3. POST /auth/refresh with that cookie returns { token, onboarded }
-#      — the exact contract the frontend depends on
+#   3. POST /auth/refresh (cookie + CSRF header, NO Authorization) returns
+#      - response body with { refreshed: true, onboarded }
+#      - Set-Cookie: kc_auth=... (refreshed JWT)
+#      - NO `token` field in the body
 #
 # The test uses DEV_MODE (no GitHub OAuth credentials) so the backend
 # auto-creates a dev-user on /auth/github. This takes ~60 seconds.
@@ -112,32 +116,39 @@ jobs:
           echo "Got kc_auth cookie (${#KC_AUTH} chars)"
           echo "$KC_AUTH" > /tmp/kc_auth_token.txt
 
-      # ── 6. Test /auth/refresh contract ───────────────────────────
+      # ── 6. Test /auth/refresh contract (#6590) ───────────────────
+      # The refreshed JWT is delivered via the HttpOnly kc_auth cookie
+      # ONLY. The JSON body must NOT contain a `token` field — any such
+      # field is readable by XSS/extension content scripts and is the
+      # regression #8107 fixed. We drive this call exactly like the
+      # frontend does: cookie jar + CSRF header, no Authorization.
       - name: Test /auth/refresh contract
         run: |
-          KC_AUTH=$(cat /tmp/kc_auth_token.txt)
+          COOKIE_JAR=/tmp/cookies.txt
+          REFRESH_COOKIE_JAR=/tmp/cookies-after-refresh.txt
 
           echo "Testing POST /auth/refresh..."
           REFRESH_RESP=$(curl -sS --max-time 5 \
             -X POST \
-            -H "Authorization: Bearer $KC_AUTH" \
+            -b "$COOKIE_JAR" \
+            -c "$REFRESH_COOKIE_JAR" \
             -H "X-Requested-With: XMLHttpRequest" \
             http://localhost:8081/auth/refresh)
 
           echo "Response: $REFRESH_RESP"
 
-          # CONTRACT: response must contain "token" (non-empty string)
-          # This is the exact regression that broke us in commit 25e464fa (#6593)
-          HAS_TOKEN=$(echo "$REFRESH_RESP" | jq -r '.token // empty')
-          if [ -z "$HAS_TOKEN" ]; then
-            echo "::error::CONTRACT VIOLATION: /auth/refresh response missing 'token' field — OAuth login is BROKEN"
-            echo "This is the same regression as commit 25e464fa (#6593)."
+          # #6590 CONTRACT: response body MUST NOT contain a `token` field.
+          # Presence of `token` means the refreshed JWT is JS-readable,
+          # which is the XSS leak that #8107 fixed.
+          HAS_TOKEN=$(echo "$REFRESH_RESP" | jq 'has("token")')
+          if [ "$HAS_TOKEN" != "false" ]; then
+            echo "::error::CONTRACT VIOLATION: /auth/refresh response includes 'token' field — this is the #6590 XSS leak that #8107 fixed. Refreshed JWT must live in the HttpOnly kc_auth cookie only."
             echo "Response was: $REFRESH_RESP"
             exit 1
           fi
-          echo "token field present (${#HAS_TOKEN} chars)"
+          echo "token field absent from body (correct)"
 
-          # CONTRACT: response must contain "onboarded" (boolean)
+          # #6590 CONTRACT: response body MUST contain `onboarded` (boolean)
           HAS_ONBOARDED=$(echo "$REFRESH_RESP" | jq 'has("onboarded")')
           if [ "$HAS_ONBOARDED" != "true" ]; then
             echo "::error::CONTRACT VIOLATION: /auth/refresh response missing 'onboarded' field"
@@ -146,7 +157,7 @@ jobs:
           fi
           echo "onboarded field present"
 
-          # CONTRACT: response must contain "refreshed" (boolean, true)
+          # #6590 CONTRACT: response body MUST contain `refreshed: true`
           HAS_REFRESHED=$(echo "$REFRESH_RESP" | jq -r '.refreshed // empty')
           if [ "$HAS_REFRESHED" != "true" ]; then
             echo "::error::CONTRACT VIOLATION: /auth/refresh response missing 'refreshed' field"
@@ -154,6 +165,16 @@ jobs:
             exit 1
           fi
           echo "refreshed field present"
+
+          # #6590 CONTRACT: Set-Cookie must refresh the kc_auth cookie.
+          REFRESHED_KC_AUTH=$(grep -E '^[^#].*\skc_auth\s' "$REFRESH_COOKIE_JAR" 2>/dev/null | awk '{print $NF}' | tail -n1)
+          if [ -z "$REFRESHED_KC_AUTH" ]; then
+            echo "::error::CONTRACT VIOLATION: /auth/refresh did not set a new kc_auth cookie. The refreshed JWT must be delivered exclusively via the HttpOnly cookie."
+            echo "Cookie jar contents:"
+            cat "$REFRESH_COOKIE_JAR" || true
+            exit 1
+          fi
+          echo "kc_auth cookie refreshed (${#REFRESHED_KC_AUTH} chars)"
 
           echo ""
           echo "Auth login smoke test PASSED"
@@ -182,14 +203,20 @@ jobs:
               'The auth contract test failed against a local backend in dev mode.',
               'This means the `/auth/refresh` endpoint is not returning the expected response shape.',
               '',
-              '### What broke last time',
-              'Commit `25e464fa` (#6593) removed the `token` field from the response body.',
-              'Fixed in `be946db9`. See contract test in `auth_contract_test.go`.',
+              '### #6590 contract (enforced by #8107)',
+              'The refreshed JWT must be delivered EXCLUSIVELY via the HttpOnly `kc_auth` cookie.',
+              'The JSON body carries only `{ refreshed: true, onboarded }`. Any `token` field in the body',
+              'is an XSS/extension-readable leak and MUST fail this smoke test.',
               '',
               '### Action required',
               '1. Check the workflow run logs above for the specific failure',
-              '2. Verify the `/auth/refresh` response includes `token`, `onboarded`, and `refreshed`',
+              '2. Verify /auth/refresh:',
+              '   - body contains `refreshed: true` and `onboarded`',
+              '   - body does NOT contain `token`',
+              '   - response sets a fresh `kc_auth` HttpOnly cookie',
               '3. Run `go test ./pkg/api/handlers/ -run TestAuthRefreshContract` locally',
+              '4. DO NOT "fix" this by re-adding `token` to the response body — that is the #6590 regression',
+              '   and will be reverted.',
             ].join('\n');
 
             // Don't create duplicate issues

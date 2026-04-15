@@ -4,6 +4,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 // Mocks — must be declared before importing the module under test
 // ---------------------------------------------------------------------------
 
+import { STORAGE_KEY_HAS_SESSION } from '../constants/storage'
+
 vi.mock('../constants', async (importOriginal) => {
   const actual = await importOriginal() as Record<string, unknown>
   return {
@@ -433,7 +435,7 @@ describe('api.ts', () => {
       expect(localStorage.getItem(STORAGE_KEY_TOKEN)).toBe('old-token')
       // Silent refresh also marks the persistent session hint so reloads
       // know to attempt cookie restoration.
-      expect(localStorage.getItem('kc-has-session')).toBe('true')
+      expect(localStorage.getItem(STORAGE_KEY_HAS_SESSION)).toBe('true')
     })
   })
 
