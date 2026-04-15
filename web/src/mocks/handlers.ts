@@ -280,7 +280,10 @@ const demoEvents = [
 
 const demoGPUNodes = [
   // vllm-gpu-cluster - Large GPU cluster for AI/ML workloads
-  { name: 'gpu-node-1', cluster: 'vllm-gpu-cluster', gpuType: 'NVIDIA A100', gpuCount: 8, gpuAllocated: 6 },
+  // gpu-node-1 is tainted `dedicated=ofer:NoSchedule` so the taint-aware filter
+  // on the GPU Utilization / GPU Inventory cards has something to gate on
+  // (issue #8172 — matches Mike Spreitzer's reported scenario).
+  { name: 'gpu-node-1', cluster: 'vllm-gpu-cluster', gpuType: 'NVIDIA A100', gpuCount: 8, gpuAllocated: 6, taints: [{ key: 'dedicated', value: 'ofer', effect: 'NoSchedule' }] },
   { name: 'gpu-node-2', cluster: 'vllm-gpu-cluster', gpuType: 'NVIDIA A100', gpuCount: 8, gpuAllocated: 8 },
   { name: 'gpu-node-3', cluster: 'vllm-gpu-cluster', gpuType: 'NVIDIA A100', gpuCount: 8, gpuAllocated: 4 },
   { name: 'gpu-node-4', cluster: 'vllm-gpu-cluster', gpuType: 'NVIDIA H100', gpuCount: 8, gpuAllocated: 7 },

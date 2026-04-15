@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect, useRef } from 'react'
 import { TrendingUp, Clock, Server } from 'lucide-react'
 import { CardClusterFilter } from '../../lib/cards/CardComponents'
+import { useGPUTaintFilter, GPUTaintFilterControl } from './GPUTaintFilter'
 import { Skeleton, SkeletonStats } from '../ui/Skeleton'
 import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { useCardLoadingState } from './CardDataContext'
@@ -61,6 +62,19 @@ export function GPUUtilization() {
   const [localClusterFilter, setLocalClusterFilter] = useState<string[]>([])
   const [showClusterFilter, setShowClusterFilter] = useState(false)
   const clusterFilterRef = useRef<HTMLDivElement>(null)
+  // Taint-aware filtering (#8172). Computed from the full raw node list so
+  // the set of distinct taints shown to the user is stable across cluster
+  // filter changes — otherwise toggling a cluster off would "hide" a taint
+  // that still exists in the fleet.
+  const {
+    distinctTaints,
+    toleratedKeys: toleratedTaintKeys,
+    toggle: toggleTaintTolerance,
+    clear: clearTaintTolerance,
+    isVisible: nodeToleratedByTaints,
+  } = useGPUTaintFilter(gpuNodes)
+  const [showTaintFilter, setShowTaintFilter] = useState(false)
+  const taintFilterRef = useRef<HTMLDivElement>(null)
 
   const reachableClusters = clusters.filter(c => c.reachable !== false)
   const availableClustersForFilter = (() => {
@@ -106,6 +120,8 @@ export function GPUUtilization() {
     if (localClusterFilter.length > 0) {
       result = result.filter(n => localClusterFilter.some(c => (n.cluster ?? '').startsWith(c)))
     }
+    // Drop nodes whose scheduling-gating taints are not tolerated (#8172).
+    result = result.filter(nodeToleratedByTaints)
     return result
   })()
 
@@ -250,6 +266,15 @@ export function GPUUtilization() {
               setIsOpen={setShowClusterFilter}
               containerRef={clusterFilterRef}
               minClusters={1}
+            />
+            <GPUTaintFilterControl
+              distinctTaints={distinctTaints}
+              toleratedKeys={toleratedTaintKeys}
+              onToggle={toggleTaintTolerance}
+              onClear={clearTaintTolerance}
+              isOpen={showTaintFilter}
+              setIsOpen={setShowTaintFilter}
+              containerRef={taintFilterRef}
             />
           </div>
         </div>

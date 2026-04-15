@@ -260,6 +260,22 @@ func (m *MultiClusterClient) GetGPUNodes(ctx context.Context, contextName string
 			allocated = xpuAllocationByNode[node.Name]
 		}
 
+		// Collect scheduling-gating taints so the UI can offer taint-aware
+		// filtering of "available" GPUs (issue #8172). Only NoSchedule and
+		// NoExecute gate scheduling; PreferNoSchedule is advisory and is
+		// intentionally dropped here.
+		var nodeTaints []GPUTaint
+		for _, t := range node.Spec.Taints {
+			if t.Effect != corev1.TaintEffectNoSchedule && t.Effect != corev1.TaintEffectNoExecute {
+				continue
+			}
+			nodeTaints = append(nodeTaints, GPUTaint{
+				Key:    t.Key,
+				Value:  t.Value,
+				Effect: string(t.Effect),
+			})
+		}
+
 		gpuNodes = append(gpuNodes, GPUNode{
 			Name:               node.Name,
 			Cluster:            contextName,
@@ -267,6 +283,7 @@ func (m *MultiClusterClient) GetGPUNodes(ctx context.Context, contextName string
 			GPUCount:           deviceCount,
 			GPUAllocated:       allocated,
 			AcceleratorType:    accelType,
+			Taints:             nodeTaints,
 			GPUMemoryMB:        gpuMemoryMB,
 			GPUFamily:          gpuFamily,
 			CUDADriverVersion:  cudaDriverVersion,

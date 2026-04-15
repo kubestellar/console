@@ -86,7 +86,10 @@ function getDemoSecurityIssues() {
  */
 function getDemoGPUNodes() {
   return [
-    { name: 'gpu-node-1', cluster: 'vllm-gpu-cluster', gpuCount: 8, gpuType: 'NVIDIA A100', gpuAllocated: 6, gpuAvailable: 2, memory: '80GB', status: 'Ready' },
+    // gpu-node-1 carries a `dedicated=ofer:NoSchedule` taint so the taint-aware
+    // filter on GPU Utilization / GPU Inventory has something to gate on in
+    // demo mode (issue #8172 — matches Mike Spreitzer's reported scenario).
+    { name: 'gpu-node-1', cluster: 'vllm-gpu-cluster', gpuCount: 8, gpuType: 'NVIDIA A100', gpuAllocated: 6, gpuAvailable: 2, memory: '80GB', status: 'Ready', taints: [{ key: 'dedicated', value: 'ofer', effect: 'NoSchedule' }] },
     { name: 'gpu-node-2', cluster: 'vllm-gpu-cluster', gpuCount: 8, gpuType: 'NVIDIA A100', gpuAllocated: 8, gpuAvailable: 0, memory: '80GB', status: 'Ready' },
     { name: 'gpu-node-3', cluster: 'vllm-gpu-cluster', gpuCount: 4, gpuType: 'NVIDIA V100', gpuAllocated: 2, gpuAvailable: 2, memory: '32GB', status: 'Ready' },
     { name: 'ml-worker-1', cluster: 'eks-prod-us-east-1', gpuCount: 4, gpuType: 'NVIDIA T4', gpuAllocated: 4, gpuAvailable: 0, memory: '16GB', status: 'Ready' },

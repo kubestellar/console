@@ -1,6 +1,7 @@
-import { useMemo } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Cpu, Server, ChevronRight } from 'lucide-react'
 import { useCachedGPUNodes } from '../../hooks/useCachedData'
+import { useGPUTaintFilter, GPUTaintFilterControl } from './GPUTaintFilter'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { CardClusterFilter } from '../../lib/cards/CardComponents'
@@ -65,6 +66,20 @@ export function GPUInventory({ config }: GPUInventoryProps) {
     isDemoData: isDemoFallback,
   })
 
+  // Taint-aware filtering (#8172). Derived from the full raw list so the
+  // set of distinct taints shown in the UI is stable and the user can drill
+  // down/up through search/cluster filters without tainted nodes vanishing
+  // from the toleration picker.
+  const {
+    distinctTaints,
+    toleratedKeys: toleratedTaintKeys,
+    toggle: toggleTaintTolerance,
+    clear: clearTaintTolerance,
+    visibleNodes: taintFilteredRawNodes,
+  } = useGPUTaintFilter(rawNodes)
+  const [showTaintFilter, setShowTaintFilter] = useState(false)
+  const taintFilterRef = useRef<HTMLDivElement>(null)
+
   // Use unified card data hook for filtering, sorting, and pagination
   const {
     items: nodes,
@@ -79,7 +94,7 @@ export function GPUInventory({ config }: GPUInventoryProps) {
     sorting,
     containerRef,
     containerStyle,
-  } = useCardData<GPUNode, SortByOption>(rawNodes, {
+  } = useCardData<GPUNode, SortByOption>(taintFilteredRawNodes, {
     filter: {
       searchFields: ['name', 'cluster', 'gpuType'] as (keyof GPUNode)[],
       clusterField: 'cluster' as keyof GPUNode,
@@ -98,25 +113,16 @@ export function GPUInventory({ config }: GPUInventoryProps) {
   // using the same filter criteria that useCardData applies internally.
   // Since useCardData returns totalItems = filtered+sorted count, we can
   // use a lightweight useMemo that mirrors the filter logic for aggregation.
+  // Stats must reflect the taint-filtered view so the "Available" number on
+  // the card matches what's actually schedulable under the current toleration
+  // set (#8172). Using `taintFilteredRawNodes` rather than `rawNodes` makes
+  // toggling a tolerance checkbox visibly recompute the totals.
   const stats = useMemo(() => {
-    // The hook's totalItems reflects the filtered count, but we need
-    // per-field aggregation. We'll filter rawNodes the same way the hook does
-    // by leveraging the hook's internal filter state exposed through `filters`.
-    // This avoids duplicating the global filter logic by just summing from
-    // the items visible in the hook's filtered view.
-    //
-    // totalItems is the count of all items after filtering (before pagination).
-    // We need to compute GPU stats from those same items. The simplest approach:
-    // use the paginated `nodes` if showing all, otherwise we need the full filtered set.
-    // Since useCardData doesn't expose the full filtered set directly, we'll
-    // approximate by summing from rawNodes with the same search/cluster filter.
-    // However, the cleanest approach from the GPUWorkloads pattern is to compute
-    // from the source data (rawNodes), since stats should reflect overall totals.
-    const totalGPUs = rawNodes.reduce((sum, n) => sum + n.gpuCount, 0)
-    const allocatedGPUs = rawNodes.reduce((sum, n) => sum + n.gpuAllocated, 0)
+    const totalGPUs = taintFilteredRawNodes.reduce((sum, n) => sum + n.gpuCount, 0)
+    const allocatedGPUs = taintFilteredRawNodes.reduce((sum, n) => sum + n.gpuAllocated, 0)
     const availableGPUs = totalGPUs - allocatedGPUs
     return { totalGPUs, allocatedGPUs, availableGPUs }
-  }, [rawNodes])
+  }, [taintFilteredRawNodes])
 
   if (showSkeleton) {
     return (
@@ -183,6 +189,17 @@ export function GPUInventory({ config }: GPUInventoryProps) {
             setIsOpen={filters.setShowClusterFilter}
             containerRef={filters.clusterFilterRef}
             minClusters={1}
+          />
+
+          {/* Taint toleration picker (#8172) */}
+          <GPUTaintFilterControl
+            distinctTaints={distinctTaints}
+            toleratedKeys={toleratedTaintKeys}
+            onToggle={toggleTaintTolerance}
+            onClear={clearTaintTolerance}
+            isOpen={showTaintFilter}
+            setIsOpen={setShowTaintFilter}
+            containerRef={taintFilterRef}
           />
 
           <CardControls

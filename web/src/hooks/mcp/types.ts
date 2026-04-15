@@ -211,6 +211,17 @@ export interface AggregatedMetricCompleteness {
 // AcceleratorType represents the category of accelerator
 export type AcceleratorType = 'GPU' | 'TPU' | 'AIU' | 'XPU'
 
+/**
+ * Scheduling-gating taint on a GPU node (issue #8172).
+ * Only taint effects that actually gate scheduling (`NoSchedule`, `NoExecute`)
+ * are surfaced by the backend — `PreferNoSchedule` is advisory and is omitted.
+ */
+export interface GPUTaint {
+  key: string
+  value?: string
+  effect: string  // 'NoSchedule' | 'NoExecute'
+}
+
 export interface GPUNode {
   name: string
   cluster: string
@@ -218,6 +229,8 @@ export interface GPUNode {
   gpuCount: number          // Number of accelerators
   gpuAllocated: number      // Number of allocated accelerators
   acceleratorType?: AcceleratorType  // GPU, TPU, AIU, or XPU
+  /** Scheduling-gating taints on the underlying node (issue #8172). */
+  taints?: GPUTaint[]
   // Enhanced GPU info from NVIDIA GPU Feature Discovery
   gpuMemoryMB?: number
   gpuFamily?: string
