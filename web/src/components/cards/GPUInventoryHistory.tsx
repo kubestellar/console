@@ -749,9 +749,9 @@ export function GPUInventoryHistory() {
     <div className="h-full w-full min-w-0 flex flex-col content-loaded">
       {/* Header with controls */}
       <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 mb-2">
-        <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
           <Clock className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-          <span className="text-xs text-muted-foreground truncate">
+          <span className="text-xs text-muted-foreground truncate min-w-0 flex-1">
             {(chartData || []).length} {t('cards:gpuInventoryHistory.snapshots', 'snapshots')}
           </span>
         </div>
