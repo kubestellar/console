@@ -10,10 +10,10 @@
  *   <UnifiedCard config={clusterHealthConfig} title="Custom Title" />
  */
 
-import { ReactNode } from 'react'
-import { 
-  AlertTriangle, 
-  Info, 
+import { ReactNode, useMemo } from 'react'
+import {
+  AlertTriangle,
+  Info,
   RefreshCw,
   CheckCircle,
   AlertCircle,
@@ -47,14 +47,18 @@ export function UnifiedCard({
   // Check if mode is switching (show skeleton during transition)
   const isModeSwitching = useIsModeSwitching()
 
-  // Merge instance config with base config
-  const mergedConfig = (() => {
+  // Merge instance config with base config.
+  // MUST be memoized: the merged object is passed to useDataSource,
+  // useCardFiltering, and InlineStats — if those (or any downstream
+  // hook) read `mergedConfig.dataSource`/`.filters`/`.stats` in a
+  // useEffect dep, a fresh object every render becomes a setState loop
+  // that trips React error #185. Seen today in GA4 on pv_status /
+  // /storage. Memoizing against `config` and `instanceConfig` identity
+  // is safe: both come from static modules or stable parent state.
+  const mergedConfig = useMemo<UnifiedCardConfig>(() => {
     if (!instanceConfig) return config
-    return {
-      ...config,
-      // Instance config can override certain fields
-      ...instanceConfig } as UnifiedCardConfig
-  })()
+    return { ...config, ...instanceConfig } as UnifiedCardConfig
+  }, [config, instanceConfig])
 
   // Fetch data using the configured data source (skipped if overrideData provided)
   const { data: fetchedData, isLoading: isDataLoading, error, refetch } = useDataSource(
