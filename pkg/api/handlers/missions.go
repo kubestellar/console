@@ -413,6 +413,8 @@ func (h *MissionsHandler) RegisterRoutes(g fiber.Router) {
 func (h *MissionsHandler) RegisterPublicRoutes(g fiber.Router) {
 	g.Get("/browse", h.BrowseConsoleKB)
 	g.Get("/file", h.GetMissionFile)
+	g.Get("/scores", h.GetKBScores)
+	g.Get("/scores/:project/:id", h.GetMissionScore)
 }
 
 // githubGet makes a GET request to the GitHub API, falling back to unauthenticated if token is expired.
@@ -562,7 +564,7 @@ func (h *MissionsHandler) BrowseConsoleKB(c *fiber.Ctx) error {
 	// #6421 — Any dot-prefixed entry is hidden by the dotfile check below,
 	// so this map only needs to cover non-dot files.
 	hiddenFiles := map[string]bool{
-		"index.json":       true,
+		"index.json":        true,
 		"search-state.json": true,
 	}
 
@@ -748,6 +750,128 @@ func (h *MissionsHandler) ValidateMission(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"valid": false, "errors": errs})
 	}
 	return c.JSON(fiber.Map{"valid": true})
+}
+
+// ---------- Score Exposure ----------
+
+type indexJsonFormat struct {
+	Version  int `json:"version"`
+	Count    int `json:"count"`
+	Missions []struct {
+		Path               string      `json:"path"`
+		Title              string      `json:"title"`
+		Description        string      `json:"description"`
+		QualityScore       *int        `json:"qualityScore"`
+		QualityPass        *bool       `json:"qualityPass"`
+		QualityIssues      []string    `json:"qualityIssues"`
+		QualitySuggestions []string    `json:"qualitySuggestions"`
+		QualityBreakdown   interface{} `json:"qualityBreakdown"`
+		CncfProjects       []string    `json:"cncfProjects"`
+	} `json:"missions"`
+}
+
+func (h *MissionsHandler) fetchMissionIndex(c *fiber.Ctx) (*indexJsonFormat, error) {
+	cacheKey := "file:master:fixes/index.json"
+	var body []byte
+	if cached := h.cache.get(cacheKey, missionsCacheTTL); cached != nil {
+		body = cached.body
+	} else {
+		url := fmt.Sprintf("%s/kubestellar/console-kb/master/fixes/index.json", h.githubRawURL)
+		resp, err := h.githubGet(url, c.Get("X-GitHub-Token"))
+		if err != nil || resp.StatusCode != http.StatusOK {
+			if stale := h.cache.getStale(cacheKey, missionsCacheStaleTTL); stale != nil {
+				body = stale.body
+			} else {
+				return nil, fmt.Errorf("failed to fetch index")
+			}
+		} else {
+			defer resp.Body.Close()
+			limitedBody := io.LimitReader(resp.Body, missionsMaxBodyBytes)
+			fetched, _ := io.ReadAll(limitedBody)
+			body = fetched
+			h.cache.set(cacheKey, &missionsCacheEntry{
+				body:        fetched,
+				contentType: "application/json",
+				statusCode:  http.StatusOK,
+				fetchedAt:   time.Now(),
+			})
+		}
+	}
+
+	if body == nil {
+		return nil, fmt.Errorf("index body is nil")
+	}
+
+	var index indexJsonFormat
+	if err := json.Unmarshal(body, &index); err != nil {
+		return nil, fmt.Errorf("failed to parse index")
+	}
+	return &index, nil
+}
+
+// GetKBScores fetches scores across projects
+// GET /api/missions/scores
+func (h *MissionsHandler) GetKBScores(c *fiber.Ctx) error {
+	index, err := h.fetchMissionIndex(c)
+	if err != nil {
+		return c.Status(502).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	// Filter just the scoring related fields
+	var results []fiber.Map
+	for _, m := range index.Missions {
+		if m.QualityScore != nil {
+			project := "unknown"
+			if len(m.CncfProjects) > 0 {
+				project = m.CncfProjects[0]
+			}
+			results = append(results, fiber.Map{
+				"path":         m.Path,
+				"title":        m.Title,
+				"project":      project,
+				"qualityScore": m.QualityScore,
+				"qualityPass":  m.QualityPass,
+			})
+		}
+	}
+
+	return c.JSON(fiber.Map{"count": len(results), "scores": results})
+}
+
+// GetMissionScore fetches score breakdown for a specific entry
+// GET /api/missions/scores/:project/:id
+func (h *MissionsHandler) GetMissionScore(c *fiber.Ctx) error {
+	project := c.Params("project")
+	id := c.Params("id")
+
+	index, err := h.fetchMissionIndex(c)
+	if err != nil {
+		return c.Status(502).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	for _, m := range index.Missions {
+		mProject := "unknown"
+		if len(m.CncfProjects) > 0 {
+			mProject = m.CncfProjects[0]
+		}
+		// Match project and id from path (e.g. cncf-generated/coredns/coredns-123.json)
+		if mProject == project && strings.Contains(m.Path, id) {
+			if m.QualityScore == nil {
+				return c.Status(404).JSON(fiber.Map{"error": "Mission found but has no score associated"})
+			}
+			return c.JSON(fiber.Map{
+				"path":               m.Path,
+				"project":            mProject,
+				"title":              m.Title,
+				"qualityScore":       m.QualityScore,
+				"qualityBreakdown":   m.QualityBreakdown,
+				"qualityIssues":      m.QualityIssues,
+				"qualitySuggestions": m.QualitySuggestions,
+			})
+		}
+	}
+
+	return c.Status(404).JSON(fiber.Map{"error": "KB mission not found"})
 }
 
 // ---------- Share to Slack ----------
