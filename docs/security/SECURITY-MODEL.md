@@ -160,69 +160,102 @@ The table below documents the provider implementations that exist in the source 
 | Anthropic Claude (HTTP) | `claude` / `anthropic` | `ANTHROPIC_API_KEY` | `CLAUDE_MODEL` | — | no | `pkg/agent/provider_claude.go` |
 | OpenAI (ChatGPT, HTTP) | `openai` | `OPENAI_API_KEY` | `OPENAI_MODEL` | — | no | `pkg/agent/provider_openai.go:15` |
 | Google Gemini (HTTP) | `gemini` / `google` | `GOOGLE_API_KEY` | `GEMINI_MODEL` | — | no | `pkg/agent/provider_gemini.go:15` |
-| Groq (OpenAI-compatible, HTTP) | `groq` | `GROQ_API_KEY` | `GROQ_MODEL` | `GROQ_BASE_URL` (parsed, not wired) | no | `pkg/agent/provider_groq.go:22-51` |
-| OpenRouter (OpenAI-compatible, HTTP) | `openrouter` | `OPENROUTER_API_KEY` | `OPENROUTER_MODEL` | `OPENROUTER_BASE_URL` (parsed, not wired) | no | `pkg/agent/provider_openrouter.go:23-58` |
-| Open WebUI (OpenAI-compatible, HTTP) | `open-webui` | `OPEN_WEBUI_API_KEY` | `OPEN_WEBUI_MODEL` | `OPEN_WEBUI_URL` (parsed, not wired) | no | `pkg/agent/provider_openwebui.go:16,39` |
+| Groq (OpenAI-compatible, HTTP) | `groq` | `GROQ_API_KEY` | `GROQ_MODEL` | `GROQ_BASE_URL` | **yes (chat only)** | `pkg/agent/provider_groq.go` |
+| OpenRouter (OpenAI-compatible, HTTP) | `openrouter` | `OPENROUTER_API_KEY` | `OPENROUTER_MODEL` | `OPENROUTER_BASE_URL` | **yes (chat only)** | `pkg/agent/provider_openrouter.go` |
+| Open WebUI (OpenAI-compatible, HTTP) | `open-webui` | `OPEN_WEBUI_API_KEY` | `OPEN_WEBUI_MODEL` | `OPEN_WEBUI_URL` | **yes (chat only)** | `pkg/agent/provider_openwebui.go` |
+| Ollama (local, OpenAI-compatible) | `ollama` | `OLLAMA_API_KEY` (optional) | `OLLAMA_MODEL` | `OLLAMA_URL` (default `http://127.0.0.1:11434`) | **yes (chat only)** | `pkg/agent/provider_local_openai_compat.go` |
+| llama.cpp server | `llamacpp` | `LLAMACPP_API_KEY` (optional) | `LLAMACPP_MODEL` | `LLAMACPP_URL` | **yes (chat only)** | `pkg/agent/provider_local_openai_compat.go` |
+| LocalAI | `localai` | `LOCALAI_API_KEY` (optional) | `LOCALAI_MODEL` | `LOCALAI_URL` | **yes (chat only)** | `pkg/agent/provider_local_openai_compat.go` |
+| vLLM | `vllm` | `VLLM_API_KEY` (optional) | `VLLM_MODEL` | `VLLM_URL` | **yes (chat only)** | `pkg/agent/provider_local_openai_compat.go` |
+| LM Studio | `lm-studio` | `LM_STUDIO_API_KEY` (optional) | `LM_STUDIO_MODEL` | `LM_STUDIO_URL` (default `http://127.0.0.1:1234`) | **yes (chat only)** | `pkg/agent/provider_local_openai_compat.go` |
+| Red Hat AI Inference Server | `rhaiis` | `RHAIIS_API_KEY` (optional) | `RHAIIS_MODEL` | `RHAIIS_URL` | **yes (chat only)** | `pkg/agent/provider_local_openai_compat.go` |
 
-Note the asymmetry: the upstream OpenAI provider source file hard-codes its hostname as a package-level variable in `pkg/agent/provider_openai.go:15` (no `OPENAI_BASE_URL` override). Groq, OpenRouter, and Open WebUI do parse base-URL env vars, but because those providers are not registered at runtime today, setting those env vars does not actually route AI traffic through a local endpoint.
+"Chat only" means the provider reports `CapabilityChat` but not `CapabilityToolExec`. AI missions that need to execute cluster commands (kubectl, helm) still route through the tool-capable CLI agents (`claude`, `codex`, `gemini-cli`, `antigravity`, `goose`, `copilot-cli`, `bob`); local LLM providers are selectable in the agent dropdown for analysis and chat workflows but do not drive missions. See `pkg/agent/registry.go:303` for the rationale comment and `promoteExecutingDefault()` which keeps a mission-capable agent as the default whenever one is available.
 
-### Planned follow-up: wire up OpenAI-compatible local LLMs
+The upstream Anthropic, OpenAI, and Gemini HTTP providers remain intentionally unregistered — they cannot execute commands AND they route traffic to a specific vendor the operator has no say over, so they offer strictly less than the CLI agent equivalents. The `pkg/agent/provider_openai.go:15` hostname is still hard-coded.
 
-The diagrams and examples below describe the **planned** configuration shape once the base-URL-overridable HTTP providers are registered in `InitializeProviders`. They are **not operative in the current build** — treat them as forward-looking documentation. If/when the providers are wired in, this section will be promoted back to a supported recipe.
+### Local LLM strategy
 
-#### Planned: routing a local LLM through an overridable provider slot
+The registered local LLM providers unlock a "chat stays inside the cluster" posture: when `OLLAMA_URL` (or any of the six runner-specific env vars) points at an in-cluster Service or a workstation-local server, user prompts and the model's responses never reach a public vendor. The `docs/security/SECURITY-MODEL.md` threat model still applies: kubeconfig files, bearer tokens, and cluster credentials are never put into the chat request body regardless of which provider is selected.
+
+For a decision matrix on which runner fits which deployment profile, the install missions, and three topology diagrams, see the [Local LLM Strategy](https://docs.kubestellar.io/console/local-llm-strategy/) page on docs.kubestellar.io. Each runner has a companion install mission in `kubestellar/console-kb` (for example `install-ollama`, `install-llama-cpp`, `install-localai`, `install-vllm`, `install-rhaiis`, `install-lm-studio`, `install-open-webui`, `install-claude-desktop`), reachable from the agent selector dropdown when the runner is not yet configured.
+
+### Working path today — point a local LLM at the dropdown
+
+The examples below are **active recipes** as of this revision of the document — the providers they rely on are registered in `InitializeProviders` and the `Available` field in the agent dropdown honors these env vars.
+
+#### Routing a local LLM through a dedicated provider slot
 
 ![Mermaid diagram 4](diagrams/diagram-4.svg)
 
-Once the provider is registered, setting `GROQ_BASE_URL` would redirect every chat-completion call made by the Groq provider to your own endpoint. The request payload is unchanged — it's the OpenAI wire format — so any OpenAI-compatible local runner would work without the console knowing or caring which one. Today, however, the Groq provider is excluded from `InitializeProviders` (see "Current registration status" above), so this flow is documented but not active.
+Each local LLM runner has its own provider key and env var, so operators can point a single kc-agent at several runners simultaneously and switch between them from the dropdown. The request payload is the standard OpenAI wire format — any OpenAI-compatible local runner works without the console knowing or caring which one. When the env var is unset, the provider is listed in the dropdown as unavailable with a link to its install mission.
 
-#### Local LLM as a security posture (intended direction)
+#### Local LLM as a security posture
 
-Using a local / on-prem LLM would be the strongest way to keep prompts and conversation history inside your trust boundary. When the base URL points at something running on your own network, the AI traffic never leaves the machine (for a loopback endpoint) or never leaves your perimeter (for an internal gateway). This is the intended direction for operators in regulated, air-gapped, or high-sensitivity environments — not because the console is broken without a public provider, but because the security posture matches what those environments need. Until the HTTP providers are wired into the runtime registry, the supported air-gapped path is to run without AI (Posture B) or to use a CLI tool agent whose upstream endpoint you control.
+Using a local / on-prem LLM is the strongest way to keep prompts and conversation history inside your trust boundary. When the base URL points at something running on your own cluster (or on your own workstation), the AI traffic never leaves your perimeter. This is the supported direction for operators in regulated, air-gapped, or high-sensitivity environments. Pair a local runner with the Console's existing "no AI" (Posture B) path as an explicit escalation: start with B, enable a local LLM when the operator needs it, and never route chat to a public vendor unless the policy explicitly allows it.
 
-See `pkg/agent/provider_groq.go`, `pkg/agent/provider_openrouter.go`, and `pkg/agent/provider_openwebui.go` for the three overridable slots.
+See `pkg/agent/provider_local_openai_compat.go` for the shared factory, and `pkg/agent/provider_groq.go`, `pkg/agent/provider_openrouter.go`, `pkg/agent/provider_openwebui.go` for the three previously-staged slots that are now also registered.
 
-#### Planned: Ollama via the Groq provider slot
+#### Ollama
 
-[Ollama](https://ollama.com) exposes an OpenAI-compatible endpoint at `http://localhost:11434/v1`. Once the Groq provider is registered, `GROQ_BASE_URL` would be honored verbatim and you could repurpose the Groq provider to point at Ollama:
+[Ollama](https://ollama.com) exposes an OpenAI-compatible endpoint at `http://localhost:11434/v1`. kc-agent ships with Ollama as a registered provider; the env var defaults to the loopback endpoint so on a workstation with Ollama running, the provider becomes Available automatically:
 
 ```bash
-# PLANNED — not yet wired at runtime
-export GROQ_API_KEY=unused-but-nonempty     # kc-agent only checks for non-empty
-export GROQ_BASE_URL=http://localhost:11434/v1
-export GROQ_MODEL=llama3.1:8b
+export OLLAMA_URL=http://127.0.0.1:11434     # optional — this is also the default
+export OLLAMA_MODEL=llama3.2
 ./bin/kc-agent
 ```
 
-kc-agent would then call `http://localhost:11434/v1/chat/completions` (see `pkg/agent/provider_groq.go` where `baseURL + groqChatCompletionsPath` is assembled) with the standard OpenAI request shape. Ollama would handle it natively.
+kc-agent calls `${OLLAMA_URL}/v1/chat/completions` (see `pkg/agent/provider_local_openai_compat.go` — the generic LocalOpenAICompatProvider factory). The dropdown lists "Ollama (Local)"; selecting it routes chat through Ollama.
 
-The same recipe is intended to work for any other OpenAI-compatible local runner (vLLM, LM Studio, LocalAI, text-generation-webui with OpenAI mode) — set `GROQ_BASE_URL` to the server's `/v1` endpoint once the provider is registered.
+#### llama.cpp / LocalAI / vLLM / RHAIIS
 
-#### Planned: OpenRouter or an internal OpenAI-compatible gateway
+Each runner has the same shape. Set the runner's URL env var to the in-cluster Service URL (or loopback for a workstation install) and pick the provider from the dropdown:
 
 ```bash
-# PLANNED — not yet wired at runtime
+export LLAMACPP_URL=http://llama-server.llamacpp.svc.cluster.local:8080
+export LOCALAI_URL=http://local-ai.localai.svc.cluster.local:8080
+export VLLM_URL=http://vllm.vllm.svc.cluster.local:8000
+export RHAIIS_URL=http://rhaiis.rhaiis.svc.cluster.local:8000
+./bin/kc-agent
+```
+
+For the corresponding install missions, use `install-llama-cpp`, `install-localai`, `install-vllm`, `install-rhaiis` from `kubestellar/console-kb`. The dropdown's install-mission link for each unavailable runner points at these directly.
+
+#### LM Studio (workstation)
+
+LM Studio runs on macOS, Windows, or Linux and exposes an OpenAI-compatible server on `127.0.0.1:1234` from the Developer tab. The `lm-studio` provider defaults to that endpoint, so on a laptop with LM Studio running it becomes Available automatically:
+
+```bash
+export LM_STUDIO_URL=http://127.0.0.1:1234   # optional — this is also the default
+./bin/kc-agent
+```
+
+See `install-lm-studio` for the workstation setup walkthrough.
+
+#### Groq / OpenRouter / Open WebUI gateways
+
+If you already run a corporate LLM gateway that speaks the OpenAI API (Groq LPU for throughput, OpenRouter as a multi-model gateway, Open WebUI as a self-hosted frontend), point the corresponding base URL at it:
+
+```bash
+# Groq LPU gateway or an internal OpenAI-compatible gateway
+export GROQ_API_KEY=<your key>
+export GROQ_BASE_URL=https://llm-gateway.internal.example.com/v1
+export GROQ_MODEL=llama-3.1-70b-versatile
+
+# OpenRouter or an internal unified gateway
 export OPENROUTER_API_KEY=<your key>
 export OPENROUTER_BASE_URL=https://llm-gateway.internal.example.com/v1
 export OPENROUTER_MODEL=mixtral-8x7b
-./bin/kc-agent
-```
 
-This is the intended path for a corporate LLM gateway — OpenRouter's provider implementation already sets sensible defaults and honors the override (`pkg/agent/provider_openrouter.go:57-58`), but the provider itself is not currently registered.
-
-#### Planned: Open WebUI
-
-If you already run [Open WebUI](https://openwebui.com) as your internal LLM front-end, the planned configuration would be:
-
-```bash
-# PLANNED — not yet wired at runtime
+# Open WebUI frontend
 export OPEN_WEBUI_API_KEY=<token>
 export OPEN_WEBUI_URL=http://open-webui.llm.svc:3000
 export OPEN_WEBUI_MODEL=llama3.1
 ./bin/kc-agent
 ```
 
-(`pkg/agent/provider_openwebui.go:16,39` — `OPEN_WEBUI_URL` is the base, not a full chat path.)
+All three are registered as chat-capable providers and are honored by the runtime. See `pkg/agent/provider_groq.go`, `pkg/agent/provider_openrouter.go`, `pkg/agent/provider_openwebui.go` for the full field-by-field provider definitions.
 
 ### Config file vs env vars
 
