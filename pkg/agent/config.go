@@ -304,6 +304,8 @@ func getEnvKeyForProvider(provider string) string {
 		return "OPEN_WEBUI_API_KEY"
 	case "openrouter":
 		return "OPENROUTER_API_KEY"
+	case "groq":
+		return "GROQ_API_KEY"
 	case "goose":
 		return "GOOSE_PROVIDER"
 	default:
@@ -327,6 +329,8 @@ func getModelEnvKeyForProvider(provider string) string {
 		return "OPEN_WEBUI_MODEL"
 	case "openrouter":
 		return "OPENROUTER_MODEL"
+	case "groq":
+		return "GROQ_MODEL"
 	case "goose":
 		return "GOOSE_MODEL"
 	default:

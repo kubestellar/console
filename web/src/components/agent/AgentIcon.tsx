@@ -153,6 +153,13 @@ export function AgentIcon({ provider, className = 'w-5 h-5' }: AgentIconProps) {
           <path d="M6 12 L18 19" className="stroke-sky-500" />
         </svg>
       )
+    case 'groq':
+      return (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          {/* Groq icon - lightning bolt (ultra-low-latency LPU inference) */}
+          <path d="M13 2 L4 14 L11 14 L10 22 L20 9 L13 9 Z" className="fill-orange-500 stroke-orange-500" />
+        </svg>
+      )
     case 'bob':
       return (
         <svg className={className} viewBox="0 0 100 100" fill="none">

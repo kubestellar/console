@@ -220,7 +220,7 @@
     },
     "apiKeys": {
       "title": "AI Provider Keys",
-      "subtitle": "Configure API keys for Claude, OpenAI, Gemini, and OpenRouter",
+      "subtitle": "Configure API keys for Claude, OpenAI, Gemini, OpenRouter, and Groq",
       "securityNote": "API keys are stored securely on your local machine in ~/.kc/config.yaml and are never sent to our servers.",
       "manageKeys": "Manage API Keys"
     },

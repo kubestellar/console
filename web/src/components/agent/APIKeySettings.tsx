@@ -86,6 +86,10 @@ const PROVIDER_INFO: Record<string, { docsUrl: string; placeholder: string }> = 
     docsUrl: AI_PROVIDER_DOCS.openrouter,
     placeholder: 'sk-or-...',
   },
+  groq: {
+    docsUrl: AI_PROVIDER_DOCS.groq,
+    placeholder: 'gsk_...',
+  },
 }
 
 // Map backend provider key names to AgentIcon provider values
@@ -104,6 +108,7 @@ function providerToIconMap(provider: string): string {
     raycast: 'raycast',
     'open-webui': 'open-webui',
     openrouter: 'openrouter',
+    groq: 'groq',
   }
   return map[provider] || provider
 }

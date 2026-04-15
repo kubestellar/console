@@ -19,6 +19,7 @@ export type AgentProvider =
   | 'raycast'         // Raycast
   | 'open-webui'      // Open WebUI
   | 'openrouter'      // OpenRouter (https://openrouter.ai) — unified OpenAI-compatible gateway
+  | 'groq'            // Groq (https://groq.com) — ultra-low-latency LPU inference, OpenAI-compatible
   | 'bob'             // Bob (discovery-only)
   | 'block'           // Goose (Block Inc)
   | 'github-cli'      // GitHub Copilot CLI
