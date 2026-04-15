@@ -8,6 +8,12 @@ import '../../test/utils/setupMocks'
 // Wait budget for async detection flows.
 const ASYNC_WAIT_TIMEOUT_MS = 2000
 
+// #7993 Phase 4 (#8044): GitOps.tsx no longer calls `api.post`; it now
+// fetches kc-agent's drift-detect endpoint directly. We match the fetch URL
+// by suffix so the test stays agnostic of LOCAL_AGENT_HTTP_URL's host.
+const DETECT_DRIFT_PATH_SUFFIX = '/gitops/detect-drift'
+const HEALTH_CHECK_PATH = '/api/health'
+
 // Controls whether getDemoMode() returns true for the current test.
 // IMPORTANT: setupMocks mocks useDemoMode to always return true. We override
 // that below with `vi.doMock` inside a sync import shim so tests can flip
@@ -53,11 +59,11 @@ vi.mock('../ui/Toast', () => ({
   useToast: () => ({ showToast: vi.fn() }),
 }))
 
-// The component uses both api.post (for detect-drift) and getDemoMode.
-const apiPostMock = vi.fn()
-vi.mock('../../lib/api', () => ({
-  api: { post: (...args: unknown[]) => apiPostMock(...args) },
-}))
+// Per-test handler for the drift-detect fetch call. beforeEach resets to a
+// successful empty response; individual tests override to simulate failures
+// or a drifted result.
+type DriftFetchResponse = { ok: boolean; body: unknown }
+let driftFetchHandler: () => DriftFetchResponse | Promise<DriftFetchResponse>
 
 // NOTE: setupMocks.ts already mocks '../../hooks/useDemoMode'. We override
 // getDemoMode at runtime in beforeEach below so each test can control the
@@ -81,19 +87,26 @@ describe('GitOps Component', () => {
   beforeEach(() => {
     demoModeFlag = false
     mockClusters = []
-    apiPostMock.mockReset()
+    // Default: drift detection succeeds with no drift. Tests override.
+    driftFetchHandler = () => ({ ok: true, body: { drifted: false, resources: [] } })
     // Override setupMocks' forced-true getDemoMode with our flag. vi.spyOn
     // replaces the export on the already-mocked module.
     vi.spyOn(useDemoModeModule, 'getDemoMode').mockImplementation(() => demoModeFlag)
-    // Default: health check + detect-drift both succeed cleanly.
+    // Route-aware fetch mock. Health check always succeeds; detect-drift
+    // delegates to the per-test handler.
     vi.stubGlobal(
       'fetch',
-      vi.fn(() =>
-        Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({}),
-        })
-      )
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = typeof input === 'string' ? input : input.toString()
+        if (url.includes(DETECT_DRIFT_PATH_SUFFIX)) {
+          const { ok, body } = await driftFetchHandler()
+          return { ok, json: () => Promise.resolve(body) } as unknown as Response
+        }
+        if (url.includes(HEALTH_CHECK_PATH)) {
+          return { ok: true, json: () => Promise.resolve({}) } as unknown as Response
+        }
+        return { ok: true, json: () => Promise.resolve({}) } as unknown as Response
+      })
     )
   })
 
@@ -140,16 +153,11 @@ describe('GitOps Component', () => {
   // "synced + healthy" (false green).
   it('renders drift check failure as error state, not as synced (#6156)', async () => {
     mockClusters = [{ name: 'only', context: 'only' }]
-    // health check ok, but api.post (detect-drift) throws.
-    apiPostMock.mockRejectedValue(new Error('backend exploded'))
+    // Health check ok, but the detect-drift fetch throws.
+    driftFetchHandler = () => {
+      throw new Error('backend exploded')
+    }
     renderGitOps()
-    await waitFor(
-      () => {
-        // api.post must have been called for each app config.
-        expect(apiPostMock).toHaveBeenCalled()
-      },
-      { timeout: ASYNC_WAIT_TIMEOUT_MS }
-    )
     await waitFor(
       () => {
         expect(screen.getAllByText('gitops.driftCheckFailed').length).toBeGreaterThan(0)
@@ -168,7 +176,7 @@ describe('GitOps Component', () => {
       { name: 'cluster-a', context: 'cluster-a' },
       { name: 'cluster-b', context: 'cluster-b' },
     ]
-    apiPostMock.mockResolvedValue({ data: { drifted: false, resources: [] } })
+    driftFetchHandler = () => ({ ok: true, body: { drifted: false, resources: [] } })
     renderGitOps()
     await waitFor(
       () => {
@@ -190,7 +198,7 @@ describe('GitOps Component', () => {
   // "gitops.unknown" (via getTimeAgo with undefined), not "gitops.justNow".
   it('does not fabricate a recent lastSyncTime on render (#6158)', async () => {
     mockClusters = [{ name: 'only', context: 'only' }]
-    apiPostMock.mockResolvedValue({ data: { drifted: false, resources: [] } })
+    driftFetchHandler = () => ({ ok: true, body: { drifted: false, resources: [] } })
     renderGitOps()
     await waitFor(
       () => {
