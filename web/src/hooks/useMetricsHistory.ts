@@ -15,9 +15,16 @@ const MAX_INCREASING_RESTART_PODS = 10
  * from the last known non-empty gpuNodes list. Prevents a transient GPU fetch
  * glitch (SSE race, partial cluster reachability) from being persisted as a
  * zero-total snapshot in GPU Inventory History while still allowing truly
- * removed GPUs to reflect after ~2 intervals.
+ * removed GPUs to reflect after roughly this-many capture intervals.
+ *
+ * At the default 10-minute capture interval, 6 consecutive carries covers
+ * ~1 hour of flapping — long enough to absorb a slow-rolling cluster outage
+ * on the GPU-bearing cluster (see issues #8080, #8081 from Mike Spreitzer's
+ * vllm-d cluster where partial fetch failures flapped inventory for multiple
+ * polling windows). Previously this was 2, which only covered ~20 minutes
+ * and still let zero bars leak into the persisted history.
  */
-const MAX_GPU_CARRY_FORWARD = 2
+const MAX_GPU_CARRY_FORWARD = 6
 
 // Singleton state - shared across all hook instances
 let snapshots: MetricsSnapshot[] = []

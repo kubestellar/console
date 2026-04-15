@@ -22,6 +22,12 @@ export interface SSEFetchOptions<T> {
   params?: Record<string, string | number | undefined>
   /** Called when each cluster's data arrives */
   onClusterData: (clusterName: string, items: T[]) => void
+  /**
+   * Called when the backend emits a `cluster_error` event for a cluster that
+   * failed mid-stream. Used so callers can distinguish "no data for this
+   * cluster" from "the cluster fetch errored" (see issues #8080, #8081).
+   */
+  onClusterError?: (clusterName: string, error: string) => void
   /** Called when stream completes */
   onDone?: (summary: Record<string, unknown>) => void
   /** Key in each event's JSON that holds the items array */
@@ -48,6 +54,7 @@ const inflightRequests = new Map<string, Promise<unknown[]>>()
 /** Subscribers waiting for callbacks on an in-flight SSE stream */
 interface SSESubscriber<T = unknown> {
   onClusterData: (clusterName: string, items: T[]) => void
+  onClusterError?: (clusterName: string, error: string) => void
   onDone?: (summary: Record<string, unknown>) => void
 }
 const inflightSubscribers = new Map<string, SSESubscriber[]>()
@@ -109,7 +116,7 @@ function parseSSEChunk(
  * (up to SSE_MAX_RECONNECT_ATTEMPTS attempts) before rejecting.
  */
 export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
-  const { url, params, onClusterData, onDone, itemsKey, signal } = options
+  const { url, params, onClusterData, onClusterError, onDone, itemsKey, signal } = options
 
   const searchParams = new URLSearchParams()
   if (params) {
@@ -152,7 +159,10 @@ export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
   const inflight = inflightRequests.get(cacheKey)
   if (inflight) {
     const subscribers = inflightSubscribers.get(cacheKey) || []
-    subscribers.push({ onClusterData: onClusterData as SSESubscriber['onClusterData'], onDone })
+    subscribers.push({
+      onClusterData: onClusterData as SSESubscriber['onClusterData'],
+      onClusterError: onClusterError as SSESubscriber['onClusterError'],
+      onDone })
     inflightSubscribers.set(cacheKey, subscribers)
     return inflight as Promise<T[]>
   }
@@ -282,6 +292,25 @@ export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
                 }
               } catch (e) {
                 console.error('[SSE] Failed to parse cluster_data:', e)
+              }
+            } else if (eventType === 'cluster_error') {
+              // Backend emits cluster_error when a single cluster fetch
+              // failed mid-stream (see pkg/api/handlers/sse.go). Surface this
+              // to callers so they can distinguish "zero results" from
+              // "some clusters errored". Without this, a transient failure
+              // on the only GPU-bearing cluster looks like "no GPUs" to the
+              // client and flaps the inventory (issues #8080, #8081).
+              try {
+                const parsed = JSON.parse(data) as Record<string, unknown>
+                const clusterName = (parsed.cluster as string) || 'unknown'
+                const errorMessage = (parsed.error as string) || 'unknown error'
+                onClusterError?.(clusterName, errorMessage)
+                const subs = inflightSubscribers.get(cacheKey) || []
+                for (const sub of subs) {
+                  try { sub.onClusterError?.(clusterName, errorMessage) } catch { /* subscriber error */ }
+                }
+              } catch (e) {
+                console.error('[SSE] Failed to parse cluster_error:', e)
               }
             } else if (eventType === 'done') {
               receivedDone = true

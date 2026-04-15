@@ -155,6 +155,20 @@ async function fetchClusters(): Promise<string[]> {
     .map(c => c.name)
 }
 
+/**
+ * Options for fetchFromAllClusters that alter empty-result semantics.
+ */
+interface FetchFromAllClustersOptions {
+  /**
+   * When true, throw if any cluster fetch failed AND the accumulated result
+   * is empty. Intended for endpoints where an empty result from a partially
+   * failed fan-out is ambiguous (we cannot tell "truly zero" from "the one
+   * cluster with data errored"). Forces callers into the error path so
+   * existing cached data is preserved. See issues #8080, #8081 (GPU flap).
+   */
+  throwIfPartialFailureEmpty?: boolean
+}
+
 // Fetch data from all clusters in parallel and merge results
 // Throws if ALL cluster fetches fail (so callers can fall back to agent)
 async function fetchFromAllClusters<T>(
@@ -162,7 +176,8 @@ async function fetchFromAllClusters<T>(
   resultKey: string,
   params?: Record<string, string | number | undefined>,
   addClusterField = true,
-  onProgress?: (partial: T[]) => void
+  onProgress?: (partial: T[]) => void,
+  options?: FetchFromAllClustersOptions
 ): Promise<T[]> {
   const clusters = await fetchClusters()
   if (clusters.length === 0) {
@@ -202,6 +217,23 @@ async function fetchFromAllClusters<T>(
     throw new Error('All cluster fetches failed')
   }
 
+  // Opt-in partial-failure protection: if any cluster failed and the
+  // accumulated result is empty, the empty result is ambiguous — we cannot
+  // distinguish "no data anywhere" from "the one cluster with data errored".
+  // Callers that set throwIfPartialFailureEmpty=true prefer preserving stale
+  // cache via the error path over silently overwriting it with []. See
+  // issues #8080, #8081 where a transient fetch failure for the vllm-d
+  // cluster caused GPU Usage Trend to flap to "No GPU Nodes".
+  if (
+    options?.throwIfPartialFailureEmpty &&
+    accumulated.length === 0 &&
+    failedCount > 0
+  ) {
+    throw new Error(
+      `Partial cluster failure yielded empty result (${failedCount}/${clusters.length} clusters errored) — preserving existing cache`,
+    )
+  }
+
   return accumulated
 }
 
@@ -214,27 +246,46 @@ async function fetchViaSSE<T>(
   endpoint: string,
   resultKey: string,
   params?: Record<string, string | number | undefined>,
-  onProgress?: (partial: T[]) => void
+  onProgress?: (partial: T[]) => void,
+  options?: FetchFromAllClustersOptions
 ): Promise<T[]> {
   const token = getToken()
   // SSE only available with real backend token
   if (!token || token === 'demo-token' || isBackendUnavailable()) {
-    return fetchFromAllClusters<T>(endpoint, resultKey, params, true, onProgress)
+    return fetchFromAllClusters<T>(endpoint, resultKey, params, true, onProgress, options)
   }
 
   try {
     const accumulated: T[] = []
-    return await fetchSSE<T>({
+    // Track backend-emitted cluster_error events so we can detect the
+    // "partial failure yielding empty result" case below (issues #8080,
+    // #8081). Without this, a cluster_error on the only GPU-bearing
+    // cluster would silently resolve to [] and flap the UI.
+    let clusterErrorCount = 0
+    const result = await fetchSSE<T>({
       url: `/api/mcp/${endpoint}/stream`,
       params,
       itemsKey: resultKey,
       onClusterData: (_cluster, items) => {
         accumulated.push(...items)
         onProgress?.([...accumulated])
+      },
+      onClusterError: () => {
+        clusterErrorCount += 1
       } })
+    if (
+      options?.throwIfPartialFailureEmpty &&
+      result.length === 0 &&
+      clusterErrorCount > 0
+    ) {
+      throw new Error(
+        `Partial SSE failure yielded empty result (${clusterErrorCount} cluster_error events) — preserving existing cache`,
+      )
+    }
+    return result
   } catch {
     // SSE failed — fall back to per-cluster REST
-    return fetchFromAllClusters<T>(endpoint, resultKey, params, true, onProgress)
+    return fetchFromAllClusters<T>(endpoint, resultKey, params, true, onProgress, options)
   }
 }
 
@@ -2111,6 +2162,15 @@ export function useCachedGPUNodes(
   const { category = 'gpu' } = options || {}
   const key = `gpuNodes:${cluster || 'all'}`
 
+  // Partial-failure protection (#8080, #8081): on the multi-cluster fan-out
+  // path, a transient error for the ONE cluster that actually has GPUs
+  // combined with empty results from the others is indistinguishable from
+  // "no GPUs anywhere". Rather than silently overwrite the cache with [],
+  // throw so useCache takes the error path and preserves the previous
+  // inventory. This is opt-in and GPU-specific — other endpoints (pods,
+  // deployments, etc.) still return partial data on partial failure.
+  const gpuFetchOptions: FetchFromAllClustersOptions = { throwIfPartialFailureEmpty: true }
+
   const result = useCache({
     key,
     category,
@@ -2121,10 +2181,17 @@ export function useCachedGPUNodes(
         const data = await fetchAPI<{ nodes: GPUNode[] }>('gpu-nodes', { cluster })
         return (data.nodes || []).map(n => ({ ...n, cluster }))
       }
-      return await fetchFromAllClusters<GPUNode>('gpu-nodes', 'nodes')
+      return await fetchFromAllClusters<GPUNode>(
+        'gpu-nodes',
+        'nodes',
+        undefined,
+        true,
+        undefined,
+        gpuFetchOptions,
+      )
     },
     progressiveFetcher: cluster ? undefined : async (onProgress) => {
-      return await fetchViaSSE<GPUNode>('gpu-nodes', 'nodes', {}, onProgress)
+      return await fetchViaSSE<GPUNode>('gpu-nodes', 'nodes', {}, onProgress, gpuFetchOptions)
     } })
 
   return {

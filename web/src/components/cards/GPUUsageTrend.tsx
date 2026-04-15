@@ -6,6 +6,8 @@ import { useClusters } from '../../hooks/useMCP'
 import { useCachedGPUNodes } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useMetricsHistoryReadOnly } from '../../hooks/useMetricsHistory'
+import { gpuNodeCache as mcpGPUNodeCache } from '../../hooks/mcp/compute'
+import type { GPUNode } from '../../hooks/mcp/types'
 import { Skeleton, SkeletonStats } from '../ui/Skeleton'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
@@ -110,6 +112,21 @@ export function GPUUsageTrend() {
     return () => clearInterval(intervalId)
   }, [])
 
+  // Fall back to the most recent snapshot's GPU nodes if the live list is
+  // empty. Snapshots use `gpuTotal`; we remap to `gpuCount` so downstream
+  // aggregation (currentTotals, filteredNodes) stays unchanged.
+  //
+  // Three-tier fallback (see issues 8080 and 8081):
+  //   1. Live cached GPU nodes from useCachedGPUNodes (SWR)
+  //   2. Most recent non-empty snapshot from useMetricsHistoryReadOnly
+  //   3. The MCP compute.ts localStorage cache (`kubestellar-gpu-cache`)
+  //      which persists across page reloads and is populated by the
+  //      useGPUNodes/mcp hook path
+  //
+  // Tier 3 specifically handles the fresh-page-load + flapping-cluster
+  // case: metrics history hasn't captured a snapshot yet and the live
+  // fetch returned empty, but a previous session's GPU cache is still
+  // sitting in localStorage.
   const effectiveGPUNodes: EffectiveGPUNode[] = useMemo(() => {
     if (gpuNodes.length > 0) {
       return gpuNodes.map(n => ({
@@ -154,6 +171,19 @@ export function GPUUsageTrend() {
         gpuType: g.gpuType,
         gpuCount: g.gpuTotal,
         gpuAllocated: g.gpuAllocated }))
+    }
+    // Tier 3: MCP module-level GPU cache (persisted to localStorage by
+    // web/src/hooks/mcp/compute.ts). This is last-resort when both the
+    // live fetch and metrics history are empty — typically on a fresh
+    // page load against a cluster whose GPU fetch is currently flapping.
+    const mcpCachedNodes: GPUNode[] = mcpGPUNodeCache?.nodes || []
+    if (mcpCachedNodes.length > 0) {
+      return mcpCachedNodes.map(n => ({
+        name: n.name,
+        cluster: n.cluster,
+        gpuType: n.gpuType,
+        gpuCount: n.gpuCount,
+        gpuAllocated: n.gpuAllocated }))
     }
     return []
   }, [gpuNodes, metricsHistory, hookLoading, isFailed, consecutiveFailures, stalenessTick])

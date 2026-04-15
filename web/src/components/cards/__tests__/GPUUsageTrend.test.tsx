@@ -64,6 +64,13 @@ vi.mock('../../../hooks/useMetricsHistory', () => ({
   useMetricsHistoryReadOnly: () => ({ history: mockUseMetricsHistory().history }),
 }))
 
+// Mock the MCP compute module so GPUUsageTrend's tertiary fallback
+// (issues #8080, #8081) sees an empty persisted GPU cache in tests
+// and does not rely on real localStorage side effects.
+vi.mock('../../../hooks/mcp/compute', () => ({
+  gpuNodeCache: { nodes: [], lastUpdated: null, isLoading: false, isRefreshing: false, error: null, consecutiveFailures: 0, lastRefresh: null },
+}))
+
 import { GPUUsageTrend } from '../GPUUsageTrend'
 
 describe('GPUUsageTrend', () => {

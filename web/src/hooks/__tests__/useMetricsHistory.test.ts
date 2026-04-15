@@ -817,7 +817,11 @@ describe('useMetricsHistory', () => {
     })
 
     it('eventually accepts empty GPU state after the carry-forward window expires', async () => {
-      // MAX_GPU_CARRY_FORWARD = 2 — after two empty captures, the third must reflect the empty state.
+      // MAX_GPU_CARRY_FORWARD = 6 (widened in #8080/#8081 to absorb longer
+      // slow-rolling flaps on GPU-bearing clusters). After six consecutive
+      // empty captures the seventh must reflect the empty state so truly
+      // removed GPUs eventually propagate into history.
+      const CARRY_FORWARD_WINDOW = 6
       mockClusters.push({ name: 'c1', cpuCores: 4, cpuUsageCores: 2, memoryGB: 8, memoryUsageGB: 4, nodeCount: 1, healthy: true })
       mockGPUNodes.push({ name: 'gpu-node-1', cluster: 'c1', gpuType: 'NVIDIA H100', gpuAllocated: 3, gpuCount: 8 })
 
@@ -830,13 +834,14 @@ describe('useMetricsHistory', () => {
       // Now transition to empty GPU state
       mockGPUNodes.length = 0
 
-      // Two empty captures — both should be carried-forward
-      act(() => { result.current.captureNow() })
-      act(() => { result.current.captureNow() })
+      // CARRY_FORWARD_WINDOW empty captures — all should be carried-forward
+      for (let i = 0; i < CARRY_FORWARD_WINDOW; i += 1) {
+        act(() => { result.current.captureNow() })
+      }
       const afterCarryForward = result.current.history[result.current.history.length - 1]
       expect(afterCarryForward.gpuNodes).toHaveLength(1)
 
-      // Third consecutive empty capture — must accept the empty state
+      // One more consecutive empty capture — must accept the empty state
       act(() => { result.current.captureNow() })
       const afterWindow = result.current.history[result.current.history.length - 1]
       expect(afterWindow.gpuNodes).toHaveLength(0)
