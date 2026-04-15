@@ -421,7 +421,9 @@ func (h *SelfUpgradeHandler) TriggerUpgrade(c *fiber.Ctx) error {
 			"message":  fmt.Sprintf("Deployment image patched to %s", req.ImageTag),
 		},
 	})
-	// Broadcast success — the pod will be terminated shortly by the rollout
+	// Broadcast progress: patch applied, waiting for rollout (step 2 / 60%).
+	// This is a "running" progress update, not a terminal success event — the
+	// real success broadcast happens once the deployment rollout completes.
 	h.hub.BroadcastAll(Message{
 		Type: "update_progress",
 		Data: map[string]any{
