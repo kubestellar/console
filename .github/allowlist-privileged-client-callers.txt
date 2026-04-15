@@ -1,0 +1,30 @@
+# Allowlist for the "Privileged Client Lint" CI check
+# (.github/workflows/privileged-client-lint.yml).
+#
+# Each non-comment line is a file **basename** in pkg/api/handlers/ that is
+# permitted to call `h.k8sClient.(Create|Update|Delete|Patch)…`,
+# `s.k8sClient.(Create|Update|Delete|Patch)…`, or
+# `persistence.(Create|Update|Delete)…` against a managed cluster using the
+# backend pod ServiceAccount.
+#
+# The architectural rule (#7993): all user-initiated k8s mutations must run
+# under the caller's own kubeconfig via kc-agent. The only legitimate
+# pod-SA exceptions are:
+#
+# 1. GPU reservation — creating a namespace + setting a ResourceQuota on it.
+#    Users cannot create namespaces or set quotas themselves; the console is
+#    the authorized policy layer.
+#
+# 2. Self-upgrade — the console pod patching its own Deployment. No other
+#    identity could perform a self-upgrade.
+#
+# 3. System-internal reconcilers — CR watchers that react to state changes
+#    without a human in the loop. User-initiated CR writes go through
+#    kc-agent at /console-cr/* (#7993 Phase 2.5).
+#
+# Adding a new file to this allowlist is a security decision. Do it in the
+# same PR as the new exception and explain the rationale in the PR body.
+
+mcp_resources.go
+self_upgrade.go
+console_persistence.go

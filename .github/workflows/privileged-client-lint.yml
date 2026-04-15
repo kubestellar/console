@@ -1,0 +1,122 @@
+name: Privileged Client Lint
+
+# Prevents new code from using the backend pod ServiceAccount to perform
+# user-initiated k8s mutations against managed clusters. All such operations
+# must go through kc-agent at LOCAL_AGENT_HTTP_URL / LOCAL_AGENT_WS_URL with
+# the user's own kubeconfig — see issue #7993 and the phase sequence it
+# tracks.
+#
+# The rule: a Fiber handler in pkg/api/handlers/ may not call
+#   h.k8sClient.(Create|Update|Delete|Patch)...
+#   s.k8sClient.(Create|Update|Delete|Patch)...
+#   persistence.(Create|Update|Delete)...
+# outside an explicit allowlist of files that legitimately use the pod SA.
+#
+# Legitimate exceptions (allowlist):
+#   mcp_resources.go     — GPU reservation (ResourceQuota + GPU-specific
+#                          namespace path). Users cannot create namespaces or
+#                          set quotas themselves; the console is the
+#                          authorized policy layer.
+#   self_upgrade.go      — The console pod patches its own Deployment. No
+#                          other identity could perform a self-upgrade.
+#   console_persistence.go — The reconciler (StartWatcher, reconcileDeployment,
+#                          evaluateClusterGroup, resolveManagedWorkload,
+#                          resolveTargetClusters, setTerminalStatus,
+#                          SyncNow, UpdateConfig) is system-internal: it
+#                          reacts to CR state changes without a human in the
+#                          loop and legitimately uses the pod SA. User-
+#                          initiated CR writes go through kc-agent at
+#                          /console-cr/* (#7993 Phase 2.5).
+#
+# This workflow runs on every PR that touches pkg/api/handlers/ or the
+# workflow itself so that an architectural regression is caught at review
+# time, not after it has shipped.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'pkg/api/handlers/**.go'
+      - '.github/workflows/privileged-client-lint.yml'
+      - '.github/allowlist-privileged-client-callers.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify no new pod-SA mutations in handlers
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Scan for disallowed privileged client calls
+        run: |
+          set -euo pipefail
+
+          ALLOWLIST_FILE=".github/allowlist-privileged-client-callers.txt"
+          HANDLER_DIR="pkg/api/handlers"
+
+          if [ ! -f "$ALLOWLIST_FILE" ]; then
+            echo "::error::Allowlist file $ALLOWLIST_FILE is missing"
+            exit 1
+          fi
+
+          # Load allowlist (one basename per line, # comments ignored).
+          ALLOWED_BASENAMES=$(grep -vE '^\s*(#|$)' "$ALLOWLIST_FILE" | sort -u)
+          echo "Allowed basenames:"
+          echo "$ALLOWED_BASENAMES" | sed 's/^/  /'
+          echo
+
+          # The three patterns to guard:
+          #   h.k8sClient.(Create|Update|Delete|Patch)<Name>
+          #   s.k8sClient.(Create|Update|Delete|Patch)<Name>
+          #   persistence.(Create|Update|Delete)<Name>
+          # where <Name> starts with an uppercase letter so we only catch
+          # exported mutation methods on the MultiClusterClient /
+          # ConsolePersistence facades (not arbitrary local vars or
+          # lower-case helpers).
+          PATTERN='(h\.k8sClient|s\.k8sClient)\.(Create|Update|Delete|Patch)[A-Z][A-Za-z0-9_]*\(|persistence\.(Create|Update|Delete)[A-Z][A-Za-z0-9_]*\('
+
+          # List candidate matches across the handler dir, excluding tests.
+          CANDIDATES=$(grep -rEn "$PATTERN" "$HANDLER_DIR" --include='*.go' | grep -v '_test\.go' || true)
+
+          if [ -z "$CANDIDATES" ]; then
+            echo "PASS: no privileged-client mutations found in $HANDLER_DIR"
+            exit 0
+          fi
+
+          # Filter out allowlisted files.
+          DISALLOWED=""
+          while IFS= read -r line; do
+            file_path=$(printf '%s' "$line" | cut -d: -f1)
+            base=$(basename "$file_path")
+            if ! printf '%s\n' "$ALLOWED_BASENAMES" | grep -qx "$base"; then
+              DISALLOWED="$DISALLOWED$line"$'\n'
+            fi
+          done <<< "$CANDIDATES"
+
+          if [ -z "$DISALLOWED" ]; then
+            echo "PASS: all privileged-client mutations in $HANDLER_DIR are in allowlisted files"
+            echo "$CANDIDATES"
+            exit 0
+          fi
+
+          echo "::error::Found privileged-client mutation(s) in non-allowlisted file(s)."
+          echo
+          echo "The backend pod ServiceAccount may only be used for the GPU"
+          echo "reservation exception (mcp_resources.go ResourceQuota handlers),"
+          echo "the console self-upgrade (self_upgrade.go), and the system-"
+          echo "internal persistence reconciler (console_persistence.go)."
+          echo "Every other k8s mutation must go through kc-agent at"
+          echo "LOCAL_AGENT_HTTP_URL with the user's kubeconfig — see #7993."
+          echo
+          echo "Disallowed call sites:"
+          printf '%s' "$DISALLOWED"
+          echo
+          echo "If you believe this is a legitimate new exception, update"
+          echo "$ALLOWLIST_FILE in the same PR and explain the reason in the"
+          echo "PR description."
+          exit 1
