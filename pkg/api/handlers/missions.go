@@ -771,30 +771,49 @@ type indexJsonFormat struct {
 }
 
 func (h *MissionsHandler) fetchMissionIndex(c *fiber.Ctx) (*indexJsonFormat, error) {
-	cacheKey := "file:master:fixes/index.json"
+	cacheKey := "index:master:fixes/index.json"
 	var body []byte
 	if cached := h.cache.get(cacheKey, missionsCacheTTL); cached != nil {
 		body = cached.body
 	} else {
 		url := fmt.Sprintf("%s/kubestellar/console-kb/master/fixes/index.json", h.githubRawURL)
 		resp, err := h.githubGet(url, c.Get("X-GitHub-Token"))
-		if err != nil || resp.StatusCode != http.StatusOK {
+		if resp != nil && resp.Body != nil {
+			defer func() {
+				_, _ = io.Copy(io.Discard, resp.Body)
+				_ = resp.Body.Close()
+			}()
+		}
+		if err != nil || resp == nil || resp.StatusCode != http.StatusOK {
 			if stale := h.cache.getStale(cacheKey, missionsCacheStaleTTL); stale != nil {
 				body = stale.body
 			} else {
+				if err != nil {
+					slog.Error("[missions] index json fetch failed", "error", err)
+				} else if resp != nil {
+					slog.Error("[missions] index json fetch failed", "status", resp.StatusCode)
+				}
 				return nil, fmt.Errorf("failed to fetch index")
 			}
 		} else {
-			defer resp.Body.Close()
 			limitedBody := io.LimitReader(resp.Body, missionsMaxBodyBytes)
-			fetched, _ := io.ReadAll(limitedBody)
-			body = fetched
-			h.cache.set(cacheKey, &missionsCacheEntry{
-				body:        fetched,
-				contentType: "application/json",
-				statusCode:  http.StatusOK,
-				fetchedAt:   time.Now(),
-			})
+			fetched, err := io.ReadAll(limitedBody)
+			if err != nil {
+				slog.Error("[missions] failed to read index json", "error", err)
+				if stale := h.cache.getStale(cacheKey, missionsCacheStaleTTL); stale != nil {
+					body = stale.body
+				} else {
+					return nil, fmt.Errorf("failed to read index")
+				}
+			} else {
+				body = fetched
+				h.cache.set(cacheKey, &missionsCacheEntry{
+					body:        fetched,
+					contentType: "application/json",
+					statusCode:  http.StatusOK,
+					fetchedAt:   time.Now(),
+				})
+			}
 		}
 	}
 
@@ -804,6 +823,7 @@ func (h *MissionsHandler) fetchMissionIndex(c *fiber.Ctx) (*indexJsonFormat, err
 
 	var index indexJsonFormat
 	if err := json.Unmarshal(body, &index); err != nil {
+		slog.Error("[missions] failed to parse index json", "error", err)
 		return nil, fmt.Errorf("failed to parse index")
 	}
 	return &index, nil
@@ -812,13 +832,24 @@ func (h *MissionsHandler) fetchMissionIndex(c *fiber.Ctx) (*indexJsonFormat, err
 // GetKBScores fetches scores across projects
 // GET /api/missions/scores
 func (h *MissionsHandler) GetKBScores(c *fiber.Ctx) error {
+	if isDemoMode(c) {
+		return c.JSON(fiber.Map{"count": 1, "scores": []fiber.Map{
+			{
+				"path":         "fixes/demo/demo-123.json",
+				"title":        "Demo Mission",
+				"project":      "demo",
+				"qualityScore": 85,
+				"qualityPass":  true,
+			},
+		}})
+	}
 	index, err := h.fetchMissionIndex(c)
 	if err != nil {
 		return c.Status(502).JSON(fiber.Map{"error": err.Error()})
 	}
 
 	// Filter just the scoring related fields
-	var results []fiber.Map
+	results := make([]fiber.Map, 0)
 	for _, m := range index.Missions {
 		if m.QualityScore != nil {
 			project := "unknown"
@@ -841,6 +872,18 @@ func (h *MissionsHandler) GetKBScores(c *fiber.Ctx) error {
 // GetMissionScore fetches score breakdown for a specific entry
 // GET /api/missions/scores/:project/:id
 func (h *MissionsHandler) GetMissionScore(c *fiber.Ctx) error {
+	if isDemoMode(c) {
+		return c.JSON(fiber.Map{
+			"path":               "fixes/demo/demo-123.json",
+			"project":            "demo",
+			"title":              "Demo Mission",
+			"qualityScore":       85,
+			"qualityBreakdown":   map[string]interface{}{"structure": 90, "completeness": 80},
+			"qualityIssues":      []string{},
+			"qualitySuggestions": []string{"Improve context"},
+		})
+	}
+
 	project := c.Params("project")
 	id := c.Params("id")
 
@@ -855,7 +898,8 @@ func (h *MissionsHandler) GetMissionScore(c *fiber.Ctx) error {
 			mProject = m.CncfProjects[0]
 		}
 		// Match project and id from path (e.g. cncf-generated/coredns/coredns-123.json)
-		if mProject == project && strings.Contains(m.Path, id) {
+		mBase := path.Base(m.Path)
+		if mProject == project && (mBase == id || mBase == id+".json") {
 			if m.QualityScore == nil {
 				return c.Status(404).JSON(fiber.Map{"error": "Mission found but has no score associated"})
 			}

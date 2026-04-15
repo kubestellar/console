@@ -75,6 +75,16 @@
   to = "/.netlify/functions/missions-browse"
   status = 200
 
+[[redirects]]
+  from = "/api/missions/scores/:project/:id"
+  to = "/.netlify/functions/missions-scores?project=:project&id=:id"
+  status = 200
+
+[[redirects]]
+  from = "/api/missions/scores"
+  to = "/.netlify/functions/missions-scores"
+  status = 200
+
 # GA4 gtag.js proxy — Netlify Function serves gtag.js from same origin,
 # bypassing domain-based ad blockers. This is the Netlify equivalent of
 # the Go backend's GA4ScriptProxy. Route handled by gtag-proxy.mts via

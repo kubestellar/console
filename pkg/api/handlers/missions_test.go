@@ -609,7 +609,7 @@ func TestSanitizePath_DoubleEncodedTraversal(t *testing.T) {
 	}
 
 	good := []string{
-		"",                             // repo root
+		"",                              // repo root
 		"missions/fixes/cncf-generated", // nested path
 		"fixes/kubernetes/foo.json",
 		"a/b/c",
@@ -706,6 +706,236 @@ func TestMissionsCache_ByteCapRejectsOversizeEntry(t *testing.T) {
 
 	assert.NotNil(t, cache.get("small", time.Hour), "small entry should survive")
 	assert.Nil(t, cache.get("huge", time.Hour), "oversize entry should be rejected")
+}
+
+// ---------- GetKBScores ----------
+
+// indexWithScores is a minimal fixes/index.json payload used by the score tests.
+const indexWithScores = `{
+	"version": 1,
+	"count": 2,
+	"missions": [
+		{
+			"path": "fixes/cncf-generated/coredns/coredns-123.json",
+			"title": "CoreDNS Issue 123",
+			"qualityScore": 82,
+			"qualityPass": true,
+			"qualityIssues": [],
+			"qualitySuggestions": ["Add more examples"],
+			"qualityBreakdown": {"structure": 90, "completeness": 74},
+			"cncfProjects": ["coredns"]
+		},
+		{
+			"path": "fixes/cncf-generated/kubernetes/kubernetes-456.json",
+			"title": "Kubernetes Issue 456",
+			"cncfProjects": ["kubernetes"]
+		}
+	]
+}`
+
+func TestGetKBScores_Success(t *testing.T) {
+	mock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Contains(t, r.URL.Path, "fixes/index.json")
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(indexWithScores))
+	}))
+	defer mock.Close()
+
+	app, handler := setupMissionsTest()
+	handler.githubRawURL = mock.URL
+
+	req, err := http.NewRequest("GET", "/api/missions/scores", nil)
+	require.NoError(t, err)
+	resp, err := app.Test(req, 5000)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var body map[string]interface{}
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
+	// Only the mission with qualityScore set should appear
+	assert.Equal(t, float64(1), body["count"])
+	scores, ok := body["scores"].([]interface{})
+	require.True(t, ok)
+	require.Len(t, scores, 1)
+	first := scores[0].(map[string]interface{})
+	assert.Equal(t, "coredns", first["project"])
+	assert.Equal(t, float64(82), first["qualityScore"])
+}
+
+func TestGetKBScores_EmptyResultsEncoding(t *testing.T) {
+	// An index with no scored missions should return scores:[] not scores:null.
+	emptyIndex := `{"version":1,"count":1,"missions":[{"path":"x","title":"x","cncfProjects":["k8s"]}]}`
+	mock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(emptyIndex))
+	}))
+	defer mock.Close()
+
+	app, handler := setupMissionsTest()
+	handler.githubRawURL = mock.URL
+
+	req, err := http.NewRequest("GET", "/api/missions/scores", nil)
+	require.NoError(t, err)
+	resp, err := app.Test(req, 5000)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	// Raw body must contain [] not null for the scores field
+	rawBody, _ := io.ReadAll(resp.Body)
+	assert.Contains(t, string(rawBody), `"scores":[]`,
+		"empty scores must encode as [] not null")
+}
+
+func TestGetKBScores_UpstreamError(t *testing.T) {
+	mock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer mock.Close()
+
+	app, handler := setupMissionsTest()
+	handler.githubRawURL = mock.URL
+
+	req, err := http.NewRequest("GET", "/api/missions/scores", nil)
+	require.NoError(t, err)
+	resp, err := app.Test(req, 5000)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusBadGateway, resp.StatusCode)
+}
+
+func TestGetKBScores_StaleCache(t *testing.T) {
+	var callCount atomic.Int32
+	mock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		count := callCount.Add(1)
+		if count == 1 {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(indexWithScores))
+		} else {
+			w.WriteHeader(http.StatusForbidden)
+		}
+	}))
+	defer mock.Close()
+
+	app, handler := setupMissionsTest()
+	handler.githubRawURL = mock.URL
+
+	// Populate cache
+	req1, _ := http.NewRequest("GET", "/api/missions/scores", nil)
+	resp1, err := app.Test(req1, 5000)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp1.StatusCode)
+
+	// Expire fresh cache
+	handler.cache.mu.Lock()
+	for _, entry := range handler.cache.entries {
+		entry.fetchedAt = time.Now().Add(-missionsCacheTTL - time.Second)
+	}
+	handler.cache.mu.Unlock()
+
+	// Second request: GitHub 403, should fall back to stale cache
+	req2, _ := http.NewRequest("GET", "/api/missions/scores", nil)
+	resp2, err := app.Test(req2, 5000)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp2.StatusCode, "should serve stale cache on rate-limit")
+}
+
+// ---------- GetMissionScore ----------
+
+func TestGetMissionScore_Success(t *testing.T) {
+	mock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(indexWithScores))
+	}))
+	defer mock.Close()
+
+	app, handler := setupMissionsTest()
+	handler.githubRawURL = mock.URL
+
+	req, err := http.NewRequest("GET", "/api/missions/scores/coredns/coredns-123", nil)
+	require.NoError(t, err)
+	resp, err := app.Test(req, 5000)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var body map[string]interface{}
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
+	assert.Equal(t, "coredns", body["project"])
+	assert.Equal(t, float64(82), body["qualityScore"])
+	assert.NotNil(t, body["qualityBreakdown"])
+}
+
+func TestGetMissionScore_NotFound(t *testing.T) {
+	mock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(indexWithScores))
+	}))
+	defer mock.Close()
+
+	app, handler := setupMissionsTest()
+	handler.githubRawURL = mock.URL
+
+	req, err := http.NewRequest("GET", "/api/missions/scores/coredns/coredns-999", nil)
+	require.NoError(t, err)
+	resp, err := app.Test(req, 5000)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+}
+
+func TestGetMissionScore_NoScore(t *testing.T) {
+	// Kubernetes mission exists but has no qualityScore
+	mock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(indexWithScores))
+	}))
+	defer mock.Close()
+
+	app, handler := setupMissionsTest()
+	handler.githubRawURL = mock.URL
+
+	req, err := http.NewRequest("GET", "/api/missions/scores/kubernetes/kubernetes-456", nil)
+	require.NoError(t, err)
+	resp, err := app.Test(req, 5000)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+
+	var body map[string]interface{}
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
+	assert.Contains(t, body["error"], "no score")
+}
+
+func TestGetMissionScore_ExactIDMatch(t *testing.T) {
+	// Ensure "coredns-12" does NOT match "coredns-123.json" (substring false-positive)
+	mock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(indexWithScores))
+	}))
+	defer mock.Close()
+
+	app, handler := setupMissionsTest()
+	handler.githubRawURL = mock.URL
+
+	req, err := http.NewRequest("GET", "/api/missions/scores/coredns/coredns-12", nil)
+	require.NoError(t, err)
+	resp, err := app.Test(req, 5000)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode,
+		"partial ID 'coredns-12' must not match 'coredns-123'")
+}
+
+func TestGetMissionScore_UpstreamError(t *testing.T) {
+	mock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	defer mock.Close()
+
+	app, handler := setupMissionsTest()
+	handler.githubRawURL = mock.URL
+
+	req, err := http.NewRequest("GET", "/api/missions/scores/coredns/coredns-123", nil)
+	require.NoError(t, err)
+	resp, err := app.Test(req, 5000)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusBadGateway, resp.StatusCode)
 }
 
 // ---------- Helpers ----------
