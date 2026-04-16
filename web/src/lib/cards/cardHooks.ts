@@ -471,17 +471,14 @@ export function useCardData<T, S extends string = string>(
 
   // Ensure current page is valid when total pages shrinks (e.g., data errors).
   // Uses functional setState to read the latest `currentPage` without including
-  // it in the dep array (adding it to deps causes an infinite loop when
-  // totalPages=0 because Math.max(1,0)=1 and 1>0 is always true — #5762).
+  // it in the dep array — including it caused a feedback loop (#5762).
   // Previously the stale closure also meant a Next-click mid-refresh could
   // read a pre-click `currentPage` and clamp an in-flight page update back
-  // down to `totalPages`, which looked like the page snapped back to 1
-  // (#8381). Functional setState + a totalPages ref (below) eliminate both
-  // stale reads.
+  // down to `totalPages`, which looked like the page snapped back to 1 (#8381).
+  // Functional setState + a totalPages ref (below) eliminate both stale reads.
+  // `totalPages` is `Math.ceil(...) || 1`, so it is always >= 1 — no zero guard.
   useEffect(() => {
-    if (totalPages > 0) {
-      setCurrentPage((prev) => (prev > totalPages ? totalPages : prev))
-    }
+    setCurrentPage((prev) => (prev > totalPages ? totalPages : prev))
   }, [totalPages])
 
   // Paginate
@@ -496,8 +493,8 @@ export function useCardData<T, S extends string = string>(
   // `totalPages` could clamp against the *pre-render* value (e.g. 1) and
   // silently snap the user back to page 1. Reading from a ref guarantees
   // `goToPage` always clamps against the most recent totalPages. The ref is
-  // synced in an effect (not during render) to satisfy React's no-mutation
-  // -during-render rule.
+  // synced in an effect (not during render) to satisfy React's
+  // no-mutation-during-render rule.
   const totalPagesRef = useRef(totalPages)
   useEffect(() => {
     totalPagesRef.current = totalPages
