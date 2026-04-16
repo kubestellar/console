@@ -65,25 +65,25 @@ const CRITERIA: Criterion[] = [
   { id: "acmm:copilot-instructions", source: "acmm", level: 2, category: "feedback-loop", name: "Copilot instructions", detection: { type: "path", pattern: ".github/copilot-instructions.md" } },
   { id: "acmm:agents-md", source: "acmm", level: 2, category: "feedback-loop", name: "AGENTS.md", detection: { type: "path", pattern: "AGENTS.md" } },
   { id: "acmm:cursor-rules", source: "acmm", level: 2, category: "feedback-loop", name: "Cursor rules", detection: { type: "any-of", pattern: [".cursorrules", ".cursor/rules"] } },
-  { id: "acmm:prompts-catalog", source: "acmm", level: 2, category: "feedback-loop", name: "Prompts catalog", detection: { type: "any-of", pattern: ["docs/prompts/", ".github/prompts/"] } },
+  { id: "acmm:prompts-catalog", source: "acmm", level: 2, category: "feedback-loop", name: "Prompts catalog", detection: { type: "any-of", pattern: ["prompts/", ".prompts/", "docs/prompts/", ".github/prompts/", ".github/agents/"] } },
   { id: "acmm:pr-template", source: "acmm", level: 2, category: "feedback-loop", name: "PR template", detection: { type: "any-of", pattern: [".github/pull_request_template.md", ".github/PULL_REQUEST_TEMPLATE.md"] } },
   { id: "acmm:issue-template", source: "acmm", level: 2, category: "feedback-loop", name: "Issue templates", detection: { type: "any-of", pattern: [".github/ISSUE_TEMPLATE/", ".github/issue_template.md"] } },
   { id: "acmm:contrib-guide", source: "acmm", level: 2, category: "feedback-loop", name: "Contributing guide", detection: { type: "any-of", pattern: ["CONTRIBUTING.md", "docs/contributing.md"] } },
-  { id: "acmm:style-config", source: "acmm", level: 2, category: "feedback-loop", name: "Style config", detection: { type: "any-of", pattern: [".eslintrc.json", ".eslintrc.js", "eslint.config.js", ".prettierrc", ".prettierrc.json"] } },
+  { id: "acmm:style-config", source: "acmm", level: 2, category: "feedback-loop", name: "Style config", detection: { type: "any-of", pattern: [".eslintrc", ".eslintrc.json", ".eslintrc.js", "eslint.config.js", "eslint.config.mjs", ".prettierrc", ".prettierrc.json", "prettier.config.js", "ruff.toml", ".golangci.yml", "biome.json"] } },
   { id: "acmm:editor-config", source: "acmm", level: 2, category: "feedback-loop", name: "EditorConfig", detection: { type: "path", pattern: ".editorconfig" } },
 
   // ACMM L3 — Measured
   { id: "acmm:coverage-gate", source: "acmm", level: 3, category: "feedback-loop", name: "Coverage gate", detection: { type: "any-of", pattern: ["codecov.yml", ".codecov.yml", ".github/workflows/coverage-gate.yml", "coverage.yml"] } },
-  { id: "acmm:pr-acceptance-metric", source: "acmm", level: 3, category: "feedback-loop", name: "PR acceptance metric", detection: { type: "any-of", pattern: [".github/workflows/pr-metrics.yml", "docs/metrics.md", "scripts/pr-metrics.mjs"] } },
-  { id: "acmm:test-suite", source: "acmm", level: 3, category: "feedback-loop", name: "Test suite", detection: { type: "any-of", pattern: ["test/", "tests/", "__tests__/", "spec/"] } },
+  { id: "acmm:pr-acceptance-metric", source: "acmm", level: 3, category: "feedback-loop", name: "PR acceptance metric", detection: { type: "any-of", pattern: ["scripts/build-accm-history.mjs", ".github/workflows/accm-history-update.yml", "scripts/pr-metrics.mjs", ".github/workflows/pr-metrics.yml", "docs/metrics.md"] } },
+  { id: "acmm:test-suite", source: "acmm", level: 3, category: "feedback-loop", name: "Test suite", detection: { type: "any-of", pattern: ["vitest.config.ts", "vitest.config.js", "jest.config.js", "jest.config.ts", "go.mod", "pytest.ini", "pyproject.toml", "test/", "tests/", "__tests__/", "spec/"] } },
   { id: "acmm:e2e-tests", source: "acmm", level: 3, category: "feedback-loop", name: "E2E tests", detection: { type: "any-of", pattern: ["playwright.config.ts", "playwright.config.js", "cypress.config.ts", "e2e/"] } },
-  { id: "acmm:pr-review-rubric", source: "acmm", level: 3, category: "feedback-loop", name: "PR review rubric", detection: { type: "any-of", pattern: [".github/workflows/review.yml", "docs/review-rubric.md", ".github/review-checklist.md"] } },
-  { id: "acmm:quality-dashboard", source: "acmm", level: 3, category: "feedback-loop", name: "Quality dashboard", detection: { type: "any-of", pattern: ["docs/quality.md", ".github/workflows/quality-report.yml", "scripts/quality-dashboard.mjs"] } },
+  { id: "acmm:pr-review-rubric", source: "acmm", level: 3, category: "feedback-loop", name: "PR review rubric", detection: { type: "any-of", pattern: [".github/workflows/review.yml", "docs/review-rubric.md", ".github/review-checklist.md", ".github/prompts/review.md", "docs/qa/"] } },
+  { id: "acmm:quality-dashboard", source: "acmm", level: 3, category: "feedback-loop", name: "Quality dashboard", detection: { type: "any-of", pattern: ["public/analytics.js", "web/public/analytics.js", "web/src/components/analytics/", "docs/quality.md", ".github/workflows/quality-report.yml", "docs/AI-QUALITY-ASSURANCE.md"] } },
   { id: "acmm:ci-matrix", source: "acmm", level: 3, category: "feedback-loop", name: "CI test matrix", detection: { type: "any-of", pattern: [".github/workflows/ci.yml", ".github/workflows/test.yml", ".github/workflows/build.yml"] } },
 
   // ACMM L4 — Adaptive
   { id: "acmm:auto-qa-tuning", source: "acmm", level: 4, category: "feedback-loop", name: "Auto-QA self-tuning", detection: { type: "any-of", pattern: [".github/auto-qa-tuning.json", ".github/workflows/auto-qa.yml", "scripts/auto-qa-tuner.mjs"] } },
-  { id: "acmm:nightly-compliance", source: "acmm", level: 4, category: "feedback-loop", name: "Nightly compliance", detection: { type: "any-of", pattern: [".github/workflows/nightly-compliance.yml", ".github/workflows/nightly.yml"] } },
+  { id: "acmm:nightly-compliance", source: "acmm", level: 4, category: "feedback-loop", name: "Nightly compliance", detection: { type: "any-of", pattern: [".github/workflows/nightly-compliance.yml", ".github/workflows/nightly.yml", ".github/workflows/nightly-test.yml", ".github/workflows/nightly-test-suite.yml"] } },
   { id: "acmm:copilot-review-apply", source: "acmm", level: 4, category: "feedback-loop", name: "Copilot review apply", detection: { type: "any-of", pattern: [".github/workflows/copilot-review-apply.yml", ".github/workflows/apply-copilot.yml"] } },
   { id: "acmm:auto-label", source: "acmm", level: 4, category: "feedback-loop", name: "Auto-label workflow", detection: { type: "any-of", pattern: [".github/labeler.yml", ".github/workflows/labeler.yml"] } },
   { id: "acmm:ai-fix-workflow", source: "acmm", level: 4, category: "feedback-loop", name: "AI fix workflow", detection: { type: "any-of", pattern: [".github/workflows/ai-fix.yml", ".github/workflows/ai-fix-requested.yml"] } },
@@ -93,7 +93,7 @@ const CRITERIA: Criterion[] = [
   // ACMM L5 — Self-Sustaining
   { id: "acmm:auto-issue-gen", source: "acmm", level: 5, category: "feedback-loop", name: "Auto issue generation", detection: { type: "any-of", pattern: [".github/workflows/auto-issues.yml", "scripts/generate-issues.mjs"] } },
   { id: "acmm:multi-agent-orchestration", source: "acmm", level: 5, category: "feedback-loop", name: "Multi-agent orchestration", detection: { type: "any-of", pattern: [".github/workflows/dispatcher.yml", "docs/multi-agent.md", ".claude/dispatcher/"] } },
-  { id: "acmm:strategic-dashboard", source: "acmm", level: 5, category: "feedback-loop", name: "Strategic dashboard", detection: { type: "any-of", pattern: ["docs/strategy.md", ".github/workflows/strategy-report.yml"] } },
+  { id: "acmm:strategic-dashboard", source: "acmm", level: 5, category: "feedback-loop", name: "Strategic dashboard", detection: { type: "any-of", pattern: ["web/src/components/acmm/", "docs/strategy.md", ".github/workflows/strategy-report.yml", "docs/autonomous-work-log.md"] } },
   { id: "acmm:merge-queue", source: "acmm", level: 5, category: "feedback-loop", name: "Merge queue", detection: { type: "any-of", pattern: [".github/workflows/merge-queue.yml", ".github/merge-queue.yml"] } },
   { id: "acmm:policy-as-code", source: "acmm", level: 5, category: "feedback-loop", name: "Policy-as-code", detection: { type: "any-of", pattern: ["policies/", ".github/policies/", "kyverno/"] } },
   { id: "acmm:public-metrics", source: "acmm", level: 5, category: "feedback-loop", name: "Public metrics", detection: { type: "any-of", pattern: ["public/analytics.js", "docs/metrics/", ".github/workflows/public-metrics.yml"] } },
@@ -197,9 +197,21 @@ function matchesHint(treePaths: Set<string>, hint: DetectionHint): boolean {
   for (const pattern of patterns) {
     for (const path of treePaths) {
       if (pattern.endsWith("/")) {
-        if (path.startsWith(pattern) || path === pattern.replace(/\/$/, "")) return true;
-      } else if (path === pattern || path.startsWith(`${pattern}/`)) {
-        return true;
+        // Directory pattern: match at root or any subdirectory
+        if (
+          path.startsWith(pattern) ||
+          path === pattern.replace(/\/$/, "") ||
+          path.includes(`/${pattern}`)
+        )
+          return true;
+      } else {
+        // File pattern: match at root or any subdirectory
+        if (
+          path === pattern ||
+          path.endsWith(`/${pattern}`) ||
+          path.startsWith(`${pattern}/`)
+        )
+          return true;
       }
     }
   }

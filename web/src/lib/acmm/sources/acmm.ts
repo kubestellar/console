@@ -99,7 +99,7 @@ const CRITERIA: Criterion[] = [
     name: 'Prompt catalog',
     description: 'Committed prompt templates for recurring tasks.',
     rationale: 'Reusing prompts across the team turns tribal knowledge into shared L2 assets.',
-    detection: { type: 'any-of', pattern: ['prompts/', '.prompts/', 'docs/prompts/'] },
+    detection: { type: 'any-of', pattern: ['prompts/', '.prompts/', 'docs/prompts/', '.github/prompts/', '.github/agents/'] },
   },
   {
     id: 'acmm:pr-template',
@@ -204,7 +204,7 @@ const CRITERIA: Criterion[] = [
     name: 'PR review rubric',
     description: 'Committed rubric the AI follows when reviewing PRs.',
     rationale: 'L3 signal: the quality criteria for "is this PR ok" are now written down.',
-    detection: { type: 'any-of', pattern: ['.github/review-rubric.md', 'docs/review-criteria.md', '.github/prompts/review.md'] },
+    detection: { type: 'any-of', pattern: ['.github/review-rubric.md', 'docs/review-criteria.md', '.github/prompts/review.md', 'docs/qa/'] },
   },
   {
     id: 'acmm:quality-dashboard',
@@ -247,7 +247,7 @@ const CRITERIA: Criterion[] = [
     name: 'Nightly compliance scan',
     description: 'Scheduled workflow that re-validates the codebase against its rules every night.',
     rationale: 'L4 drift detection: noticing when the loop itself has broken.',
-    detection: { type: 'any-of', pattern: ['.github/workflows/nightly-compliance.yml', '.github/workflows/nightly.yml', '.github/workflows/nightly-test.yml'] },
+    detection: { type: 'any-of', pattern: ['.github/workflows/nightly-compliance.yml', '.github/workflows/nightly.yml', '.github/workflows/nightly-test.yml', '.github/workflows/nightly-test-suite.yml'] },
   },
   {
     id: 'acmm:copilot-review-apply',
