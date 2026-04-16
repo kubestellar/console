@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"os"
 	"os/exec"
 	"strings"
 	"sync"
@@ -525,17 +526,29 @@ func validateOpenAIKey(ctx context.Context, apiKey string) (bool, error) {
 	return false, fmt.Errorf("API error: %s", string(body))
 }
 
-// openRouterValidationURL is the OpenRouter models listing endpoint. It
-// returns 200 for any valid API key and 401 otherwise, so it's a cheap way
-// to check credentials without spending tokens on a chat completion.
-const openRouterValidationURL = "https://openrouter.ai/api/v1/models"
+// openRouterDefaultValidationURL is the public OpenRouter models listing
+// endpoint. It returns 200 for any valid API key and 401 otherwise, so it's a
+// cheap way to check credentials without spending tokens on a chat completion.
+// When OPENROUTER_BASE_URL is set, the validation request is redirected to
+// that base URL's /models endpoint so operators with a self-hosted or corporate
+// OpenRouter proxy validate against their own endpoint, not the public one.
+const openRouterDefaultValidationURL = "https://openrouter.ai/api/v1/models"
+
+// openRouterValidationURL resolves the validation URL at call time so a
+// runtime OPENROUTER_BASE_URL override is honored.
+func openRouterValidationURL() string {
+	if base := os.Getenv("OPENROUTER_BASE_URL"); base != "" {
+		return strings.TrimRight(base, "/") + "/models"
+	}
+	return openRouterDefaultValidationURL
+}
 
 // validateOpenRouterKey tests an OpenRouter API key by hitting the models
 // listing endpoint. Mirrors validateOpenAIKey semantics: a 200 means valid,
 // 401 means invalid (cached as (false, nil) so we don't re-fire on every
 // startup — see #7923).
 func validateOpenRouterKey(ctx context.Context, apiKey string) (bool, error) {
-	req, err := http.NewRequestWithContext(ctx, "GET", openRouterValidationURL, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", openRouterValidationURL(), nil)
 	if err != nil {
 		return false, err
 	}
@@ -565,7 +578,7 @@ func validateOpenRouterKey(ctx context.Context, apiKey string) (bool, error) {
 // valid, 401 means invalid (cached as (false, nil) so we don't re-fire on
 // every startup — see #7923).
 func validateGroqKey(ctx context.Context, apiKey string) (bool, error) {
-	req, err := http.NewRequestWithContext(ctx, "GET", groqValidationURL, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", groqValidationURL(), nil)
 	if err != nil {
 		return false, err
 	}

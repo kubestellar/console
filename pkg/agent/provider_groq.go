@@ -33,11 +33,34 @@ const (
 	// via the GROQ_MODEL env var or the settings UI.
 	groqDefaultModel = "llama-3.3-70b-versatile"
 
-	// groqValidationURL is the Groq models listing endpoint. It returns
-	// 200 for any valid API key and 401 otherwise, so it's a cheap way to
-	// check credentials without spending tokens on a chat completion.
-	groqValidationURL = "https://api.groq.com/openai/v1/models"
+	// groqModelsPath is appended to the base URL to form the validation
+	// endpoint. Together with groqResolveBaseURL it lets the validator
+	// honor GROQ_BASE_URL so an operator pointing Groq at a local Ollama
+	// or an internal gateway does not get a false negative from a hit
+	// against the real Groq hostname (see groqValidationURL below).
+	groqModelsPath = "/models"
 )
+
+// groqResolveBaseURL returns the effective base URL for the Groq provider,
+// honoring the GROQ_BASE_URL override. Kept separate from NewGroqProvider so
+// package-level helpers (validation, tests) can consult the same resolution
+// without constructing a provider.
+func groqResolveBaseURL() string {
+	if v := os.Getenv("GROQ_BASE_URL"); v != "" {
+		return v
+	}
+	return groqDefaultBaseURL
+}
+
+// groqValidationURL returns the models listing endpoint relative to whatever
+// base URL the operator has configured. It returns 200 for any valid API key
+// and 401 otherwise, so it's a cheap way to check credentials without spending
+// tokens on a chat completion. When GROQ_BASE_URL points at a local runner,
+// the validator hits that runner's /models endpoint instead — so self-hosted
+// and enterprise gateways validate correctly (#tracking-validation-urls).
+func groqValidationURL() string {
+	return groqResolveBaseURL() + groqModelsPath
+}
 
 // GroqProvider implements AIProvider for Groq (https://groq.com).
 type GroqProvider struct {

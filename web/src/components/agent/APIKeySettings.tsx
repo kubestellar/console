@@ -90,6 +90,34 @@ const PROVIDER_INFO: Record<string, { docsUrl: string; placeholder: string }> = 
     docsUrl: AI_PROVIDER_DOCS.groq,
     placeholder: 'gsk_...',
   },
+  // Local LLM runners. Most do not require an API key — set the
+  // corresponding URL env var instead (see SECURITY-MODEL.md §3). The
+  // placeholder advises the operator how to configure the runner today;
+  // full UI support for base URL overrides is tracked as a follow-up.
+  ollama: {
+    docsUrl: 'https://ollama.com',
+    placeholder: 'Set OLLAMA_URL env var (no key needed)',
+  },
+  llamacpp: {
+    docsUrl: 'https://github.com/ggml-org/llama.cpp',
+    placeholder: 'Set LLAMACPP_URL env var (no key needed)',
+  },
+  localai: {
+    docsUrl: 'https://localai.io',
+    placeholder: 'Set LOCALAI_URL env var (no key needed)',
+  },
+  vllm: {
+    docsUrl: 'https://docs.vllm.ai',
+    placeholder: 'Set VLLM_URL env var (no key needed)',
+  },
+  'lm-studio': {
+    docsUrl: 'https://lmstudio.ai',
+    placeholder: 'Set LM_STUDIO_URL env var (no key needed)',
+  },
+  rhaiis: {
+    docsUrl: 'https://docs.redhat.com/en/documentation/red_hat_ai_inference_server/',
+    placeholder: 'Set RHAIIS_URL env var (no key needed)',
+  },
 }
 
 // Map backend provider key names to AgentIcon provider values
@@ -109,6 +137,13 @@ function providerToIconMap(provider: string): string {
     'open-webui': 'open-webui',
     openrouter: 'openrouter',
     groq: 'groq',
+    // Local LLM runners — provider key matches the icon key 1:1
+    ollama: 'ollama',
+    llamacpp: 'llamacpp',
+    localai: 'localai',
+    vllm: 'vllm',
+    'lm-studio': 'lm-studio',
+    rhaiis: 'rhaiis',
   }
   return map[provider] || provider
 }
