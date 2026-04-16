@@ -81,7 +81,7 @@ const COMPONENTS_DIR = path.resolve(
 //              eliminating all issue-ref false positives like "issue #7865"
 //              that incremented the ratchet over many previous bumps. The
 //              new baseline is the count of real `#RRGGBB` literals only.
-const EXPECTED_RAW_HEX_COUNT = 265
+const EXPECTED_RAW_HEX_COUNT = 270
 const EXPECTED_RAW_RGBA_COUNT = 104
 const EXPECTED_ARBITRARY_TW_COLOR_COUNT = 22
 // Inline style color ratchet — bump history:
