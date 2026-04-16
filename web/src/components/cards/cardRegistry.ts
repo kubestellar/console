@@ -196,6 +196,13 @@ const PerformanceTimeline = safeLazy(() => _llmdBundle, 'PerformanceTimeline')
 const ResourceUtilization = safeLazy(() => _llmdBundle, 'ResourceUtilization')
 const GitHubCIMonitor = safeLazy(() => _workloadMonitorBundle, 'GitHubCIMonitor')
 const ClusterHealthMonitor = safeLazy(() => _workloadMonitorBundle, 'ClusterHealthMonitor')
+
+// GitHub Pipelines cards — all four share one chunk via the pipelines barrel
+const _pipelinesBundle = import('./pipelines').catch(() => undefined as never)
+const NightlyReleasePulse = safeLazy(() => _pipelinesBundle, 'NightlyReleasePulse')
+const WorkflowMatrix = safeLazy(() => _pipelinesBundle, 'WorkflowMatrix')
+const PipelineFlow = safeLazy(() => _pipelinesBundle, 'PipelineFlow')
+const RecentFailures = safeLazy(() => _pipelinesBundle, 'RecentFailures')
 const ProviderHealth = safeLazy(() => import('./ProviderHealth'), 'ProviderHealth')
 
 // Kagenti AI Agent Platform cards — share one chunk via barrel import
@@ -513,6 +520,11 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   llmd_stack_monitor: LLMdStackMonitor,
   prow_ci_monitor: ProwCIMonitor,
   github_ci_monitor: GitHubCIMonitor,
+  // GitHub Pipelines dashboard cards (4 new, land on /ci-cd)
+  nightly_release_pulse: NightlyReleasePulse,
+  workflow_matrix: WorkflowMatrix,
+  pipeline_flow: PipelineFlow,
+  recent_failures: RecentFailures,
   cluster_health_monitor: ClusterHealthMonitor,
   // Provider Health card (AI + Cloud provider status)
   provider_health: ProviderHealth,
@@ -913,6 +925,11 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   prow_ci_monitor: () => import('./workload-monitor'),
   github_ci_monitor: () => import('./workload-monitor'),
   cluster_health_monitor: () => import('./workload-monitor'),
+  // GitHub Pipelines cards — all four share one chunk via pipelines barrel
+  nightly_release_pulse: () => import('./pipelines'),
+  workflow_matrix: () => import('./pipelines'),
+  pipeline_flow: () => import('./pipelines'),
+  recent_failures: () => import('./pipelines'),
   // Drasi — barrel import
   drasi_reactive_graph: () => import('./drasi'),
   // LLM-d visualization — barrel import loads all 7 cards in one module graph
@@ -1158,6 +1175,10 @@ export const LIVE_DATA_CARDS = new Set([
   'llmd_stack_monitor',
   'prow_ci_monitor',
   'github_ci_monitor',
+  'nightly_release_pulse',
+  'workflow_matrix',
+  'pipeline_flow',
+  'recent_failures',
   'cluster_health_monitor',
   // GPU node health monitoring
   'gpu_node_health',
@@ -1255,6 +1276,11 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   llmd_stack_monitor: 6,
   prow_ci_monitor: 6,
   github_ci_monitor: 8,
+  // GitHub Pipelines dashboard cards
+  nightly_release_pulse: 6,
+  workflow_matrix: 6,
+  pipeline_flow: 12,
+  recent_failures: 6,
   cluster_health_monitor: 6,
   // Provider Health card
   provider_health: 6,

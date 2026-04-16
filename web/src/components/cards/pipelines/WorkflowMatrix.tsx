@@ -1,0 +1,175 @@
+/**
+ * WorkflowMatrix — heatmap of workflows × days. Surfaces the "which
+ * workflows keep flaking" pattern that was invisible while we only saw
+ * one release-failure issue per night.
+ *
+ * Data: /api/github-pipelines?view=matrix&days={14|30|90}&repo={optional}.
+ * Client can pick 14 / 30 / 90 day ranges (server caps at 90 — the retention
+ * of the server-side history blob).
+ */
+import { useState } from 'react'
+import { ExternalLink } from 'lucide-react'
+import { useDemoMode } from '../../../hooks/useDemoMode'
+import { useCardLoadingState } from '../CardDataContext'
+import { usePipelineMatrix, PIPELINE_REPOS, type Conclusion } from '../../../hooks/useGitHubPipelines'
+import { cn } from '../../../lib/cn'
+
+/** Available range options. Must match the server's MATRIX_MAX_DAYS (90) */
+const RANGE_OPTIONS = [14, 30, 90] as const
+
+/** Minimum cell width in px — below this the CSS grid will reflow */
+const MIN_CELL_PX = 10
+
+/** Sparse-data threshold: workflows below this recent-day-hit count are
+ * hidden when the user has selected a range > 14 (reduces noise for
+ * long-windowed views) */
+const SPARSE_WORKFLOW_MIN_CELLS = 2
+
+const CELL_CLASS: Record<string, string> = {
+  success: 'bg-green-500/70 hover:bg-green-500',
+  failure: 'bg-red-500/80 hover:bg-red-500',
+  timed_out: 'bg-orange-500/80 hover:bg-orange-500',
+  cancelled: 'bg-gray-500/60 hover:bg-gray-500',
+  skipped: 'bg-gray-500/40 hover:bg-gray-500/80',
+  action_required: 'bg-yellow-500/70 hover:bg-yellow-500',
+  neutral: 'bg-gray-500/50 hover:bg-gray-500',
+  stale: 'bg-gray-500/40 hover:bg-gray-500/80',
+}
+
+function cellClass(c: Conclusion): string {
+  if (!c) return 'bg-muted/30'
+  return CELL_CLASS[c] ?? 'bg-muted/30'
+}
+
+export function WorkflowMatrix() {
+  const [days, setDays] = useState<number>(RANGE_OPTIONS[0])
+  const [repoFilter, setRepoFilter] = useState<string | null>(null)
+
+  const { data, isLoading, error } = usePipelineMatrix(repoFilter, days)
+  const { isDemoMode } = useDemoMode()
+  const hasData = (data?.workflows?.length ?? 0) > 0
+  useCardLoadingState({ isLoading: isLoading && !hasData, hasAnyData: hasData, isDemoData: isDemoMode })
+
+  const workflows = (data?.workflows ?? []).filter((wf) => {
+    if (days <= RANGE_OPTIONS[0]) return true
+    const populated = wf.cells.filter((c) => c.conclusion !== null).length
+    return populated >= SPARSE_WORKFLOW_MIN_CELLS
+  })
+
+  if (error && !hasData) {
+    return (
+      <div className="p-4 h-full flex items-center justify-center text-sm text-red-400">
+        Failed to load matrix. {error}
+      </div>
+    )
+  }
+
+  return (
+    <div className="p-3 h-full flex flex-col gap-2 min-h-0">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <select
+            value={repoFilter ?? ''}
+            onChange={(e) => setRepoFilter(e.target.value || null)}
+            className="text-xs bg-secondary/40 border border-border rounded px-2 py-1 text-foreground"
+            aria-label="Filter by repo"
+          >
+            <option value="">All repos</option>
+            {PIPELINE_REPOS.map((r) => (
+              <option key={r} value={r}>{r}</option>
+            ))}
+          </select>
+          <div className="flex items-center gap-1 text-xs">
+            {RANGE_OPTIONS.map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => setDays(n)}
+                className={cn(
+                  'px-2 py-1 rounded border border-border transition-colors',
+                  days === n ? 'bg-primary/20 text-primary border-primary/40' : 'bg-secondary/30 text-muted-foreground hover:bg-secondary/50',
+                )}
+              >
+                {n}d
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="text-[11px] text-muted-foreground">
+          {workflows.length} workflows
+        </div>
+      </div>
+
+      <div className="flex-1 min-h-0 overflow-auto">
+        {workflows.length === 0 ? (
+          <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
+            No workflow activity in this range.
+          </div>
+        ) : (
+          <div className="flex flex-col gap-1">
+            {workflows.map((wf) => (
+              <div key={`${wf.repo}:${wf.name}`} className="flex items-center gap-2">
+                <div className="w-48 shrink-0 min-w-0">
+                  <div className="text-xs font-medium text-foreground truncate" title={wf.name}>{wf.name}</div>
+                  <div className="text-[10px] text-muted-foreground truncate">{wf.repo}</div>
+                </div>
+                <div
+                  className="flex-1 grid gap-0.5"
+                  style={{ gridTemplateColumns: `repeat(${wf.cells.length}, minmax(${MIN_CELL_PX}px, 1fr))` }}
+                >
+                  {wf.cells.map((cell) => {
+                    const label = `${cell.date}: ${cell.conclusion ?? 'no run'}`
+                    const common = 'h-5 rounded-[2px] transition-colors'
+                    return cell.htmlUrl && cell.htmlUrl !== '#' ? (
+                      <a
+                        key={cell.date}
+                        href={cell.htmlUrl}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        title={label}
+                        aria-label={label}
+                        className={cn(common, cellClass(cell.conclusion))}
+                      />
+                    ) : (
+                      <div
+                        key={cell.date}
+                        title={label}
+                        aria-label={label}
+                        className={cn(common, cellClass(cell.conclusion))}
+                      />
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-center justify-between gap-3 text-[10px] text-muted-foreground">
+        <div className="flex items-center gap-2">
+          <Legend className="bg-green-500/70" label="success" />
+          <Legend className="bg-red-500/80" label="failure" />
+          <Legend className="bg-orange-500/80" label="timed out" />
+          <Legend className="bg-gray-500/60" label="cancelled" />
+          <Legend className="bg-muted/30" label="no run" />
+        </div>
+        {data?.range?.[0] && data?.range?.[data.range.length - 1] && (
+          <span className="flex items-center gap-1">
+            {data.range[0]} → {data.range[data.range.length - 1]}
+            <ExternalLink className="w-3 h-3 opacity-60" />
+          </span>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function Legend({ className, label }: { className: string; label: string }) {
+  return (
+    <span className="flex items-center gap-1">
+      <span className={cn('w-3 h-3 rounded-sm', className)} />
+      {label}
+    </span>
+  )
+}

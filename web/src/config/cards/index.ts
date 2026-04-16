@@ -59,6 +59,10 @@ import { game2048Config } from './game-2048'
 import { gatewayStatusConfig } from './gateway-status'
 import { githubActivityConfig } from './github-activity'
 import { githubCiMonitorConfig } from './github-ci-monitor'
+import { nightlyReleasePulseConfig } from './nightly-release-pulse'
+import { workflowMatrixConfig } from './workflow-matrix'
+import { pipelineFlowConfig } from './pipeline-flow'
+import { recentFailuresConfig } from './recent-failures'
 import { gitopsDriftConfig } from './gitops-drift'
 import { gpuInventoryConfig } from './gpu-inventory'
 import { gpuInventoryHistoryConfig } from './gpu-inventory-history'
@@ -234,6 +238,10 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   gateway_status: gatewayStatusConfig,
   github_activity: githubActivityConfig,
   github_ci_monitor: githubCiMonitorConfig,
+  nightly_release_pulse: nightlyReleasePulseConfig,
+  workflow_matrix: workflowMatrixConfig,
+  pipeline_flow: pipelineFlowConfig,
+  recent_failures: recentFailuresConfig,
   gitops_drift: gitopsDriftConfig,
   gpu_inventory: gpuInventoryConfig,
   gpu_inventory_history: gpuInventoryHistoryConfig,
@@ -497,6 +505,10 @@ export {
   gatewayStatusConfig,
   githubActivityConfig,
   githubCiMonitorConfig,
+  nightlyReleasePulseConfig,
+  workflowMatrixConfig,
+  pipelineFlowConfig,
+  recentFailuresConfig,
   gitopsDriftConfig,
   gpuInventoryConfig,
   gpuInventoryHistoryConfig,

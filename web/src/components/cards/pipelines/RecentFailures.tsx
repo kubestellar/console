@@ -1,0 +1,195 @@
+/**
+ * RecentFailures — lists the last N failed GitHub Actions runs across the
+ * tracked repos, with the first failing step and drill-down to the log.
+ */
+import { useState, useMemo } from 'react'
+import { ExternalLink, RefreshCw, FileText } from 'lucide-react'
+import { useDemoMode } from '../../../hooks/useDemoMode'
+import { useCardLoadingState } from '../CardDataContext'
+import {
+  usePipelineFailures,
+  usePipelineMutations,
+  PIPELINE_REPOS,
+} from '../../../hooks/useGitHubPipelines'
+import { LogsModal } from './LogsModal'
+import { cn } from '../../../lib/cn'
+
+/** Maximum ms duration we format compactly (1 hr). Over this, show "1h+" */
+const SHORT_DURATION_CAP_MS = 3_600_000
+
+function formatDuration(ms: number): string {
+  if (ms < 1000) return `${ms}ms`
+  const secs = Math.floor(ms / 1000)
+  if (secs < 60) return `${secs}s`
+  if (ms >= SHORT_DURATION_CAP_MS) return '1h+'
+  return `${Math.floor(secs / 60)}m ${secs % 60}s`
+}
+
+function relativeTime(iso: string): string {
+  const secs = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000))
+  if (secs < 60) return `${secs}s ago`
+  if (secs < 3_600) return `${Math.floor(secs / 60)}m ago`
+  if (secs < 86_400) return `${Math.floor(secs / 3_600)}h ago`
+  return `${Math.floor(secs / 86_400)}d ago`
+}
+
+export function RecentFailures() {
+  const [repoFilter, setRepoFilter] = useState<string | null>(null)
+  const [logCtx, setLogCtx] = useState<{ repo: string; jobId: number; title: string } | null>(null)
+  const [mutating, setMutating] = useState<number | null>(null)
+  const [mutationMsg, setMutationMsg] = useState<string | null>(null)
+
+  const { data, isLoading, error, refetch } = usePipelineFailures(repoFilter)
+  const { run: runMutation } = usePipelineMutations()
+  const { isDemoMode } = useDemoMode()
+
+  const hasData = (data?.runs?.length ?? 0) > 0
+  useCardLoadingState({ isLoading: isLoading && !hasData, hasAnyData: hasData, isDemoData: isDemoMode })
+
+  const rows = useMemo(() => data?.runs ?? [], [data])
+
+  async function onRerun(runId: number, repo: string) {
+    setMutating(runId)
+    setMutationMsg(null)
+    const result = await runMutation('rerun', repo, runId)
+    setMutating(null)
+    setMutationMsg(result.ok ? `Re-run triggered for #${runId}` : `Re-run failed: ${result.error ?? result.status}`)
+    if (result.ok) refetch()
+  }
+
+  if (error && !hasData) {
+    return (
+      <div className="p-4 h-full flex items-center justify-center text-sm text-red-400">
+        Failed to load recent failures. {error}
+      </div>
+    )
+  }
+
+  return (
+    <div className="p-3 h-full flex flex-col gap-2 min-h-0">
+      <div className="flex items-center justify-between gap-2">
+        <select
+          value={repoFilter ?? ''}
+          onChange={(e) => setRepoFilter(e.target.value || null)}
+          className="text-xs bg-secondary/40 border border-border rounded px-2 py-1 text-foreground"
+          aria-label="Filter by repo"
+        >
+          <option value="">All repos</option>
+          {PIPELINE_REPOS.map((r) => (
+            <option key={r} value={r}>{r}</option>
+          ))}
+        </select>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span>{rows.length} failures</span>
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className="hover:text-foreground flex items-center gap-1"
+            aria-label="Refresh"
+          >
+            <RefreshCw className="w-3 h-3" />
+          </button>
+        </div>
+      </div>
+
+      {mutationMsg && (
+        <div className="text-[11px] text-muted-foreground px-1 py-0.5">{mutationMsg}</div>
+      )}
+
+      <div className="flex-1 min-h-0 overflow-auto">
+        {rows.length === 0 ? (
+          <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
+            No recent failures 🎉
+          </div>
+        ) : (
+          <table className="w-full text-xs">
+            <thead className="sticky top-0 bg-card">
+              <tr className="text-left text-muted-foreground">
+                <th className="py-1 pr-2 font-normal">Workflow</th>
+                <th className="py-1 pr-2 font-normal">Failed step</th>
+                <th className="py-1 pr-2 font-normal">Branch</th>
+                <th className="py-1 pr-2 font-normal">When</th>
+                <th className="py-1 pr-2 font-normal">Duration</th>
+                <th className="py-1 pr-2 font-normal text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={`${r.repo}:${r.runId}`} className="border-t border-border/50">
+                  <td className="py-1.5 pr-2">
+                    <div className="font-medium text-foreground truncate">{r.workflow}</div>
+                    <div className="text-[10px] text-muted-foreground truncate">{r.repo}</div>
+                  </td>
+                  <td className="py-1.5 pr-2 text-muted-foreground">
+                    {r.failedStep ? (
+                      <span className="truncate inline-block max-w-[220px]" title={`${r.failedStep.jobName} / ${r.failedStep.stepName}`}>
+                        {r.failedStep.stepName}
+                      </span>
+                    ) : (
+                      <span className="opacity-50">—</span>
+                    )}
+                  </td>
+                  <td className="py-1.5 pr-2 text-muted-foreground truncate max-w-[120px]" title={r.branch}>
+                    {r.branch}
+                  </td>
+                  <td className="py-1.5 pr-2 text-muted-foreground whitespace-nowrap">
+                    {relativeTime(r.createdAt)}
+                  </td>
+                  <td className="py-1.5 pr-2 text-muted-foreground whitespace-nowrap">
+                    {formatDuration(r.durationMs)}
+                  </td>
+                  <td className="py-1.5 pr-2 text-right whitespace-nowrap">
+                    {r.failedStep && (
+                      <button
+                        type="button"
+                        onClick={() => setLogCtx({
+                          repo: r.repo,
+                          jobId: r.failedStep!.jobId,
+                          title: `${r.workflow} / ${r.failedStep!.stepName}`,
+                        })}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground"
+                        title="View log tail"
+                      >
+                        <FileText className="w-3 h-3" /> Log
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      disabled={mutating === r.runId || isDemoMode}
+                      onClick={() => onRerun(r.runId, r.repo)}
+                      className={cn(
+                        'inline-flex items-center gap-1 px-2 py-0.5 rounded ml-1',
+                        isDemoMode ? 'text-muted-foreground/50 cursor-not-allowed' : 'hover:bg-secondary/50 text-muted-foreground hover:text-foreground'
+                      )}
+                      title={isDemoMode ? 'Log in to re-run workflows' : 'Re-run this workflow'}
+                    >
+                      <RefreshCw className={cn('w-3 h-3', mutating === r.runId && 'animate-spin')} /> Re-run
+                    </button>
+                    <a
+                      href={r.htmlUrl}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground ml-1"
+                      title="Open run on GitHub"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {logCtx && (
+        <LogsModal
+          repo={logCtx.repo}
+          jobId={logCtx.jobId}
+          title={logCtx.title}
+          onClose={() => setLogCtx(null)}
+        />
+      )}
+    </div>
+  )
+}

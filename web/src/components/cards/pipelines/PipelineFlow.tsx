@@ -1,0 +1,379 @@
+/**
+ * PipelineFlow — Drasi-styled flow visualization of in-progress and
+ * recently-queued GitHub Actions runs. Each run is rendered as a
+ * horizontal 4-column flow:
+ *
+ *    Trigger ──► Workflow ──► Jobs ──► Steps
+ *
+ * SVG paths connect each column; segments that are currently-running get
+ * animated flow dots (via <animateMotion>, same technique as Drasi's
+ * reactive graph — borrowed from DrasiReactiveGraph.tsx).
+ *
+ * Data: /api/github-pipelines?view=flow. Client polls every 10s (Drasi's
+ * cadence) so the flow looks live without hammering the function.
+ */
+import { useState, useMemo, useRef, useLayoutEffect, useEffect, type CSSProperties } from 'react'
+import { RefreshCw, XCircle, ExternalLink } from 'lucide-react'
+import { useReducedMotion } from 'framer-motion'
+import { useDemoMode } from '../../../hooks/useDemoMode'
+import { useCardLoadingState } from '../CardDataContext'
+import {
+  usePipelineFlow,
+  usePipelineMutations,
+  PIPELINE_REPOS,
+  type FlowRun,
+  type Status,
+  type Conclusion,
+} from '../../../hooks/useGitHubPipelines'
+import { cn } from '../../../lib/cn'
+
+/** Flow-dot radius for active segments */
+const FLOW_DOT_RADIUS_PX = 2.5
+/** Per-segment animation duration */
+const FLOW_DUR_S = 2.2
+/** Max jobs rendered per run before "+N more" truncation (visual cap) */
+const MAX_JOBS_VISIBLE = 5
+/** Max steps per job rendered in the flow */
+const MAX_STEPS_VISIBLE = 8
+
+function statusColor(status: Status, conclusion: Conclusion): string {
+  if (status === 'in_progress') return 'text-blue-400'
+  if (status === 'queued' || status === 'waiting' || status === 'pending') return 'text-yellow-400'
+  if (conclusion === 'success') return 'text-green-400'
+  if (conclusion === 'failure' || conclusion === 'timed_out') return 'text-red-400'
+  if (conclusion === 'cancelled' || conclusion === 'skipped') return 'text-muted-foreground'
+  return 'text-muted-foreground'
+}
+
+function statusBg(status: Status, conclusion: Conclusion): string {
+  if (status === 'in_progress') return 'bg-blue-500/20 border-blue-500/40'
+  if (status === 'queued' || status === 'waiting' || status === 'pending') return 'bg-yellow-500/20 border-yellow-500/40'
+  if (conclusion === 'success') return 'bg-green-500/20 border-green-500/40'
+  if (conclusion === 'failure' || conclusion === 'timed_out') return 'bg-red-500/20 border-red-500/40'
+  return 'bg-secondary/40 border-border'
+}
+
+function isActive(status: Status): boolean {
+  return status === 'in_progress' || status === 'queued' || status === 'waiting' || status === 'pending'
+}
+
+// ---------------------------------------------------------------------------
+// Flow-line connector — SVG path between two rectangles with optional
+// animated dots. Simplified version of Drasi's FlowLine (no dash patterns,
+// single flow dot, enough to convey motion).
+// ---------------------------------------------------------------------------
+
+interface LineSpec {
+  d: string
+  active: boolean
+  color: string
+}
+
+function buildPath(from: DOMRect, to: DOMRect, container: DOMRect): string {
+  const x1 = from.right - container.left
+  const y1 = from.top + from.height / 2 - container.top
+  const x2 = to.left - container.left
+  const y2 = to.top + to.height / 2 - container.top
+  const midX = (x1 + x2) / 2
+  return `M ${x1},${y1} C ${midX},${y1} ${midX},${y2} ${x2},${y2}`
+}
+
+function FlowLine({ d, active, color }: LineSpec) {
+  const reduced = useReducedMotion()
+  return (
+    <>
+      <path
+        d={d}
+        fill="none"
+        stroke={color}
+        strokeOpacity={active ? 0.7 : 0.35}
+        strokeWidth={1.5}
+        strokeDasharray={active ? undefined : '4 4'}
+        vectorEffect="non-scaling-stroke"
+      />
+      {active && !reduced && (
+        <circle r={FLOW_DOT_RADIUS_PX} fill={color} fillOpacity={0.9}>
+          <animateMotion dur={`${FLOW_DUR_S}s`} repeatCount="indefinite" path={d} />
+        </circle>
+      )}
+    </>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Pipeline row (one per run)
+// ---------------------------------------------------------------------------
+
+interface RunRowProps {
+  run: FlowRun
+  onCancel: (runId: number, repo: string) => Promise<void>
+  canMutate: boolean
+  mutating: boolean
+}
+
+function RunRow({ run, onCancel, canMutate, mutating }: RunRowProps) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLDivElement>(null)
+  const workflowRef = useRef<HTMLDivElement>(null)
+  const jobRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  const stepRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  const [lines, setLines] = useState<LineSpec[]>([])
+
+  const jobs = useMemo(() => run.jobs.slice(0, MAX_JOBS_VISIBLE), [run.jobs])
+  const hiddenJobCount = Math.max(0, run.jobs.length - jobs.length)
+
+  // Measure all column rects and build connector paths.
+  useLayoutEffect(() => {
+    function measure() {
+      const container = containerRef.current
+      const trigger = triggerRef.current
+      const workflow = workflowRef.current
+      if (!container || !trigger || !workflow) return
+      const cRect = container.getBoundingClientRect()
+      const newLines: LineSpec[] = []
+
+      // trigger -> workflow
+      newLines.push({
+        d: buildPath(trigger.getBoundingClientRect(), workflow.getBoundingClientRect(), cRect),
+        active: isActive(run.run.status),
+        color: colorForStatus(run.run.status, run.run.conclusion),
+      })
+
+      // workflow -> each job, and job -> each of its steps
+      for (const job of jobs) {
+        const jobEl = jobRefs.current[job.id]
+        if (!jobEl) continue
+        newLines.push({
+          d: buildPath(workflow.getBoundingClientRect(), jobEl.getBoundingClientRect(), cRect),
+          active: isActive(job.status),
+          color: colorForStatus(job.status, job.conclusion),
+        })
+        const visibleSteps = job.steps.slice(0, MAX_STEPS_VISIBLE)
+        for (const step of visibleSteps) {
+          const stepEl = stepRefs.current[`${job.id}:${step.number}`]
+          if (!stepEl) continue
+          newLines.push({
+            d: buildPath(jobEl.getBoundingClientRect(), stepEl.getBoundingClientRect(), cRect),
+            active: isActive(step.status),
+            color: colorForStatus(step.status, step.conclusion),
+          })
+        }
+      }
+      setLines(newLines)
+    }
+    measure()
+    const observer = new ResizeObserver(measure)
+    if (containerRef.current) observer.observe(containerRef.current)
+    // Also re-measure on window resize — RO alone doesn't catch layout-only changes
+    window.addEventListener('resize', measure)
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', measure)
+    }
+  }, [run, jobs])
+
+  return (
+    <div
+      ref={containerRef}
+      className="relative grid gap-4 items-start py-3 border-t border-border/40"
+      style={{ gridTemplateColumns: '100px 180px 1fr 1fr' } as CSSProperties}
+    >
+      <svg className="absolute inset-0 w-full h-full pointer-events-none" aria-hidden="true">
+        {lines.map((l, i) => <FlowLine key={i} {...l} />)}
+      </svg>
+
+      <div ref={triggerRef} className={cn(
+        'relative z-10 px-2 py-1 rounded border text-[11px] font-medium text-center capitalize',
+        statusBg(run.run.status, run.run.conclusion),
+      )}>
+        {run.run.event}
+      </div>
+
+      <div ref={workflowRef} className={cn(
+        'relative z-10 px-2 py-1 rounded border',
+        statusBg(run.run.status, run.run.conclusion),
+      )}>
+        <div className="text-xs font-medium text-foreground truncate" title={run.run.name}>{run.run.name}</div>
+        <div className="text-[10px] text-muted-foreground truncate">{run.run.repo}</div>
+        <div className="text-[10px] text-muted-foreground truncate">{run.run.headBranch}</div>
+      </div>
+
+      <div className="relative z-10 flex flex-col gap-1 min-w-0">
+        {jobs.map((job) => (
+          <div
+            key={job.id}
+            ref={(el) => { jobRefs.current[job.id] = el }}
+            className={cn(
+              'px-2 py-1 rounded border text-[11px] truncate',
+              statusBg(job.status, job.conclusion),
+            )}
+            title={`${job.name} — ${job.status}${job.conclusion ? ` (${job.conclusion})` : ''}`}
+          >
+            <span className={statusColor(job.status, job.conclusion)}>{job.name}</span>
+          </div>
+        ))}
+        {hiddenJobCount > 0 && (
+          <div className="px-2 py-0.5 text-[10px] text-muted-foreground">+{hiddenJobCount} more jobs</div>
+        )}
+      </div>
+
+      <div className="relative z-10 flex flex-col gap-1 min-w-0">
+        {jobs.flatMap((job) => {
+          const visibleSteps = job.steps.slice(0, MAX_STEPS_VISIBLE)
+          const hidden = Math.max(0, job.steps.length - visibleSteps.length)
+          const items: React.ReactNode[] = visibleSteps.map((step) => (
+            <div
+              key={`${job.id}:${step.number}`}
+              ref={(el) => { stepRefs.current[`${job.id}:${step.number}`] = el }}
+              className={cn(
+                'px-2 py-0.5 rounded border text-[10px] truncate',
+                statusBg(step.status, step.conclusion),
+              )}
+              title={`${step.name} — ${step.status}${step.conclusion ? ` (${step.conclusion})` : ''}`}
+            >
+              <span className={statusColor(step.status, step.conclusion)}>{step.name}</span>
+            </div>
+          ))
+          if (hidden > 0) {
+            items.push(
+              <div key={`${job.id}:hidden`} className="px-2 py-0 text-[10px] text-muted-foreground">
+                +{hidden} more
+              </div>
+            )
+          }
+          return items
+        })}
+      </div>
+
+      <div className="absolute top-2 right-2 z-20 flex items-center gap-1">
+        <a
+          href={run.run.htmlUrl}
+          target="_blank"
+          rel="noreferrer noopener"
+          className="text-muted-foreground hover:text-foreground p-1 rounded hover:bg-secondary/50"
+          title="Open run on GitHub"
+        >
+          <ExternalLink className="w-3 h-3" />
+        </a>
+        {isActive(run.run.status) && (
+          <button
+            type="button"
+            disabled={!canMutate || mutating}
+            onClick={() => onCancel(run.run.id, run.run.repo)}
+            className={cn(
+              'flex items-center gap-1 px-2 py-0.5 rounded text-[11px]',
+              canMutate
+                ? 'bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30'
+                : 'text-muted-foreground/50 cursor-not-allowed border border-border',
+            )}
+            title={canMutate ? 'Cancel run' : 'Log in to cancel workflows'}
+          >
+            <XCircle className={cn('w-3 h-3', mutating && 'animate-spin')} /> Cancel
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function colorForStatus(status: Status, conclusion: Conclusion): string {
+  if (status === 'in_progress') return '#60a5fa' // blue-400
+  if (status === 'queued' || status === 'waiting' || status === 'pending') return '#fbbf24' // yellow-400
+  if (conclusion === 'success') return '#4ade80' // green-400
+  if (conclusion === 'failure' || conclusion === 'timed_out') return '#f87171' // red-400
+  return '#9ca3af' // muted
+}
+
+// ---------------------------------------------------------------------------
+// Card shell
+// ---------------------------------------------------------------------------
+
+export function PipelineFlow() {
+  const [repoFilter, setRepoFilter] = useState<string | null>(null)
+  const [mutating, setMutating] = useState<number | null>(null)
+  const [mutationMsg, setMutationMsg] = useState<string | null>(null)
+  const { data, isLoading, error, refetch } = usePipelineFlow(repoFilter)
+  const { run: runMutation } = usePipelineMutations()
+  const { isDemoMode } = useDemoMode()
+
+  const runs = useMemo(() => data?.runs ?? [], [data])
+  const hasData = runs.length > 0
+  useCardLoadingState({ isLoading: isLoading && !hasData, hasAnyData: hasData, isDemoData: isDemoMode })
+
+  // Auto-clear mutation message after a few seconds
+  useEffect(() => {
+    if (!mutationMsg) return
+    const t = setTimeout(() => setMutationMsg(null), 4000)
+    return () => clearTimeout(t)
+  }, [mutationMsg])
+
+  async function onCancel(runId: number, repo: string) {
+    setMutating(runId)
+    setMutationMsg(null)
+    const result = await runMutation('cancel', repo, runId)
+    setMutating(null)
+    setMutationMsg(result.ok ? `Cancel requested for #${runId}` : `Cancel failed: ${result.error ?? result.status}`)
+    if (result.ok) refetch()
+  }
+
+  if (error && !hasData) {
+    return (
+      <div className="p-4 h-full flex items-center justify-center text-sm text-red-400">
+        Failed to load pipeline flow. {error}
+      </div>
+    )
+  }
+
+  return (
+    <div className="p-3 h-full flex flex-col gap-2 min-h-0">
+      <div className="flex items-center justify-between gap-2">
+        <select
+          value={repoFilter ?? ''}
+          onChange={(e) => setRepoFilter(e.target.value || null)}
+          className="text-xs bg-secondary/40 border border-border rounded px-2 py-1 text-foreground"
+          aria-label="Filter by repo"
+        >
+          <option value="">All repos</option>
+          {PIPELINE_REPOS.map((r) => (
+            <option key={r} value={r}>{r}</option>
+          ))}
+        </select>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span>{runs.length} in flight</span>
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className="hover:text-foreground flex items-center gap-1"
+            aria-label="Refresh"
+          >
+            <RefreshCw className="w-3 h-3" />
+          </button>
+        </div>
+      </div>
+
+      {mutationMsg && (
+        <div className="text-[11px] text-muted-foreground px-1 py-0.5">{mutationMsg}</div>
+      )}
+
+      <div className="flex-1 min-h-0 overflow-auto">
+        {runs.length === 0 ? (
+          <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
+            No runs in flight.
+          </div>
+        ) : (
+          <div className="divide-y divide-border/40">
+            {runs.map((r) => (
+              <RunRow
+                key={`${r.run.repo}:${r.run.id}`}
+                run={r}
+                canMutate={!isDemoMode}
+                mutating={mutating === r.run.id}
+                onCancel={onCancel}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}

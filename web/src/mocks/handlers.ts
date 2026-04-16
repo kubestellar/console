@@ -712,6 +712,10 @@ export const handlers = [
   // browser blocks the actual POST.
   http.all('/api/nps', () => passthrough()),
   http.get('/api/acmm/scan', () => passthrough()),
+  // GitHub Pipelines dashboard — backed by Netlify Function that caches
+  // GitHub Actions data in Netlify Blobs. Must be http.all (not just
+  // http.get) to cover mutation POSTs + CORS preflight.
+  http.all('/api/github-pipelines', () => passthrough()),
 
   // ── Kubara Platform Catalog (demo) ──────────────────────────────
   http.get('/api/github/repos/kubara-io/kubara/contents/*', () => {
