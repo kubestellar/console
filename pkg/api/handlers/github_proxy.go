@@ -25,9 +25,14 @@ const (
 	maxGitHubProxyPathLen = 512
 	// githubProxyMaxRequestsPerMinute caps outbound GitHub API calls to protect
 	// the shared server-side PAT from being exhausted by runaway clients.
-	githubProxyMaxRequestsPerMinute = 30
+	githubProxyMaxRequestsPerMinute = 60
 	// githubProxyBurstSize allows short bursts above the steady-state rate.
-	githubProxyBurstSize = 5
+	// GitHub Activity card fans out ~7 parallel requests on initial load
+	// (repo, open PRs, closed PRs, open issues, closed issues, contributors,
+	// releases). Burst=5 was rejecting 2+ of those immediately and surfacing
+	// as "Too many requests" even when the user's PAT had plenty of quota
+	// left (#8299). 20 comfortably absorbs one card's load.
+	githubProxyBurstSize = 20
 	// maxGitHubResponseBytes caps the size of GitHub API response bodies that
 	// the proxy will buffer, preventing memory exhaustion from large list
 	// endpoints or crafted query parameters (#7035).
@@ -147,7 +152,7 @@ func (h *GitHubProxyHandler) Proxy(c *fiber.Ctx) error {
 	if !getGitHubProxyLimiter(limiterKey).Allow() {
 		slog.Warn("[GitHubProxy] rate limit exceeded, rejecting request", "user", limiterKey)
 		return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
-			"error": "GitHub proxy rate limit exceeded — try again shortly",
+			"error": "Console proxy rate limit exceeded (not GitHub). Please wait a moment and retry.",
 		})
 	}
 
