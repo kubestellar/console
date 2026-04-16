@@ -413,6 +413,8 @@ func getEnvKeyForProvider(provider string) string {
 		return "LM_STUDIO_API_KEY"
 	case "rhaiis":
 		return "RHAIIS_API_KEY"
+	case "ramalama":
+		return "RAMALAMA_API_KEY"
 	default:
 		return ""
 	}
@@ -437,6 +439,8 @@ func getBaseURLEnvKeyForProvider(provider string) string {
 		return "LM_STUDIO_URL"
 	case "rhaiis":
 		return "RHAIIS_URL"
+	case "ramalama":
+		return "RAMALAMA_URL"
 	// OpenAI-compatible gateways
 	case "groq":
 		return "GROQ_BASE_URL"
@@ -481,6 +485,8 @@ func getModelEnvKeyForProvider(provider string) string {
 		return "LM_STUDIO_MODEL"
 	case "rhaiis":
 		return "RHAIIS_MODEL"
+	case "ramalama":
+		return "RAMALAMA_MODEL"
 	default:
 		return ""
 	}

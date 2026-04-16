@@ -309,6 +309,18 @@ export function AgentIcon({ provider, className = 'w-5 h-5' }: AgentIconProps) {
           <text x="18" y="7" textAnchor="middle" className="fill-red-900" fontSize="4" fontWeight="bold">AI</text>
         </svg>
       )
+    case 'ramalama':
+      return (
+        <svg className={className} viewBox="0 0 24 24" fill="none">
+          {/* RamaLama - llama silhouette inside an OCI shipping container */}
+          <rect x="2" y="6" width="20" height="14" rx="2" className="fill-orange-600" />
+          <rect x="2" y="6" width="20" height="2" className="fill-orange-800" />
+          <rect x="2" y="18" width="20" height="2" className="fill-orange-800" />
+          <path d="M8 10c0 1 0 2 0.5 3H7l0.5 4h9L17 13h-1.5c0.5-1 0.5-2 0.5-3" className="fill-orange-100" />
+          <circle cx="9.5" cy="11.5" r="0.6" className="fill-gray-900" />
+          <circle cx="14.5" cy="11.5" r="0.6" className="fill-gray-900" />
+        </svg>
+      )
     default:
       // Generic AI/robot icon
       return (

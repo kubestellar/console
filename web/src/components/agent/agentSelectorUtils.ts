@@ -27,6 +27,7 @@ export const LOCAL_LLM_INSTALL_MISSIONS: Readonly<Partial<Record<string, string>
   vllm: 'install-vllm',
   'lm-studio': 'install-lm-studio',
   rhaiis: 'install-rhaiis',
+  ramalama: 'install-ramalama',
   // Registered by their own provider files, listed here for the dropdown
   'open-webui': 'install-open-webui',
   'claude-desktop': 'install-claude-desktop',

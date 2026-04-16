@@ -319,6 +319,7 @@ func InitializeProviders() error {
 	registry.Register(NewVLLMProvider())
 	registry.Register(NewLMStudioProvider())
 	registry.Register(NewRHAIISProvider())
+	registry.Register(NewRamalamaProvider())
 
 	// Register the OpenAI-compatible gateway and frontend providers. These
 	// have existed in the codebase but were previously unregistered because

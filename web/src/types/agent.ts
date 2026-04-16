@@ -31,6 +31,7 @@ export type AgentProvider =
   | 'vllm'            // vLLM - high-throughput GPU inference
   | 'lm-studio'       // LM Studio - workstation GUI runner
   | 'rhaiis'          // Red Hat AI Inference Server
+  | 'ramalama'        // RamaLama - OCI-packaged local model runtime
 
 // Capability flags matching backend ProviderCapability
 export const AgentCapabilityChat = 1

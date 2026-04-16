@@ -144,6 +144,7 @@ const (
 	ProviderKeyVLLM         = "vllm"
 	ProviderKeyLMStudio     = "lm-studio"
 	ProviderKeyRHAIIS       = "rhaiis"
+	ProviderKeyRamalama     = "ramalama"
 	ProviderKeyClaudeDesktopLocal = "claude-desktop"
 )
 
@@ -157,6 +158,7 @@ const (
 	envVLLMURL     = "VLLM_URL"
 	envLMStudioURL = "LM_STUDIO_URL"
 	envRHAIISURL   = "RHAIIS_URL"
+	envRamalamaURL = "RAMALAMA_URL"
 )
 
 // Default local URLs for each runner. These are only used if the corresponding
@@ -246,6 +248,20 @@ func NewRHAIISProvider() *LocalOpenAICompatProvider {
 		providerKey: ProviderKeyRHAIIS,
 		description: "Red Hat AI Inference Server - productized vLLM on OpenShift",
 		urlEnvVar:   envRHAIISURL,
+		chatPath:    "/v1/chat/completions",
+	}
+}
+
+// NewRamalamaProvider returns the RamaLama provider. RamaLama wraps llama.cpp
+// and vLLM behind an OCI-packaged workflow and exposes an OpenAI-compatible
+// server when started with `ramalama serve`.
+func NewRamalamaProvider() *LocalOpenAICompatProvider {
+	return &LocalOpenAICompatProvider{
+		name:        ProviderKeyRamalama,
+		displayName: "RamaLama (Local)",
+		providerKey: ProviderKeyRamalama,
+		description: "RamaLama - OCI-packaged local model runtime (llama.cpp/vLLM under the hood)",
+		urlEnvVar:   envRamalamaURL,
 		chatPath:    "/v1/chat/completions",
 	}
 }
