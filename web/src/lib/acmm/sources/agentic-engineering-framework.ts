@@ -1,0 +1,67 @@
+import type { Source, Criterion } from './types'
+
+const CRITERIA: Criterion[] = [
+  {
+    id: 'aef:task-traceability',
+    source: 'agentic-engineering-framework',
+    category: 'governance',
+    name: 'Task traceability ledger',
+    description: 'Every agent task is logged with intent, inputs, and outputs.',
+    rationale: 'The framework argues that without a traceable record of what an agent was asked to do, post-hoc review is impossible.',
+    detection: { type: 'any-of', pattern: ['.agent/tasks/', 'docs/agent-tasks/', '.github/agent-log/', 'agent-tasks.md'] },
+  },
+  {
+    id: 'aef:structural-gates',
+    source: 'agentic-engineering-framework',
+    category: 'governance',
+    name: 'Structural gates',
+    description: 'Config-enforced gates that block agents from touching protected areas without review.',
+    rationale: 'The framework treats structural gates as the primary mechanism for scoping agent authority — code can lie, config cannot.',
+    detection: { type: 'any-of', pattern: ['CODEOWNERS', '.github/CODEOWNERS', '.agent/boundaries.yml', 'docs/agent-boundaries.md'] },
+  },
+  {
+    id: 'aef:session-continuity',
+    source: 'agentic-engineering-framework',
+    category: 'governance',
+    name: 'Session continuity doc',
+    description: 'A persistent record the agent reads at session start to recover prior context.',
+    rationale: 'The framework: agents without session continuity repeat mistakes and lose alignment between invocations.',
+    detection: { type: 'any-of', pattern: ['CLAUDE.md', 'AGENTS.md', '.cursorrules', '.github/copilot-instructions.md', 'docs/agent-context.md'] },
+  },
+  {
+    id: 'aef:audit-trail',
+    source: 'agentic-engineering-framework',
+    category: 'governance',
+    name: 'Audit trail workflow',
+    description: 'A workflow that records agent-generated PRs and attributes them for later review.',
+    rationale: 'The framework: the governance claim rests on being able to answer "which agent did this, when, and why" after the fact.',
+    detection: { type: 'any-of', pattern: ['.github/workflows/ai-audit.yml', '.github/workflows/agent-audit.yml', 'scripts/ai-audit-report.mjs'] },
+  },
+  {
+    id: 'aef:cross-tool-config',
+    source: 'agentic-engineering-framework',
+    category: 'governance',
+    name: 'Cross-tool agent config',
+    description: 'Agent instructions that apply across Claude, Copilot, Cursor, and other tools rather than being tool-specific.',
+    rationale: 'The framework: single-tool configs fragment over time; cross-tool configs keep the governance surface consistent.',
+    detection: { type: 'any-of', pattern: ['AGENTS.md', 'docs/ai-contributors.md', '.github/ai-config.yml'] },
+  },
+  {
+    id: 'aef:change-classification',
+    source: 'agentic-engineering-framework',
+    category: 'governance',
+    name: 'Change classification policy',
+    description: 'A documented policy that classifies changes by risk tier and routes them to appropriate review.',
+    rationale: 'The framework: uniform review gates on all PRs are either too strict or too loose — classification lets the policy be tier-appropriate.',
+    detection: { type: 'any-of', pattern: ['docs/change-classification.md', '.github/change-tiers.yml', 'docs/risk-tiers.md'] },
+  },
+]
+
+export const agenticEngineeringFrameworkSource: Source = {
+  id: 'agentic-engineering-framework',
+  name: 'Agentic Engineering Framework',
+  url: 'https://github.com/DimitriGeelen/agentic-engineering-framework',
+  citation: 'Agentic Engineering Framework: Governance patterns for AI coding agents. github.com/DimitriGeelen/agentic-engineering-framework',
+  definesLevels: false,
+  criteria: CRITERIA,
+}

@@ -43,6 +43,7 @@ import { clusterAdminDashboardConfig } from './cluster-admin'
 import { insightsDashboardConfig } from './insights'
 import { multiTenancyDashboardConfig } from './multi-tenancy'
 import { drasiDashboardConfig } from './drasi'
+import { acmmDashboardConfig } from './acmm'
 
 /**
  * Registry of all unified dashboard configurations
@@ -80,6 +81,7 @@ export const DASHBOARD_CONFIGS: DashboardConfigRegistry = {
   insights: insightsDashboardConfig,
   'multi-tenancy': multiTenancyDashboardConfig,
   drasi: drasiDashboardConfig,
+  acmm: acmmDashboardConfig,
 }
 
 /**

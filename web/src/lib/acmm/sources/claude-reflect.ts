@@ -1,0 +1,67 @@
+import type { Source, Criterion } from './types'
+
+const CRITERIA: Criterion[] = [
+  {
+    id: 'claude-reflect:correction-capture',
+    source: 'claude-reflect',
+    category: 'self-tuning',
+    name: 'Correction capture',
+    description: 'A mechanism that captures user corrections during agent sessions and persists them.',
+    rationale: 'Claude-reflect: corrections are the highest-signal feedback an agent receives — discarding them means repeating the same mistakes.',
+    detection: { type: 'any-of', pattern: ['.claude/reflections/', 'memory/feedback_', '.github/ai-corrections.yml', 'scripts/capture-corrections.mjs'] },
+  },
+  {
+    id: 'claude-reflect:positive-reinforcement',
+    source: 'claude-reflect',
+    category: 'self-tuning',
+    name: 'Positive reinforcement capture',
+    description: 'A mechanism that captures confirmations of non-obvious correct behavior, not just corrections.',
+    rationale: 'Claude-reflect: saving only corrections causes drift away from approaches the user has already validated.',
+    detection: { type: 'any-of', pattern: ['.claude/reflections/', 'memory/feedback_', 'docs/ai-reinforcement.md'] },
+  },
+  {
+    id: 'claude-reflect:claude-md-sync',
+    source: 'claude-reflect',
+    category: 'self-tuning',
+    name: 'CLAUDE.md auto-sync',
+    description: 'A workflow that syncs captured corrections/preferences into CLAUDE.md or AGENTS.md.',
+    rationale: 'Claude-reflect: the feedback loop only closes when learned preferences flow back into the config the next agent session reads.',
+    detection: { type: 'any-of', pattern: ['.github/workflows/claude-md-sync.yml', 'scripts/sync-claude-md.mjs', 'scripts/update-claude-md.mjs'] },
+  },
+  {
+    id: 'claude-reflect:preference-index',
+    source: 'claude-reflect',
+    category: 'self-tuning',
+    name: 'Preference index',
+    description: 'A structured index of captured preferences keyed by topic or file area.',
+    rationale: 'Claude-reflect: an unstructured pile of reflections becomes unsearchable fast — an index keeps lookups cheap.',
+    detection: { type: 'any-of', pattern: ['.claude/preferences.json', 'memory/MEMORY.md', '.github/agent-preferences.yml'] },
+  },
+  {
+    id: 'claude-reflect:reflection-review',
+    source: 'claude-reflect',
+    category: 'self-tuning',
+    name: 'Periodic reflection review',
+    description: 'A scheduled job that surfaces captured reflections for human review and pruning.',
+    rationale: 'Claude-reflect: reflections decay in relevance; without review they become noise that the agent then trusts.',
+    detection: { type: 'any-of', pattern: ['.github/workflows/reflection-review.yml', 'scripts/review-reflections.mjs', 'docs/reflection-review.md'] },
+  },
+  {
+    id: 'claude-reflect:session-summary',
+    source: 'claude-reflect',
+    category: 'self-tuning',
+    name: 'Session summary artifact',
+    description: 'An end-of-session artifact that records what changed, what was tried, and what was learned.',
+    rationale: 'Claude-reflect: session summaries are the unit of learning — they bridge one session\'s context to the next.',
+    detection: { type: 'any-of', pattern: ['.claude/sessions/', 'docs/session-summaries/', 'memory/session_'] },
+  },
+]
+
+export const claudeReflectSource: Source = {
+  id: 'claude-reflect',
+  name: 'Claude Reflect',
+  url: 'https://github.com/BayramAnnakov/claude-reflect',
+  citation: 'Claude Reflect: A self-learning system for Claude Code that captures corrections and syncs them to CLAUDE.md. github.com/BayramAnnakov/claude-reflect',
+  definesLevels: false,
+  criteria: CRITERIA,
+}

@@ -82,6 +82,7 @@ const DASHBOARD_NAMES: Record<DashboardStatsType, string> = {
   'ci-cd': 'CI/CD',
   'karmada-ops': 'Karmada Ops',
   drasi: 'Drasi',
+  acmm: 'AI Codebase Maturity',
 }
 
 const DASHBOARD_ROUTES: Record<DashboardStatsType, string> = {
@@ -108,6 +109,7 @@ const DASHBOARD_ROUTES: Record<DashboardStatsType, string> = {
   'ci-cd': '/ci-cd',
   'karmada-ops': '/karmada-ops',
   drasi: '/drasi',
+  acmm: '/acmm',
 }
 
 const ALL_STATS_DASHBOARD_TYPES: DashboardStatsType[] = [

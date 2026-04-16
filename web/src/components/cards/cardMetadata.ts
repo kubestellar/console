@@ -2,6 +2,11 @@
 // Pure data — no runtime dependencies
 
 export const CARD_TITLES: Record<string, string> = {
+  // ACMM (AI Codebase Maturity Model)
+  acmm_level: 'Current Level',
+  acmm_balance: 'Human vs AI Balance',
+  acmm_feedback_loops: 'Feedback Loop Inventory',
+  acmm_recommendations: 'Your Role + Next Steps',
   // Core cluster cards
   cluster_health: 'Cluster Health',
   cluster_focus: 'Cluster Focus',
@@ -314,6 +319,10 @@ export const CARD_TITLES: Record<string, string> = {
 
 // Short descriptions shown via info icon tooltip in the card header
 export const CARD_DESCRIPTIONS: Record<string, string> = {
+  acmm_level: "The repo's current level on the AI Codebase Maturity Model (L1–L5).",
+  acmm_balance: 'Weekly AI vs human contribution trend with a balance target slider.',
+  acmm_feedback_loops: 'Inventory of criteria from ACMM, Fullsend, AEF, and Claude-Reflect.',
+  acmm_recommendations: 'Your current role and prioritized missing criteria for the next level.',
   cluster_health: 'Overall health status of all connected Kubernetes clusters.',
   cluster_focus: 'Deep-dive view of a single cluster with key metrics and resources.',
   cluster_network: 'Network connectivity and traffic flow between clusters.',

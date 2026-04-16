@@ -337,6 +337,12 @@ export const CARD_CATALOG = {
   'Drasi': [
     { type: 'drasi_reactive_graph', title: 'Drasi Reactive Graph', description: 'Reactive data pipeline — sources, continuous queries, reactions, and live results with animated flow', visualization: 'status' },
   ],
+  'Maturity': [
+    { type: 'acmm_level', title: 'Current Level', description: "The repo's current level on the AI Codebase Maturity Model (L1–L5)", visualization: 'gauge' },
+    { type: 'acmm_balance', title: 'Human vs AI Balance', description: 'Weekly AI vs human contribution trend with a balance target slider anchored to ACMM levels', visualization: 'timeseries' },
+    { type: 'acmm_feedback_loops', title: 'Feedback Loop Inventory', description: 'Inventory of criteria from ACMM + Fullsend + Agentic Engineering Framework + Claude Reflect', visualization: 'status' },
+    { type: 'acmm_recommendations', title: 'Your Role + Next Steps', description: 'Current role and prioritized missing criteria for the next level', visualization: 'status' },
+  ],
 } as const
 
 // ---------------------------------------------------------------------------
@@ -386,6 +392,7 @@ export const CATEGORY_LOCALE_KEYS: Record<string, string> = {
   'Orchestration': 'orchestration',
   'Serverless': 'serverless',
   'Streaming & Messaging': 'streamingMessaging',
+  'Maturity': 'maturity',
 }
 
 // ---------------------------------------------------------------------------

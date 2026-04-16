@@ -96,6 +96,9 @@ export const ROUTES = {
   // Drasi
   DRASI: '/drasi',
 
+  // AI Codebase Maturity Model
+  ACMM: '/acmm',
+
   // Dev / test routes
   TEST_UNIFIED_CARD: '/test/unified-card',
   TEST_UNIFIED_STATS: '/test/unified-stats',

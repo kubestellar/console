@@ -66,6 +66,7 @@ export type DashboardStatsType =
   | 'ci-cd'
   | 'karmada-ops'
   | 'drasi'
+  | 'acmm'
 
 /**
  * Canonical definition for a stat block.

@@ -711,6 +711,7 @@ export const handlers = [
   // Netlify Function instead of the 503 catch-all below.
   http.get('/api/nps', () => passthrough()),
   http.post('/api/nps', () => passthrough()),
+  http.get('/api/acmm/scan', () => passthrough()),
 
   // ── Kubara Platform Catalog (demo) ──────────────────────────────
   http.get('/api/github/repos/kubara-io/kubara/contents/*', () => {
