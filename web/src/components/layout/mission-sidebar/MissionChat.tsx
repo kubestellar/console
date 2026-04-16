@@ -210,8 +210,15 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
     }
   }, [mission.status])
 
-  // Auto-open setup dialog when agent connection error occurs
+  // Auto-open setup dialog when agent connection error occurs — but only
+  // for NEW messages, not messages restored from localStorage on refresh.
+  // Without this guard the dialog re-pops on every refresh because the
+  // stale "Local Agent Not Connected" system message persists across
+  // page loads.
+  const initialMessageCountRef = useRef(mission.messages.length)
   useEffect(() => {
+    // Skip messages that existed at mount time (restored from persistence).
+    if (mission.messages.length <= initialMessageCountRef.current) return
     const lastMsg = mission.messages[mission.messages.length - 1]
     if (lastMsg?.role === 'system' && lastMsg.content.includes('Local Agent Not Connected')) {
       setShowSetupDialog(true)
