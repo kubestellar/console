@@ -10,6 +10,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { ReactNode } from 'react'
 import { useCachedACMMScan, type UseACMMScanResult } from '../../hooks/useCachedACMMScan'
 import { isACMMIntroDismissed } from './ACMMIntroModal'
+import { emitACMMScanned } from '../../lib/analytics'
+import { ALL_CRITERIA } from '../../lib/acmm/sources'
 
 const DEFAULT_REPO = 'kubestellar/console'
 const SELECTED_REPO_KEY = 'kubestellar-acmm-selected-repo'
@@ -127,6 +129,18 @@ export function ACMMProvider({ children }: { children: ReactNode }) {
       setTargetLevelState(Math.min(MAX_LEVEL, scan.level.level + 1))
     }
   }, [scan.level.level])
+
+  // GA4: fire ksc_acmm_scanned when a scan completes with data.
+  const lastEmittedRepo = useRef('')
+  useEffect(() => {
+    const detectedCount = scan.data.detectedIds instanceof Set
+      ? scan.data.detectedIds.size
+      : (scan.data.detectedIds || []).length // ai-quality-ignore
+    if (detectedCount > 0 && repo !== lastEmittedRepo.current) {
+      lastEmittedRepo.current = repo
+      emitACMMScanned(repo, scan.level.level, detectedCount, ALL_CRITERIA.length)
+    }
+  }, [repo, scan.level.level, scan.data.detectedIds])
 
   const setTargetLevel = useCallback((next: number) => {
     userOverrodeLevel.current = true

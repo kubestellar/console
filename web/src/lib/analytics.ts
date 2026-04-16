@@ -2235,3 +2235,11 @@ export function emitWhatsNewUpdateClicked(tag: string, installMethod: string) {
 export function emitWhatsNewRemindLater(tag: string, duration: string) {
   send('ksc_whats_new_remind_later', { release_tag: tag, snooze_duration: duration })
 }
+
+// ── ACMM Dashboard ──────────────────────────────────────────────────
+
+/** Fired when a user scans a repo on the ACMM dashboard. Tracks which
+ *  repos people are scanning and what level they land at. */
+export function emitACMMScanned(repo: string, level: number, detected: number, total: number) {
+  send('ksc_acmm_scanned', { repo, acmm_level: level, detected, total })
+}
