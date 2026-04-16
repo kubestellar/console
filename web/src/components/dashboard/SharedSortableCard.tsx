@@ -17,12 +17,17 @@ import type { Card } from './dashboardUtils'
 const COLLAPSED_CARD_ROW_SPAN = 1
 
 /**
- * Minimum pixel height a non-collapsed sortable card cell should occupy.
- * Mirrors the legacy `auto-rows-[minmax(180px,auto)]` baseline so expanded
- * cards keep their previous look when the grid container itself uses
- * `auto-rows-min` (which is required so collapsed cards can shrink).
+ * Minimum pixel height contributed by ONE row of card span, used to mirror
+ * the legacy `auto-rows-[minmax(180px,auto)]` baseline while the grid itself
+ * uses `auto-rows-min` (required so collapsed cards can shrink).
+ *
+ * Effective card min-height = row count × this constant. Scaling with the
+ * row span is what makes the "Resize height" menu actually change card
+ * height (#8289, #8298). With a flat constant, `gridRow: span N` only
+ * reserves N grid rows but `auto-rows-min` collapses those rows to the
+ * card's content, so taller row counts had no visible effect.
  */
-const EXPANDED_CARD_MIN_HEIGHT_PX = 180
+const EXPANDED_CARD_ROW_MIN_HEIGHT_PX = 180
 
 interface SortableCardProps {
   card: Card
@@ -109,8 +114,9 @@ export const SortableCard = memo(function SortableCard({ card, onConfigure, onRe
     gridRow: `span ${effectiveRowSpan}`,
     // Only enforce the legacy minimum height when expanded; collapsed cards
     // must be free to shrink to their header height so neighbouring rows can
-    // pack upward instead of leaving dead space.
-    minHeight: isCollapsed ? undefined : `${EXPANDED_CARD_MIN_HEIGHT_PX}px`,
+    // pack upward instead of leaving dead space. Scale with posH so the
+    // "Resize height" menu actually grows/shrinks the card (#8289, #8298).
+    minHeight: isCollapsed ? undefined : `${posH * EXPANDED_CARD_ROW_MIN_HEIGHT_PX}px`,
     opacity: isDragging ? 0.5 : 1,
   }
 
