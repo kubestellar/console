@@ -221,10 +221,17 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
     setBaseURLError(e => ({ ...e, [provider]: '' }))
     try {
       setSaving(true)
+      // Empty draft = "Leave blank to use the compiled-in default" — send
+      // clearBaseURL:true so the backend removes the persisted override
+      // (and bypasses the missing_field guard that rejects all-empty
+      // requests). #8277.
+      const body = draft === ''
+        ? { provider, clearBaseURL: true }
+        : { provider, baseURL: draft }
       const response = await fetch(`${KC_AGENT_URL}/settings/keys`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ provider, baseURL: draft }),
+        body: JSON.stringify(body),
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
       if (!response.ok) {

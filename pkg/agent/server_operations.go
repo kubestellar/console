@@ -342,10 +342,12 @@ func (s *Server) handleGetKeysStatus(w http.ResponseWriter, r *http.Request) {
 			status.BaseURLSource = "config"
 		}
 		// For local LLM runners, fall through to the compiled-in default
-		// so the UI always shows the effective endpoint (#8259).
+		// so the UI always shows the effective endpoint (#8259). Leave
+		// BaseURLSource empty here — per KeyStatus docs, empty signals
+		// "the resolved value is the compiled-in default" (the UI treats
+		// empty as "default" without needing a separate enum value).
 		if p.isLocalLLM && status.BaseURL == "" && p.defaultURL != "" {
 			status.BaseURL = p.defaultURL
-			status.BaseURLSource = "default"
 		}
 		// Local LLM runners are "configured" when a URL is reachable —
 		// either via env/config override or compiled-in default. Having
