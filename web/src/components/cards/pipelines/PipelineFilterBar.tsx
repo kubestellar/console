@@ -29,11 +29,11 @@ export function PipelineFilterBar() {
 
   // In demo mode (console.kubestellar.io), repo CRUD is gated behind
   // the install dialog — we don't give away the full feature for free.
-  // The custom event 'open-setup-dialog' is listened to by Layout.tsx
+  // The custom event 'open-install' is listened to by Layout.tsx:114
   // which renders the SetupInstructionsDialog.
   const isDemo = isDemoMode()
   const showInstallGate = useCallback(() => {
-    window.dispatchEvent(new CustomEvent('open-setup-dialog'))
+    window.dispatchEvent(new CustomEvent('open-install'))
   }, [])
   const [addValue, setAddValue] = useState('')
   const [addError, setAddError] = useState<string | null>(null)
