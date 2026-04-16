@@ -37,7 +37,11 @@ export default defineConfig({
   testDir: '.',
   timeout: PER_TEST_TIMEOUT_MS,
   expect: { timeout: 20_000 },
-  retries: 1,
+  // retries:0 — benchmark tests hit live external services (Google Drive,
+  // GitHub Actions, Netlify functions) so retries double wall time on every
+  // flake without improving signal. Accept the occasional red rather than
+  // routinely burning 20+ extra minutes in the nightly suite (#8262).
+  retries: 0,
   workers: 1,
   reporter: [
     ['json', { outputFile: '../test-results/benchmark-results.json' }],

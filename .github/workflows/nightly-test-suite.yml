@@ -162,7 +162,7 @@ jobs:
           git push origin main || echo "::warning::Failed to push results — will retry next run"
 
       - name: Find or create tracking issue
-        if: always() && steps.tests.outputs.result_file != ''
+        if: always() && (steps.tests.outputs.result_file != '' || job.status == 'cancelled')
         id: issue
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
