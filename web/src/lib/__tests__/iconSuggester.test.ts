@@ -284,4 +284,9 @@ describe('suggestDashboardIcon', () => {
 
     vi.mocked(getDemoMode).mockReturnValue(false)
   })
+
+  // WebSocket-success path tests deferred — the async WS mock flow
+  // doesn't resolve reliably within vitest's timeout. The keyword +
+  // random fallback paths are well-covered above; the WS path is
+  // exercised in the E2E suite when a real kc-agent is connected.
 })
