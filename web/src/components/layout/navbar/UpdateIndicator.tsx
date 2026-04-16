@@ -1,107 +1,95 @@
 import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
 import { Download } from 'lucide-react'
 import { useVersionCheck } from '../../../hooks/useVersionCheck'
 import { useFeatureHints } from '../../../hooks/useFeatureHints'
 import { FeatureHintTooltip } from '../../ui/FeatureHintTooltip'
-import { getSettingsWithHash } from '../../../config/routes'
+import { WhatsNewModal, isUpdateSnoozed, isKillSwitchEnabled } from '../../updates/WhatsNewModal'
 import { isDemoMode } from '../../../lib/demoMode'
+import { useToast } from '../../ui/Toast'
+
+const UPDATE_TOAST_SESSION_KEY = 'kc-update-toast-seen'
 
 export function UpdateIndicator() {
-  const navigate = useNavigate()
   const { t } = useTranslation()
-  const { hasUpdate, latestRelease, channel, autoUpdateStatus, latestMainSHA, skipVersion } = useVersionCheck()
-  const [showUpdateDropdown, setShowUpdateDropdown] = useState(false)
-  const updateRef = useRef<HTMLDivElement>(null)
+  const { showToast } = useToast()
+  const { hasUpdate, latestRelease, channel, autoUpdateStatus, latestMainSHA } = useVersionCheck()
+  const [showModal, setShowModal] = useState(false)
   const updateHint = useFeatureHints('update-available')
+  const prevHasUpdate = useRef(false)
 
-  // Close dropdown when clicking outside
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (updateRef.current && !updateRef.current.contains(event.target as Node)) {
-        setShowUpdateDropdown(false)
+    if (hasUpdate && !prevHasUpdate.current) {
+      try {
+        const sessionSeen = sessionStorage.getItem(UPDATE_TOAST_SESSION_KEY)
+        if (!sessionSeen && !isUpdateSnoozed()) {
+          const tag = latestRelease?.tag ?? 'update'
+          showToast(`Version ${tag} available — click the green icon to see what's new`, 'info')
+          sessionStorage.setItem(UPDATE_TOAST_SESSION_KEY, '1')
+        }
+      } catch {
+        // sessionStorage unavailable
       }
     }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+    prevHasUpdate.current = hasUpdate
+  }, [hasUpdate, latestRelease?.tag, showToast])
 
-  // Don't show update indicator in demo mode — demo users can't update
-  if (!hasUpdate || isDemoMode()) {
+  if (!hasUpdate || isDemoMode() || isUpdateSnoozed()) {
     return null
   }
 
-  // Developer channel: latestRelease is null, use SHA from autoUpdateStatus or client-side check
   const isDeveloperUpdate = channel === 'developer' && hasUpdate
   const devSHA = autoUpdateStatus?.latestSHA ?? latestMainSHA
-  const updateLabel = isDeveloperUpdate
-    ? `New commit: ${devSHA?.slice(0, 7) ?? 'unknown'}`
-    : latestRelease?.tag ?? ''
 
-  // Need either a release update or a developer channel update
   if (!isDeveloperUpdate && !latestRelease) {
     return null
   }
 
-  return (
-    <div className="relative" ref={updateRef}>
+  if (isKillSwitchEnabled()) {
+    return (
       <button
-        onClick={() => {
-          setShowUpdateDropdown(!showUpdateDropdown)
-          updateHint.action()
-        }}
+        onClick={updateHint.action}
         className="flex items-center gap-2 px-2 py-1.5 h-9 rounded-lg bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors"
-        title={isDeveloperUpdate ? updateLabel : t('update.availableTag', { tag: latestRelease?.tag ?? '' })}
+        title={isDeveloperUpdate
+          ? `New commit: ${devSHA?.slice(0, 7) ?? 'unknown'}`
+          : t('update.availableTag', { tag: latestRelease?.tag ?? '' })}
       >
         <Download className="w-4 h-4" />
         <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
       </button>
+    )
+  }
 
-      {/* First-time hint: show users how to update */}
-      {updateHint.isVisible && !showUpdateDropdown && (
-        <FeatureHintTooltip
-          message="An update is available — click here to see what's new and how to update"
-          onDismiss={updateHint.dismiss}
-          placement="bottom-right"
-        />
-      )}
+  return (
+    <>
+      <div className="relative">
+        <button
+          onClick={() => {
+            setShowModal(true)
+            updateHint.action()
+          }}
+          className="flex items-center gap-2 px-2 py-1.5 h-9 rounded-lg bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors"
+          title={isDeveloperUpdate
+            ? `New commit: ${devSHA?.slice(0, 7) ?? 'unknown'}`
+            : t('update.availableTag', { tag: latestRelease?.tag ?? '' })}
+        >
+          <Download className="w-4 h-4" />
+          <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+        </button>
 
-      {showUpdateDropdown && (
-        <div className="absolute top-full right-0 mt-2 w-64 bg-card border border-border rounded-lg shadow-xl z-50">
-          <div className="p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Download className="w-4 h-4 text-green-400" />
-              <span className="text-sm font-medium text-foreground">{t('update.available')}</span>
-            </div>
-            <p className="text-sm text-muted-foreground mb-3">
-              {updateLabel}
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => {
-                  navigate(getSettingsWithHash('system-updates-settings'))
-                  setShowUpdateDropdown(false)
-                }}
-                className="flex-1 px-3 py-1.5 text-xs font-medium bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
-              >
-                {t('actions.viewDetails')}
-              </button>
-              {latestRelease && (
-                <button
-                  onClick={() => {
-                    skipVersion(latestRelease.tag)
-                    setShowUpdateDropdown(false)
-                  }}
-                  className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {t('actions.skip')}
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+        {updateHint.isVisible && !showModal && (
+          <FeatureHintTooltip
+            message="An update is available — click here to see what's new and how to update"
+            onDismiss={updateHint.dismiss}
+            placement="bottom-right"
+          />
+        )}
+      </div>
+
+      <WhatsNewModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+      />
+    </>
   )
 }

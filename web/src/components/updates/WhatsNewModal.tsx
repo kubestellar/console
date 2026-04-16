@@ -1,0 +1,333 @@
+import { useState, useMemo, useCallback } from 'react'
+import { Download, Clock, SkipForward, ChevronDown, Copy, Check } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import remarkBreaks from 'remark-breaks'
+import { BaseModal } from '../../lib/modals'
+import { useVersionCheck } from '../../hooks/useVersionCheck'
+import { useToast } from '../ui/Toast'
+import { useTranslation } from 'react-i18next'
+import { buildReleaseNotesComponents } from '../../lib/markdown/releaseNotesComponents'
+import { cn } from '../../lib/cn'
+import { copyToClipboard } from '../../lib/clipboard'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
+
+const SNOOZE_STORAGE_KEY = 'kc-update-snoozed'
+const KILL_SWITCH_KEY = 'kc-whats-new-modal-disabled'
+
+const SNOOZE_DURATION_1H_MS = 60 * 60 * 1000
+const SNOOZE_DURATION_1D_MS = 24 * 60 * 60 * 1000
+const SNOOZE_DURATION_1W_MS = 7 * 24 * 60 * 60 * 1000
+
+export function isUpdateSnoozed(): boolean {
+  try {
+    const raw = localStorage.getItem(SNOOZE_STORAGE_KEY)
+    if (!raw) return false
+    const snoozedUntil = Number(raw)
+    return Date.now() < snoozedUntil
+  } catch {
+    return false
+  }
+}
+
+export function isKillSwitchEnabled(): boolean {
+  try {
+    return localStorage.getItem(KILL_SWITCH_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+function snoozeUpdate(durationMs: number) {
+  try {
+    localStorage.setItem(SNOOZE_STORAGE_KEY, String(Date.now() + durationMs))
+  } catch {
+    // localStorage unavailable — silently ignore
+  }
+}
+
+function formatRelativeTime(date: Date): string {
+  const diffMs = Date.now() - date.getTime()
+  const diffMin = Math.floor(diffMs / 60_000)
+  if (diffMin < 1) return 'just now'
+  if (diffMin < 60) return `${diffMin}m ago`
+  const diffH = Math.floor(diffMin / 60)
+  if (diffH < 24) return `${diffH}h ago`
+  const diffD = Math.floor(diffH / 24)
+  if (diffD === 1) return 'yesterday'
+  if (diffD < 30) return `${diffD}d ago`
+  return date.toLocaleDateString()
+}
+
+interface WhatsNewModalProps {
+  isOpen: boolean
+  onClose: () => void
+}
+
+export function WhatsNewModal({ isOpen, onClose }: WhatsNewModalProps) {
+  const { t } = useTranslation()
+  const { showToast } = useToast()
+  const {
+    latestRelease,
+    releases,
+    currentVersion,
+    installMethod,
+    skipVersion,
+    triggerUpdate,
+  } = useVersionCheck()
+
+  const [updating, setUpdating] = useState(false)
+  const [showPreviousReleases, setShowPreviousReleases] = useState(false)
+  const [expandedRelease, setExpandedRelease] = useState<string | null>(null)
+  const [showManualUpdate, setShowManualUpdate] = useState(false)
+  const [showSnoozeMenu, setShowSnoozeMenu] = useState(false)
+  const [copiedCommand, setCopiedCommand] = useState<string | null>(null)
+
+  const markdownComponents = useMemo(() => buildReleaseNotesComponents('sm'), [])
+
+  const previousReleases = useMemo(() => {
+    if (!releases || !currentVersion || !latestRelease) return []
+    return (releases || [])
+      .filter(r => r.tag !== latestRelease.tag && r.publishedAt > new Date(0))
+      .sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime())
+      .slice(0, 10)
+  }, [releases, currentVersion, latestRelease])
+
+  const handleUpdate = useCallback(async () => {
+    setUpdating(true)
+    try {
+      if (installMethod === 'helm') {
+        const res = await fetch('/api/self-upgrade/trigger', {
+          method: 'POST',
+          signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+        })
+        if (!res.ok) {
+          showToast(`Update failed: ${res.status}`, 'error')
+          return
+        }
+      } else {
+        const result = await triggerUpdate()
+        if (!result.success) {
+          showToast(result.error ?? 'Update failed', 'error')
+          return
+        }
+      }
+      showToast('Update running in background', 'info')
+      onClose()
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Update failed', 'error')
+    } finally {
+      setUpdating(false)
+    }
+  }, [installMethod, triggerUpdate, showToast, onClose])
+
+  const handleSkip = useCallback(() => {
+    if (latestRelease) {
+      skipVersion(latestRelease.tag)
+    }
+    onClose()
+  }, [latestRelease, skipVersion, onClose])
+
+  const handleSnooze = useCallback((durationMs: number) => {
+    snoozeUpdate(durationMs)
+    setShowSnoozeMenu(false)
+    showToast('Update reminder snoozed', 'info')
+    onClose()
+  }, [showToast, onClose])
+
+  const handleCopyCommand = useCallback(async (cmd: string) => {
+    await copyToClipboard(cmd)
+    setCopiedCommand(cmd)
+    setTimeout(() => setCopiedCommand(null), 2000)
+  }, [])
+
+  const manualCommands: { label: string; command: string }[] = useMemo(() => {
+    switch (installMethod) {
+      case 'dev':
+        return [{ label: 'From source', command: 'cd /tmp/kubestellar-console && git pull && bash startup-oauth.sh' }]
+      case 'helm':
+        return [{ label: 'Helm', command: 'helm upgrade kubestellar-console kubestellar/console -n kubestellar-console' }]
+      case 'binary':
+        return [
+          { label: 'Homebrew', command: 'brew upgrade kc-agent' },
+          { label: 'Quick install', command: 'curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/start.sh | bash' },
+        ]
+      default:
+        return [{ label: 'Quick install', command: 'curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/start.sh | bash' }]
+    }
+  }, [installMethod])
+
+  if (!latestRelease) return null
+
+  const relativeTime = formatRelativeTime(latestRelease.publishedAt)
+
+  return (
+    <BaseModal isOpen={isOpen} onClose={onClose} size="lg">
+      <BaseModal.Header
+        title={t('update.whatsNew', "What's new in KubeStellar Console")}
+        description={`${latestRelease.tag} — released ${relativeTime}`}
+        icon={Download}
+        onClose={onClose}
+      />
+
+      <BaseModal.Content>
+        <div className="space-y-4">
+          {/* Primary release notes */}
+          <div className="prose dark:prose-invert max-w-none text-sm overflow-x-auto break-words [word-break:break-word] prose-pre:my-5 prose-pre:bg-transparent prose-pre:p-0 prose-code:text-purple-700 dark:prose-code:text-purple-300 prose-code:bg-black/5 dark:prose-code:bg-black/20 prose-code:px-1 prose-code:rounded">
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm, remarkBreaks]}
+              components={markdownComponents}
+            >
+              {latestRelease.releaseNotes || '*No release notes available.*'}
+            </ReactMarkdown>
+          </div>
+
+          {/* Previous releases (collapsible) */}
+          {previousReleases.length > 0 && (
+            <div className="border-t border-border pt-4">
+              <button
+                type="button"
+                onClick={() => setShowPreviousReleases(!showPreviousReleases)}
+                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors w-full text-left"
+              >
+                <ChevronDown className={cn('w-4 h-4 transition-transform', showPreviousReleases && 'rotate-180')} />
+                Previous releases ({previousReleases.length} versions)
+              </button>
+              {showPreviousReleases && (
+                <div className="mt-3 space-y-2">
+                  {previousReleases.map(release => (
+                    <div key={release.tag} className="border border-border rounded-lg">
+                      <button
+                        type="button"
+                        onClick={() => setExpandedRelease(expandedRelease === release.tag ? null : release.tag)}
+                        className="flex items-center justify-between w-full px-3 py-2 text-left text-sm hover:bg-secondary/50 transition-colors rounded-lg"
+                      >
+                        <span className="font-medium text-foreground">{release.tag}</span>
+                        <span className="text-xs text-muted-foreground">{formatRelativeTime(release.publishedAt)}</span>
+                      </button>
+                      {expandedRelease === release.tag && release.releaseNotes && (
+                        <div className="px-3 pb-3 prose dark:prose-invert max-w-none text-xs overflow-x-auto break-words [word-break:break-word]">
+                          <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} components={markdownComponents}>
+                            {release.releaseNotes}
+                          </ReactMarkdown>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Manual update commands (collapsible) */}
+          <div className="border-t border-border pt-4">
+            <button
+              type="button"
+              onClick={() => setShowManualUpdate(!showManualUpdate)}
+              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors w-full text-left"
+            >
+              <ChevronDown className={cn('w-4 h-4 transition-transform', showManualUpdate && 'rotate-180')} />
+              How to update manually
+            </button>
+            {showManualUpdate && (
+              <div className="mt-3 space-y-2">
+                {manualCommands.map(({ label, command }) => (
+                  <div key={label} className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground w-20 shrink-0">{label}:</span>
+                    <code className="flex-1 text-xs bg-secondary px-2 py-1 rounded font-mono truncate">{command}</code>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyCommand(command)}
+                      className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-foreground shrink-0"
+                      title="Copy command"
+                    >
+                      {copiedCommand === command ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </BaseModal.Content>
+
+      <BaseModal.Footer>
+        <div className="flex items-center justify-between w-full">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleSkip}
+              className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+            >
+              <SkipForward className="w-3.5 h-3.5" />
+              Skip this version
+            </button>
+
+            {/* Remind me later dropdown */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowSnoozeMenu(!showSnoozeMenu)}
+                className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+              >
+                <Clock className="w-3.5 h-3.5" />
+                Remind me later
+                <ChevronDown className="w-3 h-3" />
+              </button>
+              {showSnoozeMenu && (
+                <div className="absolute bottom-full left-0 mb-1 bg-card border border-border rounded-lg shadow-xl z-50 py-1 min-w-[160px]">
+                  <button
+                    type="button"
+                    onClick={() => handleSnooze(SNOOZE_DURATION_1H_MS)}
+                    className="w-full px-3 py-1.5 text-left text-xs hover:bg-secondary transition-colors"
+                  >
+                    In 1 hour
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSnooze(SNOOZE_DURATION_1D_MS)}
+                    className="w-full px-3 py-1.5 text-left text-xs hover:bg-secondary transition-colors"
+                  >
+                    Tomorrow
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSnooze(SNOOZE_DURATION_1W_MS)}
+                    className="w-full px-3 py-1.5 text-left text-xs hover:bg-secondary transition-colors"
+                  >
+                    Next week
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Later
+            </button>
+            <button
+              type="button"
+              onClick={handleUpdate}
+              disabled={updating}
+              className="px-4 py-1.5 text-sm font-medium bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 transition-colors flex items-center gap-2"
+            >
+              {updating ? (
+                <>Updating...</>
+              ) : (
+                <>
+                  <Download className="w-4 h-4" />
+                  Update now
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </BaseModal.Footer>
+    </BaseModal>
+  )
+}
