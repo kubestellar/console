@@ -27,10 +27,13 @@ const CONCLUSION_CLASS: Record<string, string> = {
   stale: 'bg-gray-500/40',
 }
 
+/** Standard cron expressions have exactly 5 fields: minute hour dom month dow */
+const STANDARD_CRON_FIELD_COUNT = 5
+
 function formatCron(cron: string): string {
   // Best-effort pretty-print for the common "m h * * *" case. Not a full parser.
   const parts = cron.trim().split(/\s+/)
-  if (parts.length === 5 && parts[2] === '*' && parts[3] === '*' && parts[4] === '*') {
+  if (parts.length === STANDARD_CRON_FIELD_COUNT && parts[2] === '*' && parts[3] === '*' && parts[4] === '*') {
     const minute = parseInt(parts[0], 10)
     const hourUtc = parseInt(parts[1], 10)
     if (!isNaN(minute) && !isNaN(hourUtc)) {

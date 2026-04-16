@@ -47,6 +47,7 @@ const (
 	ghpHTTPTimeout           = 15 * time.Second
 	ghpMutationHTTPTimeout   = 15 * time.Second
 	ghpMaxErrorBodyBytes     = 10_000
+	ghpMaxLogBytes           = 10 * 1024 * 1024 // 10 MB cap on job log downloads
 	ghpMatrixSparseMinCells  = 1
 )
 
@@ -257,8 +258,8 @@ func (h *ghpHistory) merge(runs []ghpWorkflowRun) {
 			byWF[day] = ghpHistoryDay{RunID: r.ID, Conclusion: r.Conclusion, HTMLURL: r.HTMLURL}
 		}
 	}
-	// Trim to retention window
-	cutoff := time.Now().AddDate(0, 0, -ghpHistoryRetentionDays).Format("2006-01-02")
+	// Trim to retention window (UTC to match GitHub's ISO-8601 timestamps)
+	cutoff := time.Now().UTC().AddDate(0, 0, -ghpHistoryRetentionDays).Format("2006-01-02")
 	for repo, byRepo := range h.days {
 		for wf, byWF := range byRepo {
 			for d := range byWF {
@@ -365,7 +366,7 @@ func (h *GitHubPipelinesHandler) Serve(c *fiber.Ctx) error {
 
 func (h *GitHubPipelinesHandler) cacheKey(c *fiber.Ctx) string {
 	return fmt.Sprintf("%s:%s:%s:%s",
-		c.Query("view"),
+		c.Query("view", "pulse"),
 		c.Query("repo", "all"),
 		c.Query("days"),
 		c.Query("job"),
@@ -388,7 +389,14 @@ func (h *GitHubPipelinesHandler) serveCached(c *fiber.Ctx, key string, build fun
 		return build(c)
 	})
 	if err != nil {
-		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": err.Error()})
+		// Distinguish client-validation errors (unknown repo, bad params) from
+		// upstream GitHub failures so callers get the correct HTTP status.
+		status := fiber.StatusBadGateway
+		msg := err.Error()
+		if msg == "unknown repo" {
+			status = fiber.StatusBadRequest
+		}
+		return c.Status(status).JSON(fiber.Map{"error": msg})
 	}
 	// Wrap payload with the repo list so the client reads it from the
 	// response instead of hardcoding. Uses a two-step marshal: first the
@@ -498,6 +506,34 @@ func (h *GitHubPipelinesHandler) fetchRuns(ctx context.Context, repo, query stri
 	return out, nil
 }
 
+// fetchWorkflowRuns fetches runs for a specific workflow file (e.g. "release.yml")
+// via /repos/{owner}/{repo}/actions/workflows/{workflow_id}/runs.
+func (h *GitHubPipelinesHandler) fetchWorkflowRuns(ctx context.Context, repo, workflowFile, query string) ([]ghpWorkflowRun, error) {
+	res, err := h.ghGet(ctx, fmt.Sprintf("/repos/%s/actions/workflows/%s/runs?%s", repo, workflowFile, query))
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+	if res.StatusCode == http.StatusNotFound {
+		return nil, nil
+	}
+	if res.StatusCode >= 400 {
+		body, _ := io.ReadAll(io.LimitReader(res.Body, ghpMaxErrorBodyBytes))
+		return nil, fmt.Errorf("github %d: %s", res.StatusCode, string(body))
+	}
+	var data struct {
+		WorkflowRuns []workflowRunRaw `json:"workflow_runs"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&data); err != nil {
+		return nil, err
+	}
+	out := make([]ghpWorkflowRun, 0, len(data.WorkflowRuns))
+	for _, r := range data.WorkflowRuns {
+		out = append(out, normalizeRunRaw(r, repo))
+	}
+	return out, nil
+}
+
 func (h *GitHubPipelinesHandler) fetchJobs(ctx context.Context, repo string, runID int64) ([]ghpJob, error) {
 	res, err := h.ghGet(ctx, fmt.Sprintf("/repos/%s/actions/runs/%d/jobs", repo, runID))
 	if err != nil {
@@ -554,24 +590,17 @@ func (h *GitHubPipelinesHandler) fetchJobs(ctx context.Context, repo string, run
 
 func (h *GitHubPipelinesHandler) buildPulse(c *fiber.Ctx) (any, error) {
 	ctx := c.UserContext()
-	// Fetch all Release workflow runs (schedule + workflow_dispatch). Don't
-	// filter by event=schedule — manual dispatches are equally valid nightly
-	// runs and excluding them makes the pulse stale when the nightly was
-	// triggered manually (which is common after fixing a broken nightly).
-	runs, err := h.fetchRuns(
+	// Fetch Release workflow runs via the workflow-specific endpoint so we
+	// don't have to filter from /actions/runs (which returns ALL workflows).
+	// Manual dispatches are included — they are equally valid nightly runs.
+	releaseRuns, err := h.fetchWorkflowRuns(
 		ctx,
 		ghpNightlyReleaseRepo,
+		ghpNightlyReleaseWFFile,
 		fmt.Sprintf("per_page=%d", ghpPulseWindowDays),
 	)
 	if err != nil {
 		return nil, err
-	}
-	// /actions/runs returns ALL workflows — filter to Release only.
-	releaseRuns := make([]ghpWorkflowRun, 0, len(runs))
-	for _, r := range runs {
-		if strings.EqualFold(r.Name, "Release") {
-			releaseRuns = append(releaseRuns, r)
-		}
 	}
 	h.history.merge(releaseRuns)
 
@@ -688,10 +717,11 @@ func (h *GitHubPipelinesHandler) buildMatrixFromQuery(c *fiber.Ctx) (any, error)
 	h.history.merge(fresh)
 	snap := h.history.snapshot()
 
-	// Build date range oldest → newest
+	// Build date range oldest → newest (UTC to match GitHub timestamps)
 	rangeDates := make([]string, 0, days)
+	now := time.Now().UTC()
 	for i := days - 1; i >= 0; i-- {
-		rangeDates = append(rangeDates, time.Now().AddDate(0, 0, -i).Format("2006-01-02"))
+		rangeDates = append(rangeDates, now.AddDate(0, 0, -i).Format("2006-01-02"))
 	}
 
 	workflows := make([]ghpMatrixWorkflow, 0, 32)
@@ -853,6 +883,10 @@ func (h *GitHubPipelinesHandler) handleLog(c *fiber.Ctx) error {
 	if !ghpIsAllowedRepo(repo) || jobStr == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "repo and job required"})
 	}
+	// Validate job ID is numeric to prevent path injection
+	if _, err := strconv.ParseInt(jobStr, 10, 64); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "job must be a numeric ID"})
+	}
 	ctx := c.UserContext()
 	res, err := h.ghGet(ctx, fmt.Sprintf("/repos/%s/actions/jobs/%s/logs", repo, jobStr))
 	if err != nil {
@@ -865,7 +899,7 @@ func (h *GitHubPipelinesHandler) handleLog(c *fiber.Ctx) error {
 	if res.StatusCode >= 400 {
 		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": fmt.Sprintf("github %d", res.StatusCode)})
 	}
-	body, err := io.ReadAll(res.Body)
+	body, err := io.ReadAll(io.LimitReader(res.Body, ghpMaxLogBytes))
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "read failed"})
 	}
@@ -897,6 +931,10 @@ func (h *GitHubPipelinesHandler) handleMutate(c *fiber.Ctx) error {
 	run := c.Query("run")
 	if !ghpIsAllowedRepo(repo) {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Unknown repo"})
+	}
+	// Validate run ID is numeric to prevent path injection
+	if _, err := strconv.ParseInt(run, 10, 64); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "run must be a numeric ID"})
 	}
 	var path string
 	switch op {
