@@ -538,29 +538,20 @@ export function MissionProvider({ children }: { children: ReactNode }) {
   // #7313 — Restore the active mission ID from localStorage so a reload
   // while a mission is running keeps the sidebar view open.
   const ACTIVE_MISSION_STORAGE_KEY = 'kc_active_mission_id'
+  /** Persists the sidebar open/closed state so it survives page refresh. */
+  const SIDEBAR_OPEN_STORAGE_KEY = 'kc_mission_sidebar_open'
   const [activeMissionId, setActiveMissionId] = useState<string | null>(() => {
     try {
       return localStorage.getItem(ACTIVE_MISSION_STORAGE_KEY) || null
     } catch { return null }
   })
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
-    // #7313 — If there's a persisted active mission that is still
-    // in-progress, open the sidebar on load. Completed / failed /
-    // cancelled missions keep their ID in localStorage (so the
-    // transcript can be reviewed on reload) but should NOT force the
-    // sidebar open — that was annoying on every refresh.
+    // Restore the sidebar's open/closed state from localStorage.
+    // If the user had it open before refresh, it reopens. If closed,
+    // it stays closed. Simple and predictable — no heuristics about
+    // mission status or demo mode.
     try {
-      const persistedId = localStorage.getItem(ACTIVE_MISSION_STORAGE_KEY)
-      if (!persistedId) return false
-      // Cross-check against the persisted missions list.
-      const stored = localStorage.getItem(MISSIONS_STORAGE_KEY)
-      if (!stored) return false
-      const parsed = JSON.parse(stored) as Array<{ id: string; status: string }>
-      const match = (parsed || []).find(m => m.id === persistedId)
-      if (!match) return false
-      // Only auto-open for non-terminal statuses.
-      const terminalStatuses: Set<string> = new Set(['completed', 'failed', 'cancelled', 'saved'])
-      return !terminalStatuses.has(match.status)
+      return localStorage.getItem(SIDEBAR_OPEN_STORAGE_KEY) === 'true'
     } catch { return false }
   })
   const [isSidebarMinimized, setIsSidebarMinimized] = useState(false)
@@ -637,7 +628,11 @@ export function MissionProvider({ children }: { children: ReactNode }) {
       }
     } catch { /* localStorage unavailable */ }
   }, [activeMissionId])
-  useEffect(() => { isSidebarOpenRef.current = isSidebarOpen }, [isSidebarOpen])
+  useEffect(() => {
+    isSidebarOpenRef.current = isSidebarOpen
+    // Persist so the next page load restores the same state.
+    try { localStorage.setItem(SIDEBAR_OPEN_STORAGE_KEY, String(isSidebarOpen)) } catch { /* ok */ }
+  }, [isSidebarOpen])
   useEffect(() => { selectedAgentRef.current = selectedAgent }, [selectedAgent])
   useEffect(() => { defaultAgentRef.current = defaultAgent }, [defaultAgent])
   // Ref to always hold the latest handleAgentMessage — avoids reconnecting WebSocket when the handler changes
