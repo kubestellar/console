@@ -258,8 +258,8 @@ describe('DashboardGrid', () => {
     const cards = [makePlacement('c1', 'test-card', 6, 3)]
     const { container } = render(<DashboardGrid cards={cards} />)
 
-    // h=3, each row = 100px, so min-height = 300px
-    const cardEl = container.querySelector('[style*="min-height: 300px"]')
+    // h=3, each row = EXPANDED_CARD_ROW_MIN_HEIGHT_PX (180px), so min-height = 540px
+    const cardEl = container.querySelector('[style*="min-height: 540px"]')
     expect(cardEl).not.toBeNull()
   })
 
