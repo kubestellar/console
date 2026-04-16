@@ -9,9 +9,21 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kubestellar/console/pkg/api/v1alpha1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	dynamicfake "k8s.io/client-go/dynamic/fake"
 )
+
+// consoleGVRListKinds maps every console CRD's GVR to its List kind so
+// the fake dynamic client knows how to return typed lists. Without this,
+// NewSimpleDynamicClient panics on the first List call because the list
+// kind isn't registered. See k8s.io/client-go/dynamic/fake docs.
+var consoleGVRListKinds = map[schema.GroupVersionResource]string{
+	v1alpha1.ManagedWorkloadGVR:    "ManagedWorkloadList",
+	v1alpha1.ClusterGroupGVR:       "ClusterGroupList",
+	v1alpha1.WorkloadDeploymentGVR: "WorkloadDeploymentList",
+}
 
 // concurrentStartCallers — number of goroutines used by the concurrency race
 // test for StartWatching. Chosen to be large enough that a naive unlocked
@@ -131,7 +143,7 @@ func TestMultiClusterClient_StartWatching_RestartAfterStop(t *testing.T) {
 
 // Issue 6472 — ConsoleWatcher must be safe to restart after Stop.
 func TestConsoleWatcher_RestartAfterStop(t *testing.T) {
-	fakeDyn := dynamicfake.NewSimpleDynamicClient(k8sruntime.NewScheme())
+	fakeDyn := dynamicfake.NewSimpleDynamicClientWithCustomListKinds(k8sruntime.NewScheme(), consoleGVRListKinds)
 	w := NewConsoleWatcher(fakeDyn, "default", func(ConsoleResourceEvent) {})
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -161,7 +173,7 @@ func TestConsoleWatcher_RestartAfterStop(t *testing.T) {
 
 // Issue 6469/6472 — ConsoleWatcher.Stop must be safe to call multiple times.
 func TestConsoleWatcher_Stop_DoubleCallSafe(t *testing.T) {
-	fakeDyn := dynamicfake.NewSimpleDynamicClient(k8sruntime.NewScheme())
+	fakeDyn := dynamicfake.NewSimpleDynamicClientWithCustomListKinds(k8sruntime.NewScheme(), consoleGVRListKinds)
 	w := NewConsoleWatcher(fakeDyn, "default", func(ConsoleResourceEvent) {})
 	if err := w.Start(context.Background()); err != nil {
 		t.Fatalf("Start: %v", err)

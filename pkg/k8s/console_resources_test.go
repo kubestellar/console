@@ -7,8 +7,11 @@ import (
 	"github.com/kubestellar/console/pkg/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/dynamic/fake"
+	fake "k8s.io/client-go/dynamic/fake"
 )
+
+// consoleGVRListKinds is defined in watcher_lifecycle_test.go (same package).
+// We reuse it here to avoid duplication.
 
 func TestConsoleResources(t *testing.T) {
 	scheme := runtime.NewScheme()
@@ -41,7 +44,7 @@ func TestConsoleResources(t *testing.T) {
 	}
 	wdU, _ := wd.ToUnstructured()
 
-	fakeDyn := fake.NewSimpleDynamicClient(scheme, mwU, cgU, wdU)
+	fakeDyn := fake.NewSimpleDynamicClientWithCustomListKinds(scheme, consoleGVRListKinds, mwU, cgU, wdU)
 	cp := NewConsolePersistence(fakeDyn)
 
 	ctx := context.Background()
