@@ -11,20 +11,19 @@ import { getDefaultCards } from '../../config/dashboards'
 import { ACMMProvider, useACMM } from './ACMMProvider'
 import { RepoPicker } from './RepoPicker'
 import { ACMMIntroModal } from './ACMMIntroModal'
+import { useACMMStats } from './useACMMStats'
 
 const ACMM_CARDS_KEY = 'kubestellar-acmm-cards'
 const DEFAULT_ACMM_CARDS = getDefaultCards('acmm')
 
-/** Small consumer that wires the context-managed intro state into the
- *  props-driven modal. Lives inside the provider so useACMM() works. */
-function ACMMIntroModalConnector() {
+/** Inner dashboard that lives inside ACMMProvider so it can consume
+ *  both the ACMM context (for the intro modal) and the ACMM stat
+ *  values (for the Stats Overview bar). */
+function ACMMDashboard() {
   const { introOpen, closeIntro } = useACMM()
-  return <ACMMIntroModal isOpen={introOpen} onClose={closeIntro} />
-}
-
-export function ACMM() {
+  const { getStatValue } = useACMMStats()
   return (
-    <ACMMProvider>
+    <>
       <DashboardPage
         title="AI Codebase Maturity"
         subtitle="Assess any GitHub repo against the AI Codebase Maturity Model"
@@ -32,6 +31,7 @@ export function ACMM() {
         storageKey={ACMM_CARDS_KEY}
         defaultCards={DEFAULT_ACMM_CARDS}
         statsType="acmm"
+        getStatValue={getStatValue}
         beforeCards={<RepoPicker />}
         emptyState={{
           title: 'AI Codebase Maturity',
@@ -39,7 +39,15 @@ export function ACMM() {
             'Enter a GitHub repo above to assess it against the AI Codebase Maturity Model.',
         }}
       />
-      <ACMMIntroModalConnector />
+      <ACMMIntroModal isOpen={introOpen} onClose={closeIntro} />
+    </>
+  )
+}
+
+export function ACMM() {
+  return (
+    <ACMMProvider>
+      <ACMMDashboard />
     </ACMMProvider>
   )
 }

@@ -414,6 +414,16 @@ export const MULTI_TENANCY_STAT_BLOCKS: StatBlockConfig[] = [
 ]
 
 /**
+ * Default stat blocks for the ACMM dashboard
+ */
+export const ACMM_STAT_BLOCKS: StatBlockConfig[] = [
+  { id: 'acmm_level', name: 'Level', icon: 'BarChart3', visible: true, color: 'purple', displayMode: 'ring' },
+  { id: 'acmm_detected', name: 'Detected', icon: 'CheckCircle2', visible: true, color: 'green', displayMode: 'gauge' },
+  { id: 'acmm_next_level', name: 'To Next Level', icon: 'TrendingUp', visible: true, color: 'cyan', displayMode: 'ring' },
+  { id: 'acmm_by_source', name: 'By Source', icon: 'Layers', visible: true, color: 'blue', displayMode: 'mini-bar' },
+]
+
+/**
  * Default stat blocks for the Drasi dashboard
  */
 export const DRASI_STAT_BLOCKS: StatBlockConfig[] = [
@@ -468,6 +478,7 @@ export const ALL_STAT_BLOCKS: StatBlockConfig[] = (() => {
     ...CLUSTER_ADMIN_STAT_BLOCKS,
     ...MULTI_TENANCY_STAT_BLOCKS,
     ...DRASI_STAT_BLOCKS,
+    ...ACMM_STAT_BLOCKS,
     ...AI_AGENTS_STAT_BLOCKS,
     ...INSIGHTS_STAT_BLOCKS,
   ]
@@ -532,6 +543,8 @@ export function getDefaultStatBlocks(dashboardType: DashboardStatsType): StatBlo
       return GITOPS_STAT_BLOCKS
     case 'drasi':
       return DRASI_STAT_BLOCKS
+    case 'acmm':
+      return ACMM_STAT_BLOCKS
     default:
       return []
   }
