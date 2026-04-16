@@ -95,7 +95,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
   const { user, isAuthenticated, token } = useAuth()
   const { showToast } = useToast()
   const currentGitHubLogin = user?.github_login || ''
-  const { createRequest, isSubmitting, requests, isLoading: requestsLoading, isRefreshing: requestsRefreshing, refresh: refreshRequests, requestUpdate, closeRequest } = useFeatureRequests(currentGitHubLogin)
+  const { createRequest, isSubmitting, requests, isLoading: requestsLoading, isRefreshing: requestsRefreshing, refresh: refreshRequests, requestUpdate, closeRequest, isDemoMode: isInDemoMode } = useFeatureRequests(currentGitHubLogin)
   const { notifications, isRefreshing: notificationsRefreshing, refresh: refreshNotifications, getUnreadCountForRequest, markRequestNotificationsAsRead } = useNotifications()
   const { githubRewards, githubPoints, refreshGitHubRewards } = useRewards()
   const { drafts, draftCount, saveDraft, deleteDraft, clearAllDrafts } = useFeedbackDrafts()
@@ -885,6 +885,17 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
         ) : activeTab === 'updates' ? (
           /* Updates Tab — unified scrollable view */
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              {isInDemoMode && (
+                <div
+                  role="status"
+                  className="flex items-start gap-2 border-b border-yellow-500/30 bg-yellow-500/10 px-3 py-2 text-xs text-yellow-400"
+                >
+                  <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                  <span>
+                    {t('feedback.demoDataBanner')}
+                  </span>
+                </div>
+              )}
               {/* Contributor banner — coins + level + progress */}
               <ContributorBanner />
 

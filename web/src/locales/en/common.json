@@ -1775,6 +1775,7 @@
     "loginWithGitHub": "Login with GitHub",
     "loginExplanation": "Please login with GitHub to submit feedback, request updates, or close requests.",
     "loginDemoExplanation": "This is a public demo — GitHub login requires your own KubeStellar Console instance. Install locally to submit feedback and unlock all features.",
+    "demoDataBanner": "Demo mode: the items below are sample data, not your submissions. Install your own console or log in via GitHub OAuth to see real feature requests.",
     "getYourOwn": "Get Your Own Console",
     "oauthRequired": "GitHub Login Required",
     "oauthExplanation": "To submit feedback and earn coins through the console, you need a GitHub OAuth app configured for your installation.",
