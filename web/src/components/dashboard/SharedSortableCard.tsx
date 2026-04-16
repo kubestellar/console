@@ -148,7 +148,7 @@ export const SortableCard = memo(function SortableCard({ card, onConfigure, onRe
       {onInsertAfter && (
         <button
           onClick={(e) => { e.stopPropagation(); onInsertAfter() }}
-          className="absolute -top-2 -right-2 z-20 opacity-0 group-hover/card:opacity-100 transition-all w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold shadow-lg hover:scale-110 ring-2 ring-background"
+          className="absolute top-2 right-2 z-20 opacity-0 group-hover/card:opacity-100 transition-all w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold shadow-lg hover:scale-110 ring-2 ring-background"
           aria-label="Add card"
           title="Add card here"
         >

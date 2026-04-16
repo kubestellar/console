@@ -34,6 +34,16 @@ import { useDashboardHealth } from '../../../hooks/useDashboardHealth'
 /** Viewport width breakpoint below which small cards are clamped to wider minimum */
 const NARROW_VIEWPORT_BREAKPOINT_PX = 1024
 
+/**
+ * Minimum pixel height contributed by ONE row of card span. Mirrors the
+ * constant in SharedSortableCard.tsx so both dashboard renderers respond
+ * identically to the "Resize height" menu (#8335, #8336). Without scaling
+ * by the row span, `gridRow: span N` reserves grid rows but `auto-rows-min`
+ * collapses them to content height, so height changes have no visible
+ * effect (same bug class as #8289/#8298 for the legacy grid).
+ */
+const EXPANDED_CARD_ROW_MIN_HEIGHT_PX = 180
+
 export interface DashboardGridProps {
   /** Card placements */
   cards: DashboardCardPlacement[]
@@ -210,9 +220,11 @@ function DashboardCardWrapper({
   const rawW = Math.min(12, Math.max(3, placement.position?.w || 4))
   const effectiveW = isNarrow && rawW < 6 ? 6 : rawW
 
-  // Calculate height (each row unit = 100px) — use inline style because
-  // Tailwind JIT can't detect dynamically constructed arbitrary classes.
-  const minHeightPx = (placement.position?.h || 2) * 100
+  // Scale min-height by row span so the "Resize height" menu actually
+  // grows/shrinks the card (#8335, #8336). Uses the same constant as
+  // SharedSortableCard so both renderers behave identically.
+  const posH = placement.position?.h || 2
+  const minHeightPx = posH * EXPANDED_CARD_ROW_MIN_HEIGHT_PX
 
   // Get card config - support both cardType (new) and card_type (legacy localStorage)
   const cardTypeKey = placement.cardType || (placement as { card_type?: string }).card_type
@@ -224,6 +236,7 @@ function DashboardCardWrapper({
   const style: React.CSSProperties = {
     minHeight: `${minHeightPx}px`,
     gridColumn: `span ${effectiveW} / span ${effectiveW}`,
+    gridRow: `span ${posH} / span ${posH}`,
     ...(isDraggable
       ? {
           transform: CSS.Transform.toString(transform),
