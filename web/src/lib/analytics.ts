@@ -234,9 +234,17 @@ function peekEngagementMs(): number {
   return total
 }
 
-/** Session-wide engagement total including any currently-active time. */
+/** Session-wide engagement total including any currently-active time.
+ *
+ *  Includes `accumulatedEngagementMs` because the visibilitychange handler
+ *  folds active time into `accumulatedEngagementMs` without updating
+ *  `sessionEngagementMs`. Without this, peek reads after a tab-hidden flush
+ *  are stale until the next user_engagement send() folds accumulated back
+ *  into the session counter. No double-count risk: when
+ *  `getAndResetEngagementMs` later drains `accumulatedEngagementMs` into
+ *  `sessionEngagementMs`, accumulated is zeroed — so the sum stays stable. */
 function peekSessionEngagementMs(): number {
-  let total = sessionEngagementMs
+  let total = sessionEngagementMs + accumulatedEngagementMs
   if (isUserActive) {
     total += Date.now() - engagementStartMs
   }
@@ -465,7 +473,9 @@ function sendViaProxy(
   // GA4 considers a session engaged when ANY of:
   //   - cumulative session engagement ≥ 10s
   //   - ≥ 2 page_views in the session
-  //   - a conversion event
+  // (Conversion-event triggering is handled server-side by GA4 based on
+  // events marked as conversions in the GA4 admin UI — the client doesn't
+  // need to flip seg=1 for that case.)
   // Previously we only checked per-page engagement via peekEngagementMs(),
   // so a user who clicked through 5 short-dwell routes (8s each → 40s
   // total) never flipped engaged — each page's accumulator reset on flush

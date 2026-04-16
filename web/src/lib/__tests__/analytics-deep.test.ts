@@ -595,6 +595,88 @@ describe('engagement tracking logic', () => {
     expect(total).toBe(10000)
     expect(accumulatedEngagementMs).toBe(0)
   })
+
+  it('peekSessionEngagementMs includes accumulated + session + active', () => {
+    const sessionEngagementMs = 4000
+    const accumulatedEngagementMs = 3000
+    const isUserActive = true
+    const engagementStartMs = Date.now() - 2000
+
+    function peekSessionEngagementMs(): number {
+      let total = sessionEngagementMs + accumulatedEngagementMs
+      if (isUserActive) {
+        total += Date.now() - engagementStartMs
+      }
+      return total
+    }
+
+    expect(peekSessionEngagementMs()).toBeGreaterThanOrEqual(9000)
+  })
+
+  it('cumulative engagement across route changes triggers engaged-session', () => {
+    const ENGAGED_SESSION_THRESHOLD_MS = 10000
+    let sessionEngagementMs = 0
+    let accumulatedEngagementMs = 0
+    let sessionPageViewCount = 0
+    let sessionEngaged = false
+
+    function peekSessionEngagementMs(): number {
+      return sessionEngagementMs + accumulatedEngagementMs
+    }
+
+    function onSend(eventName: string) {
+      if (eventName === 'page_view') sessionPageViewCount += 1
+      if (!sessionEngaged && (
+        peekSessionEngagementMs() >= ENGAGED_SESSION_THRESHOLD_MS ||
+        sessionPageViewCount >= 2
+      )) {
+        sessionEngaged = true
+      }
+      if (eventName === 'user_engagement') {
+        sessionEngagementMs += accumulatedEngagementMs
+        accumulatedEngagementMs = 0
+      }
+    }
+
+    // Route 1: 4s dwell → flushed by user_engagement
+    accumulatedEngagementMs = 4000
+    onSend('user_engagement')
+    expect(sessionEngaged).toBe(false)
+
+    // Route 2: 4s dwell → cumulative now 8s, still not engaged by time
+    accumulatedEngagementMs = 4000
+    onSend('user_engagement')
+    expect(sessionEngaged).toBe(false)
+
+    // Route 3: 3s dwell → cumulative 11s ≥ 10s threshold
+    accumulatedEngagementMs = 3000
+    onSend('custom_event')
+    expect(sessionEngaged).toBe(true)
+  })
+
+  it('two page_views trigger engaged-session without time threshold', () => {
+    const ENGAGED_SESSION_THRESHOLD_MS = 10000
+    let sessionEngaged = false
+    let sessionPageViewCount = 0
+    const sessionEngagementMs = 0
+
+    function onSend(eventName: string) {
+      if (eventName === 'page_view') sessionPageViewCount += 1
+      if (!sessionEngaged && (
+        sessionEngagementMs >= ENGAGED_SESSION_THRESHOLD_MS ||
+        sessionPageViewCount >= 2
+      )) {
+        sessionEngaged = true
+      }
+    }
+
+    onSend('page_view')
+    expect(sessionEngaged).toBe(false)
+
+    // Second page_view flips engaged on this very event (bump-before-check)
+    onSend('page_view')
+    expect(sessionEngaged).toBe(true)
+  })
 })
 
 // ============================================================================
