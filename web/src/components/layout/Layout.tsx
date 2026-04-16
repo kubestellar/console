@@ -379,19 +379,19 @@ export function Layout({ children: _children }: LayoutProps) {
                 variant="accent"
                 size="sm"
                 onClick={() => setShowSetupDialog(true)}
-                className="hidden sm:flex ml-2 rounded-full"
+                className="hidden sm:flex ml-2 rounded-full whitespace-nowrap"
               >
                 {isAuthenticatedNoAgent ? (
                   <>
                     <Plug className="w-3.5 h-3.5" aria-hidden="true" />
-                    <span className="hidden lg:inline">{t('layout.howToConnectAgent')}</span>
-                    <span className="lg:hidden">{t('layout.connect')}</span>
+                    <span className="hidden xl:inline">{t('layout.howToConnectAgent')}</span>
+                    <span className="xl:hidden">{t('layout.connect')}</span>
                   </>
                 ) : (
                   <>
                     <Rocket className="w-3.5 h-3.5" aria-hidden="true" />
-                    <span className="hidden lg:inline">{t('layout.wantYourOwnConsole')}</span>
-                    <span className="lg:hidden">{t('layout.getConsole')}</span>
+                    <span className="hidden xl:inline">{t('layout.wantYourOwnConsole')}</span>
+                    <span className="xl:hidden">{t('layout.getConsole')}</span>
                   </>
                 )}
               </Button>
