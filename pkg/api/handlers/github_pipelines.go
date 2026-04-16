@@ -511,36 +511,23 @@ func (h *GitHubPipelinesHandler) fetchJobs(ctx context.Context, repo string, run
 
 func (h *GitHubPipelinesHandler) buildPulse(c *fiber.Ctx) (any, error) {
 	ctx := c.UserContext()
+	// Fetch all Release workflow runs (schedule + workflow_dispatch). Don't
+	// filter by event=schedule — manual dispatches are equally valid nightly
+	// runs and excluding them makes the pulse stale when the nightly was
+	// triggered manually (which is common after fixing a broken nightly).
 	runs, err := h.fetchRuns(
 		ctx,
 		ghpNightlyReleaseRepo,
-		fmt.Sprintf("per_page=%d&event=schedule", ghpPulseWindowDays),
+		fmt.Sprintf("per_page=%d", ghpPulseWindowDays),
 	)
 	if err != nil {
 		return nil, err
 	}
-	// Rebind name: workflow runs fetched via workflows/<file>/runs endpoint
-	// keep the workflow name; via /actions/runs filtered by event=schedule we
-	// get all scheduled runs, then filter to the Release workflow.
+	// /actions/runs returns ALL workflows — filter to Release only.
 	releaseRuns := make([]ghpWorkflowRun, 0, len(runs))
 	for _, r := range runs {
-		if strings.EqualFold(r.Name, "Release") || strings.EqualFold(r.Name, "release") {
+		if strings.EqualFold(r.Name, "Release") {
 			releaseRuns = append(releaseRuns, r)
-		}
-	}
-	if len(releaseRuns) == 0 {
-		// Fallback: try the workflow-specific endpoint
-		alt, altErr := h.fetchRuns(
-			ctx,
-			ghpNightlyReleaseRepo,
-			fmt.Sprintf("per_page=%d", ghpPulseWindowDays),
-		)
-		if altErr == nil {
-			for _, r := range alt {
-				if strings.EqualFold(r.Name, "Release") {
-					releaseRuns = append(releaseRuns, r)
-				}
-			}
 		}
 	}
 	h.history.merge(releaseRuns)

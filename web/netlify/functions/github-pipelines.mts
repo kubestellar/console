@@ -329,7 +329,7 @@ async function buildPulse(
   token: string
 ): Promise<PulsePayload> {
   const res = await gh(
-    `/repos/${NIGHTLY_RELEASE_REPO}/actions/workflows/${NIGHTLY_RELEASE_WORKFLOW}/runs?per_page=${MATRIX_DEFAULT_DAYS}&event=schedule`,
+    `/repos/${NIGHTLY_RELEASE_REPO}/actions/workflows/${NIGHTLY_RELEASE_WORKFLOW}/runs?per_page=${MATRIX_DEFAULT_DAYS}`,
     token
   );
   if (!res.ok) throw new Error(`pulse: GitHub ${res.status}`);
