@@ -9,6 +9,7 @@ import {
 import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import { dashboardSync } from './dashboardSync'
 import { hasUnifiedConfig } from '../../config/cards'
+import { isCardTypeRegistered } from '../../components/cards/cardRegistry'
 import { DashboardCard, DashboardCardPlacement, NewCardInput } from './types'
 import { useDashboardUndoRedo } from '../../hooks/useUndoRedo'
 import { setAutoRefreshPaused } from '../cache'
@@ -145,7 +146,11 @@ export function useDashboardCards(
         // Filter out card types that were removed from the registry (e.g.
         // acmm_balance after #8426). Without this, users who visited
         // before the removal keep a ghost card in their saved layout.
-        const valid = parsed.filter(c => hasUnifiedConfig(c.card_type))
+        // Check both UnifiedCardConfig AND the component registry so
+        // component-only cards (e.g. benchmark_hero) are not pruned.
+        const valid = parsed.filter(c =>
+          hasUnifiedConfig(c.card_type) || isCardTypeRegistered(c.card_type)
+        )
         // Ensure every card has a position object (guards against old/corrupt data)
         return valid.map(c => ({
           ...c,

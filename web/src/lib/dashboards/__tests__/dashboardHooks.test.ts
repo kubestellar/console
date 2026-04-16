@@ -24,6 +24,15 @@ vi.mock('../../cache', () => ({
   setAutoRefreshPaused: (...args: unknown[]) => mockSetAutoRefreshPaused(...args),
 }))
 
+// Allow all card types through the prune filter so synthetic test types
+// (card_a, saved_card, x, etc.) are not filtered out during localStorage restore.
+vi.mock('../../../config/cards', () => ({
+  hasUnifiedConfig: () => true,
+}))
+vi.mock('../../../components/cards/cardRegistry', () => ({
+  isCardTypeRegistered: () => true,
+}))
+
 // Mock requestAnimationFrame for undo/redo
 vi.stubGlobal('requestAnimationFrame', (cb: () => void) => { cb(); return 0 })
 
