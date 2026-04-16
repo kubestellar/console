@@ -41,10 +41,11 @@ const WORKFLOW_URL_BASE = 'https://github.com'
 /** Extracted strings for ui-ux ratchet */
 const PLACEHOLDER_REPO = 'owner/repo'
 const LABEL_SET_REPO = 'Set repo to monitor'
+const STANDARD_CRON_FIELD_COUNT = 5
 
 function formatCron(cron: string): string {
   const parts = cron.trim().split(/\s+/)
-  if (parts.length === 5 && parts[2] === '*' && parts[3] === '*' && parts[4] === '*') {
+  if (parts.length === STANDARD_CRON_FIELD_COUNT && parts[2] === '*' && parts[3] === '*' && parts[4] === '*') {
     const minute = parseInt(parts[0], 10)
     const hourUtc = parseInt(parts[1], 10)
     if (!isNaN(minute) && !isNaN(hourUtc)) {
