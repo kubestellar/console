@@ -2831,7 +2831,8 @@
     "welcomeBack": "Welcome back",
     "signInDescription": "Sign in to manage your multi-cluster deployments",
     "continueWithGitHub": "Continue with GitHub",
-    "termsOfService": "By signing in, you agree to our Terms of Service"
+    "termsOfServicePrefix": "By signing in, you agree to our",
+    "termsOfServiceLink": "Terms of Service"
   },
   "authCallback": {
     "signingIn": "Signing you in...",
