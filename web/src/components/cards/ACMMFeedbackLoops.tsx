@@ -141,7 +141,7 @@ export function ACMMFeedbackLoops() {
                 onClick={() => setExpandedId(isExpanded ? null : c.id)}
                 className="w-full flex items-center gap-2 px-2 py-1.5 text-left"
                 aria-expanded={isExpanded}
-                title="Show detection rule"
+                title={'Show detection rule'}
               >
                 {isExpanded ? (
                   <ChevronDown className="w-3 h-3 text-muted-foreground/60 flex-shrink-0" />

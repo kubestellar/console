@@ -175,7 +175,7 @@ export function ACMMRecommendations() {
                   type="button"
                   onClick={() => launchOne(rec)}
                   className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors flex-shrink-0"
-                  title="Launch an AI mission to add this loop"
+                  title={'Launch an AI mission to add this loop'}
                 >
                   <Zap className="w-2.5 h-2.5" />
                   Launch
