@@ -245,7 +245,7 @@ export function ACMMFeedbackLoops() {
                           e.stopPropagation()
                           launchOne(c)
                         }}
-                        className="inline-flex items-center gap-1 text-primary hover:text-primary/80"
+                        className="ml-auto inline-flex items-center gap-1 text-primary hover:text-primary/80"
                         title={`Ask the selected agent to add the "${c.name}" criterion to ${repo}`}
                       >
                         <Sparkles className="w-2.5 h-2.5" />
