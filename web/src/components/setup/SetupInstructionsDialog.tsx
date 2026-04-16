@@ -15,9 +15,8 @@ interface SetupInstructionsDialogProps {
 
 const REPO_URL = 'https://github.com/kubestellar/console'
 const DOCS_URL = 'https://console-docs.kubestellar.io'
-// Primary (user-friendly) security doc link — rendered docs site. Falls
-// back to the source-grounded repo version + AI-specific threat model
-// for readers who want the ground truth.
+// Rendered docs site for the Console security model (shown alongside
+// the source-grounded repo version and the AI-specific threat model).
 const SECURITY_DOC_URL = 'https://kubestellar.io/docs/console/main/console/security-model/'
 const SECURITY_DOC_REPO_URL = 'https://github.com/kubestellar/console/blob/main/docs/security/SECURITY-MODEL.md'
 const SECURITY_AI_DOC_URL = 'https://github.com/kubestellar/console/blob/main/docs/security/SECURITY-AI.md'
@@ -274,7 +273,7 @@ export function SetupInstructionsDialog({ isOpen, onClose }: SetupInstructionsDi
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1 text-purple-400 hover:text-purple-300"
                         >
-                          Read the full security model (docs.kubestellar.io)
+                          Read the full security model (kubestellar.io)
                           <ExternalLink className="w-3 h-3" />
                         </a>
                         <a

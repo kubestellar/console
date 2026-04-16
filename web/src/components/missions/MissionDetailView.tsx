@@ -34,7 +34,7 @@ import { copyToClipboard } from '../../lib/clipboard'
 
 type TabId = 'install' | 'uninstall' | 'upgrade' | 'troubleshooting' | 'security'
 
-/** Primary (docs.kubestellar.io) URL for the Console security model. Linked
+/** Primary (kubestellar.io) URL for the Console security model. Linked
  *  from the Security tab fallback / footer. Prefer the rendered docs site
  *  for users; the repo version is the source-grounded reference. */
 const SECURITY_MODEL_DOC_URL = 'https://kubestellar.io/docs/console/main/console/security-model/'
@@ -665,7 +665,7 @@ export function MissionDetailView({
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 text-purple-400 hover:text-purple-300"
                       >
-                        AI threat model
+                        AI automation threat model
                         <ExternalLink className="w-3 h-3" />
                       </a>
                     </p>
