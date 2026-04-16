@@ -7,18 +7,39 @@
  */
 
 import { useMemo, useRef, useState } from 'react'
-import { RefreshCw, X, ExternalLink, AlertCircle } from 'lucide-react'
+import { RefreshCw, X, ExternalLink, AlertCircle, Award, Copy, Check } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { useACMM, DEFAULT_REPO } from './ACMMProvider'
 import { ALL_CRITERIA } from '../../lib/acmm/sources'
 
 const REPO_RE = /^[\w.-]+\/[\w.-]+$/
+const BADGE_SITE = 'https://console.kubestellar.io'
 
 export function RepoPicker() {
   const { repo, setRepo, recentRepos, scan } = useACMM()
   const [input, setInput] = useState(repo)
   const [error, setError] = useState<string | null>(null)
+  const [showBadge, setShowBadge] = useState(false)
+  const [copied, setCopied] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  const badgeEndpoint = `${BADGE_SITE}/api/acmm/badge?repo=${encodeURIComponent(repo)}`
+  const badgeImg = `https://img.shields.io/endpoint?url=${encodeURIComponent(badgeEndpoint)}`
+  const badgeHref = `${BADGE_SITE}/acmm?repo=${encodeURIComponent(repo)}`
+  const badgeMarkdown = `[![ACMM](${badgeImg})](${badgeHref})`
+  const badgeHtml = `<a href="${badgeHref}"><img src="${badgeImg}" alt="ACMM" /></a>`
+
+  function copy(text: string, tag: string) {
+    navigator.clipboard.writeText(text).then(
+      () => {
+        setCopied(tag)
+        setTimeout(() => setCopied(null), 1500)
+      },
+      () => {
+        // ignore clipboard failures
+      },
+    )
+  }
 
   function submit(next: string) {
     const trimmed = next.trim()
@@ -104,9 +125,19 @@ export function RepoPicker() {
             type="button"
             variant="ghost"
             size="sm"
-            onClick={() => scan.refetch()}
+            onClick={() => setShowBadge((v) => !v)}
+            title="Get a README badge for this repo's ACMM level"
+          >
+            <Award className="w-3.5 h-3.5 mr-1" />
+            Get badge
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => scan.forceRefetch()}
             disabled={scan.isLoading || scan.isRefreshing}
-            title="Re-scan current repo"
+            title="Re-scan current repo (bypasses server cache)"
           >
             <RefreshCw
               className={`w-3.5 h-3.5 ${scan.isRefreshing ? 'animate-spin' : ''}`}
@@ -114,6 +145,60 @@ export function RepoPicker() {
           </Button>
         </div>
       </div>
+
+      {showBadge && (
+        <div className="max-w-screen-2xl mx-auto px-6 pb-3 space-y-2 text-xs">
+          <div className="flex items-center gap-3 pt-1">
+            <img src={badgeImg} alt="ACMM badge preview" className="h-5" />
+            <span className="text-muted-foreground">
+              Preview for <code className="font-mono">{repo}</code>
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowBadge(false)}
+              className="ml-auto text-muted-foreground hover:text-foreground"
+              aria-label="Close"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-muted-foreground">Markdown</span>
+              <button
+                type="button"
+                onClick={() => copy(badgeMarkdown, 'md')}
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-muted/30 hover:bg-muted/50"
+              >
+                {copied === 'md' ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+                {copied === 'md' ? 'Copied' : 'Copy'}
+              </button>
+            </div>
+            <code className="block font-mono bg-background/60 px-2 py-1 rounded text-[10px] break-all">
+              {badgeMarkdown}
+            </code>
+          </div>
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-muted-foreground">HTML</span>
+              <button
+                type="button"
+                onClick={() => copy(badgeHtml, 'html')}
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-muted/30 hover:bg-muted/50"
+              >
+                {copied === 'html' ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+                {copied === 'html' ? 'Copied' : 'Copy'}
+              </button>
+            </div>
+            <code className="block font-mono bg-background/60 px-2 py-1 rounded text-[10px] break-all">
+              {badgeHtml}
+            </code>
+          </div>
+          <div className="text-muted-foreground text-[10px]">
+            Links back to the ACMM dashboard loaded with <code className="font-mono">{repo}</code>. Shields.io caches for ~5 minutes; use the refresh icon to force an in-dashboard re-scan.
+          </div>
+        </div>
+      )}
 
       <div className="max-w-screen-2xl mx-auto px-6 pb-2 text-xs text-muted-foreground">
         {error ? (

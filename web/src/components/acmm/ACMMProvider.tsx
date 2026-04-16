@@ -25,7 +25,16 @@ interface ACMMContextValue {
 
 const ACMMContext = createContext<ACMMContextValue | null>(null)
 
-function readStoredRepo(): string {
+function readInitialRepo(): string {
+  // URL param (?repo=owner/name) takes precedence so that badge links and
+  // shared dashboard URLs open in-context regardless of the user's last selection.
+  try {
+    const url = new URL(window.location.href)
+    const fromUrl = url.searchParams.get('repo')
+    if (fromUrl && /^[\w.-]+\/[\w.-]+$/.test(fromUrl)) return fromUrl
+  } catch {
+    // window unavailable (SSR)
+  }
   try {
     return localStorage.getItem(SELECTED_REPO_KEY) || DEFAULT_REPO
   } catch {
@@ -46,7 +55,7 @@ function readRecentRepos(): string[] {
 }
 
 export function ACMMProvider({ children }: { children: ReactNode }) {
-  const [repo, setRepoState] = useState<string>(() => readStoredRepo())
+  const [repo, setRepoState] = useState<string>(() => readInitialRepo())
   const [recentRepos, setRecentRepos] = useState<string[]>(() => readRecentRepos())
 
   const scan = useCachedACMMScan(repo)

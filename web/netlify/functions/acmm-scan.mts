@@ -6,7 +6,7 @@
  * /acmm dashboard's four cards.
  *
  * Input:  ?repo=owner/repo
- * Output: { repo, scannedAt, detectedIds, weeklyActivity }
+ * Output: { repo, scannedAt, detectedIds, weeklyActivity, fromCache, demoFallback }
  *
  * Optional env var:
  *   GITHUB_TOKEN — enables higher rate limits (5000 req/hr vs 60)
@@ -287,38 +287,56 @@ async function fetchWeeklyActivity(
   };
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  const prUrl = `${GITHUB_API}/search/issues?q=repo:${repo}+type:pr+created:>=${sinceStr}&per_page=100`;
-  const issueUrl = `${GITHUB_API}/search/issues?q=repo:${repo}+type:issue+created:>=${sinceStr}&per_page=100`;
-
-  const [prRes, issueRes] = await Promise.all([
-    fetch(prUrl, { headers, signal: AbortSignal.timeout(API_TIMEOUT_MS) }),
-    fetch(issueUrl, { headers, signal: AbortSignal.timeout(API_TIMEOUT_MS) }),
-  ]);
-
-  if (prRes.ok) {
-    const body = (await prRes.json()) as { items?: SearchItem[] };
-    for (const item of body.items || []) {
-      const week = isoWeek(new Date(item.created_at));
-      const b = buckets.get(week);
-      if (!b) continue;
-      if (isAIContribution(item.labels, item.user.login)) b.aiPrs++;
-      else b.humanPrs++;
-    }
+  const prItems = await searchAllPages(
+    `${GITHUB_API}/search/issues?q=repo:${repo}+type:pr+created:>=${sinceStr}`,
+    headers,
+  );
+  for (const item of prItems) {
+    const week = isoWeek(new Date(item.created_at));
+    const b = buckets.get(week);
+    if (!b) continue;
+    if (isAIContribution(item.labels, item.user.login)) b.aiPrs++;
+    else b.humanPrs++;
   }
 
-  if (issueRes.ok) {
-    const body = (await issueRes.json()) as { items?: SearchItem[] };
-    for (const item of body.items || []) {
-      if (item.pull_request) continue;
-      const week = isoWeek(new Date(item.created_at));
-      const b = buckets.get(week);
-      if (!b) continue;
-      if (isAIContribution(item.labels, item.user.login)) b.aiIssues++;
-      else b.humanIssues++;
-    }
+  const issueItems = await searchAllPages(
+    `${GITHUB_API}/search/issues?q=repo:${repo}+type:issue+created:>=${sinceStr}`,
+    headers,
+  );
+  for (const item of issueItems) {
+    if (item.pull_request) continue;
+    const week = isoWeek(new Date(item.created_at));
+    const b = buckets.get(week);
+    if (!b) continue;
+    if (isAIContribution(item.labels, item.user.login)) b.aiIssues++;
+    else b.humanIssues++;
   }
 
   return weeks.map((w) => buckets.get(w)!);
+}
+
+/** GitHub Search API caps at 1000 results (10 pages × 100). Walk all pages. */
+const SEARCH_PAGE_SIZE = 100;
+const SEARCH_MAX_PAGES = 10;
+
+async function searchAllPages(
+  baseUrl: string,
+  headers: Record<string, string>,
+): Promise<SearchItem[]> {
+  const items: SearchItem[] = [];
+  for (let page = 1; page <= SEARCH_MAX_PAGES; page++) {
+    const url = `${baseUrl}&per_page=${SEARCH_PAGE_SIZE}&page=${page}`;
+    const res = await fetch(url, {
+      headers,
+      signal: AbortSignal.timeout(API_TIMEOUT_MS),
+    });
+    if (!res.ok) break;
+    const body = (await res.json()) as { items?: SearchItem[] };
+    const pageItems = body.items || [];
+    items.push(...pageItems);
+    if (pageItems.length < SEARCH_PAGE_SIZE) break;
+  }
+  return items;
 }
 
 // ---------------------------------------------------------------------------
@@ -385,6 +403,8 @@ export default async (req: Request) => {
 
   const url = new URL(req.url);
   const repo = url.searchParams.get("repo") || "";
+  /** User-triggered refresh: bypass the blob cache read (still writes a new entry). */
+  const force = url.searchParams.get("force") === "true";
 
   if (!REPO_RE.test(repo)) {
     return new Response(
@@ -399,25 +419,27 @@ export default async (req: Request) => {
   const token =
     Netlify.env.get("GITHUB_TOKEN") || process.env.GITHUB_TOKEN || "";
 
-  // Check blob cache (per-repo key)
+  // Check blob cache (per-repo key) — skipped when ?force=true
   const store = getStore(CACHE_STORE);
   const cacheKey = `scan:${repo}`;
-  try {
-    const cached = await store.get(cacheKey, { type: "text" });
-    if (cached) {
-      const entry: CacheEntry = JSON.parse(cached);
-      if (Date.now() < entry.expiresAt) {
-        return new Response(
-          JSON.stringify({ ...entry.data, fromCache: true }),
-          {
-            status: 200,
-            headers: { ...headers, "Content-Type": "application/json" },
-          },
-        );
+  if (!force) {
+    try {
+      const cached = await store.get(cacheKey, { type: "text" });
+      if (cached) {
+        const entry: CacheEntry = JSON.parse(cached);
+        if (Date.now() < entry.expiresAt) {
+          return new Response(
+            JSON.stringify({ ...entry.data, fromCache: true }),
+            {
+              status: 200,
+              headers: { ...headers, "Content-Type": "application/json" },
+            },
+          );
+        }
       }
+    } catch {
+      // cache miss — continue
     }
-  } catch {
-    // cache miss — continue
   }
 
   // Live scan

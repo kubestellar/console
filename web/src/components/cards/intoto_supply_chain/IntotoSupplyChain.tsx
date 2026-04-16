@@ -359,7 +359,7 @@ Please proceed step by step.`,
       <CardSearchInput
         value={localSearch}
         onChange={setLocalSearch}
-        placeholder={t('searchLayouts' as any)}
+        placeholder={t('common:searchLayouts' as any)}
       />
 
       {/* Layouts list */}

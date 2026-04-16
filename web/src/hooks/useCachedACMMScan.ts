@@ -6,6 +6,7 @@
  * changes the cache key and triggers a fresh fetch.
  */
 
+import { useCallback, useRef } from 'react'
 import { useCache, type RefreshCategory } from '../lib/cache'
 import { computeLevel, type LevelComputation } from '../lib/acmm/computeLevel'
 import { computeRecommendations, type Recommendation } from '../lib/acmm/computeRecommendations'
@@ -42,6 +43,8 @@ export interface UseACMMScanResult {
   consecutiveFailures: number
   lastRefresh: number | null
   refetch: () => Promise<void>
+  /** Bypasses the server blob cache for one fetch — use for user-initiated refresh */
+  forceRefetch: () => Promise<void>
 }
 
 const DEFAULT_REPO = 'kubestellar/console'
@@ -105,8 +108,9 @@ function demoScan(repo: string): ACMMScanData {
   }
 }
 
-async function fetchACMMScan(repo: string): Promise<ACMMScanData> {
-  const res = await fetch(`${API_PATH}?repo=${encodeURIComponent(repo)}`)
+async function fetchACMMScan(repo: string, force: boolean): Promise<ACMMScanData> {
+  const qs = force ? `&force=true` : ''
+  const res = await fetch(`${API_PATH}?repo=${encodeURIComponent(repo)}${qs}`)
   if (!res.ok) {
     throw new Error(`ACMM scan failed: ${res.status} ${res.statusText}`)
   }
@@ -115,14 +119,27 @@ async function fetchACMMScan(repo: string): Promise<ACMMScanData> {
 }
 
 export function useCachedACMMScan(repo: string = DEFAULT_REPO): UseACMMScanResult {
+  /** Set to true for the next fetch to bypass the server blob cache (user-triggered refresh). */
+  const forceNextRef = useRef(false)
+
   const cacheResult = useCache<ACMMScanData>({
     key: `acmm:scan:${repo}`,
     category: REFRESH_CATEGORY,
     initialData: emptyScan(repo),
     demoData: demoScan(repo),
-    fetcher: () => fetchACMMScan(repo),
+    fetcher: () => {
+      const force = forceNextRef.current
+      forceNextRef.current = false
+      return fetchACMMScan(repo, force)
+    },
     liveInDemoMode: true,
   })
+
+  const refetch = cacheResult.refetch
+  const forceRefetch = useCallback(async () => {
+    forceNextRef.current = true
+    await refetch()
+  }, [refetch])
 
   const detectedIds = new Set(cacheResult.data.detectedIds ?? [])
   const level = computeLevel(detectedIds)
@@ -144,5 +161,6 @@ export function useCachedACMMScan(repo: string = DEFAULT_REPO): UseACMMScanResul
     consecutiveFailures: cacheResult.consecutiveFailures,
     lastRefresh: cacheResult.lastRefresh,
     refetch: cacheResult.refetch,
+    forceRefetch,
   }
 }
