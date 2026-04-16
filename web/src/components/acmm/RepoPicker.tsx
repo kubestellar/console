@@ -6,10 +6,11 @@
  * a "Load Console example" button.
  */
 
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { RefreshCw, X, ExternalLink, AlertCircle } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { useACMM, DEFAULT_REPO } from './ACMMProvider'
+import { ALL_CRITERIA } from '../../lib/acmm/sources'
 
 const REPO_RE = /^[\w.-]+\/[\w.-]+$/
 
@@ -34,7 +35,7 @@ export function RepoPicker() {
   }
 
   const detected = scan.data.detectedIds?.length ?? 0
-  const totalLoops = 33
+  const totalCriteria = useMemo(() => ALL_CRITERIA.length, [])
   const scannedLabel = scan.data.scannedAt
     ? new Date(scan.data.scannedAt).toLocaleTimeString()
     : '—'
@@ -127,7 +128,7 @@ export function RepoPicker() {
           </div>
         ) : (
           <div>
-            Scanned {scannedLabel} · {detected}/{totalLoops} loops detected · L{scan.level.level} ({scan.level.levelName})
+            Scanned {scannedLabel} · {detected}/{totalCriteria} criteria detected · L{scan.level.level} ({scan.level.levelName})
           </div>
         )}
       </div>

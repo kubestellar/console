@@ -17,7 +17,7 @@ const CRITERIA: Criterion[] = [
     name: 'CI/CD pipeline',
     description: 'A working CI/CD pipeline that runs on every PR.',
     rationale: 'The second fullsend readiness prerequisite — a repo without CI cannot gate agent work.',
-    detection: { type: 'any-of', pattern: ['.github/workflows/ci.yml', '.github/workflows/build.yml', '.github/workflows/test.yml', '.github/workflows/pr-check.yml'] },
+    detection: { type: 'any-of', pattern: ['.github/workflows/'] },
   },
   {
     id: 'fullsend:auto-merge-policy',

@@ -116,7 +116,7 @@ const ALL_STATS_DASHBOARD_TYPES: DashboardStatsType[] = [
   'dashboard', 'clusters', 'workloads', 'pods', 'gitops', 'storage',
   'network', 'security', 'compliance', 'data-compliance', 'compute',
   'events', 'cost', 'alerts', 'operators', 'deploy', 'ai-agents',
-  'cluster-admin', 'insights', 'ci-cd', 'drasi',
+  'cluster-admin', 'insights', 'ci-cd', 'drasi', 'acmm',
 ]
 
 // --- Dashboard storage keys → routes (for scanning placed cards) ---

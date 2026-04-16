@@ -11,8 +11,8 @@ import { computeLevel, type LevelComputation } from '../lib/acmm/computeLevel'
 import { computeRecommendations, type Recommendation } from '../lib/acmm/computeRecommendations'
 
 const API_PATH = '/api/acmm/scan'
-/** How long a cached scan is considered fresh (must match Netlify function TTL). */
-const REFRESH_CATEGORY: RefreshCategory = 'default'
+/** Scan results change slowly; 10-min refresh avoids GitHub rate limits. */
+const REFRESH_CATEGORY: RefreshCategory = 'costs'
 
 export interface WeeklyActivity {
   week: string

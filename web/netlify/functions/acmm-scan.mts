@@ -6,7 +6,7 @@
  * /acmm dashboard's four cards.
  *
  * Input:  ?repo=owner/repo
- * Output: { repo, scannedAt, detectedLoops, weeklyActivity, level, ... }
+ * Output: { repo, scannedAt, detectedIds, weeklyActivity }
  *
  * Optional env var:
  *   GITHUB_TOKEN — enables higher rate limits (5000 req/hr vs 60)
@@ -101,7 +101,7 @@ const CRITERIA: Criterion[] = [
 
   // Fullsend
   { id: "fullsend:test-coverage", source: "fullsend", category: "readiness", name: "Test coverage threshold", detection: { type: "any-of", pattern: ["codecov.yml", ".codecov.yml", "coverage.yml", ".github/workflows/coverage-gate.yml"] } },
-  { id: "fullsend:ci-cd-maturity", source: "fullsend", category: "readiness", name: "CI/CD pipeline", detection: { type: "any-of", pattern: [".github/workflows/ci.yml", ".github/workflows/build.yml", ".github/workflows/test.yml", ".github/workflows/pr-check.yml"] } },
+  { id: "fullsend:ci-cd-maturity", source: "fullsend", category: "readiness", name: "CI/CD pipeline", detection: { type: "any-of", pattern: [".github/workflows/"] } },
   { id: "fullsend:auto-merge-policy", source: "fullsend", category: "autonomy", name: "Auto-merge policy", detection: { type: "any-of", pattern: [".github/auto-merge.yml", ".prow.yaml", "tide.yaml", ".github/workflows/auto-merge.yml"] } },
   { id: "fullsend:branch-protection-doc", source: "fullsend", category: "governance", name: "Branch protection doc", detection: { type: "any-of", pattern: ["docs/branch-protection.md", "docs/governance.md", ".github/branch-protection.yml"] } },
   { id: "fullsend:production-feedback", source: "fullsend", category: "observability", name: "Production feedback", detection: { type: "any-of", pattern: ["monitoring/", "grafana/", ".github/workflows/post-deploy-check.yml", "scripts/production-feedback.mjs"] } },
