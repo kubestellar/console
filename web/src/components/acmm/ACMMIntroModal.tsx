@@ -57,6 +57,7 @@ export function ACMMIntroModal({ isOpen, onClose }: ACMMIntroModalProps) {
       size="lg"
       closeOnBackdrop={false}
       closeOnEscape={false}
+      enableBackspace={false}
     >
       <BaseModal.Header
         title="Welcome to the AI Codebase Maturity Model"
