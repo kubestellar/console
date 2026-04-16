@@ -3,9 +3,14 @@
  *
  * Educational modal shown on first visit to /acmm. Explains what the
  * AI Codebase Maturity Model is, the 5 levels, the 4 source frameworks,
- * and links to the underlying paper. Modal is "sticky" — does not close
- * on backdrop click or Escape so users have time to read; only the
- * explicit Close button (or the X in the header) dismisses it.
+ * and links to the underlying paper.
+ *
+ * Dismissal: the explicit Close button, the X in the header, and the
+ * Escape key all close the modal. Backdrop click is still a no-op so
+ * accidental taps (especially on mobile) don't dismiss before users
+ * finish reading. The earlier "Escape disabled" sticky behavior was
+ * rejected as a UX annoyance — returning users who already understand
+ * ACMM were forced to click every time.
  *
  * Persists a "don't show again" preference in localStorage so returning
  * users skip the modal automatically. The preference can always be
@@ -56,7 +61,7 @@ export function ACMMIntroModal({ isOpen, onClose }: ACMMIntroModalProps) {
       onClose={handleClose}
       size="lg"
       closeOnBackdrop={false}
-      closeOnEscape={false}
+      closeOnEscape
       enableBackspace={false}
     >
       <BaseModal.Header

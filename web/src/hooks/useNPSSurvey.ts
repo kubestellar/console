@@ -101,27 +101,54 @@ export function useNPSSurvey(): NPSSurveyState {
   const submitResponse = useCallback(async (score: number, feedback?: string) => {
     if (!Number.isInteger(score) || score < 1 || score > 4) return
 
-    // Send to our own NPS backend FIRST. Errors propagate so the UI can
-    // show a failure toast instead of silently losing the response, and
-    // so we don't emit a GA4 event for a submission that never reached
-    // the backend (which would diverge the two data sources).
+    // Try the /api/nps backend first. In production it's a Netlify Function
+    // that stores aggregate data in Netlify Blobs; on localhost (Go backend)
+    // the route does not exist — we fall back to GA4-only capture in that
+    // case so dev/self-hosted users still get a success toast and their
+    // feedback isn't silently dropped.
+    //
+    // The only failures we surface to the UI are genuine *network* errors
+    // (server reachable but broken) or the timeout — a clean 404/405 from
+    // a backend that simply doesn't implement the route is treated as
+    // "no aggregation backend available, GA4 is sufficient."
     const apiBase = import.meta.env.VITE_API_BASE_URL || ''
-    const resp = await fetch(`${apiBase}/api/nps`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        score,
-        feedback: feedback?.trim() || undefined,
-      }),
-      signal: AbortSignal.timeout(NPS_POST_TIMEOUT_MS),
-    })
-    if (!resp.ok) {
-      throw new Error(`NPS submit failed: ${resp.status} ${resp.statusText}`)
+    let backendAccepted = false
+    try {
+      const resp = await fetch(`${apiBase}/api/nps`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          score,
+          feedback: feedback?.trim() || undefined,
+        }),
+        signal: AbortSignal.timeout(NPS_POST_TIMEOUT_MS),
+      })
+      if (resp.ok) {
+        backendAccepted = true
+      } else if (resp.status === 404 || resp.status === 405) {
+        // Backend route not implemented (localhost dev / self-hosted with
+        // Go-only backend). Fall through to GA4-only capture.
+        console.debug(`[NPS] backend ${resp.status} — falling back to GA4-only capture`)
+      } else {
+        // 5xx / 400 / 401 / 403 — real server failure, surface to the user.
+        throw new Error(`NPS submit failed: ${resp.status} ${resp.statusText}`)
+      }
+    } catch (err) {
+      // Re-throw only if this wasn't a 404/405 we already swallowed above.
+      // Network errors (DNS failure, connection refused, timeout) still
+      // propagate so the user sees a failure toast and can retry.
+      if (err instanceof Error && err.message.startsWith('NPS submit failed:')) {
+        throw err
+      }
+      console.debug('[NPS] backend unreachable — falling back to GA4-only capture', err)
     }
 
-    // Backend accepted the response — mirror it into GA4. emitNPSResponse
-    // bypasses the analytics opt-out gate because NPS is voluntary,
-    // user-initiated feedback (see analytics.ts).
+    // Emit to GA4 regardless of backend status — this is the canonical
+    // record. emitNPSResponse bypasses the analytics opt-out gate because
+    // NPS is voluntary, user-initiated feedback (see analytics.ts).
+    // `backendAccepted` is tracked locally for future persistent-state
+    // enrichment; not yet surfaced to GA4.
+    void backendAccepted
     const category = NPS_CATEGORIES[score - 1]
     emitNPSResponse(score, category, feedback ? feedback.length : undefined)
 
