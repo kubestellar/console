@@ -41,7 +41,32 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
           plugins: 'code-review@claude-code-plugins'
-          prompt: '/code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }}'
+          # Decomposed-review prompt: single LLM call, structured output
+          # with three explicit concern sections + priority ranking.
+          # Adapted from fullsend-ai/fullsend's "decomposed code review"
+          # pattern (docs/problems/code-review.md) — kept as a single call
+          # rather than 3 parallel jobs to avoid tripling the token cost.
+          # See docs/security/SECURITY-AI.md for the security concerns the
+          # SECURITY section is asked to watch for.
+          prompt: |
+            /code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }}
+
+            After producing the review, organize your comments into exactly three sections in this order:
+
+            ## CORRECTNESS
+            Bugs, race conditions, logic errors, broken edge cases, incorrect assumptions, type mismatches, missing null/undefined guards. Things that will make the code behave wrong at runtime.
+
+            ## SECURITY
+            Authentication/authorization gaps, input validation, secret handling, injection (SQL, command, prompt), unsafe deserialization, path traversal, CORS, CSRF, and — for any LLM-calling code — the six threat categories from `docs/security/SECURITY-AI.md` (external prompt injection, insider credentials, DoS/resource exhaustion, agent drift, supply chain, agent-to-agent injection).
+
+            ## STYLE
+            Naming, comments, idiomatic patterns, dead code, missing constants (magic numbers/strings), hardcoded routes, localization gaps. Things that affect readability and maintainability but not correctness.
+
+            For every issue you raise, prefix it with a priority tag: **P0** (must fix before merge), **P1** (should fix before merge), or **P2** (nice to have, follow-up OK).
+
+            If a section has nothing to report, write exactly `None.` on a line by itself under that heading — do not fabricate issues to fill the section.
+
+            Keep the total response scannable: prefer bullets over prose, link to specific file:line references, and don't repeat the same issue across sections.
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options
 
