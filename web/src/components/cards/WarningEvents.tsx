@@ -171,9 +171,9 @@ export function WarningEvents() {
         </div>
       ) : (
         <div ref={containerRef} className="space-y-2" style={containerStyle}>
-          {displayedEvents.map((event, i) => (
+          {displayedEvents.map((event) => (
             <div
-              key={`${event.object}-${event.reason}-${i}`}
+              key={`${event.cluster}-${event.namespace}-${event.object}-${event.reason}-${event.lastSeen}`}
               className="p-2 rounded-lg bg-yellow-500/5 border border-yellow-500/20"
             >
               <div className="flex items-start gap-2">

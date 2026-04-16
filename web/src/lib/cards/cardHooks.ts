@@ -342,17 +342,15 @@ export function useCardSort<T, S extends string>(
     setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'))
   }
 
-  const sorted = (() => {
+  const sorted = useMemo(() => {
     const comparator = comparators?.[sortBy]
-    if (!comparator) return items
+    if (!comparator) return [...(items || [])]
 
-    const sortedItems = [...items].sort((a, b) => {
+    return [...(items || [])].sort((a, b) => {
       const result = comparator(a, b)
       return sortDirection === 'asc' ? result : -result
     })
-
-    return sortedItems
-  })()
+  }, [items, comparators, sortBy, sortDirection])
 
   return {
     sorted,

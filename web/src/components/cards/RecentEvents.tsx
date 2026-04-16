@@ -163,9 +163,9 @@ export function RecentEvents() {
         </div>
       ) : (
         <div ref={containerRef} className="space-y-2" style={containerStyle}>
-          {paginatedItems.map((event, i) => (
+          {paginatedItems.map((event) => (
             <div
-              key={`${event.object}-${event.reason}-${i}`}
+              key={`${event.cluster}-${event.namespace}-${event.object}-${event.reason}-${event.lastSeen}`}
               className={`p-2 rounded-lg border ${
                 event.type === 'Warning'
                   ? 'bg-yellow-500/5 border-yellow-500/20'

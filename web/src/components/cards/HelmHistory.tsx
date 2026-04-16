@@ -368,14 +368,14 @@ export function HelmHistory({ config }: HelmHistoryProps) {
 
                 {/* History entries */}
                 <div className="space-y-3">
-                  {history.map((entry, idx) => {
+                  {history.map((entry) => {
                     const StatusIcon = getStatusIcon(entry.status)
                     const color = getStatusColor(entry.status)
                     const isCurrent = entry.status === 'deployed'
 
                     return (
                       <div
-                        key={idx}
+                        key={`${entry.revision}-${entry.chart}-${entry.updated}`}
                         className="relative pl-6 group cursor-pointer"
                         onClick={() => setModalEntry(entry)}
                         title={`Click to view details for revision ${entry.revision}`}
