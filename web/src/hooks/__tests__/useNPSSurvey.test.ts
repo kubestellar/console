@@ -2,8 +2,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 
 const {
-  mockIsAuthenticated,
-  mockIsDemoMode,
   mockAwardCoins,
   mockApiPost,
   mockEmitShown,
@@ -11,22 +9,12 @@ const {
   mockEmitDismissed,
   store,
 } = vi.hoisted(() => ({
-  mockIsAuthenticated: vi.fn(() => true),
-  mockIsDemoMode: vi.fn(() => false),
   mockAwardCoins: vi.fn(),
   mockApiPost: vi.fn().mockResolvedValue({ data: {} }),
   mockEmitShown: vi.fn(),
   mockEmitResponse: vi.fn(),
   mockEmitDismissed: vi.fn(),
   store: new Map<string, string>(),
-}))
-
-vi.mock('../../lib/auth', () => ({
-  useAuth: () => ({ isAuthenticated: mockIsAuthenticated() }),
-}))
-
-vi.mock('../../lib/demoMode', () => ({
-  isDemoMode: () => mockIsDemoMode(),
 }))
 
 vi.mock('../useRewards', () => ({
@@ -63,8 +51,6 @@ describe('useNPSSurvey', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     store.clear()
-    mockIsAuthenticated.mockReturnValue(true)
-    mockIsDemoMode.mockReturnValue(false)
     mockAwardCoins.mockClear()
     mockApiPost.mockClear()
     mockEmitShown.mockClear()
@@ -83,31 +69,25 @@ describe('useNPSSurvey', () => {
     fetchMock.mockReset()
   })
 
-  it('does not show for unauthenticated users', () => {
-    mockIsAuthenticated.mockReturnValue(false)
+  it('shows for demo/unauthenticated visitors (voluntary feedback has no auth gate)', () => {
     const { result } = renderHook(() => useNPSSurvey())
-    act(() => { vi.advanceTimersByTime(35_000) })
-    expect(result.current.isVisible).toBe(false)
-  })
-
-  it('does not show for demo-mode users', () => {
-    mockIsDemoMode.mockReturnValue(true)
-    const { result } = renderHook(() => useNPSSurvey())
-    act(() => { vi.advanceTimersByTime(35_000) })
-    expect(result.current.isVisible).toBe(false)
+    act(() => { vi.advanceTimersByTime(15_000) })
+    expect(result.current.isVisible).toBe(true)
+    expect(mockEmitShown).toHaveBeenCalledOnce()
   })
 
   it('does not show before MIN_SESSIONS_BEFORE_NPS sessions', () => {
-    store.set('kc-session-count', '3')
+    // MIN_SESSIONS_BEFORE_NPS is 2; 1 session is below threshold
+    store.set('kc-session-count', '1')
     const { result } = renderHook(() => useNPSSurvey())
-    act(() => { vi.advanceTimersByTime(35_000) })
+    act(() => { vi.advanceTimersByTime(15_000) })
     expect(result.current.isVisible).toBe(false)
   })
 
   it('shows after idle delay when eligible', () => {
     const { result } = renderHook(() => useNPSSurvey())
     expect(result.current.isVisible).toBe(false)
-    act(() => { vi.advanceTimersByTime(30_000) })
+    act(() => { vi.advanceTimersByTime(10_000) })
     expect(result.current.isVisible).toBe(true)
     expect(mockEmitShown).toHaveBeenCalledOnce()
   })

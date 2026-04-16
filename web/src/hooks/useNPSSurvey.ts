@@ -1,6 +1,4 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useAuth } from '../lib/auth'
-import { isDemoMode } from '../lib/demoMode'
 import { safeGetJSON, safeSetJSON, safeGetItem } from '../lib/utils/localStorage'
 import { STORAGE_KEY_NPS_STATE, STORAGE_KEY_SESSION_COUNT } from '../lib/constants/storage'
 import { emitNPSSurveyShown, emitNPSResponse, emitNPSDismissed } from '../lib/analytics'
@@ -8,9 +6,9 @@ import { api } from '../lib/api'
 import { useRewards } from './useRewards'
 
 /** Minimum sessions before showing NPS for the first time */
-const MIN_SESSIONS_BEFORE_NPS = 5
+const MIN_SESSIONS_BEFORE_NPS = 2
 /** Idle delay in ms before the widget slides up */
-const NPS_IDLE_DELAY_MS = 30_000
+const NPS_IDLE_DELAY_MS = 10_000
 /** Days to wait after submission before re-prompting */
 const NPS_REPROMPT_DAYS = 30
 /** Days to wait after a dismissal before retrying */
@@ -72,15 +70,16 @@ function isEligible(state: NPSPersistentState): boolean {
 }
 
 export function useNPSSurvey(): NPSSurveyState {
-  const { isAuthenticated } = useAuth()
   const { awardCoins } = useRewards()
   const [isVisible, setIsVisible] = useState(false)
 
-  // Check eligibility and start idle timer
+  // Check eligibility and start idle timer.
+  // Demo-mode and unauthenticated visitors are both eligible: NPS is
+  // voluntary feedback, and since the vast majority of console.kubestellar.io
+  // traffic is demo visitors, gating it behind authenticated non-demo
+  // sessions left us with almost no data. Feedback still has to be
+  // explicitly submitted by the user.
   useEffect(() => {
-    // Auth + demo guard
-    if (!isAuthenticated || isDemoMode()) return
-
     // Session threshold guard
     const sessionCount = parseInt(safeGetItem(STORAGE_KEY_SESSION_COUNT) || '0', 10)
     if (sessionCount < MIN_SESSIONS_BEFORE_NPS) return
@@ -96,7 +95,7 @@ export function useNPSSurvey(): NPSSurveyState {
     }, NPS_IDLE_DELAY_MS)
 
     return () => clearTimeout(timer)
-  }, [isAuthenticated])
+  }, [])
 
   const submitResponse = useCallback(async (score: number, feedback?: string) => {
     if (!Number.isInteger(score) || score < 1 || score > 4) return
