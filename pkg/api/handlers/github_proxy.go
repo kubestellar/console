@@ -4,6 +4,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -33,6 +34,10 @@ const (
 	// as "Too many requests" even when the user's PAT had plenty of quota
 	// left (#8299). 20 comfortably absorbs one card's load.
 	githubProxyBurstSize = 20
+	// githubProxyRetryAfterSeconds is the value advertised in the Retry-After
+	// header when we reject a request with 429 (#8307). 60 matches the bucket
+	// refill window so clients back off for a full cycle.
+	githubProxyRetryAfterSeconds = 60
 	// maxGitHubResponseBytes caps the size of GitHub API response bodies that
 	// the proxy will buffer, preventing memory exhaustion from large list
 	// endpoints or crafted query parameters (#7035).
@@ -143,7 +148,8 @@ func (h *GitHubProxyHandler) resolveToken() string {
 // Only GET requests are allowed (read-only proxy).
 func (h *GitHubProxyHandler) Proxy(c *fiber.Ctx) error {
 	// Rate-limit outbound GitHub API calls per user to protect the shared PAT
-	// quota. Each user gets their own 30 req/min bucket (#7034).
+	// quota (#7034). See githubProxyMaxRequestsPerMinute / githubProxyBurstSize
+	// for the current bucket size.
 	uid := middleware.GetUserID(c)
 	limiterKey := uid.String()
 	if limiterKey == "00000000-0000-0000-0000-000000000000" {
@@ -151,6 +157,7 @@ func (h *GitHubProxyHandler) Proxy(c *fiber.Ctx) error {
 	}
 	if !getGitHubProxyLimiter(limiterKey).Allow() {
 		slog.Warn("[GitHubProxy] rate limit exceeded, rejecting request", "user", limiterKey)
+		c.Set("Retry-After", strconv.Itoa(githubProxyRetryAfterSeconds))
 		return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
 			"error": "Console proxy rate limit exceeded (not GitHub). Please wait a moment and retry.",
 		})

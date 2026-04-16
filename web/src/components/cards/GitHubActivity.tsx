@@ -199,6 +199,24 @@ function saveRepos(repos: string[]) {
 }
 
 // Demo data for GitHub Activity card
+/**
+ * Build an Error for a failed /api/github/* fetch that prefers the proxy's
+ * JSON body `error` field over response.statusText (#8307). The console proxy
+ * returns context-rich 429 messages like "Console proxy rate limit exceeded
+ * (not GitHub)." that never reached users when we only read statusText.
+ */
+async function githubFetchError(response: Response, label: string): Promise<Error> {
+  try {
+    const body = await response.clone().json()
+    if (body && typeof body.error === 'string' && body.error) {
+      return new Error(`${label}: ${body.error}`)
+    }
+  } catch {
+    // Fall through to statusText
+  }
+  return new Error(`${label}: ${response.statusText || response.status}`)
+}
+
 function getDemoGitHubData(repoName: string) {
   const now = new Date()
   const daysAgo = (d: number) => new Date(now.getTime() - d * 86400000).toISOString()
@@ -325,7 +343,7 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
 
       // Fetch repository info
       const repoResponse = await fetch(`/api/github/repos/${targetRepo}`, fetchOptions)
-      if (!repoResponse.ok) throw new Error(`Failed to fetch repo: ${repoResponse.statusText}`)
+      if (!repoResponse.ok) throw await githubFetchError(repoResponse, 'Failed to fetch repo')
       // Use .catch() directly on .json() to prevent Firefox from firing unhandledrejection
       // before the outer try/catch processes the rejection (Firefox-specific microtask timing).
       const repoData = await repoResponse.json().catch(() => null)
@@ -340,8 +358,8 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
         fetch(`/api/github/repos/${targetRepo}/pulls?state=closed&per_page=50&sort=updated`, fetchOptions)
       ])
 
-      if (!openPRsResponse.ok) throw new Error(`Failed to fetch open PRs: ${openPRsResponse.statusText}`)
-      if (!closedPRsResponse.ok) throw new Error(`Failed to fetch closed PRs: ${closedPRsResponse.statusText}`)
+      if (!openPRsResponse.ok) throw await githubFetchError(openPRsResponse, 'Failed to fetch open PRs')
+      if (!closedPRsResponse.ok) throw await githubFetchError(closedPRsResponse, 'Failed to fetch closed PRs')
 
       const openPRsData = await openPRsResponse.json().catch(() => null)
       const closedPRsData = await closedPRsResponse.json().catch(() => null)
@@ -377,7 +395,7 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
         setOpenIssueCount(calculatedOpenIssueCount)
       }
 
-      if (!recentIssuesResponse.ok) throw new Error(`Failed to fetch issues: ${recentIssuesResponse.statusText}`)
+      if (!recentIssuesResponse.ok) throw await githubFetchError(recentIssuesResponse, 'Failed to fetch issues')
       const issuesData: GitHubIssue[] = await recentIssuesResponse.json().catch(() => null) ?? []
       // Filter out pull requests (they come with issues endpoint but have pull_request field)
       const filteredIssues = issuesData.filter((issue: GitHubIssue & { pull_request?: unknown }) => !issue.pull_request)
@@ -386,7 +404,7 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
 
       // Fetch Releases
       const releasesResponse = await fetch(`/api/github/repos/${targetRepo}/releases?per_page=10`, fetchOptions)
-      if (!releasesResponse.ok) throw new Error(`Failed to fetch releases: ${releasesResponse.statusText}`)
+      if (!releasesResponse.ok) throw await githubFetchError(releasesResponse, 'Failed to fetch releases')
       const releasesData = await releasesResponse.json().catch(() => null)
       if (!releasesData) throw new Error('Failed to parse GitHub releases response: invalid JSON')
       if (signal?.aborted) return
@@ -394,7 +412,7 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
 
       // Fetch Contributors
       const contributorsResponse = await fetch(`/api/github/repos/${targetRepo}/contributors?per_page=20`, fetchOptions)
-      if (!contributorsResponse.ok) throw new Error(`Failed to fetch contributors: ${contributorsResponse.statusText}`)
+      if (!contributorsResponse.ok) throw await githubFetchError(contributorsResponse, 'Failed to fetch contributors')
       const contributorsData = await contributorsResponse.json().catch(() => null)
       if (!contributorsData) throw new Error('Failed to parse GitHub contributors response: invalid JSON')
       if (signal?.aborted) return
