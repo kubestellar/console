@@ -128,7 +128,8 @@ export function WorkflowMatrix() {
                   className="flex-1 grid gap-0.5"
                   style={{ gridTemplateColumns: `repeat(${wf.cells.length}, minmax(${MIN_CELL_PX}px, 1fr))` }}
                 >
-                  {wf.cells.map((cell) => {
+                  {/* Newest-first: server sends oldest→newest, reverse for display */}
+                  {[...wf.cells].reverse().map((cell) => {
                     const label = `${cell.date}: ${cell.conclusion ?? 'no run'}`
                     const common = 'h-5 rounded-[2px] transition-colors'
                     return cell.htmlUrl && cell.htmlUrl !== '#' ? (
@@ -167,7 +168,7 @@ export function WorkflowMatrix() {
         </div>
         {data?.range?.[0] && data?.range?.[data.range.length - 1] && (
           <span className="flex items-center gap-1">
-            {data.range[0]} → {data.range[data.range.length - 1]}
+            {data.range[data.range.length - 1]} → {data.range[0]}
             <ExternalLink className="w-3 h-3 opacity-60" />
           </span>
         )}
