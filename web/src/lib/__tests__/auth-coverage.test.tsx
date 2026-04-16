@@ -693,11 +693,13 @@ describe('cached user staleness bound (#6067)', () => {
     vi.stubGlobal('fetch', mockFetch)
 
     const { result } = await renderWithAuthProvider()
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-
-    // Stale cache → session dropped
-    expect(result.current.token).toBeNull()
-    expect(result.current.user).toBeNull()
+    // Stale cache + failed refetch fires setTokenState(null)/setUser(null) —
+    // wait for both flushes, not just the isLoading flip.
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false)
+      expect(result.current.token).toBeNull()
+      expect(result.current.user).toBeNull()
+    })
   })
 
   it('writes validated timestamp after successful /api/me fetch', async () => {
