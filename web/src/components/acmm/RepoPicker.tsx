@@ -9,6 +9,8 @@
 import { useMemo, useRef, useState } from 'react'
 import { RefreshCw, X, ExternalLink, AlertCircle, Award, Copy, Check } from 'lucide-react'
 import { Button } from '../ui/Button'
+import { Input } from '../ui/Input'
+import { cn } from '../../lib/cn'
 import { useACMM, DEFAULT_REPO } from './ACMMProvider'
 import { ALL_CRITERIA } from '../../lib/acmm/sources'
 
@@ -73,13 +75,14 @@ export function RepoPicker() {
           className="flex items-center gap-2 flex-1 min-w-[300px]"
         >
           <div className="relative flex-1">
-            <input
+            <Input
               ref={inputRef}
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="owner/repo"
-              className="w-full px-3 py-2 pr-8 rounded-md bg-secondary/50 border border-border text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/40"
+              inputSize="md"
+              className={cn('font-mono', input && 'pr-8')}
               list="acmm-recent-repos"
               aria-label="GitHub repository"
             />

@@ -7,6 +7,12 @@
  *
  * Input:  ?repo=owner/repo
  * Output: { repo, scannedAt, detectedIds, weeklyActivity, fromCache, demoFallback }
+ *   - detectedIds: array of criterion IDs (source-prefixed) matched against the
+ *     repo tree. Frontend computes ACMM level + role + recommendations from
+ *     this. Field is named `detectedIds`, not `detectedLoops`, because the
+ *     registry includes non-loop criteria from non-ACMM sources.
+ *   - weeklyActivity: 16 weeks of {weekStart, ai, human} merged-PR splits.
+ *   - fromCache / demoFallback: provenance flags so the UI can show badges.
  *
  * Optional env var:
  *   GITHUB_TOKEN — enables higher rate limits (5000 req/hr vs 60)
@@ -237,7 +243,21 @@ async function fetchTreePaths(repo: string, token: string): Promise<Set<string>>
   };
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  const url = `${GITHUB_API}/repos/${repo}/git/trees/HEAD?recursive=1`;
+  // Resolve the default branch first — the trees endpoint accepts a branch
+  // name or commit SHA, NOT "HEAD" (HEAD is git-CLI shorthand, not REST).
+  // #8271.
+  const repoRes = await fetch(`${GITHUB_API}/repos/${repo}`, {
+    headers,
+    signal: AbortSignal.timeout(API_TIMEOUT_MS),
+  });
+  if (!repoRes.ok) {
+    if (repoRes.status === 404) throw new Error("Repo not found");
+    throw new Error(`GitHub repo API ${repoRes.status}`);
+  }
+  const repoInfo = (await repoRes.json()) as { default_branch?: string };
+  const branch = repoInfo.default_branch || "main";
+
+  const url = `${GITHUB_API}/repos/${repo}/git/trees/${branch}?recursive=1`;
   const res = await fetch(url, {
     headers,
     signal: AbortSignal.timeout(API_TIMEOUT_MS),
