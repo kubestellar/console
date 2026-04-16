@@ -44,6 +44,17 @@ const TOOLTIP_FADE_DURATION_CLASS = 'duration-150'
 const TOOLTIP_MAX_WIDTH_CLASS = 'max-w-xs'
 
 /**
+ * Tailwind class forcing the bubble to size to its content's natural
+ * width (`width: max-content`). Without this the `absolute` bubble
+ * inherits a layout-time width of 0 from its `relative` wrapper — so
+ * `whitespace-normal` wraps aggressively and a short trigger (like the
+ * "AI Missions" navbar button) ends up showing one word per line.
+ * Combined with `max-w-xs` this gives "as wide as the content needs,
+ * up to 20rem" which is the expected tooltip behavior.
+ */
+const TOOLTIP_INTRINSIC_WIDTH_CLASS = 'w-max'
+
+/**
  * Side positioning classes. Keyed by the `side` prop — each entry places
  * the tooltip bubble relative to the wrapping trigger container.
  */
@@ -139,6 +150,7 @@ export function Tooltip({
           'bg-card text-card-foreground border border-border shadow-lg',
           'rounded-md px-2 py-1 text-xs text-center',
           'whitespace-normal',
+          TOOLTIP_INTRINSIC_WIDTH_CLASS,
           TOOLTIP_MAX_WIDTH_CLASS,
           className,
         )}

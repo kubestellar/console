@@ -54,6 +54,11 @@ describe('Tooltip', () => {
     const bubble = screen.getByRole('tooltip')
     expect(bubble.className).toMatch(/whitespace-normal/)
     expect(bubble.className).toMatch(/max-w-/)
+    // `w-max` is required alongside `max-w-xs` — without it the bubble
+    // inherits width from its relative wrapper and the AI Missions case
+    // ends up with one word per line. Regression guard for the fix
+    // addressing that screenshot report.
+    expect(bubble.className).toMatch(/w-max/)
   })
 
   it('skips the wrapper when disabled=true', () => {
