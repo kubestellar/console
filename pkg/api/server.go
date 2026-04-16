@@ -1620,38 +1620,68 @@ const devSecretBytes = 32
 // and should be gitignored.
 const devSecretFile = ".jwt-secret"
 
-// loadOrCreateDevSecret reads a previously persisted dev secret from .jwt-secret,
-// or generates a new one and writes it to that file. This ensures tokens issued
-// before a dev-mode restart remain valid (#6850).
-func loadOrCreateDevSecret() string {
-	secretPath := filepath.Join(".", devSecretFile)
+// sharedSecretDir is the user-level config directory where the JWT secret is
+// also persisted so it survives across fresh curl-install runs (#8202).
+const sharedSecretDir = ".kubestellar"
 
-	// Try to read an existing secret file.
-	data, err := os.ReadFile(secretPath)
-	if err == nil {
+// loadOrCreateDevSecret checks two locations for an existing JWT secret:
+// first the local working directory (explicit override), then the shared
+// ~/.kubestellar/ dir (survives reinstalls). If neither exists, it generates
+// a new secret and writes to both locations.
+func loadOrCreateDevSecret() string {
+	localPath := filepath.Join(".", devSecretFile)
+	sharedPath := sharedSecretPath()
+
+	for _, p := range []string{localPath, sharedPath} {
+		if p == "" {
+			continue
+		}
+		data, err := os.ReadFile(p)
+		if err != nil {
+			continue
+		}
 		secret := strings.TrimSpace(string(data))
 		if len(secret) >= devSecretBytes {
-			slog.Info("Loaded persisted dev JWT secret from " + devSecretFile)
+			slog.Info("Loaded persisted dev JWT secret", "path", p)
+			if p == sharedPath {
+				persistSecret(localPath, secret)
+			}
 			return secret
 		}
-		// File exists but content is too short / corrupt — regenerate.
-		slog.Warn("Existing " + devSecretFile + " is too short, regenerating")
+		slog.Warn("Existing secret file is too short, skipping", "path", p)
 	}
 
-	// Generate a new random secret.
 	secret := generateRandomSecret()
 
-	// Persist to file so it survives restarts.
-	// File permissions 0600: owner read/write only.
-	const secretFilePerms = 0o600
-	if wErr := os.WriteFile(secretPath, []byte(secret+"\n"), secretFilePerms); wErr != nil {
-		slog.Warn("Could not persist dev JWT secret to "+devSecretFile+"; tokens will not survive restart",
-			"error", wErr)
-	} else {
-		slog.Info("Generated and persisted dev JWT secret to " + devSecretFile)
+	persistSecret(localPath, secret)
+	if sharedPath != "" {
+		persistSecret(sharedPath, secret)
 	}
 
 	return secret
+}
+
+func sharedSecretPath() string {
+	home, err := os.UserHomeDir()
+	if err != nil || home == "" {
+		return ""
+	}
+	return filepath.Join(home, sharedSecretDir, devSecretFile)
+}
+
+func persistSecret(path, secret string) {
+	const secretFilePerms = 0o600
+	const secretDirPerms = 0o700
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, secretDirPerms); err != nil {
+		slog.Warn("Could not create directory for JWT secret", "dir", dir, "error", err)
+		return
+	}
+	if err := os.WriteFile(path, []byte(secret+"\n"), secretFilePerms); err != nil {
+		slog.Warn("Could not persist dev JWT secret", "path", path, "error", err)
+	} else {
+		slog.Info("Persisted dev JWT secret", "path", path)
+	}
 }
 
 // generateRandomSecret produces a cryptographically random hex string for use
