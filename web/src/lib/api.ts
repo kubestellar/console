@@ -44,12 +44,26 @@ let handling401 = false
 /** Safety cap: reset the 401 debounce flag after this many ms so future
  *  auth failures aren't permanently silenced if the redirect doesn't fire (#3899). */
 const HANDLING_401_RESET_MS = 10_000
+/** Short timeout on the session-verify probe so a hung backend doesn't block
+ *  the session-expired UI indefinitely (#8372). */
+const SESSION_VERIFY_TIMEOUT_MS = 3_000
+/** Endpoint used to verify the HttpOnly cookie is still valid. A 200 here
+ *  means the cookie still authenticates, so a 401 from another endpoint was
+ *  endpoint-specific (not a session expiry). */
+const AUTH_VERIFY_ENDPOINT = '/api/me'
 
 /**
  * Handle 401 Unauthorized responses by clearing auth state and redirecting to login.
  * This is debounced to avoid multiple simultaneous logouts from parallel API calls.
  * The flag auto-resets after HANDLING_401_RESET_MS so a failed redirect doesn't
  * permanently block all API calls.
+ *
+ * Before nuking the session we re-verify via /api/me. If the cookie-based
+ * session is still valid, the 401 was specific to the originating endpoint
+ * (e.g. a route that requires elevated scope, or a backend race) and we must
+ * NOT show "Session expired" nor redirect — doing so would bounce the user
+ * through /login?reason=session_expired and leave a stale `?reason=…` query
+ * param on the landing page (#8372).
  */
 function handle401(): void {
   if (handling401) return
@@ -61,6 +75,28 @@ function handle401(): void {
     handling401 = false
   }, HANDLING_401_RESET_MS)
 
+  // Verify the cookie-based session before treating this as an expiry. If
+  // /api/me comes back 200, the session is still valid — abort the
+  // session-expired flow entirely (#8372).
+  fetch(`${API_BASE}${AUTH_VERIFY_ENDPOINT}`, {
+    credentials: 'include',
+    signal: AbortSignal.timeout(SESSION_VERIFY_TIMEOUT_MS),
+  }).then(verifyResponse => {
+    if (verifyResponse.ok) {
+      console.warn('[API] 401 received but /api/me still 200 — endpoint-specific failure, keeping session')
+      handling401 = false
+      return
+    }
+    performSessionExpiry()
+  }).catch(() => {
+    // Verify probe failed (network error / timeout / no backend). Treat the
+    // 401 as authoritative and run the normal expiry flow.
+    performSessionExpiry()
+  })
+}
+
+/** Second half of handle401: banner + cookie invalidation + redirect. */
+function performSessionExpiry(): void {
   console.warn('[API] Received 401 Unauthorized - token invalid or expired, logging out')
 
   // Show an in-page notification before redirecting (DOM-injected, no React dependency)
@@ -93,6 +129,7 @@ function handle401(): void {
   // Clear auth state
   localStorage.removeItem(STORAGE_KEY_TOKEN)
   localStorage.removeItem(STORAGE_KEY_USER_CACHE)
+  localStorage.removeItem(STORAGE_KEY_HAS_SESSION)
 
   // Redirect to login after a delay so the user sees the banner
   setTimeout(() => {

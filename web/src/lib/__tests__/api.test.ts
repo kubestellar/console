@@ -356,11 +356,16 @@ describe('api.ts', () => {
       vi.mocked(fetch)
         .mockResolvedValueOnce(makeResponse({ status: 'ok' })) // health
         .mockResolvedValueOnce(makeResponse({}, { status: 401 })) // 401
+        .mockResolvedValueOnce(makeResponse({}, { status: 401 })) // /api/me verify probe (#8372)
 
       const { api, UnauthorizedError } = await importFresh()
       await expect(api.get('/api/data')).rejects.toThrow(UnauthorizedError)
 
-      expect(localStorage.getItem(STORAGE_KEY_TOKEN)).toBeNull()
+      // The 401 handler verifies the session via /api/me before clearing —
+      // wait for that microtask chain to resolve before asserting cleanup.
+      await vi.waitFor(() => {
+        expect(localStorage.getItem(STORAGE_KEY_TOKEN)).toBeNull()
+      })
       expect(localStorage.getItem(STORAGE_KEY_USER_CACHE)).toBeNull()
     })
 
@@ -463,6 +468,7 @@ describe('api.ts', () => {
       vi.mocked(fetch)
         .mockResolvedValueOnce(makeResponse({ status: 'ok' })) // health
         .mockResolvedValueOnce(makeResponse({}, { status: 401 }))
+        .mockResolvedValueOnce(makeResponse({}, { status: 401 })) // /api/me verify probe (#8372)
 
       const { api, UnauthorizedError } = await importFresh()
       await expect(api.post('/api/items', {})).rejects.toThrow(UnauthorizedError)
@@ -508,6 +514,7 @@ describe('api.ts', () => {
       vi.mocked(fetch)
         .mockResolvedValueOnce(makeResponse({ status: 'ok' })) // health
         .mockResolvedValueOnce(makeResponse({}, { status: 401 }))
+        .mockResolvedValueOnce(makeResponse({}, { status: 401 })) // /api/me verify probe (#8372)
 
       const { api, UnauthorizedError } = await importFresh()
       await expect(api.delete('/api/items/1')).rejects.toThrow(UnauthorizedError)
@@ -576,6 +583,7 @@ describe('api.ts', () => {
       vi.mocked(fetch)
         .mockResolvedValueOnce(makeResponse({ status: 'ok' })) // health for req 1
         .mockResolvedValueOnce(makeResponse({}, { status: 401 })) // 401 for req 1
+        .mockResolvedValueOnce(makeResponse({}, { status: 401 })) // /api/me verify probe (#8372)
         .mockResolvedValueOnce(makeResponse({ status: 'ok' })) // health for req 2
         .mockResolvedValueOnce(makeResponse({}, { status: 401 })) // 401 for req 2
 
@@ -584,8 +592,33 @@ describe('api.ts', () => {
       // Both should throw but only one handle401 should fire
       await expect(api.get('/api/a')).rejects.toThrow()
 
-      // Token already cleared by first 401
-      expect(localStorage.getItem(STORAGE_KEY_TOKEN)).toBeNull()
+      // Token clearing is async (waits for /api/me verify probe) — poll.
+      await vi.waitFor(() => {
+        expect(localStorage.getItem(STORAGE_KEY_TOKEN)).toBeNull()
+      })
+    })
+
+    // #8372 — a 401 from one endpoint must NOT nuke the session if /api/me
+    // still returns 200. Otherwise the user gets bounced to /login with a
+    // stale ?reason=session_expired param on refresh, even though their
+    // cookie is still valid.
+    it('does NOT clear auth state when /api/me still returns 200', async () => {
+      localStorage.setItem(STORAGE_KEY_TOKEN, 'still-valid-token')
+      localStorage.setItem(STORAGE_KEY_USER_CACHE, '{"id":1}')
+
+      vi.mocked(fetch)
+        .mockResolvedValueOnce(makeResponse({ status: 'ok' })) // health
+        .mockResolvedValueOnce(makeResponse({}, { status: 401 })) // endpoint 401
+        .mockResolvedValueOnce(makeResponse({ id: 1 }, { status: 200 })) // /api/me OK
+
+      const { api, UnauthorizedError } = await importFresh()
+      await expect(api.get('/api/some-scoped-route')).rejects.toThrow(UnauthorizedError)
+
+      // Drain microtasks so the verify-probe promise chain settles under
+      // fake timers. Token should remain because /api/me returned 200.
+      await vi.advanceTimersByTimeAsync(100)
+      expect(localStorage.getItem(STORAGE_KEY_TOKEN)).toBe('still-valid-token')
+      expect(localStorage.getItem(STORAGE_KEY_USER_CACHE)).toBe('{"id":1}')
     })
   })
 })
