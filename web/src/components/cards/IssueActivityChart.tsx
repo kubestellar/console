@@ -28,8 +28,16 @@ import {
 const DEFAULT_LOOKBACK_DAYS = 90
 /** Maximum items per page from GitHub API */
 const GITHUB_PER_PAGE = 100
-/** Maximum pages to paginate through for each query */
-const MAX_PAGES = 5
+/**
+ * Maximum pages to paginate through for each query (#8303). Raised from 5
+ * so the 90-day window actually fits for active repos. With GitHub's
+ * `sort=updated&direction=desc` and only 500 items, an active repo (like
+ * kubestellar/console) could blow through the whole page budget in a
+ * few weeks of recent updates and report empty older days. The loop
+ * below also short-circuits once items fall before the window, so this
+ * cap only matters as a safety bound.
+ */
+const MAX_PAGES = 30
 /** Cache TTL in milliseconds (1 hour) */
 const CACHE_TTL_MS = 60 * 60 * 1000
 /** LocalStorage cache key prefix */
@@ -152,8 +160,21 @@ function generateDemoData(days: number): DailyStats[] {
 
 // ── Data fetching ───────────────────────────────────────────────────────────
 
-async function fetchAllPages(url: string, signal?: AbortSignal): Promise<Record<string, unknown>[]> {
+/**
+ * Paginate GitHub list results sorted by `updated_at` descending, stopping
+ * once the oldest item on the current page is older than `stopBefore` —
+ * further pages can't contribute anything to the chart window (#8303).
+ * Without this bound, active repos blew through MAX_PAGES on "recently
+ * updated" items that all landed on the newest few days, leaving older
+ * days in the window showing zero activity.
+ */
+async function fetchAllPages(
+  url: string,
+  stopBefore?: Date,
+  signal?: AbortSignal,
+): Promise<Record<string, unknown>[]> {
   const allItems: Record<string, unknown>[] = []
+  const stopMs = stopBefore?.getTime()
   let page = 1
   while (page <= MAX_PAGES) {
     const separator = url.includes('?') ? '&' : '?'
@@ -166,6 +187,11 @@ async function fetchAllPages(url: string, signal?: AbortSignal): Promise<Record<
     if (!data || !Array.isArray(data) || data.length === 0) break
     allItems.push(...data)
     if (data.length < GITHUB_PER_PAGE) break
+    if (stopMs !== undefined) {
+      const last = data[data.length - 1] as Record<string, unknown>
+      const lastUpdated = last.updated_at
+      if (typeof lastUpdated === 'string' && new Date(lastUpdated).getTime() < stopMs) break
+    }
     page++
   }
   return allItems
@@ -184,12 +210,16 @@ async function fetchIssueStats(
   // GitHub issues API includes PRs, so we filter by pull_request absence
   const issues = await fetchAllPages(
     `/api/github/repos/${repo}/issues?state=all&since=${sinceISO}&sort=updated&direction=desc`,
+    startDate,
     signal,
   )
 
-  // Fetch merged PRs (closed PRs that have merged_at)
+  // Fetch merged PRs (closed PRs that have merged_at). The pulls endpoint
+  // doesn't support `since=`, so we rely on the fetchAllPages stop bound
+  // to end pagination once we see PRs updated before the window (#8303).
   const closedPRs = await fetchAllPages(
     `/api/github/repos/${repo}/pulls?state=closed&sort=updated&direction=desc`,
+    startDate,
     signal,
   )
 
