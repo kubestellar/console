@@ -153,22 +153,27 @@ export function ACMMFeedbackLoops() {
     })
   }, [detectedIds, sourceFilter, statusFilter])
 
-  /** Still-missing criteria at earnedLevel — drives the override prompt
-   *  copy and the sticky "finish this level" footer button. */
-  const missingAtEarnedList = useMemo(
-    () => ALL_CRITERIA.filter((c) => c.source === 'acmm' && c.level === earnedLevel && !detectedIds.has(c.id)),
-    [earnedLevel, detectedIds],
+  /** The level the user is working toward — the one ABOVE earnedLevel.
+   *  For L1 repos earnedLevel=1, so nextLevel=2 (the first level with
+   *  actual criteria). At L5, nextLevel=6 which is past the ceiling. */
+  const nextLevel = earnedLevel + 1
+  /** Missing criteria at the NEXT level — what the user needs to add to
+   *  level up. Drives both the lock-prompt copy and the sticky "reach
+   *  next level" footer button. */
+  const missingForNextList = useMemo(
+    () => ALL_CRITERIA.filter((c) => c.source === 'acmm' && c.level === nextLevel && !detectedIds.has(c.id)),
+    [nextLevel, detectedIds],
   )
-  const missingAtEarned = missingAtEarnedList.length
+  const missingForNext = missingForNextList.length
 
   function launchLevelCompletion() {
-    if (missingAtEarnedList.length === 0) return
+    if (missingForNextList.length === 0) return
     startMission({
-      title: `Finish ACMM L${earnedLevel} for ${repo}`,
-      description: `Add the ${missingAtEarnedList.length} missing L${earnedLevel} criteria to ${repo}`,
+      title: `Reach ACMM L${nextLevel} for ${repo}`,
+      description: `Add the ${missingForNextList.length} missing L${nextLevel} criteria to ${repo}`,
       type: 'custom',
-      initialPrompt: levelCompletionPrompt(missingAtEarnedList, earnedLevel, repo),
-      context: { repo, earnedLevel, criterionIds: missingAtEarnedList.map((c) => c.id) },
+      initialPrompt: levelCompletionPrompt(missingForNextList, nextLevel, repo),
+      context: { repo, targetLevel: nextLevel, criterionIds: missingForNextList.map((c) => c.id) },
     })
   }
 
@@ -288,9 +293,9 @@ export function ACMMFeedbackLoops() {
               {isLocked && isLockPromptOpen && (
                 <div className="px-8 pb-2 pt-1 text-[10px] border-t border-border/30 flex items-center justify-between gap-2 flex-wrap">
                   <span className="text-muted-foreground">
-                    Locked — finish <span className="font-mono text-foreground">L{earnedLevel}</span> first
-                    {missingAtEarned > 0 && (
-                      <> ({missingAtEarned} {missingAtEarned === 1 ? 'criterion' : 'criteria'} still missing)</>
+                    Locked — reach <span className="font-mono text-foreground">L{nextLevel}</span> first
+                    {missingForNext > 0 && (
+                      <> ({missingForNext} {missingForNext === 1 ? 'criterion' : 'criteria'} still missing)</>
                     )}.
                   </span>
                   <div className="flex items-center gap-2">
@@ -406,15 +411,15 @@ export function ACMMFeedbackLoops() {
           a one-click way to take on the missing criteria at their
           earnedLevel, which is exactly what they need to unlock the next
           one. Hidden once the level is complete or at L5 (terminal). */}
-      {missingAtEarned > 0 && earnedLevel < 5 && (
+      {missingForNext > 0 && nextLevel <= 5 && (
         <button
           type="button"
           onClick={launchLevelCompletion}
           className="mt-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-primary/20 text-primary hover:bg-primary/30 rounded-md transition-colors"
-          title={`Launch a mission that adds the ${missingAtEarned} missing L${earnedLevel} criteria to ${repo}, unlocking L${earnedLevel + 1}`}
+          title={`Launch a mission that adds the ${missingForNext} missing L${nextLevel} criteria to ${repo}`}
         >
           <Sparkles className="w-3 h-3" />
-          Help me finish L{earnedLevel} ({missingAtEarned} missing) → unlock L{earnedLevel + 1}
+          Help me reach L{nextLevel} ({missingForNext} criteria to go)
         </button>
       )}
     </div>
