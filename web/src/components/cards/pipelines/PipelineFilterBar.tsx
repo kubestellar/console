@@ -7,10 +7,11 @@
  * - "x" on each pill hides/removes it
  * - Manage icon shows hidden repos + "Reset to defaults"
  */
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { Plus, X, RotateCcw, Eye } from 'lucide-react'
 import { usePipelineFilter } from './PipelineFilterContext'
 import { cn } from '../../../lib/cn'
+import { isDemoMode } from '../../../lib/demoMode'
 
 /** Extracted user-visible strings */
 const LABEL_ADD_REPO = 'Add repo'
@@ -25,6 +26,15 @@ export function PipelineFilterBar() {
   const ctx = usePipelineFilter()
   const [showAdd, setShowAdd] = useState(false)
   const [showManage, setShowManage] = useState(false)
+
+  // In demo mode (console.kubestellar.io), repo CRUD is gated behind
+  // the install dialog — we don't give away the full feature for free.
+  // The custom event 'open-setup-dialog' is listened to by Layout.tsx
+  // which renders the SetupInstructionsDialog.
+  const isDemo = isDemoMode()
+  const showInstallGate = useCallback(() => {
+    window.dispatchEvent(new CustomEvent('open-setup-dialog'))
+  }, [])
   const [addValue, setAddValue] = useState('')
   const [addError, setAddError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -112,7 +122,7 @@ export function PipelineFilterBar() {
               </button>
               <button
                 type="button"
-                onClick={(e) => { e.stopPropagation(); removeRepo(repo) }}
+                onClick={(e) => { e.stopPropagation(); isDemo ? showInstallGate() : removeRepo(repo) }}
                 className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded-full hover:bg-red-500/20 text-muted-foreground hover:text-red-400"
                 title={LABEL_REMOVE_REPO}
                 aria-label={`${LABEL_REMOVE_REPO}: ${repo}`}
@@ -157,7 +167,7 @@ export function PipelineFilterBar() {
         ) : (
           <button
             type="button"
-            onClick={() => setShowAdd(true)}
+            onClick={() => isDemo ? showInstallGate() : setShowAdd(true)}
             className="px-2 py-1 rounded-full text-xs border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors"
             title={LABEL_ADD_REPO}
           >
@@ -170,7 +180,7 @@ export function PipelineFilterBar() {
           <div className="relative" ref={manageRef}>
             <button
               type="button"
-              onClick={() => setShowManage(!showManage)}
+              onClick={() => isDemo ? showInstallGate() : setShowManage(!showManage)}
               className={cn(
                 'px-2 py-1 rounded-full text-xs border transition-colors',
                 showManage ? 'bg-primary/20 text-primary border-primary/40' : 'border-border text-muted-foreground hover:text-foreground',
