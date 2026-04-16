@@ -550,8 +550,22 @@ export function MissionProvider({ children }: { children: ReactNode }) {
     // If the user had it open before refresh, it reopens. If closed,
     // it stays closed. Simple and predictable — no heuristics about
     // mission status or demo mode.
+    //
+    // One-time migration for users who visited before #8436: if the
+    // new key doesn't exist yet but the old kc_active_mission_id does,
+    // default to closed and write the new key so the old heuristic
+    // never runs again. This prevents the sidebar from force-opening
+    // on every refresh for existing users who had a stale active ID.
     try {
-      return localStorage.getItem(SIDEBAR_OPEN_STORAGE_KEY) === 'true'
+      const persisted = localStorage.getItem(SIDEBAR_OPEN_STORAGE_KEY)
+      if (persisted !== null) {
+        // New key exists — use it directly.
+        return persisted === 'true'
+      }
+      // New key missing (first visit after #8436). Default to closed
+      // and seed the key so subsequent refreshes use the new path.
+      localStorage.setItem(SIDEBAR_OPEN_STORAGE_KEY, 'false')
+      return false
     } catch { return false }
   })
   const [isSidebarMinimized, setIsSidebarMinimized] = useState(false)
