@@ -184,13 +184,11 @@ import { crossClusterPolicyComparisonConfig } from './cross-cluster-policy-compa
 import { recommendedPoliciesConfig } from './recommended-policies'
 import { drasiReactiveGraphConfig } from './drasi-reactive-graph'
 import { acmmLevelConfig } from './acmm-level'
-import { acmmBalanceConfig } from './acmm-balance'
 import { acmmFeedbackLoopsConfig } from './acmm-feedback-loops'
 import { acmmRecommendationsConfig } from './acmm-recommendations'
 
 export const CARD_CONFIGS: CardConfigRegistry = {
   acmm_level: acmmLevelConfig,
-  acmm_balance: acmmBalanceConfig,
   acmm_feedback_loops: acmmFeedbackLoopsConfig,
   acmm_recommendations: acmmRecommendationsConfig,
   active_alerts: activeAlertsConfig,
@@ -457,7 +455,6 @@ export function isCardVisibleForProject(cardType: string): boolean {
 // Re-export configs
 export {
   acmmLevelConfig,
-  acmmBalanceConfig,
   acmmFeedbackLoopsConfig,
   acmmRecommendationsConfig,
   activeAlertsConfig,

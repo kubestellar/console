@@ -16,10 +16,9 @@ export const acmmDashboardConfig: UnifiedDashboardConfig = {
   route: '/acmm',
   statsType: 'acmm',
   cards: [
-    { id: 'acmm-level-1', cardType: 'acmm_level', title: 'Current Level', position: { w: 4, h: 4 } },
-    { id: 'acmm-balance-1', cardType: 'acmm_balance', title: 'Human vs AI Balance', position: { w: 8, h: 4 } },
-    { id: 'acmm-feedback-loops-1', cardType: 'acmm_feedback_loops', title: 'Feedback Loop Inventory', position: { w: 6, h: 5 } },
-    { id: 'acmm-recommendations-1', cardType: 'acmm_recommendations', title: 'Your Role + Next Steps', position: { w: 6, h: 5 } },
+    { id: 'acmm-level-1', cardType: 'acmm_level', title: 'Current Level', position: { w: 5, h: 4 } },
+    { id: 'acmm-recommendations-1', cardType: 'acmm_recommendations', title: 'Your Role + Next Steps', position: { w: 7, h: 5 } },
+    { id: 'acmm-feedback-loops-1', cardType: 'acmm_feedback_loops', title: 'Feedback Loop Inventory', position: { w: 12, h: 5 } },
   ],
   features: {
     dragDrop: true,

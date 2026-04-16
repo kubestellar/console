@@ -169,7 +169,6 @@ const _workloadMonitorBundle = import('./workload-monitor').catch(() => undefine
 const WorkloadMonitor = safeLazy(() => _workloadMonitorBundle, 'WorkloadMonitor')
 const DynamicCard = safeLazy(() => import('./DynamicCard'), 'DynamicCard')
 const ACMMLevel = safeLazy(() => import('./ACMMLevel'), 'ACMMLevel')
-const ACMMBalance = safeLazy(() => import('./ACMMBalance'), 'ACMMBalance')
 const ACMMFeedbackLoops = safeLazy(() => import('./ACMMFeedbackLoops'), 'ACMMFeedbackLoops')
 const ACMMRecommendations = safeLazy(() => import('./ACMMRecommendations'), 'ACMMRecommendations')
 const LLMdStackMonitor = safeLazy(() => _workloadMonitorBundle, 'LLMdStackMonitor')
@@ -334,7 +333,6 @@ export type CardComponent = ComponentType<CardComponentProps>
 const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   // ACMM (AI Codebase Maturity Model) cards
   acmm_level: ACMMLevel,
-  acmm_balance: ACMMBalance,
   acmm_feedback_loops: ACMMFeedbackLoops,
   acmm_recommendations: ACMMRecommendations,
   // Core cards
