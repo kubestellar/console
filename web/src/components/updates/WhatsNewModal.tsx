@@ -11,6 +11,7 @@ import { buildReleaseNotesComponents } from '../../lib/markdown/releaseNotesComp
 import { cn } from '../../lib/cn'
 import { copyToClipboard } from '../../lib/clipboard'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
+import { emitWhatsNewUpdateClicked, emitWhatsNewRemindLater } from '../../lib/analytics'
 
 const SNOOZE_STORAGE_KEY = 'kc-update-snoozed'
 const KILL_SWITCH_KEY = 'kc-whats-new-modal-disabled'
@@ -112,6 +113,7 @@ export function WhatsNewModal({ isOpen, onClose }: WhatsNewModalProps) {
           return
         }
       }
+      emitWhatsNewUpdateClicked(latestRelease?.tag ?? '', installMethod ?? 'unknown')
       showToast('Update running in background', 'info')
       onClose()
     } catch (err) {
@@ -128,12 +130,13 @@ export function WhatsNewModal({ isOpen, onClose }: WhatsNewModalProps) {
     onClose()
   }, [latestRelease, skipVersion, onClose])
 
-  const handleSnooze = useCallback((durationMs: number) => {
+  const handleSnooze = useCallback((durationMs: number, label: string) => {
     snoozeUpdate(durationMs)
     setShowSnoozeMenu(false)
+    emitWhatsNewRemindLater(latestRelease?.tag ?? '', label)
     showToast('Update reminder snoozed', 'info')
     onClose()
-  }, [showToast, onClose])
+  }, [showToast, onClose, latestRelease?.tag])
 
   const handleCopyCommand = useCallback(async (cmd: string) => {
     await copyToClipboard(cmd)
@@ -278,21 +281,21 @@ export function WhatsNewModal({ isOpen, onClose }: WhatsNewModalProps) {
                 <div className="absolute bottom-full left-0 mb-1 bg-card border border-border rounded-lg shadow-xl z-50 py-1 min-w-[160px]">
                   <button
                     type="button"
-                    onClick={() => handleSnooze(SNOOZE_DURATION_1H_MS)}
+                    onClick={() => handleSnooze(SNOOZE_DURATION_1H_MS, '1h')}
                     className="w-full px-3 py-1.5 text-left text-xs hover:bg-secondary transition-colors"
                   >
                     In 1 hour
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleSnooze(SNOOZE_DURATION_1D_MS)}
+                    onClick={() => handleSnooze(SNOOZE_DURATION_1D_MS, '1d')}
                     className="w-full px-3 py-1.5 text-left text-xs hover:bg-secondary transition-colors"
                   >
                     Tomorrow
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleSnooze(SNOOZE_DURATION_1W_MS)}
+                    onClick={() => handleSnooze(SNOOZE_DURATION_1W_MS, '1w')}
                     className="w-full px-3 py-1.5 text-left text-xs hover:bg-secondary transition-colors"
                   >
                     Next week

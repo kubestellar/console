@@ -7,6 +7,7 @@ import { FeatureHintTooltip } from '../../ui/FeatureHintTooltip'
 import { WhatsNewModal, isUpdateSnoozed, isKillSwitchEnabled } from '../../updates/WhatsNewModal'
 import { isDemoMode } from '../../../lib/demoMode'
 import { useToast } from '../../ui/Toast'
+import { emitWhatsNewModalOpened } from '../../../lib/analytics'
 
 const UPDATE_TOAST_SESSION_KEY = 'kc-update-toast-seen'
 
@@ -67,6 +68,7 @@ export function UpdateIndicator() {
           onClick={() => {
             setShowModal(true)
             updateHint.action()
+            emitWhatsNewModalOpened(latestRelease?.tag ?? devSHA?.slice(0, 7) ?? 'unknown')
           }}
           className="flex items-center gap-2 px-2 py-1.5 h-9 rounded-lg bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors"
           title={isDeveloperUpdate

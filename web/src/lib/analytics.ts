@@ -2159,3 +2159,19 @@ export function emitStreakDay(streakCount: number) {
 export function emitBlogPostClicked(title: string) {
   send('ksc_blog_post_clicked', { blog_title: title })
 }
+
+
+/** Fired when the What's New modal opens (replaces the old update dropdown) */
+export function emitWhatsNewModalOpened(tag: string) {
+  send('ksc_whats_new_modal_opened', { release_tag: tag })
+}
+
+/** Fired when user clicks "Update now" inside the What's New modal */
+export function emitWhatsNewUpdateClicked(tag: string, installMethod: string) {
+  send('ksc_whats_new_update_clicked', { release_tag: tag, install_method: installMethod })
+}
+
+/** Fired when user clicks "Remind me later" inside the What's New modal */
+export function emitWhatsNewRemindLater(tag: string, duration: string) {
+  send('ksc_whats_new_remind_later', { release_tag: tag, snooze_duration: duration })
+}
