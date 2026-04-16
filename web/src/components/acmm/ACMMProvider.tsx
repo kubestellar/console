@@ -130,16 +130,23 @@ export function ACMMProvider({ children }: { children: ReactNode }) {
     }
   }, [scan.level.level])
 
-  // GA4: fire ksc_acmm_scanned when a scan completes with data.
-  const lastEmittedRepo = useRef('')
+  // GA4: fire ksc_acmm_scanned once per repo per session (including
+  // zero-criteria scans so we can see which repos people scan).
+  const GA4_EMITTED_KEY = 'kubestellar-acmm-ga4-emitted'
   useEffect(() => {
-    const detectedCount = scan.data.detectedIds instanceof Set
-      ? scan.data.detectedIds.size
-      : (scan.data.detectedIds || []).length // ai-quality-ignore
-    if (detectedCount > 0 && repo !== lastEmittedRepo.current) {
-      lastEmittedRepo.current = repo
-      emitACMMScanned(repo, scan.level.level, detectedCount, ALL_CRITERIA.length)
+    // Wait until the scan has resolved (level is populated).
+    if (!scan.level.level) return
+    const detectedCount = (scan.data.detectedIds || []).length
+    // Dedupe within the browser session via sessionStorage so remounts
+    // and page refreshes don't re-fire for the same repo.
+    try {
+      const emitted = JSON.parse(sessionStorage.getItem(GA4_EMITTED_KEY) || '[]') as string[]
+      if (emitted.includes(repo)) return
+      sessionStorage.setItem(GA4_EMITTED_KEY, JSON.stringify([...emitted, repo]))
+    } catch {
+      // sessionStorage unavailable — emit anyway, accept possible dupe
     }
+    emitACMMScanned(repo, scan.level.level, detectedCount, ALL_CRITERIA.length)
   }, [repo, scan.level.level, scan.data.detectedIds])
 
   const setTargetLevel = useCallback((next: number) => {
