@@ -1608,6 +1608,19 @@ type KeyStatus struct {
 	Source      string `json:"source,omitempty"` // "env" or "config"
 	Valid       *bool  `json:"valid,omitempty"`  // nil = not tested, true/false = test result
 	Error       string `json:"error,omitempty"`
+	// BaseURL is the currently-resolved base URL for this provider (env var,
+	// then ~/.kc/config.yaml, then compiled default). Empty when the provider
+	// does not support a base URL override (vendor HTTP APIs).
+	BaseURL string `json:"baseURL,omitempty"`
+	// BaseURLEnvVar is the environment variable this provider honors for
+	// base URL overrides (e.g. "OLLAMA_URL", "GROQ_BASE_URL"). Empty when
+	// the provider has no base URL override. Surfaced to the UI so the
+	// Advanced section can show the env var name as an operator hint.
+	BaseURLEnvVar string `json:"baseURLEnvVar,omitempty"`
+	// BaseURLSource is "env" when the current BaseURL value came from the
+	// env var, "config" when it came from ~/.kc/config.yaml, or empty when
+	// the resolved value is the compiled-in default.
+	BaseURLSource string `json:"baseURLSource,omitempty"`
 }
 
 // KeysStatusResponse is the response for GET /settings/keys
@@ -1616,11 +1629,15 @@ type KeysStatusResponse struct {
 	ConfigPath string      `json:"configPath"`
 }
 
-// SetKeyRequest is the request body for POST /settings/keys
+// SetKeyRequest is the request body for POST /settings/keys.
+// Setting APIKey requires a valid key; setting BaseURL is independent
+// (operators can configure a base URL without an API key, which is the
+// common path for unauthenticated local LLM runners).
 type SetKeyRequest struct {
 	Provider string `json:"provider"`
-	APIKey   string `json:"apiKey"`
+	APIKey   string `json:"apiKey,omitempty"`
 	Model    string `json:"model,omitempty"`
+	BaseURL  string `json:"baseURL,omitempty"`
 }
 
 // handleSettingsKeys handles GET and POST for /settings/keys

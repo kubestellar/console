@@ -21,6 +21,14 @@ interface KeyStatus {
   source?: 'env' | 'config'
   valid?: boolean
   error?: string
+  // Base URL metadata populated by the backend for providers that support
+  // an endpoint override (local LLM runners + OpenAI-compatible gateways).
+  // `baseURLEnvVar` is the name of the env var the operator would set to
+  // override this value from the shell; used as a hint in the UI. Empty
+  // string means the provider has no base URL override path.
+  baseURL?: string
+  baseURLEnvVar?: string
+  baseURLSource?: 'env' | 'config'
 }
 
 interface KeysStatusResponse {
@@ -161,6 +169,57 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
   const [saving, setSaving] = useState(false)
   const [copied, setCopied] = useState(false)
   const timeoutRef = useRef<number>(undefined)
+  // Advanced-section state: which provider rows are expanded, the draft
+  // base URL value per expanded row, and a transient "saved, restart kc-agent"
+  // flag so the user sees feedback after a successful POST.
+  const [expandedAdvanced, setExpandedAdvanced] = useState<Set<string>>(new Set())
+  const [baseURLDraft, setBaseURLDraft] = useState<Record<string, string>>({})
+  const [baseURLSaved, setBaseURLSaved] = useState<Set<string>>(new Set())
+  const [baseURLError, setBaseURLError] = useState<Record<string, string>>({})
+
+  const toggleAdvanced = useCallback((provider: string, initialValue: string) => {
+    setExpandedAdvanced(prev => {
+      const next = new Set(prev)
+      if (next.has(provider)) {
+        next.delete(provider)
+      } else {
+        next.add(provider)
+        setBaseURLDraft(d => ({ ...d, [provider]: initialValue }))
+      }
+      return next
+    })
+  }, [])
+
+  const handleSaveBaseURL = useCallback(async (provider: string) => {
+    const draft = (baseURLDraft[provider] ?? '').trim()
+    setBaseURLError(e => ({ ...e, [provider]: '' }))
+    try {
+      setSaving(true)
+      const response = await fetch(`${KC_AGENT_URL}/settings/keys`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider, baseURL: draft }),
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+      })
+      if (!response.ok) {
+        let message = t('agent.failedToSaveKey')
+        try {
+          const data = await response.json()
+          message = data.message || message
+        } catch {
+          // Response body was not JSON — use default message
+        }
+        throw new Error(message)
+      }
+      setBaseURLSaved(prev => new Set(prev).add(provider))
+      // Refresh status so the row reflects the new resolved value.
+      await fetchKeysStatus()
+    } catch (err) {
+      setBaseURLError(e => ({ ...e, [provider]: err instanceof Error ? err.message : t('agent.failedToSaveKey') }))
+    } finally {
+      setSaving(false)
+    }
+  }, [baseURLDraft, t])
 
   const copyInstallCommand = async () => {
     await copyToClipboard(INSTALL_COMMAND)
@@ -473,6 +532,80 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
                     <p className="mt-2 text-xs text-muted-foreground">
                       {t('agent.envVariableNote')}
                     </p>
+                  )}
+
+                  {/* Advanced section — per-provider Base URL override.
+                      Only shown for providers that actually support a base
+                      URL override (the backend populates baseURLEnvVar for
+                      those). Env-var source wins over the config file, so
+                      the form is read-only when the env var is set. */}
+                  {key.baseURLEnvVar && (
+                    <div className="mt-3 pt-3 border-t border-border">
+                      <button
+                        type="button"
+                        onClick={() => toggleAdvanced(key.provider, key.baseURL ?? '')}
+                        className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <span className={cn('transition-transform', expandedAdvanced.has(key.provider) ? 'rotate-90' : '')}>
+                          ▸
+                        </span>
+                        {t('agent.advanced', 'Advanced')}
+                        {key.baseURL && (
+                          <span className="text-xs text-muted-foreground/70">
+                            — {key.baseURL}
+                            {key.baseURLSource === 'env' && ' (env)'}
+                          </span>
+                        )}
+                      </button>
+                      {expandedAdvanced.has(key.provider) && (
+                        <div className="mt-2 space-y-2">
+                          <label className="block text-xs font-medium text-foreground">
+                            {t('agent.baseUrlLabel', 'Base URL')}
+                          </label>
+                          <p className="text-xs text-muted-foreground">
+                            {t('agent.baseUrlHint', 'Override the endpoint this provider talks to. Leave blank to use the compiled-in default. The {{env}} environment variable takes precedence when set.', { env: key.baseURLEnvVar })}
+                          </p>
+                          <input
+                            type="text"
+                            value={baseURLDraft[key.provider] ?? ''}
+                            onChange={(e) => setBaseURLDraft(d => ({ ...d, [key.provider]: e.target.value }))}
+                            placeholder={`http://<service>.<namespace>.svc.cluster.local:8080`}
+                            disabled={key.baseURLSource === 'env'}
+                            className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
+                          />
+                          {baseURLError[key.provider] && (
+                            <p className="text-xs text-destructive flex items-center gap-1">
+                              <AlertCircle className="w-3 h-3" />
+                              {baseURLError[key.provider]}
+                            </p>
+                          )}
+                          {baseURLSaved.has(key.provider) && (
+                            <p className="text-xs text-yellow-500 flex items-center gap-1">
+                              <AlertCircle className="w-3 h-3" />
+                              {t('agent.baseUrlRestartHint', 'Saved. Restart kc-agent for the change to take effect.')}
+                            </p>
+                          )}
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleSaveBaseURL(key.provider)}
+                              disabled={saving || key.baseURLSource === 'env'}
+                              className="flex-1 px-3 py-1.5 bg-primary text-primary-foreground text-sm rounded-lg hover:bg-primary/80 disabled:opacity-50"
+                            >
+                              {saving ? (
+                                <Loader2 className="w-4 h-4 animate-spin mx-auto" />
+                              ) : (
+                                t('agent.saveBaseUrl', 'Save Base URL')
+                              )}
+                            </button>
+                          </div>
+                          {key.baseURLSource === 'env' && (
+                            <p className="text-xs text-muted-foreground">
+                              {t('agent.baseUrlFromEnv', '{{env}} is currently set. Unset it to edit this value from the UI.', { env: key.baseURLEnvVar })}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               ))}

@@ -271,22 +271,47 @@ func (s *Server) handleSettingsImport(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "message": "Settings imported"})
 }
 
-// handleGetKeysStatus returns the status of all API keys (without exposing the actual keys)
+// handleGetKeysStatus returns the status of all API keys (without exposing the actual keys).
+//
+// The list covers the nine chat-only HTTP providers registered in
+// InitializeProviders (pkg/agent/registry.go): three OpenAI-compatible
+// gateway providers (Groq, OpenRouter, Open WebUI) and six local LLM
+// runners (Ollama, llama.cpp, LocalAI, vLLM, LM Studio, Red Hat AI
+// Inference Server). CLI-based tool-capable agents (claude-code, bob,
+// codex, gemini-cli, antigravity, goose, copilot-cli) are deliberately
+// omitted — they manage their own credentials and do not need an API
+// key in ~/.kc/config.yaml.
+//
+// Each entry includes the current BaseURL + BaseURLEnvVar so the
+// frontend Settings modal can offer a per-provider base URL override
+// field without needing to hardcode the mapping.
 func (s *Server) handleGetKeysStatus(w http.ResponseWriter, r *http.Request) {
 	cm := GetConfigManager()
 
-	// Build provider list dynamically from registry
-	// Include all providers that accept API keys (exclude pure CLI providers like bob, claude-code)
 	type providerDef struct {
 		name        string
 		displayName string
+		// validationRequired is true for providers that have a working
+		// validation endpoint (Groq, OpenRouter). Local LLM runners
+		// typically have no authentication, so attempting to validate
+		// their placeholder sentinel key against a real endpoint is
+		// pointless — we report Configured=true whenever a URL is set.
+		validationRequired bool
 	}
 
-	// Only show CLI-based agents — API-key-driven agents are hidden because
-	// they cannot execute commands to diagnose/repair clusters.
-	// This list is intentionally empty; the keys endpoint remains functional
-	// for any future API providers but currently returns no keys.
-	providers := []providerDef{}
+	providers := []providerDef{
+		// OpenAI-compatible gateways with real API keys
+		{name: "groq", displayName: "Groq", validationRequired: true},
+		{name: "openrouter", displayName: "OpenRouter", validationRequired: true},
+		{name: "open-webui", displayName: "Open WebUI", validationRequired: false},
+		// Local LLM runners — URL-driven, no API key by default
+		{name: "ollama", displayName: "Ollama (Local)"},
+		{name: "llamacpp", displayName: "llama.cpp (Local)"},
+		{name: "localai", displayName: "LocalAI (Local)"},
+		{name: "vllm", displayName: "vLLM (Local)"},
+		{name: "lm-studio", displayName: "LM Studio (Local)"},
+		{name: "rhaiis", displayName: "Red Hat AI Inference Server"},
+	}
 
 	keys := make([]KeyStatus, 0, len(providers))
 	for _, p := range providers {
@@ -296,6 +321,16 @@ func (s *Server) handleGetKeysStatus(w http.ResponseWriter, r *http.Request) {
 			Configured:  cm.HasAPIKey(p.name),
 		}
 
+		// Base URL metadata — surfaces the current resolved value and
+		// the env var name so the UI can render an Advanced expandable.
+		status.BaseURL = cm.GetBaseURL(p.name)
+		status.BaseURLEnvVar = getBaseURLEnvKeyForProvider(p.name)
+		if status.BaseURLEnvVar != "" && os.Getenv(status.BaseURLEnvVar) != "" {
+			status.BaseURLSource = "env"
+		} else if status.BaseURL != "" {
+			status.BaseURLSource = "config"
+		}
+
 		if status.Configured {
 			if cm.IsFromEnv(p.name) {
 				status.Source = "env"
@@ -303,14 +338,18 @@ func (s *Server) handleGetKeysStatus(w http.ResponseWriter, r *http.Request) {
 				status.Source = "config"
 			}
 
-			// Test if the key is valid
-			valid, err := s.validateAPIKey(p.name)
-			status.Valid = &valid
-			// Cache the validity for IsAvailable() checks
-			cm.SetKeyValidity(p.name, valid)
-			if err != nil {
-				slog.Error("API key validation error", "provider", p.name, "error", err)
-				status.Error = "validation failed"
+			if p.validationRequired {
+				// Test if the key is valid — validateAPIKey honors the
+				// base URL override via the per-provider resolver, so
+				// pointing a Groq config at a local Ollama validates
+				// against the local endpoint.
+				valid, err := s.validateAPIKey(p.name)
+				status.Valid = &valid
+				cm.SetKeyValidity(p.name, valid)
+				if err != nil {
+					slog.Error("API key validation error", "provider", p.name, "error", err)
+					status.Error = "validation failed"
+				}
 			}
 		}
 
@@ -323,7 +362,11 @@ func (s *Server) handleGetKeysStatus(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// handleSetKey saves a new API key
+// handleSetKey saves an API key, a model preference, a base URL override,
+// or any combination of the three for a provider. Setting BaseURL alone
+// (no APIKey) is the common path for unauthenticated local LLM runners —
+// operators point Ollama at a LAN server by saving `OLLAMA_URL` via this
+// endpoint rather than editing a shell profile.
 func (s *Server) handleSetKey(w http.ResponseWriter, r *http.Request) {
 	var req SetKeyRequest
 	if err := json.NewDecoder(io.LimitReader(r.Body, maxRequestBodyBytes)).Decode(&req); err != nil {
@@ -338,35 +381,61 @@ func (s *Server) handleSetKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.APIKey == "" {
+	// At least one of APIKey, BaseURL, or Model must be present — a request
+	// with none is a programming bug we should reject rather than silently
+	// store nothing.
+	if req.APIKey == "" && req.BaseURL == "" && req.Model == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "missing_key", Message: "API key required"})
-		return
-	}
-
-	// Validate the key before saving
-	valid, validationErr := s.validateAPIKeyValue(req.Provider, req.APIKey)
-	if !valid {
-		w.WriteHeader(http.StatusBadRequest)
-		if validationErr != nil {
-			slog.Error("API key validation error", "error", validationErr)
-		}
-		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "invalid_key", Message: "Invalid API key"})
+		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "missing_field", Message: "At least one of apiKey, baseURL, or model is required"})
 		return
 	}
 
 	cm := GetConfigManager()
 
-	// Save the key
-	if err := cm.SetAPIKey(req.Provider, req.APIKey); err != nil {
-		slog.Error("save API key error", "error", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "save_failed", Message: "failed to save API key"})
-		return
+	// Base URL can be saved independently and does not need validation —
+	// operators point at local runners that the reachability/validation
+	// check cannot test meaningfully (the sentinel "local-llm-no-auth" key
+	// is not a real credential). Save first so that subsequent API-key
+	// validation below uses the updated endpoint.
+	if req.BaseURL != "" {
+		if err := validateBaseURL(req.BaseURL); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "invalid_base_url", Message: err.Error()})
+			return
+		}
+		if err := cm.SetBaseURL(req.Provider, req.BaseURL); err != nil {
+			slog.Error("save base URL error", "error", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "save_failed", Message: "failed to save base URL"})
+			return
+		}
+		// Invalidate cached validity for this provider — the endpoint
+		// changed, so any previously-cached "key valid" result is stale.
+		cm.InvalidateKeyValidity(req.Provider)
 	}
 
-	// Cache validity (we validated before saving)
-	cm.SetKeyValidity(req.Provider, true)
+	if req.APIKey != "" {
+		// Validate the key before saving. Validation uses the provider's
+		// now-current base URL, so pointing Groq at a local Ollama works.
+		valid, validationErr := s.validateAPIKeyValue(req.Provider, req.APIKey)
+		if !valid {
+			w.WriteHeader(http.StatusBadRequest)
+			if validationErr != nil {
+				slog.Error("API key validation error", "error", validationErr)
+			}
+			json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "invalid_key", Message: "Invalid API key"})
+			return
+		}
+
+		if err := cm.SetAPIKey(req.Provider, req.APIKey); err != nil {
+			slog.Error("save API key error", "error", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "save_failed", Message: "failed to save API key"})
+			return
+		}
+
+		cm.SetKeyValidity(req.Provider, true)
+	}
 
 	// Save model if provided
 	if req.Model != "" {
@@ -378,12 +447,29 @@ func (s *Server) handleSetKey(w http.ResponseWriter, r *http.Request) {
 	// Refresh provider availability
 	s.refreshProviderAvailability()
 
-	slog.Info("API key configured", "provider", req.Provider)
+	slog.Info("provider configured", "provider", req.Provider, "hasKey", req.APIKey != "", "hasBaseURL", req.BaseURL != "", "hasModel", req.Model != "")
 	json.NewEncoder(w).Encode(map[string]any{
 		"success":  true,
 		"provider": req.Provider,
-		"valid":    true,
 	})
+}
+
+// validateBaseURL performs a syntactic check on a base URL before it is
+// saved. This is not a reachability test — local runners may not be
+// running at the time the operator configures them. The goal is only to
+// reject obvious typos (missing scheme, whitespace, non-http(s) scheme).
+func validateBaseURL(s string) error {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return fmt.Errorf("base URL is empty")
+	}
+	if strings.ContainsAny(s, " \t\n\r") {
+		return fmt.Errorf("base URL must not contain whitespace")
+	}
+	if !strings.HasPrefix(s, "http://") && !strings.HasPrefix(s, "https://") {
+		return fmt.Errorf("base URL must start with http:// or https://")
+	}
+	return nil
 }
 
 // validateAPIKey tests if the configured key for a provider works
