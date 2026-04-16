@@ -14,6 +14,7 @@ import { ALL_CRITERIA } from '../../lib/acmm/sources'
 
 const REPO_RE = /^[\w.-]+\/[\w.-]+$/
 const BADGE_SITE = 'https://console.kubestellar.io'
+const COPIED_FEEDBACK_MS = 1500
 
 export function RepoPicker() {
   const { repo, setRepo, recentRepos, scan } = useACMM()
@@ -33,7 +34,7 @@ export function RepoPicker() {
     navigator.clipboard.writeText(text).then(
       () => {
         setCopied(tag)
-        setTimeout(() => setCopied(null), 1500)
+        setTimeout(() => setCopied(null), COPIED_FEEDBACK_MS)
       },
       () => {
         // ignore clipboard failures
