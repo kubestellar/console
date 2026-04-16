@@ -14,6 +14,20 @@ const INSTALL_COMMAND = KC_AGENT.installCommand
 
 const KC_AGENT_URL = KC_AGENT.url
 
+/** Body shape for POST /settings/keys when saving a Base URL override.
+ *
+ *  Empty draft = "Leave blank to use the compiled-in default" — send
+ *  clearBaseURL:true so the backend removes the persisted override (and
+ *  bypasses the missing_field guard that rejects all-empty requests).
+ *  Non-empty draft sends the override value. See #8277. */
+export function buildBaseURLPayload(provider: string, draft: string):
+  | { provider: string; clearBaseURL: true }
+  | { provider: string; baseURL: string } {
+  return draft === ''
+    ? { provider, clearBaseURL: true }
+    : { provider, baseURL: draft }
+}
+
 interface KeyStatus {
   provider: string
   displayName: string
@@ -221,13 +235,7 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
     setBaseURLError(e => ({ ...e, [provider]: '' }))
     try {
       setSaving(true)
-      // Empty draft = "Leave blank to use the compiled-in default" — send
-      // clearBaseURL:true so the backend removes the persisted override
-      // (and bypasses the missing_field guard that rejects all-empty
-      // requests). #8277.
-      const body = draft === ''
-        ? { provider, clearBaseURL: true }
-        : { provider, baseURL: draft }
+      const body = buildBaseURLPayload(provider, draft)
       const response = await fetch(`${KC_AGENT_URL}/settings/keys`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
