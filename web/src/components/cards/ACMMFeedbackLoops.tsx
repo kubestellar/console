@@ -224,10 +224,10 @@ export function ACMMFeedbackLoops() {
                           launchOne(c)
                         }}
                         className="inline-flex items-center gap-1 text-primary hover:text-primary/80"
-                        title={'Launch an AI mission to add this loop'}
+                        title={`Ask the selected agent to add the "${c.name}" loop to ${repo}`}
                       >
                         <Sparkles className="w-2.5 h-2.5" />
-                        Launch AI mission
+                        Ask agent for help
                       </button>
                     )}
                   </div>

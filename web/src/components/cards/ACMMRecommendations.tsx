@@ -99,10 +99,10 @@ export function ACMMRecommendations() {
               type="button"
               onClick={launchAll}
               className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-primary/20 text-primary hover:bg-primary/30 transition-colors"
-              title={`Launch an AI mission to implement all ${recommendations.length} recommendations`}
+              title={`Ask the selected agent to add all ${recommendations.length} missing loops to ${repo}`}
             >
               <Sparkles className="w-2.5 h-2.5" />
-              Launch mission (all)
+              Ask agent for help with all ({recommendations.length})
             </button>
           )}
         </div>
@@ -139,10 +139,10 @@ export function ACMMRecommendations() {
                   type="button"
                   onClick={() => launchOne(rec)}
                   className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors flex-shrink-0"
-                  title={'Launch an AI mission to add this loop'}
+                  title={`Ask the selected agent to add the "${rec.criterion.name}" loop to ${repo}`}
                 >
                   <Zap className="w-2.5 h-2.5" />
-                  Launch
+                  Ask agent for help
                 </button>
               </div>
             </div>
