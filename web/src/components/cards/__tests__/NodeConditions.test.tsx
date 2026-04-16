@@ -98,6 +98,40 @@ describe('NodeConditions', () => {
       expect(screen.getByText(/nodeConditions.filterAll: 2/)).toBeTruthy()
     })
 
+    it('classifies NotReady nodes as pressure so pills always sum to total (#8297)', async () => {
+      const { useCachedNodes } = await import('../../../hooks/useCachedData')
+      vi.mocked(useCachedNodes).mockReturnValue({
+        nodes: [
+          makeNode({ name: 'a' }),
+          makeNode({ name: 'b' }),
+          makeNode({ name: 'c' }),
+          makeNode({ name: 'notready', conditions: [{ type: 'Ready', status: 'Unknown' }] }),
+        ],
+        isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
+      } as never)
+      render(<NodeConditions />)
+      expect(screen.getByText(/nodeConditions.filterAll: 4/)).toBeTruthy()
+      expect(screen.getByText(/nodeConditions.filterHealthy: 3/)).toBeTruthy()
+      expect(screen.getByText(/nodeConditions.filterCordoned: 0/)).toBeTruthy()
+      expect(screen.getByText(/nodeConditions.filterPressure: 1/)).toBeTruthy()
+    })
+
+    it('does not double-count a cordoned node that also has pressure (#8297)', async () => {
+      const { useCachedNodes } = await import('../../../hooks/useCachedData')
+      vi.mocked(useCachedNodes).mockReturnValue({
+        nodes: [makeNode({
+          name: 'both',
+          unschedulable: true,
+          conditions: [{ type: 'Ready', status: 'True' }, { type: 'MemoryPressure', status: 'True' }],
+        })],
+        isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
+      } as never)
+      render(<NodeConditions />)
+      expect(screen.getByText(/nodeConditions.filterAll: 1/)).toBeTruthy()
+      expect(screen.getByText(/nodeConditions.filterCordoned: 1/)).toBeTruthy()
+      expect(screen.getByText(/nodeConditions.filterPressure: 0/)).toBeTruthy()
+    })
+
     it('filters to cordoned nodes on cordoned pill click', async () => {
       const { useCachedNodes } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedNodes).mockReturnValue({

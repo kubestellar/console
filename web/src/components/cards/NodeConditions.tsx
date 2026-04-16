@@ -35,42 +35,35 @@ export function NodeConditions() {
   const [confirmAction, setConfirmAction] = useState<PendingAction | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
 
+  // Mutually-exclusive classification so the pill counts always sum to the
+  // total: a node with Ready!=True and no other True conditions (network
+  // partition, NotReady) otherwise lands in no bucket, and a cordoned node
+  // with pressure was being double-counted (#8297). Priority: cordoned >
+  // pressure > healthy.
+  const classify = (n: { unschedulable?: boolean; conditions?: Array<{ type: string; status: string }> }): Exclude<ConditionFilter, 'all'> => {
+    if (n.unschedulable) return 'cordoned'
+    const conditions = n.conditions || []
+    const ready = conditions.find(c => c.type === 'Ready')
+    const isReady = ready?.status === 'True'
+    const hasOtherPressure = conditions.some(c => c.type !== 'Ready' && c.status === 'True')
+    if (!isReady || hasOtherPressure) return 'pressure'
+    return 'healthy'
+  }
+
   const summary = (() => {
-    const cordoned = nodes.filter(n => n.unschedulable)
-    const pressure = nodes.filter(n => {
-      const conditions = n.conditions || []
-      return conditions.some((c: { type: string; status: string }) =>
-        c.type !== 'Ready' && c.status === 'True'
-      )
-    })
-    const healthy = nodes.filter(n => {
-      const conditions = n.conditions || []
-      const ready = conditions.find((c: { type: string }) => c.type === 'Ready')
-      return ready && (ready as { status: string }).status === 'True' && !n.unschedulable
-    })
-    return { total: nodes.length, healthy: healthy.length, cordoned: cordoned.length, pressure: pressure.length }
+    let healthy = 0, cordoned = 0, pressure = 0
+    for (const n of nodes) {
+      const bucket = classify(n)
+      if (bucket === 'healthy') healthy++
+      else if (bucket === 'cordoned') cordoned++
+      else pressure++
+    }
+    return { total: nodes.length, healthy, cordoned, pressure }
   })()
 
   const filtered = useMemo(() => {
-    switch (filter) {
-      case 'healthy':
-        return nodes.filter(n => {
-          const conditions = n.conditions || []
-          const ready = conditions.find((c: { type: string }) => c.type === 'Ready')
-          return ready && (ready as { status: string }).status === 'True' && !n.unschedulable
-        })
-      case 'cordoned':
-        return nodes.filter(n => n.unschedulable)
-      case 'pressure':
-        return nodes.filter(n => {
-          const conditions = n.conditions || []
-          return conditions.some((c: { type: string; status: string }) =>
-            c.type !== 'Ready' && c.status === 'True'
-          )
-        })
-      default:
-        return nodes
-    }
+    if (filter === 'all') return nodes
+    return nodes.filter(n => classify(n) === filter)
   }, [nodes, filter])
 
   /** Show confirmation dialog before executing cordon/uncordon */
