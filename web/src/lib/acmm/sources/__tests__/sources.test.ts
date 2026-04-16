@@ -19,10 +19,11 @@ import { fullsendSource } from '../fullsend'
 import { agenticEngineeringFrameworkSource } from '../agentic-engineering-framework'
 import { claudeReflectSource } from '../claude-reflect'
 
-// Pin the runtime whitelist to the `CriterionCategory` union via `satisfies` —
-// TypeScript will fail compilation if the union drifts, so we don't need to
-// also duplicate the literal list in a separate module. (`CriterionCategory`
-// is a type-only export, so it can't be reflected at runtime directly.)
+// Pin the runtime whitelist to the `CriterionCategory` union.
+// `satisfies` alone only checks each listed literal is assignable to
+// `CriterionCategory`; it does NOT catch union expansion. The
+// `_ExhaustiveCategories` check below fails compilation if a new member is
+// added to `CriterionCategory` without also being added here.
 const VALID_CATEGORIES = [
   'feedback-loop',
   'readiness',
@@ -31,6 +32,15 @@ const VALID_CATEGORIES = [
   'governance',
   'self-tuning',
 ] as const satisfies readonly CriterionCategory[]
+
+type _ExhaustiveCategories = Exclude<
+  CriterionCategory,
+  (typeof VALID_CATEGORIES)[number]
+> extends never
+  ? true
+  : never
+const _assertExhaustiveCategories: _ExhaustiveCategories = true
+void _assertExhaustiveCategories
 // VALID_SOURCES is derived from SOURCES so adding a new source doesn't
 // require updating a second literal list.
 const VALID_SOURCES = SOURCES.map(s => s.id)
