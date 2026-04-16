@@ -74,6 +74,18 @@ const HEIGHT_CLASSES: Record<ModalSize, string> = {
 // React Context so ModalHeader can receive the generated title ID
 const ModalTitleIdContext = createContext<string | undefined>(undefined)
 
+// React Context so ModalHeader can read whether Escape-to-close is enabled,
+// which drives the close button's tooltip + aria-label keyboard hint.
+// Defaults to true to preserve behavior for any ModalHeader rendered outside
+// a BaseModal provider (none today, but defensive).
+const ModalEscapeContext = createContext<{ escapeEnabled: boolean }>({ escapeEnabled: true })
+
+// Tooltip/aria-label text for the close button, varying with escape enablement.
+const CLOSE_WITH_ESC_LABEL = 'Close (Esc)'
+const CLOSE_LABEL = 'Close'
+const CLOSE_WITH_ESC_ARIA = 'Close modal (Esc)'
+const CLOSE_ARIA = 'Close modal'
+
 // ============================================================================
 // BaseModal Component
 // ============================================================================
@@ -134,7 +146,9 @@ export function BaseModal({
           onClick={(e) => e.stopPropagation()}
         >
           <ModalTitleIdContext.Provider value={titleId}>
-            {children}
+            <ModalEscapeContext.Provider value={{ escapeEnabled: closeOnEscape }}>
+              {children}
+            </ModalEscapeContext.Provider>
           </ModalTitleIdContext.Provider>
         </div>
       </div>
@@ -159,6 +173,9 @@ function ModalHeader({
   children,
 }: ModalHeaderProps) {
   const titleId = useContext(ModalTitleIdContext)
+  const { escapeEnabled } = useContext(ModalEscapeContext)
+  const closeTitle = escapeEnabled ? CLOSE_WITH_ESC_LABEL : CLOSE_LABEL
+  const closeAriaLabel = escapeEnabled ? CLOSE_WITH_ESC_ARIA : CLOSE_ARIA
 
   return (
     <div className="flex flex-col border-b border-border">
@@ -213,8 +230,8 @@ function ModalHeader({
             <button
               onClick={onClose}
               className="p-2 rounded-lg hover:bg-card/50 text-muted-foreground hover:text-foreground transition-colors"
-              title="Close (Esc)"
-              aria-label="Close modal"
+              title={closeTitle}
+              aria-label={closeAriaLabel}
             >
               <X className="w-5 h-5" aria-hidden="true" />
             </button>

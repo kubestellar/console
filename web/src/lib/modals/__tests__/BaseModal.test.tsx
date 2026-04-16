@@ -141,9 +141,35 @@ describe('BaseModal.Header', () => {
         <BaseModal.Header title="Title" onClose={onClose} />
       </BaseModal>
     )
-    const closeBtn = screen.getByLabelText('Close modal')
+    // Default closeOnEscape=true → aria-label includes the shortcut
+    const closeBtn = screen.getByLabelText('Close modal (Esc)')
     fireEvent.click(closeBtn)
     expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('close button title and aria-label advertise Esc when closeOnEscape is default', () => {
+    // See BaseModal.tsx ModalEscapeContext — escape enablement drives tooltip/aria.
+    render(
+      <BaseModal isOpen={true} onClose={vi.fn()}>
+        <BaseModal.Header title="Title" onClose={vi.fn()} />
+      </BaseModal>
+    )
+    const closeBtn = screen.getByLabelText('Close modal (Esc)')
+    expect(closeBtn).toHaveAttribute('title', 'Close (Esc)')
+  })
+
+  it('close button title and aria-label omit Esc when closeOnEscape is false', () => {
+    // Regression test for #8386 — sticky modals (closeOnEscape=false) must not
+    // advertise an Esc shortcut that does nothing.
+    render(
+      <BaseModal isOpen={true} onClose={vi.fn()} closeOnEscape={false}>
+        <BaseModal.Header title="Title" onClose={vi.fn()} />
+      </BaseModal>
+    )
+    const closeBtn = screen.getByLabelText('Close modal')
+    expect(closeBtn).toHaveAttribute('title', 'Close')
+    // And the old Esc variant must not be present.
+    expect(screen.queryByLabelText('Close modal (Esc)')).not.toBeInTheDocument()
   })
 
   it('renders back button when onBack and showBack are provided', () => {
