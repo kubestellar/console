@@ -176,6 +176,15 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
     (sum, c) => sum + (c.nodeCount || 0),
     0,
   )
+  // The same pattern applies to all-pods: the overview stat sums
+  // cluster.podCount (from the cluster summary) while the detail list is
+  // fetched via useAllPods() which can return empty on RBAC / network
+  // failures, so the drill-down "Total" showed 0 while the parent stat
+  // block showed e.g. 28 (#8380).
+  const expectedPodCountFromClusters = (clusters || []).reduce(
+    (sum, c) => sum + (c.podCount || 0),
+    0,
+  )
   // Convert epoch ms to ISO string for the freshness indicator
   const nodesDataAge = (() => {
     if (!nodesLastRefresh) return null
@@ -400,12 +409,30 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
   }
 
   // Summary stats
+  //
+  // When the detail list is empty for all-nodes / all-pods but the per-cluster
+  // summary says there are items, fall back to the summary count so the
+  // drill-down "Total" tile agrees with the parent stat block (#8380).
+  // The list below is still empty (and a warning is rendered separately),
+  // but the Total number matches what the user saw on the dashboard tile,
+  // which is the source-of-truth expectation.
   const stats = (() => {
-    const total = filteredItems.length
+    const listTotal = filteredItems.length
     const healthy = filteredItems.filter(item => {
       const status = config.getStatus(item as Record<string, unknown>)?.toLowerCase() || ''
       return ['running', 'healthy', 'ready', 'active', 'deployed', 'succeeded', 'available', 'normal'].includes(status)
     }).length
+
+    let total = listTotal
+    if (listTotal === 0 && !searchQuery && statusFilter === 'all' && clusterFilter === 'all') {
+      if (viewType === 'all-nodes' && expectedNodeCountFromClusters > 0) {
+        total = expectedNodeCountFromClusters
+      } else if (viewType === 'all-pods' && expectedPodCountFromClusters > 0) {
+        total = expectedPodCountFromClusters
+      }
+    }
+    // If we fell back to the summary count, we can't classify healthy vs
+    // issues (we don't have per-item statuses), so treat them as unknown.
     const issues = total - healthy
 
     return { total, healthy, issues }
@@ -519,6 +546,23 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
                     {nodesIsFailed
                       ? 'The node list endpoint is currently unreachable.'
                       : 'This usually means the current user lacks list-nodes RBAC on one or more clusters, so the detail view can\'t enumerate nodes even though the per-cluster summary includes their count.'}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : viewType === 'all-pods' &&
+            expectedPodCountFromClusters > 0 ? (
+            <div className="glass rounded-lg p-6 text-sm space-y-2">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="w-5 h-5 text-yellow-400 shrink-0 mt-0.5" />
+                <div>
+                  <div className="font-medium">
+                    Cluster summary reports {expectedPodCountFromClusters} pod
+                    {expectedPodCountFromClusters === 1 ? '' : 's'}, but the
+                    detailed list is empty.
+                  </div>
+                  <div className="text-muted-foreground mt-1">
+                    This usually means the current user lacks list-pods RBAC on one or more clusters, or the pods endpoint is temporarily unreachable — the per-cluster summary includes the count but the detail view can&apos;t enumerate individual pods. (#8380)
                   </div>
                 </div>
               </div>

@@ -30,6 +30,13 @@ const DEFAULT_API_FETCH_LIMIT = 100
  * not configured a `limit` for this card. */
 const DEFAULT_DISPLAY_LIMIT = 5
 
+/** Reserved footer height (px). The pagination bar and LimitedAccessWarning
+ * conditionally render, so without a reserved slot the card grows/shrinks
+ * each time those toggle on refresh — causing layout shift on neighboring
+ * cards (#8384). A fixed min-height for the footer region absorbs the
+ * variance so the card body stays a consistent size across refreshes. */
+const EVENT_STREAM_FOOTER_MIN_HEIGHT_PX = 48
+
 interface EventStreamConfig {
   /** User-configurable max events from the Configure Card modal. Drives BOTH
    * the API fetch ceiling and the initial in-card "show N" dropdown
@@ -292,17 +299,24 @@ function EventStreamInternal({ config }: { config?: EventStreamConfig }) {
         )}
       </div>
 
-      {/* Pagination */}
-      <CardPaginationFooter
-        currentPage={currentPage}
-        totalPages={totalPages}
-        totalItems={totalItems}
-        itemsPerPage={typeof itemsPerPage === 'number' ? itemsPerPage : 1000}
-        onPageChange={goToPage}
-        needsPagination={needsPagination}
-      />
+      {/* Footer region: pagination + limited-access warning live here.
+          Both are conditional, so we reserve a fixed min-height to prevent
+          the card from growing/shrinking on refresh (#8384). */}
+      <div
+        className="flex-shrink-0"
+        style={{ minHeight: `${EVENT_STREAM_FOOTER_MIN_HEIGHT_PX}px` }}
+      >
+        <CardPaginationFooter
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          itemsPerPage={typeof itemsPerPage === 'number' ? itemsPerPage : 1000}
+          onPageChange={goToPage}
+          needsPagination={needsPagination}
+        />
 
-      <LimitedAccessWarning hasError={!!error} className="mt-2" />
+        <LimitedAccessWarning hasError={!!error} className="mt-2" />
+      </div>
     </div>
   )
 }
