@@ -7,29 +7,41 @@ const ROTATION_INTERVAL_MS = 180_000
 const FADE_DURATION_MS = 600
 
 /**
- * Static taglines that rotate on every page load. The first entry is also
- * the branding default so it appears immediately while the component mounts.
+ * Static taglines that rotate in the sidebar header. A random one is
+ * picked on every page load so returning visitors see variety instead
+ * of the same line every time.
  */
 const TAGLINES: readonly string[] = [
   'multi-cluster first, saving time and tokens',
-  'not a dashboard, THIS is AI Ops',
-  'make this thing do anything!',
-  'deploys and manages the magical stuff — in your cluster, with what you already have',
+  'not a dashboard — THIS is AI Ops',
+  'make this thing do anything',
+  'deploy and manage the magical stuff, in your cluster, with what you already have',
+  'your clusters, your rules, your AI',
+  'one console to rule them all',
+  'Kubernetes operations, supercharged',
+  'AI-driven multi-cluster management',
 ] as const
+
+/** Pick a random index in [0, length). Used once at mount time so
+ *  each page load starts on a different tagline. */
+function randomStart(length: number): number {
+  return Math.floor(Math.random() * length)
+}
 
 /**
  * RotatingTagline cycles through a set of static taglines with a smooth
- * fade transition. When a live AI agent is connected, an AI-generated
- * tagline (contextual to user behavior) can be injected into the rotation.
+ * fade transition. Starts on a random tagline on every page load. When
+ * a live AI agent is connected, an AI-generated tagline (contextual to
+ * user behavior) can be injected into the rotation.
  */
 export function RotatingTagline({ aiTagline }: { aiTagline?: string }) {
-  const [index, setIndex] = useState(0)
-  const [visible, setVisible] = useState(true)
-
   // Build the full list: static taglines + optional AI-generated one
   const allTaglines = aiTagline
     ? [...TAGLINES, aiTagline]
     : TAGLINES
+
+  const [index, setIndex] = useState(() => randomStart(allTaglines.length))
+  const [visible, setVisible] = useState(true)
 
   const advance = useCallback(() => {
     // Fade out, swap text, fade in
