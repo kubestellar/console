@@ -34,7 +34,10 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('../../../../hooks/useVersionCheck', () => ({
-  useVersionCheck: () => ({ hasUpdate: null, latestRelease: null, channel: null, autoUpdateStatus: null, latestMainSHA: null, skipVersion: null }),
+  // Real hook computes hasUpdate as a boolean via useMemo; mock must match
+  // that shape or `if (!hasUpdate)` short-circuits on type coercion instead
+  // of on the intended boolean value.
+  useVersionCheck: () => ({ hasUpdate: false, latestRelease: null, channel: null, autoUpdateStatus: null, latestMainSHA: null, skipVersion: null }),
 }))
 
 vi.mock('../../../../hooks/useFeatureHints', () => ({
@@ -46,7 +49,7 @@ import { ToastProvider } from '../../../ui/Toast'
 
 describe('UpdateIndicator', () => {
   it('renders nothing when there is no update available', () => {
-    // useVersionCheck is mocked to return hasUpdate=null + no release, so the
+    // useVersionCheck is mocked to return hasUpdate=false + no release, so the
     // component should early-return null. Assert on the DOM, not on whether
     // render() succeeded — `container` is always truthy if render didn't throw.
     const { container } = render(
