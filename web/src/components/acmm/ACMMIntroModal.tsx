@@ -186,7 +186,7 @@ export function ACMMIntroModal({ isOpen, onClose }: ACMMIntroModalProps) {
         </div>
       </BaseModal.Content>
 
-      <BaseModal.Footer>
+      <BaseModal.Footer showKeyboardHints={false}>
         <div className="flex items-center justify-between w-full">
           <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
             <input
