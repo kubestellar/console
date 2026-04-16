@@ -1,15 +1,21 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { api } from '../lib/api'
-import { STORAGE_KEY_TOKEN } from '../lib/constants'
+import { STORAGE_KEY_TOKEN, STORAGE_KEY_HAS_SESSION, DEMO_TOKEN_VALUE } from '../lib/constants'
 import { MIN_PERCEIVED_DELAY_MS } from '../lib/constants/network'
 
 /** Cache TTL: 30 seconds — polling interval for status updates */
 const CACHE_TTL_MS = 30_000
 
-// Check if user is in demo mode — no token or explicit demo-token
+// #8291 — Post-#6590, a legitimate OAuth session can live ENTIRELY in the
+// HttpOnly kc_auth cookie with nothing in localStorage['token']. The previous
+// token-only check mislabeled those users as demo and served them the
+// hardcoded sample queue. The `kc-has-session` flag is set by /auth/refresh
+// once the backend confirms a cookie-backed session, so it's the authoritative
+// signal that a real user is logged in even with an empty localStorage token.
 function isDemoUser(): boolean {
+  if (localStorage.getItem(STORAGE_KEY_HAS_SESSION) === 'true') return false
   const token = localStorage.getItem(STORAGE_KEY_TOKEN)
-  return !token || token === 'demo-token'
+  return !token || token === DEMO_TOKEN_VALUE
 }
 
 // Types
