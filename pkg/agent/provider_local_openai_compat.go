@@ -36,11 +36,16 @@ type LocalOpenAICompatProvider struct {
 	defaultModel   string
 }
 
-// localOpenAICompatBaseURL resolves the base URL for this runner. The env var
-// wins over the struct default so operators can point a single Console backend
-// at any endpoint without rebuilding.
+// localOpenAICompatBaseURL resolves the base URL for this runner. The
+// precedence chain is: env var → ~/.kc/config.yaml via ConfigManager →
+// compiled-in default. Each local runner exposes its own URL env var so
+// operators can point a single Console backend at any endpoint from the
+// shell or from Settings → API Keys without rebuilding.
 func (p *LocalOpenAICompatProvider) localOpenAICompatBaseURL() string {
 	if v := strings.TrimRight(os.Getenv(p.urlEnvVar), "/"); v != "" {
+		return v
+	}
+	if v := strings.TrimRight(GetConfigManager().GetBaseURL(p.providerKey), "/"); v != "" {
 		return v
 	}
 	return strings.TrimRight(p.defaultURL, "/")

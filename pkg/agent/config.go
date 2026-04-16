@@ -27,6 +27,12 @@ type AgentConfig struct {
 type AgentKeyConfig struct {
 	APIKey string `yaml:"api_key"`
 	Model  string `yaml:"model,omitempty"`
+	// BaseURL lets operators point a provider at a non-default endpoint —
+	// for example, an in-cluster Ollama Service URL or a corporate Groq
+	// gateway. Empty string means "use the provider's compiled-in default";
+	// the env var for the provider (OLLAMA_URL, GROQ_BASE_URL, ...) still
+	// wins over this field, matching the APIKey / Model precedence.
+	BaseURL string `yaml:"base_url,omitempty"`
 }
 
 // ConfigManager handles reading and writing the local config file
@@ -187,6 +193,51 @@ func (cm *ConfigManager) SetModel(provider, model string) error {
 	return cm.saveLocked()
 }
 
+// GetBaseURL returns the configured base URL for a provider. Env var takes
+// precedence over the config file so operators can always override from the
+// shell that launches kc-agent. An empty return value means "no override —
+// use the provider's compiled-in default".
+func (cm *ConfigManager) GetBaseURL(provider string) string {
+	envKey := getBaseURLEnvKeyForProvider(provider)
+	if envKey != "" {
+		if envVal := os.Getenv(envKey); envVal != "" {
+			return envVal
+		}
+	}
+
+	cm.mu.RLock()
+	defer cm.mu.RUnlock()
+
+	if cm.config != nil {
+		if agentConfig, ok := cm.config.Agents[provider]; ok && agentConfig.BaseURL != "" {
+			return agentConfig.BaseURL
+		}
+	}
+	return ""
+}
+
+// SetBaseURL stores a base URL override for a provider. The lock is held
+// across both the map mutation and the disk write to prevent lost updates.
+func (cm *ConfigManager) SetBaseURL(provider, baseURL string) error {
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+	agentConfig := cm.config.Agents[provider]
+	agentConfig.BaseURL = baseURL
+	cm.config.Agents[provider] = agentConfig
+	return cm.saveLocked()
+}
+
+// RemoveBaseURL clears the base URL override for a provider, reverting to
+// the compiled-in default.
+func (cm *ConfigManager) RemoveBaseURL(provider string) error {
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+	agentConfig := cm.config.Agents[provider]
+	agentConfig.BaseURL = ""
+	cm.config.Agents[provider] = agentConfig
+	return cm.saveLocked()
+}
+
 // RemoveAPIKey removes the API key for a provider.
 func (cm *ConfigManager) RemoveAPIKey(provider string) error {
 	cm.mu.Lock()
@@ -324,6 +375,37 @@ func getEnvKeyForProvider(provider string) string {
 		return "LM_STUDIO_API_KEY"
 	case "rhaiis":
 		return "RHAIIS_API_KEY"
+	default:
+		return ""
+	}
+}
+
+// getBaseURLEnvKeyForProvider maps a provider key to the environment
+// variable that overrides its base URL. Empty return means "no env var is
+// honored for this provider" — used by providers that do not support a base
+// URL override (Claude/OpenAI/Gemini vendor HTTP APIs).
+func getBaseURLEnvKeyForProvider(provider string) string {
+	switch provider {
+	// Local LLM runners — see pkg/agent/provider_local_openai_compat.go
+	case "ollama":
+		return "OLLAMA_URL"
+	case "llamacpp":
+		return "LLAMACPP_URL"
+	case "localai":
+		return "LOCALAI_URL"
+	case "vllm":
+		return "VLLM_URL"
+	case "lm-studio":
+		return "LM_STUDIO_URL"
+	case "rhaiis":
+		return "RHAIIS_URL"
+	// OpenAI-compatible gateways
+	case "groq":
+		return "GROQ_BASE_URL"
+	case "openrouter":
+		return "OPENROUTER_BASE_URL"
+	case "open-webui":
+		return "OPEN_WEBUI_URL"
 	default:
 		return ""
 	}

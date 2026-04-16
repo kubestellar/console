@@ -47,18 +47,29 @@ const (
 )
 
 // OpenRouterProvider implements AIProvider for OpenRouter (https://openrouter.ai).
-type OpenRouterProvider struct {
-	baseURL string
+//
+// The base URL is resolved dynamically via openRouterResolveBaseURL() so
+// changes to OPENROUTER_BASE_URL or to ~/.kc/config.yaml take effect without
+// restarting the process.
+type OpenRouterProvider struct{}
+
+// NewOpenRouterProvider constructs a provider. Base URL is resolved at request
+// time so it honors env vars, the settings UI, and the compiled-in default.
+func NewOpenRouterProvider() *OpenRouterProvider {
+	return &OpenRouterProvider{}
 }
 
-// NewOpenRouterProvider constructs a provider using the default base URL,
-// overridable via OPENROUTER_BASE_URL.
-func NewOpenRouterProvider() *OpenRouterProvider {
-	baseURL := openRouterDefaultBaseURL
+// openRouterResolveBaseURL returns the effective base URL for the OpenRouter
+// provider. Precedence: OPENROUTER_BASE_URL env var → ~/.kc/config.yaml →
+// compiled-in default.
+func openRouterResolveBaseURL() string {
 	if v := os.Getenv("OPENROUTER_BASE_URL"); v != "" {
-		baseURL = v
+		return v
 	}
-	return &OpenRouterProvider{baseURL: baseURL}
+	if v := GetConfigManager().GetBaseURL(openRouterProviderKey); v != "" {
+		return v
+	}
+	return openRouterDefaultBaseURL
 }
 
 func (o *OpenRouterProvider) Name() string        { return "openrouter" }
@@ -77,13 +88,10 @@ func (o *OpenRouterProvider) Capabilities() ProviderCapability {
 	return CapabilityChat
 }
 
-// endpoint returns the fully qualified chat completions URL.
+// endpoint returns the fully qualified chat completions URL, resolved
+// dynamically so env or config changes take effect immediately.
 func (o *OpenRouterProvider) endpoint() string {
-	base := o.baseURL
-	if base == "" {
-		base = openRouterDefaultBaseURL
-	}
-	return base + openRouterChatCompletionsPath
+	return openRouterResolveBaseURL() + openRouterChatCompletionsPath
 }
 
 // extraHeaders returns the optional attribution headers OpenRouter uses.

@@ -41,12 +41,15 @@ const (
 	groqModelsPath = "/models"
 )
 
-// groqResolveBaseURL returns the effective base URL for the Groq provider,
-// honoring the GROQ_BASE_URL override. Kept separate from NewGroqProvider so
-// package-level helpers (validation, tests) can consult the same resolution
-// without constructing a provider.
+// groqResolveBaseURL returns the effective base URL for the Groq provider.
+// Precedence: GROQ_BASE_URL env var → ~/.kc/config.yaml → compiled-in default.
+// Kept separate from NewGroqProvider so package-level helpers (validation,
+// tests) can consult the same resolution without constructing a provider.
 func groqResolveBaseURL() string {
 	if v := os.Getenv("GROQ_BASE_URL"); v != "" {
+		return v
+	}
+	if v := GetConfigManager().GetBaseURL(groqProviderKey); v != "" {
 		return v
 	}
 	return groqDefaultBaseURL
@@ -63,18 +66,18 @@ func groqValidationURL() string {
 }
 
 // GroqProvider implements AIProvider for Groq (https://groq.com).
-type GroqProvider struct {
-	baseURL string
-}
+//
+// The base URL is no longer stored in the struct — it is resolved
+// dynamically via groqResolveBaseURL() so changes to GROQ_BASE_URL or to
+// ~/.kc/config.yaml take effect without restarting the process.
+type GroqProvider struct{}
 
 // NewGroqProvider constructs a provider using the default base URL,
-// overridable via GROQ_BASE_URL.
+// overridable via GROQ_BASE_URL or the config-file base URL (resolved
+// dynamically via groqResolveBaseURL so settings changes take effect
+// without restarting kc-agent).
 func NewGroqProvider() *GroqProvider {
-	baseURL := groqDefaultBaseURL
-	if v := os.Getenv("GROQ_BASE_URL"); v != "" {
-		baseURL = v
-	}
-	return &GroqProvider{baseURL: baseURL}
+	return &GroqProvider{}
 }
 
 func (g *GroqProvider) Name() string        { return "groq" }
@@ -93,13 +96,10 @@ func (g *GroqProvider) Capabilities() ProviderCapability {
 	return CapabilityChat
 }
 
-// endpoint returns the fully qualified chat completions URL.
+// endpoint returns the fully qualified chat completions URL, resolved
+// dynamically so env or config changes take effect immediately.
 func (g *GroqProvider) endpoint() string {
-	base := g.baseURL
-	if base == "" {
-		base = groqDefaultBaseURL
-	}
-	return base + groqChatCompletionsPath
+	return groqResolveBaseURL() + groqChatCompletionsPath
 }
 
 // Chat sends a message and returns the complete response.

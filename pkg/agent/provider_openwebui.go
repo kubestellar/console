@@ -6,17 +6,26 @@ import (
 	"os"
 )
 
-// OpenWebUIProvider implements the AIProvider interface for Open WebUI
-type OpenWebUIProvider struct {
-	baseURL string
-}
+// OpenWebUIProvider implements the AIProvider interface for Open WebUI.
+//
+// Base URL is resolved dynamically via openWebUIResolveBaseURL() so changes
+// to OPEN_WEBUI_URL or ~/.kc/config.yaml take effect without restarting.
+type OpenWebUIProvider struct{}
 
 func NewOpenWebUIProvider() *OpenWebUIProvider {
-	p := &OpenWebUIProvider{}
-	if url := os.Getenv("OPEN_WEBUI_URL"); url != "" {
-		p.baseURL = url
+	return &OpenWebUIProvider{}
+}
+
+// openWebUIResolveBaseURL returns the effective base URL. Precedence:
+// OPEN_WEBUI_URL env var → ~/.kc/config.yaml → empty (not configured).
+func openWebUIResolveBaseURL() string {
+	if v := os.Getenv("OPEN_WEBUI_URL"); v != "" {
+		return v
 	}
-	return p
+	if v := GetConfigManager().GetBaseURL("open-webui"); v != "" {
+		return v
+	}
+	return ""
 }
 
 func (o *OpenWebUIProvider) Name() string        { return "open-webui" }
@@ -33,13 +42,11 @@ func (o *OpenWebUIProvider) IsAvailable() bool {
 func (o *OpenWebUIProvider) Capabilities() ProviderCapability { return CapabilityChat }
 
 func (o *OpenWebUIProvider) getEndpoint() string {
-	if o.baseURL != "" {
-		return o.baseURL + "/api/chat/completions"
+	base := openWebUIResolveBaseURL()
+	if base == "" {
+		return ""
 	}
-	if url := os.Getenv("OPEN_WEBUI_URL"); url != "" {
-		return url + "/api/chat/completions"
-	}
-	return ""
+	return base + "/api/chat/completions"
 }
 
 func (o *OpenWebUIProvider) Chat(ctx context.Context, req *ChatRequest) (*ChatResponse, error) {
