@@ -158,10 +158,24 @@ function getStatusBadge(status: string) {
 export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSummaryDrillDownProps) {
   const { t } = useTranslation()
   const { clusters, deduplicatedClusters, pods, deployments, events, helmReleases, operatorSubscriptions, securityIssues } = useClusterData()
-  const { nodes: rawCachedNodes, lastRefresh: nodesLastRefresh } = useCachedNodes()
+  const {
+    nodes: rawCachedNodes,
+    lastRefresh: nodesLastRefresh,
+    isLoading: nodesIsLoading,
+    isFailed: nodesIsFailed,
+  } = useCachedNodes()
   const { pvcs: cachedPVCs } = useCachedPVCs()
   // Guard against undefined to prevent crashes when APIs return 404/500/empty
   const cachedNodes = rawCachedNodes || []
+  // For the all-nodes view: the overview stat block sums cluster.nodeCount,
+  // but the detail list is fetched from a separate endpoint that may return
+  // empty when the caller lacks list-nodes RBAC on some clusters (#8312).
+  // Track the expected count so we can explain the discrepancy instead of
+  // showing a blank "No items found".
+  const expectedNodeCountFromClusters = (clusters || []).reduce(
+    (sum, c) => sum + (c.nodeCount || 0),
+    0,
+  )
   // Convert epoch ms to ISO string for the freshness indicator
   const nodesDataAge = (() => {
     if (!nodesLastRefresh) return null
@@ -485,9 +499,35 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
       {/* Items List */}
       <div className="space-y-2">
         {filteredItems.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            No items found
-          </div>
+          viewType === 'all-nodes' && nodesIsLoading ? (
+            <div className="text-center py-8 text-muted-foreground text-sm">
+              Loading node details…
+            </div>
+          ) : viewType === 'all-nodes' &&
+            cachedNodes.length === 0 &&
+            expectedNodeCountFromClusters > 0 ? (
+            <div className="glass rounded-lg p-6 text-sm space-y-2">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="w-5 h-5 text-yellow-400 shrink-0 mt-0.5" />
+                <div>
+                  <div className="font-medium">
+                    Cluster summary reports {expectedNodeCountFromClusters} node
+                    {expectedNodeCountFromClusters === 1 ? '' : 's'}, but the
+                    detailed list is empty.
+                  </div>
+                  <div className="text-muted-foreground mt-1">
+                    {nodesIsFailed
+                      ? 'The node list endpoint is currently unreachable.'
+                      : 'This usually means the current user lacks list-nodes RBAC on one or more clusters, so the detail view can\'t enumerate nodes even though the per-cluster summary includes their count.'}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              No items found
+            </div>
+          )
         ) : (
           filteredItems.slice(0, 100).map((item, idx) => {
             const name = (item as Record<string, unknown>)[config.nameKey] as string || (item as Record<string, unknown>).name as string || 'Unknown'
