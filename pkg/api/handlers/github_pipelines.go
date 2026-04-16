@@ -602,6 +602,9 @@ func (h *GitHubPipelinesHandler) buildPulse(c *fiber.Ctx) (any, error) {
 	if err != nil {
 		return nil, err
 	}
+	if releaseRuns == nil {
+		releaseRuns = make([]ghpWorkflowRun, 0)
+	}
 	h.history.merge(releaseRuns)
 
 	// Latest release tag (best-effort)
