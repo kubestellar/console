@@ -5,12 +5,17 @@
  * ACMM registry plus weekly AI-vs-human contribution activity. Powers the
  * /acmm dashboard's four cards.
  *
- * Input:  ?repo=owner/repo&force=true (force bypasses cache)
+ * Input:  ?repo=owner/repo&force=true
+ *         (`force` bypasses cache *reads* and refreshes the cached entry —
+ *         the response body is always written back to the blob store)
  *
- * Response body (JSON) — discriminated by HTTP status:
+ * Response body (JSON) — discriminated by HTTP status, and for 200 also
+ * by the `demoFallback` / `fromCache` flags (both 200 shapes share the
+ * same status code):
  *
  *   200 live/cache-hit:
  *     { repo, scannedAt, detectedIds, weeklyActivity, fromCache? }
+ *     (`fromCache: true` iff served from blob cache; omitted on a live scan)
  *
  *   200 demo fallback (live fetch failed — soft degradation):
  *     { repo, scannedAt, detectedIds, weeklyActivity, demoFallback: true, error }
