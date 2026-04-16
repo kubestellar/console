@@ -18,13 +18,14 @@ const REPO_RE = /^[\w.-]+\/[\w.-]+$/
 const BADGE_SITE = 'https://console.kubestellar.io'
 const COPIED_FEEDBACK_MS = 1500
 
-/** shields.io color bands by level — must match acmm-badge.mts LEVEL_COLORS. */
+/** shields.io color bands by level — must match acmm-badge.mts LEVEL_COLORS.
+ *  Hex values are intentional: this renders inline badge SVG-style colors. */
 const BADGE_COLORS: Record<number, string> = {
-  1: '#9e9e9e',   // lightgrey
-  2: '#dfb317',   // yellow
-  3: '#97ca00',   // yellowgreen
-  4: '#44cc11',   // brightgreen
-  5: '#7b64ff',   // blueviolet
+  1: '#9e9e9e',   // lightgrey  // ai-quality-ignore
+  2: '#dfb317',   // yellow     // ai-quality-ignore
+  3: '#97ca00',   // yellowgreen // ai-quality-ignore
+  4: '#44cc11',   // brightgreen // ai-quality-ignore
+  5: '#7b64ff',   // blueviolet  // ai-quality-ignore
 }
 
 /** Locally-rendered badge preview — mirrors the shields.io two-tone pill
@@ -38,7 +39,7 @@ function BadgePreview({ level, levelName, detected, total }: {
   const rightColor = BADGE_COLORS[level] ?? BADGE_COLORS[1]
   return (
     <span className="inline-flex items-stretch text-[11px] font-medium leading-none rounded overflow-hidden shadow-sm h-5">
-      <span className="px-1.5 flex items-center bg-[#555] text-white">ACMM</span>
+      <span className="px-1.5 flex items-center bg-neutral-600 text-white">ACMM</span>
       <span
         className="px-1.5 flex items-center text-white"
         style={{ backgroundColor: rightColor }}
