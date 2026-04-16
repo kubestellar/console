@@ -406,11 +406,10 @@ export function useIntoto() {
       setClustersChecked(0)
 
       // Check all clusters with bounded concurrency, stream results progressively
-      const allStatuses: Record<string, IntotoClusterStatus> = {}
+      const clusterList = clusters || []
 
-      const tasks = (clusters || []).map(cluster => async () => {
+      const tasks = clusterList.map(cluster => async () => {
         const status = await fetchSingleCluster(cluster)
-        allStatuses[cluster] = status
         // Stream each result immediately — card re-renders progressively
         setStatuses(prev => ({ ...prev, [cluster]: status }))
         setClustersChecked(prev => prev + 1)
@@ -419,9 +418,19 @@ export function useIntoto() {
           initialLoadDone.current = true
           setIsLoading(false)
         }
+        return { cluster, status }
       })
 
-      await settledWithConcurrency(tasks)
+      const settled = await settledWithConcurrency(tasks)
+
+      // Collect results from settled promises — no shared mutable state
+      const allStatuses: Record<string, IntotoClusterStatus> = {}
+      for (const result of settled) {
+        if (result.status === 'fulfilled' && result.value) {
+          const { cluster, status } = result.value as { cluster: string; status: IntotoClusterStatus }
+          allStatuses[cluster] = status
+        }
+      }
 
       // A cycle "fails" only when every cluster returned a connection error —
       // "not installed" is a clean result and should reset the counter.
