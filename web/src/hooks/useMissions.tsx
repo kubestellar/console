@@ -536,7 +536,8 @@ function saveUnreadMissionIds(ids: Set<string>) {
 export function MissionProvider({ children }: { children: ReactNode }) {
   const [missions, setMissions] = useState<Mission[]>(() => loadMissions())
   // #7313 — Restore the active mission ID from localStorage so a reload
-  // while a mission is running keeps the sidebar view open.
+  // remembers which mission was selected. Sidebar visibility is restored
+  // separately via SIDEBAR_OPEN_STORAGE_KEY (kc_mission_sidebar_open).
   const ACTIVE_MISSION_STORAGE_KEY = 'kc_active_mission_id'
   /** Persists the sidebar open/closed state so it survives page refresh. */
   const SIDEBAR_OPEN_STORAGE_KEY = 'kc_mission_sidebar_open'

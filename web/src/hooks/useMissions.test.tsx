@@ -5821,3 +5821,48 @@ describe('runSavedMission wsSend failure', () => {
     }
   })
 })
+
+// ── Sidebar open/closed persistence via kc_mission_sidebar_open ──────────────
+
+describe('sidebar open/closed persistence', () => {
+  const SIDEBAR_OPEN_KEY = 'kc_mission_sidebar_open'
+
+  it('persists sidebar open state to localStorage when opened', () => {
+    const { result } = renderHook(() => useMissions(), { wrapper })
+
+    // Sidebar starts closed (localStorage is cleared in beforeEach)
+    expect(result.current.isSidebarOpen).toBe(false)
+    expect(localStorage.getItem(SIDEBAR_OPEN_KEY)).toBe('false')
+
+    act(() => { result.current.openSidebar() })
+
+    expect(result.current.isSidebarOpen).toBe(true)
+    expect(localStorage.getItem(SIDEBAR_OPEN_KEY)).toBe('true')
+  })
+
+  it('persists sidebar closed state to localStorage when closed', () => {
+    // Pre-seed open state
+    localStorage.setItem(SIDEBAR_OPEN_KEY, 'true')
+
+    const { result } = renderHook(() => useMissions(), { wrapper })
+    expect(result.current.isSidebarOpen).toBe(true)
+
+    act(() => { result.current.closeSidebar() })
+
+    expect(result.current.isSidebarOpen).toBe(false)
+    expect(localStorage.getItem(SIDEBAR_OPEN_KEY)).toBe('false')
+  })
+
+  it('restores sidebar open state from localStorage on mount', () => {
+    localStorage.setItem(SIDEBAR_OPEN_KEY, 'true')
+
+    const { result } = renderHook(() => useMissions(), { wrapper })
+    expect(result.current.isSidebarOpen).toBe(true)
+  })
+
+  it('defaults to closed when localStorage has no sidebar key', () => {
+    // localStorage is cleared in beforeEach — no key present
+    const { result } = renderHook(() => useMissions(), { wrapper })
+    expect(result.current.isSidebarOpen).toBe(false)
+  })
+})
