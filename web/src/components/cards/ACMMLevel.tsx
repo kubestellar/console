@@ -66,9 +66,10 @@ export function ACMMLevel() {
   const nextLevel = level.level < MAX_LEVEL ? level.level + 1 : null
   const nextRequired = nextLevel ? level.requiredByLevel[nextLevel] ?? 0 : 0
   const nextDetected = nextLevel ? level.detectedByLevel[nextLevel] ?? 0 : 0
+  const nextLevelDef = nextLevel ? ALL_LEVELS.find((l) => l.n === nextLevel) : null
 
   return (
-    <div className="h-full flex flex-col p-2">
+    <div className="h-full flex flex-col p-2 overflow-y-auto">
       <div className="flex items-center justify-between mb-2">
         <div className="text-xs text-muted-foreground font-mono truncate">{repo}</div>
         <a
@@ -82,7 +83,7 @@ export function ACMMLevel() {
         </a>
       </div>
 
-      <div className="flex items-center gap-3 mb-3">
+      <div className="flex items-center gap-3 mb-2">
         <div className="relative flex-shrink-0">
           <LevelRing level={level.level} />
           <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -105,6 +106,35 @@ export function ACMMLevel() {
           </p>
         </div>
       </div>
+
+      {/* Why move up — transition trigger from the paper. Kept short:
+          one quoted sentence + what the next level unlocks. */}
+      {nextLevel && nextLevelDef && (
+        <div className="mb-2 p-2 rounded-md bg-primary/5 border border-primary/10">
+          <div className="text-[10px] text-primary uppercase tracking-wide mb-0.5">Why move to L{nextLevel}?</div>
+          <p className="text-[11px] text-muted-foreground leading-snug italic mb-1">
+            {level.nextTransitionTrigger}
+          </p>
+          <p className="text-[11px] text-foreground leading-snug">
+            At <span className="font-mono">L{nextLevel} {nextLevelDef.name}</span> you become {/^[aeiou]/i.test(nextLevelDef.role) ? 'an' : 'a'} <span className="font-medium">{nextLevelDef.role}</span> — {nextLevelDef.characteristic.split('.')[0].toLowerCase()}.
+          </p>
+        </div>
+      )}
+
+      {/* How to level up — practical pointers to the other two cards. */}
+      {nextLevel && (
+        <div className="mb-2 text-[11px] text-muted-foreground leading-snug space-y-1">
+          <div className="text-[10px] uppercase tracking-wide text-foreground/70">How to level up</div>
+          <p>
+            Check the <span className="text-foreground font-medium">Feedback Loop Inventory</span> below for missing criteria at L{nextLevel}.
+            Click <span className="text-primary">Ask agent for help</span> on any item to have an AI agent add it, or use the
+            {' '}<span className="text-primary">Help me reach L{nextLevel}</span> button at the bottom to tackle them all at once.
+          </p>
+          <p className="text-muted-foreground/70">
+            No agent? Add the files manually — each criterion shows the exact detection pattern to match.
+          </p>
+        </div>
+      )}
 
       <div className="flex flex-col gap-0.5 mb-2">
         {ALL_LEVELS.map((lvl) => {
@@ -132,7 +162,7 @@ export function ACMMLevel() {
       {nextLevel && (
         <div className="mt-auto pt-2 border-t border-border/50">
           <div className="flex items-center justify-between text-xs mb-1">
-            <span className="text-muted-foreground">Next level progress</span>
+            <span className="text-muted-foreground">Progress to L{nextLevel}</span>
             <span className="font-mono">
               {nextDetected}/{nextRequired}
             </span>
