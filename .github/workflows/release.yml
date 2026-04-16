@@ -436,11 +436,16 @@ jobs:
             if (releaseResult === 'failure') failedJobs.push('release');
             if (helmResult === 'failure') failedJobs.push('helm-release');
 
-            const title = `🚨 ${releaseType} release failed: ${version}`;
-            const body = [
-              `## Release Failure`,
+            // Hours after closure that still counts as the "same incident" —
+            // if the last release-failure issue closed within this window and
+            // tonight still failed, the fix didn't stick. Reopen it instead
+            // of cutting a fresh issue every night.
+            const SAME_INCIDENT_HOURS = 48;
+
+            const failureSummary = [
+              `## Release Failure — \`${version}\``,
               ``,
-              `The **${releaseType}** release for \`${version}\` failed.`,
+              `The **${releaseType}** release failed.`,
               ``,
               `**Failed jobs:** ${failedJobs.join(', ')}`,
               `- test: ${testResult}`,
@@ -448,14 +453,54 @@ jobs:
               `- helm-release: ${helmResult}`,
               ``,
               `**Workflow run:** ${runUrl}`,
-              ``,
-              `This issue was auto-created by the release workflow.`,
             ].join('\n');
 
-            await github.rest.issues.create({
+            // Look for the most recent release-failure issue (any state).
+            // Rolling incident model: open issue → comment; recently-closed
+            // issue → reopen + comment; otherwise → new issue.
+            const { data: recent } = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title,
-              body,
-              labels: ['bug', 'release-failure'],
+              labels: 'release-failure',
+              state: 'all',
+              sort: 'created',
+              direction: 'desc',
+              per_page: 1,
             });
+            const existing = recent[0];
+
+            const now = Date.now();
+            const closedAt = existing?.closed_at ? new Date(existing.closed_at).getTime() : 0;
+            const hoursSinceClose = closedAt ? (now - closedAt) / 36e5 : Infinity;
+            const isOpen = existing && existing.state === 'open';
+            const recentlyClosed = existing && existing.state === 'closed' && hoursSinceClose <= SAME_INCIDENT_HOURS;
+
+            if (isOpen || recentlyClosed) {
+              if (recentlyClosed) {
+                await github.rest.issues.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: existing.number,
+                  state: 'open',
+                });
+              }
+              const note = recentlyClosed
+                ? `🔁 **Reopened:** previous fix did not stick — tonight's release also failed.`
+                : `🔁 **Still failing:** another release failure recorded.`;
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                body: `${note}\n\n${failureSummary}`,
+              });
+              core.info(`Updated existing issue #${existing.number} (${recentlyClosed ? 'reopened' : 'commented'}).`);
+            } else {
+              const { data: created } = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `🚨 ${releaseType} release failing`,
+                body: `${failureSummary}\n\n_Auto-created by the release workflow. Subsequent nightly failures within ${SAME_INCIDENT_HOURS}h will append to this issue instead of opening a duplicate._`,
+                labels: ['bug', 'release-failure'],
+              });
+              core.info(`Created new issue #${created.number}.`);
+            }
