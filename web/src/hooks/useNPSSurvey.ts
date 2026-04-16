@@ -81,7 +81,8 @@ export function useNPSSurvey(): NPSSurveyState {
   // explicitly submitted by the user.
   useEffect(() => {
     // Session threshold guard
-    const sessionCount = parseInt(safeGetItem(STORAGE_KEY_SESSION_COUNT) || '0', 10)
+    const rawCount = parseInt(safeGetItem(STORAGE_KEY_SESSION_COUNT) || '0', 10)
+    const sessionCount = Number.isFinite(rawCount) ? rawCount : 0
     if (sessionCount < MIN_SESSIONS_BEFORE_NPS) return
 
     // Timing guard
