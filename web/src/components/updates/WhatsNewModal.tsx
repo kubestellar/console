@@ -14,7 +14,6 @@ import { FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
 import { emitWhatsNewUpdateClicked, emitWhatsNewRemindLater } from '../../lib/analytics'
 
 const SNOOZE_STORAGE_KEY = 'kc-update-snoozed'
-const KILL_SWITCH_KEY = 'kc-whats-new-modal-disabled'
 
 const SNOOZE_DURATION_1H_MS = 60 * 60 * 1000
 const SNOOZE_DURATION_1D_MS = 24 * 60 * 60 * 1000
@@ -31,13 +30,6 @@ export function isUpdateSnoozed(): boolean {
   }
 }
 
-export function isKillSwitchEnabled(): boolean {
-  try {
-    return localStorage.getItem(KILL_SWITCH_KEY) === '1'
-  } catch {
-    return false
-  }
-}
 
 function snoozeUpdate(durationMs: number) {
   try {
