@@ -28,6 +28,7 @@ import { useMissions } from '../../../hooks/useMissions'
 import { TokenUsageWidget } from './TokenUsageWidget'
 import { ClusterFilterPanel } from './ClusterFilterPanel'
 import { AgentStatusIndicator } from './AgentStatusIndicator'
+import { RotatingTagline } from './RotatingTagline'
 import { UpdateIndicator } from './UpdateIndicator'
 import { StreakBadge } from './StreakBadge'
 import { ROUTES } from '../../../config/routes'
@@ -91,7 +92,7 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
           aria-label={t('navbar.goHome')}
         >
           <span className="text-base md:text-lg font-semibold text-foreground">{branding.appName}</span>
-          <span className="text-[10px] text-muted-foreground tracking-wide">{branding.tagline}</span>
+          <RotatingTagline />
         </button>
         {__DEV_MODE__ && (
           <span className="hidden sm:inline-flex items-center justify-center px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-green-500/20 text-green-400 border border-green-500/30 rounded-full" title={t('layout.navbar.devModeTitle')}>
