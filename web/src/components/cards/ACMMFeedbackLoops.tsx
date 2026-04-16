@@ -184,7 +184,7 @@ export function ACMMFeedbackLoops() {
   const sources: (SourceId | 'all')[] = ['all', 'acmm', 'fullsend', 'agentic-engineering-framework', 'claude-reflect']
 
   return (
-    <div className="h-full flex flex-col p-2 gap-2">
+    <div className="h-full flex flex-col p-2 gap-2 max-w-4xl">
       <div className="flex items-center gap-1.5 flex-wrap">
         <Filter className="w-3.5 h-3.5 text-muted-foreground" />
         {sources.map((s) => (
