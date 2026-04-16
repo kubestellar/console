@@ -26,11 +26,19 @@ interface HealthPoint {
 
 type TimeRange = '15m' | '1h' | '6h' | '24h'
 
+/** Maximum data points to display per time range selection */
+const TIME_RANGE_MAX_POINTS: Record<TimeRange, number> = {
+  '15m': 15,
+  '1h': 20,
+  '6h': 24,
+  '24h': 24,
+}
+
 const TIME_RANGE_OPTIONS: { value: TimeRange; label: string; points: number }[] = [
-  { value: '15m', label: '15 min', points: 15 },
-  { value: '1h', label: '1 hour', points: 20 },
-  { value: '6h', label: '6 hours', points: 24 },
-  { value: '24h', label: '24 hours', points: 24 },
+  { value: '15m', label: '15 min', points: TIME_RANGE_MAX_POINTS['15m'] },
+  { value: '1h', label: '1 hour', points: TIME_RANGE_MAX_POINTS['1h'] },
+  { value: '6h', label: '6 hours', points: TIME_RANGE_MAX_POINTS['6h'] },
+  { value: '24h', label: '24 hours', points: TIME_RANGE_MAX_POINTS['24h'] },
 ]
 
 export function PodHealthTrend() {
@@ -235,12 +243,18 @@ export function PodHealthTrend() {
     }
   }, [currentStats, history.length])
 
+  // Slice history to the number of points allowed by the selected time range
+  const visibleHistory = useMemo(() => {
+    const maxPoints = TIME_RANGE_MAX_POINTS[timeRange]
+    return history.slice(-maxPoints)
+  }, [history, timeRange])
+
   const chartOption = useMemo(() => ({
     backgroundColor: 'transparent',
     grid: { left: 40, right: 5, top: 5, bottom: 25 },
     xAxis: {
       type: 'category' as const,
-      data: history.map(d => d.time),
+      data: visibleHistory.map(d => d.time),
       axisLabel: { color: CHART_TICK_COLOR, fontSize: 10 },
       axisLine: { lineStyle: { color: CHART_AXIS_STROKE } },
       axisTick: { show: false },
@@ -265,7 +279,7 @@ export function PodHealthTrend() {
         type: 'line',
         stack: 'total',
         smooth: true,
-        data: history.map(d => d.issues),
+        data: visibleHistory.map(d => d.issues),
         lineStyle: { color: '#f97316', width: 2 },
         itemStyle: { color: '#f97316' },
         areaStyle: {
@@ -279,7 +293,7 @@ export function PodHealthTrend() {
         type: 'line',
         stack: 'total',
         smooth: true,
-        data: history.map(d => d.pending),
+        data: visibleHistory.map(d => d.pending),
         lineStyle: { color: '#eab308', width: 2 },
         itemStyle: { color: '#eab308' },
         areaStyle: {
@@ -293,7 +307,7 @@ export function PodHealthTrend() {
         type: 'line',
         stack: 'total',
         smooth: true,
-        data: history.map(d => d.healthy),
+        data: visibleHistory.map(d => d.healthy),
         lineStyle: { color: '#22c55e', width: 2 },
         itemStyle: { color: '#22c55e' },
         areaStyle: {
@@ -305,7 +319,7 @@ export function PodHealthTrend() {
       {
         name: 'Issues (trend)',
         type: 'line',
-        data: history.map(d => d.issues),
+        data: visibleHistory.map(d => d.issues),
         smooth: true,
         lineStyle: { color: '#f97316', width: 2, type: 'dashed' as const },
         itemStyle: { color: '#f97316' },
@@ -313,7 +327,7 @@ export function PodHealthTrend() {
         silent: true,
       },
     ],
-  }), [history])
+  }), [visibleHistory])
 
   if (showSkeleton && history.length === 0) {
     return (
