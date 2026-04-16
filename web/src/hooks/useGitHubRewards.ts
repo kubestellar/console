@@ -109,9 +109,12 @@ export function useGitHubRewards() {
     // exclusively in the HttpOnly kc_auth cookie with no token in
     // localStorage. Check both the token AND the session hint so we
     // don't bail out for cookie-only authenticated users.
-    const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+    // Both reads are wrapped because localStorage can throw in
+    // restricted browser modes (private browsing, disabled storage).
+    let token: string | null = null
     let hasCookieSession = false
     try {
+      token = localStorage.getItem(STORAGE_KEY_TOKEN)
       hasCookieSession = localStorage.getItem(STORAGE_KEY_HAS_SESSION) === 'true'
     } catch {
       // localStorage unavailable — fall through
