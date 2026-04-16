@@ -99,11 +99,7 @@ export function StorageOverview() {
     filteredClusters.some(c => c.reachable !== false && c.storageGB !== undefined)
 
   if (showSkeleton) {
-    return (
-      <div className="h-full flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">{t('storageOverview.loading')}</div>
-      </div>
-    )
+    return null
   }
 
   if (showEmptyState) {
@@ -236,7 +232,7 @@ export function StorageOverview() {
 
       {/* Footer */}
       <div className="mt-3 pt-3 border-t border-border/50 text-xs text-muted-foreground">
-        {pvcsLoading ? t('storageOverview.loadingPVCs') : t('storageOverview.footer', { pvcs: stats.totalPVCs, clusters: filteredClusters.length })}
+        {t('storageOverview.footer', { pvcs: stats.totalPVCs, clusters: filteredClusters.length })}
       </div>
     </div>
   )

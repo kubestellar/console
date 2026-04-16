@@ -105,11 +105,7 @@ export function NetworkOverview() {
   }, [filteredServices, filteredClusters])
 
   if (showSkeleton) {
-    return (
-      <div className="h-full flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading network data...</div>
-      </div>
-    )
+    return null
   }
 
   if (showEmptyState) {
@@ -317,7 +313,7 @@ export function NetworkOverview() {
 
       {/* Footer */}
       <div className="mt-3 pt-3 border-t border-border/50 text-xs text-muted-foreground">
-        {servicesLoading ? 'Loading service data...' : `${stats.totalServices} services across ${filteredClusters.length} clusters`}
+        {`${stats.totalServices} services across ${filteredClusters.length} clusters`}
       </div>
     </div>
   )

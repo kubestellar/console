@@ -322,15 +322,6 @@ export function HelmHistory({ config }: HelmHistoryProps) {
         <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
           {t('helmHistory.selectClusterRelease')}
         </div>
-      ) : (historyLoading || historyRefreshing) && rawHistory.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center gap-3">
-          <div className="flex items-center gap-2 text-sm text-blue-400">
-            <RotateCcw className="w-4 h-4 animate-spin" />
-            <span>{t('helmHistory.loadingHistory', { release: selectedRelease })}</span>
-          </div>
-          <Skeleton variant="rounded" height={50} className="w-full" />
-          <Skeleton variant="rounded" height={50} className="w-full" />
-        </div>
       ) : (
         <>
           {/* Scope badge - clickable to drill down */}

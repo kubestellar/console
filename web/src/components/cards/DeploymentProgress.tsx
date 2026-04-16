@@ -188,13 +188,7 @@ export function DeploymentProgress({ config }: DeploymentProgressProps) {
       progress: deployment.progress })
   }
 
-  if (isLoading && deployments.length === 0) {
-    return (
-      <div className="h-full flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-      </div>
-    )
-  }
+  // CardWrapper handles skeleton display via useCardLoadingState; no custom loading UI needed
 
   if (error && deployments.length === 0) {
     return (
