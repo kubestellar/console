@@ -20,7 +20,7 @@ import { useCardLoadingState } from '../CardDataContext'
 import {
   usePipelineFlow,
   usePipelineMutations,
-  PIPELINE_REPOS,
+  getPipelineRepos,
   type FlowRun,
   type Status,
   type Conclusion,
@@ -352,7 +352,7 @@ export function PipelineFlow() {
           aria-label={LABEL_FILTER_REPO}
         >
           <option value="">All repos</option>
-          {PIPELINE_REPOS.map((r) => (
+          {getPipelineRepos().map((r) => (
             <option key={r} value={r}>{r}</option>
           ))}
         </select>

@@ -11,7 +11,7 @@ import { useState } from 'react'
 import { ExternalLink } from 'lucide-react'
 import { useDemoMode } from '../../../hooks/useDemoMode'
 import { useCardLoadingState } from '../CardDataContext'
-import { usePipelineMatrix, PIPELINE_REPOS, type Conclusion } from '../../../hooks/useGitHubPipelines'
+import { usePipelineMatrix, getPipelineRepos, type Conclusion } from '../../../hooks/useGitHubPipelines'
 import { cn } from '../../../lib/cn'
 
 /** Available range options. Must match the server's MATRIX_MAX_DAYS (90) */
@@ -79,7 +79,7 @@ export function WorkflowMatrix() {
             aria-label={LABEL_FILTER_REPO}
           >
             <option value="">All repos</option>
-            {PIPELINE_REPOS.map((r) => (
+            {getPipelineRepos().map((r) => (
               <option key={r} value={r}>{r}</option>
             ))}
           </select>

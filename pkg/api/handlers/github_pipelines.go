@@ -50,8 +50,8 @@ const (
 	ghpMatrixSparseMinCells  = 1
 )
 
-// ghpRepos is the canonical list scanned — same set /hygiene uses.
-var ghpRepos = []string{
+// ghpDefaultRepos is the default when PIPELINE_REPOS env var is not set.
+var ghpDefaultRepos = []string{
 	"kubestellar/console",
 	"kubestellar/docs",
 	"kubestellar/console-kb",
@@ -59,6 +59,30 @@ var ghpRepos = []string{
 	"kubestellar/console-marketplace",
 	"kubestellar/homebrew-tap",
 }
+
+// ghpGetRepos reads the PIPELINE_REPOS env var (comma-separated owner/repo
+// list). Falls back to ghpDefaultRepos if unset. Called once at handler
+// construction time — not on every request.
+func ghpGetRepos() []string {
+	env := os.Getenv("PIPELINE_REPOS")
+	if env == "" {
+		return ghpDefaultRepos
+	}
+	var repos []string
+	for _, s := range strings.Split(env, ",") {
+		s = strings.TrimSpace(s)
+		if s != "" {
+			repos = append(repos, s)
+		}
+	}
+	if len(repos) == 0 {
+		return ghpDefaultRepos
+	}
+	return repos
+}
+
+// ghpRepos is populated once at init from PIPELINE_REPOS env var.
+var ghpRepos = ghpGetRepos()
 
 func ghpIsAllowedRepo(repo string) bool {
 	for _, r := range ghpRepos {
@@ -366,7 +390,26 @@ func (h *GitHubPipelinesHandler) serveCached(c *fiber.Ctx, key string, build fun
 	if err != nil {
 		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": err.Error()})
 	}
-	body, err := json.Marshal(v)
+	// Wrap payload with the repo list so the client reads it from the
+	// response instead of hardcoding. Uses a two-step marshal: first the
+	// inner payload, then merge with the repos envelope.
+	inner, err := json.Marshal(v)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "marshal failed"})
+	}
+	// Build merged JSON: { ...payload, "repos": [...] }
+	reposJSON, _ := json.Marshal(ghpRepos)
+	var body []byte
+	if len(inner) > 2 && inner[0] == '{' {
+		// Merge repos into existing object
+		body = make([]byte, 0, len(inner)+len(reposJSON)+12)
+		body = append(body, inner[:len(inner)-1]...) // strip trailing }
+		body = append(body, `,"repos":`...)
+		body = append(body, reposJSON...)
+		body = append(body, '}')
+	} else {
+		body = inner
+	}
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "marshal failed"})
 	}

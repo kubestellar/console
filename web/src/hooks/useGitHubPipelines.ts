@@ -16,19 +16,28 @@ const DEFAULT_POLL_MS = 60_000
 /** Timeout for any /api/github-pipelines fetch */
 const FETCH_TIMEOUT_MS = 10_000
 
-/** Canonical list of repos the dashboard scans. Server authoritative — this
- * is duplicated here only to drive the repo-filter dropdowns; if they drift,
- * the server response is the source of truth. */
-export const PIPELINE_REPOS = [
+/** Fallback repos used in demo mode before the first server response arrives.
+ * The server is the single source of truth — it reads PIPELINE_REPOS env var
+ * and returns the live list in every response under the `repos` field.
+ * Cards read repos from the response to populate their filter dropdown. */
+const FALLBACK_REPOS = [
   'kubestellar/console',
   'kubestellar/docs',
   'kubestellar/console-kb',
   'kubestellar/kubestellar-mcp',
   'kubestellar/console-marketplace',
   'kubestellar/homebrew-tap',
-] as const
+]
 
-export type PipelineRepo = (typeof PIPELINE_REPOS)[number]
+/** Last-known repo list from the server. Updated on every successful fetch.
+ * Cards call `getPipelineRepos()` to get the current list for their dropdown. */
+let serverRepos: string[] = FALLBACK_REPOS
+
+/** Returns the current repo list. After the first successful fetch, this
+ * reflects whatever the server's PIPELINE_REPOS env var is set to. */
+export function getPipelineRepos(): string[] {
+  return serverRepos
+}
 
 export type Conclusion =
   | 'success'
@@ -298,7 +307,14 @@ async function fetchView<T>(params: URLSearchParams): Promise<T> {
   const url = `/api/github-pipelines?${params.toString()}`
   const res = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  return (await res.json()) as T
+  const body = (await res.json()) as T & { repos?: string[] }
+  // Update the shared repo list from the server response — this is the
+  // single source of truth for which repos the backend is configured to
+  // scan (set via PIPELINE_REPOS env var).
+  if (Array.isArray(body.repos) && body.repos.length > 0) {
+    serverRepos = body.repos
+  }
+  return body
 }
 
 // ---------------------------------------------------------------------------

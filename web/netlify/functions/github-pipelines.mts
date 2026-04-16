@@ -59,15 +59,31 @@ const MATRIX_RUNS_PER_REPO = 100;
 /** How many in-progress/queued runs to pull per repo for the flow view */
 const FLOW_MAX_RUNS_PER_REPO = 8;
 
-/** Repos scanned — same set used by /hygiene. Order matters for UI */
-const REPOS = [
+/** Default repos when PIPELINE_REPOS env var is not set */
+const DEFAULT_REPOS = [
   "kubestellar/console",
   "kubestellar/docs",
   "kubestellar/console-kb",
   "kubestellar/kubestellar-mcp",
   "kubestellar/console-marketplace",
   "kubestellar/homebrew-tap",
-] as const;
+];
+
+/**
+ * Repos scanned by the pipelines dashboard. Centralized: set the
+ * PIPELINE_REPOS env var to a comma-separated list of owner/repo strings
+ * to override (e.g. "myorg/myrepo" for a single-repo install, or
+ * "org/a,org/b,org/c" for multi-repo). If unset, defaults to the 6
+ * KubeStellar repos above. The repo list is returned in every API
+ * response so the frontend never hardcodes it.
+ */
+function getRepos(): string[] {
+  const env = process.env.PIPELINE_REPOS;
+  if (!env) return DEFAULT_REPOS;
+  return env.split(",").map((s) => s.trim()).filter(Boolean);
+}
+
+const REPOS = getRepos();
 
 /** The nightly release workflow on kubestellar/console — drives the Pulse card */
 const NIGHTLY_RELEASE_REPO = "kubestellar/console";
@@ -192,8 +208,8 @@ async function gh(path: string, token: string, init: RequestInit = {}): Promise<
   });
 }
 
-function isValidRepo(repo: string | null): repo is (typeof REPOS)[number] {
-  return !!repo && (REPOS as readonly string[]).includes(repo);
+function isValidRepo(repo: string | null): boolean {
+  return !!repo && REPOS.includes(repo);
 }
 
 /** YYYY-MM-DD in UTC */
@@ -789,8 +805,11 @@ export default async (req: Request): Promise<Response> => {
         return jsonResponse({ error: `Unknown view: ${view}` }, { status: 400, headers: baseHeaders });
     }
 
-    await writeCache(store, cacheKey, payload).catch(() => {});
-    return jsonResponse(payload, {
+    // Wrap payload with the repo list so the client never hardcodes it.
+    // Cards read `repos` from the response to populate their filter dropdown.
+    const wrapped = { ...(payload as Record<string, unknown>), repos: REPOS };
+    await writeCache(store, cacheKey, wrapped).catch(() => {});
+    return jsonResponse(wrapped, {
       headers: {
         ...baseHeaders,
         "Cache-Control": `public, max-age=${Math.floor(CACHE_TTL_MS / 1000)}`,
