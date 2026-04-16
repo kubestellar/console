@@ -45,7 +45,10 @@ import { UpdateIndicator } from '../UpdateIndicator'
 import { ToastProvider } from '../../../ui/Toast'
 
 describe('UpdateIndicator', () => {
-  it('renders without crashing', () => {
+  it('renders nothing when there is no update available', () => {
+    // useVersionCheck is mocked to return hasUpdate=null + no release, so the
+    // component should early-return null. Assert on the DOM, not on whether
+    // render() succeeded — `container` is always truthy if render didn't throw.
     const { container } = render(
       <MemoryRouter>
         <ToastProvider>
@@ -53,6 +56,6 @@ describe('UpdateIndicator', () => {
         </ToastProvider>
       </MemoryRouter>
     )
-    expect(container).toBeTruthy()
+    expect(container.firstChild).toBeNull()
   })
 })
