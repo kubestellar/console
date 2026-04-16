@@ -42,10 +42,17 @@ vi.mock('../../../../hooks/useFeatureHints', () => ({
 }))
 
 import { UpdateIndicator } from '../UpdateIndicator'
+import { ToastProvider } from '../../../ui/Toast'
 
 describe('UpdateIndicator', () => {
   it('renders without crashing', () => {
-    const { container } = render(<MemoryRouter><UpdateIndicator /></MemoryRouter>)
+    const { container } = render(
+      <MemoryRouter>
+        <ToastProvider>
+          <UpdateIndicator />
+        </ToastProvider>
+      </MemoryRouter>
+    )
     expect(container).toBeTruthy()
   })
 })
