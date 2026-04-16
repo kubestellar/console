@@ -59,7 +59,7 @@ const STEP_STATUS_CONFIG: Record<
 }
 
 function IntotoSupplyChainInternal({ config: _config }: IntotoSupplyChainProps) {
-  const { t } = useTranslation('cards')
+  const { t } = useTranslation(['cards', 'common'])
   const {
     statuses,
     isLoading,
@@ -359,7 +359,7 @@ Please proceed step by step.`,
       <CardSearchInput
         value={localSearch}
         onChange={setLocalSearch}
-        placeholder={t('common:searchLayouts' as any)}
+        placeholder={t('common:common.searchLayouts')}
       />
 
       {/* Layouts list */}
