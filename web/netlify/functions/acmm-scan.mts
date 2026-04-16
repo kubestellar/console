@@ -21,13 +21,14 @@
  *   - demoFallback: present (true) only when the live fetch failed and the
  *     function returned the demo catalog as a soft degradation; omitted
  *     otherwise.
- *   - error: always present on non-200 responses (400 invalid repo,
- *     404 repo not found, 405 method not allowed), carrying a short
- *     description of why the request was rejected. Also present on the
- *     200 demo-fallback response (alongside `demoFallback: true`),
- *     carrying the upstream GitHub error message so the UI can surface
- *     it (rate-limited, network error, etc.) while still rendering
- *     the demo catalog.
+ *   - error: present on non-200 JSON responses for rejected `GET` requests
+ *     (400 invalid repo, 404 repo not found, 405 method not allowed),
+ *     carrying a short description of why the request was rejected. The
+ *     204 `OPTIONS` CORS preflight response has no JSON body and
+ *     therefore no `error` field. Also present on the 200 demo-fallback
+ *     response (alongside `demoFallback: true`), carrying the upstream
+ *     GitHub error message so the UI can surface it (rate-limited,
+ *     network error, etc.) while still rendering the demo catalog.
  *
  * Optional env var:
  *   GITHUB_TOKEN — enables higher rate limits (5000 req/hr vs 60)
