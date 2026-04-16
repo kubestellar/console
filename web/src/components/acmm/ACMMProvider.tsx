@@ -69,6 +69,16 @@ export function ACMMProvider({ children }: { children: ReactNode }) {
     } catch {
       // ignore localStorage failures
     }
+    // Sync the URL so the current scan is always shareable. replaceState
+    // (not pushState) keeps the back button useful — picking a new repo
+    // is dashboard interaction, not navigation.
+    try {
+      const url = new URL(window.location.href)
+      url.searchParams.set('repo', trimmed)
+      window.history.replaceState(null, '', url.toString())
+    } catch {
+      // window/history unavailable (SSR)
+    }
     setRecentRepos((prev) => {
       const dedup = [trimmed, ...prev.filter((r) => r !== trimmed)].slice(0, MAX_RECENT_REPOS)
       try {
@@ -86,6 +96,13 @@ export function ACMMProvider({ children }: { children: ReactNode }) {
       localStorage.setItem(SELECTED_REPO_KEY, DEFAULT_REPO)
     } catch {
       // ignore
+    }
+    try {
+      const url = new URL(window.location.href)
+      url.searchParams.set('repo', DEFAULT_REPO)
+      window.history.replaceState(null, '', url.toString())
+    } catch {
+      // window/history unavailable
     }
   }, [])
 

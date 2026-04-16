@@ -7,7 +7,7 @@
  */
 
 import { useMemo, useRef, useState } from 'react'
-import { RefreshCw, X, ExternalLink, AlertCircle, Award, Copy, Check } from 'lucide-react'
+import { RefreshCw, X, ExternalLink, AlertCircle, Award, Copy, Check, Share2 } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { cn } from '../../lib/cn'
@@ -134,6 +134,25 @@ export function RepoPicker() {
           >
             <Award className="w-3.5 h-3.5 mr-1" />
             Get badge
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => copy(`${BADGE_SITE}/acmm?repo=${encodeURIComponent(repo)}`, 'share')}
+            title={`Copy a shareable link to this scan: ${BADGE_SITE}/acmm?repo=${repo}`}
+          >
+            {copied === 'share' ? (
+              <>
+                <Check className="w-3.5 h-3.5 mr-1 text-green-400" />
+                Copied
+              </>
+            ) : (
+              <>
+                <Share2 className="w-3.5 h-3.5 mr-1" />
+                Share
+              </>
+            )}
           </Button>
           <Button
             type="button"
