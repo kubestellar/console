@@ -294,11 +294,11 @@ export function DashboardPage({
   const emptyDescription = emptyState?.description || `Add cards to monitor your ${title.toLowerCase()} across clusters.`
 
   return (
-    // `min-w-0 max-w-full` + overflow-x-hidden on the outer wrapper prevents
-    // wide inline content (tables, pre blocks, long URLs) from pushing the
-    // whole page past the viewport width at narrow breakpoints (issues 6385,
-    // 6387, 6394). Individual scrollable children (tables) still get their
-    // own horizontal scroll inside this clipped box.
+    // Fragment wrapper: the overflow-x-hidden div prevents wide inline content
+    // from pushing the page past the viewport (issues 6385, 6387, 6394), but
+    // fixed-position children (FAB, customizer, modals) must live OUTSIDE it
+    // to avoid clipping when ancestors create a new containing block (issue 8464).
+    <>
     <div className="pt-16 min-w-0 max-w-full overflow-x-hidden">
       {/* Header */}
       <DashboardHeader
@@ -415,43 +415,48 @@ export function DashboardPage({
 
       {/* Dashboard-specific content */}
       {children}
-
-      {/* Floating action button — opens Dashboard Studio */}
-      <FloatingDashboardActions
-        onOpenCustomizer={() => setShowAddCard(true)}
-        onUndo={undo}
-        onRedo={redo}
-        canUndo={canUndo}
-        canRedo={canRedo}
-      />
-
-      {/* Dashboard Studio — unified customization panel */}
-      <DashboardCustomizer
-        isOpen={showAddCard}
-        onClose={() => { setShowAddCard(false); setAddCardSearch(''); setInsertAtIndex(null); setCustomizerInitialSection(undefined) }}
-        dashboardName={title}
-        onAddCards={handleAddCards}
-        existingCardTypes={cards.map(c => c.card_type)}
-        initialSection={customizerInitialSection}
-        initialSearch={addCardSearch}
-        onApplyTemplate={applyTemplate}
-        /* onExport not available on generic DashboardPage — only on Dashboard.tsx */
-        onReset={reset}
-        isCustomized={isCustomized}
-        onUndo={undo}
-        onRedo={redo}
-        canUndo={canUndo}
-        canRedo={canRedo}
-      />
-
-      {/* Configure Card Modal */}
-      <ConfigureCardModal
-        isOpen={!!configuringCard}
-        card={configureCardData}
-        onClose={() => setConfiguringCard(null)}
-        onSave={handleSaveCardConfig}
-      />
     </div>
+
+    {/* Fixed-position elements rendered outside overflow-x-hidden to prevent
+        viewport clipping (issue 8464). Parent overflow + ancestor transforms
+        can create a new containing block that clips position:fixed children. */}
+
+    {/* Floating action button — opens Dashboard Studio */}
+    <FloatingDashboardActions
+      onOpenCustomizer={() => setShowAddCard(true)}
+      onUndo={undo}
+      onRedo={redo}
+      canUndo={canUndo}
+      canRedo={canRedo}
+    />
+
+    {/* Dashboard Studio — unified customization panel */}
+    <DashboardCustomizer
+      isOpen={showAddCard}
+      onClose={() => { setShowAddCard(false); setAddCardSearch(''); setInsertAtIndex(null); setCustomizerInitialSection(undefined) }}
+      dashboardName={title}
+      onAddCards={handleAddCards}
+      existingCardTypes={cards.map(c => c.card_type)}
+      initialSection={customizerInitialSection}
+      initialSearch={addCardSearch}
+      onApplyTemplate={applyTemplate}
+      /* onExport not available on generic DashboardPage — only on Dashboard.tsx */
+      onReset={reset}
+      isCustomized={isCustomized}
+      onUndo={undo}
+      onRedo={redo}
+      canUndo={canUndo}
+      canRedo={canRedo}
+    />
+
+    {/* Configure Card Modal */}
+    <ConfigureCardModal
+      isOpen={!!configuringCard}
+      card={configureCardData}
+      onClose={() => setConfiguringCard(null)}
+      onSave={handleSaveCardConfig}
+    />
+    </>
   )
 }
 
