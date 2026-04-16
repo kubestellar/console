@@ -4,6 +4,7 @@ const CRITERIA: Criterion[] = [
   {
     id: 'aef:task-traceability',
     source: 'agentic-engineering-framework',
+    level: 3,
     category: 'governance',
     name: 'Task traceability ledger',
     description: 'Every agent task is logged with intent, inputs, and outputs.',
@@ -13,6 +14,7 @@ const CRITERIA: Criterion[] = [
   {
     id: 'aef:structural-gates',
     source: 'agentic-engineering-framework',
+    level: 2,
     category: 'governance',
     name: 'Structural gates',
     description: 'Config-enforced gates that block agents from touching protected areas without review.',
@@ -22,6 +24,7 @@ const CRITERIA: Criterion[] = [
   {
     id: 'aef:session-continuity',
     source: 'agentic-engineering-framework',
+    level: 2,
     category: 'governance',
     name: 'Session continuity doc',
     description: 'A persistent record the agent reads at session start to recover prior context.',
@@ -31,6 +34,7 @@ const CRITERIA: Criterion[] = [
   {
     id: 'aef:audit-trail',
     source: 'agentic-engineering-framework',
+    level: 4,
     category: 'governance',
     name: 'Audit trail workflow',
     description: 'A workflow that records agent-generated PRs and attributes them for later review.',
@@ -40,6 +44,7 @@ const CRITERIA: Criterion[] = [
   {
     id: 'aef:cross-tool-config',
     source: 'agentic-engineering-framework',
+    level: 4,
     category: 'governance',
     name: 'Cross-tool agent config',
     description: 'Agent instructions that apply across Claude, Copilot, Cursor, and other tools rather than being tool-specific.',
@@ -49,6 +54,7 @@ const CRITERIA: Criterion[] = [
   {
     id: 'aef:change-classification',
     source: 'agentic-engineering-framework',
+    level: 3,
     category: 'governance',
     name: 'Change classification policy',
     description: 'A documented policy that classifies changes by risk tier and routes them to appropriate review.',

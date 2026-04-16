@@ -8,6 +8,7 @@ import {
   DragStartEvent } from '@dnd-kit/core'
 import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import { dashboardSync } from './dashboardSync'
+import { hasUnifiedConfig } from '../../config/cards'
 import { DashboardCard, DashboardCardPlacement, NewCardInput } from './types'
 import { useDashboardUndoRedo } from '../../hooks/useUndoRedo'
 import { setAutoRefreshPaused } from '../cache'
@@ -141,8 +142,12 @@ export function useDashboardCards(
       const stored = localStorage.getItem(storageKey)
       if (stored) {
         const parsed = JSON.parse(stored) as DashboardCard[]
+        // Filter out card types that were removed from the registry (e.g.
+        // acmm_balance after #8426). Without this, users who visited
+        // before the removal keep a ghost card in their saved layout.
+        const valid = parsed.filter(c => hasUnifiedConfig(c.card_type))
         // Ensure every card has a position object (guards against old/corrupt data)
-        return parsed.map(c => ({
+        return valid.map(c => ({
           ...c,
           position: c.position || { w: 4, h: 2 } }))
       }

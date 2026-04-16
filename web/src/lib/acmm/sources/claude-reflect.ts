@@ -4,6 +4,7 @@ const CRITERIA: Criterion[] = [
   {
     id: 'claude-reflect:correction-capture',
     source: 'claude-reflect',
+    level: 3,
     category: 'self-tuning',
     name: 'Correction capture',
     description: 'A mechanism that captures user corrections during agent sessions and persists them.',
@@ -13,6 +14,7 @@ const CRITERIA: Criterion[] = [
   {
     id: 'claude-reflect:positive-reinforcement',
     source: 'claude-reflect',
+    level: 3,
     category: 'self-tuning',
     name: 'Positive reinforcement capture',
     description: 'A mechanism that captures confirmations of non-obvious correct behavior, not just corrections.',
@@ -22,6 +24,7 @@ const CRITERIA: Criterion[] = [
   {
     id: 'claude-reflect:claude-md-sync',
     source: 'claude-reflect',
+    level: 4,
     category: 'self-tuning',
     name: 'CLAUDE.md auto-sync',
     description: 'A workflow that syncs captured corrections/preferences into CLAUDE.md or AGENTS.md.',
@@ -31,6 +34,7 @@ const CRITERIA: Criterion[] = [
   {
     id: 'claude-reflect:preference-index',
     source: 'claude-reflect',
+    level: 3,
     category: 'self-tuning',
     name: 'Preference index',
     description: 'A structured index of captured preferences keyed by topic or file area.',
@@ -40,6 +44,7 @@ const CRITERIA: Criterion[] = [
   {
     id: 'claude-reflect:reflection-review',
     source: 'claude-reflect',
+    level: 4,
     category: 'self-tuning',
     name: 'Periodic reflection review',
     description: 'A scheduled job that surfaces captured reflections for human review and pruning.',
@@ -49,6 +54,7 @@ const CRITERIA: Criterion[] = [
   {
     id: 'claude-reflect:session-summary',
     source: 'claude-reflect',
+    level: 3,
     category: 'self-tuning',
     name: 'Session summary artifact',
     description: 'An end-of-session artifact that records what changed, what was tried, and what was learned.',

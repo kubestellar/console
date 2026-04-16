@@ -4,6 +4,7 @@ const CRITERIA: Criterion[] = [
   {
     id: 'fullsend:test-coverage',
     source: 'fullsend',
+    level: 2,
     category: 'readiness',
     name: 'Test coverage threshold',
     description: 'Documented or enforced test coverage floor.',
@@ -13,6 +14,7 @@ const CRITERIA: Criterion[] = [
   {
     id: 'fullsend:ci-cd-maturity',
     source: 'fullsend',
+    level: 2,
     category: 'readiness',
     name: 'CI/CD pipeline',
     description: 'A working CI/CD pipeline that runs on every PR.',
@@ -22,6 +24,7 @@ const CRITERIA: Criterion[] = [
   {
     id: 'fullsend:auto-merge-policy',
     source: 'fullsend',
+    level: 3,
     category: 'autonomy',
     name: 'Auto-merge policy',
     description: 'Explicit policy for when PRs auto-merge vs. escalate to humans.',
@@ -31,6 +34,7 @@ const CRITERIA: Criterion[] = [
   {
     id: 'fullsend:branch-protection-doc',
     source: 'fullsend',
+    level: 3,
     category: 'governance',
     name: 'Branch protection documentation',
     description: 'Documented branch protection rules (required reviews, status checks).',
@@ -40,6 +44,7 @@ const CRITERIA: Criterion[] = [
   {
     id: 'fullsend:production-feedback',
     source: 'fullsend',
+    level: 4,
     category: 'observability',
     name: 'Production feedback signal',
     description: 'A mechanism that feeds production observations back into the development loop.',
@@ -49,6 +54,7 @@ const CRITERIA: Criterion[] = [
   {
     id: 'fullsend:observability-runbook',
     source: 'fullsend',
+    level: 4,
     category: 'observability',
     name: 'Observability runbook',
     description: 'A runbook or guide describing how humans debug autonomous behavior.',
@@ -58,6 +64,7 @@ const CRITERIA: Criterion[] = [
   {
     id: 'fullsend:risk-assessment',
     source: 'fullsend',
+    level: 4,
     category: 'autonomy',
     name: 'Risk assessment config',
     description: 'A config that lets the agent assess blast radius before acting.',
@@ -67,6 +74,7 @@ const CRITERIA: Criterion[] = [
   {
     id: 'fullsend:rollback-drill',
     source: 'fullsend',
+    level: 3,
     category: 'readiness',
     name: 'Rollback drill',
     description: 'A documented or automated rollback procedure.',
