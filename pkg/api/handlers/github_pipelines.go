@@ -365,8 +365,16 @@ func (h *GitHubPipelinesHandler) Serve(c *fiber.Ctx) error {
 }
 
 func (h *GitHubPipelinesHandler) cacheKey(c *fiber.Ctx) string {
-	return fmt.Sprintf("%s:%s:%s:%s",
-		c.Query("view", "pulse"),
+	view := c.Query("view", "pulse")
+	// Pulse cache key includes the current hour so it rotates hourly
+	// and doesn't serve yesterday's release tag after a new nightly publishes.
+	datePrefix := ""
+	if view == "pulse" {
+		datePrefix = time.Now().UTC().Format("2006-01-02T15")
+	}
+	return fmt.Sprintf("%s:%s:%s:%s:%s",
+		view,
+		datePrefix,
 		c.Query("repo", "all"),
 		c.Query("days"),
 		c.Query("job"),
@@ -648,14 +656,13 @@ func (h *GitHubPipelinesHandler) buildPulse(c *fiber.Ctx) (any, error) {
 		}
 	}
 
-	// recent: oldest → newest (reverse of the API's newest-first ordering)
+	// Newest-first (matches NightlyE2EStatus: leftmost dot = most recent run)
 	window := releaseRuns
 	if len(window) > ghpPulseWindowDays {
 		window = window[:ghpPulseWindowDays]
 	}
 	recent := make([]ghpPulseRecent, 0, len(window))
-	for i := len(window) - 1; i >= 0; i-- {
-		r := window[i]
+	for _, r := range window {
 		recent = append(recent, ghpPulseRecent{
 			Conclusion: r.Conclusion, CreatedAt: r.CreatedAt, HTMLURL: r.HTMLURL,
 		})

@@ -402,9 +402,9 @@ async function buildPulse(
       : null,
     streak,
     streakKind,
+    // Newest-first (matches the nightly E2E card: leftmost dot = most recent run)
     recent: runs
       .slice(0, MATRIX_DEFAULT_DAYS)
-      .reverse()
       .map((r) => ({ conclusion: r.conclusion, createdAt: r.createdAt, htmlUrl: r.htmlUrl })),
     nextCron: "0 5 * * *", // embedded in release.yml — would parse it live but one-liner is fine
   };
@@ -756,8 +756,11 @@ export default async (req: Request): Promise<Response> => {
       return resp;
     }
 
-    // Reads — cache hit?
-    const cacheKey = `${view}:${url.searchParams.get("repo") ?? "all"}:${url.searchParams.get("days") ?? ""}:${url.searchParams.get("job") ?? ""}`;
+    // Reads — cache hit? Include UTC date in the pulse key so it rotates
+    // daily and doesn't serve yesterday's release tag for hours after a new
+    // nightly publishes. Other views are keyed by their query params.
+    const datePrefix = view === "pulse" ? new Date().toISOString().slice(0, 13) : ""; // hourly bucket for pulse
+    const cacheKey = `${view}:${datePrefix}:${url.searchParams.get("repo") ?? "all"}:${url.searchParams.get("days") ?? ""}:${url.searchParams.get("job") ?? ""}`;
     if (view !== "log") {
       const cached = await readCache<unknown>(store, cacheKey);
       if (cached) {
