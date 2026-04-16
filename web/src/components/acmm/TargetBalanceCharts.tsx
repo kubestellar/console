@@ -38,6 +38,8 @@ const AREA_OPACITY_HEX = 'CC'
 const WAVE_AMPLITUDE = 0.05
 /** Tooltip body font size in pixels. */
 const TOOLTIP_FONT_SIZE = 11
+/** Smooth transition duration (ms) when the slider changes levels. */
+const TRANSITION_DURATION_MS = 500
 
 /** AI share targets for PRs — climbs L1→L5. */
 const PR_AI_SHARE_BY_LEVEL: Record<number, number> = {
@@ -84,6 +86,9 @@ function buildOption(label: string, aiShare: number, total: number) {
   const weeks = Array.from({ length: PROJECTION_WEEKS }, (_, i) => `W${i + 1}`)
   return {
     backgroundColor: 'transparent',
+    animation: true,
+    animationDuration: TRANSITION_DURATION_MS,
+    animationEasing: 'cubicInOut' as const,
     grid: { left: 0, right: 0, top: CHART_TITLE_OFFSET_PX, bottom: 0 },
     xAxis: {
       type: 'category' as const,
@@ -145,7 +150,7 @@ export function TargetBalanceCharts({ level }: TargetBalanceChartsProps) {
       <div>
         <ReactECharts
           option={prOption}
-          notMerge={true}
+          notMerge={false}
           style={{ height: CHART_HEIGHT_PX, width: '100%' }}
           opts={{ renderer: 'svg' }}
         />
@@ -156,7 +161,7 @@ export function TargetBalanceCharts({ level }: TargetBalanceChartsProps) {
       <div>
         <ReactECharts
           option={issueOption}
-          notMerge={true}
+          notMerge={false}
           style={{ height: CHART_HEIGHT_PX, width: '100%' }}
           opts={{ renderer: 'svg' }}
         />
