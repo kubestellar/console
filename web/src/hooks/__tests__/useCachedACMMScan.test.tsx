@@ -7,7 +7,7 @@
  * logic is what's under test.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { renderHook, act, waitFor } from '@testing-library/react'
+import { renderHook, act } from '@testing-library/react'
 
 // ---------------------------------------------------------------------------
 // Mock useCache — the hook delegates all fetching/caching to it. We mock it
@@ -16,10 +16,15 @@ import { renderHook, act, waitFor } from '@testing-library/react'
 // ---------------------------------------------------------------------------
 
 const lastArgs: { current: Record<string, unknown> | null } = { current: null }
+// Capture the last `refetch` mock handed to the hook so tests can assert
+// `forceRefetch()` actually calls through to it.
+const lastRefetch: { current: ReturnType<typeof vi.fn> | null } = { current: null }
 
 vi.mock('../../lib/cache', () => ({
   useCache: (args: Record<string, unknown>) => {
     lastArgs.current = args
+    const refetch = vi.fn()
+    lastRefetch.current = refetch
     return {
       data: args.demoData,
       isLoading: false,
@@ -29,7 +34,7 @@ vi.mock('../../lib/cache', () => ({
       isFailed: false,
       consecutiveFailures: 0,
       lastRefresh: Date.now(),
-      refetch: vi.fn(),
+      refetch,
     }
   },
   REFRESH_RATES: { costs: 600_000, default: 120_000 },
@@ -38,13 +43,19 @@ vi.mock('../../lib/cache', () => ({
 import { useCachedACMMScan } from '../useCachedACMMScan'
 
 describe('useCachedACMMScan', () => {
+  // Capture the real fetch once so `afterEach` can restore it — otherwise a
+  // reassigned `globalThis.fetch` from one test would leak into later files.
+  const ORIGINAL_FETCH = globalThis.fetch
+
   beforeEach(() => {
     lastArgs.current = null
+    lastRefetch.current = null
     globalThis.fetch = vi.fn() as typeof globalThis.fetch
   })
 
   afterEach(() => {
     vi.restoreAllMocks()
+    globalThis.fetch = ORIGINAL_FETCH
   })
 
   it('uses the default repo when none is provided', () => {
@@ -102,6 +113,10 @@ describe('useCachedACMMScan', () => {
 
   it('forceRefetch flips the force flag and calls refetch', async () => {
     const { result } = renderHook(() => useCachedACMMScan('x/y'))
+    // Capture the mocked refetch that the hook received from useCache — we
+    // assert it gets invoked by forceRefetch() below.
+    const refetchMock = lastRefetch.current
+    expect(refetchMock).not.toBeNull()
     // Call the fetcher directly to verify the force flag makes it to the URL.
     const fetcher = lastArgs.current?.fetcher as () => Promise<unknown>
     globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
@@ -114,6 +129,9 @@ describe('useCachedACMMScan', () => {
     }) as typeof globalThis.fetch
 
     await act(async () => { await result.current.forceRefetch() })
+    // forceRefetch must delegate to the underlying cache.refetch — that's
+    // the "calls refetch" half of this test's contract.
+    expect(refetchMock).toHaveBeenCalledTimes(1)
     // Directly invoke the fetcher after forceRefetch — forceNextRef was set
     // to true in forceRefetch, so this first call should include &force=true.
     await act(async () => { await fetcher() })

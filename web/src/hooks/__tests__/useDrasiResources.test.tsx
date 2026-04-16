@@ -51,6 +51,10 @@ function serverWrap(data: unknown) {
 }
 
 describe('useDrasiResources', () => {
+  // Capture the real fetch once so `afterEach` can restore it — otherwise a
+  // reassigned `globalThis.fetch` from one test would leak into later files.
+  const ORIGINAL_FETCH = globalThis.fetch
+
   beforeEach(() => {
     mockActive.current = null
     fetchMap.clear()
@@ -71,6 +75,7 @@ describe('useDrasiResources', () => {
 
   afterEach(() => {
     vi.restoreAllMocks()
+    globalThis.fetch = ORIGINAL_FETCH
   })
 
   describe('no-fetch short-circuits', () => {
@@ -219,7 +224,7 @@ describe('useDrasiResources', () => {
       await waitFor(() => expect(result.current.data).not.toBeNull())
       const callsBefore = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length
 
-      await act(async () => { result.current.refetch() })
+      await act(async () => { await result.current.refetch() })
       await waitFor(() => {
         const callsAfter = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length
         expect(callsAfter).toBeGreaterThan(callsBefore)

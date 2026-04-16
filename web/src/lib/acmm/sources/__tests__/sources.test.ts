@@ -13,11 +13,16 @@ import {
   ALL_CRITERIA,
   ACMM_LEVELS,
 } from '../index'
+import type { CriterionCategory } from '../types'
 import { acmmSource } from '../acmm'
 import { fullsendSource } from '../fullsend'
 import { agenticEngineeringFrameworkSource } from '../agentic-engineering-framework'
 import { claudeReflectSource } from '../claude-reflect'
 
+// Pin the runtime whitelist to the `CriterionCategory` union via `satisfies` —
+// TypeScript will fail compilation if the union drifts, so we don't need to
+// also duplicate the literal list in a separate module. (`CriterionCategory`
+// is a type-only export, so it can't be reflected at runtime directly.)
 const VALID_CATEGORIES = [
   'feedback-loop',
   'readiness',
@@ -25,8 +30,10 @@ const VALID_CATEGORIES = [
   'observability',
   'governance',
   'self-tuning',
-]
-const VALID_SOURCES = ['acmm', 'fullsend', 'agentic-engineering-framework', 'claude-reflect']
+] as const satisfies readonly CriterionCategory[]
+// VALID_SOURCES is derived from SOURCES so adding a new source doesn't
+// require updating a second literal list.
+const VALID_SOURCES = SOURCES.map(s => s.id)
 
 describe('ACMM sources index', () => {
   it('SOURCES contains exactly four sources', () => {
@@ -40,8 +47,15 @@ describe('ACMM sources index', () => {
   })
 
   it('ALL_CRITERIA equals the union of every source.criteria list', () => {
-    const expected = SOURCES.flatMap(s => s.criteria).length
-    expect(ALL_CRITERIA.length).toBe(expected)
+    // Use deep-equality against the concatenated criteria so a swap (right
+    // count, wrong items) fails. Order mirrors the SOURCES declaration.
+    const expected = SOURCES.flatMap(s => s.criteria)
+    expect(ALL_CRITERIA).toEqual(expected)
+    // Also assert the ID set matches — redundant but makes the intent clear
+    // and surfaces any accidental dedup in ALL_CRITERIA.
+    expect(new Set(ALL_CRITERIA.map(c => c.id))).toEqual(
+      new Set(SOURCES.flatMap(s => s.criteria.map(c => c.id))),
+    )
   })
 
   it('ACMM_LEVELS is populated only from the acmm source', () => {
