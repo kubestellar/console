@@ -12,7 +12,7 @@
  * reset by clearing the localStorage key.
  */
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { BarChart3, ExternalLink, BookOpen, Layers, Wrench, GitBranch } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 
@@ -210,21 +210,3 @@ export function ACMMIntroModal({ isOpen, onClose }: ACMMIntroModalProps) {
   )
 }
 
-/**
- * Hook that controls intro modal visibility for the /acmm page.
- * Opens on mount unless the user previously dismissed with "don't show again".
- */
-export function useACMMIntroModal() {
-  const [isOpen, setIsOpen] = useState(false)
-
-  useEffect(() => {
-    if (!isACMMIntroDismissed()) {
-      setIsOpen(true)
-    }
-  }, [])
-
-  return {
-    isOpen,
-    onClose: () => setIsOpen(false),
-  }
-}

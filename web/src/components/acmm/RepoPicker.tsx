@@ -7,7 +7,7 @@
  */
 
 import { useMemo, useRef, useState } from 'react'
-import { RefreshCw, X, ExternalLink, AlertCircle, Award, Copy, Check, Share2 } from 'lucide-react'
+import { RefreshCw, X, ExternalLink, AlertCircle, Award, Copy, Check, Share2, Info } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { cn } from '../../lib/cn'
@@ -19,7 +19,7 @@ const BADGE_SITE = 'https://console.kubestellar.io'
 const COPIED_FEEDBACK_MS = 1500
 
 export function RepoPicker() {
-  const { repo, setRepo, recentRepos, scan } = useACMM()
+  const { repo, setRepo, recentRepos, scan, openIntro } = useACMM()
   const [input, setInput] = useState(repo)
   const [error, setError] = useState<string | null>(null)
   const [showBadge, setShowBadge] = useState(false)
@@ -66,6 +66,17 @@ export function RepoPicker() {
 
   return (
     <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b border-border">
+      <div className="max-w-screen-2xl mx-auto px-6 pt-2 pb-0">
+        <button
+          type="button"
+          onClick={openIntro}
+          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+          title="Re-open the ACMM intro"
+        >
+          <Info className="w-3 h-3" />
+          What is ACMM?
+        </button>
+      </div>
       <div className="max-w-screen-2xl mx-auto px-6 py-3 flex flex-wrap items-center gap-3">
         <form
           onSubmit={(e) => {

@@ -9,6 +9,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useCachedACMMScan, type UseACMMScanResult } from '../../hooks/useCachedACMMScan'
+import { isACMMIntroDismissed } from './ACMMIntroModal'
 
 const DEFAULT_REPO = 'kubestellar/console'
 const SELECTED_REPO_KEY = 'kubestellar-acmm-selected-repo'
@@ -21,6 +22,11 @@ interface ACMMContextValue {
   recentRepos: string[]
   clearRepo: () => void
   scan: UseACMMScanResult
+  /** Intro-modal visibility — lifted into context so the picker can
+   *  re-trigger the modal via "What is ACMM?" after dismissal. */
+  introOpen: boolean
+  openIntro: () => void
+  closeIntro: () => void
 }
 
 const ACMMContext = createContext<ACMMContextValue | null>(null)
@@ -57,8 +63,21 @@ function readRecentRepos(): string[] {
 export function ACMMProvider({ children }: { children: ReactNode }) {
   const [repo, setRepoState] = useState<string>(() => readInitialRepo())
   const [recentRepos, setRecentRepos] = useState<string[]>(() => readRecentRepos())
+  const [introOpen, setIntroOpen] = useState(false)
 
   const scan = useCachedACMMScan(repo)
+
+  // Auto-open the intro on first visit unless previously dismissed. The
+  // "What is ACMM?" link in RepoPicker can re-trigger via openIntro()
+  // regardless of dismissal state — manual recall always wins.
+  useEffect(() => {
+    if (!isACMMIntroDismissed()) {
+      setIntroOpen(true)
+    }
+  }, [])
+
+  const openIntro = useCallback(() => setIntroOpen(true), [])
+  const closeIntro = useCallback(() => setIntroOpen(false), [])
 
   const setRepo = useCallback((next: string) => {
     const trimmed = next.trim()
@@ -113,8 +132,8 @@ export function ACMMProvider({ children }: { children: ReactNode }) {
   }, [repo, recentRepos])
 
   const value = useMemo<ACMMContextValue>(
-    () => ({ repo, setRepo, recentRepos, clearRepo, scan }),
-    [repo, setRepo, recentRepos, clearRepo, scan],
+    () => ({ repo, setRepo, recentRepos, clearRepo, scan, introOpen, openIntro, closeIntro }),
+    [repo, setRepo, recentRepos, clearRepo, scan, introOpen, openIntro, closeIntro],
   )
 
   return <ACMMContext.Provider value={value}>{children}</ACMMContext.Provider>
