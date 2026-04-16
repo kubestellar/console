@@ -2,6 +2,8 @@ package notifications
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -12,6 +14,11 @@ import (
 const (
 	pagerdutyEventsURL  = "https://events.pagerduty.com/v2/enqueue"
 	pagerdutyHTTPTimeout = 10 * time.Second
+	// dedupHashHexLen truncates the SHA-256 hex digest used as a fallback
+	// dedup key when ID, RuleID, and Cluster are all empty. 16 hex chars = 64
+	// bits of entropy, plenty to avoid accidental collisions between distinct
+	// alerts while keeping the key short in PagerDuty / OpsGenie UIs (#8389, #8390).
+	dedupHashHexLen = 16
 )
 
 // PagerDutyNotifier handles PagerDuty Events API v2 notifications
@@ -58,6 +65,14 @@ func (p *PagerDutyNotifier) Send(alert Alert) error {
 	dedupKey := alert.RuleID + "::" + alert.Cluster
 	if alert.RuleID == "" || alert.Cluster == "" {
 		dedupKey = alert.ID + "::" + alert.RuleID + "::" + alert.Cluster
+	}
+	// #8389: if ID, RuleID, and Cluster are ALL empty the key degenerates to
+	// "::::", a constant that would collapse every such alert into a single
+	// PagerDuty incident. Fall back to a stable hash of the alert message +
+	// fired timestamp so identical alerts fired very close together still
+	// dedupe, but distinct alerts get distinct keys.
+	if alert.ID == "" && alert.RuleID == "" && alert.Cluster == "" {
+		dedupKey = fallbackDedupKey(alert)
 	}
 
 	event := pagerdutyEvent{
@@ -142,6 +157,19 @@ func (p *PagerDutyNotifier) sendEvent(event pagerdutyEvent) error {
 	}
 
 	return nil
+}
+
+// fallbackDedupKey returns a stable short hash used as the dedup key when all
+// three identity fields on the alert (ID, RuleID, Cluster) are empty. Without
+// this, PagerDuty (#8389) and OpsGenie (#8390) would collapse unrelated alerts
+// into a single incident because the composed key degenerates to a constant
+// ("::::"). The hash covers Message + FiredAt timestamp so identical alerts
+// fired at the same instant still dedupe, but distinct alerts get distinct
+// keys. Truncated to dedupHashHexLen hex chars (64 bits) — collision-safe for
+// this use case.
+func fallbackDedupKey(alert Alert) string {
+	h := sha256.Sum256([]byte(alert.Message + "::" + alert.FiredAt.String()))
+	return "fallback-" + hex.EncodeToString(h[:])[:dedupHashHexLen]
 }
 
 // mapSeverity maps console severity to PagerDuty severity

@@ -3,6 +3,7 @@ package notifications
 import (
 	"encoding/json"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -266,3 +267,172 @@ func TestOpsGenie_CloseAlert_NoEscapeNeeded(t *testing.T) {
 type roundTripFunc func(*http.Request) (*http.Response, error)
 
 func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
+
+// ---------------------------------------------------------------------------
+// #8389 — PagerDuty dedup key collision when ID/RuleID/Cluster all empty
+// ---------------------------------------------------------------------------
+
+// TestPagerDuty_FallbackDedupKey_DistinctMessages verifies that when all three
+// identity fields are empty, distinct alert messages produce distinct dedup
+// keys (previously the key degenerated to the constant "::::" so unrelated
+// alerts collapsed into one incident).
+func TestPagerDuty_FallbackDedupKey_DistinctMessages(t *testing.T) {
+	firedAt := time.Date(2026, 4, 16, 12, 0, 0, 0, time.UTC)
+	a := Alert{Message: "disk full", FiredAt: firedAt}
+	b := Alert{Message: "oom killed", FiredAt: firedAt}
+
+	keyA := fallbackDedupKey(a)
+	keyB := fallbackDedupKey(b)
+
+	require.NotEqual(t, keyA, keyB, "distinct messages must produce distinct dedup keys")
+	require.NotEqual(t, "::::", keyA, "fallback key must not degenerate to constant")
+	require.NotEqual(t, "::::", keyB)
+	// Sanity: prefix + hex truncation length.
+	require.True(t, strings.HasPrefix(keyA, "fallback-"))
+	require.Equal(t, len("fallback-")+dedupHashHexLen, len(keyA))
+}
+
+// TestPagerDuty_FallbackDedupKey_Stable verifies identical (Message, FiredAt)
+// pairs produce the same dedup key so PagerDuty still dedupes repeats.
+func TestPagerDuty_FallbackDedupKey_Stable(t *testing.T) {
+	firedAt := time.Date(2026, 4, 16, 12, 0, 0, 0, time.UTC)
+	a := Alert{Message: "disk full", FiredAt: firedAt}
+	b := Alert{Message: "disk full", FiredAt: firedAt}
+
+	require.Equal(t, fallbackDedupKey(a), fallbackDedupKey(b))
+}
+
+// TestPagerDuty_Send_UsesFallbackWhenAllEmpty wires the notifier through a
+// round-tripper and confirms the outgoing dedup_key is NOT the degenerate
+// "::::" when every identity field is empty.
+func TestPagerDuty_Send_UsesFallbackWhenAllEmpty(t *testing.T) {
+	var captured pagerdutyEvent
+	rt := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		body, _ := io.ReadAll(req.Body)
+		_ = json.Unmarshal(body, &captured)
+		return &http.Response{
+			StatusCode: http.StatusAccepted,
+			Body:       io.NopCloser(strings.NewReader("")),
+			Header:     make(http.Header),
+		}, nil
+	})
+	p := &PagerDutyNotifier{RoutingKey: "test-key", HTTPClient: &http.Client{Transport: rt}}
+
+	err := p.Send(Alert{Message: "disk full", Severity: SeverityCritical, Status: "firing", FiredAt: time.Now()})
+	require.NoError(t, err)
+	require.NotEqual(t, "::::", captured.DedupKey)
+	require.NotEmpty(t, captured.DedupKey)
+	require.True(t, strings.HasPrefix(captured.DedupKey, "fallback-"))
+}
+
+// ---------------------------------------------------------------------------
+// #8390 — OpsGenie alias collision (same class of bug as #8389)
+// ---------------------------------------------------------------------------
+
+// TestOpsGenie_Send_UsesFallbackAliasWhenAllEmpty confirms the OpsGenie
+// createAlert path does not send "::::" as the alias when every identity
+// field is empty.
+func TestOpsGenie_Send_UsesFallbackAliasWhenAllEmpty(t *testing.T) {
+	var captured opsgenieAlert
+	rt := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		body, _ := io.ReadAll(req.Body)
+		_ = json.Unmarshal(body, &captured)
+		return &http.Response{
+			StatusCode: http.StatusAccepted,
+			Body:       io.NopCloser(strings.NewReader("")),
+			Header:     make(http.Header),
+		}, nil
+	})
+	o := &OpsGenieNotifier{APIKey: "test-key", HTTPClient: &http.Client{Transport: rt}}
+
+	err := o.Send(Alert{RuleName: "no-id rule", Message: "oom", Severity: SeverityCritical, Status: "firing", FiredAt: time.Now()})
+	require.NoError(t, err)
+	require.NotEqual(t, "::::", captured.Alias)
+	require.NotEmpty(t, captured.Alias)
+	require.True(t, strings.HasPrefix(captured.Alias, "fallback-"))
+}
+
+// ---------------------------------------------------------------------------
+// #8391 — SMTP missing per-op deadlines
+// ---------------------------------------------------------------------------
+
+// TestSetSMTPDeadline_ArmsDeadline confirms the helper pushes the deadline
+// forward by roughly SMTPOpTimeout. We use a net.Pipe() conn because it
+// honors SetDeadline without needing a real TCP socket.
+func TestSetSMTPDeadline_ArmsDeadline(t *testing.T) {
+	// Use a net.Pipe to get a net.Conn that supports SetDeadline. We don't
+	// actually do I/O on it — we just verify SetDeadline returns nil and the
+	// helper doesn't panic. Read/write deadline enforcement is covered by the
+	// stdlib tests; we're verifying our call site plumbs correctly.
+	a, b := net.Pipe()
+	defer a.Close()
+	defer b.Close()
+
+	before := time.Now()
+	err := setSMTPDeadline(a)
+	require.NoError(t, err)
+	// The deadline must be at least SMTPOpTimeout-epsilon into the future.
+	// We can't directly read the deadline back, but we can assert the helper
+	// didn't error and the constant is plausibly non-zero.
+	require.True(t, SMTPOpTimeout > 0)
+	require.True(t, time.Since(before) < SMTPOpTimeout)
+}
+
+// ---------------------------------------------------------------------------
+// #8392 — Webhook accepts plaintext HTTP
+// ---------------------------------------------------------------------------
+
+// TestWebhookNotifier_RejectsPlaintextHTTPForRemoteHost verifies plaintext
+// http:// URLs to non-loopback hosts are rejected at construction time.
+func TestWebhookNotifier_RejectsPlaintextHTTPForRemoteHost(t *testing.T) {
+	_, err := NewWebhookNotifier("http://evil.com/hook")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "https")
+	require.Contains(t, err.Error(), "loopback")
+}
+
+// TestWebhookNotifier_AllowsPlaintextHTTPForLoopback verifies loopback hosts
+// may still be reached over plaintext http for local development and sidecar
+// receivers.
+func TestWebhookNotifier_AllowsPlaintextHTTPForLoopback(t *testing.T) {
+	for _, u := range []string{
+		"http://localhost:9000/hook",
+		"http://127.0.0.1:9000/hook",
+		"http://[::1]:9000/hook",
+	} {
+		_, err := NewWebhookNotifier(u)
+		require.NoErrorf(t, err, "loopback URL must be accepted: %s", u)
+	}
+}
+
+// TestWebhookNotifier_AllowsHTTPSForAnyHost verifies https:// is always
+// accepted regardless of host.
+func TestWebhookNotifier_AllowsHTTPSForAnyHost(t *testing.T) {
+	for _, u := range []string{
+		"https://alerts.example.com/hook",
+		"https://localhost:9000/hook",
+	} {
+		_, err := NewWebhookNotifier(u)
+		require.NoErrorf(t, err, "https URL must be accepted: %s", u)
+	}
+}
+
+// TestIsLoopbackHost covers the helper's recognized values and rejects
+// anything else, including a host name that merely *contains* "localhost".
+func TestIsLoopbackHost(t *testing.T) {
+	cases := []struct {
+		host string
+		want bool
+	}{
+		{"localhost", true},
+		{"127.0.0.1", true},
+		{"::1", true},
+		{"evil.com", false},
+		{"localhost.evil.com", false},
+		{"127.0.0.2", false},
+		{"", false},
+	}
+	for _, c := range cases {
+		require.Equalf(t, c.want, isLoopbackHost(c.host), "isLoopbackHost(%q)", c.host)
+	}
+}

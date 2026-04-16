@@ -55,6 +55,13 @@ func (o *OpsGenieNotifier) Send(alert Alert) error {
 	if alert.RuleID == "" || alert.Cluster == "" {
 		alias = alert.ID + "::" + alert.RuleID + "::" + alert.Cluster
 	}
+	// #8390: if ID, RuleID, and Cluster are ALL empty the alias degenerates to
+	// "::::" — a constant that would cause every such alert to share the same
+	// OpsGenie alias and resolve/overwrite each other. Fall back to a stable
+	// hash of the alert message + fired timestamp (see fallbackDedupKey).
+	if alert.ID == "" && alert.RuleID == "" && alert.Cluster == "" {
+		alias = fallbackDedupKey(alert)
+	}
 
 	if alert.Status == "resolved" {
 		return o.closeAlert(alias)

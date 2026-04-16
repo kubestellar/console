@@ -65,6 +65,12 @@ func NewWebhookNotifier(webhookURL string) (*WebhookNotifier, error) {
 	if u.Host == "" {
 		return nil, fmt.Errorf("webhook URL must have a host")
 	}
+	// #8392: reject plaintext http by default. Allow it only when the host
+	// is a loopback address so local development and in-cluster testing
+	// against sidecar receivers still work without TLS.
+	if u.Scheme == "http" && !isLoopbackHost(u.Hostname()) {
+		return nil, fmt.Errorf("webhook URL must use https (plaintext http allowed only for loopback hosts)")
+	}
 	if err := checkWebhookHostAllowed(u.Hostname()); err != nil {
 		return nil, err
 	}
@@ -80,6 +86,18 @@ func NewWebhookNotifier(webhookURL string) (*WebhookNotifier, error) {
 			},
 		},
 	}, nil
+}
+
+// isLoopbackHost returns true if host is a recognized loopback hostname or
+// address. Used to carve out an exception to the HTTPS-only webhook rule for
+// local development and in-cluster sidecar receivers (#8392).
+func isLoopbackHost(host string) bool {
+	switch host {
+	case "localhost", "127.0.0.1", "::1":
+		return true
+	default:
+		return false
+	}
 }
 
 // checkWebhookHostAllowed enforces the optional KC_WEBHOOK_ALLOWED_HOSTS
