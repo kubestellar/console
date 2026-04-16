@@ -121,8 +121,7 @@ export function ACMMProvider({ children }: { children: ReactNode }) {
   const closeIntro = useCallback(() => setIntroOpen(false), [])
 
   // Sync targetLevel to (detected level + 1) on scan complete so the slider
-  // opens "one level ahead" — naturally invites users to look at what's
-  // next rather than just confirming where they are.
+  // opens "one level ahead". Stops following the scan once the user drags.
   useEffect(() => {
     if (!userOverrodeLevel.current && scan.level.level) {
       setTargetLevelState(Math.min(MAX_LEVEL, scan.level.level + 1))

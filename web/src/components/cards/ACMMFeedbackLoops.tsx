@@ -7,7 +7,7 @@
  */
 
 import { useMemo, useState } from 'react'
-import { Check, X, Filter, ChevronDown, ChevronRight, Flag, Sparkles } from 'lucide-react'
+import { Check, X, Filter, ChevronDown, ChevronRight, Flag, Sparkles, Lock, Unlock } from 'lucide-react'
 import { useCardLoadingState } from './CardDataContext'
 import { CardSkeleton } from '../../lib/cards/CardComponents'
 import { useACMM } from '../acmm/ACMMProvider'
@@ -41,6 +41,45 @@ const SOURCE_FILES: Record<SourceId, string> = {
 }
 
 const CONSOLE_REPO = 'kubestellar/console'
+/** Mirrors the badge-function threshold: a level is "earned" once 70% of
+ *  its criteria are detected. Anything above earnedLevel is locked
+ *  (gamification — finish what you're on before the next level opens). */
+const LEVEL_COMPLETION_THRESHOLD = 0.7
+const LOCK_OVERRIDE_KEY = 'kc-acmm-locks-overridden'
+
+function readLocksOverridden(): boolean {
+  try {
+    return sessionStorage.getItem(LOCK_OVERRIDE_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+function persistLocksOverridden(v: boolean) {
+  try {
+    if (v) sessionStorage.setItem(LOCK_OVERRIDE_KEY, '1')
+    else sessionStorage.removeItem(LOCK_OVERRIDE_KEY)
+  } catch {
+    // ignore
+  }
+}
+
+/** Highest level where 70%+ of that level's ACMM criteria are detected.
+ *  Walks L1→L5 and stops at the first level that fails the threshold. */
+function computeEarnedLevel(detectedIds: Set<string>): number {
+  let earned = 1
+  for (let n = 2; n <= 5; n++) {
+    const required = ALL_CRITERIA.filter((c) => c.source === 'acmm' && c.level === n)
+    if (required.length === 0) continue
+    const detected = required.filter((c) => detectedIds.has(c.id)).length
+    if (detected / required.length >= LEVEL_COMPLETION_THRESHOLD) {
+      earned = n
+    } else {
+      break
+    }
+  }
+  return earned
+}
 
 function proposeChangeUrl(c: Criterion): string {
   const title = encodeURIComponent(`ACMM criterion fix: ${c.id}`)
@@ -56,17 +95,32 @@ function proposeChangeUrl(c: Criterion): string {
 }
 
 export function ACMMFeedbackLoops() {
-  const { scan, repo, targetLevel } = useACMM()
+  const { scan, repo } = useACMM()
   const { detectedIds, isLoading, isRefreshing, isDemoData, isFailed, consecutiveFailures, lastRefresh } = scan
   const { startMission } = useMissions()
 
   const [sourceFilter, setSourceFilter] = useState<SourceId | 'all'>('all')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
-  /** When true, hide criteria above the slider's targetLevel — lets the
-   *  user focus on what's relevant at their chosen exploration level.
-   *  Toggleable so they can still see the full inventory. */
-  const [filterByTargetLevel, setFilterByTargetLevel] = useState(true)
+  /** Session-scoped override that unlocks all higher-level criteria.
+   *  Persisted to sessionStorage so refreshes within the tab survive,
+   *  but a fresh tab/session re-locks the gamification gate. */
+  const [locksOverridden, setLocksOverridden] = useState<boolean>(() => readLocksOverridden())
+  /** Which row's lock-prompt is currently open (null = none). */
+  const [lockPromptId, setLockPromptId] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+
+  const earnedLevel = useMemo(() => computeEarnedLevel(detectedIds), [detectedIds])
+
+  function overrideLocks() {
+    setLocksOverridden(true)
+    persistLocksOverridden(true)
+    setLockPromptId(null)
+  }
+
+  function relock() {
+    setLocksOverridden(false)
+    persistLocksOverridden(false)
+  }
 
   function launchOne(c: Criterion) {
     startMission({
@@ -95,12 +149,16 @@ export function ACMMFeedbackLoops() {
       const detected = detectedIds.has(c.id)
       if (statusFilter === 'detected' && !detected) return false
       if (statusFilter === 'missing' && detected) return false
-      // Level filter: hide criteria above the slider's target. Criteria
-      // without a level (e.g. structural ones) are always shown.
-      if (filterByTargetLevel && c.level && c.level > targetLevel) return false
       return true
     })
-  }, [detectedIds, sourceFilter, statusFilter, filterByTargetLevel, targetLevel])
+  }, [detectedIds, sourceFilter, statusFilter])
+
+  /** Count of still-missing criteria at earnedLevel — used in the
+   *  override prompt copy. */
+  const missingAtEarned = useMemo(
+    () => ALL_CRITERIA.filter((c) => c.source === 'acmm' && c.level === earnedLevel && !detectedIds.has(c.id)).length,
+    [earnedLevel, detectedIds],
+  )
 
   if (showSkeleton) {
     return <CardSkeleton type="list" rows={6} />
@@ -126,19 +184,21 @@ export function ACMMFeedbackLoops() {
           </button>
         ))}
         <div className="ml-auto flex items-center gap-1">
-          {/* Level filter chip — driven by the Recommendations card slider
-              via shared targetLevel context. Click to toggle the constraint. */}
+          {/* Lock-status chip — gamification: rows above earnedLevel are
+              locked until the user finishes their current level. Click to
+              toggle the session-scoped override. */}
           <button
             type="button"
-            onClick={() => setFilterByTargetLevel((v) => !v)}
-            className={`px-2 py-0.5 text-[10px] rounded-full transition-colors ${
-              filterByTargetLevel
-                ? 'bg-primary text-primary-foreground'
+            onClick={locksOverridden ? relock : overrideLocks}
+            className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] rounded-full transition-colors ${
+              locksOverridden
+                ? 'bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30'
                 : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
             }`}
-            title={filterByTargetLevel ? `Showing criteria up to L${targetLevel} — click to show all levels` : 'Showing all levels — click to filter to slider'}
+            title={locksOverridden ? 'Locks overridden for this session — click to re-lock' : `Locked above L${earnedLevel} — click to override`}
           >
-            {filterByTargetLevel ? `≤ L${targetLevel}` : 'All levels'}
+            {locksOverridden ? <Unlock className="w-2.5 h-2.5" /> : <Lock className="w-2.5 h-2.5" />}
+            {locksOverridden ? 'Unlocked' : `L${earnedLevel}`}
           </button>
           {(['all', 'detected', 'missing'] as const).map((s) => (
             <button
@@ -160,24 +220,41 @@ export function ACMMFeedbackLoops() {
         {filtered.map((c) => {
           const detected = detectedIds.has(c.id)
           const isExpanded = expandedId === c.id
+          // Lock criteria above earnedLevel until the user finishes their
+          // current level (or chooses to override). Criteria without a
+          // level (structural ones) are never locked.
+          const isLocked = !locksOverridden && !!c.level && c.level > earnedLevel
+          const isLockPromptOpen = lockPromptId === c.id
           return (
             <div
               key={c.id}
-              className="rounded-md bg-muted/20 hover:bg-muted/40 transition-colors"
+              className={`rounded-md transition-colors ${
+                isLocked ? 'bg-muted/10 hover:bg-muted/20 opacity-60' : 'bg-muted/20 hover:bg-muted/40'
+              }`}
             >
               <button
                 type="button"
-                onClick={() => setExpandedId(isExpanded ? null : c.id)}
+                onClick={() => {
+                  if (isLocked) {
+                    setLockPromptId(isLockPromptOpen ? null : c.id)
+                    return
+                  }
+                  setExpandedId(isExpanded ? null : c.id)
+                }}
                 className="w-full flex items-center gap-2 px-2 py-1.5 text-left"
-                aria-expanded={isExpanded}
-                title={'Show detection rule'}
+                aria-expanded={isLocked ? isLockPromptOpen : isExpanded}
+                title={isLocked ? `Locked — finish L${earnedLevel} first` : 'Show detection rule'}
               >
-                {isExpanded ? (
+                {isLocked ? (
+                  <Lock className="w-3 h-3 text-muted-foreground/60 flex-shrink-0" />
+                ) : isExpanded ? (
                   <ChevronDown className="w-3 h-3 text-muted-foreground/60 flex-shrink-0" />
                 ) : (
                   <ChevronRight className="w-3 h-3 text-muted-foreground/60 flex-shrink-0" />
                 )}
-                {detected ? (
+                {isLocked ? (
+                  <Lock className="w-4 h-4 text-muted-foreground/40 flex-shrink-0" />
+                ) : detected ? (
                   <Check className="w-4 h-4 text-green-400 flex-shrink-0" />
                 ) : (
                   <X className="w-4 h-4 text-muted-foreground/40 flex-shrink-0" />
@@ -196,7 +273,34 @@ export function ACMMFeedbackLoops() {
                   {SOURCE_LABELS[c.source]}
                 </span>
               </button>
-              {isExpanded && (
+              {isLocked && isLockPromptOpen && (
+                <div className="px-8 pb-2 pt-1 text-[10px] border-t border-border/30 flex items-center justify-between gap-2 flex-wrap">
+                  <span className="text-muted-foreground">
+                    Locked — finish <span className="font-mono text-foreground">L{earnedLevel}</span> first
+                    {missingAtEarned > 0 && (
+                      <> ({missingAtEarned} {missingAtEarned === 1 ? 'criterion' : 'criteria'} still missing)</>
+                    )}.
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setLockPromptId(null)}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      Stay focused
+                    </button>
+                    <button
+                      type="button"
+                      onClick={overrideLocks}
+                      className="inline-flex items-center gap-1 text-yellow-400 hover:text-yellow-300"
+                    >
+                      <Unlock className="w-2.5 h-2.5" />
+                      Override anyway
+                    </button>
+                  </div>
+                </div>
+              )}
+              {!isLocked && isExpanded && (
                 <div className="px-8 pb-2 pt-0 text-[10px] space-y-1.5 border-t border-border/30">
                   {SOURCES_BY_ID[c.source]?.url && (
                     <div>
