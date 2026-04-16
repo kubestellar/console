@@ -15,7 +15,12 @@ interface SetupInstructionsDialogProps {
 
 const REPO_URL = 'https://github.com/kubestellar/console'
 const DOCS_URL = 'https://console-docs.kubestellar.io'
-const SECURITY_DOC_URL = 'https://github.com/kubestellar/console/blob/main/docs/security/SECURITY-MODEL.md'
+// Primary (user-friendly) security doc link — rendered docs site. Falls
+// back to the source-grounded repo version + AI-specific threat model
+// for readers who want the ground truth.
+const SECURITY_DOC_URL = 'https://kubestellar.io/docs/console/main/console/security-model/'
+const SECURITY_DOC_REPO_URL = 'https://github.com/kubestellar/console/blob/main/docs/security/SECURITY-MODEL.md'
+const SECURITY_AI_DOC_URL = 'https://github.com/kubestellar/console/blob/main/docs/security/SECURITY-AI.md'
 const CURL_BASE = 'https://raw.githubusercontent.com/kubestellar/console/main'
 
 const QUICKSTART_CMD = `curl -sSL ${CURL_BASE}/start.sh | bash`
@@ -262,14 +267,32 @@ export function SetupInstructionsDialog({ isOpen, onClose }: SetupInstructionsDi
                           never leaves your perimeter. The core cluster-management UX works with no AI at all.
                         </p>
                       </div>
-                      <div className="pt-1">
+                      <div className="pt-1 flex flex-col gap-1">
                         <a
                           href={SECURITY_DOC_URL}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1 text-purple-400 hover:text-purple-300"
                         >
-                          Read the full security model
+                          Read the full security model (docs.kubestellar.io)
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                        <a
+                          href={SECURITY_AI_DOC_URL}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-purple-400 hover:text-purple-300"
+                        >
+                          AI automation threat model (SECURITY-AI.md)
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                        <a
+                          href={SECURITY_DOC_REPO_URL}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                        >
+                          Source-grounded version on GitHub
                           <ExternalLink className="w-3 h-3" />
                         </a>
                       </div>

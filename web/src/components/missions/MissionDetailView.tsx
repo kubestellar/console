@@ -34,8 +34,13 @@ import { copyToClipboard } from '../../lib/clipboard'
 
 type TabId = 'install' | 'uninstall' | 'upgrade' | 'troubleshooting' | 'security'
 
-/** GitHub URL for the overall Console security model doc. Linked from the Security tab fallback / footer. */
-const SECURITY_MODEL_DOC_URL = 'https://github.com/kubestellar/console/blob/main/docs/security/SECURITY-MODEL.md'
+/** Primary (docs.kubestellar.io) URL for the Console security model. Linked
+ *  from the Security tab fallback / footer. Prefer the rendered docs site
+ *  for users; the repo version is the source-grounded reference. */
+const SECURITY_MODEL_DOC_URL = 'https://kubestellar.io/docs/console/main/console/security-model/'
+/** AI-specific threat model for LLM-backed automation (prompt injection,
+ *  supply chain, agent drift). Only lives in the repo. */
+const SECURITY_AI_DOC_URL = 'https://github.com/kubestellar/console/blob/main/docs/security/SECURITY-AI.md'
 
 interface TabDef {
   id: TabId
@@ -601,19 +606,34 @@ export function MissionDetailView({
                   />
                 ))}
                 {activeTab === 'security' && (
-                  <div className="mt-4 p-4 rounded-lg border border-purple-500/20 bg-purple-500/5 text-xs text-muted-foreground">
-                    The bullets above are specific to this mission. For the Console's overall security model — how kc-agent binds,
-                    where AI keys live, what leaves your machine, and how to run air-gapped — read the
-                    {' '}
-                    <a
-                      href={SECURITY_MODEL_DOC_URL}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-purple-400 hover:text-purple-300"
-                    >
-                      KubeStellar Console Security Model
-                      <ExternalLink className="w-3 h-3" />
-                    </a>.
+                  <div className="mt-4 p-4 rounded-lg border border-purple-500/20 bg-purple-500/5 text-xs text-muted-foreground space-y-1">
+                    <p>
+                      The bullets above are specific to this mission. For the Console's overall security model — how kc-agent binds,
+                      where AI keys live, what leaves your machine, and how to run air-gapped — read the
+                      {' '}
+                      <a
+                        href={SECURITY_MODEL_DOC_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-purple-400 hover:text-purple-300"
+                      >
+                        KubeStellar Console Security Model
+                        <ExternalLink className="w-3 h-3" />
+                      </a>.
+                    </p>
+                    <p>
+                      For the LLM-specific threat model (prompt injection, supply chain, agent drift), see the
+                      {' '}
+                      <a
+                        href={SECURITY_AI_DOC_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-purple-400 hover:text-purple-300"
+                      >
+                        AI automation threat model
+                        <ExternalLink className="w-3 h-3" />
+                      </a>.
+                    </p>
                   </div>
                 )}
               </>
@@ -636,6 +656,16 @@ export function MissionDetailView({
                         className="inline-flex items-center gap-1 text-purple-400 hover:text-purple-300"
                       >
                         Read the KubeStellar Console Security Model
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                      {' · '}
+                      <a
+                        href={SECURITY_AI_DOC_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-purple-400 hover:text-purple-300"
+                      >
+                        AI threat model
                         <ExternalLink className="w-3 h-3" />
                       </a>
                     </p>
