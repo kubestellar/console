@@ -299,9 +299,11 @@ function EventStreamInternal({ config }: { config?: EventStreamConfig }) {
         )}
       </div>
 
-      {/* Footer region: pagination + limited-access warning live here.
-          Both are conditional, so we reserve a fixed min-height to prevent
-          the card from growing/shrinking on refresh (#8384). */}
+      {/*
+       * Footer region: pagination + limited-access warning live here.
+       * Both are conditional, so we reserve a fixed min-height to prevent
+       * the card from growing/shrinking on refresh (#8384).
+       */}
       <div
         className="flex-shrink-0"
         style={{ minHeight: `${EVENT_STREAM_FOOTER_MIN_HEIGHT_PX}px` }}
