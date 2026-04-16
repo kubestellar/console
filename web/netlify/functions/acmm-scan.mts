@@ -13,16 +13,21 @@
  *     registry includes non-loop criteria from non-ACMM sources.
  *   - weeklyActivity: 16 weeks of WeeklyActivity entries —
  *     `{ week, aiPrs, humanPrs, aiIssues, humanIssues }`. `week` is an
- *     ISO `YYYY-Www` bucket; PR and issue counts split AI vs human by the
- *     `ai-generated` label.
+ *     ISO `YYYY-Www` bucket. Counts are split AI vs human by `isAIContribution`:
+ *     item is AI if the author login is in `AI_AUTHORS`, OR ends in `[bot]`,
+ *     OR any attached label is `ai-generated` — human otherwise.
  *   - fromCache: present (true) only on cache-hit responses; omitted on
  *     live scans and demo fallback.
  *   - demoFallback: present (true) only when the live fetch failed and the
  *     function returned the demo catalog as a soft degradation; omitted
  *     otherwise.
- *   - error: present only alongside `demoFallback: true` — carries the
- *     upstream GitHub error message so the UI can surface it
- *     (rate-limited, 404, etc.) while still rendering the demo catalog.
+ *   - error: always present on non-200 responses (400 invalid repo,
+ *     404 repo not found, 405 method not allowed), carrying a short
+ *     description of why the request was rejected. Also present on the
+ *     200 demo-fallback response (alongside `demoFallback: true`),
+ *     carrying the upstream GitHub error message so the UI can surface
+ *     it (rate-limited, network error, etc.) while still rendering
+ *     the demo catalog.
  *
  * Optional env var:
  *   GITHUB_TOKEN — enables higher rate limits (5000 req/hr vs 60)
