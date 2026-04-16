@@ -6,7 +6,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '../lib/auth'
-import { STORAGE_KEY_TOKEN } from '../lib/constants'
+import { STORAGE_KEY_TOKEN, STORAGE_KEY_HAS_SESSION } from '../lib/constants'
 import { BACKEND_DEFAULT_URL } from '../lib/constants'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import type { GitHubRewardsResponse } from '../types/rewards'
@@ -105,8 +105,18 @@ export function useGitHubRewards() {
   const fetchRewards = useCallback(async () => {
     if (!isAuthenticated || isDemoUser || !githubLogin) return
 
+    // #8494 — Support cookie-only sessions (#6590). The JWT may live
+    // exclusively in the HttpOnly kc_auth cookie with no token in
+    // localStorage. Check both the token AND the session hint so we
+    // don't bail out for cookie-only authenticated users.
     const token = localStorage.getItem(STORAGE_KEY_TOKEN)
-    if (!token) return
+    let hasCookieSession = false
+    try {
+      hasCookieSession = localStorage.getItem(STORAGE_KEY_HAS_SESSION) === 'true'
+    } catch {
+      // localStorage unavailable — fall through
+    }
+    if (!token && !hasCookieSession) return
 
     setIsLoading(true)
     try {
@@ -115,8 +125,15 @@ export function useGitHubRewards() {
       // validation on serverless). The Go backend ignores this param and reads
       // the login from the JWT instead — no security impact either way since
       // reward data is computed from public GitHub activity.
+      const headers: Record<string, string> = {}
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
+      }
       const res = await fetch(`${apiBase}/api/rewards/github?login=${encodeURIComponent(githubLogin)}`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers,
+        // #8494 — credentials: 'include' sends the HttpOnly kc_auth cookie
+        // for cookie-only sessions where no Bearer token is available.
+        credentials: 'include',
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
       if (!res.ok) throw new Error(`API error: ${res.status}`)
