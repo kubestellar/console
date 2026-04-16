@@ -15,6 +15,29 @@ const DEFAULT_REPO = 'kubestellar/console'
 const SELECTED_REPO_KEY = 'kubestellar-acmm-selected-repo'
 const RECENT_REPOS_KEY = 'kubestellar-acmm-recent-repos'
 const MAX_RECENT_REPOS = 5
+const REPO_SLUG_RE = /^[\w.-]+\/[\w.-]+$/
+
+/** Coerce common GitHub URL shapes to bare owner/repo so users can paste
+ *  what's in their address bar directly:
+ *    - https://github.com/owner/repo
+ *    - https://github.com/owner/repo.git
+ *    - https://github.com/owner/repo/tree/main/anything
+ *    - git@github.com:owner/repo.git
+ *    - github.com/owner/repo
+ *  Returns the input unchanged if it doesn't look like a GitHub URL —
+ *  REPO_SLUG_RE validation downstream still catches garbage. */
+export function normalizeRepoInput(raw: string): string {
+  const trimmed = raw.trim()
+  if (!trimmed) return trimmed
+  // SSH form: git@github.com:owner/repo(.git)?
+  const ssh = /^git@github\.com:([\w.-]+)\/([\w.-]+?)(?:\.git)?$/.exec(trimmed)
+  if (ssh) return `${ssh[1]}/${ssh[2]}`
+  // HTTPS / bare-host form. Strip protocol, optional www, github.com/, then
+  // peel any trailing /tree/... or .git suffix.
+  const httpsLike = /^(?:https?:\/\/)?(?:www\.)?github\.com\/([\w.-]+)\/([\w.-]+?)(?:\.git)?(?:\/.*)?$/.exec(trimmed)
+  if (httpsLike) return `${httpsLike[1]}/${httpsLike[2]}`
+  return trimmed
+}
 
 interface ACMMContextValue {
   repo: string
@@ -34,10 +57,14 @@ const ACMMContext = createContext<ACMMContextValue | null>(null)
 function readInitialRepo(): string {
   // URL param (?repo=owner/name) takes precedence so that badge links and
   // shared dashboard URLs open in-context regardless of the user's last selection.
+  // Also accepts a full github.com URL passed via ?repo= for convenience.
   try {
     const url = new URL(window.location.href)
     const fromUrl = url.searchParams.get('repo')
-    if (fromUrl && /^[\w.-]+\/[\w.-]+$/.test(fromUrl)) return fromUrl
+    if (fromUrl) {
+      const normalized = normalizeRepoInput(fromUrl)
+      if (REPO_SLUG_RE.test(normalized)) return normalized
+    }
   } catch {
     // window unavailable (SSR)
   }
@@ -80,7 +107,10 @@ export function ACMMProvider({ children }: { children: ReactNode }) {
   const closeIntro = useCallback(() => setIntroOpen(false), [])
 
   const setRepo = useCallback((next: string) => {
-    const trimmed = next.trim()
+    // Coerce pasted GitHub URLs to bare owner/repo so the rest of the
+    // pipeline (URL sync, badges, share link, scan endpoint) sees a
+    // canonical slug regardless of what the user typed.
+    const trimmed = normalizeRepoInput(next)
     if (!trimmed) return
     setRepoState(trimmed)
     try {

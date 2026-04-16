@@ -11,7 +11,7 @@ import { RefreshCw, X, ExternalLink, AlertCircle, Award, Copy, Check, Share2, In
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { cn } from '../../lib/cn'
-import { useACMM, DEFAULT_REPO } from './ACMMProvider'
+import { useACMM, DEFAULT_REPO, normalizeRepoInput } from './ACMMProvider'
 import { ALL_CRITERIA } from '../../lib/acmm/sources'
 
 const REPO_RE = /^[\w.-]+\/[\w.-]+$/
@@ -45,17 +45,21 @@ export function RepoPicker() {
   }
 
   function submit(next: string) {
-    const trimmed = next.trim()
-    if (!trimmed) {
-      setError('Enter a repo in owner/name format')
+    // Accept either bare owner/name or any common GitHub URL — normalize
+    // first, then validate. Reflects the cleaned slug back into the input
+    // so the user sees what got sent.
+    const normalized = normalizeRepoInput(next)
+    if (!normalized) {
+      setError('Enter a repo as owner/name or a github.com URL')
       return
     }
-    if (!REPO_RE.test(trimmed)) {
-      setError('Invalid format — use owner/name')
+    if (!REPO_RE.test(normalized)) {
+      setError('Invalid format — use owner/name or a github.com URL')
       return
     }
     setError(null)
-    setRepo(trimmed)
+    if (normalized !== next) setInput(normalized)
+    setRepo(normalized)
   }
 
   const detected = scan.data.detectedIds?.length ?? 0
@@ -91,7 +95,7 @@ export function RepoPicker() {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="owner/repo"
+              placeholder="owner/repo or https://github.com/owner/repo"
               inputSize="md"
               className={cn('font-mono', input && 'pr-8')}
               list="acmm-recent-repos"
