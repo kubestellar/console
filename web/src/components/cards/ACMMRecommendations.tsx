@@ -100,7 +100,7 @@ export function ACMMRecommendations() {
           Feedback Loops Inventory card via shared context. */}
       <div>
         <div className="flex items-center justify-between text-[10px] text-muted-foreground mb-1">
-          <span>Explore level</span>
+          <span>Explore level <span className="italic text-muted-foreground/60">— drag to preview AI vs human balance</span></span>
           <span className="font-mono text-foreground">L{targetLevel}</span>
         </div>
         <input
