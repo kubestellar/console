@@ -388,6 +388,12 @@
         "no": "No",
         "verified": "Browser notifications verified and working.",
         "enableInstructions": "Make sure notifications are enabled: System Settings → Notifications → Google Chrome → Allow Notifications",
+        "enableInstructionsChrome": "Make sure notifications are enabled: System Settings → Notifications → Google Chrome → Allow Notifications.",
+        "enableInstructionsFirefox": "Make sure notifications are enabled: System Settings → Notifications → Firefox → Allow Notifications, and check Firefox's site permissions for this page.",
+        "enableInstructionsSafari": "Make sure notifications are enabled: System Settings → Notifications → Safari → Allow Notifications, and Safari → Settings → Websites → Notifications.",
+        "enableInstructionsEdge": "Make sure notifications are enabled: System Settings → Notifications → Microsoft Edge → Allow Notifications.",
+        "enableInstructionsGeneric": "Make sure notifications are enabled in your operating system's notification settings for this browser, and in the browser's site permissions for this page.",
+        "dndHint": "Also check that Do Not Disturb / Focus mode is off — the OS suppresses notifications while it's on.",
         "tryAgain": "Try Again",
         "blocked": "Browser notifications are blocked. Enable them in your browser's site settings for this page, then reload.",
         "requestPermission": "Request Permission"

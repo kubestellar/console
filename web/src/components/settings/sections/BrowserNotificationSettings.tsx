@@ -7,11 +7,31 @@ import { isBrowserNotifVerified, setBrowserNotifVerified } from '../../../lib/no
 type BrowserNotifState = 'idle' | 'asked' | 'verified' | 'failed'
 
 /**
+ * Pick browser-specific instruction key. The OS-level notification center
+ * labels the browser differently depending on which one is installed, so
+ * showing "Google Chrome → Allow Notifications" to a Firefox user is wrong
+ * (#8305). Edge must match before Chrome because its UA contains "Chrome".
+ */
+export function detectInstructionKey(ua: string): string {
+  const u = ua.toLowerCase()
+  if (u.includes('edg/') || u.includes('edge/')) return 'settings.notifications.browser.enableInstructionsEdge'
+  if (u.includes('firefox/')) return 'settings.notifications.browser.enableInstructionsFirefox'
+  if (u.includes('safari/') && !u.includes('chrome/') && !u.includes('chromium/') && !u.includes('android')) {
+    return 'settings.notifications.browser.enableInstructionsSafari'
+  }
+  if (u.includes('chrome/') || u.includes('chromium/')) return 'settings.notifications.browser.enableInstructionsChrome'
+  return 'settings.notifications.browser.enableInstructionsGeneric'
+}
+
+/**
  * Browser notification settings sub-section.
  * Handles permission requests, test notifications, and verification flow.
  */
 export function BrowserNotificationSettings() {
   const { t } = useTranslation()
+  const instructionKey = detectInstructionKey(
+    typeof navigator !== 'undefined' ? navigator.userAgent : '',
+  )
   const [browserNotifState, setBrowserNotifState] = useState<BrowserNotifState>(
     () => (isBrowserNotifVerified() ? 'verified' : 'idle'),
   )
@@ -122,7 +142,10 @@ export function BrowserNotificationSettings() {
               <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
                 <X className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
                 <p className="text-sm text-amber-400">
-                  {t('settings.notifications.browser.enableInstructions')}
+                  {t(instructionKey as never)}
+                </p>
+                <p className="text-xs text-amber-400/80">
+                  {t('settings.notifications.browser.dndHint')}
                 </p>
               </div>
               <button
