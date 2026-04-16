@@ -89,6 +89,7 @@ export const DISCOVERABLE_DASHBOARDS: SidebarItem[] = [
   { id: 'services', name: 'Services', icon: 'Network', href: '/services', type: 'link', order: 17 },
   { id: 'storage', name: 'Storage', icon: 'HardDrive', href: '/storage', type: 'link', order: 18 },
   { id: 'workloads', name: 'Workloads', icon: 'Box', href: '/workloads', type: 'link', order: 19 },
+  { id: 'acmm', name: 'AI Codebase Maturity', icon: 'BarChart3', href: '/acmm', type: 'link', order: 20 },
 ]
 
 const DEFAULT_SECONDARY_NAV: SidebarItem[] = [
