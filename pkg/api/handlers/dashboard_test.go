@@ -23,6 +23,14 @@ const fiberTestTimeout = 5000
 func setupDashboardTest(userID uuid.UUID) (*fiber.App, *test.MockStore, *DashboardHandler) {
 	app := fiber.New()
 	mockStore := new(test.MockStore)
+
+	// CreateDashboard now enforces a per-user dashboard limit (#7010) by
+	// calling store.CountUserDashboards before creating. Register a default
+	// expectation so tests that don't override it return 0 (under limit) and
+	// proceed to creation. Tests exercising the limit can override with a
+	// higher return value before calling the handler.
+	mockStore.On("CountUserDashboards", userID).Return(0, nil).Maybe()
+
 	handler := NewDashboardHandler(mockStore)
 
 	// Inject userID into context (simulates auth middleware)

@@ -460,10 +460,19 @@ func TestServer_SettingsHandlers(t *testing.T) {
 		t.Fatalf("Failed to decode keys status: %v", err)
 	}
 
-	// API-key providers are intentionally hidden (only CLI-based agents shown),
-	// so the keys endpoint returns an empty list even when keys are configured.
-	if len(resp.Keys) != 0 {
-		t.Errorf("Expected empty keys list (API-key providers hidden), got %d entries", len(resp.Keys))
+	// handleGetKeysStatus now reports the nine chat-only HTTP providers registered
+	// in InitializeProviders (3 OpenAI-compatible gateways + 6 local LLM runners)
+	// so the Settings modal can render a per-provider base URL override field
+	// (#8248, #8254, #8256). CLI-based tool-capable agents remain hidden — they
+	// manage their own credentials. The list must be non-empty and all entries
+	// must carry a Provider name.
+	if len(resp.Keys) == 0 {
+		t.Error("Expected keys list to include chat-only HTTP providers, got 0 entries")
+	}
+	for _, k := range resp.Keys {
+		if k.Provider == "" {
+			t.Errorf("Key status entry missing Provider: %+v", k)
+		}
 	}
 }
 

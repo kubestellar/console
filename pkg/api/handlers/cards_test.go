@@ -199,8 +199,17 @@ func TestRecordFocus_BadBody_Returns400(t *testing.T) {
 	dashID := uuid.New()
 	cardID := uuid.New()
 
+	mockStore := new(test.MockStore)
+	// RecordFocus now runs requireEditorOrAdmin before parsing the body (#7011),
+	// which calls store.GetUser. Register an admin user so the role check passes
+	// and the handler proceeds to BodyParser, which is what this test exercises.
+	mockStore.On("GetUser", userID).Return(&models.User{
+		ID:   userID,
+		Role: models.UserRoleAdmin,
+	}, nil).Maybe()
+
 	rfs := &recordFocusStore{
-		MockStore: new(test.MockStore),
+		MockStore: mockStore,
 		card: &models.Card{
 			ID:          cardID,
 			DashboardID: dashID,

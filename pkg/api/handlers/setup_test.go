@@ -11,6 +11,7 @@ import (
 	"github.com/kubestellar/console/pkg/settings"
 	"github.com/kubestellar/console/pkg/store"
 	"github.com/kubestellar/console/pkg/test"
+	"github.com/stretchr/testify/mock"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic/fake"
@@ -80,6 +81,14 @@ func setupTestEnv(t *testing.T) *testEnv {
 		ID:   testAdminUserID,
 		Role: "admin",
 	}, nil)
+
+	// Cluster-group CRUD handlers persist definitions to the store (#7013).
+	// Register permissive mocks so TestClusterGroupsCRUD doesn't panic when
+	// the handler calls Save/Delete/List. Individual tests can override with
+	// an explicit expectation to assert specific persistence behavior.
+	mockStore.On("SaveClusterGroup", mock.Anything, mock.Anything).Return(nil).Maybe()
+	mockStore.On("DeleteClusterGroup", mock.Anything).Return(nil).Maybe()
+	mockStore.On("ListClusterGroups").Return(map[string][]byte{}, nil).Maybe()
 
 	app := fiber.New()
 
