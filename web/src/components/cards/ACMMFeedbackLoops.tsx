@@ -14,7 +14,7 @@ import { useACMM } from '../acmm/ACMMProvider'
 import { useMissions } from '../../hooks/useMissions'
 import { ALL_CRITERIA, SOURCES_BY_ID } from '../../lib/acmm/sources'
 import type { Criterion, SourceId } from '../../lib/acmm/sources/types'
-import { detectionLabel, singleCriterionPrompt } from '../../lib/acmm/missionPrompts'
+import { detectionLabel, singleCriterionPrompt, levelCompletionPrompt } from '../../lib/acmm/missionPrompts'
 
 type StatusFilter = 'all' | 'detected' | 'missing'
 
@@ -153,12 +153,24 @@ export function ACMMFeedbackLoops() {
     })
   }, [detectedIds, sourceFilter, statusFilter])
 
-  /** Count of still-missing criteria at earnedLevel — used in the
-   *  override prompt copy. */
-  const missingAtEarned = useMemo(
-    () => ALL_CRITERIA.filter((c) => c.source === 'acmm' && c.level === earnedLevel && !detectedIds.has(c.id)).length,
+  /** Still-missing criteria at earnedLevel — drives the override prompt
+   *  copy and the sticky "finish this level" footer button. */
+  const missingAtEarnedList = useMemo(
+    () => ALL_CRITERIA.filter((c) => c.source === 'acmm' && c.level === earnedLevel && !detectedIds.has(c.id)),
     [earnedLevel, detectedIds],
   )
+  const missingAtEarned = missingAtEarnedList.length
+
+  function launchLevelCompletion() {
+    if (missingAtEarnedList.length === 0) return
+    startMission({
+      title: `Finish ACMM L${earnedLevel} for ${repo}`,
+      description: `Add the ${missingAtEarnedList.length} missing L${earnedLevel} criteria to ${repo}`,
+      type: 'custom',
+      initialPrompt: levelCompletionPrompt(missingAtEarnedList, earnedLevel, repo),
+      context: { repo, earnedLevel, criterionIds: missingAtEarnedList.map((c) => c.id) },
+    })
+  }
 
   if (showSkeleton) {
     return <CardSkeleton type="list" rows={6} />
@@ -389,6 +401,22 @@ export function ACMMFeedbackLoops() {
           </div>
         )}
       </div>
+
+      {/* Sticky "finish this level" footer — gamification: gives the user
+          a one-click way to take on the missing criteria at their
+          earnedLevel, which is exactly what they need to unlock the next
+          one. Hidden once the level is complete or at L5 (terminal). */}
+      {missingAtEarned > 0 && earnedLevel < 5 && (
+        <button
+          type="button"
+          onClick={launchLevelCompletion}
+          className="mt-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-primary/20 text-primary hover:bg-primary/30 rounded-md transition-colors"
+          title={`Launch a mission that adds the ${missingAtEarned} missing L${earnedLevel} criteria to ${repo}, unlocking L${earnedLevel + 1}`}
+        >
+          <Sparkles className="w-3 h-3" />
+          Help me finish L{earnedLevel} ({missingAtEarned} missing) → unlock L{earnedLevel + 1}
+        </button>
+      )}
     </div>
   )
 }

@@ -74,3 +74,23 @@ For each item:
 - Return a brief summary of what changed for each criterion.
 Do not push or open a PR automatically — stop after commits so I can review.`
 }
+
+/** Mission prompt for finishing all missing criteria at a given ACMM
+ *  level — the gamification "complete this level to unlock the next"
+ *  flow. Used by the sticky footer in the Feedback Loops Inventory. */
+export function levelCompletionPrompt(criteria: Criterion[], earnedLevel: number, repo: string): string {
+  const list = criteria
+    .map((c, i) => `${i + 1}. ${c.name} (${SOURCE_LABELS[c.source]}) — detection: ${detectionLabel(c.detection)}`)
+    .join('\n')
+  return `Finish ACMM Level ${earnedLevel} for ${repo} by implementing the remaining missing criteria:
+
+${list}
+
+Why this matters: completing L${earnedLevel} unlocks L${earnedLevel + 1} on the ACMM dashboard and bumps the README badge.
+
+For each item:
+- Check whether an equivalent artifact already exists under a non-standard path (don't duplicate).
+- If truly missing, add the minimum change that matches the detection pattern and follows the repo's conventions.
+- Return a brief summary of what changed for each criterion.
+Do not push or open a PR automatically — stop after commits so I can review.`
+}
