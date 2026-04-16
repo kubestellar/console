@@ -15,6 +15,10 @@ import { emitWhatsNewUpdateClicked, emitWhatsNewRemindLater } from '../../lib/an
 
 const SNOOZE_STORAGE_KEY = 'kc-update-snoozed'
 
+// Clean up the removed kill-switch key so users who had it set during
+// development don't get a dead button. Runs once on module load.
+try { localStorage.removeItem('kc-whats-new-modal-disabled') } catch { /* ignore */ }
+
 const SNOOZE_DURATION_1H_MS = 60 * 60 * 1000
 const SNOOZE_DURATION_1D_MS = 24 * 60 * 60 * 1000
 const SNOOZE_DURATION_1W_MS = 7 * 24 * 60 * 60 * 1000
