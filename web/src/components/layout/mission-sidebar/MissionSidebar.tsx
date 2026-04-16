@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, lazy, Suspense } from 'react'
+import { isAnyModalOpen } from '../../../lib/modals'
 import {
   X,
   ChevronRight,
@@ -495,12 +496,19 @@ export function MissionSidebar() {
   const pendingMission = pendingRunMissionId ? missions.find(m => m.id === pendingRunMissionId) : null
 
   // Escape key: exit fullscreen first, then close sidebar.
-  // Skip when an overlay (MissionBrowser or MissionControlDialog) is open —
-  // those handle their own Escape and closing the sidebar behind them is wrong.
+  // Skip when an overlay (MissionBrowser, MissionControlDialog, or ANY
+  // BaseModal) is open — those handle their own Escape via the modal
+  // stack, and closing the sidebar behind them is wrong (#8428 follow-up).
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return
       if (showBrowser || showMissionControl) return
+      // Yield to any open BaseModal (ACMM intro, confirm dialog, etc.)
+      // — isAnyModalOpen() checks the global modal stack maintained by
+      // useModalNavigation. Without this guard, dismissing a modal also
+      // closes the sidebar behind it because both listeners fire on the
+      // same keypress.
+      if (isAnyModalOpen()) return
       if (isFullScreen) {
         setFullScreen(false)
       } else if (isSidebarOpen) {

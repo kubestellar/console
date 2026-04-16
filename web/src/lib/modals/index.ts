@@ -21,6 +21,7 @@ export {
   useModalFocusTrap,
   useModal,
   useModalState,
+  isAnyModalOpen,
   type UseModalOptions,
   type UseModalStateResult,
 } from './useModalNavigation'

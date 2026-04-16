@@ -10,6 +10,13 @@ import { UseModalNavigationOptions, UseModalNavigationResult } from './types'
 const modalStack: number[] = []
 let modalStackCounter = 0
 
+/** Returns true when at least one BaseModal is currently open. Used by
+ *  non-modal ESC handlers (e.g. the mission sidebar) to yield to the
+ *  front-most modal instead of closing the sidebar behind it. */
+export function isAnyModalOpen(): boolean {
+  return modalStack.length > 0
+}
+
 /**
  * #6749-B (Copilot on PR #6746) — Module-level stable no-op ref object
  * used as a fallback when a `useModal` caller omits `modalRef`/`backdropRef`.
