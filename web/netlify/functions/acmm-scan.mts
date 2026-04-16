@@ -6,8 +6,10 @@
  * /acmm dashboard's four cards.
  *
  * Input:  ?repo=owner/repo&force=true
- *         (`force` bypasses cache *reads* and refreshes the cached entry —
- *         the response body is always written back to the blob store)
+ *         (`force` bypasses cache *reads*; on a successful live scan the
+ *         cached entry is refreshed. Demo-fallback responses are not
+ *         cached, and all writes are best-effort — `store.set()` errors
+ *         are swallowed so a blob-store outage never fails the request.)
  *
  * Response body (JSON) — discriminated by HTTP status, and for 200 also
  * by the `demoFallback` / `fromCache` flags (both 200 shapes share the
