@@ -299,6 +299,28 @@ describe('useCardData deep branches', () => {
     // Sort no longer resets page — user stays on current page (#5209)
     expect(result.current.currentPage).toBe(3)
   })
+
+  it('goToPage reads totalPages from a ref so a Next click after data grows still advances (#8381)', () => {
+    // Simulate the EventStream scenario: the card mounts with a small
+    // initial dataset (1 page), then a background refresh expands the
+    // dataset to multiple pages. Before the ref fix, `goToPage` would
+    // clamp against the *initial* totalPages=1 captured in its render
+    // closure, so clicking Next silently snapped back to page 1.
+    const fewItems = items.slice(0, 3) // 3 items / page 5 = 1 page
+    const { result, rerender } = renderHook(
+      ({ data }: { data: TestItem[] }) => useCardData(data, config),
+      { initialProps: { data: fewItems } },
+    )
+    expect(result.current.totalPages).toBe(1)
+
+    // Data grows (simulates background refresh arriving).
+    rerender({ data: items })
+    expect(result.current.totalPages).toBe(3)
+
+    // Clicking Next must honor the *latest* totalPages, not the stale one.
+    act(() => { result.current.goToPage(2) })
+    expect(result.current.currentPage).toBe(2)
+  })
 })
 
 // ============================================================================

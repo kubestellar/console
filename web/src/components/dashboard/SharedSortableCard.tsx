@@ -148,7 +148,14 @@ export const SortableCard = memo(function SortableCard({ card, onConfigure, onRe
       {onInsertAfter && (
         <button
           onClick={(e) => { e.stopPropagation(); onInsertAfter() }}
-          className="absolute top-2 right-2 z-20 opacity-0 group-hover/card:opacity-100 transition-all w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold shadow-lg hover:scale-110 ring-2 ring-background"
+          // #8383: Anchor to the right edge centered vertically so the "+"
+          // sits between this card and the next column, not on top of the
+          // card header action row where the kebab / maximize / report
+          // buttons live. `top-2 right-2` from the original #8337 fix put
+          // this button in the same coordinate space as the kebab menu
+          // (which sits at roughly right:16px inside the header) causing
+          // a direct overlap at rest and on hover.
+          className="absolute top-1/2 -translate-y-1/2 right-2 z-20 opacity-0 group-hover/card:opacity-100 transition-all w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold shadow-lg hover:scale-110 ring-2 ring-background"
           aria-label="Add card"
           title="Add card here"
         >

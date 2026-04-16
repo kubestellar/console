@@ -984,11 +984,20 @@ ${aiEnabled ? '\nClick to run AI analysis now' : ''}`}
 
       {/* Search and View Mode Toggle */}
       <div className="flex items-center gap-2 mb-3">
+        {/*
+          #8385: `CardSearchInput` wraps the <input> in a div with a baked-in
+          `mb-4`, so when it sits inline with the view-mode toggle the search
+          input's outer box is taller than the toggle group. `items-center`
+          then vertically centers the two children but the visual top edges
+          no longer align, which reads as a misaligned "list / root cause"
+          toggle. `!mb-0` overrides the default bottom margin so both
+          children occupy the same vertical box.
+        */}
         <CardSearchInput
           value={search}
           onChange={setSearch}
           placeholder={t('common:common.searchIssues')}
-          className="flex-1"
+          className="flex-1 !mb-0"
         />
         {/* View mode toggle - only show if there are grouped items */}
         {rootCauseGroups.length > 0 && rootCauseGroups.some(g => g.items.length > 1) && (

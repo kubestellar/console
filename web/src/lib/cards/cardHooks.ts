@@ -470,13 +470,19 @@ export function useCardData<T, S extends string = string>(
   }, [filterResult.search, filterResult.localClusterFilter])
 
   // Ensure current page is valid when total pages shrinks (e.g., data errors).
-  // Only depend on totalPages — including currentPage causes an infinite loop
-  // when totalPages=0 because Math.max(1,0)=1 and 1>0 is always true (#5762).
+  // Uses functional setState to read the latest `currentPage` without including
+  // it in the dep array (adding it to deps causes an infinite loop when
+  // totalPages=0 because Math.max(1,0)=1 and 1>0 is always true — #5762).
+  // Previously the stale closure also meant a Next-click mid-refresh could
+  // read a pre-click `currentPage` and clamp an in-flight page update back
+  // down to `totalPages`, which looked like the page snapped back to 1
+  // (#8381). Functional setState + a totalPages ref (below) eliminate both
+  // stale reads.
   useEffect(() => {
-    if (totalPages > 0 && currentPage > totalPages) {
-      setCurrentPage(totalPages)
+    if (totalPages > 0) {
+      setCurrentPage((prev) => (prev > totalPages ? totalPages : prev))
     }
-  }, [totalPages]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [totalPages])
 
   // Paginate
   const paginatedItems = (() => {
@@ -485,8 +491,21 @@ export function useCardData<T, S extends string = string>(
     return sorted.slice(start, start + effectivePerPage)
   })()
 
+  // #8381: `goToPage` previously read `totalPages` from its render closure, so
+  // a Next click dispatched while a background refresh was producing a new
+  // `totalPages` could clamp against the *pre-render* value (e.g. 1) and
+  // silently snap the user back to page 1. Reading from a ref guarantees
+  // `goToPage` always clamps against the most recent totalPages. The ref is
+  // synced in an effect (not during render) to satisfy React's no-mutation
+  // -during-render rule.
+  const totalPagesRef = useRef(totalPages)
+  useEffect(() => {
+    totalPagesRef.current = totalPages
+  }, [totalPages])
+
   const goToPage = (page: number) => {
-    setCurrentPage(Math.max(1, Math.min(page, totalPages)))
+    const limit = totalPagesRef.current
+    setCurrentPage(Math.max(1, Math.min(page, limit)))
   }
 
   // Stable height for paginated container
