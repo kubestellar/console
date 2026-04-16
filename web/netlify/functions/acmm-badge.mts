@@ -16,6 +16,16 @@ const GITHUB_API = "https://api.github.com";
 const REPO_RE = /^[\w.-]+\/[\w.-]+$/;
 const API_TIMEOUT_MS = 15_000;
 const LEVEL_COMPLETION_THRESHOLD = 0.7;
+/**
+ * Badge cache window. ACMM level changes slowly (file-tree shape, not commit
+ * activity), so a 1 h cache is plenty. This is shared across three layers:
+ *   1. shields.io respects this in its `cacheSeconds` JSON field below
+ *   2. our CDN respects this in the `Cache-Control` header below
+ *   3. GitHub's camo image proxy fetches the badge SVG and caches it itself
+ * Bumping from the prior 5 min to 1 h cuts function invocations ~12× without
+ * any user-visible staleness for a maturity-level signal.
+ */
+const BADGE_CACHE_SECONDS = 3600;
 
 /** ACMM criteria grouped by level. Mirrors acmm-scan.mts CRITERIA entries. */
 const ACMM_IDS_BY_LEVEL: Record<number, string[]> = {
@@ -81,7 +91,7 @@ const ALLOWED_ORIGIN_RE = /^https?:\/\/(.*\.kubestellar\.io|localhost(:\d+)?)$/;
 
 function corsHeaders(origin: string | null): Record<string, string> {
   const headers: Record<string, string> = {
-    "Cache-Control": "public, max-age=300",
+    "Cache-Control": `public, max-age=${BADGE_CACHE_SECONDS}`,
   };
   if (origin && ALLOWED_ORIGIN_RE.test(origin)) {
     headers["Access-Control-Allow-Origin"] = origin;
@@ -156,6 +166,7 @@ export default async (req: Request) => {
         label: "ACMM",
         message: "invalid repo",
         color: "red",
+        cacheSeconds: BADGE_CACHE_SECONDS,
       }),
       {
         status: 200,
@@ -178,6 +189,7 @@ export default async (req: Request) => {
           label: "ACMM",
           message: "unavailable",
           color: "lightgrey",
+          cacheSeconds: BADGE_CACHE_SECONDS,
         }),
         {
           status: 200,
@@ -198,6 +210,7 @@ export default async (req: Request) => {
       message: `L${level} · ${name} · ${totalDetected}/${totalAcmm}`,
       color,
       namedLogo: "github",
+      cacheSeconds: BADGE_CACHE_SECONDS,
     }),
     {
       status: 200,

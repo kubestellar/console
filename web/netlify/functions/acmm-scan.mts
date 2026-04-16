@@ -58,8 +58,13 @@ import { getStore } from "@netlify/blobs";
 
 const GITHUB_API = "https://api.github.com";
 const CACHE_STORE = "acmm-scan";
-/** Per-repo cache TTL: 15 minutes. Scans are expensive and state changes slowly. */
-const CACHE_TTL_MS = 15 * 60 * 1000;
+/**
+ * Per-repo cache TTL: 1 hour. Scans are expensive (full repo tree fetch) and
+ * the maturity signal changes on the order of days, not minutes. Aligned with
+ * the badge function's `cacheSeconds: 3600` so badge re-fetches almost always
+ * land on a warm blob and never re-hit GitHub.
+ */
+const CACHE_TTL_MS = 60 * 60 * 1000;
 /** Request timeout for GitHub API calls */
 const API_TIMEOUT_MS = 15_000;
 /** How many weeks of contribution history to return */
