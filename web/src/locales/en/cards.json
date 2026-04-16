@@ -552,7 +552,7 @@
     "demoBadgeTitle": "This card displays demo data",
     "demoModeTitle": "Demo mode enabled - showing sample data",
     "live": "Live",
-    "liveBadgeTitle": "Showing live data",
+    "liveBadgeTitle": "Streaming live events — this card subscribes to a real-time feed. Cards without the badge refresh on a polling interval.",
     "refreshFailed": "Refresh failed",
     "refreshFailedCount": "{{count}} consecutive refresh failures",
     "refreshFailedCount_one": "{{count}} consecutive refresh failure",
