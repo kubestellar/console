@@ -544,8 +544,24 @@ export function MissionProvider({ children }: { children: ReactNode }) {
     } catch { return null }
   })
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
-    // #7313 — If there's a persisted active mission, open the sidebar on load
-    try { return !!localStorage.getItem(ACTIVE_MISSION_STORAGE_KEY) } catch { return false }
+    // #7313 — If there's a persisted active mission that is still
+    // in-progress, open the sidebar on load. Completed / failed /
+    // cancelled missions keep their ID in localStorage (so the
+    // transcript can be reviewed on reload) but should NOT force the
+    // sidebar open — that was annoying on every refresh.
+    try {
+      const persistedId = localStorage.getItem(ACTIVE_MISSION_STORAGE_KEY)
+      if (!persistedId) return false
+      // Cross-check against the persisted missions list.
+      const stored = localStorage.getItem(MISSIONS_STORAGE_KEY)
+      if (!stored) return false
+      const parsed = JSON.parse(stored) as Array<{ id: string; status: string }>
+      const match = (parsed || []).find(m => m.id === persistedId)
+      if (!match) return false
+      // Only auto-open for non-terminal statuses.
+      const terminalStatuses: Set<string> = new Set(['completed', 'failed', 'cancelled', 'saved'])
+      return !terminalStatuses.has(match.status)
+    } catch { return false }
   })
   const [isSidebarMinimized, setIsSidebarMinimized] = useState(false)
   const [isFullScreen, setIsFullScreen] = useState(false)
