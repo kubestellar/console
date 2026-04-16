@@ -65,12 +65,22 @@ func (p *LocalOpenAICompatProvider) DisplayName() string { return p.displayName 
 func (p *LocalOpenAICompatProvider) Provider() string    { return p.providerKey }
 func (p *LocalOpenAICompatProvider) Description() string { return p.description }
 
-// IsAvailable returns true when either the env var is set or the provider has
-// a non-empty default URL. Local runners typically have no API key — the OpenAI
-// helper accepts a sentinel value when CapabilityChat is the only capability,
-// so availability is driven by URL reachability rather than credential state.
+// IsAvailable reports whether an operator has EXPLICITLY configured this
+// runner via its URL env var or via Settings → API Keys (persisted as a
+// base-URL override in ~/.kc/config.yaml). Compiled-in loopback defaults
+// (Ollama, LM Studio) are deliberately NOT treated as "available" here —
+// otherwise the agent selector would flag those two runners as reachable on
+// any machine, even when the runner is not installed (#8255). Operators who
+// really do want the loopback path can set OLLAMA_URL / LM_STUDIO_URL
+// explicitly and the dropdown will light up immediately.
 func (p *LocalOpenAICompatProvider) IsAvailable() bool {
-	return p.localOpenAICompatBaseURL() != ""
+	if v := strings.TrimRight(os.Getenv(p.urlEnvVar), "/"); v != "" {
+		return true
+	}
+	if v := strings.TrimRight(GetConfigManager().GetBaseURL(p.providerKey), "/"); v != "" {
+		return true
+	}
+	return false
 }
 
 // Capabilities: chat only. These providers cannot execute cluster commands,
@@ -110,13 +120,17 @@ func (p *LocalOpenAICompatProvider) StreamChat(ctx context.Context, req *ChatReq
 // error.
 const localLLMPlaceholderKey = "local-llm-no-auth" //nolint:gosec // sentinel, not a credential
 
-// ensureLocalLLMPlaceholderKey seeds the config manager with the placeholder
-// key only when the operator has NOT explicitly set a real key via env var or
-// ~/.kc/config.yaml. Real keys always win.
+// ensureLocalLLMPlaceholderKey seeds an in-memory sentinel API key for the
+// runner ONLY when the operator has not explicitly set a real key via env
+// var or ~/.kc/config.yaml. The sentinel is stored in ConfigManager's
+// in-memory override (NOT persisted to disk) so read-only filesystems and
+// ephemeral containers do not see spurious writes to ~/.kc/config.yaml
+// (#8255). Real keys always win because GetAPIKey checks env → config →
+// in-memory in that order.
 func ensureLocalLLMPlaceholderKey(providerKey string) {
 	cm := GetConfigManager()
 	if cm.GetAPIKey(providerKey) == "" {
-		_ = cm.SetAPIKey(providerKey, localLLMPlaceholderKey)
+		cm.SetAPIKeyInMemory(providerKey, localLLMPlaceholderKey)
 	}
 }
 

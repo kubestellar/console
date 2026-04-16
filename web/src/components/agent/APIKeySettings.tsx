@@ -190,6 +190,32 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
     })
   }, [])
 
+  const fetchKeysStatus = useCallback(async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const response = await fetch(`${KC_AGENT_URL}/settings/keys`, {
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+      })
+      if (!response.ok) {
+        throw new Error(t('agent.failedToFetchKeyStatus'))
+      }
+      const data: KeysStatusResponse = await response.json()
+      setKeysStatus(data.keys)
+      setConfigPath(data.configPath)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('agent.failedToConnect'))
+    } finally {
+      setLoading(false)
+    }
+  }, [t])
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchKeysStatus()
+    }
+  }, [isOpen, fetchKeysStatus])
+
   const handleSaveBaseURL = useCallback(async (provider: string) => {
     const draft = (baseURLDraft[provider] ?? '').trim()
     setBaseURLError(e => ({ ...e, [provider]: '' }))
@@ -219,7 +245,7 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
     } finally {
       setSaving(false)
     }
-  }, [baseURLDraft, t])
+  }, [baseURLDraft, t, fetchKeysStatus])
 
   const copyInstallCommand = async () => {
     await copyToClipboard(INSTALL_COMMAND)
@@ -235,32 +261,6 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
       }
     }
   }, [])
-
-  const fetchKeysStatus = useCallback(async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const response = await fetch(`${KC_AGENT_URL}/settings/keys`, {
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      })
-      if (!response.ok) {
-        throw new Error(t('agent.failedToFetchKeyStatus'))
-      }
-      const data: KeysStatusResponse = await response.json()
-      setKeysStatus(data.keys)
-      setConfigPath(data.configPath)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('agent.failedToConnect'))
-    } finally {
-      setLoading(false)
-    }
-  }, [t])
-
-  useEffect(() => {
-    if (isOpen) {
-      fetchKeysStatus()
-    }
-  }, [isOpen, fetchKeysStatus])
 
   const handleSaveKey = async (provider: string) => {
     if (!newKeyValue.trim()) return

@@ -42,6 +42,11 @@ type ConfigManager struct {
 	config      *AgentConfig
 	keyValidity map[string]bool // Cache of key validity (true=valid, false=invalid)
 	validityMu  sync.RWMutex    // Separate mutex for validity cache
+	// inMemoryKeys holds provider API keys that should NOT be persisted to
+	// ~/.kc/config.yaml — for example the sentinel placeholder used by local
+	// LLM runners that do not enforce auth. Using an in-memory map avoids
+	// disk side-effects and works on read-only filesystems (#8255).
+	inMemoryKeys sync.Map // map[string]string
 }
 
 var (
@@ -132,7 +137,12 @@ func (cm *ConfigManager) saveLocked() error {
 	return nil
 }
 
-// GetAPIKey returns the API key for a provider (env var takes precedence)
+// GetAPIKey returns the API key for a provider. Precedence:
+//  1. Environment variable
+//  2. Persistent config file (~/.kc/config.yaml)
+//  3. In-memory override set via SetAPIKeyInMemory (e.g. local LLM sentinel)
+//
+// Real operator keys always win over in-memory placeholders.
 func (cm *ConfigManager) GetAPIKey(provider string) string {
 	// Environment variable takes precedence
 	envKey := getEnvKeyForProvider(provider)
@@ -145,11 +155,25 @@ func (cm *ConfigManager) GetAPIKey(provider string) string {
 	defer cm.mu.RUnlock()
 
 	if cm.config != nil {
-		if agentConfig, ok := cm.config.Agents[provider]; ok {
+		if agentConfig, ok := cm.config.Agents[provider]; ok && agentConfig.APIKey != "" {
 			return agentConfig.APIKey
 		}
 	}
+	// Finally, fall back to in-memory override (never persisted).
+	if v, ok := cm.inMemoryKeys.Load(provider); ok {
+		if s, ok := v.(string); ok {
+			return s
+		}
+	}
 	return ""
+}
+
+// SetAPIKeyInMemory stores a key for a provider WITHOUT writing to disk.
+// Used for sentinel placeholders (e.g. local LLM runners that do not
+// enforce auth) so read-only filesystems and ephemeral containers do not
+// see spurious writes to ~/.kc/config.yaml (#8255).
+func (cm *ConfigManager) SetAPIKeyInMemory(provider, apiKey string) {
+	cm.inMemoryKeys.Store(provider, apiKey)
 }
 
 // GetModel returns the model for a provider (env var takes precedence)
@@ -246,9 +270,23 @@ func (cm *ConfigManager) RemoveAPIKey(provider string) error {
 	return cm.saveLocked()
 }
 
-// HasAPIKey checks if a provider has an API key configured (env or config)
+// HasAPIKey checks if a provider has a REAL API key configured in the
+// environment or on disk. In-memory placeholders (see SetAPIKeyInMemory)
+// are deliberately ignored so local LLM runners are not reported as
+// "configured" just because the sentinel was seeded at chat time (#8255).
 func (cm *ConfigManager) HasAPIKey(provider string) bool {
-	return cm.GetAPIKey(provider) != ""
+	envKey := getEnvKeyForProvider(provider)
+	if envVal := os.Getenv(envKey); envVal != "" {
+		return true
+	}
+	cm.mu.RLock()
+	defer cm.mu.RUnlock()
+	if cm.config != nil {
+		if agentConfig, ok := cm.config.Agents[provider]; ok && agentConfig.APIKey != "" {
+			return true
+		}
+	}
+	return false
 }
 
 // IsFromEnv checks if the API key is from environment variable

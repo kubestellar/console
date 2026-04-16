@@ -1633,11 +1633,16 @@ type KeysStatusResponse struct {
 // Setting APIKey requires a valid key; setting BaseURL is independent
 // (operators can configure a base URL without an API key, which is the
 // common path for unauthenticated local LLM runners).
+//
+// To clear a previously-set base URL (reverting to the compiled-in default),
+// set ClearBaseURL=true with an empty BaseURL. This avoids the "missing
+// field" guard that rejects requests where all three fields are empty (#8259).
 type SetKeyRequest struct {
-	Provider string `json:"provider"`
-	APIKey   string `json:"apiKey,omitempty"`
-	Model    string `json:"model,omitempty"`
-	BaseURL  string `json:"baseURL,omitempty"`
+	Provider     string `json:"provider"`
+	APIKey       string `json:"apiKey,omitempty"`
+	Model        string `json:"model,omitempty"`
+	BaseURL      string `json:"baseURL,omitempty"`
+	ClearBaseURL bool   `json:"clearBaseURL,omitempty"`
 }
 
 // handleSettingsKeys handles GET and POST for /settings/keys

@@ -297,6 +297,15 @@ func (s *Server) handleGetKeysStatus(w http.ResponseWriter, r *http.Request) {
 		// their placeholder sentinel key against a real endpoint is
 		// pointless — we report Configured=true whenever a URL is set.
 		validationRequired bool
+		// isLocalLLM marks URL-driven providers (Ollama, llama.cpp, etc.)
+		// whose "configured" status is derived from URL presence rather
+		// than API key presence. This also drives the BaseURL resolution
+		// to include compiled-in defaults so the UI shows the current
+		// effective endpoint (#8259).
+		isLocalLLM bool
+		// defaultURL is the compiled-in loopback URL (e.g. Ollama on
+		// 127.0.0.1:11434). Empty for providers with no default.
+		defaultURL string
 	}
 
 	providers := []providerDef{
@@ -304,13 +313,14 @@ func (s *Server) handleGetKeysStatus(w http.ResponseWriter, r *http.Request) {
 		{name: "groq", displayName: "Groq", validationRequired: true},
 		{name: "openrouter", displayName: "OpenRouter", validationRequired: true},
 		{name: "open-webui", displayName: "Open WebUI", validationRequired: false},
-		// Local LLM runners — URL-driven, no API key by default
-		{name: "ollama", displayName: "Ollama (Local)"},
-		{name: "llamacpp", displayName: "llama.cpp (Local)"},
-		{name: "localai", displayName: "LocalAI (Local)"},
-		{name: "vllm", displayName: "vLLM (Local)"},
-		{name: "lm-studio", displayName: "LM Studio (Local)"},
-		{name: "rhaiis", displayName: "Red Hat AI Inference Server"},
+		// Local LLM runners — URL-driven, no API key by default.
+		// isLocalLLM=true changes Configured semantics: URL-present counts.
+		{name: ProviderKeyOllama, displayName: "Ollama (Local)", isLocalLLM: true, defaultURL: defaultOllamaURL},
+		{name: ProviderKeyLlamaCpp, displayName: "llama.cpp (Local)", isLocalLLM: true},
+		{name: ProviderKeyLocalAI, displayName: "LocalAI (Local)", isLocalLLM: true},
+		{name: ProviderKeyVLLM, displayName: "vLLM (Local)", isLocalLLM: true},
+		{name: ProviderKeyLMStudio, displayName: "LM Studio (Local)", isLocalLLM: true, defaultURL: defaultLMStudioURL},
+		{name: ProviderKeyRHAIIS, displayName: "Red Hat AI Inference Server", isLocalLLM: true},
 	}
 
 	keys := make([]KeyStatus, 0, len(providers))
@@ -321,14 +331,27 @@ func (s *Server) handleGetKeysStatus(w http.ResponseWriter, r *http.Request) {
 			Configured:  cm.HasAPIKey(p.name),
 		}
 
-		// Base URL metadata — surfaces the current resolved value and
-		// the env var name so the UI can render an Advanced expandable.
+		// Base URL metadata — surfaces the fully-resolved value (env →
+		// config → compiled default) and the env var name so the UI can
+		// render an Advanced expandable section.
 		status.BaseURL = cm.GetBaseURL(p.name)
 		status.BaseURLEnvVar = getBaseURLEnvKeyForProvider(p.name)
 		if status.BaseURLEnvVar != "" && os.Getenv(status.BaseURLEnvVar) != "" {
 			status.BaseURLSource = "env"
 		} else if status.BaseURL != "" {
 			status.BaseURLSource = "config"
+		}
+		// For local LLM runners, fall through to the compiled-in default
+		// so the UI always shows the effective endpoint (#8259).
+		if p.isLocalLLM && status.BaseURL == "" && p.defaultURL != "" {
+			status.BaseURL = p.defaultURL
+			status.BaseURLSource = "default"
+		}
+		// Local LLM runners are "configured" when a URL is reachable —
+		// either via env/config override or compiled-in default. Having
+		// only a sentinel placeholder API key is not enough (#8259).
+		if p.isLocalLLM {
+			status.Configured = status.BaseURL != ""
 		}
 
 		if status.Configured {
@@ -381,12 +404,13 @@ func (s *Server) handleSetKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// At least one of APIKey, BaseURL, or Model must be present — a request
-	// with none is a programming bug we should reject rather than silently
-	// store nothing.
-	if req.APIKey == "" && req.BaseURL == "" && req.Model == "" {
+	// At least one actionable field must be present — a request with none
+	// is a programming bug we should reject rather than silently store
+	// nothing. ClearBaseURL counts as actionable (it reverts the URL to
+	// the compiled-in default).
+	if req.APIKey == "" && req.BaseURL == "" && req.Model == "" && !req.ClearBaseURL {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "missing_field", Message: "At least one of apiKey, baseURL, or model is required"})
+		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "missing_field", Message: "At least one of apiKey, baseURL, model, or clearBaseURL is required"})
 		return
 	}
 
@@ -411,6 +435,16 @@ func (s *Server) handleSetKey(w http.ResponseWriter, r *http.Request) {
 		}
 		// Invalidate cached validity for this provider — the endpoint
 		// changed, so any previously-cached "key valid" result is stale.
+		cm.InvalidateKeyValidity(req.Provider)
+	} else if req.ClearBaseURL {
+		// Explicit clear: remove the persisted base URL override so the
+		// provider reverts to its compiled-in default URL (#8259).
+		if err := cm.RemoveBaseURL(req.Provider); err != nil {
+			slog.Error("clear base URL error", "error", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "save_failed", Message: "failed to clear base URL"})
+			return
+		}
 		cm.InvalidateKeyValidity(req.Provider)
 	}
 

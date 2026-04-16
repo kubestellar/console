@@ -3,20 +3,31 @@ import type { AgentInfo, AgentProvider } from '../../types/agent'
 // Providers that are cluster-based (rendered in bottom section)
 export const CLUSTER_PROVIDER_KEYS: AgentProvider[] = ['kagent', 'kagenti']
 
-// Local LLM runners. Each is registered in the backend agent registry but only
-// reports Available=true when its URL env var is set (or a loopback default
-// applies for Ollama / LM Studio). When they are NOT available, we still want
-// the dropdown to surface them with a link to their install mission so the
-// operator can get from "not set up" to "chatting with a local LLM" without
-// leaving the Console. Keep this map in sync with the provider keys in
-// pkg/agent/provider_local_openai_compat.go.
-export const LOCAL_LLM_INSTALL_MISSIONS: Readonly<Record<string, string>> = Object.freeze({
+// Install mission IDs for local/desktop LLM runners that the agent selector
+// should surface a "Install …" link for when they are not yet reachable.
+//
+// The first block tracks runners registered in
+// pkg/agent/provider_local_openai_compat.go — keep those entries in sync
+// with the ProviderKey* constants in that file.
+//
+// The second block covers runners that are NOT implemented by the local
+// OpenAI-compat provider (open-webui and claude-desktop are each registered
+// by their own provider files) but still need install-mission links in the
+// dropdown. They are listed here so agentSelectorUtils has one source of
+// truth for the dropdown UX.
+//
+// Typed as `Partial<Record<…>>` so indexing with an arbitrary agent name
+// narrows to `string | undefined` and callers are forced to handle the
+// "no mission registered" case (#8255).
+export const LOCAL_LLM_INSTALL_MISSIONS: Readonly<Partial<Record<string, string>>> = Object.freeze({
+  // Registered in pkg/agent/provider_local_openai_compat.go
   ollama: 'install-ollama',
   llamacpp: 'install-llama-cpp',
   localai: 'install-localai',
   vllm: 'install-vllm',
   'lm-studio': 'install-lm-studio',
   rhaiis: 'install-rhaiis',
+  // Registered by their own provider files, listed here for the dropdown
   'open-webui': 'install-open-webui',
   'claude-desktop': 'install-claude-desktop',
 })
