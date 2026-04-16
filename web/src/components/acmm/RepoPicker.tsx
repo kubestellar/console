@@ -18,6 +18,37 @@ const REPO_RE = /^[\w.-]+\/[\w.-]+$/
 const BADGE_SITE = 'https://console.kubestellar.io'
 const COPIED_FEEDBACK_MS = 1500
 
+/** shields.io color bands by level — must match acmm-badge.mts LEVEL_COLORS. */
+const BADGE_COLORS: Record<number, string> = {
+  1: '#9e9e9e',   // lightgrey
+  2: '#dfb317',   // yellow
+  3: '#97ca00',   // yellowgreen
+  4: '#44cc11',   // brightgreen
+  5: '#7b64ff',   // blueviolet
+}
+
+/** Locally-rendered badge preview — mirrors the shields.io two-tone pill
+ *  so the preview is instant and doesn't depend on an external service. */
+function BadgePreview({ level, levelName, detected, total }: {
+  level: number
+  levelName: string
+  detected: number
+  total: number
+}) {
+  const rightColor = BADGE_COLORS[level] ?? BADGE_COLORS[1]
+  return (
+    <span className="inline-flex items-stretch text-[11px] font-medium leading-none rounded overflow-hidden shadow-sm h-5">
+      <span className="px-1.5 flex items-center bg-[#555] text-white">ACMM</span>
+      <span
+        className="px-1.5 flex items-center text-white"
+        style={{ backgroundColor: rightColor }}
+      >
+        L{level} · {levelName} · {detected}/{total}
+      </span>
+    </span>
+  )
+}
+
 export function RepoPicker() {
   const { repo, setRepo, recentRepos, scan, openIntro } = useACMM()
   const [input, setInput] = useState(repo)
@@ -187,7 +218,12 @@ export function RepoPicker() {
       {showBadge && (
         <div className="max-w-screen-2xl mx-auto px-6 pb-3 space-y-2 text-xs">
           <div className="flex items-center gap-3 pt-1">
-            <img src={badgeImg} alt="ACMM badge preview" className="h-5" />
+            <BadgePreview
+              level={scan.level.level}
+              levelName={scan.level.levelName}
+              detected={detected}
+              total={totalCriteria}
+            />
             <span className="text-muted-foreground">
               Preview for <code className="font-mono">{repo}</code>
             </span>
