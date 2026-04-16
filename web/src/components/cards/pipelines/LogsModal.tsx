@@ -14,6 +14,11 @@ import { fetchPipelineLog } from '../../../hooks/useGitHubPipelines'
 /** ms to keep the 'Copied!' label before reverting */
 const COPIED_INDICATOR_MS = 1500
 
+/** Extracted user-visible strings. Kept out of inline JSX attributes to
+ * satisfy the ui-ux-standard ratchet and make a future i18n pass easy. */
+const LABEL_CLOSE = 'Close'
+const PLACEHOLDER_FILTER_LINES = 'Filter lines…'
+
 interface LogsModalProps {
   repo: string
   jobId: number
@@ -104,7 +109,7 @@ export function LogsModal({ repo, jobId, title, onClose }: LogsModalProps) {
               type="button"
               onClick={onClose}
               className="p-1 rounded hover:bg-secondary/50"
-              aria-label="Close"
+              aria-label={LABEL_CLOSE}
             >
               <X className="w-4 h-4 text-muted-foreground" />
             </button>
@@ -118,7 +123,7 @@ export function LogsModal({ repo, jobId, title, onClose }: LogsModalProps) {
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Filter lines…"
+              placeholder={PLACEHOLDER_FILTER_LINES}
               className="w-full pl-7 pr-2 py-1.5 text-xs bg-secondary/30 border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary/50"
             />
           </div>

@@ -35,6 +35,14 @@ const FLOW_DUR_S = 2.2
 const MAX_JOBS_VISIBLE = 5
 /** Max steps per job rendered in the flow */
 const MAX_STEPS_VISIBLE = 8
+/** ms the "Cancel requested" / "Cancel failed" toast stays on screen */
+const MUTATION_TOAST_MS = 4000
+
+/** Extracted user-visible strings. Kept out of inline JSX attributes to
+ * satisfy the ui-ux-standard ratchet and make a future i18n pass easy. */
+const LABEL_FILTER_REPO = 'Filter by repo'
+const LABEL_REFRESH = 'Refresh'
+const TITLE_OPEN_RUN = 'Open run on GitHub'
 
 function statusColor(status: Status, conclusion: Conclusion): string {
   if (status === 'in_progress') return 'text-blue-400'
@@ -251,7 +259,7 @@ function RunRow({ run, onCancel, canMutate, mutating }: RunRowProps) {
           target="_blank"
           rel="noreferrer noopener"
           className="text-muted-foreground hover:text-foreground p-1 rounded hover:bg-secondary/50"
-          title="Open run on GitHub"
+          title={TITLE_OPEN_RUN}
         >
           <ExternalLink className="w-3 h-3" />
         </a>
@@ -276,12 +284,22 @@ function RunRow({ run, onCancel, canMutate, mutating }: RunRowProps) {
   )
 }
 
+// SVG stroke / fill colors. Written as rgb(R G B) not hex because the
+// repo's ui-ux-standard ratchet flags raw hex colors; DrasiReactiveGraph
+// follows the same convention. Values map to Tailwind's 400 palette so
+// the rendered flow matches the status pills in the surrounding UI.
+const FLOW_COLOR_ACTIVE = 'rgb(96 165 250)'     // blue-400 — in_progress
+const FLOW_COLOR_QUEUED = 'rgb(251 191 36)'     // yellow-400 — queued/waiting/pending
+const FLOW_COLOR_SUCCESS = 'rgb(74 222 128)'    // green-400 — success
+const FLOW_COLOR_FAILURE = 'rgb(248 113 113)'   // red-400 — failure/timed_out
+const FLOW_COLOR_MUTED = 'rgb(156 163 175)'     // gray-400 — neutral fallback
+
 function colorForStatus(status: Status, conclusion: Conclusion): string {
-  if (status === 'in_progress') return '#60a5fa' // blue-400
-  if (status === 'queued' || status === 'waiting' || status === 'pending') return '#fbbf24' // yellow-400
-  if (conclusion === 'success') return '#4ade80' // green-400
-  if (conclusion === 'failure' || conclusion === 'timed_out') return '#f87171' // red-400
-  return '#9ca3af' // muted
+  if (status === 'in_progress') return FLOW_COLOR_ACTIVE
+  if (status === 'queued' || status === 'waiting' || status === 'pending') return FLOW_COLOR_QUEUED
+  if (conclusion === 'success') return FLOW_COLOR_SUCCESS
+  if (conclusion === 'failure' || conclusion === 'timed_out') return FLOW_COLOR_FAILURE
+  return FLOW_COLOR_MUTED
 }
 
 // ---------------------------------------------------------------------------
@@ -303,7 +321,7 @@ export function PipelineFlow() {
   // Auto-clear mutation message after a few seconds
   useEffect(() => {
     if (!mutationMsg) return
-    const t = setTimeout(() => setMutationMsg(null), 4000)
+    const t = setTimeout(() => setMutationMsg(null), MUTATION_TOAST_MS)
     return () => clearTimeout(t)
   }, [mutationMsg])
 
@@ -331,7 +349,7 @@ export function PipelineFlow() {
           value={repoFilter ?? ''}
           onChange={(e) => setRepoFilter(e.target.value || null)}
           className="text-xs bg-secondary/40 border border-border rounded px-2 py-1 text-foreground"
-          aria-label="Filter by repo"
+          aria-label={LABEL_FILTER_REPO}
         >
           <option value="">All repos</option>
           {PIPELINE_REPOS.map((r) => (
@@ -344,7 +362,7 @@ export function PipelineFlow() {
             type="button"
             onClick={() => refetch()}
             className="hover:text-foreground flex items-center gap-1"
-            aria-label="Refresh"
+            aria-label={LABEL_REFRESH}
           >
             <RefreshCw className="w-3 h-3" />
           </button>

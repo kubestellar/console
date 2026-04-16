@@ -17,6 +17,13 @@ import { cn } from '../../../lib/cn'
 /** Maximum ms duration we format compactly (1 hr). Over this, show "1h+" */
 const SHORT_DURATION_CAP_MS = 3_600_000
 
+/** Extracted user-visible strings. Kept out of inline JSX attributes to
+ * satisfy the ui-ux-standard ratchet and make a future i18n pass easy. */
+const LABEL_FILTER_REPO = 'Filter by repo'
+const LABEL_REFRESH = 'Refresh'
+const TITLE_VIEW_LOG = 'View log tail'
+const TITLE_OPEN_RUN = 'Open run on GitHub'
+
 function formatDuration(ms: number): string {
   if (ms < 1000) return `${ms}ms`
   const secs = Math.floor(ms / 1000)
@@ -72,7 +79,7 @@ export function RecentFailures() {
           value={repoFilter ?? ''}
           onChange={(e) => setRepoFilter(e.target.value || null)}
           className="text-xs bg-secondary/40 border border-border rounded px-2 py-1 text-foreground"
-          aria-label="Filter by repo"
+          aria-label={LABEL_FILTER_REPO}
         >
           <option value="">All repos</option>
           {PIPELINE_REPOS.map((r) => (
@@ -85,7 +92,7 @@ export function RecentFailures() {
             type="button"
             onClick={() => refetch()}
             className="hover:text-foreground flex items-center gap-1"
-            aria-label="Refresh"
+            aria-label={LABEL_REFRESH}
           >
             <RefreshCw className="w-3 h-3" />
           </button>
@@ -148,7 +155,7 @@ export function RecentFailures() {
                           title: `${r.workflow} / ${r.failedStep!.stepName}`,
                         })}
                         className="inline-flex items-center gap-1 px-2 py-0.5 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground"
-                        title="View log tail"
+                        title={TITLE_VIEW_LOG}
                       >
                         <FileText className="w-3 h-3" /> Log
                       </button>
@@ -170,7 +177,7 @@ export function RecentFailures() {
                       target="_blank"
                       rel="noreferrer noopener"
                       className="inline-flex items-center gap-1 px-2 py-0.5 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground ml-1"
-                      title="Open run on GitHub"
+                      title={TITLE_OPEN_RUN}
                     >
                       <ExternalLink className="w-3 h-3" />
                     </a>

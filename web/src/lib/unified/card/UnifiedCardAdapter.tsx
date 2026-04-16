@@ -247,6 +247,10 @@ export const UNIFIED_EXCLUDED_CARDS = new Set<string>([
   'cluster_health_monitor', 'namespace_monitor', 'workload_monitor',
   'prow_ci_monitor', 'github_ci_monitor',
 
+  // GitHub Pipelines dashboard — custom JSX rendering (sparkline strip,
+  // CSS heatmap grid, SVG flow, filter-aware table + drill-down modal)
+  'nightly_release_pulse', 'workflow_matrix', 'pipeline_flow', 'recent_failures',
+
   // Complex interactive cards
   'cluster_focus', 'cluster_groups', 'resource_marshall',
   'user_management', 'workload_deployment',

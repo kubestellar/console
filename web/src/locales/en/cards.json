@@ -282,7 +282,11 @@
     "strimzi_status": "Strimzi",
     "kubevela_status": "KubeVela",
     "cloudevents_status": "CloudEvents",
-    "keycloak_status": "Keycloak"
+    "keycloak_status": "Keycloak",
+    "nightly_release_pulse": "Nightly Release Pulse",
+    "workflow_matrix": "Workflow Matrix",
+    "pipeline_flow": "Live Runs",
+    "recent_failures": "Recent Failures"
   },
   "descriptions": {
     "cluster_health": "Overall health status of all connected Kubernetes clusters.",
@@ -457,7 +461,11 @@
     "strimzi_status": "Strimzi Kafka cluster health, topic status, and consumer group lag.",
     "kubevela_status": "KubeVela application delivery, component status, and workflow progress.",
     "cloudevents_status": "CloudEvents message flow, event source tracking, and delivery status.",
-    "keycloak_status": "Keycloak realm health, active user sessions, and registered clients."
+    "keycloak_status": "Keycloak realm health, active user sessions, and registered clients.",
+    "nightly_release_pulse": "Last release tag, success/failure streak, next scheduled nightly, and a 14-day history strip.",
+    "workflow_matrix": "Heatmap of every workflow run over the last 14, 30, or 90 days - surfaces chronic flakiness.",
+    "pipeline_flow": "Drasi-style flow visualization of in-flight GitHub Actions runs: trigger, workflow, jobs, steps.",
+    "recent_failures": "The last failed GitHub Actions runs with log drill-down and optional re-run."
   },
   "categories": {
     "core": "Core",
@@ -2953,7 +2961,7 @@
     "category": "Category",
     "updated": "Updated",
     "ago": "ago",
-    "searchPlaceholder": "Search OpenKruise resources\u2026",
+    "searchPlaceholder": "Search OpenKruise resources…",
     "filterByResource": "Filter by resource type",
     "healthyResources": "healthy resources",
     "failedResources": "resources with issues",
@@ -2962,7 +2970,7 @@
     "connectCluster": "Install OpenKruise on a connected cluster to see workloads",
     "installGuide": "OpenKruise install guide",
     "noClusters": "No clusters available",
-    "footer": "{{count}} resources \u2022 controller v{{version}} \u2022 {{scope}}",
+    "footer": "{{count}} resources • controller v{{version}} • {{scope}}",
     "nClustersScope": "{{count}} clusters",
     "docs": "Docs",
     "issueName": "{{category}} {{status}}",

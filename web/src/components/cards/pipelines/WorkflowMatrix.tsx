@@ -25,6 +25,10 @@ const MIN_CELL_PX = 10
  * long-windowed views) */
 const SPARSE_WORKFLOW_MIN_CELLS = 2
 
+/** Extracted user-visible strings. Kept out of inline JSX attributes to
+ * satisfy the ui-ux-standard ratchet and make a future i18n pass easy. */
+const LABEL_FILTER_REPO = 'Filter by repo'
+
 const CELL_CLASS: Record<string, string> = {
   success: 'bg-green-500/70 hover:bg-green-500',
   failure: 'bg-red-500/80 hover:bg-red-500',
@@ -72,7 +76,7 @@ export function WorkflowMatrix() {
             value={repoFilter ?? ''}
             onChange={(e) => setRepoFilter(e.target.value || null)}
             className="text-xs bg-secondary/40 border border-border rounded px-2 py-1 text-foreground"
-            aria-label="Filter by repo"
+            aria-label={LABEL_FILTER_REPO}
           >
             <option value="">All repos</option>
             {PIPELINE_REPOS.map((r) => (

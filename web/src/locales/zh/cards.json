@@ -275,7 +275,11 @@
     "contour_status": "Contour",
     "crio_status": "CRI-O",
     "coredns_status": "CoreDNS",
-    "cloudevents_status": "CloudEvents"
+    "cloudevents_status": "CloudEvents",
+    "nightly_release_pulse": "Nightly Release Pulse",
+    "workflow_matrix": "Workflow Matrix",
+    "pipeline_flow": "Live Runs",
+    "recent_failures": "Recent Failures"
   },
   "descriptions": {
     "cluster_health": "Overall health status of all connected Kubernetes clusters.",
@@ -440,7 +444,11 @@
     "flatcar_status": "Flatcar node OS versions, update status, and version distribution.",
     "contour_status": "Contour ingress proxy status, HTTPProxy resources.",
     "crio_status": "CRI-O container runtime metrics, image pulls, and pod sandbox status.",
-    "cloudevents_status": "CloudEvents message flow, event source tracking, and delivery status."
+    "cloudevents_status": "CloudEvents message flow, event source tracking, and delivery status.",
+    "nightly_release_pulse": "Last release tag, success/failure streak, next scheduled nightly, and a 14-day history strip.",
+    "workflow_matrix": "Heatmap of every workflow run over the last 14, 30, or 90 days - surfaces chronic flakiness.",
+    "pipeline_flow": "Drasi-style flow visualization of in-flight GitHub Actions runs: trigger, workflow, jobs, steps.",
+    "recent_failures": "The last failed GitHub Actions runs with log drill-down and optional re-run."
   },
   "categories": {
     "core": "Core",

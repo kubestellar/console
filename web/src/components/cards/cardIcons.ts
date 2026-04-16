@@ -5,7 +5,7 @@ import {
   FileCode, Gauge, AlertCircle, Layers, HardDrive, Globe, Users, Terminal, TrendingUp,
   Gamepad2, Puzzle, Target, Zap, Crown, Ghost, Bird, Rocket, Wand2, Stethoscope,
   MonitorCheck, Monitor, Workflow, Split, Router, BookOpen, Cloudy, Rss, Frame, Wrench, Phone,
-  Clock, Settings, BarChart3,
+  Clock, Settings, BarChart3, Grid3x3,
 } from 'lucide-react'
 
 export const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: string }>, color: string }> = {
@@ -178,6 +178,10 @@ export const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: stri
   llmd_stack_monitor: { icon: Cpu, color: 'text-purple-400' },
   prow_ci_monitor: { icon: Activity, color: 'text-blue-400' },
   github_ci_monitor: { icon: GitBranch, color: 'text-purple-400' },
+  nightly_release_pulse: { icon: Activity, color: 'text-green-400' },
+  workflow_matrix: { icon: Grid3x3, color: 'text-blue-400' },
+  pipeline_flow: { icon: GitBranch, color: 'text-purple-400' },
+  recent_failures: { icon: AlertTriangle, color: 'text-red-400' },
   cluster_health_monitor: { icon: Server, color: 'text-green-400' },
 
   // Provider health

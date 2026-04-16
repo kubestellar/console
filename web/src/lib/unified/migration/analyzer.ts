@@ -61,6 +61,7 @@ const COMPLEX_CARDS = new Set([
   'cluster_locations', 'cluster_comparison', 'cluster_network', 'service_topology',
   'cluster_resource_tree', 'workload_monitor', 'cluster_health_monitor',
   'llmd_stack_monitor', 'prow_ci_monitor', 'github_ci_monitor', 'resource_marshall',
+  'nightly_release_pulse', 'workflow_matrix', 'pipeline_flow', 'recent_failures',
   'cluster_groups', 'namespace_monitor', 'cluster_focus', 'user_management',
   // AI-ML flow cards
   'llmd_flow', 'epp_routing', 'kv_cache_monitor', 'pd_disaggregation',

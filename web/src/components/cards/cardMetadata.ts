@@ -36,6 +36,10 @@ export const CARD_TITLES: Record<string, string> = {
   llmd_stack_monitor: 'llm-d Stack Monitor',
   prow_ci_monitor: 'PROW CI Monitor',
   github_ci_monitor: 'GitHub CI Monitor',
+  nightly_release_pulse: 'Nightly Release Pulse',
+  workflow_matrix: 'Workflow Matrix',
+  pipeline_flow: 'Live Runs',
+  recent_failures: 'Recent Failures',
   cluster_health_monitor: 'Cluster Health Monitor',
 
   // Pod and resource cards
@@ -349,6 +353,10 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   llmd_stack_monitor: 'Monitor the llm-d inference stack: model serving, EPP, gateways, and autoscalers.',
   prow_ci_monitor: 'Monitor PROW CI jobs with success rates, failure analysis, and AI repair.',
   github_ci_monitor: 'Monitor GitHub Actions workflows across repos with pass rates and alerts.',
+  nightly_release_pulse: 'Last release tag, success/failure streak, next scheduled nightly, and a 14-day history strip.',
+  workflow_matrix: 'Heatmap of every workflow run over the last 14, 30, or 90 days — surfaces chronic flakiness.',
+  pipeline_flow: 'Drasi-style flow visualization of in-flight GitHub Actions runs: trigger, workflow, jobs, steps.',
+  recent_failures: 'The last failed GitHub Actions runs with log drill-down and optional re-run.',
   cluster_health_monitor: 'Monitor cluster health across all connected clusters with pod and deployment issues.',
   pod_issues: 'Pods with errors, restarts, or scheduling problems.',
   top_pods: 'Top resource-consuming pods ranked by CPU or memory usage.',
