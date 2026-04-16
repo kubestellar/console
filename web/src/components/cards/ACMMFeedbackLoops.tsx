@@ -216,10 +216,10 @@ export function ACMMFeedbackLoops() {
                 ? 'bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30'
                 : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
             }`}
-            title={locksOverridden ? 'Locks overridden for this session — click to re-lock' : `Locked above L${earnedLevel} — click to override`}
+            title={locksOverridden ? 'Locks overridden for this session — click to re-lock' : `Locked above L${earnedLevel + 1} — click to override`}
           >
             {locksOverridden ? <Unlock className="w-2.5 h-2.5" /> : <Lock className="w-2.5 h-2.5" />}
-            {locksOverridden ? 'Unlocked' : `L${earnedLevel}`}
+            {locksOverridden ? 'Unlocked' : `≤ L${earnedLevel + 1}`}
           </button>
           {(['all', 'detected', 'missing'] as const).map((s) => (
             <button
@@ -244,7 +244,9 @@ export function ACMMFeedbackLoops() {
           // Lock criteria above earnedLevel until the user finishes their
           // current level (or chooses to override). Criteria without a
           // level (structural ones) are never locked.
-          const isLocked = !locksOverridden && !!c.level && c.level > earnedLevel
+          // Lock criteria TWO+ levels above earned. The next level (earnedLevel+1)
+          // stays unlocked — that's what the user is actively working toward.
+          const isLocked = !locksOverridden && !!c.level && c.level > earnedLevel + 1
           const isLockPromptOpen = lockPromptId === c.id
           return (
             <div
