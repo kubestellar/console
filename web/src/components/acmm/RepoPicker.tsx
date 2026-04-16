@@ -14,12 +14,20 @@ import { cn } from '../../lib/cn'
 import { useACMM, DEFAULT_REPO, normalizeRepoInput } from './ACMMProvider'
 import { ALL_CRITERIA } from '../../lib/acmm/sources'
 
+/** ACMM-source criteria only — used for the badge preview to match the
+ *  shields.io badge endpoint which counts only ACMM criteria, not criteria
+ *  from other sources (fullsend, agentic-engineering-framework, etc.). */
+const ACMM_CRITERIA = ALL_CRITERIA.filter((c) => c.source === 'acmm')
+const ACMM_CRITERIA_IDS = new Set(ACMM_CRITERIA.map((c) => c.id))
+
 const REPO_RE = /^[\w.-]+\/[\w.-]+$/
 const BADGE_SITE = 'https://console.kubestellar.io'
 const COPIED_FEEDBACK_MS = 1500
 
-/** shields.io color bands by level — must match acmm-badge.mts LEVEL_COLORS.
- *  Hex values are intentional: this renders inline badge SVG-style colors. */
+/** Hex equivalents of the shields.io named colors used in acmm-badge.mts
+ *  LEVEL_COLORS (lightgrey, yellow, yellowgreen, brightgreen, blueviolet).
+ *  Hex values are needed here because the inline badge SVG preview renders
+ *  via CSS backgroundColor, not the shields.io color resolver. */
 const BADGE_COLORS: Record<number, string> = {
   1: '#9e9e9e',   // lightgrey  // ai-quality-ignore
   2: '#dfb317',   // yellow     // ai-quality-ignore
@@ -96,6 +104,14 @@ export function RepoPicker() {
 
   const detected = scan.data.detectedIds?.length ?? 0
   const totalCriteria = useMemo(() => ALL_CRITERIA.length, [])
+
+  /** ACMM-only counts for the badge preview — the shields.io endpoint only
+   *  counts ACMM criteria (per ACMM_IDS_BY_LEVEL), not other sources. */
+  const acmmDetected = useMemo(
+    () => (scan.data.detectedIds ?? []).filter((id) => ACMM_CRITERIA_IDS.has(id)).length,
+    [scan.data.detectedIds],
+  )
+  const acmmTotal = useMemo(() => ACMM_CRITERIA.length, [])
   const scannedLabel = scan.data.scannedAt
     ? new Date(scan.data.scannedAt).toLocaleTimeString()
     : '—'
@@ -222,8 +238,8 @@ export function RepoPicker() {
             <BadgePreview
               level={scan.level.level}
               levelName={scan.level.levelName}
-              detected={detected}
-              total={totalCriteria}
+              detected={acmmDetected}
+              total={acmmTotal}
             />
             <span className="text-muted-foreground">
               Preview for <code className="font-mono">{repo}</code>
