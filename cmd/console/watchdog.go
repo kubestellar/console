@@ -505,11 +505,35 @@ func pollBackendHealth(ctx context.Context, backendBase string, healthy *int32, 
 	}
 }
 
+// isAPIRequest returns true when the inbound request is an XHR/fetch call
+// rather than a top-level HTML navigation. The watchdog must hand those calls
+// a 503 JSON body, not the HTML fallback page — otherwise a cached page whose
+// `fetch('/api/…')` lands on the watchdog gets HTML back, the client JS tries
+// to parse it as JSON, and the UI control (e.g. the login button) silently
+// fails. `*/*` is the default `Accept` for browser `fetch()`, so Accept alone
+// can't disambiguate navigation from XHR.
+func isAPIRequest(r *http.Request) bool {
+	if strings.HasPrefix(r.URL.Path, "/api/") ||
+		strings.HasPrefix(r.URL.Path, "/ws/") ||
+		strings.HasPrefix(r.URL.Path, "/sse/") {
+		return true
+	}
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		return true
+	}
+	if strings.Contains(r.Header.Get("Accept"), "application/json") {
+		return true
+	}
+	return false
+}
+
 // serveFallback serves the appropriate response when the backend is down.
-// HTML requests get the branded reconnecting page; API requests get a 503 JSON response.
+// HTML navigations get the branded reconnecting page; API/XHR requests get a
+// 503 JSON response so client-side fetch handlers can react cleanly.
 func serveFallback(w http.ResponseWriter, r *http.Request) {
 	accept := r.Header.Get("Accept")
-	if strings.Contains(accept, "text/html") || accept == "" || accept == "*/*" {
+	wantsHTML := strings.Contains(accept, "text/html") || accept == "" || accept == "*/*"
+	if wantsHTML && !isAPIRequest(r) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.WriteHeader(http.StatusServiceUnavailable)
 		// Inject version info into the HTML template. Prefer the hash resolved

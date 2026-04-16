@@ -152,3 +152,87 @@ func TestWatchdogProxiesDegradedBackend(t *testing.T) {
 		t.Errorf("expected version=test via proxy, got %q", body["version"])
 	}
 }
+
+func TestServeFallback_APIRequestGetsJSON(t *testing.T) {
+	// Regression: a fetch() call to /api/auth while the backend is booting
+	// must return a 503 JSON body, not the HTML fallback. Otherwise the
+	// caller's `response.json()` call blows up on the HTML and the login
+	// button silently fails. `*/*` is the default fetch() Accept header, so
+	// Accept-based content negotiation alone is insufficient.
+	cases := []struct {
+		name   string
+		method string
+		path   string
+		accept string
+	}{
+		{"default fetch POST to /api/auth", "POST", "/api/auth/login", "*/*"},
+		{"default fetch GET to /api/version", "GET", "/api/version", "*/*"},
+		{"empty Accept POST", "POST", "/api/anything", ""},
+		{"text/html Accept on /api still JSON", "GET", "/api/version", "text/html"},
+		{"explicit application/json", "GET", "/something", "application/json"},
+		{"WebSocket upgrade path", "GET", "/ws/events", "*/*"},
+		{"SSE path", "GET", "/sse/stream", "*/*"},
+		{"non-GET method on root", "POST", "/", "*/*"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(tc.method, tc.path, nil)
+			if tc.accept != "" {
+				req.Header.Set("Accept", tc.accept)
+			}
+			rec := httptest.NewRecorder()
+			serveFallback(rec, req)
+
+			if rec.Code != http.StatusServiceUnavailable {
+				t.Errorf("status = %d, want %d", rec.Code, http.StatusServiceUnavailable)
+			}
+			if got := rec.Header().Get("Content-Type"); got != "application/json" {
+				t.Errorf("Content-Type = %q, want application/json", got)
+			}
+			var body map[string]string
+			if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
+				t.Fatalf("response body is not JSON: %v", err)
+			}
+			if body["error"] != "backend_unavailable" {
+				t.Errorf("body error = %q, want backend_unavailable", body["error"])
+			}
+		})
+	}
+}
+
+func TestServeFallback_NavigationGetsHTML(t *testing.T) {
+	// Top-level HTML navigations (browser hitting / or /login directly) must
+	// still render the branded reconnecting page so the user sees something
+	// better than a raw 503.
+	cases := []struct {
+		name   string
+		method string
+		path   string
+		accept string
+	}{
+		{"GET / with HTML accept", "GET", "/", "text/html,application/xhtml+xml"},
+		{"GET / with */*", "GET", "/", "*/*"},
+		{"GET /login with HTML accept", "GET", "/login", "text/html"},
+		{"GET /login with empty accept", "GET", "/login", ""},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(tc.method, tc.path, nil)
+			if tc.accept != "" {
+				req.Header.Set("Accept", tc.accept)
+			}
+			rec := httptest.NewRecorder()
+			serveFallback(rec, req)
+
+			if rec.Code != http.StatusServiceUnavailable {
+				t.Errorf("status = %d, want %d", rec.Code, http.StatusServiceUnavailable)
+			}
+			ct := rec.Header().Get("Content-Type")
+			if ct != "text/html; charset=utf-8" {
+				t.Errorf("Content-Type = %q, want text/html; charset=utf-8", ct)
+			}
+		})
+	}
+}
