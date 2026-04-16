@@ -6,13 +6,16 @@
  * /acmm dashboard's four cards.
  *
  * Input:  ?repo=owner/repo
- * Output: { repo, scannedAt, detectedIds, weeklyActivity, fromCache, demoFallback }
+ * Output: { repo, scannedAt, detectedIds, weeklyActivity, fromCache, demoFallback, error? }
  *   - detectedIds: array of criterion IDs (source-prefixed) matched against the
  *     repo tree. Frontend computes ACMM level + role + recommendations from
  *     this. Field is named `detectedIds`, not `detectedLoops`, because the
  *     registry includes non-loop criteria from non-ACMM sources.
  *   - weeklyActivity: 16 weeks of {weekStart, ai, human} merged-PR splits.
  *   - fromCache / demoFallback: provenance flags so the UI can show badges.
+ *   - error: present only when `demoFallback: true` — carries the upstream
+ *     GitHub error message so the UI can surface it (rate-limited, 404, etc.)
+ *     while still rendering the demo catalog.
  *
  * Optional env var:
  *   GITHUB_TOKEN — enables higher rate limits (5000 req/hr vs 60)
