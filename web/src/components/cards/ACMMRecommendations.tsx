@@ -10,6 +10,7 @@ import { Sparkles, Zap } from 'lucide-react'
 import { useCardLoadingState } from './CardDataContext'
 import { CardSkeleton } from '../../lib/cards/CardComponents'
 import { useACMM } from '../acmm/ACMMProvider'
+import { TargetBalanceCharts } from '../acmm/TargetBalanceCharts'
 import { useMissions } from '../../hooks/useMissions'
 import { SOURCES_BY_ID } from '../../lib/acmm/sources'
 import type { Recommendation } from '../../lib/acmm/computeRecommendations'
@@ -27,10 +28,25 @@ const SOURCE_LABELS: Record<SourceId, string> = {
   'claude-reflect': 'Reflect',
 }
 
+/** Static role names per level — used to render the "You are a/an X" line
+ *  that updates as the slider moves, not just on scan complete. */
+const ROLE_BY_LEVEL: Record<number, string> = {
+  1: 'Executor',
+  2: 'Rule-writer',
+  3: 'Analyst',
+  4: 'Governor',
+  5: 'Strategist',
+}
+const LEVEL_TICKS = [1, 2, 3, 4, 5] as const
+
 export function ACMMRecommendations() {
-  const { scan, repo } = useACMM()
+  const { scan, repo, targetLevel, setTargetLevel } = useACMM()
   const { level, recommendations, isLoading, isRefreshing, isDemoData, isFailed, consecutiveFailures, lastRefresh } = scan
   const { startMission } = useMissions()
+  // Use the slider's targetLevel for the role label so the card stays in
+  // sync with the projection. Falls back to detected role + role string
+  // when slider is at the detected level so we keep the original copy.
+  const displayedRole = targetLevel === level.level ? level.role : (ROLE_BY_LEVEL[targetLevel] ?? level.role)
 
   function launchOne(rec: Recommendation) {
     startMission({
@@ -70,11 +86,50 @@ export function ACMMRecommendations() {
 
   return (
     <div className="h-full flex flex-col p-2 gap-3 overflow-y-auto">
+      {/* Projected AI/Human balance at the slider's targetLevel. Synthetic
+          curves — labeled in the sub-component as "Projected" so users
+          don't read them as historical data. */}
+      <div>
+        <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">
+          Projected balance at L{targetLevel}
+        </div>
+        <TargetBalanceCharts level={targetLevel} />
+      </div>
+
+      {/* Level slider — drag to explore other levels. Filters the
+          Feedback Loops Inventory card via shared context. */}
+      <div>
+        <div className="flex items-center justify-between text-[10px] text-muted-foreground mb-1">
+          <span>Explore level</span>
+          <span className="font-mono text-foreground">L{targetLevel}</span>
+        </div>
+        <input
+          type="range"
+          min={1}
+          max={5}
+          step={1}
+          value={targetLevel}
+          onChange={(e) => setTargetLevel(Number(e.target.value))}
+          className="w-full accent-primary"
+          aria-label="Target ACMM level"
+        />
+        <div className="flex items-center justify-between text-[9px] text-muted-foreground mt-0.5">
+          {LEVEL_TICKS.map((n) => (
+            <span
+              key={n}
+              className={n === targetLevel ? 'text-primary font-bold' : ''}
+            >
+              L{n}
+            </span>
+          ))}
+        </div>
+      </div>
+
       <div>
         <div className="text-[10px] text-muted-foreground uppercase tracking-wide">
-          You are {/^[aeiou]/i.test(level.role) ? 'an' : 'a'}
+          You are {/^[aeiou]/i.test(displayedRole) ? 'an' : 'a'}
         </div>
-        <div className="text-xl font-bold text-primary">{level.role}</div>
+        <div className="text-xl font-bold text-primary">{displayedRole}</div>
         <p className="text-xs text-muted-foreground mt-1 leading-snug">{level.characteristic}</p>
       </div>
 

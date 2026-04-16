@@ -56,12 +56,16 @@ function proposeChangeUrl(c: Criterion): string {
 }
 
 export function ACMMFeedbackLoops() {
-  const { scan, repo } = useACMM()
+  const { scan, repo, targetLevel } = useACMM()
   const { detectedIds, isLoading, isRefreshing, isDemoData, isFailed, consecutiveFailures, lastRefresh } = scan
   const { startMission } = useMissions()
 
   const [sourceFilter, setSourceFilter] = useState<SourceId | 'all'>('all')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  /** When true, hide criteria above the slider's targetLevel — lets the
+   *  user focus on what's relevant at their chosen exploration level.
+   *  Toggleable so they can still see the full inventory. */
+  const [filterByTargetLevel, setFilterByTargetLevel] = useState(true)
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
   function launchOne(c: Criterion) {
@@ -91,9 +95,12 @@ export function ACMMFeedbackLoops() {
       const detected = detectedIds.has(c.id)
       if (statusFilter === 'detected' && !detected) return false
       if (statusFilter === 'missing' && detected) return false
+      // Level filter: hide criteria above the slider's target. Criteria
+      // without a level (e.g. structural ones) are always shown.
+      if (filterByTargetLevel && c.level && c.level > targetLevel) return false
       return true
     })
-  }, [detectedIds, sourceFilter, statusFilter])
+  }, [detectedIds, sourceFilter, statusFilter, filterByTargetLevel, targetLevel])
 
   if (showSkeleton) {
     return <CardSkeleton type="list" rows={6} />
@@ -119,6 +126,20 @@ export function ACMMFeedbackLoops() {
           </button>
         ))}
         <div className="ml-auto flex items-center gap-1">
+          {/* Level filter chip — driven by the Recommendations card slider
+              via shared targetLevel context. Click to toggle the constraint. */}
+          <button
+            type="button"
+            onClick={() => setFilterByTargetLevel((v) => !v)}
+            className={`px-2 py-0.5 text-[10px] rounded-full transition-colors ${
+              filterByTargetLevel
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
+            }`}
+            title={filterByTargetLevel ? `Showing criteria up to L${targetLevel} — click to show all levels` : 'Showing all levels — click to filter to slider'}
+          >
+            {filterByTargetLevel ? `≤ L${targetLevel}` : 'All levels'}
+          </button>
           {(['all', 'detected', 'missing'] as const).map((s) => (
             <button
               key={s}

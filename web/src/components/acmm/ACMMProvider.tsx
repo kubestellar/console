@@ -6,7 +6,7 @@
  * to localStorage so revisits resume where the user left off.
  */
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useCachedACMMScan, type UseACMMScanResult } from '../../hooks/useCachedACMMScan'
 import { isACMMIntroDismissed } from './ACMMIntroModal'
@@ -39,6 +39,12 @@ export function normalizeRepoInput(raw: string): string {
   return trimmed
 }
 
+/** ACMM has 5 levels (L1 Assisted → L5 Self-Sustaining). The slider in
+ *  the Recommendations card lets the user explore "what would balance
+ *  look like at this level?" and filter the inventory accordingly. */
+const MIN_LEVEL = 1
+const MAX_LEVEL = 5
+
 interface ACMMContextValue {
   repo: string
   setRepo: (repo: string) => void
@@ -50,6 +56,11 @@ interface ACMMContextValue {
   introOpen: boolean
   openIntro: () => void
   closeIntro: () => void
+  /** User-chosen exploration level (1-5). Defaults to detected level on
+   *  scan complete, but the user can drag the slider to project ahead.
+   *  Drives the dual area charts (visualization only). */
+  targetLevel: number
+  setTargetLevel: (level: number) => void
 }
 
 const ACMMContext = createContext<ACMMContextValue | null>(null)
@@ -91,12 +102,15 @@ export function ACMMProvider({ children }: { children: ReactNode }) {
   const [repo, setRepoState] = useState<string>(() => readInitialRepo())
   const [recentRepos, setRecentRepos] = useState<string[]>(() => readRecentRepos())
   const [introOpen, setIntroOpen] = useState(false)
+  const [targetLevel, setTargetLevelState] = useState<number>(MIN_LEVEL)
+  /** Tracks whether the user has dragged the slider. While false, the
+   *  target tracks the detected level. Once the user takes control, we
+   *  stop following the scan so their exploration sticks. */
+  const userOverrodeLevel = useRef(false)
 
   const scan = useCachedACMMScan(repo)
 
-  // Auto-open the intro on first visit unless previously dismissed. The
-  // "What is ACMM?" link in RepoPicker can re-trigger via openIntro()
-  // regardless of dismissal state — manual recall always wins.
+  // Auto-open the intro on first visit unless previously dismissed.
   useEffect(() => {
     if (!isACMMIntroDismissed()) {
       setIntroOpen(true)
@@ -105,6 +119,21 @@ export function ACMMProvider({ children }: { children: ReactNode }) {
 
   const openIntro = useCallback(() => setIntroOpen(true), [])
   const closeIntro = useCallback(() => setIntroOpen(false), [])
+
+  // Sync targetLevel to (detected level + 1) on scan complete so the slider
+  // opens "one level ahead" — naturally invites users to look at what's
+  // next rather than just confirming where they are.
+  useEffect(() => {
+    if (!userOverrodeLevel.current && scan.level.level) {
+      setTargetLevelState(Math.min(MAX_LEVEL, scan.level.level + 1))
+    }
+  }, [scan.level.level])
+
+  const setTargetLevel = useCallback((next: number) => {
+    userOverrodeLevel.current = true
+    const clamped = Math.max(MIN_LEVEL, Math.min(MAX_LEVEL, Math.round(next)))
+    setTargetLevelState(clamped)
+  }, [])
 
   const setRepo = useCallback((next: string) => {
     // Coerce pasted GitHub URLs to bare owner/repo so the rest of the
@@ -162,8 +191,8 @@ export function ACMMProvider({ children }: { children: ReactNode }) {
   }, [repo, recentRepos])
 
   const value = useMemo<ACMMContextValue>(
-    () => ({ repo, setRepo, recentRepos, clearRepo, scan, introOpen, openIntro, closeIntro }),
-    [repo, setRepo, recentRepos, clearRepo, scan, introOpen, openIntro, closeIntro],
+    () => ({ repo, setRepo, recentRepos, clearRepo, scan, introOpen, openIntro, closeIntro, targetLevel, setTargetLevel }),
+    [repo, setRepo, recentRepos, clearRepo, scan, introOpen, openIntro, closeIntro, targetLevel, setTargetLevel],
   )
 
   return <ACMMContext.Provider value={value}>{children}</ACMMContext.Provider>
