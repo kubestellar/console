@@ -435,6 +435,22 @@ export const handlers = [
     return HttpResponse.json({ nodes: demoGPUNodes })
   }),
 
+  // GPU node SSE stream — served by kc-agent (not the Go backend).
+  // In demo mode there is no kc-agent, so return an empty SSE stream
+  // that closes immediately; cards will fall back to demo data.
+  http.get('/gpu-nodes/stream', () => {
+    const encoder = new TextEncoder()
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(encoder.encode('data: []\n\n'))
+        controller.close()
+      },
+    })
+    return new HttpResponse(stream, {
+      headers: { 'Content-Type': 'text/event-stream' },
+    })
+  }),
+
   // Security issues
   http.get('/api/mcp/security-issues', async () => {
     await delay(150)
