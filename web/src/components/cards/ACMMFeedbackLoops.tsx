@@ -144,13 +144,17 @@ export function ACMMFeedbackLoops() {
   })
 
   const filtered = useMemo(() => {
-    return ALL_CRITERIA.filter((c) => {
-      if (sourceFilter !== 'all' && c.source !== sourceFilter) return false
-      const detected = detectedIds.has(c.id)
-      if (statusFilter === 'detected' && !detected) return false
-      if (statusFilter === 'missing' && detected) return false
-      return true
-    })
+    return ALL_CRITERIA
+      .filter((c) => {
+        if (sourceFilter !== 'all' && c.source !== sourceFilter) return false
+        const detected = detectedIds.has(c.id)
+        if (statusFilter === 'detected' && !detected) return false
+        if (statusFilter === 'missing' && detected) return false
+        return true
+      })
+      // Sort by level (ascending) so all sources mix by maturity tier.
+      // Criteria without a level sort last.
+      .sort((a, b) => (a.level ?? 99) - (b.level ?? 99))
   }, [detectedIds, sourceFilter, statusFilter])
 
   /** The level the user is working toward — the one ABOVE earnedLevel.
@@ -276,15 +280,16 @@ export function ACMMFeedbackLoops() {
                 ) : (
                   <X className="w-4 h-4 text-muted-foreground/40 flex-shrink-0" />
                 )}
+                {/* Fixed-width level column for clean alignment */}
+                <span className="text-[10px] font-mono text-muted-foreground w-6 text-right flex-shrink-0">
+                  {c.level ? `L${c.level}` : ''}
+                </span>
                 <div className="min-w-0 flex-1">
                   <div className="text-xs font-medium truncate">{c.name}</div>
                   <div className="text-[10px] text-muted-foreground truncate">{c.description}</div>
                 </div>
-                {c.level && (
-                  <span className="text-[10px] font-mono text-muted-foreground">L{c.level}</span>
-                )}
                 <span
-                  className={`text-[9px] px-1.5 py-0.5 rounded-full ${SOURCE_COLORS[c.source]}`}
+                  className={`text-[9px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${SOURCE_COLORS[c.source]}`}
                   title={SOURCES_BY_ID[c.source]?.citation}
                 >
                   {SOURCE_LABELS[c.source]}

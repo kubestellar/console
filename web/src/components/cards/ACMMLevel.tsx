@@ -69,8 +69,8 @@ export function ACMMLevel() {
   const nextLevelDef = nextLevel ? ALL_LEVELS.find((l) => l.n === nextLevel) : null
 
   return (
-    <div className="h-full flex flex-col p-2 overflow-y-auto">
-      <div className="flex items-center justify-between mb-2">
+    <div className="h-full flex flex-col p-4 gap-4 overflow-y-auto">
+      <div className="flex items-center justify-between">
         <div className="text-xs text-muted-foreground font-mono truncate">{repo}</div>
         <a
           href={PAPER_URL}
@@ -83,7 +83,7 @@ export function ACMMLevel() {
         </a>
       </div>
 
-      <div className="flex items-center gap-3 mb-2">
+      <div className="flex items-center gap-4">
         <div className="relative flex-shrink-0">
           <LevelRing level={level.level} />
           <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -110,12 +110,12 @@ export function ACMMLevel() {
       {/* Why move up — transition trigger from the paper. Kept short:
           one quoted sentence + what the next level unlocks. */}
       {nextLevel && nextLevelDef && (
-        <div className="mb-2 p-2 rounded-md bg-primary/5 border border-primary/10">
-          <div className="text-[10px] text-primary uppercase tracking-wide mb-0.5">Why move to L{nextLevel}?</div>
-          <p className="text-[11px] text-muted-foreground leading-snug italic mb-1">
+        <div className="p-3 rounded-md bg-primary/5 border border-primary/10">
+          <div className="text-[10px] text-primary uppercase tracking-wide mb-1">Why move to L{nextLevel}?</div>
+          <p className="text-[11px] text-muted-foreground leading-relaxed italic mb-1.5">
             {level.nextTransitionTrigger}
           </p>
-          <p className="text-[11px] text-foreground leading-snug">
+          <p className="text-[11px] text-foreground leading-relaxed">
             At <span className="font-mono">L{nextLevel} {nextLevelDef.name}</span> you become {/^[aeiou]/i.test(nextLevelDef.role) ? 'an' : 'a'} <span className="font-medium">{nextLevelDef.role}</span> — {nextLevelDef.characteristic.split('.')[0].toLowerCase()}.
           </p>
         </div>
@@ -123,7 +123,7 @@ export function ACMMLevel() {
 
       {/* How to level up — practical pointers to the other two cards. */}
       {nextLevel && (
-        <div className="mb-2 text-[11px] text-muted-foreground leading-snug space-y-1">
+        <div className="text-[11px] text-muted-foreground leading-relaxed space-y-1.5">
           <div className="text-[10px] uppercase tracking-wide text-foreground/70">How to level up</div>
           <p>
             Check the <span className="text-foreground font-medium">Feedback Loop Inventory</span> below for missing criteria at L{nextLevel}.
@@ -136,14 +136,14 @@ export function ACMMLevel() {
         </div>
       )}
 
-      <div className="flex flex-col gap-0.5 mb-2">
+      <div className="flex flex-col gap-1">
         {ALL_LEVELS.map((lvl) => {
           const isCurrent = lvl.n === level.level
           const isPast = lvl.n < level.level
           return (
             <div
               key={lvl.n}
-              className={`flex items-center gap-2 px-2 py-0.5 rounded text-xs transition-colors ${
+              className={`flex items-center gap-2 px-2 py-1 rounded text-xs transition-colors ${
                 isCurrent
                   ? 'bg-primary/15 text-foreground font-semibold'
                   : isPast
