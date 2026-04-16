@@ -506,11 +506,22 @@ function markGtagDecided(available: boolean) {
   flushPendingEvents()
 }
 
+interface SendOptions {
+  /**
+   * Bypass the analytics opt-out gate. Reserved for voluntary, user-initiated
+   * feedback events (e.g. NPS survey submissions) where the user explicitly
+   * clicks to send the data. Passive tracking must never set this.
+   */
+  bypassOptOut?: boolean
+}
+
 function send(
   eventName: string,
   params?: Record<string, string | number | boolean>,
+  options?: SendOptions,
 ) {
-  if (!initialized || isOptedOut()) return
+  if (!initialized) return
+  if (isOptedOut() && !options?.bypassOptOut) return
 
   // Don't send any events until a real user has interacted.
   // This prevents automated/headless page loads from generating traffic.
@@ -982,10 +993,14 @@ export function emitScreenshotUploadSuccess(screenshotCount: number) {
 }
 
 // ── NPS Survey ────────────────────────────────────────────────────
+// NPS is voluntary, user-initiated product feedback — the user explicitly
+// clicks an emoji and hits submit. These three events bypass the analytics
+// opt-out gate so GA4 stays in sync with the NPS backend (Netlify Blobs),
+// which already records responses regardless of opt-out. See useNPSSurvey.ts.
 
 /** Fired when the NPS survey widget becomes visible */
 export function emitNPSSurveyShown() {
-  send('ksc_nps_survey_shown')
+  send('ksc_nps_survey_shown', undefined, { bypassOptOut: true })
 }
 
 /** Fired when user submits an NPS response */
@@ -994,12 +1009,12 @@ export function emitNPSResponse(score: number, category: string, feedbackLength?
     nps_score: score,
     nps_category: category,
     ...(feedbackLength !== undefined && { nps_feedback_length: feedbackLength }),
-  })
+  }, { bypassOptOut: true })
 }
 
 /** Fired when user dismisses the NPS widget without responding */
 export function emitNPSDismissed(dismissCount: number) {
-  send('ksc_nps_dismissed', { dismiss_count: dismissCount })
+  send('ksc_nps_dismissed', { dismiss_count: dismissCount }, { bypassOptOut: true })
 }
 
 // ── Orbit (Recurring Maintenance) ─────────────────────────────────

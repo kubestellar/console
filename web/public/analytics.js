@@ -851,7 +851,8 @@
       html += '<div class="kpi-grid">';
       html += `<div class="kpi-card"><div class="kpi-label">NPS Score</div><div class="kpi-value" style="color:${scoreColor}">${nps.npsScore}</div><div class="kpi-change" style="color:${scoreColor}">${scoreLabel}</div></div>`;
       html += `<div class="kpi-card"><div class="kpi-label">Responses</div><div class="kpi-value">${nps.totalResponses}</div></div>`;
-      html += `<div class="kpi-card"><div class="kpi-label">Avg Score</div><div class="kpi-value">${nps.averageScore}</div><div class="kpi-change flat">out of 10</div></div>`;
+      const avgMax = nps.scoreMax || 4;
+      html += `<div class="kpi-card"><div class="kpi-label">Avg Score</div><div class="kpi-value">${nps.averageScore}</div><div class="kpi-change flat">out of ${avgMax}</div></div>`;
       html += `<div class="kpi-card"><div class="kpi-label">Breakdown</div><div class="kpi-value" style="font-size:14px"><span style="color:var(--green)">${nps.promoterPct}% P</span> · <span style="color:var(--yellow)">${nps.passivePct}% N</span> · <span style="color:var(--red)">${nps.detractorPct}% D</span></div></div>`;
       html += '</div>';
 

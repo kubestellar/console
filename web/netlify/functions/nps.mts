@@ -15,8 +15,15 @@ import { getStore } from "@netlify/blobs";
 
 // ── Types ────────────────────────────────────────────────────────────
 
+/**
+ * The frontend widget uses a 4-emoji scale (1=sad, 2=meh, 3=good, 4=love).
+ * We store the raw 1-4 score and bucket into classic NPS categories:
+ *   1     → detractor
+ *   2, 3  → passive
+ *   4     → promoter
+ */
 interface NPSResponse {
-  score: number; // 0-10
+  score: number; // 1-4
   category: "promoter" | "passive" | "detractor";
   feedback?: string;
   timestamp: string;
@@ -37,8 +44,10 @@ interface NPSAggregation {
   promoterPct: number;
   passivePct: number;
   detractorPct: number;
-  /** Average score (0-10) */
+  /** Average score (1-4) */
   averageScore: number;
+  /** Maximum possible score — lets the dashboard render "X / MAX" without hardcoding */
+  scoreMax: number;
   /** Monthly trend: { month: "2026-04", npsScore, count } */
   trend: Array<{ month: string; npsScore: number; count: number; avgScore: number }>;
   /** Recent responses (last 20, no PII) */
@@ -55,6 +64,14 @@ const MAX_RESPONSES = 1000;
 const MAX_FEEDBACK_LENGTH = 500;
 /** Recent responses to include in GET response */
 const RECENT_COUNT = 20;
+/** Minimum valid score (1 = sad emoji) */
+const SCORE_MIN = 1;
+/** Maximum valid score (4 = love emoji) */
+const SCORE_MAX = 4;
+/** Threshold at/above which a response is a promoter */
+const PROMOTER_MIN = 4;
+/** Threshold at/above which a response is a passive (else detractor) */
+const PASSIVE_MIN = 2;
 
 const ALLOWED_ORIGINS = [
   "https://console.kubestellar.io",
@@ -73,13 +90,19 @@ function corsOrigin(origin: string | null): string {
 }
 
 function categorize(score: number): "promoter" | "passive" | "detractor" {
-  if (score >= 9) return "promoter";
-  if (score >= 7) return "passive";
+  if (score >= PROMOTER_MIN) return "promoter";
+  if (score >= PASSIVE_MIN) return "passive";
   return "detractor";
 }
 
 function computeAggregation(data: NPSData): NPSAggregation {
-  const responses = data.responses;
+  // Re-derive category from raw score on every read so historical rows
+  // that were bucketed under the old 0-10 thresholds get corrected in the
+  // aggregation without needing a storage migration.
+  const responses: NPSResponse[] = data.responses.map((r) => ({
+    ...r,
+    category: categorize(r.score),
+  }));
   const total = responses.length;
 
   if (total === 0) {
@@ -93,6 +116,7 @@ function computeAggregation(data: NPSData): NPSAggregation {
       passivePct: 0,
       detractorPct: 0,
       averageScore: 0,
+      scoreMax: SCORE_MAX,
       trend: [],
       recent: [],
     };
@@ -144,6 +168,7 @@ function computeAggregation(data: NPSData): NPSAggregation {
     passivePct: Math.round((passives / total) * 100),
     detractorPct: Math.round((detractors / total) * 100),
     averageScore: Math.round(averageScore * 10) / 10,
+    scoreMax: SCORE_MAX,
     trend,
     recent,
   };
@@ -190,10 +215,10 @@ export default async (req: Request) => {
       const body = await req.json();
       const score = parseInt(body.score, 10);
 
-      // Validate
-      if (isNaN(score) || score < 0 || score > 10) {
+      // Validate — 4-emoji widget uses scores 1-4
+      if (isNaN(score) || score < SCORE_MIN || score > SCORE_MAX) {
         return new Response(
-          JSON.stringify({ error: "Score must be 0-10" }),
+          JSON.stringify({ error: `Score must be ${SCORE_MIN}-${SCORE_MAX}` }),
           { status: 400, headers }
         );
       }

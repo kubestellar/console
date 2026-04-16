@@ -48,6 +48,10 @@ export function NPSSurvey() {
       setShowThankYou(true)
       showToast(t('nps.thankYou'), 'success')
       thankYouTimerRef.current = setTimeout(() => setShowThankYou(false), THANK_YOU_DISPLAY_MS)
+    } catch {
+      // Keep the widget open so the user can retry — don't claim success
+      // when the POST never reached the backend.
+      showToast(t('nps.submitError'), 'error')
     } finally {
       setIsSubmitting(false)
     }

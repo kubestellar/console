@@ -1816,7 +1816,8 @@
     "submit": "Submit",
     "dismiss": "Not now",
     "thankYou": "Thank you for your feedback!",
-    "thankYouDetail": "Your input helps us improve KubeStellar Console."
+    "thankYouDetail": "Your input helps us improve KubeStellar Console.",
+    "submitError": "Couldn't send your feedback. Please try again."
   },
   "orbit": {
     "title": "Orbital Maintenance",

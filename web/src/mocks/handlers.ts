@@ -706,6 +706,11 @@ export const handlers = [
   http.get('/api/missions/file', () => passthrough()),
   http.get('/api/missions/browse', () => passthrough()),
   http.get('/api/rewards/github', () => passthrough()),
+  // NPS (voluntary feedback) — widget is gated off in demo mode at the
+  // hook level, but if a dev enables it the POST/GET must reach the real
+  // Netlify Function instead of the 503 catch-all below.
+  http.get('/api/nps', () => passthrough()),
+  http.post('/api/nps', () => passthrough()),
 
   // ── Kubara Platform Catalog (demo) ──────────────────────────────
   http.get('/api/github/repos/kubara-io/kubara/contents/*', () => {

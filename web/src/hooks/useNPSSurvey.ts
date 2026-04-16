@@ -19,6 +19,8 @@ const NPS_DISMISS_RETRY_DAYS = 7
 const NPS_MAX_DISMISSALS = 3
 /** Milliseconds per day */
 const MS_PER_DAY = 86_400_000
+/** Timeout for the NPS POST — keep short; the UI is blocked on this */
+const NPS_POST_TIMEOUT_MS = 5_000
 
 /** NPS category labels for GA4 */
 const NPS_CATEGORIES = ['detractor', 'passive', 'satisfied', 'promoter'] as const
@@ -99,25 +101,29 @@ export function useNPSSurvey(): NPSSurveyState {
   const submitResponse = useCallback(async (score: number, feedback?: string) => {
     if (!Number.isInteger(score) || score < 1 || score > 4) return
 
+    // Send to our own NPS backend FIRST. Errors propagate so the UI can
+    // show a failure toast instead of silently losing the response, and
+    // so we don't emit a GA4 event for a submission that never reached
+    // the backend (which would diverge the two data sources).
+    const apiBase = import.meta.env.VITE_API_BASE_URL || ''
+    const resp = await fetch(`${apiBase}/api/nps`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        score,
+        feedback: feedback?.trim() || undefined,
+      }),
+      signal: AbortSignal.timeout(NPS_POST_TIMEOUT_MS),
+    })
+    if (!resp.ok) {
+      throw new Error(`NPS submit failed: ${resp.status} ${resp.statusText}`)
+    }
+
+    // Backend accepted the response — mirror it into GA4. emitNPSResponse
+    // bypasses the analytics opt-out gate because NPS is voluntary,
+    // user-initiated feedback (see analytics.ts).
     const category = NPS_CATEGORIES[score - 1]
     emitNPSResponse(score, category, feedback ? feedback.length : undefined)
-
-    // Send to our own NPS backend — independent of analytics opt-out.
-    // NPS is voluntary product feedback, not passive tracking.
-    try {
-      const apiBase = import.meta.env.VITE_API_BASE_URL || ''
-      await fetch(`${apiBase}/api/nps`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          score,
-          feedback: feedback?.trim() || undefined,
-        }),
-        signal: AbortSignal.timeout(5000),
-      })
-    } catch {
-      // Best-effort — don't block the UI if this fails
-    }
 
     // Create GitHub issue for detractors (score 1 = "Not great")
     // Backend requires description >= MIN_FEEDBACK_LENGTH chars

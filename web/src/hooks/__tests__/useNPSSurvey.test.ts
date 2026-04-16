@@ -58,6 +58,8 @@ vi.mock('../../lib/utils/localStorage', () => ({
 import { useNPSSurvey } from '../useNPSSurvey'
 
 describe('useNPSSurvey', () => {
+  const fetchMock = vi.fn()
+
   beforeEach(() => {
     vi.useFakeTimers()
     store.clear()
@@ -70,10 +72,15 @@ describe('useNPSSurvey', () => {
     mockEmitDismissed.mockClear()
     // Default: enough sessions
     store.set('kc-session-count', '10')
+    // NPS POST now throws on non-ok; default to a successful 201
+    fetchMock.mockResolvedValue(new Response(null, { status: 201 }))
+    vi.stubGlobal('fetch', fetchMock)
   })
 
   afterEach(() => {
     vi.useRealTimers()
+    vi.unstubAllGlobals()
+    fetchMock.mockReset()
   })
 
   it('does not show for unauthenticated users', () => {
@@ -117,6 +124,34 @@ describe('useNPSSurvey', () => {
     expect(result.current.isVisible).toBe(false)
     expect(mockEmitResponse).toHaveBeenCalledWith(4, 'promoter', 14)
     expect(mockAwardCoins).toHaveBeenCalledWith('nps_survey')
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/nps',
+      expect.objectContaining({ method: 'POST' }),
+    )
+  })
+
+  it('submitResponse throws when NPS POST fails and skips GA4 emit', async () => {
+    fetchMock.mockResolvedValueOnce(new Response('bad', { status: 500 }))
+    const { result } = renderHook(() => useNPSSurvey())
+    act(() => { vi.advanceTimersByTime(30_000) })
+
+    let caught: unknown = null
+    await act(async () => {
+      try {
+        await result.current.submitResponse(3)
+      } catch (err) {
+        caught = err
+      }
+    })
+
+    expect(caught).toBeInstanceOf(Error)
+    // Widget stays open so the user can retry
+    expect(result.current.isVisible).toBe(true)
+    // GA4 event must NOT fire when the backend rejected the response —
+    // keeps GA4 and the NPS Blobs store in sync
+    expect(mockEmitResponse).not.toHaveBeenCalled()
+    // Coins not awarded for a failed submission
+    expect(mockAwardCoins).not.toHaveBeenCalled()
   })
 
   it('creates GitHub issue for detractor scores', async () => {
