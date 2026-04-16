@@ -74,7 +74,10 @@ export function StorageOverview() {
     const totalPVCs = filteredPVCs.length
     const boundPVCs = filteredPVCs.filter(p => p.status === 'Bound').length
     const pendingPVCs = filteredPVCs.filter(p => p.status === 'Pending').length
-    const failedPVCs = totalPVCs - boundPVCs - pendingPVCs
+    // Only count PVCs with explicitly failed statuses — Released, Terminating,
+    // and Available are valid lifecycle states, not failures (#8516).
+    const PVC_FAILED_STATUSES = ['Failed', 'Lost']
+    const failedPVCs = filteredPVCs.filter(p => PVC_FAILED_STATUSES.includes(p.status || '')).length
 
     // Group by storage class
     const storageClasses = new Map<string, number>()

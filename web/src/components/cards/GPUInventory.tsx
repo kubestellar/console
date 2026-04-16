@@ -28,8 +28,12 @@ const SORT_OPTIONS = [
 
 type GPUNode = ReturnType<typeof useCachedGPUNodes>['nodes'][number]
 
+/** Safe GPU utilization ratio — returns 0 when gpuCount is zero to avoid NaN. */
+const safeGpuUtilization = (node: GPUNode): number =>
+  node.gpuCount > 0 ? (node.gpuAllocated / node.gpuCount) * 100 : 0
+
 const GPU_SORT_COMPARATORS: Record<SortByOption, (a: GPUNode, b: GPUNode) => number> = {
-  utilization: (a, b) => (a.gpuAllocated / a.gpuCount) - (b.gpuAllocated / b.gpuCount),
+  utilization: (a, b) => safeGpuUtilization(a) - safeGpuUtilization(b),
   name: commonComparators.string<GPUNode>('name'),
   cluster: commonComparators.string<GPUNode>('cluster'),
   gpuType: commonComparators.string<GPUNode>('gpuType'),
@@ -226,7 +230,7 @@ export function GPUInventory({ config }: GPUInventoryProps) {
               gpuType: node.gpuType,
               gpuCount: node.gpuCount,
               gpuAllocated: node.gpuAllocated,
-              utilization: (node.gpuAllocated / node.gpuCount) * 100,
+              utilization: safeGpuUtilization(node),
             })}
             className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group"
           >
@@ -246,12 +250,18 @@ export function GPUInventory({ config }: GPUInventoryProps) {
                 </span>
               </div>
             </div>
-            <div className="mt-2 h-1.5 bg-secondary rounded-full overflow-hidden">
-              <div
-                className="h-full bg-purple-500 transition-all"
-                style={{ width: `${(node.gpuAllocated / node.gpuCount) * 100}%` }}
-              />
-            </div>
+            {node.gpuCount > 0 ? (
+              <div className="mt-2 h-1.5 bg-secondary rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-purple-500 transition-all"
+                  style={{ width: `${safeGpuUtilization(node)}%` }}
+                />
+              </div>
+            ) : (
+              <p className="mt-2 text-xs text-muted-foreground italic">
+                {t('gpuInventory.noGPUsAvailable')}
+              </p>
+            )}
           </div>
         ))}
       </div>

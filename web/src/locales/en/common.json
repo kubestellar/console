@@ -1518,7 +1518,13 @@
     "compareWithCount": "Compare ({{count}})",
     "selectForComparison": "Select {{name}} for comparison",
     "deselectForComparison": "Deselect {{name}} for comparison",
-    "noClustersAvailable": "No clusters available"
+    "noClustersAvailable": "No clusters available",
+    "maxClustersReached": "Maximum {{max}} clusters can be compared at once"
+  },
+  "warningEvents": {
+    "noWarnings": "No Warnings",
+    "noWarningsHint": "Warning events will appear here when detected",
+    "noMatchingWarnings": "No warnings match the current filters"
   },
   "drasi": {
     "configureSource": "Configure Source",

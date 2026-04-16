@@ -2250,7 +2250,8 @@
     "gpuCount_other": "{{count}} GPUs",
     "searchPlaceholder": "Search GPU nodes...",
     "inUse": "In Use",
-    "usingSimulatedData": "Using simulated data"
+    "usingSimulatedData": "Using simulated data",
+    "noGPUsAvailable": "No GPUs available"
   },
   "gpuInventoryHistory": {
     "noData": "No GPU History",

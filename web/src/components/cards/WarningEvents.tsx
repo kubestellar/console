@@ -109,6 +109,19 @@ export function WarningEvents() {
     )
   }
 
+  /* If there are no warning events at all, show a clean empty state without filters */
+  if (warningOnly.length === 0) {
+    return (
+      <div className="h-full flex flex-col content-loaded">
+        <div className="flex-1 flex flex-col items-center justify-center text-center py-6">
+          <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-green-400 opacity-50" />
+          <p className="text-sm text-foreground font-medium">{t('warningEvents.noWarnings')}</p>
+          <p className="text-xs text-muted-foreground mt-1">{t('warningEvents.noWarningsHint')}</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-3">
       {/* Header controls */}
@@ -163,11 +176,11 @@ export function WarningEvents() {
         placeholder={t('common.searchWarnings')}
       />
 
-      {/* Warning events list */}
+      {/* Warning events list — filtered by search/cluster may yield 0 even when warningOnly > 0 */}
       {totalItems === 0 ? (
         <div className="text-center py-6">
           <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-green-400 opacity-50" />
-          <p className="text-sm text-muted-foreground">No warnings</p>
+          <p className="text-sm text-muted-foreground">{t('warningEvents.noMatchingWarnings')}</p>
         </div>
       ) : (
         <div ref={containerRef} className="space-y-2" style={containerStyle}>

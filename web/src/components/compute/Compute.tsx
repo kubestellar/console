@@ -171,14 +171,16 @@ export function Compute() {
 
   const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
 
+  /** Maximum number of clusters that can be selected for side-by-side comparison. */
+  const MAX_COMPARISON_CLUSTERS = 4
+
   // Cluster comparison handlers
   const toggleClusterSelection = (clusterName: string) => {
     setSelectedForComparison(prev => {
       if (prev.includes(clusterName)) {
         return prev.filter(name => name !== clusterName)
       }
-      // Max 4 clusters
-      if (prev.length >= 4) return prev
+      if (prev.length >= MAX_COMPARISON_CLUSTERS) return prev
       return [...prev, clusterName]
     })
   }
@@ -212,6 +214,12 @@ export function Compute() {
             <span className="text-xs text-muted-foreground">
               {t('compute.countSelected', { count: selectedForComparison.length })}
             </span>
+            {selectedForComparison.length >= MAX_COMPARISON_CLUSTERS && (
+              <span className="flex items-center gap-1 text-xs text-yellow-400">
+                <AlertCircle className="w-3 h-3" />
+                {t('compute.maxClustersReached', { max: MAX_COMPARISON_CLUSTERS })}
+              </span>
+            )}
             <button
               onClick={clearSelection}
               className="text-xs text-muted-foreground hover:text-foreground transition-colors"
@@ -236,7 +244,7 @@ export function Compute() {
         <div id="cluster-comparison-list" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
           {filteredClusters.map((cluster) => {
             const isSelected = selectedForComparison.includes(cluster.name)
-            const isDisabled = !isSelected && selectedForComparison.length >= 4
+            const isDisabled = !isSelected && selectedForComparison.length >= MAX_COMPARISON_CLUSTERS
 
             return (
               <button
