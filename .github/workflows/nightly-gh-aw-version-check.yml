@@ -28,8 +28,8 @@ jobs:
           fi
           echo "Current version: v${CURRENT_VERSION}"
 
-          # Get latest release
-          LATEST_VERSION=$(gh release list --repo github/gh-aw --limit 1 --json tagName --jq '.[0].tagName' | sed 's/^v//')
+          # Get latest stable release (exclude pre-releases — upstream tags -rc / pre-release cuts we shouldn't auto-bump to)
+          LATEST_VERSION=$(gh release list --repo github/gh-aw --exclude-pre-releases --limit 1 --json tagName --jq '.[0].tagName' | sed 's/^v//')
           echo "Latest version: v${LATEST_VERSION}"
 
           if [ "$CURRENT_VERSION" = "$LATEST_VERSION" ]; then
@@ -46,7 +46,7 @@ jobs:
 
           # Get changelog highlights for breaking changes
           BREAKING_CHANGES=""
-          for tag in $(gh release list --repo github/gh-aw --limit 10 --json tagName --jq '.[].tagName'); do
+          for tag in $(gh release list --repo github/gh-aw --exclude-pre-releases --limit 10 --json tagName --jq '.[].tagName'); do
             tag_minor=$(echo "$tag" | sed 's/^v//' | cut -d. -f2)
             if [ "$tag_minor" -gt "$CURRENT_MINOR" ]; then
               NOTES=$(gh release view "$tag" --repo github/gh-aw --json body --jq '.body' 2>/dev/null | grep -A1 "Breaking" | head -5)
