@@ -179,7 +179,10 @@ export async function fetchEnabledDashboards(): Promise<void> {
   }
 }
 
-// Migrate config to ensure all default routes exist
+// Migrate config to ensure all default routes exist.
+// By design, new routes added to DEFAULT_PRIMARY_NAV (e.g. /acmm) are
+// automatically appended to any stored sidebar config that lacks them,
+// so existing users pick up new dashboards without resetting their layout.
 function migrateConfig(stored: SidebarConfig): SidebarConfig {
   // First, remove deprecated routes
   const primaryNav = stored.primaryNav.filter(item => !DEPRECATED_ROUTES.includes(item.href))

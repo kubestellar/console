@@ -8,7 +8,8 @@ package api
 var projectDashboardPresets = map[string][]string{
 	"kubestellar": {
 		"dashboard", "clusters", "cluster-admin", "compliance", "deploy",
-		"insights", "ai-ml", "ai-agents", "ci-cd", "alerts", "arcade",
+		"insights", "ai-ml", "ai-agents", "acmm", "ci-cd",
+		"multi-tenancy", "alerts", "arcade",
 		"llm-d-benchmarks", "gpu-reservations",
 		"compute", "security", "storage", "network", "events",
 		"workloads", "operators", "nodes", "deployments", "pods",
