@@ -25,8 +25,10 @@ import { BaseModal } from '../../lib/modals/BaseModal'
 import { Button } from '../ui/Button'
 import { TextArea } from '../ui/TextArea'
 
-/** Minimum visible rows for the prompt textarea. */
-const PROMPT_TEXTAREA_ROWS = 12
+/** Minimum visible rows for the prompt textarea. Bumped from 12 to 20
+ *  so ACMM-length prompts (~25 lines of detection rules + context)
+ *  don't require immediate scrolling to see the full content. */
+const PROMPT_TEXTAREA_ROWS = 20
 
 interface ConfirmMissionPromptDialogProps {
   /** Whether the dialog is open. */

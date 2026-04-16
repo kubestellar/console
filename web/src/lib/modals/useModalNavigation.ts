@@ -1,5 +1,14 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { UseModalNavigationOptions, UseModalNavigationResult } from './types'
+
+// ---------------------------------------------------------------------------
+// Modal stack — ensures only the front-most open modal handles ESC.
+// Each open modal registers itself (push) and deregisters on close (splice).
+// The ESC handler checks whether this modal's ID is at the top of the stack
+// before processing the key — background modals pass through silently.
+// ---------------------------------------------------------------------------
+const modalStack: number[] = []
+let modalStackCounter = 0
 
 /**
  * #6749-B (Copilot on PR #6746) — Module-level stable no-op ref object
@@ -102,13 +111,41 @@ export function useModalNavigation({
     [onClose, onBack, enableEscape, enableBackspace]
   )
 
-  // Set up keyboard listener
+  // Register this modal in the global stack so only the top-most open
+  // modal handles ESC. Without this, stacked modals (e.g. ACMM intro
+  // behind + mission-prompt-review on top) both fire their ESC handlers
+  // and the wrong one closes.
+  const modalIdRef = useRef(++modalStackCounter)
   useEffect(() => {
     if (!isOpen) return
+    const id = modalIdRef.current
+    modalStack.push(id)
+    return () => {
+      const idx = modalStack.indexOf(id)
+      if (idx >= 0) modalStack.splice(idx, 1)
+    }
+  }, [isOpen])
 
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, handleKeyDown])
+  // Set up keyboard listener — only process ESC when this modal is the
+  // top of the stack. Other keys (Backspace/Space) pass through
+  // unconditionally because they only affect focused elements inside
+  // the modal anyway.
+  const guardedHandleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        const topId = modalStack[modalStack.length - 1]
+        if (topId !== modalIdRef.current) return // not the top modal
+      }
+      handleKeyDown(e)
+    },
+    [handleKeyDown],
+  )
+
+  useEffect(() => {
+    if (!isOpen) return
+    window.addEventListener('keydown', guardedHandleKeyDown)
+    return () => window.removeEventListener('keydown', guardedHandleKeyDown)
+  }, [isOpen, guardedHandleKeyDown])
 
   // Disable body scroll when modal is open
   useEffect(() => {
