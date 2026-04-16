@@ -25,6 +25,7 @@ import {
   type Status,
   type Conclusion,
 } from '../../../hooks/useGitHubPipelines'
+import { usePipelineFilter } from './PipelineFilterContext'
 import { cn } from '../../../lib/cn'
 
 /** Flow-dot radius for active segments */
@@ -307,7 +308,11 @@ function colorForStatus(status: Status, conclusion: Conclusion): string {
 // ---------------------------------------------------------------------------
 
 export function PipelineFlow() {
-  const [repoFilter, setRepoFilter] = useState<string | null>(null)
+  const shared = usePipelineFilter()
+  const [localRepoFilter, setLocalRepoFilter] = useState<string | null>(null)
+  const repoFilter = shared?.repoFilter ?? localRepoFilter
+  const setRepoFilter = shared?.setRepoFilter ?? setLocalRepoFilter
+  const repos = shared?.repos ?? getPipelineRepos()
   const [mutating, setMutating] = useState<number | null>(null)
   const [mutationMsg, setMutationMsg] = useState<string | null>(null)
   const { data, isLoading, error, refetch } = usePipelineFlow(repoFilter)
@@ -352,7 +357,7 @@ export function PipelineFlow() {
           aria-label={LABEL_FILTER_REPO}
         >
           <option value="">All repos</option>
-          {getPipelineRepos().map((r) => (
+          {repos.map((r) => (
             <option key={r} value={r}>{r}</option>
           ))}
         </select>

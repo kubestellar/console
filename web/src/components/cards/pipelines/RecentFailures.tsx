@@ -11,6 +11,7 @@ import {
   usePipelineMutations,
   getPipelineRepos,
 } from '../../../hooks/useGitHubPipelines'
+import { usePipelineFilter } from './PipelineFilterContext'
 import { LogsModal } from './LogsModal'
 import { cn } from '../../../lib/cn'
 
@@ -41,7 +42,11 @@ function relativeTime(iso: string): string {
 }
 
 export function RecentFailures() {
-  const [repoFilter, setRepoFilter] = useState<string | null>(null)
+  const shared = usePipelineFilter()
+  const [localRepoFilter, setLocalRepoFilter] = useState<string | null>(null)
+  const repoFilter = shared?.repoFilter ?? localRepoFilter
+  const setRepoFilter = shared?.setRepoFilter ?? setLocalRepoFilter
+  const repos = shared?.repos ?? getPipelineRepos()
   const [logCtx, setLogCtx] = useState<{ repo: string; jobId: number; title: string } | null>(null)
   const [mutating, setMutating] = useState<number | null>(null)
   const [mutationMsg, setMutationMsg] = useState<string | null>(null)
@@ -82,7 +87,7 @@ export function RecentFailures() {
           aria-label={LABEL_FILTER_REPO}
         >
           <option value="">All repos</option>
-          {getPipelineRepos().map((r) => (
+          {repos.map((r) => (
             <option key={r} value={r}>{r}</option>
           ))}
         </select>

@@ -5,6 +5,7 @@ import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
 import { RotatingTip } from '../ui/RotatingTip'
+import { PipelineFilterProvider, PipelineFilterBar } from '../cards/pipelines'
 
 const CICD_CARDS_KEY = 'kubestellar-cicd-cards'
 
@@ -81,31 +82,34 @@ export function CICD() {
   const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
 
   return (
-    <DashboardPage
-      title="CI/CD"
-      subtitle="Monitor continuous integration and deployment pipelines"
-      icon="GitPullRequest"
-      rightExtra={<RotatingTip page="ci-cd" />}
-      storageKey={CICD_CARDS_KEY}
-      defaultCards={DEFAULT_CICD_CARDS}
-      statsType="ci-cd"
-      getStatValue={getStatValue}
-      onRefresh={refetch}
-      isLoading={isLoading || prowLoading || deploymentsLoading}
-      isRefreshing={dataRefreshing}
-      lastUpdated={lastUpdated}
-      hasData={reachableClusters.length > 0 || hasRealData}
-      isDemoData={isDemoData}
-      emptyState={{
-        title: 'CI/CD Dashboard',
-        description: 'Add cards to monitor pipelines, builds, and deployment status across your clusters.' }}
-    >
-      {error && (
-        <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400">
-          <div className="font-medium">Error loading cluster data</div>
-          <div className="text-sm text-muted-foreground">{error}</div>
-        </div>
-      )}
-    </DashboardPage>
+    <PipelineFilterProvider>
+      <DashboardPage
+        title="CI/CD"
+        subtitle="Monitor continuous integration and deployment pipelines"
+        icon="GitPullRequest"
+        rightExtra={<RotatingTip page="ci-cd" />}
+        headerExtra={<PipelineFilterBar />}
+        storageKey={CICD_CARDS_KEY}
+        defaultCards={DEFAULT_CICD_CARDS}
+        statsType="ci-cd"
+        getStatValue={getStatValue}
+        onRefresh={refetch}
+        isLoading={isLoading || prowLoading || deploymentsLoading}
+        isRefreshing={dataRefreshing}
+        lastUpdated={lastUpdated}
+        hasData={reachableClusters.length > 0 || hasRealData}
+        isDemoData={isDemoData}
+        emptyState={{
+          title: 'CI/CD Dashboard',
+          description: 'Add cards to monitor pipelines, builds, and deployment status across your clusters.' }}
+      >
+        {error && (
+          <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400">
+            <div className="font-medium">Error loading cluster data</div>
+            <div className="text-sm text-muted-foreground">{error}</div>
+          </div>
+        )}
+      </DashboardPage>
+    </PipelineFilterProvider>
   )
 }

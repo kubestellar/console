@@ -12,6 +12,7 @@ import { ExternalLink } from 'lucide-react'
 import { useDemoMode } from '../../../hooks/useDemoMode'
 import { useCardLoadingState } from '../CardDataContext'
 import { usePipelineMatrix, getPipelineRepos, type Conclusion } from '../../../hooks/useGitHubPipelines'
+import { usePipelineFilter } from './PipelineFilterContext'
 import { cn } from '../../../lib/cn'
 
 /** Available range options. Must match the server's MATRIX_MAX_DAYS (90) */
@@ -47,7 +48,13 @@ function cellClass(c: Conclusion): string {
 
 export function WorkflowMatrix() {
   const [days, setDays] = useState<number>(RANGE_OPTIONS[0])
-  const [repoFilter, setRepoFilter] = useState<string | null>(null)
+  // Shared dashboard filter (if inside PipelineFilterProvider on /ci-cd).
+  // Falls back to per-card local state when on a different dashboard.
+  const shared = usePipelineFilter()
+  const [localRepoFilter, setLocalRepoFilter] = useState<string | null>(null)
+  const repoFilter = shared?.repoFilter ?? localRepoFilter
+  const setRepoFilter = shared?.setRepoFilter ?? setLocalRepoFilter
+  const repos = shared?.repos ?? getPipelineRepos()
 
   const { data, isLoading, error } = usePipelineMatrix(repoFilter, days)
   const { isDemoMode } = useDemoMode()
@@ -79,7 +86,7 @@ export function WorkflowMatrix() {
             aria-label={LABEL_FILTER_REPO}
           >
             <option value="">All repos</option>
-            {getPipelineRepos().map((r) => (
+            {repos.map((r) => (
               <option key={r} value={r}>{r}</option>
             ))}
           </select>
