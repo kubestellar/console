@@ -1,0 +1,900 @@
+// Package handlers — GitHub Pipelines dashboard
+//
+// Go port of web/netlify/functions/github-pipelines.mts. Same six views,
+// same response shapes, same behavior. Lets the /ci-cd pipeline cards
+// work with live data in localhost and in-cluster deployments (the
+// Netlify Function only covers console.kubestellar.io).
+//
+// If two versions drift, the Netlify function is the canonical source.
+package handlers
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"sort"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/gofiber/fiber/v2"
+	"golang.org/x/sync/singleflight"
+)
+
+// ---------------------------------------------------------------------------
+// Constants — mirror web/netlify/functions/github-pipelines.mts
+// ---------------------------------------------------------------------------
+
+const (
+	ghpCacheTTL              = 2 * time.Minute
+	ghpMatrixDefaultDays     = 14
+	ghpMatrixMaxDays         = 90
+	ghpHistoryRetentionDays  = 90
+	ghpFailuresLimit         = 10
+	ghpFailuresOverfetch     = 30
+	ghpLogTailLines          = 500
+	ghpMatrixRunsPerRepo     = 100
+	ghpFlowMaxRunsPerRepo    = 8
+	ghpPulseWindowDays       = 14
+	ghpGitHubAPIBase         = "https://api.github.com"
+	ghpNightlyReleaseRepo    = "kubestellar/console"
+	ghpNightlyReleaseWFFile  = "release.yml"
+	ghpNightlyReleaseCron    = "0 5 * * *"
+	ghpHTTPTimeout           = 15 * time.Second
+	ghpMutationHTTPTimeout   = 15 * time.Second
+	ghpMaxErrorBodyBytes     = 10_000
+	ghpMatrixSparseMinCells  = 1
+)
+
+// ghpRepos is the canonical list scanned — same set /hygiene uses.
+var ghpRepos = []string{
+	"kubestellar/console",
+	"kubestellar/docs",
+	"kubestellar/console-kb",
+	"kubestellar/kubestellar-mcp",
+	"kubestellar/console-marketplace",
+	"kubestellar/homebrew-tap",
+}
+
+func ghpIsAllowedRepo(repo string) bool {
+	for _, r := range ghpRepos {
+		if r == repo {
+			return true
+		}
+	}
+	return false
+}
+
+// ---------------------------------------------------------------------------
+// Wire shapes — match the Netlify function's JSON exactly so the TS hook
+// doesn't have to know which backend served the response.
+// ---------------------------------------------------------------------------
+
+type ghpWorkflowRun struct {
+	ID          int64   `json:"id"`
+	Repo        string  `json:"repo"`
+	Name        string  `json:"name"`
+	WorkflowID  int64   `json:"workflowId"`
+	HeadBranch  string  `json:"headBranch"`
+	Status      string  `json:"status"`
+	Conclusion  *string `json:"conclusion"`
+	Event       string  `json:"event"`
+	RunNumber   int     `json:"runNumber"`
+	HTMLURL     string  `json:"htmlUrl"`
+	CreatedAt   string  `json:"createdAt"`
+	UpdatedAt   string  `json:"updatedAt"`
+}
+
+type ghpStep struct {
+	Name        string  `json:"name"`
+	Status      string  `json:"status"`
+	Conclusion  *string `json:"conclusion"`
+	Number      int     `json:"number"`
+	StartedAt   string  `json:"startedAt,omitempty"`
+	CompletedAt string  `json:"completedAt,omitempty"`
+}
+
+type ghpJob struct {
+	ID          int64     `json:"id"`
+	Name        string    `json:"name"`
+	Status      string    `json:"status"`
+	Conclusion  *string   `json:"conclusion"`
+	StartedAt   *string   `json:"startedAt"`
+	CompletedAt *string   `json:"completedAt"`
+	HTMLURL     string    `json:"htmlUrl"`
+	Steps       []ghpStep `json:"steps"`
+}
+
+type ghpPulseLastRun struct {
+	Conclusion *string `json:"conclusion"`
+	CreatedAt  string  `json:"createdAt"`
+	HTMLURL    string  `json:"htmlUrl"`
+	RunNumber  int     `json:"runNumber"`
+	ReleaseTag *string `json:"releaseTag"`
+}
+
+type ghpPulseRecent struct {
+	Conclusion *string `json:"conclusion"`
+	CreatedAt  string  `json:"createdAt"`
+	HTMLURL    string  `json:"htmlUrl"`
+}
+
+type ghpPulsePayload struct {
+	LastRun    *ghpPulseLastRun `json:"lastRun"`
+	Streak     int              `json:"streak"`
+	StreakKind string           `json:"streakKind"`
+	Recent     []ghpPulseRecent `json:"recent"`
+	NextCron   string           `json:"nextCron"`
+}
+
+type ghpMatrixCell struct {
+	Date       string  `json:"date"`
+	Conclusion *string `json:"conclusion"`
+	HTMLURL    string  `json:"htmlUrl"`
+}
+
+type ghpMatrixWorkflow struct {
+	Repo  string          `json:"repo"`
+	Name  string          `json:"name"`
+	Cells []ghpMatrixCell `json:"cells"`
+}
+
+type ghpMatrixPayload struct {
+	Days      int                 `json:"days"`
+	Range     []string            `json:"range"`
+	Workflows []ghpMatrixWorkflow `json:"workflows"`
+}
+
+type ghpFlowRun struct {
+	Run  ghpWorkflowRun `json:"run"`
+	Jobs []ghpJob       `json:"jobs"`
+}
+
+type ghpFlowPayload struct {
+	Runs []ghpFlowRun `json:"runs"`
+}
+
+type ghpFailedStep struct {
+	JobID    int64  `json:"jobId"`
+	JobName  string `json:"jobName"`
+	StepName string `json:"stepName"`
+}
+
+type ghpFailureRow struct {
+	Repo       string         `json:"repo"`
+	RunID      int64          `json:"runId"`
+	Workflow   string         `json:"workflow"`
+	HTMLURL    string         `json:"htmlUrl"`
+	Branch     string         `json:"branch"`
+	Event      string         `json:"event"`
+	Conclusion *string        `json:"conclusion"`
+	CreatedAt  string         `json:"createdAt"`
+	DurationMs int64          `json:"durationMs"`
+	FailedStep *ghpFailedStep `json:"failedStep"`
+}
+
+type ghpFailuresPayload struct {
+	Runs []ghpFailureRow `json:"runs"`
+}
+
+type ghpLogPayload struct {
+	Lines         int    `json:"lines"`
+	TruncatedFrom int    `json:"truncatedFrom"`
+	Log           string `json:"log"`
+}
+
+// ---------------------------------------------------------------------------
+// History — in-memory rolling 90-day record of per-workflow daily outcomes.
+// Lost on process restart; re-seeded from GitHub on the next request. GitHub
+// keeps 14 days of run history, so restart means the 30/90 day views are
+// thin until the process accumulates again.
+// ---------------------------------------------------------------------------
+
+type ghpHistoryDay struct {
+	RunID      int64
+	Conclusion *string
+	HTMLURL    string
+}
+
+type ghpHistory struct {
+	mu sync.RWMutex
+	// repo -> workflow name -> dateKey (YYYY-MM-DD) -> ghpHistoryDay
+	days map[string]map[string]map[string]ghpHistoryDay
+}
+
+func newGHPHistory() *ghpHistory {
+	return &ghpHistory{days: make(map[string]map[string]map[string]ghpHistoryDay)}
+}
+
+func (h *ghpHistory) merge(runs []ghpWorkflowRun) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	for _, r := range runs {
+		if len(r.CreatedAt) < 10 {
+			continue
+		}
+		day := r.CreatedAt[:10]
+		byRepo, ok := h.days[r.Repo]
+		if !ok {
+			byRepo = make(map[string]map[string]ghpHistoryDay)
+			h.days[r.Repo] = byRepo
+		}
+		byWF, ok := byRepo[r.Name]
+		if !ok {
+			byWF = make(map[string]ghpHistoryDay)
+			byRepo[r.Name] = byWF
+		}
+		existing, had := byWF[day]
+		if !had || r.ID > existing.RunID {
+			byWF[day] = ghpHistoryDay{RunID: r.ID, Conclusion: r.Conclusion, HTMLURL: r.HTMLURL}
+		}
+	}
+	// Trim to retention window
+	cutoff := time.Now().AddDate(0, 0, -ghpHistoryRetentionDays).Format("2006-01-02")
+	for repo, byRepo := range h.days {
+		for wf, byWF := range byRepo {
+			for d := range byWF {
+				if d < cutoff {
+					delete(byWF, d)
+				}
+			}
+			if len(byWF) == 0 {
+				delete(byRepo, wf)
+			}
+		}
+		if len(byRepo) == 0 {
+			delete(h.days, repo)
+		}
+	}
+}
+
+func (h *ghpHistory) snapshot() map[string]map[string]map[string]ghpHistoryDay {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	out := make(map[string]map[string]map[string]ghpHistoryDay, len(h.days))
+	for repo, byRepo := range h.days {
+		rMap := make(map[string]map[string]ghpHistoryDay, len(byRepo))
+		out[repo] = rMap
+		for wf, byWF := range byRepo {
+			wMap := make(map[string]ghpHistoryDay, len(byWF))
+			rMap[wf] = wMap
+			for d, v := range byWF {
+				wMap[d] = v
+			}
+		}
+	}
+	return out
+}
+
+// ---------------------------------------------------------------------------
+// Handler
+// ---------------------------------------------------------------------------
+
+// GitHubPipelinesHandler serves /api/github-pipelines.
+type GitHubPipelinesHandler struct {
+	token         string
+	mutationToken string
+	httpClient    *http.Client
+	history       *ghpHistory
+
+	mu       sync.RWMutex
+	cache    map[string]ghpCacheEntry // cacheKey -> entry
+	fetchGrp singleflight.Group
+}
+
+type ghpCacheEntry struct {
+	body []byte
+	exp  time.Time
+}
+
+// NewGitHubPipelinesHandler constructs the handler. `githubToken` is the
+// read-only PAT. Mutation token comes from GITHUB_MUTATIONS_TOKEN env var
+// — if unset, mutations return 503.
+func NewGitHubPipelinesHandler(githubToken string) *GitHubPipelinesHandler {
+	return &GitHubPipelinesHandler{
+		token:         githubToken,
+		mutationToken: os.Getenv("GITHUB_MUTATIONS_TOKEN"),
+		httpClient:    &http.Client{Timeout: ghpHTTPTimeout},
+		history:       newGHPHistory(),
+		cache:         make(map[string]ghpCacheEntry),
+	}
+}
+
+// Serve routes a request to the right view.
+func (h *GitHubPipelinesHandler) Serve(c *fiber.Ctx) error {
+	view := c.Query("view", "pulse")
+	method := c.Method()
+
+	if view == "mutate" {
+		if method != fiber.MethodPost {
+			return c.Status(fiber.StatusMethodNotAllowed).JSON(fiber.Map{"error": "Mutations require POST"})
+		}
+		return h.handleMutate(c)
+	}
+	if method != fiber.MethodGet {
+		return c.Status(fiber.StatusMethodNotAllowed).JSON(fiber.Map{"error": "GET required"})
+	}
+
+	if h.token == "" {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "GITHUB_TOKEN not configured"})
+	}
+
+	switch view {
+	case "pulse":
+		return h.serveCached(c, h.cacheKey(c), h.buildPulse)
+	case "matrix":
+		return h.serveCached(c, h.cacheKey(c), h.buildMatrixFromQuery)
+	case "flow":
+		return h.serveCached(c, h.cacheKey(c), h.buildFlowFromQuery)
+	case "failures":
+		return h.serveCached(c, h.cacheKey(c), h.buildFailuresFromQuery)
+	case "log":
+		return h.handleLog(c)
+	default:
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Unknown view: " + view})
+	}
+}
+
+func (h *GitHubPipelinesHandler) cacheKey(c *fiber.Ctx) string {
+	return fmt.Sprintf("%s:%s:%s:%s",
+		c.Query("view"),
+		c.Query("repo", "all"),
+		c.Query("days"),
+		c.Query("job"),
+	)
+}
+
+func (h *GitHubPipelinesHandler) serveCached(c *fiber.Ctx, key string, build func(c *fiber.Ctx) (any, error)) error {
+	h.mu.RLock()
+	entry, ok := h.cache[key]
+	h.mu.RUnlock()
+	if ok && time.Now().Before(entry.exp) {
+		c.Set("X-Cache", "HIT")
+		c.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
+		c.Set(fiber.HeaderCacheControl, fmt.Sprintf("public, max-age=%d", int(ghpCacheTTL.Seconds())))
+		return c.Send(entry.body)
+	}
+
+	// Coalesce concurrent cold fetches
+	v, err, _ := h.fetchGrp.Do(key, func() (any, error) {
+		return build(c)
+	})
+	if err != nil {
+		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": err.Error()})
+	}
+	body, err := json.Marshal(v)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "marshal failed"})
+	}
+	h.mu.Lock()
+	h.cache[key] = ghpCacheEntry{body: body, exp: time.Now().Add(ghpCacheTTL)}
+	h.mu.Unlock()
+	c.Set("X-Cache", "MISS")
+	c.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
+	c.Set(fiber.HeaderCacheControl, fmt.Sprintf("public, max-age=%d", int(ghpCacheTTL.Seconds())))
+	return c.Send(body)
+}
+
+// ---------------------------------------------------------------------------
+// GitHub API helpers
+// ---------------------------------------------------------------------------
+
+func (h *GitHubPipelinesHandler) ghGet(ctx context.Context, path string) (*http.Response, error) {
+	url := path
+	if !strings.HasPrefix(url, "http") {
+		url = ghpGitHubAPIBase + path
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+	req.Header.Set("Authorization", "Bearer "+h.token)
+	return h.httpClient.Do(req)
+}
+
+// workflowRunsRaw is the subset of GitHub's workflow_run JSON we consume.
+type workflowRunRaw struct {
+	ID         int64   `json:"id"`
+	Name       string  `json:"name"`
+	WorkflowID int64   `json:"workflow_id"`
+	HeadBranch string  `json:"head_branch"`
+	Status     string  `json:"status"`
+	Conclusion *string `json:"conclusion"`
+	Event      string  `json:"event"`
+	RunNumber  int     `json:"run_number"`
+	HTMLURL    string  `json:"html_url"`
+	CreatedAt  string  `json:"created_at"`
+	UpdatedAt  string  `json:"updated_at"`
+}
+
+func normalizeRunRaw(r workflowRunRaw, repo string) ghpWorkflowRun {
+	return ghpWorkflowRun{
+		ID:         r.ID,
+		Repo:       repo,
+		Name:       r.Name,
+		WorkflowID: r.WorkflowID,
+		HeadBranch: r.HeadBranch,
+		Status:     r.Status,
+		Conclusion: r.Conclusion,
+		Event:      r.Event,
+		RunNumber:  r.RunNumber,
+		HTMLURL:    r.HTMLURL,
+		CreatedAt:  r.CreatedAt,
+		UpdatedAt:  r.UpdatedAt,
+	}
+}
+
+func (h *GitHubPipelinesHandler) fetchRuns(ctx context.Context, repo, query string) ([]ghpWorkflowRun, error) {
+	res, err := h.ghGet(ctx, fmt.Sprintf("/repos/%s/actions/runs?%s", repo, query))
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+	if res.StatusCode == http.StatusNotFound {
+		return nil, nil
+	}
+	if res.StatusCode >= 400 {
+		body, _ := io.ReadAll(io.LimitReader(res.Body, ghpMaxErrorBodyBytes))
+		return nil, fmt.Errorf("github %d: %s", res.StatusCode, string(body))
+	}
+	var data struct {
+		WorkflowRuns []workflowRunRaw `json:"workflow_runs"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&data); err != nil {
+		return nil, err
+	}
+	out := make([]ghpWorkflowRun, 0, len(data.WorkflowRuns))
+	for _, r := range data.WorkflowRuns {
+		out = append(out, normalizeRunRaw(r, repo))
+	}
+	return out, nil
+}
+
+func (h *GitHubPipelinesHandler) fetchJobs(ctx context.Context, repo string, runID int64) ([]ghpJob, error) {
+	res, err := h.ghGet(ctx, fmt.Sprintf("/repos/%s/actions/runs/%d/jobs", repo, runID))
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+	if res.StatusCode >= 400 {
+		body, _ := io.ReadAll(io.LimitReader(res.Body, ghpMaxErrorBodyBytes))
+		return nil, fmt.Errorf("github %d: %s", res.StatusCode, string(body))
+	}
+	var data struct {
+		Jobs []struct {
+			ID          int64   `json:"id"`
+			Name        string  `json:"name"`
+			Status      string  `json:"status"`
+			Conclusion  *string `json:"conclusion"`
+			StartedAt   *string `json:"started_at"`
+			CompletedAt *string `json:"completed_at"`
+			HTMLURL     string  `json:"html_url"`
+			Steps       []struct {
+				Name        string  `json:"name"`
+				Status      string  `json:"status"`
+				Conclusion  *string `json:"conclusion"`
+				Number      int     `json:"number"`
+				StartedAt   string  `json:"started_at"`
+				CompletedAt string  `json:"completed_at"`
+			} `json:"steps"`
+		} `json:"jobs"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&data); err != nil {
+		return nil, err
+	}
+	jobs := make([]ghpJob, 0, len(data.Jobs))
+	for _, j := range data.Jobs {
+		steps := make([]ghpStep, 0, len(j.Steps))
+		for _, s := range j.Steps {
+			steps = append(steps, ghpStep{
+				Name: s.Name, Status: s.Status, Conclusion: s.Conclusion,
+				Number: s.Number, StartedAt: s.StartedAt, CompletedAt: s.CompletedAt,
+			})
+		}
+		jobs = append(jobs, ghpJob{
+			ID: j.ID, Name: j.Name, Status: j.Status, Conclusion: j.Conclusion,
+			StartedAt: j.StartedAt, CompletedAt: j.CompletedAt, HTMLURL: j.HTMLURL,
+			Steps: steps,
+		})
+	}
+	return jobs, nil
+}
+
+// ---------------------------------------------------------------------------
+// Pulse
+// ---------------------------------------------------------------------------
+
+func (h *GitHubPipelinesHandler) buildPulse(c *fiber.Ctx) (any, error) {
+	ctx := c.UserContext()
+	runs, err := h.fetchRuns(
+		ctx,
+		ghpNightlyReleaseRepo,
+		fmt.Sprintf("per_page=%d&event=schedule", ghpPulseWindowDays),
+	)
+	if err != nil {
+		return nil, err
+	}
+	// Rebind name: workflow runs fetched via workflows/<file>/runs endpoint
+	// keep the workflow name; via /actions/runs filtered by event=schedule we
+	// get all scheduled runs, then filter to the Release workflow.
+	releaseRuns := make([]ghpWorkflowRun, 0, len(runs))
+	for _, r := range runs {
+		if strings.EqualFold(r.Name, "Release") || strings.EqualFold(r.Name, "release") {
+			releaseRuns = append(releaseRuns, r)
+		}
+	}
+	if len(releaseRuns) == 0 {
+		// Fallback: try the workflow-specific endpoint
+		alt, altErr := h.fetchRuns(
+			ctx,
+			ghpNightlyReleaseRepo,
+			fmt.Sprintf("per_page=%d", ghpPulseWindowDays),
+		)
+		if altErr == nil {
+			for _, r := range alt {
+				if strings.EqualFold(r.Name, "Release") {
+					releaseRuns = append(releaseRuns, r)
+				}
+			}
+		}
+	}
+	h.history.merge(releaseRuns)
+
+	// Latest release tag (best-effort)
+	var releaseTag *string
+	relRes, relErr := h.ghGet(ctx, "/repos/"+ghpNightlyReleaseRepo+"/releases?per_page=1")
+	if relErr == nil {
+		defer relRes.Body.Close()
+		if relRes.StatusCode == http.StatusOK {
+			var arr []struct {
+				TagName string `json:"tag_name"`
+			}
+			if dec := json.NewDecoder(relRes.Body).Decode(&arr); dec == nil && len(arr) > 0 {
+				tag := arr[0].TagName
+				releaseTag = &tag
+			}
+		}
+	}
+
+	var lastRun *ghpPulseLastRun
+	streak := 0
+	streakKind := "mixed"
+	if len(releaseRuns) > 0 {
+		first := releaseRuns[0]
+		lastRun = &ghpPulseLastRun{
+			Conclusion: first.Conclusion,
+			CreatedAt:  first.CreatedAt,
+			HTMLURL:    first.HTMLURL,
+			RunNumber:  first.RunNumber,
+			ReleaseTag: releaseTag,
+		}
+		kind := ghpStreakKind(first.Conclusion)
+		if kind != "" {
+			streakKind = kind
+			for _, r := range releaseRuns {
+				if ghpStreakKind(r.Conclusion) == kind {
+					streak++
+				} else {
+					break
+				}
+			}
+		}
+	}
+
+	// recent: oldest → newest (reverse of the API's newest-first ordering)
+	window := releaseRuns
+	if len(window) > ghpPulseWindowDays {
+		window = window[:ghpPulseWindowDays]
+	}
+	recent := make([]ghpPulseRecent, 0, len(window))
+	for i := len(window) - 1; i >= 0; i-- {
+		r := window[i]
+		recent = append(recent, ghpPulseRecent{
+			Conclusion: r.Conclusion, CreatedAt: r.CreatedAt, HTMLURL: r.HTMLURL,
+		})
+	}
+
+	return ghpPulsePayload{
+		LastRun:    lastRun,
+		Streak:     streak,
+		StreakKind: streakKind,
+		Recent:     recent,
+		NextCron:   ghpNightlyReleaseCron,
+	}, nil
+}
+
+func ghpStreakKind(c *string) string {
+	if c == nil {
+		return ""
+	}
+	switch *c {
+	case "success":
+		return "success"
+	case "failure", "timed_out":
+		return "failure"
+	}
+	return ""
+}
+
+// ---------------------------------------------------------------------------
+// Matrix
+// ---------------------------------------------------------------------------
+
+func (h *GitHubPipelinesHandler) buildMatrixFromQuery(c *fiber.Ctx) (any, error) {
+	days := ghpMatrixDefaultDays
+	if d := c.Query("days"); d != "" {
+		n, err := strconv.Atoi(d)
+		if err == nil && n > 0 {
+			if n > ghpMatrixMaxDays {
+				n = ghpMatrixMaxDays
+			}
+			days = n
+		}
+	}
+	repoFilter := c.Query("repo")
+	repos := ghpRepos
+	if repoFilter != "" {
+		if !ghpIsAllowedRepo(repoFilter) {
+			return nil, fmt.Errorf("unknown repo")
+		}
+		repos = []string{repoFilter}
+	}
+
+	ctx := c.UserContext()
+	fresh := make([]ghpWorkflowRun, 0, 256)
+	for _, repo := range repos {
+		runs, err := h.fetchRuns(ctx, repo, fmt.Sprintf("per_page=%d", ghpMatrixRunsPerRepo))
+		if err != nil {
+			// per-repo failures shouldn't nuke the whole matrix
+			continue
+		}
+		fresh = append(fresh, runs...)
+	}
+	h.history.merge(fresh)
+	snap := h.history.snapshot()
+
+	// Build date range oldest → newest
+	rangeDates := make([]string, 0, days)
+	for i := days - 1; i >= 0; i-- {
+		rangeDates = append(rangeDates, time.Now().AddDate(0, 0, -i).Format("2006-01-02"))
+	}
+
+	workflows := make([]ghpMatrixWorkflow, 0, 32)
+	for _, repo := range repos {
+		byWF, ok := snap[repo]
+		if !ok {
+			continue
+		}
+		wfNames := make([]string, 0, len(byWF))
+		for name := range byWF {
+			wfNames = append(wfNames, name)
+		}
+		sort.Strings(wfNames)
+		for _, name := range wfNames {
+			cells := make([]ghpMatrixCell, 0, len(rangeDates))
+			populated := 0
+			for _, d := range rangeDates {
+				day, had := byWF[name][d]
+				if had {
+					populated++
+					cells = append(cells, ghpMatrixCell{Date: d, Conclusion: day.Conclusion, HTMLURL: day.HTMLURL})
+				} else {
+					cells = append(cells, ghpMatrixCell{Date: d, Conclusion: nil, HTMLURL: ""})
+				}
+			}
+			if populated < ghpMatrixSparseMinCells {
+				continue
+			}
+			workflows = append(workflows, ghpMatrixWorkflow{Repo: repo, Name: name, Cells: cells})
+		}
+	}
+	return ghpMatrixPayload{Days: days, Range: rangeDates, Workflows: workflows}, nil
+}
+
+// ---------------------------------------------------------------------------
+// Flow
+// ---------------------------------------------------------------------------
+
+func (h *GitHubPipelinesHandler) buildFlowFromQuery(c *fiber.Ctx) (any, error) {
+	repoFilter := c.Query("repo")
+	repos := ghpRepos
+	if repoFilter != "" {
+		if !ghpIsAllowedRepo(repoFilter) {
+			return nil, fmt.Errorf("unknown repo")
+		}
+		repos = []string{repoFilter}
+	}
+
+	ctx := c.UserContext()
+	var all []ghpFlowRun
+	for _, repo := range repos {
+		inProgress, errP := h.fetchRuns(ctx, repo, fmt.Sprintf("status=in_progress&per_page=%d", ghpFlowMaxRunsPerRepo))
+		if errP != nil {
+			continue
+		}
+		queued, errQ := h.fetchRuns(ctx, repo, fmt.Sprintf("status=queued&per_page=%d", ghpFlowMaxRunsPerRepo))
+		if errQ != nil {
+			// partial OK
+			queued = nil
+		}
+		runs := append(inProgress, queued...)
+		for _, r := range runs {
+			jobs, err := h.fetchJobs(ctx, repo, r.ID)
+			if err != nil {
+				continue
+			}
+			all = append(all, ghpFlowRun{Run: r, Jobs: jobs})
+		}
+	}
+	// Newest first by createdAt (lexical works for ISO strings)
+	sort.Slice(all, func(i, j int) bool {
+		return all[i].Run.CreatedAt > all[j].Run.CreatedAt
+	})
+	return ghpFlowPayload{Runs: all}, nil
+}
+
+// ---------------------------------------------------------------------------
+// Failures
+// ---------------------------------------------------------------------------
+
+func (h *GitHubPipelinesHandler) buildFailuresFromQuery(c *fiber.Ctx) (any, error) {
+	repoFilter := c.Query("repo")
+	repos := ghpRepos
+	if repoFilter != "" {
+		if !ghpIsAllowedRepo(repoFilter) {
+			return nil, fmt.Errorf("unknown repo")
+		}
+		repos = []string{repoFilter}
+	}
+
+	ctx := c.UserContext()
+	var rows []ghpFailureRow
+	for _, repo := range repos {
+		runs, err := h.fetchRuns(ctx, repo, fmt.Sprintf("status=failure&per_page=%d", ghpFailuresOverfetch))
+		if err != nil {
+			continue
+		}
+		for _, r := range runs {
+			created, _ := time.Parse(time.RFC3339, r.CreatedAt)
+			updated, _ := time.Parse(time.RFC3339, r.UpdatedAt)
+			dur := updated.Sub(created).Milliseconds()
+			if dur < 0 {
+				dur = 0
+			}
+			rows = append(rows, ghpFailureRow{
+				Repo:       repo,
+				RunID:      r.ID,
+				Workflow:   r.Name,
+				HTMLURL:    r.HTMLURL,
+				Branch:     r.HeadBranch,
+				Event:      r.Event,
+				Conclusion: r.Conclusion,
+				CreatedAt:  r.CreatedAt,
+				DurationMs: dur,
+			})
+		}
+	}
+	sort.Slice(rows, func(i, j int) bool {
+		return rows[i].CreatedAt > rows[j].CreatedAt
+	})
+	if len(rows) > ghpFailuresLimit {
+		rows = rows[:ghpFailuresLimit]
+	}
+	// Identify first failed step per row (best-effort)
+	for i := range rows {
+		jobs, err := h.fetchJobs(ctx, rows[i].Repo, rows[i].RunID)
+		if err != nil {
+			continue
+		}
+		for _, j := range jobs {
+			if j.Conclusion == nil || *j.Conclusion != "failure" {
+				continue
+			}
+			for _, s := range j.Steps {
+				if s.Conclusion != nil && *s.Conclusion == "failure" {
+					rows[i].FailedStep = &ghpFailedStep{
+						JobID:    j.ID,
+						JobName:  j.Name,
+						StepName: s.Name,
+					}
+					break
+				}
+			}
+			if rows[i].FailedStep != nil {
+				break
+			}
+		}
+	}
+	return ghpFailuresPayload{Runs: rows}, nil
+}
+
+// ---------------------------------------------------------------------------
+// Log
+// ---------------------------------------------------------------------------
+
+func (h *GitHubPipelinesHandler) handleLog(c *fiber.Ctx) error {
+	repo := c.Query("repo")
+	jobStr := c.Query("job")
+	if !ghpIsAllowedRepo(repo) || jobStr == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "repo and job required"})
+	}
+	ctx := c.UserContext()
+	res, err := h.ghGet(ctx, fmt.Sprintf("/repos/%s/actions/jobs/%s/logs", repo, jobStr))
+	if err != nil {
+		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": err.Error()})
+	}
+	defer res.Body.Close()
+	if res.StatusCode == http.StatusNotFound {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Log not available (may have been purged)"})
+	}
+	if res.StatusCode >= 400 {
+		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": fmt.Sprintf("github %d", res.StatusCode)})
+	}
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "read failed"})
+	}
+	lines := strings.Split(string(body), "\n")
+	total := len(lines)
+	start := total - ghpLogTailLines
+	if start < 0 {
+		start = 0
+	}
+	return c.JSON(ghpLogPayload{
+		Lines:         ghpLogTailLines,
+		TruncatedFrom: total,
+		Log:           strings.Join(lines[start:], "\n"),
+	})
+}
+
+// ---------------------------------------------------------------------------
+// Mutate
+// ---------------------------------------------------------------------------
+
+func (h *GitHubPipelinesHandler) handleMutate(c *fiber.Ctx) error {
+	if h.mutationToken == "" {
+		// Intentional: local/in-cluster deploys default to read-only. Operator
+		// opts in by setting GITHUB_MUTATIONS_TOKEN. See README.
+		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": "Workflow mutations disabled on this deployment"})
+	}
+	op := c.Query("op")
+	repo := c.Query("repo")
+	run := c.Query("run")
+	if !ghpIsAllowedRepo(repo) {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Unknown repo"})
+	}
+	var path string
+	switch op {
+	case "rerun":
+		path = fmt.Sprintf("/repos/%s/actions/runs/%s/rerun", repo, run)
+	case "cancel":
+		path = fmt.Sprintf("/repos/%s/actions/runs/%s/cancel", repo, run)
+	default:
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Unknown op"})
+	}
+
+	// Use a short-timeout client specifically for the mutation
+	ctx, cancel := context.WithTimeout(c.UserContext(), ghpMutationHTTPTimeout)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, ghpGitHubAPIBase+path, nil)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+	req.Header.Set("Authorization", "Bearer "+h.mutationToken)
+	res, err := h.httpClient.Do(req)
+	if err != nil {
+		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": err.Error()})
+	}
+	defer res.Body.Close()
+	if res.StatusCode >= 400 {
+		body, _ := io.ReadAll(io.LimitReader(res.Body, ghpMaxErrorBodyBytes))
+		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": fmt.Sprintf("github %d: %s", res.StatusCode, string(body))})
+	}
+	return c.JSON(fiber.Map{"ok": true, "op": op, "run": run, "repo": repo})
+}
