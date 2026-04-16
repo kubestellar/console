@@ -258,9 +258,30 @@ describe('DashboardGrid', () => {
     const cards = [makePlacement('c1', 'test-card', 6, 3)]
     const { container } = render(<DashboardGrid cards={cards} />)
 
-    // h=3, each row = 100px, so min-height = 300px
-    const cardEl = container.querySelector('[style*="min-height: 300px"]')
+    // h=3, EXPANDED_CARD_ROW_MIN_HEIGHT_PX = 180 (raised from 100 in
+    // #8349 so the Resize-height menu actually grows the card visibly
+    // — #8335 #8336 #8337). 3 * 180 = 540px.
+    const cardEl = container.querySelector('[style*="min-height: 540px"]')
     expect(cardEl).not.toBeNull()
+  })
+
+  it('min-height scales linearly with position.h (constant-independent)', () => {
+    // Regression guard: if the per-row constant changes again, the
+    // previous literal-pixel test breaks silently. Assert the ratio so
+    // the only way this fails is a genuine scaling bug, not a constant
+    // retune.
+    mockGetCardConfig = (type: string) => ({ type, title: type })
+    const extract = (h: number) => {
+      const { container } = render(
+        <DashboardGrid cards={[makePlacement(`h${h}`, 'test-card', 6, h)]} />,
+      )
+      const el = container.querySelector('[style*="min-height"]') as HTMLElement | null
+      return Number((el?.style.minHeight || '').replace('px', ''))
+    }
+    const h2 = extract(2)
+    const h4 = extract(4)
+    expect(h2).toBeGreaterThan(0)
+    expect(h4).toBe(h2 * 2)
   })
 
   it('renders empty grid when no cards provided', () => {
