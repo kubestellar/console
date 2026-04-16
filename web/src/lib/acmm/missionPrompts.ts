@@ -25,11 +25,11 @@ export function detectionLabel(hint: DetectionHint): string {
 
 function buildPromptForCriterion(c: Criterion, repo: string, reason: string): string {
   const ref = c.referencePath ? `\n- Reference implementation: ${c.referencePath} in kubestellar/console` : ''
-  return `Add the "${c.name}" feedback loop to ${repo} so the ACMM dashboard detects it.
+  return `Add the "${c.name}" ACMM criterion to ${repo} so the ACMM dashboard detects it.
 
 Source: ${SOURCE_LABELS[c.source]}
 Criterion ID: ${c.id}
-What this loop does: ${c.description}
+What this criterion does: ${c.description}
 Why it matters: ${reason}
 
 Detection rule (must match at least one after your change):
@@ -64,13 +64,13 @@ export function allRecommendationsPrompt(recs: Recommendation[], repo: string): 
   const list = recs
     .map((r, i) => `${i + 1}. ${r.criterion.name} (${SOURCE_LABELS[r.criterion.source]}) — detection: ${detectionLabel(r.criterion.detection)}`)
     .join('\n')
-  return `Implement the missing ACMM feedback loops for ${repo}:
+  return `Implement the missing ACMM criteria for ${repo}:
 
 ${list}
 
 For each item:
 - Check whether an equivalent artifact already exists under a non-standard path (don't duplicate).
 - If truly missing, add the minimum change that matches the detection pattern and follows the repo's conventions.
-- Return a brief summary of what changed for each loop.
+- Return a brief summary of what changed for each criterion.
 Do not push or open a PR automatically — stop after commits so I can review.`
 }

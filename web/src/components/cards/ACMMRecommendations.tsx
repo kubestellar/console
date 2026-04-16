@@ -2,7 +2,7 @@
  * ACMM Recommendations Card
  *
  * Shows the user's current role, the next transition trigger, and the
- * top prioritized recommendations (missing feedback loops) merged from
+ * top prioritized recommendations (missing criteria) merged from
  * all registered sources.
  */
 
@@ -11,6 +11,7 @@ import { useCardLoadingState } from './CardDataContext'
 import { CardSkeleton } from '../../lib/cards/CardComponents'
 import { useACMM } from '../acmm/ACMMProvider'
 import { useMissions } from '../../hooks/useMissions'
+import { SOURCES_BY_ID } from '../../lib/acmm/sources'
 import type { Recommendation } from '../../lib/acmm/computeRecommendations'
 import type { SourceId } from '../../lib/acmm/sources/types'
 import {
@@ -33,7 +34,7 @@ export function ACMMRecommendations() {
 
   function launchOne(rec: Recommendation) {
     startMission({
-      title: `Add ACMM loop: ${rec.criterion.name}`,
+      title: `Add ACMM criterion: ${rec.criterion.name}`,
       description: `Add "${rec.criterion.name}" to ${repo}`,
       type: 'custom',
       initialPrompt: singleRecommendationPrompt(rec, repo),
@@ -44,7 +45,7 @@ export function ACMMRecommendations() {
   function launchAll() {
     if (recommendations.length === 0) return
     startMission({
-      title: `Add ${recommendations.length} missing ACMM loops`,
+      title: `Add ${recommendations.length} missing ACMM criteria`,
       description: `Implement all top ACMM recommendations for ${repo}`,
       type: 'custom',
       initialPrompt: allRecommendationsPrompt(recommendations, repo),
@@ -99,7 +100,7 @@ export function ACMMRecommendations() {
               type="button"
               onClick={launchAll}
               className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-primary/20 text-primary hover:bg-primary/30 transition-colors"
-              title={`Ask the selected agent to add all ${recommendations.length} missing loops to ${repo}`}
+              title={`Ask the selected agent to add all ${recommendations.length} missing criteria to ${repo}`}
             >
               <Sparkles className="w-2.5 h-2.5" />
               Ask agent for help with all ({recommendations.length})
@@ -115,14 +116,24 @@ export function ACMMRecommendations() {
               <div className="flex items-start justify-between gap-2">
                 <div className="text-xs font-medium flex-1">{rec.criterion.name}</div>
                 <div className="flex gap-1 flex-shrink-0">
-                  {rec.sources.map((s) => (
-                    <span
-                      key={s}
-                      className="text-[9px] px-1.5 py-0.5 rounded-full bg-primary/20 text-primary"
-                    >
-                      {SOURCE_LABELS[s]}
-                    </span>
-                  ))}
+                  {rec.sources.map((s) => {
+                    const src = SOURCES_BY_ID[s]
+                    const badge = (
+                      <span
+                        className="text-[9px] px-1.5 py-0.5 rounded-full bg-primary/20 text-primary hover:bg-primary/30"
+                        title={src?.citation}
+                      >
+                        {SOURCE_LABELS[s]}
+                      </span>
+                    )
+                    return src?.url ? (
+                      <a key={s} href={src.url} target="_blank" rel="noopener noreferrer" className="no-underline">
+                        {badge}
+                      </a>
+                    ) : (
+                      <span key={s}>{badge}</span>
+                    )
+                  })}
                 </div>
               </div>
               <div className="text-[10px] text-muted-foreground mt-0.5 leading-snug">
@@ -139,7 +150,7 @@ export function ACMMRecommendations() {
                   type="button"
                   onClick={() => launchOne(rec)}
                   className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors flex-shrink-0"
-                  title={`Ask the selected agent to add the "${rec.criterion.name}" loop to ${repo}`}
+                  title={`Ask the selected agent to add the "${rec.criterion.name}" criterion to ${repo}`}
                 >
                   <Zap className="w-2.5 h-2.5" />
                   Ask agent for help

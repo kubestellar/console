@@ -12,7 +12,7 @@ import { useCardLoadingState } from './CardDataContext'
 import { CardSkeleton } from '../../lib/cards/CardComponents'
 import { useACMM } from '../acmm/ACMMProvider'
 import { useMissions } from '../../hooks/useMissions'
-import { ALL_CRITERIA } from '../../lib/acmm/sources'
+import { ALL_CRITERIA, SOURCES_BY_ID } from '../../lib/acmm/sources'
 import type { Criterion, SourceId } from '../../lib/acmm/sources/types'
 import { detectionLabel, singleCriterionPrompt } from '../../lib/acmm/missionPrompts'
 
@@ -66,7 +66,7 @@ export function ACMMFeedbackLoops() {
 
   function launchOne(c: Criterion) {
     startMission({
-      title: `Add ACMM loop: ${c.name}`,
+      title: `Add ACMM criterion: ${c.name}`,
       description: `Add "${c.name}" to ${repo}`,
       type: 'custom',
       initialPrompt: singleCriterionPrompt(c, repo),
@@ -168,12 +168,34 @@ export function ACMMFeedbackLoops() {
                 {c.level && (
                   <span className="text-[10px] font-mono text-muted-foreground">L{c.level}</span>
                 )}
-                <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${SOURCE_COLORS[c.source]}`}>
+                <span
+                  className={`text-[9px] px-1.5 py-0.5 rounded-full ${SOURCE_COLORS[c.source]}`}
+                  title={SOURCES_BY_ID[c.source]?.citation}
+                >
                   {SOURCE_LABELS[c.source]}
                 </span>
               </button>
               {isExpanded && (
                 <div className="px-8 pb-2 pt-0 text-[10px] space-y-1.5 border-t border-border/30">
+                  {SOURCES_BY_ID[c.source]?.url && (
+                    <div>
+                      <span className="text-muted-foreground">Cited from:</span>{' '}
+                      <a
+                        href={SOURCES_BY_ID[c.source].url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline"
+                        title={SOURCES_BY_ID[c.source]?.citation}
+                      >
+                        {SOURCES_BY_ID[c.source].name}
+                      </a>
+                      {SOURCES_BY_ID[c.source]?.citation && (
+                        <span className="ml-1 text-muted-foreground/70 italic">
+                          — {SOURCES_BY_ID[c.source].citation}
+                        </span>
+                      )}
+                    </div>
+                  )}
                   <div>
                     <span className="text-muted-foreground">Detection ({c.detection.type}):</span>{' '}
                     <code className="font-mono bg-background/60 px-1 py-0.5 rounded">
@@ -224,7 +246,7 @@ export function ACMMFeedbackLoops() {
                           launchOne(c)
                         }}
                         className="inline-flex items-center gap-1 text-primary hover:text-primary/80"
-                        title={`Ask the selected agent to add the "${c.name}" loop to ${repo}`}
+                        title={`Ask the selected agent to add the "${c.name}" criterion to ${repo}`}
                       >
                         <Sparkles className="w-2.5 h-2.5" />
                         Ask agent for help
