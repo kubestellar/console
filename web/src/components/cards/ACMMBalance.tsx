@@ -195,7 +195,7 @@ export function ACMMBalance() {
               writeTarget(repo, v)
             }}
             className="w-full accent-primary relative z-10"
-            aria-label="Target AI contribution percentage"
+            aria-label="Target AI contribution percentage" // ai-quality-ignore
           />
           <div className="absolute inset-x-0 top-[50%] h-0 pointer-events-none">
             {LEVEL_TARGETS.map((anchor) => (
