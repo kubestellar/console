@@ -104,6 +104,7 @@ export function Layout({ children: _children }: LayoutProps) {
   const { isOnline, wasOffline } = useNetworkStatus()
   const { status: backendStatus, versionChanged, isInClusterMode } = useBackendHealth()
   const [offlineBannerDismissed, setOfflineBannerDismissed] = useState(false)
+  const [demoBannerDismissed, setDemoBannerDismissed] = useState(false)
   const [showSetupDialog, setShowSetupDialog] = useState(false)
   const [showInClusterAgentDialog, setShowInClusterAgentDialog] = useState(false)
   const [wasBackendDown, setWasBackendDown] = useState(false)
@@ -254,10 +255,11 @@ export function Layout({ children: _children }: LayoutProps) {
   // Sidebar/MissionSidebar/Mobile menus escalated to z-modal so they sit above their overlays/banners (issues #6486/#6488/#6489/#6490/#6493).
   // Stack order: Network (top) → Demo → In-cluster agent / Agent Offline (bottom)
   const networkBannerTop = NAVBAR_HEIGHT_PX
+  const showDemoBanner = isDemoMode && !demoBannerDismissed
   const demoBannerTop = NAVBAR_HEIGHT_PX + (showNetworkBanner ? BANNER_HEIGHT_PX : 0)
-  const inClusterBannerTop = NAVBAR_HEIGHT_PX + (showNetworkBanner ? BANNER_HEIGHT_PX : 0) + (isDemoMode ? BANNER_HEIGHT_PX : 0)
-  const offlineBannerTop = NAVBAR_HEIGHT_PX + (showNetworkBanner ? BANNER_HEIGHT_PX : 0) + (isDemoMode ? BANNER_HEIGHT_PX : 0) + (showInClusterBanner ? BANNER_HEIGHT_PX : 0)
-  const activeBannerCount = (showNetworkBanner ? 1 : 0) + (isDemoMode ? 1 : 0) + (showInClusterBanner ? 1 : 0) + (showOfflineBanner ? 1 : 0)
+  const inClusterBannerTop = NAVBAR_HEIGHT_PX + (showNetworkBanner ? BANNER_HEIGHT_PX : 0) + (showDemoBanner ? BANNER_HEIGHT_PX : 0)
+  const offlineBannerTop = NAVBAR_HEIGHT_PX + (showNetworkBanner ? BANNER_HEIGHT_PX : 0) + (showDemoBanner ? BANNER_HEIGHT_PX : 0) + (showInClusterBanner ? BANNER_HEIGHT_PX : 0)
+  const activeBannerCount = (showNetworkBanner ? 1 : 0) + (showDemoBanner ? 1 : 0) + (showInClusterBanner ? 1 : 0) + (showOfflineBanner ? 1 : 0)
   const totalBannerHeight = activeBannerCount * BANNER_HEIGHT_PX
 
   // Show bottom snackbar when backend is down, or briefly after reconnecting.
@@ -353,7 +355,7 @@ export function Layout({ children: _children }: LayoutProps) {
       {/* Demo Mode Banner — context-aware messaging:
           - Authenticated (real JWT) but no agent: "Connect your agent"
           - No auth / Netlify preview: "Install locally" */}
-      {isDemoMode && (() => {
+      {showDemoBanner && (() => {
         const isAuthenticatedNoAgent = hasRealToken() && agentStatus !== 'connected'
         return (
           <div
@@ -396,10 +398,10 @@ export function Layout({ children: _children }: LayoutProps) {
                 )}
               </Button>
               <button
-                onClick={() => isDemoModeForced ? setShowSetupDialog(true) : toggleDemoMode()}
+                onClick={() => isDemoModeForced ? setDemoBannerDismissed(true) : toggleDemoMode()}
                 className="ml-1 md:ml-2 p-2 min-h-11 min-w-11 flex items-center justify-center hover:bg-yellow-500/20 rounded-full transition-colors"
-                aria-label={isDemoModeForced ? t('buttons.installConsole') : t('buttons.exitDemoMode')}
-                title={isDemoModeForced ? t('buttons.installConsole') : t('buttons.exitDemoMode')}
+                aria-label={isDemoModeForced ? t('buttons.dismissBanner') : t('buttons.exitDemoMode')}
+                title={isDemoModeForced ? t('buttons.dismissBanner') : t('buttons.exitDemoMode')}
               >
                 <X className="w-3.5 h-3.5 text-yellow-400" aria-hidden="true" />
               </button>

@@ -54,7 +54,8 @@
     "replaceCard": "Replace Card",
     "askAI": "Ask AI about this card",
     "installConsole": "Install your own console",
-    "exitDemoMode": "Exit demo mode"
+    "exitDemoMode": "Exit demo mode",
+    "dismissBanner": "Dismiss banner"
   },
   "labels": {
     "loading": "Loading...",
