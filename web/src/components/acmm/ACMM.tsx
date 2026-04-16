@@ -10,11 +10,13 @@ import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
 import { ACMMProvider } from './ACMMProvider'
 import { RepoPicker } from './RepoPicker'
+import { ACMMIntroModal, useACMMIntroModal } from './ACMMIntroModal'
 
 const ACMM_CARDS_KEY = 'kubestellar-acmm-cards'
 const DEFAULT_ACMM_CARDS = getDefaultCards('acmm')
 
 export function ACMM() {
+  const intro = useACMMIntroModal()
   return (
     <ACMMProvider>
       <DashboardPage
@@ -31,6 +33,7 @@ export function ACMM() {
             'Enter a GitHub repo above to assess it against the AI Codebase Maturity Model.',
         }}
       />
+      <ACMMIntroModal isOpen={intro.isOpen} onClose={intro.onClose} />
     </ACMMProvider>
   )
 }

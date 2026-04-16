@@ -71,7 +71,9 @@ export function ACMMRecommendations() {
   return (
     <div className="h-full flex flex-col p-2 gap-3 overflow-y-auto">
       <div>
-        <div className="text-[10px] text-muted-foreground uppercase tracking-wide">You are a</div>
+        <div className="text-[10px] text-muted-foreground uppercase tracking-wide">
+          You are {/^[aeiou]/i.test(level.role) ? 'an' : 'a'}
+        </div>
         <div className="text-xl font-bold text-primary">{level.role}</div>
         <p className="text-xs text-muted-foreground mt-1 leading-snug">{level.characteristic}</p>
       </div>
