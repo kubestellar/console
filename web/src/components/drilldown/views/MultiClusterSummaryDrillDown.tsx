@@ -562,7 +562,7 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
                     detailed list is empty.
                   </div>
                   <div className="text-muted-foreground mt-1">
-                    This usually means the current user lacks list-pods RBAC on one or more clusters, or the pods endpoint is temporarily unreachable — the per-cluster summary includes the count but the detail view can&apos;t enumerate individual pods. (#8380)
+                    This usually means the current user lacks list-pods RBAC on one or more clusters, or the pods endpoint is temporarily unreachable — the per-cluster summary includes the count but the detail view can&apos;t enumerate individual pods.
                   </div>
                 </div>
               </div>
