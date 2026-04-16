@@ -5,31 +5,39 @@
  * ACMM registry plus weekly AI-vs-human contribution activity. Powers the
  * /acmm dashboard's four cards.
  *
- * Input:  ?repo=owner/repo
- * Output: { repo, scannedAt, detectedIds, weeklyActivity, fromCache?, demoFallback?, error? }
- *   - detectedIds: array of criterion IDs (source-prefixed) matched against the
- *     repo tree. Frontend computes ACMM level + role + recommendations from
- *     this. Field is named `detectedIds`, not `detectedLoops`, because the
- *     registry includes non-loop criteria from non-ACMM sources.
+ * Input:  ?repo=owner/repo&force=true (force bypasses cache)
+ *
+ * Response body (JSON) — discriminated by HTTP status:
+ *
+ *   200 live/cache-hit:
+ *     { repo, scannedAt, detectedIds, weeklyActivity, fromCache? }
+ *
+ *   200 demo fallback (live fetch failed — soft degradation):
+ *     { repo, scannedAt, detectedIds, weeklyActivity, demoFallback: true, error }
+ *
+ *   400 invalid repo slug:   { error: "Invalid repo — must be owner/name" }
+ *   404 repo not found:      { error: "Repo not found", detail: repo }
+ *   405 non-GET method:      { error: "Method not allowed" }
+ *   204 OPTIONS preflight:   (no body — CORS only)
+ *
+ * Field notes:
+ *   - detectedIds: array of criterion IDs (source-prefixed) matched against
+ *     the repo tree. Frontend computes ACMM level + role + recommendations
+ *     from this. Field is named `detectedIds`, not `detectedLoops`, because
+ *     the registry includes non-loop criteria from non-ACMM sources.
  *   - weeklyActivity: 16 weeks of WeeklyActivity entries —
- *     `{ week, aiPrs, humanPrs, aiIssues, humanIssues }`. `week` is an
- *     ISO `YYYY-Www` bucket. Counts are split AI vs human by `isAIContribution`:
+ *     `{ week, aiPrs, humanPrs, aiIssues, humanIssues }`. `week` is an ISO
+ *     `YYYY-Www` bucket. Counts are split AI vs human by `isAIContribution`:
  *     item is AI if the author login is in `AI_AUTHORS`, OR ends in `[bot]`,
  *     OR any attached label is `ai-generated` — human otherwise.
- *   - fromCache: present (true) only on cache-hit responses; omitted on
- *     live scans and demo fallback.
- *   - demoFallback: present (true) only when the live fetch failed and the
- *     function returned the demo catalog as a soft degradation; omitted
+ *   - fromCache: true on cache-hit 200 responses; omitted on live and demo.
+ *   - demoFallback: true only on the 200 demo-fallback path; omitted
  *     otherwise.
- *   - error: present on non-200 JSON responses, carrying a short
- *     description of why the request was rejected: for rejected `GET`
- *     requests, 400 invalid repo or 404 repo not found; for non-`GET`
- *     methods, 405 method not allowed. The 204 `OPTIONS` CORS preflight
- *     response has no JSON body and therefore no `error` field. Also
- *     present on the 200 demo-fallback response (alongside
- *     `demoFallback: true`), carrying the upstream GitHub error message
- *     so the UI can surface it (rate-limited, network error, etc.)
- *     while still rendering the demo catalog.
+ *   - error (200 demo fallback): upstream GitHub error message so the UI
+ *     can surface it (rate-limited, network error, etc.) while still
+ *     rendering the demo catalog.
+ *   - error (400/404/405): short description of why the request was
+ *     rejected; never combined with the scan fields above.
  *
  * Optional env var:
  *   GITHUB_TOKEN — enables higher rate limits (5000 req/hr vs 60)
