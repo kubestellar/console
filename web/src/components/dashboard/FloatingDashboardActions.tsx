@@ -125,12 +125,12 @@ export function FloatingDashboardActions({
 
   const getPositionClasses = () => {
     if (isMobile) return 'left-4 bottom-4'
-    // right-10 (40px) instead of right-6 (24px) — the scrollbar on
-    // the main content area eats ~15px of viewport width, so right-6
-    // left the 40px button clipped to a half-circle (#8464 follow-up).
-    if (!isSidebarOpen) return 'right-10 bottom-20'
-    if (isSidebarMinimized) return 'right-[88px] bottom-20'
-    return 'right-[552px] bottom-20'
+    // right-16 (64px) keeps the 40px FAB fully visible regardless of
+    // macOS "always-show scrollbars" preference, browser zoom, or any
+    // future scrollbar-gutter changes (#8551 follow-up).
+    if (!isSidebarOpen) return 'right-16 bottom-20'
+    if (isSidebarMinimized) return 'right-[104px] bottom-20'
+    return 'right-[568px] bottom-20'
   }
   const positionClasses = getPositionClasses()
 
