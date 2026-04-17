@@ -614,6 +614,8 @@ func (h *GitHubPipelinesHandler) buildPulse(c *fiber.Ctx) (any, error) {
 	pulseRepo := c.Query("repo")
 	if pulseRepo == "" {
 		pulseRepo = ghpNightlyReleaseRepo
+	} else if !ghpIsAllowedRepo(pulseRepo) {
+		return nil, fiber.NewError(fiber.StatusBadRequest, "invalid repo slug")
 	}
 	// Fetch Release workflow runs via the workflow-specific endpoint so we
 	// don't have to filter from /actions/runs (which returns ALL workflows).
