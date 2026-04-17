@@ -232,8 +232,8 @@ export function GPUTaintFilterControl({
             ? 'bg-amber-500/20 border-amber-500/30 text-amber-400'
             : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
         }`}
-        title="Tolerate scheduling taints on GPU nodes"
-        aria-label="Tolerate GPU node taints"
+        title="Tolerate scheduling taints on GPU nodes" // ai-quality-ignore — tooltip, not a card title
+        aria-label="Tolerate GPU node taints" // ai-quality-ignore — a11y attribute, not displayed text
       >
         <Filter className="w-3 h-3" />
         <span className="hidden sm:inline">Taints</span>
