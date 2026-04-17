@@ -583,7 +583,7 @@ function useVersionCheckCore() {
         headers['If-None-Match'] = cache.etag
       }
 
-      const response = await fetch(GITHUB_API_URL, { headers, signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) })
+      const response = await fetch(GITHUB_API_URL, { headers, credentials: 'include', signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) })
 
       // Handle rate limiting
       if (response.status === 403) {

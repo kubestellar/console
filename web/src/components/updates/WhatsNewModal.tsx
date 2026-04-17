@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { Download, Clock, SkipForward, ChevronDown, Copy, Check } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -79,8 +79,40 @@ export function WhatsNewModal({ isOpen, onClose }: WhatsNewModalProps) {
   const [showManualUpdate, setShowManualUpdate] = useState(false)
   const [showSnoozeMenu, setShowSnoozeMenu] = useState(false)
   const [copiedCommand, setCopiedCommand] = useState<string | null>(null)
+  const [recentPRs, setRecentPRs] = useState<Array<{ number: number; title: string; merged_at: string }>>([])
 
   const markdownComponents = useMemo(() => buildReleaseNotesComponents('sm'), [])
+
+  // When release notes are empty, fetch recent merged PRs as fallback content
+  const MAX_RECENT_PRS = 20
+  const hasReleaseNotes = !!latestRelease?.releaseNotes?.trim()
+  useEffect(() => {
+    if (hasReleaseNotes || !isOpen) return
+    let cancelled = false
+    const fetchPRs = async () => {
+      try {
+        const resp = await fetch(
+          `/api/github/repos/kubestellar/console/pulls?state=closed&sort=updated&direction=desc&per_page=${MAX_RECENT_PRS}`,
+          { credentials: 'include' },
+        )
+        if (!resp.ok || cancelled) return
+        const data = await resp.json()
+        if (cancelled) return
+        const merged = (data || [])
+          .filter((pr: { merged_at: string | null }) => pr.merged_at)
+          .map((pr: { number: number; title: string; merged_at: string }) => ({
+            number: pr.number,
+            title: pr.title,
+            merged_at: pr.merged_at,
+          }))
+        setRecentPRs(merged)
+      } catch {
+        // Silently fail — the modal still shows "no release notes"
+      }
+    }
+    fetchPRs()
+    return () => { cancelled = true }
+  }, [hasReleaseNotes, isOpen])
 
   const previousReleases = useMemo(() => {
     if (!releases || !currentVersion || !latestRelease) return []
@@ -173,15 +205,44 @@ export function WhatsNewModal({ isOpen, onClose }: WhatsNewModalProps) {
 
       <BaseModal.Content>
         <div className="space-y-4">
-          {/* Primary release notes */}
-          <div className="prose dark:prose-invert max-w-none text-sm overflow-x-auto break-words [word-break:break-word] prose-pre:my-5 prose-pre:bg-transparent prose-pre:p-0 prose-code:text-purple-700 dark:prose-code:text-purple-300 prose-code:bg-black/5 dark:prose-code:bg-black/20 prose-code:px-1 prose-code:rounded">
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm, remarkBreaks]}
-              components={markdownComponents}
-            >
-              {latestRelease?.releaseNotes || '*No release notes available. Pull the latest commits to update.*'}
-            </ReactMarkdown>
-          </div>
+          {/* Primary release notes — or recent merged PRs as fallback */}
+          {hasReleaseNotes ? (
+            <div className="prose dark:prose-invert max-w-none text-sm overflow-x-auto break-words [word-break:break-word] prose-pre:my-5 prose-pre:bg-transparent prose-pre:p-0 prose-code:text-purple-700 dark:prose-code:text-purple-300 prose-code:bg-black/5 dark:prose-code:bg-black/20 prose-code:px-1 prose-code:rounded">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm, remarkBreaks]}
+                components={markdownComponents}
+              >
+                {latestRelease?.releaseNotes ?? ''}
+              </ReactMarkdown>
+            </div>
+          ) : recentPRs.length > 0 ? (
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground mb-2">
+                Recently merged pull requests:
+              </p>
+              {recentPRs.map((pr) => (
+                <a
+                  key={pr.number}
+                  href={`https://github.com/kubestellar/console/pull/${pr.number}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-start gap-2 px-2 py-1.5 rounded hover:bg-secondary/50 transition-colors group"
+                >
+                  <span className="text-xs text-muted-foreground font-mono shrink-0">#{pr.number}</span>
+                  <span className="text-sm text-foreground group-hover:text-primary transition-colors">{pr.title}</span>
+                  <span className="text-xs text-muted-foreground ml-auto shrink-0">
+                    {formatRelativeTime(new Date(pr.merged_at))}
+                  </span>
+                </a>
+              ))}
+            </div>
+          ) : (
+            <div className="prose dark:prose-invert max-w-none text-sm">
+              <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} components={markdownComponents}>
+                {'*No release notes available. Pull the latest commits to update.*'}
+              </ReactMarkdown>
+            </div>
+          )}
 
           {/* Previous releases (collapsible) */}
           {previousReleases.length > 0 && (
