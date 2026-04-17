@@ -1,6 +1,8 @@
 import { CheckCircle, AlertTriangle, AlertCircle } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useDashboardHealth, type DashboardHealthStatus } from '../../hooks/useDashboardHealth'
+import { useGlobalFilters } from '../../hooks/useGlobalFilters'
+import { ROUTES } from '../../config/routes'
 import { cn } from '../../lib/cn'
 
 interface StatusConfig {
@@ -48,14 +50,33 @@ export function DashboardHealthIndicator({
 }: DashboardHealthIndicatorProps) {
   const health = useDashboardHealth()
   const navigate = useNavigate()
+  const location = useLocation()
+  const { setSelectedSeverities } = useGlobalFilters()
   const config = STATUS_CONFIGS[health.status]
   const Icon = config.icon
 
+  const isOnAlertsPage = location.pathname === ROUTES.ALERTS
+
   const handleClick = () => {
-    if (health.navigateTo) {
+    if (health.status === 'critical') {
+      // Apply critical severity filter
+      setSelectedSeverities(['critical'])
+      if (!isOnAlertsPage) {
+        navigate(ROUTES.ALERTS)
+      }
+    } else if (health.status === 'warning') {
+      // Apply warning severity filter
+      setSelectedSeverities(['warning'])
+      if (!isOnAlertsPage) {
+        navigate(ROUTES.ALERTS)
+      }
+    } else if (health.navigateTo && !isOnAlertsPage) {
       navigate(health.navigateTo)
     }
   }
+
+  /** Whether clicking the badge has an action (navigate or filter) */
+  const isClickable = health.status !== 'healthy'
 
   const iconSize = size === 'sm' ? 'w-3 h-3' : 'w-4 h-4'
   const textSize = size === 'sm' ? 'text-2xs' : 'text-xs'
@@ -67,7 +88,7 @@ export function DashboardHealthIndicator({
   return (
     <button
       onClick={handleClick}
-      disabled={!health.navigateTo}
+      disabled={!isClickable}
       className={cn(
         'inline-flex items-center gap-1 rounded border font-medium transition-all',
         config.bgColor,
@@ -75,7 +96,7 @@ export function DashboardHealthIndicator({
         config.borderColor,
         padding,
         textSize,
-        health.navigateTo
+        isClickable
           ? 'cursor-pointer hover:scale-105 hover:shadow-md'
           : 'cursor-default',
         className
