@@ -100,6 +100,10 @@ export function Settings() {
   const { restoredFromFile, syncStatus, lastSaved, filePath, exportSettings, importSettings } = usePersistedSettings()
 
   const [activeSection, setActiveSection] = useState<string>('ai-mode-settings')
+  // Mirror of activeSection for the IntersectionObserver callback — avoids
+  // reading stale closure values and lets us skip no-op setState calls that
+  // would trigger re-renders and feed the layout loop (issue #8578).
+  const activeSectionRef = useRef<string>('ai-mode-settings')
   const [showRestoredToast, setShowRestoredToast] = useState(false)
 
   /** Close settings and return to previous page (or home as fallback).
@@ -176,6 +180,7 @@ export function Settings() {
         navScrollTimerRef.current = setTimeout(() => { isNavScrollingRef.current = false }, NAV_SCROLL_SUPPRESS_MS)
 
         scrollToSection(hash, false)
+        activeSectionRef.current = hash
         setActiveSection(hash)
         element.classList.add('ring-2', 'ring-purple-500/50')
         setTimeout(() => element.classList.remove('ring-2', 'ring-purple-500/50'), UI_FEEDBACK_TIMEOUT_MS)
@@ -187,6 +192,12 @@ export function Settings() {
     const timer = setTimeout(tryScroll, TOOLTIP_HIDE_DELAY_MS)
     return () => clearTimeout(timer)
   }, [location.pathname, location.hash, scrollToSection])
+
+  /** Pixel threshold for considering the scroll container "at the bottom".
+   *  When within this many pixels of the max scroll, we pick the last
+   *  visible section instead of the first — this prevents the observer
+   *  from oscillating between two sections at the scroll boundary. */
+  const SCROLL_BOTTOM_THRESHOLD_PX = 50
 
   // Track active section on scroll using IntersectionObserver
   useEffect(() => {
@@ -211,12 +222,38 @@ export function Settings() {
         // (nav click or deep link) — handleNavClick already set it.
         if (isNavScrollingRef.current) return
 
-        // Pick the first visible section in document order
-        for (const id of allSectionIds) {
-          if (visibleSections.has(id)) {
-            setActiveSection(id)
-            break
+        // When scrolled to the bottom the -40% rootMargin can cause
+        // sections to oscillate across the observation boundary, rapidly
+        // toggling activeSection and triggering re-renders that shift the
+        // sidebar scroll position (issue #8578).  Pick the *last* visible
+        // section when near the bottom so the selection is stable.
+        const isAtBottom =
+          container.scrollHeight - container.scrollTop - container.clientHeight < SCROLL_BOTTOM_THRESHOLD_PX
+
+        let nextActive: string | null = null
+        if (isAtBottom) {
+          // Walk in reverse document order — first match is the last visible section
+          for (let i = allSectionIds.length - 1; i >= 0; i--) {
+            if (visibleSections.has(allSectionIds[i])) {
+              nextActive = allSectionIds[i]
+              break
+            }
           }
+        } else {
+          // Pick the first visible section in document order
+          for (const id of allSectionIds) {
+            if (visibleSections.has(id)) {
+              nextActive = id
+              break
+            }
+          }
+        }
+
+        // Only update state when the value actually changes to avoid
+        // unnecessary re-renders that can cause layout feedback loops.
+        if (nextActive && nextActive !== activeSectionRef.current) {
+          activeSectionRef.current = nextActive
+          setActiveSection(nextActive)
         }
       },
       {
@@ -240,6 +277,7 @@ export function Settings() {
     navScrollTimerRef.current = setTimeout(() => { isNavScrollingRef.current = false }, NAV_SCROLL_SUPPRESS_MS)
 
     scrollToSection(sectionId)
+    activeSectionRef.current = sectionId
     setActiveSection(sectionId)
     // Update URL hash without triggering the deep link effect (isNavScrollingRef guards it)
     navigate(`#${sectionId}`, { replace: true })
