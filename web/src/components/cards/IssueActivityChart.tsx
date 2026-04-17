@@ -365,7 +365,11 @@ export function IssueActivityChart(props: { config?: IssueActivityConfig }) {
           params: Array<{ seriesName: string; value: number; color: string; axisValueLabel: string }>
         ) => {
           if (!Array.isArray(params) || params.length === 0) return ''
-          const dateLabel = `<span style="color:${CHART_TOOLTIP_LABEL_COLOR};font-weight:600">${params[0].axisValueLabel}</span>`
+          const rawDate = params[0].axisValueLabel
+          const d = new Date(rawDate + 'T00:00:00')
+          const dow = d.toLocaleDateString('en-US', { weekday: 'long' })
+          const fullDate = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+          const dateLabel = `<span style="color:${CHART_TOOLTIP_LABEL_COLOR};font-weight:600">${dow}, ${fullDate}</span>`
           const lines = params.map(
             p =>
               `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${p.color};margin-right:6px;"></span>${p.seriesName}: <b>${p.value}</b>`
@@ -381,9 +385,11 @@ export function IssueActivityChart(props: { config?: IssueActivityConfig }) {
           fontSize: 10,
           rotate: 45,
           formatter: (val: string) => {
-            // Show abbreviated date: "Mar 15"
+            // Show "Mon Mar 15" so users can see day-of-week seasonality
             const d = new Date(val + 'T00:00:00')
-            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+            const dow = d.toLocaleDateString('en-US', { weekday: 'short' })
+            const date = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+            return `${dow} ${date}`
           },
           // Show ~15 labels max regardless of date range
           interval: Math.max(0, Math.floor(dates.length / 15) - 1),
