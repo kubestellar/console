@@ -184,6 +184,13 @@ async function fetchAllPages(
       { signal }
     )
     if (!response.ok) break
+    // On Netlify (no Go backend), /api/github/* returns the SPA's index.html
+    // (text/html, status 200). Throw so the caller falls back to demo data
+    // instead of silently showing zeros from an empty JSON parse.
+    const ct = response.headers.get('content-type') || ''
+    if (!ct.includes('application/json')) {
+      throw new Error('GitHub proxy not available — showing demo data')
+    }
     const data = await response.json().catch(() => null)
     if (!data || !Array.isArray(data) || data.length === 0) break
     allItems.push(...data)
