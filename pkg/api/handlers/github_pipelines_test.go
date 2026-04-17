@@ -58,7 +58,8 @@ func TestGitHubPipelines_MutateDisabledWhenNoMutationToken(t *testing.T) {
 
 func TestGitHubPipelines_MutateRejectsUnknownRepo(t *testing.T) {
 	app := newGHPTestApp(t, "fake-token", "fake-mutation-token")
-	req := httptest.NewRequest("POST", "/api/github-pipelines?view=mutate&op=rerun&repo=evil/repo&run=1", nil)
+	// Use a path-traversal slug that the regex must reject.
+	req := httptest.NewRequest("POST", "/api/github-pipelines?view=mutate&op=rerun&repo=evil/../passwd&run=1", nil)
 	res, err := app.Test(req, -1)
 	if err != nil {
 		t.Fatalf("app.Test: %v", err)
@@ -133,11 +134,28 @@ func TestGHPHistory_MergeAndTrim(t *testing.T) {
 }
 
 func TestGHPIsAllowedRepo(t *testing.T) {
+	// Preconfigured repo must always be allowed.
 	if !ghpIsAllowedRepo("kubestellar/console") {
 		t.Fatal("console should be allowed")
 	}
-	if ghpIsAllowedRepo("evil/repo") {
-		t.Fatal("non-allowlist repo must be rejected")
+	// Any valid owner/repo slug is allowed (GitHub token is the real ACL).
+	if !ghpIsAllowedRepo("some-org/some-repo") {
+		t.Fatal("valid owner/repo slug should be allowed")
+	}
+	// Path-traversal and malformed slugs must be rejected.
+	for _, bad := range []string{
+		"",
+		"noslash",
+		"owner/repo/extra",
+		"../etc/passwd",
+		"owner/../repo",
+		"owner/repo%00evil",
+		"/leading-slash",
+		"trailing-slash/",
+	} {
+		if ghpIsAllowedRepo(bad) {
+			t.Errorf("expected %q to be rejected", bad)
+		}
 	}
 }
 
