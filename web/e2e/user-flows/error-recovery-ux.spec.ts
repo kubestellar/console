@@ -94,10 +94,7 @@ test.describe('Error Recovery', () => {
       .or(page.getByRole('button', { name: /refresh|reload/i }))
 
     const hasRefresh = await refreshBtn.first().isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
-    if (!hasRefresh) {
-      test.info().annotations.push({ type: 'ux-finding', description: 'No refresh button found on dashboard' })
-      return
-    }
+    if (!hasRefresh) { test.skip(true, 'No refresh button found on dashboard'); return }
 
     await refreshBtn.first().click()
 

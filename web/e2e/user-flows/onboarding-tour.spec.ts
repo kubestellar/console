@@ -198,8 +198,7 @@ test.describe('Onboarding Tour', () => {
     // Sidebar should be clickable
     const sidebarLink = page.locator('nav a, [data-testid*="sidebar"] a').first()
     const hasSidebar = await sidebarLink.isVisible().catch(() => false)
-    if (hasSidebar) {
-      await expect(sidebarLink).toBeEnabled()
-    }
+    if (!hasSidebar) { test.skip(true, 'No sidebar link visible to verify usability'); return }
+    await expect(sidebarLink).toBeEnabled()
   })
 })

@@ -50,7 +50,7 @@ test.describe('Console Studio — "Customize my dashboard"', () => {
     await setupDemoAndNavigate(page, '/')
     const addMore = page.locator('button:has-text("Add more"), button:has-text("Console Studio"), button:has-text("Customize")')
     const hasTrigger = await addMore.first().isVisible({ timeout: 3_000 }).catch(() => false)
-    if (!hasTrigger) return
+    if (!hasTrigger) { test.skip(true, 'Studio trigger button not visible'); return }
     await addMore.first().click()
     const studioSidebar = page.getByTestId('studio-sidebar')
     const hasStudioSidebar = await studioSidebar.isVisible({ timeout: STUDIO_OPEN_TIMEOUT_MS }).catch(() => false)
@@ -64,7 +64,7 @@ test.describe('Console Studio — "Customize my dashboard"', () => {
     await setupDemoAndNavigate(page, '/')
     const addMore = page.locator('button:has-text("Add more"), button:has-text("Console Studio"), button:has-text("Customize")')
     const hasTrigger = await addMore.first().isVisible({ timeout: 3_000 }).catch(() => false)
-    if (!hasTrigger) return
+    if (!hasTrigger) { test.skip(true, 'Studio trigger button not visible'); return }
     await addMore.first().click()
     const preview = page.getByTestId('studio-preview')
     const hasPreview = await preview.isVisible({ timeout: STUDIO_OPEN_TIMEOUT_MS }).catch(() => false)
@@ -78,7 +78,7 @@ test.describe('Console Studio — "Customize my dashboard"', () => {
     await setupDemoAndNavigate(page, '/')
     const addMore = page.locator('button:has-text("Add more"), button:has-text("Console Studio"), button:has-text("Customize")')
     const hasTrigger = await addMore.first().isVisible({ timeout: 3_000 }).catch(() => false)
-    if (!hasTrigger) return
+    if (!hasTrigger) { test.skip(true, 'Studio trigger button not visible'); return }
     await addMore.first().click()
     // Look for search input within the studio
     const studioSearch = page.locator('[data-testid="console-studio"] input[type="text"], [data-testid="console-studio"] input[type="search"], [role="dialog"] input[type="text"]')
@@ -99,7 +99,7 @@ test.describe('Console Studio — "Customize my dashboard"', () => {
     await setupDemoAndNavigate(page, '/')
     const addMore = page.locator('button:has-text("Add more"), button:has-text("Console Studio"), button:has-text("Customize")')
     const hasTrigger = await addMore.first().isVisible({ timeout: 3_000 }).catch(() => false)
-    if (!hasTrigger) return
+    if (!hasTrigger) { test.skip(true, 'Studio trigger button not visible'); return }
     await addMore.first().click()
     const studio = page.getByTestId('console-studio')
     const isOpen = await studio.isVisible({ timeout: STUDIO_OPEN_TIMEOUT_MS }).catch(() => false)
@@ -127,7 +127,7 @@ test.describe('Console Studio — "Customize my dashboard"', () => {
     await setupDemoAndNavigate(page, '/')
     const addMore = page.locator('button:has-text("Add more"), button:has-text("Console Studio"), button:has-text("Customize")')
     const hasTrigger = await addMore.first().isVisible({ timeout: 3_000 }).catch(() => false)
-    if (!hasTrigger) return
+    if (!hasTrigger) { test.skip(true, 'Studio trigger button not visible'); return }
     await addMore.first().click()
     const studio = page.getByTestId('console-studio')
     const isOpen = await studio.isVisible({ timeout: STUDIO_OPEN_TIMEOUT_MS }).catch(() => false)
@@ -140,7 +140,7 @@ test.describe('Console Studio — "Customize my dashboard"', () => {
     await setupDemoAndNavigate(page, '/')
     const addMore = page.locator('button:has-text("Add more"), button:has-text("Console Studio"), button:has-text("Customize")')
     const hasTrigger = await addMore.first().isVisible({ timeout: 3_000 }).catch(() => false)
-    if (!hasTrigger) return
+    if (!hasTrigger) { test.skip(true, 'Studio trigger button not visible'); return }
     await addMore.first().click()
     const studioSidebar = page.getByTestId('studio-sidebar')
     const hasStudioSidebar = await studioSidebar.isVisible({ timeout: STUDIO_OPEN_TIMEOUT_MS }).catch(() => false)

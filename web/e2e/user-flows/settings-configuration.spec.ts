@@ -34,22 +34,21 @@ test.describe('Settings Configuration — "Change my preferences"', () => {
     // Find theme toggle — could be a button, switch, or select
     const themeToggle = page.locator('button:has-text("Theme"), button:has-text("Dark"), button:has-text("Light"), [aria-label*="theme" i], button:has-text("theme")')
     const hasToggle = await themeToggle.first().isVisible({ timeout: 3_000 }).catch(() => false)
-    if (hasToggle) {
-      const htmlClassBefore = await page.locator('html').getAttribute('class') ?? ''
-      await themeToggle.first().click()
-      await page.waitForTimeout(THEME_TRANSITION_MS)
-      const htmlClassAfter = await page.locator('html').getAttribute('class') ?? ''
-      test.info().annotations.push({
-        type: 'ux-finding',
-        description: JSON.stringify({
-          severity: 'info',
-          category: 'visual',
-          component: 'Settings',
-          finding: htmlClassBefore !== htmlClassAfter ? 'Theme toggle changes HTML class' : 'Theme toggle did not change HTML class — may use data attribute or CSS variable',
-          recommendation: 'None',
-        }),
-      })
-    }
+    if (!hasToggle) { test.skip(true, 'Theme toggle not visible'); return }
+    const htmlClassBefore = await page.locator('html').getAttribute('class') ?? ''
+    await themeToggle.first().click()
+    await page.waitForTimeout(THEME_TRANSITION_MS)
+    const htmlClassAfter = await page.locator('html').getAttribute('class') ?? ''
+    test.info().annotations.push({
+      type: 'ux-finding',
+      description: JSON.stringify({
+        severity: 'info',
+        category: 'visual',
+        component: 'Settings',
+        finding: htmlClassBefore !== htmlClassAfter ? 'Theme toggle changes HTML class' : 'Theme toggle did not change HTML class — may use data attribute or CSS variable',
+        recommendation: 'None',
+      }),
+    })
   })
 
   test('AI mode selector shows options', async ({ page }) => {
@@ -76,23 +75,22 @@ test.describe('Settings Configuration — "Change my preferences"', () => {
     // Toggle something if available
     const toggle = page.locator('button[role="switch"], input[type="checkbox"]').first()
     const hasToggle = await toggle.isVisible({ timeout: 3_000 }).catch(() => false)
-    if (hasToggle) {
-      const checkedBefore = await toggle.getAttribute('aria-checked') ?? await toggle.isChecked().catch(() => null)
-      await toggle.click()
-      await page.waitForTimeout(300)
-      // Navigate away
-      await page.goto('/')
-      await page.waitForTimeout(500)
-      // Navigate back
-      await page.goto('/settings')
-      await page.getByTestId('settings-page').waitFor({ state: 'visible', timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
-      // Check if setting persisted
-      const toggleAfter = page.locator('button[role="switch"], input[type="checkbox"]').first()
-      const checkedAfter = await toggleAfter.getAttribute('aria-checked') ?? await toggleAfter.isChecked().catch(() => null)
-      // Setting should have persisted (value should differ from before the toggle)
-      if (checkedBefore !== null && checkedAfter !== null) {
-        expect(String(checkedAfter)).not.toBe(String(checkedBefore))
-      }
+    if (!hasToggle) { test.skip(true, 'No toggle switch visible'); return }
+    const checkedBefore = await toggle.getAttribute('aria-checked') ?? await toggle.isChecked().catch(() => null)
+    await toggle.click()
+    await page.waitForTimeout(300)
+    // Navigate away
+    await page.goto('/')
+    await page.waitForTimeout(500)
+    // Navigate back
+    await page.goto('/settings')
+    await page.getByTestId('settings-page').waitFor({ state: 'visible', timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
+    // Check if setting persisted
+    const toggleAfter = page.locator('button[role="switch"], input[type="checkbox"]').first()
+    const checkedAfter = await toggleAfter.getAttribute('aria-checked') ?? await toggleAfter.isChecked().catch(() => null)
+    // Setting should have persisted (value should differ from before the toggle)
+    if (checkedBefore !== null && checkedAfter !== null) {
+      expect(String(checkedAfter)).not.toBe(String(checkedBefore))
     }
   })
 
@@ -101,12 +99,11 @@ test.describe('Settings Configuration — "Change my preferences"', () => {
     await page.getByTestId('settings-page').waitFor({ state: 'visible', timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
     const closeBtn = page.getByTestId('settings-close-desktop')
     const hasClose = await closeBtn.isVisible({ timeout: 3_000 }).catch(() => false)
-    if (hasClose) {
-      await closeBtn.click()
-      await page.waitForTimeout(500)
-      // Should navigate away from settings
-      expect(page.url()).not.toContain('/settings')
-    }
+    if (!hasClose) { test.skip(true, 'Settings close button not visible'); return }
+    await closeBtn.click()
+    await page.waitForTimeout(500)
+    // Should navigate away from settings
+    expect(page.url()).not.toContain('/settings')
   })
 
   test('settings page is scrollable with all sections', async ({ page }) => {

@@ -59,10 +59,10 @@ test.describe('Cluster Investigation — "My cluster has issues"', () => {
     await setupDemoAndNavigate(page, '/clusters')
     const filter = page.getByTestId('cluster-filter')
     const hasFilter = await filter.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
-    if (!hasFilter) return
+    if (!hasFilter) { test.skip(true, 'Cluster filter not visible'); return }
     const trigger = filter.locator('button').first()
     const hasTrigger = await trigger.isVisible().catch(() => false)
-    if (!hasTrigger) return
+    if (!hasTrigger) { test.skip(true, 'Filter trigger button not visible'); return }
     await trigger.click()
     await page.waitForTimeout(300)
     const options = page.getByTestId('cluster-filter-option')
@@ -77,10 +77,10 @@ test.describe('Cluster Investigation — "My cluster has issues"', () => {
     await setupDemoAndNavigate(page, '/clusters')
     const filter = page.getByTestId('cluster-filter')
     const hasFilter = await filter.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
-    if (!hasFilter) return
+    if (!hasFilter) { test.skip(true, 'Cluster filter not visible'); return }
     const trigger = filter.locator('button').first()
     const hasTrigger = await trigger.isVisible().catch(() => false)
-    if (!hasTrigger) return
+    if (!hasTrigger) { test.skip(true, 'Filter trigger button not visible'); return }
     await trigger.click()
     await page.waitForTimeout(300)
     const options = page.getByTestId('cluster-filter-option')
@@ -112,7 +112,7 @@ test.describe('Cluster Investigation — "My cluster has issues"', () => {
     await setupDemoAndNavigate(page, '/clusters')
     const clusterItem = page.locator('[data-card-type] button, [data-testid*="cluster-row"], [class*="cursor-pointer"]').first()
     const hasItem = await clusterItem.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
-    if (!hasItem) return
+    if (!hasItem) { test.skip(true, 'No clickable cluster item visible'); return }
     await clusterItem.click()
     const tabs = page.getByTestId('drilldown-tabs')
     const hasTabs = await tabs.isVisible({ timeout: DRILLDOWN_TIMEOUT_MS }).catch(() => false)
