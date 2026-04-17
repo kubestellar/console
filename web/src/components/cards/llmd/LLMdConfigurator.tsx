@@ -38,7 +38,7 @@ function PresetCard({ preset, isSelected, onSelect }: PresetCardProps) {
 
   return (
     <motion.div
-      className={`${colors.bg} ${colors.border} border rounded-lg p-3 cursor-pointer transition-all ${
+      className={`${colors.bg} ${colors.border} border rounded-lg p-3 cursor-pointer transition-all min-w-0 overflow-hidden ${
         isSelected ? 'ring-2 ring-white/30' : 'hover:border-white/20'
       }`}
       onClick={onSelect}

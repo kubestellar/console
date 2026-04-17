@@ -931,7 +931,7 @@ export function MissionSidebar() {
                 }}
                 className="flex flex-col items-center justify-center gap-1.5 px-3 py-3 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors h-[72px]"
               >
-                <Sparkles className="w-5 h-5 flex-shrink-0" />
+                <Sparkles className="w-6 h-6 flex-shrink-0" />
                 <span className="text-center leading-tight text-xs truncate max-w-full">{t('missionSidebar.startCustomMission')}</span>
               </button>
             )}
@@ -939,14 +939,14 @@ export function MissionSidebar() {
               onClick={() => setShowBrowser(true)}
               className="flex flex-col items-center justify-center gap-1.5 px-3 py-3 text-sm font-medium bg-secondary text-foreground rounded-lg hover:bg-secondary/80 transition-colors h-[72px]"
             >
-              <Globe className="w-5 h-5 flex-shrink-0" />
+              <Globe className="w-6 h-6 flex-shrink-0" />
               <span className="text-center leading-tight text-xs truncate max-w-full">{t('layout.missionSidebar.browseCommunityMissions')}</span>
             </button>
             <button
               onClick={() => setShowMissionControl(true)}
               className="flex flex-col items-center justify-center gap-1.5 px-3 py-3 text-sm font-medium bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-lg hover:from-violet-500 hover:to-indigo-500 transition-colors shadow-lg shadow-violet-500/25 h-[72px]"
             >
-              <Rocket className="w-5 h-5 flex-shrink-0" />
+              <Rocket className="w-6 h-6 flex-shrink-0" />
               <span className="text-center leading-tight text-xs truncate max-w-full">{t('layout.missionSidebar.missionControl')}</span>
             </button>
           </div>
