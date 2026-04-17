@@ -188,13 +188,20 @@ export function Settings() {
     return () => clearTimeout(timer)
   }, [location.pathname, location.hash, scrollToSection])
 
-  // Track active section on scroll using IntersectionObserver
+  // Track active section on scroll using IntersectionObserver.
+  // Debounced to prevent a feedback loop: observer fires -> activeSection
+  // changes -> sidebar re-renders -> sticky layout shifts -> observer fires
+  // again with a different section -> rapid flickering. The debounce
+  // coalesces rapid-fire observer callbacks into a single state update.
+  /** Debounce interval for observer-driven activeSection updates (ms). */
+  const OBSERVER_DEBOUNCE_MS = 100
   useEffect(() => {
     const container = getScrollContainer()
     if (!container) return
 
     const allSectionIds = SETTINGS_NAV.flatMap(g => g.items.map(i => i.id))
     const visibleSections = new Map<string, number>()
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -211,18 +218,28 @@ export function Settings() {
         // (nav click or deep link) — handleNavClick already set it.
         if (isNavScrollingRef.current) return
 
-        // Pick the first visible section in document order
-        for (const id of allSectionIds) {
-          if (visibleSections.has(id)) {
-            setActiveSection(id)
-            break
+        // Debounce to prevent scroll-position feedback loops:
+        // observer -> setState -> sidebar re-render -> layout shift -> observer
+        if (debounceTimer) clearTimeout(debounceTimer)
+        debounceTimer = setTimeout(() => {
+          // Pick the first visible section in document order
+          for (const id of allSectionIds) {
+            if (visibleSections.has(id)) {
+              // Functional update avoids unnecessary re-renders when
+              // the computed section hasn't actually changed.
+              setActiveSection((prev) => prev === id ? prev : id)
+              break
+            }
           }
-        }
+        }, OBSERVER_DEBOUNCE_MS)
       },
       {
         root: container,
+        // Use a single threshold to reduce observer callback frequency.
+        // Multiple thresholds (e.g. [0, 0.1, 0.5]) fire at each boundary
+        // crossing, amplifying the feedback loop.
         rootMargin: '0px 0px -40% 0px',
-        threshold: [0, 0.1, 0.5] }
+        threshold: 0 }
     )
 
     for (const id of allSectionIds) {
@@ -230,7 +247,10 @@ export function Settings() {
       if (el) observer.observe(el)
     }
 
-    return () => observer.disconnect()
+    return () => {
+      observer.disconnect()
+      if (debounceTimer) clearTimeout(debounceTimer)
+    }
   }, [])
 
   const handleNavClick = (sectionId: string) => {
