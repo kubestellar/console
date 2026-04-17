@@ -61,6 +61,8 @@ interface MissionBrowserProps {
   onImport: (mission: MissionExport) => void
   /** Deep-link: auto-select a specific mission by name (e.g. 'install-prometheus') */
   initialMission?: string
+  /** Callback when user clicks "Use in Mission Control" on a Kubara chart (#8483) */
+  onUseInMissionControl?: (chartName: string) => void
 }
 
 // ============================================================================
@@ -144,7 +146,7 @@ function saveWatchedPaths(paths: string[]) {
 // Component
 // ============================================================================
 
-export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: MissionBrowserProps) {
+export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUseInMissionControl }: MissionBrowserProps) {
   const { t } = useTranslation(['common', 'cards'])
   const { user, isAuthenticated } = useAuth()
   const { clusterContext } = useClusterContext()
@@ -1725,24 +1727,32 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
             {/* ============================================================ */}
             {/* UNSTRUCTURED FILE PREVIEW (YAML/MD not parseable as a mission) */}
             {/* ============================================================ */}
-            {!selectedMission && unstructuredContent && (
-              <UnstructuredFilePreview
-                content={unstructuredContent.content}
-                format={unstructuredContent.format}
-                preview={unstructuredContent.preview}
-                detectedProjects={unstructuredContent.detectedProjects}
-                fileName={selectedPath?.split('/').pop() ?? 'file'}
-                onConvert={(mission) => {
-                  setSelectedMission(mission)
-                  setUnstructuredContent(null)
-                }}
-                onBack={() => {
-                  setUnstructuredContent(null)
-                  setRawContent(null)
-                  setSelectedPath(null)
-                }}
-              />
-            )}
+            {!selectedMission && unstructuredContent && (() => {
+              // Derive Kubara chart name from selectedPath (e.g. "kubara/cert-manager/Chart.yaml" → "cert-manager")
+              const kubaraChartName = selectedPath?.startsWith('kubara/')
+                ? selectedPath.split('/')[1]
+                : undefined
+              return (
+                <UnstructuredFilePreview
+                  content={unstructuredContent.content}
+                  format={unstructuredContent.format}
+                  preview={unstructuredContent.preview}
+                  detectedProjects={unstructuredContent.detectedProjects}
+                  fileName={selectedPath?.split('/').pop() ?? 'file'}
+                  onConvert={(mission) => {
+                    setSelectedMission(mission)
+                    setUnstructuredContent(null)
+                  }}
+                  onBack={() => {
+                    setUnstructuredContent(null)
+                    setRawContent(null)
+                    setSelectedPath(null)
+                  }}
+                  kubaraChartName={kubaraChartName}
+                  onUseInMissionControl={onUseInMissionControl}
+                />
+              )
+            })()}
 
             {/* ============================================================ */}
             {/* RECOMMENDED TAB (existing content) */}

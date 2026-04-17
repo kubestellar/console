@@ -3,12 +3,13 @@
  * health status, and assigned projects.
  */
 
-import { Server, Cpu, Box } from 'lucide-react'
+import { Server, Cpu, Box, CheckCircle } from 'lucide-react'
 import { cn } from '../../lib/cn'
+import { useTranslation } from 'react-i18next'
 import { CloudProviderIcon, getProviderLabel } from '../ui/CloudProviderIcon'
 import { clusterDisplayName } from '../../hooks/mcp/shared'
 import type { ClusterInfo } from '../../hooks/mcp/types'
-import type { ClusterAssignment } from './types'
+import type { ClusterAssignment, PayloadProject } from './types'
 
 interface ClusterReadinessCardProps {
   cluster: ClusterInfo
@@ -18,6 +19,8 @@ interface ClusterReadinessCardProps {
   isRecommended?: boolean
   /** Map of projectName → Set<clusterName> for installed projects */
   installedOnCluster?: Map<string, Set<string>>
+  /** Full project objects for badge rendering (Kubara badge, etc.) */
+  projects?: PayloadProject[]
 }
 
 function CapacityBar({ label, used, total, unit }: {
@@ -55,7 +58,11 @@ export function ClusterReadinessCard({
   availableProjects,
   isRecommended,
   installedOnCluster = new Map(),
+  projects = [],
 }: ClusterReadinessCardProps) {
+  const { t } = useTranslation()
+  // Build a lookup from project name → PayloadProject for Kubara badge rendering (#8484)
+  const projectByName = new Map(projects.map(p => [p.name, p]))
   // Detect provider: prefer explicit distribution, fall back to name/context/namespace heuristic
   const detectProvider = (): string => {
     if (cluster.distribution) return cluster.distribution
@@ -191,6 +198,7 @@ export function ClusterReadinessCard({
           }).map((name) => {
             const checked = assignedProjects.includes(name)
             const isInstalled = installedOnCluster.get(name)?.has(cluster.name) ?? false
+            const isKubara = !!projectByName.get(name)?.kubaraChart
             return (
               <label
                 key={name}
@@ -213,6 +221,15 @@ export function ClusterReadinessCard({
                 )}>
                   {name}
                 </span>
+                {isKubara && (
+                  <span
+                    className="inline-flex items-center gap-0.5 px-1 py-px rounded text-[8px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                    title={t('layout.missionSidebar.kubaraBadgeTooltip')}
+                  >
+                    <CheckCircle className="w-2 h-2" />
+                    {t('layout.missionSidebar.kubaraBadge')}
+                  </span>
+                )}
                 {isInstalled && (
                   <span className="text-[9px] text-emerald-400 font-medium ml-auto">installed</span>
                 )}

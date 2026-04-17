@@ -270,6 +270,7 @@ export function ClusterAssignmentPanel({
                     (a) => a.clusterName === cluster.name && a.projectNames.length > 0
                   )}
                   installedOnCluster={installedOnCluster}
+                  projects={state.projects}
                 />
                 </div>
                 )

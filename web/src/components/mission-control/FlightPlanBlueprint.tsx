@@ -1051,6 +1051,7 @@ export function FlightPlanBlueprint({
                     overlay={state.overlay}
                     glow={glowProjectKeys.has(compositeKey)}
                     dimmed={glowProjectKeys.size > 0 && !glowProjectKeys.has(compositeKey)}
+                    kubaraChart={project.kubaraChart}
                     onHover={(info) => {
                       handleProjectHover(info)
                       setHoveredProjectKey(info ? compositeKey : null)

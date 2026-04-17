@@ -3432,7 +3432,11 @@
       "noActiveMissionsHint": "No active missions. Click Run on a saved mission to start it.",
       "commandsExecuted": "Commands executed",
       "saveTranscript": "Save transcript",
-      "expandToFullScreen": "Expand to full screen"
+      "expandToFullScreen": "Expand to full screen",
+      "useInMissionControl": "Use in Mission Control",
+      "useInMissionControlDescription": "Add this Kubara chart as a project in Mission Control Phase 1",
+      "kubaraBadge": "Kubara",
+      "kubaraBadgeTooltip": "Imported from Kubara Platform Catalog"
     }
   },
   "shared": {

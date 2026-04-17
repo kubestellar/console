@@ -177,6 +177,8 @@ export function MissionSidebar() {
   const [showNewMission, setShowNewMission] = useState(false)
   const [showBrowser, setShowBrowser] = useState(false)
   const [showMissionControl, setShowMissionControl] = useState(false)
+  /** Kubara chart name to pre-populate in Mission Control Phase 1 (#8483) */
+  const [pendingKubaraChart, setPendingKubaraChart] = useState<string | undefined>(undefined)
   const [showOrbitDialog, setShowOrbitDialog] = useState(false)
   const [newMissionPrompt, setNewMissionPrompt] = useState('')
   const [showSavedToast, setShowSavedToast] = useState<string | null>(null)
@@ -1330,13 +1332,22 @@ export function MissionSidebar() {
           onClose={() => setShowBrowser(false)}
           onImport={handleImportMission}
           initialMission={deepLinkMission || undefined}
+          onUseInMissionControl={(chartName) => {
+            setShowBrowser(false)
+            setPendingKubaraChart(chartName)
+            setShowMissionControl(true)
+          }}
         />
       </Suspense>
 
       {/* Mission Control Dialog */}
       <MissionControlDialog
         open={showMissionControl}
-        onClose={() => setShowMissionControl(false)}
+        onClose={() => {
+          setShowMissionControl(false)
+          setPendingKubaraChart(undefined)
+        }}
+        initialKubaraChart={pendingKubaraChart}
       />
 
       {/* Standalone Orbit Mission Dialog */}

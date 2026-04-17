@@ -41,6 +41,8 @@ import type { WizardPhase } from './types'
 interface MissionControlDialogProps {
   open: boolean
   onClose: () => void
+  /** Pre-populate Phase 1 with this Kubara chart project (#8483) */
+  initialKubaraChart?: string
 }
 
 const PHASE_STEPS: {
@@ -72,10 +74,33 @@ const PHASE_STEPS: {
 /** Fallback a11y label when the user hasn't entered a mission title yet (issue 6745) */
 const DEFAULT_DIALOG_ARIA_LABEL = 'Mission control dialog'
 
-export function MissionControlDialog({ open, onClose }: MissionControlDialogProps) {
+export function MissionControlDialog({ open, onClose, initialKubaraChart }: MissionControlDialogProps) {
   const mc = useMissionControl()
   const { showToast } = useToast()
   const { state } = mc
+
+  // #8483 — Pre-populate Phase 1 with a Kubara chart when opened from Mission Browser
+  const initialChartAdded = useRef<string | null>(null)
+  useEffect(() => {
+    if (open && initialKubaraChart && initialChartAdded.current !== initialKubaraChart) {
+      initialChartAdded.current = initialKubaraChart
+      const alreadyAdded = state.projects.some(p => p.name === initialKubaraChart)
+      if (!alreadyAdded) {
+        mc.addProject({
+          name: initialKubaraChart,
+          displayName: initialKubaraChart.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
+          reason: 'Imported from Kubara Platform Catalog',
+          category: 'Helm Chart',
+          priority: 'required',
+          dependencies: [],
+          kubaraChart: { repoPath: `helm/${initialKubaraChart}` },
+          userAdded: true,
+        })
+      }
+      // Ensure we're on Phase 1
+      mc.setPhase('define')
+    }
+  }, [open, initialKubaraChart]) // eslint-disable-line react-hooks/exhaustive-deps
   // issue 6738 — Ref used by useModalFocusTrap to keep Tab/Shift+Tab inside the dialog
   const dialogRef = useRef<HTMLDivElement>(null)
   useModalFocusTrap(dialogRef, open)

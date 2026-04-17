@@ -17,8 +17,10 @@ import {
   CheckCircle,
   AlertTriangle,
   Terminal,
-  Copy } from 'lucide-react'
+  Copy,
+  Rocket } from 'lucide-react'
 import { cn } from '../../lib/cn'
+import { useTranslation } from 'react-i18next'
 import type { MissionExport } from '../../lib/missions/types'
 import type { UnstructuredPreview } from '../../lib/missions/fileParser'
 import type { ApiGroupMapping } from '../../lib/missions/apiGroupMapping'
@@ -43,6 +45,10 @@ interface UnstructuredFilePreviewProps {
   fileName: string
   onConvert: (mission: MissionExport) => void
   onBack: () => void
+  /** When set, this file is from a Kubara chart — enables the "Use in Mission Control" CTA */
+  kubaraChartName?: string
+  /** Callback to add the Kubara chart to Mission Control and open Phase 1 */
+  onUseInMissionControl?: (chartName: string) => void
 }
 
 // ============================================================================
@@ -56,7 +62,10 @@ export function UnstructuredFilePreview({
   detectedProjects,
   fileName,
   onConvert,
-  onBack }: UnstructuredFilePreviewProps) {
+  onBack,
+  kubaraChartName,
+  onUseInMissionControl }: UnstructuredFilePreviewProps) {
+  const { t } = useTranslation()
   const [showFullContent, setShowFullContent] = useState(false)
   const [copied, setCopied] = useState(false)
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -196,6 +205,29 @@ export function UnstructuredFilePreview({
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Kubara CTA: Use in Mission Control (#8483) */}
+      {kubaraChartName && onUseInMissionControl && (
+        <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3 space-y-2">
+          <div className="flex items-center gap-2 text-sm font-medium text-emerald-300">
+            <Rocket className="w-4 h-4" />
+            {t('layout.missionSidebar.kubaraBadge')} — {kubaraChartName}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {t('layout.missionSidebar.useInMissionControlDescription')}
+          </p>
+          <button
+            onClick={() => onUseInMissionControl(kubaraChartName)}
+            className={cn(
+              'flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
+              'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 hover:bg-emerald-500/20'
+            )}
+          >
+            <Rocket className="w-3.5 h-3.5" />
+            {t('layout.missionSidebar.useInMissionControl')}
+          </button>
         </div>
       )}
 

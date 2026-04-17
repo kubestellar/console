@@ -60,6 +60,8 @@ export interface ProjectNodeProps {
   glow?: boolean
   /** Whether something else is glowing and this node should fade */
   dimmed?: boolean
+  /** Set when the project was imported from Kubara Platform Catalog (#8484) */
+  kubaraChart?: { repoPath: string; valuesUrl?: string }
   onHover?: (info: ProjectHoverInfo | null) => void
   onDragStart?: (name: string) => void
   onDragEnd?: () => void
@@ -110,6 +112,7 @@ export function ProjectNode({
   overlay = 'architecture',
   glow = false,
   dimmed = false,
+  kubaraChart,
   onHover,
   onDragStart: _onDragStart,
   onDragEnd: _onDragEnd,
@@ -289,6 +292,31 @@ export function ProjectNode({
           animate={{ pathLength: 1 }}
           transition={{ duration: 0.3 }}
         />
+      )}
+
+      {/* Kubara badge — small "K✓" indicator at bottom-right of node (#8484) */}
+      {kubaraChart && (
+        <g>
+          <circle
+            cx={cx + radius - 1}
+            cy={cy + radius - 1}
+            r={4}
+            fill="#065f46"
+            stroke="#10b981"
+            strokeWidth={0.5}
+          />
+          <text
+            x={cx + radius - 1}
+            y={cy + radius + 0.5}
+            textAnchor="middle"
+            fill="#6ee7b7"
+            fontSize={4}
+            fontWeight="bold"
+            fontFamily="system-ui, sans-serif"
+          >
+            K
+          </text>
+        </g>
       )}
 
       {/* Name label — shown on hover (glow) or when completed so project names are always visible */}
