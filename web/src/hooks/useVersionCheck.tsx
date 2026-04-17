@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, createContext, use, type ReactNode } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef, createContext, use, type ReactNode } from 'react'
 import type {
   UpdateChannel,
   ReleaseType,
@@ -25,6 +25,9 @@ const MIN_CHECK_INTERVAL_MS = 30 * 60 * 1000 // 30 minutes minimum between check
 const AUTO_UPDATE_POLL_MS = 60 * 1000 // Poll kc-agent for update status every 60s
 const DEV_SHA_CACHE_KEY = 'kc-dev-latest-sha'
 
+/** Timeout for the /health fetch during install-method detection (ms) */
+/** Number of consecutive fetch failures before surfacing an error to the UI */
+const ERROR_DISPLAY_THRESHOLD = 2
 /** Timeout for the /health fetch during install-method detection (ms) */
 const HEALTH_FETCH_TIMEOUT_MS = 3000
 /** Max retries for /health when the backend is still warming up */
@@ -278,6 +281,10 @@ function useVersionCheckCore() {
   })
   const [skippedVersions, setSkippedVersions] = useState<string[]>(loadSkippedVersions)
 
+  // Consecutive failure counter — errors are only surfaced to the UI after
+  // ERROR_DISPLAY_THRESHOLD consecutive failures to avoid flicker on transient errors.
+  const consecutiveFailuresRef = useRef(0)
+
   // Auto-update state
   const [autoUpdateEnabled, setAutoUpdateEnabledState] = useState(loadAutoUpdateEnabled)
   // Initialize install method: localhost always means dev mode (running from source)
@@ -330,6 +337,7 @@ function useVersionCheckCore() {
         console.debug('[version-check] Auto-update status:', data)
         setAutoUpdateStatus(data)
         // Clear any stale error from a previous failed check
+        consecutiveFailuresRef.current = 0
         setError(null)
         // Update latestMainSHA and lastChecked from agent response
         if (data.latestSHA) {
@@ -340,11 +348,17 @@ function useVersionCheckCore() {
         localStorage.setItem(UPDATE_STORAGE_KEYS.LAST_CHECK, String(now))
       } else {
         console.debug('[version-check] Auto-update status failed:', resp.status)
-        setError(`kc-agent returned ${resp.status}`)
+        consecutiveFailuresRef.current += 1
+        if (consecutiveFailuresRef.current >= ERROR_DISPLAY_THRESHOLD) {
+          setError(`kc-agent returned ${resp.status}`)
+        }
       }
     } catch (err) {
       console.debug('[version-check] Auto-update status error:', err)
-      setError('Could not reach kc-agent')
+      consecutiveFailuresRef.current += 1
+      if (consecutiveFailuresRef.current >= ERROR_DISPLAY_THRESHOLD) {
+        setError('Could not reach kc-agent')
+      }
     }
   }, [agentSupportsAutoUpdate])
 
@@ -552,7 +566,6 @@ function useVersionCheckCore() {
    */
   const fetchReleases = async (force = false): Promise<void> => {
     setIsChecking(true)
-    setError(null)
 
     try {
       // Check cache first
@@ -608,11 +621,16 @@ function useVersionCheckCore() {
 
       // Parse and set releases
       setReleases(validReleases.map(parseRelease))
+      consecutiveFailuresRef.current = 0
+      setError(null)
       setLastChecked(Date.now())
       localStorage.setItem(UPDATE_STORAGE_KEYS.LAST_CHECK, Date.now().toString())
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to check for updates'
-      setError(message)
+      consecutiveFailuresRef.current += 1
+      if (consecutiveFailuresRef.current >= ERROR_DISPLAY_THRESHOLD) {
+        setError(message)
+      }
 
       // Fall back to cache if available
       const cache = loadCache()
@@ -665,6 +683,9 @@ function useVersionCheckCore() {
   const forceCheck = async (): Promise<void> => {
     console.debug('[version-check] Force check — channel:', channel, 'agentSupportsAutoUpdate:', agentSupportsAutoUpdate)
     setIsChecking(true)
+    // Reset consecutive failure counter on user-initiated check so a single
+    // success clears the error, and a single failure doesn't flash red.
+    consecutiveFailuresRef.current = 0
     setError(null)
     // Trigger an immediate agent health check via the shared singleton
     refreshAgent()

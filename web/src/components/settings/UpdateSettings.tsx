@@ -177,10 +177,16 @@ export function UpdateSettings() {
     }
   }, [isChecking])
 
-  // Check for updates on mount
+  // Check for updates once on mount — use a ref to avoid re-firing when
+  // forceCheck's identity changes (its useCallback deps include state that
+  // changes after each check, which would cause a rapid-fire loop).
+  const mountCheckDoneRef = useRef(false)
   useEffect(() => {
+    if (mountCheckDoneRef.current) return
+    mountCheckDoneRef.current = true
     forceCheck()
-  }, [forceCheck])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Clear triggered state once WebSocket progress starts or update fails.
   // Emit GA4 lifecycle events for update completion/failure.
