@@ -1,12 +1,12 @@
 # In-place upgrade smoke test
 #
 # Verifies the console's self-upgrade mechanism end-to-end:
-#   1. Build HEAD image and tag it :ci-head
-#   2. Create a Kind cluster, install baseline (:latest) via Helm
-#   3. Confirm /api/self-upgrade/status reports canPatch=true
+#   1. Build HEAD image, tag as :ci-baseline and :ci-head
+#   2. Create a Kind cluster, install :ci-baseline via Helm
+#   3. Get dev-mode auth cookie, confirm canPatch=true
 #   4. POST /api/self-upgrade/trigger with imageTag=ci-head
 #   5. Poll the Deployment spec until the image tag rolls to :ci-head
-#   6. Verify the upgraded pod is healthy (/api/health returns 200)
+#   6. Verify the upgraded pod is healthy (/health returns 200)
 #
 # This is the gold-standard canary for the self-upgrade mechanism.
 # If this workflow fails on main, every deployed console instance's
@@ -48,7 +48,8 @@ env:
   RELEASE_NAME: console
   NAMESPACE: upgrade-smoke
   TARGET_TAG: ci-head
-  BASELINE_IMAGE: ghcr.io/kubestellar/console:latest
+  BASELINE_TAG: ci-baseline
+  IMAGE_REPO: ghcr.io/kubestellar/console
   # Timeouts (seconds) — named constants, no magic numbers
   HEALTH_POLL_INTERVAL_S: 5
   HEALTH_TIMEOUT_S: 120
@@ -75,8 +76,15 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build HEAD image as :ci-head
-        run: docker build -t ghcr.io/kubestellar/console:${{ env.TARGET_TAG }} .
+      - name: Build HEAD image and tag as baseline + target
+        run: |
+          # Build once, tag twice. Both tags use the same binary so the
+          # SSAR fix is present in the baseline. The upgrade changes the
+          # Deployment's image tag from :ci-baseline to :ci-head, proving
+          # the rollout mechanism works.
+          docker build -t ${{ env.IMAGE_REPO }}:${{ env.TARGET_TAG }} .
+          docker tag ${{ env.IMAGE_REPO }}:${{ env.TARGET_TAG }} \
+                     ${{ env.IMAGE_REPO }}:${{ env.BASELINE_TAG }}
 
       - name: Create Kind cluster
         uses: helm/kind-action@v1
@@ -86,17 +94,16 @@ jobs:
 
       - name: Load images into Kind
         run: |
-          docker pull ${{ env.BASELINE_IMAGE }}
-          kind load docker-image ${{ env.BASELINE_IMAGE }} --name upgrade-smoke
-          kind load docker-image ghcr.io/kubestellar/console:${{ env.TARGET_TAG }} --name upgrade-smoke
+          kind load docker-image ${{ env.IMAGE_REPO }}:${{ env.BASELINE_TAG }} --name upgrade-smoke
+          kind load docker-image ${{ env.IMAGE_REPO }}:${{ env.TARGET_TAG }} --name upgrade-smoke
 
       - name: Install baseline via Helm
         run: |
           kubectl create namespace ${{ env.NAMESPACE }}
           helm install ${{ env.RELEASE_NAME }} ./deploy/helm/kubestellar-console \
             -n ${{ env.NAMESPACE }} \
-            --set image.repository=ghcr.io/kubestellar/console \
-            --set image.tag=latest \
+            --set image.repository=${{ env.IMAGE_REPO }} \
+            --set image.tag=${{ env.BASELINE_TAG }} \
             --set image.pullPolicy=IfNotPresent \
             --set 'extraEnv[0].name=DEV_MODE' \
             --set-string 'extraEnv[0].value=true' \
