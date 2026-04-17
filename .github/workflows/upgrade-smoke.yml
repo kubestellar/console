@@ -92,7 +92,7 @@ jobs:
             --set image.tag=latest \
             --set image.pullPolicy=IfNotPresent \
             --set 'extraEnv[0].name=DEV_MODE' \
-            --set 'extraEnv[0].value=true' \
+            --set-string 'extraEnv[0].value=true' \
             --wait --timeout=${{ env.HELM_INSTALL_TIMEOUT }}
 
       - name: Port-forward and verify baseline health
