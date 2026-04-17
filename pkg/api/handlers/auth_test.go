@@ -89,8 +89,8 @@ func TestDevModeLogin(t *testing.T) {
 }
 
 // refreshReq builds a POST /auth/refresh request with the CSRF header
-// set so the handler does not reject it at the CSRF gate (#6588). Tests
-// that want to exercise the CSRF gate should build requests directly.
+// set so the RequireCSRF middleware allows it through (#6588). Tests that
+// want to exercise the CSRF gate should build requests directly.
 func refreshReq(authHeader string) *http.Request {
 	req, err := http.NewRequest("POST", "/auth/refresh", nil)
 	if err != nil {
@@ -105,7 +105,7 @@ func refreshReq(authHeader string) *http.Request {
 
 func TestRefreshToken(t *testing.T) {
 	app, mockStore, handler := setupAuthTest()
-	app.Post("/auth/refresh", handler.RefreshToken)
+	app.Post("/auth/refresh", middleware.RequireCSRF(), handler.RefreshToken)
 
 	t.Run("Valid token refresh", func(t *testing.T) {
 		// 1. Generate a valid token manually
@@ -618,7 +618,7 @@ func TestGitHubCallback_SanitizesErrorDescription(t *testing.T) {
 // when a valid JWT is presented.
 func TestLogout_RequiresCSRFHeader(t *testing.T) {
 	app, _, handler := setupAuthTest()
-	app.Post("/auth/logout", handler.Logout)
+	app.Post("/auth/logout", middleware.RequireCSRF(), handler.Logout)
 
 	uid := uuid.New()
 	user := &models.User{ID: uid, GitHubLogin: "test"}
@@ -648,7 +648,7 @@ func TestLogout_RequiresCSRFHeader(t *testing.T) {
 // JTIs only bloats the persistent table for no security benefit.
 func TestLogout_ExpiredTokenIdempotent(t *testing.T) {
 	app, _, handler := setupAuthTest()
-	app.Post("/auth/logout", handler.Logout)
+	app.Post("/auth/logout", middleware.RequireCSRF(), handler.Logout)
 
 	expClaims := middleware.UserClaims{
 		UserID: uuid.New(),

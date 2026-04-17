@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -30,7 +31,7 @@ import (
 // DO NOT re-introduce a "token" field in the /auth/refresh JSON body.
 func TestAuthRefreshContract_TokenNotInResponseBody(t *testing.T) {
 	app, mockStore, handler := setupAuthTest()
-	app.Post("/auth/refresh", handler.RefreshToken)
+	app.Post("/auth/refresh", middleware.RequireCSRF(), handler.RefreshToken)
 
 	// 1. Create a mock user and generate a valid JWT.
 	uid := uuid.New()
@@ -89,7 +90,7 @@ func TestAuthRefreshContract_TokenNotInResponseBody(t *testing.T) {
 // still be cookie-only, never returned in the JSON body.
 func TestAuthRefreshContract_OnboardedFalse(t *testing.T) {
 	app, mockStore, handler := setupAuthTest()
-	app.Post("/auth/refresh", handler.RefreshToken)
+	app.Post("/auth/refresh", middleware.RequireCSRF(), handler.RefreshToken)
 
 	uid := uuid.New()
 	user := &models.User{ID: uid, GitHubLogin: "new-user", Onboarded: false}
