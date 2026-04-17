@@ -261,19 +261,39 @@ jobs:
           # Get all dependencies from package.json
           DEPS=$(jq -r '.dependencies // {} | keys[]' package.json)
 
+          # Packages used via dynamic import(), web workers, Netlify Functions,
+          # peer dependencies, or build tooling — not discoverable by grepping
+          # src/ for static import statements. Maintain this list when adding
+          # new indirect deps to avoid false-positive auto-QA issues.
+          INDIRECT_DEPS="@netlify/blobs @sqlite.org/sqlite-wasm fflate googleapis react-is sucrase"
+
           for dep in $DEPS; do
             # Skip known framework deps that won't appear as direct imports
             case "$dep" in
               react|react-dom|react-scripts|vite|@vitejs/*|@types/*|typescript) continue ;;
             esac
 
-            # Search for import/require of this dep in src/
-            COUNT=$(grep -rl "from ['\"]${dep}" src/ 2>/dev/null | wc -l || echo "0")
-            COUNT2=$(grep -rl "require(['\"]${dep}" src/ 2>/dev/null | wc -l || echo "0")
-            TOTAL=$((COUNT + COUNT2))
+            # Skip packages on the indirect-dependency allowlist
+            SKIP=false
+            for indirect in $INDIRECT_DEPS; do
+              if [ "$dep" = "$indirect" ]; then
+                SKIP=true
+                break
+              fi
+            done
+            if [ "$SKIP" = "true" ]; then
+              continue
+            fi
+
+            # Search for import/require in src/ AND netlify/functions/
+            COUNT=$(grep -rl "from ['\"]${dep}" src/ netlify/functions/ 2>/dev/null | wc -l || echo "0")
+            COUNT2=$(grep -rl "require(['\"]${dep}" src/ netlify/functions/ 2>/dev/null | wc -l || echo "0")
+            # Also check for dynamic import() calls
+            COUNT3=$(grep -rl "import(['\"]${dep}" src/ netlify/functions/ 2>/dev/null | wc -l || echo "0")
+            TOTAL=$((COUNT + COUNT2 + COUNT3))
 
             if [ "$TOTAL" -eq 0 ]; then
-              ISSUES="${ISSUES}  - \`${dep}\` — no direct imports found in src/\n"
+              ISSUES="${ISSUES}  - \`${dep}\` — no direct imports found in src/ or netlify/functions/\n"
             fi
           done
 
