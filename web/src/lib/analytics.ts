@@ -2243,3 +2243,33 @@ export function emitWhatsNewRemindLater(tag: string, duration: string) {
 export function emitACMMScanned(repo: string, level: number, detected: number, total: number) {
   send('ksc_acmm_scanned', { repo, acmm_level: level, detected, total })
 }
+
+/** Fired when a user launches an AI mission from the ACMM dashboard to
+ *  add a missing criterion. Connects the scan → mission → level-up funnel. */
+export function emitACMMMissionLaunched(
+  repo: string,
+  criterionId: string,
+  criterionSource: string,
+  targetLevel: number,
+) {
+  send('ksc_acmm_mission_launched', {
+    repo,
+    criterion_id: criterionId,
+    criterion_source: criterionSource,
+    target_level: targetLevel,
+  })
+}
+
+/** Fired when a user launches a "complete this level" mission from the
+ *  ACMM Feedback Loop Inventory sticky footer. */
+export function emitACMMLevelMissionLaunched(
+  repo: string,
+  targetLevel: number,
+  criteriaCount: number,
+) {
+  send('ksc_acmm_level_mission_launched', {
+    repo,
+    target_level: targetLevel,
+    criteria_count: criteriaCount,
+  })
+}

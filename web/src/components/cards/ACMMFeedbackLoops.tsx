@@ -15,6 +15,7 @@ import { useMissions } from '../../hooks/useMissions'
 import { ALL_CRITERIA, SOURCES_BY_ID } from '../../lib/acmm/sources'
 import type { Criterion, SourceId } from '../../lib/acmm/sources/types'
 import { detectionLabel, singleCriterionPrompt, levelCompletionPrompt } from '../../lib/acmm/missionPrompts'
+import { emitACMMMissionLaunched, emitACMMLevelMissionLaunched } from '../../lib/analytics'
 
 type StatusFilter = 'all' | 'detected' | 'missing'
 
@@ -123,6 +124,7 @@ export function ACMMFeedbackLoops() {
   }
 
   function launchOne(c: Criterion) {
+    emitACMMMissionLaunched(repo, c.id, c.source, c.level ?? 0)
     startMission({
       title: `Add ACMM criterion: ${c.name}`,
       description: `Add "${c.name}" to ${repo}`,
@@ -172,6 +174,7 @@ export function ACMMFeedbackLoops() {
 
   function launchLevelCompletion() {
     if (missingForNextList.length === 0) return
+    emitACMMLevelMissionLaunched(repo, nextLevel, missingForNextList.length)
     startMission({
       title: `Reach ACMM L${nextLevel} for ${repo}`,
       description: `Add the ${missingForNextList.length} missing L${nextLevel} criteria to ${repo}`,

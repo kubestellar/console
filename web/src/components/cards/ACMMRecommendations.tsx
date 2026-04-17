@@ -20,6 +20,7 @@ import {
   singleRecommendationPrompt,
   allRecommendationsPrompt,
 } from '../../lib/acmm/missionPrompts'
+import { emitACMMMissionLaunched } from '../../lib/analytics'
 
 const SOURCE_LABELS: Record<SourceId, string> = {
   acmm: 'ACMM',
@@ -49,6 +50,7 @@ export function ACMMRecommendations() {
   const displayedRole = targetLevel === level.level ? level.role : (ROLE_BY_LEVEL[targetLevel] ?? level.role)
 
   function launchOne(rec: Recommendation) {
+    emitACMMMissionLaunched(repo, rec.criterion.id, rec.criterion.source, rec.criterion.level ?? 0)
     startMission({
       title: `Add ACMM criterion: ${rec.criterion.name}`,
       description: `Add "${rec.criterion.name}" to ${repo}`,
@@ -60,6 +62,9 @@ export function ACMMRecommendations() {
 
   function launchAll() {
     if (recommendations.length === 0) return
+    for (const rec of recommendations) {
+      emitACMMMissionLaunched(repo, rec.criterion.id, rec.criterion.source, rec.criterion.level ?? 0)
+    }
     startMission({
       title: `Add ${recommendations.length} missing ACMM criteria`,
       description: `Implement all top ACMM recommendations for ${repo}`,
