@@ -28,6 +28,7 @@ vi.mock('react-i18next', () => ({
         'dashboard.create.cards': 'cards',
         'dashboard.create.creating': 'Creating...',
         'actions.cancel': 'Cancel',
+        'dashboard.create.nameRequired': 'Dashboard name is required',
       }
       if (key === 'dashboard.create.preConfiguredCards' && opts?.count) {
         return `${opts.count} pre-configured cards`
@@ -173,6 +174,14 @@ describe('CreateDashboardModal', () => {
     await user.type(nameInput, '   ')
     const createBtn = screen.getByText('Create Dashboard', { selector: 'button' })
     expect(createBtn).toBeDisabled()
+
+    // Error message should be rendered
+    const errorMsg = screen.getByRole('alert')
+    expect(errorMsg).toHaveTextContent('Dashboard name is required')
+
+    // Input should have accessible error attributes
+    expect(nameInput).toHaveAttribute('aria-invalid', 'true')
+    expect(nameInput).toHaveAttribute('aria-describedby', 'create-dashboard-name-error')
   })
 
   it('uses placeholder as default name in input', () => {

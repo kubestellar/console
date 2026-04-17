@@ -83,6 +83,8 @@ function CreateDashboardModalInner({
   const trimmedName = name.trim()
   const isNameEmpty = trimmedName.length === 0
   const isCreateDisabled = isCreating || isNameEmpty
+  const showNameError = name.length > 0 && isNameEmpty
+  const NAME_ERROR_ID = 'create-dashboard-name-error'
 
   const handleCreate = async () => {
     if (isCreateDisabled) return
@@ -119,12 +121,14 @@ function CreateDashboardModalInner({
             onChange={(e) => setName(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={generateDefaultName()}
+            aria-invalid={showNameError}
+            aria-describedby={showNameError ? NAME_ERROR_ID : undefined}
             className={`w-full px-4 py-3 bg-secondary/30 border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-transparent ${
-              name.length > 0 && isNameEmpty ? 'border-destructive' : 'border-border'
+              showNameError ? 'border-destructive' : 'border-border'
             }`}
           />
-          {name.length > 0 && isNameEmpty && (
-            <p className="mt-1 text-xs text-destructive">{t('dashboard.create.nameRequired')}</p>
+          {showNameError && (
+            <p id={NAME_ERROR_ID} role="alert" className="mt-1 text-xs text-destructive">{t('dashboard.create.nameRequired')}</p>
           )}
         </div>
 

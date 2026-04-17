@@ -115,7 +115,7 @@ describe('CreateDashboardModal Component', () => {
     expect(createBtn).not.toBeDisabled()
   })
 
-  it('disables Create button when name is only whitespace', () => {
+  it('disables Create button when name is only whitespace and shows error', () => {
     vi.mocked(useDashboardHealth).mockReturnValue(mockHealthHealthy)
     render(<CreateDashboardModal isOpen={true} onClose={vi.fn()} onCreate={vi.fn()} />)
 
@@ -124,6 +124,14 @@ describe('CreateDashboardModal Component', () => {
 
     const createBtn = screen.getByRole('button', { name: /title/i })
     expect(createBtn).toBeDisabled()
+
+    // Error message should be rendered with role="alert"
+    const errorMsg = screen.getByRole('alert')
+    expect(errorMsg).toHaveTextContent('nameRequired')
+
+    // Input should have accessible error attributes
+    expect(input).toHaveAttribute('aria-invalid', 'true')
+    expect(input).toHaveAttribute('aria-describedby', 'create-dashboard-name-error')
   })
 
   it('disables Create button while async onCreate is in progress', async () => {
