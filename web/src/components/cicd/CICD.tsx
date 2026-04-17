@@ -1,116 +1,45 @@
-import { useClusters, useDeployments } from '../../hooks/useMCP'
-import { useCachedProwJobs } from '../../hooks/useCachedData'
-import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
-import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
 import { RotatingTip } from '../ui/RotatingTip'
 import { PipelineFilterProvider, PipelineDataProvider, PipelineFilterBar } from '../cards/pipelines'
+import { useCICDStats } from './useCICDStats'
 
 const CICD_CARDS_KEY = 'kubestellar-cicd-cards'
 
 // Default cards for CI/CD dashboard
 const DEFAULT_CICD_CARDS = getDefaultCards('ci-cd')
 
+/**
+ * Inner dashboard that lives inside PipelineDataProvider so it can
+ * consume the unified pipeline data for stat calculations.
+ */
+function CICDDashboard() {
+  const { getStatValue, isLoading } = useCICDStats()
+
+  return (
+    <DashboardPage
+      title="CI/CD"
+      subtitle="Monitor continuous integration and deployment pipelines"
+      icon="GitPullRequest"
+      rightExtra={<RotatingTip page="ci-cd" />}
+      headerExtra={<PipelineFilterBar />}
+      storageKey={CICD_CARDS_KEY}
+      defaultCards={DEFAULT_CICD_CARDS}
+      statsType="ci-cd"
+      getStatValue={getStatValue}
+      isLoading={isLoading}
+      emptyState={{
+        title: 'CI/CD Dashboard',
+        description: 'Add cards to monitor pipelines, builds, and deployment status across your clusters.' }}
+    />
+  )
+}
+
 export function CICD() {
-  const { clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch, error } = useClusters()
-  const { jobs: prowJobs, isLoading: prowLoading, status: prowStatus } = useCachedProwJobs()
-  const { deployments, isLoading: deploymentsLoading } = useDeployments()
-  const { getStatValue: getUniversalStatValue } = useUniversalStats()
-
-  // Filter reachable clusters
-  const reachableClusters = clusters.filter(c => c.reachable !== false)
-
-  // Calculate pipeline/job stats
-  const runningJobs = prowJobs.filter(j => j.state === 'pending' || j.state === 'running').length
-  const failedJobs = prowJobs.filter(j => j.state === 'failure' || j.state === 'error').length
-
-  // Count active deployments (currently deploying or recently deployed)
-  const deploymentsToday = deployments.filter(d => d.status === 'deploying' || d.status === 'running').length
-
-  // Determine if we have real data
-  const hasRealData = prowJobs.length > 0 || deployments.length > 0
-  const isDemoData = !hasRealData && !prowLoading && !deploymentsLoading
-
-  // Stats value getter for the configurable StatsOverview component
-  const getDashboardStatValue = (blockId: string): StatBlockValue => {
-    switch (blockId) {
-      case 'clusters':
-        return { value: reachableClusters.length, sublabel: 'clusters', isClickable: false }
-      case 'pipelines':
-        return {
-          value: prowJobs.length,
-          sublabel: `${runningJobs} running`,
-          isClickable: false,
-          isDemo: prowJobs.length === 0 && !prowLoading
-        }
-      case 'running_jobs':
-        return {
-          value: runningJobs,
-          sublabel: 'running jobs',
-          isClickable: false,
-          isDemo: prowJobs.length === 0 && !prowLoading
-        }
-      case 'failed_jobs':
-        return {
-          value: failedJobs,
-          sublabel: 'failed jobs',
-          isClickable: false,
-          isDemo: prowJobs.length === 0 && !prowLoading
-        }
-      case 'success_rate': {
-        const successRate = prowStatus?.successRate || 0
-        return {
-          value: `${Math.round(successRate)}%`,
-          sublabel: 'success rate',
-          isClickable: false,
-          isDemo: prowJobs.length === 0 && !prowLoading
-        }
-      }
-      case 'deployments':
-        return {
-          value: deploymentsToday,
-          sublabel: 'deployments today',
-          isClickable: false,
-          isDemo: deployments.length === 0 && !deploymentsLoading
-        }
-      default:
-        return { value: '-' }
-    }
-  }
-
-  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
-
   return (
     <PipelineFilterProvider>
     <PipelineDataProvider>
-      <DashboardPage
-        title="CI/CD"
-        subtitle="Monitor continuous integration and deployment pipelines"
-        icon="GitPullRequest"
-        rightExtra={<RotatingTip page="ci-cd" />}
-        headerExtra={<PipelineFilterBar />}
-        storageKey={CICD_CARDS_KEY}
-        defaultCards={DEFAULT_CICD_CARDS}
-        statsType="ci-cd"
-        getStatValue={getStatValue}
-        onRefresh={refetch}
-        isLoading={isLoading || prowLoading || deploymentsLoading}
-        isRefreshing={dataRefreshing}
-        lastUpdated={lastUpdated}
-        hasData={reachableClusters.length > 0 || hasRealData}
-        isDemoData={isDemoData}
-        emptyState={{
-          title: 'CI/CD Dashboard',
-          description: 'Add cards to monitor pipelines, builds, and deployment status across your clusters.' }}
-      >
-        {error && (
-          <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400">
-            <div className="font-medium">Error loading cluster data</div>
-            <div className="text-sm text-muted-foreground">{error}</div>
-          </div>
-        )}
-      </DashboardPage>
+      <CICDDashboard />
     </PipelineDataProvider>
     </PipelineFilterProvider>
   )

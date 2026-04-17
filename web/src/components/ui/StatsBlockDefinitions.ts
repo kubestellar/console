@@ -424,6 +424,18 @@ export const ACMM_STAT_BLOCKS: StatBlockConfig[] = [
 ]
 
 /**
+ * Default stat blocks for the CI/CD dashboard
+ */
+export const CICD_STAT_BLOCKS: StatBlockConfig[] = [
+  { id: 'cicd_pass_rate', name: 'Pass Rate', icon: 'Percent', visible: true, color: 'green', displayMode: 'ring' },
+  { id: 'cicd_open_prs', name: 'Open PRs', icon: 'ClipboardList', visible: true, color: 'blue' },
+  { id: 'cicd_failed_24h', name: 'Failed (24h)', icon: 'XCircle', visible: true, color: 'red' },
+  { id: 'cicd_avg_duration', name: 'Avg Duration', icon: 'Clock', visible: true, color: 'cyan' },
+  { id: 'cicd_streak', name: 'Nightly Streak', icon: 'Activity', visible: true, color: 'purple', displayMode: 'sparkline' },
+  { id: 'cicd_total_workflows', name: 'Total Workflows', icon: 'Workflow', visible: true, color: 'yellow' },
+]
+
+/**
  * Default stat blocks for the Drasi dashboard
  */
 export const DRASI_STAT_BLOCKS: StatBlockConfig[] = [
@@ -477,6 +489,7 @@ export const ALL_STAT_BLOCKS: StatBlockConfig[] = (() => {
     ...KAGENTI_STAT_BLOCKS,
     ...CLUSTER_ADMIN_STAT_BLOCKS,
     ...MULTI_TENANCY_STAT_BLOCKS,
+    ...CICD_STAT_BLOCKS,
     ...DRASI_STAT_BLOCKS,
     ...ACMM_STAT_BLOCKS,
     ...AI_AGENTS_STAT_BLOCKS,
@@ -540,7 +553,7 @@ export function getDefaultStatBlocks(dashboardType: DashboardStatsType): StatBlo
     case 'multi-tenancy':
       return MULTI_TENANCY_STAT_BLOCKS
     case 'ci-cd':
-      return GITOPS_STAT_BLOCKS
+      return CICD_STAT_BLOCKS
     case 'drasi':
       return DRASI_STAT_BLOCKS
     case 'acmm':
@@ -594,6 +607,11 @@ export const STAT_DISPLAY_MODE_DEFAULTS: Record<string, StatDisplayMode> = {
 
   // Pods — trend over time
   'pods:total_pods': 'sparkline',
+
+  // CI/CD — pass rate as ring, streak as sparkline, failed as heatmap
+  'ci-cd:cicd_pass_rate': 'ring',
+  'ci-cd:cicd_streak': 'sparkline',
+  'ci-cd:cicd_failed_24h': 'heatmap',
 
   // Multi-tenancy — isolation score as gauge, components as ring, tenants as sparkline
   'multi-tenancy:isolation_score': 'gauge',
