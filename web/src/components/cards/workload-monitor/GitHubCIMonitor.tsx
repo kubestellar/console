@@ -1,7 +1,7 @@
 import { useState, useMemo, useImperativeHandle, type Ref } from 'react'
 import {
   GitBranch, AlertTriangle, CheckCircle, XCircle,
-  Clock, Loader2, ExternalLink, Key, Settings, Plus, X, Check } from 'lucide-react'
+  Clock, Loader2, ExternalLink, Key, Settings, Plus, X, Check, Stethoscope } from 'lucide-react'
 import { FETCH_EXTERNAL_TIMEOUT_MS } from '../../../lib/constants'
 import { Button } from '../../ui/Button'
 import { Skeleton } from '../../ui/Skeleton'
@@ -12,6 +12,7 @@ import { CardSearchInput, CardAIActions } from '../../../lib/cards/CardComponent
 import { useCardLoadingState } from '../CardDataContext'
 import { useCache } from '../../../lib/cache'
 import type { SortDirection } from '../../../lib/cards/cardHooks'
+import { useMissions } from '../../../hooks/useMissions'
 import { cn } from '../../../lib/cn'
 import { WorkloadMonitorAlerts } from './WorkloadMonitorAlerts'
 import type { MonitorIssue } from '../../../types/workloadMonitor'
@@ -94,6 +95,7 @@ const DEMO_WORKFLOWS: WorkflowRun[] = [
 
 export function GitHubCIMonitor({ config, ref }: GitHubCIMonitorProps & { ref?: Ref<GitHubCIMonitorRef> }) {
   const { t } = useTranslation()
+  const { startMission } = useMissions()
   const ghConfig = config as GitHubCIConfig | undefined
   const shared = usePipelineFilter()
 
@@ -482,11 +484,26 @@ export function GitHubCIMonitor({ config, ref }: GitHubCIMonitorProps & { ref?: 
                 {formatTimeAgo(w.updatedAt)}
               </span>
               {(w.conclusion === 'failure' || w.conclusion === 'timed_out') && (
-                <CardAIActions
-                  resource={{ kind: 'GitHubWorkflow', name: w.name, status: w.conclusion }}
-                  issues={[{ name: `${w.conclusion} on ${w.repo}/${w.branch}`, message: `Run #${w.runNumber}, event: ${w.event}` }]}
-                  showRepair={false}
-                />
+                <>
+                  <button
+                    type="button"
+                    onClick={() => startMission({
+                      title: `Diagnose: ${w.name}`,
+                      description: `Diagnose failing workflow ${w.name} on ${w.repo}`,
+                      type: 'troubleshoot',
+                      initialPrompt: `Diagnose why the "${w.name}" workflow failed on ${w.repo} (branch: ${w.branch}).\n\nRun URL: ${w.url}\n\nPlease:\n1. Check the workflow logs and identify the root cause.\n2. Tell me what went wrong, then ask:\n   - "Should I create a fix?"\n   - "Show me more details"\n3. If I say fix it, create a branch with the fix and open a PR.`,
+                    })}
+                    className="text-muted-foreground hover:text-blue-400 p-1 rounded hover:bg-blue-500/10 shrink-0"
+                    title="Diagnose with AI"
+                  >
+                    <Stethoscope className="w-3 h-3" />
+                  </button>
+                  <CardAIActions
+                    resource={{ kind: 'GitHubWorkflow', name: w.name, status: w.conclusion }}
+                    issues={[{ name: `${w.conclusion} on ${w.repo}/${w.branch}`, message: `Run #${w.runNumber}, event: ${w.event}` }]}
+                    showRepair={false}
+                  />
+                </>
               )}
               {w.url !== '#' && (
                 <a

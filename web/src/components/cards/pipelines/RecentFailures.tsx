@@ -3,7 +3,7 @@
  * tracked repos, with the first failing step and drill-down to the log.
  */
 import { useState, useMemo } from 'react'
-import { ExternalLink, RefreshCw, FileText } from 'lucide-react'
+import { ExternalLink, RefreshCw, FileText, Stethoscope } from 'lucide-react'
 import { useDemoMode } from '../../../hooks/useDemoMode'
 import { useCardLoadingState } from '../CardDataContext'
 import {
@@ -16,6 +16,7 @@ import { usePipelineData } from './PipelineDataContext'
 import { RepoSubtitle } from './RepoSubtitle'
 import { EmbedButton } from './EmbedButton'
 import { LogsModal } from './LogsModal'
+import { useMissions } from '../../../hooks/useMissions'
 import { cn } from '../../../lib/cn'
 
 /** Maximum ms duration we format compactly (1 hr). Over this, show "1h+" */
@@ -27,6 +28,7 @@ const LABEL_FILTER_REPO = 'Filter by repo'
 const LABEL_REFRESH = 'Refresh'
 const TITLE_VIEW_LOG = 'View log tail'
 const TITLE_OPEN_RUN = 'Open run on GitHub'
+const TITLE_DIAGNOSE = 'Diagnose with AI'
 
 function formatDuration(ms: number): string {
   if (ms < 1000) return `${ms}ms`
@@ -65,6 +67,7 @@ export function RecentFailures() {
   const refetch = hasUnified ? unifiedData.refetch : individual.refetch
   const { run: runMutation } = usePipelineMutations()
   const { isDemoMode } = useDemoMode()
+  const { startMission } = useMissions()
 
   const hasData = (data?.runs?.length ?? 0) > 0
   useCardLoadingState({ isLoading: isLoading && !hasData, hasAnyData: hasData, isDemoData: isDemoMode })
@@ -171,6 +174,19 @@ export function RecentFailures() {
                     {formatDuration(r.durationMs)}
                   </td>
                   <td className="py-1.5 pr-2 text-right whitespace-nowrap">
+                    <button
+                      type="button"
+                      onClick={() => startMission({
+                        title: `Diagnose: ${r.workflow}`,
+                        description: `Diagnose failing workflow ${r.workflow} on ${r.repo}`,
+                        type: 'troubleshoot',
+                        initialPrompt: `Diagnose why the "${r.workflow}" workflow failed on ${r.repo} (branch: ${r.branch}).\n\nRun URL: ${r.htmlUrl}\n\n${r.failedStep ? `Failed step: ${r.failedStep.stepName}` : ''}\n\nPlease:\n1. Check the workflow logs and identify the root cause.\n2. Tell me what went wrong, then ask:\n   - "Should I create a fix?"\n   - "Show me more details"\n3. If I say fix it, create a branch with the fix and open a PR.`,
+                      })}
+                      className="text-muted-foreground hover:text-blue-400 p-1 rounded hover:bg-blue-500/10"
+                      title={TITLE_DIAGNOSE}
+                    >
+                      <Stethoscope className="w-3 h-3" />
+                    </button>
                     {r.failedStep && (
                       <button
                         type="button"

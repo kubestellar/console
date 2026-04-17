@@ -13,7 +13,7 @@
  * cadence) so the flow looks live without hammering the function.
  */
 import { useState, useMemo, useRef, useLayoutEffect, useEffect, type CSSProperties } from 'react'
-import { RefreshCw, XCircle, ExternalLink } from 'lucide-react'
+import { RefreshCw, XCircle, ExternalLink, Stethoscope } from 'lucide-react'
 import { useReducedMotion } from 'framer-motion'
 import { useDemoMode } from '../../../hooks/useDemoMode'
 import { useCardLoadingState } from '../CardDataContext'
@@ -29,6 +29,7 @@ import { usePipelineFilter } from './PipelineFilterContext'
 import { usePipelineData } from './PipelineDataContext'
 import { RepoSubtitle } from './RepoSubtitle'
 import { EmbedButton } from './EmbedButton'
+import { useMissions } from '../../../hooks/useMissions'
 import { cn } from '../../../lib/cn'
 
 /** Flow-dot radius for active segments */
@@ -47,6 +48,7 @@ const MUTATION_TOAST_MS = 4000
 const LABEL_FILTER_REPO = 'Filter by repo'
 const LABEL_REFRESH = 'Refresh'
 const TITLE_OPEN_RUN = 'Open run on GitHub'
+const TITLE_DIAGNOSE = 'Diagnose with AI'
 
 function statusColor(status: Status, conclusion: Conclusion): string {
   if (status === 'in_progress') return 'text-blue-400'
@@ -124,6 +126,7 @@ interface RunRowProps {
 }
 
 function RunRow({ run, onCancel, canMutate, mutating }: RunRowProps) {
+  const { startMission } = useMissions()
   const containerRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLDivElement>(null)
   const workflowRef = useRef<HTMLDivElement>(null)
@@ -226,12 +229,27 @@ function RunRow({ run, onCancel, canMutate, mutating }: RunRowProps) {
             key={job.id}
             ref={(el) => { jobRefs.current[job.id] = el }}
             className={cn(
-              'px-2 py-1 rounded border text-[11px] truncate',
+              'px-2 py-1 rounded border text-[11px] truncate flex items-center gap-1',
               statusBg(job.status, job.conclusion),
             )}
             title={`${job.name} — ${job.status}${job.conclusion ? ` (${job.conclusion})` : ''}`}
           >
-            <span className={statusColor(job.status, job.conclusion)}>{job.name}</span>
+            <span className={cn('truncate', statusColor(job.status, job.conclusion))}>{job.name}</span>
+            {(job.conclusion === 'failure' || job.conclusion === 'timed_out') && (
+              <button
+                type="button"
+                onClick={() => startMission({
+                  title: `Diagnose: ${job.name}`,
+                  description: `Diagnose failing job ${job.name} in workflow ${run.run.name} on ${run.run.repo}`,
+                  type: 'troubleshoot',
+                  initialPrompt: `Diagnose why the "${job.name}" job failed in workflow "${run.run.name}" on ${run.run.repo} (branch: ${run.run.headBranch}).\n\nRun URL: ${run.run.htmlUrl}\n\nPlease:\n1. Check the workflow logs and identify the root cause.\n2. Tell me what went wrong, then ask:\n   - "Should I create a fix?"\n   - "Show me more details"\n3. If I say fix it, create a branch with the fix and open a PR.`,
+                })}
+                className="text-muted-foreground hover:text-blue-400 p-1 rounded hover:bg-blue-500/10 shrink-0"
+                title={TITLE_DIAGNOSE}
+              >
+                <Stethoscope className="w-3 h-3" />
+              </button>
+            )}
           </div>
         ))}
         {hiddenJobCount > 0 && (

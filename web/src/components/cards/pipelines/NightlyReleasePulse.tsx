@@ -14,7 +14,7 @@ import { useState, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import {
   CheckCircle, XCircle, AlertTriangle, Clock, ExternalLink,
-  TrendingUp, TrendingDown, Minus, Loader2, Search,
+  TrendingUp, TrendingDown, Minus, Loader2, Search, Stethoscope,
 } from 'lucide-react'
 import { useDemoMode } from '../../../hooks/useDemoMode'
 import { useCardLoadingState } from '../CardDataContext'
@@ -28,6 +28,7 @@ import { usePipelineFilter } from './PipelineFilterContext'
 import { usePipelineData } from './PipelineDataContext'
 import { RepoSubtitle } from './RepoSubtitle'
 import { EmbedButton } from './EmbedButton'
+import { useMissions } from '../../../hooks/useMissions'
 import { cn } from '../../../lib/cn'
 
 /** Max dots per row */
@@ -40,6 +41,7 @@ const TREND_THRESHOLD = 0.1
 const MATRIX_DAYS = 14
 
 const WORKFLOW_URL_BASE = 'https://github.com'
+const TITLE_DIAGNOSE = 'Diagnose with AI'
 
 /** Extracted strings for ui-ux ratchet */
 const PLACEHOLDER_REPO = 'owner/repo'
@@ -189,6 +191,7 @@ function TrendIndicator({ passRate, trend }: { passRate: number; trend: 'up' | '
 // ---------------------------------------------------------------------------
 
 function WorkflowRow({ wf }: { wf: MatrixWorkflow }) {
+  const { startMission } = useMissions()
   const dots: DotInfo[] = useMemo(() =>
     [...wf.cells].reverse().slice(0, MAX_DOTS).map((c) => ({
       conclusion: c.conclusion as Conclusion, htmlUrl: c.htmlUrl, date: c.date,
@@ -196,6 +199,7 @@ function WorkflowRow({ wf }: { wf: MatrixWorkflow }) {
 
   const { passRate, trend } = useMemo(() => computeTrend(dots), [dots])
   const latest = dots[0]?.conclusion
+  const latestFailed = latest === 'failure' || latest === 'timed_out'
   const StatusIcon = !latest ? AlertTriangle
     : latest === 'success' ? CheckCircle
     : latest === 'failure' || latest === 'timed_out' ? XCircle
@@ -220,6 +224,21 @@ function WorkflowRow({ wf }: { wf: MatrixWorkflow }) {
         ))}
       </div>
       <TrendIndicator passRate={passRate} trend={trend} />
+      {latestFailed && (
+        <button
+          type="button"
+          onClick={() => startMission({
+            title: `Diagnose: ${wf.name}`,
+            description: `Diagnose failing workflow ${wf.name} on ${wf.repo}`,
+            type: 'troubleshoot',
+            initialPrompt: `Diagnose why the "${wf.name}" workflow failed on ${wf.repo}.\n\nRun URL: ${dots[0]?.htmlUrl ?? `${WORKFLOW_URL_BASE}/${wf.repo}/actions`}\n\nPlease:\n1. Check the workflow logs and identify the root cause.\n2. Tell me what went wrong, then ask:\n   - "Should I create a fix?"\n   - "Show me more details"\n3. If I say fix it, create a branch with the fix and open a PR.`,
+          })}
+          className="text-muted-foreground hover:text-blue-400 p-1 rounded hover:bg-blue-500/10"
+          title={TITLE_DIAGNOSE}
+        >
+          <Stethoscope className="w-3 h-3" />
+        </button>
+      )}
       <a href={`${WORKFLOW_URL_BASE}/${wf.repo}/actions`} target="_blank" rel="noopener noreferrer"
         className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-secondary"
         onClick={(e) => e.stopPropagation()}>
