@@ -29,13 +29,14 @@ interface MLJobsProps {
 
 export function MLJobs({ config: _config }: MLJobsProps) {
   const { t } = useTranslation()
-  const { data: jobs, isLoading } = useDemoData(DEMO_ML_JOBS)
+  const { data: jobs, isLoading, isRefreshing, isDemoData } = useDemoData(DEMO_ML_JOBS)
 
   const hasData = jobs.length > 0
   useCardLoadingState({
     isLoading: isLoading && !hasData,
+    isRefreshing,
     hasAnyData: hasData,
-    isDemoData: true,
+    isDemoData,
   })
 
   const statusOrder: Record<string, number> = { running: 0, queued: 1, completed: 2, failed: 3 }

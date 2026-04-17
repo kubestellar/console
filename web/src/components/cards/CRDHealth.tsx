@@ -30,13 +30,14 @@ const statusOrder: Record<string, number> = { NotEstablished: 0, Terminating: 1,
 export function CRDHealth({ config: _config }: CRDHealthProps) {
   const { t } = useTranslation(['cards', 'common'])
   const SORT_OPTIONS = SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) }))
-  const { crds: allCRDs, isLoading, isDemoData } = useCRDs()
+  const { crds: allCRDs, isLoading, isRefreshing, isDemoData } = useCRDs()
 
   const [filterGroup, setFilterGroup] = useState<string>('')
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,
+    isRefreshing,
     hasAnyData: allCRDs.length > 0,
     isDemoData })
 

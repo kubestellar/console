@@ -147,6 +147,7 @@ export interface UseCRDsResult {
   crds: CRDData[]
   isDemoData: boolean
   isLoading: boolean
+  isRefreshing: boolean
   isFailed: boolean
   consecutiveFailures: number
   lastRefresh: number | null
@@ -162,6 +163,7 @@ export function useCRDs(): UseCRDsResult {
   const [crds, setCRDs] = useState<CRDData[]>(cachedSnapshot?.data || [])
   const [isDemoData, setIsDemoData] = useState(cachedSnapshot?.isDemoData ?? true)
   const [isLoading, setIsLoading] = useState(!cachedSnapshot)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
   const [lastRefresh, setLastRefresh] = useState<number | null>(
     cachedSnapshot?.timestamp || null
@@ -178,6 +180,9 @@ export function useCRDs(): UseCRDsResult {
   const refetch = useCallback(async (silent = false) => {
     if (!silent && !initialLoadDone.current) {
       setIsLoading(true)
+    }
+    if (silent && initialLoadDone.current) {
+      setIsRefreshing(true)
     }
 
     try {
@@ -224,6 +229,7 @@ export function useCRDs(): UseCRDsResult {
       saveToCache(demoCRDs, true)
     } finally {
       setIsLoading(false)
+      setIsRefreshing(false)
     }
   }, []) // No dependency on clusters — uses clustersRef instead
 
@@ -249,6 +255,7 @@ export function useCRDs(): UseCRDsResult {
     crds,
     isDemoData,
     isLoading: isLoading || clustersLoading,
+    isRefreshing,
     isFailed: consecutiveFailures >= FAILURE_THRESHOLD,
     consecutiveFailures,
     lastRefresh,

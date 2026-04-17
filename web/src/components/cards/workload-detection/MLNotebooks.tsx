@@ -22,13 +22,14 @@ interface MLNotebooksProps {
 
 export function MLNotebooks({ config: _config }: MLNotebooksProps) {
   const { t } = useTranslation(['cards', 'common'])
-  const { data: notebooks, isLoading } = useDemoData(DEMO_NOTEBOOKS)
+  const { data: notebooks, isLoading, isRefreshing, isDemoData } = useDemoData(DEMO_NOTEBOOKS)
 
   const hasData = notebooks.length > 0
   useCardLoadingState({
     isLoading: isLoading && !hasData,
+    isRefreshing,
     hasAnyData: hasData,
-    isDemoData: true,
+    isDemoData,
   })
 
   const statusOrder: Record<string, number> = { running: 0, idle: 1, stopped: 2 }

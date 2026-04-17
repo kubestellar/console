@@ -3,13 +3,15 @@ import type { ClusterInfo } from '../../../hooks/mcp/types'
 
 export interface DemoState {
   isLoading: boolean
+  isRefreshing: boolean
+  isDemoData: boolean
   lastUpdated: Date | null
 }
 
 export function useDemoData<T>(data: T): DemoState & { data: T } {
   const [isLoading] = useState(false)
   const [lastUpdated] = useState<Date | null>(new Date())
-  return { data, isLoading, lastUpdated }
+  return { data, isLoading, isRefreshing: false, isDemoData: true, lastUpdated }
 }
 
 // Keywords that indicate a cluster may have LLM-d or AI/ML workloads
