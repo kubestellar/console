@@ -208,8 +208,12 @@ async function gh(path: string, token: string, init: RequestInit = {}): Promise<
   });
 }
 
+/** Matches `owner/repo` format — allows any valid GitHub repo, not just
+ * preconfigured PIPELINE_REPOS. The token's access controls what's fetchable. */
+const VALID_REPO_PATTERN = /^[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$/;
+
 function isValidRepo(repo: string | null): boolean {
-  return !!repo && REPOS.includes(repo);
+  return !!repo && VALID_REPO_PATTERN.test(repo);
 }
 
 /** YYYY-MM-DD in UTC */
@@ -342,21 +346,26 @@ interface PulsePayload {
 
 async function buildPulse(
   store: ReturnType<typeof getStore>,
-  token: string
+  token: string,
+  repoFilter: string | null
 ): Promise<PulsePayload> {
-  const res = await gh(
-    `/repos/${NIGHTLY_RELEASE_REPO}/actions/workflows/${NIGHTLY_RELEASE_WORKFLOW}/runs?per_page=${MATRIX_DEFAULT_DAYS}`,
-    token
-  );
+  // When a specific repo is selected, fetch its most recent workflow runs
+  // across all workflows. When null, use the default nightly release workflow.
+  const targetRepo = repoFilter && isValidRepo(repoFilter) ? repoFilter : NIGHTLY_RELEASE_REPO;
+  const isDefault = targetRepo === NIGHTLY_RELEASE_REPO;
+  const apiPath = isDefault
+    ? `/repos/${targetRepo}/actions/workflows/${NIGHTLY_RELEASE_WORKFLOW}/runs?per_page=${MATRIX_DEFAULT_DAYS}`
+    : `/repos/${targetRepo}/actions/runs?per_page=${MATRIX_DEFAULT_DAYS}`;
+  const res = await gh(apiPath, token);
   if (!res.ok) throw new Error(`pulse: GitHub ${res.status}`);
   const data = (await res.json()) as { workflow_runs: Array<Record<string, unknown>> };
-  const runs = (data.workflow_runs ?? []).map((r) => normalizeRun(r, NIGHTLY_RELEASE_REPO));
+  const runs = (data.workflow_runs ?? []).map((r) => normalizeRun(r, targetRepo));
   mergeIntoHistory(await readHistory(store), runs); // side-effect updates below
 
   // Latest release tag (best-effort — release might be on the same day as the run)
   let releaseTag: string | null = null;
   try {
-    const rel = await gh(`/repos/${NIGHTLY_RELEASE_REPO}/releases?per_page=1`, token);
+    const rel = await gh(`/repos/${targetRepo}/releases?per_page=1`, token);
     if (rel.ok) {
       const releases = (await rel.json()) as Array<{ tag_name?: string }>;
       releaseTag = releases[0]?.tag_name ?? null;
@@ -777,7 +786,7 @@ export default async (req: Request): Promise<Response> => {
     let payload: unknown;
     switch (view) {
       case "pulse":
-        payload = await buildPulse(store, token);
+        payload = await buildPulse(store, token, url.searchParams.get("repo"));
         break;
       case "matrix": {
         const daysRaw = parseInt(url.searchParams.get("days") ?? String(MATRIX_DEFAULT_DAYS), 10);

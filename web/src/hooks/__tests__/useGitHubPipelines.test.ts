@@ -133,9 +133,14 @@ describe('DEMO_FAILURES', () => {
 describe('hooks pass correct useCache config', () => {
   beforeEach(() => { lastCacheArgs.calls = [] })
 
-  it('usePipelinePulse uses key gh-pipelines-pulse', () => {
-    renderHook(() => usePipelinePulse())
-    expect(lastCacheArgs.calls.some(a => a.key === 'gh-pipelines-pulse')).toBe(true)
+  it('usePipelinePulse with null repo uses key gh-pipelines-pulse:all', () => {
+    renderHook(() => usePipelinePulse(null))
+    expect(lastCacheArgs.calls.some(a => a.key === 'gh-pipelines-pulse:all')).toBe(true)
+  })
+
+  it('usePipelinePulse with specific repo includes repo in key', () => {
+    renderHook(() => usePipelinePulse('kubestellar/docs'))
+    expect(lastCacheArgs.calls.some(a => (a.key as string).includes('kubestellar/docs'))).toBe(true)
   })
 
   it('usePipelineMatrix uses key containing the repo', () => {

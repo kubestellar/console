@@ -321,15 +321,19 @@ async function fetchView<T>(params: URLSearchParams): Promise<T> {
 // Hooks — one per view
 // ---------------------------------------------------------------------------
 
-export function usePipelinePulse() {
+export function usePipelinePulse(repo: string | null) {
   return useCache<PulsePayload>({
-    key: 'gh-pipelines-pulse',
+    key: `gh-pipelines-pulse:${repo ?? 'all'}`,
     category: 'default',
     refreshInterval: DEFAULT_POLL_MS,
     initialData: DEMO_PULSE,
     demoData: DEMO_PULSE,
     liveInDemoMode: true,
-    fetcher: () => fetchView<PulsePayload>(new URLSearchParams({ view: 'pulse' })),
+    fetcher: () => {
+      const p = new URLSearchParams({ view: 'pulse' })
+      if (repo) p.set('repo', repo)
+      return fetchView<PulsePayload>(p)
+    },
   })
 }
 

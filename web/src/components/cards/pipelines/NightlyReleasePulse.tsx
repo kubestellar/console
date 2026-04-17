@@ -252,7 +252,7 @@ export function NightlyReleasePulse() {
     ? shared.repoFilter
     : standaloneRepo.includes('/') ? standaloneRepo.trim() : null
 
-  const { data: pulseData, isLoading: pulseLoading, error: pulseError, refetch } = usePipelinePulse()
+  const { data: pulseData, isLoading: pulseLoading, error: pulseError, refetch } = usePipelinePulse(effectiveRepoFilter)
   const { data: matrixData, isLoading: matrixLoading } = usePipelineMatrix(effectiveRepoFilter, MATRIX_DAYS)
   const { isDemoMode } = useDemoMode()
 
