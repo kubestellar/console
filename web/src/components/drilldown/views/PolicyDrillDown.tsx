@@ -273,11 +273,14 @@ ${violations.length > 5 ? `... and ${violations.length - 5} more` : ''}
 ` : 'No violations found.'}
 
 Please:
-1. Assess the policy effectiveness and coverage
-2. Analyze the violations and their root causes
-3. Check for policy conflicts or gaps
-4. Suggest remediation for existing violations
-5. Recommend policy improvements or best practices`
+1. Assess the policy — effectiveness, violations, and coverage gaps.
+2. Tell me what you found, then ask:
+   - "Should I fix the violations?"
+   - "Should I adjust the policy rules?"
+   - "Show me more details first"
+3. If I pick an action, apply and verify. Then ask:
+   - "Should I check related policies?"
+   - "All done"`
 
     startMission({
       title: `Diagnose Policy: ${policyName}`,

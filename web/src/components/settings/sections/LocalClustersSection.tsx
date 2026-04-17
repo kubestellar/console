@@ -212,7 +212,7 @@ export function LocalClustersSection() {
         title: 'Install vCluster CLI',
         description: 'Install the vCluster CLI tool on this machine',
         type: 'deploy',
-        initialPrompt: 'Install the vCluster CLI tool on the local machine. Try using homebrew first (brew install loft-sh/tap/vcluster), and if that is not available, use the official install script: curl -L -o vcluster "https://github.com/loft-sh/vcluster/releases/latest/download/vcluster-$(uname -s)-$(uname -m)" && sudo install -c -m 0755 vcluster /usr/local/bin && rm -f vcluster. Verify the installation by running vcluster --version.',
+        initialPrompt: 'Install the vCluster CLI tool on the local machine. Try using homebrew first (brew install loft-sh/tap/vcluster), and if that is not available, use the official install script: curl -L -o vcluster "https://github.com/loft-sh/vcluster/releases/latest/download/vcluster-$(uname -s)-$(uname -m)" && sudo install -c -m 0755 vcluster /usr/local/bin && rm -f vcluster. Verify the installation by running vcluster --version. After installation, ask: "vCluster CLI is installed — want to deploy it to a cluster?" or "Something went wrong — want to see details?"',
       })
     })
   }
@@ -237,7 +237,9 @@ Steps:
 4. Wait for readiness: kubectl --context=${clusterContext} -n vcluster wait --for=condition=ready pod -l app=vcluster --timeout=120s
 5. Verify the installation: kubectl --context=${clusterContext} get pods -n vcluster
 
-After installation, the user can create virtual clusters on this host cluster from the console settings page.`,
+After installation, ask:
+- "vCluster operator is ready — want to create a virtual cluster now?"
+- "Something went wrong — want to see details?"`,
       })
     })
   }
@@ -263,7 +265,9 @@ Steps:
 5. Wait for KubeVirt to be ready: kubectl --context=${clusterContext} -n kubevirt wait kv kubevirt --for condition=Available --timeout=300s
 6. Verify the installation: kubectl --context=${clusterContext} get pods -n kubevirt
 
-After installation, the user can manage VMs on this cluster from the console.`,
+After installation, ask:
+- "KubeVirt is ready — want to create a VM?"
+- "Something went wrong — want to see details?"`,
       })
     })
   }

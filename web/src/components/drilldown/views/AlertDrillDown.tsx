@@ -207,10 +207,13 @@ Labels:
 ${Object.entries(alertLabels).map(([k, v]) => `- ${k}: ${v}`).join('\n')}
 
 Please:
-1. Explain what this alert means
-2. Identify the likely root cause
-3. Suggest steps to investigate
-4. Recommend remediation actions`
+1. Investigate the alert — explain what it means and identify the root cause.
+2. Tell me what you found, then ask:
+   - "Should I apply the fix?"
+   - "Show me the investigation details first"
+3. If I say fix it, apply and verify. Then ask:
+   - "Should I silence this alert or set up a preventive rule?"
+   - "All done"`
 
     startMission({
       title: `Diagnose Alert: ${alertName}`,

@@ -561,13 +561,14 @@ function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
       cluster: clusterName,
       initialPrompt: `I want to install OPA Gatekeeper on the cluster "${clusterName}".
 
-Please help me:
-1. Check if Gatekeeper is already installed
-2. If not, install it using the official Helm chart or manifests
-3. Verify the installation is working
-4. Set up a basic policy (like requiring labels)
-
-Please proceed step by step.`,
+Please:
+1. Check if Gatekeeper is already installed. If not, install it.
+2. After installation, ask:
+   - "Gatekeeper is installed — should I set up a basic policy?"
+   - "Something went wrong — want to see details?"
+3. If I say set up a policy, create one and verify. Then ask:
+   - "Should I create another policy?"
+   - "All done"`,
       context: { clusterName } })
   }
 
@@ -595,23 +596,24 @@ Please proceed step by step.`,
       initialPrompt: basedOnPolicy
         ? `I want to create a new OPA Gatekeeper policy similar to "${basedOnPolicy}".
 
-Please help me:
-1. Explain what the ${basedOnPolicy} policy does
-2. Ask me what modifications I want to make
-3. Generate a ConstraintTemplate and Constraint for my requirements
-4. Help me apply it to the cluster
-5. Test that the policy is working
-
-Let's start by discussing what kind of policy I need.`
+Please:
+1. Explain what the ${basedOnPolicy} policy does and ask what modifications I want.
+2. Generate the ConstraintTemplate and Constraint, then ask:
+   - "Ready to apply this to the cluster?"
+   - "Want to adjust the rules first?"
+3. If I say apply, deploy and test. Then ask:
+   - "Should I create another policy?"
+   - "All done"`
         : `I want to create a new OPA Gatekeeper policy for my Kubernetes cluster.
 
-Please help me:
-1. Ask me what kind of policy I want to enforce (e.g., require labels, restrict images, enforce resource limits)
-2. Generate the appropriate ConstraintTemplate and Constraint
-3. Help me apply it to the cluster
-4. Test that the policy is working
-
-Let's start by discussing what kind of policy I need.`,
+Please:
+1. Ask me what kind of policy I want (e.g., require labels, restrict images, enforce resource limits).
+2. Generate the ConstraintTemplate and Constraint, then ask:
+   - "Ready to apply this to the cluster?"
+   - "Want to adjust the rules first?"
+3. If I say apply, deploy and test. Then ask:
+   - "Should I create another policy?"
+   - "All done"`,
       context: { basedOnPolicy } })
   }
 

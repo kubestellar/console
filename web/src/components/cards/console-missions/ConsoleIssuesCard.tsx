@@ -97,10 +97,13 @@ ${issuesSummary}
 ${totalIssues > 10 ? `\n...and ${totalIssues - 10} more issues` : ''}
 
 Please:
-1. Analyze these issues and identify root causes
-2. Prioritize by severity
-3. Provide step-by-step remediation commands
-4. Explain potential side effects of each fix`,
+1. Analyze these issues — identify root causes and prioritize by severity.
+2. Tell me what you found, then ask:
+   - "Should I start fixing the highest-priority issue?"
+   - "Show me the full analysis first"
+3. If I say fix it, apply and verify each fix. Then ask:
+   - "Should I move to the next issue?"
+   - "All done for now"`,
       context: {
         podIssues: podIssues.slice(0, 20),
         deploymentIssues: deploymentIssues.slice(0, 20),

@@ -268,11 +268,14 @@ CSV Information:
 ` : ''}
 
 Please:
-1. Assess the operator health and installation status
-2. Check for version updates or deprecated APIs
-3. Verify the subscription configuration
-4. Identify any issues or misconfigurations
-5. Suggest best practices for operator management`
+1. Assess the operator health — installation status, subscription, and CSV state.
+2. Tell me what you found, then ask:
+   - "Should I fix the issues?"
+   - "Should I upgrade to a newer version?"
+   - "Show me more details first"
+3. If I pick an action, apply and verify. Then ask:
+   - "Should I check other operators on this cluster?"
+   - "All done"`
 
     startMission({
       title: `Diagnose Operator: ${operatorName}`,

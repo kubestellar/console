@@ -38,10 +38,13 @@ Detection rule (must match at least one after your change):
 - Pattern: ${detectionLabel(c.detection)}${ref}
 
 Please:
-1. Audit the existing repo for any similar artifact that could already satisfy this detection (don't duplicate).
-2. If missing, create/commit the minimum file(s) that match the detection pattern and follow our project conventions.
-3. Return a short summary of what was added and why.
-Do not push or open a PR automatically — stop after the commit so I can review.`
+1. Audit the repo for any existing artifact that satisfies this detection (don't duplicate).
+2. If found, tell me what you found and ask if I want to modify it or skip.
+3. If missing, create a feature branch, add the minimum file(s) that match the detection pattern.
+4. Show me a summary of what you created, then ask:
+   - "Should I push this branch and open a PR?"
+   - "Should I make changes first?"
+5. If I say yes, push the branch and open a PR. Return the PR URL.`
 }
 
 /**
@@ -70,10 +73,13 @@ export function allRecommendationsPrompt(recs: Recommendation[], repo: string): 
 ${list}
 
 For each item:
-- Check whether an equivalent artifact already exists under a non-standard path (don't duplicate).
-- If truly missing, add the minimum change that matches the detection pattern and follows the repo's conventions.
-- Return a brief summary of what changed for each criterion.
-Do not push or open a PR automatically — stop after commits so I can review.`
+- Check whether an equivalent artifact already exists (don't duplicate).
+- If truly missing, add the minimum change that matches the detection pattern.
+- After each item, briefly confirm what was added.
+
+When all items are done, ask:
+  - "Should I push and open a PR with all changes?"
+  - "Should I make adjustments first?"`
 }
 
 /** Mission prompt for finishing all missing criteria at a given ACMM
@@ -90,8 +96,11 @@ ${list}
 Why this matters: completing L${earnedLevel} unlocks L${earnedLevel + 1} on the ACMM dashboard and bumps the README badge.
 
 For each item:
-- Check whether an equivalent artifact already exists under a non-standard path (don't duplicate).
-- If truly missing, add the minimum change that matches the detection pattern and follows the repo's conventions.
-- Return a brief summary of what changed for each criterion.
-Do not push or open a PR automatically — stop after commits so I can review.`
+- Check whether an equivalent artifact already exists (don't duplicate).
+- If truly missing, add the minimum change that matches the detection pattern.
+- After each item, briefly confirm what was added.
+
+When all items are done, ask:
+  - "Should I push and open a PR with all changes?"
+  - "Should I make adjustments first?"`
 }

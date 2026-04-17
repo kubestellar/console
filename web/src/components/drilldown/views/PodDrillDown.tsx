@@ -687,14 +687,14 @@ Restarts: ${restarts}
 ${reason ? `Reason: ${reason}` : ''}
 ${(issues || []).length > 0 ? `Issues: ${(issues || []).join(', ')}` : ''}
 
-Please help me:
-1. Investigate the root cause of the issues
-2. Check the pod logs and events
-3. Analyze the pod configuration
-4. Suggest remediation steps
-5. Apply fixes if appropriate (with my confirmation)
-
-Please proceed step by step and ask for confirmation before making any changes.`,
+Please:
+1. Investigate the root cause — check pod logs, events, and configuration.
+2. Tell me what you found, then ask:
+   - "Should I apply the fix?"
+   - "Show me more details first"
+3. If I say fix it, apply and verify. Then ask:
+   - "Should I check for related issues?"
+   - "All done"`,
       context: {
         podName,
         namespace,

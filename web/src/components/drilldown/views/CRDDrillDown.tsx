@@ -303,11 +303,13 @@ ${deprecatedVersions.map(v => `- ${v.name}: ${v.deprecationWarning || 'No warnin
 Instances: ${instances?.length || 0} found
 
 Please:
-1. Assess the CRD health and version strategy
-2. Identify deprecated versions and migration paths
-3. Check for API compatibility issues
-4. Analyze the schema for best practices
-5. Suggest improvements for CRD management`
+1. Assess the CRD health — check versions, deprecations, and schema.
+2. Tell me what you found, then ask:
+   - "Should I fix the issues I found?"
+   - "Show me more details first"
+3. If I say fix it, apply changes and verify. Then ask:
+   - "Should I check related CRDs?"
+   - "All done"`
 
     startMission({
       title: `Diagnose CRD: ${crdName}`,

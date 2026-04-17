@@ -346,11 +346,14 @@ Status: ${status}
 Builder: ${builder}
 ${imageInfo?.status?.latestImage ? `Latest Image: ${imageInfo.status.latestImage}` : ''}
 
-Check:
-1. Build health and status
-2. Common failure causes for this builder
-3. Best practices for buildpack configuration
-4. Performance and optimization suggestions
+Please:
+1. Analyze the build health — status, failure causes, and configuration.
+2. Tell me what you found, then ask:
+   - "Should I fix the build issue?"
+   - "Show me the build logs first"
+3. If I say fix it, apply and verify. Then ask:
+   - "Should I check other buildpack images?"
+   - "All done"
 `,
       context: {
         kind: 'BuildpackImage',

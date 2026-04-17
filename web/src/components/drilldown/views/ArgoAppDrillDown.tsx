@@ -295,11 +295,14 @@ Application Details:
 - Path: ${path || '/'}
 
 Please:
-1. Assess the overall health of this GitOps application
-2. Identify any sync or health issues
-3. Check for common ArgoCD misconfigurations
-4. Suggest remediation steps if needed
-5. Recommend best practices for this deployment`
+1. Assess the application health — sync status, conditions, and resource state.
+2. Tell me what you found, then ask:
+   - "Should I fix the sync/health issues?"
+   - "Should I trigger a manual sync?"
+   - "Show me more details first"
+3. If I pick an action, apply and verify. Then ask:
+   - "Should I check other ArgoCD apps?"
+   - "All done"`
 
     startMission({
       title: `Diagnose ArgoApp: ${appName}`,

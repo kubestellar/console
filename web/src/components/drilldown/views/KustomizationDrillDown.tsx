@@ -250,11 +250,13 @@ Ready Condition:
 Applied Resources: ${appliedResources?.length || 0}
 
 Please:
-1. Assess the kustomization health and sync status
-2. Identify any drift or reconciliation issues
-3. Check for dependency problems
-4. Analyze the Ready condition for root causes
-5. Suggest improvements for GitOps best practices`
+1. Assess the kustomization health — sync status, conditions, and dependencies.
+2. Tell me what you found, then ask:
+   - "Should I fix the reconciliation issues?"
+   - "Show me more details first"
+3. If I say fix it, apply and verify. Then ask:
+   - "Should I check related Flux resources?"
+   - "All done"`
 
     startMission({
       title: `Diagnose Kustomization: ${kustomizationName}`,

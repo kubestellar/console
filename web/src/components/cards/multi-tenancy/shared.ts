@@ -75,22 +75,26 @@ export const K3S_IMAGE_PATTERN = 'rancher/k3s' as const
 export const OVN_INSTALL_PROMPT =
   'Install OVN-Kubernetes with User Defined Network (UDN) support on this cluster. ' +
   'OVN-Kubernetes provides advanced networking with Layer 2/3 tenant isolation. ' +
-  'Follow the official OVN-Kubernetes installation guide and configure UDN support for multi-tenancy.'
+  'Follow the official OVN-Kubernetes installation guide and configure UDN support for multi-tenancy. ' +
+  'After installation, ask: "OVN is ready — move on?" or "Something went wrong — want to see details?"'
 
 /** Mission prompt for installing KubeFlex */
 export const KUBEFLEX_INSTALL_PROMPT =
   'Install KubeFlex from the KubeStellar project to provide dedicated control planes per tenant. ' +
   'KubeFlex enables scalable multi-tenant Kubernetes control plane management. ' +
-  'Use the official KubeFlex Helm chart or kubectl apply method.'
+  'Use the official KubeFlex Helm chart or kubectl apply method. ' +
+  'After installation, ask: "KubeFlex is ready — move on?" or "Something went wrong — want to see details?"'
 
 /** Mission prompt for deploying K3s as nested clusters */
 export const K3S_INSTALL_PROMPT =
   'Deploy K3s lightweight Kubernetes as pods for multi-tenant control planes. ' +
   'K3s provides a certified Kubernetes distribution in a single binary, ideal for nested clusters ' +
-  'within KubeVirt VMs or as standalone tenant control planes.'
+  'within KubeVirt VMs or as standalone tenant control planes. ' +
+  'After deployment, ask: "K3s is ready — move on?" or "Something went wrong — want to see details?"'
 
 /** Mission prompt for installing KubeVirt */
 export const KUBEVIRT_INSTALL_PROMPT =
   'Install KubeVirt to run virtual machines as Kubernetes pods for data-plane tenant isolation. ' +
   'Deploy the KubeVirt operator and configure VM support. ' +
-  'KubeVirt provides a cost-effective alternative to physical node isolation for multi-tenancy.'
+  'KubeVirt provides a cost-effective alternative to physical node isolation for multi-tenancy. ' +
+  'After installation, ask: "KubeVirt is ready — move on?" or "Something went wrong — want to see details?"'

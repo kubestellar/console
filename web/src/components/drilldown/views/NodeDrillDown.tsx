@@ -95,13 +95,14 @@ export function NodeDrillDown({ data }: Props) {
 - Roles: ${(roles ?? []).join(', ') || 'unknown'}
 - Issue: ${issue || 'Node is not healthy'}
 
-Please help me:
-1. **Diagnose** - What could cause this node to be in this state?
-2. **Investigate** - What commands should I run to gather more information?
-3. **Remediate** - What are the steps to fix this issue?
-4. **Prevent** - How can I prevent this from happening again?
-
-Start by checking node events and conditions.`,
+Please:
+1. Diagnose the node — check events, conditions, and resource pressure.
+2. Tell me what you found, then ask:
+   - "Should I attempt a fix?"
+   - "Show me the raw diagnostics"
+3. If I say fix it, apply and verify. Then ask:
+   - "Should I check other nodes for similar issues?"
+   - "All done"`,
       context: { cluster: clusterShort, node: nodeName, status, unschedulable }
     })
   }
@@ -314,13 +315,14 @@ Start by checking node events and conditions.`,
 **Cluster:** ${clusterShort}
 **Status:** Cordoned (unschedulable)
 
-Please help me:
-1. What are common reasons a node gets cordoned?
-2. What should I check to understand why this node was cordoned?
-3. Is it safe to uncordon this node?
-4. What kubectl commands should I run to investigate?
-
-Provide specific commands I can run to diagnose the issue.`,
+Please:
+1. Investigate why this node was cordoned — check events, taints, and conditions.
+2. Tell me what you found, then ask:
+   - "It looks safe to uncordon — should I proceed?"
+   - "There are issues to fix first — want me to show details?"
+3. If I approve, uncordon and verify. Then ask:
+   - "Should I monitor the node for a few minutes?"
+   - "All done"`,
                     context: { cluster: clusterShort, node: nodeName }
                   })
                 }}
@@ -342,14 +344,14 @@ Provide specific commands I can run to diagnose the issue.`,
 **Cluster:** ${clusterShort}
 **Current Status:** Cordoned (unschedulable)
 
-Please guide me through:
-1. Pre-flight checks before uncordoning (node health, resource availability)
-2. The uncordon command and what to expect
-3. Post-uncordon verification steps
-4. How to monitor the node after uncordoning
-5. Rollback plan if issues occur
-
-Provide the specific kubectl commands for cluster context "${clusterShort}".`,
+Please:
+1. Run pre-flight checks — node health, resource availability, pending pods.
+2. Tell me the results, then ask:
+   - "Looks good — should I uncordon now?"
+   - "There are concerns — want to see details?"
+3. If I say go ahead, uncordon and verify scheduling resumes. Then ask:
+   - "Should I monitor the node post-uncordon?"
+   - "All done"`,
                     context: { cluster: clusterShort, node: nodeName }
                   })
                 }}

@@ -281,11 +281,14 @@ ${changes.length > 10 ? `... and ${changes.length - 10} more` : ''}
 ` : 'No specific drift changes detected.'}
 
 Please:
-1. Analyze the root cause of the drift
-2. Identify which resources need attention
-3. Determine if drift is intentional or accidental
-4. Suggest remediation steps (sync vs. manual fix)
-5. Recommend GitOps best practices to prevent future drift`
+1. Analyze the drift — identify root cause and affected resources.
+2. Tell me what you found, then ask:
+   - "Should I sync to resolve the drift?"
+   - "This looks intentional — want to update the Git source instead?"
+   - "Show me the diff first"
+3. If I pick an action, apply and verify. Then ask:
+   - "Should I check for drift in other namespaces?"
+   - "All done"`
 
     startMission({
       title: `Analyze GitOps Drift: ${cluster}`,

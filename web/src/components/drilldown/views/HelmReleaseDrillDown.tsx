@@ -312,10 +312,13 @@ Release Details:
 - Revision: ${releaseRevision || releaseInfo?.revision || 'Unknown'}
 
 Please:
-1. Check if the release is healthy
-2. Identify any issues or misconfigurations
-3. Compare with best practices for this chart
-4. Suggest improvements or upgrades if available`
+1. Check the release health — status, values, and resource state.
+2. Tell me what you found, then ask:
+   - "Should I apply a fix or upgrade?"
+   - "Show me the full analysis first"
+3. If I say go ahead, apply and verify. Then ask:
+   - "Should I check other Helm releases?"
+   - "All done"`
 
     startMission({
       title: `Diagnose Helm: ${releaseName}`,
