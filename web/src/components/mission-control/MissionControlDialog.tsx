@@ -228,8 +228,12 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart }: Miss
     setHighestReached(0)
   }
 
-  /** Inset (in px) from viewport edges so the backdrop peeks through */
-  const MODAL_INSET_PX = 16
+  /** Inset from left/right/bottom so the backdrop peeks through. */
+  const MODAL_SIDE_INSET_PX = 16
+  /** Top inset must clear the fixed navbar (64px) + a small gap so the
+   *  modal header doesn't hide behind it. Previous value was 16px which
+   *  left the top ~48px of the modal obscured. */
+  const MODAL_TOP_INSET_PX = 80 // NAVBAR_HEIGHT_PX (64) + 16px breathing room
 
   return (
     <AnimatePresence>
@@ -255,7 +259,10 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart }: Miss
             data-testid="mission-control-dialog"
             className="fixed z-modal flex flex-col bg-background rounded-xl border border-border shadow-2xl shadow-black/30 overflow-hidden"
             style={{
-              inset: `${MODAL_INSET_PX}px`,
+              top: `${MODAL_TOP_INSET_PX}px`,
+              left: `${MODAL_SIDE_INSET_PX}px`,
+              right: `${MODAL_SIDE_INSET_PX}px`,
+              bottom: `${MODAL_SIDE_INSET_PX}px`,
             }}
             initial={{ opacity: 0, scale: 0.97, y: 12 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
