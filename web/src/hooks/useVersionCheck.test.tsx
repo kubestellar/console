@@ -388,8 +388,15 @@ describe('VersionCheckProvider', () => {
 
     const { result } = renderHook(() => useVersionCheck(), { wrapper })
 
+    // The hook uses ERROR_DISPLAY_THRESHOLD = 2 consecutive failures before
+    // surfacing an error. forceCheck() resets the counter, so the first call
+    // only reaches 1. A follow-up checkForUpdates() (which does NOT reset)
+    // pushes the counter to 2, meeting the threshold.
     await act(async () => {
       await result.current.forceCheck()
+    })
+    await act(async () => {
+      await result.current.checkForUpdates()
     })
 
     await waitFor(() => {
@@ -1173,8 +1180,13 @@ describe('fetchReleases edge cases', () => {
 
     const { result } = renderHook(() => useVersionCheck(), { wrapper })
 
+    // ERROR_DISPLAY_THRESHOLD = 2: forceCheck resets counter then fails (counter=1),
+    // checkForUpdates does NOT reset so the second failure reaches the threshold.
     await act(async () => {
       await result.current.forceCheck()
+    })
+    await act(async () => {
+      await result.current.checkForUpdates()
     })
 
     await waitFor(() => {
@@ -1189,8 +1201,12 @@ describe('fetchReleases edge cases', () => {
 
     const { result } = renderHook(() => useVersionCheck(), { wrapper })
 
+    // ERROR_DISPLAY_THRESHOLD = 2: need two consecutive failures to surface the error.
     await act(async () => {
       await result.current.forceCheck()
+    })
+    await act(async () => {
+      await result.current.checkForUpdates()
     })
 
     await waitFor(() => {
@@ -1207,8 +1223,12 @@ describe('fetchReleases edge cases', () => {
 
     const { result } = renderHook(() => useVersionCheck(), { wrapper })
 
+    // ERROR_DISPLAY_THRESHOLD = 2: need two consecutive failures.
     await act(async () => {
       await result.current.forceCheck()
+    })
+    await act(async () => {
+      await result.current.checkForUpdates()
     })
 
     await waitFor(() => {
@@ -1226,8 +1246,12 @@ describe('fetchReleases edge cases', () => {
 
     const { result } = renderHook(() => useVersionCheck(), { wrapper })
 
+    // ERROR_DISPLAY_THRESHOLD = 2: need two consecutive failures.
     await act(async () => {
       await result.current.forceCheck()
+    })
+    await act(async () => {
+      await result.current.checkForUpdates()
     })
 
     await waitFor(() => {
@@ -1555,6 +1579,13 @@ describe('fetchAutoUpdateStatus', () => {
 
     const { result } = renderHook(() => useVersionCheck(), { wrapper })
 
+    // The mount-time effect fires fetchAutoUpdateStatus once (counter=1).
+    // ERROR_DISPLAY_THRESHOLD = 2, so we need a second failure via checkForUpdates
+    // (which does NOT reset the counter) to reach the threshold.
+    await act(async () => {
+      await result.current.checkForUpdates()
+    })
+
     await waitFor(() => {
       expect(result.current.error).toMatch(/502/)
     })
@@ -1570,6 +1601,12 @@ describe('fetchAutoUpdateStatus', () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('timeout')))
 
     const { result } = renderHook(() => useVersionCheck(), { wrapper })
+
+    // The mount-time effect fires fetchAutoUpdateStatus once (counter=1).
+    // ERROR_DISPLAY_THRESHOLD = 2, so trigger a second failure via checkForUpdates.
+    await act(async () => {
+      await result.current.checkForUpdates()
+    })
 
     await waitFor(() => {
       expect(result.current.error).toBe('Could not reach kc-agent')
