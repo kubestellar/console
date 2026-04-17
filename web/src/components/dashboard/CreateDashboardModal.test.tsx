@@ -96,6 +96,36 @@ describe('CreateDashboardModal Component', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
+  it('disables Create button when name is empty', () => {
+    vi.mocked(useDashboardHealth).mockReturnValue(mockHealthHealthy)
+    render(<CreateDashboardModal isOpen={true} onClose={vi.fn()} onCreate={vi.fn()} />)
+
+    const createBtn = screen.getByRole('button', { name: /title/i })
+    expect(createBtn).toBeDisabled()
+  })
+
+  it('enables Create button when name is non-empty', () => {
+    vi.mocked(useDashboardHealth).mockReturnValue(mockHealthHealthy)
+    render(<CreateDashboardModal isOpen={true} onClose={vi.fn()} onCreate={vi.fn()} />)
+
+    const input = screen.getByLabelText(/nameLabel/i)
+    fireEvent.change(input, { target: { value: 'My Dashboard' } })
+
+    const createBtn = screen.getByRole('button', { name: /title/i })
+    expect(createBtn).not.toBeDisabled()
+  })
+
+  it('disables Create button when name is only whitespace', () => {
+    vi.mocked(useDashboardHealth).mockReturnValue(mockHealthHealthy)
+    render(<CreateDashboardModal isOpen={true} onClose={vi.fn()} onCreate={vi.fn()} />)
+
+    const input = screen.getByLabelText(/nameLabel/i)
+    fireEvent.change(input, { target: { value: '   ' } })
+
+    const createBtn = screen.getByRole('button', { name: /title/i })
+    expect(createBtn).toBeDisabled()
+  })
+
   it('disables Create button while async onCreate is in progress', async () => {
     let resolveCreate!: () => void
     const asyncOnCreate = vi.fn(
@@ -104,6 +134,10 @@ describe('CreateDashboardModal Component', () => {
     const onClose = vi.fn()
     vi.mocked(useDashboardHealth).mockReturnValue(mockHealthHealthy)
     render(<CreateDashboardModal isOpen={true} onClose={onClose} onCreate={asyncOnCreate} />)
+
+    // Type a name first — Create button requires a non-empty name
+    const input = screen.getByLabelText(/nameLabel/i)
+    fireEvent.change(input, { target: { value: 'Test Dashboard' } })
 
     // Capture button by initial text before click
     const createBtn = screen.getByRole('button', { name: /title/i })
@@ -131,6 +165,10 @@ describe('CreateDashboardModal Component', () => {
     vi.mocked(useDashboardHealth).mockReturnValue(mockHealthHealthy)
     render(<CreateDashboardModal isOpen={true} onClose={onClose} onCreate={asyncOnCreate} />)
 
+    // Type a name first — Create button requires a non-empty name
+    const input = screen.getByLabelText(/nameLabel/i)
+    fireEvent.change(input, { target: { value: 'Test Dashboard' } })
+
     const createBtn = screen.getByRole('button', { name: /title/i })
     const cancelBtn = screen.getByRole('button', { name: /cancel/i })
     fireEvent.click(createBtn)
@@ -155,6 +193,10 @@ describe('CreateDashboardModal Component', () => {
     )
     vi.mocked(useDashboardHealth).mockReturnValue(mockHealthHealthy)
     render(<CreateDashboardModal isOpen={true} onClose={vi.fn()} onCreate={asyncOnCreate} />)
+
+    // Type a name first — Create button requires a non-empty name
+    const input = screen.getByLabelText(/nameLabel/i)
+    fireEvent.change(input, { target: { value: 'Test Dashboard' } })
 
     const createBtn = screen.getByRole('button', { name: /title/i })
     fireEvent.click(createBtn)

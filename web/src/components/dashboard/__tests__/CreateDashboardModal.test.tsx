@@ -160,8 +160,22 @@ describe('CreateDashboardModal', () => {
 
   // ── Name generation ─────────────────────────────────────────────────
 
-  it('generates a unique default name avoiding existing names', async () => {
+  it('disables Create button when name is empty', () => {
+    render(<CreateDashboardModal {...defaultProps} />)
+    const createBtn = screen.getByText('Create Dashboard', { selector: 'button' })
+    expect(createBtn).toBeDisabled()
+  })
+
+  it('disables Create button when name is only whitespace', async () => {
     const user = userEvent.setup()
+    render(<CreateDashboardModal {...defaultProps} />)
+    const nameInput = screen.getByPlaceholderText('Dashboard 1')
+    await user.type(nameInput, '   ')
+    const createBtn = screen.getByText('Create Dashboard', { selector: 'button' })
+    expect(createBtn).toBeDisabled()
+  })
+
+  it('uses placeholder as default name in input', () => {
     const onCreate = vi.fn().mockResolvedValue(undefined)
     render(
       <CreateDashboardModal
@@ -170,12 +184,9 @@ describe('CreateDashboardModal', () => {
         onCreate={onCreate}
       />
     )
-    // Click create without entering a name
-    const createBtn = screen.getByText('Create Dashboard', { selector: 'button' })
-    await user.click(createBtn)
-    await waitFor(() => {
-      expect(onCreate).toHaveBeenCalledWith('Dashboard 3', undefined, undefined)
-    })
+    // Placeholder should show the next available name
+    const nameInput = screen.getByPlaceholderText('Dashboard 3')
+    expect(nameInput).toBeInTheDocument()
   })
 
   // ── Template selection ──────────────────────────────────────────────
@@ -276,6 +287,10 @@ describe('CreateDashboardModal', () => {
     let resolveCreate: () => void = () => {}
     const onCreate = vi.fn().mockImplementation(() => new Promise<void>((r) => { resolveCreate = r }))
     render(<CreateDashboardModal {...defaultProps} onCreate={onCreate} />)
+
+    // Type a name first — Create button requires a non-empty name
+    const nameInput = screen.getByPlaceholderText('Dashboard 1')
+    await user.type(nameInput, 'Test Dashboard')
 
     const createBtn = screen.getByText('Create Dashboard', { selector: 'button' })
     await user.click(createBtn)

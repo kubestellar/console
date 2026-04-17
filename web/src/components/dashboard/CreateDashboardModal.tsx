@@ -80,12 +80,15 @@ function CreateDashboardModalInner({
     return defaultName
   }
 
+  const trimmedName = name.trim()
+  const isNameEmpty = trimmedName.length === 0
+  const isCreateDisabled = isCreating || isNameEmpty
+
   const handleCreate = async () => {
-    if (isCreating) return
+    if (isCreateDisabled) return
     setIsCreating(true)
     try {
-      const dashboardName = name.trim() || generateDefaultName()
-      await onCreate(dashboardName, selectedTemplate || undefined, description.trim() || undefined)
+      await onCreate(trimmedName, selectedTemplate || undefined, description.trim() || undefined)
       onClose()
     } finally {
       setIsCreating(false)
@@ -116,8 +119,13 @@ function CreateDashboardModalInner({
             onChange={(e) => setName(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={generateDefaultName()}
-            className="w-full px-4 py-3 bg-secondary/30 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-transparent"
+            className={`w-full px-4 py-3 bg-secondary/30 border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-transparent ${
+              name.length > 0 && isNameEmpty ? 'border-destructive' : 'border-border'
+            }`}
           />
+          {name.length > 0 && isNameEmpty && (
+            <p className="mt-1 text-xs text-destructive">{t('dashboard.create.nameRequired')}</p>
+          )}
         </div>
 
         {/* Description input (optional) */}
@@ -260,7 +268,7 @@ function CreateDashboardModalInner({
       iconRight={isCreating ? undefined : <ChevronRight className="w-4 h-4" />}
       onClick={handleCreate}
       loading={isCreating}
-      disabled={isCreating}
+      disabled={isCreateDisabled}
     >
       {isCreating ? t('dashboard.create.creating') : t('dashboard.create.title', 'Create Dashboard')}
     </Button>

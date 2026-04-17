@@ -887,7 +887,9 @@
       "preConfiguredCards_other": "{{count}} pre-configured cards",
       "selectByCategory": "Select a template by category:",
       "cards": "cards",
-      "creating": "Creating..."
+      "creating": "Creating...",
+      "nameRequired": "Dashboard name is required",
+      "descriptionCollection": "Name your dashboard and optionally start with a card collection."
     },
     "templates": {
       "title": "Dashboard Templates",
