@@ -931,7 +931,7 @@ export const ClusterGrid = memo(function ClusterGrid({
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
       <SortableContext items={clusterIds} strategy={sortingStrategy}>
-        <div className={`${gridClasses[layoutMode]} mb-6`}>
+        <div className={`${gridClasses[layoutMode]} mb-6 overflow-hidden px-2 -mx-2 py-1 -my-1`}>
           {clusters.map((cluster) => {
             const clusterKey = cluster.name.split('/')[0]
             const gpuInfo = gpuByCluster[clusterKey] || gpuByCluster[cluster.name]
