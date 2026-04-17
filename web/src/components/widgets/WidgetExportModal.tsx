@@ -53,10 +53,22 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
   const copiedTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const [isLoading, setIsLoading] = useState(false)
   const isOnPublicSite = window.location.hostname === 'console.kubestellar.io' || window.location.hostname.includes('netlify')
+  const cardListRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     return () => clearTimeout(copiedTimerRef.current)
   }, [])
+
+  // Auto-scroll to the pre-selected card when opening via "Export Widget" menu
+  useEffect(() => {
+    if (!cardType || activeTab !== 'card') return
+    const SCROLL_DELAY_MS = 100
+    const timer = setTimeout(() => {
+      const el = cardListRef.current?.querySelector(`[data-widget-card="${cardType}"]`)
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, SCROLL_DELAY_MS)
+    return () => clearTimeout(timer)
+  }, [cardType, activeTab])
 
   // Determine what we're exporting
   const exportConfig: WidgetConfig | null = (() => {
@@ -172,7 +184,7 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
         <div className="flex-1 flex gap-4 overflow-hidden">
           {/* Left: Selection */}
           <div className="w-1/2 flex flex-col overflow-hidden">
-            <div className="flex-1 overflow-y-auto pr-2">
+            <div ref={cardListRef} className="flex-1 overflow-y-auto pr-2">
               {activeTab === 'templates' && (
                 <div className="space-y-2">
                   <p className="text-xs text-muted-foreground mb-3">
@@ -438,6 +450,7 @@ function CardItem({
 }) {
   return (
     <button
+      data-widget-card={card.cardType}
       onClick={onSelect}
       className={`w-full text-left p-3 rounded-lg border transition-colors ${
         selected
@@ -903,6 +916,143 @@ function CardPreview({ cardType }: { cardType: string }) {
         </div>
       )
 
+    case 'nightly_release_pulse':
+      return (
+        <div style={ps.card}>
+          <div style={ps.title}><span style={ps.dot(ps.colors.healthy)} /> Nightly Release Pulse</div>
+          <div style={{ textAlign: 'center', marginBottom: PREV_SM }}>
+            <div style={{ fontSize: '20px', fontWeight: 700, color: ps.colors.healthy }}>v0.3.22</div>
+            <div style={ps.muted}>Released 2h ago</div>
+          </div>
+          <div style={ps.row}>
+            <div style={ps.statBlock}>
+              <span style={{ ...ps.statVal, fontSize: '14px', color: ps.colors.healthy }}>12</span>
+              <span style={ps.statLbl}>Streak</span>
+            </div>
+            <div style={ps.statBlock}>
+              <span style={{ ...ps.statVal, fontSize: '14px', color: ps.colors.info }}>93%</span>
+              <span style={ps.statLbl}>Pass rate</span>
+            </div>
+          </div>
+        </div>
+      )
+
+    case 'workflow_matrix':
+      return (
+        <div style={ps.card}>
+          <div style={ps.title}><span style={ps.dot(ps.colors.info)} /> Workflow Matrix</div>
+          <div style={ps.col}>
+            {['build', 'test', 'lint', 'deploy'].map((wf) => (
+              <div key={wf} style={{ ...ps.row, justifyContent: 'space-between', fontSize: '10px' }}>
+                <span style={{ fontWeight: 500 }}>{wf}</span>
+                <div style={{ display: 'flex', gap: '2px' }}>
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} style={{ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: i === 3 && wf === 'deploy' ? ps.colors.error : ps.colors.healthy }} />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )
+
+    case 'pipeline_flow':
+      return (
+        <div style={ps.card}>
+          <div style={ps.title}><span style={ps.dot(ps.colors.info)} /> Live Runs</div>
+          <div style={ps.col}>
+            {[
+              { name: 'build (amd64)', status: 'running', time: '3m 12s' },
+              { name: 'fullstack-smoke', status: 'queued', time: 'queued' },
+              { name: 'coverage-gate', status: 'success', time: '24s' },
+            ].map((r) => (
+              <div key={r.name} style={{ ...ps.row, justifyContent: 'space-between', fontSize: '10px', padding: PREV_ITEM_PAD, backgroundColor: 'rgba(30,41,59,0.5)', borderRadius: PREV_XS }}>
+                <span style={ps.dot(r.status === 'running' ? ps.colors.info : r.status === 'success' ? ps.colors.healthy : '#6b7280')} />
+                <span style={{ fontWeight: 500, flex: 1 }}>{r.name}</span>
+                <span style={{ color: '#9ca3af', fontSize: '9px' }}>{r.time}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )
+
+    case 'recent_failures':
+      return (
+        <div style={ps.card}>
+          <div style={ps.title}><span style={ps.dot(ps.colors.error)} /> Recent Failures</div>
+          <div style={ps.col}>
+            {[
+              { wf: 'nightly-test-suite', step: 'e2e-tests', ago: '2h ago' },
+              { wf: 'build', step: 'lint', ago: '5h ago' },
+            ].map((f) => (
+              <div key={f.wf} style={{ ...ps.row, padding: PREV_ITEM_PAD, backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: PREV_XS, borderLeft: `3px solid ${ps.colors.error}` }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '10px', fontWeight: 600, color: ps.colors.error }}>{f.wf}</div>
+                  <div style={{ fontSize: '9px', color: '#9ca3af' }}>Failed at: {f.step}</div>
+                </div>
+                <span style={{ fontSize: '9px', color: '#9ca3af' }}>{f.ago}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )
+
+    case 'issue_activity_chart':
+      return (
+        <div style={ps.card}>
+          <div style={ps.title}><span style={ps.dot(ps.colors.info)} /> Daily Issues &amp; PRs</div>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '3px', height: '60px', marginBottom: PREV_SM }}>
+            {[4, 7, 3, 8, 5, 6, 9, 2, 5, 7, 4, 6, 3].map((v, i) => (
+              <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1px', justifyContent: 'flex-end', height: '100%' }}>
+                <div style={{ height: `${v * 6}px`, backgroundColor: ps.colors.info, borderRadius: '1px', opacity: 0.7 }} />
+                <div style={{ height: `${(8 - v) * 4}px`, backgroundColor: ps.colors.healthy, borderRadius: '1px', opacity: 0.5 }} />
+              </div>
+            ))}
+          </div>
+          <div style={ps.row}>
+            <div style={ps.statBlock}><span style={{ ...ps.statVal, fontSize: '12px', color: ps.colors.info }}>23</span><span style={ps.statLbl}>Opened</span></div>
+            <div style={ps.statBlock}><span style={{ ...ps.statVal, fontSize: '12px', color: ps.colors.healthy }}>18</span><span style={ps.statLbl}>Closed</span></div>
+            <div style={ps.statBlock}><span style={{ ...ps.statVal, fontSize: '12px', color: ps.colors.purple }}>12</span><span style={ps.statLbl}>Merged</span></div>
+          </div>
+        </div>
+      )
+
+    case 'github_ci_monitor':
+      return (
+        <div style={ps.card}>
+          <div style={ps.title}><span style={ps.dot(ps.colors.healthy)} /> GitHub CI Monitor</div>
+          <div style={{ textAlign: 'center', marginBottom: PREV_SM }}>
+            <div style={{ fontSize: '24px', fontWeight: 700, color: ps.colors.healthy }}>94%</div>
+            <div style={ps.muted}>Pass rate (7d)</div>
+          </div>
+          <div style={ps.row}>
+            <div style={ps.statBlock}><span style={{ ...ps.statVal, fontSize: '12px' }}>156</span><span style={ps.statLbl}>Runs</span></div>
+            <div style={ps.statBlock}><span style={{ ...ps.statVal, fontSize: '12px', color: ps.colors.healthy }}>147</span><span style={ps.statLbl}>Passed</span></div>
+            <div style={ps.statBlock}><span style={{ ...ps.statVal, fontSize: '12px', color: ps.colors.error }}>9</span><span style={ps.statLbl}>Failed</span></div>
+          </div>
+        </div>
+      )
+
+    case 'github_activity':
+      return (
+        <div style={ps.card}>
+          <div style={ps.title}><span style={ps.dot(ps.colors.info)} /> GitHub Activity</div>
+          <div style={ps.col}>
+            {[
+              { label: 'PRs merged (7d)', value: '24', color: ps.colors.purple },
+              { label: 'Issues opened', value: '8', color: ps.colors.info },
+              { label: 'Contributors', value: '6', color: ps.colors.healthy },
+              { label: 'Latest release', value: 'v0.3.22', color: '#cbd5e1' },
+            ].map((item) => (
+              <div key={item.label} style={{ ...ps.row, justifyContent: 'space-between', fontSize: '10px' }}>
+                <span style={{ color: '#9ca3af' }}>{item.label}</span>
+                <span style={{ fontWeight: 600, color: item.color }}>{item.value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )
+
     default:
       return <GenericCardPreview card={card} />
   }
@@ -915,7 +1065,8 @@ function GenericCardPreview({ card }: { card: WidgetCardDefinition }) {
     workload: { dot: ps.colors.info, items: [{ label: 'Running', value: '45', color: ps.colors.healthy }, { label: 'Pending', value: '2', color: ps.colors.warning }, { label: 'Failed', value: '1', color: ps.colors.error }] },
     gpu: { dot: ps.colors.purple, items: [{ label: 'Total', value: '32' }, { label: 'Allocated', value: '24', color: ps.colors.purple }, { label: 'Available', value: '8', color: ps.colors.healthy }] },
     security: { dot: ps.colors.warning, items: [{ label: 'Critical', value: '2', color: ps.colors.error }, { label: 'Warning', value: '5', color: ps.colors.warning }, { label: 'Info', value: '8', color: ps.colors.info }] },
-    monitoring: { dot: ps.colors.info, items: [{ label: 'Active', value: '3', color: ps.colors.info }, { label: 'Resolved', value: '12', color: ps.colors.healthy }, { label: 'Silenced', value: '1' }] } }
+    monitoring: { dot: ps.colors.info, items: [{ label: 'Active', value: '3', color: ps.colors.info }, { label: 'Resolved', value: '12', color: ps.colors.healthy }, { label: 'Silenced', value: '1' }] },
+    'ci-cd': { dot: ps.colors.info, items: [{ label: 'Runs', value: '36', color: ps.colors.info }, { label: 'Passed', value: '34', color: ps.colors.healthy }, { label: 'Failed', value: '2', color: ps.colors.error }] } }
   const data = categoryData[card.category] || categoryData.monitoring
   return (
     <div style={ps.card}>
