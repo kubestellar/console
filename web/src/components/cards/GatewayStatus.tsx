@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { CheckCircle2, Clock, XCircle, AlertCircle, ExternalLink, Globe, ArrowRight, Server } from 'lucide-react'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { Skeleton } from '../ui/Skeleton'
@@ -6,100 +7,11 @@ import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { K8S_DOCS } from '../../config/externalApis'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
+import { useGatewayStatus as useGatewayStatusHook } from '../../hooks/useGatewayStatus'
+import type { Gateway } from '../../hooks/useGatewayStatus'
 
 // Gateway status types
 type GatewayStatusType = 'Programmed' | 'Accepted' | 'Pending' | 'NotAccepted' | 'Unknown'
-
-interface Listener {
-  name: string
-  protocol: string
-  port: number
-  hostname?: string
-  attachedRoutes: number
-}
-
-interface Gateway {
-  name: string
-  namespace: string
-  cluster: string
-  gatewayClass: string
-  status: GatewayStatusType
-  addresses: string[]
-  listeners: Listener[]
-  attachedRoutes: number
-  createdAt: string
-}
-
-// Demo data for Gateway API resources
-const DEMO_GATEWAYS: Gateway[] = [
-  {
-    name: 'prod-gateway',
-    namespace: 'gateway-system',
-    cluster: 'us-east-1',
-    gatewayClass: 'istio',
-    status: 'Programmed',
-    addresses: ['34.102.136.180'],
-    listeners: [
-      { name: 'http', protocol: 'HTTP', port: 80, attachedRoutes: 5 },
-      { name: 'https', protocol: 'HTTPS', port: 443, hostname: '*.example.com', attachedRoutes: 8 },
-    ],
-    attachedRoutes: 13,
-    createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString() },
-  {
-    name: 'api-gateway',
-    namespace: 'api',
-    cluster: 'us-west-2',
-    gatewayClass: 'envoy-gateway',
-    status: 'Programmed',
-    addresses: ['10.0.0.50'],
-    listeners: [
-      { name: 'api', protocol: 'HTTP', port: 8080, attachedRoutes: 12 },
-    ],
-    attachedRoutes: 12,
-    createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString() },
-  {
-    name: 'internal-gateway',
-    namespace: 'internal',
-    cluster: 'eu-central-1',
-    gatewayClass: 'contour',
-    status: 'Accepted',
-    addresses: [],
-    listeners: [
-      { name: 'grpc', protocol: 'HTTPS', port: 443, attachedRoutes: 3 },
-    ],
-    attachedRoutes: 3,
-    createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString() },
-  {
-    name: 'staging-gateway',
-    namespace: 'staging',
-    cluster: 'us-east-1',
-    gatewayClass: 'nginx',
-    status: 'Pending',
-    addresses: [],
-    listeners: [
-      { name: 'http', protocol: 'HTTP', port: 80, attachedRoutes: 0 },
-    ],
-    attachedRoutes: 0,
-    createdAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString() },
-  {
-    name: 'legacy-gateway',
-    namespace: 'legacy',
-    cluster: 'on-prem-dc1',
-    gatewayClass: 'traefik',
-    status: 'NotAccepted',
-    addresses: [],
-    listeners: [],
-    attachedRoutes: 0,
-    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString() },
-]
-
-const DEMO_STATS = {
-  totalGateways: 8,
-  programmedCount: 5,
-  pendingCount: 2,
-  failedCount: 1,
-  totalRoutes: 42,
-  clustersWithGatewayAPI: 4 }
 
 const getStatusIcon = (status: GatewayStatusType) => {
   switch (status) {
@@ -152,15 +64,32 @@ interface GatewayStatusProps {
 export function GatewayStatus({ config: _config }: GatewayStatusProps) {
   const { t } = useTranslation(['cards', 'common'])
   const SORT_OPTIONS = SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) }))
-  // Demo data - always available, never loading/erroring
-  const isLoading = false
-  const hasError = false
+
+  // Fetch real gateway data with demo fallback
+  const { gateways: allGateways, isLoading, isDemoData, isFailed, consecutiveFailures } = useGatewayStatusHook()
+  const hasError = isFailed
+
+  // Compute stats from real data
+  const stats = useMemo(() => {
+    const items = allGateways || []
+    const programmedCount = items.filter(g => g.status === 'Programmed').length
+    const pendingCount = items.filter(g => g.status === 'Pending').length
+    const totalRoutes = items.reduce((sum, g) => sum + (g.attachedRoutes || 0), 0)
+    return {
+      totalGateways: items.length,
+      programmedCount,
+      pendingCount,
+      totalRoutes,
+    }
+  }, [allGateways])
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
   useCardLoadingState({
     isLoading,
-    hasAnyData: DEMO_GATEWAYS.length > 0,
-    isDemoData: true })
+    hasAnyData: (allGateways || []).length > 0,
+    isDemoData,
+    isFailed,
+    consecutiveFailures })
 
   const {
     items: paginatedGateways,
@@ -187,7 +116,7 @@ export function GatewayStatus({ config: _config }: GatewayStatusProps) {
       sortDirection,
       setSortDirection },
     containerRef,
-    containerStyle } = useCardData<Gateway, SortByOption>(DEMO_GATEWAYS, {
+    containerStyle } = useCardData<Gateway, SortByOption>(allGateways || [], {
     filter: {
       searchFields: ['name', 'namespace', 'cluster', 'gatewayClass', 'status'],
       clusterField: 'cluster',
@@ -307,15 +236,15 @@ export function GatewayStatus({ config: _config }: GatewayStatusProps) {
       <div className="grid grid-cols-3 gap-2 mb-3">
         <div className="p-2 rounded-lg bg-purple-500/10 border border-purple-500/20 text-center">
           <p className="text-2xs text-purple-400">{t('gatewayStatus.gateways')}</p>
-          <p className="text-lg font-bold text-foreground">{DEMO_STATS.totalGateways}</p>
+          <p className="text-lg font-bold text-foreground">{stats.totalGateways}</p>
         </div>
         <div className="p-2 rounded-lg bg-green-500/10 border border-green-500/20 text-center">
           <p className="text-2xs text-green-400">{t('gatewayStatus.programmed')}</p>
-          <p className="text-lg font-bold text-foreground">{DEMO_STATS.programmedCount}</p>
+          <p className="text-lg font-bold text-foreground">{stats.programmedCount}</p>
         </div>
         <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/20 text-center">
           <p className="text-2xs text-blue-400">{t('gatewayStatus.routes')}</p>
-          <p className="text-lg font-bold text-foreground">{DEMO_STATS.totalRoutes}</p>
+          <p className="text-lg font-bold text-foreground">{stats.totalRoutes}</p>
         </div>
       </div>
 
