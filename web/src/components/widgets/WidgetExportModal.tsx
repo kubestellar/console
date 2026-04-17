@@ -315,8 +315,8 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
                 </pre>
               </div>
             ) : (
-              <div className="flex-1 bg-secondary/50 rounded-lg p-4 flex items-center justify-center overflow-hidden">
-                <div style={{ transform: 'scale(1.5)', transformOrigin: 'center center' }}>
+              <div className="flex-1 bg-secondary/50 rounded-lg p-4 flex items-center justify-center overflow-hidden min-w-0 min-h-0">
+                <div className="max-w-full max-h-full overflow-hidden" style={{ transform: 'scale(1.5)', transformOrigin: 'center center' }}>
                   <WidgetPreview config={exportConfig} />
                 </div>
               </div>
@@ -1248,7 +1248,7 @@ function GenericCardPreview({ card }: { card: WidgetCardDefinition }) {
 // --- Stat previews ---
 function StatPreview({ statIds }: { statIds: string[] }) {
   return (
-    <div style={{ ...ps.card, display: 'flex', gap: '8px', padding: '8px 12px' }}>
+    <div style={{ ...ps.card, display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '8px 12px', overflow: 'hidden' }}>
       {statIds.map((id) => {
         const stat = WIDGET_STATS[id]
         const value = SAMPLE_STATS[id] ?? '—'
@@ -1269,7 +1269,7 @@ function TemplatePreview({ templateId }: { templateId: string }) {
   if (!template) return null
 
   const statsRow = template.stats && template.stats.length > 0 ? (
-    <div style={{ display: 'flex', gap: PREV_XS, marginBottom: PREV_SM }}>
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: PREV_XS, marginBottom: PREV_SM, overflow: 'hidden' }}>
       {template.stats.map((id) => {
         const stat = WIDGET_STATS[id]
         const value = SAMPLE_STATS[id] ?? '—'

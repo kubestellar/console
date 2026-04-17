@@ -1,13 +1,19 @@
 package handlers
 
 import (
-	"strings"
+	"net/mail"
+	"regexp"
 
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/store"
 )
+
+// emailDomainRegexp requires a domain with at least one dot and a TLD of 2+ chars.
+// This complements net/mail.ParseAddress which handles RFC 5322 structure but
+// accepts bare domains like "user@localhost".
+var emailDomainRegexp = regexp.MustCompile(`^[^@]+@[^@]+\.[a-zA-Z]{2,}$`)
 
 // UserHandler handles user operations
 type UserHandler struct {
@@ -53,7 +59,12 @@ func (h *UserHandler) UpdateCurrentUser(c *fiber.Ctx) error {
 	}
 
 	if updates.Email != "" {
-		if !strings.Contains(updates.Email, "@") {
+		// RFC 5322 structural validation
+		if _, err := mail.ParseAddress(updates.Email); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, "invalid email format")
+		}
+		// Require a real domain with a TLD (e.g. "user@example.com", not "user@localhost")
+		if !emailDomainRegexp.MatchString(updates.Email) {
 			return fiber.NewError(fiber.StatusBadRequest, "invalid email format")
 		}
 		user.Email = updates.Email
