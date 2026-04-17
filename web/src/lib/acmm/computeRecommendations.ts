@@ -11,6 +11,9 @@ const CATEGORY_WEIGHT: Record<string, number> = {
   observability: 60,
   'self-tuning': 50,
   autonomy: 40,
+  prerequisite: 90,
+  learning: 55,
+  traceability: 65,
 }
 
 export interface Recommendation {
@@ -26,7 +29,10 @@ export function computeRecommendations(
 ): Recommendation[] {
   const recs: Recommendation[] = []
 
+  // Only recommend scannable items — non-scannable ones can't be
+  // auto-detected so recommending "add a file" doesn't make sense.
   for (const missing of level.missingForNextLevel) {
+    if (missing.scannable === false) continue
     recs.push({
       criterion: missing,
       priority: 1000 + (CATEGORY_WEIGHT[missing.category] ?? 0),
@@ -36,7 +42,7 @@ export function computeRecommendations(
   }
 
   const nonLeveled = ALL_CRITERIA.filter(
-    (c) => c.source !== 'acmm' && !detectedIds.has(c.id),
+    (c) => c.source !== 'acmm' && !detectedIds.has(c.id) && c.scannable !== false,
   )
   for (const criterion of nonLeveled) {
     recs.push({

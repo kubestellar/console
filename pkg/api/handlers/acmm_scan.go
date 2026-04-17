@@ -69,41 +69,56 @@ type acmmWeeklyActivity struct {
 //
 //nolint:lll // catalog entries are intentionally wide for readability
 var acmmCriteria = []acmmCriterion{
+	// ACMM L0 — Prerequisites (soft indicator)
+	{ID: "acmm:prereq-test-suite", Patterns: []string{"vitest.config.ts", "vitest.config.js", "jest.config.js", "jest.config.ts", "go.mod", "pytest.ini", "pyproject.toml", "test/", "tests/", "__tests__/", "spec/"}},
+	{ID: "acmm:prereq-e2e", Patterns: []string{"playwright.config.ts", "playwright.config.js", "cypress.config.ts", "e2e/"}},
+	{ID: "acmm:prereq-cicd", Patterns: []string{".github/workflows/", ".gitlab-ci.yml", "Jenkinsfile", ".circleci/"}},
+	{ID: "acmm:prereq-pr-template", Patterns: []string{".github/pull_request_template.md", ".github/PULL_REQUEST_TEMPLATE.md"}},
+	{ID: "acmm:prereq-issue-template", Patterns: []string{".github/ISSUE_TEMPLATE/", ".github/issue_template.md"}},
+	{ID: "acmm:prereq-contrib-guide", Patterns: []string{"CONTRIBUTING.md", "docs/contributing.md", ".github/CONTRIBUTING.md"}},
+	{ID: "acmm:prereq-code-style", Patterns: []string{".eslintrc", ".eslintrc.json", ".eslintrc.js", "eslint.config.js", "eslint.config.mjs", ".prettierrc", ".prettierrc.json", "prettier.config.js", "ruff.toml", ".golangci.yml", "biome.json"}},
+	{ID: "acmm:prereq-coverage-gate", Patterns: []string{"codecov.yml", ".codecov.yml", ".github/workflows/coverage-gate.yml", "coverage.yml", ".coverage-thresholds.json"}},
 	// ACMM L2 — Instructed
 	{ID: "acmm:claude-md", Patterns: []string{"CLAUDE.md", ".claude/CLAUDE.md"}},
 	{ID: "acmm:copilot-instructions", Patterns: []string{".github/copilot-instructions.md"}},
 	{ID: "acmm:agents-md", Patterns: []string{"AGENTS.md"}},
 	{ID: "acmm:cursor-rules", Patterns: []string{".cursorrules", ".cursor/rules"}},
 	{ID: "acmm:prompts-catalog", Patterns: []string{"prompts/", ".prompts/", "docs/prompts/", ".github/prompts/", ".github/agents/"}},
-	{ID: "acmm:pr-template", Patterns: []string{".github/pull_request_template.md", ".github/PULL_REQUEST_TEMPLATE.md"}},
-	{ID: "acmm:issue-template", Patterns: []string{".github/ISSUE_TEMPLATE/", ".github/issue_template.md"}},
-	{ID: "acmm:contrib-guide", Patterns: []string{"CONTRIBUTING.md", "docs/contributing.md"}},
-	{ID: "acmm:style-config", Patterns: []string{".eslintrc", ".eslintrc.json", ".eslintrc.js", "eslint.config.js", "eslint.config.mjs", ".prettierrc", ".prettierrc.json", "prettier.config.js", "ruff.toml", ".golangci.yml", "biome.json"}},
 	{ID: "acmm:editor-config", Patterns: []string{".editorconfig"}},
-	// ACMM L3 — Measured
-	{ID: "acmm:coverage-gate", Patterns: []string{"codecov.yml", ".codecov.yml", ".github/workflows/coverage-gate.yml", "coverage.yml"}},
+	{ID: "acmm:simple-skills", Patterns: []string{".claude/skills/", ".claude/commands/", "skills/"}},
+	{ID: "acmm:correction-capture", Patterns: []string{".claude/memory/", ".memory/", "corrections.jsonl"}},
+	// ACMM L3 — Measured / Enforced
 	{ID: "acmm:pr-acceptance-metric", Patterns: []string{"scripts/build-accm-history.mjs", ".github/workflows/accm-history-update.yml", "scripts/pr-metrics.mjs", ".github/workflows/pr-metrics.yml", "docs/metrics.md"}},
-	{ID: "acmm:test-suite", Patterns: []string{"vitest.config.ts", "vitest.config.js", "jest.config.js", "jest.config.ts", "go.mod", "pytest.ini", "pyproject.toml", "test/", "tests/", "__tests__/", "spec/"}},
-	{ID: "acmm:e2e-tests", Patterns: []string{"playwright.config.ts", "playwright.config.js", "cypress.config.ts", "e2e/"}},
 	{ID: "acmm:pr-review-rubric", Patterns: []string{".github/workflows/review.yml", "docs/review-rubric.md", ".github/review-checklist.md", ".github/prompts/review.md", "docs/qa/"}},
 	{ID: "acmm:quality-dashboard", Patterns: []string{"public/analytics.js", "web/public/analytics.js", "web/src/components/analytics/", "docs/quality.md", ".github/workflows/quality-report.yml", "docs/AI-QUALITY-ASSURANCE.md"}},
 	{ID: "acmm:ci-matrix", Patterns: []string{".github/workflows/ci.yml", ".github/workflows/test.yml", ".github/workflows/build.yml"}},
-	// ACMM L4 — Adaptive
+	{ID: "acmm:layered-safety", Patterns: []string{".claude/settings.json", ".claude/settings.local.json"}},
+	{ID: "acmm:mechanical-enforcement", Patterns: []string{".claude/settings.json"}},
+	{ID: "acmm:session-summary", Patterns: []string{".claude/session-summary.md", ".claude/checkpoint.md"}},
+	{ID: "acmm:structural-gates", Patterns: []string{".claude/settings.json"}},
+	// ACMM L4 — Adaptive / Structured
 	{ID: "acmm:auto-qa-tuning", Patterns: []string{".github/auto-qa-tuning.json", ".github/workflows/auto-qa.yml", "scripts/auto-qa-tuner.mjs"}},
 	{ID: "acmm:nightly-compliance", Patterns: []string{".github/workflows/nightly-compliance.yml", ".github/workflows/nightly.yml", ".github/workflows/nightly-test.yml", ".github/workflows/nightly-test-suite.yml"}},
-	{ID: "acmm:copilot-review-apply", Patterns: []string{".github/workflows/copilot-review-apply.yml", ".github/workflows/apply-copilot.yml"}},
-	{ID: "acmm:auto-label", Patterns: []string{".github/labeler.yml", ".github/workflows/labeler.yml"}},
-	{ID: "acmm:ai-fix-workflow", Patterns: []string{".github/workflows/ai-fix.yml", ".github/workflows/ai-fix-requested.yml"}},
-	{ID: "acmm:tier-classifier", Patterns: []string{".github/workflows/tier-classifier.yml", "docs/risk-tiers.md", ".github/risk-tiers.yml"}},
+	{ID: "acmm:copilot-review-apply", Patterns: []string{".github/workflows/copilot-review-apply.yml", ".github/workflows/apply-copilot.yml", ".github/workflows/ai-fix.yml", ".github/workflows/auto-review.yml"}},
+	{ID: "acmm:auto-label", Patterns: []string{".github/labeler.yml", ".github/workflows/labeler.yml", ".github/workflows/triage.yml"}},
+	{ID: "acmm:ai-fix-workflow", Patterns: []string{".github/workflows/ai-fix.yml", ".github/workflows/ai-fix-requested.yml", ".github/workflows/claude.yml"}},
+	{ID: "acmm:tier-classifier", Patterns: []string{".github/workflows/tier-classifier.yml", "docs/risk-tiers.md", ".github/risk-tiers.yml", ".github/workflows/pr-size.yml"}},
 	{ID: "acmm:security-ai-md", Patterns: []string{"docs/security/SECURITY-AI.md", "SECURITY-AI.md", "docs/SECURITY-AI.md"}},
-	// ACMM L5 — Self-Sustaining
-	{ID: "acmm:auto-issue-gen", Patterns: []string{".github/workflows/auto-issues.yml", "scripts/generate-issues.mjs"}},
-	{ID: "acmm:multi-agent-orchestration", Patterns: []string{".github/workflows/dispatcher.yml", "docs/multi-agent.md", ".claude/dispatcher/"}},
+	{ID: "acmm:session-continuity", Patterns: []string{".claude/checkpoint.md", ".claude/session-summary.md"}},
+	{ID: "acmm:cross-session-knowledge", Patterns: []string{"knowledge.jsonl", ".knowledge/", "docs/reflections/"}},
+	// ACMM L5 — Automated / Self-Sustaining
+	{ID: "acmm:github-actions-ai", Patterns: []string{".github/workflows/claude.yml", ".github/workflows/claude-code-review.yml"}},
+	{ID: "acmm:auto-qa-self-tuning", Patterns: []string{".github/workflows/auto-qa.yml", ".github/auto-qa-tuning.json"}},
+	{ID: "acmm:public-metrics", Patterns: []string{"web/netlify/functions/analytics-accm.mts", "web/public/analytics.js", "docs/metrics/"}},
+	{ID: "acmm:policy-as-code", Patterns: []string{"policies/", ".github/policies/", "kyverno/", "conftest.yaml", "opa/"}},
+	{ID: "acmm:reflection-log", Patterns: []string{".claude/reflections/", "memory/", ".memory/", "docs/reflections/", "REFLECTIONS.md"}},
+	// ACMM L6 — Autonomous
+	{ID: "acmm:auto-issue-gen", Patterns: []string{".github/workflows/auto-issues.yml", ".github/workflows/auto-issue.yml", ".github/workflows/issue-gen.yml", ".github/workflows/auto-generate-issues.yml", "scripts/generate-issues.mjs"}},
+	{ID: "acmm:multi-agent-orchestration", Patterns: []string{".github/workflows/dispatcher.yml", ".github/workflows/orchestrate.yml", "scripts/orchestrate.mjs", "docs/multi-agent.md", ".claude/dispatcher/", "orchestrator/"}},
 	{ID: "acmm:strategic-dashboard", Patterns: []string{"web/src/components/acmm/", "docs/strategy.md", ".github/workflows/strategy-report.yml", "docs/autonomous-work-log.md"}},
-	{ID: "acmm:merge-queue", Patterns: []string{".github/workflows/merge-queue.yml", ".github/merge-queue.yml"}},
-	{ID: "acmm:policy-as-code", Patterns: []string{"policies/", ".github/policies/", "kyverno/"}},
-	{ID: "acmm:public-metrics", Patterns: []string{"public/analytics.js", "docs/metrics/", ".github/workflows/public-metrics.yml"}},
-	{ID: "acmm:reflection-log", Patterns: []string{".claude/reflections/", "memory/", "docs/reflections/"}},
+	{ID: "acmm:merge-queue", Patterns: []string{".github/workflows/merge-queue.yml", ".github/merge-queue.yml", ".prow.yaml", "tide.yaml"}},
+	{ID: "acmm:risk-assessment-config", Patterns: []string{"risk-config.json", ".claude/risk-config.json", ".github/risk-assessment.yml"}},
+	{ID: "acmm:observability-runbook", Patterns: []string{"docs/ai-ops-runbook.md", "docs/runbook/", "RUNBOOK.md"}},
 	// Fullsend
 	{ID: "fullsend:test-coverage", Patterns: []string{"codecov.yml", ".codecov.yml", "coverage.yml", ".github/workflows/coverage-gate.yml"}},
 	{ID: "fullsend:ci-cd-maturity", Patterns: []string{".github/workflows/"}},
@@ -443,12 +458,23 @@ func demoACMMScan(repo string) acmmScanResult {
 		Repo:      repo,
 		ScannedAt: time.Now().UTC().Format(time.RFC3339),
 		DetectedIDs: []string{
-			"acmm:claude-md", "acmm:copilot-instructions", "acmm:pr-template",
-			"acmm:contrib-guide", "acmm:style-config", "acmm:editor-config",
-			"acmm:coverage-gate", "acmm:test-suite", "acmm:e2e-tests",
-			"acmm:ci-matrix", "acmm:nightly-compliance", "acmm:auto-label",
-			"acmm:ai-fix-workflow", "acmm:security-ai-md", "acmm:public-metrics",
-			"acmm:reflection-log", "fullsend:test-coverage", "fullsend:ci-cd-maturity",
+			// Prerequisites
+			"acmm:prereq-test-suite", "acmm:prereq-e2e", "acmm:prereq-cicd",
+			"acmm:prereq-pr-template", "acmm:prereq-contrib-guide", "acmm:prereq-code-style",
+			"acmm:prereq-coverage-gate",
+			// L2
+			"acmm:claude-md", "acmm:copilot-instructions", "acmm:editor-config",
+			"acmm:simple-skills", "acmm:correction-capture",
+			// L3
+			"acmm:ci-matrix", "acmm:layered-safety", "acmm:mechanical-enforcement",
+			"acmm:structural-gates",
+			// L4
+			"acmm:nightly-compliance", "acmm:auto-label", "acmm:ai-fix-workflow",
+			"acmm:security-ai-md",
+			// L5
+			"acmm:public-metrics", "acmm:reflection-log",
+			// Other sources
+			"fullsend:test-coverage", "fullsend:ci-cd-maturity",
 			"aef:structural-gates", "aef:session-continuity",
 			"claude-reflect:preference-index", "claude-reflect:session-summary",
 		},

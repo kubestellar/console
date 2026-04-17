@@ -7,7 +7,7 @@
  */
 
 import { useMemo, useState } from 'react'
-import { Check, X, Filter, ChevronDown, ChevronRight, Flag, Sparkles, Lock, Unlock } from 'lucide-react'
+import { Check, X, Filter, ChevronDown, ChevronRight, Flag, Sparkles, Lock, Unlock, Eye } from 'lucide-react'
 import { useCardLoadingState } from './CardDataContext'
 import { CardSkeleton } from '../../lib/cards/CardComponents'
 import { useACMM } from '../acmm/ACMMProvider'
@@ -64,12 +64,18 @@ function persistLocksOverridden(v: boolean) {
   }
 }
 
-/** Highest level where 70%+ of that level's ACMM criteria are detected.
- *  Walks L1→L5 and stops at the first level that fails the threshold. */
+/** Maximum maturity level (L6 = Autonomous) */
+const MAX_MATURITY_LEVEL = 6
+
+/** Highest level where 70%+ of that level's scannable ACMM criteria are
+ *  detected. Walks L2→L6 and stops at the first level that fails the
+ *  threshold. Non-scannable items are excluded from the calculation. */
 function computeEarnedLevel(detectedIds: Set<string>): number {
   let earned = 1
-  for (let n = 2; n <= 5; n++) {
-    const required = ALL_CRITERIA.filter((c) => c.source === 'acmm' && c.level === n)
+  for (let n = 2; n <= MAX_MATURITY_LEVEL; n++) {
+    const required = ALL_CRITERIA.filter(
+      (c) => c.source === 'acmm' && c.level === n && c.scannable !== false,
+    )
     if (required.length === 0) continue
     const detected = required.filter((c) => detectedIds.has(c.id)).length
     if (detected / required.length >= LEVEL_COMPLETION_THRESHOLD) {
@@ -80,6 +86,14 @@ function computeEarnedLevel(detectedIds: Set<string>): number {
   }
   return earned
 }
+
+type ViewMode = 'by-level' | 'cross-cutting'
+
+/** Cross-cutting dimension labels */
+const CROSS_CUTTING_LABELS = {
+  learning: 'Learning & Feedback',
+  traceability: 'Traceability & Audit',
+} as const
 
 function proposeChangeUrl(c: Criterion): string {
   const title = encodeURIComponent(`ACMM criterion fix: ${c.id}`)
@@ -101,6 +115,7 @@ export function ACMMFeedbackLoops() {
 
   const [sourceFilter, setSourceFilter] = useState<SourceId | 'all'>('all')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [viewMode, setViewMode] = useState<ViewMode>('by-level')
   /** Session-scoped override that unlocks all higher-level criteria.
    *  Persisted to sessionStorage so refreshes within the tab survive,
    *  but a fresh tab/session re-locks the gamification gate. */
@@ -144,18 +159,32 @@ export function ACMMFeedbackLoops() {
   })
 
   const filtered = useMemo(() => {
-    return ALL_CRITERIA
+    let items = ALL_CRITERIA
       .filter((c) => {
+        // Cross-cutting view: only show items with a crossCutting tag
+        if (viewMode === 'cross-cutting' && !c.crossCutting) return false
         if (sourceFilter !== 'all' && c.source !== sourceFilter) return false
         const detected = detectedIds.has(c.id)
         if (statusFilter === 'detected' && !detected) return false
         if (statusFilter === 'missing' && detected) return false
         return true
       })
+
+    if (viewMode === 'cross-cutting') {
+      // Group by cross-cutting dimension, then by level within each
+      items = items.sort((a, b) => {
+        const dimOrder = (c: typeof a) => c.crossCutting === 'learning' ? 0 : 1
+        const dimDiff = dimOrder(a) - dimOrder(b)
+        if (dimDiff !== 0) return dimDiff
+        return (a.level ?? 99) - (b.level ?? 99)
+      })
+    } else {
       // Sort by level (ascending) so all sources mix by maturity tier.
       // Criteria without a level sort last.
-      .sort((a, b) => (a.level ?? 99) - (b.level ?? 99))
-  }, [detectedIds, sourceFilter, statusFilter])
+      items = items.sort((a, b) => (a.level ?? 99) - (b.level ?? 99))
+    }
+    return items
+  }, [detectedIds, sourceFilter, statusFilter, viewMode])
 
   /** The level the user is working toward — the one ABOVE earnedLevel.
    *  For L1 repos earnedLevel=1, so nextLevel=2 (the first level with
@@ -190,6 +219,21 @@ export function ACMMFeedbackLoops() {
   return (
     <div className="h-full flex flex-col p-2 gap-2 max-w-4xl">
       <div className="flex items-center gap-1.5 flex-wrap">
+        {/* View mode toggle: By Level / Cross-cutting */}
+        {(['by-level', 'cross-cutting'] as const).map((m) => (
+          <button
+            key={m}
+            onClick={() => setViewMode(m)}
+            className={`px-2 py-0.5 text-[10px] rounded-full transition-colors ${
+              viewMode === m
+                ? 'bg-violet-500/30 text-violet-300'
+                : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
+            }`}
+          >
+            {m === 'by-level' ? 'By Level' : 'Cross-cutting'}
+          </button>
+        ))}
+        <span className="w-px h-3 bg-border/50" />
         <Filter className="w-3.5 h-3.5 text-muted-foreground" />
         {sources.map((s) => (
           <button
@@ -238,7 +282,16 @@ export function ACMMFeedbackLoops() {
       </div>
 
       <div className="flex-1 overflow-y-auto space-y-1">
-        {filtered.map((c) => {
+        {filtered.map((c, idx) => {
+          // In cross-cutting view, insert a section header when the
+          // dimension changes between adjacent items.
+          const prevDim = idx > 0 ? filtered[idx - 1].crossCutting : undefined
+          const showDimHeader = viewMode === 'cross-cutting' && c.crossCutting && c.crossCutting !== prevDim
+          const dimHeader = showDimHeader && c.crossCutting ? (
+            <div key={`dim-${c.crossCutting}`} className="text-[10px] uppercase tracking-wide text-violet-400 font-medium pt-2 pb-1 px-2 border-b border-violet-500/20">
+              {CROSS_CUTTING_LABELS[c.crossCutting]}
+            </div>
+          ) : null
           const detected = detectedIds.has(c.id)
           const isExpanded = expandedId === c.id
           // Lock criteria above earnedLevel until the user finishes their
@@ -249,7 +302,7 @@ export function ACMMFeedbackLoops() {
           const isLocked = !locksOverridden && !!c.level && c.level > earnedLevel + 1
           const isLockPromptOpen = lockPromptId === c.id
           return (
-            <div
+            <>{dimHeader}<div
               key={c.id}
               className={`rounded-md transition-colors ${
                 isLocked ? 'bg-muted/10 hover:bg-muted/20 opacity-60' : 'bg-muted/20 hover:bg-muted/40'
@@ -277,6 +330,8 @@ export function ACMMFeedbackLoops() {
                 )}
                 {isLocked ? (
                   <Lock className="w-4 h-4 text-muted-foreground/40 flex-shrink-0" />
+                ) : c.scannable === false ? (
+                  <span title="Not yet scannable — practice-based"><Eye className="w-4 h-4 text-muted-foreground/30 flex-shrink-0" /></span>
                 ) : detected ? (
                   <Check className="w-4 h-4 text-green-400 flex-shrink-0" />
                 ) : (
@@ -290,6 +345,16 @@ export function ACMMFeedbackLoops() {
                   <div className="text-xs font-medium truncate">{c.name}</div>
                   <div className="text-[10px] text-muted-foreground truncate">{c.description}</div>
                 </div>
+                {c.crossCutting && (
+                  <span className="text-[9px] px-1.5 py-0.5 rounded-full flex-shrink-0 bg-violet-500/20 text-violet-400">
+                    {c.crossCutting === 'learning' ? 'L&F' : 'T&A'}
+                  </span>
+                )}
+                {c.scannable === false && (
+                  <span className="text-[9px] px-1.5 py-0.5 rounded-full flex-shrink-0 bg-muted/40 text-muted-foreground/60">
+                    practice
+                  </span>
+                )}
                 <span
                   className={`text-[9px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${SOURCE_COLORS[c.source]}`}
                   title={SOURCES_BY_ID[c.source]?.citation}
@@ -410,7 +475,7 @@ export function ACMMFeedbackLoops() {
                   </div>
                 </div>
               )}
-            </div>
+            </div></>
           )
         })}
         {filtered.length === 0 && (
@@ -424,7 +489,7 @@ export function ACMMFeedbackLoops() {
           a one-click way to take on the missing criteria at their
           earnedLevel, which is exactly what they need to unlock the next
           one. Hidden once the level is complete or at L5 (terminal). */}
-      {missingForNext > 0 && nextLevel <= 5 && (
+      {missingForNext > 0 && nextLevel <= MAX_MATURITY_LEVEL && (
         <button
           type="button"
           onClick={launchLevelCompletion}

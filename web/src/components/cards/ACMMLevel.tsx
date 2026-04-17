@@ -4,7 +4,7 @@ import { CardSkeleton } from '../../lib/cards/CardComponents'
 import { useACMM } from '../acmm/ACMMProvider'
 import { acmmSource } from '../../lib/acmm/sources/acmm'
 
-const MAX_LEVEL = 5
+const MAX_LEVEL = 6
 const GAUGE_SIZE = 120
 const GAUGE_STROKE = 10
 const PAPER_URL = 'https://arxiv.org/abs/2604.09388'
@@ -107,6 +107,23 @@ export function ACMMLevel() {
         </div>
       </div>
 
+      {/* Prerequisites soft indicator — not gating, just informational */}
+      {level.prerequisites.total > 0 && (
+        <div className="flex items-center gap-2 px-2 py-1.5 rounded bg-muted/30 text-xs">
+          <span className="text-muted-foreground">Foundations:</span>
+          <span className={`font-mono font-medium ${
+            level.prerequisites.met === level.prerequisites.total
+              ? 'text-green-400'
+              : level.prerequisites.met > 0
+                ? 'text-yellow-400'
+                : 'text-muted-foreground'
+          }`}>
+            {level.prerequisites.met}/{level.prerequisites.total}
+          </span>
+          <span className="text-[10px] text-muted-foreground ml-auto">prerequisites</span>
+        </div>
+      )}
+
       {/* Why move up — transition trigger from the paper. Kept short:
           one quoted sentence + what the next level unlocks. */}
       {nextLevel && nextLevelDef && (
@@ -137,7 +154,7 @@ export function ACMMLevel() {
       )}
 
       <div className="flex flex-col gap-1">
-        {ALL_LEVELS.map((lvl) => {
+        {ALL_LEVELS.filter((lvl) => lvl.n > 0).map((lvl) => {
           const isCurrent = lvl.n === level.level
           const isPast = lvl.n < level.level
           return (
