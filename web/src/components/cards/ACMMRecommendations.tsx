@@ -36,9 +36,10 @@ const ROLE_BY_LEVEL: Record<number, string> = {
   2: 'Rule-writer',
   3: 'Analyst',
   4: 'Governor',
-  5: 'Strategist',
+  5: 'Operator',
+  6: 'Strategist',
 }
-const LEVEL_TICKS = [1, 2, 3, 4, 5] as const
+const LEVEL_TICKS = [1, 2, 3, 4, 5, 6] as const
 
 export function ACMMRecommendations() {
   const { scan, repo, targetLevel, setTargetLevel } = useACMM()
@@ -111,7 +112,7 @@ export function ACMMRecommendations() {
         <input
           type="range"
           min={1}
-          max={5}
+          max={6}
           step={1}
           value={targetLevel}
           onChange={(e) => setTargetLevel(Number(e.target.value))}

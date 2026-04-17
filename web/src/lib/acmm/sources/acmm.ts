@@ -43,7 +43,7 @@ const LEVELS: LevelDef[] = [
   },
   {
     n: 5,
-    name: 'Automated / Self-Sustaining',
+    name: 'Semi-Automated',
     role: 'Operator',
     characteristic: 'Detection and proposed resolution happen without human initiation. Scheduled workflows find problems, create issues, and route them to AI for proposed resolution. Humans approve; the system proposes.',
     transitionTrigger: '"I want the system to act on what it finds, not just propose."',
@@ -51,7 +51,7 @@ const LEVELS: LevelDef[] = [
   },
   {
     n: 6,
-    name: 'Autonomous',
+    name: 'Fully Autonomous',
     role: 'Strategist',
     characteristic: 'The codebase operates with minimal human intervention. AI agents generate work, execute it, review it, merge it, and learn from outcomes. Humans hold 15-20% of contributions — the share that requires strategic judgment, not execution.',
     transitionTrigger: 'None — L6 is the terminal state. The human role becomes direction-setting, not code writing.',
@@ -659,7 +659,7 @@ const CRITERIA: Criterion[] = [
     crossCutting: 'traceability',
   },
 
-  // ── L5 — Automated / Self-Sustaining ────────────────────────────
+  // ── L5 — Semi-Automated ────────────────────────────
   {
     id: 'acmm:github-actions-ai',
     source: 'acmm',

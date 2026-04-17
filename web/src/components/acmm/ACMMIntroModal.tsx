@@ -66,7 +66,7 @@ export function ACMMIntroModal({ isOpen, onClose }: ACMMIntroModalProps) {
     >
       <BaseModal.Header
         title="Welcome to the AI Codebase Maturity Model"
-        description="Score any GitHub repo on a 5-level framework for AI-assisted engineering"
+        description="Score any GitHub repo on a 6-level framework for AI-assisted engineering"
         icon={BarChart3}
         onClose={handleClose}
       />
@@ -80,14 +80,16 @@ export function ACMMIntroModal({ isOpen, onClose }: ACMMIntroModalProps) {
               <h3 className="font-semibold text-foreground">What is ACMM?</h3>
             </div>
             <p className="text-muted-foreground leading-relaxed">
-              The AI Codebase Maturity Model is a 5-level framework that scores how
+              The AI Codebase Maturity Model is a 6-level framework that scores how
               ready your repository is for AI-assisted engineering. It looks for
               concrete, detectable signals — instruction files, measurement
               workflows, feedback loops, gating policies — and scores from{' '}
-              <span className="font-mono text-foreground">L1 Assisted</span> (an AI
+              <span className="font-mono text-foreground">L1 Assisted / Ad Hoc</span> (an AI
               suggests completions) up to{' '}
-              <span className="font-mono text-foreground">L5 Self-Sustaining</span>{' '}
-              (the codebase proposes, triages, and gates its own work).
+              <span className="font-mono text-foreground">L6 Fully Autonomous</span>{' '}
+              (the codebase generates work, executes it, reviews it, and merges it
+              with minimal human intervention). A prerequisites tier tracks
+              foundational engineering hygiene without gating level progression.
             </p>
             <p className="text-muted-foreground leading-relaxed mt-2">
               The dashboard scans the repo&apos;s file structure, workflows, and
@@ -96,39 +98,48 @@ export function ACMMIntroModal({ isOpen, onClose }: ACMMIntroModalProps) {
             </p>
           </section>
 
-          {/* The 5 levels */}
+          {/* The 6 levels */}
           <section>
             <div className="flex items-center gap-2 mb-2">
               <Layers className="w-4 h-4 text-primary" />
-              <h3 className="font-semibold text-foreground">The 5 levels</h3>
+              <h3 className="font-semibold text-foreground">The 6 levels</h3>
             </div>
             <div className="space-y-1.5">
               <div className="flex gap-3">
                 <span className="font-mono text-xs text-muted-foreground w-8 shrink-0">L1</span>
-                <span className="font-medium text-foreground w-28 shrink-0">Assisted</span>
+                <span className="font-medium text-foreground w-36 shrink-0">Assisted / Ad Hoc</span>
                 <span className="text-xs text-muted-foreground">AI suggests completions, no persistent rules</span>
               </div>
               <div className="flex gap-3">
                 <span className="font-mono text-xs text-muted-foreground w-8 shrink-0">L2</span>
-                <span className="font-medium text-foreground w-28 shrink-0">Instructed</span>
+                <span className="font-medium text-foreground w-36 shrink-0">Instructed</span>
                 <span className="text-xs text-muted-foreground">Judgment encoded in CLAUDE.md / AGENTS.md / Copilot instructions</span>
               </div>
               <div className="flex gap-3">
                 <span className="font-mono text-xs text-muted-foreground w-8 shrink-0">L3</span>
-                <span className="font-medium text-foreground w-28 shrink-0">Measured</span>
-                <span className="text-xs text-muted-foreground">Metrics instrument the AI loop itself</span>
+                <span className="font-medium text-foreground w-36 shrink-0">Measured / Enforced</span>
+                <span className="text-xs text-muted-foreground">Rules mechanically enforced; metrics instrument the loop</span>
               </div>
               <div className="flex gap-3">
                 <span className="font-mono text-xs text-muted-foreground w-8 shrink-0">L4</span>
-                <span className="font-medium text-foreground w-28 shrink-0">Adaptive</span>
-                <span className="text-xs text-muted-foreground">Metrics feed back into instructions and gating thresholds</span>
+                <span className="font-medium text-foreground w-36 shrink-0">Adaptive / Structured</span>
+                <span className="text-xs text-muted-foreground">Metrics feed back into instructions; workflows are structured</span>
               </div>
               <div className="flex gap-3">
                 <span className="font-mono text-xs text-muted-foreground w-8 shrink-0">L5</span>
-                <span className="font-medium text-foreground w-28 shrink-0">Self-Sustaining</span>
-                <span className="text-xs text-muted-foreground">Codebase proposes, triages, and gates its own work</span>
+                <span className="font-medium text-foreground w-36 shrink-0">Semi-Automated</span>
+                <span className="text-xs text-muted-foreground">System detects + proposes — humans still approve</span>
+              </div>
+              <div className="flex gap-3">
+                <span className="font-mono text-xs text-muted-foreground w-8 shrink-0">L6</span>
+                <span className="font-medium text-foreground w-36 shrink-0">Fully Autonomous</span>
+                <span className="text-xs text-muted-foreground">System acts — generates issues, merges PRs, rolls back; humans set policy</span>
               </div>
             </div>
+            <p className="text-xs text-muted-foreground mt-2 italic">
+              L5 vs L6: at L5 the system proposes and humans approve.
+              At L6 the system acts and humans audit after the fact.
+            </p>
           </section>
 
           {/* Source frameworks */}
@@ -145,7 +156,7 @@ export function ACMMIntroModal({ isOpen, onClose }: ACMMIntroModalProps) {
             <ul className="space-y-1 text-xs">
               <li>
                 <span className="font-mono px-1.5 py-0.5 rounded bg-primary/20 text-primary">ACMM</span>{' '}
-                <span className="text-muted-foreground">— the 5-level model itself</span>
+                <span className="text-muted-foreground">— the 6-level model (L1–L6 + prerequisites)</span>
               </li>
               <li>
                 <span className="font-mono px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400">Fullsend</span>{' '}
