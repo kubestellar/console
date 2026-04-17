@@ -17,6 +17,7 @@ import { WorkloadMonitorAlerts } from './WorkloadMonitorAlerts'
 import type { MonitorIssue } from '../../../types/workloadMonitor'
 import { useTranslation } from 'react-i18next'
 import { formatTimeAgo, loadRepos, saveRepos } from './gitHubCIUtils'
+import { usePipelineFilter } from '../pipelines/PipelineFilterContext'
 
 interface GitHubCIMonitorProps {
   config?: Record<string, unknown>
@@ -91,9 +92,12 @@ const DEMO_WORKFLOWS: WorkflowRun[] = [
 export function GitHubCIMonitor({ config, ref }: GitHubCIMonitorProps & { ref?: Ref<GitHubCIMonitorRef> }) {
   const { t } = useTranslation()
   const ghConfig = config as GitHubCIConfig | undefined
+  const shared = usePipelineFilter()
 
-  // Repo configuration
-  const [repos, setRepos] = useState<string[]>(() => ghConfig?.repos || loadRepos())
+  // Repo configuration — shared filter overrides when on /ci-cd
+  const [localRepos, setLocalRepos] = useState<string[]>(() => ghConfig?.repos || loadRepos())
+  const repos = shared?.repoFilter ? [shared.repoFilter] : localRepos
+  const setRepos = shared?.repoFilter ? () => {} : setLocalRepos
   const [isEditingRepos, setIsEditingRepos] = useState(false)
   const [newRepoInput, setNewRepoInput] = useState('')
 
