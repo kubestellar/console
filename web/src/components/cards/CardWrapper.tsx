@@ -811,6 +811,19 @@ export function CardWrapper({
     }
   }, [showMenu])
 
+  // Close this menu when another card's menu opens (#8556).
+  // Each menu dispatches 'card-menu-open' with its card ID; all others close.
+  useEffect(() => {
+    function handleOtherMenuOpen(e: Event) {
+      const detail = (e as CustomEvent).detail
+      if (detail !== cardId && showMenu) {
+        setShowMenu(false)
+      }
+    }
+    window.addEventListener('card-menu-open', handleOtherMenuOpen)
+    return () => window.removeEventListener('card-menu-open', handleOtherMenuOpen)
+  }, [showMenu, cardId])
+
   // Keep menu anchored to button on scroll/resize.
   // Includes boundary detection to prevent the menu from rendering off-screen (#5253).
   useEffect(() => {
@@ -1108,7 +1121,11 @@ export function CardWrapper({
 
                         setMenuPosition({ top, right })
                       }
-                      setShowMenu(!showMenu)
+                      const opening = !showMenu
+                      if (opening) {
+                        window.dispatchEvent(new CustomEvent('card-menu-open', { detail: cardId }))
+                      }
+                      setShowMenu(opening)
                     }}
                     className="p-1.5 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors"
                     aria-label={t('cardWrapper.cardMenuTooltip')}
