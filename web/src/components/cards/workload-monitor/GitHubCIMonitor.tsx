@@ -18,6 +18,7 @@ import type { MonitorIssue } from '../../../types/workloadMonitor'
 import { useTranslation } from 'react-i18next'
 import { formatTimeAgo, loadRepos, saveRepos } from './gitHubCIUtils'
 import { usePipelineFilter } from '../pipelines/PipelineFilterContext'
+import { RepoSubtitle } from '../pipelines/RepoSubtitle'
 
 interface GitHubCIMonitorProps {
   config?: Record<string, unknown>
@@ -281,6 +282,7 @@ export function GitHubCIMonitor({ config, ref }: GitHubCIMonitorProps & { ref?: 
       <div className="rounded-lg bg-card/50 border border-border p-2.5 mb-3 flex items-center gap-2">
         <GitBranch className="w-4 h-4 text-purple-400 shrink-0" />
         <span className="text-sm font-medium text-foreground">GitHub CI</span>
+        {shared?.repoFilter && <RepoSubtitle repo={shared.repoFilter} />}
         <button
           onClick={() => setIsEditingRepos(!isEditingRepos)}
           className={cn(

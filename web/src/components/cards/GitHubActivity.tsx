@@ -12,6 +12,7 @@ import type { SortDirection } from '../../lib/cards/cardHooks'
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../ui/StatusBadge'
 import { usePipelineFilter } from './pipelines/PipelineFilterContext'
+import { RepoSubtitle } from './pipelines/RepoSubtitle'
 
 // Types for GitHub activity data
 interface GitHubPR {
@@ -757,7 +758,7 @@ export function GitHubActivity({ config, ref }: { config?: GitHubActivityConfig;
             )}
             title={t('cards:github.configureRepo')}
           >
-            {currentRepo}
+            <RepoSubtitle repo={currentRepo} />
             <Settings className="w-3 h-3" />
           </button>
         </div>
@@ -890,7 +891,7 @@ export function GitHubActivity({ config, ref }: { config?: GitHubActivityConfig;
             )}
             title={t('cards:github.configureRepo')}
           >
-            {repoInfo?.full_name || currentRepo}
+            <RepoSubtitle repo={repoInfo?.full_name || currentRepo} />
             <Settings className="w-3 h-3" />
           </button>
         </div>

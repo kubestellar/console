@@ -12,6 +12,7 @@ import {
   getPipelineRepos,
 } from '../../../hooks/useGitHubPipelines'
 import { usePipelineFilter } from './PipelineFilterContext'
+import { RepoSubtitle } from './RepoSubtitle'
 import { EmbedButton } from './EmbedButton'
 import { LogsModal } from './LogsModal'
 import { cn } from '../../../lib/cn'
@@ -93,6 +94,7 @@ export function RecentFailures() {
           ))}
         </select>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          {repoFilter && <RepoSubtitle repo={repoFilter} />}
           <span>{rows.length} failures</span>
           <EmbedButton
             cardType="recent-failures"

@@ -13,6 +13,7 @@ import { useDemoMode } from '../../../hooks/useDemoMode'
 import { useCardLoadingState } from '../CardDataContext'
 import { usePipelineMatrix, getPipelineRepos, type Conclusion } from '../../../hooks/useGitHubPipelines'
 import { usePipelineFilter } from './PipelineFilterContext'
+import { RepoSubtitle } from './RepoSubtitle'
 import { EmbedButton } from './EmbedButton'
 import { cn } from '../../../lib/cn'
 
@@ -108,6 +109,7 @@ export function WorkflowMatrix() {
           </div>
         </div>
         <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+          {repoFilter && <RepoSubtitle repo={repoFilter} />}
           <span>{workflows.length} workflows</span>
           <EmbedButton
             cardType="workflow-matrix"

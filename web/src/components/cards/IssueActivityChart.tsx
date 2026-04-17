@@ -14,6 +14,7 @@ import { Calendar, RefreshCw, GitPullRequest } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Skeleton } from '../ui/Skeleton'
 import { usePipelineFilter } from './pipelines/PipelineFilterContext'
+import { RepoSubtitle } from './pipelines/RepoSubtitle'
 import { Button } from '../ui/Button'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { useCardLoadingState } from './CardDataContext'
@@ -463,7 +464,7 @@ export function IssueActivityChart(props: { config?: IssueActivityConfig }) {
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2">
           <Calendar className="h-4 w-4 text-muted-foreground" />
-          <span className="text-xs text-muted-foreground">{repo}</span>
+          <RepoSubtitle repo={repo} />
         </div>
         <div className="flex items-center gap-1">
           {LOOKBACK_OPTIONS.map(opt => (

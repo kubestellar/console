@@ -14,7 +14,7 @@ import { useState, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import {
   CheckCircle, XCircle, AlertTriangle, Clock, ExternalLink,
-  TrendingUp, TrendingDown, Minus, Loader2, Search, GitFork,
+  TrendingUp, TrendingDown, Minus, Loader2, Search,
 } from 'lucide-react'
 import { useDemoMode } from '../../../hooks/useDemoMode'
 import { useCardLoadingState } from '../CardDataContext'
@@ -25,6 +25,7 @@ import {
   type Conclusion,
 } from '../../../hooks/useGitHubPipelines'
 import { usePipelineFilter } from './PipelineFilterContext'
+import { RepoSubtitle } from './RepoSubtitle'
 import { EmbedButton } from './EmbedButton'
 import { cn } from '../../../lib/cn'
 
@@ -303,9 +304,8 @@ export function NightlyReleasePulse() {
                 {lastRun?.releaseTag ?? 'No release yet'}
               </span>
             </div>
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
-              <GitFork size={10} />
-              <span>{effectiveRepoFilter || 'all repos'}</span>
+            <div className="mt-0.5">
+              <RepoSubtitle repo={effectiveRepoFilter || 'all repos'} />
             </div>
             <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-2">
               {lastRun && <>
