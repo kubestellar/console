@@ -271,13 +271,14 @@ export function IssueActivityChart(props: { config?: IssueActivityConfig }) {
   const [stats, setStats] = useState<DailyStats[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isDemoFallback, setIsDemoFallback] = useState(false)
 
   const hasData = stats.length > 0
-  useCardLoadingState({ isLoading: isLoading && !hasData, hasAnyData: hasData, isDemoData: isDemoMode })
+  useCardLoadingState({ isLoading: isLoading && !hasData, hasAnyData: hasData, isDemoData: isDemoMode || isDemoFallback })
 
   const loadData = useCallback(async (lookbackDays: number, signal?: AbortSignal) => {
     // No early demo guard — try live data first (liveInDemoMode pattern).
-    // Falls back to demo fixtures on fetch error (line ~300).
+    // Falls back to demo fixtures in the fetch-error catch path.
 
     // Check cache
     const cached = getCachedStats(repo, lookbackDays)
@@ -285,6 +286,7 @@ export function IssueActivityChart(props: { config?: IssueActivityConfig }) {
       setStats(cached)
       setIsLoading(false)
       setError(null)
+      setIsDemoFallback(false)
       return
     }
 
@@ -294,12 +296,14 @@ export function IssueActivityChart(props: { config?: IssueActivityConfig }) {
       const data = await fetchIssueStats(repo, lookbackDays, signal)
       if (signal?.aborted) return
       setStats(data)
+      setIsDemoFallback(false)
       setCachedStats(repo, lookbackDays, data)
     } catch (err) {
       if (signal?.aborted) return
       const message = err instanceof Error ? err.message : 'Failed to fetch issue data'
       setError(message)
       // Fall back to demo data on error
+      setIsDemoFallback(true)
       setStats(generateDemoData(lookbackDays))
     } finally {
       if (!signal?.aborted) setIsLoading(false)
