@@ -773,6 +773,8 @@ func (s *Server) setupRoutes() {
 	// Medium blog (public — proxies to Medium RSS feed, cached 1h)
 	s.app.Get("/api/medium/blog", publicLimiter, handlers.MediumBlogHandler)
 
+	// ACMM scan — registered below on the authenticated api group
+
 	// Mission knowledge base browse/file (public — proxies to public GitHub repo)
 	missions := handlers.NewMissionsHandler()
 	missions.RegisterPublicRoutes(s.app.Group("/api/missions"))
@@ -827,6 +829,9 @@ func (s *Server) setupRoutes() {
 	api.Post("/github-pipelines", githubPipelines.Serve)
 
 	api.Get("/github/*", githubProxy.Proxy)
+
+	// ACMM scan — uses server's GitHub token like other GitHub-powered cards
+	api.Get("/acmm/scan", handlers.ACMMScanHandler)
 
 	// Persistent settings routes
 	settingsHandler := handlers.NewSettingsHandler(settings.GetSettingsManager(), s.store)

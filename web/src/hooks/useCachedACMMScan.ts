@@ -114,9 +114,9 @@ async function fetchACMMScan(repo: string, force: boolean): Promise<ACMMScanData
   if (!res.ok) {
     throw new Error(`ACMM scan failed: ${res.status} ${res.statusText}`)
   }
-  // The Go backend and cluster deployments don't implement /api/acmm/scan —
-  // the SPA catch-all returns index.html (text/html) instead of JSON.
-  // Detect this and throw a clean error so the card falls back to demo data.
+  // Safety net: if the response isn't JSON (e.g. older builds without the Go
+  // handler, or an SPA catch-all returning index.html), throw a clean error
+  // so the card falls back to demo data instead of a JSON parse crash.
   const ct = res.headers.get('content-type') || ''
   if (!ct.includes('application/json')) {
     throw new Error('ACMM scan is not available on this deployment — showing demo data')
