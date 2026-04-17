@@ -276,12 +276,8 @@ export function IssueActivityChart(props: { config?: IssueActivityConfig }) {
   useCardLoadingState({ isLoading: isLoading && !hasData, hasAnyData: hasData, isDemoData: isDemoMode })
 
   const loadData = useCallback(async (lookbackDays: number, signal?: AbortSignal) => {
-    if (isDemoMode) {
-      setStats(generateDemoData(lookbackDays))
-      setIsLoading(false)
-      setError(null)
-      return
-    }
+    // No early demo guard — try live data first (liveInDemoMode pattern).
+    // Falls back to demo fixtures on fetch error (line ~300).
 
     // Check cache
     const cached = getCachedStats(repo, lookbackDays)
