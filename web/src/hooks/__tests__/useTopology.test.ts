@@ -145,10 +145,10 @@ describe('useTopology', () => {
     const { result } = renderHook(() => useTopology())
 
     await waitFor(() => {
-      expect(result.current.isDemoData).toBe(true)
+      expect(result.current.graph).not.toBeNull()
     })
 
-    expect(result.current.graph).not.toBeNull()
+    expect(result.current.isDemoData).toBe(true)
     expect(result.current.consecutiveFailures).toBe(1)
   })
 

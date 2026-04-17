@@ -2572,7 +2572,7 @@ describe('useCachedData', () => {
 
       mockAuthFetch.mockResolvedValue({
         ok: true,
-        json: vi.fn().mockResolvedValue({ issues: [{ name: 'rest-sec', issue: 'Priv', severity: 'high' }] }),
+        json: vi.fn().mockResolvedValue({ issues: [{ name: 'rest-sec', namespace: 'default', issue: 'Priv', severity: 'high' }] }),
       })
 
       const { useCachedSecurityIssues } = await loadModule()
@@ -3154,7 +3154,7 @@ describe('useCachedData', () => {
 
       mockAuthFetch.mockResolvedValue({
         ok: true,
-        json: vi.fn().mockResolvedValue({ issues: [{ name: 'sec1', issue: 'Priv', severity: 'high' }] }),
+        json: vi.fn().mockResolvedValue({ issues: [{ name: 'sec1', namespace: 'default', issue: 'Priv', severity: 'high' }] }),
       })
 
       const { coreFetchers } = await loadModule()
@@ -6114,7 +6114,7 @@ describe('useCachedData', () => {
       mockIsBackendUnavailable.mockReturnValue(false)
       mockAuthFetch.mockResolvedValue({
         ok: true,
-        json: vi.fn().mockResolvedValue({ issues: [{ name: 'rest-issue', severity: 'high' }] }),
+        json: vi.fn().mockResolvedValue({ issues: [{ name: 'rest-issue', namespace: 'default', severity: 'high', issue: 'Privilege escalation' }] }),
       })
       mockUseCache.mockReturnValue(makeCacheResult([]))
 
