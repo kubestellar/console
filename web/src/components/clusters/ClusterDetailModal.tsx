@@ -103,7 +103,7 @@ export function ClusterDetailModal({ clusterName, clusterUser, onClose, onRename
   const { deduplicatedClusters, clusters: rawClusters } = useClusters()
   const { issues: podIssues } = usePodIssues(clusterName)
   const { issues: deploymentIssues } = useDeploymentIssues(clusterName)
-  const { nodes: gpuNodes } = useGPUNodes(clusterName)
+  const { nodes: gpuNodes, isLoading: gpuLoading, isRefreshing: gpuRefreshing } = useGPUNodes(clusterName)
   const { nodes: clusterNodes, isLoading: nodesLoading } = useNodes(clusterName)
   const { stats: namespaceStats, isLoading: nsLoading } = useNamespaceStats(clusterName)
   const { deployments: clusterDeployments } = useDeployments(clusterName)
@@ -261,11 +261,16 @@ After I approve, help me execute the repairs step by step.`,
   })()
 
   // Retain last non-empty GPU data so the section doesn't vanish during refetch (#8597).
-  // When the hook briefly returns an empty array mid-poll, we keep showing the previous
-  // data to prevent the "GPUs by Type" section from flickering in and out.
+  // Only fall back to cached data while a refresh/load is in progress (transient empty).
+  // When a settled (non-loading, non-refreshing) fetch returns empty, respect it as
+  // authoritative — GPUs may have been removed from the cluster (#8601).
+  const isGpuTransient = gpuLoading || gpuRefreshing
   const lastGpuDataRef = useRef<{ clusterGPUs: typeof clusterGPUs; gpuByType: typeof gpuByType }>({ clusterGPUs: [], gpuByType: {} })
   if (clusterGPUs.length > 0) {
     lastGpuDataRef.current = { clusterGPUs, gpuByType }
+  } else if (!isGpuTransient) {
+    // Settled fetch returned empty — clear cached data so UI shows no GPUs
+    lastGpuDataRef.current = { clusterGPUs: [], gpuByType: {} }
   }
   const stableClusterGPUs = clusterGPUs.length > 0 ? clusterGPUs : lastGpuDataRef.current.clusterGPUs
   const stableGpuByType = clusterGPUs.length > 0 ? gpuByType : lastGpuDataRef.current.gpuByType
