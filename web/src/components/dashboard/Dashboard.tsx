@@ -774,12 +774,9 @@ export function Dashboard() {
       try {
         await api.delete(`/api/cards/${cardId}`)
       } catch (error) {
-        // Ignore 404 — card may have been local-only (e.g. demo-, new-, rec-, template- prefixed IDs)
-        const status = (error as { response?: { status?: number } })?.response?.status
-        if (status !== 404) {
-          console.error('Failed to delete card from backend:', error)
-          showToast('Failed to delete card from backend', 'error')
-        }
+        // Card is already removed from UI state above — backend failure is
+        // non-critical. Log for debugging but don't alarm the user. (#8564)
+        console.debug('Backend card deletion failed (card already removed from UI):', error)
       }
     }
   }

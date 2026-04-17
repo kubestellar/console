@@ -460,8 +460,9 @@ export function CustomDashboard() {
       try {
         await api.delete(`/api/dashboards/${id}/cards/${cardId}`)
       } catch (error) {
-        console.error('Failed to delete card:', error)
-        showToast('Failed to delete card from backend', 'error')
+        // Card is already removed from UI state above — backend failure is
+        // non-critical. Log for debugging but don't alarm the user. (#8564)
+        console.debug('Backend card deletion failed (card already removed from UI):', error)
       }
     }
   }

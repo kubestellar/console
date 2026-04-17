@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo, ReactNode } from 'react'
-import { X, Check, AlertTriangle, Info } from 'lucide-react'
+import { X, XCircle, Check, AlertTriangle, Info } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { Button } from './Button'
 
@@ -111,7 +111,7 @@ interface ToastItemProps {
 function ToastItem({ toast, onRemove }: ToastItemProps) {
   const icons: Record<ToastType, ReactNode> = {
     success: <Check className="w-4 h-4" />,
-    error: <X className="w-4 h-4" />,
+    error: <XCircle className="w-4 h-4" />,
     warning: <AlertTriangle className="w-4 h-4" />,
     info: <Info className="w-4 h-4" /> }
 
