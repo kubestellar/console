@@ -11,6 +11,7 @@ import { useCardLoadingState } from './CardDataContext'
 import type { SortDirection } from '../../lib/cards/cardHooks'
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../ui/StatusBadge'
+import { usePipelineFilter } from './pipelines/PipelineFilterContext'
 
 // Types for GitHub activity data
 interface GitHubPR {
@@ -547,6 +548,9 @@ export function GitHubActivity({ config, ref }: { config?: GitHubActivityConfig;
   const [viewMode, setViewMode] = useState<ViewMode>('prs')
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d' | '1y'>(config?.timeRange || '30d')
 
+  // Shared pipeline filter (if on /ci-cd inside PipelineFilterProvider).
+  const shared = usePipelineFilter()
+
   // Multi-repo state - inline CRUD pattern (matching GitHubCIMonitor)
   const [savedRepos, setSavedRepos] = useState<string[]>(() => getSavedRepos())
   const [currentRepo, setCurrentRepo] = useState<string>(() => {
@@ -559,8 +563,9 @@ export function GitHubActivity({ config, ref }: { config?: GitHubActivityConfig;
   const [repoInput, setRepoInput] = useState('')
   const [isEditingRepos, setIsEditingRepos] = useState(false)
 
-  // Use current repo for data fetching
-  const effectiveConfig = { ...config, repos: [currentRepo] }
+  // Use shared filter repo if available, otherwise per-card selection
+  const effectiveRepo = shared?.repoFilter || currentRepo
+  const effectiveConfig = { ...config, repos: [effectiveRepo] }
 
   const {
     prs,
