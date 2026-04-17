@@ -263,7 +263,7 @@ export function ActiveAlerts() {
               )}
             </button>
             {showDNDMenu && !dnd.isActive && (
-              <div className="absolute top-full left-0 mt-1 z-50 bg-popover border border-border rounded-lg shadow-lg py-1 min-w-[160px]">
+              <div className="absolute top-full left-0 mt-1 z-50 bg-[#1a1a2e] border border-border rounded-lg shadow-xl py-1 min-w-[160px]">
                 {([
                   ['1h', 'For 1 hour'],
                   ['4h', 'For 4 hours'],
