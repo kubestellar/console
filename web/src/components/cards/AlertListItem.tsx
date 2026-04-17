@@ -1,9 +1,11 @@
+import { useState, useRef, useEffect } from 'react'
 import {
   Clock,
   ChevronRight,
   Bot,
   Server,
   ExternalLink,
+  BellOff,
 } from 'lucide-react'
 import { getSeverityIcon } from '../../types/alerts'
 import type { Alert, AlertSeverity } from '../../types/alerts'
@@ -12,6 +14,7 @@ import { CardAIActions } from '../../lib/cards/CardComponents'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
 import type { Mission } from '../../hooks/useMissions'
+import { useSnoozedAlerts, SNOOZE_DURATIONS, formatSnoozeRemaining, type SnoozeDuration } from '../../hooks/useSnoozedAlerts'
 
 // Severity color map — defined at module level to avoid re-creation on each render
 const SEVERITY_COLORS: Record<AlertSeverity, string> = {
@@ -73,6 +76,23 @@ export function AlertListItem({
   onOpenMission,
 }: AlertListItemProps) {
   const { t } = useTranslation('cards')
+  const { snoozeAlert, unsnoozeAlert, isSnoozed, getSnoozeRemaining } = useSnoozedAlerts()
+  const [snoozeMenuOpen, setSnoozeMenuOpen] = useState(false)
+  const snoozeRef = useRef<HTMLDivElement>(null)
+  const alertSnoozed = isSnoozed(alert.id)
+  const snoozeRemaining = alertSnoozed ? getSnoozeRemaining(alert.id) : 0
+
+  // Close snooze menu on outside click
+  useEffect(() => {
+    if (!snoozeMenuOpen) return
+    const handler = (e: MouseEvent) => {
+      if (snoozeRef.current && !snoozeRef.current.contains(e.target as Node)) {
+        setSnoozeMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [snoozeMenuOpen])
 
   return (
     <div
@@ -119,6 +139,40 @@ export function AlertListItem({
 
       {/* Quick Actions */}
       <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/30">
+        {/* Snooze button */}
+        <div className="relative" ref={snoozeRef}>
+          {alertSnoozed ? (
+            <button
+              onClick={(e) => { e.stopPropagation(); unsnoozeAlert(alert.id) }}
+              className="flex items-center gap-1 px-2 py-1 text-xs rounded bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 hover:bg-yellow-500/30 transition-colors"
+              title="Snoozed — click to unsnooze"
+            >
+              <BellOff className="w-3 h-3" />
+              {formatSnoozeRemaining(snoozeRemaining ?? 0)}
+            </button>
+          ) : (
+            <button
+              onClick={(e) => { e.stopPropagation(); setSnoozeMenuOpen(!snoozeMenuOpen) }}
+              className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+              title="Snooze this alert"
+            >
+              <BellOff className="w-3.5 h-3.5" />
+            </button>
+          )}
+          {snoozeMenuOpen && (
+            <div className="absolute left-0 bottom-full mb-1 z-50 bg-[#1a1a2e] border border-border rounded-lg shadow-xl py-1 min-w-[100px]">
+              {(Object.keys(SNOOZE_DURATIONS) as SnoozeDuration[]).map(duration => (
+                <button
+                  key={duration}
+                  onClick={(e) => { e.stopPropagation(); snoozeAlert(alert.id, duration); setSnoozeMenuOpen(false) }}
+                  className="w-full px-3 py-1.5 text-xs text-left text-foreground hover:bg-muted/50 transition-colors"
+                >
+                  {duration}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         {!alert.acknowledgedAt && (
           <Button
             variant="secondary"

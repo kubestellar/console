@@ -466,9 +466,29 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
             {/* Duration */}
             <div>
               <label htmlFor="alertRuleDuration" className="block text-xs text-muted-foreground mb-1">
-                {t('alerts.durationSeconds')}
+                Duration (seconds before alerting)
               </label>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                {[
+                  { label: 'Immediate', value: 0 },
+                  { label: '1 min', value: 60 },
+                  { label: '5 min', value: 300 },
+                  { label: '15 min', value: 900 },
+                  { label: '1 hour', value: 3600 },
+                ].map(preset => (
+                  <button
+                    key={preset.value}
+                    type="button"
+                    onClick={() => setDuration(preset.value)}
+                    className={`px-2.5 py-1.5 text-xs rounded-lg border transition-colors ${
+                      duration === preset.value
+                        ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
+                        : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
                 <input
                   id="alertRuleDuration"
                   name="alertRuleDuration"
@@ -477,9 +497,9 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
                   max={3600}
                   value={duration}
                   onChange={e => setDuration(Number(e.target.value))}
-                  className="w-24 px-3 py-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-20 px-2 py-1.5 text-xs rounded-lg bg-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
                 />
-                <span className="text-sm text-muted-foreground">{t('alerts.durationHint')}</span>
+                <span className="text-xs text-muted-foreground">{t('alerts.durationHint')}</span>
               </div>
             </div>
 
