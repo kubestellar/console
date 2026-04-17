@@ -371,7 +371,7 @@ export function ACMMFeedbackLoops() {
                 </span>
               </button>
               {isLocked && isLockPromptOpen && (
-                <div className="px-8 pb-2 pt-1 text-[10px] border-t border-border/30 flex flex-wrap items-center justify-between gap-y-2 gap-2 ">
+                <div className="px-8 pb-2 pt-1 text-[10px] border-t border-border/30 flex flex-wrap items-center justify-between gap-2">
                   <span className="text-muted-foreground">
                     Locked — reach <span className="font-mono text-foreground">L{nextLevel}</span> first
                     {missingForNext > 0 && (

@@ -561,7 +561,7 @@ export function PodCrosser(_props: CardComponentProps) {
 
   return (
     <div ref={gameContainerRef} className="h-full flex flex-col p-2 select-none">
-      <div className="flex flex-wrap items-center justify-between gap-y-2 gap-2 mb-2 ">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-3 text-xs">
           <div className="text-center">
             <div className="text-muted-foreground">Score</div>

@@ -550,7 +550,7 @@ export function Solitaire(_props: CardComponentProps) {
   return (
     <div className="h-full flex flex-col p-2 select-none">
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-y-2 gap-2 mb-2 ">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span>Moves: {moves}</span>
           <span>Time: {formatTime(time)}</span>

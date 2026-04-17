@@ -252,7 +252,7 @@ function PodSweeperInternal(_props: CardComponentProps) {
   return (
     <div className="h-full flex flex-col p-2 select-none">
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-y-2 gap-2 mb-2 ">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-3 text-xs">
           <div className="flex items-center gap-1 text-red-400">
             <Flag className="w-3 h-3" />

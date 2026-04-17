@@ -291,7 +291,7 @@ export function MatchGame(_props: CardComponentProps) {
       />
 
       {/* Header with controls */}
-      <div className="flex flex-wrap items-center justify-between gap-y-2 gap-2 ">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         {/* Difficulty selector */}
         <div className="flex gap-1">
           {(['easy', 'medium', 'hard'] as Difficulty[]).map(d => (
@@ -312,7 +312,7 @@ export function MatchGame(_props: CardComponentProps) {
 
       {/* Game stats */}
       {isPlaying && (
-        <div className="flex flex-wrap items-center justify-between gap-y-2 gap-2 text-xs">
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
           <div className="flex items-center gap-1.5">
             <Hash className="w-3.5 h-3.5 text-blue-400" />
             <span>Moves: <span className="font-bold">{moves}</span></span>

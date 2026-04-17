@@ -469,7 +469,7 @@ export function IssueActivityChart(props: { config?: IssueActivityConfig }) {
   return (
     <div className="p-4 space-y-3">
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-y-2  gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Calendar className="h-4 w-4 text-muted-foreground" />
           <RepoSubtitle repo={repo} />

@@ -393,7 +393,7 @@ export function NodeInvaders(_props: CardComponentProps) {
 
   return (
     <div ref={gameContainerRef} className="h-full flex flex-col p-2 select-none">
-      <div className="flex flex-wrap items-center justify-between gap-y-2 gap-2 mb-2 ">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-1.5">
           <Rocket className="w-4 h-4 text-cyan-400" />
           <span className="text-sm font-semibold">Node Invaders</span>
