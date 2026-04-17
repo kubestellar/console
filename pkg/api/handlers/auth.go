@@ -350,22 +350,28 @@ func (h *AuthHandler) devModeLogin(c *fiber.Ctx) error {
 	}
 
 	if user == nil {
-		// Create dev user
+		// Create dev user with admin role — dev mode is for testing and
+		// the dev user needs full access to exercise all features (e.g.
+		// self-upgrade trigger, settings, RBAC management).
 		user = &models.User{
 			GitHubID:    devGitHubID,
 			GitHubLogin: devLogin,
 			Email:       devEmail,
 			AvatarURL:   avatarURL,
+			Role:        models.UserRoleAdmin,
 			Onboarded:   true, // Skip onboarding in dev mode
 		}
 		if err := h.store.CreateUser(user); err != nil {
 			return c.Redirect(h.frontendURL+"/login?error=create_user_failed", fiber.StatusTemporaryRedirect)
 		}
 	} else {
-		// Update existing user info to match config
+		// Update existing user info to match config.
+		// Ensure dev-mode user always has admin role so all features
+		// (self-upgrade, settings, RBAC) are exercisable during testing.
 		user.GitHubLogin = devLogin
 		user.Email = devEmail
 		user.AvatarURL = avatarURL
+		user.Role = models.UserRoleAdmin
 		if err := h.store.UpdateUser(user); err != nil {
 			slog.Warn("[Auth] failed to update dev user", "user", devLogin, "error", err)
 			return c.Redirect(h.frontendURL+"/login?error=db_error", fiber.StatusTemporaryRedirect)
