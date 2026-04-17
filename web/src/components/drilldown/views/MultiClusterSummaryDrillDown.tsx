@@ -163,6 +163,7 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
     lastRefresh: nodesLastRefresh,
     isLoading: nodesIsLoading,
     isFailed: nodesIsFailed,
+    isDemoFallback: nodesIsDemoFallback,
   } = useCachedNodes()
   const { pvcs: cachedPVCs } = useCachedPVCs()
   // Guard against undefined to prevent crashes when APIs return 404/500/empty
@@ -441,11 +442,18 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
   return (
     <div className="space-y-6">
       {/* Freshness indicator for cached data */}
-      {nodesDataAge && (
-        <div className="flex justify-end">
-          <span className="text-2xs text-muted-foreground" title={new Date(nodesLastRefresh!).toLocaleString()}>
-            Updated {formatRelativeTime(nodesDataAge)}
-          </span>
+      {viewType === 'all-nodes' && (nodesDataAge || nodesIsDemoFallback) && (
+        <div className="flex items-center justify-end gap-2">
+          {nodesIsDemoFallback && (
+            <span className="text-2xs px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+              Demo
+            </span>
+          )}
+          {nodesDataAge && (
+            <span className="text-2xs text-muted-foreground" title={new Date(nodesLastRefresh!).toLocaleString()}>
+              Updated {formatRelativeTime(nodesDataAge)}
+            </span>
+          )}
         </div>
       )}
 

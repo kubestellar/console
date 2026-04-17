@@ -1329,6 +1329,7 @@ export function useCachedNodes(
     category: 'pods' as RefreshCategory,
     initialData: [] as NodeInfo[],
     demoData: getDemoCachedNodes(),
+    demoWhenEmpty: !cluster,
     persist: true,
     fetcher: async () => {
       if (cluster) {

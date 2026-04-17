@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { ChevronRight, ChevronDown, Server, Box, Layers, Database, Network, HardDrive, Search, AlertTriangle, XCircle } from 'lucide-react'
 import { StatusBadge } from '../../ui/StatusBadge'
 import { useClusterHealth, usePodIssues, useDeploymentIssues, useGPUNodes, useNodes, useNamespaces, useDeployments, useServices, useEvents } from '../../../hooks/useMCP'
@@ -21,13 +21,33 @@ interface Props {
 export function ClusterDrillDown({ data }: Props) {
   const { t } = useTranslation()
   const clusterName = (data.cluster as string) || ''
-  const { drillToNamespace, drillToPod, drillToGPUNode, drillToEvents } = useDrillDownActions()
+  const { drillToNamespace, drillToPod, drillToGPUNode, drillToEvents, drillToNode } = useDrillDownActions()
 
   // Tree view state
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['cluster', 'nodes', 'namespaces']))
   const [searchFilter, setSearchFilter] = useState('')
   const [activeLens, setActiveLens] = useState<TreeLens>('all')
   const [activeTab, setActiveTab] = useState<ClusterTab>('events')
+  const nodesSectionRef = useRef<HTMLDivElement>(null)
+
+  /** Scroll delay to let the DOM update after switching tabs */
+  const SCROLL_AFTER_TAB_SWITCH_MS = 100
+
+  /** Navigate to the nodes section in the resource tree */
+  const scrollToNodesSection = useCallback(() => {
+    setActiveTab('resources')
+    setActiveLens('nodes')
+    setExpandedSections(prev => {
+      const next = new Set(prev)
+      next.add('cluster')
+      next.add('nodes')
+      return next
+    })
+    // Allow DOM to update before scrolling
+    setTimeout(() => {
+      nodesSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }, SCROLL_AFTER_TAB_SWITCH_MS)
+  }, [])
 
   // Safeguard timeout to prevent infinite loading - show content after 5 seconds max
   const [loadingTimedOut, setLoadingTimedOut] = useState(false)
@@ -248,11 +268,14 @@ export function ClusterDrillDown({ data }: Props) {
           </div>
         </div>
 
-        <div className="p-4 rounded-lg bg-card/50 border border-border">
+        <button
+          onClick={scrollToNodesSection}
+          className="p-4 rounded-lg bg-card/50 border border-border text-left hover:bg-card hover:border-primary/50 transition-colors cursor-pointer w-full"
+        >
           <div className="text-sm text-muted-foreground mb-2">{t('common.nodes')}</div>
           <div className="text-2xl font-bold text-foreground">{health?.nodeCount || 0}</div>
           <div className="text-xs text-green-400">{health?.readyNodes || 0} ready</div>
-        </div>
+        </button>
 
         <div className="p-4 rounded-lg bg-card/50 border border-border">
           <div className="text-sm text-muted-foreground mb-2">{t('common.pods')}</div>
@@ -598,14 +621,15 @@ export function ClusterDrillDown({ data }: Props) {
                         </div>
 
                         {expandedSections.has('nodes') && (
-                          <div className="ml-6 border-l-2 border-blue-500/30 pl-4 mt-1 space-y-1">
+                          <div ref={nodesSectionRef} className="ml-6 border-l-2 border-blue-500/30 pl-4 mt-1 space-y-1">
                             {filteredNodes.slice(0, 20).map((node, i) => (
                               <div
                                 key={i}
+                                onClick={() => drillToNode(clusterName, node.name, { status: node.status, roles: node.roles, unschedulable: node.unschedulable })}
                                 className="flex items-center gap-2 p-2 rounded-lg hover:bg-secondary/50 cursor-pointer group"
                               >
                                 <div className={`w-2 h-2 rounded-full ${node.status === 'Ready' ? 'bg-green-400' : 'bg-red-400'}`} />
-                                <span className="text-sm text-foreground">{node.name}</span>
+                                <span className="text-sm text-foreground group-hover:text-primary transition-colors">{node.name}</span>
                                 <span className={`text-xs ${node.status === 'Ready' ? 'text-green-400' : 'text-red-400'}`}>
                                   {node.status}
                                 </span>
