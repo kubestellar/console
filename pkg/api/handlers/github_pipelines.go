@@ -746,32 +746,38 @@ func (h *GitHubPipelinesHandler) buildPulse(c *fiber.Ctx) (any, error) {
 			var arr []struct {
 				TagName     string  `json:"tag_name"`
 				PublishedAt *string `json:"published_at"`
+				CreatedAt   *string `json:"created_at"`
 				Draft       bool    `json:"draft"`
 			}
 			if dec := json.NewDecoder(relRes.Body).Decode(&arr); dec == nil && len(arr) > 0 {
-				// Filter to non-draft nightly releases and sort by published_at descending.
-				type candidate struct {
-					tag         string
-					publishedAt time.Time
-				}
 				// Include drafts — nightly releases on this repo are created as
 				// drafts and never promoted, so filtering them out leaves zero
-				// candidates. (#8666 follow-up)
+				// candidates. Sort by published_at (preferred) or created_at
+				// (fallback for drafts where published_at is unset). (#8666 follow-up)
+				type candidate struct {
+					tag       string
+					sortTime  time.Time
+				}
 				candidates := make([]candidate, 0, len(arr))
 				for _, r := range arr {
 					if !ghpNightlyTagRe.MatchString(r.TagName) {
 						continue
 					}
-					var pub time.Time
+					var sortTime time.Time
 					if r.PublishedAt != nil {
 						if parsed, pErr := time.Parse(time.RFC3339, *r.PublishedAt); pErr == nil {
-							pub = parsed
+							sortTime = parsed
 						}
 					}
-					candidates = append(candidates, candidate{tag: r.TagName, publishedAt: pub})
+					if sortTime.IsZero() && r.CreatedAt != nil {
+						if parsed, pErr := time.Parse(time.RFC3339, *r.CreatedAt); pErr == nil {
+							sortTime = parsed
+						}
+					}
+					candidates = append(candidates, candidate{tag: r.TagName, sortTime: sortTime})
 				}
 				sort.Slice(candidates, func(i, j int) bool {
-					return candidates[i].publishedAt.After(candidates[j].publishedAt)
+					return candidates[i].sortTime.After(candidates[j].sortTime)
 				})
 				if len(candidates) > 0 {
 					tag := candidates[0].tag

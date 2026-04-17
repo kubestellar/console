@@ -415,17 +415,21 @@ async function buildPulse(
       const releases = (await rel.json()) as Array<{
         tag_name?: string;
         published_at?: string;
+        created_at?: string;
         draft?: boolean;
       }>;
       // Include drafts — nightly releases on this repo are created as drafts
       // and never promoted, so filtering them out leaves zero candidates.
+      // Sort by published_at when available, falling back to created_at for
+      // drafts where published_at is unset.
+      const sortTime = (r: { published_at?: string; created_at?: string }): number => {
+        if (r.published_at) return new Date(r.published_at).getTime();
+        if (r.created_at) return new Date(r.created_at).getTime();
+        return 0;
+      };
       const candidates = (releases || [])
         .filter((r) => r.tag_name && NIGHTLY_TAG_RE.test(r.tag_name))
-        .sort((a, b) => {
-          const pa = a.published_at ? new Date(a.published_at).getTime() : 0;
-          const pb = b.published_at ? new Date(b.published_at).getTime() : 0;
-          return pb - pa; // newest first
-        });
+        .sort((a, b) => sortTime(b) - sortTime(a)); // newest first
       releaseTag = candidates[0]?.tag_name ?? null;
     }
   } catch {
