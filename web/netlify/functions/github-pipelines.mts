@@ -89,6 +89,12 @@ const REPOS = getRepos();
 const NIGHTLY_RELEASE_REPO = "kubestellar/console";
 const NIGHTLY_RELEASE_WORKFLOW = "release.yml";
 
+/** How many releases to fetch so we can sort by published_at ourselves */
+const RELEASE_OVERFETCH = 10;
+
+/** Matches nightly release tags like "v0.3.21-nightly.20260417" */
+const NIGHTLY_TAG_RE = /nightly/i;
+
 /** ms per day — used in matrix date math */
 const MS_PER_DAY = 86_400_000;
 
@@ -362,13 +368,28 @@ async function buildPulse(
   const runs = (data.workflow_runs ?? []).map((r) => normalizeRun(r, targetRepo));
   mergeIntoHistory(await readHistory(store), runs); // side-effect updates below
 
-  // Latest release tag (best-effort — release might be on the same day as the run)
+  // Latest release tag (best-effort).
+  // Fetch several recent releases and pick the one with the newest
+  // published_at. GitHub's /releases endpoint sorts by created_at of the
+  // release API object, not published_at — causing stale tags when a
+  // release is re-published or a draft is later promoted. (#8666)
   let releaseTag: string | null = null;
   try {
-    const rel = await gh(`/repos/${targetRepo}/releases?per_page=1`, token);
+    const rel = await gh(`/repos/${targetRepo}/releases?per_page=${RELEASE_OVERFETCH}`, token);
     if (rel.ok) {
-      const releases = (await rel.json()) as Array<{ tag_name?: string }>;
-      releaseTag = releases[0]?.tag_name ?? null;
+      const releases = (await rel.json()) as Array<{
+        tag_name?: string;
+        published_at?: string;
+        draft?: boolean;
+      }>;
+      const candidates = (releases || [])
+        .filter((r) => !r.draft && r.tag_name && NIGHTLY_TAG_RE.test(r.tag_name))
+        .sort((a, b) => {
+          const pa = a.published_at ? new Date(a.published_at).getTime() : 0;
+          const pb = b.published_at ? new Date(b.published_at).getTime() : 0;
+          return pb - pa; // newest first
+        });
+      releaseTag = candidates[0]?.tag_name ?? null;
     }
   } catch {
     // Non-fatal

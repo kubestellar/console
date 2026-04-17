@@ -50,6 +50,7 @@ const (
 	ghpMaxErrorBodyBytes     = 10_000
 	ghpMaxLogBytes           = 10 * 1024 * 1024 // 10 MB cap on job log downloads
 	ghpMatrixSparseMinCells  = 1
+	ghpReleaseOverfetch      = 10 // fetch recent releases so we can sort by published_at
 )
 
 // ghpDefaultRepos is the default when PIPELINE_REPOS env var is not set.
@@ -89,6 +90,9 @@ var ghpRepos = ghpGetRepos()
 // ghpValidRepoPattern enforces strict owner/repo format to prevent path
 // traversal — the repo value is interpolated into GitHub API paths.
 var ghpValidRepoPattern = regexp.MustCompile(`^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$`)
+
+// ghpNightlyTagRe matches nightly release tags like "v0.3.21-nightly.20260417".
+var ghpNightlyTagRe = regexp.MustCompile(`(?i)nightly`)
 
 func ghpIsAllowedRepo(repo string) bool {
 	// Accept any valid owner/repo slug — the GitHub token's permissions
@@ -634,18 +638,52 @@ func (h *GitHubPipelinesHandler) buildPulse(c *fiber.Ctx) (any, error) {
 	}
 	h.history.merge(releaseRuns)
 
-	// Latest release tag (best-effort)
+	// Latest release tag (best-effort).
+	// Fetch several recent releases and pick the one with the newest
+	// published_at timestamp. GitHub's /releases endpoint sorts by the
+	// release-object created_at, which can differ from published_at when
+	// a draft is edited or a release is re-published — causing a stale
+	// tag to appear at position 0. Sorting by published_at ourselves
+	// eliminates that false staleness. (#8666)
 	var releaseTag *string
-	relRes, relErr := h.ghGet(ctx, "/repos/"+pulseRepo+"/releases?per_page=1")
+	relRes, relErr := h.ghGet(ctx, "/repos/"+pulseRepo+"/releases?per_page="+strconv.Itoa(ghpReleaseOverfetch))
 	if relErr == nil {
 		defer relRes.Body.Close()
 		if relRes.StatusCode == http.StatusOK {
 			var arr []struct {
-				TagName string `json:"tag_name"`
+				TagName     string  `json:"tag_name"`
+				PublishedAt *string `json:"published_at"`
+				Draft       bool    `json:"draft"`
 			}
 			if dec := json.NewDecoder(relRes.Body).Decode(&arr); dec == nil && len(arr) > 0 {
-				tag := arr[0].TagName
-				releaseTag = &tag
+				// Filter to non-draft nightly releases and sort by published_at descending.
+				type candidate struct {
+					tag         string
+					publishedAt time.Time
+				}
+				candidates := make([]candidate, 0, len(arr))
+				for _, r := range arr {
+					if r.Draft {
+						continue
+					}
+					if !ghpNightlyTagRe.MatchString(r.TagName) {
+						continue
+					}
+					var pub time.Time
+					if r.PublishedAt != nil {
+						if parsed, pErr := time.Parse(time.RFC3339, *r.PublishedAt); pErr == nil {
+							pub = parsed
+						}
+					}
+					candidates = append(candidates, candidate{tag: r.TagName, publishedAt: pub})
+				}
+				sort.Slice(candidates, func(i, j int) bool {
+					return candidates[i].publishedAt.After(candidates[j].publishedAt)
+				})
+				if len(candidates) > 0 {
+					tag := candidates[0].tag
+					releaseTag = &tag
+				}
 			}
 		}
 	}
