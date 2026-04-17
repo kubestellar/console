@@ -349,8 +349,13 @@ export function ACMMFeedbackLoops() {
                   <div className="text-[10px] text-muted-foreground truncate">{c.description}</div>
                 </div>
                 {c.crossCutting && (
-                  <span className="text-[9px] px-1.5 py-0.5 rounded-full flex-shrink-0 bg-violet-500/20 text-violet-400">
-                    {c.crossCutting === 'learning' ? 'L&F' : 'T&A'}
+                  <span
+                    className="text-[9px] px-1.5 py-0.5 rounded-full flex-shrink-0 bg-violet-500/20 text-violet-400 cursor-help"
+                    title={c.crossCutting === 'learning'
+                      ? 'Cross-cutting: Learning & Feedback — how the system encodes learnings and improves over time'
+                      : 'Cross-cutting: Traceability & Audit — how agent actions are logged, attributed, and reviewable'}
+                  >
+                    {c.crossCutting === 'learning' ? 'Learning' : 'Traceability'}
                   </span>
                 )}
                 {c.scannable === false && (

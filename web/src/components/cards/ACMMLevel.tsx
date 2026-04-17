@@ -88,8 +88,8 @@ export function ACMMLevel() {
           <LevelRing level={level.level} />
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <div className="text-2xl font-bold leading-none">L{level.level}</div>
-            <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">
-              {level.levelName}
+            <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5 max-w-[90px] text-center leading-tight">
+              {level.levelName.split(' / ')[0]}
             </div>
           </div>
         </div>
