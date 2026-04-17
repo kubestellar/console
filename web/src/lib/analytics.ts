@@ -983,7 +983,7 @@ export function emitMissionError(
 }
 
 export function emitMissionRated(missionType: string, rating: string) {
-  send('ksc_mission_rated', { mission_type: missionType, rating })
+  send('ksc_mission_rated', { mission_type: missionType, rating }, { bypassOptOut: true })
 }
 
 // ── Mission Browser / Knowledge Base ──────────────────────────────

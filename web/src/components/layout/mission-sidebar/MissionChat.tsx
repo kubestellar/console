@@ -62,6 +62,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
   const savedInputRef = useRef('')
   // Resolution memory state
   const [showSaveDialog, setShowSaveDialog] = useState(false)
+  const [feedbackDismissed, setFeedbackDismissed] = useState<Set<string>>(new Set())
   const [appliedResolutionId] = useState<string | null>(null)
   const [showSetupDialog, setShowSetupDialog] = useState(false)
   // Message validation error (e.g. too long)
@@ -847,91 +848,69 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
                 <Send className="w-4 h-4" />
               </button>
             </div>
-            <div className="flex items-center justify-end">
-              <button
-                onClick={() => cancelMission(mission.id)}
-                className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 py-2.5 px-3 min-h-[44px] rounded hover:bg-red-500/10 transition-colors"
-                data-testid="terminate-session-inline-btn"
-              >
-                <StopCircle className="w-3 h-3" />
-                {t('missionChat.terminateSession', { defaultValue: 'Terminate Session' })}
-              </button>
-            </div>
+            {/* Terminate button removed — header already has one (line 448) */}
           </div>
         ) : mission.status === 'completed' ? (
           <div className="flex flex-col gap-3">
-            {/* Conversational completion message */}
-            <div className="bg-secondary/30 border border-border rounded-lg p-3">
-              <div className="flex items-start gap-2">
-                <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
-                  <CheckCircle className="w-3.5 h-3.5 text-green-400" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-foreground mb-2">
-                    {mission.type === 'troubleshoot'
-                      ? t('missionChat.completedDiagnosis')
-                      : mission.type === 'deploy' || mission.type === 'repair'
-                      ? t('missionChat.operationComplete')
-                      : t('missionChat.missionComplete')}
-                  </p>
-
-                  {/* Feedback buttons - only show if no feedback yet */}
-                  {!mission.feedback && (
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => {
-                          rateMission(mission.id, 'positive')
-                          if (appliedResolutionId) {
-                            recordUsage(appliedResolutionId, true)
-                          }
-                        }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-green-500/10 hover:bg-green-500/20 text-green-400 border border-green-500/30 rounded-lg transition-colors"
-                      >
-                        <ThumbsUp className="w-3.5 h-3.5" />
-                        {t('missionChat.yesHelpful')}
-                      </button>
-                      <button
-                        onClick={() => {
-                          rateMission(mission.id, 'negative')
-                          if (appliedResolutionId) {
-                            recordUsage(appliedResolutionId, false)
-                          }
-                        }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-secondary hover:bg-secondary/80 text-muted-foreground border border-border rounded-lg transition-colors"
-                      >
-                        <ThumbsDown className="w-3.5 h-3.5" />
-                        {t('missionChat.notReally')}
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Save prompt after positive feedback */}
-                  {mission.feedback === 'positive' && (
-                    <div className="mt-3 pt-3 border-t border-border/50">
-                      <p className="text-sm text-foreground mb-2">
-                        {t('missionChat.saveResolutionPrompt')}
-                      </p>
-                      <button
-                        onClick={() => setShowSaveDialog(true)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 rounded-lg transition-colors"
-                      >
-                        <Save className="w-3.5 h-3.5" />
-                        {t('missionChat.saveResolution')}
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Thank you after negative feedback */}
-                  {mission.feedback === 'negative' && (
-                    <div className="mt-2">
-                      <p className="text-xs text-muted-foreground">
-                        {t('missionChat.thanksFeedback')}
-                      </p>
-                    </div>
-                  )}
-                </div>
+            {/* Slim inline feedback bar — dismissable, non-obtrusive */}
+            {!mission.feedback && !feedbackDismissed.has(mission.id) && (
+              <div className="flex items-center gap-2 px-2.5 py-1.5 bg-secondary/30 border border-border rounded-md text-xs">
+                <CheckCircle className="w-3.5 h-3.5 text-green-400 flex-shrink-0" />
+                <span className="text-muted-foreground">{t('missionChat.wasHelpful', { defaultValue: 'Helpful?' })}</span>
+                <button
+                  onClick={() => {
+                    rateMission(mission.id, 'positive')
+                    if (appliedResolutionId) {
+                      recordUsage(appliedResolutionId, true)
+                    }
+                  }}
+                  className="flex items-center gap-1 px-2 py-0.5 text-green-400 hover:bg-green-500/15 rounded transition-colors"
+                >
+                  <ThumbsUp className="w-3 h-3" />
+                  {t('missionChat.yes', { defaultValue: 'Yes' })}
+                </button>
+                <button
+                  onClick={() => {
+                    rateMission(mission.id, 'negative')
+                    if (appliedResolutionId) {
+                      recordUsage(appliedResolutionId, false)
+                    }
+                  }}
+                  className="flex items-center gap-1 px-2 py-0.5 text-muted-foreground hover:bg-secondary/80 rounded transition-colors"
+                >
+                  <ThumbsDown className="w-3 h-3" />
+                  {t('missionChat.no', { defaultValue: 'No' })}
+                </button>
+                <button
+                  onClick={() => setFeedbackDismissed(prev => new Set(prev).add(mission.id))}
+                  className="ml-auto p-0.5 text-muted-foreground/50 hover:text-muted-foreground rounded transition-colors"
+                  aria-label="Dismiss"
+                >
+                  <X className="w-3 h-3" />
+                </button>
               </div>
-            </div>
+            )}
+
+            {/* Save resolution prompt — slim, dismissable */}
+            {mission.feedback === 'positive' && !feedbackDismissed.has(mission.id) && (
+              <div className="flex items-center gap-2 px-2.5 py-1.5 bg-secondary/30 border border-border rounded-md text-xs">
+                <span className="text-muted-foreground">{t('missionChat.saveResolutionShort', { defaultValue: 'Save this resolution for next time?' })}</span>
+                <button
+                  onClick={() => setShowSaveDialog(true)}
+                  className="flex items-center gap-1 px-2 py-0.5 text-primary hover:bg-primary/15 rounded transition-colors"
+                >
+                  <Save className="w-3 h-3" />
+                  {t('missionChat.save', { defaultValue: 'Save' })}
+                </button>
+                <button
+                  onClick={() => setFeedbackDismissed(prev => new Set(prev).add(mission.id))}
+                  className="ml-auto p-0.5 text-muted-foreground/50 hover:text-muted-foreground rounded transition-colors"
+                  aria-label="Dismiss"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            )}
 
             {/* Orbit Setup Offer — shown after install/deploy missions complete */}
             {(mission.importedFrom?.missionClass === 'install' || mission.type === 'deploy') && (
