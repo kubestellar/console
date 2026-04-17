@@ -37,7 +37,17 @@ vi.mock('../useDemoMode', () => ({
 
 vi.mock('../../lib/demoMode', () => ({
   isDemoMode: () => true,
+  getDemoMode: () => true,
+  setDemoMode: vi.fn(),
+  toggleDemoMode: vi.fn(),
+  subscribeDemoMode: vi.fn(() => vi.fn()),
+  isDemoModeForced: false,
   isNetlifyDeployment: false,
+  canToggleDemoMode: () => true,
+  isDemoToken: () => true,
+  hasRealToken: () => false,
+  setDemoToken: vi.fn(),
+  setGlobalDemoMode: vi.fn(),
 }))
 
 vi.mock('../../lib/modeTransition', () => ({
