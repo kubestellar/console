@@ -80,6 +80,8 @@ const SORT_OPTIONS = [
   { value: 'branch', label: 'Branch' },
 ]
 
+const TITLE_DIAGNOSE = 'Diagnose with AI'
+
 // Demo data for when GitHub API is not available
 const DEMO_WORKFLOWS: WorkflowRun[] = [
   { id: '1', name: 'CI / Build & Test', repo: 'kubestellar/kubestellar', status: 'completed', conclusion: 'success', branch: 'main', event: 'push', runNumber: 1234, createdAt: new Date(Date.now() - 300000).toISOString(), updatedAt: new Date(Date.now() - 60000).toISOString(), url: '#' },
@@ -494,7 +496,7 @@ export function GitHubCIMonitor({ config, ref }: GitHubCIMonitorProps & { ref?: 
                       initialPrompt: `Diagnose why the "${w.name}" workflow failed on ${w.repo} (branch: ${w.branch}).\n\nRun URL: ${w.url}\n\nPlease:\n1. Check the workflow logs and identify the root cause.\n2. Tell me what went wrong, then ask:\n   - "Should I create a fix?"\n   - "Show me more details"\n3. If I say fix it, create a branch with the fix and open a PR.`,
                     })}
                     className="text-muted-foreground hover:text-blue-400 p-1 rounded hover:bg-blue-500/10 shrink-0"
-                    title="Diagnose with AI"
+                    title={TITLE_DIAGNOSE}
                   >
                     <Stethoscope className="w-3 h-3" />
                   </button>
