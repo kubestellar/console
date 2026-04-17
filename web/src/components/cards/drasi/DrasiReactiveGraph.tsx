@@ -1060,7 +1060,7 @@ function RowDetailDrawer({ row, onClose }: { row: LiveResultRow | null; onClose:
     >
       <div className="flex items-center justify-between px-3 py-2 border-b border-slate-700/60">
         <span className="text-xs font-semibold text-cyan-300 uppercase tracking-wider">{t('drasi.rowDetailTitle')}</span>
-        <button type="button" onClick={onClose} className="w-5 h-5 flex items-center justify-center rounded hover:bg-slate-800 text-slate-400" aria-label={t('actions.close')}>
+        <button type="button" onClick={onClose} className="min-w-11 min-h-11 flex items-center justify-center rounded hover:bg-slate-800 text-slate-400" aria-label={t('actions.close')}>
           <X className="w-3.5 h-3.5" />
         </button>
       </div>
@@ -1163,7 +1163,7 @@ function ExpandModal({ node, onClose }: { node: ExpandedNodeDetails | null; onCl
             {node.type} · {node.kind}
           </div>
         </div>
-        <button type="button" onClick={onClose} className="w-6 h-6 flex items-center justify-center rounded hover:bg-slate-800 text-slate-400" aria-label={t('actions.close')}>
+        <button type="button" onClick={onClose} className="min-w-11 min-h-11 flex items-center justify-center rounded hover:bg-slate-800 text-slate-400" aria-label={t('actions.close')}>
           <X className="w-4 h-4" />
         </button>
       </div>
@@ -1233,7 +1233,7 @@ function SourceConfigModal({
             {isCreate ? t('drasi.newSourceSubtitle') : t('drasi.sourceKindLabel', { kind: source!.kind })}
           </div>
         </div>
-        <button type="button" onClick={onClose} className="w-6 h-6 flex items-center justify-center rounded hover:bg-slate-800 text-slate-400" aria-label={t('actions.close')}>
+        <button type="button" onClick={onClose} className="min-w-11 min-h-11 flex items-center justify-center rounded hover:bg-slate-800 text-slate-400" aria-label={t('actions.close')}>
           <X className="w-4 h-4" />
         </button>
       </div>
@@ -1330,7 +1330,7 @@ function QueryConfigModal({
             {isCreate ? t('drasi.newQuerySubtitle') : t('drasi.queryLanguageLabel', { language: query!.language })}
           </div>
         </div>
-        <button type="button" onClick={onClose} className="w-6 h-6 flex items-center justify-center rounded hover:bg-slate-800 text-slate-400" aria-label={t('actions.close')}>
+        <button type="button" onClick={onClose} className="min-w-11 min-h-11 flex items-center justify-center rounded hover:bg-slate-800 text-slate-400" aria-label={t('actions.close')}>
           <X className="w-4 h-4" />
         </button>
       </div>
@@ -1469,7 +1469,7 @@ function ConnectionsModal({
           <div id="drasi-connections-title" className="text-white font-semibold text-sm">{t('drasi.connectionsTitle')}</div>
           <div className="text-muted-foreground text-xs uppercase tracking-wider mt-0.5">{t('drasi.connectionsSubtitle')}</div>
         </div>
-        <button type="button" onClick={onClose} className="w-6 h-6 flex items-center justify-center rounded hover:bg-slate-800 text-slate-400" aria-label={t('actions.close')}>
+        <button type="button" onClick={onClose} className="min-w-11 min-h-11 flex items-center justify-center rounded hover:bg-slate-800 text-slate-400" aria-label={t('actions.close')}>
           <X className="w-4 h-4" />
         </button>
       </div>
@@ -1780,7 +1780,7 @@ function StreamSampleDrawer({ endpoint, isDemo, onClose }: StreamSampleDrawerPro
           <Code2 className="w-3.5 h-3.5 text-cyan-400" />
           <span className="text-xs font-semibold text-cyan-300 uppercase tracking-wider">{t('drasi.consumeStreamTitle')}</span>
         </div>
-        <button type="button" onClick={onClose} className="w-5 h-5 flex items-center justify-center rounded hover:bg-slate-800 text-slate-400" aria-label={t('actions.close')}>
+        <button type="button" onClick={onClose} className="min-w-11 min-h-11 flex items-center justify-center rounded hover:bg-slate-800 text-slate-400" aria-label={t('actions.close')}>
           <X className="w-3.5 h-3.5" />
         </button>
       </div>
