@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import { WhatsNewModal, isUpdateSnoozed, isKillSwitchEnabled } from './WhatsNewModal'
+import { WhatsNewModal, isUpdateSnoozed } from './WhatsNewModal'
 
 // Mock dependencies
 vi.mock('../../hooks/useVersionCheck', () => ({
@@ -165,15 +165,4 @@ describe('isUpdateSnoozed', () => {
   })
 })
 
-describe('isKillSwitchEnabled', () => {
-  beforeEach(() => localStorage.clear())
-
-  it('returns false by default', () => {
-    expect(isKillSwitchEnabled()).toBe(false)
-  })
-
-  it('returns true when set', () => {
-    localStorage.setItem('kc-whats-new-modal-disabled', '1')
-    expect(isKillSwitchEnabled()).toBe(true)
-  })
-})
+// isKillSwitchEnabled was removed in PR #8527 — kill-switch is no longer needed

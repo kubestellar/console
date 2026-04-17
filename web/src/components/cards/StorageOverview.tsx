@@ -9,6 +9,7 @@ import { CardClusterFilter } from '../../lib/cards/CardComponents'
 import { useChartFilters } from '../../lib/cards/cardHooks'
 import { useTranslation } from 'react-i18next'
 import { useDemoMode } from '../../hooks/useDemoMode'
+import { Skeleton, SkeletonStats, SkeletonList } from '../ui/Skeleton'
 
 export function StorageOverview() {
   const { t } = useTranslation(['cards', 'common'])
@@ -102,7 +103,21 @@ export function StorageOverview() {
     filteredClusters.some(c => c.reachable !== false && c.storageGB !== undefined)
 
   if (showSkeleton) {
-    return null
+    return (
+      <div className="h-full flex flex-col min-h-card">
+        {/* Loading label for accessibility / test hook */}
+        <p className="sr-only">{t('storageOverview.loading')}</p>
+        {/* Header skeleton */}
+        <div className="flex items-center justify-between mb-4">
+          <Skeleton variant="text" width={120} height={16} />
+          <Skeleton variant="rounded" width={80} height={24} />
+        </div>
+        {/* Stats skeleton */}
+        <SkeletonStats className="mb-4" />
+        {/* List skeleton */}
+        <SkeletonList items={3} className="flex-1" />
+      </div>
+    )
   }
 
   if (showEmptyState) {

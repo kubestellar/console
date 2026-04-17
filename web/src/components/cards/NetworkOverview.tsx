@@ -9,6 +9,7 @@ import { CardClusterFilter } from '../../lib/cards/CardComponents'
 import { useChartFilters } from '../../lib/cards/cardHooks'
 import { ClusterStatusDot } from '../ui/ClusterStatusBadge'
 import { RefreshIndicator } from '../ui/RefreshIndicator'
+import { Skeleton, SkeletonStats, SkeletonList } from '../ui/Skeleton'
 
 export function NetworkOverview() {
   const { deduplicatedClusters: clusters, isLoading, isRefreshing: clustersRefreshing, lastRefresh: clustersLastRefreshDate } = useClusters()
@@ -105,7 +106,22 @@ export function NetworkOverview() {
   }, [filteredServices, filteredClusters])
 
   if (showSkeleton) {
-    return null
+    return (
+      <div className="h-full flex flex-col min-h-card">
+        {/* Header skeleton */}
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Skeleton variant="circular" width={16} height={16} />
+            <Skeleton variant="text" width={100} height={16} />
+          </div>
+          <Skeleton variant="rounded" width={80} height={24} />
+        </div>
+        {/* Stats skeleton */}
+        <SkeletonStats className="mb-4" />
+        {/* List skeleton */}
+        <SkeletonList items={3} className="flex-1" />
+      </div>
+    )
   }
 
   if (showEmptyState) {
