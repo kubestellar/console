@@ -331,10 +331,10 @@ describe('useGPUReservations', () => {
   })
 })
 
-// #8144: multi-type GPU reservations. These tests pin the front-end
+// Multi-type GPU reservations. These tests pin the front-end
 // reconciliation helper used everywhere the UI needs to know the
 // canonical list of accepted GPU types for a reservation.
-describe('normalizeGpuTypes (#8144)', () => {
+describe('normalizeGpuTypes (gpu-multitype)', () => {
   it('returns the multi-type list when gpu_types is populated', () => {
     const r = { gpu_type: 'NVIDIA A100', gpu_types: ['NVIDIA A100', 'NVIDIA H100'] }
     expect(normalizeGpuTypes(r)).toEqual(['NVIDIA A100', 'NVIDIA H100'])

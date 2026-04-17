@@ -56,17 +56,17 @@ func (s ReservationStatus) CanTransitionTo(target ReservationStatus) bool {
 
 // GPUReservation represents a GPU reservation submitted by a user.
 //
-// #8144: GPUType (singular) is the legacy single-type field kept for
+// GPUType (singular) is the legacy single-type field kept for
 // backwards compatibility with existing rows and external consumers.
 // GPUTypes (plural) is the authoritative list of acceptable GPU types for
 // a reservation — an empty list means "any GPU is acceptable", a single
 // entry behaves exactly like the old single-type reservation, and two
-// or more entries implement the multi-type-preference request from
-// issue #8144 (Mike Spreitzer).
+// or more entries implement the multi-type-preference feature
+// (Mike Spreitzer).
 //
 // Serialization & migration rules:
 //   - On write, GPUType mirrors GPUTypes[0] (or "" when GPUTypes is empty)
-//     so pre-#8144 readers still see a meaningful value.
+//     so pre-multitype readers still see a meaningful value.
 //   - On read from persistent storage, if GPUTypes is empty but GPUType
 //     is set, GPUTypes is synthesized as []string{GPUType}. This keeps
 //     existing rows usable without a destructive migration.
@@ -80,7 +80,7 @@ type GPUReservation struct {
 	Namespace     string            `json:"namespace"`
 	GPUCount      int               `json:"gpu_count"`
 	GPUType       string            `json:"gpu_type"`  // legacy single-type (mirrors GPUTypes[0]).
-	GPUTypes      []string          `json:"gpu_types"` // #8144: acceptable GPU types.
+	GPUTypes      []string          `json:"gpu_types"` // multi-type: acceptable GPU types.
 	StartDate     string            `json:"start_date"`
 	DurationHours int               `json:"duration_hours"`
 	Notes         string            `json:"notes"`
@@ -92,7 +92,7 @@ type GPUReservation struct {
 }
 
 // NormalizeGPUTypes reconciles the legacy single-type field (GPUType) with
-// the multi-type field (GPUTypes) added in #8144. It is idempotent and
+// the multi-type field (GPUTypes) added for gpu-multitype. It is idempotent and
 // safe to call on any GPUReservation value regardless of whether the
 // caller populated one, both, or neither field:
 //
@@ -153,7 +153,7 @@ func (r *GPUReservation) MatchesNodeGPUType(nodeGPUType string) bool {
 
 // CreateGPUReservationInput is the input for creating a GPU reservation.
 //
-// Both GPUType (legacy single) and GPUTypes (#8144 multi) are accepted
+// Both GPUType (legacy single) and GPUTypes (multi-type) are accepted
 // so existing API clients continue to work unchanged. If both are set,
 // GPUTypes takes precedence; if only GPUType is set, it is promoted to
 // a one-element GPUTypes. See NormalizeGPUTypes for the canonical
@@ -187,7 +187,7 @@ type GPUUtilizationSnapshot struct {
 
 // UpdateGPUReservationInput is the input for updating a GPU reservation.
 //
-// #8144: GPUTypes is a pointer to a slice so the handler can distinguish
+// GPUTypes is a pointer to a slice so the handler can distinguish
 // "caller did not send this field" (nil) from "caller explicitly sent
 // an empty list meaning any-type" (non-nil but empty). Both GPUType and
 // GPUTypes are accepted; when both are supplied, GPUTypes takes

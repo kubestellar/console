@@ -151,7 +151,7 @@ func TestCreateGPUReservationWithCapacity_AtomicQuotaCheck(t *testing.T) {
 }
 
 // gpuMultiTypeA100 and gpuMultiTypeH100 are the two GPU types used by the
-// #8144 round-trip tests. Named constants instead of inline literals so
+// gpu-multitype round-trip tests. Named constants instead of inline literals so
 // the "reservation accepts A100 OR H100" assertions read clearly.
 const (
 	gpuMultiTypeA100 = "NVIDIA A100"
@@ -159,7 +159,7 @@ const (
 	gpuMultiTypeV100 = "NVIDIA V100"
 )
 
-// TestGPUReservation_MultiType_RoundTrip exercises the #8144 schema
+// TestGPUReservation_MultiType_RoundTrip exercises the gpu-multitype schema
 // change: a reservation created with two accepted GPU types must
 // round-trip through SQLite and come back as the same two-element list,
 // and the legacy single-type field must mirror the primary type so
@@ -187,7 +187,7 @@ func TestGPUReservation_MultiType_RoundTrip(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, fetched)
 	assert.Equal(t, []string{gpuMultiTypeA100, gpuMultiTypeH100}, fetched.GPUTypes,
-		"both accepted GPU types must survive the round trip (#8144)")
+		"both accepted GPU types must survive the round trip")
 	assert.Equal(t, gpuMultiTypeA100, fetched.GPUType,
 		"legacy singular field must mirror GPUTypes[0] for pre-migration clients")
 
@@ -203,7 +203,7 @@ func TestGPUReservation_MultiType_RoundTrip(t *testing.T) {
 
 // TestGPUReservation_LegacySingleType_BackCompat pins the migration's
 // back-compat guarantee: a reservation written via the legacy singular
-// GPUType field (simulating a pre-#8144 row) must read back as a
+// GPUType field (simulating a pre-multitype row) must read back as a
 // one-element GPUTypes list so new frontend code can rely on
 // GPUTypes always being populated.
 func TestGPUReservation_LegacySingleType_BackCompat(t *testing.T) {

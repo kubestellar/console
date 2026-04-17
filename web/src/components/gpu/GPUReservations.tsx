@@ -197,7 +197,7 @@ export function GPUReservations() {
         (r.cluster ?? '').toLowerCase().includes(term) ||
         (r.status ?? '').toLowerCase().includes(term) ||
         (r.gpu_type && r.gpu_type.toLowerCase().includes(term)) ||
-        // #8144: match against any accepted GPU type so searching
+        // Match against any accepted GPU type so searching
         // for "H100" finds multi-type reservations that list H100
         // among their acceptable alternatives.
         (r.gpu_types && r.gpu_types.some(t => t.toLowerCase().includes(term))) ||

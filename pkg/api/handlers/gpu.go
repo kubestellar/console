@@ -128,7 +128,7 @@ func (h *GPUHandler) CreateReservation(c *fiber.Ctx) error {
 		QuotaName:     input.QuotaName,
 		QuotaEnforced: input.QuotaEnforced,
 	}
-	// #8144: reconcile legacy single + new multi fields. NormalizeGPUTypes
+	// Reconcile legacy single + new multi fields. NormalizeGPUTypes
 	// is idempotent and handles all combinations (legacy-only, multi-only,
 	// both, neither) uniformly. Called here so validation and capacity
 	// checks see the canonical shape before the store call below.
@@ -311,7 +311,7 @@ func (h *GPUHandler) UpdateReservation(c *fiber.Ctx) error {
 		existing.GPUTypes = nil
 	}
 	if input.GPUTypes != nil {
-		// #8144: copy-by-value so later caller mutations of the input
+		// Copy-by-value so later caller mutations of the input
 		// slice cannot retroactively change the stored reservation.
 		copied := make([]string, len(*input.GPUTypes))
 		copy(copied, *input.GPUTypes)

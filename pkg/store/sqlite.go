@@ -383,7 +383,7 @@ func (s *SQLiteStore) migrate() error {
 		namespace TEXT NOT NULL,
 		gpu_count INTEGER NOT NULL,
 		gpu_type TEXT DEFAULT '',
-		-- #8144: JSON-encoded []string of acceptable GPU types. Empty
+		-- Multi-type: JSON-encoded []string of acceptable GPU types. Empty
 		-- string means "no preference" (any type); a one-element list is
 		-- equivalent to the legacy single-type behaviour. The legacy
 		-- gpu_type column is kept alongside and mirrors gpu_types[0].
@@ -485,7 +485,7 @@ func (s *SQLiteStore) migrate() error {
 		// #6949: ActionURL was declared in the Notification model but never
 		// persisted — the column, INSERT, and SELECT all omitted it.
 		"ALTER TABLE notifications ADD COLUMN action_url TEXT NOT NULL DEFAULT ''",
-		// #8144: multi-type GPU reservations. gpu_types is a JSON-encoded
+		// Multi-type GPU reservations. gpu_types is a JSON-encoded
 		// []string of acceptable GPU types. The legacy gpu_type column is
 		// still populated (mirrors gpu_types[0]) so pre-migration clients
 		// continue to read meaningful values, and pre-migration rows are
@@ -1771,7 +1771,7 @@ func (s *SQLiteStore) MarkAllNotificationsRead(userID uuid.UUID) error {
 // GPU Reservation methods
 
 // encodeGPUTypes serializes the multi-type preference list into the JSON
-// form persisted in the gpu_reservations.gpu_types column (#8144). An
+// form persisted in the gpu_reservations.gpu_types column (gpu-multitype). An
 // empty or nil list becomes an empty string, which is what the schema
 // default emits for pre-migration rows — this keeps the round trip
 // idempotent and lets a NULL/empty column decode back to "no preference".
@@ -2107,7 +2107,7 @@ func (s *SQLiteStore) scanGPUReservation(row *sql.Row) (*models.GPUReservation, 
 	if updatedAt.Valid {
 		r.UpdatedAt = &updatedAt.Time
 	}
-	// #8144: decode multi-type list and promote legacy single-type
+	// Decode multi-type list and promote legacy single-type
 	// reservations to a one-element list so callers always see a
 	// populated GPUTypes slice.
 	r.GPUTypes = decodeGPUTypes(gpuTypesRaw)
@@ -2137,7 +2137,7 @@ func (s *SQLiteStore) scanGPUReservationRow(rows *sql.Rows) (*models.GPUReservat
 	if updatedAt.Valid {
 		r.UpdatedAt = &updatedAt.Time
 	}
-	// #8144: see scanGPUReservation — same normalization logic.
+	// See scanGPUReservation — same normalization logic.
 	r.GPUTypes = decodeGPUTypes(gpuTypesRaw)
 	r.NormalizeGPUTypes()
 	return &r, nil

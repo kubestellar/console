@@ -18,17 +18,17 @@ export interface GPUReservation {
   gpu_count: number
   /**
    * Legacy single-type field kept for backwards compatibility with
-   * pre-#8144 reservations and external readers. New UI code should
+   * pre-multitype reservations and external readers. New UI code should
    * prefer `gpu_types`; the backend guarantees `gpu_type` always
    * mirrors `gpu_types[0]` (or is empty when any type is acceptable).
    */
   gpu_type: string
   /**
-   * #8144: list of acceptable GPU types for this reservation. An empty
+   * Multi-type: list of acceptable GPU types for this reservation. An empty
    * list means "any GPU is acceptable"; a one-element list behaves
    * like the legacy single-type reservation; two or more entries
    * implement the multi-type-preference feature requested by
-   * @MikeSpreitzer in issue #8144.
+   * @MikeSpreitzer.
    *
    * Optional on the wire for back-compat with any cached client that
    * was populated before the column existed. Helpers in this module
@@ -48,7 +48,7 @@ export interface GPUReservation {
 
 /**
  * Reconcile the legacy `gpu_type` and new `gpu_types` fields on a
- * `GPUReservation` fetched from the API (#8144). Returns the canonical
+ * `GPUReservation` fetched from the API (gpu-multitype). Returns the canonical
  * acceptable-types list: the `gpu_types` array when present and
  * non-empty, otherwise a one-element list wrapping `gpu_type`, or an
  * empty array when neither is set. Safe to call on partial objects.
@@ -79,7 +79,7 @@ export interface CreateGPUReservationInput {
   gpu_count: number
   /** Legacy single-type; prefer `gpu_types` for new reservations. */
   gpu_type?: string
-  /** #8144: acceptable GPU types; empty/omitted means any type. */
+  /** Multi-type: acceptable GPU types; empty/omitted means any type. */
   gpu_types?: string[]
   start_date: string
   duration_hours?: number
@@ -97,7 +97,7 @@ export interface UpdateGPUReservationInput {
   gpu_count?: number
   /** Legacy single-type; prefer `gpu_types` for new reservations. */
   gpu_type?: string
-  /** #8144: acceptable GPU types; empty array explicitly clears. */
+  /** Multi-type: acceptable GPU types; empty array explicitly clears. */
   gpu_types?: string[]
   start_date?: string
   duration_hours?: number
@@ -138,7 +138,7 @@ const DEMO_RESERVATIONS: GPUReservation[] = [
     namespace: 'benchmarks',
     gpu_count: 4,
     gpu_type: 'NVIDIA H100',
-    // #8144: demo data showing multi-type preference — this
+    // Multi-type demo data showing multi-type preference — this
     // reservation accepts either H100 or A100 nodes.
     gpu_types: ['NVIDIA H100', 'NVIDIA A100'],
     start_date: new Date(Date.now() + 86400000).toISOString().split('T')[0],

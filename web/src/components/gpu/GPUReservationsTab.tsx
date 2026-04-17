@@ -96,7 +96,7 @@ export function GPUReservationsTab({
         <div className={'glass p-8 rounded-lg text-center'}>
           <Settings2 className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
           {/*
-            Issue #5991: do not manually truncate translation output with
+            Do not manually truncate translation output with
             .split('"')[0]. That assumes an English-shaped string containing
             a literal double quote and silently drops text in locales whose
             translated string has no such quote. Use a dedicated short key
@@ -167,7 +167,7 @@ export function GPUReservationsTab({
                     <div className="text-sm font-medium text-foreground">{r.gpu_count}</div>
                   </div>
                 </div>
-                {/* #8144: display the full accepted-types list when a
+                {/* Display the full accepted-types list when a
                     reservation permits more than one GPU type. Falls
                     back to the legacy singular field for pre-migration
                     rows so existing reservations keep their label. */}

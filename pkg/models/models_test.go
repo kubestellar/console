@@ -222,7 +222,7 @@ func TestGPUReservation_JSONSerialization(t *testing.T) {
 }
 
 // TestGPUReservation_NormalizeGPUTypes_LegacyPromotion pins the back-compat
-// path used for reservations created before #8144 — the migration
+// path used for reservations created before gpu-multitype — the migration
 // leaves gpu_types empty and the scan must promote gpu_type into a
 // one-element list so callers always see a populated GPUTypes slice.
 func TestGPUReservation_NormalizeGPUTypes_LegacyPromotion(t *testing.T) {
@@ -267,7 +267,7 @@ func TestGPUReservation_NormalizeGPUTypes_Empty(t *testing.T) {
 }
 
 // TestGPUReservation_MatchesNodeGPUType exercises the node-matching
-// contract for the #8144 multi-type case: a reservation listing
+// contract for the multi-type case: a reservation listing
 // {A100, H100} must accept a node advertising either, but reject a
 // node advertising a third type.
 func TestGPUReservation_MatchesNodeGPUType(t *testing.T) {
