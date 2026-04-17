@@ -5,14 +5,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math"
 	"net/http"
-	"os"
+	"net/url"
 	"regexp"
 	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/settings"
 )
 
 // ACMM scan constants
@@ -25,6 +27,10 @@ const (
 	searchMaxPages = 10
 	// AI contribution detection
 	aiLabel = "ai-generated"
+	// githubGet response body limit (10 MB)
+	acmmMaxBodyBytes = 10 * 1024 * 1024
+	// User-Agent sent with GitHub API requests
+	acmmUserAgent = "kubestellar-console/1.0"
 )
 
 var (
@@ -134,7 +140,7 @@ func ACMMScanHandler(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid repo — must be owner/name"})
 	}
 
-	token := os.Getenv("GITHUB_TOKEN")
+	token := settings.ResolveGitHubTokenEnv()
 
 	ctx, cancel := context.WithTimeout(c.Context(), time.Duration(acmmAPITimeoutMS)*time.Millisecond)
 	defer cancel()
@@ -145,13 +151,9 @@ func ACMMScanHandler(c *fiber.Ctx) error {
 		if strings.Contains(err.Error(), "not found") {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Repo not found", "detail": repo})
 		}
-		return c.Status(fiber.StatusOK).JSON(fiber.Map{
-			"error":        err.Error(),
-			"demoFallback": true,
-			"repo":         repo,
-			"scannedAt":    time.Now().UTC().Format(time.RFC3339),
-			"detectedIds":  []string{},
-			"weeklyActivity": []acmmWeeklyActivity{},
+		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{
+			"error":  fmt.Sprintf("GitHub API error: %s", err.Error()),
+			"repo":   repo,
 		})
 	}
 
@@ -200,7 +202,9 @@ func fetchACMMTreePaths(ctx context.Context, repo, token string) (map[string]boo
 	}
 
 	// Get recursive tree
-	treeURL := fmt.Sprintf("%s/repos/%s/git/trees/%s?recursive=1", acmmGitHubAPI, repo, branch)
+	// URL-encode the branch name — branches like "release/v1" contain "/" which
+	// would break the path segment without encoding.
+	treeURL := fmt.Sprintf("%s/repos/%s/git/trees/%s?recursive=1", acmmGitHubAPI, repo, url.PathEscape(branch))
 	treeBody, err := githubGet(ctx, treeURL, token)
 	if err != nil {
 		return nil, err
@@ -390,6 +394,7 @@ func githubGet(ctx context.Context, url, token string) ([]byte, error) {
 		return nil, err
 	}
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
+	req.Header.Set("User-Agent", acmmUserAgent)
 	if token != "" {
 		req.Header.Set("Authorization", "Bearer "+token)
 	}
@@ -407,23 +412,15 @@ func githubGet(ctx context.Context, url, token string) ([]byte, error) {
 		return nil, fmt.Errorf("GitHub API %d", resp.StatusCode)
 	}
 
-	// Read body with a size limit to avoid unbounded memory
-	const maxBodySize = 10 * 1024 * 1024 // 10 MB
-	body := make([]byte, 0, 1024)
-	buf := make([]byte, 4096)
-	total := 0
-	for {
-		n, readErr := resp.Body.Read(buf)
-		if n > 0 {
-			total += n
-			if total > maxBodySize {
-				return nil, fmt.Errorf("response too large (>%d bytes)", maxBodySize)
-			}
-			body = append(body, buf[:n]...)
-		}
-		if readErr != nil {
-			break
-		}
+	// Read body with a size limit; io.ReadAll + LimitReader properly checks
+	// for io.EOF vs non-EOF read errors (the manual loop previously swallowed
+	// non-EOF errors, potentially returning truncated JSON).
+	body, err := io.ReadAll(io.LimitReader(resp.Body, acmmMaxBodyBytes+1))
+	if err != nil {
+		return nil, fmt.Errorf("reading response body: %w", err)
+	}
+	if int64(len(body)) > acmmMaxBodyBytes {
+		return nil, fmt.Errorf("response too large (>%d bytes)", acmmMaxBodyBytes)
 	}
 
 	return body, nil
