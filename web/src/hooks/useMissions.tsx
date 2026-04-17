@@ -2051,6 +2051,11 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
           const rawDuration = Math.round((Date.now() - m.createdAt.getTime()) / 1000)
           const clampedDuration = Math.min(Math.max(rawDuration, 0), MAX_MISSION_DURATION_SEC)
           emitMissionCompleted(m.type, clampedDuration)
+          // Notify data-dependent components (e.g. ACMM scan) so they
+          // re-fetch after a mission may have changed the repo's state.
+          window.dispatchEvent(new CustomEvent('kc-mission-completed', {
+            detail: { missionId, missionType: m.type },
+          }))
         }
 
         const resultContent = chatPayload.content || (payload as { output?: string }).output || 'Task completed.'

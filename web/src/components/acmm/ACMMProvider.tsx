@@ -112,6 +112,15 @@ export function ACMMProvider({ children }: { children: ReactNode }) {
 
   const scan = useCachedACMMScan(repo)
 
+  // Force-refresh the scan when a mission completes — the mission may
+  // have added a feedback loop (e.g. created CLAUDE.md, added a workflow)
+  // that changes the repo's maturity score.
+  useEffect(() => {
+    const handler = () => { scan.forceRefetch() }
+    window.addEventListener('kc-mission-completed', handler)
+    return () => window.removeEventListener('kc-mission-completed', handler)
+  }, [scan.forceRefetch])
+
   // Auto-open the intro on first visit unless previously dismissed.
   useEffect(() => {
     if (!isACMMIntroDismissed()) {
