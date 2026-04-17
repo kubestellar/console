@@ -3,7 +3,7 @@ import { AlertTriangle, ExternalLink, Settings, Copy, Check, ChevronDown, Chevro
 import { Github } from '@/lib/icons'
 import { Navigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../lib/auth'
-import { checkOAuthConfigured } from '../../lib/api'
+import { checkOAuthConfiguredWithRetry } from '../../lib/api'
 import { ROUTES } from '../../config/routes'
 import { useTranslation } from 'react-i18next'
 import { emitLogin } from '../../lib/analytics'
@@ -197,7 +197,8 @@ export function Login() {
   }, [])
 
   const handleCopyStep = async (text: string, stepKey: number) => {
-    await copyToClipboard(text)
+    const ok = await copyToClipboard(text)
+    if (!ok) return
     setCopiedStep(stepKey)
     clearTimeout(copiedTimerRef.current)
     copiedTimerRef.current = setTimeout(() => setCopiedStep(null), UI_FEEDBACK_TIMEOUT_MS)
@@ -239,17 +240,17 @@ export function Login() {
     // When the backend is up but OAuth is not configured, show the login page
     // with setup instructions rather than silently auto-logging in as a demo
     // user. Users can still choose "Continue in Demo Mode" from the page.
-    checkOAuthConfigured().then(({ backendUp, oauthConfigured }) => {
+    checkOAuthConfiguredWithRetry().then(({ backendUp, oauthConfigured }) => {
       if (backendUp && !oauthConfigured) {
         setShowOAuthSetup(true)
       }
-    }).catch(() => { /* checkOAuthConfigured always resolves — defensive catch */ })
+    }).catch(() => { /* checkOAuthConfiguredWithRetry always resolves — defensive catch */ })
   }, [isLoading, isAuthenticated, login, oauthError, branding.hostedDomain])
 
   // Show loading while checking auth status
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-8 w-8 border-2 border-transparent border-t-primary" />
       </div>
     )
@@ -261,7 +262,7 @@ export function Login() {
   }
 
   return (
-    <div data-testid="login-page" className="h-screen flex bg-[#0a0a0a] relative overflow-hidden">
+    <div data-testid="login-page" className="h-screen flex bg-background relative overflow-hidden">
       {/* Left side - Login form */}
       <div className="flex-1 h-full flex items-center justify-center relative z-10">
         {/* Star field background (left side only) */}
@@ -359,8 +360,8 @@ export function Login() {
           </div>
 
           {/* Hosted demo notice — shown when on the hosted demo domain so users
-              understand that GitHub OAuth is intentionally unavailable and that
-              they'll be auto-logged-in as a demo user. Ref: #6338. */}
+            * understand that GitHub OAuth is intentionally unavailable and that
+            * they'll be auto-logged-in as a demo user. Ref: #6338. */}
           {isHostedDemoLogin && (
             <div className="mb-4 px-4 py-3 rounded-lg border border-purple-500/30 bg-purple-500/10 text-purple-200 text-xs">
               <div className="font-medium text-purple-300 mb-1">Hosted demo</div>
@@ -382,9 +383,9 @@ export function Login() {
           )}
 
           {/* OAuth not configured notice — shown when the backend is running
-              but no GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET are set. Gives
-              self-hosted users a clear path to enable GitHub sign-in instead
-              of silently falling into demo mode (#3761). */}
+            * but no GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET are set. Gives
+            * self-hosted users a clear path to enable GitHub sign-in instead
+            * of silently falling into demo mode (#3761). */}
           {showOAuthSetup && !oauthError && (
             <div data-testid="oauth-setup-notice" className="mb-4 rounded-lg border border-blue-500/30 bg-blue-500/5 overflow-hidden">
               <div className="px-4 py-3">
@@ -508,7 +509,7 @@ export function Login() {
           {showOAuthSetup && (
             <div className="space-y-3">
               <button
-                data-testid="github-login-button"
+                data-testid="github-setup-button"
                 onClick={() => setOauthSetupExpanded(true)}
                 className="w-full flex items-center justify-center gap-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-medium py-3 px-4 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 hover:shadow-lg"
               >
@@ -544,7 +545,7 @@ export function Login() {
       {/* Right side - Globe animation */}
       <div className="hidden lg:block flex-1 h-full relative overflow-hidden">
         {/* Subtle gradient background for the globe side */}
-        <div className="absolute inset-0 bg-gradient-to-l from-[#0a0f1c] to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-l from-background to-transparent" />
         {/* Wrapper div ensures the globe is absolutely positioned (GlobeAnimation
             internally prepends "relative" to className which overrides "absolute"
             in Tailwind's CSS ordering, causing layout breakage). */}

@@ -82,9 +82,13 @@ const COMPONENTS_DIR = path.resolve(
 //              that incremented the ratchet over many previous bumps. The
 //              new baseline is the count of real `#RRGGBB` literals only.
 //   270 → 271: PR #8550 ratchet drift — pre-existing hex literal not introduced by this PR
-const EXPECTED_RAW_HEX_COUNT = 271
+//   271 → 269: PR #8546 — fixed comment continuation lines in Login.tsx
+//              that tripped false-positive hex detection (#6338, #3761 refs)
+const EXPECTED_RAW_HEX_COUNT = 269
 const EXPECTED_RAW_RGBA_COUNT = 104
-const EXPECTED_ARBITRARY_TW_COLOR_COUNT = 22
+//   22 → 19: PR #8547 — replaced 3 arbitrary Tailwind hex colors in Login.tsx
+//            (bg-[#0a0a0a], from-[#0a0f1c]) with semantic bg-background/from-background
+const EXPECTED_ARBITRARY_TW_COLOR_COUNT = 19
 // Inline style color ratchet — bump history:
 //   213 → 215: Drasi reactive graph (PRs #7832, #7857) — two new
 //              echarts/flow-node inline colors not covered by theming utils.
