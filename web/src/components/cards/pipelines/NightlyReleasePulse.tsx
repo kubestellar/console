@@ -44,7 +44,8 @@ const PLACEHOLDER_REPO = 'owner/repo'
 const LABEL_SET_REPO = 'Set repo to monitor'
 const STANDARD_CRON_FIELD_COUNT = 5
 
-function formatCron(cron: string): string {
+function formatCron(cron: string | undefined | null): string {
+  if (!cron || typeof cron !== 'string') return '—'
   const parts = cron.trim().split(/\s+/)
   if (parts.length === STANDARD_CRON_FIELD_COUNT && parts[2] === '*' && parts[3] === '*' && parts[4] === '*') {
     const minute = parseInt(parts[0], 10)

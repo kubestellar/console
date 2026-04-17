@@ -830,7 +830,11 @@ export default async (req: Request): Promise<Response> => {
     });
   } catch (err) {
     return jsonResponse(
-      { error: (err as Error).message ?? "Internal error" },
+      {
+        error: (err as Error).message ?? "Internal error",
+        repos: REPOS,
+        nextCron: "0 5 * * *",
+      },
       { status: 500, headers: baseHeaders }
     );
   }
