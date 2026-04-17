@@ -446,7 +446,7 @@ function SudokuGameInternal({ config: _config }: SudokuGameProps) {
   return (
     <div className="h-full flex-1 flex flex-col min-h-card content-loaded">
       {/* Header */}
-      <div className={`flex items-center justify-between ${isMaximized ? 'mb-4' : 'mb-1.5'}`}>
+      <div className={`flex flex-wrap items-center justify-between gap-y-2 ${isMaximized ? 'mb-4' : 'mb-1.5'}`}>
         <div className={`flex items-center ${isMaximized ? 'gap-3' : 'gap-1.5'}`}>
           <Sparkles className={isMaximized ? 'w-5 h-5 text-purple-400' : 'w-3.5 h-3.5 text-purple-400'} />
           <span className={`font-medium text-muted-foreground ${isMaximized ? 'text-base' : 'text-xs'}`}>Sudoku</span>
@@ -463,7 +463,7 @@ function SudokuGameInternal({ config: _config }: SudokuGameProps) {
       </div>
 
       {/* Game info */}
-      <div className={`flex items-center justify-between ${isMaximized ? 'mb-4 text-sm' : 'mb-1.5 text-2xs'}`}>
+      <div className={`flex flex-wrap items-center justify-between gap-y-2 ${isMaximized ? 'mb-4 text-sm' : 'mb-1.5 text-2xs'}`}>
         <div className={`flex items-center ${isMaximized ? 'gap-4' : 'gap-2'}`}>
           <span className={`${isMaximized ? 'px-3 py-1' : 'px-1.5 py-0.5'} rounded bg-purple-500/20 text-purple-400 font-medium`}>
             {DIFFICULTIES[gameState.difficulty].label}
@@ -611,7 +611,7 @@ function SudokuGameInternal({ config: _config }: SudokuGameProps) {
       {showSettings && (
         <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-50 rounded-lg">
           <div className="bg-background border border-border rounded-lg p-4 max-w-xs w-full mx-4">
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
               <h3 className="text-sm font-medium">New Game</h3>
               <button
                 onClick={() => setShowSettings(false)}
@@ -627,7 +627,7 @@ function SudokuGameInternal({ config: _config }: SudokuGameProps) {
                   onClick={() => startNewGame(difficulty)}
                   className="w-full text-left px-3 py-2 rounded bg-secondary/50 hover:bg-purple-500/20 transition-colors"
                 >
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-y-2">
                     <span className="font-medium">{DIFFICULTIES[difficulty].label}</span>
                     {bestTimes[difficulty] && (
                       <span className="text-xs text-muted-foreground flex items-center gap-1">

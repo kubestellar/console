@@ -64,7 +64,7 @@ function StatusBadge({ status }: { status: string }) {
 function CheckRow({ check }: { check: GPUNodeHealthCheck }) {
   const label = CHECK_LABELS[check.name] || check.name
   return (
-    <div className="flex items-center justify-between py-1 text-xs">
+    <div className="flex flex-wrap items-center justify-between gap-y-2 py-1 text-xs">
       <span className="text-white/60">{label}</span>
       <div className="flex items-center gap-1.5">
         {check.passed ? (

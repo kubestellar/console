@@ -121,7 +121,7 @@ Please:
         onGoToSettings={goToSettings}
       />
 
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
         <div className="flex items-center gap-2">
           {runningRepairMission && (
             <span className="flex items-center gap-1 text-xs text-purple-400">
@@ -165,7 +165,7 @@ Please:
         {podIssues.slice(0, 3).map((issue, i) => (
           <div
             key={`pod-${i}`}
-            className="p-2 rounded bg-orange-500/10 text-xs cursor-pointer hover:bg-orange-500/20 transition-colors group flex items-center justify-between"
+            className="p-2 rounded bg-orange-500/10 text-xs cursor-pointer hover:bg-orange-500/20 transition-colors group flex flex-wrap items-center justify-between gap-y-2"
             onClick={() => issue.cluster && drillToPod(issue.cluster, issue.namespace, issue.name, { status: issue.status, restarts: issue.restarts, issues: issue.issues })}
             title={`Click to view details for pod ${issue.name}`}
           >

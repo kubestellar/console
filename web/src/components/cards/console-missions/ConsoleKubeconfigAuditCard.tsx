@@ -122,7 +122,7 @@ Please:
         {unreachableClusters.slice(0, 3).map((cluster, i) => (
           <div
             key={i}
-            className="p-2 rounded bg-yellow-500/10 text-xs cursor-pointer hover:bg-yellow-500/20 transition-colors group flex items-center justify-between"
+            className="p-2 rounded bg-yellow-500/10 text-xs cursor-pointer hover:bg-yellow-500/20 transition-colors group flex flex-wrap items-center justify-between gap-y-2"
             onClick={() => drillToCluster(cluster.name)}
             title={`Click to view details for ${cluster.name}`}
           >

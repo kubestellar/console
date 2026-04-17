@@ -79,7 +79,7 @@ export function ProwHistory({ config: _config }: ProwHistoryProps) {
   return (
     <div className="h-full flex flex-col min-h-card">
       {/* Controls */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
         <StatusBadge color="orange">
           {totalItems} revisions
         </StatusBadge>
@@ -122,7 +122,7 @@ export function ProwHistory({ config: _config }: ProwHistoryProps) {
                 )}
               </div>
               <div className="p-2 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-y-2">
                   <span className="text-sm font-medium text-foreground truncate">{job.name}</span>
                   <span className="text-xs text-muted-foreground">{formatTimeAgo(job.startTime)}</span>
                 </div>

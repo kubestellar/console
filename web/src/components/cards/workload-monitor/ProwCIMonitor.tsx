@@ -211,7 +211,7 @@ export function ProwCIMonitor({ config: _config }: ProwCIMonitorProps) {
       </div>
 
       {/* Stats grid */}
-      <div className="grid grid-cols-4 gap-2 mb-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
         <div className="rounded-md bg-card/50 border border-border p-2 text-center">
           <p className="text-lg font-semibold text-green-400">{stats.successRate}%</p>
           <p className="text-2xs text-muted-foreground">Success Rate</p>

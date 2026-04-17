@@ -50,7 +50,7 @@ export function KagentiSecurity({ config }: { config?: Record<string, unknown> }
           </div>
           <span className="text-lg font-bold text-white">{stats.pct}%</span>
         </div>
-        <div className="grid grid-cols-3 gap-2 text-center">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-center">
           <div className="rounded bg-green-400/10 py-1.5">
             <div className="text-sm font-bold text-green-400">{stats.strict}</div>
             <div className="text-xs text-muted-foreground">Strict</div>
@@ -78,7 +78,7 @@ export function KagentiSecurity({ config }: { config?: Record<string, unknown> }
               // issue 6449 — include namespace in the React key to avoid
               // collisions when two cards share the same name across
               // namespaces on the same cluster.
-              <div key={`${agent.cluster}:${agent.namespace}:${agent.name}`} className="flex items-center justify-between text-xs py-1 px-2 rounded bg-red-400/5 border border-red-400/10">
+              <div key={`${agent.cluster}:${agent.namespace}:${agent.name}`} className="flex flex-wrap items-center justify-between gap-y-2 text-xs py-1 px-2 rounded bg-red-400/5 border border-red-400/10">
                 <div className="flex items-center gap-1.5">
                   <ShieldAlert className="w-3 h-3 text-red-400" />
                   <span className="text-foreground">{agent.agentName}</span>

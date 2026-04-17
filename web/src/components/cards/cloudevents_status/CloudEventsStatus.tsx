@@ -63,7 +63,7 @@ export function CloudEventsStatus() {
   if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card gap-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-y-2">
           <Skeleton variant="rounded" width={140} height={28} />
           <Skeleton variant="rounded" width={90} height={20} />
         </div>
@@ -95,7 +95,7 @@ export function CloudEventsStatus() {
 
   return (
     <div className="h-full flex flex-col min-h-card content-loaded gap-4 overflow-hidden">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-y-2">
         <div
           className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${
             isHealthy ? 'bg-green-500/15 text-green-400' : 'bg-yellow-500/15 text-yellow-400'
@@ -156,7 +156,7 @@ export function CloudEventsStatus() {
               const style = STATUS_STYLE[resource.state]
               return (
                 <div key={`${resource.cluster}/${resource.namespace}/${resource.kind}/${resource.name}`} className="rounded-md bg-secondary/30 px-3 py-2.5 space-y-1.5">
-                  <div className="flex items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center justify-between gap-y-2 gap-2">
                     <div className="min-w-0 flex items-center gap-1.5">
                       {style.icon}
                       <span className="text-xs font-medium truncate">{resource.name}</span>
@@ -165,7 +165,7 @@ export function CloudEventsStatus() {
                       {t(STATUS_LABEL_KEY[resource.state])}
                     </span>
                   </div>
-                  <div className="text-xs text-muted-foreground flex items-center justify-between gap-2">
+                  <div className="text-xs text-muted-foreground flex flex-wrap items-center justify-between gap-y-2 gap-2">
                     <span className="truncate">{resource.kind} · {resource.namespace} · {resource.cluster}</span>
                     <span className="shrink-0">{t('cloudevents.sink')}: {resource.sink || t('security.notApplicable')}</span>
                   </div>

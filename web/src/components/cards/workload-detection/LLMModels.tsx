@@ -99,7 +99,7 @@ export function LLMModels({ config: _config }: LLMModelsProps) {
   return (
     <div className="h-full flex flex-col min-h-card">
       {/* Header controls */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
         <div className="flex items-center gap-2">
           <RefreshIndicator
             isRefreshing={isRefreshing}

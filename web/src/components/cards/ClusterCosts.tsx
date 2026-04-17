@@ -354,7 +354,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
   if (isLoading && allClusters.length === 0) {
     return (
       <div className="h-full flex flex-col min-h-card">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
           <Skeleton variant="text" width={120} height={20} />
           <Skeleton variant="rounded" width={80} height={28} />
         </div>
@@ -371,7 +371,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded">
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-muted-foreground">
             {t('cards:clusterCosts.clusterCount', { count: totalItems })}
@@ -415,7 +415,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
       </div>
 
       {/* Pricing Mode and Provider Selector */}
-      <div className="flex items-center justify-between gap-2 mb-3">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 gap-2 mb-3">
         <div className="flex items-center gap-2">
           {/* Pricing Mode Toggle */}
           <div className="relative">
@@ -441,7 +441,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
                     setPricingMode('per-cluster')
                     setShowSettingsMenu(false)
                   }}
-                  className={`w-full px-3 py-2 text-xs text-left hover:bg-secondary transition-colors flex items-center justify-between ${
+                  className={`w-full px-3 py-2 text-xs text-left hover:bg-secondary transition-colors flex flex-wrap items-center justify-between gap-y-2 ${
                     pricingMode === 'per-cluster' ? 'text-purple-400 bg-purple-500/10' : 'text-foreground'
                   }`}
                 >
@@ -456,7 +456,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
                     setPricingMode('uniform')
                     setShowSettingsMenu(false)
                   }}
-                  className={`w-full px-3 py-2 text-xs text-left hover:bg-secondary transition-colors flex items-center justify-between ${
+                  className={`w-full px-3 py-2 text-xs text-left hover:bg-secondary transition-colors flex flex-wrap items-center justify-between gap-y-2 ${
                     pricingMode === 'uniform' ? 'text-purple-400 bg-purple-500/10' : 'text-foreground'
                   }`}
                 >
@@ -546,7 +546,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
           {pricingMode === 'uniform' ? (
             // Uniform mode - show single provider rates
             <>
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2">
                 <span className="font-medium text-foreground">{t('cards:clusterCosts.pricingRates', { provider: pricing.name })}</span>
                 {pricing.pricingUrl && (
                   <a
@@ -560,7 +560,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
                   </a>
                 )}
               </div>
-              <div className="grid grid-cols-3 gap-2 mb-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-2">
                 <div className="p-2 rounded bg-secondary/50">
                   <p className="text-muted-foreground mb-0.5">{t('common:common.cpu')}</p>
                   <p className="text-foreground font-medium">${cpuCost.toFixed(3)}/hr</p>
@@ -582,7 +582,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
           ) : (
             // Per-cluster mode - show all providers' rates
             <>
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2">
                 <span className="font-medium text-foreground">{t('cards:clusterCosts.perClusterPricingRates')}</span>
                 <span className="text-muted-foreground">{t('cards:clusterCosts.clickBadgesToChange')}</span>
               </div>
@@ -635,7 +635,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
 
       {/* Total costs */}
       <div className="p-4 rounded-lg bg-gradient-to-r from-green-500/20 to-green-500/20 border border-green-500/30 mb-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-y-2">
           <div>
             <p className="text-xs text-green-400 mb-1">{t('cards:clusterCosts.estimatedMonthly')}</p>
             <p className="text-2xl font-bold text-foreground">${totalMonthly.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
@@ -667,7 +667,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
                 provider: cluster.provider })}
               className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors group cursor-pointer"
             >
-              <div className="flex items-center justify-between mb-2 gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 gap-2">
                 <div className="flex items-center gap-2 min-w-0 flex-1">
                   {/* 1. Server icon */}
                   <Server className="w-4 h-4 text-muted-foreground flex-shrink-0" />
@@ -765,7 +765,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
 
       {/* Footer */}
       <div className="mt-4 pt-3 border-t border-border/50 space-y-2 text-xs text-muted-foreground">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-y-2">
           <div className="flex items-center gap-1.5 flex-wrap">
             {pricingMode === 'uniform' ? (
               <>

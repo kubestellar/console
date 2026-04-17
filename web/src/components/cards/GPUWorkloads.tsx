@@ -189,11 +189,11 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
   if (isLoading && gpuWorkloadSource.length === 0) {
     return (
       <div className="h-full flex flex-col min-h-card">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
           <Skeleton variant="text" width={100} height={16} />
           <Skeleton variant="rounded" width={80} height={28} />
         </div>
-        <div className="grid grid-cols-4 gap-2 mb-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
           {[1, 2, 3, 4].map(i => (
             <Skeleton key={i} variant="rounded" height={50} />
           ))}
@@ -226,7 +226,7 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
   return (
     <div className="h-full flex flex-col content-loaded">
       {/* Controls */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
         {summary.failed > 0 ? (
           <StatusBadge color="red">
             {t('gpuWorkloads.failedCount', { count: summary.failed })}
@@ -273,7 +273,7 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
       />
 
       {/* Summary stats */}
-      <div className="grid grid-cols-4 gap-2 mb-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
         <div className="p-2 rounded-lg bg-secondary/30 text-center" title={t('gpuWorkloads.totalGPUWorkloads', { count: summary.total })}>
           <p className="text-lg font-bold text-foreground">{summary.total}</p>
           <p className="text-xs text-muted-foreground">{t('common:common.total')}</p>

@@ -241,7 +241,7 @@ Please proceed step by step. Start with verifying prerequisites (Python 3.9+, ku
       )}
 
       {/* Overall Score */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-y-2">
         <div className="flex items-center gap-3">
           <button
             onClick={() => drillToCompliance('', {})}
@@ -315,12 +315,12 @@ Please proceed step by step. Start with verifying prerequisites (Python 3.9+, ku
               className="w-full text-left p-2.5 rounded-lg border border-border/50 hover:border-border transition-colors bg-secondary/20 cursor-pointer"
               onClick={() => setExpandedProfile(isExpanded ? null : profile.name)}
             >
-              <div className="flex items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-y-2 gap-2">
                 <div
                   className="flex-1 text-left"
                   title={t('cards:trestleScan.toggleProfileDetails', { name: profile.name })}
                 >
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-y-2">
                     <div className="flex items-center gap-2">
                       <Shield className="w-3.5 h-3.5 text-teal-400" />
                       <span className="text-xs font-medium text-foreground">{profile.name}</span>
@@ -364,7 +364,7 @@ Please proceed step by step. Start with verifying prerequisites (Python 3.9+, ku
 
               {/* Expanded details */}
               {isExpanded && (
-                <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
+                <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
                   <button
                     onClick={(e) => { e.stopPropagation(); drillToCompliance('pass', { profile: profile.name }) }}
                     className="flex items-center gap-1 text-green-400 hover:opacity-80 transition-opacity cursor-pointer"
@@ -417,7 +417,7 @@ Please proceed step by step. Start with verifying prerequisites (Python 3.9+, ku
       )}
 
       {/* CNCF badge */}
-      <div className="flex items-center justify-between text-2xs text-muted-foreground pt-1 border-t border-border/30">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 text-2xs text-muted-foreground pt-1 border-t border-border/30">
         <a
           href="https://oscal-compass.github.io/compliance-trestle/"
           target="_blank"

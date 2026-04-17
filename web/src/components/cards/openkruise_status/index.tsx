@@ -445,7 +445,7 @@ export function OpenKruiseStatus({ config: _config }: OpenKruiseStatusProps) {
   if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
           <Skeleton variant="text" width={140} height={20} />
           <Skeleton variant="rounded" width={80} height={28} />
         </div>
@@ -488,7 +488,7 @@ export function OpenKruiseStatus({ config: _config }: OpenKruiseStatusProps) {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded overflow-hidden">
       {/* Controls row */}
-      <div className="flex items-center justify-between gap-2 mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 gap-2 mb-4">
         <div className="flex items-center gap-2">
           {localClusterFilter.length > 0 && (
             <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
@@ -648,7 +648,7 @@ export function OpenKruiseStatus({ config: _config }: OpenKruiseStatusProps) {
                   } hover:bg-secondary/50 transition-colors cursor-pointer group`}
                   title={`${item.name} \u2014 ${getCategoryLabel(item.category)}`}
                 >
-                  <div className="flex items-center justify-between mb-1">
+                  <div className="flex flex-wrap items-center justify-between gap-y-2 mb-1">
                     <div className="flex items-center gap-2">
                       <span title={`${t('common:common.status')}: ${item.status}`}>
                         <StatusIcon

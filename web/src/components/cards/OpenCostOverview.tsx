@@ -95,7 +95,7 @@ function OpenCostOverviewInternal({ config: _config }: OpenCostOverviewProps) {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded">
       {/* Header with controls */}
-      <div className="flex items-center justify-between mb-2 flex-shrink-0">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 flex-shrink-0">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-muted-foreground">
             {totalItems} namespaces
@@ -184,7 +184,7 @@ function OpenCostOverviewInternal({ config: _config }: OpenCostOverviewProps) {
             })}
             className="p-2 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group"
           >
-            <div className="flex items-center justify-between mb-1.5">
+            <div className="flex flex-wrap items-center justify-between gap-y-2 mb-1.5">
               <div className="flex items-center gap-2">
                 <Box className="w-3.5 h-3.5 text-muted-foreground" />
                 <span className="text-sm font-medium text-foreground group-hover:text-blue-400">{ns.namespace}</span>
@@ -226,7 +226,7 @@ function OpenCostOverviewInternal({ config: _config }: OpenCostOverviewProps) {
       />
 
       {/* Footer */}
-      <div className="mt-3 pt-2 border-t border-border/50 flex items-center justify-between text-xs text-muted-foreground">
+      <div className="mt-3 pt-2 border-t border-border/50 flex flex-wrap items-center justify-between gap-y-2 text-xs text-muted-foreground">
         <span>{t('costs.poweredByOpenCost')}</span>
         <a
           href="https://www.opencost.io/docs"

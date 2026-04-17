@@ -199,7 +199,7 @@ export function CardChat({
                     </button>
                   </div>
                 )}
-                <div className="flex items-center justify-between mt-1">
+                <div className="flex flex-wrap items-center justify-between gap-y-2 mt-1">
                   <span className="text-xs opacity-50">
                     {new Date(message.timestamp).toLocaleTimeString()}
                   </span>

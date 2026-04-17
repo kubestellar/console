@@ -255,7 +255,7 @@ export function ComputeOverview() {
         onClick={() => stats.totalGPUs > 0 && drillToResources()}
         title={stats.totalGPUs > 0 ? t('computeOverview.gpuAllocatedTitle', { allocated: stats.allocatedGPUs, total: stats.totalGPUs, percent: stats.gpuUtilization }) : t('computeOverview.noGPUsInClusters')}
       >
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2">
           <div className="flex items-center gap-2">
             <Zap className="w-4 h-4 text-purple-400" />
             <span className="text-xs text-purple-400">{t('computeOverview.gpus')}</span>
@@ -286,7 +286,7 @@ export function ComputeOverview() {
             {stats.gpuTypes.length > 0 && (
               <div className="space-y-1">
                 {stats.gpuTypes.slice(0, 3).map(([type, count]) => (
-                  <div key={type} className="flex items-center justify-between text-xs cursor-default" title={t('computeOverview.gpuTypeCountTitle', { count, type })}>
+                  <div key={type} className="flex flex-wrap items-center justify-between gap-y-2 text-xs cursor-default" title={t('computeOverview.gpuTypeCountTitle', { count, type })}>
                     <span className="text-muted-foreground truncate" title={type}>{type}</span>
                     <span className="text-foreground">{count}</span>
                   </div>

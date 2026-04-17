@@ -318,7 +318,7 @@ export function NetworkUtils() {
   return (
     <div className="h-full flex flex-col">
         {/* Network status bar */}
-        <div className="flex items-center justify-between mb-3 p-2 rounded-lg bg-secondary/30">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3 p-2 rounded-lg bg-secondary/30">
           <div className="flex items-center gap-2">
             {networkInfo.online ? (
               <Wifi className="w-4 h-4 text-green-400" />
@@ -440,7 +440,7 @@ export function NetworkUtils() {
                     key={host}
                     className="p-3 rounded-lg bg-secondary/20 border border-border/50"
                   >
-                    <div className="flex items-center justify-between mb-2">
+                    <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2">
                       <span className="text-sm font-medium truncate flex-1 mr-2">{host}</span>
                       <button
                         onClick={() => removeHost(host, 'ping')}
@@ -548,7 +548,7 @@ export function NetworkUtils() {
                   <div className="mt-4 space-y-2">
                     <p className="text-xs text-muted-foreground">{t('networkUtils.savedPortChecks')}</p>
                     {portHosts.map(({ host, port }) => (
-                      <div key={`${host}:${port}`} className="flex items-center justify-between px-3 py-2 bg-secondary/30 rounded">
+                      <div key={`${host}:${port}`} className="flex flex-wrap items-center justify-between gap-y-2 px-3 py-2 bg-secondary/30 rounded">
                         <span className="text-sm">{host}:{port}</span>
                         <button
                           onClick={() => removeHost(host, 'port', port)}

@@ -275,7 +275,7 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
   if (isLoading) {
     return (
       <div className="h-full flex flex-col min-h-card">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
           <Skeleton variant="text" width={130} height={20} />
           <Skeleton variant="rounded" width={80} height={28} />
         </div>
@@ -292,7 +292,7 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded overflow-hidden">
       {/* Header with controls */}
-      <div className="flex items-center justify-between mb-2 flex-shrink-0">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 flex-shrink-0">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-muted-foreground">
             {totalItems} values

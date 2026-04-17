@@ -221,7 +221,7 @@ export function GPUUtilization() {
   if (isLoading && history.length === 0 && hasReachableClusters) {
     return (
       <div className="h-full flex flex-col min-h-card">
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2">
           <Skeleton variant="text" width={120} height={16} />
           <Skeleton variant="rounded" width={28} height={28} />
         </div>
@@ -234,7 +234,7 @@ export function GPUUtilization() {
   if (!hasReachableClusters || (!hookLoading && currentStats.total === 0)) {
     return (
       <div className="h-full flex flex-col content-loaded">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
           <div className="flex items-center gap-2">
             {localClusterFilter.length > 0 && (
               <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
@@ -287,7 +287,7 @@ export function GPUUtilization() {
 
   return (
     <div className="h-full flex flex-col content-loaded">
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
         <div className="flex items-center gap-2">
           {localClusterFilter.length > 0 && (
             <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
@@ -344,7 +344,7 @@ export function GPUUtilization() {
             <span className="text-sm font-bold text-foreground">{currentStats.utilization}%</span>
           </div>
         </div>
-        <div className="flex-1 grid grid-cols-3 gap-2">
+        <div className="flex-1 grid grid-cols-2 sm:grid-cols-3 gap-2">
           <div className="p-2 rounded-lg bg-purple-500/10 border border-purple-500/20">
             <div className="text-xs text-purple-400 mb-1">{t('common.allocated')}</div>
             <span className="text-lg font-bold text-foreground">{currentStats.allocated}</span>

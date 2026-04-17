@@ -60,7 +60,7 @@ function UdnRow({ udn }: { udn: UdnInfo }) {
   const roleColor = ROLE_COLORS[udn.role] || ROLE_COLORS.unknown
 
   return (
-    <div className="flex items-center justify-between text-sm gap-3 px-3 py-2.5 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors">
+    <div className="flex flex-wrap items-center justify-between gap-y-2 text-sm gap-3 px-3 py-2.5 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors">
       <div className="flex items-center gap-2 min-w-0 flex-1">
         <Network className="w-4 h-4 text-purple-400 shrink-0" />
         <span className="text-foreground truncate font-medium" title={udn.name}>
@@ -172,7 +172,7 @@ export function OvnDetailModal({ isOpen, onClose, data, isDemoData }: OvnDetailM
           {activeTab === TAB_UDNS && (
             <div className="space-y-3">
               {/* Network type breakdown */}
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <div className="p-2 rounded bg-secondary/30 text-center">
                   <p className="text-sm font-bold text-foreground">{udns.length}</p>
                   <p className="text-[10px] text-muted-foreground">{t('ovnStatus.totalUdns', 'Total')}</p>

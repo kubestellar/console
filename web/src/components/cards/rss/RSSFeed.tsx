@@ -650,7 +650,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
   if (showFullSkeleton) {
     return (
       <div className="h-full flex flex-col animate-pulse">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
           <div className="h-5 w-32 bg-secondary/50 rounded" />
           <div className="h-6 w-6 bg-secondary/50 rounded" />
         </div>
@@ -669,7 +669,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
   return (
     <div className="h-full flex flex-col min-h-0 overflow-hidden relative">
       {/* Row 1: Header */}
-      <div className="flex items-center justify-between mb-2 flex-shrink-0">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 flex-shrink-0">
         <div className="flex items-center gap-2 min-w-0">
           {/* Feed Selector */}
           <div className="relative">
@@ -793,7 +793,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
       )}
 
       {/* Sort & Filter Controls */}
-      <div className="flex items-center justify-between mb-2 flex-shrink-0">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 flex-shrink-0">
         <div className="flex items-center gap-2">
           {/* CardControlsRow for sort & limit */}
           <CardControlsRow
@@ -885,7 +885,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
       {/* Filter Editor Modal */}
       {showFilterEditor && (
         <div className="mb-2 p-2 bg-purple-500/10 border border-purple-500/20 rounded-lg flex-shrink-0 max-h-36 overflow-y-auto">
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2">
             <span className="text-xs font-medium text-purple-300">Filter: {activeFeed?.name}</span>
             <button
               onClick={() => setShowFilterEditor(false)}
@@ -943,7 +943,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
       {/* Settings Panel - absolute positioned to not affect card height */}
       {showSettings && (
         <div className="absolute inset-x-3 top-16 bottom-3 p-3 bg-card border border-border rounded-lg shadow-lg z-40 flex flex-col overflow-hidden">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
             <span className="text-sm font-medium">{t('cards:rssFeed.manageFeeds')}</span>
             <button
               onClick={() => setShowSettings(false)}
@@ -1015,7 +1015,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
                 <div
                   key={feed.url}
                   className={cn(
-                    "flex items-center justify-between px-2 py-1.5 rounded transition-colors",
+                    "flex flex-wrap items-center justify-between gap-y-2 px-2 py-1.5 rounded transition-colors",
                     idx === activeFeedIndex
                       ? "bg-primary/20 border border-primary/30"
                       : "bg-secondary/30 hover:bg-secondary/50"
@@ -1153,7 +1153,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
 
                 {/* Source feed selector */}
                 <div className="mb-2">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-y-2">
                     <label className="text-2xs text-muted-foreground">{t('cards:rssFeed.selectSourceFeeds')}:</label>
                     <button
                       type="button"
@@ -1262,7 +1262,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
             Loading {activeFeed?.name || 'feed'}...
           </span>
         ) : error ? (
-          <div className="flex items-center justify-between gap-2 w-full px-2 py-0.5 bg-yellow-500/10 border border-yellow-500/20 rounded text-2xs text-yellow-400">
+          <div className="flex flex-wrap items-center justify-between gap-y-2 gap-2 w-full px-2 py-0.5 bg-yellow-500/10 border border-yellow-500/20 rounded text-2xs text-yellow-400">
             <span className="truncate">
               ⚠ {error === 'Failed to fetch' || error.includes('failed')
                 ? `Could not load ${activeFeed?.name || 'feed'}`

@@ -331,7 +331,7 @@ export function KubeSnake() {
     <div ref={gameContainerRef} className="h-full flex flex-col">
       <div className={`flex flex-col items-center gap-3 ${isExpanded ? 'flex-1 min-h-0' : ''}`}>
         {/* Stats bar */}
-        <div className="flex items-center justify-between w-full text-sm" style={{ maxWidth: isExpanded ? CANVAS_WIDTH * canvasScale : DEFAULT_CANVAS_SIZE }}>
+        <div className="flex flex-wrap items-center justify-between gap-y-2 w-full text-sm" style={{ maxWidth: isExpanded ? CANVAS_WIDTH * canvasScale : DEFAULT_CANVAS_SIZE }}>
           <div className="flex items-center gap-2">
             <Apple className="w-4 h-4 text-red-400" />
             <span className="font-bold text-lg">{score}</span>

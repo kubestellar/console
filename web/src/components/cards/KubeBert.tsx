@@ -649,7 +649,7 @@ export function KubeBert() {
   return (
     <div ref={containerRef} className="h-full flex flex-col">
       {/* Stats bar */}
-      <div className="flex items-center justify-between px-3 py-1.5 bg-black/30 rounded-t-lg text-xs">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 px-3 py-1.5 bg-black/30 rounded-t-lg text-xs">
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1 text-yellow-400">
             <Trophy className="w-3.5 h-3.5" />

@@ -108,7 +108,7 @@ export function StorageOverview() {
         {/* Loading label for accessibility / test hook */}
         <p className="sr-only">{t('storageOverview.loading')}</p>
         {/* Header skeleton */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
           <Skeleton variant="text" width={120} height={16} />
           <Skeleton variant="rounded" width={80} height={24} />
         </div>
@@ -132,7 +132,7 @@ export function StorageOverview() {
   return (
     <div className="h-full flex flex-col">
       {/* Controls */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
         <div />
         <div className="flex items-center gap-2">
           {/* Cluster count indicator */}
@@ -200,7 +200,7 @@ export function StorageOverview() {
       </div>
 
       {/* PVC Status breakdown */}
-      <div className="grid grid-cols-3 gap-2 mb-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
         <div
           className="p-2 rounded-lg bg-green-500/10 border border-green-500/20 cursor-default transition-colors"
           title={stats.boundPVCs > 0 ? `${stats.boundPVCs} PVC${stats.boundPVCs !== 1 ? 's' : ''} successfully bound` : 'No bound PVCs'}
@@ -239,7 +239,7 @@ export function StorageOverview() {
           <div className="text-xs text-muted-foreground mb-2">{t('storageOverview.storageClasses')}</div>
           <div className="space-y-1.5">
             {stats.storageClasses.slice(0, 5).map(([name, count]) => (
-              <div key={name} className="flex items-center justify-between p-2 rounded bg-secondary/30 cursor-default" title={`Storage class "${name}" has ${count} PVC${count !== 1 ? 's' : ''}`}>
+              <div key={name} className="flex flex-wrap items-center justify-between gap-y-2 p-2 rounded bg-secondary/30 cursor-default" title={`Storage class "${name}" has ${count} PVC${count !== 1 ? 's' : ''}`}>
                 <span className="text-sm text-foreground truncate" title={name}>{name}</span>
                 <span className="text-xs text-muted-foreground">{t('storageOverview.nPVCs', { count })}</span>
               </div>

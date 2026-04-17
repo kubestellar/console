@@ -144,7 +144,7 @@ export function CrossplaneManagedResources() {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
         <StatusBadge color="purple">
           {t('crossplaneManagedResources.resourceCount', { count: rawResources.length })}
         </StatusBadge>
@@ -170,7 +170,7 @@ export function CrossplaneManagedResources() {
         className="mb-4"
       />
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-2 mb-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
         <StatBox label={t('crossplaneManagedResources.ready')} value={readyCount} color="green" />
         <StatBox label={t('crossplaneManagedResources.notReady')} value={notReadyCount} color="orange" />
         <StatBox label={t('crossplaneManagedResources.error')} value={errorCount} color="red" />
@@ -193,7 +193,7 @@ export function CrossplaneManagedResources() {
           return (
             <div
               key={`${resource.namespace}/${resource.name}`}
-              className="group flex items-center justify-between p-2 rounded-lg border border-border/30 bg-secondary/30 transition-all hover:bg-secondary/50 hover:border-border/50"
+              className="group flex flex-wrap items-center justify-between gap-y-2 p-2 rounded-lg border border-border/30 bg-secondary/30 transition-all hover:bg-secondary/50 hover:border-border/50"
             >
               <div className="flex items-center gap-2 min-w-0 flex-1">
                 {statusIcon}

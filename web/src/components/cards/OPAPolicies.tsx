@@ -634,7 +634,7 @@ Please:
   return (
     <div className="h-full flex flex-col min-h-card">
       {/* Controls */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
         <div className="flex items-center gap-2">
           {installedCount > 0 && (
             <StatusBadge color="green" size="xs">
@@ -740,7 +740,7 @@ Please:
                     : ''
                 } ${isOffline ? 'opacity-50' : ''}`}
               >
-                <div className="flex items-center justify-between mb-1">
+                <div className="flex flex-wrap items-center justify-between gap-y-2 mb-1">
                   <span className={`text-sm font-medium text-foreground ${!isOffline && status?.installed ? 'group-hover:text-purple-400' : ''}`}>
                     {cluster.name}
                   </span>
@@ -805,7 +805,7 @@ Please:
                     <span>{status.error}</span>
                   </div>
                 ) : (
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-y-2">
                     <span className="text-xs text-muted-foreground">Not installed</span>
                     <span
                       onClick={(e) => {
@@ -854,7 +854,7 @@ Please:
                     setSelectedPolicy(policy)
                     openPolicyModal()
                   }}
-                  className="w-full flex items-center justify-between text-xs p-1.5 -mx-1.5 rounded hover:bg-secondary/50 transition-colors group"
+                  className="w-full flex flex-wrap items-center justify-between gap-y-2 text-xs p-1.5 -mx-1.5 rounded hover:bg-secondary/50 transition-colors group"
                 >
                   <span className="text-foreground truncate group-hover:text-purple-400">{policy.name}</span>
                   <div className="flex items-center gap-2">

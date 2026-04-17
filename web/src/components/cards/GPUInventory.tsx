@@ -127,11 +127,11 @@ export function GPUInventory({ config }: GPUInventoryProps) {
   if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
           <Skeleton variant="text" width={100} height={16} />
           <Skeleton variant="rounded" width={80} height={28} />
         </div>
-        <div className="grid grid-cols-3 gap-2 mb-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
           {[1, 2, 3].map(i => (
             <Skeleton key={i} variant="rounded" height={50} />
           ))}
@@ -164,7 +164,7 @@ export function GPUInventory({ config }: GPUInventoryProps) {
   return (
     <div className="h-full flex flex-col content-loaded overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
         <div className="flex items-center gap-2">
           <StatusBadge color="green">
             {t('gpuInventory.gpuCount', { count: stats.totalGPUs })}
@@ -223,7 +223,7 @@ export function GPUInventory({ config }: GPUInventoryProps) {
       />
 
       {/* Summary */}
-      <div className="grid grid-cols-3 gap-2 mb-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
         <div className="p-2 rounded-lg bg-secondary/30 text-center">
           <p className="text-lg font-bold text-foreground">{stats.totalGPUs}</p>
           <p className="text-xs text-muted-foreground">{t('common:common.total')}</p>
@@ -256,7 +256,7 @@ export function GPUInventory({ config }: GPUInventoryProps) {
               <span className="text-sm font-medium text-foreground truncate min-w-0 flex-1 group-hover:text-purple-400">{node.name}</span>
               <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
-            <div className="flex items-center justify-between text-xs gap-2 min-w-0">
+            <div className="flex flex-wrap items-center justify-between gap-y-2 text-xs gap-2 min-w-0">
               <div className="min-w-0 flex-1">
                 <ClusterBadge cluster={node.cluster} size="sm" />
               </div>

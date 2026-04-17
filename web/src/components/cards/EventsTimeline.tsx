@@ -243,7 +243,7 @@ function EventsTimelineInternal() {
   if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card">
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2">
           <Skeleton variant="text" width={120} height={16} />
           <Skeleton variant="rounded" width={28} height={28} />
         </div>
@@ -265,7 +265,7 @@ function EventsTimelineInternal() {
   return (
     <div className="h-full flex flex-col content-loaded">
       {/* Controls - single row: Time Range -> Cluster Filter -> Refresh */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
         <div className="flex items-center gap-2">
           <RefreshIndicator
             isRefreshing={isRefreshing}
@@ -313,7 +313,7 @@ function EventsTimelineInternal() {
       </div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-3 gap-2 mb-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
         <div className="p-2 rounded-lg bg-orange-500/10 border border-orange-500/20">
           <div className="flex items-center gap-1.5 mb-1">
             <AlertTriangle className="w-3 h-3 text-orange-400" aria-hidden="true" />

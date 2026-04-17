@@ -723,7 +723,7 @@ export function GitHubActivity({ config, ref }: { config?: GitHubActivityConfig;
   if (isLoading && !repoInfo) {
     return (
       <div className="h-full flex flex-col min-h-card">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
           <Skeleton variant="text" width={150} height={16} />
           <Skeleton variant="rounded" width={100} height={28} />
         </div>
@@ -746,7 +746,7 @@ export function GitHubActivity({ config, ref }: { config?: GitHubActivityConfig;
     return (
       <div className="h-full flex flex-col content-loaded">
         {/* Header with inline repo editor */}
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
           <StatusBadge color="red" variant="outline" rounded="full">
             {t('common:common.error')}
           </StatusBadge>
@@ -878,7 +878,7 @@ export function GitHubActivity({ config, ref }: { config?: GitHubActivityConfig;
   return (
     <div className="h-full flex flex-col content-loaded">
       {/* Row 1: Header with repo selector and controls - inline CRUD style */}
-      <div className="flex items-center justify-between mb-2 flex-shrink-0">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 flex-shrink-0">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-muted-foreground">
             {t('common:common.itemCount', { count: totalItems, item: viewMode })}

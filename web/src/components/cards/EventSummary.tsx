@@ -93,7 +93,7 @@ export function EventSummary() {
   return (
     <div className="space-y-4">
       {/* Header controls */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-y-2">
         <span className="text-xs text-muted-foreground">
           {t('eventSummary.nEvents', { count: total })}
         </span>
@@ -172,7 +172,7 @@ export function EventSummary() {
           <div className="text-xs font-medium text-muted-foreground mb-2">{t('eventSummary.topReasons')}</div>
           <div className="space-y-1">
             {summary.topReasons.map(([reason, count]) => (
-              <div key={reason} className="flex items-center justify-between text-xs">
+              <div key={reason} className="flex flex-wrap items-center justify-between gap-y-2 text-xs">
                 <span className="text-foreground truncate mr-2">{reason}</span>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <div className="w-16 h-1.5 rounded-full bg-secondary overflow-hidden">
@@ -195,7 +195,7 @@ export function EventSummary() {
           <div className="text-xs font-medium text-muted-foreground mb-2">{t('eventSummary.byCluster')}</div>
           <div className="space-y-1">
             {summary.topClusters.map(([cluster, count]) => (
-              <div key={cluster} className="flex items-center justify-between text-xs">
+              <div key={cluster} className="flex flex-wrap items-center justify-between gap-y-2 text-xs">
                 <span className="text-foreground truncate mr-2">{cluster}</span>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <div className="w-16 h-1.5 rounded-full bg-secondary overflow-hidden">

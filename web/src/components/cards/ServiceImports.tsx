@@ -102,7 +102,7 @@ function ServiceImportsInternal({ config: _config }: ServiceImportsProps) {
   if (isLoading) {
     return (
       <div className="h-full flex flex-col min-h-card">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
           <Skeleton variant="text" width={120} height={20} />
           <Skeleton variant="rounded" width={80} height={28} />
         </div>
@@ -134,7 +134,7 @@ function ServiceImportsInternal({ config: _config }: ServiceImportsProps) {
   return (
     <div className="h-full flex flex-col min-h-card">
       {/* Header with controls */}
-      <div className="flex items-center justify-between mb-2 flex-shrink-0">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 flex-shrink-0">
         <div className="flex items-center gap-2">
           <a
             href={K8S_DOCS.mcsApi}
@@ -193,7 +193,7 @@ function ServiceImportsInternal({ config: _config }: ServiceImportsProps) {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-2 mb-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
         <div className="p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-center">
           <p className="text-2xs text-cyan-400">{t('serviceImports.imports')}</p>
           <p className="text-lg font-bold text-foreground">{stats.totalImports}</p>
@@ -226,7 +226,7 @@ function ServiceImportsInternal({ config: _config }: ServiceImportsProps) {
               key={`${imp.cluster}-${imp.namespace}-${imp.name}-${idx}`}
               className="p-2.5 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors"
             >
-              <div className="flex items-center justify-between mb-1">
+              <div className="flex flex-wrap items-center justify-between gap-y-2 mb-1">
                 <div className="flex items-center gap-2">
                   <EndpointIcon className={`w-4 h-4 ${endpointStatus.color}`} />
                   <span className="text-sm font-medium text-foreground truncate">{imp.name}</span>

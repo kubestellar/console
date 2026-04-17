@@ -482,7 +482,7 @@ data:
   return (
     <div className="h-full flex flex-col min-h-card overflow-hidden">
       {/* Header with controls */}
-      <div className="flex items-center justify-between mb-4 gap-2 min-w-0">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4 gap-2 min-w-0">
         <div className="flex items-center gap-2 min-w-0 flex-1">
           {clusters.length > 0 && (
             <select
@@ -580,7 +580,7 @@ data:
       {/* YAML Editor Panel */}
       {showYAMLEditor && (
         <div className="mb-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2">
             <div className="flex items-center gap-2">
               <FileCode className="w-4 h-4 text-blue-400" />
               <span className="text-sm font-medium text-blue-300">{t('cards:kubectl.yamlEditor')}</span>
@@ -681,7 +681,7 @@ data:
                       selectedManifest === manifest.id ? 'bg-secondary/50 text-foreground' : 'text-muted-foreground'
                     )}
                   >
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-wrap items-center justify-between gap-y-2">
                       <span>{manifest.name}</span>
                       <span className="text-2xs">{manifest.timestamp.toLocaleTimeString()}</span>
                     </div>
@@ -722,7 +722,7 @@ data:
                 }}
                 className="w-full px-2 py-1.5 text-xs rounded text-left hover:bg-secondary/50 group"
               >
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-y-2">
                   <div className="flex items-center gap-2 flex-1 min-w-0">
                     {item.success ? (
                       <CheckCircle className="w-3 h-3 text-green-400 flex-shrink-0" />

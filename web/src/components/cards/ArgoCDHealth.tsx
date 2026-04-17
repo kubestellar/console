@@ -54,7 +54,7 @@ export function ArgoCDHealth({ config: _config }: ArgoCDHealthProps) {
   if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
           <Skeleton variant="text" width={130} height={20} />
           <Skeleton variant="rounded" width={80} height={28} />
         </div>
@@ -79,7 +79,7 @@ export function ArgoCDHealth({ config: _config }: ArgoCDHealthProps) {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded">
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
         <h3 className="text-sm font-medium text-foreground truncate">{t('argoCDHealth.title')}</h3>
         <div className="flex items-center gap-1">
           <a
@@ -130,7 +130,7 @@ export function ArgoCDHealth({ config: _config }: ArgoCDHealthProps) {
           const Icon = config.icon
 
           return (
-            <div key={key} className={`flex items-center justify-between p-2 rounded-lg ${config.bg}`}>
+            <div key={key} className={`flex flex-wrap items-center justify-between gap-y-2 p-2 rounded-lg ${config.bg}`}>
               <div className="flex items-center gap-2">
                 <Icon className={`w-4 h-4 ${config.color}`} />
                 <span className="text-sm text-foreground">{t(config.labelKey)}</span>

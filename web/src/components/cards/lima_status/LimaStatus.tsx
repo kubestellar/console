@@ -75,7 +75,7 @@ export function LimaStatus() {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded gap-4">
       {/* Health badge + last check */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-y-2">
         <div
           className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${
             isHealthy
@@ -128,7 +128,7 @@ export function LimaStatus() {
           {data.instances.map((instance) => (
             <div
               key={instance.name}
-              className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 bg-secondary/30"
+              className="flex flex-wrap items-center justify-between gap-y-2 gap-2 rounded-md px-2 py-1.5 bg-secondary/30"
             >
               <div className="flex items-center gap-2 min-w-0">
                 <Monitor className={`w-3.5 h-3.5 shrink-0 ${STATUS_COLORS[instance.status] ?? 'text-muted-foreground'}`} />

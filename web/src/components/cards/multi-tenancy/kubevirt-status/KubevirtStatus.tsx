@@ -172,7 +172,7 @@ export function KubevirtStatus() {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded gap-4">
       {/* Health badge + last check */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-y-2">
         <div
           role="button"
           tabIndex={0}
@@ -267,7 +267,7 @@ export function KubevirtStatus() {
           <p className="text-xs font-medium text-muted-foreground">{t('kubevirtStatus.clusterBreakdown')}</p>
           <div className="space-y-1.5">
             {clusters.map((ci) => (
-              <div key={ci.cluster} className="flex items-center justify-between text-xs gap-2 px-2 py-1.5 rounded bg-secondary/30 cursor-pointer hover:bg-secondary/50 transition-colors" role="button" tabIndex={0} aria-label={t('kubevirtStatus.viewCluster', { cluster: ci.cluster })} onClick={openDetailModal} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetailModal() } }}>
+              <div key={ci.cluster} className="flex flex-wrap items-center justify-between gap-y-2 text-xs gap-2 px-2 py-1.5 rounded bg-secondary/30 cursor-pointer hover:bg-secondary/50 transition-colors" role="button" tabIndex={0} aria-label={t('kubevirtStatus.viewCluster', { cluster: ci.cluster })} onClick={openDetailModal} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetailModal() } }}>
                 <div className="flex items-center gap-2 min-w-0 flex-1">
                   <Server className="w-3 h-3 text-cyan-400 shrink-0" />
                   <span className="text-foreground truncate" title={ci.cluster}>{ci.cluster}</span>
@@ -288,7 +288,7 @@ export function KubevirtStatus() {
           <p className="text-xs font-medium text-muted-foreground">{t('kubevirtStatus.vmList')}</p>
           <div className="space-y-1.5 max-h-40 overflow-y-auto scrollbar-thin">
             {vms.map((vm) => (
-              <div key={`${vm.cluster}/${vm.namespace}/${vm.name}`} className="flex items-center justify-between text-xs gap-2 px-2 py-1.5 rounded bg-secondary/30 cursor-pointer hover:bg-secondary/50 transition-colors" role="button" tabIndex={0} aria-label={t('kubevirtStatus.viewVm', { name: vm.name, namespace: vm.namespace })} onClick={openDetailModal} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetailModal() } }}>
+              <div key={`${vm.cluster}/${vm.namespace}/${vm.name}`} className="flex flex-wrap items-center justify-between gap-y-2 text-xs gap-2 px-2 py-1.5 rounded bg-secondary/30 cursor-pointer hover:bg-secondary/50 transition-colors" role="button" tabIndex={0} aria-label={t('kubevirtStatus.viewVm', { name: vm.name, namespace: vm.namespace })} onClick={openDetailModal} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetailModal() } }}>
                 <div className="flex flex-col min-w-0 flex-1">
                   <span className="text-foreground truncate" title={vm.name}>
                     {vm.name}

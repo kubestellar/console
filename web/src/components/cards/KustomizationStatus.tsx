@@ -221,7 +221,7 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
   if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
           <Skeleton variant="text" width={160} height={20} />
           <Skeleton variant="rounded" width={80} height={28} />
         </div>
@@ -247,7 +247,7 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-muted-foreground">
             {totalItems} kustomizations
@@ -361,7 +361,7 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
                   className={`p-3 rounded-lg cursor-pointer group ${ks.status === 'NotReady' ? 'bg-red-500/10 border border-red-500/20' : 'bg-secondary/30'} hover:bg-secondary/50 transition-colors`}
                   title={`Click to view ${ks.name} details`}
                 >
-                  <div className="flex items-center justify-between mb-1">
+                  <div className="flex flex-wrap items-center justify-between gap-y-2 mb-1">
                     <div className="flex items-center gap-2">
                       <StatusIcon className={`w-4 h-4 text-${color}-400 ${ks.status === 'Progressing' ? 'animate-spin' : ''}`} />
                       <span className="text-sm text-foreground font-medium">{ks.name}</span>
@@ -378,7 +378,7 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
                       <GitBranch className="w-3 h-3" />
                       <span className="truncate">{ks.path}</span>
                     </div>
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-wrap items-center justify-between gap-y-2">
                       <span className="truncate">{ks.revision.split('@')[1]?.slice(0, 12)}</span>
                       <span>{formatTime(ks.lastApplied)}</span>
                     </div>

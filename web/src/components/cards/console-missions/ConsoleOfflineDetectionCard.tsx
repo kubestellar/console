@@ -874,7 +874,7 @@ Please:
       </div>
 
       {/* Status Summary */}
-      <div className="grid grid-cols-3 gap-2 mb-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
         <div
           className={cn(
             'p-2 rounded-lg border',
@@ -1042,7 +1042,7 @@ ${aiEnabled ? '\nClick to run AI analysis now' : ''}`}
                   {/* Group Header */}
                   <div
                     className={cn(
-                      'p-2 rounded text-xs cursor-pointer transition-colors flex items-center justify-between',
+                      'p-2 rounded text-xs cursor-pointer transition-colors flex flex-wrap items-center justify-between gap-y-2',
                       `bg-${severityColor}-500/10 hover:bg-${severityColor}-500/20 border border-${severityColor}-500/20`
                     )}
                     style={{
@@ -1119,7 +1119,7 @@ TASK:
                       {group.items.map((item) => (
                         <div
                           key={item.id}
-                          className="p-1.5 rounded bg-secondary/30 text-xs cursor-pointer hover:bg-secondary/50 transition-colors flex items-center justify-between"
+                          className="p-1.5 rounded bg-secondary/30 text-xs cursor-pointer hover:bg-secondary/50 transition-colors flex flex-wrap items-center justify-between gap-y-2"
                           onClick={() => {
                             if (item.category === 'offline' && item.nodeData?.cluster) {
                               drillToNode(item.nodeData.cluster, item.name, {})
@@ -1162,7 +1162,7 @@ TASK:
             return (
               <div
                 key={item.id}
-                className="p-2 rounded bg-red-500/10 text-xs cursor-pointer hover:bg-red-500/20 transition-colors group flex items-center justify-between"
+                className="p-2 rounded bg-red-500/10 text-xs cursor-pointer hover:bg-red-500/20 transition-colors group flex flex-wrap items-center justify-between gap-y-2"
                 onClick={() => node.cluster && drillToNode(node.cluster, node.name, {
                   status: node.unschedulable ? 'Cordoned' : node.status,
                   unschedulable: node.unschedulable,
@@ -1203,7 +1203,7 @@ TASK:
             return (
               <div
                 key={item.id}
-                className="p-2 rounded bg-yellow-500/10 text-xs cursor-pointer hover:bg-yellow-500/20 transition-colors group flex items-center justify-between"
+                className="p-2 rounded bg-yellow-500/10 text-xs cursor-pointer hover:bg-yellow-500/20 transition-colors group flex flex-wrap items-center justify-between gap-y-2"
                 onClick={() => drillToCluster(issue.cluster)}
                 title={`Click to view cluster ${issue.cluster}`}
               >
@@ -1243,7 +1243,7 @@ TASK:
                 )}
                 title={risk.reasonDetailed || risk.reason}
               >
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-y-2">
                   <div
                     className="min-w-0 flex items-center gap-2 flex-1 cursor-pointer"
                     onClick={() => risk.cluster && drillToCluster(risk.cluster)}

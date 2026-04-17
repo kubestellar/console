@@ -176,7 +176,7 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
   if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
           <Skeleton variant="text" width={130} height={20} />
           <Skeleton variant="rounded" width={80} height={28} />
         </div>
@@ -202,7 +202,7 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
         <div className="flex items-center gap-2">
           <StatusBadge color="purple">
             {activeTab === 'roles' ? t('namespaceRBAC.nRoles', { count: rbacRoles.length }) : activeTab === 'bindings' ? t('namespaceRBAC.nBindings', { count: rbacBindings.length }) : t('namespaceRBAC.nServiceAccounts', { count: rbacServiceAccounts.length })}
@@ -340,7 +340,7 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
                     subjects: item.subjects })}
                   className={`p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 cursor-pointer transition-colors group ${isFetchingRBAC ? 'opacity-50' : ''}`}
                 >
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-y-2">
                     <div className="flex items-center gap-2">
                       {activeTab === 'roles' && <Key className="w-4 h-4 text-yellow-400" />}
                       {activeTab === 'bindings' && <Lock className="w-4 h-4 text-green-400" />}
@@ -375,7 +375,7 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
           />
 
           {/* Summary */}
-          <div className="mt-4 pt-3 border-t border-border/50 flex items-center justify-between text-xs text-muted-foreground">
+          <div className="mt-4 pt-3 border-t border-border/50 flex flex-wrap items-center justify-between gap-y-2 text-xs text-muted-foreground">
             <span>{t('namespaceRBAC.nRoles', { count: rbacRoles.length })}</span>
             <span>{t('namespaceRBAC.nBindings', { count: rbacBindings.length })}</span>
             <span>{t('namespaceRBAC.nServiceAccounts', { count: rbacServiceAccounts.length })}</span>

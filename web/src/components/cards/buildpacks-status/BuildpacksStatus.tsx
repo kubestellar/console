@@ -190,7 +190,7 @@ export function BuildpacksStatus({ config }: BuildpacksStatusProps) {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded overflow-hidden">
       {/* Controls */}
-      <div className="flex items-center justify-between gap-2 mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 gap-2 mb-4">
         <div className="flex items-center gap-2">
           {localClusterFilter.length > 0 && (
             <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
@@ -306,7 +306,7 @@ export function BuildpacksStatus({ config }: BuildpacksStatusProps) {
                   : 'bg-secondary/30'
               } hover:bg-secondary/50`}
             >
-              <div className="flex items-center justify-between mb-1">
+              <div className="flex flex-wrap items-center justify-between gap-y-2 mb-1">
                 <div className="flex items-center gap-2">
                   <Icon className={`w-4 h-4 ${styles.icon}`} />
                   <span className="text-sm font-medium group-hover:text-purple-400">

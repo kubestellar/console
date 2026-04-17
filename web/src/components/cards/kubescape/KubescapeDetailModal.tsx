@@ -109,7 +109,7 @@ export function KubescapeDetailModal({
               <h3 className="text-sm font-medium text-muted-foreground">Framework Scores</h3>
               {(status.frameworks || []).map((fw, i) => (
                 <div key={i} className="space-y-1">
-                  <div className="flex items-center justify-between text-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-y-2 text-sm">
                     <span className="text-foreground">{fw.name}</span>
                     <span className={`font-medium ${
                       fw.score >= SCORE_GOOD_THRESHOLD ? 'text-green-400' :
@@ -137,7 +137,7 @@ export function KubescapeDetailModal({
           </div>
 
           {/* Summary stats */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <div className="p-3 rounded-lg bg-secondary/30 text-center">
               <p className="text-xl font-bold text-foreground">{status.totalControls}</p>
               <p className="text-xs text-muted-foreground">Total Controls</p>

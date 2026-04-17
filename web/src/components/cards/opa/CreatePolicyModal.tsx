@@ -407,7 +407,7 @@ Please proceed with applying this policy.`,
                     onClick={() => handleUseTemplate(template)}
                     className="w-full p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors text-left"
                   >
-                    <div className="flex items-center justify-between mb-1">
+                    <div className="flex flex-wrap items-center justify-between gap-y-2 mb-1">
                       <span className="text-sm font-medium text-foreground">{template.name}</span>
                       <span className="text-xs text-muted-foreground">{template.kind}</span>
                     </div>
@@ -420,7 +420,7 @@ Please proceed with applying this policy.`,
             {/* Flow: Custom YAML / Template editor */}
             {flow === 'yaml' && (
               <div className="space-y-3">
-                <div className="flex items-center justify-between text-xs">
+                <div className="flex flex-wrap items-center justify-between gap-y-2 text-xs">
                   <span className="text-muted-foreground">
                     YAML will be applied to: <span className="text-foreground">{selectedCluster}</span>
                   </span>

@@ -209,7 +209,7 @@ function EventStreamInternal({ config }: { config?: EventStreamConfig }) {
   return (
     <div className="h-full flex flex-col content-loaded">
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
         <div className="flex items-center gap-2">
           <RefreshIndicator
             isRefreshing={isRefreshing}

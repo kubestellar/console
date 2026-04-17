@@ -202,7 +202,7 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
   if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
           <Skeleton variant="text" width={140} height={20} />
           <Skeleton variant="rounded" width={28} height={28} />
         </div>
@@ -235,7 +235,7 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
         <div className="flex items-center gap-2">
           <RefreshIndicator
             isRefreshing={isRefreshing}
@@ -293,7 +293,7 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
 
             return (
               <div key={item.id} className="p-3 rounded-lg bg-secondary/30">
-                <div className="flex items-center justify-between mb-1.5">
+                <div className="flex flex-wrap items-center justify-between gap-y-2 mb-1.5">
                   <div className="flex items-center gap-2">
                     <span className={textClasses[item.color]}>{getIcon(item.icon)}</span>
                     <span className="text-sm font-medium text-foreground">{item.label}</span>
@@ -346,7 +346,7 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
       {/* Summary */}
       {/* Summary footer */}
       <div
-        className={`mt-3 pt-3 border-t border-border/50 grid ${totals.totalGPUs > 0 ? 'grid-cols-4' : 'grid-cols-3'} gap-2 text-center cursor-pointer hover:bg-secondary/30 rounded-lg transition-colors`}
+        className={`mt-3 pt-3 border-t border-border/50 grid ${totals.totalGPUs > 0 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2 sm:grid-cols-3'} gap-2 text-center cursor-pointer hover:bg-secondary/30 rounded-lg transition-colors`}
         onClick={() => drillToResources()}
       >
         <div>

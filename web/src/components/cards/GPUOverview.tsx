@@ -105,14 +105,14 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
   if (isLoading && hasReachableClusters) {
     return (
       <div className="h-full flex flex-col min-h-card">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
           <Skeleton variant="text" width={100} height={16} />
           <Skeleton variant="rounded" width={80} height={28} />
         </div>
         <div className="flex justify-center mb-4">
           <Skeleton variant="circular" width={128} height={128} />
         </div>
-        <div className="grid grid-cols-3 gap-2 mb-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
           {[1, 2, 3].map(i => (
             <Skeleton key={i} variant="rounded" height={50} />
           ))}
@@ -296,7 +296,7 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-2 mb-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
         <div
           className={`text-center ${totalGPUs > 0 ? 'cursor-pointer hover:bg-secondary/50 rounded-lg' : 'cursor-default'} transition-colors p-1`}
           onClick={() => totalGPUs > 0 && drillToResources()}
@@ -331,7 +331,7 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
             {sortedGpuTypes.map(([type, count]) => (
               <div
                 key={type}
-                className="flex items-center justify-between text-sm cursor-pointer hover:bg-secondary/50 rounded px-1 transition-colors"
+                className="flex flex-wrap items-center justify-between gap-y-2 text-sm cursor-pointer hover:bg-secondary/50 rounded px-1 transition-colors"
                 onClick={() => drillToResources()}
                 title={t('gpuOverview.gpuTypeRowTitle', { count, type })}
               >

@@ -41,7 +41,7 @@ export function TrinoGateway() {
   if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card gap-3 p-1">
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {Array.from({ length: SUMMARY_TILE_COUNT }).map((_, i) => (
             <Skeleton key={i} variant="rounded" height={48} />
           ))}
@@ -76,7 +76,7 @@ export function TrinoGateway() {
   return (
     <div className="h-full flex flex-col min-h-card gap-3 p-1 overflow-hidden">
       {/* Summary tiles */}
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <StatTile icon={Database} label="Clusters" value={`${healthyClusters}/${trinoClusters.length}`} color="text-blue-400" />
         <StatTile icon={Server} label="Workers" value={String(data.totalWorkers)} color="text-purple-400" />
         <StatTile icon={Activity} label="Queries" value={String(data.totalActiveQueries)} color="text-green-400" />
@@ -88,7 +88,7 @@ export function TrinoGateway() {
         {trinoClusters.length > 0 && (
           <Section title={`Trino Clusters (${trinoClusters.length})`}>
             {trinoClusters.map(c => (
-              <div key={`${c.cluster}/${c.namespace}/${c.name}`} className="flex items-center justify-between px-2 py-1.5 rounded bg-secondary/30 text-xs">
+              <div key={`${c.cluster}/${c.namespace}/${c.name}`} className="flex flex-wrap items-center justify-between gap-y-2 px-2 py-1.5 rounded bg-secondary/30 text-xs">
                 <div className="flex items-center gap-2 min-w-0">
                   <div className={`w-1.5 h-1.5 rounded-full ${c.coordinatorReady ? 'bg-green-500' : 'bg-red-500'}`} />
                   <span className="truncate font-mono">{c.name}</span>
@@ -112,7 +112,7 @@ export function TrinoGateway() {
           <Section title={`Gateways (${gateways.length})`}>
             {gateways.map(g => (
               <div key={`${g.cluster}/${g.namespace}/${g.name}`} className="space-y-1">
-                <div className="flex items-center justify-between px-2 py-1.5 rounded bg-secondary/30 text-xs">
+                <div className="flex flex-wrap items-center justify-between gap-y-2 px-2 py-1.5 rounded bg-secondary/30 text-xs">
                   <div className="flex items-center gap-2 min-w-0">
                     <div className={`w-1.5 h-1.5 rounded-full ${GATEWAY_STATUS_DOT[g.status]}`} />
                     <span className="truncate font-mono">{g.name}</span>

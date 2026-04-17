@@ -157,7 +157,7 @@ export function ThroughputComparison() {
   return (
     <div className="p-4 h-full flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
         <div className="flex items-center gap-2">
           <Zap size={14} className="text-blue-400" />
           <span className="text-sm font-medium text-white">Throughput Scaling</span>

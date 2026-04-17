@@ -235,7 +235,7 @@ Please proceed with applying this policy.`,
 
         <BaseModal.Content className="max-h-[60vh]">
           {/* Tabs */}
-          <div className="flex items-center justify-between mb-4 pb-3 border-b border-border">
+          <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4 pb-3 border-b border-border">
             <div className="flex gap-1">
               <button
                 onClick={() => setActiveTab('policies')}
@@ -322,7 +322,7 @@ Please proceed with applying this policy.`,
                     onClick={() => handleEditYaml(policy)}
                     className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group"
                   >
-                    <div className="flex items-center justify-between mb-2">
+                    <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-foreground group-hover:text-purple-400 transition-colors">{policy.name}</span>
                         <span className="text-xs text-muted-foreground">({policy.kind})</span>
@@ -337,7 +337,7 @@ Please proceed with applying this policy.`,
                         </button>
                       </div>
                     </div>
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-wrap items-center justify-between gap-y-2">
                       <div className="flex items-center gap-3 text-xs">
                         {policy.violations > 0 ? (
                           <span className="flex items-center gap-1 text-yellow-400">
@@ -385,7 +385,7 @@ Please proceed with applying this policy.`,
           {activeTab === 'violations' && (
             <>
               {/* Summary */}
-              <div className="grid grid-cols-3 gap-3 mb-4 pb-4 border-b border-border">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4 pb-4 border-b border-border">
                 <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-center">
                   <p className="text-2xl font-bold text-red-400">{severityCounts.critical}</p>
                   <p className="text-xs text-muted-foreground">{t('common:common.critical')}</p>
@@ -479,7 +479,7 @@ Please proceed with applying this policy.`,
                 onClick={() => handleUseTemplate(template)}
                 className="w-full p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors text-left"
               >
-                <div className="flex items-center justify-between mb-1">
+                <div className="flex flex-wrap items-center justify-between gap-y-2 mb-1">
                   <span className="text-sm font-medium text-foreground">{template.name}</span>
                   <span className="text-xs text-muted-foreground">{template.kind}</span>
                 </div>
@@ -501,7 +501,7 @@ Please proceed with applying this policy.`,
         />
         <BaseModal.Content className="!overflow-visible">
           <div className="space-y-3">
-            <div className="flex items-center justify-between text-xs">
+            <div className="flex flex-wrap items-center justify-between gap-y-2 text-xs">
               <span className="text-muted-foreground">YAML will be applied to: <span className="text-foreground">{clusterName}</span></span>
               <button
                 onClick={() => copyToClipboard(yamlContent)}

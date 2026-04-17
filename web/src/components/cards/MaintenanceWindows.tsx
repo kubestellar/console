@@ -150,7 +150,7 @@ export function MaintenanceWindows() {
 
   return (
     <div className="space-y-2 p-1">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-y-2">
         <span className="text-xs text-muted-foreground">{displayWindows.filter(w => w.status !== 'completed').length} upcoming</span>
         <button
           onClick={() => { setShowForm(!showForm); setTimeError('') }}
@@ -206,7 +206,7 @@ export function MaintenanceWindows() {
           {timeError && (
             <p className="text-xs text-red-400">{timeError}</p>
           )}
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-y-2">
             <select
               value={formData.type}
               onChange={e => setFormData(f => ({ ...f, type: e.target.value as MaintenanceWindow['type'] }))}
@@ -231,7 +231,7 @@ export function MaintenanceWindows() {
           </div>
         ) : (
           displayWindows.map(w => (
-            <div key={w.id} className="flex items-center justify-between px-2 py-1.5 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors group">
+            <div key={w.id} className="flex flex-wrap items-center justify-between gap-y-2 px-2 py-1.5 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors group">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
                   <span className={`text-xs px-1.5 py-0.5 rounded ${statusColors[w.status]}`}>{w.status}</span>

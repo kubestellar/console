@@ -232,7 +232,7 @@ export function HelmHistory({ config }: HelmHistoryProps) {
   if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
           <Skeleton variant="text" width={120} height={20} />
           <Skeleton variant="rounded" width={80} height={28} />
         </div>
@@ -258,7 +258,7 @@ export function HelmHistory({ config }: HelmHistoryProps) {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
         <div className="flex items-center gap-2">
           {totalItems > 0 && (
             <StatusBadge color="purple">
@@ -379,7 +379,7 @@ export function HelmHistory({ config }: HelmHistoryProps) {
                         </div>
 
                         <div className={`p-2 rounded-lg transition-colors ${isCurrent ? 'bg-green-500/10 border border-green-500/20 group-hover:bg-green-500/20' : 'bg-secondary/30 group-hover:bg-secondary/50'}`}>
-                          <div className="flex items-center justify-between mb-1">
+                          <div className="flex flex-wrap items-center justify-between gap-y-2 mb-1">
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-medium text-foreground">{t('helmHistory.rev', { revision: entry.revision })}</span>
                               {isCurrent && (

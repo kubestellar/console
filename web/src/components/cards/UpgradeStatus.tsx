@@ -697,7 +697,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
         <div className="flex items-center gap-2">
           {pendingUpgrades > 0 && (
             <StatusBadge color="yellow">
@@ -751,7 +751,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
               className="cursor-pointer"
               onClick={() => drillToCluster(cluster.name, { tab: 'upgrade', version: cluster.currentVersion, targetVersion: cluster.targetVersion })}
             >
-              <div className="flex items-center justify-between mb-2 gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 gap-2">
                 <span className="text-sm font-medium text-foreground truncate min-w-0 flex-1">{cluster.name}</span>
                 <span className="shrink-0">{getStatusIcon(cluster.status)}</span>
               </div>

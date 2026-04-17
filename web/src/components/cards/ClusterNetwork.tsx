@@ -68,7 +68,7 @@ export function ClusterNetwork({ config }: ClusterNetworkProps) {
   if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
           <Skeleton variant="text" width={130} height={20} />
           <Skeleton variant="rounded" width={120} height={32} />
         </div>
@@ -112,7 +112,7 @@ export function ClusterNetwork({ config }: ClusterNetworkProps) {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded overflow-hidden">
       {/* Controls */}
-      <div className="flex items-center justify-between mb-4 gap-2 min-w-0">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4 gap-2 min-w-0">
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <span className="text-sm font-medium text-foreground truncate">{selectedCluster}</span>
           <div className={`w-2 h-2 rounded-full ${cluster?.healthy ? 'bg-green-500' : 'bg-red-500'}`} />
@@ -140,15 +140,15 @@ export function ClusterNetwork({ config }: ClusterNetworkProps) {
             <span className="text-sm font-medium text-cyan-300">{t('cards:clusterNetwork.apiServer')}</span>
           </div>
           <div className="space-y-2">
-            <div className="flex items-center justify-between gap-2 min-w-0">
+            <div className="flex flex-wrap items-center justify-between gap-y-2 gap-2 min-w-0">
               <span className="text-xs text-muted-foreground shrink-0">{t('cards:clusterNetwork.host')}</span>
               <span className="text-sm text-foreground font-mono truncate">{serverInfo.host}</span>
             </div>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-y-2">
               <span className="text-xs text-muted-foreground">{t('common:common.port')}</span>
               <span className="text-sm text-foreground font-mono">{serverInfo.port}</span>
             </div>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-y-2">
               <span className="text-xs text-muted-foreground">{t('common:common.protocol')}</span>
               <span className="text-sm text-foreground font-mono uppercase">{serverInfo.protocol}</span>
             </div>
@@ -159,7 +159,7 @@ export function ClusterNetwork({ config }: ClusterNetworkProps) {
       {/* Connection Status */}
       <div className="space-y-3">
         <div className="p-3 rounded-lg bg-secondary/30">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-y-2">
             <div className="flex items-center gap-2">
               <div className={`w-2 h-2 rounded-full ${cluster?.healthy ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
               <span className="text-sm text-muted-foreground">{t('cards:clusterNetwork.connectionStatus')}</span>
@@ -171,7 +171,7 @@ export function ClusterNetwork({ config }: ClusterNetworkProps) {
         </div>
 
         <div className="p-3 rounded-lg bg-secondary/30">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-y-2">
             <div className="flex items-center gap-2">
               <Shield className="w-4 h-4 text-purple-400" />
               <span className="text-sm text-muted-foreground">TLS</span>
@@ -181,7 +181,7 @@ export function ClusterNetwork({ config }: ClusterNetworkProps) {
         </div>
 
         <div className="p-3 rounded-lg bg-secondary/30">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-y-2">
             <div className="flex items-center gap-2">
               <Server className="w-4 h-4 text-blue-400" />
               <span className="text-sm text-muted-foreground">{t('common:common.nodes')}</span>

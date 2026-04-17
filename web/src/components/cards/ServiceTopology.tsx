@@ -361,7 +361,7 @@ export function ServiceTopology({ config: _config }: ServiceTopologyProps) {
       {/* Selected node details */}
       {selectedNodeData && (
         <div className="mt-2 p-2 bg-secondary/50 rounded-lg text-xs">
-          <div className="flex items-center justify-between mb-1">
+          <div className="flex flex-wrap items-center justify-between gap-y-2 mb-1">
             <div className="flex items-center gap-2">
               <div className={`w-2 h-2 rounded-full ${getNodeColor(selectedNodeData.type, selectedNodeData.health)}`} />
               <span className="font-medium text-foreground">{selectedNodeData.label}</span>

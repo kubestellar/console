@@ -154,7 +154,7 @@ export function NetworkPolicyCoverage() {
       {/* Namespace list */}
       <div className="space-y-1 max-h-[250px] overflow-y-auto">
         {displayed.slice(0, 30).map(ns => (
-          <div key={`${ns.cluster}/${ns.namespace}`} className="flex items-center justify-between px-2 py-1 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+          <div key={`${ns.cluster}/${ns.namespace}`} className="flex flex-wrap items-center justify-between gap-y-2 px-2 py-1 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
             <div className="flex items-center gap-2 min-w-0">
               <div className={`w-2 h-2 rounded-full ${ns.hasPolicies ? 'bg-green-500' : 'bg-red-500'}`} />
               <div className="min-w-0">

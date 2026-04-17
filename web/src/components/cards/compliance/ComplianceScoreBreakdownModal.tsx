@@ -191,7 +191,7 @@ function OverviewTab({ score, breakdown, scoreCtx, kubescapeData, kyvernoData }:
 
       {/* Aggregate stats — makes the Overview tab informative even when a single tool is connected. */}
       {totalChecks > 0 && (
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           <StatBox label="Total Checks" value={totalChecks} />
           <StatBox label="Passing" value={totalPassed} color="text-green-400" />
           <StatBox label="Failing" value={totalFailed} color="text-red-400" />
@@ -204,7 +204,7 @@ function OverviewTab({ score, breakdown, scoreCtx, kubescapeData, kyvernoData }:
           <h4 className="text-xs font-medium text-muted-foreground">By tool</h4>
           {breakdown.map(item => (
             <div key={item.name} className="space-y-1">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-y-2">
                 <span className="text-sm font-medium text-foreground">{item.name}</span>
                 <span className={`text-sm font-bold ${item.value >= SCORE_GOOD_THRESHOLD ? 'text-green-400' : item.value >= SCORE_WARN_THRESHOLD ? 'text-yellow-400' : 'text-red-400'}`}>
                   {item.value}%
@@ -236,7 +236,7 @@ function KubescapeTab({ data }: { data: NonNullable<ComplianceScoreBreakdownModa
   return (
     <div className="space-y-4">
       {/* Stats grid */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <StatBox label="Total Controls" value={data.totalControls} />
         <StatBox label="Passed" value={data.passedControls} color="text-green-400" />
         <StatBox label="Failed" value={data.failedControls} color="text-red-400" />

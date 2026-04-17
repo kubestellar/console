@@ -108,11 +108,11 @@ function ClusterComparisonInternal({ config }: ClusterComparisonProps) {
   if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
           <Skeleton variant="text" width={150} height={20} />
           <Skeleton variant="rounded" width={80} height={28} />
         </div>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           <Skeleton variant="rounded" height={150} />
           <Skeleton variant="rounded" height={150} />
           <Skeleton variant="rounded" height={150} />
@@ -232,7 +232,7 @@ function ClusterComparisonInternal({ config }: ClusterComparisonProps) {
       <div className="mt-4 pt-3 border-t border-border/50 space-y-2">
         {metrics.slice(0, 2).map(m => (
           <div key={m.key}>
-            <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+            <div className="flex flex-wrap items-center justify-between gap-y-2 text-xs text-muted-foreground mb-1">
               <span>{m.label}</span>
             </div>
             <div className="flex gap-1">

@@ -330,7 +330,7 @@ export function Weather({ config }: { config?: WeatherConfig }) {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded">
       {/* Compact Header */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
         <button
           onClick={() => setShowSettings(!showSettings)}
           className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition-colors ${showSettings ? 'bg-primary/20 text-primary' : 'hover:bg-secondary/50 text-muted-foreground'}`}
@@ -381,7 +381,7 @@ export function Weather({ config }: { config?: WeatherConfig }) {
           </div>
 
           {/* Current Location + Save Button */}
-          <div className="flex items-center justify-between p-2.5 rounded-lg bg-secondary/50 border border-border/30">
+          <div className="flex flex-wrap items-center justify-between gap-y-2 p-2.5 rounded-lg bg-secondary/50 border border-border/30">
             <div className="flex items-center gap-2">
               <MapPin className="w-4 h-4 text-primary" />
               <div>
@@ -631,11 +631,11 @@ export function Weather({ config }: { config?: WeatherConfig }) {
 
                     {isExpanded && (
                       <div className="px-4 py-3 ml-6 space-y-2 text-sm">
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-wrap items-center justify-between gap-y-2">
                           <span className="text-muted-foreground">Condition</span>
                           <span className="font-medium">{condition.label}</span>
                         </div>
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-wrap items-center justify-between gap-y-2">
                           <span className="text-muted-foreground">Precipitation</span>
                           <span className="font-medium">{day.precipitation}%</span>
                         </div>
@@ -715,7 +715,7 @@ export function Weather({ config }: { config?: WeatherConfig }) {
       </div>
 
       {/* Footer */}
-      <div className="mt-3 pt-2 border-t border-border/30 text-xs text-muted-foreground flex items-center justify-between">
+      <div className="mt-3 pt-2 border-t border-border/30 text-xs text-muted-foreground flex flex-wrap items-center justify-between gap-y-2">
         <a
           href="https://open-meteo.com"
           target="_blank"

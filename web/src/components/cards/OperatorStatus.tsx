@@ -149,7 +149,7 @@ function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
   if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
           <Skeleton variant="text" width={130} height={20} />
           <Skeleton variant="rounded" width={120} height={32} />
         </div>
@@ -192,7 +192,7 @@ function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded">
       {/* Controls row */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
         <div className="flex items-center gap-2">
           {totalItems > 0 && (
             <StatusBadge color="purple">
@@ -280,7 +280,7 @@ function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
                     upgradeAvailable: op.upgradeAvailable })}
                   className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group"
                 >
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-y-2">
                     <div className="flex items-center gap-2">
                       <StatusIcon className={`w-4 h-4 ${STATUS_ICON_CLASS[color]} ${op.status === 'Installing' ? 'animate-spin' : ''}`} />
                       {op.cluster && (

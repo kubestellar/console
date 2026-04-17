@@ -141,7 +141,7 @@ function GPUNamespaceAllocationsInternal({ config: _config }: GPUNamespaceAlloca
   if (isLoading) {
     return (
       <div className="h-full flex flex-col min-h-card">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
           <Skeleton variant="text" width={120} height={16} />
           <Skeleton variant="rounded" width={80} height={28} />
         </div>
@@ -171,7 +171,7 @@ function GPUNamespaceAllocationsInternal({ config: _config }: GPUNamespaceAlloca
   return (
     <div className="h-full flex flex-col content-loaded overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
         <div className="flex items-center gap-2">
           <StatusBadge color="purple">
             {t('gpuNamespaceAllocations.gpusAcrossNamespaces', { gpus: totalGPUs, count: namespaceAllocations.length })}
@@ -254,7 +254,7 @@ function GPUNamespaceAllocationsInternal({ config: _config }: GPUNamespaceAlloca
               </span>
               <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
-            <div className="flex items-center justify-between text-xs gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-y-2 text-xs gap-2">
               <div className="flex items-center gap-2">
                 {ns.clusters.slice(0, 2).map(c => (
                   <ClusterBadge key={c} cluster={c} size="sm" />

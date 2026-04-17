@@ -349,7 +349,7 @@ export function PodHealthTrend() {
   return (
     <div className="h-full flex flex-col">
       {/* Controls - single row: Time Range -> Cluster Filter -> Refresh */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
         <div className="flex items-center gap-2">
           {/* Cluster count indicator */}
           {localClusterFilter.length > 0 && (
@@ -391,7 +391,7 @@ export function PodHealthTrend() {
       </div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-3 gap-2 mb-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
         <div className="p-2 rounded-lg bg-green-500/10 border border-green-500/20" title={hasReachableClusters ? `${currentStats.healthy} healthy pods` : 'No reachable clusters'}>
           <div className="flex items-center gap-1.5 mb-1">
             <CheckCircle className="w-3 h-3 text-green-400" />

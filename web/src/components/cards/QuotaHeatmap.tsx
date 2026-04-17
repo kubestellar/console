@@ -77,7 +77,7 @@ export function QuotaHeatmap() {
 
   return (
     <div className="space-y-2 p-1">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 gap-2">
         <div className="text-xs text-muted-foreground">
           {t('quotaHeatmap.summary', { namespaces: namespaceData.length, clusters: new Set(namespaceData.map(d => d.cluster)).size })}
         </div>
@@ -90,7 +90,7 @@ export function QuotaHeatmap() {
           staleThresholdMinutes={5}
         />
       </div>
-      <div className="grid grid-cols-4 sm:grid-cols-6 gap-1 max-h-[350px] overflow-y-auto">
+      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-1 max-h-[350px] overflow-y-auto">
         {namespaceData.slice(0, 60).map(ns => {
           const ratio = ns.podCount / maxPods
           const isSelected = selectedNs === `${ns.cluster}/${ns.namespace}`

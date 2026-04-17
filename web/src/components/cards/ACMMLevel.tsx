@@ -70,7 +70,7 @@ export function ACMMLevel() {
 
   return (
     <div className="h-full flex flex-col p-4 gap-4 overflow-y-auto">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-y-2">
         <div className="text-xs text-muted-foreground font-mono truncate">{repo}</div>
         <a
           href={PAPER_URL}
@@ -178,7 +178,7 @@ export function ACMMLevel() {
 
       {nextLevel && (
         <div className="mt-auto pt-2 border-t border-border/50">
-          <div className="flex items-center justify-between text-xs mb-1">
+          <div className="flex flex-wrap items-center justify-between gap-y-2 text-xs mb-1">
             <span className="text-muted-foreground">Progress to L{nextLevel}</span>
             <span className="font-mono">
               {nextDetected}/{nextRequired}

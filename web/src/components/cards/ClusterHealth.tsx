@@ -184,7 +184,7 @@ export function ClusterHealth() {
     return (
       <div className="h-full flex flex-col min-h-card">
         {/* Header skeleton */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
           <div className="flex items-center gap-2">
             <Skeleton variant="circular" width={16} height={16} />
             <Skeleton variant="text" width={80} height={16} />
@@ -216,7 +216,7 @@ export function ClusterHealth() {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded">
       {/* Header with controls */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
         <div className="flex items-center gap-2">
           <StatusBadge color="purple" title={t('clusterHealth.totalClustersTitle', { count: rawClusters.length })}>
             {rawClusters.length} {t('clusterHealth.clustersLabel')}
@@ -321,7 +321,7 @@ export function ClusterHealth() {
             <div
               key={cluster.name}
               data-tour={idx === 0 ? 'drilldown' : undefined}
-              className={`group ${isMobile ? 'flex flex-col gap-1.5' : 'flex items-center justify-between'} p-2 rounded-lg border border-border/30 bg-secondary/30 transition-all cursor-pointer hover:bg-secondary/50 hover:border-border/50 min-w-0 overflow-hidden`}
+              className={`group ${isMobile ? 'flex flex-col gap-1.5' : 'flex flex-wrap items-center justify-between gap-y-2'} p-2 rounded-lg border border-border/30 bg-secondary/30 transition-all cursor-pointer hover:bg-secondary/50 hover:border-border/50 min-w-0 overflow-hidden`}
               onClick={() => setSelectedCluster(cluster.name)}
               title={t('clusterHealth.clickViewDetails', { name: cluster.name })}
             >

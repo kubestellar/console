@@ -91,7 +91,7 @@ export function WorkloadMonitorDiagnose({
   return (
     <div className="mt-3 border-t border-border/50 pt-3">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-y-2">
         <button
           onClick={() => setExpanded(!expanded)}
           className="flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
@@ -182,7 +182,7 @@ export function WorkloadMonitorDiagnose({
           {/* Proposed repairs */}
           {(state.phase === 'proposing-repair' || state.phase === 'awaiting-approval') && state.proposedRepairs.length > 0 && (
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-y-2">
                 <span className="text-xs font-medium text-foreground">Proposed Repairs</span>
                 {!allApproved && (
                   <button

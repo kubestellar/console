@@ -53,7 +53,7 @@ function InsightCard({ insight, isExpanded, onToggle }: InsightCardProps) {
           </div>
 
           <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-y-2">
               <h4 className={`font-medium text-sm ${colors.text}`}>{insight.title}</h4>
               <motion.div
                 animate={{ rotate: isExpanded ? 90 : 0 }}
@@ -86,7 +86,7 @@ function InsightCard({ insight, isExpanded, onToggle }: InsightCardProps) {
 
               {/* Metrics */}
               {insight.metrics && (
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {Object.entries(insight.metrics).map(([key, value]) => (
                     <div key={key} className="bg-secondary rounded p-2 text-center">
                       <div className="text-xs text-muted-foreground truncate">{key}</div>
@@ -391,7 +391,7 @@ export function LLMdAIInsights() {
   return (
     <div className="p-4 h-full flex-1 flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
         <div className="flex items-center gap-2">
           <Brain size={18} className="text-purple-400" />
           <span className="font-medium text-white">{t('llmdAIInsights.aiInsights')}</span>

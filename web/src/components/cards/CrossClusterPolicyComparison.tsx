@@ -204,7 +204,7 @@ function CrossClusterPolicyComparisonInternal({ config: _config }: CardConfig) {
       </div>
 
       {/* Refresh indicator + inline progress */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-y-2">
         {(isLoading || isRefreshing) && totalClusters > 0 && (
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <ProgressRing progress={clustersChecked / totalClusters} size={14} strokeWidth={1.5} />

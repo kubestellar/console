@@ -331,7 +331,7 @@ export function ClusterMetrics() {
   return (
     <div className="h-full flex flex-col">
       {/* Header with metric value and selector */}
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2">
         <div>
           <h4 className="text-sm font-medium text-foreground">{config.label}</h4>
           <p className="text-2xl font-bold text-foreground">
@@ -456,7 +456,7 @@ export function ClusterMetrics() {
 
       {/* Stats - show when we have time series data */}
       {data.length > 0 && (
-        <div className="mt-3 pt-3 border-t border-border/50 grid grid-cols-3 gap-4">
+        <div className="mt-3 pt-3 border-t border-border/50 grid grid-cols-2 sm:grid-cols-3 gap-4">
           <div>
             <p className="text-xs text-muted-foreground">{t('cards:clusterMetrics.min')}</p>
             <p className="text-sm font-medium text-foreground">

@@ -87,7 +87,7 @@ export function WorkflowMatrix() {
 
   return (
     <div className="p-3 h-full flex flex-col gap-2 min-h-0">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 gap-2">
         <div className="flex items-center gap-2">
           <select
             value={repoFilter ?? ''}
@@ -174,7 +174,7 @@ export function WorkflowMatrix() {
         )}
       </div>
 
-      <div className="flex items-center justify-between gap-3 text-[10px] text-muted-foreground">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 gap-3 text-[10px] text-muted-foreground">
         <div className="flex items-center gap-2">
           <Legend className="bg-green-500/70" label="success" />
           <Legend className="bg-red-500/80" label="failure" />

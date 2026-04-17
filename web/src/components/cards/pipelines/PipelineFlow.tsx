@@ -372,7 +372,7 @@ export function PipelineFlow() {
 
   return (
     <div className="p-3 h-full flex flex-col gap-2 min-h-0">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 gap-2">
         <select
           value={repoFilter ?? ''}
           onChange={(e) => setRepoFilter(e.target.value || null)}

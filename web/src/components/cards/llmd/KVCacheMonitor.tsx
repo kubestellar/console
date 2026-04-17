@@ -548,7 +548,7 @@ export function KVCacheMonitor() {
         </div>
       )}
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
         <div className="flex items-center gap-2">
           <div className="p-1.5 rounded-lg bg-cyan-500/20">
             <Database size={16} className="text-cyan-400" />
@@ -631,7 +631,7 @@ export function KVCacheMonitor() {
       </div>
 
       {/* Summary stats with glow */}
-      <div className={`grid grid-cols-4 mb-4 ${isExpanded ? 'gap-4' : 'gap-2'}`}>
+      <div className={`grid grid-cols-2 sm:grid-cols-4 mb-4 ${isExpanded ? 'gap-4' : 'gap-2'}`}>
         <div className="bg-secondary/60 backdrop-blur-sm rounded-lg p-2 text-center border border-border/50">
           <div className="text-lg font-bold text-white flex items-center justify-center gap-1">
             {aggregateMetrics.avgUtil}%
@@ -682,7 +682,7 @@ export function KVCacheMonitor() {
 
                   return (
                     <>
-                      <div className="flex items-center justify-between mb-2">
+                      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2">
                         <span className="text-white font-medium text-sm">{stat.podName.replace('vllm-', '').slice(0, 14)}</span>
                         <button
                           onClick={() => { setSelectedPod(null); setPanelPosition(null) }}
@@ -774,14 +774,14 @@ export function KVCacheMonitor() {
               className={`h-full overflow-auto ${
                 isExpanded
                   ? (stats.length <= 2 ? 'flex items-center justify-evenly gap-16' :
-                     stats.length <= 4 ? 'grid grid-cols-4 gap-8 place-items-center' :
-                     stats.length <= 6 ? 'grid grid-cols-3 gap-6 place-items-center' :
-                     'grid grid-cols-4 gap-4 place-items-center')
+                     stats.length <= 4 ? 'grid grid-cols-2 sm:grid-cols-4 gap-8 place-items-center' :
+                     stats.length <= 6 ? 'grid grid-cols-2 sm:grid-cols-3 gap-6 place-items-center' :
+                     'grid grid-cols-2 sm:grid-cols-4 gap-4 place-items-center')
                   : (stats.length <= 2 ? 'flex items-center justify-evenly gap-12' :
-                     stats.length <= 3 ? 'grid grid-cols-3 gap-6 place-items-center' :
-                     stats.length <= 6 ? 'grid grid-cols-3 gap-3 place-items-center' :
-                     stats.length <= 9 ? 'grid grid-cols-3 gap-2 place-items-center' :
-                     'grid grid-cols-4 gap-2 place-items-center')
+                     stats.length <= 3 ? 'grid grid-cols-2 sm:grid-cols-3 gap-6 place-items-center' :
+                     stats.length <= 6 ? 'grid grid-cols-2 sm:grid-cols-3 gap-3 place-items-center' :
+                     stats.length <= 9 ? 'grid grid-cols-2 sm:grid-cols-3 gap-2 place-items-center' :
+                     'grid grid-cols-2 sm:grid-cols-4 gap-2 place-items-center')
               }`}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -815,13 +815,13 @@ export function KVCacheMonitor() {
               className={`grid h-full place-items-center overflow-auto ${
                 isExpanded
                   ? (stats.length <= 2 ? 'grid-cols-2 gap-6' :
-                     stats.length <= 4 ? 'grid-cols-4 gap-4' :
-                     stats.length <= 6 ? 'grid-cols-3 gap-4' :
-                     'grid-cols-4 gap-3')
+                     stats.length <= 4 ? 'grid-cols-2 sm:grid-cols-4 gap-4' :
+                     stats.length <= 6 ? 'grid-cols-2 sm:grid-cols-3 gap-4' :
+                     'grid-cols-2 sm:grid-cols-4 gap-3')
                   : (stats.length <= 2 ? 'grid-cols-2 gap-2' :
-                     stats.length <= 3 ? 'grid-cols-3 gap-1' :
-                     stats.length <= 6 ? 'grid-cols-3 gap-1' :
-                     'grid-cols-4 gap-1')
+                     stats.length <= 3 ? 'grid-cols-2 sm:grid-cols-3 gap-1' :
+                     stats.length <= 6 ? 'grid-cols-2 sm:grid-cols-3 gap-1' :
+                     'grid-cols-2 sm:grid-cols-4 gap-1')
               }`}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}

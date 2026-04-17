@@ -350,7 +350,7 @@ Please:
   return (
     <div className="h-full flex flex-col">
       {/* Controls row: cluster filter + sort + limit */}
-      <div className="flex items-center justify-between mb-2 shrink-0">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 shrink-0">
         <div className="flex items-center gap-2">
           {activeMissions.length > 0 ? (
             <StatusBadge color="blue" size="xs">

@@ -50,7 +50,7 @@ export function KubeRayFleet() {
   if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card gap-3 p-1">
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} variant="rounded" height={48} />
           ))}
@@ -82,7 +82,7 @@ export function KubeRayFleet() {
   return (
     <div className="h-full flex flex-col min-h-card gap-3 p-1 overflow-hidden">
       {/* Fleet summary tiles */}
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <StatTile icon={Server} label="Clusters" value={`${readyClusters}/${rayClusters.length}`} color="text-blue-400" />
         <StatTile icon={Cpu} label="Workers" value={String(totalWorkers)} color="text-purple-400" />
         <StatTile icon={Layers} label="GPUs" value={String(data.totalGPUs)} color="text-green-400" />
@@ -94,7 +94,7 @@ export function KubeRayFleet() {
         {rayClusters.length > 0 && (
           <Section title={`Ray Clusters (${rayClusters.length})`}>
             {rayClusters.map(c => (
-              <div key={`${c.cluster}/${c.namespace}/${c.name}`} className="flex items-center justify-between px-2 py-1.5 rounded bg-secondary/30 text-xs">
+              <div key={`${c.cluster}/${c.namespace}/${c.name}`} className="flex flex-wrap items-center justify-between gap-y-2 px-2 py-1.5 rounded bg-secondary/30 text-xs">
                 <div className="flex items-center gap-2 min-w-0">
                   <div className={`w-1.5 h-1.5 rounded-full ${c.state === 'ready' ? 'bg-green-500' : c.state === 'unhealthy' ? 'bg-red-500' : 'bg-yellow-500'}`} />
                   <span className="truncate font-mono">{c.name}</span>
@@ -114,7 +114,7 @@ export function KubeRayFleet() {
         {rayServices.length > 0 && (
           <Section title={`Serving Endpoints (${servingEndpoints}/${rayServices.length})`}>
             {rayServices.map(s => (
-              <div key={`${s.cluster}/${s.namespace}/${s.name}`} className="flex items-center justify-between px-2 py-1.5 rounded bg-secondary/30 text-xs">
+              <div key={`${s.cluster}/${s.namespace}/${s.name}`} className="flex flex-wrap items-center justify-between gap-y-2 px-2 py-1.5 rounded bg-secondary/30 text-xs">
                 <div className="flex items-center gap-2 min-w-0">
                   <ArrowUpCircle className={`w-3 h-3 flex-shrink-0 ${SERVICE_STATUS_COLORS[s.status]}`} />
                   <span className="truncate font-mono">{s.name}</span>
@@ -139,7 +139,7 @@ export function KubeRayFleet() {
             {rayJobs.map(j => {
               const { Icon, color } = JOB_STATUS_ICONS[j.jobStatus] || JOB_STATUS_ICONS.PENDING
               return (
-                <div key={`${j.cluster}/${j.namespace}/${j.name}`} className="flex items-center justify-between px-2 py-1.5 rounded bg-secondary/30 text-xs">
+                <div key={`${j.cluster}/${j.namespace}/${j.name}`} className="flex flex-wrap items-center justify-between gap-y-2 px-2 py-1.5 rounded bg-secondary/30 text-xs">
                   <div className="flex items-center gap-2 min-w-0">
                     <Icon className={`w-3 h-3 flex-shrink-0 ${color}`} />
                     <span className="truncate font-mono">{j.name}</span>

@@ -190,7 +190,7 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
   if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
           <Skeleton variant="text" width={140} height={20} />
           <Skeleton variant="rounded" width={80} height={28} />
         </div>
@@ -217,7 +217,7 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded overflow-hidden">
       {/* Controls - single row */}
-      <div className="flex items-center justify-between gap-2 mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 gap-2 mb-4">
         <div className="flex items-center gap-2">
           {localClusterFilter.length > 0 && (
             <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
@@ -331,7 +331,7 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
                   className={`p-3 rounded-lg ${release.status === 'failed' ? 'bg-red-500/10 border border-red-500/20' : idx % 2 === 0 ? 'bg-secondary/20' : 'bg-secondary/40'} hover:bg-secondary/50 transition-colors cursor-pointer group`}
                   title={`${release.name} - ${release.chart}@${release.version} (Revision ${release.revision})`}
                 >
-                  <div className="flex items-center justify-between mb-1">
+                  <div className="flex flex-wrap items-center justify-between gap-y-2 mb-1">
                     <div className="flex items-center gap-2">
                       <span title={`Status: ${release.status}`}><StatusIcon className={`w-4 h-4 ${STATUS_TEXT_CLASSES[color]}`} /></span>
                       <span className="text-sm text-foreground font-medium group-hover:text-purple-400" title={release.name}>{release.name}</span>

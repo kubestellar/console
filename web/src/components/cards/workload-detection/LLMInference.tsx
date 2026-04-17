@@ -163,7 +163,7 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
   return (
     <div className="h-full flex flex-col min-h-card">
       {/* Header controls */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
         <div className="flex items-center gap-2">
           <RefreshIndicator
             isRefreshing={isRefreshing}
@@ -298,7 +298,7 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
           const compBadge = getComponentBadge(server.componentType)
           return (
             <div key={server.id} className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors">
-              <div className="flex items-center justify-between mb-1">
+              <div className="flex flex-wrap items-center justify-between gap-y-2 mb-1">
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="text-sm font-medium text-foreground truncate" title={server.name}>{server.name}</span>
                   {/* Component type badge */}
@@ -352,7 +352,7 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
                   </span>
                 )}
               </div>
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <div className="flex flex-wrap items-center justify-between gap-y-2 text-xs text-muted-foreground">
                 <div className="flex items-center gap-3">
                   {server.componentType === 'model' && (
                     <span className="flex items-center gap-1"><Layers className="w-3 h-3" /> {server.model}</span>

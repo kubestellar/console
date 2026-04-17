@@ -278,7 +278,7 @@ export function Kubedle(_props: CardComponentProps) {
   return (
     <div ref={gameContainerRef} className="h-full flex flex-col p-2 select-none">
       {/* Header */}
-      <div className="flex items-center justify-between gap-2 mb-2">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 gap-2 mb-2">
         {practiceMode && (
           <span className="text-xs text-muted-foreground">(Practice)</span>
         )}
@@ -390,7 +390,7 @@ export function Kubedle(_props: CardComponentProps) {
       {showHelp && (
         <div className="absolute inset-0 bg-background/90 flex items-center justify-center rounded-lg z-10 p-4">
           <div className="bg-card border border-border rounded-lg p-4 max-w-sm">
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
               <h3 className="font-bold text-foreground">How to Play</h3>
               <button onClick={() => setShowHelp(false)} aria-label="Close help">
                 <X className="w-4 h-4" />
@@ -422,14 +422,14 @@ export function Kubedle(_props: CardComponentProps) {
       {showStats && (
         <div className="absolute inset-0 bg-background/90 flex items-center justify-center rounded-lg z-10 p-4">
           <div className="bg-card border border-border rounded-lg p-4 max-w-sm w-full">
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
               <h3 className="font-bold text-foreground">Statistics</h3>
               <button onClick={() => setShowStats(false)} aria-label="Close statistics">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="grid grid-cols-4 gap-2 text-center mb-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center mb-4">
               <div>
                 <div className="text-2xl font-bold text-foreground">{stats.played}</div>
                 <div className="text-xs text-muted-foreground">Played</div>

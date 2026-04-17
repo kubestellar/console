@@ -113,7 +113,7 @@ function ServerCard({ server, isHighlighted }: ServerCardProps) {
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ scale: 1.02 }}
     >
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2">
         <span className="font-medium text-white text-sm">{server.name}</span>
         <div
           className="w-2 h-2 rounded-full"
@@ -332,7 +332,7 @@ export function PDDisaggregation() {
   return (
     <div className={`p-4 h-full flex-1 flex flex-col ${isExpanded ? 'min-h-[500px]' : ''}`}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
         <div className="flex items-center gap-2">
           <Split size={18} className="text-cyan-400" />
           <span className="font-medium text-white">{t('llmd.pdDisaggregation')}</span>

@@ -139,7 +139,7 @@ Help me investigate and resolve this.`,
         )}
       </BaseModal.Content>
       <BaseModal.Footer>
-        <div className="flex items-center justify-between w-full">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 w-full">
           <div className="flex items-center gap-2">
             {!acknowledged && (
               <button

@@ -179,7 +179,7 @@ function SecurityIssuesInternal({ config }: SecurityIssuesProps) {
   if (showSkeleton) {
     return (
       <div className="h-full flex flex-col">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
           <div className="flex items-center gap-2">
             <div className="h-4 w-24 bg-secondary rounded animate-pulse" />
             <div className="h-4 w-12 bg-secondary rounded animate-pulse" />
@@ -243,7 +243,7 @@ function SecurityIssuesInternal({ config }: SecurityIssuesProps) {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded">
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
         <div className="flex items-center gap-2">
           {highCount > 0 && (
             <StatusBadge color="red" title={t('securityIssues.highSeverityTitle', { count: highCount })}>

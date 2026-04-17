@@ -310,7 +310,7 @@ export function UserManagement({ config: _config }: UserManagementProps) {
     return (
       <div className="h-full flex flex-col min-h-card">
         {/* Header skeleton */}
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
           <div className="flex gap-2">
             <Skeleton variant="rounded" width={100} height={28} />
             <Skeleton variant="rounded" width={120} height={28} />
@@ -341,7 +341,7 @@ export function UserManagement({ config: _config }: UserManagementProps) {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded">
       {/* Row 1: Header with count badge and controls */}
-      <div className="flex items-center justify-between mb-2 flex-shrink-0">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 flex-shrink-0">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-muted-foreground">
             {currentTabCount} {currentTabLabel}
@@ -577,7 +577,7 @@ function ConsoleUsersTab({
             )}
           >
             <div className={cn(
-              'flex items-center justify-between',
+              'flex flex-wrap items-center justify-between gap-y-2',
               isBlurred && 'blur-sm select-none pointer-events-none'
             )}>
               <div className="flex items-center gap-3">
@@ -634,7 +634,7 @@ function ConsoleUsersTab({
             {/* Expanded actions */}
             {isAdmin && expandedUser === user.id && !isCurrentUser && (
               <div className="mt-3 pt-3 border-t border-border/50">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-y-2">
                   <div className="flex gap-2">
                     {(['admin', 'editor', 'viewer'] as UserRole[]).map((role) => (
                       <button
@@ -741,7 +741,7 @@ function ClusterUsersTab({
               onClick={() => onDrillToUser(user.cluster, user.name)}
               className="p-2 rounded bg-secondary/30 text-sm hover:bg-secondary/50 transition-colors cursor-pointer group"
             >
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-y-2">
                 <div className="flex items-center gap-2">
                   <span className="text-foreground font-medium group-hover:text-purple-400">{user.name}</span>
                   {user.fullName && (
@@ -871,7 +871,7 @@ function ServiceAccountsTab({
               onClick={() => onDrillToServiceAccount(sa.cluster, sa.namespace, sa.name, sa.roles)}
               className="p-2 rounded bg-secondary/30 text-sm hover:bg-secondary/50 transition-colors cursor-pointer group"
             >
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-y-2">
                 <div className="flex items-center gap-2">
                   <span className="text-foreground font-medium group-hover:text-purple-400">{sa.name}</span>
                   {showClusterBadge && (

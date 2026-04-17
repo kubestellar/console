@@ -128,7 +128,7 @@ export function ChartVersions({ config: _config }: ChartVersionsProps) {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
         <RefreshIndicator
           isRefreshing={isRefreshing}
           lastUpdated={lastRefresh ? new Date(lastRefresh) : null}
@@ -197,7 +197,7 @@ export function ChartVersions({ config: _config }: ChartVersionsProps) {
                   key={`${chart.cluster}-${chart.namespace}-${chart.name}-${idx}`}
                   className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors"
                 >
-                  <div className="flex items-center justify-between mb-1 gap-2 min-w-0">
+                  <div className="flex flex-wrap items-center justify-between gap-y-2 mb-1 gap-2 min-w-0">
                     <div className="flex items-center gap-2 min-w-0 flex-1">
                       <Package className="w-4 h-4 text-green-400 shrink-0" />
                       <span className="text-sm text-foreground font-medium truncate">{chart.name}</span>

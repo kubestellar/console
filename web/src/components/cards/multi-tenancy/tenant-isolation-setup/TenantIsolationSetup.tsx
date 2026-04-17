@@ -87,7 +87,7 @@ function ReadinessBadge({ component, onInstall }: {
 /** Isolation level row */
 function IsolationLevelRow({ level }: { level: IsolationLevel }) {
   return (
-    <div className="flex items-center justify-between py-1">
+    <div className="flex flex-wrap items-center justify-between gap-y-2 py-1">
       <div className="flex items-center gap-1.5">
         <IsolationStatusIcon status={level.status} />
         <span className="text-xs text-foreground">{level.type}</span>

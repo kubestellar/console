@@ -454,7 +454,7 @@ export function HardwareHealthCard() {
         </div>
       )}
       {/* Status Summary */}
-      <div className="grid grid-cols-3 gap-1.5 sm:gap-2 mb-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 sm:gap-2 mb-4">
         <div className={cn(
           'p-2 rounded-lg border',
           criticalCount > 0
@@ -636,7 +636,7 @@ export function HardwareHealthCard() {
       {/* Error display with retry */}
       {fetchError && (
         <div className="mb-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs">
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-y-2 gap-2">
             <div className="flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 flex-shrink-0" />
               <span>{fetchError}</span>

@@ -226,7 +226,7 @@ function QuotaModal({
 
           {/* Resources */}
           <div>
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2">
               <label className="text-sm font-medium text-muted-foreground">{t('namespaceQuotas.resourceLimits')}</label>
               <div className="flex items-center gap-2">
                 <div className="relative">
@@ -553,7 +553,7 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
   if (isInitialLoading) {
     return (
       <div className="h-full flex flex-col min-h-card">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
           <Skeleton variant="text" width={140} height={20} />
           <Skeleton variant="rounded" width={80} height={28} />
         </div>
@@ -570,7 +570,7 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
         <div className="flex items-center gap-2">
           <StatusBadge color="yellow">
             {activeTab === 'quotas' ? `${totalQuotas} quotas` : `${totalLimits} limits`}
@@ -724,7 +724,7 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
                 return (
                   <div key={`${quota.cluster}-${quota.namespace}-${quota.resource}-${idx}`} className={`p-3 rounded-lg bg-secondary/30 ${isFetchingData ? 'opacity-50' : ''}`}>
                     {showScope && (
-                      <div className="flex items-center justify-between mb-2 gap-2">
+                      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 gap-2">
                         <div className="flex items-center gap-1 text-xs text-muted-foreground min-w-0 overflow-hidden">
                           {quota.cluster && <span className="flex-shrink-0"><ClusterBadge cluster={quota.cluster} size="sm" /></span>}
                           {quota.namespace && (
@@ -760,7 +760,7 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
                         )}
                       </div>
                     )}
-                    <div className="flex items-center justify-between mb-2">
+                    <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2">
                       <div className="flex items-center gap-2">
                         <Icon className={`w-4 h-4 ${USAGE_TEXT_CLASSES[color]}`} />
                         <span className="text-sm text-foreground">{quota.resource}</span>
@@ -803,7 +803,7 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
                         )}
                       </div>
                     )}
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-wrap items-center justify-between gap-y-2">
                       <div className="flex items-center gap-2">
                         <Gauge className="w-4 h-4 text-blue-400" />
                         <span className="text-sm text-foreground">{item.name}</span>

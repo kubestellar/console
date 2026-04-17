@@ -222,7 +222,7 @@ export function ISO27001Audit({ config }: ISO27001AuditProps) {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded">
       {/* Header: stats + controls */}
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2">
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1">
             <Shield className="w-4 h-4 text-blue-400" />

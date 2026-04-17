@@ -61,7 +61,7 @@ export function DNSHealth() {
 
   return (
     <div className="space-y-2 p-1">
-      <div className="flex items-center justify-between gap-2 mb-1">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 gap-2 mb-1">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span>{t('dnsHealth.podsSummary', { pods: dnsPods.length, clusters: byCluster.length })}</span>
         </div>
@@ -81,7 +81,7 @@ export function DNSHealth() {
 
         return (
           <div key={cluster} className="px-2 py-1.5 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-y-2">
               <div className="flex items-center gap-2">
                 <div className={`w-2 h-2 rounded-full ${allHealthy ? 'bg-green-500' : 'bg-yellow-500'}`} />
                 <span className="text-sm font-medium">{cluster}</span>

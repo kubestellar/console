@@ -398,7 +398,7 @@ export function GPUUsageTrend() {
   if (isLoading && history.length === 0) {
     return (
       <div className="h-full flex flex-col min-h-card">
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2">
           <Skeleton variant="text" width={120} height={16} />
           <Skeleton variant="rounded" width={28} height={28} />
         </div>
@@ -425,7 +425,7 @@ export function GPUUsageTrend() {
 
   return (
     <div className="h-full flex flex-col content-loaded">
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2">
         <div className="flex items-center gap-2">
           {localClusterFilter.length > 0 && (
             <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">

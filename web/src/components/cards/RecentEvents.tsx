@@ -98,7 +98,7 @@ export function RecentEvents() {
   return (
     <div className="space-y-3">
       {/* Header controls */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-y-2">
         <div className="flex items-center gap-2">
           <Clock className="w-3.5 h-3.5 text-blue-400" />
           <span className="text-xs text-muted-foreground">

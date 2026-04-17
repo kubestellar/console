@@ -344,7 +344,7 @@ export function ExternalSecrets({ config: _config }: CardConfig) {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 text-center text-xs">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-center text-xs">
         <div className="p-2 rounded-lg bg-green-500/10">
           <CheckCircle2 className="w-4 h-4 text-green-400 mx-auto mb-1" />
           <p className="font-medium text-foreground">{esoStatus.synced}</p>
@@ -362,7 +362,7 @@ export function ExternalSecrets({ config: _config }: CardConfig) {
         </div>
       </div>
 
-      <div className="flex items-center justify-between text-xs">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 text-xs">
         <span className="text-muted-foreground">Secret Stores</span>
         <span className="font-medium text-foreground">{esoStatus.totalStores}</span>
       </div>
@@ -416,7 +416,7 @@ export function CertManager({ config: _config }: CardConfig) {
   if (isLoading && issuers.length === 0) {
     return (
       <div className="space-y-3">
-        <div className="animate-pulse grid grid-cols-4 gap-1.5">
+        <div className="animate-pulse grid grid-cols-2 sm:grid-cols-4 gap-1.5">
           {[...Array(4)].map((_, i) => (
             <div key={i} className="p-2 rounded-lg bg-secondary/30 h-16" />
           ))}
@@ -443,7 +443,7 @@ export function CertManager({ config: _config }: CardConfig) {
         </span>
       </div>
 
-      <div className="grid grid-cols-4 gap-1.5 text-center text-xs">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-center text-xs">
         <div className="p-2 rounded-lg bg-green-500/10">
           <p className="text-lg font-bold text-green-400">{status.validCertificates}</p>
           <p className="text-muted-foreground">Valid</p>
@@ -484,7 +484,7 @@ export function CertManager({ config: _config }: CardConfig) {
         </p>
         {topIssuers.length > 0 ? (
           topIssuers.map((issuer) => (
-            <div key={issuer.id} className="flex items-center justify-between p-2 rounded-lg bg-secondary/30">
+            <div key={issuer.id} className="flex flex-wrap items-center justify-between gap-y-2 p-2 rounded-lg bg-secondary/30">
               <div className="flex items-center gap-2">
                 <Shield className={`w-3 h-3 ${
                   issuer.status === 'ready' ? 'text-green-400' :

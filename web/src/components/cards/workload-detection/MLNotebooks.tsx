@@ -80,7 +80,7 @@ export function MLNotebooks({ config: _config }: MLNotebooksProps) {
   return (
     <div className="h-full flex flex-col min-h-card">
       {/* Header controls */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
         <StatusBadge color="blue">
           {notebooks.filter(n => n.status === 'running').length} active
         </StatusBadge>

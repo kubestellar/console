@@ -176,7 +176,7 @@ export function BenchmarkHero() {
   return (
     <div className="p-5 h-full flex flex-col gap-4">
       {/* Top row: Run info + time range filter */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-y-2">
         <div className="flex items-center gap-3">
           <motion.div
             initial={{ scale: 0 }}
@@ -241,7 +241,7 @@ export function BenchmarkHero() {
       </div>
 
       {/* Hero metrics row */}
-      <div className="grid grid-cols-4 gap-3 flex-1">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 flex-1">
         <HeroMetric
           label="Output Throughput"
           value={fmtNum(throughput)}

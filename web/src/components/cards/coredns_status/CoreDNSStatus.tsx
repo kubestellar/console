@@ -47,7 +47,7 @@ export function CoreDNSStatus({ config }: CoreDNSStatusProps) {
   if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card gap-3">
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {[1, 2, 3].map(i => <Skeleton key={i} variant="rounded" height={52} />)}
         </div>
         <Skeleton variant="rounded" height={64} />
@@ -70,7 +70,7 @@ export function CoreDNSStatus({ config }: CoreDNSStatusProps) {
     <div className="h-full flex flex-col min-h-card content-loaded overflow-hidden gap-3">
       {/* top stats — only pod-derivable metrics */}
       {totals && (
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           <StatTile
             value={totals.totalPods.toString()}
             sub={t('coreDNSStatus.pods')}
@@ -97,7 +97,7 @@ export function CoreDNSStatus({ config }: CoreDNSStatusProps) {
       </div>
 
       {/* footer */}
-      <div className="pt-2 border-t border-border/50 text-xs text-muted-foreground flex items-center justify-between">
+      <div className="pt-2 border-t border-border/50 text-xs text-muted-foreground flex flex-wrap items-center justify-between gap-y-2">
         <span>
           {t('coreDNSStatus.summary', {
             pods: clusters.reduce((s, c) => s + c.pods.length, 0),
@@ -122,7 +122,7 @@ function ClusterRow({ cluster, t }: { cluster: CoreDNSClusterStatus; t: ReturnTy
         }`}
     >
       {/* name + badge */}
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2">
         <div className="flex items-center gap-2">
           <StatusIcon
             className={`w-4 h-4 flex-shrink-0 ${cluster.healthy ? 'text-green-400' : 'text-red-400'}`}

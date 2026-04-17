@@ -192,7 +192,7 @@ export function ClusterDeltaDetector() {
                   key={`${delta.dimension}-${i}`}
                   className={`rounded-lg border p-2 ${SIGNIFICANCE_COLORS[delta.significance] || SIGNIFICANCE_COLORS.low}`}
                 >
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-y-2">
                     <span className="text-xs font-medium">{delta.dimension}</span>
                     <StatusBadge
                       color={delta.significance === 'high' ? 'red' : delta.significance === 'medium' ? 'yellow' : 'gray'}

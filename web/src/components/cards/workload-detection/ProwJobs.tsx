@@ -123,7 +123,7 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
   return (
     <div className="h-full flex flex-col min-h-card">
       {/* Header controls */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
         <div className="flex items-center gap-2">
           <RefreshIndicator
             isRefreshing={isRefreshing}
@@ -193,7 +193,7 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
       <div ref={containerRef} className="flex-1 overflow-y-auto space-y-2" style={containerStyle}>
         {items.map((job) => (
           <div key={job.id} className="p-2 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-y-2">
               <div className="flex items-center gap-2">
                 {getStateIcon(job.state)}
                 <span className="text-sm font-medium text-foreground truncate max-w-[200px]">{job.name}</span>

@@ -83,7 +83,7 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
   if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
           <Skeleton variant="text" width={150} height={20} />
           <Skeleton variant="rounded" width={120} height={32} />
         </div>
@@ -131,7 +131,7 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <span className="text-sm font-medium text-foreground truncate">{clusterName}</span>
           <div className={`w-2 h-2 rounded-full shrink-0 ${cluster?.healthy ? 'bg-green-500' : 'bg-red-500'}`} />
@@ -216,7 +216,7 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
       {/* Issues Summary */}
       <div className="space-y-2">
         <div
-          className="flex items-center justify-between p-2 rounded-lg bg-red-500/10 border border-red-500/20 cursor-pointer hover:bg-red-500/20 transition-colors"
+          className="flex flex-wrap items-center justify-between gap-y-2 p-2 rounded-lg bg-red-500/10 border border-red-500/20 cursor-pointer hover:bg-red-500/20 transition-colors"
           onClick={() => {
             if (podIssues.length > 0) {
               const issue = podIssues[0]
@@ -237,7 +237,7 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
         </div>
 
         <div
-          className="flex items-center justify-between p-2 rounded-lg bg-red-500/10 border border-red-500/20 cursor-pointer hover:bg-red-500/20 transition-colors"
+          className="flex flex-wrap items-center justify-between gap-y-2 p-2 rounded-lg bg-red-500/10 border border-red-500/20 cursor-pointer hover:bg-red-500/20 transition-colors"
           onClick={() => {
             if (deploymentIssues.length > 0) {
               const issue = deploymentIssues[0]

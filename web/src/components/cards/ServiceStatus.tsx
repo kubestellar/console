@@ -229,7 +229,7 @@ export function ServiceStatus() {
   if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
           <Skeleton variant="text" width={100} height={16} />
           <Skeleton variant="rounded" width={80} height={28} />
         </div>
@@ -251,7 +251,7 @@ export function ServiceStatus() {
   return (
     <div className="h-full flex flex-col content-loaded">
       {/* Controls */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
         <div className="flex items-center gap-2">
           {/* Cache freshness badge (#6162) */}
           {isStale && cacheAgeMs !== null && (
@@ -302,7 +302,7 @@ export function ServiceStatus() {
       />
 
       {/* Stats row */}
-      <div className="grid grid-cols-4 gap-2 mb-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
         <div className="p-1.5 rounded-lg bg-secondary/50 text-center">
           <div className="text-sm font-bold text-foreground">{stats.total}</div>
           <div className="text-2xs text-muted-foreground">{t('common.total')}</div>
@@ -350,7 +350,7 @@ export function ServiceStatus() {
                 lbStatus: service.lbStatus,
                 selector: service.selector,
               })}
-              className="flex items-center justify-between p-2 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group gap-2"
+              className="flex flex-wrap items-center justify-between gap-y-2 p-2 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group gap-2"
             >
               <div className="flex items-center gap-2 min-w-0 flex-1">
                 {/* Connectivity dot — single source of truth via deriveServiceHealth (#6167) */}

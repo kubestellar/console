@@ -210,7 +210,7 @@ Please proceed step by step.`,
   return (
     <div className="h-full flex flex-col min-h-card">
       {/* Controls */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
         <div className="flex items-center gap-1">
           <RefreshIndicator isRefreshing={isRefreshing} lastUpdated={lastRefresh} size="xs" />
           {isDemoData && (
@@ -242,7 +242,7 @@ Please proceed step by step.`,
       {isLoading && !hasData && (
         <div className="space-y-3 animate-pulse">
           <div className="h-10 bg-secondary/50 rounded-lg" />
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             <div className="h-12 bg-secondary/50 rounded-lg" />
             <div className="h-12 bg-secondary/50 rounded-lg" />
             <div className="h-12 bg-secondary/50 rounded-lg" />
@@ -340,7 +340,7 @@ Please proceed step by step.`,
       )}
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-2 mb-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
         <div className="p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-center">
           <p className="text-2xs text-cyan-400">{t('intoto_supply_chain.statsLayouts')}</p>
           <p className="text-lg font-bold text-foreground">{stats.totalLayouts}</p>
@@ -389,7 +389,7 @@ Please proceed step by step.`,
                 aria-expanded={isExpanded}
                 aria-label={`${isExpanded ? 'Collapse' : 'Expand'} layout: ${layout.name} on ${layout.cluster}`}
               >
-                <div className="flex items-center justify-between mb-1">
+                <div className="flex flex-wrap items-center justify-between gap-y-2 mb-1">
                   <span className="text-sm font-medium text-foreground truncate">
                     {layout.name}
                   </span>
@@ -405,7 +405,7 @@ Please proceed step by step.`,
                     </StatusBadge>
                   </div>
                 </div>
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <div className="flex flex-wrap items-center justify-between gap-y-2 text-xs text-muted-foreground">
                   <span>{t('intoto_supply_chain.stepsCount', { count: layout.steps.length })}</span>
                   <span className="text-2xs">{layout.cluster}</span>
                 </div>
@@ -420,7 +420,7 @@ Please proceed step by step.`,
                     return (
                       <div
                         key={`${step.name}-${si}`}
-                        className="flex items-center justify-between text-xs"
+                        className="flex flex-wrap items-center justify-between gap-y-2 text-xs"
                       >
                         <div className="flex items-center gap-1.5">
                           <StatusIcon className={`w-3 h-3 ${cfg.color} flex-shrink-0`} />

@@ -130,7 +130,7 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
   if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
           <Skeleton variant="text" width={150} height={20} />
           <Skeleton variant="rounded" width={200} height={32} />
         </div>
@@ -156,7 +156,7 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
         <RefreshIndicator
           isRefreshing={isRefreshing}
           lastUpdated={lastRefresh ? new Date(lastRefresh) : null}

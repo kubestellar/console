@@ -140,7 +140,7 @@ export function CRDHealth({ config: _config }: CRDHealthProps) {
   if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
           <Skeleton variant="text" width={110} height={20} />
           <Skeleton variant="rounded" width={120} height={32} />
         </div>
@@ -165,7 +165,7 @@ export function CRDHealth({ config: _config }: CRDHealthProps) {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded">
       {/* Controls - single row */}
-      <div className="flex items-center justify-between gap-2 mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 gap-2 mb-4">
         <div className="flex items-center gap-2" />
         <CardControlsRow
           clusterIndicator={{
@@ -227,7 +227,7 @@ export function CRDHealth({ config: _config }: CRDHealthProps) {
           </div>
 
           {/* Summary */}
-          <div className="grid grid-cols-4 gap-2 mb-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
             <div className="p-2 rounded-lg bg-cyan-500/10 text-center">
               <span className="text-lg font-bold text-cyan-400">{statsSource.length}</span>
               <p className="text-xs text-muted-foreground">{t('crdHealth.crds')}</p>
@@ -257,7 +257,7 @@ export function CRDHealth({ config: _config }: CRDHealthProps) {
                   key={`${crd.cluster}-${crd.group}-${crd.name}`}
                   className="p-2 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors"
                 >
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-y-2">
                     <div className="flex items-center gap-2">
                       <StatusIcon className={`w-4 h-4 text-${color}-400`} />
                       <ClusterBadge cluster={crd.cluster} size="sm" />

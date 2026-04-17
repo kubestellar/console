@@ -145,7 +145,7 @@ export function KagentSecurity({ config }: { config?: Record<string, unknown> })
           </div>
           <div className="space-y-1">
             {byoAgents.map(agent => (
-              <div key={`${agent.cluster}-${agent.name}`} className="flex items-center justify-between text-xs py-1 px-2 rounded bg-yellow-400/5 border border-yellow-400/10">
+              <div key={`${agent.cluster}-${agent.name}`} className="flex flex-wrap items-center justify-between gap-y-2 text-xs py-1 px-2 rounded bg-yellow-400/5 border border-yellow-400/10">
                 <div className="flex items-center gap-1.5">
                   <ShieldAlert className="w-3 h-3 text-yellow-400" />
                   <span className="text-foreground">{agent.name}</span>

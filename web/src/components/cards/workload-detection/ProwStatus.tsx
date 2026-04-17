@@ -37,7 +37,7 @@ export function ProwStatus({ config: _config }: ProwStatusProps) {
   return (
     <div className="h-full flex flex-col min-h-card">
       {/* Status badge */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
         <span className={`text-xs px-1.5 py-0.5 rounded ${status.healthy ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
           {status.healthy ? 'Healthy' : 'Unhealthy'}
         </span>

@@ -606,7 +606,7 @@ Please proceed step by step.`,
             const info = getFrameworkInfo(fw.name)
             return (
               <div key={i} className="rounded-md px-2 py-1.5 hover:bg-secondary/30 transition-colors">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-y-2">
                   <div className="flex items-center gap-1.5 min-w-0">
                     <span className="text-xs font-medium text-foreground truncate">
                       {info?.label || fw.name}
@@ -833,7 +833,7 @@ export function PolicyViolations({ config: _config }: CardConfig) {
         {(violations || []).map((v, i) => (
           <div
             key={i}
-            className="group flex items-center justify-between p-2 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer"
+            className="group flex flex-wrap items-center justify-between gap-y-2 p-2 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer"
             onClick={() => setSelectedViolation(v)}
             role="button"
             aria-label={t('cards:policyViolations.viewViolationAria', { policy: v.policy })}

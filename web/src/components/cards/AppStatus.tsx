@@ -231,7 +231,7 @@ export function AppStatus(_props: AppStatusProps) {
             className={`p-3 rounded-lg hover:bg-secondary/50 transition-colors cursor-pointer group ${idx % 2 === 0 ? 'bg-secondary/20' : 'bg-secondary/40'}`}
             title={`Click to view details for ${app.name}`}
           >
-            <div className="flex items-center justify-between mb-2 gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 gap-2">
               <div className="flex items-center gap-2 min-w-0 flex-1">
                 <span title="Workload"><Box className="w-4 h-4 text-purple-400 shrink-0" /></span>
                 <span className="text-sm font-medium text-foreground truncate" title={app.name}>{app.name}</span>

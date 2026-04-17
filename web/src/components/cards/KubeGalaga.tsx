@@ -485,7 +485,7 @@ export function KubeGalaga() {
     <div ref={gameContainerRef} className="h-full flex flex-col">
       <div className={`flex flex-col items-center gap-3 ${isExpanded ? 'flex-1 min-h-0' : ''}`}>
         {/* Stats bar */}
-        <div className="flex items-center justify-between w-full max-w-[400px] text-sm">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 w-full max-w-[400px] text-sm">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-1">
               <Target className="w-4 h-4 text-cyan-400" />

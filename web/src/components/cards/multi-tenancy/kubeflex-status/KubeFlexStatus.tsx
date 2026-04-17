@@ -150,7 +150,7 @@ export function KubeFlexStatus() {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded gap-4">
       {/* Health badge + last check */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-y-2">
         <div
           role="button"
           tabIndex={0}
@@ -218,7 +218,7 @@ export function KubeFlexStatus() {
                 onClick={openDetailModal}
                 onKeyDown={handleDetailKeyDown}
                 aria-label={`${cp.name}: ${cp.healthy ? t('kubeFlexStatus.cpHealthy') : t('kubeFlexStatus.cpUnhealthy')}`}
-                className="flex items-center justify-between text-xs gap-2 px-2 py-1.5 rounded bg-secondary/30 cursor-pointer hover:bg-secondary/50 transition-colors"
+                className="flex flex-wrap items-center justify-between gap-y-2 text-xs gap-2 px-2 py-1.5 rounded bg-secondary/30 cursor-pointer hover:bg-secondary/50 transition-colors"
               >
                 <span className="text-foreground truncate flex-1" title={cp.name}>
                   {cp.name}

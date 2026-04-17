@@ -129,7 +129,7 @@ export function PerformanceTimeline() {
   return (
     <div className="p-4 h-full flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
         <div className="flex items-center gap-2">
           <LayoutGrid size={14} className="text-purple-400" />
           <span className="text-sm font-medium text-white">Sequence Length Impact</span>

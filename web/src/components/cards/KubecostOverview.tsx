@@ -109,7 +109,7 @@ export function KubecostOverview({ config: _config }: KubecostOverviewProps) {
 
       {/* Savings recommendations */}
       <div className="flex-1 overflow-y-auto">
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2">
           <p className="text-xs text-muted-foreground font-medium">{t('kubecostOverview.savingsRecommendations')}</p>
           <span className="flex items-center gap-1 text-xs text-green-400">
             <TrendingDown className="w-3 h-3" aria-hidden="true" />
@@ -128,7 +128,7 @@ export function KubecostOverview({ config: _config }: KubecostOverviewProps) {
               })}
               className="p-2 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group"
             >
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-y-2">
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="w-3.5 h-3.5 text-yellow-400" />
                   <span className="text-xs text-foreground group-hover:text-green-400">{rec.description}</span>
@@ -144,7 +144,7 @@ export function KubecostOverview({ config: _config }: KubecostOverviewProps) {
       </div>
 
       {/* Footer */}
-      <div className="mt-3 pt-2 border-t border-border/50 flex items-center justify-between text-xs text-muted-foreground">
+      <div className="mt-3 pt-2 border-t border-border/50 flex flex-wrap items-center justify-between gap-y-2 text-xs text-muted-foreground">
         <span>{t('kubecostOverview.poweredBy')}</span>
         <a
           href="https://docs.kubecost.com/"

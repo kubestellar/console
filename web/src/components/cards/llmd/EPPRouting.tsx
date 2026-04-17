@@ -887,7 +887,7 @@ function EPPRoutingInternal() {
         </div>
       )}
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
         <div className="flex items-center gap-2">
           <div className="p-1.5 rounded-lg bg-yellow-500/20">
             <Zap size={14} className="text-yellow-400" />
@@ -1075,7 +1075,7 @@ function EPPRoutingInternal() {
 
                 return (
                   <>
-                    <div className="flex items-center justify-between mb-2">
+                    <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2">
                       <span className="text-white font-medium text-sm">{node.label}</span>
                       <button
                         onClick={(e) => { e.stopPropagation(); setSelectedNode(null) }}
@@ -1183,7 +1183,7 @@ function EPPRoutingInternal() {
             if (!link) return null
 
             return (
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-y-2">
                 <div className="flex items-center gap-2">
                   <span className="text-white capitalize font-medium">{link.source.replace('-', ' ')}</span>
                   <ArrowRight size={12} className="text-muted-foreground" />

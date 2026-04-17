@@ -141,7 +141,7 @@ export function NodeConditions() {
 
       {/* Error toast for failed actions */}
       {actionError && (
-        <div className="p-2 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-400 flex items-center justify-between">
+        <div className="p-2 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-400 flex flex-wrap items-center justify-between gap-y-2">
           <span>{actionError}</span>
           <button onClick={() => setActionError(null)} className="ml-2 text-red-300 hover:text-red-200">
             ✕
@@ -193,7 +193,7 @@ export function NodeConditions() {
           const pressures = conditions.filter(c => c.type !== 'Ready' && c.status === 'True')
 
           return (
-            <div key={`${node.cluster}-${node.name}`} className="flex items-center justify-between px-2 py-1.5 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+            <div key={`${node.cluster}-${node.name}`} className="flex flex-wrap items-center justify-between gap-y-2 px-2 py-1.5 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
               <div className="flex items-center gap-2 min-w-0 flex-1">
                 <div className={`w-2 h-2 rounded-full shrink-0 ${
                   node.unschedulable ? 'bg-yellow-500' :

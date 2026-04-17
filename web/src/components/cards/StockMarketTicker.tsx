@@ -710,7 +710,7 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
   return (
     <div className="h-full flex flex-col">
       {/* Header with market status and controls */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
         <div className="flex items-center gap-2">
           <BarChart3 className="w-4 h-4 text-muted-foreground" />
           <div className="text-xs">
@@ -781,7 +781,7 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
                 <button
                   key={result.symbol}
                   onClick={() => addStock(result)}
-                  className="w-full p-2 text-left hover:bg-accent transition-colors flex items-center justify-between"
+                  className="w-full p-2 text-left hover:bg-accent transition-colors flex flex-wrap items-center justify-between gap-y-2"
                   disabled={activeSymbols.includes(result.symbol)}
                 >
                   <div>
@@ -801,7 +801,7 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
       </div>
 
       {/* Portfolio summary */}
-      <div className="grid grid-cols-3 gap-2 mb-3 p-2 bg-accent/30 rounded-lg text-xs">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3 p-2 bg-accent/30 rounded-lg text-xs">
         <div className="text-center">
           <div className="text-muted-foreground">{t('stockMarket.avgChange')}</div>
           <div className={`font-semibold ${portfolioSummary.avgChange >= 0 ? 'text-green-500' : 'text-red-500'}`}>
@@ -841,7 +841,7 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
       )}
 
       {/* Footer with pagination and data source */}
-      <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/30">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mt-2 pt-2 border-t border-border/30">
         <div className="text-xs text-muted-foreground flex items-center gap-1">
           <span>{t('stockMarket.dataFrom', { source: dataSource })}</span>
           {useLiveData && <span className="text-green-500">{t('stockMarket.liveLabel')}</span>}

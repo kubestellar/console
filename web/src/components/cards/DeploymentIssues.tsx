@@ -180,7 +180,7 @@ function DeploymentIssuesInternal({ config }: DeploymentIssuesProps) {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded">
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
         <div className="flex items-center gap-2">
           <StatusBadge color="red" title={t('deploymentIssues.issuesTitle', { count: rawIssues.length })}>
             {t('deploymentIssues.nIssues', { count: rawIssues.length })}

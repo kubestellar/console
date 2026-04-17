@@ -139,14 +139,14 @@ export function VClusterStatus({ config: _config }: VClusterStatusProps) {
     defaultLimit: DEFAULT_PAGE_SIZE,
   })
   if (isLoading) {
-    return (<div className="h-full flex flex-col min-h-card"><div className="flex items-center justify-between mb-3"><Skeleton variant="text" width={120} height={20} /><Skeleton variant="rounded" width={80} height={28} /></div><div className="space-y-2"><Skeleton variant="rounded" height={60} /><Skeleton variant="rounded" height={60} /><Skeleton variant="rounded" height={60} /></div></div>)
+    return (<div className="h-full flex flex-col min-h-card"><div className="flex flex-wrap items-center justify-between gap-y-2 mb-3"><Skeleton variant="text" width={120} height={20} /><Skeleton variant="rounded" width={80} height={28} /></div><div className="space-y-2"><Skeleton variant="rounded" height={60} /><Skeleton variant="rounded" height={60} /><Skeleton variant="rounded" height={60} /></div></div>)
   }
   if (hasError) {
     return (<div className="h-full flex flex-col items-center justify-center min-h-card p-6"><AlertCircle className="w-12 h-12 text-red-400 mb-4" /><p className="text-sm text-muted-foreground mb-4">{t('vclusterStatus.loadFailed')}</p><button onClick={() => refresh()} className="px-4 py-2 rounded-lg bg-purple-500 hover:bg-purple-600 text-white text-sm">{t('common:common.retry')}</button></div>)
   }
   return (
     <div className="h-full flex flex-col min-h-card">
-      <div className="flex items-center justify-between mb-2 flex-shrink-0">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 flex-shrink-0">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-muted-foreground">{t('vclusterStatus.nVClusters', { count: totalItems })}</span>
           {localClusterFilter.length > 0 && (<span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded"><Server className="w-3 h-3" />{localClusterFilter.length}/{availableClusters.length}</span>)}
@@ -157,7 +157,7 @@ export function VClusterStatus({ config: _config }: VClusterStatusProps) {
         />
       </div>
       <CardSearchInput value={localSearch} onChange={setLocalSearch} placeholder={t('vclusterStatus.searchPlaceholder')} className="mb-3" />
-      <div className="grid grid-cols-3 gap-2 mb-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
         <div className="p-2 rounded-lg bg-purple-500/10 border border-purple-500/20 text-center"><p className="text-2xs text-purple-400">{t('vclusterStatus.total')}</p><p className="text-lg font-bold text-foreground">{stats.totalVClusters}</p></div>
         <div className="p-2 rounded-lg bg-green-500/10 border border-green-500/20 text-center"><p className="text-2xs text-green-400">{t('vclusterStatus.running')}</p><p className="text-lg font-bold text-foreground">{stats.runningCount}</p></div>
         <div className="p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-center"><p className="text-2xs text-yellow-400">{t('vclusterStatus.paused')}</p><p className="text-lg font-bold text-foreground">{stats.pausedCount}</p></div>
@@ -174,7 +174,7 @@ export function VClusterStatus({ config: _config }: VClusterStatusProps) {
           const colors = getStatusColors(vc.status)
           return (
             <div key={`${vc.hostCluster}-${vc.namespace}-${vc.name}-${idx}`} className="p-2.5 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors">
-              <div className="flex items-center justify-between mb-1">
+              <div className="flex flex-wrap items-center justify-between gap-y-2 mb-1">
                 <div className="flex items-center gap-2">
                   <Icon className={`w-4 h-4 ${colors.text}`} />
                   <span className="text-sm font-medium text-foreground truncate">{vc.name}</span>
@@ -182,7 +182,7 @@ export function VClusterStatus({ config: _config }: VClusterStatusProps) {
                 </div>
                 <span className="text-xs text-muted-foreground font-mono">{vc.k8sVersion}</span>
               </div>
-              <div className="flex items-center justify-between text-xs">
+              <div className="flex flex-wrap items-center justify-between gap-y-2 text-xs">
                 <div className="flex items-center gap-2"><ClusterBadge cluster={vc.hostCluster} /><span className="text-muted-foreground">{vc.namespace}</span></div>
               </div>
             </div>

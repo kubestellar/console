@@ -155,7 +155,7 @@ export function ClusterGroups(_props: ClusterGroupsProps) {
   return (
     <div className="space-y-3">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-y-2">
         <div className="flex items-center gap-2">
           <Layers className="w-4 h-4 text-blue-400" />
           <span className="text-sm font-medium text-foreground">
@@ -551,7 +551,7 @@ function CreateGroupForm({ availableClusters, clusterHealthMap, onSave, onCancel
 
   return (
     <div className="rounded-lg border border-blue-500/40 bg-blue-500/5 p-3 space-y-3">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-y-2">
         <span className="text-xs font-medium text-blue-400">{t('cards:clusterGroups.newClusterGroup')}</span>
         <button onClick={onCancel} aria-label={t('common:common.cancel')} className="p-2 hover:bg-gray-900/10 dark:hover:bg-white/10 rounded min-h-11 min-w-11 flex items-center justify-center">
           <X className="w-3.5 h-3.5 text-muted-foreground" />
@@ -823,7 +823,7 @@ function QueryBuilder({
 
       {/* Resource filters */}
       <div>
-        <div className="flex items-center justify-between mb-1">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-1">
           <label className="flex items-center gap-1 text-2xs text-muted-foreground">
             <Filter className="w-2.5 h-2.5" />
             {t('cards:clusterGroups.resourceFilters')}
@@ -1054,7 +1054,7 @@ function EditGroupForm({ group, availableClusters, clusterHealthMap, onSave, onC
 
   return (
     <div className="rounded-lg border border-yellow-500/40 bg-yellow-500/5 p-3 space-y-3">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-y-2">
         <span className="text-xs font-medium text-yellow-400">{t('common:common.edit')}: {group.name}</span>
         <button onClick={onCancel} aria-label={t('common:common.cancel')} className="p-2 hover:bg-gray-900/10 dark:hover:bg-white/10 rounded min-h-11 min-w-11 flex items-center justify-center">
           <X className="w-3.5 h-3.5 text-muted-foreground" />

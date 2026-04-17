@@ -115,7 +115,7 @@ function ArgoCDApplicationSetsInternal({ config }: ArgoCDApplicationSetsProps) {
   if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
           <Skeleton variant="text" width={150} height={20} />
           <Skeleton variant="rounded" width={80} height={28} />
         </div>
@@ -141,7 +141,7 @@ function ArgoCDApplicationSetsInternal({ config }: ArgoCDApplicationSetsProps) {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded">
       {/* Header with controls */}
-      <div className="flex items-center justify-between mb-3 flex-shrink-0">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3 flex-shrink-0">
         <div className="flex items-center gap-2">
           <StatusBadge color="purple">
             {totalItems} AppSet{totalItems !== 1 ? 's' : ''}
@@ -213,7 +213,7 @@ function ArgoCDApplicationSetsInternal({ config }: ArgoCDApplicationSetsProps) {
       />
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-2 mb-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
         <div className="text-center p-2 rounded-lg bg-green-500/10">
           <p className="text-lg font-bold text-green-400">{stats.healthy}</p>
           <p className="text-xs text-muted-foreground">Healthy</p>
@@ -244,7 +244,7 @@ function ArgoCDApplicationSetsInternal({ config }: ArgoCDApplicationSetsProps) {
                 key={`${appSet.cluster}-${appSet.namespace}-${appSet.name}-${idx}`}
                 className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors group"
               >
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2">
                   <div className="flex items-center gap-2">
                     <Layers className="w-4 h-4 text-purple-400" />
                     <span className="text-sm font-medium text-foreground">{appSet.name}</span>
@@ -266,7 +266,7 @@ function ArgoCDApplicationSetsInternal({ config }: ArgoCDApplicationSetsProps) {
                     </span>
                   </div>
                 </div>
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <div className="flex flex-wrap items-center justify-between gap-y-2 text-xs text-muted-foreground">
                   <div className="flex items-center gap-2">
                     <ClusterBadge cluster={appSet.cluster} size="sm" />
                     <span>/{appSet.namespace}</span>

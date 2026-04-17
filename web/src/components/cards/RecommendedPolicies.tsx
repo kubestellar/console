@@ -469,7 +469,7 @@ Deploy each policy to every cluster where it's missing. Proceed cluster by clust
               {/* Category header */}
               <button
                 onClick={() => setExpandedCategory(isExpanded ? null : category)}
-                className={`w-full flex items-center justify-between p-2 rounded-lg border transition-colors ${
+                className={`w-full flex flex-wrap items-center justify-between gap-y-2 p-2 rounded-lg border transition-colors ${
                   isExpanded ? CATEGORY_BG[category] : 'bg-secondary/20 border-transparent hover:bg-secondary/40'
                 }`}
               >

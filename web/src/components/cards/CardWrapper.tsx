@@ -982,7 +982,7 @@ export function CardWrapper({
             onMouseLeave={() => setShowSummary(false)}
           >
             {/* Header */}
-            <div data-tour="card-header" className="flex items-center justify-between px-4 py-3 border-b border-border/50">
+            <div data-tour="card-header" className="flex flex-wrap items-center justify-between gap-y-2 px-4 py-3 border-b border-border/50">
               <div className="flex items-center gap-2 min-w-0">
                 {dragHandle}
                 {ResolvedIcon && <ResolvedIcon className={cn('w-4 h-4 flex-shrink-0', resolvedIconColor)} />}
@@ -1183,7 +1183,7 @@ export function CardWrapper({
                               setShowResizeMenu(!showResizeMenu)
                               setShowHeightMenu(false)
                             }}
-                            className="w-full px-4 py-2 text-left text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 flex items-center justify-between"
+                            className="w-full px-4 py-2 text-left text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 flex flex-wrap items-center justify-between gap-y-2"
                             role="menuitem"
                             aria-haspopup="menu"
                             aria-expanded={showResizeMenu}
@@ -1220,7 +1220,7 @@ export function CardWrapper({
                                     setShowMenu(false)
                                   }}
                                   className={cn(
-                                    'w-full px-3 py-2 text-left text-sm flex items-center justify-between',
+                                    'w-full px-3 py-2 text-left text-sm flex flex-wrap items-center justify-between gap-y-2',
                                     cardWidth === option.value
                                       ? 'text-purple-400 bg-purple-500/10'
                                       : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
@@ -1243,7 +1243,7 @@ export function CardWrapper({
                               setShowHeightMenu(!showHeightMenu)
                               setShowResizeMenu(false)
                             }}
-                            className="w-full px-4 py-2 text-left text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 flex items-center justify-between"
+                            className="w-full px-4 py-2 text-left text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 flex flex-wrap items-center justify-between gap-y-2"
                             role="menuitem"
                             aria-haspopup="menu"
                             aria-expanded={showHeightMenu}
@@ -1280,7 +1280,7 @@ export function CardWrapper({
                                     setShowMenu(false)
                                   }}
                                   className={cn(
-                                    'w-full px-3 py-2 text-left text-sm flex items-center justify-between',
+                                    'w-full px-3 py-2 text-left text-sm flex flex-wrap items-center justify-between gap-y-2',
                                     cardHeight === option.value
                                       ? 'text-purple-400 bg-purple-500/10'
                                       : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
@@ -1598,7 +1598,7 @@ export function CardWrapper({
           {showInstallGuide && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" role="presentation" onClick={() => setShowInstallGuide(null)}>
               <div className="bg-card border border-border rounded-xl shadow-2xl max-w-lg w-full mx-4 max-h-[80vh] overflow-y-auto p-6" role="dialog" aria-modal="true" aria-labelledby="install-guide-title" onClick={e => e.stopPropagation()}>
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
                   <h3 id="install-guide-title" className="text-lg font-semibold">{showInstallGuide.mission.mission?.title ?? `Install ${installInfo?.project ?? 'Component'}`}</h3>
                   <button onClick={() => setShowInstallGuide(null)} className="p-2 min-h-11 min-w-11 flex items-center justify-center hover:bg-secondary rounded" aria-label="Close dialog"><X className="w-4 h-4" /></button>
                 </div>

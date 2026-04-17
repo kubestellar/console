@@ -192,7 +192,7 @@ function PVCStatusInternal() {
   return (
     <div className="h-full flex flex-col">
       {/* Controls */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-muted-foreground">{totalItems} PVCs</span>
           <RefreshIndicator
@@ -238,7 +238,7 @@ function PVCStatusInternal() {
       />
 
       {/* Stats row */}
-      <div className="grid grid-cols-4 gap-2 mb-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
         <div className="p-2 rounded-lg bg-secondary/50 text-center">
           <div className="text-lg font-bold text-foreground">{stats.total}</div>
           <div className="text-xs text-muted-foreground">{t('common.total')}</div>
@@ -267,7 +267,7 @@ function PVCStatusInternal() {
           displayPVCs.map(pvc => (
             <div
               key={`${pvc.cluster}-${pvc.namespace}-${pvc.name}`}
-              className="flex items-center justify-between p-2 rounded-lg bg-secondary/30 transition-colors"
+              className="flex flex-wrap items-center justify-between gap-y-2 p-2 rounded-lg bg-secondary/30 transition-colors"
               title="PVC drilldown not available"
             >
               <div className="flex items-center gap-2 min-w-0">

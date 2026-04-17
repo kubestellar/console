@@ -108,7 +108,7 @@ const StackOption = memo(function StackOption({ stack, isSelected, onSelect }: S
       }`}
     >
       {/* Row 1: Name and replica counts */}
-      <div className="flex items-center justify-between mb-1">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-1">
         <div className="flex items-center gap-2">
           {/* Status indicator */}
           <div className={`w-2 h-2 rounded-full shrink-0 ${STATUS_COLORS[stack.status]}`} />
@@ -422,7 +422,7 @@ export function StackSelector() {
                 </p>
               </div>
 
-              <div className="flex items-center justify-between px-3 py-2">
+              <div className="flex flex-wrap items-center justify-between gap-y-2 px-3 py-2">
                 <span className="text-xs font-medium text-muted-foreground">
                   {filteredAndSortedStacks.length} stack{filteredAndSortedStacks.length !== 1 ? 's' : ''}{searchQuery ? ` of ${stacks.length}` : ''}
                 </span>
@@ -441,7 +441,7 @@ export function StackSelector() {
               {/* Error message */}
               {fetchError && (
                 <div className="px-3 py-2 bg-red-500/10 border-b border-red-500/20 text-red-400 text-xs">
-                  <div className="flex items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center justify-between gap-y-2 gap-2">
                     <span className="flex-1">{fetchError}</span>
                     <button
                       onClick={handleRefetch}
@@ -525,7 +525,7 @@ export function StackSelector() {
                 <div className="px-3 py-4 space-y-3">
                   {Array.from({ length: 3 }).map((_, i) => (
                     <div key={i} className="px-3 py-2.5 border-b border-border/50 last:border-0">
-                      <div className="flex items-center justify-between mb-1">
+                      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-1">
                         <div className="flex items-center gap-2">
                           <Skeleton variant="circular" width={8} height={8} />
                           <Skeleton variant="text" width={120} height={14} />
@@ -547,7 +547,7 @@ export function StackSelector() {
             </div>
 
             {/* Footer stats */}
-            <div className="px-3 py-2 border-t border-border bg-background/50 flex items-center justify-between text-2xs">
+            <div className="px-3 py-2 border-t border-border bg-background/50 flex flex-wrap items-center justify-between gap-y-2 text-2xs">
               <div className="flex items-center gap-3">
                 <span className="flex items-center gap-1">
                   <div className="w-1.5 h-1.5 rounded-full bg-green-500" />

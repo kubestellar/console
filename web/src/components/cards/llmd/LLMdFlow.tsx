@@ -961,7 +961,7 @@ export function LLMdFlow() {
         </div>
       )}
       {/* Header */}
-      <div className="absolute top-3 left-3 right-3 flex items-center justify-between z-10">
+      <div className="absolute top-3 left-3 right-3 flex flex-wrap items-center justify-between gap-y-2 z-10">
         <div className="flex items-center gap-4">
           {/* Stack info */}
           {selectedStack && (
@@ -1109,7 +1109,7 @@ export function LLMdFlow() {
             exit={{ opacity: 0, x: -20 }}
             className="absolute top-10 left-3 w-56 bg-background/95 backdrop-blur-sm rounded-xl p-4 border border-border shadow-xl"
           >
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
               <h4 className="text-white font-semibold text-sm">
                 {selectedMetrics.name}
               </h4>

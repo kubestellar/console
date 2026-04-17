@@ -870,7 +870,7 @@ function findTrendColumn(columns: string[]): string | null {
 function KPIBox({ label, value, accent }: { label: string; value: number; accent: 'emerald' | 'cyan' }) {
   const accentClass = accent === 'cyan' ? 'text-cyan-400' : 'text-emerald-400'
   return (
-    <div className="bg-slate-900/80 border border-slate-700/40 rounded px-3 py-1.5 flex items-center justify-between">
+    <div className="bg-slate-900/80 border border-slate-700/40 rounded px-3 py-1.5 flex flex-wrap items-center justify-between gap-y-2">
       <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{label}</span>
       <span className={`text-sm font-mono font-semibold ${accentClass}`}>{value}</span>
     </div>
@@ -936,7 +936,7 @@ function ResultsTable({ results, isDemo, onRowClick, headerAction }: ResultsTabl
 
   return (
     <div className="mt-2 bg-slate-950/80 border border-slate-700/40 rounded overflow-hidden">
-      <div className="px-2 py-1 border-b border-slate-700/50 flex items-center justify-between">
+      <div className="px-2 py-1 border-b border-slate-700/50 flex flex-wrap items-center justify-between gap-y-2">
         <div className="flex items-center gap-1.5">
           <span className="text-[10px] font-medium text-cyan-400 uppercase tracking-wider">{label}</span>
           <motion.div
@@ -1058,7 +1058,7 @@ function RowDetailDrawer({ row, onClose }: { row: LiveResultRow | null; onClose:
       exit={{ x: '100%' }}
       transition={{ type: 'tween', duration: 0.2 }}
     >
-      <div className="flex items-center justify-between px-3 py-2 border-b border-slate-700/60">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 px-3 py-2 border-b border-slate-700/60">
         <span className="text-xs font-semibold text-cyan-300 uppercase tracking-wider">{t('drasi.rowDetailTitle')}</span>
         <button type="button" onClick={onClose} className="min-w-11 min-h-11 flex items-center justify-center rounded hover:bg-slate-800 text-slate-400" aria-label={t('actions.close')}>
           <X className="w-3.5 h-3.5" />
@@ -1775,7 +1775,7 @@ function StreamSampleDrawer({ endpoint, isDemo, onClose }: StreamSampleDrawerPro
       exit={{ x: '100%' }}
       transition={{ type: 'tween', duration: 0.2 }}
     >
-      <div className="flex items-center justify-between px-3 py-2 border-b border-slate-700/60">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 px-3 py-2 border-b border-slate-700/60">
         <div className="flex items-center gap-1.5">
           <Code2 className="w-3.5 h-3.5 text-cyan-400" />
           <span className="text-xs font-semibold text-cyan-300 uppercase tracking-wider">{t('drasi.consumeStreamTitle')}</span>
@@ -1808,7 +1808,7 @@ function StreamSampleDrawer({ endpoint, isDemo, onClose }: StreamSampleDrawerPro
         ))}
       </div>
 
-      <div className="px-3 py-1.5 flex items-center justify-between border-b border-slate-800/60">
+      <div className="px-3 py-1.5 flex flex-wrap items-center justify-between gap-y-2 border-b border-slate-800/60">
         <code className="text-[10px] text-muted-foreground font-mono truncate flex-1 mr-2">{endpoint}</code>
         <button
           type="button"
@@ -2583,7 +2583,7 @@ export function DrasiReactiveGraph() {
       {/* Install Drasi CTA — shown only when no live connection is active.
           Deep-links to the existing console-kb install mission. */}
       {!isLive && (
-        <div className="flex-shrink-0 mb-2 p-2 rounded border border-cyan-500/30 bg-cyan-500/5 flex items-center justify-between gap-3">
+        <div className="flex-shrink-0 mb-2 p-2 rounded border border-cyan-500/30 bg-cyan-500/5 flex flex-wrap items-center justify-between gap-y-2 gap-3">
           <div className="min-w-0">
             <div className="text-xs font-semibold text-cyan-300 truncate">{t('drasi.installDrasiTitle')}</div>
             <div className="text-[10px] text-muted-foreground truncate">{t('drasi.installDrasiDescription')}</div>
@@ -2599,7 +2599,7 @@ export function DrasiReactiveGraph() {
         </div>
       )}
       {/* Pipeline KPIs strip */}
-      <div className="flex-shrink-0 grid grid-cols-4 gap-2 mb-2">
+      <div className="flex-shrink-0 grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
         <KPIBox label={KPI_LABEL_EVENTS_PER_SEC} value={kpis.eventsPerSec} accent="emerald" />
         <KPIBox label={KPI_LABEL_RESULT_ROWS} value={kpis.matchRate} accent="cyan" />
         <KPIBox label={KPI_LABEL_SOURCES} value={kpis.activeSources} accent="emerald" />

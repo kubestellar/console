@@ -92,7 +92,7 @@ export function LogsModal({ repo, jobId, title, onClose }: LogsModalProps) {
         className="relative w-full max-w-4xl max-h-[85vh] bg-card border border-border rounded-xl shadow-2xl flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-border shrink-0">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 gap-2 px-4 py-3 border-b border-border shrink-0">
           <div className="min-w-0">
             <div className="text-sm font-medium text-foreground truncate">{title}</div>
             <div className="text-[11px] text-muted-foreground truncate">{repo} • job #{jobId}</div>

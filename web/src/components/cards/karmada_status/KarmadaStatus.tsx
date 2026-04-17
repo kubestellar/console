@@ -76,7 +76,7 @@ function MemberClusterRow({ cluster }: { cluster: KarmadaMemberCluster }) {
   return (
     <div className="rounded-md bg-muted/30 px-3 py-2 space-y-1">
       {/* Row 1: name + status */}
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 gap-2">
         <div className="flex items-center gap-1.5 min-w-0">
           {statusCfg.icon}
           <span className="text-xs font-medium truncate">{cluster.name}</span>
@@ -84,7 +84,7 @@ function MemberClusterRow({ cluster }: { cluster: KarmadaMemberCluster }) {
         <span className={`text-xs shrink-0 ${statusCfg.color}`}>{cluster.status}</span>
       </div>
       {/* Row 2: k8s version + node count */}
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 text-xs text-muted-foreground">
         <span className="truncate">{cluster.kubernetesVersion}</span>
         <span className="shrink-0 ml-2">
           {cluster.nodeCount} nodes · {cluster.syncedResources} synced
@@ -99,11 +99,11 @@ function ResourceBindingRow({ binding }: { binding: KarmadaResourceBinding }) {
   const clusters = (binding.boundClusters || []).join(', ') || '—'
   return (
     <div className="rounded-md bg-muted/30 px-3 py-2 space-y-1">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 gap-2">
         <span className="text-xs font-medium truncate">{binding.name}</span>
         <span className={`text-xs shrink-0 ${color}`}>{binding.status}</span>
       </div>
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 text-xs text-muted-foreground">
         <span className="shrink-0">{binding.resourceKind}</span>
         <span className="truncate ml-2 text-right">{clusters}</span>
       </div>
@@ -158,7 +158,7 @@ export function KarmadaStatus() {
   if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card gap-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-y-2">
           <Skeleton variant="rounded" width={140} height={28} />
           <Skeleton variant="rounded" width={80} height={20} />
         </div>
@@ -207,7 +207,7 @@ export function KarmadaStatus() {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded gap-4 overflow-hidden">
       {/* ── Header ── */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-y-2">
         <div className="flex items-center gap-2">
           <div
             className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${healthColorClass}`}
@@ -233,7 +233,7 @@ export function KarmadaStatus() {
       </div>
 
       {/* ── Stats grid ── */}
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <StatTile
           icon={<Globe className="w-4 h-4 text-blue-400" />}
           label={t('karmada.clusters', 'Clusters')}

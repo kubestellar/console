@@ -935,7 +935,7 @@ function KubeChessInternal() {
     <div className="h-full flex flex-col">
       <div className="flex flex-col items-center gap-3">
         {/* Status */}
-        <div className="flex items-center justify-between w-full max-w-xs">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 w-full max-w-xs">
           <div className="flex items-center gap-2">
             <div className={`w-3 h-3 rounded-full ${gameState.turn === 'white' ? 'bg-white border border-gray-300 dark:border-gray-600' : 'bg-gray-800 dark:bg-gray-900'}`} />
             <span className="text-sm font-medium">

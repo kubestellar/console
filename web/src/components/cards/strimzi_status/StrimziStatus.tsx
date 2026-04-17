@@ -24,7 +24,7 @@ function TopicRow({ topic }: { topic: StrimziTopic }) {
     t('strimziStatus.topicStatus_error', 'Error')
 
   return (
-    <div className="flex items-center justify-between rounded-md bg-muted/30 px-3 py-2">
+    <div className="flex flex-wrap items-center justify-between gap-y-2 rounded-md bg-muted/30 px-3 py-2">
       <div className="min-w-0 flex-1">
         <p className="text-xs font-medium truncate">{topic.name}</p>
         <p className="text-xs text-muted-foreground">
@@ -55,7 +55,7 @@ function ConsumerGroupRow({ group }: { group: StrimziConsumerGroup }) {
     t('strimziStatus.groupStatus_error', 'Error')
 
   return (
-    <div className="flex items-center justify-between rounded-md bg-muted/30 px-3 py-2">
+    <div className="flex flex-wrap items-center justify-between gap-y-2 rounded-md bg-muted/30 px-3 py-2">
       <div className="min-w-0 flex-1">
         <p className="text-xs font-medium truncate">{group.groupId}</p>
         <p className={`text-xs tabular-nums ${lagColor}`}>
@@ -126,7 +126,7 @@ export function StrimziStatus() {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded gap-4 overflow-hidden">
       {/* Health badge + cluster name + last check */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-y-2">
         <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${healthColorClass}`}>
           {isHealthy ? (
             <CheckCircle className="w-4 h-4" />

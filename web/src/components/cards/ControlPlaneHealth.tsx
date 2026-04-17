@@ -127,7 +127,7 @@ export function ControlPlaneHealth() {
         </div>
       )}
       {componentStatus.map(comp => (
-        <div key={comp.name} className="flex items-center justify-between px-2 py-1.5 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+        <div key={comp.name} className="flex flex-wrap items-center justify-between gap-y-2 px-2 py-1.5 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
           <div className="flex items-center gap-2">
             <div className={`w-2 h-2 rounded-full ${
               comp.total === 0 ? 'bg-muted-foreground/30' :

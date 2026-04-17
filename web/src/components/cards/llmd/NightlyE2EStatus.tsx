@@ -754,45 +754,45 @@ function GuideDetailPanel({ guide, hoveredRun, onRunHover }: {
             </span>
           </div>
         )}
-        <div className="flex items-center justify-between text-[11px]">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 text-[11px]">
           <span className="text-muted-foreground">{t('cards:llmd.model')}</span>
           <span className={`font-mono text-2xs truncate max-w-[140px] ${hoveredRun ? 'text-foreground' : 'text-foreground'}`} title={displayModel}>{displayModel}</span>
         </div>
-        <div className="flex items-center justify-between text-[11px]">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 text-[11px]">
           <span className="text-muted-foreground">{t('cards:llmd.gpu')}</span>
           <span className={`font-mono text-2xs ${hoveredRun ? 'text-foreground' : 'text-foreground'}`}>
             {displayGpuCount > 0 ? `${displayGpuCount}× ${displayGpuType}` : displayGpuType}
           </span>
         </div>
         {hoveredRun && runDur !== null ? (
-          <div className="flex items-center justify-between text-[11px]">
+          <div className="flex flex-wrap items-center justify-between gap-y-2 text-[11px]">
             <span className="text-muted-foreground">{t('cards:llmd.duration')}</span>
             <span className="text-foreground font-mono">{formatDuration(runDur)}</span>
           </div>
         ) : avgDur !== null ? (
-          <div className="flex items-center justify-between text-[11px]">
+          <div className="flex flex-wrap items-center justify-between gap-y-2 text-[11px]">
             <span className="text-muted-foreground">{t('cards:llmd.avgDuration')}</span>
             <span className="text-foreground font-mono">{formatDuration(avgDur)}</span>
           </div>
         ) : null}
         <div className="h-px bg-border/30 my-0.5" />
         {lastSuccess && (
-          <div className="flex items-center justify-between text-[11px]">
+          <div className="flex flex-wrap items-center justify-between gap-y-2 text-[11px]">
             <span className="text-muted-foreground">{t('cards:llmd.lastPass')}</span>
             <span className="text-green-400 font-mono">{formatTimeAgo(lastSuccess.updatedAt)}</span>
           </div>
         )}
         {lastFailure && (
-          <div className="flex items-center justify-between text-[11px]">
+          <div className="flex flex-wrap items-center justify-between gap-y-2 text-[11px]">
             <span className="text-muted-foreground">{t('cards:llmd.lastFail')}</span>
             <span className="text-red-400 font-mono">{formatTimeAgo(lastFailure.updatedAt)}</span>
           </div>
         )}
-        <div className="flex items-center justify-between text-[11px]">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 text-[11px]">
           <span className="text-muted-foreground">{t('cards:llmd.totalRuns')}</span>
           <span className="text-foreground font-mono">{guide.runs.length}</span>
         </div>
-        <div className="flex items-center justify-between text-[11px]">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 text-[11px]">
           <span className="text-muted-foreground">{t('cards:llmd.trend')}</span>
           <TrendIndicator trend={guide.trend} passRate={guide.passRate} />
         </div>
@@ -895,7 +895,7 @@ export function NightlyE2EStatus() {
   if (showSkeleton) {
     return (
       <div className="p-4 h-full flex flex-col gap-3 overflow-hidden">
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} variant="rounded" height={64} />
           ))}
@@ -917,7 +917,7 @@ export function NightlyE2EStatus() {
   return (
     <div className="p-4 h-full flex flex-col gap-3 overflow-hidden">
       {/* Stats row */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}

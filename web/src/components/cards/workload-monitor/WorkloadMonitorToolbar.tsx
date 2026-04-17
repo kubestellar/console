@@ -53,7 +53,7 @@ export function WorkloadMonitorToolbar({
   return (
     <div className="space-y-2 mb-3">
       {/* Top row: summary + controls */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-y-2">
         <div className="flex items-center gap-2">
           <StatusBadge color="purple">
             {totalItems} resources

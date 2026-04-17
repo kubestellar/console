@@ -1017,7 +1017,7 @@ export function GPUInventoryHistory() {
               </tbody>
             </table>
             {totalTablePages > 1 && (
-              <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
+              <div className="flex flex-wrap items-center justify-between gap-y-2 mt-2 text-xs text-muted-foreground">
                 <span>{t('cards:gpuInventoryHistory.showing', 'Showing')} {tablePage * TABLE_PAGE_SIZE + 1}-{Math.min((tablePage + 1) * TABLE_PAGE_SIZE, (tableRows || []).length)} {t('cards:gpuInventoryHistory.of', 'of')} {(tableRows || []).length}</span>
                 <div className="flex gap-1">
                   <button

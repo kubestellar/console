@@ -105,7 +105,7 @@ export function ACMMRecommendations() {
       {/* Level slider — drag to explore other levels. Filters the
           Feedback Loops Inventory card via shared context. */}
       <div>
-        <div className="flex items-center justify-between text-[10px] text-muted-foreground mb-1">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 text-[10px] text-muted-foreground mb-1">
           <span>Explore level <span className="italic text-muted-foreground/60">— drag to preview AI vs human balance</span></span>
           <span className="font-mono text-foreground">L{targetLevel}</span>
         </div>
@@ -119,7 +119,7 @@ export function ACMMRecommendations() {
           className="w-full accent-primary"
           aria-label="Target ACMM level"
         />
-        <div className="flex items-center justify-between text-[9px] text-muted-foreground mt-0.5">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 text-[9px] text-muted-foreground mt-0.5">
           {LEVEL_TICKS.map((n) => (
             <span
               key={n}
@@ -154,7 +154,7 @@ export function ACMMRecommendations() {
       )}
 
       <div>
-        <div className="flex items-center justify-between mb-1.5">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-1.5">
           <div className="text-[10px] text-muted-foreground uppercase tracking-wide">
             Top recommendations
           </div>
@@ -205,7 +205,7 @@ export function ACMMRecommendations() {
               <div className="text-[10px] text-muted-foreground/80 mt-1 italic leading-snug">
                 {rec.reason}
               </div>
-              <div className="mt-1.5 flex items-center justify-between gap-2">
+              <div className="mt-1.5 flex flex-wrap items-center justify-between gap-y-2 gap-2">
                 <code className="text-[9px] font-mono text-muted-foreground/70 truncate flex-1" title={`Detection (${rec.criterion.detection.type})`}>
                   {detectionLabel(rec.criterion.detection)}
                 </code>

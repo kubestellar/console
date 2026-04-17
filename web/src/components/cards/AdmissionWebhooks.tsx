@@ -66,7 +66,7 @@ export function AdmissionWebhooks() {
 
       <div className="space-y-1 max-h-[300px] overflow-y-auto">
         {filtered.map((wh, i) => (
-          <div key={`${wh.cluster}-${wh.name}-${i}`} className="flex items-center justify-between px-2 py-1.5 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+          <div key={`${wh.cluster}-${wh.name}-${i}`} className="flex flex-wrap items-center justify-between gap-y-2 px-2 py-1.5 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
                 <span className={`text-xs px-1.5 py-0.5 rounded ${

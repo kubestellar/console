@@ -155,7 +155,7 @@ export function SLOCompliance() {
           return (
             <div
               key={target.metric}
-              className="flex items-center justify-between px-2 py-1.5 rounded bg-secondary/30 text-xs"
+              className="flex flex-wrap items-center justify-between gap-y-2 px-2 py-1.5 rounded bg-secondary/30 text-xs"
             >
               <div className="flex items-center gap-2 min-w-0">
                 <Target className={`w-3 h-3 flex-shrink-0 ${getBudgetColor(target.currentCompliance)}`} />

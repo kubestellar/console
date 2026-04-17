@@ -398,7 +398,7 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
   if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
           <Skeleton variant="text" width={140} height={20} />
           <Skeleton variant="rounded" width={80} height={28} />
         </div>

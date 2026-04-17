@@ -109,7 +109,7 @@ export function NetworkOverview() {
     return (
       <div className="h-full flex flex-col min-h-card">
         {/* Header skeleton */}
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
           <div className="flex items-center gap-2">
             <Skeleton variant="circular" width={16} height={16} />
             <Skeleton variant="text" width={100} height={16} />
@@ -162,7 +162,7 @@ export function NetworkOverview() {
       )}
 
       {/* Controls */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
         {/* part 5: freshness indicator.
             #6265: this card uses BOTH useClusters() and useCachedServices(),
             so the indicator must reflect the OLDER of the two timestamps
@@ -314,7 +314,7 @@ export function NetworkOverview() {
               return (
                 <div
                   key={name}
-                  className={`flex items-center justify-between gap-2 p-2 rounded bg-secondary/30 ${svc ? 'cursor-pointer hover:bg-secondary/50' : 'cursor-default'} transition-colors`}
+                  className={`flex flex-wrap items-center justify-between gap-y-2 gap-2 p-2 rounded bg-secondary/30 ${svc ? 'cursor-pointer hover:bg-secondary/50' : 'cursor-default'} transition-colors`}
                   onClick={() => svc?.cluster && svc?.namespace && drillToService(svc.cluster, svc.namespace, svc.name)}
                   title={`${count} service${count !== 1 ? 's' : ''} in namespace ${name}${svc ? ' - Click to view' : ''}`}
                 >

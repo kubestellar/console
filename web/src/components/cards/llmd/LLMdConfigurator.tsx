@@ -91,7 +91,7 @@ interface ParameterSliderProps {
 function ParameterSlider({ param, onChange }: ParameterSliderProps) {
   if (typeof param.value === 'boolean') {
     return (
-      <div className="flex items-center justify-between py-2 border-b border-border/50">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 py-2 border-b border-border/50">
         <div>
           <div className="text-sm text-white">{param.name}</div>
           <div className="text-xs text-muted-foreground">{param.description}</div>
@@ -114,7 +114,7 @@ function ParameterSlider({ param, onChange }: ParameterSliderProps) {
   if (typeof param.value === 'string') {
     return (
       <div className="py-2 border-b border-border/50">
-        <div className="flex items-center justify-between mb-1">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-1">
           <div className="text-sm text-white">{param.name}</div>
           <div className="text-sm font-mono text-purple-400">{param.value}</div>
         </div>
@@ -126,7 +126,7 @@ function ParameterSlider({ param, onChange }: ParameterSliderProps) {
   // Numeric slider
   return (
     <div className="py-2 border-b border-border/50">
-      <div className="flex items-center justify-between mb-1">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-1">
         <div className="text-sm text-white">{param.name}</div>
         <div className="text-sm font-mono text-purple-400">
           {param.value}{param.unit || ''}
@@ -199,7 +199,7 @@ ${Object.entries(params).map(([k, v]) => `    ${k}: ${v}`).join('\n')}`
   return (
     <div className="p-4 h-full flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
         <div className="flex items-center gap-2">
           <Settings size={18} className="text-purple-400" />
           <span className="font-medium text-white">Configurator</span>
@@ -258,7 +258,7 @@ ${Object.entries(params).map(([k, v]) => `    ${k}: ${v}`).join('\n')}`
             </div>
 
             {/* Expected impact */}
-            <div className="grid grid-cols-3 gap-2 mb-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
               <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-2 text-center">
                 <div className="text-xs text-muted-foreground"><Acronym term="TTFT" /> Improvement</div>
                 <div className="text-lg font-bold text-green-400">
@@ -288,7 +288,7 @@ ${Object.entries(params).map(([k, v]) => `    ${k}: ${v}`).join('\n')}`
 
             {/* Config export */}
             <div className="bg-background rounded-lg p-3 border border-border">
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2">
                 <span className="text-xs text-muted-foreground">Generated Config</span>
                 <button
                   onClick={copyConfig}

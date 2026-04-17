@@ -115,7 +115,7 @@ export function OverlayComparison({ config }: OverlayComparisonProps) {
   if (isLoading && allClusters.length === 0) {
     return (
       <div className="h-full flex flex-col min-h-card">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
           <Skeleton variant="text" width={150} height={20} />
           <Skeleton variant="rounded" width={80} height={28} />
         </div>
@@ -132,7 +132,7 @@ export function OverlayComparison({ config }: OverlayComparisonProps) {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
         <div className="flex items-center gap-2">
           {diffs.length > 0 && (
             <StatusBadge color="purple">
@@ -239,7 +239,7 @@ export function OverlayComparison({ config }: OverlayComparisonProps) {
                       })}
                       className={`p-2 rounded-lg bg-${color}-500/10 border-l-2 border-${color}-500 hover:bg-${color}-500/20 transition-colors cursor-pointer group`}
                     >
-                      <div className="flex items-center justify-between mb-1">
+                      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-1">
                         <div className="flex items-center gap-2">
                           <DiffIcon className={`w-4 h-4 text-${color}-400 flex-shrink-0`} />
                           <span className="text-sm text-foreground group-hover:text-purple-400 truncate">{diff.resource}</span>

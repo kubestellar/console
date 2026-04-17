@@ -79,7 +79,7 @@ export function ClusterChangelog() {
 
   return (
     <div className="space-y-2 p-1">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 gap-2">
         <div className="flex gap-1">
           {(['1h', '6h', '24h', '7d'] as TimeRange[]).map(r => (
             <button

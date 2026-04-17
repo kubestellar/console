@@ -183,7 +183,7 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
         <div className="flex items-center gap-2">
           {totalItems > 0 && (
             <StatusBadge color="orange">

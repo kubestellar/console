@@ -414,7 +414,7 @@ function DraggableWorkloadItem({ workload, isSelected, onSelect, onScaled }: Dra
       {/* Expanded details */}
       {isSelected && !isDragging && (
         <div className="mt-3 pt-3 ml-10 border-t border-gray-200 dark:border-border space-y-2">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-y-2">
             <span className="text-xs text-muted-foreground">Target Clusters</span>
             <div className="flex gap-1">
               {workload.targetClusters.map((c) => (
@@ -422,7 +422,7 @@ function DraggableWorkloadItem({ workload, isSelected, onSelect, onScaled }: Dra
               ))}
             </div>
           </div>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-y-2">
             <span className="text-xs text-muted-foreground">{t('common.labels')}</span>
             <div className="flex gap-1 flex-wrap justify-end">
               {Object.entries(workload.labels).map(([k, v]) => (
@@ -731,7 +731,7 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
   if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card p-3">
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2">
           <Skeleton variant="text" width={120} height={16} />
           <Skeleton variant="rounded" width={80} height={28} />
         </div>
@@ -749,7 +749,7 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
   return (
     <div className="h-full flex flex-col">
       {/* Header with controls */}
-      <div className="flex items-center justify-between mb-2 flex-shrink-0 px-3 pt-3">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 flex-shrink-0 px-3 pt-3">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-muted-foreground">
             {stats.totalWorkloads} total &middot; {stats.uniqueWorkloads} unique

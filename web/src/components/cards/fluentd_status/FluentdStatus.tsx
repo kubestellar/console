@@ -116,7 +116,7 @@ function FluentdStatusInternal() {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded gap-4 overflow-hidden">
       {/* Health badge + last check */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-y-2">
         <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${healthColorClass}`}>
           {isHealthy ? (
             <CheckCircle className="w-4 h-4" />
@@ -160,7 +160,7 @@ function FluentdStatusInternal() {
       {/* Buffer utilization */}
       {data.bufferUtilization > 0 && (
         <div>
-          <div className="flex items-center justify-between mb-1">
+          <div className="flex flex-wrap items-center justify-between gap-y-2 mb-1">
             <span className="text-xs text-muted-foreground">
               {t('fluentd.bufferUtilization', 'Buffer utilization')}
             </span>
@@ -179,7 +179,7 @@ function FluentdStatusInternal() {
             {outputPlugins.map((plugin) => (
               <div
                 key={plugin.name}
-                className="flex items-center justify-between rounded-md bg-muted/30 px-3 py-2"
+                className="flex flex-wrap items-center justify-between gap-y-2 rounded-md bg-muted/30 px-3 py-2"
               >
                 <div className="flex items-center gap-2 min-w-0">
                   {pluginStatusIcon(plugin.status)}

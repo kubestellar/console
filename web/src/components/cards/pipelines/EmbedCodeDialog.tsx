@@ -96,7 +96,7 @@ export function EmbedCodeDialog({ open, cardType, cardTitle, currentRepo, onClos
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 px-5 py-4 border-b border-border">
           <div className="flex items-center gap-2">
             <Code2 size={18} className="text-primary" />
             <h2 className="text-base font-semibold text-foreground">

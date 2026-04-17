@@ -188,7 +188,7 @@ export function DeploymentStatus() {
   if (isLoading) {
     return (
       <div className="h-full flex flex-col min-h-card">
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2">
           <Skeleton variant="text" width={100} height={16} />
           <Skeleton variant="rounded" width={80} height={28} />
         </div>
@@ -215,7 +215,7 @@ export function DeploymentStatus() {
   return (
     <div className="h-full flex flex-col min-h-0 content-loaded">
       {/* Header with controls */}
-      <div className="flex items-center justify-between mb-2 flex-shrink-0">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 flex-shrink-0">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-muted-foreground">
             {statusCounts.all} deployments

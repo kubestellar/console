@@ -242,7 +242,7 @@ export function RBACExplorer() {
                     transform: `translateY(${virtualRow.start}px)` }}
                 >
                   <div className={`px-2 py-1.5 mb-1 rounded-lg ${style.bg} border border-transparent hover:border-current/20 transition-colors`}>
-                    <div className="flex items-center justify-between gap-2">
+                    <div className="flex flex-wrap items-center justify-between gap-y-2 gap-2">
                       <div className="flex items-center gap-2 min-w-0">
                         <span className={`text-xs px-1.5 py-0.5 rounded ${style.bg} ${style.text} font-medium shrink-0`}>
                           {finding.risk.toUpperCase()}

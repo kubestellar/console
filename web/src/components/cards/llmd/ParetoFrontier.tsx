@@ -650,7 +650,7 @@ function FilterDropdown({
 
 function Toggle({ label, active, onChange }: { label: string; active: boolean; onChange: (v: boolean) => void }) {
   return (
-    <button onClick={() => onChange(!active)} className="flex items-center justify-between w-full group">
+    <button onClick={() => onChange(!active)} className="flex flex-wrap items-center justify-between gap-y-2 w-full group">
       <span className="text-2xs text-muted-foreground group-hover:text-foreground transition-colors">{label}</span>
       <span
         className={`relative inline-flex rounded-full transition-colors ${

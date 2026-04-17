@@ -146,7 +146,7 @@ export function OvnStatus() {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded gap-4">
       {/* Health badge + last check */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-y-2">
         <div
           role="button"
           tabIndex={0}
@@ -223,7 +223,7 @@ export function OvnStatus() {
           <p className="text-xs font-medium text-muted-foreground">{t('ovnStatus.udnList')}</p>
           <div className="space-y-1.5 max-h-32 overflow-y-auto scrollbar-thin">
             {(data.udns || []).map((udn) => (
-              <div key={udn.name} className="flex items-center justify-between text-xs gap-2 cursor-pointer hover:bg-secondary/50 transition-colors rounded px-1 -mx-1" role="button" tabIndex={0} aria-label={t('ovnStatus.viewUdn', { name: udn.name })} onClick={openDetailModal} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetailModal() } }}>
+              <div key={udn.name} className="flex flex-wrap items-center justify-between gap-y-2 text-xs gap-2 cursor-pointer hover:bg-secondary/50 transition-colors rounded px-1 -mx-1" role="button" tabIndex={0} aria-label={t('ovnStatus.viewUdn', { name: udn.name })} onClick={openDetailModal} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetailModal() } }}>
                 <span className="text-muted-foreground truncate flex-1" title={udn.name}>
                   {udn.name}
                 </span>

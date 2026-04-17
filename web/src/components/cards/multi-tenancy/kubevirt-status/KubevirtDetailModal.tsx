@@ -86,7 +86,7 @@ function VmRow({ vm }: { vm: VmInfo }) {
   const age = formatVmAge(vm.creationTime)
 
   return (
-    <div className="flex items-center justify-between text-sm gap-3 px-3 py-2.5 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors">
+    <div className="flex flex-wrap items-center justify-between gap-y-2 text-sm gap-3 px-3 py-2.5 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors">
       <div className="flex items-center gap-2 min-w-0 flex-1">
         <Monitor className="w-4 h-4 text-purple-400 shrink-0" />
         <div className="min-w-0 flex-1">
@@ -299,7 +299,7 @@ export function KubevirtDetailModal({ isOpen, onClose, data, isDemoData }: Kubev
               <p className="text-xs font-medium text-muted-foreground mb-2">
                 {t('kubevirtStatus.tenantDistribution', 'Tenant Distribution')}
               </p>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {(tenantDistribution || []).map((td) => (
                   <div key={td.namespace} className="p-2 rounded bg-secondary/30 text-center">
                     <p className="text-sm font-bold text-foreground">{td.vmCount}</p>
@@ -320,7 +320,7 @@ export function KubevirtDetailModal({ isOpen, onClose, data, isDemoData }: Kubev
               </p>
               <div className="space-y-1.5">
                 {clusters.map((ci) => (
-                  <div key={ci.cluster} className="flex items-center justify-between text-sm gap-3 px-3 py-2 rounded-lg bg-secondary/30">
+                  <div key={ci.cluster} className="flex flex-wrap items-center justify-between gap-y-2 text-sm gap-3 px-3 py-2 rounded-lg bg-secondary/30">
                     <div className="flex items-center gap-2 min-w-0 flex-1">
                       <Server className="w-4 h-4 text-cyan-400 shrink-0" />
                       <span className="text-foreground font-medium truncate" title={ci.cluster}>{ci.cluster}</span>

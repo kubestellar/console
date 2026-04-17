@@ -327,7 +327,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
   return (
     <div className="h-full flex flex-col min-h-0">
       {/* Header */}
-      <div className="flex items-center justify-between mb-3 flex-shrink-0">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3 flex-shrink-0">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-muted-foreground">
             {t('resourceTree.clustersCount', { count: filteredClusters.length })}

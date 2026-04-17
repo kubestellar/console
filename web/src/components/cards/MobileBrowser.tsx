@@ -317,7 +317,7 @@ export function MobileBrowser() {
                   {bookmarks.length > 0 && (
                     <div className="mb-4">
                       <h3 className="text-xs font-semibold text-muted-foreground mb-2">Favorites</h3>
-                      <div className="grid grid-cols-4 gap-2">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                         {bookmarks.slice(0, 8).map((bookmark, i) => (
                           <button
                             key={i}
@@ -339,7 +339,7 @@ export function MobileBrowser() {
                   {/* Quick Links */}
                   <div>
                     <h3 className="text-xs font-semibold text-muted-foreground mb-2">Quick Links</h3>
-                    <div className="grid grid-cols-4 gap-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       {QUICK_LINKS.map((link) => (
                         <button
                           key={link.url}
@@ -389,7 +389,7 @@ export function MobileBrowser() {
                       }`}
                     >
                       <div className="bg-white dark:bg-secondary p-3">
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-wrap items-center justify-between gap-y-2">
                           <span className="text-xs font-medium text-gray-700 dark:text-foreground truncate">
                             {tab.title || 'New Tab'}
                           </span>

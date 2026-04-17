@@ -415,7 +415,7 @@ export function WorkloadImportDialog({ isOpen, onClose, onImport }: WorkloadImpo
 
   const renderYamlTab = () => (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-y-2">
         <p className="text-xs text-muted-foreground">
           {t('workloadImport.yamlDescription')}
         </p>

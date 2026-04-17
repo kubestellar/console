@@ -560,7 +560,7 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
     <div className={`absolute right-0 top-12 w-80 bg-card border border-border rounded-lg shadow-xl z-40 transition-all ${
       showChangesPanel ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'
     }`}>
-      <div className="flex items-center justify-between p-3 border-b border-border">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 p-3 border-b border-border">
         <span className="text-sm font-medium text-foreground">Recent Changes</span>
         <button onClick={() => setShowChangesPanel(false)} aria-label="Close recent changes panel" className="p-2 hover:bg-secondary rounded min-h-11 min-w-11 flex items-center justify-center">
           <X className="w-4 h-4 text-muted-foreground" />

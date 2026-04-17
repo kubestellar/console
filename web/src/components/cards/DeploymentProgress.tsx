@@ -219,7 +219,7 @@ export function DeploymentProgress({ config }: DeploymentProgressProps) {
   return (
     <div className="h-full flex flex-col min-h-0">
       {/* Header with controls */}
-      <div className="flex items-center justify-between mb-2 flex-shrink-0">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 flex-shrink-0">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-muted-foreground">
             {statusCounts.all} progressing

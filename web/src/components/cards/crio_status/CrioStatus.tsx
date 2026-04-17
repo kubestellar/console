@@ -84,7 +84,7 @@ export function CrioStatus() {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded gap-4">
       {/* Health badge + last check */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-y-2">
         <div
           className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${
             isHealthy
@@ -184,7 +184,7 @@ export function CrioStatus() {
           <p className="text-xs font-medium text-muted-foreground">{t('crio.recentImagePulls')}</p>
           <div className="space-y-1.5 max-h-32 overflow-y-auto scrollbar-thin">
             {(data.recentImagePulls || []).slice(0, 5).map((pull, idx) => (
-              <div key={idx} className="flex items-center justify-between text-xs gap-2">
+              <div key={idx} className="flex flex-wrap items-center justify-between gap-y-2 text-xs gap-2">
                 <span className="text-muted-foreground truncate flex-1" title={pull.image}>
                   {pull.image.split('/').pop()?.split(':')[0] || pull.image}
                 </span>

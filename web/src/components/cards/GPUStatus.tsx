@@ -136,7 +136,7 @@ export function GPUStatus({ config }: GPUStatusProps) {
   if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
           <Skeleton variant="text" width={100} height={16} />
           <Skeleton variant="rounded" width={80} height={28} />
         </div>
@@ -169,7 +169,7 @@ export function GPUStatus({ config }: GPUStatusProps) {
   return (
     <div className="h-full flex flex-col content-loaded overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
         <div className="flex items-center gap-2">
           <StatusBadge color="purple">
             {t('gpuStatus.clusterCount', { count: totalItems })}
@@ -239,7 +239,7 @@ export function GPUStatus({ config }: GPUStatusProps) {
               gpuUtilization: stats.utilization })}
             className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group"
           >
-            <div className="flex items-center justify-between mb-2 gap-2 min-w-0">
+            <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 gap-2 min-w-0">
               <div className="min-w-0 flex-1">
                 <ClusterBadge cluster={stats.clusterName} size="sm" />
               </div>
@@ -254,7 +254,7 @@ export function GPUStatus({ config }: GPUStatusProps) {
                 <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
             </div>
-            <div className="flex items-center justify-between text-xs text-muted-foreground mb-2 gap-2 min-w-0">
+            <div className="flex flex-wrap items-center justify-between gap-y-2 text-xs text-muted-foreground mb-2 gap-2 min-w-0">
               <span className="truncate min-w-0 flex-1">{(stats.types || []).join(', ')}</span>
               <span className="shrink-0">{stats.used}/{stats.total} {t('gpuStatus.gpus')}</span>
             </div>

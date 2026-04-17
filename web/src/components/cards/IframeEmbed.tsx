@@ -177,7 +177,7 @@ export function IframeEmbed({ config }: { config?: IframeEmbedConfig }) {
     <div className="h-full flex flex-col">
       <div className="h-full flex flex-col">
         {/* Header controls */}
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2">
           <div className="flex items-center gap-2 min-w-0">
             <Globe className="w-4 h-4 text-muted-foreground flex-shrink-0" />
             {url && !showSettings ? (
@@ -217,7 +217,7 @@ export function IframeEmbed({ config }: { config?: IframeEmbedConfig }) {
         {/* Settings panel */}
         {showSettings && (
           <div className="mb-3 p-3 rounded-lg bg-secondary/30 border border-border/50">
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
               <span className="text-sm font-medium">{t('cards:iframeEmbed.embedConfiguration')}</span>
               {url && (
                 <button
