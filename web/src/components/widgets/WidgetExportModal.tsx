@@ -295,8 +295,9 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
             </div>
           </div>
 
-          {/* Right: Preview & Code */}
-          <div className="w-1/2 flex flex-col">
+          {/* Right: Preview & Code — overflow-hidden + min-h-0 keeps the preview
+              pinned in view while the left card list scrolls independently */}
+          <div className="w-1/2 flex flex-col overflow-hidden min-h-0">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium">{t('common.preview')}</span>
               <button
@@ -319,8 +320,8 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
               </div>
             )}
 
-            {/* Setup instructions */}
-            <div className="mt-3 p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
+            {/* Setup instructions — shrink-0 keeps it visible, overflow-auto if cramped */}
+            <div className="mt-3 p-3 bg-blue-500/10 rounded-lg border border-blue-500/20 flex-shrink-0 overflow-auto max-h-40">
               <div className="flex items-start gap-2">
                 <Info className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
                 <div className="text-xs text-blue-200">
