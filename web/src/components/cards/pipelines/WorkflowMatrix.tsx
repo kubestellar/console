@@ -108,7 +108,7 @@ export function WorkflowMatrix() {
             ))}
           </div>
         </div>
-        <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
           {repoFilter && <RepoSubtitle repo={repoFilter} />}
           <span>{workflows.length} workflows</span>
           <EmbedButton

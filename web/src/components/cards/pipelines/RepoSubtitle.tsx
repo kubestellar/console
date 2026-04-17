@@ -7,9 +7,9 @@ import { GitFork } from 'lucide-react'
 export function RepoSubtitle({ repo }: { repo: string | null }) {
   if (!repo) return null
   return (
-    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+    <div className="flex items-center gap-1.5 text-xs text-muted-foreground min-w-0">
       <GitFork size={10} className="shrink-0" />
-      <span className="truncate">{repo}</span>
+      <span className="truncate min-w-0">{repo}</span>
     </div>
   )
 }
