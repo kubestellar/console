@@ -111,8 +111,13 @@ export function Sidebar() {
     setIsPinned(prev => {
       const next = !prev
       try { localStorage.setItem('sidebar-left-pinned', String(next)) } catch { /* ignore */ }
-      if (next) clearAutoHideTimer()
-      else if (!config.collapsed) {
+      if (next) {
+        clearAutoHideTimer()
+        // Pinning while collapsed should expand the sidebar (#8647)
+        if (config.collapsed) {
+          setCollapsed(false)
+        }
+      } else if (!config.collapsed) {
         // Start auto-hide when unpinning
         autoHideTimerRef.current = setTimeout(() => setCollapsed(true), SIDEBAR_AUTO_HIDE_MS)
       }

@@ -523,6 +523,11 @@ const PREV_FS_BODY = '12px'     // body text, count badges
 const PREV_FS_CAPTION = '10px'  // caption text, row items
 const PREV_FS_MICRO = '9px'     // micro text, timestamps, secondary labels
 
+// Issue activity chart bar-height multipliers — keeps preview bars proportional
+const PREV_BAR_OPENED_SCALE = 6   // px per unit for the "opened" bar segment
+const PREV_BAR_CLOSED_SCALE = 4   // px per unit for the "closed" bar segment
+const PREV_BAR_CLOSED_BASE = 8    // baseline value subtracted before scaling closed segment
+
 // Preview color constants — declared before `ps` so they can be used in its definition
 const PREV_CLR_TEXT = '#f9fafb'      // primary text color in widget previews
 const PREV_CLR_MUTED = '#9ca3af'     // muted/secondary text color
@@ -1021,8 +1026,8 @@ function CardPreview({ cardType }: { cardType: string }) {
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: '3px', height: '60px', marginBottom: PREV_SM }}>
             {[4, 7, 3, 8, 5, 6, 9, 2, 5, 7, 4, 6, 3].map((v, i) => (
               <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1px', justifyContent: 'flex-end', height: '100%' }}>
-                <div style={{ height: `${v * 6}px`, backgroundColor: ps.colors.info, borderRadius: '1px', opacity: 0.7 }} />
-                <div style={{ height: `${(8 - v) * 4}px`, backgroundColor: ps.colors.healthy, borderRadius: '1px', opacity: 0.5 }} />
+                <div style={{ height: `${v * PREV_BAR_OPENED_SCALE}px`, backgroundColor: ps.colors.info, borderRadius: '1px', opacity: 0.7 }} />
+                <div style={{ height: `${Math.max(0, (PREV_BAR_CLOSED_BASE - v) * PREV_BAR_CLOSED_SCALE)}px`, backgroundColor: ps.colors.healthy, borderRadius: '1px', opacity: 0.5 }} />
               </div>
             ))}
           </div>

@@ -249,7 +249,11 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
     forceClose()
   }, [forceClose])
 
-  // Keyboard navigation - ESC to close, Space to close when not typing
+  // Submit form programmatically via ref (used by Cmd/Ctrl+Enter shortcut)
+  const formRef = useRef<HTMLFormElement>(null)
+
+  // Keyboard navigation - ESC to close, Space to close when not typing,
+  // Cmd/Ctrl+Enter to submit (#8651)
   useEffect(() => {
     if (!isOpen) return
 
@@ -258,6 +262,13 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
       if (e.key === 'Escape') {
         e.preventDefault()
         handleClose()
+        return
+      }
+
+      // Cmd+Enter (Mac) or Ctrl+Enter (Win/Linux) submits the form
+      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault()
+        formRef.current?.requestSubmit()
         return
       }
 
@@ -418,7 +429,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
                 </button>
               </div>
 
-              <form onSubmit={handleSubmit}>
+              <form ref={formRef} onSubmit={handleSubmit}>
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-1.5">
@@ -554,6 +565,9 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
         <div className="flex items-center justify-end gap-3 px-4 py-2 border-t border-border/50 text-2xs text-muted-foreground/50">
           <span><kbd className="px-1 py-0.5 rounded bg-secondary/50 text-[9px]">Esc</kbd> close</span>
           <span><kbd className="px-1 py-0.5 rounded bg-secondary/50 text-[9px]">Space</kbd> close</span>
+          {!success && (
+            <span><kbd className="px-1 py-0.5 rounded bg-secondary/50 text-[9px]">{navigator.platform?.includes('Mac') ? '⌘' : 'Ctrl'}+↵</kbd> submit</span>
+          )}
         </div>
       </div>
     </div>,
