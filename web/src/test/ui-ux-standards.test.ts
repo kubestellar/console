@@ -84,7 +84,8 @@ const COMPONENTS_DIR = path.resolve(
 //   270 → 271: PR #8550 ratchet drift — pre-existing hex literal not introduced by this PR
 //   271 → 269: PR #8546 — fixed comment continuation lines in Login.tsx
 //              that tripped false-positive hex detection (#6338, #3761 refs)
-const EXPECTED_RAW_HEX_COUNT = 269
+//   269 → 273: PR #8635 — widget export modal card preview thumbnails
+const EXPECTED_RAW_HEX_COUNT = 273
 const EXPECTED_RAW_RGBA_COUNT = 104
 //   22 → 19: PR #8547 — replaced 3 arbitrary Tailwind hex colors in Login.tsx
 //            (bg-[#0a0a0a], from-[#0a0f1c]) with semantic bg-background/from-background
@@ -92,7 +93,8 @@ const EXPECTED_ARBITRARY_TW_COLOR_COUNT = 19
 // Inline style color ratchet — bump history:
 //   213 → 215: Drasi reactive graph (PRs #7832, #7857) — two new
 //              echarts/flow-node inline colors not covered by theming utils.
-const EXPECTED_INLINE_STYLE_COLOR_COUNT = 215
+//   215 → 229: PR #8635 — widget export modal card preview thumbnails
+const EXPECTED_INLINE_STYLE_COLOR_COUNT = 229
 // 80 → 96: PR #8635 — widget export modal card preview thumbnails use inline
 //           fontSize for pixel-accurate static SVG-like renderings (not DOM text).
 const EXPECTED_RAW_FONT_SIZE_COUNT = 96
