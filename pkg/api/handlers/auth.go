@@ -255,13 +255,6 @@ func (h *AuthHandler) SetHub(hub SessionDisconnecter) {
 const (
 	// jwtCookieName is the HttpOnly cookie that carries the JWT.
 	jwtCookieName = "kc_auth"
-	// csrfHeaderName is the custom header required on mutating auth endpoints
-	// (#6588). Browsers will not send this header on cross-origin form POSTs,
-	// so requiring it blocks a malicious site from triggering logout/refresh
-	// via a forged form submission even if the victim's cookie is SameSite=Lax.
-	csrfHeaderName = "X-Requested-With"
-	// csrfHeaderValue is the expected value for csrfHeaderName.
-	csrfHeaderValue = "XMLHttpRequest"
 	// maxOAuthErrorDescriptionLen bounds the length of an OAuth
 	// error_description value reflected into a redirect URL (#6583).
 	maxOAuthErrorDescriptionLen = 200
@@ -654,14 +647,7 @@ func (h *AuthHandler) GitHubCallback(c *fiber.Ctx) error {
 //   - The /auth/logout route is registered with h.JWTAuth middleware in
 //     server.go (#6587), which additionally enforces the revocation check.
 func (h *AuthHandler) Logout(c *fiber.Ctx) error {
-	// #6588 — require the XHR header as a CSRF gate. This rejects cross-origin
-	// form POSTs that would otherwise succeed because session cookies are
-	// sent on top-level POSTs when SameSite=Lax.
-	if c.Get(csrfHeaderName) != csrfHeaderValue {
-		slog.Warn("[Auth] logout rejected: missing CSRF header",
-			"ip", c.IP(), "path", c.Path())
-		return fiber.NewError(fiber.StatusForbidden, "CSRF header required")
-	}
+	// CSRF protection is enforced by the RequireCSRF middleware in server.go.
 
 	// Accept token from Authorization header or HttpOnly cookie
 	var tokenString string
@@ -750,12 +736,7 @@ func (h *AuthHandler) Logout(c *fiber.Ctx) error {
 //     no longer contains the token (#6590) so JavaScript cannot read it,
 //     preserving the intent of HttpOnly.
 func (h *AuthHandler) RefreshToken(c *fiber.Ctx) error {
-	// #6588 — CSRF gate (see Logout for rationale).
-	if c.Get(csrfHeaderName) != csrfHeaderValue {
-		slog.Warn("[Auth] refresh rejected: missing CSRF header",
-			"ip", c.IP(), "path", c.Path())
-		return fiber.NewError(fiber.StatusForbidden, "CSRF header required")
-	}
+	// CSRF protection is enforced by the RequireCSRF middleware in server.go.
 
 	var tokenString string
 

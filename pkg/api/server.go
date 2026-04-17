@@ -671,8 +671,9 @@ func (s *Server) setupRoutes() {
 	// #6579 — /auth/refresh similarly requires JWTAuth so that a revoked
 	// token is rejected by the middleware before the handler even runs.
 	jwtAuth := middleware.JWTAuth(s.config.JWTSecret)
-	s.app.Post("/auth/refresh", authLimiter, jwtAuth, auth.RefreshToken)
-	s.app.Post("/auth/logout", authLimiter, jwtAuth, auth.Logout)
+	csrfGuard := middleware.RequireCSRF()
+	s.app.Post("/auth/refresh", authLimiter, csrfGuard, jwtAuth, auth.RefreshToken)
+	s.app.Post("/auth/logout", authLimiter, csrfGuard, jwtAuth, auth.Logout)
 
 	// Public endpoint rate limiter — loose limit to prevent DoS on unauthenticated
 	// routes (active-users, ping, nightly-e2e, youtube, medium, analytics) (#7029).
@@ -810,7 +811,7 @@ func (s *Server) setupRoutes() {
 		}
 		return c.Next()
 	}
-	api := s.app.Group("/api", apiLimiter, bodyGuard, middleware.JWTAuth(s.config.JWTSecret))
+	api := s.app.Group("/api", apiLimiter, bodyGuard, csrfGuard, middleware.JWTAuth(s.config.JWTSecret))
 
 	// User routes
 	user := handlers.NewUserHandler(s.store)
@@ -1240,7 +1241,10 @@ func (s *Server) setupRoutes() {
 	api.Get("/persistence/deployments", persistenceHandler.ListWorkloadDeployments)
 	api.Get("/persistence/deployments/:name", persistenceHandler.GetWorkloadDeployment)
 
-	// GitHub webhook (public endpoint, uses signature verification)
+	// GitHub webhook (public endpoint, uses signature verification).
+	// Not behind the /api group, so the CSRF middleware does not apply — the
+	// handler's own HMAC signature check (X-Hub-Signature-256) authenticates
+	// the request instead.
 	s.app.Post("/webhooks/github", feedback.HandleGitHubWebhook)
 
 	// WebSocket for real-time updates
