@@ -1,8 +1,11 @@
 /**
  * Netlify Function: Affiliate Clicks
  *
- * Returns intern affiliate click counts from GA4, keyed by GitHub login.
- * Used by the docs leaderboard to show a "Social" column for mapped interns.
+ * Returns affiliate click counts from GA4, keyed by GitHub login.
+ * Queries two campaigns:
+ *   - intern_outreach: utm_term is intern-01..10, mapped to GitHub logins via INTERN_MAP
+ *   - contributor_affiliate: utm_term IS the GitHub handle directly (no mapping)
+ * Used by the docs leaderboard to show a "Social" column.
  *
  * Requires Netlify env vars: GA4_SERVICE_ACCOUNT_JSON (base64), GA4_PROPERTY_ID
  */
@@ -91,7 +94,11 @@ async function fetchAffiliateClicks(): Promise<Record<string, AffiliateData>> {
   const startDate = new Date(endDate.getTime() - LOOKBACK_DAYS * 86400000);
   const fmt = (d: Date) => d.toISOString().slice(0, 10);
 
-  const res = await analyticsData.properties.runReport({
+  /** Max rows to return per GA4 query */
+  const GA4_QUERY_LIMIT = 50;
+
+  // --- Query 1: intern_outreach campaign (intern-01..10 → GitHub login via INTERN_MAP) ---
+  const internRes = await analyticsData.properties.runReport({
     property: `properties/${propertyId}`,
     requestBody: {
       dateRanges: [{ startDate: fmt(startDate), endDate: fmt(endDate) }],
@@ -103,13 +110,41 @@ async function fetchAffiliateClicks(): Promise<Record<string, AffiliateData>> {
           stringFilter: { matchType: "EXACT", value: "intern_outreach" },
         },
       },
-      limit: 50,
+      limit: GA4_QUERY_LIMIT,
+    },
+  });
+
+  // --- Query 2: contributor_affiliate campaign (utm_term IS the GitHub handle) ---
+  const contributorRes = await analyticsData.properties.runReport({
+    property: `properties/${propertyId}`,
+    requestBody: {
+      dateRanges: [{ startDate: fmt(startDate), endDate: fmt(endDate) }],
+      dimensions: [{ name: "sessionManualTerm" }],
+      metrics: [{ name: "sessions" }, { name: "activeUsers" }],
+      dimensionFilter: {
+        filter: {
+          fieldName: "sessionCampaignName",
+          stringFilter: { matchType: "EXACT", value: "contributor_affiliate" },
+        },
+      },
+      limit: GA4_QUERY_LIMIT,
     },
   });
 
   const result: Record<string, AffiliateData> = {};
 
-  for (const row of res.data.rows || []) {
+  /** Helper to merge a row into the result, summing clicks/unique_users for duplicates */
+  function mergeEntry(login: string, utmTerm: string, sessions: number, users: number): void {
+    if (result[login]) {
+      result[login].clicks += sessions;
+      result[login].unique_users += users;
+    } else {
+      result[login] = { clicks: sessions, unique_users: users, utm_term: utmTerm };
+    }
+  }
+
+  // Process intern_outreach rows (utm_term → GitHub login via INTERN_MAP)
+  for (const row of internRes.data.rows || []) {
     const utmTerm = row.dimensionValues?.[0]?.value;
     const sessions = parseInt(row.metricValues?.[0]?.value || "0");
     const users = parseInt(row.metricValues?.[1]?.value || "0");
@@ -117,11 +152,18 @@ async function fetchAffiliateClicks(): Promise<Record<string, AffiliateData>> {
     if (!utmTerm || !TERM_TO_LOGIN[utmTerm]) continue;
 
     const login = TERM_TO_LOGIN[utmTerm];
-    result[login] = {
-      clicks: sessions,
-      unique_users: users,
-      utm_term: utmTerm,
-    };
+    mergeEntry(login, utmTerm, sessions, users);
+  }
+
+  // Process contributor_affiliate rows (utm_term IS the GitHub login directly)
+  for (const row of contributorRes.data.rows || []) {
+    const utmTerm = row.dimensionValues?.[0]?.value;
+    const sessions = parseInt(row.metricValues?.[0]?.value || "0");
+    const users = parseInt(row.metricValues?.[1]?.value || "0");
+
+    if (!utmTerm) continue;
+
+    mergeEntry(utmTerm, utmTerm, sessions, users);
   }
 
   // Fill in zeros for interns with no clicks
