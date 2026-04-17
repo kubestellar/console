@@ -25,6 +25,7 @@ import {
   type Conclusion,
 } from '../../../hooks/useGitHubPipelines'
 import { usePipelineFilter } from './PipelineFilterContext'
+import { EmbedButton } from './EmbedButton'
 import { cn } from '../../../lib/cn'
 
 /** Max dots per row */
@@ -351,10 +352,17 @@ export function NightlyReleasePulse() {
           )}
         </div>
 
-        <button type="button" onClick={() => refetch()}
-          className="self-end text-[11px] text-muted-foreground hover:text-foreground">
-          Refresh
-        </button>
+        <div className="flex items-center justify-end gap-2">
+          <EmbedButton
+            cardType="nightly-release-pulse"
+            cardTitle="Nightly Release Pulse"
+            currentRepo={effectiveRepoFilter}
+          />
+          <button type="button" onClick={() => refetch()}
+            className="text-[11px] text-muted-foreground hover:text-foreground">
+            Refresh
+          </button>
+        </div>
       </div>
     </div>
   )

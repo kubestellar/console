@@ -12,6 +12,7 @@ import {
   getPipelineRepos,
 } from '../../../hooks/useGitHubPipelines'
 import { usePipelineFilter } from './PipelineFilterContext'
+import { EmbedButton } from './EmbedButton'
 import { LogsModal } from './LogsModal'
 import { cn } from '../../../lib/cn'
 
@@ -93,6 +94,11 @@ export function RecentFailures() {
         </select>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span>{rows.length} failures</span>
+          <EmbedButton
+            cardType="recent-failures"
+            cardTitle="Recent Failures"
+            currentRepo={repoFilter}
+          />
           <button
             type="button"
             onClick={() => refetch()}

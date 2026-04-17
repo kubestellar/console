@@ -26,6 +26,7 @@ import {
   type Conclusion,
 } from '../../../hooks/useGitHubPipelines'
 import { usePipelineFilter } from './PipelineFilterContext'
+import { EmbedButton } from './EmbedButton'
 import { cn } from '../../../lib/cn'
 
 /** Flow-dot radius for active segments */
@@ -363,6 +364,11 @@ export function PipelineFlow() {
         </select>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span>{runs.length} in flight</span>
+          <EmbedButton
+            cardType="pipeline-flow"
+            cardTitle="Live Runs"
+            currentRepo={repoFilter}
+          />
           <button
             type="button"
             onClick={() => refetch()}

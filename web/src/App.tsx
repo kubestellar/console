@@ -85,6 +85,7 @@ const Drasi = safeLazy(() => import('./components/drasi/Drasi'), 'Drasi')
 const ACMM = safeLazy(() => import('./components/acmm/ACMM'), 'ACMM')
 const Marketplace = safeLazy(() => import('./components/marketplace/Marketplace'), 'Marketplace')
 const MiniDashboard = safeLazy(() => import('./components/widget/MiniDashboard'), 'MiniDashboard')
+const EmbedCard = safeLazy(() => import('./pages/EmbedCard'), 'EmbedCard')
 const Welcome = safeLazy(() => import('./pages/Welcome'), 'Welcome')
 const FromLens = safeLazy(() => import('./pages/FromLens'), 'FromLens')
 const FromHeadlamp = safeLazy(() => import('./pages/FromHeadlamp'), 'FromHeadlamp')
@@ -351,6 +352,7 @@ const ROUTE_TITLES: Record<string, string> = {
   '/feature-inspektorgadget': 'Inspektor Gadget Integration',
   '/feature-kagent': 'Kagent Integration',
   '/white-label': 'White-Label Your Console',
+  '/embed': 'Embed Card',
 }
 
 /** Map route paths to dashboard IDs for duration analytics */
@@ -533,6 +535,11 @@ function App() {
       <Route path={ROUTES.FEATURE_KAGENT} element={<LightweightShell><FeatureKagent /></LightweightShell>} />
       <Route path={ROUTES.WHITE_LABEL} element={<LightweightShell><WhiteLabel /></LightweightShell>} />
       <Route path={ROUTES.WELCOME} element={<LightweightShell><Welcome /></LightweightShell>} />
+
+      {/* ── Embeddable card (iframe mode) ────────────────────────────
+          Renders a single CI/CD card full-screen without sidebar or nav.
+          Lightweight shell keeps the bundle small for embed consumers. */}
+      <Route path={ROUTES.EMBED_CARD} element={<LightweightShell><EmbedCard /></LightweightShell>} />
 
       {/* ── Full dashboard routes ─────────────────────────────────────
           Everything else gets the full provider stack. */}

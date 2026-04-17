@@ -3484,5 +3484,18 @@
     "emptyPromptError": "Prompt cannot be empty.",
     "cancel": "Cancel",
     "confirm": "Run mission"
+  },
+  "embed": {
+    "getEmbedCode": "Get embed code",
+    "unknownCard": "Unknown card type",
+    "supportedCards": "Supported card types",
+    "repoLabel": "Repository (owner/repo)",
+    "repoHint": "Leave blank to show all configured repos, or enter a specific owner/repo.",
+    "invalidRepo": "Must be in owner/repo format (e.g. kubestellar/console).",
+    "embedUrl": "Embed URL",
+    "iframeSnippet": "HTML iframe",
+    "markdownBadge": "Markdown badge",
+    "copied": "Copied!",
+    "copy": "Copy to clipboard"
   }
 }

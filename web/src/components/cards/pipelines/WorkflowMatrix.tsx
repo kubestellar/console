@@ -13,6 +13,7 @@ import { useDemoMode } from '../../../hooks/useDemoMode'
 import { useCardLoadingState } from '../CardDataContext'
 import { usePipelineMatrix, getPipelineRepos, type Conclusion } from '../../../hooks/useGitHubPipelines'
 import { usePipelineFilter } from './PipelineFilterContext'
+import { EmbedButton } from './EmbedButton'
 import { cn } from '../../../lib/cn'
 
 /** Available range options. Must match the server's MATRIX_MAX_DAYS (90) */
@@ -106,8 +107,13 @@ export function WorkflowMatrix() {
             ))}
           </div>
         </div>
-        <div className="text-[11px] text-muted-foreground">
-          {workflows.length} workflows
+        <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+          <span>{workflows.length} workflows</span>
+          <EmbedButton
+            cardType="workflow-matrix"
+            cardTitle="Workflow Matrix"
+            currentRepo={repoFilter}
+          />
         </div>
       </div>
 

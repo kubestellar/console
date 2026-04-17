@@ -94,8 +94,10 @@ export interface PipelineFilterState {
 
 const PipelineFilterCtx = createContext<PipelineFilterState | null>(null)
 
-export function PipelineFilterProvider({ children }: { children: ReactNode }) {
-  const [selectedRepos, setSelectedReposRaw] = useState<Set<string>>(() => loadSelection())
+export function PipelineFilterProvider({ children, initialRepo }: { children: ReactNode; initialRepo?: string | null }) {
+  const [selectedRepos, setSelectedReposRaw] = useState<Set<string>>(
+    () => initialRepo ? new Set([initialRepo]) : loadSelection()
+  )
   const [config, setConfig] = useState<StoredRepoConfig>(loadConfig)
   const serverRepos = getPipelineRepos()
 

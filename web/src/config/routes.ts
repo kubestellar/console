@@ -74,6 +74,9 @@ export const ROUTES = {
   // Widget
   WIDGET: '/widget',
 
+  // Embed (standalone card for iframe embedding)
+  EMBED_CARD: '/embed/:cardType',
+
   // Feedback / issue shortcuts
   ISSUE: '/issue',
   ISSUES: '/issues',
