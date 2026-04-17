@@ -14,7 +14,7 @@ import { useState, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import {
   CheckCircle, XCircle, AlertTriangle, Clock, ExternalLink,
-  TrendingUp, TrendingDown, Minus, Loader2, Search,
+  TrendingUp, TrendingDown, Minus, Loader2, Search, GitFork,
 } from 'lucide-react'
 import { useDemoMode } from '../../../hooks/useDemoMode'
 import { useCardLoadingState } from '../CardDataContext'
@@ -302,6 +302,10 @@ export function NightlyReleasePulse() {
               <span className="text-base font-semibold text-foreground truncate">
                 {lastRun?.releaseTag ?? 'No release yet'}
               </span>
+            </div>
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
+              <GitFork size={10} />
+              <span>{effectiveRepoFilter || 'all repos'}</span>
             </div>
             <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-2">
               {lastRun && <>

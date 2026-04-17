@@ -108,6 +108,12 @@ export interface FlowJob {
   steps: FlowStep[]
 }
 
+/** Compact PR reference forwarded from the GitHub Actions API. */
+export interface PullRequestRef {
+  number: number
+  url: string
+}
+
 export interface FlowRun {
   run: {
     id: number
@@ -121,6 +127,7 @@ export interface FlowRun {
     htmlUrl: string
     createdAt: string
     updatedAt: string
+    pullRequests?: PullRequestRef[]
   }
   jobs: FlowJob[]
 }
@@ -140,6 +147,7 @@ export interface FailureRow {
   createdAt: string
   durationMs: number
   failedStep: { jobId: number; jobName: string; stepName: string } | null
+  pullRequests?: PullRequestRef[]
 }
 
 export interface FailuresPayload {

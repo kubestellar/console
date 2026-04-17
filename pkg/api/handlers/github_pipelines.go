@@ -115,19 +115,26 @@ func ghpIsAllowedRepo(repo string) bool {
 // doesn't have to know which backend served the response.
 // ---------------------------------------------------------------------------
 
+// ghpPullRequestRef is a compact reference to a PR associated with a run.
+type ghpPullRequestRef struct {
+	Number int    `json:"number"`
+	URL    string `json:"url"`
+}
+
 type ghpWorkflowRun struct {
-	ID          int64   `json:"id"`
-	Repo        string  `json:"repo"`
-	Name        string  `json:"name"`
-	WorkflowID  int64   `json:"workflowId"`
-	HeadBranch  string  `json:"headBranch"`
-	Status      string  `json:"status"`
-	Conclusion  *string `json:"conclusion"`
-	Event       string  `json:"event"`
-	RunNumber   int     `json:"runNumber"`
-	HTMLURL     string  `json:"htmlUrl"`
-	CreatedAt   string  `json:"createdAt"`
-	UpdatedAt   string  `json:"updatedAt"`
+	ID           int64               `json:"id"`
+	Repo         string              `json:"repo"`
+	Name         string              `json:"name"`
+	WorkflowID   int64               `json:"workflowId"`
+	HeadBranch   string              `json:"headBranch"`
+	Status       string              `json:"status"`
+	Conclusion   *string             `json:"conclusion"`
+	Event        string              `json:"event"`
+	RunNumber    int                 `json:"runNumber"`
+	HTMLURL      string              `json:"htmlUrl"`
+	CreatedAt    string              `json:"createdAt"`
+	UpdatedAt    string              `json:"updatedAt"`
+	PullRequests []ghpPullRequestRef `json:"pullRequests,omitempty"`
 }
 
 type ghpStep struct {
@@ -206,16 +213,17 @@ type ghpFailedStep struct {
 }
 
 type ghpFailureRow struct {
-	Repo       string         `json:"repo"`
-	RunID      int64          `json:"runId"`
-	Workflow   string         `json:"workflow"`
-	HTMLURL    string         `json:"htmlUrl"`
-	Branch     string         `json:"branch"`
-	Event      string         `json:"event"`
-	Conclusion *string        `json:"conclusion"`
-	CreatedAt  string         `json:"createdAt"`
-	DurationMs int64          `json:"durationMs"`
-	FailedStep *ghpFailedStep `json:"failedStep"`
+	Repo         string              `json:"repo"`
+	RunID        int64               `json:"runId"`
+	Workflow     string              `json:"workflow"`
+	HTMLURL      string              `json:"htmlUrl"`
+	Branch       string              `json:"branch"`
+	Event        string              `json:"event"`
+	Conclusion   *string             `json:"conclusion"`
+	CreatedAt    string              `json:"createdAt"`
+	DurationMs   int64               `json:"durationMs"`
+	FailedStep   *ghpFailedStep      `json:"failedStep"`
+	PullRequests []ghpPullRequestRef `json:"pullRequests,omitempty"`
 }
 
 type ghpFailuresPayload struct {
@@ -269,9 +277,17 @@ func (h *ghpHistory) merge(runs []ghpWorkflowRun) {
 			byWF = make(map[string]ghpHistoryDay)
 			byRepo[r.Name] = byWF
 		}
+		// When conclusion is nil but the run is actively executing, surface
+		// "in_progress" instead of null so the matrix renders a blue dot
+		// rather than a grey unknown dot.
+		conclusion := r.Conclusion
+		if conclusion == nil && (r.Status == "in_progress" || r.Status == "queued") {
+			inProg := "in_progress"
+			conclusion = &inProg
+		}
 		existing, had := byWF[day]
 		if !had || r.ID > existing.RunID {
-			byWF[day] = ghpHistoryDay{RunID: r.ID, Conclusion: r.Conclusion, HTMLURL: r.HTMLURL}
+			byWF[day] = ghpHistoryDay{RunID: r.ID, Conclusion: conclusion, HTMLURL: r.HTMLURL}
 		}
 	}
 	// Trim to retention window (UTC to match GitHub's ISO-8601 timestamps)
@@ -474,33 +490,42 @@ func (h *GitHubPipelinesHandler) ghGet(ctx context.Context, path string) (*http.
 
 // workflowRunsRaw is the subset of GitHub's workflow_run JSON we consume.
 type workflowRunRaw struct {
-	ID         int64   `json:"id"`
-	Name       string  `json:"name"`
-	WorkflowID int64   `json:"workflow_id"`
-	HeadBranch string  `json:"head_branch"`
-	Status     string  `json:"status"`
-	Conclusion *string `json:"conclusion"`
-	Event      string  `json:"event"`
-	RunNumber  int     `json:"run_number"`
-	HTMLURL    string  `json:"html_url"`
-	CreatedAt  string  `json:"created_at"`
-	UpdatedAt  string  `json:"updated_at"`
+	ID           int64   `json:"id"`
+	Name         string  `json:"name"`
+	WorkflowID   int64   `json:"workflow_id"`
+	HeadBranch   string  `json:"head_branch"`
+	Status       string  `json:"status"`
+	Conclusion   *string `json:"conclusion"`
+	Event        string  `json:"event"`
+	RunNumber    int     `json:"run_number"`
+	HTMLURL      string  `json:"html_url"`
+	CreatedAt    string  `json:"created_at"`
+	UpdatedAt    string  `json:"updated_at"`
+	PullRequests []struct {
+		Number int    `json:"number"`
+		URL    string `json:"url"`
+	} `json:"pull_requests"`
 }
 
 func normalizeRunRaw(r workflowRunRaw, repo string) ghpWorkflowRun {
+	var prs []ghpPullRequestRef
+	for _, pr := range r.PullRequests {
+		prs = append(prs, ghpPullRequestRef{Number: pr.Number, URL: pr.URL})
+	}
 	return ghpWorkflowRun{
-		ID:         r.ID,
-		Repo:       repo,
-		Name:       r.Name,
-		WorkflowID: r.WorkflowID,
-		HeadBranch: r.HeadBranch,
-		Status:     r.Status,
-		Conclusion: r.Conclusion,
-		Event:      r.Event,
-		RunNumber:  r.RunNumber,
-		HTMLURL:    r.HTMLURL,
-		CreatedAt:  r.CreatedAt,
-		UpdatedAt:  r.UpdatedAt,
+		ID:           r.ID,
+		Repo:         repo,
+		Name:         r.Name,
+		WorkflowID:   r.WorkflowID,
+		HeadBranch:   r.HeadBranch,
+		Status:       r.Status,
+		Conclusion:   r.Conclusion,
+		Event:        r.Event,
+		RunNumber:    r.RunNumber,
+		HTMLURL:      r.HTMLURL,
+		CreatedAt:    r.CreatedAt,
+		UpdatedAt:    r.UpdatedAt,
+		PullRequests: prs,
 	}
 }
 
@@ -747,6 +772,8 @@ func ghpStreakKind(c *string) string {
 	return ""
 }
 
+
+
 // ---------------------------------------------------------------------------
 // Matrix
 // ---------------------------------------------------------------------------
@@ -894,15 +921,16 @@ func (h *GitHubPipelinesHandler) buildFailuresFromQuery(c *fiber.Ctx) (any, erro
 				dur = 0
 			}
 			rows = append(rows, ghpFailureRow{
-				Repo:       repo,
-				RunID:      r.ID,
-				Workflow:   r.Name,
-				HTMLURL:    r.HTMLURL,
-				Branch:     r.HeadBranch,
-				Event:      r.Event,
-				Conclusion: r.Conclusion,
-				CreatedAt:  r.CreatedAt,
-				DurationMs: dur,
+				Repo:         repo,
+				RunID:        r.ID,
+				Workflow:     r.Name,
+				HTMLURL:      r.HTMLURL,
+				Branch:       r.HeadBranch,
+				Event:        r.Event,
+				Conclusion:   r.Conclusion,
+				CreatedAt:    r.CreatedAt,
+				DurationMs:   dur,
+				PullRequests: r.PullRequests,
 			})
 		}
 	}

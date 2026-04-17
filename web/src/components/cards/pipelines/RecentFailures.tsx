@@ -149,6 +149,9 @@ export function RecentFailures() {
                   </td>
                   <td className="py-1.5 pr-2 text-muted-foreground truncate max-w-[120px]" title={r.branch}>
                     {r.branch}
+                    {(r.pullRequests?.length ?? 0) > 0 && (
+                      <span className="ml-1 text-blue-400">#{r.pullRequests![0].number}</span>
+                    )}
                   </td>
                   <td className="py-1.5 pr-2 text-muted-foreground whitespace-nowrap">
                     {relativeTime(r.createdAt)}

@@ -121,6 +121,11 @@ type Conclusion =
 
 type Status = "queued" | "in_progress" | "completed" | "waiting" | "pending";
 
+interface PullRequestRef {
+  number: number;
+  url: string;
+}
+
 interface WorkflowRun {
   id: number;
   repo: string;
@@ -134,6 +139,7 @@ interface WorkflowRun {
   htmlUrl: string;
   createdAt: string;
   updatedAt: string;
+  pullRequests?: PullRequestRef[];
 }
 
 interface JobStep {
@@ -229,6 +235,11 @@ function dayKey(iso: string): string {
 
 /** Map GitHub's workflow_run shape to our WorkflowRun type */
 function normalizeRun(r: Record<string, unknown>, repo: string): WorkflowRun {
+  const rawPRs = Array.isArray(r.pull_requests)
+    ? (r.pull_requests as Array<{ number?: number; url?: string }>)
+      .filter((pr) => typeof pr.number === "number")
+      .map((pr) => ({ number: pr.number!, url: String(pr.url ?? "") }))
+    : undefined;
   return {
     id: Number(r.id),
     repo,
@@ -242,6 +253,7 @@ function normalizeRun(r: Record<string, unknown>, repo: string): WorkflowRun {
     htmlUrl: String(r.html_url ?? ""),
     createdAt: String(r.created_at ?? ""),
     updatedAt: String(r.updated_at ?? ""),
+    pullRequests: rawPRs?.length ? rawPRs : undefined,
   };
 }
 
@@ -316,12 +328,18 @@ function mergeIntoHistory(history: HistoryBlob, runs: WorkflowRun[]): void {
     const byRepo = (history.days[run.repo] ??= {});
     const byWf = (byRepo[run.name] ??= {});
     const existing = byWf[day];
+    // When conclusion is null but status indicates activity, surface
+    // "in_progress" so the matrix renders a blue dot, not grey.
+    const conclusion: Conclusion =
+      run.conclusion === null && (run.status === "in_progress" || run.status === "queued")
+        ? "in_progress" as Conclusion
+        : run.conclusion;
     // Newer run wins (higher ID ≈ newer). Failure trumps success for the same day
     // if one of the runs failed — CI health signal matters more than "latest".
     if (!existing || run.id > existing.runId) {
       byWf[day] = {
         runId: run.id,
-        conclusion: run.conclusion,
+        conclusion,
         htmlUrl: run.htmlUrl,
       };
     }
@@ -606,6 +624,7 @@ interface FailureRow {
   durationMs: number;
   /** First failed step (name + job id for log drill-down) */
   failedStep: { jobId: number; jobName: string; stepName: string } | null;
+  pullRequests?: PullRequestRef[];
 }
 
 interface FailuresPayload {
@@ -642,6 +661,7 @@ async function buildFailures(
           createdAt: r.createdAt,
           durationMs: Math.max(0, updated - created),
           failedStep: null,
+          pullRequests: r.pullRequests,
         });
       }
     } catch {

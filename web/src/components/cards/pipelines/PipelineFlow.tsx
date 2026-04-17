@@ -197,6 +197,11 @@ function RunRow({ run, onCancel, canMutate, mutating }: RunRowProps) {
         statusBg(run.run.status, run.run.conclusion),
       )}>
         {run.run.event}
+        {(run.run.pullRequests?.length ?? 0) > 0 && (
+          <div className="text-[10px] text-muted-foreground mt-0.5">
+            #{run.run.pullRequests![0].number}
+          </div>
+        )}
       </div>
 
       <div ref={workflowRef} className={cn(
@@ -205,7 +210,12 @@ function RunRow({ run, onCancel, canMutate, mutating }: RunRowProps) {
       )}>
         <div className="text-xs font-medium text-foreground truncate" title={run.run.name}>{run.run.name}</div>
         <div className="text-[10px] text-muted-foreground truncate">{run.run.repo}</div>
-        <div className="text-[10px] text-muted-foreground truncate">{run.run.headBranch}</div>
+        <div className="text-[10px] text-muted-foreground truncate">
+          {run.run.headBranch}
+          {(run.run.pullRequests?.length ?? 0) > 0 && (
+            <span className="ml-1 text-blue-400">#{run.run.pullRequests![0].number}</span>
+          )}
+        </div>
       </div>
 
       <div className="relative z-10 flex flex-col gap-1 min-w-0">
