@@ -132,9 +132,12 @@ func (h *SelfUpgradeHandler) findDeployment(ctx context.Context, client kubernet
 	return nil, fmt.Errorf("no kubestellar-console Deployment found in namespace %s", namespace)
 }
 
-// canPatchDeployment checks if the ServiceAccount has permission to patch Deployments
-// in the given namespace using a SelfSubjectAccessReview.
-func (h *SelfUpgradeHandler) canPatchDeployment(ctx context.Context, client kubernetes.Interface, namespace string) bool {
+// canPatchDeployment checks if the ServiceAccount has permission to patch a
+// specific Deployment in the given namespace using a SelfSubjectAccessReview.
+// The deploymentName is required because the self-upgrade Role uses resourceNames
+// to scope access to the console's own Deployment only — an SSAR without a Name
+// field would check "can I patch ANY deployment?" which the scoped Role denies.
+func (h *SelfUpgradeHandler) canPatchDeployment(ctx context.Context, client kubernetes.Interface, namespace, deploymentName string) bool {
 	review := &authorizationv1.SelfSubjectAccessReview{
 		Spec: authorizationv1.SelfSubjectAccessReviewSpec{
 			ResourceAttributes: &authorizationv1.ResourceAttributes{
@@ -142,6 +145,7 @@ func (h *SelfUpgradeHandler) canPatchDeployment(ctx context.Context, client kube
 				Verb:      "patch",
 				Group:     "apps",
 				Resource:  "deployments",
+				Name:      deploymentName,
 			},
 		},
 	}
@@ -194,8 +198,9 @@ func (h *SelfUpgradeHandler) GetStatus(c *fiber.Ctx) error {
 		resp.CurrentImage = dep.Spec.Template.Spec.Containers[0].Image
 	}
 
-	// Check RBAC
-	resp.CanPatch = h.canPatchDeployment(ctx, client, namespace)
+	// Check RBAC — pass the specific deployment name so the SSAR matches
+	// the resourceNames-scoped Role created by self-upgrade-role.yaml.
+	resp.CanPatch = h.canPatchDeployment(ctx, client, namespace, dep.Name)
 	if !resp.CanPatch {
 		resp.Reason = "insufficient RBAC — deploy with selfUpgrade.enabled=true"
 		return c.JSON(resp)
@@ -307,7 +312,7 @@ func (h *SelfUpgradeHandler) TriggerUpgrade(c *fiber.Ctx) error {
 	}
 
 	// Verify RBAC before proceeding
-	if !h.canPatchDeployment(ctx, client, namespace) {
+	if !h.canPatchDeployment(ctx, client, namespace, dep.Name) {
 		return c.Status(fiber.StatusForbidden).JSON(SelfUpgradeTriggerResponse{
 			Error: "insufficient RBAC permissions — deploy with selfUpgrade.enabled=true",
 		})
