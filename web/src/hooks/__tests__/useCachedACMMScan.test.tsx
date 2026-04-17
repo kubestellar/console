@@ -124,6 +124,7 @@ describe('useCachedACMMScan', () => {
       return {
         ok: true,
         status: 200,
+        headers: new Headers({ 'content-type': 'application/json' }),
         json: async () => ({ repo: 'x/y', scannedAt: '', detectedIds: [], weeklyActivity: [], _url: url }),
       } as Response
     }) as typeof globalThis.fetch
