@@ -96,13 +96,13 @@ jobs:
           echo "Dev-mode login OK — got kc_auth cookie (HTTP ${LAST_STATUS})"
 
           # Test /auth/refresh contract (#6590):
-          # - Token is sent via cookie (primary) AND Bearer header (fallback)
+          # - Token is sent via Authorization header (primary) AND cookie (fallback)
           # - Response body must contain "refreshed" and "onboarded" (NOT "token")
           # - New JWT is delivered exclusively via the HttpOnly kc_auth cookie
           REFRESH_RESP=$(curl -sS --max-time 5 -X POST \
             -H "Cookie: kc_auth=$TOKEN" \
             -H "Authorization: Bearer $TOKEN" \
-            -H "X-CSRF-Token: nightly" \
+            -H "X-Requested-With: XMLHttpRequest" \
             http://localhost:8081/auth/refresh)
           HAS_REFRESHED=$(echo "$REFRESH_RESP" | jq -r '.refreshed // empty')
           if [ "$HAS_REFRESHED" != "true" ]; then
