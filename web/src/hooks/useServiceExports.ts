@@ -146,6 +146,7 @@ export interface UseServiceExportsResult {
   exports: ServiceExport[]
   isDemoData: boolean
   isLoading: boolean
+  isRefreshing: boolean
   isFailed: boolean
   consecutiveFailures: number
   lastRefresh: number | null
@@ -161,6 +162,7 @@ export function useServiceExports(): UseServiceExportsResult {
   const [exports, setExports] = useState<ServiceExport[]>(cachedSnapshot?.data || [])
   const [isDemoData, setIsDemoData] = useState(cachedSnapshot?.isDemoData ?? true)
   const [isLoading, setIsLoading] = useState(!cachedSnapshot)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
   const [lastRefresh, setLastRefresh] = useState<number | null>(
     cachedSnapshot?.timestamp || null
@@ -170,6 +172,9 @@ export function useServiceExports(): UseServiceExportsResult {
   const refetch = useCallback(async (silent = false) => {
     if (!silent && !initialLoadDone.current) {
       setIsLoading(true)
+    }
+    if (silent && initialLoadDone.current) {
+      setIsRefreshing(true)
     }
 
     try {
@@ -213,6 +218,7 @@ export function useServiceExports(): UseServiceExportsResult {
       saveToCache(demoExports, true)
     } finally {
       setIsLoading(false)
+      setIsRefreshing(false)
     }
   }, [clusters])
 
@@ -238,6 +244,7 @@ export function useServiceExports(): UseServiceExportsResult {
     exports,
     isDemoData,
     isLoading: isLoading || clustersLoading,
+    isRefreshing,
     isFailed: consecutiveFailures >= FAILURE_THRESHOLD,
     consecutiveFailures,
     lastRefresh,

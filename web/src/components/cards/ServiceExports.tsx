@@ -57,12 +57,13 @@ interface ServiceExportsProps {
 
 function ServiceExportsInternal({ config: _config }: ServiceExportsProps) {
   const { t } = useTranslation(['cards', 'common'])
-  const { exports: allExports, isLoading, isDemoData } = useServiceExports()
+  const { exports: allExports, isLoading, isRefreshing, isDemoData } = useServiceExports()
   const SORT_OPTIONS = SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) }))
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
   const { showSkeleton } = useCardLoadingState({
     isLoading,
+    isRefreshing,
     hasAnyData: allExports.length > 0,
     isDemoData })
 

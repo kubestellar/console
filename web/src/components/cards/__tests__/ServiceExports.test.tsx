@@ -61,7 +61,7 @@ describe('ServiceExports', () => {
     vi.clearAllMocks()
     mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false })
-    mockServiceExports.mockReturnValue({ exports: [], isLoading: false, error: null })
+    mockServiceExports.mockReturnValue({ exports: [], isLoading: false, isRefreshing: false, isDemoData: false, error: null })
   })
 
   it('renders without crashing', () => {
@@ -91,6 +91,14 @@ describe('ServiceExports', () => {
     mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     const { container } = render(<ServiceExports />)
     expect(container).toBeTruthy()
+  })
+
+  it('passes isRefreshing to useCardLoadingState', () => {
+    mockServiceExports.mockReturnValue({ exports: [], isLoading: false, isRefreshing: true, isDemoData: false, error: null })
+    render(<ServiceExports />)
+    expect(mockUseCardLoadingState).toHaveBeenCalledWith(
+      expect.objectContaining({ isRefreshing: true }),
+    )
   })
 
 })
