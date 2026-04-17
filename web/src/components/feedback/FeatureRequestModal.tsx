@@ -157,13 +157,26 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
     showToast('Draft deleted', 'success')
   }
 
+  /** Ref to track the success display timeout so it can be cleared on unmount */
+  const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Clear the success display timeout when the component unmounts
+  useEffect(() => {
+    return () => {
+      if (successTimeoutRef.current) {
+        clearTimeout(successTimeoutRef.current)
+      }
+    }
+  }, [])
+
   const handleSubmitSuccess = (result: SuccessState) => {
     setSuccess(result)
     if (editingDraftId) {
       deleteDraft(editingDraftId)
       setEditingDraftId(null)
     }
-    setTimeout(() => {
+    successTimeoutRef.current = setTimeout(() => {
+      successTimeoutRef.current = null
       setDescription('')
       setRequestType('bug')
       setTargetRepo('console')
@@ -343,6 +356,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
             githubRewards={githubRewards}
             githubPoints={githubPoints}
             token={token}
+            showToast={showToast}
             onRefreshRequests={refreshRequests}
             onRefreshNotifications={refreshNotifications}
             onRefreshGitHub={handleRefreshGitHub}

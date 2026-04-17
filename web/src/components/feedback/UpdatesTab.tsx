@@ -44,6 +44,7 @@ interface UpdatesTabProps {
   } | null
   githubPoints: number
   token: string | null
+  showToast: (message: string, type: 'success' | 'error' | 'info') => void
   onRefreshRequests: () => void
   onRefreshNotifications: () => void
   onRefreshGitHub: () => void
@@ -68,6 +69,7 @@ export function UpdatesTab({
   githubRewards,
   githubPoints,
   token,
+  showToast,
   onRefreshRequests,
   onRefreshNotifications,
   onRefreshGitHub,
@@ -91,7 +93,9 @@ export function UpdatesTab({
       setActionError(null)
       await onRequestUpdate(requestId)
     } catch {
-      setActionError('Failed to request update')
+      const errorMsg = 'Failed to request update'
+      setActionError(errorMsg)
+      showToast(errorMsg, 'error')
     } finally {
       setActionLoading(null)
     }
@@ -104,7 +108,9 @@ export function UpdatesTab({
       await onCloseRequest(requestId)
       setConfirmClose(null)
     } catch {
-      setActionError('Failed to close request')
+      const errorMsg = 'Failed to close request'
+      setActionError(errorMsg)
+      showToast(errorMsg, 'error')
     } finally {
       setActionLoading(null)
     }
@@ -113,8 +119,12 @@ export function UpdatesTab({
   const handleCheckPreview = async (prNumber: number) => {
     setPreviewChecking(prNumber)
     try {
+      const headers: Record<string, string> = {}
+      if (token) {
+        headers.Authorization = `Bearer ${token}`
+      }
       const res = await fetch(`${BACKEND_DEFAULT_URL}/api/feedback/preview/${prNumber}`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers,
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
       if (res.ok) {

@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'
-import { useRef } from 'react'
+import { useRef, useEffect } from 'react'
 
 // ── Discard / Save Draft confirmation dialog ──
 
@@ -265,10 +265,17 @@ interface ScreenshotPreviewOverlayProps {
 
 export function ScreenshotPreviewOverlay({ src, onClose }: ScreenshotPreviewOverlayProps) {
   const overlayRef = useRef<HTMLDivElement>(null)
+
+  // Auto-focus the overlay so it can receive keyboard events (e.g. Escape)
+  useEffect(() => {
+    overlayRef.current?.focus()
+  }, [])
+
   return (
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-overlay flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      tabIndex={-1}
+      className="fixed inset-0 z-overlay flex items-center justify-center bg-black/60 backdrop-blur-sm outline-none"
       onClick={(e) => {
         if (e.target === overlayRef.current) {
           onClose()
