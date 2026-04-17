@@ -40,6 +40,54 @@ export interface WidgetTemplateDefinition {
   category: 'overview' | 'gpu' | 'pods' | 'security' | 'custom' | 'ci-cd'
 }
 
+/**
+ * Valid category values for card widgets.
+ * Derived from the WidgetCardDefinition['category'] union type.
+ */
+export const VALID_CARD_CATEGORIES: WidgetCardDefinition['category'][] = [
+  'cluster',
+  'workload',
+  'gpu',
+  'security',
+  'monitoring',
+  'ci-cd',
+]
+
+/**
+ * Valid category values for template widgets.
+ * Derived from the WidgetTemplateDefinition['category'] union type.
+ */
+export const VALID_TEMPLATE_CATEGORIES: WidgetTemplateDefinition['category'][] = [
+  'overview',
+  'gpu',
+  'pods',
+  'security',
+  'custom',
+  'ci-cd',
+]
+
+/**
+ * Valid layout values for template widgets.
+ * Derived from the WidgetTemplateDefinition['layout'] union type.
+ */
+export const VALID_TEMPLATE_LAYOUTS: WidgetTemplateDefinition['layout'][] = [
+  'grid',
+  'row',
+  'column',
+  'dashboard',
+]
+
+/**
+ * Valid format values for stat widgets.
+ * Derived from the WidgetStatDefinition['format'] union type.
+ */
+export const VALID_STAT_FORMATS: WidgetStatDefinition['format'][] = [
+  'number',
+  'percentage',
+  'bytes',
+  'duration',
+]
+
 // Cards that support widget export
 export const WIDGET_CARDS: Record<string, WidgetCardDefinition> = {
   cluster_health: {

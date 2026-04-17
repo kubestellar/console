@@ -7,6 +7,10 @@ import {
   isCardExportable,
   getExportableCardsByCategory,
   getTemplatesByCategory,
+  VALID_CARD_CATEGORIES,
+  VALID_TEMPLATE_CATEGORIES,
+  VALID_TEMPLATE_LAYOUTS,
+  VALID_STAT_FORMATS,
 } from '../widgetRegistry'
 
 describe('WIDGET_CARDS', () => {
@@ -26,7 +30,7 @@ describe('WIDGET_CARDS', () => {
       expect(card.minRefreshInterval).toBeGreaterThan(0)
       expect(card.defaultSize.width).toBeGreaterThan(0)
       expect(card.defaultSize.height).toBeGreaterThan(0)
-      expect(['cluster', 'workload', 'gpu', 'security', 'monitoring', 'ci-cd']).toContain(card.category)
+      expect(VALID_CARD_CATEGORIES).toContain(card.category)
     }
   })
 
@@ -55,7 +59,7 @@ describe('WIDGET_STATS', () => {
       expect(stat.displayName).toBeTruthy()
       expect(stat.apiEndpoint).toBeTruthy()
       expect(stat.dataPath).toBeTruthy()
-      expect(['number', 'percentage', 'bytes', 'duration']).toContain(stat.format)
+      expect(VALID_STAT_FORMATS).toContain(stat.format)
       expect(stat.color).toMatch(/^#/)
       expect(stat.size.width).toBeGreaterThan(0)
       expect(stat.size.height).toBeGreaterThan(0)
@@ -78,10 +82,10 @@ describe('WIDGET_TEMPLATES', () => {
       expect(template.displayName).toBeTruthy()
       expect(template.description).toBeTruthy()
       expect(Array.isArray(template.cards)).toBe(true)
-      expect(['grid', 'row', 'column', 'dashboard']).toContain(template.layout)
+      expect(VALID_TEMPLATE_LAYOUTS).toContain(template.layout)
       expect(template.size.width).toBeGreaterThan(0)
       expect(template.size.height).toBeGreaterThan(0)
-      expect(['overview', 'gpu', 'pods', 'security', 'custom', 'ci-cd']).toContain(template.category)
+      expect(VALID_TEMPLATE_CATEGORIES).toContain(template.category)
     }
   })
 
