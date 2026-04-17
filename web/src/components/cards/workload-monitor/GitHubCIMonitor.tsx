@@ -97,7 +97,7 @@ export function GitHubCIMonitor({ config, ref }: GitHubCIMonitorProps & { ref?: 
   // Repo configuration — shared filter overrides when on /ci-cd
   const [localRepos, setLocalRepos] = useState<string[]>(() => ghConfig?.repos || loadRepos())
   const repos = shared?.repoFilter ? [shared.repoFilter] : localRepos
-  const setRepos = shared?.repoFilter ? () => {} : setLocalRepos
+  const setRepos: React.Dispatch<React.SetStateAction<string[]>> = shared?.repoFilter ? () => {} : setLocalRepos
   const [isEditingRepos, setIsEditingRepos] = useState(false)
   const [newRepoInput, setNewRepoInput] = useState('')
 
