@@ -548,16 +548,17 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
   const isDemo = demoMode
 
   // Fetch real workloads from cache (handles demo mode internally via useCache)
-  const { data: realWorkloads, isLoading: workloadsLoading, isFailed, consecutiveFailures, isDemoFallback, refetch: refetchWorkloads } = useCachedWorkloads()
+  const { data: realWorkloads, isLoading: workloadsLoading, isRefreshing: workloadsRefreshing, isFailed, consecutiveFailures, isDemoFallback, refetch: refetchWorkloads } = useCachedWorkloads()
 
   // Report state to CardWrapper for refresh animation
   const { showSkeleton } = useCardLoadingState({
     isLoading: clustersLoading || workloadsLoading,
+    isRefreshing: workloadsRefreshing,
     hasAnyData: isDemo ? DEMO_WORKLOADS.length > 0 : (realWorkloads?.length ?? 0) > 0,
     isFailed,
     consecutiveFailures,
     isDemoData: isDemoFallback || isDemo,
-    errorMessage: isFailed ? 'Failed to load workloads' : undefined })
+    errorMessage: isFailed ? t('common.failedToLoadWorkloads') : undefined })
   const [localClusterFilter, setLocalClusterFilterState] = useState<string[]>(() => {
     try {
       const stored = localStorage.getItem(CLUSTER_FILTER_STORAGE_KEY)

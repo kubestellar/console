@@ -15,6 +15,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useClusters } from './useMCP'
 import { STORAGE_KEY_TOKEN } from '../lib/constants'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
+import { registerRefetch } from '../lib/modeTransition'
 
 // ============================================================================
 // Constants
@@ -212,6 +213,7 @@ export interface UseGatewayStatusResult {
   gateways: Gateway[]
   isDemoData: boolean
   isLoading: boolean
+  isRefreshing: boolean
   isFailed: boolean
   consecutiveFailures: number
   lastRefresh: number | null
@@ -227,6 +229,7 @@ export function useGatewayStatus(): UseGatewayStatusResult {
   const [gateways, setGateways] = useState<Gateway[]>(cachedSnapshot?.data || [])
   const [isDemoData, setIsDemoData] = useState(cachedSnapshot?.isDemoData ?? true)
   const [isLoading, setIsLoading] = useState(!cachedSnapshot)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
   const [lastRefresh, setLastRefresh] = useState<number | null>(
     cachedSnapshot?.timestamp || null
@@ -236,6 +239,9 @@ export function useGatewayStatus(): UseGatewayStatusResult {
   const refetch = useCallback(async (silent = false) => {
     if (!silent && !initialLoadDone.current) {
       setIsLoading(true)
+    }
+    if (initialLoadDone.current) {
+      setIsRefreshing(true)
     }
 
     try {
@@ -279,6 +285,7 @@ export function useGatewayStatus(): UseGatewayStatusResult {
       saveToCache(demoGateways, true)
     } finally {
       setIsLoading(false)
+      setIsRefreshing(false)
     }
   }, [clusters])
 
@@ -288,6 +295,12 @@ export function useGatewayStatus(): UseGatewayStatusResult {
       refetch()
     }
   }, [clustersLoading]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Register with the global refetch registry so the dashboard refresh button
+  // and mode transitions can trigger a data reload (#8679).
+  useEffect(() => {
+    return registerRefetch('gateway-status', () => refetch(false))
+  }, [refetch])
 
   // Auto-refresh
   useEffect(() => {
@@ -304,6 +317,7 @@ export function useGatewayStatus(): UseGatewayStatusResult {
     gateways,
     isDemoData,
     isLoading: isLoading || clustersLoading,
+    isRefreshing,
     isFailed: consecutiveFailures >= FAILURE_THRESHOLD,
     consecutiveFailures,
     lastRefresh,

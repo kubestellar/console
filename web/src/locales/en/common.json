@@ -2507,6 +2507,7 @@
     "itemCount_other": "{{count}} {{item}}",
     "errorLoading": "Error loading data",
     "failedToFetch": "Failed to fetch {{resource}}",
+    "failedToLoadWorkloads": "Failed to load workloads",
     "connectToCluster": "Connect to a cluster to view data",
     "demoData": "Demo data",
     "liveData": "Live data",
