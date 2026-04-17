@@ -753,11 +753,11 @@ func (h *GitHubPipelinesHandler) buildPulse(c *fiber.Ctx) (any, error) {
 					tag         string
 					publishedAt time.Time
 				}
+				// Include drafts — nightly releases on this repo are created as
+				// drafts and never promoted, so filtering them out leaves zero
+				// candidates. (#8666 follow-up)
 				candidates := make([]candidate, 0, len(arr))
 				for _, r := range arr {
-					if r.Draft {
-						continue
-					}
 					if !ghpNightlyTagRe.MatchString(r.TagName) {
 						continue
 					}
@@ -775,6 +775,29 @@ func (h *GitHubPipelinesHandler) buildPulse(c *fiber.Ctx) (any, error) {
 				if len(candidates) > 0 {
 					tag := candidates[0].tag
 					releaseTag = &tag
+				}
+			}
+		}
+	}
+
+	// Fallback: if no nightly release was found (releases may only exist as
+	// tags, not GitHub Release objects), try the tags API.
+	if releaseTag == nil {
+		tagRes, tagErr := h.ghGet(ctx, "/repos/"+pulseRepo+"/tags?per_page=10")
+		if tagErr == nil {
+			defer tagRes.Body.Close()
+			if tagRes.StatusCode == http.StatusOK {
+				var tags []struct {
+					Name string `json:"name"`
+				}
+				if err := json.NewDecoder(tagRes.Body).Decode(&tags); err == nil {
+					for _, t := range tags {
+						if ghpNightlyTagRe.MatchString(t.Name) {
+							tag := t.Name
+							releaseTag = &tag
+							break
+						}
+					}
 				}
 			}
 		}

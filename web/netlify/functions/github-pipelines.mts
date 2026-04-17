@@ -416,8 +416,10 @@ async function buildPulse(
         published_at?: string;
         draft?: boolean;
       }>;
+      // Include drafts — nightly releases on this repo are created as drafts
+      // and never promoted, so filtering them out leaves zero candidates.
       const candidates = (releases || [])
-        .filter((r) => !r.draft && r.tag_name && NIGHTLY_TAG_RE.test(r.tag_name))
+        .filter((r) => r.tag_name && NIGHTLY_TAG_RE.test(r.tag_name))
         .sort((a, b) => {
           const pa = a.published_at ? new Date(a.published_at).getTime() : 0;
           const pb = b.published_at ? new Date(b.published_at).getTime() : 0;
@@ -427,6 +429,21 @@ async function buildPulse(
     }
   } catch {
     // Non-fatal
+  }
+
+  // Fallback: if no nightly release found (they may only exist as tags,
+  // not GitHub Release objects), try the tags API.
+  if (!releaseTag) {
+    try {
+      const tagRes = await gh(`/repos/${targetRepo}/tags?per_page=10`, token);
+      if (tagRes.ok) {
+        const tags = (await tagRes.json()) as Array<{ name: string }>;
+        const match = (tags || []).find((t) => NIGHTLY_TAG_RE.test(t.name));
+        if (match) releaseTag = match.name;
+      }
+    } catch {
+      // Non-fatal
+    }
   }
 
   const last = runs[0];

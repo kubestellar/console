@@ -184,10 +184,12 @@ async function fetchAllPages(
       `${url}${separator}per_page=${GITHUB_PER_PAGE}&page=${page}`,
       { signal }
     )
-    if (!response.ok) break
-    // On Netlify (no Go backend), /api/github/* returns the SPA's index.html
-    // (text/html, status 200). Throw so the caller falls back to demo data
-    // instead of silently showing zeros from an empty JSON parse.
+    // Throw on non-2xx (MSW catch-all returns 503 in demo mode) AND on
+    // non-JSON (SPA catch-all returns HTML on Netlify). Both should trigger
+    // the demo data fallback instead of silently returning empty arrays.
+    if (!response.ok) {
+      throw new Error(`GitHub proxy returned ${response.status}`)
+    }
     const ct = response.headers.get('content-type') || ''
     if (!ct.includes('application/json')) {
       throw new Error('GitHub proxy not available — showing demo data')
