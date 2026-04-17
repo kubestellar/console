@@ -28,6 +28,7 @@ import { DashboardHealthIndicator } from '../../components/dashboard/DashboardHe
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import { prefetchCardChunks } from '../../components/cards/cardRegistry'
+import { useDashboardContextOptional } from '../../hooks/useDashboardContext'
 
 // ============================================================================
 // Types
@@ -197,6 +198,25 @@ export function DashboardPage({
   // Combined refreshing state
   const isRefreshing = externalRefreshing || showIndicator
   const isFetching = isLoading || isRefreshing
+
+  // Bridge: when CardWrapper's "Export Widget" calls studioContext.openAddCardModal(),
+  // it sets isAddCardModalOpen in the DashboardContext. Sync that into our local
+  // showAddCard state so the DashboardCustomizer opens.
+  const dashCtx = useDashboardContextOptional()
+  const [widgetCardType, setWidgetCardType] = useState<string | undefined>(undefined)
+  useEffect(() => {
+    if (dashCtx?.isAddCardModalOpen) {
+      setShowAddCard(true)
+      if (dashCtx.studioInitialSection) {
+        setCustomizerInitialSection(dashCtx.studioInitialSection as 'cards' | 'dashboards' | undefined)
+      }
+      if (dashCtx.studioWidgetCardType) {
+        setWidgetCardType(dashCtx.studioWidgetCardType)
+      }
+      // Reset context state so it doesn't re-trigger
+      dashCtx.closeAddCardModal()
+    }
+  }, [dashCtx?.isAddCardModalOpen, dashCtx?.studioInitialSection, dashCtx?.studioWidgetCardType])
 
   // Handle addCard and customizeSidebar URL params via the DashboardCustomizer.
   // Guard with mounted route: KeepAlive keeps hidden dashboards mounted,
@@ -433,12 +453,13 @@ export function DashboardPage({
     {/* Dashboard Studio — unified customization panel */}
     <DashboardCustomizer
       isOpen={showAddCard}
-      onClose={() => { setShowAddCard(false); setAddCardSearch(''); setInsertAtIndex(null); setCustomizerInitialSection(undefined) }}
+      onClose={() => { setShowAddCard(false); setAddCardSearch(''); setInsertAtIndex(null); setCustomizerInitialSection(undefined); setWidgetCardType(undefined) }}
       dashboardName={title}
       onAddCards={handleAddCards}
       existingCardTypes={cards.map(c => c.card_type)}
       initialSection={customizerInitialSection}
       initialSearch={addCardSearch}
+      initialWidgetCardType={widgetCardType}
       onApplyTemplate={applyTemplate}
       /* onExport not available on generic DashboardPage — only on Dashboard.tsx */
       onReset={reset}
