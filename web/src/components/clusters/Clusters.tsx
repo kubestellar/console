@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams, useLocation, useNavigate } from 'react-router-dom'
-import { AlertTriangle, ChevronRight, ChevronDown, Server, Scissors, Sparkles } from 'lucide-react'
+import { AlertTriangle, ChevronRight, ChevronDown, Server, Scissors } from 'lucide-react'
 import { useClusters, useGPUNodes, useNVIDIAOperators, refreshSingleCluster } from '../../hooks/useMCP'
 import { agentFetch } from '../../hooks/mcp/shared'
 import { ClusterDetailModal } from './ClusterDetailModal'
@@ -343,30 +343,6 @@ export function Clusters() {
         </div>
       )}
 
-      {/* Create Cluster with AI Mission button (#6454) */}
-      <div className="mb-4 flex items-center gap-3">
-        <button
-          onClick={() => {
-            createCheckKeyAndRun(async () => {
-              const prompt = await loadMissionPrompt(
-                'create-cluster',
-                'Help me create a new Kubernetes cluster. Ask me about the provider (kind, k3d, EKS, GKE, AKS, OpenShift), cluster name, node count, and Kubernetes version. Then generate and execute the appropriate commands to create the cluster and add it to my kubeconfig.',
-              )
-              startMission({
-                title: 'Create Cluster with AI',
-                description: 'AI-guided cluster creation across any provider',
-                type: 'deploy',
-                initialPrompt: prompt })
-              openSidebar()
-            })
-          }}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-500/20 text-purple-300 text-xs font-medium hover:bg-purple-500/30 transition-colors whitespace-nowrap border border-purple-500/30"
-        >
-          <Sparkles className="w-3.5 h-3.5" />
-          Create Cluster with AI
-        </button>
-      </div>
-
       {/* Cluster Info Cards - collapsible */}
       <div className="mb-6">
         <button
@@ -409,6 +385,20 @@ export function Clusters() {
                   safeSetItem(STORAGE_KEY_CLUSTER_LAYOUT, mode)
                 }}
                 onAddCluster={() => setShowAddCluster(true)}
+                onCreateClusterWithAI={() => {
+                  createCheckKeyAndRun(async () => {
+                    const prompt = await loadMissionPrompt(
+                      'create-cluster',
+                      'Help me create a new Kubernetes cluster. Ask me about the provider (kind, k3d, EKS, GKE, AKS, OpenShift), cluster name, node count, and Kubernetes version. Then generate and execute the appropriate commands to create the cluster and add it to my kubeconfig.',
+                    )
+                    startMission({
+                      title: t('cluster.createClusterWithAI'),
+                      description: 'AI-guided cluster creation across any provider',
+                      type: 'deploy',
+                      initialPrompt: prompt })
+                    openSidebar()
+                  })
+                }}
               />
               {filteredClusters.length === 0 && !isLoading && !showSkeletonContent ? (
                 <EmptyClusterState onAddCluster={() => setShowAddCluster(true)} />

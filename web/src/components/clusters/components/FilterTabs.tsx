@@ -1,4 +1,4 @@
-import { WifiOff, SortAsc, SortDesc, LayoutGrid, List, Grid3X3, Columns, Plus } from 'lucide-react'
+import { WifiOff, SortAsc, SortDesc, LayoutGrid, List, Grid3X3, Columns, Plus, Sparkles } from 'lucide-react'
 import { ClusterStats } from './StatsOverview'
 import { ClusterLayoutMode } from './ClusterGrid'
 import { useTranslation } from 'react-i18next'
@@ -17,6 +17,7 @@ interface FilterTabsProps {
   layoutMode?: ClusterLayoutMode
   onLayoutModeChange?: (mode: ClusterLayoutMode) => void
   onAddCluster?: () => void
+  onCreateClusterWithAI?: () => void
 }
 
 const LAYOUT_OPTIONS: { mode: ClusterLayoutMode; icon: typeof LayoutGrid; label: string }[] = [
@@ -37,6 +38,7 @@ export function FilterTabs({
   layoutMode = 'grid',
   onLayoutModeChange,
   onAddCluster,
+  onCreateClusterWithAI,
 }: FilterTabsProps) {
   const { t } = useTranslation()
   return (
@@ -84,17 +86,30 @@ export function FilterTabs({
         Offline ({stats.unreachable})
       </button>
 
-      {/* Add Cluster, Layout, and Sort */}
+      {/* Add Cluster, Create with AI, Layout, and Sort */}
       <div className="ml-auto flex items-center gap-3">
-        {/* Add Cluster */}
-        {onAddCluster && (
-          <button
-            onClick={onAddCluster}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg bg-purple-600 hover:bg-purple-500 text-white transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Add Cluster
-          </button>
+        {/* Add Cluster + Create Cluster with AI */}
+        {(onAddCluster || onCreateClusterWithAI) && (
+          <div className="flex items-center gap-2">
+            {onAddCluster && (
+              <button
+                onClick={onAddCluster}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg bg-purple-600 hover:bg-purple-500 text-white transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                {t('cluster.addCluster')}
+              </button>
+            )}
+            {onCreateClusterWithAI && (
+              <button
+                onClick={onCreateClusterWithAI}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg bg-purple-600/80 hover:bg-purple-500 text-white transition-colors border border-purple-500/30"
+              >
+                <Sparkles className="w-4 h-4" />
+                {t('cluster.createClusterWithAI')}
+              </button>
+            )}
+          </div>
         )}
         {/* Layout mode selector */}
         {onLayoutModeChange && (

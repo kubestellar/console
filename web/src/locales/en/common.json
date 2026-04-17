@@ -2909,6 +2909,7 @@
     "clickToViewWorkloads": "Click to view workloads by namespace",
     "deleteGroup": "Delete group",
     "addCluster": "Add Cluster",
+    "createClusterWithAI": "Create Cluster with AI",
     "addClusterTitle": "Add a Cluster",
     "addClusterCommandLine": "Command Line",
     "addClusterImport": "Import Kubeconfig",

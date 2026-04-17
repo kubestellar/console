@@ -80,7 +80,7 @@ describe('FilterTabs', () => {
     const onAddCluster = vi.fn()
     renderFilterTabs({ onAddCluster })
 
-    const addBtn = screen.getByText('Add Cluster')
+    const addBtn = screen.getByText('cluster.addCluster')
     expect(addBtn).toBeTruthy()
     fireEvent.click(addBtn)
     expect(onAddCluster).toHaveBeenCalled()
@@ -88,6 +88,35 @@ describe('FilterTabs', () => {
 
   it('does not show Add Cluster button when onAddCluster is not provided', () => {
     renderFilterTabs()
-    expect(screen.queryByText('Add Cluster')).toBeNull()
+    expect(screen.queryByText('cluster.addCluster')).toBeNull()
+  })
+
+  it('shows Create Cluster with AI button when onCreateClusterWithAI is provided', () => {
+    const onCreateClusterWithAI = vi.fn()
+    renderFilterTabs({ onCreateClusterWithAI })
+
+    const createBtn = screen.getByText('cluster.createClusterWithAI')
+    expect(createBtn).toBeTruthy()
+    fireEvent.click(createBtn)
+    expect(onCreateClusterWithAI).toHaveBeenCalled()
+  })
+
+  it('does not show Create Cluster with AI button when onCreateClusterWithAI is not provided', () => {
+    renderFilterTabs()
+    expect(screen.queryByText('cluster.createClusterWithAI')).toBeNull()
+  })
+
+  it('renders both buttons adjacent when both handlers are provided', () => {
+    const onAddCluster = vi.fn()
+    const onCreateClusterWithAI = vi.fn()
+    renderFilterTabs({ onAddCluster, onCreateClusterWithAI })
+
+    const addBtn = screen.getByText('cluster.addCluster')
+    const createBtn = screen.getByText('cluster.createClusterWithAI')
+    expect(addBtn).toBeTruthy()
+    expect(createBtn).toBeTruthy()
+
+    // Both buttons should share a common parent container
+    expect(addBtn.closest('div')).toBe(createBtn.closest('div'))
   })
 })
