@@ -146,7 +146,7 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
   }
 
   const widgetContent = (
-      <div className="flex flex-col">
+      <div className="flex flex-col h-full min-h-0 overflow-hidden">
         {/* Tabs */}
         <div className="flex border-b border-border mb-4">
           <button
