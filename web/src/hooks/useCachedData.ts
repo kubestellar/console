@@ -1342,12 +1342,17 @@ export function useCachedNodes(
       return fetchViaSSE<NodeInfo>('nodes', 'nodes', {}, onProgress)
     } })
 
+  // Only report demo fallback when NOT loading — prevents Demo badge
+  // from flashing during the optimistic demo phase while a real fetch
+  // is still in-flight (CLAUDE.md: effectiveIsDemoFallback pattern).
+  const effectiveIsDemoFallback = result.isDemoFallback && !result.isLoading
+
   return {
     nodes: result.data,
     data: result.data,
     isLoading: result.isLoading,
     isRefreshing: result.isRefreshing,
-    isDemoFallback: result.isDemoFallback,
+    isDemoFallback: effectiveIsDemoFallback,
     error: result.error,
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,

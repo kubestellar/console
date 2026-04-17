@@ -41,8 +41,8 @@ vi.mock('../../../../hooks/useDrillDown', () => ({
 }))
 
 vi.mock('../../../../hooks/useCachedData', () => ({
-  useCachedNodes: () => ({ nodes: [], lastRefresh: Date.now() }),
-  useCachedPVCs: () => ({ pvcs: [], lastRefresh: Date.now() }),
+  useCachedNodes: () => ({ nodes: [], lastRefresh: Date.now(), isLoading: false, isFailed: false, isDemoFallback: false, isRefreshing: false, consecutiveFailures: 0, refetch: vi.fn() }),
+  useCachedPVCs: () => ({ pvcs: [], lastRefresh: Date.now(), isLoading: false, isFailed: false, isDemoFallback: false, isRefreshing: false, consecutiveFailures: 0, refetch: vi.fn() }),
 }))
 
 import { MultiClusterSummaryDrillDown } from '../MultiClusterSummaryDrillDown'

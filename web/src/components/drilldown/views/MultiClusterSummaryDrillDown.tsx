@@ -444,7 +444,7 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
       {/* Freshness indicator for cached data */}
       {viewType === 'all-nodes' && (nodesDataAge || nodesIsDemoFallback) && (
         <div className="flex items-center justify-end gap-2">
-          {nodesIsDemoFallback && (
+          {nodesIsDemoFallback && !nodesIsLoading && (
             <span className="text-2xs px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
               Demo
             </span>

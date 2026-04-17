@@ -14,6 +14,9 @@ import { LOADING_TIMEOUT_MS } from '../../../lib/constants/network'
 type TreeLens = 'all' | 'issues' | 'nodes' | 'workloads' | 'storage' | 'network'
 type ClusterTab = 'events' | 'resources'
 
+/** Scroll delay (ms) to let the DOM update after switching tabs */
+const SCROLL_AFTER_TAB_SWITCH_MS = 100
+
 interface Props {
   data: Record<string, unknown>
 }
@@ -29,9 +32,6 @@ export function ClusterDrillDown({ data }: Props) {
   const [activeLens, setActiveLens] = useState<TreeLens>('all')
   const [activeTab, setActiveTab] = useState<ClusterTab>('events')
   const nodesSectionRef = useRef<HTMLDivElement>(null)
-
-  /** Scroll delay to let the DOM update after switching tabs */
-  const SCROLL_AFTER_TAB_SWITCH_MS = 100
 
   /** Navigate to the nodes section in the resource tree */
   const scrollToNodesSection = useCallback(() => {
@@ -622,11 +622,12 @@ export function ClusterDrillDown({ data }: Props) {
 
                         {expandedSections.has('nodes') && (
                           <div ref={nodesSectionRef} className="ml-6 border-l-2 border-blue-500/30 pl-4 mt-1 space-y-1">
-                            {filteredNodes.slice(0, 20).map((node, i) => (
-                              <div
-                                key={i}
+                            {filteredNodes.slice(0, 20).map((node) => (
+                              <button
+                                key={node.name}
                                 onClick={() => drillToNode(clusterName, node.name, { status: node.status, roles: node.roles, unschedulable: node.unschedulable })}
-                                className="flex items-center gap-2 p-2 rounded-lg hover:bg-secondary/50 cursor-pointer group"
+                                type="button"
+                                className="flex items-center gap-2 p-2 rounded-lg hover:bg-secondary/50 cursor-pointer group w-full text-left bg-transparent border-none"
                               >
                                 <div className={`w-2 h-2 rounded-full ${node.status === 'Ready' ? 'bg-green-400' : 'bg-red-400'}`} />
                                 <span className="text-sm text-foreground group-hover:text-primary transition-colors">{node.name}</span>
@@ -639,7 +640,7 @@ export function ClusterDrillDown({ data }: Props) {
                                   </span>
                                 )}
                                 <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 ml-auto" />
-                              </div>
+                              </button>
                             ))}
                             {filteredNodes.length > 20 && (
                               <div className="text-xs text-muted-foreground p-2">

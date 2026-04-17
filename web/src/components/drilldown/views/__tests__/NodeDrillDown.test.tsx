@@ -46,7 +46,7 @@ vi.mock('../../../../lib/clipboard', () => ({
 }))
 
 vi.mock('../../../../hooks/useCachedData', () => ({
-  useCachedNodes: () => ({ nodes: [], isLoading: false, isFailed: false, lastRefresh: Date.now() }),
+  useCachedNodes: () => ({ nodes: [], isLoading: false, isFailed: false, isDemoFallback: false, isRefreshing: false, consecutiveFailures: 0, lastRefresh: Date.now(), refetch: vi.fn() }),
 }))
 
 import { NodeDrillDown } from '../NodeDrillDown'

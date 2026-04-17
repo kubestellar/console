@@ -38,7 +38,7 @@ vi.mock('../../../../hooks/useMCP', () => ({
 
 vi.mock('../../../../hooks/useCachedData', () => ({
   useCachedPodIssues: () => ({ issues: [] }),
-  useCachedNodes: () => ({ nodes: [], isLoading: false, isDemoFallback: null }),
+  useCachedNodes: () => ({ nodes: [], isLoading: false, isDemoFallback: false, isFailed: false, isRefreshing: false, consecutiveFailures: 0, lastRefresh: null, refetch: vi.fn() }),
   useCachedNamespaces: () => ({ namespaces: [], isLoading: false, isDemoFallback: null }),
   useCachedDeployments: () => ({ deployments: [], isDemoFallback: null }),
   useCachedServices: () => ({ services: [], isDemoFallback: null }),
