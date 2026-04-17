@@ -605,12 +605,17 @@ func (h *GitHubPipelinesHandler) fetchJobs(ctx context.Context, repo string, run
 
 func (h *GitHubPipelinesHandler) buildPulse(c *fiber.Ctx) (any, error) {
 	ctx := c.UserContext()
+	// Use the repo filter if provided, otherwise default to the nightly release repo.
+	pulseRepo := c.Query("repo")
+	if pulseRepo == "" {
+		pulseRepo = ghpNightlyReleaseRepo
+	}
 	// Fetch Release workflow runs via the workflow-specific endpoint so we
 	// don't have to filter from /actions/runs (which returns ALL workflows).
 	// Manual dispatches are included — they are equally valid nightly runs.
 	releaseRuns, err := h.fetchWorkflowRuns(
 		ctx,
-		ghpNightlyReleaseRepo,
+		pulseRepo,
 		ghpNightlyReleaseWFFile,
 		fmt.Sprintf("per_page=%d", ghpPulseWindowDays),
 	)
@@ -624,7 +629,7 @@ func (h *GitHubPipelinesHandler) buildPulse(c *fiber.Ctx) (any, error) {
 
 	// Latest release tag (best-effort)
 	var releaseTag *string
-	relRes, relErr := h.ghGet(ctx, "/repos/"+ghpNightlyReleaseRepo+"/releases?per_page=1")
+	relRes, relErr := h.ghGet(ctx, "/repos/"+pulseRepo+"/releases?per_page=1")
 	if relErr == nil {
 		defer relRes.Body.Close()
 		if relRes.StatusCode == http.StatusOK {
