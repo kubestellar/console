@@ -16,6 +16,9 @@ import { safeGetJSON, safeSetJSON } from '../../../lib/utils/localStorage'
 
 /** localStorage key for user-managed repo overrides */
 const STORAGE_KEY = 'kc-pipeline-repos'
+/** localStorage key for the active repo selection — persists across
+ *  refreshes and restarts so the user doesn't lose their filter. */
+const SELECTION_STORAGE_KEY = 'kc-pipeline-selection'
 
 /** Shape persisted in localStorage */
 interface StoredRepoConfig {
@@ -33,6 +36,15 @@ function loadConfig(): StoredRepoConfig {
 
 function saveConfig(config: StoredRepoConfig): void {
   safeSetJSON(STORAGE_KEY, config)
+}
+
+function loadSelection(): Set<string> {
+  const arr = safeGetJSON<string[]>(SELECTION_STORAGE_KEY)
+  return arr && arr.length > 0 ? new Set(arr) : new Set()
+}
+
+function saveSelection(sel: Set<string>): void {
+  safeSetJSON(SELECTION_STORAGE_KEY, [...sel])
 }
 
 /** Merge server repos + user config into the visible list */
@@ -83,9 +95,18 @@ export interface PipelineFilterState {
 const PipelineFilterCtx = createContext<PipelineFilterState | null>(null)
 
 export function PipelineFilterProvider({ children }: { children: ReactNode }) {
-  const [selectedRepos, setSelectedRepos] = useState<Set<string>>(new Set())
+  const [selectedRepos, setSelectedReposRaw] = useState<Set<string>>(() => loadSelection())
   const [config, setConfig] = useState<StoredRepoConfig>(loadConfig)
   const serverRepos = getPipelineRepos()
+
+  // Wrap setSelectedRepos to persist on every change
+  const setSelectedRepos = useCallback((updater: Set<string> | ((prev: Set<string>) => Set<string>)) => {
+    setSelectedReposRaw((prev) => {
+      const next = typeof updater === 'function' ? updater(prev) : updater
+      saveSelection(next)
+      return next
+    })
+  }, [])
 
   // Persist repo config on every change
   useEffect(() => {
