@@ -63,6 +63,7 @@ export interface PulsePayload {
     htmlUrl: string
     runNumber: number
     releaseTag: string | null
+    weeklyTag?: string | null
   } | null
   streak: number
   streakKind: 'success' | 'failure' | 'mixed'
@@ -170,6 +171,7 @@ export const DEMO_PULSE: PulsePayload = {
     htmlUrl: '#',
     runNumber: 128,
     releaseTag: 'v0.3.21-nightly.20260416',
+    weeklyTag: 'v0.3.20',
   },
   streak: 3,
   streakKind: 'success',

@@ -374,6 +374,7 @@ interface PulsePayload {
     htmlUrl: string;
     runNumber: number;
     releaseTag: string | null;
+    weeklyTag?: string | null;
   } | null;
   /** Consecutive conclusions of the same kind, counting back from lastRun */
   streak: number;
@@ -431,19 +432,19 @@ async function buildPulse(
     // Non-fatal
   }
 
-  // Fallback: if no nightly release found (they may only exist as tags,
-  // not GitHub Release objects), try the tags API.
-  if (!releaseTag) {
-    try {
-      const tagRes = await gh(`/repos/${targetRepo}/tags?per_page=10`, token);
-      if (tagRes.ok) {
-        const tags = (await tagRes.json()) as Array<{ name: string }>;
-        const match = (tags || []).find((t) => NIGHTLY_TAG_RE.test(t.name));
-        if (match) releaseTag = match.name;
+  // Also check tags — newer nightlies may only exist as git tags, not
+  // GitHub Release objects. Pick the newer of releases vs tags.
+  try {
+    const tagRes = await gh(`/repos/${targetRepo}/tags?per_page=10`, token);
+    if (tagRes.ok) {
+      const tags = (await tagRes.json()) as Array<{ name: string }>;
+      const match = (tags || []).find((t) => NIGHTLY_TAG_RE.test(t.name));
+      if (match && (!releaseTag || match.name > releaseTag)) {
+        releaseTag = match.name;
       }
-    } catch {
-      // Non-fatal
     }
+  } catch {
+    // Non-fatal
   }
 
   const last = runs[0];
@@ -471,6 +472,19 @@ async function buildPulse(
     }
   }
 
+  // Fetch latest stable (weekly) release — /releases/latest returns
+  // the most recent non-prerelease, non-draft release.
+  let weeklyTag: string | null = null;
+  try {
+    const wkRes = await gh(`/repos/${targetRepo}/releases/latest`, token);
+    if (wkRes.ok) {
+      const wk = (await wkRes.json()) as { tag_name?: string };
+      if (wk.tag_name) weeklyTag = wk.tag_name;
+    }
+  } catch {
+    // Non-fatal
+  }
+
   return {
     lastRun: last
       ? {
@@ -479,6 +493,7 @@ async function buildPulse(
           htmlUrl: last.htmlUrl,
           runNumber: last.runNumber,
           releaseTag,
+          weeklyTag,
         }
       : null,
     streak,

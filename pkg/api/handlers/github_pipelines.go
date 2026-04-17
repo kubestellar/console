@@ -167,6 +167,7 @@ type ghpPulseLastRun struct {
 	HTMLURL    string  `json:"htmlUrl"`
 	RunNumber  int     `json:"runNumber"`
 	ReleaseTag *string `json:"releaseTag"`
+	WeeklyTag  *string `json:"weeklyTag,omitempty"`
 }
 
 type ghpPulseRecent struct {
@@ -780,25 +781,42 @@ func (h *GitHubPipelinesHandler) buildPulse(c *fiber.Ctx) (any, error) {
 		}
 	}
 
-	// Fallback: if no nightly release was found (releases may only exist as
-	// tags, not GitHub Release objects), try the tags API.
-	if releaseTag == nil {
-		tagRes, tagErr := h.ghGet(ctx, "/repos/"+pulseRepo+"/tags?per_page=10")
-		if tagErr == nil {
-			defer tagRes.Body.Close()
-			if tagRes.StatusCode == http.StatusOK {
-				var tags []struct {
-					Name string `json:"name"`
-				}
-				if err := json.NewDecoder(tagRes.Body).Decode(&tags); err == nil {
-					for _, t := range tags {
-						if ghpNightlyTagRe.MatchString(t.Name) {
+	// Also check tags API — newer nightlies may only exist as git tags
+	// (not GitHub Release objects). Pick the newer of releases vs tags.
+	tagRes, tagErr := h.ghGet(ctx, "/repos/"+pulseRepo+"/tags?per_page=10")
+	if tagErr == nil {
+		defer tagRes.Body.Close()
+		if tagRes.StatusCode == http.StatusOK {
+			var tags []struct {
+				Name string `json:"name"`
+			}
+			if err := json.NewDecoder(tagRes.Body).Decode(&tags); err == nil {
+				for _, t := range tags {
+					if ghpNightlyTagRe.MatchString(t.Name) {
+						// Compare with release tag — pick the one with the
+						// newer date suffix (YYYYMMDD in the tag name).
+						if releaseTag == nil || t.Name > *releaseTag {
 							tag := t.Name
 							releaseTag = &tag
-							break
 						}
+						break
 					}
 				}
+			}
+		}
+	}
+
+	// Fetch latest stable (weekly) release — non-prerelease, non-draft
+	var weeklyTag *string
+	weeklyRes, weeklyErr := h.ghGet(ctx, "/repos/"+pulseRepo+"/releases/latest")
+	if weeklyErr == nil {
+		defer weeklyRes.Body.Close()
+		if weeklyRes.StatusCode == http.StatusOK {
+			var latest struct {
+				TagName string `json:"tag_name"`
+			}
+			if err := json.NewDecoder(weeklyRes.Body).Decode(&latest); err == nil && latest.TagName != "" {
+				weeklyTag = &latest.TagName
 			}
 		}
 	}
@@ -814,6 +832,7 @@ func (h *GitHubPipelinesHandler) buildPulse(c *fiber.Ctx) (any, error) {
 			HTMLURL:    first.HTMLURL,
 			RunNumber:  first.RunNumber,
 			ReleaseTag: releaseTag,
+			WeeklyTag:  weeklyTag,
 		}
 		kind := ghpStreakKind(first.Conclusion)
 		if kind != "" {

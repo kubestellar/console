@@ -303,7 +303,16 @@ export function NightlyReleasePulse() {
               <span className="text-base font-semibold text-foreground truncate">
                 {lastRun?.releaseTag ?? 'No release yet'}
               </span>
+              {lastRun?.releaseTag && (
+                <span className="text-2xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400 shrink-0">nightly</span>
+              )}
             </div>
+            {lastRun?.weeklyTag && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
+                <span className="text-2xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">stable</span>
+                <span>{lastRun.weeklyTag}</span>
+              </div>
+            )}
             <div className="mt-0.5">
               <RepoSubtitle repo={effectiveRepoFilter || 'all repos'} />
             </div>
