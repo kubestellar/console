@@ -91,7 +91,7 @@ var acmmCriteria = []acmmCriterion{
 	{ID: "acmm:pr-acceptance-metric", Patterns: []string{"scripts/build-accm-history.mjs", ".github/workflows/accm-history-update.yml", "scripts/pr-metrics.mjs", ".github/workflows/pr-metrics.yml", "docs/metrics.md"}},
 	{ID: "acmm:pr-review-rubric", Patterns: []string{".github/workflows/review.yml", "docs/review-rubric.md", ".github/review-checklist.md", ".github/prompts/review.md", "docs/qa/"}},
 	{ID: "acmm:quality-dashboard", Patterns: []string{"public/analytics.js", "web/public/analytics.js", "web/src/components/analytics/", "docs/quality.md", ".github/workflows/quality-report.yml", "docs/AI-QUALITY-ASSURANCE.md"}},
-	{ID: "acmm:ci-matrix", Patterns: []string{".github/workflows/ci.yml", ".github/workflows/test.yml", ".github/workflows/build.yml"}},
+	{ID: "acmm:ci-matrix", Patterns: []string{".github/workflows/ci.yml", ".github/workflows/test.yml", ".github/workflows/build.yml", ".github/workflows/build-deploy.yml"}},
 	{ID: "acmm:layered-safety", Patterns: []string{".claude/settings.json", ".claude/settings.local.json"}},
 	{ID: "acmm:mechanical-enforcement", Patterns: []string{".claude/settings.json"}},
 	{ID: "acmm:session-summary", Patterns: []string{".claude/session-summary.md", ".claude/checkpoint.md"}},
