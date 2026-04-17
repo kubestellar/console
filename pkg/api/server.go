@@ -820,6 +820,12 @@ func (s *Server) setupRoutes() {
 	api.Get("/github/token/status", githubProxy.HasToken)
 	api.Post("/github/token", githubProxy.SaveToken)
 	api.Delete("/github/token", githubProxy.DeleteToken)
+	// GitHub Pipelines dashboard — registered BEFORE the /github/* wildcard
+	// proxy so Fiber matches the specific route first.
+	githubPipelines := handlers.NewGitHubPipelinesHandler(s.config.GitHubToken)
+	api.Get("/github-pipelines", githubPipelines.Serve)
+	api.Post("/github-pipelines", githubPipelines.Serve)
+
 	api.Get("/github/*", githubProxy.Proxy)
 
 	// Persistent settings routes
@@ -1153,13 +1159,6 @@ func (s *Server) setupRoutes() {
 	// upstream fetch from kubara-io/kubara (#8487)
 	kubaraCatalog := handlers.NewKubaraCatalogHandler(s.config.GitHubToken)
 	api.Get("/kubara/catalog", kubaraCatalog.GetCatalog)
-
-	// GitHub Pipelines dashboard (powers /ci-cd cards). Same endpoint shape
-	// as the Netlify Function at web/netlify/functions/github-pipelines.mts
-	// so the TS hook works against either backend without branching.
-	githubPipelines := handlers.NewGitHubPipelinesHandler(s.config.GitHubToken)
-	api.Get("/github-pipelines", githubPipelines.Serve)
-	api.Post("/github-pipelines", githubPipelines.Serve)
 
 	// GPU reservation routes — capacity provider uses live k8s node data
 	// so the server never trusts client-supplied GPU limits (#5421).
