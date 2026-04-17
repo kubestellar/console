@@ -33,6 +33,8 @@ export type EmbeddableCardType =
   | 'recent-failures'
 
 interface EmbedCodeDialogProps {
+  /** Whether the dialog is open */
+  open: boolean
   /** Which card type to generate the embed for */
   cardType: EmbeddableCardType
   /** Human-readable card title */
@@ -43,7 +45,8 @@ interface EmbedCodeDialogProps {
   onClose: () => void
 }
 
-export function EmbedCodeDialog({ cardType, cardTitle, currentRepo, onClose }: EmbedCodeDialogProps) {
+export function EmbedCodeDialog({ open, cardType, cardTitle, currentRepo, onClose }: EmbedCodeDialogProps) {
+  if (!open) return null
   const { t } = useTranslation()
   const [repo, setRepo] = useState(currentRepo ?? '')
   const [copiedField, setCopiedField] = useState<string | null>(null)

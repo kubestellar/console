@@ -31,14 +31,13 @@ export function EmbedButton({ cardType, cardTitle, currentRepo }: EmbedButtonPro
       >
         <Code2 size={12} />
       </button>
-      {open && (
-        <EmbedCodeDialog
-          cardType={cardType}
-          cardTitle={cardTitle}
-          currentRepo={currentRepo}
-          onClose={() => setOpen(false)}
-        />
-      )}
+      <EmbedCodeDialog
+        open={open}
+        cardType={cardType}
+        cardTitle={cardTitle}
+        currentRepo={currentRepo}
+        onClose={() => setOpen(false)}
+      />
     </>
   )
 }
