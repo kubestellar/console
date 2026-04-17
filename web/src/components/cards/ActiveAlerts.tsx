@@ -4,7 +4,9 @@ import {
   CheckCircle,
   Eye,
   EyeOff,
-  Server } from 'lucide-react'
+  Server,
+  Bell,
+  BellOff } from 'lucide-react'
 import { useAlerts } from '../../hooks/useAlerts'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useGlobalFilters, type SeverityLevel } from '../../hooks/useGlobalFilters'
@@ -20,6 +22,16 @@ import { useTranslation } from 'react-i18next'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { NotificationVerifyIndicator } from './NotificationVerifyIndicator'
 import { AlertListItem } from './AlertListItem'
+import { useDoNotDisturb, type TimedDuration } from '../../hooks/useDoNotDisturb'
+
+/** Format remaining DND time as "Xh Ym" or "Ym" */
+function formatRemaining(ms: number): string {
+  const totalMinutes = Math.ceil(ms / 60_000)
+  const hours = Math.floor(totalMinutes / 60)
+  const minutes = totalMinutes % 60
+  if (hours > 0) return `${hours}h ${minutes}m`
+  return `${minutes}m`
+}
 
 // Stats summary row shown at the top of the alerts card
 function AlertStatsRow({ critical, warning, acknowledged }: { critical: number; warning: number; acknowledged: number }) {
@@ -86,6 +98,8 @@ export function ActiveAlerts() {
   const { missions, setActiveMission, openSidebar } = useMissions()
 
   const [showAcknowledged, setShowAcknowledged] = useState(false)
+  const [showDNDMenu, setShowDNDMenu] = useState(false)
+  const dnd = useDoNotDisturb()
 
   // Combine active and acknowledged alerts when toggle is on
   const allAlertsToShow = (() => {
@@ -230,6 +244,49 @@ export function ActiveAlerts() {
           )}
           {/* Browser notification verification indicator */}
           <NotificationVerifyIndicator />
+          {/* Do Not Disturb toggle */}
+          <div className="relative">
+            <button
+              onClick={() => dnd.isActive ? dnd.clearDND() : setShowDNDMenu(!showDNDMenu)}
+              className={`flex items-center gap-1 px-1.5 py-1 text-xs rounded-lg border transition-colors ${
+                dnd.isActive
+                  ? 'bg-yellow-500/20 border-yellow-500/30 text-yellow-400'
+                  : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
+              }`}
+              title={dnd.isActive
+                ? `Notifications paused${dnd.remaining > 0 ? ` (${formatRemaining(dnd.remaining)})` : ''} — click to resume`
+                : 'Pause notifications'}
+            >
+              {dnd.isActive ? <BellOff className="w-3 h-3" /> : <Bell className="w-3 h-3" />}
+              {dnd.isActive && dnd.remaining > 0 && (
+                <span className="text-[10px]">{formatRemaining(dnd.remaining)}</span>
+              )}
+            </button>
+            {showDNDMenu && !dnd.isActive && (
+              <div className="absolute top-full left-0 mt-1 z-50 bg-popover border border-border rounded-lg shadow-lg py-1 min-w-[160px]">
+                {([
+                  ['1h', 'For 1 hour'],
+                  ['4h', 'For 4 hours'],
+                  ['tomorrow', 'Until tomorrow 8am'],
+                ] as [TimedDuration, string][]).map(([duration, label]) => (
+                  <button
+                    key={duration}
+                    onClick={() => { dnd.setTimedDND(duration); setShowDNDMenu(false) }}
+                    className="w-full text-left px-3 py-1.5 text-xs text-foreground hover:bg-muted/50 transition-colors"
+                  >
+                    {label}
+                  </button>
+                ))}
+                <div className="border-t border-border my-1" />
+                <button
+                  onClick={() => { dnd.setManualDND(true); setShowDNDMenu(false) }}
+                  className="w-full text-left px-3 py-1.5 text-xs text-foreground hover:bg-muted/50 transition-colors"
+                >
+                  Until I turn it off
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="flex items-center gap-2">

@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Globe, Check, X } from 'lucide-react'
+import { Globe, Check, X, Moon } from 'lucide-react'
 import { isBrowserNotifVerified, setBrowserNotifVerified } from '../../../lib/notificationStatus'
+import { useDoNotDisturb } from '../../../hooks/useDoNotDisturb'
 
 /** Browser notification verification flow state */
 type BrowserNotifState = 'idle' | 'asked' | 'verified' | 'failed'
@@ -174,6 +175,56 @@ export function BrowserNotificationSettings() {
               {t('settings.notifications.browser.requestPermission')}
             </button>
           )}
+        </div>
+      )}
+
+      {/* Quiet Hours */}
+      <QuietHoursConfig />
+    </div>
+  )
+}
+
+/** Quiet hours configuration — recurring daily window where notifications are suppressed */
+function QuietHoursConfig() {
+  const dnd = useDoNotDisturb()
+
+  return (
+    <div className="space-y-3 pt-4 border-t border-border">
+      <div className="flex items-center gap-2">
+        <Moon className="w-4 h-4 text-muted-foreground" />
+        <h4 className="text-sm font-medium text-foreground">Quiet Hours</h4>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Suppress desktop notifications during a recurring daily window.
+      </p>
+
+      <label className="flex items-center gap-2 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={dnd.quietHoursEnabled}
+          onChange={(e) => dnd.setQuietHours(e.target.checked)}
+          className="rounded border-border accent-primary"
+        />
+        <span className="text-sm text-foreground">
+          Don&apos;t notify between
+        </span>
+      </label>
+
+      {dnd.quietHoursEnabled && (
+        <div className="flex items-center gap-2 pl-6">
+          <input
+            type="time"
+            value={dnd.quietHoursStart}
+            onChange={(e) => dnd.setQuietHours(true, e.target.value)}
+            className="px-2 py-1 text-sm bg-secondary border border-border rounded text-foreground"
+          />
+          <span className="text-xs text-muted-foreground">and</span>
+          <input
+            type="time"
+            value={dnd.quietHoursEnd}
+            onChange={(e) => dnd.setQuietHours(true, undefined, e.target.value)}
+            className="px-2 py-1 text-sm bg-secondary border border-border rounded text-foreground"
+          />
         </div>
       )}
     </div>
