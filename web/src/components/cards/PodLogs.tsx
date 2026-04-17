@@ -283,7 +283,7 @@ export function PodLogs({ config }: PodLogsProps) {
             No log output.
           </div>
         ) : (
-          <pre className="h-full w-full overflow-auto p-3 text-xs leading-snug font-mono text-slate-200 whitespace-pre">
+          <pre className="h-full w-full overflow-auto p-3 text-xs leading-snug font-mono text-foreground whitespace-pre">
             {logs}
           </pre>
         )}

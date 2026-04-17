@@ -580,7 +580,7 @@ function NodeControls({ isStopped, isPinned = false, showPin = false, showGear =
         onClick={handle(onStop)}
         className={`w-5 h-5 flex items-center justify-center rounded border transition-colors ${
           isStopped
-            ? 'bg-slate-700/60 border-slate-500/50 text-slate-300'
+            ? 'bg-slate-700/60 border-slate-500/50 text-muted-foreground'
             : 'bg-red-500/20 hover:bg-red-500/40 border-red-500/40 text-red-400'
         }`}
         aria-label={isStopped ? 'Start' : 'Stop'}
@@ -1168,12 +1168,12 @@ function ExpandModal({ node, onClose }: { node: ExpandedNodeDetails | null; onCl
         </button>
       </div>
       <div className="space-y-1.5 text-xs">
-        <div className="flex justify-between text-slate-300">
+        <div className="flex justify-between text-foreground">
           <span className="text-muted-foreground">{t('drasi.idLabel')}</span>
           <span className="font-mono">{node.id}</span>
         </div>
         {node.extra && Object.entries(node.extra).map(([k, v]) => (
-          <div key={k} className="flex justify-between text-slate-300 gap-3">
+          <div key={k} className="flex justify-between text-foreground gap-3">
             <span className="text-muted-foreground whitespace-nowrap">{k}:</span>
             <span className="font-mono truncate text-right">{v}</span>
           </div>
@@ -1263,14 +1263,14 @@ function SourceConfigModal({
           <button
             type="button"
             onClick={handleDownloadYaml}
-            className="px-3 py-1.5 text-xs rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 flex items-center gap-1.5"
+            className="px-3 py-1.5 text-xs rounded bg-slate-800 hover:bg-slate-700 text-muted-foreground border border-slate-700 flex items-center gap-1.5"
           >
             <Download className="w-3 h-3" />
             {t('drasi.downloadYaml')}
           </button>
         ) : <div />}
         <div className="flex gap-2">
-          <button type="button" onClick={onClose} className="px-3 py-1.5 text-xs rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700">{t('actions.cancel')}</button>
+          <button type="button" onClick={onClose} className="px-3 py-1.5 text-xs rounded bg-slate-800 hover:bg-slate-700 text-muted-foreground border border-slate-700">{t('actions.cancel')}</button>
           <button
             type="button"
             disabled={!name.trim()}
@@ -1379,14 +1379,14 @@ function QueryConfigModal({
           <button
             type="button"
             onClick={handleDownloadYaml}
-            className="px-3 py-1.5 text-xs rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 flex items-center gap-1.5"
+            className="px-3 py-1.5 text-xs rounded bg-slate-800 hover:bg-slate-700 text-muted-foreground border border-slate-700 flex items-center gap-1.5"
           >
             <Download className="w-3 h-3" />
             {t('drasi.downloadYaml')}
           </button>
         ) : <div />}
         <div className="flex gap-2">
-          <button type="button" onClick={onClose} className="px-3 py-1.5 text-xs rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700">{t('actions.cancel')}</button>
+          <button type="button" onClick={onClose} className="px-3 py-1.5 text-xs rounded bg-slate-800 hover:bg-slate-700 text-muted-foreground border border-slate-700">{t('actions.cancel')}</button>
           <button
             type="button"
             disabled={!name.trim()}
@@ -1580,7 +1580,7 @@ function ConnectionsModal({
             </div>
           )}
           <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => setEditing(null)} className="px-3 py-1.5 text-xs rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700">{t('actions.cancel')}</button>
+            <button type="button" onClick={() => setEditing(null)} className="px-3 py-1.5 text-xs rounded bg-slate-800 hover:bg-slate-700 text-muted-foreground border border-slate-700">{t('actions.cancel')}</button>
             <button
               type="button"
               onClick={saveEdit}
@@ -1813,7 +1813,7 @@ function StreamSampleDrawer({ endpoint, isDemo, onClose }: StreamSampleDrawerPro
         <button
           type="button"
           onClick={handleCopy}
-          className="shrink-0 px-2 py-0.5 text-[10px] rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 flex items-center gap-1"
+          className="shrink-0 px-2 py-0.5 text-[10px] rounded bg-slate-800 hover:bg-slate-700 text-muted-foreground border border-slate-700 flex items-center gap-1"
           aria-label={t('drasi.copySnippet')}
         >
           {copied ? <Check className="w-2.5 h-2.5 text-emerald-400" /> : <Copy className="w-2.5 h-2.5" />}
@@ -2541,7 +2541,7 @@ export function DrasiReactiveGraph() {
         <button
           type="button"
           onClick={() => setShowConnectionsModal(true)}
-          className="shrink-0 w-6 h-6 flex items-center justify-center rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-cyan-300"
+          className="shrink-0 w-6 h-6 flex items-center justify-center rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-muted-foreground hover:text-cyan-300"
           aria-label={t('drasi.manageConnections')}
           title={t('drasi.manageConnections')}
         >
@@ -2572,7 +2572,7 @@ export function DrasiReactiveGraph() {
         <button
           type="button"
           onClick={() => setShowStreamSamples(true)}
-          className="shrink-0 ml-auto px-2 py-1 text-[10px] rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-cyan-300 flex items-center gap-1.5"
+          className="shrink-0 ml-auto px-2 py-1 text-[10px] rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-muted-foreground hover:text-cyan-300 flex items-center gap-1.5"
           aria-label={t('drasi.consumeStreamTitle')}
           title={t('drasi.consumeStreamTitle')}
         >
@@ -2787,7 +2787,7 @@ export function DrasiReactiveGraph() {
                           <button
                             type="button"
                             onClick={e => { e.stopPropagation(); setShowStreamSamples(true) }}
-                            className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-cyan-300 flex items-center gap-1"
+                            className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-muted-foreground hover:text-cyan-300 flex items-center gap-1"
                             title={t('drasi.consumeStreamTitle')}
                           >
                             <Code2 className="w-2.5 h-2.5" />

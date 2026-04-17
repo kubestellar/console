@@ -115,7 +115,7 @@ function ActionButton({
 
   if (action.actionType === 'info') {
     return (
-      <div className="flex items-start gap-2 text-xs text-gray-300">
+      <div className="flex items-start gap-2 text-xs text-muted-foreground">
         <Icon size={14} className="mt-0.5 shrink-0 text-gray-400" />
         <span>{action.description}</span>
       </div>
@@ -152,11 +152,11 @@ function ActionButton({
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-gray-300">{action.label}</span>
+        <span className="text-xs font-medium text-muted-foreground">{action.label}</span>
         {action.codeSnippet && (
           <button
             onClick={handleCopy}
-            className="flex items-center gap-1 rounded px-2 py-0.5 text-xs text-gray-400 transition-colors hover:bg-gray-700 hover:text-gray-200"
+            className="flex items-center gap-1 rounded px-2 py-0.5 text-xs text-gray-400 transition-colors hover:bg-gray-700 hover:text-foreground"
           >
             <Icon size={12} />
             {copied ? 'Copied' : 'Copy'}
@@ -165,7 +165,7 @@ function ActionButton({
       </div>
       <p className="text-xs text-gray-400">{action.description}</p>
       {action.codeSnippet && (
-        <pre className="mt-1 overflow-x-auto rounded-md bg-gray-900/70 p-2 text-xs text-gray-300">
+        <pre className="mt-1 overflow-x-auto rounded-md bg-gray-900/70 p-2 text-xs text-muted-foreground">
           <code>{action.codeSnippet}</code>
         </pre>
       )}
@@ -209,7 +209,7 @@ export function PreflightFailure({ error, context, onRetry }: PreflightFailurePr
       </div>
 
       {/* Error message */}
-      <p className="mb-3 text-xs leading-relaxed text-gray-300">
+      <p className="mb-3 text-xs leading-relaxed text-muted-foreground">
         {error.message}
       </p>
 

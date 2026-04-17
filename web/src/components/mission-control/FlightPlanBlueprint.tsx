@@ -306,7 +306,7 @@ function GaugeRow({ label, value, max, unit }: {
     <div className="space-y-1">
       <div className="flex items-center justify-between text-xs">
         <span className="text-slate-400 font-medium">{label}</span>
-        <span className="text-slate-300 tabular-nums">{display}{pctVal != null ? ` (${pctVal}%)` : ''}</span>
+        <span className="text-foreground tabular-nums">{display}{pctVal != null ? ` (${pctVal}%)` : ''}</span>
       </div>
       <div className="h-1.5 rounded-full bg-slate-800 overflow-hidden">
         {pctVal != null && (

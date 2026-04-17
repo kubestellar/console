@@ -125,7 +125,7 @@ export function FeatureKagent() {
               href="https://kagent.dev"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-lg border border-slate-700 text-slate-300 font-medium hover:bg-slate-800 transition-colors"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-lg border border-border text-muted-foreground font-medium hover:bg-secondary transition-colors"
             >
               kagent.dev
               <ExternalLink className="w-4 h-4" />
