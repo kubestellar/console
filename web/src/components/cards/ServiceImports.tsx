@@ -52,7 +52,7 @@ function ServiceImportsInternal({ config: _config }: ServiceImportsProps) {
   const SORT_OPTIONS = SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) }))
 
   // Fetch real ServiceImport data with demo fallback
-  const { imports: allImports, isLoading, isDemoData, isFailed, consecutiveFailures } = useServiceImportsCard()
+  const { imports: allImports, isLoading, isDemoData, isFailed, consecutiveFailures, refetch } = useServiceImportsCard()
   const hasError = isFailed
 
   // Compute stats from real data
@@ -122,7 +122,7 @@ function ServiceImportsInternal({ config: _config }: ServiceImportsProps) {
         <AlertCircle className="w-12 h-12 text-red-400 mb-4" />
         <p className="text-sm text-muted-foreground mb-4">{t('serviceImports.loadFailed')}</p>
         <button
-          onClick={() => window.location.reload()}
+          onClick={() => refetch()}
           className="px-4 py-2 rounded-lg bg-purple-500 hover:bg-purple-600 text-white text-sm"
         >
           {t('common:common.retry')}

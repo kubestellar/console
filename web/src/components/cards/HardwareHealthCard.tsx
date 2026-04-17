@@ -642,7 +642,7 @@ export function HardwareHealthCard() {
               <span>{fetchError}</span>
             </div>
             <button
-              onClick={() => window.location.reload()}
+              onClick={() => refetch()}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-red-500/20 hover:bg-red-500/30 transition-colors whitespace-nowrap"
             >
               <RefreshCw className="w-3 h-3" />
