@@ -51,6 +51,7 @@ export function PipelineDataProvider({
     isRefreshing,
     error,
     isFailed,
+    isDemoFallback,
     lastRefresh,
     refetch,
   } = useUnifiedPipelineData(repo, days)
@@ -65,10 +66,11 @@ export function PipelineDataProvider({
       isRefreshing,
       error,
       isFailed,
+      isDemoFallback: isDemoFallback && !isLoading,
       lastRefresh,
       refetch,
     }),
-    [data, isLoading, isRefreshing, error, isFailed, lastRefresh, refetch],
+    [data, isLoading, isRefreshing, error, isFailed, isDemoFallback, lastRefresh, refetch],
   )
 
   return (

@@ -2,6 +2,7 @@ import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
 import { RotatingTip } from '../ui/RotatingTip'
 import { PipelineFilterProvider, PipelineDataProvider, PipelineFilterBar } from '../cards/pipelines'
+import { usePipelineFilter } from '../cards/pipelines/PipelineFilterContext'
 import { useCICDStats } from './useCICDStats'
 
 const CICD_CARDS_KEY = 'kubestellar-cicd-cards'
@@ -14,7 +15,15 @@ const DEFAULT_CICD_CARDS = getDefaultCards('ci-cd')
  * consume the unified pipeline data for stat calculations.
  */
 function CICDDashboard() {
-  const { getStatValue, isLoading } = useCICDStats()
+  const {
+    getStatValue,
+    isLoading,
+    isRefreshing,
+    isDemoData,
+    error,
+    lastRefresh,
+    refetch,
+  } = useCICDStats()
 
   return (
     <DashboardPage
@@ -28,6 +37,11 @@ function CICDDashboard() {
       statsType="ci-cd"
       getStatValue={getStatValue}
       isLoading={isLoading}
+      isRefreshing={isRefreshing}
+      isDemoData={isDemoData}
+      error={error}
+      lastUpdated={lastRefresh != null ? new Date(lastRefresh) : null}
+      onRefresh={refetch ?? undefined}
       emptyState={{
         title: 'CI/CD Dashboard',
         description: 'Add cards to monitor pipelines, builds, and deployment status across your clusters.' }}
@@ -35,12 +49,27 @@ function CICDDashboard() {
   )
 }
 
+/**
+ * Bridges PipelineFilterContext → PipelineDataProvider so the unified
+ * fetch respects the dashboard-level repo filter.
+ */
+function CICDDataBridge({ children }: { children: React.ReactNode }) {
+  const filterState = usePipelineFilter()
+  const repoFilter = filterState?.repoFilter ?? null
+
+  return (
+    <PipelineDataProvider repo={repoFilter}>
+      {children}
+    </PipelineDataProvider>
+  )
+}
+
 export function CICD() {
   return (
     <PipelineFilterProvider>
-    <PipelineDataProvider>
-      <CICDDashboard />
-    </PipelineDataProvider>
+      <CICDDataBridge>
+        <CICDDashboard />
+      </CICDDataBridge>
     </PipelineFilterProvider>
   )
 }

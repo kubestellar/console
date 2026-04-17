@@ -352,6 +352,7 @@ export interface UnifiedPipelineData {
   isRefreshing: boolean
   error: string | null
   isFailed: boolean
+  isDemoFallback: boolean
   lastRefresh: number | null
   refetch: () => Promise<void>
 }

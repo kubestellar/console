@@ -11,9 +11,6 @@ import type { StatBlockValue } from '../ui/StatsOverview'
 import { usePipelineData } from '../cards/pipelines/PipelineDataContext'
 import type { Conclusion, FlowRun } from '../../hooks/useGitHubPipelines'
 
-/** Number of days used for the pass-rate calculation window */
-const PASS_RATE_WINDOW_DAYS = 14
-
 /** Milliseconds in 24 hours — used to filter recent failures */
 const MS_PER_24H = 24 * 60 * 60 * 1000
 
@@ -27,6 +24,9 @@ const PASS_RATE_MAX = 100
 /** Milliseconds per minute — used for duration formatting */
 const MS_PER_MINUTE = 60_000
 
+/** Minutes per hour — used for duration formatting */
+const MINUTES_PER_HOUR = 60
+
 /** Whether a conclusion counts as a "pass" */
 function isPassing(c: Conclusion): boolean {
   return c === 'success' || c === 'skipped' || c === 'neutral'
@@ -36,13 +36,24 @@ function isPassing(c: Conclusion): boolean {
 function formatDuration(ms: number): string {
   const minutes = Math.round(ms / MS_PER_MINUTE)
   if (minutes < 1) return '<1m'
-  if (minutes < 60) return `${minutes}m` // eslint-disable-line @typescript-eslint/no-magic-numbers
-  const hours = Math.floor(minutes / 60) // eslint-disable-line @typescript-eslint/no-magic-numbers
-  const remainder = minutes % 60 // eslint-disable-line @typescript-eslint/no-magic-numbers
+  if (minutes < MINUTES_PER_HOUR) return `${minutes}m`
+  const hours = Math.floor(minutes / MINUTES_PER_HOUR)
+  const remainder = minutes % MINUTES_PER_HOUR
   return remainder > 0 ? `${hours}h ${remainder}m` : `${hours}h`
 }
 
-export function useCICDStats() {
+/** Return shape for useCICDStats — callers use these to drive DashboardPage lifecycle */
+export interface CICDStatsResult {
+  getStatValue: (blockId: string) => StatBlockValue
+  isLoading: boolean
+  isRefreshing: boolean
+  isDemoData: boolean
+  error: string | null
+  lastRefresh: number | null
+  refetch: (() => Promise<void>) | null
+}
+
+export function useCICDStats(): CICDStatsResult {
   const pipelineData = usePipelineData()
 
   // Memoize computed values from pipeline data
@@ -59,12 +70,13 @@ export function useCICDStats() {
         totalWorkflows: 0,
         openPRs: 0,
         isDemo: true,
+        matrixDays: 0,
       }
     }
 
     const { matrix, pulse, failures, flow } = pipelineData
 
-    // --- Pass Rate (14-day window from matrix) ---
+    // --- Pass Rate (window from matrix.days) ---
     let totalCells = 0
     let passingCells = 0
     for (const wf of (matrix?.workflows || [])) {
@@ -120,10 +132,9 @@ export function useCICDStats() {
     }
     const openPRs = prNumbers.size
 
-    // Check if data is demo (all from demo fixtures)
-    const isDemo = pipelineData.isFailed || (
-      totalCells === 0 && completedRuns.length === 0 && streak === 0
-    )
+    // Use the context's isDemoFallback for accurate demo detection —
+    // a real repo with no recent activity should NOT be flagged as demo.
+    const isDemo = pipelineData.isDemoFallback
 
     return {
       passRate,
@@ -136,6 +147,7 @@ export function useCICDStats() {
       totalWorkflows,
       openPRs,
       isDemo,
+      matrixDays: matrix?.days ?? 0,
     }
   }, [pipelineData])
 
@@ -149,7 +161,9 @@ export function useCICDStats() {
             : 'Critical'
         return {
           value: computed.passRate,
-          sublabel: `${sublabel} (${PASS_RATE_WINDOW_DAYS}d)`,
+          sublabel: computed.matrixDays > 0
+            ? `${sublabel} (${computed.matrixDays}d)`
+            : sublabel,
           max: PASS_RATE_MAX,
           isDemo: computed.isDemo,
           modeHints: ['ring', 'gauge', 'horseshoe', 'numeric'],
@@ -183,7 +197,6 @@ export function useCICDStats() {
       }
 
       case 'cicd_streak': {
-        const prefix = computed.streakKind === 'success' ? '' : ''
         const label = computed.streakKind === 'success'
           ? `${computed.streak} passing`
           : computed.streakKind === 'failure'
@@ -191,7 +204,7 @@ export function useCICDStats() {
             : 'mixed'
         return {
           value: computed.streak,
-          sublabel: `${prefix}${label}`,
+          sublabel: label,
           isDemo: computed.isDemo,
         }
       }
@@ -208,5 +221,13 @@ export function useCICDStats() {
     }
   }, [computed])
 
-  return { getStatValue, isLoading: pipelineData?.isLoading ?? false }
+  return {
+    getStatValue,
+    isLoading: pipelineData?.isLoading ?? false,
+    isRefreshing: pipelineData?.isRefreshing ?? false,
+    isDemoData: computed.isDemo,
+    error: pipelineData?.error ?? null,
+    lastRefresh: pipelineData?.lastRefresh ?? null,
+    refetch: pipelineData?.refetch ?? null,
+  }
 }
