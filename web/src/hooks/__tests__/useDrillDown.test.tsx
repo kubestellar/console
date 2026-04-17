@@ -224,6 +224,10 @@ describe('useDrillDownActions', () => {
     expect(typeof result.current.drillToAllClusters).toBe('function')
     expect(typeof result.current.drillToAllPods).toBe('function')
     expect(typeof result.current.drillToAllGPU).toBe('function')
+    // Navigation helpers
+    expect(typeof result.current.goBack).toBe('function')
+    expect(typeof result.current.closeDrillDown).toBe('function')
+    expect(result.current.canGoBack).toBe(false) // nothing open yet
   })
 
   it('does not throw when used outside provider', () => {
@@ -306,6 +310,64 @@ describe('useDrillDownActions', () => {
     })
 
     expect(result.current.drill.state.currentView?.title).toBe('All Clusters')
+  })
+
+  it('goBack pops the stack and canGoBack reflects depth', () => {
+    const { result } = renderHook(
+      () => ({ actions: useDrillDownActions(), drill: useDrillDown() }),
+      { wrapper }
+    )
+
+    // Initially canGoBack is false
+    expect(result.current.actions.canGoBack).toBe(false)
+
+    act(() => {
+      result.current.actions.drillToCluster('cluster-1')
+    })
+
+    // Single view: canGoBack is still false (nothing behind the root)
+    expect(result.current.actions.canGoBack).toBe(false)
+
+    act(() => {
+      result.current.actions.drillToNamespace('cluster-1', 'default')
+    })
+
+    // Two views: canGoBack is true
+    expect(result.current.actions.canGoBack).toBe(true)
+    expect(result.current.drill.state.stack).toHaveLength(2)
+
+    // goBack should pop to the first view
+    act(() => {
+      result.current.actions.goBack()
+    })
+
+    expect(result.current.drill.state.stack).toHaveLength(1)
+    expect(result.current.drill.state.currentView?.type).toBe('cluster')
+    expect(result.current.drill.state.isOpen).toBe(true)
+  })
+
+  it('closeDrillDown closes the modal entirely', () => {
+    const { result } = renderHook(
+      () => ({ actions: useDrillDownActions(), drill: useDrillDown() }),
+      { wrapper }
+    )
+
+    act(() => {
+      result.current.actions.drillToCluster('cluster-1')
+    })
+
+    act(() => {
+      result.current.actions.drillToNamespace('cluster-1', 'default')
+    })
+
+    expect(result.current.drill.state.stack).toHaveLength(2)
+
+    act(() => {
+      result.current.actions.closeDrillDown()
+    })
+
+    expect(result.current.drill.state.isOpen).toBe(false)
+    expect(result.current.drill.state.stack).toHaveLength(0)
   })
 
   it('navigates to existing view instead of duplicating', () => {

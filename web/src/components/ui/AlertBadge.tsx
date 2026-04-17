@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { Bell, AlertTriangle, CheckCircle, Clock, ChevronRight, X, Server, Search, ExternalLink, CheckSquare, Square, MinusSquare } from 'lucide-react'
 import { useAlerts } from '../../hooks/useAlerts'
-import { useDrillDown } from '../../hooks/useDrillDown'
+import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useMissions } from '../../hooks/useMissions'
 import { useMobile } from '../../hooks/useMobile'
 import { getSeverityIcon } from '../../types/alerts'
@@ -94,7 +94,7 @@ export function AlertBadge() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const { activeAlerts, stats, acknowledgeAlert, acknowledgeAlerts, runAIDiagnosis } = useAlerts()
-  const { open: openDrillDown } = useDrillDown()
+  const { drillToCluster } = useDrillDownActions()
   const { missions, setActiveMission, openSidebar } = useMissions()
   const { isMobile } = useMobile()
   const { isOpen, close, toggle } = useModalState()
@@ -179,10 +179,7 @@ export function AlertBadge() {
   const handleAlertClick = (alert: Alert) => {
     close()
     if (alert.cluster) {
-      openDrillDown({
-        type: 'cluster',
-        title: alert.cluster,
-        data: { cluster: alert.cluster, alert } })
+      drillToCluster(alert.cluster, { alert })
     }
   }
 

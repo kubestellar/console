@@ -86,6 +86,10 @@ interface DrillDownContextType {
   close: () => void
   // Replace current view
   replace: (view: DrillDownView) => void
+  // Open or push: opens if closed, pushes if open, navigates to existing
+  // if the view is already in the stack. Uses functional setState to
+  // guarantee the latest state is read, avoiding stale-closure bugs.
+  openOrPush: (view: DrillDownView) => void
 }
 
 const DrillDownContext = createContext<DrillDownContextType | null>(null)
@@ -154,11 +158,46 @@ export function DrillDownProvider({ children }: { children: ReactNode }) {
     })
   }, [])
 
+  // Open-or-push that reads state via functional setState to guarantee
+  // freshness even when the calling component hasn't re-rendered yet.
+  // This prevents the stale-closure bug where state.isOpen reads as false
+  // when the modal is actually open, which would reset the entire stack.
+  const openOrPushFn = useCallback((view: DrillDownView) => {
+    setState(prev => {
+      if (!prev.isOpen) {
+        emitDrillDownOpened(view.type)
+        return {
+          isOpen: true,
+          stack: [view],
+          currentView: view }
+      }
+
+      // Check if this view already exists in the stack
+      const viewKey = getViewKey(view)
+      const existingIndex = prev.stack.findIndex(v => getViewKey(v) === viewKey)
+
+      if (existingIndex >= 0) {
+        // Navigate to existing view instead of pushing duplicate
+        const newStack = prev.stack.slice(0, existingIndex + 1)
+        return {
+          ...prev,
+          stack: newStack,
+          currentView: newStack[newStack.length - 1] }
+      }
+
+      // Push new view onto the stack
+      return {
+        ...prev,
+        stack: [...prev.stack, view],
+        currentView: view }
+    })
+  }, [])
+
   // #6149 — Memoize the provider value so consumers don't re-render every
   // time DrillDownProvider itself re-renders for an unrelated reason.
   const contextValue = useMemo(
-    () => ({ state, open, push, pop, goTo, close, replace }),
-    [state, open, push, pop, goTo, close, replace]
+    () => ({ state, open, push, pop, goTo, close, replace, openOrPush: openOrPushFn }),
+    [state, open, push, pop, goTo, close, replace, openOrPushFn]
   )
 
   return (
@@ -279,38 +318,37 @@ function getViewKey(view: DrillDownView): string {
 }
 
 // Stable no-op functions used when DrillDownProvider is absent
-const _noopOpen = () => {}
-const _noopPush = () => {}
-const _noopGoTo = () => {}
+const _noop = () => {}
 const _noopState: DrillDownState = { isOpen: false, stack: [], currentView: null }
 
 // Helper hook to create drill-down actions
 export function useDrillDownActions() {
   const context = useContext(DrillDownContext)
   const state = context?.state ?? _noopState
-  const open = context?.open ?? _noopOpen
-  const push = context?.push ?? _noopPush
-  const goTo = context?.goTo ?? _noopGoTo
+  const pop = context?.pop ?? _noop
+  const close = context?.close ?? _noop
 
-  // Helper to navigate - checks if view already exists in stack
-  const openOrPush = (view: DrillDownView) => {
-    if (!context) return
-    if (!state.isOpen) {
-      open(view)
-      return
-    }
+  // Use the provider-level openOrPush which reads state via functional
+  // setState — immune to stale closures since it always sees the latest
+  // state, even when the calling component hasn't re-rendered yet.
+  const providerOpenOrPush = context?.openOrPush ?? _noop
 
-    // Check if this view already exists in the stack
-    const viewKey = getViewKey(view)
-    const existingIndex = state.stack.findIndex(v => getViewKey(v) === viewKey)
+  /** Whether the drill-down stack has a previous view to navigate back to */
+  const canGoBack = state.stack.length > 1
 
-    if (existingIndex >= 0) {
-      // Navigate to existing view instead of pushing duplicate
-      goTo(existingIndex)
-    } else {
-      push(view)
-    }
-  }
+  /** Navigate back one level in the drill-down stack. If at the root view,
+   *  closes the drill-down entirely. */
+  const goBack = useCallback(() => {
+    pop()
+  }, [pop])
+
+  /** Close the drill-down modal entirely, clearing the full stack. */
+  const closeDrillDown = useCallback(() => {
+    close()
+  }, [close])
+
+  // Delegate to provider-level openOrPush (stale-closure-safe)
+  const openOrPush = providerOpenOrPush
 
   const drillToCluster = (cluster: string, clusterData?: Record<string, unknown>) => {
     openOrPush({
@@ -751,5 +789,9 @@ export function useDrillDownActions() {
     drillToAllSecurity,
     drillToAllGPU,
     drillToAllStorage,
-    drillToAllJobs }
+    drillToAllJobs,
+    // Navigation helpers
+    goBack,
+    canGoBack,
+    closeDrillDown }
 }
