@@ -61,6 +61,8 @@ import type {
 import type { Workload } from './useWorkloads'
 import { fetchProwJobs } from './useCachedProw'
 import { fetchLLMdServers, fetchLLMdModels } from './useCachedLLMd'
+import { SecurityIssuesResponseSchema } from '../lib/schemas'
+import { validateResponse } from '../lib/schemas/validate'
 
 // ============================================================================
 // API Fetchers
@@ -1265,7 +1267,8 @@ export function useCachedSecurityIssues(
               Authorization: `Bearer ${token}` },
             signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
           if (response.ok) {
-            const data = await response.json().catch(() => null) as { issues: SecurityIssue[] } | null
+            const rawSecurity = await response.json().catch(() => null)
+            const data = validateResponse(SecurityIssuesResponseSchema, rawSecurity, '/security-issues')
             if (data?.issues && data.issues.length > 0) return data.issues
           }
         } catch (err) {
@@ -1674,7 +1677,8 @@ export const coreFetchers = {
           Authorization: `Bearer ${token}` },
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (response.ok) {
-        const data = await response.json().catch(() => null) as { issues: SecurityIssue[] } | null
+        const rawSecurity = await response.json().catch(() => null)
+        const data = validateResponse(SecurityIssuesResponseSchema, rawSecurity, '/security-issues (fallback)')
         if (data && data.issues && data.issues.length > 0) return data.issues
       }
     }

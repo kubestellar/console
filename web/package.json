@@ -80,7 +80,8 @@
     "remark-gfm": "^4.0.1",
     "sucrase": "^3.35.1",
     "tailwind-merge": "^3.5.0",
-    "three": "^0.183.2"
+    "three": "^0.183.2",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.10.0",

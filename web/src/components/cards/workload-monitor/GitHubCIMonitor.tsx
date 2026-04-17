@@ -13,6 +13,8 @@ import { useCardLoadingState } from '../CardDataContext'
 import { useCache } from '../../../lib/cache'
 import type { SortDirection } from '../../../lib/cards/cardHooks'
 import { useMissions } from '../../../hooks/useMissions'
+import { GitHubWorkflowRunsResponseSchema } from '../../../lib/schemas'
+import { validateResponse } from '../../../lib/schemas/validate'
 import { cn } from '../../../lib/cn'
 import { WorkloadMonitorAlerts } from './WorkloadMonitorAlerts'
 import type { MonitorIssue } from '../../../types/workloadMonitor'
@@ -131,7 +133,8 @@ export function GitHubCIMonitor({ config, ref }: GitHubCIMonitorProps & { ref?: 
           if (!response.ok) continue // Skip this repo on other errors
           // Use .catch() directly to prevent Firefox from firing unhandledrejection
           // before the outer try/catch processes the rejection (Firefox-specific timing issue).
-          const data = await response.json().catch(() => null) as { workflow_runs?: Record<string, unknown>[] } | null
+          const rawGH = await response.json().catch(() => null)
+          const data = validateResponse(GitHubWorkflowRunsResponseSchema, rawGH, `/api/github/repos/${repo}/actions/runs`)
           if (!data) continue
           const prFromCommit = /\(#(\d+)\)\s*$/
           const runs = (data.workflow_runs || []).map((run: Record<string, unknown>) => {

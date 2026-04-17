@@ -8,6 +8,8 @@ import { clearClusterCacheOnLogout } from '../hooks/mcp/shared'
 import { STORAGE_KEY_TOKEN, DEMO_TOKEN_VALUE, STORAGE_KEY_DEMO_MODE, STORAGE_KEY_ONBOARDED, STORAGE_KEY_USER_CACHE, STORAGE_KEY_HAS_SESSION, FETCH_DEFAULT_TIMEOUT_MS } from './constants'
 import { emitLogin, emitLogout, setAnalyticsUserId, setAnalyticsUserProperties, emitConversionStep, emitDeveloperSession } from './analytics'
 import { setDemoMode as setGlobalDemoMode } from './demoMode'
+import { AuthRefreshResponseSchema, UserSchema } from './schemas'
+import { validateResponse } from './schemas/validate'
 
 interface User {
   id: string
@@ -302,7 +304,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // we cannot read the token from JS — but the JWTAuth middleware
             // accepts the cookie on subsequent requests, so we can call
             // /api/me directly via cookie credentials to populate the user.
-            const data = await refreshResponse.json().catch(() => null) as { refreshed?: boolean } | null
+            const rawRefresh = await refreshResponse.json().catch(() => null)
+            const data = validateResponse(AuthRefreshResponseSchema, rawRefresh, '/auth/refresh')
             if (data?.refreshed) {
               try {
                 localStorage.setItem(STORAGE_KEY_HAS_SESSION, 'true')
@@ -314,7 +317,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
               })
               if (meResponse.ok) {
-                const userData = await meResponse.json().catch(() => null) as User | null
+                const rawUser = await meResponse.json().catch(() => null)
+                const userData = validateResponse(UserSchema, rawUser, '/api/me') as User | null
                 if (userData) {
                   setUser(userData)
                   cacheUser(userData)
@@ -400,7 +404,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         headers: { Authorization: `Bearer ${effectiveToken}` },
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (!meResponse.ok) throw new Error(`/api/me returned ${meResponse.status}`)
-      const userData = await meResponse.json().catch(() => null) as User | null
+      const rawMe = await meResponse.json().catch(() => null)
+      const userData = validateResponse(UserSchema, rawMe, '/api/me') as User | null
       if (!userData) throw new Error('Invalid JSON from /api/me')
       // #6149 — Avoid triggering an AuthProvider re-render cascade when the
       // background /api/me poll returns an identical user. Shallow-compare
