@@ -27,6 +27,20 @@ const DEFAULT_DURATION_SECS = 60 // Default condition duration in seconds
 const DEFAULT_TEMPERATURE_F = 100 // Default temperature threshold in Fahrenheit
 const DEFAULT_WIND_SPEED_MPH = 40 // Default wind speed threshold in mph
 
+/** Seconds per minute */
+const SECS_PER_MINUTE = 60
+/** Seconds per hour */
+const SECS_PER_HOUR = 3600
+
+/** Preset duration options shown as clickable chips in the rule editor */
+const DURATION_PRESETS = [
+  { label: 'Immediate', value: 0 },
+  { label: '1 min', value: SECS_PER_MINUTE },
+  { label: '5 min', value: 5 * SECS_PER_MINUTE },
+  { label: '15 min', value: 15 * SECS_PER_MINUTE },
+  { label: '1 hour', value: SECS_PER_HOUR },
+] as const
+
 interface AlertRuleEditorProps {
   isOpen?: boolean
   rule?: AlertRule // If editing existing rule
@@ -469,13 +483,7 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
                 Duration (seconds before alerting)
               </label>
               <div className="flex items-center gap-2 flex-wrap">
-                {[
-                  { label: 'Immediate', value: 0 },
-                  { label: '1 min', value: 60 },
-                  { label: '5 min', value: 300 },
-                  { label: '15 min', value: 900 },
-                  { label: '1 hour', value: 3600 },
-                ].map(preset => (
+                {DURATION_PRESETS.map(preset => (
                   <button
                     key={preset.value}
                     type="button"
