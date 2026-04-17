@@ -1,5 +1,5 @@
 /**
- * GPUTaintFilter — taint-aware GPU node filtering (issue #8172).
+ * GPUTaintFilter — taint-aware GPU node filtering (taint-filter feature).
  *
  * The GPU Utilization and GPU Inventory cards both count GPU capacity from a
  * list of {@link GPUNode}s. If a node carries a `NoSchedule` / `NoExecute`
@@ -232,7 +232,7 @@ export function GPUTaintFilterControl({
             ? 'bg-amber-500/20 border-amber-500/30 text-amber-400'
             : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
         }`}
-        title="Tolerate taints (issue #8172)"
+        title="Tolerate scheduling taints on GPU nodes"
         aria-label="Tolerate GPU node taints"
       >
         <Filter className="w-3 h-3" />

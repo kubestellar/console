@@ -62,7 +62,7 @@ export function GPUUtilization() {
   const [localClusterFilter, setLocalClusterFilter] = useState<string[]>([])
   const [showClusterFilter, setShowClusterFilter] = useState(false)
   const clusterFilterRef = useRef<HTMLDivElement>(null)
-  // Taint-aware filtering (#8172). Computed from the full raw node list so
+  // Taint-aware filtering (taint-filter). Computed from the full raw node list so
   // the set of distinct taints shown to the user is stable across cluster
   // filter changes — otherwise toggling a cluster off would "hide" a taint
   // that still exists in the fleet.
@@ -120,7 +120,7 @@ export function GPUUtilization() {
     if (localClusterFilter.length > 0) {
       result = result.filter(n => localClusterFilter.some(c => (n.cluster ?? '').startsWith(c)))
     }
-    // Drop nodes whose scheduling-gating taints are not tolerated (#8172).
+    // Drop nodes whose scheduling-gating taints are not tolerated (taint-filter).
     result = result.filter(nodeToleratedByTaints)
     return result
   })()

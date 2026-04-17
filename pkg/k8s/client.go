@@ -341,7 +341,7 @@ const (
 	AcceleratorXPU AcceleratorType = "XPU" // Intel XPU
 )
 
-// GPUTaint describes a scheduling-gating taint on a GPU node (issue #8172).
+// GPUTaint describes a scheduling-gating taint on a GPU node.
 // Only taint effects that actually gate pod scheduling (NoSchedule, NoExecute)
 // are surfaced — PreferNoSchedule is advisory and is intentionally omitted.
 type GPUTaint struct {
@@ -358,7 +358,7 @@ type GPUNode struct {
 	GPUCount        int             `json:"gpuCount"`                  // Number of accelerators
 	GPUAllocated    int             `json:"gpuAllocated"`              // Number of allocated accelerators
 	AcceleratorType AcceleratorType `json:"acceleratorType,omitempty"` // GPU, TPU, AIU, or XPU
-	// Scheduling-gating taints on the underlying node (issue #8172).
+	// Scheduling-gating taints on the underlying node.
 	// Empty when the node has no NoSchedule/NoExecute taints.
 	Taints []GPUTaint `json:"taints,omitempty"`
 	// Enhanced GPU info from NVIDIA GPU Feature Discovery

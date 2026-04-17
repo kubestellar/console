@@ -66,7 +66,7 @@ export function GPUInventory({ config }: GPUInventoryProps) {
     isDemoData: isDemoFallback,
   })
 
-  // Taint-aware filtering (#8172). Derived from the full raw list so the
+  // Taint-aware filtering (taint-filter). Derived from the full raw list so the
   // set of distinct taints shown in the UI is stable and the user can drill
   // down/up through search/cluster filters without tainted nodes vanishing
   // from the toleration picker.
@@ -115,7 +115,7 @@ export function GPUInventory({ config }: GPUInventoryProps) {
   // use a lightweight useMemo that mirrors the filter logic for aggregation.
   // Stats must reflect the taint-filtered view so the "Available" number on
   // the card matches what's actually schedulable under the current toleration
-  // set (#8172). Using `taintFilteredRawNodes` rather than `rawNodes` makes
+  // set (taint-filter). Using `taintFilteredRawNodes` rather than `rawNodes` makes
   // toggling a tolerance checkbox visibly recompute the totals.
   const stats = useMemo(() => {
     const totalGPUs = taintFilteredRawNodes.reduce((sum, n) => sum + n.gpuCount, 0)
@@ -191,7 +191,7 @@ export function GPUInventory({ config }: GPUInventoryProps) {
             minClusters={1}
           />
 
-          {/* Taint toleration picker (#8172) */}
+          {/* Taint toleration picker (taint-filter) */}
           <GPUTaintFilterControl
             distinctTaints={distinctTaints}
             toleratedKeys={toleratedTaintKeys}

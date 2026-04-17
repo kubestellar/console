@@ -261,7 +261,7 @@ func (m *MultiClusterClient) GetGPUNodes(ctx context.Context, contextName string
 		}
 
 		// Collect scheduling-gating taints so the UI can offer taint-aware
-		// filtering of "available" GPUs (issue #8172). Only NoSchedule and
+		// filtering of "available" GPUs. Only NoSchedule and
 		// NoExecute gate scheduling; PreferNoSchedule is advisory and is
 		// intentionally dropped here.
 		var nodeTaints []GPUTaint
