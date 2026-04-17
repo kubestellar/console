@@ -7,15 +7,23 @@ export type CriterionCategory =
   | 'observability'
   | 'governance'
   | 'self-tuning'
+  | 'prerequisite'
+  | 'learning'
+  | 'traceability'
 
 export interface DetectionHint {
   type: 'path' | 'glob' | 'any-of'
   pattern: string | string[]
 }
 
+/** Cross-cutting dimension — items tagged with this participate in the
+ *  cross-cutting overlay view regardless of their maturity level. */
+export type CrossCuttingDimension = 'learning' | 'traceability'
+
 export interface Criterion {
   id: string
   source: SourceId
+  /** Maturity level (0 = prerequisite, 1–6 = maturity levels). */
   level?: number
   category: CriterionCategory
   name: string
@@ -26,6 +34,12 @@ export interface Criterion {
   detection: DetectionHint
   referencePath?: string
   frequency?: string
+  /** Items without file-based detection show in the checklist but don't
+   *  affect the maturity score. Default: true. */
+  scannable?: boolean
+  /** Cross-cutting dimension — items tagged here are also shown in the
+   *  Learning & Feedback or Traceability & Audit overlay view. */
+  crossCutting?: CrossCuttingDimension
 }
 
 export interface LevelDef {

@@ -31,6 +31,9 @@ const VALID_CATEGORIES = [
   'observability',
   'governance',
   'self-tuning',
+  'prerequisite',
+  'learning',
+  'traceability',
 ] as const satisfies readonly CriterionCategory[]
 
 type _ExhaustiveCategories = Exclude<
@@ -126,25 +129,28 @@ describe('Each source is well-formed', () => {
 })
 
 describe('ACMM-specific invariants', () => {
-  it('every ACMM criterion has a level in 1..5', () => {
+  it('every ACMM criterion has a level in 0..6', () => {
     for (const c of acmmSource.criteria) {
       if (c.source === 'acmm') {
-        expect(c.level).toBeGreaterThanOrEqual(1)
-        expect(c.level).toBeLessThanOrEqual(5)
+        expect(c.level).toBeGreaterThanOrEqual(0)
+        expect(c.level).toBeLessThanOrEqual(6)
       }
     }
   })
 
-  it('acmm.levels defines 5 entries with n=1..5', () => {
-    expect(acmmSource.levels?.map(l => l.n)).toEqual([1, 2, 3, 4, 5])
+  it('acmm.levels defines 7 entries with n=0..6', () => {
+    expect(acmmSource.levels?.map(l => l.n)).toEqual([0, 1, 2, 3, 4, 5, 6])
   })
 
-  it('every level has a name, role, characteristic, and anti-pattern', () => {
+  it('every level has a name, characteristic, and anti-pattern', () => {
     for (const lvl of acmmSource.levels ?? []) {
       expect(lvl.name).toBeTruthy()
-      expect(lvl.role).toBeTruthy()
       expect(lvl.characteristic).toBeTruthy()
       expect(lvl.antiPattern).toBeTruthy()
+      // L0 (Prerequisites) has no role — all other levels do
+      if (lvl.n > 0) {
+        expect(lvl.role).toBeTruthy()
+      }
     }
   })
 })
