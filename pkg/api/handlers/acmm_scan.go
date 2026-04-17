@@ -309,7 +309,9 @@ func fetchACMMWeeklyActivity(ctx context.Context, repo, token string) []acmmWeek
 
 	result := make([]acmmWeeklyActivity, 0, len(weeks))
 	for _, w := range weeks {
-		result = append(result, *buckets[w])
+		if b := buckets[w]; b != nil {
+			result = append(result, *b)
+		}
 	}
 	return result
 }
