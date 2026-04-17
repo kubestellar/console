@@ -1,5 +1,5 @@
-import { lazy, Suspense, useEffect, useMemo } from 'react'
-import { AlertTriangle, ExternalLink, Settings } from 'lucide-react'
+import { lazy, Suspense, useEffect, useMemo, useState, useRef } from 'react'
+import { AlertTriangle, ExternalLink, Settings, Copy, Check, ChevronDown, ChevronRight, KeyRound, Monitor } from 'lucide-react'
 import { Github } from '@/lib/icons'
 import { Navigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../lib/auth'
@@ -9,12 +9,36 @@ import { useTranslation } from 'react-i18next'
 import { emitLogin } from '../../lib/analytics'
 import { LogoWithStar } from '../ui/LogoWithStar'
 import { useBranding } from '../../hooks/useBranding'
+import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
+import { copyToClipboard } from '../../lib/clipboard'
 
 // Lazy load the heavy Three.js globe animation
 const GlobeAnimation = lazy(() => import('../animations/globe').then(m => ({ default: m.GlobeAnimation })))
 
 // Apache 2.0 license is the project's effective terms; link opens in a new tab (#8376).
 const TERMS_OF_SERVICE_URL = 'https://github.com/kubestellar/console/blob/main/LICENSE'
+
+// GitHub Developer Settings URL for creating OAuth Apps.
+const GITHUB_DEVELOPER_SETTINGS_URL = 'https://github.com/settings/developers'
+
+// Default OAuth callback URL shown in the setup wizard steps.
+const DEFAULT_OAUTH_CALLBACK = 'http://localhost:8080/auth/github/callback'
+
+// Step-by-step instructions for creating a GitHub OAuth App.
+// Each step is rendered inline on the Login page when OAuth is not configured.
+const OAUTH_SETUP_STEPS = [
+  { label: 'Go to', link: GITHUB_DEVELOPER_SETTINGS_URL, linkText: 'GitHub Developer Settings' },
+  { label: 'Click "New OAuth App" and fill in:' },
+  { label: 'Application name:', value: 'KubeStellar Console' },
+  { label: 'Homepage URL:', value: 'http://localhost:8080' },
+  { label: 'Callback URL:', value: DEFAULT_OAUTH_CALLBACK },
+  { label: 'Click "Register application", then copy the Client ID and generate a Client Secret' },
+  { label: 'Create a .env file in the project root:', command: 'GITHUB_CLIENT_ID=<your-client-id>\nGITHUB_CLIENT_SECRET=<your-client-secret>' },
+  { label: 'Restart the console:', command: 'curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/start.sh | bash' },
+]
+
+// Note: OAUTH_SETUP_STEPS indices are used directly in handleCopyStep; the
+// restart step is at index 7 (last element) if analytics tracking needs it.
 
 /** Structured info displayed for each OAuth error code returned by the backend. */
 interface OAuthErrorEntry {
@@ -158,6 +182,27 @@ export function Login() {
     && !!branding.hostedDomain
     && window.location.hostname === branding.hostedDomain
 
+  // Track whether the backend is up but OAuth is not configured — when true,
+  // the Login page shows a setup wizard instead of silently falling into demo
+  // mode. This gives self-hosted users a clear "Sign in with GitHub" path
+  // (addresses kubestellar/kubestellar#3761).
+  const [showOAuthSetup, setShowOAuthSetup] = useState(false)
+  const [oauthSetupExpanded, setOauthSetupExpanded] = useState(false)
+  const [copiedStep, setCopiedStep] = useState<number | null>(null)
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+
+  // Cleanup copy-feedback timer on unmount.
+  useEffect(() => {
+    return () => clearTimeout(copiedTimerRef.current)
+  }, [])
+
+  const handleCopyStep = async (text: string, stepKey: number) => {
+    await copyToClipboard(text)
+    setCopiedStep(stepKey)
+    clearTimeout(copiedTimerRef.current)
+    copiedTimerRef.current = setTimeout(() => setCopiedStep(null), UI_FEEDBACK_TIMEOUT_MS)
+  }
+
   // Pre-compute random star positions so render stays pure (no Math.random() in JSX)
   const STAR_COUNT = 30
   const starStyles = Array.from({ length: STAR_COUNT }, () => ({
@@ -167,9 +212,12 @@ export function Login() {
       top: Math.random() * 100 + '%',
       animationDelay: Math.random() * 3 + 's' }))
 
-  // Auto-login for Netlify deploy previews, the hosted demo domain, or when
-  // the backend has no OAuth configured.
-  // Skip auto-login when there's an OAuth error so the user can see the troubleshooting info
+  // Auto-login for Netlify deploy previews and the hosted demo domain.
+  // When the backend is up but OAuth is NOT configured, show the login page
+  // with setup instructions instead of silently falling into demo mode — this
+  // gives self-hosted users a clear path to enable GitHub authentication
+  // (addresses kubestellar/kubestellar#3761).
+  // Skip auto-login when there's an OAuth error so the user can see the troubleshooting info.
   useEffect(() => {
     if (isLoading || isAuthenticated || oauthError) return
 
@@ -188,11 +236,12 @@ export function Login() {
       return
     }
 
-    // Binary quickstart without OAuth: auto-login to skip the login page
-    // (the backend will create a dev-user JWT automatically)
+    // When the backend is up but OAuth is not configured, show the login page
+    // with setup instructions rather than silently auto-logging in as a demo
+    // user. Users can still choose "Continue in Demo Mode" from the page.
     checkOAuthConfigured().then(({ backendUp, oauthConfigured }) => {
       if (backendUp && !oauthConfigured) {
-        emitLogin('auto-quickstart'); login()
+        setShowOAuthSetup(true)
       }
     }).catch(() => { /* checkOAuthConfigured always resolves — defensive catch */ })
   }, [isLoading, isAuthenticated, login, oauthError, branding.hostedDomain])
@@ -332,17 +381,150 @@ export function Login() {
             </div>
           )}
 
-          {/* GitHub login button */}
-          <button
-            data-testid="github-login-button"
-            onClick={() => { if (!isHostedDemoLogin) { emitLogin('github'); login() } }}
-            disabled={isHostedDemoLogin}
-            title={isHostedDemoLogin ? 'Not available in the hosted demo — self-host to enable GitHub OAuth' : undefined}
-            className="w-full flex items-center justify-center gap-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-medium py-3 px-4 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white dark:disabled:hover:bg-gray-800 disabled:hover:shadow-none"
-          >
-            <Github className="w-5 h-5" />
-            {t('login.continueWithGitHub')}
-          </button>
+          {/* OAuth not configured notice — shown when the backend is running
+              but no GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET are set. Gives
+              self-hosted users a clear path to enable GitHub sign-in instead
+              of silently falling into demo mode (#3761). */}
+          {showOAuthSetup && !oauthError && (
+            <div data-testid="oauth-setup-notice" className="mb-4 rounded-lg border border-blue-500/30 bg-blue-500/5 overflow-hidden">
+              <div className="px-4 py-3">
+                <div className="flex items-start gap-2.5">
+                  <KeyRound className="w-4 h-4 text-blue-400 mt-0.5 shrink-0" />
+                  <div className="text-xs">
+                    <div className="font-medium text-blue-300 mb-1">{t('login.oauthNotConfigured')}</div>
+                    <p className="text-blue-300/80 leading-relaxed">
+                      {t('login.oauthNotConfiguredDescription')}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Expandable setup wizard */}
+              <div className="px-4 pb-3">
+                <button
+                  onClick={() => setOauthSetupExpanded(!oauthSetupExpanded)}
+                  className="flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                >
+                  {oauthSetupExpanded ? (
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  ) : (
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  )}
+                  {t('login.showSetupSteps')}
+                </button>
+
+                {oauthSetupExpanded && (
+                  <div className="mt-2 space-y-2">
+                    {OAUTH_SETUP_STEPS.map((step, idx) => (
+                      <div key={idx} className="text-xs">
+                        {step.link ? (
+                          <span className="text-muted-foreground">
+                            {idx + 1}. {step.label}{' '}
+                            <a
+                              href={step.link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-400 hover:text-blue-300 underline"
+                            >
+                              {step.linkText}
+                            </a>
+                          </span>
+                        ) : step.value ? (
+                          <div className="flex items-center gap-2 ml-4">
+                            <span className="text-muted-foreground shrink-0">{step.label}</span>
+                            <code className="rounded bg-muted px-2 py-0.5 font-mono text-foreground select-all">
+                              {step.value}
+                            </code>
+                          </div>
+                        ) : step.command ? (
+                          <div className="ml-4 mt-1">
+                            <span className="text-muted-foreground">{idx + 1}. {step.label}</span>
+                            <div className="flex items-center gap-2 mt-1">
+                              <pre className="flex-1 rounded bg-muted px-3 py-1.5 font-mono text-foreground select-all overflow-x-auto whitespace-pre text-[11px]">
+                                {step.command}
+                              </pre>
+                              <button
+                                onClick={() => handleCopyStep(step.command, idx)}
+                                className="shrink-0 p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors self-start"
+                                title="Copy"
+                              >
+                                {copiedStep === idx ? (
+                                  <Check className="w-3.5 h-3.5 text-green-400" />
+                                ) : (
+                                  <Copy className="w-3.5 h-3.5" />
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">
+                            {idx + 1}. {step.label}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                    <div className="flex items-center gap-2 mt-3 pt-2 border-t border-border/30">
+                      <a
+                        href={GITHUB_DEVELOPER_SETTINGS_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-2.5 py-1.5 text-xs rounded border border-blue-500/30 text-blue-300 hover:bg-blue-500/10 transition-colors flex items-center gap-1.5"
+                      >
+                        <Settings className="w-3 h-3" />
+                        {t('login.openGitHubSettings')}
+                      </a>
+                      <a
+                        href={`${branding.repoUrl}#quick-start`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-2.5 py-1.5 text-xs rounded border border-blue-500/30 text-blue-300 hover:bg-blue-500/10 transition-colors flex items-center gap-1.5"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        {t('login.fullSetupGuide')}
+                      </a>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* GitHub login button — shown when OAuth IS configured */}
+          {!showOAuthSetup && (
+            <button
+              data-testid="github-login-button"
+              onClick={() => { if (!isHostedDemoLogin) { emitLogin('github'); login() } }}
+              disabled={isHostedDemoLogin}
+              title={isHostedDemoLogin ? 'Not available in the hosted demo — self-host to enable GitHub OAuth' : undefined}
+              className="w-full flex items-center justify-center gap-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-medium py-3 px-4 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white dark:disabled:hover:bg-gray-800 disabled:hover:shadow-none"
+            >
+              <Github className="w-5 h-5" />
+              {t('login.continueWithGitHub')}
+            </button>
+          )}
+
+          {/* Two-button layout when OAuth is not configured:
+              primary "Sign in with GitHub" (links to setup) + secondary "Demo Mode" */}
+          {showOAuthSetup && (
+            <div className="space-y-3">
+              <button
+                data-testid="github-login-button"
+                onClick={() => setOauthSetupExpanded(true)}
+                className="w-full flex items-center justify-center gap-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-medium py-3 px-4 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 hover:shadow-lg"
+              >
+                <Github className="w-5 h-5" />
+                {t('login.setupGitHubSignIn')}
+              </button>
+              <button
+                data-testid="demo-mode-button"
+                onClick={() => { emitLogin('demo-from-login'); login() }}
+                className="w-full flex items-center justify-center gap-3 text-muted-foreground font-medium py-2.5 px-4 rounded-lg border border-border/50 hover:bg-secondary/50 hover:text-foreground transition-all duration-200"
+              >
+                <Monitor className="w-4 h-4" />
+                {t('login.continueInDemoMode')}
+              </button>
+            </div>
+          )}
 
           {/* Footer */}
           <div className="text-center text-sm text-muted-foreground mt-8">

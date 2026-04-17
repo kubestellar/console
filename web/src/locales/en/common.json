@@ -3219,6 +3219,13 @@
     "welcomeBack": "Welcome back",
     "signInDescription": "Sign in to manage your multi-cluster deployments",
     "continueWithGitHub": "Continue with GitHub",
+    "setupGitHubSignIn": "Set up GitHub Sign-In",
+    "continueInDemoMode": "Continue in Demo Mode",
+    "oauthNotConfigured": "GitHub sign-in is not configured",
+    "oauthNotConfiguredDescription": "Set up a GitHub OAuth App to sign in with your GitHub identity. This takes about 2 minutes. You can also explore in demo mode first.",
+    "showSetupSteps": "Show setup instructions",
+    "openGitHubSettings": "GitHub OAuth Settings",
+    "fullSetupGuide": "Full Setup Guide",
     "termsOfServicePrefix": "By signing in, you agree to our",
     "termsOfServiceLink": "Terms of Service"
   },
