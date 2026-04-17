@@ -17,6 +17,7 @@ const TIPS: Record<string, string[]> = {
     'AI Missions can detect and fix issues across your entire fleet automatically.',
     'Use the global cluster filter to focus all dashboards on specific clusters.',
     'The search bar (Ctrl+K) finds clusters, pods, services, and settings instantly.',
+    'Found a bug? Open an issue — average time from issue to fix is 30 min. Feature requests ship in under 60 min.',
   ],
   clusters: [
     'You can drag cluster cards to reorder them on the dashboard.',

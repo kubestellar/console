@@ -156,15 +156,17 @@ export function WhatsNewModal({ isOpen, onClose }: WhatsNewModalProps) {
     }
   }, [installMethod])
 
-  if (!latestRelease) return null
+  // Developer channel: no release object, just a SHA diff. Show a
+  // minimal modal with the commit SHA instead of full release notes.
+  if (!latestRelease && !isOpen) return null
 
-  const relativeTime = formatRelativeTime(latestRelease.publishedAt)
+  const relativeTime = latestRelease ? formatRelativeTime(latestRelease.publishedAt) : 'just now'
 
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} size="lg">
       <BaseModal.Header
         title={t('update.whatsNew', "What's new in KubeStellar Console")}
-        description={`${latestRelease.tag} — released ${relativeTime}`}
+        description={latestRelease ? `${latestRelease.tag} — released ${relativeTime}` : `New commits available`}
         icon={Download}
         onClose={onClose}
       />
@@ -177,7 +179,7 @@ export function WhatsNewModal({ isOpen, onClose }: WhatsNewModalProps) {
               remarkPlugins={[remarkGfm, remarkBreaks]}
               components={markdownComponents}
             >
-              {latestRelease.releaseNotes || '*No release notes available.*'}
+              {latestRelease?.releaseNotes || '*No release notes available. Pull the latest commits to update.*'}
             </ReactMarkdown>
           </div>
 
@@ -250,7 +252,7 @@ export function WhatsNewModal({ isOpen, onClose }: WhatsNewModalProps) {
         </div>
       </BaseModal.Content>
 
-      <BaseModal.Footer>
+      <BaseModal.Footer showKeyboardHints={false}>
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-2">
             <button
