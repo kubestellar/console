@@ -177,6 +177,7 @@ jobs:
             -X POST http://127.0.0.1:8080/api/self-upgrade/trigger \
             -b "$COOKIE_JAR" \
             -H 'Content-Type: application/json' \
+            -H 'X-Requested-With: XMLHttpRequest' \
             -d '{"imageTag":"${{ env.TARGET_TAG }}"}')
           echo "HTTP $HTTP_CODE"
           cat /tmp/trigger_response.json | jq . 2>/dev/null || cat /tmp/trigger_response.json
