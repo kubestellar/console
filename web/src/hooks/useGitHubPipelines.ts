@@ -245,6 +245,7 @@ export const DEMO_FLOW: FlowPayload = {
         htmlUrl: '#',
         createdAt: new Date(Date.now() - 120_000).toISOString(),
         updatedAt: new Date().toISOString(),
+        pullRequests: [{ number: 8630, url: '#' }],
       },
       jobs: [
         {
@@ -291,6 +292,7 @@ export const DEMO_FAILURES: FailuresPayload = {
       createdAt: new Date(Date.now() - 3 * 86_400_000).toISOString(),
       durationMs: 612_000,
       failedStep: { jobId: 2, jobName: 'e2e', stepName: 'Run Playwright tests' },
+      pullRequests: [{ number: 8625, url: '#' }],
     },
     {
       repo: 'kubestellar/docs',
@@ -303,6 +305,7 @@ export const DEMO_FAILURES: FailuresPayload = {
       createdAt: new Date(Date.now() - 2 * 86_400_000).toISOString(),
       durationMs: 95_000,
       failedStep: { jobId: 3, jobName: 'build', stepName: 'Build MkDocs' },
+      pullRequests: [{ number: 1205, url: '#' }],
     },
   ],
 }

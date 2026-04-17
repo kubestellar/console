@@ -44,6 +44,8 @@ interface WorkflowRun {
   createdAt: string
   updatedAt: string
   url: string
+  prNumber?: number
+  prUrl?: string
 }
 
 type SortField = 'name' | 'status' | 'repo' | 'branch'
@@ -127,18 +129,38 @@ export function GitHubCIMonitor({ config, ref }: GitHubCIMonitorProps & { ref?: 
           // before the outer try/catch processes the rejection (Firefox-specific timing issue).
           const data = await response.json().catch(() => null) as { workflow_runs?: Record<string, unknown>[] } | null
           if (!data) continue
-          const runs = (data.workflow_runs || []).map((run: Record<string, unknown>) => ({
-            id: String(run.id),
-            name: run.name as string,
-            repo,
-            status: run.status as WorkflowRun['status'],
-            conclusion: run.conclusion as WorkflowRun['conclusion'],
-            branch: (run.head_branch || 'unknown') as string,
-            event: (run.event || 'unknown') as string,
-            runNumber: run.run_number as number,
-            createdAt: run.created_at as string,
-            updatedAt: run.updated_at as string,
-            url: (run.html_url || '#') as string }))
+          const prFromCommit = /\(#(\d+)\)\s*$/
+          const runs = (data.workflow_runs || []).map((run: Record<string, unknown>) => {
+            const prs = run.pull_requests as { number: number; url: string }[] | undefined
+            let prNumber: number | undefined
+            let prUrl: string | undefined
+            if (prs && prs.length > 0) {
+              prNumber = prs[0].number
+              prUrl = `https://github.com/${repo}/pull/${prs[0].number}`
+            } else if (run.event === 'push') {
+              const msg = (run.head_commit as { message?: string } | undefined)?.message ?? ''
+              const m = prFromCommit.exec(msg)
+              if (m) {
+                prNumber = parseInt(m[1], 10)
+                prUrl = `https://github.com/${repo}/pull/${m[1]}`
+              }
+            }
+            return {
+              id: String(run.id),
+              name: run.name as string,
+              repo,
+              status: run.status as WorkflowRun['status'],
+              conclusion: run.conclusion as WorkflowRun['conclusion'],
+              branch: (run.head_branch || 'unknown') as string,
+              event: (run.event || 'unknown') as string,
+              runNumber: run.run_number as number,
+              createdAt: run.created_at as string,
+              updatedAt: run.updated_at as string,
+              url: (run.html_url || '#') as string,
+              prNumber,
+              prUrl,
+            }
+          })
           allRuns.push(...runs)
         } catch {
           // Network error for this repo — skip it
@@ -448,6 +470,9 @@ export function GitHubCIMonitor({ config, ref }: GitHubCIMonitorProps & { ref?: 
                 <span className="text-xs text-foreground truncate block">{w.name}</span>
                 <span className="text-2xs text-muted-foreground truncate block">
                   {w.repo.split('/')[1]} · {w.branch}
+                  {w.prNumber && (
+                    <a href={w.prUrl || `https://github.com/${w.repo}/pull/${w.prNumber}`} target="_blank" rel="noopener noreferrer" className="ml-1 text-blue-400 hover:underline">#{w.prNumber}</a>
+                  )}
                 </span>
               </div>
               <span className={cn('text-2xs px-1 py-0.5 rounded shrink-0', badgeClass)}>

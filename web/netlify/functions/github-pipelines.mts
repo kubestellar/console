@@ -54,7 +54,7 @@ const FAILURES_OVERFETCH = 30;
 const LOG_TAIL_LINES = 500;
 
 /** How many workflow runs to pull per repo for the matrix view */
-const MATRIX_RUNS_PER_REPO = 100;
+const MATRIX_RUNS_PER_REPO = 500;
 
 /** How many in-progress/queued runs to pull per repo for the flow view */
 const FLOW_MAX_RUNS_PER_REPO = 8;
@@ -94,6 +94,9 @@ const RELEASE_OVERFETCH = 10;
 
 /** Matches nightly release tags like "v0.3.21-nightly.20260417" */
 const NIGHTLY_TAG_RE = /nightly/i;
+
+/** Extracts PR number from merge-commit messages like "feat: something (#8673)" */
+const PR_FROM_COMMIT_RE = /\(#(\d+)\)\s*$/;
 
 /** ms per day — used in matrix date math */
 const MS_PER_DAY = 86_400_000;
@@ -235,11 +238,24 @@ function dayKey(iso: string): string {
 
 /** Map GitHub's workflow_run shape to our WorkflowRun type */
 function normalizeRun(r: Record<string, unknown>, repo: string): WorkflowRun {
-  const rawPRs = Array.isArray(r.pull_requests)
+  let rawPRs = Array.isArray(r.pull_requests)
     ? (r.pull_requests as Array<{ number?: number; url?: string }>)
       .filter((pr) => typeof pr.number === "number")
       .map((pr) => ({ number: pr.number!, url: String(pr.url ?? "") }))
     : undefined;
+  // For push events (merge commits), the pull_requests array is empty.
+  // Extract the PR number from the commit message pattern "feat: … (#1234)".
+  if ((!rawPRs || rawPRs.length === 0) && r.event === "push") {
+    const headCommit = r.head_commit as { message?: string } | undefined;
+    const msg = headCommit?.message ?? "";
+    const m = PR_FROM_COMMIT_RE.exec(msg);
+    if (m) {
+      const num = Number(m[1]);
+      if (num > 0) {
+        rawPRs = [{ number: num, url: `https://github.com/${repo}/pull/${num}` }];
+      }
+    }
+  }
   return {
     id: Number(r.id),
     repo,
@@ -488,18 +504,29 @@ async function buildMatrix(
 ): Promise<MatrixPayload> {
   const targetRepos = repoFilter && isValidRepo(repoFilter) ? [repoFilter] : (REPOS as readonly string[]);
 
-  // Fetch fresh runs per repo
+  // Fetch fresh runs per repo with pagination (GitHub caps per_page at 100)
+  const MAX_PER_PAGE = 100;
+  const MAX_PAGES = 5;
   const freshRuns: WorkflowRun[] = [];
   for (const repo of targetRepos) {
     try {
-      const res = await gh(
-        `/repos/${repo}/actions/runs?per_page=${MATRIX_RUNS_PER_REPO}`,
-        token
-      );
-      if (!res.ok) continue;
-      const data = (await res.json()) as { workflow_runs: Array<Record<string, unknown>> };
-      for (const r of data.workflow_runs ?? []) {
-        freshRuns.push(normalizeRun(r, repo));
+      let fetched = 0;
+      const pages = Math.min(Math.ceil(MATRIX_RUNS_PER_REPO / MAX_PER_PAGE), MAX_PAGES);
+      for (let page = 1; page <= pages; page++) {
+        const res = await gh(
+          `/repos/${repo}/actions/runs?per_page=${MAX_PER_PAGE}&page=${page}`,
+          token
+        );
+        if (!res.ok) break;
+        const data = (await res.json()) as { workflow_runs: Array<Record<string, unknown>> };
+        const runs = data.workflow_runs ?? [];
+        for (const r of runs) {
+          freshRuns.push(normalizeRun(r, repo));
+        }
+        fetched += runs.length;
+        // Stop early if fewer results than page size (no more pages)
+        if (runs.length < MAX_PER_PAGE) break;
+        if (fetched >= MATRIX_RUNS_PER_REPO) break;
       }
     } catch {
       // Per-repo fetch failures shouldn't nuke the whole matrix

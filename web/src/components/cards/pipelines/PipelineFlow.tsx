@@ -199,9 +199,9 @@ function RunRow({ run, onCancel, canMutate, mutating }: RunRowProps) {
       )}>
         {run.run.event}
         {(run.run.pullRequests?.length ?? 0) > 0 && (
-          <div className="text-[10px] text-muted-foreground mt-0.5">
+          <a href={run.run.pullRequests![0].url || `https://github.com/${run.run.repo}/pull/${run.run.pullRequests![0].number}`} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-400 hover:underline mt-0.5 block">
             #{run.run.pullRequests![0].number}
-          </div>
+          </a>
         )}
       </div>
 
@@ -214,7 +214,7 @@ function RunRow({ run, onCancel, canMutate, mutating }: RunRowProps) {
         <div className="text-[10px] text-muted-foreground truncate">
           {run.run.headBranch}
           {(run.run.pullRequests?.length ?? 0) > 0 && (
-            <span className="ml-1 text-blue-400">#{run.run.pullRequests![0].number}</span>
+            <a href={run.run.pullRequests![0].url || `https://github.com/${run.run.repo}/pull/${run.run.pullRequests![0].number}`} target="_blank" rel="noopener noreferrer" className="ml-1 text-blue-400 hover:underline">#{run.run.pullRequests![0].number}</a>
           )}
         </div>
       </div>
@@ -266,7 +266,9 @@ function RunRow({ run, onCancel, canMutate, mutating }: RunRowProps) {
         })}
       </div>
 
-      <div className="absolute top-2 right-2 z-20 flex items-center gap-1">
+      {/* Actions — inline at the end of the steps column so they don't
+           get clipped by the card's overflow-auto scroll container. */}
+      <div className="relative z-20 flex items-center gap-1 justify-end pt-1">
         <a
           href={run.run.htmlUrl}
           target="_blank"

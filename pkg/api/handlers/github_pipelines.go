@@ -38,7 +38,7 @@ const (
 	ghpFailuresLimit         = 10
 	ghpFailuresOverfetch     = 30
 	ghpLogTailLines          = 500
-	ghpMatrixRunsPerRepo     = 100
+	ghpMatrixRunsPerRepo     = 500
 	ghpFlowMaxRunsPerRepo    = 8
 	ghpPulseWindowDays       = 14
 	ghpGitHubAPIBase         = "https://api.github.com"
@@ -93,6 +93,10 @@ var ghpValidRepoPattern = regexp.MustCompile(`^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$`
 
 // ghpNightlyTagRe matches nightly release tags like "v0.3.21-nightly.20260417".
 var ghpNightlyTagRe = regexp.MustCompile(`(?i)nightly`)
+
+// ghpPRFromCommitRe extracts a PR number from merge-commit messages like
+// "feat: something (#8673)".
+var ghpPRFromCommitRe = regexp.MustCompile(`\(#(\d+)\)\s*$`)
 
 func ghpIsAllowedRepo(repo string) bool {
 	// Accept any valid owner/repo slug — the GitHub token's permissions
@@ -505,12 +509,28 @@ type workflowRunRaw struct {
 		Number int    `json:"number"`
 		URL    string `json:"url"`
 	} `json:"pull_requests"`
+	HeadCommit struct {
+		Message string `json:"message"`
+	} `json:"head_commit"`
 }
 
 func normalizeRunRaw(r workflowRunRaw, repo string) ghpWorkflowRun {
 	var prs []ghpPullRequestRef
 	for _, pr := range r.PullRequests {
 		prs = append(prs, ghpPullRequestRef{Number: pr.Number, URL: pr.URL})
+	}
+	// For push events (merge commits), the pull_requests array is empty.
+	// Extract the PR number from the commit message pattern "feat: … (#1234)".
+	if len(prs) == 0 && r.Event == "push" && r.HeadCommit.Message != "" {
+		if m := ghpPRFromCommitRe.FindStringSubmatch(r.HeadCommit.Message); len(m) > 1 {
+			n, _ := strconv.Atoi(m[1])
+			if n > 0 {
+				prs = append(prs, ghpPullRequestRef{
+					Number: n,
+					URL:    fmt.Sprintf("https://github.com/%s/pull/%d", repo, n),
+				})
+			}
+		}
 	}
 	return ghpWorkflowRun{
 		ID:           r.ID,
@@ -529,28 +549,75 @@ func normalizeRunRaw(r workflowRunRaw, repo string) ghpWorkflowRun {
 	}
 }
 
+// ghpMaxPerPage is the GitHub API maximum for per_page.
+const ghpMaxPerPage = 100
+
+// ghpMaxPages caps pagination depth to avoid runaway API calls.
+const ghpMaxPages = 5
+
 func (h *GitHubPipelinesHandler) fetchRuns(ctx context.Context, repo, query string) ([]ghpWorkflowRun, error) {
-	res, err := h.ghGet(ctx, fmt.Sprintf("/repos/%s/actions/runs?%s", repo, query))
-	if err != nil {
-		return nil, err
+	// Parse per_page from the query string to determine the desired total.
+	// GitHub caps per_page at 100, so we paginate if the caller asks for more.
+	desired := ghpMaxPerPage
+	parts := strings.Split(query, "&")
+	baseParams := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if strings.HasPrefix(p, "per_page=") {
+			n, err := strconv.Atoi(strings.TrimPrefix(p, "per_page="))
+			if err == nil && n > 0 {
+				desired = n
+			}
+		} else {
+			baseParams = append(baseParams, p)
+		}
 	}
-	defer res.Body.Close()
-	if res.StatusCode == http.StatusNotFound {
-		return nil, nil
+	pageSize := desired
+	if pageSize > ghpMaxPerPage {
+		pageSize = ghpMaxPerPage
 	}
-	if res.StatusCode >= 400 {
-		body, _ := io.ReadAll(io.LimitReader(res.Body, ghpMaxErrorBodyBytes))
-		return nil, fmt.Errorf("github %d: %s", res.StatusCode, string(body))
+	maxPages := (desired + pageSize - 1) / pageSize
+	if maxPages > ghpMaxPages {
+		maxPages = ghpMaxPages
 	}
-	var data struct {
-		WorkflowRuns []workflowRunRaw `json:"workflow_runs"`
+	baseQuery := strings.Join(baseParams, "&")
+	if baseQuery != "" {
+		baseQuery += "&"
 	}
-	if err := json.NewDecoder(res.Body).Decode(&data); err != nil {
-		return nil, err
-	}
-	out := make([]ghpWorkflowRun, 0, len(data.WorkflowRuns))
-	for _, r := range data.WorkflowRuns {
-		out = append(out, normalizeRunRaw(r, repo))
+
+	var out []ghpWorkflowRun
+	for page := 1; page <= maxPages; page++ {
+		pageQuery := fmt.Sprintf("%sper_page=%d&page=%d", baseQuery, pageSize, page)
+		res, err := h.ghGet(ctx, fmt.Sprintf("/repos/%s/actions/runs?%s", repo, pageQuery))
+		if err != nil {
+			return out, err
+		}
+		if res.StatusCode == http.StatusNotFound {
+			res.Body.Close()
+			return out, nil
+		}
+		if res.StatusCode >= 400 {
+			body, _ := io.ReadAll(io.LimitReader(res.Body, ghpMaxErrorBodyBytes))
+			res.Body.Close()
+			return out, fmt.Errorf("github %d: %s", res.StatusCode, string(body))
+		}
+		var data struct {
+			WorkflowRuns []workflowRunRaw `json:"workflow_runs"`
+		}
+		if err := json.NewDecoder(res.Body).Decode(&data); err != nil {
+			res.Body.Close()
+			return out, err
+		}
+		res.Body.Close()
+		for _, r := range data.WorkflowRuns {
+			out = append(out, normalizeRunRaw(r, repo))
+		}
+		// Stop early if this page returned fewer than pageSize (no more pages)
+		if len(data.WorkflowRuns) < pageSize {
+			break
+		}
+		if len(out) >= desired {
+			break
+		}
 	}
 	return out, nil
 }

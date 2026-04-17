@@ -152,7 +152,7 @@ export function RecentFailures() {
                   <td className="py-1.5 pr-2 text-muted-foreground truncate max-w-[120px]" title={r.branch}>
                     {r.branch}
                     {(r.pullRequests?.length ?? 0) > 0 && (
-                      <span className="ml-1 text-blue-400">#{r.pullRequests![0].number}</span>
+                      <a href={r.pullRequests![0].url || `https://github.com/${r.repo}/pull/${r.pullRequests![0].number}`} target="_blank" rel="noopener noreferrer" className="ml-1 text-blue-400 hover:underline">#{r.pullRequests![0].number}</a>
                     )}
                   </td>
                   <td className="py-1.5 pr-2 text-muted-foreground whitespace-nowrap">
