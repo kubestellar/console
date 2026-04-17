@@ -332,10 +332,71 @@ async function fetchView<T>(params: URLSearchParams): Promise<T> {
 }
 
 // ---------------------------------------------------------------------------
-// Hooks — one per view
+// Unified payload — returned by view=all, consumed by PipelineDataContext
 // ---------------------------------------------------------------------------
 
-export function usePipelinePulse(repo: string | null) {
+export interface UnifiedPipelinePayload {
+  pulse: PulsePayload | null
+  matrix: MatrixPayload | null
+  failures: FailuresPayload | null
+  flow: FlowPayload | null
+}
+
+/** Shared data shape exposed via PipelineDataContext to all pipeline cards. */
+export interface UnifiedPipelineData {
+  pulse: PulsePayload
+  matrix: MatrixPayload
+  failures: FailuresPayload
+  flow: FlowPayload
+  isLoading: boolean
+  isRefreshing: boolean
+  error: string | null
+  isFailed: boolean
+  lastRefresh: number | null
+  refetch: () => Promise<void>
+}
+
+// ---------------------------------------------------------------------------
+// Hooks — unified + per-view
+// ---------------------------------------------------------------------------
+
+/** Matrix days default for the unified fetch — matches the default individual hooks use. */
+const UNIFIED_MATRIX_DAYS = 14
+
+/**
+ * useUnifiedPipelineData — fetches all four pipeline views in one request.
+ * Used by PipelineDataProvider on the CI/CD dashboard so cards share data.
+ */
+export function useUnifiedPipelineData(repo: string | null, days: number = UNIFIED_MATRIX_DAYS) {
+  const demoMatrix = days === DEMO_MATRIX_DAYS ? DEMO_MATRIX : buildDemoMatrix(days)
+  const initialData: UnifiedPipelinePayload = {
+    pulse: DEMO_PULSE,
+    matrix: demoMatrix,
+    failures: DEMO_FAILURES,
+    flow: DEMO_FLOW,
+  }
+  return useCache<UnifiedPipelinePayload>({
+    key: `gh-pipelines-all:${repo ?? 'all'}:${days}`,
+    category: 'default',
+    refreshInterval: DEFAULT_POLL_MS,
+    initialData,
+    demoData: initialData,
+    liveInDemoMode: true,
+    fetcher: () => {
+      const p = new URLSearchParams({ view: 'all', days: String(days) })
+      if (repo) p.set('repo', repo)
+      return fetchView<UnifiedPipelinePayload>(p)
+    },
+  })
+}
+
+/**
+ * Individual view hooks. Each accepts an optional `enabled` flag (default true).
+ * When the card is inside a PipelineDataProvider, it passes `enabled: false` to
+ * suppress the individual fetch and reads shared data from the context instead.
+ */
+
+export function usePipelinePulse(repo: string | null, enabled = true) {
   return useCache<PulsePayload>({
     key: `gh-pipelines-pulse:${repo ?? 'all'}`,
     category: 'default',
@@ -343,6 +404,7 @@ export function usePipelinePulse(repo: string | null) {
     initialData: DEMO_PULSE,
     demoData: DEMO_PULSE,
     liveInDemoMode: true,
+    enabled,
     fetcher: () => {
       const p = new URLSearchParams({ view: 'pulse' })
       if (repo) p.set('repo', repo)
@@ -351,7 +413,7 @@ export function usePipelinePulse(repo: string | null) {
   })
 }
 
-export function usePipelineMatrix(repo: string | null, days: number) {
+export function usePipelineMatrix(repo: string | null, days: number, enabled = true) {
   const demo = days === DEMO_MATRIX_DAYS ? DEMO_MATRIX : buildDemoMatrix(days)
   return useCache<MatrixPayload>({
     key: `gh-pipelines-matrix:${repo ?? 'all'}:${days}`,
@@ -360,6 +422,7 @@ export function usePipelineMatrix(repo: string | null, days: number) {
     initialData: demo,
     demoData: demo,
     liveInDemoMode: true,
+    enabled,
     fetcher: () => {
       const p = new URLSearchParams({ view: 'matrix', days: String(days) })
       if (repo) p.set('repo', repo)
@@ -368,7 +431,7 @@ export function usePipelineMatrix(repo: string | null, days: number) {
   })
 }
 
-export function usePipelineFlow(repo: string | null) {
+export function usePipelineFlow(repo: string | null, enabled = true) {
   return useCache<FlowPayload>({
     key: `gh-pipelines-flow:${repo ?? 'all'}`,
     category: 'default',
@@ -376,6 +439,7 @@ export function usePipelineFlow(repo: string | null) {
     initialData: DEMO_FLOW,
     demoData: DEMO_FLOW,
     liveInDemoMode: true,
+    enabled,
     fetcher: () => {
       const p = new URLSearchParams({ view: 'flow' })
       if (repo) p.set('repo', repo)
@@ -384,7 +448,7 @@ export function usePipelineFlow(repo: string | null) {
   })
 }
 
-export function usePipelineFailures(repo: string | null) {
+export function usePipelineFailures(repo: string | null, enabled = true) {
   return useCache<FailuresPayload>({
     key: `gh-pipelines-failures:${repo ?? 'all'}`,
     category: 'default',
@@ -392,6 +456,7 @@ export function usePipelineFailures(repo: string | null) {
     initialData: DEMO_FAILURES,
     demoData: DEMO_FAILURES,
     liveInDemoMode: true,
+    enabled,
     fetcher: () => {
       const p = new URLSearchParams({ view: 'failures' })
       if (repo) p.set('repo', repo)

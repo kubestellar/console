@@ -26,6 +26,7 @@ import {
   type Conclusion,
 } from '../../../hooks/useGitHubPipelines'
 import { usePipelineFilter } from './PipelineFilterContext'
+import { usePipelineData } from './PipelineDataContext'
 import { RepoSubtitle } from './RepoSubtitle'
 import { EmbedButton } from './EmbedButton'
 import { cn } from '../../../lib/cn'
@@ -329,7 +330,15 @@ export function PipelineFlow() {
   const repos = shared?.repos ?? getPipelineRepos()
   const [mutating, setMutating] = useState<number | null>(null)
   const [mutationMsg, setMutationMsg] = useState<string | null>(null)
-  const { data, isLoading, error, refetch } = usePipelineFlow(repoFilter)
+  // Prefer shared unified data; fall back to individual fetch when standalone.
+  const unifiedData = usePipelineData()
+  const hasUnified = !!unifiedData
+  const individual = usePipelineFlow(repoFilter, !hasUnified)
+
+  const data = hasUnified ? unifiedData.flow : individual.data
+  const isLoading = hasUnified ? unifiedData.isLoading : individual.isLoading
+  const error = hasUnified ? unifiedData.error : individual.error
+  const refetch = hasUnified ? unifiedData.refetch : individual.refetch
   const { run: runMutation } = usePipelineMutations()
   const { isDemoMode } = useDemoMode()
 

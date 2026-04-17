@@ -5,7 +5,7 @@ import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
 import { RotatingTip } from '../ui/RotatingTip'
-import { PipelineFilterProvider, PipelineFilterBar } from '../cards/pipelines'
+import { PipelineFilterProvider, PipelineDataProvider, PipelineFilterBar } from '../cards/pipelines'
 
 const CICD_CARDS_KEY = 'kubestellar-cicd-cards'
 
@@ -83,6 +83,7 @@ export function CICD() {
 
   return (
     <PipelineFilterProvider>
+    <PipelineDataProvider>
       <DashboardPage
         title="CI/CD"
         subtitle="Monitor continuous integration and deployment pipelines"
@@ -110,6 +111,7 @@ export function CICD() {
           </div>
         )}
       </DashboardPage>
+    </PipelineDataProvider>
     </PipelineFilterProvider>
   )
 }

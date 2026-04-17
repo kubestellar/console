@@ -25,6 +25,7 @@ import {
   type Conclusion,
 } from '../../../hooks/useGitHubPipelines'
 import { usePipelineFilter } from './PipelineFilterContext'
+import { usePipelineData } from './PipelineDataContext'
 import { RepoSubtitle } from './RepoSubtitle'
 import { EmbedButton } from './EmbedButton'
 import { cn } from '../../../lib/cn'
@@ -255,8 +256,19 @@ export function NightlyReleasePulse() {
     ? shared.repoFilter
     : standaloneRepo.includes('/') ? standaloneRepo.trim() : null
 
-  const { data: pulseData, isLoading: pulseLoading, error: pulseError, refetch } = usePipelinePulse(effectiveRepoFilter)
-  const { data: matrixData, isLoading: matrixLoading } = usePipelineMatrix(effectiveRepoFilter, MATRIX_DAYS)
+  // Prefer shared unified data from PipelineDataProvider (one fetch for all cards).
+  // Fall back to individual fetches when rendered outside the CI/CD dashboard.
+  const unifiedData = usePipelineData()
+  const hasUnified = !!unifiedData
+  const individualPulse = usePipelinePulse(effectiveRepoFilter, !hasUnified)
+  const individualMatrix = usePipelineMatrix(effectiveRepoFilter, MATRIX_DAYS, !hasUnified)
+
+  const pulseData = hasUnified ? unifiedData.pulse : individualPulse.data
+  const pulseLoading = hasUnified ? unifiedData.isLoading : individualPulse.isLoading
+  const pulseError = hasUnified ? unifiedData.error : individualPulse.error
+  const refetch = hasUnified ? unifiedData.refetch : individualPulse.refetch
+  const matrixData = hasUnified ? unifiedData.matrix : individualMatrix.data
+  const matrixLoading = hasUnified ? unifiedData.isLoading : individualMatrix.isLoading
   const { isDemoMode } = useDemoMode()
 
   const hasData = !!pulseData?.lastRun || (matrixData?.workflows?.length ?? 0) > 0

@@ -904,6 +904,26 @@ export default async (req: Request): Promise<Response> => {
       case "failures":
         payload = await buildFailures(token, url.searchParams.get("repo"));
         break;
+      case "all": {
+        // Unified fetch — builds all four views in parallel so the CI/CD
+        // dashboard makes one request instead of four.
+        const repoFilter = url.searchParams.get("repo");
+        const daysRaw = parseInt(url.searchParams.get("days") ?? String(MATRIX_DEFAULT_DAYS), 10);
+        const days = Math.min(Math.max(1, daysRaw || MATRIX_DEFAULT_DAYS), MATRIX_MAX_DAYS);
+        const [pulse, matrix, flow, failures] = await Promise.allSettled([
+          buildPulse(store, token, repoFilter),
+          buildMatrix(store, token, days, repoFilter),
+          buildFlow(token, repoFilter),
+          buildFailures(token, repoFilter),
+        ]);
+        payload = {
+          pulse: pulse.status === "fulfilled" ? pulse.value : null,
+          matrix: matrix.status === "fulfilled" ? matrix.value : null,
+          flow: flow.status === "fulfilled" ? flow.value : null,
+          failures: failures.status === "fulfilled" ? failures.value : null,
+        };
+        break;
+      }
       case "log": {
         const repo = url.searchParams.get("repo") ?? "";
         const job = url.searchParams.get("job") ?? "";

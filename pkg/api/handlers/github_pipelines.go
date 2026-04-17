@@ -394,6 +394,8 @@ func (h *GitHubPipelinesHandler) Serve(c *fiber.Ctx) error {
 		return h.serveCached(c, h.cacheKey(c), h.buildFlowFromQuery)
 	case "failures":
 		return h.serveCached(c, h.cacheKey(c), h.buildFailuresFromQuery)
+	case "all":
+		return h.serveCached(c, h.cacheKey(c), h.buildAll)
 	case "log":
 		return h.handleLog(c)
 	default:
@@ -1081,6 +1083,40 @@ func (h *GitHubPipelinesHandler) buildFailuresFromQuery(c *fiber.Ctx) (any, erro
 		}
 	}
 	return ghpFailuresPayload{Runs: rows}, nil
+}
+
+// ---------------------------------------------------------------------------
+// All (unified) — combines pulse, matrix, failures, and flow into one response
+// so the CI/CD dashboard makes one fetch instead of four.
+// ---------------------------------------------------------------------------
+
+// ghpAllPayload bundles all four pipeline views into a single response.
+type ghpAllPayload struct {
+	Pulse    any `json:"pulse"`
+	Matrix   any `json:"matrix"`
+	Failures any `json:"failures"`
+	Flow     any `json:"flow"`
+}
+
+func (h *GitHubPipelinesHandler) buildAll(c *fiber.Ctx) (any, error) {
+	pulse, pulseErr := h.buildPulse(c)
+	matrix, matrixErr := h.buildMatrixFromQuery(c)
+	failures, failuresErr := h.buildFailuresFromQuery(c)
+	flow, flowErr := h.buildFlowFromQuery(c)
+
+	// Return whatever succeeded — partial data is better than no data.
+	// Individual view errors are logged but don't fail the whole response.
+	if pulseErr != nil && matrixErr != nil && failuresErr != nil && flowErr != nil {
+		return nil, fmt.Errorf("all views failed: pulse=%v, matrix=%v, failures=%v, flow=%v",
+			pulseErr, matrixErr, failuresErr, flowErr)
+	}
+
+	return ghpAllPayload{
+		Pulse:    pulse,
+		Matrix:   matrix,
+		Failures: failures,
+		Flow:     flow,
+	}, nil
 }
 
 // ---------------------------------------------------------------------------

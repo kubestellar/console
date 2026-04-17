@@ -13,6 +13,7 @@ import { useDemoMode } from '../../../hooks/useDemoMode'
 import { useCardLoadingState } from '../CardDataContext'
 import { usePipelineMatrix, getPipelineRepos, type Conclusion } from '../../../hooks/useGitHubPipelines'
 import { usePipelineFilter } from './PipelineFilterContext'
+import { usePipelineData } from './PipelineDataContext'
 import { RepoSubtitle } from './RepoSubtitle'
 import { EmbedButton } from './EmbedButton'
 import { cn } from '../../../lib/cn'
@@ -58,7 +59,14 @@ export function WorkflowMatrix() {
   const setRepoFilter = shared?.setRepoFilter ?? setLocalRepoFilter
   const repos = shared?.repos ?? getPipelineRepos()
 
-  const { data, isLoading, error } = usePipelineMatrix(repoFilter, days)
+  // Prefer shared unified data; fall back to individual fetch when standalone.
+  const unifiedData = usePipelineData()
+  const hasUnified = !!unifiedData
+  const individual = usePipelineMatrix(repoFilter, days, !hasUnified)
+
+  const data = hasUnified ? unifiedData.matrix : individual.data
+  const isLoading = hasUnified ? unifiedData.isLoading : individual.isLoading
+  const error = hasUnified ? unifiedData.error : individual.error
   const { isDemoMode } = useDemoMode()
   const hasData = (data?.workflows?.length ?? 0) > 0
   useCardLoadingState({ isLoading: isLoading && !hasData, hasAnyData: hasData, isDemoData: isDemoMode })
