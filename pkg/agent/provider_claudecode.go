@@ -254,13 +254,15 @@ func (c *ClaudeCodeProvider) StreamChatWithProgress(ctx context.Context, req *Ch
 	// Build command with streaming JSON output
 	// -p (print mode) is required for stream-json
 	// --verbose is required for stream-json in print mode
-	// --allowedTools restricts tool access to Bash and Read only (no Write/Edit)
+	// --allowedTools grants the tools missions need: file I/O for creating
+	// feedback loops (AGENTS.md, workflows) and search for code exploration.
+	// Bash covers git, gh CLI, and shell commands for PR creation.
 	// --max-turns limits agentic loops (workaround for CLI bug with duplicate tool_use IDs)
 	args := []string{
 		"-p",
 		"--output-format", "stream-json",
 		"--verbose",
-		"--allowedTools", "Bash,Read",
+		"--allowedTools", "Bash,Read,Write,Edit,Glob,Grep",
 		"--max-turns", "25",
 		fullPrompt,
 	}
