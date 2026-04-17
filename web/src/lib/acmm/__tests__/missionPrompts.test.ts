@@ -87,7 +87,7 @@ describe('allRecommendationsPrompt', () => {
     expect(prompt).toContain('1. Test suite')
     expect(prompt).toContain('2. Coverage gate')
     expect(prompt).toContain('org/repo')
-    expect(prompt).toContain('Do not push or open a PR automatically')
+    expect(prompt).toContain('Should I push and open a PR with all changes?')
   })
 })
 
