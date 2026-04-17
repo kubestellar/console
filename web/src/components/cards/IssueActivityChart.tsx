@@ -13,6 +13,7 @@ import ReactECharts from 'echarts-for-react'
 import { Calendar, RefreshCw, GitPullRequest } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Skeleton } from '../ui/Skeleton'
+import { usePipelineFilter } from './pipelines/PipelineFilterContext'
 import { Button } from '../ui/Button'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { useCardLoadingState } from './CardDataContext'
@@ -262,7 +263,8 @@ async function fetchIssueStats(
 export function IssueActivityChart(props: { config?: IssueActivityConfig }) {
   const { t } = useTranslation('cards')
   const { isDemoMode } = useDemoMode()
-  const repo = props.config?.repo || DEFAULT_REPO
+  const shared = usePipelineFilter()
+  const repo = shared?.repoFilter || props.config?.repo || DEFAULT_REPO
   const initialDays = props.config?.days || DEFAULT_LOOKBACK_DAYS
 
   const [days, setDays] = useState(initialDays)
