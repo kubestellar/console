@@ -441,7 +441,7 @@ const FullClusterCard = memo(function FullClusterCard({
               <div className="flex flex-col gap-1 mt-1">
                 {cluster.server && (
                   <span
-                    className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-default truncate max-w-[220px]"
+                    className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-default truncate max-w-[220px]"
                     title={`Server: ${cluster.server}`}
                   >
                     <Globe className="w-3 h-3 flex-shrink-0" />
@@ -450,7 +450,7 @@ const FullClusterCard = memo(function FullClusterCard({
                 )}
                 {cluster.user && (
                   <span
-                    className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-default truncate max-w-[220px]"
+                    className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-default truncate max-w-[220px]"
                     title={`User: ${cluster.user}`}
                   >
                     <User className="w-3 h-3 flex-shrink-0" />
@@ -487,7 +487,7 @@ const FullClusterCard = memo(function FullClusterCard({
           </div>
         </div>
 
-        <div className="grid grid-cols-4 gap-4 text-center relative z-10">
+        <div className="grid grid-cols-4 gap-4 text-center relative z-10 cursor-default">
           <div title={unreachable ? 'Nodes: Cluster offline' : hasCachedData && cluster.nodeCount !== undefined ? `Nodes: ${cluster.nodeCount} worker nodes in cluster` : 'Nodes: Loading...'}>
             <div className={`text-lg font-bold ${refreshing ? 'text-muted-foreground' : 'text-foreground'}`}>
               <FlashingValue value={hasCachedData && cluster.nodeCount !== undefined ? cluster.nodeCount : '-'} />
@@ -514,7 +514,7 @@ const FullClusterCard = memo(function FullClusterCard({
           </div>
         </div>
 
-        <div className="mt-4 pt-4 border-t border-border relative z-10">
+        <div className="mt-4 pt-4 border-t border-border relative z-10 cursor-default">
           {consoleUrl && (
             <div className="flex justify-center mb-3">
               <a

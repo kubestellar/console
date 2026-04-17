@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { X, CheckCircle, AlertTriangle, WifiOff, Pencil, Trash2, ChevronRight, ChevronDown, Layers, Server, Network, HardDrive, Box, FolderOpen, Loader2, Cpu, MemoryStick, Database, Wand2, Stethoscope, Wrench, Bot, ExternalLink } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import { useClusterHealth, usePodIssues, useDeploymentIssues, useGPUNodes, useNodes, useNamespaceStats, useDeployments, useClusters } from '../../hooks/useMCP'
@@ -259,6 +259,16 @@ After I approve, help me execute the repairs step by step.`,
     })
     return map
   })()
+
+  // Retain last non-empty GPU data so the section doesn't vanish during refetch (#8597).
+  // When the hook briefly returns an empty array mid-poll, we keep showing the previous
+  // data to prevent the "GPUs by Type" section from flickering in and out.
+  const lastGpuDataRef = useRef<{ clusterGPUs: typeof clusterGPUs; gpuByType: typeof gpuByType }>({ clusterGPUs: [], gpuByType: {} })
+  if (clusterGPUs.length > 0) {
+    lastGpuDataRef.current = { clusterGPUs, gpuByType }
+  }
+  const stableClusterGPUs = clusterGPUs.length > 0 ? clusterGPUs : lastGpuDataRef.current.clusterGPUs
+  const stableGpuByType = clusterGPUs.length > 0 ? gpuByType : lastGpuDataRef.current.gpuByType
 
   // Show modal immediately with loading state for data - don't block on isLoading
   return (
@@ -523,12 +533,12 @@ After I approve, help me execute the repairs step by step.`,
             )}
           </button>
           <button
-            onClick={() => !isUnreachable && !isLoading && clusterGPUs.length > 0 && setShowGPUDetail(true)}
-            disabled={isUnreachable || isLoading || clusterGPUs.length === 0}
+            onClick={() => !isUnreachable && !isLoading && stableClusterGPUs.length > 0 && setShowGPUDetail(true)}
+            disabled={isUnreachable || isLoading || stableClusterGPUs.length === 0}
             className={`group p-4 rounded-lg bg-card/50 border text-left transition-all duration-200 ${
-              !isUnreachable && !isLoading && clusterGPUs.length > 0 ? 'border-border hover:border-yellow-500/50 hover:bg-yellow-500/5 hover:shadow-lg hover:shadow-yellow-500/10 cursor-pointer' : 'border-border cursor-default'
+              !isUnreachable && !isLoading && stableClusterGPUs.length > 0 ? 'border-border hover:border-yellow-500/50 hover:bg-yellow-500/5 hover:shadow-lg hover:shadow-yellow-500/10 cursor-pointer' : 'border-border cursor-default'
             }`}
-            title={!isUnreachable && !isLoading && clusterGPUs.length > 0 ? t('clusterDetail.clickToViewGPU') : undefined}
+            title={!isUnreachable && !isLoading && stableClusterGPUs.length > 0 ? t('clusterDetail.clickToViewGPU') : undefined}
           >
             {isLoading ? (
               <>
@@ -538,10 +548,10 @@ After I approve, help me execute the repairs step by step.`,
               </>
             ) : (
               <>
-                <div className="text-2xl font-bold text-foreground">{!isUnreachable ? clusterGPUs.reduce((sum, n) => sum + n.gpuCount, 0) : '-'}</div>
+                <div className="text-2xl font-bold text-foreground">{!isUnreachable ? stableClusterGPUs.reduce((sum, n) => sum + n.gpuCount, 0) : '-'}</div>
                 <div className="text-sm text-muted-foreground">{t('common.gpus')}</div>
-                <div className="text-xs text-yellow-400">{!isUnreachable ? `${clusterGPUs.reduce((sum, n) => sum + n.gpuAllocated, 0)} ${t('clusterDetail.allocated')}` : ''}</div>
-                {!isUnreachable && clusterGPUs.length > 0 && (
+                <div className="text-xs text-yellow-400">{!isUnreachable ? `${stableClusterGPUs.reduce((sum, n) => sum + n.gpuAllocated, 0)} ${t('clusterDetail.allocated')}` : ''}</div>
+                {!isUnreachable && stableClusterGPUs.length > 0 && (
                   <div className="text-2xs text-muted-foreground/50 mt-2 group-hover:text-yellow-400/70 transition-colors">{t('clusterDetail.clickForDetails')}</div>
                 )}
               </>
@@ -778,14 +788,14 @@ After I approve, help me execute the repairs step by step.`,
         )}
 
         {/* GPU Section */}
-        {clusterGPUs.length > 0 && (
+        {stableClusterGPUs.length > 0 && (
           <div className="mb-6">
             <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
               <HardDrive className="w-4 h-4 text-purple-400" />
               {t('clusterDetail.gpusByType')}
             </h3>
             <div className="space-y-4">
-              {Object.entries(gpuByType).map(([type, info]) => (
+              {Object.entries(stableGpuByType).map(([type, info]) => (
                 <div key={type} className="rounded-lg bg-card/50 border border-border overflow-hidden">
                   <div className="p-3 border-b border-border/50 bg-purple-500/5">
                     <div className="flex items-center justify-between">
@@ -944,7 +954,7 @@ After I approve, help me execute the repairs step by step.`,
       {showGPUDetail && (
         <GPUDetailModal
           clusterName={clusterName}
-          gpuNodes={clusterGPUs.map(n => ({
+          gpuNodes={stableClusterGPUs.map(n => ({
             name: n.name,
             gpuType: n.gpuType || 'Unknown',
             gpuCount: n.gpuCount,
