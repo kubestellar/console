@@ -880,7 +880,7 @@ export const handlers = [
   // http.all('/api/*') below returns 503 on the preflight and the
   // browser blocks the actual POST.
   http.all('/api/nps', () => passthrough()),
-  http.get('/api/acmm/scan', () => passthrough()),
+  http.all('/api/acmm/scan', () => passthrough()),
   // GitHub Pipelines dashboard — backed by Netlify Function that caches
   // GitHub Actions data in Netlify Blobs. Must be http.all (not just
   // http.get) to cover mutation POSTs + CORS preflight.

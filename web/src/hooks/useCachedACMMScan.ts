@@ -114,6 +114,13 @@ async function fetchACMMScan(repo: string, force: boolean): Promise<ACMMScanData
   if (!res.ok) {
     throw new Error(`ACMM scan failed: ${res.status} ${res.statusText}`)
   }
+  // The Go backend and cluster deployments don't implement /api/acmm/scan —
+  // the SPA catch-all returns index.html (text/html) instead of JSON.
+  // Detect this and throw a clean error so the card falls back to demo data.
+  const ct = res.headers.get('content-type') || ''
+  if (!ct.includes('application/json')) {
+    throw new Error('ACMM scan is not available on this deployment — showing demo data')
+  }
   const body = (await res.json()) as ACMMScanData & { demoFallback?: boolean }
   return body
 }
@@ -141,24 +148,30 @@ export function useCachedACMMScan(repo: string = DEFAULT_REPO): UseACMMScanResul
     await refetch()
   }, [refetch])
 
-  const detectedIds = new Set(cacheResult.data.detectedIds ?? [])
+  // When the Netlify Function isn't available (localhost / cluster deploy),
+  // the fetcher fails. Fall back to demo data so the cards render something
+  // useful instead of showing an empty state with a raw error.
+  const apiUnavailable = cacheResult.isFailed && cacheResult.data.detectedIds.length === 0
+  const effectiveData = apiUnavailable ? demoScan(repo) : cacheResult.data
+
+  const detectedIds = new Set(effectiveData.detectedIds ?? [])
   const level = computeLevel(detectedIds)
   const recommendations = computeRecommendations(detectedIds, level)
 
   const isDemoData =
-    cacheResult.isDemoFallback && !cacheResult.isLoading
+    (cacheResult.isDemoFallback && !cacheResult.isLoading) || apiUnavailable
 
   return {
-    data: cacheResult.data,
+    data: effectiveData,
     detectedIds,
     level,
     recommendations,
     isLoading: cacheResult.isLoading,
     isRefreshing: cacheResult.isRefreshing,
     isDemoData,
-    error: cacheResult.error,
-    isFailed: cacheResult.isFailed,
-    consecutiveFailures: cacheResult.consecutiveFailures,
+    error: apiUnavailable ? null : cacheResult.error,
+    isFailed: apiUnavailable ? false : cacheResult.isFailed,
+    consecutiveFailures: apiUnavailable ? 0 : cacheResult.consecutiveFailures,
     lastRefresh: cacheResult.lastRefresh,
     refetch: cacheResult.refetch,
     forceRefetch,
