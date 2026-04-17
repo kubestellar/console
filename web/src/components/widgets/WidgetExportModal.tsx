@@ -1053,6 +1053,143 @@ function CardPreview({ cardType }: { cardType: string }) {
         </div>
       )
 
+    case 'cluster_metrics':
+      return (
+        <div style={ps.card}>
+          <div style={ps.title}><span style={ps.dot(ps.colors.info)} /> Cluster Metrics</div>
+          <div style={ps.row}>
+            <div style={ps.statBlock}>
+              <span style={{ ...ps.statVal, fontSize: '14px', color: '#60a5fa' }}>62%</span>
+              <span style={ps.statLbl}>CPU</span>
+            </div>
+            <div style={ps.statBlock}>
+              <span style={{ ...ps.statVal, fontSize: '14px', color: '#c084fc' }}>78%</span>
+              <span style={ps.statLbl}>Memory</span>
+            </div>
+            <div style={ps.statBlock}>
+              <span style={{ ...ps.statVal, fontSize: '14px', color: ps.colors.healthy }}>45</span>
+              <span style={ps.statLbl}>Pods</span>
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '2px', height: '40px', marginTop: PREV_SM }}>
+            {[40, 55, 62, 58, 70, 65, 72, 68, 75, 62].map((v, i) => (
+              <div key={i} style={{ flex: 1, height: `${v * 0.55}px`, backgroundColor: '#3b82f6', borderRadius: '1px', opacity: 0.6 }} />
+            ))}
+          </div>
+        </div>
+      )
+
+    case 'workload_status':
+      return (
+        <div style={ps.card}>
+          <div style={ps.title}><span style={ps.dot(ps.colors.healthy)} /> Workload Status</div>
+          <div style={ps.col}>
+            {[
+              { name: 'Deployments', running: 12, total: 14, color: ps.colors.healthy },
+              { name: 'StatefulSets', running: 3, total: 3, color: ps.colors.healthy },
+              { name: 'DaemonSets', running: 4, total: 5, color: ps.colors.warning },
+            ].map((w) => (
+              <div key={w.name} style={{ ...ps.row, justifyContent: 'space-between', fontSize: '10px', padding: PREV_ITEM_PAD }}>
+                <span style={{ fontWeight: 500 }}>{w.name}</span>
+                <span style={{ color: w.running === w.total ? ps.colors.healthy : ps.colors.warning }}>
+                  {w.running}/{w.total} ready
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )
+
+    case 'app_status':
+      return (
+        <div style={ps.card}>
+          <div style={ps.title}><span style={ps.dot(ps.colors.healthy)} /> Application Status</div>
+          <div style={ps.col}>
+            {[
+              { name: 'frontend', clusters: 3, status: 'healthy' },
+              { name: 'api-gateway', clusters: 2, status: 'healthy' },
+              { name: 'worker', clusters: 2, status: 'degraded' },
+              { name: 'scheduler', clusters: 1, status: 'healthy' },
+            ].map((a) => (
+              <div key={a.name} style={{ ...ps.row, justifyContent: 'space-between', fontSize: '10px' }}>
+                <span style={{ fontWeight: 500 }}>{a.name}</span>
+                <span style={{ color: '#9ca3af', fontSize: '9px' }}>{a.clusters} clusters</span>
+                <span style={ps.dot(a.status === 'healthy' ? ps.colors.healthy : ps.colors.warning)} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )
+
+    case 'namespace_overview':
+      return (
+        <div style={ps.card}>
+          <div style={ps.title}><span style={ps.dot(ps.colors.info)} /> Namespace Overview</div>
+          <div style={ps.col}>
+            {[
+              { ns: 'default', pods: 12, deploys: 4 },
+              { ns: 'kube-system', pods: 24, deploys: 8 },
+              { ns: 'monitoring', pods: 6, deploys: 3 },
+              { ns: 'production', pods: 18, deploys: 6 },
+            ].map((n) => (
+              <div key={n.ns} style={{ ...ps.row, justifyContent: 'space-between', fontSize: '10px', padding: PREV_ITEM_PAD }}>
+                <span style={{ fontWeight: 500, color: '#60a5fa' }}>{n.ns}</span>
+                <span style={{ color: '#9ca3af' }}>{n.pods} pods</span>
+                <span style={{ color: '#9ca3af' }}>{n.deploys} deploys</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )
+
+    case 'console_ai_health_check':
+      return (
+        <div style={ps.card}>
+          <div style={ps.title}><span style={ps.dot(ps.colors.healthy)} /> AI Health Check</div>
+          <div style={{ textAlign: 'center', marginBottom: PREV_SM }}>
+            <div style={{ fontSize: '20px', fontWeight: 700, color: ps.colors.healthy }}>Healthy</div>
+            <div style={ps.muted}>AI analysis complete</div>
+          </div>
+          <div style={ps.col}>
+            {[
+              { finding: 'All nodes responding', severity: 'ok' },
+              { finding: 'Pod restart rate normal', severity: 'ok' },
+              { finding: 'Memory pressure on worker-2', severity: 'warn' },
+            ].map((f) => (
+              <div key={f.finding} style={{ ...ps.row, fontSize: '10px', padding: PREV_ITEM_PAD }}>
+                <span style={ps.dot(f.severity === 'ok' ? ps.colors.healthy : ps.colors.warning)} />
+                <span style={{ color: f.severity === 'ok' ? '#cbd5e1' : ps.colors.warning }}>{f.finding}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )
+
+    case 'console_ai_offline_detection':
+      return (
+        <div style={ps.card}>
+          <div style={ps.title}><span style={ps.dot(ps.colors.warning)} /> AI Offline Detection</div>
+          <div style={ps.row}>
+            <div style={ps.statBlock}>
+              <span style={{ ...ps.statVal, fontSize: '16px', color: ps.colors.healthy }}>11</span>
+              <span style={ps.statLbl}>Online</span>
+            </div>
+            <div style={ps.statBlock}>
+              <span style={{ ...ps.statVal, fontSize: '16px', color: ps.colors.error }}>1</span>
+              <span style={ps.statLbl}>Offline</span>
+            </div>
+            <div style={ps.statBlock}>
+              <span style={{ ...ps.statVal, fontSize: '16px', color: ps.colors.warning }}>2</span>
+              <span style={ps.statLbl}>GPUs down</span>
+            </div>
+          </div>
+          <div style={{ ...ps.row, padding: PREV_ITEM_PAD, backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: PREV_XS, borderLeft: `3px solid ${ps.colors.error}`, marginTop: PREV_SM }}>
+            <span style={{ fontSize: '10px', color: ps.colors.error, fontWeight: 600 }}>worker-4</span>
+            <span style={{ fontSize: '9px', color: '#9ca3af', marginLeft: 'auto' }}>unreachable 12m</span>
+          </div>
+        </div>
+      )
+
     default:
       return <GenericCardPreview card={card} />
   }
