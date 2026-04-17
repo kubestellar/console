@@ -234,7 +234,7 @@ export function ServiceStatus() {
           <Skeleton variant="rounded" width={80} height={28} />
         </div>
         <Skeleton variant="rounded" height={32} className="mb-3" />
-        <div className="grid grid-cols-4 gap-2 mb-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
           {[1, 2, 3, 4].map(i => (
             <Skeleton key={i} variant="rounded" height={40} />
           ))}

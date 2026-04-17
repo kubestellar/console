@@ -161,7 +161,7 @@ export function ProwCIMonitor({ config: _config }: ProwCIMonitorProps) {
     return (
       <div className="space-y-3">
         <Skeleton variant="text" width={140} height={20} />
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} variant="rounded" height={48} />
           ))}

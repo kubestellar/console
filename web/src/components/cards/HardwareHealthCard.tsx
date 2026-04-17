@@ -454,7 +454,7 @@ export function HardwareHealthCard() {
         </div>
       )}
       {/* Status Summary */}
-      <div className="grid grid-cols-3 gap-2 mb-4">
+      <div className="grid grid-cols-3 gap-1.5 sm:gap-2 mb-4">
         <div className={cn(
           'p-2 rounded-lg border',
           criticalCount > 0
@@ -489,8 +489,8 @@ export function HardwareHealthCard() {
       </div>
 
       {/* View Mode Toggle — Inventory first (default), Alerts second */}
-      <div className="flex gap-2 mb-3">
-        <div className="flex flex-1 bg-muted/30 rounded-lg p-0.5">
+      <div className="flex flex-wrap gap-2 mb-3">
+        <div className="flex flex-1 min-w-0 bg-muted/30 rounded-lg p-0.5">
           <button
             onClick={() => { userSelectedView.current = true; setViewMode('inventory') }}
             className={cn(
@@ -667,9 +667,9 @@ export function HardwareHealthCard() {
                     : 'bg-yellow-500/10 hover:bg-yellow-500/20'
                 )}
               >
-                <div className="flex items-center justify-between">
+                <div className="flex items-start justify-between gap-1">
                   <div
-                    className="min-w-0 flex items-center gap-2 flex-1 cursor-pointer"
+                    className="min-w-0 flex items-start gap-2 flex-1 cursor-pointer"
                     onClick={() => drillToNode(alert.cluster, alert.nodeName, {
                       issue: `${getDeviceLabel(alert.deviceType)} disappeared: ${alert.previousCount} → ${alert.currentCount}`
                     })}
@@ -677,13 +677,13 @@ export function HardwareHealthCard() {
                     <DeviceIcon
                       deviceType={alert.deviceType}
                       className={cn(
-                        'w-4 h-4 flex-shrink-0',
+                        'w-4 h-4 flex-shrink-0 mt-0.5',
                         alert.severity === 'critical' ? 'text-red-400' : 'text-yellow-400'
                       )}
                     />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="font-medium text-foreground truncate">{extractHostname(alert.nodeName)}</span>
+                        <span className="font-medium text-foreground break-all">{extractHostname(alert.nodeName)}</span>
                         <span className={cn(
                           'flex-shrink-0 px-1 py-0.5 text-[9px] font-medium rounded',
                           alert.severity === 'critical'
@@ -792,12 +792,12 @@ export function HardwareHealthCard() {
                 className="p-2 rounded text-xs transition-colors group bg-muted/20 hover:bg-muted/40 cursor-pointer"
                 onClick={() => drillToNode(node.cluster, node.nodeName)}
               >
-                <div className="flex items-center justify-between">
-                  <div className="min-w-0 flex items-center gap-2 flex-1">
-                    <Server className="w-4 h-4 flex-shrink-0 text-blue-400" />
+                <div className="flex items-start justify-between gap-1">
+                  <div className="min-w-0 flex items-start gap-2 flex-1">
+                    <Server className="w-4 h-4 flex-shrink-0 text-blue-400 mt-0.5" />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="font-medium text-foreground truncate">{extractHostname(node.nodeName)}</span>
+                        <span className="font-medium text-foreground break-all">{extractHostname(node.nodeName)}</span>
                         <ClusterBadge cluster={node.cluster} size="sm" />
                       </div>
                       {/* Device counts row */}
