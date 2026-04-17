@@ -109,23 +109,44 @@ jobs:
           PF_PID=$!
           echo "PF_PID=$PF_PID" >> "$GITHUB_ENV"
 
-          # Poll until the app responds — port-forward may connect before
-          # the Go binary inside the container finishes starting up.
+          # Poll /health (no auth required) until the backend is up.
+          # /api/* routes require a JWT even in DEV_MODE; /health does not.
           DEADLINE=$(( $(date +%s) + ${{ env.HEALTH_TIMEOUT_S }} ))
-          echo "Waiting for /api/health (timeout: ${{ env.HEALTH_TIMEOUT_S }}s)..."
+          echo "Waiting for /health (timeout: ${{ env.HEALTH_TIMEOUT_S }}s)..."
           while [ "$(date +%s)" -lt "$DEADLINE" ]; do
-            if curl -sf http://127.0.0.1:8080/api/health > /dev/null 2>&1; then
+            if curl -sf http://127.0.0.1:8080/health > /dev/null 2>&1; then
               echo "Backend healthy after $(( $(date +%s) - DEADLINE + ${{ env.HEALTH_TIMEOUT_S }} ))s"
               break
             fi
             sleep ${{ env.HEALTH_POLL_INTERVAL_S }}
           done
 
-          echo "--- /api/health ---"
-          curl -sf http://127.0.0.1:8080/api/health | jq .
+          echo "--- /health ---"
+          curl -sf http://127.0.0.1:8080/health | jq .
 
+      - name: Get dev-mode auth cookie
+        run: |
+          # DEV_MODE auto-creates a dev-user on /auth/github and returns
+          # a kc_auth HttpOnly cookie. All /api/* routes require this JWT.
+          COOKIE_JAR=/tmp/cookies.txt
+          curl -sS --max-time 10 \
+            -c "$COOKIE_JAR" \
+            -o /dev/null \
+            http://127.0.0.1:8080/auth/github
+          echo "COOKIE_JAR=$COOKIE_JAR" >> "$GITHUB_ENV"
+
+          # Verify cookie was set
+          if ! grep -q 'kc_auth' "$COOKIE_JAR"; then
+            echo "FAIL: dev-mode login did not set kc_auth cookie"
+            cat "$COOKIE_JAR"
+            exit 1
+          fi
+          echo "Got dev-mode auth cookie"
+
+      - name: Verify self-upgrade status
+        run: |
           echo "--- /api/self-upgrade/status ---"
-          STATUS=$(curl -sf http://127.0.0.1:8080/api/self-upgrade/status)
+          STATUS=$(curl -sf -b "$COOKIE_JAR" http://127.0.0.1:8080/api/self-upgrade/status)
           echo "$STATUS" | jq .
 
           # Verify canPatch is true — RBAC is working
@@ -136,6 +157,7 @@ jobs:
         run: |
           echo "Triggering upgrade to tag: ${{ env.TARGET_TAG }}"
           RESPONSE=$(curl -sfX POST http://127.0.0.1:8080/api/self-upgrade/trigger \
+            -b "$COOKIE_JAR" \
             -H 'Content-Type: application/json' \
             -d '{"imageTag":"${{ env.TARGET_TAG }}"}')
           echo "$RESPONSE" | jq .
@@ -174,22 +196,22 @@ jobs:
           kubectl -n ${{ env.NAMESPACE }} port-forward \
             svc/${{ env.RELEASE_NAME }}-kubestellar-console 8080:8080 &
 
-          # Poll until the upgraded pod responds
+          # Poll /health (no auth) until the upgraded pod responds
           DEADLINE=$(( $(date +%s) + ${{ env.HEALTH_TIMEOUT_S }} ))
-          echo "Waiting for post-upgrade /api/health (timeout: ${{ env.HEALTH_TIMEOUT_S }}s)..."
+          echo "Waiting for post-upgrade /health (timeout: ${{ env.HEALTH_TIMEOUT_S }}s)..."
           while [ "$(date +%s)" -lt "$DEADLINE" ]; do
-            if curl -sf http://127.0.0.1:8080/api/health > /dev/null 2>&1; then
+            if curl -sf http://127.0.0.1:8080/health > /dev/null 2>&1; then
               echo "Upgraded pod healthy after $(( $(date +%s) - DEADLINE + ${{ env.HEALTH_TIMEOUT_S }} ))s"
               break
             fi
             sleep ${{ env.HEALTH_POLL_INTERVAL_S }}
           done
 
-          echo "--- Post-upgrade /api/health ---"
-          curl -sf http://127.0.0.1:8080/api/health | jq .
+          echo "--- Post-upgrade /health ---"
+          curl -sf http://127.0.0.1:8080/health | jq .
 
           echo "--- Post-upgrade /api/self-upgrade/status ---"
-          curl -sf http://127.0.0.1:8080/api/self-upgrade/status | jq .
+          curl -sf -b "$COOKIE_JAR" http://127.0.0.1:8080/api/self-upgrade/status | jq .
 
           echo "Upgrade smoke test PASSED"
 
