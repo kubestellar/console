@@ -15,6 +15,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -85,12 +86,16 @@ func ghpGetRepos() []string {
 // ghpRepos is populated once at init from PIPELINE_REPOS env var.
 var ghpRepos = ghpGetRepos()
 
+// ghpValidRepoPattern enforces strict owner/repo format to prevent path
+// traversal — the repo value is interpolated into GitHub API paths.
+var ghpValidRepoPattern = regexp.MustCompile(`^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$`)
+
 func ghpIsAllowedRepo(repo string) bool {
 	// Accept any valid owner/repo slug — the GitHub token's permissions
 	// are the real access control. The preconfigured list only controls
 	// which repos are fetched by default (no filter), not which repos
 	// a user is allowed to query.
-	if strings.Contains(repo, "/") && len(repo) > 2 {
+	if ghpValidRepoPattern.MatchString(repo) {
 		return true
 	}
 	for _, r := range ghpRepos {
