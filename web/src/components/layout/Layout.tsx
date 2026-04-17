@@ -560,35 +560,42 @@ export function Layout({ children: _children }: LayoutProps) {
               : "bg-green-900/80 border-green-700/50 text-green-200"
           )}>
             {backendDown ? (
-              <>
-                <div className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
-                <span>{t('layout.connectionLost')}</span>
-                {restartState === 'restarting' ? (
-                  <button disabled className="ml-1 flex items-center gap-1.5 px-2.5 py-1 bg-muted text-muted-foreground rounded text-xs cursor-wait">
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                    {t('layout.restarting')}
-                  </button>
-                ) : restartState === 'waiting' ? (
-                  <span className="ml-1 flex items-center gap-1.5 px-2.5 py-1 bg-muted text-muted-foreground rounded text-xs">
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                    {t('layout.restartedWaiting')}
-                  </span>
-                ) : restartState === 'copied' ? (
-                  <span className="ml-1 flex items-center gap-1.5 px-2.5 py-1 bg-green-800/50 text-green-300 rounded text-xs">
-                    <Check className="w-3 h-3" />
-                    {t('actions.copied')}
-                  </span>
+              <div className="flex flex-col items-center gap-1">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
+                  <span>{t('layout.connectionLost')}</span>
+                  {restartState === 'restarting' ? (
+                    <button disabled className="ml-1 flex items-center gap-1.5 px-2.5 py-1 bg-muted text-muted-foreground rounded text-xs cursor-wait">
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      {t('layout.restarting')}
+                    </button>
+                  ) : restartState === 'waiting' ? (
+                    <span className="ml-1 flex items-center gap-1.5 px-2.5 py-1 bg-muted text-muted-foreground rounded text-xs">
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      {t('layout.restartedWaiting')}
+                    </span>
+                  ) : restartState === 'copied' ? (
+                    <span className="ml-1 flex items-center gap-1.5 px-2.5 py-1 bg-green-800/50 text-green-300 rounded text-xs">
+                      <Check className="w-3 h-3" />
+                      {t('layout.copiedRestartCommand')}
+                    </span>
+                  ) : (
+                    <button
+                      onClick={handleRestartBackend}
+                      className="ml-1 flex items-center gap-1.5 px-2.5 py-1 bg-muted hover:bg-muted/80 text-foreground rounded text-xs transition-colors"
+                      title={t('layout.restartBackendServer')}
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      {t('layout.restart')}
+                    </button>
+                  )}
+                </div>
+                {restartError ? (
+                  <span className="text-xs text-muted-foreground">{restartError}</span>
                 ) : (
-                  <button
-                    onClick={handleRestartBackend}
-                    className="ml-1 flex items-center gap-1.5 px-2.5 py-1 bg-muted hover:bg-muted/80 text-foreground rounded text-xs transition-colors"
-                    title={restartError ?? t('layout.restartBackendServer')}
-                  >
-                    <RotateCcw className="w-3 h-3" />
-                    {t('layout.restart')}
-                  </button>
+                  <span className="text-xs text-muted-foreground">{t('layout.connectionLostHint')}</span>
                 )}
-              </>
+              </div>
             ) : (
               <>
                 <div className="w-2 h-2 rounded-full bg-green-400" />

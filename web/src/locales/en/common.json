@@ -3352,6 +3352,8 @@
     "switchTo": "Switch to",
     "demo": "Demo",
     "connectionLost": "Connection lost",
+    "connectionLostHint": "Could not reach the backend — restart the server to reconnect",
+    "copiedRestartCommand": "Copied — run this in your project root terminal",
     "restarting": "Restarting\u2026",
     "restartedWaiting": "Restarted, waiting for connection\u2026",
     "restartBackendServer": "Restart the backend server",
