@@ -182,8 +182,8 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
         </div>
 
         <div className="flex-1 flex gap-4 overflow-hidden">
-          {/* Left: Selection (narrower to give preview more room) */}
-          <div className="w-[35%] flex flex-col overflow-hidden">
+          {/* Left: Selection */}
+          <div className="w-1/2 flex flex-col overflow-hidden">
             <div ref={cardListRef} className="flex-1 overflow-y-auto pr-2">
               {activeTab === 'templates' && (
                 <div className="space-y-2">
@@ -297,7 +297,7 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
 
           {/* Right: Preview & Code — overflow-hidden + min-h-0 keeps the preview
               pinned in view while the left card list scrolls independently */}
-          <div className="w-[65%] flex flex-col overflow-hidden min-h-0">
+          <div className="w-1/2 flex flex-col overflow-hidden min-h-0">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium">{t('common.preview')}</span>
               <button
@@ -315,8 +315,10 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
                 </pre>
               </div>
             ) : (
-              <div className="flex-1 bg-secondary/50 rounded-lg p-4 flex items-center justify-center">
-                <WidgetPreview config={exportConfig} />
+              <div className="flex-1 bg-secondary/50 rounded-lg p-4 flex items-center justify-center overflow-hidden">
+                <div style={{ transform: 'scale(1.5)', transformOrigin: 'center center' }}>
+                  <WidgetPreview config={exportConfig} />
+                </div>
               </div>
             )}
 
