@@ -15,6 +15,7 @@ import { createPortal } from 'react-dom'
 import {
   CheckCircle, XCircle, AlertTriangle, Clock, ExternalLink,
   TrendingUp, TrendingDown, Minus, Loader2, Search, Stethoscope,
+  ClipboardCheck,
 } from 'lucide-react'
 import { useDemoMode } from '../../../hooks/useDemoMode'
 import { useCardLoadingState } from '../CardDataContext'
@@ -42,6 +43,7 @@ const MATRIX_DAYS = 14
 
 const WORKFLOW_URL_BASE = 'https://github.com'
 const TITLE_DIAGNOSE = 'Diagnose with AI'
+const TITLE_AUDIT = 'Audit workflow'
 
 /** Extracted strings for ui-ux ratchet */
 const PLACEHOLDER_REPO = 'owner/repo'
@@ -200,6 +202,7 @@ function WorkflowRow({ wf }: { wf: MatrixWorkflow }) {
   const { passRate, trend } = useMemo(() => computeTrend(dots), [dots])
   const latest = dots[0]?.conclusion
   const latestFailed = latest === 'failure' || latest === 'timed_out'
+  const isInactive = latest === 'skipped' || latest === 'cancelled' || latest === null
   const StatusIcon = !latest ? AlertTriangle
     : latest === 'success' ? CheckCircle
     : latest === 'failure' || latest === 'timed_out' ? XCircle
@@ -239,6 +242,21 @@ function WorkflowRow({ wf }: { wf: MatrixWorkflow }) {
           <Stethoscope className="w-3 h-3" />
         </button>
       )}
+      {isInactive && (
+        <button
+          type="button"
+          onClick={() => startMission({
+            title: `Audit: ${wf.name}`,
+            description: `Audit inactive workflow ${wf.name} on ${wf.repo}`,
+            type: 'analyze',
+            initialPrompt: `Audit the "${wf.name}" workflow in ${wf.repo}.\n\nThis workflow is showing as ${latest || 'inactive'} in the CI/CD dashboard.\n\nPlease:\n1. Read the workflow YAML file (.github/workflows/) and check why it's ${latest || 'not running'}.\n2. Categorize it as one of:\n   - **Intentional**: deliberately disabled (if: false, workflow_dispatch only, etc.)\n   - **Broken**: has errors preventing it from running\n   - **Obsolete**: references removed features or old tooling\n   - **Misconfigured**: should run but conditions aren't met\n3. Tell me your finding, then ask:\n   - "Should I fix this workflow?"\n   - "Should I archive/delete it?"\n   - "Leave it as-is"`,
+          })}
+          className="text-muted-foreground hover:text-yellow-400 p-1 rounded hover:bg-yellow-500/10"
+          title={TITLE_AUDIT}
+        >
+          <ClipboardCheck className="w-3 h-3" />
+        </button>
+      )}
       <a href={`${WORKFLOW_URL_BASE}/${wf.repo}/actions`} target="_blank" rel="noopener noreferrer"
         className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-secondary"
         onClick={(e) => e.stopPropagation()}>
@@ -269,6 +287,7 @@ function StandaloneRepoInput({ value, onChange }: { value: string; onChange: (v:
 // ---------------------------------------------------------------------------
 
 export function NightlyReleasePulse() {
+  const { startMission } = useMissions()
   const shared = usePipelineFilter()
   const [standaloneRepo, setStandaloneRepo] = useState('')
   const effectiveRepoFilter = shared
@@ -305,6 +324,14 @@ export function NightlyReleasePulse() {
         conclusion: c.conclusion as Conclusion, htmlUrl: c.htmlUrl, date: c.date,
       }))), [workflows])
   const { passRate: overallPassRate, trend: overallTrend } = useMemo(() => computeTrend(allDots), [allDots])
+
+  /** Workflows whose latest conclusion is not "success" — candidates for bulk audit */
+  const inactiveWorkflows = useMemo(() =>
+    workflows.filter((wf) => {
+      const cells = [...wf.cells].reverse()
+      const latestConclusion = cells[0]?.conclusion ?? null
+      return latestConclusion !== 'success'
+    }), [workflows])
 
   if (pulseError && !hasData) {
     return <div className="p-4 h-full flex items-center justify-center text-sm text-red-400">
@@ -403,6 +430,31 @@ export function NightlyReleasePulse() {
             cardTitle="Nightly Release Pulse"
             currentRepo={effectiveRepoFilter}
           />
+          {inactiveWorkflows.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                const repoLabel = effectiveRepoFilter || 'all repos'
+                const inactiveList = inactiveWorkflows
+                  .map((wf) => {
+                    const cells = [...wf.cells].reverse()
+                    const status = cells[0]?.conclusion ?? 'inactive'
+                    return `- ${wf.name} (${wf.repo}): ${status}`
+                  })
+                  .join('\n')
+                startMission({
+                  title: `Audit inactive workflows: ${repoLabel}`,
+                  description: `Audit all inactive or skipped workflows in ${repoLabel}`,
+                  type: 'analyze',
+                  initialPrompt: `Audit all inactive or skipped workflows in ${repoLabel}.\n\nThe following workflows have not run successfully recently or are being skipped:\n${inactiveList}\n\nFor each workflow:\n1. Read the YAML file and determine why it's inactive\n2. Categorize: intentional / broken / obsolete / misconfigured\n3. After reviewing all of them, present a summary table and ask:\n   - "Should I create a PR to clean up the obsolete ones?"\n   - "Should I fix the broken ones?"\n   - "No changes needed"`,
+                })
+              }}
+              className="text-[11px] text-muted-foreground hover:text-yellow-400 flex items-center gap-1"
+            >
+              <ClipboardCheck className="w-3 h-3" />
+              Audit inactive
+            </button>
+          )}
           <button type="button" onClick={() => refetch()}
             className="text-[11px] text-muted-foreground hover:text-foreground">
             Refresh
