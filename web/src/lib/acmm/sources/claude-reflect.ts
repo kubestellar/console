@@ -9,6 +9,7 @@ const CRITERIA: Criterion[] = [
     name: 'Correction capture',
     description: 'A mechanism that captures user corrections during agent sessions and persists them.',
     rationale: 'Claude-reflect: corrections are the highest-signal feedback an agent receives — discarding them means repeating the same mistakes.',
+    details: 'Correction capture is a system that records every time you correct the AI during a session — "no, not that way" or "use X instead of Y" — and saves it to a persistent file. Without it, the AI forgets your corrections between sessions and you end up repeating yourself. An AI mission will set up a reflections directory and memory files that automatically persist corrections for future sessions.',
     detection: { type: 'any-of', pattern: ['.claude/reflections/', 'memory/feedback_', '.github/ai-corrections.yml', 'scripts/capture-corrections.mjs'] },
   },
   {
@@ -19,6 +20,7 @@ const CRITERIA: Criterion[] = [
     name: 'Positive reinforcement capture',
     description: 'A mechanism that captures confirmations of non-obvious correct behavior, not just corrections.',
     rationale: 'Claude-reflect: saving only corrections causes drift away from approaches the user has already validated.',
+    details: 'Positive reinforcement capture records when the AI does something right that was not obvious — "yes, that approach is exactly what I wanted." If you only save corrections, the AI learns what NOT to do but gradually drifts away from approaches you have already validated. An AI mission will add positive-signal capture alongside corrections so the AI remembers both what works and what does not.',
     detection: { type: 'any-of', pattern: ['.claude/reflections/', 'memory/feedback_', 'docs/ai-reinforcement.md'] },
   },
   {
@@ -29,6 +31,7 @@ const CRITERIA: Criterion[] = [
     name: 'CLAUDE.md auto-sync',
     description: 'A workflow that syncs captured corrections/preferences into CLAUDE.md or AGENTS.md.',
     rationale: 'Claude-reflect: the feedback loop only closes when learned preferences flow back into the config the next agent session reads.',
+    details: 'CLAUDE.md auto-sync is a workflow that takes captured corrections and preferences and automatically updates your CLAUDE.md or AGENTS.md instruction files. Without this, captured feedback sits in a separate file that the AI may not read at session start. The sync closes the loop: corrections become instructions. An AI mission will add a sync script that periodically merges captured reflections into your instruction files.',
     detection: { type: 'any-of', pattern: ['.github/workflows/claude-md-sync.yml', 'scripts/sync-claude-md.mjs', 'scripts/update-claude-md.mjs'] },
   },
   {
@@ -39,6 +42,7 @@ const CRITERIA: Criterion[] = [
     name: 'Preference index',
     description: 'A structured index of captured preferences keyed by topic or file area.',
     rationale: 'Claude-reflect: an unstructured pile of reflections becomes unsearchable fast — an index keeps lookups cheap.',
+    details: 'A preference index is a structured file (JSON, YAML, or Markdown with frontmatter) that organizes captured preferences by topic, file area, or category so the AI can quickly look up what you prefer for a specific situation. Without an index, reflections become an unsearchable pile that the AI either loads entirely (wasting context) or ignores. An AI mission will create a MEMORY.md index that categorizes your existing preferences.',
     detection: { type: 'any-of', pattern: ['.claude/preferences.json', 'memory/MEMORY.md', '.github/agent-preferences.yml'] },
   },
   {
@@ -49,6 +53,7 @@ const CRITERIA: Criterion[] = [
     name: 'Periodic reflection review',
     description: 'A scheduled job that surfaces captured reflections for human review and pruning.',
     rationale: 'Claude-reflect: reflections decay in relevance; without review they become noise that the agent then trusts.',
+    details: 'Periodic reflection review is a scheduled workflow that surfaces your accumulated AI reflections for human review, letting you prune outdated entries and promote important ones to instruction files. Without pruning, reflections pile up and become stale — the AI ends up following advice from six months ago that no longer applies. An AI mission will add a weekly workflow or script that generates a review summary of new reflections.',
     detection: { type: 'any-of', pattern: ['.github/workflows/reflection-review.yml', 'scripts/review-reflections.mjs', 'docs/reflection-review.md'] },
   },
   {
@@ -59,6 +64,7 @@ const CRITERIA: Criterion[] = [
     name: 'Session summary artifact',
     description: 'An end-of-session artifact that records what changed, what was tried, and what was learned.',
     rationale: 'Claude-reflect: session summaries are the unit of learning — they bridge one session\'s context to the next.',
+    details: 'A session summary artifact is a file written at the end of each AI session recording what was changed, what approaches were tried (including failed ones), and what was learned. It bridges context between sessions so the next session can pick up where the last one left off instead of re-discovering the same things. An AI mission will add a session summary template and post-session hook that captures this information automatically.',
     detection: { type: 'any-of', pattern: ['.claude/sessions/', 'docs/session-summaries/', 'memory/session_'] },
   },
 ]

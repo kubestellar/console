@@ -25,13 +25,14 @@ export function detectionLabel(hint: DetectionHint): string {
 
 function buildPromptForCriterion(c: Criterion, repo: string, reason: string): string {
   const ref = c.referencePath ? `\n- Reference implementation: ${c.referencePath} in kubestellar/console` : ''
+  const detailsBlock = c.details ? `\nContext: ${c.details}\n` : ''
   return `Add the "${c.name}" ACMM criterion to ${repo} so the ACMM dashboard detects it.
 
 Source: ${SOURCE_LABELS[c.source]}
 Criterion ID: ${c.id}
 What this criterion does: ${c.description}
 Why it matters: ${reason}
-
+${detailsBlock}
 Detection rule (must match at least one after your change):
 - Type: ${c.detection.type}
 - Pattern: ${detectionLabel(c.detection)}${ref}

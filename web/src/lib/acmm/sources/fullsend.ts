@@ -9,6 +9,7 @@ const CRITERIA: Criterion[] = [
     name: 'Test coverage threshold',
     description: 'Documented or enforced test coverage floor.',
     rationale: 'Fullsend treats coverage as a readiness prerequisite: agents cannot be trusted on an untested codebase.',
+    details: 'A test coverage threshold is a documented minimum (e.g., 80%) that all code must meet before AI agents are trusted to make changes. Without it, an AI can introduce bugs in untested code paths that no one catches until production. An AI mission will add a codecov config or coverage workflow that enforces your chosen floor on every PR.',
     detection: { type: 'any-of', pattern: ['codecov.yml', '.codecov.yml', 'coverage.yml', '.github/workflows/coverage-gate.yml'] },
   },
   {
@@ -19,6 +20,7 @@ const CRITERIA: Criterion[] = [
     name: 'CI/CD pipeline',
     description: 'A working CI/CD pipeline that runs on every PR.',
     rationale: 'The second fullsend readiness prerequisite — a repo without CI cannot gate agent work.',
+    details: 'A CI/CD pipeline is a set of GitHub Actions workflows that automatically build, test, and validate every pull request before it can merge. Without CI, there is no automated safety net — AI-generated changes could break the build and no one would know until someone manually checks. An AI mission will create a basic CI workflow for your project\'s language and framework.',
     detection: { type: 'any-of', pattern: ['.github/workflows/'] },
   },
   {
@@ -29,6 +31,7 @@ const CRITERIA: Criterion[] = [
     name: 'Auto-merge policy',
     description: 'Explicit policy for when PRs auto-merge vs. escalate to humans.',
     rationale: 'Fullsend\'s "When to auto-merge vs. escalate to humans" dimension — this is where the autonomy boundary gets drawn.',
+    details: 'An auto-merge policy explicitly documents which PRs can merge automatically (e.g., dependency updates, typo fixes) and which require human review (e.g., API changes, security-sensitive code). Without this boundary, either everything needs manual approval (slow) or nothing does (dangerous). An AI mission will create a policy document and auto-merge workflow based on your project\'s risk tolerance.',
     detection: { type: 'any-of', pattern: ['.github/auto-merge.yml', '.prow.yaml', 'tide.yaml', '.github/workflows/auto-merge.yml'] },
   },
   {
@@ -39,6 +42,7 @@ const CRITERIA: Criterion[] = [
     name: 'Branch protection documentation',
     description: 'Documented branch protection rules (required reviews, status checks).',
     rationale: 'Autonomy only works on top of explicit protection rules — fullsend treats these as the fence inside which agents may act.',
+    details: 'Branch protection documentation spells out the rules governing your main branch: how many reviews are required, which CI checks must pass, who can bypass protections. This is the fence inside which AI agents can safely operate — without documented protection, there is no clear boundary for autonomous behavior. An AI mission will document your current branch protection settings and recommend improvements.',
     detection: { type: 'any-of', pattern: ['docs/branch-protection.md', 'docs/governance.md', '.github/branch-protection.yml'] },
   },
   {
@@ -49,6 +53,7 @@ const CRITERIA: Criterion[] = [
     name: 'Production feedback signal',
     description: 'A mechanism that feeds production observations back into the development loop.',
     rationale: 'Fullsend\'s Production Feedback dimension: platform execution signals should inform what agents work on and how they assess risk.',
+    details: 'A production feedback signal is a mechanism (monitoring hooks, post-deploy checks, error rate alerts) that pipes production observations back into the development loop. When a deploy causes errors, the signal tells the AI system what went wrong so it can prioritize the fix. An AI mission will add a post-deploy check workflow or monitoring integration that feeds production data back into your issue tracker.',
     detection: { type: 'any-of', pattern: ['monitoring/', 'grafana/', '.github/workflows/post-deploy-check.yml', 'scripts/production-feedback.mjs'] },
   },
   {
@@ -59,6 +64,7 @@ const CRITERIA: Criterion[] = [
     name: 'Observability runbook',
     description: 'A runbook or guide describing how humans debug autonomous behavior.',
     rationale: 'Fullsend\'s Operational Observability question: how do humans understand what the autonomous system is doing when it goes wrong?',
+    details: 'An observability runbook documents how humans investigate when the autonomous system misbehaves: where to find logs, how to trace an AI-generated change, how to roll back a bad auto-merge. Without it, debugging autonomous behavior is guesswork. An AI mission will create a runbook documenting your project\'s key observability paths and escalation procedures.',
     detection: { type: 'any-of', pattern: ['docs/runbook.md', 'docs/runbooks/', 'RUNBOOK.md', 'docs/operations/'] },
   },
   {
@@ -69,6 +75,7 @@ const CRITERIA: Criterion[] = [
     name: 'Risk assessment config',
     description: 'A config that lets the agent assess blast radius before acting.',
     rationale: 'Fullsend emphasizes that agents need a risk model to know when to escalate — static config is the minimum viable version.',
+    details: 'A risk assessment config is a YAML or JSON file that maps file paths and change types to risk tiers, letting AI agents estimate the blast radius of their changes before committing. An agent touching a README is low risk; an agent touching auth middleware is high risk and should escalate. An AI mission will create a risk-tier config based on your project\'s directory structure and critical paths.',
     detection: { type: 'any-of', pattern: ['.github/risk-assessment.yml', 'docs/risk-tiers.md', '.github/workflows/tier-classifier.yml'] },
   },
   {
@@ -79,6 +86,7 @@ const CRITERIA: Criterion[] = [
     name: 'Rollback drill',
     description: 'A documented or automated rollback procedure.',
     rationale: 'Fullsend: autonomy requires the ability to undo, not just to do.',
+    details: 'A rollback drill is a documented or scripted procedure for reverting a bad deployment or merge to the last known-good state. Autonomy is only safe when you can undo quickly — if rolling back takes hours, the cost of an AI mistake is too high to tolerate. An AI mission will create a rollback script or document that covers your deployment method (git revert, helm rollback, image tag pin).',
     detection: { type: 'any-of', pattern: ['docs/rollback.md', '.github/workflows/rollback.yml', 'scripts/rollback.sh'] },
   },
 ]

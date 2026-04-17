@@ -21,6 +21,8 @@ export interface Criterion {
   name: string
   description: string
   rationale: string
+  /** Three-sentence blurb: what it is, why it matters, how an AI mission implements it. */
+  details?: string
   detection: DetectionHint
   referencePath?: string
   frequency?: string

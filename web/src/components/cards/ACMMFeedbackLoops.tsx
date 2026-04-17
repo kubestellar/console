@@ -326,6 +326,12 @@ export function ACMMFeedbackLoops() {
               )}
               {!isLocked && isExpanded && (
                 <div className="px-8 pb-2 pt-0 text-[10px] space-y-1.5 border-t border-border/30">
+                  {/* Details blurb — what it is, why it matters, how a mission implements it */}
+                  {c.details && (
+                    <p className="text-[11px] leading-relaxed text-muted-foreground/90 py-1">
+                      {c.details}
+                    </p>
+                  )}
                   {SOURCES_BY_ID[c.source]?.url && (
                     <div>
                       <span className="text-muted-foreground">Cited from:</span>{' '}

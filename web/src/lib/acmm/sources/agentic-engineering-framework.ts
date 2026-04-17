@@ -9,6 +9,7 @@ const CRITERIA: Criterion[] = [
     name: 'Task traceability ledger',
     description: 'Every agent task is logged with intent, inputs, and outputs.',
     rationale: 'The framework argues that without a traceable record of what an agent was asked to do, post-hoc review is impossible.',
+    details: 'A task traceability ledger is a log file or directory where every AI agent task is recorded with what it was asked to do, what inputs it used, and what outputs it produced. Without this record, you cannot audit AI behavior after the fact or understand why a change was made. An AI mission will create a task logging directory and add hooks that record each agent session\'s intent and results.',
     detection: { type: 'any-of', pattern: ['.agent/tasks/', 'docs/agent-tasks/', '.github/agent-log/', 'agent-tasks.md'] },
   },
   {
@@ -19,6 +20,7 @@ const CRITERIA: Criterion[] = [
     name: 'Structural gates',
     description: 'Config-enforced gates that block agents from touching protected areas without review.',
     rationale: 'The framework treats structural gates as the primary mechanism for scoping agent authority — code can lie, config cannot.',
+    details: 'Structural gates are config files (like CODEOWNERS or boundary definitions) that prevent AI agents from modifying protected areas — such as auth modules, database migrations, or deployment configs — without explicit human review. They scope what the AI is allowed to touch. An AI mission will create a CODEOWNERS file or agent boundary config based on your project\'s sensitive directories.',
     detection: { type: 'any-of', pattern: ['CODEOWNERS', '.github/CODEOWNERS', '.agent/boundaries.yml', 'docs/agent-boundaries.md'] },
   },
   {
@@ -29,6 +31,7 @@ const CRITERIA: Criterion[] = [
     name: 'Session continuity doc',
     description: 'A persistent record the agent reads at session start to recover prior context.',
     rationale: 'The framework: agents without session continuity repeat mistakes and lose alignment between invocations.',
+    details: 'A session continuity document is a file that AI agents read at the start of every session to recover context from prior sessions — what was decided, what was tried, what failed. Without it, each session starts from zero and the agent may repeat mistakes or contradict previous decisions. An AI mission will create or enhance your instruction files to include session-persistent context.',
     detection: { type: 'any-of', pattern: ['CLAUDE.md', 'AGENTS.md', '.cursorrules', '.github/copilot-instructions.md', 'docs/agent-context.md'] },
   },
   {
@@ -39,6 +42,7 @@ const CRITERIA: Criterion[] = [
     name: 'Audit trail workflow',
     description: 'A workflow that records agent-generated PRs and attributes them for later review.',
     rationale: 'The framework: the governance claim rests on being able to answer "which agent did this, when, and why" after the fact.',
+    details: 'An audit trail workflow automatically labels and logs every AI-generated pull request with metadata: which agent created it, what issue it addresses, and what model was used. This lets you answer "who did this and why" for any AI-generated change during incident review or compliance audits. An AI mission will add a workflow that tags AI PRs with an "ai-generated" label and records attribution details.',
     detection: { type: 'any-of', pattern: ['.github/workflows/ai-audit.yml', '.github/workflows/agent-audit.yml', 'scripts/ai-audit-report.mjs'] },
   },
   {
@@ -49,6 +53,7 @@ const CRITERIA: Criterion[] = [
     name: 'Cross-tool agent config',
     description: 'Agent instructions that apply across Claude, Copilot, Cursor, and other tools rather than being tool-specific.',
     rationale: 'The framework: single-tool configs fragment over time; cross-tool configs keep the governance surface consistent.',
+    details: 'A cross-tool agent config is an instruction file (like AGENTS.md) that works with any AI coding tool, not just one vendor. If your rules only live in CLAUDE.md, a Copilot or Cursor user bypasses them entirely. Cross-tool configs keep governance consistent regardless of which AI tool a contributor uses. An AI mission will create an AGENTS.md that mirrors your existing tool-specific rules in a portable format.',
     detection: { type: 'any-of', pattern: ['AGENTS.md', 'docs/ai-contributors.md', '.github/ai-config.yml'] },
   },
   {
@@ -59,6 +64,7 @@ const CRITERIA: Criterion[] = [
     name: 'Change classification policy',
     description: 'A documented policy that classifies changes by risk tier and routes them to appropriate review.',
     rationale: 'The framework: uniform review gates on all PRs are either too strict or too loose — classification lets the policy be tier-appropriate.',
+    details: 'A change classification policy is a documented set of rules that sorts PRs into risk tiers (trivial, standard, critical) and applies different review requirements to each. A typo fix should not need the same review as a database migration. This prevents both over-gatekeeping (slow) and under-gatekeeping (risky). An AI mission will create a classification policy document based on your project\'s file structure and historical PR patterns.',
     detection: { type: 'any-of', pattern: ['docs/change-classification.md', '.github/change-tiers.yml', 'docs/risk-tiers.md'] },
   },
 ]

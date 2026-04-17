@@ -53,6 +53,7 @@ const CRITERIA: Criterion[] = [
     name: 'CLAUDE.md instructions',
     description: 'Project-level instructions loaded by Claude Code at every session start.',
     rationale: 'The foundational L2 feedback loop: encoding judgment as text the AI reads every session.',
+    details: 'CLAUDE.md is a file at the root of your repository that Claude Code reads automatically at the start of every session. It tells the AI about your project conventions, forbidden patterns, preferred libraries, and workflow rules so you do not have to repeat yourself. An AI mission will audit your repo for existing conventions and generate a CLAUDE.md that captures them, so every future AI session starts with the right context.',
     detection: { type: 'path', pattern: 'CLAUDE.md' },
     referencePath: 'CLAUDE.md',
     frequency: 'Every AI session',
@@ -65,6 +66,7 @@ const CRITERIA: Criterion[] = [
     name: 'Copilot instructions',
     description: 'GitHub Copilot repository instructions loaded on every Copilot interaction.',
     rationale: 'Same L2 signal as CLAUDE.md, scoped to Copilot users.',
+    details: 'copilot-instructions.md is a file in .github/ that GitHub Copilot reads to understand your project-specific rules during every interaction. It prevents Copilot from suggesting patterns your team has rejected, like deprecated APIs or wrong import styles. An AI mission will create this file from your existing code conventions so Copilot suggestions match your team standards out of the box.',
     detection: { type: 'path', pattern: '.github/copilot-instructions.md' },
     referencePath: '.github/copilot-instructions.md',
     frequency: 'Every Copilot session',
@@ -77,6 +79,7 @@ const CRITERIA: Criterion[] = [
     name: 'AGENTS.md shared directives',
     description: 'Cross-tool agent instructions readable by any AI coding tool.',
     rationale: 'Portable instructions that survive tool changes — an L2 durability signal.',
+    details: 'AGENTS.md is a tool-agnostic instruction file that any AI coding agent can read, regardless of whether you use Claude Code, Copilot, Cursor, or something else. It ensures your project rules survive tool switches without having to rewrite instructions for each platform. An AI mission will create an AGENTS.md that references your existing tool-specific instruction files and adds universal project rules.',
     detection: { type: 'path', pattern: 'AGENTS.md' },
     frequency: 'Every AI session',
   },
@@ -88,6 +91,7 @@ const CRITERIA: Criterion[] = [
     name: 'Cursor rules',
     description: 'Cursor IDE project rules that guide its agent.',
     rationale: 'Tool-specific L2 signal for Cursor users.',
+    details: 'Cursor rules are project-level instruction files (.cursorrules or .cursor/rules) that the Cursor IDE reads to guide its AI agent during code generation and editing. They prevent the AI from generating code that violates your architecture decisions or style preferences. An AI mission will create a Cursor rules file derived from your existing code patterns and conventions.',
     detection: { type: 'any-of', pattern: ['.cursor/rules', '.cursorrules'] },
     frequency: 'Every Cursor session',
   },
@@ -99,6 +103,7 @@ const CRITERIA: Criterion[] = [
     name: 'Prompt catalog',
     description: 'Committed prompt templates for recurring tasks.',
     rationale: 'Reusing prompts across the team turns tribal knowledge into shared L2 assets.',
+    details: 'A prompt catalog is a directory of reusable prompt templates (e.g., prompts/review.md, prompts/migrate-api.md) that encode your team\'s best approaches to recurring tasks like code reviews, migrations, or bug triage. It prevents each developer from reinventing prompts and ensures consistent quality across AI interactions. An AI mission will identify your most common development tasks and create prompt templates for each one.',
     detection: { type: 'any-of', pattern: ['prompts/', '.prompts/', 'docs/prompts/', '.github/prompts/', '.github/agents/'] },
   },
   {
@@ -109,6 +114,7 @@ const CRITERIA: Criterion[] = [
     name: 'Pull request template',
     description: 'Structured PR description template that guides both humans and AI.',
     rationale: 'A template nudges every PR through the same reasoning — an L2 structural aid.',
+    details: 'A PR template is a markdown form that pre-populates every new pull request with sections like Summary, Test Plan, and Breaking Changes. It ensures both human and AI contributors provide the same baseline information, making reviews faster and more consistent. An AI mission will create a PR template tailored to your project\'s review workflow and common change types.',
     detection: { type: 'any-of', pattern: ['.github/pull_request_template.md', '.github/PULL_REQUEST_TEMPLATE.md'] },
     referencePath: '.github/pull_request_template.md',
   },
@@ -120,6 +126,7 @@ const CRITERIA: Criterion[] = [
     name: 'Issue template',
     description: 'Structured issue form that ensures every report is triageable by the AI.',
     rationale: 'L2 governance aid — forces consistent issue shape so automation can classify.',
+    details: 'Issue templates are structured forms (bug report, feature request, etc.) that ensure every new issue includes the fields needed for triage: reproduction steps, expected behavior, environment details. This structure lets AI agents classify and prioritize issues automatically instead of parsing free-text descriptions. An AI mission will create issue templates based on your project\'s common issue categories.',
     detection: { type: 'any-of', pattern: ['.github/ISSUE_TEMPLATE/', '.github/issue_template.md'] },
   },
   {
@@ -130,6 +137,7 @@ const CRITERIA: Criterion[] = [
     name: 'Contributing guide',
     description: 'CONTRIBUTING.md used both by humans and AI to understand contribution rules.',
     rationale: 'Documented process is an L2 signal the team has articulated how work enters the repo.',
+    details: 'CONTRIBUTING.md documents how to set up the development environment, run tests, format code, and submit changes. It prevents AI agents from guessing at your workflow — instead they follow the documented process like any new contributor would. An AI mission will generate a contributing guide from your existing setup scripts, CI config, and code style rules.',
     detection: { type: 'any-of', pattern: ['CONTRIBUTING.md', '.github/CONTRIBUTING.md'] },
   },
   {
@@ -140,6 +148,7 @@ const CRITERIA: Criterion[] = [
     name: 'Code style config',
     description: 'Committed formatter/linter config (eslint, prettier, gofmt, ruff, etc.).',
     rationale: 'Style rules expressed as config — L2 mechanized judgment.',
+    details: 'A code style config file (like .eslintrc, .prettierrc, or .golangci.yml) enforces formatting and linting rules automatically, so neither humans nor AI can introduce style inconsistencies. Without it, AI-generated code may use different indentation, quote styles, or import ordering than your team prefers. An AI mission will detect your language stack and create the appropriate linter/formatter config with sensible defaults.',
     detection: { type: 'any-of', pattern: ['.eslintrc', '.eslintrc.json', '.eslintrc.js', 'eslint.config.js', '.prettierrc', 'ruff.toml', '.golangci.yml'] },
   },
   {
@@ -150,6 +159,7 @@ const CRITERIA: Criterion[] = [
     name: 'EditorConfig',
     description: '.editorconfig for cross-editor consistency.',
     rationale: 'Baseline L2 consistency signal — trivial to add, hard to retrofit.',
+    details: 'EditorConfig is a simple dotfile (.editorconfig) that tells every editor and IDE — VS Code, Vim, JetBrains, and others — to use the same indentation, line endings, and charset settings. Without it, contributors using different editors produce inconsistent whitespace that clutters diffs and causes merge conflicts. An AI mission will create an .editorconfig matched to your project\'s existing indentation style and file types.',
     detection: { type: 'path', pattern: '.editorconfig' },
   },
 
@@ -162,6 +172,7 @@ const CRITERIA: Criterion[] = [
     name: 'Coverage gate workflow',
     description: 'CI workflow that fails PRs below a coverage threshold.',
     rationale: 'L3 measurement: the first metric you encode as a blocking signal.',
+    details: 'A coverage gate is a CI workflow that blocks merging when test coverage drops below a threshold (e.g., 80%). It turns test coverage from a number you glance at into a hard constraint that both humans and AI must satisfy. An AI mission will add a GitHub Actions workflow that runs your test suite with coverage reporting and fails the PR check if coverage regresses.',
     detection: { type: 'any-of', pattern: ['.github/workflows/coverage-gate.yml', '.github/workflows/coverage.yml'] },
     referencePath: '.github/workflows/coverage-gate.yml',
   },
@@ -173,6 +184,7 @@ const CRITERIA: Criterion[] = [
     name: 'PR acceptance tracking',
     description: 'Scheduled job that tracks AI PR acceptance rate over time.',
     rationale: 'L3 meta-metric: measuring the feedback loop itself, not just the code.',
+    details: 'PR acceptance tracking is a scheduled job that measures what percentage of AI-generated PRs are merged vs. rejected over time. This meta-metric tells you whether your AI instructions are actually working — a declining acceptance rate means the instructions need updating. An AI mission will add a script that queries your GitHub PR history and writes acceptance metrics to a tracking file.',
     detection: { type: 'any-of', pattern: ['scripts/build-accm-history.mjs', '.github/workflows/accm-history-update.yml', 'scripts/pr-metrics.mjs'] },
     referencePath: 'scripts/build-accm-history.mjs',
   },
@@ -184,6 +196,7 @@ const CRITERIA: Criterion[] = [
     name: 'Automated test suite',
     description: 'A test runner config and at least one test directory.',
     rationale: 'L3 precondition: you cannot measure what is not tested.',
+    details: 'An automated test suite is a test framework (Vitest, Jest, pytest, go test, etc.) with a configuration file and at least one test directory. It is the foundation for all L3 measurement — you cannot gate on coverage, track regressions, or validate AI changes without runnable tests. An AI mission will detect your language/framework, add the appropriate test runner config, and create an example test file.',
     detection: { type: 'any-of', pattern: ['vitest.config.ts', 'vitest.config.js', 'jest.config.js', 'jest.config.ts', 'go.mod', 'pytest.ini', 'pyproject.toml'] },
   },
   {
@@ -194,6 +207,7 @@ const CRITERIA: Criterion[] = [
     name: 'End-to-end tests',
     description: 'Playwright, Cypress, or equivalent e2e test suite.',
     rationale: 'L3 user-path measurement — unit tests alone do not tell you the feature works.',
+    details: 'End-to-end tests use tools like Playwright or Cypress to simulate real user interactions — clicking buttons, filling forms, navigating pages — and verify the entire stack works together. Unit tests catch code-level bugs but miss integration failures that only appear when components connect. An AI mission will add a Playwright or Cypress config and create smoke tests for your application\'s critical user paths.',
     detection: { type: 'any-of', pattern: ['playwright.config.ts', 'playwright.config.js', 'cypress.config.ts', 'cypress.config.js', 'e2e/', 'tests/e2e/'] },
   },
   {
@@ -204,6 +218,7 @@ const CRITERIA: Criterion[] = [
     name: 'PR review rubric',
     description: 'Committed rubric the AI follows when reviewing PRs.',
     rationale: 'L3 signal: the quality criteria for "is this PR ok" are now written down.',
+    details: 'A PR review rubric is a document listing the specific quality criteria reviewers (human or AI) should check: error handling, test coverage, naming conventions, security patterns, etc. Without it, reviews are subjective and inconsistent — one reviewer checks for error handling while another focuses on style. An AI mission will create a review rubric based on your project\'s past review comments and common feedback themes.',
     detection: { type: 'any-of', pattern: ['.github/review-rubric.md', 'docs/review-criteria.md', '.github/prompts/review.md', 'docs/qa/'] },
   },
   {
@@ -214,6 +229,7 @@ const CRITERIA: Criterion[] = [
     name: 'Quality dashboard',
     description: 'A dashboard or page that renders the AI loop metrics.',
     rationale: 'L3 visibility: metrics you can see are the ones that get acted on.',
+    details: 'A quality dashboard is a visible page or widget that renders your AI loop metrics — PR acceptance rates, coverage trends, review turnaround, test pass rates — in one place. Metrics that are not visible are metrics that get ignored; a dashboard makes them actionable. An AI mission will create an analytics page or embed that pulls data from your CI and displays it as charts and trend lines.',
     detection: { type: 'any-of', pattern: ['web/public/analytics.js', 'web/src/components/analytics/'] },
     referencePath: 'web/public/analytics.js',
   },
@@ -225,6 +241,7 @@ const CRITERIA: Criterion[] = [
     name: 'CI matrix',
     description: 'Matrix CI testing multiple platforms/versions.',
     rationale: 'L3 breadth: coverage across the real deployment envelope.',
+    details: 'A CI matrix runs your test suite across multiple combinations of OS, language version, and architecture (e.g., ubuntu + macos, Node 18 + 20, amd64 + arm64). This catches platform-specific bugs that single-environment CI misses — especially important when AI generates code on one platform. An AI mission will add a matrix strategy to your existing CI workflow covering your project\'s supported platforms.',
     detection: { type: 'any-of', pattern: ['.github/workflows/build.yml', '.github/workflows/ci.yml', '.github/workflows/test.yml'] },
   },
 
@@ -237,6 +254,7 @@ const CRITERIA: Criterion[] = [
     name: 'Auto-QA self-tuning config',
     description: 'A config file that tunes review prompts based on the L3 metrics.',
     rationale: 'L4 loop-closing signal: metrics feeding back into instructions automatically.',
+    details: 'An auto-QA tuning config is a JSON or YAML file that adjusts review strictness and prompt templates based on your L3 metrics — for example, tightening coverage requirements when acceptance rate is high, or relaxing style checks when they generate too many false positives. This closes the loop: metrics drive instructions, not just reports. An AI mission will create a tuning config that references your metrics and defines adjustment rules.',
     detection: { type: 'any-of', pattern: ['.github/auto-qa-tuning.json', '.github/qa-tuning.yml'] },
   },
   {
@@ -247,6 +265,7 @@ const CRITERIA: Criterion[] = [
     name: 'Nightly compliance scan',
     description: 'Scheduled workflow that re-validates the codebase against its rules every night.',
     rationale: 'L4 drift detection: noticing when the loop itself has broken.',
+    details: 'A nightly compliance scan is a scheduled CI workflow that runs your full test suite, linters, and security checks on a cron schedule (typically every night). It catches regressions that slip through PR-level checks — like a dependency update that passes its own tests but breaks an unrelated feature. An AI mission will add a nightly GitHub Actions workflow that runs your complete validation pipeline and opens issues on failure.',
     detection: { type: 'any-of', pattern: ['.github/workflows/nightly-compliance.yml', '.github/workflows/nightly.yml', '.github/workflows/nightly-test.yml', '.github/workflows/nightly-test-suite.yml'] },
   },
   {
@@ -257,6 +276,7 @@ const CRITERIA: Criterion[] = [
     name: 'Automated review application',
     description: 'Workflow that applies AI-review suggestions automatically to PRs.',
     rationale: 'L4 action-taking: the loop closes when suggestions become commits without human intervention.',
+    details: 'Automated review application is a workflow that takes AI-generated review comments and applies the suggested fixes directly as commits on the PR branch. Instead of a human reading "change X to Y" and making the edit, the system does it automatically. This is L4 because the feedback loop acts on its own output. An AI mission will add a workflow that parses review bot suggestions and commits the fixes.',
     detection: { type: 'any-of', pattern: ['.github/workflows/copilot-review-apply.yml', '.github/workflows/ai-fix.yml', '.github/workflows/auto-review.yml'] },
   },
   {
@@ -267,6 +287,7 @@ const CRITERIA: Criterion[] = [
     name: 'Automated issue labeling',
     description: 'Workflow or bot config that triages new issues with AI.',
     rationale: 'L4 triage automation: removes a human step from the default path.',
+    details: 'Automated issue labeling uses AI or pattern-matching rules to classify new issues with labels (bug, feature, docs, priority) the moment they are filed. Without it, issues sit unlabeled until a human triages them, which can take hours or days. An AI mission will add a GitHub Actions workflow or labeler config that reads issue titles and bodies and applies the appropriate labels automatically.',
     detection: { type: 'any-of', pattern: ['.github/workflows/auto-label.yml', '.github/labeler.yml', '.github/workflows/triage.yml'] },
   },
   {
@@ -277,6 +298,7 @@ const CRITERIA: Criterion[] = [
     name: 'AI-fix-requested workflow',
     description: 'A workflow or label that dispatches AI agents on issues marked for fix.',
     rationale: 'L4 intent channel: humans express "fix this" as data; the loop executes.',
+    details: 'An AI-fix-requested workflow watches for a specific label (like "ai-fix-requested") on issues and automatically dispatches an AI agent to attempt a fix, create a branch, and open a PR. Humans express intent by labeling; the system executes. This is the core L4 pattern: humans set direction, machines do the work. An AI mission will add a workflow that triggers on label events and dispatches an agent to fix the issue.',
     detection: { type: 'any-of', pattern: ['.github/workflows/ai-fix.yml', '.github/workflows/fix-requested.yml'] },
   },
   {
@@ -287,6 +309,7 @@ const CRITERIA: Criterion[] = [
     name: 'Change-tier classifier',
     description: 'Workflow that classifies PRs by risk/blast-radius and routes review accordingly.',
     rationale: 'L4 risk-aware routing: not every change gets the same scrutiny.',
+    details: 'A change-tier classifier is a workflow that analyzes each PR\'s files, size, and content to assign a risk tier (e.g., T1-trivial, T2-standard, T3-critical). Low-risk changes like docs or config updates get fast-tracked, while high-risk changes touching auth or database schemas require senior review. An AI mission will add a classifier workflow that reads the diff and assigns a tier label based on configurable rules.',
     detection: { type: 'any-of', pattern: ['.github/workflows/tier-classifier.yml', '.github/workflows/pr-size.yml'] },
   },
   {
@@ -297,6 +320,7 @@ const CRITERIA: Criterion[] = [
     name: 'AI security policy',
     description: 'A SECURITY-AI.md or equivalent defining what the AI is and is not allowed to do.',
     rationale: 'L4 policy: the rules the self-tuning system cannot override.',
+    details: 'SECURITY-AI.md is a policy document that defines hard boundaries for AI agents: files they must never modify, secrets they must never access, destructive operations they must never run, and approval gates they must never skip. As AI autonomy increases, these guardrails prevent the system from optimizing its way into a security incident. An AI mission will create a SECURITY-AI.md tailored to your project\'s sensitive areas and compliance requirements.',
     detection: { type: 'any-of', pattern: ['SECURITY-AI.md', 'docs/security/SECURITY-AI.md', 'docs/SECURITY-AI.md'] },
     referencePath: 'docs/security/SECURITY-AI.md',
   },
@@ -310,6 +334,7 @@ const CRITERIA: Criterion[] = [
     name: 'Automated issue generation',
     description: 'Workflow or cron that generates work items for the AI to pick up.',
     rationale: 'L5 self-direction: the codebase proposes its own next task.',
+    details: 'Automated issue generation is a cron-triggered workflow that scans the codebase for TODOs, stale dependencies, failing tests, or coverage gaps and files GitHub issues for each finding. The codebase identifies its own work rather than waiting for humans to notice problems. An AI mission will add a workflow that scans for common improvement opportunities and creates prioritized issues automatically.',
     detection: { type: 'any-of', pattern: ['.github/workflows/auto-issue.yml', '.github/workflows/issue-gen.yml', '.github/workflows/auto-generate-issues.yml'] },
   },
   {
@@ -320,6 +345,7 @@ const CRITERIA: Criterion[] = [
     name: 'Multi-agent orchestration',
     description: 'A workflow or script that coordinates multiple AI agents on one task.',
     rationale: 'L5 composition: single agents become units of a larger autonomous system.',
+    details: 'Multi-agent orchestration uses a dispatcher script or workflow to coordinate multiple AI agents working on different parts of one task — for example, one agent fixes the bug while another writes the test and a third updates the docs. This parallelism is what makes L5 codebases productive beyond what a single agent can achieve. An AI mission will add an orchestration script that decomposes tasks and dispatches sub-agents.',
     detection: { type: 'any-of', pattern: ['scripts/orchestrate.mjs', '.github/workflows/orchestrate.yml', 'orchestrator/'] },
   },
   {
@@ -330,6 +356,7 @@ const CRITERIA: Criterion[] = [
     name: 'Strategic dashboard',
     description: 'A human-facing dashboard that shows *what the codebase is doing on its own*.',
     rationale: 'L5 accountability: humans need visibility into autonomous behavior without micromanaging it.',
+    details: 'A strategic dashboard shows humans what the autonomous system is doing: which issues it generated, which fixes it attempted, which PRs it merged, and what the trend lines look like. Without it, an L5 codebase becomes a black box. An AI mission will create a dashboard page that aggregates autonomous activity into a single human-readable view.',
     detection: { type: 'any-of', pattern: ['web/src/components/acmm/', 'web/public/analytics.js', 'docs/autonomous-work-log.md'] },
   },
   {
@@ -340,6 +367,7 @@ const CRITERIA: Criterion[] = [
     name: 'Merge queue / auto-merge',
     description: 'Branch protection with automated merge queue or tide-style auto-merge.',
     rationale: 'L5 throughput: humans no longer gate individual merges, only the queue config.',
+    details: 'A merge queue automatically batches, tests, and merges approved PRs in dependency order without human intervention. Humans configure the queue rules (required checks, approval count) but do not manually click "merge" on each PR. This removes the last human bottleneck from the PR lifecycle. An AI mission will configure branch protection with a merge queue or add a Tide-style auto-merge workflow.',
     detection: { type: 'any-of', pattern: ['.github/workflows/merge-queue.yml', '.prow.yaml', 'tide.yaml'] },
   },
   {
@@ -350,6 +378,7 @@ const CRITERIA: Criterion[] = [
     name: 'Policy as code',
     description: 'Policies expressed as machine-enforceable code (OPA, ConfTest, etc.).',
     rationale: 'L5 self-enforcing constraints: policies that cannot drift because they are executed.',
+    details: 'Policy as code means your governance rules (who can merge what, which files need senior review, which APIs are deprecated) are written as executable code using tools like OPA or ConfTest, not as wiki pages that drift. The system enforces them automatically on every PR. An AI mission will identify your implicit policies from code review history and express them as machine-enforceable rules.',
     detection: { type: 'any-of', pattern: ['.github/policies/', 'policy/', 'conftest.yaml', 'opa/'] },
   },
   {
@@ -360,6 +389,7 @@ const CRITERIA: Criterion[] = [
     name: 'Public metrics endpoint',
     description: 'A published metrics endpoint or analytics page that external reviewers can audit.',
     rationale: 'L5 external accountability: the self-running codebase must be inspectable from outside.',
+    details: 'A public metrics endpoint is an API or web page that exposes your project\'s health and maturity metrics to external stakeholders — CNCF reviewers, adopters, or the community. It makes the project\'s quality claims verifiable rather than self-reported. An AI mission will create an endpoint that serves your ACMM level, coverage stats, and CI pass rates as JSON or a web page.',
     detection: { type: 'any-of', pattern: ['web/netlify/functions/analytics-accm.mts', 'web/public/analytics.js'] },
   },
   {
@@ -370,6 +400,7 @@ const CRITERIA: Criterion[] = [
     name: 'Reflection log',
     description: 'A committed log where the AI records lessons learned that feed back into instruction files.',
     rationale: 'L5 self-improvement loop: the codebase records what changed its own behavior.',
+    details: 'A reflection log is a committed file or directory where AI agents record what they learned during a session — patterns that worked, mistakes that were corrected, conventions that were unclear. These reflections feed back into instruction files so future sessions start smarter. An AI mission will create a reflections directory and add a post-session hook that appends lessons learned.',
     detection: { type: 'any-of', pattern: ['docs/reflections/', 'memory/', '.memory/', 'REFLECTIONS.md'] },
   },
 ]
