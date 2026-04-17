@@ -16,20 +16,25 @@ import { useTranslation } from 'react-i18next'
 type MLJob = typeof DEMO_ML_JOBS[number]
 type SortByOption = 'name' | 'status' | 'framework' | 'gpus'
 
-const SORT_OPTIONS = [
-  { value: 'name' as const, label: 'Name' },
-  { value: 'status' as const, label: 'Status' },
-  { value: 'framework' as const, label: 'Framework' },
-  { value: 'gpus' as const, label: 'GPUs' },
-]
+const SORT_OPTION_KEYS = [
+  { value: 'name' as const, labelKey: 'mlJobs.sortName' },
+  { value: 'status' as const, labelKey: 'mlJobs.sortStatus' },
+  { value: 'framework' as const, labelKey: 'mlJobs.sortFramework' },
+  { value: 'gpus' as const, labelKey: 'mlJobs.sortGpus' },
+] as const
 
 interface MLJobsProps {
   config?: Record<string, unknown>
 }
 
 export function MLJobs({ config: _config }: MLJobsProps) {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
   const { data: jobs, isLoading, isRefreshing, isDemoData } = useDemoData(DEMO_ML_JOBS)
+
+  const sortOptions = SORT_OPTION_KEYS.map(opt => ({
+    value: opt.value,
+    label: t(opt.labelKey),
+  }))
 
   const hasData = jobs.length > 0
   useCardLoadingState({
@@ -118,7 +123,7 @@ export function MLJobs({ config: _config }: MLJobsProps) {
             limit={itemsPerPage}
             onLimitChange={setItemsPerPage}
             sortBy={sorting.sortBy}
-            sortOptions={SORT_OPTIONS}
+            sortOptions={sortOptions}
             onSortChange={(v) => sorting.setSortBy(v as SortByOption)}
             sortDirection={sorting.sortDirection}
             onSortDirectionChange={sorting.setSortDirection}
@@ -130,7 +135,7 @@ export function MLJobs({ config: _config }: MLJobsProps) {
       <CardSearchInput
         value={filters.search}
         onChange={filters.setSearch}
-        placeholder={t('common.searchJobs')}
+        placeholder={t('mlJobs.searchJobs', 'Search jobs...')}
         className="mb-2"
       />
 

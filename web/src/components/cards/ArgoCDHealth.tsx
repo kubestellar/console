@@ -79,7 +79,8 @@ export function ArgoCDHealth({ config: _config }: ArgoCDHealthProps) {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded">
       {/* Header */}
-      <div className="flex items-center justify-end mb-3">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-medium text-foreground truncate">{t('argoCDHealth.title')}</h3>
         <div className="flex items-center gap-1">
           <a
             href="https://argo-cd.readthedocs.io/"

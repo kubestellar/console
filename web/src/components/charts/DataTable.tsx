@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next'
+
 interface Column<T> {
   key: keyof T
   header: string
@@ -20,6 +22,7 @@ export function DataTable<T extends Record<string, unknown>>({
   maxHeight = 300,
   onRowClick,
 }: DataTableProps<T>) {
+  const { t } = useTranslation()
   return (
     <div className="w-full">
       {title && (
@@ -68,7 +71,7 @@ export function DataTable<T extends Record<string, unknown>>({
         </table>
         {data.length === 0 && (
           <div className="px-3 py-8 text-center text-muted-foreground">
-            No data available
+            {t('common.noData')}
           </div>
         )}
       </div>

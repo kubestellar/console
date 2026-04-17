@@ -2173,6 +2173,7 @@
     "syncNow": "Sync Now"
   },
   "argoCDHealth": {
+    "title": "ArgoCD Health",
     "healthy": "Healthy",
     "degraded": "Degraded",
     "progressing": "Progressing",
@@ -3583,5 +3584,12 @@
     "error": "Error",
     "sortByStatus": "Status",
     "sortByName": "Name"
+  },
+  "mlJobs": {
+    "sortName": "Name",
+    "sortStatus": "Status",
+    "sortFramework": "Framework",
+    "sortGpus": "GPUs",
+    "searchJobs": "Search jobs..."
   }
 }
