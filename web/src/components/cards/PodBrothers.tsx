@@ -146,19 +146,19 @@ export function PodBrothers() {
     invincibilityRef.current = INVINCIBILITY_FRAMES
   }, [])
 
-  // Collision detection
-  const getTileAt = (x: number, y: number): number => {
+  // Collision detection — wrapped in useCallback for stable update() deps
+  const getTileAt = useCallback((x: number, y: number): number => {
     const col = Math.floor(x / TILE_SIZE)
     const row = Math.floor(y / TILE_SIZE)
     if (row < 0 || row >= levelRef.current.length || col < 0 || col >= levelRef.current[0].length) {
       return EMPTY
     }
     return levelRef.current[row][col]
-  }
+  }, [])
 
-  const isSolid = (tile: number): boolean => {
+  const isSolid = useCallback((tile: number): boolean => {
     return tile === BRICK || tile === GROUND || tile === PIPE || tile === QUESTION
-  }
+  }, [])
 
   // Game loop
   const update = useCallback(() => {
@@ -483,6 +483,8 @@ export function PodBrothers() {
   const startGame = () => {
     // Cancel any in-flight animation frame to prevent stale updates
     cancelAnimationFrame(animationRef.current)
+    // Clear held keys so stale presses don't carry into the new game
+    keysRef.current.clear()
     initLevel()
     setScore(0)
     livesRef.current = 3

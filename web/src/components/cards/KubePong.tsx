@@ -47,6 +47,8 @@ export function KubePong() {
   const [gameState, setGameState] = useState<'idle' | 'playing' | 'paused' | 'finished'>('idle')
   const [playerScore, setPlayerScore] = useState(0)
   const [aiScore, setAiScore] = useState(0)
+  const playerScoreRef = useRef(0)
+  const aiScoreRef = useRef(0)
   const [winner, setWinner] = useState<'player' | 'ai' | null>(null)
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium')
   const [wins, setWins] = useState(() => {
@@ -79,14 +81,14 @@ export function KubePong() {
     hard: { speed: 5.5, reactionDelay: 0.1, errorMargin: 5 } }
 
   // Reset ball to center
-  const resetBall = (direction: number = 1) => {
+  const resetBall = useCallback((direction: number = 1) => {
     ballRef.current = {
       x: CANVAS_WIDTH / 2,
       y: CANVAS_HEIGHT / 2,
       vx: INITIAL_BALL_SPEED * direction,
       vy: (Math.random() - 0.5) * 4,
       speed: INITIAL_BALL_SPEED }
-  }
+  }, [])
 
   // Initialize game
   const initGame = useCallback(() => {
@@ -97,6 +99,8 @@ export function KubePong() {
       y: CANVAS_HEIGHT / 2 - PADDLE_HEIGHT / 2,
       score: 0 }
     resetBall(Math.random() > 0.5 ? 1 : -1)
+    playerScoreRef.current = 0
+    aiScoreRef.current = 0
     setPlayerScore(0)
     setAiScore(0)
     setWinner(null)
@@ -177,31 +181,35 @@ export function KubePong() {
     // Score
     if (ball.x < 0) {
       // AI scores
-      const newAiScore = aiScore + 1
+      aiScoreRef.current++
+      const newAiScore = aiScoreRef.current
       setAiScore(newAiScore)
       if (newAiScore >= WINNING_SCORE) {
         setWinner('ai')
         setGameState('finished')
-        emitGameEnded('pong', 'loss', playerScore)
+        emitGameEnded('pong', 'loss', playerScoreRef.current)
         return
       }
       resetBall(-1)
     } else if (ball.x > CANVAS_WIDTH) {
       // Player scores
-      const newPlayerScore = playerScore + 1
+      playerScoreRef.current++
+      const newPlayerScore = playerScoreRef.current
       setPlayerScore(newPlayerScore)
       if (newPlayerScore >= WINNING_SCORE) {
         setWinner('player')
-        const newWins = wins + 1
-        setWins(newWins)
-        localStorage.setItem('kubePongWins', newWins.toString())
+        setWins(prev => {
+          const newWins = prev + 1
+          localStorage.setItem('kubePongWins', newWins.toString())
+          return newWins
+        })
         setGameState('finished')
         emitGameEnded('pong', 'win', newPlayerScore)
         return
       }
       resetBall(1)
     }
-  }, [difficulty, aiScore, playerScore, resetBall, wins])
+  }, [difficulty, resetBall])
 
   // Render
   const render = useCallback(() => {
@@ -282,6 +290,8 @@ export function KubePong() {
   }, [gameState, initGame, render])
 
   const startGame = () => {
+    cancelAnimationFrame(animationRef.current)
+    keysRef.current.clear()
     initGame()
     setGameState('playing')
     emitGameStarted('pong')

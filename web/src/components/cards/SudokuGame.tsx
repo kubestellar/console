@@ -488,7 +488,7 @@ function SudokuGameInternal({ config: _config }: SudokuGameProps) {
 
       {/* Sudoku Grid */}
       <div className={`flex-1 flex items-center justify-center ${isMaximized ? 'mb-8' : 'mb-1.5'}`}>
-        <div className={`inline-grid grid-cols-9 gap-0 ${isMaximized ? 'border-4 rounded-lg' : 'border rounded'} border-purple-500/30 overflow-hidden bg-secondary/20`}>
+        <div className={`inline-grid grid-cols-9 gap-0 ${isMaximized ? 'border-4 rounded-lg' : 'border-2 rounded'} border-purple-400 overflow-hidden bg-secondary/20`}>
           {gameState.board.map((row, i) =>
             row.map((cell, j) => {
               const isSelected = selectedCell?.[0] === i && selectedCell?.[1] === j
@@ -508,8 +508,8 @@ function SudokuGameInternal({ config: _config }: SudokuGameProps) {
                   disabled={gameState.isComplete}
                   className={`
                     ${cellSize} font-medium transition-all
-                    ${rightBorder ? (isMaximized ? 'border-r-4' : 'border-r-2') + ' border-purple-500/50' : 'border-r border-border/30'}
-                    ${bottomBorder ? (isMaximized ? 'border-b-4' : 'border-b-2') + ' border-purple-500/50' : 'border-b border-border/30'}
+                    ${rightBorder ? (isMaximized ? 'border-r-4' : 'border-r-2') + ' border-purple-400' : 'border-r border-border/60'}
+                    ${bottomBorder ? (isMaximized ? 'border-b-4' : 'border-b-2') + ' border-purple-400' : 'border-b border-border/60'}
                     ${isSelected ? 'bg-purple-500/30 ring-2 ring-purple-500' : ''}
                     ${!isSelected && (isInSameRow || isInSameCol || isInSameBox) ? 'bg-purple-500/10' : ''}
                     ${cell.isOriginal ? 'text-foreground font-bold' : 'text-purple-400'}

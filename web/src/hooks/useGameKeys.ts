@@ -115,13 +115,28 @@ export function useGameKeyTracking(
       keysRef.current.delete(lowercase ? e.key.toLowerCase() : e.key)
     }
 
+    /** Release all held keys when the tab/window loses focus or becomes hidden. */
+    const handleBlur = () => {
+      keysRef.current.clear()
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        keysRef.current.clear()
+      }
+    }
+
     window.addEventListener('keydown', handleKeyDown)
     window.addEventListener('keyup', handleKeyUp)
+    window.addEventListener('blur', handleBlur)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
 
     const keys = keysRef.current
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
       window.removeEventListener('keyup', handleKeyUp)
+      window.removeEventListener('blur', handleBlur)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
       keys.clear()
     }
   }, [containerRef, keysRef])

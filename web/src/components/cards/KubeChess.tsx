@@ -149,6 +149,8 @@ const KNIGHT_TABLE = [
 const STORAGE_KEY = 'kube_chess_state'
 const STORAGE_KEY_STATS = 'kube_chess_stats'
 const AI_THINK_DELAY_MS = 300 // delay before AI computation to allow UI to update
+/** Maximum wall-clock time (ms) the AI is allowed to spend computing a move. */
+const AI_TIMEOUT_MS = 5000
 
 // Initialize the starting position
 function createInitialBoard(): Board {
@@ -561,11 +563,11 @@ function evaluateBoard(board: Board, state: GameState): number {
 const MAX_POSITIONS_EVALUATED = 50_000
 
 // Minimax with alpha-beta pruning and position count limit
-function minimax(state: GameState, depth: number, alpha: number, beta: number, maximizing: boolean, counter: { count: number }): number {
+function minimax(state: GameState, depth: number, alpha: number, beta: number, maximizing: boolean, counter: { count: number; deadline: number }): number {
   counter.count++
 
-  // Bail out if we've evaluated too many positions to prevent UI freeze
-  if (counter.count >= MAX_POSITIONS_EVALUATED) {
+  // Bail out if we've evaluated too many positions or exceeded time budget
+  if (counter.count >= MAX_POSITIONS_EVALUATED || performance.now() > counter.deadline) {
     return evaluateBoard(state.board, state)
   }
 
@@ -636,13 +638,13 @@ function findBestMove(state: GameState, depth: number): { from: { row: number; c
     return valueB - valueA
   })
 
-  const counter = { count: 0 }
+  const counter = { count: 0, deadline: performance.now() + AI_TIMEOUT_MS }
   let bestMove = moves[0]
   let bestScore = state.turn === 'white' ? -Infinity : Infinity
 
   for (const move of moves) {
-    // If we've hit the position limit, stop searching and use best so far
-    if (counter.count > MAX_POSITIONS_EVALUATED) break
+    // If we've hit the position limit or exceeded time budget, stop and use best so far
+    if (counter.count > MAX_POSITIONS_EVALUATED || performance.now() > counter.deadline) break
 
     const newState = makeMove(state, move.from, move.to)
     const score = minimax(newState, depth - 1, -Infinity, Infinity, state.turn === 'black', counter)
@@ -691,6 +693,8 @@ function KubeChessInternal() {
   const [difficulty, setDifficulty] = useState<1 | 2 | 3>(2) // 1=easy, 2=medium, 3=hard
   const [isThinking, setIsThinking] = useState(false)
   const isThinkingRef = useRef(false)
+  /** Incremented on reset/flip to signal in-flight AI setTimeout to bail out. */
+  const aiGenerationRef = useRef(0)
   const [showSettings, setShowSettings] = useState(false)
   const [promotionPending, setPromotionPending] = useState<{ from: { row: number; col: number }; to: { row: number; col: number } } | null>(null)
   const [stats, setStats] = useState(() => {
@@ -724,11 +728,20 @@ function KubeChessInternal() {
       isThinkingRef.current = true
       setIsThinking(true)
 
+      // Capture the current generation so we can detect reset/flip during compute
+      const generation = aiGenerationRef.current
+
       // Use setTimeout to allow UI to update before heavy computation
       const id = setTimeout(() => {
         try {
+          // Bail out if the game was reset/flipped while waiting
+          if (aiGenerationRef.current !== generation) return
+
           const depth = difficulty + 1 // 2, 3, or 4
           const bestMove = findBestMove(gameState, depth)
+
+          // Bail out if reset/flipped during computation
+          if (aiGenerationRef.current !== generation) return
 
           if (bestMove) {
             // UI commit: track repetition history.
@@ -828,8 +841,11 @@ function KubeChessInternal() {
     }
   }
 
-  // Reset game
+  // Reset game — bump generation to abort any in-flight AI computation
   const resetGame = () => {
+    aiGenerationRef.current++
+    isThinkingRef.current = false
+    setIsThinking(false)
     setGameState(createInitialState())
     setSelectedSquare(null)
     setValidMoves([])
@@ -837,8 +853,11 @@ function KubeChessInternal() {
     emitGameStarted('chess')
   }
 
-  // Flip board
+  // Flip board — bump generation to abort any in-flight AI computation
   const flipBoard = () => {
+    aiGenerationRef.current++
+    isThinkingRef.current = false
+    setIsThinking(false)
     setPlayerColor(prev => prev === 'white' ? 'black' : 'white')
   }
 

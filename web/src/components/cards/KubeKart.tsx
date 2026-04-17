@@ -150,22 +150,22 @@ export function KubeKart() {
     activeShieldRef.current = 0
   }, [])
 
-  // Get track curve at position
-  const getTrackCurve = (y: number): number => {
+  // Get track curve at position — stable ref for render/update deps
+  const getTrackCurve = useCallback((y: number): number => {
     const period = 400
     const phase = (y + trackScrollRef.current) / period
     return Math.sin(phase) * 0.3
-  }
+  }, [])
 
-  // Check if position is on track
-  const isOnTrack = (x: number): boolean => {
+  // Check if position is on track — stable ref for update deps
+  const isOnTrack = useCallback((x: number): boolean => {
     const trackLeft = (CANVAS_WIDTH - TRACK_WIDTH) / 2
     const trackRight = trackLeft + TRACK_WIDTH
     return x >= trackLeft + 20 && x <= trackRight - 20
-  }
+  }, [])
 
   // Update AI karts - drive straight at moderate speed in fixed lanes
-  const updateAI = (kart: Kart, index: number) => {
+  const updateAI = useCallback((kart: Kart, index: number) => {
     const maxAiSpeed = MAX_SPEED * (0.65 + index * 0.05)
     if (kart.speed < maxAiSpeed) {
       kart.speed += ACCELERATION * 0.6
@@ -186,7 +186,7 @@ export function KubeKart() {
 
     // Face forward
     kart.angle = FORWARD_ANGLE
-  }
+  }, [])
 
   // Game update
   const update = useCallback(() => {
@@ -502,6 +502,8 @@ export function KubeKart() {
   }, [gameState, initTrack, render])
 
   const startGame = () => {
+    cancelAnimationFrame(animationRef.current)
+    keysRef.current.clear()
     initTrack()
     raceTimeRef.current = 0
     setRaceTime(0)
