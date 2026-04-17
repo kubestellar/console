@@ -20,6 +20,7 @@ import { SortableDashboardCard, DragPreviewCard } from './DashboardComponents'
 import { ConfigureCardModal } from '../../components/dashboard/ConfigureCardModal'
 import { FloatingDashboardActions } from '../../components/dashboard/FloatingDashboardActions'
 import { DashboardCustomizer } from '../../components/dashboard/customizer/DashboardCustomizer'
+import type { CustomizerSection } from '../../components/dashboard/customizer/customizerNav'
 import { DashboardTemplate } from '../../components/dashboard/templates'
 import { StatsOverview, StatBlockValue } from '../../components/ui/StatsOverview'
 import { DashboardStatsType } from '../../components/ui/StatsBlockDefinitions'
@@ -205,10 +206,14 @@ export function DashboardPage({
   const dashCtx = useDashboardContextOptional()
   const [widgetCardType, setWidgetCardType] = useState<string | undefined>(undefined)
   useEffect(() => {
+    // Guard: only process on the active dashboard — KeepAlive keeps inactive
+    // dashboards mounted, so without this check we'd open the customizer on
+    // a hidden dashboard when the context fires.
+    if (location.pathname !== mountedRouteRef.current) return
     if (dashCtx?.isAddCardModalOpen) {
       setShowAddCard(true)
       if (dashCtx.studioInitialSection) {
-        setCustomizerInitialSection(dashCtx.studioInitialSection as 'cards' | 'dashboards' | undefined)
+        setCustomizerInitialSection(dashCtx.studioInitialSection)
       }
       if (dashCtx.studioWidgetCardType) {
         setWidgetCardType(dashCtx.studioWidgetCardType)
@@ -216,14 +221,14 @@ export function DashboardPage({
       // Reset context state so it doesn't re-trigger
       dashCtx.closeAddCardModal()
     }
-  }, [dashCtx?.isAddCardModalOpen, dashCtx?.studioInitialSection, dashCtx?.studioWidgetCardType])
+  }, [dashCtx?.isAddCardModalOpen, dashCtx?.studioInitialSection, dashCtx?.studioWidgetCardType, location.pathname])
 
   // Handle addCard and customizeSidebar URL params via the DashboardCustomizer.
   // Guard with mounted route: KeepAlive keeps hidden dashboards mounted,
   // so all of them see the same searchParams. Only process when active.
   const [addCardSearch, setAddCardSearch] = useState('')
   // Determine initial section for DashboardCustomizer based on URL params
-  const [customizerInitialSection, setCustomizerInitialSection] = useState<'cards' | 'dashboards' | undefined>(undefined)
+  const [customizerInitialSection, setCustomizerInitialSection] = useState<CustomizerSection | undefined>(undefined)
   useEffect(() => {
     if (location.pathname !== mountedRouteRef.current) return
     if (searchParams.get('addCard') === 'true') {
@@ -259,6 +264,8 @@ export function DashboardPage({
     }
     expandCards()
     setShowAddCard(false)
+    setWidgetCardType(undefined)
+    setCustomizerInitialSection(undefined)
   }
 
   const handleRemoveCard = (cardId: string) => {
@@ -292,6 +299,8 @@ export function DashboardPage({
     expandCards()
     // Close DashboardCustomizer after applying template
     setShowAddCard(false)
+    setWidgetCardType(undefined)
+    setCustomizerInitialSection(undefined)
   }
 
   // Merged stat value getter: dashboard-specific first, then universal fallback
