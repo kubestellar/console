@@ -46,6 +46,19 @@ export interface PayloadProject {
    * loses user-selected CNCF projects on refinement.
    */
   userAdded?: boolean
+  /**
+   * Kubara platform chart reference. When present, the project can be
+   * installed via the Kubara catalog instead of (or in addition to) the
+   * console-kb install mission. `repoPath` is the directory path inside
+   * the kubara-io/kubara repo (e.g. "helm/prometheus-stack"). `valuesUrl`
+   * optionally points to a pre-built values file for the chart (#8480).
+   */
+  kubaraChart?: {
+    /** Path inside the kubara-io/kubara repo (e.g. "helm/prometheus-stack") */
+    repoPath: string
+    /** Optional URL to a default or recommended values file */
+    valuesUrl?: string
+  }
 }
 
 // ---------------------------------------------------------------------------

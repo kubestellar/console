@@ -1149,6 +1149,11 @@ func (s *Server) setupRoutes() {
 	api.Get("/nightly-e2e/runs", nightlyE2E.GetRuns)
 	api.Get("/nightly-e2e/run-logs", nightlyE2E.GetRunLogs)
 
+	// Kubara platform catalog — server-side cache so all users share one
+	// upstream fetch from kubara-io/kubara (#8487)
+	kubaraCatalog := handlers.NewKubaraCatalogHandler(s.config.GitHubToken)
+	api.Get("/kubara/catalog", kubaraCatalog.GetCatalog)
+
 	// GitHub Pipelines dashboard (powers /ci-cd cards). Same endpoint shape
 	// as the Netlify Function at web/netlify/functions/github-pipelines.mts
 	// so the TS hook works against either backend without branching.

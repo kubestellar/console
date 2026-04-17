@@ -11,6 +11,159 @@ import { http, HttpResponse, delay, passthrough } from 'msw'
  * Provides mock API responses without requiring backend connectivity.
  */
 
+// ---------------------------------------------------------------------------
+// Kubara catalog fixture — realistic snapshot of the GitHub Contents API
+// response for kubara-io/kubara/contents/helm. Each entry includes the full
+// set of fields returned by the API (sha, size, URLs) so that components
+// exercising those fields work correctly in demo mode (#8486).
+// ---------------------------------------------------------------------------
+const kubaraCatalogFixture = [
+  {
+    name: 'prometheus-stack',
+    path: 'helm/prometheus-stack',
+    sha: 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2',
+    size: 0,
+    url: 'https://api.github.com/repos/kubara-io/kubara/contents/helm/prometheus-stack?ref=main',
+    html_url: 'https://github.com/kubara-io/kubara/tree/main/helm/prometheus-stack',
+    git_url: 'https://api.github.com/repos/kubara-io/kubara/git/trees/a1b2c3d',
+    download_url: null,
+    type: 'dir',
+    description: 'Production Prometheus + Grafana + Alertmanager monitoring stack',
+  },
+  {
+    name: 'cert-manager',
+    path: 'helm/cert-manager',
+    sha: 'b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3',
+    size: 0,
+    url: 'https://api.github.com/repos/kubara-io/kubara/contents/helm/cert-manager?ref=main',
+    html_url: 'https://github.com/kubara-io/kubara/tree/main/helm/cert-manager',
+    git_url: 'https://api.github.com/repos/kubara-io/kubara/git/trees/b2c3d4e',
+    download_url: null,
+    type: 'dir',
+    description: 'Automated TLS certificate management with Let\'s Encrypt and custom CAs',
+  },
+  {
+    name: 'falco-runtime-security',
+    path: 'helm/falco-runtime-security',
+    sha: 'c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4',
+    size: 0,
+    url: 'https://api.github.com/repos/kubara-io/kubara/contents/helm/falco-runtime-security?ref=main',
+    html_url: 'https://github.com/kubara-io/kubara/tree/main/helm/falco-runtime-security',
+    git_url: 'https://api.github.com/repos/kubara-io/kubara/git/trees/c3d4e5f',
+    download_url: null,
+    type: 'dir',
+    description: 'Runtime threat detection and incident response for containers',
+  },
+  {
+    name: 'kyverno-policies',
+    path: 'helm/kyverno-policies',
+    sha: 'd4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5',
+    size: 0,
+    url: 'https://api.github.com/repos/kubara-io/kubara/contents/helm/kyverno-policies?ref=main',
+    html_url: 'https://github.com/kubara-io/kubara/tree/main/helm/kyverno-policies',
+    git_url: 'https://api.github.com/repos/kubara-io/kubara/git/trees/d4e5f6a',
+    download_url: null,
+    type: 'dir',
+    description: 'Kubernetes-native policy engine for admission control and governance',
+  },
+  {
+    name: 'argocd-gitops',
+    path: 'helm/argocd-gitops',
+    sha: 'e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6',
+    size: 0,
+    url: 'https://api.github.com/repos/kubara-io/kubara/contents/helm/argocd-gitops?ref=main',
+    html_url: 'https://github.com/kubara-io/kubara/tree/main/helm/argocd-gitops',
+    git_url: 'https://api.github.com/repos/kubara-io/kubara/git/trees/e5f6a1b',
+    download_url: null,
+    type: 'dir',
+    description: 'Declarative GitOps continuous delivery with Argo CD',
+  },
+  {
+    name: 'istio-service-mesh',
+    path: 'helm/istio-service-mesh',
+    sha: 'f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1',
+    size: 0,
+    url: 'https://api.github.com/repos/kubara-io/kubara/contents/helm/istio-service-mesh?ref=main',
+    html_url: 'https://github.com/kubara-io/kubara/tree/main/helm/istio-service-mesh',
+    git_url: 'https://api.github.com/repos/kubara-io/kubara/git/trees/f6a1b2c',
+    download_url: null,
+    type: 'dir',
+    description: 'Service mesh for traffic management, mTLS, and observability',
+  },
+  {
+    name: 'velero-backups',
+    path: 'helm/velero-backups',
+    sha: 'a7b8c9d0e1f2a7b8c9d0e1f2a7b8c9d0e1f2a7b8',
+    size: 0,
+    url: 'https://api.github.com/repos/kubara-io/kubara/contents/helm/velero-backups?ref=main',
+    html_url: 'https://github.com/kubara-io/kubara/tree/main/helm/velero-backups',
+    git_url: 'https://api.github.com/repos/kubara-io/kubara/git/trees/a7b8c9d',
+    download_url: null,
+    type: 'dir',
+    description: 'Cluster backup, disaster recovery, and migration tooling',
+  },
+  {
+    name: 'external-secrets',
+    path: 'helm/external-secrets',
+    sha: 'b8c9d0e1f2a7b8c9d0e1f2a7b8c9d0e1f2a7b8c9',
+    size: 0,
+    url: 'https://api.github.com/repos/kubara-io/kubara/contents/helm/external-secrets?ref=main',
+    html_url: 'https://github.com/kubara-io/kubara/tree/main/helm/external-secrets',
+    git_url: 'https://api.github.com/repos/kubara-io/kubara/git/trees/b8c9d0e',
+    download_url: null,
+    type: 'dir',
+    description: 'Sync secrets from AWS Secrets Manager, Vault, GCP, and Azure Key Vault',
+  },
+  {
+    name: 'trivy-vulnerability-scanner',
+    path: 'helm/trivy-vulnerability-scanner',
+    sha: 'c9d0e1f2a7b8c9d0e1f2a7b8c9d0e1f2a7b8c9d0',
+    size: 0,
+    url: 'https://api.github.com/repos/kubara-io/kubara/contents/helm/trivy-vulnerability-scanner?ref=main',
+    html_url: 'https://github.com/kubara-io/kubara/tree/main/helm/trivy-vulnerability-scanner',
+    git_url: 'https://api.github.com/repos/kubara-io/kubara/git/trees/c9d0e1f',
+    download_url: null,
+    type: 'dir',
+    description: 'Container image and filesystem vulnerability scanning',
+  },
+  {
+    name: 'fluent-bit-logging',
+    path: 'helm/fluent-bit-logging',
+    sha: 'd0e1f2a7b8c9d0e1f2a7b8c9d0e1f2a7b8c9d0e1',
+    size: 0,
+    url: 'https://api.github.com/repos/kubara-io/kubara/contents/helm/fluent-bit-logging?ref=main',
+    html_url: 'https://github.com/kubara-io/kubara/tree/main/helm/fluent-bit-logging',
+    git_url: 'https://api.github.com/repos/kubara-io/kubara/git/trees/d0e1f2a',
+    download_url: null,
+    type: 'dir',
+    description: 'Lightweight log processor and forwarder for Kubernetes',
+  },
+  {
+    name: 'harbor-registry',
+    path: 'helm/harbor-registry',
+    sha: 'e1f2a7b8c9d0e1f2a7b8c9d0e1f2a7b8c9d0e1f2',
+    size: 0,
+    url: 'https://api.github.com/repos/kubara-io/kubara/contents/helm/harbor-registry?ref=main',
+    html_url: 'https://github.com/kubara-io/kubara/tree/main/helm/harbor-registry',
+    git_url: 'https://api.github.com/repos/kubara-io/kubara/git/trees/e1f2a7b',
+    download_url: null,
+    type: 'dir',
+    description: 'Enterprise container registry with vulnerability scanning and RBAC',
+  },
+  {
+    name: 'crossplane-infra',
+    path: 'helm/crossplane-infra',
+    sha: 'f2a7b8c9d0e1f2a7b8c9d0e1f2a7b8c9d0e1f2a7',
+    size: 0,
+    url: 'https://api.github.com/repos/kubara-io/kubara/contents/helm/crossplane-infra?ref=main',
+    html_url: 'https://github.com/kubara-io/kubara/tree/main/helm/crossplane-infra',
+    git_url: 'https://api.github.com/repos/kubara-io/kubara/git/trees/f2a7b8c',
+    download_url: null,
+    type: 'dir',
+    description: 'Infrastructure-as-code with Kubernetes-native resource provisioning',
+  },
+]
+
 // Demo data - one cluster for each provider type to showcase all icons
 const demoClusters = [
   { name: 'kind-local', context: 'kind-local', healthy: true, source: 'kubeconfig', nodeCount: 1, podCount: 15, cpuCores: 4, memoryGB: 8, storageGB: 50, distribution: 'kind' },
@@ -733,18 +886,23 @@ export const handlers = [
   // http.get) to cover mutation POSTs + CORS preflight.
   http.all('/api/github-pipelines', () => passthrough()),
 
-  // ── Kubara Platform Catalog (demo) ──────────────────────────────
+  // ── Kubara Platform Catalog (demo fixtures — #8486) ─────────────
+  // Realistic fixture snapshots matching the GitHub Contents API shape
+  // returned by the kubara-io/kubara repo. Each entry mirrors a real
+  // chart directory with sha, size, git URLs, and download links so that
+  // downstream components exercising those fields work correctly in demo.
   http.get('/api/github/repos/kubara-io/kubara/contents/*', () => {
-    return HttpResponse.json([
-      { name: 'prometheus-stack', path: 'helm/prometheus-stack', type: 'directory', description: 'Production Prometheus + Grafana + Alertmanager' },
-      { name: 'cert-manager', path: 'helm/cert-manager', type: 'directory', description: 'Automated TLS certificate management' },
-      { name: 'falco-runtime-security', path: 'helm/falco-runtime-security', type: 'directory', description: 'Runtime threat detection and response' },
-      { name: 'kyverno-policies', path: 'helm/kyverno-policies', type: 'directory', description: 'Kubernetes policy engine for security' },
-      { name: 'argocd-gitops', path: 'helm/argocd-gitops', type: 'directory', description: 'Declarative GitOps continuous delivery' },
-      { name: 'istio-service-mesh', path: 'helm/istio-service-mesh', type: 'directory', description: 'Service mesh for traffic management and security' },
-      { name: 'velero-backups', path: 'helm/velero-backups', type: 'directory', description: 'Cluster backup and disaster recovery' },
-      { name: 'external-secrets', path: 'helm/external-secrets', type: 'directory', description: 'Sync secrets from external providers' },
-    ])
+    return HttpResponse.json(kubaraCatalogFixture)
+  }),
+
+  // Server-side Kubara catalog endpoint (Go handler with cache — #8487).
+  // In demo mode this is intercepted by MSW; the Go handler also returns
+  // demo data when it sees X-Demo-Mode, but belt-and-suspenders is safer.
+  http.get('/api/kubara/catalog', () => {
+    return HttpResponse.json({
+      entries: kubaraCatalogFixture,
+      source: 'demo',
+    })
   }),
 
   // ── Optional feature status endpoints (issue #8162) ──────────────
