@@ -1,10 +1,13 @@
 package handlers
 
 import (
+	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"io"
 	"net/http"
+	"os/exec"
+	"strings"
 	"sync"
 	"time"
 
@@ -71,9 +74,28 @@ var cache = &playlistCache{}
 var playlistSingleflight singleflight.Group
 
 func fetchPlaylistFromYouTube() ([]PlaylistVideo, error) {
+	// Primary: RSS feed (fast, no dependencies).
+	videos, rssErr := fetchPlaylistViaRSS()
+	if rssErr == nil && len(videos) > 0 {
+		return videos, nil
+	}
+
+	// Fallback: yt-dlp (handles playlists where RSS returns 404).
+	videos, ytErr := fetchPlaylistViaYTDLP()
+	if ytErr == nil && len(videos) > 0 {
+		return videos, nil
+	}
+
+	// Both failed — return the more informative error.
+	if rssErr != nil {
+		return nil, rssErr
+	}
+	return nil, ytErr
+}
+
+func fetchPlaylistViaRSS() ([]PlaylistVideo, error) {
 	url := fmt.Sprintf("https://www.youtube.com/feeds/videos.xml?playlist_id=%s", playlistID)
 
-	// #7065: reuse shared HTTP client for connection pooling.
 	resp, err := youtubeHTTPClient.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch playlist feed: %w", err)
@@ -81,10 +103,9 @@ func fetchPlaylistFromYouTube() ([]PlaylistVideo, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("YouTube returned status %d", resp.StatusCode)
+		return nil, fmt.Errorf("YouTube RSS returned status %d", resp.StatusCode)
 	}
 
-	// #7064: limit response body to prevent memory exhaustion.
 	body, err := io.ReadAll(io.LimitReader(resp.Body, maxYouTubeResponseBytes))
 	if err != nil {
 		return nil, fmt.Errorf("failed to read feed body: %w", err)
@@ -104,7 +125,42 @@ func fetchPlaylistFromYouTube() ([]PlaylistVideo, error) {
 			Published:   entry.Published,
 		})
 	}
+	return videos, nil
+}
 
+// ytdlpVideoJSON is the shape yt-dlp emits with --flat-playlist --dump-json.
+type ytdlpVideoJSON struct {
+	ID    string `json:"id"`
+	Title string `json:"title"`
+}
+
+func fetchPlaylistViaYTDLP() ([]PlaylistVideo, error) {
+	ytdlp, err := exec.LookPath("yt-dlp")
+	if err != nil {
+		return nil, fmt.Errorf("yt-dlp not found: %w", err)
+	}
+
+	playlistURL := fmt.Sprintf("https://www.youtube.com/playlist?list=%s", playlistID)
+	cmd := exec.Command(ytdlp, "--flat-playlist", "--dump-json", "--no-warnings", playlistURL)
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("yt-dlp failed: %w", err)
+	}
+
+	var videos []PlaylistVideo
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		if line == "" {
+			continue
+		}
+		var v ytdlpVideoJSON
+		if err := json.Unmarshal([]byte(line), &v); err != nil {
+			continue
+		}
+		videos = append(videos, PlaylistVideo{
+			ID:    v.ID,
+			Title: v.Title,
+		})
+	}
 	return videos, nil
 }
 
