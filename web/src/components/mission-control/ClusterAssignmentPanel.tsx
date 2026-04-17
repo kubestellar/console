@@ -25,7 +25,7 @@ type ViewMode = 'cards' | 'matrix'
 interface ClusterAssignmentPanelProps {
   state: MissionControlState
   onAskAI: (projects: PayloadProject[], clustersJson: string) => void
-  onAutoAssign: (clusters: Array<{ name: string; context?: string; distribution?: string; cpuCores?: number; memoryGB?: number; storageGB?: number; cpuUsageCores?: number; cpuRequestsCores?: number; memoryUsageGB?: number; memoryRequestsGB?: number }>) => void
+  onAutoAssign: (clusters: Array<{ name: string; context?: string; distribution?: string; cpuCores?: number; memoryGB?: number; storageGB?: number; cpuUsageCores?: number; cpuRequestsCores?: number; memoryUsageGB?: number; memoryRequestsGB?: number }>) => void | Promise<void>
   onSetAssignment: (clusterName: string, projectName: string, assigned: boolean) => void
   aiStreaming: boolean
   planningMission?: Mission | null

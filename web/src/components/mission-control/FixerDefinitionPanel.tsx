@@ -33,7 +33,7 @@ interface FixerDefinitionPanelProps {
   onDescriptionChange: (desc: string) => void
   onTitleChange: (title: string) => void
   onTargetClustersChange: (clusters: string[]) => void
-  onAskAI: (description: string, existing?: PayloadProject[]) => void
+  onAskAI: (description: string, existing?: PayloadProject[]) => void | Promise<void>
   onAddProject: (project: PayloadProject) => void
   onRemoveProject: (name: string) => void
   onUpdatePriority: (name: string, priority: PayloadProject['priority']) => void

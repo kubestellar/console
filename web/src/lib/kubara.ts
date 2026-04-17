@@ -1,0 +1,216 @@
+/**
+ * Kubara catalog utilities for Mission Control integration.
+ *
+ * Provides helpers to fetch the Kubara chart catalog index, retrieve
+ * per-chart values.yaml contents, and parse resource requests from
+ * Helm values so that Mission Control can:
+ *   1. Include available chart names in AI suggestion context (#8481)
+ *   2. Embed values.yaml into install prompts (#8482)
+ *   3. Factor chart resource requests into cluster sizing (#8485)
+ */
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+/** Timeout (ms) for fetching the Kubara catalog index */
+const KUBARA_CATALOG_FETCH_TIMEOUT_MS = 8_000
+
+/** Timeout (ms) for fetching a single chart's values.yaml */
+const KUBARA_VALUES_FETCH_TIMEOUT_MS = 10_000
+
+/** Base path inside the kubara-io/kubara repo for Helm charts */
+const KUBARA_HELM_BASE_PATH = 'go-binary/templates/embedded/managed-service-catalog/helm'
+
+/** In-memory TTL for the catalog index cache (ms) — avoids redundant fetches */
+const CATALOG_CACHE_TTL_MS = 5 * 60 * 1000
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+/** A single entry in the Kubara chart catalog */
+export interface KubaraChartEntry {
+  /** Chart name (e.g. "kube-prometheus-stack") */
+  name: string
+  /** Relative path inside the repo (e.g. "go-binary/.../helm/kube-prometheus-stack") */
+  path: string
+  /** Optional description from the catalog */
+  description?: string
+}
+
+/** Parsed resource requests from a chart's values.yaml */
+export interface KubaraResourceRequests {
+  /** CPU request (in millicores, e.g. 100 for "100m", 1000 for "1") */
+  cpuMillicores: number
+  /** Memory request (in MiB, e.g. 128 for "128Mi", 1024 for "1Gi") */
+  memoryMiB: number
+}
+
+// ---------------------------------------------------------------------------
+// In-memory catalog cache
+// ---------------------------------------------------------------------------
+
+let cachedCatalog: KubaraChartEntry[] | null = null
+let cachedCatalogTimestamp = 0
+
+// ---------------------------------------------------------------------------
+// Static fallback catalog (used in demo mode and when fetch fails)
+// ---------------------------------------------------------------------------
+
+const STATIC_KUBARA_CHARTS: KubaraChartEntry[] = [
+  { name: 'kube-prometheus-stack', path: `${KUBARA_HELM_BASE_PATH}/kube-prometheus-stack`, description: 'Production Prometheus + Grafana + Alertmanager' },
+  { name: 'cert-manager', path: `${KUBARA_HELM_BASE_PATH}/cert-manager`, description: 'Automated TLS certificate management' },
+  { name: 'kyverno', path: `${KUBARA_HELM_BASE_PATH}/kyverno`, description: 'Kubernetes policy engine for security' },
+  { name: 'kyverno-policies', path: `${KUBARA_HELM_BASE_PATH}/kyverno-policies`, description: 'Curated Kyverno policy library' },
+  { name: 'argo-cd', path: `${KUBARA_HELM_BASE_PATH}/argo-cd`, description: 'Declarative GitOps continuous delivery' },
+  { name: 'external-secrets', path: `${KUBARA_HELM_BASE_PATH}/external-secrets`, description: 'Sync secrets from external providers' },
+  { name: 'loki', path: `${KUBARA_HELM_BASE_PATH}/loki`, description: 'Log aggregation system' },
+  { name: 'longhorn', path: `${KUBARA_HELM_BASE_PATH}/longhorn`, description: 'Cloud-native distributed storage' },
+  { name: 'metallb', path: `${KUBARA_HELM_BASE_PATH}/metallb`, description: 'Bare metal load balancer for Kubernetes' },
+  { name: 'traefik', path: `${KUBARA_HELM_BASE_PATH}/traefik`, description: 'Cloud-native ingress controller' },
+]
+
+// ---------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetch the Kubara catalog index (list of available chart names).
+ * Returns the static fallback in demo mode or on network error.
+ * Results are cached in-memory for `CATALOG_CACHE_TTL_MS`.
+ */
+export async function fetchKubaraCatalog(): Promise<KubaraChartEntry[]> {
+  // Return cached if still fresh
+  const now = Date.now()
+  if (cachedCatalog && now - cachedCatalogTimestamp < CATALOG_CACHE_TTL_MS) {
+    return cachedCatalog
+  }
+
+  try {
+    const url = `/api/github/repos/kubara-io/kubara/contents/${encodeURIComponent(KUBARA_HELM_BASE_PATH)}`
+    const response = await fetch(url, {
+      signal: AbortSignal.timeout(KUBARA_CATALOG_FETCH_TIMEOUT_MS),
+    })
+
+    if (!response.ok) {
+      cachedCatalog = STATIC_KUBARA_CHARTS
+      cachedCatalogTimestamp = now
+      return STATIC_KUBARA_CHARTS
+    }
+
+    const data: unknown = await response.json()
+    if (!Array.isArray(data) || data.length === 0) {
+      cachedCatalog = STATIC_KUBARA_CHARTS
+      cachedCatalogTimestamp = now
+      return STATIC_KUBARA_CHARTS
+    }
+
+    const entries: KubaraChartEntry[] = (data as Array<Record<string, unknown>>)
+      .filter((item) => item.type === 'directory' || item.type === 'dir')
+      .map((item) => ({
+        name: String(item.name ?? ''),
+        path: String(item.path ?? ''),
+        description: typeof item.description === 'string' ? item.description : undefined,
+      }))
+      .filter((e) => e.name.length > 0)
+
+    cachedCatalog = entries.length > 0 ? entries : STATIC_KUBARA_CHARTS
+    cachedCatalogTimestamp = now
+    return cachedCatalog
+  } catch {
+    // Network error, timeout, parse error — fall back to static catalog
+    cachedCatalog = STATIC_KUBARA_CHARTS
+    cachedCatalogTimestamp = now
+    return STATIC_KUBARA_CHARTS
+  }
+}
+
+/**
+ * Fetch the raw values.yaml content for a specific Kubara chart.
+ * Returns `null` on any failure (network error, 404, timeout).
+ *
+ * @param chartName  The chart directory name (e.g. "cert-manager")
+ * @param valuesUrl  Optional override URL — if provided, fetches from
+ *                   that URL directly instead of the default Kubara path.
+ */
+export async function fetchKubaraValues(
+  chartName: string,
+  valuesUrl?: string,
+): Promise<string | null> {
+  try {
+    const url = valuesUrl
+      ?? `/api/github/repos/kubara-io/kubara/contents/${encodeURIComponent(`${KUBARA_HELM_BASE_PATH}/${chartName}/values.yaml`)}`
+    const response = await fetch(url, {
+      signal: AbortSignal.timeout(KUBARA_VALUES_FETCH_TIMEOUT_MS),
+    })
+
+    if (!response.ok) return null
+
+    const text = await response.text()
+    return text || null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Parse resource requests (CPU + memory) from a values.yaml string.
+ * Looks for the `resources.requests` block and extracts `cpu` and `memory`.
+ *
+ * Returns `null` if the values don't contain parseable resource requests.
+ */
+export function parseResourceRequests(valuesYaml: string): KubaraResourceRequests | null {
+  // Simple YAML regex parsing — avoids pulling in a full YAML library.
+  // Matches patterns like:
+  //   resources:
+  //     requests:
+  //       cpu: 100m
+  //       memory: 128Mi
+  const resourcesBlock = valuesYaml.match(
+    /resources:\s*\n\s+requests:\s*\n((?:\s+\w+:.*\n?)*)/,
+  )
+  if (!resourcesBlock) return null
+
+  const block = resourcesBlock[1]
+  const cpuMatch = block.match(/cpu:\s*["']?(\d+m?|\d+\.?\d*)["']?/)
+  const memMatch = block.match(/memory:\s*["']?(\d+(?:Mi|Gi|Ki|M|G)?)["']?/)
+
+  if (!cpuMatch && !memMatch) return null
+
+  return {
+    cpuMillicores: cpuMatch ? parseCpuToMillicores(cpuMatch[1]) : 0,
+    memoryMiB: memMatch ? parseMemoryToMiB(memMatch[1]) : 0,
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Internal helpers
+// ---------------------------------------------------------------------------
+
+/** Convert a Kubernetes CPU string (e.g. "100m", "0.5", "1") to millicores */
+function parseCpuToMillicores(cpu: string): number {
+  if (cpu.endsWith('m')) {
+    return parseInt(cpu.slice(0, -1), 10) || 0
+  }
+  // Whole or decimal cores → millicores
+  const MILLICORES_PER_CORE = 1000
+  return Math.round((parseFloat(cpu) || 0) * MILLICORES_PER_CORE)
+}
+
+/** Convert a Kubernetes memory string (e.g. "128Mi", "1Gi", "512M") to MiB */
+function parseMemoryToMiB(mem: string): number {
+  const GI_TO_MIB = 1024
+  const KI_TO_MIB = 1 / 1024
+  const G_TO_MIB = 1000 * 1000 / (1024 * 1024) // ~953.67
+  const M_TO_MIB = 1000 * 1000 / (1024 * 1024)  // ~0.954 per MB
+
+  if (mem.endsWith('Gi')) return Math.round((parseFloat(mem) || 0) * GI_TO_MIB)
+  if (mem.endsWith('Mi')) return Math.round(parseFloat(mem) || 0)
+  if (mem.endsWith('Ki')) return Math.round((parseFloat(mem) || 0) * KI_TO_MIB)
+  if (mem.endsWith('G')) return Math.round((parseFloat(mem) || 0) * G_TO_MIB)
+  if (mem.endsWith('M')) return Math.round((parseFloat(mem) || 0) * M_TO_MIB)
+  // Raw number — assume bytes → MiB
+  const BYTES_PER_MIB = 1024 * 1024
+  return Math.round((parseFloat(mem) || 0) / BYTES_PER_MIB)
+}

@@ -11,6 +11,8 @@ import { useDebouncedValue } from '../../hooks/useDebouncedValue'
 import { useHelmReleases } from '../../hooks/mcp/helm'
 import { useClusters } from '../../hooks/mcp/clusters'
 import { isDemoMode } from '../../lib/demoMode'
+import { fetchKubaraCatalog, fetchKubaraValues, parseResourceRequests } from '../../lib/kubara'
+import type { KubaraResourceRequests } from '../../lib/kubara'
 import { getDemoMissionControlState } from './demoState'
 import type {
   MissionControlState,
@@ -723,10 +725,14 @@ export function useMissionControl() {
             `[MissionControl] filtered ${projectsArr.length - validProjects.length} invalid project(s) from AI payload`
           )
         }
-        // Ensure dependencies defaults to []
+        // Ensure dependencies defaults to [] and tag Kubara-matched charts (#8481)
+        const kubaraNames = kubaraChartNamesRef.current
         const normalized = validProjects.map((p) => ({
           ...p,
-          dependencies: p.dependencies ?? [] }))
+          dependencies: p.dependencies ?? [],
+          // #8481 — Tag projects that have a matching Kubara chart so
+          // LaunchSequence can embed production Helm values in the prompt.
+          kubaraChartName: kubaraNames.has(p.name) ? p.name : undefined }))
         lastParsedContentRef.current = latest.content
         setState((prev) => ({
           ...prev,
@@ -915,6 +921,9 @@ export function useMissionControl() {
   // synchronously at the top of askAIForSuggestions and cleared when streaming ends.
   const aiRequestInFlightRef = useRef(false)
   const helmReleasesRef = useRef(helmReleases)
+  // #8481 — Kubara catalog chart names (populated by askAIForSuggestions,
+  // read by the AI response parser to tag projects with kubaraChartName).
+  const kubaraChartNamesRef = useRef<Set<string>>(new Set())
   // #6834 — Dedicated ref for planningMissionId so askAIForSuggestions always
   // reads the latest value, even when a prior setState hasn't been committed yet.
   const planningMissionIdRef = useRef(state.planningMissionId)
@@ -927,7 +936,7 @@ export function useMissionControl() {
   useLayoutEffect(() => { planningMissionIdRef.current = state.planningMissionId }, [state.planningMissionId])
   useLayoutEffect(() => { helmReleasesRef.current = helmReleases }, [helmReleases])
 
-  const askAIForSuggestions = (description: string, existingProjects: PayloadProject[] = []) => {
+  const askAIForSuggestions = async (description: string, existingProjects: PayloadProject[] = []) => {
       // #6827 — Synchronous ref guard: two rapid Enter keystrokes in a single
       // frame can both pass the stateRef.current.aiStreaming check below because
       // that ref is updated via useEffect (runs after render). This ref is set
@@ -973,9 +982,26 @@ export function useMissionControl() {
         ? `\n\nIMPORTANT — Cluster inspection results (helm releases already installed across clusters):\n${JSON.stringify(scopedReleases.map(r => ({ name: r.name, chart: r.chart, namespace: r.namespace, status: r.status, cluster: r.cluster })), null, 2)}\n\nFor each suggested project, check if it is already installed on the clusters. Include a "Cluster Inspection Summary" table in your analysis showing which components are Running vs Not installed on each cluster.`
         : ''
 
+      // #8481 — Pre-fetch Kubara catalog index so the AI knows which
+      // production-tested Helm charts are available in the Kubara platform.
+      // The fetch is non-blocking: if it fails the prompt simply omits the
+      // catalog context (graceful degradation, no user-visible error).
+      let kubaraCatalogContext = ''
+      try {
+        const catalog = await fetchKubaraCatalog()
+        if ((catalog || []).length > 0) {
+          const chartNames = (catalog || []).map(c => c.name)
+          // Populate ref so the AI response parser can tag matched projects
+          kubaraChartNamesRef.current = new Set(chartNames)
+          kubaraCatalogContext = `\n\nKubara Platform Catalog — The following production-tested Helm charts are available via the Kubara platform (kubara-io/kubara). When a Kubara chart matches a suggested project, prefer it and note "(Kubara chart available)" in the reason:\n${JSON.stringify(chartNames)}`
+        }
+      } catch {
+        // Non-critical — catalog context is optional enrichment
+      }
+
       const prompt = `You are helping plan a Kubernetes fix deployment.
 User's goal: "${description}"
-${clusterScope}${existingContext}${helmContext}
+${clusterScope}${existingContext}${helmContext}${kubaraCatalogContext}
 
 First, provide a brief executive analysis of the user's requirements and your recommended architecture approach. Explain what layers of the stack need to be covered (security, networking, observability, etc.) and why.
 
@@ -1493,7 +1519,7 @@ Order phases by dependency — prerequisites first. Each phase completes before 
   // Auto-assign: deterministic local algorithm (no AI)
   // ---------------------------------------------------------------------------
 
-  const autoAssignProjects = (availableClusters: Array<{ name: string; context?: string; server?: string; distribution?: string; cpuCores?: number; memoryGB?: number; storageGB?: number; cpuUsageCores?: number; cpuRequestsCores?: number; memoryUsageGB?: number; memoryRequestsGB?: number }>) => {
+  const autoAssignProjects = async (availableClusters: Array<{ name: string; context?: string; server?: string; distribution?: string; cpuCores?: number; memoryGB?: number; storageGB?: number; cpuUsageCores?: number; cpuRequestsCores?: number; memoryUsageGB?: number; memoryRequestsGB?: number }>) => {
       if (availableClusters.length === 0 || state.projects.length === 0) return
 
       // Category groups — projects in the same group have affinity
@@ -1512,8 +1538,50 @@ Order phases by dependency — prerequisites first. Each phase completes before 
         Storage: 'storage',
         'Backup & Recovery': 'storage' }
 
+      // #8485 — Pre-fetch Kubara catalog to look up resource requests for
+      // projects that have a matching chart. The catalog fetch is cached
+      // in-memory so repeated calls within the TTL are free.
+      let kubaraChartNames = new Set<string>()
+      try {
+        const catalog = await fetchKubaraCatalog()
+        kubaraChartNames = new Set((catalog || []).map(c => c.name))
+      } catch {
+        // Non-critical — sizing falls back to generic headroom scoring
+      }
+
+      // #8485 — Fetch resource requests for matched projects in parallel.
+      // Map: projectName → KubaraResourceRequests (only for projects with a
+      // matching Kubara chart that has parseable resource requests).
+      const projectResources = new Map<string, KubaraResourceRequests>()
+      const resourceFetchPromises: Array<Promise<void>> = []
+      for (const project of state.projects) {
+        if (kubaraChartNames.has(project.name)) {
+          resourceFetchPromises.push(
+            fetchKubaraValues(project.name)
+              .then((yaml) => {
+                if (yaml) {
+                  const resources = parseResourceRequests(yaml)
+                  if (resources) {
+                    projectResources.set(project.name, resources)
+                  }
+                }
+              })
+              .catch(() => { /* Non-critical — skip this project's sizing */ }),
+          )
+        }
+      }
+      await Promise.all(resourceFetchPromises)
+
       // Score each cluster for resource headroom (0-100)
       const clusterScores = new Map<string, number>()
+      // #8485 — Track remaining capacity per cluster (in real units) so
+      // Kubara resource requests can be subtracted as projects are assigned.
+      /** Millicores per core for unit conversion */
+      const MILLICORES_PER_CORE = 1000
+      /** MiB per GiB for unit conversion */
+      const MIB_PER_GIB = 1024
+      const clusterCpuFreeMillicores = new Map<string, number>()
+      const clusterMemFreeMiB = new Map<string, number>()
       for (const c of availableClusters) {
         const cpuTotal = c.cpuCores ?? 0
         const cpuUsed = c.cpuUsageCores ?? c.cpuRequestsCores ?? 0
@@ -1522,6 +1590,9 @@ Order phases by dependency — prerequisites first. Each phase completes before 
         const cpuFree = cpuTotal > 0 ? ((cpuTotal - cpuUsed) / cpuTotal) * 100 : 50
         const memFree = memTotal > 0 ? ((memTotal - memUsed) / memTotal) * 100 : 50
         clusterScores.set(c.name, (cpuFree + memFree) / 2)
+        // Store remaining capacity in absolute units for Kubara sizing
+        clusterCpuFreeMillicores.set(c.name, (cpuTotal - cpuUsed) * MILLICORES_PER_CORE)
+        clusterMemFreeMiB.set(c.name, (memTotal - memUsed) * MIB_PER_GIB)
       }
 
       // Track how many projects each cluster gets (for load balancing)
@@ -1561,6 +1632,9 @@ Order phases by dependency — prerequisites first. Each phase completes before 
         (a, b) => rankPriority(a.priority) - rankPriority(b.priority)
       )
 
+      /** #8485 — Penalty applied when a cluster lacks capacity for the chart's resource requests */
+      const INSUFFICIENT_CAPACITY_PENALTY = 40
+
       for (const project of sortedProjects) {
         const pName = project.name
         const group = CATEGORY_GROUPS[project.category] ?? project.category.toLowerCase()
@@ -1571,6 +1645,9 @@ Order phases by dependency — prerequisites first. Each phase completes before 
           // Don't add to newAssignments — it's already installed
           continue
         }
+
+        // #8485 — Look up Kubara resource requests for this project
+        const chartResources = projectResources.get(pName)
 
         // Score each cluster for this project
         let bestCluster = availableClusters[0].name
@@ -1596,6 +1673,18 @@ Order phases by dependency — prerequisites first. Each phase completes before 
           const load = clusterLoad.get(c.name) ?? 0
           score -= load * 8
 
+          // #8485 — Kubara resource-aware capacity check: penalize clusters
+          // that don't have enough free CPU/memory for this chart's requests.
+          if (chartResources) {
+            const freeCpu = clusterCpuFreeMillicores.get(c.name) ?? 0
+            const freeMem = clusterMemFreeMiB.get(c.name) ?? 0
+            const cpuFits = chartResources.cpuMillicores <= 0 || freeCpu >= chartResources.cpuMillicores
+            const memFits = chartResources.memoryMiB <= 0 || freeMem >= chartResources.memoryMiB
+            if (!cpuFits || !memFits) {
+              score -= INSUFFICIENT_CAPACITY_PENALTY
+            }
+          }
+
           if (score > bestScore) {
             bestScore = score
             bestCluster = c.name
@@ -1605,6 +1694,17 @@ Order phases by dependency — prerequisites first. Each phase completes before 
         // Assign
         newAssignments.get(bestCluster)!.push(pName)
         clusterLoad.set(bestCluster, (clusterLoad.get(bestCluster) ?? 0) + 1)
+
+        // #8485 — Subtract assigned chart's resource requests from the
+        // cluster's remaining capacity so subsequent projects see accurate
+        // headroom. This prevents packing too many resource-heavy charts
+        // onto a single cluster.
+        if (chartResources) {
+          const prevCpu = clusterCpuFreeMillicores.get(bestCluster) ?? 0
+          const prevMem = clusterMemFreeMiB.get(bestCluster) ?? 0
+          clusterCpuFreeMillicores.set(bestCluster, prevCpu - chartResources.cpuMillicores)
+          clusterMemFreeMiB.set(bestCluster, prevMem - chartResources.memoryMiB)
+        }
 
         // Record category affinity
         if (!categoryCluster.has(group)) {

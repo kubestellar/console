@@ -26,6 +26,8 @@ export interface PayloadProject {
   dependencies: string[]
   /** Path in console-kb to the install mission JSON */
   kbPath?: string
+  /** Kubara chart name when a matching chart exists in the Kubara platform catalog */
+  kubaraChartName?: string
   /** GitHub org for avatar URL */
   githubOrg?: string
   /** CNCF maturity level */

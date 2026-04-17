@@ -8,6 +8,7 @@
  */
 
 import type { MissionExport } from '../../../lib/missions/types'
+import { fetchKubaraValues } from '../../../lib/kubara'
 
 /** Timeout for fetching a mission file from console-kb (ms) */
 const MISSION_FETCH_TIMEOUT_MS = 10_000
@@ -36,6 +37,7 @@ export async function loadMissionPrompt(
   componentKey: string,
   fallbackPrompt: string,
   kbPaths?: string[],
+  options?: LoadMissionPromptOptions,
 ): Promise<string> {
   // Try kbPaths first, then legacy MISSION_PATHS lookup
   const path = kbPaths?.[0] ?? MISSION_PATHS[componentKey]
@@ -77,6 +79,29 @@ export async function loadMissionPrompt(
       prompt += `### Step ${i + 1}: ${step.title}\n${step.description}\n\n`
     }
 
+    // #8482 — Embed Kubara values.yaml into the install prompt when a
+    // kubaraValuesUrl (or chart name) is provided. This gives the AI agent
+    // production-tested Helm values to use during installation, avoiding
+    // default values that may not be production-ready.
+    const kubaraValuesUrl = options?.kubaraValuesUrl
+    const kubaraChartName = options?.kubaraChartName
+    if (kubaraValuesUrl || kubaraChartName) {
+      try {
+        const valuesYaml = await fetchKubaraValues(
+          kubaraChartName ?? componentKey,
+          kubaraValuesUrl,
+        )
+        if (valuesYaml) {
+          prompt += `## Kubara Production Values\n\n`
+          prompt += `The following values.yaml contains production-tested Helm values from the Kubara platform. `
+          prompt += `Use these values as the baseline for the installation — they have been validated in production environments.\n\n`
+          prompt += `\`\`\`yaml\n${valuesYaml}\n\`\`\`\n\n`
+        }
+      } catch {
+        // Non-critical — Kubara values are optional enrichment
+      }
+    }
+
     // Add troubleshooting if available (v2+ schema field — absent in older exports)
     const rawTroubleshooting: unknown = mission?.troubleshooting
     const troubleshooting = Array.isArray(rawTroubleshooting)
@@ -99,6 +124,17 @@ export async function loadMissionPrompt(
     // Network error, timeout, parse error — fall back to raw prompt
     return fallbackPrompt
   }
+}
+
+/**
+ * Options for loadMissionPrompt (#8482).
+ * When provided, Kubara Helm values are fetched and embedded into the prompt.
+ */
+export interface LoadMissionPromptOptions {
+  /** Full URL to a Kubara values.yaml (takes precedence over kubaraChartName) */
+  kubaraValuesUrl?: string
+  /** Kubara chart name — used to construct the default values.yaml URL */
+  kubaraChartName?: string
 }
 
 /**

@@ -197,10 +197,13 @@ export function LaunchSequence({
           project.name,
           project.displayName,
         )
+        // #8482 — Pass Kubara chart name so loadMissionPrompt can embed
+        // production-tested Helm values into the install prompt.
         const prompt = await loadMissionPrompt(
           project.name,
           fallbackPrompt,
           project.kbPath ? [project.kbPath] : undefined,
+          project.kubaraChartName ? { kubaraChartName: project.kubaraChartName } : undefined,
         )
 
         // Derive a safe display name for UI strings too — the title is
