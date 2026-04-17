@@ -523,6 +523,14 @@ const PREV_FS_BODY = '12px'     // body text, count badges
 const PREV_FS_CAPTION = '10px'  // caption text, row items
 const PREV_FS_MICRO = '9px'     // micro text, timestamps, secondary labels
 
+// Preview color constants — declared before `ps` so they can be used in its definition
+const PREV_CLR_TEXT = '#f9fafb'      // primary text color in widget previews
+const PREV_CLR_MUTED = '#9ca3af'     // muted/secondary text color
+const PREV_CLR_SECONDARY = '#cbd5e1' // light secondary text
+const PREV_CLR_DIM = '#d1d5db'       // dim text
+const PREV_CLR_CPU = '#60a5fa'       // CPU metric color (blue-400)
+const PREV_CLR_MEM = '#c084fc'       // Memory metric color (purple-400)
+
 /** Shared preview styles matching macOS Übersicht widget appearance.
  *  These use hardcoded dark colors intentionally — they render a fixed preview
  *  of how the exported widget will look on a macOS desktop, regardless of
@@ -533,7 +541,7 @@ const ps = {
     borderRadius: '12px',
     padding: '12px 16px',
     border: '1px solid rgba(255, 255, 255, 0.1)',
-    color: '#f9fafb',
+    color: PREV_CLR_TEXT,
     fontFamily: 'Inter, -apple-system, sans-serif',
     fontSize: PREV_FS_BODY,
     lineHeight: 1.4,
@@ -541,7 +549,7 @@ const ps = {
   title: {
     fontSize: PREV_FS_BODY,
     fontWeight: 600,
-    color: '#f9fafb',
+    color: PREV_CLR_TEXT,
     marginBottom: PREV_SM,
     display: 'flex',
     alignItems: 'center',
@@ -569,13 +577,13 @@ const ps = {
     lineHeight: 1.2 } as React.CSSProperties,
   statLbl: {
     fontSize: PREV_FS_MICRO,
-    color: '#9ca3af',
+    color: PREV_CLR_MUTED,
     textTransform: 'uppercase' as const,
     letterSpacing: '0.05em',
     marginTop: '1px' } as React.CSSProperties,
   row: { display: 'flex', gap: PREV_SM, alignItems: 'center' } as React.CSSProperties,
   col: { display: 'flex', flexDirection: 'column' as const, gap: PREV_XS } as React.CSSProperties,
-  muted: { color: '#9ca3af', fontSize: PREV_FS_CAPTION } as React.CSSProperties,
+  muted: { color: PREV_CLR_MUTED, fontSize: PREV_FS_CAPTION } as React.CSSProperties,
   colors: { healthy: '#22c55e', warning: '#eab308', error: '#ef4444', info: '#3b82f6', purple: '#9333ea' } }
 
 // Sample stat data for realistic previews
@@ -700,14 +708,14 @@ function CardPreview({ cardType }: { cardType: string }) {
             </div>
           </div>
           <div style={ps.col}>
-            <div style={{ fontSize: PREV_FS_MICRO, fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Alerts (2)</div>
+            <div style={{ fontSize: PREV_FS_MICRO, fontWeight: 600, color: PREV_CLR_MUTED, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Alerts (2)</div>
             <div style={{ ...ps.row, padding: PREV_ITEM_PAD, backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: PREV_XS, borderLeft: `4px solid ${ps.colors.error}` }}>
               <span style={{ fontSize: PREV_FS_CAPTION, color: ps.colors.error, fontWeight: 600 }}>GPU</span>
-              <span style={{ fontSize: PREV_FS_MICRO, color: '#9ca3af', marginLeft: PREV_XS }}>worker-3 (-2)</span>
+              <span style={{ fontSize: PREV_FS_MICRO, color: PREV_CLR_MUTED, marginLeft: PREV_XS }}>worker-3 (-2)</span>
             </div>
             <div style={{ ...ps.row, padding: PREV_ITEM_PAD, backgroundColor: 'rgba(234,179,8,0.1)', borderRadius: PREV_XS, borderLeft: `4px solid ${ps.colors.warning}` }}>
               <span style={{ fontSize: PREV_FS_CAPTION, color: ps.colors.warning, fontWeight: 600 }}>NIC</span>
-              <span style={{ fontSize: PREV_FS_MICRO, color: '#9ca3af', marginLeft: PREV_XS }}>worker-1 (-1)</span>
+              <span style={{ fontSize: PREV_FS_MICRO, color: PREV_CLR_MUTED, marginLeft: PREV_XS }}>worker-1 (-1)</span>
             </div>
           </div>
         </div>
@@ -747,7 +755,7 @@ function CardPreview({ cardType }: { cardType: string }) {
             ].map((a) => (
               <div key={a.name} style={{ ...ps.row, padding: PREV_ITEM_PAD, backgroundColor: a.severity === 'critical' ? 'rgba(239,68,68,0.1)' : 'rgba(234,179,8,0.1)', borderRadius: PREV_XS, borderLeft: `4px solid ${a.severity === 'critical' ? ps.colors.error : ps.colors.warning}` }}>
                 <span style={{ fontSize: PREV_FS_CAPTION, color: a.severity === 'critical' ? ps.colors.error : ps.colors.warning, fontWeight: 600 }}>{a.name}</span>
-                <span style={{ fontSize: PREV_FS_MICRO, color: '#9ca3af', marginLeft: 'auto' }}>{a.ns}</span>
+                <span style={{ fontSize: PREV_FS_MICRO, color: PREV_CLR_MUTED, marginLeft: 'auto' }}>{a.ns}</span>
               </div>
             ))}
           </div>
@@ -768,7 +776,7 @@ function CardPreview({ cardType }: { cardType: string }) {
               <div key={r.name} style={{ ...ps.row, justifyContent: 'space-between' }}>
                 <span style={{ fontSize: PREV_FS_CAPTION, fontWeight: 500 }}>{r.name}</span>
                 <span style={{ fontSize: PREV_FS_MICRO, color: r.status === 'deployed' ? ps.colors.healthy : ps.colors.error }}>{r.status}</span>
-                <span style={{ fontSize: PREV_FS_MICRO, color: '#9ca3af' }}>{r.ver}</span>
+                <span style={{ fontSize: PREV_FS_MICRO, color: PREV_CLR_MUTED }}>{r.ver}</span>
               </div>
             ))}
           </div>
@@ -787,8 +795,8 @@ function CardPreview({ cardType }: { cardType: string }) {
             ].map((p) => (
               <div key={p.name} style={{ ...ps.row, justifyContent: 'space-between', fontSize: PREV_FS_CAPTION }}>
                 <span style={{ fontWeight: 500, maxWidth: '110px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
-                <span style={{ color: '#60a5fa' }}>{p.cpu}</span>
-                <span style={{ color: '#c084fc' }}>{p.mem}</span>
+                <span style={{ color: PREV_CLR_CPU }}>{p.cpu}</span>
+                <span style={{ color: PREV_CLR_MEM }}>{p.mem}</span>
               </div>
             ))}
           </div>
@@ -808,7 +816,7 @@ function CardPreview({ cardType }: { cardType: string }) {
             ].map((e, i) => (
               <div key={i} style={{ ...ps.row, fontSize: PREV_FS_CAPTION }}>
                 <span style={{ color: e.type === 'Warning' ? ps.colors.warning : ps.colors.healthy, fontWeight: 600, minWidth: '18px' }}>{e.count}</span>
-                <span style={{ color: '#cbd5e1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.msg}</span>
+                <span style={{ color: PREV_CLR_SECONDARY, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.msg}</span>
               </div>
             ))}
           </div>
@@ -874,7 +882,7 @@ function CardPreview({ cardType }: { cardType: string }) {
           </div>
           <div style={ps.col}>
             {['ClusterIP (12)', 'LoadBalancer (4)', 'NodePort (2)'].map((s) => (
-              <div key={s} style={{ fontSize: PREV_FS_CAPTION, color: '#9ca3af' }}>{s}</div>
+              <div key={s} style={{ fontSize: PREV_FS_CAPTION, color: PREV_CLR_MUTED }}>{s}</div>
             ))}
           </div>
         </div>
@@ -890,15 +898,15 @@ function CardPreview({ cardType }: { cardType: string }) {
           </div>
           <div style={ps.row}>
             <div style={ps.statBlock}>
-              <span style={{ ...ps.statVal, fontSize: PREV_FS_STAT_SM, color: '#60a5fa' }}>$482</span>
+              <span style={{ ...ps.statVal, fontSize: PREV_FS_STAT_SM, color: PREV_CLR_CPU }}>$482</span>
               <span style={ps.statLbl}>Compute</span>
             </div>
             <div style={ps.statBlock}>
-              <span style={{ ...ps.statVal, fontSize: PREV_FS_STAT_SM, color: '#c084fc' }}>$635</span>
+              <span style={{ ...ps.statVal, fontSize: PREV_FS_STAT_SM, color: PREV_CLR_MEM }}>$635</span>
               <span style={ps.statLbl}>GPU</span>
             </div>
             <div style={ps.statBlock}>
-              <span style={{ ...ps.statVal, fontSize: PREV_FS_STAT_SM, color: '#22d3ee' }}>$130</span>
+              <span style={{ ...ps.statVal, fontSize: PREV_FS_STAT_SM, color: ps.colors.info }}>$130</span>
               <span style={ps.statLbl}>{t('common.storage')}</span>
             </div>
           </div>
@@ -976,9 +984,9 @@ function CardPreview({ cardType }: { cardType: string }) {
               { name: 'coverage-gate', status: 'success', time: '24s' },
             ].map((r) => (
               <div key={r.name} style={{ ...ps.row, justifyContent: 'space-between', fontSize: PREV_FS_CAPTION, padding: PREV_ITEM_PAD, backgroundColor: 'rgba(30,41,59,0.5)', borderRadius: PREV_XS }}>
-                <span style={ps.dot(r.status === 'running' ? ps.colors.info : r.status === 'success' ? ps.colors.healthy : '#6b7280')} />
+                <span style={ps.dot(r.status === 'running' ? ps.colors.info : r.status === 'success' ? ps.colors.healthy : PREV_CLR_MUTED)} />
                 <span style={{ fontWeight: 500, flex: 1 }}>{r.name}</span>
-                <span style={{ color: '#9ca3af', fontSize: PREV_FS_MICRO }}>{r.time}</span>
+                <span style={{ color: PREV_CLR_MUTED, fontSize: PREV_FS_MICRO }}>{r.time}</span>
               </div>
             ))}
           </div>
@@ -997,9 +1005,9 @@ function CardPreview({ cardType }: { cardType: string }) {
               <div key={f.wf} style={{ ...ps.row, padding: PREV_ITEM_PAD, backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: PREV_XS, borderLeft: `3px solid ${ps.colors.error}` }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: PREV_FS_CAPTION, fontWeight: 600, color: ps.colors.error }}>{f.wf}</div>
-                  <div style={{ fontSize: PREV_FS_MICRO, color: '#9ca3af' }}>Failed at: {f.step}</div>
+                  <div style={{ fontSize: PREV_FS_MICRO, color: PREV_CLR_MUTED }}>Failed at: {f.step}</div>
                 </div>
-                <span style={{ fontSize: PREV_FS_MICRO, color: '#9ca3af' }}>{f.ago}</span>
+                <span style={{ fontSize: PREV_FS_MICRO, color: PREV_CLR_MUTED }}>{f.ago}</span>
               </div>
             ))}
           </div>
@@ -1051,10 +1059,10 @@ function CardPreview({ cardType }: { cardType: string }) {
               { label: 'PRs merged (7d)', value: '24', color: ps.colors.purple },
               { label: 'Issues opened', value: '8', color: ps.colors.info },
               { label: 'Contributors', value: '6', color: ps.colors.healthy },
-              { label: 'Latest release', value: 'v0.3.22', color: '#cbd5e1' },
+              { label: 'Latest release', value: 'v0.3.22', color: PREV_CLR_SECONDARY },
             ].map((item) => (
               <div key={item.label} style={{ ...ps.row, justifyContent: 'space-between', fontSize: PREV_FS_CAPTION }}>
-                <span style={{ color: '#9ca3af' }}>{item.label}</span>
+                <span style={{ color: PREV_CLR_MUTED }}>{item.label}</span>
                 <span style={{ fontWeight: 600, color: item.color }}>{item.value}</span>
               </div>
             ))}
@@ -1068,11 +1076,11 @@ function CardPreview({ cardType }: { cardType: string }) {
           <div style={ps.title}><span style={ps.dot(ps.colors.info)} /> Cluster Metrics</div>
           <div style={ps.row}>
             <div style={ps.statBlock}>
-              <span style={{ ...ps.statVal, fontSize: PREV_FS_STAT_SM, color: '#60a5fa' }}>62%</span>
+              <span style={{ ...ps.statVal, fontSize: PREV_FS_STAT_SM, color: PREV_CLR_CPU }}>62%</span>
               <span style={ps.statLbl}>CPU</span>
             </div>
             <div style={ps.statBlock}>
-              <span style={{ ...ps.statVal, fontSize: PREV_FS_STAT_SM, color: '#c084fc' }}>78%</span>
+              <span style={{ ...ps.statVal, fontSize: PREV_FS_STAT_SM, color: PREV_CLR_MEM }}>78%</span>
               <span style={ps.statLbl}>Memory</span>
             </div>
             <div style={ps.statBlock}>
@@ -1082,7 +1090,7 @@ function CardPreview({ cardType }: { cardType: string }) {
           </div>
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: '2px', height: '40px', marginTop: PREV_SM }}>
             {[40, 55, 62, 58, 70, 65, 72, 68, 75, 62].map((v, i) => (
-              <div key={i} style={{ flex: 1, height: `${v * 0.55}px`, backgroundColor: '#3b82f6', borderRadius: '1px', opacity: 0.6 }} />
+              <div key={i} style={{ flex: 1, height: `${v * 0.55}px`, backgroundColor: ps.colors.info, borderRadius: '1px', opacity: 0.6 }} />
             ))}
           </div>
         </div>
@@ -1122,7 +1130,7 @@ function CardPreview({ cardType }: { cardType: string }) {
             ].map((a) => (
               <div key={a.name} style={{ ...ps.row, justifyContent: 'space-between', fontSize: PREV_FS_CAPTION }}>
                 <span style={{ fontWeight: 500 }}>{a.name}</span>
-                <span style={{ color: '#9ca3af', fontSize: PREV_FS_MICRO }}>{a.clusters} clusters</span>
+                <span style={{ color: PREV_CLR_MUTED, fontSize: PREV_FS_MICRO }}>{a.clusters} clusters</span>
                 <span style={ps.dot(a.status === 'healthy' ? ps.colors.healthy : ps.colors.warning)} />
               </div>
             ))}
@@ -1142,9 +1150,9 @@ function CardPreview({ cardType }: { cardType: string }) {
               { ns: 'production', pods: 18, deploys: 6 },
             ].map((n) => (
               <div key={n.ns} style={{ ...ps.row, justifyContent: 'space-between', fontSize: PREV_FS_CAPTION, padding: PREV_ITEM_PAD }}>
-                <span style={{ fontWeight: 500, color: '#60a5fa' }}>{n.ns}</span>
-                <span style={{ color: '#9ca3af' }}>{n.pods} pods</span>
-                <span style={{ color: '#9ca3af' }}>{n.deploys} deploys</span>
+                <span style={{ fontWeight: 500, color: PREV_CLR_CPU }}>{n.ns}</span>
+                <span style={{ color: PREV_CLR_MUTED }}>{n.pods} pods</span>
+                <span style={{ color: PREV_CLR_MUTED }}>{n.deploys} deploys</span>
               </div>
             ))}
           </div>
@@ -1167,7 +1175,7 @@ function CardPreview({ cardType }: { cardType: string }) {
             ].map((f) => (
               <div key={f.finding} style={{ ...ps.row, fontSize: PREV_FS_CAPTION, padding: PREV_ITEM_PAD }}>
                 <span style={ps.dot(f.severity === 'ok' ? ps.colors.healthy : ps.colors.warning)} />
-                <span style={{ color: f.severity === 'ok' ? '#cbd5e1' : ps.colors.warning }}>{f.finding}</span>
+                <span style={{ color: f.severity === 'ok' ? PREV_CLR_SECONDARY : ps.colors.warning }}>{f.finding}</span>
               </div>
             ))}
           </div>
@@ -1194,7 +1202,7 @@ function CardPreview({ cardType }: { cardType: string }) {
           </div>
           <div style={{ ...ps.row, padding: PREV_ITEM_PAD, backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: PREV_XS, borderLeft: `3px solid ${ps.colors.error}`, marginTop: PREV_SM }}>
             <span style={{ fontSize: PREV_FS_CAPTION, color: ps.colors.error, fontWeight: 600 }}>worker-4</span>
-            <span style={{ fontSize: PREV_FS_MICRO, color: '#9ca3af', marginLeft: 'auto' }}>unreachable 12m</span>
+            <span style={{ fontSize: PREV_FS_MICRO, color: PREV_CLR_MUTED, marginLeft: 'auto' }}>unreachable 12m</span>
           </div>
         </div>
       )
@@ -1292,7 +1300,7 @@ function TemplatePreview({ templateId }: { templateId: string }) {
             const c = WIDGET_CARDS[cardType]
             return (
               <div key={cardType} style={cardMiniStyle}>
-                <div style={{ fontSize: PREV_FS_MICRO, fontWeight: 600, color: '#d1d5db', marginBottom: PREV_XS }}>{c?.displayName || cardType}</div>
+                <div style={{ fontSize: PREV_FS_MICRO, fontWeight: 600, color: PREV_CLR_DIM, marginBottom: PREV_XS }}>{c?.displayName || cardType}</div>
                 <div style={{ fontSize: PREV_FS_STAT_SM, fontWeight: 700, color: ps.colors.purple }}>
                   {cardType === 'cluster_health' ? '3/4' : cardType === 'pod_issues' ? '4' : cardType === 'gpu_overview' ? '72%' : cardType === 'security_issues' ? '20' : '—'}
                 </div>
