@@ -38,7 +38,7 @@ const (
 	ghpFailuresLimit         = 10
 	ghpFailuresOverfetch     = 30
 	ghpLogTailLines          = 500
-	ghpMatrixRunsPerRepo     = 500
+	ghpMatrixRunsPerRepo     = 200
 	ghpFlowMaxRunsPerRepo    = 8
 	ghpPulseWindowDays       = 14
 	ghpGitHubAPIBase         = "https://api.github.com"

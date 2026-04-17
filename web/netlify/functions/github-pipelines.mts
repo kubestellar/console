@@ -54,7 +54,7 @@ const FAILURES_OVERFETCH = 30;
 const LOG_TAIL_LINES = 500;
 
 /** How many workflow runs to pull per repo for the matrix view */
-const MATRIX_RUNS_PER_REPO = 500;
+const MATRIX_RUNS_PER_REPO = 200;
 
 /** How many in-progress/queued runs to pull per repo for the flow view */
 const FLOW_MAX_RUNS_PER_REPO = 8;
