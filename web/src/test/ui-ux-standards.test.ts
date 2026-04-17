@@ -93,7 +93,9 @@ const EXPECTED_ARBITRARY_TW_COLOR_COUNT = 19
 //   213 → 215: Drasi reactive graph (PRs #7832, #7857) — two new
 //              echarts/flow-node inline colors not covered by theming utils.
 const EXPECTED_INLINE_STYLE_COLOR_COUNT = 215
-const EXPECTED_RAW_FONT_SIZE_COUNT = 80
+// 80 → 96: PR #8635 — widget export modal card preview thumbnails use inline
+//           fontSize for pixel-accurate static SVG-like renderings (not DOM text).
+const EXPECTED_RAW_FONT_SIZE_COUNT = 96
 
 /** Max snippet length for readable output */
 const MAX_SNIPPET_LENGTH = 120
