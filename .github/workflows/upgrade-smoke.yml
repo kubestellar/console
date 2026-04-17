@@ -68,6 +68,13 @@ jobs:
 
       - uses: docker/setup-buildx-action@v3
 
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build HEAD image as :ci-head
         run: docker build -t ghcr.io/kubestellar/console:${{ env.TARGET_TAG }} .
 
@@ -79,7 +86,7 @@ jobs:
 
       - name: Load images into Kind
         run: |
-          docker pull ${{ env.BASELINE_IMAGE }} || true
+          docker pull ${{ env.BASELINE_IMAGE }}
           kind load docker-image ${{ env.BASELINE_IMAGE }} --name upgrade-smoke
           kind load docker-image ghcr.io/kubestellar/console:${{ env.TARGET_TAG }} --name upgrade-smoke
 
