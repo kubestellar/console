@@ -56,11 +56,15 @@ jobs:
           JWT_SECRET="nightly-smoke-$(openssl rand -hex 16)" \
           DEV_MODE=true BACKEND_PORT=8081 ./console-bin &
           PID=$!
-          # Poll /auth/dev-login until it returns a JSON body with a token.
-          # The previous /health poll could succeed before Fiber had fully
-          # bound the listener, so the subsequent curl returned empty/non-JSON
-          # and jq died with a parse error (#7897). Waiting on the real
-          # endpoint avoids the race (#7941).
+          # Poll /auth/github (dev-mode login) until it returns a 307 with a
+          # kc_auth cookie. In dev mode (no GITHUB_CLIENT_ID), GitHubLogin
+          # delegates to devModeLogin which sets the JWT in an HttpOnly cookie
+          # and redirects to the frontend callback URL (#6590, #4278).
+          #
+          # Previous versions called /auth/dev-login (non-existent route that
+          # fell through to the SPA catch-all 307) and expected a JSON body
+          # with a "token" field. Both assumptions were stale: the route was
+          # never registered, and the token has been cookie-only since #6590.
           #
           # Retry budget: MAX_TRIES * (CURL_MAX_TIME + SLEEP_SECONDS) = worst case.
           # 10 * (2 + 1) = 30s total, matching the original intent.
@@ -68,38 +72,52 @@ jobs:
           CURL_MAX_TIME=2      # seconds per curl attempt
           SLEEP_SECONDS=1      # seconds between attempts
           MAX_RESP_CHARS=200   # chars of last response to echo in error message
-          LOGIN_RESP=""
+          COOKIE_JAR=/tmp/auth-cookies.txt
           TOKEN=""
+          LAST_STATUS=""
           for i in $(seq 1 "$MAX_TRIES"); do
-            # Keep stderr so curl errors surface in the diagnostic line below.
-            # (-S is dropped intentionally: previously "curl -sS ... 2>/dev/null"
-            # silently discarded the very output -S was meant to emit.)
-            LOGIN_RESP=$(curl -s --max-time "$CURL_MAX_TIME" http://localhost:8081/auth/dev-login || true)
-            if [ -n "$LOGIN_RESP" ] && [ "${LOGIN_RESP:0:1}" = "{" ]; then
-              TOKEN=$(echo "$LOGIN_RESP" | jq -r '.token // empty' 2>/dev/null || true)
+            # Use -c (cookie jar) to capture Set-Cookie headers, and avoid
+            # following the redirect so we can inspect the 307 response.
+            LAST_STATUS=$(curl -s -o /dev/null -w '%{http_code}' \
+              --max-time "$CURL_MAX_TIME" \
+              -c "$COOKIE_JAR" \
+              http://localhost:8081/auth/github 2>/dev/null || echo "000")
+            # Extract the kc_auth cookie value from the Netscape cookie jar.
+            if [ -f "$COOKIE_JAR" ]; then
+              TOKEN=$(grep 'kc_auth' "$COOKIE_JAR" | awk '{print $NF}' || true)
               if [ -n "$TOKEN" ]; then break; fi
             fi
             sleep "$SLEEP_SECONDS"
           done
           if [ -z "$TOKEN" ]; then
-            # Sanitize for GitHub Actions log commands: strip CR/LF and
-            # percent-encode '%' so ::error:: is not mangled by HTML responses.
-            SAFE_RESP=$(printf '%s' "${LOGIN_RESP:0:$MAX_RESP_CHARS}" | tr -d '\r\n' | sed 's/%/%25/g')
-            echo "::error::Could not get dev-user token after ${MAX_TRIES} tries (~30s) (last response: ${SAFE_RESP})"
+            echo "::error::Could not get dev-user token after ${MAX_TRIES} tries (~30s) (last HTTP status: ${LAST_STATUS})"
             kill $PID 2>/dev/null; exit 1
           fi
+          echo "Dev-mode login OK — got kc_auth cookie (HTTP ${LAST_STATUS})"
+
+          # Test /auth/refresh contract (#6590):
+          # - Token is sent via cookie (primary) AND Bearer header (fallback)
+          # - Response body must contain "refreshed" and "onboarded" (NOT "token")
+          # - New JWT is delivered exclusively via the HttpOnly kc_auth cookie
           REFRESH_RESP=$(curl -sS --max-time 5 -X POST \
+            -H "Cookie: kc_auth=$TOKEN" \
             -H "Authorization: Bearer $TOKEN" \
             -H "X-CSRF-Token: nightly" \
             http://localhost:8081/auth/refresh)
-          HAS_TOKEN=$(echo "$REFRESH_RESP" | jq -r '.token // empty')
-          if [ -z "$HAS_TOKEN" ]; then
-            echo "::error::CONTRACT VIOLATION: /auth/refresh missing 'token' — login is BROKEN"
+          HAS_REFRESHED=$(echo "$REFRESH_RESP" | jq -r '.refreshed // empty')
+          if [ "$HAS_REFRESHED" != "true" ]; then
+            echo "::error::CONTRACT VIOLATION: /auth/refresh missing 'refreshed' field — response: ${REFRESH_RESP:0:$MAX_RESP_CHARS}"
             kill $PID 2>/dev/null; exit 1
           fi
           HAS_ONBOARDED=$(echo "$REFRESH_RESP" | jq 'has("onboarded")')
           if [ "$HAS_ONBOARDED" != "true" ]; then
             echo "::error::CONTRACT VIOLATION: /auth/refresh missing 'onboarded'"
+            kill $PID 2>/dev/null; exit 1
+          fi
+          # Verify token is NOT in the body (#6590 security invariant)
+          BODY_TOKEN=$(echo "$REFRESH_RESP" | jq -r '.token // empty')
+          if [ -n "$BODY_TOKEN" ]; then
+            echo "::error::CONTRACT VIOLATION (#6590): /auth/refresh must NOT return 'token' in body — JWT is HttpOnly cookie-only"
             kill $PID 2>/dev/null; exit 1
           fi
           echo "Auth contract OK"
