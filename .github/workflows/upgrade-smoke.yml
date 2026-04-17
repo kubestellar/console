@@ -150,10 +150,20 @@ jobs:
           fi
           echo "Got dev-mode auth cookie"
 
+      - name: Verify dev user is admin
+        run: |
+          echo "--- /api/me (user role check) ---"
+          ME=$(curl -sS -b "$COOKIE_JAR" http://127.0.0.1:8080/api/me)
+          echo "$ME" | jq '{login: .githubLogin, role: .role, id: .id}'
+
+          echo "$ME" | jq -e '.role == "admin"' \
+            || { echo "FAIL: dev user role is not admin — got $(echo "$ME" | jq -r .role)"; exit 1; }
+          echo "Dev user has admin role"
+
       - name: Verify self-upgrade status
         run: |
           echo "--- /api/self-upgrade/status ---"
-          STATUS=$(curl -sf -b "$COOKIE_JAR" http://127.0.0.1:8080/api/self-upgrade/status)
+          STATUS=$(curl -sS -b "$COOKIE_JAR" http://127.0.0.1:8080/api/self-upgrade/status)
           echo "$STATUS" | jq .
 
           # Verify canPatch is true — RBAC is working
@@ -163,14 +173,21 @@ jobs:
       - name: Trigger upgrade to HEAD
         run: |
           echo "Triggering upgrade to tag: ${{ env.TARGET_TAG }}"
-          RESPONSE=$(curl -sfX POST http://127.0.0.1:8080/api/self-upgrade/trigger \
+          HTTP_CODE=$(curl -sS -o /tmp/trigger_response.json -w '%{http_code}' \
+            -X POST http://127.0.0.1:8080/api/self-upgrade/trigger \
             -b "$COOKIE_JAR" \
             -H 'Content-Type: application/json' \
             -d '{"imageTag":"${{ env.TARGET_TAG }}"}')
-          echo "$RESPONSE" | jq .
+          echo "HTTP $HTTP_CODE"
+          cat /tmp/trigger_response.json | jq . 2>/dev/null || cat /tmp/trigger_response.json
 
-          echo "$RESPONSE" | jq -e '.success == true' \
-            || { echo "FAIL: trigger returned success=false"; echo "$RESPONSE" | jq -r '.error // .message // "no detail"'; exit 1; }
+          if [ "$HTTP_CODE" -ge 400 ]; then
+            echo "FAIL: trigger returned HTTP $HTTP_CODE"
+            exit 1
+          fi
+
+          jq -e '.success == true' /tmp/trigger_response.json \
+            || { echo "FAIL: trigger returned success=false"; jq -r '.error // .message // "no detail"' /tmp/trigger_response.json; exit 1; }
 
       - name: Poll Deployment image until rollover to :ci-head
         run: |
