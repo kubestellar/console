@@ -97,6 +97,26 @@ describe('RenameModal', () => {
     })
   })
 
+  // Regression for #8927: after a successful rename the button must NOT flip
+  // back to "Rename" while the modal is closing.
+  it('shows "Renamed" (not "Rename") after successful rename so close animation does not flash', async () => {
+    render(<RenameModal {...defaultProps} />)
+
+    const input = screen.getByDisplayValue('my-cluster')
+    fireEvent.change(input, { target: { value: 'new-name' } })
+    fireEvent.click(screen.getByText('Rename'))
+
+    await waitFor(() => {
+      expect(defaultProps.onClose).toHaveBeenCalled()
+    })
+
+    // After success, label should be "Renamed", not "Rename".
+    expect(screen.queryByText('Rename')).toBeNull()
+    expect(screen.getByText('Renamed')).toBeTruthy()
+    // Button should remain disabled while the modal is closing.
+    expect(screen.getByText('Renamed').closest('button')?.disabled).toBe(true)
+  })
+
   it('shows error message when onRename rejects', async () => {
     const failingRename = vi.fn().mockRejectedValue(new Error('Server error'))
     render(<RenameModal {...defaultProps} onRename={failingRename} />)

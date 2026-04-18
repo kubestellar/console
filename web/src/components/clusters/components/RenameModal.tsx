@@ -10,35 +10,47 @@ interface RenameModalProps {
   onRename: (oldName: string, newName: string) => Promise<void>
 }
 
+// Phases for the rename action button. The 'success' phase is sticky: once we
+// enter it after a successful rename we stay there until the modal unmounts.
+// This prevents the button from flashing back to "Rename" during the close
+// animation (see #8927).
+type RenamePhase = 'idle' | 'renaming' | 'success'
+
 export function RenameModal({ isOpen = true, clusterName, currentDisplayName, onClose, onRename }: RenameModalProps) {
   const [newName, setNewName] = useState(currentDisplayName)
-  const [status, setStatus] = useState<{ renaming: boolean; error: string | null }>({ renaming: false, error: null })
+  const [phase, setPhase] = useState<RenamePhase>('idle')
+  const [error, setError] = useState<string | null>(null)
 
   const handleRename = async () => {
     if (!newName.trim()) {
-      setStatus(prev => ({ ...prev, error: 'Name cannot be empty' }))
+      setError('Name cannot be empty')
       return
     }
     if (newName.includes(' ')) {
-      setStatus(prev => ({ ...prev, error: 'Name cannot contain spaces' }))
+      setError('Name cannot contain spaces')
       return
     }
     if (newName.trim() === currentDisplayName) {
-      setStatus(prev => ({ ...prev, error: 'Name is unchanged' }))
+      setError('Name is unchanged')
       return
     }
 
-    setStatus({ renaming: true, error: null })
+    setPhase('renaming')
+    setError(null)
 
     try {
       await onRename(clusterName, newName.trim())
+      // Lock the button into the 'success' phase before triggering close so
+      // the label does not flip back to "Rename" while the modal fades out.
+      setPhase('success')
       onClose()
     } catch (err) {
-      setStatus({ renaming: false, error: err instanceof Error ? err.message : 'Failed to rename context' })
-    } finally {
-      setStatus(prev => ({ ...prev, renaming: false }))
+      setPhase('idle')
+      setError(err instanceof Error ? err.message : 'Failed to rename context')
     }
   }
+
+  const isBusy = phase === 'renaming' || phase === 'success'
 
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} size="sm" closeOnBackdrop={false}>
@@ -68,7 +80,7 @@ export function RenameModal({ isOpen = true, clusterName, currentDisplayName, on
           />
         </div>
 
-        {status.error && <p className="text-sm text-red-400 mb-4">{status.error}</p>}
+        {error && <p className="text-sm text-red-400 mb-4">{error}</p>}
 
         <p className="text-xs text-muted-foreground">This updates your kubeconfig via the local agent.</p>
       </BaseModal.Content>
@@ -81,10 +93,16 @@ export function RenameModal({ isOpen = true, clusterName, currentDisplayName, on
           </button>
           <button
             onClick={handleRename}
-            disabled={status.renaming || !newName.trim()}
+            disabled={isBusy || !newName.trim()}
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm bg-primary text-primary-foreground hover:bg-primary/80 disabled:opacity-50"
           >
-            {status.renaming ? <><Loader2 className="w-4 h-4 animate-spin" />Renaming...</> : <><Check className="w-4 h-4" />Rename</>}
+            {phase === 'renaming' ? (
+              <><Loader2 className="w-4 h-4 animate-spin" />Renaming...</>
+            ) : phase === 'success' ? (
+              <><Check className="w-4 h-4" />Renamed</>
+            ) : (
+              <><Check className="w-4 h-4" />Rename</>
+            )}
           </button>
         </div>
       </BaseModal.Footer>
