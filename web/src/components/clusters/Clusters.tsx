@@ -121,7 +121,7 @@ export function Clusters() {
       try {
         JSON.parse(savedOrder)
       } catch {
-        showToast('Cluster sort preferences were corrupted and have been reset to defaults.', 'warning')
+        showToast(t('cluster.sortPreferencesCorrupted'), 'warning')
       }
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -149,7 +149,7 @@ export function Clusters() {
   }, [location.key]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleRenameContext = async (oldName: string, newName: string) => {
-    if (!isConnected) throw new Error('Local agent not connected')
+    if (!isConnected) throw new Error(t('cluster.renameNoAgent'))
     // Use agentFetch so the Authorization: Bearer <KC_AGENT_TOKEN> header
     // is injected — plain fetch() is rejected with 401 when the agent has
     // a token configured (#6133).

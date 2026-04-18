@@ -3050,7 +3050,28 @@
     "removeClusterSuccess": "Removed cluster \"{{name}}\" from kubeconfig",
     "removeClusterError": "Failed to remove cluster from kubeconfig",
     "removeClusterNoAgent": "Local agent not connected",
-    "removeClusterAgentTooOld": "Your local kc-agent is out of date and doesn't support removing clusters from the kubeconfig. Please upgrade kc-agent to the latest release and try again."
+    "removeClusterAgentTooOld": "Your local kc-agent is out of date and doesn't support removing clusters from the kubeconfig. Please upgrade kc-agent to the latest release and try again.",
+    "renameNoAgent": "Local agent not connected",
+    "sortPreferencesCorrupted": "Cluster sort preferences were corrupted and have been reset to defaults.",
+    "connectTestSuccessKubernetes": "Connected — Kubernetes {{version}}",
+    "renameContext": {
+      "title": "Rename Context",
+      "currentLabel": "Current:",
+      "newNameLabel": "New name",
+      "updatesKubeconfigHint": "This updates your kubeconfig via the local agent.",
+      "cancel": "Cancel",
+      "rename": "Rename",
+      "renaming": "Renaming...",
+      "renamed": "Renamed",
+      "errorEmpty": "Name cannot be empty",
+      "errorSpaces": "Name cannot contain spaces",
+      "errorUnchanged": "Name is unchanged",
+      "errorFailed": "Failed to rename context"
+    },
+    "diagnoseMissionTitle": "Diagnose {{cluster}}",
+    "diagnoseMissionDescription": "Analyzing cluster health and identifying issues",
+    "repairMissionTitle": "Repair {{cluster}}",
+    "repairMissionDescription": "Automatically fixing cluster issues"
   },
   "remediation": {
     "title": "AI Remediation Console",
@@ -3388,8 +3409,25 @@
       "deleteTitle": "Delete Cluster Group",
       "deleteMessage": "Are you sure you want to delete this cluster group? This action cannot be undone.",
       "deleteConfirm": "Delete cluster group \"{{name}}\"? This cannot be undone.",
-      "title": "Cluster Groups ({{count}})"
+      "title": "Cluster Groups ({{count}})",
+      "newGroup": "New Group",
+      "namePlaceholder": "Group name...",
+      "selectClustersLabel": "Select clusters for this group:",
+      "cancel": "Cancel",
+      "create": "Create",
+      "deleteTooltip": "Delete group"
     }
+  },
+  "clusterAdmin": {
+    "title": "Cluster Admin",
+    "subtitle": "Multi-cluster operations, health, and infrastructure management",
+    "emptyTitle": "Cluster Admin Dashboard",
+    "emptyDescription": "Add cards to manage cluster health, node operations, upgrades, and security across your infrastructure.",
+    "errorLoadingData": "Error loading cluster data",
+    "statTotal": "total",
+    "statHealthy": "healthy",
+    "statDegraded": "degraded",
+    "statOffline": "offline"
   },
   "discardUnsavedChanges": "Discard unsaved changes?",
   "discardUnsavedChangesMessage": "You have unsaved changes that will be lost.",

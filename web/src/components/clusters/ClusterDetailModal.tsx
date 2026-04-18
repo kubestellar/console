@@ -178,8 +178,8 @@ export function ClusterDetailModal({ clusterName, clusterUser, onClose, onRename
     ].slice(0, 10).join('\n')
 
     startMission({
-      title: `Diagnose ${clusterName.split('/').pop()}`,
-      description: `Analyzing cluster health and identifying issues`,
+      title: t('cluster.diagnoseMissionTitle', { cluster: clusterName.split('/').pop() }),
+      description: t('cluster.diagnoseMissionDescription'),
       type: 'troubleshoot',
       cluster: clusterName,
       initialPrompt: `Analyze the health of Kubernetes cluster "${clusterName}" and identify any issues that need attention.
@@ -216,8 +216,8 @@ Please analyze this cluster and provide:
     ].join('\n')
 
     startMission({
-      title: `Repair ${clusterName.split('/').pop()}`,
-      description: `Automatically fixing cluster issues`,
+      title: t('cluster.repairMissionTitle', { cluster: clusterName.split('/').pop() }),
+      description: t('cluster.repairMissionDescription'),
       type: 'repair',
       cluster: clusterName,
       initialPrompt: `I need help repairing issues in Kubernetes cluster "${clusterName}".

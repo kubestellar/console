@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useClusters } from '../../hooks/useMCP'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { StatBlockValue } from '../ui/StatsOverview'
@@ -10,6 +11,7 @@ const STORAGE_KEY = 'kubestellar-cluster-admin-cards'
 const DEFAULT_CARDS = getDefaultCards('cluster-admin')
 
 export function ClusterAdmin() {
+  const { t } = useTranslation()
   // Use deduplicatedClusters so the stat blocks count physical clusters, not
   // kubeconfig contexts. Multiple contexts (long path + short alias + per-user
   // SA variants) commonly point to the same server — the raw list double-counts
@@ -42,10 +44,10 @@ export function ClusterAdmin() {
       // made the sidebar disagree with itself (ClusterAdmin showed 10 while
       // My Clusters and Dashboard showed 12 for the same 12 physical clusters
       // with 2 offline).
-      case 'clusters': return { value: clusters.length, sublabel: 'total', isDemo: isDemoData }
-      case 'healthy': return { value: healthy.length, sublabel: 'healthy', isDemo: isDemoData }
-      case 'degraded': return { value: degraded.length, sublabel: 'degraded', isDemo: isDemoData }
-      case 'offline': return { value: offline.length, sublabel: 'offline', isDemo: isDemoData }
+      case 'clusters': return { value: clusters.length, sublabel: t('clusterAdmin.statTotal'), isDemo: isDemoData }
+      case 'healthy': return { value: healthy.length, sublabel: t('clusterAdmin.statHealthy'), isDemo: isDemoData }
+      case 'degraded': return { value: degraded.length, sublabel: t('clusterAdmin.statDegraded'), isDemo: isDemoData }
+      case 'offline': return { value: offline.length, sublabel: t('clusterAdmin.statOffline'), isDemo: isDemoData }
       default: return { value: '-', isDemo: isDemoData }
     }
   }
@@ -54,8 +56,8 @@ export function ClusterAdmin() {
 
   return (
     <DashboardPage
-      title="Cluster Admin"
-      subtitle="Multi-cluster operations, health, and infrastructure management"
+      title={t('clusterAdmin.title')}
+      subtitle={t('clusterAdmin.subtitle')}
       icon="ShieldAlert"
       rightExtra={<RotatingTip page="cluster-admin" />}
       storageKey={STORAGE_KEY}
@@ -69,12 +71,12 @@ export function ClusterAdmin() {
       hasData={hasData}
       isDemoData={isDemoData}
       emptyState={{
-        title: 'Cluster Admin Dashboard',
-        description: 'Add cards to manage cluster health, node operations, upgrades, and security across your infrastructure.' }}
+        title: t('clusterAdmin.emptyTitle'),
+        description: t('clusterAdmin.emptyDescription') }}
     >
       {error && (
         <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400">
-          <div className="font-medium">Error loading cluster data</div>
+          <div className="font-medium">{t('clusterAdmin.errorLoadingData')}</div>
           <div className="text-sm text-muted-foreground">{error}</div>
         </div>
       )}

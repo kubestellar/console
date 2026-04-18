@@ -390,7 +390,7 @@ export function ConnectTab({
                   {testResult.reachable ? (
                     <>
                       <Check className="w-4 h-4 shrink-0" />
-                      {t('cluster.connectTestSuccess')} — Kubernetes {testResult.serverVersion}
+                      {t('cluster.connectTestSuccessKubernetes', { version: testResult.serverVersion })}
                     </>
                   ) : (
                     <>
