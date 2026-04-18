@@ -9,7 +9,7 @@
 import { useCallback, useMemo } from 'react'
 import type { StatBlockValue } from '../ui/StatsOverview'
 import { usePipelineData } from '../cards/pipelines/PipelineDataContext'
-import type { Conclusion, FlowRun } from '../../hooks/useGitHubPipelines'
+import type { Conclusion } from '../../hooks/useGitHubPipelines'
 
 /** Milliseconds in 24 hours — used to filter recent failures */
 const MS_PER_24H = 24 * 60 * 60 * 1000
@@ -89,25 +89,40 @@ export function useCICDStats(): CICDStatsResult {
     }
     const passRate = totalCells > 0 ? Math.round((passingCells / totalCells) * PASS_RATE_MAX) : 0
 
-    // --- Failed (24h) ---
+    // --- Failed (24h) — count + top workflow names for context ---
     const now = Date.now()
     const cutoff24h = now - MS_PER_24H
-    const failed24h = (failures?.runs || []).filter(
+    const recentFailures = (failures?.runs || []).filter(
       (r) => new Date(r.createdAt).getTime() >= cutoff24h
-    ).length
-
-    // --- Avg Duration (from flow runs that have completed) ---
-    const completedRuns = (flow?.runs || []).filter(
-      (r: FlowRun) => r.run.status === 'completed' && r.run.createdAt && r.run.updatedAt
     )
+    const failed24h = recentFailures.length
+    // Top 3 failing workflow names for the sublabel
+    const failureNameCounts = new Map<string, number>()
+    for (const r of recentFailures) {
+      const name = r.workflow || 'Unknown'
+      failureNameCounts.set(name, (failureNameCounts.get(name) || 0) + 1)
+    }
+    const topFailures = [...failureNameCounts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([name, count]) => `${name} (${count})`)
+
+    // --- Avg Duration (from matrix cells — completed runs have timestamps) ---
+    // Flow only has in-flight runs. Use pulse recent runs which have timestamps.
+    const recentRuns = pulse?.recent || []
     let avgDurationMs = 0
-    if (completedRuns.length > 0) {
-      const totalMs = completedRuns.reduce((sum: number, r: FlowRun) => {
-        const start = new Date(r.run.createdAt).getTime()
-        const end = new Date(r.run.updatedAt).getTime()
-        return sum + (end - start)
-      }, 0)
-      avgDurationMs = totalMs / completedRuns.length
+    const runsWithDuration = recentRuns.filter(
+      (r) => r.createdAt && r.conclusion !== null
+    )
+    if (runsWithDuration.length > 1) {
+      // Approximate avg interval between nightly runs (since we don't have
+      // individual run duration in the pulse payload)
+      const timestamps = runsWithDuration.map(r => new Date(r.createdAt).getTime()).sort()
+      const intervals: number[] = []
+      for (let i = 1; i < timestamps.length; i++) {
+        intervals.push(timestamps[i] - timestamps[i - 1])
+      }
+      avgDurationMs = intervals.reduce((a, b) => a + b, 0) / intervals.length
     }
 
     // --- Nightly Streak (from pulse data) ---
@@ -121,12 +136,21 @@ export function useCICDStats(): CICDStatsResult {
     }
     const totalWorkflows = workflowNames.size
 
-    // --- Open PRs (count from flow runs triggered by pull_request) ---
+    // --- Open PRs (deduplicate PR numbers from ALL data sources) ---
     const prNumbers = new Set<string>()
+    // From flow (in-flight runs)
     for (const r of (flow?.runs || [])) {
-      if (r.run.event === 'pull_request' && r.run.pullRequests) {
+      if (r.run.pullRequests) {
         for (const pr of r.run.pullRequests) {
           prNumbers.add(`${r.run.repo}#${pr.number}`)
+        }
+      }
+    }
+    // From failures (recent failed runs may reference PRs)
+    for (const r of (failures?.runs || [])) {
+      if (r.pullRequests) {
+        for (const pr of r.pullRequests) {
+          prNumbers.add(`${r.repo}#${pr.number}`)
         }
       }
     }
@@ -141,6 +165,7 @@ export function useCICDStats(): CICDStatsResult {
       totalRuns: totalCells,
       passCount: passingCells,
       failed24h,
+      topFailures,
       avgDurationMs,
       streak,
       streakKind,
@@ -173,14 +198,18 @@ export function useCICDStats(): CICDStatsResult {
       case 'cicd_open_prs':
         return {
           value: computed.openPRs,
-          sublabel: 'with active runs',
+          sublabel: computed.openPRs > 0
+            ? `across ${computed.totalWorkflows} workflows`
+            : 'no active PR runs',
           isDemo: computed.isDemo,
         }
 
       case 'cicd_failed_24h':
         return {
           value: computed.failed24h,
-          sublabel: computed.failed24h > 0 ? 'needs attention' : 'all clear',
+          sublabel: computed.failed24h > 0
+            ? (computed.topFailures || []).join(', ')
+            : 'all clear',
           isDemo: computed.isDemo,
           modeHints: ['numeric', 'heatmap', 'trend'],
         }
@@ -191,7 +220,9 @@ export function useCICDStats(): CICDStatsResult {
           : '-'
         return {
           value: formatted,
-          sublabel: 'avg run time',
+          sublabel: computed.avgDurationMs > 0
+            ? 'nightly avg interval'
+            : 'no completed runs yet',
           isDemo: computed.isDemo,
         }
       }
