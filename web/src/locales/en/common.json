@@ -1147,7 +1147,8 @@
       "blocksCount_other": "{{count}} blocks",
       "deleteStatBlock": "Delete stat block",
       "addAtLeastOne": "Add at least one stat block.",
-      "changeIcon": "Change icon"
+      "changeIcon": "Change icon",
+      "moveBlockUp": "Move stat block up"
     },
     "aiAssist": {
       "describeWhatYouWant": "AI Assist — describe what you want",

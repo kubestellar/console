@@ -492,6 +492,8 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated, embedde
                               onClick={() => moveBlock(idx, 'up')}
                               disabled={idx === 0}
                               className="p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-20"
+                              title={t('dashboard.statFactory.moveBlockUp')}
+                              aria-label={t('dashboard.statFactory.moveBlockUp')}
                             >
                               <GripVertical className="w-3 h-3" />
                             </button>
