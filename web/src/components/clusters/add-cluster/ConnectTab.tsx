@@ -329,15 +329,19 @@ export function ConnectTab({
                 >
                   {t('cluster.connectBack')}
                 </button>
-                {authType !== 'cloud-iam' && (
-                  <button
-                    onClick={() => goToConnectStep(3)}
-                    disabled={authType === 'token' ? !token.trim() : (!certData.trim() || !keyData.trim())}
-                    className="px-4 py-2 text-sm font-medium rounded-lg bg-secondary text-foreground hover:bg-black/5 dark:hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-border dark:border-white/10"
-                  >
-                    {t('cluster.connectNext')}
-                  </button>
-                )}
+                <button
+                  onClick={() => goToConnectStep(3)}
+                  disabled={
+                    authType === 'token'
+                      ? !token.trim()
+                      : authType === 'certificate'
+                        ? (!certData.trim() || !keyData.trim())
+                        : false // cloud-iam: user authenticates via CLI, no UI input required to proceed
+                  }
+                  className="px-4 py-2 text-sm font-medium rounded-lg bg-secondary text-foreground hover:bg-black/5 dark:hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-border dark:border-white/10"
+                >
+                  {t('cluster.connectNext')}
+                </button>
               </div>
             </div>
           )}

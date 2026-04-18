@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 
 vi.mock('../../../../lib/demoMode', () => ({
   isDemoMode: () => true, getDemoMode: () => true, isNetlifyDeployment: false,
@@ -74,5 +74,49 @@ describe('ConnectTab', () => {
       />
     )
     expect(container).toBeTruthy()
+  })
+
+  // Regression: #8914 — when Cloud IAM auth is selected, the Next button must
+  // still be rendered and enabled so the user can advance to step 3.
+  it('renders an enabled Next button on step 2 when authType is cloud-iam', () => {
+    render(
+      <ConnectTab
+        connectStep={2}
+        setConnectStep={vi.fn()}
+        connectState="idle"
+        serverUrl="https://example.com"
+        setServerUrl={vi.fn()}
+        authType="cloud-iam"
+        setAuthType={vi.fn()}
+        token=""
+        setToken={vi.fn()}
+        certData=""
+        setCertData={vi.fn()}
+        keyData=""
+        setKeyData={vi.fn()}
+        caData=""
+        setCaData={vi.fn()}
+        skipTls={false}
+        setSkipTls={vi.fn()}
+        contextName=""
+        setContextName={vi.fn()}
+        clusterName=""
+        setClusterName={vi.fn()}
+        namespace=""
+        setNamespace={vi.fn()}
+        testResult={null}
+        connectError=""
+        showAdvanced={false}
+        setShowAdvanced={vi.fn()}
+        selectedCloudProvider="eks"
+        setSelectedCloudProvider={vi.fn()}
+        goToConnectStep={vi.fn()}
+        handleTestConnection={vi.fn()}
+        handleAddCluster={vi.fn()}
+      />
+    )
+    const nextBtn = screen.getByRole('button', { name: 'cluster.connectNext' })
+    expect(nextBtn).toBeTruthy()
+    expect((nextBtn as HTMLButtonElement).disabled).toBe(false)
   })
 })
