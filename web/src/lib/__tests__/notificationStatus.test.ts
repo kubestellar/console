@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach} from 'vitest'
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { isBrowserNotifVerified, setBrowserNotifVerified } from '../notificationStatus'
 
 describe('isBrowserNotifVerified', () => {
@@ -45,5 +45,37 @@ describe('setBrowserNotifVerified', () => {
     const stored = JSON.parse(localStorage.getItem('kc_browser_notif_verified')!)
     expect(stored.verified).toBe(true)
     expect(typeof stored.at).toBe('number')
+  })
+
+  it('returns true when persistence succeeds', () => {
+    expect(setBrowserNotifVerified(true)).toBe(true)
+  })
+
+  describe('when localStorage.setItem throws (#8866)', () => {
+    let setItemSpy: ReturnType<typeof vi.spyOn>
+    let warnSpy: ReturnType<typeof vi.spyOn>
+
+    beforeEach(() => {
+      setItemSpy = vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => {
+        // Simulate browser quota / private-browsing failure mode
+        throw new DOMException('quota exceeded', 'QuotaExceededError')
+      })
+      warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    })
+
+    afterEach(() => {
+      setItemSpy.mockRestore()
+      warnSpy.mockRestore()
+    })
+
+    it('returns false instead of throwing', () => {
+      expect(() => setBrowserNotifVerified(true)).not.toThrow()
+      expect(setBrowserNotifVerified(true)).toBe(false)
+    })
+
+    it('logs a warning so the failure is observable', () => {
+      setBrowserNotifVerified(true)
+      expect(warnSpy).toHaveBeenCalled()
+    })
   })
 })
