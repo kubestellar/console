@@ -276,7 +276,11 @@
       "remaining": "{{count}} remaining",
       "monthlyLimitHint": "Maximum tokens per month",
       "warningAtHint": "Warning at {{percent}}% usage",
-      "criticalAtHint": "Critical at {{percent}}% usage"
+      "criticalAtHint": "Critical at {{percent}}% usage",
+      "validation": {
+        "warningMustBeLower": "Warning threshold must be lower than critical threshold.",
+        "limitZeroConfirm": "Setting limit to 0 disables all AI operations. Continue?"
+      }
     },
     "github": {
       "title": "GitHub Integration",

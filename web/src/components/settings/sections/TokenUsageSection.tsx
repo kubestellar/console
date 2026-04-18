@@ -19,13 +19,30 @@ export function TokenUsageSection({ usage, updateSettings, resetUsage, isDemoDat
   const [warningThreshold, setWarningThreshold] = useState(usage.warningThreshold * 100)
   const [criticalThreshold, setCriticalThreshold] = useState(usage.criticalThreshold * 100)
   const [saved, setSaved] = useState(false)
+  const [thresholdError, setThresholdError] = useState<string | null>(null)
   const savedTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+
+  // Token limit value that effectively disables all AI operations
+  const DISABLED_TOKEN_LIMIT = 0
 
   useEffect(() => {
     return () => clearTimeout(savedTimerRef.current)
   }, [])
 
   const handleSaveTokenSettings = () => {
+    // #8869: warning must be strictly less than critical, otherwise alert semantics invert
+    if (warningThreshold >= criticalThreshold) {
+      setThresholdError(t('settings.tokens.validation.warningMustBeLower'))
+      return
+    }
+    setThresholdError(null)
+
+    // #8870: a limit of 0 silently disables all AI operations; require explicit confirmation
+    if (tokenLimit === DISABLED_TOKEN_LIMIT) {
+      const confirmed = window.confirm(t('settings.tokens.validation.limitZeroConfirm'))
+      if (!confirmed) return
+    }
+
     updateSettings({
       limit: tokenLimit,
       warningThreshold: warningThreshold / 100,
@@ -171,6 +188,12 @@ export function TokenUsageSection({ usage, updateSettings, resetUsage, isDemoDat
             </p>
           </div>
         </div>
+
+        {thresholdError && (
+          <p role="alert" className="text-sm text-red-400">
+            {thresholdError}
+          </p>
+        )}
 
         <button
           onClick={handleSaveTokenSettings}
