@@ -418,6 +418,9 @@ class ApiClient {
   private getHeaders(): Record<string, string> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
+      // #8830 — the /api group middleware rejects state-changing requests
+      // (POST/PUT/DELETE/PATCH) without this header. Harmless on GET.
+      'X-Requested-With': 'XMLHttpRequest',
     }
     const token = localStorage.getItem(STORAGE_KEY_TOKEN)
     if (token) {
@@ -679,6 +682,12 @@ export function authFetch(input: RequestInfo | URL, init?: RequestInit): Promise
 
   if (token && token !== DEMO_TOKEN_VALUE && !headers.has('Authorization')) {
     headers.set('Authorization', `Bearer ${token}`)
+  }
+  // #8830 — /api group RequireCSRF middleware rejects state-changing requests
+  // without this header; safeHTTPMethods pass through unconditionally, so
+  // setting it on every authFetch is correct and harmless for GET/HEAD.
+  if (!headers.has('X-Requested-With')) {
+    headers.set('X-Requested-With', 'XMLHttpRequest')
   }
 
   // Use caller-provided signal if present, otherwise apply default timeout
