@@ -219,7 +219,7 @@ function generatePredictionId(type: string, name: string, cluster?: string): str
   return `heuristic-${type}-${name}-${cluster || 'unknown'}`
 }
 
-// Card 4: Predictive Health Monitor - Detect issues, predict failures, group by root cause
+// Card 4: AI Cluster Issue Predictor - Detect issues, predict failures, group by root cause
 export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
   const { t } = useTranslation(['cards', 'common'])
   const { startMission, missions } = useMissions()

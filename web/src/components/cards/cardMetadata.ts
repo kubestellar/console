@@ -203,7 +203,7 @@ export const CARD_TITLES: Record<string, string> = {
   console_ai_issues: 'AI Issues',
   console_ai_kubeconfig_audit: 'AI Kubeconfig Audit',
   console_ai_health_check: 'AI Health Check',
-  console_ai_offline_detection: 'Predictive Health Monitor',
+  console_ai_offline_detection: 'AI Cluster Issue Predictor',
 
   // stock_market_ticker — registered via unified descriptor system
 
