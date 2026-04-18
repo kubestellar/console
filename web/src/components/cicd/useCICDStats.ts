@@ -21,26 +21,11 @@ const PASS_RATE_WARN_PCT = 70
 /** Maximum value for pass-rate (100%) — used as gauge max */
 const PASS_RATE_MAX = 100
 
-/** Milliseconds per minute — used for duration formatting */
-const MS_PER_MINUTE = 60_000
-
-/** Minutes per hour — used for duration formatting */
-const MINUTES_PER_HOUR = 60
-
 /** Whether a conclusion counts as a "pass" */
 function isPassing(c: Conclusion): boolean {
   return c === 'success' || c === 'skipped' || c === 'neutral'
 }
 
-/** Format milliseconds as a human-readable duration string */
-function formatDuration(ms: number): string {
-  const minutes = Math.round(ms / MS_PER_MINUTE)
-  if (minutes < 1) return '<1m'
-  if (minutes < MINUTES_PER_HOUR) return `${minutes}m`
-  const hours = Math.floor(minutes / MINUTES_PER_HOUR)
-  const remainder = minutes % MINUTES_PER_HOUR
-  return remainder > 0 ? `${hours}h ${remainder}m` : `${hours}h`
-}
 
 /** Return shape for useCICDStats — callers use these to drive DashboardPage lifecycle */
 export interface CICDStatsResult {
@@ -136,6 +121,14 @@ export function useCICDStats(): CICDStatsResult {
     }
     const totalWorkflows = workflowNames.size
 
+    // --- Runs Today (count workflows that ran today) ---
+    const todayStr = new Date().toISOString().slice(0, 10)
+    let runsToday = 0
+    for (const wf of (matrix?.workflows || [])) {
+      const todayCell = (wf.cells || []).find(c => c.date === todayStr)
+      if (todayCell && todayCell.conclusion !== null) runsToday++
+    }
+
     // --- Open PRs (deduplicate PR numbers from ALL data sources) ---
     const prNumbers = new Set<string>()
     // From flow (in-flight runs)
@@ -171,6 +164,7 @@ export function useCICDStats(): CICDStatsResult {
       streakKind,
       totalWorkflows,
       openPRs,
+      runsToday,
       isDemo,
       matrixDays: matrix?.days ?? 0,
     }
@@ -199,9 +193,10 @@ export function useCICDStats(): CICDStatsResult {
         return {
           value: computed.openPRs,
           sublabel: computed.openPRs > 0
-            ? `across ${computed.totalWorkflows} workflows`
-            : 'no active PR runs',
+            ? 'PRs with active workflows'
+            : 'no PRs running CI',
           isDemo: computed.isDemo,
+          modeHints: ['sparkline', 'numeric'],
         }
 
       case 'cicd_failed_24h':
@@ -215,14 +210,9 @@ export function useCICDStats(): CICDStatsResult {
         }
 
       case 'cicd_avg_duration': {
-        const formatted = computed.avgDurationMs > 0
-          ? formatDuration(computed.avgDurationMs)
-          : '-'
         return {
-          value: formatted,
-          sublabel: computed.avgDurationMs > 0
-            ? 'nightly avg interval'
-            : 'no completed runs yet',
+          value: computed.runsToday ?? 0,
+          sublabel: 'workflows ran today',
           isDemo: computed.isDemo,
         }
       }

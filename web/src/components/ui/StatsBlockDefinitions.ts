@@ -428,9 +428,9 @@ export const ACMM_STAT_BLOCKS: StatBlockConfig[] = [
  */
 export const CICD_STAT_BLOCKS: StatBlockConfig[] = [
   { id: 'cicd_pass_rate', name: 'Pass Rate', icon: 'Percent', visible: true, color: 'green', displayMode: 'ring' },
-  { id: 'cicd_open_prs', name: 'Open PRs', icon: 'ClipboardList', visible: true, color: 'blue' },
+  { id: 'cicd_open_prs', name: 'Active PR Runs', icon: 'ClipboardList', visible: true, color: 'blue', displayMode: 'sparkline' },
   { id: 'cicd_failed_24h', name: 'Failed (24h)', icon: 'XCircle', visible: true, color: 'red' },
-  { id: 'cicd_avg_duration', name: 'Avg Duration', icon: 'Clock', visible: true, color: 'cyan' },
+  { id: 'cicd_avg_duration', name: 'Runs Today', icon: 'Clock', visible: true, color: 'cyan' },
   { id: 'cicd_streak', name: 'Nightly Streak', icon: 'Activity', visible: true, color: 'purple', displayMode: 'sparkline' },
   { id: 'cicd_total_workflows', name: 'Total Workflows', icon: 'Workflow', visible: true, color: 'yellow' },
 ]
