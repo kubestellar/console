@@ -480,7 +480,7 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
             {/* Duration */}
             <div>
               <label htmlFor="alertRuleDuration" className="block text-xs text-muted-foreground mb-1">
-                Duration (seconds before alerting)
+                {t('alerts.durationSeconds')}
               </label>
               <div className="flex items-center gap-2 flex-wrap">
                 {DURATION_PRESETS.map(preset => (
