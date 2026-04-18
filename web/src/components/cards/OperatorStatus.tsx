@@ -266,19 +266,49 @@ function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
           </div>
 
           {/* Operators list */}
-          <div ref={containerRef} className="flex-1 space-y-2 overflow-y-auto" style={containerStyle}>
-            {operators.map((op) => {
+          <div ref={containerRef} className="flex-1 space-y-2 overflow-y-auto" style={containerStyle} role="list">
+            {operators.map((op, idx) => {
               const StatusIcon = getStatusIcon(op.status)
               const color = getStatusColor(op.status)
+              const activate = () => {
+                if (op.cluster) {
+                  drillToOperator(op.cluster, op.namespace, op.name, {
+                    status: op.status,
+                    version: op.version,
+                    upgradeAvailable: op.upgradeAvailable })
+                }
+              }
+              // #8883: roving-tabindex keyboard nav for the operators list.
+              const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+                const list = e.currentTarget.parentElement
+                const items = list ? Array.from(list.querySelectorAll<HTMLDivElement>('[data-keynav-item="operator"]')) : []
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  activate()
+                } else if (e.key === 'ArrowDown' && idx < operators.length - 1) {
+                  e.preventDefault()
+                  items[idx + 1]?.focus()
+                } else if (e.key === 'ArrowUp' && idx > 0) {
+                  e.preventDefault()
+                  items[idx - 1]?.focus()
+                } else if (e.key === 'Home') {
+                  e.preventDefault()
+                  items[0]?.focus()
+                } else if (e.key === 'End') {
+                  e.preventDefault()
+                  items[items.length - 1]?.focus()
+                }
+              }
 
               return (
                 <div
                   key={`${op.cluster || 'unknown'}-${op.namespace}-${op.name}`}
-                  onClick={() => op.cluster && drillToOperator(op.cluster, op.namespace, op.name, {
-                    status: op.status,
-                    version: op.version,
-                    upgradeAvailable: op.upgradeAvailable })}
-                  className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group"
+                  data-keynav-item="operator"
+                  role="button"
+                  tabIndex={0}
+                  onClick={activate}
+                  onKeyDown={handleKeyDown}
+                  className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-y-2">
                     <div className="flex items-center gap-2">

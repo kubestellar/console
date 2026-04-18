@@ -343,23 +343,49 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
             </div>
           </div>
 
-          {/* Kustomizations list */}
-          <div ref={containerRef} className="flex-1 space-y-2 overflow-y-auto" style={containerStyle}>
+          {/* Kustomizations list — #8883: roving-tabindex keyboard nav.
+              Arrow Up/Down moves focus, Home/End jumps to ends, Enter/Space drills in. */}
+          <div ref={containerRef} className="flex-1 space-y-2 overflow-y-auto" style={containerStyle} role="list">
             {kustomizations.map((ks, idx) => {
               const StatusIcon = getStatusIcon(ks.status)
               const color = getStatusColor(ks.status)
+              const activate = () => drillToKustomization(selectedCluster, ks.namespace, ks.name, {
+                path: ks.path,
+                sourceRef: ks.sourceRef,
+                status: ks.status,
+                lastApplied: ks.lastApplied,
+                revision: ks.revision })
+              const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+                const list = e.currentTarget.parentElement
+                const items = list ? Array.from(list.querySelectorAll<HTMLDivElement>('[data-keynav-item="kustomization"]')) : []
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  activate()
+                } else if (e.key === 'ArrowDown' && idx < kustomizations.length - 1) {
+                  e.preventDefault()
+                  items[idx + 1]?.focus()
+                } else if (e.key === 'ArrowUp' && idx > 0) {
+                  e.preventDefault()
+                  items[idx - 1]?.focus()
+                } else if (e.key === 'Home') {
+                  e.preventDefault()
+                  items[0]?.focus()
+                } else if (e.key === 'End') {
+                  e.preventDefault()
+                  items[items.length - 1]?.focus()
+                }
+              }
 
               return (
                 <div
                   key={idx}
-                  onClick={() => drillToKustomization(selectedCluster, ks.namespace, ks.name, {
-                    path: ks.path,
-                    sourceRef: ks.sourceRef,
-                    status: ks.status,
-                    lastApplied: ks.lastApplied,
-                    revision: ks.revision })}
-                  className={`p-3 rounded-lg cursor-pointer group ${ks.status === 'NotReady' ? 'bg-red-500/10 border border-red-500/20' : 'bg-secondary/30'} hover:bg-secondary/50 transition-colors`}
-                  title={`Click to view ${ks.name} details`}
+                  data-keynav-item="kustomization"
+                  role="button"
+                  tabIndex={0}
+                  onClick={activate}
+                  onKeyDown={handleKeyDown}
+                  className={`p-3 rounded-lg cursor-pointer group ${ks.status === 'NotReady' ? 'bg-red-500/10 border border-red-500/20' : 'bg-secondary/30'} hover:bg-secondary/50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400`}
+                  title={`Click or press Enter to view ${ks.name} details`}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-y-2 mb-1">
                     <div className="flex items-center gap-2">

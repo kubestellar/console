@@ -308,15 +308,47 @@ export function NetworkOverview() {
       {stats.namespaces.length > 0 && (
         <div className="flex-1">
           <div className="text-xs text-muted-foreground mb-2">Top Namespaces</div>
-          <div className="space-y-1.5">
-            {stats.namespaces.slice(0, 5).map(([name, count]) => {
+          {/* #8883: Top Namespaces is a roving-tabindex list; arrow keys
+              traverse siblings, Home/End jump to ends, Enter/Space activate. */}
+          <div className="space-y-1.5" role="list">
+            {stats.namespaces.slice(0, 5).map(([name, count], idx, arr) => {
               const svc = filteredServices.find(s => s.namespace === name)
+              const isInteractive = !!(svc?.cluster && svc?.namespace)
+              const activate = () => {
+                if (svc?.cluster && svc?.namespace) {
+                  drillToService(svc.cluster, svc.namespace, svc.name)
+                }
+              }
+              const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+                if (!isInteractive) return
+                const list = e.currentTarget.parentElement
+                const items = list ? Array.from(list.querySelectorAll<HTMLDivElement>('[data-keynav-item="namespace"]')) : []
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  activate()
+                } else if (e.key === 'ArrowDown' && idx < arr.length - 1) {
+                  e.preventDefault()
+                  items[idx + 1]?.focus()
+                } else if (e.key === 'ArrowUp' && idx > 0) {
+                  e.preventDefault()
+                  items[idx - 1]?.focus()
+                } else if (e.key === 'Home') {
+                  e.preventDefault()
+                  items[0]?.focus()
+                } else if (e.key === 'End') {
+                  e.preventDefault()
+                  items[items.length - 1]?.focus()
+                }
+              }
               return (
                 <div
                   key={name}
-                  className={`flex flex-wrap items-center justify-between gap-y-2 gap-2 p-2 rounded bg-secondary/30 ${svc ? 'cursor-pointer hover:bg-secondary/50' : 'cursor-default'} transition-colors`}
-                  onClick={() => svc?.cluster && svc?.namespace && drillToService(svc.cluster, svc.namespace, svc.name)}
-                  title={`${count} service${count !== 1 ? 's' : ''} in namespace ${name}${svc ? ' - Click to view' : ''}`}
+                  data-keynav-item="namespace"
+                  className={`flex flex-wrap items-center justify-between gap-y-2 gap-2 p-2 rounded bg-secondary/30 ${isInteractive ? 'cursor-pointer hover:bg-secondary/50' : 'cursor-default'} transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400`}
+                  onClick={activate}
+                  onKeyDown={handleKeyDown}
+                  {...(isInteractive ? { role: 'button' as const, tabIndex: 0 } : { role: 'listitem' as const })}
+                  title={`${count} service${count !== 1 ? 's' : ''} in namespace ${name}${isInteractive ? ' - Click or press Enter to view' : ''}`}
                 >
                   <span className="text-sm text-foreground truncate min-w-0 flex-1">{name}</span>
                   <span className="text-xs text-muted-foreground shrink-0">{count} services</span>
