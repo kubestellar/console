@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   X, Plus, Code, Layers, Wand2, Eye, Save, Sparkles,
-  AlertTriangle, CheckCircle, Loader2, Trash2 } from 'lucide-react'
+  AlertTriangle, CheckCircle, Loader2 } from 'lucide-react'
 import { BaseModal, ConfirmDialog } from '../../lib/modals'
 import { cn } from '../../lib/cn'
 import { saveDynamicCard, deleteDynamicCard, getAllDynamicCards } from '../../lib/dynamic-cards'
@@ -16,11 +16,11 @@ import { LivePreviewPanel } from './LivePreviewPanel'
 import { InlineAIAssist } from './InlineAIAssist'
 import { CARD_INLINE_ASSIST_PROMPT, CODE_INLINE_ASSIST_PROMPT } from '../../lib/ai/prompts'
 import { generateSampleData } from '../../lib/ai/sampleData'
-import { wrapAbbreviations } from '../shared/TechnicalAcronym'
 import { T1_TEMPLATES, type T1Template } from './cardFactoryTemplates'
 import { TemplateDropdown } from './cardFactoryPreviews'
 import { FieldSuggestChips } from './FieldSuggestChips'
 import { AiCardTab } from './cardFactoryAiTab'
+import { ManageCardsTab } from './cardFactoryManageTab'
 import {
   validateT1AssistResult,
   validateT2AssistResult,
@@ -1144,46 +1144,10 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
 
           {/* Manage */}
           {tab === 'manage' && (
-            <div className="space-y-3">
-              {existingCards.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <Wand2 className="w-8 h-8 text-muted-foreground/40 mb-2" />
-                  <p className="text-sm text-muted-foreground">{t('dashboard.cardFactory.noCustomCards')}</p>
-                  <p className="text-xs text-muted-foreground/70 mt-1">
-                    {t('dashboard.cardFactory.useDeclarativeOrCode')}
-                  </p>
-                </div>
-              ) : (
-                existingCards.map(card => (
-                  <div key={card.id} className="rounded-lg bg-card/50 border border-border p-3 flex items-start gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-foreground">{wrapAbbreviations(card.title)}</span>
-                        <span className={cn(
-                          'text-xs px-1.5 py-0.5 rounded',
-                          card.tier === 'tier1' ? 'bg-blue-500/20 text-blue-400' : 'bg-purple-500/20 text-purple-400',
-                        )}>
-                          {card.tier === 'tier1' ? t('dashboard.cardFactory.declarativeBadge') : t('dashboard.cardFactory.customCodeBadge')}
-                        </span>
-                      </div>
-                      {card.description && (
-                        <p className="text-xs text-muted-foreground mt-0.5">{wrapAbbreviations(card.description)}</p>
-                      )}
-                      <p className="text-xs text-muted-foreground/70 mt-1">
-                        ID: {card.id} · Created: {new Date(card.createdAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => setDeleteConfirmId(card.id)}
-                      className="p-1.5 rounded hover:bg-red-500/20 text-muted-foreground hover:text-red-400 transition-colors shrink-0"
-                      title={t('dashboard.cardFactory.deleteCard')}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))
-              )}
-            </div>
+            <ManageCardsTab
+              existingCards={existingCards}
+              onDeleteRequest={setDeleteConfirmId}
+            />
           )}
         </div>
       </div>
