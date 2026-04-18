@@ -60,6 +60,11 @@ vi.mock('../lib/sseClient', () => ({
   fetchSSE: vi.fn().mockResolvedValue([]),
 }))
 
+vi.mock('../lib/schemas/validate', () => ({
+  validateResponse: (_schema: unknown, data: unknown) => data,
+  validateArrayResponse: (_schema: unknown, data: unknown) => data,
+}))
+
 vi.mock('./mcp/shared', () => ({
   clusterCacheRef: mockClusterCacheRef,
 }))

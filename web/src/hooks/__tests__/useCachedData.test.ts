@@ -101,6 +101,11 @@ vi.mock('../useCachedISO27001', () => ({}))
 // Stub the re-exports so the module loads cleanly
 vi.mock('../useWorkloads', () => ({}))
 
+vi.mock('../../lib/schemas/validate', () => ({
+  validateResponse: (_schema: unknown, data: unknown) => data,
+  validateArrayResponse: (_schema: unknown, data: unknown) => data,
+}))
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
