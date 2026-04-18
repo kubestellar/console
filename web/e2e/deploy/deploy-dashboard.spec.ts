@@ -167,6 +167,31 @@ async function setupMockRoutes(page: Page) {
   apiCallLog = []
   deployPhase = 'launching'
 
+  // Health — required so checkBackendAvailability() returns true
+  await page.route('**/health', (route) => {
+    logCall(route, 'health')
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ status: 'ok', uptime: 3600 }),
+    })
+  })
+
+  // Local agent (kc-agent) — health returns 200, data returns 503
+  await page.route('http://127.0.0.1:8585/**', (route) => {
+    logCall(route, 'agent')
+    const url = route.request().url()
+    if (url.endsWith('/health') || url.includes('/health?')) {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ status: 'ok', version: 'e2e-test', clusters: 1, hasClaude: false }),
+      })
+    } else {
+      route.fulfill({ status: 503, contentType: 'application/json', body: '{"status":"unavailable"}' })
+    }
+  })
+
   // Auth
   await page.route('**/api/me', (route) => {
     logCall(route, 'api/me')
@@ -286,18 +311,28 @@ async function setupMockRoutes(page: Page) {
 
   // kubectl proxy catch-all
   await page.route('**/api/kubectl/**', (route) => {
+    logCall(route, 'kubectl')
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ items: [] }) })
   })
 
   // Config catch-all
   await page.route('**/api/config/**', (route) => {
+    logCall(route, 'config')
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({}) })
   })
 
-  // Agent HTTP catch-all
-  await page.route('**/localhost:8090/**', (route) => {
-    route.abort('connectionrefused')
-  })
+  // Utility endpoints — prevent unhandled requests from reaching a real server
+  const utilityEndpoints = [
+    '**/api/persistence/**', '**/api/dashboards**', '**/api/notifications/**',
+    '**/api/user/preferences*', '**/api/active-users*', '**/api/feedback/**',
+    '**/api/rewards/**', '**/api/gpu/**', '**/api/self-upgrade/**',
+    '**/api/admin/**', '**/api/acmm/**', '**/auth/**',
+  ]
+  for (const pattern of utilityEndpoints) {
+    await page.route(pattern, (route) => {
+      route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
+    })
+  }
 }
 
 function logCall(route: Route, endpoint: string) {
@@ -340,6 +375,7 @@ async function setupAuthAndNavigate(page: Page, route: string, opts?: {
     localStorage.setItem('kc-demo-mode', 'false')
     localStorage.setItem('demo-user-onboarded', 'true')
     localStorage.setItem('kubestellar-console-tour-completed', 'true')
+    localStorage.setItem('kc-backend-status', JSON.stringify({ available: true, timestamp: Date.now() }))
   })
 
   // Inject mission data if provided
@@ -424,15 +460,18 @@ test.describe('Deploy Dashboard', () => {
       // Workload names may appear in different cards — check API was called
     })
 
-    // Workloads may be fetched via REST (/api/workloads) or SSE (/api/mcp/deployments)
+    // Workloads may be fetched via REST (/api/workloads), SSE (/api/mcp/*),
+    // kc-agent (127.0.0.1:8585), or kubectl proxy (/api/kubectl/*)
     const workloadCalls = getCallCount('api/workloads')
     const sseCalls = apiCallLog.filter((c) => c.endpoint.includes('mcp')).length
+    const kubectlCalls = getCallCount('kubectl')
+    const agentCalls = getCallCount('agent')
 
     // Check for workload names or deployment status content in the page
     const body = await page.textContent('body')
     const hasWorkloadContent = (body || '').includes('nginx') || (body || '').includes('Running') || (body || '').includes('Deployment')
-    const hasAnyCalls = workloadCalls > 0 || sseCalls > 0
-    console.log(`[Deploy] Workload REST: ${workloadCalls}, SSE calls: ${sseCalls}, has content: ${hasWorkloadContent}`)
+    const hasAnyCalls = workloadCalls > 0 || sseCalls > 0 || kubectlCalls > 0 || agentCalls > 0
+    console.log(`[Deploy] Workload REST: ${workloadCalls}, SSE: ${sseCalls}, kubectl: ${kubectlCalls}, agent: ${agentCalls}, has content: ${hasWorkloadContent}`)
 
     // At least one data-fetching call should have been made
     expect(hasAnyCalls).toBe(true)

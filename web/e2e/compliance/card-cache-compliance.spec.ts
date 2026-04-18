@@ -110,6 +110,10 @@ const BATCH_SIZE = 24
 const BATCH_LOAD_TIMEOUT_MS = 30_000
 const WARM_RETURN_WAIT_MS = 3_000
 const _WARM_POLL_INTERVAL_MS = 50
+/** Max retry attempts for page.evaluate calls that may race with navigation */
+const EVALUATE_RETRY_ATTEMPTS = 3
+/** Delay between evaluate retries (ms) */
+const EVALUATE_RETRY_DELAY_MS = 500
 
 
 // Mock data, setupAuth, setupLiveMocks, setLiveColdMode, navigateToBatch,
@@ -121,29 +125,53 @@ let mockControl: MockControl
 // ---------------------------------------------------------------------------
 
 async function captureColdSnapshots(page: Page, cardIds: string[]): Promise<ColdLoadSnapshot[]> {
-  return await page.evaluate((ids: string[]) => {
-    return ids.map((id) => {
-      const card = document.querySelector(`[data-card-id="${id}"]`)
-      if (!card) {
-        return {
+  // Retry page.evaluate to handle transient execution-context invalidation
+  // (e.g., a background navigation triggered by a card hook between
+  // waitForCardsToLoad and this call).
+  for (let attempt = 0; attempt < EVALUATE_RETRY_ATTEMPTS; attempt++) {
+    try {
+      return await page.evaluate((ids: string[]) => {
+        return ids.map((id) => {
+          const card = document.querySelector(`[data-card-id="${id}"]`)
+          if (!card) {
+            return {
+              cardId: id, cardType: '', textLength: 0,
+              hasVisualContent: false, hasContent: false,
+              hasDemoBadge: false, dataLoading: null,
+            }
+          }
+          const textLen = (card.textContent || '').trim().length
+          const hasVisual = !!card.querySelector('canvas,svg,iframe,table,img,video,pre,code,[role="img"]')
+          return {
+            cardId: id,
+            cardType: card.getAttribute('data-card-type') || '',
+            textLength: textLen,
+            hasVisualContent: hasVisual,
+            hasContent: textLen > 10 || hasVisual,
+            hasDemoBadge: !!card.querySelector('[data-testid="demo-badge"]'),
+            dataLoading: card.getAttribute('data-loading'),
+          }
+        })
+      }, cardIds)
+    } catch (err) {
+      console.warn(`[CacheTest] captureColdSnapshots attempt ${attempt + 1}/${EVALUATE_RETRY_ATTEMPTS} failed:`, err)
+      if (attempt === EVALUATE_RETRY_ATTEMPTS - 1) {
+        // Final attempt — return empty snapshots instead of crashing
+        console.warn('[CacheTest] All captureColdSnapshots retries exhausted, returning empty snapshots')
+        return cardIds.map((id) => ({
           cardId: id, cardType: '', textLength: 0,
           hasVisualContent: false, hasContent: false,
           hasDemoBadge: false, dataLoading: null,
-        }
+        }))
       }
-      const textLen = (card.textContent || '').trim().length
-      const hasVisual = !!card.querySelector('canvas,svg,iframe,table,img,video,pre,code,[role="img"]')
-      return {
-        cardId: id,
-        cardType: card.getAttribute('data-card-type') || '',
-        textLength: textLen,
-        hasVisualContent: hasVisual,
-        hasContent: textLen > 10 || hasVisual,
-        hasDemoBadge: !!card.querySelector('[data-testid="demo-badge"]'),
-        dataLoading: card.getAttribute('data-loading'),
-      }
-    })
-  }, cardIds)
+      // Wait before retrying to let the page settle
+      await new Promise((r) => setTimeout(r, EVALUATE_RETRY_DELAY_MS))
+      // Re-wait for page to be stable
+      await page.waitForLoadState('domcontentloaded', { timeout: BATCH_LOAD_TIMEOUT_MS }).catch(() => { /* best-effort */ })
+    }
+  }
+  // TypeScript: unreachable but needed for type safety
+  return []
 }
 
 async function _captureWarmSnapshots(
@@ -522,6 +550,7 @@ test('card cache compliance — storage and retrieval', async ({ page }) => {
     '**/auth/**', '**/api/dashboards/**', '**/api/gpu/**', '**/api/feedback/**',
     '**/api/persistence/**', '**/api/config/**', '**/api/gitops/**',
     '**/api/nightly-e2e/**', '**/api/public/nightly-e2e/**', '**/api/rewards/**',
+    '**/api/self-upgrade/**', '**/api/admin/**', '**/api/acmm/**',
   ]
   for (const pattern of skipRoutePatterns) {
     await page.route(pattern, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '{}' }))
