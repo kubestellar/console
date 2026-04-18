@@ -1,5 +1,6 @@
 import { useCache } from '../../../lib/cache'
 import { useCardLoadingState } from '../CardDataContext'
+import { useDemoMode } from '../../../hooks/useDemoMode'
 import { FLUENTD_DEMO_DATA, type FluentdDemoData } from './demoData'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants'
 import { authFetch } from '../../../lib/api'
@@ -302,7 +303,13 @@ export interface UseFluentdStatusResult {
 }
 
 export function useFluentdStatus(): UseFluentdStatusResult {
-  const { data, isLoading, isRefreshing, isFailed, consecutiveFailures, isDemoFallback } =
+  // #8836: subscribe to demo mode toggles so the card swaps to demo data
+  // immediately (and shows the Demo badge / yellow outline) when the user
+  // flips demo mode on, instead of only switching when the cache layer falls
+  // back after a fetch failure.
+  const { isDemoMode } = useDemoMode()
+
+  const { data: liveData, isLoading, isRefreshing, isFailed, consecutiveFailures, isDemoFallback } =
     useCache<FluentdStatus>({
       key: CACHE_KEY,
       category: 'default',
@@ -312,11 +319,12 @@ export function useFluentdStatus(): UseFluentdStatusResult {
       fetcher: fetchFluentdStatus,
     })
 
-  const effectiveIsDemoData = isDemoFallback && !isLoading
+  const data = isDemoMode ? FLUENTD_DEMO_DATA : liveData
+  const effectiveIsDemoData = isDemoMode || (isDemoFallback && !isLoading)
   const hasAnyData = (data.pods?.total ?? 0) > 0
 
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !isDemoMode,
     isRefreshing,
     hasAnyData,
     isFailed,
@@ -326,10 +334,10 @@ export function useFluentdStatus(): UseFluentdStatusResult {
 
   return {
     data,
-    loading: isLoading,
+    loading: isLoading && !isDemoMode,
     isRefreshing,
-    isDemoFallback,
-    error: isFailed && !hasAnyData,
+    isDemoFallback: effectiveIsDemoData,
+    error: isFailed && !hasAnyData && !isDemoMode,
     consecutiveFailures,
     showSkeleton,
     showEmptyState,
