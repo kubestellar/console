@@ -74,6 +74,10 @@ func TestFailureTracker_Timestamps(t *testing.T) {
 	rec := ft.failures["ts"]
 	ft.mu.Unlock()
 
+	if rec == nil {
+		t.Fatal("expected failure record for key 'ts', got nil")
+	}
+
 	if rec.FirstAt.Before(before) || rec.FirstAt.After(after) {
 		t.Fatalf("FirstAt %v not in expected range [%v, %v]", rec.FirstAt, before, after)
 	}
@@ -83,6 +87,10 @@ func TestFailureTracker_Timestamps(t *testing.T) {
 	ft.mu.Lock()
 	rec = ft.failures["ts"]
 	ft.mu.Unlock()
+
+	if rec == nil {
+		t.Fatal("expected failure record for key 'ts' after second call, got nil")
+	}
 
 	if rec.LastAt.Before(rec.FirstAt) {
 		t.Fatalf("LastAt %v should be >= FirstAt %v", rec.LastAt, rec.FirstAt)
