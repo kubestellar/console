@@ -2069,8 +2069,11 @@ jobs:
             ISSUES="${ISSUES}### API calls without error handling\nThese may cause console errors on network failure:\n${FETCH_NO_ERROR}\n\n"
           fi
 
-          # Find components without ErrorBoundary wrapping
-          COMPLEX_NO_BOUNDARY=$(for f in $(find src/components/cards -name "*.tsx" 2>/dev/null | head -30); do
+          # Find components without ErrorBoundary wrapping.
+          # Skip src/components/cards/ — all dynamic cards are wrapped by
+          # DynamicCardErrorBoundary in DynamicCard.tsx, so the per-file grep
+          # for "ErrorBoundary" produces false positives for registered cards.
+          COMPLEX_NO_BOUNDARY=$(for f in $(find src/components -name "*.tsx" -not -path "*/cards/*" 2>/dev/null | head -30); do
             LINES=$(wc -l < "$f" 2>/dev/null || echo "0")
             if [ "$LINES" -gt 100 ]; then
               HAS_BOUNDARY=$(grep -l "ErrorBoundary\|error.*boundary\|componentDidCatch" "$f" 2>/dev/null || true)
@@ -2084,10 +2087,28 @@ jobs:
             ISSUES="${ISSUES}### Complex components without ErrorBoundary\nWrap in ErrorBoundary to prevent full-page crashes:\n${COMPLEX_NO_BOUNDARY}\n\n"
           fi
 
-          # Find console.error usage without proper error handling
-          CONSOLE_ERROR_ONLY=$(grep -rn "console\.error" src/ --include="*.tsx" --include="*.ts" 2>/dev/null | \
+          # Find console.error usage without proper error handling.
+          # Check a 4-line window (the match line + 3 following) for user-visible
+          # handlers — the handler (showToast, setXxxError, fallback) is almost
+          # always on the next line, not the same one, so a line-only grep -v
+          # misses them. Patterns excluded: showToast, set<Name>Error,
+          # setYamlContent, generateMock* fallbacks, fallback/Fallback.
+          HANDLER_PATTERN='showToast|set[A-Z][a-zA-Z_]*Error|setYamlContent|generateMock|[Ff]allback'
+          CONSOLE_ERROR_CANDIDATES=$(grep -rn "console\.error" src/ --include="*.tsx" --include="*.ts" 2>/dev/null | \
             grep -v "node_modules\|test\|spec" | \
-            grep -v "setError\|onError\|ErrorBoundary\|throw" | head -15 || true)
+            grep -v "setError\|onError\|ErrorBoundary\|throw" || true)
+          CONSOLE_ERROR_ONLY=""
+          while IFS= read -r entry; do
+            [ -z "$entry" ] && continue
+            file="${entry%%:*}"
+            rest="${entry#*:}"
+            lineno="${rest%%:*}"
+            ctx=$(sed -n "${lineno},$((lineno + 3))p" "$file" 2>/dev/null)
+            if ! echo "$ctx" | grep -qE "$HANDLER_PATTERN"; then
+              CONSOLE_ERROR_ONLY="${CONSOLE_ERROR_ONLY}${entry}"$'\n'
+            fi
+          done <<< "$CONSOLE_ERROR_CANDIDATES"
+          CONSOLE_ERROR_ONLY=$(echo "$CONSOLE_ERROR_ONLY" | sed '/^$/d' | head -15)
 
           if [ -n "$CONSOLE_ERROR_ONLY" ]; then
             COUNT=$(echo "$CONSOLE_ERROR_ONLY" | wc -l | tr -d ' ')
