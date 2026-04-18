@@ -3386,6 +3386,7 @@
     "groups": {
       "deleteTitle": "Delete Cluster Group",
       "deleteMessage": "Are you sure you want to delete this cluster group? This action cannot be undone.",
+      "deleteConfirm": "Delete cluster group \"{{name}}\"? This cannot be undone.",
       "title": "Cluster Groups ({{count}})"
     }
   },

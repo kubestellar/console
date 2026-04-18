@@ -5,6 +5,7 @@ import type { ClusterInfo } from '../../hooks/mcp/types'
 import type { ClusterGroup } from '../../hooks/useGlobalFilters'
 import { deduplicateClustersByServer } from '../../hooks/mcp/shared'
 import { getClusterHealthState, isClusterUnreachable } from './utils'
+import { ConfirmDialog } from '../../lib/modals'
 
 export interface ClusterGroupsSectionProps {
   /** All clusters (unfiltered) for the new-group cluster picker */
@@ -36,6 +37,10 @@ export function ClusterGroupsSection({
   const [showGroupForm, setShowGroupForm] = useState(false)
   const [newGroupName, setNewGroupName] = useState('')
   const [newGroupClusters, setNewGroupClusters] = useState<string[]>([])
+  // Pending delete confirmation — null when no dialog is shown. Storing the
+  // whole group (id + name) lets the dialog show the name while the confirm
+  // handler deletes by id (#8916).
+  const [deleteConfirmGroup, setDeleteConfirmGroup] = useState<{ id: string; name: string } | null>(null)
 
   // Deduplicate clusters so contexts pointing at the same server are not
   // rendered twice in the picker (#5922). Uses the same helper as the main
@@ -194,7 +199,8 @@ export function ClusterGroupsSection({
               <button
                 onClick={(e) => {
                   e.stopPropagation()
-                  deleteClusterGroup(group.id)
+                  // Open confirmation dialog instead of deleting immediately (#8916).
+                  setDeleteConfirmGroup({ id: group.id, name: group.name })
                 }}
                 className="p-1.5 rounded hover:bg-red-500/20 text-muted-foreground hover:text-red-400 transition-colors"
                 title={t('cluster.deleteGroup')}
@@ -205,6 +211,27 @@ export function ClusterGroupsSection({
           ))}
         </div>
       )}
+
+      {/* Delete confirmation dialog — prevents accidental irreversible delete
+          of a cluster group (#8916). */}
+      <ConfirmDialog
+        isOpen={deleteConfirmGroup !== null}
+        onClose={() => setDeleteConfirmGroup(null)}
+        onConfirm={() => {
+          if (deleteConfirmGroup) {
+            deleteClusterGroup(deleteConfirmGroup.id)
+            setDeleteConfirmGroup(null)
+          }
+        }}
+        title={t('clusters.groups.deleteTitle')}
+        message={t('clusters.groups.deleteConfirm', {
+          name: deleteConfirmGroup?.name ?? '',
+          defaultValue: 'Delete cluster group "{{name}}"? This cannot be undone.',
+        })}
+        confirmLabel={t('actions.delete')}
+        cancelLabel={t('actions.cancel')}
+        variant="danger"
+      />
     </div>
   )
 }
