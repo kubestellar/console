@@ -61,8 +61,17 @@ import type {
 import type { Workload } from './useWorkloads'
 import { fetchProwJobs } from './useCachedProw'
 import { fetchLLMdServers, fetchLLMdModels } from './useCachedLLMd'
-import { SecurityIssuesResponseSchema } from '../lib/schemas'
-import { validateResponse } from '../lib/schemas/validate'
+import {
+  SecurityIssuesResponseSchema,
+  PodsResponseSchema,
+  EventsResponseSchema,
+  DeploymentsResponseSchema,
+  NodesResponseSchema,
+  GPUNodesResponseSchema,
+  GPUNodeHealthResponseSchema,
+  ClustersResponseSchema,
+} from '../lib/schemas'
+import { validateResponse, validateArrayResponse } from '../lib/schemas/validate'
 
 // ============================================================================
 // API Fetchers
@@ -151,7 +160,8 @@ async function fetchClusters(): Promise<string[]> {
   }
 
   // Fall back to backend API
-  const data = await fetchAPI<{ clusters: Array<{ name: string; reachable?: boolean }> }>('clusters')
+  const raw = await fetchAPI<unknown>('clusters')
+  const data = validateArrayResponse<{ clusters: Array<{ name: string; reachable?: boolean }> }>(ClustersResponseSchema, raw, '/api/mcp/clusters', 'clusters')
   return (data.clusters || [])
     .filter(c => c.reachable !== false && !c.name.includes('/'))
     .map(c => c.name)
@@ -562,7 +572,8 @@ export function useCachedPods(
     fetcher: async () => {
       let pods: PodInfo[]
       if (cluster) {
-        const data = await fetchAPI<{ pods: PodInfo[] }>('pods', { cluster, namespace })
+        const raw = await fetchAPI<unknown>('pods', { cluster, namespace })
+        const data = validateArrayResponse<{ pods: PodInfo[] }>(PodsResponseSchema, raw, '/api/mcp/pods', 'pods')
         pods = (data.pods || []).map(p => ({ ...p, cluster }))
       } else {
         pods = await fetchFromAllClusters<PodInfo>('pods', 'pods', { namespace })
@@ -642,7 +653,8 @@ export function useCachedEvents(
 
       // Fall back to REST API (requires backend auth)
       if (cluster) {
-        const data = await fetchAPI<{ events: ClusterEvent[] }>('events', { cluster, namespace, limit })
+        const raw = await fetchAPI<unknown>('events', { cluster, namespace, limit })
+        const data = validateArrayResponse<{ events: ClusterEvent[] }>(EventsResponseSchema, raw, '/api/mcp/events', 'events')
         return data.events || []
       }
       return await fetchFromAllClusters<ClusterEvent>('events', 'events', { namespace, limit })
@@ -888,9 +900,10 @@ export function useCachedDeployments(
           clearTimeout(timeoutId)
 
           if (response.ok) {
-            const data = await response.json().catch(() => null)
-            if (!data) return []
-            return ((data.deployments || []) as Deployment[]).map(d => ({
+            const rawData = await response.json().catch(() => null)
+            if (!rawData) return []
+            const data = validateArrayResponse<{ deployments: Deployment[] }>(DeploymentsResponseSchema, rawData, '/agent/deployments', 'deployments')
+            return (data.deployments || []).map(d => ({
               ...d,
               cluster: cluster }))
           }
@@ -903,7 +916,8 @@ export function useCachedDeployments(
       const hasRealToken = token && token !== 'demo-token'
       if (hasRealToken && !isBackendUnavailable()) {
         if (cluster) {
-          const data = await fetchAPI<{ deployments: Deployment[] }>('deployments', { cluster, namespace })
+          const raw = await fetchAPI<unknown>('deployments', { cluster, namespace })
+          const data = validateArrayResponse<{ deployments: Deployment[] }>(DeploymentsResponseSchema, raw, '/api/mcp/deployments', 'deployments')
           const deployments = data.deployments || []
           return deployments.map(d => ({ ...d, cluster: d.cluster || cluster }))
         }
@@ -1336,7 +1350,8 @@ export function useCachedNodes(
     persist: true,
     fetcher: async () => {
       if (cluster) {
-        const data = await fetchAPI<{ nodes: NodeInfo[] }>('nodes', { cluster })
+        const raw = await fetchAPI<unknown>('nodes', { cluster })
+        const data = validateArrayResponse<{ nodes: NodeInfo[] }>(NodesResponseSchema, raw, '/api/mcp/nodes', 'nodes')
         return (data.nodes || []).map(n => ({ ...n, cluster }))
       }
       return fetchFromAllClusters<NodeInfo>('nodes', 'nodes', {})
@@ -1426,7 +1441,8 @@ export function useCachedGPUNodeHealth(
     persist: true,
     fetcher: async () => {
       if (cluster) {
-        const data = await fetchAPI<{ nodes: GPUNodeHealthStatus[] }>('gpu-nodes/health', { cluster })
+        const raw = await fetchAPI<unknown>('gpu-nodes/health', { cluster })
+        const data = validateArrayResponse<{ nodes: GPUNodeHealthStatus[] }>(GPUNodeHealthResponseSchema, raw, '/api/mcp/gpu-nodes/health', 'nodes')
         return (data.nodes || []).map(n => ({ ...n, cluster }))
       }
       return fetchFromAllClusters<GPUNodeHealthStatus>('gpu-nodes/health', 'nodes', {})
@@ -2188,7 +2204,8 @@ export function useCachedGPUNodes(
     demoData: getDemoGPUNodes(),
     fetcher: async () => {
       if (cluster) {
-        const data = await fetchAPI<{ nodes: GPUNode[] }>('gpu-nodes', { cluster })
+        const raw = await fetchAPI<unknown>('gpu-nodes', { cluster })
+        const data = validateArrayResponse<{ nodes: GPUNode[] }>(GPUNodesResponseSchema, raw, '/api/mcp/gpu-nodes', 'nodes')
         return (data.nodes || []).map(n => ({ ...n, cluster }))
       }
       return await fetchFromAllClusters<GPUNode>(
@@ -2235,7 +2252,8 @@ export function useCachedAllPods(
     demoData: getDemoPods(),
     fetcher: async () => {
       if (cluster) {
-        const data = await fetchAPI<{ pods: PodInfo[] }>('pods', { cluster })
+        const raw = await fetchAPI<unknown>('pods', { cluster })
+        const data = validateArrayResponse<{ pods: PodInfo[] }>(PodsResponseSchema, raw, '/api/mcp/pods (allPods)', 'pods')
         return (data.pods || []).map(p => ({ ...p, cluster }))
       }
       return await fetchFromAllClusters<PodInfo>('pods', 'pods')

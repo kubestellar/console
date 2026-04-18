@@ -34,6 +34,39 @@ export function validateResponse<T>(
 }
 
 /**
+ * Validate an API response that wraps an array in an envelope object
+ * (e.g. `{ pods: [...] }`). The schema is used only for validation — the
+ * original data is returned on success (preserving the caller's expected
+ * TypeScript type). On failure, logs a warning and returns a safe fallback
+ * with an empty array for the result key so callers never crash on undefined.
+ *
+ * The `TResult` type parameter is the caller's expected shape (e.g.
+ * `{ pods: PodInfo[] }`). It is separate from the Zod schema's inferred
+ * type to avoid structural mismatches between Zod output and existing
+ * TypeScript interfaces.
+ *
+ * @param schema    Zod schema for the envelope object
+ * @param data      Raw data from `response.json()`
+ * @param label     Human-readable label for log messages
+ * @param resultKey The key holding the array (e.g. "pods", "nodes")
+ */
+export function validateArrayResponse<TResult>(
+  schema: ZodType,
+  data: unknown,
+  label: string,
+  resultKey: string,
+): TResult {
+  const result = schema.safeParse(data)
+  if (result.success) {
+    // Return original data (not result.data) to preserve the caller's TS type
+    return data as TResult
+  }
+  logValidationWarning(label, result.error)
+  // Return a safe fallback with an empty array so callers never crash
+  return { [resultKey]: [] } as unknown as TResult
+}
+
+/**
  * Log a structured warning for a validation failure.
  * Limits the number of issues logged to avoid flooding the console.
  */
