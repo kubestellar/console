@@ -27,6 +27,11 @@ import {
   type AiCardT1Result,
   type AiCardT2Result,
   type AiMode } from './cardFactoryAiTypes'
+import {
+  validateT1AssistResult,
+  validateT2AssistResult,
+  type T1AssistResult,
+  type T2AssistResult } from './cardFactoryAssistTypes'
 
 interface CardFactoryModalProps {
   isOpen: boolean
@@ -543,38 +548,6 @@ const T2_TEMPLATES: T2Template[] = [
   )
 }` },
 ]
-
-// ============================================================================
-// Inline AI Assist Result Types
-// ============================================================================
-
-interface T1AssistResult {
-  title?: string
-  description?: string
-  layout?: 'list' | 'stats' | 'stats-and-list'
-  width?: number
-  columns?: DynamicCardColumn[]
-  data?: Record<string, unknown>[]
-}
-
-interface T2AssistResult {
-  title?: string
-  description?: string
-  width?: number
-  sourceCode?: string
-}
-
-function validateT1AssistResult(data: unknown): { valid: true; result: T1AssistResult } | { valid: false; error: string } {
-  const obj = data as Record<string, unknown>
-  if (!obj.columns && !obj.data && !obj.title) return { valid: false, error: 'Response must include title, columns, or data' }
-  return { valid: true, result: obj as T1AssistResult }
-}
-
-function validateT2AssistResult(data: unknown): { valid: true; result: T2AssistResult } | { valid: false; error: string } {
-  const obj = data as Record<string, unknown>
-  if (!obj.sourceCode && !obj.title) return { valid: false, error: 'Response must include sourceCode or title' }
-  return { valid: true, result: obj as T2AssistResult }
-}
 
 // ============================================================================
 // Main Component

@@ -42,7 +42,7 @@ import { UnstructuredFilePreview } from './UnstructuredFilePreview'
 import { useTranslation } from 'react-i18next'
 import {
   TreeNodeItem, DirectoryListing, RecommendationCard, EmptyState, MissionFetchErrorBanner,
-  getMissionSlug, getMissionShareUrl, updateNodeInTree, removeNodeFromTree,
+  getMissionShareUrl, updateNodeInTree, removeNodeFromTree,
   missionCache, startMissionCacheFetch, resetMissionCache,
   fetchMissionContent, BROWSER_TABS,
   VirtualizedMissionGrid,
@@ -69,6 +69,11 @@ import {
   computeFacetCounts,
   filterRecommendations,
 } from './missionBrowserFilters'
+import {
+  HIGH_CONFIDENCE_THRESHOLD,
+  toWordSet,
+  findBestDeepLinkMatch,
+} from './missionBrowserDeepLink'
 
 // ============================================================================
 // Types
@@ -413,68 +418,14 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
     const slug = deepLinkSlugRef.current
     if (!slug || !isOpen || selectedMission) return
 
-    /**
-     * Fuzzy deep-link matching: converts both the URL slug and mission metadata
-     * into normalized word-sets so that `/missions/install-open-policy-agent-opa`
-     * can match a mission titled "Install and Configure Open Policy Agent Opa-".
-     *
-     * Strategy (in priority order):
-     *  1. Exact slug match (`getMissionSlug(m) === slug`)
-     *  2. cncfProject match (strip "install-" prefix from slug)
-     *  3. Fuzzy word-overlap: extract meaningful words from the slug and from
-     *     the mission title+cncfProject, then pick the mission whose word
-     *     overlap ratio is highest (≥ threshold).
-     */
-    const FILLER_WORDS = new Set(['and', 'on', 'for', 'the', 'in', 'with', 'a', 'an', 'to', 'of', 'kubernetes', 'k8s'])
-    const MIN_WORD_OVERLAP_RATIO = 0.6
-
-    /** Extract unique meaningful lowercase words, stripping filler and short fragments */
-    const toWordSet = (s: string): Set<string> =>
-      new Set(
-        s.toLowerCase()
-          .replace(/[^a-z0-9]+/g, ' ')
-          .split(' ')
-          .filter((w) => w.length > 1 && !FILLER_WORDS.has(w))
-      )
-
+    // Fuzzy deep-link matching: converts both the URL slug and mission metadata
+    // into normalized word-sets so that `/missions/install-open-policy-agent-opa`
+    // can match a mission titled "Install and Configure Open Policy Agent Opa-".
+    // Pure helpers live in `./missionBrowserDeepLink`.
     const slugWordSet = toWordSet(slug)
 
-    /** Score how well a mission matches the deep-link slug (0–1) */
-    const scoreMission = (m: MissionExport, isInstaller: boolean): number => {
-      // Exact slug match
-      if (getMissionSlug(m) === slug) return 1
-
-      // cncfProject match (installers only — fixers use slug/title matching)
-      if (isInstaller) {
-        const project = (m.cncfProject || '').toLowerCase()
-        const slugProject = slug.replace(/^install-/, '')
-        if (project && (project === slugProject || project === slug)) return 0.95
-      }
-
-      // Fuzzy word-overlap (set intersection) on title + cncfProject
-      const missionWordSet = toWordSet(`${m.title || ''} ${m.cncfProject || ''}`)
-      if (slugWordSet.size === 0 || missionWordSet.size === 0) return 0
-      let matched = 0
-      for (const w of slugWordSet) { if (missionWordSet.has(w)) matched++ }
-      return matched / slugWordSet.size
-    }
-
-    /** Minimum score to permanently consume the deep-link ref (#5654) */
-    const HIGH_CONFIDENCE_THRESHOLD = 0.9
-
-    /** Find best-scoring mission at or above threshold in a list */
-    const findBest = (list: MissionExport[], isInstaller: boolean): { match?: MissionExport; score: number } => {
-      let best: MissionExport | undefined
-      let bestScore = MIN_WORD_OVERLAP_RATIO
-      for (const m of list) {
-        const score = scoreMission(m, isInstaller)
-        if (score >= bestScore) { best = m; bestScore = score }
-      }
-      return { match: best, score: bestScore }
-    }
-
     // Search installers first, then fixers
-    const installer = findBest(installerMissions, true)
+    const installer = findBestDeepLinkMatch(installerMissions, slug, slugWordSet, true)
     if (installer.match) {
       setActiveTab('installers')
       selectCardMission(installer.match)
@@ -484,7 +435,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
       return
     }
 
-    const fixer = findBest(fixerMissions, false)
+    const fixer = findBestDeepLinkMatch(fixerMissions, slug, slugWordSet, false)
     if (fixer.match) {
       setActiveTab('fixes')
       selectCardMission(fixer.match)
