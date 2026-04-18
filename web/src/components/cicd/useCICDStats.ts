@@ -21,6 +21,9 @@ const PASS_RATE_WARN_PCT = 70
 /** Maximum value for pass-rate (100%) — used as gauge max */
 const PASS_RATE_MAX = 100
 
+/** How many workflow names to include in the "top failures" summary */
+const TOP_FAILURES_LIMIT = 3
+
 /** Whether a conclusion counts as a "pass" */
 function isPassing(c: Conclusion): boolean {
   return c === 'success' || c === 'skipped' || c === 'neutral'
@@ -82,7 +85,7 @@ export function useCICDStats(): CICDStatsResult {
       (r) => new Date(r.createdAt).getTime() >= cutoff24h
     )
     const failed24h = recentFailures.length
-    // Top 3 failing workflow names for the sublabel
+    // Top failing workflow names for the sublabel
     const failureNameCounts = new Map<string, number>()
     for (const r of recentFailures) {
       const name = r.workflow || 'Unknown'
@@ -90,7 +93,7 @@ export function useCICDStats(): CICDStatsResult {
     }
     const topFailures = [...failureNameCounts.entries()]
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 3)
+      .slice(0, TOP_FAILURES_LIMIT)
       .map(([name, count]) => `${name} (${count})`)
 
     // --- Avg Duration (from matrix cells — completed runs have timestamps) ---
