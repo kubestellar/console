@@ -11,6 +11,12 @@ import { ResetDialog } from './ResetDialog'
 import { SidebarCustomizer } from '../layout/SidebarCustomizer'
 import { DashboardHealthIndicator } from './DashboardHealthIndicator'
 
+/** Size classes for the FAB circle — desktop and mobile variants.
+ *  shrink-0 + aspect-square prevent flex containers from compressing
+ *  the button into a non-circular shape on narrow viewports (#8777). */
+const FAB_SIZE_DESKTOP = 'w-10 h-10 min-w-10 min-h-10 shrink-0 aspect-square'
+const FAB_SIZE_MOBILE  = 'w-8 h-8 min-w-8 min-h-8 shrink-0 aspect-square'
+
 interface FloatingDashboardActionsProps {
   /** New: open unified Dashboard Studio customizer */
   onOpenCustomizer?: () => void
@@ -191,7 +197,7 @@ export function FloatingDashboardActions({
           data-tour="fab-button"
           onClick={() => { onOpenCustomizer!(); fabHint.action() }}
           className={`flex items-center justify-center rounded-full shadow-lg transition-all duration-200 ${
-            isMobile ? 'w-8 h-8' : 'w-10 h-10'
+            isMobile ? FAB_SIZE_MOBILE : FAB_SIZE_DESKTOP
           } bg-gradient-ks hover:scale-110 hover:shadow-xl ${
             fabHint.isVisible ? 'animate-fab-shimmer' : ''
           }`}
@@ -273,7 +279,7 @@ export function FloatingDashboardActions({
           data-tour="fab-button"
           onClick={() => { menu.toggle(); fabHint.action() }}
           className={`flex items-center justify-center rounded-full shadow-lg transition-all duration-200 ${
-            isMobile ? 'w-8 h-8' : 'w-10 h-10'
+            isMobile ? FAB_SIZE_MOBILE : FAB_SIZE_DESKTOP
           } ${
             menu.isOpen
               ? 'bg-card border border-border rotate-45'
