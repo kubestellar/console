@@ -1,5 +1,6 @@
 import { useState, useEffect, useContext } from 'react'
 import { AlertsContext } from '../contexts/AlertsContext'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants'
 import type {
   Alert,
   AlertRule,
@@ -206,6 +207,7 @@ export function useSlackNotification() {
         const response = await fetch('/api/notifications/send', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
           body: JSON.stringify({
             alert: {
               id: alert.id,

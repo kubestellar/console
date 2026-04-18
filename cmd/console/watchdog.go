@@ -256,6 +256,7 @@ func runWatchdog(cfg WatchdogConfig) error {
 		tlsCfg := &tls.Config{
 			Certificates: []tls.Certificate{cert},
 			NextProtos:   []string{"h2", "http/1.1"},
+			MinVersion:   tls.VersionTLS12,
 		}
 
 		// Listen on raw TCP, then peek each connection's first byte.

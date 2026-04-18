@@ -168,7 +168,7 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart }: Miss
   useEffect(() => {
     if (!open) return
     if (mc.staleClusterNames.length === 0) return
-    const names = mc.staleClusterNames.join(', ')
+    const names = (mc.staleClusterNames || []).join(', ')
     showToast(
       `Unassigned ${mc.staleClusterNames.length} cluster(s) from your previous session that no longer exist: ${names}`,
       'warning',

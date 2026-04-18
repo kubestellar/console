@@ -10,6 +10,7 @@ import { useCallback, useRef } from 'react'
 import { useCache, type RefreshCategory } from '../lib/cache'
 import { computeLevel, type LevelComputation } from '../lib/acmm/computeLevel'
 import { computeRecommendations, type Recommendation } from '../lib/acmm/computeRecommendations'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants'
 
 const API_PATH = '/api/acmm/scan'
 /** Scan results change slowly; 10-min refresh avoids GitHub rate limits. */
@@ -110,7 +111,9 @@ function demoScan(repo: string): ACMMScanData {
 
 async function fetchACMMScan(repo: string, force: boolean): Promise<ACMMScanData> {
   const qs = force ? `&force=true` : ''
-  const res = await fetch(`${API_PATH}?repo=${encodeURIComponent(repo)}${qs}`)
+  const res = await fetch(`${API_PATH}?repo=${encodeURIComponent(repo)}${qs}`, {
+    signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+  })
   if (!res.ok) {
     throw new Error(`ACMM scan failed: ${res.status} ${res.statusText}`)
   }

@@ -40,6 +40,8 @@ import { useDrasiConnections, type DrasiConnection } from '../../../hooks/useDra
 // Constants
 // ---------------------------------------------------------------------------
 
+/** Timeout for Drasi proxy API calls (ms) */
+const DRASI_PROXY_TIMEOUT_MS = 10_000
 /** How often to refresh demo data values */
 const FLOW_ANIMATION_INTERVAL_MS = 3000
 /** Maximum rows shown in the results table */
@@ -2045,6 +2047,7 @@ export function DrasiReactiveGraph() {
           method: isCreate ? 'POST' : 'PUT',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ id: config.name, spec: { kind: config.kind } }),
+          signal: AbortSignal.timeout(DRASI_PROXY_TIMEOUT_MS),
         })
         refetchDrasi()
       } catch {
@@ -2079,6 +2082,7 @@ export function DrasiReactiveGraph() {
             id: config.name,
             spec: { mode: config.language.replace(/ QUERY$/, ''), query: config.queryText },
           }),
+          signal: AbortSignal.timeout(DRASI_PROXY_TIMEOUT_MS),
         })
         refetchDrasi()
       } catch {
@@ -2115,6 +2119,7 @@ export function DrasiReactiveGraph() {
             id: defaultName,
             spec: { kind: 'SSE', queries: queries.map(q => ({ id: q.id })) },
           }),
+          signal: AbortSignal.timeout(DRASI_PROXY_TIMEOUT_MS),
         })
         refetchDrasi()
       } catch {
@@ -2146,6 +2151,7 @@ export function DrasiReactiveGraph() {
           id: reactionName,
           spec: { kind: 'Result', queries: [{ id: queryId }] },
         }),
+        signal: AbortSignal.timeout(DRASI_PROXY_TIMEOUT_MS),
       })
       refetchDrasi()
     } catch {
@@ -2166,6 +2172,7 @@ export function DrasiReactiveGraph() {
           try {
             await fetch(`/api/drasi/proxy${drasiResourcePath(kind)}/${encodeURIComponent(id)}?${drasiProxyTarget()}`, {
               method: 'DELETE',
+              signal: AbortSignal.timeout(DRASI_PROXY_TIMEOUT_MS),
             })
             refetchDrasi()
           } catch {
@@ -2755,7 +2762,7 @@ export function DrasiReactiveGraph() {
                   onClick={() => handleQueryClick(query.id)}
                   onStop={() => toggleStopped(query.id)}
                   onPin={() => togglePin(query.id)}
-                  onExpand={() => setExpandedNode({ id: query.id, name: query.name, kind: query.language, type: 'query', extra: { sources: query.sourceIds.join(', ') || '(none)' } })}
+                  onExpand={() => setExpandedNode({ id: query.id, name: query.name, kind: query.language, type: 'query', extra: { sources: (query.sourceIds || []).join(', ') || '(none)' } })}
                   onConfigure={() => setConfiguringQuery(query)}
                   onDelete={() => deleteResource('query', query.id, query.name)}
                   onHoverEnter={() => setHoveredNodeId(query.id)}
@@ -2816,7 +2823,7 @@ export function DrasiReactiveGraph() {
                 isDimmed={hoveredNodeId !== null && hoveredNodeId !== reaction.id && !connectedNodeIds(hoveredNodeId).has(reaction.id)}
                 showDelete
                 onStop={() => toggleStopped(reaction.id)}
-                onExpand={() => setExpandedNode({ id: reaction.id, name: reaction.name, kind: reaction.kind, type: 'reaction', extra: { queries: reaction.queryIds.join(', ') || '(none)' } })}
+                onExpand={() => setExpandedNode({ id: reaction.id, name: reaction.name, kind: reaction.kind, type: 'reaction', extra: { queries: (reaction.queryIds || []).join(', ') || '(none)' } })}
                 onDelete={() => deleteResource('reaction', reaction.id, reaction.name)}
                 onHoverEnter={() => setHoveredNodeId(reaction.id)}
                 onHoverLeave={() => setHoveredNodeId(null)}

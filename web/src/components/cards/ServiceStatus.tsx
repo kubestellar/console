@@ -388,9 +388,9 @@ export function ServiceStatus() {
                 {formattedPorts.length > 0 && (
                   <span
                     className="text-xs text-muted-foreground truncate max-w-[140px]"
-                    title={formattedPorts.join(', ')}
+                    title={(formattedPorts || []).join(', ')}
                   >
-                    {formattedPorts.join(', ')}
+                    {(formattedPorts || []).join(', ')}
                   </span>
                 )}
                 {/* Orphaned badge (#6164/#6165) */}

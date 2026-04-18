@@ -184,9 +184,9 @@ export function GPUReservationsTab({
                       <div className="text-xs text-muted-foreground">{t('common:common.type')}</div>
                       <div
                         className="text-sm font-medium text-foreground truncate"
-                        title={acceptedTypes.join(', ')}
+                        title={(acceptedTypes || []).join(', ')}
                       >
-                        {acceptedTypes.join(', ')}
+                        {(acceptedTypes || []).join(', ')}
                       </div>
                     </div>
                   )

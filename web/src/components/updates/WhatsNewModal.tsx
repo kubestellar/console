@@ -98,7 +98,7 @@ export function WhatsNewModal({ isOpen, onClose }: WhatsNewModalProps) {
         if (commitHash && commitHash !== 'unknown') {
           const commitResp = await fetch(
             `/api/github/repos/kubestellar/console/commits/${commitHash}`,
-            { credentials: 'include' },
+            { credentials: 'include', signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) },
           )
           if (commitResp.ok) {
             const commitData = await commitResp.json()
@@ -109,7 +109,7 @@ export function WhatsNewModal({ isOpen, onClose }: WhatsNewModalProps) {
         // Step 2: Fetch recent merged PRs
         const resp = await fetch(
           `/api/github/repos/kubestellar/console/pulls?state=closed&sort=updated&direction=desc&per_page=${MAX_RECENT_PRS}`,
-          { credentials: 'include' },
+          { credentials: 'include', signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) },
         )
         if (!resp.ok || cancelled) return
         const data = await resp.json()
@@ -190,7 +190,9 @@ export function WhatsNewModal({ isOpen, onClose }: WhatsNewModalProps) {
   const handleCopyCommand = useCallback(async (cmd: string) => {
     await copyToClipboard(cmd)
     setCopiedCommand(cmd)
-    setTimeout(() => setCopiedCommand(null), 2000)
+    /** Delay before clearing the "copied" indicator so user sees feedback (ms) */
+    const COPY_FEEDBACK_CLEAR_MS = 2000
+    setTimeout(() => setCopiedCommand(null), COPY_FEEDBACK_CLEAR_MS)
   }, [])
 
   const manualCommands: { label: string; command: string }[] = useMemo(() => {
