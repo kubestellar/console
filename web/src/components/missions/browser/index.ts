@@ -12,3 +12,4 @@ export {
 } from './missionCache'
 export type { MissionCache } from './missionCache'
 export { VirtualizedMissionGrid } from './VirtualizedMissionGrid'
+export { fetchTreeChildren, fetchDirectoryEntries, fetchNodeFileContent } from './treeFetchers'

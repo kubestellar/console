@@ -13,7 +13,6 @@ import { cn } from '../../lib/cn'
 import { api } from '../../lib/api'
 import { isDemoMode } from '../../lib/demoMode'
 import { useAuth } from '../../lib/auth'
-import { FETCH_EXTERNAL_TIMEOUT_MS } from '../../lib/constants/network'
 import { matchMissionsToCluster } from '../../lib/missions/matcher'
 import { useClusterContext } from '../../hooks/useClusterContext'
 import {
@@ -46,7 +45,8 @@ import {
   missionCache, startMissionCacheFetch, resetMissionCache,
   fetchMissionContent, BROWSER_TABS,
   VirtualizedMissionGrid,
-  getCachedRecommendations, setCachedRecommendations } from './browser'
+  getCachedRecommendations, setCachedRecommendations,
+  fetchTreeChildren, fetchDirectoryEntries, fetchNodeFileContent } from './browser'
 import type { TreeNode, ViewMode, BrowserTab } from './browser'
 import { copyToClipboard } from '../../lib/clipboard'
 import { useToast } from '../ui/Toast'
@@ -54,7 +54,6 @@ import {
   CATEGORY_FILTERS,
   SIDEBAR_WIDTH,
   MISSION_FILE_ACCEPT,
-  isHiddenEntry,
   isMissionFile,
   CNCF_CATEGORIES,
   MATURITY_LEVELS,
@@ -513,88 +512,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
       )
 
       try {
-        let children: TreeNode[] = []
-
-        if (node.source === 'community') {
-          const { data: entries } = await api.get<BrowseEntry[]>(
-            `/api/missions/browse?path=${encodeURIComponent(node.path)}`
-          )
-          // Backend already filters infra/metadata, but guard client-side too.
-          // #6421 — filter ALL dot-prefixed entries (directories AND files).
-          children = entries
-            .filter(e => !isHiddenEntry(e.name))
-            .map((e) => ({
-              id: `${nodeId}/${e.name}`,
-              name: e.name,
-              path: e.path,
-              type: e.type,
-              source: 'community' as const,
-              loaded: e.type === 'file',
-              description: e.description }))
-        } else if (node.source === 'github') {
-          if (nodeId === 'github') {
-            // Root "My Repositories" node — list user's repos
-            const { data: repos } = await api.get<Array<{ name: string; full_name: string }>>(
-              '/api/github/repos?hasMissionsDir=true'
-            )
-            children = repos.map((r) => ({
-              id: `github/${r.full_name}`,
-              name: r.name,
-              path: r.full_name,
-              type: 'directory' as const,
-              source: 'github' as const,
-              loaded: false,
-              description: r.full_name }))
-          } else if (nodeId === 'kubara' || nodeId.startsWith('kubara/')) {
-            // Static Kubara catalog (cached, no API calls). Used in demo mode
-            // AND in real mode — the list is curated and doesn't change often,
-            // and the live GitHub Contents API path requires a per-user
-            // GitHub OAuth token that not every user has wired up. Without
-            // this branch the node was empty for non-demo users.
-            if (nodeId === 'kubara') {
-              children = [
-                'kube-prometheus-stack', 'cert-manager', 'kyverno', 'kyverno-policies',
-                'argo-cd', 'external-secrets', 'loki', 'longhorn', 'metallb', 'traefik',
-              ].map(name => ({
-                id: `kubara/${name}`,
-                name,
-                path: `go-binary/templates/embedded/managed-service-catalog/helm/${name}`,
-                type: 'directory' as const,
-                source: 'github' as const,
-                repoOwner: 'kubara-io',
-                repoName: 'kubara',
-                loaded: false,
-              }))
-            } else {
-              children = ['Chart.yaml', 'values.yaml', 'templates'].map(fname => ({
-                id: `${nodeId}/${fname}`,
-                name: fname,
-                path: `${node.path}/${fname}`,
-                type: (fname === 'templates' ? 'directory' : 'file') as TreeNode['type'],
-                source: 'github' as const,
-                repoOwner: 'kubara-io',
-                repoName: 'kubara',
-                loaded: fname !== 'templates',
-              }))
-            }
-          } else {
-            // Specific repo node — list repo contents via GitHub Contents API
-            const repoPath = node.path
-            const { data: ghEntries } = await api.get<Array<{ name: string; path: string; type: string; size?: number }>>(
-              `/api/github/repos/${repoPath}/contents`
-            )
-            children = (ghEntries || [])
-              .filter(e => e.type === 'dir' || isMissionFile(e.name))
-              .map(e => ({
-                id: `${nodeId}/${e.name}`,
-                name: e.name,
-                path: `${repoPath.split('/').slice(0, 2).join('/')}/${e.path}`,
-                type: (e.type === 'dir' ? 'directory' : 'file') as TreeNode['type'],
-                source: 'github' as const,
-                loaded: e.type !== 'dir',
-                description: e.size ? `${e.size} bytes` : undefined }))
-          }
-        }
+        const children = await fetchTreeChildren(node)
 
         // For community sub-directories (not root): if no missions remain after filtering,
         // mark the node as empty and remove it from the parent's children so
@@ -640,38 +558,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
       emitFixerBrowsed(node.path)
       setLoading(true)
       try {
-        if (node.source === 'community') {
-          const { data: entries } = await api.get<BrowseEntry[]>(
-            `/api/missions/browse?path=${encodeURIComponent(node.path)}`
-          )
-          // #6421 — Hide dot-prefixed entries and the index.json manifest.
-          // Only mission files or directories may appear in the listing.
-          setDirectoryEntries(
-            entries.filter(e =>
-              !isHiddenEntry(e.name) &&
-              (e.type === 'directory' || isMissionFile(e.name))
-            )
-          )
-        } else if (node.source === 'github') {
-          // Fetch repo contents via GitHub Contents API proxy
-          const owner = node.repoOwner || node.path.split('/')[0]
-          const repo = node.repoName || node.path.split('/')[1]
-          const subPath = node.repoOwner ? node.path : node.path.split('/').slice(2).join('/')
-          const apiPath = subPath
-            ? `/api/github/repos/${owner}/${repo}/contents/${subPath}`
-            : `/api/github/repos/${owner}/${repo}/contents/`
-          const { data: ghEntries } = await api.get<Array<{ name: string; path: string; type: string; size?: number }>>(apiPath)
-          const entries: BrowseEntry[] = (ghEntries || [])
-            .filter(e => e.type === 'dir' || isMissionFile(e.name))
-            .map(e => ({
-              name: e.name,
-              path: node.repoOwner ? e.path : `${owner}/${repo}/${e.path}`,
-              type: e.type === 'dir' ? 'directory' as const : 'file' as const,
-              size: e.size }))
-          setDirectoryEntries(entries)
-        } else {
-          setDirectoryEntries([])
-        }
+        setDirectoryEntries(await fetchDirectoryEntries(node))
       } catch {
         setDirectoryEntries([])
       } finally {
@@ -681,50 +568,10 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
       // File selected → fetch and preview
       setLoading(true)
       try {
-        let content: string
-        if (node.source === 'community') {
-          const { data } = await api.get<string>(
-            `/api/missions/file?path=${encodeURIComponent(node.path)}`
-          )
-          content = data
-        } else if (node.source === 'github') {
-          // Serve canned sample content for kubara/* nodes instead of hitting
-          // the GitHub Contents API — avoids per-file rate-limit burn when a
-          // user expands a chart tree.
-          if (node.id.startsWith('kubara/')) {
-            const chartName = node.id.split('/')[1] || 'chart'
-            if (node.name === 'Chart.yaml') {
-              content = `apiVersion: v2\nname: ${chartName}\ndescription: Production-tested ${chartName} Helm chart from Kubara\nversion: 1.0.0\ntype: application\nappVersion: "latest"\nmaintainers:\n  - name: kubara-io\n    url: https://github.com/kubara-io/kubara`
-            } else if (node.name === 'values.yaml') {
-              content = `# ${chartName} — Kubara production values\n# These values are tested in production environments\n# See https://github.com/kubara-io/kubara for details\n\nreplicaCount: 2\n\nresources:\n  requests:\n    cpu: 100m\n    memory: 128Mi\n  limits:\n    cpu: 500m\n    memory: 512Mi\n\nserviceAccount:\n  create: true\n\npodSecurityContext:\n  runAsNonRoot: true\n  fsGroup: 65534\n\nmonitoring:\n  enabled: true\n  serviceMonitor:\n    enabled: true`
-            } else {
-              content = `# ${node.name}\n# Kubara template file`
-            }
-          } else {
-          // Fetch raw file content via GitHub Contents API proxy
-          const parts = node.path.split('/')
-          const owner = parts[0]
-          const repo = parts[1]
-          const filePath = parts.slice(2).join('/')
-          const { data: ghFile } = await api.get<{ content?: string; encoding?: string; download_url?: string }>(
-            `/api/github/repos/${owner}/${repo}/contents/${filePath}`
-          )
-          // GitHub returns base64-encoded content for files
-          if (ghFile.content && ghFile.encoding === 'base64') {
-            content = atob(ghFile.content.replace(/\n/g, ''))
-          } else if (ghFile.download_url) {
-            const rawResp = await fetch(ghFile.download_url, {
-              signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) })
-            content = await rawResp.text()
-          } else {
-            content = JSON.stringify(ghFile)
-          }
-          }
-        } else {
-          return
-        }
+        const content = await fetchNodeFileContent(node)
+        if (content === null) return
 
-        const raw = typeof content === 'string' ? content : JSON.stringify(content, null, 2)
+        const raw = content
         setRawContent(raw)
         setUnstructuredContent(null)
 
