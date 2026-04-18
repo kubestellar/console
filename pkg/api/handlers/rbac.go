@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"sync"
 	"time"
@@ -10,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/kubestellar/console/pkg/api/audit"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/models"
@@ -52,9 +54,7 @@ func (h *RBACHandler) ListConsoleUsers(c *fiber.Ctx) error {
 	}
 
 	if currentUser.Role != models.UserRoleAdmin {
-		slog.Warn("[rbac] SECURITY: non-admin attempted to list all users",
-			"user_id", currentUser.ID,
-			"github_login", currentUser.GitHubLogin)
+		audit.Log(c, audit.ActionUnauthorizedAttempt, "endpoint", "/api/users", "non-admin list attempt")
 		return fiber.NewError(fiber.StatusForbidden, "Admin access required")
 	}
 
@@ -108,9 +108,18 @@ func (h *RBACHandler) UpdateUserRole(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Cannot remove your own admin role")
 	}
 
+	// Fetch old role for audit trail before mutating.
+	oldRole := "unknown"
+	if target, err := h.store.GetUser(targetID); err == nil && target != nil {
+		oldRole = string(target.Role)
+	}
+
 	if err := h.store.UpdateUserRole(targetID, string(req.Role)); err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to update user role")
 	}
+
+	audit.Log(c, audit.ActionUpdateRole, "user", targetUserID,
+		fmt.Sprintf("%s->%s", oldRole, string(req.Role)))
 
 	return c.JSON(fiber.Map{"success": true})
 }
@@ -143,6 +152,8 @@ func (h *RBACHandler) DeleteConsoleUser(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to delete user")
 	}
 
+	audit.Log(c, audit.ActionDeleteUser, "user", targetUserID)
+
 	return c.JSON(fiber.Map{"success": true})
 }
 
@@ -157,9 +168,7 @@ func (h *RBACHandler) GetUserManagementSummary(c *fiber.Ctx) error {
 	}
 
 	if currentUser.Role != models.UserRoleAdmin {
-		slog.Warn("[rbac] SECURITY: non-admin attempted to read user-management summary",
-			"user_id", currentUser.ID,
-			"github_login", currentUser.GitHubLogin)
+		audit.Log(c, audit.ActionUnauthorizedAttempt, "endpoint", "/api/users/summary", "non-admin summary attempt")
 		return fiber.NewError(fiber.StatusForbidden, "Admin access required")
 	}
 
@@ -290,9 +299,7 @@ func (h *RBACHandler) ListK8sRoles(c *fiber.Ctx) error {
 	}
 
 	if currentUser.Role != models.UserRoleAdmin {
-		slog.Warn("[rbac] SECURITY: non-admin attempted to list Kubernetes roles",
-			"user_id", currentUser.ID,
-			"github_login", currentUser.GitHubLogin)
+		audit.Log(c, audit.ActionUnauthorizedAttempt, "endpoint", "/api/k8s/roles", "non-admin role list attempt")
 		return fiber.NewError(fiber.StatusForbidden, "Admin access required")
 	}
 
@@ -340,9 +347,7 @@ func (h *RBACHandler) ListK8sRoleBindings(c *fiber.Ctx) error {
 	}
 
 	if currentUser.Role != models.UserRoleAdmin {
-		slog.Warn("[rbac] SECURITY: non-admin attempted to list role bindings",
-			"user_id", currentUser.ID,
-			"github_login", currentUser.GitHubLogin)
+		audit.Log(c, audit.ActionUnauthorizedAttempt, "endpoint", "/api/k8s/rolebindings", "non-admin role-binding list attempt")
 		return fiber.NewError(fiber.StatusForbidden, "Admin access required")
 	}
 
@@ -405,9 +410,7 @@ func (h *RBACHandler) ListK8sUsers(c *fiber.Ctx) error {
 	}
 
 	if currentUser.Role != models.UserRoleAdmin {
-		slog.Warn("[rbac] SECURITY: non-admin attempted to list Kubernetes subjects",
-			"user_id", currentUser.ID,
-			"github_login", currentUser.GitHubLogin)
+		audit.Log(c, audit.ActionUnauthorizedAttempt, "endpoint", "/api/k8s/users", "non-admin subject list attempt")
 		return fiber.NewError(fiber.StatusForbidden, "Admin access required")
 	}
 
@@ -442,9 +445,7 @@ func (h *RBACHandler) ListOpenShiftUsers(c *fiber.Ctx) error {
 	}
 
 	if currentUser.Role != models.UserRoleAdmin {
-		slog.Warn("[rbac] SECURITY: non-admin attempted to list OpenShift users",
-			"user_id", currentUser.ID,
-			"github_login", currentUser.GitHubLogin)
+		audit.Log(c, audit.ActionUnauthorizedAttempt, "endpoint", "/api/k8s/openshift-users", "non-admin OpenShift user list attempt")
 		return fiber.NewError(fiber.StatusForbidden, "Admin access required")
 	}
 
