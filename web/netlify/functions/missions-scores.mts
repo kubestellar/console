@@ -33,6 +33,31 @@ interface CacheEntry {
   fetchedAt: number;
 }
 
+/** Mirrors the relevant fields of indexJsonFormat in pkg/api/handlers/missions.go */
+interface IndexEntry {
+  path: string;
+  title: string;
+  cncfProjects?: string[];
+  qualityScore?: number;
+  qualityPass?: boolean;
+  qualityBreakdown?: Record<string, number>;
+  qualityIssues?: string[];
+  qualitySuggestions?: string[];
+}
+
+interface MissionIndex {
+  missions: IndexEntry[];
+}
+
+/** Shape returned by GET /api/missions/scores (list) */
+interface ScoreEntry {
+  path: string;
+  title: string;
+  project: string;
+  qualityScore: number;
+  qualityPass: boolean;
+}
+
 export default async (request: Request): Promise<Response> => {
   if (request.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: CORS_HEADERS });
@@ -108,9 +133,9 @@ export default async (request: Request): Promise<Response> => {
       return jsonResponse({ error: "failed to fetch index" }, 502);
     }
 
-    let index: any;
+    let index: MissionIndex;
     try {
-      index = JSON.parse(bodyText);
+      index = JSON.parse(bodyText) as MissionIndex;
     } catch {
       return jsonResponse({ error: "failed to parse index" }, 502);
     }
@@ -118,8 +143,10 @@ export default async (request: Request): Promise<Response> => {
     if (projectParam && idParam) {
       for (const m of (index.missions || [])) {
         const mProject = Array.isArray(m.cncfProjects) && m.cncfProjects.length > 0 ? m.cncfProjects[0] : "unknown";
-        const mBase = m.path ? m.path.split('/').pop() : "";
-        if (mProject === projectParam && (mBase === idParam || mBase === idParam + ".json")) {
+        const mBase = m.path ? m.path.split('/').pop() ?? "" : "";
+        const mBaseNoExt = mBase.endsWith(".json") ? mBase.slice(0, -5) : mBase;
+        const idNoExt = idParam.endsWith(".json") ? idParam.slice(0, -5) : idParam;
+        if (mProject === projectParam && mBaseNoExt === idNoExt) {
           if (m.qualityScore == null) {
             return jsonResponse({ error: "Mission found but has no score associated" }, 404);
           }
@@ -136,7 +163,7 @@ export default async (request: Request): Promise<Response> => {
       }
       return jsonResponse({ error: "KB mission not found" }, 404);
     } else {
-      const results: any[] = [];
+      const results: ScoreEntry[] = [];
       for (const m of (index.missions || [])) {
         if (m.qualityScore != null) {
           const mProject = Array.isArray(m.cncfProjects) && m.cncfProjects.length > 0 ? m.cncfProjects[0] : "unknown";

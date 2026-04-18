@@ -465,6 +465,16 @@ func (h *MissionsHandler) githubGet(url string, clientToken string) (*http.Respo
 	return resp, nil
 }
 
+// cacheStatus indicates whether a fetchWithCache result came from a fresh cache
+// hit, a network fetch (cache miss), or a stale entry served during upstream errors.
+type cacheStatus string
+
+const (
+	cacheStatusHit   cacheStatus = "HIT"
+	cacheStatusMiss  cacheStatus = "MISS"
+	cacheStatusStale cacheStatus = "STALE"
+)
+
 // fetchWithCache encapsulates the common fetch-with-cache pattern used by GitHub wrappers.
 // It checks fresh cache, calls githubGet, drains/limits the body, and falls back to stale cache on upstream/rate-limit errors.
 // It does NOT store the final response in fresh cache (callers must do this to support transforming before caching).
@@ -472,7 +482,7 @@ type githubFetchResult struct {
 	Body        []byte
 	StatusCode  int
 	ContentType string
-	CacheStatus string
+	CacheStatus cacheStatus
 }
 
 func (h *MissionsHandler) fetchWithCache(c *fiber.Ctx, cacheKey, url, logContext string, logArgs ...any) (*githubFetchResult, error) {
@@ -482,7 +492,7 @@ func (h *MissionsHandler) fetchWithCache(c *fiber.Ctx, cacheKey, url, logContext
 			Body:        cached.body,
 			StatusCode:  cached.statusCode,
 			ContentType: cached.contentType,
-			CacheStatus: "HIT",
+			CacheStatus: cacheStatusHit,
 		}, nil
 	}
 
@@ -494,7 +504,7 @@ func (h *MissionsHandler) fetchWithCache(c *fiber.Ctx, cacheKey, url, logContext
 				Body:        stale.body,
 				StatusCode:  stale.statusCode,
 				ContentType: stale.contentType,
-				CacheStatus: "STALE",
+				CacheStatus: cacheStatusStale,
 			}, nil
 		}
 		var statusCode = http.StatusBadGateway
@@ -519,7 +529,7 @@ func (h *MissionsHandler) fetchWithCache(c *fiber.Ctx, cacheKey, url, logContext
 				Body:        stale.body,
 				StatusCode:  stale.statusCode,
 				ContentType: stale.contentType,
-				CacheStatus: "STALE",
+				CacheStatus: cacheStatusStale,
 			}, nil
 		}
 		return &githubFetchResult{StatusCode: resp.StatusCode}, fmt.Errorf("GitHub API rate limit exceeded — no cached data available")
@@ -528,7 +538,7 @@ func (h *MissionsHandler) fetchWithCache(c *fiber.Ctx, cacheKey, url, logContext
 	return &githubFetchResult{
 		Body:        body,
 		StatusCode:  resp.StatusCode,
-		CacheStatus: "MISS",
+		CacheStatus: cacheStatusMiss,
 	}, nil
 }
 
@@ -561,9 +571,9 @@ func (h *MissionsHandler) BrowseConsoleKB(c *fiber.Ctx) error {
 		return c.Status(res.StatusCode).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	if res.CacheStatus != "MISS" {
+	if res.CacheStatus != cacheStatusMiss {
 		c.Set("Content-Type", res.ContentType)
-		c.Set("X-Cache", res.CacheStatus)
+		c.Set("X-Cache", string(res.CacheStatus))
 		return c.Status(res.StatusCode).Send(res.Body)
 	}
 
@@ -695,9 +705,9 @@ func (h *MissionsHandler) GetMissionFile(c *fiber.Ctx) error {
 		return c.Status(res.StatusCode).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	if res.CacheStatus != "MISS" {
+	if res.CacheStatus != cacheStatusMiss {
 		c.Set("Content-Type", res.ContentType)
-		c.Set("X-Cache", res.CacheStatus)
+		c.Set("X-Cache", string(res.CacheStatus))
 		return c.Status(res.StatusCode).Send(res.Body)
 	}
 
@@ -799,7 +809,7 @@ func (h *MissionsHandler) fetchMissionIndex(c *fiber.Ctx) (*indexJsonFormat, err
 	}
 
 	var body = res.Body
-	if res.CacheStatus == "MISS" {
+	if res.CacheStatus == cacheStatusMiss {
 		if res.StatusCode != http.StatusOK {
 			return nil, fmt.Errorf("GitHub raw content error")
 		}
@@ -889,9 +899,10 @@ func (h *MissionsHandler) GetMissionScore(c *fiber.Ctx) error {
 		if len(m.CncfProjects) > 0 {
 			mProject = m.CncfProjects[0]
 		}
-		// Match project and id from path (e.g. cncf-generated/coredns/coredns-123.json)
+		// Match by project and filename. Accept both "foo" and "foo.json" from
+		// callers so URL construction on the frontend is flexible.
 		mBase := path.Base(m.Path)
-		if mProject == project && (mBase == id || mBase == id+".json") {
+		if mProject == project && (strings.TrimSuffix(mBase, ".json") == strings.TrimSuffix(id, ".json")) {
 			if m.QualityScore == nil {
 				return c.Status(404).JSON(fiber.Map{"error": "Mission found but has no score associated"})
 			}
