@@ -401,7 +401,8 @@
         "testNotification": "Test Email Notification",
         "configureFirst": "Please configure all required email fields first",
         "testSuccess": "Test email sent successfully!",
-        "testFailed": "Failed to send test email"
+        "testFailed": "Failed to send test email",
+        "invalidSmtpPort": "SMTP port must be a number between 1 and 65535."
       },
       "tip": "Configure notification channels here, then add them to specific alert rules in the Alert Rules editor. Each rule can have multiple notification channels with different configurations.",
       "browser": {

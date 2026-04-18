@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Mail, Check, X } from 'lucide-react'
 import { NotificationConfig } from '../../../types/alerts'
@@ -5,6 +6,10 @@ import type { TestResultState } from './NotificationSettingsSection'
 
 /** Default SMTP port for email configuration */
 const DEFAULT_SMTP_PORT = 587
+/** Minimum valid TCP port number (inclusive) */
+const MIN_PORT = 1
+/** Maximum valid TCP port number (inclusive) */
+const MAX_PORT = 65535
 
 interface EmailNotificationSettingsProps {
   config: NotificationConfig
@@ -28,10 +33,37 @@ export function EmailNotificationSettings({
   isLoading,
 }: EmailNotificationSettingsProps) {
   const { t } = useTranslation()
+  const [portRaw, setPortRaw] = useState<string>(
+    config.emailSMTPPort != null ? String(config.emailSMTPPort) : String(DEFAULT_SMTP_PORT),
+  )
+  const [portError, setPortError] = useState<string | null>(null)
+
+  const handlePortChange = (value: string) => {
+    setPortRaw(value)
+    const trimmed = value.trim()
+    // Empty, non-integer, or out-of-range values are rejected. We only push a
+    // valid integer to the shared config so a cleared field never silently
+    // reverts to the default — the user sees an inline error instead.
+    if (trimmed.length === 0 || !/^\d+$/.test(trimmed)) {
+      setPortError(t('settings.notifications.email.invalidSmtpPort'))
+      return
+    }
+    const parsed = parseInt(trimmed, 10)
+    if (parsed < MIN_PORT || parsed > MAX_PORT) {
+      setPortError(t('settings.notifications.email.invalidSmtpPort'))
+      return
+    }
+    setPortError(null)
+    updateConfig({ emailSMTPPort: parsed })
+  }
 
   const handleTestEmail = async () => {
     if (!config.emailSMTPHost || !config.emailFrom || !config.emailTo) {
       setTestResult({ type: 'email', success: false, message: t('settings.notifications.email.configureFirst') })
+      return
+    }
+    if (portError) {
+      setTestResult({ type: 'email', success: false, message: portError })
       return
     }
 
@@ -82,11 +114,18 @@ export function EmailNotificationSettings({
           </label>
           <input
             type="number"
-            value={config.emailSMTPPort || DEFAULT_SMTP_PORT}
-            onChange={e => updateConfig({ emailSMTPPort: parseInt(e.target.value) })}
+            value={portRaw}
+            onChange={e => handlePortChange(e.target.value)}
             placeholder={String(DEFAULT_SMTP_PORT)}
+            min={MIN_PORT}
+            max={MAX_PORT}
+            aria-invalid={!!portError}
+            aria-describedby={portError ? 'email-smtp-port-error' : undefined}
             className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
           />
+          {portError && (
+            <p id="email-smtp-port-error" role="alert" className="mt-1 text-xs text-red-400">{portError}</p>
+          )}
         </div>
       </div>
 
@@ -149,7 +188,7 @@ export function EmailNotificationSettings({
 
       <button
         onClick={handleTestEmail}
-        disabled={isLoading}
+        disabled={isLoading || !!portError}
         className="px-4 py-2 text-sm rounded-lg bg-purple-500 text-white hover:bg-purple-600 transition-colors disabled:opacity-50"
       >
         {isLoading ? t('settings.notifications.email.testing') : t('settings.notifications.email.testNotification')}
