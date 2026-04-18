@@ -385,7 +385,8 @@
         "testNotification": "Test Slack Notification",
         "configureFirst": "Please configure Slack webhook URL first",
         "testSuccess": "Test notification sent successfully!",
-        "testFailed": "Failed to send test notification"
+        "testFailed": "Failed to send test notification",
+        "invalidWebhookUrl": "Enter a valid Slack webhook URL (https://hooks.slack.com/services/...)."
       },
       "email": {
         "title": "Email Integration",

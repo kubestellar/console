@@ -1,8 +1,13 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Check, X } from 'lucide-react'
 import { Slack } from '@/lib/icons'
 import { NotificationConfig } from '../../../types/alerts'
 import type { TestResultState } from './NotificationSettingsSection'
+
+// Strict Slack incoming webhook URL: https://hooks.slack.com/services/<token>.
+// Blocks arbitrary text/URLs from being POSTed to a non-Slack endpoint.
+const SLACK_WEBHOOK_REGEX = /^https:\/\/hooks\.slack\.com\/services\/\S+$/
 
 interface SlackNotificationSettingsProps {
   config: NotificationConfig
@@ -26,10 +31,26 @@ export function SlackNotificationSettings({
   isLoading,
 }: SlackNotificationSettingsProps) {
   const { t } = useTranslation()
+  const [urlError, setUrlError] = useState<string | null>(null)
+
+  const handleUrlChange = (value: string) => {
+    updateConfig({ slackWebhookUrl: value })
+    const trimmed = value.trim()
+    if (trimmed.length > 0 && !SLACK_WEBHOOK_REGEX.test(trimmed)) {
+      setUrlError(t('settings.notifications.slack.invalidWebhookUrl'))
+    } else {
+      setUrlError(null)
+    }
+  }
 
   const handleTestSlack = async () => {
     if (!config.slackWebhookUrl) {
       setTestResult({ type: 'slack', success: false, message: t('settings.notifications.slack.configureFirst') })
+      return
+    }
+    if (!SLACK_WEBHOOK_REGEX.test(config.slackWebhookUrl.trim())) {
+      setUrlError(t('settings.notifications.slack.invalidWebhookUrl'))
+      setTestResult({ type: 'slack', success: false, message: t('settings.notifications.slack.invalidWebhookUrl') })
       return
     }
 
@@ -63,10 +84,15 @@ export function SlackNotificationSettings({
         <input
           type="text"
           value={config.slackWebhookUrl || ''}
-          onChange={e => updateConfig({ slackWebhookUrl: e.target.value })}
+          onChange={e => handleUrlChange(e.target.value)}
           placeholder="https://hooks.slack.com/services/..."
+          aria-invalid={!!urlError}
+          aria-describedby={urlError ? 'slack-webhook-url-error' : undefined}
           className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
         />
+        {urlError && (
+          <p id="slack-webhook-url-error" role="alert" className="mt-1 text-xs text-red-400">{urlError}</p>
+        )}
         <p className="text-xs text-muted-foreground mt-1">
           {t('settings.notifications.slack.webhookHint')}
         </p>
@@ -90,7 +116,7 @@ export function SlackNotificationSettings({
 
       <button
         onClick={handleTestSlack}
-        disabled={isLoading}
+        disabled={isLoading || !!urlError}
         className="px-4 py-2 text-sm rounded-lg bg-purple-500 text-white hover:bg-purple-600 transition-colors disabled:opacity-50"
       >
         {isLoading ? t('settings.notifications.slack.testing') : t('settings.notifications.slack.testNotification')}
