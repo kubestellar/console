@@ -28,7 +28,7 @@ export function OpsGenieNotificationSettings({
 
   const handleTestOpsGenie = async () => {
     if (!config.opsgenieApiKey) {
-      setTestResult({ type: 'opsgenie', success: false, message: 'OpsGenie API key is required' })
+      setTestResult({ type: 'opsgenie', success: false, message: t('settings.notifications.opsgenie.apiKeyRequired') })
       return
     }
 
@@ -37,12 +37,12 @@ export function OpsGenieNotificationSettings({
       await testNotification('opsgenie', {
         opsgenieApiKey: config.opsgenieApiKey,
       })
-      setTestResult({ type: 'opsgenie', success: true, message: 'Test alert created and closed successfully' })
+      setTestResult({ type: 'opsgenie', success: true, message: t('settings.notifications.opsgenie.testSuccess') })
     } catch (error) {
       setTestResult({
         type: 'opsgenie',
         success: false,
-        message: error instanceof Error ? error.message : 'Failed to send test notification',
+        message: error instanceof Error ? error.message : t('settings.notifications.opsgenie.testFailed'),
       })
     }
   }
@@ -75,7 +75,7 @@ export function OpsGenieNotificationSettings({
         disabled={isLoading}
         className="px-4 py-2 text-sm rounded-lg bg-purple-500 text-white hover:bg-purple-600 transition-colors disabled:opacity-50"
       >
-        {isLoading ? 'Testing...' : t('settings.notifications.opsgenie.testNotification', 'Test OpsGenie')}
+        {isLoading ? t('settings.notifications.opsgenie.testing') : t('settings.notifications.opsgenie.testNotification', 'Test OpsGenie')}
       </button>
 
       {testResult && testResult.type === 'opsgenie' && (

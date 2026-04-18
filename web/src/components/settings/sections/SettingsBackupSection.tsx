@@ -25,16 +25,25 @@ const STATUS_ICONS: Record<SyncStatus, { icon: typeof Check; className: string }
 interface LastSavedLabels {
   never: string
   justNow: string
+  secondsAgo: (count: number) => string
+  minutesAgo: (count: number) => string
 }
+// Threshold (seconds) below which we render "Just now" instead of an exact
+// number of seconds. Matches the original hardcoded value.
+const JUST_NOW_THRESHOLD_SEC = 5
+// Boundary for switching from seconds-ago to minutes-ago / minutes-ago to
+// absolute time. 60s in a minute, 60m in an hour.
+const SECONDS_PER_MINUTE = 60
+const MINUTES_PER_HOUR = 60
 function formatLastSaved(date: Date | null, labels: LastSavedLabels): string {
   if (!date) return labels.never
   const now = new Date()
   const diffMs = now.getTime() - date.getTime()
   const diffSec = Math.floor(diffMs / 1000)
-  if (diffSec < 5) return labels.justNow
-  if (diffSec < 60) return `${diffSec}s ago`
-  const diffMin = Math.floor(diffSec / 60)
-  if (diffMin < 60) return `${diffMin}m ago`
+  if (diffSec < JUST_NOW_THRESHOLD_SEC) return labels.justNow
+  if (diffSec < SECONDS_PER_MINUTE) return labels.secondsAgo(diffSec)
+  const diffMin = Math.floor(diffSec / SECONDS_PER_MINUTE)
+  if (diffMin < MINUTES_PER_HOUR) return labels.minutesAgo(diffMin)
   return date.toLocaleTimeString()
 }
 
@@ -128,6 +137,8 @@ export function SettingsBackupSection({
                     time: formatLastSaved(lastSaved, {
                       never: t('settings.backup.never'),
                       justNow: t('settings.backup.justNow'),
+                      secondsAgo: (count: number) => t('settings.backup.secondsAgo', { count }),
+                      minutesAgo: (count: number) => t('settings.backup.minutesAgo', { count }),
                     }),
                   })}
                 </p>

@@ -267,7 +267,16 @@
       "warningAt": "Warning at (%)",
       "criticalAt": "Critical at (%)",
       "saved": "Saved!",
-      "saveSettings": "Save Token Settings"
+      "saveSettings": "Save Token Settings",
+      "demoBadge": "Demo Data",
+      "demoBadgeAriaLabel": "Demo mode active",
+      "demoModeLabel": "Demo Mode:",
+      "demoModeMessage": "Showing simulated token usage data. To see live token consumption from your AI operations, ensure the kc-agent is running and connected.",
+      "percentUsed": "{{percent}}% used",
+      "remaining": "{{count}} remaining",
+      "monthlyLimitHint": "Maximum tokens per month",
+      "warningAtHint": "Warning at {{percent}}% usage",
+      "criticalAtHint": "Critical at {{percent}}% usage"
     },
     "github": {
       "title": "GitHub Integration",
@@ -345,7 +354,8 @@
       "refreshing": "Refreshing...",
       "saving": "Saving...",
       "saved": "Saved!",
-      "saveProfile": "Save Profile"
+      "saveProfile": "Save Profile",
+      "saveFailed": "Failed to save profile"
     },
     "notifications": {
       "title": "Alert Notifications",
@@ -420,6 +430,16 @@
         "testing": "Testing...",
         "testNotification": "Test PagerDuty",
         "testSuccess": "Test notification sent and resolved successfully",
+        "testFailed": "Failed to send test notification"
+      },
+      "opsgenie": {
+        "title": "OpsGenie",
+        "apiKey": "API Key",
+        "apiKeyHint": "Find this under Settings > API key management in OpsGenie",
+        "apiKeyRequired": "OpsGenie API key is required",
+        "testing": "Testing...",
+        "testNotification": "Test OpsGenie",
+        "testSuccess": "Test alert created and closed successfully",
         "testFailed": "Failed to send test notification"
       }
     },
@@ -509,6 +529,8 @@
       "backendOffline": "Backend offline",
       "never": "Never",
       "justNow": "Just now",
+      "secondsAgo": "{{count}}s ago",
+      "minutesAgo": "{{count}}m ago",
       "lastSaved": "Last saved: {{time}}",
       "encrypted": "AES-256 encrypted",
       "fileLocation": "File location",

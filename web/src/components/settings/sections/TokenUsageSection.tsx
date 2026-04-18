@@ -47,8 +47,8 @@ export function TokenUsageSection({ usage, updateSettings, resetUsage, isDemoDat
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-medium text-foreground">{t('settings.tokens.title')}</h2>
               {isDemoData && (
-                <StatusBadge color="yellow" variant="outline" role="img" aria-label="Demo mode active">
-                  Demo Data
+                <StatusBadge color="yellow" variant="outline" role="img" aria-label={t('settings.tokens.demoBadgeAriaLabel')}>
+                  {t('settings.tokens.demoBadge')}
                 </StatusBadge>
               )}
             </div>
@@ -68,8 +68,7 @@ export function TokenUsageSection({ usage, updateSettings, resetUsage, isDemoDat
       {isDemoData && (
         <div className="mb-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
           <p className="text-sm text-yellow-400/90">
-            <strong className="font-medium">Demo Mode:</strong> Showing simulated token usage data. 
-            To see live token consumption from your AI operations, ensure the kc-agent is running and connected.
+            <strong className="font-medium">{t('settings.tokens.demoModeLabel')}</strong> {t('settings.tokens.demoModeMessage')}
           </p>
         </div>
       )}
@@ -108,10 +107,10 @@ export function TokenUsageSection({ usage, updateSettings, resetUsage, isDemoDat
                   ? 'text-yellow-400'
                   : 'text-green-400'
               }`}>
-                {((usage.used / usage.limit) * 100).toFixed(1)}% used
+                {t('settings.tokens.percentUsed', { percent: ((usage.used / usage.limit) * 100).toFixed(1) })}
               </span>
               <span className="text-xs text-muted-foreground">
-                {Math.max(usage.limit - usage.used, 0).toLocaleString()} remaining
+                {t('settings.tokens.remaining', { count: Math.max(usage.limit - usage.used, 0).toLocaleString() })}
               </span>
             </div>
           </div>
@@ -130,7 +129,7 @@ export function TokenUsageSection({ usage, updateSettings, resetUsage, isDemoDat
               className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm"
             />
             <p className="mt-1 text-xs text-muted-foreground">
-              Maximum tokens per month
+              {t('settings.tokens.monthlyLimitHint')}
             </p>
           </div>
           <div>
@@ -149,7 +148,7 @@ export function TokenUsageSection({ usage, updateSettings, resetUsage, isDemoDat
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-yellow-400 text-sm" aria-hidden="true">%</span>
             </div>
             <p className="mt-1 text-xs text-yellow-400/70">
-              Warning at {warningThreshold}% usage
+              {t('settings.tokens.warningAtHint', { percent: warningThreshold })}
             </p>
           </div>
           <div>
@@ -168,7 +167,7 @@ export function TokenUsageSection({ usage, updateSettings, resetUsage, isDemoDat
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-red-400 text-sm" aria-hidden="true">%</span>
             </div>
             <p className="mt-1 text-xs text-red-400/70">
-              Critical at {criticalThreshold}% usage
+              {t('settings.tokens.criticalAtHint', { percent: criticalThreshold })}
             </p>
           </div>
         </div>

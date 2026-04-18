@@ -46,7 +46,7 @@ export function ProfileSection({ initialEmail, initialSlackId, refreshUser, isLo
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
       if (!response.ok) {
-        throw new Error('Failed to save profile')
+        throw new Error(t('settings.profile.saveFailed'))
       }
       // Refresh user data to update the dropdown
       setIsRefreshing(true)
@@ -55,7 +55,7 @@ export function ProfileSection({ initialEmail, initialSlackId, refreshUser, isLo
       setProfileSaved(true)
       timeoutRef.current = window.setTimeout(() => setProfileSaved(false), UI_FEEDBACK_TIMEOUT_MS)
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to save profile'
+      const message = error instanceof Error ? error.message : t('settings.profile.saveFailed')
       setError(message)
       setIsRefreshing(false)
     } finally {
