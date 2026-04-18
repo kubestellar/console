@@ -643,24 +643,34 @@ func (s *Server) setupRoutes() {
 		DevMode:        s.config.DevMode,
 		SkipOnboarding: s.config.SkipOnboarding,
 	})
-	// Rate limit auth endpoints — stricter to prevent brute-force
+	// FailureTracker for per-user/IP auth failure counting (#8676 Phase 1).
+	// Exposed via c.Locals for use in auth handlers in future phases.
+	failureTracker := middleware.NewFailureTracker()
+
+	// Rate limit auth endpoints — stricter to prevent brute-force.
+	// Uses composite key (userID:IP when authenticated, IP alone pre-auth)
+	// so users behind shared NAT don't exhaust each other's budgets (#8676).
 	authLimiterMaxRequests := 10         // max requests per window
 	authLimiterWindow := 1 * time.Minute // sliding window duration
 	authLimiter := limiter.New(limiter.Config{
 		Max:        authLimiterMaxRequests,
 		Expiration: authLimiterWindow,
-		KeyGenerator: func(c *fiber.Ctx) string {
-			return c.IP()
-		},
+		KeyGenerator: middleware.CompositeKey,
 		LimitReached: func(c *fiber.Ctx) error {
 			c.Set("Retry-After", strconv.Itoa(int(authLimiterWindow.Seconds()))) // #7040
 			return c.Status(429).JSON(fiber.Map{"error": "too many requests, try again later"})
 		},
 	})
+	// Inject FailureTracker into request context for auth handlers (#8676).
+	injectTracker := func(c *fiber.Ctx) error {
+		c.Locals("failureTracker", failureTracker)
+		return c.Next()
+	}
+
 	// Wire WebSocket hub into auth handler so logout disconnects WS sessions (#4906)
 	auth.SetHub(s.hub)
-	s.app.Get("/auth/github", authLimiter, auth.GitHubLogin)
-	s.app.Get("/auth/github/callback", authLimiter, auth.GitHubCallback)
+	s.app.Get("/auth/github", authLimiter, injectTracker, auth.GitHubLogin)
+	s.app.Get("/auth/github/callback", authLimiter, injectTracker, auth.GitHubCallback)
 	// #6587 — /auth/logout now requires JWTAuth. Previously anyone could
 	// POST /auth/logout with any JWT (even a stolen one) because the route
 	// was registered without the auth middleware. Requiring JWTAuth proves
@@ -672,8 +682,8 @@ func (s *Server) setupRoutes() {
 	// token is rejected by the middleware before the handler even runs.
 	jwtAuth := middleware.JWTAuth(s.config.JWTSecret)
 	csrfGuard := middleware.RequireCSRF()
-	s.app.Post("/auth/refresh", authLimiter, csrfGuard, jwtAuth, auth.RefreshToken)
-	s.app.Post("/auth/logout", authLimiter, csrfGuard, jwtAuth, auth.Logout)
+	s.app.Post("/auth/refresh", authLimiter, injectTracker, csrfGuard, jwtAuth, auth.RefreshToken)
+	s.app.Post("/auth/logout", authLimiter, injectTracker, csrfGuard, jwtAuth, auth.Logout)
 
 	// Public endpoint rate limiter — loose limit to prevent DoS on unauthenticated
 	// routes (active-users, ping, nightly-e2e, youtube, medium, analytics) (#7029).
