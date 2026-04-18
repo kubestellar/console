@@ -8,6 +8,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -32,6 +33,13 @@ import (
 
 // githubAPITimeout is the timeout for HTTP requests to the GitHub API.
 const githubAPITimeout = 10 * time.Second
+
+// errGitHubUnauthorized is returned when GitHub rejects the FEEDBACK_GITHUB_TOKEN
+// as invalid or expired (HTTP 401). Callers should branch on this with errors.Is
+// and surface a user-visible "refresh your PAT" message instead of the generic
+// 502 Bad Gateway wrapper, which sends contributors on wild goose chases looking
+// for OAuth app setup issues (#6186).
+var errGitHubUnauthorized = errors.New("github: token invalid or expired")
 
 // githubAPIBase is the default public GitHub API base URL.
 // Used as the fallback by resolveGitHubAPIBase() when GITHUB_URL is unset.
@@ -286,6 +294,13 @@ func (h *FeedbackHandler) CreateFeatureRequest(c *fiber.Ctx) error {
 		if cErr := h.store.CloseFeatureRequest(request.ID, false); cErr != nil {
 			slog.Warn("[Feedback] failed to close orphaned feature request",
 				"request_id", request.ID, "error", cErr)
+		}
+		// #6186: distinguish an expired/invalid FEEDBACK_GITHUB_TOKEN (the
+		// GitHub API returned 401) from other upstream failures. The generic
+		// "create a GitHub OAuth app" guidance the client shows on generic
+		// errors misleads users whose real problem is a stale PAT.
+		if errors.Is(err, errGitHubUnauthorized) {
+			return fiber.NewError(fiber.StatusUnauthorized, "FEEDBACK_GITHUB_TOKEN is invalid or expired. Refresh the PAT in your .env and restart the console.")
 		}
 		return fiber.NewError(fiber.StatusBadGateway, fmt.Sprintf("Failed to create GitHub issue: %v", err))
 	}
@@ -1961,6 +1976,9 @@ func (h *FeedbackHandler) postGitHubIssue(repoOwner, repoName, title, body strin
 		respBody, readErr := io.ReadAll(resp.Body)
 		if readErr != nil {
 			respBody = []byte("(failed to read response body)")
+		}
+		if resp.StatusCode == http.StatusUnauthorized {
+			return 0, "", fmt.Errorf("%w: %s", errGitHubUnauthorized, string(respBody))
 		}
 		return 0, "", fmt.Errorf("GitHub API returned %d: %s", resp.StatusCode, string(respBody))
 	}
