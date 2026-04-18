@@ -12,6 +12,10 @@ interface ProfileSectionProps {
   isLoading?: boolean
 }
 
+// Basic email format check: non-empty local + "@" + domain + "." + TLD, no whitespace.
+// Intentionally not RFC-perfect — matches HTML5 type=email's spirit and blocks obvious junk.
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
 export function ProfileSection({ initialEmail, initialSlackId, refreshUser, isLoading }: ProfileSectionProps) {
   const { t } = useTranslation()
   const [email, setEmail] = useState(initialEmail)
@@ -20,7 +24,18 @@ export function ProfileSection({ initialEmail, initialSlackId, refreshUser, isLo
   const [isSaving, setIsSaving] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [emailError, setEmailError] = useState<string | null>(null)
   const timeoutRef = useRef<number>(undefined)
+
+  const handleEmailChange = (value: string) => {
+    setEmail(value)
+    const trimmed = value.trim()
+    if (trimmed.length > 0 && !EMAIL_REGEX.test(trimmed)) {
+      setEmailError(t('settings.profile.invalidEmail'))
+    } else {
+      setEmailError(null)
+    }
+  }
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -32,6 +47,11 @@ export function ProfileSection({ initialEmail, initialSlackId, refreshUser, isLo
   }, [])
 
   const handleSaveProfile = async () => {
+    const trimmedEmail = email.trim()
+    if (!EMAIL_REGEX.test(trimmedEmail)) {
+      setEmailError(t('settings.profile.invalidEmail'))
+      return
+    }
     setIsSaving(true)
     setError(null)
     try {
@@ -94,9 +114,14 @@ export function ProfileSection({ initialEmail, initialSlackId, refreshUser, isLo
               id="profile-email"
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => handleEmailChange(e.target.value)}
+              aria-invalid={!!emailError}
+              aria-describedby={emailError ? 'profile-email-error' : undefined}
               className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm"
             />
+            {emailError && (
+              <p id="profile-email-error" className="mt-1 text-xs text-red-400">{emailError}</p>
+            )}
           </div>
           <div>
             <label htmlFor="profile-slack" className="block text-sm text-muted-foreground mb-1">{t('settings.profile.slackId')}</label>
@@ -126,7 +151,7 @@ export function ProfileSection({ initialEmail, initialSlackId, refreshUser, isLo
           )}
           <button
             onClick={handleSaveProfile}
-            disabled={isSaving || isRefreshing}
+            disabled={isSaving || isRefreshing || !!emailError}
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSaving || isRefreshing ? (

@@ -359,7 +359,8 @@
       "saving": "Saving...",
       "saved": "Saved!",
       "saveProfile": "Save Profile",
-      "saveFailed": "Failed to save profile"
+      "saveFailed": "Failed to save profile",
+      "invalidEmail": "Enter a valid email address."
     },
     "notifications": {
       "title": "Alert Notifications",
