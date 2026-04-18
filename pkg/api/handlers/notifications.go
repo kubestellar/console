@@ -4,6 +4,7 @@ import (
 	"log/slog"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/api/audit"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/notifications"
@@ -141,6 +142,8 @@ func (h *NotificationHandler) SaveNotificationConfig(c *fiber.Ctx) error {
 			"error": "Invalid request body",
 		})
 	}
+
+	audit.Log(c, audit.ActionSaveNotificationConfig, "notification_config", userID.String())
 
 	// Config validation only - actual storage is client-side
 	// This endpoint exists for future server-side config storage

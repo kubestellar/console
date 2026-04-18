@@ -12,6 +12,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"golang.org/x/time/rate"
 
+	"github.com/kubestellar/console/pkg/api/audit"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/settings"
 	"github.com/kubestellar/console/pkg/store"
@@ -340,6 +341,8 @@ func (h *GitHubProxyHandler) DeleteToken(c *fiber.Ctx) error {
 			"error": "Failed to clear token",
 		})
 	}
+
+	audit.Log(c, audit.ActionDeleteToken, "token", "github")
 
 	return c.JSON(fiber.Map{"success": true})
 }

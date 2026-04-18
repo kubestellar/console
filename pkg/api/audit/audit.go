@@ -17,6 +17,18 @@ const (
 	ActionUpdateRole          = "update_role"
 	ActionDeleteUser          = "delete_user"
 	ActionUnauthorizedAttempt = "unauthorized_attempt"
+
+	// Phase 2: settings, cluster groups, notifications, tokens, quotas.
+	ActionSaveSettings         = "save_settings"
+	ActionImportSettings       = "import_settings"
+	ActionExportSettings       = "export_settings"
+	ActionCreateClusterGroup   = "create_cluster_group"
+	ActionUpdateClusterGroup   = "update_cluster_group"
+	ActionDeleteClusterGroup   = "delete_cluster_group"
+	ActionSaveNotificationConfig = "save_notification_config"
+	ActionDeleteToken          = "delete_token"
+	ActionCreateResourceQuota  = "create_resource_quota"
+	ActionDeleteResourceQuota  = "delete_resource_quota"
 )
 
 // Log emits a structured audit log entry for a security-sensitive operation.

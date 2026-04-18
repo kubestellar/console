@@ -15,6 +15,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubestellar/console/pkg/agent"
+	"github.com/kubestellar/console/pkg/api/audit"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/models"
@@ -439,6 +440,8 @@ func (h *WorkloadHandlers) CreateClusterGroup(c *fiber.Ctx) error {
 		}
 	}
 
+	audit.Log(c, audit.ActionCreateClusterGroup, "cluster_group", group.Name)
+
 	return c.Status(201).JSON(group)
 }
 
@@ -512,6 +515,8 @@ func (h *WorkloadHandlers) UpdateClusterGroup(c *fiber.Ctx) error {
 		}
 	}
 
+	audit.Log(c, audit.ActionUpdateClusterGroup, "cluster_group", name)
+
 	return c.JSON(group)
 }
 
@@ -558,6 +563,8 @@ func (h *WorkloadHandlers) DeleteClusterGroup(c *fiber.Ctx) error {
 			})
 		}
 	}
+
+	audit.Log(c, audit.ActionDeleteClusterGroup, "cluster_group", name)
 
 	return c.JSON(fiber.Map{"message": "Cluster group deleted", "name": name})
 }

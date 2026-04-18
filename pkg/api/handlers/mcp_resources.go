@@ -9,6 +9,9 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+
+	"github.com/kubestellar/console/pkg/api/audit"
+
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -813,6 +816,9 @@ func (h *MCPHandlers) CreateOrUpdateResourceQuota(c *fiber.Ctx) error {
 			return handleK8sError(c, err)
 		}
 
+		audit.Log(c, audit.ActionCreateResourceQuota, "resource_quota", req.Name,
+			"cluster="+req.Cluster, "namespace="+req.Namespace)
+
 		return c.JSON(fiber.Map{"resourceQuota": quota, "source": "k8s"})
 	}
 
@@ -848,6 +854,9 @@ func (h *MCPHandlers) DeleteResourceQuota(c *fiber.Ctx) error {
 		if err != nil {
 			return handleK8sError(c, err)
 		}
+
+		audit.Log(c, audit.ActionDeleteResourceQuota, "resource_quota", name,
+			"cluster="+cluster, "namespace="+namespace)
 
 		return c.JSON(fiber.Map{"deleted": true, "name": name, "namespace": namespace, "cluster": cluster})
 	}
