@@ -7,7 +7,7 @@
  */
 
 import { useMemo, useState } from 'react'
-import { Check, X, Filter, ChevronDown, ChevronRight, Flag, Sparkles, Lock, Unlock, Eye } from 'lucide-react'
+import { Check, X, Filter, ChevronDown, ChevronRight, Flag, Sparkles, Lock, Unlock, Eye, RefreshCw } from 'lucide-react'
 import { useCardLoadingState } from './CardDataContext'
 import { CardSkeleton } from '../../lib/cards/CardComponents'
 import { useACMM } from '../acmm/ACMMProvider'
@@ -252,6 +252,18 @@ export function ACMMFeedbackLoops() {
           </button>
         ))}
         <div className="ml-auto flex items-center gap-1">
+          {/* Re-scan: force a fresh ACMM scan bypassing the server cache */}
+          <button
+            type="button"
+            onClick={() => scan.forceRefetch()}
+            disabled={scan.isLoading || scan.isRefreshing}
+            className="p-1 rounded hover:bg-muted/50 text-muted-foreground transition-colors disabled:opacity-50"
+            title="Re-scan current repo (bypasses server cache)"
+          >
+            <RefreshCw
+              className={`w-3.5 h-3.5 ${scan.isRefreshing ? 'animate-spin' : ''}`}
+            />
+          </button>
           {/* Lock-status chip — gamification: rows above earnedLevel are
               locked until the user finishes their current level. Click to
               toggle the session-scoped override. */}
