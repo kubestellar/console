@@ -20,12 +20,18 @@ const STATUS_ICONS: Record<SyncStatus, { icon: typeof Check; className: string }
   offline: { icon: WifiOff, className: 'text-yellow-400' },
 }
 
-function formatLastSaved(date: Date | null, t: (key: string) => string): string {
-  if (!date) return t('settings.backup.never')
+// Pre-resolved labels passed in from the caller so this helper does not
+// need to depend on i18next's overloaded TFunction generic.
+interface LastSavedLabels {
+  never: string
+  justNow: string
+}
+function formatLastSaved(date: Date | null, labels: LastSavedLabels): string {
+  if (!date) return labels.never
   const now = new Date()
   const diffMs = now.getTime() - date.getTime()
   const diffSec = Math.floor(diffMs / 1000)
-  if (diffSec < 5) return t('settings.backup.justNow')
+  if (diffSec < 5) return labels.justNow
   if (diffSec < 60) return `${diffSec}s ago`
   const diffMin = Math.floor(diffSec / 60)
   if (diffMin < 60) return `${diffMin}m ago`
@@ -118,7 +124,12 @@ export function SettingsBackupSection({
               <div>
                 <p className={`text-sm font-medium ${status.className}`}>{statusLabel}</p>
                 <p className="text-xs text-muted-foreground">
-                  {t('settings.backup.lastSaved', { time: formatLastSaved(lastSaved, t) })}
+                  {t('settings.backup.lastSaved', {
+                    time: formatLastSaved(lastSaved, {
+                      never: t('settings.backup.never'),
+                      justNow: t('settings.backup.justNow'),
+                    }),
+                  })}
                 </p>
               </div>
             </div>
