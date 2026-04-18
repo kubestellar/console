@@ -785,6 +785,10 @@ function GitHubContributionsSection({
       </div>
 
       {githubRewards && githubRewards.breakdown && (
+        // These badges count every issue/PR you authored across our orgs
+        // (kubestellar, llm-d) — NOT only items submitted via this console.
+        // The Rewards panel's "Submitted via console" line counts a different
+        // (smaller) population. See kubestellar/console#8893 for context.
         <div className="px-3 py-2 border-b border-border/50 flex-shrink-0">
           <div className="flex flex-wrap gap-1.5">
             {githubRewards.breakdown.prs_merged > 0 && (
@@ -798,12 +802,24 @@ function GitHubContributionsSection({
               </StatusBadge>
             )}
             {githubRewards.breakdown.bug_issues > 0 && (
-              <StatusBadge color="red" size="xs" rounded="full" icon={<Bug className="w-2.5 h-2.5" />}>
+              <StatusBadge
+                color="red"
+                size="xs"
+                rounded="full"
+                icon={<Bug className="w-2.5 h-2.5" />}
+                title="All bug-labeled GitHub issues you authored across our orgs. The Rewards panel's 'Report Bugs' counter only includes bugs submitted through this console and will be smaller."
+              >
                 {githubRewards.breakdown.bug_issues} Bugs
               </StatusBadge>
             )}
             {githubRewards.breakdown.feature_issues > 0 && (
-              <StatusBadge color="yellow" size="xs" rounded="full" icon={<Lightbulb className="w-2.5 h-2.5" />}>
+              <StatusBadge
+                color="yellow"
+                size="xs"
+                rounded="full"
+                icon={<Lightbulb className="w-2.5 h-2.5" />}
+                title="All feature-labeled GitHub issues you authored across our orgs. The Rewards panel's 'Suggest Features' counter only includes features submitted through this console and will be smaller."
+              >
                 {githubRewards.breakdown.feature_issues} Features
               </StatusBadge>
             )}

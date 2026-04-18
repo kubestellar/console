@@ -98,7 +98,16 @@ export function RewardsPanel() {
           {/* LinkedIn Share */}
           <LinkedInShareCard />
 
-          {/* Bug Reports */}
+          {/*
+            Bug Reports / Feature Suggestions cards intentionally show
+            console-submitted counts only (sourced from local reward events).
+            This is NOT the same population as the "X Bugs" badge in the
+            Feedback → Updates tab, which counts every bug-labeled GitHub
+            issue authored by the user across our orgs (kubestellar, llm-d).
+            Tracked: kubestellar/console#8893 — the labels and tooltips
+            below make the distinction explicit so the two numbers no
+            longer look like a data inconsistency.
+          */}
           <div className="p-4 rounded-lg bg-red-500/5 border border-red-500/20">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0">
@@ -112,8 +121,11 @@ export function RewardsPanel() {
                 <p className="text-sm text-muted-foreground">
                   Found a bug? Report it on GitHub to earn coins!
                 </p>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Reports: {getActionCount('bug_report')}
+                <p
+                  className="text-xs text-muted-foreground mt-2"
+                  title="Bugs you submitted through this console. The 'Bugs' badge in Feedback → Updates counts every bug-labeled GitHub issue you authored across our orgs and may be larger."
+                >
+                  Submitted via console: {getActionCount('bug_report')}
                 </p>
               </div>
             </div>
@@ -133,8 +145,11 @@ export function RewardsPanel() {
                 <p className="text-sm text-muted-foreground">
                   Have an idea? Submit feature requests to earn coins!
                 </p>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Suggestions: {getActionCount('feature_suggestion')}
+                <p
+                  className="text-xs text-muted-foreground mt-2"
+                  title="Features you submitted through this console. The 'Features' badge in Feedback → Updates counts every feature-labeled GitHub issue you authored across our orgs and may be larger."
+                >
+                  Submitted via console: {getActionCount('feature_suggestion')}
                 </p>
               </div>
             </div>
