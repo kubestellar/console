@@ -228,9 +228,13 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
   }
 
   // Clear stale close timers when the dialog is closed (#7593)
+  // Also reset per-tab form state on close so the next open starts fresh.
+  // (During a single open session, state is preserved across tab switches — see #8913.)
   useEffect(() => {
     if (!open) {
       clearTimeout(closeTimerRef.current)
+      resetConnectState()
+      resetImportState()
     }
   }, [open])
 
@@ -276,9 +280,11 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
               key={tab.id}
               onClick={() => {
                 if (!tab.disabled) {
+                  // Preserve each tab's form state when switching tabs so users
+                  // don't lose work if they click the wrong tab by mistake (#8913).
+                  // State is still cleared on dialog close (handleClose) and on
+                  // successful import/add via resetImportState / resetConnectState.
                   setActiveTab(tab.id)
-                  if (tab.id !== 'connect') resetConnectState()
-                  if (tab.id !== 'import') resetImportState()
                 }
               }}
               disabled={tab.disabled}
