@@ -195,6 +195,7 @@ export function IframeEmbed({ config }: { config?: IframeEmbedConfig }) {
                   onClick={openInNewTab}
                   className="p-1 hover:bg-secondary rounded text-muted-foreground hover:text-foreground"
                   title={t('cards:iframeEmbed.openInNewTab')}
+                  aria-label={t('cards:iframeEmbed.openInNewTab')}
                 >
                   <ExternalLink className="w-4 h-4" />
                 </button>
@@ -208,6 +209,8 @@ export function IframeEmbed({ config }: { config?: IframeEmbedConfig }) {
                   : 'hover:bg-secondary text-muted-foreground hover:text-foreground'
               }`}
               title={t('cards:iframeEmbed.settings')}
+              aria-label={t('cards:iframeEmbed.settings')}
+              aria-expanded={showSettings}
             >
               <Settings className="w-4 h-4" />
             </button>
@@ -223,6 +226,7 @@ export function IframeEmbed({ config }: { config?: IframeEmbedConfig }) {
                 <button
                   onClick={() => setShowSettings(false)}
                   className="p-1 rounded hover:bg-secondary text-muted-foreground"
+                  aria-label={t('cards:iframeEmbed.closeSettingsAria')}
                 >
                   <X className="w-4 h-4" />
                 </button>

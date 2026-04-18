@@ -545,7 +545,9 @@ export function HardwareHealthCard() {
                     ? 'bg-yellow-500/20 text-yellow-400'
                     : 'bg-muted/30 text-muted-foreground hover:text-foreground'
                 )}
-                title={showSnoozed ? 'Hide snoozed alerts' : 'Show snoozed alerts'}
+                title={showSnoozed ? t('cards:hardwareHealth.hideSnoozedAlerts') : t('cards:hardwareHealth.showSnoozedAlerts')}
+                aria-label={showSnoozed ? t('cards:hardwareHealth.hideSnoozedAlerts') : t('cards:hardwareHealth.showSnoozedAlerts')}
+                aria-pressed={showSnoozed}
               >
                 <BellOff className="w-3.5 h-3.5" />
                 <span className="font-medium">{snoozedAlertCount}</span>
@@ -558,7 +560,10 @@ export function HardwareHealthCard() {
                 <button
                   onClick={() => setSnoozeAllMenuOpen(!snoozeAllMenuOpen)}
                   className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-md transition-colors"
-                  title="Snooze all visible alerts"
+                  title={t('cards:hardwareHealth.snoozeAllVisible')}
+                  aria-label={t('cards:hardwareHealth.snoozeAllVisible')}
+                  aria-haspopup="menu"
+                  aria-expanded={snoozeAllMenuOpen}
                 >
                   <MoreVertical className="w-4 h-4" />
                 </button>

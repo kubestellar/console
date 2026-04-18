@@ -1089,7 +1089,10 @@
     "infiniband": "InfiniBand",
     "monitoring": "Monitoring",
     "deviceDisappearances": "Device Disappearances",
-    "noDevicesDetected": "No devices detected"
+    "noDevicesDetected": "No devices detected",
+    "hideSnoozedAlerts": "Hide snoozed alerts",
+    "showSnoozedAlerts": "Show snoozed alerts",
+    "snoozeAllVisible": "Snooze all visible alerts"
   },
   "networkOverview": {
     "policies": "Policies",
@@ -3346,7 +3349,8 @@
     "noUrlConfigured": "No URL configured",
     "clickSettings": "Click settings to add a URL",
     "autoRefreshEvery": "Auto-refreshes every {{seconds}}s",
-    "titlePlaceholder": "My Dashboard"
+    "titlePlaceholder": "My Dashboard",
+    "closeSettingsAria": "Close settings"
   },
   "namespaceOverview": {
     "noNamespaces": "No namespaces",

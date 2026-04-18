@@ -359,6 +359,7 @@ function DroppableGroup({ group, isExpanded, clusterHealthMap, onToggle, onEdit,
             onClick={onEdit}
             className="p-1 rounded hover:bg-gray-900/10 dark:hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors"
             title={t('cards:clusterGroups.editGroup')}
+            aria-label={t('cards:clusterGroups.editGroup')}
           >
             <Edit2 className="w-3 h-3" />
           </button>
@@ -366,6 +367,7 @@ function DroppableGroup({ group, isExpanded, clusterHealthMap, onToggle, onEdit,
             onClick={onDelete}
             className="p-1 rounded hover:bg-red-500/20 text-muted-foreground hover:text-red-400 transition-colors"
             title={t('cards:clusterGroups.deleteGroup')}
+            aria-label={t('cards:clusterGroups.deleteGroup')}
           >
             <Trash2 className="w-3 h-3" />
           </button>
