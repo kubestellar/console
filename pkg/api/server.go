@@ -936,6 +936,10 @@ func (s *Server) setupRoutes() {
 	api.Get("/namespaces", namespaces.ListNamespaces)
 	api.Get("/namespaces/:name/access", namespaces.GetNamespaceAccess)
 
+	// Admin visibility routes — rate-limit metrics (#8676 Phase 3).
+	adminHandler := handlers.NewAdminHandler(failureTracker)
+	api.Get("/admin/rate-limit-status", adminHandler.GetRateLimitStatus)
+
 	// Mission knowledge base routes (validate, share — protected)
 	missions.RegisterRoutes(api.Group("/missions"))
 

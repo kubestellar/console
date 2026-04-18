@@ -108,6 +108,74 @@ func TestFailureTracker_GetRetryAfter(t *testing.T) {
 	}
 }
 
+func TestTierName(t *testing.T) {
+	tests := []struct {
+		count int
+		want  string
+	}{
+		{0, "normal"},
+		{FailureThresholdEscalate - 1, "normal"},
+		{FailureThresholdEscalate, "escalate"},
+		{FailureThresholdSoftLock, "soft-lock"},
+		{FailureThresholdHardLock, "hard-lock"},
+		{FailureThresholdHardLock + 10, "hard-lock"},
+	}
+	for _, tt := range tests {
+		if got := TierName(tt.count); got != tt.want {
+			t.Errorf("TierName(%d) = %q, want %q", tt.count, got, tt.want)
+		}
+	}
+}
+
+func TestFailureTracker_Status(t *testing.T) {
+	ft := NewFailureTracker()
+	defer ft.Stop()
+
+	// Empty tracker.
+	s := ft.Status()
+	if s.Total != 0 {
+		t.Fatalf("empty tracker: want total=0, got %d", s.Total)
+	}
+	if len(s.Keys) != 0 {
+		t.Fatalf("empty tracker: want 0 keys, got %d", len(s.Keys))
+	}
+
+	// Add some keys at different tiers.
+	ft.RecordFailure("a")
+	for i := 0; i < FailureThresholdSoftLock; i++ {
+		ft.RecordFailure("b")
+	}
+
+	s = ft.Status()
+	if s.Total != 2 {
+		t.Fatalf("want total=2, got %d", s.Total)
+	}
+
+	byKey := make(map[string]KeyStatus)
+	for _, ks := range s.Keys {
+		byKey[ks.Key] = ks
+	}
+
+	aStatus := byKey["a"]
+	if aStatus.Failures != 1 || aStatus.Tier != "normal" {
+		t.Fatalf("key a: want 1/normal, got %d/%s", aStatus.Failures, aStatus.Tier)
+	}
+	if aStatus.RetryAfterSec != RetryAfterNormalSec {
+		t.Fatalf("key a retryAfter: want %d, got %d", RetryAfterNormalSec, aStatus.RetryAfterSec)
+	}
+
+	bStatus := byKey["b"]
+	if bStatus.Tier != "soft-lock" {
+		t.Fatalf("key b: want soft-lock, got %s", bStatus.Tier)
+	}
+	if bStatus.RetryAfterSec != RetryAfterSoftLockSec {
+		t.Fatalf("key b retryAfter: want %d, got %d", RetryAfterSoftLockSec, bStatus.RetryAfterSec)
+	}
+	if bStatus.LastFailure == "" {
+		t.Fatal("key b: LastFailure should not be empty")
+	}
+}
+
 func TestFailureTracker_Timestamps(t *testing.T) {
 	ft := NewFailureTracker()
 	defer ft.Stop()

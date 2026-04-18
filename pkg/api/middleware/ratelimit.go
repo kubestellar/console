@@ -58,6 +58,8 @@ func NewFailureTracker() *FailureTracker {
 }
 
 // RecordFailure increments the failure count for key and updates timestamps.
+// When the count crosses the hard-lock threshold, a structured log event is
+// emitted so that external monitors (e.g. GA4 error workflow) can alert on it.
 func (ft *FailureTracker) RecordFailure(key string) {
 	ft.mu.Lock()
 	defer ft.mu.Unlock()
@@ -69,6 +71,15 @@ func (ft *FailureTracker) RecordFailure(key string) {
 	}
 	rec.Count++
 	rec.LastAt = now
+
+	// Emit structured log when crossing the hard-lock threshold (#8676 Phase 3).
+	if rec.Count == FailureThresholdHardLock {
+		slog.Error("[RateLimit] hard-lock threshold reached",
+			"event", "rate_limit_hard_lock",
+			"key", key,
+			"failures", rec.Count,
+		)
+	}
 }
 
 // GetFailureCount returns the current failure count for key (0 if absent).
@@ -92,7 +103,58 @@ func (ft *FailureTracker) Reset(key string) {
 // GetRetryAfter returns the Retry-After value (seconds) for the given key
 // based on which failure-count tier it falls into (#8676 Phase 2).
 func (ft *FailureTracker) GetRetryAfter(key string) int {
-	count := ft.GetFailureCount(key)
+	return retryAfterForCount(ft.GetFailureCount(key))
+}
+
+// KeyStatus describes the rate-limit state for a single tracked key.
+type KeyStatus struct {
+	Key           string `json:"key"`
+	Failures      int    `json:"failures"`
+	Tier          string `json:"tier"`
+	LastFailure   string `json:"lastFailure"`
+	RetryAfterSec int    `json:"retryAfterSec"`
+}
+
+// TierName returns the human-readable tier for the given failure count.
+func TierName(count int) string {
+	switch {
+	case count >= FailureThresholdHardLock:
+		return "hard-lock"
+	case count >= FailureThresholdSoftLock:
+		return "soft-lock"
+	case count >= FailureThresholdEscalate:
+		return "escalate"
+	default:
+		return "normal"
+	}
+}
+
+// StatusResponse is the JSON shape returned by the admin metrics endpoint.
+type StatusResponse struct {
+	Keys  []KeyStatus `json:"keys"`
+	Total int         `json:"total"`
+}
+
+// Status returns a snapshot of all tracked keys and their current tier.
+func (ft *FailureTracker) Status() StatusResponse {
+	ft.mu.Lock()
+	defer ft.mu.Unlock()
+	keys := make([]KeyStatus, 0, len(ft.failures))
+	for k, rec := range ft.failures {
+		keys = append(keys, KeyStatus{
+			Key:           k,
+			Failures:      rec.Count,
+			Tier:          TierName(rec.Count),
+			LastFailure:   rec.LastAt.UTC().Format(time.RFC3339),
+			RetryAfterSec: retryAfterForCount(rec.Count),
+		})
+	}
+	return StatusResponse{Keys: keys, Total: len(keys)}
+}
+
+// retryAfterForCount returns the Retry-After seconds for a given count without
+// acquiring the lock (used internally by Status which already holds it).
+func retryAfterForCount(count int) int {
 	switch {
 	case count >= FailureThresholdHardLock:
 		return RetryAfterHardLockSec
