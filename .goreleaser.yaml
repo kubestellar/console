@@ -66,6 +66,10 @@ checksum:
   name_template: "checksums.txt"
 
 changelog:
+  # Use GitHub's auto-generated release notes (based on merged PR titles)
+  # instead of raw commit messages. This populates the release body so the
+  # "What's New" modal has content for nightly and weekly releases.
+  use: github
   sort: asc
   filters:
     exclude:
