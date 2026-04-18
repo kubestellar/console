@@ -2500,7 +2500,7 @@ func (s *SQLiteStore) IncrementUserCoins(ctx context.Context, userID string, del
 	committed := false
 	defer func() {
 		if !committed {
-			_, _ = conn.ExecContext(ctx, "ROLLBACK")
+			rollbackConn(conn)
 		}
 	}()
 
@@ -2593,7 +2593,7 @@ func (s *SQLiteStore) ClaimDailyBonus(ctx context.Context, userID string, bonusA
 	committed := false
 	defer func() {
 		if !committed {
-			_, _ = conn.ExecContext(ctx, "ROLLBACK")
+			rollbackConn(conn)
 		}
 	}()
 
@@ -2796,7 +2796,7 @@ func (s *SQLiteStore) AddUserTokenDelta(ctx context.Context, userID string, cate
 	committed := false
 	defer func() {
 		if !committed {
-			_, _ = conn.ExecContext(ctx, "ROLLBACK")
+			rollbackConn(conn)
 		}
 	}()
 
@@ -2907,7 +2907,7 @@ func (s *SQLiteStore) ConsumeOAuthState(ctx context.Context, state string) (bool
 	committed := false
 	defer func() {
 		if !committed {
-			_, _ = conn.ExecContext(ctx, "ROLLBACK")
+			rollbackConn(conn)
 		}
 	}()
 
@@ -3063,4 +3063,21 @@ func (s *SQLiteStore) QueryAuditLogs(ctx context.Context, limit int, userID, act
 		entries = append(entries, e)
 	}
 	return entries, rows.Err()
+}
+
+// rollbackTimeout bounds the time a best-effort ROLLBACK is allowed to run on
+// a pinned connection. Must be long enough for SQLite to release its write
+// lock but short enough to avoid holding the pool when the pool is itself
+// shutting down.
+const rollbackTimeout = 5 * time.Second
+
+// rollbackConn executes ROLLBACK against a pinned connection using a fresh
+// bounded context. Use this from defers in BEGIN IMMEDIATE flows instead of
+// ExecContext(ctx, "ROLLBACK"): if the caller's ctx is already cancelled
+// (client disconnect, request timeout), a rollback on that ctx fails
+// immediately and leaves the transaction zombified on the connection (#8854).
+func rollbackConn(conn *sql.Conn) {
+	ctx, cancel := context.WithTimeout(context.Background(), rollbackTimeout)
+	defer cancel()
+	_, _ = conn.ExecContext(ctx, "ROLLBACK")
 }
