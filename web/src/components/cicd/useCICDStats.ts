@@ -54,6 +54,7 @@ export function useCICDStats(): CICDStatsResult {
         streakKind: 'mixed' as const,
         totalWorkflows: 0,
         openPRs: 0,
+        runsToday: 0,
         isDemo: true,
         matrixDays: 0,
       }
@@ -129,21 +130,12 @@ export function useCICDStats(): CICDStatsResult {
       if (todayCell && todayCell.conclusion !== null) runsToday++
     }
 
-    // --- Open PRs (deduplicate PR numbers from ALL data sources) ---
+    // --- Open PRs (only in-progress/queued runs from flow) ---
     const prNumbers = new Set<string>()
-    // From flow (in-flight runs)
     for (const r of (flow?.runs || [])) {
       if (r.run.pullRequests) {
         for (const pr of r.run.pullRequests) {
           prNumbers.add(`${r.run.repo}#${pr.number}`)
-        }
-      }
-    }
-    // From failures (recent failed runs may reference PRs)
-    for (const r of (failures?.runs || [])) {
-      if (r.pullRequests) {
-        for (const pr of r.pullRequests) {
-          prNumbers.add(`${r.repo}#${pr.number}`)
         }
       }
     }
@@ -193,7 +185,7 @@ export function useCICDStats(): CICDStatsResult {
         return {
           value: computed.openPRs,
           sublabel: computed.openPRs > 0
-            ? 'PRs with active workflows'
+            ? 'PRs with in-progress CI'
             : 'no PRs running CI',
           isDemo: computed.isDemo,
           modeHints: ['sparkline', 'numeric'],
@@ -209,7 +201,7 @@ export function useCICDStats(): CICDStatsResult {
           modeHints: ['numeric', 'heatmap', 'trend'],
         }
 
-      case 'cicd_avg_duration': {
+      case 'cicd_runs_today': {
         return {
           value: computed.runsToday ?? 0,
           sublabel: 'workflows ran today',
