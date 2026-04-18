@@ -74,6 +74,10 @@ import {
   toWordSet,
   findBestDeepLinkMatch,
 } from './missionBrowserDeepLink'
+import {
+  computeActiveFilterCount,
+  filterDirectoryEntries,
+} from './missionBrowserFilterState'
 
 // ============================================================================
 // Types
@@ -920,20 +924,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
   // Filtered directory entries
   // ============================================================================
 
-  const filteredEntries = (() => {
-    let entries = directoryEntries
-
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase()
-      entries = entries.filter(
-        (e) =>
-          e.name.toLowerCase().includes(q) ||
-          e.description?.toLowerCase().includes(q)
-      )
-    }
-
-    return entries
-  })()
+  const filteredEntries = filterDirectoryEntries(directoryEntries, searchQuery)
 
   // ============================================================================
   // Filtered recommendations
@@ -942,18 +933,16 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
   // Compute dynamic facet counts from unfiltered recommendations
   const facetCounts = useMemo(() => computeFacetCounts(recommendations), [recommendations])
 
-  const activeFilterCount = (() => {
-    let count = 0
-    if (minMatchPercent > 0) count++
-    if (categoryFilter !== 'All') count++
-    if (matchSourceFilter !== 'all') count++
-    if (maturityFilter !== 'All') count++
-    if (missionClassFilter !== 'All') count++
-    if (difficultyFilter !== 'All') count++
-    if (selectedTags.size > 0) count++
-    if (cncfFilter) count++
-    return count
-  })()
+  const activeFilterCount = computeActiveFilterCount({
+    minMatchPercent,
+    categoryFilter,
+    matchSourceFilter,
+    maturityFilter,
+    missionClassFilter,
+    difficultyFilter,
+    selectedTags,
+    cncfFilter,
+  })
 
   const clearAllFilters = () => {
     setMinMatchPercent(0)
