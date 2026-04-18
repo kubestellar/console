@@ -7,6 +7,9 @@ import { DASHBOARD_TEMPLATES, TEMPLATE_CATEGORIES, DashboardTemplate } from './t
 import { FOCUS_DELAY_MS } from '../../lib/constants/network'
 import { getIcon } from '../../lib/icons'
 
+/** Stable DOM id for the name-validation error message (aria-describedby target) */
+const NAME_ERROR_ID = 'create-dashboard-name-error'
+
 interface CreateDashboardModalProps {
   isOpen: boolean
   onClose: () => void
@@ -84,7 +87,6 @@ function CreateDashboardModalInner({
   const isNameEmpty = trimmedName.length === 0
   const isCreateDisabled = isCreating || isNameEmpty
   const showNameError = name.length > 0 && isNameEmpty
-  const NAME_ERROR_ID = 'create-dashboard-name-error'
 
   const handleCreate = async () => {
     if (isCreateDisabled) return
