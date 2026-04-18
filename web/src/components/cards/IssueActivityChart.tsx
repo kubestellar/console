@@ -8,7 +8,7 @@
  * Falls back to demo data when in demo mode.
  */
 
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import ReactECharts from 'echarts-for-react'
 import { Calendar, RefreshCw, GitPullRequest } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -56,6 +56,16 @@ const COLOR_PR_MERGED = '#ED7D31'
 const BAR_BORDER_RADIUS: [number, number, number, number] = [3, 3, 0, 0]
 /** Chart minimum height in pixels */
 const CHART_HEIGHT_PX = 320
+/** Slider height in pixels for the dataZoom slider control */
+const DATA_ZOOM_SLIDER_HEIGHT_PX = 20
+/** Slider bottom offset in pixels */
+const DATA_ZOOM_SLIDER_BOTTOM_PX = 5
+/** Full zoom range start percentage */
+const ZOOM_RANGE_START = 0
+/** Full zoom range end percentage */
+const ZOOM_RANGE_END = 100
+/** Percentage threshold for float comparison when detecting custom zoom */
+const ZOOM_EPSILON = 0.01
 /** Default repo to display if none configured */
 const DEFAULT_REPO = 'kubestellar/console'
 /** Available lookback options in days */
@@ -282,6 +292,11 @@ export function IssueActivityChart(props: { config?: IssueActivityConfig }) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isDemoFallback, setIsDemoFallback] = useState(false)
+  const [visibleRange, setVisibleRange] = useState<{ start: number; end: number }>({
+    start: ZOOM_RANGE_START,
+    end: ZOOM_RANGE_END,
+  })
+  const chartRef = useRef<ReactECharts>(null)
 
   const hasData = stats.length > 0
   useCardLoadingState({ isLoading: isLoading && !hasData, hasAnyData: hasData, isDemoData: isDemoMode || isDemoFallback })
@@ -326,13 +341,65 @@ export function IssueActivityChart(props: { config?: IssueActivityConfig }) {
     return () => controller.abort()
   }, [days, loadData])
 
-  // Compute summary stats
-  const summary = useMemo(() => {
-    const totalOpened = (stats || []).reduce((sum, s) => sum + s.opened, 0)
-    const totalClosed = (stats || []).reduce((sum, s) => sum + s.closed, 0)
-    const totalPRsMerged = (stats || []).reduce((sum, s) => sum + s.prsMerged, 0)
-    return { totalOpened, totalClosed, totalPRsMerged }
-  }, [stats])
+  // Compute summary stats from the visible zoom window
+  const visibleStats = useMemo(() => {
+    const safeStats = stats || []
+    const startIdx = Math.floor((visibleRange.start / ZOOM_RANGE_END) * safeStats.length)
+    const endIdx = Math.ceil((visibleRange.end / ZOOM_RANGE_END) * safeStats.length)
+    const slice = safeStats.slice(startIdx, endIdx)
+    const isCustomRange =
+      visibleRange.start > ZOOM_RANGE_START + ZOOM_EPSILON ||
+      visibleRange.end < ZOOM_RANGE_END - ZOOM_EPSILON
+    return {
+      totalOpened: slice.reduce((sum, s) => sum + s.opened, 0),
+      totalClosed: slice.reduce((sum, s) => sum + s.closed, 0),
+      totalPRsMerged: slice.reduce((sum, s) => sum + s.prsMerged, 0),
+      isCustomRange,
+      startDate: slice.length > 0 ? slice[0].date : '',
+      endDate: slice.length > 0 ? slice[slice.length - 1].date : '',
+    }
+  }, [stats, visibleRange])
+
+  /** Handle dataZoom events from scroll/drag/slider interaction */
+  const handleDataZoom = useCallback((params: Record<string, unknown>) => {
+    // ECharts emits batch or single events depending on trigger source
+    const batch = params.batch as Array<{ start?: number; end?: number }> | undefined
+    if (batch && batch.length > 0) {
+      setVisibleRange({
+        start: batch[0].start ?? ZOOM_RANGE_START,
+        end: batch[0].end ?? ZOOM_RANGE_END,
+      })
+    } else {
+      setVisibleRange({
+        start: (params.start as number) ?? ZOOM_RANGE_START,
+        end: (params.end as number) ?? ZOOM_RANGE_END,
+      })
+    }
+  }, [])
+
+  /** ECharts event map for the onEvents prop */
+  const chartEvents = useMemo(() => ({
+    datazoom: handleDataZoom,
+  }), [handleDataZoom])
+
+  /** Reset zoom to full range and update chart programmatically */
+  const resetZoom = useCallback(() => {
+    setVisibleRange({ start: ZOOM_RANGE_START, end: ZOOM_RANGE_END })
+    const instance = chartRef.current?.getEchartsInstance()
+    if (instance) {
+      instance.dispatchAction({
+        type: 'dataZoom',
+        start: ZOOM_RANGE_START,
+        end: ZOOM_RANGE_END,
+      })
+    }
+  }, [])
+
+  /** Handle preset button click — reset zoom then switch days */
+  const handlePresetClick = useCallback((newDays: number) => {
+    resetZoom()
+    setDays(newDays)
+  }, [resetZoom])
 
   // Build ECharts option
   const chartOption = useMemo(() => {
@@ -343,7 +410,7 @@ export function IssueActivityChart(props: { config?: IssueActivityConfig }) {
 
     return {
       backgroundColor: 'transparent',
-      grid: { left: 50, right: 50, top: 40, bottom: 60, containLabel: false },
+      grid: { left: 50, right: 50, top: 40, bottom: 80, containLabel: false },
       legend: {
         data: [
           t('issueActivityChart.opened', 'Opened'),
@@ -450,8 +517,24 @@ export function IssueActivityChart(props: { config?: IssueActivityConfig }) {
       dataZoom: [
         {
           type: 'inside' as const,
-          start: 0,
-          end: 100,
+          start: ZOOM_RANGE_START,
+          end: ZOOM_RANGE_END,
+        },
+        {
+          type: 'slider' as const,
+          start: ZOOM_RANGE_START,
+          end: ZOOM_RANGE_END,
+          height: DATA_ZOOM_SLIDER_HEIGHT_PX,
+          bottom: DATA_ZOOM_SLIDER_BOTTOM_PX,
+          borderColor: '#444',
+          backgroundColor: 'rgba(50,50,50,0.3)',
+          fillerColor: 'rgba(68,114,196,0.15)',
+          handleStyle: { color: '#666' },
+          textStyle: { color: '#888', fontSize: 10 },
+          dataBackground: {
+            lineStyle: { color: '#555' },
+            areaStyle: { color: 'rgba(100,100,100,0.2)' },
+          },
         },
       ],
     }
@@ -478,14 +561,19 @@ export function IssueActivityChart(props: { config?: IssueActivityConfig }) {
           {LOOKBACK_OPTIONS.map(opt => (
             <Button
               key={opt.value}
-              variant={days === opt.value ? 'primary' : 'ghost'}
+              variant={days === opt.value && !visibleStats.isCustomRange ? 'primary' : 'ghost'}
               size="sm"
-              className="h-6 px-2 text-xs"
-              onClick={() => setDays(opt.value)}
+              className={`h-6 px-2 text-xs ${visibleStats.isCustomRange ? 'opacity-50' : ''}`}
+              onClick={() => handlePresetClick(opt.value)}
             >
               {opt.label}
             </Button>
           ))}
+          {visibleStats.isCustomRange && (
+            <span className="text-[10px] text-muted-foreground bg-muted/50 rounded px-1.5 py-0.5">
+              Custom
+            </span>
+          )}
           <Button
             variant="ghost"
             size="sm"
@@ -503,21 +591,29 @@ export function IssueActivityChart(props: { config?: IssueActivityConfig }) {
       </div>
 
       {/* Summary stats */}
+      {visibleStats.isCustomRange && visibleStats.startDate && visibleStats.endDate && (
+        <div className="text-[10px] text-muted-foreground text-center">
+          {t('issueActivityChart.showingRange', 'Showing {{start}} to {{end}}', {
+            start: visibleStats.startDate,
+            end: visibleStats.endDate,
+          })}
+        </div>
+      )}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <div className="rounded-md bg-blue-500/10 border border-blue-500/20 px-3 py-2 text-center">
-          <div className="text-lg font-semibold text-blue-400">{summary.totalOpened}</div>
+          <div className="text-lg font-semibold text-blue-400">{visibleStats.totalOpened}</div>
           <div className="text-[10px] text-muted-foreground uppercase tracking-wide">
             {t('issueActivityChart.opened', 'Opened')}
           </div>
         </div>
         <div className="rounded-md bg-green-500/10 border border-green-500/20 px-3 py-2 text-center">
-          <div className="text-lg font-semibold text-green-400">{summary.totalClosed}</div>
+          <div className="text-lg font-semibold text-green-400">{visibleStats.totalClosed}</div>
           <div className="text-[10px] text-muted-foreground uppercase tracking-wide">
             {t('issueActivityChart.closed', 'Closed')}
           </div>
         </div>
         <div className="rounded-md bg-orange-500/10 border border-orange-500/20 px-3 py-2 text-center">
-          <div className="text-lg font-semibold text-orange-400">{summary.totalPRsMerged}</div>
+          <div className="text-lg font-semibold text-orange-400">{visibleStats.totalPRsMerged}</div>
           <div className="text-[10px] text-muted-foreground uppercase tracking-wide flex items-center justify-center gap-1">
             <GitPullRequest className="h-3 w-3" />
             {t('issueActivityChart.merged', 'Merged')}
@@ -535,10 +631,12 @@ export function IssueActivityChart(props: { config?: IssueActivityConfig }) {
       {/* Chart */}
       <div className="w-full overflow-hidden" style={{ minWidth: 0 }}>
         <ReactECharts
+          ref={chartRef}
           option={chartOption}
           style={{ height: CHART_HEIGHT_PX, width: '100%' }}
           notMerge={true}
           opts={{ renderer: 'svg' }}
+          onEvents={chartEvents}
         />
       </div>
     </div>
