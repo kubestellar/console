@@ -346,6 +346,7 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
               namespace={namespace}
               setNamespace={setNamespace}
               testResult={testResult}
+              resetTestResult={() => setTestResult(null)}
               connectError={connectError}
               showAdvanced={showAdvanced}
               setShowAdvanced={setShowAdvanced}

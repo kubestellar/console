@@ -62,6 +62,7 @@ describe('ConnectTab', () => {
         namespace=""
         setNamespace={vi.fn()}
         testResult={null}
+        resetTestResult={vi.fn()}
         connectError=""
         showAdvanced={false}
         setShowAdvanced={vi.fn()}

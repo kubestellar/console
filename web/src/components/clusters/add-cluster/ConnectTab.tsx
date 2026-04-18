@@ -53,6 +53,7 @@ interface ConnectTabProps {
   namespace: string
   setNamespace: (ns: string) => void
   testResult: { reachable: boolean; serverVersion?: string; error?: string } | null
+  resetTestResult: () => void
   connectError: string
   showAdvanced: boolean
   setShowAdvanced: (show: boolean) => void
@@ -88,6 +89,7 @@ export function ConnectTab({
   namespace,
   setNamespace,
   testResult,
+  resetTestResult,
   connectError,
   showAdvanced,
   setShowAdvanced,
@@ -403,7 +405,7 @@ export function ConnectTab({
 
               <div className="flex items-center justify-between gap-2 pt-1">
                 <button
-                  onClick={() => setConnectStep(2)}
+                  onClick={() => { resetTestResult(); setConnectStep(2) }}
                   className="px-4 py-2 text-sm font-medium rounded-lg bg-secondary text-foreground hover:bg-black/5 dark:hover:bg-white/10 transition-colors border border-border dark:border-white/10"
                 >
                   {t('cluster.connectBack')}
@@ -425,7 +427,8 @@ export function ConnectTab({
                   </button>
                   <button
                     onClick={handleAddCluster}
-                    disabled={connectState === 'adding' || !contextName.trim() || !clusterName.trim()}
+                    disabled={connectState === 'adding' || !contextName.trim() || !clusterName.trim() || testResult?.reachable === false}
+                    title={testResult?.reachable === false ? t('cluster.connectAddDisabledAfterTestFail') : undefined}
                     className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-purple-600 text-white hover:bg-purple-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {connectState === 'adding' ? (

@@ -3016,6 +3016,7 @@
     "connectTestSuccess": "Connected",
     "connectTestFailed": "Connection failed",
     "connectAddButton": "Add Cluster",
+    "connectAddDisabledAfterTestFail": "Connection test failed. Edit connection settings or re-run the test before adding.",
     "connectAdding": "Adding...",
     "connectSuccess": "Cluster added successfully",
     "connectNext": "Next",
