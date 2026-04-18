@@ -38,6 +38,20 @@ export function ImportTab({
 
   const newCount = previewContexts.filter((c) => c.isNew).length
 
+  // Wrap the upload handler to confirm before overwriting existing pasted YAML.
+  // Fixes #8917 — uploading a file used to silently replace pasted content.
+  const handleFileUploadWithConfirm = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (kubeconfigYaml.trim().length > 0) {
+      const confirmed = window.confirm(t('cluster.importOverwriteConfirm'))
+      if (!confirmed) {
+        // Clear the file input so re-selecting the same file still fires onChange next time.
+        if (fileInputRef.current) fileInputRef.current.value = ''
+        return
+      }
+    }
+    handleFileUpload(e)
+  }
+
   return (
     <div className="space-y-4">
       {importState === 'done' ? (
@@ -71,7 +85,7 @@ export function ImportTab({
               ref={fileInputRef}
               type="file"
               accept=".yaml,.yml,.conf,.config"
-              onChange={handleFileUpload}
+              onChange={handleFileUploadWithConfirm}
               className="hidden"
             />
             <button

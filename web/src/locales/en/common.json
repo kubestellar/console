@@ -2981,6 +2981,7 @@
     "addClusterConnectDesc": "Add a cluster by entering connection details manually.",
     "importPaste": "Paste your kubeconfig YAML below, or upload a file:",
     "importUpload": "Upload file",
+    "importOverwriteConfirm": "This will replace the kubeconfig YAML you've already pasted. Continue?",
     "importPreview": "Preview",
     "importPreviewDesc": "The following contexts were found:",
     "importButton": "Import {{count}} Cluster(s)",
