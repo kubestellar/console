@@ -617,17 +617,46 @@ function ProactiveGPUNodeHealthMonitorInternal() {
         </div>
       )}
 
-      {/* Node list */}
-      <div className="flex-1 overflow-auto space-y-1">
-        {paginatedNodes.map(node => {
+      {/* Node list.
+          #8883: roving-tabindex keynav on each node row — Enter/Space
+          toggles expand; ArrowUp/Down move focus between sibling rows;
+          Home/End jump to ends. Container gets role="list". */}
+      <div role="list" className="flex-1 overflow-auto space-y-1">
+        {paginatedNodes.map((node, idx, arr) => {
           const isExpanded = expandedNode === `${node.cluster}/${node.nodeName}`
           const nodeKey = `${node.cluster}/${node.nodeName}`
+          const toggleExpand = () => setExpandedNode(isExpanded ? null : nodeKey)
+          const handleRowKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+            const list = e.currentTarget.closest('[role="list"]')
+            const items = list ? Array.from(list.querySelectorAll<HTMLDivElement>('[data-keynav-item="gpu-node"]')) : []
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              toggleExpand()
+            } else if (e.key === 'ArrowDown' && idx < arr.length - 1) {
+              e.preventDefault()
+              items[idx + 1]?.focus()
+            } else if (e.key === 'ArrowUp' && idx > 0) {
+              e.preventDefault()
+              items[idx - 1]?.focus()
+            } else if (e.key === 'Home') {
+              e.preventDefault()
+              items[0]?.focus()
+            } else if (e.key === 'End') {
+              e.preventDefault()
+              items[items.length - 1]?.focus()
+            }
+          }
           return (
             <div key={nodeKey} className="rounded-lg border border-border bg-secondary overflow-hidden">
               {/* Node row */}
               <div
-                className="group flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-secondary transition-colors"
-                onClick={() => setExpandedNode(isExpanded ? null : nodeKey)}
+                data-keynav-item="gpu-node"
+                role="button"
+                tabIndex={0}
+                aria-expanded={isExpanded}
+                className="group flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-secondary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+                onClick={toggleExpand}
+                onKeyDown={handleRowKeyDown}
               >
                 {isExpanded ? (
                   <ChevronDown className="w-3.5 h-3.5 text-white/30 shrink-0" />

@@ -168,21 +168,51 @@ function OpenCostOverviewInternal({ config: _config }: OpenCostOverviewProps) {
         <p className="text-xl font-bold text-foreground">${totalCost.toLocaleString()}</p>
       </div>
 
-      {/* Namespace costs */}
+      {/* Namespace costs.
+          #8883: roving-tabindex list — Enter/Space activate; ArrowUp/Down
+          traverse siblings; Home/End jump. Container gets role="list" so
+          AT exposes the list semantics. */}
       <div ref={containerRef} className="flex-1 overflow-y-auto space-y-2" style={containerStyle}>
         <p className="text-xs text-muted-foreground font-medium mb-2">Cost by Namespace</p>
-        {filteredCosts.map(ns => (
+        <div role="list" className="space-y-2">
+        {filteredCosts.map((ns, idx, arr) => {
+          const activate = () => drillToCost('all', {
+            namespace: ns.namespace,
+            cpuCost: ns.cpuCost,
+            memCost: ns.memCost,
+            storageCost: ns.storageCost,
+            totalCost: ns.totalCost,
+            source: 'opencost',
+          })
+          const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+            const list = e.currentTarget.parentElement
+            const items = list ? Array.from(list.querySelectorAll<HTMLDivElement>('[data-keynav-item="opencost-ns"]')) : []
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              activate()
+            } else if (e.key === 'ArrowDown' && idx < arr.length - 1) {
+              e.preventDefault()
+              items[idx + 1]?.focus()
+            } else if (e.key === 'ArrowUp' && idx > 0) {
+              e.preventDefault()
+              items[idx - 1]?.focus()
+            } else if (e.key === 'Home') {
+              e.preventDefault()
+              items[0]?.focus()
+            } else if (e.key === 'End') {
+              e.preventDefault()
+              items[items.length - 1]?.focus()
+            }
+          }
+          return (
           <div
             key={ns.namespace}
-            onClick={() => drillToCost('all', {
-              namespace: ns.namespace,
-              cpuCost: ns.cpuCost,
-              memCost: ns.memCost,
-              storageCost: ns.storageCost,
-              totalCost: ns.totalCost,
-              source: 'opencost',
-            })}
-            className="p-2 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group"
+            data-keynav-item="opencost-ns"
+            role="button"
+            tabIndex={0}
+            onClick={activate}
+            onKeyDown={handleKeyDown}
+            className="p-2 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
           >
             <div className="flex flex-wrap items-center justify-between gap-y-2 mb-1.5">
               <div className="flex items-center gap-2">
@@ -212,7 +242,9 @@ function OpenCostOverviewInternal({ config: _config }: OpenCostOverviewProps) {
               <span>Storage: ${ns.storageCost}</span>
             </div>
           </div>
-        ))}
+          )
+        })}
+        </div>
       </div>
 
       {/* Pagination */}

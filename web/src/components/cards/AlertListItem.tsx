@@ -94,11 +94,41 @@ export function AlertListItem({
     return () => document.removeEventListener('mousedown', handler)
   }, [snoozeMenuOpen])
 
+  // #8883: roving-tabindex keyboard navigation. Enter/Space activates the
+  // drill-down; ArrowUp/Down move focus between sibling list items;
+  // Home/End jump to ends. The list container in ActiveAlerts has
+  // role="list" so AT exposes the listitem semantics.
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const list = e.currentTarget.parentElement
+    const items = list ? Array.from(list.querySelectorAll<HTMLDivElement>('[data-keynav-item="alert"]')) : []
+    const idx = items.indexOf(e.currentTarget)
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      onAlertClick(alert)
+    } else if (e.key === 'ArrowDown' && idx >= 0 && idx < items.length - 1) {
+      e.preventDefault()
+      items[idx + 1]?.focus()
+    } else if (e.key === 'ArrowUp' && idx > 0) {
+      e.preventDefault()
+      items[idx - 1]?.focus()
+    } else if (e.key === 'Home') {
+      e.preventDefault()
+      items[0]?.focus()
+    } else if (e.key === 'End') {
+      e.preventDefault()
+      items[items.length - 1]?.focus()
+    }
+  }
+
   return (
     <div
       key={alert.id}
+      data-keynav-item="alert"
+      role="button"
+      tabIndex={0}
       onClick={() => onAlertClick(alert)}
-      className="p-2 rounded-lg bg-secondary/30 border border-border/50 hover:bg-secondary/50 cursor-pointer transition-colors group"
+      onKeyDown={handleKeyDown}
+      className="p-2 rounded-lg bg-secondary/30 border border-border/50 hover:bg-secondary/50 cursor-pointer transition-colors group focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
     >
       <div className="flex items-start gap-2">
         <span className="text-lg">{getSeverityIcon(alert.severity)}</span>
