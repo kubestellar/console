@@ -286,6 +286,12 @@ if [ -z "$FAST_MODE" ]; then
         # Export PLAYWRIGHT_BASE_URL so Playwright configs skip their own webServer
         export PLAYWRIGHT_BASE_URL="http://127.0.0.1:${PREVIEW_PORT}"
 
+        # Per-suite wall-clock cap (seconds). Prevents a single hanging suite
+        # (e.g. benchmark retries against unresponsive external services) from
+        # consuming the entire nightly workflow budget. 5 minutes is generous
+        # for any single Playwright suite; most finish in under 2 minutes.
+        PLAYWRIGHT_SUITE_TIMEOUT_SECS=300
+
         for script in "${PLAYWRIGHT_SCRIPTS[@]}"; do
           SUITE_NAME=$(basename "$script" .sh)
           TOTAL=$((TOTAL + 1))
@@ -302,9 +308,16 @@ if [ -z "$FAST_MODE" ]; then
           SUITE_START=$(date +%s)
           SUITE_OUTPUT="/tmp/suite-${SUITE_NAME}.log"
           SUITE_EXIT=0
-          bash "$script" > "$SUITE_OUTPUT" 2>&1 || SUITE_EXIT=$?
+          timeout "${PLAYWRIGHT_SUITE_TIMEOUT_SECS}" bash "$script" > "$SUITE_OUTPUT" 2>&1 || SUITE_EXIT=$?
           SUITE_END=$(date +%s)
           SUITE_DURATION=$((SUITE_END - SUITE_START))
+
+          # timeout(1) returns 124 when the command is killed by the timer
+          TIMEOUT_EXIT_CODE=124
+          if [ "$SUITE_EXIT" -eq "$TIMEOUT_EXIT_CODE" ]; then
+            echo -e "    ${RED}⏱  TIMEOUT${NC} after ${PLAYWRIGHT_SUITE_TIMEOUT_SECS}s"
+            echo "Suite killed after ${PLAYWRIGHT_SUITE_TIMEOUT_SECS}s wall-clock timeout" >> "$SUITE_OUTPUT"
+          fi
 
           if [ "$SUITE_EXIT" -eq 0 ]; then
             echo -e "    ${GREEN}✓ PASS${NC}  (${SUITE_DURATION}s)"

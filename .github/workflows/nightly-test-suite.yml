@@ -24,17 +24,16 @@ jobs:
       issues: write
     if: github.repository == 'kubestellar/console'
     runs-on: ubuntu-latest
-    # The suite bundles 13 Playwright specs after the Go and security tests.
-    # One of them (benchmark-dashboard, which hits live Google Drive + GitHub
-    # Actions + Netlify functions) had been burning 20+ minutes on retry
-    # storms and pushing the total over 90m, cancelling three nights in a row
-    # (run 24439970651, plus two earlier runs on 2026-04-13 and 04-14).
-    # 120m covers the worst case with headroom;
-    # the per-test timeout in benchmarks.config.ts is also being cut from 5m
-    # to 2m in the same PR, which should actually bring total runtime back
-    # under 90m — the 120m bump is belt-and-suspenders in case one of the
-    # other Playwright specs inherits a similar pattern.
-    timeout-minutes: 120
+    # Three layers prevent benchmark retry storms from blowing the budget:
+    #   1. benchmarks.config.ts: retries=0, per-test timeout=60s (was 120s)
+    #   2. run-all-tests.sh: per-suite wall-clock cap of 5m via timeout(1)
+    #   3. This workflow-level backstop at 90m
+    # Previously the workflow ran at 120m with no per-suite cap, and benchmark
+    # specs retrying against live Google Drive / GitHub Actions / Netlify
+    # pushed total runtime past 90m on three consecutive nights (2026-04-13
+    # through 04-15). With per-suite caps the total should stay under 60m;
+    # 90m provides headroom without masking real hangs.
+    timeout-minutes: 90
     steps:
       - name: Checkout
         uses: actions/checkout@v4
