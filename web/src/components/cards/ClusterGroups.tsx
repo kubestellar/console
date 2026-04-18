@@ -314,8 +314,8 @@ function DroppableGroup({ group, isExpanded, clusterHealthMap, onToggle, onEdit,
         <div className={cn('w-2 h-2 rounded-full', color.dot)} />
 
         {/* Group name + dynamic badge */}
-        <span className={cn('text-sm font-medium flex-1 flex items-center gap-1.5', color.text)}>
-          {group.name}
+        <span className={cn('text-sm font-medium flex-1 min-w-0 flex items-center gap-1.5', color.text)}>
+          <span className="truncate">{group.name}</span>
           {isDynamic && (
             <StatusBadge color="purple" size="xs" variant="outline" rounded="full" icon={<Zap className="w-2.5 h-2.5" />}>
               {t('cards:clusterGroups.dynamic')}
@@ -324,7 +324,7 @@ function DroppableGroup({ group, isExpanded, clusterHealthMap, onToggle, onEdit,
         </span>
 
         {/* Compact cluster badges */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 shrink-0">
           {group.clusters.slice(0, MAX_INLINE_BADGES).map(cluster => (
             <div
               key={cluster}
@@ -343,7 +343,7 @@ function DroppableGroup({ group, isExpanded, clusterHealthMap, onToggle, onEdit,
         </div>
 
         {/* Cluster count + health */}
-        <span className="text-2xs text-muted-foreground">
+        <span className="text-2xs text-muted-foreground whitespace-nowrap shrink-0">
           {healthyCount}/{group.clusters.length} {t('common:common.healthy').toLowerCase()}
         </span>
 
