@@ -12,21 +12,15 @@ import type {
   DynamicCardDefinition_T1,
   DynamicCardColumn } from '../../lib/dynamic-cards/types'
 import { registerDynamicCardType } from '../cards/cardRegistry'
-import { AiGenerationPanel } from './AiGenerationPanel'
 import { LivePreviewPanel } from './LivePreviewPanel'
 import { InlineAIAssist } from './InlineAIAssist'
-import { CARD_T1_SYSTEM_PROMPT, CARD_T2_SYSTEM_PROMPT, CARD_INLINE_ASSIST_PROMPT, CODE_INLINE_ASSIST_PROMPT } from '../../lib/ai/prompts'
+import { CARD_INLINE_ASSIST_PROMPT, CODE_INLINE_ASSIST_PROMPT } from '../../lib/ai/prompts'
 import { generateSampleData } from '../../lib/ai/sampleData'
 import { wrapAbbreviations } from '../shared/TechnicalAcronym'
 import { T1_TEMPLATES, type T1Template } from './cardFactoryTemplates'
-import { TemplateDropdown, T1Preview, T2Preview } from './cardFactoryPreviews'
+import { TemplateDropdown } from './cardFactoryPreviews'
 import { FieldSuggestChips } from './FieldSuggestChips'
-import {
-  validateT1Result,
-  validateT2Result,
-  type AiCardT1Result,
-  type AiCardT2Result,
-  type AiMode } from './cardFactoryAiTypes'
+import { AiCardTab } from './cardFactoryAiTab'
 import {
   validateT1AssistResult,
   validateT2AssistResult,
@@ -1234,123 +1228,5 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
       </BaseModal.Content>
       {confirmDialog}
     </BaseModal>
-  )
-}
-
-// ============================================================================
-// AI Create Tab
-// ============================================================================
-
-function AiCardTab({ onCardCreated }: { onCardCreated: (id: string) => void }) {
-  const [aiMode, setAiMode] = useState<AiMode>('tier1')
-
-  const handleSaveT1 = (result: AiCardT1Result) => {
-    const id = `dynamic_${Date.now()}`
-    const now = new Date().toISOString()
-
-    const cardDef: DynamicCardDefinition_T1 = {
-      dataSource: 'static',
-      staticData: result.staticData || [],
-      columns: result.columns,
-      layout: result.layout || 'list',
-      searchFields: result.searchFields || result.columns.map(c => c.field),
-      defaultLimit: result.defaultLimit || 5 }
-
-    const def: DynamicCardDefinition = {
-      id,
-      title: result.title,
-      tier: 'tier1',
-      description: result.description || undefined,
-      defaultWidth: result.defaultWidth || 6,
-      createdAt: now,
-      updatedAt: now,
-      cardDefinition: cardDef }
-
-    saveDynamicCard(def)
-    registerDynamicCardType(id, result.defaultWidth || 6)
-    onCardCreated(id)
-  }
-
-  const handleSaveT2 = async (result: AiCardT2Result) => {
-    const compileResult = await compileCardCode(result.sourceCode)
-    if (compileResult.error) {
-      throw new Error(`Compile error: ${compileResult.error}`)
-    }
-
-    const id = `dynamic_${Date.now()}`
-    const now = new Date().toISOString()
-
-    const def: DynamicCardDefinition = {
-      id,
-      title: result.title,
-      tier: 'tier2',
-      description: result.description || undefined,
-      defaultWidth: result.defaultWidth || 6,
-      createdAt: now,
-      updatedAt: now,
-      sourceCode: result.sourceCode,
-      compiledCode: compileResult.code! }
-
-    saveDynamicCard(def)
-    registerDynamicCardType(id, result.defaultWidth || 6)
-    onCardCreated(id)
-  }
-
-  return (
-    <div className="space-y-4">
-      {/* Mode toggle */}
-      <div>
-        <label className="text-xs text-muted-foreground block mb-1">Card Type</label>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setAiMode('tier1')}
-            className={cn(
-              'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors',
-              aiMode === 'tier1'
-                ? 'bg-blue-500/20 text-blue-400'
-                : 'bg-secondary text-muted-foreground hover:text-foreground',
-            )}
-          >
-            <Layers className="w-3 h-3" />
-            Declarative (table/list)
-          </button>
-          <button
-            onClick={() => setAiMode('tier2')}
-            className={cn(
-              'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors',
-              aiMode === 'tier2'
-                ? 'bg-purple-500/20 text-purple-400'
-                : 'bg-secondary text-muted-foreground hover:text-foreground',
-            )}
-          >
-            <Code className="w-3 h-3" />
-            Custom Code (React)
-          </button>
-        </div>
-      </div>
-
-      {/* AI Generation Panel */}
-      {aiMode === 'tier1' ? (
-        <AiGenerationPanel<AiCardT1Result>
-          systemPrompt={CARD_T1_SYSTEM_PROMPT}
-          placeholder="Describe the card you want, e.g., 'A card showing deployment status across clusters with name, namespace, replicas, and status columns'"
-          missionTitle="AI Card Generation (Declarative)"
-          validateResult={validateT1Result}
-          renderPreview={(result) => <T1Preview result={result} />}
-          onSave={handleSaveT1}
-          saveLabel="Create Declarative Card"
-        />
-      ) : (
-        <AiGenerationPanel<AiCardT2Result>
-          systemPrompt={CARD_T2_SYSTEM_PROMPT}
-          placeholder="Describe the card you want, e.g., 'A card with animated donut chart showing cluster health percentages with color-coded segments'"
-          missionTitle="AI Card Generation (Custom Code)"
-          validateResult={validateT2Result}
-          renderPreview={(result) => <T2Preview result={result} />}
-          onSave={handleSaveT2}
-          saveLabel="Create Custom Code Card"
-        />
-      )}
-    </div>
   )
 }
