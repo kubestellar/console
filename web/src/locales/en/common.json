@@ -411,6 +411,16 @@
         "quietHoursDesc": "Suppress desktop notifications during a recurring daily window.",
         "quietHoursDontNotifyBetween": "Don't notify between",
         "quietHoursAnd": "and"
+      },
+      "pagerduty": {
+        "title": "PagerDuty",
+        "routingKey": "Integration / Routing Key",
+        "routingKeyHint": "Find this under Services > Integrations > Events API v2 in PagerDuty",
+        "routingKeyRequired": "PagerDuty routing key is required",
+        "testing": "Testing...",
+        "testNotification": "Test PagerDuty",
+        "testSuccess": "Test notification sent and resolved successfully",
+        "testFailed": "Failed to send test notification"
       }
     },
     "persistence": {

@@ -28,7 +28,7 @@ export function PagerDutyNotificationSettings({
 
   const handleTestPagerDuty = async () => {
     if (!config.pagerdutyRoutingKey) {
-      setTestResult({ type: 'pagerduty', success: false, message: 'PagerDuty routing key is required' })
+      setTestResult({ type: 'pagerduty', success: false, message: t('settings.notifications.pagerduty.routingKeyRequired') })
       return
     }
 
@@ -37,12 +37,12 @@ export function PagerDutyNotificationSettings({
       await testNotification('pagerduty', {
         pagerdutyRoutingKey: config.pagerdutyRoutingKey,
       })
-      setTestResult({ type: 'pagerduty', success: true, message: 'Test notification sent and resolved successfully' })
+      setTestResult({ type: 'pagerduty', success: true, message: t('settings.notifications.pagerduty.testSuccess') })
     } catch (error) {
       setTestResult({
         type: 'pagerduty',
         success: false,
-        message: error instanceof Error ? error.message : 'Failed to send test notification',
+        message: error instanceof Error ? error.message : t('settings.notifications.pagerduty.testFailed'),
       })
     }
   }
@@ -75,7 +75,7 @@ export function PagerDutyNotificationSettings({
         disabled={isLoading}
         className="px-4 py-2 text-sm rounded-lg bg-purple-500 text-white hover:bg-purple-600 transition-colors disabled:opacity-50"
       >
-        {isLoading ? 'Testing...' : t('settings.notifications.pagerduty.testNotification', 'Test PagerDuty')}
+        {isLoading ? t('settings.notifications.pagerduty.testing') : t('settings.notifications.pagerduty.testNotification', 'Test PagerDuty')}
       </button>
 
       {testResult && testResult.type === 'pagerduty' && (
