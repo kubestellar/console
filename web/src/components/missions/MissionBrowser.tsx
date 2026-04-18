@@ -63,6 +63,12 @@ import {
   loadWatchedPaths,
   saveWatchedPaths,
 } from './missionBrowserConstants'
+import {
+  filterInstallers,
+  filterFixers,
+  computeFacetCounts,
+  filterRecommendations,
+} from './missionBrowserFilters'
 
 // ============================================================================
 // Types
@@ -515,42 +521,16 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
     if (value && searchQuery) setSearchQuery('')
   }
 
-  // AND search: each space-separated term must match somewhere in the mission
-  const andMatch = (text: string, query: string) => {
-    const terms = query.toLowerCase().split(/\s+/).filter(Boolean)
-    const lower = text.toLowerCase()
-    return terms.every(term => lower.includes(term))
-  }
+  const filteredInstallers = filterInstallers(installerMissions, {
+    categoryFilter: installerCategoryFilter,
+    maturityFilter: installerMaturityFilter,
+    search: effectiveInstallerSearch,
+  })
 
-  const matchesMission = (m: MissionExport, query: string) => {
-    const haystack = [m.title || '', m.description || '', ...(m.tags || [])].join(' ')
-    return andMatch(haystack, query)
-  }
-
-  const filteredInstallers = (() => {
-    let list = installerMissions
-    if (installerCategoryFilter !== 'All') {
-      list = list.filter(m => m.category === installerCategoryFilter)
-    }
-    if (installerMaturityFilter !== 'All') {
-      list = list.filter(m => m.tags?.includes(installerMaturityFilter))
-    }
-    if (effectiveInstallerSearch) {
-      list = list.filter(m => matchesMission(m, effectiveInstallerSearch))
-    }
-    return list
-  })()
-
-  const filteredFixers = (() => {
-    let list = fixerMissions
-    if (fixerTypeFilter !== 'All') {
-      list = list.filter(m => m.type === fixerTypeFilter.toLowerCase())
-    }
-    if (effectiveFixerSearch) {
-      list = list.filter(m => matchesMission(m, effectiveFixerSearch))
-    }
-    return list
-  })()
+  const filteredFixers = filterFixers(fixerMissions, {
+    typeFilter: fixerTypeFilter,
+    search: effectiveFixerSearch,
+  })
 
   // ============================================================================
   // Tree expansion & lazy loading
@@ -1009,35 +989,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
   // ============================================================================
 
   // Compute dynamic facet counts from unfiltered recommendations
-  const facetCounts = useMemo(() => {
-    const tags = new Map<string, number>()
-    const maturity = new Map<string, number>()
-    const difficulty = new Map<string, number>()
-    const missionClass = new Map<string, number>()
-    let clusterMatched = 0
-    let community = 0
-
-    for (const r of recommendations) {
-      if (r.score > 1) clusterMatched++
-      else community++
-      const mat = r.mission.metadata?.maturity || 'unknown'
-      maturity.set(mat, (maturity.get(mat) || 0) + 1)
-      const diff = r.mission.difficulty || 'unspecified'
-      difficulty.set(diff, (difficulty.get(diff) || 0) + 1)
-      const cls = r.mission.missionClass || 'unspecified'
-      missionClass.set(cls, (missionClass.get(cls) || 0) + 1)
-      for (const tag of (r.mission.tags || [])) {
-        const t = tag.toLowerCase()
-        tags.set(t, (tags.get(t) || 0) + 1)
-      }
-    }
-    const topTags = [...tags.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 12)
-      .map(([tag, count]: [string, number]) => ({ tag, count }))
-
-    return { clusterMatched, community, maturity, difficulty, missionClass, topTags }
-  }, [recommendations])
+  const facetCounts = useMemo(() => computeFacetCounts(recommendations), [recommendations])
 
   const activeFilterCount = (() => {
     let count = 0
@@ -1064,62 +1016,20 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
     setSearchQuery('')
   }
 
-  const filteredRecommendations = useMemo(() => {
-    let recs = recommendations
-
-    if (minMatchPercent > 0) {
-      recs = recs.filter((r) => r.matchPercent >= minMatchPercent)
-    }
-
-    if (matchSourceFilter === 'cluster') {
-      recs = recs.filter((r) => r.score > 1)
-    } else if (matchSourceFilter === 'community') {
-      recs = recs.filter((r) => r.score <= 1)
-    }
-
-    if (categoryFilter !== 'All') {
-      recs = recs.filter(
-        (r) => (r.mission.type || '').toLowerCase() === categoryFilter.toLowerCase()
-      )
-    }
-
-    if (maturityFilter !== 'All') {
-      recs = recs.filter((r) => (r.mission.metadata?.maturity || 'unknown').toLowerCase() === maturityFilter.toLowerCase())
-    }
-
-    if (missionClassFilter !== 'All') {
-      recs = recs.filter((r) => (r.mission.missionClass || 'unspecified').toLowerCase() === missionClassFilter.toLowerCase())
-    }
-
-    if (difficultyFilter !== 'All') {
-      recs = recs.filter((r) => (r.mission.difficulty || 'unspecified').toLowerCase() === difficultyFilter.toLowerCase())
-    }
-
-    if (selectedTags.size > 0) {
-      recs = recs.filter((r) =>
-        (r.mission.tags || []).some((tag) => selectedTags.has(tag.toLowerCase()))
-      )
-    }
-
-    if (cncfFilter) {
-      const q = cncfFilter.toLowerCase()
-      recs = recs.filter(
-        (r) => r.mission.cncfProject?.toLowerCase().includes(q)
-      )
-    }
-
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase()
-      recs = recs.filter(
-        (r) =>
-          (r.mission.title || '').toLowerCase().includes(q) ||
-          (r.mission.description || '').toLowerCase().includes(q) ||
-          (r.mission.tags || []).some((tag) => tag.toLowerCase().includes(q))
-      )
-    }
-
-    return recs
-  }, [recommendations, categoryFilter, cncfFilter, searchQuery, minMatchPercent, matchSourceFilter, maturityFilter, missionClassFilter, difficultyFilter, selectedTags])
+  const filteredRecommendations = useMemo(
+    () => filterRecommendations(recommendations, {
+      minMatchPercent,
+      matchSourceFilter,
+      categoryFilter,
+      maturityFilter,
+      missionClassFilter,
+      difficultyFilter,
+      selectedTags,
+      cncfFilter,
+      searchQuery,
+    }),
+    [recommendations, categoryFilter, cncfFilter, searchQuery, minMatchPercent, matchSourceFilter, maturityFilter, missionClassFilter, difficultyFilter, selectedTags],
+  )
 
   // ============================================================================
   // Keyboard
