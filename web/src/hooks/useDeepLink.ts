@@ -31,7 +31,7 @@ export type DeepLinkDrilldown =
   | 'deployment'
   | 'namespace'
 
-interface DeepLinkParams {
+export interface DeepLinkParams {
   drilldown?: DeepLinkDrilldown
   action?: DeepLinkAction
   card?: string

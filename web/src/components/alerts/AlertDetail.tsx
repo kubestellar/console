@@ -162,6 +162,19 @@ export function AlertDetail({ alert, onClose }: AlertDetailProps) {
               >
                 {alert.status === 'firing' ? 'FIRING' : 'RESOLVED'}
               </span>
+              {/* Signal type classification badge (#8750) */}
+              {alert.signalType && alert.signalType !== 'state' && (
+                <span
+                  className={`px-2 py-0.5 text-xs rounded ${
+                    alert.signalType === 'acknowledged'
+                      ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
+                      : 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
+                  }`}
+                  title={t(`settings.notifications.signalTypes.${alert.signalType}Description`)}
+                >
+                  {t(`settings.notifications.signalTypes.${alert.signalType}`)}
+                </span>
+              )}
             </div>
           </div>
         </div>

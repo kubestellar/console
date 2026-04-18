@@ -32,17 +32,29 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const toastCounter = useRef(0)
   // Auto-dismiss duration for transient toast notifications
   const TOAST_AUTO_DISMISS_MS = 3_000
+  /** Cooldown (ms) after a toast is dismissed before the same message+type can appear again.
+   *  Prevents rapid-fire re-creation of identical toasts (#8751). */
+  const TOAST_DEDUP_COOLDOWN_MS = 2_000
+  /** Tracks recently dismissed toast keys (message+type) with their dismissal timestamp
+   *  to enforce the dedup cooldown window (#8751). */
+  const recentlyDismissedRef = useRef<Map<string, number>>(new Map())
+
   const showToast = useCallback((message: string, type: ToastType = 'success') => {
+    const dedupKey = `${type}::${message}`
     const id = `toast-${Date.now()}-${++toastCounter.current}`
     setToasts((prev) => {
       // Deduplicate: skip if an identical message+type is already visible
       if (prev.some(t => t.message === message && t.type === type)) return prev
+      // Also skip if the same toast was recently dismissed (cooldown dedup)
+      const lastDismissed = recentlyDismissedRef.current.get(dedupKey)
+      if (lastDismissed && (Date.now() - lastDismissed) < TOAST_DEDUP_COOLDOWN_MS) return prev
       return [...prev, { id, message, type }]
     })
 
     // Auto-remove after TOAST_AUTO_DISMISS_MS (timeout is harmless if toast was deduplicated)
     const timeoutId = window.setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id))
+      recentlyDismissedRef.current.set(dedupKey, Date.now())
       if (timeoutsRef.current.has(id)) {
         timeoutsRef.current.delete(id)
       }
@@ -51,7 +63,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const removeToast = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id))
+    setToasts((prev) => {
+      // Track the dismissed toast's dedup key so it respects cooldown (#8751)
+      const toast = prev.find(t => t.id === id)
+      if (toast) {
+        recentlyDismissedRef.current.set(`${toast.type}::${toast.message}`, Date.now())
+      }
+      return prev.filter((t) => t.id !== id)
+    })
     // Clear timeout if manually removed
     const timeoutId = timeoutsRef.current.get(id)
     if (timeoutId) {

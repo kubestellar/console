@@ -20,6 +20,18 @@ export type AlertSeverity = 'critical' | 'warning' | 'info'
 // Alert status
 export type AlertStatus = 'firing' | 'resolved'
 
+/**
+ * Signal classification for alerts (#8750).
+ *
+ * - `state`        Persistent system condition (e.g. "6 alerts firing").
+ *                  Displayed in the alerts card/page. Stays until resolved.
+ * - `notification` Transient user-facing event (toast, browser push).
+ *                  Fires once per dedup window; not persisted in alert list.
+ * - `acknowledged` User has explicitly seen/dismissed the signal.
+ *                  Removes from active count but keeps in history.
+ */
+export type AlertSignalType = 'state' | 'notification' | 'acknowledged'
+
 // Alert channel types
 export type AlertChannelType = 'browser' | 'slack' | 'webhook' | 'pagerduty' | 'opsgenie'
 
@@ -93,6 +105,8 @@ export interface Alert {
   acknowledgedBy?: string
   aiDiagnosis?: AlertAIDiagnosis
   isDemo?: boolean // True if alert was generated during demo mode
+  /** Signal classification — see AlertSignalType. Defaults to 'state'. */
+  signalType?: AlertSignalType
 }
 
 // Slack webhook configuration

@@ -14,7 +14,7 @@ import { STORAGE_KEY_AUTH_TOKEN, FETCH_DEFAULT_TIMEOUT_MS, STORAGE_KEY_NOTIFIED_
 import { safeGet, safeSet, safeRemove, safeGetJSON } from '../lib/safeLocalStorage'
 import { INITIAL_FETCH_DELAY_MS, POLL_INTERVAL_SLOW_MS, SECONDARY_FETCH_DELAY_MS, NIGHTLY_E2E_POLL_INTERVAL_MS } from '../lib/constants/network'
 import { PRESET_ALERT_RULES } from '../types/alerts'
-import { sendNotificationWithDeepLink } from '../hooks/useDeepLink'
+import { sendNotificationWithDeepLink, type DeepLinkParams } from '../hooks/useDeepLink'
 import { findRunbookForCondition } from '../lib/runbooks/builtins'
 import { executeRunbook } from '../lib/runbooks/executor'
 
@@ -260,6 +260,69 @@ function getNotificationCooldown(severity: string): number {
  *  These fire only once and suppress until the cluster recovers —
  *  no 5-minute cooldown repeat for ongoing connectivity failures. */
 const PERSISTENT_CLUSTER_CONDITIONS = new Set(['certificate_error', 'cluster_unreachable'])
+
+// ── Centralized Browser Notification Dispatcher (#8750, #8751, #8752) ───
+//
+// All evaluators previously had inline dedup-check + sendNotificationWithDeepLink
+// logic with subtle inconsistencies:
+//   - Some used cooldown-based repeat, others used one-shot "fire once"
+//   - Persistent condition detection was duplicated in each evaluator
+//   - The dedup key format varied per evaluator
+//
+// This centralized helper unifies the rules:
+//   1. Check if the rule has a `browser` channel enabled
+//   2. Compute the dedup key using the standard `alertDedupKey`
+//   3. For persistent conditions: notify once, suppress until recovery
+//   4. For transient conditions: notify once per cooldown window (severity-tiered)
+//   5. Record the dedup key + timestamp for future checks
+
+/** Parameters for the centralized browser notification dispatcher */
+interface BrowserNotificationParams {
+  /** The alert rule that triggered this notification */
+  rule: AlertRule
+  /** The notification dedup key (from alertDedupKey or custom) */
+  dedupKey: string
+  /** The notification title */
+  title: string
+  /** The notification body text */
+  body: string
+  /** Deep link parameters for click-through navigation */
+  deepLinkParams: DeepLinkParams
+}
+
+/**
+ * Dispatch a browser notification with centralized dedup rules.
+ *
+ * This replaces the 6 inline dedup-check patterns that were scattered
+ * across individual evaluators, each with slightly different logic.
+ *
+ * @returns true if the notification was sent, false if suppressed by dedup
+ */
+function shouldDispatchBrowserNotification(
+  rule: AlertRule,
+  dedupKey: string,
+  notifiedKeys: Map<string, number>
+): boolean {
+  // Gate: rule must have an enabled browser channel
+  const hasBrowserChannel = (rule.channels || []).some(
+    ch => ch.type === 'browser' && ch.enabled
+  )
+  if (!hasBrowserChannel) return false
+
+  const isPersistent = PERSISTENT_CLUSTER_CONDITIONS.has(rule.condition.type)
+  const alreadyNotified = notifiedKeys.has(dedupKey)
+
+  if (isPersistent) {
+    // Persistent conditions: notify exactly once, suppress until recovery
+    // clears the dedup key (see evaluateCertificateError/evaluateClusterUnreachable)
+    return !alreadyNotified
+  }
+
+  // Transient conditions: use severity-tiered cooldown
+  if (!alreadyNotified) return true
+  const lastNotified = notifiedKeys.get(dedupKey) ?? 0
+  return (Date.now() - lastNotified) > getNotificationCooldown(rule.severity)
+}
 
 /**
  * When a cluster is unreachable we cannot observe its node / disk / memory
@@ -685,24 +748,24 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
     return deduplicateAlerts(acked, rules)
   }, [alerts, rules])
 
-  // Acknowledge an alert
+  // Acknowledge an alert — transitions signalType from 'state' to 'acknowledged' (#8750)
   const acknowledgeAlert = (alertId: string, acknowledgedBy?: string) => {
     setAlerts(prev =>
       prev.map(alert =>
         alert.id === alertId
-          ? { ...alert, acknowledgedAt: new Date().toISOString(), acknowledgedBy }
+          ? { ...alert, acknowledgedAt: new Date().toISOString(), acknowledgedBy, signalType: 'acknowledged' as const }
           : alert
       )
     )
   }
 
-  // Acknowledge multiple alerts at once
+  // Acknowledge multiple alerts at once — transitions signalType to 'acknowledged' (#8750)
   const acknowledgeAlerts = (alertIds: string[], acknowledgedBy?: string) => {
     const now = new Date().toISOString()
     setAlerts(prev =>
       prev.map(alert =>
         alertIds.includes(alert.id)
-          ? { ...alert, acknowledgedAt: now, acknowledgedBy }
+          ? { ...alert, acknowledgedAt: now, acknowledgedBy, signalType: 'acknowledged' as const }
           : alert
       )
     )
@@ -805,7 +868,8 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
             resource,
             resourceKind,
             firedAt: new Date().toISOString(),
-            isDemo: isDemoMode }
+            isDemo: isDemoMode,
+            signalType: 'state' }
           acc.mutations.push({ type: 'create', rule, alert })
 
           // Queue notification for after the flush
@@ -847,7 +911,8 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
         resource,
         resourceKind,
         firedAt,
-        isDemo: isDemoMode }
+        isDemo: isDemoMode,
+        signalType: 'state' }
 
       setAlerts(prev => {
         const existingAlert = prev.find(
@@ -1001,6 +1066,21 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
       // Silent failure - notifications are best-effort
     }
   }
+
+  // ── Centralized browser notification dispatch (#8750, #8751, #8752) ──
+  // Replaces 6 inline dedup-check + sendNotificationWithDeepLink patterns
+  // that had inconsistent logic across evaluators.
+  const dispatchBrowserNotification = useCallback(
+    (params: BrowserNotificationParams) => {
+      const { rule, dedupKey, title, body, deepLinkParams } = params
+      if (!shouldDispatchBrowserNotification(rule, dedupKey, notifiedAlertKeysRef.current)) {
+        return
+      }
+      setNotifiedKey(dedupKey, Date.now())
+      sendNotificationWithDeepLink(title, body, deepLinkParams)
+    },
+    [setNotifiedKey]
+  )
 
   // #7341 — Track in-flight diagnosis requests to prevent duplicate missions
   const diagnosisInFlightRef = useRef<Set<string>>(new Set())
@@ -1352,23 +1432,18 @@ Please provide:
             'Node'
           )
 
-          // Send browser notification only once per alert (not on every evaluation cycle)
-          const notifKey = alertDedupKey(rule.id, rule.condition.type, cluster.name)
-          if (
-            rule.channels?.some(ch => ch.type === 'browser' && ch.enabled) &&
-            (!notifiedAlertKeysRef.current.has(notifKey) || (Date.now() - (notifiedAlertKeysRef.current.get(notifKey) ?? 0)) > getNotificationCooldown(rule.severity))
-          ) {
-            setNotifiedKey(notifKey, Date.now())
-            const firstNode = failedNodes[0]
-            sendNotificationWithDeepLink(
-              `GPU Health Alert: ${cluster.name}`,
-              `${totalIssues} issue(s) on ${failedNodes.length} GPU node(s)`,
-              {
-                drilldown: 'node',
-                cluster: cluster.name,
-                node: firstNode.nodeName }
-            )
-          }
+          // Browser notification via centralized dispatcher (#8751)
+          const firstNode = failedNodes[0]
+          dispatchBrowserNotification({
+            rule,
+            dedupKey: alertDedupKey(rule.id, rule.condition.type, cluster.name),
+            title: `GPU Health Alert: ${cluster.name}`,
+            body: `${totalIssues} issue(s) on ${failedNodes.length} GPU node(s)`,
+            deepLinkParams: {
+              drilldown: 'node',
+              cluster: cluster.name,
+              node: firstNode.nodeName },
+          })
         } else {
           // Auto-resolve if all nodes are healthy
           queueAutoResolve(rule.id, cluster.name)
@@ -1413,23 +1488,16 @@ Please provide:
             'Cluster'
           )
 
-          // Send browser notification only once per alert (not on every evaluation cycle).
-          // notifiedAlertKeysRef tracks which (ruleId, cluster) combos already sent a notification.
-          const notifKey = alertDedupKey(rule.id, rule.condition.type, cluster.name)
-          if (
-            rule.channels?.some(ch => ch.type === 'browser' && ch.enabled) &&
-            (!notifiedAlertKeysRef.current.has(notifKey) || (Date.now() - (notifiedAlertKeysRef.current.get(notifKey) ?? 0)) > getNotificationCooldown(rule.severity))
-          ) {
-            setNotifiedKey(notifKey, Date.now())
-            sendNotificationWithDeepLink(
-              `Disk Pressure: ${cluster.name}`,
-              diskPressureIssue,
-              // Deep link to the affected node drilldown (not cluster_health card)
-              affectedNode
-                ? { drilldown: 'node', cluster: cluster.name, node: affectedNode, issue: 'DiskPressure' }
-                : { drilldown: 'cluster', cluster: cluster.name, issue: 'DiskPressure' }
-            )
-          }
+          // Browser notification via centralized dispatcher (#8751)
+          dispatchBrowserNotification({
+            rule,
+            dedupKey: alertDedupKey(rule.id, rule.condition.type, cluster.name),
+            title: `Disk Pressure: ${cluster.name}`,
+            body: diskPressureIssue,
+            deepLinkParams: affectedNode
+              ? { drilldown: 'node', cluster: cluster.name, node: affectedNode, issue: 'DiskPressure' }
+              : { drilldown: 'cluster', cluster: cluster.name, issue: 'DiskPressure' },
+          })
         } else {
           // Auto-resolve if DiskPressure clears — also clear the notification dedup key
           queueAutoResolve(rule.id, cluster.name)
@@ -1510,18 +1578,14 @@ Please provide:
           'Pod'
         )
 
-        const notifKey = alertDedupKey(rule.id, rule.condition.type, cluster)
-        if (
-          rule.channels?.some(ch => ch.type === 'browser' && ch.enabled) &&
-          (!notifiedAlertKeysRef.current.has(notifKey) || (Date.now() - (notifiedAlertKeysRef.current.get(notifKey) ?? 0)) > getNotificationCooldown(rule.severity))
-        ) {
-          setNotifiedKey(notifKey, Date.now())
-          sendNotificationWithDeepLink(
-            `DNS Failure: ${cluster}`,
-            `${pods.length} CoreDNS pod(s) unhealthy — ${issues || 'check pod status'}`,
-            { drilldown: 'pod', cluster, namespace: pods[0].namespace, pod: pods[0].name }
-          )
-        }
+        // Browser notification via centralized dispatcher (#8751)
+        dispatchBrowserNotification({
+          rule,
+          dedupKey: alertDedupKey(rule.id, rule.condition.type, cluster),
+          title: `DNS Failure: ${cluster}`,
+          body: `${pods.length} CoreDNS pod(s) unhealthy — ${issues || 'check pod status'}`,
+          deepLinkParams: { drilldown: 'pod', cluster, namespace: pods[0].namespace, pod: pods[0].name },
+        })
       }
 
       // Auto-resolve clusters that no longer have DNS issues
@@ -1557,27 +1621,18 @@ Please provide:
             'Cluster'
           )
 
-          const notifKey = alertDedupKey(rule.id, rule.condition.type, cluster.name)
-          const isPersistent = PERSISTENT_CLUSTER_CONDITIONS.has(rule.condition.type)
-          const alreadyNotified = notifiedAlertKeysRef.current.has(notifKey)
-          const cooldownExpired = !alreadyNotified || (Date.now() - (notifiedAlertKeysRef.current.get(notifKey) ?? 0)) > getNotificationCooldown(rule.severity)
-          // Persistent cluster errors: notify once, suppress until recovery.
-          // Transient alerts: use the standard 5-minute cooldown.
-          const shouldNotify = isPersistent ? !alreadyNotified : cooldownExpired
-          if (
-            rule.channels?.some(ch => ch.type === 'browser' && ch.enabled) && shouldNotify
-          ) {
-            setNotifiedKey(notifKey, Date.now())
-            sendNotificationWithDeepLink(
-              `Certificate Error: ${cluster.name}`,
-              cluster.errorMessage || 'TLS certificate validation failed',
-              { drilldown: 'cluster', cluster: cluster.name, issue: 'certificate' }
-            )
-          }
+          // Browser notification via centralized dispatcher (#8751)
+          // Persistent conditions are handled uniformly by shouldDispatchBrowserNotification
+          dispatchBrowserNotification({
+            rule,
+            dedupKey: alertDedupKey(rule.id, rule.condition.type, cluster.name),
+            title: `Certificate Error: ${cluster.name}`,
+            body: cluster.errorMessage || 'TLS certificate validation failed',
+            deepLinkParams: { drilldown: 'cluster', cluster: cluster.name, issue: 'certificate' },
+          })
         } else {
           // Auto-resolve if cert error clears — also clear dedup so next failure re-notifies
-          const notifKey = alertDedupKey(rule.id, rule.condition.type, cluster.name)
-          deleteNotifiedKey(notifKey)
+          deleteNotifiedKey(alertDedupKey(rule.id, rule.condition.type, cluster.name))
           queueAutoResolve(rule.id, cluster.name)
         }
       }
@@ -1612,25 +1667,17 @@ Please provide:
             'Cluster'
           )
 
-          const notifKey = alertDedupKey(rule.id, rule.condition.type, cluster.name)
-          const isPersistent = PERSISTENT_CLUSTER_CONDITIONS.has(rule.condition.type)
-          const alreadyNotified = notifiedAlertKeysRef.current.has(notifKey)
-          const cooldownExpired = !alreadyNotified || (Date.now() - (notifiedAlertKeysRef.current.get(notifKey) ?? 0)) > getNotificationCooldown(rule.severity)
-          const shouldNotify = isPersistent ? !alreadyNotified : cooldownExpired
-          if (
-            rule.channels?.some(ch => ch.type === 'browser' && ch.enabled) && shouldNotify
-          ) {
-            setNotifiedKey(notifKey, Date.now())
-            sendNotificationWithDeepLink(
-              `Cluster Unreachable: ${cluster.name}`,
-              `${errorLabel}${cluster.lastSeen ? ` — last seen ${cluster.lastSeen}` : ''}`,
-              { drilldown: 'cluster', cluster: cluster.name, issue: 'unreachable' }
-            )
-          }
+          // Browser notification via centralized dispatcher (#8751)
+          dispatchBrowserNotification({
+            rule,
+            dedupKey: alertDedupKey(rule.id, rule.condition.type, cluster.name),
+            title: `Cluster Unreachable: ${cluster.name}`,
+            body: `${errorLabel}${cluster.lastSeen ? ` — last seen ${cluster.lastSeen}` : ''}`,
+            deepLinkParams: { drilldown: 'cluster', cluster: cluster.name, issue: 'unreachable' },
+          })
         } else if (cluster.reachable !== false) {
           // Auto-resolve when cluster becomes reachable — clear dedup so next failure re-notifies
-          const notifKey = alertDedupKey(rule.id, rule.condition.type, cluster.name)
-          deleteNotifiedKey(notifKey)
+          deleteNotifiedKey(alertDedupKey(rule.id, rule.condition.type, cluster.name))
           queueAutoResolve(rule.id, cluster.name)
         }
       }
@@ -1682,19 +1729,14 @@ Please provide:
             'WorkflowRun'
           )
 
-          // Send browser notification only once per failed run (not on every evaluation cycle)
-          const notifKey = `${rule.id}::${guide.acronym}::${run.runNumber}`
-          if (
-            rule.channels?.some(ch => ch.type === 'browser' && ch.enabled) &&
-            (!notifiedAlertKeysRef.current.has(notifKey) || (Date.now() - (notifiedAlertKeysRef.current.get(notifKey) ?? 0)) > getNotificationCooldown(rule.severity))
-          ) {
-            setNotifiedKey(notifKey, Date.now())
-            sendNotificationWithDeepLink(
-              `Nightly E2E Failed: ${guide.acronym} (${guide.platform})`,
-              `Run #${run.runNumber} failed — ${guide.guide}`,
-              { card: 'nightly_e2e_status' }
-            )
-          }
+          // Browser notification via centralized dispatcher (#8751)
+          dispatchBrowserNotification({
+            rule,
+            dedupKey: `${rule.id}::${guide.acronym}::${run.runNumber}`,
+            title: `Nightly E2E Failed: ${guide.acronym} (${guide.platform})`,
+            body: `Run #${run.runNumber} failed — ${guide.guide}`,
+            deepLinkParams: { card: 'nightly_e2e_status' },
+          })
         }
       }
 

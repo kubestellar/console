@@ -351,6 +351,15 @@
       "title": "Alert Notifications",
       "subtitle": "Configure notification channels",
       "description": "Configure notification channels for alert delivery. Alerts will be sent to all enabled channels.",
+      "signalTypes": {
+        "state": "Persistent State",
+        "stateDescription": "Ongoing system condition — stays until resolved",
+        "notification": "Transient Notification",
+        "notificationDescription": "One-time user-facing event (toast or browser push)",
+        "acknowledged": "Acknowledged",
+        "acknowledgedDescription": "User has seen and dismissed this signal"
+      },
+      "dedupSuppressed": "Notification suppressed (duplicate within cooldown window)",
       "slack": {
         "title": "Slack Integration",
         "webhookUrl": "Webhook URL *",
