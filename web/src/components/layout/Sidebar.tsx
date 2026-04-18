@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback, lazy, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
-import { Plus, ChevronLeft, ChevronRight, CheckCircle2, AlertTriangle, WifiOff, GripVertical, X, User, Pin, PinOff, Satellite } from 'lucide-react'
+import { Plus, ChevronLeft, ChevronRight, CheckCircle2, AlertTriangle, WifiOff, GripVertical, X, User, Pin, PinOff, Satellite, Loader2 } from 'lucide-react'
 import { iconRegistry } from '../../lib/icons'
 import { cn } from '../../lib/cn'
 import { Tooltip } from '../ui/Tooltip'
@@ -21,6 +21,7 @@ import { DASHBOARD_CONFIGS } from '../../config/dashboards/index'
 import { emitSidebarNavigated, emitDashboardRenamed } from '../../lib/analytics'
 import { prefetchDashboard } from '../../lib/prefetchDashboard'
 import { useVersionCheck } from '../../hooks/useVersionCheck'
+import { useUpgradeState } from '../../hooks/useUpgradeState'
 import { STORAGE_KEY_GROUND_CONTROL_DASHBOARDS } from '../../lib/constants/storage'
 import { safeGetJSON } from '../../lib/utils/localStorage'
 
@@ -66,6 +67,8 @@ export function Sidebar() {
   const { isFullScreen: isMissionFullScreen } = useMissions()
   const { viewerCount, hasError: viewersError, isLoading: viewersLoading } = useActiveUsers()
   const { hasUpdate, channel, latestMainSHA } = useVersionCheck()
+  const upgradeState = useUpgradeState()
+  const isUpgrading = upgradeState.phase === 'triggering' || upgradeState.phase === 'restarting'
   const { t } = useTranslation()
   const navigate = useNavigate()
   const location = useLocation()
@@ -584,14 +587,27 @@ export function Sidebar() {
                 {__COMMIT_HASH__.substring(0, 7)}
               </span>
             </div>
-            {/* Developer mode: warn when running an older commit */}
+            {/* Developer mode: warn when running an older commit, or show upgrade progress */}
             {channel === 'developer' && hasUpdate && (
               <div
-                className="flex items-center gap-1 text-2xs text-yellow-400/80"
-                title={`Behind main — latest: ${latestMainSHA?.substring(0, 7) ?? 'unknown'}`}
+                className={cn(
+                  'flex items-center gap-1 text-2xs',
+                  isUpgrading ? 'text-cyan-400/80' : 'text-yellow-400/80',
+                )}
+                title={isUpgrading
+                  ? t('update.upgrading', 'Upgrading...')
+                  : `Behind main — latest: ${latestMainSHA?.substring(0, 7) ?? 'unknown'}`}
               >
-                <AlertTriangle className="w-3 h-3" />
-                <span>{t('sidebar.behindMain', 'Behind main')}</span>
+                {isUpgrading ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <AlertTriangle className="w-3 h-3" />
+                )}
+                <span>
+                  {isUpgrading
+                    ? t('update.upgrading', 'Upgrading...')
+                    : t('sidebar.behindMain', 'Behind main')}
+                </span>
               </div>
             )}
           </div>

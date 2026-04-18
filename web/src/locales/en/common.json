@@ -1894,7 +1894,10 @@
   },
   "update": {
     "available": "Update Available",
-    "availableTag": "Update available: {{tag}}"
+    "availableTag": "Update available: {{tag}}",
+    "upgrading": "Upgrading...",
+    "upgradeComplete": "Upgrade complete — reloading...",
+    "upgradeFailed": "Upgrade failed"
   },
   "drilldown": {
     "goBack": "Go back",

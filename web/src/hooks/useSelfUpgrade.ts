@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import type { SelfUpgradeStatus } from '../types/updates'
 import { STORAGE_KEY_TOKEN } from '../lib/constants'
+import { setUpgradeState } from '../lib/upgradeState'
 
 /** Timeout for self-upgrade API calls (ms) */
 const SELF_UPGRADE_TIMEOUT_MS = 15_000
@@ -82,6 +83,7 @@ export function useSelfUpgrade() {
     setRestartComplete(false)
     setRestartError(null)
     setRestartElapsed(0)
+    setUpgradeState({ phase: 'restarting' })
 
     const controller = new AbortController()
     pollAbortRef.current = controller
@@ -106,6 +108,7 @@ export function useSelfUpgrade() {
         if (tickIntervalRef.current) { clearInterval(tickIntervalRef.current); tickIntervalRef.current = null }
         setIsRestarting(false)
         setRestartError('The console did not come back within the expected time. Try refreshing manually.')
+        setUpgradeState({ phase: 'error', errorMessage: 'The console did not come back within the expected time.' })
         return
       }
 
@@ -118,6 +121,7 @@ export function useSelfUpgrade() {
             if (tickIntervalRef.current) { clearInterval(tickIntervalRef.current); tickIntervalRef.current = null }
             setIsRestarting(false)
             setRestartComplete(true)
+            setUpgradeState({ phase: 'complete' })
             // Auto-reload after a brief pause so the user sees the success state
             setTimeout(() => window.location.reload(), RELOAD_DELAY_MS)
           }
@@ -139,6 +143,7 @@ export function useSelfUpgrade() {
   const triggerUpgrade = async (imageTag: string): Promise<{ success: boolean; error?: string }> => {
     setIsTriggering(true)
     setTriggerError(null)
+    setUpgradeState({ phase: 'triggering' })
     try {
       const token = getToken()
       const resp = await fetch('/api/self-upgrade/trigger', {
@@ -158,6 +163,7 @@ export function useSelfUpgrade() {
       const errorMsg = data.error ?? `Server returned ${resp.status}`
       setTriggerError(errorMsg)
       setIsTriggering(false)
+      setUpgradeState({ phase: 'error', errorMessage: errorMsg })
       return { success: false, error: errorMsg }
     } catch (err) {
       // If the trigger request itself fails (connection lost mid-request),
@@ -170,6 +176,7 @@ export function useSelfUpgrade() {
       }
       setTriggerError(msg)
       setIsTriggering(false)
+      setUpgradeState({ phase: 'error', errorMessage: msg })
       return { success: false, error: msg }
     }
   }
