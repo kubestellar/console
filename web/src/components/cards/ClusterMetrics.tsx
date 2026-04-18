@@ -330,8 +330,8 @@ export function ClusterMetrics() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header with metric value and selector */}
-      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2">
+      {/* Header with metric value and selector — @container responsive */}
+      <div className="flex flex-wrap @lg:flex-nowrap items-center justify-between gap-y-2 mb-2">
         <div>
           <h4 className="text-sm font-medium text-foreground">{config.label}</h4>
           <p className="text-2xl font-bold text-foreground">
@@ -355,8 +355,9 @@ export function ClusterMetrics() {
         </div>
       </div>
 
-      {/* Controls - single row: Cluster count → Time Range → Cluster Filter → Chart Mode → Refresh */}
-      <div className="flex items-center gap-2 mb-3">
+      {/* Controls - single row at wide widths, wraps at narrow.
+           Uses @container queries to respond to card width */}
+      <div className="flex flex-wrap @lg:flex-nowrap items-center gap-2 mb-3">
         {/* Cluster count indicator */}
         {localClusterFilter.length > 0 && (
           <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">

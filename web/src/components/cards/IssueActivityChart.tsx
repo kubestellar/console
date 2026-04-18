@@ -551,8 +551,8 @@ export function IssueActivityChart(props: { config?: IssueActivityConfig }) {
 
   return (
     <div className="p-4 space-y-3">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      {/* Header — @container responsive */}
+      <div className="flex flex-wrap @lg:flex-nowrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Calendar className="h-4 w-4 text-muted-foreground" />
           <RepoSubtitle repo={repo} />
@@ -590,7 +590,7 @@ export function IssueActivityChart(props: { config?: IssueActivityConfig }) {
         </div>
       </div>
 
-      {/* Summary stats */}
+      {/* Summary stats — @container responsive grid */}
       {visibleStats.isCustomRange && visibleStats.startDate && visibleStats.endDate && (
         <div className="text-[10px] text-muted-foreground text-center">
           {t('issueActivityChart.showingRange', 'Showing {{start}} to {{end}}', {
@@ -599,7 +599,7 @@ export function IssueActivityChart(props: { config?: IssueActivityConfig }) {
           })}
         </div>
       )}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 @md:grid-cols-3 gap-3">
         <div className="rounded-md bg-blue-500/10 border border-blue-500/20 px-3 py-2 text-center">
           <div className="text-lg font-semibold text-blue-400">{visibleStats.totalOpened}</div>
           <div className="text-[10px] text-muted-foreground uppercase tracking-wide">

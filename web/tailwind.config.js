@@ -1,3 +1,5 @@
+import containerQueries from '@tailwindcss/container-queries'
+
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
@@ -18,6 +20,22 @@ export default {
   ],
   theme: {
     extend: {
+      /**
+       * Container query breakpoint tokens for card-width-responsive layouts.
+       * Cards use @container queries instead of viewport breakpoints so they
+       * respond to their own width (which shrinks when panels expand).
+       *
+       * @xs  (<300px)  — stack vertically, hide non-essential controls
+       * @sm  (300px+)  — two-row wrapped layout
+       * @md  (450px+)  — relaxed wrapping
+       * @lg  (600px+)  — single-row layout (full width)
+       */
+      containers: {
+        xs: '300px',
+        sm: '300px',
+        md: '450px',
+        lg: '600px',
+      },
       fontSize: {
         '2xs': ['10px', { lineHeight: '14px' }],
       },
@@ -145,5 +163,5 @@ export default {
       },
     },
   },
-  plugins: [],
+  plugins: [containerQueries],
 }

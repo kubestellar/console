@@ -225,14 +225,14 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
 
   return (
     <div className="h-full flex flex-col content-loaded">
-      {/* Controls */}
-      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
+      {/* Controls — @container responsive */}
+      <div className="flex flex-wrap @lg:flex-nowrap items-center justify-between gap-y-2 mb-3">
         {summary.failed > 0 ? (
           <StatusBadge color="red">
             {t('gpuWorkloads.failedCount', { count: summary.failed })}
           </StatusBadge>
         ) : <div />}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 @xs:flex-wrap">
           {/* Cluster count indicator */}
           {filters.localClusterFilter.length > 0 && (
             <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
@@ -272,8 +272,8 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
         placeholder={t('gpuWorkloads.searchPlaceholder')}
       />
 
-      {/* Summary stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+      {/* Summary stats — @container responsive grid */}
+      <div className="grid grid-cols-2 @md:grid-cols-4 gap-2 mb-3">
         <div className="p-2 rounded-lg bg-secondary/30 text-center" title={t('gpuWorkloads.totalGPUWorkloads', { count: summary.total })}>
           <p className="text-lg font-bold text-foreground">{summary.total}</p>
           <p className="text-xs text-muted-foreground">{t('common:common.total')}</p>

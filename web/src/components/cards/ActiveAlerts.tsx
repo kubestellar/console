@@ -228,9 +228,10 @@ export function ActiveAlerts() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header with controls */}
-      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 flex-shrink-0">
-        <div className="flex items-center gap-2">
+      {/* Header with controls — uses @container queries so layout
+           responds to card width, not viewport width */}
+      <div className="flex flex-wrap @lg:flex-nowrap items-center justify-between gap-y-2 mb-2 flex-shrink-0">
+        <div className="flex items-center gap-2 @xs:flex-wrap">
           {stats.firing > 0 && (
             <StatusBadge color="red" variant="outline" rounded="full">
               {t('activeAlerts.firingCount', { count: stats.firing })}
@@ -289,7 +290,7 @@ export function ActiveAlerts() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 @xs:flex-wrap">
           {/* 1. Ack'd toggle */}
           <button
             onClick={() => setShowAcknowledged(!showAcknowledged)}

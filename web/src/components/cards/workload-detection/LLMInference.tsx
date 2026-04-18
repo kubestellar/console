@@ -162,9 +162,9 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
 
   return (
     <div className="h-full flex flex-col min-h-card">
-      {/* Header controls */}
-      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
-        <div className="flex items-center gap-2">
+      {/* Header controls — @container responsive */}
+      <div className="flex flex-wrap @lg:flex-nowrap items-center justify-between gap-y-2 mb-4">
+        <div className="flex items-center gap-2 @xs:flex-wrap">
           <RefreshIndicator
             isRefreshing={isRefreshing}
             lastUpdated={lastRefresh ? new Date(lastRefresh) : null}
@@ -188,7 +188,7 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
             {items.filter(s => s.status === 'running').length} running
           </StatusBadge>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 @xs:flex-wrap">
           {/* Component type filter */}
           <div ref={componentFilterRef} className="relative">
             <button

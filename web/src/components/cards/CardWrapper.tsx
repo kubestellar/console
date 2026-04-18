@@ -1336,6 +1336,12 @@ export function CardWrapper({
             {/* Content - hidden when collapsed, lazy loaded when visible or expanded */}
             {!isCollapsed && (
               <div className="flex-1 p-4 overflow-auto scroll-enhanced min-h-0 flex flex-col">
+                {/* Container query boundary — cards use @container breakpoints
+                    instead of viewport breakpoints so layouts respond to actual
+                    card width (which shrinks when side panels expand).
+                    Must be INSIDE overflow-auto (CSS spec: container-type and
+                    overflow conflict on the same element). */}
+                <div className="@container flex-1 flex flex-col min-h-0" style={{ containerType: 'inline-size' }}>
                 {(isVisible || isExpanded) ? (
                   <>
                     {/* Show skeleton overlay when loading with no cached data */}
@@ -1449,6 +1455,7 @@ export function CardWrapper({
                   // This provides visual continuity instead of a tiny pulse loader
                   <CardSkeleton type={effectiveSkeletonType} rows={skeletonRows || 3} showHeader={false} />
                 )}
+                </div>{/* Close @container query boundary */}
               </div>
             )}
 
