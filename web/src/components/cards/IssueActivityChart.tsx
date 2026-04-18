@@ -218,10 +218,17 @@ async function fetchAllPages(
   return allItems
 }
 
+/**
+ * Fetch issue stats incrementally — shows partial data as each API call
+ * completes instead of waiting for everything to finish. The `onPartial`
+ * callback is called after issues are fetched (before PRs), so the chart
+ * renders immediately with opened/closed counts while PR data loads.
+ */
 async function fetchIssueStats(
   repo: string,
   days: number,
   signal?: AbortSignal,
+  onPartial?: (stats: DailyStats[]) => void,
 ): Promise<DailyStats[]> {
   const endDate = new Date()
   const startDate = new Date(endDate.getTime() - days * MS_PER_DAY)
@@ -235,6 +242,27 @@ async function fetchIssueStats(
     signal,
   )
 
+  // Build partial stats from issues only — show chart immediately
+  const dateRange = generateDateRange(startDate, endDate)
+  const partialMap = new Map<string, DailyStats>()
+  for (const date of dateRange) {
+    partialMap.set(date, { date, opened: 0, closed: 0, prsMerged: 0 })
+  }
+  for (const issue of issues) {
+    if ((issue as Record<string, unknown>).pull_request) continue
+    const createdDate = toDateString(new Date(issue.created_at as string))
+    const entry = partialMap.get(createdDate)
+    if (entry) entry.opened++
+    if (issue.state === 'closed' && issue.closed_at) {
+      const closedDate = toDateString(new Date(issue.closed_at as string))
+      const closedEntry = partialMap.get(closedDate)
+      if (closedEntry) closedEntry.closed++
+    }
+  }
+  if (onPartial && !signal?.aborted) {
+    onPartial(dateRange.map(d => partialMap.get(d)!).filter(Boolean))
+  }
+
   // Fetch merged PRs (closed PRs that have merged_at). The pulls endpoint
   // doesn't support `since=`, so we rely on the fetchAllPages stop bound
   // to end pagination once we see PRs updated before the window (#8303).
@@ -244,28 +272,8 @@ async function fetchIssueStats(
     signal,
   )
 
-  // Build a map of date -> stats
-  const dateRange = generateDateRange(startDate, endDate)
-  const statsMap = new Map<string, DailyStats>()
-  for (const date of dateRange) {
-    statsMap.set(date, { date, opened: 0, closed: 0, prsMerged: 0 })
-  }
-
-  // Count issues opened and closed per day
-  for (const issue of issues) {
-    // Skip pull requests included in issues endpoint
-    if ((issue as Record<string, unknown>).pull_request) continue
-
-    const createdDate = toDateString(new Date(issue.created_at as string))
-    const entry = statsMap.get(createdDate)
-    if (entry) entry.opened++
-
-    if (issue.state === 'closed' && issue.closed_at) {
-      const closedDate = toDateString(new Date(issue.closed_at as string))
-      const closedEntry = statsMap.get(closedDate)
-      if (closedEntry) closedEntry.closed++
-    }
-  }
+  // Reuse the partial map (already has issues data) — just add PR merges
+  const statsMap = partialMap
 
   // Count PRs merged per day
   for (const pr of closedPRs) {
@@ -318,7 +326,14 @@ export function IssueActivityChart(props: { config?: IssueActivityConfig }) {
     setIsLoading(true)
     setError(null)
     try {
-      const data = await fetchIssueStats(repo, lookbackDays, signal)
+      const data = await fetchIssueStats(repo, lookbackDays, signal, (partial) => {
+        // Show issues data immediately while PRs are still loading
+        if (!signal?.aborted) {
+          setStats(partial)
+          setIsLoading(false)
+          setIsDemoFallback(false)
+        }
+      })
       if (signal?.aborted) return
       setStats(data)
       setIsDemoFallback(false)
@@ -327,9 +342,16 @@ export function IssueActivityChart(props: { config?: IssueActivityConfig }) {
       if (signal?.aborted) return
       const message = err instanceof Error ? err.message : 'Failed to fetch issue data'
       setError(message)
-      // Fall back to demo data on error
-      setIsDemoFallback(true)
-      setStats(generateDemoData(lookbackDays))
+      // If we already have partial data (issues loaded, PRs failed), keep it.
+      // Only fall back to demo data if we have nothing at all.
+      setStats((prev) => {
+        if (prev.length > 0 && prev.some(d => d.opened > 0 || d.closed > 0)) {
+          // Keep partial real data — PRs column will just be zero
+          return prev
+        }
+        setIsDemoFallback(true)
+        return generateDemoData(lookbackDays)
+      })
     } finally {
       if (!signal?.aborted) setIsLoading(false)
     }
