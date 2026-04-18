@@ -21,6 +21,12 @@ import { useAIMode } from '../../hooks/useAIMode'
 import { StatusBadge } from '../ui/StatusBadge'
 import { wrapAbbreviations } from '../shared/TechnicalAcronym'
 import { T1_TEMPLATES, type T1Template } from './cardFactoryTemplates'
+import {
+  validateT1Result,
+  validateT2Result,
+  type AiCardT1Result,
+  type AiCardT2Result,
+  type AiMode } from './cardFactoryAiTypes'
 
 interface CardFactoryModalProps {
   isOpen: boolean
@@ -1366,43 +1372,6 @@ function TemplateDropdown<T extends { name: string }>({
 // ============================================================================
 // AI Create Tab
 // ============================================================================
-
-interface AiCardT1Result {
-  title: string
-  description: string
-  layout: 'list' | 'stats' | 'stats-and-list'
-  defaultWidth: number
-  defaultLimit: number
-  columns: DynamicCardColumn[]
-  searchFields: string[]
-  staticData: Record<string, unknown>[]
-}
-
-interface AiCardT2Result {
-  title: string
-  description: string
-  defaultWidth: number
-  sourceCode: string
-}
-
-type AiMode = 'tier1' | 'tier2'
-
-function validateT1Result(data: unknown): { valid: true; result: AiCardT1Result } | { valid: false; error: string } {
-  const obj = data as Record<string, unknown>
-  if (!obj.title || typeof obj.title !== 'string') return { valid: false, error: 'Missing or invalid "title"' }
-  if (!obj.columns || !Array.isArray(obj.columns)) return { valid: false, error: 'Missing or invalid "columns" array' }
-  if (!['list', 'stats', 'stats-and-list'].includes(obj.layout as string)) {
-    (obj as Record<string, unknown>).layout = 'list' // default
-  }
-  return { valid: true, result: obj as unknown as AiCardT1Result }
-}
-
-function validateT2Result(data: unknown): { valid: true; result: AiCardT2Result } | { valid: false; error: string } {
-  const obj = data as Record<string, unknown>
-  if (!obj.title || typeof obj.title !== 'string') return { valid: false, error: 'Missing or invalid "title"' }
-  if (!obj.sourceCode || typeof obj.sourceCode !== 'string') return { valid: false, error: 'Missing or invalid "sourceCode"' }
-  return { valid: true, result: obj as unknown as AiCardT2Result }
-}
 
 function T1Preview({ result }: { result: AiCardT1Result }) {
   return (
