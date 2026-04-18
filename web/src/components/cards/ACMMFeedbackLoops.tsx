@@ -14,7 +14,7 @@ import { useACMM } from '../acmm/ACMMProvider'
 import { useMissions } from '../../hooks/useMissions'
 import { ALL_CRITERIA, SOURCES_BY_ID } from '../../lib/acmm/sources'
 import type { Criterion, SourceId } from '../../lib/acmm/sources/types'
-import { detectionLabel, singleCriterionPrompt, levelCompletionPrompt } from '../../lib/acmm/missionPrompts'
+import { detectionLabel, singleCriterionPrompt, levelCompletionPrompt, cumulativeLevelUpPrompt } from '../../lib/acmm/missionPrompts'
 import { emitACMMMissionLaunched, emitACMMLevelMissionLaunched } from '../../lib/analytics'
 
 type StatusFilter = 'all' | 'detected' | 'missing'
@@ -201,6 +201,33 @@ export function ACMMFeedbackLoops() {
   )
   const missingForNext = missingForNextList.length
 
+  /** Cumulative missing criteria for each level boundary (L2 through L6).
+   *  E.g. cumulativeMissing[3] = all undetected criteria from L1+L2+L3.
+   *  Used by the section break "Level up" buttons. */
+  const cumulativeMissing = useMemo(() => {
+    const result: Record<number, Criterion[]> = {}
+    for (let targetLevel = 2; targetLevel <= MAX_MATURITY_LEVEL; targetLevel++) {
+      result[targetLevel] = ALL_CRITERIA.filter(
+        (c) => c.source === 'acmm' && c.level != null && c.level <= targetLevel && !detectedIds.has(c.id),
+      )
+    }
+    return result
+  }, [detectedIds])
+
+  /** Launch a cumulative level-up mission for all missing criteria L1..targetLevel. */
+  function launchCumulativeLevelUp(targetLevel: number) {
+    const missing = cumulativeMissing[targetLevel] || []
+    if (missing.length === 0) return
+    emitACMMLevelMissionLaunched(repo, targetLevel, missing.length)
+    startMission({
+      title: `Reach ACMM L${targetLevel} for ${repo}`,
+      description: `Add ${missing.length} missing criteria (L1-L${targetLevel}) to ${repo}`,
+      type: 'custom',
+      initialPrompt: cumulativeLevelUpPrompt(missing, targetLevel, repo),
+      context: { repo, targetLevel, criterionIds: missing.map((c) => c.id) },
+    })
+  }
+
   function launchLevelCompletion() {
     if (missingForNextList.length === 0) return
     emitACMMLevelMissionLaunched(repo, nextLevel, missingForNextList.length)
@@ -307,6 +334,61 @@ export function ACMMFeedbackLoops() {
               {CROSS_CUTTING_LABELS[c.crossCutting]}
             </div>
           ) : null
+
+          // Level-break divider: in "by-level" view, insert a "Level up
+          // to L{N}" CTA between the last item of level N-1 and the
+          // first item of level N. The previous item's level determines
+          // the boundary — if it differs from the current item's level
+          // and both have levels, we're crossing a boundary.
+          const prevLevel = idx > 0 ? (filtered[idx - 1].level ?? 0) : 0
+          const curLevel = c.level ?? 0
+          const showLevelBreak = viewMode === 'by-level' && curLevel > prevLevel && prevLevel > 0 && curLevel >= 2
+          /** Whether this level-break button is actionable. Only the
+           *  immediate next level above earned is active; higher levels
+           *  are "locked" until the preceding one is completed. */
+          const levelBreakActive = curLevel <= earnedLevel + 1 || locksOverridden
+          const levelBreakMissing = (cumulativeMissing[curLevel] || []).length
+          const levelBreak = showLevelBreak ? (
+            <div
+              key={`level-break-${curLevel}`}
+              className={`flex items-center gap-3 py-2.5 px-4 my-1 rounded-md border-y transition-colors ${
+                levelBreakActive
+                  ? 'bg-gradient-to-r from-purple-500/10 to-transparent border-purple-500/20'
+                  : 'bg-gradient-to-r from-muted/10 to-transparent border-border/20 opacity-50'
+              }`}
+            >
+              <div className="flex-1 min-w-0">
+                <span className={`text-sm font-medium ${levelBreakActive ? 'text-foreground' : 'text-muted-foreground'}`}>
+                  Reach Level {curLevel}
+                </span>
+                {levelBreakMissing > 0 && (
+                  <span className="text-xs text-muted-foreground ml-2">
+                    {levelBreakMissing} {levelBreakMissing === 1 ? 'criterion' : 'criteria'} to go
+                  </span>
+                )}
+              </div>
+              {levelBreakActive ? (
+                <button
+                  type="button"
+                  onClick={() => launchCumulativeLevelUp(curLevel)}
+                  disabled={levelBreakMissing === 0}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 rounded-md transition-colors disabled:opacity-50 disabled:cursor-default"
+                  title={levelBreakMissing > 0
+                    ? `Launch a mission to implement all ${levelBreakMissing} missing criteria through L${curLevel}`
+                    : `All criteria through L${curLevel} are already detected`}
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  {levelBreakMissing > 0 ? 'Level up' : 'Complete'}
+                </button>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 text-xs text-muted-foreground">
+                  <Lock className="w-3.5 h-3.5" />
+                  Complete L{curLevel - 1} first
+                </span>
+              )}
+            </div>
+          ) : null
+
           const detected = detectedIds.has(c.id)
           const isExpanded = expandedId === c.id
           // Lock criteria above earnedLevel until the user finishes their
@@ -317,7 +399,7 @@ export function ACMMFeedbackLoops() {
           const isLocked = !locksOverridden && !!c.level && c.level > earnedLevel + 1
           const isLockPromptOpen = lockPromptId === c.id
           return (
-            <>{dimHeader}<div
+            <>{dimHeader}{levelBreak}<div
               key={c.id}
               className={`rounded-md transition-colors ${
                 isLocked ? 'bg-muted/10 hover:bg-muted/20 opacity-60' : 'bg-muted/20 hover:bg-muted/40'

@@ -83,6 +83,30 @@ When all items are done, run build and lint to verify no regressions, then ask:
   2. "Should I make adjustments first?"`
 }
 
+/** Mission prompt for reaching a target ACMM level by implementing
+ *  ALL missing criteria from L1 through that level — the cumulative
+ *  "level up" flow used by the section break buttons in the Feedback
+ *  Loops Inventory. */
+export function cumulativeLevelUpPrompt(criteria: Criterion[], targetLevel: number, repo: string): string {
+  const list = criteria
+    .map((c, i) => `${i + 1}. [L${c.level}] ${c.name} (${SOURCE_LABELS[c.source]}) — detection: ${detectionLabel(c.detection)}`)
+    .join('\n')
+  return `Reach ACMM Level ${targetLevel} for ${repo} by implementing all missing criteria from L1 through L${targetLevel}:
+
+${list}
+
+Why this matters: completing all criteria through L${targetLevel} earns the L${targetLevel} badge on the ACMM dashboard and the README badge.
+
+For each item:
+1. Check whether an equivalent artifact already exists (don't duplicate).
+2. If truly missing, add the minimum change that matches the detection pattern.
+3. After each item, briefly confirm what was added.
+
+When all items are done, run build and lint to verify no regressions, then ask:
+  1. "Should I push and open a PR with all changes?"
+  2. "Should I make adjustments first?"`
+}
+
 /** Mission prompt for finishing all missing criteria at a given ACMM
  *  level — the gamification "complete this level to unlock the next"
  *  flow. Used by the sticky footer in the Feedback Loops Inventory. */
