@@ -211,41 +211,67 @@ func (mh *MetricsHistory) captureSnapshot() error {
 	// Get pod issues and GPU nodes from all clusters.
 	// If ListClusters fails, skip GPU metrics entirely instead of saving
 	// a zeroed snapshot that masks the error (#7016).
+	// Per-cluster fan-out in parallel so the snapshot ctx's
+	// metricsHistoryTimeout isn't exhausted by sequential round-trips at
+	// 50+ clusters (#8853).
 	clusters, err := mh.k8sClient.ListClusters(ctx)
 	if err != nil {
 		slog.Error("[MetricsHistory] ListClusters failed, skipping pod/GPU metrics for this snapshot", "error", err)
 	} else {
+		var snapMu sync.Mutex
+		var wg sync.WaitGroup
 		for _, cluster := range clusters {
-			pods, podErr := mh.k8sClient.FindPodIssues(ctx, cluster.Context, "")
-			if podErr != nil {
-				continue
-			}
-			for _, p := range pods {
-				snapshot.PodIssues = append(snapshot.PodIssues, PodIssueSnapshot{
-					Name:     p.Name,
-					Cluster:  cluster.Name,
-					Restarts: p.Restarts,
-					Status:   p.Status,
-				})
-			}
+			wg.Add(1)
+			go func(cl k8s.ClusterInfo) {
+				defer wg.Done()
+				pods, podErr := mh.k8sClient.FindPodIssues(ctx, cl.Context, "")
+				if podErr != nil {
+					return
+				}
+				if len(pods) == 0 {
+					return
+				}
+				entries := make([]PodIssueSnapshot, 0, len(pods))
+				for _, p := range pods {
+					entries = append(entries, PodIssueSnapshot{
+						Name:     p.Name,
+						Cluster:  cl.Name,
+						Restarts: p.Restarts,
+						Status:   p.Status,
+					})
+				}
+				snapMu.Lock()
+				snapshot.PodIssues = append(snapshot.PodIssues, entries...)
+				snapMu.Unlock()
+			}(cluster)
 		}
-	}
-
-	// Get GPU nodes from all clusters (only if ListClusters succeeded)
-	for _, cluster := range clusters {
-		gpuNodes, err := mh.k8sClient.GetGPUNodes(ctx, cluster.Context)
-		if err != nil {
-			continue
+		for _, cluster := range clusters {
+			wg.Add(1)
+			go func(cl k8s.ClusterInfo) {
+				defer wg.Done()
+				gpuNodes, err := mh.k8sClient.GetGPUNodes(ctx, cl.Context)
+				if err != nil {
+					return
+				}
+				if len(gpuNodes) == 0 {
+					return
+				}
+				entries := make([]GPUNodeMetricSnapshot, 0, len(gpuNodes))
+				for _, g := range gpuNodes {
+					entries = append(entries, GPUNodeMetricSnapshot{
+						Name:         g.Name,
+						Cluster:      g.Cluster,
+						GPUType:      g.GPUType,
+						GPUAllocated: g.GPUAllocated,
+						GPUTotal:     g.GPUCount,
+					})
+				}
+				snapMu.Lock()
+				snapshot.GPUNodes = append(snapshot.GPUNodes, entries...)
+				snapMu.Unlock()
+			}(cluster)
 		}
-		for _, g := range gpuNodes {
-			snapshot.GPUNodes = append(snapshot.GPUNodes, GPUNodeMetricSnapshot{
-				Name:         g.Name,
-				Cluster:      g.Cluster,
-				GPUType:      g.GPUType,
-				GPUAllocated: g.GPUAllocated,
-				GPUTotal:     g.GPUCount,
-			})
-		}
+		wg.Wait()
 	}
 
 	// Add to history
