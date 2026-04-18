@@ -169,9 +169,10 @@ function OpenCostOverviewInternal({ config: _config }: OpenCostOverviewProps) {
       </div>
 
       {/* Namespace costs.
-          #8883: roving-tabindex list — Enter/Space activate; ArrowUp/Down
-          traverse siblings; Home/End jump. Container gets role="list" so
-          AT exposes the list semantics. */}
+        * #8883: roving-tabindex list — Enter/Space activate; ArrowUp/Down
+        * traverse siblings; Home/End jump. Container gets role="list" so
+        * AT exposes the list semantics.
+        */}
       <div ref={containerRef} className="flex-1 overflow-y-auto space-y-2" style={containerStyle}>
         <p className="text-xs text-muted-foreground font-medium mb-2">Cost by Namespace</p>
         <div role="list" className="space-y-2">

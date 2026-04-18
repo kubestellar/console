@@ -618,9 +618,10 @@ function ProactiveGPUNodeHealthMonitorInternal() {
       )}
 
       {/* Node list.
-          #8883: roving-tabindex keynav on each node row — Enter/Space
-          toggles expand; ArrowUp/Down move focus between sibling rows;
-          Home/End jump to ends. Container gets role="list". */}
+        * #8883: roving-tabindex keynav on each node row — Enter/Space
+        * toggles expand; ArrowUp/Down move focus between sibling rows;
+        * Home/End jump to ends. Container gets role="list".
+        */}
       <div role="list" className="flex-1 overflow-auto space-y-1">
         {paginatedNodes.map((node, idx, arr) => {
           const isExpanded = expandedNode === `${node.cluster}/${node.nodeName}`
