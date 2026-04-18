@@ -68,6 +68,7 @@ export function WhatsNewModal({ isOpen, onClose }: WhatsNewModalProps) {
     latestRelease,
     releases,
     currentVersion,
+    commitHash,
     installMethod,
     skipVersion,
     triggerUpdate,
@@ -83,14 +84,29 @@ export function WhatsNewModal({ isOpen, onClose }: WhatsNewModalProps) {
 
   const markdownComponents = useMemo(() => buildReleaseNotesComponents('sm'), [])
 
-  // When release notes are empty, fetch recent merged PRs as fallback content
-  const MAX_RECENT_PRS = 20
+  // When release notes are empty, fetch merged PRs since the running commit.
+  // First get the commit date for the running hash, then filter PRs merged after.
+  const MAX_RECENT_PRS = 50
   const hasReleaseNotes = !!latestRelease?.releaseNotes?.trim()
   useEffect(() => {
     if (hasReleaseNotes || !isOpen) return
     let cancelled = false
     const fetchPRs = async () => {
       try {
+        // Step 1: Get the date of the currently running commit
+        let sinceDate: string | null = null
+        if (commitHash && commitHash !== 'unknown') {
+          const commitResp = await fetch(
+            `/api/github/repos/kubestellar/console/commits/${commitHash}`,
+            { credentials: 'include' },
+          )
+          if (commitResp.ok) {
+            const commitData = await commitResp.json()
+            sinceDate = commitData?.commit?.committer?.date ?? null
+          }
+        }
+
+        // Step 2: Fetch recent merged PRs
         const resp = await fetch(
           `/api/github/repos/kubestellar/console/pulls?state=closed&sort=updated&direction=desc&per_page=${MAX_RECENT_PRS}`,
           { credentials: 'include' },
@@ -100,6 +116,11 @@ export function WhatsNewModal({ isOpen, onClose }: WhatsNewModalProps) {
         if (cancelled) return
         const merged = (data || [])
           .filter((pr: { merged_at: string | null }) => pr.merged_at)
+          // Only show PRs merged AFTER the running commit
+          .filter((pr: { merged_at: string }) => {
+            if (!sinceDate) return true // no commit date = show all
+            return new Date(pr.merged_at) > new Date(sinceDate)
+          })
           .map((pr: { number: number; title: string; merged_at: string }) => ({
             number: pr.number,
             title: pr.title,
@@ -112,7 +133,7 @@ export function WhatsNewModal({ isOpen, onClose }: WhatsNewModalProps) {
     }
     fetchPRs()
     return () => { cancelled = true }
-  }, [hasReleaseNotes, isOpen])
+  }, [hasReleaseNotes, isOpen, commitHash])
 
   const previousReleases = useMemo(() => {
     if (!releases || !currentVersion || !latestRelease) return []
