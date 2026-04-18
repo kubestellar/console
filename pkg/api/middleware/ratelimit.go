@@ -17,6 +17,17 @@ const (
 
 	// failureCleanupInterval is how often stale failure records are purged.
 	failureCleanupInterval = 5 * time.Minute
+
+	// Progressive threshold tiers for Retry-After escalation (#8676 Phase 2).
+	FailureThresholdEscalate = 6  // 5min Retry-After
+	FailureThresholdSoftLock = 11 // 15min Retry-After + log warning
+	FailureThresholdHardLock = 21 // 1hr Retry-After + GA4 event (Phase 3)
+
+	// Retry-After values (seconds) for each tier.
+	RetryAfterNormalSec    = 60   // default for rate-limited requests
+	RetryAfterEscalateSec  = 300  // 5 minutes
+	RetryAfterSoftLockSec  = 900  // 15 minutes
+	RetryAfterHardLockSec  = 3600 // 1 hour
 )
 
 // failureRecord tracks consecutive auth failures for a single composite key.
@@ -76,6 +87,22 @@ func (ft *FailureTracker) Reset(key string) {
 	ft.mu.Lock()
 	defer ft.mu.Unlock()
 	delete(ft.failures, key)
+}
+
+// GetRetryAfter returns the Retry-After value (seconds) for the given key
+// based on which failure-count tier it falls into (#8676 Phase 2).
+func (ft *FailureTracker) GetRetryAfter(key string) int {
+	count := ft.GetFailureCount(key)
+	switch {
+	case count >= FailureThresholdHardLock:
+		return RetryAfterHardLockSec
+	case count >= FailureThresholdSoftLock:
+		return RetryAfterSoftLockSec
+	case count >= FailureThresholdEscalate:
+		return RetryAfterEscalateSec
+	default:
+		return RetryAfterNormalSec
+	}
 }
 
 // Stop cancels the background cleanup goroutine.

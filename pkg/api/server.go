@@ -657,7 +657,13 @@ func (s *Server) setupRoutes() {
 		Expiration: authLimiterWindow,
 		KeyGenerator: middleware.CompositeKey,
 		LimitReached: func(c *fiber.Ctx) error {
-			c.Set("Retry-After", strconv.Itoa(int(authLimiterWindow.Seconds()))) // #7040
+			ip := c.IP()
+			retryAfter := failureTracker.GetRetryAfter(ip)
+			count := failureTracker.GetFailureCount(ip)
+			if count >= middleware.FailureThresholdSoftLock {
+				slog.Warn("[RateLimit] auth soft-lock", "ip", ip, "failures", count)
+			}
+			c.Set("Retry-After", strconv.Itoa(retryAfter)) // #7040 + #8676 Phase 2
 			return c.Status(429).JSON(fiber.Map{"error": "too many requests, try again later"})
 		},
 	})

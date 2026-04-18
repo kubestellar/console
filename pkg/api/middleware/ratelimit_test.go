@@ -62,6 +62,52 @@ func TestFailureTracker_PurgeStale(t *testing.T) {
 	}
 }
 
+func TestFailureTracker_GetRetryAfter(t *testing.T) {
+	ft := NewFailureTracker()
+	defer ft.Stop()
+
+	// No failures → normal tier.
+	if got := ft.GetRetryAfter("k"); got != RetryAfterNormalSec {
+		t.Fatalf("0 failures: want %d, got %d", RetryAfterNormalSec, got)
+	}
+
+	// Record failures up to just below escalate threshold.
+	for i := 0; i < FailureThresholdEscalate-1; i++ {
+		ft.RecordFailure("k")
+	}
+	if got := ft.GetRetryAfter("k"); got != RetryAfterNormalSec {
+		t.Fatalf("below escalate: want %d, got %d", RetryAfterNormalSec, got)
+	}
+
+	// Hit escalate threshold.
+	ft.RecordFailure("k")
+	if got := ft.GetRetryAfter("k"); got != RetryAfterEscalateSec {
+		t.Fatalf("at escalate: want %d, got %d", RetryAfterEscalateSec, got)
+	}
+
+	// Advance to soft-lock threshold.
+	for ft.GetFailureCount("k") < FailureThresholdSoftLock {
+		ft.RecordFailure("k")
+	}
+	if got := ft.GetRetryAfter("k"); got != RetryAfterSoftLockSec {
+		t.Fatalf("at soft-lock: want %d, got %d", RetryAfterSoftLockSec, got)
+	}
+
+	// Advance to hard-lock threshold.
+	for ft.GetFailureCount("k") < FailureThresholdHardLock {
+		ft.RecordFailure("k")
+	}
+	if got := ft.GetRetryAfter("k"); got != RetryAfterHardLockSec {
+		t.Fatalf("at hard-lock: want %d, got %d", RetryAfterHardLockSec, got)
+	}
+
+	// Reset clears the tier.
+	ft.Reset("k")
+	if got := ft.GetRetryAfter("k"); got != RetryAfterNormalSec {
+		t.Fatalf("after reset: want %d, got %d", RetryAfterNormalSec, got)
+	}
+}
+
 func TestFailureTracker_Timestamps(t *testing.T) {
 	ft := NewFailureTracker()
 	defer ft.Stop()

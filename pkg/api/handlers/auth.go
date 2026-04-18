@@ -466,6 +466,10 @@ func sanitizeOAuthErrorDescription(raw string) string {
 // Any attacker-influenceable detail MUST be passed through
 // sanitizeOAuthErrorDescription before reaching this function (#6583).
 func (h *AuthHandler) oauthErrorRedirect(c *fiber.Ctx, errorCode, detail string) error {
+	// Record auth failure for progressive rate-limit escalation (#8676 Phase 2).
+	if tracker, ok := c.Locals("failureTracker").(*middleware.FailureTracker); ok {
+		tracker.RecordFailure(c.IP())
+	}
 	q := url.Values{"error": {errorCode}}
 	if detail != "" {
 		q.Set("error_detail", detail)
