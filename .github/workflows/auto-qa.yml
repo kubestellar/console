@@ -4591,16 +4591,46 @@ jobs:
 
             core.info(`${checks.length} finding(s) to process (focus: ${focusArea}). Creating issues...`);
 
+            // Rate-limit-aware retry helper for GitHub API calls.
+            // Waits for x-ratelimit-reset on 403/429, with exponential backoff fallback.
+            const MAX_RETRIES = 3;
+            const INITIAL_BACKOFF_MS = 5000;
+            async function withRetry(fn, label = 'API call') {
+              for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+                try {
+                  return await fn();
+                } catch (err) {
+                  const isRateLimit = (err.status === 403 || err.status === 429) &&
+                    (err.message || '').toLowerCase().includes('rate limit');
+                  if (!isRateLimit || attempt === MAX_RETRIES) throw err;
+
+                  // Calculate wait time from reset header or use exponential backoff
+                  const resetEpoch = err.response?.headers?.['x-ratelimit-reset'];
+                  const backoffMs = INITIAL_BACKOFF_MS * Math.pow(2, attempt);
+                  let waitMs = backoffMs;
+                  if (resetEpoch) {
+                    const resetMs = parseInt(resetEpoch, 10) * 1000 - Date.now();
+                    const RATE_LIMIT_BUFFER_MS = 1000;
+                    waitMs = Math.max(resetMs + RATE_LIMIT_BUFFER_MS, backoffMs);
+                  }
+                  const MAX_WAIT_MS = 120000;
+                  waitMs = Math.min(waitMs, MAX_WAIT_MS);
+                  core.warning(`${label}: rate limited (attempt ${attempt + 1}/${MAX_RETRIES}), waiting ${Math.round(waitMs / 1000)}s...`);
+                  await new Promise(resolve => setTimeout(resolve, waitMs));
+                }
+              }
+            }
+
             // Fetch both open AND recently closed issues to prevent duplicates after PR merges
             const [{ data: openIssues }, { data: closedIssues }] = await Promise.all([
-              github.rest.issues.listForRepo({
+              withRetry(() => github.rest.issues.listForRepo({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 state: 'open',
                 labels: 'auto-qa',
                 per_page: 100,
-              }),
-              github.rest.issues.listForRepo({
+              }), 'list open issues'),
+              withRetry(() => github.rest.issues.listForRepo({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 state: 'closed',
@@ -4608,7 +4638,7 @@ jobs:
                 per_page: 50,
                 sort: 'updated',
                 direction: 'desc',
-              }),
+              }), 'list closed issues'),
             ]);
 
             // Filter closed issues to only those closed in the last 7 days
@@ -4655,13 +4685,13 @@ jobs:
                 continue;
               }
 
-              const { data: issue } = await github.rest.issues.create({
+              const { data: issue } = await withRetry(() => github.rest.issues.create({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 title: check.title,
                 body: check.body,
                 labels: check.labels,
-              });
+              }), `create issue "${check.title}"`);
 
               core.info(`Created issue #${issue.number}: ${check.title}`);
               createdTotal++;
@@ -4722,20 +4752,20 @@ jobs:
             if (rejections.length > 0) {
               const diagTitle = '[Auto-QA] Copilot assignment rejected — review rate limit config';
               try {
-                const existingDiag = await github.rest.issues.listForRepo({
+                const existingDiag = await withRetry(() => github.rest.issues.listForRepo({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   state: 'open',
                   labels: 'auto-qa,auto-qa:rate-limit',
                   per_page: 10,
-                });
+                }), 'list diagnostic issues');
                 const hasDiag = existingDiag.data.some(i => i.title.includes('Copilot assignment rejected'));
                 if (!hasDiag) {
                   const currentDelay = process.env.COPILOT_ASSIGNMENT_DELAY_S || '120';
                   const rejectionList = rejections.map(r =>
                     `- Issue #${r.issueNumber}: HTTP ${r.status} — ${r.message}`
                   ).join('\n');
-                  await github.rest.issues.create({
+                  await withRetry(() => github.rest.issues.create({
                     owner: context.repo.owner,
                     repo: context.repo.repo,
                     title: diagTitle,
@@ -4759,7 +4789,7 @@ jobs:
                       '*Auto-created by the auto-qa workflow when Copilot assignments fail.*',
                     ].join('\n'),
                     labels: ['auto-qa', 'auto-qa:rate-limit', 'triage/needed'],
-                  });
+                  }), 'create diagnostic issue');
                   core.warning(`Created diagnostic issue: ${rejections.length} Copilot assignment(s) rejected`);
                 } else {
                   core.info('Diagnostic issue for Copilot rejections already exists — skipping');
