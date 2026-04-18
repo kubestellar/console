@@ -461,6 +461,15 @@ export function SubmitForm({
               value={description}
               onChange={e => setDescription(e.target.value)}
               onPaste={handlePaste}
+              onKeyDown={e => {
+                // Cmd+Enter (Mac) / Ctrl+Enter (Win/Linux) submits the form,
+                // matching the convention used by GitHub, Slack, and other
+                // compose-style modals. See issue #8651.
+                if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && !isSubmitting) {
+                  e.preventDefault()
+                  e.currentTarget.form?.requestSubmit()
+                }
+              }}
               placeholder={
                 requestType === 'bug'
                   ? 'Example bug report: (replace this with a detailed bug report)\n\nWhat happened:\nThe GPU utilization card shows 0% even though pods are running.\n\nWhat I expected:\nGPU metrics should reflect actual usage from nvidia-smi.\n\nSteps to reproduce:\n1. Deploy a GPU workload\n2. Open the dashboard\n3. Check the GPU card'
@@ -481,7 +490,8 @@ export function SubmitForm({
             </div>
           )}
           <p className="text-2xs text-muted-foreground mt-1">
-            First line becomes the title. Add details below.
+            First line becomes the title. Add details below.{' '}
+            <span className="text-muted-foreground/70">{t('feedback.submitShortcutHint')}</span>
           </p>
         </div>
 

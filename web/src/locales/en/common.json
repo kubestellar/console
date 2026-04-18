@@ -1852,6 +1852,7 @@
     "submitFailed": "Unable to submit — GitHub login may be required.",
     "submitFailedGuidance": "You can open issues directly on GitHub. Coins will be accumulated and available in your console once you install a GitHub OAuth app.",
     "submitInfo": "Your request will be reviewed by a maintainer before being analyzed by our AI. Once approved, the AI will attempt to create a fix automatically and you'll receive a notification when ready.",
+    "submitShortcutHint": "Press Cmd/Ctrl+Enter to submit.",
     "loginBannerDemo": "Login with GitHub to submit feedback and manage requests",
     "loginBannerLocal": "Set up GitHub OAuth to submit feedback, earn coins, and track requests",
     "requestSubmitted": "Request Submitted!",
