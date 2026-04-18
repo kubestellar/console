@@ -406,7 +406,11 @@
         "dndHint": "Also check that Do Not Disturb / Focus mode is off — the OS suppresses notifications while it's on.",
         "tryAgain": "Try Again",
         "blocked": "Browser notifications are blocked. Enable them in your browser's site settings for this page, then reload.",
-        "requestPermission": "Request Permission"
+        "requestPermission": "Request Permission",
+        "quietHoursTitle": "Quiet Hours",
+        "quietHoursDesc": "Suppress desktop notifications during a recurring daily window.",
+        "quietHoursDontNotifyBetween": "Don't notify between",
+        "quietHoursAnd": "and"
       }
     },
     "persistence": {

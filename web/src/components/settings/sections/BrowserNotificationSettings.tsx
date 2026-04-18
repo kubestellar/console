@@ -187,15 +187,18 @@ export function BrowserNotificationSettings() {
 /** Quiet hours configuration — recurring daily window where notifications are suppressed */
 function QuietHoursConfig() {
   const dnd = useDoNotDisturb()
+  const { t } = useTranslation()
 
   return (
     <div className="space-y-3 pt-4 border-t border-border">
       <div className="flex items-center gap-2">
         <Moon className="w-4 h-4 text-muted-foreground" />
-        <h4 className="text-sm font-medium text-foreground">Quiet Hours</h4>
+        <h4 className="text-sm font-medium text-foreground">
+          {t('settings.notifications.browser.quietHoursTitle')}
+        </h4>
       </div>
       <p className="text-xs text-muted-foreground">
-        Suppress desktop notifications during a recurring daily window.
+        {t('settings.notifications.browser.quietHoursDesc')}
       </p>
 
       <label className="flex items-center gap-2 cursor-pointer">
@@ -206,7 +209,7 @@ function QuietHoursConfig() {
           className="rounded border-border accent-primary"
         />
         <span className="text-sm text-foreground">
-          Don&apos;t notify between
+          {t('settings.notifications.browser.quietHoursDontNotifyBetween')}
         </span>
       </label>
 
@@ -218,7 +221,9 @@ function QuietHoursConfig() {
             onChange={(e) => dnd.setQuietHours(true, e.target.value)}
             className="px-2 py-1 text-sm bg-secondary border border-border rounded text-foreground"
           />
-          <span className="text-xs text-muted-foreground">and</span>
+          <span className="text-xs text-muted-foreground">
+            {t('settings.notifications.browser.quietHoursAnd')}
+          </span>
           <input
             type="time"
             value={dnd.quietHoursEnd}
