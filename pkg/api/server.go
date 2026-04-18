@@ -28,6 +28,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/recover"
 
 	"github.com/kubestellar/console/pkg/agent"
+	"github.com/kubestellar/console/pkg/api/audit"
 	"github.com/kubestellar/console/pkg/api/handlers"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/k8s"
@@ -334,6 +335,9 @@ func NewServer(cfg Config) (*Server, error) {
 		loadingSrv:          loadingSrv,
 		done:                make(chan struct{}),
 	}
+
+	// Enable SQLite persistence for audit entries (#8670 Phase 3).
+	audit.SetStore(db)
 
 	server.setupMiddleware()
 	server.setupRoutes()
@@ -919,6 +923,10 @@ func (s *Server) setupRoutes() {
 	// ${LOCAL_AGENT_HTTP_URL}/rbac/can-i so SelfSubjectAccessReviews run
 	// under the user's kubeconfig instead of the backend pod ServiceAccount
 	// when console is deployed in-cluster.
+
+	// Admin audit-log endpoint (#8670 Phase 3) — returns recent audit entries.
+	auditHandler := handlers.NewAuditHandler(s.store)
+	api.Get("/admin/audit-log", auditHandler.GetAuditLog)
 
 	// Namespace read routes. GET /namespaces is viewer-or-above (see
 	// ListNamespaces's requireViewerOrAbove check) and

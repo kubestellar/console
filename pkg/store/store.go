@@ -45,6 +45,15 @@ type UserTokenUsage struct {
 	UpdatedAt          time.Time
 }
 
+// AuditEntry represents a single row in the audit_log table (#8670 Phase 3).
+type AuditEntry struct {
+	ID        int64  `json:"id"`
+	Timestamp string `json:"timestamp"`
+	UserID    string `json:"user_id"`
+	Action    string `json:"action"`
+	Detail    string `json:"detail,omitempty"`
+}
+
 // Store defines the interface for data persistence
 type Store interface {
 	// Users
@@ -238,6 +247,15 @@ type Store interface {
 	// the BEGIN IMMEDIATE transaction if the browser disconnects.
 	ConsumeOAuthState(ctx context.Context, state string) (bool, error)
 	CleanupExpiredOAuthStates() (int64, error)
+
+	// Audit Log — persistent audit trail for security-sensitive operations
+	// (#8670 Phase 3). Entries survive restarts so admins can review who did
+	// what. The detail field is a JSON blob for action-specific context.
+	InsertAuditLog(ctx context.Context, userID, action, detail string) error
+	// QueryAuditLogs returns recent audit entries, newest first. All filter
+	// parameters are optional (empty string = no filter). Limit is clamped
+	// to maxAuditQueryLimit internally.
+	QueryAuditLogs(ctx context.Context, limit int, userID, action string) ([]AuditEntry, error)
 
 	// Cluster Groups — persistent storage for cluster group definitions so they
 	// survive server restarts (#7013). The in-memory map is the runtime cache;

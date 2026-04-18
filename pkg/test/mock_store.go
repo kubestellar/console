@@ -369,4 +369,16 @@ func (m *MockStore) ListClusterGroups() (map[string][]byte, error) {
 	return args.Get(0).(map[string][]byte), args.Error(1)
 }
 
+func (m *MockStore) InsertAuditLog(_ context.Context, _, _, _ string) error {
+	return nil
+}
+
+func (m *MockStore) QueryAuditLogs(_ context.Context, limit int, userID, action string) ([]store.AuditEntry, error) {
+	args := m.Called(limit, userID, action)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]store.AuditEntry), args.Error(1)
+}
+
 func (m *MockStore) Close() error { return nil }

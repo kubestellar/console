@@ -468,6 +468,18 @@ func (s *SQLiteStore) migrate() error {
 		data BLOB NOT NULL,
 		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);
+
+	-- Audit log for security-sensitive operations (#8670 Phase 3).
+	-- Entries are append-only; the detail column holds a JSON blob with
+	-- action-specific context (target type, target ID, IP, path, etc.).
+	CREATE TABLE IF NOT EXISTS audit_log (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		timestamp TEXT NOT NULL,
+		user_id TEXT NOT NULL,
+		action TEXT NOT NULL,
+		detail TEXT
+	);
+	CREATE INDEX IF NOT EXISTS idx_audit_log_user_time ON audit_log(user_id, timestamp);
 	`
 	_, err := s.db.Exec(schema)
 	if err != nil {
@@ -2985,4 +2997,70 @@ func (s *SQLiteStore) ListClusterGroups() (map[string][]byte, error) {
 		groups[name] = data
 	}
 	return groups, rows.Err()
+}
+
+// ---------------------------------------------------------------------------
+// Audit Log (#8670 Phase 3)
+// ---------------------------------------------------------------------------
+
+// maxAuditQueryLimit is the upper bound on rows returned by QueryAuditLogs
+// to prevent unbounded reads from large audit tables.
+const maxAuditQueryLimit = 200
+
+// defaultAuditQueryLimit is used when the caller passes 0 for limit.
+const defaultAuditQueryLimit = 50
+
+// InsertAuditLog appends an audit entry to the audit_log table.
+func (s *SQLiteStore) InsertAuditLog(ctx context.Context, userID, action, detail string) error {
+	_, err := s.db.ExecContext(ctx,
+		`INSERT INTO audit_log (timestamp, user_id, action, detail) VALUES (?, ?, ?, ?)`,
+		time.Now().UTC().Format(time.RFC3339), userID, action, detail,
+	)
+	return err
+}
+
+// QueryAuditLogs returns recent audit entries, newest first. Empty userID or
+// action strings disable the corresponding filter. Limit is clamped to
+// maxAuditQueryLimit.
+func (s *SQLiteStore) QueryAuditLogs(ctx context.Context, limit int, userID, action string) ([]AuditEntry, error) {
+	if limit <= 0 {
+		limit = defaultAuditQueryLimit
+	}
+	if limit > maxAuditQueryLimit {
+		limit = maxAuditQueryLimit
+	}
+
+	query := `SELECT id, timestamp, user_id, action, COALESCE(detail, '') FROM audit_log`
+	args := make([]interface{}, 0)
+	clauses := make([]string, 0)
+
+	if userID != "" {
+		clauses = append(clauses, "user_id = ?")
+		args = append(args, userID)
+	}
+	if action != "" {
+		clauses = append(clauses, "action = ?")
+		args = append(args, action)
+	}
+	if len(clauses) > 0 {
+		query += " WHERE " + strings.Join(clauses, " AND ")
+	}
+	query += " ORDER BY id DESC LIMIT ?"
+	args = append(args, limit)
+
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	entries := make([]AuditEntry, 0)
+	for rows.Next() {
+		var e AuditEntry
+		if err := rows.Scan(&e.ID, &e.Timestamp, &e.UserID, &e.Action, &e.Detail); err != nil {
+			return nil, err
+		}
+		entries = append(entries, e)
+	}
+	return entries, rows.Err()
 }
