@@ -202,7 +202,7 @@ export function ClusterHealthMonitor({ config: _config }: ClusterHealthMonitorPr
     return (
       <div className="space-y-3">
         <Skeleton variant="text" width={160} height={20} />
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 @md:grid-cols-3 gap-2">
           {Array.from({ length: 3 }).map((_, i) => (
             <Skeleton key={i} variant="rounded" height={48} />
           ))}
@@ -236,7 +236,7 @@ export function ClusterHealthMonitor({ config: _config }: ClusterHealthMonitorPr
       </div>
 
       {/* Stats grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
+      <div className="grid grid-cols-2 @md:grid-cols-3 gap-2 mb-3">
         <div className="rounded-md bg-card/50 border border-border p-2 text-center">
           <p className="text-lg font-semibold text-foreground">{stats.totalNodes}</p>
           <p className="text-2xs text-muted-foreground">{t('common.nodes')}</p>

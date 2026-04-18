@@ -238,7 +238,7 @@ function PVCStatusInternal() {
       />
 
       {/* Stats row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+      <div className="grid grid-cols-2 @md:grid-cols-4 gap-2 mb-4">
         <div className="p-2 rounded-lg bg-secondary/50 text-center">
           <div className="text-lg font-bold text-foreground">{stats.total}</div>
           <div className="text-xs text-muted-foreground">{t('common.total')}</div>

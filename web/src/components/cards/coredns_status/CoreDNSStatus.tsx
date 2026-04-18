@@ -47,7 +47,7 @@ export function CoreDNSStatus({ config }: CoreDNSStatusProps) {
   if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card gap-3">
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 @md:grid-cols-3 gap-2">
           {[1, 2, 3].map(i => <Skeleton key={i} variant="rounded" height={52} />)}
         </div>
         <Skeleton variant="rounded" height={64} />
@@ -70,7 +70,7 @@ export function CoreDNSStatus({ config }: CoreDNSStatusProps) {
     <div className="h-full flex flex-col min-h-card content-loaded overflow-hidden gap-3">
       {/* top stats — only pod-derivable metrics */}
       {totals && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 @md:grid-cols-3 gap-2">
           <StatTile
             value={totals.totalPods.toString()}
             sub={t('coreDNSStatus.pods')}

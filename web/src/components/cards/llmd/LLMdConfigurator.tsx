@@ -258,7 +258,7 @@ ${Object.entries(params).map(([k, v]) => `    ${k}: ${v}`).join('\n')}`
             </div>
 
             {/* Expected impact */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
+            <div className="grid grid-cols-2 @md:grid-cols-3 gap-2 mb-4">
               <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-2 text-center">
                 <div className="text-xs text-muted-foreground"><Acronym term="TTFT" /> Improvement</div>
                 <div className="text-lg font-bold text-green-400">

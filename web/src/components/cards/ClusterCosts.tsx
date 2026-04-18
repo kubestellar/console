@@ -429,7 +429,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
               title={t('cards:clusterCosts.pricingSettings')}
             >
               <Settings2 className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">{pricingMode === 'per-cluster' ? t('cards:clusterCosts.perCluster') : t('cards:clusterCosts.uniform')}</span>
+              <span className="hidden @sm:inline">{pricingMode === 'per-cluster' ? t('cards:clusterCosts.perCluster') : t('cards:clusterCosts.uniform')}</span>
             </button>
             {showSettingsMenu && (
               <div className="absolute top-full left-0 mt-1 w-52 bg-card border border-border rounded-lg shadow-lg z-20 py-2">
@@ -560,7 +560,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
                   </a>
                 )}
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-2">
+              <div className="grid grid-cols-2 @md:grid-cols-3 gap-2 mb-2">
                 <div className="p-2 rounded bg-secondary/50">
                   <p className="text-muted-foreground mb-0.5">{t('common:common.cpu')}</p>
                   <p className="text-foreground font-medium">${cpuCost.toFixed(3)}/hr</p>

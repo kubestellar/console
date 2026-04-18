@@ -895,7 +895,7 @@ export function NightlyE2EStatus() {
   if (showSkeleton) {
     return (
       <div className="p-4 h-full flex flex-col gap-3 overflow-hidden">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 @md:grid-cols-4 gap-3">
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} variant="rounded" height={64} />
           ))}
@@ -917,7 +917,7 @@ export function NightlyE2EStatus() {
   return (
     <div className="p-4 h-full flex flex-col gap-3 overflow-hidden">
       {/* Stats row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 @md:grid-cols-4 gap-3">
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}

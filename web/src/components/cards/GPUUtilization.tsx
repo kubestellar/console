@@ -344,7 +344,7 @@ export function GPUUtilization() {
             <span className="text-sm font-bold text-foreground">{currentStats.utilization}%</span>
           </div>
         </div>
-        <div className="flex-1 grid grid-cols-2 sm:grid-cols-3 gap-2">
+        <div className="flex-1 grid grid-cols-2 @md:grid-cols-3 gap-2">
           <div className="p-2 rounded-lg bg-purple-500/10 border border-purple-500/20">
             <div className="text-xs text-purple-400 mb-1">{t('common.allocated')}</div>
             <span className="text-lg font-bold text-foreground">{currentStats.allocated}</span>

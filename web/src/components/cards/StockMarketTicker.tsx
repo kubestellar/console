@@ -465,7 +465,7 @@ function StockRow({
         </div>
 
         {/* Sparkline */}
-        <div className="hidden sm:block flex-shrink-0">
+        <div className="hidden @sm:block flex-shrink-0">
           <Sparkline data={stock.sparklineData} isPositive={isPositive} />
         </div>
 
@@ -801,7 +801,7 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
       </div>
 
       {/* Portfolio summary */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3 p-2 bg-accent/30 rounded-lg text-xs">
+      <div className="grid grid-cols-2 @md:grid-cols-3 gap-2 mb-3 p-2 bg-accent/30 rounded-lg text-xs">
         <div className="text-center">
           <div className="text-muted-foreground">{t('stockMarket.avgChange')}</div>
           <div className={`font-semibold ${portfolioSummary.avgChange >= 0 ? 'text-green-500' : 'text-red-500'}`}>

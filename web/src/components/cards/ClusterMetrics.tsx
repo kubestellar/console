@@ -457,7 +457,7 @@ export function ClusterMetrics() {
 
       {/* Stats - show when we have time series data */}
       {data.length > 0 && (
-        <div className="mt-3 pt-3 border-t border-border/50 grid grid-cols-2 sm:grid-cols-3 gap-4">
+        <div className="mt-3 pt-3 border-t border-border/50 grid grid-cols-2 @md:grid-cols-3 gap-4">
           <div>
             <p className="text-xs text-muted-foreground">{t('cards:clusterMetrics.min')}</p>
             <p className="text-sm font-medium text-foreground">

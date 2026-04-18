@@ -112,7 +112,7 @@ function ClusterComparisonInternal({ config }: ClusterComparisonProps) {
           <Skeleton variant="text" width={150} height={20} />
           <Skeleton variant="rounded" width={80} height={28} />
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 @md:grid-cols-3 gap-2">
           <Skeleton variant="rounded" height={150} />
           <Skeleton variant="rounded" height={150} />
           <Skeleton variant="rounded" height={150} />

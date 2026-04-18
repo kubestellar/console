@@ -298,7 +298,7 @@ export function KeycloakStatus() {
 
       {/* ── Stats grid ── */}
       {realms.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 @md:grid-cols-4 gap-2">
           <StatTile
             icon={<Globe className="w-4 h-4 text-blue-400" />}
             label={t('keycloak.realms')}

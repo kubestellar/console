@@ -86,7 +86,7 @@ function InsightCard({ insight, isExpanded, onToggle }: InsightCardProps) {
 
               {/* Metrics */}
               {insight.metrics && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 @md:grid-cols-3 gap-2">
                   {Object.entries(insight.metrics).map(([key, value]) => (
                     <div key={key} className="bg-secondary rounded p-2 text-center">
                       <div className="text-xs text-muted-foreground truncate">{key}</div>

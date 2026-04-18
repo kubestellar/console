@@ -50,7 +50,7 @@ export function KubeRayFleet() {
   if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card gap-3 p-1">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 @md:grid-cols-4 gap-2">
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} variant="rounded" height={48} />
           ))}
@@ -82,7 +82,7 @@ export function KubeRayFleet() {
   return (
     <div className="h-full flex flex-col min-h-card gap-3 p-1 overflow-hidden">
       {/* Fleet summary tiles */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 @md:grid-cols-4 gap-2">
         <StatTile icon={Server} label="Clusters" value={`${readyClusters}/${rayClusters.length}`} color="text-blue-400" />
         <StatTile icon={Cpu} label="Workers" value={String(totalWorkers)} color="text-purple-400" />
         <StatTile icon={Layers} label="GPUs" value={String(data.totalGPUs)} color="text-green-400" />

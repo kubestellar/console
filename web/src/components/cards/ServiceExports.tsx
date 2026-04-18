@@ -189,7 +189,7 @@ function ServiceExportsInternal({ config: _config }: ServiceExportsProps) {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
+      <div className="grid grid-cols-2 @md:grid-cols-3 gap-2 mb-3">
         <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/20 text-center">
           <p className="text-2xs text-blue-400">{t('serviceExports.exports')}</p>
           <p className="text-lg font-bold text-foreground">{totalItems}</p>

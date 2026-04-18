@@ -2599,7 +2599,7 @@ export function DrasiReactiveGraph() {
         </div>
       )}
       {/* Pipeline KPIs strip */}
-      <div className="flex-shrink-0 grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
+      <div className="flex-shrink-0 grid grid-cols-2 @md:grid-cols-4 gap-2 mb-2">
         <KPIBox label={KPI_LABEL_EVENTS_PER_SEC} value={kpis.eventsPerSec} accent="emerald" />
         <KPIBox label={KPI_LABEL_RESULT_ROWS} value={kpis.matchRate} accent="cyan" />
         <KPIBox label={KPI_LABEL_SOURCES} value={kpis.activeSources} accent="emerald" />

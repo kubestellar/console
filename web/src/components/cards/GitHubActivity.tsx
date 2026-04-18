@@ -727,7 +727,7 @@ export function GitHubActivity({ config, ref }: { config?: GitHubActivityConfig;
           <Skeleton variant="text" width={150} height={16} />
           <Skeleton variant="rounded" width={100} height={28} />
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+        <div className="grid grid-cols-2 @md:grid-cols-4 gap-2 mb-4">
           <Skeleton variant="rounded" height={60} />
           <Skeleton variant="rounded" height={60} />
           <Skeleton variant="rounded" height={60} />
@@ -821,7 +821,7 @@ export function GitHubActivity({ config, ref }: { config?: GitHubActivityConfig;
         )}
 
         {/* Placeholder Stats Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+        <div className="grid grid-cols-2 @md:grid-cols-4 gap-2 mb-4">
           <div className="bg-secondary/30 rounded-lg p-3 border border-border/50 opacity-50">
             <div className="flex items-center gap-2 mb-1">
               <GitPullRequest className="w-4 h-4 text-blue-400" />
@@ -1024,7 +1024,7 @@ export function GitHubActivity({ config, ref }: { config?: GitHubActivityConfig;
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3 flex-shrink-0">
+      <div className="grid grid-cols-2 @md:grid-cols-4 gap-2 mb-3 flex-shrink-0">
         <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
           <div className="flex items-center gap-2 mb-1">
             <GitPullRequest className="w-4 h-4 text-blue-400" />

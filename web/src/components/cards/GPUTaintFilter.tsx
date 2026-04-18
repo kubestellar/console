@@ -236,7 +236,7 @@ export function GPUTaintFilterControl({
         aria-label="Tolerate GPU node taints" // ai-quality-ignore — a11y attribute, not displayed text
       >
         <Filter className="w-3 h-3" />
-        <span className="hidden sm:inline">Taints</span>
+        <span className="hidden @sm:inline">Taints</span>
         {activeCount > 0 && <span className="font-mono">{activeCount}</span>}
         <ChevronDown className="w-3 h-3" />
       </button>

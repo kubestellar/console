@@ -429,7 +429,7 @@ export function Kubedle(_props: CardComponentProps) {
               </button>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center mb-4">
+            <div className="grid grid-cols-2 @md:grid-cols-4 gap-2 text-center mb-4">
               <div>
                 <div className="text-2xl font-bold text-foreground">{stats.played}</div>
                 <div className="text-xs text-muted-foreground">Played</div>

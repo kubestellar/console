@@ -200,7 +200,7 @@ export function StorageOverview() {
       </div>
 
       {/* PVC Status breakdown */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
+      <div className="grid grid-cols-2 @md:grid-cols-3 gap-2 mb-4">
         <div
           className="p-2 rounded-lg bg-green-500/10 border border-green-500/20 cursor-default transition-colors"
           title={stats.boundPVCs > 0 ? `${stats.boundPVCs} PVC${stats.boundPVCs !== 1 ? 's' : ''} successfully bound` : 'No bound PVCs'}

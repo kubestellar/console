@@ -559,7 +559,7 @@ function SudokuGameInternal({ config: _config }: SudokuGameProps) {
             }`}
           >
             <Pencil className={iconSize} />
-            <span className={isMaximized ? 'inline' : 'hidden sm:inline'}>Notes</span>
+            <span className={isMaximized ? 'inline' : 'hidden @sm:inline'}>Notes</span>
           </button>
           <button
             onClick={handleHint}
@@ -567,7 +567,7 @@ function SudokuGameInternal({ config: _config }: SudokuGameProps) {
             className={`flex items-center justify-center gap-1 ${controlButtonSize} rounded bg-secondary/50 hover:bg-secondary transition-colors disabled:opacity-30 disabled:cursor-not-allowed`}
           >
             <Lightbulb className={iconSize} />
-            <span className={isMaximized ? 'inline' : 'hidden sm:inline'}>Hint</span>
+            <span className={isMaximized ? 'inline' : 'hidden @sm:inline'}>Hint</span>
           </button>
           <button
             onClick={undo}
@@ -595,14 +595,14 @@ function SudokuGameInternal({ config: _config }: SudokuGameProps) {
             className={`flex-1 flex items-center justify-center gap-1 ${controlButtonSize} rounded bg-secondary/50 hover:bg-secondary transition-colors disabled:opacity-30`}
           >
             {gameState.isPaused ? <Play className={iconSize} /> : <Pause className={iconSize} />}
-            <span className={isMaximized ? 'inline' : 'hidden sm:inline'}>{gameState.isPaused ? 'Resume' : 'Pause'}</span>
+            <span className={isMaximized ? 'inline' : 'hidden @sm:inline'}>{gameState.isPaused ? 'Resume' : 'Pause'}</span>
           </button>
           <button
             onClick={saveGame}
             className={`flex-1 flex items-center justify-center gap-1 ${controlButtonSize} rounded bg-secondary/50 hover:bg-secondary transition-colors`}
           >
             <Save className={iconSize} />
-            <span className={isMaximized ? 'inline' : 'hidden sm:inline'}>{t('common.save')}</span>
+            <span className={isMaximized ? 'inline' : 'hidden @sm:inline'}>{t('common.save')}</span>
           </button>
         </div>
       </div>

@@ -213,7 +213,7 @@ function ArgoCDApplicationSetsInternal({ config }: ArgoCDApplicationSetsProps) {
       />
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
+      <div className="grid grid-cols-2 @md:grid-cols-3 gap-2 mb-3">
         <div className="text-center p-2 rounded-lg bg-green-500/10">
           <p className="text-lg font-bold text-green-400">{stats.healthy}</p>
           <p className="text-xs text-muted-foreground">Healthy</p>

@@ -50,7 +50,7 @@ export function KagentiSecurity({ config }: { config?: Record<string, unknown> }
           </div>
           <span className="text-lg font-bold text-white">{stats.pct}%</span>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-center">
+        <div className="grid grid-cols-2 @md:grid-cols-3 gap-2 text-center">
           <div className="rounded bg-green-400/10 py-1.5">
             <div className="text-sm font-bold text-green-400">{stats.strict}</div>
             <div className="text-xs text-muted-foreground">Strict</div>

@@ -112,7 +112,7 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
         <div className="flex justify-center mb-4">
           <Skeleton variant="circular" width={128} height={128} />
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
+        <div className="grid grid-cols-2 @md:grid-cols-3 gap-2 mb-4">
           {[1, 2, 3].map(i => (
             <Skeleton key={i} variant="rounded" height={50} />
           ))}
@@ -296,7 +296,7 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
+      <div className="grid grid-cols-2 @md:grid-cols-3 gap-2 mb-4">
         <div
           className={`text-center ${totalGPUs > 0 ? 'cursor-pointer hover:bg-secondary/50 rounded-lg' : 'cursor-default'} transition-colors p-1`}
           onClick={() => totalGPUs > 0 && drillToResources()}

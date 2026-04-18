@@ -157,7 +157,7 @@ export function VClusterStatus({ config: _config }: VClusterStatusProps) {
         />
       </div>
       <CardSearchInput value={localSearch} onChange={setLocalSearch} placeholder={t('vclusterStatus.searchPlaceholder')} className="mb-3" />
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
+      <div className="grid grid-cols-2 @md:grid-cols-3 gap-2 mb-3">
         <div className="p-2 rounded-lg bg-purple-500/10 border border-purple-500/20 text-center"><p className="text-2xs text-purple-400">{t('vclusterStatus.total')}</p><p className="text-lg font-bold text-foreground">{stats.totalVClusters}</p></div>
         <div className="p-2 rounded-lg bg-green-500/10 border border-green-500/20 text-center"><p className="text-2xs text-green-400">{t('vclusterStatus.running')}</p><p className="text-lg font-bold text-foreground">{stats.runningCount}</p></div>
         <div className="p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-center"><p className="text-2xs text-yellow-400">{t('vclusterStatus.paused')}</p><p className="text-lg font-bold text-foreground">{stats.pausedCount}</p></div>

@@ -170,7 +170,7 @@ export function CrossplaneManagedResources() {
         className="mb-4"
       />
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+      <div className="grid grid-cols-2 @md:grid-cols-4 gap-2 mb-4">
         <StatBox label={t('crossplaneManagedResources.ready')} value={readyCount} color="green" />
         <StatBox label={t('crossplaneManagedResources.notReady')} value={notReadyCount} color="orange" />
         <StatBox label={t('crossplaneManagedResources.error')} value={errorCount} color="red" />

@@ -242,7 +242,7 @@ Please proceed step by step.`,
       {isLoading && !hasData && (
         <div className="space-y-3 animate-pulse">
           <div className="h-10 bg-secondary/50 rounded-lg" />
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 @md:grid-cols-3 gap-2">
             <div className="h-12 bg-secondary/50 rounded-lg" />
             <div className="h-12 bg-secondary/50 rounded-lg" />
             <div className="h-12 bg-secondary/50 rounded-lg" />
@@ -340,7 +340,7 @@ Please proceed step by step.`,
       )}
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
+      <div className="grid grid-cols-2 @md:grid-cols-3 gap-2 mb-3">
         <div className="p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-center">
           <p className="text-2xs text-cyan-400">{t('intoto_supply_chain.statsLayouts')}</p>
           <p className="text-lg font-bold text-foreground">{stats.totalLayouts}</p>

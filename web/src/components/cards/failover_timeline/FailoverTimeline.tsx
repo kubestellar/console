@@ -249,7 +249,7 @@ export function FailoverTimeline() {
       </div>
 
       {/* ── Summary stats ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 @md:grid-cols-3 gap-2">
         <div className="p-2 rounded-lg bg-secondary/30 border border-red-500/20">
           <span className="text-xs text-red-400 block">
             {t('failoverTimeline.clusterDown', 'Down Events')}

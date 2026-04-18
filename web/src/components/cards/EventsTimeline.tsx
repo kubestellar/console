@@ -313,7 +313,7 @@ function EventsTimelineInternal() {
       </div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
+      <div className="grid grid-cols-2 @md:grid-cols-3 gap-2 mb-4">
         <div className="p-2 rounded-lg bg-orange-500/10 border border-orange-500/20">
           <div className="flex items-center gap-1.5 mb-1">
             <AlertTriangle className="w-3 h-3 text-orange-400" aria-hidden="true" />

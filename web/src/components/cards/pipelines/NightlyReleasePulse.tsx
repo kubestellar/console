@@ -392,7 +392,7 @@ export function NightlyReleasePulse() {
           )}
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 @md:grid-cols-3 gap-2">
           <div className="rounded-lg bg-secondary/30 px-3 py-2">
             <div className="text-[11px] text-muted-foreground">Streak</div>
             <div className={cn('text-sm font-medium mt-0.5',

@@ -237,7 +237,7 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
       />
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+      <div className="grid grid-cols-2 @md:grid-cols-4 gap-2 mb-3">
         <div className="text-center p-2 rounded-lg bg-green-500/10 cursor-pointer hover:bg-green-500/20"
              role="button" tabIndex={0}
              aria-label={`Show all applications (${stats.synced} synced)`}

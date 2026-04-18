@@ -364,7 +364,7 @@ Please proceed step by step. Start with verifying prerequisites (Python 3.9+, ku
 
               {/* Expanded details */}
               {isExpanded && (
-                <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                <div className="mt-2 grid grid-cols-2 @md:grid-cols-3 gap-2 text-xs">
                   <button
                     onClick={(e) => { e.stopPropagation(); drillToCompliance('pass', { profile: profile.name }) }}
                     className="flex items-center gap-1 text-green-400 hover:opacity-80 transition-opacity cursor-pointer"

@@ -41,7 +41,7 @@ export function TrinoGateway() {
   if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card gap-3 p-1">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 @md:grid-cols-4 gap-2">
           {Array.from({ length: SUMMARY_TILE_COUNT }).map((_, i) => (
             <Skeleton key={i} variant="rounded" height={48} />
           ))}
@@ -76,7 +76,7 @@ export function TrinoGateway() {
   return (
     <div className="h-full flex flex-col min-h-card gap-3 p-1 overflow-hidden">
       {/* Summary tiles */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 @md:grid-cols-4 gap-2">
         <StatTile icon={Database} label="Clusters" value={`${healthyClusters}/${trinoClusters.length}`} color="text-blue-400" />
         <StatTile icon={Server} label="Workers" value={String(data.totalWorkers)} color="text-purple-400" />
         <StatTile icon={Activity} label="Queries" value={String(data.totalActiveQueries)} color="text-green-400" />

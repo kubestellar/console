@@ -100,7 +100,7 @@ export function KagentStatusCard({ config }: KagentStatusCardProps) {
   if (showSkeleton) {
     return (
       <div className="space-y-3 p-1">
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 @md:grid-cols-3 gap-2">
           {[1, 2, 3].map(i => <Skeleton key={i} className="h-16 rounded-lg" />)}
         </div>
         <Skeleton className="h-24 rounded-lg" />
@@ -126,7 +126,7 @@ export function KagentStatusCard({ config }: KagentStatusCardProps) {
   return (
     <div className="space-y-3 p-1">
       {/* Metric tiles */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 @md:grid-cols-3 gap-2">
         <MetricTile
           icon={Bot}
           label="Agents"

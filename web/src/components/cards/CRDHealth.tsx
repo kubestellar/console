@@ -227,7 +227,7 @@ export function CRDHealth({ config: _config }: CRDHealthProps) {
           </div>
 
           {/* Summary */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+          <div className="grid grid-cols-2 @md:grid-cols-4 gap-2 mb-4">
             <div className="p-2 rounded-lg bg-cyan-500/10 text-center">
               <span className="text-lg font-bold text-cyan-400">{statsSource.length}</span>
               <p className="text-xs text-muted-foreground">{t('crdHealth.crds')}</p>

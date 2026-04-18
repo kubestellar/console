@@ -131,7 +131,7 @@ export function GPUInventory({ config }: GPUInventoryProps) {
           <Skeleton variant="text" width={100} height={16} />
           <Skeleton variant="rounded" width={80} height={28} />
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
+        <div className="grid grid-cols-2 @md:grid-cols-3 gap-2 mb-4">
           {[1, 2, 3].map(i => (
             <Skeleton key={i} variant="rounded" height={50} />
           ))}
@@ -223,7 +223,7 @@ export function GPUInventory({ config }: GPUInventoryProps) {
       />
 
       {/* Summary */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
+      <div className="grid grid-cols-2 @md:grid-cols-3 gap-2 mb-4">
         <div className="p-2 rounded-lg bg-secondary/30 text-center">
           <p className="text-lg font-bold text-foreground">{stats.totalGPUs}</p>
           <p className="text-xs text-muted-foreground">{t('common:common.total')}</p>

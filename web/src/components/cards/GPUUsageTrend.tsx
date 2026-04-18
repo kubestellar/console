@@ -461,7 +461,7 @@ export function GPUUsageTrend() {
         />
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+      <div className="grid grid-cols-2 @md:grid-cols-4 gap-2 mb-4">
         <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/20" title={`${currentTotals.available} total GPUs available`}>
           <div className="flex items-center gap-1 mb-1">
             <Cpu className="w-3 h-3 text-blue-400" />

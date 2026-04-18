@@ -241,7 +241,7 @@ export function BenchmarkHero() {
       </div>
 
       {/* Hero metrics row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 flex-1">
+      <div className="grid grid-cols-2 @md:grid-cols-4 gap-3 flex-1">
         <HeroMetric
           label="Output Throughput"
           value={fmtNum(throughput)}

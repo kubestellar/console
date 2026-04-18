@@ -154,7 +154,7 @@ Please provide:
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-2 text-center">
+      <div className="grid grid-cols-2 @md:grid-cols-3 gap-2 mb-2 text-center">
         <div
           className={cn(
             "p-2 rounded bg-green-500/10",

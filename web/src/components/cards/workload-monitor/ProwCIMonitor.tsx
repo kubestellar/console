@@ -161,7 +161,7 @@ export function ProwCIMonitor({ config: _config }: ProwCIMonitorProps) {
     return (
       <div className="space-y-3">
         <Skeleton variant="text" width={140} height={20} />
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 @md:grid-cols-4 gap-2">
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} variant="rounded" height={48} />
           ))}
@@ -211,7 +211,7 @@ export function ProwCIMonitor({ config: _config }: ProwCIMonitorProps) {
       </div>
 
       {/* Stats grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+      <div className="grid grid-cols-2 @md:grid-cols-4 gap-2 mb-3">
         <div className="rounded-md bg-card/50 border border-border p-2 text-center">
           <p className="text-lg font-semibold text-green-400">{stats.successRate}%</p>
           <p className="text-2xs text-muted-foreground">Success Rate</p>

@@ -90,7 +90,7 @@ export function QuotaHeatmap() {
           staleThresholdMinutes={5}
         />
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-1 max-h-[350px] overflow-y-auto">
+      <div className="grid grid-cols-2 @md:grid-cols-4 @lg:grid-cols-6 gap-1 max-h-[350px] overflow-y-auto">
         {namespaceData.slice(0, 60).map(ns => {
           const ratio = ns.podCount / maxPods
           const isSelected = selectedNs === `${ns.cluster}/${ns.namespace}`

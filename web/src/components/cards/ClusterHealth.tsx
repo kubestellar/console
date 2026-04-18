@@ -264,7 +264,7 @@ export function ClusterHealth() {
       />
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+      <div className="grid grid-cols-2 @md:grid-cols-4 gap-2 mb-4">
         <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20 min-w-0 overflow-hidden" title={t('clusterHealth.healthyTooltip', { count: healthyClusters })}>
           <div className="flex items-center gap-1.5 mb-1 min-w-0">
             <CheckCircle className="w-4 h-4 text-green-400 shrink-0" />
@@ -349,7 +349,7 @@ export function ClusterHealth() {
                     title="API server externally unreachable — cluster healthy internally but external access may be blocked"
                   >
                     <WifiOff className="w-3 h-3" />
-                    <span className="hidden sm:inline">ext. unreachable</span>
+                    <span className="hidden @sm:inline">ext. unreachable</span>
                   </span>
                 )}
                 {consoleUrl && (
