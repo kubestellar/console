@@ -3,7 +3,7 @@ import { Bot, Wrench, Cpu } from 'lucide-react'
 import { useKagentCRDAgents, useKagentCRDTools, useKagentCRDModels } from '../../../hooks/mcp/kagent_crds'
 import { useCardLoadingState } from '../CardDataContext'
 import { DynamicCardErrorBoundary } from '../DynamicCardErrorBoundary'
-// #8836 Auto-QA (Data Freshness): the topology card caches three CRD lists
+// Issue 8836 Auto-QA (Data Freshness): the topology card caches three CRD lists
 // but had no "Last updated X ago" indicator — so users had no way to know
 // if the topology they were looking at was stale.
 import { RefreshIndicator } from '../../ui/RefreshIndicator'
@@ -60,7 +60,7 @@ function KagentTopologyInternal({ config }: { config?: Record<string, unknown> }
     consecutiveFailures,
   })
 
-  // #8836 Auto-QA (Data Freshness): freshness is driven by whichever of the
+  // Issue 8836 Auto-QA (Data Freshness): freshness is driven by whichever of the
   // three cache slices refreshed most recently. Using the MAX (not MIN) so
   // the indicator reflects the last time we successfully touched the
   // cluster for kagent data, not the oldest slice.
@@ -202,7 +202,7 @@ function KagentTopologyInternal({ config }: { config?: Record<string, unknown> }
           <span>{t('kagentTopology.legendLink')}</span>
         </div>
         {/*
-          #8836 Auto-QA (Data Freshness): right-aligned "Last updated X ago"
+          Issue 8836 Auto-QA (Data Freshness): right-aligned "Last updated X ago"
           indicator. lastUpdated is sourced from the max of the three CRD
           cache slices' lastRefresh so the label reflects the most recent
           successful refresh, not the oldest slice.

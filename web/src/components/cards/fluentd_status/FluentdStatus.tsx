@@ -5,7 +5,7 @@ import { RefreshIndicator } from '../../ui/RefreshIndicator'
 import { MetricTile } from '../../../lib/cards/CardComponents'
 import { DynamicCardErrorBoundary } from '../DynamicCardErrorBoundary'
 import { useFluentdStatus } from './useFluentdStatus'
-// #8836 Auto-QA (Data Freshness): subscribe to demo mode at the component
+// Issue 8836 Auto-QA (Data Freshness): subscribe to demo mode at the component
 // level so the card re-renders (and Demo badge / yellow outline apply) when
 // the user flips the global toggle. The underlying useFluentdStatus hook
 // already swaps data; this direct subscription is what the static Auto-QA
@@ -52,7 +52,7 @@ function BufferBar({ utilization }: { utilization: number }) {
 // a runtime error in the 205-line component doesn't crash the dashboard.
 function FluentdStatusInternal() {
   const { t } = useTranslation('cards')
-  // #8836 Auto-QA: component-level demo-mode subscription. The underlying
+  // Issue 8836 Auto-QA: component-level demo-mode subscription. The underlying
   // hook already swaps data on toggle, but the Auto-QA static scan looks
   // for the import + call in the .tsx and the direct subscription also
   // ensures an immediate re-render when the toggle flips.
@@ -119,7 +119,7 @@ function FluentdStatusInternal() {
           {healthLabel}
         </div>
         {/*
-          #8836 Auto-QA (Data Freshness): render "Last updated X ago" via the
+          Issue 8836 Auto-QA (Data Freshness): render "Last updated X ago" via the
           shared RefreshIndicator. lastUpdated reads from useCache.lastRefresh
           (via useFluentdStatus), which reflects the cache refresh cadence
           instead of the server-reported data.lastCheckTime (which does not

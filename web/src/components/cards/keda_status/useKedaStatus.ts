@@ -220,7 +220,7 @@ export interface UseKedaStatusResult {
   consecutiveFailures: number
   showSkeleton: boolean
   showEmptyState: boolean
-  // #8836: exposed so the card can render a "Last updated X ago" indicator
+  // Issue 8836: exposed so the card can render a "Last updated X ago" indicator
   // using the cache-layer refresh timestamp instead of the server-side
   // lastCheckTime (which does not advance across cache rehydrates).
   lastRefresh: number | null
@@ -228,7 +228,7 @@ export interface UseKedaStatusResult {
 }
 
 export function useKedaStatus(): UseKedaStatusResult {
-  // #8836: subscribe to demo mode toggles so the card swaps to demo data
+  // Issue 8836: subscribe to demo mode toggles so the card swaps to demo data
   // immediately (and shows the Demo badge / yellow outline) when the user
   // flips demo mode on, instead of only switching when the cache layer falls
   // back after a fetch failure.

@@ -300,7 +300,7 @@ export interface UseFluentdStatusResult {
   consecutiveFailures: number
   showSkeleton: boolean
   showEmptyState: boolean
-  // #8836: cache-layer refresh timestamp, used by the card to render a
+  // Issue 8836: cache-layer refresh timestamp, used by the card to render a
   // "Last updated X ago" indicator. Preferred over data.lastCheckTime
   // because it reflects the actual refresh cadence (not the backend-reported
   // fetch time, which does not advance across cache rehydrates).
@@ -308,7 +308,7 @@ export interface UseFluentdStatusResult {
 }
 
 export function useFluentdStatus(): UseFluentdStatusResult {
-  // #8836: subscribe to demo mode toggles so the card swaps to demo data
+  // Issue 8836: subscribe to demo mode toggles so the card swaps to demo data
   // immediately (and shows the Demo badge / yellow outline) when the user
   // flips demo mode on, instead of only switching when the cache layer falls
   // back after a fetch failure.

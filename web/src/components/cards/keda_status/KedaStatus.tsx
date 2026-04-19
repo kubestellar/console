@@ -12,7 +12,7 @@ import { Skeleton, SkeletonStats, SkeletonList } from '../../ui/Skeleton'
 import { RefreshIndicator } from '../../ui/RefreshIndicator'
 import { CardSearchInput } from '../../../lib/cards/CardComponents'
 import { useKedaStatus } from './useKedaStatus'
-// #8836 Auto-QA (Data Freshness): subscribe to demo mode at the component
+// Issue 8836 Auto-QA (Data Freshness): subscribe to demo mode at the component
 // level so the card re-renders (and the Demo badge / yellow outline apply)
 // when the user flips the global toggle — not only when the cache layer
 // falls back after a failed fetch.
@@ -56,7 +56,7 @@ const TRIGGER_LABELS: Record<KedaTriggerType, string> = {
   memory: 'Memory',
   external: 'External' }
 
-// #8836: KedaStatus previously computed its own "synced X ago" label from
+// Issue 8836: KedaStatus previously computed its own "synced X ago" label from
 // data.lastCheckTime. That string only advances when the backend reports a
 // new fetch — it does not reflect the cache-layer refresh cadence that drives
 // the rest of the dashboard. We now source freshness from useCache's
@@ -190,7 +190,7 @@ function ScaledObjectRow({ obj }: { obj: KedaScaledObject }) {
 
 export function KedaStatus() {
   const { t } = useTranslation('cards')
-  // #8836 Auto-QA: component-level demo-mode subscription — needed so the
+  // Issue 8836 Auto-QA: component-level demo-mode subscription — needed so the
   // Auto-QA data-freshness scan recognizes this card as demo-aware and so
   // the card re-renders inline when the toggle flips (not just when the
   // cache layer happens to fail).
@@ -306,7 +306,7 @@ export function KedaStatus() {
           </span>
         </div>
         {/*
-          #8836 Auto-QA (Data Freshness): surface "Last updated X ago" using
+          Issue 8836 Auto-QA (Data Freshness): surface "Last updated X ago" using
           the shared RefreshIndicator (sources its timestamp from the cache
           lastUpdated prop, which mirrors useCache.lastRefresh). Replaces the
           ad-hoc formatRelativeTime(data.lastCheckTime) line.
