@@ -98,7 +98,7 @@ Please help me install one or both of these tools:
 
 Please install at least one tool and verify it is producing scan results.`
 
-/** Install mission fallback prompt for Falco (#8846) — used when the
+/** Install mission fallback prompt for Falco (Issue 8846) — used when the
  *  structured mission JSON (fixes/cncf-install/install-falco.json) cannot
  *  be fetched from console-kb. */
 const FALCO_INSTALL_PROMPT =
@@ -117,7 +117,7 @@ export function FalcoAlerts({ config: _config }: CardConfig) {
   const { isDemoMode } = useDemoMode()
   const { startMission } = useMissions()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
-  // #8846 — Holds the AI mission prompt pending user review/edit before running.
+  // Issue 8846 — Holds the AI mission prompt pending user review/edit before running.
   const [pendingPrompt, setPendingPrompt] = useState<string | null>(null)
 
   // Falco has no live data hook yet so isDemoData is always true.
@@ -133,7 +133,7 @@ export function FalcoAlerts({ config: _config }: CardConfig) {
     { severity: 'info', message: 'Shell spawned in container', time: '1h ago' },
   ]
 
-  // #8846 — Launch the Falco install AI mission. Resolves the structured
+  // Issue 8846 — Launch the Falco install AI mission. Resolves the structured
   // install-falco.json mission from console-kb; falls back to a raw prompt
   // if the fetch fails.
   const handleInstallFalco = () => {
@@ -172,7 +172,7 @@ export function FalcoAlerts({ config: _config }: CardConfig) {
           <Shield className="w-6 h-6 mb-2 text-purple-400" />
           <p>{t('cards:falcoAlerts.noAlertsAvailable')}</p>
           <p className="text-xs mt-1">{t('cards:falcoAlerts.installToSee')}</p>
-          {/* #8846 — AI-mission install CTA parity with other detector cards
+          {/* Issue 8846 — AI-mission install CTA parity with other detector cards
               (Trivy/Kubescape/OVN etc.) so users can launch a guided install
               directly from the Falco Alerts card. */}
           <button
