@@ -202,10 +202,12 @@ function OverviewTab({ score, breakdown, scoreCtx, kubescapeData, kyvernoData }:
         <p className="text-xs text-muted-foreground mt-0.5">{scoreCtx.description}</p>
       </div>
 
-      {/* Per-tool stats. Each row's numbers use the tool's native semantics and
-          reconcile internally (Kubescape: passed + failed == total). Mixing them
-          into a single aggregate row hides the fact that Kyverno violations are
-          event counts, not "failed checks", and led to impossible totals (#8974). */}
+      {/*
+       * Per-tool stats. Each row's numbers use the tool's native semantics and
+       * reconcile internally (Kubescape: passed + failed == total). Mixing them
+       * into a single aggregate row hides the fact that Kyverno violations are
+       * event counts, not "failed checks", and led to impossible totals (issue 8974).
+       */}
       {hasKubescapeChecks && (
         <div>
           <h4 className="text-xs font-medium text-muted-foreground mb-2">Kubescape checks</h4>
