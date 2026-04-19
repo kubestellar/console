@@ -4,6 +4,7 @@ import { useClusterData } from '../../../hooks/useClusterData'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import type { DrillDownViewType } from '../../../hooks/useDrillDown'
 import { useCachedNodes, useCachedPVCs } from '../../../hooks/useCachedData'
+import { useAlerts } from '../../../hooks/useAlerts'
 import { useTranslation } from 'react-i18next'
 import { formatRelativeTime } from '../../../lib/formatters'
 
@@ -80,7 +81,15 @@ function getViewConfig(viewType: DrillDownViewType) {
         bgColor: 'bg-red-500/20',
         dataKey: 'alerts',
         nameKey: 'name',
-        getStatus: (item: { severity?: string; state?: string }) => item.severity || item.state || 'unknown' }
+        // #8844 — The alerts drill-down is opened with filter='firing' or
+        // filter='resolved' from the Alerts dashboard stat blocks. Those
+        // filters are compared against this getStatus() result, so it must
+        // return the alert's lifecycle status (firing | resolved), not its
+        // severity. Otherwise the preFilter drops every item and the
+        // drill-down list appears empty even though the stat block shows a
+        // non-zero count.
+        getStatus: (item: { status?: string; severity?: string; state?: string }) =>
+          item.status || item.severity || item.state || 'unknown' }
     case 'all-helm':
       return {
         icon: Ship,
@@ -158,6 +167,14 @@ function getStatusBadge(status: string) {
 export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSummaryDrillDownProps) {
   const { t } = useTranslation()
   const { clusters, deduplicatedClusters, pods, deployments, events, helmReleases, operatorSubscriptions, securityIssues } = useClusterData()
+  // #8844 — The all-alerts drill-down must read from the same AlertsContext
+  // source that powers the Alerts dashboard stat blocks (firing / resolved
+  // counts). Sourcing alerts from pods (non-Running pods were used as a
+  // synthetic stand-in) diverged from the stat counts: the "Resolved" block
+  // could show e.g. 18 while the drill-down list was always empty because
+  // synthetic pod-alerts never carry status='resolved'. Using the real
+  // alerts list here keeps the count and the list in lock-step.
+  const { alerts: contextAlerts } = useAlerts()
   const {
     nodes: rawCachedNodes,
     lastRefresh: nodesLastRefresh,
@@ -197,7 +214,8 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
 
   const {
     drillToCluster, drillToNamespace, drillToDeployment, drillToPod,
-    drillToNode, drillToEvents, drillToHelm, drillToOperator, drillToPVC
+    drillToNode, drillToEvents, drillToHelm, drillToOperator, drillToPVC,
+    drillToAlert
   } = useDrillDownActions()
 
   const filter = data.filter as string | undefined
@@ -255,15 +273,18 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
           ...e,
           status: e.type || 'Normal' }))
       case 'all-alerts':
-        // Mock alerts from security issues and pod issues
-        return pods
-          .filter(p => p.status !== 'Running')
-          .map(p => ({
-            name: `Pod ${p.name} ${p.status}`,
-            namespace: p.namespace,
-            cluster: p.cluster || '',
-            severity: p.status === 'Failed' ? 'critical' : 'warning',
-            status: p.status }))
+        // #8844 — Use real alerts from AlertsContext so the drill-down list
+        // matches the Alerts dashboard stat blocks (firing / resolved). The
+        // previous implementation synthesized "alerts" from non-Running
+        // pods, which never produced status='resolved' items and left the
+        // Resolved drill-down permanently empty regardless of the count.
+        return (contextAlerts || []).map(a => ({
+          ...a,
+          name: a.ruleName || a.message || a.id,
+          namespace: a.namespace,
+          cluster: a.cluster || '',
+          severity: a.severity,
+          status: a.status }))
       case 'all-helm':
         return helmReleases.map(h => ({
           ...h,
@@ -305,7 +326,7 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
       default:
         return []
     }
-  }, [viewType, clusters, deduplicatedClusters, pods, deployments, events, helmReleases, operatorSubscriptions, securityIssues, cachedNodes, cachedPVCs])
+  }, [viewType, clusters, deduplicatedClusters, pods, deployments, events, helmReleases, operatorSubscriptions, securityIssues, cachedNodes, cachedPVCs, contextAlerts])
 
   // Apply initial filter from data prop
   const preFilteredItems = (() => {
@@ -388,6 +409,9 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
         break
       case 'all-events':
         drillToEvents(cluster, namespace, (item.involvedObject as string) || name)
+        break
+      case 'all-alerts':
+        drillToAlert(cluster, namespace || undefined, name, item)
         break
       case 'all-helm':
         drillToHelm(cluster, namespace, name, item)
