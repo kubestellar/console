@@ -335,9 +335,22 @@ function PodSweeperInternal(_props: CardComponentProps) {
                 return (
                   <div
                     key={colIdx}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Cell row ${rowIdx + 1} column ${colIdx + 1}`}
                     onClick={() => handleClick(rowIdx, colIdx)}
                     onContextMenu={(e) => handleRightClick(e, rowIdx, colIdx)}
-                    className={`${cellSize} flex items-center justify-center border border-border/50 cursor-pointer transition-colors ${bgClass}`}
+                    onKeyDown={(e) => {
+                      // Issue #8837: Enter/Space reveal, F to toggle flag (matches right-click)
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault()
+                        handleClick(rowIdx, colIdx)
+                      } else if (e.key === "f" || e.key === "F") {
+                        e.preventDefault()
+                        handleRightClick(e as unknown as React.MouseEvent, rowIdx, colIdx)
+                      }
+                    }}
+                    className={`${cellSize} flex items-center justify-center border border-border/50 cursor-pointer transition-colors ${bgClass} focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400`}
                   >
                     {content}
                   </div>

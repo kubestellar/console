@@ -169,6 +169,15 @@ function DroppableCluster({ cluster, workload, onDeploy }: DroppableClusterProps
           : 'bg-gray-50 dark:bg-secondary/50 border-gray-200 dark:border-border hover:border-blue-300 dark:hover:border-blue-600'
       )}
       onClick={handleClick}
+      onKeyDown={(e) => {
+        // Issue #8837: Enter/Space activates drop-zone click, matching mouse behavior
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault()
+          handleClick()
+        }
+      }}
+      role="button"
+      tabIndex={0}
     >
       <div className="flex-shrink-0 mt-0.5">
         <Server className={cn('w-5 h-5', isOver ? 'text-blue-500' : 'text-blue-400')} />
