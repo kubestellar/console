@@ -3224,7 +3224,10 @@
     "installDescription": "Install Falco for runtime security monitoring.",
     "installGuide": "Install guide",
     "noAlertsAvailable": "No Falco alerts available",
-    "installToSee": "Install Falco to see runtime security alerts"
+    "installToSee": "Install Falco to see runtime security alerts",
+    "installWithMission": "Install Falco (AI mission)",
+    "missionTitle": "Install Falco",
+    "missionDescription": "Install Falco for runtime security monitoring and threat detection"
   },
   "trivyScan": {
     "checkingClusters": "Checking clusters... {{checked}}/{{total}}",

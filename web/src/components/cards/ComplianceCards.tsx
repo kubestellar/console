@@ -7,7 +7,7 @@
  */
 
 import { useState, useMemo } from 'react'
-import { AlertTriangle, AlertCircle, Shield, ExternalLink, Info, Loader2, ChevronRight } from 'lucide-react'
+import { AlertTriangle, AlertCircle, Shield, ExternalLink, Info, Loader2, ChevronRight, Sparkles } from 'lucide-react'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
@@ -23,6 +23,10 @@ import { KyvernoDetailModal } from './kyverno/KyvernoDetailModal'
 import { getFrameworkInfo, getScoreContext, TRIVY_SEVERITY, CARD_DESCRIPTIONS } from '../../lib/constants/compliance'
 import { ComplianceScoreBreakdownModal } from './compliance/ComplianceScoreBreakdownModal'
 import { PolicyViolationDetailModal } from './compliance/PolicyViolationDetailModal'
+import { loadMissionPrompt } from './multi-tenancy/missionLoader'
+import { useApiKeyCheck, ApiKeyPromptModal } from './console-missions/shared'
+import { ConfirmMissionPromptDialog } from '../missions/ConfirmMissionPromptDialog'
+import { CARD_INSTALL_MAP } from '../../lib/cards/cardInstallMap'
 
 interface CardConfig {
   config?: Record<string, unknown>
@@ -94,11 +98,27 @@ Please help me install one or both of these tools:
 
 Please install at least one tool and verify it is producing scan results.`
 
+/** Install mission fallback prompt for Falco (#8846) — used when the
+ *  structured mission JSON (fixes/cncf-install/install-falco.json) cannot
+ *  be fetched from console-kb. */
+const FALCO_INSTALL_PROMPT =
+  'Install Falco for runtime security monitoring on this cluster. ' +
+  'Falco provides container runtime threat detection by watching kernel ' +
+  'system calls and Kubernetes audit events. ' +
+  'Use the official Helm chart: ' +
+  '`helm repo add falcosecurity https://falcosecurity.github.io/charts && ' +
+  'helm install falco falcosecurity/falco --namespace falco --create-namespace`. ' +
+  'After installation, verify the Falco pods are running and producing events.'
+
 // ── Falco (static demo data — no live hook yet) ───────────────────────
 
 export function FalcoAlerts({ config: _config }: CardConfig) {
   const { t } = useTranslation(['common', 'cards'])
   const { isDemoMode } = useDemoMode()
+  const { startMission } = useMissions()
+  const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
+  // #8846 — Holds the AI mission prompt pending user review/edit before running.
+  const [pendingPrompt, setPendingPrompt] = useState<string | null>(null)
 
   // Falco has no live data hook yet so isDemoData is always true.
   // However, we still gate the demo content on isDemoMode so the card
@@ -112,6 +132,21 @@ export function FalcoAlerts({ config: _config }: CardConfig) {
     { severity: 'warning', message: 'Privileged pod spawned', time: '15m ago' },
     { severity: 'info', message: 'Shell spawned in container', time: '1h ago' },
   ]
+
+  // #8846 — Launch the Falco install AI mission. Resolves the structured
+  // install-falco.json mission from console-kb; falls back to a raw prompt
+  // if the fetch fails.
+  const handleInstallFalco = () => {
+    checkKeyAndRun(async () => {
+      const installInfo = CARD_INSTALL_MAP.falco_alerts
+      const prompt = await loadMissionPrompt(
+        installInfo?.missionKey ?? 'install-falco',
+        FALCO_INSTALL_PROMPT,
+        installInfo?.kbPaths,
+      )
+      setPendingPrompt(prompt)
+    })
+  }
 
   if (!showDemo) {
     return (
@@ -137,7 +172,36 @@ export function FalcoAlerts({ config: _config }: CardConfig) {
           <Shield className="w-6 h-6 mb-2 text-purple-400" />
           <p>{t('cards:falcoAlerts.noAlertsAvailable')}</p>
           <p className="text-xs mt-1">{t('cards:falcoAlerts.installToSee')}</p>
+          {/* #8846 — AI-mission install CTA parity with other detector cards
+              (Trivy/Kubescape/OVN etc.) so users can launch a guided install
+              directly from the Falco Alerts card. */}
+          <button
+            onClick={handleInstallFalco}
+            className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-500/20 text-purple-400 text-xs font-medium hover:bg-purple-500/30 transition-colors"
+          >
+            <Sparkles className="w-3 h-3" />
+            {t('cards:falcoAlerts.installWithMission')}
+          </button>
         </div>
+        <ApiKeyPromptModal isOpen={showKeyPrompt} onDismiss={dismissPrompt} onGoToSettings={goToSettings} />
+        {pendingPrompt !== null && (
+          <ConfirmMissionPromptDialog
+            open={pendingPrompt !== null}
+            missionTitle={t('cards:falcoAlerts.missionTitle')}
+            missionDescription={t('cards:falcoAlerts.missionDescription')}
+            initialPrompt={pendingPrompt}
+            onCancel={() => setPendingPrompt(null)}
+            onConfirm={(editedPrompt) => {
+              setPendingPrompt(null)
+              startMission({
+                title: t('cards:falcoAlerts.missionTitle'),
+                description: t('cards:falcoAlerts.missionDescription'),
+                type: 'deploy',
+                initialPrompt: editedPrompt,
+              })
+            }}
+          />
+        )}
       </div>
     )
   }
