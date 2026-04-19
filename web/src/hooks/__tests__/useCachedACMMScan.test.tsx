@@ -152,7 +152,7 @@ describe('useCachedACMMScan', () => {
     await expect(fetcher()).rejects.toThrow(/503/)
   })
 
-  // Regression test for kubestellar/console#8848:
+  // Regression test for kubestellar/consoleIssue 8848:
   // When the Netlify Function can't reach GitHub (missing token, rate limit,
   // network failure, etc.) it returns HTTP 200 with `demoFallback: true` and
   // a plausible demo catalog. Before the fix, the hook threw that flag away

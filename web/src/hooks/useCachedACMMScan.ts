@@ -117,7 +117,7 @@ function demoScan(repo: string): ACMMScanData {
  * GITHUB_TOKEN, rate-limited, network error, etc.). The response still
  * contains a plausible demo catalog so the dashboard renders, but the
  * user MUST be told it's demo data — otherwise they see a working-looking
- * scan of kubestellar/console that doesn't match reality (bug #8848).
+ * scan of kubestellar/console that doesn't match reality (bug Issue 8848).
  *
  * We can't surface that flag through `useCache` (which only tracks its
  * own demo-fallback path — triggered when the fetcher errors, not when
@@ -163,7 +163,7 @@ async function fetchACMMScan(repo: string, force: boolean): Promise<ACMMScanData
   }
   const body = (await res.json()) as ACMMScanData & { demoFallback?: boolean }
   // Track the server-signalled demoFallback flag so the hook can expose it
-  // via isDemoData even though the HTTP call itself succeeded (see bug #8848:
+  // via isDemoData even though the HTTP call itself succeeded (see bug Issue 8848:
   // the Netlify function returns 200 with demoFallback:true when upstream
   // GitHub is unreachable, and without this signal the UI silently shows the
   // demo catalog as if it were a live scan of the user's repo).
