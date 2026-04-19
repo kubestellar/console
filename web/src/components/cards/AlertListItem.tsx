@@ -125,6 +125,7 @@ export function AlertListItem({
       key={alert.id}
       data-keynav-item="alert"
       role="button"
+      aria-label={t('activeAlerts.viewAlertDetailsAria', { rule: alert.ruleName })}
       tabIndex={0}
       onClick={() => onAlertClick(alert)}
       onKeyDown={handleKeyDown}

@@ -3147,12 +3147,24 @@ jobs:
           echo "Checking for ARIA gaps..."
           ISSUES=""
 
-          # Find role="button" without aria-label
-          ROLE_NO_LABEL=$(grep -rn 'role="button"' src/ --include="*.tsx" 2>/dev/null | while read line; do
+          # Number of lines after the attribute to scan for aria-label/title.
+          # JSX props commonly span multiple lines; a 10-line window catches the
+          # common pattern of role="button" followed by aria-label and handlers.
+          ARIA_WINDOW_LINES=10
+          # Find role="button" without aria-label within the JSX element window.
+          # Exclude test files — they may construct synthetic role=button mocks.
+          ROLE_NO_LABEL=$(grep -rn 'role="button"' src/ --include="*.tsx" 2>/dev/null | \
+            grep -v "__tests__" | grep -v "\.test\.tsx:" | \
+            while read line; do
             FILE=$(echo "$line" | cut -d: -f1)
             LINE_NO=$(echo "$line" | cut -d: -f2)
-            LINE_CONTENT=$(sed -n "${LINE_NO}p" "$FILE" 2>/dev/null)
-            HAS_LABEL=$(echo "$LINE_CONTENT" | grep -E "aria-label|aria-labelledby|title=" || true)
+            # Look at a window around the match: 3 lines before (for aria-label
+            # listed above role) and ARIA_WINDOW_LINES after.
+            START=$((LINE_NO - 3))
+            if [ $START -lt 1 ]; then START=1; fi
+            END=$((LINE_NO + ARIA_WINDOW_LINES))
+            CONTEXT=$(sed -n "${START},${END}p" "$FILE" 2>/dev/null)
+            HAS_LABEL=$(echo "$CONTEXT" | grep -E "aria-label|aria-labelledby|title=" || true)
             if [ -z "$HAS_LABEL" ]; then
               RELATIVE=$(echo "$FILE" | sed 's|^src/||')
               echo "  - \`${RELATIVE}:${LINE_NO}\`"
@@ -3164,15 +3176,21 @@ jobs:
           fi
 
           # Find icon-only buttons without labels
-          ICON_BUTTON_NO_LABEL=$(grep -rn "<button" src/ --include="*.tsx" 2>/dev/null | while read line; do
+          # Window for scanning inside a <button ...> element for aria-label,
+          # title, or visible text. Wider than the role check because buttons
+          # with long className expressions push the content further down.
+          ICON_BUTTON_WINDOW_LINES=12
+          ICON_BUTTON_NO_LABEL=$(grep -rn "<button" src/ --include="*.tsx" 2>/dev/null | \
+            grep -v "__tests__" | grep -v "\.test\.tsx:" | \
+            while read line; do
             FILE=$(echo "$line" | cut -d: -f1)
             LINE_NO=$(echo "$line" | cut -d: -f2)
-            # Get button content (next 3 lines)
-            CONTEXT=$(sed -n "${LINE_NO},$((LINE_NO + 3))p" "$FILE" 2>/dev/null)
+            # Get button content (next N lines)
+            CONTEXT=$(sed -n "${LINE_NO},$((LINE_NO + ICON_BUTTON_WINDOW_LINES))p" "$FILE" 2>/dev/null)
             # Check if it only contains an icon
             HAS_ICON=$(echo "$CONTEXT" | grep -E "Icon|<[A-Z][a-z]+.*className.*w-[0-9]" || true)
             HAS_TEXT=$(echo "$CONTEXT" | grep -E ">[A-Za-z]|{['\"]" || true)
-            HAS_LABEL=$(echo "$CONTEXT" | grep -E "aria-label|title=" || true)
+            HAS_LABEL=$(echo "$CONTEXT" | grep -E "aria-label|aria-labelledby|title=" || true)
             if [ -n "$HAS_ICON" ] && [ -z "$HAS_TEXT" ] && [ -z "$HAS_LABEL" ]; then
               RELATIVE=$(echo "$FILE" | sed 's|^src/||')
               echo "  - \`${RELATIVE}:${LINE_NO}\`"
@@ -3183,13 +3201,21 @@ jobs:
             ISSUES="${ISSUES}### Icon-only buttons without aria-label\n${ICON_BUTTON_NO_LABEL}\n\n"
           fi
 
-          # Find modals/dialogs without proper ARIA
-          MODAL_NO_ARIA=$(grep -rln "Modal\|Dialog\|isOpen\|isVisible" src/ --include="*.tsx" 2>/dev/null | while read f; do
-            HAS_ROLE=$(grep -l 'role="dialog"\|role="alertdialog"\|aria-modal' "$f" 2>/dev/null || true)
+          # Find modals/dialogs without proper ARIA.
+          # Exclude test files, tooltip/popover components, and files that only
+          # re-export a dialog from a child component. True modals typically
+          # contain both a portal/overlay pattern AND an "isOpen" prop.
+          MODAL_NO_ARIA=$(grep -rln "Modal\|Dialog" src/ --include="*.tsx" 2>/dev/null | \
+            grep -v "__tests__" | grep -v "\.test\.tsx$" | \
+            grep -v "Tooltip" | grep -v "Popover" | grep -v "Dropdown" | \
+            while read f; do
+            HAS_ROLE=$(grep -l 'role="dialog"\|role="alertdialog"\|role="menu"\|role="listbox"\|role="tooltip"\|aria-modal' "$f" 2>/dev/null || true)
             if [ -z "$HAS_ROLE" ]; then
-              # Only flag if it looks like a modal component
-              IS_MODAL=$(grep -l "portal\|Portal\|overlay\|Overlay\|backdrop" "$f" 2>/dev/null || true)
-              if [ -n "$IS_MODAL" ]; then
+              # Require BOTH a portal/overlay indicator AND an isOpen-style prop
+              # to reduce false positives against non-modal panels.
+              HAS_PORTAL=$(grep -l "createPortal\|backdrop\|overlay\|Overlay" "$f" 2>/dev/null || true)
+              HAS_OPEN_PROP=$(grep -E "isOpen[ :=]|open[ :=][ ]*\{|onClose" "$f" 2>/dev/null || true)
+              if [ -n "$HAS_PORTAL" ] && [ -n "$HAS_OPEN_PROP" ]; then
                 RELATIVE=$(echo "$f" | sed 's|^src/||')
                 echo "  - \`${RELATIVE}\`"
               fi

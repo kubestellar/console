@@ -210,6 +210,7 @@ function OpenCostOverviewInternal({ config: _config }: OpenCostOverviewProps) {
             key={ns.namespace}
             data-keynav-item="opencost-ns"
             role="button"
+            aria-label={t('actions.viewNamespaceCostAria', { namespace: ns.namespace })}
             tabIndex={0}
             onClick={activate}
             onKeyDown={handleKeyDown}

@@ -42,7 +42,10 @@
     "getYourOwn": "Get Your Own Console",
     "viewDetails": "View Details",
     "copied": "Copied!",
-    "dismiss": "Dismiss"
+    "dismiss": "Dismiss",
+    "viewNamespaceCostAria": "View cost details for namespace {{namespace}}",
+    "viewOperatorAria": "View operator {{name}}",
+    "toggleGPUNodeAria": "Toggle details for GPU node {{node}}"
   },
   "buttons": {
     "addCard": "Add Card",

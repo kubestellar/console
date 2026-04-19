@@ -655,6 +655,7 @@ function ProactiveGPUNodeHealthMonitorInternal() {
                 role="button"
                 tabIndex={0}
                 aria-expanded={isExpanded}
+                aria-label={t('common:actions.toggleGPUNodeAria', { node: node.nodeName })}
                 className="group flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-secondary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
                 onClick={toggleExpand}
                 onKeyDown={handleRowKeyDown}

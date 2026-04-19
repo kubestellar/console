@@ -243,6 +243,8 @@ export function GPUTaintFilterControl({
 
       {isOpen && dropdownPos && createPortal(
         <div
+          role="menu"
+          aria-label="Tolerate GPU node taints" // ai-quality-ignore — a11y attribute, not displayed text
           className="fixed max-h-72 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-dropdown"
           style={{ top: dropdownPos.top, left: dropdownPos.left, width: DROPDOWN_WIDTH_PX }}
           onMouseDown={e => e.stopPropagation()}

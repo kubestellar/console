@@ -305,6 +305,7 @@ function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
                   key={`${op.cluster || 'unknown'}-${op.namespace}-${op.name}`}
                   data-keynav-item="operator"
                   role="button"
+                  aria-label={t('common:actions.viewOperatorAria', { name: op.name })}
                   tabIndex={0}
                   onClick={activate}
                   onKeyDown={handleKeyDown}

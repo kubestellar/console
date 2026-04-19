@@ -2134,7 +2134,8 @@
     "didYouSeeIt": "Did you see it?",
     "yes": "Yes",
     "no": "No",
-    "checkSystemSettings": "Check System Settings → Notifications → Chrome"
+    "checkSystemSettings": "Check System Settings → Notifications → Chrome",
+    "viewAlertDetailsAria": "View alert details: {{rule}}"
   },
   "alertRules": {
     "sortName": "Name",

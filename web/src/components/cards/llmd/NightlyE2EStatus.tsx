@@ -217,6 +217,7 @@ Please provide:
       </a>
       {showPopup && popupPos && createPortal(
         <div
+          role="tooltip"
           className="fixed z-dropdown"
           style={{ top: popupPos.top, left: popupPos.left, transform: 'translate(-50%, -100%)' }}
           onMouseEnter={cancelHide}

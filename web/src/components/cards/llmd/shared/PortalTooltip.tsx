@@ -59,6 +59,7 @@ export function PortalTooltip({ children, content, className = '' }: PortalToolt
         <AnimatePresence>
           {isVisible && (
             <motion.div
+              role="tooltip"
               initial={{ opacity: 0, y: 5 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 5 }}
