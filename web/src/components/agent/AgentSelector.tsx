@@ -16,6 +16,7 @@ import type { MissionExport } from '../../lib/missions/types'
 import { cn } from '../../lib/cn'
 import { useModalState } from '../../lib/modals'
 import { safeGetItem, safeSetItem } from '../../lib/utils/localStorage'
+import { sanitizeUrl } from '../../lib/utils/sanitizeUrl'
 import { AgentApprovalDialog, hasApprovedAgents } from './AgentApprovalDialog'
 import { MissionDetailView } from '../missions/MissionDetailView'
 import { ClusterSelectionDialog } from '../missions/ClusterSelectionDialog'
@@ -361,7 +362,7 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
         )}
         {!agent.available && agent.installUrl && !agent.installMissionId && (
           <a
-            href={agent.installUrl}
+            href={sanitizeUrl(agent.installUrl)}
             target="_blank"
             rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}

@@ -10,6 +10,7 @@ import {
   Package, FileText, ExternalLink
 } from 'lucide-react'
 import { cn } from '../../../lib/cn'
+import { sanitizeUrl } from '../../../lib/utils/sanitizeUrl'
 import { LOCAL_AGENT_WS_URL } from '../../../lib/constants'
 import { ConsoleAIIcon } from '../../ui/ConsoleAIIcon'
 import {
@@ -465,7 +466,7 @@ Please:
                   {csvInfo.links.map((link, i) => (
                     <a
                       key={i}
-                      href={link.url}
+                      href={sanitizeUrl(link.url)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-secondary/50 text-sm text-foreground hover:bg-secondary transition-colors"
