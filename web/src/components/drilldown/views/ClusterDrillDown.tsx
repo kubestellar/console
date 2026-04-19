@@ -31,21 +31,28 @@ export function ClusterDrillDown({ data }: Props) {
   const [searchFilter, setSearchFilter] = useState('')
   const [activeLens, setActiveLens] = useState<TreeLens>('all')
   const [activeTab, setActiveTab] = useState<ClusterTab>('events')
-  const nodesSectionRef = useRef<HTMLDivElement>(null)
+  const resourceTreeRef = useRef<HTMLDivElement>(null)
 
-  /** Navigate to the nodes section in the resource tree */
-  const scrollToNodesSection = useCallback(() => {
+  /**
+   * Navigate to the Resource Tree tab with a given lens active.
+   *
+   * Scrolls the tab container (not an inner branch) into view so the user
+   * sees the lens buttons and the filtered branch together — keeping this
+   * flow consistent with clicking a lens button directly inside the tab.
+   */
+  const navigateToResourceTree = useCallback((lens: TreeLens) => {
     setActiveTab('resources')
-    setActiveLens('nodes')
+    setActiveLens(lens)
     setExpandedSections(prev => {
       const next = new Set(prev)
       next.add('cluster')
-      next.add('nodes')
+      if (lens === 'nodes') next.add('nodes')
+      if (lens === 'workloads') next.add('namespaces')
       return next
     })
     // Allow DOM to update before scrolling
     setTimeout(() => {
-      nodesSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      resourceTreeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }, SCROLL_AFTER_TAB_SWITCH_MS)
   }, [])
 
@@ -269,7 +276,7 @@ export function ClusterDrillDown({ data }: Props) {
         </div>
 
         <button
-          onClick={scrollToNodesSection}
+          onClick={() => navigateToResourceTree('nodes')}
           className="p-4 rounded-lg bg-card/50 border border-border text-left hover:bg-card hover:border-primary/50 transition-colors cursor-pointer w-full"
         >
           <div className="text-sm text-muted-foreground mb-2">{t('common.nodes')}</div>
@@ -277,10 +284,13 @@ export function ClusterDrillDown({ data }: Props) {
           <div className="text-xs text-green-400">{health?.readyNodes || 0} ready</div>
         </button>
 
-        <div className="p-4 rounded-lg bg-card/50 border border-border">
+        <button
+          onClick={() => navigateToResourceTree('workloads')}
+          className="p-4 rounded-lg bg-card/50 border border-border text-left hover:bg-card hover:border-primary/50 transition-colors cursor-pointer w-full"
+        >
           <div className="text-sm text-muted-foreground mb-2">{t('common.pods')}</div>
           <div className="text-2xl font-bold text-foreground">{health?.podCount || 0}</div>
-        </div>
+        </button>
 
         <div className="p-4 rounded-lg bg-card/50 border border-border">
           <div className="text-sm text-muted-foreground mb-2">{t('common.gpus')}</div>
@@ -439,7 +449,7 @@ export function ClusterDrillDown({ data }: Props) {
       )}
 
       {/* Tabs for Events and Resources */}
-      <div className="border-t border-border pt-4">
+      <div ref={resourceTreeRef} className="border-t border-border pt-4">
         <div className="border-b border-border mb-4">
           <div className="flex gap-0">
             {([
@@ -621,7 +631,7 @@ export function ClusterDrillDown({ data }: Props) {
                         </div>
 
                         {expandedSections.has('nodes') && (
-                          <div ref={nodesSectionRef} className="ml-6 border-l-2 border-blue-500/30 pl-4 mt-1 space-y-1">
+                          <div className="ml-6 border-l-2 border-blue-500/30 pl-4 mt-1 space-y-1">
                             {filteredNodes.slice(0, 20).map((node) => (
                               <button
                                 key={node.name}
