@@ -310,7 +310,11 @@ export function RepoPicker() {
         </div>
       )}
 
-      <div className="max-w-screen-2xl mx-auto px-6 pb-2 text-xs text-muted-foreground border-b border-border/60">
+      {/* Info bar (issue #8977): removed the bottom border that bled through
+          as an underline beneath the inline text (e.g. "request timed out").
+          The sticky wrapper's backdrop-blur + bg-background/95 already give
+          enough visual separation from the scrollable page content. */}
+      <div className="max-w-screen-2xl mx-auto px-6 pb-2 text-xs text-muted-foreground">
         {error ? (
           <div className="flex items-center gap-1.5 text-red-400">
             <AlertCircle className="w-3.5 h-3.5" />

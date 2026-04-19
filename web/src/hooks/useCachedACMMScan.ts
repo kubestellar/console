@@ -10,11 +10,25 @@ import { useCallback, useRef, useSyncExternalStore } from 'react'
 import { useCache, type RefreshCategory } from '../lib/cache'
 import { computeLevel, type LevelComputation } from '../lib/acmm/computeLevel'
 import { computeRecommendations, type Recommendation } from '../lib/acmm/computeRecommendations'
-import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants'
 
 const API_PATH = '/api/acmm/scan'
 /** Scan results change slowly; 10-min refresh avoids GitHub rate limits. */
 const REFRESH_CATEGORY: RefreshCategory = 'costs'
+
+/**
+ * ACMM scan timeout (issue #8978).
+ *
+ * A cold scan of a large repo (like kubestellar/console, ~1600 files) fans
+ * out into up to 12 GitHub API calls from the Netlify Function: 1 repo info
+ * + 1 full-tree fetch + up to 10 paginated search pages for weekly activity.
+ * Each GitHub call has its own 15s timeout inside the function. The default
+ * 10s browser fetch timeout (FETCH_DEFAULT_TIMEOUT_MS) was too tight and
+ * aborted healthy live scans, making the UI show "request timed out" even
+ * though the backend would eventually answer (and cache the result, so the
+ * next visit worked). 30s covers the realistic worst case without hanging
+ * the tab indefinitely.
+ */
+const ACMM_SCAN_TIMEOUT_MS = 30_000
 
 export interface WeeklyActivity {
   week: string
@@ -78,32 +92,55 @@ function demoScan(repo: string): ACMMScanData {
       humanIssues: 3,
     })
   }
+  // Issue #8978: detectedIds must use the CURRENT criterion IDs from
+  // web/src/lib/acmm/sources/acmm.ts — the previous list used legacy short
+  // IDs (acmm:pr-template, acmm:style-config, …) that no longer exist in
+  // the taxonomy, so the demo fallback computed to L1 even for well-tooled
+  // repos like kubestellar/console which should land at L5. Keep this set
+  // in sync with acmm-scan.mts when criteria IDs change.
   return {
     repo,
     scannedAt: new Date().toISOString(),
     detectedIds: [
+      // L0 prerequisites
+      'acmm:prereq-test-suite',
+      'acmm:prereq-e2e',
+      'acmm:prereq-cicd',
+      'acmm:prereq-pr-template',
+      'acmm:prereq-issue-template',
+      'acmm:prereq-contrib-guide',
+      'acmm:prereq-code-style',
+      'acmm:prereq-coverage-gate',
+      // L2 — Instructed
       'acmm:claude-md',
       'acmm:copilot-instructions',
-      'acmm:pr-template',
-      'acmm:contrib-guide',
-      'acmm:style-config',
+      'acmm:agents-md',
+      'acmm:prompts-catalog',
       'acmm:editor-config',
-      'acmm:coverage-gate',
-      'acmm:test-suite',
-      'acmm:e2e-tests',
+      // L3 — Measured / Enforced
+      'acmm:pr-acceptance-metric',
+      'acmm:pr-review-rubric',
+      'acmm:quality-dashboard',
       'acmm:ci-matrix',
+      // L4 — Adaptive / Structured
+      'acmm:auto-qa-tuning',
       'acmm:nightly-compliance',
       'acmm:auto-label',
       'acmm:ai-fix-workflow',
+      'acmm:tier-classifier',
       'acmm:security-ai-md',
+      // L5 — Semi-Automated
+      'acmm:github-actions-ai',
+      'acmm:auto-qa-self-tuning',
       'acmm:public-metrics',
-      'acmm:reflection-log',
+      'acmm:policy-as-code',
+      // L6 — Fully Autonomous
+      'acmm:strategic-dashboard',
+      // Other sources
       'fullsend:test-coverage',
       'fullsend:ci-cd-maturity',
-      'aef:structural-gates',
       'aef:session-continuity',
-      'claude-reflect:preference-index',
-      'claude-reflect:session-summary',
+      'aef:cross-tool-config',
     ],
     weeklyActivity: weeks,
   }
@@ -149,7 +186,7 @@ function getDemoFallback(repo: string): boolean {
 async function fetchACMMScan(repo: string, force: boolean): Promise<ACMMScanData> {
   const qs = force ? `&force=true` : ''
   const res = await fetch(`${API_PATH}?repo=${encodeURIComponent(repo)}${qs}`, {
-    signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+    signal: AbortSignal.timeout(ACMM_SCAN_TIMEOUT_MS),
   })
   if (!res.ok) {
     throw new Error(`ACMM scan failed: ${res.status} ${res.statusText}`)

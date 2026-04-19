@@ -16,6 +16,9 @@ const GITHUB_API = "https://api.github.com";
 const REPO_RE = /^[\w.-]+\/[\w.-]+$/;
 const API_TIMEOUT_MS = 15_000;
 const LEVEL_COMPLETION_THRESHOLD = 0.7;
+/** Maximum maturity level scanned (L6 = Fully Autonomous). L1 is the
+ *  starting level; threshold walk gates L2 through MAX_LEVEL. */
+const MAX_LEVEL = 6;
 /**
  * Badge cache window. ACMM level changes slowly (file-tree shape, not commit
  * activity), so a 1 h cache is plenty. This is shared across three layers:
@@ -27,7 +30,16 @@ const LEVEL_COMPLETION_THRESHOLD = 0.7;
  */
 const BADGE_CACHE_SECONDS = 3600;
 
-/** ACMM criteria grouped by level. Mirrors acmm-scan.mts CRITERIA entries. */
+/**
+ * ACMM criteria grouped by level. MUST mirror the scannable entries in
+ * acmm-scan.mts CRITERIA (IDs and level assignments).
+ *
+ * Issue #8979: the previous map used legacy short IDs (acmm:pr-template,
+ * acmm:style-config, acmm:test-suite, …) that no longer exist in the scan
+ * taxonomy, so the badge always computed to L1 ("5/10" for kubestellar/
+ * console) regardless of the repo's real maturity. When adding / renaming
+ * criteria in acmm-scan.mts, update this map and the LEVEL_NAMES below.
+ */
 const ACMM_IDS_BY_LEVEL: Record<number, string[]> = {
   2: [
     "acmm:claude-md",
@@ -35,20 +47,17 @@ const ACMM_IDS_BY_LEVEL: Record<number, string[]> = {
     "acmm:agents-md",
     "acmm:cursor-rules",
     "acmm:prompts-catalog",
-    "acmm:pr-template",
-    "acmm:issue-template",
-    "acmm:contrib-guide",
-    "acmm:style-config",
     "acmm:editor-config",
   ],
   3: [
-    "acmm:coverage-gate",
     "acmm:pr-acceptance-metric",
-    "acmm:test-suite",
-    "acmm:e2e-tests",
     "acmm:pr-review-rubric",
     "acmm:quality-dashboard",
     "acmm:ci-matrix",
+    "acmm:layered-safety",
+    "acmm:mechanical-enforcement",
+    "acmm:session-summary",
+    "acmm:structural-gates",
   ],
   4: [
     "acmm:auto-qa-tuning",
@@ -58,25 +67,36 @@ const ACMM_IDS_BY_LEVEL: Record<number, string[]> = {
     "acmm:ai-fix-workflow",
     "acmm:tier-classifier",
     "acmm:security-ai-md",
+    "acmm:session-continuity",
+    "acmm:cross-session-knowledge",
   ],
   5: [
+    "acmm:github-actions-ai",
+    "acmm:auto-qa-self-tuning",
+    "acmm:public-metrics",
+    "acmm:policy-as-code",
+    "acmm:reflection-log",
+  ],
+  6: [
     "acmm:auto-issue-gen",
     "acmm:multi-agent-orchestration",
     "acmm:strategic-dashboard",
     "acmm:merge-queue",
-    "acmm:policy-as-code",
-    "acmm:public-metrics",
-    "acmm:reflection-log",
+    "acmm:risk-assessment-config",
+    "acmm:observability-runbook",
   ],
 };
 
-/** Shields.io color bands by level — matches the ACMM gauge on Card 1. */
+/** Shields.io color bands by level — matches the ACMM gauge on Card 1.
+ *  Level 6 (Fully Autonomous) extends the gradient beyond the original
+ *  five bands; `blue` stays within shields.io's named-color palette. */
 const LEVEL_COLORS: Record<number, string> = {
   1: "lightgrey",
   2: "yellow",
   3: "yellowgreen",
   4: "brightgreen",
   5: "blueviolet",
+  6: "blue",
 };
 
 const LEVEL_NAMES: Record<number, string> = {
@@ -84,7 +104,8 @@ const LEVEL_NAMES: Record<number, string> = {
   2: "Instructed",
   3: "Measured",
   4: "Adaptive",
-  5: "Self-Sustaining",
+  5: "Semi-Automated",
+  6: "Fully Autonomous",
 };
 
 const ALLOWED_ORIGIN_RE = /^https?:\/\/(.*\.kubestellar\.io|localhost(:\d+)?)$/;
@@ -105,17 +126,23 @@ function computeLevel(detectedIds: Set<string>): { level: number; totalDetected:
   let currentLevel = 1;
   let totalDetected = 0;
   let totalAcmm = 0;
-  for (let n = 2; n <= 5; n++) {
-    const required = ACMM_IDS_BY_LEVEL[n];
+  let stopPromotion = false;
+  for (let n = 2; n <= MAX_LEVEL; n++) {
+    const required = ACMM_IDS_BY_LEVEL[n] ?? [];
     const detected = required.filter((id) => detectedIds.has(id)).length;
     totalAcmm += required.length;
     totalDetected += detected;
-    if (required.length === 0) continue;
+    if (required.length === 0 || stopPromotion) continue;
     const ratio = detected / required.length;
     if (ratio >= LEVEL_COMPLETION_THRESHOLD) {
       currentLevel = n;
     } else {
-      break;
+      // Stop promoting levels after the first gap, but keep counting
+      // detected / total across every level so the "X / Y" pill in the
+      // badge reflects the full criterion catalog (not just the levels
+      // up to the current gate). This matches the frontend pill the
+      // user sees inside the dashboard.
+      stopPromotion = true;
     }
   }
   return { level: currentLevel, totalDetected, totalAcmm };
@@ -131,26 +158,127 @@ async function fetchDetectedIds(origin: string, repo: string): Promise<string[]>
   return body.detectedIds || [];
 }
 
-/** Fallback: call GitHub directly if the scan endpoint isn't reachable from this function. */
+/**
+ * Fallback: call GitHub directly when the scan endpoint isn't reachable
+ * from this function (same-origin fetch timed out, scan function cold-
+ * started, etc.). Detects a representative subset of criteria by path —
+ * enough to produce a plausible level for the badge so we never show
+ * "custom badge inaccessible" (issue #8979). Previously this used a
+ * naive `id.replace("acmm:", "").replace(/-/g, "_") + ".md"` heuristic
+ * that never matched anything real (e.g. `claude_md.md` is not a file
+ * on any repo), so every fallback path computed to L1.
+ */
+const BADGE_FALLBACK_PATHS: Record<string, readonly string[]> = {
+  // L2
+  "acmm:claude-md": ["CLAUDE.md", ".claude/CLAUDE.md"],
+  "acmm:copilot-instructions": [".github/copilot-instructions.md"],
+  "acmm:agents-md": ["AGENTS.md"],
+  "acmm:cursor-rules": [".cursorrules", ".cursor/rules"],
+  "acmm:prompts-catalog": [
+    "prompts/",
+    ".prompts/",
+    "docs/prompts/",
+    ".github/prompts/",
+    ".github/agents/",
+  ],
+  "acmm:editor-config": [".editorconfig"],
+  // L3
+  "acmm:pr-review-rubric": [
+    ".github/review-rubric.md",
+    "docs/review-criteria.md",
+    ".github/prompts/review.md",
+  ],
+  "acmm:ci-matrix": [
+    ".github/workflows/ci.yml",
+    ".github/workflows/test.yml",
+    ".github/workflows/build.yml",
+    ".github/workflows/build-deploy.yml",
+  ],
+  "acmm:layered-safety": [".claude/settings.json", ".claude/settings.local.json"],
+  "acmm:mechanical-enforcement": [".claude/settings.json"],
+  "acmm:structural-gates": [".claude/settings.json"],
+  // L4
+  "acmm:security-ai-md": [
+    "docs/security/SECURITY-AI.md",
+    "SECURITY-AI.md",
+    "docs/SECURITY-AI.md",
+  ],
+  "acmm:ai-fix-workflow": [
+    ".github/workflows/ai-fix.yml",
+    ".github/workflows/ai-fix-requested.yml",
+    ".github/workflows/claude.yml",
+  ],
+  "acmm:nightly-compliance": [
+    ".github/workflows/nightly-compliance.yml",
+    ".github/workflows/nightly.yml",
+    ".github/workflows/nightly-test.yml",
+  ],
+  "acmm:auto-label": [
+    ".github/labeler.yml",
+    ".github/workflows/labeler.yml",
+    ".github/workflows/triage.yml",
+  ],
+  // L5
+  "acmm:github-actions-ai": [
+    ".github/workflows/claude.yml",
+    ".github/workflows/claude-code-review.yml",
+  ],
+  // L6
+  "acmm:merge-queue": [
+    ".github/workflows/merge-queue.yml",
+    ".github/merge-queue.yml",
+    ".prow.yaml",
+    "tide.yaml",
+  ],
+};
+
+function pathMatches(paths: Set<string>, pattern: string): boolean {
+  if (pattern.endsWith("/")) {
+    for (const path of paths) {
+      if (path.startsWith(pattern)) return true;
+    }
+    return false;
+  }
+  return paths.has(pattern);
+}
+
 async function fetchDetectedIdsDirect(repo: string, token: string): Promise<string[]> {
   const headers: Record<string, string> = {
     Accept: "application/vnd.github.v3+json",
   };
   if (token) headers["Authorization"] = `Bearer ${token}`;
-  const res = await fetch(`${GITHUB_API}/repos/${repo}/git/trees/HEAD?recursive=1`, {
+
+  // The trees endpoint requires a branch name or SHA, not "HEAD" — resolve
+  // the default branch first. See acmm-scan.mts for the same pattern.
+  const repoRes = await fetch(`${GITHUB_API}/repos/${repo}`, {
     headers,
     signal: AbortSignal.timeout(API_TIMEOUT_MS),
   });
+  if (!repoRes.ok) throw new Error(`repo API ${repoRes.status}`);
+  const repoInfo = (await repoRes.json()) as { default_branch?: string };
+  const branch = repoInfo.default_branch || "main";
+
+  const res = await fetch(
+    `${GITHUB_API}/repos/${repo}/git/trees/${branch}?recursive=1`,
+    {
+      headers,
+      signal: AbortSignal.timeout(API_TIMEOUT_MS),
+    },
+  );
   if (!res.ok) throw new Error(`tree API ${res.status}`);
   const body = (await res.json()) as { tree?: { path: string }[] };
   const paths = new Set((body.tree || []).map((e) => e.path));
 
-  const allIds = Object.values(ACMM_IDS_BY_LEVEL).flat();
-  return allIds.filter((id) => {
-    /** Rough match: use a subset of the real detection rules since this
-     * fallback only runs when the scan endpoint is unreachable. */
-    return paths.has(id.replace("acmm:", "").replace(/-/g, "_") + ".md");
-  });
+  const detected: string[] = [];
+  for (const [id, patterns] of Object.entries(BADGE_FALLBACK_PATHS)) {
+    for (const p of patterns) {
+      if (pathMatches(paths, p)) {
+        detected.push(id);
+        break;
+      }
+    }
+  }
+  return detected;
 }
 
 export default async (req: Request) => {
