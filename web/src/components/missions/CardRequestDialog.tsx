@@ -70,7 +70,7 @@ export function CardRequestDialog({ missingProjects, onClose }: CardRequestDialo
               <span className="text-[10px] text-green-400 font-medium">{t('orbit.cardRequestRequested')}</span>
             ) : failedProjects.has(project) ? (
               // Auto-QA #9036 — explicit inline error + retry affordance so
-              // the failed state is visible beyond the one-shot toast.
+              // the failed state persists beyond the one-shot toast.
               <button
                 onClick={() => handleRequest(project)}
                 disabled={submittingProjects.has(project)}
