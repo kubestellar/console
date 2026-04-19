@@ -248,9 +248,11 @@ test.describe('Dashboard Page', () => {
     test('has proper ARIA labels', async ({ page }) => {
       await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
 
-      // Refresh button should have title for accessibility
+      // Refresh button should have title for accessibility. The actual i18n
+      // string is `common.refreshClusterData` → "Refresh cluster data"
+      // (see web/src/locales/en/common.json and DashboardHeader.tsx).
       const refreshButton = page.getByTestId('dashboard-refresh-button')
-      await expect(refreshButton).toHaveAttribute('title', 'Refresh data')
+      await expect(refreshButton).toHaveAttribute('title', 'Refresh cluster data')
     })
   })
 

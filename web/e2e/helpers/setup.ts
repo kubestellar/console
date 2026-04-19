@@ -37,6 +37,8 @@ export const EXPECTED_ERROR_PATTERNS = [
   /localhost:8585/i, // Agent connection attempts in demo mode
   /127\.0\.0\.1:8585/i, // Agent connection attempts (IP form)
   /Cross-Origin Request Blocked/i, // CORS errors when backend/agent not running
+  /blocked by CORS policy/i, // Chromium CORS wording (Firefox uses pattern above)
+  /Access to fetch.*has been blocked by CORS/i, // Chromium-specific phrasing; Medium blog public fallback is cross-origin from vite preview (localhost:4173 → console.kubestellar.io)
   /Notification permission/i, // Firefox blocks notification requests outside user gestures
   /ERR_CONNECTION_REFUSED/i, // Backend/agent not running in CI
   /net::ERR_/i, // Any network-level Chrome error in demo mode

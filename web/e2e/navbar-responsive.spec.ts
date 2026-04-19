@@ -55,18 +55,28 @@ test.describe('Navbar responsive layout', () => {
       const nav = page.locator('nav[data-tour="navbar"]')
       await expect(nav).toBeVisible()
 
-      // Logo / home button always visible
-      await expect(nav.getByRole('button', { name: /go home/i })).toBeVisible()
+      // Logo / home button always visible. The actual aria-label comes from
+      // i18n key `navbar.goHome` → "Go to home dashboard" (see Navbar.tsx),
+      // so the previous `/go home/i` substring regex never matched. Match
+      // on "home" (case-insensitive) and take .first() because the logo
+      // and the app-name button both carry the same aria-label.
+      await expect(nav.getByRole('button', { name: /home/i }).first()).toBeVisible()
 
-      // Theme toggle always visible
-      await expect(nav.locator('button[title*="theme" i]')).toBeVisible()
+      // Theme toggle always visible. The button uses aria-label (from i18n
+      // `navbar.themeToggle` → "Theme: <mode> (click to toggle)"), not a
+      // native `title` attribute — the tooltip is a Tooltip primitive
+      // (see components/ui/Tooltip.tsx), not a browser title.
+      await expect(nav.locator('button[aria-label*="theme" i]')).toBeVisible()
 
       // Alerts badge always visible
       await expect(nav.locator('[data-testid="alert-badge"], button[aria-label*="alert" i]').first()).toBeVisible()
 
-      // User profile dropdown always visible
+      // User profile dropdown always visible. UserProfileDropdown.tsx's
+      // trigger button has no aria-label or data-testid — it's identified
+      // by `aria-haspopup="true"` inside the nav element. Accept any of
+      // these locators so future relabeling won't re-break this test.
       await expect(
-        nav.locator('[data-testid="user-menu"], button[aria-label*="user" i], button[aria-label*="profile" i]').first()
+        nav.locator('[data-testid="user-menu"], button[aria-label*="user" i], button[aria-label*="profile" i], button[aria-haspopup="true"]').first()
       ).toBeVisible()
     })
   }
@@ -98,8 +108,13 @@ test.describe('Navbar responsive layout', () => {
     await setupPage(page)
 
     const nav = page.locator('nav[data-tour="navbar"]')
-    // Search container uses hidden sm:block
-    const searchWrapper = nav.locator('.hidden.sm\\:block')
+    // Search container uses `hidden sm:flex`. Multiple unrelated elements in
+    // the navbar share a `.hidden.sm:block` utility pair (e.g. the
+    // UserProfileDropdown name div and a StreakBadge progress pill), so use
+    // `.first()` to pick the outermost search wrapper and avoid strict-mode
+    // violations. The `.flex-1.max-w-md` identifiers on the search container
+    // are unique to this wrapper.
+    const searchWrapper = nav.locator('.hidden.sm\\:flex.flex-1, .hidden.sm\\:block.flex-1').first()
     await expect(searchWrapper).toBeVisible()
   })
 
