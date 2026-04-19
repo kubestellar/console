@@ -327,7 +327,7 @@ const FullClusterCard = memo(function FullClusterCard({
       role="button"
       tabIndex={0}
       aria-label={`Select cluster ${cluster.context || cluster.name}`}
-      className="relative p-[1px] rounded-lg cursor-pointer transition-all hover:scale-[1.02] overflow-hidden h-full"
+      className="relative p-[1px] rounded-lg cursor-pointer transition-all hover:shadow-lg hover:-translate-y-0.5 overflow-hidden h-full"
       style={{
         /* Card view: prominent gradient — provider at 50%, theme at 38% */
         background: `linear-gradient(135deg, color-mix(in srgb, ${providerColor} 50%, transparent) 0%, color-mix(in srgb, ${themeColor} 38%, transparent) 100%)` }}
@@ -580,7 +580,7 @@ const ListClusterCard = memo(function ListClusterCard({
       role="button"
       tabIndex={0}
       aria-label={`Select cluster ${cluster.context || cluster.name}`}
-      className="relative p-[1px] rounded-lg cursor-pointer transition-all hover:scale-[1.01] overflow-hidden"
+      className="relative p-[1px] rounded-lg cursor-pointer transition-all hover:shadow-lg hover:-translate-y-0.5 overflow-hidden"
       style={{
         /* List view: subtle gradient — provider at 38%, theme at 25% */
         background: `linear-gradient(90deg, color-mix(in srgb, ${providerColor} 38%, transparent) 0%, color-mix(in srgb, ${themeColor} 25%, transparent) 100%)` }}
@@ -770,7 +770,7 @@ const CompactClusterCard = memo(function CompactClusterCard({
       role="button"
       tabIndex={0}
       aria-label={`Select cluster ${cluster.context || cluster.name}`}
-      className="relative p-[1px] rounded-lg cursor-pointer transition-all hover:scale-[1.02] overflow-hidden"
+      className="relative p-[1px] rounded-lg cursor-pointer transition-all hover:shadow-lg hover:-translate-y-0.5 overflow-hidden"
       style={{
         /* Grid view: subtle gradient — provider at 38%, theme at 25% */
         background: `linear-gradient(135deg, color-mix(in srgb, ${providerColor} 38%, transparent) 0%, color-mix(in srgb, ${themeColor} 25%, transparent) 100%)` }}
@@ -931,7 +931,7 @@ export const ClusterGrid = memo(function ClusterGrid({
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
       <SortableContext items={clusterIds} strategy={sortingStrategy}>
-        <div className={`${gridClasses[layoutMode]} mb-6 overflow-hidden px-2 -mx-2 py-1 -my-1`}>
+        <div className={`${gridClasses[layoutMode]} mb-6 pt-1`}>
           {clusters.map((cluster) => {
             const clusterKey = cluster.name.split('/')[0]
             const gpuInfo = gpuByCluster[clusterKey] || gpuByCluster[cluster.name]
