@@ -210,10 +210,22 @@ export function NetworkOverview() {
       </div>
 
       {/* Main stat */}
+      {/* #8883: roving-tabindex stat tiles — Enter/Space activates; only
+          focusable when the tile is interactive (totalServices > 0). */}
       <div
-        className={`p-3 rounded-lg bg-cyan-500/10 border border-cyan-500/20 mb-4 ${stats.totalServices > 0 ? 'cursor-pointer hover:bg-cyan-500/20' : 'cursor-default'} transition-colors`}
+        className={`p-3 rounded-lg bg-cyan-500/10 border border-cyan-500/20 mb-4 ${stats.totalServices > 0 ? 'cursor-pointer hover:bg-cyan-500/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400' : 'cursor-default'} transition-colors`}
+        {...(stats.totalServices > 0 ? { role: 'button' as const, tabIndex: 0 } : {})}
         onClick={() => {
           if (stats.totalServices > 0 && filteredServices[0]) {
+            const svc = filteredServices[0]
+            if (svc.cluster && svc.namespace) {
+              drillToService(svc.cluster, svc.namespace, svc.name)
+            }
+          }
+        }}
+        onKeyDown={(e) => {
+          if ((e.key === 'Enter' || e.key === ' ') && stats.totalServices > 0 && filteredServices[0]) {
+            e.preventDefault()
             const svc = filteredServices[0]
             if (svc.cluster && svc.namespace) {
               drillToService(svc.cluster, svc.namespace, svc.name)
@@ -235,9 +247,18 @@ export function NetworkOverview() {
       {/* Service Types */}
       <div className="grid grid-cols-2 gap-2 mb-4">
         <div
-          className={`p-2 rounded-lg bg-blue-500/10 border border-blue-500/20 ${stats.loadBalancers > 0 ? 'cursor-pointer hover:bg-blue-500/20' : 'cursor-default'} transition-colors`}
+          className={`p-2 rounded-lg bg-blue-500/10 border border-blue-500/20 ${stats.loadBalancers > 0 ? 'cursor-pointer hover:bg-blue-500/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400' : 'cursor-default'} transition-colors`}
+          {...(stats.loadBalancers > 0 ? { role: 'button' as const, tabIndex: 0 } : {})}
           onClick={() => {
             if (stats.loadBalancers > 0) {
+              drillToAllServices('LoadBalancer', {
+                services: filteredServices.filter(s => s.type === 'LoadBalancer'),
+              })
+            }
+          }}
+          onKeyDown={(e) => {
+            if ((e.key === 'Enter' || e.key === ' ') && stats.loadBalancers > 0) {
+              e.preventDefault()
               drillToAllServices('LoadBalancer', {
                 services: filteredServices.filter(s => s.type === 'LoadBalancer'),
               })
@@ -252,9 +273,18 @@ export function NetworkOverview() {
           <span className="text-lg font-bold text-foreground">{stats.loadBalancers}</span>
         </div>
         <div
-          className={`p-2 rounded-lg bg-purple-500/10 border border-purple-500/20 ${stats.nodePort > 0 ? 'cursor-pointer hover:bg-purple-500/20' : 'cursor-default'} transition-colors`}
+          className={`p-2 rounded-lg bg-purple-500/10 border border-purple-500/20 ${stats.nodePort > 0 ? 'cursor-pointer hover:bg-purple-500/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400' : 'cursor-default'} transition-colors`}
+          {...(stats.nodePort > 0 ? { role: 'button' as const, tabIndex: 0 } : {})}
           onClick={() => {
             if (stats.nodePort > 0) {
+              drillToAllServices('NodePort', {
+                services: filteredServices.filter(s => s.type === 'NodePort'),
+              })
+            }
+          }}
+          onKeyDown={(e) => {
+            if ((e.key === 'Enter' || e.key === ' ') && stats.nodePort > 0) {
+              e.preventDefault()
               drillToAllServices('NodePort', {
                 services: filteredServices.filter(s => s.type === 'NodePort'),
               })
@@ -269,9 +299,18 @@ export function NetworkOverview() {
           <span className="text-lg font-bold text-foreground">{stats.nodePort}</span>
         </div>
         <div
-          className={`p-2 rounded-lg bg-green-500/10 border border-green-500/20 ${stats.clusterIP > 0 ? 'cursor-pointer hover:bg-green-500/20' : 'cursor-default'} transition-colors`}
+          className={`p-2 rounded-lg bg-green-500/10 border border-green-500/20 ${stats.clusterIP > 0 ? 'cursor-pointer hover:bg-green-500/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400' : 'cursor-default'} transition-colors`}
+          {...(stats.clusterIP > 0 ? { role: 'button' as const, tabIndex: 0 } : {})}
           onClick={() => {
             if (stats.clusterIP > 0) {
+              drillToAllServices('ClusterIP', {
+                services: filteredServices.filter(s => s.type === 'ClusterIP'),
+              })
+            }
+          }}
+          onKeyDown={(e) => {
+            if ((e.key === 'Enter' || e.key === ' ') && stats.clusterIP > 0) {
+              e.preventDefault()
               drillToAllServices('ClusterIP', {
                 services: filteredServices.filter(s => s.type === 'ClusterIP'),
               })
@@ -286,9 +325,18 @@ export function NetworkOverview() {
           <span className="text-lg font-bold text-foreground">{stats.clusterIP}</span>
         </div>
         <div
-          className={`p-2 rounded-lg bg-orange-500/10 border border-orange-500/20 ${stats.externalName > 0 ? 'cursor-pointer hover:bg-orange-500/20' : 'cursor-default'} transition-colors`}
+          className={`p-2 rounded-lg bg-orange-500/10 border border-orange-500/20 ${stats.externalName > 0 ? 'cursor-pointer hover:bg-orange-500/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400' : 'cursor-default'} transition-colors`}
+          {...(stats.externalName > 0 ? { role: 'button' as const, tabIndex: 0 } : {})}
           onClick={() => {
             if (stats.externalName > 0) {
+              drillToAllServices('ExternalName', {
+                services: filteredServices.filter(s => s.type === 'ExternalName'),
+              })
+            }
+          }}
+          onKeyDown={(e) => {
+            if ((e.key === 'Enter' || e.key === ' ') && stats.externalName > 0) {
+              e.preventDefault()
               drillToAllServices('ExternalName', {
                 services: filteredServices.filter(s => s.type === 'ExternalName'),
               })

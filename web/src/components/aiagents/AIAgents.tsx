@@ -55,15 +55,39 @@ export function AIAgents() {
 
   const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
 
+  // #8883: WAI-ARIA tablist keyboard navigation. ArrowLeft/Right move
+  // between enabled tabs, Home/End jump to the first/last enabled tab,
+  // Enter/Space activate. Roving tabindex is applied below.
+  const enabledTabs = tabs.filter(t => !t.disabled)
+  const handleTabKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (enabledTabs.length === 0) return
+    const currentIdx = enabledTabs.findIndex(t => t.id === activeTab)
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+      e.preventDefault()
+      const delta = e.key === 'ArrowRight' ? 1 : -1
+      const next = enabledTabs[(currentIdx + delta + enabledTabs.length) % enabledTabs.length]
+      if (next) setActiveTab(next.id)
+    } else if (e.key === 'Home') {
+      e.preventDefault()
+      if (enabledTabs[0]) setActiveTab(enabledTabs[0].id)
+    } else if (e.key === 'End') {
+      e.preventDefault()
+      const last = enabledTabs[enabledTabs.length - 1]
+      if (last) setActiveTab(last.id)
+    }
+  }
+
   const tabBar = tabs.length > 0 ? (
-    <div className="flex items-center gap-1 mb-6 border-b border-border">
+    <div className="flex items-center gap-1 mb-6 border-b border-border" role="tablist">
       {tabs.map(tab => (
         <button
           key={tab.id}
           onClick={() => !tab.disabled && setActiveTab(tab.id)}
+          onKeyDown={handleTabKeyDown}
           disabled={tab.disabled}
           role="tab"
           aria-selected={activeTab === tab.id}
+          tabIndex={activeTab === tab.id ? 0 : -1}
           className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
             activeTab === tab.id
               ? 'border-purple-500 text-foreground'
