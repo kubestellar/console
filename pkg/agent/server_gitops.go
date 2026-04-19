@@ -177,7 +177,14 @@ func gitopsCloneRepo(ctx context.Context, repoURL, branch string) (string, error
 }
 
 // gitopsIsKustomizeDir mirrors the backend isKustomizeDir helper.
+// SECURITY: Re-validates the path at the sink so static analysis (CodeQL #561/#562)
+// can see that the path passed to os.Stat is sanitized even when this helper is
+// called with a value derived from user input. Callers already validate req.Path
+// at handler entry, but taint-tracking tools need the check adjacent to the sink.
 func gitopsIsKustomizeDir(path string) bool {
+	if err := validateGitopsPath(path); err != nil {
+		return false
+	}
 	if _, err := os.Stat(path + "/kustomization.yaml"); err == nil {
 		return true
 	}
