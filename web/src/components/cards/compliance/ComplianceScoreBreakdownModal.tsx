@@ -147,18 +147,31 @@ function OverviewTab({ score, breakdown, scoreCtx, kubescapeData, kyvernoData }:
   kubescapeData?: ComplianceScoreBreakdownModalProps['kubescapeData']
   kyvernoData?: ComplianceScoreBreakdownModalProps['kyvernoData']
 }) {
-  // Aggregate checks across tools to show a global total even when an individual tool is empty.
+  // Kubescape uses a true "checks" model where passed + failed == total per control.
+  // Kyverno, on the other hand, reports policies and violations — a single policy can
+  // have N violations (one per offending resource), so violations often EXCEEDS the
+  // policy count and passed != (policies - violations). Prior to #8974, the Overview
+  // tab summed Kubescape's controls with Kyverno's policies/violations into a single
+  // "Total Checks / Passing / Failing" row. That produced impossible totals like
+  // "126 checks, 121 passing, 167 failing" because Kyverno's violations are
+  // incommensurable with Kubescape's pass/fail counts.
+  //
+  // Fix: show each tool's counts in its own row with its own labels, so the numbers
+  // in each row add up correctly (Kubescape: passed + failed == total) and Kyverno
+  // uses its native vocabulary (policies / violations) without implying a pass/fail
+  // relationship. Also display an aggregated "Total Checks" row ONLY across tools
+  // that share the same pass+fail==total model (currently just Kubescape), so the
+  // top-line number always reconciles with the per-bucket sums.
   const kubescapeTotal = kubescapeData?.totalControls ?? 0
   const kubescapePassed = kubescapeData?.passedControls ?? 0
   const kubescapeFailed = kubescapeData?.failedControls ?? 0
 
-  const kyvernoTotal = kyvernoData?.totalPolicies ?? 0
-  const kyvernoFailed = kyvernoData?.totalViolations ?? 0
-  const kyvernoPassed = Math.max(0, kyvernoTotal - kyvernoFailed)
+  const kyvernoTotalPolicies = kyvernoData?.totalPolicies ?? 0
+  const kyvernoTotalViolations = kyvernoData?.totalViolations ?? 0
 
-  const totalChecks = kubescapeTotal + kyvernoTotal
-  const totalPassed = kubescapePassed + kyvernoPassed
-  const totalFailed = kubescapeFailed + kyvernoFailed
+  const hasKubescapeChecks = kubescapeTotal > 0
+  const hasKyvernoPolicies = kyvernoTotalPolicies > 0
+  const hasAnyToolData = hasKubescapeChecks || hasKyvernoPolicies
 
   const scoreColorClass = score >= SCORE_GOOD_THRESHOLD
     ? 'text-green-400'
@@ -189,12 +202,31 @@ function OverviewTab({ score, breakdown, scoreCtx, kubescapeData, kyvernoData }:
         <p className="text-xs text-muted-foreground mt-0.5">{scoreCtx.description}</p>
       </div>
 
-      {/* Aggregate stats — makes the Overview tab informative even when a single tool is connected. */}
-      {totalChecks > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          <StatBox label="Total Checks" value={totalChecks} />
-          <StatBox label="Passing" value={totalPassed} color="text-green-400" />
-          <StatBox label="Failing" value={totalFailed} color="text-red-400" />
+      {/* Per-tool stats. Each row's numbers use the tool's native semantics and
+          reconcile internally (Kubescape: passed + failed == total). Mixing them
+          into a single aggregate row hides the fact that Kyverno violations are
+          event counts, not "failed checks", and led to impossible totals (#8974). */}
+      {hasKubescapeChecks && (
+        <div>
+          <h4 className="text-xs font-medium text-muted-foreground mb-2">Kubescape checks</h4>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <StatBox label="Total Checks" value={kubescapeTotal} />
+            <StatBox label="Passing" value={kubescapePassed} color="text-green-400" />
+            <StatBox label="Failing" value={kubescapeFailed} color="text-red-400" />
+          </div>
+        </div>
+      )}
+      {hasKyvernoPolicies && (
+        <div>
+          <h4 className="text-xs font-medium text-muted-foreground mb-2">Kyverno policies</h4>
+          <div className="grid grid-cols-2 gap-3">
+            <StatBox label="Policies" value={kyvernoTotalPolicies} />
+            <StatBox label="Violations" value={kyvernoTotalViolations} color="text-red-400" />
+          </div>
+          <p className="text-[11px] text-muted-foreground mt-1.5">
+            Violations count individual offending resources — a single policy may contribute
+            multiple violations, so the violation count is not comparable to the policy count.
+          </p>
         </div>
       )}
 
@@ -222,7 +254,7 @@ function OverviewTab({ score, breakdown, scoreCtx, kubescapeData, kyvernoData }:
       )}
 
       {/* Empty state — no tool data at all */}
-      {totalChecks === 0 && (!breakdown || breakdown.length === 0) && (
+      {!hasAnyToolData && (!breakdown || breakdown.length === 0) && (
         <div className="text-center py-4 text-muted-foreground">
           <p className="text-sm">No compliance tools are reporting data.</p>
           <p className="text-xs mt-1">Install Kubescape or Kyverno in a connected cluster to see detailed breakdowns.</p>

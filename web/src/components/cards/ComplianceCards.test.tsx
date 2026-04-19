@@ -533,4 +533,70 @@ describe('ComplianceScoreBreakdownModal', () => {
 
     expect(screen.queryByText('Compliance Score Breakdown')).not.toBeInTheDocument()
   })
+
+  // Regression test for #8974: earlier versions of the Overview tab summed
+  // Kubescape's pass/fail/total counts with Kyverno's policies/violations into
+  // a single "Total Checks / Passing / Failing" row. Because Kyverno violations
+  // are event counts (one per offending resource, not per policy), the numbers
+  // didn't add up — users saw totals like "126 checks, 121 passing, 167 failing".
+  //
+  // Invariant to pin: within each tool's section on the Overview tab, the
+  // bucket values must be internally consistent with the labels shown.
+  // Kubescape's section uses a checks/passed/failed model where passed + failed
+  // == total. Kyverno's section uses a policies/violations model (no pass/fail
+  // relationship is implied or displayed).
+  it('overview tab shows per-tool counts that reconcile without mixing Kubescape checks and Kyverno violations (#8974)', () => {
+    // Kubescape with a much smaller totalControls than Kyverno's violations.
+    // Before the fix, "Total Checks" would have been 116 + 10 = 126, "Passing"
+    // would have been 110 + max(0, 10 - 167) = 110, and "Failing" would have
+    // been 6 + 167 = 173 — mirroring the shape of the issue.
+    const kubescapeSmall = {
+      totalControls: 116,
+      passedControls: 110,
+      failedControls: 6,
+      frameworks: [],
+    }
+    const kyvernoManyViolations = {
+      totalPolicies: 10,
+      totalViolations: 167,
+      enforcingCount: 4,
+      auditCount: 6,
+    }
+
+    render(
+      <ComplianceScoreBreakdownModal
+        isOpen={true}
+        onClose={vi.fn()}
+        score={70}
+        breakdown={defaultBreakdown}
+        kubescapeData={kubescapeSmall}
+        kyvernoData={kyvernoManyViolations}
+      />,
+    )
+
+    // Kubescape section: passed + failed == total, so 110 + 6 == 116.
+    const kubescapeHeading = screen.getByText('Kubescape checks')
+    const kubescapeSection = kubescapeHeading.parentElement!
+    const totalChecksLabel = within(kubescapeSection).getByText('Total Checks')
+    expect(within(totalChecksLabel.parentElement!).getByText('116')).toBeInTheDocument()
+    const passingLabel = within(kubescapeSection).getByText('Passing')
+    expect(within(passingLabel.parentElement!).getByText('110')).toBeInTheDocument()
+    const failingLabel = within(kubescapeSection).getByText('Failing')
+    expect(within(failingLabel.parentElement!).getByText('6')).toBeInTheDocument()
+
+    // Kyverno section: uses its native vocabulary (policies + violations).
+    // The violation count is NOT summed with Kubescape failures, and is NOT
+    // labeled "Failing".
+    const kyvernoHeading = screen.getByText('Kyverno policies')
+    const kyvernoSection = kyvernoHeading.parentElement!
+    const policiesLabel = within(kyvernoSection).getByText('Policies')
+    expect(within(policiesLabel.parentElement!).getByText('10')).toBeInTheDocument()
+    const violationsLabel = within(kyvernoSection).getByText('Violations')
+    expect(within(violationsLabel.parentElement!).getByText('167')).toBeInTheDocument()
+
+    // And the pre-fix aggregate row must no longer exist.
+    expect(screen.queryByText((_, el) =>
+      !!el && el.tagName === 'P' && el.textContent === '126',
+    )).not.toBeInTheDocument()
+  })
 })
