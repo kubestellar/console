@@ -122,20 +122,41 @@ async function measureNavigation(
 
   const link = page.locator(linkSelector).first()
 
+  // Timeouts for link discovery: fast path avoids triggering an expensive reload
+  // when the route simply isn't in the primary nav (a config choice, not a crash).
+  const LINK_ATTACH_TIMEOUT_MS = 3_000
+  const LINK_VISIBLE_TIMEOUT_MS = 2_000
+  const SIDEBAR_PRESENCE_TIMEOUT_MS = 500
+  const RELOAD_SIDEBAR_TIMEOUT_MS = 10_000
+
   // Check if link exists and is visible (scroll into view for long sidebars)
   try {
-    await link.waitFor({ state: 'attached', timeout: 3_000 })
+    await link.waitFor({ state: 'attached', timeout: LINK_ATTACH_TIMEOUT_MS })
     await link.scrollIntoViewIfNeeded()
-    await link.waitFor({ state: 'visible', timeout: 2_000 })
+    await link.waitFor({ state: 'visible', timeout: LINK_VISIBLE_TIMEOUT_MS })
   } catch {
-    // If sidebar link not found, the page may have crashed from a previous nav.
-    // Try recovering by reloading and waiting for the sidebar.
+    // Distinguish "sidebar missing (page crashed)" from "link not in primaryNav
+    // for this dashboard config". Only reload in the crash case — when the sidebar
+    // itself is missing. If the sidebar is present but the link isn't, the route
+    // simply isn't configured in primaryNav, so skip fast without a 10s reload.
+    const sidebar = page.locator('[data-testid="sidebar"]').first()
+    const sidebarPresent = await sidebar
+      .waitFor({ state: 'attached', timeout: SIDEBAR_PRESENCE_TIMEOUT_MS })
+      .then(() => true)
+      .catch(() => false)
+
+    if (sidebarPresent) {
+      console.log(`  SKIP ${target.name}: not in primary nav (${linkSelector})`)
+      return null
+    }
+
+    // Sidebar is gone — attempt recovery with a reload.
     try {
       await page.reload({ waitUntil: 'domcontentloaded' })
-      await page.waitForSelector('[data-testid="sidebar"]', { timeout: 10_000 })
-      await link.waitFor({ state: 'attached', timeout: 3_000 })
+      await page.waitForSelector('[data-testid="sidebar"]', { timeout: RELOAD_SIDEBAR_TIMEOUT_MS })
+      await link.waitFor({ state: 'attached', timeout: LINK_ATTACH_TIMEOUT_MS })
       await link.scrollIntoViewIfNeeded()
-      await link.waitFor({ state: 'visible', timeout: 2_000 })
+      await link.waitFor({ state: 'visible', timeout: LINK_VISIBLE_TIMEOUT_MS })
     } catch {
       console.log(`  SKIP ${target.name}: sidebar link not found after recovery (${linkSelector})`)
       return null
