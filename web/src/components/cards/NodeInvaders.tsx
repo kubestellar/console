@@ -1,10 +1,16 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { RotateCcw, Trophy, Rocket } from 'lucide-react'
+import { RotateCcw, Trophy, Rocket, Pause, Play } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
 import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 import { useGameKeyTracking } from '../../hooks/useGameKeys'
+import { safeGet, safeSet } from '../../lib/safeLocalStorage'
+
+// High-score storage key — safe wrapper tolerates private-mode
+// localStorage failures (issue #8936).
+const NODE_INVADERS_HIGHSCORE_KEY = 'highscore-nodeInvaders'
 
 // Game constants
 const CANVAS_WIDTH = 300
@@ -40,6 +46,7 @@ interface Shield {
 }
 
 export function NodeInvaders(_props: CardComponentProps) {
+  const { t } = useTranslation('cards')
   useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: false })
   const { isExpanded } = useCardExpanded()
   const gameContainerRef = useRef<HTMLDivElement>(null)
@@ -58,7 +65,20 @@ export function NodeInvaders(_props: CardComponentProps) {
   const [gameOver, setGameOver] = useState(false)
   const [won, setWon] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
+  const [isPaused, setIsPaused] = useState(false)
   const [canShoot, setCanShoot] = useState(true)
+  const [highScore, setHighScore] = useState<number>(() => {
+    const saved = safeGet(NODE_INVADERS_HIGHSCORE_KEY)
+    return saved ? parseInt(saved, 10) || 0 : 0
+  })
+
+  // Persist high score when game ends and score beats the stored best.
+  useEffect(() => {
+    if (gameOver && score > highScore) {
+      setHighScore(score)
+      safeSet(NODE_INVADERS_HIGHSCORE_KEY, score.toString())
+    }
+  }, [gameOver, score, highScore])
 
   const gameStateRef = useRef({ player, bullets, invaders, shields, invaderDir })
   useEffect(() => {
@@ -173,9 +193,10 @@ export function NodeInvaders(_props: CardComponentProps) {
     ctx.restore()
   }, [player, bullets, invaders, shields, isExpanded])
 
-  // Game loop
+  // Game loop — also stops on pause so requestAnimationFrame/interval
+  // halts and stats freeze (issue #8943).
   useEffect(() => {
-    if (!isPlaying || gameOver) {
+    if (!isPlaying || gameOver || isPaused) {
       if (gameLoopRef.current) {
         clearInterval(gameLoopRef.current)
         gameLoopRef.current = null
@@ -363,7 +384,7 @@ export function NodeInvaders(_props: CardComponentProps) {
         clearInterval(gameLoopRef.current)
       }
     }
-  }, [isPlaying, gameOver, draw, initInvaders, initShields, canShoot, invaderSpeed])
+  }, [isPlaying, gameOver, isPaused, draw, initInvaders, initShields, canShoot, invaderSpeed])
 
   // Keyboard — scoped to visible game container (KeepAlive-safe)
   useGameKeyTracking(gameContainerRef, keysRef, {
@@ -380,10 +401,33 @@ export function NodeInvaders(_props: CardComponentProps) {
     initShields()
     setGameOver(false)
     setWon(false)
+    setIsPaused(false)
     setIsPlaying(true)
     setCanShoot(true)
     emitGameStarted('node_invaders')
   }
+
+  // Toggle pause — issue #8943.
+  const togglePause = () => {
+    if (!isPlaying || gameOver) return
+    setIsPaused(p => !p)
+  }
+
+  // Keyboard shortcut for pause (P key) — scoped to the game container
+  // via the existing keysRef machinery by watching the DOM directly.
+  useEffect(() => {
+    const container = gameContainerRef.current
+    if (!container) return
+    const onKey = (e: KeyboardEvent) => {
+      if (!isPlaying || gameOver) return
+      if (e.key === 'p' || e.key === 'P') {
+        e.preventDefault()
+        setIsPaused(p => !p)
+      }
+    }
+    container.addEventListener('keydown', onKey)
+    return () => container.removeEventListener('keydown', onKey)
+  }, [isPlaying, gameOver])
 
   const scale = isExpanded ? 1.4 : 1
 
@@ -396,27 +440,48 @@ export function NodeInvaders(_props: CardComponentProps) {
       <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-1.5">
           <Rocket className="w-4 h-4 text-cyan-400" />
-          <span className="text-sm font-semibold">Node Invaders</span>
+          <span className="text-sm font-semibold">{t('nodeInvaders.title')}</span>
         </div>
 
         <div className="flex items-center gap-3 text-xs">
           <div className="text-center">
-            <div className="text-muted-foreground">Score</div>
+            <div className="text-muted-foreground">{t('nodeInvaders.score')}</div>
             <div className="font-bold text-foreground">{score}</div>
           </div>
           <div className="text-center">
-            <div className="text-muted-foreground">Lives</div>
+            <div className="text-muted-foreground">{t('nodeInvaders.lives')}</div>
             <div className="font-bold text-red-400">{'❤️'.repeat(player.lives)}</div>
           </div>
           <div className="text-center">
-            <div className="text-muted-foreground">Wave</div>
+            <div className="text-muted-foreground">{t('nodeInvaders.wave')}</div>
             <div className="font-bold text-purple-400">{level}</div>
+          </div>
+          <div className="text-center">
+            <div className="text-muted-foreground">{t('nodeInvaders.best')}</div>
+            <div className="font-bold text-yellow-400">{highScore}</div>
           </div>
         </div>
 
-        <button onClick={startGame} className="p-2 rounded hover:bg-secondary min-h-11 min-w-11 flex items-center justify-center" title="New Game">
-          <RotateCcw className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-1">
+          {isPlaying && !gameOver && (
+            <button
+              onClick={togglePause}
+              className="p-2 rounded hover:bg-secondary min-h-11 min-w-11 flex items-center justify-center"
+              title={isPaused ? t('nodeInvaders.resume') : t('nodeInvaders.pauseAction')}
+              aria-label={isPaused ? t('nodeInvaders.resume') : t('nodeInvaders.pauseAction')}
+            >
+              {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+            </button>
+          )}
+          <button
+            onClick={startGame}
+            className="p-2 rounded hover:bg-secondary min-h-11 min-w-11 flex items-center justify-center"
+            title={t('nodeInvaders.newGame')}
+            aria-label={t('nodeInvaders.newGame')}
+          >
+            <RotateCcw className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {/* Game area - relative container for overlays */}
@@ -432,14 +497,29 @@ export function NodeInvaders(_props: CardComponentProps) {
         {!isPlaying && !gameOver && (
           <div className="absolute inset-0 bg-background/80 flex items-center justify-center rounded-lg">
             <div className="text-center">
-              <div className="text-xl font-bold text-cyan-400 mb-2">NODE INVADERS</div>
-              <div className="text-muted-foreground mb-2 text-sm">Defend your cluster!</div>
-              <div className="text-muted-foreground mb-4 text-xs">Arrow keys to move, Space to shoot</div>
+              <div className="text-xl font-bold text-cyan-400 mb-2">{t('nodeInvaders.heading')}</div>
+              <div className="text-muted-foreground mb-2 text-sm">{t('nodeInvaders.tagline')}</div>
+              <div className="text-muted-foreground mb-4 text-xs">{t('nodeInvaders.controls')}</div>
               <button
                 onClick={startGame}
                 className="px-6 py-3 bg-cyan-500/20 text-cyan-400 rounded-lg hover:bg-cyan-500/30 font-semibold"
               >
-                Start Game
+                {t('nodeInvaders.startGame')}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Paused overlay — issue #8943 */}
+        {isPlaying && !gameOver && isPaused && (
+          <div className="absolute inset-0 bg-background/80 flex items-center justify-center rounded-lg">
+            <div className="text-center">
+              <div className="text-xl font-bold text-foreground mb-4">{t('nodeInvaders.pausedTitle')}</div>
+              <button
+                onClick={togglePause}
+                className="px-6 py-3 bg-cyan-500/20 text-cyan-400 rounded-lg hover:bg-cyan-500/30 font-semibold"
+              >
+                {t('nodeInvaders.resume')}
               </button>
             </div>
           </div>
@@ -452,17 +532,17 @@ export function NodeInvaders(_props: CardComponentProps) {
               {won ? (
                 <>
                   <Trophy className="w-12 h-12 text-yellow-400 mx-auto mb-3" />
-                  <div className="text-xl font-bold text-yellow-400 mb-2">Cluster Defended!</div>
+                  <div className="text-xl font-bold text-yellow-400 mb-2">{t('nodeInvaders.defended')}</div>
                 </>
               ) : (
-                <div className="text-xl font-bold text-red-400 mb-2">Cluster Overrun!</div>
+                <div className="text-xl font-bold text-red-400 mb-2">{t('nodeInvaders.overrun')}</div>
               )}
-              <div className="text-muted-foreground mb-4">Score: {score}</div>
+              <div className="text-muted-foreground mb-4">{t('nodeInvaders.scoreLabel', { score })}</div>
               <button
                 onClick={startGame}
                 className="px-6 py-3 bg-cyan-500/20 text-cyan-400 rounded-lg hover:bg-cyan-500/30 font-semibold"
               >
-                Play Again
+                {t('nodeInvaders.playAgain')}
               </button>
             </div>
           </div>

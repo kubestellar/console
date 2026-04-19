@@ -6,6 +6,7 @@ import { useReportCardDataState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 import { useGameKeys } from '../../hooks/useGameKeys'
+import { safeGet, safeSet } from '../../lib/safeLocalStorage'
 
 // 5-letter Kubernetes-themed words
 const WORD_LIST = [
@@ -63,31 +64,30 @@ interface GameStats {
 
 const STATS_KEY = 'kubedle-stats'
 
+// Duration of the shake/error message flash on invalid input.
+const SHAKE_DURATION_MS = 500
+
+// Standard Wordle-style game: 6 guesses per puzzle.
+const MAX_GUESSES = 6
+
 function loadStats(): GameStats {
+  const defaults: GameStats = {
+    played: 0,
+    won: 0,
+    currentStreak: 0,
+    maxStreak: 0,
+    guessDistribution: [0, 0, 0, 0, 0, 0] }
+  const stored = safeGet(STATS_KEY)
+  if (!stored) return defaults
   try {
-    const stored = localStorage.getItem(STATS_KEY)
-    return stored ? JSON.parse(stored) : {
-      played: 0,
-      won: 0,
-      currentStreak: 0,
-      maxStreak: 0,
-      guessDistribution: [0, 0, 0, 0, 0, 0] }
+    return JSON.parse(stored)
   } catch {
-    return {
-      played: 0,
-      won: 0,
-      currentStreak: 0,
-      maxStreak: 0,
-      guessDistribution: [0, 0, 0, 0, 0, 0] }
+    return defaults
   }
 }
 
 function saveStats(stats: GameStats) {
-  try {
-    localStorage.setItem(STATS_KEY, JSON.stringify(stats))
-  } catch {
-    // Ignore storage errors
-  }
+  safeSet(STATS_KEY, JSON.stringify(stats))
 }
 
 // Check letter states for a guess
@@ -129,7 +129,9 @@ const KEYBOARD_ROWS = [
 ]
 
 export function Kubedle(_props: CardComponentProps) {
+  // Existing "kubedle.*" keys live in common.json; new ones go in cards.json.
   const { t } = useTranslation()
+  const { t: tCards } = useTranslation('cards')
   useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: false })
   const { isExpanded } = useCardExpanded()
 
@@ -175,13 +177,13 @@ export function Kubedle(_props: CardComponentProps) {
     if (key === 'ENTER' || key === 'Enter') {
       if (currentGuess.length !== 5) {
         setShake(true)
-        setMessage('Not enough letters')
+        setMessage(tCards('kubedle.notEnoughLetters'))
         if (shakeTimeoutRef.current) clearTimeout(shakeTimeoutRef.current)
         shakeTimeoutRef.current = setTimeout(() => {
           setShake(false)
           setMessage('')
           shakeTimeoutRef.current = null
-        }, 500)
+        }, SHAKE_DURATION_MS)
         return
       }
 
@@ -192,13 +194,13 @@ export function Kubedle(_props: CardComponentProps) {
       // guess. Ties into the existing "Not enough letters" shake UX.
       if (!VALID_GUESSES.has(currentGuess)) {
         setShake(true)
-        setMessage('Not in word list')
+        setMessage(tCards('kubedle.notInWordList'))
         if (shakeTimeoutRef.current) clearTimeout(shakeTimeoutRef.current)
         shakeTimeoutRef.current = setTimeout(() => {
           setShake(false)
           setMessage('')
           shakeTimeoutRef.current = null
-        }, 500)
+        }, SHAKE_DURATION_MS)
         return
       }
 
@@ -208,7 +210,7 @@ export function Kubedle(_props: CardComponentProps) {
 
       if (currentGuess === targetWord) {
         setGameOver(true)
-        setMessage('Excellent!')
+        setMessage(tCards('kubedle.excellent'))
         emitGameEnded('kubedle', 'win', newGuesses.length)
 
         // Update stats
@@ -224,9 +226,9 @@ export function Kubedle(_props: CardComponentProps) {
           saveStats(newStats)
           return newStats
         })
-      } else if (newGuesses.length >= 6) {
+      } else if (newGuesses.length >= MAX_GUESSES) {
         setGameOver(true)
-        setMessage(`The word was ${targetWord}`)
+        setMessage(tCards('kubedle.wordWas', { word: targetWord }))
         emitGameEnded('kubedle', 'loss', newGuesses.length)
 
         // Update stats
@@ -280,28 +282,31 @@ export function Kubedle(_props: CardComponentProps) {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-y-2 gap-2 mb-2">
         {practiceMode && (
-          <span className="text-xs text-muted-foreground">(Practice)</span>
+          <span className="text-xs text-muted-foreground">{tCards('kubedle.practiceLabel')}</span>
         )}
 
         <div className="flex items-center gap-1">
           <button
             onClick={() => setShowHelp(true)}
             className="p-1.5 rounded hover:bg-secondary"
-            title="How to Play"
+            title={tCards('kubedle.howToPlay')}
+            aria-label={tCards('kubedle.howToPlay')}
           >
             <HelpCircle className="w-4 h-4" />
           </button>
           <button
             onClick={() => setShowStats(true)}
             className="p-1.5 rounded hover:bg-secondary"
-            title="Statistics"
+            title={tCards('kubedle.statistics')}
+            aria-label={tCards('kubedle.statistics')}
           >
             <BarChart3 className="w-4 h-4" />
           </button>
           <button
             onClick={() => newGame(true)}
             className="p-1.5 rounded hover:bg-secondary"
-            title="Practice Mode"
+            title={tCards('kubedle.practiceMode')}
+            aria-label={tCards('kubedle.practiceMode')}
           >
             <RotateCcw className="w-4 h-4" />
           </button>
@@ -317,7 +322,7 @@ export function Kubedle(_props: CardComponentProps) {
 
       {/* Grid */}
       <div className="flex-1 flex flex-col items-center justify-center gap-1">
-        {Array(6).fill(null).map((_, rowIdx) => {
+        {Array(MAX_GUESSES).fill(null).map((_, rowIdx) => {
           const guess = guesses[rowIdx]
           const isCurrentRow = rowIdx === guesses.length && !gameOver
           const displayWord = guess || (isCurrentRow ? currentGuess.padEnd(5, ' ') : '     ')
@@ -391,8 +396,8 @@ export function Kubedle(_props: CardComponentProps) {
         <div className="absolute inset-0 bg-background/90 flex items-center justify-center rounded-lg z-10 p-4">
           <div className="bg-card border border-border rounded-lg p-4 max-w-sm">
             <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
-              <h3 className="font-bold text-foreground">How to Play</h3>
-              <button onClick={() => setShowHelp(false)} aria-label="Close help">
+              <h3 className="font-bold text-foreground">{tCards('kubedle.howToPlay')}</h3>
+              <button onClick={() => setShowHelp(false)} aria-label={tCards('kubedle.closeHelp')}>
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -418,13 +423,15 @@ export function Kubedle(_props: CardComponentProps) {
         </div>
       )}
 
-      {/* Stats Modal */}
+      {/* Stats Modal — width bumped + horizontal scroll fallback so the
+          distribution rows aren't clipped in a default-width card
+          (issue #8939). */}
       {showStats && (
-        <div className="absolute inset-0 bg-background/90 flex items-center justify-center rounded-lg z-10 p-4">
-          <div className="bg-card border border-border rounded-lg p-4 max-w-sm w-full">
+        <div className="absolute inset-0 bg-background/90 flex items-center justify-center rounded-lg z-10 p-2 overflow-auto">
+          <div className="bg-card border border-border rounded-lg p-4 w-full min-w-[260px] max-w-[420px] max-h-full overflow-x-auto overflow-y-auto">
             <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
-              <h3 className="font-bold text-foreground">Statistics</h3>
-              <button onClick={() => setShowStats(false)} aria-label="Close statistics">
+              <h3 className="font-bold text-foreground">{tCards('kubedle.statistics')}</h3>
+              <button onClick={() => setShowStats(false)} aria-label={tCards('kubedle.closeStatistics')}>
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -432,25 +439,25 @@ export function Kubedle(_props: CardComponentProps) {
             <div className="grid grid-cols-2 @md:grid-cols-4 gap-2 text-center mb-4">
               <div>
                 <div className="text-2xl font-bold text-foreground">{stats.played}</div>
-                <div className="text-xs text-muted-foreground">Played</div>
+                <div className="text-xs text-muted-foreground">{tCards('kubedle.played')}</div>
               </div>
               <div>
                 <div className="text-2xl font-bold text-foreground">
                   {stats.played > 0 ? Math.round((stats.won / stats.played) * 100) : 0}%
                 </div>
-                <div className="text-xs text-muted-foreground">Win %</div>
+                <div className="text-xs text-muted-foreground">{tCards('kubedle.winPercent')}</div>
               </div>
               <div>
                 <div className="text-2xl font-bold text-foreground">{stats.currentStreak}</div>
-                <div className="text-xs text-muted-foreground">Streak</div>
+                <div className="text-xs text-muted-foreground">{tCards('kubedle.streak')}</div>
               </div>
               <div>
                 <div className="text-2xl font-bold text-foreground">{stats.maxStreak}</div>
-                <div className="text-xs text-muted-foreground">Max</div>
+                <div className="text-xs text-muted-foreground">{tCards('kubedle.maxStreak')}</div>
               </div>
             </div>
 
-            <div className="text-sm font-medium text-foreground mb-2">Guess Distribution</div>
+            <div className="text-sm font-medium text-foreground mb-2">{tCards('kubedle.guessDistribution')}</div>
             <div className="space-y-1">
               {stats.guessDistribution.map((count, idx) => {
                 const maxCount = Math.max(...stats.guessDistribution, 1)
@@ -478,7 +485,7 @@ export function Kubedle(_props: CardComponentProps) {
                 }}
                 className="mt-4 w-full py-2 bg-purple-500/20 text-purple-400 rounded-lg hover:bg-purple-500/30"
               >
-                Play Again (Practice)
+                {tCards('kubedle.playAgainPractice')}
               </button>
             )}
           </div>

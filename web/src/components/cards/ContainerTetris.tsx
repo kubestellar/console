@@ -7,6 +7,11 @@ import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import { useTranslation } from 'react-i18next'
 import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 import { useGameKeys } from '../../hooks/useGameKeys'
+import { safeGet, safeSet } from '../../lib/safeLocalStorage'
+
+// High-score key — persisted via safe wrapper so private-mode browsers
+// don't throw (issue #8935, same pattern as #8938).
+const TETRIS_HIGHSCORE_KEY = 'highscore-containerTetris'
 
 // Board dimensions
 const ROWS = 20
@@ -150,6 +155,18 @@ function ContainerTetrisInternal(_props: CardComponentProps) {
   const [gameOver, setGameOver] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
+  const [highScore, setHighScore] = useState<number>(() => {
+    const saved = safeGet(TETRIS_HIGHSCORE_KEY)
+    return saved ? parseInt(saved, 10) || 0 : 0
+  })
+
+  // Persist high score when game ends and score beats the stored best.
+  useEffect(() => {
+    if (gameOver && score > highScore) {
+      setHighScore(score)
+      safeSet(TETRIS_HIGHSCORE_KEY, score.toString())
+    }
+  }, [gameOver, score, highScore])
 
   const gameContainerRef = useRef<HTMLDivElement>(null)
   const gameLoopRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -352,16 +369,20 @@ function ContainerTetrisInternal(_props: CardComponentProps) {
       <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-3 text-xs">
           <div className="text-center">
-            <div className="text-muted-foreground">Score</div>
+            <div className="text-muted-foreground">{t('containerTetris.score')}</div>
             <div className="font-bold text-foreground">{score}</div>
           </div>
           <div className="text-center">
-            <div className="text-muted-foreground">Level</div>
+            <div className="text-muted-foreground">{t('containerTetris.level')}</div>
             <div className="font-bold text-purple-400">{level}</div>
           </div>
           <div className="text-center">
-            <div className="text-muted-foreground">Lines</div>
+            <div className="text-muted-foreground">{t('containerTetris.lines')}</div>
             <div className="font-bold text-green-400">{lines}</div>
+          </div>
+          <div className="text-center">
+            <div className="text-muted-foreground">{t('containerTetris.best')}</div>
+            <div className="font-bold text-yellow-400">{highScore}</div>
           </div>
         </div>
 
@@ -370,7 +391,8 @@ function ContainerTetrisInternal(_props: CardComponentProps) {
             <button
               onClick={togglePause}
               className="p-1.5 rounded hover:bg-secondary"
-              title={isPaused ? 'Resume' : 'Pause'}
+              title={isPaused ? t('containerTetris.resume') : t('containerTetris.pauseAction')}
+              aria-label={isPaused ? t('containerTetris.resume') : t('containerTetris.pauseAction')}
             >
               {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
             </button>
@@ -378,7 +400,8 @@ function ContainerTetrisInternal(_props: CardComponentProps) {
           <button
             onClick={startGame}
             className="p-1.5 rounded hover:bg-secondary"
-            title="New Game"
+            title={t('containerTetris.newGame')}
+            aria-label={t('containerTetris.newGame')}
           >
             <RotateCcw className="w-4 h-4" />
           </button>
@@ -405,7 +428,7 @@ function ContainerTetrisInternal(_props: CardComponentProps) {
         <div className="flex flex-col gap-4">
           {/* Next piece preview */}
           <div>
-            <div className="text-xs text-muted-foreground mb-1">Next</div>
+            <div className="text-xs text-muted-foreground mb-1">{t('containerTetris.next')}</div>
             <div className="border border-border rounded p-1 bg-gray-900">
               {nextPiece.shape.map((row, r) => (
                 <div key={r} className="flex">
@@ -439,7 +462,7 @@ function ContainerTetrisInternal(_props: CardComponentProps) {
               onClick={startGame}
               className="px-6 py-3 bg-purple-500/20 text-purple-400 rounded-lg hover:bg-purple-500/30 font-semibold"
             >
-              Start Game
+              {t('containerTetris.startGame')}
             </button>
           </div>
         )}
@@ -448,12 +471,12 @@ function ContainerTetrisInternal(_props: CardComponentProps) {
         {isPaused && (
           <div className="absolute inset-0 bg-background/80 flex items-center justify-center rounded-lg">
             <div className="text-center">
-              <div className="text-xl font-bold text-foreground mb-4">Paused</div>
+              <div className="text-xl font-bold text-foreground mb-4">{t('containerTetris.pausedTitle')}</div>
               <button
                 onClick={togglePause}
                 className="px-6 py-3 bg-purple-500/20 text-purple-400 rounded-lg hover:bg-purple-500/30 font-semibold"
               >
-                Resume
+                {t('containerTetris.resume')}
               </button>
             </div>
           </div>
@@ -463,13 +486,13 @@ function ContainerTetrisInternal(_props: CardComponentProps) {
         {gameOver && (
           <div className="absolute inset-0 bg-background/80 flex items-center justify-center rounded-lg">
             <div className="text-center">
-              <div className="text-xl font-bold text-foreground mb-2">Game Over!</div>
-              <div className="text-muted-foreground mb-4">Score: {score}</div>
+              <div className="text-xl font-bold text-foreground mb-2">{t('containerTetris.gameOver')}</div>
+              <div className="text-muted-foreground mb-4">{t('containerTetris.scoreLabel', { score })}</div>
               <button
                 onClick={startGame}
                 className="px-6 py-3 bg-purple-500/20 text-purple-400 rounded-lg hover:bg-purple-500/30 font-semibold"
               >
-                Play Again
+                {t('containerTetris.playAgain')}
               </button>
             </div>
           </div>

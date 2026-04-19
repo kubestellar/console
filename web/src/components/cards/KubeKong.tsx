@@ -1,10 +1,16 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { RotateCcw, Trophy } from 'lucide-react'
+import { RotateCcw, Trophy, Pause, Play } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
 import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 import { useGameKeyTracking } from '../../hooks/useGameKeys'
+import { safeGet, safeSet } from '../../lib/safeLocalStorage'
+
+// High-score storage key — safe wrapper tolerates private-mode
+// localStorage failures (issue #8937).
+const KUBE_KONG_HIGHSCORE_KEY = 'highscore-kubeKong'
 
 // Game constants
 const CANVAS_WIDTH = 280
@@ -90,6 +96,7 @@ function getPlatformY(platform: Platform, x: number): number {
 }
 
 export function KubeKong(_props: CardComponentProps) {
+  const { t } = useTranslation('cards')
   useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: false })
   const { isExpanded } = useCardExpanded()
   const gameContainerRef = useRef<HTMLDivElement>(null)
@@ -114,8 +121,21 @@ export function KubeKong(_props: CardComponentProps) {
   const [gameOver, setGameOver] = useState(false)
   const [won, setWon] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
+  const [isPaused, setIsPaused] = useState(false)
   const [bossFrame, setBossFrame] = useState(0)
   const [helpText, setHelpText] = useState(true)
+  const [highScore, setHighScore] = useState<number>(() => {
+    const saved = safeGet(KUBE_KONG_HIGHSCORE_KEY)
+    return saved ? parseInt(saved, 10) || 0 : 0
+  })
+
+  // Persist high score when game ends and current score beats stored best.
+  useEffect(() => {
+    if (gameOver && score > highScore) {
+      setHighScore(score)
+      safeSet(KUBE_KONG_HIGHSCORE_KEY, score.toString())
+    }
+  }, [gameOver, score, highScore])
 
   const gameStateRef = useRef({ player, barrels })
   useEffect(() => {
@@ -371,9 +391,10 @@ export function KubeKong(_props: CardComponentProps) {
   // Ref for barrel jump scoring dedup
   const scoredBarrelsRef = useRef<Set<number>>(new Set())
 
-  // Game loop
+  // Game loop — also halts on pause (issue #8944) so the setInterval
+  // tick stops advancing physics/spawning.
   useEffect(() => {
-    if (!isPlaying || gameOver) {
+    if (!isPlaying || gameOver || isPaused) {
       if (gameLoopRef.current) {
         clearInterval(gameLoopRef.current)
         gameLoopRef.current = null
@@ -636,7 +657,7 @@ export function KubeKong(_props: CardComponentProps) {
         clearInterval(gameLoopRef.current)
       }
     }
-  }, [isPlaying, gameOver, getOnLadder, checkPlatformCollision, level, lives])
+  }, [isPlaying, gameOver, isPaused, getOnLadder, checkPlatformCollision, level, lives])
 
   // Keyboard controls — scoped to visible game container (KeepAlive-safe)
   useGameKeyTracking(gameContainerRef, keysRef, {
@@ -659,10 +680,32 @@ export function KubeKong(_props: CardComponentProps) {
     setLevel(1)
     setGameOver(false)
     setWon(false)
+    setIsPaused(false)
     setBossFrame(0)
     setIsPlaying(true)
     emitGameStarted('kube_kong')
   }
+
+  // Toggle pause — issue #8944.
+  const togglePause = () => {
+    if (!isPlaying || gameOver) return
+    setIsPaused(p => !p)
+  }
+
+  // Keyboard shortcut for pause (P key).
+  useEffect(() => {
+    const container = gameContainerRef.current
+    if (!container) return
+    const onKey = (e: KeyboardEvent) => {
+      if (!isPlaying || gameOver) return
+      if (e.key === 'p' || e.key === 'P') {
+        e.preventDefault()
+        setIsPaused(p => !p)
+      }
+    }
+    container.addEventListener('keydown', onKey)
+    return () => container.removeEventListener('keydown', onKey)
+  }, [isPlaying, gameOver])
 
   const scale = isExpanded ? 1.5 : 1
 
@@ -675,22 +718,43 @@ export function KubeKong(_props: CardComponentProps) {
       <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-3 text-xs">
           <div className="text-center">
-            <div className="text-muted-foreground">Score</div>
+            <div className="text-muted-foreground">{t('kubeKong.score')}</div>
             <div className="font-bold text-foreground">{score}</div>
           </div>
           <div className="text-center">
-            <div className="text-muted-foreground">Lives</div>
+            <div className="text-muted-foreground">{t('kubeKong.lives')}</div>
             <div className="font-bold text-red-400">{'❤️'.repeat(lives)}</div>
           </div>
           <div className="text-center">
-            <div className="text-muted-foreground">Level</div>
+            <div className="text-muted-foreground">{t('kubeKong.level')}</div>
             <div className="font-bold text-purple-400">{level}</div>
+          </div>
+          <div className="text-center">
+            <div className="text-muted-foreground">{t('kubeKong.best')}</div>
+            <div className="font-bold text-yellow-400">{highScore}</div>
           </div>
         </div>
 
-        <button onClick={startGame} className="p-2 rounded hover:bg-secondary min-h-11 min-w-11 flex items-center justify-center" title="New Game">
-          <RotateCcw className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-1">
+          {isPlaying && !gameOver && (
+            <button
+              onClick={togglePause}
+              className="p-2 rounded hover:bg-secondary min-h-11 min-w-11 flex items-center justify-center"
+              title={isPaused ? t('kubeKong.resume') : t('kubeKong.pauseAction')}
+              aria-label={isPaused ? t('kubeKong.resume') : t('kubeKong.pauseAction')}
+            >
+              {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+            </button>
+          )}
+          <button
+            onClick={startGame}
+            className="p-2 rounded hover:bg-secondary min-h-11 min-w-11 flex items-center justify-center"
+            title={t('kubeKong.newGame')}
+            aria-label={t('kubeKong.newGame')}
+          >
+            <RotateCcw className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {/* Game area - relative container for overlays */}
@@ -706,16 +770,31 @@ export function KubeKong(_props: CardComponentProps) {
         {!isPlaying && !gameOver && (
           <div className="absolute inset-0 bg-background/80 flex items-center justify-center rounded-lg">
             <div className="text-center">
-              <div className="text-xl font-bold text-orange-400 mb-2">KUBE KONG</div>
-              <div className="text-muted-foreground mb-2 text-sm">Rescue the deployment!</div>
+              <div className="text-xl font-bold text-orange-400 mb-2">{t('kubeKong.heading')}</div>
+              <div className="text-muted-foreground mb-2 text-sm">{t('kubeKong.tagline')}</div>
               <div className="text-muted-foreground mb-4 text-xs">
-                ← → Move | ↑ ↓ Climb | Space Jump
+                {t('kubeKong.controls')}
               </div>
               <button
                 onClick={startGame}
                 className="px-6 py-3 bg-orange-500/20 text-orange-400 rounded-lg hover:bg-orange-500/30 font-semibold"
               >
-                Start Game
+                {t('kubeKong.startGame')}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Paused overlay — issue #8944 */}
+        {isPlaying && !gameOver && isPaused && (
+          <div className="absolute inset-0 bg-background/80 flex items-center justify-center rounded-lg">
+            <div className="text-center">
+              <div className="text-xl font-bold text-foreground mb-4">{t('kubeKong.pausedTitle')}</div>
+              <button
+                onClick={togglePause}
+                className="px-6 py-3 bg-orange-500/20 text-orange-400 rounded-lg hover:bg-orange-500/30 font-semibold"
+              >
+                {t('kubeKong.resume')}
               </button>
             </div>
           </div>
@@ -728,17 +807,17 @@ export function KubeKong(_props: CardComponentProps) {
               {won ? (
                 <>
                   <Trophy className="w-12 h-12 text-yellow-400 mx-auto mb-3" />
-                  <div className="text-xl font-bold text-yellow-400 mb-2">Deployment Rescued!</div>
+                  <div className="text-xl font-bold text-yellow-400 mb-2">{t('kubeKong.rescued')}</div>
                 </>
               ) : (
-                <div className="text-xl font-bold text-red-400 mb-2">Game Over!</div>
+                <div className="text-xl font-bold text-red-400 mb-2">{t('kubeKong.gameOver')}</div>
               )}
-              <div className="text-muted-foreground mb-4">Score: {score}</div>
+              <div className="text-muted-foreground mb-4">{t('kubeKong.scoreLabel', { score })}</div>
               <button
                 onClick={startGame}
                 className="px-6 py-3 bg-orange-500/20 text-orange-400 rounded-lg hover:bg-orange-500/30 font-semibold"
               >
-                Play Again
+                {t('kubeKong.playAgain')}
               </button>
             </div>
           </div>
