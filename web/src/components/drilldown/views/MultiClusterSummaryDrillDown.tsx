@@ -3,7 +3,7 @@ import { Search, Server, Layers, Rocket, Box, Settings as SettingsIcon, AlertCir
 import { useClusterData } from '../../../hooks/useClusterData'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import type { DrillDownViewType } from '../../../hooks/useDrillDown'
-import { useCachedNodes, useCachedPVCs } from '../../../hooks/useCachedData'
+import { useCachedAllNodes, useCachedPVCs } from '../../../hooks/useCachedData'
 import { useAlerts } from '../../../hooks/useAlerts'
 import { useTranslation } from 'react-i18next'
 import { formatRelativeTime } from '../../../lib/formatters'
@@ -175,13 +175,22 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
   // synthetic pod-alerts never carry status='resolved'. Using the real
   // alerts list here keeps the count and the list in lock-step.
   const { alerts: contextAlerts } = useAlerts()
+  // Use useCachedAllNodes (not useCachedNodes) for the cumulative,
+  // cross-cluster drill-down list so the UI never substitutes four
+  // hard-coded demo nodes for a real-but-empty live result (Issue 8840).
+  // useCachedNodes() without a cluster has demoWhenEmpty=true, which made
+  // the landing-dashboard Nodes stat block drill-down masquerade demo data
+  // as real. The per-cluster drill-down always passed a cluster name, so
+  // it bypassed that fallback — that's why it worked. useCachedAllNodes
+  // additionally iterates DeduplicatedClusters() to avoid double-counting
+  // nodes when multiple contexts point to the same API server.
   const {
     nodes: rawCachedNodes,
     lastRefresh: nodesLastRefresh,
     isLoading: nodesIsLoading,
     isFailed: nodesIsFailed,
     isDemoFallback: nodesIsDemoFallback,
-  } = useCachedNodes()
+  } = useCachedAllNodes()
   const { pvcs: cachedPVCs } = useCachedPVCs()
   // Guard against undefined to prevent crashes when APIs return 404/500/empty
   const cachedNodes = rawCachedNodes || []

@@ -48,6 +48,7 @@ vi.mock('../../../../hooks/useAlerts', () => ({
 
 vi.mock('../../../../hooks/useCachedData', () => ({
   useCachedNodes: () => ({ nodes: [], lastRefresh: Date.now(), isLoading: false, isFailed: false, isDemoFallback: false, isRefreshing: false, consecutiveFailures: 0, refetch: vi.fn() }),
+  useCachedAllNodes: () => ({ nodes: [], lastRefresh: Date.now(), isLoading: false, isFailed: false, isDemoFallback: false, isRefreshing: false, consecutiveFailures: 0, refetch: vi.fn() }),
   useCachedPVCs: () => ({ pvcs: [], lastRefresh: Date.now(), isLoading: false, isFailed: false, isDemoFallback: false, isRefreshing: false, consecutiveFailures: 0, refetch: vi.fn() }),
 }))
 
