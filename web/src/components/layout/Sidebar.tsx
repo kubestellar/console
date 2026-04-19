@@ -23,6 +23,7 @@ import { prefetchDashboard } from '../../lib/prefetchDashboard'
 import { useVersionCheck } from '../../hooks/useVersionCheck'
 import { useUpgradeState } from '../../hooks/useUpgradeState'
 import { STORAGE_KEY_GROUND_CONTROL_DASHBOARDS } from '../../lib/constants/storage'
+import { SIDEBAR_CONTROLS_LEFT_OFFSET_PX } from '../../lib/constants/ui'
 import { safeGetJSON } from '../../lib/utils/localStorage'
 
 // Lazy-load SidebarCustomizer — it pulls in dnd-kit and heavy UI (~50 KB)
@@ -615,11 +616,15 @@ export function Sidebar() {
         )}
       </aside>
 
-      {/* Collapse + Pin controls — top-right of sidebar, above resize handle */}
+      {/* Collapse + Pin controls — top-right of sidebar, above resize handle.
+          Container uses solid `bg-background` and overlaps the sidebar's right
+          border by 1px (see SIDEBAR_CONTROLS_LEFT_OFFSET_PX) so the sidebar's
+          translucent `glass` border doesn't bleed through behind the icons
+          (Issue 8843). */}
       {!isMobile && !isMissionFullScreen && (
         <div
-          className="fixed top-[4.5rem] z-sticky flex flex-col gap-1.5 items-center transition-[left] duration-300 bg-background rounded-full p-1"
-          style={{ left: sidebarWidth + 4 }}
+          className="fixed top-[4.5rem] z-sticky flex flex-col gap-1.5 items-center transition-[left] duration-300 bg-background border border-border/50 rounded-full p-1 shadow-md"
+          style={{ left: sidebarWidth + SIDEBAR_CONTROLS_LEFT_OFFSET_PX }}
         >
           <button
             data-testid="sidebar-collapse-toggle"
@@ -637,18 +642,19 @@ export function Sidebar() {
               }
             }}
             aria-expanded={!config.collapsed}
-            className="hidden md:flex items-center justify-center w-8 h-8 rounded-full border border-border bg-background text-muted-foreground hover:text-foreground hover:bg-secondary shadow-md transition-colors"
+            className="hidden md:flex items-center justify-center w-8 h-8 rounded-full bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors"
             title={config.collapsed ? t('layout.sidebar.expandSidebar') : t('layout.sidebar.collapseSidebar')}
           >
             {config.collapsed ? <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" /> : <ChevronLeft className="w-3.5 h-3.5" aria-hidden="true" />}
           </button>
           <button
             onClick={toggleSidebarPin}
+            aria-pressed={isPinned}
             className={cn(
-              "flex items-center justify-center w-8 h-8 rounded-full border shadow-md transition-colors",
+              "flex items-center justify-center w-8 h-8 rounded-full transition-colors",
               isPinned
-                ? "bg-purple-900 text-purple-400 hover:bg-purple-800 border-purple-500/50"
-                : "bg-background border-border text-muted-foreground hover:text-foreground hover:bg-secondary"
+                ? "bg-purple-500/15 text-purple-400 hover:bg-purple-500/25"
+                : "bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80"
             )}
             title={isPinned ? t('layout.sidebar.unpinSidebar') : t('layout.sidebar.pinSidebar')}
           >

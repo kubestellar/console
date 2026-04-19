@@ -67,14 +67,27 @@ export const BANNER_HEIGHT_PX = 36
 /** Height of the green dev-mode indicator bar in pixels (h-5 = 20px) */
 export const DEV_BAR_HEIGHT_PX = 20
 /**
+ * Horizontal offset (in pixels) from the sidebar's right edge at which the
+ * floating collapse + pin control container is anchored (see Sidebar.tsx).
+ *
+ * The value is negative so the container visually overlaps the sidebar's
+ * `border-r` line by 1px. Without this overlap the sidebar border bleeds
+ * through behind the control container (Issue 8843) — the sidebar uses a
+ * translucent `glass` background and sits at `z-modal` while the control
+ * container sits at `z-sticky`, so any gap between them lets the vertical
+ * border line render beside/behind the icons.
+ */
+export const SIDEBAR_CONTROLS_LEFT_OFFSET_PX = -1
+
+/**
  * Width reserved in the main content margin for the sidebar's floating
  * collapse + pin controls (see Sidebar.tsx). The control container is
- * positioned at `left: sidebarWidth + 4` with `p-1` (4px padding) wrapping
- * a `w-8` (32px) button, so it spans from `sidebarWidth + 4` to
- * `sidebarWidth + 44`. Main content must clear that end plus a small
- * breathing gap so page headers (e.g. the Dashboard title) are not
- * obscured by the button — issue #8891 reported the "D" in "Dashboard"
+ * anchored at `left: sidebarWidth + SIDEBAR_CONTROLS_LEFT_OFFSET_PX` with
+ * `p-1` (4px padding) wrapping a `w-8` (32px) button, so the right edge
+ * lands near `sidebarWidth + 39`. Main content must clear that end plus a
+ * small breathing gap so page headers (e.g. the Dashboard title) are not
+ * obscured by the button — issue 8891 reported the "D" in "Dashboard"
  * being visually clipped when this value was only 14px.
- *   button right edge (44) + breathing gap (4) = 48
+ *   button right edge (~39) + breathing gap (~9) = 48
  */
 export const SIDEBAR_CONTROLS_OFFSET_PX = 48
