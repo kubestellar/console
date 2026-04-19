@@ -82,14 +82,14 @@ describe('Events Component', () => {
 
   it('renders the overview tab by default', () => {
     renderEvents()
-    expect(screen.getByText('Overview')).toBeTruthy()
-    expect(screen.getByText('Timeline')).toBeTruthy()
-    expect(screen.getByText('All Events')).toBeTruthy()
+    expect(screen.getByText('events.tabs.overview')).toBeTruthy()
+    expect(screen.getByText('events.tabs.timeline')).toBeTruthy()
+    expect(screen.getByText('events.tabs.allEvents')).toBeTruthy()
   })
 
   it('renders stat summary cards', () => {
     renderEvents()
-    expect(screen.getByText('Total Events')).toBeTruthy()
-    expect(screen.getByText('Warnings')).toBeTruthy()
+    expect(screen.getAllByText('events.stats.total').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('events.stats.warnings').length).toBeGreaterThan(0)
   })
 })

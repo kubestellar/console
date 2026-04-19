@@ -126,8 +126,9 @@ export function WarningEvents() {
     <div className="space-y-3">
       {/* Header controls */}
       <div className="flex flex-wrap items-center justify-between gap-y-2">
+        {/* Bug #9043: use i18n plural keys so non-English languages get correct pluralization */}
         <span className="text-xs text-muted-foreground">
-          {totalItems} warning{totalItems !== 1 ? 's' : ''}
+          {t('warningEvents.count', { count: totalItems })}
         </span>
         <div className="flex flex-wrap items-center gap-2">
           <CardControlsRow
@@ -159,13 +160,13 @@ export function WarningEvents() {
         </div>
       </div>
 
-      {/* Error Display */}
+      {/* Error Display — bug #9043: error strings must respect language setting */}
       {isFailed && (
         <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-2 mb-3">
           <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="text-xs font-medium text-red-400">Error loading events</p>
-            <p className="text-2xs text-muted-foreground mt-0.5">Failed to fetch event data ({consecutiveFailures} attempts)</p>
+            <p className="text-xs font-medium text-red-400">{t('warningEvents.errorLoading')}</p>
+            <p className="text-2xs text-muted-foreground mt-0.5">{t('warningEvents.errorFetchAttempts', { count: consecutiveFailures })}</p>
           </div>
         </div>
       )}
@@ -198,9 +199,10 @@ export function WarningEvents() {
                       {event.reason}
                     </StatusBadge>
                     <span className="text-xs text-foreground truncate">{event.object}</span>
+                    {/* Bug #9044: use × (Unicode multiplication) consistently across tabs */}
                     {event.count > 1 && (
                       <span className="text-xs px-1 py-0.5 rounded bg-card text-muted-foreground">
-                        x{event.count}
+                        {t('warningEvents.repeatCount', { count: event.count })}
                       </span>
                     )}
                   </div>

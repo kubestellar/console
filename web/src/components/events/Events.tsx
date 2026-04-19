@@ -21,7 +21,15 @@ import { StatusBadge } from '../ui/StatusBadge'
 const EVENT_LIMIT = 100 // Maximum number of events to fetch
 const HOURS_IN_DAY = 24 // Number of hours to display in timeline
 const MAX_PREVIEW_EVENTS = 10 // Maximum events shown in preview before "View more"
-const MILLISECONDS_PER_HOUR = 60 * 60 * 1000 // Milliseconds in an hour
+const MAX_RECENT_WARNINGS_PREVIEW = 5 // Max recent warnings shown on overview
+const MILLISECONDS_PER_MINUTE = 60 * 1000 // Milliseconds in a minute
+const MILLISECONDS_PER_HOUR = 60 * MILLISECONDS_PER_MINUTE // Milliseconds in an hour
+const MAX_TOP_REASONS = 6 // Top reasons shown in donut chart
+const DONUT_COLOR_BUCKETS = 6 // Number of palette slots for charts
+const DONUT_SIZE = 150 // Donut chart diameter in px
+const DONUT_THICKNESS = 20 // Donut ring thickness in px
+const DONUT_EMPTY_HEIGHT = 150 // Empty-state placeholder height in px
+const BAR_CHART_HEIGHT = 200 // Bar chart height in px
 // Threshold for treating a cached hook as "failed" so we can render an
 // explicit error state with a retry button instead of an indefinite spinner.
 const EVENTS_FAILURE_THRESHOLD = 1
@@ -43,19 +51,22 @@ let eventsStatsCache: EventsStatsCache | null = null
 
 type EventFilter = 'all' | 'warning' | 'normal'
 type ViewTab = 'overview' | 'timeline' | 'list'
+// Timeline buckets. `unknownTime` captures events missing a lastSeen timestamp
+// so they don't get falsely bucketed as recent (bug #9039).
+type TimelineGroupKey = 'lastHour' | 'today' | 'older' | 'unknownTime'
 
-function getTimeAgo(timestamp: string | undefined): string {
-  if (!timestamp) return 'Unknown'
+function getTimeAgo(timestamp: string | undefined, t: (key: string, opts?: Record<string, unknown>) => string): string {
+  if (!timestamp) return t('events.timeAgo.unknown')
   const now = new Date()
   const then = new Date(timestamp)
   const diffMs = now.getTime() - then.getTime()
-  const diffMins = Math.floor(diffMs / 60000)
+  const diffMins = Math.floor(diffMs / MILLISECONDS_PER_MINUTE)
   const diffHours = Math.floor(diffMins / 60)
-  const diffDays = Math.floor(diffHours / 24)
-  if (diffDays > 0) return `${diffDays}d ago`
-  if (diffHours > 0) return `${diffHours}h ago`
-  if (diffMins > 0) return `${diffMins}m ago`
-  return 'Just now'
+  const diffDays = Math.floor(diffHours / HOURS_IN_DAY)
+  if (diffDays > 0) return t('events.timeAgo.days', { count: diffDays })
+  if (diffHours > 0) return t('events.timeAgo.hours', { count: diffHours })
+  if (diffMins > 0) return t('events.timeAgo.minutes', { count: diffMins })
+  return t('events.timeAgo.justNow')
 }
 
 function getEventIcon(type: string, reason: string): React.ReactNode {
@@ -74,8 +85,14 @@ function getEventIcon(type: string, reason: string): React.ReactNode {
   return <svg className="w-4 h-4 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
 }
 
+// Loose translator type for dynamic key lookup (group labels computed from a union).
+// i18next's strict `TFunction` generics don't play well with `events.groups.${key}`
+// concatenation, so we narrow to the runtime contract we actually rely on.
+type TranslateFn = (key: string, opts?: Record<string, unknown>) => string
+
 export function Events() {
-  const { t } = useTranslation()
+  const { t: tTyped } = useTranslation()
+  const t = tTyped as unknown as TranslateFn
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected, filterBySeverity, customFilter: globalCustomFilter } = useGlobalFilters()
   const { drillToAllEvents } = useDrillDownActions()
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
@@ -92,7 +109,7 @@ export function Events() {
     isDemoFallback: eventsIsDemoFallback,
     error: eventsError,
   } = useCachedEvents(undefined, undefined, { limit: EVENT_LIMIT })
-  const warningEvents = allEvents.filter(e => e.type === 'Warning')
+  const warningEvents = (allEvents || []).filter(e => e.type === 'Warning')
   const lastUpdated = allUpdated ? new Date(allUpdated) : null
   // Show the explicit error banner once the cache layer has given up and
   // there's no usable cached data to display. We don't want to flash this
@@ -100,7 +117,7 @@ export function Events() {
   const showLoadError =
     (eventsFailed || eventsConsecutiveFailures >= EVENTS_FAILURE_THRESHOLD) &&
     !isLoading &&
-    allEvents.length === 0
+    (allEvents || []).length === 0
 
   // Local state
   const [selectedNamespace, setSelectedNamespace] = useState<string>('')
@@ -108,10 +125,12 @@ export function Events() {
   const [filter, setFilter] = useState<EventFilter>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTab, setActiveTab] = useState<ViewTab>('overview')
+  // Group context preserved when the user clicks "View X more events" (bug #9040).
+  const [timelineGroupContext, setTimelineGroupContext] = useState<TimelineGroupKey | null>(null)
 
   // Events after global filter
-  const globalFilteredAllEvents = (() => {
-    let result = allEvents
+  const globalFilteredAllEvents = useMemo(() => {
+    let result = allEvents || []
     if (!isAllClustersSelected) {
       result = result.filter(e => e.cluster && globalSelectedClusters.includes(e.cluster))
     }
@@ -124,13 +143,19 @@ export function Events() {
       )
     }
     return result
-  })()
+  }, [allEvents, isAllClustersSelected, globalSelectedClusters, globalCustomFilter])
 
-  const globalFilteredWarningEvents = globalFilteredAllEvents.filter(e => e.type === 'Warning')
-  const globalFilteredErrorEvents = globalFilteredAllEvents.filter(e => e.type === 'Error')
+  const globalFilteredWarningEvents = useMemo(
+    () => globalFilteredAllEvents.filter(e => e.type === 'Warning'),
+    [globalFilteredAllEvents]
+  )
+  const globalFilteredErrorEvents = useMemo(
+    () => globalFilteredAllEvents.filter(e => e.type === 'Error'),
+    [globalFilteredAllEvents]
+  )
 
   // Extract unique namespaces and reasons
-  const { namespaces, reasons } = (() => {
+  const { namespaces, reasons } = useMemo(() => {
     const nsSet = new Set<string>()
     const reasonSet = new Set<string>()
     globalFilteredAllEvents.forEach(e => {
@@ -138,11 +163,20 @@ export function Events() {
       if (e.reason) reasonSet.add(e.reason)
     })
     return { namespaces: Array.from(nsSet).sort(), reasons: Array.from(reasonSet).sort() }
-  })()
+  }, [globalFilteredAllEvents])
+
+  // Helper: parse an event's timestamp as a Date, or return null for missing/invalid.
+  // Events without a valid lastSeen should never be falsely bucketed as recent (bug #9039).
+  const parseEventTime = (ts: string | undefined): Date | null => {
+    if (!ts) return null
+    const d = new Date(ts)
+    if (Number.isNaN(d.getTime())) return null
+    return d
+  }
 
   // Filtered events for list/timeline views
   const filteredEvents = useMemo(() => {
-    let result = filter === 'warning' ? warningEvents : allEvents
+    let result = filter === 'warning' ? warningEvents : (allEvents || [])
     if (!isAllClustersSelected) {
       result = result.filter(e => e.cluster && globalSelectedClusters.includes(e.cluster))
     }
@@ -176,32 +210,41 @@ export function Events() {
     const errors = globalFilteredErrorEvents.length
     const normal = globalFilteredAllEvents.filter(e => e.type === 'Normal').length
     const reasonCounts = globalFilteredAllEvents.reduce((acc, e) => { acc[e.reason] = (acc[e.reason] || 0) + 1; return acc }, {} as Record<string, number>)
-    const topReasons = Object.entries(reasonCounts).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([name, value], i) => ({
-      name, value, color: getChartColor((i % 6) + 1)
+    const topReasons = Object.entries(reasonCounts).sort((a, b) => b[1] - a[1]).slice(0, MAX_TOP_REASONS).map(([name, value], i) => ({
+      name, value, color: getChartColor((i % DONUT_COLOR_BUCKETS) + 1)
     }))
     const clusterCounts = globalFilteredAllEvents.reduce((acc, e) => {
       if (e.cluster) { const name = e.cluster.split('/').pop() || e.cluster; acc[name] = (acc[name] || 0) + 1 }
       return acc
     }, {} as Record<string, number>)
     const clusterData = Object.entries(clusterCounts).sort((a, b) => b[1] - a[1]).map(([name, value], i) => ({
-      name, value, color: getChartColor((i % 6) + 1)
+      name, value, color: getChartColor((i % DONUT_COLOR_BUCKETS) + 1)
     }))
     const now = new Date()
     const hourlyData: { name: string; value: number; color?: string }[] = []
     for (let i = HOURS_IN_DAY - 1; i >= 0; i--) {
       const hourStart = new Date(now.getTime() - i * MILLISECONDS_PER_HOUR)
       const hourEnd = new Date(hourStart.getTime() + MILLISECONDS_PER_HOUR)
-      const hourTotal = globalFilteredAllEvents.filter(e => e.lastSeen && new Date(e.lastSeen) >= hourStart && new Date(e.lastSeen) < hourEnd).length
-      const hourWarnings = globalFilteredAllEvents.filter(e => e.lastSeen && new Date(e.lastSeen) >= hourStart && new Date(e.lastSeen) < hourEnd && e.type === 'Warning').length
+      const hourTotal = globalFilteredAllEvents.filter(e => {
+        const ts = parseEventTime(e.lastSeen)
+        return ts !== null && ts >= hourStart && ts < hourEnd
+      }).length
+      const hourWarnings = globalFilteredAllEvents.filter(e => {
+        const ts = parseEventTime(e.lastSeen)
+        return ts !== null && ts >= hourStart && ts < hourEnd && e.type === 'Warning'
+      }).length
       hourlyData.push({ name: hourStart.getHours().toString().padStart(2, '0') + ':00', value: hourTotal, color: hourWarnings > hourTotal / 2 ? getChartColorByName('warning') : getChartColorByName('primary') })
     }
     const oneHourAgo = new Date(now.getTime() - MILLISECONDS_PER_HOUR)
-    const recentCount = globalFilteredAllEvents.filter(e => e.lastSeen && new Date(e.lastSeen) >= oneHourAgo).length
+    const recentCount = globalFilteredAllEvents.filter(e => {
+      const ts = parseEventTime(e.lastSeen)
+      return ts !== null && ts >= oneHourAgo
+    }).length
     return {
       total: globalFilteredAllEvents.length, warnings, errors, normal, recentCount, topReasons, clusterData, hourlyData,
-      typeChartData: [{ name: 'Warnings', value: warnings, color: getChartColorByName('warning') }, { name: 'Normal', value: normal, color: getChartColorByName('success') }].filter(d => d.value > 0)
+      typeChartData: [{ name: t('events.stats.warnings'), value: warnings, color: getChartColorByName('warning') }, { name: t('common.normal'), value: normal, color: getChartColorByName('success') }].filter(d => d.value > 0)
     }
-  }, [globalFilteredAllEvents, globalFilteredWarningEvents, globalFilteredErrorEvents])
+  }, [globalFilteredAllEvents, globalFilteredWarningEvents, globalFilteredErrorEvents, t])
 
   // Update cache
   useEffect(() => {
@@ -220,56 +263,105 @@ export function Events() {
   // Stats value getter
   const getDashboardStatValue = (blockId: string): StatBlockValue => {
     switch (blockId) {
-      case 'total': return { value: formatEventStat(displayStats.total), sublabel: 'events', onClick: () => drillToAllEvents(), isClickable: displayStats.total > 0 }
-      case 'warnings': return { value: formatEventStat(displayStats.warnings), sublabel: 'warning events', onClick: () => drillToAllEvents('warning'), isClickable: displayStats.warnings > 0 }
-      case 'normal': return { value: formatEventStat(displayStats.normal), sublabel: 'normal events', onClick: () => drillToAllEvents('normal'), isClickable: displayStats.normal > 0 }
-      case 'recent': return { value: formatEventStat(displayStats.recentCount), sublabel: 'in last hour', onClick: () => drillToAllEvents('recent'), isClickable: displayStats.recentCount > 0 }
-      case 'errors': return { value: formatEventStat(displayStats.errors), sublabel: 'error events', onClick: () => drillToAllEvents('error'), isClickable: displayStats.errors > 0 }
+      case 'total': return { value: formatEventStat(displayStats.total), sublabel: t('events.stats.totalSublabel'), onClick: () => drillToAllEvents(), isClickable: displayStats.total > 0 }
+      case 'warnings': return { value: formatEventStat(displayStats.warnings), sublabel: t('events.stats.warningsSublabel'), onClick: () => drillToAllEvents('warning'), isClickable: displayStats.warnings > 0 }
+      case 'normal': return { value: formatEventStat(displayStats.normal), sublabel: t('events.stats.normalSublabel'), onClick: () => drillToAllEvents('normal'), isClickable: displayStats.normal > 0 }
+      case 'recent': return { value: formatEventStat(displayStats.recentCount), sublabel: t('events.stats.lastHourSublabel'), onClick: () => drillToAllEvents('recent'), isClickable: displayStats.recentCount > 0 }
+      case 'errors': return { value: formatEventStat(displayStats.errors), sublabel: t('events.stats.errorsSublabel'), onClick: () => drillToAllEvents('error'), isClickable: displayStats.errors > 0 }
       default: return { value: '-', sublabel: '' }
     }
   }
 
   const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
 
-  // Group events by time
-  const groupedEvents = (() => {
-    const groups: Record<string, typeof filteredEvents> = { 'Last Hour': [], 'Today': [], 'Older': [] }
+  // Group events by time. Events with missing/invalid timestamps go to "unknownTime"
+  // so they never inflate the "Last Hour" bucket (bug #9039).
+  const groupedEvents = useMemo(() => {
+    const groups: Record<TimelineGroupKey, typeof filteredEvents> = {
+      lastHour: [],
+      today: [],
+      older: [],
+      unknownTime: [],
+    }
     const now = new Date()
-    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000)
+    const oneHourAgo = new Date(now.getTime() - MILLISECONDS_PER_HOUR)
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
     filteredEvents.forEach(event => {
-      const eventTime = event.lastSeen ? new Date(event.lastSeen) : new Date()
-      if (eventTime >= oneHourAgo) groups['Last Hour'].push(event)
-      else if (eventTime >= todayStart) groups['Today'].push(event)
-      else groups['Older'].push(event)
+      const eventTime = parseEventTime(event.lastSeen)
+      if (eventTime === null) {
+        groups.unknownTime.push(event)
+      } else if (eventTime >= oneHourAgo) {
+        groups.lastHour.push(event)
+      } else if (eventTime >= todayStart) {
+        groups.today.push(event)
+      } else {
+        groups.older.push(event)
+      }
     })
     return groups
-  })()
+  }, [filteredEvents])
 
-  const clearFilters = () => { setSelectedNamespace(''); setSelectedReason(''); setFilter('all'); setSearchQuery('') }
-  const hasActiveFilters = selectedNamespace || selectedReason || filter !== 'all' || searchQuery
+  // Events visible in the list tab, narrowed to the timeline group when the user
+  // arrived via "View X more events" (bug #9040).
+  const listTabVisibleGroups = useMemo(() => {
+    if (timelineGroupContext) {
+      return { [timelineGroupContext]: groupedEvents[timelineGroupContext] } as Partial<Record<TimelineGroupKey, typeof filteredEvents>>
+    }
+    return groupedEvents
+  }, [groupedEvents, timelineGroupContext])
+
+  // Flattened list for the "Showing N of M events" counter (bug #9041).
+  // Denominator MUST reflect cluster-filtered events, not raw allEvents.
+  const visibleListEvents = useMemo(() => {
+    const groupsToShow = listTabVisibleGroups
+    const out: typeof filteredEvents = []
+    ;(Object.keys(groupsToShow) as TimelineGroupKey[]).forEach(key => {
+      const list = groupsToShow[key]
+      if (list) out.push(...list)
+    })
+    return out
+  }, [listTabVisibleGroups])
+
+  const clearFilters = () => {
+    setSelectedNamespace('')
+    setSelectedReason('')
+    setFilter('all')
+    setSearchQuery('')
+    setTimelineGroupContext(null)
+  }
+  const hasActiveFilters = Boolean(selectedNamespace || selectedReason || filter !== 'all' || searchQuery || timelineGroupContext)
+
+  // Tabs config (translated labels, defined inside render so i18n updates reactively)
+  const TAB_CONFIG: { id: ViewTab; labelKey: string; icon: typeof Activity; showCount?: boolean }[] = [
+    { id: 'overview', labelKey: 'events.tabs.overview', icon: Activity },
+    { id: 'timeline', labelKey: 'events.tabs.timeline', icon: Clock },
+    { id: 'list', labelKey: 'events.tabs.allEvents', icon: Bell, showCount: true },
+  ]
+
+  const handleTabSwitch = (tabId: ViewTab) => {
+    setActiveTab(tabId)
+    // Switching away from the list tab (or back to overview/timeline) clears any
+    // group context so it doesn't leak into a fresh list view.
+    if (tabId !== 'list') setTimelineGroupContext(null)
+  }
 
   // Tabs - rendered before cards
   const tabsContent = (
     <div className="flex gap-1 mb-6 border-b border-border">
-      {[
-        { id: 'overview', label: 'Overview', icon: Activity },
-        { id: 'timeline', label: 'Timeline', icon: Clock },
-        { id: 'list', label: 'All Events', icon: Bell, count: displayStats.total },
-      ].map(tab => {
+      {TAB_CONFIG.map(tab => {
         const Icon = tab.icon
         return (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id as ViewTab)}
+            onClick={() => handleTabSwitch(tab.id)}
             className={cn(
               'flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 -mb-[2px] transition-colors',
               activeTab === tab.id ? 'border-purple-500 text-purple-400' : 'border-transparent text-muted-foreground hover:text-foreground'
             )}
           >
             <Icon className="w-4 h-4" />
-            {tab.label}
-            {tab.count !== undefined && <span className="px-1.5 py-0.5 text-xs rounded-full bg-card text-muted-foreground">{tab.count}</span>}
+            {t(tab.labelKey)}
+            {tab.showCount && <span className="px-1.5 py-0.5 text-xs rounded-full bg-card text-muted-foreground">{displayStats.total}</span>}
           </button>
         )
       })}
@@ -279,7 +371,7 @@ export function Events() {
   return (
     <DashboardPage
       title={t('common.events')}
-      subtitle="Cluster events and activity across your infrastructure"
+      subtitle={t('events.subtitle')}
       icon="Activity"
       rightExtra={<RotatingTip page="events" />}
       storageKey={EVENTS_CARDS_KEY}
@@ -293,25 +385,25 @@ export function Events() {
       hasData={displayStats.total > 0}
       isDemoData={eventsIsDemoFallback}
       beforeCards={tabsContent}
-      emptyState={{ title: 'Events Dashboard', description: 'Add cards to monitor Kubernetes events, warnings, and activity across your clusters.' }}
+      emptyState={{ title: t('events.dashboardTitle'), description: t('events.dashboardDescription') }}
     >
       {/* Overview Tab */}
       {activeTab === 'overview' && (
         <div className="space-y-6">
           <div className="grid grid-cols-4 gap-4">
-            <button onClick={() => { setActiveTab('list'); setFilter('all') }} className="glass p-4 rounded-lg text-left hover:bg-secondary/30 transition-colors">
+            <button onClick={() => { handleTabSwitch('list'); setFilter('all') }} className="glass p-4 rounded-lg text-left hover:bg-secondary/30 transition-colors">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-purple-500/20"><Bell className="w-5 h-5 text-purple-400" /></div>
-                <div><div className="text-2xl font-bold text-foreground">{formatStat(stats.total)}</div><div className="text-xs text-muted-foreground">Total Events</div></div>
+                <div><div className="text-2xl font-bold text-foreground">{formatStat(stats.total)}</div><div className="text-xs text-muted-foreground">{t('events.stats.total')}</div></div>
               </div>
             </button>
-            <button onClick={() => { setActiveTab('list'); setFilter('warning') }} className="glass p-4 rounded-lg text-left hover:bg-secondary/30 transition-colors">
+            <button onClick={() => { handleTabSwitch('list'); setFilter('warning') }} className="glass p-4 rounded-lg text-left hover:bg-secondary/30 transition-colors">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-yellow-500/20"><AlertTriangle className="w-5 h-5 text-yellow-400" /></div>
-                <div><div className="text-2xl font-bold text-yellow-400">{formatStat(stats.warnings)}</div><div className="text-xs text-muted-foreground">Warnings</div></div>
+                <div><div className="text-2xl font-bold text-yellow-400">{formatStat(stats.warnings)}</div><div className="text-xs text-muted-foreground">{t('events.stats.warnings')}</div></div>
               </div>
             </button>
-            <button onClick={() => { setActiveTab('list'); setFilter('normal') }} className="glass p-4 rounded-lg text-left hover:bg-secondary/30 transition-colors">
+            <button onClick={() => { handleTabSwitch('list'); setFilter('normal') }} className="glass p-4 rounded-lg text-left hover:bg-secondary/30 transition-colors">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-green-500/20"><CheckCircle2 className="w-5 h-5 text-green-400" /></div>
                 <div><div className="text-2xl font-bold text-green-400">{formatStat(stats.normal)}</div><div className="text-xs text-muted-foreground">{t('common.normal')}</div></div>
@@ -320,41 +412,41 @@ export function Events() {
             <div className="glass p-4 rounded-lg">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-blue-500/20"><Zap className="w-5 h-5 text-blue-400" /></div>
-                <div><div className="text-2xl font-bold text-blue-400">{formatStat(stats.recentCount)}</div><div className="text-xs text-muted-foreground">Last Hour</div></div>
+                <div><div className="text-2xl font-bold text-blue-400">{formatStat(stats.recentCount)}</div><div className="text-xs text-muted-foreground">{t('events.stats.lastHour')}</div></div>
               </div>
             </div>
           </div>
 
           <div className="grid grid-cols-3 gap-4">
             <div className="glass p-4 rounded-lg">
-              <div className="text-sm font-medium text-muted-foreground mb-4">Event Types</div>
-              {stats.typeChartData.length > 0 ? <DonutChart data={stats.typeChartData} size={150} thickness={20} showLegend={true} /> : <div className="flex items-center justify-center h-[150px] text-muted-foreground">No events</div>}
+              <div className="text-sm font-medium text-muted-foreground mb-4">{t('events.sections.eventTypes')}</div>
+              {stats.typeChartData.length > 0 ? <DonutChart data={stats.typeChartData} size={DONUT_SIZE} thickness={DONUT_THICKNESS} showLegend={true} /> : <div className="flex items-center justify-center text-muted-foreground" style={{ height: DONUT_EMPTY_HEIGHT }}>{t('events.empty.noEvents')}</div>}
             </div>
             <div className="glass p-4 rounded-lg">
-              <div className="text-sm font-medium text-muted-foreground mb-4">Top Reasons</div>
-              {stats.topReasons.length > 0 ? <DonutChart data={stats.topReasons} size={150} thickness={20} showLegend={true} /> : <div className="flex items-center justify-center h-[150px] text-muted-foreground">No events</div>}
+              <div className="text-sm font-medium text-muted-foreground mb-4">{t('events.sections.topReasons')}</div>
+              {stats.topReasons.length > 0 ? <DonutChart data={stats.topReasons} size={DONUT_SIZE} thickness={DONUT_THICKNESS} showLegend={true} /> : <div className="flex items-center justify-center text-muted-foreground" style={{ height: DONUT_EMPTY_HEIGHT }}>{t('events.empty.noEvents')}</div>}
             </div>
             <div className="glass p-4 rounded-lg">
-              <div className="text-sm font-medium text-muted-foreground mb-4">By Cluster</div>
-              {stats.clusterData.length > 0 ? <DonutChart data={stats.clusterData} size={150} thickness={20} showLegend={true} /> : <div className="flex items-center justify-center h-[150px] text-muted-foreground">No cluster data</div>}
+              <div className="text-sm font-medium text-muted-foreground mb-4">{t('events.sections.byCluster')}</div>
+              {stats.clusterData.length > 0 ? <DonutChart data={stats.clusterData} size={DONUT_SIZE} thickness={DONUT_THICKNESS} showLegend={true} /> : <div className="flex items-center justify-center text-muted-foreground" style={{ height: DONUT_EMPTY_HEIGHT }}>{t('events.empty.noClusterData')}</div>}
             </div>
           </div>
 
           <div className="glass p-4 rounded-lg">
-            <h4 className="text-sm font-medium text-muted-foreground mb-4">Event Activity (Last 24 Hours)</h4>
-            <BarChart data={stats.hourlyData} height={200} color={getChartColorByName('primary')} showGrid={true} />
+            <h4 className="text-sm font-medium text-muted-foreground mb-4">{t('events.sections.activityLast24h')}</h4>
+            <BarChart data={stats.hourlyData} height={BAR_CHART_HEIGHT} color={getChartColorByName('primary')} showGrid={true} />
           </div>
 
           <div className="glass p-4 rounded-lg">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-medium text-muted-foreground">Recent Warnings</h3>
-              <button onClick={() => { setActiveTab('list'); setFilter('warning') }} className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1 px-3 py-2 min-h-11 min-w-11">View all <ChevronRight className="w-3 h-3" /></button>
+              <h3 className="text-sm font-medium text-muted-foreground">{t('events.sections.recentWarnings')}</h3>
+              <button onClick={() => { handleTabSwitch('list'); setFilter('warning') }} className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1 px-3 py-2 min-h-11 min-w-11">{t('events.viewAll')} <ChevronRight className="w-3 h-3" /></button>
             </div>
-            {globalFilteredWarningEvents.slice(0, 5).length === 0 ? (
-              <div className="text-sm text-muted-foreground text-center py-4"><CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-green-400 opacity-50" />No warnings</div>
+            {globalFilteredWarningEvents.slice(0, MAX_RECENT_WARNINGS_PREVIEW).length === 0 ? (
+              <div className="text-sm text-muted-foreground text-center py-4"><CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-green-400 opacity-50" />{t('events.empty.noWarnings')}</div>
             ) : (
               <div className="space-y-2">
-                {globalFilteredWarningEvents.slice(0, 5).map((event, i) => (
+                {globalFilteredWarningEvents.slice(0, MAX_RECENT_WARNINGS_PREVIEW).map((event, i) => (
                   <div key={i} className="flex items-center gap-3 p-2 rounded bg-yellow-500/10 border border-yellow-500/20">
                     <AlertTriangle className="w-4 h-4 text-yellow-400 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
@@ -364,7 +456,7 @@ export function Events() {
                       </div>
                       <div className="text-xs text-muted-foreground truncate mt-0.5">{event.message}</div>
                     </div>
-                    <div className="text-xs text-muted-foreground whitespace-nowrap">{getTimeAgo(event.lastSeen)}</div>
+                    <div className="text-xs text-muted-foreground whitespace-nowrap">{getTimeAgo(event.lastSeen, t)}</div>
                   </div>
                 ))}
               </div>
@@ -377,23 +469,25 @@ export function Events() {
       {activeTab === 'timeline' && (
         <div className="space-y-6">
           <div className="glass p-6 rounded-lg">
-            <h3 className="text-lg font-medium text-foreground mb-6 flex items-center gap-2"><Calendar className="w-5 h-5" />Event Timeline</h3>
+            <h3 className="text-lg font-medium text-foreground mb-6 flex items-center gap-2"><Calendar className="w-5 h-5" />{t('events.sections.eventTimeline')}</h3>
             {filteredEvents.length === 0 ? (
-              <div className="text-center py-12"><Clock className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" /><p className="text-muted-foreground">No events to display</p></div>
+              <div className="text-center py-12"><Clock className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" /><p className="text-muted-foreground">{t('events.empty.noEventsToDisplay')}</p></div>
             ) : (
               <div className="relative">
                 <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-border" />
-                {Object.entries(groupedEvents).map(([group, groupEvents]) => {
+                {(Object.keys(groupedEvents) as TimelineGroupKey[]).map((groupKey) => {
+                  const groupEvents = groupedEvents[groupKey]
                   if (groupEvents.length === 0) return null
+                  const groupLabel = t(`events.groups.${groupKey}`)
                   return (
-                    <div key={group} className="mb-8">
+                    <div key={groupKey} className="mb-8">
                       <div className="flex items-center gap-3 mb-4">
                         <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center z-10"><Clock className="w-4 h-4 text-purple-400" /></div>
-                        <h4 className="text-sm font-medium text-foreground">{group}</h4>
-                        <span className="text-xs text-muted-foreground">({groupEvents.length} events)</span>
+                        <h4 className="text-sm font-medium text-foreground">{groupLabel}</h4>
+                        <span className="text-xs text-muted-foreground">{t('events.groupCount', { count: groupEvents.length })}</span>
                       </div>
                       <div className="ml-12 space-y-3">
-                        {groupEvents.slice(0, 10).map((event, i) => (
+                        {groupEvents.slice(0, MAX_PREVIEW_EVENTS).map((event, i) => (
                           <div key={`${event.object}-${event.reason}-${i}`} className={cn('relative p-4 rounded-lg border-l-4', event.type === 'Warning' ? 'bg-yellow-500/5 border-l-yellow-500' : 'bg-green-500/5 border-l-green-500')}>
                             <div className={cn('absolute -left-[2.125rem] top-5 w-2 h-2 rounded-full', event.type === 'Warning' ? 'bg-yellow-400' : 'bg-green-400')} />
                             <div className="flex items-start justify-between gap-4">
@@ -401,7 +495,7 @@ export function Events() {
                                 <div className="flex items-center gap-2 flex-wrap mb-1">
                                   <span className={cn('text-xs px-2 py-0.5 rounded font-medium', event.type === 'Warning' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-green-500/20 text-green-400')}>{event.reason}</span>
                                   <span className="text-sm font-medium text-foreground">{event.object}</span>
-                                  {event.count > 1 && <span className="text-xs px-1.5 py-0.5 rounded bg-card text-muted-foreground">×{event.count}</span>}
+                                  {event.count > 1 && <span className="text-xs px-1.5 py-0.5 rounded bg-card text-muted-foreground">{t('events.repeatCount', { count: event.count })}</span>}
                                 </div>
                                 <p className="text-sm text-muted-foreground">{event.message}</p>
                                 <div className="flex items-center gap-3 mt-2">
@@ -409,11 +503,21 @@ export function Events() {
                                   {event.cluster && <ClusterBadge cluster={event.cluster.split('/').pop() || event.cluster} size="sm" />}
                                 </div>
                               </div>
-                              <span className="text-xs text-muted-foreground whitespace-nowrap">{getTimeAgo(event.lastSeen)}</span>
+                              <span className="text-xs text-muted-foreground whitespace-nowrap">{getTimeAgo(event.lastSeen, t)}</span>
                             </div>
                           </div>
                         ))}
-                        {groupEvents.length > MAX_PREVIEW_EVENTS && <button onClick={() => setActiveTab('list')} className="text-sm text-purple-400 hover:text-purple-300 ml-4">View {groupEvents.length - MAX_PREVIEW_EVENTS} more events...</button>}
+                        {groupEvents.length > MAX_PREVIEW_EVENTS && (
+                          <button
+                            onClick={() => {
+                              setTimelineGroupContext(groupKey)
+                              setActiveTab('list')
+                            }}
+                            className="text-sm text-purple-400 hover:text-purple-300 ml-4"
+                          >
+                            {t('events.viewMore', { count: groupEvents.length - MAX_PREVIEW_EVENTS })}
+                          </button>
+                        )}
                       </div>
                     </div>
                   )
@@ -430,11 +534,11 @@ export function Events() {
           <div className="grid grid-cols-3 gap-4">
             <button onClick={() => setFilter('all')} className={cn('glass p-4 rounded-lg text-left transition-all', filter === 'all' ? 'ring-2 ring-purple-500' : 'hover:bg-secondary/30')}>
               <div className="text-3xl font-bold text-foreground">{formatStat(stats.total)}</div>
-              <div className="text-sm text-muted-foreground">Total Events</div>
+              <div className="text-sm text-muted-foreground">{t('events.stats.total')}</div>
             </button>
             <button onClick={() => setFilter('warning')} className={cn('glass p-4 rounded-lg text-left transition-all', filter === 'warning' ? 'ring-2 ring-yellow-500' : 'hover:bg-secondary/30')}>
               <div className="text-3xl font-bold text-yellow-400">{formatStat(stats.warnings)}</div>
-              <div className="text-sm text-muted-foreground">Warnings</div>
+              <div className="text-sm text-muted-foreground">{t('events.stats.warnings')}</div>
             </button>
             <button onClick={() => setFilter('normal')} className={cn('glass p-4 rounded-lg text-left transition-all', filter === 'normal' ? 'ring-2 ring-green-500' : 'hover:bg-secondary/30')}>
               <div className="text-3xl font-bold text-green-400">{formatStat(stats.normal)}</div>
@@ -459,17 +563,26 @@ export function Events() {
                 </select>
               </div>
               <div className="flex-1 min-w-[200px]">
-                <label htmlFor="events-search" className="block text-xs text-muted-foreground mb-1">Search</label>
+                <label htmlFor="events-search" className="block text-xs text-muted-foreground mb-1">{t('events.search')}</label>
                 <input type="text" id="events-search" placeholder={t('common.searchEvents')} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full px-3 py-1.5 rounded-lg bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
               </div>
               {hasActiveFilters && (
                 <div>
                   <label className="block text-xs text-transparent mb-1">{t('common.clear')}</label>
-                  <button onClick={clearFilters} className="px-3 py-1.5 rounded-lg text-sm font-medium bg-secondary text-muted-foreground hover:text-foreground transition-colors">Clear Filters</button>
+                  <button onClick={clearFilters} className="px-3 py-1.5 rounded-lg text-sm font-medium bg-secondary text-muted-foreground hover:text-foreground transition-colors">{t('events.clearFiltersButton')}</button>
                 </div>
               )}
             </div>
-            {hasActiveFilters && <div className="mt-3 pt-3 border-t border-border/50 text-xs text-muted-foreground">Showing {filteredEvents.length} of {allEvents.length} events</div>}
+            {hasActiveFilters && (
+              <div className="mt-3 pt-3 border-t border-border/50 text-xs text-muted-foreground">
+                {/*
+                  Bug #9041: denominator counts events from currently-selected clusters
+                  (globalFilteredAllEvents), not raw allEvents. When a timeline group
+                  context is active, the filtered count reflects that narrowed view.
+                */}
+                {t('events.showingFiltered', { filtered: visibleListEvents.length, total: globalFilteredAllEvents.length })}
+              </div>
+            )}
           </div>
 
           {isLoading ? (
@@ -477,9 +590,9 @@ export function Events() {
           ) : showLoadError ? (
             <div className="glass p-6 rounded-lg border border-red-500/30 bg-red-500/5 text-center" role="alert" aria-live="polite">
               <AlertTriangle className="w-10 h-10 mx-auto mb-3 text-red-400" />
-              <p className="text-sm font-medium text-foreground mb-1">Failed to load events</p>
+              <p className="text-sm font-medium text-foreground mb-1">{t('events.loadError.title')}</p>
               <p className="text-xs text-muted-foreground mb-4">
-                {eventsError || 'The backend is unavailable or the request timed out. Check your connection and try again.'}
+                {eventsError || t('events.loadError.fallback')}
               </p>
               <button
                 onClick={() => { void refetchAll() }}
@@ -487,23 +600,25 @@ export function Events() {
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-primary text-white hover:bg-primary/90 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
               >
                 <RefreshCw className={cn('w-4 h-4', refreshingAll && 'animate-spin')} />
-                Retry
+                {t('events.loadError.retry')}
               </button>
             </div>
           ) : filteredEvents.length === 0 ? (
             <div className="text-center py-12">
               <Bell className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
-              <p className="text-muted-foreground">No events found</p>
-              {!isAllClustersSelected && <p className="text-sm text-muted-foreground mt-1">Showing events from: {(globalSelectedClusters || []).join(', ')}</p>}
-              {hasActiveFilters && <button onClick={clearFilters} className="mt-2 text-sm text-primary hover:underline">Clear filters</button>}
+              <p className="text-muted-foreground">{t('events.empty.noEventsFound')}</p>
+              {!isAllClustersSelected && <p className="text-sm text-muted-foreground mt-1">{t('events.empty.showingFrom', { clusters: (globalSelectedClusters || []).join(', ') })}</p>}
+              {hasActiveFilters && <button onClick={clearFilters} className="mt-2 text-sm text-primary hover:underline">{t('events.empty.clearFilters')}</button>}
             </div>
           ) : (
             <div className="space-y-6">
-              {Object.entries(groupedEvents).map(([group, groupEvents]) => {
-                if (groupEvents.length === 0) return null
+              {(Object.keys(listTabVisibleGroups) as TimelineGroupKey[]).map((groupKey) => {
+                const groupEvents = listTabVisibleGroups[groupKey]
+                if (!groupEvents || groupEvents.length === 0) return null
+                const groupLabel = t(`events.groups.${groupKey}`)
                 return (
-                  <div key={group}>
-                    <h3 className="text-sm font-medium text-muted-foreground mb-3">{group} ({groupEvents.length})</h3>
+                  <div key={groupKey}>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-3">{t('events.groupHeading', { group: groupLabel, count: groupEvents.length })}</h3>
                     <div className="space-y-2">
                       {groupEvents.map((event, index) => (
                         <div key={`${event.object}-${event.reason}-${index}`} className={`glass p-4 rounded-lg border-l-4 ${event.type === 'Warning' ? 'border-l-yellow-500' : 'border-l-green-500'}`}>
@@ -513,11 +628,16 @@ export function Events() {
                               <div className="flex items-center gap-2 flex-wrap">
                                 <span className={`text-xs px-2 py-0.5 rounded font-medium ${event.type === 'Warning' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-green-500/20 text-green-400'}`}>{event.reason}</span>
                                 <span className="text-xs text-muted-foreground">{event.namespace}/{event.object}</span>
-                                {event.count > 1 && <span className="text-xs px-2 py-0.5 rounded bg-card text-muted-foreground">x{event.count}</span>}
+                                {/*
+                                  Bug #9044: use the same Unicode multiplication sign (×)
+                                  as the Timeline tab so the symbol is consistent across
+                                  tabs for the same data.
+                                */}
+                                {event.count > 1 && <span className="text-xs px-2 py-0.5 rounded bg-card text-muted-foreground">{t('events.repeatCount', { count: event.count })}</span>}
                                 {event.cluster && <ClusterBadge cluster={event.cluster.split('/').pop() || event.cluster} size="sm" />}
                               </div>
                               <p className="text-sm text-foreground mt-1 break-words">{event.message}</p>
-                              <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground"><span>{getTimeAgo(event.lastSeen)}</span></div>
+                              <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground"><span>{getTimeAgo(event.lastSeen, t)}</span></div>
                             </div>
                           </div>
                         </div>

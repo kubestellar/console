@@ -1420,7 +1420,71 @@
   },
   "events": {
     "allNamespaces": "All Namespaces",
-    "allReasons": "All Reasons"
+    "allReasons": "All Reasons",
+    "subtitle": "Cluster events and activity across your infrastructure",
+    "dashboardTitle": "Events Dashboard",
+    "dashboardDescription": "Add cards to monitor Kubernetes events, warnings, and activity across your clusters.",
+    "tabs": {
+      "overview": "Overview",
+      "timeline": "Timeline",
+      "allEvents": "All Events"
+    },
+    "stats": {
+      "total": "Total Events",
+      "totalSublabel": "events",
+      "warnings": "Warnings",
+      "warningsSublabel": "warning events",
+      "normal": "Normal",
+      "normalSublabel": "normal events",
+      "lastHour": "Last Hour",
+      "lastHourSublabel": "in last hour",
+      "errorsSublabel": "error events"
+    },
+    "sections": {
+      "eventTypes": "Event Types",
+      "topReasons": "Top Reasons",
+      "byCluster": "By Cluster",
+      "recentWarnings": "Recent Warnings",
+      "eventTimeline": "Event Timeline",
+      "activityLast24h": "Event Activity (Last 24 Hours)"
+    },
+    "groups": {
+      "lastHour": "Last Hour",
+      "today": "Today",
+      "older": "Older",
+      "unknownTime": "Unknown time"
+    },
+    "empty": {
+      "noEvents": "No events",
+      "noEventsToDisplay": "No events to display",
+      "noEventsFound": "No events found",
+      "noClusterData": "No cluster data",
+      "noWarnings": "No warnings",
+      "showingFrom": "Showing events from: {{clusters}}",
+      "clearFilters": "Clear filters"
+    },
+    "search": "Search",
+    "clearFiltersButton": "Clear Filters",
+    "viewAll": "View all",
+    "viewMore_one": "View {{count}} more event...",
+    "viewMore_other": "View {{count}} more events...",
+    "groupCount_one": "({{count}} event)",
+    "groupCount_other": "({{count}} events)",
+    "groupHeading": "{{group}} ({{count}})",
+    "showingFiltered": "Showing {{filtered}} of {{total}} events",
+    "repeatCount": "×{{count}}",
+    "timeAgo": {
+      "unknown": "Unknown",
+      "justNow": "Just now",
+      "minutes": "{{count}}m ago",
+      "hours": "{{count}}h ago",
+      "days": "{{count}}d ago"
+    },
+    "loadError": {
+      "title": "Failed to load events",
+      "fallback": "The backend is unavailable or the request timed out. Check your connection and try again.",
+      "retry": "Retry"
+    }
   },
   "alerts": {
     "title": "Alerts",
@@ -1582,7 +1646,13 @@
   "warningEvents": {
     "noWarnings": "No Warnings",
     "noWarningsHint": "Warning events will appear here when detected",
-    "noMatchingWarnings": "No warnings match the current filters"
+    "noMatchingWarnings": "No warnings match the current filters",
+    "count_one": "{{count}} warning",
+    "count_other": "{{count}} warnings",
+    "errorLoading": "Error loading events",
+    "errorFetchAttempts_one": "Failed to fetch event data ({{count}} attempt)",
+    "errorFetchAttempts_other": "Failed to fetch event data ({{count}} attempts)",
+    "repeatCount": "×{{count}}"
   },
   "drasi": {
     "configureSource": "Configure Source",
