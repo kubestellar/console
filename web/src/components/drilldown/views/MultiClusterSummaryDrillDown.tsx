@@ -170,7 +170,7 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
   const { pvcs: cachedPVCs } = useCachedPVCs()
   // Guard against undefined to prevent crashes when APIs return 404/500/empty.
   //
-  // (#8840) When we're NOT in demo mode but the cached nodes hook returned
+  // Issue 8840: when we're NOT in demo mode but the cached nodes hook returned
   // its demo-fallback payload (because /api/mcp/nodes returned empty across
   // all clusters — typically due to list-nodes RBAC denial — and
   // demoWhenEmpty kicked in), treat the list as empty so the detailed empty
@@ -453,11 +453,13 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
 
   return (
     <div className="space-y-6">
-      {/* Freshness indicator for cached data.
-          (#8840) Only show the "Demo" badge when we're actually in demo mode.
-          In live mode with a demo-data fallback (empty /api/mcp/nodes response),
-          the empty state below explains the real cause rather than masquerading
-          as demo content. */}
+      {/*
+        * Freshness indicator for cached data.
+        * Issue 8840: only show the "Demo" badge when we're actually in demo mode.
+        * In live mode with a demo-data fallback (empty /api/mcp/nodes response),
+        * the empty state below explains the real cause rather than masquerading
+        * as demo content.
+        */}
       {viewType === 'all-nodes' && (nodesDataAge || (nodesIsDemoFallback && isDemoMode)) && (
         <div className="flex items-center justify-end gap-2">
           {nodesIsDemoFallback && isDemoMode && !nodesIsLoading && (
