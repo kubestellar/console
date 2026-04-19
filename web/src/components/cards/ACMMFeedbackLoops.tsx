@@ -247,8 +247,13 @@ export function ACMMFeedbackLoops() {
   const sources: (SourceId | 'all')[] = ['all', 'acmm', 'fullsend', 'agentic-engineering-framework', 'claude-reflect']
 
   return (
-    <div className="h-full flex flex-col p-2 gap-2 max-w-4xl">
-      <div className="flex items-center gap-1.5 flex-wrap">
+    // #8847: dropped `max-w-4xl` on the outer wrapper — it was clamping the
+    // card's inner layout well narrower than the card frame, leaving a dead
+    // band on the right and pushing filter controls far from the list
+    // content. The card's grid cell already governs width; using `w-full`
+    // lets the toolbar and list fill the actual card surface.
+    <div className="h-full w-full flex flex-col p-2 gap-2">
+      <div className="flex items-center gap-1.5 flex-wrap w-full">
         {/* View mode toggle: By Level / Cross-cutting */}
         {(['by-level', 'cross-cutting'] as const).map((m) => (
           <button
@@ -340,9 +345,19 @@ export function ACMMFeedbackLoops() {
           // first item of level N. The previous item's level determines
           // the boundary — if it differs from the current item's level
           // and both have levels, we're crossing a boundary.
-          const prevLevel = idx > 0 ? (filtered[idx - 1].level ?? 0) : 0
-          const curLevel = c.level ?? 0
-          const showLevelBreak = viewMode === 'by-level' && curLevel > prevLevel && prevLevel > 0 && curLevel >= 2
+          // #8849: Use a sentinel for "not yet seen" so the boundary
+          // between the L1 (level 0) prerequisite tier and L2 gets a
+          // divider — the old guard `prevLevel > 0` skipped it because
+          // level=0 tests falsy. -1 sentinel only suppresses the divider
+          // on the very first row.
+          const UNSET_LEVEL = -1
+          const prevLevel = idx > 0 ? (filtered[idx - 1].level ?? UNSET_LEVEL) : UNSET_LEVEL
+          const curLevel = c.level ?? UNSET_LEVEL
+          const showLevelBreak =
+            viewMode === 'by-level'
+            && curLevel > prevLevel
+            && prevLevel !== UNSET_LEVEL
+            && curLevel >= 2
           /** Whether this level-break button is actionable. Only the
            *  immediate next level above earned is active; higher levels
            *  are "locked" until the preceding one is completed. */
@@ -399,10 +414,19 @@ export function ACMMFeedbackLoops() {
           const isLocked = !locksOverridden && !!c.level && c.level > earnedLevel + 1
           const isLockPromptOpen = lockPromptId === c.id
           return (
+            // #8851: expanded rows get a distinct surface (ring + brighter
+            // bg) so the click→expand affordance is obvious. Prior styling
+            // only showed the expanded details block below the row with no
+            // visual change to the row itself, so users didn't realize a
+            // click did anything.
             <>{dimHeader}{levelBreak}<div
               key={c.id}
               className={`rounded-md transition-colors ${
-                isLocked ? 'bg-muted/10 hover:bg-muted/20 opacity-60' : 'bg-muted/20 hover:bg-muted/40'
+                isLocked
+                  ? 'bg-muted/10 hover:bg-muted/20 opacity-60'
+                  : isExpanded
+                    ? 'bg-muted/50 ring-1 ring-primary/30'
+                    : 'bg-muted/20 hover:bg-muted/40'
               }`}
             >
               <button
@@ -418,10 +442,13 @@ export function ACMMFeedbackLoops() {
                 aria-expanded={isLocked ? isLockPromptOpen : isExpanded}
                 title={isLocked ? `Locked — finish L${earnedLevel} first` : 'Show detection rule'}
               >
+                {/* #8851: brighter chevron colour when expanded so the
+                    state change is immediately visible even before the
+                    user scans the row for the details block below. */}
                 {isLocked ? (
                   <Lock className="w-3 h-3 text-muted-foreground/60 flex-shrink-0" />
                 ) : isExpanded ? (
-                  <ChevronDown className="w-3 h-3 text-muted-foreground/60 flex-shrink-0" />
+                  <ChevronDown className="w-3 h-3 text-primary flex-shrink-0" />
                 ) : (
                   <ChevronRight className="w-3 h-3 text-muted-foreground/60 flex-shrink-0" />
                 )}
@@ -434,9 +461,16 @@ export function ACMMFeedbackLoops() {
                 ) : (
                   <X className="w-4 h-4 text-muted-foreground/40 flex-shrink-0" />
                 )}
-                {/* Fixed-width level column for clean alignment */}
+                {/* Fixed-width level column for clean alignment. #8850:
+                    L1 items (internally `level: 0` — the "prerequisite" /
+                    Assisted tier) previously rendered blank because
+                    `c.level ? ...` treats 0 as falsy. Using `!= null`
+                    gives every level-tagged item a badge. Displayed as
+                    `L1` to match the user-facing "L1 Assisted" framing —
+                    the internal 0-based numbering is an implementation
+                    detail. */}
                 <span className="text-[10px] font-mono text-muted-foreground w-6 text-right flex-shrink-0">
-                  {c.level ? `L${c.level}` : ''}
+                  {c.level != null ? `L${c.level === 0 ? 1 : c.level}` : ''}
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="text-xs font-medium truncate">{c.name}</div>

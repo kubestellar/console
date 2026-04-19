@@ -29,6 +29,12 @@ export interface ACMMScanData {
   scannedAt: string
   detectedIds: string[]
   weeklyActivity: WeeklyActivity[]
+  /** Set by the Netlify Function (and Go backend) when the live GitHub
+   *  scan failed and the response body is a demo-catalog fallback rather
+   *  than a real scan. Drives the Demo badge on the cards so users can
+   *  tell "real scan of my repo" apart from "GitHub is rate-limited, here's
+   *  a canned catalog". #8848. */
+  demoFallback?: boolean
 }
 
 export interface UseACMMScanResult {
@@ -124,7 +130,7 @@ async function fetchACMMScan(repo: string, force: boolean): Promise<ACMMScanData
   if (!ct.includes('application/json')) {
     throw new Error('ACMM scan is not available on this deployment — showing demo data')
   }
-  const body = (await res.json()) as ACMMScanData & { demoFallback?: boolean }
+  const body = (await res.json()) as ACMMScanData
   return body
 }
 
@@ -160,6 +166,15 @@ export function useCachedACMMScan(repo: string = DEFAULT_REPO): UseACMMScanResul
   const apiUnavailable =
     (cacheResult.error?.includes('not available') ?? false) ||
     (cacheResult.isFailed && cacheResult.data.detectedIds.length === 0)
+  // #8848: the Netlify Function / Go handler returns `demoFallback: true`
+  // when the upstream GitHub scan failed (rate limit, network error) —
+  // the response still has a 200 status with the canned demo catalog so
+  // the card renders something, but we MUST NOT present that as a real
+  // scan of the user's repo. Surface it through isDemoData so the standard
+  // Demo badge + yellow outline appear, preventing the reporter's case
+  // where searching `kubestellar/console` silently returned demo data
+  // that looked live.
+  const serverMarkedDemo = cacheResult.data.demoFallback === true
   const effectiveData = apiUnavailable ? demoScan(repo) : cacheResult.data
 
   const detectedIds = new Set(effectiveData.detectedIds ?? [])
@@ -167,7 +182,7 @@ export function useCachedACMMScan(repo: string = DEFAULT_REPO): UseACMMScanResul
   const recommendations = computeRecommendations(detectedIds, level)
 
   const isDemoData =
-    (cacheResult.isDemoFallback && !cacheResult.isLoading) || apiUnavailable
+    (cacheResult.isDemoFallback && !cacheResult.isLoading) || apiUnavailable || serverMarkedDemo
 
   return {
     data: effectiveData,

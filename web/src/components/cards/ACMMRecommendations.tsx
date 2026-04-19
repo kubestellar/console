@@ -158,11 +158,13 @@ export function ACMMRecommendations() {
           <div className="text-[10px] text-muted-foreground uppercase tracking-wide">
             Top recommendations
           </div>
+          {/* #8852: same contrast fix as the per-row "Ask agent for help"
+              below — filled primary surface with primary-foreground. */}
           {recommendations.length > 0 && (
             <button
               type="button"
               onClick={launchAll}
-              className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-primary/20 text-primary hover:bg-primary/30 transition-colors"
+              className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors font-medium"
               title={`Ask the selected agent to add all ${recommendations.length} missing criteria to ${repo}`}
             >
               <Sparkles className="w-2.5 h-2.5" />
@@ -181,9 +183,14 @@ export function ACMMRecommendations() {
                 <div className="flex gap-1 flex-shrink-0">
                   {rec.sources.map((s) => {
                     const src = SOURCES_BY_ID[s]
+                    // #8852: bumped bg opacity (40 → up from 20) and use
+                    // text-primary-foreground-like shade so the "ACMM" /
+                    // other source chips have WCAG-passing contrast against
+                    // the dark card background instead of the prior
+                    // low-contrast primary/20 wash.
                     const badge = (
                       <span
-                        className="text-[9px] px-1.5 py-0.5 rounded-full bg-primary/20 text-primary hover:bg-primary/30"
+                        className="text-[9px] px-1.5 py-0.5 rounded-full bg-primary/40 text-primary-foreground hover:bg-primary/60"
                         title={src?.citation}
                       >
                         {SOURCE_LABELS[s]}
@@ -209,10 +216,15 @@ export function ACMMRecommendations() {
                 <code className="text-[9px] font-mono text-muted-foreground/70 truncate flex-1" title={`Detection (${rec.criterion.detection.type})`}>
                   {detectionLabel(rec.criterion.detection)}
                 </code>
+                {/* #8852: higher-contrast "Ask agent for help" control —
+                    prior bg-primary/10 + text-primary failed WCAG AA against
+                    the muted card background. Using the filled primary
+                    surface with primary-foreground mirrors other action
+                    buttons in the app. */}
                 <button
                   type="button"
                   onClick={() => launchOne(rec)}
-                  className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors flex-shrink-0"
+                  className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors flex-shrink-0 font-medium"
                   title={`Ask the selected agent to add the "${rec.criterion.name}" criterion to ${repo}`}
                 >
                   <Zap className="w-2.5 h-2.5" />
