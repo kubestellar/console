@@ -1380,7 +1380,7 @@ export function useCachedNodes(
 
 /**
  * Hook for fetching a cumulative, cross-cluster node list for the landing
- * dashboard's "Nodes" stat-block drill-down (#8840).
+ * dashboard's "Nodes" stat-block drill-down (Issue 8840).
  *
  * Differs from {@link useCachedNodes} (no cluster arg) in two ways:
  *
