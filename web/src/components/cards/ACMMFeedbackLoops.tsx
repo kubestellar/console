@@ -247,7 +247,7 @@ export function ACMMFeedbackLoops() {
   const sources: (SourceId | 'all')[] = ['all', 'acmm', 'fullsend', 'agentic-engineering-framework', 'claude-reflect']
 
   return (
-    // #8847: dropped `max-w-4xl` on the outer wrapper — it was clamping the
+    // Issue 8847: dropped `max-w-4xl` on the outer wrapper — it was clamping the
     // card's inner layout well narrower than the card frame, leaving a dead
     // band on the right and pushing filter controls far from the list
     // content. The card's grid cell already governs width; using `w-full`
@@ -345,7 +345,7 @@ export function ACMMFeedbackLoops() {
           // first item of level N. The previous item's level determines
           // the boundary — if it differs from the current item's level
           // and both have levels, we're crossing a boundary.
-          // #8849: Use a sentinel for "not yet seen" so the boundary
+          // Issue 8849: Use a sentinel for "not yet seen" so the boundary
           // between the L1 (level 0) prerequisite tier and L2 gets a
           // divider — the old guard `prevLevel > 0` skipped it because
           // level=0 tests falsy. -1 sentinel only suppresses the divider
@@ -414,7 +414,7 @@ export function ACMMFeedbackLoops() {
           const isLocked = !locksOverridden && !!c.level && c.level > earnedLevel + 1
           const isLockPromptOpen = lockPromptId === c.id
           return (
-            // #8851: expanded rows get a distinct surface (ring + brighter
+            // Issue 8851: expanded rows get a distinct surface (ring + brighter
             // bg) so the click→expand affordance is obvious. Prior styling
             // only showed the expanded details block below the row with no
             // visual change to the row itself, so users didn't realize a
@@ -442,7 +442,7 @@ export function ACMMFeedbackLoops() {
                 aria-expanded={isLocked ? isLockPromptOpen : isExpanded}
                 title={isLocked ? `Locked — finish L${earnedLevel} first` : 'Show detection rule'}
               >
-                {/* #8851: brighter chevron colour when expanded so the
+                {/* Issue 8851: brighter chevron colour when expanded so the
                     state change is immediately visible even before the
                     user scans the row for the details block below. */}
                 {isLocked ? (
@@ -461,7 +461,7 @@ export function ACMMFeedbackLoops() {
                 ) : (
                   <X className="w-4 h-4 text-muted-foreground/40 flex-shrink-0" />
                 )}
-                {/* Fixed-width level column for clean alignment. #8850:
+                {/* Fixed-width level column for clean alignment. Issue 8850:
                     L1 items (internally `level: 0` — the "prerequisite" /
                     Assisted tier) previously rendered blank because
                     `c.level ? ...` treats 0 as falsy. Using `!= null`

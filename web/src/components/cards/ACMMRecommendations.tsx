@@ -158,7 +158,7 @@ export function ACMMRecommendations() {
           <div className="text-[10px] text-muted-foreground uppercase tracking-wide">
             Top recommendations
           </div>
-          {/* #8852: same contrast fix as the per-row "Ask agent for help"
+          {/* Issue 8852: same contrast fix as the per-row "Ask agent for help"
               below — filled primary surface with primary-foreground. */}
           {recommendations.length > 0 && (
             <button
@@ -183,7 +183,7 @@ export function ACMMRecommendations() {
                 <div className="flex gap-1 flex-shrink-0">
                   {rec.sources.map((s) => {
                     const src = SOURCES_BY_ID[s]
-                    // #8852: bumped bg opacity (40 → up from 20) and use
+                    // Issue 8852: bumped bg opacity (40 → up from 20) and use
                     // text-primary-foreground-like shade so the "ACMM" /
                     // other source chips have WCAG-passing contrast against
                     // the dark card background instead of the prior
@@ -216,7 +216,7 @@ export function ACMMRecommendations() {
                 <code className="text-[9px] font-mono text-muted-foreground/70 truncate flex-1" title={`Detection (${rec.criterion.detection.type})`}>
                   {detectionLabel(rec.criterion.detection)}
                 </code>
-                {/* #8852: higher-contrast "Ask agent for help" control —
+                {/* Issue 8852: higher-contrast "Ask agent for help" control —
                     prior bg-primary/10 + text-primary failed WCAG AA against
                     the muted card background. Using the filled primary
                     surface with primary-foreground mirrors other action

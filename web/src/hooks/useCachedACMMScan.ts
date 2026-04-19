@@ -33,7 +33,7 @@ export interface ACMMScanData {
    *  scan failed and the response body is a demo-catalog fallback rather
    *  than a real scan. Drives the Demo badge on the cards so users can
    *  tell "real scan of my repo" apart from "GitHub is rate-limited, here's
-   *  a canned catalog". #8848. */
+   *  a canned catalog". Issue 8848. */
   demoFallback?: boolean
 }
 
@@ -166,7 +166,7 @@ export function useCachedACMMScan(repo: string = DEFAULT_REPO): UseACMMScanResul
   const apiUnavailable =
     (cacheResult.error?.includes('not available') ?? false) ||
     (cacheResult.isFailed && cacheResult.data.detectedIds.length === 0)
-  // #8848: the Netlify Function / Go handler returns `demoFallback: true`
+  // Issue 8848: the Netlify Function / Go handler returns `demoFallback: true`
   // when the upstream GitHub scan failed (rate limit, network error) —
   // the response still has a 200 status with the canned demo catalog so
   // the card renders something, but we MUST NOT present that as a real
