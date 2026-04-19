@@ -554,8 +554,8 @@ export function CardHeader({
   extra,
   controls }: CardHeaderProps) {
   return (
-    <div className="flex items-center justify-between mb-3">
-      <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
+      <div className="flex flex-wrap items-center gap-2">
         <span className="text-sm font-medium text-muted-foreground">{title}</span>
         {count !== undefined && (
           <span
@@ -567,7 +567,7 @@ export function CardHeader({
         )}
         {extra}
       </div>
-      {controls && <div className="flex items-center gap-2">{controls}</div>}
+      {controls && <div className="flex flex-wrap items-center gap-2">{controls}</div>}
     </div>
   )
 }
@@ -709,7 +709,7 @@ export function CardControlsRow({
   extra,
   className = '' }: CardControlsRowProps) {
   return (
-    <div className={`flex items-center gap-2 mb-3 ${className}`}>
+    <div className={`flex flex-wrap items-center gap-2 mb-3 ${className}`}>
       {clusterIndicator && (
         <CardClusterIndicator
           selectedCount={clusterIndicator.selectedCount}

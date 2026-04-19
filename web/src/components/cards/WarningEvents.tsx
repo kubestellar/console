@@ -129,7 +129,7 @@ export function WarningEvents() {
         <span className="text-xs text-muted-foreground">
           {totalItems} warning{totalItems !== 1 ? 's' : ''}
         </span>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <CardControlsRow
             clusterFilter={{
               availableClusters,
@@ -147,6 +147,7 @@ export function WarningEvents() {
               onSortChange: (v) => sorting.setSortBy(v as SortByOption),
               sortDirection: sorting.sortDirection,
               onSortDirectionChange: sorting.setSortDirection }}
+            className="!mb-0"
           />
           <RefreshButton
             isRefreshing={isRefreshing}

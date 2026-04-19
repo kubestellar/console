@@ -83,7 +83,7 @@ export function CardControls<T extends string = string>({
   const currentSortLabel = sortOptions?.find(o => o.value === sortBy)?.label || sortBy
 
   return (
-    <div className={cn('flex items-center gap-2', className)}>
+    <div className={cn('flex flex-wrap items-center gap-2', className)}>
       {/* Limit Dropdown */}
       {showLimit && onLimitChange && (
         <div ref={limitRef} className="relative">
