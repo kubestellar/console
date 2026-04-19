@@ -576,10 +576,10 @@ export function Events() {
             {hasActiveFilters && (
               <div className="mt-3 pt-3 border-t border-border/50 text-xs text-muted-foreground">
                 {/*
-                  Bug #9041: denominator counts events from currently-selected clusters
-                  (globalFilteredAllEvents), not raw allEvents. When a timeline group
-                  context is active, the filtered count reflects that narrowed view.
-                */}
+                 * Bug see issue 9041: denominator counts events from currently-selected
+                 * clusters (globalFilteredAllEvents), not raw allEvents. When a timeline
+                 * group context is active, the filtered count reflects that narrowed view.
+                 */}
                 {t('events.showingFiltered', { filtered: visibleListEvents.length, total: globalFilteredAllEvents.length })}
               </div>
             )}
@@ -629,10 +629,10 @@ export function Events() {
                                 <span className={`text-xs px-2 py-0.5 rounded font-medium ${event.type === 'Warning' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-green-500/20 text-green-400'}`}>{event.reason}</span>
                                 <span className="text-xs text-muted-foreground">{event.namespace}/{event.object}</span>
                                 {/*
-                                  Bug #9044: use the same Unicode multiplication sign (×)
-                                  as the Timeline tab so the symbol is consistent across
-                                  tabs for the same data.
-                                */}
+                                 * Bug see issue 9044: use the same Unicode multiplication
+                                 * sign (×) as the Timeline tab so the symbol is consistent
+                                 * across tabs for the same data.
+                                 */}
                                 {event.count > 1 && <span className="text-xs px-2 py-0.5 rounded bg-card text-muted-foreground">{t('events.repeatCount', { count: event.count })}</span>}
                                 {event.cluster && <ClusterBadge cluster={event.cluster.split('/').pop() || event.cluster} size="sm" />}
                               </div>
