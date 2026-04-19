@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from 'react'
-import { Download, Clock, SkipForward, ChevronDown, Copy, Check } from 'lucide-react'
+import { Download, Clock, SkipForward, ChevronDown, Copy, Check, Loader2 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'
@@ -81,6 +81,11 @@ export function WhatsNewModal({ isOpen, onClose }: WhatsNewModalProps) {
   const [showSnoozeMenu, setShowSnoozeMenu] = useState(false)
   const [copiedCommand, setCopiedCommand] = useState<string | null>(null)
   const [recentPRs, setRecentPRs] = useState<Array<{ number: number; title: string; merged_at: string }>>([])
+  // Auto-QA #9036 — surface loading/error state for the PR fallback fetch
+  // so users see either a spinner while the list is being fetched or a
+  // short error message if GitHub is unreachable, instead of an empty modal.
+  const [prsLoading, setPrsLoading] = useState(false)
+  const [prsError, setPrsError] = useState<string | null>(null)
 
   const markdownComponents = useMemo(() => buildReleaseNotesComponents('sm'), [])
 
@@ -92,6 +97,8 @@ export function WhatsNewModal({ isOpen, onClose }: WhatsNewModalProps) {
     if (hasReleaseNotes || !isOpen) return
     let cancelled = false
     const fetchPRs = async () => {
+      setPrsLoading(true)
+      setPrsError(null)
       try {
         // Step 1: Get the date of the currently running commit
         let sinceDate: string | null = null
@@ -111,7 +118,11 @@ export function WhatsNewModal({ isOpen, onClose }: WhatsNewModalProps) {
           `/api/github/repos/kubestellar/console/pulls?state=closed&sort=updated&direction=desc&per_page=${MAX_RECENT_PRS}`,
           { credentials: 'include', signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) },
         )
-        if (!resp.ok || cancelled) return
+        if (cancelled) return
+        if (!resp.ok) {
+          setPrsError(`GitHub responded ${resp.status}`)
+          return
+        }
         const data = await resp.json()
         if (cancelled) return
         const merged = (data || [])
@@ -127,8 +138,13 @@ export function WhatsNewModal({ isOpen, onClose }: WhatsNewModalProps) {
             merged_at: pr.merged_at,
           }))
         setRecentPRs(merged)
-      } catch {
-        // Silently fail — the modal still shows "no release notes"
+      } catch (err) {
+        if (cancelled) return
+        // Don't surface AbortError (user closed modal) as an error
+        const message = err instanceof Error ? err.message : 'Network error'
+        setPrsError(message)
+      } finally {
+        if (!cancelled) setPrsLoading(false)
       }
     }
     fetchPRs()
@@ -237,6 +253,17 @@ export function WhatsNewModal({ isOpen, onClose }: WhatsNewModalProps) {
               >
                 {latestRelease?.releaseNotes ?? ''}
               </ReactMarkdown>
+            </div>
+          ) : prsLoading ? (
+            // Auto-QA #9036 — loading state for the PR fallback fetch
+            <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>Loading recent pull requests…</span>
+            </div>
+          ) : prsError ? (
+            // Auto-QA #9036 — error state replaces the old silent failure
+            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-red-400">
+              Couldn&apos;t load recent pull requests: {prsError}
             </div>
           ) : recentPRs.length > 0 ? (
             <div className="space-y-1">

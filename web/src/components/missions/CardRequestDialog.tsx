@@ -5,7 +5,7 @@
 
 import { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { LayoutGrid, X, Send, Loader2 } from 'lucide-react'
+import { LayoutGrid, X, Send, Loader2, AlertTriangle } from 'lucide-react'
 import { api } from '../../lib/api'
 import { emitGroundControlCardRequestOpened } from '../../lib/analytics'
 import { useToast } from '../ui/Toast'
@@ -69,12 +69,15 @@ export function CardRequestDialog({ missingProjects, onClose }: CardRequestDialo
             {submitted.has(project) ? (
               <span className="text-[10px] text-green-400 font-medium">{t('orbit.cardRequestRequested')}</span>
             ) : failedProjects.has(project) ? (
+              // Auto-QA #9036 — explicit inline error + retry affordance so
+              // the failed state is visible beyond the one-shot toast.
               <button
                 onClick={() => handleRequest(project)}
                 disabled={submittingProjects.has(project)}
                 className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-red-400 hover:bg-red-500/10 rounded transition-colors"
+                title="Request failed — click to retry"
               >
-                <Send className="w-2.5 h-2.5" />
+                <AlertTriangle className="w-2.5 h-2.5" />
                 {t('orbit.cardRequestRetry')}
               </button>
             ) : (
