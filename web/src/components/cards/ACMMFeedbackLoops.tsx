@@ -6,7 +6,7 @@
  * detected/missing status.
  */
 
-import { useMemo, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import { Check, X, Filter, ChevronDown, ChevronRight, Flag, Sparkles, Lock, Unlock, Eye, RefreshCw } from 'lucide-react'
 import { useCardLoadingState } from './CardDataContext'
 import { CardSkeleton } from '../../lib/cards/CardComponents'
@@ -247,8 +247,11 @@ export function ACMMFeedbackLoops() {
   const sources: (SourceId | 'all')[] = ['all', 'acmm', 'fullsend', 'agentic-engineering-framework', 'claude-reflect']
 
   return (
-    <div className="h-full flex flex-col p-2 gap-2 max-w-4xl">
-      <div className="flex items-center gap-1.5 flex-wrap">
+    // Fill parent container width (issue #8847) — no artificial max-width cap.
+    // Controls row uses `justify-between` so left filters and right actions
+    // anchor to the card edges instead of clumping in the center.
+    <div className="h-full w-full flex flex-col p-2 gap-2">
+      <div className="flex items-center gap-1.5 flex-wrap w-full">
         {/* View mode toggle: By Level / Cross-cutting */}
         {(['by-level', 'cross-cutting'] as const).map((m) => (
           <button
@@ -340,14 +343,27 @@ export function ACMMFeedbackLoops() {
           // first item of level N. The previous item's level determines
           // the boundary — if it differs from the current item's level
           // and both have levels, we're crossing a boundary.
+          //
+          // Fix #8849/#8850 — L1 ALSO needs a header marker so the first
+          // group isn't visually anonymous. When idx === 0 and the first
+          // item has a level, we render a non-actionable "Level N" marker
+          // (typically L1) using the same divider component.
           const prevLevel = idx > 0 ? (filtered[idx - 1].level ?? 0) : 0
           const curLevel = c.level ?? 0
-          const showLevelBreak = viewMode === 'by-level' && curLevel > prevLevel && prevLevel > 0 && curLevel >= 2
+          const isFirstLevelMarker = viewMode === 'by-level' && idx === 0 && curLevel > 0
+          const showLevelBreak =
+            viewMode === 'by-level' &&
+            (isFirstLevelMarker || (curLevel > prevLevel && prevLevel > 0 && curLevel >= 2))
           /** Whether this level-break button is actionable. Only the
            *  immediate next level above earned is active; higher levels
            *  are "locked" until the preceding one is completed. */
           const levelBreakActive = curLevel <= earnedLevel + 1 || locksOverridden
           const levelBreakMissing = (cumulativeMissing[curLevel] || []).length
+          // For the L1 starting marker (#8850), there is no "level up to L1"
+          // action — L1 is the baseline. We show a parallel visual marker
+          // that says "Level 1 — Foundation" with the same border/background
+          // treatment so L1 has the same structural divider that L2/L3 do.
+          const isBaselineMarker = isFirstLevelMarker && curLevel <= 1
           const levelBreak = showLevelBreak ? (
             <div
               key={`level-break-${curLevel}`}
@@ -359,15 +375,22 @@ export function ACMMFeedbackLoops() {
             >
               <div className="flex-1 min-w-0">
                 <span className={`text-sm font-medium ${levelBreakActive ? 'text-foreground' : 'text-muted-foreground'}`}>
-                  Reach Level {curLevel}
+                  {isBaselineMarker ? `Level ${curLevel} — Foundation` : `Reach Level ${curLevel}`}
                 </span>
-                {levelBreakMissing > 0 && (
+                {!isBaselineMarker && levelBreakMissing > 0 && (
                   <span className="text-xs text-muted-foreground ml-2">
                     {levelBreakMissing} {levelBreakMissing === 1 ? 'criterion' : 'criteria'} to go
                   </span>
                 )}
               </div>
-              {levelBreakActive ? (
+              {isBaselineMarker ? (
+                // L1 has no "level up" action — it's where everyone starts.
+                // Keep the column balanced with a small label so the divider
+                // matches L2/L3 proportions visually.
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 text-xs text-muted-foreground">
+                  Baseline
+                </span>
+              ) : levelBreakActive ? (
                 <button
                   type="button"
                   onClick={() => launchCumulativeLevelUp(curLevel)}
@@ -399,8 +422,7 @@ export function ACMMFeedbackLoops() {
           const isLocked = !locksOverridden && !!c.level && c.level > earnedLevel + 1
           const isLockPromptOpen = lockPromptId === c.id
           return (
-            <>{dimHeader}{levelBreak}<div
-              key={c.id}
+            <Fragment key={c.id}>{dimHeader}{levelBreak}<div
               className={`rounded-md transition-colors ${
                 isLocked ? 'bg-muted/10 hover:bg-muted/20 opacity-60' : 'bg-muted/20 hover:bg-muted/40'
               }`}
@@ -492,7 +514,31 @@ export function ACMMFeedbackLoops() {
                 </div>
               )}
               {!isLocked && isExpanded && (
-                <div className="px-8 pb-2 pt-0 text-[10px] space-y-1.5 border-t border-border/30">
+                // Fix #8851 — previously the click just made the bar taller,
+                // giving no signal that a distinct "detail view" had opened.
+                // We now render an inset detail panel with its own header and
+                // an explicit Close control, so the click-to-open interaction
+                // is unambiguous and dismissable.
+                <div className="mx-2 mb-2 rounded-md border border-border/60 bg-background/60 shadow-sm">
+                  <div className="flex items-center justify-between gap-2 px-3 py-1.5 border-b border-border/40 bg-muted/20 rounded-t-md">
+                    <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                      Details — {c.name}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setExpandedId(null)
+                      }}
+                      className="inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                      aria-label="Close details"
+                      title="Close details"
+                    >
+                      <X className="w-3 h-3" />
+                      Close
+                    </button>
+                  </div>
+                  <div className="px-3 pb-2 pt-1.5 text-[10px] space-y-1.5">
                   {/* Details blurb — what it is, why it matters, how a mission implements it */}
                   {c.details && (
                     <p className="text-[11px] leading-relaxed text-muted-foreground/90 py-1">
@@ -575,9 +621,10 @@ export function ACMMFeedbackLoops() {
                       </button>
                     )}
                   </div>
+                  </div>
                 </div>
               )}
-            </div></>
+            </div></Fragment>
           )
         })}
         {filtered.length === 0 && (

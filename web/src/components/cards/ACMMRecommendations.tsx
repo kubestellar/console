@@ -162,7 +162,10 @@ export function ACMMRecommendations() {
             <button
               type="button"
               onClick={launchAll}
-              className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-primary/20 text-primary hover:bg-primary/30 transition-colors"
+              /* #8852 — previously bg-primary/20 + text-primary failed AA.
+                 Use solid primary background with primary-foreground text
+                 so the "Ask agent" CTA passes contrast in the action bar. */
+              className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-medium transition-colors"
               title={`Ask the selected agent to add all ${recommendations.length} missing criteria to ${repo}`}
             >
               <Sparkles className="w-2.5 h-2.5" />
@@ -183,7 +186,9 @@ export function ACMMRecommendations() {
                     const src = SOURCES_BY_ID[s]
                     const badge = (
                       <span
-                        className="text-[9px] px-1.5 py-0.5 rounded-full bg-primary/20 text-primary hover:bg-primary/30"
+                        /* #8852 — darker background + foreground text for AA
+                           contrast on the source chips in the action bar. */
+                        className="text-[9px] px-1.5 py-0.5 rounded-full bg-primary/40 text-foreground font-medium hover:bg-primary/50"
                         title={src?.citation}
                       >
                         {SOURCE_LABELS[s]}
@@ -212,7 +217,9 @@ export function ACMMRecommendations() {
                 <button
                   type="button"
                   onClick={() => launchOne(rec)}
-                  className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors flex-shrink-0"
+                  /* #8852 — bg-primary/10 against text-primary failed AA.
+                     Raise to solid primary fill for legible action affordance. */
+                  className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 font-medium transition-colors flex-shrink-0"
                   title={`Ask the selected agent to add the "${rec.criterion.name}" criterion to ${repo}`}
                 >
                   <Zap className="w-2.5 h-2.5" />
