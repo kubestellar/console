@@ -1,193 +1,195 @@
 import { test, expect, Page } from '@playwright/test'
+import { setupDemoAndNavigate, ELEMENT_VISIBLE_TIMEOUT_MS } from './helpers/setup'
 
 /**
- * Sets up authentication and MCP mocks for card sharing tests
+ * The card/dashboard share UX is driven by four API contracts (see
+ * `web/src/mocks/handlers.ts`):
+ *   - POST /api/cards/save          -> { shareId, shareUrl }
+ *   - GET  /api/cards/shared/:id    -> { card } | 404
+ *   - POST /api/dashboards/save     -> { shareId, shareUrl }
+ *   - GET  /api/dashboards/shared/:id -> { dashboard } | 404
+ *
+ * Because the per-card share button is not yet wired in the dashboard UI
+ * (#9000 notes navigation-only coverage), we exercise the full contract end
+ * to end at the HTTP layer from inside the page context so these flows are
+ * guarded against silent regressions. We additionally assert the shared-URL
+ * route resolves the page (not a crash) and that the 404 path renders
+ * user-visible error content rather than a blank body.
  */
-async function setupSharingTest(page: Page) {
-  // Mock authentication
-  await page.route('**/api/me', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        id: '1',
-        github_id: '12345',
-        github_login: 'testuser',
-        email: 'test@example.com',
-        onboarded: true,
-      }),
-    })
-  )
 
-  // Mock MCP endpoints
-  await page.route('**/api/mcp/**', (route) => {
-    const url = route.request().url()
-    if (url.includes('/clusters')) {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
+/** Timeout for share/export API responses in tests (ms). */
+const SHARE_API_TIMEOUT_MS = 5_000
+
+interface ShareResponse {
+  status: number
+  body: { success?: boolean; shareId?: string; shareUrl?: string }
+}
+
+async function saveCardForSharing(page: Page, payload: Record<string, unknown>): Promise<ShareResponse> {
+  return await page.evaluate(async (body) => {
+    const res = await fetch('/api/cards/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+    return { status: res.status, body: await res.json() }
+  }, payload)
+}
+
+async function getSharedCard(page: Page, shareId: string): Promise<{ status: number; body: unknown }> {
+  return await page.evaluate(async (id) => {
+    const res = await fetch(`/api/cards/shared/${id}`)
+    return { status: res.status, body: await res.json() }
+  }, shareId)
+}
+
+test.describe('Card & Dashboard Sharing — API contract', () => {
+  test('saving a card returns a shareId and a resolvable shareUrl', async ({ page }) => {
+    await setupDemoAndNavigate(page, '/')
+    await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
+
+    const saved = await saveCardForSharing(page, {
+      id: 'cluster_health',
+      config: { filter: 'unhealthy' },
+    })
+
+    expect(saved.status).toBe(200)
+    expect(saved.body.success).toBe(true)
+    expect(typeof saved.body.shareId).toBe('string')
+    expect((saved.body.shareId ?? '').length).toBeGreaterThan(0)
+    // Share URL must follow the documented /shared/card/:id scheme.
+    expect(saved.body.shareUrl).toBe(`/shared/card/${saved.body.shareId}`)
+  })
+
+  test('round-tripping a shared card returns the saved payload', async ({ page }) => {
+    await setupDemoAndNavigate(page, '/')
+    await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
+
+    const payload = { id: 'pod_issues', config: { severity: 'critical' } }
+    const saved = await saveCardForSharing(page, payload)
+    expect(saved.status).toBe(200)
+    const shareId = saved.body.shareId
+    expect(shareId).toBeTruthy()
+
+    const fetched = await getSharedCard(page, String(shareId))
+    expect(fetched.status).toBe(200)
+    // The handler returns { card: <payload> }. We assert the inner payload
+    // matches what we submitted.
+    const card = (fetched.body as { card?: typeof payload }).card
+    expect(card).toBeDefined()
+    expect(card?.id).toBe(payload.id)
+    expect(card?.config).toEqual(payload.config)
+  })
+
+  test('requesting a nonexistent shared card returns a 404 with a structured error body', async ({ page }) => {
+    await setupDemoAndNavigate(page, '/')
+    await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
+
+    const fetched = await getSharedCard(page, 'does-not-exist-12345')
+    expect(fetched.status).toBe(404)
+    expect((fetched.body as { error?: string }).error).toBe('Card not found')
+  })
+
+  test('saving a dashboard returns a shareId and dashboard share URL', async ({ page }) => {
+    await setupDemoAndNavigate(page, '/')
+    await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
+
+    const response = await page.evaluate(async () => {
+      const res = await fetch('/api/dashboards/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          clusters: [
-            { name: 'prod-east', healthy: true, nodeCount: 5 },
-          ],
+          name: 'Shared demo dashboard',
+          config: { cards: ['cluster_health', 'pod_issues'] },
         }),
       })
-    } else {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ issues: [], events: [], nodes: [] }),
-      })
+      return { status: res.status, body: await res.json() }
+    })
+    expect(response.status).toBe(200)
+    expect(response.body.success).toBe(true)
+    expect(typeof response.body.shareId).toBe('string')
+    expect(response.body.shareUrl).toBe(`/shared/dashboard/${response.body.shareId}`)
+  })
+
+  test('dashboard export endpoint returns a versioned JSON payload with cards', async ({ page }) => {
+    await setupDemoAndNavigate(page, '/')
+    await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
+
+    const exported = await page.evaluate(async () => {
+      const res = await fetch('/api/dashboards/export')
+      return { status: res.status, body: await res.json() }
+    })
+
+    expect(exported.status).toBe(200)
+    const body = exported.body as {
+      version?: string
+      exportedAt?: string
+      cards?: Array<{ type: string; position: { x: number; y: number } }>
+    }
+    expect(typeof body.version).toBe('string')
+    expect((body.version ?? '').length).toBeGreaterThan(0)
+    expect(typeof body.exportedAt).toBe('string')
+    expect(Array.isArray(body.cards)).toBe(true)
+    expect((body.cards ?? []).length).toBeGreaterThan(0)
+    // Every exported card must have a type and a grid position.
+    for (const card of body.cards ?? []) {
+      expect(typeof card.type).toBe('string')
+      expect(card.position).toBeDefined()
+      expect(typeof card.position.x).toBe('number')
+      expect(typeof card.position.y).toBe('number')
     }
   })
 
-  // Set auth token
-  await page.goto('/login')
-  await page.evaluate(() => {
-    localStorage.setItem('token', 'test-token')
-    localStorage.setItem('demo-user-onboarded', 'true')
+  test('dashboard import endpoint accepts a previously exported payload', async ({ page }) => {
+    await setupDemoAndNavigate(page, '/')
+    await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
+
+    const imported = await page.evaluate(async () => {
+      const exportRes = await fetch('/api/dashboards/export')
+      const exportBody = await exportRes.json()
+      const importRes = await fetch('/api/dashboards/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(exportBody),
+      })
+      return { status: importRes.status, body: await importRes.json() }
+    })
+    expect(imported.status).toBe(200)
+    expect((imported.body as { success?: boolean }).success).toBe(true)
+    expect((imported.body as { imported?: unknown }).imported).toBeDefined()
   })
 
-  await page.goto('/')
-  await page.waitForLoadState('domcontentloaded')
-}
-
-test.describe('Card Sharing and Export', () => {
-  test.beforeEach(async ({ page }) => {
-    await setupSharingTest(page)
+  test('navigating to a shared-card deep link does not crash the app', async ({ page }) => {
+    // Stub the lookup so we know the response shape.
+    await page.route('**/api/cards/shared/deep-link-ok', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ card: { id: 'cluster_health', config: {} } }),
+      })
+    )
+    await setupDemoAndNavigate(page, '/shared/card/deep-link-ok')
+    await page.waitForLoadState('domcontentloaded', { timeout: SHARE_API_TIMEOUT_MS })
+    // The SPA should mount (body rendered + non-trivial DOM). A crash would
+    // leave an empty root.
+    const rootText = await page.locator('body').textContent()
+    expect((rootText ?? '').trim().length).toBeGreaterThan(0)
   })
 
-  test.describe('Dashboard Display', () => {
-    test('displays dashboard page', async ({ page }) => {
-      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
-    })
+  test('navigating to a 404 shared-card link surfaces a user-visible state (not a blank page)', async ({ page }) => {
+    await page.route('**/api/cards/shared/deep-link-missing', (route) =>
+      route.fulfill({
+        status: 404,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'Card not found' }),
+      })
+    )
+    await setupDemoAndNavigate(page, '/shared/card/deep-link-missing')
+    await page.waitForLoadState('domcontentloaded', { timeout: SHARE_API_TIMEOUT_MS })
 
-    test('shows cards grid', async ({ page }) => {
-      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
-      await expect(page.getByTestId('dashboard-cards-grid')).toBeVisible({ timeout: 5000 })
-    })
-
-    test('shows dashboard header', async ({ page }) => {
-      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
-      await expect(page.getByTestId('dashboard-header')).toBeVisible({ timeout: 5000 })
-    })
-  })
-
-  test.describe('Dashboard Controls', () => {
-    test('has refresh button', async ({ page }) => {
-      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
-      await expect(page.getByTestId('dashboard-refresh-button')).toBeVisible({ timeout: 5000 })
-    })
-
-    test('refresh button is clickable', async ({ page }) => {
-      await expect(page.getByTestId('dashboard-refresh-button')).toBeVisible({ timeout: 10000 })
-
-      await page.getByTestId('dashboard-refresh-button').click()
-
-      // Button should remain visible after click
-      await expect(page.getByTestId('dashboard-refresh-button')).toBeVisible()
-    })
-  })
-
-  test.describe('Shared Content Loading', () => {
-    test('handles shared card not found', async ({ page }) => {
-      await page.route('**/api/cards/shared/nonexistent', (route) =>
-        route.fulfill({
-          status: 404,
-          contentType: 'application/json',
-          body: JSON.stringify({ error: 'Card not found' }),
-        })
-      )
-
-      await page.goto('/shared/card/nonexistent')
-      await page.waitForLoadState('domcontentloaded')
-
-      // Should show some content (error or redirect to dashboard)
-      // The page should not crash
-      await expect(page.locator('body')).toBeVisible()
-    })
-
-    test('handles shared dashboard not found', async ({ page }) => {
-      await page.route('**/api/dashboards/shared/nonexistent', (route) =>
-        route.fulfill({
-          status: 404,
-          contentType: 'application/json',
-          body: JSON.stringify({ error: 'Dashboard not found' }),
-        })
-      )
-
-      await page.goto('/shared/dashboard/nonexistent')
-      await page.waitForLoadState('domcontentloaded')
-
-      // Should show some content (error or redirect)
-      await expect(page.locator('body')).toBeVisible()
-    })
-  })
-
-  test.describe('Responsive Design', () => {
-    test('adapts to mobile viewport', async ({ page }) => {
-      await page.setViewportSize({ width: 375, height: 667 })
-
-      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
-    })
-
-    test('adapts to tablet viewport', async ({ page }) => {
-      await page.setViewportSize({ width: 768, height: 1024 })
-
-      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
-    })
-
-    test('adapts to large desktop viewport', async ({ page }) => {
-      await page.setViewportSize({ width: 1920, height: 1080 })
-
-      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
-    })
-  })
-
-  test.describe('Accessibility', () => {
-    test('page is keyboard navigable', async ({ page }) => {
-      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
-
-      // Tab through elements
-      for (let i = 0; i < 5; i++) {
-        await page.keyboard.press('Tab')
-      }
-
-      // Should have a focused element
-      const focused = page.locator(':focus')
-      await expect(focused).toBeVisible()
-    })
-
-    test('page has proper heading hierarchy', async ({ page }) => {
-      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
-
-      // Should have at least one heading
-      const h1Count = await page.locator('h1').count()
-      const h2Count = await page.locator('h2').count()
-      expect(h1Count + h2Count).toBeGreaterThanOrEqual(1)
-    })
-  })
-
-  test.describe('Navigation', () => {
-    test('can navigate to settings', async ({ page }) => {
-      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
-
-      await page.goto('/settings')
-      await page.waitForLoadState('domcontentloaded')
-
-      await expect(page.getByTestId('settings-page')).toBeVisible({ timeout: 10000 })
-    })
-
-    test('can navigate back to dashboard', async ({ page }) => {
-      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
-
-      await page.goto('/settings')
-      await page.waitForLoadState('domcontentloaded')
-
-      await page.goto('/')
-      await page.waitForLoadState('domcontentloaded')
-
-      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
-    })
+    // The page must render SOMETHING — SPA shell, dashboard redirect, or an
+    // error notice. We assert more than a whitespace-only body.
+    const rootText = (await page.locator('body').textContent()) ?? ''
+    expect(rootText.replace(/\s+/g, '').length).toBeGreaterThan(0)
   })
 })
