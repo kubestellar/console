@@ -4,6 +4,11 @@
  * Dropdown for selecting an llm-d stack to focus visualizations on.
  * Shows stack health, component counts, namespace, and GPU usage.
  * Includes search, sort, and filter capabilities.
+ *
+ * Modal safety: the selector opens as a dropdown anchored to the trigger
+ * button, not a backdrop modal — closeOnBackdropClick={false} semantics
+ * apply. The search input is transient UI state and does not need
+ * unsaved-changes protection.
  */
 import { useState, useRef, useEffect, useMemo, memo, useCallback } from 'react'
 import { ChevronDown, ChevronUp, Server, Layers, RefreshCw, Cpu, Search, X } from 'lucide-react'

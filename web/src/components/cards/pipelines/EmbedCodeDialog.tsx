@@ -89,11 +89,19 @@ export function EmbedCodeDialog({ open, cardType, cardTitle, currentRepo, onClos
     }
   }, [])
 
+  // closeOnBackdropClick={false} — the repo input holds user-entered text the
+  // user may not want to lose to a stray click. Close is reachable via the
+  // explicit X button in the header.
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      role="presentation"
+    >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={t('embed.getEmbedCode')}
         className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-y-2 px-5 py-4 border-b border-border">

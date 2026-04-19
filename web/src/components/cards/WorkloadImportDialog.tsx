@@ -638,6 +638,7 @@ export function WorkloadImportDialog({ isOpen, onClose, onImport }: WorkloadImpo
       onClose={handleClose}
       size="md"
       enableBackspace={false}
+      closeOnBackdrop={false}
     >
       <BaseModal.Header
         title={t('workloadImport.title')}

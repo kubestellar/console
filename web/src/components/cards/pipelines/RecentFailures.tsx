@@ -1,6 +1,11 @@
 /**
  * RecentFailures — lists the last N failed GitHub Actions runs across the
  * tracked repos, with the first failing step and drill-down to the log.
+ *
+ * Modal safety: backdrop-click close is disabled on the LogsModal opened
+ * from this card (closeOnBackdropClick={false}) so the log filter input is
+ * not lost to a stray click. Close is still reachable via Esc and the X
+ * button.
  */
 import { useState, useMemo } from 'react'
 import { ExternalLink, RefreshCw, FileText, Stethoscope } from 'lucide-react'

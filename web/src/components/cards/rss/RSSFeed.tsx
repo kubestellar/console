@@ -1,3 +1,6 @@
+// Modal safety: the filter/settings panels here are inline flyouts, not portal
+// modals — no backdrop to click. Any form state lives in local React state and
+// is only written on explicit save. Treat as closeOnBackdropClick={false}.
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import {
   Rss, RefreshCw, ExternalLink, Settings, X, Plus,

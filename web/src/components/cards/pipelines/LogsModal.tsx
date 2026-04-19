@@ -80,13 +80,15 @@ export function LogsModal({ repo, jobId, title, onClose }: LogsModalProps) {
     }
   }
 
+  // closeOnBackdropClick={false} — backdrop click does not close, per UX modal-safety
+  // rule: the filter input is live state users may not want to lose to a stray click.
+  // Close is still reachable via the explicit X button and ESC (see effect above).
   return createPortal(
     <div
       className="fixed inset-0 z-modal flex items-center justify-center bg-black/60 p-4"
       role="dialog"
       aria-modal="true"
       aria-label={`Log for ${title}`}
-      onClick={onClose}
     >
       <div
         className="relative w-full max-w-4xl max-h-[85vh] bg-card border border-border rounded-xl shadow-2xl flex flex-col overflow-hidden"

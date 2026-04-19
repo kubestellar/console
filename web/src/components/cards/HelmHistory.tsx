@@ -1,3 +1,6 @@
+// Modal safety: HelmHistoryDetailModal is a read-only detail pane (no form
+// inputs the user could lose). Inline search is transient filter state.
+// Treat as closeOnBackdropClick={false}.
 import { useState, useEffect, useRef } from 'react'
 import { CheckCircle, XCircle, RotateCcw, ArrowUp, Clock, ChevronRight } from 'lucide-react'
 import { useTranslation } from 'react-i18next'

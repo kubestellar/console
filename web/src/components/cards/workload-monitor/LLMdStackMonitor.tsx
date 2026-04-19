@@ -1,3 +1,7 @@
+// Modal safety: the ApiKeyPromptModal imported here uses BaseModal with its own
+// close controls, and the cluster-filter dropdown is an anchored flyout (not a
+// backdrop modal). closeOnBackdropClick={false} semantics apply to the inline
+// inputs — no unsaved-changes risk from accidental backdrop clicks.
 import { useMemo, useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import {

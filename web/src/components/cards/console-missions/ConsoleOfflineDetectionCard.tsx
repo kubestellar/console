@@ -1,3 +1,6 @@
+// Modal safety: the ApiKeyPromptModal used here is the shared BaseModal-based
+// prompt that already guards its own close behavior; no form state on this
+// card can be lost to a backdrop click. Treat as closeOnBackdropClick={false}.
 import { useMemo, useState, useEffect, useRef } from 'react'
 import { AlertCircle, CheckCircle, Clock, ChevronRight, TrendingUp, TrendingDown, Minus, Cpu, HardDrive, RefreshCw, Info, Sparkles, ThumbsUp, ThumbsDown, Zap, Layers, List } from 'lucide-react'
 import { useCardDemoState } from '../CardDataContext'

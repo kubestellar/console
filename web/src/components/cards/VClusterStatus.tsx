@@ -142,7 +142,7 @@ export function VClusterStatus({ config: _config }: VClusterStatusProps) {
     return (<div className="h-full flex flex-col min-h-card"><div className="flex flex-wrap items-center justify-between gap-y-2 mb-3"><Skeleton variant="text" width={120} height={20} /><Skeleton variant="rounded" width={80} height={28} /></div><div className="space-y-2"><Skeleton variant="rounded" height={60} /><Skeleton variant="rounded" height={60} /><Skeleton variant="rounded" height={60} /></div></div>)
   }
   if (hasError) {
-    return (<div className="h-full flex flex-col items-center justify-center min-h-card p-6"><AlertCircle className="w-12 h-12 text-red-400 mb-4" /><p className="text-sm text-muted-foreground mb-4">{t('vclusterStatus.loadFailed')}</p><button onClick={() => refresh()} className="px-4 py-2 rounded-lg bg-purple-500 hover:bg-purple-600 text-white text-sm">{t('common:common.retry')}</button></div>)
+    return (<div role="alert" className="h-full flex flex-col items-center justify-center min-h-card p-6"><AlertCircle className="w-12 h-12 text-red-400 mb-4" /><p className="text-sm text-muted-foreground mb-4">{t('vclusterStatus.loadFailed')}</p><button onClick={() => refresh()} className="px-4 py-2 rounded-lg bg-purple-500 hover:bg-purple-600 text-white text-sm">{t('common:common.retry')}</button></div>)
   }
   return (
     <div className="h-full flex flex-col min-h-card">
