@@ -6,7 +6,7 @@
  * changes the cache key and triggers a fresh fetch.
  */
 
-import { useCallback, useRef } from 'react'
+import { useCallback, useRef, useSyncExternalStore } from 'react'
 import { useCache, type RefreshCategory } from '../lib/cache'
 import { computeLevel, type LevelComputation } from '../lib/acmm/computeLevel'
 import { computeRecommendations, type Recommendation } from '../lib/acmm/computeRecommendations'
@@ -109,6 +109,43 @@ function demoScan(repo: string): ACMMScanData {
   }
 }
 
+/**
+ * Per-repo demo-fallback flag store.
+ *
+ * The Netlify Function (`/api/acmm/scan`) returns HTTP 200 with a
+ * `demoFallback: true` body when its live GitHub fetch fails (missing
+ * GITHUB_TOKEN, rate-limited, network error, etc.). The response still
+ * contains a plausible demo catalog so the dashboard renders, but the
+ * user MUST be told it's demo data — otherwise they see a working-looking
+ * scan of kubestellar/console that doesn't match reality (bug #8848).
+ *
+ * We can't surface that flag through `useCache` (which only tracks its
+ * own demo-fallback path — triggered when the fetcher errors, not when
+ * it succeeds with a demoFallback-flagged body). Instead, we keep a
+ * lightweight per-repo store updated by the fetcher and subscribe to it
+ * via useSyncExternalStore so any re-render picks up the latest flag.
+ */
+const demoFallbackByRepo = new Map<string, boolean>()
+const demoFallbackSubs = new Set<() => void>()
+
+function subscribeDemoFallback(notify: () => void): () => void {
+  demoFallbackSubs.add(notify)
+  return () => {
+    demoFallbackSubs.delete(notify)
+  }
+}
+
+function setDemoFallback(repo: string, value: boolean): void {
+  const prev = demoFallbackByRepo.get(repo) ?? false
+  if (prev === value) return
+  demoFallbackByRepo.set(repo, value)
+  for (const notify of demoFallbackSubs) notify()
+}
+
+function getDemoFallback(repo: string): boolean {
+  return demoFallbackByRepo.get(repo) ?? false
+}
+
 async function fetchACMMScan(repo: string, force: boolean): Promise<ACMMScanData> {
   const qs = force ? `&force=true` : ''
   const res = await fetch(`${API_PATH}?repo=${encodeURIComponent(repo)}${qs}`, {
@@ -125,6 +162,12 @@ async function fetchACMMScan(repo: string, force: boolean): Promise<ACMMScanData
     throw new Error('ACMM scan is not available on this deployment — showing demo data')
   }
   const body = (await res.json()) as ACMMScanData & { demoFallback?: boolean }
+  // Track the server-signalled demoFallback flag so the hook can expose it
+  // via isDemoData even though the HTTP call itself succeeded (see bug #8848:
+  // the Netlify function returns 200 with demoFallback:true when upstream
+  // GitHub is unreachable, and without this signal the UI silently shows the
+  // demo catalog as if it were a live scan of the user's repo).
+  setDemoFallback(repo, Boolean(body.demoFallback))
   return body
 }
 
@@ -151,6 +194,15 @@ export function useCachedACMMScan(repo: string = DEFAULT_REPO): UseACMMScanResul
     await refetch()
   }, [refetch])
 
+  // Subscribe to the per-repo demo-fallback flag set by the fetcher. This
+  // re-renders the hook whenever the Netlify Function flips between live
+  // and demo-fallback responses for this repo.
+  const serverDemoFallback = useSyncExternalStore(
+    subscribeDemoFallback,
+    () => getDemoFallback(repo),
+    () => false,
+  )
+
   // When the Netlify Function isn't available (localhost / cluster deploy),
   // the fetcher throws "ACMM scan is not available on this deployment".
   // Detect this from the error string (available on the FIRST failure) rather
@@ -167,7 +219,9 @@ export function useCachedACMMScan(repo: string = DEFAULT_REPO): UseACMMScanResul
   const recommendations = computeRecommendations(detectedIds, level)
 
   const isDemoData =
-    (cacheResult.isDemoFallback && !cacheResult.isLoading) || apiUnavailable
+    (cacheResult.isDemoFallback && !cacheResult.isLoading) ||
+    apiUnavailable ||
+    serverDemoFallback
 
   return {
     data: effectiveData,

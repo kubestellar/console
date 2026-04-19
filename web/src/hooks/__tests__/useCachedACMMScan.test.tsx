@@ -151,4 +151,58 @@ describe('useCachedACMMScan', () => {
     }) as Response) as typeof globalThis.fetch
     await expect(fetcher()).rejects.toThrow(/503/)
   })
+
+  // Regression test for kubestellar/console#8848:
+  // When the Netlify Function can't reach GitHub (missing token, rate limit,
+  // network failure, etc.) it returns HTTP 200 with `demoFallback: true` and
+  // a plausible demo catalog. Before the fix, the hook threw that flag away
+  // and reported `isDemoData: false`, so the user saw the demo catalog of
+  // kubestellar/console as if it were a real scan. The fix routes the flag
+  // through a per-repo store that useSyncExternalStore picks up on re-render.
+  it('flips isDemoData to true when the server returns demoFallback:true', async () => {
+    // Isolate the module graph so the per-repo demoFallback store starts
+    // fresh for this test — stale state from other tests in the same file
+    // would otherwise pre-flip the flag and mask a real regression.
+    vi.resetModules()
+    const REPO = 'demo-fallback-test/repo'
+    const { useCachedACMMScan: freshHook } = await import('../useCachedACMMScan')
+    globalThis.fetch = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      headers: new Headers({ 'content-type': 'application/json' }),
+      json: async () => ({
+        repo: REPO,
+        scannedAt: new Date().toISOString(),
+        detectedIds: ['acmm:claude-md'],
+        weeklyActivity: [],
+        demoFallback: true,
+        error: 'GitHub token not configured',
+      }),
+    }) as Response) as typeof globalThis.fetch
+    const { result } = renderHook(() => freshHook(REPO))
+    const fetcher = lastArgs.current?.fetcher as () => Promise<unknown>
+    await act(async () => { await fetcher() })
+    expect(result.current.isDemoData).toBe(true)
+  })
+
+  it('leaves isDemoData false on a clean live response (no demoFallback flag)', async () => {
+    vi.resetModules()
+    const REPO = 'clean-live/repo'
+    const { useCachedACMMScan: freshHook } = await import('../useCachedACMMScan')
+    globalThis.fetch = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      headers: new Headers({ 'content-type': 'application/json' }),
+      json: async () => ({
+        repo: REPO,
+        scannedAt: new Date().toISOString(),
+        detectedIds: ['acmm:claude-md'],
+        weeklyActivity: [],
+      }),
+    }) as Response) as typeof globalThis.fetch
+    const { result } = renderHook(() => freshHook(REPO))
+    const fetcher = lastArgs.current?.fetcher as () => Promise<unknown>
+    await act(async () => { await fetcher() })
+    expect(result.current.isDemoData).toBe(false)
+  })
 })
