@@ -24,6 +24,15 @@ const REPO_RE = /^[\w.-]+\/[\w.-]+$/
 const BADGE_SITE = 'https://console.kubestellar.io'
 const COPIED_FEEDBACK_MS = 1500
 
+/** Max width for the repo-input form on wide viewports. A GitHub slug
+ *  like `owner/repo` is typically 20-40 chars; capping here keeps the
+ *  sticky header from stretching into a messy unplanned-looking bar
+ *  on 1536px+ displays (issue #8857). */
+const REPO_FORM_MAX_WIDTH_PX = 560
+/** Minimum width for the repo-input form so the input + Scan button
+ *  don't collapse below usability on narrow viewports. */
+const REPO_FORM_MIN_WIDTH_PX = 300
+
 /** Hex equivalents of the shields.io named colors used in acmm-badge.mts
  *  LEVEL_COLORS (lightgrey, yellow, yellowgreen, brightgreen, blueviolet).
  *  Hex values are needed here because the inline badge SVG preview renders
@@ -117,7 +126,13 @@ export function RepoPicker() {
     : '—'
 
   return (
-    <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b border-border">
+    // Issue 8857 — the `border-b` used to live on this outer sticky wrapper,
+    // which stretched the divider edge-to-edge across the viewport while the
+    // inner content was capped at `max-w-screen-2xl mx-auto px-6`. On wide
+    // screens that produced a full-width bar that didn't align with anything
+    // else on the page ("messy and unplanned"). The divider now sits on the
+    // last inner container so it aligns with the page content width.
+    <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm">
       <div className="max-w-screen-2xl mx-auto px-6 pt-2 pb-0">
         <button
           type="button"
@@ -135,7 +150,11 @@ export function RepoPicker() {
             e.preventDefault()
             submit(input)
           }}
-          className="flex items-center gap-2 flex-1 min-w-[300px]"
+          className="flex items-center gap-2 flex-1"
+          style={{
+            minWidth: `${REPO_FORM_MIN_WIDTH_PX}px`,
+            maxWidth: `${REPO_FORM_MAX_WIDTH_PX}px`,
+          }}
         >
           <div className="relative flex-1">
             <Input
@@ -291,7 +310,7 @@ export function RepoPicker() {
         </div>
       )}
 
-      <div className="max-w-screen-2xl mx-auto px-6 pb-2 text-xs text-muted-foreground">
+      <div className="max-w-screen-2xl mx-auto px-6 pb-2 text-xs text-muted-foreground border-b border-border/60">
         {error ? (
           <div className="flex items-center gap-1.5 text-red-400">
             <AlertCircle className="w-3.5 h-3.5" />
