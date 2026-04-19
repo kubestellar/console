@@ -66,5 +66,15 @@ export const NAVBAR_HEIGHT_PX = 64
 export const BANNER_HEIGHT_PX = 36
 /** Height of the green dev-mode indicator bar in pixels (h-5 = 20px) */
 export const DEV_BAR_HEIGHT_PX = 20
-/** Width reserved for the sidebar collapse/pin floating controls (p-1.5 + icon + gap) */
-export const SIDEBAR_CONTROLS_OFFSET_PX = 14
+/**
+ * Width reserved in the main content margin for the sidebar's floating
+ * collapse + pin controls (see Sidebar.tsx). The control container is
+ * positioned at `left: sidebarWidth + 4` with `p-1` (4px padding) wrapping
+ * a `w-8` (32px) button, so it spans from `sidebarWidth + 4` to
+ * `sidebarWidth + 44`. Main content must clear that end plus a small
+ * breathing gap so page headers (e.g. the Dashboard title) are not
+ * obscured by the button — issue #8891 reported the "D" in "Dashboard"
+ * being visually clipped when this value was only 14px.
+ *   button right edge (44) + breathing gap (4) = 48
+ */
+export const SIDEBAR_CONTROLS_OFFSET_PX = 48
