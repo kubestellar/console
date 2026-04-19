@@ -4,6 +4,7 @@ import { useClusterData } from '../../../hooks/useClusterData'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import type { DrillDownViewType } from '../../../hooks/useDrillDown'
 import { useCachedNodes, useCachedPVCs } from '../../../hooks/useCachedData'
+import { useDemoMode } from '../../../hooks/useDemoMode'
 import { useTranslation } from 'react-i18next'
 import { formatRelativeTime } from '../../../lib/formatters'
 
@@ -158,6 +159,7 @@ function getStatusBadge(status: string) {
 export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSummaryDrillDownProps) {
   const { t } = useTranslation()
   const { clusters, deduplicatedClusters, pods, deployments, events, helmReleases, operatorSubscriptions, securityIssues } = useClusterData()
+  const { isDemoMode } = useDemoMode()
   const {
     nodes: rawCachedNodes,
     lastRefresh: nodesLastRefresh,
@@ -166,8 +168,18 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
     isDemoFallback: nodesIsDemoFallback,
   } = useCachedNodes()
   const { pvcs: cachedPVCs } = useCachedPVCs()
-  // Guard against undefined to prevent crashes when APIs return 404/500/empty
-  const cachedNodes = rawCachedNodes || []
+  // Guard against undefined to prevent crashes when APIs return 404/500/empty.
+  //
+  // (#8840) When we're NOT in demo mode but the cached nodes hook returned
+  // its demo-fallback payload (because /api/mcp/nodes returned empty across
+  // all clusters — typically due to list-nodes RBAC denial — and
+  // demoWhenEmpty kicked in), treat the list as empty so the detailed empty
+  // state below (which explains the RBAC/endpoint failure and reports the
+  // expected count) renders instead of silently showing the 4 placeholder
+  // demo nodes (prod-east/vllm-d/kind-local) that don't correspond to any
+  // real cluster the user can see elsewhere in the console.
+  const nodesDemoFallbackInLiveMode = nodesIsDemoFallback && !isDemoMode
+  const cachedNodes = nodesDemoFallbackInLiveMode ? [] : (rawCachedNodes || [])
   // For the all-nodes view: the overview stat block sums cluster.nodeCount,
   // but the detail list is fetched from a separate endpoint that may return
   // empty when the caller lacks list-nodes RBAC on some clusters (#8312).
@@ -441,10 +453,14 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
 
   return (
     <div className="space-y-6">
-      {/* Freshness indicator for cached data */}
-      {viewType === 'all-nodes' && (nodesDataAge || nodesIsDemoFallback) && (
+      {/* Freshness indicator for cached data.
+          (#8840) Only show the "Demo" badge when we're actually in demo mode.
+          In live mode with a demo-data fallback (empty /api/mcp/nodes response),
+          the empty state below explains the real cause rather than masquerading
+          as demo content. */}
+      {viewType === 'all-nodes' && (nodesDataAge || (nodesIsDemoFallback && isDemoMode)) && (
         <div className="flex items-center justify-end gap-2">
-          {nodesIsDemoFallback && !nodesIsLoading && (
+          {nodesIsDemoFallback && isDemoMode && !nodesIsLoading && (
             <span className="text-2xs px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
               Demo
             </span>
