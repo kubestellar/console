@@ -7,6 +7,7 @@
  */
 
 import { Fragment, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Check, X, Filter, ChevronDown, ChevronRight, Flag, Sparkles, Lock, Unlock, Eye, RefreshCw } from 'lucide-react'
 import { useCardLoadingState } from './CardDataContext'
 import { CardSkeleton } from '../../lib/cards/CardComponents'
@@ -110,6 +111,7 @@ function proposeChangeUrl(c: Criterion): string {
 }
 
 export function ACMMFeedbackLoops() {
+  const { t } = useTranslation()
   const { scan, repo } = useACMM()
   const { detectedIds, isLoading, isRefreshing, isDemoData, isFailed, consecutiveFailures, lastRefresh } = scan
   const { startMission } = useMissions()
@@ -531,11 +533,11 @@ export function ACMMFeedbackLoops() {
                         setExpandedId(null)
                       }}
                       className="inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
-                      aria-label="Close details"
-                      title="Close details"
+                      aria-label={t('actions.close')}
+                      title={t('actions.close')}
                     >
                       <X className="w-3 h-3" />
-                      Close
+                      {t('actions.close')}
                     </button>
                   </div>
                   <div className="px-3 pb-2 pt-1.5 text-[10px] space-y-1.5">
