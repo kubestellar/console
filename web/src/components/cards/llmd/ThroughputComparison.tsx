@@ -16,6 +16,11 @@ import {
   groupByExperiment,
   getFilterOptions,
   type ExperimentGroup } from '../../../lib/llmd/benchmarkDataUtils'
+import {
+  TOOLTIP_HEADER_MARGIN_PX,
+  TOOLTIP_INLINE_GAP_PX,
+  TOOLTIP_ROW_PADDING_PX,
+  TOOLTIP_SWATCH_SIZE_PX } from '../../../lib/llmd/tooltipSpacing'
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../../ui/StatusBadge'
 
@@ -143,9 +148,9 @@ export function ThroughputComparison() {
           const items = (params || [])
             .filter(p => !p.seriesName.endsWith('_area') && p.value !== null && p.value !== undefined)
             .sort((a, b) => (b.value ?? 0) - (a.value ?? 0))
-          let html = `<div style="font-weight:500;margin-bottom:4px">QPS: ${qps}</div>`
+          let html = `<div style="font-weight:500;margin-bottom:${TOOLTIP_HEADER_MARGIN_PX}px">QPS: ${qps}</div>`
           for (const p of items) {
-            html += `<div style="display:flex;align-items:center;gap:6px;padding:1px 0"><div style="width:8px;height:8px;border-radius:50%;background:${p.color}"></div><span>${p.seriesName}</span><span style="font-family:monospace;margin-left:auto">${(p.value ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span></div>`
+            html += `<div style="display:flex;align-items:center;gap:${TOOLTIP_INLINE_GAP_PX}px;padding:${TOOLTIP_ROW_PADDING_PX}px 0"><div style="width:${TOOLTIP_SWATCH_SIZE_PX}px;height:${TOOLTIP_SWATCH_SIZE_PX}px;border-radius:50%;background:${p.color}"></div><span>${p.seriesName}</span><span style="font-family:monospace;margin-left:auto">${(p.value ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span></div>`
           }
           return html
         },

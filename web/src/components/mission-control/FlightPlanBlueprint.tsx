@@ -389,13 +389,15 @@ function exportFullReport(
     --space-4xl: 32px; /* 4x-large: body padding, footer top margin */
     --radius-sm: 4px;  /* border-radius for badges and code */
     --radius-md: 8px;  /* border-radius for containers */
+    --border-hairline: 1px; /* table and container borders */
+    --border-emphasis: 2px; /* h1 bottom accent */
   }
   body { font-family: system-ui, -apple-system, sans-serif; max-width: 900px; margin: 0 auto; padding: var(--space-4xl); color: #1e293b; line-height: 1.5; }
-  h1 { font-size: 24px; border-bottom: 2px solid #6366f1; padding-bottom: var(--space-md); }
+  h1 { font-size: 24px; border-bottom: var(--border-emphasis) solid #6366f1; padding-bottom: var(--space-md); }
   h2 { font-size: 18px; margin-top: var(--space-3xl); color: #4338ca; }
   h3 { font-size: 14px; margin-top: var(--space-2xl); color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
   table { width: 100%; border-collapse: collapse; margin: var(--space-md) 0 var(--space-xl); font-size: 13px; }
-  th, td { border: 1px solid #e2e8f0; padding: var(--space-md) var(--space-lg); text-align: left; }
+  th, td { border: var(--border-hairline) solid #e2e8f0; padding: var(--space-md) var(--space-lg); text-align: left; }
   th { background: #f1f5f9; font-weight: 600; font-size: 11px; text-transform: uppercase; }
   .installed { display: inline-block; background: #d1fae5; color: #065f46; padding: var(--space-xs) var(--space-md); border-radius: var(--radius-sm); font-size: 11px; margin: var(--space-xs); }
   .deploy { display: inline-block; background: #fef3c7; color: #92400e; padding: var(--space-xs) var(--space-md); border-radius: var(--radius-sm); font-size: 11px; margin: var(--space-xs); }
@@ -403,7 +405,7 @@ function exportFullReport(
   .remove { display: inline-block; background: #fef3c7; color: #92400e; padding: var(--space-xs) var(--space-md); border-radius: var(--radius-sm); font-size: 11px; margin: var(--space-xs); }
   code { background: #f1f5f9; padding: var(--space-sm) var(--space-md); border-radius: var(--radius-sm); font-size: 12px; }
   .meta { color: #64748b; font-size: 13px; }
-  .svg-container { margin: var(--space-xl) 0; border: 1px solid #e2e8f0; border-radius: var(--radius-md); overflow: hidden; }
+  .svg-container { margin: var(--space-xl) 0; border: var(--border-hairline) solid #e2e8f0; border-radius: var(--radius-md); overflow: hidden; }
   .svg-container svg { width: 100%; height: auto; }
   .section { page-break-inside: avoid; }
   .description { background: #f8fafc; border-left: var(--space-sm) solid #6366f1; padding: var(--space-lg) var(--space-xl); margin: var(--space-lg) 0; font-size: 13px; }
@@ -472,7 +474,7 @@ ${toRemove.length > 0 ? `
 ` : '<p>All projects are already installed — nothing to roll back.</p>'}
 </div>
 
-<p class="meta" style="margin-top:var(--space-4xl); border-top:1px solid #e2e8f0; padding-top:var(--space-lg);">
+<p class="meta" style="margin-top:var(--space-4xl); border-top:var(--border-hairline) solid #e2e8f0; padding-top:var(--space-lg);">
   KubeStellar Console · Mission Control Report · Use browser Print (Cmd+P / Ctrl+P) to save as PDF
 </p>
 

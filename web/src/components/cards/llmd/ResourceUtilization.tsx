@@ -16,6 +16,9 @@ import {
   groupByExperiment,
   getFilterOptions,
   CONFIG_TYPE_COLORS } from '../../../lib/llmd/benchmarkDataUtils'
+import {
+  TOOLTIP_HEADER_MARGIN_PX,
+  TOOLTIP_TIGHT_GAP_PX } from '../../../lib/llmd/tooltipSpacing'
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../../ui/StatusBadge'
 
@@ -141,10 +144,10 @@ export function ResourceUtilization() {
         formatter: (params: { data: { entry: BarEntry } }) => {
           const e = params.data?.entry
           if (!e) return ''
-          return `<div style="font-weight:500;margin-bottom:4px">${e.fullVariant}</div>` +
+          return `<div style="font-weight:500;margin-bottom:${TOOLTIP_HEADER_MARGIN_PX}px">${e.fullVariant}</div>` +
             `<div>Value: <span style="font-family:monospace">${e.value.toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>` +
             `${e.isBest ? ' \u2B50' : ''}</div>` +
-            `<div style="color:#a1a1aa;margin-top:2px">Type: <span style="color:${CONFIG_TYPE_COLORS[e.config as keyof typeof CONFIG_TYPE_COLORS]}">${e.config}</span></div>`
+            `<div style="color:#a1a1aa;margin-top:${TOOLTIP_TIGHT_GAP_PX}px">Type: <span style="color:${CONFIG_TYPE_COLORS[e.config as keyof typeof CONFIG_TYPE_COLORS]}">${e.config}</span></div>`
         },
       },
       series: [{
