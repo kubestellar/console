@@ -33,6 +33,7 @@ vi.mock('../../lib/dashboards/DashboardPage', () => ({
 vi.mock('../../hooks/useCachedData', () => ({
   useCachedEvents: () => ({
     events: [], isLoading: false, isRefreshing: false, lastRefresh: null, refetch: vi.fn(),
+    isFailed: false, consecutiveFailures: 0, isDemoFallback: false, error: null,
   }),
 }))
 

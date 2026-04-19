@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Activity, AlertTriangle, Clock, Bell, ChevronRight, CheckCircle2, Calendar, Zap } from 'lucide-react'
+import { Activity, AlertTriangle, Clock, Bell, ChevronRight, CheckCircle2, Calendar, Zap, RefreshCw } from 'lucide-react'
 import { useCachedEvents } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -22,6 +22,9 @@ const EVENT_LIMIT = 100 // Maximum number of events to fetch
 const HOURS_IN_DAY = 24 // Number of hours to display in timeline
 const MAX_PREVIEW_EVENTS = 10 // Maximum events shown in preview before "View more"
 const MILLISECONDS_PER_HOUR = 60 * 60 * 1000 // Milliseconds in an hour
+// Threshold for treating a cached hook as "failed" so we can render an
+// explicit error state with a retry button instead of an indefinite spinner.
+const EVENTS_FAILURE_THRESHOLD = 1
 
 const EVENTS_CARDS_KEY = 'kubestellar-events-cards'
 
@@ -32,6 +35,7 @@ const DEFAULT_EVENTS_CARDS = getDefaultCards('events')
 interface EventsStatsCache {
   total: number
   warnings: number
+  errors: number
   normal: number
   recentCount: number
 }
@@ -77,9 +81,26 @@ export function Events() {
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
 
   // Get events
-  const { events: allEvents, isLoading, isRefreshing: refreshingAll, lastRefresh: allUpdated, refetch: refetchAll } = useCachedEvents(undefined, undefined, { limit: EVENT_LIMIT })
+  const {
+    events: allEvents,
+    isLoading,
+    isRefreshing: refreshingAll,
+    lastRefresh: allUpdated,
+    refetch: refetchAll,
+    isFailed: eventsFailed,
+    consecutiveFailures: eventsConsecutiveFailures,
+    isDemoFallback: eventsIsDemoFallback,
+    error: eventsError,
+  } = useCachedEvents(undefined, undefined, { limit: EVENT_LIMIT })
   const warningEvents = allEvents.filter(e => e.type === 'Warning')
   const lastUpdated = allUpdated ? new Date(allUpdated) : null
+  // Show the explicit error banner once the cache layer has given up and
+  // there's no usable cached data to display. We don't want to flash this
+  // while the cache is still serving stale data in the background.
+  const showLoadError =
+    (eventsFailed || eventsConsecutiveFailures >= EVENTS_FAILURE_THRESHOLD) &&
+    !isLoading &&
+    allEvents.length === 0
 
   // Local state
   const [selectedNamespace, setSelectedNamespace] = useState<string>('')
@@ -106,6 +127,7 @@ export function Events() {
   })()
 
   const globalFilteredWarningEvents = globalFilteredAllEvents.filter(e => e.type === 'Warning')
+  const globalFilteredErrorEvents = globalFilteredAllEvents.filter(e => e.type === 'Error')
 
   // Extract unique namespaces and reasons
   const { namespaces, reasons } = (() => {
@@ -151,6 +173,7 @@ export function Events() {
   // Stats calculation
   const stats = useMemo(() => {
     const warnings = globalFilteredWarningEvents.length
+    const errors = globalFilteredErrorEvents.length
     const normal = globalFilteredAllEvents.filter(e => e.type === 'Normal').length
     const reasonCounts = globalFilteredAllEvents.reduce((acc, e) => { acc[e.reason] = (acc[e.reason] || 0) + 1; return acc }, {} as Record<string, number>)
     const topReasons = Object.entries(reasonCounts).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([name, value], i) => ({
@@ -175,17 +198,17 @@ export function Events() {
     const oneHourAgo = new Date(now.getTime() - MILLISECONDS_PER_HOUR)
     const recentCount = globalFilteredAllEvents.filter(e => e.lastSeen && new Date(e.lastSeen) >= oneHourAgo).length
     return {
-      total: globalFilteredAllEvents.length, warnings, normal, recentCount, topReasons, clusterData, hourlyData,
+      total: globalFilteredAllEvents.length, warnings, errors, normal, recentCount, topReasons, clusterData, hourlyData,
       typeChartData: [{ name: 'Warnings', value: warnings, color: getChartColorByName('warning') }, { name: 'Normal', value: normal, color: getChartColorByName('success') }].filter(d => d.value > 0)
     }
-  }, [globalFilteredAllEvents, globalFilteredWarningEvents])
+  }, [globalFilteredAllEvents, globalFilteredWarningEvents, globalFilteredErrorEvents])
 
   // Update cache
   useEffect(() => {
     if (!refreshingAll && stats.total > 0) {
-      eventsStatsCache = { total: stats.total, warnings: stats.warnings, normal: stats.normal, recentCount: stats.recentCount }
+      eventsStatsCache = { total: stats.total, warnings: stats.warnings, errors: stats.errors, normal: stats.normal, recentCount: stats.recentCount }
     }
-  }, [refreshingAll, stats.total, stats.warnings, stats.normal, stats.recentCount])
+  }, [refreshingAll, stats.total, stats.warnings, stats.errors, stats.normal, stats.recentCount])
 
   const displayStats = (stats.total === 0 && eventsStatsCache && eventsStatsCache.total > 0) ? { ...stats, ...eventsStatsCache } : stats
 
@@ -201,7 +224,7 @@ export function Events() {
       case 'warnings': return { value: formatEventStat(displayStats.warnings), sublabel: 'warning events', onClick: () => drillToAllEvents('warning'), isClickable: displayStats.warnings > 0 }
       case 'normal': return { value: formatEventStat(displayStats.normal), sublabel: 'normal events', onClick: () => drillToAllEvents('normal'), isClickable: displayStats.normal > 0 }
       case 'recent': return { value: formatEventStat(displayStats.recentCount), sublabel: 'in last hour', onClick: () => drillToAllEvents('recent'), isClickable: displayStats.recentCount > 0 }
-      case 'errors': return { value: formatEventStat(displayStats.warnings), sublabel: 'error events', onClick: () => drillToAllEvents('warning'), isClickable: displayStats.warnings > 0 }
+      case 'errors': return { value: formatEventStat(displayStats.errors), sublabel: 'error events', onClick: () => drillToAllEvents('error'), isClickable: displayStats.errors > 0 }
       default: return { value: '-', sublabel: '' }
     }
   }
@@ -268,6 +291,7 @@ export function Events() {
       isRefreshing={refreshingAll}
       lastUpdated={lastUpdated}
       hasData={displayStats.total > 0}
+      isDemoData={eventsIsDemoFallback}
       beforeCards={tabsContent}
       emptyState={{ title: 'Events Dashboard', description: 'Add cards to monitor Kubernetes events, warnings, and activity across your clusters.' }}
     >
@@ -450,6 +474,22 @@ export function Events() {
 
           {isLoading ? (
             <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-2 border-transparent border-t-primary" /></div>
+          ) : showLoadError ? (
+            <div className="glass p-6 rounded-lg border border-red-500/30 bg-red-500/5 text-center" role="alert" aria-live="polite">
+              <AlertTriangle className="w-10 h-10 mx-auto mb-3 text-red-400" />
+              <p className="text-sm font-medium text-foreground mb-1">Failed to load events</p>
+              <p className="text-xs text-muted-foreground mb-4">
+                {eventsError || 'The backend is unavailable or the request timed out. Check your connection and try again.'}
+              </p>
+              <button
+                onClick={() => { void refetchAll() }}
+                disabled={refreshingAll}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-primary text-white hover:bg-primary/90 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+              >
+                <RefreshCw className={cn('w-4 h-4', refreshingAll && 'animate-spin')} />
+                Retry
+              </button>
+            </div>
           ) : filteredEvents.length === 0 ? (
             <div className="text-center py-12">
               <Bell className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
