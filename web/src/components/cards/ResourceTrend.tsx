@@ -180,15 +180,13 @@ export function ResourceTrend() {
     }
   }, [currentTotals, history.length])
 
-  if (isLoading && history.length === 0) {
-    return (
-      <div className="h-full flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading resources...</div>
-      </div>
-    )
-  }
-
   // Get visible lines based on view
+  // IMPORTANT: this runs unconditionally before any early return so the
+  // hook order below (useMemo for chartOption) stays stable across renders.
+  // Moving the early return above this block caused React error #310
+  // ("Rendered more hooks than during the previous render") when the
+  // loading state flipped, because the useMemo below was skipped on the
+  // first render and then called on later renders.
   const getLines = () => {
     switch (view) {
       case 'compute':
@@ -255,6 +253,15 @@ export function ResourceTrend() {
       itemStyle: { color: line.color },
     })),
   }), [history, lines])
+
+  // Loading gate — runs AFTER all hooks to keep hook order stable (React #310).
+  if (isLoading && history.length === 0) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="animate-pulse text-muted-foreground">Loading resources...</div>
+      </div>
+    )
+  }
 
   return (
     <div className="h-full flex flex-col">

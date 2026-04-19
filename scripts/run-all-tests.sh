@@ -288,9 +288,30 @@ if [ -z "$FAST_MODE" ]; then
 
         # Per-suite wall-clock cap (seconds). Prevents a single hanging suite
         # (e.g. benchmark retries against unresponsive external services) from
-        # consuming the entire nightly workflow budget. 5 minutes is generous
-        # for any single Playwright suite; most finish in under 2 minutes.
+        # consuming the entire nightly workflow budget. 5 minutes is the default
+        # and is generous for most Playwright suites. A handful of heavier
+        # suites exceed this routinely (#8981, #8986, #8987) — they get an
+        # explicit override below. Keep the default tight so a genuinely hung
+        # suite still fails fast.
         PLAYWRIGHT_SUITE_TIMEOUT_SECS=300
+
+        # Per-suite timeout overrides (seconds). Only list suites that need
+        # MORE time than the default. See:
+        #   #8981 console-error-scan: 38+ routes × ~5s settle ≈ 250-270s, right
+        #     at the 300s cap. Bumping to 600s gives headroom for additional
+        #     routes without re-firing nightly regressions.
+        #   #8984 ui-compliance-test: renders every registered card type; total
+        #     card count keeps growing as we add cards.
+        #   #8985 cache-test: renders all cards via the same compliance harness.
+        #   #8986 benchmark-test: 12 tests × up to 60s each ≈ 720s worst case.
+        #   #8987 ai-ml-test: 15 tests × up to 300s each in pathological cases.
+        declare -A PLAYWRIGHT_SUITE_TIMEOUT_OVERRIDES=(
+          ["console-error-scan"]=600
+          ["ui-compliance-test"]=600
+          ["cache-test"]=600
+          ["benchmark-test"]=600
+          ["ai-ml-test"]=600
+        )
 
         for script in "${PLAYWRIGHT_SCRIPTS[@]}"; do
           SUITE_NAME=$(basename "$script" .sh)
@@ -304,19 +325,22 @@ if [ -z "$FAST_MODE" ]; then
             continue
           fi
 
+          # Resolve the per-suite timeout (override wins, else default).
+          SUITE_TIMEOUT_SECS="${PLAYWRIGHT_SUITE_TIMEOUT_OVERRIDES[$SUITE_NAME]:-$PLAYWRIGHT_SUITE_TIMEOUT_SECS}"
+
           echo -e "  ${BOLD}▶ ${SUITE_NAME}${NC}"
           SUITE_START=$(date +%s)
           SUITE_OUTPUT="/tmp/suite-${SUITE_NAME}.log"
           SUITE_EXIT=0
-          timeout "${PLAYWRIGHT_SUITE_TIMEOUT_SECS}" bash "$script" > "$SUITE_OUTPUT" 2>&1 || SUITE_EXIT=$?
+          timeout "${SUITE_TIMEOUT_SECS}" bash "$script" > "$SUITE_OUTPUT" 2>&1 || SUITE_EXIT=$?
           SUITE_END=$(date +%s)
           SUITE_DURATION=$((SUITE_END - SUITE_START))
 
           # timeout(1) returns 124 when the command is killed by the timer
           TIMEOUT_EXIT_CODE=124
           if [ "$SUITE_EXIT" -eq "$TIMEOUT_EXIT_CODE" ]; then
-            echo -e "    ${RED}⏱  TIMEOUT${NC} after ${PLAYWRIGHT_SUITE_TIMEOUT_SECS}s"
-            echo "Suite killed after ${PLAYWRIGHT_SUITE_TIMEOUT_SECS}s wall-clock timeout" >> "$SUITE_OUTPUT"
+            echo -e "    ${RED}⏱  TIMEOUT${NC} after ${SUITE_TIMEOUT_SECS}s"
+            echo "Suite killed after ${SUITE_TIMEOUT_SECS}s wall-clock timeout" >> "$SUITE_OUTPUT"
           fi
 
           if [ "$SUITE_EXIT" -eq 0 ]; then

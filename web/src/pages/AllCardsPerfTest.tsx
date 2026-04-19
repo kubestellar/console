@@ -2,6 +2,12 @@ import React, { useEffect, useMemo } from 'react'
 import { CardWrapper } from '../components/cards/CardWrapper'
 import { DEMO_DATA_CARDS, getCardComponent, getRegisteredCardTypes } from '../components/cards/cardRegistry'
 import { formatCardTitle } from '../lib/formatCardTitle'
+// Some card types (ACMM Level, ACMM Recommendations, ACMM Feedback Loops)
+// call useACMM() and will throw "useACMM must be used within an ACMMProvider"
+// if rendered outside the normal /acmm route. The perf test harness
+// renders EVERY registered card type, so we wrap the whole page in
+// ACMMProvider to avoid spurious render crashes.
+import { ACMMProvider } from '../components/acmm/ACMMProvider'
 
 const DEFAULT_BATCH_SIZE = 24
 
@@ -100,48 +106,50 @@ export function AllCardsPerfTest() {
   }, [allCardTypes, batch, batchSize, selected])
 
   return (
-    <div className="p-4">
-      <div
-        data-testid="ttfi-manifest"
-        data-ttfi-total-cards={allCardTypes.length}
-        data-ttfi-batch={batch}
-        data-ttfi-batch-size={batchSize}
-        data-ttfi-selected={selected.length}
-        className="mb-4 text-xs text-muted-foreground"
-      >
-        all-cards batch {batch + 1} / {Math.max(1, Math.ceil(allCardTypes.length / batchSize))}
-      </div>
+    <ACMMProvider>
+      <div className="p-4">
+        <div
+          data-testid="ttfi-manifest"
+          data-ttfi-total-cards={allCardTypes.length}
+          data-ttfi-batch={batch}
+          data-ttfi-batch-size={batchSize}
+          data-ttfi-selected={selected.length}
+          className="mb-4 text-xs text-muted-foreground"
+        >
+          all-cards batch {batch + 1} / {Math.max(1, Math.ceil(allCardTypes.length / batchSize))}
+        </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-4 auto-rows-[minmax(180px,auto)]">
-        {selected.map((item) => {
-          const CardComponent = getCardComponent(item.cardType)
-          const title = formatCardTitle(item.cardType)
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 auto-rows-[minmax(180px,auto)]">
+          {selected.map((item) => {
+            const CardComponent = getCardComponent(item.cardType)
+            const title = formatCardTitle(item.cardType)
 
-          return (
-            <div key={item.cardId} className="md:col-span-4">
-              <CardWrapper
-                cardId={item.cardId}
-                cardType={item.cardType}
-                title={title}
-                isDemoData={DEMO_DATA_CARDS.has(item.cardType)}
-                isRefreshing={false}
-                skeletonType="status"
-                skeletonRows={4}
-              >
-                <CardErrorBoundary cardType={item.cardType}>
-                  {CardComponent ? (
-                    <CardComponent config={{ perfMode: true }} />
-                  ) : (
-                    <div data-testid={`ttfi-missing-${item.cardType}`} className="text-xs text-yellow-300">
-                      Missing card component: {item.cardType}
-                    </div>
-                  )}
-                </CardErrorBoundary>
-              </CardWrapper>
-            </div>
-          )
-        })}
+            return (
+              <div key={item.cardId} className="md:col-span-4">
+                <CardWrapper
+                  cardId={item.cardId}
+                  cardType={item.cardType}
+                  title={title}
+                  isDemoData={DEMO_DATA_CARDS.has(item.cardType)}
+                  isRefreshing={false}
+                  skeletonType="status"
+                  skeletonRows={4}
+                >
+                  <CardErrorBoundary cardType={item.cardType}>
+                    {CardComponent ? (
+                      <CardComponent config={{ perfMode: true }} />
+                    ) : (
+                      <div data-testid={`ttfi-missing-${item.cardType}`} className="text-xs text-yellow-300">
+                        Missing card component: {item.cardType}
+                      </div>
+                    )}
+                  </CardErrorBoundary>
+                </CardWrapper>
+              </div>
+            )
+          })}
+        </div>
       </div>
-    </div>
+    </ACMMProvider>
   )
 }
