@@ -81,7 +81,7 @@ function getViewConfig(viewType: DrillDownViewType) {
         bgColor: 'bg-red-500/20',
         dataKey: 'alerts',
         nameKey: 'name',
-        // #8844 — The alerts drill-down is opened with filter='firing' or
+        // Issue 8844 — The alerts drill-down is opened with filter='firing' or
         // filter='resolved' from the Alerts dashboard stat blocks. Those
         // filters are compared against this getStatus() result, so it must
         // return the alert's lifecycle status (firing | resolved), not its
@@ -167,7 +167,7 @@ function getStatusBadge(status: string) {
 export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSummaryDrillDownProps) {
   const { t } = useTranslation()
   const { clusters, deduplicatedClusters, pods, deployments, events, helmReleases, operatorSubscriptions, securityIssues } = useClusterData()
-  // #8844 — The all-alerts drill-down must read from the same AlertsContext
+  // Issue 8844 — The all-alerts drill-down must read from the same AlertsContext
   // source that powers the Alerts dashboard stat blocks (firing / resolved
   // counts). Sourcing alerts from pods (non-Running pods were used as a
   // synthetic stand-in) diverged from the stat counts: the "Resolved" block
@@ -273,7 +273,7 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
           ...e,
           status: e.type || 'Normal' }))
       case 'all-alerts':
-        // #8844 — Use real alerts from AlertsContext so the drill-down list
+        // Issue 8844 — Use real alerts from AlertsContext so the drill-down list
         // matches the Alerts dashboard stat blocks (firing / resolved). The
         // previous implementation synthesized "alerts" from non-Running
         // pods, which never produced status='resolved' items and left the

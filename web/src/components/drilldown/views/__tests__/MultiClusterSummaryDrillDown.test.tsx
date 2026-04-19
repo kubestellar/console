@@ -40,7 +40,7 @@ vi.mock('../../../../hooks/useDrillDown', () => ({
   useDrillDownActions: () => ({ drillToCluster: vi.fn(), drillToNamespace: vi.fn(), drillToDeployment: vi.fn(), drillToPod: vi.fn(), drillToNode: vi.fn(), drillToEvents: [], drillToHelm: null, drillToOperator: null, drillToAlert: vi.fn() }),
 }))
 
-// #8844 — MultiClusterSummaryDrillDown now reads alerts from useAlerts so the
+// Issue 8844 — MultiClusterSummaryDrillDown now reads alerts from useAlerts so the
 // all-alerts drill-down matches the Alerts dashboard stat blocks.
 vi.mock('../../../../hooks/useAlerts', () => ({
   useAlerts: () => ({ alerts: [], stats: { total: 0, firing: 0, resolved: 0, critical: 0, warning: 0, info: 0, acknowledged: 0 } }),
