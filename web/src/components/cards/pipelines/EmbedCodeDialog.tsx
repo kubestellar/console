@@ -8,7 +8,7 @@
  *   - A preview of the embed URL
  *   - One-click copy for iframe HTML and markdown badge
  */
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import { Copy, Check, X, Code2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Input } from '../../ui/Input'
@@ -71,6 +71,18 @@ export function EmbedCodeDialog({ open, cardType, cardTitle, currentRepo, onClos
     return `[![${cardTitle}${repoLabel}](https://img.shields.io/badge/CI%2FCD-${encodeURIComponent(cardTitle)}-blue)](${baseUrl})`
   }, [baseUrl, cardTitle, repo])
 
+  // Event handler accessibility parity (Issue 8963): keyboard equivalent
+  // for the backdrop onClick — pressing Escape closes the dialog, matching
+  // the click-outside-to-dismiss affordance for keyboard users.
+  useEffect(() => {
+    if (!open) return
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handleKey)
+    return () => window.removeEventListener('keydown', handleKey)
+  }, [open, onClose])
+
   const copyToClipboard = useCallback(async (text: string, fieldId: string) => {
     try {
       await navigator.clipboard.writeText(text)
@@ -90,16 +102,35 @@ export function EmbedCodeDialog({ open, cardType, cardTitle, currentRepo, onClos
   }, [])
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      onClick={onClose}
+      onKeyDown={(e) => {
+        // Event handler accessibility parity (Issue 8963): Enter/Space on
+        // the backdrop mirrors the onClick dismiss behavior for keyboard
+        // users. Escape is handled at the window level (see useEffect).
+        if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault()
+          onClose()
+        }
+      }}
+      role="button"
+      tabIndex={-1}
+      aria-label={t('actions.close')}
+    >
       <div
         className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden"
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="embed-dialog-title"
       >
         {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-y-2 px-5 py-4 border-b border-border">
           <div className="flex items-center gap-2">
             <Code2 size={18} className="text-primary" />
-            <h2 className="text-base font-semibold text-foreground">
+            <h2 id="embed-dialog-title" className="text-base font-semibold text-foreground">
               {t('embed.getEmbedCode')}
             </h2>
           </div>
