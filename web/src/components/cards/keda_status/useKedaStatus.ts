@@ -220,6 +220,11 @@ export interface UseKedaStatusResult {
   consecutiveFailures: number
   showSkeleton: boolean
   showEmptyState: boolean
+  // #8836: exposed so the card can render a "Last updated X ago" indicator
+  // using the cache-layer refresh timestamp instead of the server-side
+  // lastCheckTime (which does not advance across cache rehydrates).
+  lastRefresh: number | null
+  isDemoFallback: boolean
 }
 
 export function useKedaStatus(): UseKedaStatusResult {
@@ -236,6 +241,7 @@ export function useKedaStatus(): UseKedaStatusResult {
     isFailed,
     consecutiveFailures,
     isDemoFallback,
+    lastRefresh,
   } = useCache<KedaStatus>({
     key: CACHE_KEY,
     category: 'default',
@@ -267,5 +273,7 @@ export function useKedaStatus(): UseKedaStatusResult {
     consecutiveFailures,
     showSkeleton,
     showEmptyState,
+    lastRefresh,
+    isDemoFallback: effectiveIsDemoData,
   }
 }

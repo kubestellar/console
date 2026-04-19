@@ -300,6 +300,11 @@ export interface UseFluentdStatusResult {
   consecutiveFailures: number
   showSkeleton: boolean
   showEmptyState: boolean
+  // #8836: cache-layer refresh timestamp, used by the card to render a
+  // "Last updated X ago" indicator. Preferred over data.lastCheckTime
+  // because it reflects the actual refresh cadence (not the backend-reported
+  // fetch time, which does not advance across cache rehydrates).
+  lastRefresh: number | null
 }
 
 export function useFluentdStatus(): UseFluentdStatusResult {
@@ -309,7 +314,7 @@ export function useFluentdStatus(): UseFluentdStatusResult {
   // back after a fetch failure.
   const { isDemoMode } = useDemoMode()
 
-  const { data: liveData, isLoading, isRefreshing, isFailed, consecutiveFailures, isDemoFallback } =
+  const { data: liveData, isLoading, isRefreshing, isFailed, consecutiveFailures, isDemoFallback, lastRefresh } =
     useCache<FluentdStatus>({
       key: CACHE_KEY,
       category: 'default',
@@ -341,5 +346,6 @@ export function useFluentdStatus(): UseFluentdStatusResult {
     consecutiveFailures,
     showSkeleton,
     showEmptyState,
+    lastRefresh,
   }
 }

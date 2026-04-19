@@ -3,6 +3,10 @@ import { Bot, Wrench, Cpu } from 'lucide-react'
 import { useKagentCRDAgents, useKagentCRDTools, useKagentCRDModels } from '../../../hooks/mcp/kagent_crds'
 import { useCardLoadingState } from '../CardDataContext'
 import { DynamicCardErrorBoundary } from '../DynamicCardErrorBoundary'
+// #8836 Auto-QA (Data Freshness): the topology card caches three CRD lists
+// but had no "Last updated X ago" indicator — so users had no way to know
+// if the topology they were looking at was stale.
+import { RefreshIndicator } from '../../ui/RefreshIndicator'
 import { useTranslation } from 'react-i18next'
 import {
   KAGENT_RUNTIME_PYTHON, KAGENT_RUNTIME_GO, KAGENT_RUNTIME_BYO,
@@ -38,9 +42,9 @@ interface TopoEdge {
 function KagentTopologyInternal({ config }: { config?: Record<string, unknown> }) {
   const { t } = useTranslation('cards')
   const cluster = config?.cluster as string | undefined
-  const { data: agents, isLoading: agentsLoading, isDemoFallback: agentsDemo, isFailed: agentsFailed, consecutiveFailures: agentsFails } = useKagentCRDAgents({ cluster })
-  const { data: tools, isLoading: toolsLoading, isDemoFallback: toolsDemo, isFailed: toolsFailed, consecutiveFailures: toolsFails } = useKagentCRDTools({ cluster })
-  const { data: models, isLoading: modelsLoading, isDemoFallback: modelsDemo, isFailed: modelsFailed, consecutiveFailures: modelsFails } = useKagentCRDModels({ cluster })
+  const { data: agents, isLoading: agentsLoading, isRefreshing: agentsRefreshing, isDemoFallback: agentsDemo, isFailed: agentsFailed, consecutiveFailures: agentsFails, lastRefresh: agentsLastRefresh } = useKagentCRDAgents({ cluster })
+  const { data: tools, isLoading: toolsLoading, isRefreshing: toolsRefreshing, isDemoFallback: toolsDemo, isFailed: toolsFailed, consecutiveFailures: toolsFails, lastRefresh: toolsLastRefresh } = useKagentCRDTools({ cluster })
+  const { data: models, isLoading: modelsLoading, isRefreshing: modelsRefreshing, isDemoFallback: modelsDemo, isFailed: modelsFailed, consecutiveFailures: modelsFails, lastRefresh: modelsLastRefresh } = useKagentCRDModels({ cluster })
 
   const hasData = agents.length > 0 || tools.length > 0 || models.length > 0
   // #6219: surface failure state to CardWrapper. We treat the card as
@@ -55,6 +59,18 @@ function KagentTopologyInternal({ config }: { config?: Record<string, unknown> }
     isFailed,
     consecutiveFailures,
   })
+
+  // #8836 Auto-QA (Data Freshness): freshness is driven by whichever of the
+  // three cache slices refreshed most recently. Using the MAX (not MIN) so
+  // the indicator reflects the last time we successfully touched the
+  // cluster for kagent data, not the oldest slice.
+  const lastRefresh = Math.max(
+    agentsLastRefresh ?? 0,
+    toolsLastRefresh ?? 0,
+    modelsLastRefresh ?? 0,
+  )
+  const lastUpdatedDate = lastRefresh > 0 ? new Date(lastRefresh) : null
+  const isRefreshing = agentsRefreshing || toolsRefreshing || modelsRefreshing
 
   const { nodes, edges } = useMemo(() => {
     const nodesArr: TopoNode[] = []
@@ -184,6 +200,20 @@ function KagentTopologyInternal({ config }: { config?: Record<string, unknown> }
         <div className="flex items-center gap-1">
           <div className="w-6 h-0 border-t border-dashed border-muted-foreground/50" />
           <span>{t('kagentTopology.legendLink')}</span>
+        </div>
+        {/*
+          #8836 Auto-QA (Data Freshness): right-aligned "Last updated X ago"
+          indicator. lastUpdated is sourced from the max of the three CRD
+          cache slices' lastRefresh so the label reflects the most recent
+          successful refresh, not the oldest slice.
+        */}
+        <div className="ml-auto">
+          <RefreshIndicator
+            isRefreshing={isRefreshing}
+            lastUpdated={lastUpdatedDate}
+            size="xs"
+            showLabel={true}
+          />
         </div>
       </div>
 
