@@ -618,7 +618,7 @@ function ProactiveGPUNodeHealthMonitorInternal() {
       )}
 
       {/* Node list.
-        * #8883: roving-tabindex keynav on each node row — Enter/Space
+        * Issue 8883: roving-tabindex keynav on each node row — Enter/Space
         * toggles expand; ArrowUp/Down move focus between sibling rows;
         * Home/End jump to ends. Container gets role="list".
         */}

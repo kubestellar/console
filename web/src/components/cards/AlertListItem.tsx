@@ -94,7 +94,7 @@ export function AlertListItem({
     return () => document.removeEventListener('mousedown', handler)
   }, [snoozeMenuOpen])
 
-  // #8883: roving-tabindex keyboard navigation. Enter/Space activates the
+  // Issue 8883: roving-tabindex keyboard navigation. Enter/Space activates the
   // drill-down; ArrowUp/Down move focus between sibling list items;
   // Home/End jump to ends. The list container in ActiveAlerts has
   // role="list" so AT exposes the listitem semantics.

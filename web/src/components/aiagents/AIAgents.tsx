@@ -55,7 +55,7 @@ export function AIAgents() {
 
   const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
 
-  // #8883: WAI-ARIA tablist keyboard navigation. ArrowLeft/Right move
+  // Issue 8883: WAI-ARIA tablist keyboard navigation. ArrowLeft/Right move
   // between enabled tabs, Home/End jump to the first/last enabled tab,
   // Enter/Space activate. Roving tabindex is applied below.
   const enabledTabs = tabs.filter(t => !t.disabled)

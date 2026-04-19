@@ -278,7 +278,7 @@ function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
                     upgradeAvailable: op.upgradeAvailable })
                 }
               }
-              // #8883: roving-tabindex keyboard nav for the operators list.
+              // Issue 8883: roving-tabindex keyboard nav for the operators list.
               const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
                 const list = e.currentTarget.parentElement
                 const items = list ? Array.from(list.querySelectorAll<HTMLDivElement>('[data-keynav-item="operator"]')) : []

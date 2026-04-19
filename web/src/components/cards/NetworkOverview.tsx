@@ -210,7 +210,7 @@ export function NetworkOverview() {
       </div>
 
       {/* Main stat */}
-      {/* #8883: roving-tabindex stat tiles — Enter/Space activates; only
+      {/* Issue 8883: roving-tabindex stat tiles — Enter/Space activates; only
           focusable when the tile is interactive (totalServices > 0). */}
       <div
         className={`p-3 rounded-lg bg-cyan-500/10 border border-cyan-500/20 mb-4 ${stats.totalServices > 0 ? 'cursor-pointer hover:bg-cyan-500/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400' : 'cursor-default'} transition-colors`}
@@ -356,7 +356,7 @@ export function NetworkOverview() {
       {stats.namespaces.length > 0 && (
         <div className="flex-1">
           <div className="text-xs text-muted-foreground mb-2">Top Namespaces</div>
-          {/* #8883: Top Namespaces is a roving-tabindex list; arrow keys
+          {/* Issue 8883: Top Namespaces is a roving-tabindex list; arrow keys
               traverse siblings, Home/End jump to ends, Enter/Space activate. */}
           <div className="space-y-1.5" role="list">
             {stats.namespaces.slice(0, 5).map(([name, count], idx, arr) => {

@@ -169,7 +169,7 @@ function OpenCostOverviewInternal({ config: _config }: OpenCostOverviewProps) {
       </div>
 
       {/* Namespace costs.
-        * #8883: roving-tabindex list — Enter/Space activate; ArrowUp/Down
+        * Issue 8883: roving-tabindex list — Enter/Space activate; ArrowUp/Down
         * traverse siblings; Home/End jump. Container gets role="list" so
         * AT exposes the list semantics.
         */}

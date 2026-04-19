@@ -343,7 +343,7 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
             </div>
           </div>
 
-          {/* Kustomizations list — #8883: roving-tabindex keyboard nav.
+          {/* Kustomizations list — Issue 8883: roving-tabindex keyboard nav.
               Arrow Up/Down moves focus, Home/End jumps to ends, Enter/Space drills in. */}
           <div ref={containerRef} className="flex-1 space-y-2 overflow-y-auto" style={containerStyle} role="list">
             {kustomizations.map((ks, idx) => {
