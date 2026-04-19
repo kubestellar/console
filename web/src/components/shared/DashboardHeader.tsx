@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { useLocation } from 'react-router-dom'
 import { RefreshCw, Hourglass, AlertTriangle } from 'lucide-react'
-import { getRememberPosition, setRememberPosition } from '../../hooks/useLastRoute'
 import { useTranslation } from 'react-i18next'
 
 interface DashboardHeaderProps {
@@ -58,21 +56,6 @@ export function DashboardHeader({
   error,
 }: DashboardHeaderProps) {
   const { t } = useTranslation()
-  const location = useLocation()
-  // Capture this dashboard's path on mount — KeepAlive keeps us mounted even
-  // when the user navigates to a different dashboard, so location.pathname
-  // changes to other dashboards' paths. Only sync pin state for our own path.
-  const ownPathRef = useRef(location.pathname)
-  const [rememberPosition, setRememberPositionState] = useState(() => getRememberPosition(ownPathRef.current))
-
-  // Re-sync pin state only when returning to THIS dashboard's path
-  useEffect(() => {
-    const ownPath = ownPathRef.current
-    if (location.pathname === ownPath) {
-      setRememberPositionState(getRememberPosition(ownPath))
-    }
-  }, [location.pathname])
-
   // Self-managed timestamp: updates when isFetching goes true → false
   const [internalLastUpdated, setInternalLastUpdated] = useState<Date>(() => new Date())
   // Spin the refresh icon — starts on fetch, completes at least one full turn (1s)
@@ -139,23 +122,6 @@ export function DashboardHeader({
       <div className="flex flex-col items-end gap-0.5 shrink-0">
         <div className="flex items-center gap-3">
           {rightExtra}
-          <label
-            htmlFor={`remember-position-${autoRefreshId || 'default'}`}
-            className="flex items-center gap-1.5 cursor-pointer text-xs text-muted-foreground"
-            title={t('shared.dashboardHeader.rememberPosition')}
-          >
-            <input
-              type="checkbox"
-              id={`remember-position-${autoRefreshId || 'default'}`}
-              checked={rememberPosition}
-              onChange={(e) => {
-                setRememberPositionState(e.target.checked)
-                setRememberPosition(ownPathRef.current, e.target.checked)
-              }}
-              className="rounded border-border w-3.5 h-3.5"
-            />
-            {t('shared.dashboardHeader.pin')}
-          </label>
           {onAutoRefreshChange && (
             <label
               htmlFor={autoRefreshId || 'auto-refresh'}
