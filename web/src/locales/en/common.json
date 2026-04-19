@@ -3015,6 +3015,7 @@
     "connectTestButton": "Test Connection",
     "connectTesting": "Testing...",
     "connectTestSuccess": "Connected",
+    "connectTestSuccessKubernetes": "{{label}} — Kubernetes {{version}}",
     "connectTestFailed": "Connection failed",
     "connectAddButton": "Add Cluster",
     "connectAddDisabledAfterTestFail": "Connection test failed. Edit connection settings or re-run the test before adding.",
@@ -3388,8 +3389,46 @@
       "deleteTitle": "Delete Cluster Group",
       "deleteMessage": "Are you sure you want to delete this cluster group? This action cannot be undone.",
       "deleteConfirm": "Delete cluster group \"{{name}}\"? This cannot be undone.",
-      "title": "Cluster Groups ({{count}})"
-    }
+      "title": "Cluster Groups ({{count}})",
+      "newGroup": "New Group",
+      "groupNamePlaceholder": "Group name...",
+      "selectClustersForGroup": "Select clusters for this group:",
+      "cancel": "Cancel",
+      "create": "Create"
+    },
+    "sortPreferencesCorrupted": "Cluster sort preferences were corrupted and have been reset to defaults.",
+    "localAgentNotConnected": "Local agent not connected"
+  },
+  "clusterAdmin": {
+    "title": "Cluster Admin",
+    "subtitle": "Multi-cluster operations, health, and infrastructure management",
+    "emptyTitle": "Cluster Admin Dashboard",
+    "emptyDescription": "Add cards to manage cluster health, node operations, upgrades, and security across your infrastructure.",
+    "errorLoadingClusterData": "Error loading cluster data",
+    "statTotal": "total",
+    "statHealthy": "healthy",
+    "statDegraded": "degraded",
+    "statOffline": "offline"
+  },
+  "renameModal": {
+    "title": "Rename Context",
+    "current": "Current:",
+    "newName": "New name",
+    "footerHint": "This updates your kubeconfig via the local agent.",
+    "cancel": "Cancel",
+    "rename": "Rename",
+    "renaming": "Renaming...",
+    "renamed": "Renamed",
+    "errorNameEmpty": "Name cannot be empty",
+    "errorNameSpaces": "Name cannot contain spaces",
+    "errorNameUnchanged": "Name is unchanged",
+    "errorFailedToRename": "Failed to rename context"
+  },
+  "clusterActions": {
+    "diagnoseTitle": "Diagnose {{cluster}}",
+    "diagnoseDescription": "Analyzing cluster health and identifying issues",
+    "repairTitle": "Repair {{cluster}}",
+    "repairDescription": "Automatically fixing cluster issues"
   },
   "discardUnsavedChanges": "Discard unsaved changes?",
   "discardUnsavedChangesMessage": "You have unsaved changes that will be lost.",

@@ -44,7 +44,8 @@ describe('RenameModal', () => {
   it('renders the modal with current display name pre-filled', () => {
     render(<RenameModal {...defaultProps} />)
 
-    expect(screen.getByText('Rename Context')).toBeTruthy()
+    // Mocked useTranslation returns the key verbatim (see mock above).
+    expect(screen.getByText('renameModal.title')).toBeTruthy()
     expect(screen.getByDisplayValue('my-cluster')).toBeTruthy()
     expect(screen.getByText(/my-cluster/)).toBeTruthy()
   })
@@ -56,7 +57,7 @@ describe('RenameModal', () => {
     fireEvent.change(input, { target: { value: '' } })
 
     // The Rename button should be disabled when name is empty
-    const renameBtn = screen.getByText('Rename')
+    const renameBtn = screen.getByText('renameModal.rename')
     expect(renameBtn.closest('button')?.disabled).toBe(true)
   })
 
@@ -66,10 +67,10 @@ describe('RenameModal', () => {
     const input = screen.getByDisplayValue('my-cluster')
     fireEvent.change(input, { target: { value: 'has space' } })
 
-    fireEvent.click(screen.getByText('Rename'))
+    fireEvent.click(screen.getByText('renameModal.rename'))
 
     await waitFor(() => {
-      expect(screen.getByText('Name cannot contain spaces')).toBeTruthy()
+      expect(screen.getByText('renameModal.errorNameSpaces')).toBeTruthy()
     })
   })
 
@@ -77,10 +78,10 @@ describe('RenameModal', () => {
     render(<RenameModal {...defaultProps} />)
 
     // Name is already 'my-cluster', click rename without changing
-    fireEvent.click(screen.getByText('Rename'))
+    fireEvent.click(screen.getByText('renameModal.rename'))
 
     await waitFor(() => {
-      expect(screen.getByText('Name is unchanged')).toBeTruthy()
+      expect(screen.getByText('renameModal.errorNameUnchanged')).toBeTruthy()
     })
   })
 
@@ -89,7 +90,7 @@ describe('RenameModal', () => {
 
     const input = screen.getByDisplayValue('my-cluster')
     fireEvent.change(input, { target: { value: 'new-name' } })
-    fireEvent.click(screen.getByText('Rename'))
+    fireEvent.click(screen.getByText('renameModal.rename'))
 
     await waitFor(() => {
       expect(defaultProps.onRename).toHaveBeenCalledWith('cluster-1', 'new-name')
@@ -104,17 +105,17 @@ describe('RenameModal', () => {
 
     const input = screen.getByDisplayValue('my-cluster')
     fireEvent.change(input, { target: { value: 'new-name' } })
-    fireEvent.click(screen.getByText('Rename'))
+    fireEvent.click(screen.getByText('renameModal.rename'))
 
     await waitFor(() => {
       expect(defaultProps.onClose).toHaveBeenCalled()
     })
 
     // After success, label should be "Renamed", not "Rename".
-    expect(screen.queryByText('Rename')).toBeNull()
-    expect(screen.getByText('Renamed')).toBeTruthy()
+    expect(screen.queryByText('renameModal.rename')).toBeNull()
+    expect(screen.getByText('renameModal.renamed')).toBeTruthy()
     // Button should remain disabled while the modal is closing.
-    expect(screen.getByText('Renamed').closest('button')?.disabled).toBe(true)
+    expect(screen.getByText('renameModal.renamed').closest('button')?.disabled).toBe(true)
   })
 
   it('shows error message when onRename rejects', async () => {
@@ -123,7 +124,7 @@ describe('RenameModal', () => {
 
     const input = screen.getByDisplayValue('my-cluster')
     fireEvent.change(input, { target: { value: 'new-name' } })
-    fireEvent.click(screen.getByText('Rename'))
+    fireEvent.click(screen.getByText('renameModal.rename'))
 
     await waitFor(() => {
       expect(screen.getByText('Server error')).toBeTruthy()
@@ -132,7 +133,7 @@ describe('RenameModal', () => {
 
   it('does not render when isOpen is false', () => {
     render(<RenameModal {...defaultProps} isOpen={false} />)
-    expect(screen.queryByText('Rename Context')).toBeNull()
+    expect(screen.queryByText('renameModal.title')).toBeNull()
   })
 
   it('calls onClose when Escape key is pressed', () => {

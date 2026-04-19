@@ -76,7 +76,7 @@ export function ClusterGroups({
           className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
         >
           <Plus className="w-3.5 h-3.5" />
-          New Group
+          {t('clusters.groups.newGroup')}
         </button>
       </div>
 
@@ -87,13 +87,13 @@ export function ClusterGroups({
             <div className="glass p-4 rounded-lg space-y-3">
               <input
                 type="text"
-                placeholder="Group name..."
+                placeholder={t('clusters.groups.groupNamePlaceholder')}
                 value={formState.name}
                 onChange={(e) => setFormState(prev => ({ ...prev, name: e.target.value }))}
                 className="w-full px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                 autoFocus
               />
-              <div className="text-xs text-muted-foreground mb-1">Select clusters for this group:</div>
+              <div className="text-xs text-muted-foreground mb-1">{t('clusters.groups.selectClustersForGroup')}</div>
               <div className="flex flex-wrap gap-2">
                 {pickerClusters.map((cluster) => {
                   const isInGroup = formState.clusters.includes(cluster.name)
@@ -139,7 +139,7 @@ export function ClusterGroups({
                   onClick={handleCancel}
                   className="px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground"
                 >
-                  Cancel
+                  {t('clusters.groups.cancel')}
                 </button>
                 <button
                   onClick={handleCreateGroup}
@@ -147,7 +147,7 @@ export function ClusterGroups({
                   className="flex items-center gap-1 px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/80 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Check className="w-3.5 h-3.5" />
-                  Create
+                  {t('clusters.groups.create')}
                 </button>
               </div>
             </div>

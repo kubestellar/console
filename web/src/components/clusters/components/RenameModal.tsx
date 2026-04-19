@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Check, Loader2, Edit3 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { BaseModal } from '../../../lib/modals'
 
 interface RenameModalProps {
@@ -17,21 +18,22 @@ interface RenameModalProps {
 type RenamePhase = 'idle' | 'renaming' | 'success'
 
 export function RenameModal({ isOpen = true, clusterName, currentDisplayName, onClose, onRename }: RenameModalProps) {
+  const { t } = useTranslation()
   const [newName, setNewName] = useState(currentDisplayName)
   const [phase, setPhase] = useState<RenamePhase>('idle')
   const [error, setError] = useState<string | null>(null)
 
   const handleRename = async () => {
     if (!newName.trim()) {
-      setError('Name cannot be empty')
+      setError(t('renameModal.errorNameEmpty'))
       return
     }
     if (newName.includes(' ')) {
-      setError('Name cannot contain spaces')
+      setError(t('renameModal.errorNameSpaces'))
       return
     }
     if (newName.trim() === currentDisplayName) {
-      setError('Name is unchanged')
+      setError(t('renameModal.errorNameUnchanged'))
       return
     }
 
@@ -46,7 +48,7 @@ export function RenameModal({ isOpen = true, clusterName, currentDisplayName, on
       onClose()
     } catch (err) {
       setPhase('idle')
-      setError(err instanceof Error ? err.message : 'Failed to rename context')
+      setError(err instanceof Error ? err.message : t('renameModal.errorFailedToRename'))
     }
   }
 
@@ -55,7 +57,7 @@ export function RenameModal({ isOpen = true, clusterName, currentDisplayName, on
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} size="sm" closeOnBackdrop={false}>
       <BaseModal.Header
-        title="Rename Context"
+        title={t('renameModal.title')}
         icon={Edit3}
         onClose={onClose}
         showBack={false}
@@ -63,11 +65,11 @@ export function RenameModal({ isOpen = true, clusterName, currentDisplayName, on
 
       <BaseModal.Content>
         <p className="text-sm text-muted-foreground mb-4">
-          Current: <span className="text-foreground font-mono text-xs break-all">{currentDisplayName}</span>
+          {t('renameModal.current')} <span className="text-foreground font-mono text-xs break-all">{currentDisplayName}</span>
         </p>
 
         <div className="mb-4">
-          <label htmlFor="new-context-name" className="block text-sm text-muted-foreground mb-1">New name</label>
+          <label htmlFor="new-context-name" className="block text-sm text-muted-foreground mb-1">{t('renameModal.newName')}</label>
           <input
             id="new-context-name"
             type="text"
@@ -82,14 +84,14 @@ export function RenameModal({ isOpen = true, clusterName, currentDisplayName, on
 
         {error && <p className="text-sm text-red-400 mb-4">{error}</p>}
 
-        <p className="text-xs text-muted-foreground">This updates your kubeconfig via the local agent.</p>
+        <p className="text-xs text-muted-foreground">{t('renameModal.footerHint')}</p>
       </BaseModal.Content>
 
       <BaseModal.Footer showKeyboardHints>
         <div className="flex-1" />
         <div className="flex gap-2">
           <button onClick={onClose} className="px-4 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50">
-            Cancel
+            {t('renameModal.cancel')}
           </button>
           <button
             onClick={handleRename}
@@ -97,11 +99,11 @@ export function RenameModal({ isOpen = true, clusterName, currentDisplayName, on
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm bg-primary text-primary-foreground hover:bg-primary/80 disabled:opacity-50"
           >
             {phase === 'renaming' ? (
-              <><Loader2 className="w-4 h-4 animate-spin" />Renaming...</>
+              <><Loader2 className="w-4 h-4 animate-spin" />{t('renameModal.renaming')}</>
             ) : phase === 'success' ? (
-              <><Check className="w-4 h-4" />Renamed</>
+              <><Check className="w-4 h-4" />{t('renameModal.renamed')}</>
             ) : (
-              <><Check className="w-4 h-4" />Rename</>
+              <><Check className="w-4 h-4" />{t('renameModal.rename')}</>
             )}
           </button>
         </div>
