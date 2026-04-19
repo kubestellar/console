@@ -46,18 +46,61 @@ const CI_TIMEOUT_MULTIPLIER = 2
 const PAGE_LOAD_TIMEOUT_MS = IS_CI ? 30_000 : 15_000
 const SETTLE_MS = 2_000
 
+// Minimum number of resilience checks that must have executed (non-skip) for
+// the aggregated report to be considered meaningful. Must match the assertion
+// in the `generate report` test.
+const MIN_EXECUTED_CHECKS = 2
+
 // ---------------------------------------------------------------------------
-// Report state
+// Report persistence
+//
+// Each resilience test writes its own result to a JSON file in RESULTS_DIR.
+// This avoids relying on a module-level singleton, which breaks under
+// `fullyParallel: true` because each Playwright worker loads its own copy of
+// the module (see issue #9002). The `generate report` test reads every file
+// in RESULTS_DIR and aggregates them, regardless of which worker produced it.
 // ---------------------------------------------------------------------------
 
-const report: ResilienceReport = {
-  timestamp: new Date().toISOString(),
-  checks: [],
-  summary: { passCount: 0, failCount: 0, warnCount: 0, skipCount: 0 },
+const TEST_RESULTS_DIR = path.resolve(__dirname, '../test-results')
+const RESULTS_DIR = path.join(TEST_RESULTS_DIR, 'error-resilience-partials')
+
+function ensureResultsDir() {
+  if (!fs.existsSync(RESULTS_DIR)) fs.mkdirSync(RESULTS_DIR, { recursive: true })
+}
+
+function resultFileFor(testName: string): string {
+  // Sanitize test name to a safe filename. Only [a-zA-Z0-9_-] are preserved.
+  const safeName = testName.replace(/[^a-zA-Z0-9_-]+/g, '_')
+  return path.join(RESULTS_DIR, `${safeName}.json`)
 }
 
 function addResult(result: ResilienceResult) {
-  report.checks.push(result)
+  ensureResultsDir()
+  fs.writeFileSync(resultFileFor(result.testName), JSON.stringify(result, null, 2))
+}
+
+function loadAllResults(): ResilienceResult[] {
+  if (!fs.existsSync(RESULTS_DIR)) return []
+  const files = fs.readdirSync(RESULTS_DIR).filter(f => f.endsWith('.json'))
+  const results: ResilienceResult[] = []
+  for (const f of files) {
+    try {
+      const raw = fs.readFileSync(path.join(RESULTS_DIR, f), 'utf8')
+      results.push(JSON.parse(raw) as ResilienceResult)
+    } catch {
+      // Skip unparseable partials; they'll just be missing from the aggregate.
+    }
+  }
+  return results
+}
+
+function clearResults() {
+  if (!fs.existsSync(RESULTS_DIR)) return
+  for (const f of fs.readdirSync(RESULTS_DIR)) {
+    if (f.endsWith('.json')) {
+      try { fs.unlinkSync(path.join(RESULTS_DIR, f)) } catch { /* best-effort cleanup */ }
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -78,6 +121,15 @@ async function navigateAndSettle(page: Page, route: string) {
 
 test.describe('Error Resilience', () => {
   test.describe.configure({ mode: 'serial' })
+
+  // Clear any previous partials before the first test runs. Each test writes
+  // its own result file; `generate report` reads them all at the end. Serial
+  // mode guarantees ordering within this describe, but partials on disk are
+  // the source of truth (not module-level state) so the aggregator is robust
+  // against worker splits — see issue #9002.
+  test.beforeAll(() => {
+    clearResults()
+  })
 
   test('API 500 errors — cards show error state, not blank', async ({ page }) => {
     const start = Date.now()
@@ -458,6 +510,16 @@ test.describe('Error Resilience', () => {
 
   // Generate final report
   test('generate report', async () => {
+    // Aggregate results written by prior tests in this describe. Reading from
+    // disk (not a module-level singleton) makes this safe even if Playwright
+    // ever splits these tests across workers — see issue #9002.
+    const checks = loadAllResults()
+    const report: ResilienceReport = {
+      timestamp: new Date().toISOString(),
+      checks,
+      summary: { passCount: 0, failCount: 0, warnCount: 0, skipCount: 0 },
+    }
+
     // Calculate summary
     for (const check of report.checks) {
       switch (check.status) {
@@ -469,11 +531,10 @@ test.describe('Error Resilience', () => {
     }
 
     // Write JSON report
-    const outDir = path.resolve(__dirname, '../test-results')
-    if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true })
+    if (!fs.existsSync(TEST_RESULTS_DIR)) fs.mkdirSync(TEST_RESULTS_DIR, { recursive: true })
 
     fs.writeFileSync(
-      path.join(outDir, 'error-resilience-report.json'),
+      path.join(TEST_RESULTS_DIR, 'error-resilience-report.json'),
       JSON.stringify(report, null, 2)
     )
 
@@ -500,13 +561,13 @@ test.describe('Error Resilience', () => {
       '',
     ].join('\n')
 
-    fs.writeFileSync(path.join(outDir, 'error-resilience-summary.md'), md)
+    fs.writeFileSync(path.join(TEST_RESULTS_DIR, 'error-resilience-summary.md'), md)
 
     // Log summary
     console.log(`[Resilience] Pass: ${report.summary.passCount}, Fail: ${report.summary.failCount}, Warn: ${report.summary.warnCount}, Skip: ${report.summary.skipCount}`)
 
     // Soft assertion: page should not crash on errors
     const nonSkip = report.summary.passCount + report.summary.warnCount + report.summary.failCount
-    expect(nonSkip, 'At least 2 resilience tests should execute').toBeGreaterThanOrEqual(2)
+    expect(nonSkip, `At least ${MIN_EXECUTED_CHECKS} resilience tests should execute`).toBeGreaterThanOrEqual(MIN_EXECUTED_CHECKS)
   })
 })
