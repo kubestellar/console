@@ -9,6 +9,7 @@ import {
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'
+import rehypeSanitize from 'rehype-sanitize'
 import { cn } from '../../../lib/cn'
 import { AgentIcon } from '../../agent/AgentIcon'
 import { buildReleaseNotesComponents } from '../../../lib/markdown/releaseNotesComponents'
@@ -104,14 +105,14 @@ export const MemoizedMessage = memo(function MemoizedMessage({ msg, missionAgent
             <div className="space-y-4">
               {parsedContent.before && (
                 <div className={proseClasses}>
-                  <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} components={markdownComponents}>
+                  <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} rehypePlugins={[rehypeSanitize]} components={markdownComponents}>
                     {parsedContent.before.replace(/\r\n/g, '\n')}
                   </ReactMarkdown>
                 </div>
               )}
               <div className="mt-4 p-3 rounded-lg bg-purple-500/10 border border-purple-500/30">
                 <div className={cn(proseClasses, "text-purple-700 dark:text-purple-200")}>
-                  <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} components={markdownComponents}>
+                  <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} rehypePlugins={[rehypeSanitize]} components={markdownComponents}>
                     {parsedContent.request.replace(/\r\n/g, '\n')}
                   </ReactMarkdown>
                 </div>
@@ -119,7 +120,7 @@ export const MemoizedMessage = memo(function MemoizedMessage({ msg, missionAgent
             </div>
           ) : (
             <div className={proseClasses}>
-              <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} components={markdownComponents}>
+              <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} rehypePlugins={[rehypeSanitize]} components={markdownComponents}>
                 {msg.content.replace(/\r\n/g, '\n')}
               </ReactMarkdown>
             </div>

@@ -10,6 +10,7 @@ import { Loader2, Wand2, Shuffle, LayoutGrid, Table } from 'lucide-react'
 import { motion } from 'framer-motion'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import rehypeSanitize from 'rehype-sanitize'
 import { Button } from '../ui/Button'
 import { ClusterReadinessCard } from './ClusterReadinessCard'
 import { AssignmentMatrix } from './AssignmentMatrix'
@@ -125,7 +126,8 @@ export function ClusterAssignmentPanel({
         storageGB: c.storageGB,
         cpuUsageCores: c.cpuUsageCores,
         memoryUsageGB: c.memoryUsageGB,
-        namespaces: c.namespaces?.length ?? 0 })),
+        namespaces: c.namespaces?.length ?? 0
+      })),
       null,
       2
     )
@@ -243,36 +245,37 @@ export function ClusterAssignmentPanel({
                 // Merge helm-generated notes with AI warnings (dedupe by checking if AI already mentions the project)
                 const mergedAssignment = aiAssignment && helmNotes.length > 0
                   ? {
-                      ...aiAssignment,
-                      warnings: [
-                        ...helmNotes.filter(note => {
-                          // Don't add helm note if AI already has a warning about the same project
-                          const aiWarnings = aiAssignment.warnings ?? []
-                          return !aiWarnings.some(w => {
-                            // Compare by checking if both mention the same project name
-                            const noteProject = note.split(' already')[0].toLowerCase()
-                            return w.toLowerCase().includes(noteProject)
-                          })
-                        }),
-                        ...(aiAssignment.warnings ?? []),
-                      ] }
+                    ...aiAssignment,
+                    warnings: [
+                      ...helmNotes.filter(note => {
+                        // Don't add helm note if AI already has a warning about the same project
+                        const aiWarnings = aiAssignment.warnings ?? []
+                        return !aiWarnings.some(w => {
+                          // Compare by checking if both mention the same project name
+                          const noteProject = note.split(' already')[0].toLowerCase()
+                          return w.toLowerCase().includes(noteProject)
+                        })
+                      }),
+                      ...(aiAssignment.warnings ?? []),
+                    ]
+                  }
                   : aiAssignment
                 return (
-                <div key={cluster.name} data-testid={`mission-control-cluster-${cluster.name}`}>
-                <ClusterReadinessCard
-                  cluster={cluster}
-                  assignment={mergedAssignment}
-                  onToggleProject={(name, assigned) =>
-                    onSetAssignment(cluster.name, name, assigned)
-                  }
-                  availableProjects={projectNames}
-                  isRecommended={state.assignments.some(
-                    (a) => a.clusterName === cluster.name && a.projectNames.length > 0
-                  )}
-                  installedOnCluster={installedOnCluster}
-                  projects={state.projects}
-                />
-                </div>
+                  <div key={cluster.name} data-testid={`mission-control-cluster-${cluster.name}`}>
+                    <ClusterReadinessCard
+                      cluster={cluster}
+                      assignment={mergedAssignment}
+                      onToggleProject={(name, assigned) =>
+                        onSetAssignment(cluster.name, name, assigned)
+                      }
+                      availableProjects={projectNames}
+                      isRecommended={state.assignments.some(
+                        (a) => a.clusterName === cluster.name && a.projectNames.length > 0
+                      )}
+                      installedOnCluster={installedOnCluster}
+                      projects={state.projects}
+                    />
+                  </div>
                 )
               })}
             </div>
@@ -352,7 +355,7 @@ function AIAssignmentStreamPreview({ planningMission }: { planningMission?: Miss
         className="px-4 py-3 max-h-40 overflow-y-auto text-xs text-foreground/80 leading-relaxed prose prose-invert prose-xs max-w-none [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5 [&_p]:my-1 [&_strong]:text-foreground/90"
       >
         {displayText ? (
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+          <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
             {displayText}
           </ReactMarkdown>
         ) : (

@@ -77,6 +77,7 @@
     "react-is": "^19.2.5",
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.13.1",
+    "rehype-sanitize": "^6.0.0",
     "remark-breaks": "^4.0.0",
     "remark-gfm": "^4.0.1",
     "sucrase": "^3.35.1",

@@ -16,6 +16,7 @@ import { fetchMissionContent } from '../missions/browser/missionCache'
 import type { MissionExport } from '../../lib/missions/types'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import rehypeSanitize from 'rehype-sanitize'
 import { cn } from '../../lib/cn'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useModalState } from '../../lib/modals'
@@ -85,7 +86,8 @@ export function FixerDefinitionPanel({
       reason: 'Manually added',
       category: 'Custom',
       priority: 'recommended',
-      dependencies: [] })
+      dependencies: []
+    })
     setManualName('')
     setShowManualAdd(false)
   }
@@ -122,7 +124,8 @@ export function FixerDefinitionPanel({
   const priorityCounts = {
     required: state.projects.filter((p) => p.priority === 'required').length,
     recommended: state.projects.filter((p) => p.priority === 'recommended').length,
-    optional: state.projects.filter((p) => p.priority === 'optional').length }
+    optional: state.projects.filter((p) => p.priority === 'optional').length
+  }
 
   const totalDeps = new Set(state.projects.flatMap((p) => p.dependencies)).size
 
@@ -402,11 +405,11 @@ function ExecutiveAnalysis({
   projects,
   missionTitle,
   missionDescription }: {
-  aiContent: string
-  projects: PayloadProject[]
-  missionTitle: string
-  missionDescription: string
-}) {
+    aiContent: string
+    projects: PayloadProject[]
+    missionTitle: string
+    missionDescription: string
+  }) {
   const [expanded, setExpanded] = useState(true)
 
   // Extract the non-JSON text from the AI response
@@ -453,6 +456,7 @@ function ExecutiveAnalysis({
               <div className="text-xs text-foreground/80 leading-relaxed prose prose-invert prose-xs max-w-none [&_table]:text-[10px] [&_th]:px-2 [&_th]:py-1 [&_td]:px-2 [&_td]:py-1 [&_table]:border-collapse [&_th]:border [&_th]:border-border/30 [&_td]:border [&_td]:border-border/30 [&_th]:bg-secondary/50 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5 [&_p]:my-1.5 [&_h1]:text-sm [&_h2]:text-xs [&_h3]:text-xs [&_h4]:text-[11px] [&_strong]:text-foreground/90 [&_code]:text-[10px] [&_code]:bg-secondary/60 [&_code]:px-1 [&_code]:rounded">
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
+                  rehypePlugins={[rehypeSanitize]}
                   components={{
                     td: ({ children, ...props }) => {
                       const raw = String(children ?? '')
@@ -474,7 +478,8 @@ function ExecutiveAnalysis({
                         indicator = <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 mr-1.5 align-middle" />
                       }
                       return <td {...props}>{indicator}{displayChildren}</td>
-                    } }}
+                    }
+                  }}
                 >
                   {analysisText}
                 </ReactMarkdown>
@@ -616,7 +621,8 @@ const ALTERNATIVES: Record<string, { name: string; displayName: string; reason: 
   calico: [
     { name: 'cilium', displayName: 'Cilium', reason: 'eBPF-based networking and security' },
     { name: 'antrea', displayName: 'Antrea', reason: 'Kubernetes-native CNI using Open vSwitch' },
-  ] }
+  ]
+}
 
 /** Display info for original projects when swapping back */
 const ALTERNATIVES_DISPLAY: Record<string, { displayName: string; reason: string }> = {
@@ -628,16 +634,17 @@ const ALTERNATIVES_DISPLAY: Record<string, { displayName: string; reason: string
   prometheus: { displayName: 'Prometheus', reason: 'CNCF monitoring and alerting toolkit' },
   cilium: { displayName: 'Cilium', reason: 'eBPF-based networking and security' },
   'cert-manager': { displayName: 'cert-manager', reason: 'Automated TLS certificate management' },
-  'trivy-operator': { displayName: 'Trivy Operator', reason: 'Aqua vulnerability scanning for Kubernetes' } }
+  'trivy-operator': { displayName: 'Trivy Operator', reason: 'Aqua vulnerability scanning for Kubernetes' }
+}
 
 function ProjectDetailPanel({
   project,
   allProjects,
   onReplace }: {
-  project: PayloadProject
-  allProjects: PayloadProject[]
-  onReplace?: (oldName: string, newProject: PayloadProject) => void
-}) {
+    project: PayloadProject
+    allProjects: PayloadProject[]
+    onReplace?: (oldName: string, newProject: PayloadProject) => void
+  }) {
   const [mission, setMission] = useState<MissionExport | null>(null)
   const [loadingSteps, setLoadingSteps] = useState(false)
   const fetchedRef = useRef<string>('')
@@ -653,10 +660,11 @@ function ProjectDetailPanel({
       type: 'custom',
       tags: [],
       steps: [],
-      metadata: { source: project.kbPath } }
+      metadata: { source: project.kbPath }
+    }
     fetchMissionContent(indexMission)
       .then(({ mission: m }) => setMission(m))
-      .catch(() => {/* ignore */})
+      .catch(() => {/* ignore */ })
       .finally(() => setLoadingSteps(false))
   }, [project.kbPath, project.displayName, project.reason])
 
@@ -675,7 +683,8 @@ function ProjectDetailPanel({
       displayName: ALTERNATIVES_DISPLAY[lookupKey]?.displayName ?? lookupKey,
       reason: ALTERNATIVES_DISPLAY[lookupKey]?.reason ?? 'Original AI recommendation',
       isCurrent: false,
-      isOriginal: true })
+      isOriginal: true
+    })
   }
 
   // Add all known alternatives
@@ -683,7 +692,8 @@ function ProjectDetailPanel({
     allAlts.push({
       ...alt,
       isCurrent: alt.name === project.name,
-      isOriginal: false })
+      isOriginal: false
+    })
   }
 
   // Add the current project to the list if not already present (so user sees "Selected" marker)
@@ -693,7 +703,8 @@ function ProjectDetailPanel({
       displayName: project.displayName,
       reason: project.reason ?? '',
       isCurrent: true,
-      isOriginal: false })
+      isOriginal: false
+    })
   }
 
   // Filter out projects that are already in the payload under a different slot
@@ -717,8 +728,8 @@ function ProjectDetailPanel({
           <span className={cn(
             'text-[10px] px-1.5 py-0.5 rounded-full font-medium',
             project.priority === 'required' ? 'bg-red-500/10 text-red-400' :
-            project.priority === 'recommended' ? 'bg-blue-500/10 text-blue-400' :
-            'bg-gray-500/10 text-gray-400 dark:text-gray-500'
+              project.priority === 'recommended' ? 'bg-blue-500/10 text-blue-400' :
+                'bg-gray-500/10 text-gray-400 dark:text-gray-500'
           )}>
             {project.priority}
           </span>
@@ -824,7 +835,8 @@ function ProjectDetailPanel({
                         reason: alt.reason,
                         category: project.category,
                         priority: project.priority,
-                        dependencies: project.dependencies })}
+                        dependencies: project.dependencies
+                      })}
                       className="text-[10px] px-2 py-0.5 rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
                     >
                       Swap
@@ -858,7 +870,8 @@ const CATEGORY_ICONS: Record<string, React.ReactNode> = {
   'Authentication & IAM': <Lock className="w-3 h-3 text-violet-400" />,
   'Secrets Management': <Lock className="w-3 h-3 text-emerald-400" />,
   'Storage': <Box className="w-3 h-3 text-green-400" />,
-  'Custom': <Layers className="w-3 h-3 text-slate-400" /> }
+  'Custom': <Layers className="w-3 h-3 text-slate-400" />
+}
 
 function CategoryIcon({ category }: { category: string }) {
   return CATEGORY_ICONS[category] ?? <Layers className="w-3 h-3 text-slate-400" />
@@ -908,7 +921,7 @@ function AIStreamingPreview({ planningMission }: { planningMission: Mission | nu
         className="px-4 py-3 max-h-48 overflow-y-auto text-xs text-foreground/80 leading-relaxed prose prose-invert prose-xs max-w-none [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5 [&_p]:my-1 [&_h1]:text-sm [&_h2]:text-xs [&_h3]:text-xs [&_strong]:text-foreground/90"
       >
         {displayText ? (
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+          <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
             {displayText}
           </ReactMarkdown>
         ) : (
@@ -931,10 +944,10 @@ function AISuggestErrorBanner({
   errorContent,
   onRetry,
   disabled }: {
-  errorContent: string
-  onRetry: () => void
-  disabled: boolean
-}) {
+    errorContent: string
+    onRetry: () => void
+    disabled: boolean
+  }) {
   // Fall back to a generic message when the failed mission has no system
   // message attached (e.g. silent WebSocket failure).
   const message = errorContent.trim() ||
@@ -955,7 +968,7 @@ function AISuggestErrorBanner({
             AI Suggest failed
           </div>
           <div className="text-xs text-foreground/85 leading-relaxed prose prose-invert prose-xs max-w-none [&_p]:my-1 [&_strong]:text-foreground [&_code]:bg-secondary/60 [&_code]:px-1 [&_code]:rounded [&_a]:text-primary [&_a]:underline">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
               {message}
             </ReactMarkdown>
           </div>
@@ -985,9 +998,9 @@ const CLUSTER_CHIP_MIN_HEIGHT_PX = 40
 function TargetClusterSelector({
   selected,
   onChange }: {
-  selected: string[]
-  onChange: (clusters: string[]) => void
-}) {
+    selected: string[]
+    onChange: (clusters: string[]) => void
+  }) {
   const { availableClusters, clusterInfoMap } = useGlobalFilters()
   const { isOpen, close: closeDropdown, toggle: toggleDropdown } = useModalState()
   const ref = useRef<HTMLDivElement>(null)
