@@ -108,7 +108,7 @@ Return ONLY valid JSON, no markdown code blocks or explanation.`
 
       ws.send(JSON.stringify({
         type: 'chat',
-        id: `summary-${Date.now()}`,
+        id: `summary-${crypto.randomUUID()}`,
         payload: {
           prompt: prompt,
           sessionId: `resolution-${mission.id}`,

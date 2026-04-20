@@ -74,7 +74,11 @@ function getBackoffDelay(attempt: number): number {
     WS_RECONNECT_BASE_DELAY_MS * Math.pow(2, attempt),
     WS_RECONNECT_MAX_DELAY_MS,
   )
-  const jitter = Math.random() * BACKOFF_JITTER_MAX_MS
+  // Use crypto.getRandomValues() for unbiased jitter — Math.random() is not
+  // cryptographically secure. BACKOFF_JITTER_MAX_MS fits comfortably in Uint32.
+  const arr = new Uint32Array(1)
+  crypto.getRandomValues(arr)
+  const jitter = (arr[0] / 0x100000000) * BACKOFF_JITTER_MAX_MS
   return delay + jitter
 }
 
@@ -114,10 +118,14 @@ function getSessionId(): string {
   let id = sessionStorage.getItem('kc-session-id')
   if (!id) {
     // crypto.randomUUID() requires a secure context (HTTPS / localhost).
-    // Fall back to Math.random-based ID for HTTP contexts.
-    id = typeof crypto.randomUUID === 'function'
-      ? crypto.randomUUID()
-      : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
+    // Fall back to crypto.getRandomValues() for HTTP contexts where randomUUID is unavailable.
+    if (typeof crypto.randomUUID === 'function') {
+      id = crypto.randomUUID()
+    } else {
+      const arr = new Uint8Array(9)
+      crypto.getRandomValues(arr)
+      id = `${Date.now().toString(36)}-${Array.from(arr).map(b => b.toString(36).padStart(2, '0')).join('')}`
+    }
     sessionStorage.setItem('kc-session-id', id)
   }
   return id
@@ -147,7 +155,11 @@ function startHeartbeat() {
 
   // Subsequent heartbeats with jitter to spread them out
   function scheduleNextHeartbeat() {
-    const jitter = Math.random() * HEARTBEAT_JITTER
+    // Use crypto.getRandomValues() — Math.random() is not cryptographically secure.
+    // HEARTBEAT_JITTER fits well within a Uint32.
+    const arr = new Uint32Array(1)
+    crypto.getRandomValues(arr)
+    const jitter = (arr[0] / 0x100000000) * HEARTBEAT_JITTER
     heartbeatTimeoutId = setTimeout(() => {
       sendHeartbeat()
       scheduleNextHeartbeat()

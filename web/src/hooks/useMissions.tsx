@@ -233,7 +233,7 @@ const SELECTED_AGENT_KEY = 'kc_selected_agent'
 let requestIdCounter = 0
 function generateRequestId(prefix = 'claude'): string {
   requestIdCounter += 1
-  return `${prefix}-${Date.now()}-${requestIdCounter}-${Math.random().toString(36).substr(2, 6)}`
+  return `${prefix}-${Date.now()}-${requestIdCounter}-${crypto.randomUUID().replace(/-/g, '').slice(0, 6)}`
 }
 
 /**
@@ -2417,7 +2417,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
     // available, otherwise generate a new one. This ensures the ID returned
     // to callers before review confirmation stays valid after confirmation.
     const preGenId = params.context?.__preGeneratedMissionId as string | undefined
-    const missionId = preGenId || `mission-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    const missionId = preGenId || `mission-${Date.now()}-${crypto.randomUUID().replace(/-/g, '').slice(0, 9)}`
     // Strip the internal marker from context before persisting
     if (preGenId && params.context) {
       const { __preGeneratedMissionId: _, ...cleanContext } = params.context
@@ -2716,7 +2716,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
 
   // Save a mission to library without running it
   const saveMission = (params: SaveMissionParams): string => {
-    const missionId = `mission-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    const missionId = `mission-${Date.now()}-${crypto.randomUUID().replace(/-/g, '').slice(0, 9)}`
 
     const mission: Mission = {
       id: missionId,
