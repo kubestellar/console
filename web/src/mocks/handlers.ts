@@ -878,6 +878,11 @@ export const handlers = [
   http.get('/api/missions/file', () => passthrough()),
   http.get('/api/missions/browse', () => passthrough()),
   http.get('/api/rewards/github', () => passthrough()),
+  // Public contributor badge (RFC #8862 Phase 3) — backed by a Netlify
+  // Function that returns SVG. Must be http.all so that the CORS OPTIONS
+  // preflight does not get swallowed by the catch-all /api/* below
+  // (per feedback_msw_passthrough.md).
+  http.all('/api/rewards/badge/*', () => passthrough()),
   // NPS (voluntary feedback) — use http.all so the CORS preflight
   // OPTIONS request also passes through. Without this, the catch-all
   // http.all('/api/*') below returns 503 on the preflight and the

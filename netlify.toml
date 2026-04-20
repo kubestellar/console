@@ -121,6 +121,15 @@
   to = "/.netlify/functions/issue-stats"
   status = 200
 
+# Contributor badge API (RFC #8862 Phase 3) — public SVG tier badge.
+# Mirrors pkg/api/handlers/rewards_badge.go so the Netlify-hosted site
+# answers GET /api/rewards/badge/:github_login identically to the Go
+# backend. status=200 so the function sees the original URL path.
+[[redirects]]
+  from = "/api/rewards/badge/*"
+  to = "/.netlify/functions/rewards-badge/:splat"
+  status = 200
+
 # SPA routing - redirect all routes to index.html (only if file doesn't exist)
 [[redirects]]
   from = "/*"
