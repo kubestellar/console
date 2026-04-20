@@ -13,10 +13,24 @@ const ALLOWED_ORIGINS = [
   "https://console-deploy-preview.kubestellar.io",
 ];
 
+/**
+ * Returns a CORS origin header value for the given request origin.
+ * Uses exact match or parsed-hostname suffix check — not substring matching —
+ * to prevent bypass via crafted origins like "evil.com?origin=kubestellar.io"
+ * (CodeQL js/incomplete-url-substring-sanitization, #9119).
+ */
 function corsOrigin(origin: string | null): string {
   if (!origin) return ALLOWED_ORIGINS[0];
-  if (ALLOWED_ORIGINS.some((o) => origin.startsWith(o) || origin.endsWith(".kubestellar.io"))) {
-    return origin;
+  // Exact match against allowlist
+  if (ALLOWED_ORIGINS.includes(origin)) return origin;
+  // Allow any subdomain of kubestellar.io via parsed hostname check
+  try {
+    const host = new URL(origin).hostname.toLowerCase();
+    if (host === "kubestellar.io" || host.endsWith(".kubestellar.io")) {
+      return origin;
+    }
+  } catch {
+    // Malformed origin — fall through to default
   }
   return ALLOWED_ORIGINS[0];
 }

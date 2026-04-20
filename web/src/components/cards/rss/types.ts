@@ -20,11 +20,15 @@ export interface FeedFilter {
   excludeTerms: string[] // Hide items matching ANY of these (AND)
 }
 
+/** Preset feed categories — used to group feeds in the UI without URL substring checks (CodeQL #9119). */
+export type FeedCategory = 'reddit' | 'cloud-native' | 'tech-news' | 'news' | 'other'
+
 export interface FeedConfig {
   url: string
   name: string
   icon?: string
   filter?: FeedFilter // Optional filter for this feed
+  category?: FeedCategory // Category for preset grouping
   // For aggregate feeds
   isAggregate?: boolean // True if this is a custom aggregate feed
   sourceUrls?: string[] // URLs of source feeds to aggregate

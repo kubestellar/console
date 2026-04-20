@@ -1,6 +1,7 @@
 // Cloud provider icons as SVG components
 import React from 'react'
 import { useTranslation } from 'react-i18next'
+import { hostnameEndsWith } from '../../lib/utils/urlHostname'
 
 export type CloudProvider = 'eks' | 'gke' | 'aks' | 'openshift' | 'oci' | 'alibaba' | 'digitalocean' | 'rancher' | 'coreweave' | 'kind' | 'minikube' | 'k3s' | 'kubernetes'
 
@@ -470,7 +471,6 @@ export function detectCloudProvider(
   userName?: string
 ): CloudProvider {
   const name = clusterName.toLowerCase()
-  const serverUrl = apiServerUrl?.toLowerCase() || ''
   const user = userName?.toLowerCase() || ''
 
   // Check namespace-based patterns FIRST (most accurate when available)
@@ -545,37 +545,41 @@ export function detectCloudProvider(
   if (name.includes('minikube')) return 'minikube'
   if (name.includes('k3s') || name.includes('k3d')) return 'k3s'
 
-  // Check URL-based patterns (fallback for when name doesn't help)
+  // Check URL-based patterns (fallback for when name doesn't help).
+  // Use parsed-hostname checks (not substring matching) to prevent bypass via
+  // crafted URLs like evil.com/path?q=eks.amazonaws.com (CodeQL #9119).
+  // apiServerUrl is the raw value (not lowercased) — hostnameEndsWith handles case.
+  const rawUrl = apiServerUrl || ''
   // AWS EKS by URL
-  if (serverUrl.includes('.eks.amazonaws.com')) {
+  if (hostnameEndsWith(rawUrl, 'eks.amazonaws.com')) {
     return 'eks'
   }
   // Google GKE by URL
-  if (serverUrl.includes('container.googleapis.com') || serverUrl.includes('.container.cloud.google.com') || serverUrl.includes('gke.io')) {
+  if (hostnameEndsWith(rawUrl, 'container.googleapis.com') || hostnameEndsWith(rawUrl, 'container.cloud.google.com') || hostnameEndsWith(rawUrl, 'gke.io')) {
     return 'gke'
   }
   // Azure AKS by URL
-  if (serverUrl.includes('.azmk8s.io')) {
+  if (hostnameEndsWith(rawUrl, 'azmk8s.io')) {
     return 'aks'
   }
   // Oracle OCI by URL
-  if (serverUrl.includes('.oraclecloud.com')) {
+  if (hostnameEndsWith(rawUrl, 'oraclecloud.com')) {
     return 'oci'
   }
   // Alibaba Cloud by URL
-  if (serverUrl.includes('.aliyuncs.com')) {
+  if (hostnameEndsWith(rawUrl, 'aliyuncs.com')) {
     return 'alibaba'
   }
   // DigitalOcean by URL
-  if (serverUrl.includes('.digitalocean.com') || serverUrl.includes('k8s.ondigitalocean')) {
+  if (hostnameEndsWith(rawUrl, 'digitalocean.com') || hostnameEndsWith(rawUrl, 'k8s.ondigitalocean.com')) {
     return 'digitalocean'
   }
   // CoreWeave by URL
-  if (serverUrl.includes('.coreweave.com')) {
+  if (hostnameEndsWith(rawUrl, 'coreweave.com')) {
     return 'coreweave'
   }
   // OpenShift by URL - check for specific OpenShift domains (NOT just :6443 port)
-  if (serverUrl.includes('openshift.com') || serverUrl.includes('openshiftapps.com') || serverUrl.includes('.openshift.')) {
+  if (hostnameEndsWith(rawUrl, 'openshift.com') || hostnameEndsWith(rawUrl, 'openshiftapps.com')) {
     return 'openshift'
   }
 

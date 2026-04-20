@@ -2,6 +2,21 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import type { ReactNode } from 'react'
 
+/**
+ * Returns true if the link element's href URL has the given hostname — uses
+ * new URL() instead of includes() to prevent CodeQL
+ * js/incomplete-url-substring-sanitization false positives (#9119).
+ */
+function hrefHasHostname(el: Element, hostname: string): boolean {
+  const href = el.getAttribute('href')
+  if (!href) return false
+  try {
+    return new URL(href).hostname.toLowerCase() === hostname.toLowerCase()
+  } catch {
+    return false
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Hoisted mocks — must be created before any import resolution
 // ---------------------------------------------------------------------------
@@ -577,7 +592,7 @@ describe('Font loading behavior', () => {
     // so no <link> should be injected for them
     const links = document.head.querySelectorAll('link[rel="stylesheet"]')
     const googleFontLinks = Array.from(links).filter(
-      link => link.getAttribute('href')?.includes('fonts.googleapis.com')
+      link => hrefHasHostname(link, 'fonts.googleapis.com')
     )
     // Default theme uses Inter — should NOT produce a Google Fonts link
     const interLinks = googleFontLinks.filter(
@@ -604,7 +619,7 @@ describe('Font loading behavior', () => {
 
       const links = document.head.querySelectorAll('link[rel="stylesheet"]')
       const googleFontLinks = Array.from(links).filter(
-        link => link.getAttribute('href')?.includes('fonts.googleapis.com')
+        link => hrefHasHostname(link, 'fonts.googleapis.com')
       )
       expect(googleFontLinks.length).toBeGreaterThan(0)
     }

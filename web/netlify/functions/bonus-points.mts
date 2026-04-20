@@ -41,10 +41,22 @@ const ALLOWED_ORIGINS = [
   "https://kubestellar.io",
 ];
 
+/**
+ * Returns a CORS origin header value for the given request origin.
+ * Uses exact match or parsed-hostname suffix check — not raw string endsWith —
+ * to prevent bypass via crafted origins like "evil.kubestellar.io.evil.com"
+ * (CodeQL js/incomplete-url-substring-sanitization, #9119).
+ */
 function corsOrigin(origin: string | null): string {
   if (!origin) return ALLOWED_ORIGINS[0];
-  if (ALLOWED_ORIGINS.some((o) => origin === o) || origin.endsWith(".kubestellar.io")) {
-    return origin;
+  if (ALLOWED_ORIGINS.includes(origin)) return origin;
+  try {
+    const host = new URL(origin).hostname.toLowerCase();
+    if (host === "kubestellar.io" || host.endsWith(".kubestellar.io")) {
+      return origin;
+    }
+  } catch {
+    // Malformed origin — fall through to default
   }
   return ALLOWED_ORIGINS[0];
 }

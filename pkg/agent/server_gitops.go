@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -80,12 +81,20 @@ type agentSyncResponse struct {
 }
 
 // validateGitopsRepoURL mirrors the backend validateRepoURL (#6022 SECURITY).
+// Uses net/url.Parse for scheme validation instead of strings.HasPrefix to
+// satisfy CodeQL js/incomplete-url-substring-sanitization (issue #9119).
 func validateGitopsRepoURL(repoURL string) error {
 	if repoURL == "" {
 		return fmt.Errorf("repository URL is required")
 	}
-	if !strings.HasPrefix(repoURL, "https://") && !strings.HasPrefix(repoURL, "git@") {
-		return fmt.Errorf("only HTTPS and SSH git URLs are allowed")
+	// SSH git URLs (git@host:path) are not parseable by net/url; handle explicitly.
+	// For HTTPS URLs, use net/url.Parse to extract the scheme safely.
+	isSSH := strings.HasPrefix(repoURL, "git@")
+	if !isSSH {
+		parsed, err := url.Parse(repoURL)
+		if err != nil || parsed.Scheme != "https" {
+			return fmt.Errorf("only HTTPS and SSH git URLs are allowed")
+		}
 	}
 	dangerousChars := []string{";", "|", "&", "$", "`", "(", ")", "{", "}", "<", ">", "\\", "'", "\"", "\n", "\r"}
 	for _, char := range dangerousChars {

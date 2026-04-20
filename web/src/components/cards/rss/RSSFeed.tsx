@@ -21,6 +21,7 @@ import {
   isValidThumbnail, normalizeRedditLink, formatTimeAgo } from './RSSParser'
 import { useTranslation } from 'react-i18next'
 import { TOAST_DISMISS_MS } from '../../../lib/constants/network'
+import { hostnameEndsWith } from '../../../lib/utils/urlHostname'
 
 type SortByOption = 'date' | 'title'
 
@@ -630,9 +631,13 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
       return normalized
     }
 
-    // Convert Reddit URLs to RSS
-    if (normalized.includes('reddit.com') && !normalized.endsWith('.rss')) {
-      normalized = normalized.replace(/\/?$/, '.rss')
+    // Convert Reddit URLs to RSS — check parsed hostname after adding scheme (CodeQL #9119)
+    // We first ensure a scheme is present so new URL() can parse correctly.
+    const withScheme = normalized.startsWith('http://') || normalized.startsWith('https://')
+      ? normalized
+      : 'https://' + normalized
+    if (hostnameEndsWith(withScheme, 'reddit.com') && !normalized.endsWith('.rss')) {
+      normalized = withScheme.replace(/\/?$/, '.rss')
     }
 
     // Add https if missing
@@ -643,7 +648,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
     return normalized
   }
 
-  const isRedditFeed = activeFeed?.url?.includes('reddit.com')
+  const isRedditFeed = activeFeed?.url ? hostnameEndsWith(activeFeed.url, 'reddit.com') : false
 
   // Show full skeleton only on initial load with no items
   // When switching feeds, keep the controls visible and only skeleton the list
@@ -993,7 +998,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
                     addFeed({
                       url,
                       name: newFeedName || defaultName,
-                      icon: url.includes('reddit.com') ? '🔴' : '📰' })
+                      icon: hostnameEndsWith(url, 'reddit.com') ? '🔴' : '📰' })
                   }
                 }}
                 disabled={!newFeedUrl.trim()}
@@ -1071,7 +1076,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
               <div>
                 <span className="text-2xs text-muted-foreground/70 uppercase tracking-wide">{t('cards:rssFeed.reddit')}</span>
                 <div className="flex flex-wrap gap-1 mt-1">
-                  {PRESET_FEEDS.filter(p => p.url.includes('reddit.com') && !feeds.some(f => f.url === p.url)).slice(0, 8).map(preset => (
+                  {PRESET_FEEDS.filter(p => p.category === 'reddit' && !feeds.some(f => f.url === p.url)).slice(0, 8).map(preset => (
                     <button
                       key={preset.url}
                       onClick={() => addFeed(preset)}
@@ -1086,7 +1091,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
               <div>
                 <span className="text-2xs text-muted-foreground/70 uppercase tracking-wide">{t('cards:rssFeed.techNews')}</span>
                 <div className="flex flex-wrap gap-1 mt-1">
-                  {PRESET_FEEDS.filter(p => !p.url.includes('reddit.com') && !p.url.includes('kubernetes') && !p.url.includes('cncf') && !p.url.includes('docker') && !p.url.includes('hashicorp') && !p.url.includes('istio') && !p.url.includes('prometheus') && !p.url.includes('netflix') && !p.url.includes('cloudflare') && !p.url.includes('github.blog') && !p.url.includes('infoq') && !p.url.includes('dev.to') && !p.url.includes('css-tricks') && !p.url.includes('smashing') && !feeds.some(f => f.url === p.url)).slice(0, 10).map(preset => (
+                  {PRESET_FEEDS.filter(p => p.category === 'tech-news' && !feeds.some(f => f.url === p.url)).slice(0, 10).map(preset => (
                     <button
                       key={preset.url}
                       onClick={() => addFeed(preset)}
@@ -1101,7 +1106,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
               <div>
                 <span className="text-2xs text-muted-foreground/70 uppercase tracking-wide">{t('cards:rssFeed.cloudNative')}</span>
                 <div className="flex flex-wrap gap-1 mt-1">
-                  {PRESET_FEEDS.filter(p => (p.url.includes('kubernetes') || p.url.includes('cncf') || p.url.includes('docker') || p.url.includes('hashicorp') || p.url.includes('istio') || p.url.includes('prometheus')) && !feeds.some(f => f.url === p.url)).map(preset => (
+                  {PRESET_FEEDS.filter(p => p.category === 'cloud-native' && !feeds.some(f => f.url === p.url)).map(preset => (
                     <button
                       key={preset.url}
                       onClick={() => addFeed(preset)}

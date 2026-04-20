@@ -79,13 +79,24 @@ const ALLOWED_ORIGINS = [
   "https://www.kubestellar.io",
 ];
 
+/**
+ * Returns a CORS origin header value for the given request origin.
+ * Uses parsed-hostname checks — not raw string includes/startsWith/endsWith —
+ * to prevent bypass via crafted origins (CodeQL #9119).
+ */
 function corsOrigin(origin: string | null): string {
   if (!origin) return ALLOWED_ORIGINS[0];
-  if (ALLOWED_ORIGINS.some((o) => origin === o) || origin.endsWith(".kubestellar.io")) {
-    return origin;
+  if (ALLOWED_ORIGINS.includes(origin)) return origin;
+  try {
+    const parsed = new URL(origin);
+    const host = parsed.hostname.toLowerCase();
+    // Allow any subdomain of kubestellar.io
+    if (host === "kubestellar.io" || host.endsWith(".kubestellar.io")) return origin;
+    // Allow localhost for development (any port) — protocol must be http: exactly
+    if (parsed.protocol === "http:" && host === "localhost") return origin;
+  } catch {
+    // Malformed origin — fall through to default
   }
-  // Allow localhost for development
-  if (origin.startsWith("http://localhost:")) return origin;
   return ALLOWED_ORIGINS[0];
 }
 
