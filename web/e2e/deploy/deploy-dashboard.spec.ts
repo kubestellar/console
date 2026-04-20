@@ -9,7 +9,7 @@
  *   5. Deploy logs — K8s events displayed per-cluster with timestamps
  *   6. Deploy-status polling — replica counts update over time
  */
-import { test, expect, type Page, type Route } from '@playwright/test'
+import { test as base, expect, type Page, type Route } from '@playwright/test'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -158,18 +158,51 @@ interface ApiCallLog {
   timestamp: number
 }
 
-let apiCallLog: ApiCallLog[] = []
+type DeployPhase = 'launching' | 'running' | 'failed'
 
-/** Phase of the mock deploy — controls what deploy-status returns */
-let deployPhase: 'launching' | 'running' | 'failed' = 'launching'
+/** Initial deploy phase used by every test — overridden via state.setDeployPhase() */
+const INITIAL_DEPLOY_PHASE: DeployPhase = 'launching'
 
-async function setupMockRoutes(page: Page) {
-  apiCallLog = []
-  deployPhase = 'launching'
+/**
+ * Per-test mock state — created fresh in `test.beforeEach` and closed over by
+ * route handlers. Replaces the previous module-level `apiCallLog` /
+ * `deployPhase` variables which leaked between tests when run in non-default
+ * order or in parallel (see #9087).
+ */
+interface MockState {
+  apiCallLog: ApiCallLog[]
+  deployPhase: DeployPhase
+  setDeployPhase: (phase: DeployPhase) => void
+  getCallCount: (endpoint: string) => number
+  logCall: (route: Route, endpoint: string) => void
+}
 
+function createMockState(): MockState {
+  const state: MockState = {
+    apiCallLog: [],
+    deployPhase: INITIAL_DEPLOY_PHASE,
+    setDeployPhase(phase: DeployPhase) {
+      state.deployPhase = phase
+    },
+    getCallCount(endpoint: string): number {
+      return state.apiCallLog.filter((c) => c.endpoint === endpoint).length
+    },
+    logCall(route: Route, endpoint: string) {
+      state.apiCallLog.push({
+        endpoint,
+        method: route.request().method(),
+        url: route.request().url(),
+        timestamp: Date.now(),
+      })
+    },
+  }
+  return state
+}
+
+async function setupMockRoutes(page: Page, state: MockState) {
   // Health — required so checkBackendAvailability() returns true
   await page.route('**/health', (route) => {
-    logCall(route, 'health')
+    state.logCall(route, 'health')
     route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -179,7 +212,7 @@ async function setupMockRoutes(page: Page) {
 
   // Local agent (kc-agent) — health returns 200, data returns 503
   await page.route('http://127.0.0.1:8585/**', (route) => {
-    logCall(route, 'agent')
+    state.logCall(route, 'agent')
     const url = route.request().url()
     if (url.endsWith('/health') || url.includes('/health?')) {
       route.fulfill({
@@ -194,7 +227,7 @@ async function setupMockRoutes(page: Page) {
 
   // Auth
   await page.route('**/api/me', (route) => {
-    logCall(route, 'api/me')
+    state.logCall(route, 'api/me')
     route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -204,7 +237,7 @@ async function setupMockRoutes(page: Page) {
 
   // Clusters (SSE)
   await page.route('**/api/mcp/clusters**', (route) => {
-    logCall(route, 'mcp/clusters')
+    state.logCall(route, 'mcp/clusters')
     const accept = route.request().headers()['accept'] || ''
     if (accept.includes('text/event-stream')) {
       route.fulfill({
@@ -219,19 +252,19 @@ async function setupMockRoutes(page: Page) {
 
   // Workloads
   await page.route('**/api/workloads', (route) => {
-    logCall(route, 'api/workloads')
+    state.logCall(route, 'api/workloads')
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ items: MOCK_WORKLOADS }) })
   })
 
   // Resolve dependencies
   await page.route('**/api/workloads/resolve-deps/**', (route) => {
-    logCall(route, 'api/workloads/resolve-deps')
+    state.logCall(route, 'api/workloads/resolve-deps')
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_DEPENDENCIES) })
   })
 
   // Deploy action
   await page.route('**/api/workloads/deploy', (route) => {
-    logCall(route, 'api/workloads/deploy')
+    state.logCall(route, 'api/workloads/deploy')
     route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -239,23 +272,25 @@ async function setupMockRoutes(page: Page) {
     })
   })
 
-  // Deploy status — returns different data based on deployPhase
+  // Deploy status — returns different data based on the per-test deploy phase.
+  // The handler reads `state.deployPhase` at request time so tests can mutate
+  // the phase via `state.setDeployPhase()` without leaking into other tests.
   await page.route('**/api/workloads/deploy-status/**', (route) => {
-    logCall(route, 'api/workloads/deploy-status')
-    const statusData = deployPhase === 'running' ? DEPLOY_STATUS_RUNNING : DEPLOY_STATUS_LAUNCHING
+    state.logCall(route, 'api/workloads/deploy-status')
+    const statusData = state.deployPhase === 'running' ? DEPLOY_STATUS_RUNNING : DEPLOY_STATUS_LAUNCHING
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(statusData) })
   })
 
-  // Deploy logs — returns different data based on deployPhase
+  // Deploy logs — returns different data based on the per-test deploy phase.
   await page.route('**/api/workloads/deploy-logs/**', (route) => {
-    logCall(route, 'api/workloads/deploy-logs')
-    const logData = deployPhase === 'failed' ? MOCK_DEPLOY_LOGS_FAILED : MOCK_DEPLOY_LOGS
+    state.logCall(route, 'api/workloads/deploy-logs')
+    const logData = state.deployPhase === 'failed' ? MOCK_DEPLOY_LOGS_FAILED : MOCK_DEPLOY_LOGS
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(logData) })
   })
 
   // Cluster groups
   await page.route('**/api/cluster-groups', (route) => {
-    logCall(route, 'api/cluster-groups')
+    state.logCall(route, 'api/cluster-groups')
     if (route.request().method() === 'GET') {
       route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ groups: MOCK_CLUSTER_GROUPS }) })
     } else {
@@ -265,7 +300,7 @@ async function setupMockRoutes(page: Page) {
 
   // Namespaces
   await page.route('**/api/mcp/namespaces**', (route) => {
-    logCall(route, 'mcp/namespaces')
+    state.logCall(route, 'mcp/namespaces')
     const accept = route.request().headers()['accept'] || ''
     if (accept.includes('text/event-stream')) {
       route.fulfill({
@@ -291,7 +326,7 @@ async function setupMockRoutes(page: Page) {
 
   // Catch-all for SSE endpoints
   await page.route('**/api/mcp/**', (route) => {
-    logCall(route, 'mcp/catch-all')
+    state.logCall(route, 'mcp/catch-all')
     const accept = route.request().headers()['accept'] || ''
     if (accept.includes('text/event-stream')) {
       route.fulfill({
@@ -311,13 +346,13 @@ async function setupMockRoutes(page: Page) {
 
   // kubectl proxy catch-all
   await page.route('**/api/kubectl/**', (route) => {
-    logCall(route, 'kubectl')
+    state.logCall(route, 'kubectl')
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ items: [] }) })
   })
 
   // Config catch-all
   await page.route('**/api/config/**', (route) => {
-    logCall(route, 'config')
+    state.logCall(route, 'config')
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({}) })
   })
 
@@ -333,19 +368,6 @@ async function setupMockRoutes(page: Page) {
       route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
     })
   }
-}
-
-function logCall(route: Route, endpoint: string) {
-  apiCallLog.push({
-    endpoint,
-    method: route.request().method(),
-    url: route.request().url(),
-    timestamp: Date.now(),
-  })
-}
-
-function getCallCount(endpoint: string): number {
-  return apiCallLog.filter((c) => c.endpoint === endpoint).length
 }
 
 // ---------------------------------------------------------------------------
@@ -418,11 +440,24 @@ async function setupAuthAndNavigate(page: Page, route: string, opts?: {
 // Tests
 // ---------------------------------------------------------------------------
 
+/**
+ * Per-test fixture providing isolated mock state. Replaces the previous
+ * module-level `apiCallLog` / `deployPhase` variables (see #9087) so route
+ * handlers can no longer leak state between tests when run in parallel or in
+ * non-default order.
+ */
+const test = base.extend<{ mockState: MockState }>({
+  // `auto: true` ensures the fixture runs for every test in this file even if
+  // the test body doesn't destructure `mockState` — preserving the previous
+  // behavior where `beforeEach` always installed the mock routes.
+  mockState: [async ({ page }, use) => {
+    const state = createMockState()
+    await setupMockRoutes(page, state)
+    await use(state)
+  }, { auto: true }],
+})
+
 test.describe('Deploy Dashboard', () => {
-  test.beforeEach(async ({ page }) => {
-    apiCallLog = []
-    await setupMockRoutes(page)
-  })
 
   // ========================================================================
   // Test 1: Deploy page loads with core cards visible
@@ -448,7 +483,7 @@ test.describe('Deploy Dashboard', () => {
   // ========================================================================
   // Test 2: Workload listing — correct data in workload cards
   // ========================================================================
-  test('workload listing shows correct data', async ({ page }) => {
+  test('workload listing shows correct data', async ({ page, mockState }) => {
     const t0 = Date.now()
     await setupAuthAndNavigate(page, DEPLOY_ROUTE)
 
@@ -462,10 +497,10 @@ test.describe('Deploy Dashboard', () => {
 
     // Workloads may be fetched via REST (/api/workloads), SSE (/api/mcp/*),
     // kc-agent (127.0.0.1:8585), or kubectl proxy (/api/kubectl/*)
-    const workloadCalls = getCallCount('api/workloads')
-    const sseCalls = apiCallLog.filter((c) => c.endpoint.includes('mcp')).length
-    const kubectlCalls = getCallCount('kubectl')
-    const agentCalls = getCallCount('agent')
+    const workloadCalls = mockState.getCallCount('api/workloads')
+    const sseCalls = mockState.apiCallLog.filter((c) => c.endpoint.includes('mcp')).length
+    const kubectlCalls = mockState.getCallCount('kubectl')
+    const agentCalls = mockState.getCallCount('agent')
 
     // Check for workload names or deployment status content in the page
     const body = await page.textContent('body')
@@ -706,12 +741,12 @@ test.describe('Deploy Dashboard', () => {
   // ========================================================================
   // Test 8: Deploy-status polling — replica counts progress
   // ========================================================================
-  test('deploy-status returns correct replica counts', async ({ page }) => {
+  test('deploy-status returns correct replica counts', async ({ page, mockState }) => {
     const t0 = Date.now()
     await setupAuthAndNavigate(page, DEPLOY_ROUTE)
 
     // Phase 1: Launching (readyReplicas: 0)
-    deployPhase = 'launching'
+    mockState.setDeployPhase('launching')
     const launchStatus = await page.evaluate(async (cluster) => {
       const res = await fetch(`/api/workloads/deploy-status/${cluster}/default/nginx-deploy`, {
         headers: { Authorization: 'Bearer test-token' },
@@ -725,7 +760,7 @@ test.describe('Deploy Dashboard', () => {
     console.log(`[Deploy] Phase 1 (launching): ${launchStatus.readyReplicas}/${launchStatus.replicas} ready`)
 
     // Phase 2: Running (readyReplicas: 3)
-    deployPhase = 'running'
+    mockState.setDeployPhase('running')
     const runStatus = await page.evaluate(async (cluster) => {
       const res = await fetch(`/api/workloads/deploy-status/${cluster}/default/nginx-deploy`, {
         headers: { Authorization: 'Bearer test-token' },
@@ -744,9 +779,9 @@ test.describe('Deploy Dashboard', () => {
   // ========================================================================
   // Test 9: Failed deployment — error logs displayed
   // ========================================================================
-  test('failed deployment shows error events', async ({ page }) => {
+  test('failed deployment shows error events', async ({ page, mockState }) => {
     const t0 = Date.now()
-    deployPhase = 'failed'
+    mockState.setDeployPhase('failed')
     await setupAuthAndNavigate(page, DEPLOY_ROUTE)
 
     // Fetch failed logs
