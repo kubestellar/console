@@ -339,6 +339,7 @@ export const CARD_CATALOG = {
   ],
   'Streaming & Messaging': [
     { type: 'strimzi_status', title: 'Strimzi', description: 'Strimzi Kafka cluster health, topic status, and consumer group lag', visualization: 'status' },
+    { type: 'nats_status', title: 'NATS', description: 'NATS messaging server status, JetStream streams, and consumer health', visualization: 'status' },
   ],
   'Drasi': [
     { type: 'drasi_reactive_graph', title: 'Drasi Reactive Graph', description: 'Reactive data pipeline — sources, continuous queries, reactions, and live results with animated flow', visualization: 'status' },
