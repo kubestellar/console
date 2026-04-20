@@ -508,7 +508,15 @@ func (h *GitHubPipelinesHandler) serveCached(c *fiber.Ctx, key string, build fun
 	reposJSON, _ := json.Marshal(ghpRepos)
 	var body []byte
 	if len(inner) > 2 && inner[0] == '{' {
-		// Merge repos into existing object
+		// Merge repos into existing object.
+		// Guard against integer overflow before computing the allocation size
+		// (go/allocation-size-overflow): both len values come from json.Marshal
+		// on data that originates from a GitHub API response, so they are
+		// bounded in practice, but CodeQL cannot prove that statically.
+		const ghpMaxMergedBodyBytes = 100 * 1024 * 1024 // 100 MB hard cap
+		if len(inner)+len(reposJSON)+12 > ghpMaxMergedBodyBytes {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "response too large"})
+		}
 		body = make([]byte, 0, len(inner)+len(reposJSON)+12)
 		body = append(body, inner[:len(inner)-1]...) // strip trailing }
 		body = append(body, `,"repos":`...)

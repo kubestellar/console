@@ -342,6 +342,14 @@ function processMessage(msg: WorkerRequest): void {
 }
 
 self.onmessage = (event: MessageEvent<WorkerRequest>) => {
+  // Reject messages from unexpected origins (js/missing-origin-check).
+  // In a shared/service worker context `event.origin` is the origin of the
+  // client page; for a dedicated Worker it is always the same origin as the
+  // worker script itself.  Either way, only the page that spawned this worker
+  // should ever be sending messages to it.
+  if (event.origin && event.origin !== self.location.origin) {
+    return
+  }
   if (!initComplete) {
     if (pendingMessages.length >= MAX_PENDING_MESSAGES) {
       console.warn(
