@@ -1961,6 +1961,18 @@ func (s *Server) handleClusterHealthHTTP(w http.ResponseWriter, r *http.Request)
 // back-compat for every GET-only handler that still passes no methods.
 const defaultCORSAllowedMethods = "GET, OPTIONS"
 
+// catchallCORSAllowedMethods is the Access-Control-Allow-Methods value used
+// by the mux fallback ("/") preflight handler. It is intentionally the
+// superset of HTTP verbs supported by any registered handler so that a
+// preflight which falls through to "/" (e.g. due to a path typo or future
+// route refactor) does not silently strip DELETE/PUT/PATCH from the
+// browser's allowed methods. See #9155 — local-cluster delete was reported
+// as blocked when the fallback advertised only "GET, POST, OPTIONS".
+// Per-handler setCORSHeaders() calls still narrow this to the exact
+// methods each endpoint accepts, so this superset never relaxes auth on a
+// real route.
+const catchallCORSAllowedMethods = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+
 // setCORSHeaders sets common CORS headers for HTTP endpoints. An optional
 // list of HTTP methods may be supplied to override the default
 // Access-Control-Allow-Methods value — this is required for POST/PUT/DELETE

@@ -2321,6 +2321,36 @@ func TestServer_HandleLocalClusters_OPTIONS(t *testing.T) {
 	}
 }
 
+// TestHandleLocalClusters_CORSAdvertisesDELETE pins the fix for #9155: the
+// OPTIONS preflight on /local-clusters must advertise DELETE in
+// Access-Control-Allow-Methods so the browser permits the cluster-delete
+// fetch from the SPA origin. Before the audit (#8201) this handler fell
+// through to the default "GET, OPTIONS", which Chrome rejected for the
+// DELETE preflight; this test prevents that regression from coming back.
+func TestHandleLocalClusters_CORSAdvertisesDELETE(t *testing.T) {
+	server := &Server{
+		allowedOrigins: []string{"http://localhost:8080"},
+	}
+
+	req := httptest.NewRequest("OPTIONS", "/local-clusters?tool=kind&name=testing", nil)
+	req.Header.Set("Origin", "http://localhost:8080")
+	req.Header.Set("Access-Control-Request-Method", "DELETE")
+	w := httptest.NewRecorder()
+
+	server.handleLocalClusters(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected 200 for OPTIONS preflight, got %d", w.Code)
+	}
+
+	methods := w.Header().Get("Access-Control-Allow-Methods")
+	for _, want := range []string{"GET", "POST", "DELETE", "OPTIONS"} {
+		if !strings.Contains(methods, want) {
+			t.Errorf("expected Access-Control-Allow-Methods to include %q (Fixes #9155), got %q", want, methods)
+		}
+	}
+}
+
 func TestErrorPayload(t *testing.T) {
 	// Test creating an error payload directly
 	payload := protocol.ErrorPayload{

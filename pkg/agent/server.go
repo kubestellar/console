@@ -559,13 +559,19 @@ func (s *Server) Start() error {
 	// has to simulate the user identity. Handler in server_exec.go.
 	mux.HandleFunc("/ws/exec", s.handleExec)
 
-	// CORS preflight - uses isAllowedOrigin() instead of wildcard to restrict access
+	// CORS preflight - uses isAllowedOrigin() instead of wildcard to restrict access.
+	// #9155: The catchall preflight must advertise the same superset of methods
+	// supported by individual handlers (GET/POST/PUT/DELETE/PATCH), so that any
+	// preflight that falls through to "/" (e.g. due to a path typo or future
+	// route refactor) does not silently strip DELETE/PUT/PATCH from the
+	// browser's allowed methods. Per-handler setCORSHeaders() calls still
+	// narrow this to the exact methods each endpoint accepts.
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
 		if s.isAllowedOrigin(origin) {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 		}
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Methods", catchallCORSAllowedMethods)
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		w.Header().Set("Access-Control-Allow-Private-Network", "true")
 		if r.Method == "OPTIONS" {
