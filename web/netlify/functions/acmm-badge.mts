@@ -148,8 +148,9 @@ function computeLevel(detectedIds: Set<string>): { level: number; totalDetected:
   return { level: currentLevel, totalDetected, totalAcmm };
 }
 
-async function fetchDetectedIds(origin: string, repo: string): Promise<string[]> {
-  const url = `${origin}/api/acmm/scan?repo=${encodeURIComponent(repo)}`;
+async function fetchDetectedIds(origin: string, repo: string, force = false): Promise<string[]> {
+  const forceParam = force ? "&force=true" : "";
+  const url = `${origin}/api/acmm/scan?repo=${encodeURIComponent(repo)}${forceParam}`;
   const res = await fetch(url, { signal: AbortSignal.timeout(API_TIMEOUT_MS) });
   if (!res.ok) {
     throw new Error(`scan returned ${res.status}`);
@@ -286,6 +287,7 @@ export default async (req: Request) => {
   const headers = corsHeaders(origin);
   const url = new URL(req.url);
   const repo = url.searchParams.get("repo") || "";
+  const force = url.searchParams.get("force") === "true";
 
   if (!REPO_RE.test(repo)) {
     return new Response(
@@ -305,7 +307,7 @@ export default async (req: Request) => {
 
   let detectedIds: string[] = [];
   try {
-    detectedIds = await fetchDetectedIds(url.origin, repo);
+    detectedIds = await fetchDetectedIds(url.origin, repo, force);
   } catch {
     const token = process.env.GITHUB_TOKEN || "";
     try {
