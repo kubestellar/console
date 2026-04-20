@@ -1,4 +1,16 @@
 import { test, expect, Page} from '@playwright/test'
+import { setupAuth } from './mocks/liveMocks'
+
+// Mission Control requires an admin-role user to see all phases of the wizard.
+// The shared `setupAuth` (from ./mocks/liveMocks) accepts a custom user override.
+const MISSION_CONTROL_ADMIN_USER = {
+  id: '1',
+  github_id: '12345',
+  github_login: 'testuser',
+  email: 'test@example.com',
+  onboarded: true,
+  role: 'admin',
+} as const
 
 /**
  * Mission Control E2E Integration Tests
@@ -235,23 +247,6 @@ spec:
 // Setup helpers
 // ---------------------------------------------------------------------------
 
-async function setupAuth(page: Page) {
-  await page.route('**/api/me', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        id: '1',
-        github_id: '12345',
-        github_login: 'testuser',
-        email: 'test@example.com',
-        onboarded: true,
-        role: 'admin',
-      }),
-    })
-  )
-}
-
 async function setupClusterMocks(page: Page) {
   await page.route('**/api/mcp/clusters', (route) =>
     route.fulfill({
@@ -345,7 +340,7 @@ async function setupAIMocks(page: Page) {
 
 async function navigateToConsole(page: Page) {
   // Set up route mocks BEFORE navigation so they intercept the initial requests
-  await setupAuth(page)
+  await setupAuth(page, MISSION_CONTROL_ADMIN_USER)
   await setupClusterMocks(page)
   await setupGitHubMocks(page)
   await setupAIMocks(page)
