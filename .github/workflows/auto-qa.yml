@@ -61,19 +61,19 @@ jobs:
       # ── Setup ──────────────────────────────────────────────────────
 
       - name: Checkout main
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
           cache-dependency-path: web/package-lock.json
 
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version: ${{ env.GO_VERSION }}
 
@@ -3527,7 +3527,7 @@ jobs:
       # ── Issue Creation ──────────────────────────────────────────────
 
       - name: Create issues for failures
-        uses: actions/github-script@v8
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           BUILD_OUTCOME: ${{ steps.build_check.outcome }}
           LINT_OUTCOME: ${{ steps.lint_check.outcome }}

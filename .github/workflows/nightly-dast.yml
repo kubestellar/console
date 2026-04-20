@@ -36,10 +36,10 @@ jobs:
     name: OWASP ZAP Baseline Scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Run ZAP Baseline Scan
-        uses: zaproxy/action-baseline@v0.14.0
+        uses: zaproxy/action-baseline@7c4deb10e6261301961c86d65d54a516394f9aed # v0.14.0
         with:
           target: ${{ env.TARGET_URL }}
           rules_file_name: '.github/zap-rules.tsv'
@@ -49,7 +49,7 @@ jobs:
 
       - name: Upload ZAP Report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: zap-baseline-report
           path: report_html.html
@@ -128,7 +128,7 @@ jobs:
 
       - name: Create or Close ZAP Issue
         if: always() && inputs.skip_issue_creation != true
-        uses: actions/github-script@v8
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           HAS_FINDINGS: ${{ steps.zap-results.outputs.has_findings }}
           HIGH_COUNT: ${{ steps.zap-results.outputs.high_count }}
@@ -240,10 +240,10 @@ jobs:
     name: Nuclei Vulnerability Scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Run Nuclei Scan
-        uses: projectdiscovery/nuclei-action@v3
+        uses: projectdiscovery/nuclei-action@cc153d0541e1adf8a42bbe31c0a4fb2376147538 # v3
         with:
           target: ${{ env.TARGET_URL }}
           templates: 'cves/,vulnerabilities/,misconfiguration/,exposures/'
@@ -254,7 +254,7 @@ jobs:
 
       - name: Upload Nuclei Report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: nuclei-report
           path: nuclei-results.json
@@ -296,7 +296,7 @@ jobs:
 
       - name: Create or Close Nuclei Issue
         if: always() && inputs.skip_issue_creation != true
-        uses: actions/github-script@v8
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           HAS_FINDINGS: ${{ steps.nuclei-results.outputs.has_findings }}
           FINDING_COUNT: ${{ steps.nuclei-results.outputs.finding_count }}

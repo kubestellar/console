@@ -49,7 +49,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Collect copilot PR feedback (last 24h)
         id: feedback
@@ -266,7 +266,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Analyze weekly copilot PR patterns
         id: analysis
@@ -517,7 +517,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Select and scan CNCF repos
         id: scan
@@ -813,7 +813,7 @@ jobs:
       COPILOT_STALL_ESCALATION_MINUTES: 60
     steps:
       - name: Detect stalled Copilot assignments
-        uses: actions/github-script@v8
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         with:
           github-token: ${{ secrets.CONSOLE_AUTO || secrets.GITHUB_TOKEN }}
           script: |
