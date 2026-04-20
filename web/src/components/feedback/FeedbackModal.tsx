@@ -294,8 +294,24 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
 
   const coins = type === 'bug' ? REWARD_ACTIONS.bug_report.coins : REWARD_ACTIONS.feature_suggestion.coins
 
+  // Close on backdrop click — only when the click target is the backdrop
+  // itself, not any child element (so clicks inside the modal content do
+  // not dismiss it). Routes through handleClose() so the unsaved-changes
+  // confirmation flow runs if the user has typed anything. (Fixes #9159)
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget) {
+      handleClose()
+    }
+  }
+
   return createPortal(
-    <div className="fixed inset-0 z-modal flex items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div
+      className="fixed inset-0 z-modal flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      onClick={handleBackdropClick}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Submit Feedback"
+    >
       <ConfirmDialog
         isOpen={showDiscardConfirm}
         onClose={() => setShowDiscardConfirm(false)}
