@@ -80,15 +80,41 @@ function pushEscapeHandler(close: () => void): () => void {
 /** One hour in milliseconds — default snooze duration for card swaps */
 const ONE_HOUR_MS = 60 * 60 * 1000
 
-// Format relative time (e.g., "2m ago", "1h ago")
+// ---------------------------------------------------------------------------
+// Relative-time formatting for the card header "last updated" label.
+// Named constants (not magic numbers) so every threshold is explicit.
+// ---------------------------------------------------------------------------
+/** Seconds in one minute — rollover from "Xs" to "Xm" */
+const SECONDS_PER_MINUTE = 60
+/** Minutes in one hour — rollover from "Xm" to "Xh" */
+const MINUTES_PER_HOUR = 60
+/** Hours in one day — rollover from "Xh" to "Xd" */
+const HOURS_PER_DAY = 24
+/** Fallback when the timestamp isn't a valid Date — prevents "NaNd" (#9095) */
+const INVALID_TIMESTAMP_LABEL = 'Unknown'
+/**
+ * Re-render interval for the "last updated" label in ms. When SSE refresh
+ * fails, the card's lastUpdated prop is frozen at the last successful fetch,
+ * so without this ticker the label would render "5d ago" forever (#9104).
+ * One minute is enough resolution for an "Xm/Xh/Xd" label and is cheap.
+ */
+const LAST_UPDATED_TICK_MS = 60_000
+
+// Format relative time (e.g., "2m", "1h", "5d")
 function formatTimeAgo(date: Date): string {
-  const seconds = Math.floor((Date.now() - date.getTime()) / 1000)
-  if (seconds < 60) return 'now'
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes}m`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h`
-  const days = Math.floor(hours / 24)
+  // Guard against invalid Date values (e.g. `new Date('')` → NaN getTime()).
+  // Without this, every downstream Math.floor produced NaN and the UI showed
+  // "NaNm" / "NaNd" in the CardWrapper header (#9095).
+  const ts = date?.getTime?.()
+  if (ts === undefined || Number.isNaN(ts)) return INVALID_TIMESTAMP_LABEL
+
+  const seconds = Math.floor((Date.now() - ts) / 1000)
+  if (seconds < SECONDS_PER_MINUTE) return 'now'
+  const minutes = Math.floor(seconds / SECONDS_PER_MINUTE)
+  if (minutes < MINUTES_PER_HOUR) return `${minutes}m`
+  const hours = Math.floor(minutes / MINUTES_PER_HOUR)
+  if (hours < HOURS_PER_DAY) return `${hours}h`
+  const days = Math.floor(hours / HOURS_PER_DAY)
   return `${days}d`
 }
 
@@ -475,6 +501,20 @@ export function CardWrapper({
   // Track visual spinning state separately to ensure minimum spin duration
   const [isVisuallySpinning, setIsVisuallySpinning] = useState(false)
   const spinStartRef = useRef<number | null>(null)
+
+  // Tick counter that forces the "last updated" label to re-render at a fixed
+  // cadence (#9104). Without this, when the refresh source (e.g. SSE stream)
+  // returns 404 repeatedly, `lastUpdated` is frozen at the last successful
+  // fetch and the label shows a stale "5d ago" that never advances even as
+  // real-world time passes. The setInterval below bumps this every minute so
+  // formatTimeAgo() is called with a current Date.now() and the label advances.
+  const [, setLastUpdatedTick] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => {
+      setLastUpdatedTick(t => t + 1)
+    }, LAST_UPDATED_TICK_MS)
+    return () => clearInterval(id)
+  }, [])
 
   // Child-reported data state (from card components via CardDataContext)
   // Declared early so it can be used in the refresh animation effect below
@@ -1026,14 +1066,30 @@ export function CardWrapper({
                 {!onRefresh && (isVisuallySpinning || effectiveIsLoading || forceSkeletonForOffline) && !effectiveIsFailed && (
                   <RefreshCw className="w-3 h-3 text-blue-400 animate-spin" aria-hidden="true" />
                 )}
-                {/* Last updated indicator — use prop or child-reported timestamp */}
+                {/* Last updated indicator — use prop or child-reported timestamp.
+                  * Still rendered when refresh is failing (#9104): hiding the
+                  * timestamp on failure removed the only signal about data age,
+                  * so users saw "Refresh Failed" with no idea whether the data
+                  * they were looking at was 2 minutes or 5 days old. Now it
+                  * shows the stale timestamp with an orange tint + "(stale)"
+                  * tooltip when failed, and is suppressed only during
+                  * loading/spinning (where no meaningful age exists yet). */}
                 {(() => {
                   const effectiveLastUpdated = lastUpdated ?? childDataState?.lastUpdated
-                  return !isVisuallySpinning && !effectiveIsLoading && !effectiveIsFailed && effectiveLastUpdated ? (
-                    <span className="text-2xs text-muted-foreground" title={effectiveLastUpdated.toLocaleString()}>
+                  if (isVisuallySpinning || effectiveIsLoading || !effectiveLastUpdated) {
+                    return null
+                  }
+                  const title = effectiveIsFailed
+                    ? `${effectiveLastUpdated.toLocaleString()} (stale — refresh failing)`
+                    : effectiveLastUpdated.toLocaleString()
+                  const className = effectiveIsFailed
+                    ? 'text-2xs text-orange-400'
+                    : 'text-2xs text-muted-foreground'
+                  return (
+                    <span className={className} title={title}>
                       {formatTimeAgo(effectiveLastUpdated)}
                     </span>
-                  ) : null
+                  )
                 })()}
               </div>
               <div className="flex items-center gap-1 flex-shrink-0">

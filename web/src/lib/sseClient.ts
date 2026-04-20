@@ -412,9 +412,13 @@ export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
             return
           }
 
-          // No data at all — clean up and reject
+          // No data at all — clean up and reject. Pass wasAborted=true so the
+          // empty accumulated array is NOT written to the result cache (#9104):
+          // caching a failed result meant the manual refresh button hit the
+          // 10-second TTL cache and silently reused the failure instead of
+          // retrying, so the card's lastUpdated timestamp never advanced.
           clearTimeout(timeoutId)
-          cleanup()
+          cleanup(/* wasAborted */ true)
           reject(new Error(`SSE stream error: ${err.message}`))
         })
     }

@@ -227,4 +227,39 @@ describe('HelmReleaseStatus', () => {
       expect(screen.getByText('default')).toBeTruthy()
     })
   })
+
+  // Regression: #9095 — invalid/empty `updated` timestamps rendered "NaNd ago"
+  describe('Timestamp guard (#9095)', () => {
+    it('renders "Unknown" instead of NaN when updated is an empty string', async () => {
+      const { useCachedHelmReleases } = await import('../../../hooks/useCachedData')
+      vi.mocked(useCachedHelmReleases).mockReturnValue({
+        releases: [makeRelease({ updated: '' })],
+        isLoading: false, isRefreshing: false, isFailed: false, consecutiveFailures: 0, isDemoFallback: false,
+      } as never)
+      render(<HelmReleaseStatus />)
+      expect(screen.getByText('Unknown')).toBeTruthy()
+      expect(screen.queryByText(/NaN/)).toBeNull()
+    })
+
+    it('renders "Unknown" instead of NaN when updated is a non-ISO string', async () => {
+      const { useCachedHelmReleases } = await import('../../../hooks/useCachedData')
+      vi.mocked(useCachedHelmReleases).mockReturnValue({
+        releases: [makeRelease({ updated: 'not-a-real-date' })],
+        isLoading: false, isRefreshing: false, isFailed: false, consecutiveFailures: 0, isDemoFallback: false,
+      } as never)
+      render(<HelmReleaseStatus />)
+      expect(screen.getByText('Unknown')).toBeTruthy()
+      expect(screen.queryByText(/NaN/)).toBeNull()
+    })
+
+    it('renders a normal "h ago" label when updated is a valid ISO timestamp', async () => {
+      const { useCachedHelmReleases } = await import('../../../hooks/useCachedData')
+      vi.mocked(useCachedHelmReleases).mockReturnValue({
+        releases: [makeRelease({ updated: new Date(Date.now() - 2 * 3_600_000).toISOString() })],
+        isLoading: false, isRefreshing: false, isFailed: false, consecutiveFailures: 0, isDemoFallback: false,
+      } as never)
+      render(<HelmReleaseStatus />)
+      expect(screen.getByText(/\d+h ago/)).toBeTruthy()
+    })
+  })
 })
