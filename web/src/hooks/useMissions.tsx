@@ -1154,10 +1154,44 @@ export function MissionProvider({ children }: { children: ReactNode }) {
               return prev.map(m => {
                 if (!m.context?.needsReconnect) return m
                 if (missionsToMarkStale.includes(m.id)) {
-                  // #6384 item 2 (dup of #6380) — rely on status 'failed' +
-                  // the explicit system message to prompt the user to retry.
-                  // A separate `needsRestart` flag was never read anywhere,
-                  // so carrying it here was dead state.
+                  // Issue 9157: if the agent's LAST message was a substantive
+                  // assistant response, the mission almost certainly completed
+                  // before the session went stale — the only thing missing is
+                  // the explicit `done` event. Marking such missions 'failed'
+                  // contradicts the visible chat history and tells users to
+                  // retry work that actually finished. Promote them to
+                  // 'completed' with a softer note instead. Truly-failed
+                  // (no assistant response, or last message is a system
+                  // message) keeps the original 'failed' + retry CTA.
+                  const lastMsg = m.messages[m.messages.length - 1]
+                  const lastWasSuccessfulAssistant =
+                    lastMsg !== undefined &&
+                    lastMsg.role === 'assistant' &&
+                    lastMsg.content.trim().length > 0
+                  if (lastWasSuccessfulAssistant) {
+                    return {
+                      ...m,
+                      status: 'completed' as MissionStatus,
+                      currentStep: undefined,
+                      updatedAt: new Date(),
+                      context: {
+                        ...m.context,
+                        needsReconnect: false },
+                      messages: [
+                        ...m.messages,
+                        {
+                          id: `msg-reconnect-stale-success-${m.id}-${Date.now()}`,
+                          role: 'system' as const,
+                          content: `_Session expired before we could confirm completion. The agent's last response is preserved above — marking this mission complete._`,
+                          timestamp: new Date() }
+                      ]
+                    }
+                  }
+                  // No (successful) assistant response on record — really did
+                  // get stranded. Keep the original failed-with-retry-CTA
+                  // behaviour. #6384 item 2 (dup of #6380): rely on status
+                  // 'failed' + the explicit system message; a separate
+                  // `needsRestart` flag was never read anywhere.
                   return {
                     ...m,
                     status: 'failed' as MissionStatus,
