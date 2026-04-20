@@ -193,7 +193,15 @@ test('i18n compliance — internationalization audit', async ({ page }) => {
   console.log('[i18n] Phase 1: Locale file validation')
 
   const localeDir = path.resolve(__dirname, '../../src/locales/en')
-  const localeFiles = ['common.json', 'cards.json', 'status.json', 'errors.json']
+  // Issue 9243: previously this list was hardcoded as
+  // ['common.json', 'cards.json', 'status.json', 'errors.json']. Any new
+  // namespace under src/locales/en/ (e.g., missions.json, ai.json) was
+  // silently ignored — missing-key validation, empty-value checks, and
+  // plural-form checks would not apply. Discover namespaces by scanning
+  // the directory so additions are automatically covered.
+  const localeFiles = fs.readdirSync(localeDir)
+    .filter(f => f.endsWith('.json'))
+    .sort()
 
   let totalKeys = 0
   let emptyValues = 0

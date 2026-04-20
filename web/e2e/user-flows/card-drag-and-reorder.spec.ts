@@ -6,6 +6,7 @@ import {
   NETWORK_IDLE_TIMEOUT_MS,
 } from '../helpers/setup'
 import { assertTouchTargetSize } from '../helpers/ux-assertions'
+import { STORAGE_KEY_MAIN_DASHBOARD_CARDS } from '../../src/lib/constants/storage'
 
 /**
  * Card drag-and-reorder UX tests.
@@ -92,30 +93,37 @@ test.describe('Card Drag and Reorder', () => {
       return
     }
 
-    // Capture current card order from localStorage
-    const orderBefore = await page.evaluate(() => {
-      return localStorage.getItem('kubestellar-card-order')
-        || localStorage.getItem('dashboard-card-order')
-        || localStorage.getItem('card-layout')
-        || null
-    })
+    // Issue 9241: previously this test guessed at three speculative
+    // localStorage keys ('kubestellar-card-order', 'dashboard-card-order',
+    // 'card-layout') — none of which match the canonical key. If all three
+    // missed, orderBefore was null and the test silently passed even when
+    // the app didn't persist card order at all. Use the exported key from
+    // src/lib/constants/storage.ts so a renaming refactor on the source
+    // breaks this test (intended), and so the test actually exercises the
+    // persistence path.
+    const orderBefore = await page.evaluate(
+      (key) => localStorage.getItem(key),
+      STORAGE_KEY_MAIN_DASHBOARD_CARDS,
+    )
+
+    // Persistence is only meaningful if the card-order hook has written
+    // something. Without it, the test would pass vacuously — make the
+    // failure visible instead of silently annotating.
+    expect(
+      orderBefore,
+      `Expected localStorage key "${STORAGE_KEY_MAIN_DASHBOARD_CARDS}" to be populated by ` +
+      `the card-order persistence hook before reload. If the hook stopped writing, this is a regression.`,
+    ).not.toBeNull()
 
     await page.reload()
     await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
 
-    const orderAfter = await page.evaluate(() => {
-      return localStorage.getItem('kubestellar-card-order')
-        || localStorage.getItem('dashboard-card-order')
-        || localStorage.getItem('card-layout')
-        || null
-    })
+    const orderAfter = await page.evaluate(
+      (key) => localStorage.getItem(key),
+      STORAGE_KEY_MAIN_DASHBOARD_CARDS,
+    )
 
-    // If there is a persisted order, it should survive reload
-    if (orderBefore !== null) {
-      expect(orderAfter).toBe(orderBefore)
-    } else {
-      test.info().annotations.push({ type: 'ux-finding', description: 'No card order found in localStorage — order may not persist' })
-    }
+    expect(orderAfter).toBe(orderBefore)
   })
 
   test('touch targets on drag handles meet 44px minimum', async ({ page }) => {

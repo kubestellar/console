@@ -35,7 +35,15 @@ interface SecurityReport {
 
 const IS_CI = !!process.env.CI
 const CI_TIMEOUT_MULTIPLIER = 2
-const BASE_URL = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:5174'
+// Issue 9242: previous fallback was 'http://localhost:5174' (Vite dev
+// server), which diverges from playwright.config.ts:72 which uses
+// 'http://localhost:8080' (the Go backend that serves both API and the
+// built frontend). When the env var was unset, multi-page security
+// checks at lines 707-751 and the auth-bypass check at line 772
+// navigated to the wrong port and silently failed/skipped. Match the
+// project default so explicit-URL navigations work in both
+// configurations.
+const BASE_URL = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:8080'
 
 // ---------------------------------------------------------------------------
 // Helpers

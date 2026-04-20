@@ -11,9 +11,13 @@ const DRILLDOWN_TIMEOUT_MS = 5_000
 test.describe('Cluster Investigation — "My cluster has issues"', () => {
   test('clusters page loads within acceptable time', async ({ page }) => {
     await setupDemoAndNavigate(page, '/clusters')
-    // Wait for meaningful content — either a cluster list or the page container
+    // Issue 9240: previously this test only asserted body visibility +
+    // textContent length, ignoring the imported assertLoadTime and the
+    // CLUSTER_LOAD_MAX_MS budget on line 6. A page taking 10s to load
+    // would still pass. Use the existing helper so a perf regression
+    // actually fails the suite.
+    await assertLoadTime(page, 'body', CLUSTER_LOAD_MAX_MS)
     const body = page.locator('body')
-    await expect(body).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
     const content = await body.textContent()
     expect(content?.length).toBeGreaterThan(50)
   })
