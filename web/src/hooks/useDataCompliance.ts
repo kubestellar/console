@@ -24,7 +24,10 @@ const FETCH_TIMEOUT_MS = 15_000
 /** Auto-refresh interval (3 minutes) */
 const REFRESH_INTERVAL_MS = 180_000
 
-/** localStorage cache key */
+/** sessionStorage cache key
+ * security: stored in sessionStorage, not localStorage — compliance posture data contains
+ * cluster security metadata; sessionStorage clears on tab close to reduce exposure window
+ */
 const CACHE_KEY = 'kc-data-compliance-cache'
 
 // ── Types ─────────────────────────────────────────────────────────────────
@@ -62,7 +65,7 @@ interface CacheData {
 
 function loadFromCache(): CacheData | null {
   try {
-    const stored = localStorage.getItem(CACHE_KEY)
+    const stored = sessionStorage.getItem(CACHE_KEY)
     if (!stored) return null
     return JSON.parse(stored) as CacheData
   } catch {
@@ -72,7 +75,7 @@ function loadFromCache(): CacheData | null {
 
 function saveToCache(posture: CompliancePosture): void {
   try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify({ posture, timestamp: Date.now() }))
+    sessionStorage.setItem(CACHE_KEY, JSON.stringify({ posture, timestamp: Date.now() }))
   } catch {
     // Ignore storage errors
   }
@@ -80,7 +83,7 @@ function saveToCache(posture: CompliancePosture): void {
 
 function clearCache(): void {
   try {
-    localStorage.removeItem(CACHE_KEY)
+    sessionStorage.removeItem(CACHE_KEY)
   } catch {
     // Ignore
   }

@@ -9,7 +9,9 @@ const REFRESH_INTERVAL_MS = 120000
 // Days before expiration to consider "expiring soon"
 const EXPIRING_SOON_DAYS = 30
 
-// localStorage cache key and helpers
+// sessionStorage cache key and helpers
+// security: stored in sessionStorage, not localStorage — cert-manager data contains
+// cluster certificate metadata; sessionStorage clears on tab close to reduce exposure window
 const CACHE_KEY = 'kc-cert-manager-cache'
 
 interface CacheData {
@@ -21,7 +23,7 @@ interface CacheData {
 
 function loadFromCache(): CacheData | null {
   try {
-    const stored = localStorage.getItem(CACHE_KEY)
+    const stored = sessionStorage.getItem(CACHE_KEY)
     if (!stored) return null
     const data = JSON.parse(stored) as CacheData
     // Convert date strings back to Date objects
@@ -38,7 +40,7 @@ function loadFromCache(): CacheData | null {
 
 function saveToCache(certificates: Certificate[], issuers: Issuer[], installed: boolean): void {
   try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify({
+    sessionStorage.setItem(CACHE_KEY, JSON.stringify({
       certificates,
       issuers,
       installed,

@@ -80,10 +80,12 @@ export function Weather({ config }: { config?: WeatherConfig }) {
   const [expandedDay, setExpandedDay] = useState<string | null>(null)
   const hourlyScrollRef = useRef<HTMLDivElement>(null)
 
-  // Current location state - restore from localStorage
+  // Current location state - restore from sessionStorage
+  // security: stored in sessionStorage, not localStorage — location preference is
+  // user-provided and only used client-side; clears on tab close to reduce exposure window
   const [currentLocation, setCurrentLocation] = useState<SavedLocation>(() => {
     try {
-      const saved = localStorage.getItem('weather-current-location')
+      const saved = sessionStorage.getItem('weather-current-location')
       if (saved) {
         return JSON.parse(saved)
       }
@@ -104,9 +106,11 @@ export function Weather({ config }: { config?: WeatherConfig }) {
   const [showCityDropdown, setShowCityDropdown] = useState(false)
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
+  // security: stored in sessionStorage, not localStorage — location list is
+  // user-provided and only used client-side; clears on tab close to reduce exposure window
   const [savedLocations, setSavedLocations] = useState<SavedLocation[]>(() => {
     try {
-      const saved = localStorage.getItem('weather-saved-locations-v2')
+      const saved = sessionStorage.getItem('weather-saved-locations-v2')
       return saved ? JSON.parse(saved) : []
     } catch {
       return []
@@ -189,19 +193,19 @@ export function Weather({ config }: { config?: WeatherConfig }) {
   // immediately on a failed fetch instead of waiting for CARD_LOADING_TIMEOUT_MS.
   useCardLoadingState({ isLoading, isRefreshing, hasAnyData: !!currentWeather, isDemoData: isDemoFallback, isFailed, lastRefresh })
 
-  // Save locations to localStorage whenever they change
+  // Save locations to sessionStorage whenever they change
   useEffect(() => {
     try {
-      localStorage.setItem('weather-saved-locations-v2', JSON.stringify(savedLocations))
+      sessionStorage.setItem('weather-saved-locations-v2', JSON.stringify(savedLocations))
     } catch {
       // Ignore storage errors (e.g. private browsing, quota exceeded)
     }
   }, [savedLocations])
 
-  // Save current location to localStorage whenever it changes
+  // Save current location to sessionStorage whenever it changes
   useEffect(() => {
     try {
-      localStorage.setItem('weather-current-location', JSON.stringify(currentLocation))
+      sessionStorage.setItem('weather-current-location', JSON.stringify(currentLocation))
     } catch {
       // Ignore storage errors (e.g. private browsing, quota exceeded)
     }
