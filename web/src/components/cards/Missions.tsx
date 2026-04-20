@@ -96,19 +96,24 @@ const STATUS_CONFIG: Record<DeployMissionStatus, {
     bg: 'bg-orange-500/20',
     label: 'Partial' } }
 
-// Issue 9071: `pending` uses semantic tokens for the background/bar so the
-// neutral/unknown state adapts to light/dark. Other states keep tinted accent
-// colors (green/yellow/red) which read on both themes at /20 + /500 opacity.
+// ClusterStatusRow renders a row's text (`color`), a progress bar
+// (`barColor`), and a status label. The `bg` field used to be declared here
+// but was never read by ClusterStatusRow — dropped so the config matches
+// the renderer. `pending`'s barColor is also never visually shown (the bar
+// is forced to 0% width for the pending state at the call site), so its
+// value is cosmetic; semantic-token choice there still matters for the
+// text color which IS rendered. Tinted accent colors
+// (yellow/green/red at /20 + /500) already read on both light and dark
+// themes, so no dark: variants needed.
 const CLUSTER_STATUS_CONFIG: Record<DeployClusterStatus['status'], {
   color: string
-  bg: string
   barColor: string
   label: string
 }> = {
-  pending: { color: 'text-muted-foreground', bg: 'bg-muted', barColor: 'bg-muted-foreground', label: 'Pending' },
-  applying: { color: 'text-yellow-400', bg: 'bg-yellow-500/20', barColor: 'bg-yellow-500', label: 'Applying' },
-  running: { color: 'text-green-400', bg: 'bg-green-500/20', barColor: 'bg-green-500', label: 'Running' },
-  failed: { color: 'text-red-400', bg: 'bg-red-500/20', barColor: 'bg-red-500', label: 'Failed' } }
+  pending: { color: 'text-muted-foreground', barColor: 'bg-muted-foreground', label: 'Pending' },
+  applying: { color: 'text-yellow-400', barColor: 'bg-yellow-500', label: 'Applying' },
+  running: { color: 'text-green-400', barColor: 'bg-green-500', label: 'Running' },
+  failed: { color: 'text-red-400', barColor: 'bg-red-500', label: 'Failed' } }
 
 // Status priority for sorting (active first)
 const STATUS_ORDER: Record<string, number> = {
