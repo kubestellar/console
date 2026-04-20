@@ -164,7 +164,9 @@ func gitopsCloneRepo(ctx context.Context, repoURL, branch string) (string, error
 	if branch != "" {
 		args = append(args, "-b", branch)
 	}
-	args = append(args, repoURL, tempDir)
+	// "--" terminates option parsing so repoURL and tempDir are never
+	// misinterpreted as flags by git, regardless of their content.
+	args = append(args, "--", repoURL, tempDir)
 
 	cmd := exec.CommandContext(ctx, "git", args...)
 	var stderr bytes.Buffer
@@ -383,7 +385,9 @@ func (s *Server) handleDetectDrift(w http.ResponseWriter, r *http.Request) {
 		fileFlag = "-k"
 	}
 
-	args := []string{"diff", fileFlag, manifestPath}
+	// "--" terminates kubectl option parsing so manifestPath (which is derived
+	// from user-supplied req.Path) cannot be misinterpreted as a kubectl flag.
+	args := []string{"diff", fileFlag, "--", manifestPath}
 	if req.Namespace != "" {
 		args = append(args, "-n", req.Namespace)
 	}
@@ -500,7 +504,9 @@ func (s *Server) handleGitopsSync(w http.ResponseWriter, r *http.Request) {
 		fileFlag = "-k"
 	}
 
-	args := []string{"apply", fileFlag, manifestPath}
+	// "--" terminates kubectl option parsing so manifestPath (which is derived
+	// from user-supplied req.Path) cannot be misinterpreted as a kubectl flag.
+	args := []string{"apply", fileFlag, "--", manifestPath}
 	if req.Namespace != "" {
 		args = append(args, "-n", req.Namespace)
 	}
