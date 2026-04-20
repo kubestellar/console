@@ -195,10 +195,9 @@ export function Weather({ config }: { config?: WeatherConfig }) {
 
   // Save locations to sessionStorage whenever they change.
   // Location preferences are user-selected city names, not credentials or sensitive cluster data.
-  // lgtm[js/clear-text-storage-of-sensitive-data]
   useEffect(() => {
     try {
-      sessionStorage.setItem('weather-saved-locations-v2', JSON.stringify(savedLocations))
+      sessionStorage.setItem('weather-saved-locations-v2', JSON.stringify(savedLocations)) // lgtm[js/clear-text-storage-of-sensitive-data]
     } catch {
       // Ignore storage errors (e.g. private browsing, quota exceeded)
     }
@@ -206,10 +205,9 @@ export function Weather({ config }: { config?: WeatherConfig }) {
 
   // Save current location to sessionStorage whenever it changes.
   // Location preferences are user-selected city names, not credentials or sensitive cluster data.
-  // lgtm[js/clear-text-storage-of-sensitive-data]
   useEffect(() => {
     try {
-      sessionStorage.setItem('weather-current-location', JSON.stringify(currentLocation))
+      sessionStorage.setItem('weather-current-location', JSON.stringify(currentLocation)) // lgtm[js/clear-text-storage-of-sensitive-data]
     } catch {
       // Ignore storage errors (e.g. private browsing, quota exceeded)
     }

@@ -77,8 +77,7 @@ function saveToCache(posture: CompliancePosture): void {
   try {
     // Deliberate accepted risk: compliance posture (counts/scores) cached in sessionStorage for UX;
     // cleared on tab close. Contains aggregate metrics only — no secrets, tokens, or private keys.
-    // lgtm[js/clear-text-storage-of-sensitive-data]
-    sessionStorage.setItem(CACHE_KEY, JSON.stringify({ posture, timestamp: Date.now() }))
+    sessionStorage.setItem(CACHE_KEY, JSON.stringify({ posture, timestamp: Date.now() })) // lgtm[js/clear-text-storage-of-sensitive-data]
   } catch {
     // Ignore storage errors
   }
