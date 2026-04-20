@@ -40,6 +40,13 @@ type Tab = 'declarative' | 'code' | 'ai' | 'manage'
 const SAVE_MESSAGE_TIMEOUT_MS = 3000 // Duration to display save/error messages before auto-clearing
 const COPY_FEEDBACK_TIMEOUT_MS = 2000 // Duration to show "copied" feedback before resetting
 
+// #9061 — Initial sample JSON shown in the Tier 1 "Data (JSON array)" field.
+// Exported as a constant so the field's first-focus auto-select can compare
+// against the EXACT default string and skip auto-select once the user has
+// edited the value (typed/pasted their own content).
+const T1_SAMPLE_DATA_JSON =
+  '[\n  { "name": "item-1", "status": "healthy" },\n  { "name": "item-2", "status": "error" }\n]'
+
 const EXAMPLE_TSX = `// Example: Simple counter card
 export default function MyCard({ config }) {
   const [count, setCount] = useState(0)
@@ -559,7 +566,12 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
     { field: 'name', label: 'Name' },
     { field: 'status', label: 'Status', format: 'badge', badgeColors: { healthy: 'bg-green-500/20 text-green-400', error: 'bg-red-500/20 text-red-400' } },
   ])
-  const [t1DataJson, setT1DataJson] = useState('[\n  { "name": "item-1", "status": "healthy" },\n  { "name": "item-2", "status": "error" }\n]')
+  const [t1DataJson, setT1DataJson] = useState(T1_SAMPLE_DATA_JSON)
+  // #9061 — Track whether the user has already focused the JSON textarea
+  // at least once. On the FIRST focus we auto-select the pre-filled sample
+  // so that typing replaces it cleanly instead of appending to the sample
+  // (which produced invalid concatenated JSON like `[sample][new]`).
+  const t1DataJsonFirstFocusRef = useRef(true)
   const [t1Width, setT1Width] = useState(6)
 
   // Code (Tier 2) state
@@ -960,8 +972,26 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
                   <label className="text-xs text-muted-foreground block mb-1">{t('dashboard.cardFactory.dataLabel')}</label>
                   <textarea
                     value={t1DataJson}
-                    onChange={e => setT1DataJson(e.target.value)}
+                    onChange={e => {
+                      // After the first user edit, stop treating the field as "pristine
+                      // sample" so a re-focus after editing never re-selects their work.
+                      t1DataJsonFirstFocusRef.current = false
+                      setT1DataJson(e.target.value)
+                    }}
+                    onFocus={e => {
+                      // #9061 — On first focus, if the field still contains the
+                      // pristine sample JSON, select it all so typing replaces
+                      // the sample instead of appending to it.
+                      if (
+                        t1DataJsonFirstFocusRef.current &&
+                        t1DataJson === T1_SAMPLE_DATA_JSON
+                      ) {
+                        t1DataJsonFirstFocusRef.current = false
+                        e.currentTarget.select()
+                      }
+                    }}
                     rows={6}
+                    placeholder={T1_SAMPLE_DATA_JSON}
                     className="w-full text-xs px-3 py-2 rounded-lg bg-secondary text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-inset focus:ring-purple-500/50"
                   />
                 </div>

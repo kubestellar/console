@@ -29,9 +29,34 @@ export function DynamicCard({ config }: CardComponentProps) {
   const dynamicCardId = (typeof safeConfig.dynamicCardId === 'string' ? safeConfig.dynamicCardId : '') || ''
   const definition = getDynamicCard(dynamicCardId)
 
-  // Report demo state: dynamic cards depend on the agent for live API data
+  // Report demo state: dynamic cards depend on the agent for live API data.
+  //
+  // #9058 — Always include `hasData: true` in this report. Previously this
+  // call reported `{ isDemoData, isFailed, consecutiveFailures }` without
+  // `hasData`, leaving `hasData` as `undefined` (falsy). Because
+  // `useReportCardDataState` uses `useLayoutEffect` and parent layout
+  // effects fire AFTER children's, the meta-component's report runs LAST
+  // and overwrote the `hasData: true` that `Tier1CardRuntime` /
+  // `Tier2CardRuntime` had reported. CardWrapper then saw
+  // `!childDataState.hasData` for a rendered card and painted its generic
+  // "No data available" empty-state overlay (with a Retry button) on top
+  // of a perfectly valid custom card with valid inline/static data.
+  //
+  // Reporting `hasData: true` here is correct for BOTH branches:
+  //  - Error shell states below (missing id / missing definition /
+  //    invalid tier definition): the shell IS the rendered content, so
+  //    we tell CardWrapper not to paint its generic empty state over it.
+  //  - Tier runtime branch: the card's content (data rows, internal
+  //    empty-state message, or internal skeleton) IS the rendered
+  //    content, and the runtime handles its own internal loading/empty/
+  //    error UI.
   const { shouldUseDemoData } = useCardDemoState({ requires: 'agent' })
-  useReportCardDataState({ isDemoData: shouldUseDemoData, isFailed: false, consecutiveFailures: 0 })
+  useReportCardDataState({
+    isDemoData: shouldUseDemoData,
+    isFailed: false,
+    consecutiveFailures: 0,
+    hasData: true,
+  })
 
   if (!dynamicCardId) {
     return (
