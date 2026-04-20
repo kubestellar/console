@@ -904,9 +904,14 @@ test.describe('card loading compliance (per-batch split — Issue 9088)', () => 
   let sharedPage: Page
 
   test.beforeAll(async ({ browser }) => {
-    const context = await browser.newContext({
-      baseURL: process.env.PLAYWRIGHT_BASE_URL,
-    })
+    // Do NOT override baseURL here — playwright.config.ts already provides a
+    // sensible default (PLAYWRIGHT_BASE_URL || http://localhost:8080). Passing
+    // `baseURL: process.env.PLAYWRIGHT_BASE_URL` when the env var is unset
+    // assigned `undefined` to the context, which broke relative navigations
+    // (e.g. `page.goto('/__compliance/all-cards?...')`) with "invalid URL".
+    // Dropping the override lets the project-level baseURL flow through.
+    // See Issue 9208 follow-up (Copilot review comment on line 909).
+    const context = await browser.newContext()
     sharedPage = await context.newPage()
 
     // Capture browser console for debugging
@@ -937,6 +942,20 @@ test.describe('card loading compliance (per-batch split — Issue 9088)', () => 
     complianceState.allBatchResults = []
     complianceState.setupDone = true
     console.log(`[Compliance] Total cards: ${complianceState.totalCards}, batches: ${complianceState.totalBatches}`)
+
+    // Fail fast if the manifest has outgrown our pre-declared test count.
+    // Playwright requires test() declarations at load time, so we can't size
+    // the per-batch loops dynamically. Without this guard, extra batches are
+    // silently dropped from the cold/warm phases AND the aggregate report —
+    // those cards effectively escape compliance checking. See Issue 9208
+    // follow-up (Copilot review comment on line 955).
+    expect(
+      complianceState.totalBatches,
+      `Manifest has ${complianceState.totalCards} cards (${complianceState.totalBatches} batches of ${BATCH_SIZE}), ` +
+        `which exceeds MAX_EXPECTED_BATCHES=${MAX_EXPECTED_BATCHES}. ` +
+        `Bump MAX_EXPECTED_BATCHES in card-loading-compliance.spec.ts to at least ${complianceState.totalBatches} ` +
+        `so all batches are covered by pre-declared cold/warm tests.`,
+    ).toBeLessThanOrEqual(MAX_EXPECTED_BATCHES)
 
     await sharedPage.waitForLoadState('networkidle', { timeout: NETWORK_SETTLE_TIMEOUT_MS }).catch(() => { /* best-effort */ })
   })
