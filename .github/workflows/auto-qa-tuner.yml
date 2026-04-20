@@ -799,7 +799,7 @@ jobs:
   # ============================================================
   copilot-stall-check:
     permissions:
-      contents: write
+      contents: read
       issues: write
       pull-requests: read
     if: >
