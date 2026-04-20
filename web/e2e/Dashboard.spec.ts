@@ -1,54 +1,5 @@
-import { test, expect, Page } from '@playwright/test'
-
-/**
- * Sets up authentication and MCP mocks for dashboard tests
- */
-async function setupDashboardTest(page: Page) {
-  // Mock authentication
-  await page.route('**/api/me', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        id: '1',
-        github_id: '12345',
-        github_login: 'testuser',
-        email: 'test@example.com',
-        onboarded: true,
-      }),
-    })
-  )
-
-  // Mock cluster data
-  await page.route('**/api/mcp/**', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        clusters: [
-          { name: 'cluster-1', context: 'ctx-1', healthy: true, nodeCount: 5, podCount: 45 },
-          { name: 'cluster-2', context: 'ctx-2', healthy: true, nodeCount: 3, podCount: 32 },
-        ],
-        issues: [],
-        events: [],
-        nodes: [],
-      }),
-    })
-  )
-
-  // Seed localStorage BEFORE any page script runs so the auth guard sees
-  // the token on first execution. page.evaluate() runs after the page has
-  // already parsed and executed scripts, which is too late for webkit/Safari
-  // where the auth redirect fires synchronously on script evaluation.
-  // page.addInitScript() injects the snippet ahead of any page code (#9096).
-  await page.addInitScript(() => {
-    localStorage.setItem('token', 'test-token')
-    localStorage.setItem('demo-user-onboarded', 'true')
-  })
-
-  await page.goto('/')
-  await page.waitForLoadState('domcontentloaded')
-}
+import { test, expect } from '@playwright/test'
+import { setupDashboardTest } from './helpers/setup'
 
 test.describe('Dashboard Page', () => {
   test.beforeEach(async ({ page }) => {

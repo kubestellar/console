@@ -2,6 +2,7 @@ import { test, expect, type Page } from '@playwright/test'
 import * as fs from 'fs'
 import * as path from 'path'
 import { fileURLToPath } from 'url'
+import { setupAuthLocalStorage } from '../helpers/setup'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -156,16 +157,6 @@ async function setupMockServer(page: Page) {
       })
     }
     route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
-  })
-}
-
-async function setupAuth(page: Page) {
-  await page.addInitScript(() => {
-    localStorage.setItem('token', 'test-jwt-token')
-    localStorage.setItem('kc-demo-mode', 'false')
-    localStorage.setItem('kc-onboarding-complete', 'true')
-    localStorage.setItem('kc-tour-complete', 'true')
-    localStorage.setItem('kc-setup-complete', 'true')
   })
 }
 
@@ -387,7 +378,12 @@ test('i18n compliance — internationalization audit', async ({ page }) => {
     }
   })
 
-  await setupAuth(page)
+  await setupAuthLocalStorage(page, {
+    demoMode: false,
+    onboardingComplete: true,
+    tourComplete: true,
+    setupComplete: true,
+  })
   await setupMockServer(page)
   await page.goto('/', { waitUntil: 'domcontentloaded', timeout: IS_CI ? 60_000 : 30_000 })
   // Wait for page content to fully render

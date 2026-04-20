@@ -2,6 +2,7 @@ import { test, expect, type Page } from '@playwright/test'
 import * as fs from 'fs'
 import * as path from 'path'
 import { fileURLToPath } from 'url'
+import { setupAuthLocalStorage } from '../helpers/setup'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -123,14 +124,6 @@ function writeReport(report: RCEReport, outDir: string) {
 // Auth & mock setup
 // ---------------------------------------------------------------------------
 
-async function setupAuth(page: Page) {
-  await page.addInitScript(() => {
-    localStorage.setItem('token', 'test-jwt-token')
-    localStorage.setItem('kc-demo-mode', 'true')
-    localStorage.setItem('demo-user-onboarded', 'true')
-  })
-}
-
 async function setupMocks(page: Page) {
   await page.route('**/health', (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: '{"status":"ok"}' })
@@ -170,7 +163,10 @@ test('RCE vector scan — all attack surfaces', async ({ page }, testInfo) => {
   // Phase 1: Setup
   // ══════════════════════════════════════════════════════════════════════
   console.log('[RCE] Phase 1: Setup')
-  await setupAuth(page)
+  await setupAuthLocalStorage(page, {
+    demoMode: true,
+    demoUserOnboarded: true,
+  })
   await setupMocks(page)
   await page.goto('/', { waitUntil: 'networkidle', timeout: PAGE_LOAD_TIMEOUT_MS })
 

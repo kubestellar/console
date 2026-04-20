@@ -2,6 +2,7 @@ import { test, expect, type Page } from '@playwright/test'
 import * as fs from 'fs'
 import * as path from 'path'
 import { fileURLToPath } from 'url'
+import { setupAuthLocalStorage } from '../helpers/setup'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -118,16 +119,6 @@ async function setupMockServer(page: Page) {
   })
 }
 
-async function setupAuth(page: Page) {
-  await page.addInitScript(() => {
-    localStorage.setItem('token', 'test-jwt-token')
-    localStorage.setItem('kc-demo-mode', 'false')
-    localStorage.setItem('kc-onboarding-complete', 'true')
-    localStorage.setItem('kc-tour-complete', 'true')
-    localStorage.setItem('kc-setup-complete', 'true')
-  })
-}
-
 // ---------------------------------------------------------------------------
 // Test
 // ---------------------------------------------------------------------------
@@ -156,7 +147,12 @@ test('security compliance — frontend security audit', async ({ page }, testInf
 
   // ── Setup ──────────────────────────────────────────────────────────────
   console.log('[Security] Phase 1: Setup')
-  await setupAuth(page)
+  await setupAuthLocalStorage(page, {
+    demoMode: false,
+    onboardingComplete: true,
+    tourComplete: true,
+    setupComplete: true,
+  })
   await setupMockServer(page)
 
   // ── Phase 2: Load the app ──────────────────────────────────────────────

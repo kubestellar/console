@@ -1,4 +1,5 @@
 import { test, expect, Page} from '@playwright/test'
+import { setupAuth } from './helpers/setup'
 
 /**
  * Mission Control STRESS Tests
@@ -287,19 +288,6 @@ const MOCK_MCP_RESPONSES: Record<string, unknown> = {
 // Setup helpers
 // ---------------------------------------------------------------------------
 
-async function setupAuth(page: Page) {
-  await page.route('**/api/me', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        id: '1', github_id: '12345', github_login: 'stress-tester',
-        email: 'stress@test.com', onboarded: true, role: 'admin',
-      }),
-    })
-  )
-}
-
 async function setupClusterMocks(page: Page, clusters = STRESS_CLUSTERS) {
   await page.route('**/api/mcp/clusters', (route) =>
     route.fulfill({
@@ -369,7 +357,11 @@ async function setupGitHubMocks(page: Page) {
 }
 
 async function setupAllMocks(page: Page) {
-  await setupAuth(page)
+  await setupAuth(page, {
+    github_login: 'stress-tester',
+    email: 'stress@test.com',
+    role: 'admin',
+  })
   await setupClusterMocks(page)
   await setupGitHubMocks(page)
   await setupAgentMocks(page)

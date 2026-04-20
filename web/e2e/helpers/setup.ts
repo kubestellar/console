@@ -200,3 +200,180 @@ export async function waitForDashboard(page: Page) {
     timeout: ELEMENT_VISIBLE_TIMEOUT_MS,
   })
 }
+
+// ---------------------------------------------------------------------------
+// Shared auth / MCP / dashboard setup helpers (#9233)
+//
+// These consolidate the copy-pasted setupAuth / setupDashboardTest / setupMCP
+// patterns that were duplicated across 10+ spec files. Each spec was defining
+// a local copy with subtly different user shapes / localStorage keys, so the
+// helpers below accept options that preserve the exact behavior of the
+// original local helpers.
+//
+// There are two distinct flavors of "auth setup" in the codebase:
+//   1. API-route mock: stub `/api/me` with a mock user (setupAuth)
+//   2. localStorage init: seed token + demo flags via addInitScript
+//      (setupAuthLocalStorage)
+//
+// Both are provided as separate helpers so callers pick the flavor that
+// matches their test's expectations.
+// ---------------------------------------------------------------------------
+
+/** Default user shape returned from a mocked `/api/me` call */
+export interface MockApiUser {
+  id: string
+  github_id: string
+  github_login: string
+  email: string
+  onboarded: boolean
+  role?: string
+}
+
+/** Default mock user for shared `setupAuth` (matches the legacy local copies) */
+export const DEFAULT_AUTH_USER: MockApiUser = {
+  id: '1',
+  github_id: '12345',
+  github_login: 'testuser',
+  email: 'test@example.com',
+  onboarded: true,
+}
+
+/**
+ * Mock the `/api/me` endpoint so the AuthProvider sees a valid user without
+ * contacting a real backend. Accepts an optional user override for specs
+ * that need a specific github_login / role.
+ *
+ * This is the API-route-mock flavor of auth setup. If your test wants to
+ * seed `localStorage` tokens + demo-mode flags, use `setupAuthLocalStorage`
+ * instead (or both, depending on what the app under test expects).
+ */
+export async function setupAuth(page: Page, user?: Partial<MockApiUser>): Promise<void> {
+  const u: MockApiUser = { ...DEFAULT_AUTH_USER, ...(user || {}) }
+  await page.route('**/api/me', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(u),
+    })
+  )
+}
+
+/** Options for seeding auth state via localStorage */
+export interface AuthLocalStorageOptions {
+  /** Token value (default: 'test-jwt-token') */
+  token?: string
+  /** Whether to seed `kc-demo-mode` and, if so, its value (default: not set) */
+  demoMode?: boolean
+  /** Seed `demo-user-onboarded=true` (default: false) */
+  demoUserOnboarded?: boolean
+  /** Seed `kc-onboarding-complete=true` (default: false) */
+  onboardingComplete?: boolean
+  /** Seed `kc-tour-complete=true` (default: false) */
+  tourComplete?: boolean
+  /** Seed `kc-setup-complete=true` (default: false) */
+  setupComplete?: boolean
+}
+
+/**
+ * Seed `localStorage` with an auth token + onboarding/demo flags BEFORE any
+ * page script runs. This is the localStorage-init flavor of auth setup
+ * (see also `setupAuth` for the API-route-mock flavor).
+ *
+ * Uses `page.addInitScript` so the values are present on first script
+ * evaluation — avoiding a flash of the /login route on webkit/Safari where
+ * the auth redirect can fire synchronously (#9096).
+ */
+export async function setupAuthLocalStorage(
+  page: Page,
+  options?: AuthLocalStorageOptions
+): Promise<void> {
+  const opts = {
+    token: options?.token ?? 'test-jwt-token',
+    demoMode: options?.demoMode,
+    demoUserOnboarded: options?.demoUserOnboarded ?? false,
+    onboardingComplete: options?.onboardingComplete ?? false,
+    tourComplete: options?.tourComplete ?? false,
+    setupComplete: options?.setupComplete ?? false,
+  }
+  await page.addInitScript((o: typeof opts) => {
+    localStorage.setItem('token', o.token)
+    if (o.demoMode !== undefined) {
+      localStorage.setItem('kc-demo-mode', String(o.demoMode))
+    }
+    if (o.demoUserOnboarded) {
+      localStorage.setItem('demo-user-onboarded', 'true')
+    }
+    if (o.onboardingComplete) {
+      localStorage.setItem('kc-onboarding-complete', 'true')
+    }
+    if (o.tourComplete) {
+      localStorage.setItem('kc-tour-complete', 'true')
+    }
+    if (o.setupComplete) {
+      localStorage.setItem('kc-setup-complete', 'true')
+    }
+  }, opts)
+}
+
+/** Default clusters returned from a mocked MCP `**\/api/mcp/**` call */
+export const DEFAULT_MCP_CLUSTERS = [
+  { name: 'cluster-1', context: 'ctx-1', healthy: true, nodeCount: 5, podCount: 45 },
+  { name: 'cluster-2', context: 'ctx-2', healthy: true, nodeCount: 3, podCount: 32 },
+]
+
+/** Options for `setupMCP` — override cluster/issue/event/node payloads */
+export interface SetupMCPOptions {
+  clusters?: unknown[]
+  issues?: unknown[]
+  events?: unknown[]
+  nodes?: unknown[]
+}
+
+/**
+ * Mock the generic MCP endpoints (`**\/api/mcp/**`) with a default payload
+ * shape that matches what the dashboard cards expect. Accepts optional
+ * overrides for clusters / issues / events / nodes so specs can tailor the
+ * response without re-implementing the route handler.
+ */
+export async function setupMCP(page: Page, options?: SetupMCPOptions): Promise<void> {
+  const clusters = options?.clusters ?? DEFAULT_MCP_CLUSTERS
+  const issues = options?.issues ?? []
+  const events = options?.events ?? []
+  const nodes = options?.nodes ?? []
+
+  await page.route('**/api/mcp/**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        clusters,
+        issues,
+        events,
+        nodes,
+      }),
+    })
+  )
+}
+
+/**
+ * Combined dashboard test setup: auth mock + MCP mock + localStorage seed +
+ * navigation to `/`. Replaces the local `setupDashboardTest` helper that
+ * was defined in Dashboard.spec.ts (#9233).
+ *
+ * Behavior mirrors the original local implementation exactly — it seeds
+ * localStorage BEFORE any page script runs (via addInitScript) so the auth
+ * guard sees the token on first execution (#9096).
+ */
+export async function setupDashboardTest(page: Page): Promise<void> {
+  await setupAuth(page)
+  await setupMCP(page)
+  // Seed localStorage BEFORE any page script runs — page.evaluate() runs
+  // after the page has already parsed and executed scripts, which is too
+  // late for webkit/Safari where the auth redirect fires synchronously.
+  await page.addInitScript(() => {
+    localStorage.setItem('token', 'test-token')
+    localStorage.setItem('demo-user-onboarded', 'true')
+  })
+  await page.goto('/')
+  await page.waitForLoadState('domcontentloaded')
+}

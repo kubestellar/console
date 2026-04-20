@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 import * as fs from 'fs'
 import * as path from 'path'
 import { fileURLToPath } from 'url'
+import { setupAuth } from '../helpers/setup'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -97,12 +98,6 @@ function getMockRESTData(url: string): Record<string, unknown> {
   const match = url.match(/\/api\/mcp\/([^/?]+)/)
   const endpoint = match?.[1] || ''
   return MOCK_DATA[endpoint] ? { ...MOCK_DATA[endpoint], source: 'mock' } : { items: [], source: 'mock' }
-}
-
-async function setupAuth(page: Page) {
-  await page.route('**/api/me', (route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(mockUser) })
-  )
 }
 
 async function setupLiveMocks(page: Page) {
@@ -367,7 +362,7 @@ function summarizeMode(cards: CardTTFIMetric[]): string {
 }
 
 async function runMode(page: Page, mode: PerfMode): Promise<CardTTFIMetric[]> {
-  await setupAuth(page)
+  await setupAuth(page, mockUser)
   if (mode.startsWith('live')) {
     await setupLiveMocks(page)
   }
