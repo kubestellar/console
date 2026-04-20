@@ -1,0 +1,54 @@
+name: Rewards Types Drift
+
+# Phase 1 of RFC #8862 made pkg/rewards/tiers.go the canonical source for
+# contributor rank tiers. web/src/types/rewards.generated.ts is produced
+# from that Go file by scripts/gen-rewards-types.mjs. This workflow re-runs
+# the generator and fails the PR if the TS file would change — catching
+# any edit that skips the regeneration step (or any edit to the generated
+# file that would be clobbered on the next real run).
+
+on:
+  pull_request:
+    paths:
+      - 'pkg/rewards/**.go'
+      - 'scripts/gen-rewards-types.mjs'
+      - 'web/src/types/rewards.generated.ts'
+      - 'web/src/types/rewards.ts'
+      - '.github/workflows/rewards-types-drift.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'pkg/rewards/**.go'
+      - 'scripts/gen-rewards-types.mjs'
+      - 'web/src/types/rewards.generated.ts'
+      - 'web/src/types/rewards.ts'
+      - '.github/workflows/rewards-types-drift.yml'
+  workflow_dispatch:
+
+# Cancel superseded runs on the same PR/branch so we don't queue stale work.
+concurrency:
+  group: rewards-types-drift-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Verify rewards.generated.ts matches Go source
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      # The generator only uses Node's stdlib (fs/path/url) — no npm install
+      # step needed. Pinning the Node major to match the repo's Vite /
+      # TypeScript toolchain keeps behavior predictable.
+      - name: Set up Node
+        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        with:
+          node-version: '20'
+
+      - name: Run drift check
+        run: node scripts/gen-rewards-types.mjs --check

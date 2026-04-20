@@ -228,88 +228,16 @@ export interface ContributorLevel {
   borderClass: string  // Border color class
 }
 
-export const CONTRIBUTOR_LEVELS: ContributorLevel[] = [
-  {
-    rank: 1,
-    name: 'Observer',
-    icon: 'Telescope',
-    minCoins: 0,
-    color: 'gray',
-    bgClass: 'bg-gray-500/20',
-    textClass: 'text-muted-foreground',
-    borderClass: 'border-gray-500/30',
-  },
-  {
-    rank: 2,
-    name: 'Explorer',
-    icon: 'Compass',
-    minCoins: 500,
-    color: 'blue',
-    bgClass: 'bg-blue-500/20',
-    textClass: 'text-blue-400',
-    borderClass: 'border-blue-500/30',
-  },
-  {
-    rank: 3,
-    name: 'Navigator',
-    icon: 'Map',
-    minCoins: 2000,
-    color: 'cyan',
-    bgClass: 'bg-cyan-500/20',
-    textClass: 'text-cyan-400',
-    borderClass: 'border-cyan-500/30',
-  },
-  {
-    rank: 4,
-    name: 'Pilot',
-    icon: 'Rocket',
-    minCoins: 5000,
-    color: 'green',
-    bgClass: 'bg-green-500/20',
-    textClass: 'text-green-400',
-    borderClass: 'border-green-500/30',
-  },
-  {
-    rank: 5,
-    name: 'Commander',
-    icon: 'Shield',
-    minCoins: 15000,
-    color: 'purple',
-    bgClass: 'bg-purple-500/20',
-    textClass: 'text-purple-400',
-    borderClass: 'border-purple-500/30',
-  },
-  {
-    rank: 6,
-    name: 'Captain',
-    icon: 'Star',
-    minCoins: 50000,
-    color: 'orange',
-    bgClass: 'bg-orange-500/20',
-    textClass: 'text-orange-400',
-    borderClass: 'border-orange-500/30',
-  },
-  {
-    rank: 7,
-    name: 'Admiral',
-    icon: 'Crown',
-    minCoins: 150000,
-    color: 'red',
-    bgClass: 'bg-red-500/20',
-    textClass: 'text-red-400',
-    borderClass: 'border-red-500/30',
-  },
-  {
-    rank: 8,
-    name: 'Legend',
-    icon: 'Sparkles',
-    minCoins: 500000,
-    color: 'yellow',
-    bgClass: 'bg-gradient-to-r from-yellow-400/30 via-amber-300/30 to-yellow-500/30',
-    textClass: 'text-yellow-300',
-    borderClass: 'border-yellow-400/50',
-  },
-]
+// Canonical tier data lives in pkg/rewards/tiers.go (Phase 1 of RFC #8862).
+// scripts/gen-rewards-types.mjs emits rewards.generated.ts from that Go
+// source, and the CI drift check at
+// .github/workflows/rewards-types-drift.yml guarantees the two stay in
+// sync. We keep the public CONTRIBUTOR_LEVELS export name so every
+// existing caller (ContributorLadder, rewards cards, etc.) compiles
+// unchanged.
+import { CONTRIBUTOR_LEVELS_GENERATED } from './rewards.generated'
+
+export const CONTRIBUTOR_LEVELS: ContributorLevel[] = CONTRIBUTOR_LEVELS_GENERATED
 
 /** Returns the current level and the next level (null if max) */
 export function getContributorLevel(totalCoins: number): {
