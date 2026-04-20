@@ -796,6 +796,9 @@ func (h *GitHubPipelinesHandler) fetchRuns(ctx context.Context, repo, query stri
 		if err != nil {
 			return out, err
 		}
+		if res == nil {
+			return out, fmt.Errorf("github: nil response with no error")
+		}
 		if res.StatusCode == http.StatusNotFound {
 			res.Body.Close()
 			return out, nil
@@ -835,6 +838,9 @@ func (h *GitHubPipelinesHandler) fetchWorkflowRuns(ctx context.Context, repo, wo
 	res, err := h.ghGetWithRetry(ctx, fmt.Sprintf("/repos/%s/actions/workflows/%s/runs?%s", repo, workflowFile, query))
 	if err != nil {
 		return nil, err
+	}
+	if res == nil {
+		return nil, fmt.Errorf("github: nil response with no error")
 	}
 	defer res.Body.Close()
 	if res.StatusCode == http.StatusNotFound {
