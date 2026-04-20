@@ -290,13 +290,20 @@ export async function setupLiveMocks(page: Page, options?: LiveMockOptions): Pro
   }
 
   // 3. Generic MCP REST endpoints
+  //
+  // Issue 9086: the previous `const delay = 100 + Math.random() * 200` made
+  // every mock response arrive at a different time on each test run, which
+  // turned "card A appears before timeout X" assertions into flaky tests.
+  // Use a deterministic fixed delay (the midpoint of the old 100-300ms band)
+  // so test runs are reproducible. Variable delays, if ever needed to model
+  // real-world timing, should be driven by LiveMockOptions with a seed.
+  const GENERIC_MCP_DELAY_MS = 200
   await page.route('**/api/mcp/**', async (route) => {
     if (route.request().url().includes('/stream')) { await route.fallback(); return }
     const endpoint = route.request().url().match(/\/api\/mcp\/([^/?]+)/)?.[1] || ''
     if (shouldError(endpoint)) { await fulfillError(route, endpoint); return }
     await maybeDelay()
-    const delay = 100 + Math.random() * 200
-    await new Promise(r => setTimeout(r, delay))
+    await new Promise(r => setTimeout(r, GENERIC_MCP_DELAY_MS))
     route.fulfill({
       status: 200,
       contentType: 'application/json',
