@@ -2,9 +2,11 @@ import { useRef, useState, useCallback, useEffect } from 'react'
 import {
   Bug, Sparkles, Loader2, ExternalLink, Bell,
   Check, Eye, Pencil, Settings, Maximize2,
-  ImagePlus, Trash2, Copy, AlertTriangle, Monitor, BookOpen, FileText, Save,
+  ImagePlus, Trash2, Copy, AlertTriangle, Monitor, BookOpen, FileText, Save, Lock,
 } from 'lucide-react'
+import { Github } from '@/lib/icons'
 import { Button } from '../ui/Button'
+import { isDemoModeForced } from '../../lib/demoMode'
 import { FETCH_DEFAULT_TIMEOUT_MS, COPY_FEEDBACK_TIMEOUT_MS } from '../../lib/constants'
 import { FEEDBACK_UPLOAD_TIMEOUT_MS } from '../../lib/constants/network'
 import { GITHUB_TOKEN_CREATE_URL, GITHUB_TOKEN_FINE_GRAINED_PERMISSIONS } from '../../lib/constants/github-token'
@@ -124,6 +126,7 @@ interface SubmitFormProps {
   }, options?: { timeout: number }) => Promise<{ github_issue_url?: string; screenshots_uploaded?: number; screenshots_failed?: number }>
   onSuccess: (result: SuccessState) => void
   onShowSetupDialog: () => void
+  onShowLoginPrompt: () => void
 }
 
 export function SubmitForm({
@@ -149,6 +152,7 @@ export function SubmitForm({
   onSubmit,
   onSuccess,
   onShowSetupDialog,
+  onShowLoginPrompt,
 }: SubmitFormProps) {
   const { t } = useTranslation()
   const { showToast } = useToast()
@@ -238,6 +242,11 @@ export function SubmitForm({
     e.preventDefault()
     setError(null)
 
+    if (!canPerformActions) {
+      onShowLoginPrompt()
+      return
+    }
+
     const trimmed = description.trim()
     const lines = trimmed.split('\n')
     const extractedTitle = lines[0].trim().substring(0, MAX_TITLE_LENGTH)
@@ -290,9 +299,56 @@ export function SubmitForm({
     }
   }
 
+  const isAuthGated = !canPerformActions
+  const inputsDisabled = isSubmitting || isAuthGated
+
   return (
     <form id="feedback-form" onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
       <div className="p-4 space-y-4 flex-1 flex flex-col min-h-0 overflow-y-auto">
+        {isAuthGated && (
+          <div
+            role="region"
+            aria-label={t('feedback.authGateTitle')}
+            className="flex items-start gap-3 p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/40"
+          >
+            <div className="w-9 h-9 rounded-full bg-yellow-500/20 flex items-center justify-center flex-shrink-0">
+              <Lock className="w-4 h-4 text-yellow-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-yellow-400 mb-1">
+                {t('feedback.authGateTitle')}
+              </p>
+              <p className="text-xs text-muted-foreground mb-3">
+                {isDemoModeForced
+                  ? t('feedback.authGateBodyDemo')
+                  : t('feedback.authGateBodyLocal')}
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  variant="accent"
+                  size="md"
+                  icon={<Github className="w-3.5 h-3.5" />}
+                  onClick={onShowLoginPrompt}
+                >
+                  {isDemoModeForced
+                    ? t('feedback.loginWithGitHub')
+                    : t('feedback.setupOAuth')}
+                </Button>
+                <a
+                  href="https://github.com/kubestellar/console/issues/new"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-border text-foreground hover:bg-secondary/50 transition-colors"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  {t('feedback.openGitHubIssue')}
+                </a>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Warning banner when FEEDBACK_GITHUB_TOKEN is not configured */}
         {feedbackTokenMissing && (
           <div className="flex items-start gap-3 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
@@ -346,11 +402,16 @@ export function SubmitForm({
         )}
 
         {/* Type Selection */}
-        <div className="flex gap-2">
+        <fieldset
+          disabled={inputsDisabled}
+          className="flex gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+          aria-disabled={inputsDisabled}
+        >
           <button
             type="button"
             onClick={() => setRequestType('bug')}
-            className={`flex-1 p-3 rounded-lg border transition-colors flex items-center justify-center gap-2 ${
+            disabled={inputsDisabled}
+            className={`flex-1 p-3 rounded-lg border transition-colors flex items-center justify-center gap-2 disabled:cursor-not-allowed ${
               requestType === 'bug'
                 ? 'bg-red-500/20 border-red-500/50 text-red-400'
                 : 'border-border text-muted-foreground hover:border-muted-foreground'
@@ -365,7 +426,8 @@ export function SubmitForm({
           <button
             type="button"
             onClick={() => setRequestType('feature')}
-            className={`flex-1 p-3 rounded-lg border transition-colors flex items-center justify-center gap-2 ${
+            disabled={inputsDisabled}
+            className={`flex-1 p-3 rounded-lg border transition-colors flex items-center justify-center gap-2 disabled:cursor-not-allowed ${
               requestType === 'feature'
                 ? 'bg-purple-500/20 border-purple-500/50 text-purple-400'
                 : 'border-border text-muted-foreground hover:border-muted-foreground'
@@ -377,18 +439,23 @@ export function SubmitForm({
               +{REWARD_ACTIONS.feature_suggestion.coins}
             </span>
           </button>
-        </div>
+        </fieldset>
 
         {/* Repository selector */}
         <div>
           <label className="block text-xs font-medium text-muted-foreground mb-1.5">
             Where does this issue belong?
           </label>
-          <div className="flex gap-2">
+          <fieldset
+            disabled={inputsDisabled}
+            className="flex gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+            aria-disabled={inputsDisabled}
+          >
             <button
               type="button"
               onClick={() => setTargetRepo('console')}
-              className={`flex-1 p-2.5 rounded-lg border transition-colors flex items-center justify-center gap-2 ${
+              disabled={inputsDisabled}
+              className={`flex-1 p-2.5 rounded-lg border transition-colors flex items-center justify-center gap-2 disabled:cursor-not-allowed ${
                 targetRepo === 'console'
                   ? 'bg-blue-500/20 border-blue-500/50 text-blue-400'
                   : 'border-border text-muted-foreground hover:border-muted-foreground'
@@ -400,7 +467,8 @@ export function SubmitForm({
             <button
               type="button"
               onClick={() => setTargetRepo('docs')}
-              className={`flex-1 p-2.5 rounded-lg border transition-colors flex items-center justify-center gap-2 ${
+              disabled={inputsDisabled}
+              className={`flex-1 p-2.5 rounded-lg border transition-colors flex items-center justify-center gap-2 disabled:cursor-not-allowed ${
                 targetRepo === 'docs'
                   ? 'bg-amber-500/20 border-amber-500/50 text-amber-400'
                   : 'border-border text-muted-foreground hover:border-muted-foreground'
@@ -409,7 +477,7 @@ export function SubmitForm({
               <BookOpen className="w-4 h-4" />
               <span className="text-sm">Console Docs</span>
             </button>
-          </div>
+          </fieldset>
           {targetRepo === 'docs' && (
             <p className="text-2xs text-amber-400/80 mt-1">
               This issue will be filed on <span className="font-mono">kubestellar/docs</span>
@@ -475,8 +543,9 @@ export function SubmitForm({
                   ? 'Example bug report: (replace this with a detailed bug report)\n\nWhat happened:\nThe GPU utilization card shows 0% even though pods are running.\n\nWhat I expected:\nGPU metrics should reflect actual usage from nvidia-smi.\n\nSteps to reproduce:\n1. Deploy a GPU workload\n2. Open the dashboard\n3. Check the GPU card'
                   : 'Example feature request: (replace this with your feature request)\n\nWhat I want:\nAdd a button to export dashboard data as CSV.\n\nWhy it would be useful:\nI need to share cluster metrics with my team in spreadsheets.\n\nAdditional context:\nShould include all visible card data with timestamps.'
               }
-              className="w-full h-[200px] px-3 py-2 bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50 resize-none font-mono text-sm"
-              disabled={isSubmitting}
+              className="w-full h-[200px] px-3 py-2 bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50 resize-none font-mono text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+              disabled={inputsDisabled}
+              aria-disabled={inputsDisabled}
             />
           ) : (
             <div className="w-full h-[200px] overflow-y-auto px-3 py-2 bg-secondary/50 border border-border rounded-lg ghmd">
@@ -501,14 +570,17 @@ export function SubmitForm({
             Screenshots <span className="font-normal">(optional)</span>
           </label>
           <div
-            onDragOver={handleScreenshotDragOver}
-            onDragLeave={handleScreenshotDragLeave}
-            onDrop={handleScreenshotDrop}
-            onClick={() => screenshotInputRef.current?.click()}
-            className={`flex flex-col items-center gap-2 p-3 rounded-lg border-2 border-dashed cursor-pointer transition-colors ${
-              isDragOver
-                ? 'border-purple-400 bg-purple-500/10'
-                : 'border-border hover:border-muted-foreground'
+            onDragOver={inputsDisabled ? undefined : handleScreenshotDragOver}
+            onDragLeave={inputsDisabled ? undefined : handleScreenshotDragLeave}
+            onDrop={inputsDisabled ? undefined : handleScreenshotDrop}
+            onClick={inputsDisabled ? undefined : () => screenshotInputRef.current?.click()}
+            aria-disabled={inputsDisabled}
+            className={`flex flex-col items-center gap-2 p-3 rounded-lg border-2 border-dashed transition-colors ${
+              inputsDisabled
+                ? 'cursor-not-allowed opacity-60 border-border'
+                : `cursor-pointer ${isDragOver
+                  ? 'border-purple-400 bg-purple-500/10'
+                  : 'border-border hover:border-muted-foreground'}`
             }`}
           >
             <ImagePlus className="w-5 h-5 text-muted-foreground" />
@@ -518,6 +590,7 @@ export function SubmitForm({
               type="file"
               accept="image/*"
               multiple
+              disabled={inputsDisabled}
               onChange={e => handleScreenshotFiles(e.target.files)}
               className="hidden"
             />

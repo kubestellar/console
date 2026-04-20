@@ -1929,6 +1929,9 @@
     "submitShortcutHint": "Press Cmd/Ctrl+Enter to submit.",
     "loginBannerDemo": "Login with GitHub to submit feedback and manage requests",
     "loginBannerLocal": "Set up GitHub OAuth to submit feedback, earn coins, and track requests",
+    "authGateTitle": "Login required to submit feedback",
+    "authGateBodyDemo": "This is a public demo — GitHub login requires your own KubeStellar Console instance. Log in or install locally before filling out the form so your draft is not lost.",
+    "authGateBodyLocal": "Set up a GitHub OAuth app (or log in if already configured) before filling out the form so your draft is not lost.",
     "requestSubmitted": "Request Submitted!",
     "status": {
       "open": "Open",

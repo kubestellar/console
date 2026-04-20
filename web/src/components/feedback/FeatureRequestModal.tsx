@@ -401,6 +401,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
             onSubmit={createRequest}
             onSuccess={handleSubmitSuccess}
             onShowSetupDialog={() => setShowSetupDialog(true)}
+            onShowLoginPrompt={() => setShowLoginPrompt(true)}
           />
         )}
       </div>
