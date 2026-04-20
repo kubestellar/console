@@ -1171,6 +1171,13 @@ func (s *Server) setupRoutes() {
 	})
 	api.Get("/rewards/github", rewardsHandler.GetGitHubRewards)
 
+	// Public contributor-tier badge (RFC #8862 Phase 2). SVG response, no
+	// auth required, rate-limited via publicLimiter (60 req/min/IP). Mounted
+	// on s.app, not `api`, because the `api` group is gated by JWTAuth and
+	// this endpoint must be reachable from READMEs via Camo.
+	badgeHandler := handlers.NewBadgeHandler(rewardsHandler)
+	s.app.Get("/api/rewards/badge/:github_login", publicLimiter, badgeHandler.GetBadge)
+
 	// Persistent per-user reward balances (issue #6011). Every authenticated
 	// user can read and mutate their own row — no RBAC gate needed because
 	// the handler scopes every query by the JWT-derived user id.
