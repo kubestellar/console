@@ -701,8 +701,8 @@ export const handlers = [
   http.get('/api/medium/blog', () => passthrough()),
   http.get('/api/missions/file', () => passthrough()),
   http.get('/api/missions/browse', () => passthrough()),
-  http.get('/api/missions/scores', () => passthrough()),
-  http.get('/api/missions/scores/*', () => passthrough()),
+  http.all('/api/missions/scores', () => passthrough()),
+  http.all('/api/missions/scores/*', () => passthrough()),
   http.get('/api/rewards/github', () => passthrough()),
 
   // ── Kubara Platform Catalog (demo) ──────────────────────────────

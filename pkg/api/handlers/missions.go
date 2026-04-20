@@ -618,7 +618,7 @@ func (h *MissionsHandler) BrowseConsoleKB(c *fiber.Ctx) error {
 	// #6421 — Any dot-prefixed entry is hidden by the dotfile check below,
 	// so this map only needs to cover non-dot files.
 	hiddenFiles := map[string]bool{
-		"index.json":        true,
+		"index.json":       true,
 		"search-state.json": true,
 	}
 
