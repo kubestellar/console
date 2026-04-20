@@ -12,9 +12,13 @@
  * Output: { schemaVersion, label, message, color, namedLogo } per shields.io spec
  */
 
+import { getStore } from "@netlify/blobs";
+
 const GITHUB_API = "https://api.github.com";
 const REPO_RE = /^[\w.-]+\/[\w.-]+$/;
 const API_TIMEOUT_MS = 15_000;
+const BLOB_CACHE_STORE = "acmm-scan";
+const BLOB_CACHE_TTL_MS = 60 * 60 * 1000;
 const LEVEL_COMPLETION_THRESHOLD = 0.7;
 /** Maximum maturity level scanned (L6 = Fully Autonomous). L1 is the
  *  starting level; threshold walk gates L2 through MAX_LEVEL. */
@@ -149,6 +153,27 @@ function computeLevel(detectedIds: Set<string>): { level: number; totalDetected:
 }
 
 async function fetchDetectedIds(origin: string, repo: string, force = false): Promise<string[]> {
+  // Fast path: read directly from Netlify Blobs (same store the scan function writes to).
+  // This avoids a same-origin HTTP round-trip that frequently times out inside
+  // Netlify Functions (cold-start + CDN routing overhead exceeds API_TIMEOUT_MS).
+  if (!force) {
+    try {
+      const store = getStore(BLOB_CACHE_STORE);
+      const cacheKey = `scan:${repo}`;
+      const raw = await store.get(cacheKey, { type: "json" });
+      if (raw) {
+        const entry = raw as { scannedAt?: string; detectedIds?: string[] };
+        const age = entry.scannedAt ? Date.now() - new Date(entry.scannedAt).getTime() : Infinity;
+        if (age < BLOB_CACHE_TTL_MS) {
+          return entry.detectedIds || [];
+        }
+      }
+    } catch {
+      // blob read failed — fall through to HTTP
+    }
+  }
+
+  // HTTP path: call the scan endpoint (forces a fresh GitHub scan when force=true).
   const forceParam = force ? "&force=true" : "";
   const url = `${origin}/api/acmm/scan?repo=${encodeURIComponent(repo)}${forceParam}`;
   const res = await fetch(url, { signal: AbortSignal.timeout(API_TIMEOUT_MS) });
