@@ -36,9 +36,12 @@ async function setupDashboardTest(page: Page) {
     })
   )
 
-  // Set token before navigating
-  await page.goto('/login')
-  await page.evaluate(() => {
+  // Seed localStorage BEFORE any page script runs so the auth guard sees
+  // the token on first execution. page.evaluate() runs after the page has
+  // already parsed and executed scripts, which is too late for webkit/Safari
+  // where the auth redirect fires synchronously on script evaluation.
+  // page.addInitScript() injects the snippet ahead of any page code (#9096).
+  await page.addInitScript(() => {
     localStorage.setItem('token', 'test-token')
     localStorage.setItem('demo-user-onboarded', 'true')
   })
@@ -145,9 +148,6 @@ test.describe('Dashboard Page', () => {
 
   test.describe('Data Loading', () => {
     test('shows loading state initially', async ({ page }) => {
-      // Reset to fresh page without mocks set up yet
-      await page.goto('/login')
-
       // Delay the API response to see loading state
       await page.route('**/api/mcp/**', async (route) => {
         await new Promise((resolve) => setTimeout(resolve, 2000))
@@ -158,7 +158,8 @@ test.describe('Dashboard Page', () => {
         })
       })
 
-      await page.evaluate(() => {
+      // Seed localStorage BEFORE any page script runs (#9096).
+      await page.addInitScript(() => {
         localStorage.setItem('token', 'test-token')
         localStorage.setItem('demo-user-onboarded', 'true')
       })
@@ -170,9 +171,6 @@ test.describe('Dashboard Page', () => {
     })
 
     test('handles API errors gracefully', async ({ page }) => {
-      // Reset and mock error
-      await page.goto('/login')
-
       await page.route('**/api/mcp/clusters', (route) =>
         route.fulfill({
           status: 500,
@@ -181,7 +179,8 @@ test.describe('Dashboard Page', () => {
         })
       )
 
-      await page.evaluate(() => {
+      // Seed localStorage BEFORE any page script runs (#9096).
+      await page.addInitScript(() => {
         localStorage.setItem('token', 'test-token')
         localStorage.setItem('demo-user-onboarded', 'true')
       })
@@ -330,8 +329,8 @@ test.describe('Dashboard Page', () => {
         })
       })
 
-      await page.goto('/login')
-      await page.evaluate(() => {
+      // Seed localStorage BEFORE any page script runs (#9096).
+      await page.addInitScript(() => {
         localStorage.setItem('token', 'test-token')
         localStorage.setItem('demo-user-onboarded', 'true')
       })

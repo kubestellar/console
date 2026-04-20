@@ -28,8 +28,12 @@ const KEY_ROUTES = [
 ]
 
 async function setupDemoMode(page: Page) {
-  await page.goto('/login')
-  await page.evaluate(() => {
+  // Seed localStorage BEFORE any page script runs so the auth guard sees
+  // the token on first execution. page.evaluate() runs after the page has
+  // already parsed and executed scripts, which is too late for webkit/Safari
+  // where the auth redirect fires synchronously on script evaluation.
+  // page.addInitScript() injects the snippet ahead of any page code (#9096).
+  await page.addInitScript(() => {
     localStorage.setItem('token', 'demo-token')
     localStorage.setItem('kc-demo-mode', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
