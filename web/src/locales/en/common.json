@@ -363,7 +363,15 @@
       "saved": "Saved!",
       "saveProfile": "Save Profile",
       "saveFailed": "Failed to save profile",
-      "invalidEmail": "Enter a valid email address."
+      "invalidEmail": "Enter a valid email address.",
+      "affiliateTitle": "Your Affiliate Link",
+      "affiliateSubtitle": "Share this link to earn credits on the contributor leaderboard",
+      "affiliateChannelLabel": "Channel",
+      "affiliateChannelHint": "Pick the channel you're sharing on — helps us attribute traffic",
+      "affiliateCopy": "Copy link",
+      "affiliateCopied": "Copied!",
+      "affiliateLoginMissing": "Sign in with GitHub to generate your affiliate link.",
+      "affiliateFootnote": "Counts update within 24–48h (Google Analytics attribution lag). Chat apps like WhatsApp and Discord strip query strings from link previews — prefer email, SMS, GitHub comments, or plain-text shares."
     },
     "notifications": {
       "title": "Alert Notifications",

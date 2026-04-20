@@ -414,6 +414,7 @@ export function Settings() {
             <ProfileSection
               initialEmail={user?.email || ''}
               initialSlackId={user?.slack_id || ''}
+              githubLogin={user?.github_login}
               refreshUser={refreshUser}
               isLoading={isUserLoading}
             />
