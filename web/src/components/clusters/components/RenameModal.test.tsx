@@ -106,15 +106,17 @@ describe('RenameModal', () => {
     fireEvent.change(input, { target: { value: 'new-name' } })
     fireEvent.click(screen.getByText('cluster.renameContext.rename'))
 
+    // Wait for both onClose and the 'success' phase DOM update together.
+    // Asserting both inside waitFor avoids a race where onClose fires before
+    // the setPhase('success') re-render has been flushed to the DOM (#9107).
     await waitFor(() => {
       expect(defaultProps.onClose).toHaveBeenCalled()
+      // Label must be "Renamed", not "Rename", so the button does not flash.
+      expect(screen.queryByText('cluster.renameContext.rename')).toBeNull()
+      expect(screen.getByText('cluster.renameContext.renamed')).toBeTruthy()
+      // Button must remain disabled while the modal is closing.
+      expect(screen.getByText('cluster.renameContext.renamed').closest('button')?.disabled).toBe(true)
     })
-
-    // After success, label should be "Renamed" (renamed key), not "Rename" (rename key).
-    expect(screen.queryByText('cluster.renameContext.rename')).toBeNull()
-    expect(screen.getByText('cluster.renameContext.renamed')).toBeTruthy()
-    // Button should remain disabled while the modal is closing.
-    expect(screen.getByText('cluster.renameContext.renamed').closest('button')?.disabled).toBe(true)
   })
 
   it('shows error message when onRename rejects', async () => {

@@ -44,7 +44,8 @@ jobs:
 
       - name: Install dependencies
         working-directory: web
-        run: npm ci
+        # Retry once on transient npm registry failures (see #9107)
+        run: npm ci || npm ci
 
       - name: Run smoke tests with coverage (modified files only)
         working-directory: web

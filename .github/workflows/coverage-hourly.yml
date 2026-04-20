@@ -15,8 +15,11 @@ on:
   workflow_dispatch:
 
 concurrency:
+  # Only one coverage run at a time. When a burst of merges hits main, cancel
+  # the queued run in favour of the latest commit so orphaned runs don't pile
+  # up and inflate the weekly failure/cancellation count (see #9107).
   group: coverage-suite
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -50,7 +53,8 @@ jobs:
 
       - name: Install dependencies
         working-directory: web
-        run: npm ci
+        # Retry once on transient npm registry failures (see #9107)
+        run: npm ci || npm ci
 
       - name: Run shard ${{ matrix.shard }}/${{ env.TOTAL_SHARDS }} with coverage
         id: test
@@ -142,7 +146,8 @@ jobs:
 
       - name: Install dependencies
         working-directory: web
-        run: npm ci
+        # Retry once on transient npm registry failures (see #9107)
+        run: npm ci || npm ci
 
       - name: Download all shard coverage
         uses: actions/download-artifact@v4
