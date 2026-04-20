@@ -15,30 +15,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// gpuResourceNames lists every accelerator resource name the console treats
-// as a "GPU" for the purposes of pod-level resource tracking. Must stay in
-// sync with the node-inventory tracker in client_gpu.go — these are the
-// same names checked there when summing allocatable per node (Issue 9090).
-var gpuResourceNames = []string{
-	"nvidia.com/gpu",
-	"amd.com/gpu",
-	"gpu.intel.com/i915",
-	"habana.ai/gaudi",
-	"habana.ai/gaudi2",
-	"intel.com/gaudi",
-}
-
-// isGPUResourceName reports whether the given Kubernetes resource name is a
-// known GPU / AI accelerator. Exact match; no vendor-prefix heuristics.
-func isGPUResourceName(name string) bool {
-	for _, n := range gpuResourceNames {
-		if name == n {
-			return true
-		}
-	}
-	return false
-}
-
 func (m *MultiClusterClient) GetPods(ctx context.Context, contextName, namespace string) ([]PodInfo, error) {
 	client, err := m.GetClient(contextName)
 	if err != nil {
@@ -87,24 +63,16 @@ func (m *MultiClusterClient) GetPods(ctx context.Context, contextName, namespace
 					ci.Message = cs.State.Terminated.Message
 				}
 			}
-			// Check for GPU/accelerator resource requests. Keep this list in sync
-			// with the node-inventory tracker in client_gpu.go; without the Intel
-			// and Habana/Gaudi entries, pod views reported GPURequested=0 on
-			// Intel-GPU / Gaudi accelerator clusters even though the node
-			// inventory saw them (Issue 9090).
-			if c.Resources.Requests != nil {
-				for resourceName, qty := range c.Resources.Requests {
-					if isGPUResourceName(string(resourceName)) {
-						ci.GPURequested = int(qty.Value())
-					}
-				}
-			}
-			if ci.GPURequested == 0 && c.Resources.Limits != nil {
-				for resourceName, qty := range c.Resources.Limits {
-					if isGPUResourceName(string(resourceName)) {
-						ci.GPURequested = int(qty.Value())
-					}
-				}
+			// Check for GPU / accelerator resource requests using the shared
+			// SumGPURequested helper (pkg/k8s/gpu_resources.go). Sums across ALL
+			// known GPU resource names so containers requesting more than one
+			// accelerator type (e.g., nvidia.com/gpu=1 + habana.ai/gaudi=2) are
+			// counted correctly. Previously each matching name overwrote the
+			// previous, so the final value depended on map iteration order
+			// (flagged on PR Issue 9204 follow-up review).
+			ci.GPURequested = SumGPURequested(c.Resources.Requests)
+			if ci.GPURequested == 0 {
+				ci.GPURequested = SumGPURequested(c.Resources.Limits)
 			}
 			containers = append(containers, ci)
 		}

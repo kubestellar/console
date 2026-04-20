@@ -52,26 +52,12 @@ func (m *MultiClusterClient) GetGPUNodes(ctx context.Context, contextName string
 				continue
 			}
 			for _, container := range pod.Spec.Containers {
-				// Check GPU requests (NVIDIA, AMD, Intel GPU, Intel Gaudi/Habana)
-				// Intel Gaudi is classified as AcceleratorGPU, so track in gpuAllocationByNode
-				if gpuReq, ok := container.Resources.Requests["nvidia.com/gpu"]; ok {
-					gpuAllocationByNode[nodeName] += int(gpuReq.Value())
-				}
-				if gpuReq, ok := container.Resources.Requests["amd.com/gpu"]; ok {
-					gpuAllocationByNode[nodeName] += int(gpuReq.Value())
-				}
-				if gpuReq, ok := container.Resources.Requests["gpu.intel.com/i915"]; ok {
-					gpuAllocationByNode[nodeName] += int(gpuReq.Value())
-				}
-				if gpuReq, ok := container.Resources.Requests["habana.ai/gaudi"]; ok {
-					gpuAllocationByNode[nodeName] += int(gpuReq.Value())
-				}
-				if gpuReq, ok := container.Resources.Requests["habana.ai/gaudi2"]; ok {
-					gpuAllocationByNode[nodeName] += int(gpuReq.Value())
-				}
-				if gpuReq, ok := container.Resources.Requests["intel.com/gaudi"]; ok {
-					gpuAllocationByNode[nodeName] += int(gpuReq.Value())
-				}
+				// Sum GPU requests (NVIDIA, AMD, Intel GPU, Intel Gaudi/Habana)
+				// via the shared GPUResourceNames list in gpu_resources.go so this
+				// path and the pod-level tracker in client_resources.go cannot
+				// drift. Intel Gaudi is classified as AcceleratorGPU, so it rolls
+				// into gpuAllocationByNode alongside nvidia/amd/i915.
+				gpuAllocationByNode[nodeName] += SumGPURequested(container.Resources.Requests)
 				// Check TPU requests (Google Cloud)
 				if tpuReq, ok := container.Resources.Requests["google.com/tpu"]; ok {
 					tpuAllocationByNode[nodeName] += int(tpuReq.Value())
