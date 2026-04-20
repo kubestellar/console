@@ -1031,7 +1031,7 @@ export function UpdateSettings() {
               {t('settings.updates.localAgentDesc')}
             </p>
             <div className="flex items-center gap-2">
-              <code className="flex-1 px-3 py-2 rounded-lg bg-secondary font-mono text-xs select-all overflow-x-auto">
+              <code className="flex-1 min-w-0 px-3 py-2 rounded-lg bg-secondary font-mono text-xs select-all overflow-x-auto">
                 {brewCommand}
               </code>
               <button
@@ -1056,7 +1056,7 @@ export function UpdateSettings() {
               {t('settings.updates.clusterDeploymentDesc')}
             </p>
             <div className="flex items-center gap-2">
-              <code className="flex-1 px-3 py-2 rounded-lg bg-secondary font-mono text-xs select-all overflow-x-auto">
+              <code className="flex-1 min-w-0 px-3 py-2 rounded-lg bg-secondary font-mono text-xs select-all overflow-x-auto">
                 {helmCommand}
               </code>
               <button

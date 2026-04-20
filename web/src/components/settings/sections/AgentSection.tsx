@@ -100,7 +100,7 @@ export function AgentSection({ isConnected, health, refresh }: AgentSectionProps
             {t('settings.agent.installInstructions')}
           </p>
           <div className="flex items-center gap-2">
-            <code className="flex-1 px-4 py-3 rounded-lg bg-secondary font-mono text-sm select-all overflow-x-auto">
+            <code className="flex-1 min-w-0 px-4 py-3 rounded-lg bg-secondary font-mono text-sm select-all overflow-x-auto">
               {INSTALL_COMMAND}
             </code>
             <button

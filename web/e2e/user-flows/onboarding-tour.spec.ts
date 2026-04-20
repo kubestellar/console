@@ -84,19 +84,30 @@ test.describe('Onboarding Tour', () => {
     await page.goto('/')
     await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
 
-    const nextBtn = page.getByRole('button', { name: /next/i })
-    const hasNext = await nextBtn.first().isVisible({ timeout: TOUR_TOOLTIP_TIMEOUT_MS }).catch(() => false)
+    // Scope the tour tooltip container before looking for Next — a broad
+    // getByRole('button', { name: /next/i }) matches pagination/wizard buttons
+    // outside the tour and clicking the wrong one navigates away, crashing the test.
+    const tourContainer = page.locator('[class*="tour"], [class*="joyride"], [class*="onboarding"]').first()
+    const hasTour = await tourContainer.isVisible({ timeout: TOUR_TOOLTIP_TIMEOUT_MS }).catch(() => false)
+    if (!hasTour) {
+      test.skip()
+      return
+    }
+
+    // Only look for Next within the tour tooltip
+    const nextBtn = tourContainer.getByRole('button', { name: /next/i })
+    const hasNext = await nextBtn.isVisible({ timeout: TOUR_TOOLTIP_TIMEOUT_MS }).catch(() => false)
     if (!hasNext) {
       test.skip()
       return
     }
 
-    const tooltipBefore = await page.locator('[class*="tour"], [class*="joyride"], [class*="onboarding"]').first().textContent().catch(() => '')
-    await nextBtn.first().click()
+    const tooltipBefore = await tourContainer.textContent().catch(() => '')
+    await nextBtn.click()
 
     // Wait for content to update
     await page.waitForTimeout(500)
-    const tooltipAfter = await page.locator('[class*="tour"], [class*="joyride"], [class*="onboarding"]').first().textContent().catch(() => '')
+    const tooltipAfter = await tourContainer.textContent().catch(() => '')
 
     // Content should change after clicking Next
     if (tooltipBefore && tooltipAfter) {

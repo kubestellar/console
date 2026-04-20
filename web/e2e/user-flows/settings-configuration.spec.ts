@@ -117,16 +117,23 @@ test.describe('Settings Configuration — "Change my preferences"', () => {
   test('mobile: settings layout at 375px', async ({ page }) => {
     await page.setViewportSize({ width: MOBILE_WIDTH, height: MOBILE_HEIGHT })
     await setupDemoAndNavigate(page, '/settings')
-    // Mobile may show a different title testid
-    const title = page.getByTestId('settings-title').or(page.getByTestId('settings-title-mobile'))
-    await expect(title.first()).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
+    // At mobile width, the desktop sidebar nav (hidden lg:block) is CSS-hidden, so
+    // settings-title is not visible even though it exists in the DOM.
+    // Use .filter({visible:true}) to pick whichever title variant is actually rendered.
+    const title = page.getByTestId('settings-title')
+      .or(page.getByTestId('settings-title-mobile'))
+      .filter({ visible: true })
+      .first()
+    await expect(title).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
     await assertNoLayoutOverflow(page)
   })
 
   test('no overflow on any settings section', async ({ page }) => {
     await setupDemoAndNavigate(page, '/settings')
     await page.getByTestId('settings-page').waitFor({ state: 'visible', timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
+    // Check body for user-visible horizontal scrolling (main-content has overflow-x-hidden
+    // so the settings-page element's internal scrollWidth may exceed clientWidth without
+    // being user-scrollable — body is the correct overflow indicator here).
     await assertNoLayoutOverflow(page)
-    await assertNoLayoutOverflow(page, '[data-testid="settings-page"]')
   })
 })
