@@ -106,7 +106,7 @@
     "@types/three": "^0.183.1",
     "@vitejs/plugin-react": "^6.0.1",
     "@vitest/coverage-v8": "^4.1.4",
-    "@vitest/ui": "^4.1.2",
+    "@vitest/ui": "^4.1.4",
     "autoprefixer": "^10.5.0",
     "eslint": "^10.2.0",
     "eslint-plugin-react-hooks": "^7.0.1",
