@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { X } from 'lucide-react'
 import { StatusBadge } from '../ui/StatusBadge'
 import { BaseModal } from '../../lib/modals'
@@ -188,7 +188,21 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
     }, SUCCESS_DISPLAY_MS)
   }
 
-  const forceClose = () => {
+  // Stable refs so handleClose/forceClose don't depend on every keystroke.
+  // The previous unmemoized closures rebuilt on every render, churning
+  // BaseModal's onClose prop and re-registering the keydown listener.
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
+  const descriptionRef = useRef(description)
+  descriptionRef.current = description
+  const isSubmittingRef = useRef(isSubmitting)
+  isSubmittingRef.current = isSubmitting
+  const showDiscardRef = useRef(showDiscardConfirm)
+  showDiscardRef.current = showDiscardConfirm
+
+  const forceClose = useCallback(() => {
+    // Hide the discard confirmation first so a stale ref can't cause
+    // handleClose to re-open it on the next paint.
     setShowDiscardConfirm(false)
     setDescription('')
     setRequestType(initialRequestType || 'bug')
@@ -198,23 +212,33 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
     setScreenshots([])
     setEditingDraftId(null)
     setActiveTab(initialTab || 'submit')
-    onClose()
-  }
+    // Call parent's close last so all internal resets are batched into the
+    // same render as the unmount. (Fixes #9152 — the unmemoized callbacks
+    // and missing showDiscard guard let the parent modal stay open after
+    // clicking Discard.)
+    onCloseRef.current()
+  }, [initialRequestType, initialTab])
 
-  const handleSaveAndClose = () => {
+  const handleSaveAndClose = useCallback(() => {
     handleSaveDraft()
     forceClose()
-  }
+  }, [handleSaveDraft, forceClose])
 
-  const handleClose = () => {
-    if (!isSubmitting) {
-      if (description.trim() !== '') {
-        setShowDiscardConfirm(true)
-        return
-      }
+  const handleClose = useCallback(() => {
+    if (isSubmittingRef.current) return
+    // If the discard dialog is already showing, an Esc/Space coming from
+    // BaseModal's keydown handler must NOT just re-set the same flag —
+    // that traps the user. Treat the second close attempt as Discard.
+    if (showDiscardRef.current) {
       forceClose()
+      return
     }
-  }
+    if (descriptionRef.current.trim() !== '') {
+      setShowDiscardConfirm(true)
+      return
+    }
+    forceClose()
+  }, [forceClose])
 
   return (
     <BaseModal isOpen={isOpen} onClose={handleClose} size="lg" closeOnBackdrop={false} closeOnEscape={true} className="!h-[80vh]">
