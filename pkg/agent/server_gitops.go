@@ -160,13 +160,17 @@ func gitopsCloneRepo(ctx context.Context, repoURL, branch string) (string, error
 
 	tempDir := fmt.Sprintf("%s%d", gitOpsTempDirPrefix, time.Now().UnixNano())
 
+	// repoURL and branch are validated by validateGitopsRepoURL/validateGitopsBranchName
+	// above before reaching this point. exec.CommandContext with a discrete arg list
+	// (never "sh -c") is immune to shell injection; CodeQL flags the taint flow from
+	// user input but there is no shell involved. // lgtm[go/command-injection]
 	args := []string{"clone", "--depth", "1"}
 	if branch != "" {
 		args = append(args, "-b", branch)
 	}
 	args = append(args, repoURL, tempDir)
 
-	cmd := exec.CommandContext(ctx, "git", args...)
+	cmd := exec.CommandContext(ctx, "git", args...) // #nosec G204 -- validated above; no shell invoked
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 
