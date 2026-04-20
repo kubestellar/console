@@ -84,7 +84,7 @@ import {
   unregisterCacheReset,
 } from '../../lib/modeTransition'
 
-/** localStorage cache key used by the hook */
+/** sessionStorage cache key used by the hook */
 const CACHE_KEY = 'kc-data-compliance-cache'
 
 // ---------------------------------------------------------------------------
@@ -93,7 +93,7 @@ const CACHE_KEY = 'kc-data-compliance-cache'
 
 beforeEach(() => {
   vi.useFakeTimers({ shouldAdvanceTime: true })
-  localStorage.clear()
+  sessionStorage.clear()
   mockDemoMode = false
   mockClustersLoading = false
   mockAllClusters = []
@@ -625,9 +625,9 @@ describe('useDataCompliance', () => {
     unmount()
   })
 
-  // ── 17. Cache: saves to localStorage after successful fetch ────────────
+  // ── 17. Cache: saves to sessionStorage after successful fetch ────────────
 
-  it('saves compliance posture to localStorage cache after fetch', async () => {
+  it('saves compliance posture to sessionStorage cache after fetch', async () => {
     mockDemoMode = false
     mockAllClusters = [{ name: 'cache-cluster', reachable: true }]
 
@@ -643,7 +643,7 @@ describe('useDataCompliance', () => {
       expect(result.current.isLoading).toBe(false)
     })
 
-    const cachedStr = localStorage.getItem(CACHE_KEY)
+    const cachedStr = sessionStorage.getItem(CACHE_KEY)
     expect(cachedStr).not.toBeNull()
     const cached = JSON.parse(cachedStr!)
     expect(cached).toHaveProperty('posture')
@@ -657,7 +657,7 @@ describe('useDataCompliance', () => {
     unmount()
   })
 
-  // ── 18. Cache: loads from localStorage on mount ────────────────────────
+  // ── 18. Cache: loads from sessionStorage on mount ────────────────────────
 
   it('loads cached data on mount and skips initial loading state', () => {
     const cachedPosture = {
@@ -681,7 +681,7 @@ describe('useDataCompliance', () => {
       },
       timestamp: Date.now() - 30_000,
     }
-    localStorage.setItem(CACHE_KEY, JSON.stringify(cachedPosture))
+    sessionStorage.setItem(CACHE_KEY, JSON.stringify(cachedPosture))
 
     const { result, unmount } = renderHook(() => useDataCompliance())
 
@@ -857,10 +857,10 @@ describe('useDataCompliance', () => {
     unmount()
   })
 
-  // ── 23. Handles corrupt localStorage gracefully ───────────────────────
+  // ── 23. Handles corrupt sessionStorage gracefully ───────────────────────
 
-  it('handles corrupt localStorage cache gracefully', () => {
-    localStorage.setItem(CACHE_KEY, 'NOT_VALID_JSON')
+  it('handles corrupt sessionStorage cache gracefully', () => {
+    sessionStorage.setItem(CACHE_KEY, 'NOT_VALID_JSON')
 
     // Should not throw — loadFromCache returns null on parse error
     const { result, unmount } = renderHook(() => useDataCompliance())

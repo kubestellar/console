@@ -137,14 +137,14 @@ describe('useCertManager', () => {
     vi.resetModules()
     vi.clearAllMocks()
     vi.useFakeTimers({ shouldAdvanceTime: true })
-    localStorage.clear()
+    sessionStorage.clear()
     mockUseDemoMode.mockReturnValue({ isDemoMode: false })
   })
 
   afterEach(() => {
     vi.useRealTimers()
     vi.restoreAllMocks()
-    localStorage.clear()
+    sessionStorage.clear()
   })
 
   // Lazy-load module after mocks are set up
@@ -856,11 +856,11 @@ describe('useCertManager', () => {
   })
 
   // ========================================================================
-  // Cache (localStorage)
+  // Cache (sessionStorage)
   // ========================================================================
 
-  describe('localStorage cache', () => {
-    it('saves fetched data to localStorage', async () => {
+  describe('sessionStorage cache', () => {
+    it('saves fetched data to sessionStorage', async () => {
       setClusters('cluster-1')
 
       mockKubectlProxy.exec.mockImplementation(async (args: string[]) => {
@@ -883,7 +883,7 @@ describe('useCertManager', () => {
         expect(result.current.certificates.length).toBe(1)
       })
 
-      const cached = localStorage.getItem('kc-cert-manager-cache')
+      const cached = sessionStorage.getItem('kc-cert-manager-cache')
       expect(cached).toBeTruthy()
 
       const parsed = JSON.parse(cached!)
@@ -913,7 +913,7 @@ describe('useCertManager', () => {
         installed: true,
         timestamp: Date.now() - 10000,
       }
-      localStorage.setItem('kc-cert-manager-cache', JSON.stringify(cacheData))
+      sessionStorage.setItem('kc-cert-manager-cache', JSON.stringify(cacheData))
 
       const { useCertManager } = await loadModule()
       const { result } = renderHook(() => useCertManager())
@@ -925,8 +925,8 @@ describe('useCertManager', () => {
       expect(result.current.isLoading).toBe(false)
     })
 
-    it('handles corrupted localStorage cache gracefully', async () => {
-      localStorage.setItem('kc-cert-manager-cache', 'NOT_VALID_JSON')
+    it('handles corrupted sessionStorage cache gracefully', async () => {
+      sessionStorage.setItem('kc-cert-manager-cache', 'NOT_VALID_JSON')
 
       const { useCertManager } = await loadModule()
       const { result } = renderHook(() => useCertManager())
@@ -959,7 +959,7 @@ describe('useCertManager', () => {
         installed: true,
         timestamp: Date.now(),
       }
-      localStorage.setItem('kc-cert-manager-cache', JSON.stringify(cacheData))
+      sessionStorage.setItem('kc-cert-manager-cache', JSON.stringify(cacheData))
 
       const { useCertManager } = await loadModule()
       const { result } = renderHook(() => useCertManager())
