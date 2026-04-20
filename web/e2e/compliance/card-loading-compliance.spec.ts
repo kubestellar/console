@@ -730,7 +730,10 @@ function writeReport(report: ComplianceReport, outDir: string) {
 test.describe.configure({ mode: 'serial' })
 
 test('card loading compliance — cold + warm', async ({ page }, testInfo) => {
-  const COMPLIANCE_TIMEOUT_MS = 180_000 // 8 batches cold + warm needs more time
+  // 300s base × 2 CI multiplier = 600s, matching the suite wall-clock cap in
+  // run-all-tests.sh. Previous value (180s × 2 = 360s) caused the test to
+  // self-terminate on CI before all batches completed (#9100).
+  const COMPLIANCE_TIMEOUT_MS = 300_000
   testInfo.setTimeout(IS_CI ? COMPLIANCE_TIMEOUT_MS * CI_TIMEOUT_MULTIPLIER : COMPLIANCE_TIMEOUT_MS)
   const allBatchResults: BatchResult[] = []
   let totalCards = 0

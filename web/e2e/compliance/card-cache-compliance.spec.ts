@@ -114,6 +114,18 @@ const _WARM_POLL_INTERVAL_MS = 50
 const EVALUATE_RETRY_ATTEMPTS = 3
 /** Delay between evaluate retries (ms) */
 const EVALUATE_RETRY_DELAY_MS = 500
+/**
+ * Timeout for navigateToBatch calls (ms). Must be generous enough for CI
+ * preview servers under load. 20s default is too tight when the server is
+ * already serving other suites (#9101).
+ */
+const BATCH_NAV_TIMEOUT_MS = !!process.env.CI ? 90_000 : 45_000
+/**
+ * Overall test timeout (ms). 300s base × 2 CI multiplier = 600s, matching
+ * the suite wall-clock cap in run-all-tests.sh (#9101).
+ */
+const CACHE_TEST_TIMEOUT_MS = 300_000
+const CI_TIMEOUT_MULTIPLIER = 2
 
 
 // Mock data, setupAuth, setupLiveMocks, setLiveColdMode, navigateToBatch,
@@ -527,7 +539,13 @@ function writeReport(report: CacheComplianceReport, outDir: string) {
 
 test.describe.configure({ mode: 'serial' })
 
-test('card cache compliance — storage and retrieval', async ({ page }) => {
+test('card cache compliance — storage and retrieval', async ({ page }, testInfo) => {
+  // 300s base × 2 CI multiplier = 600s, matching the suite wall-clock cap in
+  // run-all-tests.sh. No testInfo.setTimeout was set before (#9101), so the
+  // test ran against the global config timeout (1200s) which meant timeout
+  // errors only surfaced as wall-clock kills.
+  testInfo.setTimeout(!!process.env.CI ? CACHE_TEST_TIMEOUT_MS * CI_TIMEOUT_MULTIPLIER : CACHE_TEST_TIMEOUT_MS)
+
   const allBatchResults: Array<{ batchIndex: number; cards: CardCacheResult[] }> = []
   const coldSnapshots: Map<string, ColdLoadSnapshot> = new Map()
   let totalCards = 0
@@ -588,7 +606,7 @@ test('card cache compliance — storage and retrieval', async ({ page }) => {
       localStorage.setItem('token', 'test-token')
     })
 
-    const manifest = await navigateToBatch(page, batch)
+    const manifest = await navigateToBatch(page, batch, BATCH_NAV_TIMEOUT_MS)
     const selected = manifest.selected || []
     if (selected.length === 0) continue
 
@@ -675,7 +693,7 @@ test('card cache compliance — storage and retrieval', async ({ page }) => {
         console.log(`[CacheTest] Phase 6 batch ${batch}: soft nav OK`)
       } catch {
         console.log(`[CacheTest] Phase 6 batch ${batch}: soft nav failed, falling back to page.goto`)
-        manifest = await navigateToBatch(page, batch)
+        manifest = await navigateToBatch(page, batch, BATCH_NAV_TIMEOUT_MS)
       }
       if (!manifest) {
         console.log(`[CacheTest] Phase 6 batch ${batch}: no manifest, skipping`)

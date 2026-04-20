@@ -305,12 +305,18 @@ if [ -z "$FAST_MODE" ]; then
         #   #8985 cache-test: renders all cards via the same compliance harness.
         #   #8986 benchmark-test: 12 tests × up to 60s each ≈ 720s worst case.
         #   #8987 ai-ml-test: 15 tests × up to 300s each in pathological cases.
+        #   #9098 nav-test: 6 serial scenarios (warmup/cold/warm/from-main/
+        #     from-clusters/rapid-nav) × ~60-120s each ≈ 480-720s total.
+        #     Default 300s cap killed it mid-run after warm-nav completed.
+        #   #9099 perf-test: same serial scenario structure as nav-test.
         declare -A PLAYWRIGHT_SUITE_TIMEOUT_OVERRIDES=(
           ["console-error-scan"]=600
           ["ui-compliance-test"]=600
           ["cache-test"]=600
           ["benchmark-test"]=600
           ["ai-ml-test"]=600
+          ["nav-test"]=600
+          ["perf-test"]=600
         )
 
         for script in "${PLAYWRIGHT_SCRIPTS[@]}"; do
