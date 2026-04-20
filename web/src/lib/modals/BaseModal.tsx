@@ -102,6 +102,13 @@ export function BaseModal({
 }: BaseModalProps) {
   const backdropRef = useRef<HTMLDivElement>(null)
   const modalRef = useRef<HTMLDivElement>(null)
+  // #9165 — Track where mousedown started so we don't treat
+  // "press inside the modal, drag out, release on backdrop" as an
+  // outside-click. Without this, a click that began on a sidebar
+  // item near the modal edge can fire its `click` event on the
+  // backdrop (because click target is the deepest common ancestor
+  // of mousedown+mouseup) and unexpectedly close the modal.
+  const mouseDownOnBackdropRef = useRef(false)
   const titleId = useId()
 
   // Set up keyboard navigation (ESC and Space/Backspace to close)
@@ -118,11 +125,43 @@ export function BaseModal({
 
   if (!isOpen) return null
 
+  // #9165 — Outside-click detection.
+  //
+  // A click is treated as an outside-click ONLY when:
+  //   1. closeOnBackdrop is enabled, AND
+  //   2. the mousedown started on the backdrop (not on modal content
+  //      that the user later dragged out of), AND
+  //   3. the mouseup target is NOT contained within the modal content.
+  //
+  // The previous implementation used `e.target === e.currentTarget`,
+  // which failed in two ways:
+  //   - mousedown-inside-then-mouseup-on-backdrop fires `click` on the
+  //     backdrop with `target === currentTarget`, closing the modal
+  //     even though the user's intent was to interact with internal
+  //     content (the "click near sidebar edge" symptom in #9165).
+  //   - clicks that bubble through nested wrappers may not satisfy the
+  //     strict `target === currentTarget` equality even when they are
+  //     genuinely on the backdrop.
+  //
+  // Using a ref-based `contains()` check on the modal element, plus
+  // mousedown tracking, eliminates both failure modes.
+  const handleBackdropMouseDown = (e: React.MouseEvent) => {
+    // Only register as a backdrop-mousedown if the press is NOT on
+    // the modal content. modalRef.current can be null briefly during
+    // unmount; treat that as not-on-modal so we still gate on (3).
+    const target = e.target as Node
+    mouseDownOnBackdropRef.current = !modalRef.current || !modalRef.current.contains(target)
+  }
+
   const handleBackdropClick = (e: React.MouseEvent) => {
-    // Close if clicking on backdrop or centering wrapper (not on modal content)
-    if (closeOnBackdrop && e.target === e.currentTarget) {
-      onClose()
-    }
+    if (!closeOnBackdrop) return
+    const startedOnBackdrop = mouseDownOnBackdropRef.current
+    // Reset for the next gesture so a stale value can't leak across clicks.
+    mouseDownOnBackdropRef.current = false
+    if (!startedOnBackdrop) return
+    const target = e.target as Node
+    if (modalRef.current && modalRef.current.contains(target)) return
+    onClose()
   }
 
   // Use React Portal to render modal at document.body level
@@ -131,10 +170,12 @@ export function BaseModal({
     <div
       ref={backdropRef}
       className="fixed inset-0 bg-black/60 backdrop-blur-sm z-modal isolate p-4 overflow-y-auto overscroll-contain"
+      onMouseDown={handleBackdropMouseDown}
       onClick={handleBackdropClick}
     >
       <div
         className="min-h-full flex items-center justify-center"
+        onMouseDown={handleBackdropMouseDown}
         onClick={handleBackdropClick}
       >
         <div
@@ -143,6 +184,7 @@ export function BaseModal({
           aria-modal="true"
           aria-labelledby={titleId}
           className={`glass w-full ${SIZE_CLASSES[size]} ${HEIGHT_CLASSES[size]} rounded-xl flex flex-col overflow-hidden ${className}`}
+          onMouseDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
         >
           <ModalTitleIdContext.Provider value={titleId}>
