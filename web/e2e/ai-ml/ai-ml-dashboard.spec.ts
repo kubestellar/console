@@ -34,6 +34,17 @@ const PROMETHEUS_POLL_TIMEOUT_MS = 15_000
 const CARD_CONTENT_TIMEOUT_MS = 10_000
 /** Polling interval for stack discovery checks */
 const STACK_POLL_INTERVAL_MS = 2_000
+/**
+ * Extra wait after domcontentloaded before asserting card count.
+ *
+ * The AI/ML page opens SSE connections (card data streams) that keep the
+ * network permanently active.  `waitForLoadState('networkidle')` therefore
+ * never resolves, causing the test to hang until the 300s timeout fires.
+ * After domcontentloaded we wait a fixed interval instead so that React has
+ * enough time to mount and render all 13 cards (including lazy-loaded chunks)
+ * without relying on a network-idle signal that will never arrive.
+ */
+const CARD_RENDER_WAIT_MS = 3_000
 
 /** Expected card count on the AI/ML route */
 const EXPECTED_CARD_COUNT = 13
@@ -44,13 +55,18 @@ const EXPECTED_CARD_COUNT = 13
 
 /**
  * Navigate to the AI/ML page with auth token and demo mode disabled.
+ *
+ * NOTE: We intentionally avoid `waitForLoadState('networkidle')` here.
+ * The AI/ML page keeps SSE connections open for card data streams, which
+ * means the network is never fully idle.  Using networkidle causes the test
+ * to hang for the full per-test timeout (300s) before failing (#9103).
+ * Instead we wait for domcontentloaded and then give React a fixed window
+ * (CARD_RENDER_WAIT_MS) to mount all lazy-loaded card chunks.
  */
 async function setupAndNavigate(page: Page, route: string) {
   await page.goto('/', { waitUntil: 'domcontentloaded', timeout: PAGE_LOAD_TIMEOUT_MS })
-  await page.waitForLoadState('networkidle')
-
-  // Set auth token + cached user so the app bypasses backend validation.
-  // The cached user prevents /api/me calls; the token satisfies ProtectedRoute.
+  // Seed localStorage before navigating to the target route so the app skips
+  // auth prompts and demo mode on first render.
   await page.evaluate(() => {
     localStorage.setItem('token', 'test-token')
     localStorage.setItem('kc-user-cache', JSON.stringify({
@@ -70,7 +86,8 @@ async function setupAndNavigate(page: Page, route: string) {
   })
 
   await page.goto(route, { waitUntil: 'domcontentloaded', timeout: PAGE_LOAD_TIMEOUT_MS })
-  await page.waitForLoadState('networkidle')
+  // Allow lazy card chunks time to mount without relying on networkidle (see note above).
+  await page.waitForTimeout(CARD_RENDER_WAIT_MS)
 }
 
 /**
