@@ -13,6 +13,7 @@ import { cn } from '../../lib/cn'
 import { api } from '../../lib/api'
 import { isDemoMode } from '../../lib/demoMode'
 import { useAuth } from '../../lib/auth'
+import { NAVBAR_HEIGHT_PX } from '../../lib/constants/ui'
 import { matchMissionsToCluster } from '../../lib/missions/matcher'
 import { useClusterContext } from '../../hooks/useClusterContext'
 import {
@@ -77,6 +78,31 @@ import {
   computeActiveFilterCount,
   filterDirectoryEntries,
 } from './missionBrowserFilterState'
+
+// ============================================================================
+// Layout constants
+// ============================================================================
+
+/**
+ * Breathing room (px) between the bottom of the navbar and the top of the
+ * mission browser modal, so the modal header doesn't visually press against
+ * the navbar (issue #9150).
+ */
+const MODAL_NAVBAR_GAP_PX = 16
+
+/**
+ * Top inset (px) for the mission browser modal. Must clear the fixed
+ * navbar (NAVBAR_HEIGHT_PX) plus a small gap so the modal's own header
+ * (search bar + filter toggle + close button) is fully visible and not
+ * obscured by the navbar (issue #9150).
+ */
+const MODAL_TOP_INSET_PX = NAVBAR_HEIGHT_PX + MODAL_NAVBAR_GAP_PX
+
+/**
+ * Side/bottom inset (px) so the dimmed backdrop peeks through around the
+ * modal panel, matching the inset pattern used by MissionControlDialog.
+ */
+const MODAL_SIDE_INSET_PX = 16
 
 // ============================================================================
 // Types
@@ -858,8 +884,22 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-modal flex items-center justify-center bg-black/60 backdrop-blur-sm">
-    <div data-testid="mission-browser" className="w-[94vw] h-[90vh] bg-background rounded-xl shadow-2xl border border-border flex flex-col overflow-hidden">
+    // Backdrop: dimmed full-viewport overlay. The mission browser sits at
+    // z-modal which is above the navbar, so we explicitly position the modal
+    // panel to start *below* the navbar (via top: MODAL_TOP_INSET_PX) rather
+    // than centering it on the viewport — otherwise the navbar visually
+    // overlaps the modal header (issue #9150).
+    <div className="fixed inset-0 z-modal bg-black/60 backdrop-blur-sm">
+    <div
+      data-testid="mission-browser"
+      className="fixed bg-background rounded-xl shadow-2xl border border-border flex flex-col overflow-hidden"
+      style={{
+        top: `${MODAL_TOP_INSET_PX}px`,
+        left: `${MODAL_SIDE_INSET_PX}px`,
+        right: `${MODAL_SIDE_INSET_PX}px`,
+        bottom: `${MODAL_SIDE_INSET_PX}px`,
+      }}
+    >
       {/* ================================================================== */}
       {/* Top bar: search + filters */}
       {/* ================================================================== */}
