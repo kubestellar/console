@@ -213,8 +213,9 @@ export default async (req: Request) => {
         headers: { ...headers, "Cache-Control": "public, max-age=300" },
       });
     } catch (err) {
+      console.error("Failed to load NPS data:", err);
       return new Response(
-        JSON.stringify({ error: "Failed to load NPS data", detail: String(err) }),
+        JSON.stringify({ error: "Internal server error" }),
         { status: 500, headers }
       );
     }
@@ -262,8 +263,9 @@ export default async (req: Request) => {
         { status: 201, headers }
       );
     } catch (err) {
+      console.error("Failed to save NPS response:", err);
       return new Response(
-        JSON.stringify({ error: "Failed to save NPS response", detail: String(err) }),
+        JSON.stringify({ error: "Internal server error" }),
         { status: 500, headers }
       );
     }

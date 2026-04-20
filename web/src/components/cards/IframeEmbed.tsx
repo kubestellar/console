@@ -111,12 +111,13 @@ export function IframeEmbed({ config }: { config?: IframeEmbedConfig }) {
     if (!iframeRef.current || !url) return
     setIsLoading(true)
     setLoadError(null)
-    // Force iframe reload by resetting src
-    const currentSrc = iframeRef.current.src
+    // Force iframe reload using the sanitized `url` state — never read back
+    // from iframeRef.current.src (DOM property), which is an XSS-through-DOM
+    // sink when written back without re-validation.
     iframeRef.current.src = ''
     setTimeout(() => {
       if (iframeRef.current) {
-        iframeRef.current.src = currentSrc
+        iframeRef.current.src = url
       }
     }, 50)
     setLastRefresh(new Date())

@@ -109,8 +109,9 @@ export default async (req: Request) => {
       { status: 200, headers }
     );
   } catch (err) {
+    console.error("Failed to fetch YouTube playlist:", err);
     return new Response(
-      JSON.stringify({ error: "Failed to fetch playlist", detail: String(err) }),
+      JSON.stringify({ error: "Internal server error" }),
       { status: 502, headers }
     );
   }
