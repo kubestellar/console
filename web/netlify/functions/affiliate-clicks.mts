@@ -32,10 +32,32 @@ for (const [login, term] of Object.entries(INTERN_MAP)) {
   TERM_TO_LOGIN[term] = login.toLowerCase();
 }
 
-/** Cache TTL — 15 minutes */
-const CACHE_TTL_MS = 15 * 60 * 1000;
+/** Cache TTL — 3 minutes. Shorter than before (was 15m) so intern shares
+ *  feel responsive on the leaderboard once GA4 has processed the clicks.
+ *  GA4 itself has a separate 24-48h attribution-dimension processing lag
+ *  that this cache cannot help with; see the leaderboard footnote. */
+const CACHE_TTL_MS = 3 * 60 * 1000;
 /** Days to look back for affiliate clicks */
 const LOOKBACK_DAYS = 90;
+
+/** Minimum / maximum plausible GitHub login length. GitHub enforces 1-39
+ *  chars; we require 2+ to avoid spurious single-letter matches that look
+ *  like parsing artifacts. */
+const GH_LOGIN_MIN_LEN = 2;
+const GH_LOGIN_MAX_LEN = 39;
+const GH_LOGIN_PATTERN = /^[a-zA-Z0-9](?:[a-zA-Z0-9]|-(?=[a-zA-Z0-9])){1,38}$/;
+
+/** True when a raw utm_term looks like a plausible GitHub login — i.e. a
+ *  mentee shared a link with `utm_campaign=intern_outreach` but used their
+ *  GitHub handle as utm_term instead of the legacy `intern-0X` form. We
+ *  treat those as contributor_affiliate-style entries rather than dropping
+ *  them (GA4 data on 2026-04-19 showed xonas1101 under intern_outreach —
+ *  the old code silently skipped that row). */
+function isPlausibleGitHubLogin(term: string): boolean {
+  if (term.length < GH_LOGIN_MIN_LEN || term.length > GH_LOGIN_MAX_LEN) return false;
+  if (/^intern-\d+$/.test(term)) return false;
+  return GH_LOGIN_PATTERN.test(term);
+}
 
 let cachedResult: { data: Record<string, AffiliateData>; fetchedAt: number } | null = null;
 
@@ -146,25 +168,39 @@ async function fetchAffiliateClicks(): Promise<Record<string, AffiliateData>> {
     }
   }
 
-  // Process intern_outreach rows (utm_term → GitHub login via INTERN_MAP)
+  // Process intern_outreach rows. Historically utm_term was `intern-0X` and
+  // mapped through INTERN_MAP; the project is migrating to utm_term=<github>.
+  // Since interns may still tag shares with `intern_outreach` while using a
+  // GitHub-login utm_term (observed 2026-04-19 with xonas1101), fall back to
+  // treating that term AS the login when it doesn't match INTERN_MAP and
+  // looks like a plausible GitHub handle.
   for (const row of internRes.data.rows || []) {
     const utmTerm = row.dimensionValues?.[0]?.value;
     const sessions = parseInt(row.metricValues?.[0]?.value || "0");
     const users = parseInt(row.metricValues?.[1]?.value || "0");
 
-    if (!utmTerm || !TERM_TO_LOGIN[utmTerm]) continue;
+    if (!utmTerm) continue;
 
-    const login = TERM_TO_LOGIN[utmTerm];
-    mergeEntry(login, utmTerm, sessions, users);
+    if (TERM_TO_LOGIN[utmTerm]) {
+      // Legacy intern-0X → mapped GitHub login
+      mergeEntry(TERM_TO_LOGIN[utmTerm], utmTerm, sessions, users);
+    } else if (isPlausibleGitHubLogin(utmTerm)) {
+      // New shape under the legacy campaign — credit the GitHub login directly
+      mergeEntry(utmTerm, utmTerm, sessions, users);
+    }
+    // Otherwise drop — utm_term is not a known intern slot and not a
+    // plausible GitHub login (e.g. free-form text, spam, typo).
   }
 
-  // Process contributor_affiliate rows (utm_term IS the GitHub login directly)
+  // Process contributor_affiliate rows (utm_term IS the GitHub login directly).
+  // Validate with the GitHub-login pattern so a stray `(not set)` / typo /
+  // garbage term doesn't create a phantom leaderboard row.
   for (const row of contributorRes.data.rows || []) {
     const utmTerm = row.dimensionValues?.[0]?.value;
     const sessions = parseInt(row.metricValues?.[0]?.value || "0");
     const users = parseInt(row.metricValues?.[1]?.value || "0");
 
-    if (!utmTerm) continue;
+    if (!utmTerm || !isPlausibleGitHubLogin(utmTerm)) continue;
 
     mergeEntry(utmTerm, utmTerm, sessions, users);
   }
