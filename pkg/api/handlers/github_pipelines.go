@@ -472,13 +472,20 @@ func (h *GitHubPipelinesHandler) cacheKey(c *fiber.Ctx) string {
 }
 
 func (h *GitHubPipelinesHandler) serveCached(c *fiber.Ctx, key string, build func(c *fiber.Ctx) (any, error)) error {
+	// go/allocation-size-overflow: convert TTL to seconds via int64 (not int) and
+	// clamp to 0 so the Sprintf value is always non-negative and never overflows.
+	maxAge := int64(ghpCacheTTL.Seconds())
+	if maxAge < 0 {
+		maxAge = 0
+	}
+
 	h.mu.RLock()
 	entry, ok := h.cache[key]
 	h.mu.RUnlock()
 	if ok && time.Now().Before(entry.exp) {
 		c.Set("X-Cache", "HIT")
 		c.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
-		c.Set(fiber.HeaderCacheControl, fmt.Sprintf("public, max-age=%d", int(ghpCacheTTL.Seconds())))
+		c.Set(fiber.HeaderCacheControl, fmt.Sprintf("public, max-age=%d", maxAge))
 		return c.Send(entry.body)
 	}
 
@@ -492,7 +499,7 @@ func (h *GitHubPipelinesHandler) serveCached(c *fiber.Ctx, key string, build fun
 			slog.Info("[github-pipelines] serving stale cache on error", "key", key, "error", err)
 			c.Set("X-Cache", "STALE")
 			c.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
-			c.Set(fiber.HeaderCacheControl, fmt.Sprintf("public, max-age=%d", int(ghpCacheTTL.Seconds())))
+			c.Set(fiber.HeaderCacheControl, fmt.Sprintf("public, max-age=%d", maxAge))
 			return c.Send(stale.body)
 		}
 		// No stale available - return error
@@ -541,7 +548,7 @@ func (h *GitHubPipelinesHandler) serveCached(c *fiber.Ctx, key string, build fun
 	h.mu.Unlock()
 	c.Set("X-Cache", "MISS")
 	c.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
-	c.Set(fiber.HeaderCacheControl, fmt.Sprintf("public, max-age=%d", int(ghpCacheTTL.Seconds())))
+	c.Set(fiber.HeaderCacheControl, fmt.Sprintf("public, max-age=%d", maxAge))
 	// Forward GitHub rate limit headers from context if present
 	if headers, ok := c.UserContext().Value(ghpRateLimitHeadersKey).(map[string]string); ok {
 		for k, v := range headers {
