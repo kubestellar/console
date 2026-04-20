@@ -22,11 +22,26 @@ import { setupAuth, setupLiveMocks } from '../mocks/liveMocks'
 // Constants
 // ---------------------------------------------------------------------------
 
-/** Time to wait after navigating to each route for console output to settle */
-const SETTLE_MS = 4_000
+/**
+ * Time to wait after navigating to each route for console output to settle.
+ * 2s is enough for Playwright to capture console messages and for lazy-loaded
+ * chunks to finish parsing in headless Chromium. Was 4s but the cumulative
+ * 38-route budget repeatedly tripped the 600s suite cap (#8981, #9097), so we
+ * trade a bit of settle time for a comfortable margin under the suite cap.
+ */
+const SETTLE_MS = 2_000
 
-/** Max time to wait for route navigation (some lazy-loaded chunks are large) */
-const NAV_TIMEOUT_MS = 30_000
+/**
+ * Max time to wait for an individual route navigation. A route that exceeds
+ * this is treated as a hang — capping it prevents one slow route from
+ * eating the entire suite budget. The initial priming load uses a longer
+ * timeout (PRIME_NAV_TIMEOUT_MS) because `networkidle` can legitimately take
+ * longer on the first paint.
+ */
+const NAV_TIMEOUT_MS = 15_000
+
+/** Longer timeout for the initial priming load (waits on `networkidle`). */
+const PRIME_NAV_TIMEOUT_MS = 30_000
 
 /** Routes that require special params or are not visitable directly */
 const _SKIP_ROUTES = new Set([
@@ -280,10 +295,10 @@ test('console error scan — all routes', async ({ page }) => {
 
   // Prime the app — initial load
   console.log('[ConsoleErrorScan] Priming app with initial load...')
-  await page.goto('/', { waitUntil: 'networkidle', timeout: NAV_TIMEOUT_MS })
+  await page.goto('/', { waitUntil: 'networkidle', timeout: PRIME_NAV_TIMEOUT_MS })
   await page.waitForFunction(
     () => document.body.innerText.length > 0,
-    { timeout: NAV_TIMEOUT_MS },
+    { timeout: PRIME_NAV_TIMEOUT_MS },
   )
 
   // Set auth token in localStorage (ProtectedRoute checks this)
