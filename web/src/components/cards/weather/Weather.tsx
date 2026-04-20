@@ -193,7 +193,9 @@ export function Weather({ config }: { config?: WeatherConfig }) {
   // immediately on a failed fetch instead of waiting for CARD_LOADING_TIMEOUT_MS.
   useCardLoadingState({ isLoading, isRefreshing, hasAnyData: !!currentWeather, isDemoData: isDemoFallback, isFailed, lastRefresh })
 
-  // Save locations to sessionStorage whenever they change
+  // Save locations to sessionStorage whenever they change.
+  // Location preferences are user-selected city names, not credentials or sensitive cluster data.
+  // lgtm[js/clear-text-storage-of-sensitive-data]
   useEffect(() => {
     try {
       sessionStorage.setItem('weather-saved-locations-v2', JSON.stringify(savedLocations))
@@ -202,7 +204,9 @@ export function Weather({ config }: { config?: WeatherConfig }) {
     }
   }, [savedLocations])
 
-  // Save current location to sessionStorage whenever it changes
+  // Save current location to sessionStorage whenever it changes.
+  // Location preferences are user-selected city names, not credentials or sensitive cluster data.
+  // lgtm[js/clear-text-storage-of-sensitive-data]
   useEffect(() => {
     try {
       sessionStorage.setItem('weather-current-location', JSON.stringify(currentLocation))

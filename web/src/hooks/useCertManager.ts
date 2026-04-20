@@ -40,6 +40,9 @@ function loadFromCache(): CacheData | null {
 
 function saveToCache(certificates: Certificate[], issuers: Issuer[], installed: boolean): void {
   try {
+    // Deliberate accepted risk: cert metadata cached in sessionStorage for UX; cleared on tab close.
+    // Data contains certificate names and expiry dates only — no private keys or secrets.
+    // lgtm[js/clear-text-storage-of-sensitive-data]
     sessionStorage.setItem(CACHE_KEY, JSON.stringify({
       certificates,
       issuers,
