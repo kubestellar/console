@@ -250,10 +250,12 @@ const StatBlock = memo(function StatBlock({ block, data, hasData, isLoading, his
         />
       )}
 
-      {/* Header: icon + name */}
-      <div className="flex items-center gap-2 mb-2">
-        <IconComponent className={`w-5 h-5 shrink-0 ${isLoading ? 'text-muted-foreground/30' : colorClass}`} />
-        <span className="text-sm text-muted-foreground truncate">{wrapAbbreviations(block.name)}</span>
+      {/* Header: icon + name. Label uses break-words + leading-tight so long labels
+          (e.g. "Unhealthy", "Storage") wrap to a second line at narrow widths
+          instead of being clipped with an ellipsis (Fixes #9164). */}
+      <div className="flex items-start gap-2 mb-2 min-w-0">
+        <IconComponent className={`w-5 h-5 shrink-0 mt-0.5 ${isLoading ? 'text-muted-foreground/30' : colorClass}`} />
+        <span className="text-sm text-muted-foreground break-words leading-tight min-w-0" title={block.name}>{wrapAbbreviations(block.name)}</span>
       </div>
 
       {/* Mode-specific content */}
@@ -483,13 +485,16 @@ export function StatsOverview({
     safeSetJSON(storageKey, !newValue)
   }
 
-  // Dynamic grid columns based on visible blocks
-  // Mobile: max 2 columns, tablet+: responsive based on count
+  // Dynamic grid columns based on visible blocks.
+  // Mobile: max 2 columns, tablet+: responsive based on count.
+  // For 7+ blocks we keep two rows on lg (1024px) and only collapse to a single
+  // row at xl (1280px+) where each card is wide enough to show its full label
+  // without ellipsis truncation (Fixes #9164).
   const gridCols = visibleBlocks.length <= 4 ? 'grid-cols-2 md:grid-cols-4' :
     visibleBlocks.length <= 5 ? 'grid-cols-2 md:grid-cols-5' :
     visibleBlocks.length <= 6 ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-6' :
-    visibleBlocks.length <= 8 ? 'grid-cols-2 md:grid-cols-4 lg:grid-cols-8' :
-    'grid-cols-2 md:grid-cols-5 lg:grid-cols-10'
+    visibleBlocks.length <= 8 ? 'grid-cols-2 md:grid-cols-4 xl:grid-cols-8' :
+    'grid-cols-2 md:grid-cols-5 xl:grid-cols-10'
 
   return (
     <div className={`mb-6 ${className}`}>
