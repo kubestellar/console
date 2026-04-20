@@ -1433,7 +1433,8 @@ describe('deep coverage: weather alert condition types', () => {
       name: 'Weather',
       description: '',
       enabled: true,
-      condition: { type: 'weather_alerts', weatherCondition: 'severe_storm' },
+      // Issue 9255 — demoMode gates the random mock-trigger path
+      condition: { type: 'weather_alerts', weatherCondition: 'severe_storm', demoMode: true },
       severity: 'warning',
       channels: [],
       aiDiagnose: false,
@@ -1462,7 +1463,7 @@ describe('deep coverage: weather alert condition types', () => {
       name: 'Weather',
       description: '',
       enabled: true,
-      condition: { type: 'weather_alerts' },
+      condition: { type: 'weather_alerts', demoMode: true },
       severity: 'warning',
       channels: [],
       aiDiagnose: false,
@@ -1494,7 +1495,7 @@ describe('deep coverage: weather alert condition types', () => {
       name: 'Heat',
       description: '',
       enabled: true,
-      condition: { type: 'weather_alerts', weatherCondition: 'extreme_heat', temperatureThreshold: 105 },
+      condition: { type: 'weather_alerts', weatherCondition: 'extreme_heat', temperatureThreshold: 105, demoMode: true },
       severity: 'critical',
       channels: [],
       aiDiagnose: false,
@@ -1524,7 +1525,7 @@ describe('deep coverage: weather alert condition types', () => {
       name: 'Wind',
       description: '',
       enabled: true,
-      condition: { type: 'weather_alerts', weatherCondition: 'high_wind', windSpeedThreshold: 45 },
+      condition: { type: 'weather_alerts', weatherCondition: 'high_wind', windSpeedThreshold: 45, demoMode: true },
       severity: 'warning',
       channels: [],
       aiDiagnose: false,
@@ -1554,7 +1555,7 @@ describe('deep coverage: weather alert condition types', () => {
       name: 'Rain',
       description: '',
       enabled: true,
-      condition: { type: 'weather_alerts', weatherCondition: 'heavy_rain' },
+      condition: { type: 'weather_alerts', weatherCondition: 'heavy_rain', demoMode: true },
       severity: 'warning',
       channels: [],
       aiDiagnose: false,
@@ -1583,7 +1584,7 @@ describe('deep coverage: weather alert condition types', () => {
       name: 'Snow',
       description: '',
       enabled: true,
-      condition: { type: 'weather_alerts', weatherCondition: 'snow' },
+      condition: { type: 'weather_alerts', weatherCondition: 'snow', demoMode: true },
       severity: 'info',
       channels: [],
       aiDiagnose: false,
@@ -1602,6 +1603,66 @@ describe('deep coverage: weather alert condition types', () => {
     const snowAlerts = result.current.alerts.filter(a => a.ruleId === 'wx-snow')
     expect(snowAlerts.length).toBe(1)
     expect(snowAlerts[0].message).toContain('Winter storm warning')
+  })
+
+  // Issue 9255 — without demoMode, weather rules must never fire on the random path
+  it('weather_alerts does NOT fire randomly when demoMode is not enabled', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.01) // would have triggered old random path
+
+    const rule: AlertRule = {
+      id: 'wx-no-demo',
+      name: 'Weather',
+      description: '',
+      enabled: true,
+      condition: { type: 'weather_alerts', weatherCondition: 'severe_storm' }, // no demoMode
+      severity: 'warning',
+      channels: [],
+      aiDiagnose: false,
+      createdAt: '2024-01-01T00:00:00Z',
+      updatedAt: '2024-01-01T00:00:00Z',
+    }
+    localStorage.setItem('kc_alert_rules', JSON.stringify([rule]))
+    localStorage.setItem('kc_alerts', JSON.stringify([]))
+
+    const { result } = renderHook(() => useAlertsContext(), { wrapper })
+
+    act(() => {
+      result.current.evaluateConditions()
+    })
+
+    const wxAlerts = result.current.alerts.filter(a => a.ruleId === 'wx-no-demo')
+    expect(wxAlerts.length).toBe(0)
+  })
+
+  // Issue 9255 — deterministic real-data path fires when threshold crossed
+  it('weather_alerts fires for extreme_heat when currentTemperature exceeds threshold', () => {
+    const rule: AlertRule = {
+      id: 'wx-real-heat',
+      name: 'Heat',
+      description: '',
+      enabled: true,
+      condition: {
+        type: 'weather_alerts',
+        weatherCondition: 'extreme_heat',
+        temperatureThreshold: 100,
+        currentTemperature: 110, // real observed value above threshold
+      },
+      severity: 'critical',
+      channels: [],
+      aiDiagnose: false,
+      createdAt: '2024-01-01T00:00:00Z',
+      updatedAt: '2024-01-01T00:00:00Z',
+    }
+    localStorage.setItem('kc_alert_rules', JSON.stringify([rule]))
+    localStorage.setItem('kc_alerts', JSON.stringify([]))
+
+    const { result } = renderHook(() => useAlertsContext(), { wrapper })
+
+    act(() => {
+      result.current.evaluateConditions()
+    })
+
+    expect(result.current.alerts.filter(a => a.ruleId === 'wx-real-heat').length).toBe(1)
   })
 })
 

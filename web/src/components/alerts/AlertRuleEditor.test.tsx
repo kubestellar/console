@@ -217,4 +217,37 @@ describe('AlertRuleEditor Component', () => {
       expect(apiKey).toHaveAttribute('id', 'alertRuleOpsgenieApiKey-1')
     })
   })
+
+  // Issue 9257 — clicking Cancel on a brand-new rule with nothing changed
+  // previously always prompted "Discard unsaved changes?" because the default
+  // channel list was treated as an edit. It must now close without prompting.
+  describe('Issue 9257: Cancel on untouched new rule does not prompt', () => {
+    it('calls onCancel directly when no fields have been edited', () => {
+      render(
+        <AlertRuleEditor
+          isOpen={true}
+          onSave={mockOnSave}
+          onCancel={mockOnCancel}
+        />,
+      )
+      fireEvent.click(screen.getByText('actions.cancel'))
+      expect(mockOnCancel).toHaveBeenCalledTimes(1)
+      // The discard confirm dialog must not have appeared
+      expect(screen.queryByText('common:common.discardUnsavedChanges')).not.toBeInTheDocument()
+    })
+
+    it('shows the discard prompt when the user has edited a field', () => {
+      render(
+        <AlertRuleEditor
+          isOpen={true}
+          onSave={mockOnSave}
+          onCancel={mockOnCancel}
+        />,
+      )
+      const nameInput = screen.getByLabelText(/alerts\.ruleName/, { exact: false })
+      fireEvent.change(nameInput, { target: { value: 'My rule' } })
+      fireEvent.click(screen.getByText('actions.cancel'))
+      expect(mockOnCancel).not.toHaveBeenCalled()
+    })
+  })
 })

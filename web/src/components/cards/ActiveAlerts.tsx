@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   AlertTriangle,
   CheckCircle,
@@ -187,6 +187,24 @@ export function ActiveAlerts() {
         time: (a, b) => new Date(b.firedAt).getTime() - new Date(a.firedAt).getTime() } },
     defaultLimit: DEFAULT_PAGE_SIZE })
 
+  // Issue 9257 — the global severity filter is applied before `useCardData`
+  // sees the items, so `useCardData`'s internal page-reset effect (which only
+  // fires on its own search/cluster filter changes) never triggered when the
+  // severity filter changed. That left users on a stale page (e.g. page 3 of
+  // a list that now has 1 page). Track the external filter inputs in a ref
+  // and reset to page 1 only on the cycle where they actually change, so we
+  // don't snap the page back to 1 on every render (useCardData recreates
+  // `goToPage` each render).
+  const RESET_TO_FIRST_PAGE = 1
+  const externalFilterKey = `${isAllSeveritiesSelected ? 'all' : selectedSeverities.join(',')}|${showAcknowledged}`
+  const lastExternalFilterKeyRef = useRef(externalFilterKey)
+  useEffect(() => {
+    if (lastExternalFilterKeyRef.current !== externalFilterKey) {
+      lastExternalFilterKeyRef.current = externalFilterKey
+      goToPage(RESET_TO_FIRST_PAGE)
+    }
+  })
+
   const handleAlertClick = (alert: Alert) => {
     if (alert.cluster) {
       drillToAlert(alert.cluster, alert.namespace, alert.ruleName, {
@@ -264,7 +282,9 @@ export function ActiveAlerts() {
               )}
             </button>
             {showDNDMenu && !dnd.isActive && (
-              <div className="absolute top-full left-0 mt-1 z-50 bg-[#1a1a2e] border border-border rounded-lg shadow-xl py-1 min-w-[160px]">
+              // Issue 9257 — same hardcoded-dark-hex fix as the snooze menu:
+              // use the themed `bg-card` token so light mode isn't broken.
+              <div className="absolute top-full left-0 mt-1 z-50 bg-card border border-border rounded-lg shadow-xl py-1 min-w-[160px]">
                 {([
                   ['1h', 'For 1 hour'],
                   ['4h', 'For 4 hours'],

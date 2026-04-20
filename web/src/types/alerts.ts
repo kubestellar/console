@@ -47,6 +47,14 @@ export interface AlertCondition {
   weatherCondition?: 'severe_storm' | 'extreme_heat' | 'heavy_rain' | 'snow' | 'high_wind'
   temperatureThreshold?: number // for extreme_heat
   windSpeedThreshold?: number // for high_wind
+  // Issue 9255 — weather alerts previously fired on a 10% random chance every
+  // evaluation cycle, which looked like bogus alerts to real users. They now
+  // only fire when demoMode is explicitly enabled (opt-in mock firing) or when
+  // a real weather API integration populates `currentTemperature` /
+  // `currentWindSpeed` that crosses the configured threshold.
+  demoMode?: boolean
+  currentTemperature?: number // current observed temperature (for real API integration)
+  currentWindSpeed?: number // current observed wind speed (for real API integration)
 }
 
 // Alert channel configuration

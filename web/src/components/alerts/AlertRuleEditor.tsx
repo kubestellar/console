@@ -108,6 +108,14 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
     onCancel()
   }
 
+  // Issue 9257 — baseline channels for a new rule. A fresh rule starts with
+  // one default browser channel, so `channels.length > 0` was always true and
+  // the Cancel button always triggered the discard prompt even when nothing
+  // had been edited. Compare against this baseline instead.
+  const DEFAULT_NEW_RULE_CHANNELS: AlertChannel[] = [
+    { type: 'browser', enabled: true, config: {} },
+  ]
+
   const handleClose = () => {
     // Check ALL fields for changes, not just name/description (#5716)
     const hasChanges = rule
@@ -129,7 +137,8 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
          weatherCondition !== 'severe_storm' ||
          temperatureThreshold !== DEFAULT_TEMPERATURE_F ||
          windSpeedThreshold !== DEFAULT_WIND_SPEED_MPH ||
-         selectedClusters.length > 0 || channels.length > 0)
+         selectedClusters.length > 0 ||
+         JSON.stringify(channels) !== JSON.stringify(DEFAULT_NEW_RULE_CHANNELS))
     if (hasChanges) {
       setShowDiscardConfirm(true)
       return
@@ -144,25 +153,36 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
       newErrors.name = t('alerts.nameRequired')
     }
 
+    // Issue 9257 — validation messages previously hardcoded English strings
+    // even though the translation keys already exist (alerts.thresholdRange,
+    // alerts.restartCountMin, alerts.temperatureRange, alerts.windSpeedRange).
     if (conditionType === 'gpu_usage' || conditionType === 'memory_pressure') {
       if (threshold < PERCENTAGE_MIN || threshold > PERCENTAGE_MAX) {
-        newErrors.threshold = `Threshold must be between ${PERCENTAGE_MIN} and ${PERCENTAGE_MAX}`
+        newErrors.threshold = t('alerts.thresholdRange', { min: PERCENTAGE_MIN, max: PERCENTAGE_MAX })
       }
     }
 
     if (conditionType === 'pod_crash') {
       if (threshold < RESTART_COUNT_MIN) {
-        newErrors.threshold = `Restart count must be at least ${RESTART_COUNT_MIN}`
+        newErrors.threshold = t('alerts.restartCountMin', { min: RESTART_COUNT_MIN })
       }
     }
 
     if (conditionType === 'weather_alerts') {
       if (weatherCondition === 'extreme_heat' && (temperatureThreshold < TEMPERATURE_MIN || temperatureThreshold > TEMPERATURE_MAX)) {
-        newErrors.temperatureThreshold = `Temperature must be between ${TEMPERATURE_MIN} and ${TEMPERATURE_MAX}`
+        newErrors.temperatureThreshold = t('alerts.temperatureRange', { min: TEMPERATURE_MIN, max: TEMPERATURE_MAX })
       }
       if (weatherCondition === 'high_wind' && (windSpeedThreshold < WIND_SPEED_MIN || windSpeedThreshold > WIND_SPEED_MAX)) {
-        newErrors.windSpeedThreshold = `Wind speed must be between ${WIND_SPEED_MIN} and ${WIND_SPEED_MAX}`
+        newErrors.windSpeedThreshold = t('alerts.windSpeedRange', { min: WIND_SPEED_MIN, max: WIND_SPEED_MAX })
       }
+    }
+
+    // Issue 9254 — previously a rule could be saved with zero enabled
+    // notification channels, which meant the rule fired silently. Refuse to
+    // save without at least one enabled channel.
+    const enabledChannelCount = channels.filter(ch => ch.enabled).length
+    if (enabledChannelCount === 0) {
+      newErrors.channels = t('alerts.atLeastOneChannelRequired', 'Enable at least one notification channel, or no one will be notified when this rule fires.')
     }
 
     setErrors(newErrors)
@@ -541,6 +561,13 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
 
           {/* Notification Channels */}
           <div className="space-y-4">
+            {/* Issue 9254 — warn when no enabled channel is present so users
+                don't save rules that fire silently. */}
+            {errors.channels && (
+              <div className="p-2 rounded bg-red-500/10 border border-red-500/30 text-xs text-red-400">
+                {errors.channels}
+              </div>
+            )}
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-medium text-foreground">{t('alerts.notificationChannels')}</h4>
               <div className="flex gap-2">

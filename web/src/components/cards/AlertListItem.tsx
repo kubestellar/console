@@ -191,7 +191,12 @@ export function AlertListItem({
             </button>
           )}
           {snoozeMenuOpen && (
-            <div className="absolute left-0 bottom-full mb-1 z-50 bg-[#1a1a2e] border border-border rounded-lg shadow-xl py-1 min-w-[100px]">
+            // Issue 9257 — use the themed `bg-card` token instead of the
+            // hardcoded dark hex `#1a1a2e`, which rendered as a dark blob in
+            // light mode. The token resolves to the correct surface color in
+            // both themes. (#5906 established `bg-card` as the convention
+            // because `bg-popover` is not defined in tailwind.config.js.)
+            <div className="absolute left-0 bottom-full mb-1 z-50 bg-card border border-border rounded-lg shadow-xl py-1 min-w-[100px]">
               {(Object.keys(SNOOZE_DURATIONS) as SnoozeDuration[]).map(duration => (
                 <button
                   key={duration}

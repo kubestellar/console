@@ -240,6 +240,11 @@ const MAX_ALERTS = 500
 /** Maximum number of resolved alerts to keep after a quota-exceeded prune. */
 const MAX_RESOLVED_ALERTS_AFTER_PRUNE = 50
 
+/** Default temperature threshold for extreme-heat weather alerts (°F). */
+const DEFAULT_TEMPERATURE_THRESHOLD_F = 100
+/** Default wind-speed threshold for high-wind weather alerts (mph). */
+const DEFAULT_WIND_SPEED_THRESHOLD_MPH = 40
+
 /** Minimum time (ms) between repeat notifications for the same alert,
  *  tiered by severity so critical alerts re-notify quickly while
  *  lower-severity alerts don't spam the desktop. */
@@ -1326,17 +1331,35 @@ Please provide:
       }
     }
 
-  // Evaluate weather alerts condition - mock implementation for demo purposes
-  // This is intentionally a demo feature to showcase conditional alerting capabilities
-  // Production deployments should disable weather alerts or replace with actual weather API
+  // Evaluate weather alerts condition — supports either a deterministic real-data
+  // path (when the rule provides `currentTemperature` / `currentWindSpeed` from a
+  // weather API) or an opt-in mock path (when `demoMode` is enabled).
+  //
+  // Issue 9255 — previously this unconditionally rolled a 10% random chance
+  // every evaluation cycle, so alerts appeared and auto-resolved randomly with
+  // no real trigger. Random firing is now gated behind `demoMode` so real
+  // deployments never see spurious alerts.
   const evaluateWeatherAlerts = useCallback(
     (rule: AlertRule) => {
-      // Mock weather data evaluation
-      // In production, this would integrate with a weather API
       const mockWeatherCondition = rule.condition.weatherCondition || 'severe_storm'
-      
-      // Randomly trigger alerts for demo purposes (10% chance)
-      const shouldAlert = Math.random() < 0.1
+      // Issue 9255 — demo-mode trigger probability per evaluation cycle
+      const DEMO_TRIGGER_PROBABILITY = 0.1
+
+      // Real-data path: if the rule has actual observed values, fire only when
+      // the threshold is crossed. This is the production-ready path when a
+      // weather API populates currentTemperature / currentWindSpeed.
+      let shouldAlert = false
+      if (mockWeatherCondition === 'extreme_heat' && rule.condition.currentTemperature !== undefined) {
+        const threshold = rule.condition.temperatureThreshold || DEFAULT_TEMPERATURE_THRESHOLD_F
+        shouldAlert = rule.condition.currentTemperature >= threshold
+      } else if (mockWeatherCondition === 'high_wind' && rule.condition.currentWindSpeed !== undefined) {
+        const threshold = rule.condition.windSpeedThreshold || DEFAULT_WIND_SPEED_THRESHOLD_MPH
+        shouldAlert = rule.condition.currentWindSpeed >= threshold
+      } else if (rule.condition.demoMode) {
+        // Opt-in demo path: keep the original random trigger so demo envs can
+        // still showcase conditional alerting without a real weather API.
+        shouldAlert = Math.random() < DEMO_TRIGGER_PROBABILITY
+      }
 
       if (shouldAlert) {
         let message = ''
@@ -1524,18 +1547,36 @@ Please provide:
         )
 
         if (memPressureIssue) {
+          // Extract node name from issue string (format: "MemoryPressure on node-name")
+          const nodeMatch = memPressureIssue.match(/on\s+(\S+)/)
+          const affectedNode = nodeMatch?.[1]
+
           createAlert(
             rule,
             `${cluster.name}: ${memPressureIssue}`,
             {
               clusterName: cluster.name,
               issue: memPressureIssue,
-              nodeCount: cluster.nodeCount },
+              nodeCount: cluster.nodeCount,
+              affectedNode },
             cluster.name,
             undefined,
             cluster.name,
             'Cluster'
           )
+
+          // Issue 9254 — memory pressure was missing the browser-notification
+          // dispatch that disk pressure has. Without this, users with browser
+          // notifications enabled never hear about memory pressure events.
+          dispatchBrowserNotification({
+            rule,
+            dedupKey: alertDedupKey(rule.id, rule.condition.type, cluster.name),
+            title: `Memory Pressure: ${cluster.name}`,
+            body: memPressureIssue,
+            deepLinkParams: affectedNode
+              ? { drilldown: 'node', cluster: cluster.name, node: affectedNode, issue: 'MemoryPressure' }
+              : { drilldown: 'cluster', cluster: cluster.name, issue: 'MemoryPressure' },
+          })
         } else {
           queueAutoResolve(rule.id, cluster.name)
         }

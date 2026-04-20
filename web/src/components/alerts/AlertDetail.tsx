@@ -14,6 +14,7 @@ import {
 import { Slack } from '@/lib/icons'
 import { useAlerts, useSlackNotification, useSlackWebhooks } from '../../hooks/useAlerts'
 import { useMissions } from '../../hooks/useMissions'
+import { useAuth } from '../../lib/auth'
 import { getSeverityIcon, getSeverityColor } from '../../types/alerts'
 import type { Alert } from '../../types/alerts'
 import { useToast } from '../ui/Toast'
@@ -21,6 +22,10 @@ import { Button } from '../ui/Button'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
 import { TOAST_DISMISS_MS } from '../../lib/constants/network'
+
+// Issue 9256 — fallback label used for acknowledgement when no authenticated
+// user is available (e.g. in demo mode without login).
+const ANONYMOUS_ACK_LABEL = 'anonymous'
 
 // Time thresholds for relative time formatting
 const MINUTES_PER_HOUR = 60 // Minutes in an hour
@@ -53,6 +58,7 @@ export function AlertDetail({ alert, onClose }: AlertDetailProps) {
   const { sendNotification } = useSlackNotification()
   const { missions, setActiveMission, openSidebar } = useMissions()
   const { showToast } = useToast()
+  const { user } = useAuth()
 
   const [showDetails, setShowDetails] = useState(false)
   const [isSendingSlack, setIsSendingSlack] = useState(false)
@@ -78,7 +84,11 @@ export function AlertDetail({ alert, onClose }: AlertDetailProps) {
   }, [])
 
   const handleAcknowledge = () => {
-    acknowledgeAlert(alert.id, 'Current User')
+    // Issue 9256 — record the actual authenticated user's github_login so
+    // team environments can track who acknowledged which alert. Falls back to
+    // ANONYMOUS_ACK_LABEL only when no user session is available.
+    const ackBy = user?.github_login || ANONYMOUS_ACK_LABEL
+    acknowledgeAlert(alert.id, ackBy)
   }
 
   const handleResolve = () => {
@@ -97,7 +107,10 @@ export function AlertDetail({ alert, onClose }: AlertDetailProps) {
       await runAIDiagnosis(alert.id)
     } catch {
       // #7334 — Clear spinner on failure instead of letting it persist
+      // Issue 9254 — previously failure was silent; now surface a toast so
+      // the user understands the diagnosis did not run.
       setIsRunningDiagnosis(false)
+      showToast(t('alerts.diagnosisFailed', 'AI diagnosis failed — please try again'), 'error')
       return
     }
     // Safety-net timeout: clear loading after 60s even if diagnosis never completes (#5714)
@@ -213,6 +226,13 @@ export function AlertDetail({ alert, onClose }: AlertDetailProps) {
               <CheckCircle className="w-4 h-4 text-green-400" />
               <span className="text-muted-foreground">{t('alerts.acknowledged')}</span>
               <span className="text-green-400">{formatRelativeTime(alert.acknowledgedAt, t)}</span>
+              {/* Issue 9256 — show who acknowledged the alert so teams can
+                  audit responders, not just the timestamp. */}
+              {alert.acknowledgedBy && (
+                <span className="text-muted-foreground text-xs">
+                  {t('alerts.acknowledgedBy', { user: alert.acknowledgedBy, defaultValue: 'by {{user}}' })}
+                </span>
+              )}
             </div>
           )}
         </div>
