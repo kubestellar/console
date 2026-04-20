@@ -685,19 +685,25 @@ jobs:
         working-directory: web
         continue-on-error: true
         run: |
-          echo "Checking for UI elements that could benefit from tooltips..."
+          echo "Checking for technical abbreviations rendered as JSX text without a wrapping acronym/tooltip..."
           ISSUES=""
 
-          # Find abbreviated or technical text without tooltips
-          ABBREV=$(grep -rn "CPU\|RAM\|OOM\|CRD\|RBAC\|PVC\|PV\b\|HPA\|VPA\|SLO\|SLI\|SLA\|MTTR\|MTTF" src/ --include="*.tsx" 2>/dev/null | grep -v "tooltip\|Tooltip\|title=" | grep -v node_modules | grep -v "\.test\." | head -15 || true)
+          # Issue 8970: the previous grep matched abbreviations anywhere
+          # (identifiers, state-machine strings, comparisons, type names),
+          # producing ~92% false positives (30-day Copilot acceptance 8%).
+          # Constrain to JSX text — an abbreviation appearing directly between
+          # > and < — which is what the user actually sees and what a tooltip
+          # would annotate. Skip matches already wrapped in <TechnicalAcronym>
+          # (the project's established affordance for acronym explanation).
+          ABBREV_PATTERN='CPU|RAM|OOM|CRD|RBAC|PVC|PV|HPA|VPA|SLO|SLI|SLA|MTTR|MTTF'
+          ABBREV=$(grep -rnP ">\s*(${ABBREV_PATTERN})\b[^<]{0,60}<" src/ --include="*.tsx" 2>/dev/null \
+            | grep -v node_modules \
+            | grep -v "\.test\." \
+            | grep -v "\.stories\." \
+            | grep -v "TechnicalAcronym" \
+            | head -15 || true)
           if [ -n "$ABBREV" ]; then
-            ISSUES="${ISSUES}### Technical abbreviations without tooltips\n\`\`\`\n${ABBREV}\n\`\`\`\n\n"
-          fi
-
-          # Find status indicators without explanation
-          STATUS=$(grep -rn "status\|Status" src/ --include="*.tsx" 2>/dev/null | grep -i "badge\|chip\|indicator\|dot" | grep -v "tooltip\|Tooltip\|title=" | grep -v node_modules | head -10 || true)
-          if [ -n "$STATUS" ]; then
-            ISSUES="${ISSUES}### Status indicators without tooltips\n\`\`\`\n${STATUS}\n\`\`\`\n\n"
+            ISSUES="${ISSUES}### Technical abbreviations rendered as JSX text without a wrapping acronym/tooltip\nWrap each in \`<TechnicalAcronym term=\"...\">\` (see \`web/src/components/ui/TechnicalAcronym.tsx\`) so hovering explains the term.\n\`\`\`\n${ABBREV}\n\`\`\`\n\n"
           fi
 
           if [ -n "$ISSUES" ]; then
@@ -716,19 +722,35 @@ jobs:
         working-directory: web
         continue-on-error: true
         run: |
-          echo "Checking for single-cluster assumptions..."
+          echo "Checking for single-cluster-assumption red flags..."
           ISSUES=""
 
-          # Find hardcoded cluster references
-          SINGLE=$(grep -rn "cluster\b" src/ --include="*.ts" --include="*.tsx" 2>/dev/null | grep -v "clusters\|Clusters\|multi\|Multi\|clusterName\|clusterId\|ClusterList\|ClusterCard" | grep -vi "type\|interface\|import" | grep -v node_modules | grep -v "\.test\." | head -15 || true)
-          if [ -n "$SINGLE" ]; then
-            ISSUES="${ISSUES}### References that may assume single cluster\n\`\`\`\n${SINGLE}\n\`\`\`\n\n"
+          # Issue 8970: the previous heuristics flagged legitimate per-cluster
+          # code (any .map(cluster => ...) rendering a list, any occurrence of
+          # the word "cluster" not followed by "s") as bugs, producing ~91%
+          # false positives (30-day Copilot acceptance 9%). Narrow to concrete
+          # red flags that reliably indicate assuming exactly one cluster:
+          #   1) Indexing [0] on a clusters-array variable (picking the first
+          #      cluster silently — the known failure mode, see GitOps.tsx).
+          #   2) Hardcoded cluster-name comparisons against literal strings.
+
+          FIRST_CLUSTER=$(grep -rnP '\b(clusters|deduplicatedClusters|reachableClusters|activeClusters)\s*\[\s*0\s*\]' src/ --include="*.ts" --include="*.tsx" 2>/dev/null \
+            | grep -v node_modules \
+            | grep -v "\.test\." \
+            | grep -v "\.spec\." \
+            | grep -vE ":[0-9]+:\s*(//|\*)" \
+            | head -10 || true)
+          if [ -n "$FIRST_CLUSTER" ]; then
+            ISSUES="${ISSUES}### Picking the first cluster with \`[0]\`\nThese silently ignore all but the first cluster. Either iterate all clusters or make the choice explicit (e.g., a user-selected cluster prop).\n\`\`\`\n${FIRST_CLUSTER}\n\`\`\`\n\n"
           fi
 
-          # Find missing aggregation (forEach without reduce/map across clusters)
-          NO_AGG=$(grep -rn "\.forEach\|\.map\|\.filter" src/ --include="*.ts" --include="*.tsx" 2>/dev/null | grep -i "cluster\|namespace" | grep -v "\.reduce\|aggregate\|total\|sum" | grep -v node_modules | head -10 || true)
-          if [ -n "$NO_AGG" ]; then
-            ISSUES="${ISSUES}### Cluster iterations without aggregation\n\`\`\`\n${NO_AGG}\n\`\`\`\n\n"
+          HARDCODED_CLUSTER=$(grep -rnP "clusterName\s*(===|==|!==|!=)\s*['\"][a-z][a-z0-9_-]{1,}['\"]" src/ --include="*.ts" --include="*.tsx" 2>/dev/null \
+            | grep -v node_modules \
+            | grep -v "\.test\." \
+            | grep -v "\.spec\." \
+            | head -10 || true)
+          if [ -n "$HARDCODED_CLUSTER" ]; then
+            ISSUES="${ISSUES}### Hardcoded cluster-name comparisons\nMatching against a literal cluster name breaks when the same code runs in clusters with different names.\n\`\`\`\n${HARDCODED_CLUSTER}\n\`\`\`\n\n"
           fi
 
           if [ -n "$ISSUES" ]; then
