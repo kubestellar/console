@@ -59,6 +59,14 @@ const (
 	// responses. Prevents allocation-size-overflow if GitHub returns a
 	// malformed or unexpectedly large total_count / array (go/allocation-size-overflow).
 	ghpMaxAllocItems = 10_000
+
+	// ghGetWithRetry tuning — see issue #9059. Mirrors the retry pattern in
+	// benchmarks.go (driveGetWithRetry). Only 403/429 trigger a retry;
+	// other statuses (including 5xx) are returned as-is to the caller so
+	// existing error handling continues to work.
+	GH_RETRY_MAX_ATTEMPTS  = 3
+	GH_RETRY_BASE_DELAY_MS = 1000
+	GH_RETRY_MAX_DELAY_MS  = 10_000
 )
 
 // ghpDefaultRepos is the default when PIPELINE_REPOS env var is not set.
@@ -586,6 +594,74 @@ func (h *GitHubPipelinesHandler) ghGet(ctx context.Context, path string) (*http.
 	return h.httpClient.Do(req)
 }
 
+// ghGetWithRetry wraps ghGet with exponential-backoff retries on GitHub
+// rate-limit responses (403 and 429). Per issue #9059, the GitHub Pipelines
+// dashboard fails immediately on rate-limit errors even though the 5000/hour
+// limit is temporary; a few retries usually succeed.
+//
+// Behavior:
+//   - Non-rate-limit responses (including 2xx and other 4xx/5xx) are returned
+//     directly so existing error handling is unchanged. Backward compatible
+//     with ghGet — opt-in only.
+//   - On 403/429, drains+closes the body and waits before retrying. If
+//     the response carries a Retry-After header (seconds), that value is
+//     honored (capped at GH_RETRY_MAX_DELAY_MS). Otherwise an exponential
+//     backoff is used: GH_RETRY_BASE_DELAY_MS * 2^(attempt-1), capped at
+//     GH_RETRY_MAX_DELAY_MS.
+//   - Honors context cancellation during the backoff sleep so callers can
+//     abort cleanly (no goroutine leak on request timeout).
+//   - After GH_RETRY_MAX_ATTEMPTS, returns the last response (still
+//     possibly 403/429) so the caller can surface the rate-limit error.
+func (h *GitHubPipelinesHandler) ghGetWithRetry(ctx context.Context, path string) (*http.Response, error) {
+	var lastResp *http.Response
+	var lastErr error
+	for attempt := 1; attempt <= GH_RETRY_MAX_ATTEMPTS; attempt++ {
+		resp, err := h.ghGet(ctx, path)
+		if err != nil {
+			// Network/transport errors are not retried — same semantics as
+			// ghGet. Caller decides whether to retry at a higher level.
+			return nil, err
+		}
+		if resp.StatusCode != http.StatusForbidden && resp.StatusCode != http.StatusTooManyRequests {
+			return resp, nil
+		}
+		// Rate-limited. If this is the final attempt, hand the response back
+		// to the caller so its existing 4xx branch formats the error.
+		lastErr = fmt.Errorf("github rate-limited (status %d)", resp.StatusCode)
+		if attempt == GH_RETRY_MAX_ATTEMPTS {
+			lastResp = resp
+			break
+		}
+		// Compute backoff: prefer Retry-After header, else exponential.
+		// Drain+close the body before sleeping so the connection can be reused.
+		backoff := time.Duration(GH_RETRY_BASE_DELAY_MS*(1<<(attempt-1))) * time.Millisecond
+		maxBackoff := time.Duration(GH_RETRY_MAX_DELAY_MS) * time.Millisecond
+		if ra := resp.Header.Get("Retry-After"); ra != "" {
+			if secs, parseErr := strconv.Atoi(strings.TrimSpace(ra)); parseErr == nil && secs > 0 {
+				backoff = time.Duration(secs) * time.Second
+			}
+		}
+		if backoff > maxBackoff {
+			backoff = maxBackoff
+		}
+		slog.Info("[github-pipelines] retrying after rate-limit",
+			"path", path,
+			"status", resp.StatusCode,
+			"attempt", attempt,
+			"maxAttempts", GH_RETRY_MAX_ATTEMPTS,
+			"backoff", backoff,
+		)
+		io.Copy(io.Discard, resp.Body)
+		resp.Body.Close()
+		select {
+		case <-time.After(backoff):
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+	}
+	return lastResp, lastErr
+}
+
 // ghpStoreRateLimitHeaders stores GitHub API rate limit headers in the context
 // for later forwarding to the client response.
 func ghpStoreRateLimitHeaders(ctx context.Context, resp *http.Response) context.Context {
@@ -716,7 +792,7 @@ func (h *GitHubPipelinesHandler) fetchRuns(ctx context.Context, repo, query stri
 	var out []ghpWorkflowRun
 	for page := 1; page <= maxPages; page++ {
 		pageQuery := fmt.Sprintf("%sper_page=%d&page=%d", baseQuery, pageSize, page)
-		res, err := h.ghGet(ctx, fmt.Sprintf("/repos/%s/actions/runs?%s", repo, pageQuery))
+		res, err := h.ghGetWithRetry(ctx, fmt.Sprintf("/repos/%s/actions/runs?%s", repo, pageQuery))
 		if err != nil {
 			return out, err
 		}
@@ -756,7 +832,7 @@ func (h *GitHubPipelinesHandler) fetchRuns(ctx context.Context, repo, query stri
 // fetchWorkflowRuns fetches runs for a specific workflow file (e.g. "release.yml")
 // via /repos/{owner}/{repo}/actions/workflows/{workflow_id}/runs.
 func (h *GitHubPipelinesHandler) fetchWorkflowRuns(ctx context.Context, repo, workflowFile, query string) ([]ghpWorkflowRun, error) {
-	res, err := h.ghGet(ctx, fmt.Sprintf("/repos/%s/actions/workflows/%s/runs?%s", repo, workflowFile, query))
+	res, err := h.ghGetWithRetry(ctx, fmt.Sprintf("/repos/%s/actions/workflows/%s/runs?%s", repo, workflowFile, query))
 	if err != nil {
 		return nil, err
 	}
