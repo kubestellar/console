@@ -140,6 +140,7 @@
     "@react-three/drei": {
       "three-mesh-bvh": "^0.8.0"
     },
-    "minimatch": "^10.2.1"
+    "minimatch": "^10.2.1",
+    "follow-redirects": "^1.15.12"
   }
 }
