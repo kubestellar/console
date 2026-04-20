@@ -5,7 +5,7 @@
  * Uses AI to generate a clean problem/solution summary for reuse.
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import {
   Save,
   Share2,
@@ -189,8 +189,12 @@ export function SaveResolutionDialog({
   const { t } = useTranslation(['common', 'cards'])
   const { saveResolution } = useResolutions()
 
-  // Auto-detect issue signature from mission content
-  const autoDetectedSignature = (() => {
+  // Auto-detect issue signature from mission content.
+  // Memoized: avoids producing a new object reference on every render, which
+  // would otherwise invalidate the init effect's deps and (combined with an
+  // unstable generateSummary) trigger an infinite render loop that kept
+  // opening fresh AI WebSockets and froze the UI (issue #9163).
+  const autoDetectedSignature = useMemo(() => {
     const content = [
       mission.title,
       mission.description,
@@ -198,7 +202,17 @@ export function SaveResolutionDialog({
     ].join('\n')
 
     return detectIssueSignature(content)
-  })()
+  }, [mission.title, mission.description, mission.messages])
+
+  // Keep latest mission + signature in refs so generateSummary can be a stable
+  // callback (no deps) without going stale. Stable callback identity is what
+  // lets the init useEffect depend only on isOpen + mission.id.
+  const missionRef = useRef(mission)
+  const signatureRef = useRef(autoDetectedSignature)
+  useEffect(() => {
+    missionRef.current = mission
+    signatureRef.current = autoDetectedSignature
+  }, [mission, autoDetectedSignature])
 
   // Form state
   const [title, setTitle] = useState('')
@@ -215,13 +229,15 @@ export function SaveResolutionDialog({
   const [isGenerating, setIsGenerating] = useState(false)
   const [aiError, setAiError] = useState<string | null>(null)
 
-  // Generate AI summary
-  const generateSummary = async () => {
+  // Generate AI summary. Stable identity (empty deps) — reads latest mission
+  // via missionRef so it doesn't need mission in its closure.
+  const generateSummary = useCallback(async () => {
     setIsGenerating(true)
     setAiError(null)
 
+    const currentMission = missionRef.current
     try {
-      const aiSummary = await generateAISummary(mission)
+      const aiSummary = await generateAISummary(currentMission)
 
       setTitle(aiSummary.title)
       setIssueType(aiSummary.issueType)
@@ -232,24 +248,27 @@ export function SaveResolutionDialog({
     } catch (err) {
       setAiError(err instanceof Error ? err.message : 'Failed to generate summary')
       // Fall back to basic extraction
-      setTitle(mission.title)
-      setIssueType(autoDetectedSignature.type || '')
-      setResourceKind(autoDetectedSignature.resourceKind || '')
+      setTitle(currentMission.title)
+      setIssueType(signatureRef.current.type || '')
+      setResourceKind(signatureRef.current.resourceKind || '')
     } finally {
       setIsGenerating(false)
     }
-  }
+  }, [])
 
-  // Initialize form when dialog opens - auto-generate AI summary
+  // Initialize form when dialog opens - auto-generate AI summary.
+  // Depends only on isOpen + mission.id so streaming message updates on the
+  // active mission don't re-fire the effect (which would re-open the AI
+  // WebSocket and freeze the UI — issue #9163).
   useEffect(() => {
     if (isOpen) {
       setError(null)
       setAiError(null)
 
       // Start with basic values while AI generates
-      setTitle(mission.title)
-      setIssueType(autoDetectedSignature.type || '')
-      setResourceKind(autoDetectedSignature.resourceKind || '')
+      setTitle(missionRef.current.title)
+      setIssueType(signatureRef.current.type || '')
+      setResourceKind(signatureRef.current.resourceKind || '')
       setSummary('')
       setSteps([''])
       setYaml('')
@@ -257,7 +276,8 @@ export function SaveResolutionDialog({
       // Generate AI summary
       generateSummary()
     }
-  }, [isOpen, mission, autoDetectedSignature, generateSummary])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, mission.id, generateSummary])
 
   const handleAddStep = () => {
     setSteps(prev => [...prev, ''])
