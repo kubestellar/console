@@ -10,9 +10,36 @@ import { acmmSource } from '../sources/acmm'
 
 const ACMM_CRITERIA = acmmSource.criteria.filter((c) => c.source === 'acmm')
 
-/** Returns IDs of scannable criteria for a level (matching the scoring algorithm). */
+/**
+ * IDs of the four individual instruction-file criteria that form the L2
+ * OR-group in computeLevel.ts (PR #9190). Detecting any one of them causes
+ * the virtual 'acmm:agent-instructions' criterion to be synthesised, which
+ * alone satisfies the L2 gate (threshold = 1/N). Tests that seed L2 with
+ * raw OR-group IDs must account for this substitution.
+ * See: web/src/lib/acmm/computeLevel.ts → AGENT_INSTRUCTION_FILE_IDS
+ */
+const AGENT_INSTRUCTION_FILE_IDS = new Set([
+  'acmm:claude-md',
+  'acmm:copilot-instructions',
+  'acmm:agents-md',
+  'acmm:cursor-rules',
+])
+
+/** Virtual criterion ID that replaces the OR-group members for L2 scoring. */
+const VIRTUAL_AGENT_INSTRUCTIONS_ID = 'acmm:agent-instructions'
+
+/**
+ * Returns effective scannable criterion IDs for a level, mirroring the
+ * OR-group substitution performed by computeLevel.ts:
+ *   - For L2, the four individual instruction-file IDs are replaced by the
+ *     single virtual 'acmm:agent-instructions' ID.
+ *   - All other levels return the raw scannable IDs unchanged.
+ */
 function scannableCriteriaForLevel(n: number): string[] {
-  return ACMM_CRITERIA.filter((c) => c.level === n && c.scannable !== false).map((c) => c.id)
+  const raw = ACMM_CRITERIA.filter((c) => c.level === n && c.scannable !== false).map((c) => c.id)
+  if (n !== 2) return raw
+  const rest = raw.filter((id) => !AGENT_INSTRUCTION_FILE_IDS.has(id))
+  return [VIRTUAL_AGENT_INSTRUCTIONS_ID, ...rest]
 }
 
 /** Returns IDs of ALL criteria for a level (including non-scannable). */
@@ -31,7 +58,10 @@ describe('computeLevel', () => {
     expect(result.nextTransitionTrigger).not.toBeNull()
   })
 
-  it('returns L2 when 70%+ of scannable L2 criteria are detected', () => {
+  it('returns L2 when at least one scannable L2 criterion is detected', () => {
+    // L2 "Instructed" uses a relaxed gate: any single criterion suffices
+    // (threshold = 1/N). Seed with 70%+ of effective L2 criteria, which
+    // necessarily exceeds that threshold.
     const l2Ids = scannableCriteriaForLevel(2)
     const targetCount = Math.ceil(l2Ids.length * LEVEL_COMPLETION_THRESHOLD)
     const detected = new Set(l2Ids.slice(0, targetCount))
@@ -40,11 +70,16 @@ describe('computeLevel', () => {
   })
 
   it('stays at the previous level if the threshold is not met', () => {
-    const l2Ids = scannableCriteriaForLevel(2)
-    // Below threshold — 1 out of many.
-    const detected = new Set([l2Ids[0]])
+    // L2 uses a relaxed gate (any 1 criterion suffices), so test threshold
+    // behaviour at L3 where the standard 70% threshold applies.
+    // Detect all of L2 (reaching L2) but only 1 of many L3 criteria — must
+    // not advance past L2.
+    const l3Ids = scannableCriteriaForLevel(3)
+    // Guard: only meaningful when L3 has more than 1 scannable criterion.
+    if (l3Ids.length <= 1) return
+    const detected = new Set([...scannableCriteriaForLevel(2), l3Ids[0]])
     const result = computeLevel(detected)
-    expect(result.level).toBe(MIN_LEVEL)
+    expect(result.level).toBe(2)
   })
 
   it('stops walking up the levels at the first unmet gate', () => {
