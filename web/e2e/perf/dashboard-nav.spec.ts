@@ -921,18 +921,59 @@ test.afterAll(async () => {
   fs.writeFileSync(path.join(outDir, 'nav-summary.md'), lines.join('\n'))
   console.log(lines.join('\n'))
 
-  // ── Navigation threshold assertions ───────────────────────────────────
-  const warmMetrics = navReport.metrics.filter(
-    (m) => m.scenario === 'warm-nav' && m.cardsFound > 0 && m.totalMs > 0
-  )
-  if (warmMetrics.length > 0) {
-    const avgWarmTotal = Math.round(
-      warmMetrics.reduce((s, m) => s + m.totalMs, 0) / warmMetrics.length
-    )
-    console.log(`[Nav] warm-nav avg total: ${avgWarmTotal}ms (threshold: 3000ms)`)
-    expect(
-      avgWarmTotal,
-      `warm-nav avg total ${avgWarmTotal}ms exceeds 3000ms threshold`
-    ).toBeLessThan(3000)
+  // ── Issue 9232: per-scenario navigation threshold assertions ──────────
+  //
+  // Before this block, every scenario except `warm-nav` measured timings
+  // and wrote them to `nav-report.json` / `nav-summary.md` without ever
+  // asserting against a budget. A dashboard navigation that regressed from
+  // 500ms to 4s (the exact example in Issue 9232) would pass.
+  //
+  // The per-scenario budgets below are sized from observed ranges in the
+  // generated `nav-summary.md`:
+  //   - cold-nav:     first visit, must fetch chunks + render
+  //   - warm-nav:     chunks cached, already <2s in practice
+  //   - from-main:    pre-warmed; measures just the transition cost
+  //   - from-clusters: pre-warmed; measures just the transition cost
+  //   - rapid-nav:    user clicks faster than the app; only the final
+  //                   nav is measured end-to-end, so budget matches warm-nav
+  //   - back-nav:     router `goBack()` + cached cards — should be fastest
+  //
+  // Each budget intentionally leaves ~30-50% headroom over the observed
+  // mean so legitimate growth (new cards, websocket events) doesn't flap
+  // CI, while the kind of regression Issue 9232 calls out ("TTFI going
+  // from 500ms to 3000ms") gets caught.
+  const COLD_NAV_AVG_MS_BUDGET = 5_000
+  const WARM_NAV_AVG_MS_BUDGET = 3_000
+  const FROM_MAIN_AVG_MS_BUDGET = 4_000
+  const FROM_CLUSTERS_AVG_MS_BUDGET = 4_000
+  const RAPID_NAV_AVG_MS_BUDGET = 3_000
+  const BACK_NAV_AVG_MS_BUDGET = 3_000
+
+  const SCENARIO_BUDGETS: Record<Scenario, number> = {
+    'cold-nav': COLD_NAV_AVG_MS_BUDGET,
+    'warm-nav': WARM_NAV_AVG_MS_BUDGET,
+    'from-main': FROM_MAIN_AVG_MS_BUDGET,
+    'from-clusters': FROM_CLUSTERS_AVG_MS_BUDGET,
+    'rapid-nav': RAPID_NAV_AVG_MS_BUDGET,
+    'back-nav': BACK_NAV_AVG_MS_BUDGET,
   }
+
+  const scenarioFailures: string[] = []
+  for (const scenario of Object.keys(SCENARIO_BUDGETS) as Scenario[]) {
+    const metrics = navReport.metrics.filter(
+      (m) => m.scenario === scenario && m.cardsFound > 0 && m.totalMs > 0
+    )
+    if (metrics.length === 0) continue
+    const avg = Math.round(metrics.reduce((s, m) => s + m.totalMs, 0) / metrics.length)
+    const budget = SCENARIO_BUDGETS[scenario]
+    console.log(`[Nav] ${scenario} avg total: ${avg}ms (budget: ${budget}ms, n=${metrics.length})`)
+    if (avg >= budget) {
+      scenarioFailures.push(`${scenario} avg total ${avg}ms >= ${budget}ms budget (n=${metrics.length})`)
+    }
+  }
+
+  expect(
+    scenarioFailures.length,
+    `Navigation-scenario avg budgets breached:\n${scenarioFailures.join('\n')}`
+  ).toBe(0)
 })

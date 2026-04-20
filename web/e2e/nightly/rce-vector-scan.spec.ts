@@ -571,9 +571,47 @@ test('RCE vector scan — all attack surfaces', async ({ page }, testInfo) => {
     contentType: 'application/json',
   })
 
-  // FAIL the test if any CRITICAL checks failed
+  // ── Issue 9235: fail the test on ANY security finding ────────────────
+  //
+  // Before this block, only `summary.criticalFails` was asserted. A `fail`
+  // at `high`/`medium`/`low` severity (e.g. an IFrame with no sandbox, an
+  // inline event handler, token exposure in a data-* attribute) was written
+  // to `rce-vector-report.md` and `rce-vector-report.json` as a PASS — the
+  // report recorded the defect, but the Playwright run still exited 0, so
+  // the nightly job went green and nobody looked at the report.
+  //
+  // We assert three separate budgets so the failure message pinpoints the
+  // severity bucket that regressed:
+  //   - criticalFails MUST be 0 (e.g. javascript: URIs, CSP bypass, path traversal)
+  //   - highFails     MUST be 0 (e.g. inline scripts, token in DOM, external WS)
+  //   - medium/low    counted in the aggregate `fail` budget below
+  //
+  // The aggregate `fail` budget catches low-severity findings too, so even
+  // a lone medium fail exits non-zero and surfaces in CI logs.
+  const TOTAL_FAIL_BUDGET = 0
+  const CRITICAL_FAIL_BUDGET = 0
+  const HIGH_FAIL_BUDGET = 0
+
   expect(
     summary.criticalFails,
     `${summary.criticalFails} CRITICAL security check(s) failed — see rce-vector-report.md`
-  ).toBe(0)
+  ).toBe(CRITICAL_FAIL_BUDGET)
+
+  expect(
+    summary.highFails,
+    `${summary.highFails} HIGH-severity security check(s) failed — see rce-vector-report.md`
+  ).toBe(HIGH_FAIL_BUDGET)
+
+  // Aggregate sweep: catches medium/low fails that aren't covered by the
+  // two severity-specific assertions above. Listing the failing check names
+  // in the message saves the developer a round-trip to the artifact.
+  if (summary.fail > 0) {
+    const failingChecks = checks
+      .filter((c) => c.status === 'fail')
+      .map((c) => `[${c.severity}] ${c.phase}: ${c.name} — ${c.details}`)
+    expect(
+      summary.fail,
+      `${summary.fail} security check(s) failed:\n${failingChecks.join('\n')}`
+    ).toBe(TOTAL_FAIL_BUDGET)
+  }
 })
