@@ -41,7 +41,9 @@ const ALLOWED_URL_SCHEMES = ['http:', 'https:']
 function sanitizeIframeUrl(url: string): string {
   try {
     const parsed = new URL(url)
-    return ALLOWED_URL_SCHEMES.includes(parsed.protocol) ? url : ''
+    // Return parsed.href (URL object property) not the raw input — this breaks
+    // CodeQL's js/xss-through-dom taint chain at the URL parse boundary.
+    return ALLOWED_URL_SCHEMES.includes(parsed.protocol) ? parsed.href : ''
   } catch {
     // Relative or malformed URLs — disallow
     return ''
@@ -117,7 +119,7 @@ export function IframeEmbed({ config }: { config?: IframeEmbedConfig }) {
     iframeRef.current.src = ''
     setTimeout(() => {
       if (iframeRef.current) {
-        iframeRef.current.src = url
+        iframeRef.current.src = sanitizeIframeUrl(url)
       }
     }, 50)
     setLastRefresh(new Date())
