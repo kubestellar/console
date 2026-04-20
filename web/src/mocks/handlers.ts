@@ -893,6 +893,10 @@ export const handlers = [
   // GitHub Actions data in Netlify Blobs. Must be http.all (not just
   // http.get) to cover mutation POSTs + CORS preflight.
   http.all('/api/github-pipelines', () => passthrough()),
+  // Feedback App attribution proxy (Netlify Function). Must be http.all
+  // (not just http.post) so the CORS OPTIONS preflight is also passed
+  // through — per feedback_msw_passthrough.md.
+  http.all('/api/feedback-app', () => passthrough()),
 
   // ── Kubara Platform Catalog (demo fixtures — #8486) ─────────────
   // Realistic fixture snapshots matching the GitHub Contents API shape
