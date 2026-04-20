@@ -26,10 +26,10 @@ const INTERN_MAP: Record<string, string> = {
   "Abhishek-Punhani": "intern-10",
 };
 
-/** Reverse map: utm_term → GitHub login */
+/** Reverse map: utm_term → GitHub login (lowercased — GitHub logins are case-insensitive) */
 const TERM_TO_LOGIN: Record<string, string> = {};
 for (const [login, term] of Object.entries(INTERN_MAP)) {
-  TERM_TO_LOGIN[term] = login;
+  TERM_TO_LOGIN[term] = login.toLowerCase();
 }
 
 /** Cache TTL — 15 minutes */
@@ -133,13 +133,16 @@ async function fetchAffiliateClicks(): Promise<Record<string, AffiliateData>> {
 
   const result: Record<string, AffiliateData> = {};
 
-  /** Helper to merge a row into the result, summing clicks/unique_users for duplicates */
+  /** Helper to merge a row into the result, summing clicks/unique_users for duplicates.
+   *  Keys are always lowercased — GitHub logins are case-insensitive and GA4 utm_term
+   *  casing varies by how mentees share their links. */
   function mergeEntry(login: string, utmTerm: string, sessions: number, users: number): void {
-    if (result[login]) {
-      result[login].clicks += sessions;
-      result[login].unique_users += users;
+    const key = login.toLowerCase();
+    if (result[key]) {
+      result[key].clicks += sessions;
+      result[key].unique_users += users;
     } else {
-      result[login] = { clicks: sessions, unique_users: users, utm_term: utmTerm };
+      result[key] = { clicks: sessions, unique_users: users, utm_term: utmTerm };
     }
   }
 
@@ -166,10 +169,11 @@ async function fetchAffiliateClicks(): Promise<Record<string, AffiliateData>> {
     mergeEntry(utmTerm, utmTerm, sessions, users);
   }
 
-  // Fill in zeros for interns with no clicks
+  // Fill in zeros for interns with no clicks (use lowercase key to match mergeEntry)
   for (const [login, term] of Object.entries(INTERN_MAP)) {
-    if (!result[login]) {
-      result[login] = { clicks: 0, unique_users: 0, utm_term: term };
+    const key = login.toLowerCase();
+    if (!result[key]) {
+      result[key] = { clicks: 0, unique_users: 0, utm_term: term };
     }
   }
 
