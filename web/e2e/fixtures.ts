@@ -25,6 +25,13 @@ export const test = base.extend<{
     mockEvents: (events: unknown[]) => Promise<void>
     mockGPUNodes: (nodes: unknown[]) => Promise<void>
     mockLocalAgent: () => Promise<void>
+    /**
+     * Unroute every handler registered through this fixture. Useful when a
+     * test wants to start from a clean slate after a beforeEach() set up
+     * defaults. Per-test cleanup also runs automatically when the fixture
+     * tears down.
+     */
+    unrouteAll: () => Promise<void>
   }
 }>({
   // AI mode fixture
@@ -50,51 +57,126 @@ export const test = base.extend<{
   },
 
   // API mocking fixture
+  //
+  // #9085 — Playwright stacks `page.route()` handlers and matches them in
+  // registration order. If a `beforeEach` registers `mockClusters([A])` and
+  // the test body registers `mockClusters([B])`, the first handler wins and
+  // the test sees A. To make the fixture do the obvious thing — "the most
+  // recent call wins" — every helper here records the URL pattern + handler
+  // in `routePatterns`, then unroutes any prior handlers for the same URL
+  // before registering a new one. The fixture also unroutes everything it
+  // registered when the test tears down, so handlers cannot leak across
+  // tests that share state (e.g. via `test.describe.configure({ mode: 'serial' })`).
   mockAPI: async ({ page }, use) => {
+    // Map of URL pattern -> list of handlers we registered for that pattern.
+    // We track handlers (not just URLs) because Playwright's page.unroute(url)
+    // requires the same handler reference if it was registered with one;
+    // calling page.unroute(url) without a handler removes ALL handlers for
+    // that URL, which is exactly the override semantics we want here.
+    const routePatterns = new Map<string, Array<(route: unknown) => unknown>>()
+
+    /**
+     * Register a route handler, unrouting any prior handlers we registered
+     * for the same URL pattern so the most recent call wins.
+     */
+    const setRoute = async (
+      urlPattern: string,
+      handler: Parameters<typeof page.route>[1]
+    ): Promise<void> => {
+      // Drop any previously registered handlers for this pattern so the new
+      // one wins. We pass no handler ref to unroute() — that removes ALL
+      // handlers for the URL, including any registered via raw page.route()
+      // earlier in the same test. Callers that want to preserve external
+      // handlers should call mockAPI helpers BEFORE registering raw routes.
+      const prior = routePatterns.get(urlPattern)
+      if (prior && prior.length > 0) {
+        await page.unroute(urlPattern)
+      }
+      await page.route(urlPattern, handler)
+      routePatterns.set(urlPattern, [handler as (route: unknown) => unknown])
+    }
+
+    /** URL patterns used by the fixture. Centralized so unrouteAll() and
+     * setRoute() agree on the exact strings. */
+    const URL_CLUSTERS = '**/api/mcp/clusters'
+    const URL_POD_ISSUES = '**/api/mcp/pod-issues'
+    const URL_EVENTS = '**/api/mcp/events**'
+    const URL_GPU_NODES = '**/api/mcp/gpu-nodes'
+    const URL_LOCAL_AGENT = '**/127.0.0.1:8585/**'
+
+    /** HTTP status returned by every mock in this fixture. */
+    const MOCK_STATUS_OK = 200
+
     // eslint-disable-next-line react-hooks/rules-of-hooks -- Playwright fixture, not a React hook
     await use({
       mockClusters: async (clusters) => {
-        await page.route('**/api/mcp/clusters', (route) =>
+        await setRoute(URL_CLUSTERS, (route) =>
           route.fulfill({
-            status: 200,
+            status: MOCK_STATUS_OK,
             json: { clusters },
           })
         )
       },
       mockPodIssues: async (issues) => {
-        await page.route('**/api/mcp/pod-issues', (route) =>
+        await setRoute(URL_POD_ISSUES, (route) =>
           route.fulfill({
-            status: 200,
+            status: MOCK_STATUS_OK,
             json: { issues },
           })
         )
       },
       mockEvents: async (events) => {
-        await page.route('**/api/mcp/events**', (route) =>
+        await setRoute(URL_EVENTS, (route) =>
           route.fulfill({
-            status: 200,
+            status: MOCK_STATUS_OK,
             json: { events },
           })
         )
       },
       mockGPUNodes: async (nodes) => {
-        await page.route('**/api/mcp/gpu-nodes', (route) =>
+        await setRoute(URL_GPU_NODES, (route) =>
           route.fulfill({
-            status: 200,
+            status: MOCK_STATUS_OK,
             json: { nodes },
           })
         )
       },
       mockLocalAgent: async () => {
         // Mock local agent endpoints (used by drilldown components)
-        await page.route('**/127.0.0.1:8585/**', (route) =>
+        await setRoute(URL_LOCAL_AGENT, (route) =>
           route.fulfill({
-            status: 200,
+            status: MOCK_STATUS_OK,
             json: { events: [], clusters: [], health: { hasClaude: false, hasBob: false } },
           })
         )
       },
+      unrouteAll: async () => {
+        for (const pattern of routePatterns.keys()) {
+          // Tolerate races where the page is already closing — unroute can
+          // throw if the target context is gone, and we don't want fixture
+          // teardown to mask the real test failure.
+          try {
+            await page.unroute(pattern)
+          } catch {
+            // page already closed or context torn down — nothing to clean up
+          }
+        }
+        routePatterns.clear()
+      },
     })
+
+    // Teardown: drop every handler we registered so they cannot leak into
+    // the next test if Playwright reuses the page (serial mode, manual
+    // page reuse, etc.). Each test normally gets a fresh page so this is
+    // belt-and-suspenders, but the cost is one unroute() per pattern.
+    for (const pattern of routePatterns.keys()) {
+      try {
+        await page.unroute(pattern)
+      } catch {
+        // page already closed — nothing to do
+      }
+    }
+    routePatterns.clear()
   },
 })
 
