@@ -58,10 +58,13 @@ export function scanMissionFile(jsonContent: string): FileScanResult {
 /**
  * Escape a string for safe inclusion in a Markdown table cell.
  * Prevents markdown injection via pipe characters, backticks, or HTML tags.
+ * Backslashes are escaped first so that subsequent replacements cannot be
+ * reinterpreted as escape sequences by the Markdown renderer.
  * Used for all user/API-derived text inserted into table rows.
  */
 function escapeMdCell(text: string): string {
   return text
+    .replace(/\\/g, '\\\\')
     .replace(/\|/g, '\\|')
     .replace(/`/g, '\\`')
     .replace(/</g, '&lt;')
