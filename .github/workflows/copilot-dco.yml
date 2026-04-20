@@ -4,6 +4,13 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
+# Least-privilege: read-only by default; the reusable workflow sets commit
+# statuses and manages DCO labels on PRs.
+permissions: read-all
+
 jobs:
   copilot-dco:
+    permissions:
+      statuses: write
+      pull-requests: write
     uses: kubestellar/infra/.github/workflows/reusable-copilot-dco.yml@main
