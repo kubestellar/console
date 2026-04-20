@@ -99,6 +99,7 @@ export function BaseModal({
   closeOnBackdrop = true,
   closeOnEscape = true,
   enableBackspace = true,
+  testId,
 }: BaseModalProps) {
   const backdropRef = useRef<HTMLDivElement>(null)
   const modalRef = useRef<HTMLDivElement>(null)
@@ -142,6 +143,7 @@ export function BaseModal({
           role="dialog"
           aria-modal="true"
           aria-labelledby={titleId}
+          data-testid={testId}
           className={`glass w-full ${SIZE_CLASSES[size]} ${HEIGHT_CLASSES[size]} rounded-xl flex flex-col overflow-hidden ${className}`}
           onClick={(e) => e.stopPropagation()}
         >
@@ -171,6 +173,7 @@ function ModalHeader({
   showBack = true,
   extra,
   children,
+  closeTestId,
 }: ModalHeaderProps) {
   const titleId = useContext(ModalTitleIdContext)
   const { escapeEnabled } = useContext(ModalEscapeContext)
@@ -232,6 +235,7 @@ function ModalHeader({
               className="p-2 rounded-lg hover:bg-card/50 text-muted-foreground hover:text-foreground transition-colors"
               title={closeTitle}
               aria-label={closeAriaLabel}
+              data-testid={closeTestId}
             >
               <X className="w-5 h-5" aria-hidden="true" />
             </button>

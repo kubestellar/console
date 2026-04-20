@@ -1572,12 +1572,14 @@ export function CardWrapper({
             isOpen={isExpanded}
             onClose={() => setIsExpanded(false)}
             size={FULLSCREEN_EXPANDED_CARDS.has(cardType) ? 'full' : LARGE_EXPANDED_CARDS.has(cardType) ? 'xl' : 'lg'}
+            testId="drilldown-modal"
           >
             <BaseModal.Header
               title={title}
               icon={Maximize2}
               onClose={() => setIsExpanded(false)}
               showBack={false}
+              closeTestId="drilldown-close"
             />
             <BaseModal.Content className={cn(
               'overflow-auto scroll-enhanced flex flex-col',

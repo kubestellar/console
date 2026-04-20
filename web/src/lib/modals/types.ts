@@ -287,6 +287,8 @@ export interface BaseModalProps {
   closeOnEscape?: boolean
   /** Whether to enable Backspace/Space to close (default true) */
   enableBackspace?: boolean
+  /** data-testid for the dialog element (for E2E tests) */
+  testId?: string
 }
 
 export interface ModalHeaderProps {
@@ -308,6 +310,8 @@ export interface ModalHeaderProps {
   extra?: ReactNode
   /** Children (below title) */
   children?: ReactNode
+  /** data-testid for the close button (for E2E tests) */
+  closeTestId?: string
 }
 
 export interface ModalContentProps {
