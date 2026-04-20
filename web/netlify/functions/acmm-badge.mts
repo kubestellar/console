@@ -35,6 +35,21 @@ const MAX_LEVEL = 6;
 const BADGE_CACHE_SECONDS = 3600;
 
 /**
+ * Agent instruction files are an OR group for L2: any one vendor-specific or
+ * vendor-neutral file satisfies the "Instructed" signal. A project using the
+ * vendor-agnostic AGENTS.md (agents.md spec) should reach L2 just as easily
+ * as one that stacks multiple vendor-specific configs. The virtual criterion
+ * "acmm:agent-instructions" is synthesised in computeLevel() before the level
+ * walk if any member of this set is present in detectedIds. Issue #9169.
+ */
+const AGENT_INSTRUCTION_FILE_IDS = new Set([
+  "acmm:claude-md",
+  "acmm:copilot-instructions",
+  "acmm:agents-md",
+  "acmm:cursor-rules",
+]);
+
+/**
  * ACMM criteria grouped by level. MUST mirror the scannable entries in
  * acmm-scan.mts CRITERIA (IDs and level assignments).
  *
@@ -43,13 +58,14 @@ const BADGE_CACHE_SECONDS = 3600;
  * taxonomy, so the badge always computed to L1 ("5/10" for kubestellar/
  * console) regardless of the repo's real maturity. When adding / renaming
  * criteria in acmm-scan.mts, update this map and the LEVEL_NAMES below.
+ *
+ * L2 uses a virtual "acmm:agent-instructions" criterion (synthesised in
+ * computeLevel) rather than the four individual instruction-file IDs, so that
+ * any one vendor-neutral or vendor-specific file satisfies the L2 gate.
  */
 const ACMM_IDS_BY_LEVEL: Record<number, string[]> = {
   2: [
-    "acmm:claude-md",
-    "acmm:copilot-instructions",
-    "acmm:agents-md",
-    "acmm:cursor-rules",
+    "acmm:agent-instructions", // virtual OR: any of claude-md / agents-md / copilot-instructions / cursor-rules
     "acmm:prompts-catalog",
     "acmm:editor-config",
   ],
@@ -126,7 +142,15 @@ function corsHeaders(origin: string | null): Record<string, string> {
   return headers;
 }
 
-function computeLevel(detectedIds: Set<string>): { level: number; totalDetected: number; totalAcmm: number } {
+function computeLevel(rawDetectedIds: Set<string>): { level: number; totalDetected: number; totalAcmm: number } {
+  // Synthesise the virtual L2 criterion before the level walk.
+  // Any one instruction file (vendor-neutral AGENTS.md or vendor-specific
+  // CLAUDE.md / copilot-instructions / .cursorrules) satisfies the group.
+  const detectedIds = new Set(rawDetectedIds);
+  if ([...AGENT_INSTRUCTION_FILE_IDS].some((id) => detectedIds.has(id))) {
+    detectedIds.add("acmm:agent-instructions");
+  }
+
   let currentLevel = 1;
   let totalDetected = 0;
   let totalAcmm = 0;
@@ -137,8 +161,11 @@ function computeLevel(detectedIds: Set<string>): { level: number; totalDetected:
     totalAcmm += required.length;
     totalDetected += detected;
     if (required.length === 0 || stopPromotion) continue;
+    // L2 "Instructed" is reached with any single criterion (the project has
+    // started using AI tooling); higher levels use the 70 % threshold.
+    const threshold = n === 2 ? 1 / required.length : LEVEL_COMPLETION_THRESHOLD;
     const ratio = detected / required.length;
-    if (ratio >= LEVEL_COMPLETION_THRESHOLD) {
+    if (ratio >= threshold) {
       currentLevel = n;
     } else {
       // Stop promoting levels after the first gap, but keep counting
@@ -195,7 +222,8 @@ async function fetchDetectedIds(origin: string, repo: string, force = false): Pr
  * on any repo), so every fallback path computed to L1.
  */
 const BADGE_FALLBACK_PATHS: Record<string, readonly string[]> = {
-  // L2
+  // L2 — individual instruction files still detected; computeLevel synthesises
+  // the virtual "acmm:agent-instructions" from any one of these matches.
   "acmm:claude-md": ["CLAUDE.md", ".claude/CLAUDE.md"],
   "acmm:copilot-instructions": [".github/copilot-instructions.md"],
   "acmm:agents-md": ["AGENTS.md"],

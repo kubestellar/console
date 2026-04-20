@@ -8,6 +8,31 @@ const LEVEL_COMPLETION_THRESHOLD = 0.7
 /** Level 0 = prerequisites (soft indicator, not gating) */
 const PREREQUISITE_LEVEL = 0
 
+/**
+ * Agent instruction files are an OR group for L2: any one vendor-specific or
+ * vendor-neutral file satisfies "Instructed." A virtual criterion
+ * "acmm:agent-instructions" is synthesised before the level walk if any
+ * member of this set is present in detectedIds. Issue #9169 / kubebuilder#5651.
+ */
+const AGENT_INSTRUCTION_FILE_IDS = new Set([
+  'acmm:claude-md',
+  'acmm:copilot-instructions',
+  'acmm:agents-md',
+  'acmm:cursor-rules',
+])
+
+/** Virtual criterion representing the OR group above (not in acmm.ts source). */
+const VIRTUAL_AGENT_INSTRUCTIONS: Criterion = {
+  id: 'acmm:agent-instructions',
+  source: 'acmm',
+  level: 2,
+  category: 'feedback-loop',
+  name: 'Agent instructions (any)',
+  description: 'Any one of CLAUDE.md, AGENTS.md, .github/copilot-instructions.md, or .cursorrules.',
+  rationale: 'Any vendor-neutral or vendor-specific instruction file satisfies the L2 Instructed signal.',
+  detection: { type: 'any-of', pattern: ['CLAUDE.md', 'AGENTS.md', '.github/copilot-instructions.md', '.cursorrules'] },
+}
+
 export interface LevelComputation {
   level: number
   levelName: string
@@ -31,11 +56,15 @@ const ACMM_CRITERIA = acmmSource.criteria.filter((c) => c.source === 'acmm')
 const ACMM_LEVELS = acmmSource.levels ?? []
 
 /** Return scannable criteria for a given level (non-scannable items are
- *  displayed in the UI but excluded from threshold calculations). */
+ *  displayed in the UI but excluded from threshold calculations).
+ *  For L2, the four individual instruction-file criteria are replaced by the
+ *  virtual OR-group criterion so any one file satisfies the level gate. */
 function scannableCriteriaForLevel(level: number): Criterion[] {
-  return ACMM_CRITERIA.filter(
-    (c) => c.level === level && c.scannable !== false,
-  )
+  const raw = ACMM_CRITERIA.filter((c) => c.level === level && c.scannable !== false)
+  if (level !== 2) return raw
+  // Replace individual instruction-file entries with the virtual OR-group
+  const rest = raw.filter((c) => !AGENT_INSTRUCTION_FILE_IDS.has(c.id))
+  return [VIRTUAL_AGENT_INSTRUCTIONS, ...rest]
 }
 
 /** Return ALL criteria for a given level (including non-scannable). */
@@ -47,7 +76,13 @@ function levelDef(n: number) {
   return ACMM_LEVELS.find((l) => l.n === n)
 }
 
-export function computeLevel(detectedIds: Set<string>): LevelComputation {
+export function computeLevel(rawDetectedIds: Set<string>): LevelComputation {
+  // Synthesise the virtual L2 OR-group criterion before the level walk.
+  const detectedIds = new Set(rawDetectedIds)
+  if ([...AGENT_INSTRUCTION_FILE_IDS].some((id) => detectedIds.has(id))) {
+    detectedIds.add('acmm:agent-instructions')
+  }
+
   const detectedByLevel: Record<number, number> = {}
   const requiredByLevel: Record<number, number> = {}
 
@@ -63,8 +98,10 @@ export function computeLevel(detectedIds: Set<string>): LevelComputation {
     const required = requiredByLevel[n]
     const detected = detectedByLevel[n]
     if (required === 0) continue
+    // L2 "Instructed" is reached with any single criterion; higher levels use 70%
+    const threshold = n === 2 ? 1 / required : LEVEL_COMPLETION_THRESHOLD
     const ratio = detected / required
-    if (ratio >= LEVEL_COMPLETION_THRESHOLD) {
+    if (ratio >= threshold) {
       currentLevel = n
     } else {
       break
