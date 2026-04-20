@@ -374,7 +374,10 @@ for (const dashboard of DASHBOARDS) {
 
 test.afterAll(async () => {
   const outDir = path.resolve(__dirname, '../test-results')
-  if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true })
+  // Use mkdirSync directly with recursive:true — avoids the existsSync→mkdirSync
+  // TOCTOU race where a concurrent process could create the directory between
+  // the check and the creation (js/file-system-race).
+  fs.mkdirSync(outDir, { recursive: true })
 
   fs.writeFileSync(path.join(outDir, 'perf-report.json'), JSON.stringify(perfReport, null, 2))
 
@@ -409,9 +412,19 @@ test.afterAll(async () => {
 
   // ── Baseline regression comparison ────────────────────────────────────
   const baselinePath = path.resolve(__dirname, 'baseline/perf-baseline.json')
-  if (fs.existsSync(baselinePath)) {
+  // Use try/catch for atomic read instead of existsSync→readFileSync, which
+  // has a TOCTOU race if the file is deleted between the check and the read
+  // (js/file-system-race).
+  let baselineContent: string | null = null
+  try {
+    baselineContent = fs.readFileSync(baselinePath, 'utf-8')
+  } catch {
+    // File does not exist yet — will be created below
+  }
+
+  if (baselineContent !== null) {
     console.log('[Perf] Comparing against baseline...')
-    const baseline = JSON.parse(fs.readFileSync(baselinePath, 'utf-8')) as PerfReport
+    const baseline = JSON.parse(baselineContent) as PerfReport
 
     const REGRESSION_THRESHOLD_PCT = 20 // warn if >20% slower
     let regressionCount = 0
@@ -445,8 +458,10 @@ test.afterAll(async () => {
     ).toBeLessThanOrEqual(5)
   } else {
     console.log('[Perf] No baseline found — saving current run as baseline')
+    // mkdirSync with recursive:true is atomic — no existsSync check needed
+    // (eliminates the TOCTOU race, js/file-system-race).
     const baselineDir = path.resolve(__dirname, 'baseline')
-    if (!fs.existsSync(baselineDir)) fs.mkdirSync(baselineDir, { recursive: true })
+    fs.mkdirSync(baselineDir, { recursive: true })
     fs.writeFileSync(baselinePath, JSON.stringify(perfReport, null, 2))
   }
 })

@@ -40,12 +40,18 @@ const (
 )
 
 // imageRe matches direct image references: ghcr.io/llm-d/<name>:<tag>
-var imageRe = regexp.MustCompile(`ghcr\.io/llm-d/([\w][\w.-]*?):([\w][\w.+-]*)`)
+// imageRe matches direct image references: ghcr.io/llm-d/<name>:<tag>.
+// (?m) enables per-line ^/$ so FindAllStringSubmatch anchors each match to
+// a complete line, preventing partial-substring bypass across line boundaries
+// (go/regex/missing-regexp-anchor).
+var imageRe = regexp.MustCompile(`(?m)^.*ghcr\.io/llm-d/([\w][\w.-]*?):([\w][\w.+-]*).*$`)
 
-// hubRe matches the hub/name/tag EPP pattern (hub: ghcr.io/llm-d)
-var hubRe = regexp.MustCompile(`(?i)hub:\s*ghcr\.io/llm-d\b`)
-var nameRe = regexp.MustCompile(`(?i)name:\s*([\w][\w.-]*)`)
-var tagRe = regexp.MustCompile(`(?i)tag:\s*([\w][\w.+-]*)`)
+// hubRe, nameRe, tagRe are applied to individual YAML lines via MatchString /
+// FindStringSubmatch.  ^ and $ anchor each to the full line it is called on,
+// preventing partial-line false positives (go/regex/missing-regexp-anchor).
+var hubRe = regexp.MustCompile(`(?i)^.*hub:\s*ghcr\.io/llm-d\b.*$`)
+var nameRe = regexp.MustCompile(`(?i)^.*name:\s*([\w][\w.-]*).*$`)
+var tagRe = regexp.MustCompile(`(?i)^.*tag:\s*([\w][\w.+-]*).*$`)
 
 // NightlyWorkflow defines a GitHub Actions workflow to monitor.
 type NightlyWorkflow struct {

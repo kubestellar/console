@@ -53,6 +53,11 @@ const (
 	ghpMaxLogBytes           = 10 * 1024 * 1024 // 10 MB cap on job log downloads
 	ghpMatrixSparseMinCells  = 1
 	ghpReleaseOverfetch      = 10 // fetch recent releases so we can sort by published_at
+
+	// ghpMaxAllocItems is the upper bound for slice sizes derived from API
+	// responses. Prevents allocation-size-overflow if GitHub returns a
+	// malformed or unexpectedly large total_count / array (go/allocation-size-overflow).
+	ghpMaxAllocItems = 10_000
 )
 
 // ghpDefaultRepos is the default when PIPELINE_REPOS env var is not set.
@@ -103,11 +108,14 @@ const ghpRateLimitHeadersKey ghpContextKey = "rateLimitHeaders"
 var ghpValidRepoPattern = regexp.MustCompile(`^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$`)
 
 // ghpNightlyTagRe matches nightly release tags like "v0.3.21-nightly.20260417".
-var ghpNightlyTagRe = regexp.MustCompile(`(?i)nightly`)
+// Anchored to prevent partial substring collisions on tag names that contain
+// "nightly" as a fragment of a larger word (go/regex/missing-regexp-anchor).
+var ghpNightlyTagRe = regexp.MustCompile(`(?i)^.*nightly.*$`)
 
 // ghpPRFromCommitRe extracts a PR number from merge-commit messages like
-// "feat: something (#8673)".
-var ghpPRFromCommitRe = regexp.MustCompile(`\(#(\d+)\)\s*$`)
+// "feat: something (#8673)". Anchored at end only — the leading content is
+// arbitrary; the PR reference must appear at the very end of the line.
+var ghpPRFromCommitRe = regexp.MustCompile(`^.*\(#(\d+)\)\s*$`)
 
 func ghpIsAllowedRepo(repo string) bool {
 	// Accept any valid owner/repo slug — the GitHub token's permissions
@@ -756,7 +764,13 @@ func (h *GitHubPipelinesHandler) fetchWorkflowRuns(ctx context.Context, repo, wo
 	if err := json.NewDecoder(res.Body).Decode(&data); err != nil {
 		return nil, err
 	}
-	out := make([]ghpWorkflowRun, 0, len(data.WorkflowRuns))
+	// Bounds-check before make to guard against malformed API responses that
+	// return an unexpectedly large array (go/allocation-size-overflow).
+	n := len(data.WorkflowRuns)
+	if n < 0 || n > ghpMaxAllocItems {
+		return nil, fiber.NewError(fiber.StatusBadGateway, "GitHub API returned invalid workflow run count")
+	}
+	out := make([]ghpWorkflowRun, 0, n)
 	for _, r := range data.WorkflowRuns {
 		out = append(out, normalizeRunRaw(r, repo))
 	}
@@ -797,7 +811,13 @@ func (h *GitHubPipelinesHandler) fetchJobs(ctx context.Context, repo string, run
 	if err := json.NewDecoder(res.Body).Decode(&data); err != nil {
 		return nil, err
 	}
-	jobs := make([]ghpJob, 0, len(data.Jobs))
+	// Bounds-check before make to guard against malformed API responses
+	// (go/allocation-size-overflow).
+	nJobs := len(data.Jobs)
+	if nJobs < 0 || nJobs > ghpMaxAllocItems {
+		return nil, fiber.NewError(fiber.StatusBadGateway, "GitHub API returned invalid job count")
+	}
+	jobs := make([]ghpJob, 0, nJobs)
 	for _, j := range data.Jobs {
 		steps := make([]ghpStep, 0, len(j.Steps))
 		for _, s := range j.Steps {

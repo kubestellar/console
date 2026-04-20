@@ -6,6 +6,11 @@
  * MediumBlogHandler for Netlify deployments.
  */
 
+// isomorphic-dompurify works in both Node (Netlify Functions) and browser
+// contexts, replacing the incomplete regex-based HTML sanitization that
+// could miss multi-character sequences (js/incomplete-multi-character-sanitization).
+import DOMPurify from "isomorphic-dompurify";
+
 const MEDIUM_FEED_URL = "https://medium.com/feed/@kubestellar";
 const MEDIUM_CHANNEL_URL = "https://medium.com/@kubestellar";
 
@@ -61,9 +66,18 @@ interface MediumPost {
   preview: string;
 }
 
-/** Strip HTML tags and return plain text, trimmed to maxLen */
+/**
+ * Strip HTML tags and return plain text, trimmed to maxLen.
+ *
+ * Uses DOMPurify.sanitize() to remove all HTML tags safely, avoiding the
+ * incomplete multi-character sanitization pattern where a regex like
+ * /<[^>]*>/g can be bypassed by crafted tag sequences
+ * (js/incomplete-multi-character-sanitization).
+ */
 function stripHTML(html: string, maxLen: number): string {
-  const text = html.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
+  // DOMPurify.sanitize with ALLOWED_TAGS:[] strips all HTML, leaving only text
+  const sanitized = DOMPurify.sanitize(html, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
+  const text = sanitized.replace(/\s+/g, " ").trim();
   return text.length > maxLen ? text.slice(0, maxLen) : text;
 }
 

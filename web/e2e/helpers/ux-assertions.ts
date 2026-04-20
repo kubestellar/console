@@ -142,6 +142,12 @@ export async function assertLoadTime(
  *   3. Prefer fixing the underlying cause over adding a suppression
  */
 export function collectConsoleErrors(page: Page): () => void {
+  // These patterns intentionally use partial (unanchored) matching to detect
+  // known-benign console error substrings.  Adding ^ / $ anchors would cause
+  // false positives because browser console messages wrap the actual text with
+  // context (URL, stack, etc.).  The suppression is conservative by design —
+  // see the comment above for the narrowness requirement.
+  // codeql-suppress js/regex/missing-regexp-anchor
   const EXPECTED = [
     // -- Network / backend-not-running (expected in demo-only CI)
     /Failed to fetch/i,
