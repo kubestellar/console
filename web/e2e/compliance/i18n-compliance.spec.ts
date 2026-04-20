@@ -73,7 +73,7 @@ function writeReport(report: I18nReport, outDir: string) {
       c.status === 'fail' ? 'FAIL' :
       c.status === 'warn' ? 'WARN' :
       c.status === 'info' ? 'INFO' : 'SKIP'
-    lines.push(`| ${c.category} | ${c.name} | ${c.severity} | ${statusIcon} | ${c.details.replace(/\|/g, '\\|')} |`)
+    lines.push(`| ${escapeMdCell(c.category)} | ${escapeMdCell(c.name)} | ${c.severity} | ${statusIcon} | ${escapeMdCell(c.details)} |`)
   }
 
   lines.push('')
@@ -92,6 +92,34 @@ function flattenKeys(obj: Record<string, unknown>, prefix = ''): string[] {
     }
   }
   return keys
+}
+
+/**
+ * Safely traverse a nested object using a dot-notation key path.
+ * Guards against prototype-pollution by refusing to descend into
+ * __proto__, constructor, or prototype segments.
+ */
+const UNSAFE_KEY_SEGMENTS = new Set(['__proto__', 'constructor', 'prototype'])
+
+function safeGetByPath(obj: Record<string, unknown>, dotPath: string): unknown {
+  let val: unknown = obj
+  for (const segment of dotPath.split('.')) {
+    if (UNSAFE_KEY_SEGMENTS.has(segment)) return undefined
+    val = (val as Record<string, unknown>)?.[segment]
+  }
+  return val
+}
+
+/**
+ * Escape a string for safe inclusion in a Markdown table cell.
+ * Prevents markdown injection via pipe characters, backticks, or HTML tags.
+ */
+function escapeMdCell(text: string): string {
+  return text
+    .replace(/\|/g, '\\|')
+    .replace(/`/g, '\\`')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
 }
 
 // ---------------------------------------------------------------------------
@@ -197,11 +225,7 @@ test('i18n compliance — internationalization audit', async ({ page }) => {
 
     // Check for empty values
     for (const key of keys) {
-      const parts = key.split('.')
-      let val: unknown = data
-      for (const p of parts) {
-        val = (val as Record<string, unknown>)?.[p]
-      }
+      const val = safeGetByPath(data, key)
       if (val === '' || val === null || val === undefined) {
         emptyValues++
         if (emptyKeyExamples.length < 5) {
@@ -228,9 +252,7 @@ test('i18n compliance — internationalization audit', async ({ page }) => {
     const filePath = path.join(localeDir, `${ns}.json`)
     const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'))
     for (const key of keys) {
-      const parts = key.split('.')
-      let val: unknown = data
-      for (const p of parts) val = (val as Record<string, unknown>)?.[p]
+      const val = safeGetByPath(data, key)
       if (typeof val === 'string' && val.includes('{{')) {
         interpolationKeys.push(`${ns}:${key}`)
         // Check for malformed interpolation (missing closing braces)
@@ -277,9 +299,7 @@ test('i18n compliance — internationalization audit', async ({ page }) => {
     const filePath = path.join(localeDir, `${ns}.json`)
     const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'))
     for (const key of keys) {
-      const parts = key.split('.')
-      let val: unknown = data
-      for (const p of parts) val = (val as Record<string, unknown>)?.[p]
+      const val = safeGetByPath(data, key)
       if (typeof val === 'string' && val.includes('{{count}}')) {
         pluralKeys.push(`${ns}:${key}`)
         const baseKey = key.replace(/_one$|_other$|_zero$|_two$|_few$|_many$/, '')

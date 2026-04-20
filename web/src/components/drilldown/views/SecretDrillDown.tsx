@@ -25,6 +25,9 @@ import { maskKubernetesYamlData } from '../../../lib/yamlMask'
 /** @deprecated use `maskKubernetesYamlData` from `lib/yamlMask` */
 export const maskSecretYaml = maskKubernetesYamlData
 
+/** Property names that must never be used as object keys (prototype pollution prevention). */
+const UNSAFE_PROP_NAMES = new Set(['__proto__', 'constructor', 'prototype'])
+
 export function SecretDrillDown({ data }: Props) {
   const { t } = useTranslation()
   const cluster = data.cluster as string
@@ -96,10 +99,9 @@ export function SecretDrillDown({ data }: Props) {
         const secret = JSON.parse(output)
         // Decode base64 data (use null-prototype object to prevent prototype pollution)
         const decodedData: Record<string, string> = Object.create(null) as Record<string, string>
-        const unsafeKeys = new Set(['__proto__', 'constructor', 'prototype'])
         if (secret.data) {
           for (const [key, value] of Object.entries(secret.data)) {
-            if (unsafeKeys.has(key)) continue
+            if (UNSAFE_PROP_NAMES.has(key)) continue
             try {
               decodedData[key] = atob(value as string)
             } catch {
