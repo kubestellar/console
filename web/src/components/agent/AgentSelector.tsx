@@ -362,7 +362,7 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
         )}
         {!agent.available && agent.installUrl && !agent.installMissionId && (
           <a
-            href={sanitizeUrl(agent.installUrl)} // lgtm[js/xss] lgtm[js/client-side-unvalidated-url-redirection]
+            href={sanitizeUrl(agent.installUrl)}
             target="_blank"
             rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}

@@ -466,7 +466,7 @@ Please:
                   {csvInfo.links.map((link, i) => (
                     <a
                       key={i}
-                      href={sanitizeUrl(link.url)} // lgtm[js/xss] lgtm[js/client-side-unvalidated-url-redirection]
+                      href={sanitizeUrl(link.url)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-secondary/50 text-sm text-foreground hover:bg-secondary transition-colors"
