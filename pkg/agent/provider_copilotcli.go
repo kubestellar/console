@@ -217,6 +217,11 @@ func (c *CopilotCLIProvider) StreamChatWithProgress(ctx context.Context, req *Ch
 		Agent:     c.Name(),
 		Done:      true,
 		Truncated: scanErr != nil, // scanner hit error — output may be incomplete (#7278)
+		// Copilot CLI does not emit token usage in its stdout, so we estimate
+		// from the input prompt and the captured output. Without this the
+		// navbar token-usage indicator stays at 0 for the entire session
+		// (#9160), which breaks budget visibility for Copilot users.
+		TokenUsage: estimateChatTokenUsage(req, content),
 	}
 	// Populate exit code so callers can detect CLI failures (#7273)
 	if exitErr, ok := waitErr.(*exec.ExitError); ok {
