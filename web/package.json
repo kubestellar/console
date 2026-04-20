@@ -19,6 +19,7 @@
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:debug": "playwright test --debug",
     "test:e2e:chromium": "playwright test --project=chromium",
+    "test:e2e:ux-sweep": "PLAYWRIGHT_BASE_URL=http://localhost:8080 PLAYWRIGHT_STORAGE_STATE=auth.json playwright test --config=e2e/user-flows/ux-scan.config.ts",
     "test:e2e:firefox": "playwright test --project=firefox",
     "test:e2e:webkit": "playwright test --project=webkit",
     "test:e2e:report": "playwright show-report",

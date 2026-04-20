@@ -27,7 +27,7 @@ npm run test:e2e:report
 
 ```
 e2e/
-├── helpers/setup.ts        # Shared demo-mode setup + /api/me mock
+├── auth.setup.ts           # Authentication setup (runs first)
 ├── fixtures.ts             # Custom test fixtures and helpers
 ├── Login.spec.ts           # Login/authentication tests
 ├── Dashboard.spec.ts       # Dashboard page tests
@@ -39,6 +39,19 @@ e2e/
 ├── Events.spec.ts          # Events page tests
 ├── Settings.spec.ts        # Settings page tests
 └── DrillDown.spec.ts       # Drilldown modal tests
+
+The canonical location for Playwright specs is `web/e2e/`.
+The default `playwright.config.ts` now targets this folder directly.
+
+Default run (`npx playwright test`) is intentionally scoped to:
+- core UX/regression specs (`Login`, `Dashboard`, `Sidebar`, `Settings`, `smoke`, `spa-routes`, `keyboard-and-card-ops`)
+- `e2e/user-flows/**`
+
+Specialized/high-cost suites remain opt-in via dedicated configs:
+- `e2e/compliance/**`
+- `e2e/perf/**`
+- `e2e/nightly/**`
+- `e2e/visual/**`
 ```
 
 ## Test Coverage Areas

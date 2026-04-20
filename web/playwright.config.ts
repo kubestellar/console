@@ -1,5 +1,10 @@
 import { defineConfig, devices } from '@playwright/test'
 
+const env =
+  (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {}
+const isCI = Boolean(env.CI)
+
+
 /**
  * Playwright configuration for KubeStellar Console (kc)
  *
@@ -25,16 +30,16 @@ export default defineConfig({
   fullyParallel: true,
 
   // Fail the build on CI if test.only is left in
-  forbidOnly: !!process.env.CI,
+  forbidOnly: isCI,
 
   // Retry failed tests once in CI (balances flake detection vs run time)
-  retries: process.env.CI ? 1 : 0,
+  retries: isCI ? 1 : 0,
 
   // Workers — CI gets 4 workers per shard, local uses half of available cores
-  workers: process.env.CI ? 4 : '50%',
+  workers: isCI ? 4 : '50%',
 
   // Reporter configuration
-  reporter: process.env.CI
+  reporter: isCI
     ? [
         ['blob', { outputDir: 'blob-report' }],
         ['html', { outputFolder: 'playwright-report' }],
@@ -62,7 +67,7 @@ export default defineConfig({
     // real deployment, not a standalone vite dev server. Override with
     // PLAYWRIGHT_BASE_URL=http://localhost:5174 if running against a detached
     // vite dev server (e.g. for fast local UI iteration).
-    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:8080',
+    baseURL: env.PLAYWRIGHT_BASE_URL || 'http://localhost:8080',
 
     // Collect trace on first retry
     trace: 'on-first-retry',
@@ -136,7 +141,7 @@ export default defineConfig({
   //
   // Local dev: just `npm run test:e2e` and playwright will start the backend
   // itself. Previously this was `webServer: undefined`, which hung on connect.
-  webServer: process.env.PLAYWRIGHT_BASE_URL
+  webServer: env.PLAYWRIGHT_BASE_URL
     ? undefined
     : {
         // Run `go run .` from the repo root (one level up from web/).
@@ -145,7 +150,7 @@ export default defineConfig({
         // Go backend can take a while to build on first run.
         // 3 minutes covers a cold `go run` compile on modest hardware.
         timeout: 180_000,
-        reuseExistingServer: !process.env.CI,
+        reuseExistingServer: !isCI,
         stdout: 'pipe',
         stderr: 'pipe',
       },
