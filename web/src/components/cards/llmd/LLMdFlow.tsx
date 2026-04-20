@@ -5,6 +5,13 @@
  * glowing gauges, time-series sparklines, and interactive elements.
  *
  * Now supports live data from selected llm-d stack via StackContext.
+ *
+ * Issue 9071 (dark-mode pass): inline `style={{ backgroundColor|color|textShadow }}`
+ * uses in this file are intentionally data-driven — colors come from
+ * `loadColors.glow`, `COLORS.{prefill|decode|kv-transfer}`, and
+ * `metricConfig[metric].color` (per-metric brand color). These are accent
+ * colors, not surface chrome, and are designed to read on both light and
+ * dark backgrounds. They are not candidates for `dark:` variants.
  */
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'

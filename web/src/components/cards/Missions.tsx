@@ -96,13 +96,16 @@ const STATUS_CONFIG: Record<DeployMissionStatus, {
     bg: 'bg-orange-500/20',
     label: 'Partial' } }
 
+// Issue 9071: `pending` uses semantic tokens for the background/bar so the
+// neutral/unknown state adapts to light/dark. Other states keep tinted accent
+// colors (green/yellow/red) which read on both themes at /20 + /500 opacity.
 const CLUSTER_STATUS_CONFIG: Record<DeployClusterStatus['status'], {
   color: string
   bg: string
   barColor: string
   label: string
 }> = {
-  pending: { color: 'text-muted-foreground', bg: 'bg-gray-500/20', barColor: 'bg-gray-500', label: 'Pending' },
+  pending: { color: 'text-muted-foreground', bg: 'bg-muted', barColor: 'bg-muted-foreground', label: 'Pending' },
   applying: { color: 'text-yellow-400', bg: 'bg-yellow-500/20', barColor: 'bg-yellow-500', label: 'Applying' },
   running: { color: 'text-green-400', bg: 'bg-green-500/20', barColor: 'bg-green-500', label: 'Running' },
   failed: { color: 'text-red-400', bg: 'bg-red-500/20', barColor: 'bg-red-500', label: 'Failed' } }

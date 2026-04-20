@@ -5,6 +5,12 @@
  * with animated token transfer between stages.
  *
  * Uses live stack data when available, demo data when in demo mode.
+ *
+ * Issue 9071 (dark-mode pass): inline `style={{ backgroundColor }}` uses in
+ * this file are data-driven load-indicator colors (amber `#f59e0b` when
+ * `server.load > 70`, otherwise the prefill/decode brand `color`). These are
+ * accent indicators that read on both light and dark backgrounds — not
+ * candidates for `dark:` variants.
  */
 import { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'

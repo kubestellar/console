@@ -176,6 +176,11 @@ export function HardwareLeaderboard() {
                 <td className="py-2 px-2 text-white font-medium">{row.hardware}</td>
                 <td className="py-2 px-2 text-foreground truncate max-w-[100px]">{row.model}</td>
                 <td className="py-2 px-2">
+                  {/* Issue 9071: inline `background`/`color` are data-driven accent
+                   * colors from CONFIG_COLORS (per-configuration brand color).
+                   * These are intentionally not theme-switched — the /20 alpha
+                   * background + full-saturation foreground pairing reads on
+                   * both light and dark by design. */}
                   <span
                     className="px-1.5 py-0.5 rounded text-2xs font-medium"
                     style={{ background: `${CONFIG_COLORS[row.config]}20`, color: CONFIG_COLORS[row.config] }}

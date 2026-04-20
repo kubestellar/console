@@ -318,7 +318,8 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
                   {(cardDefinition.columns || []).map(col => {
                     const val = String((item as Record<string, unknown>)[col.field] ?? '-')
                     if (col.format === 'badge') {
-                      const badgeColor = col.badgeColors?.[val] || 'bg-gray-500/20 text-muted-foreground'
+                      // Issue 9071: swap `bg-gray-500/20` -> `bg-muted` (semantic, auto-switches).
+                      const badgeColor = col.badgeColors?.[val] || 'bg-muted text-muted-foreground'
                       return (
                         <span
                           key={col.field}

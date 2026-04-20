@@ -152,6 +152,9 @@ function Card({
 
   const { Icon, color } = SUIT_CONFIG[card.suit]
 
+  // Issue 9071: card-back sits on a theme-independent blue-to-purple gradient,
+  // so the `bg-white/10` highlight and `text-white/50` glyph read correctly
+  // in both light and dark modes. No theme-switching needed.
   if (!card.faceUp) {
     return (
       <div

@@ -36,6 +36,8 @@ const STATE_ORDER: Record<string, number> = {
   triggered: 5,
   success: 6 }
 
+// Issue 9071: `aborted` (and fallback lookups below) use `bg-muted text-muted-foreground`
+// so the neutral/default badge adapts to light/dark via semantic tokens.
 const STATE_BADGE: Record<string, string> = {
   success: 'bg-green-500/20 text-green-400',
   failure: 'bg-red-500/20 text-red-400',
@@ -43,7 +45,7 @@ const STATE_BADGE: Record<string, string> = {
   running: 'bg-blue-500/20 text-blue-400',
   pending: 'bg-yellow-500/20 text-yellow-400',
   triggered: 'bg-purple-500/20 text-purple-400',
-  aborted: 'bg-gray-500/20 text-muted-foreground' }
+  aborted: 'bg-muted text-muted-foreground' }
 
 const STATE_ICON: Record<string, typeof CheckCircle> = {
   success: CheckCircle,
@@ -267,10 +269,10 @@ export function ProwCIMonitor({ config: _config }: ProwCIMonitorProps) {
                 job.state === 'running' ? 'text-blue-400' : 'text-muted-foreground',
               )} />
               <span className="text-xs text-foreground truncate flex-1">{job.name}</span>
-              <span className={cn('text-2xs px-1 py-0.5 rounded shrink-0', TYPE_BADGE[job.type] || 'bg-gray-500/20 text-muted-foreground')}>
+              <span className={cn('text-2xs px-1 py-0.5 rounded shrink-0', TYPE_BADGE[job.type] || 'bg-muted text-muted-foreground')}>
                 {job.type}
               </span>
-              <span className={cn('text-2xs px-1 py-0.5 rounded shrink-0', STATE_BADGE[job.state] || 'bg-gray-500/20 text-muted-foreground')}>
+              <span className={cn('text-2xs px-1 py-0.5 rounded shrink-0', STATE_BADGE[job.state] || 'bg-muted text-muted-foreground')}>
                 {job.state}
               </span>
               {job.pr && (

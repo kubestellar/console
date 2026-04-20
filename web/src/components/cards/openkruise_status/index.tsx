@@ -99,12 +99,13 @@ const ICON_COLOR_CLASS: Record<string, string> = {
   orange: 'text-orange-400',
 }
 
+// Issue 9071: `gray` entry uses semantic tokens so the neutral badge adapts to light/dark.
 const BADGE_COLOR_CLASS: Record<string, string> = {
   green: 'bg-green-500/20 text-green-400',
   red: 'bg-red-500/20 text-red-400',
   blue: 'bg-blue-500/20 text-blue-400',
   yellow: 'bg-yellow-500/20 text-yellow-400',
-  gray: 'bg-gray-500/20 text-gray-400',
+  gray: 'bg-muted text-muted-foreground',
   orange: 'bg-orange-500/20 text-orange-400',
 }
 

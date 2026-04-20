@@ -33,6 +33,11 @@ const SPARSE_WORKFLOW_MIN_CELLS = 2
  * satisfy the ui-ux-standard ratchet and make a future i18n pass easy. */
 const LABEL_FILTER_REPO = 'Filter by repo'
 
+// Issue 9071: Auto-QA flagged `bg-gray-500/*` cells as light-only. These are
+// heatmap cells where the distinct opacity levels (40/50/60) encode the
+// cancelled/skipped/neutral/stale states and must stay visually distinguishable
+// on both themes. gray-500 is mid-gray and reads on both light and dark
+// backgrounds, so no theme-switching is applied.
 const CELL_CLASS: Record<string, string> = {
   success: 'bg-green-500/70 hover:bg-green-500',
   failure: 'bg-red-500/80 hover:bg-red-500',

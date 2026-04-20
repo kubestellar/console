@@ -19,7 +19,8 @@ function StatusDot({ status }: { status: string }) {
   return <span className={`inline-block w-1.5 h-1.5 rounded-full ${color}`} />
 }
 
-// Metric tile
+// Metric tile.
+// Issue 9071: swap `bg-white/5` -> `bg-muted/30` for a theme-adapting subtle tint.
 function MetricTile({ icon: Icon, label, value, sub, accent }: {
   icon: React.ComponentType<{ className?: string }>
   label: string
@@ -28,7 +29,7 @@ function MetricTile({ icon: Icon, label, value, sub, accent }: {
   accent: string
 }) {
   return (
-    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 border border-white/5">
+    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/30 border border-border/50">
       <div className={`p-1.5 rounded-md ${accent}`}>
         <Icon className="w-3.5 h-3.5" />
       </div>
@@ -163,7 +164,8 @@ export function KagentiStatusCard({ config }: KagentiStatusCardProps) {
             {maxFramework.slice(0, 4).map(([fw, count]) => (
               <div key={fw} className="flex items-center gap-2">
                 <div className="text-sm text-muted-foreground w-20 truncate">{fw}</div>
-                <div className="flex-1 h-1.5 rounded-full bg-white/5 overflow-hidden">
+                {/* Issue 9071: swap `bg-white/5` -> `bg-muted/30` on progress track for theme adaptation. */}
+                <div className="flex-1 h-1.5 rounded-full bg-muted/30 overflow-hidden">
                   <div
                     className="h-full rounded-full bg-purple-500/60"
                     style={{ width: `${(count / agents.length) * 100}%` }}

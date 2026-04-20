@@ -354,7 +354,11 @@ export function Game2048(_props: CardComponentProps) {
             )}
           </div>
 
-          {/* Win overlay */}
+          {/* Win overlay.
+           * Issue 9071: Auto-QA flagged `bg-white/20 text-white` as light-only.
+           * Intentional: buttons sit on a yellow (`bg-yellow-500/80`) overlay
+           * whose backdrop is theme-independent, so white-on-yellow reads
+           * correctly in both light and dark modes. No theme-switching needed. */}
           {won && !keepPlaying && (
             <div className="absolute inset-0 bg-yellow-500/80 rounded-lg flex flex-col items-center justify-center">
               <Trophy className="w-12 h-12 text-white mb-2" />

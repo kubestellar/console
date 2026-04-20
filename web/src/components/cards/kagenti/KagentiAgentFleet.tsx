@@ -17,7 +17,8 @@ function StatusBadge({ status }: { status: string }) {
         ? 'bg-yellow-500/15 text-yellow-400 border-yellow-500/20'
         : status === 'Failed'
           ? 'bg-red-500/15 text-red-400 border-red-500/20'
-          : 'bg-gray-500/15 text-muted-foreground border-gray-500/20'
+          // Issue 9071: default/unknown uses semantic tokens so it adapts to light/dark.
+          : 'bg-muted text-muted-foreground border-border'
   return (
     <span className={`inline-flex items-center px-1.5 py-0.5 text-2xs font-medium rounded border ${classes}`}>
       {status}

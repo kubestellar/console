@@ -73,7 +73,8 @@ const getStatusColors = (status: VClusterStatusType) => {
     case 'Running': return { bg: 'bg-green-500/20', text: 'text-green-400', border: 'border-green-500/20' }
     case 'Paused': return { bg: 'bg-yellow-500/20', text: 'text-yellow-400', border: 'border-yellow-500/20' }
     case 'Failed': return { bg: 'bg-red-500/20', text: 'text-red-400', border: 'border-red-500/20' }
-    default: return { bg: 'bg-gray-500/20', text: 'text-muted-foreground', border: 'border-gray-500/20' }
+    // Issue 9071: default/unknown status uses semantic tokens so it adapts to light/dark.
+    default: return { bg: 'bg-muted', text: 'text-muted-foreground', border: 'border-border' }
   }
 }
 
