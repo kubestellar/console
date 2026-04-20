@@ -93,16 +93,75 @@ test.describe('Dashboard Page', () => {
     })
 
     test('cards have proper structure', async ({ page }) => {
-      // Wait for cards grid
-      await expect(page.getByTestId('dashboard-cards-grid')).toBeVisible({ timeout: 10000 })
+      // #9074 — This test previously asserted `cardCount >= 0`, which is
+      // mathematically impossible to fail (Playwright `.count()` always
+      // returns a non-negative integer). A regression that removed every
+      // card from the dashboard would have gone undetected. The assertions
+      // below verify real structural properties of the rendered cards.
 
-      // Cards should have content
+      // Min number of default cards we expect on a fresh dashboard. The
+      // default dashboard ships with several built-in cards; if this drops
+      // to zero the dashboard is broken.
+      const MIN_DEFAULT_CARDS = 1
+
+      // Max time (ms) to wait for the cards grid + first card to appear.
+      const GRID_VISIBLE_TIMEOUT_MS = 10_000
+
+      // Max number of cards to spot-check structural attributes on. We
+      // bound this so the test stays fast even on dashboards with many
+      // cards while still catching regressions on the first few.
+      const MAX_CARDS_TO_CHECK = 5
+
+      // Wait for cards grid to be visible.
       const cardsGrid = page.getByTestId('dashboard-cards-grid')
-      const cards = cardsGrid.locator('> div')
-      const cardCount = await cards.count()
+      await expect(cardsGrid).toBeVisible({ timeout: GRID_VISIBLE_TIMEOUT_MS })
 
-      // Dashboard should have at least one card (defaults are set)
-      expect(cardCount).toBeGreaterThanOrEqual(0)
+      // The grid itself must be a role=grid with an a11y label so screen
+      // readers can announce it. This is part of the public contract of
+      // the dashboard layout (see Dashboard.tsx).
+      await expect(cardsGrid).toHaveAttribute('role', 'grid')
+      await expect(cardsGrid).toHaveAttribute('aria-label', /.+/)
+
+      // Every rendered card carries a `data-card-id` attribute applied by
+      // CardWrapper. Counting those — rather than direct-child <div>s —
+      // excludes non-card grid children like the DiscoverCardsPlaceholder
+      // and any drag overlays. That makes this a real assertion about
+      // *cards*, not arbitrary grid children.
+      const cards = cardsGrid.locator('[data-card-id]')
+
+      // Wait for at least one card to actually render before counting,
+      // otherwise the count race with React's first paint could falsely
+      // report zero. Playwright's `.first()` + toBeVisible serves as the
+      // synchronization barrier.
+      await expect(cards.first()).toBeVisible({ timeout: GRID_VISIBLE_TIMEOUT_MS })
+
+      const cardCount = await cards.count()
+      expect(cardCount).toBeGreaterThanOrEqual(MIN_DEFAULT_CARDS)
+
+      // Spot-check each card (up to MAX_CARDS_TO_CHECK) for the structural
+      // attributes that downstream features depend on:
+      //   - data-card-type: drives card-type-specific behaviors and
+      //     analytics (cardType is used as the GA4 event label).
+      //   - data-card-id: stable identity for drag/drop, persistence, and
+      //     selector targeting in other tests.
+      //   - aria-label: announced to screen readers as the card title.
+      //   - <h3>: visible heading per the design system.
+      const cardsToCheck = Math.min(cardCount, MAX_CARDS_TO_CHECK)
+      for (let i = 0; i < cardsToCheck; i++) {
+        const card = cards.nth(i)
+
+        // Required attributes.
+        await expect(card).toHaveAttribute('data-card-type', /.+/)
+        await expect(card).toHaveAttribute('data-card-id', /.+/)
+        await expect(card).toHaveAttribute('aria-label', /.+/)
+
+        // Each card must render a visible <h3> heading (the title shown in
+        // the card header). If a card variant ever stops rendering the
+        // heading, this catches it.
+        const heading = card.locator('h3').first()
+        await expect(heading).toBeVisible()
+        await expect(heading).not.toHaveText('')
+      }
     })
 
     test('cards are interactive (hover/click)', async ({ page }) => {
