@@ -252,7 +252,7 @@ const StatBlock = memo(function StatBlock({ block, data, hasData, isLoading, his
 
       {/* Header: icon + name. Label uses break-words + leading-tight so long labels
           (e.g. "Unhealthy", "Storage") wrap to a second line at narrow widths
-          instead of being clipped with an ellipsis (Fixes #9164). */}
+          instead of being clipped with an ellipsis */}
       <div className="flex items-start gap-2 mb-2 min-w-0">
         <IconComponent className={`w-5 h-5 shrink-0 mt-0.5 ${isLoading ? 'text-muted-foreground/30' : colorClass}`} />
         <span className="text-sm text-muted-foreground break-words leading-tight min-w-0" title={block.name}>{wrapAbbreviations(block.name)}</span>
@@ -489,7 +489,7 @@ export function StatsOverview({
   // Mobile: max 2 columns, tablet+: responsive based on count.
   // For 7+ blocks we keep two rows on lg (1024px) and only collapse to a single
   // row at xl (1280px+) where each card is wide enough to show its full label
-  // without ellipsis truncation (Fixes #9164).
+  // without ellipsis truncation
   const gridCols = visibleBlocks.length <= 4 ? 'grid-cols-2 md:grid-cols-4' :
     visibleBlocks.length <= 5 ? 'grid-cols-2 md:grid-cols-5' :
     visibleBlocks.length <= 6 ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-6' :

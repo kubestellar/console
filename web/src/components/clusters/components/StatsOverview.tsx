@@ -191,7 +191,7 @@ function StatBlock({ blockId, stats, hasData, onClick, color, icon }: StatBlockP
     >
       {/* Allow long labels (e.g. "Unhealthy", "Storage") to wrap to a second
           line at narrow widths instead of being clipped with an ellipsis
-          (Fixes #9164). */}
+          */}
       <div className="flex items-start gap-2 mb-2 min-w-0">
         <IconComponent className={`w-5 h-5 shrink-0 mt-0.5 ${colorClass}`} />
         <span className="text-sm text-muted-foreground break-words leading-tight min-w-0" title={label}>{wrapAbbreviations(label)}</span>
@@ -267,7 +267,7 @@ export function StatsOverview({
   // Dynamic grid columns based on visible blocks.
   // For 7+ blocks we keep two rows on lg (1024px) and only collapse to a single
   // row at xl (1280px+) where each card is wide enough to show its full label
-  // without ellipsis truncation (Fixes #9164).
+  // without ellipsis truncation
   const gridCols = visibleBlocks.length <= 5 ? 'grid-cols-5' :
     visibleBlocks.length <= 6 ? 'grid-cols-6' :
     visibleBlocks.length <= 8 ? 'grid-cols-4 xl:grid-cols-8' :
