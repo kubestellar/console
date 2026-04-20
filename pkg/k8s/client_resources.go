@@ -3,6 +3,7 @@ package k8s
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"sort"
 	"strings"
 	"time"
@@ -718,7 +719,10 @@ func (m *MultiClusterClient) GetServices(ctx context.Context, contextName, names
 	// real number of ready addresses backing each service. We list in the
 	// same namespace scope as the Services list call so the result set is
 	// comparable. If this call fails we still return services with
-	// Endpoints=0 rather than failing the whole request (issue #6150).
+	// Endpoints=0 rather than failing the whole request (issue #6150), but
+	// we log the error so operators can see RBAC / connectivity problems
+	// instead of silently seeing every service report zero ready endpoints
+	// (issue #9091).
 	endpointReadyCounts := make(map[string]int) // key: "<namespace>/<name>"
 	if epList, epErr := client.CoreV1().Endpoints(namespace).List(ctx, metav1.ListOptions{}); epErr == nil {
 		for _, ep := range epList.Items {
@@ -728,6 +732,9 @@ func (m *MultiClusterClient) GetServices(ctx context.Context, contextName, names
 			}
 			endpointReadyCounts[ep.Namespace+"/"+ep.Name] = ready
 		}
+	} else {
+		slog.Error("[Services] failed to list endpoints for readiness counts",
+			"cluster", contextName, "namespace", namespace, "error", epErr)
 	}
 
 	var result []Service

@@ -635,6 +635,23 @@ func (h *WorkloadHandlers) EvaluateClusterQuery(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "invalid request"})
 	}
 
+	// Validate the label selector up front so we can return a specific
+	// 400 Bad Request with the parser's error message instead of silently
+	// matching zero clusters and returning a 200 OK with an empty result
+	// set (issue #9092). Matching code below may re-parse, but doing it
+	// here guarantees we never swallow the parse error.
+	if query.LabelSelector != "" {
+		if _, selErr := labels.Parse(query.LabelSelector); selErr != nil {
+			slog.Info("[Workloads] invalid label selector in cluster query",
+				"selector", query.LabelSelector, "error", selErr)
+			return c.Status(400).JSON(fiber.Map{
+				"error":         "invalid label selector",
+				"labelSelector": query.LabelSelector,
+				"detail":        selErr.Error(),
+			})
+		}
+	}
+
 	ctx, cancel := context.WithTimeout(c.Context(), workloadListTimeout)
 	defer cancel()
 
@@ -721,10 +738,15 @@ func clusterMatchesQuery(health k8s.ClusterHealth, nodes []k8s.NodeInfo, query *
 	return true
 }
 
-// clusterMatchesLabelSelector returns true if at least one node matches the selector
+// clusterMatchesLabelSelector returns true if at least one node matches the selector.
+// The EvaluateClusterQuery handler validates the selector up front and returns
+// 400 on parse errors (issue #9092); we still log here as a defense-in-depth
+// signal in case any future caller feeds an unvalidated selector string.
 func clusterMatchesLabelSelector(nodes []k8s.NodeInfo, selectorStr string) bool {
 	selector, err := labels.Parse(selectorStr)
 	if err != nil {
+		slog.Warn("[Workloads] label selector parse failed in matcher (should have been validated upstream)",
+			"selector", selectorStr, "error", err)
 		return false
 	}
 	for _, node := range nodes {
