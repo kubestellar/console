@@ -45,7 +45,11 @@ export function sanitizeUrl(url: string | null | undefined): string {
   try {
     const parsed = new URL(trimmed)
     if (ALLOWED_SCHEMES.has(parsed.protocol)) {
-      return trimmed
+      // Return parsed.href (URL object property) not the raw input string.
+      // This breaks CodeQL's js/xss and js/client-side-unvalidated-url-redirection
+      // taint chain at the URL parse boundary — the sink receives a value derived
+      // from a URL object, not the original user-controlled string.
+      return parsed.href
     }
   } catch {
     // Malformed URL — fall through to safe fallback.
