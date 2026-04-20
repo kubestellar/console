@@ -132,40 +132,54 @@ export async function assertLoadTime(
  *   const checkErrors = collectConsoleErrors(page)
  *   // ... test actions ...
  *   checkErrors() // throws if unexpected errors found
+ *
+ * #9083 — The patterns below are intentionally NARROW. Broad regexes like
+ * `/Cannot read.*undefined/i` or `/hydrat/i` would suppress real production
+ * crashes (null-pointer TypeErrors, React hydration mismatches). If you
+ * need to add a new suppression:
+ *   1. Scope it to the minimum text that uniquely identifies the known issue
+ *   2. Tie it to a tracking issue number in the comment
+ *   3. Prefer fixing the underlying cause over adding a suppression
  */
 export function collectConsoleErrors(page: Page): () => void {
   const EXPECTED = [
+    // -- Network / backend-not-running (expected in demo-only CI)
     /Failed to fetch/i,
-    /WebSocket/i,
-    /ResizeObserver/i,
-    /ChunkLoadError/i,
-    /Loading chunk/i,
-    /demo-token/i,
-    /localhost:8585/i,
-    /127\.0\.0\.1:8585/i,
+    /can't establish a connection/i,
     /ERR_CONNECTION_REFUSED/i,
     /net::ERR_/i,
     /502.*Bad Gateway/i,
     /Failed to load resource/i,
+    // -- CORS (demo fallbacks, local/demo origins only)
     /Cross-Origin Request Blocked/i,
-    /CORS policy/i,
-    // Narrowed: only allow Access-Control errors from known demo/local origins
-    // to avoid masking unrelated issues that mention this header.
+    /blocked by CORS policy/i,
+    /Access to fetch.*has been blocked by CORS/i,
     /Access-Control-Allow-Origin.*localhost/i,
     /Access-Control-Allow-Origin.*127\.0\.0\.1/i,
     /Access-Control-Allow-Origin.*kubestellar\.io/i,
+    // -- WebSocket / local agent probes in demo mode
+    /WebSocket/i,
+    /localhost:8585/i,
+    /127\.0\.0\.1:8585/i,
+    /demo-token/i,
+    // -- Benign browser warnings
+    /ResizeObserver loop (?:limit exceeded|completed with undelivered notifications)/i,
     /Notification permission/i,
     /validateDOMNesting/i,
     /act\(\)/i,
-    /Cannot read.*undefined/i,
-    /hydrat/i,
-    /OPFS/i,
-    /IndexedDB/i,
-    /sqlite/i,
-    /SharedArrayBuffer/i,
-    /Atomics/i,
-    /service.worker/i,
-    /workbox/i,
+    // -- Code-split chunk loads (retried automatically by the runtime)
+    /ChunkLoadError/i,
+    /Loading chunk \d+ failed/i,
+    // -- SQLite WASM cache worker (#9083: scoped to the SQLite module so
+    //    unrelated WASM/IndexedDB failures are NOT suppressed)
+    /wasm streaming compile failed.*sqlite/i,
+    /failed to asynchronously prepare wasm.*sqlite/i,
+    /Aborted\(NetworkError.*sqlite/i,
+    /Exception loading sqlite3 module/i,
+    /\[kc\.cache\] sqlite/i,
+    // -- Firefox navigation cleanup noise
+    /NS_BINDING_ABORTED/i,
+    /NS_ERROR_FAILURE/i,
   ]
 
   const unexpected: string[] = []

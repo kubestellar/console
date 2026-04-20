@@ -27,7 +27,7 @@ npm run test:e2e:report
 
 ```
 e2e/
-├── auth.setup.ts           # Authentication setup (runs first)
+├── helpers/setup.ts        # Shared demo-mode setup + /api/me mock
 ├── fixtures.ts             # Custom test fixtures and helpers
 ├── Login.spec.ts           # Login/authentication tests
 ├── Dashboard.spec.ts       # Dashboard page tests

@@ -11,6 +11,30 @@ import { defineConfig } from '@playwright/test'
  * Override with PLAYWRIGHT_BASE_URL or PERF_DEV=1 for dev server testing.
  *
  * Runs sequentially (1 worker) — cold→warm phases share browser state.
+ *
+ * ---------------------------------------------------------------------------
+ * TOPOLOGY NOTE (#9077)
+ * ---------------------------------------------------------------------------
+ * This config uses a DIFFERENT server topology from the main
+ * `playwright.config.ts`:
+ *
+ *   | Config                | Server              | Port | API routes |
+ *   | --------------------- | ------------------- | ---- | ---------- |
+ *   | playwright.config.ts  | Go backend (go run) | 8080 | Real       |
+ *   | compliance.config.ts  | Vite preview        | 4174 | 404 unless mocked |
+ *
+ * The Go backend serves both the API and the built frontend. Vite preview
+ * serves only static assets — any API request that is not explicitly mocked
+ * will fall through to a 404.
+ *
+ * Tests written for THIS config MUST mock every API endpoint they rely on.
+ * They cannot assume a real backend is reachable. Conversely, tests that
+ * depend on real backend behavior (end-to-end deploy flows, live clusters)
+ * must use the main `playwright.config.ts`, not this one.
+ *
+ * If you need to run the same test file under both configs, make sure the
+ * test mocks all data endpoints so its behavior is topology-agnostic.
+ * ---------------------------------------------------------------------------
  */
 
 const PREVIEW_PORT = 4174

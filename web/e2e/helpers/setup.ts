@@ -20,19 +20,38 @@ export const MODAL_TIMEOUT_MS = 5_000
 export const NAV_TIMEOUT_MS = 15_000
 
 // ---------------------------------------------------------------------------
+// Mock user returned from /api/me in demo/test mode
+// See #9075 — smoke tests must mock /api/me so AuthProvider does not try
+// to contact a real backend (which is not running in frontend-only CI).
+// ---------------------------------------------------------------------------
+
+export const MOCK_DEMO_USER = {
+  id: '1',
+  github_id: '99999',
+  github_login: 'demo-user',
+  email: 'demo@kubestellar.io',
+  onboarded: true,
+  role: 'admin',
+} as const
+
+// ---------------------------------------------------------------------------
 // Expected console errors — shared across all test files
 // ---------------------------------------------------------------------------
 
+// Expected console error patterns. Each entry should be as NARROW as possible
+// so we don't accidentally suppress a real production crash (see #9083).
+// If you need to add a broad suppression, tie it to a tracking issue with a
+// comment linking the issue number — so the suppression can be removed once
+// the root cause is fixed.
 export const EXPECTED_ERROR_PATTERNS = [
   /Failed to fetch/i, // Network errors in demo mode
   /WebSocket/i, // WebSocket not available in tests
   /can't establish a connection/i, // Firefox WebSocket connection errors
-  /ResizeObserver/i, // ResizeObserver loop warnings
+  /ResizeObserver loop (?:limit exceeded|completed with undelivered notifications)/i, // Benign ResizeObserver loop warning
   /validateDOMNesting/i, // Already tracked by Auto-QA DOM errors check
   /act\(\)/i, // React testing warnings
-  /Cannot read.*undefined/i, // May occur during lazy loading
   /ChunkLoadError/i, // Expected during code splitting
-  /Loading chunk/i, // Expected during lazy loading
+  /Loading chunk \d+ failed/i, // Code-split chunk load failure (retried automatically)
   /demo-token/i, // Demo mode messages
   /localhost:8585/i, // Agent connection attempts in demo mode
   /127\.0\.0\.1:8585/i, // Agent connection attempts (IP form)
@@ -47,11 +66,14 @@ export const EXPECTED_ERROR_PATTERNS = [
   // SQLite WASM cache worker — webkit/Safari can't streaming-compile the
   // sqlite3 wasm, and the worker has a documented IndexedDB fallback path
   // (see lib/cache/worker.ts). These errors emit from the sqlite-wasm loader
-  // before our catch block runs, so they must be filtered here.
-  /wasm streaming compile failed/i,
-  /failed to asynchronously prepare wasm/i,
-  /Aborted\(NetworkError/i,
+  // before our catch block runs, so they must be filtered here. Scoped to
+  // the SQLite module specifically (#9083) so unrelated IndexedDB/WASM
+  // failures are NOT suppressed.
+  /wasm streaming compile failed.*sqlite/i,
+  /failed to asynchronously prepare wasm.*sqlite/i,
+  /Aborted\(NetworkError.*sqlite/i,
   /Exception loading sqlite3 module/i,
+  /\[kc\.cache\] sqlite/i,
   // Firefox aborts in-flight requests when page.goto() is called again before
   // previous navigation settles. These NS_BINDING_ABORTED errors do not
   // indicate a real page failure — they're test harness cleanup noise.
@@ -85,16 +107,40 @@ export function setupErrorCollector(page: Page): { errors: string[]; warnings: s
 }
 
 // ---------------------------------------------------------------------------
-// Demo mode setup — sets localStorage flags for demo/test mode
+// Demo mode setup — sets localStorage flags + mocks /api/me so tests are
+// self-contained and do NOT depend on the Go backend being reachable.
+//
+// Uses `page.addInitScript` so localStorage is set BEFORE any app code runs
+// (including the AuthProvider's first /api/me call). This is the canonical
+// demo-mode setup — all tests should import it from here rather than define
+// their own copy (see #9075, #9081).
 // ---------------------------------------------------------------------------
 
+/**
+ * Install a mock for `/api/me` that returns a demo user. Safe to call
+ * multiple times — Playwright will overwrite the handler. Tests that need
+ * to simulate an unauthenticated state should NOT call this helper.
+ */
+export async function mockApiMe(page: Page) {
+  await page.route('**/api/me', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(MOCK_DEMO_USER),
+    })
+  )
+}
+
 export async function setupDemoMode(page: Page) {
-  await page.goto('/login')
-  await page.evaluate(() => {
+  // Seed localStorage before page scripts execute — prevents the app from
+  // briefly rendering the /login screen before the demo flag is picked up.
+  await page.addInitScript(() => {
     localStorage.setItem('token', 'demo-token')
     localStorage.setItem('kc-demo-mode', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
   })
+  // Mock /api/me so AuthProvider has a deterministic user without a backend.
+  await mockApiMe(page)
 }
 
 // ---------------------------------------------------------------------------
@@ -104,7 +150,35 @@ export async function setupDemoMode(page: Page) {
 export async function setupDemoAndNavigate(page: Page, path: string) {
   await setupDemoMode(page)
   await page.goto(path)
-  await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+  // `networkidle` is unreliable in a dashboard with WebSockets + SSE +
+  // periodic polling (#9082). Log when it times out so we can diagnose
+  // slow loads instead of silently swallowing the error.
+  await waitForNetworkIdleBestEffort(page, NETWORK_IDLE_TIMEOUT_MS)
+}
+
+// ---------------------------------------------------------------------------
+// Best-effort networkidle wait — logs a warning on timeout instead of
+// silently swallowing the error. The dashboard has long-lived WebSocket/SSE
+// connections so `networkidle` almost never settles; callers should prefer
+// `domcontentloaded` + waiting on a specific UI element when possible.
+// See #9082.
+// ---------------------------------------------------------------------------
+
+export async function waitForNetworkIdleBestEffort(
+  page: Page,
+  timeoutMs: number = NETWORK_IDLE_TIMEOUT_MS,
+  label?: string
+) {
+  try {
+    await page.waitForLoadState('networkidle', { timeout: timeoutMs })
+  } catch {
+    if (process.env.E2E_VERBOSE_WAITS) {
+      // eslint-disable-next-line no-console -- Opt-in debug logging for tests
+      console.warn(
+        `[e2e] networkidle timed out after ${timeoutMs}ms${label ? ` (${label})` : ''} — page may have long-lived WebSocket/SSE connections`
+      )
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------

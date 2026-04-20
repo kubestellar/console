@@ -1,4 +1,5 @@
 import { test, expect, Page } from '@playwright/test'
+import { setupDemoMode } from './helpers/setup'
 
 /**
  * E2E Tests for GPUOverview card on the Compute dashboard
@@ -17,16 +18,20 @@ import { test, expect, Page } from '@playwright/test'
  * Closes #3558
  *
  * Run with: npx playwright test e2e/GPUOverview.spec.ts
+ *
+ * #9081 — `setupDemoMode` is imported from `./helpers/setup` instead of
+ * being redefined locally. The shared helper uses `addInitScript` + mocks
+ * `/api/me` so tests are self-contained.
  */
 
-/** Set up demo mode for predictable data */
-async function setupDemoMode(page: Page) {
-  await page.addInitScript(() => {
-    localStorage.setItem('token', 'demo-token')
-    localStorage.setItem('kc-demo-mode', 'true')
-    localStorage.setItem('demo-user-onboarded', 'true')
-  })
-}
+/** Timeout (ms) to probe whether the GPU card is visible. */
+const GPU_CARD_VISIBILITY_TIMEOUT_MS = 10_000
+
+/** Timeout (ms) for asserting card content once the card is present. */
+const GPU_CARD_CONTENT_TIMEOUT_MS = 20_000
+
+/** Minimum body length (chars) we consider "real content" on the page. */
+const MIN_BODY_CONTENT_LEN = 100
 
 /** Navigate to /compute in demo mode */
 async function setupComputeDashboard(page: Page) {
@@ -38,7 +43,23 @@ async function setupComputeDashboard(page: Page) {
 /** Check if the GPU Overview card is visible on the page */
 async function isGpuCardVisible(page: Page): Promise<boolean> {
   const gpuCard = page.getByText('GPU Overview')
-  return gpuCard.first().isVisible({ timeout: 10000 }).catch(() => false)
+  return gpuCard.first().isVisible({ timeout: GPU_CARD_VISIBILITY_TIMEOUT_MS }).catch(() => false)
+}
+
+/**
+ * Assert the GPU Overview card is visible, otherwise skip the test with a
+ * clear reason. Feature tests (e.g. "renders utilization gauge") use this
+ * because the card may legitimately not appear in some environments (no
+ * GPU nodes in demo data, layout variant, etc.). The dedicated "card is
+ * visible" smoke test (#9080) uses `expect(...).toBeVisible()` directly so
+ * a broken card causes a real FAIL, not a silent skip.
+ */
+async function skipIfGpuCardMissing(page: Page): Promise<boolean> {
+  const visible = await isGpuCardVisible(page)
+  if (!visible) {
+    test.skip(true, 'GPU Overview card is not visible — skipping feature test. The presence smoke test will FAIL if the card is genuinely broken.')
+  }
+  return visible
 }
 
 test.describe('GPUOverview Card', () => {
@@ -46,15 +67,16 @@ test.describe('GPUOverview Card', () => {
     test('GPU Overview card is visible on the Compute dashboard', async ({ page }) => {
       await setupComputeDashboard(page)
 
-      const visible = await isGpuCardVisible(page)
-      if (!visible) {
-        test.skip()
-        return
-      }
-
-      // The card title "GPU Overview" should be visible somewhere on the page
-      const cardTitle = page.getByText('GPU Overview')
-      await expect(cardTitle.first()).toBeVisible({ timeout: 20000 })
+      // #9080 — This test's explicit purpose is to verify that the GPU
+      // Overview card renders. Previously it skipped when the card was not
+      // visible, which meant a broken card component produced a "skipped"
+      // status instead of a failure. We now assert visibility directly —
+      // if the card is missing, the test MUST fail.
+      const cardTitle = page.getByText('GPU Overview').first()
+      await expect(
+        cardTitle,
+        'GPU Overview card is not visible on /compute — card may be broken or hidden by a regression',
+      ).toBeVisible({ timeout: GPU_CARD_CONTENT_TIMEOUT_MS })
     })
 
     test('Compute dashboard page loads successfully', async ({ page }) => {
@@ -62,121 +84,81 @@ test.describe('GPUOverview Card', () => {
 
       // The heading "Compute" should be visible
       const heading = page.getByText('Compute').first()
-      await expect(heading).toBeVisible({ timeout: 20000 })
+      await expect(heading).toBeVisible({ timeout: GPU_CARD_CONTENT_TIMEOUT_MS })
     })
   })
 
   test.describe('Normal State — GPU Data Present', () => {
     test('renders GPU utilization gauge with demo data', async ({ page }) => {
       await setupComputeDashboard(page)
-
-      const visible = await isGpuCardVisible(page)
-      if (!visible) {
-        test.skip()
-        return
-      }
+      await skipIfGpuCardMissing(page)
 
       // Wait for card content — look for "utilized" label from the gauge
       const utilized = page.getByText('utilized')
-      await expect(utilized.first()).toBeVisible({ timeout: 20000 })
+      await expect(utilized.first()).toBeVisible({ timeout: GPU_CARD_CONTENT_TIMEOUT_MS })
     })
 
     test('shows Total GPUs stat', async ({ page }) => {
       await setupComputeDashboard(page)
-
-      const visible = await isGpuCardVisible(page)
-      if (!visible) {
-        test.skip()
-        return
-      }
+      await skipIfGpuCardMissing(page)
 
       // "Total GPUs" label should be visible in the stats grid
       const totalLabel = page.getByText('Total GPUs')
-      await expect(totalLabel.first()).toBeVisible({ timeout: 20000 })
+      await expect(totalLabel.first()).toBeVisible({ timeout: GPU_CARD_CONTENT_TIMEOUT_MS })
     })
 
     test('shows Allocated stat', async ({ page }) => {
       await setupComputeDashboard(page)
-
-      const visible = await isGpuCardVisible(page)
-      if (!visible) {
-        test.skip()
-        return
-      }
+      await skipIfGpuCardMissing(page)
 
       // "Allocated" label should be visible in the stats grid
       const allocatedLabel = page.getByText('Allocated')
-      await expect(allocatedLabel.first()).toBeVisible({ timeout: 20000 })
+      await expect(allocatedLabel.first()).toBeVisible({ timeout: GPU_CARD_CONTENT_TIMEOUT_MS })
     })
 
     test('shows Clusters stat', async ({ page }) => {
       await setupComputeDashboard(page)
-
-      const visible = await isGpuCardVisible(page)
-      if (!visible) {
-        test.skip()
-        return
-      }
+      await skipIfGpuCardMissing(page)
 
       // "Clusters" label should be visible in the stats grid
       const clustersLabel = page.getByText('Clusters')
-      await expect(clustersLabel.first()).toBeVisible({ timeout: 20000 })
+      await expect(clustersLabel.first()).toBeVisible({ timeout: GPU_CARD_CONTENT_TIMEOUT_MS })
     })
 
     test('shows GPU type breakdown', async ({ page }) => {
       await setupComputeDashboard(page)
-
-      const visible = await isGpuCardVisible(page)
-      if (!visible) {
-        test.skip()
-        return
-      }
+      await skipIfGpuCardMissing(page)
 
       // Demo data should include GPU type names (e.g., NVIDIA A100, H100, T4, V100)
       const gpuType = page.getByText(/NVIDIA|A100|H100|T4|V100/i)
-      await expect(gpuType.first()).toBeVisible({ timeout: 20000 })
+      await expect(gpuType.first()).toBeVisible({ timeout: GPU_CARD_CONTENT_TIMEOUT_MS })
     })
 
     test('shows GPU Types section heading', async ({ page }) => {
       await setupComputeDashboard(page)
-
-      const visible = await isGpuCardVisible(page)
-      if (!visible) {
-        test.skip()
-        return
-      }
+      await skipIfGpuCardMissing(page)
 
       const gpuTypesLabel = page.getByText('GPU Types')
-      await expect(gpuTypesLabel.first()).toBeVisible({ timeout: 20000 })
+      await expect(gpuTypesLabel.first()).toBeVisible({ timeout: GPU_CARD_CONTENT_TIMEOUT_MS })
     })
 
     test('shows cluster health indicator bar', async ({ page }) => {
       await setupComputeDashboard(page)
-
-      const visible = await isGpuCardVisible(page)
-      if (!visible) {
-        test.skip()
-        return
-      }
+      await skipIfGpuCardMissing(page)
 
       // The Cluster Health bar is inside the card — it may require scrolling
       // Check the card renders the content-loaded marker
       const contentLoaded = page.locator('.content-loaded')
-      await expect(contentLoaded.first()).toBeVisible({ timeout: 20000 })
+      await expect(contentLoaded.first()).toBeVisible({ timeout: GPU_CARD_CONTENT_TIMEOUT_MS })
     })
 
     test('utilization percentage is displayed as a number', async ({ page }) => {
       await setupComputeDashboard(page)
-
-      const visible = await isGpuCardVisible(page)
-      if (!visible) {
-        test.skip()
-        return
-      }
+      await skipIfGpuCardMissing(page)
 
       // The gauge shows "XX%" inside the SVG circle
       const percentText = page.locator('text=/\\d+%/')
-      await expect(percentText.first()).toBeVisible({ timeout: 20000 })
+      await expect(percentText.first()).toBeVisible({ timeout: GPU_CARD_CONTENT_TIMEOUT_MS })
     })
   })
 
@@ -187,12 +169,7 @@ test.describe('GPUOverview Card', () => {
 
     test('empty state text is defined in the app i18n bundle', async ({ page }) => {
       await setupComputeDashboard(page)
-
-      const visible = await isGpuCardVisible(page)
-      if (!visible) {
-        test.skip()
-        return
-      }
+      await skipIfGpuCardMissing(page)
 
       // Verify the translation keys resolve correctly by checking the page
       // contains the expected strings somewhere in the DOM (even if not visible)
@@ -204,7 +181,7 @@ test.describe('GPUOverview Card', () => {
       // Verify the card component loaded successfully (a prerequisite for
       // the empty state branch to be reachable)
       const cardTitle = page.getByText('GPU Overview')
-      await expect(cardTitle.first()).toBeVisible({ timeout: 20000 })
+      await expect(cardTitle.first()).toBeVisible({ timeout: GPU_CARD_CONTENT_TIMEOUT_MS })
     })
   })
 
@@ -227,7 +204,7 @@ test.describe('GPUOverview Card', () => {
       // Page should not crash — body should be visible with content
       await expect(page.locator('body')).toBeVisible()
       const pageContent = await page.content()
-      expect(pageContent.length).toBeGreaterThan(100)
+      expect(pageContent.length).toBeGreaterThan(MIN_BODY_CONTENT_LEN)
     })
 
     test('page does not crash when clusters API returns empty', async ({ page }) => {
@@ -246,43 +223,42 @@ test.describe('GPUOverview Card', () => {
 
       await expect(page.locator('body')).toBeVisible()
       const pageContent = await page.content()
-      expect(pageContent.length).toBeGreaterThan(100)
+      expect(pageContent.length).toBeGreaterThan(MIN_BODY_CONTENT_LEN)
     })
   })
 
   test.describe('Responsive Design', () => {
+    const MOBILE_VIEWPORT = { width: 375, height: 667 } as const
+    const TABLET_VIEWPORT = { width: 768, height: 1024 } as const
+    const DESKTOP_WIDE_VIEWPORT = { width: 1920, height: 1080 } as const
+
     test('renders on mobile viewport (375x667)', async ({ page }) => {
       await setupComputeDashboard(page)
-      await page.setViewportSize({ width: 375, height: 667 })
+      await page.setViewportSize(MOBILE_VIEWPORT)
 
       // Page should still be functional
       await expect(page.locator('body')).toBeVisible()
       const pageContent = await page.content()
-      expect(pageContent.length).toBeGreaterThan(100)
+      expect(pageContent.length).toBeGreaterThan(MIN_BODY_CONTENT_LEN)
     })
 
     test('renders on tablet viewport (768x1024)', async ({ page }) => {
       await setupComputeDashboard(page)
-      await page.setViewportSize({ width: 768, height: 1024 })
+      await page.setViewportSize(TABLET_VIEWPORT)
 
       await expect(page.locator('body')).toBeVisible()
       const pageContent = await page.content()
-      expect(pageContent.length).toBeGreaterThan(100)
+      expect(pageContent.length).toBeGreaterThan(MIN_BODY_CONTENT_LEN)
     })
 
     test('renders on wide viewport (1920x1080)', async ({ page }) => {
       await setupComputeDashboard(page)
-      await page.setViewportSize({ width: 1920, height: 1080 })
-
-      const visible = await isGpuCardVisible(page)
-      if (!visible) {
-        test.skip()
-        return
-      }
+      await page.setViewportSize(DESKTOP_WIDE_VIEWPORT)
+      await skipIfGpuCardMissing(page)
 
       // GPU Overview card should be visible on wide screens
       const cardTitle = page.getByText('GPU Overview')
-      await expect(cardTitle.first()).toBeVisible({ timeout: 20000 })
+      await expect(cardTitle.first()).toBeVisible({ timeout: GPU_CARD_CONTENT_TIMEOUT_MS })
     })
   })
 })

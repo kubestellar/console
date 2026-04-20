@@ -109,7 +109,8 @@ interface CacheComplianceReport {
 const BATCH_SIZE = 24
 const BATCH_LOAD_TIMEOUT_MS = 30_000
 const WARM_RETURN_WAIT_MS = 3_000
-const _WARM_POLL_INTERVAL_MS = 50
+/** Polling interval (ms) for the resilient warm-snapshot capture loop. */
+const WARM_POLL_INTERVAL_MS = 200
 /** Max retry attempts for page.evaluate calls that may race with navigation */
 const EVALUATE_RETRY_ATTEMPTS = 3
 /** Delay between evaluate retries (ms) */
@@ -254,7 +255,6 @@ async function captureWarmSnapshotsResilient(
   cardIds: string[],
   totalMs: number
 ): Promise<WarmLoadSnapshot[]> {
-  const POLL_INTERVAL = 200
   const start = Date.now()
   const firstContentTime: Record<string, number | null> = {}
   for (const id of cardIds) firstContentTime[id] = null
@@ -280,7 +280,7 @@ async function captureWarmSnapshotsResilient(
     } catch {
       // page context may have been destroyed during navigation — skip this tick
     }
-    await page.waitForTimeout(POLL_INTERVAL)
+    await page.waitForTimeout(WARM_POLL_INTERVAL_MS)
   }
 
   // Final snapshot

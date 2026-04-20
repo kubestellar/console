@@ -167,6 +167,28 @@ export const testData = {
 }
 
 // Helper functions
+
+/** Timeout for login to complete (ms). */
+const LOGIN_TIMEOUT_MS = 15_000
+
+/**
+ * URL regex that matches a SUCCESSFUL post-login landing page.
+ *
+ * #9084 — The previous regex `/\/$|\/onboarding/` had a subtle bug: `\/$`
+ * matches any URL ending in `/`, including `/login/` itself. If the dev
+ * login button was missing OR the login flow redirected back to the login
+ * page, the helper reported success even though auth had clearly failed.
+ *
+ * The new regex:
+ *   - Matches the exact bare-root `/` (e.g. `http://host/`) — the dashboard
+ *   - Matches `/dashboard` and `/onboarding` with optional trailing `/`
+ *   - Explicitly REJECTS any URL containing `/login`
+ */
+const LOGIN_SUCCESS_URL = (url: URL): boolean => {
+  if (/\/login(\/|$)/i.test(url.pathname)) return false
+  return url.pathname === '/' || /^\/(dashboard|onboarding)\/?$/i.test(url.pathname)
+}
+
 export async function login(page: ReturnType<typeof base.extend>['page']) {
   await page.goto('/login')
   await page.waitForLoadState('domcontentloaded')
@@ -174,11 +196,18 @@ export async function login(page: ReturnType<typeof base.extend>['page']) {
   const devLoginButton = page.getByRole('button', { name: /dev.*login|continue.*demo/i }).first()
   const hasDevLogin = await devLoginButton.isVisible().catch(() => false)
 
-  if (hasDevLogin) {
-    await devLoginButton.click()
+  if (!hasDevLogin) {
+    throw new Error(
+      'login(): dev-login button is not present on /login. Cannot proceed with login. ' +
+      'If this test does not need a real auth flow, call setupDemoMode() from helpers/setup.ts instead.'
+    )
   }
 
-  await page.waitForURL(/\/$|\/onboarding/, { timeout: 15000 })
+  await devLoginButton.click()
+
+  // Accept any non-/login URL as success. Reject explicit /login URLs so
+  // we don't report success when the app redirected back to the login page.
+  await page.waitForURL(LOGIN_SUCCESS_URL, { timeout: LOGIN_TIMEOUT_MS })
 }
 
 export async function waitForDashboard(page: ReturnType<typeof base.extend>['page']) {

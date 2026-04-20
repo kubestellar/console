@@ -14,19 +14,12 @@ export default defineConfig({
 
   // Skip flaky tests until they are stabilized
   // Re-enable these incrementally as they are fixed
-  testIgnore: [
-    // Tour.spec.ts - re-enabled after stabilization
-    // Sidebar.spec.ts - re-enabled after stabilization
-    // AIMode.spec.ts - re-enabled after stabilization
-    // AIRecommendations.spec.ts - re-enabled after stabilization
-    // CardChat.spec.ts - re-enabled after stabilization
-    // CardSharing.spec.ts - re-enabled after stabilization
-    // DrillDown.spec.ts - re-enabled after stabilization
-    // Clusters.spec.ts - re-enabled after stabilization
-    // Events.spec.ts - re-enabled after stabilization
-    // Settings.spec.ts - re-enabled after stabilization
-    '**/auth.setup.ts',
-  ],
+  //
+  // #9076 — The previous `**/auth.setup.ts` entry has been removed along
+  // with the file itself. No project declared `dependencies: ['setup']`, so
+  // the file was dead code. All tests handle auth mocking inline via
+  // `helpers/setup.ts::setupDemoMode`.
+  testIgnore: [],
 
   // Run tests in parallel
   fullyParallel: true,

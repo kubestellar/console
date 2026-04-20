@@ -23,9 +23,9 @@ const DEPLOY_ROUTE = '/deploy'
 const PAGE_LOAD_TIMEOUT_MS = 60_000
 /** Timeout for card content to appear after navigation */
 const CARD_CONTENT_TIMEOUT_MS = 15_000
-/** How long to wait for polling updates */
-const _POLL_WAIT_MS = 8_000
-/** _SETTLE_MS removed — replaced with proper Playwright wait patterns */
+// #9078 — _POLL_WAIT_MS and _SETTLE_MS were dead constants from a previous
+// refactor; both have been removed in favor of explicit Playwright wait
+// patterns (expect.poll / waitForSelector) at the call sites.
 
 // ---------------------------------------------------------------------------
 // Mock data — comprehensive deploy-related fixtures

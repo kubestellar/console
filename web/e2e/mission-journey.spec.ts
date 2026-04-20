@@ -61,6 +61,36 @@ const SLOW_RUNBOOK_DELAY_MS = 3000
 const RAPID_CLICK_COUNT = 5
 
 // ---------------------------------------------------------------------------
+// Named wait durations (#9079)
+//
+// These replace the arbitrary `waitForTimeout(...)` literals that previously
+// appeared throughout this file. Each constant expresses WHY we wait — tests
+// that actually care about a DOM transition should prefer `expect(...).toBe
+// Visible()` / `expect.poll(...)` instead of a fixed sleep. These constants
+// exist so the remaining (genuinely time-based) waits are self-documenting
+// and tunable from a single location.
+// ---------------------------------------------------------------------------
+
+/** Brief pause for a sidebar/dialog animation to settle. */
+const UI_ANIMATION_SETTLE_MS = 500
+/** Short pause for the app to persist local state (localStorage write). */
+const PERSIST_SETTLE_MS = 800
+/** Short wait for an event to have a chance to fire (1s = debounce + tick). */
+const EVENT_SETTLE_MS = 1_000
+/** A generous animation settle + render window. */
+const RENDER_SETTLE_MS = 1_500
+/** Time to wait for a mission to appear / a WS message to round-trip. */
+const MISSION_ROUNDTRIP_MS = 2_000
+/** Time for the journey streaming chunks to finish arriving. */
+const STREAM_SETTLE_MS = 3_000
+/** Long wait for end-to-end mission lifecycle (trigger → complete). */
+const LIFECYCLE_SETTLE_MS = 5_000
+/** Extra padding on top of a slow-runbook delay before expectations. */
+const SLOW_RUNBOOK_PADDING_MS = 2_000
+/** Upper bound wait for the longest flow (recovery / reload). */
+const RECOVERY_SETTLE_MS = 8_000
+
+// ---------------------------------------------------------------------------
 // Mock data
 // ---------------------------------------------------------------------------
 
@@ -316,7 +346,7 @@ async function openMissionSidebar(page: Page) {
     await page.locator('button', { hasText: /Mission/i }).first().click({ force: true, timeout: 5000 }).catch(() => {})
   }
   // Wait for sidebar to appear
-  await page.waitForTimeout(500)
+  await page.waitForTimeout(UI_ANIMATION_SETTLE_MS)
 }
 
 async function getMissionStatus(page: Page, missionId?: string): Promise<string | null> {
@@ -480,7 +510,7 @@ test.describe('Mission Control Journey Tests', () => {
         await chatInput.press('Enter')
 
         // Wait for mission to appear in sidebar
-        await page.waitForTimeout(2000)
+        await page.waitForTimeout(MISSION_ROUNDTRIP_MS)
 
         // Verify mission messages appear (streaming content)
         const messageArea = page.locator('[class*="mission"], [class*="sidebar"], [class*="chat"]')
@@ -525,7 +555,7 @@ test.describe('Mission Control Journey Tests', () => {
       if (await chatInput.isVisible({ timeout: 5000 }).catch(() => false)) {
         await chatInput.fill('Run pod health check')
         await chatInput.press('Enter')
-        await page.waitForTimeout(3000)
+        await page.waitForTimeout(STREAM_SETTLE_MS)
       }
 
       await page.screenshot({ path: 'test-results/journey-1-streaming.png', fullPage: true })
@@ -561,14 +591,14 @@ test.describe('Mission Control Journey Tests', () => {
         await chatInput.press('Enter')
 
         // During the delay, the mission should stay in running state (not jump to completed)
-        await page.waitForTimeout(1000)
+        await page.waitForTimeout(EVENT_SETTLE_MS)
 
         // Verify no "completed" text appears prematurely
         const prematureComplete = await page.getByText('Mission completed').isVisible({ timeout: 500 }).catch(() => false)
         expect(prematureComplete).toBe(false)
 
         // Now wait for the full delay + response
-        await page.waitForTimeout(SLOW_RUNBOOK_DELAY_MS + 2000)
+        await page.waitForTimeout(SLOW_RUNBOOK_DELAY_MS + SLOW_RUNBOOK_PADDING_MS)
       }
 
       await page.screenshot({ path: 'test-results/journey-2-delayed-runbook.png', fullPage: true })
@@ -605,7 +635,7 @@ test.describe('Mission Control Journey Tests', () => {
       if (await chatInput.isVisible({ timeout: 5000 }).catch(() => false)) {
         await chatInput.fill('Run step-by-step analysis')
         await chatInput.press('Enter')
-        await page.waitForTimeout(5000)
+        await page.waitForTimeout(LIFECYCLE_SETTLE_MS)
       }
 
       // Verify progress was sent
@@ -644,7 +674,7 @@ test.describe('Mission Control Journey Tests', () => {
         await chatInput.press('Enter')
 
         // Wait for error to propagate
-        await page.waitForTimeout(3000)
+        await page.waitForTimeout(STREAM_SETTLE_MS)
 
         // The UI should show an error state, not infinite loading
         const loadingSpinner = page.locator('[class*="animate-spin"], [class*="loading"]')
@@ -654,7 +684,7 @@ test.describe('Mission Control Journey Tests', () => {
         // (the error should have terminated the loading state)
         if (spinnerVisible) {
           // Give it one more second — the error should clear it
-          await page.waitForTimeout(2000)
+          await page.waitForTimeout(MISSION_ROUNDTRIP_MS)
         }
       }
 
@@ -692,7 +722,7 @@ test.describe('Mission Control Journey Tests', () => {
       if (await chatInput.isVisible({ timeout: 5000 }).catch(() => false)) {
         await chatInput.fill('Diagnose OOM kills')
         await chatInput.press('Enter')
-        await page.waitForTimeout(5000)
+        await page.waitForTimeout(LIFECYCLE_SETTLE_MS)
       }
 
       expect(aiProcessingStarted).toBe(false)
@@ -728,7 +758,7 @@ test.describe('Mission Control Journey Tests', () => {
       if (await chatInput.isVisible({ timeout: 5000 }).catch(() => false)) {
         await chatInput.fill('Analyze cluster security posture')
         await chatInput.press('Enter')
-        await page.waitForTimeout(3000)
+        await page.waitForTimeout(STREAM_SETTLE_MS)
 
         // Should see error indication, not spinner
         const bodyText = await page.locator('body').textContent() || ''
@@ -767,7 +797,7 @@ test.describe('Mission Control Journey Tests', () => {
       if (await chatInput.isVisible({ timeout: 5000 }).catch(() => false)) {
         await chatInput.fill('Audit production namespace')
         await chatInput.press('Enter')
-        await page.waitForTimeout(3000)
+        await page.waitForTimeout(STREAM_SETTLE_MS)
       }
 
       // The partial content should still be visible
@@ -808,7 +838,7 @@ test.describe('Mission Control Journey Tests', () => {
       await openMissionSidebar(page)
 
       // Sidebar should open without crash
-      await page.waitForTimeout(2000)
+      await page.waitForTimeout(MISSION_ROUNDTRIP_MS)
       const bodyContent = await page.locator('body').textContent({ timeout: UI_SETTLE_MS }) || ''
       expect(bodyContent.length).toBeGreaterThan(0)
 
@@ -837,7 +867,7 @@ test.describe('Mission Control Journey Tests', () => {
       if (await chatInput.isVisible({ timeout: 5000 }).catch(() => false)) {
         await chatInput.fill('Check cluster health')
         await chatInput.press('Enter')
-        await page.waitForTimeout(3000)
+        await page.waitForTimeout(STREAM_SETTLE_MS)
       }
 
       await page.screenshot({ path: 'test-results/journey-5-mcp-500.png', fullPage: true })
@@ -894,13 +924,13 @@ test.describe('Mission Control Journey Tests', () => {
         await chatInput.press('Enter')
 
         // Wait for streaming to start
-        await page.waitForTimeout(1500)
+        await page.waitForTimeout(RENDER_SETTLE_MS)
 
         // Click cancel/stop button
         const stopBtn = page.locator('button[title*="Stop"], button[title*="Cancel"], button[aria-label*="Stop"], button[aria-label*="Cancel"]').first()
         if (await stopBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
           await stopBtn.click()
-          await page.waitForTimeout(2000)
+          await page.waitForTimeout(MISSION_ROUNDTRIP_MS)
         }
       }
 
@@ -941,12 +971,12 @@ test.describe('Mission Control Journey Tests', () => {
       if (await chatInput.isVisible({ timeout: 5000 }).catch(() => false)) {
         await chatInput.fill('Long running task')
         await chatInput.press('Enter')
-        await page.waitForTimeout(800)
+        await page.waitForTimeout(PERSIST_SETTLE_MS)
 
         const stopBtn = page.locator('button[title*="Stop"], button[title*="Cancel"], button[aria-label*="Stop"]').first()
         if (await stopBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
           await stopBtn.click()
-          await page.waitForTimeout(3000)
+          await page.waitForTimeout(STREAM_SETTLE_MS)
         }
       }
 
@@ -992,7 +1022,7 @@ test.describe('Mission Control Journey Tests', () => {
           await delay(50) // Near-simultaneous
         }
 
-        await page.waitForTimeout(5000)
+        await page.waitForTimeout(LIFECYCLE_SETTLE_MS)
       }
 
       // Should have AT MOST a small number of actual agent calls
@@ -1030,7 +1060,7 @@ test.describe('Mission Control Journey Tests', () => {
         await chatInput.press('Enter')
 
         // While running, check if input has changed state
-        await page.waitForTimeout(1000)
+        await page.waitForTimeout(EVENT_SETTLE_MS)
 
         // Look for a stop/cancel button appearing (indicates mission is running)
         const stopBtn = page.locator('button[title*="Stop"], button[aria-label*="Stop"]').first()
@@ -1074,7 +1104,7 @@ test.describe('Mission Control Journey Tests', () => {
       if (await chatInput.isVisible({ timeout: 5000 }).catch(() => false)) {
         await chatInput.fill('Long running diagnostic')
         await chatInput.press('Enter')
-        await page.waitForTimeout(2000)
+        await page.waitForTimeout(MISSION_ROUNDTRIP_MS)
       }
 
       // Check if missions exist in localStorage before refresh
@@ -1084,7 +1114,7 @@ test.describe('Mission Control Journey Tests', () => {
       await page.reload()
       await page.waitForLoadState('networkidle', { timeout: UI_SETTLE_MS })
       await seedAuth(page)
-      await page.waitForTimeout(2000)
+      await page.waitForTimeout(MISSION_ROUNDTRIP_MS)
 
       // After refresh, missions should still be in localStorage
       const postMissionCount = await getMissionCount(page)
@@ -1130,7 +1160,7 @@ test.describe('Mission Control Journey Tests', () => {
         await chatInput.fill('Reconnection test')
         await chatInput.press('Enter')
         // Wait for drop + reconnect
-        await page.waitForTimeout(8000)
+        await page.waitForTimeout(RECOVERY_SETTLE_MS)
       }
 
       // Should have connected at least twice
@@ -1161,20 +1191,20 @@ test.describe('Mission Control Journey Tests', () => {
         // Create two missions
         await chatInput.fill('Mission Alpha')
         await chatInput.press('Enter')
-        await page.waitForTimeout(3000)
+        await page.waitForTimeout(STREAM_SETTLE_MS)
 
         await chatInput.fill('Mission Beta')
         await chatInput.press('Enter')
-        await page.waitForTimeout(3000)
+        await page.waitForTimeout(STREAM_SETTLE_MS)
       }
 
       const preMissionCount = await getMissionCount(page)
 
       // Navigate away and back
       await page.goto('/compute')
-      await page.waitForTimeout(1000)
+      await page.waitForTimeout(EVENT_SETTLE_MS)
       await page.goto('/')
-      await page.waitForTimeout(2000)
+      await page.waitForTimeout(MISSION_ROUNDTRIP_MS)
 
       const postMissionCount = await getMissionCount(page)
 
@@ -1207,7 +1237,7 @@ test.describe('Mission Control Journey Tests', () => {
         // Try submitting empty
         await chatInput.fill('')
         await chatInput.press('Enter')
-        await page.waitForTimeout(1000)
+        await page.waitForTimeout(EVENT_SETTLE_MS)
 
         // Should not crash — page still renders
         const bodyContent = await page.locator('body').textContent({ timeout: 3000 }) || ''
@@ -1240,7 +1270,7 @@ test.describe('Mission Control Journey Tests', () => {
         const longPrompt = 'Check pod health. '.repeat(Math.ceil(LONG_PROMPT_CHAR_COUNT / 18)).slice(0, LONG_PROMPT_CHAR_COUNT)
         await chatInput.fill(longPrompt)
         await chatInput.press('Enter')
-        await page.waitForTimeout(3000)
+        await page.waitForTimeout(STREAM_SETTLE_MS)
 
         // Page should not crash
         const bodyContent = await page.locator('body').textContent({ timeout: 3000 }) || ''
@@ -1290,12 +1320,12 @@ test.describe('Mission Control Journey Tests', () => {
         // XSS-like input
         await chatInput.fill('<script>alert("xss")</script> && kubectl delete --all')
         await chatInput.press('Enter')
-        await page.waitForTimeout(3000)
+        await page.waitForTimeout(STREAM_SETTLE_MS)
 
         // Page should handle safely — no alert dialogs
         const dialogs: string[] = []
         page.on('dialog', d => { dialogs.push(d.message()); d.dismiss() })
-        await page.waitForTimeout(1000)
+        await page.waitForTimeout(EVENT_SETTLE_MS)
         expect(dialogs.length).toBe(0)
       }
 
@@ -1326,11 +1356,11 @@ test.describe('Mission Control Journey Tests', () => {
       if (await chatInput.isVisible({ timeout: 5000 }).catch(() => false)) {
         await chatInput.fill('First concurrent mission')
         await chatInput.press('Enter')
-        await page.waitForTimeout(1000)
+        await page.waitForTimeout(EVENT_SETTLE_MS)
 
         await chatInput.fill('Second concurrent mission')
         await chatInput.press('Enter')
-        await page.waitForTimeout(5000)
+        await page.waitForTimeout(LIFECYCLE_SETTLE_MS)
       }
 
       await page.screenshot({ path: 'test-results/journey-9-concurrent.png', fullPage: true })

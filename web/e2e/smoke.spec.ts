@@ -1,5 +1,21 @@
-import { test, expect, Page } from '@playwright/test'
-import { setupErrorCollector, EXPECTED_ERROR_PATTERNS } from './helpers/setup'
+import { test, expect } from '@playwright/test'
+import {
+  setupErrorCollector,
+  setupDemoMode,
+  waitForNetworkIdleBestEffort,
+  NETWORK_IDLE_TIMEOUT_MS,
+  MODAL_TIMEOUT_MS,
+} from './helpers/setup'
+
+/** Mobile viewport used by the mobile-specific smoke tests. */
+const MOBILE_VIEWPORT = { width: 393, height: 852 } as const
+
+/** Minimum body length we consider "real content" (catches blank pages). */
+const MIN_BODY_TEXT_LEN = 50
+/** Minimum body length after a full dashboard render. */
+const MIN_DASHBOARD_TEXT_LEN = 100
+/** Short timeout for optional UI probes (theme toggle, demo badge, etc.). */
+const OPTIONAL_PROBE_TIMEOUT_MS = 3_000
 
 /**
  * Smoke Tests for KubeStellar Console
@@ -8,19 +24,11 @@ import { setupErrorCollector, EXPECTED_ERROR_PATTERNS } from './helpers/setup'
  * navigation is consistent, and key user interactions work correctly.
  *
  * Run with: npx playwright test e2e/smoke.spec.ts
+ *
+ * Note: `setupDemoMode` is imported from `./helpers/setup` — it uses
+ * `page.addInitScript` + mocks `/api/me` so smoke tests are self-contained
+ * and do not depend on the Go backend being reachable (see #9075, #9081).
  */
-
-/**
- * Sets up demo mode for testing
- */
-async function setupDemoMode(page: Page) {
-  await page.goto('/login')
-  await page.evaluate(() => {
-    localStorage.setItem('token', 'demo-token')
-    localStorage.setItem('kc-demo-mode', 'true')
-    localStorage.setItem('demo-user-onboarded', 'true')
-  })
-}
 
 test.describe('Smoke Tests', () => {
   test.describe('Route Loading', () => {
@@ -40,7 +48,7 @@ test.describe('Smoke Tests', () => {
         const { errors } = setupErrorCollector(page)
 
         await page.goto(path)
-        await page.waitForLoadState('networkidle', { timeout: 15000 })
+        await waitForNetworkIdleBestEffort(page, NETWORK_IDLE_TIMEOUT_MS, `route ${path}`)
 
         await expect(page.locator('body')).toBeVisible()
 
@@ -56,7 +64,7 @@ test.describe('Smoke Tests', () => {
     test('navbar links navigate correctly', async ({ page }) => {
       await setupDemoMode(page)
       await page.goto('/')
-      await page.waitForLoadState('networkidle')
+      await waitForNetworkIdleBestEffort(page)
 
       const navLinks = [
         { text: 'Clusters', expectedPath: '/clusters' },
@@ -66,7 +74,7 @@ test.describe('Smoke Tests', () => {
 
       for (const { text, expectedPath } of navLinks) {
         await page.click(`nav >> text="${text}"`)
-        await page.waitForLoadState('networkidle')
+        await waitForNetworkIdleBestEffort(page, NETWORK_IDLE_TIMEOUT_MS, `nav to ${expectedPath}`)
         expect(page.url()).toContain(expectedPath)
       }
     })
@@ -74,7 +82,7 @@ test.describe('Smoke Tests', () => {
     test('sidebar navigation works', async ({ page }) => {
       await setupDemoMode(page)
       await page.goto('/')
-      await page.waitForLoadState('networkidle')
+      await waitForNetworkIdleBestEffort(page)
 
       // Check sidebar is visible
       const sidebar = page.getByTestId('sidebar')
@@ -87,19 +95,19 @@ test.describe('Smoke Tests', () => {
 
     test('clicking navbar logo navigates to home from non-home route', async ({ page }) => {
       await setupDemoMode(page)
-      
+
       // Navigate to a non-home route
       await page.goto('/settings')
-      await page.waitForLoadState('networkidle')
+      await waitForNetworkIdleBestEffort(page, NETWORK_IDLE_TIMEOUT_MS, '/settings')
       expect(page.url()).toContain('/settings')
 
       // Click the logo button (has aria-label "Go to home dashboard")
       const logoButton = page.locator('nav button[aria-label*="home"]')
       await expect(logoButton).toBeVisible()
       await logoButton.click()
-      
+
       // Wait for navigation and verify we're at home
-      await page.waitForLoadState('networkidle')
+      await waitForNetworkIdleBestEffort(page, NETWORK_IDLE_TIMEOUT_MS, 'logo click')
       expect(page.url()).toMatch(/\/$|\/dashboard$/)
     })
   })
@@ -108,37 +116,37 @@ test.describe('Smoke Tests', () => {
     test('add card modal opens and closes', async ({ page }) => {
       await setupDemoMode(page)
       await page.goto('/dashboard')
-      await page.waitForLoadState('networkidle')
+      await waitForNetworkIdleBestEffort(page)
 
       // Try to find add card button
       const addButton = page.getByTestId('add-card-button')
         .or(page.locator('button:has-text("Add Card")'))
         .or(page.locator('[aria-label*="add"]'))
 
-      if (await addButton.first().isVisible({ timeout: 5000 })) {
+      if (await addButton.first().isVisible({ timeout: MODAL_TIMEOUT_MS })) {
         await addButton.first().click()
 
         // Verify modal opened
         const modal = page.locator('[role="dialog"]')
-        await expect(modal).toBeVisible({ timeout: 5000 })
+        await expect(modal).toBeVisible({ timeout: MODAL_TIMEOUT_MS })
 
         // Close with Escape
         await page.keyboard.press('Escape')
-        await expect(modal).not.toBeVisible({ timeout: 5000 })
+        await expect(modal).not.toBeVisible({ timeout: MODAL_TIMEOUT_MS })
       }
     })
 
     test('settings page interactions work', async ({ page }) => {
       await setupDemoMode(page)
       await page.goto('/settings')
-      await page.waitForLoadState('networkidle')
+      await waitForNetworkIdleBestEffort(page)
 
       // Check for theme toggle
       const themeToggle = page.getByTestId('theme-toggle')
         .or(page.locator('button:has-text("Theme")'))
         .or(page.locator('[aria-label*="theme"]'))
 
-      if (await themeToggle.first().isVisible({ timeout: 3000 })) {
+      if (await themeToggle.first().isVisible({ timeout: OPTIONAL_PROBE_TIMEOUT_MS })) {
         const htmlBefore = await page.locator('html').getAttribute('class')
         await themeToggle.first().click()
 
@@ -153,11 +161,11 @@ test.describe('Smoke Tests', () => {
     test('404 page shows error message', async ({ page }) => {
       await setupDemoMode(page)
       await page.goto('/this-page-does-not-exist-12345')
-      await page.waitForLoadState('networkidle')
+      await waitForNetworkIdleBestEffort(page)
 
       // Should show some error indication, not blank page
       const pageContent = await page.textContent('body')
-      expect(pageContent?.length).toBeGreaterThan(50)
+      expect(pageContent?.length).toBeGreaterThan(MIN_BODY_TEXT_LEN)
     })
 
     test('page handles missing data gracefully', async ({ page }) => {
@@ -166,34 +174,32 @@ test.describe('Smoke Tests', () => {
 
       // Visit a data-heavy page
       await page.goto('/clusters')
-      await page.waitForLoadState('networkidle')
+      await waitForNetworkIdleBestEffort(page)
 
       // Should not crash, should show loading or empty state
       const pageContent = await page.textContent('body')
-      expect(pageContent?.length).toBeGreaterThan(50)
+      expect(pageContent?.length).toBeGreaterThan(MIN_BODY_TEXT_LEN)
       expect(errors).toHaveLength(0)
     })
   })
 
   test.describe('Mobile Viewport', () => {
-    const MOBILE_VIEWPORT = { width: 393, height: 852 }
-
     test('dashboard loads without error on mobile', async ({ page }) => {
       await page.setViewportSize(MOBILE_VIEWPORT)
       await setupDemoMode(page)
       const { errors } = setupErrorCollector(page)
 
       await page.goto('/')
-      await page.waitForLoadState('networkidle', { timeout: 15000 })
+      await waitForNetworkIdleBestEffort(page, NETWORK_IDLE_TIMEOUT_MS, 'mobile /')
 
       // Check no error boundary rendered (React #185 crash)
       const errorBoundary = page.locator('text=This page encountered an error')
-      await expect(errorBoundary).not.toBeVisible({ timeout: 5000 })
+      await expect(errorBoundary).not.toBeVisible({ timeout: MODAL_TIMEOUT_MS })
 
       // Page should have real content, not just an error
       await expect(page.locator('body')).toBeVisible()
       const bodyText = await page.textContent('body')
-      expect(bodyText?.length).toBeGreaterThan(100)
+      expect(bodyText?.length).toBeGreaterThan(MIN_DASHBOARD_TEXT_LEN)
 
       if (errors.length > 0) {
         console.log('Mobile console errors:', errors)
@@ -206,10 +212,10 @@ test.describe('Smoke Tests', () => {
       await setupDemoMode(page)
 
       await page.goto('/clusters')
-      await page.waitForLoadState('networkidle', { timeout: 15000 })
+      await waitForNetworkIdleBestEffort(page, NETWORK_IDLE_TIMEOUT_MS, 'mobile /clusters')
 
       const errorBoundary = page.locator('text=This page encountered an error')
-      await expect(errorBoundary).not.toBeVisible({ timeout: 5000 })
+      await expect(errorBoundary).not.toBeVisible({ timeout: MODAL_TIMEOUT_MS })
     })
   })
 
@@ -217,7 +223,7 @@ test.describe('Smoke Tests', () => {
     test('demo mode indicator is visible', async ({ page }) => {
       await setupDemoMode(page)
       await page.goto('/')
-      await page.waitForLoadState('networkidle')
+      await waitForNetworkIdleBestEffort(page)
 
       // Check for demo mode badge/indicator
       const demoIndicator = page.locator('text=/demo/i')
@@ -225,7 +231,7 @@ test.describe('Smoke Tests', () => {
         .or(page.locator('[aria-label*="demo"]'))
 
       // Should have some indication of demo mode
-      const isVisible = await demoIndicator.first().isVisible({ timeout: 3000 }).catch(() => false)
+      const isVisible = await demoIndicator.first().isVisible({ timeout: OPTIONAL_PROBE_TIMEOUT_MS }).catch(() => false)
       // This is informational - demo indicator may not always be visible
       console.log(`Demo mode indicator visible: ${isVisible}`)
     })
