@@ -59,7 +59,7 @@ if ! command -v semgrep &>/dev/null; then
   if command -v brew &>/dev/null; then
     brew install semgrep 2>/dev/null
   elif command -v pip3 &>/dev/null; then
-    pip3 install semgrep 2>/dev/null
+    pip3 install semgrep==1.160.0 2>/dev/null
   else
     echo -e "${RED}ERROR: Cannot install semgrep — install manually: brew install semgrep${NC}"
     exit 1

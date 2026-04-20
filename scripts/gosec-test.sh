@@ -52,7 +52,7 @@ fi
 
 if ! command -v gosec &>/dev/null; then
   echo -e "${YELLOW}Installing gosec...${NC}"
-  go install github.com/securego/gosec/v2/cmd/gosec@latest
+  go install github.com/securego/gosec/v2/cmd/gosec@v2.25.0
 fi
 
 # ============================================================================

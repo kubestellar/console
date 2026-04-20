@@ -57,7 +57,7 @@ if ! command -v gitleaks &>/dev/null; then
   if command -v brew &>/dev/null; then
     brew install gitleaks
   elif command -v go &>/dev/null; then
-    go install github.com/gitleaks/gitleaks/v8@latest
+    go install github.com/gitleaks/gitleaks/v8@v8.30.1
     # go install places binaries in GOPATH/bin which may not be on PATH
     export PATH="$(go env GOPATH)/bin:$PATH"
   else

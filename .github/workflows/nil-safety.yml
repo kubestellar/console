@@ -45,7 +45,7 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
 
       - name: Install nilaway
-        run: go install go.uber.org/nilaway/cmd/nilaway@latest
+        run: go install go.uber.org/nilaway/cmd/nilaway@v0.0.0-20260318203545-ad240b12fb4c
 
       - name: Install build dependencies
         run: sudo apt-get install -y -qq gcc musl-tools > /dev/null 2>&1
@@ -134,7 +134,7 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
 
       - name: Install nilaway
-        run: go install go.uber.org/nilaway/cmd/nilaway@latest
+        run: go install go.uber.org/nilaway/cmd/nilaway@v0.0.0-20260318203545-ad240b12fb4c
 
       - name: Install build dependencies
         run: sudo apt-get install -y -qq gcc musl-tools > /dev/null 2>&1

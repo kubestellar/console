@@ -131,7 +131,7 @@ echo -e "${BOLD}Phase 2: govulncheck (Go backend)${NC}"
 if command -v go &>/dev/null; then
   if ! command -v govulncheck &>/dev/null; then
     echo -e "  ${DIM}Installing govulncheck...${NC}"
-    go install golang.org/x/vuln/cmd/govulncheck@latest 2>/dev/null
+    go install golang.org/x/vuln/cmd/govulncheck@v1.2.0 2>/dev/null
   fi
 
   if command -v govulncheck &>/dev/null; then
