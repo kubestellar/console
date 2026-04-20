@@ -15,6 +15,30 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// gpuResourceNames lists every accelerator resource name the console treats
+// as a "GPU" for the purposes of pod-level resource tracking. Must stay in
+// sync with the node-inventory tracker in client_gpu.go — these are the
+// same names checked there when summing allocatable per node (Issue 9090).
+var gpuResourceNames = []string{
+	"nvidia.com/gpu",
+	"amd.com/gpu",
+	"gpu.intel.com/i915",
+	"habana.ai/gaudi",
+	"habana.ai/gaudi2",
+	"intel.com/gaudi",
+}
+
+// isGPUResourceName reports whether the given Kubernetes resource name is a
+// known GPU / AI accelerator. Exact match; no vendor-prefix heuristics.
+func isGPUResourceName(name string) bool {
+	for _, n := range gpuResourceNames {
+		if name == n {
+			return true
+		}
+	}
+	return false
+}
+
 func (m *MultiClusterClient) GetPods(ctx context.Context, contextName, namespace string) ([]PodInfo, error) {
 	client, err := m.GetClient(contextName)
 	if err != nil {
@@ -63,17 +87,21 @@ func (m *MultiClusterClient) GetPods(ctx context.Context, contextName, namespace
 					ci.Message = cs.State.Terminated.Message
 				}
 			}
-			// Check for GPU resource requests (nvidia.com/gpu, amd.com/gpu)
+			// Check for GPU/accelerator resource requests. Keep this list in sync
+			// with the node-inventory tracker in client_gpu.go; without the Intel
+			// and Habana/Gaudi entries, pod views reported GPURequested=0 on
+			// Intel-GPU / Gaudi accelerator clusters even though the node
+			// inventory saw them (Issue 9090).
 			if c.Resources.Requests != nil {
 				for resourceName, qty := range c.Resources.Requests {
-					if resourceName == "nvidia.com/gpu" || resourceName == "amd.com/gpu" {
+					if isGPUResourceName(string(resourceName)) {
 						ci.GPURequested = int(qty.Value())
 					}
 				}
 			}
 			if ci.GPURequested == 0 && c.Resources.Limits != nil {
 				for resourceName, qty := range c.Resources.Limits {
-					if resourceName == "nvidia.com/gpu" || resourceName == "amd.com/gpu" {
+					if isGPUResourceName(string(resourceName)) {
 						ci.GPURequested = int(qty.Value())
 					}
 				}
