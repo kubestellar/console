@@ -83,7 +83,7 @@ describe('useIntoto — demo mode', () => {
   it('returns isDemoData=true in demo mode', async () => {
     mockIsDemoMode.mockReturnValue(true)
     const { result } = renderHook(() => useIntoto())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.isDemoData).toBe(true)
   })
 
@@ -91,7 +91,7 @@ describe('useIntoto — demo mode', () => {
     mockIsDemoMode.mockReturnValue(true)
     mockClusters.mockReturnValue([])
     const { result } = renderHook(() => useIntoto())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(Object.keys(result.current.statuses)).toHaveLength(3)
     expect(result.current.statuses['us-east-1']).toBeDefined()
     expect(result.current.statuses['eu-central-1']).toBeDefined()
@@ -102,7 +102,7 @@ describe('useIntoto — demo mode', () => {
     mockIsDemoMode.mockReturnValue(true)
     mockClusters.mockReturnValue(['prod-cluster', 'staging-cluster'])
     const { result } = renderHook(() => useIntoto())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.statuses['prod-cluster']).toBeDefined()
     expect(result.current.statuses['staging-cluster']).toBeDefined()
   })
@@ -110,7 +110,7 @@ describe('useIntoto — demo mode', () => {
   it('demo statuses have installed=true and no error', async () => {
     mockIsDemoMode.mockReturnValue(true)
     const { result } = renderHook(() => useIntoto())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
     const statuses = Object.values(result.current.statuses)
     expect(statuses.every(s => s.installed)).toBe(true)
     expect(statuses.every(s => !s.error)).toBe(true)
@@ -119,14 +119,14 @@ describe('useIntoto — demo mode', () => {
   it('sets clustersChecked to number of demo clusters', async () => {
     mockIsDemoMode.mockReturnValue(true)
     const { result } = renderHook(() => useIntoto())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.clustersChecked).toBe(3)
   })
 
   it('sets lastRefresh to a Date in demo mode', async () => {
     mockIsDemoMode.mockReturnValue(true)
     const { result } = renderHook(() => useIntoto())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.lastRefresh).toBeInstanceOf(Date)
   })
 
@@ -140,7 +140,7 @@ describe('useIntoto — demo mode', () => {
   it('installed=true when demo statuses are populated', async () => {
     mockIsDemoMode.mockReturnValue(true)
     const { result } = renderHook(() => useIntoto())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.installed).toBe(true)
   })
 })
@@ -155,7 +155,7 @@ describe('useIntoto — no clusters', () => {
     mockClusters.mockReturnValue([])
     mockClustersLoading.mockReturnValue(false)
     const { result } = renderHook(() => useIntoto())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.isLoading).toBe(false)
   })
 
@@ -164,26 +164,26 @@ describe('useIntoto — no clusters', () => {
     mockClusters.mockReturnValue([])
     mockClustersLoading.mockReturnValue(false)
     const { result } = renderHook(() => useIntoto())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.statuses).toEqual({})
     expect(result.current.installed).toBe(false)
   })
 
   it('totalClusters is 0 when no clusters', async () => {
     const { result } = renderHook(() => useIntoto())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.totalClusters).toBe(0)
   })
 
   it('hasErrors is false when no clusters', async () => {
     const { result } = renderHook(() => useIntoto())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.hasErrors).toBe(false)
   })
 
   it('isFailed is false initially', async () => {
     const { result } = renderHook(() => useIntoto())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.isFailed).toBe(false)
   })
 })
@@ -200,7 +200,7 @@ describe('useIntoto — cluster fetch: CRD not installed', () => {
       Promise.all(tasks.map(t => t().then(v => ({ status: 'fulfilled' as const, value: v }))))
     )
     const { result } = renderHook(() => useIntoto())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.statuses['cluster-a']?.installed).toBe(false)
   })
 })
@@ -239,20 +239,20 @@ describe('useIntoto — cluster fetch: CRD installed', () => {
 
   it('marks cluster as installed when CRD found and layouts fetched', async () => {
     const { result } = renderHook(() => useIntoto())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.statuses['cluster-b']?.installed).toBe(true)
   })
 
   it('populates layouts from API response', async () => {
     const { result } = renderHook(() => useIntoto())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.statuses['cluster-b']?.layouts).toHaveLength(1)
     expect(result.current.statuses['cluster-b']?.layouts[0].name).toBe('build-layout')
   })
 
   it('steps are mapped from spec.steps', async () => {
     const { result } = renderHook(() => useIntoto())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
     const steps = result.current.statuses['cluster-b']?.layouts[0].steps ?? []
     expect(steps).toHaveLength(2)
     expect(steps[0].name).toBe('clone')
@@ -261,20 +261,20 @@ describe('useIntoto — cluster fetch: CRD installed', () => {
 
   it('steps with no pubkeys show unknown functionary', async () => {
     const { result } = renderHook(() => useIntoto())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
     const steps = result.current.statuses['cluster-b']?.layouts[0].steps ?? []
     expect(steps[1].functionary).toBe('unknown')
   })
 
   it('installed is true when at least one cluster is installed', async () => {
     const { result } = renderHook(() => useIntoto())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.installed).toBe(true)
   })
 
   it('saves result to localStorage cache', async () => {
     renderHook(() => useIntoto())
-    await waitFor(() => localStorage.getItem('kc-intoto-cache') !== null)
+    await waitFor(() => expect(localStorage.getItem('kc-intoto-cache')).not.toBeNull())
     const cached = localStorage.getItem('kc-intoto-cache')
     expect(cached).toBeTruthy()
   })
@@ -315,7 +315,7 @@ describe('useIntoto — link verification', () => {
     )
 
     const { result } = renderHook(() => useIntoto())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
     const step = result.current.statuses['c1']?.layouts[0]?.steps[0]
     expect(step?.status).toBe('verified')
   })
@@ -334,7 +334,7 @@ describe('useIntoto — cluster fetch: errors', () => {
     )
 
     const { result } = renderHook(() => useIntoto())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.statuses['bad-cluster']?.error).toBeTruthy()
   })
 
@@ -346,7 +346,7 @@ describe('useIntoto — cluster fetch: errors', () => {
     )
 
     const { result } = renderHook(() => useIntoto())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.hasErrors).toBe(true)
   })
 
@@ -358,7 +358,7 @@ describe('useIntoto — cluster fetch: errors', () => {
     )
 
     const { result } = renderHook(() => useIntoto())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.consecutiveFailures).toBeGreaterThan(0)
   })
 })
@@ -370,19 +370,19 @@ describe('useIntoto — cluster fetch: errors', () => {
 describe('useIntoto — mode transition', () => {
   it('registers a cache reset handler on mount', async () => {
     renderHook(() => useIntoto())
-    await waitFor(() => mockRegisterCacheReset.mock.calls.length > 0)
+    await waitFor(() => expect(mockRegisterCacheReset.mock.calls.length).toBeGreaterThan(0))
     expect(mockRegisterCacheReset).toHaveBeenCalledWith('intoto', expect.any(Function))
   })
 
   it('registers a refetch handler on mount', async () => {
     renderHook(() => useIntoto())
-    await waitFor(() => mockRegisterRefetch.mock.calls.length > 0)
+    await waitFor(() => expect(mockRegisterRefetch.mock.calls.length).toBeGreaterThan(0))
     expect(mockRegisterRefetch).toHaveBeenCalledWith('intoto', expect.any(Function))
   })
 
   it('unregisters cache reset on unmount', async () => {
     const { unmount } = renderHook(() => useIntoto())
-    await waitFor(() => mockRegisterCacheReset.mock.calls.length > 0)
+    await waitFor(() => expect(mockRegisterCacheReset.mock.calls.length).toBeGreaterThan(0))
     unmount()
     expect(mockUnregisterCacheReset).toHaveBeenCalledWith('intoto')
   })
@@ -390,7 +390,7 @@ describe('useIntoto — mode transition', () => {
   it('cache reset handler clears statuses', async () => {
     mockIsDemoMode.mockReturnValue(true)
     const { result } = renderHook(() => useIntoto())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(Object.keys(result.current.statuses).length).toBeGreaterThan(0)
 
     const cacheResetCall = mockRegisterCacheReset.mock.calls.find(

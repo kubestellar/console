@@ -103,7 +103,7 @@ describe('useBonusPoints — successful fetch', () => {
     authenticatedUser('bob')
     mockFetchBonus({ login: 'bob', total_bonus_points: 150, entries: [] })
     const { result } = renderHook(() => useBonusPoints())
-    await waitFor(() => !result.current.isBonusLoading)
+    await waitFor(() => expect(result.current.isBonusLoading).toBe(false))
     expect(result.current.bonusPoints).toBe(150)
   })
 
@@ -112,7 +112,7 @@ describe('useBonusPoints — successful fetch', () => {
     const entries = [{ issue_number: 1, points: 50, reason: 'PR fix', created_at: '2026-01-01', state: 'closed' }]
     mockFetchBonus({ login: 'bob', total_bonus_points: 50, entries })
     const { result } = renderHook(() => useBonusPoints())
-    await waitFor(() => !result.current.isBonusLoading)
+    await waitFor(() => expect(result.current.isBonusLoading).toBe(false))
     expect(result.current.bonusEntries).toHaveLength(1)
   })
 
@@ -120,7 +120,7 @@ describe('useBonusPoints — successful fetch', () => {
     authenticatedUser('alice')
     mockFetchBonus({ login: 'alice', total_bonus_points: 75, entries: [] })
     renderHook(() => useBonusPoints())
-    await waitFor(() => localStorage.getItem(`${CACHE_KEY_PREFIX}:alice`) !== null)
+    await waitFor(() => expect(localStorage.getItem(`${CACHE_KEY_PREFIX}:alice`)).not.toBeNull())
     const cached = JSON.parse(localStorage.getItem(`${CACHE_KEY_PREFIX}:alice`)!)
     expect(cached.data.total_bonus_points).toBe(75)
   })
@@ -158,7 +158,7 @@ describe('useBonusPoints — error handling', () => {
     authenticatedUser('eve')
     globalThis.fetch = vi.fn().mockResolvedValue({ ok: false, status: 404 })
     const { result } = renderHook(() => useBonusPoints())
-    await waitFor(() => !result.current.isBonusLoading)
+    await waitFor(() => expect(result.current.isBonusLoading).toBe(false))
     expect(result.current.bonusPoints).toBe(0)
     expect(result.current.bonusEntries).toHaveLength(0)
   })
@@ -167,7 +167,7 @@ describe('useBonusPoints — error handling', () => {
     authenticatedUser('frank')
     globalThis.fetch = vi.fn().mockResolvedValue({ ok: false, status: 500 })
     const { result } = renderHook(() => useBonusPoints())
-    await waitFor(() => !result.current.isBonusLoading)
+    await waitFor(() => expect(result.current.isBonusLoading).toBe(false))
     expect(result.current.bonusPoints).toBe(0)
   })
 
@@ -175,7 +175,7 @@ describe('useBonusPoints — error handling', () => {
     authenticatedUser('grace')
     globalThis.fetch = vi.fn().mockRejectedValue(new Error('Network error'))
     const { result } = renderHook(() => useBonusPoints())
-    await waitFor(() => !result.current.isBonusLoading)
+    await waitFor(() => expect(result.current.isBonusLoading).toBe(false))
     expect(result.current.bonusPoints).toBe(0)
   })
 
@@ -187,7 +187,7 @@ describe('useBonusPoints — error handling', () => {
       json: async () => { throw new Error('bad json') },
     })
     const { result } = renderHook(() => useBonusPoints())
-    await waitFor(() => !result.current.isBonusLoading)
+    await waitFor(() => expect(result.current.isBonusLoading).toBe(false))
     expect(result.current.bonusPoints).toBe(0)
   })
 })
