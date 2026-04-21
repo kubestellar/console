@@ -300,8 +300,68 @@ export function UnifiedDashboard({
     }
   }
 
+  // #9384 — Cross-tab sync: listen for storage events so that when another
+  // browser tab persists layout changes to the same localStorage keys, this
+  // tab picks them up instead of silently overwriting on its next write.
+  useEffect(() => {
+    if (!config.storageKey) return
+
+    const handleStorageEvent = (e: StorageEvent) => {
+      if (!e.key || !e.newValue) return
+
+      // Flat-cards key (non-tab dashboards)
+      if (e.key === config.storageKey && !hasTabs) {
+        try {
+          const parsed = JSON.parse(e.newValue)
+          if (Array.isArray(parsed)) setCards(parsed)
+        } catch {
+          // Ignore parse errors from other tabs
+        }
+        return
+      }
+
+      // Per-tab card slots (tab-mode dashboards)
+      const tabSlotPrefix = `${config.storageKey}::tab::`
+      const tabSlotSuffix = '::cards'
+      if (hasTabs && e.key.startsWith(tabSlotPrefix) && e.key.endsWith(tabSlotSuffix)) {
+        const tabId = e.key.slice(tabSlotPrefix.length, -tabSlotSuffix.length)
+        try {
+          const parsed = JSON.parse(e.newValue)
+          if (Array.isArray(parsed)) {
+            setTabCards((prev) => ({ ...prev, [tabId]: parsed }))
+          }
+        } catch {
+          // Ignore parse errors from other tabs
+        }
+      }
+    }
+
+    window.addEventListener('storage', handleStorageEvent)
+    return () => window.removeEventListener('storage', handleStorageEvent)
+  }, [config.storageKey, hasTabs])
+
   // Check if customized (different from defaults)
+  //
+  // #9383 — When `hasTabs` is true the flat `cards` array is irrelevant;
+  // customization lives in `tabCards`. Compare each tab's current placements
+  // against the defaults from `config.tabs`.
   const isCustomized = (() => {
+    if (hasTabs) {
+      return (config.tabs ?? []).some((tab) => {
+        const current = tabCards[tab.id] ?? []
+        const defaults = tab.cards ?? []
+        if (current.length !== defaults.length) return true
+        return current.some((card, i) => {
+          const defaultCard = defaults[i]
+          return (
+            card.id !== defaultCard?.id ||
+            card.cardType !== defaultCard?.cardType ||
+            card.position?.w !== defaultCard?.position?.w ||
+            card.position?.h !== defaultCard?.position?.h
+          )
+        })
+      })
+    }
     if (cards.length !== config.cards.length) return true
     return cards.some((card, i) => {
       const defaultCard = config.cards[i]
