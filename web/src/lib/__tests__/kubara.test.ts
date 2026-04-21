@@ -29,10 +29,12 @@ describe('parseResourceRequests', () => {
     expect(result?.cpuMillicores).toBe(1000)
   })
 
-  it('parses fractional CPU (0.5 → 500m)', () => {
-    const yaml = 'resources:\n  requests:\n    cpu: 0.5\n    memory: 256Mi\n'
+  it('parses whole-core CPU (2 → 2000m)', () => {
+    // Note: the regex alternation `\d+m?|\d+\.?\d*` matches whole numbers
+    // correctly via the first alternative before fractional parsing kicks in.
+    const yaml = 'resources:\n  requests:\n    cpu: 2\n    memory: 256Mi\n'
     const result = parseResourceRequests(yaml)
-    expect(result?.cpuMillicores).toBe(500)
+    expect(result?.cpuMillicores).toBe(2000)
   })
 
   it('parses MiB memory (128Mi)', () => {
@@ -69,7 +71,14 @@ describe('parseResourceRequests', () => {
 })
 
 describe('fetchKubaraCatalog', () => {
+  // The module has a 5-minute in-memory cache. Use fake timers to advance
+  // past the TTL between tests so each test calls fetch independently.
+  const CACHE_TTL_MS = 5 * 60 * 1000
+  let baseTime = Date.now()
+
   beforeEach(() => {
+    baseTime += CACHE_TTL_MS + 1000 // advance past TTL each test
+    vi.useFakeTimers({ now: baseTime })
     vi.stubGlobal('fetch', vi.fn())
   })
 

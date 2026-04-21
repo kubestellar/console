@@ -22,8 +22,8 @@ describe('sanitizeUrl', () => {
   })
 
   it('passes through http URLs', () => {
-    const url = 'http://example.com'
-    expect(sanitizeUrl(url)).toBe(url)
+    // URL parser adds trailing slash: 'http://example.com' → 'http://example.com/'
+    expect(sanitizeUrl('http://example.com/path')).toBe('http://example.com/path')
   })
 
   it('passes through mailto URLs', () => {

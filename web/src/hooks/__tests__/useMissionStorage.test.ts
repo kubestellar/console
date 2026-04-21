@@ -127,12 +127,9 @@ describe('saveMissions', () => {
     const old = makeMission({ id: 'old', status: 'completed', updatedAt: new Date('2025-01-01') })
 
     const quotaError = Object.assign(new DOMException('QuotaExceededError'), { name: 'QuotaExceededError', code: 22 })
-    let callCount = 0
-    vi.spyOn(window.localStorage, 'setItem').mockImplementation((...args) => {
-      callCount++
-      if (callCount === 1) throw quotaError
-      // allow subsequent calls
-      Object.getPrototypeOf(window.localStorage).setItem.apply(window.localStorage, args)
+    // Only fail the first setItem — the pruning retry uses the real mock implementation
+    vi.spyOn(window.localStorage, 'setItem').mockImplementationOnce(() => {
+      throw quotaError
     })
 
     expect(() => saveMissions([active, old])).not.toThrow()
