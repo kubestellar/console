@@ -123,6 +123,7 @@ type Server struct {
 
 	// Token tracking
 	tokenMux         sync.RWMutex
+	tokenFileMux     sync.Mutex // serializes file I/O in saveTokenUsage to prevent race (#9441)
 	sessionStart     time.Time
 	sessionTokensIn  int64
 	sessionTokensOut int64

@@ -254,3 +254,72 @@ func TestServer_SessionIDGeneration(t *testing.T) {
 		t.Errorf("Generated SessionID is not a valid UUID: %v", err)
 	}
 }
+
+// TestExtractCommandsFromResponse covers robust command extraction (#9440).
+func TestExtractCommandsFromResponse(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected []string
+	}{
+		{
+			name:     "CMD with space prefix",
+			input:    "Analysis done.\nCMD: kubectl get pods\nCMD: kubectl get svc",
+			expected: []string{"kubectl get pods", "kubectl get svc"},
+		},
+		{
+			name:     "CMD without space",
+			input:    "CMD:kubectl get pods",
+			expected: []string{"kubectl get pods"},
+		},
+		{
+			name:     "Command prefix case-insensitive",
+			input:    "Command: kubectl get nodes\ncommand: helm list",
+			expected: []string{"kubectl get nodes", "helm list"},
+		},
+		{
+			name:     "markdown code block",
+			input:    "Here are the commands:\n```bash\nkubectl get pods -A\nhelm install foo bar\n```",
+			expected: []string{"kubectl get pods -A", "helm install foo bar"},
+		},
+		{
+			name:     "bare kubectl outside code block",
+			input:    "You should run:\nkubectl describe pod foo\n\nThat will show the details.",
+			expected: []string{"kubectl describe pod foo"},
+		},
+		{
+			name:     "oc command support",
+			input:    "CMD: oc get routes",
+			expected: []string{"oc get routes"},
+		},
+		{
+			name:     "deduplication",
+			input:    "CMD: kubectl get pods\nkubectl get pods",
+			expected: []string{"kubectl get pods"},
+		},
+		{
+			name:     "no commands",
+			input:    "I think we should check the cluster status.\nLet me know if you need help.",
+			expected: nil,
+		},
+		{
+			name:     "mixed formats",
+			input:    "Analysis:\nCMD: kubectl get pods\n```\nhelm list -A\n```\ncommand: kubectl get svc",
+			expected: []string{"kubectl get pods", "helm list -A", "kubectl get svc"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := extractCommandsFromResponse(tt.input)
+			if len(got) != len(tt.expected) {
+				t.Fatalf("expected %d commands, got %d: %v", len(tt.expected), len(got), got)
+			}
+			for i, cmd := range got {
+				if cmd != tt.expected[i] {
+					t.Errorf("command[%d] = %q, want %q", i, cmd, tt.expected[i])
+				}
+			}
+		})
+	}
+}

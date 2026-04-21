@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -20,6 +21,13 @@ import (
 // maxWSGoroutines limits concurrent chat/kubectl goroutines per connection
 // to prevent resource exhaustion from bursty or malicious traffic (#7277).
 const maxWSGoroutines = 20
+
+// cmdPrefixRe matches lines like "CMD: ...", "CMD:...", "Command: ...", or "command: ..."
+// used by extractCommandsFromResponse to parse mixed-mode thinking output (#9440).
+var cmdPrefixRe = regexp.MustCompile(`(?i)^(?:cmd|command)\s*:\s*(.+)`)
+
+// codeBlockCmdRe matches kubectl/helm/oc commands inside markdown code blocks (#9440).
+var codeBlockCmdRe = regexp.MustCompile(`^\s*(kubectl|helm|oc)\s+.+`)
 
 // wsMaxMessageBytes caps the size of any single WebSocket frame the agent
 // will accept from a client. Without this, an authenticated client could
@@ -1194,16 +1202,8 @@ User request: %s`, req.Prompt)
 		},
 	})
 
-	// Extract commands from thinking response (lines starting with CMD:)
-	var commands []string
-	for _, line := range strings.Split(thinkingResp.Content, "\n") {
-		trimmed := strings.TrimSpace(line)
-		if strings.HasPrefix(trimmed, "CMD: ") {
-			commands = append(commands, strings.TrimPrefix(trimmed, "CMD: "))
-		} else if strings.HasPrefix(trimmed, "CMD:") {
-			commands = append(commands, strings.TrimPrefix(trimmed, "CMD:"))
-		}
-	}
+	// Extract commands from thinking response using robust heuristics (#9440).
+	commands := extractCommandsFromResponse(thinkingResp.Content)
 
 	if len(commands) == 0 {
 		// No commands to execute - just return thinking response
@@ -1572,8 +1572,13 @@ func (s *Server) loadTokenUsage() {
 	}
 }
 
-// saveTokenUsage persists token usage to disk
+// saveTokenUsage persists token usage to disk.
+// tokenFileMux serializes the entire read-snapshot-write cycle so concurrent
+// goroutines spawned by addTokenUsage cannot clobber each other (#9441).
 func (s *Server) saveTokenUsage() {
+	s.tokenFileMux.Lock()
+	defer s.tokenFileMux.Unlock()
+
 	s.tokenMux.RLock()
 	usage := tokenUsageData{
 		Date:      s.todayDate,
@@ -1598,6 +1603,54 @@ func (s *Server) saveTokenUsage() {
 	if err := os.Rename(tmpPath, path); err != nil {
 		slog.Warn("could not rename token usage temp file", "error", err)
 	}
+}
+
+// extractCommandsFromResponse parses an LLM thinking response to find
+// executable commands. It handles multiple formats (#9440):
+//   - Lines prefixed with "CMD: ", "CMD:", "Command: ", "command:" (case-insensitive)
+//   - kubectl/helm/oc commands inside markdown fenced code blocks (```...```)
+//   - Bare kubectl/helm/oc commands on standalone lines
+func extractCommandsFromResponse(content string) []string {
+	var commands []string
+	seen := make(map[string]bool) // deduplicate commands
+	inCodeBlock := false
+
+	for _, line := range strings.Split(content, "\n") {
+		trimmed := strings.TrimSpace(line)
+
+		// Track markdown fenced code block boundaries
+		if strings.HasPrefix(trimmed, "```") {
+			inCodeBlock = !inCodeBlock
+			continue
+		}
+
+		// 1. Check for CMD:/Command: prefix (case-insensitive)
+		if m := cmdPrefixRe.FindStringSubmatch(trimmed); m != nil {
+			cmd := strings.TrimSpace(m[1])
+			if cmd != "" && !seen[cmd] {
+				seen[cmd] = true
+				commands = append(commands, cmd)
+			}
+			continue
+		}
+
+		// 2. Inside a code block, accept kubectl/helm/oc commands
+		if inCodeBlock {
+			if codeBlockCmdRe.MatchString(trimmed) && !seen[trimmed] {
+				seen[trimmed] = true
+				commands = append(commands, trimmed)
+			}
+			continue
+		}
+
+		// 3. Bare kubectl/helm/oc commands outside code blocks (standalone lines)
+		if codeBlockCmdRe.MatchString(trimmed) && !seen[trimmed] {
+			seen[trimmed] = true
+			commands = append(commands, trimmed)
+		}
+	}
+
+	return commands
 }
 
 // KeyStatus represents the status of an API key for a provider
