@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } from 'react'
+import { useToast } from '../ui/Toast'
 import { useMissions } from '../../hooks/useMissions'
 import { useDebouncedValue } from '../../hooks/useDebouncedValue'
 import { useHelmReleases } from '../../hooks/mcp/helm'
@@ -513,6 +514,7 @@ function extractBalancedBlocks(text: string, warnKey?: string): string[] {
 // ---------------------------------------------------------------------------
 
 export function useMissionControl() {
+  const { showToast } = useToast()
   const [state, setState] = useState<MissionControlState>(() =>
     makeInitialState(loadPersistedState())
   )
@@ -1061,6 +1063,7 @@ Include real CNCF projects only. Consider dependencies between projects.`
       } catch (err) {
         aiRequestInFlightRef.current = false
         console.error('[MissionControl] #6811 — askAIForSuggestions failed:', err)
+        showToast('AI suggestion request failed — please try again', 'error')
       }
     }
 
@@ -1214,6 +1217,7 @@ Order phases by dependency — prerequisites first. Each phase completes before 
       } catch (err) {
         aiRequestInFlightRef.current = false
         console.error('[MissionControl] #7117 — askAIForAssignments failed:', err)
+        showToast('AI assignment request failed — please try again', 'error')
       }
     }
 

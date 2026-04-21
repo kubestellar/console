@@ -10,6 +10,7 @@ import DOMPurify from 'dompurify'
 import WorldMapSvgUrl from '../../assets/world-map.svg'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
+import { useToast } from '../ui/Toast'
 import { useDemoMode } from '../../hooks/useDemoMode'
 
 /** Search input debounce delay (#6213). */
@@ -218,6 +219,7 @@ type StatusFilter = 'all' | 'healthy' | 'unhealthy'
 
 export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
   const { t } = useTranslation(['cards', 'common'])
+  const { showToast } = useToast()
   const { deduplicatedClusters: allClusters, isLoading, isRefreshing } = useClusters()
   const { drillToCluster } = useDrillDownActions()
   const { isDemoMode } = useDemoMode()
@@ -259,6 +261,7 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
       .catch(err => {
         if (err.name !== 'AbortError') {
           console.error('Failed to load world map:', err)
+          showToast('Failed to load world map', 'error')
           setMapError(true)
           setMapLoading(false)
         }

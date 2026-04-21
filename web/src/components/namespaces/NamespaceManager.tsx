@@ -333,6 +333,7 @@ export function NamespaceManager() {
     } catch (err) {
       console.error('Failed to delete namespace:', err)
       setError('Failed to delete namespace')
+      showToast('Failed to delete namespace', 'error')
       setNamespaceToDelete(null)
     }
   }
@@ -369,6 +370,7 @@ export function NamespaceManager() {
     } catch (err) {
       console.error('Failed to revoke access:', err)
       setError('Failed to revoke access')
+      showToast('Failed to revoke access', 'error')
     }
   }
 
