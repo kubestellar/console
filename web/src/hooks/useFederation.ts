@@ -163,6 +163,9 @@ const DEMO_HUBS: ProviderHubStatus[] = [
   { provider: 'ocm', hubContext: 'hub-staging', detected: true, version: 'v1' },
   { provider: 'capi', hubContext: 'capi-mgmt', detected: true, version: 'v1beta1' },
   { provider: 'karmada', hubContext: 'karmada-control', detected: true, version: 'v1alpha1' },
+  { provider: 'clusternet', hubContext: 'clusternet-parent', detected: true, version: 'v1beta1' },
+  { provider: 'liqo', hubContext: 'liqo-local', detected: true, version: 'v1alpha1' },
+  { provider: 'kubeadmiral', hubContext: 'kubeadmiral-ctl', detected: true, version: 'v1alpha1' },
 ]
 
 const DEMO_CLUSTERS: FederatedCluster[] = [
@@ -238,6 +241,39 @@ const DEMO_CLUSTERS: FederatedCluster[] = [
     labels: { env: 'staging', region: 'eu-west-1' },
     apiServerURL: 'https://karmada-member-2.eu-west-1.example.com:6443',
   },
+  {
+    provider: 'clusternet', hubContext: 'clusternet-parent', name: 'child-cluster-1',
+    state: 'joined', available: 'True',
+    labels: { 'clusternet.io/cluster-id': 'cn-abc-123', env: 'prod' },
+    apiServerURL: 'https://child-1.clusternet.example.com:6443',
+  },
+  {
+    provider: 'clusternet', hubContext: 'clusternet-parent', name: 'child-cluster-2',
+    state: 'pending', available: 'False',
+    labels: { 'clusternet.io/cluster-id': 'cn-def-456' },
+  },
+  {
+    provider: 'liqo', hubContext: 'liqo-local', name: 'peer-rome',
+    state: 'joined', available: 'True',
+    labels: { 'liqo.io/remote-cluster-id': 'lq-rome' },
+    apiServerURL: 'https://peer-rome.liqo.example.com:6443',
+  },
+  {
+    provider: 'liqo', hubContext: 'liqo-local', name: 'peer-berlin',
+    state: 'pending', available: 'Unknown',
+    labels: { 'liqo.io/remote-cluster-id': 'lq-berlin' },
+  },
+  {
+    provider: 'kubeadmiral', hubContext: 'kubeadmiral-ctl', name: 'member-east',
+    state: 'joined', available: 'True',
+    labels: { region: 'us-east-1', tier: 'production' },
+    apiServerURL: 'https://member-east.kubeadmiral.example.com:6443',
+  },
+  {
+    provider: 'kubeadmiral', hubContext: 'kubeadmiral-ctl', name: 'member-west',
+    state: 'pending', available: 'False',
+    labels: { region: 'us-west-2' },
+  },
 ]
 
 const DEMO_GROUPS: FederatedGroup[] = [
@@ -245,10 +281,15 @@ const DEMO_GROUPS: FederatedGroup[] = [
   { provider: 'ocm', hubContext: 'hub-staging', name: 'staging', members: ['gke-staging'], kind: 'set' },
   { provider: 'capi', hubContext: 'capi-mgmt', name: 'capi:awscluster', members: ['workload-prod-aws', 'workload-staging-aws'], kind: 'infra' },
   { provider: 'karmada', hubContext: 'karmada-control', name: 'deploy-to-apac', members: ['karmada-member-1'], kind: 'selector' },
+  { provider: 'clusternet', hubContext: 'clusternet-parent', name: 'cn-abc-123', members: ['child-cluster-1'], kind: 'selector' },
+  { provider: 'liqo', hubContext: 'liqo-local', name: 'peers', members: ['peer-rome'], kind: 'peer' },
+  { provider: 'kubeadmiral', hubContext: 'kubeadmiral-ctl', name: 'region=us-east-1', members: ['member-east'], kind: 'selector' },
 ]
 
-const FIVE_MINUTES_MS = 300_000;
-const TEN_MINUTES_MS = 600_000;
+const FIVE_MINUTES_MS = 300_000
+const TEN_MINUTES_MS = 600_000
+const TWO_MINUTES_MS = 120_000
+const THREE_MINUTES_MS = 180_000
 
 const DEMO_PENDING: PendingJoin[] = [
   {
@@ -260,6 +301,21 @@ const DEMO_PENDING: PendingJoin[] = [
     provider: 'karmada', hubContext: 'karmada-control', clusterName: 'karmada-member-2',
     requestedAt: new Date(Date.now() - TEN_MINUTES_MS).toISOString(),
     detail: 'Cluster Ready condition is not True',
+  },
+  {
+    provider: 'clusternet', hubContext: 'clusternet-parent', clusterName: 'child-cluster-2',
+    requestedAt: new Date(Date.now() - TWO_MINUTES_MS).toISOString(),
+    detail: 'ManagedCluster: child-cluster-2 (Ready=False or missing)',
+  },
+  {
+    provider: 'liqo', hubContext: 'liqo-local', clusterName: 'peer-berlin',
+    requestedAt: new Date(Date.now() - TEN_MINUTES_MS).toISOString(),
+    detail: 'ForeignCluster: peer-berlin (peering not active)',
+  },
+  {
+    provider: 'kubeadmiral', hubContext: 'kubeadmiral-ctl', clusterName: 'member-west',
+    requestedAt: new Date(Date.now() - THREE_MINUTES_MS).toISOString(),
+    detail: 'FederatedCluster: member-west (Ready=False or missing)',
   },
 ]
 
