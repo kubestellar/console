@@ -277,7 +277,7 @@ function useApiDataSourceInternal(
 
       const response = await fetch(url, {
         method,
-        headers: method === 'POST' ? { 'Content-Type': 'application/json' } : undefined,
+        headers: method === 'POST' ? { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } : undefined,
         body: method === 'POST' && params ? JSON.stringify(params) : undefined,
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
 

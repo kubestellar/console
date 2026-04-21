@@ -1010,6 +1010,7 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
           Authorization: `Bearer ${token}` },
         body: JSON.stringify({ alert, channels }),
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
@@ -1053,6 +1054,7 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
                 Authorization: `Bearer ${token}` },
               body: JSON.stringify({ alert, channels }),
               signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })

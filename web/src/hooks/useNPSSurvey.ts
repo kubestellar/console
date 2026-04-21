@@ -116,7 +116,7 @@ export function useNPSSurvey(): NPSSurveyState {
     try {
       const resp = await fetch(`${apiBase}/api/nps`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify({
           score,
           feedback: feedback?.trim() || undefined,
