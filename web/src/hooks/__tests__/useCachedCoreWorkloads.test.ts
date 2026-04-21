@@ -317,9 +317,9 @@ describe('useCachedWorkloads', () => {
     expect(result.current.workloads).toEqual(workloads)
   })
 
-  it('includes cluster in cache key', () => {
+  it('uses fixed cache key regardless of cluster param', () => {
     renderHook(() => useCachedWorkloads('prod'))
-    expect(mockUseCache.mock.calls[0][0].key).toContain('prod')
+    expect(mockUseCache.mock.calls[0][0].key).toBe('workloads:all:all')
   })
 
   it('exposes refetch function', () => {

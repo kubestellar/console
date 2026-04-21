@@ -196,7 +196,7 @@ describe('useCachedK8sRoleBindings', () => {
   it('exposes roleBindings field', () => {
     mockUseCache.mockReturnValue(defaultCache({ data: [] }))
     const { result } = renderHook(() => useCachedK8sRoleBindings())
-    expect(result.current).toHaveProperty('roleBindings')
+    expect(result.current).toHaveProperty('bindings')
   })
 })
 

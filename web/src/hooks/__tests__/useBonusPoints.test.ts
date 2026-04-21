@@ -40,11 +40,11 @@ function setCachedBonus(login: string, data: object, offset = 0) {
 }
 
 function mockFetchBonus(data: object, status = 200) {
-  globalThis.fetch = vi.fn().mockResolvedValue({
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
     ok: status >= 200 && status < 300,
     status,
     json: async () => data,
-  })
+  }))
 }
 
 function authenticatedUser(login = 'alice') {
@@ -54,8 +54,6 @@ function authenticatedUser(login = 'alice') {
   })
 }
 
-const originalFetch = globalThis.fetch
-
 beforeEach(() => {
   vi.clearAllMocks()
   localStorage.clear()
@@ -63,7 +61,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
-  globalThis.fetch = originalFetch
+  vi.unstubAllGlobals()
 })
 
 // ---------------------------------------------------------------------------
@@ -72,27 +70,27 @@ afterEach(() => {
 
 describe('useBonusPoints — unauthenticated / demo user', () => {
   it('returns zero bonus points for unauthenticated user', () => {
-    globalThis.fetch = vi.fn()
+    vi.stubGlobal('fetch', vi.fn())
     const { result } = renderHook(() => useBonusPoints())
     expect(result.current.bonusPoints).toBe(0)
     expect(result.current.bonusEntries).toHaveLength(0)
   })
 
   it('does not fetch when user is null', () => {
-    globalThis.fetch = vi.fn()
+    vi.stubGlobal('fetch', vi.fn())
     renderHook(() => useBonusPoints())
     expect(globalThis.fetch).not.toHaveBeenCalled()
   })
 
   it('does not fetch when user is demo-user', () => {
     mockUseAuth.mockReturnValue({ user: { github_login: 'demo-user' }, isAuthenticated: true })
-    globalThis.fetch = vi.fn()
+    vi.stubGlobal('fetch', vi.fn())
     renderHook(() => useBonusPoints())
     expect(globalThis.fetch).not.toHaveBeenCalled()
   })
 
   it('returns isBonusLoading=false for unauthenticated user', () => {
-    globalThis.fetch = vi.fn()
+    vi.stubGlobal('fetch', vi.fn())
     const { result } = renderHook(() => useBonusPoints())
     expect(result.current.isBonusLoading).toBe(false)
   })
@@ -126,7 +124,7 @@ describe('useBonusPoints — successful fetch', () => {
   })
 
   it('exposes refreshBonus function', () => {
-    globalThis.fetch = vi.fn()
+    vi.stubGlobal('fetch', vi.fn())
     authenticatedUser()
     const { result } = renderHook(() => useBonusPoints())
     expect(typeof result.current.refreshBonus).toBe('function')
@@ -138,7 +136,7 @@ describe('useBonusPoints — cache loading', () => {
     authenticatedUser('carol')
     const cachedData = { login: 'carol', total_bonus_points: 200, entries: [] }
     setCachedBonus('carol', cachedData)
-    globalThis.fetch = vi.fn().mockReturnValue(new Promise(() => {}))
+    vi.stubGlobal('fetch', vi.fn().mockReturnValue(new Promise(() => {})))
     const { result } = renderHook(() => useBonusPoints())
     expect(result.current.bonusPoints).toBe(200)
   })
@@ -156,7 +154,7 @@ describe('useBonusPoints — cache loading', () => {
 describe('useBonusPoints — error handling', () => {
   it('handles 404 response (route unavailable) gracefully', async () => {
     authenticatedUser('eve')
-    globalThis.fetch = vi.fn().mockResolvedValue({ ok: false, status: 404 })
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 404 }))
     const { result } = renderHook(() => useBonusPoints())
     await waitFor(() => !result.current.isBonusLoading)
     expect(result.current.bonusPoints).toBe(0)
@@ -165,7 +163,7 @@ describe('useBonusPoints — error handling', () => {
 
   it('does not throw on non-ok response (fail silently)', async () => {
     authenticatedUser('frank')
-    globalThis.fetch = vi.fn().mockResolvedValue({ ok: false, status: 500 })
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500 }))
     const { result } = renderHook(() => useBonusPoints())
     await waitFor(() => !result.current.isBonusLoading)
     expect(result.current.bonusPoints).toBe(0)
@@ -173,7 +171,7 @@ describe('useBonusPoints — error handling', () => {
 
   it('does not throw on network error (fail silently)', async () => {
     authenticatedUser('grace')
-    globalThis.fetch = vi.fn().mockRejectedValue(new Error('Network error'))
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network error')))
     const { result } = renderHook(() => useBonusPoints())
     await waitFor(() => !result.current.isBonusLoading)
     expect(result.current.bonusPoints).toBe(0)
@@ -181,11 +179,11 @@ describe('useBonusPoints — error handling', () => {
 
   it('handles invalid JSON response (fail silently)', async () => {
     authenticatedUser('hank')
-    globalThis.fetch = vi.fn().mockResolvedValue({
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
       json: async () => { throw new Error('bad json') },
-    })
+    }))
     const { result } = renderHook(() => useBonusPoints())
     await waitFor(() => !result.current.isBonusLoading)
     expect(result.current.bonusPoints).toBe(0)

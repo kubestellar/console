@@ -122,9 +122,9 @@ describe('useCachedHPAs', () => {
 })
 
 describe('useCachedConfigMaps', () => {
-  it('exposes configMaps field', () => {
+  it('exposes configmaps field', () => {
     const { result } = renderHook(() => useCachedConfigMaps())
-    expect(result.current).toHaveProperty('configMaps')
+    expect(result.current).toHaveProperty('configmaps')
   })
 })
 
@@ -143,30 +143,30 @@ describe('useCachedServiceAccounts', () => {
 })
 
 describe('useCachedReplicaSets', () => {
-  it('exposes replicaSets field', () => {
+  it('exposes replicasets field', () => {
     const { result } = renderHook(() => useCachedReplicaSets())
-    expect(result.current).toHaveProperty('replicaSets')
+    expect(result.current).toHaveProperty('replicasets')
   })
 })
 
 describe('useCachedStatefulSets', () => {
-  it('exposes statefulSets field', () => {
+  it('exposes statefulsets field', () => {
     const { result } = renderHook(() => useCachedStatefulSets())
-    expect(result.current).toHaveProperty('statefulSets')
+    expect(result.current).toHaveProperty('statefulsets')
   })
 })
 
 describe('useCachedDaemonSets', () => {
-  it('exposes daemonSets field', () => {
+  it('exposes daemonsets field', () => {
     const { result } = renderHook(() => useCachedDaemonSets())
-    expect(result.current).toHaveProperty('daemonSets')
+    expect(result.current).toHaveProperty('daemonsets')
   })
 })
 
 describe('useCachedCronJobs', () => {
-  it('exposes cronJobs field', () => {
+  it('exposes cronjobs field', () => {
     const { result } = renderHook(() => useCachedCronJobs())
-    expect(result.current).toHaveProperty('cronJobs')
+    expect(result.current).toHaveProperty('cronjobs')
   })
 })
 
@@ -178,9 +178,9 @@ describe('useCachedIngresses', () => {
 })
 
 describe('useCachedNetworkPolicies', () => {
-  it('exposes networkPolicies field', () => {
+  it('exposes networkpolicies field', () => {
     const { result } = renderHook(() => useCachedNetworkPolicies())
-    expect(result.current).toHaveProperty('networkPolicies')
+    expect(result.current).toHaveProperty('networkpolicies')
   })
   it('includes cluster in key', () => {
     renderHook(() => useCachedNetworkPolicies('staging'))

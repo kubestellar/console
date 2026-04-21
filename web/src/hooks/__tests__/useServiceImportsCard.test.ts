@@ -5,16 +5,12 @@ import { renderHook, waitFor } from '@testing-library/react'
 // Hoisted mock factories
 // ---------------------------------------------------------------------------
 
-const { mockClusters, mockClustersLoading } = vi.hoisted(() => ({
-  mockClusters: vi.fn(() => []),
-  mockClustersLoading: vi.fn(() => false),
+const { mockUseClusters } = vi.hoisted(() => ({
+  mockUseClusters: vi.fn(),
 }))
 
 vi.mock('../useMCP', () => ({
-  useClusters: () => ({
-    deduplicatedClusters: mockClusters(),
-    isLoading: mockClustersLoading(),
-  }),
+  useClusters: () => mockUseClusters(),
 }))
 
 vi.mock('../../lib/constants', () => ({
@@ -49,51 +45,48 @@ function makeServiceImport(name = 'svc', cluster = 'c1') {
 }
 
 function mockFetchOk(items = [makeServiceImport()]) {
-  globalThis.fetch = vi.fn().mockResolvedValue({
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
     ok: true,
     status: 200,
     statusText: 'OK',
     json: async () => ({ items }),
-  })
+  }))
 }
 
 function mockFetch503() {
-  globalThis.fetch = vi.fn().mockResolvedValue({
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
     ok: false,
     status: 503,
     statusText: 'Service Unavailable',
     json: async () => ({}),
-  })
+  }))
 }
 
 function mockFetchError(message = 'Network error') {
-  globalThis.fetch = vi.fn().mockRejectedValue(new Error(message))
+  vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error(message)))
 }
 
 function mockFetchHttpError(status: number) {
-  globalThis.fetch = vi.fn().mockResolvedValue({
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
     ok: false,
     status,
     statusText: 'Error',
     json: async () => ({}),
-  })
+  }))
 }
 
 // ---------------------------------------------------------------------------
 // Setup / Teardown
 // ---------------------------------------------------------------------------
 
-const originalFetch = globalThis.fetch
-
 beforeEach(() => {
   vi.clearAllMocks()
   localStorage.clear()
-  mockClusters.mockReturnValue([])
-  mockClustersLoading.mockReturnValue(false)
+  mockUseClusters.mockReturnValue({ deduplicatedClusters: [], isLoading: false })
 })
 
 afterEach(() => {
-  globalThis.fetch = originalFetch
+  vi.unstubAllGlobals()
 })
 
 // ---------------------------------------------------------------------------
@@ -102,13 +95,13 @@ afterEach(() => {
 
 describe('useServiceImportsCard — initial state', () => {
   it('returns loading state when no cache and fetch is pending', () => {
-    globalThis.fetch = vi.fn().mockReturnValue(new Promise(() => {}))
+    vi.stubGlobal('fetch', vi.fn().mockReturnValue(new Promise(() => {})))
     const { result } = renderHook(() => useServiceImportsCard())
     expect(result.current.isLoading).toBe(true)
   })
 
   it('exposes expected return fields', () => {
-    globalThis.fetch = vi.fn().mockReturnValue(new Promise(() => {}))
+    vi.stubGlobal('fetch', vi.fn().mockReturnValue(new Promise(() => {})))
     const { result } = renderHook(() => useServiceImportsCard())
     expect(result.current).toHaveProperty('imports')
     expect(result.current).toHaveProperty('isDemoData')
@@ -120,7 +113,7 @@ describe('useServiceImportsCard — initial state', () => {
   })
 
   it('refetch is a function', () => {
-    globalThis.fetch = vi.fn().mockReturnValue(new Promise(() => {}))
+    vi.stubGlobal('fetch', vi.fn().mockReturnValue(new Promise(() => {})))
     const { result } = renderHook(() => useServiceImportsCard())
     expect(typeof result.current.refetch).toBe('function')
   })
@@ -210,7 +203,7 @@ describe('useServiceImportsCard — error fallback', () => {
   })
 
   it('uses cluster names for demo data when clusters are connected', async () => {
-    mockClusters.mockReturnValue([{ name: 'prod', reachable: true }])
+    mockUseClusters.mockReturnValue({ deduplicatedClusters: [{ name: 'prod', reachable: true }], isLoading: false })
     mockFetchError()
     const { result } = renderHook(() => useServiceImportsCard())
     await waitFor(() => result.current.imports.length > 0)
@@ -240,7 +233,7 @@ describe('useServiceImportsCard — cache', () => {
       isDemoData: false,
     }
     localStorage.setItem(CACHE_KEY, JSON.stringify(cached))
-    globalThis.fetch = vi.fn().mockReturnValue(new Promise(() => {}))
+    vi.stubGlobal('fetch', vi.fn().mockReturnValue(new Promise(() => {})))
     const { result } = renderHook(() => useServiceImportsCard())
     expect(result.current.imports).toHaveLength(1)
     expect(result.current.isLoading).toBe(false)
@@ -253,7 +246,7 @@ describe('useServiceImportsCard — cache', () => {
       isDemoData: false,
     }
     localStorage.setItem(CACHE_KEY, JSON.stringify(cached))
-    globalThis.fetch = vi.fn().mockReturnValue(new Promise(() => {}))
+    vi.stubGlobal('fetch', vi.fn().mockReturnValue(new Promise(() => {})))
     const { result } = renderHook(() => useServiceImportsCard())
     expect(result.current.isLoading).toBe(true)
     expect(result.current.imports).toHaveLength(0)
@@ -261,7 +254,7 @@ describe('useServiceImportsCard — cache', () => {
 
   it('handles malformed cache gracefully', () => {
     localStorage.setItem(CACHE_KEY, '{invalid}')
-    globalThis.fetch = vi.fn().mockReturnValue(new Promise(() => {}))
+    vi.stubGlobal('fetch', vi.fn().mockReturnValue(new Promise(() => {})))
     const { result } = renderHook(() => useServiceImportsCard())
     expect(result.current.isLoading).toBe(true)
   })
@@ -269,14 +262,14 @@ describe('useServiceImportsCard — cache', () => {
 
 describe('useServiceImportsCard — clustersLoading', () => {
   it('does not fetch while clusters are still loading', () => {
-    mockClustersLoading.mockReturnValue(true)
-    globalThis.fetch = vi.fn()
+    mockUseClusters.mockReturnValue({ deduplicatedClusters: [], isLoading: true })
+    vi.stubGlobal('fetch', vi.fn())
     renderHook(() => useServiceImportsCard())
     expect(globalThis.fetch).not.toHaveBeenCalled()
   })
 
   it('fetches once clusters finish loading', async () => {
-    mockClustersLoading.mockReturnValue(false)
+    mockUseClusters.mockReturnValue({ deduplicatedClusters: [], isLoading: false })
     mockFetchOk([])
     renderHook(() => useServiceImportsCard())
     await waitFor(() => (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length > 0)

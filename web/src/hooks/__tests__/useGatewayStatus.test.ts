@@ -5,17 +5,13 @@ import { renderHook, waitFor } from '@testing-library/react'
 // Hoisted mock factories
 // ---------------------------------------------------------------------------
 
-const { mockRegisterRefetch, mockClusters, mockClustersLoading } = vi.hoisted(() => ({
+const { mockRegisterRefetch, mockUseClusters } = vi.hoisted(() => ({
   mockRegisterRefetch: vi.fn(() => vi.fn()),
-  mockClusters: vi.fn(() => []),
-  mockClustersLoading: vi.fn(() => false),
+  mockUseClusters: vi.fn(),
 }))
 
 vi.mock('../useMCP', () => ({
-  useClusters: () => ({
-    deduplicatedClusters: mockClusters(),
-    isLoading: mockClustersLoading(),
-  }),
+  useClusters: () => mockUseClusters(),
 }))
 
 vi.mock('../../lib/modeTransition', () => ({
@@ -53,53 +49,49 @@ function makeGateway(name = 'gw', cluster = 'c1') {
 }
 
 function mockFetchOk(items = [makeGateway()]) {
-  globalThis.fetch = vi.fn().mockResolvedValue({
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
     ok: true,
     status: 200,
     statusText: 'OK',
     json: async () => ({ items, totalCount: items.length }),
-  })
+  }))
 }
 
 function mockFetch503() {
-  globalThis.fetch = vi.fn().mockResolvedValue({
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
     ok: false,
     status: 503,
     statusText: 'Service Unavailable',
     json: async () => ({}),
-  })
+  }))
 }
 
 function mockFetchError(message = 'Network error') {
-  globalThis.fetch = vi.fn().mockRejectedValue(new Error(message))
+  vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error(message)))
 }
 
 function mockFetchHttpError(status: number) {
-  globalThis.fetch = vi.fn().mockResolvedValue({
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
     ok: false,
     status,
     statusText: 'Error',
     json: async () => ({}),
-  })
+  }))
 }
 
 // ---------------------------------------------------------------------------
 // Setup / Teardown
 // ---------------------------------------------------------------------------
 
-const originalFetch = globalThis.fetch
-
 beforeEach(() => {
   vi.clearAllMocks()
   localStorage.clear()
-  mockClusters.mockReturnValue([])
-  mockClustersLoading.mockReturnValue(false)
+  mockUseClusters.mockReturnValue({ deduplicatedClusters: [], isLoading: false })
   mockRegisterRefetch.mockReturnValue(vi.fn())
 })
 
 afterEach(() => {
-  globalThis.fetch = originalFetch
-  vi.useRealTimers()
+  vi.unstubAllGlobals()
 })
 
 // ---------------------------------------------------------------------------
@@ -108,13 +100,13 @@ afterEach(() => {
 
 describe('useGatewayStatus — initial state', () => {
   it('returns loading state initially when no cache exists', () => {
-    globalThis.fetch = vi.fn().mockReturnValue(new Promise(() => {}))
+    vi.stubGlobal('fetch', vi.fn().mockReturnValue(new Promise(() => {})))
     const { result } = renderHook(() => useGatewayStatus())
     expect(result.current.isLoading).toBe(true)
   })
 
   it('exposes expected return fields', () => {
-    globalThis.fetch = vi.fn().mockReturnValue(new Promise(() => {}))
+    vi.stubGlobal('fetch', vi.fn().mockReturnValue(new Promise(() => {})))
     const { result } = renderHook(() => useGatewayStatus())
     expect(result.current).toHaveProperty('gateways')
     expect(result.current).toHaveProperty('isDemoData')
@@ -127,7 +119,7 @@ describe('useGatewayStatus — initial state', () => {
   })
 
   it('refetch is a function', () => {
-    globalThis.fetch = vi.fn().mockReturnValue(new Promise(() => {}))
+    vi.stubGlobal('fetch', vi.fn().mockReturnValue(new Promise(() => {})))
     const { result } = renderHook(() => useGatewayStatus())
     expect(typeof result.current.refetch).toBe('function')
   })
@@ -219,7 +211,7 @@ describe('useGatewayStatus — error fallback (demo data)', () => {
   })
 
   it('generates demo gateways using cluster names when available', async () => {
-    mockClusters.mockReturnValue([{ name: 'my-cluster', reachable: true }])
+    mockUseClusters.mockReturnValue({ deduplicatedClusters: [{ name: 'my-cluster', reachable: true }], isLoading: false })
     mockFetchError()
     const { result } = renderHook(() => useGatewayStatus())
     await waitFor(() => result.current.gateways.length > 0)
@@ -228,7 +220,7 @@ describe('useGatewayStatus — error fallback (demo data)', () => {
   })
 
   it('generates demo gateways with default cluster names when no clusters', async () => {
-    mockClusters.mockReturnValue([])
+    mockUseClusters.mockReturnValue({ deduplicatedClusters: [], isLoading: false })
     mockFetchError()
     const { result } = renderHook(() => useGatewayStatus())
     await waitFor(() => result.current.gateways.length > 0)
@@ -262,7 +254,7 @@ describe('useGatewayStatus — cache', () => {
     }
     localStorage.setItem(CACHE_KEY, JSON.stringify(cached))
 
-    globalThis.fetch = vi.fn().mockReturnValue(new Promise(() => {}))
+    vi.stubGlobal('fetch', vi.fn().mockReturnValue(new Promise(() => {})))
     const { result } = renderHook(() => useGatewayStatus())
     expect(result.current.gateways).toHaveLength(1)
     expect(result.current.gateways[0].name).toBe('cached-gw')
@@ -276,7 +268,7 @@ describe('useGatewayStatus — cache', () => {
     }
     localStorage.setItem(CACHE_KEY, JSON.stringify(cached))
 
-    globalThis.fetch = vi.fn().mockReturnValue(new Promise(() => {}))
+    vi.stubGlobal('fetch', vi.fn().mockReturnValue(new Promise(() => {})))
     const { result } = renderHook(() => useGatewayStatus())
     expect(result.current.isLoading).toBe(false)
   })
@@ -289,7 +281,7 @@ describe('useGatewayStatus — cache', () => {
     }
     localStorage.setItem(CACHE_KEY, JSON.stringify(cached))
 
-    globalThis.fetch = vi.fn().mockReturnValue(new Promise(() => {}))
+    vi.stubGlobal('fetch', vi.fn().mockReturnValue(new Promise(() => {})))
     const { result } = renderHook(() => useGatewayStatus())
     expect(result.current.isLoading).toBe(true)
     expect(result.current.gateways).toHaveLength(0)
@@ -297,7 +289,7 @@ describe('useGatewayStatus — cache', () => {
 
   it('handles malformed cache gracefully', () => {
     localStorage.setItem(CACHE_KEY, 'not-valid-json')
-    globalThis.fetch = vi.fn().mockReturnValue(new Promise(() => {}))
+    vi.stubGlobal('fetch', vi.fn().mockReturnValue(new Promise(() => {})))
     const { result } = renderHook(() => useGatewayStatus())
     expect(result.current.isLoading).toBe(true)
   })
@@ -344,14 +336,14 @@ describe('useGatewayStatus — auth headers', () => {
 
 describe('useGatewayStatus — clustersLoading', () => {
   it('does not fetch while clusters are still loading', () => {
-    mockClustersLoading.mockReturnValue(true)
-    globalThis.fetch = vi.fn()
+    mockUseClusters.mockReturnValue({ deduplicatedClusters: [], isLoading: true })
+    vi.stubGlobal('fetch', vi.fn())
     renderHook(() => useGatewayStatus())
     expect(globalThis.fetch).not.toHaveBeenCalled()
   })
 
   it('fetches once clusters finish loading', async () => {
-    mockClustersLoading.mockReturnValue(false)
+    mockUseClusters.mockReturnValue({ deduplicatedClusters: [], isLoading: false })
     mockFetchOk([])
     renderHook(() => useGatewayStatus())
     await waitFor(() => (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length > 0)
