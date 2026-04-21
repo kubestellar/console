@@ -172,14 +172,10 @@ func (b *Bridge) Start(ctx context.Context) error {
 		// failure are still running. Stop them so we don't leak
 		// goroutines, child processes, or file descriptors on a partial
 		// Start failure (#6624).
+		// Stop() nils the client pointers, so no additional cleanup needed.
 		if stopErr := b.Stop(); stopErr != nil {
 			slog.Warn("[MCP] errors during Start rollback", "error", stopErr)
 		}
-		b.mu.Lock()
-		b.opsClient = nil
-		b.deployClient = nil
-		b.gadgetClient = nil
-		b.mu.Unlock()
 		return fmt.Errorf("failed to start MCP clients: %v", errs)
 	}
 
@@ -197,18 +193,21 @@ func (b *Bridge) Stop() error {
 		if err := b.opsClient.Stop(); err != nil {
 			errs = append(errs, fmt.Errorf("ops client: %w", err))
 		}
+		b.opsClient = nil
 	}
 
 	if b.deployClient != nil {
 		if err := b.deployClient.Stop(); err != nil {
 			errs = append(errs, fmt.Errorf("deploy client: %w", err))
 		}
+		b.deployClient = nil
 	}
 
 	if b.gadgetClient != nil {
 		if err := b.gadgetClient.Stop(); err != nil {
 			errs = append(errs, fmt.Errorf("gadget client: %w", err))
 		}
+		b.gadgetClient = nil
 	}
 
 	if len(errs) > 0 {
