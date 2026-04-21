@@ -56,6 +56,10 @@ vi.mock('../../../hooks/useGlobalFilters', () => ({
 
 vi.mock('../../../assets/world-map.svg', () => ({ default: 'mock.svg' }))
 
+vi.mock('../../ui/Toast', () => ({
+  useToast: () => ({ showToast: vi.fn() }),
+}))
+
 import { ClusterLocations } from '../ClusterLocations'
 
 describe('ClusterLocations', () => {
