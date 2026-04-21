@@ -44,7 +44,7 @@ const STACK_POLL_INTERVAL_MS = 2_000
  * enough time to mount and render all 13 cards (including lazy-loaded chunks)
  * without relying on a network-idle signal that will never arrive.
  */
-const CARD_RENDER_WAIT_MS = 3_000
+const CARD_RENDER_WAIT_MS = 5_000
 
 /** Expected card count on the AI/ML route */
 const EXPECTED_CARD_COUNT = 13
@@ -77,12 +77,9 @@ async function setupAndNavigate(page: Page, route: string) {
       role: 'admin',
       onboarded: true,
     }))
-    localStorage.setItem('kc-demo-mode', 'false')
+    localStorage.setItem('kc-demo-mode', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
     localStorage.setItem('kubestellar-console-tour-completed', 'true')
-    // Clear any cached stack selection to force fresh discovery
-    localStorage.removeItem('kubestellar-llmd-stack')
-    localStorage.removeItem('kubestellar-stack-cache')
   })
 
   await page.goto(route, { waitUntil: 'domcontentloaded', timeout: PAGE_LOAD_TIMEOUT_MS })

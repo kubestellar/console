@@ -520,26 +520,29 @@ export async function setLiveColdMode(page: Page, user?: typeof mockUser): Promi
   const u = user || mockUser
   await page.addInitScript(
     ({ user: usr }: { user: typeof mockUser }) => {
-      localStorage.setItem('token', 'test-token')
-      localStorage.setItem('kc-demo-mode', 'false')
-      localStorage.setItem('demo-user-onboarded', 'true')
-      localStorage.setItem('kubestellar-console-tour-completed', 'true')
-      localStorage.setItem('kc-user-cache', JSON.stringify(usr))
-      localStorage.setItem('kc-backend-status', JSON.stringify({ available: true, timestamp: Date.now() }))
-      localStorage.setItem('kc-sqlite-migrated', '2')
+      // Guard: about:blank has no origin and throws on localStorage access.
+      try {
+        localStorage.setItem('token', 'test-token')
+        localStorage.setItem('kc-demo-mode', 'false')
+        localStorage.setItem('demo-user-onboarded', 'true')
+        localStorage.setItem('kubestellar-console-tour-completed', 'true')
+        localStorage.setItem('kc-user-cache', JSON.stringify(usr))
+        localStorage.setItem('kc-backend-status', JSON.stringify({ available: true, timestamp: Date.now() }))
+        localStorage.setItem('kc-sqlite-migrated', '2')
 
-      // Clear all caches for cold start — use allowlist so card-specific backup
-      // keys (e.g. nightly-e2e-cache) are also cleared
-      const COLD_KEEP_KEYS = new Set([
-        'token', 'kc-demo-mode', 'demo-user-onboarded',
-        'kubestellar-console-tour-completed', 'kc-user-cache',
-        'kc-backend-status', 'kc-sqlite-migrated',
-      ])
-      for (let i = localStorage.length - 1; i >= 0; i--) {
-        const key = localStorage.key(i)
-        if (!key || COLD_KEEP_KEYS.has(key)) continue
-        localStorage.removeItem(key)
-      }
+        // Clear all caches for cold start — use allowlist so card-specific backup
+        // keys (e.g. nightly-e2e-cache) are also cleared
+        const COLD_KEEP_KEYS = new Set([
+          'token', 'kc-demo-mode', 'demo-user-onboarded',
+          'kubestellar-console-tour-completed', 'kc-user-cache',
+          'kc-backend-status', 'kc-sqlite-migrated',
+        ])
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+          const key = localStorage.key(i)
+          if (!key || COLD_KEEP_KEYS.has(key)) continue
+          localStorage.removeItem(key)
+        }
+      } catch { /* about:blank has no origin */ }
     },
     { user: u },
   )
@@ -588,14 +591,17 @@ export async function setMode(page: Page, mode: 'demo' | 'live' | 'live+cache', 
 
   await page.addInitScript(
     (values: Record<string, string>) => {
-      for (const [k, v] of Object.entries(values)) localStorage.setItem(k, v)
-      // Clear stale dashboard card layouts
-      const keysToRemove: string[] = []
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i)
-        if (key && key.endsWith('-dashboard-cards')) keysToRemove.push(key)
-      }
-      keysToRemove.forEach(k => localStorage.removeItem(k))
+      // Guard: about:blank has no origin and throws on localStorage access.
+      try {
+        for (const [k, v] of Object.entries(values)) localStorage.setItem(k, v)
+        // Clear stale dashboard card layouts
+        const keysToRemove: string[] = []
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i)
+          if (key && key.endsWith('-dashboard-cards')) keysToRemove.push(key)
+        }
+        keysToRemove.forEach(k => localStorage.removeItem(k))
+      } catch { /* about:blank has no origin */ }
     },
     lsValues,
   )

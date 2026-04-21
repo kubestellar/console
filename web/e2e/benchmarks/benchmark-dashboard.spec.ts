@@ -62,7 +62,9 @@ const EXPECTED_PLATFORMS = ['ocp', 'gke', 'cks']
  */
 async function setupAndNavigate(page: Page, route: string) {
   await page.goto('/', { waitUntil: 'domcontentloaded', timeout: PAGE_LOAD_TIMEOUT_MS })
-  await page.waitForLoadState('networkidle')
+  // NOTE: Do NOT use waitForLoadState('networkidle') here. The benchmarks page
+  // opens SSE connections for streaming data that keep the network permanently
+  // active, so networkidle never resolves and the test times out (#4086).
 
   // Set auth token + cached user so the app bypasses backend validation.
   // The cached user prevents /api/me calls; the token satisfies ProtectedRoute.
@@ -82,7 +84,8 @@ async function setupAndNavigate(page: Page, route: string) {
   })
 
   await page.goto(route, { waitUntil: 'domcontentloaded', timeout: PAGE_LOAD_TIMEOUT_MS })
-  await page.waitForLoadState('networkidle')
+  // Give React time to mount lazy-loaded card chunks without relying on networkidle.
+  await page.waitForTimeout(STREAM_DATA_TIMEOUT_MS)
 }
 
 /**

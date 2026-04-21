@@ -256,23 +256,26 @@ async function setMode(page: Page, mode: PerfMode) {
 
   await page.addInitScript(
     ({ demo, warm, user }: { demo: boolean; warm: boolean; user: unknown }) => {
-      localStorage.setItem('token', demo ? 'demo-token' : 'test-token')
-      localStorage.setItem('kc-demo-mode', String(demo))
-      localStorage.setItem('demo-user-onboarded', 'true')
-      localStorage.setItem('kubestellar-console-tour-completed', 'true')
-      localStorage.setItem('kc-user-cache', JSON.stringify(user))
-      localStorage.setItem('kc-backend-status', JSON.stringify({ available: true, timestamp: Date.now() }))
-      localStorage.setItem('kc-sqlite-migrated', '2')
+      // Guard: about:blank has no origin and throws on localStorage access.
+      try {
+        localStorage.setItem('token', demo ? 'demo-token' : 'test-token')
+        localStorage.setItem('kc-demo-mode', String(demo))
+        localStorage.setItem('demo-user-onboarded', 'true')
+        localStorage.setItem('kubestellar-console-tour-completed', 'true')
+        localStorage.setItem('kc-user-cache', JSON.stringify(user))
+        localStorage.setItem('kc-backend-status', JSON.stringify({ available: true, timestamp: Date.now() }))
+        localStorage.setItem('kc-sqlite-migrated', '2')
 
-      if (!warm) {
-        for (let i = localStorage.length - 1; i >= 0; i--) {
-          const key = localStorage.key(i)
-          if (!key) continue
-          if (key.includes('dashboard-cards') || key.startsWith('cache:') || key.includes('kubestellar-stack-cache')) {
-            localStorage.removeItem(key)
+        if (!warm) {
+          for (let i = localStorage.length - 1; i >= 0; i--) {
+            const key = localStorage.key(i)
+            if (!key) continue
+            if (key.includes('dashboard-cards') || key.startsWith('cache:') || key.includes('kubestellar-stack-cache')) {
+              localStorage.removeItem(key)
+            }
           }
         }
-      }
+      } catch { /* about:blank has no origin */ }
     },
     { demo: isDemo, warm: isWarm, user: mockUser }
   )

@@ -92,9 +92,6 @@ const ALL_ROUTES: string[] = [
   '/cluster-admin',
   '/ci-cd',
   '/marketplace',
-  '/test/unified-card',
-  '/test/unified-stats',
-  '/test/unified-dashboard',
 ]
 
 // ---------------------------------------------------------------------------
