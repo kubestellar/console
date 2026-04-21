@@ -95,7 +95,7 @@ func (h *RewardsHandler) GetGitHubRewards(c *fiber.Ctx) error {
 
 	// Check cache
 	h.mu.RLock()
-	if entry, ok := h.cache[githubLogin]; ok && time.Since(entry.fetchedAt) < rewardsCacheTTL {
+	if entry, ok := h.cache[githubLogin]; ok && time.Since(entry.fetchedAt) < rewardsCacheTTL && entry.response != nil {
 		h.mu.RUnlock()
 		resp := *entry.response
 		resp.FromCache = true
@@ -113,7 +113,7 @@ func (h *RewardsHandler) GetGitHubRewards(c *fiber.Ctx) error {
 
 		// Return stale cache if available
 		h.mu.RLock()
-		if entry, ok := h.cache[githubLogin]; ok {
+		if entry, ok := h.cache[githubLogin]; ok && entry.response != nil {
 			h.mu.RUnlock()
 			stale := *entry.response
 			stale.FromCache = true
