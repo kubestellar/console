@@ -3,13 +3,19 @@
  *
  * Full-screen file-explorer-style dialog for browsing and importing mission files.
  * Sources: KubeStellar Community repo, GitHub repos with kubestellar-missions, local files.
+ *
+ * This component owns all state and data-fetching logic. Presentation is split
+ * into focused subcomponents (issue #8624):
+ *   - MissionBrowserTopBar      — search, filter toggle, view-mode, close
+ *   - MissionBrowserFilterPanel — filter pill rows
+ *   - MissionBrowserTabBar      — tab navigation
+ *   - MissionBrowserSidebar     — file tree + drop zone
+ *   - MissionBrowserRecommendedTab
+ *   - MissionBrowserInstallersTab
+ *   - MissionBrowserFixesTab
  */
 
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
-import {
-  Search, X, Upload, Filter, Grid3X3, List, Sparkles, CheckCircle,
-  Loader2, ExternalLink, RefreshCw } from 'lucide-react'
-import { cn } from '../../lib/cn'
 import { api } from '../../lib/api'
 import { isDemoMode } from '../../lib/demoMode'
 import { useAuth } from '../../lib/auth'
@@ -21,43 +27,40 @@ import {
   emitFixerViewed,
   emitFixerImported,
   emitFixerImportError,
-  emitFixerGitHubLink,
-  emitFixerLinkCopied } from '../../lib/analytics'
+  emitFixerLinkCopied,
+} from '../../lib/analytics'
 import type {
   MissionExport,
   MissionMatch,
   BrowseEntry,
-  FileScanResult } from '../../lib/missions/types'
+  FileScanResult,
+} from '../../lib/missions/types'
 import { validateMissionExport } from '../../lib/missions/types'
 import { parseFileContent, type UnstructuredPreview } from '../../lib/missions/fileParser'
 import type { ApiGroupMapping } from '../../lib/missions/apiGroupMapping'
 import { fullScan } from '../../lib/missions/scanner/index'
 import { ScanProgressOverlay } from './ScanProgressOverlay'
-import { CollapsibleSection } from '../ui/CollapsibleSection'
-import { InstallerCard } from './InstallerCard'
-import { FixerCard } from './FixerCard'
 import { MissionDetailView } from './MissionDetailView'
 import { ImproveMissionDialog } from './ImproveMissionDialog'
 import { UnstructuredFilePreview } from './UnstructuredFilePreview'
-import { useTranslation } from 'react-i18next'
 import {
-  TreeNodeItem, DirectoryListing, RecommendationCard, EmptyState, MissionFetchErrorBanner,
-  getMissionShareUrl, updateNodeInTree, removeNodeFromTree,
-  missionCache, startMissionCacheFetch, resetMissionCache,
-  fetchMissionContent, BROWSER_TABS,
-  VirtualizedMissionGrid,
-  getCachedRecommendations, setCachedRecommendations,
-  fetchTreeChildren, fetchDirectoryEntries, fetchNodeFileContent } from './browser'
+  getMissionShareUrl,
+  updateNodeInTree,
+  removeNodeFromTree,
+  missionCache,
+  startMissionCacheFetch,
+  fetchMissionContent,
+  getCachedRecommendations,
+  setCachedRecommendations,
+  fetchTreeChildren,
+  fetchDirectoryEntries,
+  fetchNodeFileContent,
+} from './browser'
 import type { TreeNode, ViewMode, BrowserTab } from './browser'
 import { copyToClipboard } from '../../lib/clipboard'
 import { useToast } from '../ui/Toast'
 import {
-  CATEGORY_FILTERS,
-  SIDEBAR_WIDTH,
-  MISSION_FILE_ACCEPT,
   isMissionFile,
-  CNCF_CATEGORIES,
-  MATURITY_LEVELS,
   loadWatchedRepos,
   saveWatchedRepos,
   loadWatchedPaths,
@@ -78,6 +81,13 @@ import {
   computeActiveFilterCount,
   filterDirectoryEntries,
 } from './missionBrowserFilterState'
+import { MissionBrowserTopBar } from './MissionBrowserTopBar'
+import { MissionBrowserFilterPanel } from './MissionBrowserFilterPanel'
+import { MissionBrowserTabBar } from './MissionBrowserTabBar'
+import { MissionBrowserSidebar } from './MissionBrowserSidebar'
+import { MissionBrowserRecommendedTab } from './MissionBrowserRecommendedTab'
+import { MissionBrowserInstallersTab } from './MissionBrowserInstallersTab'
+import { MissionBrowserFixesTab } from './MissionBrowserFixesTab'
 
 // ============================================================================
 // Layout constants
@@ -123,7 +133,6 @@ interface MissionBrowserProps {
 // ============================================================================
 
 export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUseInMissionControl }: MissionBrowserProps) {
-  const { t } = useTranslation(['common', 'cards'])
   const { user, isAuthenticated } = useAuth()
   const { clusterContext } = useClusterContext()
   const clusterContextRef = useRef(clusterContext)
@@ -193,8 +202,6 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
   const [addingPath, setAddingPath] = useState(false)
   const [newRepoValue, setNewRepoValue] = useState('')
   const [newPathValue, setNewPathValue] = useState('')
-
-  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Tab state
   const [activeTab, setActiveTab] = useState<BrowserTab>('recommended')
@@ -878,7 +885,62 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
   }, [isOpen])
 
   // ============================================================================
-  // Render helpers
+  // Handlers wired to sidebar watched-source management
+  // ============================================================================
+
+  const handleAddRepo = (val: string) => {
+    const updated = [...watchedRepos, val]
+    setWatchedRepos(updated)
+    saveWatchedRepos(updated)
+    showToast(`Added repository "${val}"`, 'success')
+  }
+
+  const handleRemoveRepo = (path: string) => {
+    const updated = watchedRepos.filter(r => r !== path)
+    setWatchedRepos(updated)
+    saveWatchedRepos(updated)
+    showToast(`Removed repository "${path}"`, 'info')
+  }
+
+  const handleAddPath = (val: string) => {
+    const updated = [...watchedPaths, val]
+    setWatchedPaths(updated)
+    saveWatchedPaths(updated)
+    showToast(`Added path "${val}"`, 'success')
+  }
+
+  const handleRemovePath = (path: string) => {
+    const updated = watchedPaths.filter(p => p !== path)
+    setWatchedPaths(updated)
+    saveWatchedPaths(updated)
+    showToast(`Removed path "${path}"`, 'info')
+  }
+
+  const handleRefreshNode = (child: TreeNode) => {
+    // Re-expand after a tick to trigger the useEffect
+    setTimeout(() => {
+      toggleNode(child)
+      selectNode(child)
+    }, 50)
+  }
+
+  // ============================================================================
+  // Directory-entry import (recommended tab, tree navigation)
+  // ============================================================================
+
+  const handleImportDirectoryEntry = async (entry: BrowseEntry) => {
+    try {
+      const { data: content } = await api.get<string>(
+        `/api/missions/file?path=${encodeURIComponent(entry.path)}`,
+      )
+      const raw = typeof content === 'string' ? content : JSON.stringify(content, null, 2)
+      const parsed = typeof content === 'string' ? JSON.parse(content) : content
+      handleImport(parsed, raw)
+    } catch { /* skip */ }
+  }
+
+  // ============================================================================
+  // Render
   // ============================================================================
 
   if (!isOpen) return null
@@ -900,455 +962,94 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
         bottom: `${MODAL_SIDE_INSET_PX}px`,
       }}
     >
-      {/* ================================================================== */}
-      {/* Top bar: search + filters */}
-      {/* ================================================================== */}
-      <div className="flex items-center gap-3 px-4 py-3 bg-card border-b border-border">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={activeTab === 'installers' ? 'Search installers… (AND logic: "argo events" = argo AND events)' : activeTab === 'fixes' ? 'Search fixes…' : 'Search missions by name, tag, or description…'}
-            className="w-full pl-10 pr-4 py-2 bg-secondary border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/40"
-            data-testid="mission-search"
-            autoFocus
-          />
-        </div>
+      {/* Top bar: search + filter toggle + view mode + close */}
+      <MissionBrowserTopBar
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        activeTab={activeTab}
+        showFilters={showFilters}
+        onToggleFilters={() => setShowFilters(!showFilters)}
+        activeFilterCount={activeFilterCount}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        onClose={onClose}
+      />
 
-        <button
-          onClick={() => setShowFilters(!showFilters)}
-          className={cn(
-            'p-2 rounded-lg transition-colors relative',
-            showFilters
-              ? 'bg-purple-500/20 text-purple-400'
-              : 'hover:bg-secondary text-muted-foreground hover:text-foreground'
-          )}
-          title="Toggle filters"
-        >
-          <Filter className="w-5 h-5" />
-          {activeFilterCount > 0 && (
-            <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-purple-500 text-white text-[9px] font-bold flex items-center justify-center">
-              {activeFilterCount}
-            </span>
-          )}
-        </button>
-
-        <div className="flex items-center border border-border rounded-lg overflow-hidden">
-          <button
-            onClick={() => setViewMode('grid')}
-            className={cn(
-              'p-2 transition-colors',
-              viewMode === 'grid'
-                ? 'bg-purple-500/20 text-purple-400'
-                : 'text-muted-foreground hover:text-foreground'
-            )}
-          >
-            <Grid3X3 className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => setViewMode('list')}
-            className={cn(
-              'p-2 transition-colors',
-              viewMode === 'list'
-                ? 'bg-purple-500/20 text-purple-400'
-                : 'text-muted-foreground hover:text-foreground'
-            )}
-          >
-            <List className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* #6308: close button moved to the RIGHT end of the top bar to
-            match every other modal in the app (BaseModal etc). Having
-            it on the left was a confusing one-off — users trained to
-            close modals via the top-right X were not finding it. */}
-        <button
-          onClick={onClose}
-          className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-          title="Close (Esc)"
-          aria-label="Close mission browser"
-        >
-          <X className="w-5 h-5" />
-        </button>
-      </div>
-
-      {/* Filter bar — constrained height on mobile with scroll */}
+      {/* Filter panel */}
       {showFilters && (
-        <div className="px-4 py-2.5 bg-card border-b border-border space-y-2 max-h-[40vh] md:max-h-[50vh] overflow-y-auto">
-          {/* Row 1: Clear all + Match % + Source + Category */}
-          <div className="flex items-center gap-3 flex-wrap">
-            {activeFilterCount > 0 && (
-              <button
-                onClick={clearAllFilters}
-                className="inline-flex items-center gap-1 px-2 py-1 text-[11px] rounded-full bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-colors"
-              >
-                <X className="w-3 h-3" />
-                Clear all
-              </button>
-            )}
-
-            <span className="text-xs text-muted-foreground font-medium">Match:</span>
-            <div className="flex items-center gap-1">
-              {[0, 25, 50, 75].map((pct) => (
-                <button
-                  key={pct}
-                  onClick={() => setMinMatchPercent(pct)}
-                  className={cn(
-                    'px-2 py-0.5 text-[11px] rounded-full transition-colors tabular-nums',
-                    minMatchPercent === pct
-                      ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
-                      : 'bg-secondary text-muted-foreground hover:text-foreground border border-transparent'
-                  )}
-                >
-                  {pct === 0 ? 'Any' : `≥${pct}%`}
-                </button>
-              ))}
-            </div>
-
-            <div className="w-px h-4 bg-border" />
-
-            <span className="text-xs text-muted-foreground font-medium">Source:</span>
-            <div className="flex items-center gap-1">
-              {([['all', 'All', null], ['cluster', '🎯 Cluster', facetCounts.clusterMatched], ['community', '🌐 Community', facetCounts.community]] as const).map(([val, label, count]) => (
-                <button
-                  key={val}
-                  onClick={() => setMatchSourceFilter(val)}
-                  className={cn(
-                    'px-2 py-0.5 text-[11px] rounded-full transition-colors',
-                    matchSourceFilter === val
-                      ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
-                      : 'bg-secondary text-muted-foreground hover:text-foreground border border-transparent'
-                  )}
-                >
-                  {label}{count != null ? ` (${count})` : ''}
-                </button>
-              ))}
-            </div>
-
-            <div className="w-px h-4 bg-border" />
-
-            <span className="text-xs text-muted-foreground font-medium">Category:</span>
-            <div className="flex items-center gap-1">
-              {CATEGORY_FILTERS.map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setCategoryFilter(cat)}
-                  className={cn(
-                    'px-2 py-0.5 text-[11px] rounded-full transition-colors',
-                    categoryFilter === cat
-                      ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
-                      : 'bg-secondary text-muted-foreground hover:text-foreground border border-transparent'
-                  )}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Row 2: Class + Maturity + Difficulty + CNCF Project */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <span className="text-xs text-muted-foreground font-medium">Class:</span>
-            <div className="flex items-center gap-1">
-              {['All', ...Array.from(facetCounts.missionClass.keys())].map((cls) => (
-                <button
-                  key={cls}
-                  onClick={() => setMissionClassFilter(cls)}
-                  className={cn(
-                    'px-2 py-0.5 text-[11px] rounded-full transition-colors capitalize',
-                    missionClassFilter === cls
-                      ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
-                      : 'bg-secondary text-muted-foreground hover:text-foreground border border-transparent'
-                  )}
-                >
-                  {cls === 'All' ? cls : `${cls} (${facetCounts.missionClass.get(cls) || 0})`}
-                </button>
-              ))}
-            </div>
-
-            <div className="w-px h-4 bg-border" />
-
-            <span className="text-xs text-muted-foreground font-medium">Maturity:</span>
-            <div className="flex items-center gap-1">
-              {['All', ...Array.from(facetCounts.maturity.keys())].map((mat) => (
-                <button
-                  key={mat}
-                  onClick={() => setMaturityFilter(mat)}
-                  className={cn(
-                    'px-2 py-0.5 text-[11px] rounded-full transition-colors capitalize',
-                    maturityFilter === mat
-                      ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
-                      : 'bg-secondary text-muted-foreground hover:text-foreground border border-transparent'
-                  )}
-                >
-                  {mat === 'All' ? mat : `${mat} (${facetCounts.maturity.get(mat) || 0})`}
-                </button>
-              ))}
-            </div>
-
-            <div className="w-px h-4 bg-border" />
-
-            <span className="text-xs text-muted-foreground font-medium">Difficulty:</span>
-            <div className="flex items-center gap-1">
-              {['All', ...Array.from(facetCounts.difficulty.keys())].map((diff) => (
-                <button
-                  key={diff}
-                  onClick={() => setDifficultyFilter(diff)}
-                  className={cn(
-                    'px-2 py-0.5 text-[11px] rounded-full transition-colors capitalize',
-                    difficultyFilter === diff
-                      ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
-                      : 'bg-secondary text-muted-foreground hover:text-foreground border border-transparent'
-                  )}
-                >
-                  {diff === 'All' ? diff : `${diff} (${facetCounts.difficulty.get(diff) || 0})`}
-                </button>
-              ))}
-            </div>
-
-            <div className="w-px h-4 bg-border" />
-
-            <span className="text-xs text-muted-foreground font-medium">CNCF:</span>
-            <input
-              type="text"
-              value={cncfFilter}
-              onChange={(e) => setCncfFilter(e.target.value)}
-              placeholder="e.g. Istio, Envoy…"
-              className="w-36 px-2 py-0.5 text-[11px] bg-secondary border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/40"
-            />
-          </div>
-
-          {/* Row 3: Top tags */}
-          {facetCounts.topTags.length > 0 && (
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs text-muted-foreground font-medium">Tags:</span>
-              {facetCounts.topTags.map(({ tag, count }: { tag: string; count: number }) => (
-                <button
-                  key={tag}
-                  onClick={() => {
-                    setSelectedTags((prev: Set<string>) => {
-                      const next = new Set(prev)
-                      if (next.has(tag)) next.delete(tag)
-                      else next.add(tag)
-                      return next
-                    })
-                  }}
-                  className={cn(
-                    'px-2 py-0.5 text-[11px] rounded-full transition-colors',
-                    selectedTags.has(tag)
-                      ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
-                      : 'bg-secondary text-muted-foreground hover:text-foreground border border-transparent'
-                  )}
-                >
-                  {tag} <span className="opacity-60">({count})</span>
-                </button>
-              ))}
-              {selectedTags.size > 0 && (
-                <button
-                  onClick={() => setSelectedTags(new Set())}
-                  className="text-[11px] text-muted-foreground hover:text-foreground underline"
-                >
-                  clear tags
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* Active filter summary — always show count when recommendations are loaded */}
-          {recommendations.length > 0 && (
-            <div className="text-[11px] text-muted-foreground">
-              Showing {filteredRecommendations.length} of {recommendations.length} missions
-              {activeFilterCount > 0 && ' (filtered)'}
-            </div>
-          )}
-        </div>
+        <MissionBrowserFilterPanel
+          activeFilterCount={activeFilterCount}
+          onClearAllFilters={clearAllFilters}
+          minMatchPercent={minMatchPercent}
+          onMinMatchPercentChange={setMinMatchPercent}
+          matchSourceFilter={matchSourceFilter}
+          onMatchSourceFilterChange={setMatchSourceFilter}
+          categoryFilter={categoryFilter}
+          onCategoryFilterChange={setCategoryFilter}
+          missionClassFilter={missionClassFilter}
+          onMissionClassFilterChange={setMissionClassFilter}
+          maturityFilter={maturityFilter}
+          onMaturityFilterChange={setMaturityFilter}
+          difficultyFilter={difficultyFilter}
+          onDifficultyFilterChange={setDifficultyFilter}
+          cncfFilter={cncfFilter}
+          onCncfFilterChange={setCncfFilter}
+          selectedTags={selectedTags}
+          onTagToggle={(tag) => {
+            setSelectedTags((prev) => {
+              const next = new Set(prev)
+              if (next.has(tag)) next.delete(tag)
+              else next.add(tag)
+              return next
+            })
+          }}
+          onClearTags={() => setSelectedTags(new Set())}
+          facetCounts={facetCounts}
+          recommendationsTotal={recommendations.length}
+          filteredRecommendationsCount={filteredRecommendations.length}
+        />
       )}
 
-      {/* ================================================================== */}
       {/* Tab bar */}
-      {/* ================================================================== */}
-      <div className="flex items-center gap-1 px-4 py-1.5 bg-card border-b border-border overflow-x-auto scrollbar-hide">
-        {BROWSER_TABS.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => { setSelectedMission(null); setActiveTab(tab.id) }}
-            className={cn(
-              'inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-colors',
-              activeTab === tab.id
-                ? 'bg-purple-500/20 text-purple-400 font-medium'
-                : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
-            )}
-          >
-            <span>{tab.icon}</span>
-            {tab.label}
-            {tab.id === 'installers' && (
-              <span className="text-2xs bg-secondary px-1.5 py-0.5 rounded-full min-w-[28px] text-center tabular-nums">{installerMissions.length || '–'}</span>
-            )}
-            {tab.id === 'fixes' && (
-              <span className="text-2xs bg-secondary px-1.5 py-0.5 rounded-full min-w-[28px] text-center tabular-nums">{fixerMissions.length || '–'}</span>
-            )}
-          </button>
-        ))}
-        <button
-          onClick={() => resetMissionCache()}
-          className="ml-auto inline-flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors"
-          title={activeTab === 'installers' ? 'Refresh installers' : activeTab === 'fixes' ? 'Refresh fixes' : 'Refresh all mission data'}
-        >
-          <RefreshCw className={cn('w-3.5 h-3.5', (activeTab === 'installers' ? !missionCache.installersDone : activeTab === 'fixes' ? !missionCache.fixesDone : (!missionCache.installersDone || !missionCache.fixesDone)) && 'animate-spin')} />
-        </button>
-      </div>
+      <MissionBrowserTabBar
+        activeTab={activeTab}
+        onTabChange={(tab) => { setSelectedMission(null); setActiveTab(tab) }}
+        installerCount={installerMissions.length}
+        fixerCount={fixerMissions.length}
+      />
 
-      {/* ================================================================== */}
-      {/* Main content: sidebar + panel */}
-      {/* ================================================================== */}
+      {/* Main content: sidebar + right panel */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left sidebar — file tree (hidden on mobile, shown on md+) */}
-        <div
-          data-testid="mission-tree"
-          className="hidden md:flex flex-col border-r border-border bg-card overflow-y-auto"
-          style={{ width: SIDEBAR_WIDTH, minWidth: SIDEBAR_WIDTH }}
-        >
-          <div className="p-3 space-y-1">
-            {treeNodes.map((node) => (
-              <div key={node.id}>
-                <div>
-                  <TreeNodeItem
-                    node={node}
-                    depth={0}
-                    expandedNodes={expandedNodes}
-                    selectedPath={selectedPath}
-                    onToggle={toggleNode}
-                    onSelect={selectNode}
-                    onRemove={node.id === 'github' ? (child) => {
-                      const updated = watchedRepos.filter(r => r !== child.path)
-                      setWatchedRepos(updated)
-                      saveWatchedRepos(updated)
-                      showToast(`Removed repository "${child.path}"`, 'info')
-                    } : node.id === 'local' ? (child) => {
-                      const updated = watchedPaths.filter(p => p !== child.path)
-                      setWatchedPaths(updated)
-                      saveWatchedPaths(updated)
-                      showToast(`Removed path "${child.path}"`, 'info')
-                    } : undefined}
-                    onRefresh={(node.id === 'github' || node.id === 'local') ? (child) => {
-                      // Mark node as unloaded to force re-fetch
-                      setTreeNodes((prev) =>
-                        updateNodeInTree(prev, child.id, {
-                          loaded: false,
-                          loading: false,
-                          children: [] })
-                      )
-                      // Collapse and re-expand to trigger load
-                      setExpandedNodes((prev) => {
-                        const next = new Set(prev)
-                        next.delete(child.id)
-                        return next
-                      })
-                      // Re-expand after a tick to trigger the useEffect
-                      setTimeout(() => {
-                        toggleNode(child)
-                        selectNode(child)
-                      }, 50)
-                    } : undefined}
-                    onAdd={node.id === 'github' ? () => setAddingRepo(!addingRepo)
-                      : node.id === 'local' ? () => setAddingPath(!addingPath)
-                      : undefined}
-                  />
-                </div>
-
-                {/* Inline add repo form */}
-                {node.id === 'github' && addingRepo && (
-                  <div className="ml-6 mt-1 mb-2">
-                    <form onSubmit={(e) => {
-                      e.preventDefault()
-                      const val = newRepoValue.trim()
-                      if (val && !watchedRepos.includes(val)) {
-                        const updated = [...watchedRepos, val]
-                        setWatchedRepos(updated)
-                        saveWatchedRepos(updated)
-                        showToast(`Added repository "${val}"`, 'success')
-                      }
-                      setNewRepoValue('')
-                      setAddingRepo(false)
-                    }} className="flex items-center gap-1">
-                      <input
-                        type="text"
-                        value={newRepoValue}
-                        onChange={(e) => setNewRepoValue(e.target.value)}
-                        placeholder="owner/repo (e.g., kubara-io/kubara or your-org/runbooks)"
-                        className="flex-1 px-2 py-1 text-xs bg-secondary border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/40"
-                        autoFocus
-                        onKeyDown={(e) => { if (e.key === 'Escape') { setAddingRepo(false); setNewRepoValue('') } }}
-                      />
-                      <button type="submit" className="p-1 text-xs text-green-400 hover:text-green-300 min-h-11 min-w-11 flex items-center justify-center"><CheckCircle className="w-3.5 h-3.5" /></button>
-                      <button type="button" onClick={() => { setAddingRepo(false); setNewRepoValue('') }} className="p-1 text-xs text-muted-foreground hover:text-foreground min-h-11 min-w-11 flex items-center justify-center"><X className="w-3.5 h-3.5" /></button>
-                    </form>
-                  </div>
-                )}
-
-                {/* Inline add path form */}
-                {node.id === 'local' && addingPath && (
-                  <div className="ml-6 mt-1 mb-2">
-                    <form onSubmit={(e) => {
-                      e.preventDefault()
-                      const val = newPathValue.trim()
-                      if (val && !watchedPaths.includes(val)) {
-                        const updated = [...watchedPaths, val]
-                        setWatchedPaths(updated)
-                        saveWatchedPaths(updated)
-                        showToast(`Added path "${val}"`, 'success')
-                      }
-                      setNewPathValue('')
-                      setAddingPath(false)
-                    }} className="flex items-center gap-1">
-                      <input
-                        type="text"
-                        value={newPathValue}
-                        onChange={(e) => setNewPathValue(e.target.value)}
-                        placeholder="/path/to/missions"
-                        className="flex-1 px-2 py-1 text-xs bg-secondary border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/40"
-                        autoFocus
-                        onKeyDown={(e) => { if (e.key === 'Escape') { setAddingPath(false); setNewPathValue('') } }}
-                      />
-                      <button type="submit" className="p-1 text-xs text-green-400 hover:text-green-300 min-h-11 min-w-11 flex items-center justify-center"><CheckCircle className="w-3.5 h-3.5" /></button>
-                      <button type="button" onClick={() => { setAddingPath(false); setNewPathValue('') }} className="p-1 text-xs text-muted-foreground hover:text-foreground min-h-11 min-w-11 flex items-center justify-center"><X className="w-3.5 h-3.5" /></button>
-                    </form>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {/* Drop zone for local files */}
-          <div className="mt-auto p-3 border-t border-border">
-            <div
-              onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
-              onDragLeave={() => setIsDragging(false)}
-              onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
-              className={cn(
-                'flex flex-col items-center gap-2 p-4 rounded-lg border-2 border-dashed cursor-pointer transition-colors',
-                isDragging
-                  ? 'border-purple-400 bg-purple-500/10'
-                  : 'border-border hover:border-muted-foreground'
-              )}
-            >
-              <Upload className="w-5 h-5 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground text-center">
-                Drop mission file (JSON, YAML, MD) or click to browse
-              </span>
-            </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept={MISSION_FILE_ACCEPT}
-              onChange={handleFileSelect}
-              className="hidden"
-            />
-          </div>
-        </div>
+        <MissionBrowserSidebar
+          treeNodes={treeNodes}
+          expandedNodes={expandedNodes}
+          selectedPath={selectedPath}
+          onToggleNode={toggleNode}
+          onSelectNode={selectNode}
+          isDragging={isDragging}
+          onDragOver={() => setIsDragging(true)}
+          onDragLeave={() => setIsDragging(false)}
+          onDrop={handleDrop}
+          onFileSelect={handleFileSelect}
+          watchedRepos={watchedRepos}
+          onRemoveRepo={handleRemoveRepo}
+          onRefreshNode={handleRefreshNode}
+          watchedPaths={watchedPaths}
+          onRemovePath={handleRemovePath}
+          addingRepo={addingRepo}
+          setAddingRepo={setAddingRepo}
+          newRepoValue={newRepoValue}
+          setNewRepoValue={setNewRepoValue}
+          onAddRepo={handleAddRepo}
+          addingPath={addingPath}
+          setAddingPath={setAddingPath}
+          newPathValue={newPathValue}
+          setNewPathValue={setNewPathValue}
+          onAddPath={handleAddPath}
+          setTreeNodes={setTreeNodes}
+          setExpandedNodes={setExpandedNodes}
+        />
 
         {/* Right panel */}
         <div data-testid="mission-grid" className="flex-1 flex flex-col overflow-hidden relative bg-background">
@@ -1361,9 +1062,9 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
           />
 
           <div className="flex-1 overflow-y-auto p-4">
-            {/* ============================================================ */}
+            {/* ================================================================ */}
             {/* MISSION DETAIL VIEW (renders above any tab when a mission is selected) */}
-            {/* ============================================================ */}
+            {/* ================================================================ */}
             {selectedMission && (
               <>
                 <MissionDetailView
@@ -1397,9 +1098,9 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
               </>
             )}
 
-            {/* ============================================================ */}
+            {/* ================================================================ */}
             {/* UNSTRUCTURED FILE PREVIEW (YAML/MD not parseable as a mission) */}
-            {/* ============================================================ */}
+            {/* ================================================================ */}
             {!selectedMission && unstructuredContent && (() => {
               // Derive Kubara chart name from selectedPath (e.g. "kubara/cert-manager/Chart.yaml" → "cert-manager")
               const kubaraChartName = selectedPath?.startsWith('kubara/')
@@ -1427,375 +1128,75 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
               )
             })()}
 
-            {/* ============================================================ */}
-            {/* RECOMMENDED TAB (existing content) */}
-            {/* ============================================================ */}
-            {!selectedMission && !unstructuredContent && activeTab === 'recommended' && (<>
-            {/* Token / rate-limit guidance banner */}
-            {tokenError && (
-              <div className="mb-4 rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-4">
-                <div className="flex items-start gap-3">
-                  <span className="text-yellow-400 text-lg mt-0.5">⚠️</span>
-                  <div className="text-sm space-y-2">
-                    <p className="font-medium text-yellow-300">
-                      {tokenError === 'rate_limited'
-                        ? 'GitHub API rate limit reached'
-                        : 'GitHub token is invalid or expired'}
-                    </p>
-                    <p className="text-muted-foreground">
-                      The fix browser needs a GitHub personal access token to fetch missions.
-                      Add one to your <code className="px-1.5 py-0.5 bg-white/10 rounded text-xs font-mono">.env</code> file and restart the console:
-                    </p>
-                    <ol className="text-muted-foreground list-decimal list-inside space-y-1.5 ml-1">
-                      <li>
-                        <a
-                          href="https://github.com/settings/tokens/new?description=KubeStellar+Console&scopes=public_repo"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-purple-400 hover:text-purple-300 underline"
-                        >
-                          Create a GitHub personal access token
-                        </a>
-                        {' '}(only <code className="px-1 py-0.5 bg-white/10 rounded text-xs font-mono">public_repo</code> scope needed)
-                      </li>
-                      <li>
-                        Add it to your <code className="px-1 py-0.5 bg-white/10 rounded text-xs font-mono">.env</code> file:
-                        <pre className="mt-1 px-3 py-2 bg-black/40 rounded text-xs font-mono text-purple-300 select-all">GITHUB_TOKEN=ghp_your_token_here</pre>
-                      </li>
-                      <li>{t('common.restartConsole')}</li>
-                    </ol>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Recommended for You */}
-            {!selectedMission && missionFetchError && recommendations.length === 0 && !loadingRecommendations && (
-              <div className="mb-4">
-                <MissionFetchErrorBanner message={missionFetchError} />
-              </div>
-            )}
-
-            {/* Recommended for You */}
-            {!selectedMission && (recommendations.length > 0 || loadingRecommendations) && (
-              <CollapsibleSection
-                title={hasCluster ? 'Recommended for Your Cluster' : 'Explore CNCF Fixes'}
-                defaultOpen={true}
-                badge={
-                  <span className="flex items-center gap-2 text-xs text-purple-400">
-                    <span className="flex items-center gap-1">
-                      <Sparkles className="w-3.5 h-3.5" />
-                      {filteredRecommendations.length}
-                    </span>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); resetMissionCache(); }}
-                      className="p-0.5 rounded hover:bg-secondary/80 text-muted-foreground hover:text-foreground transition-colors"
-                      title="Refresh recommendations"
-                    >
-                      <RefreshCw className="w-3 h-3" />
-                    </button>
-                  </span>
-                }
-                className="mb-6"
-              >
-                {/* Context subtitle */}
-                {!loadingRecommendations && (
-                  <p className="text-xs text-muted-foreground mb-3 -mt-1">
-                    {hasCluster
-                      ? '🎯 Matched based on your cluster resources, labels, and detected issues'
-                      : '🌐 Showing popular CNCF community fixes — connect a cluster for personalized recommendations'}
-                  </p>
-                )}
-                {loadingRecommendations ? (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
-                      <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
-                      <span className="flex-1">
-                        {searchProgress.step === 'Connecting' && 'Connecting to knowledge base…'}
-                        {searchProgress.step === 'Scanning' && (
-                          <>
-                            Scanning <span className="text-purple-400 font-mono">{searchProgress.detail}</span>
-                          </>
-                        )}
-                        {searchProgress.step === 'Error' && searchProgress.detail}
-                      </span>
-                      {searchProgress.found > 0 && (
-                        <span className="text-xs text-purple-400 tabular-nums">
-                          {searchProgress.found} found · {searchProgress.scanned} scanned
-                        </span>
-                      )}
-                    </div>
-                    {/* Show cards progressively as they arrive */}
-                    {filteredRecommendations.length > 0 && (
-                      <VirtualizedMissionGrid
-                        items={filteredRecommendations}
-                        viewMode="grid"
-                        maxColumns={3}
-                        className="flex-1 h-[calc(90vh-360px)]"
-                        renderItem={(match) => (
-                          <RecommendationCard
-                            match={match}
-                            onSelect={() => selectCardMission(match.mission)}
-                            onImport={() => handleImport(match.mission)}
-                            onCopyLink={(e) => handleCopyLink(match.mission, e)}
-                          />
-                        )}
-                      />
-                    )}
-                  </div>
-                ) : (
-                  <VirtualizedMissionGrid
-                    items={filteredRecommendations}
-                    viewMode="grid"
-                    maxColumns={3}
-                    className="flex-1 h-[calc(90vh-360px)]"
-                    renderItem={(match) => (
-                      <RecommendationCard
-                        match={match}
-                        onSelect={() => selectCardMission(match.mission)}
-                        onImport={() => handleImport(match.mission)}
-                      />
-                    )}
-                  />
-                )}
-              </CollapsibleSection>
-            )}
-
-            {/* Browse on GitHub link */}
-            {!selectedMission && !loading && (
-              <div className="flex items-center gap-2 mb-4 px-1">
-                <a
-                  href="https://github.com/kubestellar/console-kb/tree/master/fixes"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-purple-400 transition-colors"
-                  onClick={() => emitFixerGitHubLink()}
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  Browse all fixes on GitHub
-                </a>
-                {searchProgress.step === 'Done' && searchProgress.found > 0 && (
-                  <span className="text-xs text-muted-foreground/60 ml-auto">
-                    {searchProgress.detail}
-                  </span>
-                )}
-              </div>
-            )}
-
-            {/* Directory listing */}
-            {loading ? (
-              <div className="flex items-center justify-center py-16">
-                <Loader2 className="w-6 h-6 text-muted-foreground animate-spin" />
-              </div>
-            ) : filteredEntries.length > 0 ? (
-              <DirectoryListing
-                entries={filteredEntries}
+            {/* ================================================================ */}
+            {/* RECOMMENDED TAB */}
+            {/* ================================================================ */}
+            {!selectedMission && !unstructuredContent && activeTab === 'recommended' && (
+              <MissionBrowserRecommendedTab
+                tokenError={tokenError}
+                missionFetchError={missionFetchError}
+                loadingRecommendations={loadingRecommendations}
+                searchProgress={searchProgress}
+                hasCluster={hasCluster}
+                recommendations={recommendations}
+                filteredRecommendations={filteredRecommendations}
+                onSelectMission={selectCardMission}
+                onImportMission={handleImport}
+                onCopyLink={handleCopyLink}
+                loading={loading}
+                filteredEntries={filteredEntries}
+                selectedPath={selectedPath}
                 viewMode={viewMode}
-                onSelect={(entry) => {
-                  const entrySource = selectedPath?.startsWith('github/') ? 'github' as const : 'community' as const
-                  const node: TreeNode = {
-                    id: entry.path,
-                    name: entry.name,
-                    path: entry.path,
-                    type: entry.type,
-                    source: entrySource,
-                    loaded: entry.type === 'file' }
-                  if (entry.type === 'file') {
-                    selectNode(node)
-                  } else {
-                    toggleNode(node)
-                    selectNode(node)
-                  }
-                }}
-                onImport={async (entry) => {
-                  try {
-                    const { data: content } = await api.get<string>(
-                      `/api/missions/file?path=${encodeURIComponent(entry.path)}`
-                    )
-                    const raw = typeof content === 'string' ? content : JSON.stringify(content, null, 2)
-                    const parsed = typeof content === 'string' ? JSON.parse(content) : content
-                    handleImport(parsed, raw)
-                  } catch { /* skip */ }
-                }}
+                onImportDirectoryEntry={handleImportDirectoryEntry}
+                onToggleNode={toggleNode}
+                onSelectNode={selectNode}
               />
-            ) : selectedPath ? (
-              <EmptyState message="No files in this directory" />
-            ) : (
-              <EmptyState message="Select a folder from the sidebar to browse missions" />
             )}
-            </>)}
 
-            {/* ============================================================ */}
+            {/* ================================================================ */}
             {/* INSTALLERS TAB */}
-            {/* ============================================================ */}
+            {/* ================================================================ */}
             {!selectedMission && !unstructuredContent && activeTab === 'installers' && (
-              <div className="space-y-4">
-                {/* Installer filters */}
-                <div className="flex flex-wrap items-center gap-2">
-                  <div className="flex-1 relative min-w-[200px]">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <input
-                      type="text"
-                      value={installerSearch}
-                      onChange={(e) => handleInstallerSearchChange(e.target.value)}
-                      placeholder="Search installers…"
-                      className="w-full pl-10 pr-4 py-1.5 bg-secondary border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/40"
-                    />
-                  </div>
-                  {!installerSearch && searchQuery && (
-                    <span className="text-xs text-purple-400 flex items-center gap-1">
-                      <Filter className="w-3 h-3" />
-                      Filtered by global search: &quot;{searchQuery}&quot;
-                    </span>
-                  )}
-                  <select
-                    value={installerCategoryFilter}
-                    onChange={(e) => setInstallerCategoryFilter(e.target.value)}
-                    className="px-2.5 py-1.5 text-xs bg-secondary border border-border rounded-lg text-foreground"
-                  >
-                    {CNCF_CATEGORIES.map(cat => (
-                      <option key={cat} value={cat}>{cat === 'All' ? 'All Categories' : cat}</option>
-                    ))}
-                  </select>
-                  <select
-                    value={installerMaturityFilter}
-                    onChange={(e) => setInstallerMaturityFilter(e.target.value)}
-                    className="px-2.5 py-1.5 text-xs bg-secondary border border-border rounded-lg text-foreground"
-                  >
-                    {MATURITY_LEVELS.map(m => (
-                      <option key={m} value={m}>{m === 'All' ? 'All Maturity' : m.charAt(0).toUpperCase() + m.slice(1)}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Fetch error banner */}
-                {missionFetchError && installerMissions.length === 0 && (
-                  <MissionFetchErrorBanner message={missionFetchError} />
-                )}
-
-                {/* Installer grid */}
-                {loadingInstallers && filteredInstallers.length === 0 ? (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground py-8 justify-center">
-                    <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
-                    Loading CNCF installers…
-                  </div>
-                ) : filteredInstallers.length === 0 && !loadingInstallers ? (
-                  <EmptyState message={installerMissions.length > 0 ? 'No installers match your filters' : 'No installer missions found'} />
-                ) : (
-                  <>
-                    {loadingInstallers && (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
-                        <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
-                        Loading… {installerMissions.length} found so far
-                      </div>
-                    )}
-                    <VirtualizedMissionGrid
-                      items={filteredInstallers}
-                      viewMode={viewMode}
-                      maxColumns={4}
-                      className="flex-1 h-[calc(90vh-280px)]"
-                      renderItem={(mission) => (
-                        <InstallerCard
-                          mission={mission}
-                          compact={viewMode === 'list'}
-                          onSelect={() => selectCardMission(mission)}
-                          onImport={() => handleImport(mission)}
-                          onCopyLink={(e) => handleCopyLink(mission, e)}
-                        />
-                      )}
-                    />
-                  </>
-                )}
-
-                {/* Count footer */}
-                {filteredInstallers.length > 0 && (
-                  <p className="text-xs text-muted-foreground text-center pt-2">
-                    {loadingInstallers ? `${filteredInstallers.length} loaded…` : `Showing ${filteredInstallers.length} of ${installerMissions.length} installer missions`}
-                  </p>
-                )}
-              </div>
+              <MissionBrowserInstallersTab
+                installerMissions={installerMissions}
+                filteredInstallers={filteredInstallers}
+                loadingInstallers={loadingInstallers}
+                missionFetchError={missionFetchError}
+                installerSearch={installerSearch}
+                onInstallerSearchChange={handleInstallerSearchChange}
+                globalSearchActive={!!searchQuery}
+                globalSearchQuery={searchQuery}
+                installerCategoryFilter={installerCategoryFilter}
+                onInstallerCategoryFilterChange={setInstallerCategoryFilter}
+                installerMaturityFilter={installerMaturityFilter}
+                onInstallerMaturityFilterChange={setInstallerMaturityFilter}
+                viewMode={viewMode}
+                onSelectMission={selectCardMission}
+                onImportMission={handleImport}
+                onCopyLink={handleCopyLink}
+              />
             )}
 
-            {/* ============================================================ */}
+            {/* ================================================================ */}
             {/* FIXES TAB */}
-            {/* ============================================================ */}
+            {/* ================================================================ */}
             {!selectedMission && !unstructuredContent && activeTab === 'fixes' && (
-              <div className="space-y-4">
-                {/* Fixer filters */}
-                <div className="flex flex-wrap items-center gap-2">
-                  <div className="flex-1 relative min-w-[200px]">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <input
-                      type="text"
-                      value={fixerSearch}
-                      onChange={(e) => handleFixerSearchChange(e.target.value)}
-                      placeholder="Search fixes…"
-                      className="w-full pl-10 pr-4 py-1.5 bg-secondary border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/40"
-                    />
-                  </div>
-                  {!fixerSearch && searchQuery && (
-                    <span className="text-xs text-purple-400 flex items-center gap-1">
-                      <Filter className="w-3 h-3" />
-                      Filtered by global search: &quot;{searchQuery}&quot;
-                    </span>
-                  )}
-                  <select
-                    value={fixerTypeFilter}
-                    onChange={(e) => setFixerTypeFilter(e.target.value)}
-                    className="px-2.5 py-1.5 text-xs bg-secondary border border-border rounded-lg text-foreground"
-                  >
-                    {CATEGORY_FILTERS.map(cat => (
-                      <option key={cat} value={cat}>{cat === 'All' ? 'All Types' : cat}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Fetch error banner */}
-                {missionFetchError && fixerMissions.length === 0 && (
-                  <MissionFetchErrorBanner message={missionFetchError} />
-                )}
-
-                {/* Fixer grid */}
-                {loadingFixers && filteredFixers.length === 0 ? (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground py-8 justify-center">
-                    <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
-                    Loading fixes…
-                  </div>
-                ) : filteredFixers.length === 0 && !loadingFixers ? (
-                  <EmptyState message={fixerMissions.length > 0 ? 'No fixes match your filters' : 'No fixer missions found'} />
-                ) : (
-                  <>
-                    {loadingFixers && (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
-                        <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
-                        Loading… {fixerMissions.length} found so far
-                      </div>
-                    )}
-                    <VirtualizedMissionGrid
-                      items={filteredFixers}
-                      viewMode={viewMode}
-                      maxColumns={3}
-                      className="flex-1 h-[calc(90vh-280px)]"
-                      renderItem={(mission) => (
-                        <FixerCard
-                          mission={mission}
-                          compact={viewMode === 'list'}
-                          onSelect={() => selectCardMission(mission)}
-                          onImport={() => handleImport(mission)}
-                          onCopyLink={(e) => handleCopyLink(mission, e)}
-                        />
-                      )}
-                    />
-                  </>
-                )}
-
-                {/* Count footer */}
-                {filteredFixers.length > 0 && (
-                  <p className="text-xs text-muted-foreground text-center pt-2">
-                    {loadingFixers ? `${filteredFixers.length} loaded…` : `Showing ${filteredFixers.length} of ${fixerMissions.length} fixer missions`}
-                  </p>
-                )}
-              </div>
+              <MissionBrowserFixesTab
+                fixerMissions={fixerMissions}
+                filteredFixers={filteredFixers}
+                loadingFixers={loadingFixers}
+                missionFetchError={missionFetchError}
+                fixerSearch={fixerSearch}
+                onFixerSearchChange={handleFixerSearchChange}
+                globalSearchActive={!!searchQuery}
+                globalSearchQuery={searchQuery}
+                fixerTypeFilter={fixerTypeFilter}
+                onFixerTypeFilterChange={setFixerTypeFilter}
+                viewMode={viewMode}
+                onSelectMission={selectCardMission}
+                onImportMission={handleImport}
+                onCopyLink={handleCopyLink}
+              />
             )}
           </div>
         </div>
@@ -1804,4 +1205,3 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
     </div>
   )
 }
-
