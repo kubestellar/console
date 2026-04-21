@@ -144,6 +144,13 @@ type Config struct {
 	BrandIssuesURL    string // ISSUES_URL (default: "https://github.com/kubestellar/kubestellar/issues/new")
 	BrandRepoURL      string // REPO_URL (default: "https://github.com/kubestellar/console")
 	BrandHostedDomain string // HOSTED_DOMAIN — domain for demo mode (default: "console.kubestellar.io")
+	// Kubara platform catalog configuration
+	// KubaraCatalogRepo is the GitHub owner/name of the catalog repo
+	// (e.g. "my-org/my-catalog"). Defaults to "kubara-io/kubara".
+	KubaraCatalogRepo string
+	// KubaraCatalogPath is the directory path inside the repo containing
+	// Helm chart subdirectories. Defaults to the standard Kubara path.
+	KubaraCatalogPath string
 	// Watchdog support: when set, the backend listens on this port instead of Port
 	BackendPort int
 }
@@ -1206,9 +1213,11 @@ func (s *Server) setupRoutes() {
 	api.Get("/nightly-e2e/run-logs", nightlyE2E.GetRunLogs)
 
 	// Kubara platform catalog — server-side cache so all users share one
-	// upstream fetch from kubara-io/kubara (#8487)
-	kubaraCatalog := handlers.NewKubaraCatalogHandler(s.config.GitHubToken)
+	// upstream fetch. Repo/path are configurable via KUBARA_CATALOG_REPO and
+	// KUBARA_CATALOG_PATH for private or self-hosted catalogs (#8487).
+	kubaraCatalog := handlers.NewKubaraCatalogHandler(s.config.GitHubToken, s.config.KubaraCatalogRepo, s.config.KubaraCatalogPath)
 	api.Get("/kubara/catalog", kubaraCatalog.GetCatalog)
+	api.Get("/kubara/config", kubaraCatalog.GetConfig)
 
 	// GPU reservation routes — capacity provider uses live k8s node data
 	// so the server never trusts client-supplied GPU limits (#5421).
@@ -1623,6 +1632,9 @@ func LoadConfigFromEnv() Config {
 		// Benchmark data from Google Drive
 		BenchmarkGoogleDriveAPIKey: os.Getenv("GOOGLE_DRIVE_API_KEY"),
 		BenchmarkFolderID:          getEnvOrDefault("BENCHMARK_FOLDER_ID", "1r2Z2Xp1L0KonUlvQHvEzed8AO9Xj8IPm"),
+		// Kubara platform catalog (optional — defaults to kubara-io/kubara public catalog)
+		KubaraCatalogRepo: os.Getenv("KUBARA_CATALOG_REPO"),
+		KubaraCatalogPath: os.Getenv("KUBARA_CATALOG_PATH"),
 		// Sidebar dashboard filter
 		EnabledDashboards: os.Getenv("ENABLED_DASHBOARDS"),
 		// White-label project context

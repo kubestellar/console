@@ -19,8 +19,11 @@ const KUBARA_CATALOG_FETCH_TIMEOUT_MS = 8_000
 /** Timeout (ms) for fetching a single chart's values.yaml */
 const KUBARA_VALUES_FETCH_TIMEOUT_MS = 10_000
 
-/** Base path inside the kubara-io/kubara repo for Helm charts */
-const KUBARA_HELM_BASE_PATH = 'go-binary/templates/embedded/managed-service-catalog/helm'
+/** Default GitHub repo (owner/name) — overridden by /api/kubara/config */
+const KUBARA_DEFAULT_REPO = 'kubara-io/kubara'
+
+/** Default path inside the repo — overridden by /api/kubara/config */
+const KUBARA_DEFAULT_PATH = 'go-binary/templates/embedded/managed-service-catalog/helm'
 
 /** In-memory TTL for the catalog index cache (ms) — avoids redundant fetches */
 const CATALOG_CACHE_TTL_MS = 5 * 60 * 1000
@@ -48,27 +51,49 @@ export interface KubaraResourceRequests {
 }
 
 // ---------------------------------------------------------------------------
-// In-memory catalog cache
+// In-memory catalog cache + server config
 // ---------------------------------------------------------------------------
 
 let cachedCatalog: KubaraChartEntry[] | null = null
 let cachedCatalogTimestamp = 0
+
+// Resolved once from /api/kubara/config; falls back to defaults if unreachable
+let resolvedRepo = KUBARA_DEFAULT_REPO
+let resolvedPath = KUBARA_DEFAULT_PATH
+let configFetched = false
+
+async function ensureConfig(): Promise<void> {
+  if (configFetched) return
+  configFetched = true
+  try {
+    const res = await fetch('/api/kubara/config', {
+      signal: AbortSignal.timeout(KUBARA_CATALOG_FETCH_TIMEOUT_MS),
+    })
+    if (res.ok) {
+      const cfg = (await res.json()) as { repo?: string; path?: string }
+      if (cfg.repo) resolvedRepo = cfg.repo
+      if (cfg.path) resolvedPath = cfg.path
+    }
+  } catch {
+    // Backend unreachable — stick with defaults
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Static fallback catalog (used in demo mode and when fetch fails)
 // ---------------------------------------------------------------------------
 
 const STATIC_KUBARA_CHARTS: KubaraChartEntry[] = [
-  { name: 'kube-prometheus-stack', path: `${KUBARA_HELM_BASE_PATH}/kube-prometheus-stack`, description: 'Production Prometheus + Grafana + Alertmanager' },
-  { name: 'cert-manager', path: `${KUBARA_HELM_BASE_PATH}/cert-manager`, description: 'Automated TLS certificate management' },
-  { name: 'kyverno', path: `${KUBARA_HELM_BASE_PATH}/kyverno`, description: 'Kubernetes policy engine for security' },
-  { name: 'kyverno-policies', path: `${KUBARA_HELM_BASE_PATH}/kyverno-policies`, description: 'Curated Kyverno policy library' },
-  { name: 'argo-cd', path: `${KUBARA_HELM_BASE_PATH}/argo-cd`, description: 'Declarative GitOps continuous delivery' },
-  { name: 'external-secrets', path: `${KUBARA_HELM_BASE_PATH}/external-secrets`, description: 'Sync secrets from external providers' },
-  { name: 'loki', path: `${KUBARA_HELM_BASE_PATH}/loki`, description: 'Log aggregation system' },
-  { name: 'longhorn', path: `${KUBARA_HELM_BASE_PATH}/longhorn`, description: 'Cloud-native distributed storage' },
-  { name: 'metallb', path: `${KUBARA_HELM_BASE_PATH}/metallb`, description: 'Bare metal load balancer for Kubernetes' },
-  { name: 'traefik', path: `${KUBARA_HELM_BASE_PATH}/traefik`, description: 'Cloud-native ingress controller' },
+  { name: 'kube-prometheus-stack', path: `${KUBARA_DEFAULT_PATH}/kube-prometheus-stack`, description: 'Production Prometheus + Grafana + Alertmanager' },
+  { name: 'cert-manager', path: `${KUBARA_DEFAULT_PATH}/cert-manager`, description: 'Automated TLS certificate management' },
+  { name: 'kyverno', path: `${KUBARA_DEFAULT_PATH}/kyverno`, description: 'Kubernetes policy engine for security' },
+  { name: 'kyverno-policies', path: `${KUBARA_DEFAULT_PATH}/kyverno-policies`, description: 'Curated Kyverno policy library' },
+  { name: 'argo-cd', path: `${KUBARA_DEFAULT_PATH}/argo-cd`, description: 'Declarative GitOps continuous delivery' },
+  { name: 'external-secrets', path: `${KUBARA_DEFAULT_PATH}/external-secrets`, description: 'Sync secrets from external providers' },
+  { name: 'loki', path: `${KUBARA_DEFAULT_PATH}/loki`, description: 'Log aggregation system' },
+  { name: 'longhorn', path: `${KUBARA_DEFAULT_PATH}/longhorn`, description: 'Cloud-native distributed storage' },
+  { name: 'metallb', path: `${KUBARA_DEFAULT_PATH}/metallb`, description: 'Bare metal load balancer for Kubernetes' },
+  { name: 'traefik', path: `${KUBARA_DEFAULT_PATH}/traefik`, description: 'Cloud-native ingress controller' },
 ]
 
 // ---------------------------------------------------------------------------
@@ -87,8 +112,10 @@ export async function fetchKubaraCatalog(): Promise<KubaraChartEntry[]> {
     return cachedCatalog
   }
 
+  await ensureConfig()
+
   try {
-    const url = `/api/github/repos/kubara-io/kubara/contents/${encodeURIComponent(KUBARA_HELM_BASE_PATH)}`
+    const url = `/api/github/repos/${resolvedRepo}/contents/${encodeURIComponent(resolvedPath)}`
     const response = await fetch(url, {
       signal: AbortSignal.timeout(KUBARA_CATALOG_FETCH_TIMEOUT_MS),
     })
@@ -139,8 +166,9 @@ export async function fetchKubaraValues(
   valuesUrl?: string,
 ): Promise<string | null> {
   try {
+    await ensureConfig()
     const url = valuesUrl
-      ?? `/api/github/repos/kubara-io/kubara/contents/${encodeURIComponent(`${KUBARA_HELM_BASE_PATH}/${chartName}/values.yaml`)}`
+      ?? `/api/github/repos/${resolvedRepo}/contents/${encodeURIComponent(`${resolvedPath}/${chartName}/values.yaml`)}`
     const response = await fetch(url, {
       signal: AbortSignal.timeout(KUBARA_VALUES_FETCH_TIMEOUT_MS),
     })
