@@ -2,96 +2,36 @@ import { createContext, useContext, useMemo, useState, useRef, useEffect, ReactN
 import type { AgentInfo, AgentsListPayload, AgentSelectedPayload, ChatStreamPayload } from '../types/agent'
 import { AgentCapabilityToolExec } from '../types/agent'
 import { getDemoMode } from './useDemoMode'
-import { DEMO_MISSIONS } from '../mocks/demoMissions'
 import { addCategoryTokens, setActiveTokenCategory, clearActiveTokenCategory } from './useTokenUsage'
-import { detectIssueSignature, findSimilarResolutionsStandalone, generateResolutionPromptContext } from './useResolutions'
 import { LOCAL_AGENT_WS_URL, LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 import { emitMissionStarted, emitMissionCompleted, emitMissionError, emitMissionRated } from '../lib/analytics'
 import { scanForMaliciousContent } from '../lib/missions/scanner/malicious'
-import { runPreflightCheck, type PreflightError, type PreflightResult } from '../lib/missions/preflightCheck'
+import { runPreflightCheck, type PreflightResult } from '../lib/missions/preflightCheck'
 import { kubectlProxy } from '../lib/kubectlProxy'
 import { kagentiProviderChat, fetchKagentiProviderAgents } from '../lib/kagentiProviderBackend'
 import { ConfirmMissionPromptDialog } from '../components/missions/ConfirmMissionPromptDialog'
+// Sub-modules extracted from this file (#8624)
+export type {
+  MissionStatus, Mission, MissionMessage, MissionFeedback, MatchedResolution,
+  StartMissionParams, PendingReviewEntry, SaveMissionParams, SavedMissionUpdates,
+} from './useMissionTypes'
+export { INACTIVE_MISSION_STATUSES, isActiveMission } from './useMissionTypes'
+import type {
+  MissionStatus, Mission, MissionMessage, MissionFeedback, MatchedResolution,
+  StartMissionParams, PendingReviewEntry, SaveMissionParams, SavedMissionUpdates,
+} from './useMissionTypes'
+import { INACTIVE_MISSION_STATUSES } from './useMissionTypes'
+import {
+  MISSIONS_STORAGE_KEY, CROSS_TAB_ECHO_IGNORE_MS, UNREAD_MISSIONS_KEY,
+  SELECTED_AGENT_KEY, KAGENTI_SELECTED_AGENT_KEY,
+  loadMissions, saveMissions, loadUnreadMissionIds, saveUnreadMissionIds,
+  mergeMissions, getSelectedKagentiAgentFromStorage,
+} from './useMissionStorage'
+import {
+  generateMessageId, buildEnhancedPrompt, buildSystemMessages,
+  stripInteractiveArtifacts, buildSavedMissionPrompt,
+} from './useMissionPromptBuilder'
 
-export type MissionStatus = 'pending' | 'running' | 'waiting_input' | 'completed' | 'failed' | 'saved' | 'blocked' | 'cancelling' | 'cancelled'
-
-/**
- * Mission statuses that are NOT considered "active" in the sidebar list,
- * the active counter, or the toggle button badge (#5946, #5947).
- *
- * - `saved`  : library entries the user hasn't run yet
- * - `completed` / `failed` / `cancelled` : terminal states — the mission is done
- *
- * Everything else (`pending`, `running`, `waiting_input`, `blocked`, `cancelling`)
- * is treated as active because the user may still need to take action on it.
- */
-export const INACTIVE_MISSION_STATUSES: ReadonlySet<MissionStatus> = new Set([
-  'saved',
-  'completed',
-  'failed',
-  'cancelled',
-])
-
-/** True if the mission is currently active (i.e. not saved/terminal). */
-export function isActiveMission(mission: Pick<Mission, 'status'>): boolean {
-  return !INACTIVE_MISSION_STATUSES.has(mission.status)
-}
-
-export interface MissionMessage {
-  id: string
-  role: 'user' | 'assistant' | 'system'
-  content: string
-  timestamp: Date
-  /** Agent that generated this message (for assistant messages) */
-  agent?: string
-}
-
-export type MissionFeedback = 'positive' | 'negative' | null
-
-export interface MatchedResolution {
-  id: string
-  title: string
-  similarity: number
-  source: 'personal' | 'shared'
-}
-
-export interface Mission {
-  id: string
-  title: string
-  description: string
-  type: 'upgrade' | 'troubleshoot' | 'analyze' | 'deploy' | 'repair' | 'custom' | 'maintain'
-  status: MissionStatus
-  progress?: number
-  cluster?: string
-  messages: MissionMessage[]
-  createdAt: Date
-  updatedAt: Date
-  context?: Record<string, unknown>
-  feedback?: MissionFeedback
-  /** Current step/action the agent is performing */
-  currentStep?: string
-  /** Token usage statistics */
-  tokenUsage?: {
-    input: number
-    output: number
-    total: number
-  }
-  /** AI agent used for this mission */
-  agent?: string
-  /** Resolutions that were auto-matched for this mission */
-  matchedResolutions?: MatchedResolution[]
-  /** Structured preflight error when mission is blocked */
-  preflightError?: PreflightError
-  /** Original imported mission data (for saved/library missions) */
-  importedFrom?: {
-    title: string
-    description: string
-    missionClass?: string
-    cncfProject?: string
-    steps?: Array<{ title: string; description: string }>
-    tags?: string[]
-  }
-}
 
 interface MissionContextValue {
   missions: Mission[]
@@ -154,76 +94,7 @@ interface MissionContextValue {
   setFullScreen: (isFullScreen: boolean) => void
 }
 
-interface StartMissionParams {
-  title: string
-  description: string
-  type: Mission['type']
-  cluster?: string
-  initialPrompt: string
-  context?: Record<string, unknown>
-  /** When true, injects --dry-run=server instructions into the prompt */
-  dryRun?: boolean
-  /**
-   * When true, skip the review-prompt dialog and start immediately.
-   * Defaults to false — all missions show the review dialog unless
-   * explicitly opted out (e.g., the sidebar text input where the user
-   * already composed the prompt). (#6455)
-   */
-  skipReview?: boolean
-}
-
-/**
- * #7086/#7087/#7094/#7100/#7101 — A queued pending-review entry. Each entry
- * carries a pre-generated `missionId` so callers receive a valid ID
- * synchronously, even before the user confirms the review dialog. The queue
- * replaces the old single-slot `pendingReview` to support concurrent
- * mission requests without overwriting each other.
- */
-interface PendingReviewEntry {
-  params: StartMissionParams
-  /** Pre-generated mission ID returned to the caller immediately */
-  missionId: string
-}
-
-interface SaveMissionParams {
-  title: string
-  description: string
-  type: Mission['type']
-  missionClass?: string
-  cncfProject?: string
-  steps?: Array<{ title: string; description: string }>
-  tags?: string[]
-  initialPrompt: string
-  /** Optional context (e.g. orbitConfig) stored on the mission */
-  context?: Record<string, unknown>
-}
-
-/** Fields that can be updated on a saved (not-yet-run) mission */
-export interface SavedMissionUpdates {
-  description?: string
-  steps?: Array<{ title: string; description: string }>
-  cluster?: string
-}
-
 const MissionContext = createContext<MissionContextValue | null>(null)
-
-const MISSIONS_STORAGE_KEY = 'kc_missions'
-/**
- * #6668 — Window (ms) during which a `storage` event for MISSIONS_STORAGE_KEY
- * is treated as an echo of our own write and ignored. Real browsers do not
- * fire storage events in the same tab that made the write, so this is only
- * a guard against test shims / polyfills.
- *
- * #7095 — Reduced from 50ms to 5ms. The original 50ms window was wide enough
- * that two tabs interacting simultaneously could blind each other's state
- * changes (split-brain). 5ms is still sufficient to suppress same-tab echoes
- * from test shims/polyfills but tight enough that genuine cross-tab writes
- * arriving within a few ms of a local write are still honored.
- */
-const CROSS_TAB_ECHO_IGNORE_MS = 5
-const UNREAD_MISSIONS_KEY = 'kc_unread_missions'
-const SELECTED_AGENT_KEY = 'kc_selected_agent'
-const KAGENTI_SELECTED_AGENT_KEY = 'kc_kagenti_selected_agent'
 
 /**
  * #7089 — Monotonic counter for generating unique request IDs. The previous
@@ -236,30 +107,6 @@ let requestIdCounter = 0
 function generateRequestId(prefix = 'claude'): string {
   requestIdCounter += 1
   return `${prefix}-${Date.now()}-${requestIdCounter}-${crypto.randomUUID().replace(/-/g, '').slice(0, 6)}`
-}
-
-/**
- * #7311 — Monotonic counter for generating unique message IDs.
- * Replaces bare `msg-${Date.now()}` which collides when two messages
- * are created in the same millisecond (e.g., rapid stream splits,
- * system messages added back-to-back).
- */
-let messageIdCounter = 0
-function generateMessageId(suffix = ''): string {
-  messageIdCounter += 1
-  return `msg-${Date.now()}-${messageIdCounter}${suffix ? `-${suffix}` : ''}`
-}
-
-function getSelectedKagentiAgentFromStorage(): { name: string; namespace: string } | null {
-  try {
-    const value = localStorage.getItem(KAGENTI_SELECTED_AGENT_KEY)
-    if (!value) return null
-    const [namespace, name] = value.split('/')
-    if (!namespace || !name) return null
-    return { namespace, name }
-  } catch {
-    return null
-  }
 }
 
 /** Delay before auto-reconnecting interrupted missions after WS opens */
@@ -343,209 +190,6 @@ const CANCEL_CONFIRMED_MESSAGE_TYPE = 'cancel_confirmed'
  */
 const WAITING_INPUT_TIMEOUT_MS = 600_000 // 10 minutes
 
-/**
- * Strip interactive terminal prompt artifacts from agent metadata strings (#5482).
- * Interactive agents (e.g. copilot-cli) sometimes leak prompt text, ANSI escape
- * codes, or selection indicators into their description or displayName fields.
- */
-function stripInteractiveArtifacts(text: string): string {
-  if (!text) return text
-  return text
-    // Remove ANSI escape codes (colors, cursor movement, etc.)
-    // eslint-disable-next-line no-control-regex
-    .replace(/\x1B\[[0-9;]*[A-Za-z]/g, '')
-    // Remove interactive prompt indicators (? prompt, > selection, etc.)
-    .replace(/^[?>]\s+/gm, '')
-    // Remove lines that look like interactive menu items
-    .replace(/^\s*[-*]\s+\[.\]\s+/gm, '')
-    // Remove carriage returns and excess whitespace
-    .replace(/\r/g, '')
-    .replace(/\n{2,}/g, '\n')
-    .trim()
-}
-
-/** Pre-converted demo missions for demo mode — showcases all mission types */
-const DEMO_MISSIONS_AS_MISSIONS: Mission[] = DEMO_MISSIONS.map(m => ({
-  ...m,
-  type: m.type as Mission['type'],
-  status: m.status as Mission['status'],
-}))
-
-// Load missions from localStorage
-function loadMissions(): Mission[] {
-  try {
-    const stored = localStorage.getItem(MISSIONS_STORAGE_KEY)
-    if (stored) {
-      const parsed = JSON.parse(stored)
-      // In demo mode, replace stale demo data with fresh demo missions
-      // (catches both empty arrays and outdated demo entries without steps)
-      if (getDemoMode() && Array.isArray(parsed) && (
-        parsed.length === 0 ||
-        parsed.some((m: { id?: string }) => m.id?.startsWith('demo-'))
-      )) {
-        return DEMO_MISSIONS_AS_MISSIONS
-      }
-      // Convert date strings back to Date objects
-      // Mark running missions for auto-reconnection instead of failing them
-      return parsed.map((m: Mission) => {
-        const mission = {
-          ...m,
-          createdAt: new Date(m.createdAt),
-          updatedAt: new Date(m.updatedAt),
-          messages: (m.messages ?? []).map(msg => ({
-            ...msg,
-            timestamp: new Date(msg.timestamp)
-          }))
-        }
-        // Mark running/waiting_input missions for reconnection — they'll be
-        // resumed when WS connects (#6912, #6913).
-        if (mission.status === 'running' || mission.status === 'waiting_input') {
-          return {
-            ...mission,
-            currentStep: 'Reconnecting...',
-            context: { ...mission.context, needsReconnect: true }
-          }
-        }
-        // Missions stuck in 'pending' state after a page reload cannot be resumed —
-        // the backend never received the chat request (we only transition to
-        // 'running' after ensureConnection resolves and wsSend is called), so
-        // replaying it now would risk a duplicate execution on agents that are
-        // not idempotent. Fail the mission with a clear message prompting the
-        // user to retry manually (#5931).
-        if (mission.status === 'pending') {
-          return {
-            ...mission,
-            status: 'failed',
-            currentStep: undefined,
-            updatedAt: new Date(),
-            messages: [
-              ...mission.messages,
-              {
-                id: `msg-pending-reload-${mission.id}-${Date.now()}`,
-                role: 'system' as const,
-                content: 'Page was reloaded before this mission could start. Please retry the mission.',
-                timestamp: new Date() }
-            ]
-          }
-        }
-        // Missions stuck in 'cancelling' after a page reload should be finalized
-        if (mission.status === 'cancelling') {
-          return {
-            ...mission,
-            status: 'failed',
-            currentStep: undefined,
-            messages: [
-              ...mission.messages,
-              {
-                id: `msg-cancel-${mission.id}-${Date.now()}`,
-                role: 'system' as const,
-                content: 'Mission cancelled by user (page was reloaded during cancellation).',
-                timestamp: new Date() }
-            ]
-          }
-        }
-        return mission
-      })
-    }
-  } catch (e) {
-    // issue 6437 — If the persisted payload is unparseable (the previous
-    // saveMissions pass may have been interrupted mid-write, or quota
-    // pressure corrupted it), fully clear the key instead of leaving a
-    // broken entry that will keep crashing every load. The user loses
-    // their history, which is strictly better than an unusable app.
-    console.error('[Missions] Failed to parse kc_missions, clearing:', e)
-    try {
-      localStorage.removeItem(MISSIONS_STORAGE_KEY)
-    } catch {
-      // If removeItem itself throws (e.g., private mode), nothing we can do.
-    }
-  }
-
-  // In demo mode, seed with orbit demo missions so the feature is visible
-  if (getDemoMode()) {
-    return DEMO_MISSIONS_AS_MISSIONS
-  }
-
-  return []
-}
-
-// Maximum number of completed/failed missions to retain when pruning for quota.
-// Active (pending/running/waiting_input) and saved (library) missions are always kept.
-const MAX_COMPLETED_MISSIONS = 50
-
-// Save missions to localStorage, pruning old completed/failed missions if quota is exceeded
-function saveMissions(missions: Mission[]) {
-  try {
-    localStorage.setItem(MISSIONS_STORAGE_KEY, JSON.stringify(missions))
-  } catch (e) {
-    // QuotaExceededError: DOMException with name 'QuotaExceededError', or legacy
-    // browsers that use numeric code 22 instead of the named exception.
-    // Pattern matches useMetricsHistory for consistency across the codebase.
-    const isQuotaError = e instanceof DOMException
-      && (e.name === 'QuotaExceededError' || e.code === 22)
-    if (isQuotaError) {
-      console.warn('[Missions] localStorage quota exceeded, pruning old missions')
-      // Keep active missions (pending/running/cancelling/waiting_input/blocked) unconditionally
-      const active = missions.filter(m =>
-        m.status === 'running' || m.status === 'pending' || m.status === 'waiting_input' || m.status === 'blocked' || m.status === 'cancelling'
-      )
-      // Keep saved/library missions unconditionally — they are small (no chat history)
-      const saved = missions.filter(m => m.status === 'saved')
-      // Only prune completed/failed/cancelled missions by age (#5935)
-      const completedOrFailed = missions
-        .filter(m => m.status === 'completed' || m.status === 'failed' || m.status === 'cancelled')
-        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-        .slice(0, MAX_COMPLETED_MISSIONS)
-      const pruned = [...active, ...saved, ...completedOrFailed]
-      try {
-        localStorage.setItem(MISSIONS_STORAGE_KEY, JSON.stringify(pruned))
-        return
-      } catch {
-        // Still too large — strip chat messages from completed missions (#5695)
-        console.warn('[Missions] still full after count-pruning, stripping chat messages')
-        const stripped = pruned.map(m =>
-          (m.status === 'completed' || m.status === 'failed' || m.status === 'cancelled')
-            ? { ...m, messages: m.messages.slice(-3) } // keep only last 3 messages
-            : m
-        )
-        try {
-          localStorage.setItem(MISSIONS_STORAGE_KEY, JSON.stringify(stripped))
-          return
-        } catch {
-          // Absolute last resort — clear missions storage
-          console.error('[Missions] localStorage still full after stripping messages, clearing missions')
-          localStorage.removeItem(MISSIONS_STORAGE_KEY)
-        }
-      }
-    } else {
-      console.error('Failed to save missions to localStorage:', e)
-    }
-  }
-}
-
-// Load unread mission IDs from localStorage
-function loadUnreadMissionIds(): Set<string> {
-  try {
-    const stored = localStorage.getItem(UNREAD_MISSIONS_KEY)
-    if (stored) {
-      const parsed = JSON.parse(stored)
-      if (!Array.isArray(parsed)) return new Set()
-      return new Set(parsed)
-    }
-  } catch (e) {
-    console.error('Failed to load unread missions from localStorage:', e)
-  }
-  return new Set()
-}
-
-// Save unread mission IDs to localStorage
-function saveUnreadMissionIds(ids: Set<string>) {
-  try {
-    localStorage.setItem(UNREAD_MISSIONS_KEY, JSON.stringify([...ids]))
-  } catch (e) {
-    console.error('Failed to save unread missions to localStorage:', e)
-  }
-}
 
 export function MissionProvider({ children }: { children: ReactNode }) {
   const [missions, setMissions] = useState<Mission[]>(() => loadMissions())
@@ -883,48 +527,14 @@ export function MissionProvider({ children }: { children: ReactNode }) {
       try {
         // #7088 — Merge instead of replace. The old code did a full replace,
         // causing last-write-wins data loss when two tabs updated different
-        // missions concurrently. The merge strategy: for missions present in
-        // both local and remote, keep the version with the later updatedAt;
-        // add missions that only exist in remote; keep local-only missions
-        // that are actively running (the remote tab may not know about them).
+        // missions concurrently. See mergeMissions() in useMissionStorage.ts
+        // for the full merge strategy.
         const reloaded = loadMissions()
         // #7323 — Suppress the save effect for this setMissions call
         // since the data came from another tab's write.
         suppressNextSaveRef.current = true
         // #7088 — Smart merge by updatedAt instead of full replace
-        setMissions(prev => {
-          const remoteById = new Map(reloaded.map(m => [m.id, m]))
-          const merged: Mission[] = []
-          const seen = new Set<string>()
-
-          for (const local of prev) {
-            seen.add(local.id)
-            const remote = remoteById.get(local.id)
-            if (!remote) {
-              if (!INACTIVE_MISSION_STATUSES.has(local.status)) {
-                merged.push(local)
-              }
-              continue
-            }
-            const localTime = new Date(local.updatedAt).getTime()
-            const remoteTime = new Date(remote.updatedAt).getTime()
-            merged.push(remoteTime >= localTime ? remote : local)
-          }
-          for (const remote of reloaded) {
-            if (!seen.has(remote.id)) {
-              merged.push(remote)
-            }
-          }
-          // #7309 — Enforce the completed-missions cap after merge so cross-tab
-          // syncing cannot re-introduce a mission that was trimmed by the other tab.
-          // Keep all active missions unconditionally; only trim completed/failed.
-          const active = merged.filter(m => !INACTIVE_MISSION_STATUSES.has(m.status))
-          const inactive = merged
-            .filter(m => INACTIVE_MISSION_STATUSES.has(m.status))
-            .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-            .slice(0, MAX_COMPLETED_MISSIONS)
-          return [...active, ...inactive]
-        })
+        setMissions(prev => mergeMissions(prev, reloaded))
         // #7105 — Reconcile derived state against the reloaded mission list.
         const reloadedIds = new Set(reloaded.map(m => m.id))
         setActiveMissionId(prev => (prev && !reloadedIds.has(prev) ? null : prev))
@@ -2250,126 +1860,6 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
 
   // Start a new mission
   /**
-   * Shared prompt-enhancement pipeline: cluster targeting, dry-run injection,
-   * non-interactive terminal handling, and resolution matching.
-   * Used by both startMission and runSavedMission to avoid duplication (#4768).
-   */
-  const buildEnhancedPrompt = (params: StartMissionParams): {
-    enhancedPrompt: string
-    matchedResolutions: MatchedResolution[]
-    isInstallMission: boolean
-  } => {
-    // Inject cluster targeting into the prompt sent to the agent
-    let enhancedPrompt = params.initialPrompt
-    if (params.cluster) {
-      const clusterList = params.cluster.split(',').map(c => c.trim()).filter(Boolean)
-      if (clusterList.length === 1) {
-        enhancedPrompt = `Target cluster: ${clusterList[0]}\nIMPORTANT: All kubectl commands MUST use --context=${clusterList[0]}\n\n${enhancedPrompt}`
-      } else {
-        // #7188/#7198 — Inject explicit per-cluster context instructions so
-        // the agent uses the correct kubectl context for each cluster instead
-        // of defaulting to the first one.
-        const perClusterInstructions = clusterList
-          .map((c, i) => `  ${i + 1}. Cluster "${c}": use --context=${c}`)
-          .join('\n')
-        enhancedPrompt = `Target clusters: ${clusterList.join(', ')}\nIMPORTANT: Perform the following on EACH cluster using its respective kubectl context:\n${perClusterInstructions}\n\n${enhancedPrompt}`
-      }
-    }
-
-    // Inject dry-run instructions for server-side validation without actual changes
-    if (params.dryRun) {
-      enhancedPrompt += '\n\nCRITICAL — DRY RUN MODE:\n' +
-        'This is a DRY RUN deployment. You MUST NOT create, modify, or delete any actual resources.\n' +
-        'For every kubectl apply, create, or delete command, append --dry-run=server to perform server-side validation only.\n' +
-        'For every helm install or helm upgrade command, append --dry-run to simulate without installing.\n' +
-        'Report what WOULD be deployed, including:\n' +
-        '- Resources that would be created (with their kinds, names, and namespaces)\n' +
-        '- Any validation errors the server returns\n' +
-        '- Any missing prerequisites (CRDs, namespaces, RBAC)\n' +
-        'Conclude with a summary: "DRY RUN COMPLETE — N resources validated, M errors found."\n'
-    }
-
-    // Remind the agent that it runs in a non-interactive terminal (no stdin).
-    // This prevents commands that prompt for user input from hanging (#3767).
-    const isInstallMission = params.type === 'deploy' || /install/i.test(params.title)
-    if (isInstallMission) {
-      enhancedPrompt += '\n\nIMPORTANT: You are running in a non-interactive terminal with NO stdin support. ' +
-        'Never run commands that require interactive input (login prompts, confirmation dialogs, browser OAuth flows). ' +
-        'Always use non-interactive flags (--yes, -y, --non-interactive, --no-input, --batch) or pipe "yes" where needed. ' +
-        'If a step requires interactive authentication, stop and tell the user to complete it manually in their own terminal first.'
-    }
-
-    // Auto-match and inject resolution context for relevant mission types
-    let matchedResolutions: MatchedResolution[] = []
-
-    // Match resolutions for troubleshooting-related missions (not deploy/upgrade)
-    if (params.type !== 'deploy' && params.type !== 'upgrade') {
-      // Detect issue signature from mission content
-      const content = `${params.title} ${params.description} ${params.initialPrompt}`
-      const signature = detectIssueSignature(content)
-
-      if (signature.type && signature.type !== 'Unknown') {
-        // Find similar resolutions from history
-        const similarResolutions = findSimilarResolutionsStandalone(
-          { type: signature.type, resourceKind: signature.resourceKind, errorPattern: signature.errorPattern },
-          { minSimilarity: 0.4, limit: 3 }
-        )
-
-        if (similarResolutions.length > 0) {
-          // Store matched resolutions for display
-          matchedResolutions = similarResolutions.map(sr => ({
-            id: sr.resolution.id,
-            title: sr.resolution.title,
-            similarity: sr.similarity,
-            source: sr.source }))
-
-          // Inject resolution context into the prompt
-          const resolutionContext = generateResolutionPromptContext(similarResolutions)
-          enhancedPrompt = params.initialPrompt + resolutionContext
-        }
-      }
-    }
-
-    return { enhancedPrompt, matchedResolutions, isInstallMission }
-  }
-
-  /**
-   * Build system messages for non-interactive mode and auto-matched resolutions.
-   * Shared between startMission and runSavedMission (#4768).
-   */
-  const buildSystemMessages = (
-    isInstallMission: boolean,
-    matchedResolutions: MatchedResolution[],
-  ): MissionMessage[] => {
-    const messages: MissionMessage[] = []
-
-    // Warn the user that interactive terminal input is not supported (#3767)
-    if (isInstallMission) {
-      messages.push({
-        id: generateMessageId('nointeractive'),
-        role: 'system',
-        content: '**Non-interactive mode:** This terminal does not support interactive input. ' +
-          'If a tool requires browser-based login or manual confirmation, the agent will ask you to run that step in your own terminal first.',
-        timestamp: new Date() })
-    }
-
-    // Add system message if resolutions were auto-matched
-    if (matchedResolutions.length > 0) {
-      const resolutionNames = matchedResolutions.map(r =>
-        `• **${r.title}** (${Math.round(r.similarity * 100)}% match, ${r.source === 'personal' ? 'your history' : 'team knowledge'})`
-      ).join('\n')
-
-      messages.push({
-        id: generateMessageId('resolutions'),
-        role: 'system',
-        content: `🔍 **Found ${matchedResolutions.length} similar resolution${matchedResolutions.length > 1 ? 's' : ''} from your knowledge base:**\n\n${resolutionNames}\n\n_This context has been automatically provided to the AI to help solve the problem faster._`,
-        timestamp: new Date() })
-    }
-
-    return messages
-  }
-
-  /**
    * Shared preflight + execute pipeline.
    * Runs preflight permission check and, on success, delegates to executeMission.
    * Used by startMission and runSavedMission to avoid duplicating preflight logic (#4768).
@@ -2969,9 +2459,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
     }
 
     // Build the base prompt from saved mission data
-    const basePrompt = mission.importedFrom?.steps
-      ? `${mission.description}\n\nSteps:\n${mission.importedFrom.steps.map((s, i) => `${i + 1}. ${s.title}: ${s.description}`).join('\n')}`
-      : mission.description
+    const basePrompt = buildSavedMissionPrompt(mission)
 
     // Build StartMissionParams so we can reuse the shared prompt pipeline
     const params: StartMissionParams = {
