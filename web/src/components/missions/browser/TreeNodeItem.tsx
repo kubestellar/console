@@ -88,7 +88,7 @@ export const TreeNodeItem = memo(function TreeNodeItem({
     }
   }
 
-  const showHeaderActions = showRemoveButton || showRefreshButton || (depth === 0 && !!onAdd)
+  const showHeaderActions = showRemoveButton || showRefreshButton || (depth === 0 && !!onAdd) || (depth === 0 && !!node.infoTooltip)
 
   // Memoize inline style objects to avoid creating new references on each render
   const paddingStyle = { paddingLeft: `${depth * 16 + 8}px` }
