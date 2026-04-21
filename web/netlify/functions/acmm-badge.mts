@@ -57,8 +57,11 @@ const AGENT_INSTRUCTION_FILE_IDS = new Set([
 ]);
 
 /**
- * ACMM criteria grouped by level. MUST mirror the scannable entries in
- * acmm-scan.mts CRITERIA (IDs and level assignments).
+ * ACMM criteria grouped by level. MUST stay in sync with the scannable
+ * criteria in web/src/data/acmm.ts — only IDs where scannable !== false
+ * belong here. Non-scannable criteria (layered-safety, mechanical-enforcement,
+ * session-summary, structural-gates, session-continuity, cross-session-knowledge)
+ * are excluded because the frontend cannot detect them automatically.
  *
  * Issue #8979: the previous map used legacy short IDs (acmm:pr-template,
  * acmm:style-config, acmm:test-suite, …) that no longer exist in the scan
@@ -75,16 +78,14 @@ const ACMM_IDS_BY_LEVEL: Record<number, string[]> = {
     "acmm:agent-instructions", // virtual OR: any of claude-md / agents-md / copilot-instructions / cursor-rules
     "acmm:prompts-catalog",
     "acmm:editor-config",
+    "acmm:correction-capture",
+    "acmm:positive-reinforcement",
   ],
   3: [
     "acmm:pr-acceptance-metric",
     "acmm:pr-review-rubric",
     "acmm:quality-dashboard",
     "acmm:ci-matrix",
-    "acmm:layered-safety",
-    "acmm:mechanical-enforcement",
-    "acmm:session-summary",
-    "acmm:structural-gates",
   ],
   4: [
     "acmm:auto-qa-tuning",
@@ -94,8 +95,6 @@ const ACMM_IDS_BY_LEVEL: Record<number, string[]> = {
     "acmm:ai-fix-workflow",
     "acmm:tier-classifier",
     "acmm:security-ai-md",
-    "acmm:session-continuity",
-    "acmm:cross-session-knowledge",
   ],
   5: [
     "acmm:github-actions-ai",
@@ -255,9 +254,6 @@ const BADGE_FALLBACK_PATHS: Record<string, readonly string[]> = {
     ".github/workflows/build.yml",
     ".github/workflows/build-deploy.yml",
   ],
-  "acmm:layered-safety": [".claude/settings.json", ".claude/settings.local.json"],
-  "acmm:mechanical-enforcement": [".claude/settings.json"],
-  "acmm:structural-gates": [".claude/settings.json"],
   // L4
   "acmm:security-ai-md": [
     "docs/security/SECURITY-AI.md",
@@ -280,6 +276,10 @@ const BADGE_FALLBACK_PATHS: Record<string, readonly string[]> = {
     ".github/workflows/triage.yml",
   ],
   // L5
+  "acmm:policy-as-code": [
+    ".github/policies/",
+    "policies/",
+  ],
   "acmm:github-actions-ai": [
     ".github/workflows/claude.yml",
     ".github/workflows/claude-code-review.yml",

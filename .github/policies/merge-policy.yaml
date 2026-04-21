@@ -1,0 +1,23 @@
+# Merge policy — machine-enforceable rules for PR acceptance
+rules:
+  - name: dco-required
+    description: All commits must have Signed-off-by trailer
+    enforcement: blocking
+    check: dco
+
+  - name: adopters-human-approval
+    description: ADOPTERS.md PRs require explicit maintainer approval
+    enforcement: blocking
+    paths: ["ADOPTERS.md", "ADOPTERS.MD"]
+    auto_merge: false
+
+  - name: no-direct-main
+    description: All changes via PR, never push to main
+    enforcement: blocking
+    branch_protection: true
+
+  - name: ci-gate
+    description: Build and lint must pass before merge
+    enforcement: blocking
+    required_checks: ["build", "lint"]
+    ignored_checks: ["playwright"]
