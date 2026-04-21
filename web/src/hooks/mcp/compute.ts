@@ -9,7 +9,22 @@ import { STORAGE_KEY_TOKEN } from '../../lib/constants'
 import { GPU_POLL_INTERVAL_MS, getEffectiveInterval, LOCAL_AGENT_URL, agentFetch } from './shared'
 import { subscribePolling } from './pollingManager'
 import { MCP_EXTENDED_TIMEOUT_MS, MCP_HOOK_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../../lib/constants/network'
+import { classifyError, type ClusterErrorType } from '../../lib/errorClassifier'
 import type { GPUNode, NodeInfo, NVIDIAOperatorStatus } from './types'
+
+/**
+ * Per-cluster error surfaced by {@link useNodes} when the backend emits a
+ * `cluster_error` SSE event for a particular cluster (Issue 9355). Lets
+ * consumers distinguish an RBAC denial ({@link ClusterErrorType} === 'auth')
+ * from a transient 5xx/timeout failure so the UI can render a specific
+ * "lacks list-nodes RBAC" explanation instead of a generic "detailed list
+ * is empty" warning.
+ */
+export interface NodeClusterError {
+  cluster: string
+  errorType: ClusterErrorType
+  message: string
+}
 
 // Module-level cache for GPU nodes (persists across navigation)
 interface GPUNodeCache {
@@ -429,6 +444,12 @@ export function useNodes(cluster?: string) {
   const [nodes, setNodes] = useState<NodeInfo[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  // Per-cluster errors from the SSE `cluster_error` event (Issue 9355). Lets
+  // consumers (drill-downs) distinguish an RBAC denial on one or more
+  // clusters from a globally-transient failure so the UI can show a
+  // specific "lacks list-nodes RBAC on cluster X" message instead of a
+  // generic "detailed list is empty" warning.
+  const [clusterErrors, setClusterErrors] = useState<NodeClusterError[]>([])
   const { isDemoMode: demoMode } = useDemoMode()
 
   // Track previous cluster to detect actual changes (not just initial mount)
@@ -441,6 +462,7 @@ export function useNodes(cluster?: string) {
       setNodes([])
       setIsLoading(true)
       setError(null)
+      setClusterErrors([])
       prevClusterRef.current = cluster
     }
   }, [cluster])
@@ -452,6 +474,7 @@ export function useNodes(cluster?: string) {
       setNodes(demoNodes)
       setIsLoading(false)
       setError(null)
+      setClusterErrors([])
       return
     }
     setIsLoading(true)
@@ -486,6 +509,7 @@ export function useNodes(cluster?: string) {
             }))
             setNodes(mappedNodes)
             setError(null)
+            setClusterErrors([])
             setIsLoading(false)
             reportAgentDataSuccess()
             return
@@ -495,6 +519,12 @@ export function useNodes(cluster?: string) {
         console.error(`[useNodes] Local agent failed for ${cluster}:`, err)
       }
     }
+
+    // Collect per-cluster error events during this refetch. We replace the
+    // previous snapshot atomically when the stream settles so a transient
+    // flash of "cluster X failed" isn't left stale after a retry succeeds
+    // (Issue 9355).
+    const collectedErrors: NodeClusterError[] = []
 
     // Use SSE streaming for progressive multi-cluster data
     try {
@@ -509,15 +539,33 @@ export function useNodes(cluster?: string) {
           setNodes(prev => [...prev, ...items])
           setIsLoading(false)
         },
+        onClusterError: (clusterName, errorMessage) => {
+          // Classify the raw backend error so consumers can render an
+          // RBAC-specific message (auth) instead of "transient failure"
+          // (timeout/network/unknown). Backend error strings already
+          // contain enough context ("nodes is forbidden", "401",
+          // "unauthorized", etc.) for the classifier to match.
+          const classified = classifyError(errorMessage)
+          collectedErrors.push({
+            cluster: clusterName,
+            errorType: classified.type,
+            message: errorMessage,
+          })
+        },
       })
 
       setNodes(allNodes)
       setError(null)
+      setClusterErrors(collectedErrors)
     } catch {
       // On error, show empty state instead of fabricating placeholder nodes
-      // that would masquerade as real Ready nodes (#7351)
+      // that would masquerade as real Ready nodes (#7351).  Even on
+      // catastrophic failure, surface any per-cluster errors we collected
+      // before the stream aborted so the UI can still explain the partial
+      // state (Issue 9355).
       setError(null)
       setNodes([])
+      setClusterErrors(collectedErrors)
     } finally {
       setIsLoading(false)
     }
@@ -545,7 +593,10 @@ export function useNodes(cluster?: string) {
     refetch()
   }, [demoMode, refetch])
 
-  return { nodes, isLoading, error, refetch }
+  // Per-cluster errors surfaced from the SSE stream (Issue 9355) so the
+  // multi-cluster drill-down can explain an empty list with "lacks
+  // list-nodes RBAC on cluster X" rather than a generic warning.
+  return { nodes, isLoading, error, clusterErrors, refetch }
 }
 
 // Hook to get NVIDIA operator status

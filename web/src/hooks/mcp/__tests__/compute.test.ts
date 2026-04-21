@@ -242,6 +242,49 @@ describe('useNodes', () => {
     expect(result.current.nodes.length).toBeGreaterThan(0)
     expect(result.current.error).toBeNull()
   })
+
+  // Issue 9355 — per-cluster error surfacing.  The backend emits a
+  // `cluster_error` SSE event when an individual cluster's nodes list
+  // fails (e.g. 403 from RBAC denial).  useNodes must forward those
+  // events as `clusterErrors` so the multi-cluster drill-down can
+  // distinguish RBAC denial from a transient endpoint failure when the
+  // cluster summary count disagrees with the list length.
+  it('surfaces per-cluster errors from SSE cluster_error events', async () => {
+    // Simulate the SSE stream invoking onClusterError for a 403 and a timeout.
+    mockFetchSSE.mockImplementation(async (opts: {
+      onClusterError?: (cluster: string, message: string) => void
+    }) => {
+      opts.onClusterError?.('rbac-cluster', 'nodes is forbidden: User "u" cannot list resource "nodes"')
+      opts.onClusterError?.('slow-cluster', 'context deadline exceeded')
+      return []
+    })
+
+    const { result } = renderHook(() => useNodes('rbac-test-unique-nodes'))
+    await waitFor(() => expect(result.current.isLoading).toBe(false), { timeout: 5000 })
+
+    // Both events surface in clusterErrors, classified by type.  The RBAC
+    // denial is 'auth' (matches /forbidden/i) and the timeout is 'timeout'.
+    expect(result.current.clusterErrors).toHaveLength(2)
+    const rbac = result.current.clusterErrors.find(e => e.cluster === 'rbac-cluster')
+    const slow = result.current.clusterErrors.find(e => e.cluster === 'slow-cluster')
+    expect(rbac?.errorType).toBe('auth')
+    expect(slow?.errorType).toBe('timeout')
+  })
+
+  it('returns empty clusterErrors when the stream succeeds for every cluster', async () => {
+    mockFetchSSE.mockResolvedValue([
+      {
+        name: 'n1', cluster: 'c1', status: 'Ready', roles: ['worker'],
+        kubeletVersion: 'v1.28.4', cpuCapacity: '8', memoryCapacity: '16Gi',
+        podCapacity: '110', conditions: [], unschedulable: false,
+      },
+    ])
+
+    const { result } = renderHook(() => useNodes('happy-test-unique-nodes'))
+    await waitFor(() => expect(result.current.isLoading).toBe(false), { timeout: 5000 })
+
+    expect(result.current.clusterErrors).toEqual([])
+  })
 })
 
 // ===========================================================================

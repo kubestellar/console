@@ -204,7 +204,15 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
     isLoading: nodesIsLoading,
     isFailed: nodesIsFailed,
     isDemoFallback: nodesIsDemoFallback,
+    // Per-cluster errors emitted by the cross-cluster nodes REST fan-out
+    // (Issue 9355). Used below to render an RBAC- vs transient-failure-aware
+    // warning when the all-nodes drill-down list is empty but the cluster
+    // summary reports a non-zero node count. Guarded against undefined to
+    // keep older test mocks and mid-upgrade hook shapes crash-safe (see
+    // MEMORY.md: "ALWAYS guard `.join()` and `for...of` against undefined").
+    clusterErrors: rawNodeClusterErrors,
   } = useCachedAllNodes()
+  const nodeClusterErrors = rawNodeClusterErrors || []
   const { pvcs: cachedPVCs } = useCachedPVCs()
   // Guard against undefined to prevent crashes when APIs return 404/500/empty
   const cachedNodes = rawCachedNodes || []
@@ -597,11 +605,55 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
                     {expectedNodeCountFromClusters === 1 ? '' : 's'}, but the
                     detailed list is empty.
                   </div>
-                  <div className="text-muted-foreground mt-1">
-                    {nodesIsFailed
-                      ? 'The node list endpoint is currently unreachable.'
-                      : 'This usually means the current user lacks list-nodes RBAC on one or more clusters, so the detail view can\'t enumerate nodes even though the per-cluster summary includes their count.'}
-                  </div>
+                  {/*
+                    Per-cluster error breakdown (Issue 9355). When the
+                    `useCachedAllNodes` fan-out captures per-cluster
+                    `/api/mcp/nodes` failures we show a typed list so the
+                    user can see which clusters were denied by RBAC (auth)
+                    vs. which failed transiently (timeout / network /
+                    unknown). Without this block the warning conflated
+                    every failure mode into a single message.
+                  */}
+                  {nodeClusterErrors.length > 0 ? (
+                    <>
+                      <div className="text-muted-foreground mt-1">
+                        The nodes endpoint returned an error for
+                        {' '}
+                        {nodeClusterErrors.length}
+                        {' '}
+                        cluster{nodeClusterErrors.length === 1 ? '' : 's'}:
+                      </div>
+                      <ul className="mt-2 space-y-1 text-muted-foreground">
+                        {nodeClusterErrors.map(err => {
+                          const isAuth = err.errorType === 'auth'
+                          const isTimeout = err.errorType === 'timeout'
+                          const kindLabel = isAuth
+                            ? 'RBAC denied (list-nodes)'
+                            : isTimeout
+                              ? 'Transient timeout'
+                              : `Endpoint failure (${err.errorType})`
+                          return (
+                            <li key={`${err.cluster}-${err.errorType}`} className="flex items-start gap-2">
+                              <Server className="w-3 h-3 mt-0.5 shrink-0" />
+                              <span>
+                                <span className="font-mono">{err.cluster.split('/').pop()}</span>
+                                {' — '}
+                                <span className={isAuth ? 'text-red-400' : 'text-yellow-400'}>
+                                  {kindLabel}
+                                </span>
+                              </span>
+                            </li>
+                          )
+                        })}
+                      </ul>
+                    </>
+                  ) : (
+                    <div className="text-muted-foreground mt-1">
+                      {nodesIsFailed
+                        ? 'The node list endpoint is currently unreachable.'
+                        : 'This usually means the current user lacks list-nodes RBAC on one or more clusters, so the detail view can\'t enumerate nodes even though the per-cluster summary includes their count.'}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

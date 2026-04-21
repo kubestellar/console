@@ -48,7 +48,10 @@ vi.mock('../../../../hooks/useAlerts', () => ({
 
 vi.mock('../../../../hooks/useCachedData', () => ({
   useCachedNodes: () => ({ nodes: [], lastRefresh: Date.now(), isLoading: false, isFailed: false, isDemoFallback: false, isRefreshing: false, consecutiveFailures: 0, refetch: vi.fn() }),
-  useCachedAllNodes: () => ({ nodes: [], lastRefresh: Date.now(), isLoading: false, isFailed: false, isDemoFallback: false, isRefreshing: false, consecutiveFailures: 0, refetch: vi.fn() }),
+  // `clusterErrors` is the Issue 9355 addition — per-cluster RBAC/timeout
+  // breakdown the drill-down uses when the nodes list comes back empty but
+  // the cluster summary reported a non-zero count.
+  useCachedAllNodes: () => ({ nodes: [], clusterErrors: [], lastRefresh: Date.now(), isLoading: false, isFailed: false, isDemoFallback: false, isRefreshing: false, consecutiveFailures: 0, refetch: vi.fn() }),
   useCachedPVCs: () => ({ pvcs: [], lastRefresh: Date.now(), isLoading: false, isFailed: false, isDemoFallback: false, isRefreshing: false, consecutiveFailures: 0, refetch: vi.fn() }),
 }))
 

@@ -4,6 +4,7 @@
  * Extracted from useCachedData.ts for maintainability.
  */
 
+import { useSyncExternalStore } from 'react'
 import { useCache, type RefreshCategory } from '../lib/cache'
 import { clusterCacheRef, deduplicateClustersByServer } from './mcp/shared'
 import { fetchAPI, fetchFromAllClusters, fetchViaSSE } from '../lib/cache/fetcherUtils'
@@ -11,7 +12,46 @@ import { settledWithConcurrency } from '../lib/utils/concurrency'
 import { NodesResponseSchema } from '../lib/schemas'
 import { validateArrayResponse } from '../lib/schemas/validate'
 import { getDemoCachedNodes, getDemoCoreDNSStatus } from './useCachedData/demoData'
+import { classifyError, type ClusterErrorType } from '../lib/errorClassifier'
 import type { NodeInfo, PodInfo } from './useMCP'
+
+/**
+ * Per-cluster error surfaced by {@link useCachedAllNodes} when a particular
+ * cluster's `/api/mcp/nodes` REST call fails during the fan-out (Issue 9355).
+ * Lets the multi-cluster drill-down distinguish an RBAC denial
+ * ({@link ClusterErrorType} === 'auth') from a transient 5xx/timeout failure
+ * so the UI can render a specific "lacks list-nodes RBAC on cluster X"
+ * explanation instead of a generic "detailed list is empty" warning.
+ */
+export interface NodeClusterError {
+  cluster: string
+  errorType: ClusterErrorType
+  message: string
+}
+
+// Module-level subscribable snapshot of the most recent per-cluster errors
+// emitted by the {@link useCachedAllNodes} fetcher. We use a module-level
+// subscribable (rather than per-hook React state) because `useCache`'s
+// `fetcher` is invoked outside React and does not have access to a
+// component-scoped setState. `useSyncExternalStore` in the hook return gives
+// every consumer a fresh snapshot that re-renders when the fetcher publishes
+// a new error list (Issue 9355).
+let nodeClusterErrorsSnapshot: readonly NodeClusterError[] = []
+const nodeClusterErrorsListeners = new Set<() => void>()
+
+function subscribeNodeClusterErrors(listener: () => void) {
+  nodeClusterErrorsListeners.add(listener)
+  return () => nodeClusterErrorsListeners.delete(listener)
+}
+
+function getNodeClusterErrorsSnapshot(): readonly NodeClusterError[] {
+  return nodeClusterErrorsSnapshot
+}
+
+function publishNodeClusterErrors(next: readonly NodeClusterError[]) {
+  nodeClusterErrorsSnapshot = next
+  nodeClusterErrorsListeners.forEach(listener => listener())
+}
 
 // ============================================================================
 // Shared types
@@ -124,7 +164,13 @@ export function useCachedNodes(
  * its existing `nodesIsDemoFallback` wiring intact — see the task's
  * `isDemoData` preservation rule.
  */
-export function useCachedAllNodes(): CachedHookResult<NodeInfo[]> & { nodes: NodeInfo[] } {
+export function useCachedAllNodes(): CachedHookResult<NodeInfo[]> & {
+  nodes: NodeInfo[]
+  // Per-cluster errors captured during the REST fan-out (Issue 9355) so the
+  // multi-cluster drill-down can explain an empty list with
+  // "lacks list-nodes RBAC on cluster X" instead of a generic warning.
+  clusterErrors: readonly NodeClusterError[]
+} {
   const key = 'nodes:all:dedup'
 
   const result = useCache({
@@ -149,10 +195,21 @@ export function useCachedAllNodes(): CachedHookResult<NodeInfo[]> & { nodes: Nod
         (c) => c.reachable !== false && !c.name.includes('/'),
       )
       if (reachable.length === 0) {
+        // Reset any stale per-cluster errors from a prior fetch before
+        // throwing so consumers that still subscribe don't see a stale
+        // "cluster X denied" after the user has logged out / lost creds
+        // (Issue 9355).
+        publishNodeClusterErrors([])
         throw new Error(
           'No reachable clusters (agent connecting or backend not authenticated)',
         )
       }
+
+      // Collect per-cluster errors during this fetch. We replace the
+      // previous module-level snapshot atomically after the fan-out settles
+      // so a transient flash of "cluster X failed" isn't left stale after
+      // a retry succeeds (Issue 9355).
+      const collectedErrors: NodeClusterError[] = []
 
       // Fan out per-cluster fetches in parallel. Each per-cluster call is
       // identical to what useCachedNodes(clusterName) would do — using the
@@ -169,11 +226,21 @@ export function useCachedAllNodes(): CachedHookResult<NodeInfo[]> & { nodes: Nod
             'nodes',
           )
           return (data.nodes || []).map((n) => ({ ...n, cluster: cluster.name }))
-        } catch {
+        } catch (err) {
           // Per-cluster failure: tolerate it so a single unreachable cluster
           // doesn't wipe the whole aggregate. Accumulated nodes from other
-          // clusters still render; the drill-down's empty-state explainer
-          // handles the all-failed case.
+          // clusters still render.  Issue 9355 — classify the error (auth /
+          // timeout / network / certificate / unknown) so the drill-down
+          // can tell the user which clusters denied list-nodes RBAC vs.
+          // which failed transiently, instead of a generic empty-state
+          // warning that conflated every failure mode.
+          const message = err instanceof Error ? err.message : String(err)
+          const classified = classifyError(message)
+          collectedErrors.push({
+            cluster: cluster.name,
+            errorType: classified.type,
+            message,
+          })
           return [] as NodeInfo[]
         }
       })
@@ -185,8 +252,22 @@ export function useCachedAllNodes(): CachedHookResult<NodeInfo[]> & { nodes: Nod
         }
       }
       await settledWithConcurrency(tasks, undefined, handleSettled)
+      // Publish the final per-cluster error snapshot so every consumer
+      // subscribed via `useSyncExternalStore` re-renders with the fresh
+      // list (Issue 9355).
+      publishNodeClusterErrors(collectedErrors)
       return accumulated
     } })
+
+  // Subscribe every caller to the module-level per-cluster errors snapshot.
+  // The fetcher lives outside React, so we cannot use component-scoped
+  // useState for the error list — useSyncExternalStore is the canonical
+  // bridge from a mutable external store to React render (Issue 9355).
+  const clusterErrors = useSyncExternalStore(
+    subscribeNodeClusterErrors,
+    getNodeClusterErrorsSnapshot,
+    getNodeClusterErrorsSnapshot,
+  )
 
   return {
     nodes: result.data,
@@ -198,6 +279,10 @@ export function useCachedAllNodes(): CachedHookResult<NodeInfo[]> & { nodes: Nod
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
+    // Per-cluster errors surfaced from the REST fan-out (Issue 9355) so the
+    // multi-cluster drill-down can explain an empty list with "lacks
+    // list-nodes RBAC on cluster X" rather than a generic warning.
+    clusterErrors,
     refetch: result.refetch }
 }
 

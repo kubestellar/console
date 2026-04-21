@@ -49,7 +49,9 @@ vi.mock('../../lib/constants/network', () => ({
   KUBECTL_EXTENDED_TIMEOUT_MS: 60000,
 }))
 
-import { useCachedNodes, useCachedCoreDNSStatus } from '../useCachedNodes'
+import { useCachedNodes, useCachedCoreDNSStatus, useCachedAllNodes } from '../useCachedNodes'
+import { fetchAPI } from '../../lib/cache/fetcherUtils'
+import { settledWithConcurrency } from '../../lib/utils/concurrency'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -168,5 +170,110 @@ describe('useCachedCoreDNSStatus', () => {
     renderHook(() => useCachedCoreDNSStatus('my-cluster'))
     const callArgs = mockUseCache.mock.calls[0][0]
     expect(callArgs.key).toContain('my-cluster')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// useCachedAllNodes — Issue 9355 per-cluster error surfacing
+// ---------------------------------------------------------------------------
+
+describe('useCachedAllNodes — Issue 9355 clusterErrors surfacing', () => {
+  // Helper: capture the fetcher passed to useCache so we can invoke it
+  // directly with a given cluster cache + fetchAPI behaviour, then read the
+  // per-cluster errors from the hook's returned `clusterErrors`.
+  async function runFetcherAndGetErrors(
+    clusters: Array<{ name: string; reachable?: boolean }>,
+    fetchBehaviour: (cluster: string) => Promise<unknown>,
+  ) {
+    mockClusterCacheRef.clusters = clusters
+    // Run each fan-out task sequentially so we can deterministically
+    // observe which clusters produced errors.
+    vi.mocked(settledWithConcurrency).mockImplementation(
+      async (tasks, _concurrency, handleSettled) => {
+        const results: PromiseSettledResult<unknown>[] = []
+        for (const task of tasks) {
+          try {
+            const value = await task()
+            const res: PromiseSettledResult<unknown> = { status: 'fulfilled', value }
+            results.push(res)
+            if (handleSettled) await handleSettled(res as PromiseSettledResult<never>)
+          } catch (reason) {
+            const res: PromiseSettledResult<unknown> = { status: 'rejected', reason }
+            results.push(res)
+            if (handleSettled) await handleSettled(res as PromiseSettledResult<never>)
+          }
+        }
+        return results as never
+      },
+    )
+    vi.mocked(fetchAPI).mockImplementation(
+      async (_endpoint, params) => fetchBehaviour(params?.cluster as string),
+    )
+
+    // Render the hook so useCache is invoked and the fetcher option is
+    // captured. The hook itself returns `clusterErrors: []` initially
+    // because the module-level snapshot is empty until the fetcher runs.
+    const { result, rerender } = renderHook(() => useCachedAllNodes())
+
+    // Pull the fetcher out of the most recent mockUseCache invocation and
+    // run it — this mirrors what useCache does internally when it decides
+    // to refresh the cache.
+    const fetcherArg = mockUseCache.mock.calls.at(-1)?.[0] as {
+      fetcher: () => Promise<unknown>
+    }
+    expect(typeof fetcherArg?.fetcher).toBe('function')
+    await fetcherArg.fetcher()
+
+    // Re-render so useSyncExternalStore picks up the published snapshot.
+    rerender()
+    return result.current.clusterErrors
+  }
+
+  it('exposes clusterErrors as an array on the hook return', () => {
+    const { result } = renderHook(() => useCachedAllNodes())
+    expect(Array.isArray(result.current.clusterErrors)).toBe(true)
+  })
+
+  // Issue 9355 — the core acceptance criterion: when one cluster's
+  // `/api/mcp/nodes` returns 403 Forbidden (RBAC denial) and another
+  // returns context deadline exceeded (transient), the hook surfaces
+  // both as typed per-cluster entries so the drill-down can render
+  // "RBAC denied" vs "Transient timeout" instead of a single generic
+  // warning.
+  it('surfaces per-cluster RBAC denials and transient failures separately', async () => {
+    const errors = await runFetcherAndGetErrors(
+      [
+        { name: 'rbac-cluster', reachable: true },
+        { name: 'slow-cluster', reachable: true },
+        { name: 'happy-cluster', reachable: true },
+      ],
+      async (cluster) => {
+        if (cluster === 'rbac-cluster') {
+          throw new Error('nodes is forbidden: User "u" cannot list resource "nodes"')
+        }
+        if (cluster === 'slow-cluster') {
+          throw new Error('context deadline exceeded')
+        }
+        return { nodes: [{ name: 'n1', cluster, status: 'Ready' }] }
+      },
+    )
+
+    expect(errors).toHaveLength(2)
+    const rbac = errors.find(e => e.cluster === 'rbac-cluster')
+    const slow = errors.find(e => e.cluster === 'slow-cluster')
+    expect(rbac?.errorType).toBe('auth')
+    expect(slow?.errorType).toBe('timeout')
+  })
+
+  it('returns empty clusterErrors when every cluster succeeds', async () => {
+    const errors = await runFetcherAndGetErrors(
+      [
+        { name: 'c1', reachable: true },
+        { name: 'c2', reachable: true },
+      ],
+      async (cluster) => ({ nodes: [{ name: `n-${cluster}`, cluster, status: 'Ready' }] }),
+    )
+
+    expect(errors).toEqual([])
   })
 })
