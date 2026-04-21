@@ -161,9 +161,8 @@ async function fetchRealStockData(symbols: string[]): Promise<StockData[]> {
         sparklineData,
         lastUpdated: new Date() }
     })
-  } catch (error) {
-    console.error('Error fetching real stock data:', error)
-    // Fallback to mock data on error
+  } catch {
+    // Fallback to mock data on error (#8816 — silent fallback is the intended UX)
     return generateMockStockData(symbols)
   }
 }
@@ -232,9 +231,8 @@ async function searchStocks(query: string): Promise<StockSearchResult[]> {
         region: q.exchDisp || q.exchange || 'US',
         currency: q.currency || 'USD' }))
       .slice(0, 10)
-  } catch (error) {
-    console.error('Error searching stocks, using fallback:', error)
-    // Fallback to local search when API fails (e.g., CORS issues)
+  } catch {
+    // Fallback to local search when API fails (e.g., CORS issues) — #8816
     const queryLower = query.toLowerCase()
     return COMMON_STOCKS.filter(stock =>
       stock.symbol.toLowerCase().includes(queryLower) ||
@@ -612,8 +610,8 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
       if (results.length > 0) {
         setShowStockDropdown(true)
       }
-    } catch (error) {
-      console.error('Stock search error:', error)
+    } catch {
+      // User-visible toast already surfaces the failure (#8816)
       showToast(t('cards:stockMarket.searchFailed', 'Stock search failed. Please try again.'), 'error')
       setStockSearchResults([])
       setShowStockDropdown(false)

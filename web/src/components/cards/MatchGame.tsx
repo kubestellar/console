@@ -73,8 +73,9 @@ export function MatchGame(_props: CardComponentProps) {
     if (stored) {
       try {
         setHighScores(JSON.parse(stored))
-      } catch (e) {
-        console.error('Failed to load high scores:', e)
+      } catch {
+        // User-visible toast already communicates the failure; no console
+        // noise needed (#8816).
         showToast(t('matchGame.errors.highScoresFailed', 'Could not load high scores.'), 'warning')
       }
     }

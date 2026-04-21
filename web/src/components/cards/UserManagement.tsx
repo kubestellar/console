@@ -277,8 +277,8 @@ export function UserManagement({ config: _config }: UserManagementProps) {
       await updateUserRole(userId, newRole)
       showToast('User role updated successfully', 'success')
       emitUserRoleChanged(newRole)
-    } catch (error) {
-      console.error('Failed to update role:', error)
+    } catch {
+      // User-visible toast already surfaces the failure (#8816)
       showToast('Failed to update user role', 'error')
     }
   }
@@ -289,8 +289,8 @@ export function UserManagement({ config: _config }: UserManagementProps) {
       await deleteUser(userId)
       showToast('User deleted successfully', 'success')
       emitUserRemoved()
-    } catch (error) {
-      console.error('Failed to delete user:', error)
+    } catch {
+      // User-visible toast already surfaces the failure (#8816)
       showToast('Failed to delete user', 'error')
     }
   }

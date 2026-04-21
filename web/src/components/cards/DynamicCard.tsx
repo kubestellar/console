@@ -435,7 +435,7 @@ export function Tier2CardRuntime({ definition, config }: Tier2Props) {
       } catch (err) {
         if (cancelled) return
         const message = err instanceof Error ? err.message : String(err)
-        console.error(`[DynamicCard] Unexpected compile error:`, err)
+        // Message is already surfaced to the user via setError below (#8816)
         setError(`Unexpected error: ${message}`)
         setCompiling(false)
       }
