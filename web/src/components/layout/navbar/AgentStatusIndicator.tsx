@@ -299,7 +299,7 @@ export function AgentStatusIndicator() {
           )}
         >
           <Loader2 className="w-4 h-4 animate-spin" />
-          <span className="text-xs font-medium hidden sm:inline whitespace-nowrap">
+          <span className="text-sm font-medium hidden sm:inline whitespace-nowrap">
             {t('agent.connecting')}
           </span>
         </div>
@@ -318,7 +318,7 @@ export function AgentStatusIndicator() {
         title={pillStyle.title}
       >
         <pillStyle.Icon className="w-4 h-4" />
-        <span className="text-xs font-medium hidden sm:inline whitespace-nowrap">
+        <span className="text-sm font-medium hidden sm:inline whitespace-nowrap">
           {pillStyle.label}
         </span>
         <span
