@@ -193,12 +193,12 @@ function CreateDashboardModalInner({
             </div>
             <div className="flex-1">
               <h3 className="text-sm font-medium text-foreground">
-                {selectedTemplate ? selectedTemplate.name : 'Start with a Card Collection'}
+                {selectedTemplate ? selectedTemplate.name : t('dashboard.create.startWithCollection')}
               </h3>
               <p className="text-xs text-muted-foreground">
                 {selectedTemplate
-                  ? `${selectedTemplate.cards.length} pre-configured cards`
-                  : 'Choose from pre-built card sets'
+                  ? t('dashboard.create.preConfiguredCards', { count: selectedTemplate.cards.length })
+                  : t('dashboard.create.chooseFromCollections')
                 }
               </p>
             </div>
@@ -212,7 +212,7 @@ function CreateDashboardModalInner({
           {/* Collection selection - categorized view */}
           {showTemplates && (
             <div className="ml-14 space-y-2 animate-fade-in max-h-64 overflow-y-auto">
-              <p className="text-xs text-muted-foreground">Select a collection by category:</p>
+              <p className="text-xs text-muted-foreground">{t('dashboard.create.selectByCategoryCollection')}</p>
 
               {TEMPLATE_CATEGORIES.map((category) => {
                 const categoryTemplates = DASHBOARD_TEMPLATES.filter(t => t.category === category.id)
@@ -285,7 +285,7 @@ function CreateDashboardModalInner({
     return (
       <div className="h-full flex flex-col overflow-hidden">
         <div className="flex-1 overflow-y-auto p-4">
-          <p className="text-xs text-muted-foreground mb-4">Name your dashboard and optionally start with a card collection.</p>
+          <p className="text-xs text-muted-foreground mb-4">{t('dashboard.create.descriptionCollection')}</p>
           {formContent}
         </div>
         <div className="border-t border-border px-4 py-3 flex items-center justify-end gap-2">

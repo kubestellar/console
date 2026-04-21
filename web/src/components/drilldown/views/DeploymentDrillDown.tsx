@@ -4,7 +4,7 @@ import { LOCAL_AGENT_WS_URL } from '../../../lib/constants'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { useCanI } from '../../../hooks/usePermissions'
 import { ClusterBadge } from '../../ui/ClusterBadge'
-import { FileText, Code, Info, Tag, Zap, Loader2, Copy, Check, Layers, Server, Box, Minus, Plus } from 'lucide-react'
+import { FileText, Code, Info, Tag, Zap, Loader2, Copy, Check, Layers, Server, Box, Minus, Plus, RefreshCw } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { RETRY_DELAY_MS, UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 import { StatusIndicator } from '../../charts/StatusIndicator'
@@ -15,6 +15,45 @@ import { copyToClipboard } from '../../../lib/clipboard'
 /** Maximum replicas allowed via the UI scale widget. Kubernetes itself supports
  *  up to 2^31-1 but most real deployments won't exceed a few hundred. */
 const MAX_SCALE_REPLICAS = 100
+
+/**
+ * Classify a raw kubectl scale error into a stable i18n key. The caller
+ * runs `t(...)` on the result. Returning a static key literal keeps the
+ * keys compatible with i18next-typescript strict typing (no runtime
+ * template literals inside t()).
+ *
+ * Issue 9284: previously we surfaced the full kubectl stderr, which exposed
+ * internal cluster details (namespaces, group-version-kind, resource versions)
+ * that aren't useful to end users.
+ */
+type ScaleErrorKey =
+  | 'drilldown.scale.failedGeneric'
+  | 'drilldown.scale.failedForbidden'
+  | 'drilldown.scale.failedNotFound'
+  | 'drilldown.scale.failedInvalid'
+  | 'drilldown.scale.failedConflict'
+  | 'drilldown.scale.failedTimeout'
+
+function classifyScaleError(raw: string): ScaleErrorKey {
+  const lc = (raw || '').toLowerCase()
+  if (!raw) return 'drilldown.scale.failedGeneric'
+  if (lc.includes('forbidden') || lc.includes('cannot patch') || lc.includes('unauthorized')) {
+    return 'drilldown.scale.failedForbidden'
+  }
+  if (lc.includes('not found') || lc.includes('notfound')) {
+    return 'drilldown.scale.failedNotFound'
+  }
+  if (lc.includes('invalid') || lc.includes('must be') || lc.includes('out of range')) {
+    return 'drilldown.scale.failedInvalid'
+  }
+  if (lc.includes('conflict') || lc.includes('modified')) {
+    return 'drilldown.scale.failedConflict'
+  }
+  if (lc.includes('timeout') || lc.includes('timed out') || lc.includes('deadline')) {
+    return 'drilldown.scale.failedTimeout'
+  }
+  return 'drilldown.scale.failedGeneric'
+}
 
 interface Props {
   data: Record<string, unknown>
@@ -111,6 +150,9 @@ export function DeploymentDrillDown({ data }: Props) {
   const [canScale, setCanScale] = useState<boolean | null>(null)
   const [isScaling, setIsScaling] = useState(false)
   const [scaleError, setScaleError] = useState<string | null>(null)
+  // Issue 9283: add a Refresh control that clears cached tab outputs and
+  // refetches fresh data from the cluster.
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const { checkPermission } = useCanI()
 
   // Track reason/message from the initial click payload but reconcile with
@@ -320,10 +362,12 @@ export function DeploymentDrillDown({ data }: Props) {
         // Refetch data to get updated status
         setTimeout(fetchData, RETRY_DELAY_MS)
       } else if (output.toLowerCase().includes('error') || output.toLowerCase().includes('forbidden')) {
-        setScaleError(output || 'Failed to scale deployment')
+        // Issue 9284: don't leak raw kubectl stderr — map to a friendly message.
+        setScaleError(t(classifyScaleError(output)))
       }
     } catch (err) {
-      setScaleError(err instanceof Error ? err.message : 'Unknown error')
+      // Issue 9284: don't leak raw stack traces; map through the same helper.
+      setScaleError(t(classifyScaleError(err instanceof Error ? err.message : '')))
     } finally {
       setIsScaling(false)
     }
@@ -332,6 +376,34 @@ export function DeploymentDrillDown({ data }: Props) {
   // Increment/decrement handlers that directly trigger scaling
   const handleDecrement = () => handleScaleTo(replicas - 1)
   const handleIncrement = () => handleScaleTo(replicas + 1)
+
+  // Issue 9283: Refresh all tab data. The per-tab fetchX helpers
+  // (fetchEvents/fetchDescribe/fetchYaml) short-circuit when their cached
+  // output is already set, so bypass them and re-run the kubectl calls
+  // directly, overwriting the cached state at the end.
+  const handleRefreshAll = async () => {
+    if (!agentConnected || isRefreshing) return
+    setIsRefreshing(true)
+    setEventsLoading(true)
+    setDescribeLoading(true)
+    setYamlLoading(true)
+    try {
+      const [, events, describe, yaml] = await Promise.all([
+        fetchData(),
+        runKubectl(['get', 'events', '-n', namespace, '--field-selector', `involvedObject.name=${deploymentName}`, '-o', 'wide']),
+        runKubectl(['describe', 'deployment', deploymentName, '-n', namespace]),
+        runKubectl(['get', 'deployment', deploymentName, '-n', namespace, '-o', 'yaml']),
+      ])
+      setEventsOutput(events)
+      setDescribeOutput(describe)
+      setYamlOutput(yaml)
+    } finally {
+      setEventsLoading(false)
+      setDescribeLoading(false)
+      setYamlLoading(false)
+      setIsRefreshing(false)
+    }
+  }
 
   // Track if we've already loaded data to prevent refetching
   const hasLoadedRef = useRef(false)
@@ -378,7 +450,7 @@ export function DeploymentDrillDown({ data }: Props) {
   return (
     <div className="flex flex-col h-full -m-6">
       {/* Header */}
-      <div className="px-6 pt-6 pb-4">
+      <div className="px-6 pt-6 pb-4 flex items-center justify-between gap-4">
         <div className="flex items-center gap-6 text-sm">
           <button
             onClick={() => drillToNamespace(cluster, namespace)}
@@ -403,6 +475,18 @@ export function DeploymentDrillDown({ data }: Props) {
             </svg>
           </button>
         </div>
+        {/* Issue 9283: Refresh all tabs — Events/Describe/YAML used to cache
+            forever with no way to refetch. */}
+        <button
+          type="button"
+          onClick={handleRefreshAll}
+          disabled={!agentConnected || isRefreshing}
+          title={t('drilldown.deployment.refreshAll')}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-card/50 border border-border text-sm text-foreground hover:bg-card disabled:opacity-50"
+        >
+          <RefreshCw className={cn('w-4 h-4', isRefreshing && 'animate-spin')} />
+          <span>{t('drilldown.deployment.refresh')}</span>
+        </button>
       </div>
 
       {/* Tabs */}

@@ -1196,7 +1196,13 @@
     "searchClusterUsers": "Search cluster users...",
     "searchServiceAccounts": "Search service accounts...",
     "searchConsoleUsers": "Search console users...",
-    "fullName": "Full Name"
+    "fullName": "Full Name",
+    "toast": {
+      "deleteSuccess": "User deleted successfully",
+      "deleteError": "Failed to delete user",
+      "roleUpdateSuccess": "User role updated successfully",
+      "roleUpdateError": "Failed to update user role"
+    }
   },
   "clusterComparison": {
     "selectClusters": "Select Clusters to Compare",
@@ -3788,5 +3794,44 @@
       "warning": "warning",
       "error": "error"
     }
+  },
+  "helmHistoryModal": {
+    "chart": "Chart",
+    "appVersion": "App Version",
+    "updated": "Updated",
+    "cluster": "Cluster",
+    "description": "Description",
+    "notAvailable": "N/A",
+    "currentlyDeployed": "Currently Deployed",
+    "rollbackWithAI": "Rollback with AI Mission",
+    "rollbackDescription": "Rolling back to revision {{revision}} will restore the release to this version. Use an AI Mission to safely execute and verify the rollback."
+  },
+  "gitopsDriftModal": {
+    "kind": "Kind",
+    "driftTypeLabel": "Drift Type",
+    "namespace": "Namespace",
+    "cluster": "Cluster",
+    "gitVersion": "Git Version",
+    "details": "Details",
+    "syncWithAI": "Sync with AI Mission",
+    "contextDescription": "This {{kind}} has drifted from its desired state in Git. Use an AI Mission to investigate the cause and sync it back.",
+    "severityBadge": "{{severity}} severity",
+    "severity": {
+      "high": "high",
+      "medium": "medium",
+      "low": "low"
+    },
+    "driftType": {
+      "modified": "Modified",
+      "deleted": "Missing in Cluster",
+      "added": "Not in Git"
+    }
+  },
+  "policyModal": {
+    "enforcementMode": "Enforcement Mode",
+    "violations": "Violations",
+    "namespaceLabel": "Namespace:",
+    "policyDocumentation": "Policy Documentation",
+    "createSimilar": "Create Similar Policy"
   }
 }

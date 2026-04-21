@@ -1,11 +1,46 @@
-import { useState, useEffect, useRef } from 'react'
-import { Loader2, AlertCircle, Server, Layers, Box } from 'lucide-react'
+import { useState, useEffect, useRef, useMemo } from 'react'
+import { Loader2, AlertCircle, Server, Layers, Box, RefreshCw } from 'lucide-react'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { useTranslation } from 'react-i18next'
 
 interface Props {
   data: Record<string, unknown>
+}
+
+// Issue 9282: Logs drilldown controls (tail lines, Follow, Download, Refresh)
+// were wired to UI but did nothing. Logs are a static mock until a real API
+// lands (TODO in the pre-existing file). This implementation makes the controls
+// behave against the mock data so the UI is consistent with its labels.
+
+/** Simulated refresh spinner duration (ms). Matches the prior visual delay. */
+const REFRESH_SPINNER_MS = 500
+
+/** How often the "follow" tailer appends a new heartbeat line (ms). */
+const FOLLOW_TICK_MS = 1_000
+
+/** Valid tail-line choices. Kept as a named constant rather than a magic array. */
+const TAIL_LINE_OPTIONS = [50, 100, 500, 1000] as const
+
+/** Default tail lines on mount. */
+const DEFAULT_TAIL_LINES = 100
+
+/** Build the seed (static placeholder) log body. Extracted so Refresh can
+ *  regenerate the timestamp and tail slicing can operate on an array. */
+function buildSeedLogLines(pod: string, container: string | undefined, generatedAtISO: string): string[] {
+  const base = new Date(generatedAtISO).getTime()
+  const fmt = (offsetMs: number) => new Date(base + offsetMs).toISOString().replace('T', ' ').slice(0, 19)
+  return [
+    `# Fetching logs for pod: ${pod}`,
+    `# Container: ${container || 'all'}`,
+    `# Generated: ${generatedAtISO}`,
+    `[${fmt(0)}] Starting application...`,
+    `[${fmt(1_000)}] Initializing components...`,
+    `[${fmt(2_000)}] Server listening on port 8080`,
+    `[${fmt(3_000)}] Connected to database`,
+    `[${fmt(4_000)}] Health check passed`,
+    `[${fmt(5_000)}] Ready to accept connections`,
+  ]
 }
 
 export function LogsDrillDown({ data }: Props) {
@@ -16,44 +51,96 @@ export function LogsDrillDown({ data }: Props) {
   const container = data.container as string | undefined
   const { drillToCluster, drillToNamespace, drillToPod } = useDrillDownActions()
   const clusterShort = cluster?.split('/').pop() || cluster
-  const [tailLines, setTailLines] = useState(100)
+  const [tailLines, setTailLines] = useState<number>(DEFAULT_TAIL_LINES)
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error] = useState<string | null>(null)
+  const [follow, setFollow] = useState(false)
+  // Refresh bumps the generatedAt timestamp which regenerates the seed lines
+  // so the user sees that the fetch actually took effect.
+  const [generatedAt, setGeneratedAt] = useState<string>(() => new Date().toISOString())
+  // When follow is on we append heartbeat lines to a running buffer.
+  const [followLines, setFollowLines] = useState<string[]>([])
   const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const followIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const logContainerRef = useRef<HTMLDivElement>(null)
+
+  // Regenerate the seed log block whenever the tail selector changes or the
+  // user clicks Refresh. Memoized so tail slicing is cheap.
+  const seedLines = useMemo(
+    () => buildSeedLogLines(pod, container, generatedAt),
+    [pod, container, generatedAt],
+  )
+
+  // Combined view = seed + follow heartbeats, sliced to the requested tail.
+  const visibleLogLines = useMemo(() => {
+    const all = [...seedLines, ...followLines]
+    if (tailLines >= all.length) return all
+    return all.slice(all.length - tailLines)
+  }, [seedLines, followLines, tailLines])
+
+  const visibleLog = visibleLogLines.join('\n')
 
   useEffect(() => {
     return () => {
       if (refreshTimeoutRef.current !== null) clearTimeout(refreshTimeoutRef.current)
+      if (followIntervalRef.current !== null) clearInterval(followIntervalRef.current)
     }
   }, [])
 
-  // In a real implementation, this would fetch logs from the API
-  // For now, show a placeholder with the log fetch parameters
-  const mockLogs = `Fetching logs for pod: ${pod}
-Container: ${container || 'all'}
-Tail lines: ${tailLines}
+  // Follow mode: append a synthetic heartbeat line every FOLLOW_TICK_MS and
+  // auto-scroll to the bottom. Stops when follow is toggled off.
+  useEffect(() => {
+    if (!follow) {
+      if (followIntervalRef.current !== null) {
+        clearInterval(followIntervalRef.current)
+        followIntervalRef.current = null
+      }
+      return
+    }
+    followIntervalRef.current = setInterval(() => {
+      setFollowLines((prev) => {
+        const ts = new Date().toISOString().replace('T', ' ').slice(0, 19)
+        return [...prev, `[${ts}] (heartbeat)`]
+      })
+    }, FOLLOW_TICK_MS)
+    return () => {
+      if (followIntervalRef.current !== null) {
+        clearInterval(followIntervalRef.current)
+        followIntervalRef.current = null
+      }
+    }
+  }, [follow])
 
-[2024-01-16 10:00:00] Starting application...
-[2024-01-16 10:00:01] Initializing components...
-[2024-01-16 10:00:02] Server listening on port 8080
-[2024-01-16 10:00:03] Connected to database
-[2024-01-16 10:00:04] Health check passed
-[2024-01-16 10:00:05] Ready to accept connections
-
-Note: Live log streaming coming soon.
-Connect to kubestellar-ops MCP server to fetch real logs.`
-
-  // TODO: When real API is added, replace this with actual fetch logic.
-  // Currently logs are static placeholder text — no loading/error state needed.
+  // Auto-scroll when follow is on and new lines arrive.
+  useEffect(() => {
+    if (!follow) return
+    const el = logContainerRef.current
+    if (el) el.scrollTop = el.scrollHeight
+  }, [follow, followLines])
 
   const handleRefresh = () => {
-    // Placeholder for future API refresh
     setIsLoading(true)
-    setError(null)
     if (refreshTimeoutRef.current !== null) clearTimeout(refreshTimeoutRef.current)
     refreshTimeoutRef.current = setTimeout(() => {
+      // Bump the timestamp so seedLines regenerates with a new time,
+      // giving visible feedback that Refresh did something.
+      setGeneratedAt(new Date().toISOString())
+      setFollowLines([])
       setIsLoading(false)
-    }, 500)
+    }, REFRESH_SPINNER_MS)
+  }
+
+  const handleDownload = () => {
+    // Build a blob from the currently-visible log view and trigger a download.
+    const blob = new Blob([visibleLog], { type: 'text/plain;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${pod || 'pod'}${container ? '-' + container : ''}-logs.txt`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
   }
 
   return (
@@ -100,30 +187,52 @@ Connect to kubestellar-ops MCP server to fetch real logs.`
             onChange={(e) => setTailLines(Number(e.target.value))}
             disabled={isLoading}
             className="px-3 py-2 rounded-lg bg-card/50 border border-border text-foreground text-sm disabled:opacity-50"
+            aria-label={t('drilldown.logs.tailLinesLabel')}
           >
-            <option value={50}>Last 50 lines</option>
-            <option value={100}>Last 100 lines</option>
-            <option value={500}>Last 500 lines</option>
-            <option value={1000}>Last 1000 lines</option>
+            {TAIL_LINE_OPTIONS.map((n) => (
+              <option key={n} value={n}>{t('drilldown.logs.tailLinesOption', { count: n })}</option>
+            ))}
           </select>
           <label className="flex items-center gap-2 text-sm text-muted-foreground">
-            <input type="checkbox" className="rounded" disabled={isLoading} />
-            Follow logs
+            <input
+              type="checkbox"
+              className="rounded"
+              disabled={isLoading}
+              checked={follow}
+              onChange={(e) => setFollow(e.target.checked)}
+              aria-label={t('drilldown.logs.followLogs')}
+            />
+            {t('drilldown.logs.followLogs')}
           </label>
         </div>
         <div className="flex items-center gap-2">
-          <button className="px-3 py-2 rounded-lg bg-card/50 border border-border text-sm text-foreground hover:bg-card disabled:opacity-50" disabled={isLoading}>
-            Download
+          <button
+            type="button"
+            onClick={handleDownload}
+            disabled={isLoading || visibleLogLines.length === 0}
+            className="px-3 py-2 rounded-lg bg-card/50 border border-border text-sm text-foreground hover:bg-card disabled:opacity-50"
+          >
+            {t('drilldown.logs.download')}
           </button>
-          <button 
+          <button
+            type="button"
             onClick={handleRefresh}
             disabled={isLoading}
             className="px-3 py-2 rounded-lg bg-primary text-primary-foreground text-sm flex items-center gap-2 disabled:opacity-50"
           >
-            {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-            Refresh
+            {isLoading
+              ? <Loader2 className="w-4 h-4 animate-spin" />
+              : <RefreshCw className="w-4 h-4" />}
+            {t('drilldown.logs.refresh')}
           </button>
         </div>
+      </div>
+
+      {/* Tail / generation summary so users can see changes took effect. */}
+      <div className="text-xs text-muted-foreground">
+        {t('drilldown.logs.showing', { lines: visibleLogLines.length, tail: tailLines })}
+        {' · '}
+        {t('drilldown.logs.generatedAt', { time: new Date(generatedAt).toLocaleTimeString() })}
       </div>
 
       {/* Error State */}
@@ -131,7 +240,7 @@ Connect to kubestellar-ops MCP server to fetch real logs.`
         <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 flex items-center gap-2">
           <AlertCircle className="w-5 h-5" />
           <div>
-            <div className="font-medium">Failed to load logs</div>
+            <div className="font-medium">{t('drilldown.logs.failedToLoad')}</div>
             <div className="text-sm text-muted-foreground">{error}</div>
           </div>
         </div>
@@ -141,15 +250,26 @@ Connect to kubestellar-ops MCP server to fetch real logs.`
       {isLoading && (
         <div className="flex items-center justify-center p-8">
           <Loader2 className="w-6 h-6 animate-spin text-blue-400" />
-          <span className="ml-2 text-muted-foreground">Loading logs...</span>
+          <span className="ml-2 text-muted-foreground">{t('drilldown.logs.loadingLogs')}</span>
         </div>
       )}
 
       {/* Log Output */}
       {!isLoading && !error && (
-        <div className="rounded-lg bg-black/50 border border-border p-4 font-mono text-sm overflow-x-auto">
-          <pre className="text-green-400 whitespace-pre-wrap">{mockLogs}</pre>
+        <div
+          ref={logContainerRef}
+          className="rounded-lg bg-black/50 border border-border p-4 font-mono text-sm overflow-auto max-h-[60vh]"
+        >
+          <pre className="text-green-400 whitespace-pre-wrap">{visibleLog}</pre>
         </div>
+      )}
+
+      {/* Informational footer: logs are static mock data until the real log
+          streaming API lands. Retain the "coming soon" hint. */}
+      {!isLoading && !error && (
+        <p className="text-xs text-muted-foreground italic">
+          {t('drilldown.logs.mockNotice')}
+        </p>
       )}
     </div>
   )

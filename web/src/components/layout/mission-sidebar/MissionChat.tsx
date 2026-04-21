@@ -92,6 +92,10 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
     setEditDescription(mission.description)
     setEditSteps((mission.importedFrom?.steps || []).map(s => ({ title: s.title, description: s.description })))
     setIsEditingMission(false)
+    // Issue 9284: clear the input validation error (too-long messages, etc.)
+    // when switching missions — the old error bled into the new mission
+    // context and looked stale.
+    setInputError(null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mission.id])
 

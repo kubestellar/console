@@ -7,6 +7,7 @@
 
 import { useRef, useEffect } from 'react'
 import { RotateCcw, Rocket } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { BaseModal } from '../../../lib/modals/BaseModal'
 import { StatusBadge } from '../../ui/StatusBadge'
 import { useMissions } from '../../../hooks/useMissions'
@@ -36,6 +37,7 @@ export function HelmHistoryDetailModal({
   isOpen, onClose, entry, releaseName, clusterName, namespace, currentRevision }: HelmHistoryDetailModalProps) {
   const openTimeRef = useRef<number>(0)
   const { startMission, openSidebar } = useMissions()
+  const { t, i18n } = useTranslation(['cards', 'common'])
 
   useEffect(() => {
     if (isOpen && entry) {
@@ -90,7 +92,9 @@ Please proceed step by step.`,
   const isCurrent = entry.status === 'deployed'
   const formatDate = (timestamp: string) => {
     const date = new Date(timestamp)
-    return date.toLocaleDateString('en-US', {
+    // Issue 9285: use the active i18n locale so dates match the user's
+    // language (previously hardcoded to en-US).
+    return date.toLocaleDateString(i18n.language, {
       month: 'short', day: 'numeric', year: 'numeric',
       hour: '2-digit', minute: '2-digit' })
   }
@@ -109,22 +113,22 @@ Please proceed step by step.`,
       />
       <BaseModal.Content>
         <div className="space-y-4">
-          {/* Revision info grid */}
+          {/* Revision info grid — Issue 9285: labels now i18n */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <h4 className="text-xs font-medium text-muted-foreground mb-1">Chart</h4>
+              <h4 className="text-xs font-medium text-muted-foreground mb-1">{t('cards:helmHistoryModal.chart')}</h4>
               <span className="text-sm font-medium text-foreground">{entry.chart}</span>
             </div>
             <div>
-              <h4 className="text-xs font-medium text-muted-foreground mb-1">App Version</h4>
-              <span className="text-sm text-foreground">{entry.app_version || 'N/A'}</span>
+              <h4 className="text-xs font-medium text-muted-foreground mb-1">{t('cards:helmHistoryModal.appVersion')}</h4>
+              <span className="text-sm text-foreground">{entry.app_version || t('cards:helmHistoryModal.notAvailable')}</span>
             </div>
             <div>
-              <h4 className="text-xs font-medium text-muted-foreground mb-1">Updated</h4>
+              <h4 className="text-xs font-medium text-muted-foreground mb-1">{t('cards:helmHistoryModal.updated')}</h4>
               <span className="text-sm text-foreground">{formatDate(entry.updated)}</span>
             </div>
             <div>
-              <h4 className="text-xs font-medium text-muted-foreground mb-1">Cluster</h4>
+              <h4 className="text-xs font-medium text-muted-foreground mb-1">{t('cards:helmHistoryModal.cluster')}</h4>
               <span className="text-sm text-foreground">{clusterName}</span>
             </div>
           </div>
@@ -132,7 +136,7 @@ Please proceed step by step.`,
           {/* Description */}
           {entry.description && (
             <div>
-              <h4 className="text-xs font-medium text-muted-foreground mb-1">Description</h4>
+              <h4 className="text-xs font-medium text-muted-foreground mb-1">{t('cards:helmHistoryModal.description')}</h4>
               <div className="bg-secondary/30 rounded-lg p-3">
                 <p className="text-xs text-foreground">{entry.description}</p>
               </div>
@@ -142,7 +146,7 @@ Please proceed step by step.`,
           {/* Current badge */}
           {isCurrent && (
             <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 text-center">
-              <span className="text-sm font-medium text-green-400">Currently Deployed</span>
+              <span className="text-sm font-medium text-green-400">{t('cards:helmHistoryModal.currentlyDeployed')}</span>
             </div>
           )}
 
@@ -151,8 +155,7 @@ Please proceed step by step.`,
             <>
               <div className="bg-secondary/30 rounded-lg p-3">
                 <p className="text-xs text-muted-foreground">
-                  Rolling back to revision {entry.revision} will restore the release to this version.
-                  Use an AI Mission to safely execute and verify the rollback.
+                  {t('cards:helmHistoryModal.rollbackDescription', { revision: entry.revision })}
                 </p>
               </div>
               <button
@@ -160,7 +163,7 @@ Please proceed step by step.`,
                 className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 hover:bg-blue-500/20 transition-colors text-sm"
               >
                 <Rocket className="w-4 h-4" />
-                Rollback with AI Mission
+                {t('cards:helmHistoryModal.rollbackWithAI')}
               </button>
             </>
           )}

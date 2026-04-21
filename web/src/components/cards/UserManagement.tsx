@@ -275,23 +275,29 @@ export function UserManagement({ config: _config }: UserManagementProps) {
   const handleRoleChange = async (userId: string, newRole: UserRole) => {
     try {
       await updateUserRole(userId, newRole)
-      showToast('User role updated successfully', 'success')
+      // Issue 9285: route toast text through i18n so non-English users see
+      // the message translated (previously hardcoded English).
+      showToast(t('userManagement.toast.roleUpdateSuccess'), 'success')
       emitUserRoleChanged(newRole)
     } catch {
       // User-visible toast already surfaces the failure (#8816)
-      showToast('Failed to update user role', 'error')
+      showToast(t('userManagement.toast.roleUpdateError'), 'error')
     }
   }
 
+  // Issue 9284: the ConsoleUsersTab already wraps this handler in a
+  // ConfirmDialog (the app-styled modal). The extra window.confirm() call
+  // here caused a double-confirm flow AND fell back to a native browser
+  // popup that's blockable. Rely on the dialog-based confirmation.
   const handleDeleteUser = async (userId: string) => {
-    if (!confirm(t('userManagement.confirmDelete'))) return
     try {
       await deleteUser(userId)
-      showToast('User deleted successfully', 'success')
+      // Issue 9285: i18n for success/error toasts.
+      showToast(t('userManagement.toast.deleteSuccess'), 'success')
       emitUserRemoved()
     } catch {
       // User-visible toast already surfaces the failure (#8816)
-      showToast('Failed to delete user', 'error')
+      showToast(t('userManagement.toast.deleteError'), 'error')
     }
   }
 

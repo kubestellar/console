@@ -949,6 +949,9 @@
       "preConfiguredCards_one": "{{count}} pre-configured card",
       "preConfiguredCards_other": "{{count}} pre-configured cards",
       "selectByCategory": "Select a template by category:",
+      "selectByCategoryCollection": "Select a collection by category:",
+      "startWithCollection": "Start with a Card Collection",
+      "chooseFromCollections": "Choose from pre-built card sets",
       "cards": "cards",
       "creating": "Creating...",
       "nameRequired": "Dashboard name is required",
@@ -2336,7 +2339,31 @@
       "alreadyAtMinimum": "Already at minimum (0 replicas)",
       "maximumReplicas": "Maximum is 10 replicas",
       "noPermission": "No permission to scale deployments in this namespace",
-      "scaleHint": "Click +/- to scale (0-10 replicas)"
+      "scaleHint": "Click +/- to scale (0-10 replicas)",
+      "failedGeneric": "Unable to scale deployment",
+      "failedForbidden": "You don't have permission to scale this deployment",
+      "failedNotFound": "Deployment not found — it may have been deleted",
+      "failedInvalid": "Invalid replica count",
+      "failedConflict": "Deployment was changed by someone else — please retry",
+      "failedTimeout": "The cluster didn't respond in time — please retry"
+    },
+    "logs": {
+      "followLogs": "Follow logs",
+      "download": "Download",
+      "refresh": "Refresh",
+      "loadingLogs": "Loading logs...",
+      "failedToLoad": "Failed to load logs",
+      "tailLinesLabel": "Tail lines",
+      "tailLinesOption": "Last {{count}} lines",
+      "tailLinesOption_one": "Last {{count}} line",
+      "tailLinesOption_other": "Last {{count}} lines",
+      "showing": "Showing {{lines}} of last {{tail}} lines",
+      "generatedAt": "Generated at {{time}}",
+      "mockNotice": "Live log streaming is not yet available — showing placeholder content. Connect the local agent to stream real logs when available."
+    },
+    "deployment": {
+      "refresh": "Refresh",
+      "refreshAll": "Refresh all tabs"
     },
     "node": {
       "nodeIssueDetected": "Node Issue Detected",

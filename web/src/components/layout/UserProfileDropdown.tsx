@@ -53,6 +53,9 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
     i18n.changeLanguage(langCode)
     emitLanguageChanged(langCode)
     setShowLanguageSubmenu(false)
+    // Issue 9284: close the outer profile dropdown after a language is picked
+    // so the user doesn't have to click again to dismiss it.
+    closeDropdown()
   }
 
   const handleLinkedInShare = () => {
