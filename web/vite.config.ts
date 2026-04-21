@@ -283,6 +283,7 @@ export default defineConfig(({ mode }) => ({
         '**/*.test.{ts,tsx}',
         '**/*.spec.{ts,tsx}',
         '**/*.d.ts',
+        '**/*.md',
         '**/demo*Data*.{ts,tsx}',
         '**/icons.{ts,tsx}',
       ],
