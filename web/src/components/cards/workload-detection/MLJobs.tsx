@@ -75,7 +75,7 @@ export function MLJobs({ config: _config }: MLJobsProps) {
       case 'queued':
         return <StatusBadge color="yellow" icon={<Clock className="w-2.5 h-2.5" />}>Queued</StatusBadge>
       case 'completed':
-        return <StatusBadge color="blue" icon={<CheckCircle className="w-2.5 h-2.5" />}>Done</StatusBadge>
+        return <StatusBadge color="blue" icon={<CheckCircle className="w-2.5 h-2.5" />}>Completed</StatusBadge>
       case 'failed':
         return <StatusBadge color="red" icon={<XCircle className="w-2.5 h-2.5" />}>Failed</StatusBadge>
       default:
@@ -104,7 +104,7 @@ export function MLJobs({ config: _config }: MLJobsProps) {
               {filters.localClusterFilter.length}/{filters.availableClusters.length}
             </span>
           )}
-          <StatusBadge color="yellow">
+          <StatusBadge color="green">
             {jobs.filter(j => j.status === 'running').length} running
           </StatusBadge>
         </div>
@@ -146,7 +146,7 @@ export function MLJobs({ config: _config }: MLJobsProps) {
           <p className="text-yellow-400 font-medium">ML Job Detection</p>
           <p className="text-muted-foreground">
             Auto-detects Kubeflow, Ray, and custom ML training jobs.{' '}
-            <a href="https://www.kubeflow.org/docs/started/installing-kubeflow/" target="_blank" rel="noopener noreferrer" className="text-yellow-400 hover:underline inline-block py-2">
+            <a href="https://www.kubeflow.org/docs/started/installing-kubeflow/" target="_blank" rel="noopener noreferrer" className="text-yellow-400 hover:underline inline">
               Kubeflow docs <ExternalLink className="w-3 h-3 inline" />
             </a>
           </p>

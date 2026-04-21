@@ -113,7 +113,7 @@ export function MLNotebooks({ config: _config }: MLNotebooksProps) {
           <p className="text-blue-400 font-medium">{t('cards:mlNotebooks.notebookDetection')}</p>
           <p className="text-muted-foreground">
             {t('cards:mlNotebooks.notebookDetectionDescription')}{' '}
-            <a href="https://jupyterhub.readthedocs.io/en/stable/getting-started/index.html" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline inline-block py-2">
+            <a href="https://jupyterhub.readthedocs.io/en/stable/getting-started/index.html" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline inline">
               JupyterHub docs <ExternalLink className="w-3 h-3 inline" />
             </a>
           </p>
