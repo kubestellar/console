@@ -49,6 +49,14 @@ afterEach(() => {
 // ── isAutomatedEnvironment ──────────────────────────────────────────────────
 
 describe('isAutomatedEnvironment', () => {
+  beforeEach(() => {
+    // JSDOM lacks plugins and languages by default — simulate a real browser
+    Object.defineProperty(navigator, 'plugins', { value: { length: 1 }, configurable: true, writable: true })
+    Object.defineProperty(navigator, 'languages', { value: ['en-US'], configurable: true, writable: true })
+    Object.defineProperty(navigator, 'userAgent', { value: 'Chrome/120', configurable: true })
+    Object.defineProperty(navigator, 'webdriver', { value: false, configurable: true })
+  })
+
   it('returns false for a normal browser environment', () => {
     expect(isAutomatedEnvironment()).toBe(false)
   })

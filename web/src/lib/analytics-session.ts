@@ -242,6 +242,10 @@ export function getAndResetEngagementMs(): number {
 export function resetSessionEngagement() {
   sessionEngagementMs = 0
   sessionPageViewCount = 0
+  accumulatedEngagementMs = 0
+  engagementStartMs = 0
+  lastInteractionMs = 0
+  isUserActive = false
 }
 
 /** Increment the page view counter */
@@ -306,6 +310,7 @@ export function getUtmParams(): UtmParams {
  * Only used by analytics-core.ts — prefer captureUtmParams() from analytics.ts.
  */
 export function _loadUtmParams(): UtmParams | null {
+  utmParams = {}
   const params = new URLSearchParams(window.location.search)
   const utmKeys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content']
   for (const key of utmKeys) {

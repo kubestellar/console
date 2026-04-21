@@ -284,8 +284,8 @@ describe('saveUnreadMissionIds', () => {
 // ── mergeMissions ───────────────────────────────────────────────────────────
 
 describe('mergeMissions', () => {
-  it('returns prev missions when reloaded is empty', () => {
-    const prev = [makeMission({ status: 'completed', id: 'a' })]
+  it('keeps active prev missions when reloaded is empty', () => {
+    const prev = [makeMission({ status: 'running', id: 'a' })]
     const result = mergeMissions(prev, [])
     expect(result).toHaveLength(1)
   })
