@@ -271,8 +271,12 @@ describe('useFeatureRequests', () => {
     localStorage.setItem('kc-auth-token', 'real-jwt-token')
     vi.mocked(api.get).mockResolvedValue({ data: [] })
 
-    // Use a deferred promise so we can inspect isSubmitting mid-flight
-    let resolvePost!: (val: { data: unknown }) => void
+    // Use a deferred promise so we can inspect isSubmitting mid-flight.
+    // Issue 9246: `createRequest` awaits a dynamic `import('../lib/clientCtx')`
+    // before calling `api.post`, so the mock (and therefore `resolvePost`) is
+    // not assigned synchronously. We must wait for `api.post` to have been
+    // invoked before asserting in-flight state and resolving it.
+    let resolvePost: ((val: { data: unknown }) => void) | undefined
     vi.mocked(api.post).mockImplementation(() =>
       new Promise(resolve => { resolvePost = resolve })
     )
@@ -287,12 +291,14 @@ describe('useFeatureRequests', () => {
       createPromise = result.current.createRequest({ title: 'T', description: 'd', request_type: 'feature' })
     })
 
-    // isSubmitting should be true while the promise is pending
-    expect(result.current.isSubmitting).toBe(true)
+    // Wait for the dynamic-import chain to reach `api.post` so `resolvePost`
+    // is assigned and the hook has committed `isSubmitting = true`.
+    await waitFor(() => expect(api.post).toHaveBeenCalled())
+    await waitFor(() => expect(result.current.isSubmitting).toBe(true))
 
     // Resolve the API call
     await act(async () => {
-      resolvePost({ data: { id: 'new1', title: 'T', description: 'd', request_type: 'feature', user_id: 'u1', status: 'open', created_at: '2024-01-01' } })
+      resolvePost!({ data: { id: 'new1', title: 'T', description: 'd', request_type: 'feature', user_id: 'u1', status: 'open', created_at: '2024-01-01' } })
       await createPromise!
     })
     expect(result.current.isSubmitting).toBe(false)

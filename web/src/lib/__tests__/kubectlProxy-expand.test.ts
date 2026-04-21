@@ -95,20 +95,59 @@ beforeEach(() => {
   // Reset the KubectlProxy singleton state
   kubectlProxy.close()
   // Force-reset private fields that persist across close() calls to prevent
-  // state leaking between tests (cooldown, connection flags, pending requests).
+  // state leaking between tests (cooldown, connection flags, pending requests,
+  // lingering connectPromise from prior test's in-flight connect).
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const proxy = kubectlProxy as any
   proxy.lastConnectionFailureAt = 0
   proxy.isConnecting = false
   proxy.messageId = 0
   proxy.pendingRequests.clear()
+  proxy.connectPromise = null
+  proxy.requestQueue = []
+  proxy.activeRequests = 0
 })
 
 afterEach(() => {
+  // Issue 9246: clear all pending fake timers BEFORE restoring real timers.
+  // The kubectlProxy schedules WS connect timeouts (2500ms) and per-request
+  // timeouts (up to 10_000ms+). If those fire after the test body completes
+  // but before teardown, they reject promises that no test is awaiting,
+  // which vitest surfaces as "Unhandled Rejection" warnings. Clearing
+  // timers and pending requests here prevents that cross-test bleed.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const proxy = kubectlProxy as any
+  proxy.pendingRequests.forEach((pending: { timeout: ReturnType<typeof setTimeout> }) => {
+    clearTimeout(pending.timeout)
+  })
+  proxy.pendingRequests.clear()
+  proxy.requestQueue = []
+  vi.clearAllTimers()
   vi.useRealTimers()
   vi.restoreAllMocks()
   kubectlProxy.close()
 })
+
+// ---------------------------------------------------------------------------
+// Test helpers
+// ---------------------------------------------------------------------------
+
+// Issue 9246: after `kubectlProxy.exec(...)` is called, the FakeWebSocket is
+// not constructed synchronously — `ensureConnected` awaits an async
+// `resolveWebSocketURL()` (which can include a `fetch('/health')` probe).
+// Tests that need to drive the fake socket must wait for it to become
+// non-null before triggering events. Flushing microtasks by advancing fake
+// timers repeatedly (in zero-length steps) settles the promise chain without
+// firing any user-relevant timer.
+const MAX_WS_WAIT_ITERATIONS = 20
+
+async function waitForActiveWs(): Promise<FakeWebSocket> {
+  for (let i = 0; i < MAX_WS_WAIT_ITERATIONS; i++) {
+    if (activeWs) return activeWs
+    await vi.advanceTimersByTimeAsync(0)
+  }
+  throw new Error('FakeWebSocket was not constructed in time')
+}
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -146,80 +185,104 @@ describe('KubectlProxy — expanded edge cases', () => {
 
   // 5. WebSocket connection timeout
   it('rejects on connection timeout', async () => {
+    const PAST_CONNECT_TIMEOUT_MS = 3000 // > WS_CONNECT_TIMEOUT_MS (2500)
     const promise = kubectlProxy.exec(['get', 'pods'])
+    // Issue 9246: attach a synchronous .catch to mark the promise as having
+    // a handler BEFORE advancing fake timers. Without this, the timer fires
+    // the rejection inside a setTimeout callback and node flags it as
+    // "unhandled" before the later `await expect(...).rejects` subscribes —
+    // which vitest surfaces as an unhandled error (non-zero exit code).
+    const handled = promise.catch((e) => e)
     // Don't trigger open — let it time out
-    await vi.advanceTimersByTimeAsync(3000) // Past the 2500ms timeout
+    await vi.advanceTimersByTimeAsync(PAST_CONNECT_TIMEOUT_MS)
     await expect(promise).rejects.toThrow('timeout')
+    await handled
   })
 
   // 6. WebSocket error during connection
   it('rejects on WebSocket error during connection', async () => {
     const promise = kubectlProxy.exec(['get', 'pods'])
-    // Trigger error before open
-    if (activeWs) activeWs.triggerError()
+    // Issue 9246: wait for the FakeWebSocket to be constructed before
+    // triggering the error — previously this used `if (activeWs)` and
+    // silently no-op'd when the socket hadn't been created yet, causing
+    // the test to time out on connection instead of observing the error.
+    const ws = await waitForActiveWs()
+    ws.triggerError()
     await expect(promise).rejects.toThrow('connect to local agent')
   })
 
   // 7. Priority requests bypass the queue
   it('priority requests bypass the queue', async () => {
-    // Open connection first
+    // Open connection first — a priority: true exec should take the
+    // execImmediate path (bypassing the queue) and, absent a server
+    // response, reject with the per-request timeout message.
+    const REQUEST_TIMEOUT_PAST_MS = 11_000 // Past KUBECTL_DEFAULT_TIMEOUT_MS (10_000)
     const connectPromise = kubectlProxy.exec(['get', 'pods'], { priority: true })
-    if (activeWs) {
-      activeWs.triggerOpen()
-      // Need to respond to the message
-      setTimeout(() => {
-        if (activeWs) {
-          const _sentData = vi.spyOn(activeWs, 'send')
-          // The request is already sent, respond to it
-        }
-      }, 0)
-    }
-    // This tests the code path, the actual assertion is that it doesn't crash
-    await vi.advanceTimersByTimeAsync(11_000) // Past the default timeout
+    // Issue 9246: eager .catch so the rejection is marked handled the
+    // instant the request-timeout setTimeout fires (see test 5 comment).
+    const handled = connectPromise.catch((e) => e)
+    // Issue 9246: await socket construction before triggering open so the
+    // connection actually resolves and the request is sent.
+    const ws = await waitForActiveWs()
+    ws.triggerOpen()
+    await vi.advanceTimersByTimeAsync(REQUEST_TIMEOUT_PAST_MS)
     await expect(connectPromise).rejects.toThrow('timed out')
+    await handled
   })
 
   // 8. Request timeout rejection
   it('rejects individual requests that time out', async () => {
-    const promise = kubectlProxy.exec(['get', 'pods'], { timeout: 500, priority: true })
-    if (activeWs) activeWs.triggerOpen()
-    await vi.advanceTimersByTimeAsync(600)
+    const REQUEST_TIMEOUT_MS = 500
+    const WAIT_PAST_TIMEOUT_MS = 600 // > REQUEST_TIMEOUT_MS to trip the per-request timeout
+    const promise = kubectlProxy.exec(['get', 'pods'], { timeout: REQUEST_TIMEOUT_MS, priority: true })
+    // Issue 9246: eager .catch so the rejection is marked handled the
+    // instant the request-timeout setTimeout fires (see test 5 comment).
+    const handled = promise.catch((e) => e)
+    // Issue 9246: await socket construction before opening — otherwise the
+    // connection times out (at WS_CONNECT_TIMEOUT_MS=2500) before the
+    // per-request timeout can ever fire.
+    const ws = await waitForActiveWs()
+    ws.triggerOpen()
+    await vi.advanceTimersByTimeAsync(WAIT_PAST_TIMEOUT_MS)
     await expect(promise).rejects.toThrow('timed out')
+    await handled
   })
 
   // 9. getPodIssues parses CrashLoopBackOff
   it('getPodIssues detects CrashLoopBackOff pods', async () => {
     // Set up connected WS that responds
+    const CRASH_RESTART_COUNT = 10
     const execPromise = kubectlProxy.exec(['get', 'pods', '-A', '-o', 'json'], { priority: true })
-    if (activeWs) {
-      const ws = activeWs
-      const origSend = ws.send.bind(ws)
-      ws.send = function(data: string) {
-        origSend(data)
-        const msg = JSON.parse(data)
-        const response = {
-          id: msg.id,
-          type: 'result',
-          payload: {
-            exitCode: 0,
-            output: JSON.stringify({
-              items: [{
-                metadata: { name: 'crash-pod', namespace: 'default' },
-                status: {
-                  phase: 'Running',
-                  containerStatuses: [{
-                    restartCount: 10,
-                    state: { waiting: { reason: 'CrashLoopBackOff' } },
-                  }],
-                },
-              }],
-            }),
-          },
-        }
-        setTimeout(() => ws.triggerMessage(response), 0)
+    // Issue 9246: await socket construction before wiring up the `send`
+    // spy — previously `if (activeWs)` was false at this point, so the
+    // spy was never attached and the test timed out waiting for a response.
+    const ws = await waitForActiveWs()
+    const origSend = ws.send.bind(ws)
+    ws.send = function(data: string) {
+      origSend(data)
+      const msg = JSON.parse(data)
+      const response = {
+        id: msg.id,
+        type: 'result',
+        payload: {
+          exitCode: 0,
+          output: JSON.stringify({
+            items: [{
+              metadata: { name: 'crash-pod', namespace: 'default' },
+              status: {
+                phase: 'Running',
+                containerStatuses: [{
+                  restartCount: CRASH_RESTART_COUNT,
+                  state: { waiting: { reason: 'CrashLoopBackOff' } },
+                }],
+              },
+            }],
+          }),
+        },
       }
-      ws.triggerOpen()
+      setTimeout(() => ws.triggerMessage(response), 0)
     }
+    ws.triggerOpen()
     const result = await execPromise
     expect(result.exitCode).toBe(0)
     const data = JSON.parse(result.output)
@@ -264,12 +327,14 @@ describe('KubectlProxy — expanded edge cases', () => {
   it('rejects all pending requests on connection close', async () => {
     // Open connection
     const p1 = kubectlProxy.exec(['get', 'pods'], { priority: true })
-    if (activeWs) {
-      activeWs.triggerOpen()
-      // Close immediately after open — by the time execImmediate proceeds
-      // (microtask), the WS is already null so it throws 'Not connected'
-      activeWs.close()
-    }
+    // Issue 9246: await socket construction; previously the `if (activeWs)`
+    // branch was skipped and the promise rejected with the connection
+    // timeout instead of the expected 'Not connected' path.
+    const ws = await waitForActiveWs()
+    ws.triggerOpen()
+    // Close immediately after open — by the time execImmediate proceeds
+    // (microtask), the WS is already null so it throws 'Not connected'
+    ws.close()
     await expect(p1).rejects.toThrow('Not connected')
   })
 })

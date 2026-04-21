@@ -317,7 +317,11 @@ describe('useKagentBackend', () => {
     localStorage.setItem('kc_agent_backend_preference', 'kagent')
     setupBothUnavailable()
     const { result, unmount } = renderHook(() => useKagentBackend())
-    await waitFor(() => expect(mockFetchKagentStatus).toHaveBeenCalled())
+    // Issue 9246: `activeBackend` starts equal to `preferredBackend` and only
+    // snaps to 'kc-agent' after `hasPolled` flips true. Waiting for the mock
+    // to have been CALLED is insufficient — the state commit happens in a
+    // later microtask. Wait for `hasPolled` (or the final value) instead.
+    await waitFor(() => expect(result.current.hasPolled).toBe(true))
     expect(result.current.activeBackend).toBe('kc-agent')
     unmount()
   })
@@ -335,7 +339,9 @@ describe('useKagentBackend', () => {
     localStorage.setItem('kc_agent_backend_preference', 'kagenti')
     setupBothUnavailable()
     const { result, unmount } = renderHook(() => useKagentBackend())
-    await waitFor(() => expect(mockFetchKagentStatus).toHaveBeenCalled())
+    // Issue 9246: same race as the 'kagent' fallback test above — wait for
+    // `hasPolled` instead of the mock call, so `activeBackend` has settled.
+    await waitFor(() => expect(result.current.hasPolled).toBe(true))
     expect(result.current.activeBackend).toBe('kc-agent')
     unmount()
   })
