@@ -22,7 +22,7 @@
  *                             QueryConfigModal, ConnectionsModal, RowDetailDrawer
  *   DrasiStreamSamples.tsx  — StreamSampleDrawer, STREAM_SAMPLES
  */
-import React, { useState, useEffect, useMemo, useCallback, useRef, useLayoutEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef, useLayoutEffect } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import { Search, Plus, Settings, Rocket, Code2, Zap, Server } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'

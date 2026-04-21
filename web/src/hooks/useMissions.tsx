@@ -17,13 +17,12 @@ export type {
 } from './useMissionTypes'
 export { INACTIVE_MISSION_STATUSES, isActiveMission } from './useMissionTypes'
 import type {
-  MissionStatus, Mission, MissionMessage, MissionFeedback, MatchedResolution,
+  MissionStatus, Mission, MissionMessage, MissionFeedback,
   StartMissionParams, PendingReviewEntry, SaveMissionParams, SavedMissionUpdates,
 } from './useMissionTypes'
-import { INACTIVE_MISSION_STATUSES } from './useMissionTypes'
 import {
-  MISSIONS_STORAGE_KEY, CROSS_TAB_ECHO_IGNORE_MS, UNREAD_MISSIONS_KEY,
-  SELECTED_AGENT_KEY, KAGENTI_SELECTED_AGENT_KEY,
+  MISSIONS_STORAGE_KEY, CROSS_TAB_ECHO_IGNORE_MS,
+  SELECTED_AGENT_KEY,
   loadMissions, saveMissions, loadUnreadMissionIds, saveUnreadMissionIds,
   mergeMissions, getSelectedKagentiAgentFromStorage,
 } from './useMissionStorage'

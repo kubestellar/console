@@ -40,9 +40,7 @@ import { DependencyPath, DependencyLabel, computeEdgeMidpoint } from './svg/Depe
 import { PhaseTimeline } from './svg/PhaseTimeline'
 import type {
   MissionControlState,
-  OverlayMode,
-  BlueprintLayout,
-  DependencyEdge } from './types'
+  OverlayMode } from './types'
 import { useClusters } from '../../hooks/mcp/clusters'
 import { detectCloudProvider } from '../ui/CloudProviderIcon'
 import { fetchMissionContent } from '../missions/browser/missionCache'

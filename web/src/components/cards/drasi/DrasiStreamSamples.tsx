@@ -4,7 +4,7 @@
  *
  * Exports: StreamSampleDrawer, STREAM_SAMPLES, StreamSample
  */
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { X, Code2, Copy, Check } from 'lucide-react'
 import { useTranslation } from 'react-i18next'

@@ -3,7 +3,6 @@
  *
  * Exports: FlowLine, flowStateColors, seededRand, TRAFFIC_PATTERNS
  */
-import React from 'react'
 import { useReducedMotion } from 'framer-motion'
 import {
   FLOW_COLOR_ACTIVE_STROKE, FLOW_COLOR_ACTIVE_DOT,
