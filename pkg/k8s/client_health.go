@@ -301,29 +301,26 @@ func (m *MultiClusterClient) GetClusterHealth(ctx context.Context, contextName s
 	return health, nil
 }
 
+// defaultAPIServerPort is the port assumed when the API server URL doesn't
+// include one. HTTPS is the overwhelming case for Kubernetes API servers; bare
+// host entries (no scheme, no port) also default here.
+const defaultAPIServerPort = "443"
+
 // probeAPIServer performs a lightweight TCP dial to the API server URL to verify
 // external reachability. The kc-agent can reach clusters via internal networking
 // or VPN, but users/CI runners may not be able to (#4202).
+//
+// #9338 — IPv6 hosts contain many colons (e.g. `2001:db8::1`). The previous
+// implementation used `strings.Contains(host, ":")` to detect "port already
+// present", which misclassified bare IPv6 addresses as already-ported and
+// produced invalid dial addresses. We now rely on `net.SplitHostPort` for
+// hosts that look port-decorated (bracketed or trailing numeric segment),
+// and `net.JoinHostPort` to construct the dial address — it handles
+// bracketing automatically for IPv6.
 func probeAPIServer(host string) bool {
-	// Parse the URL to extract host:port.
-	// rest.Config.Host can be a bare "host:port" or a full URL "https://host:port".
-	addr := host
-	if strings.Contains(host, "://") {
-		parsed, err := url.Parse(host)
-		if err != nil {
-			return false
-		}
-		port := parsed.Port()
-		if port == "" {
-			if parsed.Scheme == "https" {
-				port = "443"
-			} else {
-				port = "80"
-			}
-		}
-		addr = net.JoinHostPort(parsed.Hostname(), port)
-	} else if !strings.Contains(host, ":") {
-		addr = net.JoinHostPort(host, "443")
+	addr, ok := apiServerDialAddr(host)
+	if !ok {
+		return false
 	}
 
 	conn, err := net.DialTimeout("tcp", addr, clusterProbeTimeout)
@@ -331,6 +328,86 @@ func probeAPIServer(host string) bool {
 		return false
 	}
 	conn.Close()
+	return true
+}
+
+// apiServerDialAddr converts a rest.Config.Host value (which may be a bare
+// host, `host:port`, a full URL, or an IPv6 literal) into a `host:port`
+// address suitable for net.DialTimeout. Returns ok=false if the input cannot
+// be parsed. (#9338)
+func apiServerDialAddr(host string) (string, bool) {
+	// Full URL form — let net/url handle it.
+	if strings.Contains(host, "://") {
+		parsed, err := url.Parse(host)
+		if err != nil {
+			return "", false
+		}
+		hostname := parsed.Hostname()
+		if hostname == "" {
+			return "", false
+		}
+		port := parsed.Port()
+		if port == "" {
+			if parsed.Scheme == "https" {
+				port = defaultAPIServerPort
+			} else {
+				port = "80"
+			}
+		}
+		return net.JoinHostPort(hostname, port), true
+	}
+
+	// Bracketed IPv6, possibly with a port: `[::1]` or `[::1]:8080`.
+	if strings.HasPrefix(host, "[") {
+		if strings.Contains(host, "]:") {
+			// Has an explicit port — net.SplitHostPort handles this correctly.
+			h, p, err := net.SplitHostPort(host)
+			if err != nil {
+				return "", false
+			}
+			return net.JoinHostPort(h, p), true
+		}
+		// Bare bracketed IPv6, no port.
+		h := strings.TrimSuffix(strings.TrimPrefix(host, "["), "]")
+		if h == "" {
+			return "", false
+		}
+		return net.JoinHostPort(h, defaultAPIServerPort), true
+	}
+
+	// No scheme, no brackets. Decide between "bare IPv6 literal" and
+	// "host:port" by looking at the last colon-delimited segment: a port is
+	// numeric, an IPv6 segment is hex (may contain letters) or empty.
+	lastColon := strings.LastIndex(host, ":")
+	if lastColon == -1 {
+		// No colons at all — must be a bare host or IPv4.
+		return net.JoinHostPort(host, defaultAPIServerPort), true
+	}
+	tail := host[lastColon+1:]
+	if isNumericPort(tail) && !strings.Contains(host[:lastColon], ":") {
+		// Exactly one colon with a numeric tail → `host:port` (IPv4/hostname).
+		h, p, err := net.SplitHostPort(host)
+		if err != nil {
+			return "", false
+		}
+		return net.JoinHostPort(h, p), true
+	}
+	// Otherwise treat the whole thing as a bare IPv6 literal. JoinHostPort
+	// will bracket it correctly for the dial address.
+	return net.JoinHostPort(host, defaultAPIServerPort), true
+}
+
+// isNumericPort returns true if s is a non-empty sequence of ASCII digits.
+// Used by apiServerDialAddr to disambiguate `host:port` from bare IPv6 (#9338).
+func isNumericPort(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, r := range s {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
 	return true
 }
 
@@ -484,13 +561,22 @@ func (m *MultiClusterClient) CheckSecurityIssues(ctx context.Context, contextNam
 				})
 			}
 
-			// Check for running as root
-			runAsRoot := false
-			if sc != nil && sc.RunAsUser != nil && *sc.RunAsUser == 0 {
-				runAsRoot = true
-			} else if sc == nil && podSC != nil && podSC.RunAsUser != nil && *podSC.RunAsUser == 0 {
-				runAsRoot = true
+			// Check for running as root. Container-level SecurityContext.RunAsUser
+			// overrides pod-level PodSecurityContext.RunAsUser ONLY when it is
+			// non-nil. Previously we only consulted the pod-level value when the
+			// ENTIRE container-level SecurityContext was nil — meaning a container
+			// with a non-nil SecurityContext that set only unrelated fields (e.g.
+			// `Privileged: false`) would hide an inherited pod-level
+			// `RunAsUser: 0`. Kubernetes resolves these field-by-field, so we
+			// must mirror that: only fall back to pod-level for fields the
+			// container didn't set. (#9337)
+			var effectiveRunAsUser *int64
+			if sc != nil && sc.RunAsUser != nil {
+				effectiveRunAsUser = sc.RunAsUser
+			} else if podSC != nil && podSC.RunAsUser != nil {
+				effectiveRunAsUser = podSC.RunAsUser
 			}
+			runAsRoot := effectiveRunAsUser != nil && *effectiveRunAsUser == 0
 			if runAsRoot {
 				issues = append(issues, SecurityIssue{
 					Name:      pod.Name,

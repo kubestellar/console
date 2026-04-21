@@ -19,14 +19,28 @@ import (
 )
 
 func (m *MultiClusterClient) GetGPUNodes(ctx context.Context, contextName string) ([]GPUNode, error) {
+	nodes, _, err := m.getGPUNodesWithPods(ctx, contextName)
+	return nodes, err
+}
+
+// getGPUNodesWithPods is the shared implementation of GetGPUNodes that also
+// returns the cluster-wide pod list it fetched for allocation accounting.
+// Callers that need the same pod list for subsequent analysis (e.g. stuck-pod
+// detection in GetGPUNodeHealth, #9339) can reuse it instead of issuing a
+// second cluster-wide Pods("").List call.
+//
+// The returned pod list may be nil on a listing failure; in that case the
+// node inventory is still returned with zero allocations and the listing
+// error is logged (#9091). Callers that rely on the pod list must handle nil.
+func (m *MultiClusterClient) getGPUNodesWithPods(ctx context.Context, contextName string) ([]GPUNode, *corev1.PodList, error) {
 	client, err := m.GetClient(contextName)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	nodes, err := client.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// Fetch all pods once upfront to calculate accelerator allocations per node
@@ -288,7 +302,7 @@ func (m *MultiClusterClient) GetGPUNodes(ctx context.Context, contextName string
 		})
 	}
 
-	return gpuNodes, nil
+	return gpuNodes, allPods, nil
 }
 
 // GPU operator namespace names to search for operator pods
@@ -307,8 +321,12 @@ func (m *MultiClusterClient) GetGPUNodeHealth(ctx context.Context, contextName s
 		return nil, err
 	}
 
-	// 1. Get GPU nodes using existing method
-	gpuNodes, err := m.GetGPUNodes(ctx, contextName)
+	// 1. Get GPU nodes AND reuse the cluster-wide pod list the lookup already
+	// fetched. Previously we issued a redundant second Pods("").List call below
+	// for stuck-pod detection — on large clusters (hundreds of namespaces,
+	// thousands of pods) that second list doubled API-server load and latency
+	// of this endpoint. (#9339)
+	gpuNodes, allPods, err := m.getGPUNodesWithPods(ctx, contextName)
 	if err != nil {
 		return nil, fmt.Errorf("listing GPU nodes: %w", err)
 	}
@@ -336,15 +354,9 @@ func (m *MultiClusterClient) GetGPUNodeHealth(ctx context.Context, contextName s
 		operatorPods = append(operatorPods, pods.Items...)
 	}
 
-	// 4. Find non-running pods for stuck pod detection (exclude Succeeded/Running).
-	// A failure here is non-fatal — we still return per-node health, but we
-	// log so operators can see why stuck-pod detection is effectively
-	// disabled (issue #9091).
-	allPods, allPodsErr := client.CoreV1().Pods("").List(ctx, metav1.ListOptions{})
-	if allPodsErr != nil {
-		slog.Error("[GPUNodeHealth] failed to list pods for stuck pod detection",
-			"cluster", contextName, "error", allPodsErr)
-	}
+	// 4. Stuck-pod detection reuses allPods from step 1 (see #9339). A nil
+	// allPods means getGPUNodesWithPods failed the inner pod list — we've
+	// already logged it there, so just proceed with empty stuck-pod data.
 
 	// 5. Get warning events from the last hour for GPU reset detection.
 	// Non-fatal, but log so operators can see why GPU-reset signals are

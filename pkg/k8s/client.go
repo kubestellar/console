@@ -1402,6 +1402,15 @@ func (m *MultiClusterClient) WarmupHealthCache() {
 		wg.Add(1)
 		go func(name, ctxName string) {
 			defer wg.Done()
+			// #9334 — Respect context cancellation promptly. If the outer
+			// warmup deadline already fired, don't start a fresh 5s probe
+			// that extends the effective timeout well past the documented
+			// clusterHealthCheckTimeout.
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
 			probeCtx, probeCancel := context.WithTimeout(ctx, clusterProbeTimeout)
 			defer probeCancel()
 
@@ -1555,7 +1564,17 @@ func isBetterClusterName(candidate, current string) bool {
 	return len(candidate) < len(current)
 }
 
-// GetClient returns a kubernetes client for the specified context
+// GetClient returns a kubernetes client for the specified context.
+//
+// #9334 — Client construction (especially `clientcmd…ClientConfig()` for
+// kubeconfigs that invoke an exec credential plugin like aws-iam-authenticator,
+// oci, gcloud, tsh, etc.) can take hundreds of ms to several seconds. Holding
+// the global write lock for the entire construction serializes every other
+// cluster probe in the process — fan-out health checks end up running
+// one-at-a-time. We build the client OUTSIDE the lock and only take the write
+// lock for the short final insertion, which permits concurrent construction
+// for different contexts while still preventing a single context from being
+// constructed twice.
 func (m *MultiClusterClient) GetClient(contextName string) (kubernetes.Interface, error) {
 	m.mu.RLock()
 	if client, ok := m.clients[contextName]; ok {
@@ -1563,26 +1582,25 @@ func (m *MultiClusterClient) GetClient(contextName string) (kubernetes.Interface
 		return client, nil
 	}
 	inClusterConfig := m.inClusterConfig
+	kubeconfigPath := m.kubeconfig
+	inClusterName := m.inClusterName
 	m.mu.RUnlock()
 
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	// Double-check after acquiring write lock
-	if client, ok := m.clients[contextName]; ok {
-		return client, nil
-	}
-
+	// Build the client OUTSIDE the lock so concurrent callers for distinct
+	// contexts don't serialize on a single write lock (#9334). It is
+	// intentionally acceptable for two goroutines racing on the same context
+	// to both build a client here — the final map insertion under the write
+	// lock is idempotent (first writer wins, second discards its extra client).
 	var config *rest.Config
 	var err error
 
 	// Handle in-cluster context specially — accept both "in-cluster" and the detected name
-	isInCluster := inClusterConfig != nil && (contextName == "in-cluster" || contextName == m.inClusterName)
+	isInCluster := inClusterConfig != nil && (contextName == "in-cluster" || contextName == inClusterName)
 	if isInCluster {
 		config = rest.CopyConfig(inClusterConfig)
 	} else {
 		config, err = clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-			&clientcmd.ClientConfigLoadingRules{ExplicitPath: m.kubeconfig},
+			&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfigPath},
 			&clientcmd.ConfigOverrides{CurrentContext: contextName},
 		).ClientConfig()
 		if err != nil {
@@ -1599,6 +1617,13 @@ func (m *MultiClusterClient) GetClient(contextName string) (kubernetes.Interface
 		return nil, fmt.Errorf("failed to create client for context %s: %w", contextName, err)
 	}
 
+	// Install the constructed client under a short write lock. If a concurrent
+	// caller beat us to it, reuse the existing entry (#9334).
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if existing, ok := m.clients[contextName]; ok {
+		return existing, nil
+	}
 	m.clients[contextName] = client
 	m.configs[contextName] = config
 	return client, nil
