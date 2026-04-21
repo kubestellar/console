@@ -24,7 +24,11 @@ describe('safeSetItem', () => {
   })
 
   it('returns false when setItem throws (quota exceeded)', () => {
-    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new DOMException('QuotaExceededError') })
+    // Issue 9372: the test setup (src/test/setup.ts) replaces window.localStorage
+    // with a plain object literal, so it does NOT inherit from Storage.prototype.
+    // Spying on Storage.prototype.setItem therefore never intercepts the mocked
+    // instance's method — we must spy directly on the localStorage instance.
+    vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => { throw new DOMException('QuotaExceededError') })
     expect(safeSetItem('key', 'val')).toBe(false)
   })
 })
@@ -40,7 +44,8 @@ describe('safeRemoveItem', () => {
   })
 
   it('returns false when removeItem throws', () => {
-    vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => { throw new Error('storage error') })
+    // Issue 9372: spy directly on the localStorage instance — see note above.
+    vi.spyOn(window.localStorage, 'removeItem').mockImplementation(() => { throw new Error('storage error') })
     expect(safeRemoveItem('key')).toBe(false)
   })
 })
@@ -83,7 +88,8 @@ describe('safeSetJSON', () => {
   })
 
   it('returns false when setItem throws (quota exceeded)', () => {
-    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new DOMException('QuotaExceededError') })
+    // Issue 9372: spy directly on the localStorage instance — see note in safeSetItem.
+    vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => { throw new DOMException('QuotaExceededError') })
     expect(safeSetJSON('key', { x: 1 })).toBe(false)
   })
 })
