@@ -872,33 +872,33 @@ export const handlers = [
   // ── Passthrough for Netlify Functions that work in demo mode ─────
   // These endpoints are backed by Netlify Functions and return real data
   // even in demo mode — let them through to the actual backend.
-  http.get('/api/youtube/playlist', () => passthrough()),
-  http.get('/api/youtube/thumbnail/*', () => passthrough()),
-  http.get('/api/medium/blog', () => passthrough()),
-  http.get('/api/missions/file', () => passthrough()),
-  http.get('/api/missions/browse', () => passthrough()),
+  // All use http.all (not http.get) so CORS OPTIONS preflights are not
+  // swallowed by the catch-all /api/* handler (per feedback_msw_passthrough.md).
+  http.all('/api/youtube/playlist', () => passthrough()),
+  http.all('/api/youtube/thumbnail/*', () => passthrough()),
+  http.all('/api/medium/blog', () => passthrough()),
+  http.all('/api/missions/file', () => passthrough()),
+  http.all('/api/missions/browse', () => passthrough()),
   http.all('/api/missions/scores', () => passthrough()),
   http.all('/api/missions/scores/*', () => passthrough()),
-  http.get('/api/rewards/github', () => passthrough()),
-  // Public contributor badge (RFC #8862 Phase 3) — backed by a Netlify
-  // Function that returns SVG. Must be http.all so that the CORS OPTIONS
-  // preflight does not get swallowed by the catch-all /api/* below
-  // (per feedback_msw_passthrough.md).
+  http.all('/api/rewards/github', () => passthrough()),
   http.all('/api/rewards/badge/*', () => passthrough()),
-  // NPS (voluntary feedback) — use http.all so the CORS preflight
-  // OPTIONS request also passes through. Without this, the catch-all
-  // http.all('/api/*') below returns 503 on the preflight and the
-  // browser blocks the actual POST.
+  http.all('/api/rewards/bonus', () => passthrough()),
   http.all('/api/nps', () => passthrough()),
   http.all('/api/acmm/scan', () => passthrough()),
-  // GitHub Pipelines dashboard — backed by Netlify Function that caches
-  // GitHub Actions data in Netlify Blobs. Must be http.all (not just
-  // http.get) to cover mutation POSTs + CORS preflight.
+  http.all('/api/acmm/badge/*', () => passthrough()),
   http.all('/api/github-pipelines', () => passthrough()),
-  // Feedback App attribution proxy (Netlify Function). Must be http.all
-  // (not just http.post) so the CORS OPTIONS preflight is also passed
-  // through — per feedback_msw_passthrough.md.
   http.all('/api/feedback-app', () => passthrough()),
+  http.all('/api/nightly-e2e/runs', () => passthrough()),
+  http.all('/api/public/nightly-e2e/runs', () => passthrough()),
+  http.all('/api/analytics-dashboard', () => passthrough()),
+  http.all('/api/analytics-accm', () => passthrough()),
+  http.all('/api/issue-stats', () => passthrough()),
+  http.all('/api/affiliate/clicks', () => passthrough()),
+  http.all('/api/gtag', () => passthrough()),
+  http.all('/api/ksc', () => passthrough()),
+  http.all('/api/m', () => passthrough()),
+  http.all('/api/send', () => passthrough()),
 
   // ── Kubara Platform Catalog (demo fixtures — #8486) ─────────────
   // Realistic fixture snapshots matching the GitHub Contents API shape
