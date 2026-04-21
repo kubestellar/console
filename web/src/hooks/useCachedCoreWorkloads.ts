@@ -403,7 +403,8 @@ export function useCachedPodIssues(
           const clusterInfo = clusterCacheRef.clusters.find(c => c.name === cluster)
           const ctx = clusterInfo?.context || cluster
           issues = await kubectlProxy.getPodIssues(ctx, namespace)
-          issues = issues.map(i => ({ ...i, cluster: cluster }))
+          // Guard against null/undefined when proxy is disconnected or in cooldown
+          issues = (issues || []).map(i => ({ ...i, cluster: cluster }))
         } else {
           issues = await fetchPodIssuesViaAgent(namespace)
         }

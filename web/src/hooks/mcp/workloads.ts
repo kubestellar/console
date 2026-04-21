@@ -693,9 +693,11 @@ export function usePodIssues(cluster?: string, namespace?: string) {
         const clusterInfo = clusterCacheRef.clusters.find(c => c.name === cluster)
         const kubectlContext = clusterInfo?.context || cluster
         const podIssuesData = await kubectlProxy.getPodIssues(kubectlContext, namespace)
+        // Guard against null/undefined when proxy is disconnected or in cooldown
+        const safePodIssues = podIssuesData || []
         const now = new Date()
-        podIssuesCache = { data: podIssuesData, timestamp: now, key: cacheKey }
-        setIssues(podIssuesData)
+        podIssuesCache = { data: safePodIssues, timestamp: now, key: cacheKey }
+        setIssues(safePodIssues)
         setError(null)
         setLastUpdated(now)
         setConsecutiveFailures(0)

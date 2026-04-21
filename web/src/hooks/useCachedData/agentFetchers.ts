@@ -48,7 +48,8 @@ export async function fetchPodIssuesViaAgent(namespace?: string, onProgress?: (p
     const ctx = context || name
     const issues = await kubectlProxy.getPodIssues(ctx, namespace)
     // Always use the short name — kubectlProxy returns context path as cluster
-    return issues.map(i => ({ ...i, cluster: name }))
+    // Guard against null/undefined when proxy is disconnected or in cooldown
+    return (issues || []).map(i => ({ ...i, cluster: name }))
   })
 
   const accumulated: PodIssue[] = []
