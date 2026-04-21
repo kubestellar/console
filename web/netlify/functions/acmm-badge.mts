@@ -24,15 +24,22 @@ const LEVEL_COMPLETION_THRESHOLD = 0.7;
  *  starting level; threshold walk gates L2 through MAX_LEVEL. */
 const MAX_LEVEL = 6;
 /**
- * Badge cache window. ACMM level changes slowly (file-tree shape, not commit
- * activity), so a 1 h cache is plenty. This is shared across three layers:
+ * Badge cache window for successful responses. ACMM level changes slowly
+ * (file-tree shape, not commit activity), so 5 min is plenty. This is shared
+ * across three layers:
  *   1. shields.io respects this in its `cacheSeconds` JSON field below
  *   2. our CDN respects this in the `Cache-Control` header below
  *   3. GitHub's camo image proxy fetches the badge SVG and caches it itself
- * Bumping from the prior 5 min to 1 h cuts function invocations ~12× without
- * any user-visible staleness for a maturity-level signal.
+ * Kept at 5 min (was 1 h) so a transient Netlify outage doesn't lock the
+ * badge into "inaccessible" for an hour (#4086).
  */
-const BADGE_CACHE_SECONDS = 3600;
+const BADGE_CACHE_SECONDS = 300;
+
+/**
+ * Short cache for error/unavailable responses so shields.io retries quickly
+ * after a transient failure instead of caching "inaccessible" for 5 min.
+ */
+const BADGE_ERROR_CACHE_SECONDS = 60;
 
 /**
  * Agent instruction files are an OR group for L2: any one vendor-specific or
@@ -349,7 +356,7 @@ export default async (req: Request) => {
         label: "ACMM",
         message: "invalid repo",
         color: "red",
-        cacheSeconds: BADGE_CACHE_SECONDS,
+        cacheSeconds: BADGE_ERROR_CACHE_SECONDS,
       }),
       {
         status: 200,
@@ -372,7 +379,7 @@ export default async (req: Request) => {
           label: "ACMM",
           message: "unavailable",
           color: "lightgrey",
-          cacheSeconds: BADGE_CACHE_SECONDS,
+          cacheSeconds: BADGE_ERROR_CACHE_SECONDS,
         }),
         {
           status: 200,
