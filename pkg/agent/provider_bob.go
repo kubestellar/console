@@ -198,6 +198,7 @@ func (b *BobProvider) Chat(ctx context.Context, req *ChatRequest) (*ChatResponse
 	}
 
 	cmd := exec.CommandContext(ctx, b.cliPath, args...)
+	configureProcessGroup(cmd) // #9442: kill entire process tree on timeout
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout

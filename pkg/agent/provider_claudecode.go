@@ -291,6 +291,7 @@ func (c *ClaudeCodeProvider) StreamChatWithProgress(ctx context.Context, req *Ch
 
 	cmd := exec.CommandContext(ctx, c.cliPath, args...)
 	cmd.Env = cleanEnvForCLI()
+	configureProcessGroup(cmd) // #9442: kill entire process tree on timeout
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -478,6 +479,7 @@ Provide a clear, concise analysis of what this output shows.`, lastToolOutput)
 
 		analysisCmd := exec.CommandContext(ctx, c.cliPath, analysisArgs...)
 		analysisCmd.Env = cleanEnvForCLI()
+		configureProcessGroup(analysisCmd) // #9442: kill entire process tree on timeout
 		analysisStdout, err := analysisCmd.StdoutPipe()
 		if err == nil {
 			if startErr := analysisCmd.Start(); startErr == nil {
