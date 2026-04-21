@@ -797,7 +797,7 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
       queueMicrotask(() => {
         const rule = rules.find(r => r.id === alertToResolve.ruleId)
         if (rule) {
-          const enabledChannels = rule.channels.filter(ch => ch.enabled)
+          const enabledChannels = (rule.channels || []).filter(ch => ch.enabled)
           if (enabledChannels.length > 0) {
             // #7330 — Send notification with updated resolved status, not the
             // pre-update firing object. Without this, resolved notifications
@@ -1207,8 +1207,8 @@ Please provide:
   // Evaluate GPU usage condition — reads from refs for stable identity
   const evaluateGPUUsage = (rule: AlertRule) => {
       const threshold = rule.condition.threshold || 90
-      const currentClusters = clustersRef.current
-      const currentGPUNodes = gpuNodesRef.current
+      const currentClusters = clustersRef.current || []
+      const currentGPUNodes = gpuNodesRef.current || []
       const relevantClusters = rule.condition.clusters?.length
         ? currentClusters.filter(c => rule.condition.clusters!.includes(c.name))
         : currentClusters
@@ -1252,7 +1252,7 @@ Please provide:
   // alert for an unreachable cluster is auto-resolved so the list clears
   // down to just the single authoritative Cluster Unreachable entry.
   const evaluateNodeReady = (rule: AlertRule) => {
-      const currentClusters = clustersRef.current
+      const currentClusters = clustersRef.current || []
       const relevantClusters = rule.condition.clusters?.length
         ? currentClusters.filter(c => rule.condition.clusters!.includes(c.name))
         : currentClusters
@@ -1288,7 +1288,7 @@ Please provide:
       // auto-resolve alerts whose pods have recovered or been removed.
       const stillFiringKeys = new Set<string>()
 
-      for (const issue of podIssuesRef.current) {
+      for (const issue of (podIssuesRef.current || [])) {
         if (issue.restarts && issue.restarts >= threshold) {
           const clusterMatch =
             !rule.condition.clusters?.length ||
@@ -1317,7 +1317,7 @@ Please provide:
 
       // Auto-resolve any firing pod_crash alerts whose pods are no longer above
       // the threshold (pod recovered, deleted, or restarts dropped).
-      const currentAlerts = alertsRef.current
+      const currentAlerts = alertsRef.current || []
       for (const a of currentAlerts) {
         if (a.ruleId === rule.id && a.status === 'firing') {
           const key = alertDedupKey(a.ruleId, rule.condition.type, a.cluster, a.resource, a.namespace)
@@ -1414,8 +1414,8 @@ Please provide:
 
   // Evaluate GPU Health CronJob — reads cached results from ref
   const evaluateGPUHealthCronJob = (rule: AlertRule) => {
-      const cachedResults = cronJobResultsRef.current
-      const currentClusters = clustersRef.current
+      const cachedResults = cronJobResultsRef.current || {}
+      const currentClusters = clustersRef.current || []
       const relevantClusters = rule.condition.clusters?.length
         ? currentClusters.filter(c => rule.condition.clusters!.includes(c.name))
         : currentClusters
@@ -1476,7 +1476,7 @@ Please provide:
 
   // Evaluate disk pressure condition — checks for DiskPressure in cluster issues
   const evaluateDiskPressure = (rule: AlertRule) => {
-      const currentClusters = clustersRef.current
+      const currentClusters = clustersRef.current || []
       const relevantClusters = rule.condition.clusters?.length
         ? currentClusters.filter(c => rule.condition.clusters!.includes(c.name))
         : currentClusters
@@ -1530,7 +1530,7 @@ Please provide:
 
   // Evaluate memory pressure condition — checks for MemoryPressure in cluster issues
   const evaluateMemoryPressure = (rule: AlertRule) => {
-      const currentClusters = clustersRef.current
+      const currentClusters = clustersRef.current || []
       const relevantClusters = rule.condition.clusters?.length
         ? currentClusters.filter(c => rule.condition.clusters!.includes(c.name))
         : currentClusters
@@ -1585,13 +1585,13 @@ Please provide:
 
   // Evaluate DNS failures — checks for CoreDNS pods crashing or not ready
   const evaluateDNSFailure = (rule: AlertRule) => {
-      const currentPodIssues = podIssuesRef.current
+      const currentPodIssues = podIssuesRef.current || []
       const relevantClusters = rule.condition.clusters?.length
         ? rule.condition.clusters
         : undefined
 
       // Find CoreDNS pods with issues (coredns, dns-default on OpenShift)
-      const dnsIssues = (currentPodIssues || []).filter(pod => {
+      const dnsIssues = currentPodIssues.filter(pod => {
         const isDNSPod = pod.name.includes('coredns') || pod.name.includes('dns-default')
         const matchesCluster = !relevantClusters || relevantClusters.includes(pod.cluster || '')
         return isDNSPod && matchesCluster
@@ -1631,7 +1631,7 @@ Please provide:
 
       // Auto-resolve clusters that no longer have DNS issues
       const clustersWithIssues = new Set(clusterDNSIssues.keys())
-      const currentAlerts = alertsRef.current
+      const currentAlerts = alertsRef.current || []
       for (const a of currentAlerts) {
         if (a.ruleId === rule.id && a.status === 'firing' && a.cluster && !clustersWithIssues.has(a.cluster)) {
           queueAutoResolve(rule.id, a.cluster)
@@ -1641,7 +1641,7 @@ Please provide:
 
   // Evaluate certificate errors — checks for clusters with certificate connection failures
   const evaluateCertificateError = (rule: AlertRule) => {
-      const currentClusters = clustersRef.current
+      const currentClusters = clustersRef.current || []
       const relevantClusters = rule.condition.clusters?.length
         ? currentClusters.filter(c => rule.condition.clusters!.includes(c.name))
         : currentClusters
@@ -1681,7 +1681,7 @@ Please provide:
 
   // Evaluate cluster unreachable — checks for clusters with network/auth/timeout failures
   const evaluateClusterUnreachable = (rule: AlertRule) => {
-      const currentClusters = clustersRef.current
+      const currentClusters = clustersRef.current || []
       const relevantClusters = rule.condition.clusters?.length
         ? currentClusters.filter(c => rule.condition.clusters!.includes(c.name))
         : currentClusters
@@ -1726,13 +1726,13 @@ Please provide:
 
   // Evaluate nightly E2E failures — reads cached run data from ref
   const evaluateNightlyE2EFailure = (rule: AlertRule) => {
-      const guides = nightlyE2ERef.current
+      const guides = nightlyE2ERef.current || []
       if (!guides.length) return
 
       const currentRunIds = new Set<number>()
 
       for (const guide of guides) {
-        for (const run of guide.runs) {
+        for (const run of (guide.runs || [])) {
           currentRunIds.add(run.id)
 
           // Only alert on completed failures not already alerted
@@ -1808,7 +1808,7 @@ Please provide:
     mutationAccRef.current = acc
 
     try {
-      const enabledRules = rulesRef.current.filter(r => r.enabled)
+      const enabledRules = (rulesRef.current || []).filter(r => r.enabled)
 
       for (const rule of enabledRules) {
         switch (rule.condition.type) {
