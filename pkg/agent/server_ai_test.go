@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -95,6 +96,101 @@ func TestServer_TokenUsage(t *testing.T) {
 		t.Errorf("Session tokens should accumulate across days, got %d/%d", s.sessionTokensIn, s.sessionTokensOut)
 	}
 	s.tokenMux.RUnlock()
+}
+
+// TestServer_SessionTokenQuota verifies that the per-session aggregate
+// token quota rejects new prompts once the limit is reached (#9438).
+func TestServer_SessionTokenQuota(t *testing.T) {
+	const testQuota int64 = 500 // intentionally small for the test
+
+	s := &Server{
+		todayDate:         time.Now().Format("2006-01-02"),
+		sessionTokenQuota: testQuota,
+	}
+
+	// Before any usage, the quota should NOT be exceeded
+	if s.isSessionQuotaExceeded() {
+		t.Fatal("quota should not be exceeded before any usage")
+	}
+
+	// Add usage that stays under the quota
+	s.addTokenUsage(&ProviderTokenUsage{InputTokens: 100, OutputTokens: 100, TotalTokens: 200})
+	time.Sleep(50 * time.Millisecond) // let async save fire
+	if s.isSessionQuotaExceeded() {
+		t.Fatal("quota should not be exceeded at 200/500")
+	}
+
+	// Push over the limit
+	s.addTokenUsage(&ProviderTokenUsage{InputTokens: 200, OutputTokens: 200, TotalTokens: 400})
+	time.Sleep(50 * time.Millisecond)
+	if !s.isSessionQuotaExceeded() {
+		t.Fatal("quota should be exceeded at 600/500")
+	}
+
+	// Verify the error message mentions the env var
+	msg := s.sessionTokenQuotaMessage()
+	if !strings.Contains(msg, "KC_SESSION_TOKEN_QUOTA") {
+		t.Errorf("quota message should mention env var, got: %s", msg)
+	}
+}
+
+// TestServer_SessionTokenQuota_Unlimited verifies that a quota of 0
+// disables the limit (#9438).
+func TestServer_SessionTokenQuota_Unlimited(t *testing.T) {
+	s := &Server{
+		todayDate:         time.Now().Format("2006-01-02"),
+		sessionTokenQuota: 0, // unlimited
+	}
+
+	// Even with huge usage, the quota should never trigger
+	s.addTokenUsage(&ProviderTokenUsage{InputTokens: 999_999_999, OutputTokens: 999_999_999})
+	time.Sleep(50 * time.Millisecond)
+	if s.isSessionQuotaExceeded() {
+		t.Fatal("quota of 0 should mean unlimited")
+	}
+}
+
+// TestServer_HandleChatMessage_QuotaExceeded verifies that handleChatMessage
+// returns a token_quota_exceeded error when the session quota is blown (#9438).
+func TestServer_HandleChatMessage_QuotaExceeded(t *testing.T) {
+	const testQuota int64 = 100
+
+	registry := &Registry{providers: make(map[string]AIProvider)}
+	registry.Register(&ServerMockProvider{name: "mock"})
+	registry.SetDefault("mock")
+
+	s := &Server{
+		todayDate:         time.Now().Format("2006-01-02"),
+		sessionTokenQuota: testQuota,
+		registry:          registry,
+	}
+
+	// Blow through the quota
+	s.addTokenUsage(&ProviderTokenUsage{InputTokens: 80, OutputTokens: 80})
+	time.Sleep(50 * time.Millisecond)
+
+	msg := protocol.Message{
+		ID:   "test-1",
+		Type: protocol.TypeChat,
+		Payload: protocol.ChatRequest{
+			Prompt: "hello",
+		},
+	}
+
+	resp := s.handleChatMessage(msg, "")
+	if resp.Type != protocol.TypeError {
+		t.Fatalf("expected error response, got type %s", resp.Type)
+	}
+
+	// Extract the error code from the payload
+	payloadBytes, _ := json.Marshal(resp.Payload)
+	var errPayload struct {
+		Code string `json:"code"`
+	}
+	_ = json.Unmarshal(payloadBytes, &errPayload)
+	if errPayload.Code != "token_quota_exceeded" {
+		t.Errorf("expected code token_quota_exceeded, got %s", errPayload.Code)
+	}
 }
 
 // TestServer_SmartRouting tests the promptNeedsToolExecution heuristic

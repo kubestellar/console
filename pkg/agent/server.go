@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -46,6 +47,16 @@ const (
 
 	maxQueryLimit       = 1000    // Upper bound for client-supplied limit query parameter
 	maxRequestBodyBytes = 1 << 20 // 1MB upper bound for request body reads
+
+	// defaultSessionTokenQuota is the maximum total tokens (input + output)
+	// allowed per agent session before new prompts are rejected. Prevents
+	// bill-shock from runaway or malicious clients (#9438). Configurable
+	// via KC_SESSION_TOKEN_QUOTA env var. 0 = unlimited. Default: 5 million.
+	defaultSessionTokenQuota int64 = 5_000_000
+
+	// sessionTokenQuotaEnvVar is the environment variable operators can set
+	// to override the per-session aggregate token limit.
+	sessionTokenQuotaEnvVar = "KC_SESSION_TOKEN_QUOTA"
 
 	// deployedByAnonymousMarker is the default value recorded on workloads
 	// created via kc-agent when the caller did not supply a "deployedBy"
@@ -122,14 +133,15 @@ type Server struct {
 	agentToken     string // Optional shared secret for authentication
 
 	// Token tracking
-	tokenMux         sync.RWMutex
-	tokenFileMux     sync.Mutex // serializes file I/O in saveTokenUsage to prevent race (#9441)
-	sessionStart     time.Time
-	sessionTokensIn  int64
-	sessionTokensOut int64
-	todayTokensIn    int64
-	todayTokensOut   int64
-	todayDate        string // YYYY-MM-DD format to detect day change
+	tokenMux          sync.RWMutex
+	tokenFileMux      sync.Mutex // serializes file I/O in saveTokenUsage to prevent race (#9441)
+	sessionStart      time.Time
+	sessionTokensIn   int64
+	sessionTokensOut  int64
+	todayTokensIn     int64
+	todayTokensOut    int64
+	todayDate         string // YYYY-MM-DD format to detect day change
+	sessionTokenQuota int64  // max total tokens per session; 0 = unlimited (#9438)
 
 	// Prediction system
 	predictionWorker *PredictionWorker
@@ -219,19 +231,35 @@ func NewServer(cfg Config) (*Server, error) {
 		slog.Warn("KC_AGENT_TOKEN is not set — all requests will be accepted without authentication. Set KC_AGENT_TOKEN to enable token validation.")
 	}
 
+	// Resolve per-session token quota from env, falling back to the compiled
+	// default. 0 means unlimited (operator opted out of the safety net).
+	sessionQuota := defaultSessionTokenQuota
+	if raw := os.Getenv(sessionTokenQuotaEnvVar); raw != "" {
+		if parsed, err := strconv.ParseInt(raw, 10, 64); err == nil && parsed >= 0 {
+			sessionQuota = parsed
+		} else {
+			slog.Warn("invalid KC_SESSION_TOKEN_QUOTA value, using default",
+				"value", raw, "default", defaultSessionTokenQuota)
+		}
+	}
+	if sessionQuota > 0 {
+		slog.Info("session token quota enabled", "limit", sessionQuota)
+	}
+
 	now := time.Now()
 	server := &Server{
-		config:         cfg,
-		kubectl:        kubectl,
-		k8sClient:      k8sClient,
-		registry:       GetRegistry(),
-		clients:        make(map[*websocket.Conn]*wsClient),
-		allowedOrigins: allowedOrigins,
-		agentToken:     agentToken,
-		sessionStart:   now,
-		todayDate:      now.Format("2006-01-02"),
-		activeChatCtxs: make(map[string]context.CancelFunc),
-		dryRunSessions: make(map[string]bool),
+		config:            cfg,
+		kubectl:           kubectl,
+		k8sClient:         k8sClient,
+		registry:          GetRegistry(),
+		clients:           make(map[*websocket.Conn]*wsClient),
+		allowedOrigins:    allowedOrigins,
+		agentToken:        agentToken,
+		sessionStart:      now,
+		todayDate:         now.Format("2006-01-02"),
+		activeChatCtxs:    make(map[string]context.CancelFunc),
+		dryRunSessions:    make(map[string]bool),
+		sessionTokenQuota: sessionQuota,
 	}
 
 	server.upgrader = websocket.Upgrader{

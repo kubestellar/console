@@ -459,6 +459,13 @@ func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.M
 		return
 	}
 
+	// SECURITY: Reject new prompts when the session token quota is exhausted
+	// to prevent unbounded AI API spend (#9438).
+	if s.isSessionQuotaExceeded() {
+		safeWrite(context.Background(), s.errorResponse(msg.ID, "token_quota_exceeded", s.sessionTokenQuotaMessage()))
+		return
+	}
+
 	// Generate a unique session ID when the client omits one so that
 	// concurrent anonymous chats do not collide in activeChatCtxs (#4263).
 	if req.SessionID == "" {
@@ -899,6 +906,12 @@ func (s *Server) handleChatMessage(msg protocol.Message, forceAgent string) prot
 
 	if req.Prompt == "" {
 		return s.errorResponse(msg.ID, "empty_prompt", "Prompt cannot be empty")
+	}
+
+	// SECURITY: Reject new prompts when the session token quota is exhausted
+	// to prevent unbounded AI API spend (#9438).
+	if s.isSessionQuotaExceeded() {
+		return s.errorResponse(msg.ID, "token_quota_exceeded", s.sessionTokenQuotaMessage())
 	}
 
 	// Generate a unique session ID when the client omits one so that
@@ -1500,6 +1513,29 @@ func (s *Server) getClaudeInfo() *protocol.ClaudeInfo {
 			},
 		},
 	}
+}
+
+// isSessionQuotaExceeded returns true when the aggregate session token count
+// (input + output) has reached or passed the configured quota. A quota of 0
+// means unlimited — the check is skipped (#9438).
+func (s *Server) isSessionQuotaExceeded() bool {
+	if s.sessionTokenQuota <= 0 {
+		return false // unlimited
+	}
+	s.tokenMux.RLock()
+	total := s.sessionTokensIn + s.sessionTokensOut
+	s.tokenMux.RUnlock()
+	return total >= s.sessionTokenQuota
+}
+
+// sessionTokenQuotaMessage builds a human-readable error string returned to
+// the client when the session token quota is exceeded.
+func (s *Server) sessionTokenQuotaMessage() string {
+	return fmt.Sprintf(
+		"Session token quota exceeded (limit: %d tokens). "+
+			"Restart kc-agent to reset the session quota, or increase "+
+			"the limit via the %s environment variable.",
+		s.sessionTokenQuota, sessionTokenQuotaEnvVar)
 }
 
 // addTokenUsage accumulates token usage from a chat response
