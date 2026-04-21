@@ -29,6 +29,18 @@ export interface NodeClusterError {
   message: string
 }
 
+/**
+ * Per-cluster fan-out result returned by each {@link useCachedAllNodes}
+ * concurrency callback. Each task returns one of these synchronous tuples
+ * instead of mutating shared accumulators, keeping the callback safe under
+ * the concurrent-mutation-safety ratchet
+ * (src/test/concurrent-mutation-safety.test.ts).
+ */
+interface PerClusterNodeResult {
+  nodes: NodeInfo[]
+  error: NodeClusterError | null
+}
+
 // Module-level subscribable snapshot of the most recent per-cluster errors
 // emitted by the {@link useCachedAllNodes} fetcher. We use a module-level
 // subscribable (rather than per-hook React state) because `useCache`'s
@@ -205,18 +217,17 @@ export function useCachedAllNodes(): CachedHookResult<NodeInfo[]> & {
         )
       }
 
-      // Collect per-cluster errors during this fetch. We replace the
-      // previous module-level snapshot atomically after the fan-out settles
-      // so a transient flash of "cluster X failed" isn't left stale after
-      // a retry succeeds (Issue 9355).
-      const collectedErrors: NodeClusterError[] = []
-
       // Fan out per-cluster fetches in parallel. Each per-cluster call is
       // identical to what useCachedNodes(clusterName) would do — using the
       // same /api/mcp/nodes endpoint that already works on the per-cluster
       // drill-down, so the "live data path exists" invariant from the
       // issue description holds.
-      const tasks = reachable.map((cluster) => async () => {
+      //
+      // Concurrency-safety: each callback RETURNS a tagged { nodes, error }
+      // tuple instead of mutating outer-scope accumulators. Aggregation
+      // happens after `settledWithConcurrency` resolves (see P2-B static
+      // scan, src/test/concurrent-mutation-safety.test.ts).
+      const tasks = reachable.map((cluster) => async (): Promise<PerClusterNodeResult> => {
         try {
           const raw = await fetchAPI<unknown>('nodes', { cluster: cluster.name })
           const data = validateArrayResponse<{ nodes: NodeInfo[] }>(
@@ -225,7 +236,10 @@ export function useCachedAllNodes(): CachedHookResult<NodeInfo[]> & {
             '/api/mcp/nodes',
             'nodes',
           )
-          return (data.nodes || []).map((n) => ({ ...n, cluster: cluster.name }))
+          return {
+            nodes: (data.nodes || []).map((n) => ({ ...n, cluster: cluster.name })),
+            error: null,
+          }
         } catch (err) {
           // Per-cluster failure: tolerate it so a single unreachable cluster
           // doesn't wipe the whole aggregate. Accumulated nodes from other
@@ -236,25 +250,38 @@ export function useCachedAllNodes(): CachedHookResult<NodeInfo[]> & {
           // warning that conflated every failure mode.
           const message = err instanceof Error ? err.message : String(err)
           const classified = classifyError(message)
-          collectedErrors.push({
-            cluster: cluster.name,
-            errorType: classified.type,
-            message,
-          })
-          return [] as NodeInfo[]
+          return {
+            nodes: [],
+            error: {
+              cluster: cluster.name,
+              errorType: classified.type,
+              message,
+            },
+          }
         }
       })
 
-      const accumulated: NodeInfo[] = []
-      async function handleSettled(res: PromiseSettledResult<NodeInfo[]>) {
+      // Aggregate per-cluster results AFTER settlement. Both lists are
+      // produced by local consts inside handleSettled's caller scope — no
+      // outer-scope mutation from inside the concurrency callback.
+      const settledResults: PerClusterNodeResult[] = []
+      async function handleSettled(res: PromiseSettledResult<PerClusterNodeResult>) {
         if (res.status === 'fulfilled') {
-          accumulated.push(...res.value)
+          settledResults.push(res.value)
         }
       }
       await settledWithConcurrency(tasks, undefined, handleSettled)
+
+      const accumulated: NodeInfo[] = settledResults.flatMap((r) => r.nodes)
+      const collectedErrors: NodeClusterError[] = settledResults
+        .map((r) => r.error)
+        .filter((e): e is NodeClusterError => e !== null)
+
       // Publish the final per-cluster error snapshot so every consumer
       // subscribed via `useSyncExternalStore` re-renders with the fresh
-      // list (Issue 9355).
+      // list (Issue 9355). We replace the previous module-level snapshot
+      // atomically after the fan-out settles so a transient flash of
+      // "cluster X failed" isn't left stale after a retry succeeds.
       publishNodeClusterErrors(collectedErrors)
       return accumulated
     } })

@@ -128,8 +128,11 @@ describe('FeatureRequestModal Component', () => {
     const submitBtn = screen.getByRole('button', { name: /^Submit/i })
     fireEvent.click(submitBtn)
 
-    // Wait for the success view to appear.
-    await screen.findByText(/Request Submitted/i)
+    // Wait for the success view to appear. The success view renders a plain
+    // (non-i18n) paragraph "Your request has been submitted for review." — use
+    // that as the anchor so the assertion doesn't depend on the mocked `t`
+    // returning the raw i18n key (feedback.requestSubmitted).
+    await screen.findByText(/Your request has been submitted for review/i)
 
     // At this point the description state is intentionally still populated —
     // the modal clears it on a 5s timer. But the content has already been
