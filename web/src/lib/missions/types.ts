@@ -31,6 +31,13 @@ export interface OrbitRunHistoryEntry {
   summary?: string
 }
 
+export interface OrbitResourceFilter {
+  kind: string
+  clusterScoped: boolean
+  /** Targeted namespaces for namespaced kinds. Empty array = all namespaces. Ignored for cluster-scoped kinds. */
+  namespaces?: string[]
+}
+
 export interface OrbitConfig {
   cadence: OrbitCadence
   orbitType: OrbitType
@@ -40,6 +47,11 @@ export interface OrbitConfig {
   projects?: string[]
   /** Target clusters for this orbit */
   clusters?: string[]
+  /**
+   * Per-cluster resource scope. Key = cluster name.
+   * Absent or empty entry for a cluster = all resources (backward-compat).
+   */
+  resourceFilters?: Record<string, OrbitResourceFilter[]>
   /** ISO timestamp of the last run */
   lastRunAt?: string | null
   /** Result of the last run */

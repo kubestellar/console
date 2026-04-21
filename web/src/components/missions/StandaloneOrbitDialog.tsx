@@ -2,7 +2,8 @@
  * StandaloneOrbitDialog -- Create an orbit mission without a prior install mission.
  *
  * Allows users to pick an orbit template, cadence, auto-run toggle,
- * and target clusters, then saves the mission to the library.
+ * target clusters, and per-cluster resource scope (namespaced or cluster-scoped
+ * Kubernetes objects), then saves the mission to the library.
  */
 
 import { useState, useCallback } from 'react'
@@ -11,27 +12,222 @@ import { Satellite, Orbit, X, ChevronDown, ChevronUp } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { useClusters } from '../../hooks/mcp/clusters'
 import { useMissions } from '../../hooks/useMissions'
+import { useNamespaces } from '../../hooks/mcp/namespaces'
 import { getApplicableOrbitTemplates } from '../../lib/orbit/orbitTemplates'
 import { ORBIT_DEFAULT_CADENCE } from '../../lib/constants/orbit'
+import { ORBIT_CLUSTER_SCOPED_KINDS, ORBIT_NAMESPACED_KINDS } from '../../lib/constants/k8sResources'
 import { emitOrbitMissionCreated } from '../../lib/analytics'
 import { isDemoMode } from '../../lib/demoMode'
 import { SetupInstructionsDialog } from '../setup/SetupInstructionsDialog'
 import { ConfirmDialog } from '../../lib/modals'
-import type { OrbitCadence, OrbitType, OrbitConfig } from '../../lib/missions/types'
+import type { OrbitCadence, OrbitType, OrbitConfig, OrbitResourceFilter } from '../../lib/missions/types'
 
 interface StandaloneOrbitDialogProps {
-  /** Close the dialog */
   onClose: () => void
+  prefill?: {
+    clusters?: string[]
+    resourceFilters?: Record<string, OrbitResourceFilter[]>
+  }
 }
 
 const CADENCE_OPTIONS: OrbitCadence[] = ['daily', 'weekly', 'monthly']
 
-export function StandaloneOrbitDialog({ onClose }: StandaloneOrbitDialogProps) {
+// ---------------------------------------------------------------------------
+// ClusterScopeSection — per-cluster resource kind + namespace picker
+// Must be a real component (not rendered inside a loop) so that
+// useNamespaces() is called at the top level of a component, not inside a map.
+// ---------------------------------------------------------------------------
+
+interface ClusterScopeSectionProps {
+  clusterName: string
+  value: OrbitResourceFilter[]
+  onChange: (clusterName: string, filters: OrbitResourceFilter[]) => void
+}
+
+function ClusterScopeSection({ clusterName, value, onChange }: ClusterScopeSectionProps) {
+  const [expanded, setExpanded] = useState(value.length > 0)
+  const { namespaces, isLoading: nsLoading } = useNamespaces(clusterName)
+  const nsOptions = (namespaces || []) as string[]
+
+  const isKindChecked = (kind: string) => value.some(f => f.kind === kind)
+
+  const getNamespacesForKind = (kind: string): string[] =>
+    value.find(f => f.kind === kind)?.namespaces ?? []
+
+  const toggleKind = useCallback((meta: { kind: string; clusterScoped: boolean }) => {
+    if (isKindChecked(meta.kind)) {
+      onChange(clusterName, value.filter(f => f.kind !== meta.kind))
+    } else {
+      onChange(clusterName, [...value, { kind: meta.kind, clusterScoped: meta.clusterScoped, namespaces: [] }])
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clusterName, value, onChange])
+
+  const toggleNamespace = useCallback((kind: string, ns: string) => {
+    const existing = value.find(f => f.kind === kind)
+    if (!existing) return
+    const nsSet = new Set(existing.namespaces ?? [])
+    if (nsSet.has(ns)) nsSet.delete(ns)
+    else nsSet.add(ns)
+    onChange(clusterName, value.map(f => f.kind === kind ? { ...f, namespaces: [...nsSet] } : f))
+  }, [clusterName, value, onChange])
+
+  const activeCount = value.length
+
+  // Group kinds by their `group` field for display
+  const clusterGroups = ORBIT_CLUSTER_SCOPED_KINDS.reduce<Record<string, typeof ORBIT_CLUSTER_SCOPED_KINDS>>((acc, k) => {
+    ;(acc[k.group] ??= []).push(k)
+    return acc
+  }, {})
+  const namespacedGroups = ORBIT_NAMESPACED_KINDS.reduce<Record<string, typeof ORBIT_NAMESPACED_KINDS>>((acc, k) => {
+    ;(acc[k.group] ??= []).push(k)
+    return acc
+  }, {})
+
+  return (
+    <div className="mt-1 ml-6 border-l border-border pl-3">
+      <button
+        onClick={() => setExpanded(p => !p)}
+        className="flex items-center gap-1.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors py-0.5"
+      >
+        {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+        <span>Scope</span>
+        {activeCount > 0 && (
+          <span className="bg-purple-500/20 text-purple-400 px-1 rounded-full">
+            {activeCount}
+          </span>
+        )}
+        {activeCount === 0 && <span className="text-[9px] opacity-50">(all resources)</span>}
+      </button>
+
+      {expanded && (
+        <div className="mt-2 space-y-3">
+          {/* Cluster-scoped section */}
+          <div>
+            <p className="text-[10px] font-medium text-muted-foreground mb-1">Cluster-scoped</p>
+            <div className="space-y-2">
+              {Object.entries(clusterGroups).map(([group, kinds]) => (
+                <div key={group}>
+                  <p className="text-[9px] uppercase tracking-wide text-muted-foreground/60 mb-0.5">{group}</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {kinds.map(k => (
+                      <label key={k.kind} className="flex items-center gap-1 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={isKindChecked(k.kind)}
+                          onChange={() => toggleKind(k)}
+                          className="accent-purple-500 w-3 h-3"
+                        />
+                        <span className={cn(
+                          'text-[10px]',
+                          isKindChecked(k.kind) ? 'text-foreground' : 'text-muted-foreground',
+                        )}>{k.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Namespaced section */}
+          <div>
+            <p className="text-[10px] font-medium text-muted-foreground mb-1">Namespaced</p>
+            <div className="space-y-2">
+              {Object.entries(namespacedGroups).map(([group, kinds]) => (
+                <div key={group}>
+                  <p className="text-[9px] uppercase tracking-wide text-muted-foreground/60 mb-0.5">{group}</p>
+                  <div className="space-y-1">
+                    {kinds.map(k => (
+                      <div key={k.kind}>
+                        <label className="flex items-center gap-1 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={isKindChecked(k.kind)}
+                            onChange={() => toggleKind(k)}
+                            className="accent-purple-500 w-3 h-3"
+                          />
+                          <span className={cn(
+                            'text-[10px]',
+                            isKindChecked(k.kind) ? 'text-foreground' : 'text-muted-foreground',
+                          )}>{k.label}</span>
+                        </label>
+
+                        {/* Namespace picker — only shown when kind is checked */}
+                        {isKindChecked(k.kind) && (
+                          <div className="ml-4 mt-1">
+                            {nsLoading ? (
+                              <span className="text-[9px] text-muted-foreground">Loading namespaces…</span>
+                            ) : nsOptions.length === 0 ? (
+                              <span className="text-[9px] text-muted-foreground">All namespaces</span>
+                            ) : (
+                              <div className="flex flex-wrap gap-1">
+                                {nsOptions.map(ns => {
+                                  const checked = getNamespacesForKind(k.kind).includes(ns)
+                                  return (
+                                    <button
+                                      key={ns}
+                                      onClick={() => toggleNamespace(k.kind, ns)}
+                                      className={cn(
+                                        'text-[9px] px-1.5 py-0.5 rounded border transition-colors',
+                                        checked
+                                          ? 'bg-purple-500/20 border-purple-500/40 text-purple-300'
+                                          : 'border-border text-muted-foreground hover:border-purple-500/40',
+                                      )}
+                                    >
+                                      {ns}
+                                    </button>
+                                  )
+                                })}
+                                {getNamespacesForKind(k.kind).length === 0 && (
+                                  <span className="text-[9px] text-muted-foreground/60 self-center">all namespaces</span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// buildScopeString — injects resource filter selections into the orbit prompt
+// ---------------------------------------------------------------------------
+
+function buildScopeString(filters: Record<string, OrbitResourceFilter[]>): string {
+  const lines = Object.entries(filters)
+    .filter(([, f]) => f.length > 0)
+    .map(([cluster, f]) => {
+      const parts = f.map(r =>
+        r.clusterScoped
+          ? `${r.kind} (cluster-scoped)`
+          : (r.namespaces ?? []).length
+            ? `${r.kind} in namespaces: ${r.namespaces!.join(', ')}`
+            : `${r.kind} (all namespaces)`
+      )
+      return `- ${cluster}: ${parts.join('; ')}`
+    })
+  return lines.length ? `\n\nFocus on:\n${lines.join('\n')}` : ''
+}
+
+// ---------------------------------------------------------------------------
+// StandaloneOrbitDialog
+// ---------------------------------------------------------------------------
+
+export function StandaloneOrbitDialog({ onClose, prefill }: StandaloneOrbitDialogProps) {
   const { t } = useTranslation()
   const { saveMission } = useMissions()
   const { deduplicatedClusters, isLoading: clustersLoading } = useClusters()
 
-  // All orbit templates are applicable (wildcard categories)
   const templates = getApplicableOrbitTemplates(['*'])
 
   const [selectedOrbit, setSelectedOrbit] = useState<OrbitType | null>(
@@ -39,8 +235,15 @@ export function StandaloneOrbitDialog({ onClose }: StandaloneOrbitDialogProps) {
   )
   const [cadence, setCadence] = useState<OrbitCadence>(ORBIT_DEFAULT_CADENCE)
   const [autoRun, setAutoRun] = useState(false)
-  const [selectedClusters, setSelectedClusters] = useState<Set<string>>(new Set())
-  const [showClusterPicker, setShowClusterPicker] = useState(false)
+  const [selectedClusters, setSelectedClusters] = useState<Set<string>>(
+    new Set(prefill?.clusters ?? [])
+  )
+  const [resourceFilters, setResourceFilters] = useState<Record<string, OrbitResourceFilter[]>>(
+    prefill?.resourceFilters ?? {}
+  )
+  const [showClusterPicker, setShowClusterPicker] = useState(
+    (prefill?.clusters?.length ?? 0) > 0
+  )
   const [showSetupDialog, setShowSetupDialog] = useState(false)
   // Issue 9373: confirm before creating an orbit with an empty cluster selection
   // (which would otherwise silently target every connected cluster).
@@ -51,8 +254,17 @@ export function StandaloneOrbitDialog({ onClose }: StandaloneOrbitDialogProps) {
   const toggleCluster = useCallback((name: string) => {
     setSelectedClusters(prev => {
       const next = new Set(prev)
-      if (next.has(name)) next.delete(name)
-      else next.add(name)
+      if (next.has(name)) {
+        next.delete(name)
+        // clean up filters for deselected cluster
+        setResourceFilters(f => {
+          const updated = { ...f }
+          delete updated[name]
+          return updated
+        })
+      } else {
+        next.add(name)
+      }
       return next
     })
   }, [])
@@ -63,6 +275,11 @@ export function StandaloneOrbitDialog({ onClose }: StandaloneOrbitDialogProps) {
 
   const deselectAllClusters = useCallback(() => {
     setSelectedClusters(new Set())
+    setResourceFilters({})
+  }, [])
+
+  const handleScopeChange = useCallback((clusterName: string, filters: OrbitResourceFilter[]) => {
+    setResourceFilters(prev => ({ ...prev, [clusterName]: filters }))
   }, [])
 
   // Actually build + persist the orbit mission. Split out so both the
@@ -79,12 +296,18 @@ export function StandaloneOrbitDialog({ onClose }: StandaloneOrbitDialogProps) {
       ? `${template.title} -- ${clusterNames.join(', ')}`
       : template.title
 
+    const activeFilters: Record<string, OrbitResourceFilter[]> = {}
+    for (const [c, f] of Object.entries(resourceFilters)) {
+      if (f.length > 0) activeFilters[c] = f
+    }
+
     const orbitConfig: OrbitConfig = {
       cadence,
       orbitType: selectedOrbit,
       clusters: clusterNames,
       autoRun,
       lastRunAt: null,
+      ...(Object.keys(activeFilters).length > 0 ? { resourceFilters: activeFilters } : {}),
     }
 
     saveMission({
@@ -94,13 +317,13 @@ export function StandaloneOrbitDialog({ onClose }: StandaloneOrbitDialogProps) {
       missionClass: 'orbit',
       steps: template.steps.map(s => ({ title: s.title, description: s.description })),
       tags: ['orbit', selectedOrbit, cadence],
-      initialPrompt: template.description,
+      initialPrompt: template.description + buildScopeString(activeFilters),
       context: { orbitConfig },
     })
 
     emitOrbitMissionCreated(selectedOrbit, cadence)
     onClose()
-  }, [selectedOrbit, cadence, autoRun, selectedClusters, templates, saveMission, onClose])
+  }, [selectedOrbit, cadence, autoRun, selectedClusters, resourceFilters, templates, saveMission, onClose])
 
   const handleCreate = useCallback(() => {
     if (!selectedOrbit) return
@@ -221,7 +444,7 @@ export function StandaloneOrbitDialog({ onClose }: StandaloneOrbitDialogProps) {
             <span className="text-xs text-foreground">{t('orbit.autoRunDescription')}</span>
           </label>
 
-          {/* Target clusters */}
+          {/* Target clusters + per-cluster scope */}
           <div>
             <button
               onClick={() => setShowClusterPicker(!showClusterPicker)}
@@ -243,7 +466,7 @@ export function StandaloneOrbitDialog({ onClose }: StandaloneOrbitDialogProps) {
             </button>
 
             {showClusterPicker && (
-              <div className="mt-2 space-y-1 max-h-40 overflow-y-auto rounded-lg border border-border p-2">
+              <div className="mt-2 space-y-1 max-h-96 overflow-y-auto rounded-lg border border-border p-2">
                 {clustersLoading ? (
                   <p className="text-[10px] text-muted-foreground py-2 text-center">
                     {t('orbit.standaloneClustersLoading')}
@@ -269,29 +492,39 @@ export function StandaloneOrbitDialog({ onClose }: StandaloneOrbitDialogProps) {
                       </button>
                     </div>
                     {clusters.map(c => (
-                      <label
-                        key={c.name}
-                        className={cn(
-                          'flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-colors',
-                          selectedClusters.has(c.name)
-                            ? 'bg-purple-500/10'
-                            : 'hover:bg-secondary/50',
+                      <div key={c.name}>
+                        <label
+                          className={cn(
+                            'flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-colors',
+                            selectedClusters.has(c.name)
+                              ? 'bg-purple-500/10'
+                              : 'hover:bg-secondary/50',
+                          )}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedClusters.has(c.name)}
+                            onChange={() => toggleCluster(c.name)}
+                            className="accent-purple-500"
+                          />
+                          <span className="text-xs text-foreground truncate">{c.name}</span>
+                          <span className={cn(
+                            'ml-auto text-[10px] flex-shrink-0',
+                            c.healthy ? 'text-green-400' : 'text-red-400',
+                          )}>
+                            {c.healthy ? 'Healthy' : 'Unhealthy'}
+                          </span>
+                        </label>
+
+                        {/* Per-cluster resource scope — only when cluster is selected */}
+                        {selectedClusters.has(c.name) && (
+                          <ClusterScopeSection
+                            clusterName={c.name}
+                            value={resourceFilters[c.name] ?? []}
+                            onChange={handleScopeChange}
+                          />
                         )}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedClusters.has(c.name)}
-                          onChange={() => toggleCluster(c.name)}
-                          className="accent-purple-500"
-                        />
-                        <span className="text-xs text-foreground truncate">{c.name}</span>
-                        <span className={cn(
-                          'ml-auto text-[10px] flex-shrink-0',
-                          c.healthy ? 'text-green-400' : 'text-red-400',
-                        )}>
-                          {c.healthy ? 'Healthy' : 'Unhealthy'}
-                        </span>
-                      </label>
+                      </div>
                     ))}
                   </>
                 )}

@@ -35,7 +35,7 @@ const MissionBrowser = lazy(() =>
 )
 import { MissionControlDialog } from '../../mission-control/MissionControlDialog'
 import { MissionDetailView } from '../../missions/MissionDetailView'
-import type { MissionExport } from '../../../lib/missions/types'
+import type { MissionExport, OrbitResourceFilter } from '../../../lib/missions/types'
 import type { Mission } from '../../../hooks/useMissions'
 import { MissionListItem } from './MissionListItem'
 import { OrbitReminderBanner } from '../../missions/OrbitReminderBanner'
@@ -189,6 +189,7 @@ export function MissionSidebar() {
   /** Kubara chart name to pre-populate in Mission Control Phase 1 (#8483) */
   const [pendingKubaraChart, setPendingKubaraChart] = useState<string | undefined>(undefined)
   const [showOrbitDialog, setShowOrbitDialog] = useState(false)
+  const [orbitDialogPrefill, setOrbitDialogPrefill] = useState<{ clusters?: string[]; resourceFilters?: Record<string, OrbitResourceFilter[]> } | undefined>(undefined)
   const [newMissionPrompt, setNewMissionPrompt] = useState('')
   const [showSavedToast, setShowSavedToast] = useState<string | null>(null)
   /** Countdown seconds remaining for the saved-mission toast */
@@ -1097,7 +1098,15 @@ export function MissionSidebar() {
                 {t('missionSidebar.backToMissions', { count: listTotalMissions })}
               </button>
             )}
-            <MissionChat mission={activeMission} isFullScreen={isFullScreen} onToggleFullScreen={() => setFullScreen(true)} />
+            <MissionChat
+              mission={activeMission}
+              isFullScreen={isFullScreen}
+              onToggleFullScreen={() => setFullScreen(true)}
+              onOpenOrbitDialog={(prefill) => {
+                setOrbitDialogPrefill(prefill)
+                setShowOrbitDialog(true)
+              }}
+            />
           </div>
         </div>
       ) : (
@@ -1346,7 +1355,10 @@ export function MissionSidebar() {
 
       {/* Standalone Orbit Mission Dialog */}
       {showOrbitDialog && (
-        <StandaloneOrbitDialog onClose={() => setShowOrbitDialog(false)} />
+        <StandaloneOrbitDialog
+          onClose={() => { setShowOrbitDialog(false); setOrbitDialogPrefill(undefined) }}
+          prefill={orbitDialogPrefill}
+        />
       )}
 
       {/* Cluster Selection Dialog for install missions */}

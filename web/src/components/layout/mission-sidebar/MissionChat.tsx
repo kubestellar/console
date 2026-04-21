@@ -36,12 +36,14 @@ import { PreflightFailure } from '../../missions/PreflightFailure'
 import { SaveResolutionDialog } from '../../missions/SaveResolutionDialog'
 import { SetupInstructionsDialog } from '../../setup/SetupInstructionsDialog'
 import { OrbitSetupOffer } from '../../missions/OrbitSetupOffer'
+import { OrbitMonitorOffer } from '../../missions/OrbitMonitorOffer'
+import type { OrbitResourceFilter } from '../../../lib/missions/types'
 import { STATUS_CONFIG, TYPE_ICONS } from './types'
 import type { FontSize } from './types'
 import { TypingIndicator } from './TypingIndicator'
 import { MemoizedMessage } from './MemoizedMessage'
 
-export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' as FontSize, onToggleFullScreen }: { mission: Mission; isFullScreen?: boolean; fontSize?: FontSize; onToggleFullScreen?: () => void }) {
+export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' as FontSize, onToggleFullScreen, onOpenOrbitDialog }: { mission: Mission; isFullScreen?: boolean; fontSize?: FontSize; onToggleFullScreen?: () => void; onOpenOrbitDialog?: (prefill: { clusters?: string[]; resourceFilters?: Record<string, OrbitResourceFilter[]> }) => void }) {
   const { t } = useTranslation('common')
   // #6226: useToast for download error feedback (replaces an unhandled
   // exception path that could white-screen the dialog).
@@ -927,6 +929,14 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
                 onDashboardCreated={() => {/* navigation handled internally */}}
                 onSkip={() => {/* dismiss is internal */}}
               />
+            )}
+
+            {/* Monitor offer — shown after repair/troubleshoot/analyze missions complete */}
+            {mission.importedFrom?.missionClass !== 'install' &&
+             mission.importedFrom?.missionClass !== 'orbit' &&
+             mission.type !== 'deploy' &&
+             onOpenOrbitDialog && (
+              <OrbitMonitorOffer mission={mission} onOpenOrbitDialog={onOpenOrbitDialog} />
             )}
 
             {/* Follow-up input — allow continuing the conversation after completion (#5735) */}
