@@ -101,7 +101,9 @@ describe('useBonusPoints — successful fetch', () => {
     authenticatedUser('bob')
     mockFetchBonus({ login: 'bob', total_bonus_points: 150, entries: [] })
     const { result } = renderHook(() => useBonusPoints())
-    await waitFor(() => result.current.bonusPoints === 150)
+    // waitFor only re-polls when the callback throws; a boolean return resolves
+    // immediately via onDone(null, false). Use expect() so it actually waits.
+    await waitFor(() => expect(result.current.bonusPoints).toBe(150))
     expect(result.current.bonusPoints).toBe(150)
   })
 
@@ -110,7 +112,7 @@ describe('useBonusPoints — successful fetch', () => {
     const entries = [{ issue_number: 1, points: 50, reason: 'PR fix', created_at: '2026-01-01', state: 'closed' }]
     mockFetchBonus({ login: 'bob', total_bonus_points: 50, entries })
     const { result } = renderHook(() => useBonusPoints())
-    await waitFor(() => result.current.bonusEntries.length > 0)
+    await waitFor(() => expect(result.current.bonusEntries.length).toBeGreaterThan(0))
     expect(result.current.bonusEntries).toHaveLength(1)
   })
 

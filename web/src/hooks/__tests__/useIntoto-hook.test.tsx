@@ -192,7 +192,7 @@ describe('useIntoto — cluster fetch: CRD not installed', () => {
       Promise.all(tasks.map(t => t().then(v => ({ status: 'fulfilled' as const, value: v }))))
     )
     const { result } = renderHook(() => useIntoto())
-    await waitFor(() => result.current.statuses['cluster-a'] !== undefined)
+    await waitFor(() => expect(result.current.statuses['cluster-a']).toBeDefined())
     expect(result.current.statuses['cluster-a']?.installed).toBe(false)
   })
 })
@@ -231,20 +231,26 @@ describe('useIntoto — cluster fetch: CRD installed', () => {
 
   it('marks cluster as installed when CRD found and layouts fetched', async () => {
     const { result } = renderHook(() => useIntoto())
-    await waitFor(() => !result.current.isLoading)
+    // waitFor only re-polls when the callback throws; a boolean return resolves
+    // immediately via onDone(null, false). Use expect() so it actually waits.
+    await waitFor(() => expect(result.current.statuses['cluster-b']?.installed).toBe(true))
     expect(result.current.statuses['cluster-b']?.installed).toBe(true)
   })
 
   it('populates layouts from API response', async () => {
     const { result } = renderHook(() => useIntoto())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() =>
+      expect(result.current.statuses['cluster-b']?.layouts?.length).toBeGreaterThan(0)
+    )
     expect(result.current.statuses['cluster-b']?.layouts).toHaveLength(1)
     expect(result.current.statuses['cluster-b']?.layouts[0].name).toBe('build-layout')
   })
 
   it('steps are mapped from spec.steps', async () => {
     const { result } = renderHook(() => useIntoto())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() =>
+      expect(result.current.statuses['cluster-b']?.layouts[0]?.steps?.length).toBeGreaterThanOrEqual(2)
+    )
     const steps = result.current.statuses['cluster-b']?.layouts[0].steps ?? []
     expect(steps).toHaveLength(2)
     expect(steps[0].name).toBe('clone')
@@ -253,20 +259,22 @@ describe('useIntoto — cluster fetch: CRD installed', () => {
 
   it('steps with no pubkeys show unknown functionary', async () => {
     const { result } = renderHook(() => useIntoto())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() =>
+      expect(result.current.statuses['cluster-b']?.layouts[0]?.steps?.length).toBeGreaterThanOrEqual(2)
+    )
     const steps = result.current.statuses['cluster-b']?.layouts[0].steps ?? []
     expect(steps[1].functionary).toBe('unknown')
   })
 
   it('installed is true when at least one cluster is installed', async () => {
     const { result } = renderHook(() => useIntoto())
-    await waitFor(() => result.current.installed === true)
+    await waitFor(() => expect(result.current.installed).toBe(true))
     expect(result.current.installed).toBe(true)
   })
 
   it('saves result to localStorage cache', async () => {
     renderHook(() => useIntoto())
-    await waitFor(() => localStorage.getItem('kc-intoto-cache') !== null)
+    await waitFor(() => expect(localStorage.getItem('kc-intoto-cache')).not.toBeNull())
     const cached = localStorage.getItem('kc-intoto-cache')
     expect(cached).toBeTruthy()
   })
@@ -307,7 +315,7 @@ describe('useIntoto — link verification', () => {
     )
 
     const { result } = renderHook(() => useIntoto())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => expect(result.current.statuses['c1']?.layouts[0]?.steps[0]?.status).toBe('verified'))
     const step = result.current.statuses['c1']?.layouts[0]?.steps[0]
     expect(step?.status).toBe('verified')
   })
@@ -329,7 +337,7 @@ describe('useIntoto — cluster fetch: errors', () => {
     )
 
     const { result } = renderHook(() => useIntoto())
-    await waitFor(() => result.current.statuses['bad-cluster'] !== undefined)
+    await waitFor(() => expect(result.current.statuses['bad-cluster']).toBeDefined())
     expect(result.current.statuses['bad-cluster']?.error).toBeTruthy()
   })
 
@@ -344,7 +352,7 @@ describe('useIntoto — cluster fetch: errors', () => {
     )
 
     const { result } = renderHook(() => useIntoto())
-    await waitFor(() => result.current.statuses['err-cluster'] !== undefined)
+    await waitFor(() => expect(result.current.hasErrors).toBe(true))
     expect(result.current.hasErrors).toBe(true)
   })
 
@@ -359,7 +367,7 @@ describe('useIntoto — cluster fetch: errors', () => {
     )
 
     const { result } = renderHook(() => useIntoto())
-    await waitFor(() => result.current.consecutiveFailures > 0)
+    await waitFor(() => expect(result.current.consecutiveFailures).toBeGreaterThan(0))
     expect(result.current.consecutiveFailures).toBeGreaterThan(0)
   })
 })

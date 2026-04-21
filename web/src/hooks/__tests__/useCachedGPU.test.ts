@@ -85,7 +85,9 @@ beforeEach(() => {
 describe('useCachedGPUNodes', () => {
   it('exposes gpuNodes and standard cache fields', () => {
     const { result } = renderHook(() => useCachedGPUNodes())
-    expect(result.current).toHaveProperty('gpuNodes')
+    // Hook exposes `nodes` (matches backend /api/mcp/gpu-nodes response shape),
+    // not `gpuNodes`. See useCachedGPU.ts useCachedGPUNodes().
+    expect(result.current).toHaveProperty('nodes')
     expect(result.current).toHaveProperty('isLoading')
     expect(result.current).toHaveProperty('isDemoFallback')
     expect(result.current).toHaveProperty('refetch')
@@ -95,7 +97,7 @@ describe('useCachedGPUNodes', () => {
     const nodes = [{ name: 'gpu-0', cluster: 'c1', gpuCount: 4 }]
     mockUseCache.mockReturnValue(defaultCache({ data: nodes }))
     const { result } = renderHook(() => useCachedGPUNodes())
-    expect(result.current.gpuNodes).toEqual(nodes)
+    expect(result.current.nodes).toEqual(nodes)
   })
 
   it('uses cluster in cache key when provided', () => {
@@ -117,8 +119,10 @@ describe('useCachedGPUNodes', () => {
 describe('useCachedGPUNodeHealth', () => {
   it('exposes healthStatuses field', () => {
     const { result } = renderHook(() => useCachedGPUNodeHealth())
-    expect(result.current).toHaveProperty('healthStatuses')
-    expect(Array.isArray(result.current.healthStatuses)).toBe(true)
+    // Hook exposes `nodes` (matches backend /api/mcp/gpu-nodes/health response
+    // shape), not `healthStatuses`. See useCachedGPU.ts useCachedGPUNodeHealth().
+    expect(result.current).toHaveProperty('nodes')
+    expect(Array.isArray(result.current.nodes)).toBe(true)
   })
 
   it('cluster key included when cluster provided', () => {
