@@ -430,6 +430,19 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/console-cr/deployments", s.handleConsoleCRWorkloadDeployments)
 	mux.HandleFunc("/console-cr/deployments/status", s.handleConsoleCRWorkloadDeploymentStatus)
 
+	// Federation / multi-cluster-management awareness (Issue 9368, PR A).
+	// Read-only endpoints that fan out across every kubeconfig context in
+	// parallel and query every registered federation provider (OCM,
+	// Karmada, Clusternet, Liqo, KubeAdmiral, CAPI). PR A ships with the
+	// registry empty — providers register themselves in later PRs.
+	// Identity rule: all reads run under the user's kubeconfig; no
+	// pod-ServiceAccount fallback. See pkg/agent/server_federation.go and
+	// the master plan referenced at the top of that file.
+	mux.HandleFunc("/federation/detect", s.handleFederationDetect)
+	mux.HandleFunc("/federation/clusters", s.handleFederationClusters)
+	mux.HandleFunc("/federation/groups", s.handleFederationGroups)
+	mux.HandleFunc("/federation/pending-joins", s.handleFederationPendingJoins)
+
 	// GitOps drift detection + kubectl sync moved to kc-agent (#7993 Phase 3b).
 	// These shell `kubectl diff` / `kubectl apply` under the user's kubeconfig.
 	// Backend handlers are still present until Phase 4 deletes them — routes
