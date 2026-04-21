@@ -162,6 +162,7 @@ const DEMO_HUBS: ProviderHubStatus[] = [
   { provider: 'ocm', hubContext: 'hub-prod', detected: true, version: 'v1' },
   { provider: 'ocm', hubContext: 'hub-staging', detected: true, version: 'v1' },
   { provider: 'capi', hubContext: 'capi-mgmt', detected: true, version: 'v1beta1' },
+  { provider: 'karmada', hubContext: 'karmada-control', detected: true, version: 'v1alpha1' },
 ]
 
 const DEMO_CLUSTERS: FederatedCluster[] = [
@@ -225,19 +226,40 @@ const DEMO_CLUSTERS: FederatedCluster[] = [
       readyMachines: 0,
     },
   },
+  {
+    provider: 'karmada', hubContext: 'karmada-control', name: 'karmada-member-1',
+    state: 'joined', available: 'True',
+    labels: { env: 'prod', region: 'ap-southeast-1' },
+    apiServerURL: 'https://karmada-member-1.ap-southeast-1.example.com:6443',
+  },
+  {
+    provider: 'karmada', hubContext: 'karmada-control', name: 'karmada-member-2',
+    state: 'pending', available: 'False',
+    labels: { env: 'staging', region: 'eu-west-1' },
+    apiServerURL: 'https://karmada-member-2.eu-west-1.example.com:6443',
+  },
 ]
 
 const DEMO_GROUPS: FederatedGroup[] = [
   { provider: 'ocm', hubContext: 'hub-prod', name: 'production', members: ['eks-prod-us-east-1', 'openshift-prod'], kind: 'set' },
   { provider: 'ocm', hubContext: 'hub-staging', name: 'staging', members: ['gke-staging'], kind: 'set' },
   { provider: 'capi', hubContext: 'capi-mgmt', name: 'capi:awscluster', members: ['workload-prod-aws', 'workload-staging-aws'], kind: 'infra' },
+  { provider: 'karmada', hubContext: 'karmada-control', name: 'deploy-to-apac', members: ['karmada-member-1'], kind: 'selector' },
 ]
+
+const FIVE_MINUTES_MS = 300_000;
+const TEN_MINUTES_MS = 600_000;
 
 const DEMO_PENDING: PendingJoin[] = [
   {
     provider: 'ocm', hubContext: 'hub-staging', clusterName: 'aks-dev-westeu',
-    requestedAt: new Date(Date.now() - 300_000).toISOString(),
+    requestedAt: new Date(Date.now() - FIVE_MINUTES_MS).toISOString(),
     detail: 'CSR: csr-aks-dev-westeu-1',
+  },
+  {
+    provider: 'karmada', hubContext: 'karmada-control', clusterName: 'karmada-member-2',
+    requestedAt: new Date(Date.now() - TEN_MINUTES_MS).toISOString(),
+    detail: 'Cluster Ready condition is not True',
   },
 ]
 
