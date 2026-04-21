@@ -9,9 +9,7 @@ import {
   Minimize2,
   PanelRightClose,
   PanelRightOpen,
-  Minus,
   Plus,
-  Type,
   Sparkles,
   Send,
   Globe,
@@ -39,7 +37,6 @@ import { MissionControlDialog } from '../../mission-control/MissionControlDialog
 import { MissionDetailView } from '../../missions/MissionDetailView'
 import type { MissionExport } from '../../../lib/missions/types'
 import type { Mission } from '../../../hooks/useMissions'
-import type { FontSize } from './types'
 import { MissionListItem } from './MissionListItem'
 import { OrbitReminderBanner } from '../../missions/OrbitReminderBanner'
 import { MissionTypeExplainer } from '../../missions/MissionTypeExplainer'
@@ -85,7 +82,19 @@ export function MissionSidebar() {
   const { missions, activeMission, isSidebarOpen, isSidebarMinimized, isFullScreen, setActiveMission, closeSidebar, dismissMission, cancelMission, minimizeSidebar, expandSidebar, setFullScreen, selectedAgent, startMission, saveMission, runSavedMission, openSidebar, sendMessage } = useMissions()
   const { isMobile } = useMobile()
   const [collapsedMissions, setCollapsedMissions] = useState<Set<string>>(new Set())
-  const [fontSize, setFontSize] = useState<FontSize>('base')
+  const [showAddMenu, setShowAddMenu] = useState(false)
+  const addMenuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!showAddMenu) return
+    const handler = (e: MouseEvent) => {
+      if (addMenuRef.current && !addMenuRef.current.contains(e.target as Node)) {
+        setShowAddMenu(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [showAddMenu])
 
   /** Number of missions rendered per page in the history list (#4778) */
   const MISSIONS_PAGE_SIZE = 20
@@ -695,67 +704,52 @@ export function MissionSidebar() {
         <div className="flex items-center gap-1 min-w-0">
           {/* Optional toolbar buttons — clipped when sidebar is narrow */}
           <div className="flex items-center gap-1 overflow-hidden min-w-0 flex-shrink">
-            {/* New Mission Button — uses "+" for discoverability (#6095).
-                Styled with a purple accent and ring so it stands out from
-                the font-size Plus control and reads clearly as "add new". */}
-            <button
-              onClick={() => {
-                setShowNewMission(!showNewMission)
-                if (!showNewMission) {
-                  setTimeout(() => newMissionInputRef.current?.focus(), FOCUS_DELAY_MS)
-                }
-              }}
-              className={cn(
-                // mr-2 gives the accented "+ New mission" button breathing room
-                // from the adjacent toolbar group (#6132) so it doesn't visually
-                // merge with the Globe/Rocket icons next to it.
-                "p-1.5 mr-2 rounded transition-colors flex-shrink-0 ring-1",
-                showNewMission
-                  ? "bg-primary text-primary-foreground ring-primary"
-                  : "bg-purple-500/10 text-purple-400 ring-purple-500/30 hover:bg-purple-500/20 hover:text-purple-300"
+            {/* + button with dropdown: New Mission / Browse / Mission Control */}
+            <div className="relative mr-2 flex-shrink-0" ref={addMenuRef}>
+              <button
+                onClick={() => setShowAddMenu(prev => !prev)}
+                className={cn(
+                  "p-1.5 rounded transition-colors ring-1",
+                  showAddMenu
+                    ? "bg-primary text-primary-foreground ring-primary"
+                    : "bg-purple-500/10 text-purple-400 ring-purple-500/30 hover:bg-purple-500/20 hover:text-purple-300"
+                )}
+                aria-label="Add"
+                title="Add"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+              {showAddMenu && (
+                <div className="absolute left-0 top-full mt-1 z-50 w-52 rounded-lg border border-border bg-background shadow-lg py-1">
+                  <button
+                    onClick={() => {
+                      setShowAddMenu(false)
+                      setShowNewMission(true)
+                      setTimeout(() => newMissionInputRef.current?.focus(), FOCUS_DELAY_MS)
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-white/5 text-foreground"
+                  >
+                    <Plus className="w-4 h-4 text-purple-400" />
+                    New Mission
+                  </button>
+                  <button
+                    onClick={() => { setShowAddMenu(false); setShowBrowser(true) }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-white/5 text-foreground"
+                  >
+                    <Globe className="w-4 h-4 text-muted-foreground" />
+                    Browse Community
+                  </button>
+                  <button
+                    onClick={() => { setShowAddMenu(false); setShowMissionControl(true) }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-white/5 text-foreground"
+                  >
+                    <Rocket className="w-4 h-4 text-muted-foreground" />
+                    Mission Control
+                  </button>
+                </div>
               )}
-              aria-label={t('missionSidebar.newMissionButton')}
-              title={t('missionSidebar.newMissionButton')}
-            >
-              <Plus className="w-4 h-4" />
-            </button>
-            {/* Browse Community Missions */}
-            <button
-              onClick={() => setShowBrowser(true)}
-              className="p-1.5 rounded transition-colors text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10 flex-shrink-0"
-              title={t('layout.missionSidebar.browseCommunityMissions')}
-            >
-              <Globe className="w-4 h-4" />
-            </button>
-            {/* Mission Control */}
-            <button
-              onClick={() => setShowMissionControl(true)}
-              className="p-1.5 rounded transition-colors text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10 flex-shrink-0"
-              title={t('layout.missionSidebar.missionControlTitle')}
-            >
-              <Rocket className="w-4 h-4" />
-            </button>
-            <AgentSelector compact={!isFullScreen} />
-            {/* Font size controls */}
-            <div className="flex items-center gap-1 border border-border rounded-lg px-1 flex-shrink-0">
-              <button
-                onClick={() => setFontSize(prev => prev === 'base' ? 'sm' : prev === 'lg' ? 'base' : 'sm')}
-                disabled={fontSize === 'sm'}
-                className="p-1 rounded transition-colors disabled:opacity-30 hover:bg-black/5 dark:hover:bg-white/10"
-                title={t('missionSidebar.decreaseFontSize')}
-              >
-                <Minus className="w-3 h-3 text-muted-foreground" />
-              </button>
-              <Type className="w-3 h-3 text-muted-foreground" />
-              <button
-                onClick={() => setFontSize(prev => prev === 'sm' ? 'base' : prev === 'base' ? 'lg' : 'lg')}
-                disabled={fontSize === 'lg'}
-                className="p-1 rounded transition-colors disabled:opacity-30 hover:bg-black/5 dark:hover:bg-white/10"
-                title={t('missionSidebar.increaseFontSize')}
-              >
-                <Plus className="w-3 h-3 text-muted-foreground" />
-              </button>
             </div>
+            <AgentSelector compact={!isFullScreen} />
           </div>
           {/* Window control buttons — always visible, never clipped */}
           <div className="flex items-center gap-1 flex-shrink-0">
@@ -1103,7 +1097,7 @@ export function MissionSidebar() {
                 {t('missionSidebar.backToMissions', { count: listTotalMissions })}
               </button>
             )}
-            <MissionChat mission={activeMission} isFullScreen={isFullScreen} fontSize={fontSize} onToggleFullScreen={() => setFullScreen(true)} />
+            <MissionChat mission={activeMission} isFullScreen={isFullScreen} onToggleFullScreen={() => setFullScreen(true)} />
           </div>
         </div>
       ) : (

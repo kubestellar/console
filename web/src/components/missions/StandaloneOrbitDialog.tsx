@@ -109,7 +109,7 @@ export function StandaloneOrbitDialog({ onClose }: StandaloneOrbitDialogProps) {
       tabIndex={-1}
       ref={(el) => el?.focus()}
     >
-      <div className="w-full max-w-md mx-4 rounded-xl border border-purple-500/30 bg-card shadow-2xl overflow-hidden">
+      <div className="w-full max-w-2xl mx-4 rounded-xl border border-purple-500/30 bg-card shadow-2xl overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div className="flex items-center gap-2">
