@@ -16,6 +16,7 @@ import { ORBIT_DEFAULT_CADENCE } from '../../lib/constants/orbit'
 import { emitOrbitMissionCreated } from '../../lib/analytics'
 import { isDemoMode } from '../../lib/demoMode'
 import { SetupInstructionsDialog } from '../setup/SetupInstructionsDialog'
+import { ConfirmDialog } from '../../lib/modals'
 import type { OrbitCadence, OrbitType, OrbitConfig } from '../../lib/missions/types'
 
 interface StandaloneOrbitDialogProps {
@@ -41,6 +42,9 @@ export function StandaloneOrbitDialog({ onClose }: StandaloneOrbitDialogProps) {
   const [selectedClusters, setSelectedClusters] = useState<Set<string>>(new Set())
   const [showClusterPicker, setShowClusterPicker] = useState(false)
   const [showSetupDialog, setShowSetupDialog] = useState(false)
+  // Issue 9373: confirm before creating an orbit with an empty cluster selection
+  // (which would otherwise silently target every connected cluster).
+  const [showAllClustersConfirm, setShowAllClustersConfirm] = useState(false)
 
   const clusters = deduplicatedClusters || []
 
@@ -61,14 +65,11 @@ export function StandaloneOrbitDialog({ onClose }: StandaloneOrbitDialogProps) {
     setSelectedClusters(new Set())
   }, [])
 
-  const handleCreate = useCallback(() => {
+  // Actually build + persist the orbit mission. Split out so both the
+  // primary Create button and the "run on all clusters" confirmation
+  // can invoke it (Issue 9373).
+  const persistOrbitMission = useCallback(() => {
     if (!selectedOrbit) return
-
-    // In demo mode, redirect to local install setup dialog
-    if (isDemoMode()) {
-      setShowSetupDialog(true)
-      return
-    }
 
     const template = templates.find(tpl => tpl.orbitType === selectedOrbit)
     if (!template) return
@@ -100,6 +101,31 @@ export function StandaloneOrbitDialog({ onClose }: StandaloneOrbitDialogProps) {
     emitOrbitMissionCreated(selectedOrbit, cadence)
     onClose()
   }, [selectedOrbit, cadence, autoRun, selectedClusters, templates, saveMission, onClose])
+
+  const handleCreate = useCallback(() => {
+    if (!selectedOrbit) return
+
+    // In demo mode, redirect to local install setup dialog
+    if (isDemoMode()) {
+      setShowSetupDialog(true)
+      return
+    }
+
+    // Issue 9373: If the user left the cluster picker empty we would
+    // otherwise silently target every connected cluster. Surface a
+    // confirmation modal instead of proceeding silently.
+    if (selectedClusters.size === 0 && clusters.length > 0) {
+      setShowAllClustersConfirm(true)
+      return
+    }
+
+    persistOrbitMission()
+  }, [selectedOrbit, selectedClusters, clusters.length, persistOrbitMission])
+
+  const handleConfirmAllClusters = useCallback(() => {
+    setShowAllClustersConfirm(false)
+    persistOrbitMission()
+  }, [persistOrbitMission])
 
   return (
     <>
@@ -301,6 +327,17 @@ export function StandaloneOrbitDialog({ onClose }: StandaloneOrbitDialogProps) {
     {showSetupDialog && (
       <SetupInstructionsDialog isOpen={showSetupDialog} onClose={() => setShowSetupDialog(false)} />
     )}
+    {/* Issue 9373: Empty cluster selection fallback confirmation. */}
+    <ConfirmDialog
+      isOpen={showAllClustersConfirm}
+      onClose={() => setShowAllClustersConfirm(false)}
+      onConfirm={handleConfirmAllClusters}
+      title={t('orbit.confirmAllClustersTitle')}
+      message={t('orbit.confirmAllClustersMessage', { count: clusters.length })}
+      confirmLabel={t('orbit.confirmAllClustersContinue')}
+      cancelLabel={t('common.cancel', { defaultValue: 'Cancel' })}
+      variant="warning"
+    />
     </>
   )
 }

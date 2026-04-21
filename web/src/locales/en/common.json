@@ -2040,7 +2040,10 @@
     "standaloneSelectAll": "Select all",
     "standaloneDeselectAll": "Deselect all",
     "standaloneCreate": "Create Orbit",
-    "addOrbit": "Add Orbit"
+    "addOrbit": "Add Orbit",
+    "confirmAllClustersTitle": "No clusters selected",
+    "confirmAllClustersMessage": "This orbit will run against all {{count}} connected cluster(s). Do you want to continue?",
+    "confirmAllClustersContinue": "Run on all clusters"
   },
   "update": {
     "available": "Update Available",
