@@ -123,21 +123,20 @@ describe('useServiceImportsCard — successful API response', () => {
   it('populates imports from API response', async () => {
     mockFetchOk([makeServiceImport('my-svc')])
     const { result } = renderHook(() => useServiceImportsCard())
-    await waitFor(() => result.current.imports.length > 0)
+    await waitFor(() => expect(result.current.imports.length).toBeGreaterThan(0))
     expect(result.current.imports).toHaveLength(1)
   })
 
   it('sets isDemoData=false on successful fetch', async () => {
     mockFetchOk([makeServiceImport()])
     const { result } = renderHook(() => useServiceImportsCard())
-    await waitFor(() => result.current.isDemoData === false)
-    expect(result.current.isDemoData).toBe(false)
+    await waitFor(() => expect(result.current.isDemoData).toBe(false))
   })
 
   it('handles empty items array legitimately', async () => {
     mockFetchOk([])
     const { result } = renderHook(() => useServiceImportsCard())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.imports).toHaveLength(0)
     expect(result.current.isDemoData).toBe(false)
   })
@@ -145,21 +144,21 @@ describe('useServiceImportsCard — successful API response', () => {
   it('sets consecutiveFailures=0 on success', async () => {
     mockFetchOk()
     const { result } = renderHook(() => useServiceImportsCard())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.consecutiveFailures).toBe(0)
   })
 
   it('sets lastRefresh to a number on success', async () => {
     mockFetchOk()
     const { result } = renderHook(() => useServiceImportsCard())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(typeof result.current.lastRefresh).toBe('number')
   })
 
   it('saves to localStorage cache on success', async () => {
     mockFetchOk([makeServiceImport()])
     renderHook(() => useServiceImportsCard())
-    await waitFor(() => localStorage.getItem(CACHE_KEY) !== null)
+    await waitFor(() => expect(localStorage.getItem(CACHE_KEY)).not.toBeNull())
     const cached = JSON.parse(localStorage.getItem(CACHE_KEY)!)
     expect(cached.isDemoData).toBe(false)
   })
@@ -167,7 +166,7 @@ describe('useServiceImportsCard — successful API response', () => {
   it('isFailed=false on success', async () => {
     mockFetchOk()
     const { result } = renderHook(() => useServiceImportsCard())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.isFailed).toBe(false)
   })
 })
@@ -176,7 +175,7 @@ describe('useServiceImportsCard — error fallback', () => {
   it('falls back to demo data on 503 response', async () => {
     mockFetch503()
     const { result } = renderHook(() => useServiceImportsCard())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.isDemoData).toBe(true)
     expect(result.current.imports.length).toBeGreaterThan(0)
   })
@@ -184,21 +183,21 @@ describe('useServiceImportsCard — error fallback', () => {
   it('falls back to demo data on network error', async () => {
     mockFetchError()
     const { result } = renderHook(() => useServiceImportsCard())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.isDemoData).toBe(true)
   })
 
   it('falls back to demo data on non-503 HTTP error', async () => {
     mockFetchHttpError(500)
     const { result } = renderHook(() => useServiceImportsCard())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.isDemoData).toBe(true)
   })
 
   it('increments consecutiveFailures on error', async () => {
     mockFetchError()
     const { result } = renderHook(() => useServiceImportsCard())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.consecutiveFailures).toBe(1)
   })
 
@@ -206,7 +205,7 @@ describe('useServiceImportsCard — error fallback', () => {
     mockUseClusters.mockReturnValue({ deduplicatedClusters: [{ name: 'prod', reachable: true }], isLoading: false })
     mockFetchError()
     const { result } = renderHook(() => useServiceImportsCard())
-    await waitFor(() => result.current.imports.length > 0)
+    await waitFor(() => expect(result.current.imports.length).toBeGreaterThan(0))
     const clusterImports = result.current.imports.filter(
       i => i.metadata?.labels?.['multicluster.kubernetes.io/cluster'] === 'prod'
         || (i.status?.clusters ?? []).some((c: { cluster: string }) => c.cluster === 'prod')
@@ -219,7 +218,7 @@ describe('useServiceImportsCard — error fallback', () => {
   it('saves demo data to cache on fallback', async () => {
     mockFetchError()
     renderHook(() => useServiceImportsCard())
-    await waitFor(() => localStorage.getItem(CACHE_KEY) !== null)
+    await waitFor(() => expect(localStorage.getItem(CACHE_KEY)).not.toBeNull())
     const cached = JSON.parse(localStorage.getItem(CACHE_KEY)!)
     expect(cached.isDemoData).toBe(true)
   })
@@ -272,7 +271,7 @@ describe('useServiceImportsCard — clustersLoading', () => {
     mockUseClusters.mockReturnValue({ deduplicatedClusters: [], isLoading: false })
     mockFetchOk([])
     renderHook(() => useServiceImportsCard())
-    await waitFor(() => (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length > 0)
+    await waitFor(() => expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(0))
     expect(globalThis.fetch).toHaveBeenCalled()
   })
 })
@@ -282,7 +281,7 @@ describe('useServiceImportsCard — auth headers', () => {
     localStorage.setItem('kc-auth-token', 'test-token')
     mockFetchOk([])
     renderHook(() => useServiceImportsCard())
-    await waitFor(() => (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length > 0)
+    await waitFor(() => expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(0))
     const [, options] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0]
     expect(options?.headers?.['Authorization']).toBe('Bearer test-token')
   })

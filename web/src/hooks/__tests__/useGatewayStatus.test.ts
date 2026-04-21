@@ -129,7 +129,7 @@ describe('useGatewayStatus — successful API response', () => {
   it('populates gateways from API response', async () => {
     mockFetchOk([makeGateway('prod-gw', 'prod')])
     const { result } = renderHook(() => useGatewayStatus())
-    await waitFor(() => result.current.gateways.length > 0)
+    await waitFor(() => expect(result.current.gateways.length).toBeGreaterThan(0))
     expect(result.current.gateways).toHaveLength(1)
     expect(result.current.gateways[0].name).toBe('prod-gw')
   })
@@ -137,28 +137,27 @@ describe('useGatewayStatus — successful API response', () => {
   it('sets isDemoData=false on successful fetch', async () => {
     mockFetchOk([makeGateway()])
     const { result } = renderHook(() => useGatewayStatus())
-    await waitFor(() => result.current.isDemoData === false)
-    expect(result.current.isDemoData).toBe(false)
+    await waitFor(() => expect(result.current.isDemoData).toBe(false))
   })
 
   it('sets consecutiveFailures=0 on success', async () => {
     mockFetchOk([makeGateway()])
     const { result } = renderHook(() => useGatewayStatus())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.consecutiveFailures).toBe(0)
   })
 
   it('sets lastRefresh to a number on success', async () => {
     mockFetchOk([makeGateway()])
     const { result } = renderHook(() => useGatewayStatus())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(typeof result.current.lastRefresh).toBe('number')
   })
 
   it('saves result to localStorage cache', async () => {
     mockFetchOk([makeGateway()])
     renderHook(() => useGatewayStatus())
-    await waitFor(() => localStorage.getItem(CACHE_KEY) !== null)
+    await waitFor(() => expect(localStorage.getItem(CACHE_KEY)).not.toBeNull())
     const cached = JSON.parse(localStorage.getItem(CACHE_KEY)!)
     expect(cached.isDemoData).toBe(false)
     expect(cached.data).toHaveLength(1)
@@ -167,7 +166,7 @@ describe('useGatewayStatus — successful API response', () => {
   it('handles empty items array (no gateways configured)', async () => {
     mockFetchOk([])
     const { result } = renderHook(() => useGatewayStatus())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.gateways).toHaveLength(0)
     expect(result.current.isDemoData).toBe(false)
   })
@@ -175,7 +174,7 @@ describe('useGatewayStatus — successful API response', () => {
   it('isFailed is false after success', async () => {
     mockFetchOk([makeGateway()])
     const { result } = renderHook(() => useGatewayStatus())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.isFailed).toBe(false)
   })
 })
@@ -184,7 +183,7 @@ describe('useGatewayStatus — error fallback (demo data)', () => {
   it('falls back to demo data on 503 response', async () => {
     mockFetch503()
     const { result } = renderHook(() => useGatewayStatus())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.isDemoData).toBe(true)
     expect(result.current.gateways.length).toBeGreaterThan(0)
   })
@@ -192,21 +191,21 @@ describe('useGatewayStatus — error fallback (demo data)', () => {
   it('falls back to demo data on network error', async () => {
     mockFetchError('Network error')
     const { result } = renderHook(() => useGatewayStatus())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.isDemoData).toBe(true)
   })
 
   it('falls back to demo data on non-503 HTTP error', async () => {
     mockFetchHttpError(500)
     const { result } = renderHook(() => useGatewayStatus())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.isDemoData).toBe(true)
   })
 
   it('increments consecutiveFailures on error', async () => {
     mockFetchError()
     const { result } = renderHook(() => useGatewayStatus())
-    await waitFor(() => result.current.consecutiveFailures > 0)
+    await waitFor(() => expect(result.current.consecutiveFailures).toBeGreaterThan(0))
     expect(result.current.consecutiveFailures).toBe(1)
   })
 
@@ -214,7 +213,7 @@ describe('useGatewayStatus — error fallback (demo data)', () => {
     mockUseClusters.mockReturnValue({ deduplicatedClusters: [{ name: 'my-cluster', reachable: true }], isLoading: false })
     mockFetchError()
     const { result } = renderHook(() => useGatewayStatus())
-    await waitFor(() => result.current.gateways.length > 0)
+    await waitFor(() => expect(result.current.gateways.length).toBeGreaterThan(0))
     const clusterGateways = result.current.gateways.filter(gw => gw.cluster === 'my-cluster')
     expect(clusterGateways.length).toBeGreaterThan(0)
   })
@@ -223,7 +222,7 @@ describe('useGatewayStatus — error fallback (demo data)', () => {
     mockUseClusters.mockReturnValue({ deduplicatedClusters: [], isLoading: false })
     mockFetchError()
     const { result } = renderHook(() => useGatewayStatus())
-    await waitFor(() => result.current.gateways.length > 0)
+    await waitFor(() => expect(result.current.gateways.length).toBeGreaterThan(0))
     const clusterNames = new Set(result.current.gateways.map(gw => gw.cluster))
     expect(clusterNames.size).toBeGreaterThan(0)
   })
@@ -231,7 +230,7 @@ describe('useGatewayStatus — error fallback (demo data)', () => {
   it('saves demo data to cache on fallback', async () => {
     mockFetchError()
     renderHook(() => useGatewayStatus())
-    await waitFor(() => localStorage.getItem(CACHE_KEY) !== null)
+    await waitFor(() => expect(localStorage.getItem(CACHE_KEY)).not.toBeNull())
     const cached = JSON.parse(localStorage.getItem(CACHE_KEY)!)
     expect(cached.isDemoData).toBe(true)
   })
@@ -239,7 +238,7 @@ describe('useGatewayStatus — error fallback (demo data)', () => {
   it('isFailed becomes true after 3 consecutive failures', async () => {
     mockFetchError()
     const { result } = renderHook(() => useGatewayStatus())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.consecutiveFailures).toBe(1)
     expect(result.current.isFailed).toBe(false)
   })
@@ -299,7 +298,7 @@ describe('useGatewayStatus — refetch registration', () => {
   it('registers with modeTransition.registerRefetch on mount', async () => {
     mockFetchOk([])
     renderHook(() => useGatewayStatus())
-    await waitFor(() => mockRegisterRefetch.mock.calls.length > 0)
+    await waitFor(() => expect(mockRegisterRefetch.mock.calls.length).toBeGreaterThan(0))
     expect(mockRegisterRefetch).toHaveBeenCalledWith('gateway-status', expect.any(Function))
   })
 
@@ -308,7 +307,7 @@ describe('useGatewayStatus — refetch registration', () => {
     mockRegisterRefetch.mockReturnValue(mockCleanup)
     mockFetchOk([])
     const { unmount } = renderHook(() => useGatewayStatus())
-    await waitFor(() => mockRegisterRefetch.mock.calls.length > 0)
+    await waitFor(() => expect(mockRegisterRefetch.mock.calls.length).toBeGreaterThan(0))
     unmount()
     expect(mockCleanup).toHaveBeenCalled()
   })
@@ -319,7 +318,7 @@ describe('useGatewayStatus — auth headers', () => {
     localStorage.setItem('kc-auth-token', 'my-token')
     mockFetchOk([])
     renderHook(() => useGatewayStatus())
-    await waitFor(() => (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length > 0)
+    await waitFor(() => expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(0))
     const [, options] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0]
     expect(options?.headers?.['Authorization']).toBe('Bearer my-token')
   })
@@ -328,7 +327,7 @@ describe('useGatewayStatus — auth headers', () => {
     localStorage.removeItem('kc-auth-token')
     mockFetchOk([])
     renderHook(() => useGatewayStatus())
-    await waitFor(() => (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length > 0)
+    await waitFor(() => expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(0))
     const [, options] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0]
     expect(options?.headers?.['Authorization']).toBeUndefined()
   })
@@ -346,7 +345,7 @@ describe('useGatewayStatus — clustersLoading', () => {
     mockUseClusters.mockReturnValue({ deduplicatedClusters: [], isLoading: false })
     mockFetchOk([])
     renderHook(() => useGatewayStatus())
-    await waitFor(() => (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length > 0)
+    await waitFor(() => expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(0))
     expect(globalThis.fetch).toHaveBeenCalled()
   })
 })
