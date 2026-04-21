@@ -29,6 +29,8 @@ package agent
 
 import (
 	"context"
+	"encoding/json"
+	"io"
 	"net/http"
 	"sync"
 	"time"
@@ -466,4 +468,85 @@ func runOneRead(
 		items []interface{}
 		err   *federation.FederationError
 	}{items: items}
+}
+
+// federationActionTimeout bounds a single action execution. Actions may
+// involve real API mutations (CSR approval, ManagedCluster patch/delete)
+// so we allow slightly more time than a read probe but still cap it to
+// prevent runaway operations.
+const federationActionTimeout = 30 * time.Second
+
+// handleFederationAction serves `POST /federation/action` — the Phase 2
+// imperative action endpoint. It decodes an ActionRequest from the body,
+// looks up the provider in the registry, asserts ActionProvider, resolves
+// the user's rest.Config for the specified hubContext, and delegates to
+// the provider's Execute method. The result is returned as ActionResult JSON.
+func (s *Server) handleFederationAction(w http.ResponseWriter, r *http.Request) {
+	s.setCORSHeaders(w, r, http.MethodPost, http.MethodOptions)
+	w.Header().Set("Content-Type", "application/json")
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	if r.Method != http.MethodPost {
+		writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	if !s.requireBearerToken(w, r) {
+		return
+	}
+	if s.k8sClient == nil {
+		writeJSONError(w, http.StatusServiceUnavailable, "k8s client not initialized")
+		return
+	}
+
+	// Read and decode the request body.
+	body, err := io.ReadAll(io.LimitReader(r.Body, int64(maxRequestBodyBytes)))
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, "failed to read request body")
+		return
+	}
+	defer r.Body.Close()
+
+	var req federation.ActionRequest
+	if err := json.Unmarshal(body, &req); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid JSON: "+err.Error())
+		return
+	}
+
+	if req.ActionID == "" || req.Provider == "" || req.HubContext == "" {
+		writeJSONError(w, http.StatusBadRequest, "actionId, provider, and hubContext are required")
+		return
+	}
+
+	// Look up the provider in the registry.
+	p, ok := federation.Get(req.Provider)
+	if !ok {
+		writeJSONError(w, http.StatusNotFound, "unknown federation provider: "+string(req.Provider))
+		return
+	}
+
+	// Assert the provider implements ActionProvider.
+	ap, ok := p.(federation.ActionProvider)
+	if !ok {
+		writeJSONError(w, http.StatusNotImplemented, "provider "+string(req.Provider)+" does not support actions")
+		return
+	}
+
+	// Resolve the user's rest.Config for the specified hub context.
+	cfg, err := s.k8sClient.GetRestConfig(req.HubContext)
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "failed to resolve config for context "+req.HubContext+": "+err.Error())
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), federationActionTimeout)
+	defer cancel()
+
+	result, err := ap.Execute(ctx, cfg, req)
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, result)
 }

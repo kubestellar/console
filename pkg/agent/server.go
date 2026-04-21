@@ -442,6 +442,11 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/federation/clusters", s.handleFederationClusters)
 	mux.HandleFunc("/federation/groups", s.handleFederationGroups)
 	mux.HandleFunc("/federation/pending-joins", s.handleFederationPendingJoins)
+	// Phase 2: imperative action endpoint. Providers that implement
+	// ActionProvider expose management operations (approve CSR, accept/detach
+	// cluster, add taints) via POST. Same bearer-token identity contract as
+	// the read handlers above.
+	mux.HandleFunc("/federation/action", s.handleFederationAction)
 
 	// GitOps drift detection + kubectl sync moved to kc-agent (#7993 Phase 3b).
 	// These shell `kubectl diff` / `kubectl apply` under the user's kubeconfig.
