@@ -18,7 +18,7 @@ export function useClusterData() {
   //
   // `podClusterErrors` surfaces per-cluster SSE `cluster_error` events so
   // the all-pods drill-down can distinguish an RBAC denial from a
-  // transient failure when the count disagrees with the list (#9353).
+  // transient failure when the count disagrees with the list (Issue 9353).
   const { pods, clusterErrors: podClusterErrors } = useAllPods()
   const { deployments } = useDeployments()
   const { namespaces } = useNamespaces()

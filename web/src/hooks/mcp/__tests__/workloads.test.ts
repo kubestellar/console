@@ -331,7 +331,7 @@ describe('useAllPods', () => {
     expect(Array.isArray(result.current.pods)).toBe(true)
   })
 
-  // #9353 — per-cluster error surfacing.  The backend emits a
+  // Issue 9353 — per-cluster error surfacing.  The backend emits a
   // `cluster_error` SSE event when an individual cluster's pods list
   // fails (e.g. 403 from RBAC denial).  useAllPods must forward those
   // events as `clusterErrors` so the multi-cluster drill-down can

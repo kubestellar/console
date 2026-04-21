@@ -170,7 +170,7 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
     clusters,
     deduplicatedClusters,
     pods,
-    // Per-cluster errors emitted by the pods SSE stream (#9353). Used
+    // Per-cluster errors emitted by the pods SSE stream (Issue 9353). Used
     // below to render an RBAC- vs transient-failure-aware warning when
     // the all-pods drill-down list is empty but the cluster summary
     // reports a non-zero pod count.
@@ -617,7 +617,7 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
                     detailed list is empty.
                   </div>
                   {/*
-                    Per-cluster error breakdown (#9353). When the backend
+                    Per-cluster error breakdown (Issue 9353). When the backend
                     emits `cluster_error` SSE events we show a typed list
                     so the user can see which clusters were denied by
                     RBAC (auth) vs. which failed transiently (timeout /

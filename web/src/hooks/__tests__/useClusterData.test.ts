@@ -136,7 +136,7 @@ describe('useClusterData', () => {
     expect(result.current.events).toEqual([])
   })
 
-  // 5. #9353 — podClusterErrors forwarded from useAllPods
+  // 5. Issue 9353 — podClusterErrors forwarded from useAllPods
   it('forwards podClusterErrors from useAllPods so the drill-down can distinguish RBAC vs transient failures', async () => {
     const clusterErrors = [
       { cluster: 'prod-east', errorType: 'auth', message: 'pods is forbidden' },
@@ -150,7 +150,7 @@ describe('useClusterData', () => {
     expect(result.current.podClusterErrors).toEqual(clusterErrors)
   })
 
-  // 6. #9353 — podClusterErrors coalesces to [] when useAllPods omits it
+  // 6. Issue 9353 — podClusterErrors coalesces to [] when useAllPods omits it
   it('coalesces podClusterErrors to empty array when useAllPods does not provide one', async () => {
     mockUseAllPods.mockReturnValue({ pods: [] })
 

@@ -14,7 +14,7 @@ import { classifyError, type ClusterErrorType } from '../../lib/errorClassifier'
 
 /**
  * Per-cluster error surfaced by `useAllPods` when the backend emits a
- * `cluster_error` SSE event for a particular cluster (#9353). Lets the
+ * `cluster_error` SSE event for a particular cluster (Issue 9353). Lets the
  * drill-down distinguish an RBAC denial ({@link ClusterErrorType} === 'auth')
  * from a transient 5xx/timeout failure so the UI can render a specific
  * explanation instead of a generic "detailed list is empty" warning.
@@ -458,7 +458,7 @@ export function useAllPods(cluster?: string, namespace?: string, forceLive = fal
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(cached?.timestamp || null)
   const [error, setError] = useState<string | null>(null)
-  // Per-cluster errors from the SSE `cluster_error` event (#9353). Lets
+  // Per-cluster errors from the SSE `cluster_error` event (Issue 9353). Lets
   // consumers (drill-downs) distinguish an RBAC denial on one or more
   // clusters from a globally-transient failure so the UI can show a
   // specific "lacks list-pods RBAC on cluster X" message instead of a
@@ -595,7 +595,7 @@ export function useAllPods(cluster?: string, namespace?: string, forceLive = fal
     isRefreshing,
     lastUpdated,
     error,
-    // Per-cluster errors surfaced from the SSE stream (#9353) so the
+    // Per-cluster errors surfaced from the SSE stream (Issue 9353) so the
     // multi-cluster drill-down can explain an empty list with "lacks
     // list-pods RBAC on cluster X" rather than a generic warning.
     clusterErrors,
