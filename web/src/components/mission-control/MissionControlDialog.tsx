@@ -24,6 +24,7 @@ import {
   FlaskConical,
   Monitor,
   ArrowLeft,
+  GitPullRequestArrow,
 } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { Button } from '../ui/Button'
@@ -36,6 +37,7 @@ const FlightPlanBlueprint = lazy(() =>
   import('./FlightPlanBlueprint').then(m => ({ default: m.FlightPlanBlueprint }))
 )
 import { LaunchSequence } from './LaunchSequence'
+import { RequestApprovalModal } from './RequestApprovalModal'
 import type { WizardPhase } from './types'
 
 interface MissionControlDialogProps {
@@ -134,6 +136,7 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart }: Miss
   // Track the highest phase the user has reached so they can click back to any visited phase
   const currentStepIndex = PHASE_STEPS.findIndex((s) => s.key === state.phase)
   const [highestReached, setHighestReached] = useState(currentStepIndex)
+  const [approvalModalOpen, setApprovalModalOpen] = useState(false)
   useEffect(() => {
     setHighestReached(prev => Math.max(prev, currentStepIndex))
   }, [currentStepIndex])
@@ -236,6 +239,7 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart }: Miss
   const MODAL_TOP_INSET_PX = 80 // NAVBAR_HEIGHT_PX (64) + 16px breathing room
 
   return (
+    <>
     <AnimatePresence>
       {open && (
         <>
@@ -527,6 +531,15 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart }: Miss
                       <Button
                         variant="secondary"
                         size="sm"
+                        onClick={() => setApprovalModalOpen(true)}
+                        icon={<GitPullRequestArrow className="w-3.5 h-3.5" />}
+                        title="Create a GitHub issue with the deployment plan for team approval"
+                      >
+                        Request Approval
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
                         onClick={() => showToast('Local cluster simulation is not yet available', 'info')}
                         icon={<Monitor className="w-3.5 h-3.5" />}
                         title="Create local clusters to simulate the deployment"
@@ -594,6 +607,14 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart }: Miss
         </>
       )}
     </AnimatePresence>
+
+    <RequestApprovalModal
+      isOpen={approvalModalOpen}
+      onClose={() => setApprovalModalOpen(false)}
+      state={state}
+      installedProjects={mc.installedProjects}
+    />
+    </>
   )
 }
 
