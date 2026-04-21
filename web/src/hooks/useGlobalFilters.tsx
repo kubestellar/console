@@ -238,11 +238,12 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
     return []
   })
 
-  // Reconcile selected clusters against available clusters — drop any that no longer exist
-  // This prevents filters from getting stuck on clusters that have been removed from kubeconfig
+  // Reconcile selected clusters against available clusters — drop any that no longer exist.
+  // This prevents filters from getting stuck on clusters that have been removed from kubeconfig.
+  // Also reconciles the __none__ sentinel (from deselectAllClusters) back to all-selected
+  // mode, since __none__ is not a real cluster name and will be filtered out.
   useEffect(() => {
     if (selectedClusters.length === 0 || availableClusters.length === 0) return
-    if (selectedClusters.includes('__none__')) return
     const validSelections = selectedClusters.filter(c => availableClusters.includes(c))
     if (validSelections.length !== selectedClusters.length) {
       setSelectedClustersState(validSelections.length === 0 ? [] : validSelections)
