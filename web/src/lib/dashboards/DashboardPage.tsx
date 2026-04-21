@@ -344,7 +344,7 @@ export function DashboardPage({
     // fixed-position children (FAB, customizer, modals) must live OUTSIDE it
     // to avoid clipping when ancestors create a new containing block (issue 8464).
     <>
-      <div className="pt-16 min-w-0 max-w-full overflow-x-hidden" data-testid={testId}>
+      <div className="pt-4 min-w-0 max-w-full overflow-x-hidden" data-testid={testId}>
         {/* Header */}
         <DashboardHeader
           title={title}
