@@ -283,6 +283,25 @@ describe('DashboardPage', () => {
     expect(screen.getByTestId('header-extra')).toBeInTheDocument()
   })
 
+  // Issue 9344 — pages that embed DashboardPage (Clusters, Events, ...) need
+  // a stable route-specific testid on the page wrapper so cross-browser
+  // Playwright specs can synchronize on "page mounted". This is a contract
+  // test: if the prop is dropped, the nightly cross-browser suite regresses.
+  it('applies testId to the outer page wrapper when provided', () => {
+    const { container } = renderPage({ testId: 'clusters-page' })
+    expect(container.querySelector('[data-testid="clusters-page"]')).not.toBeNull()
+  })
+
+  it('omits data-testid on the wrapper when testId is not provided', () => {
+    const { container } = renderPage()
+    // The outer wrapper is the first div inside the test render. Without an
+    // explicit testId it must not emit a stray `data-testid` attribute —
+    // keeps existing selectors (dashboard-page, etc.) unambiguous.
+    const wrapper = container.querySelector('div.pt-16')
+    expect(wrapper).not.toBeNull()
+    expect(wrapper?.hasAttribute('data-testid')).toBe(false)
+  })
+
   it('opens customizer when floating action button is clicked', () => {
     const setShowAddCard = vi.fn()
     mockUseDashboard.mockReturnValue(makeDashboardReturn({ setShowAddCard }))

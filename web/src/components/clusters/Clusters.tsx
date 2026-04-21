@@ -435,6 +435,7 @@ export function Clusters() {
 
   return (
     <DashboardPage
+      testId="clusters-page"
       title={t('navigation.clusters')}
       subtitle={t('cluster.subtitle')}
       icon="Server"

@@ -82,6 +82,15 @@ export interface DashboardPageProps {
   isDemoData?: boolean
   /** Custom drag-end handler (called after card reorder, e.g. for workload drops) */
   onDragEnd?: (event: DragEndEvent) => void
+  /**
+   * Optional `data-testid` applied to the outer page wrapper. Pages that
+   * embed DashboardPage (Clusters, Events, etc.) can pass a route-specific
+   * id so cross-browser Playwright specs have a stable mount selector that
+   * survives refactors. See issue 9344 — Clusters.spec.ts expects
+   * `clusters-page` but the testid was lost when the page migrated to
+   * DashboardPage.
+   */
+  testId?: string
 }
 
 // ============================================================================
@@ -108,7 +117,8 @@ export function DashboardPage({
   rightExtra,
   emptyState,
   isDemoData = false,
-  onDragEnd: externalDragEnd }: DashboardPageProps) {
+  onDragEnd: externalDragEnd,
+  testId }: DashboardPageProps) {
   const [searchParams, setSearchParams] = useSearchParams()
   const location = useLocation()
   // Capture the route path at mount time — KeepAlive keeps this component alive
@@ -328,7 +338,7 @@ export function DashboardPage({
     // fixed-position children (FAB, customizer, modals) must live OUTSIDE it
     // to avoid clipping when ancestors create a new containing block (issue 8464).
     <>
-    <div className="pt-16 min-w-0 max-w-full overflow-x-hidden">
+    <div className="pt-16 min-w-0 max-w-full overflow-x-hidden" data-testid={testId}>
       {/* Header */}
       <DashboardHeader
         title={title}
