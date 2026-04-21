@@ -161,6 +161,7 @@ function publishFederation(next: FederationAwareness): void {
 const DEMO_HUBS: ProviderHubStatus[] = [
   { provider: 'ocm', hubContext: 'hub-prod', detected: true, version: 'v1' },
   { provider: 'ocm', hubContext: 'hub-staging', detected: true, version: 'v1' },
+  { provider: 'capi', hubContext: 'capi-mgmt', detected: true, version: 'v1beta1' },
 ]
 
 const DEMO_CLUSTERS: FederatedCluster[] = [
@@ -187,11 +188,49 @@ const DEMO_CLUSTERS: FederatedCluster[] = [
     state: 'pending', available: 'Unknown',
     labels: { env: 'dev', region: 'westeurope' },
   },
+  {
+    provider: 'capi', hubContext: 'capi-mgmt', name: 'workload-prod-aws',
+    state: 'provisioned', available: 'True',
+    labels: { env: 'prod', infra: 'aws' },
+    apiServerURL: 'https://workload-prod-aws.us-east-1.elb.amazonaws.com:6443',
+    lifecycle: {
+      phase: 'Provisioned',
+      controlPlaneReady: true,
+      infrastructureReady: true,
+      desiredMachines: 3,
+      readyMachines: 3,
+    },
+  },
+  {
+    provider: 'capi', hubContext: 'capi-mgmt', name: 'workload-staging-aws',
+    state: 'provisioning', available: 'Unknown',
+    labels: { env: 'staging', infra: 'aws' },
+    lifecycle: {
+      phase: 'Provisioning',
+      controlPlaneReady: false,
+      infrastructureReady: false,
+      desiredMachines: 2,
+      readyMachines: 0,
+    },
+  },
+  {
+    provider: 'capi', hubContext: 'capi-mgmt', name: 'workload-dev-docker',
+    state: 'failed', available: 'False',
+    labels: { env: 'dev', infra: 'docker' },
+    lifecycle: {
+      phase: 'Failed',
+      controlPlaneReady: false,
+      infrastructureReady: false,
+      desiredMachines: 1,
+      readyMachines: 0,
+    },
+  },
 ]
 
 const DEMO_GROUPS: FederatedGroup[] = [
   { provider: 'ocm', hubContext: 'hub-prod', name: 'production', members: ['eks-prod-us-east-1', 'openshift-prod'], kind: 'set' },
   { provider: 'ocm', hubContext: 'hub-staging', name: 'staging', members: ['gke-staging'], kind: 'set' },
+  { provider: 'capi', hubContext: 'capi-mgmt', name: 'capi:awscluster', members: ['workload-prod-aws', 'workload-staging-aws'], kind: 'infra' },
 ]
 
 const DEMO_PENDING: PendingJoin[] = [
