@@ -1,0 +1,267 @@
+/**
+ * Cached hooks for Kubernetes node data.
+ *
+ * Extracted from useCachedData.ts for maintainability.
+ */
+
+import { useCache, type RefreshCategory } from '../lib/cache'
+import { clusterCacheRef, deduplicateClustersByServer } from './mcp/shared'
+import { fetchAPI, fetchFromAllClusters, fetchViaSSE } from '../lib/cache/fetcherUtils'
+import { settledWithConcurrency } from '../lib/utils/concurrency'
+import { NodesResponseSchema } from '../lib/schemas'
+import { validateArrayResponse } from '../lib/schemas/validate'
+import { getDemoCachedNodes, getDemoCoreDNSStatus } from './useCachedData/demoData'
+import type { NodeInfo, PodInfo } from './useMCP'
+
+// ============================================================================
+// Shared types
+// ============================================================================
+
+/** Shared result shape for all useCached* hooks */
+interface CachedHookResult<T> {
+  data: T
+  isLoading: boolean
+  isRefreshing: boolean
+  isDemoFallback: boolean
+  error: string | null
+  isFailed: boolean
+  consecutiveFailures: number
+  lastRefresh: number | null
+  refetch: () => Promise<void>
+}
+
+// ============================================================================
+// CoreDNS types (defined here — this is the canonical location)
+// ============================================================================
+
+export interface CoreDNSPodInfo {
+  name: string
+  status: string
+  ready: string
+  restarts: number
+  version: string
+}
+
+export interface CoreDNSClusterStatus {
+  cluster: string
+  pods: CoreDNSPodInfo[]
+  healthy: boolean
+  totalRestarts: number
+}
+
+// ============================================================================
+// Hooks
+// ============================================================================
+
+/**
+ * Hook for fetching nodes with caching and SSE streaming.
+ * When no cluster is specified, fetches from all available clusters via SSE.
+ */
+export function useCachedNodes(
+  cluster?: string,
+): CachedHookResult<NodeInfo[]> & { nodes: NodeInfo[] } {
+  const key = `nodes:${cluster || 'all'}`
+
+  const result = useCache({
+    key,
+    category: 'pods' as RefreshCategory,
+    initialData: [] as NodeInfo[],
+    demoData: getDemoCachedNodes(),
+    demoWhenEmpty: !cluster,
+    persist: true,
+    fetcher: async () => {
+      if (cluster) {
+        const raw = await fetchAPI<unknown>('nodes', { cluster })
+        const data = validateArrayResponse<{ nodes: NodeInfo[] }>(NodesResponseSchema, raw, '/api/mcp/nodes', 'nodes')
+        return (data.nodes || []).map(n => ({ ...n, cluster }))
+      }
+      return fetchFromAllClusters<NodeInfo>('nodes', 'nodes', {})
+    },
+    progressiveFetcher: cluster ? undefined : async (onProgress) => {
+      return fetchViaSSE<NodeInfo>('nodes', 'nodes', {}, onProgress)
+    } })
+
+  // Only report demo fallback when NOT loading — prevents Demo badge
+  // from flashing during the optimistic demo phase while a real fetch
+  // is still in-flight (CLAUDE.md: effectiveIsDemoFallback pattern).
+  const effectiveIsDemoFallback = result.isDemoFallback && !result.isLoading
+
+  return {
+    nodes: result.data,
+    data: result.data,
+    isLoading: result.isLoading,
+    isRefreshing: result.isRefreshing,
+    isDemoFallback: effectiveIsDemoFallback,
+    error: result.error,
+    isFailed: result.isFailed,
+    consecutiveFailures: result.consecutiveFailures,
+    lastRefresh: result.lastRefresh,
+    refetch: result.refetch }
+}
+
+/**
+ * Hook for fetching a cumulative, cross-cluster node list for the landing
+ * dashboard's "Nodes" stat-block drill-down (Issue 8840).
+ *
+ * Differs from {@link useCachedNodes} (no cluster arg) in two ways:
+ *
+ * 1. It iterates DEDUPLICATED clusters from the shared cluster cache via
+ *    {@link deduplicateClustersByServer}. The generic fan-out in
+ *    {@link fetchFromAllClusters} only filters out long-context aliases by
+ *    name, which can still double-count when two short-named contexts point
+ *    to the same API server. See MEMORY.md: "ALWAYS use
+ *    DeduplicatedClusters() when iterating clusters".
+ *
+ * 2. It DOES NOT fall back to demo data on empty live results. The drill-down
+ *    is expected to render an authoritative cross-cluster list (or the
+ *    existing "summary reports N nodes but list is empty" explainer),
+ *    NOT four hard-coded fake nodes. The parent stat block (on the Dashboard)
+ *    retains the original {@link useCachedNodes} optimistic-demo behaviour so
+ *    tiles never flash empty. Only the drill-down is switched to this hook.
+ *
+ * An `isDemoFallback` field is still returned (always `false` in live mode,
+ * `true` only when the whole app is in demo mode) so the drill-down can keep
+ * its existing `nodesIsDemoFallback` wiring intact — see the task's
+ * `isDemoData` preservation rule.
+ */
+export function useCachedAllNodes(): CachedHookResult<NodeInfo[]> & { nodes: NodeInfo[] } {
+  const key = 'nodes:all:dedup'
+
+  const result = useCache({
+    key,
+    category: 'pods' as RefreshCategory,
+    initialData: [] as NodeInfo[],
+    demoData: getDemoCachedNodes(),
+    // IMPORTANT: no demoWhenEmpty — we never want to mask a real empty /
+    // partially-failed cross-cluster result with four hard-coded fake nodes
+    // in the drill-down list. The drill-down has its own empty-state
+    // explainer (RBAC hint, summary-vs-list mismatch) that is much more
+    // useful than synthetic demo data.
+    persist: true,
+    fetcher: async () => {
+      const allClusters = clusterCacheRef.clusters || []
+      // Apply the same deduplication that useClusters().deduplicatedClusters
+      // uses — multiple kubeconfig contexts can point to the same API
+      // server, and without dedup each node would be listed once per
+      // context. See MEMORY.md: feedback_dedupe_clusters.md.
+      const deduped = deduplicateClustersByServer(allClusters)
+      const reachable = deduped.filter(
+        (c) => c.reachable !== false && !c.name.includes('/'),
+      )
+      if (reachable.length === 0) {
+        throw new Error(
+          'No reachable clusters (agent connecting or backend not authenticated)',
+        )
+      }
+
+      // Fan out per-cluster fetches in parallel. Each per-cluster call is
+      // identical to what useCachedNodes(clusterName) would do — using the
+      // same /api/mcp/nodes endpoint that already works on the per-cluster
+      // drill-down, so the "live data path exists" invariant from the
+      // issue description holds.
+      const tasks = reachable.map((cluster) => async () => {
+        try {
+          const raw = await fetchAPI<unknown>('nodes', { cluster: cluster.name })
+          const data = validateArrayResponse<{ nodes: NodeInfo[] }>(
+            NodesResponseSchema,
+            raw,
+            '/api/mcp/nodes',
+            'nodes',
+          )
+          return (data.nodes || []).map((n) => ({ ...n, cluster: cluster.name }))
+        } catch {
+          // Per-cluster failure: tolerate it so a single unreachable cluster
+          // doesn't wipe the whole aggregate. Accumulated nodes from other
+          // clusters still render; the drill-down's empty-state explainer
+          // handles the all-failed case.
+          return [] as NodeInfo[]
+        }
+      })
+
+      const accumulated: NodeInfo[] = []
+      async function handleSettled(res: PromiseSettledResult<NodeInfo[]>) {
+        if (res.status === 'fulfilled') {
+          accumulated.push(...res.value)
+        }
+      }
+      await settledWithConcurrency(tasks, undefined, handleSettled)
+      return accumulated
+    } })
+
+  return {
+    nodes: result.data,
+    data: result.data,
+    isLoading: result.isLoading,
+    isRefreshing: result.isRefreshing,
+    isDemoFallback: result.isDemoFallback,
+    error: result.error,
+    isFailed: result.isFailed,
+    consecutiveFailures: result.consecutiveFailures,
+    lastRefresh: result.lastRefresh,
+    refetch: result.refetch }
+}
+
+// fetches coredns pods from kube-system and builds per-cluster health info
+export function useCachedCoreDNSStatus(
+  cluster?: string
+): CachedHookResult<CoreDNSClusterStatus[]> & { clusters: CoreDNSClusterStatus[] } {
+  const key = `coredns:${cluster || 'all'}`
+
+  const result = useCache({
+    key,
+    category: 'pods' as RefreshCategory,
+    initialData: [] as CoreDNSClusterStatus[],
+    demoData: getDemoCoreDNSStatus(),
+    fetcher: async () => {
+      let pods: PodInfo[]
+      if (cluster) {
+        const data = await fetchAPI<{ pods: PodInfo[] }>('pods', { cluster, namespace: 'kube-system' })
+        pods = (data.pods || []).map(p => ({ ...p, cluster }))
+      } else {
+        pods = await fetchFromAllClusters<PodInfo>('pods', 'pods', { namespace: 'kube-system' })
+      }
+
+      const corednsPods = pods.filter(p =>
+        p.name?.includes('coredns') || p.name?.includes('kube-dns')
+      )
+
+      const byCluster = new Map<string, PodInfo[]>()
+      for (const pod of (corednsPods || [])) {
+        const c = pod.cluster || 'unknown'
+        if (!byCluster.has(c)) byCluster.set(c, [])
+        byCluster.get(c)!.push(pod)
+      }
+
+      const clusters = Array.from(byCluster.entries()).map(([clusterName, clusterPods]) => {
+        const running = clusterPods.filter(p => p.status === 'Running')
+        const healthy = running.length === clusterPods.length && clusterPods.length > 0
+        const totalRestarts = clusterPods.reduce((s, p) => s + (p.restarts || 0), 0)
+
+        return {
+          cluster: clusterName,
+          pods: clusterPods.map(p => ({
+            name: p.name,
+            status: p.status,
+            ready: p.ready,
+            restarts: p.restarts || 0,
+            version: p.containers?.[0]?.image?.split(':')[1]?.replace(/^v/, '') || '' })),
+          healthy,
+          totalRestarts } satisfies CoreDNSClusterStatus
+      })
+
+      // Sort clusters alphabetically for stable UI ordering
+      return clusters.sort((a, b) => a.cluster.localeCompare(b.cluster))
+    } })
+
+  return {
+    clusters: result.data,
+    data: result.data,
+    isLoading: result.isLoading,
+    isRefreshing: result.isRefreshing,
+    isDemoFallback: result.isDemoFallback,
+    error: result.error,
+    isFailed: result.isFailed,
+    consecutiveFailures: result.consecutiveFailures,
+    lastRefresh: result.lastRefresh,
+    refetch: result.refetch }
+}
