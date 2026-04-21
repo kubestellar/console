@@ -3,10 +3,14 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import * as FeatureRequestModalModule from './FeatureRequestModal'
 import { FeatureRequestModal } from './FeatureRequestModal'
 
-// Mock heavy/lazy deps so the modal mounts cleanly in jsdom
+// Mock heavy/lazy deps so the modal mounts cleanly in jsdom.
+// createRequest is declared outside the factory so individual tests can
+// swap its implementation (e.g. to simulate a successful submission).
+const createRequestMock = vi.fn()
+
 vi.mock('../../hooks/useFeatureRequests', () => ({
   useFeatureRequests: () => ({
-    createRequest: vi.fn(),
+    createRequest: createRequestMock,
     isSubmitting: false,
     requests: [],
     isLoading: false,
@@ -57,6 +61,7 @@ vi.mock('react-i18next', () => ({
 describe('FeatureRequestModal Component', () => {
   beforeEach(() => {
     document.body.innerHTML = ''
+    createRequestMock.mockReset()
   })
 
   it('exports FeatureRequestModal component', () => {
@@ -92,5 +97,51 @@ describe('FeatureRequestModal Component', () => {
 
     // Parent's onClose must have been called exactly once
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
+  })
+
+  // Regression test for Issue 9358 — after a successful submission the
+  // form shows the "Request Submitted" confirmation view. Clicking Close
+  // must dismiss the modal cleanly, WITHOUT re-surfacing the unsaved-
+  // changes (Save Draft) prompt, even though the internal description
+  // state has not yet been reset by the SUCCESS_DISPLAY_MS timer.
+  it('closes cleanly after successful submission without prompting to save as draft', async () => {
+    const onClose = vi.fn()
+    // Simulate a successful issue creation — onSubmit resolves with a URL.
+    createRequestMock.mockResolvedValue({
+      github_issue_url: 'https://github.com/kubestellar/console/issues/1234',
+      screenshots_uploaded: 0,
+      screenshots_failed: 0,
+    })
+
+    render(<FeatureRequestModal isOpen onClose={onClose} initialTab="submit" />)
+
+    // Fill the description with a valid title (≥10 chars) + body (≥20 chars, ≥3 words).
+    const textarea = await screen.findByRole('textbox')
+    fireEvent.change(textarea, {
+      target: {
+        value:
+          'This is a valid bug title\nThis bug happens when the console crashes on load and users cannot proceed.',
+      },
+    })
+
+    // Submit the form.
+    const submitBtn = screen.getByRole('button', { name: /^Submit/i })
+    fireEvent.click(submitBtn)
+
+    // Wait for the success view to appear.
+    await screen.findByText(/Request Submitted/i)
+
+    // At this point the description state is intentionally still populated —
+    // the modal clears it on a 5s timer. But the content has already been
+    // filed as a GitHub issue, so closing must NOT prompt "Unsaved changes".
+    const closeBtn = await screen.findByRole('button', { name: /^Close$/i })
+    fireEvent.click(closeBtn)
+
+    // Parent's onClose must be invoked…
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
+
+    // …and the Unsaved-changes dialog must NOT appear.
+    expect(screen.queryByText(/Unsaved changes/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Save Draft & Close/i)).not.toBeInTheDocument()
   })
 })

@@ -199,6 +199,13 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
   isSubmittingRef.current = isSubmitting
   const showDiscardRef = useRef(showDiscardConfirm)
   showDiscardRef.current = showDiscardConfirm
+  // Issue 9358: after a successful submission the form is showing the
+  // "Request Submitted" confirmation view. The description/screenshots
+  // state may still be populated (we clear it on the SUCCESS_DISPLAY_MS
+  // timer), but the content has already been filed as a GitHub issue —
+  // it is NOT unsaved. Close must skip the unsaved-changes prompt.
+  const successRef = useRef(success)
+  successRef.current = success
 
   const forceClose = useCallback(() => {
     // Hide the discard confirmation first so a stale ref can't cause
@@ -230,6 +237,14 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
     // BaseModal's keydown handler must NOT just re-set the same flag —
     // that traps the user. Treat the second close attempt as Discard.
     if (showDiscardRef.current) {
+      forceClose()
+      return
+    }
+    // Issue 9358: once the submission succeeded, the form content has
+    // been filed as a GitHub issue — it is not "unsaved". Close cleanly
+    // without prompting, even if the description/screenshots state has
+    // not yet been reset by the SUCCESS_DISPLAY_MS timer.
+    if (successRef.current) {
       forceClose()
       return
     }
