@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -398,14 +399,29 @@ func (h *ConsolePersistenceHandlers) evaluateClusterGroup(ctx context.Context, g
 			healthMap := h.k8sClient.GetCachedHealth()
 
 			// Fetch nodes per cluster only when a filter requires node-level data.
+			// Queries run in parallel to avoid sequential latency on large fleets.
+			const maxConcurrentNodeQueries = 10 // cap parallel k8s API calls per reconcile
 			nodesByCluster := make(map[string][]k8s.NodeInfo)
 			if clusterFilterNeedsNodes(group.Spec.DynamicFilters) {
+				var wg sync.WaitGroup
+				var mu sync.Mutex
+				sem := make(chan struct{}, maxConcurrentNodeQueries)
+
 				for _, cluster := range clusters {
-					nodes, nodeErr := h.k8sClient.GetNodes(ctx, cluster.Name)
-					if nodeErr == nil {
-						nodesByCluster[cluster.Name] = nodes
-					}
+					wg.Add(1)
+					sem <- struct{}{} // acquire semaphore slot
+					go func(clusterName string) {
+						defer wg.Done()
+						defer func() { <-sem }() // release semaphore slot
+						nodes, nodeErr := h.k8sClient.GetNodes(ctx, clusterName)
+						if nodeErr == nil {
+							mu.Lock()
+							nodesByCluster[clusterName] = nodes
+							mu.Unlock()
+						}
+					}(cluster.Name)
 				}
+				wg.Wait()
 			}
 
 			for _, cluster := range clusters {
