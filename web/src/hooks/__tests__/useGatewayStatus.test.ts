@@ -302,7 +302,7 @@ describe('useGatewayStatus — refetch registration', () => {
   it('registers with modeTransition.registerRefetch on mount', async () => {
     mockFetchOk([])
     renderHook(() => useGatewayStatus())
-    await waitFor(() => mockRegisterRefetch.mock.calls.length > 0)
+    await waitFor(() => expect(mockRegisterRefetch.mock.calls.length).toBeGreaterThan(0))
     expect(mockRegisterRefetch).toHaveBeenCalledWith('gateway-status', expect.any(Function))
   })
 
@@ -311,7 +311,7 @@ describe('useGatewayStatus — refetch registration', () => {
     mockRegisterRefetch.mockReturnValue(mockCleanup)
     mockFetchOk([])
     const { unmount } = renderHook(() => useGatewayStatus())
-    await waitFor(() => mockRegisterRefetch.mock.calls.length > 0)
+    await waitFor(() => expect(mockRegisterRefetch.mock.calls.length).toBeGreaterThan(0))
     unmount()
     expect(mockCleanup).toHaveBeenCalled()
   })
@@ -322,7 +322,7 @@ describe('useGatewayStatus — auth headers', () => {
     localStorage.setItem('kc-auth-token', 'my-token')
     mockFetchOk([])
     renderHook(() => useGatewayStatus())
-    await waitFor(() => (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length > 0)
+    await waitFor(() => expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(0))
     const [, options] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0]
     expect(options?.headers?.['Authorization']).toBe('Bearer my-token')
   })
@@ -331,7 +331,7 @@ describe('useGatewayStatus — auth headers', () => {
     localStorage.removeItem('kc-auth-token')
     mockFetchOk([])
     renderHook(() => useGatewayStatus())
-    await waitFor(() => (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length > 0)
+    await waitFor(() => expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(0))
     const [, options] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0]
     expect(options?.headers?.['Authorization']).toBeUndefined()
   })
@@ -349,7 +349,7 @@ describe('useGatewayStatus — clustersLoading', () => {
     mockUseClusters.mockReturnValue({ deduplicatedClusters: [], isLoading: false })
     mockFetchOk([])
     renderHook(() => useGatewayStatus())
-    await waitFor(() => (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length > 0)
+    await waitFor(() => expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(0))
     expect(globalThis.fetch).toHaveBeenCalled()
   })
 })

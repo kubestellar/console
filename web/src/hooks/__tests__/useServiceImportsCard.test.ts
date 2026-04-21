@@ -274,7 +274,7 @@ describe('useServiceImportsCard — clustersLoading', () => {
     mockUseClusters.mockReturnValue({ deduplicatedClusters: [], isLoading: false })
     mockFetchOk([])
     renderHook(() => useServiceImportsCard())
-    await waitFor(() => (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length > 0)
+    await waitFor(() => expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(0))
     expect(globalThis.fetch).toHaveBeenCalled()
   })
 })
@@ -284,7 +284,7 @@ describe('useServiceImportsCard — auth headers', () => {
     localStorage.setItem('kc-auth-token', 'test-token')
     mockFetchOk([])
     renderHook(() => useServiceImportsCard())
-    await waitFor(() => (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length > 0)
+    await waitFor(() => expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(0))
     const [, options] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0]
     expect(options?.headers?.['Authorization']).toBe('Bearer test-token')
   })
