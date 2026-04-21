@@ -17,6 +17,7 @@ import { usePipelineFilter } from './pipelines/PipelineFilterContext'
 import { RepoSubtitle } from './pipelines/RepoSubtitle'
 import { Button } from '../ui/Button'
 import { useDemoMode } from '../../hooks/useDemoMode'
+import { useToast } from '../ui/Toast'
 import { useCardLoadingState } from './CardDataContext'
 import {
   CHART_TOOLTIP_CONTENT_STYLE,
@@ -291,6 +292,7 @@ async function fetchIssueStats(
 export function IssueActivityChart(props: { config?: IssueActivityConfig }) {
   const { t } = useTranslation('cards')
   const { isDemoMode } = useDemoMode()
+  const { showToast } = useToast()
   const shared = usePipelineFilter()
   const repo = shared?.repoFilter || props.config?.repo || DEFAULT_REPO
   const initialDays = props.config?.days || DEFAULT_LOOKBACK_DAYS
@@ -604,6 +606,7 @@ export function IssueActivityChart(props: { config?: IssueActivityConfig }) {
               // Clear cache and reload
               try { localStorage.removeItem(getCacheKey(repo, days)) } catch { /* ignore */ }
               loadData(days)
+              showToast('Chart data refreshed', 'info')
             }}
             title={t('issueActivityChart.refresh', 'Refresh')}
           >

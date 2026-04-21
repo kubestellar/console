@@ -13,6 +13,7 @@ import { Input } from '../ui/Input'
 import { cn } from '../../lib/cn'
 import { useACMM, DEFAULT_REPO, normalizeRepoInput } from './ACMMProvider'
 import { ALL_CRITERIA } from '../../lib/acmm/sources'
+import { useToast } from '../ui/Toast'
 
 /** ACMM-source criteria only — used for the badge preview to match the
  *  shields.io badge endpoint which counts only ACMM criteria, not criteria
@@ -69,6 +70,7 @@ function BadgePreview({ level, levelName, detected, total }: {
 
 export function RepoPicker() {
   const { repo, setRepo, recentRepos, scan, openIntro } = useACMM()
+  const { showToast } = useToast()
   const [input, setInput] = useState(repo)
   const [error, setError] = useState<string | null>(null)
   const [showBadge, setShowBadge] = useState(false)
@@ -109,6 +111,7 @@ export function RepoPicker() {
     setError(null)
     if (normalized !== next) setInput(normalized)
     setRepo(normalized)
+    showToast(`Scanning ${normalized}`, 'success')
   }
 
   const detected = scan.data.detectedIds?.length ?? 0
