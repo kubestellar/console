@@ -330,6 +330,45 @@ describe('useAllPods', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(Array.isArray(result.current.pods)).toBe(true)
   })
+
+  // #9353 — per-cluster error surfacing.  The backend emits a
+  // `cluster_error` SSE event when an individual cluster's pods list
+  // fails (e.g. 403 from RBAC denial).  useAllPods must forward those
+  // events as `clusterErrors` so the multi-cluster drill-down can
+  // distinguish RBAC denial from a transient endpoint failure when the
+  // cluster summary count disagrees with the list length.
+  it('surfaces per-cluster errors from SSE cluster_error events', async () => {
+    // Simulate the SSE stream invoking onClusterError for a 403 and a timeout.
+    mockFetchSSE.mockImplementation(async (opts: {
+      onClusterError?: (cluster: string, message: string) => void
+    }) => {
+      opts.onClusterError?.('rbac-cluster', 'pods is forbidden: User "u" cannot list resource "pods"')
+      opts.onClusterError?.('slow-cluster', 'context deadline exceeded')
+      return []
+    })
+
+    const { result } = renderHook(() => useAllPods('rbac-test-unique'))
+    await waitFor(() => expect(result.current.isLoading).toBe(false), { timeout: 5000 })
+
+    // Both events surface in clusterErrors, classified by type.  The RBAC
+    // denial is 'auth' (matches /forbidden/i) and the timeout is 'timeout'.
+    expect(result.current.clusterErrors).toHaveLength(2)
+    const rbac = result.current.clusterErrors.find(e => e.cluster === 'rbac-cluster')
+    const slow = result.current.clusterErrors.find(e => e.cluster === 'slow-cluster')
+    expect(rbac?.errorType).toBe('auth')
+    expect(slow?.errorType).toBe('timeout')
+  })
+
+  it('returns empty clusterErrors when the stream succeeds for every cluster', async () => {
+    mockFetchSSE.mockResolvedValue([
+      { name: 'p1', namespace: 'n', cluster: 'c1', status: 'Running', ready: '1/1', restarts: 0, age: '1d' },
+    ])
+
+    const { result } = renderHook(() => useAllPods('happy-test-unique'))
+    await waitFor(() => expect(result.current.isLoading).toBe(false), { timeout: 5000 })
+
+    expect(result.current.clusterErrors).toEqual([])
+  })
 })
 
 // ===========================================================================

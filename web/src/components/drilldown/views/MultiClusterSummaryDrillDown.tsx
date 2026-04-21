@@ -166,7 +166,21 @@ function getStatusBadge(status: string) {
 
 export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSummaryDrillDownProps) {
   const { t } = useTranslation()
-  const { clusters, deduplicatedClusters, pods, deployments, events, helmReleases, operatorSubscriptions, securityIssues } = useClusterData()
+  const {
+    clusters,
+    deduplicatedClusters,
+    pods,
+    // Per-cluster errors emitted by the pods SSE stream (#9353). Used
+    // below to render an RBAC- vs transient-failure-aware warning when
+    // the all-pods drill-down list is empty but the cluster summary
+    // reports a non-zero pod count.
+    podClusterErrors,
+    deployments,
+    events,
+    helmReleases,
+    operatorSubscriptions,
+    securityIssues,
+  } = useClusterData()
   // Issue 8844 — The all-alerts drill-down must read from the same AlertsContext
   // source that powers the Alerts dashboard stat blocks (firing / resolved
   // counts). Sourcing alerts from pods (non-Running pods were used as a
@@ -602,9 +616,52 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
                     {expectedPodCountFromClusters === 1 ? '' : 's'}, but the
                     detailed list is empty.
                   </div>
-                  <div className="text-muted-foreground mt-1">
-                    This usually means the current user lacks list-pods RBAC on one or more clusters, or the pods endpoint is temporarily unreachable — the per-cluster summary includes the count but the detail view can&apos;t enumerate individual pods.
-                  </div>
+                  {/*
+                    Per-cluster error breakdown (#9353). When the backend
+                    emits `cluster_error` SSE events we show a typed list
+                    so the user can see which clusters were denied by
+                    RBAC (auth) vs. which failed transiently (timeout /
+                    network / unknown). Without this block the warning
+                    conflated every failure mode into a single message.
+                  */}
+                  {podClusterErrors.length > 0 ? (
+                    <>
+                      <div className="text-muted-foreground mt-1">
+                        The pods endpoint returned an error for
+                        {' '}
+                        {podClusterErrors.length}
+                        {' '}
+                        cluster{podClusterErrors.length === 1 ? '' : 's'}:
+                      </div>
+                      <ul className="mt-2 space-y-1 text-muted-foreground">
+                        {podClusterErrors.map(err => {
+                          const isAuth = err.errorType === 'auth'
+                          const isTimeout = err.errorType === 'timeout'
+                          const kindLabel = isAuth
+                            ? 'RBAC denied (list-pods)'
+                            : isTimeout
+                              ? 'Transient timeout'
+                              : `Endpoint failure (${err.errorType})`
+                          return (
+                            <li key={`${err.cluster}-${err.errorType}`} className="flex items-start gap-2">
+                              <Server className="w-3 h-3 mt-0.5 shrink-0" />
+                              <span>
+                                <span className="font-mono">{err.cluster.split('/').pop()}</span>
+                                {' — '}
+                                <span className={isAuth ? 'text-red-400' : 'text-yellow-400'}>
+                                  {kindLabel}
+                                </span>
+                              </span>
+                            </li>
+                          )
+                        })}
+                      </ul>
+                    </>
+                  ) : (
+                    <div className="text-muted-foreground mt-1">
+                      This usually means the current user lacks list-pods RBAC on one or more clusters, or the pods endpoint is temporarily unreachable — the per-cluster summary includes the count but the detail view can&apos;t enumerate individual pods.
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

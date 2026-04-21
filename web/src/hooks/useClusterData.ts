@@ -15,7 +15,11 @@ export function useClusterData() {
   // Use useAllPods (no pagination limit) so the multi-cluster drill-down
   // sees every pod. usePods() defaults to limit=10 and was causing the
   // stat block (total pod count) and drill-down list to disagree. #6100
-  const { pods } = useAllPods()
+  //
+  // `podClusterErrors` surfaces per-cluster SSE `cluster_error` events so
+  // the all-pods drill-down can distinguish an RBAC denial from a
+  // transient failure when the count disagrees with the list (#9353).
+  const { pods, clusterErrors: podClusterErrors } = useAllPods()
   const { deployments } = useDeployments()
   const { namespaces } = useNamespaces()
   const { events } = useEvents()
@@ -27,6 +31,7 @@ export function useClusterData() {
     clusters: clusters || [],
     deduplicatedClusters: deduplicatedClusters || [],
     pods: pods || [],
+    podClusterErrors: podClusterErrors || [],
     deployments: deployments || [],
     namespaces: namespaces || [],
     events: events || [],

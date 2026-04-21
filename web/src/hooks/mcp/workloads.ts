@@ -10,6 +10,20 @@ import { REFRESH_INTERVAL_MS, MIN_REFRESH_INDICATOR_MS, getEffectiveInterval, LO
 import { subscribePolling } from './pollingManager'
 import { MCP_HOOK_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../../lib/constants/network'
 import type { PodInfo, PodIssue, Deployment, DeploymentIssue, Job, HPA, ReplicaSet, StatefulSet, DaemonSet, CronJob } from './types'
+import { classifyError, type ClusterErrorType } from '../../lib/errorClassifier'
+
+/**
+ * Per-cluster error surfaced by `useAllPods` when the backend emits a
+ * `cluster_error` SSE event for a particular cluster (#9353). Lets the
+ * drill-down distinguish an RBAC denial ({@link ClusterErrorType} === 'auth')
+ * from a transient 5xx/timeout failure so the UI can render a specific
+ * explanation instead of a generic "detailed list is empty" warning.
+ */
+export interface PodClusterError {
+  cluster: string
+  errorType: ClusterErrorType
+  message: string
+}
 
 // ---------------------------------------------------------------------------
 // Shared Workloads State - enables cache reset notifications to all consumers
@@ -444,6 +458,14 @@ export function useAllPods(cluster?: string, namespace?: string, forceLive = fal
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(cached?.timestamp || null)
   const [error, setError] = useState<string | null>(null)
+  // Per-cluster errors from the SSE `cluster_error` event (#9353). Lets
+  // consumers (drill-downs) distinguish an RBAC denial on one or more
+  // clusters from a globally-transient failure so the UI can show a
+  // specific "lacks list-pods RBAC on cluster X" message instead of a
+  // generic "detailed list is empty" warning.
+  const [clusterErrors, setClusterErrors] = useState<PodClusterError[]>(
+    [],
+  )
   const sseAbortRef = useRef<AbortController | null>(null)
 
   const refetch = useCallback(async (silent = false) => {
@@ -455,6 +477,7 @@ export function useAllPods(cluster?: string, namespace?: string, forceLive = fal
       setPods(demoPods)
       setIsLoading(false)
       setError(null)
+      setClusterErrors([])
       setLastUpdated(new Date())
       return
     }
@@ -468,6 +491,11 @@ export function useAllPods(cluster?: string, namespace?: string, forceLive = fal
     sseAbortRef.current?.abort()
     const abortController = new AbortController()
     sseAbortRef.current = abortController
+
+    // Collect per-cluster error events during this refetch. We replace the
+    // previous snapshot atomically when the stream settles so a transient
+    // flash of "cluster X failed" isn't left stale after a retry succeeds.
+    const collectedErrors: PodClusterError[] = []
 
     // Use SSE streaming for progressive multi-cluster data
     try {
@@ -484,6 +512,19 @@ export function useAllPods(cluster?: string, namespace?: string, forceLive = fal
           setPods(prev => [...prev, ...items])
           setIsLoading(false)
         },
+        onClusterError: (clusterName, errorMessage) => {
+          // Classify the raw backend error so consumers can render an
+          // RBAC-specific message (auth) instead of "transient failure"
+          // (timeout/network/unknown). Backend error strings already
+          // contain enough context ("pods is forbidden", "401",
+          // "unauthorized", etc.) for the classifier to match.
+          const classified = classifyError(errorMessage)
+          collectedErrors.push({
+            cluster: clusterName,
+            errorType: classified.type,
+            message: errorMessage,
+          })
+        },
       })
 
       const now = new Date()
@@ -492,6 +533,7 @@ export function useAllPods(cluster?: string, namespace?: string, forceLive = fal
 
       setPods(allPods)
       setError(null)
+      setClusterErrors(collectedErrors)
       setLastUpdated(now)
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return
@@ -500,6 +542,10 @@ export function useAllPods(cluster?: string, namespace?: string, forceLive = fal
       if (!silent && !podsCache) {
         setError(message)
       }
+      // Even on catastrophic failure, surface any per-cluster errors we
+      // collected before the stream aborted so the UI can still explain
+      // the partial state.
+      setClusterErrors(collectedErrors)
     } finally {
       if (!silent) {
         setIsLoading(false)
@@ -536,13 +582,24 @@ export function useAllPods(cluster?: string, namespace?: string, forceLive = fal
       if (state.isResetting) {
         setIsLoading(true)
         setPods([])
+        setClusterErrors([])
         setLastUpdated(null)
       }
     }
     return subscribeWorkloadsCache(handleCacheReset)
   }, [])
 
-  return { pods, isLoading, isRefreshing, lastUpdated, error, refetch: () => refetch(false) }
+  return {
+    pods,
+    isLoading,
+    isRefreshing,
+    lastUpdated,
+    error,
+    // Per-cluster errors surfaced from the SSE stream (#9353) so the
+    // multi-cluster drill-down can explain an empty list with "lacks
+    // list-pods RBAC on cluster X" rather than a generic warning.
+    clusterErrors,
+    refetch: () => refetch(false) }
 }
 
 // ---------------------------------------------------------------------------
