@@ -10,11 +10,11 @@ import { useTranslation } from 'react-i18next'
 type Notebook = typeof DEMO_NOTEBOOKS[number]
 type SortByOption = 'name' | 'user' | 'status'
 
-const SORT_OPTIONS = [
-  { value: 'name' as const, label: 'Name' },
-  { value: 'user' as const, label: 'User' },
-  { value: 'status' as const, label: 'Status' },
-]
+const SORT_OPTION_KEYS = [
+  { value: 'name' as const, labelKey: 'mlNotebooks.sortName' },
+  { value: 'user' as const, labelKey: 'mlNotebooks.sortUser' },
+  { value: 'status' as const, labelKey: 'mlNotebooks.sortStatus' },
+] as const
 
 interface MLNotebooksProps {
   config?: Record<string, unknown>
@@ -89,7 +89,7 @@ export function MLNotebooks({ config: _config }: MLNotebooksProps) {
             limit: itemsPerPage,
             onLimitChange: setItemsPerPage,
             sortBy: sorting.sortBy,
-            sortOptions: SORT_OPTIONS,
+            sortOptions: SORT_OPTION_KEYS.map(opt => ({ value: opt.value, label: t(opt.labelKey) })),
             onSortChange: (v) => sorting.setSortBy(v as SortByOption),
             sortDirection: sorting.sortDirection,
             onSortDirectionChange: sorting.setSortDirection,
@@ -102,7 +102,7 @@ export function MLNotebooks({ config: _config }: MLNotebooksProps) {
       <CardSearchInput
         value={filters.search}
         onChange={filters.setSearch}
-        placeholder="Search notebooks..."
+        placeholder={t('mlNotebooks.searchNotebooks')}
         className="mb-3"
       />
 
@@ -125,8 +125,8 @@ export function MLNotebooks({ config: _config }: MLNotebooksProps) {
         <table className="w-full text-sm">
           <thead>
             <tr className="text-xs text-muted-foreground border-b border-border/50">
-              <th className="text-left py-2">Notebook</th>
-              <th className="text-left py-2">User</th>
+              <th className="text-left py-2">{t('mlNotebooks.columnNotebook')}</th>
+              <th className="text-left py-2">{t('mlNotebooks.columnUser')}</th>
               <th className="text-right py-2">{t('common:common.resources')}</th>
               <th className="text-right py-2">{t('common:common.status')}</th>
             </tr>

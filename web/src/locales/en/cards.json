@@ -2387,7 +2387,9 @@
     "gaugeTooltip": "GPU Utilization: {{allocated}} of {{total}} GPUs allocated ({{percent}}%)",
     "gpuTypeRowTitle": "{{count}} {{type}} GPUs - Click to view nodes with this GPU type",
     "gpuTypeRowTitle_one": "{{count}} {{type}} GPU - Click to view nodes with this GPU type",
-    "gpuTypeRowTitle_other": "{{count}} {{type}} GPUs - Click to view nodes with this GPU type"
+    "gpuTypeRowTitle_other": "{{count}} {{type}} GPUs - Click to view nodes with this GPU type",
+    "noGPUData": "No GPU Data",
+    "gpuMetricsNotAvailable": "GPU metrics not available"
   },
   "gpuStatus": {
     "noGPUData": "No GPU Data",
@@ -2890,7 +2892,13 @@
     "notebookDetection": "Notebook Detection",
     "notebookDetectionDescription": "Scans for JupyterHub and standalone notebook servers.",
     "idle": "Idle",
-    "stopped": "Stopped"
+    "stopped": "Stopped",
+    "sortName": "Name",
+    "sortUser": "User",
+    "sortStatus": "Status",
+    "searchNotebooks": "Search notebooks...",
+    "columnNotebook": "Notebook",
+    "columnUser": "User"
   },
   "configDrift": {
     "noDriftDetected": "No config drift detected",
@@ -3385,6 +3393,31 @@
   "kagentAgentPicker": {
     "noAgentsAvailable": "No kagent agents available"
   },
+  "kagentSecurity": {
+    "agentTypeCoverage": "Agent Type Coverage",
+    "declarative": "Declarative",
+    "byo": "BYO",
+    "modelAuthStatus": "Model Auth Status",
+    "agentsWithModelConfig": "{{configured}}/{{total}} agents with model config",
+    "toolServers": "Tool Servers",
+    "ready": "Ready",
+    "remote": "Remote",
+    "byoAgentsWarning": "BYO Agents (Less Controlled)",
+    "allDeclarative_one": "All {{count}} agent is Declarative (fully managed)",
+    "allDeclarative_other": "All {{count}} agents are Declarative (fully managed)",
+    "noResources": "No kagent resources found"
+  },
+  "kagentToolRegistry": {
+    "sortName": "Name",
+    "sortKind": "Kind",
+    "sortStatus": "Status",
+    "sortCluster": "Cluster",
+    "searchPlaceholder": "Search tool servers...",
+    "noToolServers": "No Tool Servers",
+    "deployHint": "Deploy ToolServer or RemoteMCPServer CRDs",
+    "toolCount_one": "{{count}} tool",
+    "toolCount_other": "{{count}} tools"
+  },
   "falcoAlerts": {
     "integration": "Falco Integration",
     "installDescription": "Install Falco for runtime security monitoring.",
@@ -3788,7 +3821,11 @@
     "sortStatus": "Status",
     "sortFramework": "Framework",
     "sortGpus": "GPUs",
-    "searchJobs": "Search jobs..."
+    "searchJobs": "Search jobs...",
+    "statusRunning": "Running",
+    "statusQueued": "Queued",
+    "statusCompleted": "Completed",
+    "statusFailed": "Failed"
   },
   "nats_status": {
     "healthy": "Healthy",

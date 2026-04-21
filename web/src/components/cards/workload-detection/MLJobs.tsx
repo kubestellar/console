@@ -71,13 +71,13 @@ export function MLJobs({ config: _config }: MLJobsProps) {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'running':
-        return <StatusBadge color="green" icon={<Play className="w-2.5 h-2.5" />}>Running</StatusBadge>
+        return <StatusBadge color="green" icon={<Play className="w-2.5 h-2.5" />}>{t('mlJobs.statusRunning')}</StatusBadge>
       case 'queued':
-        return <StatusBadge color="yellow" icon={<Clock className="w-2.5 h-2.5" />}>Queued</StatusBadge>
+        return <StatusBadge color="yellow" icon={<Clock className="w-2.5 h-2.5" />}>{t('mlJobs.statusQueued')}</StatusBadge>
       case 'completed':
-        return <StatusBadge color="blue" icon={<CheckCircle className="w-2.5 h-2.5" />}>Completed</StatusBadge>
+        return <StatusBadge color="blue" icon={<CheckCircle className="w-2.5 h-2.5" />}>{t('mlJobs.statusCompleted')}</StatusBadge>
       case 'failed':
-        return <StatusBadge color="red" icon={<XCircle className="w-2.5 h-2.5" />}>Failed</StatusBadge>
+        return <StatusBadge color="red" icon={<XCircle className="w-2.5 h-2.5" />}>{t('mlJobs.statusFailed')}</StatusBadge>
       default:
         return <StatusBadge color="gray">{status}</StatusBadge>
     }

@@ -6,6 +6,7 @@ import { DynamicCardErrorBoundary } from '../DynamicCardErrorBoundary'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../../lib/cards/CardComponents'
 import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
 import { Skeleton } from '../../ui/Skeleton'
+import { useTranslation } from 'react-i18next'
 
 interface KagentToolRegistryProps {
   config?: { cluster?: string }
@@ -54,15 +55,16 @@ function ProtocolBadge({ protocol }: { protocol: string }) {
 
 type SortField = 'name' | 'kind' | 'status' | 'cluster'
 
-const SORT_OPTIONS: { value: SortField; label: string }[] = [
-  { value: 'name', label: 'Name' },
-  { value: 'kind', label: 'Kind' },
-  { value: 'status', label: 'Status' },
-  { value: 'cluster', label: 'Cluster' },
-]
+const SORT_OPTION_KEYS = [
+  { value: 'name' as const, labelKey: 'kagentToolRegistry.sortName' },
+  { value: 'kind' as const, labelKey: 'kagentToolRegistry.sortKind' },
+  { value: 'status' as const, labelKey: 'kagentToolRegistry.sortStatus' },
+  { value: 'cluster' as const, labelKey: 'kagentToolRegistry.sortCluster' },
+] as const
 
 // #6216 part 2: wrapped at the bottom in DynamicCardErrorBoundary.
 function KagentToolRegistryInternal({ config }: KagentToolRegistryProps) {
+  const { t } = useTranslation(['cards'])
   const [expandedTool, setExpandedTool] = useState<string | null>(null)
 
   const {
@@ -129,8 +131,8 @@ function KagentToolRegistryInternal({ config }: KagentToolRegistryProps) {
     return (
       <div className="flex flex-col items-center justify-center py-8 text-center">
         <Wrench className="w-10 h-10 text-muted-foreground/30 mb-3" />
-        <div className="text-sm font-medium text-muted-foreground">No Tool Servers</div>
-        <div className="text-xs text-muted-foreground/60 mt-1">Deploy ToolServer or RemoteMCPServer CRDs</div>
+        <div className="text-sm font-medium text-muted-foreground">{t('kagentToolRegistry.noToolServers')}</div>
+        <div className="text-xs text-muted-foreground/60 mt-1">{t('kagentToolRegistry.deployHint')}</div>
       </div>
     )
   }
@@ -156,13 +158,13 @@ function KagentToolRegistryInternal({ config }: KagentToolRegistryProps) {
           limit: itemsPerPage,
           onLimitChange: setItemsPerPage,
           sortBy: sorting.sortBy,
-          sortOptions: SORT_OPTIONS,
+          sortOptions: SORT_OPTION_KEYS.map(opt => ({ value: opt.value, label: t(opt.labelKey) })),
           onSortChange: (v) => sorting.setSortBy(v as SortField),
           sortDirection: sorting.sortDirection,
           onSortDirectionChange: sorting.setSortDirection,
         }}
         extra={
-          <CardSearchInput value={filters.search} onChange={filters.setSearch} placeholder="Search tool servers..." />
+          <CardSearchInput value={filters.search} onChange={filters.setSearch} placeholder={t('kagentToolRegistry.searchPlaceholder')} />
         }
       />
 
@@ -190,7 +192,7 @@ function KagentToolRegistryInternal({ config }: KagentToolRegistryProps) {
                 <ProtocolBadge protocol={tool.protocol} />
                 {toolCount > 0 && (
                   <span className="text-xs text-muted-foreground">
-                    {toolCount} tool{toolCount !== 1 ? 's' : ''}
+                    {t('kagentToolRegistry.toolCount', { count: toolCount })}
                   </span>
                 )}
                 <StatusBadge status={tool.status} />
