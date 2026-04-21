@@ -32,7 +32,8 @@ env:
   # Color shown in the GitHub UI for the managed test label (hex without '#').
   # Neutral gray so it does not collide with severity or status label colors.
   TEST_LABEL_COLOR: "ededed"
-  TEST_LABEL_DESCRIPTION: "Ephemeral label used by the console-app-roundtrip workflow; issues tagged with this are auto-closed and auto-locked."
+  # GitHub enforces a 100-character maximum on label descriptions; keep this terse.
+  TEST_LABEL_DESCRIPTION: "Ephemeral label for console-app-roundtrip; tagged issues auto-close and auto-lock."
 
 jobs:
   roundtrip:
