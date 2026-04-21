@@ -26,6 +26,12 @@ const mockFetchProwJobs = vi.fn()
 const mockFetchLLMdServers = vi.fn()
 const mockFetchLLMdModels = vi.fn()
 
+// Shared mutable cluster-cache ref — the hoisted `vi.mock('../mcp/shared', ...)`
+// below returns this same object reference, so tests can mutate `.clusters`
+// directly instead of calling `vi.doMock` (which is unreliable on the first
+// test-after-resetModules in CI — see kubestellar/console#9305).
+const mockClusterCacheRef = vi.hoisted(() => ({ clusters: [] as Array<{ name: string; context?: string; reachable?: boolean }> }))
+
 vi.mock('../../lib/cache', () => ({
   useCache: (...args: unknown[]) => mockUseCache(...args),
   REFRESH_RATES: {
@@ -51,7 +57,7 @@ vi.mock('../../lib/sseClient', () => ({
 }))
 
 vi.mock('../mcp/shared', () => ({
-  clusterCacheRef: { clusters: [] },
+  clusterCacheRef: mockClusterCacheRef,
 }))
 
 vi.mock('../useLocalAgent', () => ({
@@ -139,6 +145,8 @@ describe('useCachedData', () => {
     localStorage.clear()
     // Set a valid token so fetchAPI doesn't throw
     localStorage.setItem('kc_token', 'test-jwt-token')
+    // Reset the shared cluster cache so tests start with a clean slate
+    mockClusterCacheRef.clusters = []
     // Default useCache implementation
     mockUseCache.mockImplementation((opts: { initialData: unknown }) =>
       makeCacheResult(opts.initialData)
@@ -174,17 +182,14 @@ describe('useCachedData', () => {
         return makeCacheResult([])
       })
 
-      // clusterCacheRef has clusters — should be used instead of backend
-      vi.doMock('../mcp/shared', () => ({
-        clusterCacheRef: {
-          clusters: [
-            { name: 'agent-c1', reachable: true },
-            { name: 'agent-c2', reachable: undefined }, // pending health check — included
-            { name: 'agent-c3', reachable: false }, // unreachable — excluded
-            { name: 'ns/long-path-name', reachable: true }, // long path — excluded
-          ],
-        },
-      }))
+      // Mutate the shared mock ref directly — avoids the `vi.doMock` +
+      // `resetModules` race that caused kubestellar/console#9305.
+      mockClusterCacheRef.clusters = [
+        { name: 'agent-c1', reachable: true },
+        { name: 'agent-c2', reachable: undefined }, // pending health check — included
+        { name: 'agent-c3', reachable: false }, // unreachable — excluded
+        { name: 'ns/long-path-name', reachable: true }, // long path — excluded
+      ]
 
       const podRes = { ok: true, text: vi.fn().mockResolvedValue(JSON.stringify({ pods: [{ name: 'p1' }] })) }
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue(podRes))

@@ -26,6 +26,12 @@ const mockFetchProwJobs = vi.fn()
 const mockFetchLLMdServers = vi.fn()
 const mockFetchLLMdModels = vi.fn()
 
+// Shared mutable cluster-cache ref — the hoisted `vi.mock('../mcp/shared', ...)`
+// below returns this same object reference, so tests can mutate `.clusters`
+// directly instead of calling `vi.doMock` (which is unreliable on the first
+// test-after-resetModules in CI — see kubestellar/console#9305).
+const mockClusterCacheRef = vi.hoisted(() => ({ clusters: [] as Array<{ name: string; context?: string; reachable?: boolean }> }))
+
 vi.mock('../../lib/cache', () => ({
   useCache: (...args: unknown[]) => mockUseCache(...args),
   REFRESH_RATES: {
@@ -51,7 +57,7 @@ vi.mock('../../lib/sseClient', () => ({
 }))
 
 vi.mock('../mcp/shared', () => ({
-  clusterCacheRef: { clusters: [] },
+  clusterCacheRef: mockClusterCacheRef,
 }))
 
 vi.mock('../useLocalAgent', () => ({
@@ -139,6 +145,8 @@ describe('useCachedData', () => {
     localStorage.clear()
     // Set a valid token so fetchAPI doesn't throw
     localStorage.setItem('kc_token', 'test-jwt-token')
+    // Reset the shared cluster cache so tests start with a clean slate
+    mockClusterCacheRef.clusters = []
     // Default useCache implementation
     mockUseCache.mockImplementation((opts: { initialData: unknown }) =>
       makeCacheResult(opts.initialData)
@@ -174,11 +182,9 @@ describe('useCachedData', () => {
         return makeCacheResult([])
       })
 
-      vi.doMock('../mcp/shared', () => ({
-        clusterCacheRef: {
-          clusters: [{ name: 'prod', context: 'prod-ctx', reachable: true }],
-        },
-      }))
+      // Mutate the shared mock ref directly — avoids the `vi.doMock` +
+      // `resetModules` race that caused kubestellar/console#9305.
+      mockClusterCacheRef.clusters = [{ name: 'prod', context: 'prod-ctx', reachable: true }]
       mockIsAgentUnavailable.mockReturnValue(false)
 
       mockKubectlProxy.exec.mockResolvedValue({

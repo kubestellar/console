@@ -483,10 +483,13 @@ describe('useAIPredictions', () => {
     const { result } = renderHook(() => useAIPredictions())
 
     // Start analyze — don't await, let timers drive it
-    const _done = false
+    let done = false
     act(() => {
       result.current.analyze().then(() => { done = true })
     })
+    // Reference `done` so TS/ESLint doesn't flag it as unused — the variable
+    // exists to anchor the promise settlement for debugging if the test hangs.
+    void done
 
     // Advance past all internal delays (triggerAnalysis demo delay + RETRY_DELAY_MS)
     await act(async () => {

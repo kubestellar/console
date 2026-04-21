@@ -61,6 +61,14 @@ function wrapper({ children }: { children: React.ReactNode }) {
   return <VersionCheckProvider>{children}</VersionCheckProvider>
 }
 
+/** Subset of the proxy URL used to identify calls to the releases endpoint */
+const RELEASES_API_PATH = '/api/github/repos/kubestellar/console/releases'
+
+/** Returns true when a fetch mock call is targeting the GitHub releases endpoint */
+function isReleasesApiCall(call: unknown[]): boolean {
+  return typeof call[0] === 'string' && (call[0] as string).includes(RELEASES_API_PATH)
+}
+
 // ---------------------------------------------------------------------------
 // parseReleaseTag
 // ---------------------------------------------------------------------------
