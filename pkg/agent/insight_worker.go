@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -184,24 +185,24 @@ func (w *InsightWorker) Enrich(req InsightEnrichmentRequest) (*InsightEnrichment
 	for _, e := range enrichments {
 		w.cache[e.InsightID] = insightCacheEntry{enrichment: e, cachedAt: cacheNow}
 	}
-	// Evict entries beyond the size cap — delete the oldest entries first
+	// Evict entries beyond the size cap — collect all keys, sort by
+	// cachedAt ascending, and delete the oldest entries in one pass.
+	// This is O(N log N) instead of the previous O(N^2) approach (#9443).
 	if len(w.cache) > insightCacheMaxEntries {
-		var oldestKey string
-		var oldestTime time.Time
-		for len(w.cache) > insightCacheMaxEntries {
-			oldestKey = ""
-			oldestTime = cacheNow
-			for k, v := range w.cache {
-				if v.cachedAt.Before(oldestTime) {
-					oldestKey = k
-					oldestTime = v.cachedAt
-				}
-			}
-			if oldestKey != "" {
-				delete(w.cache, oldestKey)
-			} else {
-				break
-			}
+		type cacheRef struct {
+			key      string
+			cachedAt time.Time
+		}
+		entries := make([]cacheRef, 0, len(w.cache))
+		for k, v := range w.cache {
+			entries = append(entries, cacheRef{key: k, cachedAt: v.cachedAt})
+		}
+		sort.Slice(entries, func(i, j int) bool {
+			return entries[i].cachedAt.Before(entries[j].cachedAt)
+		})
+		evictCount := len(w.cache) - insightCacheMaxEntries
+		for i := 0; i < evictCount; i++ {
+			delete(w.cache, entries[i].key)
 		}
 	}
 	w.cacheTime = cacheNow
