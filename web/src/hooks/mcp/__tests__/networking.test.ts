@@ -1305,3 +1305,74 @@ describe('useIngresses — agent skipped when no cluster', () => {
     expect(mockReportAgentDataSuccess).not.toHaveBeenCalled()
   })
 })
+
+// ===========================================================================
+// useIngresses - isDemoFallback wiring (Issue 9357)
+// ===========================================================================
+
+describe('useIngresses — isDemoFallback wiring (Issue 9357)', () => {
+  it('returns isDemoFallback: true when serving demo data in demo mode', async () => {
+    mockIsDemoMode.mockReturnValue(true)
+
+    const { result } = renderHook(() => useIngresses())
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.isDemoFallback).toBe(true)
+    // Demo mode must produce non-empty demo ingress data so the Demo badge
+    // shows with actual content (not a fake "empty live" view).
+    expect(result.current.ingresses.length).toBeGreaterThan(0)
+    // Live API must NOT be called in demo mode.
+    expect(mockApiGet).not.toHaveBeenCalled()
+  })
+
+  it('returns isDemoFallback: false when serving live API data', async () => {
+    const liveIngresses = [{ name: 'live-ingress', namespace: 'prod', cluster: 'c1', hosts: ['x.example.com'] }]
+    mockApiGet.mockResolvedValue({ data: { ingresses: liveIngresses } })
+
+    const { result } = renderHook(() => useIngresses())
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.isDemoFallback).toBe(false)
+    expect(result.current.ingresses).toEqual(liveIngresses)
+  })
+
+  it('returns isDemoFallback: false when live API fails (empty, not demo)', async () => {
+    mockApiGet.mockRejectedValue(new Error('network error'))
+
+    const { result } = renderHook(() => useIngresses())
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.isDemoFallback).toBe(false)
+    expect(result.current.ingresses).toEqual([])
+  })
+
+  it('transitions isDemoFallback from true to false when demo mode is disabled', async () => {
+    mockIsDemoMode.mockReturnValue(true)
+    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    const { result, rerender } = renderHook(
+      ({ demo }) => {
+        mockIsDemoMode.mockReturnValue(demo)
+        mockUseDemoMode.mockReturnValue({ isDemoMode: demo })
+        return useIngresses()
+      },
+      { initialProps: { demo: true } }
+    )
+
+    await waitFor(() => expect(result.current.isDemoFallback).toBe(true))
+
+    mockApiGet.mockResolvedValue({ data: { ingresses: [] } })
+    rerender({ demo: false })
+
+    await waitFor(() => expect(result.current.isDemoFallback).toBe(false))
+  })
+
+  it('filters demo ingresses by cluster when cluster is provided', async () => {
+    mockIsDemoMode.mockReturnValue(true)
+
+    const { result } = renderHook(() => useIngresses('eks-prod-us-east-1'))
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.isDemoFallback).toBe(true)
+    expect(result.current.ingresses.every(i => i.cluster === 'eks-prod-us-east-1')).toBe(true)
+  })
+})

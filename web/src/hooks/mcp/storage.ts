@@ -422,10 +422,13 @@ export function usePVs(cluster?: string) {
 // Hook to get ResourceQuotas
 // When forceLive is true, skip demo mode fallback and always query the real API.
 // Used by GPU Reservations to show live data when running in-cluster with OAuth.
+// Returns `isDemoFallback: true` when the hook is serving demo data so callers
+// can render the Demo badge only for true demo output. See Issue 9356.
 export function useResourceQuotas(cluster?: string, namespace?: string, forceLive = false) {
   const [resourceQuotas, setResourceQuotas] = useState<ResourceQuota[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isDemoFallback, setIsDemoFallback] = useState(false)
 
   const refetch = useCallback(async () => {
     // If demo mode is enabled, use demo data (unless forceLive overrides)
@@ -434,6 +437,7 @@ export function useResourceQuotas(cluster?: string, namespace?: string, forceLiv
         (!cluster || q.cluster === cluster) && (!namespace || q.namespace === namespace)
       )
       setResourceQuotas(demoQuotas)
+      setIsDemoFallback(true)
       setIsLoading(false)
       setError(null)
       return
@@ -445,12 +449,14 @@ export function useResourceQuotas(cluster?: string, namespace?: string, forceLiv
       if (namespace) params.append('namespace', namespace)
       const { data } = await api.get<{ resourceQuotas: ResourceQuota[] }>(`${LOCAL_AGENT_HTTP_URL}/resourcequotas?${params}`)
       setResourceQuotas(data.resourceQuotas || [])
+      setIsDemoFallback(false)
       setError(null)
     } catch {
       // Don't show error - ResourceQuotas are optional
       setError(null)
       // Don't fall back to demo data - show empty instead
       setResourceQuotas([])
+      setIsDemoFallback(false)
     } finally {
       setIsLoading(false)
     }
@@ -476,7 +482,7 @@ export function useResourceQuotas(cluster?: string, namespace?: string, forceLiv
     }
   }, [refetch, cluster, namespace])
 
-  return { resourceQuotas, isLoading, error, refetch }
+  return { resourceQuotas, isLoading, error, refetch, isDemoFallback }
 }
 
 // Hook to get LimitRanges

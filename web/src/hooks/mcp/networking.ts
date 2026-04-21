@@ -10,6 +10,7 @@ import { REFRESH_INTERVAL_MS, MIN_REFRESH_INDICATOR_MS, getEffectiveInterval, LO
 import { subscribePolling } from './pollingManager'
 import { MCP_HOOK_TIMEOUT_MS, DEPLOY_ABORT_TIMEOUT_MS, SERVICES_CACHE_TTL_MS, LOCAL_AGENT_HTTP_URL } from '../../lib/constants/network'
 import type { Service, Ingress, NetworkPolicy } from './types'
+import { getDemoIngresses } from '../useCachedData/demoData'
 
 // ---------------------------------------------------------------------------
 // Shared Networking State - enables cache reset notifications to all consumers
@@ -353,16 +354,36 @@ export function useServices(cluster?: string, namespace?: string) {
   }
 }
 
+// Hook to get Ingresses.
+// Returns `isDemoFallback: true` when the hook is serving demo data so callers
+// can render the Demo badge only for true demo output. See Issue 9357.
 export function useIngresses(cluster?: string, namespace?: string) {
   const [ingresses, setIngresses] = useState<Ingress[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
+  const [isDemoFallback, setIsDemoFallback] = useState(false)
   const { isDemoMode: demoMode } = useDemoMode()
   const initialMountRef = useRef(true)
 
   const refetch = useCallback(async () => {
+    // If demo mode is enabled, use demo data so the Demo badge correctly
+    // reflects the data source. Previously this hook relied on an empty live
+    // response plus a hardcoded `isDemoData: true` in the card config,
+    // producing false positive Demo badges on live data. See Issue 9357.
+    if (isDemoMode()) {
+      const demoIngresses = getDemoIngresses().filter(i =>
+        (!cluster || i.cluster === cluster) && (!namespace || i.namespace === namespace)
+      )
+      setIngresses(demoIngresses)
+      setIsDemoFallback(true)
+      setError(null)
+      setConsecutiveFailures(0)
+      setIsLoading(false)
+      setIsRefreshing(false)
+      return
+    }
     setIsLoading(true)
     setIsRefreshing(true)
     if (cluster && !isAgentUnavailable()) {
@@ -380,6 +401,7 @@ export function useIngresses(cluster?: string, namespace?: string) {
         if (response.ok) {
           const data = await response.json()
           setIngresses(data.ingresses || [])
+          setIsDemoFallback(false)
           setError(null)
           setConsecutiveFailures(0)
           setIsLoading(false)
@@ -397,6 +419,7 @@ export function useIngresses(cluster?: string, namespace?: string) {
       if (namespace) params.append('namespace', namespace)
       const { data } = await api.get<{ ingresses: Ingress[] }>(`${LOCAL_AGENT_HTTP_URL}/ingresses?${params}`)
       setIngresses(data.ingresses || [])
+      setIsDemoFallback(false)
       setError(null)
       setConsecutiveFailures(0)
     } catch {
@@ -404,6 +427,7 @@ export function useIngresses(cluster?: string, namespace?: string) {
       setError(null)
       setConsecutiveFailures(prev => prev + 1)
       setIngresses([])
+      setIsDemoFallback(false)
     } finally {
       setIsLoading(false)
       setIsRefreshing(false)
@@ -430,7 +454,7 @@ export function useIngresses(cluster?: string, namespace?: string) {
     refetch()
   }, [demoMode, refetch])
 
-  return { ingresses, isLoading, isRefreshing, error, refetch, consecutiveFailures, isFailed: consecutiveFailures >= 3 }
+  return { ingresses, isLoading, isRefreshing, error, refetch, consecutiveFailures, isFailed: consecutiveFailures >= 3, isDemoFallback }
 }
 
 // Hook to get NetworkPolicies

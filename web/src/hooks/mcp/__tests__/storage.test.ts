@@ -1188,6 +1188,69 @@ describe('useResourceQuotas — additional branches', () => {
   })
 })
 
+// ===========================================================================
+// useResourceQuotas - isDemoFallback wiring (Issue 9356)
+// ===========================================================================
+
+describe('useResourceQuotas — isDemoFallback wiring (Issue 9356)', () => {
+  it('returns isDemoFallback: true when serving demo data in demo mode', async () => {
+    mockIsDemoMode.mockReturnValue(true)
+
+    const { result } = renderHook(() => useResourceQuotas())
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.isDemoFallback).toBe(true)
+  })
+
+  it('returns isDemoFallback: false when serving live API data', async () => {
+    const liveQuotas = [{ name: 'live-quota', namespace: 'prod', cluster: 'c1', hard: { pods: '100' }, used: { pods: '20' }, age: '1d' }]
+    mockApiGet.mockResolvedValue({ data: { resourceQuotas: liveQuotas } })
+
+    const { result } = renderHook(() => useResourceQuotas())
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.isDemoFallback).toBe(false)
+    expect(result.current.resourceQuotas).toEqual(liveQuotas)
+  })
+
+  it('returns isDemoFallback: false when live API fails (empty, not demo)', async () => {
+    mockApiGet.mockRejectedValue(new Error('API error'))
+
+    const { result } = renderHook(() => useResourceQuotas())
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.isDemoFallback).toBe(false)
+    expect(result.current.resourceQuotas).toEqual([])
+  })
+
+  it('returns isDemoFallback: false when forceLive bypasses demo mode', async () => {
+    mockIsDemoMode.mockReturnValue(true)
+    const liveQuotas = [{ name: 'live-quota', namespace: 'prod', cluster: 'c1', hard: { pods: '100' }, used: { pods: '20' }, age: '1d' }]
+    mockApiGet.mockResolvedValue({ data: { resourceQuotas: liveQuotas } })
+
+    const { result } = renderHook(() => useResourceQuotas(undefined, undefined, true))
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    // forceLive=true skips demo data, so isDemoFallback must be false
+    // even though global demo mode is on.
+    expect(result.current.isDemoFallback).toBe(false)
+    expect(result.current.resourceQuotas).toEqual(liveQuotas)
+  })
+
+  it('transitions isDemoFallback from true to false when demo mode is disabled', async () => {
+    mockIsDemoMode.mockReturnValue(true)
+    const { result } = renderHook(() => useResourceQuotas())
+
+    await waitFor(() => expect(result.current.isDemoFallback).toBe(true))
+
+    mockIsDemoMode.mockReturnValue(false)
+    mockApiGet.mockResolvedValue({ data: { resourceQuotas: [] } })
+    await act(async () => { result.current.refetch() })
+
+    await waitFor(() => expect(result.current.isDemoFallback).toBe(false))
+  })
+})
+
 describe('useLimitRanges — additional branches', () => {
   it('filters demo limit ranges by both cluster and namespace', async () => {
     mockIsDemoMode.mockReturnValue(true)

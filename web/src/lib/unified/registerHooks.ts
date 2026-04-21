@@ -178,7 +178,10 @@ function useUnifiedIngresses(params?: Record<string, unknown>) {
     data: result.ingresses,
     isLoading: result.isLoading,
     error: result.error ? new Error(result.error) : null,
-    refetch: result.refetch }
+    refetch: result.refetch,
+    // Propagate demo-fallback state so UnifiedCard can show the Demo badge
+    // only for actual demo output (Issue 9357).
+    isDemoData: result.isDemoFallback }
 }
 
 function useUnifiedNodes(params?: Record<string, unknown>) {
@@ -275,7 +278,10 @@ function useUnifiedResourceQuotas(params?: Record<string, unknown>) {
     data: result.resourceQuotas,
     isLoading: result.isLoading,
     error: result.error ? new Error(result.error) : null,
-    refetch: result.refetch }
+    refetch: result.refetch,
+    // Propagate demo-fallback state so UnifiedCard can show the Demo badge
+    // only for actual demo output (Issue 9356).
+    isDemoData: result.isDemoFallback }
 }
 
 function useUnifiedLimitRanges(params?: Record<string, unknown>) {

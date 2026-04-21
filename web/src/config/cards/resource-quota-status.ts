@@ -95,7 +95,11 @@ export const resourceQuotaStatusConfig: UnifiedCardConfig = {
   },
 
   // Metadata
-  isDemoData: true,
+  // Note: `isDemoData` is intentionally omitted. The underlying
+  // `useResourceQuotas` hook reports `isDemoFallback` at fetch time and the
+  // unified wrapper (`useUnifiedResourceQuotas`) propagates it as
+  // `isDemoData`. Hardcoding `isDemoData: true` here caused the Demo badge
+  // to appear on live agent data — see Issue 9356.
   isLive: true,
 }
 

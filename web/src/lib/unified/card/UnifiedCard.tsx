@@ -61,7 +61,7 @@ export function UnifiedCard({
   }, [config, instanceConfig])
 
   // Fetch data using the configured data source (skipped if overrideData provided)
-  const { data: fetchedData, isLoading: isDataLoading, error, refetch } = useDataSource(
+  const { data: fetchedData, isLoading: isDataLoading, error, refetch, isDemoData: hookIsDemoData } = useDataSource(
     mergedConfig.dataSource,
     { skip: !!overrideData }
   )
@@ -75,6 +75,15 @@ export function UnifiedCard({
   // Determine if we have any data
   const hasAnyData = Array.isArray(data) ? data.length > 0 : !!data
 
+  // Prefer hook-reported demo state over static config metadata:
+  // - Static `config.isDemoData: true` is a false-positive source because
+  //   it stays `true` even when the hook is serving real live data.
+  // - When the hook explicitly reports demo state (`true` or `false`), use
+  //   it directly. When the hook does not report demo state
+  //   (`hookIsDemoData === undefined`), fall back to the config metadata.
+  // See Issues 9356 and 9357 for the regression this fixes.
+  const effectiveIsDemoData = hookIsDemoData !== undefined ? hookIsDemoData : mergedConfig.isDemoData
+
   // Report loading state to CardWrapper for refresh icon animation and skeleton coordination
   // This enables the refresh icon to spin while data is loading or mode is switching
   useReportCardDataState({
@@ -84,7 +93,7 @@ export function UnifiedCard({
     isLoading: isLoading && !hasAnyData,      // Initial load or mode switch - show skeleton
     isRefreshing: isLoading && hasAnyData,     // Refresh - spin refresh icon
     hasData: !isLoading || hasAnyData,         // True once loading completes or has cached data
-    isDemoData: mergedConfig.isDemoData,       // From card config
+    isDemoData: effectiveIsDemoData,           // Hook-reported when available, else config
   })
 
   // Apply filtering if configured

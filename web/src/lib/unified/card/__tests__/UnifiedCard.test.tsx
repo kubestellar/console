@@ -69,8 +69,9 @@ vi.mock('../../../../hooks/useDrillDown', () => ({
   useDrillDownActions: () => mockDrillDownActions,
 }))
 
+const mockUseReportCardDataState = vi.fn()
 vi.mock('../../../../components/cards/CardDataContext', () => ({
-  useReportCardDataState: vi.fn(),
+  useReportCardDataState: (state: unknown) => mockUseReportCardDataState(state),
 }))
 
 let mockIsModeSwitching = false
@@ -355,5 +356,47 @@ describe('UnifiedCard', () => {
     mockFilterReturn.filterControls = <div data-testid="filters">Filters</div>
     render(<UnifiedCard config={makeConfig()} />)
     expect(screen.getByTestId('filters')).toBeInTheDocument()
+  })
+
+  // -- isDemoData wiring (Issues 9356 and 9357) --
+
+  describe('isDemoData propagation (Issues 9356 and 9357)', () => {
+    it('uses hook-reported isDemoData: true over config', () => {
+      // Hook reports demo; config has no isDemoData set.
+      ;(mockDataSourceReturn as unknown as { isDemoData?: boolean }).isDemoData = true
+      render(<UnifiedCard config={makeConfig()} />)
+
+      expect(mockUseReportCardDataState).toHaveBeenCalled()
+      const lastCall = mockUseReportCardDataState.mock.calls.at(-1)?.[0]
+      expect(lastCall?.isDemoData).toBe(true)
+    })
+
+    it('uses hook-reported isDemoData: false over hardcoded config isDemoData: true', () => {
+      // Pre-fix regression case: config hardcoded isDemoData: true but hook
+      // returns live data with isDemoData: false. Must NOT show Demo badge.
+      ;(mockDataSourceReturn as unknown as { isDemoData?: boolean }).isDemoData = false
+      render(<UnifiedCard config={makeConfig({ isDemoData: true })} />)
+
+      const lastCall = mockUseReportCardDataState.mock.calls.at(-1)?.[0]
+      // Hook says live, so Demo badge must be suppressed.
+      expect(lastCall?.isDemoData).toBe(false)
+    })
+
+    it('falls back to config isDemoData when hook does not report it', () => {
+      // Hook returns no isDemoData field (legacy hooks).
+      delete (mockDataSourceReturn as unknown as { isDemoData?: boolean }).isDemoData
+      render(<UnifiedCard config={makeConfig({ isDemoData: true })} />)
+
+      const lastCall = mockUseReportCardDataState.mock.calls.at(-1)?.[0]
+      expect(lastCall?.isDemoData).toBe(true)
+    })
+
+    it('reports undefined isDemoData when neither hook nor config sets it', () => {
+      delete (mockDataSourceReturn as unknown as { isDemoData?: boolean }).isDemoData
+      render(<UnifiedCard config={makeConfig()} />)
+
+      const lastCall = mockUseReportCardDataState.mock.calls.at(-1)?.[0]
+      expect(lastCall?.isDemoData).toBeUndefined()
+    })
   })
 })

@@ -608,6 +608,34 @@ describe('additional resource wrapper hooks', () => {
     expect(result.current.data).toEqual([{ name: 'ing1' }])
   })
 
+  // Issue 9357: useUnifiedIngresses must propagate isDemoFallback as
+  // isDemoData so UnifiedCard can suppress the Demo badge on live data.
+  it('useUnifiedIngresses propagates isDemoFallback as isDemoData', () => {
+    mockUseIngresses.mockReturnValue({
+      ingresses: [{ name: 'demo-ing' }],
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+      isDemoFallback: true,
+    })
+    const hook = getHook('useIngresses')
+    const { result } = renderHook(() => hook({ cluster: 'c', namespace: 'n' }))
+    expect(result.current.isDemoData).toBe(true)
+  })
+
+  it('useUnifiedIngresses reports isDemoData: false when live', () => {
+    mockUseIngresses.mockReturnValue({
+      ingresses: [{ name: 'live-ing' }],
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+      isDemoFallback: false,
+    })
+    const hook = getHook('useIngresses')
+    const { result } = renderHook(() => hook({ cluster: 'c', namespace: 'n' }))
+    expect(result.current.isDemoData).toBe(false)
+  })
+
   it('useUnifiedStatefulSets maps statefulsets to data', () => {
     mockUseStatefulSets.mockReturnValue({
       statefulsets: [{ name: 'ss1' }],
@@ -679,6 +707,34 @@ describe('additional resource wrapper hooks', () => {
     const hook = getHook('useResourceQuotas')
     const { result } = renderHook(() => hook({ cluster: 'c', namespace: 'n' }))
     expect(result.current.data).toEqual([{ name: 'rq1' }])
+  })
+
+  // Issue 9356: useUnifiedResourceQuotas must propagate isDemoFallback as
+  // isDemoData so UnifiedCard can suppress the Demo badge on live data.
+  it('useUnifiedResourceQuotas propagates isDemoFallback as isDemoData', () => {
+    mockUseResourceQuotas.mockReturnValue({
+      resourceQuotas: [{ name: 'demo-rq' }],
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+      isDemoFallback: true,
+    })
+    const hook = getHook('useResourceQuotas')
+    const { result } = renderHook(() => hook({ cluster: 'c', namespace: 'n' }))
+    expect(result.current.isDemoData).toBe(true)
+  })
+
+  it('useUnifiedResourceQuotas reports isDemoData: false when live', () => {
+    mockUseResourceQuotas.mockReturnValue({
+      resourceQuotas: [{ name: 'live-rq' }],
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+      isDemoFallback: false,
+    })
+    const hook = getHook('useResourceQuotas')
+    const { result } = renderHook(() => hook({ cluster: 'c', namespace: 'n' }))
+    expect(result.current.isDemoData).toBe(false)
   })
 
   it('useUnifiedLimitRanges maps limitRanges to data', () => {

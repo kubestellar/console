@@ -14,6 +14,10 @@ import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../constants'
 import { useKeepAliveActive } from '../../../../hooks/useKeepAliveActive'
 
 // Hook registry - populated by registerDataHook
+// `isDemoData` is optional: hooks that propagate demo-fallback state return
+// `true` when the data being returned came from a demo/mock source. This lets
+// UnifiedCard show the Demo badge only for true demo output. Hooks that do
+// not know their data source may omit this field. See Issues 9356 and 9357.
 const dataHookRegistry: Record<
   string,
   (params?: Record<string, unknown>) => {
@@ -21,6 +25,7 @@ const dataHookRegistry: Record<
     isLoading: boolean
     error: Error | null
     refetch?: () => void
+    isDemoData?: boolean
   }
 > = {}
 
@@ -70,6 +75,7 @@ export function registerDataHook(
     isLoading: boolean
     error: Error | null
     refetch?: () => void
+    isDemoData?: boolean
   }
 ) {
   dataHookRegistry[name] = hook
@@ -96,6 +102,15 @@ export interface UseDataSourceResult {
   isLoading: boolean
   error: Error | null
   refetch: () => void
+  /**
+   * `true` when the underlying data hook explicitly reports that the returned
+   * data is demo/mock. `undefined` when the hook does not report demo status
+   * (in which case callers should fall back to the card config's
+   * `isDemoData` metadata). `false` means the hook explicitly reports live
+   * data — this should override any hardcoded config metadata. See Issues
+   * 9356 and 9357.
+   */
+  isDemoData?: boolean
 }
 
 export interface UseDataSourceOptions {
@@ -216,7 +231,8 @@ function useHookDataSourceInternal(
     data: hookResult.data,
     isLoading: hookResult.isLoading,
     error: hookResult.error,
-    refetch: hookResult.refetch ?? (() => {}) }
+    refetch: hookResult.refetch ?? (() => {}),
+    isDemoData: hookResult.isDemoData }
 }
 
 /**

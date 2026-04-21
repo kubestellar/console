@@ -95,7 +95,11 @@ export const ingressStatusConfig: UnifiedCardConfig = {
   },
 
   // Metadata
-  isDemoData: true,
+  // Note: `isDemoData` is intentionally omitted. The underlying
+  // `useIngresses` hook reports `isDemoFallback` at fetch time and the
+  // unified wrapper (`useUnifiedIngresses`) propagates it as `isDemoData`.
+  // Hardcoding `isDemoData: true` here caused the Demo badge to appear on
+  // live agent data — see Issue 9357.
   isLive: true,
 }
 
