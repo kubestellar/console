@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { safeGetItem, safeSetItem, safeRemoveItem, safeGetJSON, safeSetJSON } from '../localStorage'
 
 describe('safeGetItem', () => {
@@ -16,20 +16,32 @@ describe('safeGetItem', () => {
 
 describe('safeSetItem', () => {
   beforeEach(() => { localStorage.clear() })
+  afterEach(() => { vi.restoreAllMocks() })
 
   it('stores a value and returns true', () => {
     expect(safeSetItem('key', 'val')).toBe(true)
     expect(localStorage.getItem('key')).toBe('val')
   })
+
+  it('returns false when setItem throws (quota exceeded)', () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new DOMException('QuotaExceededError') })
+    expect(safeSetItem('key', 'val')).toBe(false)
+  })
 })
 
 describe('safeRemoveItem', () => {
   beforeEach(() => { localStorage.clear() })
+  afterEach(() => { vi.restoreAllMocks() })
 
   it('removes a key and returns true', () => {
     localStorage.setItem('key', 'val')
     expect(safeRemoveItem('key')).toBe(true)
     expect(localStorage.getItem('key')).toBeNull()
+  })
+
+  it('returns false when removeItem throws', () => {
+    vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => { throw new Error('storage error') })
+    expect(safeRemoveItem('key')).toBe(false)
   })
 })
 
@@ -58,6 +70,7 @@ describe('safeGetJSON', () => {
 
 describe('safeSetJSON', () => {
   beforeEach(() => { localStorage.clear() })
+  afterEach(() => { vi.restoreAllMocks() })
 
   it('stores JSON and returns true', () => {
     expect(safeSetJSON('key', { x: 1 })).toBe(true)
@@ -67,5 +80,10 @@ describe('safeSetJSON', () => {
   it('handles arrays', () => {
     expect(safeSetJSON('arr', [1, 2, 3])).toBe(true)
     expect(JSON.parse(localStorage.getItem('arr')!)).toEqual([1, 2, 3])
+  })
+
+  it('returns false when setItem throws (quota exceeded)', () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new DOMException('QuotaExceededError') })
+    expect(safeSetJSON('key', { x: 1 })).toBe(false)
   })
 })

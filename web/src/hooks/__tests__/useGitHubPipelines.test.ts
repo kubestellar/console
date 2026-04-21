@@ -3,7 +3,7 @@
  * The hooks themselves delegate to useCache; we test the config they
  * pass rather than re-testing the cache layer.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook } from '@testing-library/react'
 
 const lastCacheArgs: { calls: Array<Record<string, unknown>> } = { calls: [] }
@@ -49,6 +49,9 @@ import {
   usePipelineMatrix,
   usePipelineFlow,
   usePipelineFailures,
+  useUnifiedPipelineData,
+  usePipelineMutations,
+  fetchPipelineLog,
 } from '../useGitHubPipelines'
 
 describe('getPipelineRepos', () => {
@@ -156,5 +159,101 @@ describe('hooks pass correct useCache config', () => {
   it('usePipelineFailures uses key containing gh-pipelines-failures', () => {
     renderHook(() => usePipelineFailures('kubestellar/console'))
     expect(lastCacheArgs.calls.some(a => (a.key as string).includes('gh-pipelines-failures'))).toBe(true)
+  })
+
+  it('useUnifiedPipelineData with null repo uses key gh-pipelines-all:all:14', () => {
+    renderHook(() => useUnifiedPipelineData(null))
+    expect(lastCacheArgs.calls.some(a => a.key === 'gh-pipelines-all:all:14')).toBe(true)
+  })
+
+  it('useUnifiedPipelineData with repo includes repo and days in key', () => {
+    renderHook(() => useUnifiedPipelineData('kubestellar/console', 7))
+    expect(lastCacheArgs.calls.some(a => (a.key as string).includes('kubestellar/console') && (a.key as string).includes(':7'))).toBe(true)
+  })
+})
+
+describe('usePipelineMutations', () => {
+  afterEach(() => { vi.restoreAllMocks() })
+
+  it('run calls fetch with POST and correct params on rerun', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({}),
+    })
+    vi.stubGlobal('fetch', mockFetch)
+    const { result } = renderHook(() => usePipelineMutations())
+    const res = await result.current.run('rerun', 'kubestellar/console', 42)
+    expect(res.ok).toBe(true)
+    expect(res.status).toBe(200)
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.stringContaining('op=rerun'),
+      expect.objectContaining({ method: 'POST' })
+    )
+    vi.unstubAllGlobals()
+  })
+
+  it('run returns error shape when fetch throws', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network failure')))
+    const { result } = renderHook(() => usePipelineMutations())
+    const res = await result.current.run('cancel', 'kubestellar/console', 99)
+    expect(res.ok).toBe(false)
+    expect(res.status).toBe(0)
+    expect(res.error).toBe('network failure')
+    vi.unstubAllGlobals()
+  })
+
+  it('run returns ok:false when server returns non-ok status', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: false,
+      status: 422,
+      json: () => Promise.resolve({ error: 'unprocessable' }),
+    }))
+    const { result } = renderHook(() => usePipelineMutations())
+    const res = await result.current.run('rerun', 'kubestellar/console', 7)
+    expect(res.ok).toBe(false)
+    expect(res.status).toBe(422)
+    expect(res.error).toBe('unprocessable')
+    vi.unstubAllGlobals()
+  })
+})
+
+describe('fetchPipelineLog', () => {
+  afterEach(() => { vi.restoreAllMocks() })
+
+  it('returns log shape on success', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ log: 'hello world', lines: 1, truncatedFrom: 0 }),
+    }))
+    const res = await fetchPipelineLog('kubestellar/console', 55)
+    expect('log' in res).toBe(true)
+    if ('log' in res) {
+      expect(res.log).toBe('hello world')
+      expect(res.lines).toBe(1)
+      expect(res.truncatedFrom).toBe(0)
+    }
+    vi.unstubAllGlobals()
+  })
+
+  it('returns error shape when server returns non-ok', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+      json: () => Promise.resolve({ error: 'not found' }),
+    }))
+    const res = await fetchPipelineLog('kubestellar/console', 55)
+    expect('error' in res).toBe(true)
+    if ('error' in res) expect(res.error).toBe('not found')
+    vi.unstubAllGlobals()
+  })
+
+  it('returns error shape when fetch throws', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('timeout')))
+    const res = await fetchPipelineLog('kubestellar/console', 55)
+    expect('error' in res).toBe(true)
+    if ('error' in res) expect(res.error).toBe('timeout')
+    vi.unstubAllGlobals()
   })
 })
