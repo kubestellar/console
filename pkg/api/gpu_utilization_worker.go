@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/kubestellar/console/pkg/agent"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/notifications"
@@ -28,6 +29,12 @@ const (
 	defaultOverThreshold = 90.0
 	// defaultUnderThreshold is the default threshold for under-utilization alerts
 	defaultUnderThreshold = 20.0
+	// defaultDCGMNamespace is the Kubernetes namespace where the NVIDIA GPU
+	// Operator ships the dcgm-exporter Service by default.
+	defaultDCGMNamespace = "gpu-operator"
+	// defaultDCGMService is the Service name of the DCGM exporter shipped
+	// by the NVIDIA GPU Operator.
+	defaultDCGMService = "dcgm-exporter"
 )
 
 const (
@@ -50,6 +57,13 @@ type GPUUtilizationWorker struct {
 	notificationService *notifications.Service
 	overThreshold      float64
 	underThreshold     float64
+	// dcgmEnabled toggles NVIDIA DCGM exporter scraping for real GPU memory
+	// metrics (Issue 9135). Defaults to false — clusters without the GPU
+	// Operator / DCGM stack should silently fall back to the legacy zero
+	// value instead of logging errors every poll.
+	dcgmEnabled   bool
+	dcgmNamespace string
+	dcgmService   string
 }
 
 // NewGPUUtilizationWorker creates a new GPU utilization worker
@@ -77,6 +91,16 @@ func NewGPUUtilizationWorker(s store.Store, k8sClient *k8s.MultiClusterClient, n
 		}
 	}
 
+	dcgmEnabled := os.Getenv("GPU_METRICS_DCGM_ENABLED") == "true"
+	dcgmNamespace := os.Getenv("GPU_METRICS_DCGM_NAMESPACE")
+	if dcgmNamespace == "" {
+		dcgmNamespace = defaultDCGMNamespace
+	}
+	dcgmService := os.Getenv("GPU_METRICS_DCGM_SERVICE")
+	if dcgmService == "" {
+		dcgmService = defaultDCGMService
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	return &GPUUtilizationWorker{
 		store:               s,
@@ -89,6 +113,9 @@ func NewGPUUtilizationWorker(s store.Store, k8sClient *k8s.MultiClusterClient, n
 		notificationService: notificationService,
 		overThreshold:       overThreshold,
 		underThreshold:      underThreshold,
+		dcgmEnabled:         dcgmEnabled,
+		dcgmNamespace:       dcgmNamespace,
+		dcgmService:         dcgmService,
 	}
 }
 
@@ -145,6 +172,12 @@ func (w *GPUUtilizationWorker) collectUtilization() {
 	// Derived from w.baseCtx so Stop() cancels in-flight calls immediately (#6966).
 	perReservationTimeout := w.interval / time.Duration(perReservationTimeoutDivisor)
 
+	// Scrape DCGM once per unique cluster and share the result across all
+	// reservations on that cluster (Issue 9135). Scraping per reservation
+	// would hit the exporter N times for N namespaces in the same cluster
+	// and blow past rate limits on shared infrastructure.
+	dcgmByCluster := w.scrapeDCGMPerCluster(reservations, perReservationTimeout)
+
 	var wg sync.WaitGroup
 	for i := range reservations {
 		wg.Add(1)
@@ -152,14 +185,67 @@ func (w *GPUUtilizationWorker) collectUtilization() {
 			defer wg.Done()
 			ctx, cancel := context.WithTimeout(w.baseCtx, perReservationTimeout)
 			defer cancel()
-			w.collectForReservation(ctx, r)
+			w.collectForReservation(ctx, r, dcgmByCluster[r.Cluster])
 		}(&reservations[i])
 	}
 	wg.Wait()
 }
 
-// collectForReservation collects utilization for a single reservation
-func (w *GPUUtilizationWorker) collectForReservation(ctx context.Context, reservation *models.GPUReservation) {
+// scrapeDCGMPerCluster fetches DCGM exporter metrics once per unique
+// cluster and returns a map keyed by cluster name. Callers look up
+// per-namespace framebuffer utilization from the nested map. Returns
+// nil when DCGM is disabled via env flag — callers handle nil as
+// "no DCGM data, use legacy zero fallback".
+func (w *GPUUtilizationWorker) scrapeDCGMPerCluster(
+	reservations []models.GPUReservation,
+	timeout time.Duration,
+) map[string]map[string]*agent.DCGMNamespaceMetrics {
+	if !w.dcgmEnabled {
+		return nil
+	}
+
+	// Collect unique cluster names.
+	clusters := make(map[string]struct{})
+	for i := range reservations {
+		clusters[reservations[i].Cluster] = struct{}{}
+	}
+
+	out := make(map[string]map[string]*agent.DCGMNamespaceMetrics, len(clusters))
+	scrapeConfig := agent.DCGMScrapeConfig{
+		Namespace: w.dcgmNamespace,
+		Service:   w.dcgmService,
+	}
+	for cluster := range clusters {
+		restConfig, err := w.k8sClient.GetRestConfig(cluster)
+		if err != nil {
+			// Cluster unreachable → silent zero fallback for this cluster.
+			slog.Debug("GPU utilization worker: DCGM scrape skipped (no rest config)", "cluster", cluster, "error", err)
+			continue
+		}
+		ctx, cancel := context.WithTimeout(w.baseCtx, timeout)
+		metrics, err := agent.ScrapeDCGMByNamespace(ctx, restConfig, scrapeConfig)
+		cancel()
+		if err != nil {
+			// Log at debug — the feature is opt-in and a 503 / missing Service
+			// on an unconfigured cluster is a legitimate operational state,
+			// not an error worth pager-duty attention.
+			slog.Debug("GPU utilization worker: DCGM scrape failed", "cluster", cluster, "error", err)
+			continue
+		}
+		out[cluster] = metrics
+	}
+	return out
+}
+
+// collectForReservation collects utilization for a single reservation.
+// dcgmClusterMetrics is the per-namespace DCGM framebuffer map for the
+// reservation's cluster (or nil when DCGM is disabled / unreachable);
+// callers pass nil for the legacy zero-memory fallback.
+func (w *GPUUtilizationWorker) collectForReservation(
+	ctx context.Context,
+	reservation *models.GPUReservation,
+	dcgmClusterMetrics map[string]*agent.DCGMNamespaceMetrics,
+) {
 	cluster := reservation.Cluster
 	namespace := reservation.Namespace
 
@@ -257,12 +343,20 @@ func (w *GPUUtilizationWorker) collectForReservation(ctx context.Context, reserv
 		}
 	}
 
+	// Populate MemoryUtilizationPct from the DCGM exporter when available
+	// (Issue 9135). Silent zero fallback when DCGM is disabled, unreachable,
+	// or emits no samples for this reservation's namespace.
+	memoryUtilPct := 0.0
+	if nsMetrics, ok := dcgmClusterMetrics[namespace]; ok && nsMetrics != nil && nsMetrics.SampleCount > 0 {
+		memoryUtilPct = nsMetrics.UtilizationPct()
+	}
+
 	snapshot := &models.GPUUtilizationSnapshot{
 		ID:                   uuid.New().String(),
 		ReservationID:        reservation.ID.String(),
 		Timestamp:            time.Now(),
 		GPUUtilizationPct:    gpuUtilPct,
-		MemoryUtilizationPct: 0, // Memory metrics require a metrics-server; 0 indicates unavailable (#7019)
+		MemoryUtilizationPct: memoryUtilPct,
 		ActiveGPUCount:       activeGPUCount,
 		TotalGPUCount:        totalGPUs,
 	}

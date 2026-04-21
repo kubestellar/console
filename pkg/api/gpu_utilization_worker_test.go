@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/kubestellar/console/pkg/agent"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/notifications"
@@ -115,7 +116,7 @@ func TestGPUUtilizationWorker_MetricAccuracy(t *testing.T) {
 			return s.ActiveGPUCount == 3 && s.TotalGPUCount == 4 && s.GPUUtilizationPct == 75.0
 		})).Return(nil).Once()
 
-		worker.collectForReservation(context.Background(), reservation)
+		worker.collectForReservation(context.Background(), reservation, nil)
 		mockStore.AssertExpectations(t)
 	})
 
@@ -150,7 +151,7 @@ func TestGPUUtilizationWorker_MetricAccuracy(t *testing.T) {
 			return s.ActiveGPUCount == 2 && s.GPUUtilizationPct == 100.0
 		})).Return(nil).Once()
 
-		worker.collectForReservation(context.Background(), reservation)
+		worker.collectForReservation(context.Background(), reservation, nil)
 		mockStore.AssertExpectations(t)
 	})
 
@@ -166,7 +167,7 @@ func TestGPUUtilizationWorker_MetricAccuracy(t *testing.T) {
 			return s.TotalGPUCount == 0 && s.ActiveGPUCount == 0 && s.GPUUtilizationPct == 0
 		})).Return(nil).Once()
 
-		worker.collectForReservation(context.Background(), reservation)
+		worker.collectForReservation(context.Background(), reservation, nil)
 		mockStore.AssertExpectations(t)
 	})
 }
@@ -257,7 +258,7 @@ func TestGPUUtilizationWorker_ThresholdAlerting(t *testing.T) {
 			return s.ActiveGPUCount == 4 && s.TotalGPUCount == 4 && s.GPUUtilizationPct == 100.0
 		})).Return(nil).Once()
 
-		worker.collectForReservation(context.Background(), reservation)
+		worker.collectForReservation(context.Background(), reservation, nil)
 		mockStore.AssertExpectations(t)
 	})
 
@@ -309,7 +310,7 @@ func TestGPUUtilizationWorker_ThresholdAlerting(t *testing.T) {
 			return s.ActiveGPUCount == 1 && s.TotalGPUCount == 4 && s.GPUUtilizationPct == 25.0
 		})).Return(nil).Once()
 
-		worker.collectForReservation(context.Background(), reservation)
+		worker.collectForReservation(context.Background(), reservation, nil)
 		mockStore.AssertExpectations(t)
 	})
 
@@ -364,7 +365,120 @@ func TestGPUUtilizationWorker_ThresholdAlerting(t *testing.T) {
 			return s.ActiveGPUCount == 2 && s.TotalGPUCount == 4 && s.GPUUtilizationPct == 50.0
 		})).Return(nil).Once()
 
-		worker.collectForReservation(context.Background(), reservation)
+		worker.collectForReservation(context.Background(), reservation, nil)
 		mockStore.AssertExpectations(t)
 	})
+}
+
+// Issue 9135 — DCGM GPU memory integration tests.
+
+func TestGPUUtilizationWorker_DCGMDisabled_MemoryZero(t *testing.T) {
+	t.Setenv("GPU_METRICS_DCGM_ENABLED", "")
+
+	mockStore := new(test.MockStore)
+	k8sClient, _ := k8s.NewMultiClusterClient("")
+	k8sClient.InjectClient("c1", k8sfake.NewSimpleClientset())
+	worker := NewGPUUtilizationWorker(mockStore, k8sClient, nil)
+
+	if worker.dcgmEnabled {
+		t.Fatal("expected dcgmEnabled=false when GPU_METRICS_DCGM_ENABLED is unset")
+	}
+	if worker.dcgmNamespace != "gpu-operator" {
+		t.Errorf("dcgmNamespace default: got %q, want gpu-operator", worker.dcgmNamespace)
+	}
+	if worker.dcgmService != "dcgm-exporter" {
+		t.Errorf("dcgmService default: got %q, want dcgm-exporter", worker.dcgmService)
+	}
+
+	// Directly verify the collect path: nil dcgmClusterMetrics → MemoryUtilizationPct=0.
+	reservation := &models.GPUReservation{
+		ID:        uuid.New(),
+		Cluster:   "c1",
+		Namespace: "ns-a",
+		GPUCount:  1,
+	}
+	mockStore.On("InsertUtilizationSnapshot", mock.MatchedBy(func(s *models.GPUUtilizationSnapshot) bool {
+		return s.MemoryUtilizationPct == 0
+	})).Return(nil).Once()
+	worker.collectForReservation(context.Background(), reservation, nil)
+	mockStore.AssertExpectations(t)
+}
+
+func TestGPUUtilizationWorker_DCGMEnabled_EnvOverrides(t *testing.T) {
+	t.Setenv("GPU_METRICS_DCGM_ENABLED", "true")
+	t.Setenv("GPU_METRICS_DCGM_NAMESPACE", "custom-ns")
+	t.Setenv("GPU_METRICS_DCGM_SERVICE", "custom-svc")
+
+	mockStore := new(test.MockStore)
+	k8sClient, _ := k8s.NewMultiClusterClient("")
+	worker := NewGPUUtilizationWorker(mockStore, k8sClient, nil)
+
+	if !worker.dcgmEnabled {
+		t.Fatal("expected dcgmEnabled=true when GPU_METRICS_DCGM_ENABLED=true")
+	}
+	if worker.dcgmNamespace != "custom-ns" {
+		t.Errorf("dcgmNamespace override: got %q, want custom-ns", worker.dcgmNamespace)
+	}
+	if worker.dcgmService != "custom-svc" {
+		t.Errorf("dcgmService override: got %q, want custom-svc", worker.dcgmService)
+	}
+}
+
+func TestGPUUtilizationWorker_DCGMEnabled_MemoryFromScraper(t *testing.T) {
+	// Pass DCGM metrics directly to collectForReservation to verify the
+	// percentage computation and that non-matching namespaces fall back to 0.
+	mockStore := new(test.MockStore)
+	k8sClient, _ := k8s.NewMultiClusterClient("")
+	fakeClient := k8sfake.NewSimpleClientset()
+	k8sClient.InjectClient("c1", fakeClient)
+	worker := NewGPUUtilizationWorker(mockStore, k8sClient, nil)
+
+	// 75% framebuffer utilization: 30720 used out of 30720+10240 total.
+	const (
+		fbUsedMiB = 30720
+		fbFreeMiB = 10240
+		wantPct   = 75.0
+	)
+	dcgmByNs := map[string]*agent.DCGMNamespaceMetrics{
+		"ml-team": {FBUsedMiB: fbUsedMiB, FBFreeMiB: fbFreeMiB, SampleCount: 1},
+	}
+
+	reservation := &models.GPUReservation{
+		ID:        uuid.New(),
+		Cluster:   "c1",
+		Namespace: "ml-team",
+		GPUCount:  1,
+	}
+	mockStore.On("InsertUtilizationSnapshot", mock.MatchedBy(func(s *models.GPUUtilizationSnapshot) bool {
+		return s.MemoryUtilizationPct == wantPct
+	})).Return(nil).Once()
+
+	worker.collectForReservation(context.Background(), reservation, dcgmByNs)
+	mockStore.AssertExpectations(t)
+}
+
+func TestGPUUtilizationWorker_DCGMEnabled_NamespaceMiss_Zero(t *testing.T) {
+	// DCGM returned data, but not for this reservation's namespace.
+	mockStore := new(test.MockStore)
+	k8sClient, _ := k8s.NewMultiClusterClient("")
+	fakeClient := k8sfake.NewSimpleClientset()
+	k8sClient.InjectClient("c1", fakeClient)
+	worker := NewGPUUtilizationWorker(mockStore, k8sClient, nil)
+
+	dcgmByNs := map[string]*agent.DCGMNamespaceMetrics{
+		"other-ns": {FBUsedMiB: 1000, FBFreeMiB: 1000, SampleCount: 1},
+	}
+
+	reservation := &models.GPUReservation{
+		ID:        uuid.New(),
+		Cluster:   "c1",
+		Namespace: "missing-ns",
+		GPUCount:  1,
+	}
+	mockStore.On("InsertUtilizationSnapshot", mock.MatchedBy(func(s *models.GPUUtilizationSnapshot) bool {
+		return s.MemoryUtilizationPct == 0
+	})).Return(nil).Once()
+
+	worker.collectForReservation(context.Background(), reservation, dcgmByNs)
+	mockStore.AssertExpectations(t)
 }
