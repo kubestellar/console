@@ -389,16 +389,30 @@ if [ "$USE_DEV_SERVER" = true ]; then
     # NOTE: Do NOT pass --dev to the backend — that bypasses OAuth and creates "dev-user".
     # The --dev flag in startup-oauth.sh only controls using Vite dev server vs built assets.
 
-    # Start watchdog first so users see a "waiting" page immediately
+    # Build and start the standalone watcher so users see a branded page immediately.
+    # The watcher is stdlib-only — builds in ~2s and starts in milliseconds.
     if [ "$WATCHDOG_RUNNING" = false ]; then
         write_stage "watchdog"
-        echo -e "${GREEN}Starting watchdog on port 8080...${NC}"
+        # Rebuild watcher if binary is missing or source changed
+        WATCHER_BIN="./bin/kc-watcher"
+        WATCHER_NEEDS_BUILD=false
+        if [ ! -f "$WATCHER_BIN" ]; then
+            WATCHER_NEEDS_BUILD=true
+        elif [ -n "$(find cmd/watcher -name '*.go' -newer "$WATCHER_BIN" 2>/dev/null)" ]; then
+            WATCHER_NEEDS_BUILD=true
+        fi
+        if [ "$WATCHER_NEEDS_BUILD" = true ]; then
+            echo -e "${GREEN}Building kc-watcher...${NC}"
+            mkdir -p ./bin
+            GOWORK=off go build -ldflags "-X main.version=${VERSION:-dev}" -o "$WATCHER_BIN" ./cmd/watcher
+        fi
+        echo -e "${GREEN}Starting watcher on port 8080...${NC}"
         TLS_FLAG=""
-if [ "${TLS_ENABLED:-}" = "true" ]; then
-    TLS_FLAG="--tls"
-    echo -e "${GREEN}  HTTPS/H2 enabled (TLS_ENABLED=true)${NC}"
-fi
-GOWORK=off go run ./cmd/console --watchdog $TLS_FLAG --backend-port "$BACKEND_LISTEN_PORT" &
+        if [ "${TLS_ENABLED:-}" = "true" ]; then
+            TLS_FLAG="--tls"
+            echo -e "${GREEN}  HTTPS/H2 enabled (TLS_ENABLED=true)${NC}"
+        fi
+        "$WATCHER_BIN" $TLS_FLAG --backend-port "$BACKEND_LISTEN_PORT" &
         WATCHDOG_PID=$!
         sleep 1
     fi
@@ -430,17 +444,30 @@ GOWORK=off go run ./cmd/console --watchdog $TLS_FLAG --backend-port "$BACKEND_LI
 else
     # Production mode: pre-built frontend served by Go backend (fast load)
 
-    # Start watchdog first so users see a "waiting" page during the build
-    # instead of a connection refused error
+    # Build and start the standalone watcher so users see a branded page immediately.
+    # The watcher is stdlib-only — builds in ~2s and starts in milliseconds.
     if [ "$WATCHDOG_RUNNING" = false ]; then
         write_stage "watchdog"
-        echo -e "${GREEN}Starting watchdog on port 8080...${NC}"
+        # Rebuild watcher if binary is missing or source changed
+        WATCHER_BIN="./bin/kc-watcher"
+        WATCHER_NEEDS_BUILD=false
+        if [ ! -f "$WATCHER_BIN" ]; then
+            WATCHER_NEEDS_BUILD=true
+        elif [ -n "$(find cmd/watcher -name '*.go' -newer "$WATCHER_BIN" 2>/dev/null)" ]; then
+            WATCHER_NEEDS_BUILD=true
+        fi
+        if [ "$WATCHER_NEEDS_BUILD" = true ]; then
+            echo -e "${GREEN}Building kc-watcher...${NC}"
+            mkdir -p ./bin
+            GOWORK=off go build -ldflags "-X main.version=${VERSION:-dev}" -o "$WATCHER_BIN" ./cmd/watcher
+        fi
+        echo -e "${GREEN}Starting watcher on port 8080...${NC}"
         TLS_FLAG=""
-if [ "${TLS_ENABLED:-}" = "true" ]; then
-    TLS_FLAG="--tls"
-    echo -e "${GREEN}  HTTPS/H2 enabled (TLS_ENABLED=true)${NC}"
-fi
-GOWORK=off go run ./cmd/console --watchdog $TLS_FLAG --backend-port "$BACKEND_LISTEN_PORT" &
+        if [ "${TLS_ENABLED:-}" = "true" ]; then
+            TLS_FLAG="--tls"
+            echo -e "${GREEN}  HTTPS/H2 enabled (TLS_ENABLED=true)${NC}"
+        fi
+        "$WATCHER_BIN" $TLS_FLAG --backend-port "$BACKEND_LISTEN_PORT" &
         WATCHDOG_PID=$!
         sleep 1
     fi

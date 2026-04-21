@@ -34,8 +34,8 @@ const (
 	agentFileMode = 0600
 
 	// Backend port resolution constants (see resolveBackendPort in server_http.go).
-	// These are duplicated from cmd/console/watchdog.go because pkg/agent cannot
-	// import the main package. Keep them in sync with watchdog.go.
+	// These are duplicated from cmd/watcher/watcher.go because pkg/agent cannot
+	// import the main package. Keep them in sync with watcher.go.
 	backendPortWatchdogMode  = 8081               // watchdog (8080) proxies -> backend (8081)
 	backendPortLegacyDefault = 8080               // no-watchdog deployments: backend binds 8080 directly
 	watchdogPidFilePath      = "/tmp/.kc-watchdog.pid"

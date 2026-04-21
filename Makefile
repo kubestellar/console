@@ -33,6 +33,7 @@ build:
 	mkdir -p bin
 	go build -o bin/kc-agent ./cmd/kc-agent
 	go build -o bin/console ./cmd/console
+	go build -o bin/kc-watcher ./cmd/watcher
 	@# Update Homebrew kc-agent if installed
 	@if command -v kc-agent >/dev/null 2>&1; then cp bin/kc-agent $$(which kc-agent) 2>/dev/null || true; fi
 

@@ -2014,7 +2014,7 @@ var watchdogPidFileStat = func(path string) (os.FileInfo, error) {
 //
 // Historically this file hard-coded 8080 for both the kill and health-check
 // paths (#7945). That was correct before the watchdog landed, but after the
-// watchdog architecture (cmd/console/watchdog.go) port 8080 became the
+// watcher architecture (cmd/watcher/watcher.go) port 8080 became the
 // reverse-proxy listener and the real backend moved to 8081. The old code
 // therefore killed the watchdog instead of the backend on restart, leaving
 // the real backend alive — the exact opposite of the intent.

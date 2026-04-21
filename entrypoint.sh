@@ -13,8 +13,8 @@ BACKEND_PORT=${BACKEND_PORT:-8081}
 BACKEND_PORT=$BACKEND_PORT ./console &
 BACKEND_PID=$!
 
-# Start watchdog in the background
-./console --watchdog --backend-port "$BACKEND_PORT" &
+# Start watcher in the background
+./kc-watcher --backend-port "$BACKEND_PORT" &
 WATCHDOG_PID=$!
 
 # Trap signals to forward to children and clean up

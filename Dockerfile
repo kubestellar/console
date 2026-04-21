@@ -16,6 +16,7 @@ ARG TARGETARCH
 
 # Build for the target platform (TARGETARCH is set automatically by buildx)
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build -ldflags="-s -w -X github.com/kubestellar/console/pkg/api.Version=${APP_VERSION}" -o console ./cmd/console
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build -ldflags="-s -w -X main.version=${APP_VERSION}" -o kc-watcher ./cmd/watcher
 
 # Build stage - Frontend
 FROM node:22-alpine@sha256:8ea2348b068a9544dae7317b4f3aafcdc032df1647bb7d768a05a5cad1a7683f AS frontend-builder
@@ -46,8 +47,9 @@ WORKDIR /app
 # Install runtime dependencies
 RUN apk add --no-cache ca-certificates tzdata
 
-# Copy backend binary
+# Copy backend and watcher binaries
 COPY --from=backend-builder /app/console .
+COPY --from=backend-builder /app/kc-watcher .
 
 # Copy frontend build
 COPY --from=frontend-builder /app/dist ./web/dist

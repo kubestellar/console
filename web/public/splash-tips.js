@@ -1,6 +1,6 @@
 // Rotating tips for the pre-React splash page (#5984).
 //
-// Mirrors the watchdog loading screen tips (cmd/console/watchdog_html.go) so
+// Mirrors the watcher loading screen tips (cmd/watcher/watcher_html.go) so
 // users learn about console features while the initial JS bundle loads.
 // Runs before React; must be CSP-safe (no inline scripts, no eval).
 //
