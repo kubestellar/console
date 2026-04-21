@@ -69,6 +69,7 @@ function KagentModelProvidersInternal({ config }: KagentModelProvidersProps) {
   const {
     data: models,
     isLoading,
+    isRefreshing,
     isDemoFallback,
     consecutiveFailures,
   } = useKagentCRDModels({ cluster: config?.cluster })
@@ -76,6 +77,7 @@ function KagentModelProvidersInternal({ config }: KagentModelProvidersProps) {
   const hasAnyData = models.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: isLoading && !hasAnyData,
+    isRefreshing,
     hasAnyData,
     isFailed: consecutiveFailures >= 3,
     consecutiveFailures,

@@ -2,18 +2,28 @@ import { useMemo } from 'react'
 import { Shield, ShieldCheck, ShieldAlert, AlertTriangle, Lock } from 'lucide-react'
 import { useKagentCRDAgents, useKagentCRDTools } from '../../../hooks/mcp/kagent_crds'
 import { useCardLoadingState } from '../CardDataContext'
+import { DynamicCardErrorBoundary } from '../DynamicCardErrorBoundary'
 
-export function KagentSecurity({ config }: { config?: Record<string, unknown> }) {
+/** Percentage threshold at or above which the bar is green (healthy) */
+const HIGH_PCT_THRESHOLD = 80
+/** Percentage threshold at or above which the bar is yellow (warning) */
+const MID_PCT_THRESHOLD = 50
+/** Multiply by this to convert a ratio to a percentage */
+const PERCENT_MULTIPLIER = 100
+
+function KagentSecurityInternal({ config }: { config?: Record<string, unknown> }) {
   const cluster = config?.cluster as string | undefined
   const {
     data: agents,
     isLoading: agentsLoading,
+    isRefreshing: agentsRefreshing,
     isDemoFallback: agentsDemo,
     isFailed: agentsFailed,
     consecutiveFailures: agentsFails } = useKagentCRDAgents({ cluster })
   const {
     data: tools,
     isLoading: toolsLoading,
+    isRefreshing: toolsRefreshing,
     isDemoFallback: toolsDemo,
     isFailed: toolsFailed,
     consecutiveFailures: toolsFails } = useKagentCRDTools({ cluster })
@@ -25,6 +35,7 @@ export function KagentSecurity({ config }: { config?: Record<string, unknown> })
   const consecutiveFailures = Math.max(agentsFails || 0, toolsFails || 0)
   useCardLoadingState({
     isLoading: (agentsLoading || toolsLoading) && !hasData,
+    isRefreshing: agentsRefreshing || toolsRefreshing,
     hasAnyData: hasData,
     isDemoData: agentsDemo || toolsDemo,
     isFailed,
@@ -35,14 +46,14 @@ export function KagentSecurity({ config }: { config?: Record<string, unknown> })
     const totalAgents = agents.length
     const declarative = agents.filter(a => a.agentType === 'Declarative').length
     const byo = agents.filter(a => a.agentType === 'BYO').length
-    const declarativePct = totalAgents > 0 ? Math.round((declarative / totalAgents) * 100) : 0
+    const declarativePct = totalAgents > 0 ? Math.round((declarative / totalAgents) * PERCENT_MULTIPLIER) : 0
 
     // Agents with tool bindings (toolCount > 0 means they have tool access requiring approval consideration)
     const agentsWithTools = agents.filter(a => a.toolCount > 0).length
 
     // Model config refs (agents with modelConfigRef means they have API key configured)
     const agentsWithModel = agents.filter(a => a.modelConfigRef).length
-    const modelAuthPct = totalAgents > 0 ? Math.round((agentsWithModel / totalAgents) * 100) : 0
+    const modelAuthPct = totalAgents > 0 ? Math.round((agentsWithModel / totalAgents) * PERCENT_MULTIPLIER) : 0
 
     // Tool servers with URLs (remote servers that may need credential config)
     const remoteTools = tools.filter(t => t.kind === 'RemoteMCPServer').length
@@ -83,11 +94,11 @@ export function KagentSecurity({ config }: { config?: Record<string, unknown> })
         <div className="flex items-center gap-3 mb-2">
           <div className="flex-1 h-3 bg-secondary rounded-full overflow-hidden">
             <div
-              className={`h-full rounded-full transition-all ${stats.declarativePct >= 80 ? 'bg-green-500' : stats.declarativePct >= 50 ? 'bg-yellow-500' : 'bg-red-500'}`}
+              className={`h-full rounded-full transition-all ${stats.declarativePct >= HIGH_PCT_THRESHOLD ? 'bg-green-500' : stats.declarativePct >= MID_PCT_THRESHOLD ? 'bg-yellow-500' : 'bg-red-500'}`}
               style={{ width: `${stats.declarativePct}%` }}
             />
           </div>
-          <span className="text-lg font-bold text-white">{stats.declarativePct}%</span>
+          <span className="text-lg font-bold text-foreground">{stats.declarativePct}%</span>
         </div>
         <div className="grid grid-cols-2 gap-2 text-center">
           <div className="rounded bg-green-400/10 py-1.5">
@@ -110,11 +121,11 @@ export function KagentSecurity({ config }: { config?: Record<string, unknown> })
         <div className="flex items-center gap-3 mb-1">
           <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
             <div
-              className={`h-full rounded-full transition-all ${stats.modelAuthPct >= 80 ? 'bg-green-500' : stats.modelAuthPct >= 50 ? 'bg-yellow-500' : 'bg-red-500'}`}
+              className={`h-full rounded-full transition-all ${stats.modelAuthPct >= HIGH_PCT_THRESHOLD ? 'bg-green-500' : stats.modelAuthPct >= MID_PCT_THRESHOLD ? 'bg-yellow-500' : 'bg-red-500'}`}
               style={{ width: `${stats.modelAuthPct}%` }}
             />
           </div>
-          <span className="text-sm font-bold text-white">{stats.modelAuthPct}%</span>
+          <span className="text-sm font-bold text-foreground">{stats.modelAuthPct}%</span>
         </div>
         <div className="text-xs text-muted-foreground">
           {stats.agentsWithModel}/{stats.totalAgents} agents with model config
@@ -169,5 +180,13 @@ export function KagentSecurity({ config }: { config?: Record<string, unknown> })
         <div className="text-center py-6 text-muted-foreground text-xs">No kagent resources found</div>
       )}
     </div>
+  )
+}
+
+export function KagentSecurity(props: { config?: Record<string, unknown> }) {
+  return (
+    <DynamicCardErrorBoundary cardId="KagentSecurity">
+      <KagentSecurityInternal {...props} />
+    </DynamicCardErrorBoundary>
   )
 }

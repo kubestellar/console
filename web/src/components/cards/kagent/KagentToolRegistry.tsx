@@ -68,6 +68,7 @@ function KagentToolRegistryInternal({ config }: KagentToolRegistryProps) {
   const {
     data: tools,
     isLoading,
+    isRefreshing,
     isDemoFallback,
     consecutiveFailures,
   } = useKagentCRDTools({ cluster: config?.cluster })
@@ -75,6 +76,7 @@ function KagentToolRegistryInternal({ config }: KagentToolRegistryProps) {
   const hasAnyData = tools.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: isLoading && !hasAnyData,
+    isRefreshing,
     hasAnyData,
     isFailed: consecutiveFailures >= 3,
     consecutiveFailures,
