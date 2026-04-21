@@ -93,10 +93,11 @@ vi.mock('react-i18next', () => ({
 }))
 
 const showToastSpy = vi.fn()
-vi.mock('../../../hooks/useToast', () => ({
+vi.mock('../../ui/Toast', () => ({
     useToast: () => ({
         showToast: showToastSpy,
     }),
+    ToastProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
 
 vi.mock('../../../lib/kubectlProxy', () => ({
@@ -153,6 +154,15 @@ describe('Workloads Component', () => {
     })
 
     describe('status color rendering', () => {
+        beforeEach(() => {
+            vi.mocked(useGlobalFilters).mockReturnValue({
+                selectedClusters: [],
+                isAllClustersSelected: true,
+                customFilter: 'deploy',
+                filterByCluster: (items: any[]) => items,
+            } as any)
+        })
+
         it('uses red border for failed deployment', () => {
             mockDeployments = [{ name: 'fail-deploy', namespace: 'default', cluster: 'ctx/prod', status: 'failed', replicas: 3, readyReplicas: 1 }]
             renderWorkloads()

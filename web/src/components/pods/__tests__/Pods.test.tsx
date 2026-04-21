@@ -116,10 +116,11 @@ vi.mock('react-i18next', () => ({
 }))
 
 const showToastSpy = vi.fn()
-vi.mock('../../../hooks/useToast', () => ({
+vi.mock('../../ui/Toast', () => ({
   useToast: () => ({
     showToast: showToastSpy,
   }),
+  ToastProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
 
 vi.mock('../../../lib/kubectlProxy', () => ({
@@ -157,6 +158,7 @@ describe('Pods Component', () => {
   })
 
   it('renders the empty state message when no pods', () => {
+    mockPodIssues = []
     renderPods()
     expect(screen.getByText('No Pod Issues')).toBeTruthy()
     expect(
