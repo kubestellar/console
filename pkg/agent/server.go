@@ -410,6 +410,9 @@ func (s *Server) Start() error {
 	// available for future MCS-export UI work.
 	mux.HandleFunc("/serviceexports", s.handleServiceExportsHTTP)
 
+	// Cilium status — aggregated eBPF networking health across all clusters (#9400)
+	mux.HandleFunc("/cilium-status", s.handleCiliumStatus)
+
 	// Helm mutating operations moved to kc-agent (#7993 Phase 3a). These shell
 	// `helm rollback` / `helm uninstall` / `helm upgrade` under the user's
 	// kubeconfig instead of the backend pod SA. Backend handlers are still
