@@ -1363,6 +1363,16 @@ Order phases by dependency — prerequisites first. Each phase completes before 
     setState(makeInitialState())
   }
 
+  const hydrateFromPlan = (partial: Partial<MissionControlState>) => {
+    setState(prev => ({
+      ...makeInitialState(),
+      ...partial,
+      phase: 'blueprint' as const,
+      aiStreaming: false,
+      launchProgress: [],
+    }))
+  }
+
   // Detect installed projects via helm releases + cluster namespaces
   const { installedProjects, installedOnCluster } = useMemo(() => {
     const installed = new Set<string>()
@@ -1771,7 +1781,9 @@ Order phases by dependency — prerequisites first. Each phase completes before 
     staleClusterNames,
     acknowledgeStaleClusters,
     // Reset
-    reset }
+    reset,
+    // Deep link hydration
+    hydrateFromPlan }
 }
 
 // ---------------------------------------------------------------------------

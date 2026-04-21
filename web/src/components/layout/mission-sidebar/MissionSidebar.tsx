@@ -188,6 +188,8 @@ export function MissionSidebar() {
   const [showMissionControl, setShowMissionControl] = useState(false)
   /** Kubara chart name to pre-populate in Mission Control Phase 1 (#8483) */
   const [pendingKubaraChart, setPendingKubaraChart] = useState<string | undefined>(undefined)
+  /** Base64-encoded plan from a deep link — opens Mission Control in review mode */
+  const [pendingReviewPlan, setPendingReviewPlan] = useState<string | undefined>(undefined)
   const [showOrbitDialog, setShowOrbitDialog] = useState(false)
   const [orbitDialogPrefill, setOrbitDialogPrefill] = useState<{ clusters?: string[]; resourceFilters?: Record<string, OrbitResourceFilter[]> } | undefined>(undefined)
   const [newMissionPrompt, setNewMissionPrompt] = useState('')
@@ -277,6 +279,16 @@ export function MissionSidebar() {
       setShowMissionControl(true)
       const newParams = new URLSearchParams(searchParams)
       newParams.delete('mission-control')
+      setSearchParams(newParams, { replace: true })
+    } else if (missionControlParam === 'review') {
+      const planParam = searchParams.get('plan')
+      if (planParam) {
+        setPendingReviewPlan(planParam)
+        setShowMissionControl(true)
+      }
+      const newParams = new URLSearchParams(searchParams)
+      newParams.delete('mission-control')
+      newParams.delete('plan')
       setSearchParams(newParams, { replace: true })
     }
   }, [missionControlParam, searchParams, setSearchParams])
@@ -1349,8 +1361,10 @@ export function MissionSidebar() {
         onClose={() => {
           setShowMissionControl(false)
           setPendingKubaraChart(undefined)
+          setPendingReviewPlan(undefined)
         }}
         initialKubaraChart={pendingKubaraChart}
+        reviewPlanEncoded={pendingReviewPlan}
       />
 
       {/* Standalone Orbit Mission Dialog */}

@@ -38,6 +38,7 @@ const FlightPlanBlueprint = lazy(() =>
 )
 import { LaunchSequence } from './LaunchSequence'
 import { RequestApprovalModal } from './RequestApprovalModal'
+import { decodePlan, planToState } from './missionPlanCodec'
 import type { WizardPhase } from './types'
 
 interface MissionControlDialogProps {
@@ -45,6 +46,8 @@ interface MissionControlDialogProps {
   onClose: () => void
   /** Pre-populate Phase 1 with this Kubara chart project (#8483) */
   initialKubaraChart?: string
+  /** Base64-encoded plan from a deep link — opens in read-only review mode */
+  reviewPlanEncoded?: string
 }
 
 const PHASE_STEPS: {
@@ -76,10 +79,33 @@ const PHASE_STEPS: {
 /** Fallback a11y label when the user hasn't entered a mission title yet (issue 6745) */
 const DEFAULT_DIALOG_ARIA_LABEL = 'Mission control dialog'
 
-export function MissionControlDialog({ open, onClose, initialKubaraChart }: MissionControlDialogProps) {
+export function MissionControlDialog({ open, onClose, initialKubaraChart, reviewPlanEncoded }: MissionControlDialogProps) {
   const mc = useMissionControl()
   const { showToast } = useToast()
   const { state } = mc
+  const [isReviewMode, setIsReviewMode] = useState(false)
+  const [reviewNotes, setReviewNotes] = useState<string | undefined>()
+
+  useEffect(() => {
+    if (!open || !reviewPlanEncoded) return
+    const plan = decodePlan(reviewPlanEncoded)
+    if (!plan) {
+      showToast('Invalid plan link — could not decode the deployment plan', 'error')
+      return
+    }
+    mc.hydrateFromPlan(planToState(plan))
+    setIsReviewMode(true)
+    setReviewNotes(plan.notes)
+  }, [open, reviewPlanEncoded]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleClose = useCallback(() => {
+    if (isReviewMode) {
+      setIsReviewMode(false)
+      setReviewNotes(undefined)
+      mc.reset()
+    }
+    onClose()
+  }, [isReviewMode, onClose, mc])
 
   // #8483 — Pre-populate Phase 1 with a Kubara chart when opened from Mission Browser
   const initialChartAdded = useRef<string | null>(null)
@@ -127,10 +153,10 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart }: Miss
       if (e.key === 'Escape') {
         e.stopImmediatePropagation()
         e.preventDefault()
-        onClose()
+        handleClose()
       }
     },
-    [onClose]
+    [handleClose]
   )
 
   // Track the highest phase the user has reached so they can click back to any visited phase
@@ -250,7 +276,7 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart }: Miss
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            onClick={onClose}
+            onClick={handleClose}
             aria-hidden="true"
           />
 
@@ -278,7 +304,7 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart }: Miss
               <div className="flex items-center gap-3">
                 {/* Back to Dashboard link */}
                 <button
-                  onClick={onClose}
+                  onClick={handleClose}
                   className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mr-2 shrink-0"
                   title="Close Mission Control and return to the dashboard"
                 >
@@ -295,6 +321,11 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart }: Miss
                     {state.isDryRun && (
                       <span className="px-2 py-0.5 text-2xs font-bold uppercase tracking-wider rounded bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
                         DRY RUN
+                      </span>
+                    )}
+                    {isReviewMode && (
+                      <span className="px-2 py-0.5 text-2xs font-bold uppercase tracking-wider rounded bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
+                        REVIEW
                       </span>
                     )}
                   </div>
@@ -393,7 +424,7 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart }: Miss
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={onClose}
+                  onClick={handleClose}
                   data-testid="mission-control-cancel"
                   className="p-1.5 hover:bg-destructive/10 hover:text-destructive"
                   aria-label="Close Mission Control"
@@ -402,6 +433,20 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart }: Miss
                 />
               </div>
             </header>
+
+            {/* Review mode banner */}
+            {isReviewMode && (
+              <div className="px-6 py-2 bg-cyan-500/10 border-b border-cyan-500/20 text-sm">
+                <p className="text-cyan-400 font-medium">
+                  You are reviewing a shared deployment plan. This is read-only — no changes will be deployed.
+                </p>
+                {reviewNotes && (
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    <span className="font-medium text-foreground">Notes from requester:</span> {reviewNotes}
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* ── Content ────────────────────────────────────────────── */}
             <div
@@ -466,7 +511,7 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart }: Miss
                           if (dashboardId) mc.setGroundControlDashboardId(dashboardId)
                           mc.setPhase('complete')
                         }}
-                        onClose={onClose}
+                        onClose={handleClose}
                       />
                     </ChunkErrorBoundary>
                   </PhaseWrapper>
@@ -475,7 +520,7 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart }: Miss
             </div>
 
             {/* ── Footer nav ─────────────────────────────────────────── */}
-            {!isLaunching && !isComplete && (
+            {!isLaunching && !isComplete && !isReviewMode && (
               <footer className="flex items-center justify-between px-6 py-3 border-t border-border bg-card rounded-b-xl">
                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
                   {state.projects.length > 0 && (
