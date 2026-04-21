@@ -266,3 +266,104 @@ test.describe('Update Settings', () => {
     await expect(page.getByTestId('update-refresh-button')).toBeVisible()
   })
 })
+
+// ---------------------------------------------------------------------------
+// Issue 9234 — Cross-page settings persistence
+//
+// The tests above verify the update flow WebSocket messages, but do not
+// verify that a user-changed setting persists across reload AND cross-page
+// navigation. This block uses the Theme section's "Quick Select" buttons —
+// a real UI control that writes to localStorage (key: "kubestellar-theme-id")
+// via the useTheme() hook. We:
+//   1. Land on /settings and capture the original theme id
+//   2. Click a different theme (real pointer click, not localStorage poke)
+//   3. Reload — theme must still be the changed one
+//   4. Navigate to /clusters then back to /settings — theme must still
+//      be the changed one
+//   5. Revert to the original theme so subsequent tests start from a
+//      known state
+// ---------------------------------------------------------------------------
+
+/** LocalStorage key the useTheme() hook writes to. Keep in sync with
+ * src/hooks/useTheme.tsx `STORAGE_KEY`. */
+const THEME_STORAGE_KEY = 'kubestellar-theme-id'
+
+/** Default theme id if none is stored (matches useTheme() fallback). */
+const DEFAULT_THEME_ID = 'kubestellar'
+
+/** Alternate theme id that MUST differ from DEFAULT_THEME_ID. "Dracula"
+ * appears in the Quick Select grid (see ThemeSection.tsx). */
+const ALTERNATE_THEME_ID = 'dracula'
+
+/** Visible "Quick Select" button label text (must match themes.ts name). */
+const ALTERNATE_THEME_LABEL = 'Dracula'
+
+/** Timeout (ms) for waiting on the settings page skeleton to appear. */
+const SETTINGS_PAGE_TIMEOUT_MS = 10_000
+
+test.describe('Update Settings — cross-page persistence (Issue 9234)', () => {
+  test('theme change via Quick Select persists across reload and navigation', async ({ page }) => {
+    await setupUpdateTest(page)
+
+    // Record the starting theme id so we can restore it at test end.
+    const originalThemeId = await page.evaluate(
+      (key) => localStorage.getItem(key),
+      THEME_STORAGE_KEY,
+    )
+
+    // Click the Quick Select button for the alternate theme — this is a
+    // real UI interaction (not a localStorage poke). The quick-select grid
+    // renders a <button> whose accessible name contains the theme name
+    // (via the <span> child). Use `locator('button', { hasText: ... })`
+    // so we don't depend on exact accessible-name computation.
+    const altThemeButton = page
+      .locator('button', { hasText: new RegExp(`^\\s*${ALTERNATE_THEME_LABEL}\\s*$`) })
+      .first()
+    await altThemeButton.scrollIntoViewIfNeeded()
+    await expect(altThemeButton).toBeVisible({ timeout: SETTINGS_PAGE_TIMEOUT_MS })
+    await altThemeButton.click()
+
+    // useTheme() writes to localStorage on the next effect tick.
+    await expect
+      .poll(async () =>
+        page.evaluate((key) => localStorage.getItem(key), THEME_STORAGE_KEY),
+      )
+      .toBe(ALTERNATE_THEME_ID)
+
+    // --- Step 1: Reload the page, value must persist.
+    await page.reload()
+    await page.waitForLoadState('domcontentloaded')
+    await expect(page.getByTestId('settings-page')).toBeVisible({ timeout: SETTINGS_PAGE_TIMEOUT_MS })
+    const afterReload = await page.evaluate(
+      (key) => localStorage.getItem(key),
+      THEME_STORAGE_KEY,
+    )
+    expect(afterReload).toBe(ALTERNATE_THEME_ID)
+
+    // --- Step 2: Navigate to /clusters, then back to /settings.
+    // Using /clusters per the bug report's explicit reproduction path.
+    await page.goto('/clusters')
+    await page.waitForLoadState('domcontentloaded')
+    await page.goto('/settings')
+    await page.waitForLoadState('domcontentloaded')
+    await expect(page.getByTestId('settings-page')).toBeVisible({ timeout: SETTINGS_PAGE_TIMEOUT_MS })
+    const afterNav = await page.evaluate(
+      (key) => localStorage.getItem(key),
+      THEME_STORAGE_KEY,
+    )
+    expect(afterNav).toBe(ALTERNATE_THEME_ID)
+
+    // --- Revert: leave the app in a known state so later tests are not
+    // affected by a lingering alternate theme.
+    await page.evaluate(
+      ({ key, value }) => {
+        if (value === null) {
+          localStorage.removeItem(key)
+        } else {
+          localStorage.setItem(key, value)
+        }
+      },
+      { key: THEME_STORAGE_KEY, value: originalThemeId ?? DEFAULT_THEME_ID },
+    )
+  })
+})

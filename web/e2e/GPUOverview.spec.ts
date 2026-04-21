@@ -261,4 +261,66 @@ test.describe('GPUOverview Card', () => {
       await expect(cardTitle.first()).toBeVisible({ timeout: GPU_CARD_CONTENT_TIMEOUT_MS })
     })
   })
+
+  // -------------------------------------------------------------------------
+  // Issue 9231 — GPU-specific feature coverage beyond smoke
+  //
+  // The standard demo-mode setup renders the GPU Overview card, but does
+  // not exercise: (1) the fact that demo data produces a non-zero
+  // utilization number, (2) that GPU vendor badges / types (NVIDIA A100,
+  // T4, L4, V100) actually appear in the type breakdown, or (3) that
+  // clicking the "Total GPUs" stat triggers the drill-down action
+  // (navigation to the resources view). These tests close those gaps.
+  // -------------------------------------------------------------------------
+
+  test.describe('Issue 9231 — GPU feature coverage', () => {
+    /** Regex matching an integer percentage from 1-100 (excluding "0%"). */
+    const NON_ZERO_PERCENT_RE = /^([1-9][0-9]?|100)%$/
+    /** Minimum number of NVIDIA-badged GPU type rows expected in demo data. */
+    const MIN_NVIDIA_TYPE_ROWS = 1
+
+    test('GPU utilization gauge displays a non-zero percentage in demo mode', async ({ page }) => {
+      await setupComputeDashboard(page)
+      await skipIfGpuCardMissing(page)
+
+      // The gauge center renders "<N>%" where N is allocated/total. Demo
+      // data has allocated > 0, so the value MUST be non-zero. Use a
+      // narrow regex so "0%" (bug indicator) fails the assertion.
+      const pct = page.locator('text=/^\\d+%$/').first()
+      await expect(pct).toBeVisible({ timeout: GPU_CARD_CONTENT_TIMEOUT_MS })
+      const text = await pct.textContent()
+      expect(text ?? '').toMatch(NON_ZERO_PERCENT_RE)
+    })
+
+    test('GPU type breakdown shows NVIDIA vendor badges', async ({ page }) => {
+      await setupComputeDashboard(page)
+      await skipIfGpuCardMissing(page)
+
+      // Demo fixtures include A100 / T4 / L4 / V100 — each rendered as a
+      // row under "GPU Types". Assert at least one NVIDIA-branded row.
+      const nvidiaRows = page.getByText(/NVIDIA/i)
+      await expect(nvidiaRows.first()).toBeVisible({ timeout: GPU_CARD_CONTENT_TIMEOUT_MS })
+      const count = await nvidiaRows.count()
+      expect(count).toBeGreaterThanOrEqual(MIN_NVIDIA_TYPE_ROWS)
+    })
+
+    /** Wait (ms) for the drill-down modal to appear after a stat click. */
+    const DRILL_DOWN_MODAL_TIMEOUT_MS = 5_000
+
+    test('clicking Total GPUs stat opens the drill-down modal', async ({ page }) => {
+      await setupComputeDashboard(page)
+      await skipIfGpuCardMissing(page)
+
+      // "Total GPUs" stat is wired to drillToResources() via onClick when
+      // totalGPUs > 0 (see src/components/cards/GPUOverview.tsx). The
+      // drill-down implementation renders a modal with
+      // data-testid="drilldown-modal" (see DrillDownModal.tsx).
+      const totalStat = page.getByText('Total GPUs', { exact: false }).first()
+      await expect(totalStat).toBeVisible({ timeout: GPU_CARD_CONTENT_TIMEOUT_MS })
+      await totalStat.click()
+      await expect(page.getByTestId('drilldown-modal')).toBeVisible({
+        timeout: DRILL_DOWN_MODAL_TIMEOUT_MS,
+      })
+    })
+  })
 })
