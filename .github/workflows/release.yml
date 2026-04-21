@@ -301,7 +301,19 @@ jobs:
           # Sign checksums file with keyless cosign (Sigstore OIDC)
           # The scorecard Signed-Releases check looks for .sig files
           # attached to GitHub release assets
+          #
+          # --new-bundle-format=false: cosign v3.x defaults this to true and
+          # then requires --bundle to be specified; with the flag enabled the
+          # legacy --output-signature / --output-certificate flags are silently
+          # ignored and cosign fails with
+          #   "create bundle file: open : no such file or directory"
+          # because no --bundle path is set. Disabling the new bundle format
+          # restores the legacy .sig/.pem output that the scorecard
+          # Signed-Releases check and prior releases rely on. See
+          # https://github.com/sigstore/cosign/releases/tag/v3.0.1 for the
+          # v3 --bundle-required change.
           cosign sign-blob --yes \
+            --new-bundle-format=false \
             --output-signature dist/checksums.txt.sig \
             --output-certificate dist/checksums.txt.pem \
             dist/checksums.txt
