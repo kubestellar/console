@@ -38,7 +38,7 @@ type ActionRequest struct {
 	// for hub-scoped actions (e.g. approving a CSR by name in Payload).
 	ClusterName string `json:"clusterName,omitempty"`
 	// Payload carries action-specific parameters (e.g. taint key/value/effect
-	// for ocm.taintCluster). Keys are action-defined.
+	// for karmada.taintCluster). Keys are action-defined.
 	Payload map[string]interface{} `json:"payload,omitempty"`
 }
 
@@ -47,7 +47,7 @@ type ActionResult struct {
 	// OK is true when the action completed successfully.
 	OK bool `json:"ok"`
 	// Already is true when the action was a no-op because the desired state
-	// already existed (e.g. cluster already accepted, CSR already approved).
+	// already existed (e.g. cluster already joined, taint already present).
 	// OK is also true when Already is true.
 	Already bool `json:"already"`
 	// Message carries a human-readable status string on both success and
