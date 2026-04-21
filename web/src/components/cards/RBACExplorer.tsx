@@ -268,9 +268,19 @@ export function RBACExplorer() {
                       <StatusBadge color="purple" className="shrink-0">{finding.cluster}</StatusBadge>
                     </div>
                     <div className="text-xs text-muted-foreground mt-0.5">
-                      {/* Issue 9269: prefer translated description key; fall back to English when legacy */}
+                      {/* Issue 9269: prefer translated description key; fall back to English when legacy.
+                          Issue 9277: react-i18next's typed `t()` infers keys recursively from
+                          CustomTypeOptions.resources, but the recursion depth of its ParseKeys type
+                          drops deep leaves like `rbac.findingDescription.<N>` from the generated
+                          union. A runtime template-literal key that targets one of those dropped
+                          leaves therefore fails TS2345. Cast `t` to a plain signature for this
+                          call-site only. The keys DO exist in common.json and the value is always
+                          a string, so the cast is sound. */}
                       {finding.descriptionKey
-                        ? t(`common:rbac.findingDescription.${finding.descriptionKey}`, finding.descriptionParams ?? {})
+                        ? (t as (key: string, params?: Record<string, unknown>) => string)(
+                            `rbac.findingDescription.${finding.descriptionKey}`,
+                            finding.descriptionParams ?? {},
+                          )
                         : finding.description}
                     </div>
                     <div className="text-xs text-muted-foreground/60 mt-0.5 truncate">{finding.binding}</div>

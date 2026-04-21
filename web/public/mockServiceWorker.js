@@ -20,12 +20,6 @@ addEventListener('activate', function (event) {
   event.waitUntil(self.clients.claim())
 })
 
-// CodeQL[js/missing-origin-check] MSW intentionally omits an explicit origin
-// check here.  Every message sender is verified by resolving its client ID
-// through `self.clients.get(clientId)` — only same-origin pages controlled by
-// this Service Worker can appear in that registry, so the origin is implicitly
-// validated.  Adding a redundant `event.origin` comparison would break cross-
-// origin iframe scenarios that MSW must support (see mswjs/msw#2224).
 addEventListener('message', async function (event) {
   const clientId = Reflect.get(event.source || {}, 'id')
 
