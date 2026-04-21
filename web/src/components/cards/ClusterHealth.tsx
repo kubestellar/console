@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CheckCircle, WifiOff, Cpu, Loader2, ExternalLink, AlertTriangle, KeyRound } from 'lucide-react'
+import { CheckCircle, WifiOff, Cpu, Loader2, ExternalLink, AlertTriangle, KeyRound, Server } from 'lucide-react'
 import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { useClusters, ClusterInfo } from '../../hooks/useMCP'
 import { useCachedGPUNodes } from '../../hooks/useCachedData'
@@ -15,6 +15,7 @@ import { StatusBadge } from '../ui/StatusBadge'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { useDemoMode } from '../../hooks/useDemoMode'
+import { useFederationAwareness, getProviderLabel, getStateLabel, getStateColorClasses, type FederatedCluster } from '../../hooks/useFederation'
 
 // Console URL generation for cloud providers
 function getConsoleUrl(provider: CloudProvider, clusterName: string, apiServerUrl?: string): string | null {
@@ -91,6 +92,7 @@ export function ClusterHealth() {
   const { isMobile } = useMobile()
   const { isDemoMode } = useDemoMode()
   const [selectedCluster, setSelectedCluster] = useState<string | null>(null)
+  const federation = useFederationAwareness()
 
   // Use shared card data hook for filtering, sorting, and pagination
   const {
@@ -293,6 +295,26 @@ export function ClusterHealth() {
           </div>
           <span className="text-2xl font-bold text-foreground">{networkOfflineClusters}</span>
         </div>
+        {(federation.hubs || []).filter(h => h.detected).map(hub => {
+          const hubClusters = (federation.clusters || []).filter(
+            fc => fc.provider === hub.provider && fc.hubContext === hub.hubContext
+          )
+          const joinedCount = hubClusters.filter(fc => fc.state === 'joined' || fc.state === 'provisioned').length
+          return (
+            <div
+              key={`${hub.provider}-${hub.hubContext}`}
+              className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 min-w-0 overflow-hidden"
+              title={`${getProviderLabel(hub.provider)} hub: ${hub.hubContext} — ${joinedCount}/${hubClusters.length} clusters active`}
+            >
+              <div className="flex items-center gap-1.5 mb-1 min-w-0">
+                <Server className="w-4 h-4 text-blue-400 shrink-0" />
+                <span className="text-xs text-blue-400 truncate">{getProviderLabel(hub.provider)}</span>
+              </div>
+              <span className="text-2xl font-bold text-foreground">{hubClusters.length}</span>
+              <span className="text-xs text-muted-foreground ml-1">{t('clusterHealth.clustersLabel').toLowerCase()}</span>
+            </div>
+          )
+        })}
       </div>
 
       {/* Cluster list */}
@@ -342,6 +364,21 @@ export function ClusterHealth() {
                   <CloudProviderIcon provider={provider} size={14} />
                 </span>
                 <span className="text-sm text-foreground truncate">{cluster.name}</span>
+                {(() => {
+                  const pills = (federation.clusters || []).filter(
+                    (fc: FederatedCluster) => fc.name === cluster.name || (cluster.server && fc.apiServerURL === cluster.server)
+                  )
+                  if (pills.length === 0) return null
+                  return pills.map((fc: FederatedCluster) => (
+                    <span
+                      key={`${fc.provider}-${fc.hubContext}`}
+                      className={`inline-flex items-center gap-0.5 text-2xs px-1.5 py-0.5 rounded border shrink-0 ${getStateColorClasses(fc.state)}`}
+                      title={`${getProviderLabel(fc.provider)} [${fc.hubContext}]: ${getStateLabel(fc.state)}`}
+                    >
+                      {getProviderLabel(fc.provider)}:{getStateLabel(fc.state)}
+                    </span>
+                  ))
+                })()}
                 {/* Warn when cluster is internally reachable but API server is externally unreachable (#4202) */}
                 {!clusterUnreachable && !clusterLoading && cluster.externallyReachable === false && (
                   <span

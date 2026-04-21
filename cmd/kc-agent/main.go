@@ -10,6 +10,9 @@ import (
 	"syscall"
 
 	"github.com/kubestellar/console/pkg/agent"
+
+	// Blank-import federation providers so their init() funcs register them.
+	_ "github.com/kubestellar/console/pkg/agent/federation/providers"
 )
 
 func main() {

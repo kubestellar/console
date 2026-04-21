@@ -31,6 +31,7 @@ import { useDemoMode } from '../../hooks/useDemoMode'
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../ui/StatusBadge'
 import { ConfirmDialog } from '../../lib/modals'
+import { useFederationAwareness, getProviderLabel } from '../../hooks/useFederation'
 
 interface ClusterGroupsProps {
   config?: Record<string, unknown>
@@ -116,6 +117,7 @@ export function ClusterGroups(_props: ClusterGroupsProps) {
   const { groups: liveGroups, createGroup, updateGroup, deleteGroup, isPersisted } = useClusterGroups()
   const { deduplicatedClusters: clusters, isLoading, isRefreshing } = useClusters()
   const { isDemoMode: demoMode } = useDemoMode()
+  const federation = useFederationAwareness()
 
   // Build the built-in "all-healthy-clusters" group from current cluster state for live mode
   const builtInGroup: ClusterGroup = {
@@ -126,7 +128,16 @@ export function ClusterGroups(_props: ClusterGroupsProps) {
     builtIn: true,
     query: { filters: [{ field: 'healthy', operator: 'eq', value: 'true' }] } }
 
-  const groups = demoMode ? DEMO_GROUPS : [builtInGroup, ...liveGroups]
+  const federationGroups: ClusterGroup[] = (federation.groups || []).map(fg => ({
+    name: `${getProviderLabel(fg.provider)}:${fg.hubContext}:${fg.name}`,
+    kind: 'dynamic' as ClusterGroupKind,
+    clusters: fg.members || [],
+    color: fg.kind === 'set' ? 'cyan' : fg.kind === 'peer' ? 'purple' : 'blue',
+    builtIn: true,
+    icon: fg.kind,
+  }))
+
+  const groups = demoMode ? DEMO_GROUPS : [builtInGroup, ...federationGroups, ...liveGroups]
   const [isCreating, setIsCreating] = useState(false)
   // Track which group is pending delete confirmation (#5197)
   const [deleteConfirmName, setDeleteConfirmName] = useState<string | null>(null)

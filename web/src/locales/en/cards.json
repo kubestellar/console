@@ -129,7 +129,25 @@
     "clustersOfflineNetwork": "{{count}} cluster(s) offline - check network connection",
     "clustersOfflineNetwork_one": "{{count}} cluster(s) offline - check network connection",
     "clustersOfflineNetwork_other": "{{count}} cluster(s) offline - check network connection",
-    "checkNetworkVpn": "Check network connectivity and VPN status"
+    "checkNetworkVpn": "Check network connectivity and VPN status",
+    "federation": {
+      "hubDetected": "{{provider}} hub detected on {{context}}",
+      "hubClusters": "{{count}} managed clusters",
+      "hubClusters_one": "{{count}} managed cluster",
+      "hubClusters_other": "{{count}} managed clusters",
+      "pendingJoins": "{{count}} pending join requests",
+      "pendingJoins_one": "{{count}} pending join request",
+      "pendingJoins_other": "{{count}} pending join requests",
+      "providerAccessDenied": "Access denied for {{provider}} on {{context}}",
+      "providers": {
+        "ocm": { "label": "OCM", "fullName": "Open Cluster Management" },
+        "karmada": { "label": "Karmada", "fullName": "Karmada" },
+        "clusternet": { "label": "Clusternet", "fullName": "Clusternet" },
+        "liqo": { "label": "Liqo", "fullName": "Liqo" },
+        "kubeadmiral": { "label": "KubeAdmiral", "fullName": "KubeAdmiral" },
+        "capi": { "label": "CAPI", "fullName": "Cluster API" }
+      }
+    }
   },
   "titles": {
     "cluster_health": "Cluster Health",

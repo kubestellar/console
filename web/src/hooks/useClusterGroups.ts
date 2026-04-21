@@ -30,6 +30,8 @@ export interface ClusterGroup {
   query?: ClusterGroupQuery
   lastEvaluated?: string
   builtIn?: boolean
+  source?: 'local' | 'federation'
+  provider?: string
 }
 
 export interface AIQueryResult {
