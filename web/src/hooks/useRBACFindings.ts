@@ -26,6 +26,22 @@ const FETCH_TIMEOUT_MS = 20_000
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
+/**
+ * Stable i18n keys for each canonical finding description (Issue 9269).
+ * The hook still emits a human-readable English `description` so legacy
+ * consumers keep working, but the UI should prefer `descriptionKey` +
+ * `descriptionParams` and translate at render time.
+ */
+export type RBACFindingDescriptionKey =
+  | 'clusterAdminBinding'
+  | 'wildcardSecretsViaRole'
+  | 'wildcardSecrets'
+  | 'defaultServiceAccountElevated'
+  | 'wideListWatchViaRole'
+  | 'wideListWatch'
+  | 'elevatedRoleInNamespace'
+  | 'pvPvcAccess'
+
 export interface RBACFinding {
   id: string
   cluster: string
@@ -33,6 +49,8 @@ export interface RBACFinding {
   subjectKind: 'User' | 'Group' | 'ServiceAccount'
   risk: 'critical' | 'high' | 'medium' | 'low'
   description: string
+  descriptionKey?: RBACFindingDescriptionKey
+  descriptionParams?: Record<string, string>
   binding: string
 }
 
@@ -129,8 +147,19 @@ function toSubjectKind(kind: string): 'User' | 'Group' | 'ServiceAccount' {
   return 'User'
 }
 
-/** Analyze a cluster's RBAC resources and return findings */
-async function fetchSingleCluster(cluster: string): Promise<RBACFinding[]> {
+/**
+ * Result of a single-cluster RBAC scan. Separating `findings` from `error`
+ * lets the hook surface permission/API failures instead of silently returning
+ * an empty list (Issue 9264).
+ */
+interface ClusterFetchResult {
+  cluster: string
+  findings: RBACFinding[]
+  error: string | null
+}
+
+/** Analyze a cluster's RBAC resources and return findings + error state */
+async function fetchSingleCluster(cluster: string): Promise<ClusterFetchResult> {
   const findings: RBACFinding[] = []
 
   try {
@@ -150,7 +179,13 @@ async function fetchSingleCluster(cluster: string): Promise<RBACFinding[]> {
       ),
     ])
 
-    if (crbResult.exitCode !== 0 || !crbResult.output) return findings
+    // Surface kubectl errors (permission denied, API unreachable) instead of
+    // silently returning an empty list, which previously made the card look
+    // as if the cluster had no RBAC bindings. (Issue 9264)
+    if (crbResult.exitCode !== 0 || !crbResult.output) {
+      const stderr = (crbResult.output || '').trim() || `kubectl exit code ${crbResult.exitCode}`
+      return { cluster, findings, error: stderr }
+    }
 
     const crbData = JSON.parse(crbResult.output)
     const clusterRoleBindings: ClusterRoleBinding[] = crbData.items || []
@@ -190,6 +225,7 @@ async function fetchSingleCluster(cluster: string): Promise<RBACFinding[]> {
             subjectKind,
             risk: 'critical',
             description: 'cluster-admin binding — full cluster access',
+            descriptionKey: 'clusterAdminBinding',
             binding: bindingName })
           continue
         }
@@ -203,6 +239,8 @@ async function fetchSingleCluster(cluster: string): Promise<RBACFinding[]> {
             subjectKind,
             risk: 'high',
             description: `Wildcard verb on secrets via ${roleName}`,
+            descriptionKey: 'wildcardSecretsViaRole',
+            descriptionParams: { role: roleName },
             binding: bindingName })
           continue
         }
@@ -216,6 +254,8 @@ async function fetchSingleCluster(cluster: string): Promise<RBACFinding[]> {
             subjectKind,
             risk: 'high',
             description: `Default ServiceAccount has elevated privileges via ${roleName}`,
+            descriptionKey: 'defaultServiceAccountElevated',
+            descriptionParams: { role: roleName },
             binding: bindingName })
           continue
         }
@@ -229,6 +269,8 @@ async function fetchSingleCluster(cluster: string): Promise<RBACFinding[]> {
             subjectKind,
             risk: 'medium',
             description: `Wide list/watch access on all resources via ${roleName}`,
+            descriptionKey: 'wideListWatchViaRole',
+            descriptionParams: { role: roleName },
             binding: bindingName })
         }
       }
@@ -246,6 +288,8 @@ async function fetchSingleCluster(cluster: string): Promise<RBACFinding[]> {
           subjectKind: toSubjectKind(subject.kind),
           risk: 'low',
           description: `${rb.roleRef.name} role in namespace ${rb.metadata.namespace}`,
+          descriptionKey: 'elevatedRoleInNamespace',
+          descriptionParams: { role: rb.roleRef.name, namespace: rb.metadata.namespace },
           binding: `RoleBinding/${rb.metadata.name}` })
       }
     }
@@ -254,20 +298,24 @@ async function fetchSingleCluster(cluster: string): Promise<RBACFinding[]> {
     if (!isDemoErr) {
       console.error(`[useRBACFindings] Error fetching from ${cluster}:`, err)
     }
+    return {
+      cluster,
+      findings,
+      error: err instanceof Error ? err.message : String(err) }
   }
 
-  return findings
+  return { cluster, findings, error: null }
 }
 
 // ── Demo data ─────────────────────────────────────────────────────────────
 
 const DEMO_FINDINGS: RBACFinding[] = [
-  { id: '1', cluster: 'prod-us-east', subject: 'dev-team', subjectKind: 'Group', risk: 'critical', description: 'cluster-admin binding — full cluster access', binding: 'ClusterRoleBinding/dev-admin' },
-  { id: '2', cluster: 'prod-us-east', subject: 'ci-bot', subjectKind: 'ServiceAccount', risk: 'high', description: 'Wildcard verb on secrets — can read all secrets', binding: 'ClusterRoleBinding/ci-secrets' },
-  { id: '3', cluster: 'staging', subject: 'default', subjectKind: 'ServiceAccount', risk: 'high', description: 'Default SA has elevated privileges', binding: 'ClusterRoleBinding/default-elevated' },
-  { id: '4', cluster: 'prod-eu-west', subject: 'monitoring', subjectKind: 'ServiceAccount', risk: 'medium', description: 'Wide list/watch on all namespaces', binding: 'ClusterRoleBinding/monitoring-wide' },
-  { id: '5', cluster: 'prod-us-east', subject: 'backup-operator', subjectKind: 'ServiceAccount', risk: 'medium', description: 'PV and PVC access across namespaces', binding: 'ClusterRoleBinding/backup-pvs' },
-  { id: '6', cluster: 'staging', subject: 'developer', subjectKind: 'User', risk: 'low', description: 'Edit role in staging namespace', binding: 'RoleBinding/dev-edit' },
+  { id: '1', cluster: 'prod-us-east', subject: 'dev-team', subjectKind: 'Group', risk: 'critical', description: 'cluster-admin binding — full cluster access', descriptionKey: 'clusterAdminBinding', binding: 'ClusterRoleBinding/dev-admin' },
+  { id: '2', cluster: 'prod-us-east', subject: 'ci-bot', subjectKind: 'ServiceAccount', risk: 'high', description: 'Wildcard verb on secrets — can read all secrets', descriptionKey: 'wildcardSecrets', binding: 'ClusterRoleBinding/ci-secrets' },
+  { id: '3', cluster: 'staging', subject: 'default', subjectKind: 'ServiceAccount', risk: 'high', description: 'Default SA has elevated privileges', descriptionKey: 'defaultServiceAccountElevated', descriptionParams: { role: 'custom-role' }, binding: 'ClusterRoleBinding/default-elevated' },
+  { id: '4', cluster: 'prod-eu-west', subject: 'monitoring', subjectKind: 'ServiceAccount', risk: 'medium', description: 'Wide list/watch on all namespaces', descriptionKey: 'wideListWatch', binding: 'ClusterRoleBinding/monitoring-wide' },
+  { id: '5', cluster: 'prod-us-east', subject: 'backup-operator', subjectKind: 'ServiceAccount', risk: 'medium', description: 'PV and PVC access across namespaces', descriptionKey: 'pvPvcAccess', binding: 'ClusterRoleBinding/backup-pvs' },
+  { id: '6', cluster: 'staging', subject: 'developer', subjectKind: 'User', risk: 'low', description: 'Edit role in staging namespace', descriptionKey: 'elevatedRoleInNamespace', descriptionParams: { role: 'edit', namespace: 'staging' }, binding: 'RoleBinding/dev-edit' },
 ]
 
 // ── Hook ──────────────────────────────────────────────────────────────────
@@ -309,25 +357,31 @@ export function useRBACFindings() {
 
       // (#6857) Return findings from each callback to avoid shared mutation.
       const tasks = clusters.map(cluster => async () => {
-        const clusterFindings = await fetchSingleCluster(cluster)
+        const result = await fetchSingleCluster(cluster)
         // Stream each cluster's results immediately (React setState is safe)
         setFindings(prev => {
           const otherFindings = prev.filter(f => f.cluster !== cluster)
-          return [...otherFindings, ...clusterFindings]
+          return [...otherFindings, ...result.findings]
         })
-        if (!initialLoadDone.current && clusterFindings.length > 0) {
+        if (!initialLoadDone.current && result.findings.length > 0) {
           initialLoadDone.current = true
           setIsLoading(false)
         }
-        return clusterFindings
+        return result
       })
 
       const settled = await settledWithConcurrency(tasks)
 
       const allFindings: RBACFinding[] = []
+      const clusterErrors: string[] = []
       for (const result of settled) {
         if (result.status === 'fulfilled') {
-          allFindings.push(...result.value)
+          allFindings.push(...result.value.findings)
+          if (result.value.error) {
+            clusterErrors.push(`${result.value.cluster}: ${result.value.error}`)
+          }
+        } else {
+          clusterErrors.push(result.reason instanceof Error ? result.reason.message : String(result.reason))
         }
       }
 
@@ -335,7 +389,16 @@ export function useRBACFindings() {
       initialLoadDone.current = true
       setIsLoading(false)
       setIsRefreshing(false)
-      setConsecutiveFailures(0)
+
+      // Issue 9264: when every cluster returned an error and no findings were
+      // collected, surface the aggregate error so the card shows the retry
+      // state instead of a misleading empty/"no findings" state.
+      if (allFindings.length === 0 && clusterErrors.length > 0 && clusterErrors.length === clusters.length) {
+        setError(clusterErrors.join('; '))
+        setConsecutiveFailures(prev => prev + 1)
+      } else {
+        setConsecutiveFailures(0)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch RBAC data')
       setIsLoading(false)

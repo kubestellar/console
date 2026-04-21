@@ -510,9 +510,9 @@ describe('useRBACFindings', () => {
     unmount()
   })
 
-  // ── 11. Handles CRB fetch failure gracefully ──────────────────────────
+  // ── 11. Handles CRB fetch failure by surfacing an error (Issue 9264) ──
 
-  it('returns empty findings when clusterrolebindings fetch fails', async () => {
+  it('surfaces an error state when every cluster fails (Issue 9264)', async () => {
     mockDemoMode = false
     mockAllClusters = [{ name: 'err-cluster', reachable: true }]
 
@@ -533,16 +533,19 @@ describe('useRBACFindings', () => {
       expect(result.current.isLoading).toBe(false)
     })
 
-    // CRB fetch returns exitCode !== 0, so fetchSingleCluster returns []
+    // Issue 9264: when all clusters fail, the hook must set `error` instead
+    // of silently returning an empty list. The UI uses this to render its
+    // retry state rather than a misleading "No findings" state.
     expect(result.current.findings).toHaveLength(0)
-    expect(result.current.error).toBeNull()
+    expect(result.current.error).not.toBeNull()
+    expect(result.current.error).toContain('err-cluster')
 
     unmount()
   })
 
   // ── 12. Handles kubectl exec rejection (network error) ────────────────
 
-  it('handles kubectlProxy.exec rejection gracefully', async () => {
+  it('surfaces an error on network rejection (Issue 9264)', async () => {
     mockDemoMode = false
     mockAllClusters = [{ name: 'net-err', reachable: true }]
 
@@ -554,8 +557,9 @@ describe('useRBACFindings', () => {
       expect(result.current.isLoading).toBe(false)
     })
 
-    // fetchSingleCluster catches the error internally
+    // Single cluster, throws → error surfaces (Issue 9264).
     expect(result.current.findings).toHaveLength(0)
+    expect(result.current.error).not.toBeNull()
 
     unmount()
   })

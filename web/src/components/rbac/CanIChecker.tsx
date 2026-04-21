@@ -87,6 +87,18 @@ const COMMON_RESOURCES = [
   'daemonsets',
 ]
 
+/**
+ * Snapshot of the inputs that were used for the most recent Check call.
+ * Rendered in the result banner so the banner text stays stable even if the
+ * user edits the verb/resource dropdowns after the result arrives
+ * (Issue 9268).
+ */
+interface CheckedSnapshot {
+  verb: string
+  resource: string
+  namespace: string | undefined
+}
+
 export function CanIChecker() {
   const { t } = useTranslation('common')
   const { clusters: rawClusters } = useClusters()
@@ -104,6 +116,10 @@ export function CanIChecker() {
   const [selectedUserGroups, setSelectedUserGroups] = useState<string[]>([])
   const [customUserGroup, setCustomUserGroup] = useState('')
   const [showAdvanced, setShowAdvanced] = useState(false)
+  // Frozen snapshot of the values used for the most recent Check — prevents
+  // the result banner from updating when the user changes the dropdowns
+  // between Check presses (Issue 9268).
+  const [checkedSnapshot, setCheckedSnapshot] = useState<CheckedSnapshot | null>(null)
 
   // Get selected cluster for namespace fetching
   const selectedCluster = cluster || clusters[0] || ''
@@ -146,6 +162,15 @@ export function CanIChecker() {
     // User groups for permission check
     const groups = selectedUserGroups.length > 0 ? selectedUserGroups : undefined
 
+    // Issue 9268: freeze the values used for this check so the result banner
+    // text stays stable if the user edits the dropdowns after the result
+    // arrives. Snapshot is set *before* the async call so a late-arriving
+    // result doesn't render with pre-snapshot dropdown state.
+    setCheckedSnapshot({
+      verb: selectedVerb,
+      resource: selectedResource,
+      namespace: namespace || undefined })
+
     await checkPermission({
       cluster: targetCluster,
       verb: selectedVerb,
@@ -166,6 +191,7 @@ export function CanIChecker() {
     setCustomApiGroup('')
     setSelectedUserGroups([])
     setCustomUserGroup('')
+    setCheckedSnapshot(null)
   }
 
   return (
@@ -453,8 +479,10 @@ export function CanIChecker() {
           )}
         </div>
 
-        {/* Result */}
-        {result && (
+        {/* Result — uses the frozen snapshot captured at Check time so the
+            displayed verb/resource/namespace match what was actually checked
+            (Issue 9268). */}
+        {result && checkedSnapshot && (
           <div
             className={`p-4 rounded-lg border ${
               result.allowed
@@ -478,11 +506,11 @@ export function CanIChecker() {
             </div>
             <p className="mt-2 text-sm text-muted-foreground">
               {t(result.allowed ? 'rbac.youCan' : 'rbac.youCannot')}{' '}
-              <code className="px-1 py-0.5 rounded bg-secondary">{verb === 'custom' ? customVerb : verb}</code>{' '}
-              <code className="px-1 py-0.5 rounded bg-secondary">{resource === 'custom' ? customResource : resource}</code>
-              {namespace && (
+              <code className="px-1 py-0.5 rounded bg-secondary">{checkedSnapshot.verb}</code>{' '}
+              <code className="px-1 py-0.5 rounded bg-secondary">{checkedSnapshot.resource}</code>
+              {checkedSnapshot.namespace && (
                 <>
-                  {' '}{t('rbac.inNamespace')} <code className="px-1 py-0.5 rounded bg-secondary">{namespace}</code>
+                  {' '}{t('rbac.inNamespace')} <code className="px-1 py-0.5 rounded bg-secondary">{checkedSnapshot.namespace}</code>
                 </>
               )}
             </p>

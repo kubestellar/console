@@ -37,15 +37,25 @@ const SORT_OPTIONS_KEYS: ReadonlyArray<{ value: SortByOption; labelKey: SortTran
   { value: 'rules' as const, labelKey: 'cards:namespaceRBAC.rules' },
 ]
 
+/**
+ * Tab keys that expose a meaningful rule count. ServiceAccounts don't have
+ * rules, so "Sort by Rules" is hidden on the ServiceAccounts tab
+ * (Issue 9268).
+ */
+const TABS_WITH_RULES_COUNT: ReadonlyArray<'roles' | 'bindings' | 'serviceaccounts'> = ['roles']
+
 function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
   const { t } = useTranslation(['cards', 'common'])
-  const SORT_OPTIONS = SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) }))
+  const [activeTab, setActiveTab] = useState<'roles' | 'bindings' | 'serviceaccounts'>('roles')
+  // Hide "Sort by Rules" on tabs that don't have a rules count (Issue 9268).
+  const SORT_OPTIONS = SORT_OPTIONS_KEYS
+    .filter(opt => opt.value !== 'rules' || TABS_WITH_RULES_COUNT.includes(activeTab))
+    .map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) }))
   const { deduplicatedClusters: clusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, error } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToRBAC } = useDrillDownActions()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
   const [selectedNamespace, setSelectedNamespace] = useState<string>(config?.namespace || '')
-  const [activeTab, setActiveTab] = useState<'roles' | 'bindings' | 'serviceaccounts'>('roles')
 
   // Fetch namespaces for the selected cluster (requires a cluster to be selected)
   const { namespaces, isDemoFallback: namespacesDemoFallback, isRefreshing: namespacesRefreshing } = useCachedNamespaces(selectedCluster || undefined)
@@ -301,7 +311,21 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
             {tabs.map(tab => (
               <button
                 key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
+                onClick={() => {
+                  setActiveTab(tab.key)
+                  // Issue 9268: clear the tab-local search when switching so
+                  // the new tab starts fresh rather than inheriting a query
+                  // that was meaningful only for the previous tab.
+                  if (tab.key !== activeTab) {
+                    filters.setSearch('')
+                    // Issue 9268: if the incoming tab has no rules count, fall
+                    // back to sorting by name so we never leave the card in a
+                    // silent no-op "Sort by Rules" state.
+                    if (!TABS_WITH_RULES_COUNT.includes(tab.key) && sorting.sortBy === 'rules') {
+                      sorting.setSortBy('name')
+                    }
+                  }
+                }}
                 className={`flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded text-xs transition-colors ${
                   activeTab === tab.key
                     ? 'bg-purple-500/20 text-purple-400'

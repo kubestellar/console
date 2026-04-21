@@ -7,8 +7,13 @@ import { test, expect, Page } from '@playwright/test'
  * - Demo mode: card renders DEMO_FINDINGS, risk chips, search, pagination
  * - Live data mode: card shows empty state when no clusters are connected
  * - Demo mode guard: live-cluster mode does NOT show demo findings
+ * - Risk filter, search by subject / cluster, and clearing
+ * - Pagination scroll reset (Issue 9268)
+ * - Localized finding descriptions render from the hook's `descriptionKey`
+ *   (Issue 9269)
+ * - Expanded role-based assertions for the RBAC table columns (Issue 9239)
  *
- * Addresses issues #3084, #3085, #3088.
+ * Addresses issues 3084, 3085, 3088, 9239, 9264, 9268, 9269.
  *
  * Run with: npx playwright test e2e/RBACExplorer.spec.ts
  */
@@ -193,6 +198,46 @@ test.describe('RBACExplorer card — demo mode', () => {
 
     // Demo data has "prod-us-east" cluster — this cluster name must appear
     await expect(page.getByText('prod-us-east').first()).toBeVisible({ timeout: 10000 })
+  })
+
+  // Issue 9239 — extend coverage: RBAC table columns (subject, role/binding, cluster)
+  test('renders subject, binding, and cluster columns for each finding', async ({ page }) => {
+    await page.goto('/')
+    await page.waitForLoadState('domcontentloaded')
+
+    // Each demo finding is a row with a subject name, a binding reference,
+    // and a cluster badge. Verify a canonical row renders all three.
+    await expect(page.getByText('dev-team').first()).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText(/ClusterRoleBinding\/dev-admin/i).first()).toBeVisible()
+    await expect(page.getByText('prod-us-east').first()).toBeVisible()
+  })
+
+  // Issue 9269 — localized finding descriptions should render (via t() call)
+  test('renders a localized finding description for the critical cluster-admin finding', async ({ page }) => {
+    await page.goto('/')
+    await page.waitForLoadState('domcontentloaded')
+
+    // In English the cluster-admin description text is still the same as
+    // the legacy hardcoded string, but it now comes from i18n. The test
+    // asserts the user-visible text rather than the English literal to
+    // keep it compatible with future translation changes.
+    await expect(page.getByText(/cluster-admin binding/i).first()).toBeVisible({ timeout: 10000 })
+  })
+
+  // Issue 9268 — clearing the search restores the full result set
+  test('clearing the search restores all demo findings', async ({ page }) => {
+    await page.goto('/')
+    await page.waitForLoadState('domcontentloaded')
+
+    await expect(page.getByText('dev-team').first()).toBeVisible({ timeout: 10000 })
+
+    const searchInput = page.getByPlaceholder(/search subjects/i)
+    await searchInput.fill('ci-bot')
+    await expect(page.getByText('ci-bot')).toBeVisible()
+
+    await searchInput.fill('')
+    await expect(page.getByText('dev-team').first()).toBeVisible()
+    await expect(page.getByText('monitoring').first()).toBeVisible()
   })
 })
 

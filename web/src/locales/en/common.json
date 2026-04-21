@@ -1643,7 +1643,22 @@
     "apiGroupAppsDesc": "Deployments, StatefulSets, DaemonSets, ReplicaSets",
     "apiGroupRbacDesc": "Roles, ClusterRoles, Bindings",
     "apiGroupBatchDesc": "Jobs, CronJobs",
-    "apiGroupNetworkingDesc": "Ingresses, NetworkPolicies"
+    "apiGroupNetworkingDesc": "Ingresses, NetworkPolicies",
+    "failedToLoad": "Failed to load RBAC data",
+    "retry": "Retry",
+    "noFindings": "No RBAC findings",
+    "connectClusterHint": "Connect a cluster to analyze RBAC bindings",
+    "noMatchingFindings": "No findings match your filters",
+    "findingDescription": {
+      "clusterAdminBinding": "cluster-admin binding — full cluster access",
+      "wildcardSecretsViaRole": "Wildcard verb on secrets via {{role}}",
+      "wildcardSecrets": "Wildcard verb on secrets — can read all secrets",
+      "defaultServiceAccountElevated": "Default ServiceAccount has elevated privileges via {{role}}",
+      "wideListWatchViaRole": "Wide list/watch access on all resources via {{role}}",
+      "wideListWatch": "Wide list/watch on all namespaces",
+      "elevatedRoleInNamespace": "{{role}} role in namespace {{namespace}}",
+      "pvPvcAccess": "PV and PVC access across namespaces"
+    }
   },
   "compute": {
     "clusterComparison": "Cluster Comparison",
@@ -2295,7 +2310,20 @@
       "noStorage": "No storage configured",
       "noNetwork": "No network configuration",
       "noIssuesDetected": "No issues detected",
-      "noRelatedResourcesDiscovered": "No related resources discovered"
+      "noRelatedResourcesDiscovered": "No related resources discovered",
+      "noBindingsFound": "No bindings found"
+    },
+    "rbac": {
+      "bindingsTab": "Bindings ({{count}})",
+      "describeTab": "Describe",
+      "yamlTab": "YAML",
+      "loadingBindings": "Loading RBAC bindings...",
+      "noBindingsForSubject": "No role bindings found for {{type}} \"{{subject}}\"",
+      "clusterRoleBindingsHeader": "ClusterRoleBindings ({{count}})",
+      "roleBindingsHeader": "RoleBindings ({{count}})",
+      "clusterWide": "cluster-wide",
+      "inNamespace": "in",
+      "truncationNotice": "Showing output for {{shown}} of {{total}} bindings ({{hidden}} not shown)"
     },
     "tooltips": {
       "copyCommand": "Copy command",
