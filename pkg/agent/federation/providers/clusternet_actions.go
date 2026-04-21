@@ -24,18 +24,18 @@ const (
 
 var clusternetActionDescriptors = []federation.ActionDescriptor{
 	{
-		ID:                  clusternetActionApproveCluster,
-		Label:               "Approve Cluster",
-		Description:         "Approve the pending ManagedCluster to complete Clusternet registration.",
-		Destructive:         false,
-		ClusterNameRequired: true,
+		ID:          clusternetActionApproveCluster,
+		Label:       "Approve Cluster",
+		Verb:        "patch",
+		Provider:    "clusternet",
+		Destructive: false,
 	},
 	{
-		ID:                  clusternetActionUnregisterCluster,
-		Label:               "Unregister Cluster",
-		Description:         "Delete the ManagedCluster CR from the Clusternet hub, permanently unregistering this cluster.",
-		Destructive:         true,
-		ClusterNameRequired: true,
+		ID:          clusternetActionUnregisterCluster,
+		Label:       "Unregister Cluster",
+		Verb:        "delete",
+		Provider:    "clusternet",
+		Destructive: true,
 	},
 }
 
@@ -52,7 +52,7 @@ func (p *clusternetProvider) Execute(ctx context.Context, cfg *rest.Config, req 
 	case clusternetActionUnregisterCluster:
 		return clusternetUnregisterCluster(ctx, cfg, req.ClusterName)
 	default:
-		return federation.ActionResult{}, &federation.UnknownActionError{ActionID: req.ActionID}
+		return federation.ActionResult{}, fmt.Errorf("unknown Clusternet action: %s", req.ActionID)
 	}
 }
 
@@ -69,7 +69,7 @@ func clusternetApproveCluster(ctx context.Context, cfg *rest.Config, clusterName
 	obj, err := dc.Resource(clusternetManagedClusterGVR).Get(ctx, clusterName, metav1.GetOptions{})
 	if err != nil {
 		if isNotFoundError(err) {
-			return federation.ActionResult{Skipped: true, Message: "cluster " + clusterName + " not found"}, nil
+			return federation.ActionResult{OK: true, Already: true, Message: "cluster " + clusterName + " not found"}, nil
 		}
 		return federation.ActionResult{}, fmt.Errorf("get ManagedCluster %s: %w", clusterName, err)
 	}
@@ -77,18 +77,18 @@ func clusternetApproveCluster(ctx context.Context, cfg *rest.Config, clusterName
 	// Check whether already approved to keep the operation idempotent.
 	approved, _, _ := unstructuredNestedBool(obj.Object, "spec", "approved")
 	if approved {
-		return federation.ActionResult{Skipped: true, Message: "cluster " + clusterName + " already approved"}, nil
+		return federation.ActionResult{OK: true, Already: true, Message: "cluster " + clusterName + " already approved"}, nil
 	}
 
 	patch := []byte(`{"spec":{"approved":true}}`)
 	_, err = dc.Resource(clusternetManagedClusterGVR).Patch(ctx, clusterName, types.MergePatchType, patch, metav1.PatchOptions{})
 	if err != nil {
 		if isConflictError(err) {
-			return federation.ActionResult{Skipped: true, Message: "cluster " + clusterName + " approval updated concurrently"}, nil
+			return federation.ActionResult{OK: true, Already: true, Message: "cluster " + clusterName + " approval updated concurrently"}, nil
 		}
 		return federation.ActionResult{}, fmt.Errorf("approve ManagedCluster %s: %w", clusterName, err)
 	}
-	return federation.ActionResult{Message: "ManagedCluster " + clusterName + " approved"}, nil
+	return federation.ActionResult{OK: true, Message: "ManagedCluster " + clusterName + " approved"}, nil
 }
 
 // clusternetUnregisterCluster deletes the named ManagedCluster CR. If the CR
@@ -102,11 +102,11 @@ func clusternetUnregisterCluster(ctx context.Context, cfg *rest.Config, clusterN
 	err = dc.Resource(clusternetManagedClusterGVR).Delete(ctx, clusterName, metav1.DeleteOptions{})
 	if err != nil {
 		if isNotFoundError(err) {
-			return federation.ActionResult{Skipped: true, Message: "cluster " + clusterName + " already removed"}, nil
+			return federation.ActionResult{OK: true, Already: true, Message: "cluster " + clusterName + " already removed"}, nil
 		}
 		return federation.ActionResult{}, fmt.Errorf("unregister ManagedCluster %s: %w", clusterName, err)
 	}
-	return federation.ActionResult{Message: "ManagedCluster " + clusterName + " deleted from Clusternet hub"}, nil
+	return federation.ActionResult{OK: true, Message: "ManagedCluster " + clusterName + " deleted from Clusternet hub"}, nil
 }
 
 // unstructuredNestedBool extracts a bool field from an unstructured object's

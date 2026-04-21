@@ -20,11 +20,11 @@ const (
 
 var kubeAdmiralActionDescriptors = []federation.ActionDescriptor{
 	{
-		ID:                  kubeAdmiralActionUnfederateCluster,
-		Label:               "Unfederate Cluster",
-		Description:         "Delete the FederatedCluster CR from the KubeAdmiral control plane, permanently removing this cluster from the federation.",
-		Destructive:         true,
-		ClusterNameRequired: true,
+		ID:          kubeAdmiralActionUnfederateCluster,
+		Label:       "Unfederate Cluster",
+		Verb:        "delete",
+		Provider:    "kubeadmiral",
+		Destructive: true,
 	},
 }
 
@@ -39,7 +39,7 @@ func (p *kubeAdmiralProvider) Execute(ctx context.Context, cfg *rest.Config, req
 	case kubeAdmiralActionUnfederateCluster:
 		return kubeAdmiralUnfederateCluster(ctx, cfg, req.ClusterName)
 	default:
-		return federation.ActionResult{}, &federation.UnknownActionError{ActionID: req.ActionID}
+		return federation.ActionResult{}, fmt.Errorf("unknown KubeAdmiral action: %s", req.ActionID)
 	}
 }
 
@@ -54,11 +54,11 @@ func kubeAdmiralUnfederateCluster(ctx context.Context, cfg *rest.Config, cluster
 	err = dc.Resource(kubeAdmiralFederatedClusterGVR).Delete(ctx, clusterName, metav1.DeleteOptions{})
 	if err != nil {
 		if isNotFoundError(err) {
-			return federation.ActionResult{Skipped: true, Message: "FederatedCluster " + clusterName + " already removed"}, nil
+			return federation.ActionResult{OK: true, Already: true, Message: "FederatedCluster " + clusterName + " already removed"}, nil
 		}
 		return federation.ActionResult{}, fmt.Errorf("unfederate FederatedCluster %s: %w", clusterName, err)
 	}
-	return federation.ActionResult{Message: "FederatedCluster " + clusterName + " deleted from KubeAdmiral control plane"}, nil
+	return federation.ActionResult{OK: true, Message: "FederatedCluster " + clusterName + " deleted from KubeAdmiral control plane"}, nil
 }
 
 // Ensure compile-time interface conformance.

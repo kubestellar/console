@@ -20,11 +20,11 @@ const (
 
 var liqoActionDescriptors = []federation.ActionDescriptor{
 	{
-		ID:                  liqoActionUnpeerWith,
-		Label:               "Unpeer",
-		Description:         "Delete the ForeignCluster CR to terminate the Liqo peering relationship with this cluster.",
-		Destructive:         true,
-		ClusterNameRequired: true,
+		ID:          liqoActionUnpeerWith,
+		Label:       "Unpeer",
+		Verb:        "delete",
+		Provider:    "liqo",
+		Destructive: true,
 	},
 }
 
@@ -39,7 +39,7 @@ func (p *liqoProvider) Execute(ctx context.Context, cfg *rest.Config, req federa
 	case liqoActionUnpeerWith:
 		return liqoUnpeerWith(ctx, cfg, req.ClusterName)
 	default:
-		return federation.ActionResult{}, &federation.UnknownActionError{ActionID: req.ActionID}
+		return federation.ActionResult{}, fmt.Errorf("unknown Liqo action: %s", req.ActionID)
 	}
 }
 
@@ -55,11 +55,11 @@ func liqoUnpeerWith(ctx context.Context, cfg *rest.Config, clusterName string) (
 	err = dc.Resource(liqoForeignClusterGVR).Delete(ctx, clusterName, metav1.DeleteOptions{})
 	if err != nil {
 		if isNotFoundError(err) {
-			return federation.ActionResult{Skipped: true, Message: "ForeignCluster " + clusterName + " already removed"}, nil
+			return federation.ActionResult{OK: true, Already: true, Message: "ForeignCluster " + clusterName + " already removed"}, nil
 		}
 		return federation.ActionResult{}, fmt.Errorf("unpeer ForeignCluster %s: %w", clusterName, err)
 	}
-	return federation.ActionResult{Message: "ForeignCluster " + clusterName + " deleted; Liqo peering terminated"}, nil
+	return federation.ActionResult{OK: true, Message: "ForeignCluster " + clusterName + " deleted; Liqo peering terminated"}, nil
 }
 
 // Ensure compile-time interface conformance.

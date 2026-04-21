@@ -2,7 +2,6 @@ package providers
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"github.com/kubestellar/console/pkg/agent/federation"
@@ -23,19 +22,18 @@ func TestLiqoActionDescriptors(t *testing.T) {
 	if !d.Destructive {
 		t.Error("unpeerWith must be destructive")
 	}
-	if !d.ClusterNameRequired {
-		t.Error("unpeerWith must require a cluster name")
-	}
 	if d.Label == "" {
 		t.Error("unpeerWith label must not be empty")
 	}
-	if d.Description == "" {
-		t.Error("unpeerWith description must not be empty")
+	if d.Verb == "" {
+		t.Error("unpeerWith verb must not be empty")
+	}
+	if d.Provider != "liqo" {
+		t.Errorf("expected provider liqo, got %q", d.Provider)
 	}
 }
 
 func TestLiqoInterfaceConformance(t *testing.T) {
-	// compile-time check is in liqo_actions.go; this exercises it at run-time too.
 	var p federation.ActionProvider = &liqoProvider{}
 	if p.Name() != federation.ProviderLiqo {
 		t.Errorf("expected provider name %q, got %q", federation.ProviderLiqo, p.Name())
@@ -48,9 +46,6 @@ func TestLiqoExecuteUnknownAction(t *testing.T) {
 		ActionID: "liqo.doesNotExist",
 	})
 	if err == nil {
-		t.Fatal("expected error for unknown action, got nil")
-	}
-	if !errors.Is(err, federation.ErrUnknownAction) {
-		t.Errorf("expected ErrUnknownAction, got %v", err)
+		t.Error("expected error for unknown action")
 	}
 }

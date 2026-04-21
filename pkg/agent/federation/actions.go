@@ -2,93 +2,72 @@ package federation
 
 import (
 	"context"
-	"fmt"
 
 	"k8s.io/client-go/rest"
 )
 
-// ActionDescriptor describes a single provider action that the console UI can
-// invoke. Destructive actions MUST set Destructive=true — the server uses this
-// flag to require an explicit confirmation payload from the caller and to emit
-// an audit log entry before executing.
+// ActionDescriptor describes a single imperative action a provider can execute.
+// The backend exposes each provider's descriptors via Actions() so the UI can
+// render per-cluster action menus without hardcoding provider-specific logic.
+// Phase 2 of the federation roll-out — see Issue 9368.
 type ActionDescriptor struct {
-	// ID is the stable, dot-namespaced action identifier used in API requests.
-	// Convention: "<provider>.<verbObject>", e.g. "ocm.approveCSR".
+	// ID is the stable identifier for this action (e.g. "ocm.approveCSR").
 	ID string `json:"id"`
-	// Label is the human-readable name shown in the UI action menu.
+	// Label is the human-readable button label for the UI.
 	Label string `json:"label"`
-	// Description is a one-sentence explanation of what the action does.
-	Description string `json:"description"`
-	// Destructive, when true, indicates the action cannot be undone (delete,
-	// unregister, unpeer, unfederate). The server rejects requests for
-	// destructive actions that lack a confirmed=true field in the request body.
+	// Verb is the Kubernetes API verb the action performs (e.g. "update",
+	// "patch", "delete"). Used by the UI to gate SSAR checks.
+	Verb string `json:"verb"`
+	// Provider identifies which provider owns this action.
+	Provider FederationProviderName `json:"provider"`
+	// Destructive flags actions that warrant a confirmation dialog in the UI
+	// (e.g. detaching a cluster). The UI MUST show a ConfirmDialog before
+	// executing any action with Destructive=true.
 	Destructive bool `json:"destructive"`
-	// ClusterNameRequired, when true, indicates the action targets a specific
-	// cluster and the caller must supply ClusterName in the ActionRequest.
-	ClusterNameRequired bool `json:"clusterNameRequired"`
 }
 
-// ActionRequest is the payload sent by the UI when invoking an action.
+// ActionRequest is the POST body the frontend sends to /federation/action.
 type ActionRequest struct {
-	// ActionID is the descriptor ID of the action to execute.
+	// ActionID is the ActionDescriptor.ID to execute.
 	ActionID string `json:"actionId"`
-	// ClusterName is the target cluster, required when the descriptor has
-	// ClusterNameRequired=true.
+	// Provider selects the provider that owns the action.
+	Provider FederationProviderName `json:"provider"`
+	// HubContext is the kubeconfig context hosting the federation hub.
+	HubContext string `json:"hubContext"`
+	// ClusterName is the target cluster for cluster-scoped actions. Optional
+	// for hub-scoped actions (e.g. approving a CSR by name in Payload).
 	ClusterName string `json:"clusterName,omitempty"`
-	// Confirmed must be true for destructive actions; the server enforces this
-	// before forwarding to Execute.
-	Confirmed bool `json:"confirmed,omitempty"`
-	// Params carries action-specific extra parameters (e.g. annotation values
-	// to patch). Providers are free to define their own sub-keys.
-	Params map[string]string `json:"params,omitempty"`
+	// Payload carries action-specific parameters (e.g. taint key/value/effect
+	// for karmada.taintCluster). Keys are action-defined.
+	Payload map[string]interface{} `json:"payload,omitempty"`
 }
 
-// ActionResult is returned by Execute on success. The Message field is shown
-// verbatim to the user; providers should keep it brief (one sentence) and
-// avoid exposing internal API object names the user did not supply.
+// ActionResult is the JSON response from /federation/action.
 type ActionResult struct {
-	// Message is the human-readable success summary.
-	Message string `json:"message"`
-	// Skipped, when true, means the action was a no-op because the target
-	// was already in the desired state (idempotency).
-	Skipped bool `json:"skipped,omitempty"`
+	// OK is true when the action completed successfully.
+	OK bool `json:"ok"`
+	// Already is true when the action was a no-op because the desired state
+	// already existed (e.g. cluster already joined, taint already present).
+	// OK is also true when Already is true.
+	Already bool `json:"already"`
+	// Message carries a human-readable status string on both success and
+	// failure. On failure (OK=false) it contains the error details.
+	Message string `json:"message,omitempty"`
 }
 
-// ActionProvider extends Provider with the Phase 2 action surface. A provider
-// that does not yet implement actions can embed a NoOpActionProvider to satisfy
-// this interface without breakage.
-//
-// Implementations MUST be concurrency-safe (same contract as Provider).
-// Execute MUST be idempotent where the action is labelled non-destructive, and
-// SHOULD be idempotent for destructive actions (e.g. delete is a no-op if the
-// resource is already gone).
+// ActionProvider extends Provider with imperative action capabilities. Phase 1
+// providers that only implement read-only operations satisfy the base Provider
+// interface; Phase 2 providers that also support management operations implement
+// ActionProvider. The server asserts ActionProvider at runtime — providers that
+// don't implement it simply have no actions exposed.
 type ActionProvider interface {
 	Provider
-
-	// Actions returns the list of actions this provider exposes. The slice is
-	// static per process lifetime — callers may cache it.
+	// Actions returns the set of imperative actions this provider supports.
+	// The returned slice is stable for the process lifetime — providers MUST
+	// NOT change the set dynamically.
 	Actions() []ActionDescriptor
-
-	// Execute runs the action described by req against the cluster reachable
-	// via cfg. The caller has already validated that req.ActionID belongs to
-	// this provider and that req.Confirmed=true for destructive actions.
+	// Execute runs the action described by req against the hub reachable via
+	// cfg. Implementations MUST be idempotent where possible: repeating an
+	// already-completed action returns ActionResult{OK:true, Already:true}.
 	Execute(ctx context.Context, cfg *rest.Config, req ActionRequest) (ActionResult, error)
-}
-
-// ErrUnknownAction is returned by Execute when the ActionID in the request
-// does not match any descriptor the provider exports.
-var ErrUnknownAction = fmt.Errorf("unknown action")
-
-// UnknownActionError wraps ErrUnknownAction with the offending action ID so
-// the server can include it in the 400 response body.
-type UnknownActionError struct {
-	ActionID string
-}
-
-func (e *UnknownActionError) Error() string {
-	return fmt.Sprintf("unknown action %q", e.ActionID)
-}
-
-func (e *UnknownActionError) Is(target error) bool {
-	return target == ErrUnknownAction
 }

@@ -2,7 +2,6 @@ package providers
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"github.com/kubestellar/console/pkg/agent/federation"
@@ -29,14 +28,14 @@ func TestClusternetActionDescriptors(t *testing.T) {
 		if d.Destructive {
 			t.Error("approveCluster must not be destructive")
 		}
-		if !d.ClusterNameRequired {
-			t.Error("approveCluster must require a cluster name")
-		}
 		if d.Label == "" {
 			t.Error("approveCluster label must not be empty")
 		}
-		if d.Description == "" {
-			t.Error("approveCluster description must not be empty")
+		if d.Verb == "" {
+			t.Error("approveCluster verb must not be empty")
+		}
+		if d.Provider != "clusternet" {
+			t.Errorf("expected provider clusternet, got %q", d.Provider)
 		}
 	})
 
@@ -48,20 +47,19 @@ func TestClusternetActionDescriptors(t *testing.T) {
 		if !d.Destructive {
 			t.Error("unregisterCluster must be destructive")
 		}
-		if !d.ClusterNameRequired {
-			t.Error("unregisterCluster must require a cluster name")
-		}
 		if d.Label == "" {
 			t.Error("unregisterCluster label must not be empty")
 		}
-		if d.Description == "" {
-			t.Error("unregisterCluster description must not be empty")
+		if d.Verb == "" {
+			t.Error("unregisterCluster verb must not be empty")
+		}
+		if d.Provider != "clusternet" {
+			t.Errorf("expected provider clusternet, got %q", d.Provider)
 		}
 	})
 }
 
 func TestClusternetInterfaceConformance(t *testing.T) {
-	// compile-time check is in clusternet_actions.go; this exercises it at run-time too.
 	var p federation.ActionProvider = &clusternetProvider{}
 	if p.Name() != federation.ProviderClusternet {
 		t.Errorf("expected provider name %q, got %q", federation.ProviderClusternet, p.Name())
@@ -74,9 +72,6 @@ func TestClusternetExecuteUnknownAction(t *testing.T) {
 		ActionID: "clusternet.doesNotExist",
 	})
 	if err == nil {
-		t.Fatal("expected error for unknown action, got nil")
-	}
-	if !errors.Is(err, federation.ErrUnknownAction) {
-		t.Errorf("expected ErrUnknownAction, got %v", err)
+		t.Error("expected error for unknown action")
 	}
 }
