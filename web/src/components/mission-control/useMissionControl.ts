@@ -1364,7 +1364,7 @@ Order phases by dependency — prerequisites first. Each phase completes before 
   }
 
   const hydrateFromPlan = (partial: Partial<MissionControlState>) => {
-    setState(prev => ({
+    setState(() => ({
       ...makeInitialState(),
       ...partial,
       phase: 'blueprint' as const,
