@@ -1,7 +1,7 @@
 import { memo } from 'react'
 import {
   Folder, FolderOpen, FileJson, FileCode, FileText, ChevronRight, ChevronDown,
-  Loader2, Globe, HardDrive, Trash2, Plus, RefreshCw } from 'lucide-react'
+  Loader2, Globe, HardDrive, Trash2, Plus, RefreshCw, Info } from 'lucide-react'
 import { Github } from '@/lib/icons'
 import { cn } from '../../../lib/cn'
 import type { TreeNode } from './types'
@@ -157,6 +157,17 @@ export const TreeNodeItem = memo(function TreeNodeItem({
           <span className="truncate flex-1" title={node.name}>{node.name}</span>
           {depth === 0 && sourceIcon()}
         </button>
+        {/* Root-level info button — shown when the node has an infoTooltip */}
+        {depth === 0 && node.infoTooltip && (
+          <button
+            onClick={(e) => e.stopPropagation()}
+            className="p-2 min-h-11 min-w-11 rounded text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
+            title={node.infoTooltip}
+            aria-label="More information"
+          >
+            <Info className="w-3.5 h-3.5" />
+          </button>
+        )}
         {/* Root-level add button — rendered in the header row so it stays anchored to the header */}
         {depth === 0 && onAdd && (
           <button

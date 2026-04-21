@@ -14,6 +14,8 @@ export interface TreeNode {
   repoOwner?: string
   /** GitHub repo name (for external sources like Kubara) */
   repoName?: string
+  /** Info tooltip shown on root-level nodes (depth===0) via an ⓘ button */
+  infoTooltip?: string
 }
 
 export type ViewMode = 'grid' | 'list'
