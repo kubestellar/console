@@ -603,7 +603,8 @@ export function AgentSelector({
           aria-haspopup="listbox"
           aria-expanded={isOpen}
           className={cn(
-            "flex items-center gap-2 px-3 py-1.5 h-9 rounded-lg border transition-colors",
+            "flex items-center rounded-lg border transition-colors",
+            compact ? "p-1.5 gap-1" : "px-3 py-1.5 h-9 gap-2",
             "bg-secondary/50 border-border hover:bg-secondary",
             isOpen && "ring-1 ring-primary",
           )}
