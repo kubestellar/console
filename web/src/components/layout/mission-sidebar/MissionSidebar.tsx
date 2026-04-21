@@ -703,53 +703,53 @@ export function MissionSidebar() {
         </div>
         {/* Toolbar and window controls — split so close/minimize never overflow */}
         <div className="flex items-center gap-1 min-w-0">
+          {/* + button with dropdown — outside overflow-hidden so the dropdown isn't clipped */}
+          <div className="relative mr-1 flex-shrink-0" ref={addMenuRef}>
+            <button
+              onClick={() => setShowAddMenu(prev => !prev)}
+              className={cn(
+                "p-1.5 rounded transition-colors ring-1",
+                showAddMenu
+                  ? "bg-primary text-primary-foreground ring-primary"
+                  : "bg-purple-500/10 text-purple-400 ring-purple-500/30 hover:bg-purple-500/20 hover:text-purple-300"
+              )}
+              aria-label="Add"
+              title="Add"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+            {showAddMenu && (
+              <div className="absolute left-0 top-full mt-1 z-50 w-52 rounded-lg border border-border bg-background shadow-lg py-1">
+                <button
+                  onClick={() => {
+                    setShowAddMenu(false)
+                    setShowNewMission(true)
+                    setTimeout(() => newMissionInputRef.current?.focus(), FOCUS_DELAY_MS)
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-white/5 text-foreground"
+                >
+                  <Plus className="w-4 h-4 text-purple-400" />
+                  New Mission
+                </button>
+                <button
+                  onClick={() => { setShowAddMenu(false); setShowBrowser(true) }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-white/5 text-foreground"
+                >
+                  <Globe className="w-4 h-4 text-muted-foreground" />
+                  Browse Community
+                </button>
+                <button
+                  onClick={() => { setShowAddMenu(false); setShowMissionControl(true) }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-white/5 text-foreground"
+                >
+                  <Rocket className="w-4 h-4 text-muted-foreground" />
+                  Mission Control
+                </button>
+              </div>
+            )}
+          </div>
           {/* Optional toolbar buttons — clipped when sidebar is narrow */}
           <div className="flex items-center gap-1 overflow-hidden min-w-0 flex-shrink">
-            {/* + button with dropdown: New Mission / Browse / Mission Control */}
-            <div className="relative mr-2 flex-shrink-0" ref={addMenuRef}>
-              <button
-                onClick={() => setShowAddMenu(prev => !prev)}
-                className={cn(
-                  "p-1.5 rounded transition-colors ring-1",
-                  showAddMenu
-                    ? "bg-primary text-primary-foreground ring-primary"
-                    : "bg-purple-500/10 text-purple-400 ring-purple-500/30 hover:bg-purple-500/20 hover:text-purple-300"
-                )}
-                aria-label="Add"
-                title="Add"
-              >
-                <Plus className="w-4 h-4" />
-              </button>
-              {showAddMenu && (
-                <div className="absolute left-0 top-full mt-1 z-50 w-52 rounded-lg border border-border bg-background shadow-lg py-1">
-                  <button
-                    onClick={() => {
-                      setShowAddMenu(false)
-                      setShowNewMission(true)
-                      setTimeout(() => newMissionInputRef.current?.focus(), FOCUS_DELAY_MS)
-                    }}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-white/5 text-foreground"
-                  >
-                    <Plus className="w-4 h-4 text-purple-400" />
-                    New Mission
-                  </button>
-                  <button
-                    onClick={() => { setShowAddMenu(false); setShowBrowser(true) }}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-white/5 text-foreground"
-                  >
-                    <Globe className="w-4 h-4 text-muted-foreground" />
-                    Browse Community
-                  </button>
-                  <button
-                    onClick={() => { setShowAddMenu(false); setShowMissionControl(true) }}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-white/5 text-foreground"
-                  >
-                    <Rocket className="w-4 h-4 text-muted-foreground" />
-                    Mission Control
-                  </button>
-                </div>
-              )}
-            </div>
             <AgentSelector compact={!isFullScreen} />
           </div>
           {/* Window control buttons — always visible, never clipped */}
