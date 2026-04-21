@@ -88,6 +88,7 @@ vi.mock('../browser', () => ({
   MissionFetchErrorBanner: ({ message }: { message: string }) => <div data-testid="fetch-error">{message}</div>,
   getMissionSlug: (m: { title?: string }) => (m.title || '').toLowerCase().replace(/\s+/g, '-'),
   getMissionShareUrl: () => 'https://example.com/missions/test',
+  getKubaraConfig: vi.fn().mockResolvedValue({ baseUrl: '', repo: '', branch: '' }),
   updateNodeInTree: vi.fn((nodes: unknown[]) => nodes),
   removeNodeFromTree: vi.fn((nodes: unknown[]) => nodes),
   missionCache: {

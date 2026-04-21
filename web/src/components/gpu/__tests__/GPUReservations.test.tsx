@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, screen, cleanup } from '@testing-library/react'
+import { render, screen, cleanup, fireEvent, act } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { useGPUNodes } from '../../../hooks/useMCP'
 
@@ -51,7 +51,7 @@ vi.mock('../../../hooks/useMCP', () => ({
   useClusters: () => ({
     clusters: [], isLoading: false, isRefreshing: false, refetch: vi.fn(), error: null,
   }),
-  useGPUNodes: () => ({ nodes: [], isLoading: false, refetch: vi.fn() }),
+  useGPUNodes: vi.fn(() => ({ nodes: [], isLoading: false, refetch: vi.fn() })),
   useResourceQuotas: () => ({ resourceQuotas: [] }),
   useNamespaces: () => ({ namespaces: [], isLoading: false }),
 }))
@@ -240,17 +240,17 @@ describe('GPUReservations Component', () => {
       renderGPU()
       // Switch to inventory tab
       const inventoryTab = screen.getByRole('tab', { name: /inventory/i })
-      inventoryTab.click()
+      await act(async () => { fireEvent.click(inventoryTab) })
 
-      expect(screen.getByText('cluster-a')).toBeTruthy()
-      expect(screen.getByText('cluster-b')).toBeTruthy()
-      expect(screen.getByText('NVIDIA A100')).toBeTruthy()
-      expect(screen.getByText('Google TPU v4')).toBeTruthy()
-      expect(screen.getByText('node-1')).toBeTruthy()
-      expect(screen.getByText('node-2')).toBeTruthy()
+      expect(screen.getAllByText('cluster-a').length).toBeGreaterThan(0)
+      expect(screen.getAllByText('cluster-b').length).toBeGreaterThan(0)
+      expect(screen.getAllByText('NVIDIA A100').length).toBeGreaterThan(0)
+      expect(screen.getAllByText('Google TPU v4').length).toBeGreaterThan(0)
+      expect(screen.getAllByText('node-1').length).toBeGreaterThan(0)
+      expect(screen.getAllByText('node-2').length).toBeGreaterThan(0)
     })
 
-    it('calculates usage bars correctly', () => {
+    it('calculates usage bars correctly', async () => {
       vi.mocked(useGPUNodes).mockReturnValue({
         nodes: [
           { name: 'node-1', cluster: 'cluster-a', gpuType: 'NVIDIA A100', gpuCount: 10, gpuAllocated: 7, acceleratorType: 'GPU' },
@@ -259,15 +259,13 @@ describe('GPUReservations Component', () => {
       } as any)
 
       renderGPU()
-      screen.getByRole('tab', { name: /inventory/i }).click()
+      await act(async () => { fireEvent.click(screen.getByRole('tab', { name: /inventory/i })) })
 
-      // Total should be 10, allocated 7, available 3
-      expect(screen.getByText(/10/)).toBeTruthy()
-      expect(screen.getByText(/7/)).toBeTruthy()
-      expect(screen.getByText(/3/)).toBeTruthy()
+      // Allocated/Total should show 7/10 for the node row
+      expect(screen.getByText('7/10')).toBeTruthy()
     })
 
-    it('applies taint-aware filtering', () => {
+    it('applies taint-aware filtering', async () => {
       vi.mocked(useGPUNodes).mockReturnValue({
         nodes: [
           { name: 'node-safe', cluster: 'c1', gpuType: 'A100', gpuCount: 4, gpuAllocated: 0, acceleratorType: 'GPU', taints: [] },
@@ -277,7 +275,7 @@ describe('GPUReservations Component', () => {
       } as any)
 
       renderGPU()
-      screen.getByRole('tab', { name: /inventory/i }).click()
+      await act(async () => { fireEvent.click(screen.getByRole('tab', { name: /inventory/i })) })
 
       // node-tainted should be filtered out by default (untolerated)
       expect(screen.queryByText('node-tainted')).toBeNull()

@@ -37,7 +37,7 @@ vi.mock('../../../hooks/useMCP', () => ({
     deduplicatedClusters: [], clusters: [], isLoading: false, isRefreshing: false,
     lastUpdated: null, refetch: vi.fn(), error: null,
   }),
-  useGPUNodes: () => ({ nodes: [] }),
+  useGPUNodes: vi.fn(() => ({ nodes: [] })),
 }))
 
 vi.mock('../../../hooks/useGlobalFilters', () => ({
@@ -60,7 +60,7 @@ vi.mock('../../../hooks/useDrillDown', () => ({
 
 vi.mock('../../../hooks/useUniversalStats', () => ({
   useUniversalStats: () => ({ getStatValue: () => ({ value: 0 }) }),
-  createMergedStatValueGetter: () => () => ({ value: 0 }),
+  createMergedStatValueGetter: (primary: Function, fallback: Function) => (id: string) => primary(id) ?? fallback(id),
 }))
 
 vi.mock('react-i18next', () => ({
