@@ -137,7 +137,7 @@ describe('useGatewayStatus — successful API response', () => {
   it('populates gateways from API response', async () => {
     mockFetchOk([makeGateway('prod-gw', 'prod')])
     const { result } = renderHook(() => useGatewayStatus())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => result.current.gateways.length > 0)
     expect(result.current.gateways).toHaveLength(1)
     expect(result.current.gateways[0].name).toBe('prod-gw')
   })
@@ -145,7 +145,7 @@ describe('useGatewayStatus — successful API response', () => {
   it('sets isDemoData=false on successful fetch', async () => {
     mockFetchOk([makeGateway()])
     const { result } = renderHook(() => useGatewayStatus())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => result.current.isDemoData === false)
     expect(result.current.isDemoData).toBe(false)
   })
 
@@ -214,7 +214,7 @@ describe('useGatewayStatus — error fallback (demo data)', () => {
   it('increments consecutiveFailures on error', async () => {
     mockFetchError()
     const { result } = renderHook(() => useGatewayStatus())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => result.current.consecutiveFailures > 0)
     expect(result.current.consecutiveFailures).toBe(1)
   })
 
@@ -222,7 +222,7 @@ describe('useGatewayStatus — error fallback (demo data)', () => {
     mockClusters.mockReturnValue([{ name: 'my-cluster', reachable: true }])
     mockFetchError()
     const { result } = renderHook(() => useGatewayStatus())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => result.current.gateways.length > 0)
     const clusterGateways = result.current.gateways.filter(gw => gw.cluster === 'my-cluster')
     expect(clusterGateways.length).toBeGreaterThan(0)
   })
@@ -231,7 +231,7 @@ describe('useGatewayStatus — error fallback (demo data)', () => {
     mockClusters.mockReturnValue([])
     mockFetchError()
     const { result } = renderHook(() => useGatewayStatus())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => result.current.gateways.length > 0)
     const clusterNames = new Set(result.current.gateways.map(gw => gw.cluster))
     expect(clusterNames.size).toBeGreaterThan(0)
   })

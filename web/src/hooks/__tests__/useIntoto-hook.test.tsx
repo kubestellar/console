@@ -200,7 +200,7 @@ describe('useIntoto — cluster fetch: CRD not installed', () => {
       Promise.all(tasks.map(t => t().then(v => ({ status: 'fulfilled' as const, value: v }))))
     )
     const { result } = renderHook(() => useIntoto())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => result.current.statuses['cluster-a'] !== undefined)
     expect(result.current.statuses['cluster-a']?.installed).toBe(false)
   })
 })
@@ -268,7 +268,7 @@ describe('useIntoto — cluster fetch: CRD installed', () => {
 
   it('installed is true when at least one cluster is installed', async () => {
     const { result } = renderHook(() => useIntoto())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => result.current.installed === true)
     expect(result.current.installed).toBe(true)
   })
 
@@ -330,11 +330,14 @@ describe('useIntoto — cluster fetch: errors', () => {
     mockClusters.mockReturnValue(['bad-cluster'])
     mockKubectlExec.mockRejectedValue(new Error('connection refused'))
     mockSettledWithConcurrency.mockImplementation(async (tasks: (() => Promise<unknown>)[]) =>
-      Promise.all(tasks.map(t => t().then(v => ({ status: 'fulfilled' as const, value: v }))))
+      Promise.all(tasks.map(t => t()
+        .then(v => ({ status: 'fulfilled' as const, value: v }))
+        .catch((e: Error) => ({ status: 'rejected' as const, reason: e }))
+      ))
     )
 
     const { result } = renderHook(() => useIntoto())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => result.current.statuses['bad-cluster'] !== undefined)
     expect(result.current.statuses['bad-cluster']?.error).toBeTruthy()
   })
 
@@ -342,11 +345,14 @@ describe('useIntoto — cluster fetch: errors', () => {
     mockClusters.mockReturnValue(['err-cluster'])
     mockKubectlExec.mockRejectedValue(new Error('timeout'))
     mockSettledWithConcurrency.mockImplementation(async (tasks: (() => Promise<unknown>)[]) =>
-      Promise.all(tasks.map(t => t().then(v => ({ status: 'fulfilled' as const, value: v }))))
+      Promise.all(tasks.map(t => t()
+        .then(v => ({ status: 'fulfilled' as const, value: v }))
+        .catch((e: Error) => ({ status: 'rejected' as const, reason: e }))
+      ))
     )
 
     const { result } = renderHook(() => useIntoto())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => result.current.statuses['err-cluster'] !== undefined)
     expect(result.current.hasErrors).toBe(true)
   })
 
@@ -354,11 +360,14 @@ describe('useIntoto — cluster fetch: errors', () => {
     mockClusters.mockReturnValue(['err-cluster'])
     mockKubectlExec.mockRejectedValue(new Error('timeout'))
     mockSettledWithConcurrency.mockImplementation(async (tasks: (() => Promise<unknown>)[]) =>
-      Promise.all(tasks.map(t => t().then(v => ({ status: 'fulfilled' as const, value: v }))))
+      Promise.all(tasks.map(t => t()
+        .then(v => ({ status: 'fulfilled' as const, value: v }))
+        .catch((e: Error) => ({ status: 'rejected' as const, reason: e }))
+      ))
     )
 
     const { result } = renderHook(() => useIntoto())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => result.current.consecutiveFailures > 0)
     expect(result.current.consecutiveFailures).toBeGreaterThan(0)
   })
 })

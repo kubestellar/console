@@ -130,14 +130,14 @@ describe('useServiceImportsCard — successful API response', () => {
   it('populates imports from API response', async () => {
     mockFetchOk([makeServiceImport('my-svc')])
     const { result } = renderHook(() => useServiceImportsCard())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => result.current.imports.length > 0)
     expect(result.current.imports).toHaveLength(1)
   })
 
   it('sets isDemoData=false on successful fetch', async () => {
     mockFetchOk([makeServiceImport()])
     const { result } = renderHook(() => useServiceImportsCard())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => result.current.isDemoData === false)
     expect(result.current.isDemoData).toBe(false)
   })
 
@@ -213,7 +213,7 @@ describe('useServiceImportsCard — error fallback', () => {
     mockClusters.mockReturnValue([{ name: 'prod', reachable: true }])
     mockFetchError()
     const { result } = renderHook(() => useServiceImportsCard())
-    await waitFor(() => !result.current.isLoading)
+    await waitFor(() => result.current.imports.length > 0)
     const clusterImports = result.current.imports.filter(
       i => i.metadata?.labels?.['multicluster.kubernetes.io/cluster'] === 'prod'
         || (i.status?.clusters ?? []).some((c: { cluster: string }) => c.cluster === 'prod')
