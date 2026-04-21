@@ -127,6 +127,9 @@ export function HardwareHealthCard() {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState<number | 'unlimited'>(5)
+  // Declared here (with other state) to maintain stable hook order across renders.
+  // Previously declared after useEffect calls which violated rules of hooks (#4086).
+  const [clearAlertError, setClearAlertError] = useState<string | null>(null)
 
   const clusterFilterRef = useRef<HTMLDivElement>(null)
 
@@ -282,8 +285,9 @@ export function HardwareHealthCard() {
     return filteredAlerts.filter(a => !isSnoozed(a.id)).map(a => a.id)
   }, [filteredAlerts, isSnoozed])
 
-  // Sort alerts
-  const sortedAlerts = (() => {
+  // Sort alerts — memoized so sortedAlerts.length is stable across renders
+  // and won't cause totalPages → currentTotalPages → pagination useEffect to loop.
+  const sortedAlerts = useMemo(() => {
     const severityOrder: Record<string, number> = { critical: 0, warning: 1 }
 
     return [...filteredAlerts].sort((a, b) => {
@@ -305,7 +309,7 @@ export function HardwareHealthCard() {
       }
       return sortDirection === 'asc' ? cmp : -cmp
     })
-  })()
+  }, [filteredAlerts, sortField, sortDirection])
 
   // Pagination
   const effectivePerPage = itemsPerPage === 'unlimited' ? sortedAlerts.length : itemsPerPage
@@ -332,9 +336,6 @@ export function HardwareHealthCard() {
   const clearClusterFilter = () => {
     setLocalClusterFilter([])
   }
-
-  // Track clear-alert error for user feedback
-  const [clearAlertError, setClearAlertError] = useState<string | null>(null)
 
   // Clear an alert (after power cycle) — triggers refetch to update cached data
   const clearAlert = async (alertId: string) => {
