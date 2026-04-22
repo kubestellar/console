@@ -1538,14 +1538,20 @@ func (s *Server) sessionTokenQuotaMessage() string {
 		s.sessionTokenQuota, sessionTokenQuotaEnvVar)
 }
 
-// addTokenUsage accumulates token usage from a chat response
+// tokenUsageFlushInterval is how often accumulated in-memory token usage
+// is flushed to disk. Batching prevents high-frequency disk I/O when many
+// AI responses arrive in quick succession (#9483).
+const tokenUsageFlushInterval = 5 * time.Second
+
+// addTokenUsage accumulates token usage from a chat response.
+// Instead of writing to disk on every call, it schedules a debounced
+// flush that fires after tokenUsageFlushInterval of inactivity (#9483).
 func (s *Server) addTokenUsage(usage *ProviderTokenUsage) {
 	if usage == nil {
 		return
 	}
 
 	s.tokenMux.Lock()
-	defer s.tokenMux.Unlock()
 
 	// Check if day changed - reset daily counters
 	today := time.Now().Format("2006-01-02")
@@ -1561,8 +1567,18 @@ func (s *Server) addTokenUsage(usage *ProviderTokenUsage) {
 	s.todayTokensIn += int64(usage.InputTokens)
 	s.todayTokensOut += int64(usage.OutputTokens)
 
-	// Persist to disk (non-blocking)
-	go s.saveTokenUsage()
+	// Schedule a debounced flush: reset the timer if one is already pending,
+	// otherwise create a new one. This coalesces rapid-fire token updates into
+	// a single disk write (#9483).
+	if s.tokenFlushTimer != nil {
+		s.tokenFlushTimer.Reset(tokenUsageFlushInterval)
+	} else {
+		s.tokenFlushTimer = time.AfterFunc(tokenUsageFlushInterval, func() {
+			s.saveTokenUsage()
+		})
+	}
+
+	s.tokenMux.Unlock()
 }
 
 // tokenUsageData is persisted to disk
