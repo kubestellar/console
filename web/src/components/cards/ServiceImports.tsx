@@ -173,24 +173,26 @@ function ServiceImportsInternal({ config: _config }: ServiceImportsProps) {
         />
       </div>
 
-      {/* MCS Integration Notice */}
-      <div className="flex items-start gap-2 p-2 mb-3 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-xs">
-        <AlertCircle className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
-        <div>
-          <p className="text-cyan-400 font-medium">{t('serviceImports.mcsTitle')}</p>
-          <p className="text-muted-foreground">
-            {t('serviceImports.mcsDesc')}{' '}
-            <a
-              href={K8S_DOCS.mcsApiServiceImport}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-purple-400 hover:underline"
-            >
-              {t('serviceImports.learnMore')}
-            </a>
-          </p>
+      {/* MCS Integration Notice — only shown when no real data detected */}
+      {isDemoData && (
+        <div className="flex items-start gap-2 p-2 mb-3 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-xs">
+          <AlertCircle className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-cyan-400 font-medium">{t('serviceImports.mcsTitle')}</p>
+            <p className="text-muted-foreground">
+              {t('serviceImports.mcsDesc')}{' '}
+              <a
+                href={K8S_DOCS.mcsApiServiceImport}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-purple-400 hover:underline"
+              >
+                {t('serviceImports.learnMore')}
+              </a>
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-2 @md:grid-cols-3 gap-2 mb-3">
