@@ -253,7 +253,7 @@ func NewServer(cfg Config) (*Server, error) {
 		agentToken = generated
 		slog.Info("KC_AGENT_TOKEN is not set — auto-generated a random token for this session")
 		// Print to stdout so the operator can copy-paste it into clients.
-		fmt.Printf("Auto-generated KC_AGENT_TOKEN: %s\n", agentToken) //nolint:forbidigo // intentional stdout for operator UX
+		fmt.Fprintf(os.Stderr, "Auto-generated KC_AGENT_TOKEN: %s\n", agentToken) //nolint:forbidigo // intentional stderr for operator UX
 	}
 
 	// Resolve per-session token quota from env, falling back to the compiled

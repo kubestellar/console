@@ -2,6 +2,7 @@ package agent
 
 import (
 	"fmt"
+	"html"
 	"regexp"
 	"strings"
 )
@@ -15,7 +16,7 @@ import (
 // 16 characters of base64 alphabet to avoid false positives on short strings.
 const scrubBase64MinLen = 16
 
-var scrubBase64SecretRe = regexp.MustCompile(`(?i)(data:\s*\n(?:\s+\w+:\s*))([A-Za-z0-9+/=]{` + "16" + `,})`)
+var scrubBase64SecretRe = regexp.MustCompile(`(?i)(data:\s*\n(?:\s+[\w.-]+:\s*))([A-Za-z0-9+/=]{` + "16" + `,})`)
 
 // scrubAnthropicKeyRe matches Anthropic API key patterns (sk-ant-...)
 var scrubAnthropicKeyRe = regexp.MustCompile(`sk-ant-[A-Za-z0-9_-]{20,}`)
@@ -71,8 +72,8 @@ func ScrubSecrets(input string) string {
 
 	// Scrub large standalone base64 blocks (likely encoded certs/keys)
 	result = scrubGenericBase64BlockRe.ReplaceAllStringFunc(result, func(match string) string {
-		// Only redact if it looks like pure base64 (not a URL or path)
-		if strings.Contains(match, "http") || strings.Contains(match, "/") {
+		// Only skip redaction for URLs (not bare / which is valid base64)
+		if strings.Contains(match, "http://") || strings.Contains(match, "https://") {
 			return match
 		}
 		return redactedPlaceholder
@@ -90,9 +91,10 @@ func WrapUntrustedData(source string, data string) string {
 	if data == "" {
 		return data
 	}
+	// Escape data to prevent prompt injection via closing tags
 	return fmt.Sprintf(
 		"<cluster-data source=%q trust=\"untrusted\">%s</cluster-data>",
-		source, data)
+		source, html.EscapeString(data))
 }
 
 // UntrustedDataSystemPrompt is a system prompt prefix that instructs the AI

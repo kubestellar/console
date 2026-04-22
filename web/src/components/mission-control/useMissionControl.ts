@@ -855,17 +855,18 @@ export function useMissionControl() {
   useEffect(() => {
     if (!state.aiStreaming) return
     const timer = setTimeout(() => {
+      // #9496 — Cancel the backend mission to stop the stream. Use the ref
+      // for the latest planningMissionId to avoid a stale closure.
+      // Perform side effects outside setState to avoid replayed updaters.
+      const missionId = planningMissionIdRef.current
+      if (missionId) {
+        try { dismissMission(missionId) } catch { /* ignore */ }
+      }
       setState((prev) => {
         if (!prev.aiStreaming) return prev
         aiRequestInFlightRef.current = false // #6827
         // #9496 — Mark as timed out so the parse effect ignores late arrivals
         aiTimedOutRef.current = true
-        // #9496 — Cancel the backend mission to stop the stream. Use the ref
-        // for the latest planningMissionId to avoid a stale closure.
-        const missionId = planningMissionIdRef.current
-        if (missionId) {
-          try { dismissMission(missionId) } catch { /* ignore */ }
-        }
         return { ...prev, aiStreaming: false }
       })
     }, AI_SUGGEST_TIMEOUT_MS)

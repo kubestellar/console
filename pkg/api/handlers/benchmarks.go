@@ -413,18 +413,24 @@ func NewBenchmarkHandlers(apiKey, folderID string) *BenchmarkHandlers {
 // The lock is only held briefly to read/update timestamps; the actual
 // sleep (if needed) happens outside the lock so concurrent goroutines
 // are not blocked for the full delay.
-func (h *BenchmarkHandlers) throttle() {
+// The context is checked so that cancellation is not blocked by sleep.
+func (h *BenchmarkHandlers) throttle(ctx context.Context) error {
 	h.reqMu.Lock()
 	elapsed := time.Since(h.lastReq)
 	if elapsed >= driveRequestDelay {
 		h.lastReq = time.Now()
 		h.reqMu.Unlock()
-		return
+		return ctx.Err()
 	}
 	delay := driveRequestDelay - elapsed
 	h.lastReq = time.Now().Add(delay) // reserve a future slot
 	h.reqMu.Unlock()
-	time.Sleep(delay)
+	select {
+	case <-time.After(delay):
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 // driveGet performs a throttled HTTP GET with the proper User-Agent header.
@@ -433,7 +439,9 @@ func (h *BenchmarkHandlers) driveGet(ctx context.Context, url string) (*http.Res
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	h.throttle()
+	if err := h.throttle(ctx); err != nil {
+		return nil, err
+	}
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, err
@@ -616,6 +624,10 @@ func (h *BenchmarkHandlers) StreamReports(c *fiber.Ctx) error {
 			return
 		}
 
+		// streamMu protects shared state (allReports, pendingBatch, counters, w)
+		// across concurrent goroutines, including the keepalive ticker.
+		var streamMu sync.Mutex
+
 		// Start keepalive ticker — send comment heartbeats every 5s
 		keepaliveDone := make(chan struct{})
 		go func() {
@@ -624,8 +636,10 @@ func (h *BenchmarkHandlers) StreamReports(c *fiber.Ctx) error {
 			for {
 				select {
 				case <-ticker.C:
+					streamMu.Lock()
 					fmt.Fprintf(w, ": keepalive\n\n")
 					safeFlush()
+					streamMu.Unlock()
 				case <-keepaliveDone:
 					return
 				case <-ctx.Done():
@@ -666,11 +680,11 @@ func (h *BenchmarkHandlers) StreamReports(c *fiber.Ctx) error {
 		fmt.Fprintf(w, "event: progress\ndata: {\"status\":\"fetching\",\"experiments\":%d,\"total\":0,\"skipped\":%d}\n\n", len(experiments), skippedFolders)
 		safeFlush()
 
-		// streamMu protects shared state (allReports, pendingBatch, counters)
-		// across concurrent goroutines.
-		var streamMu sync.Mutex
 		var streamWg sync.WaitGroup
 		streamSem := make(chan struct{}, driveFetchConcurrency)
+		// Separate semaphore for inner run goroutines to prevent deadlock when
+		// all outer slots are held while inner goroutines wait for the same pool.
+		innerSem := make(chan struct{}, driveFetchConcurrency)
 
 		for _, item := range experiments {
 			if ctx.Err() != nil {
@@ -717,14 +731,14 @@ func (h *BenchmarkHandlers) StreamReports(c *fiber.Ctx) error {
 					runItem := runItem // capture
 					innerWg.Add(1)
 					select {
-					case streamSem <- struct{}{}:
+					case innerSem <- struct{}{}:
 					case <-ctx.Done():
 						innerWg.Done()
 						continue
 					}
 					go func() {
 						defer innerWg.Done()
-						defer func() { <-streamSem }()
+						defer func() { <-innerSem }()
 
 						if ctx.Err() != nil {
 							return
@@ -752,9 +766,10 @@ func (h *BenchmarkHandlers) StreamReports(c *fiber.Ctx) error {
 						if len(pendingBatch) > 0 {
 							flushBatch()
 						}
+						sentSnapshot := totalSent
 						streamMu.Unlock()
 						if len(reports) > 0 {
-							slog.Info("[benchmarks] streamed reports", "count", len(reports), "experiment", item.Name, "run", runItem.Name, "totalSent", totalSent)
+							slog.Info("[benchmarks] streamed reports", "count", len(reports), "experiment", item.Name, "run", runItem.Name, "totalSent", sentSnapshot)
 						}
 					}()
 				}
@@ -818,17 +833,13 @@ func (h *BenchmarkHandlers) fetchAllReports(ctx context.Context, cutoff time.Tim
 		experiments = append(experiments, item)
 	}
 
-	type runResult struct {
-		reports  []BenchmarkReport
-		failures int
-	}
-
 	var (
 		mu             sync.Mutex
 		allReports     []BenchmarkReport
 		totalFailures  int
 		wg             sync.WaitGroup
 		sem            = make(chan struct{}, driveFetchConcurrency)
+		innerSem       = make(chan struct{}, driveFetchConcurrency)
 	)
 
 	for _, item := range experiments {
@@ -856,10 +867,10 @@ func (h *BenchmarkHandlers) fetchAllReports(ctx context.Context, cutoff time.Tim
 				}
 				runItem := runItem // capture
 				innerWg.Add(1)
-				sem <- struct{}{} // share the same semaphore
+				innerSem <- struct{}{} // separate semaphore for inner work
 				go func() {
 					defer innerWg.Done()
-					defer func() { <-sem }()
+					defer func() { <-innerSem }()
 
 					reports, failures, runErr := h.fetchRunFolder(ctx, runItem.ID, item.Name, runItem.Name)
 					if runErr != nil {

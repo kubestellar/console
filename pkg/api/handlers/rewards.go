@@ -19,10 +19,11 @@ import (
 
 // Point values for GitHub contributions
 const (
-	rewardsCacheTTL   = 10 * time.Minute
-	rewardsAPITimeout = 30 * time.Second
-	rewardsPerPage    = 100 // GitHub max per page
-	rewardsMaxPages   = 100 // REST Issues API supports up to 10,000 per repo
+	rewardsCacheTTL          = 10 * time.Minute
+	rewardsAPITimeout        = 30 * time.Second
+	rewardsPerPage           = 100 // GitHub max per page
+	rewardsMaxPages          = 100 // REST Issues API supports up to 10,000 per repo
+	maxRewardsResponseBytes  = 10 * 1024 * 1024 // 10 MiB cap on GitHub API responses
 )
 
 // RewardsConfig holds configuration for the rewards handler.
@@ -279,7 +280,7 @@ func (h *RewardsHandler) listRepoItems(repo, login, sinceISO, token string) ([]s
 			return allItems, fmt.Errorf("execute request: %w", err)
 		}
 
-		body, err := io.ReadAll(resp.Body)
+		body, err := io.ReadAll(io.LimitReader(resp.Body, maxRewardsResponseBytes))
 		resp.Body.Close()
 
 		if err != nil {

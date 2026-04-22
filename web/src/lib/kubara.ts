@@ -60,23 +60,26 @@ let cachedCatalogTimestamp = 0
 // Resolved once from /api/kubara/config; falls back to defaults if unreachable
 let resolvedRepo = KUBARA_DEFAULT_REPO
 let resolvedPath = KUBARA_DEFAULT_PATH
-let configFetched = false
+let configPromise: Promise<void> | null = null
 
 async function ensureConfig(): Promise<void> {
-  if (configFetched) return
-  configFetched = true
-  try {
-    const res = await fetch('/api/kubara/config', {
-      signal: AbortSignal.timeout(KUBARA_CATALOG_FETCH_TIMEOUT_MS),
-    })
-    if (res.ok) {
-      const cfg = (await res.json()) as { repo?: string; path?: string }
-      if (cfg.repo) resolvedRepo = cfg.repo
-      if (cfg.path) resolvedPath = cfg.path
+  if (configPromise) return configPromise
+  configPromise = (async () => {
+    try {
+      const res = await fetch('/api/kubara/config', {
+        signal: AbortSignal.timeout(KUBARA_CATALOG_FETCH_TIMEOUT_MS),
+      })
+      if (res.ok) {
+        const cfg = (await res.json()) as { repo?: string; path?: string }
+        if (cfg.repo) resolvedRepo = cfg.repo
+        if (cfg.path) resolvedPath = cfg.path
+      }
+    } catch {
+      // Backend unreachable — allow retry on next call
+      configPromise = null
     }
-  } catch {
-    // Backend unreachable — stick with defaults
-  }
+  })()
+  return configPromise
 }
 
 // ---------------------------------------------------------------------------

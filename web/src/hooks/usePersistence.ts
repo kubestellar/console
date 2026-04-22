@@ -192,7 +192,7 @@ export function usePersistence() {
 
     setSyncing(true)
     try {
-      const response = await fetch('/api/persistence/sync', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
+      const response = await fetch('/api/persistence/sync', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'include', signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (response.ok) {
         await fetchStatus()
         return true

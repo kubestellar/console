@@ -26,9 +26,10 @@ export function useACMMStats() {
   const { scan } = useACMM()
   const { level, data } = scan
   const detectedIds = data.detectedIds
+  const detectedSet = detectedIds instanceof Set ? detectedIds : new Set(detectedIds as string[] || [])
 
   const totalCriteria = ALL_CRITERIA.length
-  const detectedCount = detectedIds instanceof Set ? detectedIds.size : (detectedIds as string[] || []).length // ai-quality-ignore
+  const detectedCount = detectedSet.size
 
   const nextLevel = level.level < MAX_LEVEL ? level.level + 1 : null
   const nextRequired = nextLevel ? level.requiredByLevel[nextLevel] ?? 0 : 0
@@ -62,9 +63,7 @@ export function useACMMStats() {
       case 'acmm_by_source': {
         const segments = SOURCE_IDS.map((sid) => {
           const srcCriteria = ALL_CRITERIA.filter((c) => c.source === sid)
-          const srcDetected = srcCriteria.filter((c) =>
-            detectedIds instanceof Set ? detectedIds.has(c.id) : (detectedIds as string[] || []).includes(c.id), // ai-quality-ignore
-          ).length
+          const srcDetected = srcCriteria.filter((c) => detectedSet.has(c.id)).length
           return {
             label: SOURCE_NAMES[sid],
             value: srcCriteria.length > 0 ? Math.round((srcDetected / srcCriteria.length) * 100) : 0, // ai-quality-ignore

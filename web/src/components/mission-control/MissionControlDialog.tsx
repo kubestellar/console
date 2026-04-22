@@ -352,7 +352,7 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart, review
                   // Next button being enabled). Without this, highestReached clamps
                   // the index to 0 on first pass, blocking a11y keyboard navigation.
                   const upperBound = (delta > 0 && canAdvance)
-                    ? highestReached + 1
+                    ? Math.min(highestReached + 1, PHASE_STEPS.length - 1)
                     : highestReached
                   const nextIdx = Math.max(0, Math.min(upperBound, currentStepIndex + delta))
                   if (nextIdx !== currentStepIndex) {

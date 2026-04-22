@@ -488,6 +488,10 @@ function useVersionCheckCore() {
     setChannelState(newChannel)
     localStorage.setItem(UPDATE_STORAGE_KEYS.CHANNEL, newChannel)
 
+    // Mark channel as changed before the async sync so that the effect
+    // triggered by setChannelState sees the flag immediately.
+    channelChangedRef.current = true
+
     // Sync to kc-agent
     try {
       await fetch(`${LOCAL_AGENT_HTTP_URL}/auto-update/config`, {
@@ -498,9 +502,6 @@ function useVersionCheckCore() {
     } catch {
       // Agent not available, local state is still saved
     }
-
-    // Trigger a fresh check for the new channel so the UI updates immediately
-    channelChangedRef.current = true
   }, [autoUpdateEnabled])
 
   /**
@@ -892,6 +893,8 @@ function useVersionCheckCore() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channel])
 
+  const clearLastCheckResult = useCallback(() => setLastCheckResult(null), [])
+
   return {
     // State
     currentVersion,
@@ -927,7 +930,7 @@ function useVersionCheckCore() {
     triggerUpdate,
     cancelUpdate,
     setUpdateProgress,
-    clearLastCheckResult: () => setLastCheckResult(null) }
+    clearLastCheckResult }
 }
 
 // ---------------------------------------------------------------------------
