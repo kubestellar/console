@@ -10,7 +10,7 @@ interface Props {
 
 // Issue 9282: Logs drilldown controls (tail lines, Follow, Download, Refresh)
 // were wired to UI but did nothing. Logs are a static mock until a real API
-// lands (TODO in the pre-existing file). This implementation makes the controls
+// lands (see original issue). This implementation makes the controls
 // behave against the mock data so the UI is consistent with its labels.
 
 /** Simulated refresh spinner duration (ms). Matches the prior visual delay. */

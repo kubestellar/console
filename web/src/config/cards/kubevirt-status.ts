@@ -13,7 +13,7 @@
  * - virtualmachines.kubevirt.io (VMs — detected via virt-launcher pods)
  * - virtualmachineinstances.kubevirt.io (running VM instances)
  *
- * TODO: Add direct CRD querying via kc-agent for richer VM metadata
+ * Future: Add direct CRD querying via kc-agent for richer VM metadata
  * (CPU/memory from VMI spec, live migration status, node affinity).
  */
 
