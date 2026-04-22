@@ -1,4 +1,4 @@
-import { memo } from 'react'
+import { memo, useState, useRef, useEffect } from 'react'
 import {
   Folder, FolderOpen, FileJson, FileCode, FileText, ChevronRight, ChevronDown,
   Loader2, Globe, HardDrive, Trash2, Plus, RefreshCw, Info } from 'lucide-react'
@@ -46,6 +46,47 @@ function detectProjectOrg(filename: string): string | null {
     if (pattern.test(filename)) return org
   }
   return null
+}
+
+/** Hover + click popover for the info (i) icon. */
+function InfoPopover({ tooltip }: { tooltip: string }) {
+  const [show, setShow] = useState(false)
+  const [pinned, setPinned] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!pinned) return
+    const onClickOutside = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setPinned(false)
+        setShow(false)
+      }
+    }
+    document.addEventListener('mousedown', onClickOutside)
+    return () => document.removeEventListener('mousedown', onClickOutside)
+  }, [pinned])
+
+  return (
+    <div
+      ref={ref}
+      className="relative flex-shrink-0"
+      onMouseEnter={() => setShow(true)}
+      onMouseLeave={() => { if (!pinned) setShow(false) }}
+    >
+      <button
+        onClick={(e) => { e.stopPropagation(); setPinned(p => !p); setShow(true) }}
+        className="p-2 min-h-11 min-w-11 rounded text-muted-foreground hover:text-foreground transition-colors"
+        aria-label="More information"
+      >
+        <Info className="w-3.5 h-3.5" />
+      </button>
+      {show && (
+        <div className="absolute right-0 top-full mt-1 z-50 w-72 rounded-lg border border-border bg-background shadow-lg p-3 text-xs text-muted-foreground leading-relaxed">
+          {tooltip}
+        </div>
+      )}
+    </div>
+  )
 }
 
 export const TreeNodeItem = memo(function TreeNodeItem({
@@ -159,14 +200,7 @@ export const TreeNodeItem = memo(function TreeNodeItem({
         </button>
         {/* Root-level info button — shown when the node has an infoTooltip */}
         {depth === 0 && node.infoTooltip && (
-          <button
-            onClick={(e) => e.stopPropagation()}
-            className="p-2 min-h-11 min-w-11 rounded text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
-            title={node.infoTooltip}
-            aria-label="More information"
-          >
-            <Info className="w-3.5 h-3.5" />
-          </button>
+          <InfoPopover tooltip={node.infoTooltip} />
         )}
         {/* Root-level add button — rendered in the header row so it stays anchored to the header */}
         {depth === 0 && onAdd && (
