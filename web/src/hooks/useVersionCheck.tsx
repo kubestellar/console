@@ -115,8 +115,9 @@ export function isDevVersion(version: string): boolean {
   if (version === '0.0.0') return true
   // A version matching semver (with or without 'v' prefix) is a real release.
   // Helm installs report versions without the 'v' prefix (e.g., "0.3.21")
-  // which should NOT be treated as dev builds.
-  if (/^v?\d+\.\d+\.\d+/.test(version)) return false
+  // which should NOT be treated as dev builds. Two-part versions like "v1.0"
+  // are also valid release tags (#9506).
+  if (/^v?\d+\.\d+(\.\d+)?/.test(version)) return false
   return true
 }
 

@@ -8,8 +8,10 @@
 import { useState } from 'react'
 import { useCache, type RefreshCategory } from '../lib/cache'
 import { fetchAPI, fetchFromAllClusters, fetchViaSSE, getToken, AGENT_HTTP_TIMEOUT_MS } from '../lib/cache/fetcherUtils'
+import { settledWithConcurrency } from '../lib/utils/concurrency'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 import { FETCH_DEFAULT_TIMEOUT_MS, AI_PREDICTION_TIMEOUT_MS } from '../lib/constants/network'
+import { clusterCacheRef, deduplicateClustersByServer } from './mcp/shared'
 import {
   getDemoGPUNodes,
   getDemoCachedGPUNodeHealth,
@@ -189,14 +191,53 @@ export function useCachedGPUNodes(
         const data = validateArrayResponse<{ nodes: GPUNode[] }>(GPUNodesResponseSchema, raw, '/api/mcp/gpu-nodes', 'nodes')
         return (data.nodes || []).map(n => ({ ...n, cluster }))
       }
-      return await fetchFromAllClusters<GPUNode>(
-        'gpu-nodes',
-        'nodes',
-        undefined,
-        true,
-        undefined,
-        gpuFetchOptions,
+
+      // Deduplicate clusters before fan-out (#9502). Multiple kubeconfig
+      // contexts can point to the same physical cluster. Without dedup,
+      // fetchFromAllClusters queries every raw context — if two contexts
+      // share a server, one cluster's GPUs appear twice while the other
+      // GPU-bearing cluster's data may be lost due to name collisions in
+      // the accumulated results. See MEMORY.md: "ALWAYS use
+      // DeduplicatedClusters() when iterating clusters".
+      const allClusters = clusterCacheRef.clusters || []
+      const deduped = deduplicateClustersByServer(allClusters)
+      const reachable = deduped.filter(
+        (c) => c.reachable !== false && !c.name.includes('/'),
       )
+      if (reachable.length === 0) {
+        throw new Error(
+          'No reachable clusters (agent connecting or backend not authenticated)',
+        )
+      }
+
+      const tasks = reachable.map((cl) => async () => {
+        const raw = await fetchAPI<unknown>('gpu-nodes', { cluster: cl.name })
+        const data = validateArrayResponse<{ nodes: GPUNode[] }>(
+          GPUNodesResponseSchema, raw, '/api/mcp/gpu-nodes', 'nodes',
+        )
+        return (data.nodes || []).map(n => ({ ...n, cluster: cl.name }))
+      })
+
+      const accumulated: GPUNode[] = []
+      let failedCount = 0
+      function handleSettled(result: PromiseSettledResult<GPUNode[]>) {
+        if (result.status === 'fulfilled') {
+          accumulated.push(...result.value)
+        } else {
+          failedCount++
+        }
+      }
+      await settledWithConcurrency(tasks, undefined, handleSettled)
+
+      // Partial-failure protection (#8080, #8081): if any cluster errored
+      // and the accumulated result is empty, preserve stale cache.
+      if (accumulated.length === 0 && failedCount > 0) {
+        throw new Error(
+          `Partial cluster failure yielded empty GPU result (${failedCount}/${reachable.length} clusters errored) — preserving existing cache`,
+        )
+      }
+
+      return accumulated
     },
     progressiveFetcher: cluster ? undefined : async (onProgress) => {
       return await fetchViaSSE<GPUNode>('gpu-nodes', 'nodes', {}, onProgress, gpuFetchOptions)
