@@ -715,6 +715,8 @@ Please proceed step by step.`,
           onClose={() => setModalCluster(null)}
           clusterName={modalCluster}
           status={statuses[modalCluster]}
+          clusters={Object.keys(statuses).filter(c => statuses[c].installed)}
+          onClusterChange={(newCluster) => setModalCluster(newCluster)}
           onRefresh={() => refetch()}
           isRefreshing={isRefreshing}
         />

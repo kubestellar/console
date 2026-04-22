@@ -73,7 +73,9 @@ export function Clusters() {
     clusterGroups,
     addClusterGroup,
     deleteClusterGroup,
-    selectClusterGroup } = useGlobalFilters()
+    selectClusterGroup,
+    selectedDistributions,
+    isAllDistributionsSelected } = useGlobalFilters()
   const [searchParams, setSearchParams] = useSearchParams()
   const location = useLocation()
   const navigate = useNavigate()
@@ -216,6 +218,8 @@ export function Clusters() {
     globalSelectedClusters,
     isAllClustersSelected,
     customFilter,
+    selectedDistributions,
+    isAllDistributionsSelected,
     sortBy,
     sortAsc,
     customOrder })

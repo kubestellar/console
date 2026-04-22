@@ -3,6 +3,7 @@ import { createContext, useContext, useState, useEffect, useMemo, ReactNode } fr
 // (~254 KB). Only clusters.ts + shared.ts are needed here.
 import { useClusters } from './mcp/clusters'
 import type { ClusterInfo } from './mcp/types'
+import { detectCloudProvider } from '../components/ui/CloudProviderIcon'
 import { emitGlobalClusterFilterChanged, emitGlobalSeverityFilterChanged, emitGlobalStatusFilterChanged } from '../lib/analytics'
 
 // Severity levels
@@ -48,6 +49,7 @@ export interface SavedFilterSet {
   clusters: string[]      // empty = all clusters
   severities: string[]    // empty = all severities
   statuses: string[]      // empty = all statuses
+  distributions: string[] // empty = all distributions
   customText: string
 }
 
@@ -88,6 +90,15 @@ interface GlobalFiltersContextType {
   isAllStatusesSelected: boolean
   isStatusesFiltered: boolean
 
+  // Distribution filtering
+  selectedDistributions: string[]
+  toggleDistribution: (distribution: string) => void
+  selectAllDistributions: () => void
+  deselectAllDistributions: () => void
+  isAllDistributionsSelected: boolean
+  isDistributionsFiltered: boolean
+  availableDistributions: string[]
+
   // Custom text filter
   customFilter: string
   setCustomFilter: (filter: string) => void
@@ -118,6 +129,7 @@ const GlobalFiltersContext = createContext<GlobalFiltersContextType | null>(null
 const CLUSTER_STORAGE_KEY = 'globalFilter:clusters'
 const SEVERITY_STORAGE_KEY = 'globalFilter:severities'
 const STATUS_STORAGE_KEY = 'globalFilter:statuses'
+const DISTRIBUTION_STORAGE_KEY = 'globalFilter:distributions'
 const CUSTOM_FILTER_STORAGE_KEY = 'globalFilter:customText'
 const GROUPS_STORAGE_KEY = 'globalFilter:clusterGroups'
 const SAVED_FILTER_SETS_KEY = 'globalFilter:savedFilterSets'
@@ -219,6 +231,20 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
     return [] // Empty means all statuses
   })
 
+  // Initialize distributions from localStorage or default to all
+  const [selectedDistributions, setSelectedDistributionsState] = useState<string[]>(() => {
+    try {
+      const stored = localStorage.getItem(DISTRIBUTION_STORAGE_KEY)
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        return parsed === null ? [] : parsed
+      }
+    } catch {
+      // Ignore parse errors
+    }
+    return [] // Empty means all distributions
+  })
+
   // Initialize custom text filter from localStorage
   const [customFilter, setCustomFilterState] = useState<string>(() => {
     try {
@@ -266,6 +292,10 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     localStorage.setItem(STATUS_STORAGE_KEY, JSON.stringify(selectedStatuses.length === 0 ? null : selectedStatuses))
   }, [selectedStatuses])
+
+  useEffect(() => {
+    localStorage.setItem(DISTRIBUTION_STORAGE_KEY, JSON.stringify(selectedDistributions.length === 0 ? null : selectedDistributions))
+  }, [selectedDistributions])
 
   useEffect(() => {
     localStorage.setItem(CUSTOM_FILTER_STORAGE_KEY, customFilter)
@@ -444,6 +474,48 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
   // Get effective selected statuses (for filtering)
   const effectiveSelectedStatuses = isAllStatusesSelected ? STATUS_LEVELS : selectedStatuses
 
+  // Distribution filtering — derives available distributions from clusters
+  const availableDistributions = useMemo(() => {
+    const distSet = new Set<string>()
+    for (const c of deduplicatedClusters) {
+      const dist = c.distribution || detectCloudProvider(c.name, c.server, c.namespaces, c.user) || 'unknown'
+      distSet.add(dist)
+    }
+    return Array.from(distSet).sort()
+  }, [deduplicatedClusters])
+
+  // Reconcile selected distributions against available ones
+  useEffect(() => {
+    if (selectedDistributions.length === 0 || availableDistributions.length === 0) return
+    const validSelections = selectedDistributions.filter(d => availableDistributions.includes(d))
+    if (validSelections.length !== selectedDistributions.length) {
+      setSelectedDistributionsState(validSelections.length === 0 ? [] : validSelections)
+    }
+  }, [availableDistributions, selectedDistributions])
+
+  const toggleDistribution = (distribution: string) => {
+    setSelectedDistributionsState(prev => {
+      if (prev.length === 0) {
+        // Currently "all" → switch to all except this one
+        return availableDistributions.filter(d => d !== distribution)
+      }
+      if (prev.includes(distribution)) {
+        const next = prev.filter(d => d !== distribution)
+        return next.length === 0 ? [] : next
+      } else {
+        const next = [...prev, distribution]
+        return next.length === availableDistributions.length ? [] : next
+      }
+    })
+  }
+
+  const selectAllDistributions = () => setSelectedDistributionsState([])
+  const deselectAllDistributions = () => setSelectedDistributionsState(['__none__'])
+
+  const isAllDistributionsSelected = selectedDistributions.length === 0
+  const isDistributionsFiltered = !isAllDistributionsSelected
+  const effectiveSelectedDistributions = isAllDistributionsSelected ? availableDistributions : selectedDistributions
+
   // Custom text filter
   const setCustomFilter = (filter: string) => {
     setCustomFilterState(filter)
@@ -456,12 +528,13 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
   const hasCustomFilter = customFilter.trim().length > 0
 
   // Combined filter state
-  const isFiltered = isClustersFiltered || isSeveritiesFiltered || isStatusesFiltered || hasCustomFilter
+  const isFiltered = isClustersFiltered || isSeveritiesFiltered || isStatusesFiltered || isDistributionsFiltered || hasCustomFilter
 
   const clearAllFilters = () => {
     setSelectedClustersState([])
     setSelectedSeveritiesState([])
     setSelectedStatusesState([])
+    setSelectedDistributionsState([])
     setCustomFilterState('')
   }
 
@@ -475,6 +548,7 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
       clusters: [...selectedClusters],
       severities: [...selectedSeverities],
       statuses: [...selectedStatuses],
+      distributions: [...selectedDistributions],
       customText: customFilter }
     setSavedFilterSets(prev => [...prev, newSet])
   }
@@ -485,6 +559,7 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
     setSelectedClustersState(filterSet.clusters)
     setSelectedSeveritiesState(filterSet.severities as SeverityLevel[])
     setSelectedStatusesState(filterSet.statuses as StatusLevel[])
+    setSelectedDistributionsState(filterSet.distributions || [])
     setCustomFilterState(filterSet.customText)
   }
 
@@ -498,8 +573,9 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
       const clustersMatch = JSON.stringify([...fs.clusters].sort()) === JSON.stringify([...selectedClusters].sort())
       const severitiesMatch = JSON.stringify([...fs.severities].sort()) === JSON.stringify([...selectedSeverities].sort())
       const statusesMatch = JSON.stringify([...fs.statuses].sort()) === JSON.stringify([...selectedStatuses].sort())
+      const distributionsMatch = JSON.stringify([...(fs.distributions || [])].sort()) === JSON.stringify([...selectedDistributions].sort())
       const textMatch = fs.customText === customFilter
-      if (clustersMatch && severitiesMatch && statusesMatch && textMatch) return fs.id
+      if (clustersMatch && severitiesMatch && statusesMatch && distributionsMatch && textMatch) return fs.id
     }
     return null
   })()
@@ -593,6 +669,15 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
     isAllStatusesSelected,
     isStatusesFiltered,
 
+    // Distribution filtering
+    selectedDistributions: effectiveSelectedDistributions,
+    toggleDistribution,
+    selectAllDistributions,
+    deselectAllDistributions,
+    isAllDistributionsSelected,
+    isDistributionsFiltered,
+    availableDistributions,
+
     // Custom text filter
     customFilter,
     setCustomFilter,
@@ -644,6 +729,13 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
     deselectAllStatuses,
     isAllStatusesSelected,
     isStatusesFiltered,
+    effectiveSelectedDistributions,
+    toggleDistribution,
+    selectAllDistributions,
+    deselectAllDistributions,
+    isAllDistributionsSelected,
+    isDistributionsFiltered,
+    availableDistributions,
     customFilter,
     setCustomFilter,
     clearCustomFilter,
@@ -709,6 +801,14 @@ const DEFAULT_GLOBAL_FILTERS: GlobalFiltersContextType = {
   deselectAllStatuses: () => {},
   isAllStatusesSelected: true,
   isStatusesFiltered: false,
+
+  selectedDistributions: [],
+  toggleDistribution: () => {},
+  selectAllDistributions: () => {},
+  deselectAllDistributions: () => {},
+  isAllDistributionsSelected: true,
+  isDistributionsFiltered: false,
+  availableDistributions: [],
 
   customFilter: '',
   setCustomFilter: () => {},
