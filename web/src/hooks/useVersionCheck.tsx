@@ -109,13 +109,15 @@ export function getLatestForChannel(
  * Development versions are simple semver without nightly/weekly suffix.
  */
 export function isDevVersion(version: string): boolean {
-  // Dev versions: 0.1.0, 1.0.0, unknown, dev
+  // Sentinel values used when no real version is set
   if (version === 'unknown' || version === 'dev') return true
-  // Simple semver without suffix (no nightly/weekly)
-  const parsed = parseReleaseTag(version)
-  // If it parsed as 'stable' type but doesn't start with 'v' or has no date, it's dev
-  if (parsed.type === 'stable' && !version.startsWith('v')) return true
-  return false
+  // Versions like "0.0.0" are placeholder dev builds (unset VITE_APP_VERSION)
+  if (version === '0.0.0') return true
+  // A version matching semver (with or without 'v' prefix) is a real release.
+  // Helm installs report versions without the 'v' prefix (e.g., "0.3.21")
+  // which should NOT be treated as dev builds.
+  if (/^v?\d+\.\d+\.\d+/.test(version)) return false
+  return true
 }
 
 /**
@@ -285,6 +287,14 @@ function useVersionCheckCore() {
   // ERROR_DISPLAY_THRESHOLD consecutive failures to avoid flicker on transient errors.
   const consecutiveFailuresRef = useRef(0)
 
+  // Signals that the user just changed the update channel, so forceCheck
+  // should run once the new channel state is committed.
+  const channelChangedRef = useRef(false)
+
+  // Transient result of the last completed check — shown briefly in the UI
+  // so the user gets feedback after clicking "Check Now".
+  const [lastCheckResult, setLastCheckResult] = useState<'success' | 'no-update' | null>(null)
+
   // Auto-update state
   const [autoUpdateEnabled, setAutoUpdateEnabledState] = useState(loadAutoUpdateEnabled)
   // Initialize install method: localhost always means dev mode (running from source)
@@ -393,6 +403,10 @@ function useVersionCheckCore() {
           localStorage.setItem(DEV_SHA_CACHE_KEY, sha)
           localStorage.removeItem('kc-github-rate-limit-until')
         }
+        // Update lastChecked timestamp so the UI reflects the check time
+        const now = Date.now()
+        setLastChecked(now)
+        localStorage.setItem(UPDATE_STORAGE_KEYS.LAST_CHECK, String(now))
       } else if (resp.status === 403 || resp.status === 429) {
         // Rate limited — back off for 15 minutes
         const resetHeader = resp.headers.get('X-RateLimit-Reset')
@@ -467,6 +481,7 @@ function useVersionCheckCore() {
 
   /**
    * Set update channel and persist to localStorage + kc-agent.
+   * Triggers a fresh version check so the UI immediately reflects the new channel.
    */
   const setChannel = useCallback(async (newChannel: UpdateChannel) => {
     setChannelState(newChannel)
@@ -482,6 +497,9 @@ function useVersionCheckCore() {
     } catch {
       // Agent not available, local state is still saved
     }
+
+    // Trigger a fresh check for the new channel so the UI updates immediately
+    channelChangedRef.current = true
   }, [autoUpdateEnabled])
 
   /**
@@ -679,10 +697,13 @@ function useVersionCheckCore() {
 
   /**
    * Force a fresh check, bypassing cache.
+   * Sets lastCheckResult so the UI can show transient success/no-update feedback.
    */
   const forceCheck = async (): Promise<void> => {
     console.debug('[version-check] Force check — channel:', channel, 'agentSupportsAutoUpdate:', agentSupportsAutoUpdate)
     setIsChecking(true)
+    // Clear any previous transient result while the new check is in progress
+    setLastCheckResult(null)
     // Reset consecutive failure counter on user-initiated check so a single
     // success clears the error, and a single failure doesn't flash red.
     consecutiveFailuresRef.current = 0
@@ -705,6 +726,16 @@ function useVersionCheckCore() {
       await fetchReleases(true)
     } finally {
       setIsChecking(false)
+      // Signal a transient result so the UI can flash feedback.
+      // An error means the check failed (error state is already set above),
+      // so only set a result when there is no error.
+      if (consecutiveFailuresRef.current === 0) {
+        // hasUpdate is derived from state that was just set, but React hasn't
+        // re-rendered yet. We use 'success' here as a generic "check succeeded"
+        // signal — the UI will read hasUpdate on the next render to decide
+        // whether to show "Update available" or "Up to date".
+        setLastCheckResult('success')
+      }
     }
   }
 
@@ -851,6 +882,15 @@ function useVersionCheckCore() {
     }
   }, [channel, hasUpdate, fetchRecentCommits])
 
+  // When the user changes the update channel, trigger a fresh check so the
+  // UI immediately reflects the new channel's latest release / SHA.
+  useEffect(() => {
+    if (!channelChangedRef.current) return
+    channelChangedRef.current = false
+    forceCheck()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [channel])
+
   return {
     // State
     currentVersion,
@@ -864,6 +904,7 @@ function useVersionCheckCore() {
     lastChecked,
     skippedVersions,
     releases,
+    lastCheckResult,
 
     // Auto-update state
     autoUpdateEnabled,
@@ -884,7 +925,8 @@ function useVersionCheckCore() {
     setAutoUpdateEnabled,
     triggerUpdate,
     cancelUpdate,
-    setUpdateProgress }
+    setUpdateProgress,
+    clearLastCheckResult: () => setLastCheckResult(null) }
 }
 
 // ---------------------------------------------------------------------------

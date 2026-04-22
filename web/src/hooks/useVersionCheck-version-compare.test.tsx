@@ -244,12 +244,16 @@ describe('isDevVersion', () => {
     expect(isDevVersion('dev')).toBe(true)
   })
 
-  it('returns true for semver without v prefix (e.g. "0.1.0")', () => {
-    expect(isDevVersion('0.1.0')).toBe(true)
+  it('returns true for "0.0.0" placeholder version', () => {
+    expect(isDevVersion('0.0.0')).toBe(true)
   })
 
-  it('returns true for "1.0.0" (no v prefix)', () => {
-    expect(isDevVersion('1.0.0')).toBe(true)
+  it('returns false for semver without v prefix (e.g. "0.1.0") — Helm installs', () => {
+    expect(isDevVersion('0.1.0')).toBe(false)
+  })
+
+  it('returns false for "1.0.0" (no v prefix) — valid release', () => {
+    expect(isDevVersion('1.0.0')).toBe(false)
   })
 
   it('returns false for proper tagged version with v prefix', () => {
@@ -278,9 +282,14 @@ describe('isNewerVersion', () => {
     expect(isNewerVersion('v1.0.0', 'v2.0.0', 'developer')).toBe(false)
   })
 
-  it('returns false for dev version current tag', () => {
-    // "0.1.0" without v prefix is a dev version
-    expect(isNewerVersion('0.1.0', 'v2.0.0', 'stable')).toBe(false)
+  it('returns true for version without v prefix when newer is available', () => {
+    // "0.1.0" without v prefix is a valid release (e.g., Helm install)
+    expect(isNewerVersion('0.1.0', 'v2.0.0', 'stable')).toBe(true)
+  })
+
+  it('returns false for "0.0.0" placeholder dev version', () => {
+    // "0.0.0" is a dev placeholder — no update shown
+    expect(isNewerVersion('0.0.0', 'v2.0.0', 'stable')).toBe(false)
   })
 
   it('returns false for "unknown" current tag', () => {
