@@ -10,7 +10,10 @@ permissions: read-all
 
 concurrency:
   group: nightly-test-suite
-  cancel-in-progress: true
+  # Never cancel a nightly run — it only fires once per day and must finish
+  # so the tracking issue (#9346) gets updated. cancel-in-progress was causing
+  # stale results when a manual workflow_dispatch overlapped the scheduled run.
+  cancel-in-progress: false
 
 env:
   RESULTS_DIR: test-results/nightly
@@ -27,13 +30,14 @@ jobs:
     # Three layers prevent benchmark retry storms from blowing the budget:
     #   1. benchmarks.config.ts: retries=0, per-test timeout=60s (was 120s)
     #   2. run-all-tests.sh: per-suite wall-clock cap of 5m via timeout(1)
-    #   3. This workflow-level backstop at 90m
-    # Previously the workflow ran at 120m with no per-suite cap, and benchmark
-    # specs retrying against live Google Drive / GitHub Actions / Netlify
-    # pushed total runtime past 90m on three consecutive nights (2026-04-13
-    # through 04-15). With per-suite caps the total should stay under 60m;
-    # 90m provides headroom without masking real hangs.
-    timeout-minutes: 90
+    #   3. This workflow-level backstop below
+    # The 90m backstop was too tight: three suites regularly hit the 600s
+    # per-suite cap (~30m combined), and the remaining suites push total
+    # runtime to 85-90m. This caused the job to be cancelled on 7 of the
+    # last 10 nights (Apr 13-17, 21-22), leaving issue #9346 un-updated.
+    # 120m restores the original headroom while per-suite caps still guard
+    # against runaway individual tests.
+    timeout-minutes: 120
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
