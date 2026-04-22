@@ -274,6 +274,10 @@ func (w *InsightWorker) callAIProvider(insights []InsightSummary) ([]AIInsightEn
 // buildInsightEnrichmentPrompt creates a structured prompt for the AI
 func buildInsightEnrichmentPrompt(insights []InsightSummary) string {
 	var b strings.Builder
+	// Prepend untrusted-data guard so the AI treats cluster-sourced fields
+	// as display-only and resists prompt injection via crafted pod logs,
+	// event descriptions, or resource names (#9486).
+	b.WriteString(UntrustedDataSystemPrompt)
 	b.WriteString("You are a Kubernetes operations expert. Analyze these cross-cluster insights and provide enriched analysis.\n\n")
 	b.WriteString("For each insight, provide:\n")
 	b.WriteString("1. A clear, actionable description (replace the heuristic description)\n")
@@ -288,8 +292,11 @@ func buildInsightEnrichmentPrompt(insights []InsightSummary) string {
 		b.WriteString(fmt.Sprintf("--- Insight %d ---\n", i+1))
 		b.WriteString(fmt.Sprintf("ID: %s\n", insight.ID))
 		b.WriteString(fmt.Sprintf("Category: %s\n", insight.Category))
-		b.WriteString(fmt.Sprintf("Title: %s\n", insight.Title))
-		b.WriteString(fmt.Sprintf("Description: %s\n", insight.Description))
+		// Scrub secrets from insight text fields before sending to AI providers (#9481).
+		// Wrap untrusted cluster data in delimiters to guard against prompt injection (#9486).
+		b.WriteString(fmt.Sprintf("Title: %s\n", ScrubSecrets(insight.Title)))
+		b.WriteString(fmt.Sprintf("Description: %s\n",
+			WrapUntrustedData("insight-description", ScrubSecrets(insight.Description))))
 		b.WriteString(fmt.Sprintf("Severity: %s\n", insight.Severity))
 		b.WriteString(fmt.Sprintf("Affected Clusters: %s\n", strings.Join(insight.AffectedClusters, ", ")))
 		if len(insight.Metrics) > 0 {

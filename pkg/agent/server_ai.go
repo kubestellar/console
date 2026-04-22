@@ -575,6 +575,14 @@ func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.M
 		History:   history,
 	}
 
+	// Thread cluster context so tool-capable agents scope kubectl to the
+	// correct cluster, preventing multi-cluster context drift (#9485).
+	if req.ClusterContext != "" {
+		chatReq.Context = map[string]string{
+			"clusterContext": req.ClusterContext,
+		}
+	}
+
 	// Send initial progress message so user sees feedback immediately
 	safeWrite(ctx, protocol.Message{
 		ID:   msg.ID,
@@ -960,6 +968,13 @@ func (s *Server) handleChatMessage(msg protocol.Message, forceAgent string) prot
 		History:   history,
 	}
 
+	// Thread cluster context for non-streaming path (#9485).
+	if req.ClusterContext != "" {
+		chatReq.Context = map[string]string{
+			"clusterContext": req.ClusterContext,
+		}
+	}
+
 	// #6678 — Previously this used context.Background() with no deadline,
 	// which meant a hung AI provider would block the WebSocket goroutine
 	// forever (the caller was a synchronous path from the read loop).
@@ -1182,10 +1197,20 @@ func (s *Server) handleMixedModeChat(ctx context.Context, conn *websocket.Conn, 
 
 User request: %s`, req.Prompt)
 
+	// Thread cluster context to both thinking and execution agents so
+	// kubectl commands are scoped to the user's current cluster (#9485).
+	var chatCtx map[string]string
+	if req.ClusterContext != "" {
+		chatCtx = map[string]string{
+			"clusterContext": req.ClusterContext,
+		}
+	}
+
 	thinkingReq := ChatRequest{
 		Prompt:    thinkingPrompt,
 		SessionID: sessionID,
 		History:   history,
+		Context:   chatCtx,
 	}
 
 	thinkingResp, err := thinkingProvider.Chat(ctx, &thinkingReq)
@@ -1250,6 +1275,7 @@ User request: %s`, req.Prompt)
 	execReq := ChatRequest{
 		Prompt:    execPrompt,
 		SessionID: sessionID,
+		Context:   chatCtx,
 	}
 
 	var execContent string
