@@ -50,6 +50,11 @@ export function ClusterNetwork({ config }: ClusterNetworkProps) {
     return result
   })()
 
+  // Detect when the selected cluster is hidden by global filters
+  const isSelectedClusterFiltered = selectedCluster !== '' &&
+    !clusters.some(c => c.name === selectedCluster) &&
+    allClusters.some(c => c.name === selectedCluster)
+
   const cluster = clusters.find(c => c.name === selectedCluster)
 
   // Parse server URL for display
@@ -88,12 +93,12 @@ export function ClusterNetwork({ config }: ClusterNetworkProps) {
     )
   }
 
-  if (!selectedCluster) {
+  if (!selectedCluster || isSelectedClusterFiltered) {
     return (
       <div className="h-full flex flex-col min-h-card">
         <div className="flex items-center justify-end mb-4">
           <select
-            value={selectedCluster}
+            value={isSelectedClusterFiltered ? '' : selectedCluster}
             onChange={(e) => setSelectedCluster(e.target.value)}
             className="px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground"
           >
@@ -103,8 +108,10 @@ export function ClusterNetwork({ config }: ClusterNetworkProps) {
             ))}
           </select>
         </div>
-        <div className="flex-1 flex items-center justify-center text-muted-foreground">
-          {t('cards:clusterNetwork.selectClusterToView')}
+        <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm text-center px-4">
+          {isSelectedClusterFiltered
+            ? t('cards:clusterNetwork.clusterHiddenByFilter')
+            : t('cards:clusterNetwork.selectClusterToView')}
         </div>
       </div>
     )

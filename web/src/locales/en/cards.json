@@ -1308,7 +1308,8 @@
     "host": "Host",
     "connectionStatus": "Connection Status",
     "connected": "Connected",
-    "disconnected": "Disconnected"
+    "disconnected": "Disconnected",
+    "clusterHiddenByFilter": "Selected cluster is hidden by the global filter. Choose another cluster or adjust the filter."
   },
   "kagenti": {
     "agents": "Agents",
@@ -2110,7 +2111,8 @@
     "podsCount_other": "{{count}} pods",
     "policiesAndPods": "{{policies}} policies, {{pods}} pods",
     "estimated": "Estimated (policy API unavailable)",
-    "estimatedTooltip": "NetworkPolicy resources could not be fetched. Coverage is estimated based on namespace type (system vs user). Connect the agent or check API access for accurate data."
+    "estimatedTooltip": "NetworkPolicy resources could not be fetched. Coverage is estimated based on namespace type (system vs user). Connect the agent or check API access for accurate data.",
+    "showingOf": "Showing {{shown}} of {{total}} namespaces"
   },
   "quotaHeatmap": {
     "noNamespaceData": "No namespace data",
@@ -2721,7 +2723,9 @@
     "exported": "Exported",
     "imported": "Imported",
     "nEndpoints_one": "{{count}} endpoint",
-    "nEndpoints_other": "{{count}} endpoints"
+    "nEndpoints_other": "{{count}} endpoints",
+    "noServices": "No services found",
+    "noServicesHint": "Service topology will appear when services are discovered in connected clusters"
   },
   "crdHealth": {
     "group": "Group",

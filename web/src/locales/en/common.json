@@ -1422,7 +1422,8 @@
     "cookiesEnabled": "Cookies Enabled",
     "yes": "Yes",
     "no": "No",
-    "diagnosticsNote": "Full network diagnostics (traceroute, DNS lookup, port scanning) require backend API support due to browser security restrictions."
+    "diagnosticsNote": "Full network diagnostics (traceroute, DNS lookup, port scanning) require backend API support due to browser security restrictions.",
+    "noHostsWarning": "Add at least one host before starting"
   },
   "cardFactory": {
     "formatText": "Text",

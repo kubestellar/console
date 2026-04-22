@@ -4,6 +4,9 @@ import { useCachedPods } from '../../hooks/useCachedData'
 import { useNetworkPolicies } from '../../hooks/mcp/networking'
 import { useCardLoadingState } from './CardDataContext'
 
+/** Maximum number of namespaces to display before showing a truncation indicator */
+const MAX_DISPLAYED_NAMESPACES = 30
+
 interface NamespaceCoverage {
   namespace: string
   cluster: string
@@ -153,7 +156,7 @@ export function NetworkPolicyCoverage() {
 
       {/* Namespace list */}
       <div className="space-y-1 max-h-[250px] overflow-y-auto">
-        {displayed.slice(0, 30).map(ns => (
+        {displayed.slice(0, MAX_DISPLAYED_NAMESPACES).map(ns => (
           <div key={`${ns.cluster}/${ns.namespace}`} className="flex flex-wrap items-center justify-between gap-y-2 px-2 py-1 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
             <div className="flex items-center gap-2 min-w-0">
               <div className={`w-2 h-2 rounded-full ${ns.hasPolicies ? 'bg-green-500' : 'bg-red-500'}`} />
@@ -170,6 +173,11 @@ export function NetworkPolicyCoverage() {
             </div>
           </div>
         ))}
+        {displayed.length > MAX_DISPLAYED_NAMESPACES && (
+          <div className="text-xs text-muted-foreground text-center py-1">
+            {t('networkPolicyCoverage.showingOf', { shown: MAX_DISPLAYED_NAMESPACES, total: displayed.length })}
+          </div>
+        )}
       </div>
     </div>
   )
