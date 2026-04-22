@@ -347,8 +347,18 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart, review
                   if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
                   e.preventDefault()
                   const delta = e.key === 'ArrowRight' ? 1 : -1
-                  const nextIdx = Math.max(0, Math.min(highestReached, currentStepIndex + delta))
+                  // #9501 — Allow keyboard ArrowRight to advance beyond highestReached
+                  // when the current step's validation passes (same condition as the
+                  // Next button being enabled). Without this, highestReached clamps
+                  // the index to 0 on first pass, blocking a11y keyboard navigation.
+                  const upperBound = (delta > 0 && canAdvance)
+                    ? highestReached + 1
+                    : highestReached
+                  const nextIdx = Math.max(0, Math.min(upperBound, currentStepIndex + delta))
                   if (nextIdx !== currentStepIndex) {
+                    if (nextIdx > highestReached) {
+                      setHighestReached(nextIdx)
+                    }
                     mc.setPhase(PHASE_STEPS[nextIdx].key)
                   }
                 }}
