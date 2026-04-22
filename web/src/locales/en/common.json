@@ -701,12 +701,12 @@
       "allPrereqsMet": "All prerequisites met — update notifications active",
       "prereqsMissing": "{{count}} prerequisite(s) not met — some features unavailable",
       "scopeInfoToggle": "What do these settings control?",
-      "scopeSystemTitle": "System Updates",
-      "scopeSystemDesc": "Updates the entire console application to a new version. Controlled by the Update Channel and Auto-Update settings on this page.",
-      "scopeReloadTitle": "Auto-Reload",
-      "scopeReloadDesc": "When a new build is deployed, your browser automatically detects the change and prompts you to reload. This happens independently of System Updates.",
-      "scopeCardDataTitle": "Card Data",
-      "scopeCardDataDesc": "Individual dashboard cards refresh their data on their own schedules. Card refreshes are not controlled by System Updates."
+      "scopeSystemTitle": "System Updates (Automatic Updates)",
+      "scopeSystemDesc": "Pulls and applies new console versions from the configured Update Channel. The Automatic Updates toggle on this page controls whether this happens automatically or only when you click Update Now. This updates all console code, including card components.",
+      "scopeReloadTitle": "Browser Reload on Deploy",
+      "scopeReloadDesc": "Separately from System Updates, the browser detects when a new build has been deployed and prompts you to reload the page so the updated code takes effect. This detection runs automatically and is not controlled by the settings on this page.",
+      "scopeCardDataTitle": "Card Data Refresh",
+      "scopeCardDataDesc": "Individual dashboard cards periodically fetch fresh data (e.g., cluster status, metrics) on their own schedules. These data refreshes are independent of both System Updates and browser reloads."
     },
     "theme": {
       "title": "Appearance",
