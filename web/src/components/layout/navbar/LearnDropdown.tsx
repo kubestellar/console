@@ -75,7 +75,7 @@ export function LearnDropdown() {
         )}
         title={t('layout.navbar.learn.title')}
       >
-        <BookOpen className="w-5 h-5" />
+        <BookOpen className="w-4 h-4" />
         <span className="hidden xl:inline">{t('layout.navbar.learn.title')}</span>
       </button>
 
