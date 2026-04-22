@@ -184,7 +184,9 @@ export function ClusterNetwork({ config }: ClusterNetworkProps) {
               <Shield className="w-4 h-4 text-purple-400" />
               <span className="text-sm text-muted-foreground">TLS</span>
             </div>
-            <span className="text-sm font-medium text-green-400">{t('common:common.enabled')}</span>
+            <span className={`text-sm font-medium ${serverInfo?.protocol === 'https' ? 'text-green-400' : 'text-red-400'}`}>
+              {serverInfo?.protocol === 'https' ? t('common:common.enabled') : t('common:common.disabled')}
+            </span>
           </div>
         </div>
 

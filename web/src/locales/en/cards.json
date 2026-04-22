@@ -1164,7 +1164,16 @@
     "servicesWillAppear": "Services will appear when deployed",
     "clusterHealth": "Cluster Health:",
     "healthy": "healthy",
-    "topNamespaces": "Top Namespaces"
+    "degraded": "degraded",
+    "offline": "offline",
+    "topNamespaces": "Top Namespaces",
+    "acrossClusters": "across {{count}} cluster",
+    "acrossClusters_one": "across {{count}} cluster",
+    "acrossClusters_other": "across {{count}} clusters",
+    "servicesCount": "{{count}} services",
+    "servicesCount_one": "{{count}} service",
+    "servicesCount_other": "{{count}} services",
+    "footerSummary": "{{services}} services across {{clusters}} clusters"
   },
   "dataCompliance": {
     "gdpr": "GDPR",
@@ -2112,7 +2121,8 @@
     "policiesAndPods": "{{policies}} policies, {{pods}} pods",
     "estimated": "Estimated (policy API unavailable)",
     "estimatedTooltip": "NetworkPolicy resources could not be fetched. Coverage is estimated based on namespace type (system vs user). Connect the agent or check API access for accurate data.",
-    "showingOf": "Showing {{shown}} of {{total}} namespaces"
+    "showingOf": "Showing {{shown}} of {{total}} namespaces",
+    "failedToLoad": "Failed to load network policy data"
   },
   "quotaHeatmap": {
     "noNamespaceData": "No namespace data",

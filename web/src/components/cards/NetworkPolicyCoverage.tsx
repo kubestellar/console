@@ -33,7 +33,7 @@ export function NetworkPolicyCoverage() {
     isDemoData: isDemoFallback,
     isFailed,
     consecutiveFailures: podsFailures,
-    errorMessage: isFailed ? 'Failed to load network policy data' : undefined })
+    errorMessage: isFailed ? t('networkPolicyCoverage.failedToLoad') : undefined })
 
   // Build a set of namespace keys that have real NetworkPolicy resources
   const policyNamespaceKeys = (() => {
