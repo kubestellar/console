@@ -625,6 +625,7 @@ describe('useCachedData', () => {
         clusterCacheRef: {
           clusters: [{ name: 'c1', reachable: true }],
         },
+        deduplicateClustersByServer: (clusters: unknown[]) => clusters,
       }))
 
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue({

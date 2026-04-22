@@ -46,7 +46,7 @@ export const MOCK_DEMO_USER = {
 export const EXPECTED_ERROR_PATTERNS = [
   /Failed to fetch/i, // Network errors in demo mode
   /WebSocket/i, // WebSocket not available in tests
-  /can't establish a connection/i, // Firefox WebSocket connection errors
+  /can[\u2018\u2019']t establish a connection/i, // Firefox WebSocket connection errors (Firefox uses curly apostrophes)
   /ResizeObserver loop (?:limit exceeded|completed with undelivered notifications)/i, // Benign ResizeObserver loop warning
   /validateDOMNesting/i, // Already tracked by Auto-QA DOM errors check
   /act\(\)/i, // React testing warnings
