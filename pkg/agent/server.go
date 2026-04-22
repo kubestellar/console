@@ -64,12 +64,15 @@ const (
 	// ("anonymous") so resources created via either path look identical.
 	deployedByAnonymousMarker = "anonymous"
 
-	// missionExecutionTimeout is the maximum wall-clock time a single mission
-	// chat execution (AI provider call) is allowed to run before the context
-	// is cancelled and the frontend receives a timeout error.  This prevents
-	// missions from staying in "Running/Processing" state indefinitely when the
-	// AI provider hangs or never responds (#2375).
-	missionExecutionTimeout = 5 * time.Minute
+	// defaultMissionExecutionTimeout is the compiled default for mission
+	// execution.  Operators can override it at startup via the
+	// KC_MISSION_TIMEOUT environment variable (accepts Go duration strings
+	// such as "10m", "600s", "1h").  See #9482.
+	defaultMissionExecutionTimeout = 5 * time.Minute
+
+	// missionTimeoutEnvVar is the environment variable operators can set
+	// to override the per-mission execution timeout.
+	missionTimeoutEnvVar = "KC_MISSION_TIMEOUT"
 
 	// missionHeartbeatInterval is how often the backend sends a heartbeat
 	// progress event during mission execution.  This prevents the frontend's
@@ -88,6 +91,11 @@ const (
 	// missionExecutionTimeout because they intentionally run tools.
 	handleChatMessageTimeout = 30 * time.Second
 )
+
+// missionExecutionTimeout is the effective mission execution deadline.
+// Initialised to defaultMissionExecutionTimeout and optionally overridden
+// from KC_MISSION_TIMEOUT in NewServer (#9482).
+var missionExecutionTimeout = defaultMissionExecutionTimeout
 
 // Version is set by ldflags during build
 var Version = "dev"
@@ -244,6 +252,18 @@ func NewServer(cfg Config) (*Server, error) {
 	}
 	if sessionQuota > 0 {
 		slog.Info("session token quota enabled", "limit", sessionQuota)
+	}
+
+	// Resolve mission execution timeout from env, falling back to the
+	// compiled default (#9482).
+	if raw := os.Getenv(missionTimeoutEnvVar); raw != "" {
+		if parsed, err := time.ParseDuration(raw); err == nil && parsed > 0 {
+			missionExecutionTimeout = parsed
+			slog.Info("mission execution timeout overridden", "timeout", missionExecutionTimeout)
+		} else {
+			slog.Warn("invalid KC_MISSION_TIMEOUT value, using default",
+				"value", raw, "default", defaultMissionExecutionTimeout)
+		}
 	}
 
 	now := time.Now()

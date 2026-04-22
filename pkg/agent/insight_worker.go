@@ -215,10 +215,14 @@ func (w *InsightWorker) Enrich(req InsightEnrichmentRequest) (*InsightEnrichment
 	return &resp, nil
 }
 
-// providerPriority lists provider names in preference order for insight enrichment
-var providerPriority = []string{"claude-code", "bob", "claude", "openai", "gemini", "ollama"}
+// defaultProviderPriority is the fallback ordering when no primary agent has
+// been selected by the user.  Used by callAIProvider (#9484).
+var defaultProviderPriority = []string{"claude-code", "bob", "claude", "openai", "gemini", "ollama"}
 
-// callAIProvider sends insights to the AI provider for enrichment
+// callAIProvider sends insights to the AI provider for enrichment.
+// If the user has selected a primary agent (via the registry default), that
+// agent is tried first.  If it fails or is unavailable the remaining providers
+// in defaultProviderPriority are tried in order (#9484).
 func (w *InsightWorker) callAIProvider(insights []InsightSummary) ([]AIInsightEnrichment, string, error) {
 	if w.registry == nil {
 		return nil, "", fmt.Errorf("no provider registry available")
@@ -239,7 +243,13 @@ func (w *InsightWorker) callAIProvider(insights []InsightSummary) ([]AIInsightEn
 	ctx, cancel := context.WithTimeout(parent, InsightEnrichmentTimeout)
 	defer cancel()
 
-	for _, name := range providerPriority {
+	// Build the effective priority list: if the user selected a primary
+	// agent, try it first, then fall back to the default list (skipping
+	// duplicates so the primary isn't attempted twice).
+	primaryAgent := w.registry.GetDefaultName()
+	order := buildProviderOrder(primaryAgent, defaultProviderPriority)
+
+	for _, name := range order {
 		provider, err := w.registry.Get(name)
 		if err != nil || !provider.IsAvailable() {
 			continue
@@ -269,6 +279,24 @@ func (w *InsightWorker) callAIProvider(insights []InsightSummary) ([]AIInsightEn
 	}
 
 	return nil, "", fmt.Errorf("no available AI providers")
+}
+
+// buildProviderOrder returns a provider ordering that places primaryAgent
+// first (if non-empty) followed by the remaining entries from fallback,
+// skipping duplicates.
+func buildProviderOrder(primaryAgent string, fallback []string) []string {
+	if primaryAgent == "" {
+		return fallback
+	}
+	// Pre-size: primary + full fallback list (at most one duplicate removed).
+	order := make([]string, 0, len(fallback)+1)
+	order = append(order, primaryAgent)
+	for _, name := range fallback {
+		if name != primaryAgent {
+			order = append(order, name)
+		}
+	}
+	return order
 }
 
 // buildInsightEnrichmentPrompt creates a structured prompt for the AI
