@@ -16,6 +16,7 @@ import {
   CHART_TICK_COLOR } from '../../lib/constants'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { safeGet, safeSet } from '../../lib/safeLocalStorage'
+import { ORANGE_500, YELLOW_500, GREEN_500_BRIGHT, hexToRgba } from '../../lib/theme/chartColors'
 
 interface HealthPoint {
   time: string
@@ -25,6 +26,11 @@ interface HealthPoint {
 }
 
 type TimeRange = '15m' | '1h' | '6h' | '24h'
+
+/** Opacity at the top of area-fill gradients */
+const AREA_GRADIENT_TOP_ALPHA = 0.4
+/** Opacity at the bottom of area-fill gradients (fully transparent) */
+const AREA_GRADIENT_BOTTOM_ALPHA = 0
 
 /** Maximum data points to display per time range selection */
 const TIME_RANGE_MAX_POINTS: Record<TimeRange, number> = {
@@ -280,11 +286,11 @@ export function PodHealthTrend() {
         stack: 'total',
         smooth: true,
         data: visibleHistory.map(d => d.issues),
-        lineStyle: { color: '#f97316', width: 2 },
-        itemStyle: { color: '#f97316' },
+        lineStyle: { color: ORANGE_500, width: 2 },
+        itemStyle: { color: ORANGE_500 },
         areaStyle: {
           color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
-            colorStops: [{ offset: 0, color: 'rgba(249,115,22,0.4)' }, { offset: 1, color: 'rgba(249,115,22,0)' }] },
+            colorStops: [{ offset: 0, color: hexToRgba(ORANGE_500, AREA_GRADIENT_TOP_ALPHA) }, { offset: 1, color: hexToRgba(ORANGE_500, AREA_GRADIENT_BOTTOM_ALPHA) }] },
         },
         showSymbol: false,
       },
@@ -294,11 +300,11 @@ export function PodHealthTrend() {
         stack: 'total',
         smooth: true,
         data: visibleHistory.map(d => d.pending),
-        lineStyle: { color: '#eab308', width: 2 },
-        itemStyle: { color: '#eab308' },
+        lineStyle: { color: YELLOW_500, width: 2 },
+        itemStyle: { color: YELLOW_500 },
         areaStyle: {
           color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
-            colorStops: [{ offset: 0, color: 'rgba(234,179,8,0.4)' }, { offset: 1, color: 'rgba(234,179,8,0)' }] },
+            colorStops: [{ offset: 0, color: hexToRgba(YELLOW_500, AREA_GRADIENT_TOP_ALPHA) }, { offset: 1, color: hexToRgba(YELLOW_500, AREA_GRADIENT_BOTTOM_ALPHA) }] },
         },
         showSymbol: false,
       },
@@ -308,11 +314,11 @@ export function PodHealthTrend() {
         stack: 'total',
         smooth: true,
         data: visibleHistory.map(d => d.healthy),
-        lineStyle: { color: '#22c55e', width: 2 },
-        itemStyle: { color: '#22c55e' },
+        lineStyle: { color: GREEN_500_BRIGHT, width: 2 },
+        itemStyle: { color: GREEN_500_BRIGHT },
         areaStyle: {
           color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
-            colorStops: [{ offset: 0, color: 'rgba(34,197,94,0.4)' }, { offset: 1, color: 'rgba(34,197,94,0)' }] },
+            colorStops: [{ offset: 0, color: hexToRgba(GREEN_500_BRIGHT, AREA_GRADIENT_TOP_ALPHA) }, { offset: 1, color: hexToRgba(GREEN_500_BRIGHT, AREA_GRADIENT_BOTTOM_ALPHA) }] },
         },
         showSymbol: false,
       },
@@ -321,8 +327,8 @@ export function PodHealthTrend() {
         type: 'line',
         data: visibleHistory.map(d => d.issues),
         smooth: true,
-        lineStyle: { color: '#f97316', width: 2, type: 'dashed' as const },
-        itemStyle: { color: '#f97316' },
+        lineStyle: { color: ORANGE_500, width: 2, type: 'dashed' as const },
+        itemStyle: { color: ORANGE_500 },
         showSymbol: false,
         silent: true,
       },

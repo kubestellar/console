@@ -23,7 +23,15 @@ import {
   CHART_TOOLTIP_CONTENT_STYLE,
   CHART_TOOLTIP_TEXT_COLOR,
   CHART_TOOLTIP_LABEL_COLOR,
+  CHART_DATAZOOM_BORDER,
+  CHART_DATAZOOM_BG,
+  CHART_DATAZOOM_FILLER,
+  CHART_DATAZOOM_HANDLE,
+  CHART_DATAZOOM_TEXT,
+  CHART_DATAZOOM_DATA_LINE,
+  CHART_DATAZOOM_DATA_AREA,
 } from '../../lib/constants'
+import { hexToRgba } from '../../lib/theme/chartColors'
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
@@ -61,6 +69,10 @@ const CHART_HEIGHT_PX = 320
 const DATA_ZOOM_SLIDER_HEIGHT_PX = 20
 /** Slider bottom offset in pixels */
 const DATA_ZOOM_SLIDER_BOTTOM_PX = 5
+/** Opacity for area-fill behind the PR-merged line */
+const PR_MERGED_AREA_ALPHA = 0.08
+/** Font size for dataZoom text labels */
+const DATAZOOM_FONT_SIZE = 10
 /** Full zoom range start percentage */
 const ZOOM_RANGE_START = 0
 /** Full zoom range end percentage */
@@ -535,7 +547,7 @@ export function IssueActivityChart(props: { config?: IssueActivityConfig }) {
           symbolSize: 4,
           lineStyle: { color: COLOR_PR_MERGED, width: 2 },
           itemStyle: { color: COLOR_PR_MERGED },
-          areaStyle: { color: 'rgba(237, 125, 49, 0.08)' },
+          areaStyle: { color: hexToRgba(COLOR_PR_MERGED, PR_MERGED_AREA_ALPHA) },
         },
       ],
       dataZoom: [
@@ -550,14 +562,14 @@ export function IssueActivityChart(props: { config?: IssueActivityConfig }) {
           end: ZOOM_RANGE_END,
           height: DATA_ZOOM_SLIDER_HEIGHT_PX,
           bottom: DATA_ZOOM_SLIDER_BOTTOM_PX,
-          borderColor: '#444',
-          backgroundColor: 'rgba(50,50,50,0.3)',
-          fillerColor: 'rgba(68,114,196,0.15)',
-          handleStyle: { color: '#666' },
-          textStyle: { color: '#888', fontSize: 10 },
+          borderColor: CHART_DATAZOOM_BORDER,
+          backgroundColor: CHART_DATAZOOM_BG,
+          fillerColor: CHART_DATAZOOM_FILLER,
+          handleStyle: { color: CHART_DATAZOOM_HANDLE },
+          textStyle: { color: CHART_DATAZOOM_TEXT, fontSize: DATAZOOM_FONT_SIZE },
           dataBackground: {
-            lineStyle: { color: '#555' },
-            areaStyle: { color: 'rgba(100,100,100,0.2)' },
+            lineStyle: { color: CHART_DATAZOOM_DATA_LINE },
+            areaStyle: { color: CHART_DATAZOOM_DATA_AREA },
           },
         },
       ],
