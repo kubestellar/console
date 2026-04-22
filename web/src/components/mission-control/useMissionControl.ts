@@ -522,6 +522,15 @@ export function useMissionControl() {
   const { releases: helmReleases } = useHelmReleases()
   const { clusters, isLoading: clustersLoading, lastUpdated: clustersLastUpdated } = useClusters()
   const lastParsedContentRef = useRef('')
+  // #9496 — Track whether the AI suggestion request timed out. When the
+  // AI_SUGGEST_TIMEOUT_MS safety net fires, we set this ref so the parse
+  // effect ignores any late-arriving streamed content that would otherwise
+  // overwrite user-entered data. Cleared when a new AI request starts.
+  const aiTimedOutRef = useRef(false)
+  // #9496 — Track whether the user has started typing (adding/removing
+  // projects manually) after an AI timeout. Once set, late-arriving AI
+  // responses are unconditionally ignored to prevent phantom overwrites.
+  const userInteractedAfterTimeoutRef = useRef(false)
   // #6403 — Stale persisted state can reference clusters that were renamed or
   // deleted between sessions. When the current cluster list loads, cross-check
   // every referenced cluster name and drop assignments/targetClusters for
@@ -670,6 +679,15 @@ export function useMissionControl() {
     // the fresh wizard state with ghost projects/assignments.
     if (!state.planningMissionId) return
     if (planningMission.id !== state.planningMissionId) return
+    // #9496 — Ignore late-arriving streamed content after the AI request
+    // timed out. The backend mission was dismissed on timeout, but buffered
+    // chunks can still arrive. Without this guard, extractJSON fires on
+    // those chunks and silently overwrites the user's manual edits.
+    if (aiTimedOutRef.current) return
+    // #9496 — If the user has interacted (added/removed/edited projects)
+    // after a timeout, unconditionally ignore any further AI content to
+    // prevent phantom overwrites of user-typed data.
+    if (userInteractedAfterTimeoutRef.current) return
     // #6384 item 3 — Gate the expensive parse on the debounced value being
     // non-empty. While the stream is actively arriving, `useDebouncedValue`
     // keeps returning the stale (possibly empty) value until the stream
@@ -831,6 +849,8 @@ export function useMissionControl() {
   // Safety-net: clear aiStreaming if no planning mission appears within 30s (#5669).
   // This handles the case where startMission() was called but no AI provider is configured,
   // so planningMission never transitions to 'running' and the UI stays stuck.
+  // #9496 — Also cancel the backend mission and mark the request as timed out
+  // so late-arriving streamed content is ignored by the parse effect.
   const AI_SUGGEST_TIMEOUT_MS = 30_000
   useEffect(() => {
     if (!state.aiStreaming) return
@@ -838,11 +858,19 @@ export function useMissionControl() {
       setState((prev) => {
         if (!prev.aiStreaming) return prev
         aiRequestInFlightRef.current = false // #6827
+        // #9496 — Mark as timed out so the parse effect ignores late arrivals
+        aiTimedOutRef.current = true
+        // #9496 — Cancel the backend mission to stop the stream. Use the ref
+        // for the latest planningMissionId to avoid a stale closure.
+        const missionId = planningMissionIdRef.current
+        if (missionId) {
+          try { dismissMission(missionId) } catch { /* ignore */ }
+        }
         return { ...prev, aiStreaming: false }
       })
     }, AI_SUGGEST_TIMEOUT_MS)
     return () => clearTimeout(timer)
-  }, [state.aiStreaming])
+  }, [state.aiStreaming, dismissMission])
 
   // ---------------------------------------------------------------------------
   // Reconcile assignments when projects change (cascade Phase 1 → 2 → 3)
@@ -894,6 +922,10 @@ export function useMissionControl() {
   // ---------------------------------------------------------------------------
 
   const setDescription = (description: string) => {
+    // #9496 — Mark user interaction so late AI responses are ignored after timeout.
+    // The user typing in the description box after a timeout is a clear signal
+    // that they've taken manual control of the wizard.
+    if (aiTimedOutRef.current) userInteractedAfterTimeoutRef.current = true
     setState((prev) => ({ ...prev, description }))
   }
 
@@ -948,6 +980,10 @@ export function useMissionControl() {
         return
       }
       aiRequestInFlightRef.current = true
+      // #9496 — Clear timeout/interaction guards from any previous request so
+      // the new AI stream is processed normally.
+      aiTimedOutRef.current = false
+      userInteractedAfterTimeoutRef.current = false
 
       const currentState = stateRef.current
       // #6406 — Guard against rapid-click parallel requests. The button is
@@ -1069,6 +1105,8 @@ Include real CNCF projects only. Consider dependencies between projects.`
 
   const addProject = (project: PayloadProject) => {
     bumpUserGeneration() // #7112 — invalidate in-flight AI streams on manual CRUD
+    // #9496 — Mark user interaction so late AI responses are ignored after timeout
+    if (aiTimedOutRef.current) userInteractedAfterTimeoutRef.current = true
     // Tag every explicit add as user-added so mergeProjects preserves it
     // across AI refinement cycles (#6465).
     const tagged: PayloadProject = { ...project, userAdded: true }
@@ -1081,6 +1119,8 @@ Include real CNCF projects only. Consider dependencies between projects.`
 
   const removeProject = (name: string) => {
     bumpUserGeneration() // #7112 — invalidate in-flight AI streams on manual CRUD
+    // #9496 — Mark user interaction so late AI responses are ignored after timeout
+    if (aiTimedOutRef.current) userInteractedAfterTimeoutRef.current = true
     setState((prev) => ({
       ...prev,
       projects: prev.projects.filter((p) => p.name !== name) }))
@@ -1088,6 +1128,8 @@ Include real CNCF projects only. Consider dependencies between projects.`
 
   const updateProjectPriority = (name: string, priority: PayloadProject['priority']) => {
       bumpUserGeneration() // #7112 — invalidate in-flight AI streams on manual CRUD
+      // #9496 — Mark user interaction so late AI responses are ignored after timeout
+      if (aiTimedOutRef.current) userInteractedAfterTimeoutRef.current = true
       setState((prev) => ({
         ...prev,
         projects: prev.projects.map((p) => (p.name === name ? { ...p, priority } : p)) }))
@@ -1095,6 +1137,8 @@ Include real CNCF projects only. Consider dependencies between projects.`
 
   const replaceProject = (oldName: string, newProject: PayloadProject) => {
       bumpUserGeneration() // #7112 — invalidate in-flight AI streams on manual CRUD
+      // #9496 — Mark user interaction so late AI responses are ignored after timeout
+      if (aiTimedOutRef.current) userInteractedAfterTimeoutRef.current = true
       setState((prev) => {
         // Preserve the original AI-suggested name for swap tracking
         const existing = prev.projects.find((p) => p.name === oldName)
@@ -1134,6 +1178,9 @@ Include real CNCF projects only. Consider dependencies between projects.`
         return
       }
       aiRequestInFlightRef.current = true
+      // #9496 — Clear timeout/interaction guards from any previous request
+      aiTimedOutRef.current = false
+      userInteractedAfterTimeoutRef.current = false
       // #6406 — Early return if a planning request is already in flight.
       if (stateRef.current.aiStreaming) {
         aiRequestInFlightRef.current = false
@@ -1358,6 +1405,9 @@ Order phases by dependency — prerequisites first. Each phase completes before 
     // from the previous mission are properly discarded.
     userMutationGenerationRef.current = 0
     lastDispatchedGenerationRef.current = 0
+    // #9496 — Clear timeout/interaction guards so the next mission starts clean
+    aiTimedOutRef.current = false
+    userInteractedAfterTimeoutRef.current = false
     localStorage.removeItem(STORAGE_KEY)
     lastParsedContentRef.current = ''
     setState(makeInitialState())
