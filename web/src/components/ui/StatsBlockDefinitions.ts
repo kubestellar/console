@@ -417,10 +417,10 @@ export const MULTI_TENANCY_STAT_BLOCKS: StatBlockConfig[] = [
  * Default stat blocks for the ACMM dashboard
  */
 export const ACMM_STAT_BLOCKS: StatBlockConfig[] = [
-  { id: 'acmm_level', name: 'Level', icon: 'BarChart3', visible: true, color: 'purple', displayMode: 'ring' },
-  { id: 'acmm_detected', name: 'Detected', icon: 'CheckCircle2', visible: true, color: 'green', displayMode: 'gauge' },
-  { id: 'acmm_next_level', name: 'To Next Level', icon: 'TrendingUp', visible: true, color: 'cyan', displayMode: 'ring' },
-  { id: 'acmm_by_source', name: 'By Source', icon: 'Layers', visible: true, color: 'blue', displayMode: 'mini-bar' },
+  { id: 'acmm_level', name: 'Maturity Level', icon: 'BarChart3', visible: true, color: 'purple', displayMode: 'ring' },
+  { id: 'acmm_detected', name: 'Criteria Met', icon: 'CheckCircle2', visible: true, color: 'green', displayMode: 'gauge' },
+  { id: 'acmm_next_level', name: 'Next Level', icon: 'TrendingUp', visible: true, color: 'cyan', displayMode: 'ring' },
+  { id: 'acmm_by_source', name: 'Best Source', icon: 'Layers', visible: true, color: 'blue', displayMode: 'mini-bar' },
 ]
 
 /**

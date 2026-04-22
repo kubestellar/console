@@ -156,6 +156,7 @@ interface CircularProgressProps {
   color?: string
   showValue?: boolean
   label?: string
+  formatValue?: (percentage: number) => string
   thresholds?: {
     warning: number
     critical: number
@@ -170,6 +171,7 @@ export function CircularProgress({
   color,
   showValue = true,
   label,
+  formatValue,
   thresholds,
 }: CircularProgressProps) {
   const percentage = max > 0 ? Math.min((value / max) * 100, 100) : 0
@@ -221,7 +223,7 @@ export function CircularProgress({
         {showValue && (
           <div className="absolute inset-0 flex items-center justify-center">
             <span className="text-lg font-bold text-foreground">
-              {Math.round(percentage)}%
+              {formatValue ? formatValue(percentage) : `${Math.round(percentage)}%`}
             </span>
           </div>
         )}

@@ -291,6 +291,7 @@ const StatBlock = memo(function StatBlock({ block, data, hasData, isLoading, his
               size={RING_SIZE_PX}
               strokeWidth={RING_STROKE_PX}
               color={hexColor}
+              formatValue={data.format && typeof rawValue === 'number' ? () => data.format!(rawValue as number) : undefined}
             />
           </div>
           {data.sublabel && <div className="text-xs text-muted-foreground text-center mt-1">{wrapAbbreviations(data.sublabel)}</div>}
