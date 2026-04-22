@@ -56,17 +56,18 @@ function scannableCriteriaForLevel(level: number): Criterion[] {
     // Levels not in the threshold walk (e.g. L0 prerequisites)
     return ACMM_CRITERIA.filter((c) => c.level === level && c.scannable !== false)
   }
-  const idSet = new Set(ids)
   // Build Criterion objects: real criteria come from the catalog; the virtual
   // "acmm:agent-instructions" is synthesised above.
-  return ids.map((id) => {
-    if (id === 'acmm:agent-instructions') return VIRTUAL_AGENT_INSTRUCTIONS
-    const found = ACMM_CRITERIA.find((c) => c.id === id)
-    if (found) return found
-    // Defensive: if an ID is in the shared list but not in the criteria catalog,
-    // create a placeholder so the count stays correct.
-    return { id, source: 'acmm', level, category: 'unknown', name: id, description: '', rationale: '', detection: { type: 'path' as const, pattern: '' } } as Criterion
-  }).filter((c): c is Criterion => idSet.has(c.id))
+  const result: Criterion[] = []
+  for (const id of ids) {
+    if (id === 'acmm:agent-instructions') {
+      result.push(VIRTUAL_AGENT_INSTRUCTIONS)
+    } else {
+      const found = ACMM_CRITERIA.find((c) => c.id === id)
+      if (found) result.push(found)
+    }
+  }
+  return result
 }
 
 /** Return ALL criteria for a given level (including non-scannable). */
