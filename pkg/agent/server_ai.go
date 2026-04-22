@@ -1728,10 +1728,14 @@ type KeyStatus struct {
 	BaseURLSource string `json:"baseURLSource,omitempty"`
 }
 
-// KeysStatusResponse is the response for GET /settings/keys
+// KeysStatusResponse is the response for GET /settings/keys.
+// RegisteredProviders is populated from the live agent registry so the
+// frontend settings UI can display only providers that are actually
+// registered in the backend, avoiding stale hardcoded lists (#9488).
 type KeysStatusResponse struct {
-	Keys       []KeyStatus `json:"keys"`
-	ConfigPath string      `json:"configPath"`
+	Keys                []KeyStatus    `json:"keys"`
+	ConfigPath          string         `json:"configPath"`
+	RegisteredProviders []ProviderInfo `json:"registeredProviders"`
 }
 
 // SetKeyRequest is the request body for POST /settings/keys.

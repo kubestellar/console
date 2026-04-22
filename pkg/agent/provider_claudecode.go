@@ -12,6 +12,45 @@ import (
 	"time"
 )
 
+// RequiredMissionTools lists the CLI binaries that must be available in
+// PATH for AI missions to execute cluster operations. Each entry is a
+// binary name passed to exec.LookPath during the pre-launch readiness
+// check. Keep this list in sync with the tools referenced in
+// ClaudeCodeSystemPrompt and the --allowedTools flag below.
+var RequiredMissionTools = []string{
+	"kubectl", // Kubernetes CLI — cluster inspection & management
+	"helm",    // Helm — chart-based deployments
+	"git",     // Git — version control operations
+	"gh",      // GitHub CLI — PR creation, issue triage
+}
+
+// ToolDependencyError is returned when one or more required CLI tools
+// are missing from PATH. The MissingTools field lists the binary names
+// that were not found so callers can surface actionable guidance.
+type ToolDependencyError struct {
+	MissingTools []string
+}
+
+func (e *ToolDependencyError) Error() string {
+	return fmt.Sprintf("missing required tools: %s — install them before running AI missions", strings.Join(e.MissingTools, ", "))
+}
+
+// CheckToolDependencies verifies that every binary in RequiredMissionTools
+// is available on PATH via exec.LookPath. Returns nil when all tools are
+// present, or a *ToolDependencyError listing the missing ones.
+func CheckToolDependencies() error {
+	var missing []string
+	for _, tool := range RequiredMissionTools {
+		if _, err := exec.LookPath(tool); err != nil {
+			missing = append(missing, tool)
+		}
+	}
+	if len(missing) > 0 {
+		return &ToolDependencyError{MissingTools: missing}
+	}
+	return nil
+}
+
 // claudeCodeStreamEvent represents events in Claude Code CLI stream-json output
 type claudeCodeStreamEvent struct {
 	Type    string `json:"type"`
@@ -261,6 +300,14 @@ func (c *ClaudeCodeProvider) StreamChat(ctx context.Context, req *ChatRequest, o
 func (c *ClaudeCodeProvider) StreamChatWithProgress(ctx context.Context, req *ChatRequest, onChunk func(chunk string), onProgress func(event StreamEvent)) (*ChatResponse, error) {
 	if c.cliPath == "" {
 		return nil, fmt.Errorf("claude CLI not found")
+	}
+
+	// Pre-flight: verify that required mission tools (kubectl, helm, git,
+	// gh) are on PATH before spawning the CLI subprocess. Failing fast
+	// here gives operators an actionable error instead of a cryptic
+	// mid-mission "command not found" from the agent (#9487).
+	if err := CheckToolDependencies(); err != nil {
+		return nil, fmt.Errorf("tool dependency check failed: %w", err)
 	}
 
 	// Build prompt with history for context
