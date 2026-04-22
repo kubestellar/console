@@ -1,9 +1,10 @@
-import { memo, useState, useRef, useEffect } from 'react'
+import { memo, useState, useRef, useEffect, useCallback } from 'react'
 import {
   Folder, FolderOpen, FileJson, FileCode, FileText, ChevronRight, ChevronDown,
   Loader2, Globe, HardDrive, Trash2, Plus, RefreshCw, Info } from 'lucide-react'
 import { Github } from '@/lib/icons'
 import { cn } from '../../../lib/cn'
+import { TOOLTIP_SHOW_DELAY_MS } from '../../../lib/constants/network'
 import type { TreeNode } from './types'
 
 /**
@@ -53,6 +54,11 @@ function InfoPopover({ tooltip }: { tooltip: string }) {
   const [show, setShow] = useState(false)
   const [pinned, setPinned] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const clearHoverTimer = useCallback(() => {
+    if (hoverTimer.current) { clearTimeout(hoverTimer.current); hoverTimer.current = null }
+  }, [])
 
   useEffect(() => {
     if (!pinned) return
@@ -66,12 +72,14 @@ function InfoPopover({ tooltip }: { tooltip: string }) {
     return () => document.removeEventListener('mousedown', onClickOutside)
   }, [pinned])
 
+  useEffect(() => clearHoverTimer, [clearHoverTimer])
+
   return (
     <div
       ref={ref}
       className="relative flex-shrink-0"
-      onMouseEnter={() => setShow(true)}
-      onMouseLeave={() => { if (!pinned) setShow(false) }}
+      onMouseEnter={() => { clearHoverTimer(); hoverTimer.current = setTimeout(() => setShow(true), TOOLTIP_SHOW_DELAY_MS) }}
+      onMouseLeave={() => { clearHoverTimer(); if (!pinned) setShow(false) }}
     >
       <button
         onClick={(e) => { e.stopPropagation(); setPinned(p => !p); setShow(true) }}

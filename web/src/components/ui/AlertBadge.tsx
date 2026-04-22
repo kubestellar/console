@@ -291,7 +291,7 @@ export function AlertBadge() {
               isMobile
                 ? 'fixed inset-x-0 bottom-0 rounded-t-2xl max-h-[70vh]'
                 : 'absolute right-0 top-full mt-2 w-96 rounded-lg'
-            } bg-background border border-border shadow-xl z-50`}
+            } bg-background border border-border shadow-xl z-toast`}
           >
             {/* Drag handle for mobile */}
             {isMobile && (
