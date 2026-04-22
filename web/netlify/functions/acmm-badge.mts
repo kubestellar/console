@@ -13,6 +13,7 @@
  */
 
 import { getStore } from "@netlify/blobs";
+import { SCANNABLE_IDS_BY_LEVEL, AGENT_INSTRUCTION_FILE_IDS } from "../../src/lib/acmm/scannableIdsByLevel";
 
 const GITHUB_API = "https://api.github.com";
 const REPO_RE = /^[\w.-]+\/[\w.-]+$/;
@@ -42,76 +43,13 @@ const BADGE_CACHE_SECONDS = 300;
 const BADGE_ERROR_CACHE_SECONDS = 60;
 
 /**
- * Agent instruction files are an OR group for L2: any one vendor-specific or
- * vendor-neutral file satisfies the "Instructed" signal. A project using the
- * vendor-agnostic AGENTS.md (agents.md spec) should reach L2 just as easily
- * as one that stacks multiple vendor-specific configs. The virtual criterion
- * "acmm:agent-instructions" is synthesised in computeLevel() before the level
- * walk if any member of this set is present in detectedIds. Issue #9169.
- */
-const AGENT_INSTRUCTION_FILE_IDS = new Set([
-  "acmm:claude-md",
-  "acmm:copilot-instructions",
-  "acmm:agents-md",
-  "acmm:cursor-rules",
-]);
-
-/**
- * ACMM criteria grouped by level. MUST stay in sync with the scannable
- * criteria in web/src/data/acmm.ts — only IDs where scannable !== false
- * belong here. Non-scannable criteria (layered-safety, mechanical-enforcement,
- * session-summary, structural-gates, session-continuity, cross-session-knowledge)
- * are excluded because the frontend cannot detect them automatically.
+ * ACMM_IDS_BY_LEVEL and AGENT_INSTRUCTION_FILE_IDS are now imported from
+ * the shared module (web/src/lib/acmm/scannableIdsByLevel.ts) so the badge
+ * and frontend dashboard always compute identical levels.
  *
- * Issue #8979: the previous map used legacy short IDs (acmm:pr-template,
- * acmm:style-config, acmm:test-suite, …) that no longer exist in the scan
- * taxonomy, so the badge always computed to L1 ("5/10" for kubestellar/
- * console) regardless of the repo's real maturity. When adding / renaming
- * criteria in acmm-scan.mts, update this map and the LEVEL_NAMES below.
- *
- * L2 uses a virtual "acmm:agent-instructions" criterion (synthesised in
- * computeLevel) rather than the four individual instruction-file IDs, so that
- * any one vendor-neutral or vendor-specific file satisfies the L2 gate.
+ * See scannableIdsByLevel.ts for the canonical list and derivation logic.
  */
-const ACMM_IDS_BY_LEVEL: Record<number, string[]> = {
-  2: [
-    "acmm:agent-instructions", // virtual OR: any of claude-md / agents-md / copilot-instructions / cursor-rules
-    "acmm:prompts-catalog",
-    "acmm:editor-config",
-    "acmm:correction-capture",
-    "acmm:positive-reinforcement",
-  ],
-  3: [
-    "acmm:pr-acceptance-metric",
-    "acmm:pr-review-rubric",
-    "acmm:quality-dashboard",
-    "acmm:ci-matrix",
-  ],
-  4: [
-    "acmm:auto-qa-tuning",
-    "acmm:nightly-compliance",
-    "acmm:copilot-review-apply",
-    "acmm:auto-label",
-    "acmm:ai-fix-workflow",
-    "acmm:tier-classifier",
-    "acmm:security-ai-md",
-  ],
-  5: [
-    "acmm:github-actions-ai",
-    "acmm:auto-qa-self-tuning",
-    "acmm:public-metrics",
-    "acmm:policy-as-code",
-    "acmm:reflection-log",
-  ],
-  6: [
-    "acmm:auto-issue-gen",
-    "acmm:multi-agent-orchestration",
-    "acmm:strategic-dashboard",
-    "acmm:merge-queue",
-    "acmm:risk-assessment-config",
-    "acmm:observability-runbook",
-  ],
-};
+const ACMM_IDS_BY_LEVEL = SCANNABLE_IDS_BY_LEVEL;
 
 /** Shields.io color bands by level — matches the ACMM gauge on Card 1.
  *  Level 6 (Fully Autonomous) extends the gradient beyond the original
@@ -283,6 +221,17 @@ const BADGE_FALLBACK_PATHS: Record<string, readonly string[]> = {
   "acmm:github-actions-ai": [
     ".github/workflows/claude.yml",
     ".github/workflows/claude-code-review.yml",
+  ],
+  "acmm:reflection-log": [
+    "docs/reflections/",
+    "memory/",
+    ".memory/",
+    "REFLECTIONS.md",
+    ".github/REFLECTIONS.md",
+  ],
+  "acmm:audit-trail": [
+    ".github/workflows/audit-trail.yml",
+    ".github/workflows/ai-attribution.yml",
   ],
   // L6
   "acmm:merge-queue": [

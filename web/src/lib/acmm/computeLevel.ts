@@ -1,5 +1,6 @@
 import { acmmSource } from './sources/acmm'
 import type { Criterion } from './sources/types'
+import { SCANNABLE_IDS_BY_LEVEL, AGENT_INSTRUCTION_FILE_IDS } from './scannableIdsByLevel'
 
 const MIN_LEVEL = 1
 const MAX_LEVEL = 6
@@ -7,19 +8,6 @@ const MAX_LEVEL = 6
 const LEVEL_COMPLETION_THRESHOLD = 0.7
 /** Level 0 = prerequisites (soft indicator, not gating) */
 const PREREQUISITE_LEVEL = 0
-
-/**
- * Agent instruction files are an OR group for L2: any one vendor-specific or
- * vendor-neutral file satisfies "Instructed." A virtual criterion
- * "acmm:agent-instructions" is synthesised before the level walk if any
- * member of this set is present in detectedIds. Issue #9169 / kubebuilder#5651.
- */
-const AGENT_INSTRUCTION_FILE_IDS = new Set([
-  'acmm:claude-md',
-  'acmm:copilot-instructions',
-  'acmm:agents-md',
-  'acmm:cursor-rules',
-])
 
 /** Virtual criterion representing the OR group above (not in acmm.ts source). */
 const VIRTUAL_AGENT_INSTRUCTIONS: Criterion = {
@@ -58,13 +46,27 @@ const ACMM_LEVELS = acmmSource.levels ?? []
 /** Return scannable criteria for a given level (non-scannable items are
  *  displayed in the UI but excluded from threshold calculations).
  *  For L2, the four individual instruction-file criteria are replaced by the
- *  virtual OR-group criterion so any one file satisfies the level gate. */
+ *  virtual OR-group criterion so any one file satisfies the level gate.
+ *
+ *  The set of IDs is governed by SCANNABLE_IDS_BY_LEVEL (shared with the
+ *  badge endpoint) to guarantee both compute identical levels. */
 function scannableCriteriaForLevel(level: number): Criterion[] {
-  const raw = ACMM_CRITERIA.filter((c) => c.level === level && c.scannable !== false)
-  if (level !== 2) return raw
-  // Replace individual instruction-file entries with the virtual OR-group
-  const rest = raw.filter((c) => !AGENT_INSTRUCTION_FILE_IDS.has(c.id))
-  return [VIRTUAL_AGENT_INSTRUCTIONS, ...rest]
+  const ids = SCANNABLE_IDS_BY_LEVEL[level]
+  if (!ids) {
+    // Levels not in the threshold walk (e.g. L0 prerequisites)
+    return ACMM_CRITERIA.filter((c) => c.level === level && c.scannable !== false)
+  }
+  const idSet = new Set(ids)
+  // Build Criterion objects: real criteria come from the catalog; the virtual
+  // "acmm:agent-instructions" is synthesised above.
+  return ids.map((id) => {
+    if (id === 'acmm:agent-instructions') return VIRTUAL_AGENT_INSTRUCTIONS
+    const found = ACMM_CRITERIA.find((c) => c.id === id)
+    if (found) return found
+    // Defensive: if an ID is in the shared list but not in the criteria catalog,
+    // create a placeholder so the count stays correct.
+    return { id, source: 'acmm', level, category: 'unknown', name: id, description: '', rationale: '', detection: { type: 'path' as const, pattern: '' } } as Criterion
+  }).filter((c): c is Criterion => idSet.has(c.id))
 }
 
 /** Return ALL criteria for a given level (including non-scannable). */
