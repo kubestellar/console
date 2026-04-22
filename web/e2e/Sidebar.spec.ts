@@ -121,8 +121,9 @@ test.describe('Sidebar Navigation', () => {
       const collapseToggle = page.getByTestId('sidebar-collapse-toggle')
       await expect(collapseToggle).toBeVisible()
 
-      // Get initial sidebar width
-      const initialWidth = await page.getByTestId('sidebar').evaluate(el => el.offsetWidth)
+      // The toggle button exposes aria-expanded reflecting the sidebar state.
+      // Assert expanded before click, collapsed after — no brittle offsetWidth. #9525
+      await expect(collapseToggle).toHaveAttribute('aria-expanded', 'true')
 
       // Click to collapse
       await collapseToggle.click()
@@ -130,9 +131,8 @@ test.describe('Sidebar Navigation', () => {
       // Wait for sidebar to finish collapsing — Add Card button hides when collapsed
       await expect(page.getByTestId('sidebar-add-card')).not.toBeVisible({ timeout: 5000 })
 
-      // Sidebar should be narrower when collapsed
-      const collapsedWidth = await page.getByTestId('sidebar').evaluate(el => el.offsetWidth)
-      expect(collapsedWidth).toBeLessThan(initialWidth)
+      // Verify the toggle now reports collapsed state
+      await expect(collapseToggle).toHaveAttribute('aria-expanded', 'false')
     })
 
     test('sidebar can be expanded after collapse', async ({ page }) => {

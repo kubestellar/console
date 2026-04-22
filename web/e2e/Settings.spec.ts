@@ -81,11 +81,15 @@ test.describe('Settings Page', () => {
       await page.reload()
       await page.waitForLoadState('domcontentloaded')
 
-      // Theme should be preserved
+      // Theme should be preserved in localStorage
       const storedTheme = await page.evaluate(() =>
         localStorage.getItem('theme')
       )
       expect(storedTheme).toBe('light')
+
+      // Verify the theme is actually applied to the DOM, not just stored. #9521
+      // The app sets class="light" or class="dark" on <html>.
+      await expect(page.locator('html')).toHaveClass(/light/)
     })
   })
 
