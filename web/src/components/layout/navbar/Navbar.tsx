@@ -80,7 +80,7 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
         <button
           type="button"
           onClick={() => navigate(ROUTES.HOME)}
-          className="flex items-center gap-2 md:gap-3 p-2 -m-2 min-w-[44px] min-h-[44px] hover:opacity-80 transition-opacity"
+          className="flex items-center gap-2 md:gap-3 p-2 -m-2 min-w-[44px] min-h-[44px] hover:opacity-80 transition-opacity cursor-pointer"
           aria-label={t('navbar.goHome')}
         >
           <LogoWithStar className="w-8 h-8 md:w-9 md:h-9" showStar={false} />
@@ -88,7 +88,7 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
         <button
           type="button"
           onClick={() => navigate(ROUTES.HOME)}
-          className="hidden lg:flex flex-col leading-tight justify-center min-h-[44px] hover:opacity-80 transition-opacity text-left"
+          className="hidden lg:flex flex-col leading-tight justify-center min-h-[44px] hover:opacity-80 transition-opacity text-left cursor-pointer"
           aria-label={t('navbar.goHome')}
         >
           <span className="text-base md:text-lg font-semibold text-foreground">{branding.appName}</span>

@@ -440,11 +440,11 @@ export function DeploymentDrillDown({ data }: Props) {
   const isHealthy = readyReplicas === replicas && replicas > 0
 
   const TABS: { id: TabType; label: string; icon: typeof Info }[] = [
-    { id: 'overview', label: 'Overview', icon: Info },
-    { id: 'pods', label: `Pods (${pods.length})`, icon: Box },
-    { id: 'events', label: 'Events', icon: Zap },
-    { id: 'describe', label: 'Describe', icon: FileText },
-    { id: 'yaml', label: 'YAML', icon: Code },
+    { id: 'overview', label: t('drilldown.tabs.overview', 'Overview'), icon: Info },
+    { id: 'pods', label: `${t('drilldown.tabs.pods', 'Pods')} (${pods.length})`, icon: Box },
+    { id: 'events', label: t('drilldown.tabs.events', 'Events'), icon: Zap },
+    { id: 'describe', label: t('drilldown.tabs.describe', 'Describe'), icon: FileText },
+    { id: 'yaml', label: t('drilldown.tabs.yaml', 'YAML'), icon: Code },
   ]
 
   return (

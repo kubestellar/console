@@ -571,6 +571,11 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
                       <Send className="w-4 h-4" />
                     )}
                     {isSubmitting ? 'Creating issue...' : `Submit & Earn ${coins} Coins`}
+                    {!isSubmitting && (
+                      <kbd className="ml-1 px-1.5 py-0.5 rounded bg-white/20 text-[10px] font-mono leading-none">
+                        {navigator.platform?.includes('Mac') ? '⌘' : 'Ctrl'}↵
+                      </kbd>
+                    )}
                   </button>
                 </div>
               </form>

@@ -397,7 +397,7 @@ export function AgentStatusIndicator() {
                         ? 'bg-yellow-400'
                         : isConnected
                           ? 'bg-green-400'
-                          : agentStatus === 'connecting'
+                          : stableStatus === 'connecting'
                             ? 'bg-yellow-400'
                             : 'bg-red-400',
                 )}
@@ -416,7 +416,7 @@ export function AgentStatusIndicator() {
                       ? t('agent.localAgentDegraded')
                       : isConnected
                         ? t('agent.localAgentConnectedLabel')
-                        : agentStatus === 'connecting'
+                        : stableStatus === 'connecting'
                           ? t('agent.localAgentConnecting')
                           : t('agent.localAgentDisconnectedLabel')}
               </span>

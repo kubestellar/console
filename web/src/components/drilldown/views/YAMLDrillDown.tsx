@@ -164,22 +164,14 @@ export function YAMLDrillDown({ data }: Props) {
 
       {/* YAML Content */}
       <div className="relative">
+        {isLoading && yaml && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 rounded-lg backdrop-blur-sm">
+            <div className="spinner w-6 h-6" />
+          </div>
+        )}
         <pre className="p-4 rounded-lg bg-card/50 border border-border overflow-auto max-h-[60vh] text-sm font-mono text-foreground whitespace-pre">
           {yaml}
         </pre>
-      </div>
-
-      {/* Quick Actions */}
-      <div className="flex flex-wrap gap-2">
-        <button className="px-3 py-1.5 rounded bg-card/50 border border-border text-sm text-muted-foreground hover:text-foreground hover:bg-card transition-colors">
-          Apply Changes
-        </button>
-        <button className="px-3 py-1.5 rounded bg-card/50 border border-border text-sm text-muted-foreground hover:text-foreground hover:bg-card transition-colors">
-          Compare with Git
-        </button>
-        <button className="px-3 py-1.5 rounded bg-card/50 border border-border text-sm text-muted-foreground hover:text-foreground hover:bg-card transition-colors">
-          View in Editor
-        </button>
       </div>
     </div>
   )

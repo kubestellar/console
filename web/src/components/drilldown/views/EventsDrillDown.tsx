@@ -159,7 +159,7 @@ export function EventsDrillDown({ data }: Props) {
         <div className="p-6 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-center">
           <AlertCircle className="w-8 h-8 text-yellow-400 mx-auto mb-3" />
           <h4 className="font-medium text-yellow-400 mb-2">
-            {error ? 'Failed to load events' : 'No events found'}
+            {error ? t('drilldown.events.failedToLoad', 'Failed to load events') : t('drilldown.events.noEventsFound', 'No events found')}
           </h4>
           <p className="text-sm text-muted-foreground mb-4">
             {error || `No events found for ${objectName || clusterShort}. Events may have expired or the cluster may be unreachable.`}
@@ -170,7 +170,7 @@ export function EventsDrillDown({ data }: Props) {
               className="flex items-center gap-2 px-4 py-2 rounded-lg bg-card border border-border text-sm hover:bg-card/80 transition-colors"
             >
               <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-              Retry
+              {t('common.retry', 'Retry')}
             </button>
           </div>
         </div>
@@ -179,7 +179,7 @@ export function EventsDrillDown({ data }: Props) {
         <div className="p-4 rounded-lg bg-card/50 border border-border">
           <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
             <Terminal className="w-4 h-4" />
-            Get Events via kubectl
+            {t('drilldown.actions.getEvents', 'Get Events via kubectl')}
           </h4>
           <div className="flex items-center justify-between p-2 rounded bg-background/50 font-mono text-xs">
             <code className="text-muted-foreground truncate">
@@ -226,13 +226,13 @@ export function EventsDrillDown({ data }: Props) {
       <div className="grid grid-cols-3 gap-4">
         <div className="p-4 rounded-lg bg-card/50 border border-border">
           <div className="text-2xl font-bold text-foreground">{filteredEvents.length}</div>
-          <div className="text-sm text-muted-foreground">Total Events</div>
+          <div className="text-sm text-muted-foreground">{t('drilldown.events.totalEvents', 'Total Events')}</div>
         </div>
         <div className="p-4 rounded-lg bg-card/50 border border-border">
           <div className="text-2xl font-bold text-yellow-400">
             {filteredEvents.filter(e => e.type === 'Warning').length}
           </div>
-          <div className="text-sm text-muted-foreground">Warnings</div>
+          <div className="text-sm text-muted-foreground">{t('common.warnings', 'Warnings')}</div>
         </div>
         <div className="p-4 rounded-lg bg-card/50 border border-border">
           <div className="text-2xl font-bold text-green-400">
@@ -280,15 +280,15 @@ export function EventsDrillDown({ data }: Props) {
       {filteredEvents.length === 0 && (
         <div className="space-y-4">
           <div className="text-center py-6">
-            <p className="text-muted-foreground">No events found for {objectName || clusterShort}</p>
-            <p className="text-xs text-muted-foreground mt-1">Events may have expired or require authentication</p>
+            <p className="text-muted-foreground">{t('drilldown.events.noEventsFoundFor', { name: objectName || clusterShort, defaultValue: `No events found for ${objectName || clusterShort}` })}</p>
+            <p className="text-xs text-muted-foreground mt-1">{t('drilldown.events.eventsExpiredHint', 'Events may have expired or require authentication')}</p>
           </div>
 
           {/* Kubectl fallback */}
           <div className="p-4 rounded-lg bg-card/50 border border-border">
             <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
               <Terminal className="w-4 h-4" />
-              Get Events via kubectl
+              {t('drilldown.actions.getEvents', 'Get Events via kubectl')}
             </h4>
             <div className="flex items-center justify-between p-2 rounded bg-background/50 font-mono text-xs">
               <code className="text-muted-foreground truncate">

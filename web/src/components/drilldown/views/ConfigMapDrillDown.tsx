@@ -155,10 +155,10 @@ export function ConfigMapDrillDown({ data }: Props) {
   }
 
   const TABS: { id: TabType; label: string; icon: typeof Info }[] = [
-    { id: 'overview', label: 'Overview', icon: Info },
-    { id: 'data', label: 'Data', icon: Database },
-    { id: 'describe', label: 'Describe', icon: FileText },
-    { id: 'yaml', label: 'YAML', icon: Code },
+    { id: 'overview', label: t('drilldown.tabs.overview', 'Overview'), icon: Info },
+    { id: 'data', label: t('drilldown.tabs.data', 'Data'), icon: Database },
+    { id: 'describe', label: t('drilldown.tabs.describe', 'Describe'), icon: FileText },
+    { id: 'yaml', label: t('drilldown.tabs.yaml', 'YAML'), icon: Code },
   ]
 
   const dataEntries = Object.entries(configmapData || {})

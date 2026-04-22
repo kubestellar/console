@@ -18,7 +18,7 @@
  *   />
  */
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Wand2, Info } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { BaseModal } from '../../lib/modals/BaseModal'
@@ -62,6 +62,25 @@ export function ConfirmMissionPromptDialog({
 
   const trimmed = prompt.trim()
   const confirmDisabled = trimmed.length === 0
+
+  const handleConfirm = useCallback(() => {
+    if (!confirmDisabled) onConfirm(prompt)
+  }, [confirmDisabled, onConfirm, prompt])
+
+  // Ctrl/Cmd+Enter submits the mission
+  useEffect(() => {
+    if (!open) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault()
+        handleConfirm()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [open, handleConfirm])
+
+  const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform ?? '')
 
   return (
     <BaseModal isOpen={open} onClose={onCancel} size="lg">
@@ -124,11 +143,14 @@ export function ConfirmMissionPromptDialog({
         <Button
           variant="accent"
           size="sm"
-          onClick={() => onConfirm(prompt)}
+          onClick={handleConfirm}
           disabled={confirmDisabled}
-          className="ml-auto"
+          className="ml-auto gap-2"
         >
           {t('confirmMissionPrompt.confirm', 'Run mission')}
+          <kbd className="hidden sm:inline-flex px-1.5 py-0.5 rounded bg-white/10 text-[10px] font-mono leading-none">
+            {isMac ? '\u2318' : 'Ctrl'}\u21b5
+          </kbd>
         </Button>
       </BaseModal.Footer>
     </BaseModal>

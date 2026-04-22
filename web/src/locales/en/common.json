@@ -2029,7 +2029,7 @@
     "cardRequestAction": "Request Card",
     "cardRequestRequested": "Requested",
     "cardRequestRetry": "Retry",
-    "cardRequestSending": "Sending\u2026",
+    "cardRequestSending": "Sending…",
     "reminderTitle": "Orbital maintenance due",
     "reminderDismiss": "Dismiss",
     "standaloneTitle": "New Orbit Mission",
@@ -2106,7 +2106,8 @@
       "more": "+{{count}} more",
       "more_one": "+{{count}} more",
       "more_other": "+{{count}} more",
-      "manifest": "Manifest"
+      "manifest": "Manifest",
+      "issues": "Issues"
     },
     "ai": {
       "title": "AI Analysis",
@@ -2459,6 +2460,19 @@
       "optimizationRecommendations": "Optimization recommendations",
       "clickAnalyze": "Click \"Analyze Buildpack\" to get AI-powered insights",
       "analyzeHint": "AI will analyze the buildpack and suggest improvements"
+    },
+    "namespace": {
+      "deploymentIssues": "Deployment Issues",
+      "podIssues": "Pod Issues",
+      "deploymentsWithIssues": "Deployments with Issues",
+      "podsWithIssues": "Pods with Issues"
+    },
+    "events": {
+      "failedToLoad": "Failed to load events",
+      "noEventsFound": "No events found",
+      "totalEvents": "Total Events",
+      "noEventsFoundFor": "No events found for {{name}}",
+      "eventsExpiredHint": "Events may have expired or require authentication"
     }
   },
   "pagination": {
@@ -3601,12 +3615,12 @@
     "connectionLost": "Connection lost",
     "connectionLostHint": "Could not reach the backend — restart the server to reconnect",
     "copiedRestartCommand": "Copied — run this in your project root terminal",
-    "restarting": "Restarting\u2026",
-    "restartedWaiting": "Restarted, waiting for connection\u2026",
+    "restarting": "Restarting…",
+    "restartedWaiting": "Restarted, waiting for connection…",
     "restartBackendServer": "Restart the backend server",
     "restart": "Restart",
     "reconnected": "Reconnected",
-    "startingUp": "Starting up\u2026",
+    "startingUp": "Starting up…",
     "newVersionAvailable": "A new version is available",
     "reload": "Reload",
     "sidebar": {

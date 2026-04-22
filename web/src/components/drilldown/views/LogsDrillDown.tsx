@@ -53,7 +53,7 @@ export function LogsDrillDown({ data }: Props) {
   const clusterShort = cluster?.split('/').pop() || cluster
   const [tailLines, setTailLines] = useState<number>(DEFAULT_TAIL_LINES)
   const [isLoading, setIsLoading] = useState(false)
-  const [error] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const [follow, setFollow] = useState(false)
   // Refresh bumps the generatedAt timestamp which regenerates the seed lines
   // so the user sees that the fetch actually took effect.
@@ -119,6 +119,7 @@ export function LogsDrillDown({ data }: Props) {
   }, [follow, followLines])
 
   const handleRefresh = () => {
+    setError(null)
     setIsLoading(true)
     if (refreshTimeoutRef.current !== null) clearTimeout(refreshTimeoutRef.current)
     refreshTimeoutRef.current = setTimeout(() => {

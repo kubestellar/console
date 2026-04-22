@@ -268,10 +268,10 @@ export function ClusterDrillDown({ data }: Props) {
             <span className="text-sm text-muted-foreground">{t('common.status')}</span>
           </div>
           <div className="text-2xl font-bold text-foreground">
-            {health?.reachable === false ? 'Offline' :
+            {health?.reachable === false ? t('common.offline', 'Offline') :
               (health?.nodeCount && health.nodeCount > 0)
-                ? (health.readyNodes === health.nodeCount ? 'Healthy' : 'Degraded')
-                : (health?.healthy ? 'Healthy' : 'Unknown')}
+                ? (health.readyNodes === health.nodeCount ? t('common.healthy', 'Healthy') : t('common.degraded', 'Degraded'))
+                : (health?.healthy ? t('common.healthy', 'Healthy') : t('common.unknown', 'Unknown'))}
           </div>
         </div>
 
