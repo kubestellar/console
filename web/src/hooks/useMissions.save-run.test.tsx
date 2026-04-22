@@ -850,6 +850,31 @@ describe('cancelling mission receives terminal messages', () => {
     expect(result.current.missions.find(m => m.id === missionId)?.status).toBe('cancelled')
   })
 
+  // #9477 — When the backend sends `{type: "result", payload: {cancelled: true}}`
+  // WITHOUT a `sessionId` field, the hook should resolve the mission ID from
+  // the active cancel intents and still finalize the cancellation instead of
+  // leaving the UI stuck on "Cancelling..." forever.
+  it('finalizes cancellation on result with cancelled:true but no sessionId (#9477)', async () => {
+    const { result } = renderHook(() => useMissions(), { wrapper })
+    const { missionId } = await startMissionWithConnection(result)
+
+    act(() => { result.current.cancelMission(missionId) })
+    expect(result.current.missions.find(m => m.id === missionId)?.status).toBe('cancelling')
+
+    // Backend replies with cancelled:true but omits sessionId entirely
+    act(() => {
+      MockWebSocket.lastInstance?.simulateMessage({
+        id: `cancel-${Date.now()}`,
+        type: 'result',
+        payload: { cancelled: true },
+      })
+    })
+
+    const mission = result.current.missions.find(m => m.id === missionId)
+    expect(mission?.status).toBe('cancelled')
+    expect(mission?.messages.some(m => m.content.includes('cancelled by user'))).toBe(true)
+  })
+
   it('prevents double-cancel (no duplicate timeout)', async () => {
     const { result } = renderHook(() => useMissions(), { wrapper })
     const { missionId } = await startMissionWithConnection(result)
