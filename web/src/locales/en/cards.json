@@ -3930,6 +3930,7 @@
     "unknown": "Unknown",
     "servicesWithIssues": "{{count}} service(s) with issues",
     "searchPlaceholder": "Search inference services…",
+    "noServices": "No inference services available.",
     "noSearchResults": "No inference services match your search.",
     "docs": "KServe docs",
     "installGuide": "KServe install guide",

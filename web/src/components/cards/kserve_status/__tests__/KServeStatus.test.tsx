@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render } from '@testing-library/react'
+import type { ReactNode } from 'react'
 import { KSERVE_DEMO_DATA } from '../demoData'
 
 vi.mock('../../../../lib/demoMode', () => ({
@@ -35,7 +36,7 @@ vi.mock('react-i18next', () => ({
     t: (key: string) => key,
     i18n: { language: 'en', changeLanguage: vi.fn() },
   }),
-  Trans: ({ children }: { children: React.ReactNode }) => children,
+  Trans: ({ children }: { children: ReactNode }) => children,
 }))
 
 vi.mock('../../../../hooks/useMCP', () => ({

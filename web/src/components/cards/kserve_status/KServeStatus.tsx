@@ -337,7 +337,9 @@ export function KServeStatus() {
       <div ref={containerRef} style={containerStyle} className="flex-1 space-y-2 overflow-y-auto">
         {services.length === 0 ? (
           <div className="flex items-center justify-center py-6 text-xs text-muted-foreground">
-            {t('kserve.noSearchResults')}
+            {localSearch.trim().length > 0
+              ? t('kserve.noSearchResults')
+              : t('kserve.noServices')}
           </div>
         ) : (
           services.map(service => {

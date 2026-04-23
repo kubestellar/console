@@ -147,8 +147,18 @@ function parseService(item: CRItem): KServeService {
 
   const qpsFromMetrics = asNumber(asRecord(status.metrics).requestsPerSecond)
   const latencyFromMetrics = asNumber(asRecord(status.metrics).p95LatencyMs)
-  const qps = qpsFromMetrics || Number.parseFloat(annotations['metrics.kserve.io/rps'] ?? '0') || 0
-  const p95 = latencyFromMetrics || Number.parseFloat(annotations['metrics.kserve.io/p95-ms'] ?? '0') || 0
+  const qpsFromAnnotations = Number.parseFloat(annotations['metrics.kserve.io/rps'] ?? '0')
+  const p95FromAnnotations = Number.parseFloat(annotations['metrics.kserve.io/p95-ms'] ?? '0')
+  const qps = Number.isFinite(qpsFromMetrics)
+    ? qpsFromMetrics
+    : Number.isFinite(qpsFromAnnotations)
+      ? qpsFromAnnotations
+      : 0
+  const p95 = Number.isFinite(latencyFromMetrics)
+    ? latencyFromMetrics
+    : Number.isFinite(p95FromAnnotations)
+      ? p95FromAnnotations
+      : 0
 
   return {
     id: `isvc-${item.cluster}-${item.namespace ?? 'default'}-${item.name}`,
