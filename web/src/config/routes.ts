@@ -48,6 +48,7 @@ export const ROUTES = {
   COMPLIANCE: '/compliance',
   COMPLIANCE_FRAMEWORKS: '/compliance-frameworks',
   CHANGE_CONTROL: '/change-control',
+  SEGREGATION_OF_DUTIES: '/segregation-of-duties',
   COMPLIANCE_REPORTS: '/compliance-reports',
   DATA_RESIDENCY: '/data-residency',
   DATA_COMPLIANCE: '/data-compliance',

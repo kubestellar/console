@@ -61,6 +61,7 @@ const Cost = safeLazy(() => import('./components/cost/Cost'), 'Cost')
 const Compliance = safeLazy(() => import('./components/compliance/Compliance'), 'Compliance')
 const ComplianceFrameworks = safeLazy(() => import('./components/compliance/ComplianceFrameworks'), 'ComplianceFrameworks')
 const ChangeControlAudit = safeLazy(() => import('./components/compliance/ChangeControlAudit'), 'default')
+const SegregationOfDuties = safeLazy(() => import('./components/compliance/SegregationOfDuties'), 'default')
 const ComplianceReports = safeLazy(() => import('./components/compliance/ComplianceReports'), 'default')
 const DataResidency = safeLazy(() => import('./components/compliance/DataResidency'), 'default')
 const DataCompliance = safeLazy(() => import('./components/data-compliance/DataCompliance'), 'DataCompliance')
@@ -333,6 +334,7 @@ const ROUTE_TITLES: Record<string, string> = {
   '/compliance': 'Compliance',
   '/compliance-frameworks': 'Compliance Frameworks',
   '/change-control': 'Change Control',
+  '/segregation-of-duties': 'Segregation of Duties',
   '/compliance-reports': 'Compliance Reports',
   '/data-residency': 'Data Residency',
   '/data-compliance': 'Data Compliance',
@@ -618,6 +620,7 @@ function FullDashboardApp({ liveLocation }: { liveLocation: Location }) {
           <Route path={ROUTES.COMPLIANCE} element={<SuspenseRoute><Compliance /></SuspenseRoute>} />
           <Route path={ROUTES.COMPLIANCE_FRAMEWORKS} element={<SuspenseRoute><ComplianceFrameworks /></SuspenseRoute>} />
           <Route path={ROUTES.CHANGE_CONTROL} element={<SuspenseRoute><ChangeControlAudit /></SuspenseRoute>} />
+          <Route path={ROUTES.SEGREGATION_OF_DUTIES} element={<SuspenseRoute><SegregationOfDuties /></SuspenseRoute>} />
           <Route path={ROUTES.COMPLIANCE_REPORTS} element={<SuspenseRoute><ComplianceReports /></SuspenseRoute>} />
           <Route path={ROUTES.DATA_RESIDENCY} element={<SuspenseRoute><DataResidency /></SuspenseRoute>} />
           <Route path={ROUTES.DATA_COMPLIANCE} element={<SuspenseRoute><DataCompliance /></SuspenseRoute>} />

@@ -825,6 +825,10 @@ func (s *Server) setupRoutes() {
 	changeControl := handlers.NewChangeControlHandler()
 	changeControl.RegisterPublicRoutes(s.app.Group("/api", publicLimiter))
 
+	// Segregation of duties public read endpoints (demo mode).
+	sodHandler := handlers.NewSoDHandler()
+	sodHandler.RegisterPublicRoutes(s.app.Group("/api", publicLimiter))
+
 	// API routes (protected) — with rate limiting
 	//
 	// NOTE (#7033): Both authLimiter and apiLimiter use Fiber's default in-process

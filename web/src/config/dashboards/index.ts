@@ -24,6 +24,7 @@ import { clustersDashboardConfig } from './clusters'
 import { complianceDashboardConfig } from './compliance'
 import { complianceFrameworksDashboardConfig } from './compliance-frameworks'
 import { changeControlDashboardConfig } from './change-control'
+import { sodDashboardConfig } from './segregation-of-duties'
 import { complianceReportsDashboardConfig } from './compliance-reports'
 import { dataResidencyDashboardConfig } from './data-residency'
 import { costDashboardConfig } from './cost'
@@ -66,6 +67,7 @@ export const DASHBOARD_CONFIGS: DashboardConfigRegistry = {
   compliance: complianceDashboardConfig,
   'compliance-frameworks': complianceFrameworksDashboardConfig,
   'change-control': changeControlDashboardConfig,
+  'segregation-of-duties': sodDashboardConfig,
   'compliance-reports': complianceReportsDashboardConfig,
   'data-residency': dataResidencyDashboardConfig,
   cost: costDashboardConfig,
@@ -178,6 +180,7 @@ export {
   complianceDashboardConfig,
   complianceFrameworksDashboardConfig,
   changeControlDashboardConfig,
+  sodDashboardConfig,
   complianceReportsDashboardConfig,
   dataResidencyDashboardConfig,
   costDashboardConfig,
