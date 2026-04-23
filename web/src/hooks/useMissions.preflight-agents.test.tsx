@@ -33,6 +33,7 @@ vi.mock('../lib/constants', async (importOriginal) => {
 } })
 
 vi.mock('../lib/analytics', () => ({
+  emitError: vi.fn(),
   emitMissionStarted: vi.fn(),
   emitMissionCompleted: vi.fn(),
   emitMissionError: vi.fn(),
