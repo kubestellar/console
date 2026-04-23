@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import BAADashboard from './BAADashboard'
+
+vi.mock('../../lib/unified/dashboard/UnifiedDashboard', () => ({
+  UnifiedDashboard: () => null,
+}))
 
 const ok = (data: unknown) => Promise.resolve({ ok: true, json: () => Promise.resolve(data) })
 
@@ -27,28 +32,28 @@ beforeEach(() => { vi.clearAllMocks() })
 
 describe('BAADashboard', () => {
   it('renders the dashboard title', async () => {
-    render(<BAADashboard />)
+    render(<MemoryRouter><BAADashboard /></MemoryRouter>)
     await waitFor(() => {
       expect(screen.getByText('Business Associate Agreements')).toBeInTheDocument()
     })
   })
 
   it('shows total agreements', async () => {
-    render(<BAADashboard />)
+    render(<MemoryRouter><BAADashboard /></MemoryRouter>)
     await waitFor(() => {
       expect(screen.getByText('6')).toBeInTheDocument()
     })
   })
 
   it('shows alert banner', async () => {
-    render(<BAADashboard />)
+    render(<MemoryRouter><BAADashboard /></MemoryRouter>)
     await waitFor(() => {
       expect(screen.getByText(/BAA Alert/)).toBeInTheDocument()
     })
   })
 
   it('displays provider name', async () => {
-    render(<BAADashboard />)
+    render(<MemoryRouter><BAADashboard /></MemoryRouter>)
     await waitFor(() => {
       expect(screen.getByText('AWS')).toBeInTheDocument()
     })

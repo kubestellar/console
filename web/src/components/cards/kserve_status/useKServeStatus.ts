@@ -205,14 +205,14 @@ async function fetchKServeStatus(): Promise<KServeDemoData> {
 
   const totalRps = services.reduce((sum, s) => sum + s.requestsPerSecond, 0)
   const totalLatency = services.reduce((sum, s) => sum + s.p95LatencyMs, 0)
-  const avgP95 = services.length > 0 ? Math.round(totalLatency / services.length) : 0
+  const avgLatencyMs = services.length > 0 ? Math.round(totalLatency / services.length) : 0
 
   return {
     health,
     controllerPods: { ready: readyPods, total: controllerPods.length },
     services,
     totalRequestsPerSecond: Math.round(totalRps * 10) / 10,
-    avgP95LatencyMs: avgP95,
+    avgP95LatencyMs: avgLatencyMs,
     lastCheckTime: new Date().toISOString(),
   }
 }

@@ -1,6 +1,11 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { MemoryRouter } from 'react-router-dom'
 import STIGDashboard from './STIGDashboard'
+
+vi.mock('../../lib/unified/dashboard/UnifiedDashboard', () => ({
+  UnifiedDashboard: () => null,
+}))
 
 const mockBenchmarks = [
   { id: 'K8S-STIG-V1', title: 'Kubernetes STIG', version: '1.0', release: 'R1', status: 'non-compliant', profile: 'MAC-1', total_rules: 120, findings_count: 14 },
@@ -23,22 +28,22 @@ describe('STIGDashboard', () => {
   beforeEach(() => { vi.clearAllMocks() })
 
   it('renders the dashboard title', async () => {
-    render(<STIGDashboard />)
+    render(<MemoryRouter><STIGDashboard /></MemoryRouter>)
     await waitFor(() => expect(screen.getByText('DISA STIG Compliance')).toBeInTheDocument())
   })
 
   it('shows compliance score', async () => {
-    render(<STIGDashboard />)
+    render(<MemoryRouter><STIGDashboard /></MemoryRouter>)
     await waitFor(() => expect(screen.getByText('76%')).toBeInTheDocument())
   })
 
   it('renders a finding rule', async () => {
-    render(<STIGDashboard />)
+    render(<MemoryRouter><STIGDashboard /></MemoryRouter>)
     await waitFor(() => expect(screen.getByText('SV-242383')).toBeInTheDocument())
   })
 
   it('shows open count', async () => {
-    render(<STIGDashboard />)
+    render(<MemoryRouter><STIGDashboard /></MemoryRouter>)
     await waitFor(() => expect(screen.getByText('14')).toBeInTheDocument())
   })
 })

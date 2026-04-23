@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import DataResidency from './DataResidency'
+
+vi.mock('../../lib/unified/dashboard/UnifiedDashboard', () => ({
+  UnifiedDashboard: () => null,
+}))
 
 /* ─── Mock data ─── */
 
@@ -64,7 +69,7 @@ describe('DataResidency', () => {
 
   it('renders summary cards with correct values', async () => {
     mockFetchSuccess()
-    render(<DataResidency />)
+    render(<MemoryRouter><DataResidency /></MemoryRouter>)
     await waitFor(() => {
       expect(screen.getByText('Data Residency Enforcement')).toBeInTheDocument()
       expect(screen.getByText('Rules')).toBeInTheDocument()
@@ -75,7 +80,7 @@ describe('DataResidency', () => {
 
   it('renders cluster region cards', async () => {
     mockFetchSuccess()
-    render(<DataResidency />)
+    render(<MemoryRouter><DataResidency /></MemoryRouter>)
     await waitFor(() => {
       expect(screen.getByText('prod-us-east')).toBeInTheDocument()
       expect(screen.getByText('prod-eu-west')).toBeInTheDocument()
@@ -85,7 +90,7 @@ describe('DataResidency', () => {
 
   it('renders residency rules', async () => {
     mockFetchSuccess()
-    render(<DataResidency />)
+    render(<MemoryRouter><DataResidency /></MemoryRouter>)
     await waitFor(() => {
       expect(screen.getByText('eu-personal-data')).toBeInTheDocument()
       expect(screen.getByText('pci-cardholder')).toBeInTheDocument()
@@ -94,7 +99,7 @@ describe('DataResidency', () => {
 
   it('renders violations with severity badges', async () => {
     mockFetchSuccess()
-    render(<DataResidency />)
+    render(<MemoryRouter><DataResidency /></MemoryRouter>)
     await waitFor(() => {
       expect(screen.getByText('Deployment/eu-customer-sync')).toBeInTheDocument()
       expect(screen.getByText('critical')).toBeInTheDocument()
@@ -105,7 +110,7 @@ describe('DataResidency', () => {
 
   it('shows error state on fetch failure', async () => {
     mockFetchFailure()
-    render(<DataResidency />)
+    render(<MemoryRouter><DataResidency /></MemoryRouter>)
     await waitFor(() => {
       expect(screen.getByText('Network error')).toBeInTheDocument()
       expect(screen.getByText('Retry')).toBeInTheDocument()

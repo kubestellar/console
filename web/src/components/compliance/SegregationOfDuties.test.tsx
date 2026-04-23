@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import SegregationOfDuties from './SegregationOfDuties'
+
+vi.mock('../../lib/unified/dashboard/UnifiedDashboard', () => ({
+  UnifiedDashboard: () => null,
+}))
 
 const mockSummary = {
   total_rules: 5, total_principals: 10, total_violations: 5,
@@ -35,7 +40,7 @@ describe('SegregationOfDuties', () => {
 
   it('renders header and compliance score', async () => {
     mockFetchSuccess()
-    render(<SegregationOfDuties />)
+    render(<MemoryRouter><SegregationOfDuties /></MemoryRouter>)
     await waitFor(() => {
       expect(screen.getByText('Segregation of Duties')).toBeInTheDocument()
       expect(screen.getByText('Compliance Score')).toBeInTheDocument()
@@ -45,7 +50,7 @@ describe('SegregationOfDuties', () => {
 
   it('renders violations', async () => {
     mockFetchSuccess()
-    render(<SegregationOfDuties />)
+    render(<MemoryRouter><SegregationOfDuties /></MemoryRouter>)
     await waitFor(() => {
       expect(screen.getByText(/bob@acme\.com/)).toBeInTheDocument()
       expect(screen.getByText('bob has deployer + approver')).toBeInTheDocument()
@@ -54,7 +59,7 @@ describe('SegregationOfDuties', () => {
 
   it('shows error on failure', async () => {
     vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('Network error'))
-    render(<SegregationOfDuties />)
+    render(<MemoryRouter><SegregationOfDuties /></MemoryRouter>)
     await waitFor(() => {
       expect(screen.getByText('Network error')).toBeInTheDocument()
     })

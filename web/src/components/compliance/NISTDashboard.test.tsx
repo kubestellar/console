@@ -1,6 +1,11 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { MemoryRouter } from 'react-router-dom'
 import NISTDashboard from './NISTDashboard'
+
+vi.mock('../../lib/unified/dashboard/UnifiedDashboard', () => ({
+  UnifiedDashboard: () => null,
+}))
 
 const mockFamilies = [
   { id: 'AC', name: 'Access Control', description: 'Manage access.', pass_rate: 83, controls: [
@@ -25,22 +30,22 @@ describe('NISTDashboard', () => {
   beforeEach(() => { vi.clearAllMocks() })
 
   it('renders the dashboard title', async () => {
-    render(<NISTDashboard />)
+    render(<MemoryRouter><NISTDashboard /></MemoryRouter>)
     await waitFor(() => expect(screen.getByText('NIST 800-53 Control Mapping')).toBeInTheDocument())
   })
 
   it('shows overall score', async () => {
-    render(<NISTDashboard />)
+    render(<MemoryRouter><NISTDashboard /></MemoryRouter>)
     await waitFor(() => expect(screen.getAllByText('83%').length).toBeGreaterThanOrEqual(1))
   })
 
   it('renders control family', async () => {
-    render(<NISTDashboard />)
+    render(<MemoryRouter><NISTDashboard /></MemoryRouter>)
     await waitFor(() => expect(screen.getAllByText('AC — Access Control').length).toBeGreaterThanOrEqual(1))
   })
 
   it('shows implemented count', async () => {
-    render(<NISTDashboard />)
+    render(<MemoryRouter><NISTDashboard /></MemoryRouter>)
     await waitFor(() => expect(screen.getByText('13')).toBeInTheDocument())
   })
 })

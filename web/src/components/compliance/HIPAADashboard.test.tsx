@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import HIPAADashboard from './HIPAADashboard'
+
+vi.mock('../../lib/unified/dashboard/UnifiedDashboard', () => ({
+  UnifiedDashboard: () => null,
+}))
 
 const mockSafeguards = [
   { id: '164.312(a)', section: '§164.312(a)(1)', name: 'Access Control', description: 'Test', status: 'pass', checks: [
@@ -38,28 +43,28 @@ beforeEach(() => { vi.clearAllMocks() })
 
 describe('HIPAADashboard', () => {
   it('renders the dashboard title', async () => {
-    render(<HIPAADashboard />)
+    render(<MemoryRouter><HIPAADashboard /></MemoryRouter>)
     await waitFor(() => {
       expect(screen.getByText('HIPAA Security Rule Compliance')).toBeInTheDocument()
     })
   })
 
   it('shows overall score', async () => {
-    render(<HIPAADashboard />)
+    render(<MemoryRouter><HIPAADashboard /></MemoryRouter>)
     await waitFor(() => {
       expect(screen.getByText('60%')).toBeInTheDocument()
     })
   })
 
   it('displays safeguard count', async () => {
-    render(<HIPAADashboard />)
+    render(<MemoryRouter><HIPAADashboard /></MemoryRouter>)
     await waitFor(() => {
       expect(screen.getByText('2/5 safeguards passing')).toBeInTheDocument()
     })
   })
 
   it('renders all five safeguards', async () => {
-    render(<HIPAADashboard />)
+    render(<MemoryRouter><HIPAADashboard /></MemoryRouter>)
     await waitFor(() => {
       expect(screen.getByText(/Access Control/)).toBeInTheDocument()
       expect(screen.getByText(/Audit Controls/)).toBeInTheDocument()

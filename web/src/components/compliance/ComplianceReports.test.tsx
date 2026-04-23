@@ -1,7 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 
 // Mock hooks before importing the component
+vi.mock('../../lib/unified/dashboard/UnifiedDashboard', () => ({
+  UnifiedDashboard: () => null,
+}))
+
 vi.mock('../../hooks/useComplianceFrameworks', () => ({
   useComplianceFrameworks: () => ({
     frameworks: [
@@ -36,29 +41,29 @@ describe('ComplianceReports', () => {
   })
 
   it('renders header and generator card', () => {
-    render(<ComplianceReports />)
+    render(<MemoryRouter><ComplianceReports /></MemoryRouter>)
     expect(screen.getByText('Compliance Reports')).toBeInTheDocument()
     expect(screen.getByText('Generate Report')).toBeInTheDocument()
   })
 
   it('renders framework picker with options', () => {
-    render(<ComplianceReports />)
+    render(<MemoryRouter><ComplianceReports /></MemoryRouter>)
     expect(screen.getAllByText(/PCI-DSS/).length).toBeGreaterThan(0)
   })
 
   it('renders format buttons', () => {
-    render(<ComplianceReports />)
+    render(<MemoryRouter><ComplianceReports /></MemoryRouter>)
     expect(screen.getByRole('button', { name: /PDF/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /JSON/ })).toBeInTheDocument()
   })
 
   it('renders generate button', () => {
-    render(<ComplianceReports />)
+    render(<MemoryRouter><ComplianceReports /></MemoryRouter>)
     expect(screen.getByRole('button', { name: /Generate & Download Report/ })).toBeInTheDocument()
   })
 
   it('renders info section about report types', () => {
-    render(<ComplianceReports />)
+    render(<MemoryRouter><ComplianceReports /></MemoryRouter>)
     expect(screen.getByText('PDF Reports')).toBeInTheDocument()
     expect(screen.getByText('JSON Reports')).toBeInTheDocument()
   })
