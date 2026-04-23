@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, memo } from 'react'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { baaDashboardConfig } from '../../config/dashboards/baa'
 import {
@@ -33,7 +33,7 @@ const PROVIDER_ICONS: Record<string, typeof Cloud> = {
   cloud: Cloud, saas: Server, managed_service: Building2, consulting: FileText,
 }
 
-export function BAADashboardContent() {
+export const BAADashboardContent = memo(function BAADashboardContent() {
   const [agreements, setAgreements] = useState<BAAgreement[]>([])
   const [alerts, setAlerts] = useState<BAAAlert[]>([])
   const [summary, setSummary] = useState<BAASummary | null>(null)
@@ -280,7 +280,7 @@ export function BAADashboardContent() {
       )}
     </div>
   )
-}
+})
 
 export default function BAADashboard() {
   return (<>

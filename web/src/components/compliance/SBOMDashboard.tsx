@@ -4,7 +4,7 @@
  * Package inventory, vulnerability scanning, license compliance,
  * and dependency tree visualization.
  */
-import { useState, useEffect } from 'react'
+import { useState, useEffect, memo } from 'react'
 import {
   Package, CheckCircle2, Loader2, AlertTriangle,
   XCircle, Shield, FileText
@@ -74,7 +74,7 @@ const STATUS_ICON: Record<string, React.ReactNode> = {
 
 // ── Content Component ───────────────────────────────────────────────────
 
-export function SBOMDashboardContent() {
+export const SBOMDashboardContent = memo(function SBOMDashboardContent() {
   const [packages, setPackages] = useState<SBOMPackage[]>([])
   const [vulnerabilities, setVulnerabilities] = useState<SBOMVulnerability[]>([])
   const [summary, setSummary] = useState<SBOMSummary | null>(null)
@@ -295,7 +295,7 @@ export function SBOMDashboardContent() {
       )}
     </div>
   )
-}
+})
 
 // ── Page Component (rendered by App.tsx route) ──────────────────────────
 

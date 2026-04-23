@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, memo } from 'react'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { changeControlDashboardConfig } from '../../config/dashboards/change-control'
 import {
@@ -60,7 +60,7 @@ function riskBg(score: number): string {
   return 'bg-emerald-500/20'
 }
 
-export function ChangeControlAuditContent() {
+export const ChangeControlAuditContent = memo(function ChangeControlAuditContent() {
   const [summary, setSummary] = useState<AuditSummary | null>(null)
   const [changes, setChanges] = useState<ChangeRecord[]>([])
   const [violations, setViolations] = useState<PolicyViolation[]>([])
@@ -240,7 +240,7 @@ function SummaryCard({ label, value, icon, accent }: { label: string; value: num
       <p className={`text-2xl font-bold ${accent === 'red' ? 'text-red-400' : accent === 'orange' ? 'text-orange-400' : 'text-zinc-100'}`}>{value}</p>
     </div>
   )
-}
+})
 
 export default function ChangeControlAudit() {
   return (<>

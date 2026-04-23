@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, memo } from 'react'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { riskMatrixDashboardConfig } from '../../config/dashboards/risk-matrix'
 import {
@@ -64,7 +64,7 @@ function severityBadge(score: number) {
 
 // ── Component ─────────────────────────────────────────────────────────
 
-export function RiskMatrixDashboardContent() {
+export const RiskMatrixDashboardContent = memo(function RiskMatrixDashboardContent() {
   const [risks, setRisks] = useState<Risk[]>([])
   const [heatmap, setHeatmap] = useState<HeatmapCell[]>([])
   const [summary, setSummary] = useState<RiskSummary | null>(null)
@@ -349,7 +349,7 @@ export function RiskMatrixDashboardContent() {
       </div>
     </div>
   )
-}
+})
 
 export default function RiskMatrixDashboard() {
   return (<>

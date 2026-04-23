@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, memo } from 'react'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { riskAppetiteDashboardConfig } from '../../config/dashboards/risk-appetite'
 import {
@@ -62,7 +62,7 @@ const BAR_COLOR = {
 
 // ── Component ─────────────────────────────────────────────────────────
 
-export function RiskAppetiteDashboardContent() {
+export const RiskAppetiteDashboardContent = memo(function RiskAppetiteDashboardContent() {
   const [thresholds, setThresholds] = useState<AppetiteThreshold[]>([])
   const [kris, setKRIs] = useState<KRI[]>([])
   const [summary, setSummary] = useState<AppetiteSummary | null>(null)
@@ -330,7 +330,7 @@ export function RiskAppetiteDashboardContent() {
       )}
     </div>
   )
-}
+})
 
 export default function RiskAppetiteDashboard() {
   return (<>

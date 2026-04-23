@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, memo } from 'react'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { sessionManagementDashboardConfig } from '../../config/dashboards/session-management'
 import {
@@ -32,7 +32,7 @@ const STATUS_STYLES: Record<string, string> = {
   terminated: 'bg-red-500/20 text-red-300 border-red-500/30',
 }
 
-export function SessionDashboardContent() {
+export const SessionDashboardContent = memo(function SessionDashboardContent() {
   const [sessions, setSessions] = useState<ActiveSession[]>([])
   const [policies, setPolicies] = useState<SessionPolicy[]>([])
   const [summary, setSummary] = useState<SessionSummary | null>(null)
@@ -242,7 +242,7 @@ export function SessionDashboardContent() {
       )}
     </div>
   )
-}
+})
 
 export default function SessionDashboard() {
   return (<>

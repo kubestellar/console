@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, memo } from 'react'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { airgapDashboardConfig } from '../../config/dashboards/airgap'
 import {
@@ -64,7 +64,7 @@ const statusColor = (status: string) => {
   }
 }
 
-export function AirGapDashboardContent() {
+export const AirGapDashboardContent = memo(function AirGapDashboardContent() {
   const [requirements, setRequirements] = useState<Requirement[]>([])
   const [clusters, setClusters] = useState<ClusterReadiness[]>([])
   const [summary, setSummary] = useState<AirGapSummary | null>(null)
@@ -302,7 +302,7 @@ export function AirGapDashboardContent() {
       )}
     </div>
   )
-}
+})
 
 export default function AirGapDashboard() {
   return (<>

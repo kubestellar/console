@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, memo } from 'react'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { gxpDashboardConfig } from '../../config/dashboards/gxp'
 import {
@@ -41,7 +41,7 @@ const ACTION_STYLES: Record<string, string> = {
   review: 'bg-purple-500/20 text-purple-300',
 }
 
-export function GxPDashboardContent() {
+export const GxPDashboardContent = memo(function GxPDashboardContent() {
   const [summary, setSummary] = useState<GxPSummary | null>(null)
   const [records, setRecords] = useState<AuditRecord[]>([])
   const [signatures, setSignatures] = useState<Signature[]>([])
@@ -300,7 +300,7 @@ export function GxPDashboardContent() {
       )}
     </div>
   )
-}
+})
 
 export default function GxPDashboard() {
   return (<>

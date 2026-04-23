@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, memo } from 'react'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { oidcDashboardConfig } from '../../config/dashboards/oidc'
 import {
@@ -32,7 +32,7 @@ const STATUS_STYLES: Record<string, string> = {
   error: 'bg-red-500/20 text-red-300 border-red-500/30',
 }
 
-export function OIDCDashboardContent() {
+export const OIDCDashboardContent = memo(function OIDCDashboardContent() {
   const [providers, setProviders] = useState<OIDCProvider[]>([])
   const [sessions, setSessions] = useState<OIDCSession[]>([])
   const [summary, setSummary] = useState<OIDCSummary | null>(null)
@@ -242,7 +242,7 @@ export function OIDCDashboardContent() {
       )}
     </div>
   )
-}
+})
 
 export default function OIDCDashboard() {
   return (<>

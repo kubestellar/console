@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, memo } from 'react'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { stigDashboardConfig } from '../../config/dashboards/stig'
 import {
@@ -68,7 +68,7 @@ const statusLabel = (status: string) => {
   }
 }
 
-export function STIGDashboardContent() {
+export const STIGDashboardContent = memo(function STIGDashboardContent() {
   const [findings, setFindings] = useState<Finding[]>([])
   const [benchmarks, setBenchmarks] = useState<Benchmark[]>([])
   const [summary, setSummary] = useState<STIGSummary | null>(null)
@@ -316,7 +316,7 @@ export function STIGDashboardContent() {
       )}
     </div>
   )
-}
+})
 
 export default function STIGDashboard() {
   return (<>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, memo } from 'react'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { rbacAuditDashboardConfig } from '../../config/dashboards/rbac-audit'
 import {
@@ -42,7 +42,7 @@ const RISK_STYLES: Record<string, string> = {
   low: 'text-emerald-400',
 }
 
-export function RBACAuditDashboardContent() {
+export const RBACAuditDashboardContent = memo(function RBACAuditDashboardContent() {
   const [bindings, setBindings] = useState<RBACBinding[]>([])
   const [findings, setFindings] = useState<RBACFinding[]>([])
   const [summary, setSummary] = useState<RBACSummary | null>(null)
@@ -276,7 +276,7 @@ export function RBACAuditDashboardContent() {
       )}
     </div>
   )
-}
+})
 
 export default function RBACAuditDashboard() {
   return (<>

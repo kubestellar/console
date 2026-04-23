@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, memo } from 'react'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { nistDashboardConfig } from '../../config/dashboards/nist'
 import {
@@ -65,7 +65,7 @@ const statusLabel = (status: string) => {
   }
 }
 
-export function NISTDashboardContent() {
+export const NISTDashboardContent = memo(function NISTDashboardContent() {
   const [families, setFamilies] = useState<ControlFamily[]>([])
   const [mappings, setMappings] = useState<ControlMapping[]>([])
   const [summary, setSummary] = useState<NISTSummary | null>(null)
@@ -329,7 +329,7 @@ export function NISTDashboardContent() {
       )}
     </div>
   )
-}
+})
 
 export default function NISTDashboard() {
   return (<>
