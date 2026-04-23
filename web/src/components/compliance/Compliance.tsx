@@ -162,11 +162,15 @@ export function Compliance() {
         return allDemo
           ? { value: (reachableClusters.length || 1) * MOCK_CHECKS_PER_CLUSTER, sublabel: 'total checks', isDemo: true, isClickable: false }
           : { value: realData.totalChecks, sublabel: 'total checks', onClick: () => { emitComplianceDrillDown('total_checks'); drillToCompliance(undefined, { passing: realData.passing, failing: realData.failing, totalChecks: realData.totalChecks }) }, isClickable: realData.totalChecks > 0 }
-      case 'passing':
+      // #9717 — IDs must match COMPLIANCE_STAT_BLOCKS in StatsBlockDefinitions.ts
+      // ('checks_passing' / 'checks_failing'), not the generic 'passing'/'failing'
+      // used by the Operators dashboard. Mismatched IDs caused these blocks to fall
+      // through to the default case and return '-', misaligning the stats bar.
+      case 'checks_passing':
         return allDemo
           ? { value: Math.floor((reachableClusters.length || 1) * MOCK_CHECKS_PER_CLUSTER * MOCK_PASS_RATE), sublabel: 'passing', isDemo: true, isClickable: false }
           : { value: realData.passing, sublabel: 'passing', onClick: () => { emitComplianceDrillDown('passing'); drillToCompliance('passing', { passing: realData.passing, failing: realData.failing, totalChecks: realData.totalChecks }) }, isClickable: realData.passing > 0 }
-      case 'failing':
+      case 'checks_failing':
         return allDemo
           ? { value: Math.floor((reachableClusters.length || 1) * MOCK_CHECKS_PER_CLUSTER * MOCK_FAIL_RATE), sublabel: 'failing', isDemo: true, isClickable: false }
           : { value: realData.failing, sublabel: 'failing', onClick: () => { emitComplianceDrillDown('failing'); drillToCompliance('failing', { passing: realData.passing, failing: realData.failing, totalChecks: realData.totalChecks }) }, isClickable: realData.failing > 0 }

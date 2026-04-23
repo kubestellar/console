@@ -381,7 +381,11 @@ const StatBlock = memo(function StatBlock({ block, data, hasData, isLoading, his
         /* Default numeric mode */
         <>
           <div className={`text-3xl font-bold ${isLoading ? 'text-muted-foreground/30' : valueColor}`}>{displayValue}</div>
-          {mode === 'sparkline' && !hasEnoughHistory && !isLoading && hasData && (
+          {/* #9708 — Only show "Building trend…" when there is no sublabel.
+              Both elements appearing together overflows the card height and
+              creates visual inconsistency across stat cards. The sublabel
+              (e.g. "healthy pods") is more informative and takes priority. */}
+          {mode === 'sparkline' && !hasEnoughHistory && !isLoading && hasData && !data.sublabel && (
             <div className="text-2xs text-muted-foreground/50 mt-0.5">Building trend…</div>
           )}
           {data.sublabel && <div className="text-xs text-muted-foreground">{wrapAbbreviations(data.sublabel)}</div>}
