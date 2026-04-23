@@ -849,6 +849,18 @@ func (s *Server) setupRoutes() {
 	// FedRAMP readiness public read endpoints (demo mode).
 	fedrampHandler := handlers.NewFedRAMPHandler()
 	fedrampHandler.RegisterPublicRoutes(s.app.Group("/api", publicLimiter))
+	// Epic 5: Security Operations — SIEM Export (#9643).
+	siemHandler := handlers.NewSIEMHandler()
+	siemHandler.RegisterPublicRoutes(s.app.Group("/api", publicLimiter))
+	// Epic 6: Supply Chain & Software Provenance (#9632, #9644, #9646, #9647, #9648).
+	sbomHandler := handlers.NewSBOMHandler()
+	sbomHandler.RegisterPublicRoutes(s.app.Group("/api", publicLimiter))
+	signingHandler := handlers.NewSigningHandler()
+	signingHandler.RegisterPublicRoutes(s.app.Group("/api", publicLimiter))
+	slsaHandler := handlers.NewSLSAHandler()
+	slsaHandler.RegisterPublicRoutes(s.app.Group("/api", publicLimiter))
+	licenseHandler := handlers.NewLicenseHandler()
+	licenseHandler.RegisterPublicRoutes(s.app.Group("/api", publicLimiter))
 
 	// API routes (protected) — with rate limiting
 	//

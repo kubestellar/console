@@ -78,8 +78,9 @@ const SIEMDashboard = safeLazy(() => import('./components/compliance/SIEMDashboa
 const IncidentResponseDashboard = safeLazy(() => import('./components/compliance/IncidentResponseDashboard'), 'default')
 const ThreatIntelDashboard = safeLazy(() => import('./components/compliance/ThreatIntelDashboard'), 'default')
 const SBOMDashboard = safeLazy(() => import('./components/compliance/SBOMDashboard'), 'default')
-const SigstoreDashboard = safeLazy(() => import('./components/compliance/SigstoreDashboard'), 'default')
+const SigningStatusDashboard = safeLazy(() => import('./components/compliance/SigningStatusDashboard'), 'default')
 const SLSADashboard = safeLazy(() => import('./components/compliance/SLSADashboard'), 'default')
+const LicenseComplianceDashboard = safeLazy(() => import('./components/compliance/LicenseComplianceDashboard'), 'default')
 const RiskMatrixDashboard = safeLazy(() => import('./components/compliance/RiskMatrixDashboard'), 'default')
 const RiskRegisterDashboard = safeLazy(() => import('./components/compliance/RiskRegisterDashboard'), 'default')
 const RiskAppetiteDashboard = safeLazy(() => import('./components/compliance/RiskAppetiteDashboard'), 'default')
@@ -660,15 +661,15 @@ function FullDashboardApp({ liveLocation }: { liveLocation: Location }) {
           <Route path="oidc" element={<SuspenseRoute><OIDCDashboard /></SuspenseRoute>} />
           <Route path="rbac-audit" element={<SuspenseRoute><RBACAuditDashboard /></SuspenseRoute>} />
           <Route path="sessions" element={<SuspenseRoute><SessionDashboard /></SuspenseRoute>} />
-          {/* Epics 4-7: Coming Soon */}
           {/* Epic 5: SecOps */}
           <Route path="siem" element={<SuspenseRoute><SIEMDashboard /></SuspenseRoute>} />
           <Route path="incident-response" element={<SuspenseRoute><IncidentResponseDashboard /></SuspenseRoute>} />
           <Route path="threat-intel" element={<SuspenseRoute><ThreatIntelDashboard /></SuspenseRoute>} />
           {/* Epic 6: Supply Chain Security */}
           <Route path="sbom" element={<SuspenseRoute><SBOMDashboard /></SuspenseRoute>} />
-          <Route path="sigstore" element={<SuspenseRoute><SigstoreDashboard /></SuspenseRoute>} />
+          <Route path="sigstore" element={<SuspenseRoute><SigningStatusDashboard /></SuspenseRoute>} />
           <Route path="slsa" element={<SuspenseRoute><SLSADashboard /></SuspenseRoute>} />
+          <Route path="licenses" element={<SuspenseRoute><LicenseComplianceDashboard /></SuspenseRoute>} />
           {/* Epic 7: Enterprise Risk Management */}
           <Route path="risk-matrix" element={<SuspenseRoute><RiskMatrixDashboard /></SuspenseRoute>} />
           <Route path="risk-register" element={<SuspenseRoute><RiskRegisterDashboard /></SuspenseRoute>} />

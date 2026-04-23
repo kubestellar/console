@@ -90,6 +90,7 @@ export const ENTERPRISE_NAV_SECTIONS: EnterpriseNavSection[] = [
       { id: 'sbom', label: 'SBOM Manager', href: '/enterprise/sbom', icon: 'Package' },
       { id: 'sigstore', label: 'Sigstore Verify', href: '/enterprise/sigstore', icon: 'BadgeCheck' },
       { id: 'slsa', label: 'SLSA Provenance', href: '/enterprise/slsa', icon: 'GitCommitHorizontal' },
+      { id: 'licenses', label: 'License Compliance', href: '/enterprise/licenses', icon: 'Scale' },
     ],
   },
   {

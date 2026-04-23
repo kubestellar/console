@@ -179,7 +179,7 @@ export default function EnterprisePortal() {
       <div className="grid grid-cols-4 gap-4 mb-8">
         <div className="rounded-lg border border-gray-800 bg-gray-900 p-4">
           <div className="text-xs text-gray-400 mb-1">Overall Score</div>
-          <div className="text-2xl font-bold text-green-400">86%</div>
+          <div className="text-2xl font-bold text-green-400">83%</div>
         </div>
         <div className="rounded-lg border border-gray-800 bg-gray-900 p-4">
           <div className="text-xs text-gray-400 mb-1">Active Verticals</div>
