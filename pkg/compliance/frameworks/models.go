@@ -33,6 +33,7 @@ type Framework struct {
 	Name        string    `json:"name"`
 	Version     string    `json:"version"`
 	Description string    `json:"description"`
+	Category    string    `json:"category"`
 	Controls    []Control `json:"controls"`
 	BuiltIn     bool      `json:"built_in"`
 }
@@ -64,7 +65,7 @@ type Check struct {
 type EvaluationResult struct {
 	FrameworkID   string          `json:"framework_id"`
 	FrameworkName string          `json:"framework_name"`
-	ClusterName   string          `json:"cluster_name"`
+	ClusterName   string          `json:"cluster"`
 	EvaluatedAt   time.Time       `json:"evaluated_at"`
 	Score         int             `json:"score"` // 0-100
 	TotalChecks   int             `json:"total_checks"`
@@ -72,13 +73,14 @@ type EvaluationResult struct {
 	Failed        int             `json:"failed"`
 	Partial       int             `json:"partial"`
 	Skipped       int             `json:"skipped"`
+	Errors        int             `json:"errors"`
 	Controls      []ControlResult `json:"controls"`
 }
 
 // ControlResult holds the evaluation of a single control.
 type ControlResult struct {
-	ControlID   string        `json:"control_id"`
-	Title       string        `json:"title"`
+	ControlID   string        `json:"id"`
+	Title       string        `json:"name"`
 	Severity    Severity      `json:"severity"`
 	Category    string        `json:"category"`
 	Status      CheckStatus   `json:"status"`
@@ -88,9 +90,10 @@ type ControlResult struct {
 
 // CheckResult holds the evaluation of a single check.
 type CheckResult struct {
-	CheckID  string      `json:"check_id"`
-	Name     string      `json:"name"`
-	Status   CheckStatus `json:"status"`
-	Evidence string      `json:"evidence,omitempty"`
-	Message  string      `json:"message,omitempty"`
+	CheckID   string      `json:"id"`
+	Name      string      `json:"name"`
+	CheckType string      `json:"type"`
+	Status    CheckStatus `json:"status"`
+	Evidence  string      `json:"evidence,omitempty"`
+	Message   string      `json:"message,omitempty"`
 }

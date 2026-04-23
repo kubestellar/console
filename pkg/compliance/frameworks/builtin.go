@@ -14,6 +14,7 @@ func PCIDSS4() Framework {
 		Name:        "PCI-DSS 4.0",
 		Version:     "4.0",
 		Description: "Payment Card Industry Data Security Standard — requirements for organizations that handle cardholder data.",
+		Category:    "financial",
 		BuiltIn:     true,
 		Controls: []Control{
 			{
@@ -111,6 +112,7 @@ func SOC2Type2() Framework {
 		Name:        "SOC 2 Type II",
 		Version:     "2024",
 		Description: "Service Organization Controls — trust services criteria for security, availability, processing integrity, confidentiality, and privacy.",
+		Category:    "operational",
 		BuiltIn:     true,
 		Controls: []Control{
 			{

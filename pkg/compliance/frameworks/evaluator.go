@@ -70,7 +70,7 @@ func (e *Evaluator) Evaluate(ctx context.Context, fw Framework, cluster string) 
 			Category:  ctrl.Category,
 		}
 
-		var passed, failed int
+		var passed, failed, errors int
 		for _, check := range ctrl.Checks {
 			checkResult := e.runCheck(ctx, check, cluster)
 			cr.Checks = append(cr.Checks, checkResult)
@@ -86,11 +86,14 @@ func (e *Evaluator) Evaluate(ctx context.Context, fw Framework, cluster string) 
 				result.Partial++
 			case StatusSkipped:
 				result.Skipped++
+			case StatusError:
+				errors++
+				result.Errors++
 			}
 		}
 
 		// Derive control status from its checks.
-		cr.Status = deriveControlStatus(passed, failed, len(ctrl.Checks))
+		cr.Status = deriveControlStatus(passed, failed, errors, len(ctrl.Checks))
 		if cr.Status == StatusFail {
 			cr.Remediation = remediationHint(ctrl)
 		}
