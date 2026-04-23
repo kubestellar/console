@@ -142,7 +142,13 @@ if (typeof window !== 'undefined') {
   /** Max wait (ms) for the enabled-dashboards list before prefetching all chunks */
   const PREFETCH_DASHBOARD_TIMEOUT_MS = 2_000
 
+  /** Routes where chunk prefetching is skipped to avoid errors during OAuth flow (#9767) */
+  const SKIP_PREFETCH_PATHS = new Set(['/login', '/auth/callback'])
+
   const prefetchRoutes = async () => {
+    // Skip prefetching on auth pages — during OAuth redirects, the browser
+    // navigates away before chunks finish loading, causing chunk_load errors.
+    if (SKIP_PREFETCH_PATHS.has(window.location.pathname)) return
     // Wait for the enabled dashboards list from /health so we only
     // prefetch chunks the user will actually see. Timeout after 2s
     // and prefetch all chunks — better to over-prefetch than leave
