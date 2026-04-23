@@ -21,7 +21,7 @@ const TOKEN_REFRESH_HEADER = 'X-Token-Refresh' // server signals when token shou
 const AUTH_LOGOUT_ENDPOINT = '/auth/logout'
 
 // Public API paths that don't require authentication (served without JWT on the backend)
-const PUBLIC_API_PREFIXES = ['/api/missions/browse', '/api/missions/file']
+const PUBLIC_API_PREFIXES = ['/api/missions/browse', '/api/missions/file', '/api/compliance/']
 
 // Error class for unauthenticated requests
 export class UnauthenticatedError extends Error {
