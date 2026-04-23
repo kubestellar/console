@@ -4,12 +4,16 @@
  * Shows a dashboard overview of all compliance verticals with
  * status cards linking to each epic's dashboards.
  */
+import { useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Landmark, Heart, Shield, KeyRound, Radar, Container, Scale, TrendingUp,
-  CheckCircle2, AlertTriangle, Clock, ArrowRight,
+  CheckCircle2, AlertTriangle, Clock, ArrowRight, Plus,
 } from 'lucide-react'
 import { ENTERPRISE_NAV_SECTIONS } from './enterpriseNav'
+import { DashboardHeader } from '../shared/DashboardHeader'
+import { RotatingTip } from '../ui/RotatingTip'
+import { useDashboardContextOptional } from '../../hooks/useDashboardContext'
 
 const VERTICAL_META: Record<string, {
   icon: React.ComponentType<{ className?: string }>
@@ -139,18 +143,37 @@ function VerticalCard({ sectionId, title, items, onNavigate }: {
 
 export default function EnterprisePortal() {
   const navigate = useNavigate()
+  const [autoRefresh, setAutoRefresh] = useState(true)
+  const [lastUpdated] = useState(() => new Date())
+  const dashboardContext = useDashboardContextOptional()
+
+  const handleRefresh = useCallback(() => {
+    // Force re-render with fresh timestamp
+    window.location.reload()
+  }, [])
+
+  const handleAddMore = useCallback(() => {
+    if (dashboardContext?.openAddCardModal) {
+      dashboardContext.openAddCardModal('dashboards')
+    }
+  }, [dashboardContext])
 
   const sections = ENTERPRISE_NAV_SECTIONS.filter((s) => s.id !== 'overview')
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-white mb-1">Enterprise Compliance Portal</h1>
-        <p className="text-sm text-gray-400">
-          Unified governance, risk, and compliance across all Kubernetes clusters
-        </p>
-      </div>
+      {/* Header with tip bar, auto-refresh, and refresh button */}
+      <DashboardHeader
+        title="Enterprise Compliance Portal"
+        subtitle="Unified governance, risk, and compliance across all Kubernetes clusters"
+        isFetching={false}
+        onRefresh={handleRefresh}
+        autoRefresh={autoRefresh}
+        onAutoRefreshChange={setAutoRefresh}
+        autoRefreshId="enterprise-auto-refresh"
+        lastUpdated={lastUpdated}
+        rightExtra={<RotatingTip page="enterprise" />}
+      />
 
       {/* Summary Stats */}
       <div className="grid grid-cols-4 gap-4 mb-8">
@@ -194,6 +217,24 @@ export default function EnterprisePortal() {
             onNavigate={(href) => navigate(href)}
           />
         ))}
+
+        {/* Add More tile */}
+        <button
+          onClick={handleAddMore}
+          className="rounded-xl border-2 border-dashed border-gray-700 hover:border-purple-500/50 bg-gray-900/30 hover:bg-purple-500/5 p-5 flex flex-col items-center justify-center gap-3 transition-all group min-h-[200px]"
+        >
+          <div className="p-3 rounded-full bg-gray-800 group-hover:bg-purple-500/20 transition-colors">
+            <Plus className="w-6 h-6 text-gray-400 group-hover:text-purple-400 transition-colors" />
+          </div>
+          <div className="text-center">
+            <p className="text-sm font-medium text-gray-400 group-hover:text-purple-300 transition-colors">
+              Add More
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              Dashboards, cards &amp; widgets
+            </p>
+          </div>
+        </button>
       </div>
     </div>
   )

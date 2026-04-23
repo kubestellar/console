@@ -173,6 +173,14 @@ const TIPS: Record<string, string[]> = {
     'Click an agent to see its recent operations and permission scope.',
     'Agent actions are logged for audit and can be replayed as missions.',
   ],
+  enterprise: [
+    'Pin your most-used dashboards to the sidebar for one-click access.',
+    'The Enterprise Portal covers 7 compliance verticals across 24 dashboards.',
+    'Use Console Studio (gear icon) to add cards, dashboards, and widgets.',
+    'Each vertical has its own compliance score based on automated checks.',
+    'AI Missions can detect and remediate compliance gaps automatically.',
+    'Export compliance reports as PDF for your next audit cycle.',
+  ],
   'ci-cd': [
     'CI/CD cards aggregate pipeline status from GitHub Actions and more.',
     'Failed workflows are highlighted with links to the failing job.',
