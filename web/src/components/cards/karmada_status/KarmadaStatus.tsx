@@ -270,7 +270,7 @@ export function KarmadaStatus() {
           id="karmada-clusters-tab"
           className={`flex-1 text-xs rounded-md py-1 transition-colors ${
             view === 'clusters'
-              ? 'bg-background text-foreground shadow-sm'
+              ? 'bg-background text-foreground shadow-xs'
               : 'text-muted-foreground hover:text-foreground'
           }`}
           onClick={() => setView('clusters')}
@@ -281,7 +281,7 @@ export function KarmadaStatus() {
           id="karmada-bindings-tab"
           className={`flex-1 text-xs rounded-md py-1 transition-colors ${
             view === 'bindings'
-              ? 'bg-background text-foreground shadow-sm'
+              ? 'bg-background text-foreground shadow-xs'
               : 'text-muted-foreground hover:text-foreground'
           }`}
           onClick={() => setView('bindings')}

@@ -56,7 +56,7 @@ function BadgePreview({ level, levelName, detected, total }: {
 }) {
   const rightColor = BADGE_COLORS[level] ?? BADGE_COLORS[1]
   return (
-    <span className="inline-flex items-stretch text-[11px] font-medium leading-none rounded overflow-hidden shadow-sm h-5">
+    <span className="inline-flex items-stretch text-[11px] font-medium leading-none rounded overflow-hidden shadow-xs h-5">
       <span className="px-1.5 flex items-center bg-neutral-600 text-white">ACMM</span>
       <span
         className="px-1.5 flex items-center text-white"
@@ -131,12 +131,12 @@ export function RepoPicker() {
   return (
     // Issue 8857 — the `border-b` used to live on this outer sticky wrapper,
     // which stretched the divider edge-to-edge across the viewport while the
-    // inner content was capped at `max-w-screen-2xl mx-auto px-6`. On wide
+    // inner content was capped at `max-w-(--breakpoint-2xl) mx-auto px-6`. On wide
     // screens that produced a full-width bar that didn't align with anything
     // else on the page ("messy and unplanned"). The divider now sits on the
     // last inner container so it aligns with the page content width.
-    <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm">
-      <div className="max-w-screen-2xl mx-auto px-6 pt-2 pb-0">
+    <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-xs">
+      <div className="max-w-(--breakpoint-2xl) mx-auto px-6 pt-2 pb-0">
         <button
           type="button"
           onClick={openIntro}
@@ -147,7 +147,7 @@ export function RepoPicker() {
           What is ACMM?
         </button>
       </div>
-      <div className="max-w-screen-2xl mx-auto px-6 py-3 flex flex-wrap items-center gap-3">
+      <div className="max-w-(--breakpoint-2xl) mx-auto px-6 py-3 flex flex-wrap items-center gap-3">
         <form
           onSubmit={(e) => {
             e.preventDefault()
@@ -255,7 +255,7 @@ export function RepoPicker() {
       </div>
 
       {showBadge && (
-        <div className="max-w-screen-2xl mx-auto px-6 pb-3 space-y-2 text-xs">
+        <div className="max-w-(--breakpoint-2xl) mx-auto px-6 pb-3 space-y-2 text-xs">
           <div className="flex items-center gap-3 pt-1">
             <BadgePreview
               level={scan.level.level}
@@ -315,9 +315,9 @@ export function RepoPicker() {
 
       {/* Info bar (issue #8977): removed the bottom border that bled through
           as an underline beneath the inline text (e.g. "request timed out").
-          The sticky wrapper's backdrop-blur + bg-background/95 already give
+          The sticky wrapper's backdrop-blur-sm + bg-background/95 already give
           enough visual separation from the scrollable page content. */}
-      <div className="max-w-screen-2xl mx-auto px-6 pb-2 text-xs text-muted-foreground">
+      <div className="max-w-(--breakpoint-2xl) mx-auto px-6 pb-2 text-xs text-muted-foreground">
         {error ? (
           <div className="flex items-center gap-1.5 text-red-400">
             <AlertCircle className="w-3.5 h-3.5" />

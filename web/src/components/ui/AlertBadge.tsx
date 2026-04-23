@@ -277,7 +277,7 @@ export function AlertBadge() {
           {/* Mobile backdrop */}
           {isMobile && (
             <div
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-overlay"
+              className="fixed inset-0 bg-black/60 backdrop-blur-xs z-overlay"
               aria-hidden="true"
               onClick={close}
             />
@@ -334,7 +334,7 @@ export function AlertBadge() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder={t('common.searchAlerts')}
-                    className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary/50 border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500"
+                    className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary/50 border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500"
                   />
                 </div>
               </div>

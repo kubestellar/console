@@ -489,7 +489,7 @@ function ParetoFrontierInternal({ config }: ParetoFrontierProps) {
   return (
     <div className="h-full flex flex-col pt-3 px-4 pb-2">
       {/* Dropdown filters row */}
-      <div className="flex items-end gap-3 mb-2 flex-shrink-0 flex-wrap">
+      <div className="flex items-end gap-3 mb-2 shrink-0 flex-wrap">
         <FilterDropdown label={t('paretoFrontier.model')} value={modelFilter} onChange={setModelFilter} options={filterOptions.models} />
         <FilterDropdown label={t('paretoFrontier.islOsl')} value={seqLenFilter} onChange={setSeqLenFilter} options={filterOptions.seqLens} />
         <FilterDropdown label={t('paretoFrontier.framework')} value={frameworkFilter} onChange={setFrameworkFilter} options={filterOptions.frameworks} />
@@ -504,12 +504,12 @@ function ParetoFrontierInternal({ config }: ParetoFrontierProps) {
       </div>
 
       {/* Title + action buttons */}
-      <div className="flex items-start justify-between mb-1 flex-shrink-0">
+      <div className="flex items-start justify-between mb-1 shrink-0">
         <div className="min-w-0">
           <h3 className="text-[13px] font-bold text-foreground leading-tight truncate">{preset.title}</h3>
           <p className="text-2xs text-muted-foreground mt-0.5 truncate">{subtitle}</p>
         </div>
-        <div className="flex items-center gap-1 flex-shrink-0 ml-3">
+        <div className="flex items-center gap-1 shrink-0 ml-3">
           <button
             onClick={handleDownload}
             className="p-1.5 rounded border border-border hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
@@ -529,7 +529,7 @@ function ParetoFrontierInternal({ config }: ParetoFrontierProps) {
 
       {/* Info pills (power or cost, depending on chart preset) */}
       {infoPills && (
-        <div className="flex items-center gap-2 mb-1.5 flex-shrink-0 flex-wrap">
+        <div className="flex items-center gap-2 mb-1.5 shrink-0 flex-wrap">
           <span className="text-2xs text-muted-foreground font-medium">{infoPills.label}</span>
           {infoPills.items.map(({ hw, value }) => (
             <span
@@ -556,7 +556,7 @@ function ParetoFrontierInternal({ config }: ParetoFrontierProps) {
         </div>
 
         {/* Right legend panel */}
-        <div className="flex-shrink-0 flex flex-col" style={{ width: 130 }}>
+        <div className="shrink-0 flex flex-col" style={{ width: 130 }}>
           {/* Hardware series list */}
           <div className="flex-1 overflow-y-auto space-y-px" style={{ scrollbarWidth: 'thin' }}>
             {legendItems.map(({ hw, color }) => {
@@ -570,7 +570,7 @@ function ParetoFrontierInternal({ config }: ParetoFrontierProps) {
                   }`}
                   title={`${hidden ? t('common:common.show') : t('common:common.hide')} ${hw}`}
                 >
-                  <span className="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                  <span className="inline-block w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
                   <span className="text-foreground truncate">{hw}</span>
                 </button>
               )
@@ -592,7 +592,7 @@ function ParetoFrontierInternal({ config }: ParetoFrontierProps) {
           </button>
 
           {/* Toggle controls */}
-          <div className="border-t border-border/50 mt-1 pt-1.5 space-y-1 flex-shrink-0">
+          <div className="border-t border-border/50 mt-1 pt-1.5 space-y-1 shrink-0">
             <Toggle label={t('paretoFrontier.hideNonOptimal')} active={hideNonOptimal} onChange={setHideNonOptimal} />
             <Toggle label={t('paretoFrontier.hideLabels')} active={hideLabels} onChange={setHideLabels} />
             <Toggle label={t('paretoFrontier.highContrast')} active={highContrast} onChange={setHighContrast} />
@@ -601,7 +601,7 @@ function ParetoFrontierInternal({ config }: ParetoFrontierProps) {
       </div>
 
       {/* Bottom hint */}
-      <p className="text-center text-[9px] text-muted-foreground/50 mt-1 flex-shrink-0">
+      <p className="text-center text-[9px] text-muted-foreground/50 mt-1 shrink-0">
         {t('paretoFrontier.scrollToPan')}
       </p>
     </div>

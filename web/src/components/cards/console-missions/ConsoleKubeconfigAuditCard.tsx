@@ -130,7 +130,7 @@ Please:
               <div className="font-medium text-foreground truncate">{cluster.name}</div>
               <div className="text-yellow-400 truncate">{cluster.errorMessage || 'Connection failed'}</div>
             </div>
-            <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 flex-shrink-0" />
+            <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 shrink-0" />
           </div>
         ))}
         {unreachableClusters.length === 0 && (

@@ -166,7 +166,7 @@ export function AlertRulesCard() {
   return (
     <div className="h-full flex flex-col">
       {/* Header with controls */}
-      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 flex-shrink-0">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 shrink-0">
         <div className="flex items-center gap-2">
           <span className="px-1.5 py-0.5 text-xs rounded bg-secondary text-muted-foreground">
             {t('alertRules.activeCount', { count: enabledCount })}
@@ -193,7 +193,7 @@ export function AlertRulesCard() {
               sortDirection,
               onSortDirectionChange: setSortDirection,
             }}
-            className="!mb-0"
+            className="mb-0!"
           />
         </div>
       </div>

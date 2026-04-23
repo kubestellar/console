@@ -311,7 +311,7 @@ export function SubmitForm({
             aria-label={t('feedback.authGateTitle')}
             className="flex items-start gap-3 p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/40"
           >
-            <div className="w-9 h-9 rounded-full bg-yellow-500/20 flex items-center justify-center flex-shrink-0">
+            <div className="w-9 h-9 rounded-full bg-yellow-500/20 flex items-center justify-center shrink-0">
               <Lock className="w-4 h-4 text-yellow-400" />
             </div>
             <div className="flex-1 min-w-0">
@@ -352,7 +352,7 @@ export function SubmitForm({
         {/* Warning banner when FEEDBACK_GITHUB_TOKEN is not configured */}
         {feedbackTokenMissing && (
           <div className="flex items-start gap-3 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
-            <AlertTriangle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+            <AlertTriangle className="w-5 h-5 text-yellow-400 shrink-0 mt-0.5" />
             <div className="text-sm">
               <p className="font-medium text-yellow-400 mb-1">
                 GitHub integration not configured
@@ -384,7 +384,7 @@ export function SubmitForm({
         {/* Editing draft banner */}
         {editingDraftId && (
           <div className="flex items-center gap-2 p-2 rounded-lg bg-orange-500/10 border border-orange-500/20">
-            <FileText className="w-4 h-4 text-orange-400 flex-shrink-0" />
+            <FileText className="w-4 h-4 text-orange-400 shrink-0" />
             <span className="text-xs text-orange-400">Editing a saved draft</span>
             <button
               type="button"
@@ -543,7 +543,7 @@ export function SubmitForm({
                   ? 'Example bug report: (replace this with a detailed bug report)\n\nWhat happened:\nThe GPU utilization card shows 0% even though pods are running.\n\nWhat I expected:\nGPU metrics should reflect actual usage from nvidia-smi.\n\nSteps to reproduce:\n1. Deploy a GPU workload\n2. Open the dashboard\n3. Check the GPU card'
                   : 'Example feature request: (replace this with your feature request)\n\nWhat I want:\nAdd a button to export dashboard data as CSV.\n\nWhy it would be useful:\nI need to share cluster metrics with my team in spreadsheets.\n\nAdditional context:\nShould include all visible card data with timestamps.'
               }
-              className="w-full h-[200px] px-3 py-2 bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50 resize-none font-mono text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full h-[200px] px-3 py-2 bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500/50 resize-none font-mono text-sm disabled:opacity-60 disabled:cursor-not-allowed"
               disabled={inputsDisabled}
               aria-disabled={inputsDisabled}
             />
@@ -598,7 +598,7 @@ export function SubmitForm({
           {screenshots.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-2">
               {screenshots.map((s, i) => (
-                <div key={i} className="relative group w-20 h-20 flex-shrink-0">
+                <div key={i} className="relative group w-20 h-20 shrink-0">
                   <img
                     src={s.preview}
                     alt={`Screenshot ${i + 1}`}

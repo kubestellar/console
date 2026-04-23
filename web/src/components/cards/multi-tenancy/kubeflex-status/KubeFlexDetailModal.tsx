@@ -180,7 +180,7 @@ export function KubeFlexDetailModal({ isOpen, onClose, data, isDemoData }: KubeF
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={t('kubeFlexStatus.searchControlPlanes', 'Search control planes...')}
-              className="w-full pl-9 pr-3 py-2 bg-secondary/50 border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500"
+              className="w-full pl-9 pr-3 py-2 bg-secondary/50 border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500"
             />
           </div>
 

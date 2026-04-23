@@ -354,7 +354,7 @@ export function MatchGame(_props: CardComponentProps) {
         <div className="flex-1 flex items-center justify-center min-h-[120px]">
           <button
             onClick={initGame}
-            className="px-4 py-2 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg text-sm font-semibold hover:from-purple-600 hover:to-blue-600 transition-all transform hover:scale-105 flex items-center gap-2"
+            className="px-4 py-2 bg-linear-to-r from-purple-500 to-blue-500 rounded-lg text-sm font-semibold hover:from-purple-600 hover:to-blue-600 transition-all transform hover:scale-105 flex items-center gap-2"
           >
             <Play className="w-4 h-4" />
             Start Game
@@ -373,7 +373,7 @@ export function MatchGame(_props: CardComponentProps) {
           </div>
           <button
             onClick={resetGame}
-            className="px-4 py-1.5 bg-gradient-to-r from-green-500 to-green-500 rounded-lg text-sm font-semibold hover:from-green-600 hover:to-green-600 transition-all transform hover:scale-105 flex items-center gap-2"
+            className="px-4 py-1.5 bg-linear-to-r from-green-500 to-green-500 rounded-lg text-sm font-semibold hover:from-green-600 hover:to-green-600 transition-all transform hover:scale-105 flex items-center gap-2"
           >
             <RotateCcw className="w-4 h-4" />
             Play Again
@@ -408,7 +408,7 @@ export function MatchGame(_props: CardComponentProps) {
                   }`}
                 >
                   {/* Card back */}
-                  <div className="card-face absolute inset-0 backface-hidden bg-gradient-to-br from-purple-500/20 to-blue-500/20 border-2 border-purple-500/30 rounded flex items-center justify-center">
+                  <div className="card-face absolute inset-0 backface-hidden bg-linear-to-br from-purple-500/20 to-blue-500/20 border-2 border-purple-500/30 rounded flex items-center justify-center">
                     <Terminal className="w-5 h-5 text-purple-400" />
                   </div>
                   
@@ -427,7 +427,7 @@ export function MatchGame(_props: CardComponentProps) {
 
       {/* Pause overlay */}
       {isPaused && (
-        <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-10 rounded-xl">
+        <div className="absolute inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-10 rounded-xl">
           <div className="text-center">
             <Pause className="w-8 h-8 mx-auto mb-2 text-white" />
             <div className="text-base font-bold">Paused</div>

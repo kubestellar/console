@@ -618,7 +618,7 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
   return (
     <div className="h-full flex flex-col min-h-0 relative">
       {/* Header */}
-      <div className="flex items-center justify-end mb-3 flex-shrink-0">
+      <div className="flex items-center justify-end mb-3 shrink-0">
         <div className="flex items-center gap-2">
           {/* Changes indicator */}
           <button
@@ -643,11 +643,11 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
         value={searchFilter}
         onChange={setSearchFilter}
         placeholder="Search clusters, namespaces..."
-        className="mb-3 flex-shrink-0"
+        className="mb-3 shrink-0"
       />
 
       {/* Resource type filters */}
-      <div className="flex flex-wrap gap-1.5 mb-3 flex-shrink-0">
+      <div className="flex flex-wrap gap-1.5 mb-3 shrink-0">
         {(Object.keys(ResourceIcons) as ResourceType[]).map(type => {
           const Icon = ResourceIcons[type]
           const isActive = activeResourceTypes.has(type)

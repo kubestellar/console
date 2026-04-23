@@ -513,7 +513,7 @@ export function DeployModeInfoPanel({ mode, phases, projects, onShowProject, ins
               return (
                 <div key={phase.phase} className="rounded-lg border border-primary/20 bg-primary/5 p-3">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="text-xs font-bold text-white bg-primary rounded-full w-6 h-6 flex items-center justify-center shadow-sm">
+                    <span className="text-xs font-bold text-white bg-primary rounded-full w-6 h-6 flex items-center justify-center shadow-xs">
                       {phase.phase}
                     </span>
                     <span className="text-sm font-semibold text-foreground">{phase.name}</span>

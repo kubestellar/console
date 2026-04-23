@@ -138,7 +138,7 @@ export function HardwareLeaderboard() {
       {/* Table */}
       <div className="flex-1 min-h-0 overflow-auto">
         <table className="w-full text-xs">
-          <thead className="sticky top-0 bg-background backdrop-blur-sm z-10">
+          <thead className="sticky top-0 bg-background backdrop-blur-xs z-10">
             <tr className="border-b border-border/50">
               <th className="text-left py-2 px-2 text-muted-foreground font-medium w-[36px]">#</th>
               <th className="text-left py-2 px-2 text-muted-foreground font-medium w-[70px]">Hardware</th>
@@ -163,7 +163,7 @@ export function HardwareLeaderboard() {
               <tr
                 key={row.rank}
                 className={`border-b border-border/50 transition-colors hover:bg-secondary/30 ${
-                  row.config !== 'standalone' ? 'bg-blue-500/[0.03]' : ''
+                  row.config !== 'standalone' ? 'bg-blue-500/3' : ''
                 }`}
               >
                 <td className="py-2 px-2 font-mono text-muted-foreground">

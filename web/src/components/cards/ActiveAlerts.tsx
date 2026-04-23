@@ -248,7 +248,7 @@ export function ActiveAlerts() {
     <div className="h-full flex flex-col">
       {/* Header with controls — uses @container queries so layout
            responds to card width, not viewport width */}
-      <div className="flex flex-wrap @lg:flex-nowrap items-center justify-between gap-y-2 mb-2 flex-shrink-0">
+      <div className="flex flex-wrap @lg:flex-nowrap items-center justify-between gap-y-2 mb-2 shrink-0">
         <div className="flex items-center gap-2 @xs:flex-wrap">
           {stats.firing > 0 && (
             <StatusBadge color="red" variant="outline" rounded="full">

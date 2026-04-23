@@ -63,9 +63,9 @@ function RequestCard({ request, onFeedback }: RequestCardProps) {
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-2 min-w-0">
           {request.request_type === 'bug' ? (
-            <Bug className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />
+            <Bug className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
           ) : (
-            <Sparkles className="w-4 h-4 text-purple-400 mt-0.5 flex-shrink-0" />
+            <Sparkles className="w-4 h-4 text-purple-400 mt-0.5 shrink-0" />
           )}
           <div className="min-w-0">
             <h3 className="text-sm font-medium text-foreground truncate">
@@ -77,7 +77,7 @@ function RequestCard({ request, onFeedback }: RequestCardProps) {
           </div>
         </div>
         <span
-          className={`px-2 py-0.5 text-xs rounded-full text-white flex-shrink-0 ${
+          className={`px-2 py-0.5 text-xs rounded-full text-white shrink-0 ${
             STATUS_COLORS[request.status]
           }`}
         >

@@ -111,7 +111,7 @@ function CategoryIcon({ iconPath, size }: { iconPath: string; size: 'sm' | 'lg' 
   /* Large icons get a frosted backdrop for contrast on gradient headers */
   if (size === 'lg') {
     return (
-      <div className="w-12 h-12 rounded-xl bg-black/25 backdrop-blur-sm shadow-sm flex items-center justify-center">
+      <div className="w-12 h-12 rounded-xl bg-black/25 backdrop-blur-xs shadow-xs flex items-center justify-center">
         {icon}
       </div>
     )
@@ -137,8 +137,8 @@ function ProjectLogo({ cncfProject, iconPath, size }: {
   const imgCls = size === 'lg' ? 'w-10 h-10 rounded-lg' : 'w-5 h-5 rounded'
   /** Semi-transparent white backdrop for logo contrast on colored gradients */
   const backdropCls = size === 'lg'
-    ? 'w-12 h-12 rounded-xl bg-white/90 shadow-sm flex items-center justify-center'
-    : 'w-6 h-6 rounded bg-white/90 shadow-sm flex items-center justify-center'
+    ? 'w-12 h-12 rounded-xl bg-white/90 shadow-xs flex items-center justify-center'
+    : 'w-6 h-6 rounded bg-white/90 shadow-xs flex items-center justify-center'
   return (
     <div className={backdropCls}>
       <img
@@ -191,7 +191,7 @@ export function InstallerCard({ mission, onImport, onSelect, onCopyLink, compact
         onClick={onSelect}
       >
         <div
-          className="w-8 h-8 rounded flex items-center justify-center flex-shrink-0"
+          className="w-8 h-8 rounded flex items-center justify-center shrink-0"
           style={{ background: `linear-gradient(135deg, ${gradient[0]}, ${gradient[1]})` }}
         >
           <ProjectLogo cncfProject={mission.cncfProject} iconPath={iconPath} size="sm" />
@@ -208,13 +208,13 @@ export function InstallerCard({ mission, onImport, onSelect, onCopyLink, compact
           <span className={cn('text-2xs', mission.troubleshooting?.length ? 'text-yellow-400' : 'text-muted-foreground/30')} title="Troubleshoot"><AlertTriangle className="w-3 h-3" /></span>
         </div>
         {maturity && (
-          <span className={cn('px-1.5 py-0.5 text-2xs font-medium rounded-full border flex-shrink-0', maturity.bg, maturity.color, maturity.border)}>
+          <span className={cn('px-1.5 py-0.5 text-2xs font-medium rounded-full border shrink-0', maturity.bg, maturity.color, maturity.border)}>
             {maturity.label}
           </span>
         )}
         <button
           onClick={(e) => { e.stopPropagation(); onImport() }}
-          className="px-2 py-1 text-2xs font-medium rounded bg-purple-600 hover:bg-purple-500 text-white transition-colors flex-shrink-0"
+          className="px-2 py-1 text-2xs font-medium rounded bg-purple-600 hover:bg-purple-500 text-white transition-colors shrink-0"
         >
           <Download className="w-3 h-3" />
         </button>
@@ -260,7 +260,7 @@ export function InstallerCard({ mission, onImport, onSelect, onCopyLink, compact
       {/* Content */}
       <div className="flex flex-col flex-1 p-3 gap-2">
         <h4 className="text-sm font-medium text-foreground line-clamp-1 group-hover:text-purple-400 transition-colors inline-flex items-center gap-1.5">
-          <Wrench className="w-3.5 h-3.5 text-purple-400 flex-shrink-0" />
+          <Wrench className="w-3.5 h-3.5 text-purple-400 shrink-0" />
           {shortTitle || mission.title}
         </h4>
         <p className="text-xs text-muted-foreground line-clamp-2">{mission.description}</p>
@@ -334,7 +334,7 @@ export function InstallerCard({ mission, onImport, onSelect, onCopyLink, compact
               </a>
             )}
           </div>
-          <div className="flex items-center gap-1 flex-shrink-0">
+          <div className="flex items-center gap-1 shrink-0">
             {onCopyLink && (
               <button
                 onClick={(e) => {

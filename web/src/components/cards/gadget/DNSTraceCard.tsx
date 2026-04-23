@@ -72,7 +72,7 @@ export function DNSTraceCard({ config }: DNSTraceCardProps) {
                 {q.pod} / {q.namespace}
               </div>
             </div>
-            <div className="text-right flex-shrink-0 space-y-0.5">
+            <div className="text-right shrink-0 space-y-0.5">
               <div className={isFailure ? 'text-red-400 font-medium' : 'text-green-400'}>
                 {q.responseCode}
               </div>

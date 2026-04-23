@@ -553,7 +553,7 @@ data:
             onChange={(e) => setAiPrompt(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && generateCommand()}
             placeholder="e.g., Create a deployment for nginx with 3 replicas"
-            className="w-full px-3 py-2 text-sm bg-secondary rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+            className="w-full px-3 py-2 text-sm bg-secondary rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500/50"
           />
           <div className="flex gap-2 mt-2">
             <Button
@@ -624,7 +624,7 @@ data:
               validateYAML(e.target.value)
             }}
             placeholder="Paste or write your YAML manifest here..."
-            className="w-full h-40 px-3 py-2 text-xs font-mono bg-black/30 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-blue-500/50 resize-none"
+            className="w-full h-40 px-3 py-2 text-xs font-mono bg-black/30 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-blue-500/50 resize-none"
           />
           {yamlError && (
             <div className="flex items-center gap-2 mt-2 text-xs text-red-400">
@@ -707,7 +707,7 @@ data:
               value={historySearch}
               onChange={(e) => setHistorySearch(e.target.value)}
               placeholder={t('cards:kubectl.searchHistory')}
-              className="w-full pl-7 pr-3 py-1.5 text-xs bg-secondary rounded text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-orange-500/50"
+              className="w-full pl-7 pr-3 py-1.5 text-xs bg-secondary rounded text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-orange-500/50"
             />
           </div>
           <div className="flex-1 overflow-y-auto space-y-1">
@@ -725,13 +725,13 @@ data:
                 <div className="flex flex-wrap items-center justify-between gap-y-2">
                   <div className="flex items-center gap-2 flex-1 min-w-0">
                     {item.success ? (
-                      <CheckCircle className="w-3 h-3 text-green-400 flex-shrink-0" />
+                      <CheckCircle className="w-3 h-3 text-green-400 shrink-0" />
                     ) : (
-                      <AlertCircle className="w-3 h-3 text-red-400 flex-shrink-0" />
+                      <AlertCircle className="w-3 h-3 text-red-400 shrink-0" />
                     )}
                     <span className="text-muted-foreground truncate">{item.command}</span>
                   </div>
-                  <span className="text-2xs text-muted-foreground ml-2 flex-shrink-0">
+                  <span className="text-2xs text-muted-foreground ml-2 shrink-0">
                     {item.timestamp.toLocaleTimeString()}
                   </span>
                 </div>
@@ -777,7 +777,7 @@ data:
               <pre
                 key={idx}
                 className={cn(
-                  'whitespace-pre-wrap break-words m-0 py-0 leading-snug',
+                  'whitespace-pre-wrap wrap-break-word m-0 py-0 leading-snug',
                   isCommand && 'text-green-400 font-semibold bg-green-500/5 -mx-1 px-1 rounded mt-1 py-0.5 border-l-2 border-green-500/40',
                   isError && 'text-red-400 bg-red-500/5 -mx-1 px-1 rounded',
                   isAI && 'text-purple-400',
@@ -801,7 +801,7 @@ data:
             onKeyDown={handleKeyDown}
             placeholder="Enter kubectl command (without 'kubectl' prefix)"
             disabled={isExecuting || !selectedContext}
-            className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
+            className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-hidden disabled:opacity-50"
           />
           <div className="flex items-center gap-1">
             <div className="relative">

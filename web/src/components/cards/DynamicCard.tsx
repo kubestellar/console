@@ -281,7 +281,7 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
             value={filters.search}
             onChange={(e) => filters.setSearch(e.target.value)}
             placeholder={t('common:common.search')}
-            className="w-full text-xs px-2.5 py-1.5 rounded-md bg-secondary/50 border border-border text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+            className="w-full text-xs px-2.5 py-1.5 rounded-md bg-secondary/50 border border-border text-foreground placeholder:text-muted-foreground/50 focus:outline-hidden focus:ring-1 focus:ring-purple-500/50"
           />
         </div>
       )}
@@ -463,7 +463,7 @@ export function Tier2CardRuntime({ definition, config }: Tier2Props) {
       <div className="h-full flex flex-col items-center justify-center p-4 text-center">
         <AlertTriangle className="w-6 h-6 text-red-400 mb-2" />
         <p className="text-sm text-red-400 font-medium">{t('dynamicCard.compilationError')}</p>
-        <p className="text-xs text-muted-foreground mt-1 max-w-sm font-mono break-words">
+        <p className="text-xs text-muted-foreground mt-1 max-w-sm font-mono wrap-break-word">
           {error}
         </p>
       </div>

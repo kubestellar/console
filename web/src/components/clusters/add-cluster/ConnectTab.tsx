@@ -140,7 +140,7 @@ export function ConnectTab({
                 value={serverUrl}
                 onChange={(e) => setServerUrl(e.target.value)}
                 placeholder={t('cluster.connectServerPlaceholder')}
-                className="bg-secondary rounded-lg px-4 py-2.5 text-sm w-full border border-border dark:border-white/10 focus:border-purple-500 focus:outline-none"
+                className="bg-secondary rounded-lg px-4 py-2.5 text-sm w-full border border-border dark:border-white/10 focus:border-purple-500 focus:outline-hidden"
               />
               {connectError && (
                 <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 text-sm text-red-400">
@@ -207,7 +207,7 @@ export function ConnectTab({
                     value={token}
                     onChange={(e) => setToken(e.target.value)}
                     placeholder={t('cluster.connectTokenPlaceholder')}
-                    className="bg-secondary rounded-lg px-4 py-2.5 text-sm w-full border border-border dark:border-white/10 focus:border-purple-500 focus:outline-none font-mono"
+                    className="bg-secondary rounded-lg px-4 py-2.5 text-sm w-full border border-border dark:border-white/10 focus:border-purple-500 focus:outline-hidden font-mono"
                   />
                 </div>
               )}
@@ -221,7 +221,7 @@ export function ConnectTab({
                       onChange={(e) => setCertData(e.target.value)}
                       rows={3}
                       placeholder="-----BEGIN CERTIFICATE-----"
-                      className="bg-secondary rounded-lg px-4 py-2 text-xs w-full border border-border dark:border-white/10 focus:border-purple-500 focus:outline-none font-mono resize-none"
+                      className="bg-secondary rounded-lg px-4 py-2 text-xs w-full border border-border dark:border-white/10 focus:border-purple-500 focus:outline-hidden font-mono resize-none"
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -231,7 +231,7 @@ export function ConnectTab({
                       onChange={(e) => setKeyData(e.target.value)}
                       rows={3}
                       placeholder="-----BEGIN RSA PRIVATE KEY-----"
-                      className="bg-secondary rounded-lg px-4 py-2 text-xs w-full border border-border dark:border-white/10 focus:border-purple-500 focus:outline-none font-mono resize-none"
+                      className="bg-secondary rounded-lg px-4 py-2 text-xs w-full border border-border dark:border-white/10 focus:border-purple-500 focus:outline-hidden font-mono resize-none"
                     />
                   </div>
                 </div>
@@ -305,7 +305,7 @@ export function ConnectTab({
                           onChange={(e) => setCaData(e.target.value)}
                           rows={3}
                           placeholder="-----BEGIN CERTIFICATE-----"
-                          className="bg-secondary rounded-lg px-4 py-2 text-xs w-full border border-border dark:border-white/10 focus:border-purple-500 focus:outline-none font-mono resize-none"
+                          className="bg-secondary rounded-lg px-4 py-2 text-xs w-full border border-border dark:border-white/10 focus:border-purple-500 focus:outline-hidden font-mono resize-none"
                         />
                       </div>
                       <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
@@ -356,7 +356,7 @@ export function ConnectTab({
                   value={contextName}
                   onChange={(e) => setContextName(e.target.value)}
                   placeholder="my-cluster"
-                  className="bg-secondary rounded-lg px-4 py-2.5 text-sm w-full border border-border dark:border-white/10 focus:border-purple-500 focus:outline-none"
+                  className="bg-secondary rounded-lg px-4 py-2.5 text-sm w-full border border-border dark:border-white/10 focus:border-purple-500 focus:outline-hidden"
                 />
               </div>
               <div className="space-y-1.5">
@@ -366,7 +366,7 @@ export function ConnectTab({
                   value={clusterName}
                   onChange={(e) => setClusterName(e.target.value)}
                   placeholder="my-cluster"
-                  className="bg-secondary rounded-lg px-4 py-2.5 text-sm w-full border border-border dark:border-white/10 focus:border-purple-500 focus:outline-none"
+                  className="bg-secondary rounded-lg px-4 py-2.5 text-sm w-full border border-border dark:border-white/10 focus:border-purple-500 focus:outline-hidden"
                 />
               </div>
               <div className="space-y-1.5">
@@ -376,7 +376,7 @@ export function ConnectTab({
                   value={namespace}
                   onChange={(e) => setNamespace(e.target.value)}
                   placeholder="default"
-                  className="bg-secondary rounded-lg px-4 py-2.5 text-sm w-full border border-border dark:border-white/10 focus:border-purple-500 focus:outline-none"
+                  className="bg-secondary rounded-lg px-4 py-2.5 text-sm w-full border border-border dark:border-white/10 focus:border-purple-500 focus:outline-hidden"
                 />
               </div>
 

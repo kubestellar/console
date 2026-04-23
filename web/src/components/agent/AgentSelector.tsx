@@ -495,7 +495,7 @@ export function AgentSelector({
       <AgentIcon
         provider={agent.provider}
         className={cn(
-          "w-5 h-5 mt-0.5 flex-shrink-0",
+          "w-5 h-5 mt-0.5 shrink-0",
           !agent.available && "opacity-40",
         )}
       />
@@ -514,7 +514,7 @@ export function AgentSelector({
             {agent.displayName}
           </span>
           {agent.name === selectedAgent && (
-            <Check className="w-4 h-4 text-primary flex-shrink-0" />
+            <Check className="w-4 h-4 text-primary shrink-0" />
           )}
         </div>
         <p
@@ -657,7 +657,7 @@ export function AgentSelector({
               }}
             >
               {/* AI Agent toggle — ON by default, OFF disables AI processing */}
-              <div className="px-3 py-3 border-b border-border flex-shrink-0">
+              <div className="px-3 py-3 border-b border-border shrink-0">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Sparkles
@@ -715,7 +715,7 @@ export function AgentSelector({
                       }
                     }}
                     className={cn(
-                      "relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0",
+                      "relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0",
                       !isNoneSelected ? "bg-primary" : "bg-secondary",
                     )}
                   >
@@ -765,7 +765,7 @@ export function AgentSelector({
                     connectionState.phase === "handshake") && (
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
-                        <Loader2 className="w-4 h-4 animate-spin text-yellow-400 flex-shrink-0" />
+                        <Loader2 className="w-4 h-4 animate-spin text-yellow-400 shrink-0" />
                         <span className="text-sm font-medium text-foreground">
                           {connectionState.phase === "starting"
                             ? t("agent.providerStarting", {
@@ -790,7 +790,7 @@ export function AgentSelector({
                   )}
                   {connectionState.phase === "connected" && (
                     <div className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-green-400 flex-shrink-0" />
+                      <Check className="w-4 h-4 text-green-400 shrink-0" />
                       <span className="text-sm font-medium text-green-400">
                         {t("agent.providerConnected", {
                           provider: connectionState.provider,
@@ -801,7 +801,7 @@ export function AgentSelector({
                   {connectionState.phase === "failed" && (
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
-                        <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" />
+                        <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
                         <span className="text-sm font-medium text-red-400">
                           {t("agent.providerFailed", {
                             provider: connectionState.provider,
@@ -938,7 +938,7 @@ export function AgentSelector({
       {(installGuide || installGuideLoading || installGuideError) &&
         createPortal(
           <div
-            className="fixed inset-0 z-modal flex items-center justify-center bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-modal flex items-center justify-center bg-black/60 backdrop-blur-xs"
             onClick={(e) => {
               if (e.target === e.currentTarget) {
                 setInstallGuide(null);

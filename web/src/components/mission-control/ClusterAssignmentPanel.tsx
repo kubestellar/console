@@ -155,7 +155,7 @@ export function ClusterAssignmentPanel({
               variant="ghost"
               size="sm"
               onClick={() => setViewMode('cards')}
-              className={`!p-1.5 !rounded-none ${viewMode === 'cards' ? 'bg-primary/10 text-primary' : ''}`}
+              className={`p-1.5! rounded-none! ${viewMode === 'cards' ? 'bg-primary/10 text-primary' : ''}`}
               title="Card view"
               icon={<LayoutGrid className="w-4 h-4" />}
             />
@@ -163,7 +163,7 @@ export function ClusterAssignmentPanel({
               variant="ghost"
               size="sm"
               onClick={() => setViewMode('matrix')}
-              className={`!p-1.5 !rounded-none ${viewMode === 'matrix' ? 'bg-primary/10 text-primary' : ''}`}
+              className={`p-1.5! rounded-none! ${viewMode === 'matrix' ? 'bg-primary/10 text-primary' : ''}`}
               title="Matrix view"
               icon={<Table className="w-4 h-4" />}
             />

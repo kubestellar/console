@@ -94,7 +94,7 @@ export function TrinoGateway() {
                   <span className="truncate font-mono">{c.name}</span>
                   <span className="text-muted-foreground truncate">@{c.cluster}</span>
                 </div>
-                <div className="flex items-center gap-3 text-muted-foreground flex-shrink-0">
+                <div className="flex items-center gap-3 text-muted-foreground shrink-0">
                   <span>{c.workerCount} workers</span>
                   <span>{c.activeQueries} active</span>
                   {c.queuedQueries > 0 && <span className="text-yellow-400">{c.queuedQueries} queued</span>}
@@ -118,7 +118,7 @@ export function TrinoGateway() {
                     <span className="truncate font-mono">{g.name}</span>
                     <span className="text-muted-foreground truncate">@{g.cluster}</span>
                   </div>
-                  <span className={`flex-shrink-0 ${GATEWAY_STATUS_COLORS[g.status]}`}>{g.status}</span>
+                  <span className={`shrink-0 ${GATEWAY_STATUS_COLORS[g.status]}`}>{g.status}</span>
                 </div>
 
                 {/* Backend routing rows */}
@@ -126,10 +126,10 @@ export function TrinoGateway() {
                   <div className="ml-4 space-y-0.5">
                     {(g.backends || []).map(b => (
                       <div key={`${b.cluster}/${b.name}`} className="flex items-center gap-2 px-2 py-1 rounded bg-secondary/20 text-xs">
-                        <ArrowRight className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                        <ArrowRight className="w-3 h-3 text-muted-foreground shrink-0" />
                         <span className="font-mono truncate">{b.name}</span>
                         <span className="text-muted-foreground truncate">@{b.cluster}</span>
-                        <span className="ml-auto flex items-center gap-1 flex-shrink-0">
+                        <span className="ml-auto flex items-center gap-1 shrink-0">
                           {b.active ? (
                             <CheckCircle2 className="w-3 h-3 text-green-400" />
                           ) : (

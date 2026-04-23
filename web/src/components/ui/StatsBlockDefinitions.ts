@@ -19,7 +19,7 @@ export type StatDisplayMode =
   | 'numeric'
   | 'sparkline'
   | 'gauge'
-  | 'ring'
+  | 'ring-3'
   | 'mini-bar'
   | 'trend'
   | 'stacked-bar'
@@ -410,16 +410,16 @@ export const MULTI_TENANCY_STAT_BLOCKS: StatBlockConfig[] = [
   { id: 'control_planes', name: 'Control Planes', icon: 'Layers', visible: true, color: 'blue' },
   { id: 'vms', name: 'VMs', icon: 'Monitor', visible: true, color: 'orange' },
   { id: 'udn_networks', name: 'UDN Networks', icon: 'Network', visible: true, color: 'cyan' },
-  { id: 'components', name: 'Components', icon: 'CheckCircle2', visible: true, color: 'green', displayMode: 'ring' },
+  { id: 'components', name: 'Components', icon: 'CheckCircle2', visible: true, color: 'green', displayMode: 'ring-3' },
 ]
 
 /**
  * Default stat blocks for the ACMM dashboard
  */
 export const ACMM_STAT_BLOCKS: StatBlockConfig[] = [
-  { id: 'acmm_level', name: 'Maturity Level', icon: 'BarChart3', visible: true, color: 'purple', displayMode: 'ring' },
+  { id: 'acmm_level', name: 'Maturity Level', icon: 'BarChart3', visible: true, color: 'purple', displayMode: 'ring-3' },
   { id: 'acmm_detected', name: 'Criteria Met', icon: 'CheckCircle2', visible: true, color: 'green', displayMode: 'gauge' },
-  { id: 'acmm_next_level', name: 'Next Level', icon: 'TrendingUp', visible: true, color: 'cyan', displayMode: 'ring' },
+  { id: 'acmm_next_level', name: 'Next Level', icon: 'TrendingUp', visible: true, color: 'cyan', displayMode: 'ring-3' },
   { id: 'acmm_by_source', name: 'Best Source', icon: 'Layers', visible: true, color: 'blue', displayMode: 'mini-bar' },
 ]
 
@@ -427,7 +427,7 @@ export const ACMM_STAT_BLOCKS: StatBlockConfig[] = [
  * Default stat blocks for the CI/CD dashboard
  */
 export const CICD_STAT_BLOCKS: StatBlockConfig[] = [
-  { id: 'cicd_pass_rate', name: 'Pass Rate', icon: 'Percent', visible: true, color: 'green', displayMode: 'ring' },
+  { id: 'cicd_pass_rate', name: 'Pass Rate', icon: 'Percent', visible: true, color: 'green', displayMode: 'ring-3' },
   { id: 'cicd_open_prs', name: 'Active PR Runs', icon: 'ClipboardList', visible: true, color: 'blue', displayMode: 'sparkline' },
   { id: 'cicd_failed_24h', name: 'Failed (24h)', icon: 'XCircle', visible: true, color: 'red' },
   { id: 'cicd_runs_today', name: 'Runs Today', icon: 'Clock', visible: true, color: 'cyan' },
@@ -581,8 +581,8 @@ export const STAT_DISPLAY_MODE_DEFAULTS: Record<string, StatDisplayMode> = {
   'compliance:nsa_score': 'gauge',
 
   // Compute — utilization percentages fit rings
-  'compute:cpu_util': 'ring',
-  'compute:memory_util': 'ring',
+  'compute:cpu_util': 'ring-3',
+  'compute:memory_util': 'ring-3',
 
   // Data compliance — horseshoe for scores
   'data-compliance:encryption_score': 'horseshoe',
@@ -609,13 +609,13 @@ export const STAT_DISPLAY_MODE_DEFAULTS: Record<string, StatDisplayMode> = {
   'pods:total_pods': 'sparkline',
 
   // CI/CD — pass rate as ring, streak as sparkline, failed as heatmap
-  'ci-cd:cicd_pass_rate': 'ring',
+  'ci-cd:cicd_pass_rate': 'ring-3',
   'ci-cd:cicd_streak': 'sparkline',
   'ci-cd:cicd_failed_24h': 'heatmap',
 
   // Multi-tenancy — isolation score as gauge, components as ring, tenants as sparkline
   'multi-tenancy:isolation_score': 'gauge',
-  'multi-tenancy:components': 'ring',
+  'multi-tenancy:components': 'ring-3',
   'multi-tenancy:tenants': 'sparkline',
 }
 

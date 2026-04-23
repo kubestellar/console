@@ -215,7 +215,7 @@ export function NetworkOverview() {
       {/* Issue 8883: roving-tabindex stat tiles — Enter/Space activates; only
           focusable when the tile is interactive (totalServices > 0). */}
       <div
-        className={`p-3 rounded-lg bg-cyan-500/10 border border-cyan-500/20 mb-4 ${stats.totalServices > 0 ? 'cursor-pointer hover:bg-cyan-500/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400' : 'cursor-default'} transition-colors`}
+        className={`p-3 rounded-lg bg-cyan-500/10 border border-cyan-500/20 mb-4 ${stats.totalServices > 0 ? 'cursor-pointer hover:bg-cyan-500/20 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400' : 'cursor-default'} transition-colors`}
         {...(stats.totalServices > 0 ? { role: 'button' as const, tabIndex: 0 } : {})}
         onClick={() => {
           if (stats.totalServices > 0) {
@@ -243,7 +243,7 @@ export function NetworkOverview() {
       {/* Service Types */}
       <div className="grid grid-cols-2 gap-2 mb-4">
         <div
-          className={`p-2 rounded-lg bg-blue-500/10 border border-blue-500/20 ${stats.loadBalancers > 0 ? 'cursor-pointer hover:bg-blue-500/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400' : 'cursor-default'} transition-colors`}
+          className={`p-2 rounded-lg bg-blue-500/10 border border-blue-500/20 ${stats.loadBalancers > 0 ? 'cursor-pointer hover:bg-blue-500/20 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400' : 'cursor-default'} transition-colors`}
           {...(stats.loadBalancers > 0 ? { role: 'button' as const, tabIndex: 0 } : {})}
           onClick={() => {
             if (stats.loadBalancers > 0) {
@@ -269,7 +269,7 @@ export function NetworkOverview() {
           <span className="text-lg font-bold text-foreground">{stats.loadBalancers}</span>
         </div>
         <div
-          className={`p-2 rounded-lg bg-purple-500/10 border border-purple-500/20 ${stats.nodePort > 0 ? 'cursor-pointer hover:bg-purple-500/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400' : 'cursor-default'} transition-colors`}
+          className={`p-2 rounded-lg bg-purple-500/10 border border-purple-500/20 ${stats.nodePort > 0 ? 'cursor-pointer hover:bg-purple-500/20 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400' : 'cursor-default'} transition-colors`}
           {...(stats.nodePort > 0 ? { role: 'button' as const, tabIndex: 0 } : {})}
           onClick={() => {
             if (stats.nodePort > 0) {
@@ -295,7 +295,7 @@ export function NetworkOverview() {
           <span className="text-lg font-bold text-foreground">{stats.nodePort}</span>
         </div>
         <div
-          className={`p-2 rounded-lg bg-green-500/10 border border-green-500/20 ${stats.clusterIP > 0 ? 'cursor-pointer hover:bg-green-500/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400' : 'cursor-default'} transition-colors`}
+          className={`p-2 rounded-lg bg-green-500/10 border border-green-500/20 ${stats.clusterIP > 0 ? 'cursor-pointer hover:bg-green-500/20 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400' : 'cursor-default'} transition-colors`}
           {...(stats.clusterIP > 0 ? { role: 'button' as const, tabIndex: 0 } : {})}
           onClick={() => {
             if (stats.clusterIP > 0) {
@@ -321,7 +321,7 @@ export function NetworkOverview() {
           <span className="text-lg font-bold text-foreground">{stats.clusterIP}</span>
         </div>
         <div
-          className={`p-2 rounded-lg bg-orange-500/10 border border-orange-500/20 ${stats.externalName > 0 ? 'cursor-pointer hover:bg-orange-500/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400' : 'cursor-default'} transition-colors`}
+          className={`p-2 rounded-lg bg-orange-500/10 border border-orange-500/20 ${stats.externalName > 0 ? 'cursor-pointer hover:bg-orange-500/20 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400' : 'cursor-default'} transition-colors`}
           {...(stats.externalName > 0 ? { role: 'button' as const, tabIndex: 0 } : {})}
           onClick={() => {
             if (stats.externalName > 0) {
@@ -388,7 +388,7 @@ export function NetworkOverview() {
                 <div
                   key={name}
                   data-keynav-item="namespace"
-                  className={`flex flex-wrap items-center justify-between gap-y-2 gap-2 p-2 rounded bg-secondary/30 ${isInteractive ? 'cursor-pointer hover:bg-secondary/50' : 'cursor-default'} transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400`}
+                  className={`flex flex-wrap items-center justify-between gap-y-2 gap-2 p-2 rounded bg-secondary/30 ${isInteractive ? 'cursor-pointer hover:bg-secondary/50' : 'cursor-default'} transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400`}
                   onClick={activate}
                   onKeyDown={handleKeyDown}
                   {...(isInteractive ? { role: 'button' as const, tabIndex: 0 } : { role: 'listitem' as const })}

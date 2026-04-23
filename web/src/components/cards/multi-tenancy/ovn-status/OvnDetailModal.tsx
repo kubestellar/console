@@ -202,7 +202,7 @@ export function OvnDetailModal({ isOpen, onClose, data, isDemoData }: OvnDetailM
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder={t('ovnStatus.searchUdns', 'Search networks...')}
-                  className="w-full pl-9 pr-3 py-2 bg-secondary/50 border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500"
+                  className="w-full pl-9 pr-3 py-2 bg-secondary/50 border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500"
                 />
               </div>
 

@@ -176,7 +176,7 @@ export function CardChat({
               )}
             >
               {message.role === 'assistant' && (
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center">
+                <div className="shrink-0 w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center">
                   <Bot className="w-4 h-4 text-purple-400" />
                 </div>
               )}
@@ -218,7 +218,7 @@ export function CardChat({
                 </div>
               </div>
               {message.role === 'user' && (
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
+                <div className="shrink-0 w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
                   <User className="w-4 h-4 text-muted-foreground" />
                 </div>
               )}
@@ -227,7 +227,7 @@ export function CardChat({
 
           {isLoading && (
             <div className="flex gap-3">
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center">
+              <div className="shrink-0 w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center">
                 <Bot className="w-4 h-4 text-purple-400" />
               </div>
               <div className="bg-secondary/50 rounded-2xl px-4 py-3">

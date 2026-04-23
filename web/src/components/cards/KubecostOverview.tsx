@@ -57,7 +57,7 @@ export function KubecostOverview({ config: _config }: KubecostOverviewProps) {
 
       {/* Integration notice */}
       <div className="flex items-start gap-2 p-2 mb-3 rounded-lg bg-green-500/10 border border-green-500/20 text-xs">
-        <AlertCircle className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
+        <AlertCircle className="w-4 h-4 text-green-400 shrink-0 mt-0.5" />
         <div>
           <p className="text-green-400 font-medium">Kubecost Integration</p>
           <p className="text-muted-foreground">
@@ -71,11 +71,11 @@ export function KubecostOverview({ config: _config }: KubecostOverviewProps) {
 
       {/* Cost overview */}
       <div className="grid grid-cols-2 gap-2 mb-3">
-        <div className="p-3 rounded-lg bg-gradient-to-r from-green-500/20 to-green-500/20 border border-green-500/30">
+        <div className="p-3 rounded-lg bg-linear-to-r from-green-500/20 to-green-500/20 border border-green-500/30">
           <p className="text-xs text-green-400 mb-1">{t('kubecostOverview.monthlyCost')}</p>
           <p className="text-xl font-bold text-foreground">${DEMO_COST_SUMMARY.totalMonthly.toLocaleString()}</p>
         </div>
-        <div className="p-3 rounded-lg bg-gradient-to-r from-purple-500/20 to-purple-500/20 border border-purple-500/30">
+        <div className="p-3 rounded-lg bg-linear-to-r from-purple-500/20 to-purple-500/20 border border-purple-500/30">
           <div className="flex items-center gap-1 mb-1">
             <p className="text-xs text-purple-400">Efficiency</p>
             <PieChart className="w-3 h-3 text-purple-400" />

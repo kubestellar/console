@@ -1008,7 +1008,7 @@ export function UpdateSettings() {
           </div>
 
           {/* Coding Agent tip */}
-          <div className="p-4 rounded-lg bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20">
+          <div className="p-4 rounded-lg bg-linear-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20">
             <div className="flex items-center gap-2 mb-2">
               <Bot className="w-4 h-4 text-purple-400" />
               <span className="text-sm font-medium text-foreground">{t('settings.updates.devCodingAgent')}</span>

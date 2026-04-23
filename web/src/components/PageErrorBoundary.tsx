@@ -76,10 +76,10 @@ export class PageErrorBoundary extends Component<Props, State> {
             )}
           </div>
           {this.state.error && (
-            // `break-words` avoids splitting words like "undefined" mid-letter
+            // `wrap-break-word` avoids splitting words like "undefined" mid-letter
             // (see issue #5902). `break-all` was the previous class and caused
             // single-character lines when error messages contained long tokens.
-            <div className="text-xs text-muted-foreground/70 font-mono mb-6 break-words whitespace-pre-wrap max-w-lg">
+            <div className="text-xs text-muted-foreground/70 font-mono mb-6 wrap-break-word whitespace-pre-wrap max-w-lg">
               {this.state.error.message}
             </div>
           )}

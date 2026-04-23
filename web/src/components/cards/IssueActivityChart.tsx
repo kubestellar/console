@@ -460,7 +460,7 @@ export function IssueActivityChart(props: { config?: IssueActivityConfig }) {
       },
       tooltip: {
         trigger: 'axis' as const,
-        axisPointer: { type: 'shadow' as const },
+        axisPointer: { type: 'shadow-sm' as const },
         backgroundColor: (CHART_TOOLTIP_CONTENT_STYLE as Record<string, unknown>).backgroundColor as string,
         borderColor: (CHART_TOOLTIP_CONTENT_STYLE as Record<string, unknown>).borderColor as string,
         textStyle: { color: CHART_TOOLTIP_TEXT_COLOR, fontSize: 12 },

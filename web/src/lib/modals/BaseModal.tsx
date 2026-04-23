@@ -170,7 +170,7 @@ export function BaseModal({
   return createPortal(
     <div
       ref={backdropRef}
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-modal isolate p-4 overflow-y-auto overscroll-contain"
+      className="fixed inset-0 bg-black/60 backdrop-blur-xs z-modal isolate p-4 overflow-y-auto overscroll-contain"
       onMouseDown={handleBackdropMouseDown}
       onClick={handleBackdropClick}
     >
@@ -231,7 +231,7 @@ function ModalHeader({
           {showBack && onBack && (
             <button
               onClick={onBack}
-              className="p-2 rounded-lg hover:bg-card/50 text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
+              className="p-2 rounded-lg hover:bg-card/50 text-muted-foreground hover:text-foreground transition-colors shrink-0"
               title="Go back (Backspace)"
               aria-label="Go back"
             >
@@ -241,7 +241,7 @@ function ModalHeader({
 
           {/* Icon */}
           {Icon && (
-            <div className="flex-shrink-0">
+            <div className="shrink-0">
               <Icon className="w-6 h-6 text-purple-400" />
             </div>
           )}
@@ -260,7 +260,7 @@ function ModalHeader({
 
           {/* Badges */}
           {badges && (
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex items-center gap-2 shrink-0">
               {badges}
             </div>
           )}

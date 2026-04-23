@@ -440,7 +440,7 @@ export function Settings() {
     >
       {/* Settings restored toast */}
       {showRestoredToast && (
-        <div className="fixed top-20 right-4 z-toast bg-green-500/20 border border-green-500/30 text-green-400 px-4 py-2 rounded-lg text-sm shadow-lg backdrop-blur-sm animate-in slide-in-from-right">
+        <div className="fixed top-20 right-4 z-toast bg-green-500/20 border border-green-500/30 text-green-400 px-4 py-2 rounded-lg text-sm shadow-lg backdrop-blur-xs animate-in slide-in-from-right">
           {t('settings.restoredFromBackup')}
         </div>
       )}

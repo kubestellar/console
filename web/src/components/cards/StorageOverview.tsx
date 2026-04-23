@@ -161,7 +161,7 @@ export function StorageOverview() {
       {/* Error banner */}
       {pvcsError && (
         <div className="mb-3 p-2 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-400 flex items-center gap-2">
-          <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+          <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
           <span>{t('storageOverview.fetchError', { defaultValue: 'Failed to load PVC data: {{error}}', error: pvcsError })}</span>
         </div>
       )}

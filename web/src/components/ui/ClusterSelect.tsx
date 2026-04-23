@@ -108,7 +108,7 @@ export function ClusterSelect({
         onClick={() => !disabled && toggle()}
         disabled={disabled}
         className={cn(
-          'rounded-md border border-border px-2 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-blue-500/50 text-left',
+          'rounded-md border border-border px-2 py-1.5 text-foreground focus:outline-hidden focus:ring-1 focus:ring-blue-500/50 text-left',
           className,
         )}
         icon={selectedState ? <ClusterStatusDot state={selectedState} size="sm" /> : undefined}

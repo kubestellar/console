@@ -108,7 +108,7 @@ export function MLNotebooks({ config: _config }: MLNotebooksProps) {
 
       {/* Integration notice */}
       <div className="flex items-start gap-2 p-2 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs mb-4">
-        <AlertCircle className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" />
+        <AlertCircle className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
         <div>
           <p className="text-blue-400 font-medium">{t('cards:mlNotebooks.notebookDetection')}</p>
           <p className="text-muted-foreground">

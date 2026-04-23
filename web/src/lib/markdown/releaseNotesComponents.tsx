@@ -56,7 +56,7 @@ export function buildReleaseNotesComponents(fontSize: 'sm' | 'base' | 'lg' = 'sm
       <th className="px-3 py-2 text-left text-xs font-semibold text-foreground border-b border-border whitespace-nowrap">{children}</th>
     ),
     td: ({ children }: ChildrenProp) => (
-      <td className="px-3 py-2 text-xs text-muted-foreground border-b border-border/50 max-w-[200px] break-words">{children}</td>
+      <td className="px-3 py-2 text-xs text-muted-foreground border-b border-border/50 max-w-[200px] wrap-break-word">{children}</td>
     ),
   }
 }

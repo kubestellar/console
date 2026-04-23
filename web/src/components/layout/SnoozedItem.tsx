@@ -37,7 +37,7 @@ export function SnoozedItem({ swap, onApply, onDismiss }: SnoozedItemProps) {
       {/* Card swap info */}
       <div className="flex items-center gap-1 pr-4 mb-1">
         <span className="text-muted-foreground truncate">{swap.originalCardTitle}</span>
-        <ArrowRight className="w-3 h-3 text-purple-400 flex-shrink-0" />
+        <ArrowRight className="w-3 h-3 text-purple-400 shrink-0" />
         <span className="text-foreground truncate">{swap.newCardTitle}</span>
       </div>
 

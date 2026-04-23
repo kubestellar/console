@@ -322,7 +322,7 @@ export function AgentStatusIndicator() {
           {pillStyle.label}
         </span>
         <span
-          className={cn('w-2 h-2 rounded-full flex-shrink-0', pillStyle.dot)}
+          className={cn('w-2 h-2 rounded-full shrink-0', pillStyle.dot)}
         />
       </button>
 
@@ -369,7 +369,7 @@ export function AgentStatusIndicator() {
                 ) : (
                   <span
                     className={cn(
-                      'absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform shadow-sm',
+                      'absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform shadow-xs',
                       isDemoMode ? 'translate-x-5' : 'translate-x-0',
                     )}
                   />
@@ -536,7 +536,7 @@ export function AgentStatusIndicator() {
                   >
                     <div
                       className={cn(
-                        'w-2 h-2 rounded-full mt-1 flex-shrink-0',
+                        'w-2 h-2 rounded-full mt-1 shrink-0',
                         event.type === 'connected'
                           ? 'bg-green-400'
                           : event.type === 'disconnected'

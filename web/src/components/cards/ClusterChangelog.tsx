@@ -106,14 +106,14 @@ export function ClusterChangelog() {
       {/* Error Display */}
       {isFailed && (
         <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-2">
-          <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+          <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="text-xs font-medium text-red-400">{t('clusterChangelog.errorLoading')}</p>
             <p className="text-2xs text-muted-foreground mt-0.5">{t('clusterChangelog.fetchFailed', { count: consecutiveFailures })}</p>
           </div>
           <button
             onClick={() => refetch()}
-            className="text-xs text-red-400 hover:text-red-300 underline underline-offset-2 flex-shrink-0"
+            className="text-xs text-red-400 hover:text-red-300 underline underline-offset-2 shrink-0"
           >
             {t('clusterChangelog.retry')}
           </button>

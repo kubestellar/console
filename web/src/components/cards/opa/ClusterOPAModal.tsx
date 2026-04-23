@@ -499,7 +499,7 @@ Please proceed with applying this policy.`,
           onClose={() => setShowYamlEditor(false)}
           showBack={false}
         />
-        <BaseModal.Content className="!overflow-visible">
+        <BaseModal.Content className="overflow-visible!">
           <div className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-y-2 text-xs">
               <span className="text-muted-foreground">YAML will be applied to: <span className="text-foreground">{clusterName}</span></span>
@@ -514,7 +514,7 @@ Please proceed with applying this policy.`,
             <textarea
               value={yamlContent}
               onChange={(e) => setYamlContent(e.target.value)}
-              className="w-full h-[60vh] p-3 bg-secondary/50 border border-border rounded-lg font-mono text-sm text-foreground resize-none focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+              className="w-full h-[60vh] p-3 bg-secondary/50 border border-border rounded-lg font-mono text-sm text-foreground resize-none focus:outline-hidden focus:ring-1 focus:ring-purple-500/50"
               placeholder="# Paste or write your ConstraintTemplate and Constraint YAML here..."
               spellCheck={false}
             />

@@ -85,7 +85,7 @@ function SortableItem({ item, onRemove, renderIcon }: SortableItemProps) {
         isDragging && 'shadow-lg'
       )}
     >
-      <GripVertical className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+      <GripVertical className="w-4 h-4 text-muted-foreground shrink-0" />
       {renderIcon(item.icon, 'w-4 h-4 text-muted-foreground')}
       <span className="text-sm text-foreground">{item.name}</span>
       <span className="text-xs text-muted-foreground/50">{item.href}</span>
@@ -400,7 +400,7 @@ export function SidebarCustomizer({ isOpen, onClose, embedded = false }: Sidebar
                 value={routeSearch}
                 onChange={(e) => setRouteSearch(e.target.value)}
                 placeholder="Search dashboards..."
-                className="w-full pl-10 pr-4 py-2 bg-secondary rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                className="w-full pl-10 pr-4 py-2 bg-secondary rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500/50"
               />
             </div>
           </div>
@@ -441,7 +441,7 @@ export function SidebarCustomizer({ isOpen, onClose, embedded = false }: Sidebar
                         <span className="text-sm font-medium text-foreground">{route.name}</span>
                         <span className="text-xs text-muted-foreground/50 ml-1.5">{route.description}</span>
                       </div>
-                      <Plus className="w-3.5 h-3.5 text-purple-400 flex-shrink-0" />
+                      <Plus className="w-3.5 h-3.5 text-purple-400 shrink-0" />
                     </button>
                   ))}
                 </div>

@@ -169,7 +169,7 @@ export function UpdatesTab({
       </div>
 
       {/* Actions header */}
-      <div className="p-2 border-b border-border/50 flex items-center justify-between flex-shrink-0">
+      <div className="p-2 border-b border-border/50 flex items-center justify-between shrink-0">
         {actionError ? (
           <span className="text-xs text-red-400">{actionError}</span>
         ) : (
@@ -192,7 +192,7 @@ export function UpdatesTab({
 
       <div className="flex-1 min-h-0 overflow-y-auto">
         {/* Your Requests section */}
-        <div className="p-2 border-b border-border/50 flex-shrink-0">
+        <div className="p-2 border-b border-border/50 shrink-0">
           <span className="text-2xs font-medium text-muted-foreground uppercase tracking-wider">
             Your Requests ({requests.length})
           </span>
@@ -434,7 +434,7 @@ function UntriagedRequestContent({
 }) {
   return isOwnedByUser ? (
     <>
-      <p className="text-sm font-medium text-foreground mt-1 truncate blur-sm select-none">
+      <p className="text-sm font-medium text-foreground mt-1 truncate blur-xs select-none">
         {request.request_type === 'bug' ? '\uD83D\uDC1B ' : '\u2728 '}{request.title}
       </p>
       <div className="flex items-center gap-2 mt-1.5 flex-wrap">
@@ -492,7 +492,7 @@ function TriagedRequestContent({
 }) {
   return (
     <>
-      <p className={`text-sm font-medium text-foreground mt-1 truncate ${shouldBlur ? 'blur-sm select-none' : ''}`}>
+      <p className={`text-sm font-medium text-foreground mt-1 truncate ${shouldBlur ? 'blur-xs select-none' : ''}`}>
         {request.request_type === 'bug' ? '\uD83D\uDC1B ' : '\u2728 '}{request.title}
       </p>
       <div className="flex items-center gap-2 mt-1.5 flex-wrap">
@@ -505,7 +505,7 @@ function TriagedRequestContent({
           </span>
         )}
         {getStatusDescription(request.status, request.closed_by_user) && (
-          <span className={`text-xs text-muted-foreground ${shouldBlur ? 'blur-sm select-none' : ''}`}>
+          <span className={`text-xs text-muted-foreground ${shouldBlur ? 'blur-xs select-none' : ''}`}>
             {getStatusDescription(request.status, request.closed_by_user)}
           </span>
         )}
@@ -748,7 +748,7 @@ function GitHubContributionsSection({
 }: GitHubContributionsSectionProps) {
   return (
     <>
-      <div className="p-2 border-b border-border/50 flex items-center justify-between flex-shrink-0">
+      <div className="p-2 border-b border-border/50 flex items-center justify-between shrink-0">
         <span className="text-2xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
           <Github className="w-3 h-3" />
           {currentGitHubLogin ? `${currentGitHubLogin}'s` : ''} GitHub Contributions
@@ -789,7 +789,7 @@ function GitHubContributionsSection({
         // (kubestellar, llm-d) — NOT only items submitted via this console.
         // The Rewards panel's "Submitted via console" line counts a different
         // (smaller) population. See kubestellar/console#8893 for context.
-        <div className="px-3 py-2 border-b border-border/50 flex-shrink-0">
+        <div className="px-3 py-2 border-b border-border/50 shrink-0">
           <div className="flex flex-wrap gap-1.5">
             {githubRewards.breakdown.prs_merged > 0 && (
               <StatusBadge color="purple" size="xs" rounded="full" icon={<GitMerge className="w-2.5 h-2.5" />}>
@@ -824,7 +824,7 @@ function GitHubContributionsSection({
               </StatusBadge>
             )}
             {githubRewards.breakdown.other_issues > 0 && (
-              <StatusBadge color="purple" size="xs" rounded="full" className="!bg-gray-500/20 !text-muted-foreground" icon={<AlertCircle className="w-2.5 h-2.5" />}>
+              <StatusBadge color="purple" size="xs" rounded="full" className="bg-gray-500/20! text-muted-foreground!" icon={<AlertCircle className="w-2.5 h-2.5" />}>
                 {githubRewards.breakdown.other_issues} Issues
               </StatusBadge>
             )}
@@ -866,7 +866,7 @@ function GitHubContributionsSection({
                 <div className="flex items-center gap-2.5 min-w-0 flex-1">
                   <GitHubContributionIcon type={contrib.type} />
                   <div className="min-w-0 flex-1">
-                    <p className={`text-sm text-foreground truncate group-hover:text-blue-400 transition-colors ${isUntriaged ? 'blur-sm select-none' : ''}`}>
+                    <p className={`text-sm text-foreground truncate group-hover:text-blue-400 transition-colors ${isUntriaged ? 'blur-xs select-none' : ''}`}>
                       {contrib.title}
                     </p>
                     <p className="text-xs text-muted-foreground">
@@ -874,7 +874,7 @@ function GitHubContributionsSection({
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                <div className="flex items-center gap-2 shrink-0 ml-2">
                   <span className="text-xs text-yellow-400 font-medium">+{contrib.points}</span>
                   <ExternalLink className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>

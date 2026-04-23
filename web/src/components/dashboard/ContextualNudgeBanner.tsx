@@ -72,7 +72,7 @@ export function ContextualNudgeBanner({ nudgeType, onAction, onDismiss }: Contex
     <div className={`mb-4 rounded-xl border ${config.accentClass} px-4 py-3 animate-in slide-in-from-top-2 duration-300`}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+          <Icon className="w-4 h-4 text-muted-foreground shrink-0" />
           <div>
             <span className="text-sm font-medium text-foreground">
               {t(config.titleKey, config.titleFallback)}
@@ -82,7 +82,7 @@ export function ContextualNudgeBanner({ nudgeType, onAction, onDismiss }: Contex
             </span>
           </div>
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+        <div className="flex items-center gap-2 shrink-0 ml-4">
           <button
             onClick={onAction}
             className="text-xs font-medium text-purple-400 hover:text-purple-300 transition-colors px-3 py-1.5 rounded-lg hover:bg-purple-500/10"

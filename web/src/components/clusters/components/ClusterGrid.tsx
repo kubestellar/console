@@ -327,7 +327,7 @@ const FullClusterCard = memo(function FullClusterCard({
       role="button"
       tabIndex={0}
       aria-label={`Select cluster ${cluster.context || cluster.name}`}
-      className="relative p-[1px] rounded-lg cursor-pointer transition-all hover:shadow-lg hover:-translate-y-0.5 overflow-hidden h-full"
+      className="relative p-px rounded-lg cursor-pointer transition-all hover:shadow-lg hover:-translate-y-0.5 overflow-hidden h-full"
       style={{
         /* Card view: prominent gradient — provider at 50%, theme at 38% */
         background: `linear-gradient(135deg, color-mix(in srgb, ${providerColor} 50%, transparent) 0%, color-mix(in srgb, ${themeColor} 38%, transparent) 100%)` }}
@@ -347,7 +347,7 @@ const FullClusterCard = memo(function FullClusterCard({
           <div className="flex items-center gap-3">
             {dragHandle}
             {/* Status indicator with refresh button below */}
-            <div className="flex flex-col items-center gap-2 flex-shrink-0">
+            <div className="flex flex-col items-center gap-2 shrink-0">
               {initialLoading ? (
                 <StatusIndicator status="loading" size="lg" showLabel={false} />
               ) : isTokenExpired(cluster) ? (
@@ -394,7 +394,7 @@ const FullClusterCard = memo(function FullClusterCard({
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <span className="flex-shrink-0" title={providerLabel}>
+                <span className="shrink-0" title={providerLabel}>
                   <CloudProviderIcon provider={provider} size={18} />
                 </span>
                 <h3
@@ -408,7 +408,7 @@ const FullClusterCard = memo(function FullClusterCard({
                 </h3>
                 {cluster.authMethod && AUTH_BADGE_MAP[cluster.authMethod] && (
                   <span
-                    className={`text-2xs px-1.5 py-0.5 rounded flex-shrink-0 ${AUTH_BADGE_MAP[cluster.authMethod].color}`}
+                    className={`text-2xs px-1.5 py-0.5 rounded shrink-0 ${AUTH_BADGE_MAP[cluster.authMethod].color}`}
                     title={cluster.authMethod === 'exec'
                       ? `Auth: IAM (exec plugin)${getIAMRefreshHint(cluster) ? `\nLogin: ${getIAMRefreshHint(cluster)}` : ''}`
                       : `Auth: ${cluster.authMethod}`}
@@ -418,7 +418,7 @@ const FullClusterCard = memo(function FullClusterCard({
                 )}
                 {cluster.aliases && cluster.aliases.length > 0 && (
                   <span title={`Also known as: ${cluster.aliases.join(', ')}`}>
-                    <StatusBadge color="purple" size="xs" className="flex-shrink-0">
+                    <StatusBadge color="purple" size="xs" className="shrink-0">
                       +{cluster.aliases.length} alias{cluster.aliases.length > 1 ? 'es' : ''}
                     </StatusBadge>
                   </span>
@@ -426,7 +426,7 @@ const FullClusterCard = memo(function FullClusterCard({
                 {isConnected && (cluster.source === 'kubeconfig' || !cluster.source) && (
                   <button
                     onClick={(e) => { e.stopPropagation(); onRenameCluster() }}
-                    className="p-1 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground flex-shrink-0"
+                    className="p-1 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground shrink-0"
                     title={t('common.renameContext')}
                     aria-label={t('common.renameContext')}
                   >
@@ -444,7 +444,7 @@ const FullClusterCard = memo(function FullClusterCard({
                     className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-default truncate max-w-[220px]"
                     title={`Server: ${cluster.server}`}
                   >
-                    <Globe className="w-3 h-3 flex-shrink-0" />
+                    <Globe className="w-3 h-3 shrink-0" />
                     <span className="truncate">{cluster.server.replace(/^https?:\/\//, '')}</span>
                   </span>
                 )}
@@ -453,7 +453,7 @@ const FullClusterCard = memo(function FullClusterCard({
                     className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-default truncate max-w-[220px]"
                     title={`User: ${cluster.user}`}
                   >
-                    <User className="w-3 h-3 flex-shrink-0" />
+                    <User className="w-3 h-3 shrink-0" />
                     <span className="truncate">{cluster.user}</span>
                   </span>
                 )}
@@ -475,7 +475,7 @@ const FullClusterCard = memo(function FullClusterCard({
               </div>
             </div>
           </div>
-          <div className="flex flex-wrap items-start justify-end gap-1 flex-shrink-0">
+          <div className="flex flex-wrap items-start justify-end gap-1 shrink-0">
             {cluster.isCurrent && (
               <span className="flex items-center px-1.5 py-0.5 rounded bg-primary/20 text-primary" title={t('common.currentContext')}>
                 <Star className="w-3.5 h-3.5 fill-current" />
@@ -580,7 +580,7 @@ const ListClusterCard = memo(function ListClusterCard({
       role="button"
       tabIndex={0}
       aria-label={`Select cluster ${cluster.context || cluster.name}`}
-      className="relative p-[1px] rounded-lg cursor-pointer transition-all hover:shadow-lg hover:-translate-y-0.5 overflow-hidden"
+      className="relative p-px rounded-lg cursor-pointer transition-all hover:shadow-lg hover:-translate-y-0.5 overflow-hidden"
       style={{
         /* List view: subtle gradient — provider at 38%, theme at 25% */
         background: `linear-gradient(90deg, color-mix(in srgb, ${providerColor} 38%, transparent) 0%, color-mix(in srgb, ${themeColor} 25%, transparent) 100%)` }}
@@ -599,7 +599,7 @@ const ListClusterCard = memo(function ListClusterCard({
         <div className="flex items-center gap-4">
           {dragHandle}
           {/* Status indicator */}
-          <div className="flex-shrink-0">
+          <div className="shrink-0">
             {initialLoading ? (
               <StatusIndicator status="loading" size="md" showLabel={false} />
             ) : isTokenExpired(cluster) ? (
@@ -620,7 +620,7 @@ const ListClusterCard = memo(function ListClusterCard({
           </div>
 
           {/* Provider and name */}
-          <div className="flex items-center gap-2 min-w-0 flex-shrink-0 w-48">
+          <div className="flex items-center gap-2 min-w-0 shrink-0 w-48">
             <CloudProviderIcon provider={provider} size={16} />
             <span
               className="font-medium text-foreground truncate"
@@ -633,7 +633,7 @@ const ListClusterCard = memo(function ListClusterCard({
             </span>
             {cluster.authMethod && AUTH_BADGE_MAP[cluster.authMethod] && (
               <span
-                className={`text-[9px] px-1 py-0.5 rounded flex-shrink-0 ${AUTH_BADGE_MAP[cluster.authMethod].color}`}
+                className={`text-[9px] px-1 py-0.5 rounded shrink-0 ${AUTH_BADGE_MAP[cluster.authMethod].color}`}
                 title={cluster.authMethod === 'exec'
                   ? `Auth: IAM (exec plugin)${getIAMRefreshHint(cluster) ? `\nLogin: ${getIAMRefreshHint(cluster)}` : ''}`
                   : `Auth: ${cluster.authMethod}`}
@@ -643,19 +643,19 @@ const ListClusterCard = memo(function ListClusterCard({
             )}
             {cluster.aliases && cluster.aliases.length > 0 && (
               <span title={`Also known as: ${cluster.aliases.join(', ')}`}>
-                <StatusBadge color="purple" size="xs" className="flex-shrink-0">
+                <StatusBadge color="purple" size="xs" className="shrink-0">
                   +{cluster.aliases.length}
                 </StatusBadge>
               </span>
             )}
             {cluster.isCurrent && (
-              <span title="Current context"><Star className="w-3 h-3 text-primary fill-current flex-shrink-0" /></span>
+              <span title="Current context"><Star className="w-3 h-3 text-primary fill-current shrink-0" /></span>
             )}
           </div>
 
           {/* Server */}
           <div className="hidden md:flex items-center gap-1.5 text-xs text-muted-foreground min-w-0 flex-1 max-w-xs">
-            <Globe className="w-3 h-3 flex-shrink-0" />
+            <Globe className="w-3 h-3 shrink-0" />
             <span className="truncate">{cluster.server?.replace(/^https?:\/\//, '') || '-'}</span>
           </div>
 
@@ -663,7 +663,7 @@ const ListClusterCard = memo(function ListClusterCard({
           {cluster.authMethod === 'exec' && (isTokenExpired(cluster) || cluster.reachable === false) && (() => {
             const hint = getIAMRefreshHint(cluster)
             return hint ? (
-              <span className="hidden md:flex items-center gap-1 text-2xs text-muted-foreground flex-shrink-0">
+              <span className="hidden md:flex items-center gap-1 text-2xs text-muted-foreground shrink-0">
                 <code className="bg-black/5 dark:bg-white/5 px-1 rounded">{hint}</code>
                 <CopyCmd text={hint} />
               </span>
@@ -671,7 +671,7 @@ const ListClusterCard = memo(function ListClusterCard({
           })()}
 
           {/* Metrics */}
-          <div className="flex items-center gap-4 text-sm flex-shrink-0">
+          <div className="flex items-center gap-4 text-sm shrink-0">
             <div className="flex items-center gap-1.5" title={unreachable ? 'Nodes: Cluster offline' : hasCachedData ? `Nodes: ${cluster.nodeCount} worker nodes in cluster` : 'Nodes: Loading...'}>
               <Server className="w-3.5 h-3.5 text-muted-foreground" />
               <FlashingValue
@@ -705,7 +705,7 @@ const ListClusterCard = memo(function ListClusterCard({
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-1 flex-shrink-0">
+          <div className="flex items-center gap-1 shrink-0">
             {LOCAL_PLATFORMS.has(provider) && (
               <LocalClusterControls
                 clusterName={cluster.name}
@@ -770,7 +770,7 @@ const CompactClusterCard = memo(function CompactClusterCard({
       role="button"
       tabIndex={0}
       aria-label={`Select cluster ${cluster.context || cluster.name}`}
-      className="relative p-[1px] rounded-lg cursor-pointer transition-all hover:shadow-lg hover:-translate-y-0.5 overflow-hidden"
+      className="relative p-px rounded-lg cursor-pointer transition-all hover:shadow-lg hover:-translate-y-0.5 overflow-hidden"
       style={{
         /* Grid view: subtle gradient — provider at 38%, theme at 25% */
         background: `linear-gradient(135deg, color-mix(in srgb, ${providerColor} 38%, transparent) 0%, color-mix(in srgb, ${themeColor} 25%, transparent) 100%)` }}
@@ -800,13 +800,13 @@ const CompactClusterCard = memo(function CompactClusterCard({
           </span>
           {cluster.aliases && cluster.aliases.length > 0 && (
             <span title={`Also known as: ${cluster.aliases.join(', ')}`}>
-              <StatusBadge color="purple" size="xs" className="flex-shrink-0">
+              <StatusBadge color="purple" size="xs" className="shrink-0">
                 +{cluster.aliases.length}
               </StatusBadge>
             </span>
           )}
           {cluster.isCurrent && (
-            <Star className="w-3 h-3 text-primary fill-current flex-shrink-0" />
+            <Star className="w-3 h-3 text-primary fill-current shrink-0" />
           )}
           {/* Remove cluster button — only for unreachable clusters (#5901) */}
           {isConnected && unreachable && onRemoveCluster && (cluster.source === 'kubeconfig' || !cluster.source) && (
@@ -867,7 +867,7 @@ function SortableClusterItem({ id, children, onReorder }: { id: string; children
     <button
       {...attributes}
       {...listeners}
-      className="p-0.5 rounded hover:bg-secondary/80 cursor-grab active:cursor-grabbing flex-shrink-0 touch-none"
+      className="p-0.5 rounded hover:bg-secondary/80 cursor-grab active:cursor-grabbing shrink-0 touch-none"
       title="Drag to reorder"
     >
       <GripVertical className="w-3.5 h-3.5 text-muted-foreground/50" />

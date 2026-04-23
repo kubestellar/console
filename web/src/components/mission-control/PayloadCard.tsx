@@ -94,7 +94,7 @@ export function PayloadCard({ project, onRemove, onUpdatePriority, onHover, onCl
     >
       <div
         className={cn(
-          'rounded-xl border border-border bg-card overflow-hidden shadow-sm hover:shadow-md transition-shadow',
+          'rounded-xl border border-border bg-card overflow-hidden shadow-xs hover:shadow-md transition-shadow',
           onClick && 'cursor-pointer'
         )}
         onClick={onClick}
@@ -106,7 +106,7 @@ export function PayloadCard({ project, onRemove, onUpdatePriority, onHover, onCl
         {/* Header with gradient accent */}
         <div className="flex items-start gap-3 p-3">
           {/* Avatar */}
-          <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-white/90 dark:bg-white/10 shadow-sm flex items-center justify-center overflow-hidden">
+          <div className="shrink-0 w-10 h-10 rounded-lg bg-white/90 dark:bg-white/10 shadow-xs flex items-center justify-center overflow-hidden">
             {!imgFailed ? (
               <img
                 src={getAvatarUrl(project)}
@@ -138,7 +138,7 @@ export function PayloadCard({ project, onRemove, onUpdatePriority, onHover, onCl
                   e.stopPropagation()
                   onRemove()
                 }}
-                className="opacity-0 group-hover:opacity-100 !p-0.5 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive"
+                className="opacity-0 group-hover:opacity-100 p-0.5! rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive"
                 title="Remove"
                 icon={<X className="w-3 h-3" />}
               />
@@ -206,7 +206,7 @@ export function PayloadCard({ project, onRemove, onUpdatePriority, onHover, onCl
                 setShowPriorityMenu(!showPriorityMenu)
               }}
               className={cn(
-                '!text-[10px] !px-1.5 !py-0.5 rounded-full border !gap-0.5 cursor-pointer',
+                'text-[10px]! px-1.5! py-0.5! rounded-full border gap-0.5! cursor-pointer',
                 PRIORITY_STYLES[project.priority]
               )}
               icon={project.priority === 'required' ? <Star className="w-2.5 h-2.5" /> : undefined}
@@ -230,7 +230,7 @@ export function PayloadCard({ project, onRemove, onUpdatePriority, onHover, onCl
                         setShowPriorityMenu(false)
                       }}
                       className={cn(
-                        'w-full !justify-start !text-xs !px-3 !py-1.5 !rounded-none capitalize',
+                        'w-full justify-start! text-xs! px-3! py-1.5! rounded-none! capitalize',
                         project.priority === p && 'font-medium text-primary'
                       )}
                     >

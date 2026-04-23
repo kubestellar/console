@@ -275,7 +275,7 @@ export function MiniDashboard() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800 text-white flex items-center justify-center p-2">
+    <div className="min-h-screen bg-linear-to-br from-gray-900 via-gray-900 to-gray-800 text-white flex items-center justify-center p-2">
       {/* Fixed-size widget container */}
       <div className="w-[520px] h-[320px] flex flex-col bg-background/50 rounded-xl border border-border/50 overflow-hidden">
         <div className="flex-1 p-4 overflow-auto scroll-enhanced">
@@ -375,12 +375,12 @@ export function MiniDashboard() {
                 >
                   <span
                     className={cn(
-                      'w-1.5 h-1.5 rounded-full flex-shrink-0',
+                      'w-1.5 h-1.5 rounded-full shrink-0',
                       isCritical ? 'bg-red-500' : 'bg-orange-500'
                     )}
                   />
                   <span className="truncate text-foreground">{issue.name}</span>
-                  <span className="text-muted-foreground ml-auto flex-shrink-0">{issue.reason || issue.status}</span>
+                  <span className="text-muted-foreground ml-auto shrink-0">{issue.reason || issue.status}</span>
                 </button>
               )
             })}
@@ -391,7 +391,7 @@ export function MiniDashboard() {
         </div>{/* End scrollable content */}
 
         {/* Footer / Install Prompt */}
-        <div className="p-3 bg-background/90 border-t border-border/50 flex-shrink-0">
+        <div className="p-3 bg-background/90 border-t border-border/50 shrink-0">
         {!isInstalled && installPrompt ? (
           <button
             onClick={handleInstall}

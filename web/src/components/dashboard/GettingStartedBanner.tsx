@@ -98,7 +98,7 @@ export function GettingStartedBanner({
   ]
 
   return (
-    <div className="mb-4 rounded-xl border border-purple-500/20 bg-gradient-to-br from-purple-500/5 via-blue-500/5 to-transparent p-4 animate-in slide-in-from-top-2 duration-300">
+    <div className="mb-4 rounded-xl border border-purple-500/20 bg-linear-to-br from-purple-500/5 via-blue-500/5 to-transparent p-4 animate-in slide-in-from-top-2 duration-300">
       <div className="flex items-start justify-between mb-3">
         <div>
           <h3 className="text-sm font-semibold text-foreground">
@@ -110,7 +110,7 @@ export function GettingStartedBanner({
         </div>
         <button
           onClick={handleDismiss}
-          className="p-1.5 rounded-md hover:bg-secondary/80 text-muted-foreground hover:text-foreground transition-colors duration-150 flex-shrink-0 flex items-center justify-center"
+          className="p-1.5 rounded-md hover:bg-secondary/80 text-muted-foreground hover:text-foreground transition-colors duration-150 shrink-0 flex items-center justify-center"
           aria-label="Dismiss"
         >
           <X className="w-3.5 h-3.5" />
@@ -124,7 +124,7 @@ export function GettingStartedBanner({
             onClick={onClick}
             className="flex items-center gap-3 p-3 rounded-lg bg-secondary/30 border border-border/50 hover:border-purple-500/30 hover:bg-secondary/50 transition-all text-left group"
           >
-            <div className="p-2 rounded-lg bg-purple-500/10 group-hover:bg-purple-500/20 transition-colors flex-shrink-0">
+            <div className="p-2 rounded-lg bg-purple-500/10 group-hover:bg-purple-500/20 transition-colors shrink-0">
               <Icon className="w-4 h-4 text-purple-400" />
             </div>
             <div className="min-w-0">

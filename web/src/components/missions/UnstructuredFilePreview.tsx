@@ -104,7 +104,7 @@ export function UnstructuredFilePreview({
         >
           <ArrowLeft className="w-4 h-4" />
         </button>
-        <FormatIcon className="w-5 h-5 text-blue-400 flex-shrink-0" />
+        <FormatIcon className="w-5 h-5 text-blue-400 shrink-0" />
         <div className="min-w-0">
           <h3 className="font-medium text-sm truncate">{fileName}</h3>
           <p className="text-xs text-muted-foreground">
@@ -147,9 +147,9 @@ export function UnstructuredFilePreview({
             {preview.detectedApiGroups.map((d, i) => (
               <div key={`${d.apiVersion}-${d.kind}-${i}`} className="flex items-center gap-2 text-xs">
                 {d.project ? (
-                  <CheckCircle className="w-3 h-3 text-green-400 flex-shrink-0" />
+                  <CheckCircle className="w-3 h-3 text-green-400 shrink-0" />
                 ) : (
-                  <AlertTriangle className="w-3 h-3 text-yellow-400 flex-shrink-0" />
+                  <AlertTriangle className="w-3 h-3 text-yellow-400 shrink-0" />
                 )}
                 <span className="font-mono text-muted-foreground">{d.kind}</span>
                 <span className="text-muted-foreground/60">({d.apiVersion})</span>
@@ -284,7 +284,7 @@ export function UnstructuredFilePreview({
             </button>
           )}
         </div>
-        <pre className="p-3 text-xs font-mono text-muted-foreground overflow-x-auto max-h-96 overflow-y-auto whitespace-pre-wrap break-words">
+        <pre className="p-3 text-xs font-mono text-muted-foreground overflow-x-auto max-h-96 overflow-y-auto whitespace-pre-wrap wrap-break-word">
           {displayContent}
           {isTruncated && (
             <span className="text-muted-foreground/40">

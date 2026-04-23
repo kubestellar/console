@@ -2,7 +2,7 @@ const GlobeLoader = () => {
   return (
     <div className="flex flex-col items-center justify-center space-y-4">
       <div className="relative w-16 h-16">
-        <div className="absolute inset-4 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full animate-pulse"></div>
+        <div className="absolute inset-4 bg-linear-to-r from-blue-400 to-purple-500 rounded-full animate-pulse"></div>
         <div className="absolute inset-0 border-2 border-blue-400/30 rounded-full animate-spin"></div>
         <div className="absolute inset-2 border-2 border-purple-400/30 rounded-full animate-spin" style={{ animationDirection: "reverse", animationDuration: "3s" }}></div>
         <div className="absolute inset-0 animate-spin" style={{ animationDuration: "2s" }}>

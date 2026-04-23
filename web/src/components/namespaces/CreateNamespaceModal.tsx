@@ -106,7 +106,7 @@ export function CreateNamespaceModal({ clusters, onClose, onCreated }: CreateNam
             <select
               value={cluster}
               onChange={(e) => setCluster(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+              className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/50"
             >
               {clusters.map(c => (
                 <option key={c} value={c}>{c}</option>
@@ -121,7 +121,7 @@ export function CreateNamespaceModal({ clusters, onClose, onCreated }: CreateNam
               value={name}
               onChange={(e) => setName(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))}
               placeholder="my-namespace"
-              className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-white placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+              className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-white placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-blue-500/50"
             />
             <p className="text-xs text-muted-foreground mt-1">
               Lowercase letters, numbers, and hyphens only
@@ -135,7 +135,7 @@ export function CreateNamespaceModal({ clusters, onClose, onCreated }: CreateNam
               value={teamLabel}
               onChange={(e) => setTeamLabel(e.target.value)}
               placeholder="platform-team"
-              className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-white placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+              className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-white placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-blue-500/50"
             />
           </div>
 

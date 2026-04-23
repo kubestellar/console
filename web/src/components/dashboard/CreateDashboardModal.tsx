@@ -125,7 +125,7 @@ function CreateDashboardModalInner({
             placeholder={generateDefaultName()}
             aria-invalid={showNameError}
             aria-describedby={showNameError ? NAME_ERROR_ID : undefined}
-            className={`w-full px-4 py-3 bg-secondary/30 border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-transparent ${
+            className={`w-full px-4 py-3 bg-secondary/30 border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500/50 focus:border-transparent ${
               showNameError ? 'border-destructive' : 'border-border'
             }`}
           />
@@ -145,7 +145,7 @@ function CreateDashboardModalInner({
             onChange={(e) => setDescription(e.target.value)}
             placeholder={t('dashboard.create.descriptionPlaceholder')}
             rows={2}
-            className="w-full px-4 py-3 bg-secondary/30 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-transparent resize-none"
+            className="w-full px-4 py-3 bg-secondary/30 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500/50 focus:border-transparent resize-none"
           />
         </div>
 
@@ -249,7 +249,7 @@ function CreateDashboardModalInner({
                                 : 'bg-secondary/50 border border-transparent hover:border-purple-500/30'
                             }`}
                           >
-                            {(() => { const TplIcon = getIcon(template.icon); return <TplIcon className="w-4 h-4 text-muted-foreground flex-shrink-0" /> })()}
+                            {(() => { const TplIcon = getIcon(template.icon); return <TplIcon className="w-4 h-4 text-muted-foreground shrink-0" /> })()}
                             <div className="flex-1 min-w-0">
                               <h4 className="text-xs font-medium text-foreground truncate">{template.name}</h4>
                               <p className="text-xs text-muted-foreground truncate">{template.cards.map(c => c.card_type.replace(/_/g, ' ')).join(', ')}</p>

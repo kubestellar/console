@@ -219,7 +219,7 @@ export function DeploymentProgress({ config }: DeploymentProgressProps) {
   return (
     <div className="h-full flex flex-col min-h-0">
       {/* Header with controls */}
-      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 flex-shrink-0">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 shrink-0">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-muted-foreground">
             {statusCounts.all} progressing
@@ -267,7 +267,7 @@ export function DeploymentProgress({ config }: DeploymentProgressProps) {
       </div>
 
       {/* Search and Status Filter Pills */}
-      <div className="flex flex-col gap-2 mb-3 flex-shrink-0">
+      <div className="flex flex-col gap-2 mb-3 shrink-0">
         <CardSearchInput
           value={filters.search}
           onChange={handleSearchChange}
@@ -365,7 +365,7 @@ export function DeploymentProgress({ config }: DeploymentProgressProps) {
 
       {/* Pagination */}
       {needsPagination && itemsPerPage !== 'unlimited' && (
-        <div className="pt-2 border-t border-border/50 mt-2 flex-shrink-0">
+        <div className="pt-2 border-t border-border/50 mt-2 shrink-0">
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}

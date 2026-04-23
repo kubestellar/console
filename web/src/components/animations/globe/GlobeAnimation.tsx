@@ -127,7 +127,7 @@ const GlobeAnimation = ({
           className="absolute inset-0 flex items-center justify-center"
           data-testid="globe-fallback"
         >
-          <div className="w-32 h-32 rounded-full bg-gradient-to-br from-purple-500/20 to-blue-500/20 border border-purple-500/30" />
+          <div className="w-32 h-32 rounded-full bg-linear-to-br from-purple-500/20 to-blue-500/20 border border-purple-500/30" />
         </div>
       ) : null}
       {hasWebGL && <Canvas className="w-full h-full bg-transparent">

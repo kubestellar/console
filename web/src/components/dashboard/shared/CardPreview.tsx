@@ -108,7 +108,7 @@ export function CardPreview({ card }: { card: HoveredCard }) {
               { color: 'bg-red-400', time: '12m ago' },
             ].map((event, i) => (
               <div key={i} className="flex items-center gap-1.5">
-                <div className={`w-1.5 h-1.5 rounded-full ${event.color} flex-shrink-0`} />
+                <div className={`w-1.5 h-1.5 rounded-full ${event.color} shrink-0`} />
                 <div className="h-1.5 flex-1 bg-secondary rounded" />
                 <span className="text-[7px] text-muted-foreground/60">{event.time}</span>
               </div>

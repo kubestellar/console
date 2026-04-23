@@ -301,7 +301,7 @@ function DeploymentSection() {
               className="rounded-xl border border-slate-700/50 bg-slate-800/30 p-6"
             >
               <div className="flex items-start gap-4">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-teal-500/20 text-teal-400 flex items-center justify-center font-bold text-sm">
+                <div className="shrink-0 w-8 h-8 rounded-full bg-teal-500/20 text-teal-400 flex items-center justify-center font-bold text-sm">
                   {s.step}
                 </div>
                 <div className="flex-1">
@@ -353,7 +353,7 @@ function DeploymentSection() {
             <h4 className="font-semibold text-sm mb-4 text-teal-300">For the full experience</h4>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="flex items-start gap-3">
-                <Lock className="w-4 h-4 text-teal-400 mt-0.5 flex-shrink-0" />
+                <Lock className="w-4 h-4 text-teal-400 mt-0.5 shrink-0" />
                 <div>
                   <p className="text-sm font-medium text-slate-200">TLS</p>
                   <p className="text-xs text-slate-400 mt-0.5">
@@ -362,7 +362,7 @@ function DeploymentSection() {
                 </div>
               </div>
               <div className="flex items-start gap-3">
-                <KeyRound className="w-4 h-4 text-teal-400 mt-0.5 flex-shrink-0" />
+                <KeyRound className="w-4 h-4 text-teal-400 mt-0.5 shrink-0" />
                 <div>
                   <p className="text-sm font-medium text-slate-200">OAuth</p>
                   <p className="text-xs text-slate-400 mt-0.5">
@@ -373,7 +373,7 @@ function DeploymentSection() {
                 </div>
               </div>
               <div className="flex items-start gap-3">
-                <Wifi className="w-4 h-4 text-teal-400 mt-0.5 flex-shrink-0" />
+                <Wifi className="w-4 h-4 text-teal-400 mt-0.5 shrink-0" />
                 <div>
                   <p className="text-sm font-medium text-slate-200">CORS</p>
                   <p className="text-xs text-slate-400 mt-0.5">
@@ -404,7 +404,7 @@ export function FromHeadlamp() {
       {/* ---- Hero Section ---- */}
       <section className="relative overflow-hidden">
         {/* Background gradient decoration */}
-        <div className="absolute inset-0 bg-gradient-to-br from-teal-900/20 via-transparent to-blue-900/20 pointer-events-none" />
+        <div className="absolute inset-0 bg-linear-to-br from-teal-900/20 via-transparent to-blue-900/20 pointer-events-none" />
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-teal-500/5 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative max-w-5xl mx-auto px-6 pt-20 pb-16 text-center">
@@ -416,7 +416,7 @@ export function FromHeadlamp() {
 
           <h1 className="text-5xl sm:text-6xl font-bold tracking-tight mb-6">
             Coming from{' '}
-            <span className="bg-gradient-to-r from-teal-400 to-blue-400 bg-clip-text text-transparent">
+            <span className="bg-linear-to-r from-teal-400 to-blue-400 bg-clip-text text-transparent">
               Headlamp?
             </span>
           </h1>
@@ -545,7 +545,7 @@ export function FromHeadlamp() {
       <DeploymentSection />
 
       {/* ---- Footer CTA ---- */}
-      <section className="border-t border-slate-700/50 bg-gradient-to-b from-slate-900/50 to-[#0f172a]">
+      <section className="border-t border-slate-700/50 bg-linear-to-b from-slate-900/50 to-[#0f172a]">
         <div className="max-w-5xl mx-auto px-6 py-20 text-center">
           <h2 className="text-4xl font-bold mb-4">Ready to explore?</h2>
           <p className="text-slate-400 mb-10 text-lg">

@@ -272,7 +272,7 @@ function EventStreamInternal({ config }: { config?: EventStreamConfig }) {
                 onClick={() => handleEventClick(event)}
                 title={`Click to view details for ${event.object}`}
               >
-                <div className={`p-1.5 rounded ${style.bg} flex-shrink-0`} title={style.tooltip}>
+                <div className={`p-1.5 rounded ${style.bg} shrink-0`} title={style.tooltip}>
                   <EventIcon className={`w-3.5 h-3.5 ${style.color}`} />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -305,7 +305,7 @@ function EventStreamInternal({ config }: { config?: EventStreamConfig }) {
        * the card from growing/shrinking on refresh (#8384).
        */}
       <div
-        className="flex-shrink-0"
+        className="shrink-0"
         style={{ minHeight: `${EVENT_STREAM_FOOTER_MIN_HEIGHT_PX}px` }}
       >
         <CardPaginationFooter

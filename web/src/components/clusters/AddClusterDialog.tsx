@@ -250,7 +250,7 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
     <div className="fixed inset-0 z-modal flex items-center justify-center">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/60 backdrop-blur-xs"
         aria-hidden="true"
       />
 

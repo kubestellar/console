@@ -351,7 +351,7 @@ export function FleetComplianceHeatmap({ config: _config }: CardConfig) {
     <div className="space-y-2 p-1">
       {/* Context description */}
       <div className="flex items-start gap-1.5 text-[10px] text-muted-foreground bg-secondary/20 rounded-md px-2 py-1.5">
-        <Info className="w-3 h-3 flex-shrink-0 mt-0.5 text-muted-foreground/60" />
+        <Info className="w-3 h-3 shrink-0 mt-0.5 text-muted-foreground/60" />
         <span>{t('fleetCompliance.contextDescription')}</span>
       </div>
 

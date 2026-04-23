@@ -173,7 +173,7 @@ Please:
               <div className="font-medium text-foreground truncate">{issue.name}</div>
               <div className="text-orange-400">{issue.status}</div>
             </div>
-            <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 flex-shrink-0" />
+            <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 shrink-0" />
           </div>
         ))}
         {totalIssues > 3 && (

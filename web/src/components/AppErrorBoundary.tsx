@@ -78,12 +78,12 @@ export class AppErrorBoundary extends Component<Props, State> {
               {i18next.t('common:appError.description', 'An unexpected error occurred. Try rendering the page again, go back to the dashboard, or reload the app.')}
             </p>
             {this.state.error && (
-              // `break-words` (overflow-wrap: break-word) prefers to wrap on
+              // `wrap-break-word` (overflow-wrap: break-word) prefers to wrap on
               // whitespace and only breaks mid-word when a single token is
               // wider than the container. `break-all` (used previously) would
               // split after any character, producing lines like
               // "…cardType is undefine" / "d" (issue #5902).
-              <p className="text-xs text-muted-foreground/70 font-mono mb-6 break-words whitespace-pre-wrap">
+              <p className="text-xs text-muted-foreground/70 font-mono mb-6 wrap-break-word whitespace-pre-wrap">
                 {this.state.error.message}
               </p>
             )}

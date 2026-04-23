@@ -86,7 +86,7 @@ export function KubescapeDetailModal({
               <select
                 value={clusterName}
                 onChange={(e) => onClusterChange(e.target.value)}
-                className="text-xs bg-secondary/50 border border-border rounded px-2 py-1 text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500"
+                className="text-xs bg-secondary/50 border border-border rounded px-2 py-1 text-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500"
               >
                 {clusters.map(c => (
                   <option key={c} value={c}>{c}</option>
@@ -107,7 +107,7 @@ export function KubescapeDetailModal({
           {/* Score gauge + framework breakdown */}
           <div className="flex items-start gap-6">
             {/* Score gauge */}
-            <div className="flex-shrink-0">
+            <div className="shrink-0">
               <div className="relative w-24 h-24">
                 <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
                   <circle cx="18" cy="18" r="16" fill="none" stroke="currentColor" strokeWidth="3" className="text-secondary" />
@@ -181,7 +181,7 @@ export function KubescapeDetailModal({
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search controls..."
-                  className="w-full pl-9 pr-3 py-2 bg-secondary/50 border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500"
+                  className="w-full pl-9 pr-3 py-2 bg-secondary/50 border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500"
                 />
               </div>
 

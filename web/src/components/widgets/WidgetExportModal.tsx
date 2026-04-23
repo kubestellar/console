@@ -260,11 +260,11 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
                   type="text"
                   value={apiEndpoint}
                   onChange={(e) => setApiEndpoint(e.target.value)}
-                  className="w-full px-3 py-1.5 text-sm bg-secondary rounded border border-border focus:border-purple-500 focus:outline-none"
+                  className="w-full px-3 py-1.5 text-sm bg-secondary rounded border border-border focus:border-purple-500 focus:outline-hidden"
                 />
                 {isOnPublicSite && (
                   <div className="flex items-center gap-1.5 mt-1.5 text-xs text-yellow-400">
-                    <AlertTriangle className="w-3 h-3 flex-shrink-0" />
+                    <AlertTriangle className="w-3 h-3 shrink-0" />
                     <span>
                       You're on console.kubestellar.io — {' '}
                       <a
@@ -289,7 +289,7 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
                   value={refreshInterval}
                   onChange={(e) => setRefreshInterval(Math.max(10, parseInt(e.target.value) || 30))}
                   min={10}
-                  className="w-24 px-3 py-1.5 text-sm bg-secondary rounded border border-border focus:border-purple-500 focus:outline-none"
+                  className="w-24 px-3 py-1.5 text-sm bg-secondary rounded border border-border focus:border-purple-500 focus:outline-hidden"
                 />
               </div>
             </div>
@@ -323,9 +323,9 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
             )}
 
             {/* Setup instructions — shrink-0 keeps it visible, overflow-auto if cramped */}
-            <div className="mt-3 p-3 bg-blue-500/10 rounded-lg border border-blue-500/20 flex-shrink-0 overflow-auto max-h-40">
+            <div className="mt-3 p-3 bg-blue-500/10 rounded-lg border border-blue-500/20 shrink-0 overflow-auto max-h-40">
               <div className="flex items-start gap-2">
-                <Info className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
+                <Info className="w-4 h-4 text-blue-400 mt-0.5 shrink-0" />
                 <div className="text-xs text-blue-200">
                   <p className="font-medium mb-1">{t('widgets.uebersichtSetup')}</p>
                   <ol className="list-decimal list-inside space-y-0.5 text-blue-300/80">

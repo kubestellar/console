@@ -276,7 +276,7 @@ function StandaloneRepoInput({ value, onChange }: { value: string; onChange: (v:
       <Search size={12} className="text-muted-foreground" />
       <input type="text" value={value} onChange={(e) => onChange(e.target.value)}
         placeholder={PLACEHOLDER_REPO}
-        className="flex-1 text-xs bg-transparent text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
+        className="flex-1 text-xs bg-transparent text-foreground placeholder:text-muted-foreground/50 focus:outline-hidden"
         aria-label={LABEL_SET_REPO} />
     </div>
   )

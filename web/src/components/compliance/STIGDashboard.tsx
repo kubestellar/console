@@ -275,7 +275,7 @@ export function STIGDashboardContent() {
                 <div className="flex items-center gap-2">
                   <div className="flex-1 h-3 bg-gray-700 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-gradient-to-r from-blue-500 to-green-500 rounded-full"
+                      className="h-full bg-linear-to-r from-blue-500 to-green-500 rounded-full"
                       style={{ width: `${summary.compliance_score}%` }}
                     />
                   </div>

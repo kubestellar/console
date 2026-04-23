@@ -164,7 +164,7 @@ export function GatewayStatus({ config: _config }: GatewayStatusProps) {
   return (
     <div className="h-full flex flex-col min-h-card">
       {/* Header with controls */}
-      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 flex-shrink-0">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 shrink-0">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-muted-foreground">
             {t('gatewayStatus.nGateways', { count: totalItems })}
@@ -217,7 +217,7 @@ export function GatewayStatus({ config: _config }: GatewayStatusProps) {
       {/* Gateway API Integration Notice — only shown when no real data detected */}
       {isDemoData && (
         <div className="flex items-start gap-2 p-2 mb-3 rounded-lg bg-purple-500/10 border border-purple-500/20 text-xs">
-          <AlertCircle className="w-4 h-4 text-purple-400 flex-shrink-0 mt-0.5" />
+          <AlertCircle className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
           <div>
             <p className="text-purple-400 font-medium">{t('gatewayStatus.gatewayApiTitle')}</p>
             <p className="text-muted-foreground">

@@ -116,7 +116,7 @@ export function TableVisualization({
       <div ref={containerRef} className="flex-1 overflow-auto" style={containerStyle}>
         <table className="w-full text-sm">
           {/* Header */}
-          <thead className="sticky top-0 bg-background/95 backdrop-blur-sm">
+          <thead className="sticky top-0 bg-background/95 backdrop-blur-xs">
             <tr className="border-b border-border">
               {visibleColumns.map((column) => (
                 <th

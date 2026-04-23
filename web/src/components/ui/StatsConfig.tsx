@@ -446,7 +446,7 @@ export function StatsConfigModal({
                   value={searchQuery}
                   onChange={e => setPanelState(prev => ({ ...prev, searchQuery: e.target.value }))}
                   placeholder="Search all available stats..."
-                  className="w-full pl-9 pr-3 py-2 bg-secondary/30 border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+                  className="w-full pl-9 pr-3 py-2 bg-secondary/30 border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500/50"
                   autoFocus
                 />
               </div>

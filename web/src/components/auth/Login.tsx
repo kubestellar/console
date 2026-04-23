@@ -313,7 +313,7 @@ export function Login() {
               {/* Server-provided detail (e.g., specific GitHub error description) */}
               {errorDetail && (
                 <div className="px-4 pb-2">
-                  <div className="text-xs text-red-400/60 bg-red-500/5 rounded px-3 py-2 font-mono break-words">
+                  <div className="text-xs text-red-400/60 bg-red-500/5 rounded px-3 py-2 font-mono wrap-break-word">
                     {errorDetail}
                   </div>
                 </div>
@@ -545,7 +545,7 @@ export function Login() {
       {/* Right side - Globe animation */}
       <div className="hidden lg:block flex-1 h-full relative overflow-hidden">
         {/* Subtle gradient background for the globe side */}
-        <div className="absolute inset-0 bg-gradient-to-l from-background to-transparent" />
+        <div className="absolute inset-0 bg-linear-to-l from-background to-transparent" />
         {/* Wrapper div ensures the globe is absolutely positioned (GlobeAnimation
             internally prepends "relative" to className which overrides "absolute"
             in Tailwind's CSS ordering, causing layout breakage). */}

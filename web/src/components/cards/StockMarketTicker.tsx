@@ -464,12 +464,12 @@ function StockRow({
         </div>
 
         {/* Sparkline */}
-        <div className="hidden @sm:block flex-shrink-0">
+        <div className="hidden @sm:block shrink-0">
           <Sparkline data={stock.sparklineData} isPositive={isPositive} />
         </div>
 
         {/* Price and change */}
-        <div className="text-right flex-shrink-0">
+        <div className="text-right shrink-0">
           <div className="font-semibold text-sm">${stock.price.toFixed(2)}</div>
           <div className={`text-xs flex items-center justify-end gap-1 ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
             {isPositive ? <TrendingUp className="w-3 h-3" aria-hidden="true" /> : <TrendingDown className="w-3 h-3" aria-hidden="true" />}
@@ -757,7 +757,7 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
                   addStock(stockSearchResults[0])
                 }
               }}
-              className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+              className="flex-1 bg-transparent text-sm outline-hidden placeholder:text-muted-foreground"
             />
             {isSearching && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
             {stockSearchInput && (

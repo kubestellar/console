@@ -284,7 +284,7 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
                 className={`p-3 rounded-lg border cursor-pointer transition-colors group overflow-hidden ${EVENT_CARD_CLASSES[color]}`}
               >
                 <div className="flex items-start gap-2 min-w-0">
-                  <Icon className={`w-4 h-4 mt-0.5 flex-shrink-0 ${EVENT_ICON_CLASSES[color]}`} />
+                  <Icon className={`w-4 h-4 mt-0.5 shrink-0 ${EVENT_ICON_CLASSES[color]}`} />
                   <div className="flex-1 min-w-0 overflow-hidden">
                     <div className="flex items-center gap-2 mb-1 min-w-0">
                       {event.cluster && (

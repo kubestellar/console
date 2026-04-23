@@ -36,7 +36,7 @@ export function DraftsTab({
   return (
     <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
       {/* Drafts header */}
-      <div className="p-2 border-b border-border/50 flex items-center justify-between flex-shrink-0">
+      <div className="p-2 border-b border-border/50 flex items-center justify-between shrink-0">
         <span className="text-2xs font-medium text-muted-foreground uppercase tracking-wider">
           Saved Drafts ({draftCount})
         </span>

@@ -536,7 +536,7 @@ export function GPUReservations() {
               tabIndex={activeTab === tab.id ? 0 : -1}
               onClick={() => setActiveTab(tab.id)}
               className={cn(
-                'flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 -mb-[2px] transition-colors',
+                'flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 mb-[-2px] transition-colors',
                 activeTab === tab.id
                   ? 'border-purple-500 text-purple-400'
                   : 'border-transparent text-muted-foreground hover:text-foreground'

@@ -185,7 +185,7 @@ export function Welcome() {
     <div className="min-h-screen bg-[#0f172a] text-white">
       {/* ---- Hero ---- */}
       <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-transparent to-blue-900/20 pointer-events-none" />
+        <div className="absolute inset-0 bg-linear-to-br from-purple-900/20 via-transparent to-blue-900/20 pointer-events-none" />
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-purple-500/5 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative max-w-5xl mx-auto px-6 pt-20 pb-12 text-center">
@@ -196,7 +196,7 @@ export function Welcome() {
 
           <h1 className="text-3xl sm:text-5xl md:text-6xl font-bold tracking-tight mb-6">
             Your Kubernetes clusters.{' '}
-            <span className="bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
+            <span className="bg-linear-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
               One&nbsp;console.
             </span>
           </h1>
@@ -291,7 +291,7 @@ export function Welcome() {
       </section>
 
       {/* ---- Footer CTA ---- */}
-      <section className="border-t border-slate-700/50 bg-gradient-to-b from-slate-900/50 to-[#0f172a]">
+      <section className="border-t border-slate-700/50 bg-linear-to-b from-slate-900/50 to-[#0f172a]">
         <div className="max-w-5xl mx-auto px-6 py-20 text-center">
           <h2 className="text-4xl font-bold mb-4">Ready to try it?</h2>
           <p className="text-slate-400 mb-10 text-lg">

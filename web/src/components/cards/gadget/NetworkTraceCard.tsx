@@ -58,14 +58,14 @@ export function NetworkTraceCard({ config }: NetworkTraceCardProps) {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1 truncate">
               <span className="font-medium text-foreground truncate">{conn.srcPod}</span>
-              <ArrowRight className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+              <ArrowRight className="w-3 h-3 text-muted-foreground shrink-0" />
               <span className="font-medium text-foreground truncate">{conn.dstPod}</span>
             </div>
             <div className="text-muted-foreground truncate">
               {conn.srcNamespace} → {conn.dstNamespace}:{conn.dstPort}
             </div>
           </div>
-          <div className="text-right flex-shrink-0">
+          <div className="text-right shrink-0">
             <div className="text-muted-foreground">{conn.protocol}</div>
             <div className="text-muted-foreground">{formatBytes(conn.bytes)}</div>
           </div>

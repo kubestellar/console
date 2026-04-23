@@ -185,7 +185,7 @@ export function NotificationBadge() {
                             {notification.title}
                           </span>
                           {!notification.read && (
-                            <span className="w-2 h-2 rounded-full bg-purple-500 flex-shrink-0" />
+                            <span className="w-2 h-2 rounded-full bg-purple-500 shrink-0" />
                           )}
                         </div>
                         <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">

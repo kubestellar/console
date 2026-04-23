@@ -125,7 +125,7 @@ describe('CardSearchInput', () => {
     expect(onChange).toHaveBeenCalledWith('deb')
   })
 
-  it('emits analytics on blur when value is non-empty', () => {
+  it('emits analytics on blur-sm when value is non-empty', () => {
     const onChange = vi.fn()
     render(<CardSearchInput value="query" onChange={onChange} />)
     const input = screen.getByPlaceholderText('Search...')
@@ -133,7 +133,7 @@ describe('CardSearchInput', () => {
     expect(mockEmitCardSearchUsed).toHaveBeenCalledWith(5, 'test-card')
   })
 
-  it('does not emit analytics on blur when value is empty', () => {
+  it('does not emit analytics on blur-sm when value is empty', () => {
     const onChange = vi.fn()
     render(<CardSearchInput value="" onChange={onChange} />)
     const input = screen.getByPlaceholderText('Search...')
@@ -141,7 +141,7 @@ describe('CardSearchInput', () => {
     expect(mockEmitCardSearchUsed).not.toHaveBeenCalled()
   })
 
-  it('emits analytics on blur using localValue when debounced', () => {
+  it('emits analytics on blur-sm using localValue when debounced', () => {
     const DEBOUNCE_MS = 300
     const onChange = vi.fn()
     render(<CardSearchInput value="" onChange={onChange} debounceMs={DEBOUNCE_MS} />)
@@ -337,15 +337,15 @@ describe('CardListItem', () => {
       <CardListItem onClick={onClick} showChevron={false}>No Chevron</CardListItem>
     )
     // ChevronRight renders as an svg; with showChevron=false + onClick, no chevron should appear
-    // The flex-shrink-0 class is on the chevron element
-    expect(container.querySelector('.flex-shrink-0')).toBeNull()
+    // The shrink-0 class is on the chevron element
+    expect(container.querySelector('.shrink-0')).toBeNull()
   })
 
   it('hides chevron when no onClick even if showChevron is true', () => {
     const { container } = render(
       <CardListItem showChevron={true}>No Click</CardListItem>
     )
-    expect(container.querySelector('.flex-shrink-0')).toBeNull()
+    expect(container.querySelector('.shrink-0')).toBeNull()
   })
 
   it('passes title prop', () => {

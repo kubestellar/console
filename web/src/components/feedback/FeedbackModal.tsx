@@ -306,7 +306,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
 
   return createPortal(
     <div
-      className="fixed inset-0 z-modal flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      className="fixed inset-0 z-modal flex items-center justify-center bg-black/60 backdrop-blur-xs"
       onClick={handleBackdropClick}
       role="dialog"
       aria-modal="true"
@@ -456,7 +456,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
                       placeholder={type === 'bug' ? 'Brief description of the bug' : 'Brief description of the feature'}
-                      className="w-full px-3 py-2.5 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                      className="w-full px-3 py-2.5 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500/50"
                       required
                     />
                   </div>
@@ -474,7 +474,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
                         : 'Describe the feature, use case, and how it would help... (paste screenshots here!)'
                       }
                       rows={4}
-                      className="w-full px-3 py-2.5 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50 resize-none"
+                      className="w-full px-3 py-2.5 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500/50 resize-none"
                       required
                     />
                   </div>
@@ -513,7 +513,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
                     {screenshots.length > 0 && (
                       <div className="mt-2 flex flex-wrap gap-2">
                         {screenshots.map((s, i) => (
-                          <div key={i} className="relative group w-20 h-20 flex-shrink-0">
+                          <div key={i} className="relative group w-20 h-20 shrink-0">
                             <img
                               src={s.preview}
                               alt={`Screenshot ${i + 1}`}
@@ -546,13 +546,13 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
                   {/* Error message */}
                   {submitError && (
                     <div className="flex items-start gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-xs">
-                      <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+                      <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
                       <span className="text-red-400">{submitError}</span>
                     </div>
                   )}
 
                   <div className="flex items-center gap-2 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs">
-                    <ExternalLink className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                    <ExternalLink className="w-4 h-4 text-blue-400 shrink-0" />
                     <span className="text-muted-foreground">
                       {screenshots.length > 0
                         ? 'A GitHub issue will be created automatically with your screenshots attached.'

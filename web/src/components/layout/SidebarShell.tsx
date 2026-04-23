@@ -433,10 +433,10 @@ export function SidebarShell({
                   if (e.key === 'Escape') { setEditingItemId(null); setEditingName('') }
                 }}
                 autoFocus
-                className="w-[150px] md:w-full md:flex-1 shrink bg-transparent border-b border-purple-500 outline-none text-foreground text-sm min-w-0"
+                className="w-[150px] md:w-full md:flex-1 shrink bg-transparent border-b border-purple-500 outline-hidden text-foreground text-sm min-w-0"
               />
             )}
-            {!isCollapsed && <GripVertical className="w-3.5 h-3.5 text-muted-foreground/50 flex-shrink-0" />}
+            {!isCollapsed && <GripVertical className="w-3.5 h-3.5 text-muted-foreground/50 shrink-0" />}
           </div>
         ) : (
           <NavLink
@@ -462,16 +462,16 @@ export function SidebarShell({
                 <span className="flex-1 min-w-0 flex items-center gap-1">
                   <span className="truncate">{item.label}</span>
                   {isGC && (
-                    <Satellite className="w-3.5 h-3.5 text-purple-400 flex-shrink-0" aria-label="Ground Control dashboard" />
+                    <Satellite className="w-3.5 h-3.5 text-purple-400 shrink-0" aria-label="Ground Control dashboard" />
                   )}
                   {count != null && (
-                    <span className="text-[10px] text-muted-foreground/40 tabular-nums ml-0.5 flex-shrink-0">{count}</span>
+                    <span className="text-[10px] text-muted-foreground/40 tabular-nums ml-0.5 shrink-0">{count}</span>
                   )}
                 </span>
               )
             })()}
             {!isCollapsed && canDrag && (
-              <span className="absolute right-5 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity bg-background/80 backdrop-blur-sm rounded px-1">
+              <span className="absolute right-5 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity bg-background/80 backdrop-blur-xs rounded px-1">
                 {!PROTECTED_SIDEBAR_IDS.includes(item.id) && (
                   <span
                     role="button"
@@ -550,7 +550,7 @@ export function SidebarShell({
       {/* Mobile backdrop */}
       {isMobile && config.isMobileOpen && (
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-overlay md:hidden"
+          className="fixed inset-0 bg-black/60 backdrop-blur-xs z-overlay md:hidden"
           onClick={closeMobileSidebar}
         />
       )}
@@ -718,7 +718,7 @@ export function SidebarShell({
       {/* Collapse + Pin controls */}
       {features.collapsePin !== false && !isMobile && !isMissionFullScreen && (
         <div
-          className="fixed top-[4.5rem] z-sticky flex flex-col gap-1.5 items-center transition-[left] duration-300 bg-background border border-border/50 rounded-full p-1 shadow-md"
+          className="fixed top-18 z-sticky flex flex-col gap-1.5 items-center transition-[left] duration-300 bg-background border border-border/50 rounded-full p-1 shadow-md"
           style={{ left: sidebarWidth + SIDEBAR_CONTROLS_LEFT_OFFSET_PX }}
         >
           <button

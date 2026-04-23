@@ -134,7 +134,7 @@ function ServiceImportsInternal({ config: _config }: ServiceImportsProps) {
   return (
     <div className="h-full flex flex-col min-h-card">
       {/* Header with controls */}
-      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 flex-shrink-0">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 shrink-0">
         <div className="flex items-center gap-2">
           <a
             href={K8S_DOCS.mcsApi}
@@ -176,7 +176,7 @@ function ServiceImportsInternal({ config: _config }: ServiceImportsProps) {
       {/* MCS Integration Notice — only shown when no real data detected */}
       {isDemoData && (
         <div className="flex items-start gap-2 p-2 mb-3 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-xs">
-          <AlertCircle className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
+          <AlertCircle className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
           <div>
             <p className="text-cyan-400 font-medium">{t('serviceImports.mcsTitle')}</p>
             <p className="text-muted-foreground">

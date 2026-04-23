@@ -163,7 +163,7 @@ Please proceed step by step. Start with verifying prerequisites (Python 3.9+, ku
     return (
       <div className="space-y-3">
         <div className="flex items-start gap-2 p-3 rounded-lg bg-teal-500/10 border border-teal-500/20 text-xs">
-          <Shield className="w-4 h-4 text-teal-400 flex-shrink-0 mt-0.5" />
+          <Shield className="w-4 h-4 text-teal-400 shrink-0 mt-0.5" />
           <div>
             <p className="text-teal-400 font-medium">{t('cards:trestleScan.cncfSandbox')}</p>
             <p className="text-muted-foreground mt-1">
@@ -196,7 +196,7 @@ Please proceed step by step. Start with verifying prerequisites (Python 3.9+, ku
     return (
       <div className="space-y-3">
         <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs">
-          <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+          <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
           <div>
             <p className="text-amber-400 font-medium">{t('cards:trestleScan.installedNoAssessments')}</p>
             <p className="text-muted-foreground mt-1">
@@ -292,7 +292,7 @@ Please proceed step by step. Start with verifying prerequisites (Python 3.9+, ku
 
       {/* Compliance Context Banner */}
       <div className="flex items-start gap-2 p-2 rounded-lg bg-teal-500/5 border border-teal-500/10 text-xs">
-        <Info className="w-3.5 h-3.5 text-teal-400 flex-shrink-0 mt-0.5" />
+        <Info className="w-3.5 h-3.5 text-teal-400 shrink-0 mt-0.5" />
         <p className="text-muted-foreground">
           <span className="text-teal-400 font-medium">{t('cards:trestleScan.oscalCompliance')}</span> — {t('cards:trestleScan.oscalDescription')}
         </p>

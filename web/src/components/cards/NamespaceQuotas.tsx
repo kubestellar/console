@@ -726,7 +726,7 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
                     {showScope && (
                       <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 gap-2">
                         <div className="flex items-center gap-1 text-xs text-muted-foreground min-w-0 overflow-hidden">
-                          {quota.cluster && <span className="flex-shrink-0"><ClusterBadge cluster={quota.cluster} size="sm" /></span>}
+                          {quota.cluster && <span className="shrink-0"><ClusterBadge cluster={quota.cluster} size="sm" /></span>}
                           {quota.namespace && (
                             <span className="flex items-center gap-1 truncate">
                               <span>/</span>
@@ -794,7 +794,7 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
                   >
                     {showScope && (
                       <div className="flex items-center gap-1 mb-2 text-xs text-muted-foreground min-w-0 overflow-hidden">
-                        {item.cluster && <span className="flex-shrink-0"><ClusterBadge cluster={item.cluster} size="sm" /></span>}
+                        {item.cluster && <span className="shrink-0"><ClusterBadge cluster={item.cluster} size="sm" /></span>}
                         {item.namespace && (
                           <span className="flex items-center gap-1 truncate">
                             <span>/</span>

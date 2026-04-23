@@ -27,7 +27,7 @@ export function PodAiAnalysis({
         <div className="p-4 pb-0">
           <div className="rounded-lg bg-red-500/10 border border-red-500/30 p-4">
             <div className="flex items-center gap-2 text-sm text-red-400">
-              <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+              <AlertTriangle className="w-4 h-4 shrink-0" />
               <span>{aiAnalysisError}</span>
             </div>
             <button
@@ -44,7 +44,7 @@ export function PodAiAnalysis({
       {/* AI Analysis Results - visible on all tabs */}
       {(aiAnalysis || aiAnalysisLoading) && !aiAnalysisError && (
         <div className="p-4 pb-0">
-          <div className="rounded-lg bg-gradient-to-br from-purple-500/10 via-blue-500/10 to-cyan-500/10 border border-purple-500/30 overflow-hidden">
+          <div className="rounded-lg bg-linear-to-br from-purple-500/10 via-blue-500/10 to-cyan-500/10 border border-purple-500/30 overflow-hidden">
             {aiAnalysisLoading ? (
               <div className="p-4">
                 <div className="flex items-center gap-3 text-sm text-muted-foreground">

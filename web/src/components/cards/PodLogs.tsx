@@ -169,7 +169,7 @@ export function PodLogs({ config }: PodLogsProps) {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded overflow-hidden">
       {/* Selector row */}
-      <div className="flex flex-wrap items-center gap-2 mb-2 flex-shrink-0">
+      <div className="flex flex-wrap items-center gap-2 mb-2 shrink-0">
         <Select
           selectSize="sm"
           aria-label="Cluster"
@@ -266,7 +266,7 @@ export function PodLogs({ config }: PodLogsProps) {
       <div className="flex-1 min-h-0 rounded-lg border border-border bg-slate-950 overflow-hidden">
         {logsError ? (
           <div className="h-full flex items-center justify-center gap-2 p-4 text-xs text-red-400">
-            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            <AlertCircle className="w-4 h-4 shrink-0" />
             <span className="break-all">{logsError}</span>
           </div>
         ) : !effectivePod ? (

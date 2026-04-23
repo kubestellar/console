@@ -84,7 +84,7 @@ export function ClusterSelectionDialog({ open, missionTitle, onSelect, onCancel 
       <BaseModal.Content noPadding>
         {/* Search + bulk actions */}
         {onlineClusters.length > 5 && (
-          <div className="px-3 pt-3 flex-shrink-0">
+          <div className="px-3 pt-3 shrink-0">
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
               <input
@@ -92,13 +92,13 @@ export function ClusterSelectionDialog({ open, missionTitle, onSelect, onCancel 
                 placeholder="Search clusters..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary/50 border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500"
+                className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary/50 border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500"
               />
             </div>
           </div>
         )}
 
-        <div className="flex items-center gap-1 px-3 pt-2 flex-shrink-0">
+        <div className="flex items-center gap-1 px-3 pt-2 shrink-0">
           <button
             onClick={allSelected ? deselectAll : selectAll}
             className="flex items-center gap-1 px-2 py-1 text-2xs text-muted-foreground hover:text-foreground rounded hover:bg-secondary transition-colors"
@@ -143,12 +143,12 @@ export function ClusterSelectionDialog({ open, missionTitle, onSelect, onCancel 
                 )}
               >
                 <div className={cn(
-                  "w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 transition-colors",
+                  "w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors",
                   isSelected ? "bg-purple-500 border-purple-500" : "border-muted-foreground/40"
                 )}>
                   {isSelected && <Check className="w-3 h-3 text-white" />}
                 </div>
-                <div className="relative flex-shrink-0">
+                <div className="relative shrink-0">
                   <Server className="w-4 h-4 text-muted-foreground" />
                   <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-green-500 ring-1 ring-card" />
                 </div>
@@ -170,8 +170,8 @@ export function ClusterSelectionDialog({ open, missionTitle, onSelect, onCancel 
                 key={id}
                 className="flex items-center gap-3 px-3 py-2 rounded-lg border border-border/50 opacity-40 cursor-not-allowed"
               >
-                <div className="w-4 h-4 rounded border border-muted-foreground/20 flex-shrink-0" />
-                <div className="relative flex-shrink-0">
+                <div className="w-4 h-4 rounded border border-muted-foreground/20 shrink-0" />
+                <div className="relative shrink-0">
                   <Server className="w-4 h-4 text-muted-foreground" />
                   <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-red-500 ring-1 ring-card" />
                 </div>

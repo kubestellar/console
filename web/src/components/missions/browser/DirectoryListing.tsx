@@ -37,10 +37,10 @@ export function DirectoryListing({
             className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-secondary/50 transition-colors text-left"
           >
             {entry.type === 'directory' ? (
-              <Folder className="w-5 h-5 text-yellow-400 flex-shrink-0" />
+              <Folder className="w-5 h-5 text-yellow-400 shrink-0" />
             ) : (() => {
               const { Icon, color } = getFileIcon(entry.name)
-              return <Icon className={`w-5 h-5 ${color} flex-shrink-0`} />
+              return <Icon className={`w-5 h-5 ${color} shrink-0`} />
             })()}
             <div className="flex-1 min-w-0">
               <p className="text-sm text-foreground truncate">{entry.name}</p>
@@ -49,7 +49,7 @@ export function DirectoryListing({
               )}
             </div>
             {entry.size !== undefined && (
-              <span className="text-xs text-muted-foreground flex-shrink-0">
+              <span className="text-xs text-muted-foreground shrink-0">
                 {formatBytes(entry.size)}
               </span>
             )}
@@ -59,7 +59,7 @@ export function DirectoryListing({
                   e.stopPropagation()
                   onImport(entry)
                 }}
-                className="p-1 rounded hover:bg-purple-500/20 text-muted-foreground hover:text-purple-400 transition-colors flex-shrink-0"
+                className="p-1 rounded hover:bg-purple-500/20 text-muted-foreground hover:text-purple-400 transition-colors shrink-0"
                 title="Import mission"
               >
                 <Download className="w-4 h-4" />

@@ -75,10 +75,10 @@ export function AdopterNudge() {
   }
 
   return (
-    <div className="mb-4 rounded-xl border border-pink-500/20 bg-gradient-to-br from-pink-500/5 via-pink-500/5 to-transparent p-4 animate-in slide-in-from-top-2 duration-300">
+    <div className="mb-4 rounded-xl border border-pink-500/20 bg-linear-to-br from-pink-500/5 via-pink-500/5 to-transparent p-4 animate-in slide-in-from-top-2 duration-300">
       <div className="flex items-start justify-between">
         <div className="flex items-start gap-3">
-          <div className="p-2 rounded-lg bg-pink-500/10 flex-shrink-0 mt-0.5">
+          <div className="p-2 rounded-lg bg-pink-500/10 shrink-0 mt-0.5">
             <Heart className="w-4 h-4 text-pink-400" />
           </div>
           <div>
@@ -99,7 +99,7 @@ export function AdopterNudge() {
         </div>
         <button
           onClick={handleDismiss}
-          className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
+          className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors shrink-0"
           aria-label="Dismiss"
         >
           <X className="w-3.5 h-3.5" />

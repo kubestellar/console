@@ -347,7 +347,7 @@ export function UserManagement({ config: _config }: UserManagementProps) {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded">
       {/* Row 1: Header with count badge and controls */}
-      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 flex-shrink-0">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 shrink-0">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-muted-foreground">
             {currentTabCount} {currentTabLabel}
@@ -399,11 +399,11 @@ export function UserManagement({ config: _config }: UserManagementProps) {
           activeTab === 'serviceAccounts' ? t('userManagement.searchServiceAccounts') :
           t('userManagement.searchConsoleUsers')
         }
-        className="mb-2 flex-shrink-0"
+        className="mb-2 shrink-0"
       />
 
       {/* Row 3: Tab filter pills */}
-      <div className="flex items-center gap-1 mb-3 flex-shrink-0">
+      <div className="flex items-center gap-1 mb-3 shrink-0">
         <button
           onClick={() => setActiveTab('clusterUsers')}
           className={cn(
@@ -584,7 +584,7 @@ function ConsoleUsersTab({
           >
             <div className={cn(
               'flex flex-wrap items-center justify-between gap-y-2',
-              isBlurred && 'blur-sm select-none pointer-events-none'
+              isBlurred && 'blur-xs select-none pointer-events-none'
             )}>
               <div className="flex items-center gap-3">
                 {user.avatar_url ? (

@@ -104,7 +104,7 @@ export function EmailNotificationSettings({
             value={config.emailSMTPHost || ''}
             onChange={e => updateConfig({ emailSMTPHost: e.target.value })}
             placeholder="smtp.gmail.com"
-            className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
+            className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500"
           />
         </div>
 
@@ -121,7 +121,7 @@ export function EmailNotificationSettings({
             max={MAX_PORT}
             aria-invalid={!!portError}
             aria-describedby={portError ? 'email-smtp-port-error' : undefined}
-            className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
+            className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500"
           />
           {portError && (
             <p id="email-smtp-port-error" role="alert" className="mt-1 text-xs text-red-400">{portError}</p>
@@ -138,7 +138,7 @@ export function EmailNotificationSettings({
           value={config.emailFrom || ''}
           onChange={e => updateConfig({ emailFrom: e.target.value })}
           placeholder="alerts@example.com"
-          className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
+          className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500"
         />
       </div>
 
@@ -151,7 +151,7 @@ export function EmailNotificationSettings({
           value={config.emailTo || ''}
           onChange={e => updateConfig({ emailTo: e.target.value })}
           placeholder="team@example.com, oncall@example.com"
-          className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
+          className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500"
         />
         <p className="text-xs text-muted-foreground mt-1">
           {t('settings.notifications.email.toHint')}
@@ -168,7 +168,7 @@ export function EmailNotificationSettings({
             value={config.emailUsername || ''}
             onChange={e => updateConfig({ emailUsername: e.target.value })}
             placeholder="username"
-            className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
+            className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500"
           />
         </div>
 
@@ -181,7 +181,7 @@ export function EmailNotificationSettings({
             value={config.emailPassword || ''}
             onChange={e => updateConfig({ emailPassword: e.target.value })}
             placeholder="password"
-            className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
+            className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500"
           />
         </div>
       </div>
@@ -201,9 +201,9 @@ export function EmailNotificationSettings({
           }`}
         >
           {testResult.success ? (
-            <Check className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
+            <Check className="w-4 h-4 text-green-400 shrink-0 mt-0.5" />
           ) : (
-            <X className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+            <X className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
           )}
           <p className={`text-sm ${testResult.success ? 'text-green-400' : 'text-red-400'}`}>
             {testResult.message}

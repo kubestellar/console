@@ -160,7 +160,7 @@ export function GrantAccessModal({ namespace, existingAccess, onClose, onGranted
                 setSubjectKind(e.target.value as 'User' | 'Group' | 'ServiceAccount')
                 setSubjectName('') // Clear selection when type changes
               }}
-              className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+              className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/50"
             >
               <option value="User">{t('namespaces.subjectUser')}</option>
               <option value="Group">{t('namespaces.subjectGroup')}</option>
@@ -179,7 +179,7 @@ export function GrantAccessModal({ namespace, existingAccess, onClose, onGranted
                 onChange={(e) => setSubjectName(e.target.value)}
                 onFocus={() => setShowDropdown(true)}
                 placeholder={subjectKind === 'User' ? 'Select or type a user...' : subjectKind === 'Group' ? 'Select or type a group...' : 'Select or type a service account...'}
-                className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-white placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-white placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-blue-500/50"
               />
               {showDropdown && availableSubjects.length > 0 && (
                 <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
@@ -222,7 +222,7 @@ export function GrantAccessModal({ namespace, existingAccess, onClose, onGranted
                 value={subjectNS}
                 onChange={(e) => setSubjectNS(e.target.value)}
                 placeholder="default"
-                className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-white placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-white placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-blue-500/50"
               />
             </div>
           )}
@@ -232,7 +232,7 @@ export function GrantAccessModal({ namespace, existingAccess, onClose, onGranted
             <select
               value={role}
               onChange={(e) => setRole(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+              className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/50"
             >
               <option value="cluster-admin">{t('namespaces.roleClusterAdmin')}</option>
               <option value="admin">{t('namespaces.roleAdmin')}</option>

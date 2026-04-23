@@ -84,7 +84,7 @@ function SortableClusterRow({
       <button
         {...attributes}
         {...listeners}
-        className="p-1 rounded hover:bg-secondary cursor-grab active:cursor-grabbing touch-none flex-shrink-0"
+        className="p-1 rounded hover:bg-secondary cursor-grab active:cursor-grabbing touch-none shrink-0"
         title="Drag to reorder"
         onClick={(e) => e.stopPropagation()}
       >
@@ -93,7 +93,7 @@ function SortableClusterRow({
 
       {/* Health status - fixed width to match header */}
       {/* Show: unreachable (offline), healthy (green if we have nodes), error (no data) */}
-      <div className="w-[90px] flex-shrink-0">
+      <div className="w-[90px] shrink-0">
         <StatusIndicator status={
           cluster.reachable === false ? 'unreachable' :
           // If we have nodes, the cluster is working - show healthy
@@ -103,7 +103,7 @@ function SortableClusterRow({
       </div>
 
       {/* Cluster name */}
-      <div className="w-[160px] flex-shrink-0">
+      <div className="w-[160px] shrink-0">
         <div className="font-medium text-foreground text-sm truncate">{cluster.name.split('/').pop()}</div>
         <div className="text-2xs text-muted-foreground truncate">
           {cluster.reachable !== false ? `${cluster.nodeCount ?? '-'} nodes • ${cluster.podCount ?? '-'} pods` : 'Offline'}
@@ -112,7 +112,7 @@ function SortableClusterRow({
 
       {/* Resource gauges - fixed width columns matching header */}
       {/* CPU */}
-      <div className="w-[130px] flex-shrink-0 flex items-center gap-2 justify-center">
+      <div className="w-[130px] shrink-0 flex items-center gap-2 justify-center">
         <Gauge
           value={Math.min(cpuPercent, 100)}
           max={100}
@@ -128,7 +128,7 @@ function SortableClusterRow({
       </div>
 
       {/* Memory */}
-      <div className="w-[130px] flex-shrink-0 flex items-center gap-2 justify-center">
+      <div className="w-[130px] shrink-0 flex items-center gap-2 justify-center">
         <Gauge
           value={Math.min(memoryPercent, 100)}
           max={100}
@@ -147,7 +147,7 @@ function SortableClusterRow({
       {accelerators.map(accel => {
         const pct = accel.data.total > 0 ? Math.round((accel.data.allocated / accel.data.total) * 100) : 0
         return (
-          <div key={accel.key} className="w-[110px] flex-shrink-0 flex items-center gap-2 justify-center">
+          <div key={accel.key} className="w-[110px] shrink-0 flex items-center gap-2 justify-center">
             {accel.data.total > 0 ? (
               <>
                 <Gauge
@@ -170,7 +170,7 @@ function SortableClusterRow({
         )
       })}
 
-      <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+      <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
     </div>
   )
 }
@@ -387,24 +387,24 @@ export function ResourcesDrillDown({ data: _data }: Props) {
 
         {/* Column headers - matching data row structure exactly */}
         <div className="flex items-center gap-3 px-2.5 py-1.5 text-2xs text-muted-foreground uppercase tracking-wider mb-1">
-          <div className="p-1 flex-shrink-0"><div className="w-4 h-4" /></div> {/* Drag handle spacer */}
-          <div className="w-[90px] flex-shrink-0" /> {/* Health + label spacer (icon w-4 + gap-2 + ~60px label) */}
-          <div className="w-[160px] flex-shrink-0">{t('common.cluster')}</div>
-          <div className="w-[130px] flex-shrink-0 text-center">
+          <div className="p-1 shrink-0"><div className="w-4 h-4" /></div> {/* Drag handle spacer */}
+          <div className="w-[90px] shrink-0" /> {/* Health + label spacer (icon w-4 + gap-2 + ~60px label) */}
+          <div className="w-[160px] shrink-0">{t('common.cluster')}</div>
+          <div className="w-[130px] shrink-0 text-center">
             <Cpu className="w-3 h-3 text-blue-400 inline mr-1" />
             <span>{t('common.cpu')}</span>
           </div>
-          <div className="w-[130px] flex-shrink-0 text-center">
+          <div className="w-[130px] shrink-0 text-center">
             <MemoryStick className="w-3 h-3 text-yellow-400 inline mr-1" />
             <span>{t('common.memory')}</span>
           </div>
           {activeAccelTypes.map(at => (
-            <div key={at.key} className="w-[110px] flex-shrink-0 text-center">
+            <div key={at.key} className="w-[110px] shrink-0 text-center">
               <Cpu className={`w-3 h-3 ${at.color} inline mr-1`} />
               <span>{at.label}</span>
             </div>
           ))}
-          <div className="w-4 flex-shrink-0" /> {/* ChevronRight spacer */}
+          <div className="w-4 shrink-0" /> {/* ChevronRight spacer */}
         </div>
 
         <DndContext

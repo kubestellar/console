@@ -71,7 +71,7 @@ export function PortalTooltip({ children, content, className = '' }: PortalToolt
                 transform: 'translate(-50%, -100%)',
               }}
             >
-              <div className="px-3 py-2 bg-background border border-border rounded-lg text-xs whitespace-nowrap shadow-xl backdrop-blur-sm">
+              <div className="px-3 py-2 bg-background border border-border rounded-lg text-xs whitespace-nowrap shadow-xl backdrop-blur-xs">
                 {content}
               </div>
             </motion.div>

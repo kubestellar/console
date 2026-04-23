@@ -973,7 +973,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
     // panel to start *below* the navbar (via top: MODAL_TOP_INSET_PX) rather
     // than centering it on the viewport — otherwise the navbar visually
     // overlaps the modal header (issue #9150).
-    <div className="fixed inset-0 z-modal bg-black/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-modal bg-black/60 backdrop-blur-xs">
     <div
       data-testid="mission-browser"
       className="fixed bg-background rounded-xl shadow-2xl border border-border flex flex-col overflow-hidden"

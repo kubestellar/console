@@ -36,20 +36,20 @@ export function OrbitMonitorOffer({ mission, onOpenOrbitDialog }: OrbitMonitorOf
 
   return (
     <div className="mx-4 my-2 rounded-lg border border-purple-500/25 bg-purple-500/5 px-3 py-2.5 flex items-center gap-3">
-      <Satellite className="w-4 h-4 text-purple-400 flex-shrink-0" />
+      <Satellite className="w-4 h-4 text-purple-400 shrink-0" />
       <div className="flex-1 min-w-0">
         <p className="text-xs text-foreground">Want to keep watching this?</p>
         <p className="text-[10px] text-muted-foreground">Set up an orbit to monitor it automatically.</p>
       </div>
       <button
         onClick={handleSetupMonitor}
-        className="flex-shrink-0 text-xs font-medium text-purple-400 hover:text-purple-300 border border-purple-500/30 rounded px-2 py-1 transition-colors hover:bg-purple-500/10"
+        className="shrink-0 text-xs font-medium text-purple-400 hover:text-purple-300 border border-purple-500/30 rounded px-2 py-1 transition-colors hover:bg-purple-500/10"
       >
         Set up monitor
       </button>
       <button
         onClick={() => setDismissed(true)}
-        className="flex-shrink-0 p-0.5 text-muted-foreground/50 hover:text-muted-foreground rounded transition-colors"
+        className="shrink-0 p-0.5 text-muted-foreground/50 hover:text-muted-foreground rounded transition-colors"
         aria-label="Dismiss"
       >
         <X className="w-3.5 h-3.5" />

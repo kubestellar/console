@@ -41,7 +41,7 @@ export function TextArea({
       className={cn(
         'w-full rounded-lg border bg-secondary text-foreground transition-colors',
         'placeholder:text-muted-foreground',
-        'focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background',
+        'focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-offset-background',
         'disabled:opacity-50 disabled:cursor-not-allowed',
         error
           ? 'border-red-500 focus:ring-red-500'

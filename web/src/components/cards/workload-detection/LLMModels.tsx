@@ -153,7 +153,7 @@ export function LLMModels({ config: _config }: LLMModelsProps) {
 
       {/* Integration notice */}
       <div className="flex items-start gap-2 p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-xs mb-4">
-        <AlertCircle className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
+        <AlertCircle className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
         <div>
           <p className="text-cyan-400 font-medium">{t('cards:llmModels.inferencePoolDetection')}</p>
           <p className="text-muted-foreground">

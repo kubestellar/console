@@ -264,7 +264,7 @@ function ExportButton({ icon, label, description, active, onClick }: {
           : 'border-border hover:border-primary/30 hover:bg-accent/50 text-foreground'
       )}
     >
-      <div className="flex-shrink-0">{active ? <CheckCircle className="w-4 h-4 text-green-400" /> : icon}</div>
+      <div className="shrink-0">{active ? <CheckCircle className="w-4 h-4 text-green-400" /> : icon}</div>
       <div>
         <p className="text-xs font-medium">{active ? 'Done!' : label}</p>
         <p className="text-2xs text-muted-foreground">{description}</p>

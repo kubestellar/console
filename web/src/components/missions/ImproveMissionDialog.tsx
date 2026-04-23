@@ -158,7 +158,7 @@ export function ImproveMissionDialog({
                 >
                   <div
                     className={cn(
-                      'w-4 h-4 rounded-full border-2 flex-shrink-0 mt-0.5',
+                      'w-4 h-4 rounded-full border-2 shrink-0 mt-0.5',
                       selectedCategory === cat.id
                         ? 'border-purple-500 bg-purple-500'
                         : 'border-muted-foreground/30'
@@ -188,7 +188,7 @@ export function ImproveMissionDialog({
               value={details}
               onChange={(e) => setDetails(e.target.value)}
               placeholder="Describe the improvement needed. Include the correct command, better approach, or updated version..."
-              className="w-full h-24 px-3 py-2 text-sm rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground/50 resize-none focus:outline-none focus:ring-1 focus:ring-purple-500"
+              className="w-full h-24 px-3 py-2 text-sm rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground/50 resize-none focus:outline-hidden focus:ring-1 focus:ring-purple-500"
             />
           </div>
         </div>

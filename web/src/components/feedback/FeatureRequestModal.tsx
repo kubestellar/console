@@ -256,7 +256,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
   }, [forceClose])
 
   return (
-    <BaseModal isOpen={isOpen} onClose={handleClose} size="lg" closeOnBackdrop={true} closeOnEscape={true} className="!h-[80vh]">
+    <BaseModal isOpen={isOpen} onClose={handleClose} size="lg" closeOnBackdrop={true} closeOnEscape={true} className="h-[80vh]!">
       {/* Discard/Save Draft confirmation */}
       {showDiscardConfirm && (
         <DiscardConfirmDialog
@@ -285,7 +285,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
       />
 
       {/* Header */}
-      <div className="p-4 border-b border-border flex items-center justify-between flex-shrink-0">
+      <div className="p-4 border-b border-border flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2">
           <div>
             <h2 className="text-lg font-semibold text-foreground">
@@ -309,7 +309,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-border flex-shrink-0">
+      <div className="flex border-b border-border shrink-0">
             <button
               onClick={() => setActiveTab('submit')}
               className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors ${
@@ -356,7 +356,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
       {!canPerformActions && (
         <button
           onClick={() => setShowLoginPrompt(true)}
-          className="w-full px-4 py-2 bg-yellow-500/10 border-b border-yellow-500/20 flex items-center justify-between hover:bg-yellow-500/20 transition-colors cursor-pointer flex-shrink-0"
+          className="w-full px-4 py-2 bg-yellow-500/10 border-b border-yellow-500/20 flex items-center justify-between hover:bg-yellow-500/20 transition-colors cursor-pointer shrink-0"
         >
               <span className="text-xs text-yellow-400">
                 {isDemoModeForced
@@ -446,7 +446,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
       </div>
 
       {/* Footer - always visible */}
-      <div className="p-4 border-t border-border flex items-center justify-between flex-shrink-0">
+      <div className="p-4 border-t border-border flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3 text-2xs text-muted-foreground/50">
           <span><kbd className="px-1 py-0.5 rounded bg-secondary/50 text-[9px]">Esc</kbd> close</span>
           <span><kbd className="px-1 py-0.5 rounded bg-secondary/50 text-[9px]">Space</kbd> close</span>

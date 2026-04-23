@@ -162,7 +162,7 @@ export function ResourceMarshall() {
             onChange={(e) => handleNamespaceChange(e.target.value)}
             disabled={!selectedCluster || nsLoading}
             className={cn(
-              'flex-1 text-sm rounded-md bg-secondary/50 border border-border px-2 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-blue-500/50',
+              'flex-1 text-sm rounded-md bg-secondary/50 border border-border px-2 py-1.5 text-foreground focus:outline-hidden focus:ring-1 focus:ring-blue-500/50',
               (!selectedCluster || nsLoading) && 'opacity-50 cursor-not-allowed',
             )}
           >
@@ -183,7 +183,7 @@ export function ResourceMarshall() {
             onChange={(e) => handleWorkloadChange(e.target.value)}
             disabled={!selectedNamespace || wlLoading}
             className={cn(
-              'flex-1 text-sm rounded-md bg-secondary/50 border border-border px-2 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-blue-500/50',
+              'flex-1 text-sm rounded-md bg-secondary/50 border border-border px-2 py-1.5 text-foreground focus:outline-hidden focus:ring-1 focus:ring-blue-500/50',
               (!selectedNamespace || wlLoading) && 'opacity-50 cursor-not-allowed',
             )}
           >

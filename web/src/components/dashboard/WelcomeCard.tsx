@@ -47,7 +47,7 @@ export function WelcomeCard() {
   }
 
   return (
-    <div className="mb-4 rounded-xl border border-purple-500/30 bg-gradient-to-br from-purple-500/5 via-blue-500/5 to-transparent p-5 relative">
+    <div className="mb-4 rounded-xl border border-purple-500/30 bg-linear-to-br from-purple-500/5 via-blue-500/5 to-transparent p-5 relative">
       <button
         onClick={handleDismiss}
         className="absolute top-3 right-3 p-1 rounded-lg hover:bg-gray-500/10 dark:hover:bg-white/10 transition-colors text-muted-foreground hover:text-foreground"
@@ -58,7 +58,7 @@ export function WelcomeCard() {
 
       {/* Hero banner */}
       <div className="flex items-center gap-3 mb-3">
-        <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-blue-500 shadow-lg shadow-purple-500/20">
+        <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-linear-to-br from-purple-500 to-blue-500 shadow-lg shadow-purple-500/20">
           <Rocket className="w-6 h-6 text-white" />
         </div>
         <div>
@@ -80,7 +80,7 @@ export function WelcomeCard() {
               </code>
               <button
                 onClick={handleCopy}
-                className={`p-2 rounded-lg border transition-all flex-shrink-0 ${
+                className={`p-2 rounded-lg border transition-all shrink-0 ${
                   copied
                     ? 'bg-green-500/20 border-green-500/30 text-green-400'
                     : 'bg-secondary/50 border-border/50 hover:border-purple-500/30 text-muted-foreground hover:text-foreground'

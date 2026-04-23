@@ -194,7 +194,7 @@ function StatBlock({ blockId, stats, hasData, onClick, color, icon }: StatBlockP
           */}
       <div className="flex items-start gap-2 mb-2 min-w-0">
         <IconComponent className={`w-5 h-5 shrink-0 mt-0.5 ${colorClass}`} />
-        <span className="text-sm text-muted-foreground break-words leading-tight min-w-0" title={label}>{wrapAbbreviations(label)}</span>
+        <span className="text-sm text-muted-foreground wrap-break-word leading-tight min-w-0" title={label}>{wrapAbbreviations(label)}</span>
       </div>
       <div className={`text-3xl font-bold ${valueColor}`}>{value}</div>
       <div className="text-xs text-muted-foreground">{sublabel}</div>

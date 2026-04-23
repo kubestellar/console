@@ -477,7 +477,7 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
                           value={newKeyValue}
                           onChange={(e) => setNewKeyValue(e.target.value)}
                           placeholder={PROVIDER_INFO[key.provider]?.placeholder || t('agent.enterApiKey')}
-                          className="w-full px-3 py-2 pr-10 text-sm bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                          className="w-full px-3 py-2 pr-10 text-sm bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-primary"
                           autoFocus
                         />
                         <button
@@ -567,7 +567,7 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
                             onChange={(e) => setBaseURLDraft(d => ({ ...d, [key.provider]: e.target.value }))}
                             placeholder={`http://<service>.<namespace>.svc.cluster.local:8080`}
                             disabled={key.baseURLSource === 'env'}
-                            className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
+                            className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-primary disabled:opacity-50"
                           />
                           {baseURLError[key.provider] && (
                             <p className="text-xs text-destructive flex items-center gap-1">

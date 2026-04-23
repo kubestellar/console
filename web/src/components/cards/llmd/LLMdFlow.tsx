@@ -958,10 +958,10 @@ export function LLMdFlow() {
   const showEmptyState = !selectedStack && !isDemoMode
 
   return (
-    <div className={`relative w-full h-full flex-1 flex flex-col bg-gradient-to-br from-background/50 to-secondary/30 rounded-lg ${isExpanded ? 'min-h-0' : 'min-h-[300px]'}`}>
+    <div className={`relative w-full h-full flex-1 flex flex-col bg-linear-to-br from-background/50 to-secondary/30 rounded-lg ${isExpanded ? 'min-h-0' : 'min-h-[300px]'}`}>
       {/* Empty state overlay */}
       {showEmptyState && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-background/60 backdrop-blur-sm">
+        <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-background/60 backdrop-blur-xs">
           <div className="w-12 h-12 rounded-full border-2 border-border border-t-purple-500 animate-spin mb-4" />
           <span className="text-muted-foreground text-sm">{t('llmd.selectStackVisualize')}</span>
           <span className="text-muted-foreground text-xs mt-1">{t('llmd.useStackSelector')}</span>
@@ -1114,7 +1114,7 @@ export function LLMdFlow() {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
-            className="absolute top-10 left-3 w-56 bg-background/95 backdrop-blur-sm rounded-xl p-4 border border-border shadow-xl"
+            className="absolute top-10 left-3 w-56 bg-background/95 backdrop-blur-xs rounded-xl p-4 border border-border shadow-xl"
           >
             <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
               <h4 className="text-white font-semibold text-sm">

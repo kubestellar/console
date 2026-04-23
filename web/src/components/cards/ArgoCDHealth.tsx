@@ -97,7 +97,7 @@ export function ArgoCDHealth({ config: _config }: ArgoCDHealthProps) {
       {/* Integration notice — only shown in demo/fallback mode (#4201) */}
       {isDemoData && (
         <div className="flex items-start gap-2 p-2 mb-3 rounded-lg bg-orange-500/10 border border-orange-500/20 text-xs">
-          <AlertCircle className="w-4 h-4 text-orange-400 flex-shrink-0 mt-0.5" />
+          <AlertCircle className="w-4 h-4 text-orange-400 shrink-0 mt-0.5" />
           <div>
             <p className="text-orange-400 font-medium">{t('argoCDHealth.argocdIntegration')}</p>
             <p className="text-muted-foreground">

@@ -860,7 +860,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
                       value={t1Title}
                       onChange={e => setT1Title(e.target.value)}
                       placeholder={t('dashboard.cardFactory.titlePlaceholder')}
-                      className="w-full text-sm px-3 py-2 rounded-lg bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-inset focus:ring-purple-500/50"
+                      className="w-full text-sm px-3 py-2 rounded-lg bg-secondary text-foreground focus:outline-hidden focus:ring-1 focus:ring-inset focus:ring-purple-500/50"
                     />
                   </div>
                   <div>
@@ -868,7 +868,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
                     <select
                       value={t1Width}
                       onChange={e => setT1Width(Number(e.target.value))}
-                      className="w-full text-sm px-3 py-2 rounded-lg bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-inset focus:ring-purple-500/50"
+                      className="w-full text-sm px-3 py-2 rounded-lg bg-secondary text-foreground focus:outline-hidden focus:ring-1 focus:ring-inset focus:ring-purple-500/50"
                     >
                       <option value={3}>{t('dashboard.cardFactory.widthSmall')}</option>
                       <option value={4}>{t('dashboard.cardFactory.widthMedium')}</option>
@@ -886,7 +886,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
                     value={t1Description}
                     onChange={e => setT1Description(e.target.value)}
                     placeholder={t('dashboard.cardFactory.descPlaceholder')}
-                    className="w-full text-sm px-3 py-2 rounded-lg bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-inset focus:ring-purple-500/50"
+                    className="w-full text-sm px-3 py-2 rounded-lg bg-secondary text-foreground focus:outline-hidden focus:ring-1 focus:ring-inset focus:ring-purple-500/50"
                   />
                 </div>
 
@@ -930,19 +930,19 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
                           value={col.field}
                           onChange={e => updateColumn(idx, 'field', e.target.value)}
                           placeholder={t('dashboard.cardFactory.fieldPlaceholder')}
-                          className="flex-1 text-xs px-2 py-1.5 rounded-lg bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-inset focus:ring-purple-500/50"
+                          className="flex-1 text-xs px-2 py-1.5 rounded-lg bg-secondary text-foreground focus:outline-hidden focus:ring-1 focus:ring-inset focus:ring-purple-500/50"
                         />
                         <input
                           type="text"
                           value={col.label}
                           onChange={e => updateColumn(idx, 'label', e.target.value)}
                           placeholder={t('dashboard.cardFactory.labelPlaceholder')}
-                          className="flex-1 text-xs px-2 py-1.5 rounded-lg bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-inset focus:ring-purple-500/50"
+                          className="flex-1 text-xs px-2 py-1.5 rounded-lg bg-secondary text-foreground focus:outline-hidden focus:ring-1 focus:ring-inset focus:ring-purple-500/50"
                         />
                         <select
                           value={col.format || 'text'}
                           onChange={e => updateColumn(idx, 'format', e.target.value)}
-                          className="w-20 text-xs px-2 py-1.5 rounded-lg bg-secondary text-foreground focus:outline-none"
+                          className="w-20 text-xs px-2 py-1.5 rounded-lg bg-secondary text-foreground focus:outline-hidden"
                         >
                           <option value="text">{t('cardFactory.formatText')}</option>
                           <option value="badge">{t('cardFactory.formatBadge')}</option>
@@ -992,7 +992,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
                     }}
                     rows={6}
                     placeholder={T1_SAMPLE_DATA_JSON}
-                    className="w-full text-xs px-3 py-2 rounded-lg bg-secondary text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-inset focus:ring-purple-500/50"
+                    className="w-full text-xs px-3 py-2 rounded-lg bg-secondary text-foreground font-mono focus:outline-hidden focus:ring-1 focus:ring-inset focus:ring-purple-500/50"
                   />
                 </div>
 
@@ -1053,7 +1053,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
                       value={t2Title}
                       onChange={e => setT2Title(e.target.value)}
                       placeholder={t('dashboard.cardFactory.titlePlaceholder')}
-                      className="w-full text-sm px-3 py-2 rounded-lg bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-inset focus:ring-purple-500/50"
+                      className="w-full text-sm px-3 py-2 rounded-lg bg-secondary text-foreground focus:outline-hidden focus:ring-1 focus:ring-inset focus:ring-purple-500/50"
                     />
                   </div>
                   <div>
@@ -1061,7 +1061,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
                     <select
                       value={t2Width}
                       onChange={e => setT2Width(Number(e.target.value))}
-                      className="w-full text-sm px-3 py-2 rounded-lg bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-inset focus:ring-purple-500/50"
+                      className="w-full text-sm px-3 py-2 rounded-lg bg-secondary text-foreground focus:outline-hidden focus:ring-1 focus:ring-inset focus:ring-purple-500/50"
                     >
                       <option value={3}>{t('dashboard.cardFactory.widthSmall')}</option>
                       <option value={4}>{t('dashboard.cardFactory.widthMedium')}</option>
@@ -1079,7 +1079,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
                     value={t2Description}
                     onChange={e => setT2Description(e.target.value)}
                     placeholder={t('dashboard.cardFactory.codeDescPlaceholder')}
-                    className="w-full text-sm px-3 py-2 rounded-lg bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-inset focus:ring-purple-500/50"
+                    className="w-full text-sm px-3 py-2 rounded-lg bg-secondary text-foreground focus:outline-hidden focus:ring-1 focus:ring-inset focus:ring-purple-500/50"
                   />
                 </div>
 
@@ -1099,7 +1099,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
                     value={t2Source}
                     onChange={e => { setT2Source(e.target.value); setCompileStatus('idle') }}
                     rows={14}
-                    className="w-full text-xs px-3 py-2 rounded-lg bg-secondary text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-inset focus:ring-purple-500/50 leading-relaxed"
+                    className="w-full text-xs px-3 py-2 rounded-lg bg-secondary text-foreground font-mono focus:outline-hidden focus:ring-1 focus:ring-inset focus:ring-purple-500/50 leading-relaxed"
                     spellCheck={false}
                   />
 

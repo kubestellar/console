@@ -135,7 +135,7 @@ export function ListVisualization({
               setSortBy(e.target.value || undefined)
               setCurrentPage(0) // Reset to first page on sort change
             }}
-            className="px-2 py-1 text-xs bg-secondary border border-border rounded text-foreground focus:outline-none focus:border-blue-500"
+            className="px-2 py-1 text-xs bg-secondary border border-border rounded text-foreground focus:outline-hidden focus:border-blue-500"
           >
             <option value="">Sort by...</option>
             {availableSortOptions.map((opt) => (

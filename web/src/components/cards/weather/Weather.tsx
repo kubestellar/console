@@ -348,7 +348,7 @@ export function Weather({ config }: { config?: WeatherConfig }) {
 
       {/* Settings Panel */}
       {showSettings && (
-        <div className="mb-3 p-3 rounded-xl bg-secondary backdrop-blur-sm border border-border/30 space-y-3">
+        <div className="mb-3 p-3 rounded-xl bg-secondary backdrop-blur-xs border border-border/30 space-y-3">
           {/* City Search */}
           <div>
             <label className="text-xs text-muted-foreground mb-1.5 block font-medium">Search for a city</label>
@@ -368,7 +368,7 @@ export function Weather({ config }: { config?: WeatherConfig }) {
 
               {/* City Search Dropdown */}
               {showCityDropdown && citySearchResults.length > 0 && (
-                <div className="absolute z-50 w-full mt-1 bg-secondary/95 backdrop-blur-sm border border-border/30 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                <div className="absolute z-50 w-full mt-1 bg-secondary/95 backdrop-blur-xs border border-border/30 rounded-lg shadow-lg max-h-60 overflow-y-auto">
                   {citySearchResults.map((city) => (
                     <button
                       key={city.id}
@@ -490,7 +490,7 @@ export function Weather({ config }: { config?: WeatherConfig }) {
         {currentWeather && (
           <div
             key={`weather-hero-${currentLocation.id}`}
-            className={`relative rounded-3xl bg-gradient-to-b ${backgroundGradient} overflow-hidden shadow-lg`}
+            className={`relative rounded-3xl bg-linear-to-b ${backgroundGradient} overflow-hidden shadow-lg`}
           >
             <div className="absolute inset-0 bg-black/20 z-0"></div>
 
@@ -617,7 +617,7 @@ export function Weather({ config }: { config?: WeatherConfig }) {
                         </span>
                         <div className="flex-1 h-1.5 bg-secondary/50 rounded-full overflow-hidden relative">
                           <div
-                            className="absolute h-full bg-gradient-to-r from-blue-400 to-orange-400 rounded-full"
+                            className="absolute h-full bg-linear-to-r from-blue-400 to-orange-400 rounded-full"
                             style={{
                               left: `${leftPercent}%`,
                               width: `${Math.max(widthPercent, 5)}%` }}

@@ -350,7 +350,7 @@ function PodSweeperInternal(_props: CardComponentProps) {
                         handleRightClick(e as unknown as React.MouseEvent, rowIdx, colIdx)
                       }
                     }}
-                    className={`${cellSize} flex items-center justify-center border border-border/50 cursor-pointer transition-colors ${bgClass} focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400`}
+                    className={`${cellSize} flex items-center justify-center border border-border/50 cursor-pointer transition-colors ${bgClass} focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400`}
                   >
                     {content}
                   </div>

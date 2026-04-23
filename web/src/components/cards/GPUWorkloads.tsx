@@ -319,7 +319,7 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Box className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                      <Box className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                       <span className="text-sm font-medium text-foreground truncate">{pod.name}</span>
                     </div>
                     <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
@@ -338,7 +338,7 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
                       issues={[{ name: t('gpuWorkloads.podStatusName', { status: pod.status }), message: t('gpuWorkloads.podStatusMessage', { status: pod.status }) }]}
                     />
                   )}
-                  <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                  <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                 </div>
               </div>
             )

@@ -41,7 +41,7 @@ interface Obstacle {
 interface Collectible {
   x: number
   y: number
-  type: 'gold' | 'diamond' | 'ring'
+  type: 'gold' | 'diamond' | 'ring-3'
   collected: boolean
 }
 
@@ -140,7 +140,7 @@ export function PodPitfall(_props: CardComponentProps) {
 
       // Collectibles
       if (Math.random() > 0.4) {
-        const type = ['gold', 'diamond', 'ring'][Math.floor(Math.random() * 3)] as Collectible['type']
+        const type = ['gold', 'diamond', 'ring-3'][Math.floor(Math.random() * 3)] as Collectible['type']
         newCollectibles.push({
           x: baseX + 50 + Math.random() * 200,
           y: 80 + Math.random() * 60,
@@ -267,7 +267,7 @@ export function PodPitfall(_props: CardComponentProps) {
           ctx.lineTo(cx, c.y + 8)
           ctx.closePath()
           ctx.fill()
-        } else if (c.type === 'ring') {
+        } else if (c.type === 'ring-3') {
           ctx.strokeStyle = '#c0c0c0'
           ctx.lineWidth = 3
           ctx.beginPath()

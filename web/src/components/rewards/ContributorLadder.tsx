@@ -137,7 +137,7 @@ export function ContributorBanner() {
                         : 'opacity-40'
                   }`}
                 >
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${
                     isUnlocked ? level.bgClass : 'bg-secondary'
                   }`}>
                     <LevelIcon

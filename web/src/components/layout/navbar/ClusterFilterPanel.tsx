@@ -237,7 +237,7 @@ export function ClusterFilterPanel() {
                           )}
                         >
                           <span
-                            className="w-2 h-2 rounded-full flex-shrink-0"
+                            className="w-2 h-2 rounded-full shrink-0"
                             style={{ backgroundColor: fs.color }}
                           />
                           <span className="max-w-[100px] truncate">{fs.name}</span>
@@ -274,7 +274,7 @@ export function ClusterFilterPanel() {
                   value={customFilter}
                   onChange={(e) => setCustomFilter(e.target.value)}
                   placeholder={t('common:filters.customFilterPlaceholder', 'Filter by name, namespace...')}
-                  className="flex-1 px-2 py-1.5 text-sm bg-secondary/50 border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500"
+                  className="flex-1 px-2 py-1.5 text-sm bg-secondary/50 border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500"
                 />
                 {hasCustomFilter && (
                   <button
@@ -405,7 +405,7 @@ export function ClusterFilterPanel() {
                         title={statusTooltip}
                       >
                         <div className={cn(
-                          'w-4 h-4 rounded border flex items-center justify-center flex-shrink-0',
+                          'w-4 h-4 rounded border flex items-center justify-center shrink-0',
                           isSelected
                             ? 'bg-purple-500 border-purple-500'
                             : 'border-muted-foreground'
@@ -413,13 +413,13 @@ export function ClusterFilterPanel() {
                           {isSelected && <Check className="w-3 h-3 text-white" />}
                         </div>
                         {isLoading ? (
-                          <div className="w-3 h-3 border border-muted-foreground/50 border-t-transparent rounded-full animate-spin flex-shrink-0" />
+                          <div className="w-3 h-3 border border-muted-foreground/50 border-t-transparent rounded-full animate-spin shrink-0" />
                         ) : isUnreachable ? (
-                          <WifiOff className="w-3 h-3 text-yellow-400 flex-shrink-0" />
+                          <WifiOff className="w-3 h-3 text-yellow-400 shrink-0" />
                         ) : isHealthy ? (
-                          <CheckCircle2 className="w-3 h-3 text-green-400 flex-shrink-0" />
+                          <CheckCircle2 className="w-3 h-3 text-green-400 shrink-0" />
                         ) : (
-                          <AlertCircle className="w-3 h-3 text-orange-400 flex-shrink-0" />
+                          <AlertCircle className="w-3 h-3 text-orange-400 shrink-0" />
                         )}
                         <span className={cn('text-sm truncate', isUnreachable ? 'text-yellow-400' : !isHealthy && !isLoading && 'text-orange-400')}>{cluster}</span>
                       </button>
@@ -438,7 +438,7 @@ export function ClusterFilterPanel() {
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
                     placeholder={t('common:filters.filterSetName', 'Filter set name...')}
-                    className="w-full px-2 py-1.5 text-sm bg-secondary/50 border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500"
+                    className="w-full px-2 py-1.5 text-sm bg-secondary/50 border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500"
                     autoFocus
                     onKeyDown={(e) => { if (e.key === 'Enter') handleSave() }}
                   />

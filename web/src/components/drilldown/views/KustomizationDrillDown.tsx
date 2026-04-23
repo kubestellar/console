@@ -371,7 +371,7 @@ Please:
         {activeTab === 'overview' && (
           <div className="space-y-6">
             {/* Kustomization Info Card */}
-            <div className="p-4 rounded-lg bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20">
+            <div className="p-4 rounded-lg bg-linear-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20">
               <div className="flex items-start gap-3">
                 <Layers className="w-8 h-8 text-blue-400 mt-1" />
                 <div className="flex-1 min-w-0">

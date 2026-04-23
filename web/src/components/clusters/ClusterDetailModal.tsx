@@ -368,7 +368,7 @@ After I approve, help me execute the repairs step by step.`,
         {/* Error banner when cluster health fetch fails (issue 6772) */}
         {healthError && (
           <div className="mb-4 p-3 rounded-lg bg-red-500/20 border border-red-500/50 flex items-center gap-2 text-sm text-red-400">
-            <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+            <AlertTriangle className="w-4 h-4 shrink-0" />
             <span>{healthError}</span>
           </div>
         )}
@@ -386,7 +386,7 @@ After I approve, help me execute the repairs step by step.`,
             parent provided a remove handler. */}
         {onRemove && isUnreachable && (clusterInfo?.source === 'kubeconfig' || !clusterInfo?.source) && (
           <div className="mb-6 flex items-start gap-3 p-4 rounded-lg bg-red-500/5 border border-red-500/20">
-            <WifiOff className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" aria-hidden="true" />
+            <WifiOff className="w-5 h-5 text-red-400 shrink-0 mt-0.5" aria-hidden="true" />
             <div className="flex-1 min-w-0">
               <h3 className="text-sm font-medium text-foreground mb-1">
                 {t('clusterDetail.offlineRemoveTitle')}
@@ -408,7 +408,7 @@ After I approve, help me execute the repairs step by step.`,
         )}
 
         {/* AI Actions */}
-        <div className="mb-6 p-4 rounded-lg bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20">
+        <div className="mb-6 p-4 rounded-lg bg-linear-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20">
           <div className="flex items-center gap-2 mb-3">
             <Bot className="w-5 h-5 text-purple-400" />
             <span className="text-sm font-medium text-foreground">{t('clusterDetail.aiAssistant')}</span>
@@ -743,11 +743,11 @@ After I approve, help me execute the repairs step by step.`,
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <StatusBadge color="blue" size="xs" icon={<Box className="w-3 h-3" />} className="flex-shrink-0">{t('clusterDetail.pod')}</StatusBadge>
+                      <StatusBadge color="blue" size="xs" icon={<Box className="w-3 h-3" />} className="shrink-0">{t('clusterDetail.pod')}</StatusBadge>
                       <span className="font-medium text-foreground truncate">{issue.name}</span>
-                      <span className="text-xs text-muted-foreground flex-shrink-0">({issue.namespace})</span>
+                      <span className="text-xs text-muted-foreground shrink-0">({issue.namespace})</span>
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                    <div className="flex items-center gap-2 shrink-0 ml-2">
                       <StatusBadge color="red" size="xs">{issue.status}</StatusBadge>
                       <ChevronRight className="w-4 h-4 text-muted-foreground" />
                     </div>
@@ -772,11 +772,11 @@ After I approve, help me execute the repairs step by step.`,
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <StatusBadge color="purple" size="xs" icon={<Layers className="w-3 h-3" />} className="flex-shrink-0">{t('clusterDetail.deploy')}</StatusBadge>
+                      <StatusBadge color="purple" size="xs" icon={<Layers className="w-3 h-3" />} className="shrink-0">{t('clusterDetail.deploy')}</StatusBadge>
                       <span className="font-medium text-foreground truncate">{issue.name}</span>
-                      <span className="text-xs text-muted-foreground flex-shrink-0">({issue.namespace})</span>
+                      <span className="text-xs text-muted-foreground shrink-0">({issue.namespace})</span>
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                    <div className="flex items-center gap-2 shrink-0 ml-2">
                       <StatusBadge color="red" size="xs">
                         {issue.readyReplicas}/{issue.replicas} ready
                       </StatusBadge>

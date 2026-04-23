@@ -217,7 +217,7 @@ export function CanIChecker() {
               id="cluster-select"
               value={cluster || clusters[0] || ''}
               onChange={(e) => setCluster(e.target.value)}
-              className="w-full p-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none pr-8"
+              className="w-full p-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-hidden focus:ring-2 focus:ring-blue-500 appearance-none pr-8"
               data-testid="can-i-cluster"
             >
               {clusters.map((c) => (
@@ -238,7 +238,7 @@ export function CanIChecker() {
               id="verb-select"
               value={verb}
               onChange={(e) => setVerb(e.target.value)}
-              className="w-full p-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none pr-8"
+              className="w-full p-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-hidden focus:ring-2 focus:ring-blue-500 appearance-none pr-8"
               data-testid="can-i-verb"
             >
               {COMMON_VERBS.map((v) => (
@@ -254,7 +254,7 @@ export function CanIChecker() {
               value={customVerb}
               onChange={(e) => setCustomVerb(e.target.value)}
               placeholder={t('rbac.enterCustomVerb')}
-              className="mt-2 w-full p-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="mt-2 w-full p-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-hidden focus:ring-2 focus:ring-blue-500"
               data-testid="can-i-custom-verb"
             />
           )}
@@ -270,7 +270,7 @@ export function CanIChecker() {
               id="resource-select"
               value={resource}
               onChange={(e) => setResource(e.target.value)}
-              className="w-full p-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none pr-8"
+              className="w-full p-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-hidden focus:ring-2 focus:ring-blue-500 appearance-none pr-8"
               data-testid="can-i-resource"
             >
               {COMMON_RESOURCES.map((r) => (
@@ -286,7 +286,7 @@ export function CanIChecker() {
               value={customResource}
               onChange={(e) => setCustomResource(e.target.value)}
               placeholder={t('rbac.enterCustomResource')}
-              className="mt-2 w-full p-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="mt-2 w-full p-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-hidden focus:ring-2 focus:ring-blue-500"
               data-testid="can-i-custom-resource"
             />
           )}
@@ -302,7 +302,7 @@ export function CanIChecker() {
               id="namespace-select"
               value={namespace}
               onChange={(e) => setNamespace(e.target.value)}
-              className="w-full p-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none pr-8"
+              className="w-full p-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-hidden focus:ring-2 focus:ring-blue-500 appearance-none pr-8"
               data-testid="can-i-namespace"
             >
               <option value="">{t('rbac.allNamespacesClusterScoped')}</option>
@@ -327,7 +327,7 @@ export function CanIChecker() {
               id="api-group-select"
               value={apiGroup}
               onChange={(e) => setApiGroup(e.target.value)}
-              className="w-full p-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none pr-8"
+              className="w-full p-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-hidden focus:ring-2 focus:ring-blue-500 appearance-none pr-8"
               data-testid="can-i-api-group"
             >
               <option value="">
@@ -349,7 +349,7 @@ export function CanIChecker() {
               value={customApiGroup}
               onChange={(e) => setCustomApiGroup(e.target.value)}
               placeholder={t('rbac.enterCustomApiGroup')}
-              className="mt-2 w-full p-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="mt-2 w-full p-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-hidden focus:ring-2 focus:ring-blue-500"
               data-testid="can-i-custom-api-group"
             />
           )}
@@ -391,7 +391,7 @@ export function CanIChecker() {
                   toggleUserGroup(e.target.value)
                 }
               }}
-              className="w-full p-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none pr-8"
+              className="w-full p-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-hidden focus:ring-2 focus:ring-blue-500 appearance-none pr-8"
               data-testid="can-i-user-groups"
             >
               <option value="">{t('rbac.selectCommonGroups')}</option>
@@ -415,7 +415,7 @@ export function CanIChecker() {
                 }
               }}
               placeholder={t('rbac.addCustomGroupPlaceholder')}
-              className="flex-1 p-2 rounded-lg bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 p-2 rounded-lg bg-secondary border border-border text-foreground text-sm focus:outline-hidden focus:ring-2 focus:ring-blue-500"
             />
             <Button
               variant="primary"

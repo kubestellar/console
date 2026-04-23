@@ -42,7 +42,7 @@ export default function NotFound() {
       <div className="max-w-lg w-full text-center space-y-8">
         {/* Animated compass icon */}
         <div className="relative inline-flex items-center justify-center">
-          <div className="absolute inset-0 w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-purple-500/20 to-blue-500/20 blur-xl motion-safe:animate-pulse" />
+          <div className="absolute inset-0 w-24 h-24 mx-auto rounded-full bg-linear-to-br from-purple-500/20 to-blue-500/20 blur-xl motion-safe:animate-pulse" />
           <Compass className="w-20 h-20 text-purple-400 relative motion-safe:animate-spin" style={{ animationDuration: '8s' }} />
         </div>
 
@@ -58,7 +58,7 @@ export default function NotFound() {
         </div>
 
         {/* Feature request CTA */}
-        <div className="bg-gradient-to-br from-purple-500/10 to-blue-500/10 border border-purple-500/20 rounded-xl p-5 space-y-3">
+        <div className="bg-linear-to-br from-purple-500/10 to-blue-500/10 border border-purple-500/20 rounded-xl p-5 space-y-3">
           <div className="flex items-center justify-center gap-2 text-purple-300">
             <Sparkles className="w-4 h-4" />
             <span className="text-sm font-semibold">Ship it in hours, not months</span>

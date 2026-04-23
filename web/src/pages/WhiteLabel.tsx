@@ -318,7 +318,7 @@ function DeploymentSection() {
               className="rounded-xl border border-slate-700/50 bg-slate-800/30 p-6"
             >
               <div className="flex items-start gap-4">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold text-sm">
+                <div className="shrink-0 w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold text-sm">
                   {s.step}
                 </div>
                 <div className="flex-1">
@@ -437,7 +437,7 @@ export function WhiteLabel() {
     <div className="min-h-screen bg-[#0f172a] text-white">
       {/* ---- Hero Section ---- */}
       <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-transparent to-blue-900/20 pointer-events-none" />
+        <div className="absolute inset-0 bg-linear-to-br from-purple-900/20 via-transparent to-blue-900/20 pointer-events-none" />
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-purple-500/5 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative max-w-5xl mx-auto px-6 pt-20 pb-16 text-center">
@@ -448,7 +448,7 @@ export function WhiteLabel() {
 
           <h1 className="text-5xl sm:text-6xl font-bold tracking-tight mb-6">
             Your brand.{' '}
-            <span className="bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
+            <span className="bg-linear-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
               Our platform.
             </span>
           </h1>
@@ -551,7 +551,7 @@ export function WhiteLabel() {
       <BrandingReference />
 
       {/* ---- Footer CTA ---- */}
-      <section className="border-t border-slate-700/50 bg-gradient-to-b from-slate-900/50 to-[#0f172a]">
+      <section className="border-t border-slate-700/50 bg-linear-to-b from-slate-900/50 to-[#0f172a]">
         <div className="max-w-5xl mx-auto px-6 py-20 text-center">
           <h2 className="text-4xl font-bold mb-4">Ready to white-label?</h2>
           <p className="text-slate-400 mb-10 text-lg max-w-2xl mx-auto">

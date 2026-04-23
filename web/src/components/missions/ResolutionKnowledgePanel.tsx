@@ -43,7 +43,7 @@ export function ResolutionKnowledgePanel({
 
   if (relatedResolutions.length === 0) {
     return (
-      <div className="flex-shrink-0 flex flex-col gap-4 overflow-y-auto scroll-enhanced">
+      <div className="shrink-0 flex flex-col gap-4 overflow-y-auto scroll-enhanced">
         <div className="bg-card border border-border rounded-lg p-4">
           <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
             <BookOpen className="w-4 h-4 text-purple-400" />
@@ -65,7 +65,7 @@ export function ResolutionKnowledgePanel({
   }
 
   return (
-    <div className="flex-shrink-0 flex flex-col gap-4 overflow-y-auto scroll-enhanced">
+    <div className="shrink-0 flex flex-col gap-4 overflow-y-auto scroll-enhanced">
       <div className="bg-card border border-border rounded-lg p-4">
         <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
           <BookOpen className="w-4 h-4 text-purple-400" />
@@ -155,9 +155,9 @@ function ResolutionCard({
         className="w-full flex items-start gap-2 p-2.5 text-left hover:bg-secondary/50 transition-colors"
       >
         {isExpanded ? (
-          <ChevronDown className="w-3.5 h-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />
+          <ChevronDown className="w-3.5 h-3.5 text-muted-foreground mt-0.5 shrink-0" />
         ) : (
-          <ChevronRight className="w-3.5 h-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />
+          <ChevronRight className="w-3.5 h-3.5 text-muted-foreground mt-0.5 shrink-0" />
         )}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">

@@ -107,7 +107,7 @@ export function LinkedInShareCard() {
   return (
     <div className="p-4 rounded-lg bg-blue-600/5 border border-blue-600/20">
       <div className="flex items-start gap-3">
-        <div className="w-10 h-10 rounded-full bg-blue-600/20 flex items-center justify-center flex-shrink-0">
+        <div className="w-10 h-10 rounded-full bg-blue-600/20 flex items-center justify-center shrink-0">
           <Linkedin className="w-5 h-5 text-blue-400" />
         </div>
         <div className="flex-1">

@@ -73,7 +73,7 @@ export function GPUReservationsTab({
           value={searchTerm}
           onChange={(e) => onSetSearchTerm(e.target.value)}
           placeholder={t('gpuReservations.searchPlaceholder', 'Search reservations...')}
-          className="w-full pl-10 pr-4 py-2 rounded-lg bg-secondary/50 border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+          className="w-full pl-10 pr-4 py-2 rounded-lg bg-secondary/50 border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500/50"
         />
       </div>
       {/* Filter banner when showing only user's reservations */}

@@ -148,7 +148,7 @@ export function WarningEvents() {
               onSortChange: (v) => sorting.setSortBy(v as SortByOption),
               sortDirection: sorting.sortDirection,
               onSortDirectionChange: sorting.setSortDirection }}
-            className="!mb-0"
+            className="mb-0!"
           />
           <RefreshButton
             isRefreshing={isRefreshing}
@@ -163,7 +163,7 @@ export function WarningEvents() {
       {/* Error Display — bug #9043: error strings must respect language setting */}
       {isFailed && (
         <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-2 mb-3">
-          <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+          <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="text-xs font-medium text-red-400">{t('warningEvents.errorLoading')}</p>
             <p className="text-2xs text-muted-foreground mt-0.5">{t('warningEvents.errorFetchAttempts', { count: consecutiveFailures })}</p>
@@ -192,7 +192,7 @@ export function WarningEvents() {
               className="p-2 rounded-lg bg-yellow-500/5 border border-yellow-500/20"
             >
               <div className="flex items-start gap-2">
-                <AlertTriangle className="w-3.5 h-3.5 text-yellow-400 mt-0.5 flex-shrink-0" />
+                <AlertTriangle className="w-3.5 h-3.5 text-yellow-400 mt-0.5 shrink-0" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <StatusBadge color="yellow">
@@ -216,9 +216,9 @@ export function WarningEvents() {
                       resource={{ kind: 'Event', name: event.object, namespace: event.namespace, cluster: event.cluster, status: 'Warning' }}
                       issues={[{ name: event.reason, message: event.message }]}
                       showRepair={false}
-                      className="flex-shrink-0"
+                      className="shrink-0"
                     />
-                    <span className="text-xs text-muted-foreground ml-auto whitespace-nowrap flex-shrink-0">{getTimeAgo(event.lastSeen)}</span>
+                    <span className="text-xs text-muted-foreground ml-auto whitespace-nowrap shrink-0">{getTimeAgo(event.lastSeen)}</span>
                   </div>
                 </div>
               </div>

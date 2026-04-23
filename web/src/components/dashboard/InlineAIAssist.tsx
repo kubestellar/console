@@ -150,7 +150,7 @@ export function InlineAIAssist<T>({
               if (e.key === 'Enter') handleGenerate()
             }}
             placeholder={placeholder}
-            className="flex-1 text-xs px-2.5 py-1.5 rounded-md bg-secondary border border-border text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+            className="flex-1 text-xs px-2.5 py-1.5 rounded-md bg-secondary border border-border text-foreground placeholder:text-muted-foreground/40 focus:outline-hidden focus:ring-1 focus:ring-purple-500/50"
           />
           <button
             onClick={handleGenerate}

@@ -397,7 +397,7 @@ Labels:       app=${resourceName.split('-')[0]}
   const REMEDIATION_MODAL_TITLE_ID = 'remediation-console-title'
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-modal">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-modal">
       <div
         role="dialog"
         aria-modal="true"
@@ -588,7 +588,7 @@ Labels:       app=${resourceName.split('-')[0]}
             {shellError && (
               <div className="mb-2 px-3 py-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-xs">
                 <div className="flex items-center gap-2 mb-2">
-                  <AlertTriangle className="w-3 h-3 flex-shrink-0" />
+                  <AlertTriangle className="w-3 h-3 shrink-0" />
                   <span>{shellError}</span>
                 </div>
                 {lastFailedCommand && (
@@ -616,7 +616,7 @@ Labels:       app=${resourceName.split('-')[0]}
                 onKeyDown={handleShellKeyDown}
                 placeholder={t('remediation.enterCommand')}
                 disabled={isExecuting}
-                className="flex-1 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground"
+                className="flex-1 bg-transparent border-none outline-hidden text-foreground placeholder:text-muted-foreground"
                 autoFocus
               />
               <button

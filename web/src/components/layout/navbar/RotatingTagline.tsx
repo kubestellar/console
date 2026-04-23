@@ -14,10 +14,10 @@ const TAGLINES: readonly string[] = [
   'AI-driven multi-cluster management',
 ] as const
 
-type TransitionStyle = 'fade' | 'slideUp' | 'slideDown' | 'slideLeft' | 'blur' | 'scaleDown'
+type TransitionStyle = 'fade' | 'slideUp' | 'slideDown' | 'slideLeft' | 'blur-sm' | 'scaleDown'
 
 const TRANSITIONS: readonly TransitionStyle[] = [
-  'fade', 'slideUp', 'slideDown', 'slideLeft', 'blur', 'scaleDown',
+  'fade', 'slideUp', 'slideDown', 'slideLeft', 'blur-sm', 'scaleDown',
 ] as const
 
 function randomIndex(length: number): number {
@@ -56,7 +56,7 @@ function getTransitionCSS(transition: TransitionStyle, visible: boolean): React.
         transform: visible ? 'translateX(0)' : 'translateX(-12px)',
         transition: `opacity ${duration} ${easing}, transform ${duration} ${easing}`,
       }
-    case 'blur':
+    case 'blur-sm':
       return {
         opacity: visible ? 1 : 0,
         filter: visible ? 'blur(0)' : 'blur(4px)',

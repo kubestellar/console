@@ -23,7 +23,7 @@ export function SimpleGlobe({ className = '' }: SimpleGlobeProps) {
       {/* Globe sphere */}
       <div className="relative w-96 h-96">
         {/* Main globe circle with gradient */}
-        <div className="absolute inset-0 rounded-full bg-gradient-to-br from-blue-900/20 via-purple-900/20 to-cyan-900/20 border-2 border-blue-500/30 shadow-2xl shadow-blue-500/20">
+        <div className="absolute inset-0 rounded-full bg-linear-to-br from-blue-900/20 via-purple-900/20 to-cyan-900/20 border-2 border-blue-500/30 shadow-2xl shadow-blue-500/20">
           {/* Rotating ring animation */}
           <div className="absolute inset-0 rounded-full border-2 border-purple-500/20 animate-spin-slow" />
           <div className="absolute inset-4 rounded-full border border-cyan-500/10 animate-spin-slower" />

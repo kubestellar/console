@@ -250,7 +250,7 @@ function TopPodsInternal({ config }: TopPodsProps) {
                   </span>
                 </div>
                 {/* Metric badge based on sort */}
-                <div className="flex items-center gap-1 flex-shrink-0">
+                <div className="flex items-center gap-1 shrink-0">
                   {sortBy === 'restarts' && (
                     <>
                       {pod.restarts > 0 ? (
@@ -394,9 +394,9 @@ function TopPodsInternal({ config }: TopPodsProps) {
               {/* Details row */}
               <div className="flex flex-wrap items-center justify-between gap-y-2 text-xs text-muted-foreground">
                 <div className="flex items-center gap-3">
-                  <span className="flex-shrink-0">{pod.status}</span>
-                  <span className="flex-shrink-0">{pod.ready}</span>
-                  <span className="flex-shrink-0">{pod.age}</span>
+                  <span className="shrink-0">{pod.status}</span>
+                  <span className="shrink-0">{pod.ready}</span>
+                  <span className="shrink-0">{pod.age}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   {(pod.restarts >= 1 || (pod.status !== 'Running' && pod.status !== 'Succeeded' && pod.status !== 'Completed')) && (

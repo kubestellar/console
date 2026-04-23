@@ -109,15 +109,15 @@ export function getStatusInfo(
 export function GitHubContributionIcon({ type }: { type: string }) {
   switch (type) {
     case 'pr_merged':
-      return createElement(GitMerge, { className: 'w-4 h-4 text-purple-400 flex-shrink-0' })
+      return createElement(GitMerge, { className: 'w-4 h-4 text-purple-400 shrink-0' })
     case 'pr_opened':
-      return createElement(GitPullRequest, { className: 'w-4 h-4 text-green-400 flex-shrink-0' })
+      return createElement(GitPullRequest, { className: 'w-4 h-4 text-green-400 shrink-0' })
     case 'issue_bug':
-      return createElement(Bug, { className: 'w-4 h-4 text-red-400 flex-shrink-0' })
+      return createElement(Bug, { className: 'w-4 h-4 text-red-400 shrink-0' })
     case 'issue_feature':
-      return createElement(Lightbulb, { className: 'w-4 h-4 text-yellow-400 flex-shrink-0' })
+      return createElement(Lightbulb, { className: 'w-4 h-4 text-yellow-400 shrink-0' })
     default:
-      return createElement(AlertCircle, { className: 'w-4 h-4 text-muted-foreground flex-shrink-0' })
+      return createElement(AlertCircle, { className: 'w-4 h-4 text-muted-foreground shrink-0' })
   }
 }
 

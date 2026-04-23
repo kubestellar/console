@@ -117,7 +117,7 @@ export function AssignmentMatrix({
                         size="sm"
                         onClick={() => onToggle(cluster.name, project.name, !assigned)}
                         className={cn(
-                          '!w-7 !h-7 !p-0 rounded-lg border',
+                          'w-7! h-7! p-0! rounded-lg border',
                           assigned
                             ? 'bg-primary/20 border-primary/50 text-primary hover:bg-primary/30'
                             : 'border-border hover:border-primary/30 hover:bg-primary/5 text-transparent hover:text-primary/30'
@@ -127,7 +127,7 @@ export function AssignmentMatrix({
                       />
                       <span
                         className={cn(
-                          'w-2 h-2 rounded-full flex-shrink-0',
+                          'w-2 h-2 rounded-full shrink-0',
                           dot ? dot.color : 'bg-transparent'
                         )}
                         title={dot?.title}

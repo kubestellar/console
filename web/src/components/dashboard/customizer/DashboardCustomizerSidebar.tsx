@@ -32,7 +32,7 @@ export function DashboardCustomizerSidebar({
                   : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50',
               )}
             >
-              <Icon className="w-4 h-4 flex-shrink-0" />
+              <Icon className="w-4 h-4 shrink-0" />
               <span className="truncate">{item.label}</span>
             </button>
             </div>

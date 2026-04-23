@@ -267,7 +267,7 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
 
       {/* Integration notice */}
       <div className="flex items-start gap-2 p-2 rounded-lg bg-purple-500/10 border border-purple-500/20 text-xs mb-4">
-        <AlertCircle className="w-4 h-4 text-purple-400 flex-shrink-0 mt-0.5" />
+        <AlertCircle className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
         <div>
           <p className="text-purple-400 font-medium">llm-d Inference Detection</p>
           <p className="text-muted-foreground">
@@ -302,18 +302,18 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="text-sm font-medium text-foreground truncate" title={server.name}>{server.name}</span>
                   {/* Component type badge */}
-                  <span className={`text-xs px-1.5 py-0.5 rounded flex-shrink-0 ${compBadge.bg} ${compBadge.text}`}>
+                  <span className={`text-xs px-1.5 py-0.5 rounded shrink-0 ${compBadge.bg} ${compBadge.text}`}>
                     {compBadge.label}
                   </span>
                   {/* Server type badge (vLLM, TGI, etc.) for model components */}
                   {server.componentType === 'model' && server.type !== 'unknown' && (
-                    <span className={`text-xs px-1.5 py-0.5 rounded flex-shrink-0 ${getTypeBadge(server.type)}`}>
+                    <span className={`text-xs px-1.5 py-0.5 rounded shrink-0 ${getTypeBadge(server.type)}`}>
                       {getTypeLabel(server.type)}
                     </span>
                   )}
                   {/* Autoscaler badge */}
                   {server.hasAutoscaler && (
-                    <StatusBadge color="orange" className="flex-shrink-0" title={server.autoscalerType === 'va' ? 'VariantAutoscaling' : server.autoscalerType === 'both' ? 'HPA + VariantAutoscaling' : 'HorizontalPodAutoscaler'}>
+                    <StatusBadge color="orange" className="shrink-0" title={server.autoscalerType === 'va' ? 'VariantAutoscaling' : server.autoscalerType === 'both' ? 'HPA + VariantAutoscaling' : 'HorizontalPodAutoscaler'}>
                       {server.autoscalerType === 'va' ? 'VA' : server.autoscalerType === 'both' ? 'HPA+VA' : 'HPA'}
                     </StatusBadge>
                   )}

@@ -83,7 +83,7 @@ export function ClusterDropZone({
   return (
     <div className="fixed right-6 top-24 z-dropdown animate-fade-in-up">
       <div className={cn(
-        'glass rounded-xl border p-4 w-72 shadow-2xl backdrop-blur-sm',
+        'glass rounded-xl border p-4 w-72 shadow-2xl backdrop-blur-xs',
         isDemo
           ? 'border-yellow-500/50 bg-yellow-50/95 dark:bg-yellow-900/20'
           : 'border-border/50 bg-white/95 dark:bg-gray-900/95'
@@ -179,7 +179,7 @@ function DroppableCluster({ cluster, workload, onDeploy }: DroppableClusterProps
       role="button"
       tabIndex={0}
     >
-      <div className="flex-shrink-0 mt-0.5">
+      <div className="shrink-0 mt-0.5">
         <Server className={cn('w-5 h-5', isOver ? 'text-blue-500' : 'text-blue-400')} />
       </div>
 

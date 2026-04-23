@@ -611,7 +611,7 @@ export function MissionSidebar() {
     return (
       <div
         className={cn(
-        "fixed top-16 right-0 bottom-0 w-12 bg-card/95 backdrop-blur-sm border-l border-border shadow-xl z-sidebar flex flex-col items-center py-4",
+        "fixed top-16 right-0 bottom-0 w-12 bg-card/95 backdrop-blur-xs border-l border-border shadow-xl z-sidebar flex flex-col items-center py-4",
         "transition-transform duration-300 ease-in-out",
         !isSidebarOpen && "translate-x-full pointer-events-none"
       )}>
@@ -648,7 +648,7 @@ export function MissionSidebar() {
           hides it from assistive tech. The sidebar itself handles close semantics. */}
       {isMobile && isSidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-overlay md:hidden"
+          className="fixed inset-0 bg-black/60 backdrop-blur-xs z-overlay md:hidden"
           onClick={closeSidebar}
           tabIndex={-1}
           aria-hidden="true"
@@ -658,7 +658,7 @@ export function MissionSidebar() {
           content isn't squeezed. A tap-out backdrop mirrors mobile UX (issue 6388). */}
       {!isMobile && isTablet && isSidebarOpen && !isFullScreen && (
         <div
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-overlay lg:hidden"
+          className="fixed inset-0 bg-black/40 backdrop-blur-xs z-overlay lg:hidden"
           onClick={closeSidebar}
           tabIndex={-1}
           aria-hidden="true"
@@ -707,7 +707,7 @@ export function MissionSidebar() {
 
       {/* Header */}
       <div className="flex items-center justify-between p-3 md:p-4 border-b border-border min-w-0">
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           <LogoWithStar className="w-5 h-5" />
           <h2 className="font-semibold text-foreground text-sm md:text-base whitespace-nowrap">{t('missionSidebar.aiMissions')}</h2>
           {needsAttention > 0 && (
@@ -717,7 +717,7 @@ export function MissionSidebar() {
         {/* Toolbar and window controls — split so close/minimize never overflow */}
         <div className="flex items-center gap-1 min-w-0">
           {/* + button with dropdown — outside overflow-hidden so the dropdown isn't clipped */}
-          <div className="relative mr-1 flex-shrink-0" ref={addMenuRef}>
+          <div className="relative mr-1 shrink-0" ref={addMenuRef}>
             <button
               onClick={() => setShowAddMenu(prev => !prev)}
               className={cn(
@@ -762,11 +762,11 @@ export function MissionSidebar() {
             )}
           </div>
           {/* Optional toolbar buttons — clipped when sidebar is narrow */}
-          <div className="flex items-center gap-1 overflow-hidden min-w-0 flex-shrink">
+          <div className="flex items-center gap-1 overflow-hidden min-w-0 shrink">
             <AgentSelector compact={!isFullScreen} />
           </div>
           {/* Window control buttons — always visible, never clipped */}
-          <div className="flex items-center gap-1 flex-shrink-0">
+          <div className="flex items-center gap-1 shrink-0">
             {/* Fullscreen and minimize - desktop only */}
             {!isMobile && (isFullScreen ? (
               <button
@@ -814,7 +814,7 @@ export function MissionSidebar() {
               value={newMissionPrompt}
               onChange={(e) => setNewMissionPrompt(e.target.value)}
               placeholder={t('missionSidebar.newMissionPlaceholder')}
-              className="w-full min-h-[80px] p-2 text-sm bg-background border border-border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="w-full min-h-[80px] p-2 text-sm bg-background border border-border rounded-lg resize-none focus:outline-hidden focus:ring-2 focus:ring-primary/50"
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && newMissionPrompt.trim()) {
                   startMission({
@@ -870,7 +870,7 @@ export function MissionSidebar() {
       {/* AI paused banner — shown when user selected "None" agent */}
       {selectedAgent === 'none' && (
         <div className="mx-3 mt-2 p-2.5 bg-cyan-500/10 border border-cyan-500/30 rounded-lg flex items-center gap-2">
-          <ShieldOff className="w-4 h-4 text-cyan-400 flex-shrink-0" />
+          <ShieldOff className="w-4 h-4 text-cyan-400 shrink-0" />
           <p className="text-xs text-cyan-400">{t('agent.aiPausedBanner')}</p>
         </div>
       )}
@@ -879,7 +879,7 @@ export function MissionSidebar() {
       {showSavedToast && (
         <div className="mx-3 mt-2 p-3 bg-green-500/10 border border-green-500/30 rounded-lg animate-in fade-in slide-in-from-top-2 duration-300">
           <div className="flex items-center gap-2 mb-2">
-            <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
+            <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
             <p className="text-sm font-medium text-green-400">{t('layout.missionSidebar.missionImported')}</p>
             {toastCountdown > 0 && (
               <span className="text-2xs text-green-400/70 ml-auto">{toastCountdown}s</span>
@@ -907,7 +907,7 @@ export function MissionSidebar() {
       {/* Direct import loading indicator */}
       {isDirectImporting && (
         <div className="mx-3 mt-2 p-2.5 bg-secondary/30 border border-border rounded-lg flex items-center gap-2">
-          <Loader2 className="w-4 h-4 animate-spin text-primary flex-shrink-0" />
+          <Loader2 className="w-4 h-4 animate-spin text-primary shrink-0" />
           <p className="text-xs text-muted-foreground">{t('missionSidebar.importingMission', 'Importing mission...')}</p>
         </div>
       )}
@@ -939,7 +939,7 @@ export function MissionSidebar() {
                 }}
                 className="flex flex-col items-center justify-center gap-1.5 px-3 py-3 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors h-[72px]"
               >
-                <Sparkles className="w-6 h-6 flex-shrink-0" />
+                <Sparkles className="w-6 h-6 shrink-0" />
                 <span className="text-center leading-tight text-xs truncate max-w-full">{t('missionSidebar.startCustomMission')}</span>
               </button>
             )}
@@ -947,14 +947,14 @@ export function MissionSidebar() {
               onClick={() => setShowBrowser(true)}
               className="flex flex-col items-center justify-center gap-1.5 px-3 py-3 text-sm font-medium bg-secondary text-foreground rounded-lg hover:bg-secondary/80 transition-colors h-[72px]"
             >
-              <Globe className="w-6 h-6 flex-shrink-0" />
+              <Globe className="w-6 h-6 shrink-0" />
               <span className="text-center leading-tight text-xs truncate max-w-full">{t('layout.missionSidebar.browseCommunityMissions')}</span>
             </button>
             <button
               onClick={() => setShowMissionControl(true)}
-              className="flex flex-col items-center justify-center gap-1.5 px-3 py-3 text-sm font-medium bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-lg hover:from-violet-500 hover:to-indigo-500 transition-colors shadow-lg shadow-violet-500/25 h-[72px]"
+              className="flex flex-col items-center justify-center gap-1.5 px-3 py-3 text-sm font-medium bg-linear-to-r from-violet-600 to-indigo-600 text-white rounded-lg hover:from-violet-500 hover:to-indigo-500 transition-colors shadow-lg shadow-violet-500/25 h-[72px]"
             >
-              <Rocket className="w-6 h-6 flex-shrink-0" />
+              <Rocket className="w-6 h-6 shrink-0" />
               <span className="text-center leading-tight text-xs truncate max-w-full">{t('layout.missionSidebar.missionControl')}</span>
             </button>
           </div>
@@ -966,7 +966,7 @@ export function MissionSidebar() {
         )}>
           {/* Fullscreen: left sidebar with saved missions + related knowledge */}
           {isFullScreen && (
-            <div className="w-64 border-r border-border bg-secondary/20 flex flex-col overflow-hidden flex-shrink-0">
+            <div className="w-64 border-r border-border bg-secondary/20 flex flex-col overflow-hidden shrink-0">
               <div className="flex-1 overflow-y-auto scroll-enhanced">
                 {/* Saved Missions section */}
                 {savedMissions.length > 0 && (
@@ -984,7 +984,7 @@ export function MissionSidebar() {
                           onClick={() => handleViewSavedMission(m)}
                         >
                           <div className="flex items-start gap-2">
-                            <Bookmark className="w-3.5 h-3.5 text-purple-400 mt-0.5 flex-shrink-0" />
+                            <Bookmark className="w-3.5 h-3.5 text-purple-400 mt-0.5 shrink-0" />
                             <div className="flex-1 min-w-0">
                               <p className="text-xs font-medium text-foreground truncate">{m.title}</p>
                               {m.importedFrom?.cncfProject && (
@@ -1038,7 +1038,7 @@ export function MissionSidebar() {
                       className={cn(
                         "flex-1 px-2 py-1 text-2xs font-medium rounded-md transition-colors flex items-center justify-center gap-1",
                         resolutionPanelView === 'related'
-                          ? "bg-card text-foreground shadow-sm"
+                          ? "bg-card text-foreground shadow-xs"
                           : "text-muted-foreground hover:text-foreground"
                       )}
                     >
@@ -1059,7 +1059,7 @@ export function MissionSidebar() {
                       className={cn(
                         "flex-1 px-2 py-1 text-2xs font-medium rounded-md transition-colors flex items-center justify-center gap-1",
                         resolutionPanelView === 'history'
-                          ? "bg-card text-foreground shadow-sm"
+                          ? "bg-card text-foreground shadow-xs"
                           : "text-muted-foreground hover:text-foreground"
                       )}
                     >
@@ -1105,7 +1105,7 @@ export function MissionSidebar() {
             {activeMission != null && (
               <button
                 onClick={() => setActiveMission(null)}
-                className="flex items-center gap-1 px-4 py-2 text-xs text-muted-foreground hover:text-foreground border-b border-border flex-shrink-0"
+                className="flex items-center gap-1 px-4 py-2 text-xs text-muted-foreground hover:text-foreground border-b border-border shrink-0"
               >
                 <ChevronLeft className="w-3 h-3" />
                 {t('missionSidebar.backToMissions', { count: listTotalMissions })}
@@ -1136,7 +1136,7 @@ export function MissionSidebar() {
                 value={missionSearchQuery}
                 onChange={(e) => setMissionSearchQuery(e.target.value)}
                 placeholder={t('missionSidebar.searchMissions', { defaultValue: 'Search missions...' })}
-                className="w-full pl-8 pr-8 py-1.5 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+                className="w-full pl-8 pr-8 py-1.5 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-primary/50"
               />
               {missionSearchQuery && (
                 <button
@@ -1180,7 +1180,7 @@ export function MissionSidebar() {
                     className="group flex items-center gap-3 p-3 rounded-lg border border-purple-500/20 bg-purple-500/5 hover:bg-purple-500/10 transition-colors cursor-pointer"
                     onClick={() => handleViewSavedMission(m)}
                   >
-                    <Bookmark className="w-4 h-4 text-purple-400 flex-shrink-0" />
+                    <Bookmark className="w-4 h-4 text-purple-400 shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-foreground truncate">{m.title}</p>
                       <p className="text-xs text-muted-foreground truncate">{m.description}</p>
@@ -1192,7 +1192,7 @@ export function MissionSidebar() {
                         </div>
                       )}
                     </div>
-                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <div className="flex items-center gap-1.5 shrink-0">
                       <button
                         onClick={(e) => { e.stopPropagation(); handleViewSavedMission(m) }}
                         className="p-1.5 text-muted-foreground hover:text-foreground rounded hover:bg-secondary transition-colors"
@@ -1300,7 +1300,7 @@ export function MissionSidebar() {
       {/* Saved Mission Detail Modal */}
       {viewingMission && (
         <div
-          className="fixed inset-0 z-modal flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          className="fixed inset-0 z-modal flex items-center justify-center bg-black/60 backdrop-blur-xs"
           onClick={(e) => { if (e.target === e.currentTarget) setViewingMission(null) }}
           onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); setViewingMission(null) } }}
           tabIndex={-1}
@@ -1455,7 +1455,7 @@ export function MissionSidebarToggle() {
       ) : (
         <span className={isMobile ? 'text-xs' : 'text-sm'}>{t('missionSidebar.aiMissions')}</span>
       )}
-      <ChevronRight className={cn(isMobile ? 'w-3 h-3' : 'w-4 h-4', isMobile && 'rotate-[-90deg]')} />
+      <ChevronRight className={cn(isMobile ? 'w-3 h-3' : 'w-4 h-4', isMobile && '-rotate-90')} />
     </button>
   )
 }

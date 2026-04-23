@@ -249,7 +249,7 @@ export function CardSearchInput({
         onChange={(e) => handleChange(e.target.value)}
         onBlur={handleBlur}
         placeholder={placeholder}
-        className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+        className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500/50"
       />
     </div>
   )
@@ -517,7 +517,7 @@ export function CardListItem({
       <div className="flex items-start gap-3">
         <div className="flex-1 min-w-0">{children}</div>
         {showChevron && onClick && (
-          <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 self-center" />
+          <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0 self-center" />
         )}
       </div>
     </div>

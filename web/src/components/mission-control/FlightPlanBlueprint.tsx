@@ -497,7 +497,7 @@ export function FlightPlanBlueprint({
       {/* Error banner when cluster data fails to load (issue 6772) */}
       {clustersError && (
         <div className="mx-6 mt-2 p-2 rounded-lg bg-red-500/20 border border-red-500/50 flex items-center gap-2 text-xs text-red-400">
-          <Shield className="w-3.5 h-3.5 flex-shrink-0" />
+          <Shield className="w-3.5 h-3.5 shrink-0" />
           <span>Cluster data unavailable: {clustersError}</span>
         </div>
       )}
@@ -850,7 +850,7 @@ export function FlightPlanBlueprint({
       {/* Mission preview modal */}
       {(previewMission || previewLoading) && (
         <div
-          className="fixed inset-0 z-modal flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          className="fixed inset-0 z-modal flex items-center justify-center bg-black/60 backdrop-blur-xs"
           onClick={(e) => { if (e.target === e.currentTarget) { setPreviewMission(null); setPreviewRaw(false) } }}
           onKeyDownCapture={(e) => {
             if (e.key === 'Escape') {

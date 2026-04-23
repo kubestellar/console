@@ -20,7 +20,7 @@ export function PreviewPanel({ hoveredCard }: PreviewPanelProps) {
   const tCard = t as (key: string, defaultValue?: string) => string
 
   return (
-    <div className="w-64 border-l border-border pl-4 flex-shrink-0 hidden lg:block">
+    <div className="w-64 border-l border-border pl-4 shrink-0 hidden lg:block">
       <div className="text-xs text-muted-foreground uppercase tracking-wide mb-2">
         {t('dashboard.addCard.preview', 'Preview')}
       </div>

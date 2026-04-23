@@ -271,7 +271,7 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart, review
         <>
           {/* ── Backdrop ──────────────────────────────────────────── */}
           <motion.div
-            className="fixed inset-0 z-modal bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-modal bg-black/60 backdrop-blur-xs"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -312,7 +312,7 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart, review
                   <span className="hidden sm:inline">Back to Dashboard</span>
                 </button>
                 <span className="w-px h-5 bg-border hidden sm:block" />
-                <div className="p-1.5 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 text-white">
+                <div className="p-1.5 rounded-lg bg-linear-to-br from-violet-500 to-indigo-600 text-white">
                   <Rocket className="w-5 h-5" />
                 </div>
                 <div>
@@ -618,7 +618,7 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart, review
                           mc.setDryRun(false)
                           mc.setPhase('launching')
                         }}
-                        className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white border-0 shadow-lg shadow-violet-500/25"
+                        className="bg-linear-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white border-0 shadow-lg shadow-violet-500/25"
                         icon={<Rocket className="w-4 h-4" />}
                       >
                         Deploy to Clusters

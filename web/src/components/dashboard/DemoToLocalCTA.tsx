@@ -98,7 +98,7 @@ export function DemoToLocalCTA() {
   // ── Localhost without OAuth — prompt to set up GitHub OAuth ──
   if (isLocalNoOAuth) {
     return (
-      <div className="mb-4 rounded-xl border border-purple-500/20 bg-gradient-to-br from-purple-500/5 via-blue-500/5 to-transparent p-4 animate-in slide-in-from-top-2 duration-300">
+      <div className="mb-4 rounded-xl border border-purple-500/20 bg-linear-to-br from-purple-500/5 via-blue-500/5 to-transparent p-4 animate-in slide-in-from-top-2 duration-300">
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-2">
             <KeyRound className="w-4 h-4 text-purple-400" />
@@ -113,7 +113,7 @@ export function DemoToLocalCTA() {
           </div>
           <button
             onClick={handleDismiss}
-            className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
+            className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors shrink-0"
             aria-label="Dismiss"
           >
             <X className="w-3.5 h-3.5" />
@@ -138,7 +138,7 @@ export function DemoToLocalCTA() {
 
   // ── State 1: Netlify — prompt to install locally ──
   return (
-    <div className="mb-4 rounded-xl border border-blue-500/20 bg-gradient-to-br from-blue-500/5 via-cyan-500/5 to-transparent p-4 animate-in slide-in-from-top-2 duration-300">
+    <div className="mb-4 rounded-xl border border-blue-500/20 bg-linear-to-br from-blue-500/5 via-cyan-500/5 to-transparent p-4 animate-in slide-in-from-top-2 duration-300">
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
           <Terminal className="w-4 h-4 text-blue-400" />
@@ -153,7 +153,7 @@ export function DemoToLocalCTA() {
         </div>
         <button
           onClick={handleDismiss}
-          className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
+          className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors shrink-0"
           aria-label="Dismiss"
         >
           <X className="w-3.5 h-3.5" />
@@ -170,7 +170,7 @@ export function DemoToLocalCTA() {
         </code>
         <button
           onClick={handleCopy}
-          className={`p-2 rounded-lg border transition-all flex-shrink-0 ${
+          className={`p-2 rounded-lg border transition-all shrink-0 ${
             copied
               ? 'bg-green-500/20 border-green-500/30 text-green-400'
               : 'bg-secondary/50 border-border/50 hover:border-blue-500/30 text-muted-foreground hover:text-foreground'

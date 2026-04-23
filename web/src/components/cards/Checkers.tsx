@@ -802,10 +802,10 @@ export function Checkers(_props: CardComponentProps) {
 
       {/* Pirate Taunt — below board, no overlap */}
       {pirateTaunt && (
-        <div className="flex-shrink-0 p-1 animate-fade-in">
+        <div className="shrink-0 p-1 animate-fade-in">
           <div className="flex items-start gap-2 px-2">
-            <div className="text-lg flex-shrink-0">🏴‍☠️</div>
-            <div className="bg-background/80 backdrop-blur-sm border border-orange-400/50 rounded-lg px-2 py-1.5 flex-1">
+            <div className="text-lg shrink-0">🏴‍☠️</div>
+            <div className="bg-background/80 backdrop-blur-xs border border-orange-400/50 rounded-lg px-2 py-1.5 flex-1">
               <span className="text-orange-300 italic text-xs font-medium leading-tight block">
                 &quot;{pirateTaunt}&quot;
               </span>

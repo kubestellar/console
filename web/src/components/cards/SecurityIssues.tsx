@@ -310,7 +310,7 @@ function SecurityIssuesInternal({ config }: SecurityIssuesProps) {
               title={t('securityIssues.clickViewPod', { name: issue.name, issue: issue.issue })}
             >
               <div className="flex items-start gap-2 group">
-                <div className={`p-1.5 rounded-lg ${colors.badge} flex-shrink-0`} title={iconTooltip}>
+                <div className={`p-1.5 rounded-lg ${colors.badge} shrink-0`} title={iconTooltip}>
                   <Icon className={`w-4 h-4 ${colors.text}`} />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -344,7 +344,7 @@ function SecurityIssuesInternal({ config }: SecurityIssuesProps) {
                   issues={[{ name: issue.issue, message: issue.details || issue.issue }]}
                   additionalContext={{ severity: issue.severity, securityIssue: issue.issue }}
                 />
-                <span title="Click to view details"><ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-1" /></span>
+                <span title="Click to view details"><ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 mt-1" /></span>
               </div>
             </div>
           )

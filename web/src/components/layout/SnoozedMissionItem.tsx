@@ -62,7 +62,7 @@ export function SnoozedMissionItem({ mission, onApply, onDismiss }: SnoozedMissi
 
       {/* Mission info */}
       <div className="flex items-center gap-2 pr-4 mb-1">
-        <Icon className={cn('w-3 h-3 flex-shrink-0', priorityTextColor)} />
+        <Icon className={cn('w-3 h-3 shrink-0', priorityTextColor)} />
         <span className="text-foreground truncate font-medium">{mission.suggestion.title}</span>
       </div>
 

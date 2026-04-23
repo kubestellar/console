@@ -491,7 +491,7 @@ export function LLMdAIInsights() {
             value={chatInput}
             onChange={e => setChatInput(e.target.value)}
             placeholder={t('llmdAIInsights.scalePlaceholder')}
-            className="flex-1 bg-secondary border border-border rounded px-3 py-2 text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-purple-500"
+            className="flex-1 bg-secondary border border-border rounded px-3 py-2 text-sm text-white placeholder:text-muted-foreground focus:outline-hidden focus:border-purple-500"
             disabled={isGenerating}
           />
           <button

@@ -49,7 +49,7 @@ export function DeleteConfirmModal({ namespace, onClose, onConfirm }: DeleteConf
             value={confirmText}
             onChange={(e) => setConfirmText(e.target.value)}
             placeholder="Enter namespace name"
-            className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-white placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-red-500/50"
+            className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-white placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-red-500/50"
           />
         </div>
       </BaseModal.Content>

@@ -355,7 +355,7 @@ export function Events() {
             key={tab.id}
             onClick={() => handleTabSwitch(tab.id)}
             className={cn(
-              'flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 -mb-[2px] transition-colors',
+              'flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 mb-[-2px] transition-colors',
               activeTab === tab.id ? 'border-purple-500 text-purple-400' : 'border-transparent text-muted-foreground hover:text-foreground'
             )}
           >
@@ -448,7 +448,7 @@ export function Events() {
               <div className="space-y-2">
                 {globalFilteredWarningEvents.slice(0, MAX_RECENT_WARNINGS_PREVIEW).map((event, i) => (
                   <div key={i} className="flex items-center gap-3 p-2 rounded bg-yellow-500/10 border border-yellow-500/20">
-                    <AlertTriangle className="w-4 h-4 text-yellow-400 flex-shrink-0" />
+                    <AlertTriangle className="w-4 h-4 text-yellow-400 shrink-0" />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <StatusBadge color="yellow">{event.reason}</StatusBadge>
@@ -489,7 +489,7 @@ export function Events() {
                       <div className="ml-12 space-y-3">
                         {groupEvents.slice(0, MAX_PREVIEW_EVENTS).map((event, i) => (
                           <div key={`${event.object}-${event.reason}-${i}`} className={cn('relative p-4 rounded-lg border-l-4', event.type === 'Warning' ? 'bg-yellow-500/5 border-l-yellow-500' : 'bg-green-500/5 border-l-green-500')}>
-                            <div className={cn('absolute -left-[2.125rem] top-5 w-2 h-2 rounded-full', event.type === 'Warning' ? 'bg-yellow-400' : 'bg-green-400')} />
+                            <div className={cn('absolute -left-8.5 top-5 w-2 h-2 rounded-full', event.type === 'Warning' ? 'bg-yellow-400' : 'bg-green-400')} />
                             <div className="flex items-start justify-between gap-4">
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 flex-wrap mb-1">
@@ -550,21 +550,21 @@ export function Events() {
             <div className="flex flex-wrap items-center gap-4">
               <div>
                 <label htmlFor="events-namespace-filter" className="block text-xs text-muted-foreground mb-1">{t('common.namespace')}</label>
-                <select id="events-namespace-filter" value={selectedNamespace} onChange={(e) => setSelectedNamespace(e.target.value)} className="px-3 py-1.5 rounded-lg bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                <select id="events-namespace-filter" value={selectedNamespace} onChange={(e) => setSelectedNamespace(e.target.value)} className="px-3 py-1.5 rounded-lg bg-secondary border border-border text-foreground text-sm focus:outline-hidden focus:ring-2 focus:ring-primary">
                   <option value="">{t('events.allNamespaces')}</option>
                   {namespaces.map((ns) => <option key={ns} value={ns}>{ns}</option>)}
                 </select>
               </div>
               <div>
                 <label htmlFor="events-reason-filter" className="block text-xs text-muted-foreground mb-1">{t('common.reason')}</label>
-                <select id="events-reason-filter" value={selectedReason} onChange={(e) => setSelectedReason(e.target.value)} className="px-3 py-1.5 rounded-lg bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                <select id="events-reason-filter" value={selectedReason} onChange={(e) => setSelectedReason(e.target.value)} className="px-3 py-1.5 rounded-lg bg-secondary border border-border text-foreground text-sm focus:outline-hidden focus:ring-2 focus:ring-primary">
                   <option value="">{t('events.allReasons')}</option>
                   {reasons.map((reason) => <option key={reason} value={reason}>{reason}</option>)}
                 </select>
               </div>
               <div className="flex-1 min-w-[200px]">
                 <label htmlFor="events-search" className="block text-xs text-muted-foreground mb-1">{t('events.search')}</label>
-                <input type="text" id="events-search" placeholder={t('common.searchEvents')} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full px-3 py-1.5 rounded-lg bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+                <input type="text" id="events-search" placeholder={t('common.searchEvents')} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full px-3 py-1.5 rounded-lg bg-secondary border border-border text-foreground text-sm focus:outline-hidden focus:ring-2 focus:ring-primary" />
               </div>
               {hasActiveFilters && (
                 <div>
@@ -636,7 +636,7 @@ export function Events() {
                                 {event.count > 1 && <span className="text-xs px-2 py-0.5 rounded bg-card text-muted-foreground">{t('events.repeatCount', { count: event.count })}</span>}
                                 {event.cluster && <ClusterBadge cluster={event.cluster.split('/').pop() || event.cluster} size="sm" />}
                               </div>
-                              <p className="text-sm text-foreground mt-1 break-words">{event.message}</p>
+                              <p className="text-sm text-foreground mt-1 wrap-break-word">{event.message}</p>
                               <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground"><span>{getTimeAgo(event.lastSeen, t)}</span></div>
                             </div>
                           </div>

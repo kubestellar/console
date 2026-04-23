@@ -376,7 +376,7 @@ export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDial
               value={cncfProject}
               onChange={(e) => setCncfProject(e.target.value)}
               placeholder="e.g., Istio, Argo CD, Prometheus..."
-              className="w-full px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500"
+              className="w-full px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500"
             />
           </div>
 
@@ -392,7 +392,7 @@ export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDial
                 type="text"
                 value={filename}
                 onChange={(e) => setFilename(e.target.value)}
-                className="flex-1 px-3 py-2 text-sm font-mono bg-secondary/50 border border-border rounded-lg text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500"
+                className="flex-1 px-3 py-2 text-sm font-mono bg-secondary/50 border border-border rounded-lg text-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500"
               />
             </div>
           </div>
@@ -448,7 +448,7 @@ export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDial
           <button
             onClick={handleSubmit}
             disabled={!filename.trim()}
-            className="flex items-center gap-2 px-5 py-2 text-sm font-semibold rounded-lg bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
+            className="flex items-center gap-2 px-5 py-2 text-sm font-semibold rounded-lg bg-linear-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
           >
             <ExternalLink className="w-4 h-4" />
             Submit to KB

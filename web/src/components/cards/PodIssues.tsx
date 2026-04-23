@@ -204,7 +204,7 @@ export function PodIssues() {
               title={`Click to view details for ${issue.name}`}
             >
               <div className="flex items-start gap-3 group">
-                <div className={`p-2 rounded-lg ${colors.iconBg} flex-shrink-0`} title={iconTooltip}>
+                <div className={`p-2 rounded-lg ${colors.iconBg} shrink-0`} title={iconTooltip}>
                   <Icon className={`w-4 h-4 ${colors.text}`} />
                 </div>
                 <div className="flex-1 min-w-0">

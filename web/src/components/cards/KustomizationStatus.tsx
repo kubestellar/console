@@ -384,7 +384,7 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
                   tabIndex={0}
                   onClick={activate}
                   onKeyDown={handleKeyDown}
-                  className={`p-3 rounded-lg cursor-pointer group ${ks.status === 'NotReady' ? 'bg-red-500/10 border border-red-500/20' : 'bg-secondary/30'} hover:bg-secondary/50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400`}
+                  className={`p-3 rounded-lg cursor-pointer group ${ks.status === 'NotReady' ? 'bg-red-500/10 border border-red-500/20' : 'bg-secondary/30'} hover:bg-secondary/50 transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400`}
                   title={`Click or press Enter to view ${ks.name} details`}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-y-2 mb-1">

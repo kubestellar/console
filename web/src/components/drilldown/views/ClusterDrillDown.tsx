@@ -345,7 +345,7 @@ export function ClusterDrillDown({ data }: Props) {
                           <div className="text-xs text-red-400 mt-1">{(issue.issues || []).join(', ')}</div>
                         )}
                       </div>
-                      <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                      <div className="flex items-center gap-2 shrink-0 ml-2">
                         <StatusBadge color="red" size="xs">{issue.status}</StatusBadge>
                         <ChevronRight className="w-4 h-4 text-muted-foreground" />
                       </div>
@@ -375,7 +375,7 @@ export function ClusterDrillDown({ data }: Props) {
                           <div className="text-xs text-orange-400 mt-1">{issue.message}</div>
                         )}
                       </div>
-                      <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                      <div className="flex items-center gap-2 shrink-0 ml-2">
                         <StatusBadge color="orange" size="xs">
                           {issue.readyReplicas}/{issue.replicas} ready
                         </StatusBadge>
@@ -553,7 +553,7 @@ export function ClusterDrillDown({ data }: Props) {
                   value={searchFilter}
                   onChange={(e) => setSearchFilter(e.target.value)}
                   placeholder={t('common.searchResources')}
-                  className="w-full pl-10 pr-4 py-2 bg-secondary rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                  className="w-full pl-10 pr-4 py-2 bg-secondary rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500/50"
                 />
               </div>
 

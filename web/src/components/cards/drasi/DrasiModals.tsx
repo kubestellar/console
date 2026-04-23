@@ -57,7 +57,7 @@ export function ModalShell({
 
   return (
     <motion.div
-      className="absolute inset-0 z-30 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-6"
+      className="absolute inset-0 z-30 bg-slate-950/85 backdrop-blur-xs flex items-center justify-center p-6"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -220,7 +220,7 @@ export function SourceConfigModal({
             type="text"
             value={name}
             onChange={e => setName(e.target.value)}
-            className="w-full px-2 py-1.5 text-xs bg-slate-950 border border-slate-700 rounded text-white focus:border-cyan-500 focus:outline-none"
+            className="w-full px-2 py-1.5 text-xs bg-slate-950 border border-slate-700 rounded text-white focus:border-cyan-500 focus:outline-hidden"
           />
         </div>
         <div>
@@ -228,7 +228,7 @@ export function SourceConfigModal({
           <select
             value={kind}
             onChange={e => setKind(e.target.value as SourceKind)}
-            className="w-full px-2 py-1.5 text-xs bg-slate-950 border border-slate-700 rounded text-white focus:border-cyan-500 focus:outline-none"
+            className="w-full px-2 py-1.5 text-xs bg-slate-950 border border-slate-700 rounded text-white focus:border-cyan-500 focus:outline-hidden"
           >
             {SOURCE_KINDS.map(k => <option key={k} value={k}>{k}</option>)}
           </select>
@@ -321,7 +321,7 @@ export function QueryConfigModal({
             type="text"
             value={name}
             onChange={e => setName(e.target.value)}
-            className="w-full px-2 py-1.5 text-xs bg-slate-950 border border-slate-700 rounded text-white focus:border-cyan-500 focus:outline-none"
+            className="w-full px-2 py-1.5 text-xs bg-slate-950 border border-slate-700 rounded text-white focus:border-cyan-500 focus:outline-hidden"
           />
         </div>
         <div>
@@ -329,7 +329,7 @@ export function QueryConfigModal({
           <select
             value={language}
             onChange={e => setLanguage(e.target.value)}
-            className="w-full px-2 py-1.5 text-xs bg-slate-950 border border-slate-700 rounded text-white focus:border-cyan-500 focus:outline-none"
+            className="w-full px-2 py-1.5 text-xs bg-slate-950 border border-slate-700 rounded text-white focus:border-cyan-500 focus:outline-hidden"
           >
             {QUERY_LANGUAGES.map(l => <option key={l} value={l}>{l}</option>)}
           </select>
@@ -521,7 +521,7 @@ export function ConnectionsModal({
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder={t('drasi.connectionNamePlaceholder')}
-              className="w-full px-2 py-1.5 text-xs bg-slate-950 border border-slate-700 rounded text-white focus:border-cyan-500 focus:outline-none"
+              className="w-full px-2 py-1.5 text-xs bg-slate-950 border border-slate-700 rounded text-white focus:border-cyan-500 focus:outline-hidden"
             />
           </div>
           <div>
@@ -529,7 +529,7 @@ export function ConnectionsModal({
             <select
               value={mode}
               onChange={e => setMode(e.target.value as 'server' | 'platform')}
-              className="w-full px-2 py-1.5 text-xs bg-slate-950 border border-slate-700 rounded text-white focus:border-cyan-500 focus:outline-none"
+              className="w-full px-2 py-1.5 text-xs bg-slate-950 border border-slate-700 rounded text-white focus:border-cyan-500 focus:outline-hidden"
             >
               <option value="server">drasi-server (REST)</option>
               <option value="platform">drasi-platform (Kubernetes)</option>
@@ -543,7 +543,7 @@ export function ConnectionsModal({
                 value={url}
                 onChange={e => setUrl(e.target.value)}
                 placeholder="http://localhost:8090"
-                className="w-full px-2 py-1.5 text-xs font-mono bg-slate-950 border border-slate-700 rounded text-white focus:border-cyan-500 focus:outline-none"
+                className="w-full px-2 py-1.5 text-xs font-mono bg-slate-950 border border-slate-700 rounded text-white focus:border-cyan-500 focus:outline-hidden"
               />
             </div>
           ) : (
@@ -554,7 +554,7 @@ export function ConnectionsModal({
                 value={cluster}
                 onChange={e => setCluster(e.target.value)}
                 placeholder="prow"
-                className="w-full px-2 py-1.5 text-xs font-mono bg-slate-950 border border-slate-700 rounded text-white focus:border-cyan-500 focus:outline-none"
+                className="w-full px-2 py-1.5 text-xs font-mono bg-slate-950 border border-slate-700 rounded text-white focus:border-cyan-500 focus:outline-hidden"
               />
             </div>
           )}

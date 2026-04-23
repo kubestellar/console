@@ -29,7 +29,7 @@ export function RewardsPanel() {
   return (
     <div className="space-y-6">
       {/* Coin Balance */}
-      <div className="p-6 rounded-xl bg-gradient-to-br from-yellow-500/10 via-yellow-500/5 to-orange-500/10 border border-yellow-500/20">
+      <div className="p-6 rounded-xl bg-linear-to-br from-yellow-500/10 via-yellow-500/5 to-orange-500/10 border border-yellow-500/20">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm text-muted-foreground mb-1">Your Balance</p>
@@ -77,7 +77,7 @@ export function RewardsPanel() {
           {/* GitHub Invite */}
           <div className="p-4 rounded-lg bg-purple-500/5 border border-purple-500/20">
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center shrink-0">
                 <Github className="w-5 h-5 text-purple-400" />
               </div>
               <div className="flex-1">
@@ -110,7 +110,7 @@ export function RewardsPanel() {
           */}
           <div className="p-4 rounded-lg bg-red-500/5 border border-red-500/20">
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center shrink-0">
                 <Bug className="w-5 h-5 text-red-400" />
               </div>
               <div className="flex-1">
@@ -134,7 +134,7 @@ export function RewardsPanel() {
           {/* Feature Suggestions */}
           <div className="p-4 rounded-lg bg-green-500/5 border border-green-500/20">
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center shrink-0">
                 <Lightbulb className="w-5 h-5 text-green-400" />
               </div>
               <div className="flex-1">
@@ -203,7 +203,7 @@ export function RewardsPanel() {
                 </StatusBadge>
               )}
               {githubRewards.breakdown.other_issues > 0 && (
-                <StatusBadge color="purple" rounded="full" className="!bg-gray-500/20 !text-muted-foreground dark:!bg-gray-400/20" icon={<AlertCircle className="w-3 h-3" />}>
+                <StatusBadge color="purple" rounded="full" className="bg-gray-500/20! text-muted-foreground! dark:bg-gray-400/20!" icon={<AlertCircle className="w-3 h-3" />}>
                   {githubRewards.breakdown.other_issues} Issues
                 </StatusBadge>
               )}
@@ -232,7 +232,7 @@ export function RewardsPanel() {
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                  <div className="flex items-center gap-2 shrink-0 ml-2">
                     <span className="text-xs text-yellow-400 font-medium">+{contrib.points}</span>
                     <ExternalLink className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
@@ -330,14 +330,14 @@ export function RewardsPanel() {
 function ContributionIcon({ type }: { type: string }) {
   switch (type) {
     case 'pr_merged':
-      return <GitMerge className="w-4 h-4 text-purple-400 flex-shrink-0" />
+      return <GitMerge className="w-4 h-4 text-purple-400 shrink-0" />
     case 'pr_opened':
-      return <GitPullRequest className="w-4 h-4 text-green-400 flex-shrink-0" />
+      return <GitPullRequest className="w-4 h-4 text-green-400 shrink-0" />
     case 'issue_bug':
-      return <Bug className="w-4 h-4 text-red-400 flex-shrink-0" />
+      return <Bug className="w-4 h-4 text-red-400 shrink-0" />
     case 'issue_feature':
-      return <Lightbulb className="w-4 h-4 text-yellow-400 flex-shrink-0" />
+      return <Lightbulb className="w-4 h-4 text-yellow-400 shrink-0" />
     default:
-      return <AlertCircle className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+      return <AlertCircle className="w-4 h-4 text-muted-foreground shrink-0" />
   }
 }

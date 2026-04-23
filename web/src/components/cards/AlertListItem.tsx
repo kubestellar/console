@@ -129,7 +129,7 @@ export function AlertListItem({
       tabIndex={0}
       onClick={() => onAlertClick(alert)}
       onKeyDown={handleKeyDown}
-      className="p-2 rounded-lg bg-secondary/30 border border-border/50 hover:bg-secondary/50 cursor-pointer transition-colors group focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+      className="p-2 rounded-lg bg-secondary/30 border border-border/50 hover:bg-secondary/50 cursor-pointer transition-colors group focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400"
     >
       <div className="flex items-start gap-2">
         <span className="text-lg">{getSeverityIcon(alert.severity)}</span>

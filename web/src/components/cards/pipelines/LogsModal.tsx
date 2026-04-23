@@ -126,7 +126,7 @@ export function LogsModal({ repo, jobId, title, onClose }: LogsModalProps) {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={PLACEHOLDER_FILTER_LINES}
-              className="w-full pl-7 pr-2 py-1.5 text-xs bg-secondary/30 border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary/50"
+              className="w-full pl-7 pr-2 py-1.5 text-xs bg-secondary/30 border border-border rounded focus:outline-hidden focus:ring-1 focus:ring-primary/50"
             />
           </div>
         </div>

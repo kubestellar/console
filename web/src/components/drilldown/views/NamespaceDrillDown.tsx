@@ -179,7 +179,7 @@ export function NamespaceDrillDown({ data }: Props) {
                           <div className="text-xs text-orange-400 mt-1">{issue.message}</div>
                         )}
                       </div>
-                      <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0 ml-4" />
+                      <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0 ml-4" />
                     </div>
                   </div>
                 ))}
@@ -220,7 +220,7 @@ export function NamespaceDrillDown({ data }: Props) {
                           </div>
                         )}
                       </div>
-                      <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0 ml-4" />
+                      <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0 ml-4" />
                     </div>
                   </div>
                 ))}
@@ -290,7 +290,7 @@ export function NamespaceDrillDown({ data }: Props) {
                 value={resourceSearch}
                 onChange={(e) => setResourceSearch(e.target.value)}
                 placeholder="Search resources..."
-                className="w-full pl-10 pr-4 py-2 bg-secondary rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                className="w-full pl-10 pr-4 py-2 bg-secondary rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500/50"
               />
             </div>
             <div className="flex flex-wrap gap-2">

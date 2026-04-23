@@ -577,7 +577,7 @@ function CreateGroupForm({ availableClusters, clusterHealthMap, onSave, onCancel
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder={t('cards:clusterGroups.groupNamePlaceholder')}
-        className="w-full px-2.5 py-1.5 text-sm rounded-md bg-gray-900/50 border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-blue-500"
+        className="w-full px-2.5 py-1.5 text-sm rounded-md bg-gray-900/50 border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:border-blue-500"
         autoFocus
       />
 
@@ -830,7 +830,7 @@ function QueryBuilder({
           value={labelSelector}
           onChange={(e) => onLabelSelectorChange(e.target.value)}
           placeholder="e.g. topology.kubernetes.io/zone in (us-east-1a)"
-          className="w-full px-2 py-1.5 text-xs font-mono rounded-md bg-gray-900/50 border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-purple-500"
+          className="w-full px-2 py-1.5 text-xs font-mono rounded-md bg-gray-900/50 border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:border-purple-500"
         />
       </div>
 
@@ -868,7 +868,7 @@ function QueryBuilder({
                       onUpdateFilter(i, { field: e.target.value, operator: 'gte', value: '1' })
                     }
                   }}
-                  className="flex-1 px-1.5 py-1 text-2xs rounded bg-gray-900/50 border border-border text-foreground focus:outline-none focus:border-purple-500"
+                  className="flex-1 px-1.5 py-1 text-2xs rounded bg-gray-900/50 border border-border text-foreground focus:outline-hidden focus:border-purple-500"
                 >
                   {FILTER_FIELDS.map(ff => (
                     <option key={ff.field} value={ff.field}>{ff.label}</option>
@@ -880,7 +880,7 @@ function QueryBuilder({
                   <select
                     value={f.value}
                     onChange={(e) => onUpdateFilter(i, { value: e.target.value })}
-                    className="w-16 px-1.5 py-1 text-2xs rounded bg-gray-900/50 border border-border text-foreground focus:outline-none focus:border-purple-500"
+                    className="w-16 px-1.5 py-1 text-2xs rounded bg-gray-900/50 border border-border text-foreground focus:outline-hidden focus:border-purple-500"
                   >
                     <option value="true">true</option>
                     <option value="false">false</option>
@@ -891,7 +891,7 @@ function QueryBuilder({
                     <select
                       value={f.operator}
                       onChange={(e) => onUpdateFilter(i, { operator: e.target.value })}
-                      className="w-16 px-1 py-1 text-2xs rounded bg-gray-900/50 border border-border text-foreground focus:outline-none focus:border-purple-500"
+                      className="w-16 px-1 py-1 text-2xs rounded bg-gray-900/50 border border-border text-foreground focus:outline-hidden focus:border-purple-500"
                     >
                       {TEXT_OPERATORS.map(op => (
                         <option key={op.value} value={op.value}>{op.label}</option>
@@ -903,7 +903,7 @@ function QueryBuilder({
                       value={f.value}
                       onChange={(e) => onUpdateFilter(i, { value: e.target.value })}
                       placeholder="e.g. A100"
-                      className="w-20 px-1.5 py-1 text-2xs rounded bg-gray-900/50 border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-purple-500"
+                      className="w-20 px-1.5 py-1 text-2xs rounded bg-gray-900/50 border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:border-purple-500"
                     />
                   </>
                 ) : (
@@ -912,7 +912,7 @@ function QueryBuilder({
                     <select
                       value={f.operator}
                       onChange={(e) => onUpdateFilter(i, { operator: e.target.value })}
-                      className="w-12 px-1 py-1 text-2xs rounded bg-gray-900/50 border border-border text-foreground focus:outline-none focus:border-purple-500"
+                      className="w-12 px-1 py-1 text-2xs rounded bg-gray-900/50 border border-border text-foreground focus:outline-hidden focus:border-purple-500"
                     >
                       {NUM_OPERATORS.map(op => (
                         <option key={op.value} value={op.value}>{op.label}</option>
@@ -923,7 +923,7 @@ function QueryBuilder({
                       type="number"
                       value={f.value}
                       onChange={(e) => onUpdateFilter(i, { value: e.target.value })}
-                      className="w-14 px-1.5 py-1 text-2xs rounded bg-gray-900/50 border border-border text-foreground focus:outline-none focus:border-purple-500"
+                      className="w-14 px-1.5 py-1 text-2xs rounded bg-gray-900/50 border border-border text-foreground focus:outline-hidden focus:border-purple-500"
                     />
                   </>
                 )}
@@ -976,7 +976,7 @@ function AIAssistant({
         onChange={(e) => onPromptChange(e.target.value)}
         placeholder='e.g. "Healthy clusters with at least 4 CPU cores"'
         rows={2}
-        className="w-full px-2.5 py-1.5 text-xs rounded-md bg-gray-900/50 border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-purple-500 resize-none"
+        className="w-full px-2.5 py-1.5 text-xs rounded-md bg-gray-900/50 border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:border-purple-500 resize-none"
       />
       <button
         onClick={onGenerate}

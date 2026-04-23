@@ -44,21 +44,21 @@ export function FixerCard({ mission, onImport, onSelect, onCopyLink, compact }: 
         className="flex items-center gap-3 px-3 py-2 rounded-lg border border-border bg-card hover:border-purple-500/30 transition-all cursor-pointer group"
         onClick={onSelect}
       >
-        <span className={cn('flex-shrink-0 px-1.5 py-0.5 text-2xs font-medium rounded-full', typeStyle.bg, typeStyle.color)}>
+        <span className={cn('shrink-0 px-1.5 py-0.5 text-2xs font-medium rounded-full', typeStyle.bg, typeStyle.color)}>
           {mission.type}
         </span>
         <h4 className="flex-1 text-sm font-medium text-foreground truncate group-hover:text-purple-400 transition-colors">
           {mission.title}
         </h4>
         {mission.category && (
-          <StatusBadge color="purple" size="xs" variant="outline" className="flex-shrink-0">
+          <StatusBadge color="purple" size="xs" variant="outline" className="shrink-0">
             {mission.category}
           </StatusBadge>
         )}
-        <span className="text-2xs text-muted-foreground flex-shrink-0">{mission.steps?.length ?? 0} steps</span>
+        <span className="text-2xs text-muted-foreground shrink-0">{mission.steps?.length ?? 0} steps</span>
         <button
           onClick={(e) => { e.stopPropagation(); onImport() }}
-          className="px-2 py-1 text-2xs font-medium rounded bg-purple-600 hover:bg-purple-500 text-white transition-colors flex-shrink-0"
+          className="px-2 py-1 text-2xs font-medium rounded bg-purple-600 hover:bg-purple-500 text-white transition-colors shrink-0"
         >
           Import
         </button>
@@ -75,7 +75,7 @@ export function FixerCard({ mission, onImport, onSelect, onCopyLink, compact }: 
         <h4 className="text-sm font-medium text-foreground line-clamp-1 group-hover:text-purple-400 transition-colors">
           {mission.title}
         </h4>
-        <div className="flex items-center gap-1 flex-shrink-0">
+        <div className="flex items-center gap-1 shrink-0">
           {onCopyLink && (
             <button
               onClick={(e) => {
@@ -137,7 +137,7 @@ export function FixerCard({ mission, onImport, onSelect, onCopyLink, compact }: 
             <span className="text-2xs">{mission.steps?.length ?? 0} steps</span>
           )}
         </div>
-        <div className="flex items-center gap-1 flex-shrink-0">
+        <div className="flex items-center gap-1 shrink-0">
           {onCopyLink && (
             <button
               onClick={(e) => {

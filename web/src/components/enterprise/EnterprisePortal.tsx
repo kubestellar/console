@@ -85,7 +85,7 @@ function VerticalCard({ sectionId, title, items, onNavigate }: {
   const Icon = meta.icon
 
   return (
-    <div className={`rounded-xl border border-gray-800 bg-gradient-to-br ${meta.gradient} p-5 flex flex-col`}>
+    <div className={`rounded-xl border border-gray-800 bg-linear-to-br ${meta.gradient} p-5 flex flex-col`}>
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-gray-800/50">

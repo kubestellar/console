@@ -770,12 +770,12 @@ export function DrasiReactiveGraph() {
           Server select is capped in width so the Flow select + Consume
           button stay anchored to the left-hand group and don't disappear
           off the right edge of wide cards. */}
-      <div className="flex-shrink-0 mb-4 flex items-center gap-2 flex-wrap">
+      <div className="shrink-0 mb-4 flex items-center gap-2 flex-wrap">
         <Server className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
         <select
           value={activeConnection?.id ?? ''}
           onChange={e => setActive(e.target.value)}
-          className="min-w-[160px] max-w-[260px] px-2 py-1 text-[11px] bg-slate-950 border border-slate-700 rounded text-white focus:border-cyan-500 focus:outline-none"
+          className="min-w-[160px] max-w-[260px] px-2 py-1 text-[11px] bg-slate-950 border border-slate-700 rounded text-white focus:border-cyan-500 focus:outline-hidden"
           aria-label={t('drasi.connectionsTitle')}
         >
           <option value="">{t('drasi.noActiveConnection')}</option>
@@ -804,7 +804,7 @@ export function DrasiReactiveGraph() {
             <select
               value={selectedFlowId}
               onChange={e => setSelectedFlowId(e.target.value)}
-              className="shrink-0 min-w-[140px] max-w-[220px] px-2 py-1 text-[11px] bg-slate-950 border border-slate-700 rounded text-white focus:border-cyan-500 focus:outline-none"
+              className="shrink-0 min-w-[140px] max-w-[220px] px-2 py-1 text-[11px] bg-slate-950 border border-slate-700 rounded text-white focus:border-cyan-500 focus:outline-hidden"
               aria-label={t('drasi.flowLabel')}
             >
               <option value={FLOW_ID_ALL}>{t('drasi.flowAllResources')}</option>
@@ -831,7 +831,7 @@ export function DrasiReactiveGraph() {
       {/* Install Drasi CTA — shown only when no live connection is active.
           Deep-links to the existing console-kb install mission. */}
       {!isLive && (
-        <div className="flex-shrink-0 mb-2 p-2 rounded border border-cyan-500/30 bg-cyan-500/5 flex flex-wrap items-center justify-between gap-y-2 gap-3">
+        <div className="shrink-0 mb-2 p-2 rounded border border-cyan-500/30 bg-cyan-500/5 flex flex-wrap items-center justify-between gap-y-2 gap-3">
           <div className="min-w-0">
             <div className="text-xs font-semibold text-cyan-300 truncate">{t('drasi.installDrasiTitle')}</div>
             <div className="text-[10px] text-muted-foreground truncate">{t('drasi.installDrasiDescription')}</div>
@@ -847,7 +847,7 @@ export function DrasiReactiveGraph() {
         </div>
       )}
       {/* Pipeline KPIs strip */}
-      <div className="flex-shrink-0 grid grid-cols-2 @md:grid-cols-4 gap-2 mb-2">
+      <div className="shrink-0 grid grid-cols-2 @md:grid-cols-4 gap-2 mb-2">
         <KPIBox label={KPI_LABEL_EVENTS_PER_SEC} value={kpis.eventsPerSec} accent="emerald" />
         <KPIBox label={KPI_LABEL_RESULT_ROWS} value={kpis.matchRate} accent="cyan" />
         <KPIBox label={KPI_LABEL_SOURCES} value={kpis.activeSources} accent="emerald" />

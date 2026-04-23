@@ -152,7 +152,7 @@ export function FalcoAlerts({ config: _config }: CardConfig) {
     return (
       <div className="space-y-3">
         <div className="flex items-start gap-2 p-2 rounded-lg bg-purple-500/10 border border-purple-500/20 text-xs">
-          <AlertCircle className="w-4 h-4 text-purple-400 flex-shrink-0 mt-0.5" />
+          <AlertCircle className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
           <div>
             <p className="text-purple-400 font-medium">{t('cards:falcoAlerts.integration')}</p>
             <p className="text-muted-foreground">
@@ -218,7 +218,7 @@ export function FalcoAlerts({ config: _config }: CardConfig) {
               'bg-blue-500/10 text-blue-400'
             }`}
           >
-            <AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0" />
+            <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
             <div className="flex-1">
               <p className="font-medium">{alert.message}</p>
               <p className="text-muted-foreground">{alert.time}</p>
@@ -327,7 +327,7 @@ Please proceed step by step.`,
       {/* Fetch error state: one or more clusters failed to return scanner data */}
       {hasErrors && !isDemoData && (
         <div className="flex items-start gap-2 p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-xs">
-          <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+          <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="text-red-400 font-medium">{t('cards:trivyScan.failedToFetch')}</p>
             <p className="text-muted-foreground">
@@ -343,7 +343,7 @@ Please proceed step by step.`,
       {/* Install prompt when not detected and no errors (only after scanning completes) */}
       {!installed && !isLoading && !isRefreshing && !hasErrors && (
         <div className="flex items-start gap-2 p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-xs">
-          <AlertCircle className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
+          <AlertCircle className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
           <div>
             <p className="text-cyan-400 font-medium">{t('cards:trivyScan.integration')}</p>
             <p className="text-muted-foreground">
@@ -359,7 +359,7 @@ Please proceed step by step.`,
       {/* Degraded state: installed but no scan data */}
       {isDegraded && (
         <div className="flex items-start gap-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs">
-          <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+          <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
           <div>
             <p className="text-amber-400 font-medium">{t('cards:trivyScan.noScanData')}</p>
             <p className="text-muted-foreground">
@@ -432,7 +432,7 @@ Please proceed step by step.`,
       {/* Action guidance */}
       {filtered.critical > 0 && (
         <div className="flex items-start gap-1.5 px-1 text-[10px] text-red-400/80">
-          <Info className="w-3 h-3 flex-shrink-0 mt-0.5" />
+          <Info className="w-3 h-3 shrink-0 mt-0.5" />
           <span>{TRIVY_SEVERITY.critical.action}</span>
         </div>
       )}
@@ -548,7 +548,7 @@ Please proceed step by step.`,
       {/* Fetch error state: one or more clusters failed to return scanner data */}
       {hasErrors && !isDemoData && (
         <div className="flex items-start gap-2 p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-xs">
-          <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+          <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="text-red-400 font-medium">{t('cards:kubescapeScan.failedToFetch')}</p>
             <p className="text-muted-foreground">
@@ -564,7 +564,7 @@ Please proceed step by step.`,
       {/* Install prompt when not detected and no errors (only after scanning completes) */}
       {!installed && !isLoading && !isRefreshing && !hasErrors && (
         <div className="flex items-start gap-2 p-2 rounded-lg bg-green-500/10 border border-green-500/20 text-xs">
-          <AlertCircle className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
+          <AlertCircle className="w-4 h-4 text-green-400 shrink-0 mt-0.5" />
           <div>
             <p className="text-green-400 font-medium">{t('cards:kubescapeScan.integration')}</p>
             <p className="text-muted-foreground">
@@ -580,7 +580,7 @@ Please proceed step by step.`,
       {/* Degraded state: installed but no scan data */}
       {isDegraded && (
         <div className="flex items-start gap-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs">
-          <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+          <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
           <div>
             <p className="text-amber-400 font-medium">{t('cards:kubescapeScan.noScanData')}</p>
             <p className="text-muted-foreground">
@@ -681,7 +681,7 @@ Please proceed step by step.`,
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}
-                        className="text-muted-foreground/50 hover:text-blue-400 transition-colors flex-shrink-0"
+                        className="text-muted-foreground/50 hover:text-blue-400 transition-colors shrink-0"
                         title={t('cards:kubescapeScan.viewFrameworkSpec')}
                       >
                         <ExternalLink className="w-2.5 h-2.5" />
@@ -830,7 +830,7 @@ export function PolicyViolations({ config: _config }: CardConfig) {
       return (
         <div className="space-y-3">
           <div className="flex items-start gap-2 p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-xs">
-            <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+            <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
             <div className="flex-1">
               <p className="text-red-400 font-medium">{t('cards:policyViolations.failedToFetch')}</p>
               <p className="text-muted-foreground">
@@ -849,7 +849,7 @@ export function PolicyViolations({ config: _config }: CardConfig) {
         {/* Degraded state: installed but no policies */}
         {isDegraded && (
           <div className="flex items-start gap-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs">
-            <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+            <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
             <div>
               <p className="text-amber-400 font-medium">{t('cards:policyViolations.noPoliciesConfigured')}</p>
               <p className="text-muted-foreground">
@@ -891,7 +891,7 @@ export function PolicyViolations({ config: _config }: CardConfig) {
 
       {/* Context banner */}
       <div className="flex items-start gap-1.5 text-[10px] text-muted-foreground bg-secondary/20 rounded-md px-2 py-1.5">
-        <Info className="w-3 h-3 flex-shrink-0 mt-0.5 text-muted-foreground/60" />
+        <Info className="w-3 h-3 shrink-0 mt-0.5 text-muted-foreground/60" />
         <span>{CARD_DESCRIPTIONS.policy_violations.description}</span>
       </div>
 
@@ -1093,14 +1093,14 @@ export function ComplianceScore({ config: _config }: CardConfig) {
 
       {/* Context description */}
       <div className="flex items-start gap-1.5 text-[10px] text-muted-foreground bg-secondary/20 rounded-md px-2 py-1.5">
-        <Info className="w-3 h-3 flex-shrink-0 mt-0.5 text-muted-foreground/60" />
+        <Info className="w-3 h-3 shrink-0 mt-0.5 text-muted-foreground/60" />
         <span>{CARD_DESCRIPTIONS.compliance_score.description}</span>
       </div>
 
       {/* Partial coverage warning — not all clusters are reporting */}
       {!isDemoData && !usingFallback && allChecked && totalChecking > 0 && scoreClusters.length < totalChecking && (
         <div className="flex items-center gap-1.5 text-xs text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 rounded-md px-2 py-1.5">
-          <AlertTriangle className="w-3 h-3 flex-shrink-0" />
+          <AlertTriangle className="w-3 h-3 shrink-0" />
           <span>
             {t('cards:complianceScore.partialCoverage', { reporting: scoreClusters.length, total: totalChecking })}
           </span>
@@ -1110,7 +1110,7 @@ export function ComplianceScore({ config: _config }: CardConfig) {
       {/* No compliance tools installed — show install prompt instead of fake demo score */}
       {noToolsInstalled && (
         <div className="flex items-start gap-2 p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-xs">
-          <AlertCircle className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
+          <AlertCircle className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
           <div>
             <p className="text-cyan-400 font-medium">{t('cards:complianceScore.noToolsDetected')}</p>
             <p className="text-muted-foreground">

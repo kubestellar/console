@@ -108,7 +108,7 @@ function ControlAccordion({ control }: { control: ControlResult }) {
         onClick={() => setOpen(v => !v)}
         type="button"
       >
-        <Icon className="w-4 h-4 text-zinc-400 flex-shrink-0" />
+        <Icon className="w-4 h-4 text-zinc-400 shrink-0" />
         <StatusBadge status={control.status} />
         <span className="text-sm font-medium text-zinc-200 flex-1 truncate">{control.id}: {control.name}</span>
         <span className="text-xs text-zinc-500">{control.checks.length} checks</span>
@@ -252,7 +252,7 @@ export function ComplianceFrameworksContent() {
           <select
             value={selectedCluster}
             onChange={e => setSelectedCluster(e.target.value)}
-            className="flex-1 max-w-xs bg-zinc-800 text-zinc-200 text-sm rounded-md border border-zinc-700 px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="flex-1 max-w-xs bg-zinc-800 text-zinc-200 text-sm rounded-md border border-zinc-700 px-3 py-1.5 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
           >
             {clusterNames.length === 0 && <option value="">No clusters available</option>}
             {clusterNames.map(name => (

@@ -220,7 +220,7 @@ export function FixerDefinitionPanel({
             value={state.title}
             onChange={(e) => onTitleChange(e.target.value)}
             placeholder="e.g., Production Security Compliance"
-            className="w-full mt-1 px-4 py-2 rounded-lg border border-border bg-secondary/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+            className="w-full mt-1 px-4 py-2 rounded-lg border border-border bg-secondary/30 text-sm focus:outline-hidden focus:ring-2 focus:ring-primary/50"
           />
         </div>
 
@@ -236,7 +236,7 @@ export function FixerDefinitionPanel({
               onChange={(e) => onDescriptionChange(e.target.value)}
               placeholder={PLACEHOLDER_EXAMPLES[placeholderIdx]}
               rows={4}
-              className="w-full px-4 py-3 rounded-lg border border-border bg-secondary/30 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground/40 transition-colors"
+              className="w-full px-4 py-3 rounded-lg border border-border bg-secondary/30 text-sm resize-none focus:outline-hidden focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground/40 transition-colors"
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
                   e.preventDefault()
@@ -327,7 +327,7 @@ export function FixerDefinitionPanel({
                   value={manualName}
                   onChange={(e) => setManualName(e.target.value)}
                   placeholder="Project name (e.g., Falco, Prometheus, Cilium)"
-                  className="w-full pl-9 pr-3 py-1.5 text-sm rounded-lg border border-border bg-secondary/50 focus:outline-none focus:ring-1 focus:ring-primary"
+                  className="w-full pl-9 pr-3 py-1.5 text-sm rounded-lg border border-border bg-secondary/50 focus:outline-hidden focus:ring-1 focus:ring-primary"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') handleManualAdd()
                   }}
@@ -351,7 +351,7 @@ export function FixerDefinitionPanel({
       </div>
 
       {/* Right: Info panel */}
-      <div className="w-[26rem] border-l border-border bg-card flex flex-col overflow-y-auto shrink-0">
+      <div className="w-104 border-l border-border bg-card flex flex-col overflow-y-auto shrink-0">
         <AnimatePresence mode="wait">
           {stickyProject ? (
             <motion.div

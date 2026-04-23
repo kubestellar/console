@@ -47,7 +47,7 @@ const MODE_OPTIONS: { mode: StatDisplayMode; icon: React.ComponentType<{ classNa
   { mode: 'sparkline', icon: TrendingUp, label: 'Sparkline' },
   { mode: 'gauge', icon: GaugeIcon, label: 'Gauge' },
   { mode: 'horseshoe', icon: HorseshoeIcon, label: 'Horseshoe' },
-  { mode: 'ring', icon: CircleDot, label: 'Ring' },
+  { mode: 'ring-3', icon: CircleDot, label: 'Ring' },
   { mode: 'mini-bar', icon: BarChart3, label: 'Bar' },
   { mode: 'trend', icon: ArrowUpDown, label: 'Trend' },
   { mode: 'stacked-bar', icon: Layers, label: 'Stacked' },
@@ -151,7 +151,7 @@ export function StatBlockModePicker({ currentMode, availableModes, onModeChange 
                       : 'text-muted-foreground/40 cursor-not-allowed'
                 }`}
               >
-                <Icon className="w-3.5 h-3.5 flex-shrink-0" />
+                <Icon className="w-3.5 h-3.5 shrink-0" />
                 <span>{label}</span>
                 {isActive && <span className="ml-auto text-purple-400">&#x2713;</span>}
               </button>

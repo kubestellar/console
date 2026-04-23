@@ -31,7 +31,7 @@ export function LogoWithStar({ className, logoClassName, alt, showStar }: LogoWi
       {/* Star treatment overlay — only shown for KubeStellar branding */}
       {renderStar && (
         <svg
-          className="absolute -top-[15%] -right-[20%] w-[55%] h-[55%] pointer-events-none"
+          className="absolute top-[-15%] right-[-20%] w-[55%] h-[55%] pointer-events-none"
           viewBox="0 0 40 40"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"

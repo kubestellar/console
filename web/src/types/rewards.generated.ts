@@ -95,7 +95,7 @@ export const CONTRIBUTOR_LEVELS_GENERATED: ContributorLevel[] = [
     iconPath: "m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z",
     minCoins: 500000,
     color: "yellow",
-    bgClass: "bg-gradient-to-r from-yellow-400/30 via-amber-300/30 to-yellow-500/30",
+    bgClass: "bg-linear-to-r from-yellow-400/30 via-amber-300/30 to-yellow-500/30",
     textClass: "text-yellow-300",
     borderClass: "border-yellow-400/50",
   },

@@ -203,7 +203,7 @@ export function PerformanceTimeline() {
                   {islValues.map(isl => {
                     const cell = getCell(isl, osl)
                     if (!cell) return (
-                      <div key={isl} className="flex-1 aspect-[2/1] min-h-[48px] rounded-lg bg-secondary/30 border border-border/30 flex items-center justify-center">
+                      <div key={isl} className="flex-1 aspect-2/1 min-h-[48px] rounded-lg bg-secondary/30 border border-border/30 flex items-center justify-center">
                         <span className="text-2xs text-muted-foreground">—</span>
                       </div>
                     )
@@ -211,7 +211,7 @@ export function PerformanceTimeline() {
                     return (
                       <div
                         key={isl}
-                        className={`flex-1 aspect-[2/1] min-h-[48px] rounded-lg border flex flex-col items-center justify-center cursor-pointer transition-all ${
+                        className={`flex-1 aspect-2/1 min-h-[48px] rounded-lg border flex flex-col items-center justify-center cursor-pointer transition-all ${
                           isHovered ? 'border-white/40 scale-105 z-10' : 'border-border/30'
                         }`}
                         style={{ backgroundColor: getColor(cell.value, minVal, maxVal, modeInfo.higherBetter) }}

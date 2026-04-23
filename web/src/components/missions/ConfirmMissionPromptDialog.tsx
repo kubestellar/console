@@ -98,7 +98,7 @@ export function ConfirmMissionPromptDialog({
           )}
 
           <div className="flex items-start gap-2 rounded-lg border border-purple-500/20 bg-purple-500/5 p-3 text-xs text-muted-foreground">
-            <Info className="h-4 w-4 text-purple-400 flex-shrink-0 mt-0.5" />
+            <Info className="h-4 w-4 text-purple-400 shrink-0 mt-0.5" />
             <p>
               {t(
                 'confirmMissionPrompt.helpText',

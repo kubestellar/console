@@ -141,7 +141,7 @@ export function MLJobs({ config: _config }: MLJobsProps) {
 
       {/* Integration notice */}
       <div className="flex items-start gap-2 p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-xs mb-4">
-        <AlertCircle className="w-4 h-4 text-yellow-400 flex-shrink-0 mt-0.5" />
+        <AlertCircle className="w-4 h-4 text-yellow-400 shrink-0 mt-0.5" />
         <div>
           <p className="text-yellow-400 font-medium">ML Job Detection</p>
           <p className="text-muted-foreground">
@@ -173,7 +173,7 @@ export function MLJobs({ config: _config }: MLJobsProps) {
             {job.status === 'running' && (
               <div className="w-full bg-secondary rounded-full h-1.5">
                 <div
-                  className="bg-gradient-to-r from-yellow-500 to-green-500 h-1.5 rounded-full transition-all"
+                  className="bg-linear-to-r from-yellow-500 to-green-500 h-1.5 rounded-full transition-all"
                   style={{ width: `${job.progress}%` }}
                 />
               </div>

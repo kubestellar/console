@@ -460,7 +460,7 @@ function DraggableWorkloadItem({ workload, isSelected, onSelect, onScaled }: Dra
                   value={desiredReplicas}
                   onChange={(e) => setDesiredReplicas(Math.max(0, Math.min(100, parseInt(e.target.value) || 0)))}
                   disabled={isScaling}
-                  className="w-12 h-7 text-center text-xs rounded border border-border bg-secondary/30 focus:outline-none focus:ring-1 focus:ring-primary/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-50"
+                  className="w-12 h-7 text-center text-xs rounded border border-border bg-secondary/30 focus:outline-hidden focus:ring-1 focus:ring-primary/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-50"
                 />
                 <button
                   onClick={() => setDesiredReplicas((r) => Math.min(100, r + 1))}
@@ -750,7 +750,7 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
   return (
     <div className="h-full flex flex-col">
       {/* Header with controls */}
-      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 flex-shrink-0 px-3 pt-3">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 shrink-0 px-3 pt-3">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-muted-foreground">
             {stats.totalWorkloads} total &middot; {stats.uniqueWorkloads} unique
@@ -786,7 +786,7 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
           value={search}
           onChange={setSearch}
           placeholder="Search workloads..."
-          className="!mb-0 flex-1"
+          className="mb-0! flex-1"
         />
         <button
           onClick={() => setShowImportDialog(true)}

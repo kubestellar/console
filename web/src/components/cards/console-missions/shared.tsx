@@ -100,7 +100,7 @@ export function ApiKeyPromptModal({ isOpen, onDismiss, onGoToSettings }: {
   if (!isOpen) return null
 
   return (
-    <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/50 backdrop-blur-sm rounded-lg">
+    <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/50 backdrop-blur-xs rounded-lg">
       <div className="bg-card border border-border rounded-lg p-4 m-4 shadow-xl max-w-sm">
         <div className="flex items-center gap-2 mb-3">
           <div className="p-1.5 rounded bg-purple-500/20">

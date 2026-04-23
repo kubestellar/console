@@ -147,7 +147,7 @@ export function VClusterStatus({ config: _config }: VClusterStatusProps) {
   }
   return (
     <div className="h-full flex flex-col min-h-card">
-      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 flex-shrink-0">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 shrink-0">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-muted-foreground">{t('vclusterStatus.nVClusters', { count: totalItems })}</span>
           {localClusterFilter.length > 0 && (<span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded"><Server className="w-3 h-3" />{localClusterFilter.length}/{availableClusters.length}</span>)}
@@ -165,7 +165,7 @@ export function VClusterStatus({ config: _config }: VClusterStatusProps) {
       </div>
       {stats.failedCount > 0 && (
         <div className="flex items-start gap-2 p-2 mb-3 rounded-lg bg-red-500/10 border border-red-500/20 text-xs">
-          <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+          <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
           <div><p className="text-red-400 font-medium">{t('vclusterStatus.healthWarning')}</p><p className="text-muted-foreground">{t('vclusterStatus.failedCount', { count: stats.failedCount })}</p></div>
         </div>
       )}

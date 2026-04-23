@@ -165,7 +165,7 @@ export function YAMLDrillDown({ data }: Props) {
       {/* YAML Content */}
       <div className="relative">
         {isLoading && yaml && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 rounded-lg backdrop-blur-sm">
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 rounded-lg backdrop-blur-xs">
             <div className="spinner w-6 h-6" />
           </div>
         )}

@@ -179,13 +179,13 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
           {/* User details section */}
           <div className="p-3 space-y-2 border-b border-border">
             <div className="flex items-center gap-3 px-2 py-1.5 text-sm min-w-0">
-              <Mail className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-              <span className="text-muted-foreground flex-shrink-0">{t('profile.email')}</span>
+              <Mail className="w-4 h-4 text-muted-foreground shrink-0" />
+              <span className="text-muted-foreground shrink-0">{t('profile.email')}</span>
               <span className="text-foreground truncate">{user.email || t('profile.notSet')}</span>
             </div>
             <div className="flex items-center gap-3 px-2 py-1.5 text-sm min-w-0">
-              <MessageSquare className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-              <span className="text-muted-foreground flex-shrink-0">{t('profile.slack')}</span>
+              <MessageSquare className="w-4 h-4 text-muted-foreground shrink-0" />
+              <span className="text-muted-foreground shrink-0">{t('profile.slack')}</span>
               <span className="text-foreground truncate">{user.slack_id || t('profile.notConnected')}</span>
             </div>
             <div className="flex items-center gap-3 px-2 py-1.5 text-sm">

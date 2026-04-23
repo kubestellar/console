@@ -192,7 +192,7 @@ export function PredictiveHealth() {
                     <div className={`w-2 h-2 rounded-full mt-1 shrink-0 ${style.dot}`} />
                     <div className="min-w-0">
                       <div className="text-sm font-medium">{pred.resource}</div>
-                      <div className="text-xs text-muted-foreground break-words">{pred.message}</div>
+                      <div className="text-xs text-muted-foreground wrap-break-word">{pred.message}</div>
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-0.5 shrink-0">

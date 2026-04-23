@@ -405,7 +405,7 @@ export function SearchDropdown() {
           onFocus={() => { openSearch(); cmdKHint.action(); emitGlobalSearchOpened('click') }}
           onBlur={() => { if (searchQuery.trim()) emitGlobalSearchQueried(searchQuery.trim().length, totalCountRef.current) }}
           placeholder={t('layout.navbar.searchPlaceholder')}
-          className="w-full pl-10 pr-16 py-2 bg-secondary rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+          className="w-full pl-10 pr-16 py-2 bg-secondary rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500/50"
         />
         <kbd className="absolute right-3 top-1/2 -translate-y-1/2 hidden sm:flex items-center gap-1 px-1.5 py-0.5 text-xs text-muted-foreground bg-secondary rounded">
           <Command className="w-3 h-3" />K

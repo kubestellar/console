@@ -180,7 +180,7 @@ export function useCICDStats(): CICDStatsResult {
             : sublabel,
           max: PASS_RATE_MAX,
           isDemo: computed.isDemo,
-          modeHints: ['ring', 'gauge', 'horseshoe', 'numeric'],
+          modeHints: ['ring-3', 'gauge', 'horseshoe', 'numeric'],
         }
       }
 

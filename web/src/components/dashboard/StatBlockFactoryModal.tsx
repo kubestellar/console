@@ -429,7 +429,7 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated, embedde
                     value={title}
                     onChange={e => setTitle(e.target.value)}
                     placeholder={t('dashboard.statFactory.titlePlaceholder')}
-                    className="w-full text-sm px-3 py-2 rounded-lg bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+                    className="w-full text-sm px-3 py-2 rounded-lg bg-secondary text-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500/50"
                   />
                 </div>
                 <div>
@@ -439,7 +439,7 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated, embedde
                     value={statsType}
                     onChange={e => setStatsType(e.target.value)}
                     placeholder={t('dashboard.statFactory.typeIdPlaceholder')}
-                    className="w-full text-sm px-3 py-2 rounded-lg bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+                    className="w-full text-sm px-3 py-2 rounded-lg bg-secondary text-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500/50"
                   />
                 </div>
                 <div>
@@ -447,7 +447,7 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated, embedde
                   <select
                     value={gridCols}
                     onChange={e => setGridCols(Number(e.target.value))}
-                    className="w-full text-sm px-3 py-2 rounded-lg bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+                    className="w-full text-sm px-3 py-2 rounded-lg bg-secondary text-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500/50"
                   >
                     <option value={0}>{t('dashboard.statFactory.autoOption')}</option>
                     <option value={2}>2</option>
@@ -563,7 +563,7 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated, embedde
                             value={block.label}
                             onChange={e => updateBlock(idx, 'label', e.target.value)}
                             placeholder={t('dashboard.statFactory.labelPlaceholder')}
-                            className="flex-1 text-xs px-2 py-1.5 rounded-lg bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+                            className="flex-1 text-xs px-2 py-1.5 rounded-lg bg-secondary text-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500/50"
                           />
 
                           {/* Value field */}
@@ -572,14 +572,14 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated, embedde
                             value={block.field}
                             onChange={e => updateBlock(idx, 'field', e.target.value)}
                             placeholder={t('dashboard.statFactory.dataFieldPlaceholder')}
-                            className="w-24 text-xs px-2 py-1.5 rounded-lg bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+                            className="w-24 text-xs px-2 py-1.5 rounded-lg bg-secondary text-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500/50"
                           />
 
                           {/* Format */}
                           <select
                             value={block.format}
                             onChange={e => updateBlock(idx, 'format', e.target.value)}
-                            className="w-20 text-xs px-1.5 py-1.5 rounded-lg bg-secondary text-foreground focus:outline-none"
+                            className="w-20 text-xs px-1.5 py-1.5 rounded-lg bg-secondary text-foreground focus:outline-hidden"
                           >
                             {VALUE_FORMATS.map(f => (
                               <option key={f.value} value={f.value}>{f.label}</option>

@@ -57,7 +57,7 @@ export const MemoizedMessage = memo(function MemoizedMessage({ msg, missionAgent
     "prose-hr:my-6",
     "prose-strong:text-foreground prose-strong:font-semibold",
     "prose-blockquote:border-yellow-500/50 prose-blockquote:bg-yellow-500/5",
-    "break-words [word-break:break-word]",
+    "wrap-break-word [word-break:break-word]",
     FONT_SIZE_CLASSES[fontSize],
     msg.role === 'system' ? 'text-yellow-700 dark:text-yellow-200' : 'text-foreground'
   )
@@ -77,7 +77,7 @@ export const MemoizedMessage = memo(function MemoizedMessage({ msg, missionAgent
   return (
     <div className={cn('flex gap-3', msg.role === 'user' && 'flex-row-reverse')}>
       <div className={cn(
-        'w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0',
+        'w-8 h-8 rounded-full flex items-center justify-center shrink-0',
         msg.role === 'user' ? 'bg-primary/20' : msg.role === 'assistant' ? 'bg-purple-500/20' : 'bg-yellow-500/20'
       )}>
         {msg.role === 'user' ? (

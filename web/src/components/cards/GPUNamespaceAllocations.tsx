@@ -256,7 +256,7 @@ function GPUNamespaceAllocationsInternal({ config: _config }: GPUNamespaceAlloca
                   clusters: ns.clusters })
               }
             }}
-            className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400"
+            className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group focus:outline-hidden focus-visible:ring-2 focus-visible:ring-purple-400"
             aria-label={t('cards:gpuNamespaceAllocations.viewNamespaceAria', { namespace: ns.namespace })}
           >
             <div className="flex items-center gap-2 mb-2 min-w-0">

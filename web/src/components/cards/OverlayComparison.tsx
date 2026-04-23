@@ -241,10 +241,10 @@ export function OverlayComparison({ config }: OverlayComparisonProps) {
                     >
                       <div className="flex flex-wrap items-center justify-between gap-y-2 mb-1">
                         <div className="flex items-center gap-2">
-                          <DiffIcon className={`w-4 h-4 text-${color}-400 flex-shrink-0`} />
+                          <DiffIcon className={`w-4 h-4 text-${color}-400 shrink-0`} />
                           <span className="text-sm text-foreground group-hover:text-purple-400 truncate">{diff.resource}</span>
                         </div>
-                        <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                        <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                       </div>
                       <div className="ml-6 text-xs text-muted-foreground truncate">
                         {diff.details}

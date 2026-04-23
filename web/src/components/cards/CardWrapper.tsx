@@ -984,17 +984,17 @@ export function CardWrapper({
           <div className={cn('relative', isCollapsed ? 'h-auto' : 'h-full')}>
             {showDemoIndicator && (
               <>
-                <svg className="absolute -top-[1px] -left-[1px] w-5 h-5 pointer-events-none z-10" viewBox="0 0 20 20" fill="none">
+                <svg className="absolute -top-px -left-px w-5 h-5 pointer-events-none z-10" viewBox="0 0 20 20" fill="none">
                   <defs><filter id="demo-rough"><feTurbulence type="turbulence" baseFrequency="0.04" numOctaves="4" result="noise" /><feDisplacementMap in="SourceGraphic" in2="noise" scale="1" /></filter></defs>
                   <path d="M2 17 V9 C2 4.5 4.5 2 9 2 H17" stroke="rgb(234 179 8 / 0.4)" strokeWidth="2.5" strokeLinecap="round" fill="none" filter="url(#demo-rough)" />
                 </svg>
-                <svg className="absolute -top-[1px] -right-[1px] w-5 h-5 pointer-events-none z-10" viewBox="0 0 20 20" fill="none">
+                <svg className="absolute -top-px -right-px w-5 h-5 pointer-events-none z-10" viewBox="0 0 20 20" fill="none">
                   <path d="M18 17 V9 C18 4.5 15.5 2 11 2 H3" stroke="rgb(234 179 8 / 0.4)" strokeWidth="2.5" strokeLinecap="round" fill="none" filter="url(#demo-rough)" />
                 </svg>
-                <svg className="absolute -bottom-[1px] -left-[1px] w-5 h-5 pointer-events-none z-10" viewBox="0 0 20 20" fill="none">
+                <svg className="absolute -bottom-px -left-px w-5 h-5 pointer-events-none z-10" viewBox="0 0 20 20" fill="none">
                   <path d="M2 3 V11 C2 15.5 4.5 18 9 18 H17" stroke="rgb(234 179 8 / 0.4)" strokeWidth="2.5" strokeLinecap="round" fill="none" filter="url(#demo-rough)" />
                 </svg>
-                <svg className="absolute -bottom-[1px] -right-[1px] w-5 h-5 pointer-events-none z-10" viewBox="0 0 20 20" fill="none">
+                <svg className="absolute -bottom-px -right-px w-5 h-5 pointer-events-none z-10" viewBox="0 0 20 20" fill="none">
                   <path d="M18 3 V11 C18 15.5 15.5 18 11 18 H3" stroke="rgb(234 179 8 / 0.4)" strokeWidth="2.5" strokeLinecap="round" fill="none" filter="url(#demo-rough)" />
                 </svg>
               </>
@@ -1025,7 +1025,7 @@ export function CardWrapper({
             <div data-tour="card-header" className="flex flex-wrap items-center justify-between gap-y-2 px-4 py-3 border-b border-border/50">
               <div className="flex items-center gap-2 min-w-0">
                 {dragHandle}
-                {ResolvedIcon && <ResolvedIcon className={cn('w-4 h-4 flex-shrink-0', resolvedIconColor)} />}
+                {ResolvedIcon && <ResolvedIcon className={cn('w-4 h-4 shrink-0', resolvedIconColor)} />}
                 <h3 className="text-sm font-medium text-foreground truncate">{title}</h3>
                 <InfoTooltip text={description || t('messages.descriptionComingSoon', { title })} />
                 {/* Demo data indicator - shows if card uses demo data (respects child opt-out) */}
@@ -1034,7 +1034,7 @@ export function CardWrapper({
                     data-testid="demo-badge"
                     role="status"
                     aria-live="polite"
-                    className="text-2xs px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 flex-shrink-0"
+                    className="text-2xs px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 shrink-0"
                     title={effectiveIsDemoData ? t('cardWrapper.demoBadgeTitle') : t('cardWrapper.demoModeTitle')}
                   >
                     {t('cardWrapper.demo')}
@@ -1045,7 +1045,7 @@ export function CardWrapper({
                   <span
                     role="status"
                     aria-live="polite"
-                    className="text-2xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 flex-shrink-0"
+                    className="text-2xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 shrink-0"
                     title={t('cardWrapper.liveBadgeTitle')}
                   >
                     {t('cardWrapper.live')}
@@ -1056,7 +1056,7 @@ export function CardWrapper({
                   <span
                     role="alert"
                     aria-live="assertive"
-                    className="text-2xs px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 flex items-center gap-1 flex-shrink-0"
+                    className="text-2xs px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 flex items-center gap-1 shrink-0"
                     title={t('cardWrapper.refreshFailedCount', { count: effectiveConsecutiveFailures })}
                   >
                     {t('cardWrapper.refreshFailed')}
@@ -1092,7 +1092,7 @@ export function CardWrapper({
                   )
                 })()}
               </div>
-              <div className="flex items-center gap-1 flex-shrink-0">
+              <div className="flex items-center gap-1 shrink-0">
                 {/* Collapse/expand button */}
                 <button
                   onClick={() => setCollapsed(!isCollapsed)}
@@ -1193,7 +1193,7 @@ export function CardWrapper({
                   </button>
                   {showMenu && menuPosition && createPortal(
                     <div
-                      className="fixed w-48 glass rounded-lg py-1 z-50 shadow-xl !bg-[rgba(10,15,25,0.98)]"
+                      className="fixed w-48 glass rounded-lg py-1 z-50 shadow-xl bg-[rgba(10,15,25,0.98)]!"
                       role="menu"
                       aria-label={t('cardWrapper.cardMenuTooltip')}
                       style={{ top: menuPosition.top, right: menuPosition.right }}
@@ -1661,7 +1661,7 @@ export function CardWrapper({
 
           {/* Install CTA: manual guide modal (no agent) */}
           {showInstallGuide && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" role="presentation" onClick={() => setShowInstallGuide(null)}>
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs" role="presentation" onClick={() => setShowInstallGuide(null)}>
               <div className="bg-card border border-border rounded-xl shadow-2xl max-w-lg w-full mx-4 max-h-[80vh] overflow-y-auto p-6" role="dialog" aria-modal="true" aria-labelledby="install-guide-title" onClick={e => e.stopPropagation()}>
                 <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
                   <h3 id="install-guide-title" className="text-lg font-semibold">{showInstallGuide.mission.mission?.title ?? `Install ${installInfo?.project ?? 'Component'}`}</h3>
@@ -1673,7 +1673,7 @@ export function CardWrapper({
                 <ol className="space-y-4">
                   {(showInstallGuide.mission.mission?.steps ?? []).map((step: { title?: string; description?: string }, i: number) => (
                     <li key={i} className="flex gap-3">
-                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 text-xs flex items-center justify-center font-medium">{i + 1}</span>
+                      <span className="shrink-0 w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 text-xs flex items-center justify-center font-medium">{i + 1}</span>
                       <div className="flex-1 min-w-0">
                         {step.title && <p className="text-sm font-medium mb-1">{step.title}</p>}
                         {step.description && <div className="text-sm text-muted-foreground whitespace-pre-wrap">{step.description}</div>}

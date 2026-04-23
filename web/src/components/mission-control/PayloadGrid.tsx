@@ -59,7 +59,7 @@ export function PayloadGrid({
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             placeholder="Filter projects..."
-            className="w-full pl-9 pr-3 py-1.5 text-sm rounded-lg border border-border bg-secondary/50 focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-full pl-9 pr-3 py-1.5 text-sm rounded-lg border border-border bg-secondary/50 focus:outline-hidden focus:ring-1 focus:ring-primary"
           />
         </div>
       )}

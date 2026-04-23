@@ -131,7 +131,7 @@ export function GPUCalendarTab({
                       <button
                         key={`add-${day}`}
                         onClick={() => onAddReservation(dateStr)}
-                        className="absolute w-5 h-5 flex items-center justify-center rounded bg-purple-500/20 text-purple-400 opacity-0 group-hover/bars:opacity-60 hover:!opacity-100 hover:bg-purple-500/40 transition-all z-10 bottom-1"
+                        className="absolute w-5 h-5 flex items-center justify-center rounded bg-purple-500/20 text-purple-400 opacity-0 group-hover/bars:opacity-60 hover:opacity-100! hover:bg-purple-500/40 transition-all z-10 bottom-1"
                         style={{
                           left: `calc(${((col + 1) / 7) * 100}% - 24px)`,
                         }}
@@ -173,8 +173,8 @@ export function GPUCalendarTab({
                       >
                         {bar.isStart && (
                           <>
-                            {isActive && <span className="inline-block w-2 h-2 rounded-full bg-green-400 flex-shrink-0" />}
-                            {isPending && <span className="inline-block w-2 h-2 rounded-full bg-yellow-400 flex-shrink-0" />}
+                            {isActive && <span className="inline-block w-2 h-2 rounded-full bg-green-400 shrink-0" />}
+                            {isPending && <span className="inline-block w-2 h-2 rounded-full bg-yellow-400 shrink-0" />}
                           </>
                         )}
                         {bar.isStart ? bar.reservation.title : ''}

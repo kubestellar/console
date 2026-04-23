@@ -154,7 +154,7 @@ function FilterControl({
         value: (value as string) ?? '',
         onChange: (e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value),
         className:
-          'flex-1 px-3 py-1.5 text-sm bg-secondary border border-border rounded focus:outline-none focus:border-blue-500 text-foreground placeholder-muted-foreground' })
+          'flex-1 px-3 py-1.5 text-sm bg-secondary border border-border rounded focus:outline-hidden focus:border-blue-500 text-foreground placeholder-muted-foreground' })
 
     case 'select':
     case 'cluster-select':
@@ -165,7 +165,7 @@ function FilterControl({
           onChange: (e: React.ChangeEvent<HTMLSelectElement>) =>
             onChange(e.target.value || undefined),
           className:
-            'px-3 py-1.5 text-sm bg-background border border-border rounded focus:outline-none focus:border-blue-500 text-foreground' },
+            'px-3 py-1.5 text-sm bg-background border border-border rounded focus:outline-hidden focus:border-blue-500 text-foreground' },
         createElement('option', { value: '' }, config.placeholder ?? 'All'),
         config.options?.map((opt) =>
           createElement('option', { key: opt.value, value: opt.value }, opt.label)

@@ -878,7 +878,7 @@ export function GitHubActivity({ config, ref }: { config?: GitHubActivityConfig;
   return (
     <div className="h-full flex flex-col content-loaded">
       {/* Row 1: Header with repo selector and controls - inline CRUD style */}
-      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 flex-shrink-0">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 shrink-0">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-muted-foreground">
             {t('common:common.itemCount', { count: totalItems, item: viewMode })}
@@ -909,7 +909,7 @@ export function GitHubActivity({ config, ref }: { config?: GitHubActivityConfig;
 
       {/* Inline repo editor (matching GitHubCIMonitor pattern) */}
       {isEditingRepos && (
-        <div className="rounded-lg bg-purple-500/10 border border-purple-500/20 p-3 mb-3 space-y-2 flex-shrink-0">
+        <div className="rounded-lg bg-purple-500/10 border border-purple-500/20 p-3 mb-3 space-y-2 shrink-0">
           <div className="flex items-center gap-2">
             <input
               type="text"
@@ -968,11 +968,11 @@ export function GitHubActivity({ config, ref }: { config?: GitHubActivityConfig;
         value={searchQuery}
         onChange={setSearchQuery}
         placeholder={`Search ${viewMode}...`}
-        className="mb-2 flex-shrink-0"
+        className="mb-2 shrink-0"
       />
 
       {/* Row 3: View Mode Tabs (act as filter pills) */}
-      <div className="flex items-center gap-1 mb-3 overflow-x-auto flex-shrink-0">
+      <div className="flex items-center gap-1 mb-3 overflow-x-auto shrink-0">
         <button
           onClick={() => setViewMode('prs')}
           className={cn(
@@ -1024,7 +1024,7 @@ export function GitHubActivity({ config, ref }: { config?: GitHubActivityConfig;
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 @md:grid-cols-4 gap-2 mb-3 flex-shrink-0">
+      <div className="grid grid-cols-2 @md:grid-cols-4 gap-2 mb-3 shrink-0">
         <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
           <div className="flex items-center gap-2 mb-1">
             <GitPullRequest className="w-4 h-4 text-blue-400" />
@@ -1062,7 +1062,7 @@ export function GitHubActivity({ config, ref }: { config?: GitHubActivityConfig;
       </div>
 
       {/* Time Range Controls */}
-      <div className="flex items-center gap-2 mb-3 flex-shrink-0">
+      <div className="flex items-center gap-2 mb-3 shrink-0">
         <span className="text-xs text-muted-foreground">{t('cards:github.timeRange')}:</span>
         {TIME_RANGES.map(range => (
           <button

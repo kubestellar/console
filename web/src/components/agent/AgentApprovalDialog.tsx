@@ -59,7 +59,7 @@ export function AgentApprovalDialog({ isOpen, agents, onApprove, onCancel }: Age
         <div className="space-y-5">
           {/* Warning banner */}
           <div className="flex gap-3 p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
-            <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+            <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
             <div className="text-sm text-amber-200/90">
               <p className="font-medium mb-1">These agents can execute commands on your system</p>
               <p className="text-amber-200/70">
@@ -81,7 +81,7 @@ export function AgentApprovalDialog({ isOpen, agents, onApprove, onCancel }: Age
                   key={agent.name}
                   className="flex items-center gap-3 p-3 rounded-lg bg-secondary/30 border border-border"
                 >
-                  <AgentIcon provider={agent.provider} className="w-5 h-5 flex-shrink-0" />
+                  <AgentIcon provider={agent.provider} className="w-5 h-5 shrink-0" />
                   <div className="flex-1 min-w-0">
                     <span className="text-sm font-medium text-foreground">{agent.displayName}</span>
                     <p className="text-xs text-muted-foreground truncate">{agent.description}</p>

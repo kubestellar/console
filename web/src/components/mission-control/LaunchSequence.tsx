@@ -471,7 +471,7 @@ export function LaunchSequence({
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-          className="inline-flex p-3 rounded-2xl bg-gradient-to-br from-violet-500/20 to-indigo-500/20 mb-3"
+          className="inline-flex p-3 rounded-2xl bg-linear-to-br from-violet-500/20 to-indigo-500/20 mb-3"
         >
           {allComplete ? (
             allSuccess ? (
@@ -592,7 +592,7 @@ export function LaunchSequence({
                       animate={{ opacity: 1, x: 0 }}
                       className="flex items-center gap-2 text-xs"
                     >
-                      <span className="flex-shrink-0">{STATUS_ICONS[proj.status]}</span>
+                      <span className="shrink-0">{STATUS_ICONS[proj.status]}</span>
                       <span
                         className={cn(
                           'flex-1',

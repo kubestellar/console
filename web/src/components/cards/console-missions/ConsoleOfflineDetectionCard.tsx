@@ -993,14 +993,14 @@ ${aiEnabled ? '\nClick to run AI analysis now' : ''}`}
           * input's outer box is taller than the toggle group. `items-center`
           * then vertically centers the two children but the visual top edges
           * no longer align, which reads as a misaligned "list / root cause"
-          * toggle. `!mb-0` overrides the default bottom margin so both
+          * toggle. `mb-0!` overrides the default bottom margin so both
           * children occupy the same vertical box.
           */}
         <CardSearchInput
           value={search}
           onChange={setSearch}
           placeholder={t('common:common.searchIssues')}
-          className="flex-1 !mb-0"
+          className="flex-1 mb-0!"
         />
         {/* View mode toggle - only show if there are grouped items */}
         {rootCauseGroups.length > 0 && rootCauseGroups.some(g => g.items.length > 1) && (
@@ -1056,7 +1056,7 @@ ${aiEnabled ? '\nClick to run AI analysis now' : ''}`}
                     <div className="flex items-center gap-2 min-w-0 flex-1">
                       <ChevronRight
                         className={cn(
-                          'w-3.5 h-3.5 flex-shrink-0 transition-transform',
+                          'w-3.5 h-3.5 shrink-0 transition-transform',
                           isExpanded && 'rotate-90'
                         )}
                         style={{ color: `rgb(${severityColor === 'red' ? '248,113,113' : severityColor === 'yellow' ? '250,204,21' : '96,165,250'})` }}
@@ -1083,7 +1083,7 @@ ${aiEnabled ? '\nClick to run AI analysis now' : ''}`}
                     </div>
                     <button
                       className={cn(
-                        'px-2 py-1 text-2xs rounded font-medium transition-colors flex-shrink-0 ml-2',
+                        'px-2 py-1 text-2xs rounded font-medium transition-colors shrink-0 ml-2',
                         'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
                       )}
                       onClick={(e) => {
@@ -1135,7 +1135,7 @@ TASK:
                             <span className="text-foreground truncate">{item.name}</span>
                             <ClusterBadge cluster={item.cluster} size="sm" />
                           </div>
-                          <ChevronRight className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                          <ChevronRight className="w-3 h-3 text-muted-foreground shrink-0" />
                         </div>
                       ))}
                     </div>
@@ -1177,7 +1177,7 @@ TASK:
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <span className="font-medium text-foreground truncate">{node.name}</span>
-                    <StatusBadge color="red" size="xs" className="flex-shrink-0">
+                    <StatusBadge color="red" size="xs" className="shrink-0">
                       {rootCause?.cause || t('cards:consoleOfflineDetection.offline')}
                     </StatusBadge>
                     {node.cluster && (
@@ -1189,7 +1189,7 @@ TASK:
                   </div>
                 </div>
                 {/* Item action buttons */}
-                <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                <div className="flex items-center gap-1 shrink-0 ml-2">
                   <CardAIActions
                     resource={{ kind: 'Node', name: node.name, cluster: node.cluster, status: node.unschedulable ? 'Cordoned' : node.status }}
                     issues={rootCause ? [{ name: rootCause.cause, message: rootCause.details }] : []}
@@ -1213,7 +1213,7 @@ TASK:
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <span className="font-medium text-foreground truncate">{issue.nodeName}</span>
-                    <StatusBadge color="yellow" size="xs" className="flex-shrink-0">
+                    <StatusBadge color="yellow" size="xs" className="shrink-0">
                       GPU
                     </StatusBadge>
                     <ClusterBadge cluster={issue.cluster} size="sm" />
@@ -1221,7 +1221,7 @@ TASK:
                   <div className="text-yellow-400 truncate mt-0.5">0 GPUs available</div>
                 </div>
                 {/* Item action buttons */}
-                <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                <div className="flex items-center gap-1 shrink-0 ml-2">
                   <CardAIActions
                     resource={{ kind: 'GPU', name: issue.nodeName, cluster: issue.cluster, status: `${issue.available}/${issue.expected} GPUs available` }}
                     issues={[{ name: 'GPU Unavailable', message: issue.reason }]}
@@ -1253,12 +1253,12 @@ TASK:
                   >
                     {/* Type Icon - all blue */}
                     {risk.type === 'pod-crash' && (
-                      <RefreshCw className="w-3 h-3 flex-shrink-0 text-blue-400" />
+                      <RefreshCw className="w-3 h-3 shrink-0 text-blue-400" />
                     )}
-                    {risk.type === 'resource-exhaustion' && <Cpu className="w-3 h-3 flex-shrink-0 text-blue-400" />}
-                    {risk.type === 'gpu-exhaustion' && <HardDrive className="w-3 h-3 flex-shrink-0 text-blue-400" />}
+                    {risk.type === 'resource-exhaustion' && <Cpu className="w-3 h-3 shrink-0 text-blue-400" />}
+                    {risk.type === 'gpu-exhaustion' && <HardDrive className="w-3 h-3 shrink-0 text-blue-400" />}
                     {(risk.type === 'resource-trend' || risk.type === 'capacity-risk' || risk.type === 'anomaly') && (
-                      <Sparkles className="w-3 h-3 flex-shrink-0 text-blue-400" />
+                      <Sparkles className="w-3 h-3 shrink-0 text-blue-400" />
                     )}
 
                     <div className="min-w-0 flex-1">
@@ -1266,11 +1266,11 @@ TASK:
                         <span className="font-medium text-foreground truncate">{risk.name}</span>
                         {/* Source Badge */}
                         {risk.source === 'ai' ? (
-                          <StatusBadge color="blue" size="xs" className="flex-shrink-0">
+                          <StatusBadge color="blue" size="xs" className="shrink-0">
                             AI
                           </StatusBadge>
                         ) : (
-                          <StatusBadge color="blue" size="xs" className="flex-shrink-0">
+                          <StatusBadge color="blue" size="xs" className="shrink-0">
                             <Zap className="w-2 h-2" />
                           </StatusBadge>
                         )}
@@ -1282,7 +1282,7 @@ TASK:
                         {risk.trend && <TrendIcon trend={risk.trend} />}
                         {/* Namespace Badge */}
                         {risk.namespace && (
-                          <StatusBadge color="gray" size="xs" className="flex-shrink-0 truncate max-w-[80px]" title={`namespace: ${risk.namespace}`}>
+                          <StatusBadge color="gray" size="xs" className="shrink-0 truncate max-w-[80px]" title={`namespace: ${risk.namespace}`}>
                             {risk.namespace}
                           </StatusBadge>
                         )}
@@ -1298,7 +1298,7 @@ TASK:
                   </div>
 
                   {/* Action Buttons + Feedback + Chevron */}
-                  <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                  <div className="flex items-center gap-1 shrink-0 ml-2">
                     {/* Diagnose & Prevent buttons */}
                     <CardAIActions
                       resource={{ kind: risk.type, name: risk.name, namespace: risk.namespace, cluster: risk.cluster, status: risk.severity }}

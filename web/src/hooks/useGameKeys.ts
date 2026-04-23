@@ -135,7 +135,7 @@ export function useGameKeyTracking(
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
       window.removeEventListener('keyup', handleKeyUp)
-      window.removeEventListener('blur', handleBlur)
+      window.removeEventListener('blur-sm', handleBlur)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       keys.clear()
     }

@@ -160,7 +160,7 @@ export function MissionBrowserSidebar({
                     value={newRepoValue}
                     onChange={(e) => setNewRepoValue(e.target.value)}
                     placeholder="owner/repo (e.g., kubara-io/kubara or your-org/runbooks)"
-                    className="flex-1 px-2 py-1 text-xs bg-secondary border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/40"
+                    className="flex-1 px-2 py-1 text-xs bg-secondary border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500/40"
                     autoFocus
                     onKeyDown={(e) => {
                       if (e.key === 'Escape') {
@@ -210,7 +210,7 @@ export function MissionBrowserSidebar({
                     value={newPathValue}
                     onChange={(e) => setNewPathValue(e.target.value)}
                     placeholder="/path/to/missions"
-                    className="flex-1 px-2 py-1 text-xs bg-secondary border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/40"
+                    className="flex-1 px-2 py-1 text-xs bg-secondary border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500/40"
                     autoFocus
                     onKeyDown={(e) => {
                       if (e.key === 'Escape') {

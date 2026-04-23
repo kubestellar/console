@@ -261,7 +261,7 @@ export function Deploy() {
 
       {/* Group Picker — shown when workload is dropped on the card but not a specific group */}
       {groupPickerWorkload && (
-        <div className="fixed inset-0 z-modal flex items-center justify-center bg-black/60 backdrop-blur-sm" role="presentation" onClick={() => setGroupPickerWorkload(null)} onKeyDown={(e) => { if (e.key === 'Escape') setGroupPickerWorkload(null) }}>
+        <div className="fixed inset-0 z-modal flex items-center justify-center bg-black/60 backdrop-blur-xs" role="presentation" onClick={() => setGroupPickerWorkload(null)} onKeyDown={(e) => { if (e.key === 'Escape') setGroupPickerWorkload(null) }}>
           <div ref={groupPickerRef} className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-sm mx-4 p-5" role="dialog" aria-modal="true" aria-labelledby="group-picker-dialog-title" onClick={e => e.stopPropagation()}>
             <h3 id="group-picker-dialog-title" className="text-base font-medium text-foreground mb-1">
               Choose a cluster group

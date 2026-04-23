@@ -144,7 +144,7 @@ export function PipelineFilterBar() {
               onKeyDown={handleKeyDown}
               placeholder={PLACEHOLDER_REPO}
               className={cn(
-                'w-40 px-2 py-1 text-xs rounded-full border bg-secondary/30 text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50',
+                'w-40 px-2 py-1 text-xs rounded-full border bg-secondary/30 text-foreground focus:outline-hidden focus:ring-1 focus:ring-primary/50',
                 addError ? 'border-red-500/50' : 'border-border',
               )}
               aria-label={LABEL_ADD_REPO}

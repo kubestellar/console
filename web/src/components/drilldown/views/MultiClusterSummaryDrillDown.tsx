@@ -547,7 +547,7 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
             placeholder={t('common.search')}
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-card/50 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+            className="w-full pl-10 pr-4 py-2 bg-card/50 border border-border rounded-lg text-sm focus:outline-hidden focus:ring-2 focus:ring-primary/50"
           />
         </div>
 
@@ -557,7 +557,7 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
           <select
             value={statusFilter}
             onChange={e => setStatusFilter(e.target.value)}
-            className="bg-card/50 border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+            className="bg-card/50 border border-border rounded-lg px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-primary/50"
           >
             {uniqueStatuses.map(status => (
               <option key={status} value={status}>
@@ -574,7 +574,7 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
             <select
               value={clusterFilter}
               onChange={e => setClusterFilter(e.target.value)}
-              className="bg-card/50 border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="bg-card/50 border border-border rounded-lg px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-primary/50"
             >
               {uniqueClusters.map(cluster => (
                 <option key={cluster} value={cluster}>

@@ -443,7 +443,7 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
               value={searchFilter}
               onChange={(e) => setSearchFilter(e.target.value)}
               placeholder={t('common:common.searchClusters')}
-              className="flex-1 px-2 py-1 text-xs bg-secondary rounded border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+              className="flex-1 px-2 py-1 text-xs bg-secondary rounded border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500/50"
             />
             {searchFilter && (
               <button onClick={() => setSearchFilter('')} aria-label={t('common:common.clearSearch', 'Clear search')} className="text-muted-foreground hover:text-foreground">
@@ -493,7 +493,7 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
       {/* World Map */}
       <div
         ref={mapRef}
-        className="flex-1 relative min-h-[180px] bg-gradient-to-b from-gray-900/50 to-gray-800/30 rounded-lg overflow-hidden cursor-grab active:cursor-grabbing"
+        className="flex-1 relative min-h-[180px] bg-linear-to-b from-gray-900/50 to-gray-800/30 rounded-lg overflow-hidden cursor-grab active:cursor-grabbing"
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}

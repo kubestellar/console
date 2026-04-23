@@ -61,7 +61,7 @@ describe('tailwindToCSS', () => {
 
   it('handles glass effect', () => {
     const result = tailwindToCSS('glass')
-    expect(result.backdropFilter).toContain('blur')
+    expect(result.backdropFilter).toContain('blur-sm')
   })
 
   it('converts hidden', () => {

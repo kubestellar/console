@@ -450,7 +450,7 @@ export function HardwareHealthCard() {
       {/* Clear alert error feedback */}
       {clearAlertError && (
         <div className="mb-2 p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center gap-2">
-          <XCircle className="w-4 h-4 flex-shrink-0" />
+          <XCircle className="w-4 h-4 shrink-0" />
           <span>{clearAlertError}</span>
         </div>
       )}
@@ -497,7 +497,7 @@ export function HardwareHealthCard() {
             className={cn(
               'flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors',
               viewMode === 'inventory'
-                ? 'bg-background text-foreground shadow-sm'
+                ? 'bg-background text-foreground shadow-xs'
                 : 'text-muted-foreground hover:text-foreground'
             )}
           >
@@ -514,7 +514,7 @@ export function HardwareHealthCard() {
             className={cn(
               'flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors',
               viewMode === 'alerts'
-                ? 'bg-background text-foreground shadow-sm'
+                ? 'bg-background text-foreground shadow-xs'
                 : 'text-muted-foreground hover:text-foreground'
             )}
           >
@@ -644,7 +644,7 @@ export function HardwareHealthCard() {
         <div className="mb-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs">
           <div className="flex flex-wrap items-center justify-between gap-y-2 gap-2">
             <div className="flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+              <AlertTriangle className="w-4 h-4 shrink-0" />
               <span>{fetchError}</span>
             </div>
             <button
@@ -675,7 +675,7 @@ export function HardwareHealthCard() {
               >
                 <div className="flex items-start justify-between gap-1">
                   <div
-                    className="min-w-0 flex items-start gap-2 flex-1 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 rounded"
+                    className="min-w-0 flex items-start gap-2 flex-1 cursor-pointer focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400 rounded"
                     role="button"
                     tabIndex={0}
                     onClick={() => drillToNode(alert.cluster, alert.nodeName, {
@@ -694,7 +694,7 @@ export function HardwareHealthCard() {
                     <DeviceIcon
                       deviceType={alert.deviceType}
                       className={cn(
-                        'w-4 h-4 flex-shrink-0 mt-0.5',
+                        'w-4 h-4 shrink-0 mt-0.5',
                         alert.severity === 'critical' ? 'text-red-400' : 'text-yellow-400'
                       )}
                     />
@@ -702,7 +702,7 @@ export function HardwareHealthCard() {
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="font-medium text-foreground break-all">{extractHostname(alert.nodeName)}</span>
                         <span className={cn(
-                          'flex-shrink-0 px-1 py-0.5 text-[9px] font-medium rounded',
+                          'shrink-0 px-1 py-0.5 text-[9px] font-medium rounded',
                           alert.severity === 'critical'
                             ? 'bg-red-500/20 text-red-400'
                             : 'bg-yellow-500/20 text-yellow-400'
@@ -721,7 +721,7 @@ export function HardwareHealthCard() {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                  <div className="flex items-center gap-1 shrink-0 ml-2">
                     <CardAIActions
                       resource={{ kind: 'HardwareDevice', name: alert.nodeName, cluster: alert.cluster, status: alert.severity }}
                       issues={[{ name: `${getDeviceLabel(alert.deviceType)} disappeared`, message: `${alert.previousCount} → ${alert.currentCount} (${alert.droppedCount} disappeared)` }]}
@@ -806,7 +806,7 @@ export function HardwareHealthCard() {
             {paginatedInventory.map((node) => (
               <div
                 key={`${node.cluster}/${node.nodeName}`}
-                className="p-2 rounded text-xs transition-colors group bg-muted/20 hover:bg-muted/40 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+                className="p-2 rounded text-xs transition-colors group bg-muted/20 hover:bg-muted/40 cursor-pointer focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400"
                 role="button"
                 tabIndex={0}
                 onClick={() => drillToNode(node.cluster, node.nodeName)}
@@ -820,7 +820,7 @@ export function HardwareHealthCard() {
               >
                 <div className="flex items-start justify-between gap-1">
                   <div className="min-w-0 flex items-start gap-2 flex-1">
-                    <Server className="w-4 h-4 flex-shrink-0 text-blue-400 mt-0.5" />
+                    <Server className="w-4 h-4 shrink-0 text-blue-400 mt-0.5" />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="font-medium text-foreground break-all">{extractHostname(node.nodeName)}</span>
@@ -874,7 +874,7 @@ export function HardwareHealthCard() {
                       </div>
                     </div>
                   </div>
-                  <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 flex-shrink-0" />
+                  <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 shrink-0" />
                 </div>
               </div>
             ))}
