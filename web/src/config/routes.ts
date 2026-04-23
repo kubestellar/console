@@ -51,6 +51,7 @@ export const ROUTES = {
   SEGREGATION_OF_DUTIES: '/segregation-of-duties',
   COMPLIANCE_REPORTS: '/compliance-reports',
   DATA_RESIDENCY: '/data-residency',
+  BAA: '/baa',
   DATA_COMPLIANCE: '/data-compliance',
   
   // Advanced Features

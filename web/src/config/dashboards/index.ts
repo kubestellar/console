@@ -27,6 +27,7 @@ import { changeControlDashboardConfig } from './change-control'
 import { sodDashboardConfig } from './segregation-of-duties'
 import { complianceReportsDashboardConfig } from './compliance-reports'
 import { dataResidencyDashboardConfig } from './data-residency'
+import { baaDashboardConfig } from './baa'
 import { costDashboardConfig } from './cost'
 import { gpuDashboardConfig } from './gpu'
 import { nodesDashboardConfig } from './nodes'
@@ -70,6 +71,7 @@ export const DASHBOARD_CONFIGS: DashboardConfigRegistry = {
   'segregation-of-duties': sodDashboardConfig,
   'compliance-reports': complianceReportsDashboardConfig,
   'data-residency': dataResidencyDashboardConfig,
+  baa: baaDashboardConfig,
   cost: costDashboardConfig,
   gpu: gpuDashboardConfig,
   nodes: nodesDashboardConfig,
@@ -183,6 +185,7 @@ export {
   sodDashboardConfig,
   complianceReportsDashboardConfig,
   dataResidencyDashboardConfig,
+  baaDashboardConfig,
   costDashboardConfig,
   gpuDashboardConfig,
   nodesDashboardConfig,

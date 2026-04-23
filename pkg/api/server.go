@@ -829,6 +829,10 @@ func (s *Server) setupRoutes() {
 	sodHandler := handlers.NewSoDHandler()
 	sodHandler.RegisterPublicRoutes(s.app.Group("/api", publicLimiter))
 
+	// BAA tracker public read endpoints (demo mode).
+	baaHandler := handlers.NewBAAHandler()
+	baaHandler.RegisterPublicRoutes(s.app.Group("/api", publicLimiter))
+
 	// API routes (protected) — with rate limiting
 	//
 	// NOTE (#7033): Both authLimiter and apiLimiter use Fiber's default in-process
