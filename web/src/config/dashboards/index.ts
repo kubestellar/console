@@ -29,6 +29,7 @@ import { complianceReportsDashboardConfig } from './compliance-reports'
 import { dataResidencyDashboardConfig } from './data-residency'
 import { baaDashboardConfig } from './baa'
 import { hipaaDashboardConfig } from './hipaa'
+import { gxpDashboardConfig } from './gxp'
 import { costDashboardConfig } from './cost'
 import { gpuDashboardConfig } from './gpu'
 import { nodesDashboardConfig } from './nodes'
@@ -74,6 +75,7 @@ export const DASHBOARD_CONFIGS: DashboardConfigRegistry = {
   'data-residency': dataResidencyDashboardConfig,
   baa: baaDashboardConfig,
   hipaa: hipaaDashboardConfig,
+  gxp: gxpDashboardConfig,
   cost: costDashboardConfig,
   gpu: gpuDashboardConfig,
   nodes: nodesDashboardConfig,
@@ -189,6 +191,7 @@ export {
   dataResidencyDashboardConfig,
   baaDashboardConfig,
   hipaaDashboardConfig,
+  gxpDashboardConfig,
   costDashboardConfig,
   gpuDashboardConfig,
   nodesDashboardConfig,

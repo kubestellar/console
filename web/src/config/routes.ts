@@ -53,6 +53,7 @@ export const ROUTES = {
   DATA_RESIDENCY: '/data-residency',
   BAA: '/baa',
   HIPAA: '/hipaa',
+  GXP: '/gxp',
   DATA_COMPLIANCE: '/data-compliance',
   
   // Advanced Features
