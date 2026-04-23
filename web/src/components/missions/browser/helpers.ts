@@ -4,10 +4,13 @@ import type { TreeNode } from './types'
 
 /**
  * Generate a stable, URL-safe slug for any mission.
- * - Installers with cncfProject: `install-<cncfProject>` (e.g. `install-prometheus`)
- * - All others: slugified title (lowercase, non-alphanum → hyphens, dedupe, trim)
+ * Priority order:
+ *   1. `name` field from console-kb (unique per mission, e.g. "install-argo-workflows")
+ *   2. Installers with cncfProject: `install-<cncfProject>` (legacy fallback)
+ *   3. Slugified title (lowercase, non-alphanum → hyphens, dedupe, trim)
  */
 export function getMissionSlug(mission: MissionExport): string {
+  if (mission.name) return mission.name
   if (mission.missionClass === 'install' && mission.cncfProject) {
     return `install-${mission.cncfProject.toLowerCase()}`
   }
@@ -92,6 +95,7 @@ export function normalizeMission(raw: Record<string, unknown>): MissionExport | 
 
   return {
     version: (raw.version as string) ?? (raw.format as string) ?? 'kc-mission-v1',
+    name: (raw.name as string) ?? undefined,
     title: (m.title as string) ?? '',
     description: (m.description as string) ?? '',
     type: (m.type as string) ?? 'troubleshoot',

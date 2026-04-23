@@ -113,8 +113,13 @@ const MISSION_FILE_FORMAT_VERSION = 'kc-mission-v1'
 
 /** Convert an index entry to a MissionExport (browsing metadata only — steps loaded on demand) */
 function indexEntryToMission(entry: IndexEntry): MissionExport {
+  // Derive stable name from path: "fixes/cncf-install/install-opa.json" → "install-opa"
+  const name = entry.path
+    ? entry.path.replace(/^.*\//, '').replace(/\.json$/, '')
+    : undefined
   return {
     version: MISSION_FILE_FORMAT_VERSION,
+    name,
     title: entry.title || '',
     description: entry.description || '',
     type: (entry.type as MissionExport['type']) || 'custom',
