@@ -99,6 +99,7 @@ const UnifiedStatsTest = safeLazy(() => import('./pages/UnifiedStatsTest'), 'Uni
 const UnifiedDashboardTest = safeLazy(() => import('./pages/UnifiedDashboardTest'), 'UnifiedDashboardTest')
 const AllCardsPerfTest = safeLazy(() => import('./pages/AllCardsPerfTest'), 'AllCardsPerfTest')
 const CompliancePerfTest = safeLazy(() => import('./pages/CompliancePerfTest'), 'CompliancePerfTest')
+const NotFound = safeLazy(() => import('./components/NotFound'), 'default')
 
 // Dashboard ID → chunk import map (shared with hover prefetch in Sidebar)
 import { DASHBOARD_CHUNKS } from './lib/dashboardChunks'
@@ -646,7 +647,7 @@ function FullDashboardApp({ liveLocation }: { liveLocation: Location }) {
           <Route path={ROUTES.FEATURES} element={<FeatureRedirect />} />
         </Route>
 
-        <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
+        <Route path="*" element={<SuspenseRoute><NotFound /></SuspenseRoute>} />
       </Routes>
       </ChunkErrorBoundary>
       </AppErrorBoundary>
