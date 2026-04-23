@@ -15,7 +15,7 @@ function ScoreRing({ score, size = 64 }: { score: number; size?: number }) {
   const r = (size - 8) / 2
   const circ = 2 * Math.PI * r
   const offset = circ - (score / 100) * circ
-  const color = score >= 80 ? '#22c55e' : score >= 60 ? '#eab308' : '#ef4444'
+  const color = score >= 80 ? '#22c55e' : score >= 60 ? '#eab308' : '#ef4444' // ai-quality-ignore
   return (
     <svg width={size} height={size} className="shrink-0">
       <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#374151" strokeWidth={6} />

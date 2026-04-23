@@ -90,10 +90,10 @@ func TestDataResidencyHandler_ListViolations(t *testing.T) {
 		t.Fatalf("failed to decode violations: %v", err)
 	}
 	if len(violations) == 0 {
-		t.Error("expected at least one demo violation")
+		t.Fatal("expected at least one demo violation")
 	}
 	// Verify violation structure
-	v := violations[0]
+	v := violations[0] //nolint:nilaway // guarded by len check above
 	if v.ID == "" || v.ClusterName == "" || v.Message == "" {
 		t.Error("violation missing required fields")
 	}
