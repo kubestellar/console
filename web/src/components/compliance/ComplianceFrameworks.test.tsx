@@ -30,18 +30,15 @@ vi.mock('../../hooks/useComplianceFrameworks', () => ({
   useFrameworkEvaluation: () => mockEvalReturn,
 }))
 
-vi.mock('../../hooks/useMCP', () => ({
-  useClusters: () => ({
+// Mock the shared cluster cache used by the lightweight useClusterNames hook (#9769)
+vi.mock('../../hooks/mcp/shared', () => ({
+  clusterCache: {
     clusters: [
       { name: 'prod-east', reachable: true },
       { name: 'prod-west', reachable: true },
     ],
-    isLoading: false,
-    refetch: vi.fn(),
-    lastUpdated: null,
-    isRefreshing: false,
-    error: null,
-  }),
+  },
+  subscribeClusterData: () => () => {},
 }))
 
 import { ComplianceFrameworksContent as ComplianceFrameworks } from './ComplianceFrameworks'

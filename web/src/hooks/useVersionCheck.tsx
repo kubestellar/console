@@ -944,10 +944,55 @@ const VersionCheckContext = createContext<VersionCheckValue | null>(null)
 /**
  * Provider that creates a single version-check instance shared by all consumers.
  * Mount once near the app root (e.g. in Layout).
+ *
+ * IMPORTANT (#9769): The context value is memoized against every state/action
+ * field returned by useVersionCheckCore(). Without memoization, every internal
+ * state change (e.g. isChecking toggle, auto-update poll result) creates a new
+ * object reference, forcing ALL consumers (Navbar, Sidebar, UpdateIndicator,
+ * every card in the enterprise portal) to re-render. The cascade amplifies
+ * through hooks like useClusters() / useDashboardHealth() and can trip React
+ * error #185 on pages with many hook subscribers (e.g. /enterprise/frameworks).
  */
 export function VersionCheckProvider({ children }: { children: ReactNode }) {
   const value = useVersionCheckCore()
-  return <VersionCheckContext.Provider value={value}>{children}</VersionCheckContext.Provider>
+
+  // Memoize against individual fields so consumers only re-render when a
+  // value they might read actually changes. Actions (useCallback) are stable
+  // across renders, so they don't contribute to unnecessary invalidations.
+  const memoized = useMemo(() => value, [
+    value.currentVersion,
+    value.commitHash,
+    value.channel,
+    value.latestRelease,
+    value.hasUpdate,
+    value.isChecking,
+    value.error,
+    value.lastChecked,
+    value.skippedVersions,
+    value.releases,
+    value.lastCheckResult,
+    value.autoUpdateEnabled,
+    value.installMethod,
+    value.autoUpdateStatus,
+    value.updateProgress,
+    value.agentConnected,
+    value.hasCodingAgent,
+    value.latestMainSHA,
+    value.recentCommits,
+    // Actions — stable useCallback references, included for completeness
+    value.setChannel,
+    value.checkForUpdates,
+    value.forceCheck,
+    value.skipVersion,
+    value.clearSkippedVersions,
+    value.setAutoUpdateEnabled,
+    value.triggerUpdate,
+    value.cancelUpdate,
+    value.setUpdateProgress,
+    value.clearLastCheckResult,
+  ])
+
+  return <VersionCheckContext.Provider value={memoized}>{children}</VersionCheckContext.Provider>
 }
 
 /**

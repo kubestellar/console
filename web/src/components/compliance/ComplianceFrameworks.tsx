@@ -3,13 +3,23 @@
  *
  * Shows PCI-DSS 4.0, SOC 2 Type II, and other frameworks with per-control
  * pass/fail results and an overall compliance score.
+ *
+ * NOTE (#9769): This component previously called `useClusters()` directly
+ * just to populate the cluster dropdown. That heavyweight hook subscribes
+ * to the shared cluster cache and triggers re-renders on every cache update
+ * (health checks, WS pings, etc.). Combined with VersionCheckProvider
+ * cascading re-renders through EnterpriseLayout, this produced React error
+ * #185 ("Cannot update a component while rendering a different component").
+ * Fix: replaced useClusters() with a lightweight `useClusterNames()` hook
+ * that subscribes via useSyncExternalStore and only re-renders when the
+ * actual list of cluster names changes.
  */
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useMemo, useEffect, useCallback, useSyncExternalStore, memo } from 'react'
 import { Shield, ChevronDown, ChevronRight, CheckCircle2, XCircle, AlertTriangle, MinusCircle, Loader2, RefreshCw } from 'lucide-react'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { complianceFrameworksDashboardConfig } from '../../config/dashboards/compliance-frameworks'
 import { useComplianceFrameworks, useFrameworkEvaluation, type Framework, type ControlResult, type ComplianceCheck } from '../../hooks/useComplianceFrameworks'
-import { useClusters } from '../../hooks/useMCP'
+import { clusterCache, subscribeClusterData } from '../../hooks/mcp/shared'
 
 /* ────────── status badge helpers ────────── */
 
@@ -149,11 +159,45 @@ function FrameworkCard({ fw, selected, onSelect }: { fw: Framework; selected: bo
   )
 }
 
+/* ────────── lightweight cluster names hook (#9769) ────────── */
+
+/**
+ * Subscribe callback adapter for useSyncExternalStore.
+ * Wraps the data-subscriber API so we can pass it to useSyncExternalStore.
+ */
+function subscribeClusterNames(onStoreChange: () => void): () => void {
+  return subscribeClusterData(() => onStoreChange())
+}
+
+/**
+ * Snapshot function for useSyncExternalStore.
+ * Returns a *stable* comma-joined string of cluster names so React can
+ * cheaply compare snapshots with Object.is. The component splits this
+ * back into an array via useMemo.
+ */
+function getClusterNamesSnapshot(): string {
+  return clusterCache.clusters.map(c => c.name).join('\0')
+}
+
+/**
+ * Lightweight hook that returns only cluster names.
+ * Unlike useClusters(), this does NOT subscribe to UI-indicator updates
+ * (isLoading, isRefreshing, error) or heavy data slices, so it only
+ * triggers a re-render when the set of cluster names actually changes.
+ */
+function useClusterNames(): string[] {
+  const snapshot = useSyncExternalStore(subscribeClusterNames, getClusterNamesSnapshot)
+  return useMemo(
+    () => (snapshot ? snapshot.split('\0') : []),
+    [snapshot],
+  )
+}
+
 /* ────────── main page ────────── */
 
-export function ComplianceFrameworksContent() {
+export const ComplianceFrameworksContent = memo(function ComplianceFrameworksContent() {
   const { frameworks, isLoading: fwLoading, error: fwError, refetch } = useComplianceFrameworks()
-  const { clusters } = useClusters()
+  const clusterNames = useClusterNames()
   const { result, isEvaluating, error: evalError, evaluate } = useFrameworkEvaluation()
 
   const [selectedFwId, setSelectedFwId] = useState<string | null>(null)
@@ -170,9 +214,6 @@ export function ComplianceFrameworksContent() {
     }
   }, [firstFwId, selectedFwId])
 
-  // Stable list of cluster names — avoids creating a new array reference
-  // on every render when useClusters() returns a fresh clusters object.
-  const clusterNames = useMemo(() => clusters.map(c => c.name), [clusters])
   const firstClusterName = clusterNames.length > 0 ? clusterNames[0] : null
 
   // Auto-select first cluster
@@ -330,7 +371,7 @@ export function ComplianceFrameworksContent() {
       )}
     </div>
   )
-}
+})
 
 export default function ComplianceFrameworks() {
   return (<>
