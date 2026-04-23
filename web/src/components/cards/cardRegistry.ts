@@ -276,6 +276,8 @@ const KeycloakStatus = safeLazy(() => import('./keycloak_status'), 'KeycloakStat
 const OpenYurtStatus = safeLazy(() => import('./openyurt_status'), 'OpenYurtStatus')
 // Knative serverless monitoring card
 const KnativeStatus = safeLazy(() => import('./knative_status'), 'KnativeStatus')
+// KServe model serving monitoring card
+const KServeStatus = safeLazy(() => import('./kserve_status'), 'KServeStatus')
 // Fluid dataset caching card
 const FluidStatus = safeLazy(() => import('./fluid_status'), 'FluidStatus')
 // Inspektor Gadget cards
@@ -602,6 +604,8 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   openyurt_status: OpenYurtStatus,
   // Knative serverless
   knative_status: KnativeStatus,
+  // KServe model serving
+  kserve_status: KServeStatus,
   // Fluid dataset caching
   fluid_status: FluidStatus,
   // KubeRay fleet monitoring
@@ -811,6 +815,8 @@ export const DEMO_DATA_CARDS = new Set([
   'vcluster_status',
   // Knative serverless - demo until Knative is installed
   'knative_status',
+  // KServe model serving - demo until KServe is installed
+  'kserve_status',
   // Fluid dataset caching - demo until Fluid is installed
   'fluid_status',
 ])
@@ -1033,6 +1039,8 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   openyurt_status: () => import('./openyurt_status'),
   // Knative serverless
   knative_status: () => import('./knative_status'),
+  // KServe model serving
+  kserve_status: () => import('./kserve_status'),
   // Fluid dataset caching
   fluid_status: () => import('./fluid_status'),
   kuberay_fleet: () => import('./kuberay_fleet'),
@@ -1229,6 +1237,7 @@ export const LIVE_DATA_CARDS = new Set([
   'keycloak_status',
   'kubevela_status',
   'openyurt_status',
+  'kserve_status',
   // KubeRay, SLO, Failover, Trino - demo until detected
   'kuberay_fleet',
   'slo_compliance',
@@ -1379,6 +1388,8 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   kubevela_status: 6,
   // OpenYurt edge computing
   openyurt_status: 6,
+  // KServe model serving
+  kserve_status: 6,
   // Flatcar Container Linux
   flatcar_status: 6,
   // Fluentd log collector

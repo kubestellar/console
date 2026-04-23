@@ -328,6 +328,7 @@ export const CARD_CATALOG = {
   'Orchestration': [
     { type: 'keda_status', title: 'KEDA', description: 'KEDA autoscaler status, scaled object metrics, and trigger queue depths', visualization: 'status' },
     { type: 'openyurt_status', title: 'OpenYurt', description: 'OpenYurt edge node pools, autonomy status, and edge-cloud connectivity', visualization: 'status' },
+    { type: 'kserve_status', title: 'KServe', description: 'KServe inference service readiness, model serving throughput, and latency health', visualization: 'status' },
     { type: 'kubevela_status', title: 'KubeVela', description: 'KubeVela application delivery, component status, and workflow progress', visualization: 'status' },
     { type: 'karmada_status', title: 'Karmada', description: 'Karmada multi-cluster resource propagation status, member clusters, and policy health', visualization: 'status' },
     { type: 'openkruise_status', title: 'OpenKruise', description: 'OpenKruise advanced workload status (CloneSet, Advanced StatefulSet/DaemonSet) and SidecarSet injection across clusters', visualization: 'status' },
@@ -546,6 +547,13 @@ export function generateCardSuggestions(query: string): CardSuggestion[] {
     return [
       { type: 'knative_status', title: 'Knative', description: 'Knative serving revisions, traffic routing, and eventing broker status', visualization: 'status', config: {} },
       { type: 'cloudevents_status', title: 'CloudEvents', description: 'CloudEvents message flow and delivery status', visualization: 'status', config: {} },
+    ]
+  }
+
+  if (lowerQuery.includes('kserve') || lowerQuery.includes('inference') || lowerQuery.includes('model serving') || lowerQuery.includes('inferenceservice')) {
+    return [
+      { type: 'kserve_status', title: 'KServe', description: 'KServe inference service readiness, model serving throughput, and latency health', visualization: 'status', config: {} },
+      { type: 'knative_status', title: 'Knative', description: 'Knative serving revisions, traffic routing, and eventing broker status', visualization: 'status', config: {} },
     ]
   }
 
