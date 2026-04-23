@@ -22,6 +22,19 @@ import (
 // to prevent resource exhaustion from bursty or malicious traffic (#7277).
 const maxWSGoroutines = 20
 
+// activeChatEntry pairs an in-progress session's context cancel function with
+// the WebSocket connection that started it. Storing the conn reference allows
+// handleCancelChat to verify the cancelling client owns the session, preventing
+// cross-session cancellation (CSRF/bypass — #9712).
+type activeChatEntry struct {
+	cancel context.CancelFunc
+	// conn is the WebSocket connection that registered this session.
+	// It is used as an ownership key: only the originating connection may
+	// cancel the session via the WebSocket cancel path. The HTTP cancel path
+	// (handleCancelChatHTTP) is separately guarded by validateToken.
+	conn *websocket.Conn
+}
+
 // cmdPrefixRe matches lines like "CMD: ...", "CMD:...", "Command: ...", or "command: ..."
 // used by extractCommandsFromResponse to parse mixed-mode thinking output (#9440).
 var cmdPrefixRe = regexp.MustCompile(`(?i)^(?:cmd|command)\s*:\s*(.+)`)
@@ -210,24 +223,35 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				conn.SetWriteDeadline(time.Time{})
 			}(msg)
 		} else {
-			// Wrap synchronous handleMessage with recover() so a panic
-			// doesn't kill the entire WebSocket read loop (#7267).
-			func() {
+			// Dispatch all remaining message types to a goroutine so the
+			// WebSocket read loop stays non-blocking (#9713). Previously this
+			// branch ran synchronously; a provider that takes time to respond
+			// blocked the read loop, preventing pings and cancel messages from
+			// being processed until the call returned.
+			// Goroutine count is bounded by the same semaphore as chat/kubectl.
+			sem <- struct{}{} // acquire slot
+			go func(m protocol.Message) {
+				defer func() { <-sem }() // release slot
 				defer func() {
 					if r := recover(); r != nil {
-						slog.Error("[WS] recovered from panic in synchronous handler", "panic", r, "msgType", msg.Type)
-						writeMu.Lock()
-						conn.SetWriteDeadline(time.Now().Add(wsWriteTimeout))
-						_ = conn.WriteJSON(protocol.Message{
-							ID:   msg.ID,
-							Type: protocol.TypeError,
-							Payload: protocol.ErrorPayload{Code: "panic", Message: "Internal server error"},
-						})
-						conn.SetWriteDeadline(time.Time{})
-						writeMu.Unlock()
+						slog.Error("[WS] recovered from panic in async handler", "panic", r, "msgType", m.Type)
+						if !closed.Load() {
+							writeMu.Lock()
+							conn.SetWriteDeadline(time.Now().Add(wsWriteTimeout))
+							_ = conn.WriteJSON(protocol.Message{
+								ID:   m.ID,
+								Type: protocol.TypeError,
+								Payload: protocol.ErrorPayload{Code: "panic", Message: "Internal server error"},
+							})
+							conn.SetWriteDeadline(time.Time{})
+							writeMu.Unlock()
+						}
 					}
 				}()
-				response := s.handleMessage(msg)
+				response := s.handleMessage(m)
+				if closed.Load() {
+					return
+				}
 				writeMu.Lock()
 				conn.SetWriteDeadline(time.Now().Add(wsWriteTimeout))
 				err := conn.WriteJSON(response)
@@ -236,7 +260,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				if err != nil {
 					slog.Error("write error", "error", err)
 				}
-			}()
+			}(msg)
 		}
 	}
 	closed.Store(true)
@@ -490,11 +514,13 @@ func (s *Server) handleChatMessageStreaming(connCtx context.Context, conn *webso
 	// Register cancel function so handleCancelChat can stop this session.
 	// If a previous request is still running for this SessionID, cancel it
 	// first to prevent orphaned goroutines (#9619).
+	// The conn reference is stored alongside the cancel function so that
+	// handleCancelChat can verify the requester owns the session (#9712).
 	s.activeChatCtxsMu.Lock()
-	if prevCancel, exists := s.activeChatCtxs[req.SessionID]; exists {
-		prevCancel()
+	if prev, exists := s.activeChatCtxs[req.SessionID]; exists {
+		prev.cancel()
 	}
-	s.activeChatCtxs[req.SessionID] = cancel
+	s.activeChatCtxs[req.SessionID] = activeChatEntry{cancel: cancel, conn: conn}
 	s.activeChatCtxsMu.Unlock()
 	defer func() {
 		s.activeChatCtxsMu.Lock()
@@ -812,15 +838,39 @@ func (s *Server) handleCancelChat(conn *websocket.Conn, msg protocol.Message, wr
 	// propagate across goroutine boundaries; if the provider's cleanup
 	// path attempts to re-lock activeChatCtxsMu, calling cancelFn inside
 	// the lock causes a deadlock.
+	//
+	// SECURITY (#9712): Only allow cancellation when the requesting connection
+	// (conn) matches the connection that originally registered the session.
+	// This prevents cross-session CSRF/bypass where User B cancels User A's
+	// mission by sending a cancel_chat message with a known sessionId.
 	s.activeChatCtxsMu.Lock()
-	cancelFn, ok := s.activeChatCtxs[req.SessionID]
+	entry, ok := s.activeChatCtxs[req.SessionID]
 	if ok {
+		if entry.conn != conn {
+			// Session exists but belongs to a different connection — reject.
+			s.activeChatCtxsMu.Unlock()
+			slog.Warn("[Chat] SECURITY: rejected cancel from non-owning connection",
+				"sessionID", req.SessionID, "requester", conn.RemoteAddr())
+			writeMu.Lock()
+			conn.SetWriteDeadline(time.Now().Add(wsWriteTimeout))
+			_ = conn.WriteJSON(protocol.Message{
+				ID:   msg.ID,
+				Type: protocol.TypeError,
+				Payload: protocol.ErrorPayload{
+					Code:    "unauthorized_cancel",
+					Message: "You do not own this session",
+				},
+			})
+			conn.SetWriteDeadline(time.Time{})
+			writeMu.Unlock()
+			return
+		}
 		delete(s.activeChatCtxs, req.SessionID)
 	}
 	s.activeChatCtxsMu.Unlock()
 
 	if ok {
-		cancelFn()
+		entry.cancel()
 		slog.Info("[Chat] cancelled chat", "sessionID", req.SessionID)
 	} else {
 		slog.Info("[Chat] no active chat to cancel", "sessionID", req.SessionID)
@@ -884,15 +934,17 @@ func (s *Server) handleCancelChatHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// #7432 — Same deadlock fix as handleCancelChat: extract cancelFn under
 	// the lock but invoke it after releasing the mutex.
+	// The HTTP path is already guarded by validateToken, so no additional
+	// ownership check is needed here (#9712).
 	s.activeChatCtxsMu.Lock()
-	cancelFn, ok := s.activeChatCtxs[req.SessionID]
+	entry, ok := s.activeChatCtxs[req.SessionID]
 	if ok {
 		delete(s.activeChatCtxs, req.SessionID)
 	}
 	s.activeChatCtxsMu.Unlock()
 
 	if ok {
-		cancelFn()
+		entry.cancel()
 		slog.Info("[Chat] cancelled chat via HTTP", "sessionID", req.SessionID)
 	} else {
 		slog.Info("[Chat] no active chat to cancel via HTTP", "sessionID", req.SessionID)
