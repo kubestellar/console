@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"log/slog"
+	"net"
 	"os"
 	"strconv"
 	"sync"
@@ -58,6 +59,7 @@ type Message struct {
 // Client represents a WebSocket client
 type Client struct {
 	conn      *websocket.Conn
+	netConn   net.Conn      // #9736 — captured at creation to avoid racing with releaseConn
 	userID    uuid.UUID
 	send      chan []byte
 	closeOnce sync.Once // #6584 — guard against double Close on the underlying conn
@@ -68,13 +70,27 @@ type Client struct {
 	writeMu sync.Mutex
 }
 
-// closeConn closes the underlying WebSocket connection exactly once (#6584).
+// closeConn closes the underlying network connection exactly once (#6584).
 // Safe to call from any goroutine (DisconnectUser, writer, reader defer).
+//
+// #9736 — Close the captured net.Conn instead of the websocket.Conn wrapper.
+// The gofiber/contrib/websocket middleware's deferred releaseConn() nils the
+// embedded *websocket.Conn field after the handler returns. If closeConn
+// races with releaseConn (e.g. hub evicts a slow client while the handler is
+// exiting), the race detector flags the concurrent read (Close) and write
+// (nil assignment) on the same pointer. Closing the raw TCP socket avoids
+// touching the wrapper entirely and still triggers ReadMessage errors in the
+// handler's read loop, causing a clean exit.
+//
 // #7306 — Acquires writeMu to prevent racing with a concurrent WriteMessage.
 func (cl *Client) closeConn() {
 	cl.closeOnce.Do(func() {
 		cl.writeMu.Lock()
-		_ = cl.conn.Close()
+		if cl.netConn != nil {
+			_ = cl.netConn.Close()
+		} else {
+			_ = cl.conn.Close()
+		}
 		cl.writeMu.Unlock()
 	})
 }
@@ -531,9 +547,10 @@ func (h *Hub) HandleConnection(conn *websocket.Conn) {
 	})
 
 	client := &Client{
-		conn:   conn,
-		userID: userID,
-		send:   make(chan []byte, 256),
+		conn:    conn,
+		netConn: conn.NetConn(), // #9736 — capture before releaseConn can nil the wrapper
+		userID:  userID,
+		send:    make(chan []byte, 256),
 	}
 
 	// Register with the hub, but abort if the hub has already been shut down

@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+
 	fasthttpws "github.com/fasthttp/websocket"
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
@@ -107,11 +108,13 @@ func TestHubNonBlockingBroadcast(t *testing.T) {
 func TestHubSlowClientDisconnect(t *testing.T) {
 	// 2b. Test that a slow client (buffer full) disconnects without blocking the Run loop
 	var serverConn *websocket.Conn
+	var serverNetConn net.Conn // #9736 — capture inside handler to avoid releaseConn race
 	var connReady sync.WaitGroup
 	connReady.Add(1)
 
 	_, wsURL := setupWSServer(t, func(c *websocket.Conn) {
 		serverConn = c
+		serverNetConn = c.NetConn()
 		connReady.Done()
 	})
 
@@ -128,9 +131,10 @@ func TestHubSlowClientDisconnect(t *testing.T) {
 	userID := uuid.New()
 
 	client := &Client{
-		conn:   serverConn,
-		userID: userID,
-		send:   make(chan []byte, 1), // small buffer
+		conn:    serverConn,
+		netConn: serverNetConn,
+		userID:  userID,
+		send:    make(chan []byte, 1), // small buffer
 	}
 
 	h.register <- client
@@ -150,11 +154,13 @@ func TestHubSlowClientDisconnect(t *testing.T) {
 // 3. Thread-Safe Closing: Stress-test client.closeConn() with multiple concurrent calls
 func TestClientThreadSafeClosing(t *testing.T) {
 	var serverConn *websocket.Conn
+	var serverNetConn net.Conn // #9736 — capture inside handler to avoid releaseConn race
 	var connReady sync.WaitGroup
 	connReady.Add(1)
 
 	_, wsURL := setupWSServer(t, func(c *websocket.Conn) {
 		serverConn = c
+		serverNetConn = c.NetConn()
 		connReady.Done()
 	})
 
@@ -165,9 +171,10 @@ func TestClientThreadSafeClosing(t *testing.T) {
 	connReady.Wait()
 
 	client := &Client{
-		conn:   serverConn,
-		userID: uuid.New(),
-		send:   make(chan []byte, 256),
+		conn:    serverConn,
+		netConn: serverNetConn,
+		userID:  uuid.New(),
+		send:    make(chan []byte, 256),
 	}
 
 	var wg sync.WaitGroup
