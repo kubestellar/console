@@ -52,6 +52,7 @@ export const ROUTES = {
   COMPLIANCE_REPORTS: '/compliance-reports',
   DATA_RESIDENCY: '/data-residency',
   BAA: '/baa',
+  HIPAA: '/hipaa',
   DATA_COMPLIANCE: '/data-compliance',
   
   // Advanced Features

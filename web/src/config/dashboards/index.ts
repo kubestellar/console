@@ -28,6 +28,7 @@ import { sodDashboardConfig } from './segregation-of-duties'
 import { complianceReportsDashboardConfig } from './compliance-reports'
 import { dataResidencyDashboardConfig } from './data-residency'
 import { baaDashboardConfig } from './baa'
+import { hipaaDashboardConfig } from './hipaa'
 import { costDashboardConfig } from './cost'
 import { gpuDashboardConfig } from './gpu'
 import { nodesDashboardConfig } from './nodes'
@@ -72,6 +73,7 @@ export const DASHBOARD_CONFIGS: DashboardConfigRegistry = {
   'compliance-reports': complianceReportsDashboardConfig,
   'data-residency': dataResidencyDashboardConfig,
   baa: baaDashboardConfig,
+  hipaa: hipaaDashboardConfig,
   cost: costDashboardConfig,
   gpu: gpuDashboardConfig,
   nodes: nodesDashboardConfig,
@@ -186,6 +188,7 @@ export {
   complianceReportsDashboardConfig,
   dataResidencyDashboardConfig,
   baaDashboardConfig,
+  hipaaDashboardConfig,
   costDashboardConfig,
   gpuDashboardConfig,
   nodesDashboardConfig,

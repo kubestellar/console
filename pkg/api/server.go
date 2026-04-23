@@ -832,6 +832,9 @@ func (s *Server) setupRoutes() {
 	// BAA tracker public read endpoints (demo mode).
 	baaHandler := handlers.NewBAAHandler()
 	baaHandler.RegisterPublicRoutes(s.app.Group("/api", publicLimiter))
+	// HIPAA compliance public read endpoints (demo mode).
+	hipaaHandler := handlers.NewHIPAAHandler()
+	hipaaHandler.RegisterPublicRoutes(s.app.Group("/api", publicLimiter))
 
 	// API routes (protected) — with rate limiting
 	//

@@ -65,6 +65,7 @@ const SegregationOfDuties = safeLazy(() => import('./components/compliance/Segre
 const ComplianceReports = safeLazy(() => import('./components/compliance/ComplianceReports'), 'default')
 const DataResidency = safeLazy(() => import('./components/compliance/DataResidency'), 'default')
 const BAADashboard = safeLazy(() => import('./components/compliance/BAADashboard'), 'default')
+const HIPAADashboard = safeLazy(() => import('./components/compliance/HIPAADashboard'), 'default')
 const DataCompliance = safeLazy(() => import('./components/data-compliance/DataCompliance'), 'DataCompliance')
 const GPUReservations = safeLazy(() => import('./components/gpu/GPUReservations'), 'GPUReservations')
 const KarmadaOps = safeLazy(() => import('./components/karmada-ops/KarmadaOps'), 'KarmadaOps')
@@ -339,6 +340,7 @@ const ROUTE_TITLES: Record<string, string> = {
   '/compliance-reports': 'Compliance Reports',
   '/data-residency': 'Data Residency',
   '/baa': 'BAA Tracker',
+  '/hipaa': 'HIPAA Compliance',
   '/data-compliance': 'Data Compliance',
   '/gitops': 'GitOps',
   '/cost': 'Cost',
@@ -626,6 +628,7 @@ function FullDashboardApp({ liveLocation }: { liveLocation: Location }) {
           <Route path={ROUTES.COMPLIANCE_REPORTS} element={<SuspenseRoute><ComplianceReports /></SuspenseRoute>} />
           <Route path={ROUTES.DATA_RESIDENCY} element={<SuspenseRoute><DataResidency /></SuspenseRoute>} />
           <Route path={ROUTES.BAA} element={<SuspenseRoute><BAADashboard /></SuspenseRoute>} />
+          <Route path={ROUTES.HIPAA} element={<SuspenseRoute><HIPAADashboard /></SuspenseRoute>} />
           <Route path={ROUTES.DATA_COMPLIANCE} element={<SuspenseRoute><DataCompliance /></SuspenseRoute>} />
           <Route path={ROUTES.GPU_RESERVATIONS} element={<SuspenseRoute><GPUReservations /></SuspenseRoute>} />
           <Route path={ROUTES.KARMADA_OPS} element={<SuspenseRoute><KarmadaOps /></SuspenseRoute>} />
