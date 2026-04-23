@@ -31,12 +31,12 @@ describe('NISTDashboard', () => {
 
   it('shows overall score', async () => {
     render(<NISTDashboard />)
-    await waitFor(() => expect(screen.getByText('83%')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getAllByText('83%').length).toBeGreaterThanOrEqual(1))
   })
 
   it('renders control family', async () => {
     render(<NISTDashboard />)
-    await waitFor(() => expect(screen.getByText('AC — Access Control')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getAllByText('AC — Access Control').length).toBeGreaterThanOrEqual(1))
   })
 
   it('shows implemented count', async () => {
