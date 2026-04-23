@@ -279,5 +279,8 @@ export function RBACAuditDashboardContent() {
 }
 
 export default function RBACAuditDashboard() {
-  return <UnifiedDashboard config={rbacAuditDashboardConfig} />
+  return (<>
+    <RBACAuditDashboardContent />
+    <UnifiedDashboard config={rbacAuditDashboardConfig} />
+  </>)
 }

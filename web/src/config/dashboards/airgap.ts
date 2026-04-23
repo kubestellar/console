@@ -7,7 +7,6 @@ export const airgapDashboardConfig: UnifiedDashboardConfig = {
   route: '/air-gap',
   statsType: 'security',
   cards: [
-    { id: 'airgap-main', cardType: 'airgap_dashboard', title: 'Air-Gap Readiness Overview', position: { w: 12, h: 8 } },
     { id: 'airgap-cluster-health', cardType: 'cluster_health', title: 'Cluster Health', position: { w: 4, h: 3 } },
     { id: 'airgap-workloads', cardType: 'workload_status', title: 'Workload Status', position: { w: 4, h: 3 } },
     { id: 'airgap-compliance', cardType: 'air_gap_readiness', title: 'Air-Gap Summary', position: { w: 4, h: 3 } },

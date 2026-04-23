@@ -288,5 +288,8 @@ function SummaryCard({ label, value, icon, accent }: { label: string; value: num
 }
 
 export default function DataResidency() {
-  return <UnifiedDashboard config={dataResidencyDashboardConfig} />
+  return (<>
+    <DataResidencyContent />
+    <UnifiedDashboard config={dataResidencyDashboardConfig} />
+  </>)
 }

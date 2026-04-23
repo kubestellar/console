@@ -245,5 +245,8 @@ export function OIDCDashboardContent() {
 }
 
 export default function OIDCDashboard() {
-  return <UnifiedDashboard config={oidcDashboardConfig} />
+  return (<>
+    <OIDCDashboardContent />
+    <UnifiedDashboard config={oidcDashboardConfig} />
+  </>)
 }

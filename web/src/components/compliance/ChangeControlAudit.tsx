@@ -243,5 +243,8 @@ function SummaryCard({ label, value, icon, accent }: { label: string; value: num
 }
 
 export default function ChangeControlAudit() {
-  return <UnifiedDashboard config={changeControlDashboardConfig} />
+  return (<>
+    <ChangeControlAuditContent />
+    <UnifiedDashboard config={changeControlDashboardConfig} />
+  </>)
 }

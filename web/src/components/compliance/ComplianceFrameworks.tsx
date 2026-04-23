@@ -325,5 +325,8 @@ export function ComplianceFrameworksContent() {
 }
 
 export default function ComplianceFrameworks() {
-  return <UnifiedDashboard config={complianceFrameworksDashboardConfig} />
+  return (<>
+    <ComplianceFrameworksContent />
+    <UnifiedDashboard config={complianceFrameworksDashboardConfig} />
+  </>)
 }

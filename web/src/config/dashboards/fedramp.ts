@@ -7,7 +7,6 @@ export const fedrampDashboardConfig: UnifiedDashboardConfig = {
   route: '/fedramp',
   statsType: 'security',
   cards: [
-    { id: 'fedramp-main', cardType: 'fedramp_dashboard', title: 'FedRAMP Overview', position: { w: 12, h: 8 } },
     { id: 'fedramp-cluster-health', cardType: 'cluster_health', title: 'Cluster Health', position: { w: 4, h: 3 } },
     { id: 'fedramp-workloads', cardType: 'workload_status', title: 'Workload Status', position: { w: 4, h: 3 } },
     { id: 'fedramp-compliance', cardType: 'fedramp_readiness', title: 'FedRAMP Summary', position: { w: 4, h: 3 } },

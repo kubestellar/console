@@ -335,5 +335,8 @@ export function FedRAMPDashboardContent() {
 }
 
 export default function FedRAMPDashboard() {
-  return <UnifiedDashboard config={fedrampDashboardConfig} />
+  return (<>
+    <FedRAMPDashboardContent />
+    <UnifiedDashboard config={fedrampDashboardConfig} />
+  </>)
 }

@@ -10,7 +10,6 @@ export const complianceFrameworksDashboardConfig: UnifiedDashboardConfig = {
   route: '/compliance-frameworks',
   statsType: 'security',
   cards: [
-    { id: 'cf-main', cardType: 'compliance_frameworks_dashboard', title: 'Compliance Frameworks Overview', position: { w: 12, h: 8 } },
     { id: 'cf-cluster-health', cardType: 'cluster_health', title: 'Cluster Health', position: { w: 4, h: 3 } },
     { id: 'cf-workloads', cardType: 'workload_status', title: 'Workload Status', position: { w: 4, h: 3 } },
     { id: 'cf-compliance', cardType: 'compliance_frameworks', title: 'Frameworks Summary', position: { w: 4, h: 3 } },

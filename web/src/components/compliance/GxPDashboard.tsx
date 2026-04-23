@@ -303,5 +303,8 @@ export function GxPDashboardContent() {
 }
 
 export default function GxPDashboard() {
-  return <UnifiedDashboard config={gxpDashboardConfig} />
+  return (<>
+    <GxPDashboardContent />
+    <UnifiedDashboard config={gxpDashboardConfig} />
+  </>)
 }

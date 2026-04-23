@@ -245,5 +245,8 @@ export function SessionDashboardContent() {
 }
 
 export default function SessionDashboard() {
-  return <UnifiedDashboard config={sessionManagementDashboardConfig} />
+  return (<>
+    <SessionDashboardContent />
+    <UnifiedDashboard config={sessionManagementDashboardConfig} />
+  </>)
 }

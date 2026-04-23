@@ -324,5 +324,8 @@ export function NISTDashboardContent() {
 }
 
 export default function NISTDashboard() {
-  return <UnifiedDashboard config={nistDashboardConfig} />
+  return (<>
+    <NISTDashboardContent />
+    <UnifiedDashboard config={nistDashboardConfig} />
+  </>)
 }

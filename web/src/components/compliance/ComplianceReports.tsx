@@ -231,5 +231,8 @@ export function ComplianceReportsContent() {
 }
 
 export default function ComplianceReports() {
-  return <UnifiedDashboard config={complianceReportsDashboardConfig} />
+  return (<>
+    <ComplianceReportsContent />
+    <UnifiedDashboard config={complianceReportsDashboardConfig} />
+  </>)
 }

@@ -222,5 +222,8 @@ function SummaryCard({ label, value, icon, accent }: { label: string; value: num
 }
 
 export default function SegregationOfDuties() {
-  return <UnifiedDashboard config={sodDashboardConfig} />
+  return (<>
+    <SegregationOfDutiesContent />
+    <UnifiedDashboard config={sodDashboardConfig} />
+  </>)
 }

@@ -7,7 +7,6 @@ export const changeControlDashboardConfig: UnifiedDashboardConfig = {
   route: '/change-control',
   statsType: 'security',
   cards: [
-    { id: 'cc-main', cardType: 'change_control_dashboard', title: 'Change Control Overview', position: { w: 12, h: 8 } },
     { id: 'cc-cluster-health', cardType: 'cluster_health', title: 'Cluster Health', position: { w: 4, h: 3 } },
     { id: 'cc-workloads', cardType: 'workload_status', title: 'Workload Status', position: { w: 4, h: 3 } },
     { id: 'cc-compliance', cardType: 'change_control', title: 'Change Control Summary', position: { w: 4, h: 3 } },

@@ -319,5 +319,8 @@ export function STIGDashboardContent() {
 }
 
 export default function STIGDashboard() {
-  return <UnifiedDashboard config={stigDashboardConfig} />
+  return (<>
+    <STIGDashboardContent />
+    <UnifiedDashboard config={stigDashboardConfig} />
+  </>)
 }

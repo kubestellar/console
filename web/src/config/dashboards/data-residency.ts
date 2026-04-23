@@ -10,7 +10,6 @@ export const dataResidencyDashboardConfig: UnifiedDashboardConfig = {
   route: '/data-residency',
   statsType: 'security',
   cards: [
-    { id: 'dr-main', cardType: 'data_residency_dashboard', title: 'Data Residency Overview', position: { w: 12, h: 8 } },
     { id: 'dr-cluster-health', cardType: 'cluster_health', title: 'Cluster Health', position: { w: 4, h: 3 } },
     { id: 'dr-workloads', cardType: 'workload_status', title: 'Workload Status', position: { w: 4, h: 3 } },
     { id: 'dr-compliance', cardType: 'data_residency', title: 'Residency Summary', position: { w: 4, h: 3 } },

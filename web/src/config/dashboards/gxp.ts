@@ -7,7 +7,6 @@ export const gxpDashboardConfig: UnifiedDashboardConfig = {
   route: '/gxp',
   statsType: 'security',
   cards: [
-    { id: 'gxp-main', cardType: 'gxp_dashboard', title: 'GxP Validation Overview', position: { w: 12, h: 8 } },
     { id: 'gxp-cluster-health', cardType: 'cluster_health', title: 'Cluster Health', position: { w: 4, h: 3 } },
     { id: 'gxp-workloads', cardType: 'workload_status', title: 'Workload Status', position: { w: 4, h: 3 } },
     { id: 'gxp-compliance', cardType: 'gxp_validation', title: 'GxP Summary', position: { w: 4, h: 3 } },

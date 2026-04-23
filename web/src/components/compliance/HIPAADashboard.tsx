@@ -321,5 +321,8 @@ export function HIPAADashboardContent() {
 }
 
 export default function HIPAADashboard() {
-  return <UnifiedDashboard config={hipaaDashboardConfig} />
+  return (<>
+    <HIPAADashboardContent />
+    <UnifiedDashboard config={hipaaDashboardConfig} />
+  </>)
 }

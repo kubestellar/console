@@ -305,5 +305,8 @@ export function AirGapDashboardContent() {
 }
 
 export default function AirGapDashboard() {
-  return <UnifiedDashboard config={airgapDashboardConfig} />
+  return (<>
+    <AirGapDashboardContent />
+    <UnifiedDashboard config={airgapDashboardConfig} />
+  </>)
 }

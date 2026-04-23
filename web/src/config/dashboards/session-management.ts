@@ -7,7 +7,6 @@ export const sessionManagementDashboardConfig: UnifiedDashboardConfig = {
   route: '/sessions',
   statsType: 'security',
   cards: [
-    { id: 'session-main', cardType: 'session_dashboard', title: 'Session Management Overview', position: { w: 12, h: 8 } },
     { id: 'session-cluster-health', cardType: 'cluster_health', title: 'Cluster Health', position: { w: 4, h: 3 } },
     { id: 'session-workloads', cardType: 'workload_status', title: 'Workload Status', position: { w: 4, h: 3 } },
     { id: 'session-compliance', cardType: 'session_management', title: 'Session Summary', position: { w: 4, h: 3 } },

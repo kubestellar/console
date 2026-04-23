@@ -283,5 +283,8 @@ export function BAADashboardContent() {
 }
 
 export default function BAADashboard() {
-  return <UnifiedDashboard config={baaDashboardConfig} />
+  return (<>
+    <BAADashboardContent />
+    <UnifiedDashboard config={baaDashboardConfig} />
+  </>)
 }

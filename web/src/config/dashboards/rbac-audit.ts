@@ -7,7 +7,6 @@ export const rbacAuditDashboardConfig: UnifiedDashboardConfig = {
   route: '/rbac-audit',
   statsType: 'security',
   cards: [
-    { id: 'rbac-main', cardType: 'rbac_audit_dashboard', title: 'RBAC Audit Overview', position: { w: 12, h: 8 } },
     { id: 'rbac-cluster-health', cardType: 'cluster_health', title: 'Cluster Health', position: { w: 4, h: 3 } },
     { id: 'rbac-workloads', cardType: 'workload_status', title: 'Workload Status', position: { w: 4, h: 3 } },
     { id: 'rbac-compliance', cardType: 'rbac_audit', title: 'RBAC Summary', position: { w: 4, h: 3 } },
