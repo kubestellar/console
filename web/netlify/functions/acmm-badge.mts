@@ -26,21 +26,21 @@ const LEVEL_COMPLETION_THRESHOLD = 0.7;
 const MAX_LEVEL = 6;
 /**
  * Badge cache window for successful responses. ACMM level changes slowly
- * (file-tree shape, not commit activity), so 5 min is plenty. This is shared
+ * (file-tree shape, not commit activity), so 15 min is plenty. This is shared
  * across three layers:
  *   1. shields.io respects this in its `cacheSeconds` JSON field below
  *   2. our CDN respects this in the `Cache-Control` header below
  *   3. GitHub's camo image proxy fetches the badge SVG and caches it itself
- * Kept at 5 min (was 1 h) so a transient Netlify outage doesn't lock the
- * badge into "inaccessible" for an hour (#4086).
+ * Combined with stale-while-revalidate=86400 to eliminate "inaccessible"
+ * badges during transient outages.
  */
-const BADGE_CACHE_SECONDS = 300;
+const BADGE_CACHE_SECONDS = 900;
 
 /**
- * Short cache for error/unavailable responses so shields.io retries quickly
- * after a transient failure instead of caching "inaccessible" for 5 min.
+ * Error cache window. Set to 5 min so shields.io doesn't retry too
+ * aggressively but also doesn't lock "unavailable" for ages.
  */
-const BADGE_ERROR_CACHE_SECONDS = 60;
+const BADGE_ERROR_CACHE_SECONDS = 300;
 
 /**
  * ACMM_IDS_BY_LEVEL and AGENT_INSTRUCTION_FILE_IDS are now imported from
@@ -74,14 +74,13 @@ const LEVEL_NAMES: Record<number, string> = {
 
 const ALLOWED_ORIGIN_RE = /^https?:\/\/(.*\.kubestellar\.io|localhost(:\d+)?)$/;
 
-function corsHeaders(origin: string | null): Record<string, string> {
+function corsHeaders(origin: string | null, cacheSeconds = BADGE_CACHE_SECONDS): Record<string, string> {
   const headers: Record<string, string> = {
-    "Cache-Control": `public, max-age=${BADGE_CACHE_SECONDS}`,
+    "Cache-Control": `public, max-age=${cacheSeconds}, stale-while-revalidate=86400`,
+    "Access-Control-Allow-Origin": "*",
   };
   if (origin && ALLOWED_ORIGIN_RE.test(origin)) {
     headers["Access-Control-Allow-Origin"] = origin;
-  } else {
-    headers["Access-Control-Allow-Origin"] = "*";
   }
   return headers;
 }
@@ -123,28 +122,41 @@ function computeLevel(rawDetectedIds: Set<string>): { level: number; totalDetect
   return { level: currentLevel, totalDetected, totalAcmm };
 }
 
-async function fetchDetectedIds(origin: string, repo: string, force = false): Promise<string[]> {
-  // Fast path: read directly from Netlify Blobs (same store the scan function writes to).
-  // This avoids a same-origin HTTP round-trip that frequently times out inside
-  // Netlify Functions (cold-start + CDN routing overhead exceeds API_TIMEOUT_MS).
-  if (!force) {
-    try {
-      const store = getStore(BLOB_CACHE_STORE);
-      const cacheKey = `scan:${repo}`;
-      const raw = await store.get(cacheKey, { type: "json" });
-      if (raw) {
-        const entry = raw as { scannedAt?: string; detectedIds?: string[] };
-        const age = entry.scannedAt ? Date.now() - new Date(entry.scannedAt).getTime() : Infinity;
-        if (age < BLOB_CACHE_TTL_MS) {
-          return entry.detectedIds || [];
-        }
-      }
-    } catch {
-      // blob read failed — fall through to HTTP
+/** Try to read from Netlify Blobs, returning { data, fresh } or null. */
+async function readBlobCache(repo: string): Promise<{ detectedIds: string[]; fresh: boolean } | null> {
+  try {
+    const store = getStore(BLOB_CACHE_STORE);
+    const cacheKey = `scan:${repo}`;
+    const raw = await store.get(cacheKey, { type: "json" });
+    if (raw) {
+      const entry = raw as { scannedAt?: string; detectedIds?: string[] };
+      const age = entry.scannedAt ? Date.now() - new Date(entry.scannedAt).getTime() : Infinity;
+      return {
+        detectedIds: entry.detectedIds || [],
+        fresh: age < BLOB_CACHE_TTL_MS,
+      };
     }
+  } catch {
+    // blob read failed
   }
+  return null;
+}
 
-  // HTTP path: call the scan endpoint (forces a fresh GitHub scan when force=true).
+/** Write scan results to Netlify Blobs so future badge requests can use them. */
+async function writeBlobCache(repo: string, detectedIds: string[]): Promise<void> {
+  try {
+    const store = getStore(BLOB_CACHE_STORE);
+    const cacheKey = `scan:${repo}`;
+    await store.setJSON(cacheKey, {
+      scannedAt: new Date().toISOString(),
+      detectedIds,
+    });
+  } catch {
+    // best-effort — don't fail the badge
+  }
+}
+
+async function fetchFromScanEndpoint(origin: string, repo: string, force = false): Promise<string[]> {
   const forceParam = force ? "&force=true" : "";
   const url = `${origin}/api/acmm/scan?repo=${encodeURIComponent(repo)}${forceParam}`;
   const res = await fetch(url, { signal: AbortSignal.timeout(API_TIMEOUT_MS) });
@@ -293,12 +305,12 @@ async function fetchDetectedIdsDirect(repo: string, token: string): Promise<stri
 
 export default async (req: Request) => {
   const origin = req.headers.get("Origin");
-  const headers = corsHeaders(origin);
   const url = new URL(req.url);
   const repo = url.searchParams.get("repo") || "";
   const force = url.searchParams.get("force") === "true";
 
   if (!REPO_RE.test(repo)) {
+    const headers = corsHeaders(origin, BADGE_ERROR_CACHE_SECONDS);
     return new Response(
       JSON.stringify({
         schemaVersion: 1,
@@ -314,33 +326,67 @@ export default async (req: Request) => {
     );
   }
 
-  let detectedIds: string[] = [];
-  try {
-    detectedIds = await fetchDetectedIds(url.origin, repo, force);
-  } catch {
-    const token = process.env.GITHUB_TOKEN || "";
-    try {
-      detectedIds = await fetchDetectedIdsDirect(repo, token);
-    } catch {
-      return new Response(
-        JSON.stringify({
-          schemaVersion: 1,
-          label: "ACMM",
-          message: "unavailable",
-          color: "lightgrey",
-          cacheSeconds: BADGE_ERROR_CACHE_SECONDS,
-        }),
-        {
-          status: 200,
-          headers: { ...headers, "Content-Type": "application/json" },
-        },
-      );
+  // ── Layer 1: Blobs cache (fastest, no network) ───────────────────────
+  let blobResult: { detectedIds: string[]; fresh: boolean } | null = null;
+  if (!force) {
+    blobResult = await readBlobCache(repo);
+    if (blobResult?.fresh) {
+      return badgeResponse(blobResult.detectedIds, origin);
     }
   }
 
+  // ── Layer 2: scan endpoint ────────────────────────────────────────────
+  // If we have stale Blob data, use it as guaranteed fallback.
+  let detectedIds: string[] | null = null;
+  try {
+    detectedIds = await fetchFromScanEndpoint(url.origin, repo, force);
+    // Persist to Blobs for next request
+    writeBlobCache(repo, detectedIds).catch(() => {});
+  } catch {
+    // scan endpoint unreachable — try direct GitHub
+  }
+
+  if (detectedIds) {
+    return badgeResponse(detectedIds, origin);
+  }
+
+  // ── Layer 3: direct GitHub ────────────────────────────────────────────
+  const token = process.env.GITHUB_TOKEN || "";
+  try {
+    detectedIds = await fetchDetectedIdsDirect(repo, token);
+    writeBlobCache(repo, detectedIds).catch(() => {});
+    return badgeResponse(detectedIds, origin);
+  } catch {
+    // direct GitHub also failed
+  }
+
+  // ── Layer 4: stale Blob fallback (better than "unavailable") ──────────
+  if (blobResult) {
+    return badgeResponse(blobResult.detectedIds, origin);
+  }
+
+  // ── Layer 5: last-resort "unavailable" badge ──────────────────────────
+  const headers = corsHeaders(origin, BADGE_ERROR_CACHE_SECONDS);
+  return new Response(
+    JSON.stringify({
+      schemaVersion: 1,
+      label: "ACMM",
+      message: "unavailable",
+      color: "lightgrey",
+      cacheSeconds: BADGE_ERROR_CACHE_SECONDS,
+    }),
+    {
+      status: 200,
+      headers: { ...headers, "Content-Type": "application/json" },
+    },
+  );
+};
+
+function badgeResponse(detectedIds: string[], origin: string | null): Response {
   const { level, totalDetected, totalAcmm } = computeLevel(new Set(detectedIds));
   const name = LEVEL_NAMES[level];
   const color = LEVEL_COLORS[level];
+  const headers = corsHeaders(origin, BADGE_CACHE_SECONDS);
 
   return new Response(
     JSON.stringify({
@@ -356,7 +402,7 @@ export default async (req: Request) => {
       headers: { ...headers, "Content-Type": "application/json" },
     },
   );
-};
+}
 
 export const config = {
   path: "/api/acmm/badge",

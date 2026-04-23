@@ -255,7 +255,7 @@ export default defineConfig(({ mode }) => ({
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
     css: true,
-    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    include: ['src/**/*.{test,spec}.{ts,tsx}', 'netlify/functions/__tests__/*.{test,spec}.{ts,tsx}'],
     exclude: ['node_modules', 'e2e/**/*'],
     teardownTimeout: process.env.CI ? 60_000 : 10_000, // CI runners need more time to terminate workers
     // CI runners (2-core, 7GB) OOM with 600+ test files at full concurrency
