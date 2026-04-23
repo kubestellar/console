@@ -174,10 +174,10 @@ export function ComplianceDrillDown({ data }: Props) {
       : <ChevronDown className="w-3 h-3" />
   }
 
-  // Summary stats
-  const passCount = filteredRows.filter(r => r.status === 'pass').length
-  const failCount = filteredRows.filter(r => r.status === 'fail').length
-  const otherCount = filteredRows.filter(r => r.status === 'other' || r.status === 'not-applicable').length
+  // Summary stats — always computed from allRows so they are unaffected by filters
+  const passCount = allRows.filter(r => r.status === 'pass').length
+  const failCount = allRows.filter(r => r.status === 'fail').length
+  const otherCount = allRows.filter(r => r.status === 'other' || r.status === 'not-applicable').length
   const activeFilters = [statusFilter, severityFilter, clusterFilter, profileFilter, searchQuery].filter(Boolean).length
 
   return (
@@ -203,7 +203,7 @@ export function ComplianceDrillDown({ data }: Props) {
               !statusFilter ? 'border-teal-500/40 bg-teal-500/10' : 'border-border bg-card/50 hover:border-border/80'
             )}
           >
-            <div className="text-xl font-bold text-foreground">{filteredRows.length}</div>
+            <div className="text-xl font-bold text-foreground">{allRows.length}</div>
             <div className="text-xs text-muted-foreground">Total Controls</div>
           </button>
           <button

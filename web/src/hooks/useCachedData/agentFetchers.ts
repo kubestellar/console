@@ -11,7 +11,7 @@
 import { kubectlProxy } from '../../lib/kubectlProxy'
 import { clusterCacheRef } from '../mcp/shared'
 import { isAgentUnavailable } from '../useLocalAgent'
-import { LOCAL_AGENT_HTTP_URL } from '../../lib/constants'
+import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
 import { settledWithConcurrency } from '../../lib/utils/concurrency'
 import { AGENT_HTTP_TIMEOUT_MS } from '../../lib/cache/fetcherUtils'
 import type { PodIssue, Deployment } from '../useMCP'
@@ -48,7 +48,8 @@ export async function fetchPodIssuesViaAgent(namespace?: string, onProgress?: (p
     const ctx = context || name
     const issues = await kubectlProxy.getPodIssues(ctx, namespace)
     // Always use the short name — kubectlProxy returns context path as cluster
-    return issues.map(i => ({ ...i, cluster: name }))
+    // Guard against null/undefined when proxy is disconnected or in cooldown
+    return (issues || []).map(i => ({ ...i, cluster: name }))
   })
 
   const accumulated: PodIssue[] = []
@@ -161,4 +162,47 @@ export async function fetchWorkloadsFromAgent(onProgress?: (partial: Workload[])
   }
   await settledWithConcurrency(tasks, undefined, handleSettled)
   return accumulated.length > 0 ? accumulated : null
+}
+
+// ============================================================================
+// Cilium status fetcher
+// ============================================================================
+
+/** Shape returned by the /cilium-status agent endpoint */
+export interface CiliumStatusResponse {
+  status: 'Healthy' | 'Degraded' | 'Unhealthy'
+  nodes: Array<{ name: string; status: string; version: string }>
+  networkPolicies: number
+  endpoints: number
+  hubble: {
+    enabled: boolean
+    flowsPerSecond: number
+    metrics: { forwarded: number; dropped: number }
+  }
+}
+
+/**
+ * Fetch aggregated Cilium status from the local agent.
+ * Returns null when the agent is unavailable or the user is in demo mode,
+ * which causes the useCache layer to fall back to demo data.
+ */
+export async function fetchCiliumStatus(): Promise<CiliumStatusResponse | null> {
+  if (isAgentUnavailable()) return null
+
+  const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+  if (!token || token === 'demo-token') return null
+
+  try {
+    const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/cilium-status`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+      },
+      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+    })
+    if (!res.ok) return null
+    return await res.json().catch(() => null)
+  } catch {
+    return null
+  }
 }

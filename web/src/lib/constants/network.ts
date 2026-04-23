@@ -247,6 +247,9 @@ export const POPUP_HIDE_DELAY_MS = 150
 /** Hover tooltip hide delay (50ms) */
 export const TOOLTIP_HIDE_DELAY_MS = 50
 
+/** Hover tooltip/popover show delay — prevents flicker from incidental cursor pass-through */
+export const TOOLTIP_SHOW_DELAY_MS = 250
+
 // ============================================================================
 // AI Mission Chat Limits
 // ============================================================================

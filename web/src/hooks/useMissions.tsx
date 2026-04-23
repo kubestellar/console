@@ -1409,12 +1409,21 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
     const isDedicatedCancelAck =
       message.type === CANCEL_ACK_MESSAGE_TYPE ||
       message.type === CANCEL_CONFIRMED_MESSAGE_TYPE
+    // #9477 — The backend may send `cancelled` without `sessionId` in the
+    // payload (e.g. when the cancel request payload itself had an empty
+    // sessionId, or when a proxy strips the field). Previously the check
+    // required BOTH `cancelled` AND `sessionId` in the payload, causing the
+    // message to fall through to the generic result handler where it was
+    // silently dropped (the cancel message's `id` is `cancel-<ts>`, which
+    // is never registered in pendingRequests). This left the UI stuck on
+    // "Cancelling..." indefinitely. Now we only require `cancelled` in the
+    // payload, and fall back to resolving the mission ID from cancelIntents
+    // or the missions list when `sessionId`/`id` are absent.
     const isCancelResultMessage =
       message.type === 'result' &&
       !!message.payload &&
       typeof message.payload === 'object' &&
-      'cancelled' in (message.payload as Record<string, unknown>) &&
-      'sessionId' in (message.payload as Record<string, unknown>)
+      'cancelled' in (message.payload as Record<string, unknown>)
     if (isDedicatedCancelAck || isCancelResultMessage) {
       const payload = message.payload as {
         sessionId?: string
@@ -1425,7 +1434,23 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
       }
       // #7310 — Backend may send `id` instead of `sessionId` in the cancel_ack
       // payload. Check both fields to avoid a permanent cancelling state lock.
-      const cancelledMissionId = payload.sessionId || payload.id
+      // #9477 — When neither field is present, resolve the mission ID from the
+      // active cancel intents or from missions currently in 'cancelling' status.
+      let cancelledMissionId = payload.sessionId || payload.id
+      if (!cancelledMissionId) {
+        // First try cancelIntents — the authoritative set of missions with
+        // pending cancellation requests.
+        const intentIds = Array.from(cancelIntents.current)
+        if (intentIds.length === 1) {
+          cancelledMissionId = intentIds[0]
+        } else {
+          // Fall back to the first mission in 'cancelling' status.
+          const cancellingMission = missionsRef.current.find(m => m.status === 'cancelling')
+          if (cancellingMission) {
+            cancelledMissionId = cancellingMission.id
+          }
+        }
+      }
       if (cancelledMissionId) {
         // Treat either `success === false` (cancel_ack shape) or
         // `cancelled === false` (result shape from handleCancelChat) as a

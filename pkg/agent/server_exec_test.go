@@ -449,7 +449,12 @@ func TestAgentWSWriter_ConcurrentWrites(t *testing.T) {
 			if err != nil {
 				return
 			}
-			receivedCh <- 1
+			// Non-blocking send to avoid panic if channel gets full
+			select {
+			case receivedCh <- 1:
+			default:
+				return
+			}
 		}
 	}()
 
@@ -457,11 +462,15 @@ func TestAgentWSWriter_ConcurrentWrites(t *testing.T) {
 	// Give time for all reads to complete
 	time.Sleep(100 * time.Millisecond)
 
-	// We should have received at least some messages without panics
-	close(receivedCh)
 	count := 0
-	for range receivedCh {
-		count++
+loop:
+	for {
+		select {
+		case <-receivedCh:
+			count++
+		default:
+			break loop
+		}
 	}
 	if count == 0 {
 		t.Error("expected at least one message to be received during concurrent writes")

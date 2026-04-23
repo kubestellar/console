@@ -175,13 +175,27 @@ test.describe('AI Missions', () => {
     await page.goto('/?browse=missions')
     await page.waitForLoadState('domcontentloaded')
 
-    // The missions browser renders each entry as a heading/button containing
-    // the mission name. If the Phase 1 panel regresses and renders no cards,
-    // this locator will fail instead of silently passing.
-    const missionEntry = page
-      .getByRole('dialog')
-      .getByText(/sample-mission/i)
-      .first()
-    await expect(missionEntry).toBeVisible({ timeout: DIALOG_VISIBLE_TIMEOUT_MS })
+    // The missions browser renders entries inside the mission grid. Query by
+    // the grid test-id first (structural), then fall back to text content.
+    // This avoids brittle getByText that breaks when the UI transforms the
+    // file name (strips .yaml, title-cases, etc.). See #9526.
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toBeVisible({ timeout: DIALOG_VISIBLE_TIMEOUT_MS })
+
+    const missionGrid = dialog.locator('[data-testid="mission-grid"]')
+    const hasGrid = await missionGrid.isVisible({ timeout: DIALOG_VISIBLE_TIMEOUT_MS }).catch(() => false)
+
+    if (hasGrid) {
+      // Prefer structural assertion: at least one card in the grid
+      const cards = missionGrid.locator('.group')
+      await expect(cards.first()).toBeVisible({ timeout: DIALOG_VISIBLE_TIMEOUT_MS })
+      expect(await cards.count()).toBeGreaterThanOrEqual(1)
+    } else {
+      // Fallback: the dialog must contain at least one heading with the mission name
+      const missionEntry = dialog.getByRole('heading', { name: /sample-mission/i })
+        .or(dialog.locator('h4:has-text("sample-mission")'))
+        .first()
+      await expect(missionEntry).toBeVisible({ timeout: DIALOG_VISIBLE_TIMEOUT_MS })
+    }
   })
 })

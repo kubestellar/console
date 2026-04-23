@@ -1,0 +1,112 @@
+# AI Attribution Workflow
+#
+# Adds an `ai-generated` label to PRs authored by bots or containing
+# AI-signature trailers (Signed-off-by patterns from known AI tools,
+# Co-Authored-By referencing AI services, etc.).
+#
+# Satisfies the ACMM L5 `acmm:audit-trail` criterion: distinguishes
+# human-authored from AI-authored changes for audit and review purposes.
+
+name: AI Attribution
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  attribute:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for AI authorship signals
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const PR_AUTHOR_TYPE_BOT = 'Bot';
+
+            // Known bot login suffixes that indicate AI-generated PRs
+            const AI_BOT_SUFFIXES = [
+              '[bot]',
+              '-bot',
+            ];
+
+            // Known AI co-author or trailer patterns (case-insensitive)
+            const AI_SIGNATURE_PATTERNS = [
+              /co-authored-by:.*\b(anthropic|openai|copilot|claude|github-actions)\b/i,
+              /generated-by:.*\b(claude|copilot|cursor|codeium)\b/i,
+            ];
+
+            const LABEL_NAME = 'ai-generated';
+            const { owner, repo } = context.repo;
+            const prNumber = context.payload.pull_request.number;
+            const author = context.payload.pull_request.user;
+
+            let isAI = false;
+
+            // Check 1: PR author is a bot account
+            if (author.type === PR_AUTHOR_TYPE_BOT) {
+              core.info(`PR author ${author.login} is a bot account`);
+              isAI = true;
+            }
+
+            // Check 2: PR author login matches known AI bot patterns
+            if (!isAI) {
+              for (const suffix of AI_BOT_SUFFIXES) {
+                if (author.login.toLowerCase().endsWith(suffix)) {
+                  core.info(`PR author ${author.login} matches AI bot suffix: ${suffix}`);
+                  isAI = true;
+                  break;
+                }
+              }
+            }
+
+            // Check 3: Scan commit messages for AI signatures
+            if (!isAI) {
+              const MAX_COMMITS_TO_SCAN = 50;
+              const commits = await github.rest.pulls.listCommits({
+                owner,
+                repo,
+                pull_number: prNumber,
+                per_page: MAX_COMMITS_TO_SCAN,
+              });
+
+              for (const commit of commits.data) {
+                const message = commit.commit.message || '';
+                for (const pattern of AI_SIGNATURE_PATTERNS) {
+                  if (pattern.test(message)) {
+                    core.info(`Commit ${commit.sha.slice(0, 8)} contains AI signature: ${pattern}`);
+                    isAI = true;
+                    break;
+                  }
+                }
+                if (isAI) break;
+              }
+            }
+
+            if (isAI) {
+              // Ensure the label exists
+              try {
+                await github.rest.issues.getLabel({ owner, repo, name: LABEL_NAME });
+              } catch {
+                await github.rest.issues.createLabel({
+                  owner,
+                  repo,
+                  name: LABEL_NAME,
+                  color: '7B68EE',
+                  description: 'PR contains AI-generated changes',
+                });
+              }
+
+              await github.rest.issues.addLabels({
+                owner,
+                repo,
+                issue_number: prNumber,
+                labels: [LABEL_NAME],
+              });
+              core.info(`Added '${LABEL_NAME}' label to PR #${prNumber}`);
+            } else {
+              core.info(`No AI authorship signals detected in PR #${prNumber}`);
+            }

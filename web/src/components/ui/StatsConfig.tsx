@@ -182,7 +182,7 @@ const DASHBOARD_CATEGORIES: { type: DashboardStatsType; name: string; icon: stri
   { type: 'storage', name: 'Storage', icon: '💽' },
   { type: 'network', name: 'Network', icon: '🌐' },
   { type: 'security', name: 'Security', icon: '🛡️' },
-  { type: 'compliance', name: 'Security Posture', icon: '🔒' },
+  { type: 'compliance', name: 'Compliance', icon: '🔒' },
   { type: 'data-compliance', name: 'Data Compliance', icon: '📋' },
   { type: 'events', name: 'Events', icon: '📜' },
   { type: 'cost', name: 'Cost', icon: '💵' },

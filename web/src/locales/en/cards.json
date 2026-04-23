@@ -317,6 +317,7 @@
     "lima_status": "Lima",
     "keda_status": "KEDA",
     "knative_status": "Knative",
+    "fluid_status": "Fluid",
     "openyurt_status": "OpenYurt",
     "strimzi_status": "Strimzi",
     "kubevela_status": "KubeVela",
@@ -500,6 +501,7 @@
     "lima_status": "Lima virtual machine instances and resource usage.",
     "keda_status": "KEDA autoscaler status, scaled object metrics, and trigger queue depths.",
     "knative_status": "Knative serving revisions, traffic routing, and eventing broker status.",
+    "fluid_status": "Fluid dataset caching status, runtime health, and data load progress.",
     "openyurt_status": "OpenYurt edge node pools, autonomy status, and edge-cloud connectivity.",
     "strimzi_status": "Strimzi Kafka cluster health, topic status, and consumer group lag.",
     "kubevela_status": "KubeVela application delivery, component status, and workflow progress.",
@@ -1164,7 +1166,16 @@
     "servicesWillAppear": "Services will appear when deployed",
     "clusterHealth": "Cluster Health:",
     "healthy": "healthy",
-    "topNamespaces": "Top Namespaces"
+    "degraded": "degraded",
+    "offline": "offline",
+    "topNamespaces": "Top Namespaces",
+    "acrossClusters": "across {{count}} cluster",
+    "acrossClusters_one": "across {{count}} cluster",
+    "acrossClusters_other": "across {{count}} clusters",
+    "servicesCount": "{{count}} services",
+    "servicesCount_one": "{{count}} service",
+    "servicesCount_other": "{{count}} services",
+    "footerSummary": "{{services}} services across {{clusters}} clusters"
   },
   "dataCompliance": {
     "gdpr": "GDPR",
@@ -1308,7 +1319,8 @@
     "host": "Host",
     "connectionStatus": "Connection Status",
     "connected": "Connected",
-    "disconnected": "Disconnected"
+    "disconnected": "Disconnected",
+    "clusterHiddenByFilter": "Selected cluster is hidden by the global filter. Choose another cluster or adjust the filter."
   },
   "kagenti": {
     "agents": "Agents",
@@ -2110,7 +2122,9 @@
     "podsCount_other": "{{count}} pods",
     "policiesAndPods": "{{policies}} policies, {{pods}} pods",
     "estimated": "Estimated (policy API unavailable)",
-    "estimatedTooltip": "NetworkPolicy resources could not be fetched. Coverage is estimated based on namespace type (system vs user). Connect the agent or check API access for accurate data."
+    "estimatedTooltip": "NetworkPolicy resources could not be fetched. Coverage is estimated based on namespace type (system vs user). Connect the agent or check API access for accurate data.",
+    "showingOf": "Showing {{shown}} of {{total}} namespaces",
+    "failedToLoad": "Failed to load network policy data"
   },
   "quotaHeatmap": {
     "noNamespaceData": "No namespace data",
@@ -2387,7 +2401,9 @@
     "gaugeTooltip": "GPU Utilization: {{allocated}} of {{total}} GPUs allocated ({{percent}}%)",
     "gpuTypeRowTitle": "{{count}} {{type}} GPUs - Click to view nodes with this GPU type",
     "gpuTypeRowTitle_one": "{{count}} {{type}} GPU - Click to view nodes with this GPU type",
-    "gpuTypeRowTitle_other": "{{count}} {{type}} GPUs - Click to view nodes with this GPU type"
+    "gpuTypeRowTitle_other": "{{count}} {{type}} GPUs - Click to view nodes with this GPU type",
+    "noGPUData": "No GPU Data",
+    "gpuMetricsNotAvailable": "GPU metrics not available"
   },
   "gpuStatus": {
     "noGPUData": "No GPU Data",
@@ -2719,7 +2735,9 @@
     "exported": "Exported",
     "imported": "Imported",
     "nEndpoints_one": "{{count}} endpoint",
-    "nEndpoints_other": "{{count}} endpoints"
+    "nEndpoints_other": "{{count}} endpoints",
+    "noServices": "No services found",
+    "noServicesHint": "Service topology will appear when services are discovered in connected clusters"
   },
   "crdHealth": {
     "group": "Group",
@@ -2890,7 +2908,13 @@
     "notebookDetection": "Notebook Detection",
     "notebookDetectionDescription": "Scans for JupyterHub and standalone notebook servers.",
     "idle": "Idle",
-    "stopped": "Stopped"
+    "stopped": "Stopped",
+    "sortName": "Name",
+    "sortUser": "User",
+    "sortStatus": "Status",
+    "searchNotebooks": "Search notebooks...",
+    "columnNotebook": "Notebook",
+    "columnUser": "User"
   },
   "configDrift": {
     "noDriftDetected": "No config drift detected",
@@ -3385,6 +3409,31 @@
   "kagentAgentPicker": {
     "noAgentsAvailable": "No kagent agents available"
   },
+  "kagentSecurity": {
+    "agentTypeCoverage": "Agent Type Coverage",
+    "declarative": "Declarative",
+    "byo": "BYO",
+    "modelAuthStatus": "Model Auth Status",
+    "agentsWithModelConfig": "{{configured}}/{{total}} agents with model config",
+    "toolServers": "Tool Servers",
+    "ready": "Ready",
+    "remote": "Remote",
+    "byoAgentsWarning": "BYO Agents (Less Controlled)",
+    "allDeclarative_one": "All {{count}} agent is Declarative (fully managed)",
+    "allDeclarative_other": "All {{count}} agents are Declarative (fully managed)",
+    "noResources": "No kagent resources found"
+  },
+  "kagentToolRegistry": {
+    "sortName": "Name",
+    "sortKind": "Kind",
+    "sortStatus": "Status",
+    "sortCluster": "Cluster",
+    "searchPlaceholder": "Search tool servers...",
+    "noToolServers": "No Tool Servers",
+    "deployHint": "Deploy ToolServer or RemoteMCPServer CRDs",
+    "toolCount_one": "{{count}} tool",
+    "toolCount_other": "{{count}} tools"
+  },
   "falcoAlerts": {
     "integration": "Falco Integration",
     "installDescription": "Install Falco for runtime security monitoring.",
@@ -3788,7 +3837,11 @@
     "sortStatus": "Status",
     "sortFramework": "Framework",
     "sortGpus": "GPUs",
-    "searchJobs": "Search jobs..."
+    "searchJobs": "Search jobs...",
+    "statusRunning": "Running",
+    "statusQueued": "Queued",
+    "statusCompleted": "Completed",
+    "statusFailed": "Failed"
   },
   "nats_status": {
     "healthy": "Healthy",
@@ -3880,5 +3933,29 @@
     "deadLetterSink": "DLS",
     "trafficSplit": "Traffic Split",
     "latestRevision": "Latest Revision"
+  },
+  "fluid": {
+    "healthy": "Healthy",
+    "degraded": "Degraded",
+    "notInstalled": "Fluid not detected",
+    "notInstalledHint": "No Fluid controller pods found. Deploy Fluid to enable dataset caching and acceleration.",
+    "fetchError": "Failed to fetch Fluid status",
+    "controllerPods": "controllers",
+    "datasets": "Datasets",
+    "runtimes": "Runtimes",
+    "dataLoads": "Data Loads",
+    "issues": "Issues",
+    "datasetsTab": "Datasets",
+    "runtimesTab": "Runtimes",
+    "searchDatasetsPlaceholder": "Search datasets\u2026",
+    "searchRuntimesPlaceholder": "Search runtimes\u2026",
+    "noDatasets": "No datasets found",
+    "noDatasetsHint": "Fluid datasets require the data.fluid.io CRD API.",
+    "noRuntimes": "No runtimes found",
+    "noRuntimesHint": "Fluid runtimes (Alluxio, JuiceFS, etc.) require the data.fluid.io CRD API.",
+    "noSearchResults": "No results match your search.",
+    "cacheUsage": "Cache",
+    "noSource": "no source",
+    "files": "files"
   }
 }

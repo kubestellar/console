@@ -965,6 +965,36 @@ if (import.meta.hot) {
   })
 }
 
+/** Storage key used by useKagentBackend to persist the preferred backend. */
+const BACKEND_PREF_KEY = 'kc_agent_backend_preference'
+
+/** Read the preferred agent backend from localStorage (non-React). */
+function getPreferredBackend(): string {
+  try {
+    return localStorage.getItem(BACKEND_PREF_KEY) || 'kc-agent'
+  } catch {
+    return 'kc-agent'
+  }
+}
+
+/**
+ * Fetch cluster list from the backend API (/api/mcp/clusters).
+ * This endpoint works independently of kc-agent — it uses the MCP bridge or
+ * direct k8s client, making it the right choice when kagenti/kagent is active. (#9535)
+ */
+async function fetchClusterListFromBackendAPI(): Promise<ClusterInfo[] | null> {
+  try {
+    const { data } = await api.get<{ clusters: ClusterInfo[] }>('/api/mcp/clusters')
+    if (data?.clusters) {
+      reportAgentDataSuccess()
+      return data.clusters
+    }
+  } catch {
+    // Backend API unavailable
+  }
+  return null
+}
+
 // Fetch basic cluster list from local agent (fast, no health check)
 async function fetchClusterListFromAgent(): Promise<ClusterInfo[] | null> {
   // On Netlify deployments (isNetlifyDeployment), skip agent entirely — there is
@@ -972,6 +1002,14 @@ async function fetchClusterListFromAgent(): Promise<ClusterInfo[] | null> {
   // On localhost, always attempt to reach the agent — it may be running even if
   // AgentManager has not detected it yet.
   if (isNetlifyDeployment) return null
+
+  // When kagenti or kagent is the preferred backend, fetch clusters from the
+  // backend API (/api/mcp/clusters) which works independently of kc-agent.
+  // kc-agent's /clusters endpoint is only available when kc-agent is running. (#9535)
+  const preferred = getPreferredBackend()
+  if (preferred === 'kagenti' || preferred === 'kagent') {
+    return fetchClusterListFromBackendAPI()
+  }
 
   try {
     const controller = new AbortController()
@@ -1598,8 +1636,8 @@ export async function fullFetchClusters() {
       return
     }
 
-    // Fall back to backend API
-    const { data } = await api.get<{ clusters: ClusterInfo[] }>(`${LOCAL_AGENT_HTTP_URL}/clusters`)
+    // Fall back to backend API (/api/mcp/clusters works regardless of agent backend)
+    const { data } = await api.get<{ clusters: ClusterInfo[] }>('/api/mcp/clusters')
     // Merge new cluster list with existing cached data (preserve distribution, health, etc.)
     const existingClusters = clusterCache.clusters
     const mergedClusters = (data.clusters || []).map(newCluster => {

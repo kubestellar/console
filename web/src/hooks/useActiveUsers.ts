@@ -136,7 +136,7 @@ async function sendHeartbeat() {
   try {
     await fetch('/api/active-users', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
       body: JSON.stringify({ sessionId: getSessionId() }),
       signal: AbortSignal.timeout(5000)
     })

@@ -694,7 +694,7 @@ func TestRunBuildCmd_OutputCapture(t *testing.T) {
 
 	writeMockScript(t, mockBin, "failbuild", `
 echo "compiling package main..."
-echo "ERROR: cannot find module 'foo'" >&2
+echo "MOCK_ERROR: Simulated build failure for testing" >&2
 exit 1
 `)
 	t.Setenv("PATH", mockBin+":"+os.Getenv("PATH"))
@@ -706,7 +706,7 @@ exit 1
 	if res.err == nil {
 		t.Fatal("expected error, got nil")
 	}
-	if !strings.Contains(res.output, "cannot find module") {
+	if !strings.Contains(res.output, "Simulated build failure") {
 		t.Errorf("expected stderr in output, got: %q", res.output)
 	}
 	if !strings.Contains(res.output, "compiling package main") {

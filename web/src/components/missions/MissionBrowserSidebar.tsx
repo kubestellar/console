@@ -14,6 +14,7 @@ import { cn } from '../../lib/cn'
 import { SIDEBAR_WIDTH, MISSION_FILE_ACCEPT } from './missionBrowserConstants'
 import { TreeNodeItem, updateNodeInTree } from './browser'
 import type { TreeNode } from './browser'
+import { useToast } from '../ui/Toast'
 
 interface MissionBrowserSidebarProps {
   treeNodes: TreeNode[]
@@ -81,6 +82,7 @@ export function MissionBrowserSidebar({
   setExpandedNodes,
 }: MissionBrowserSidebarProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const { showToast } = useToast()
 
   return (
     <div
@@ -146,6 +148,7 @@ export function MissionBrowserSidebar({
                     const val = newRepoValue.trim()
                     if (val && !watchedRepos.includes(val)) {
                       onAddRepo(val)
+                      showToast(`Repository "${val}" added`, 'success')
                     }
                     setNewRepoValue('')
                     setAddingRepo(false)
@@ -195,6 +198,7 @@ export function MissionBrowserSidebar({
                     const val = newPathValue.trim()
                     if (val && !watchedPaths.includes(val)) {
                       onAddPath(val)
+                      showToast(`Path "${val}" added`, 'success')
                     }
                     setNewPathValue('')
                     setAddingPath(false)

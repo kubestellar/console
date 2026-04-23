@@ -214,24 +214,26 @@ export function GatewayStatus({ config: _config }: GatewayStatusProps) {
         className="mb-3"
       />
 
-      {/* Gateway API Integration Notice */}
-      <div className="flex items-start gap-2 p-2 mb-3 rounded-lg bg-purple-500/10 border border-purple-500/20 text-xs">
-        <AlertCircle className="w-4 h-4 text-purple-400 flex-shrink-0 mt-0.5" />
-        <div>
-          <p className="text-purple-400 font-medium">{t('gatewayStatus.gatewayApiTitle')}</p>
-          <p className="text-muted-foreground">
-            {t('gatewayStatus.gatewayApiDesc')}{' '}
-            <a
-              href={K8S_DOCS.gatewayApiGettingStarted}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-purple-400 hover:underline"
-            >
-              {t('gatewayStatus.installGuide')}
-            </a>
-          </p>
+      {/* Gateway API Integration Notice — only shown when no real data detected */}
+      {isDemoData && (
+        <div className="flex items-start gap-2 p-2 mb-3 rounded-lg bg-purple-500/10 border border-purple-500/20 text-xs">
+          <AlertCircle className="w-4 h-4 text-purple-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-purple-400 font-medium">{t('gatewayStatus.gatewayApiTitle')}</p>
+            <p className="text-muted-foreground">
+              {t('gatewayStatus.gatewayApiDesc')}{' '}
+              <a
+                href={K8S_DOCS.gatewayApiGettingStarted}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-purple-400 hover:underline"
+              >
+                {t('gatewayStatus.installGuide')}
+              </a>
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-2 @md:grid-cols-3 gap-2 mb-3">
@@ -316,13 +318,15 @@ export function GatewayStatus({ config: _config }: GatewayStatusProps) {
         needsPagination={needsPagination && itemsPerPage !== 'unlimited'}
       />
 
-      {/* Quick install command */}
-      <div className="mt-3 pt-3 border-t border-border/50">
-        <p className="text-2xs text-muted-foreground font-medium mb-2">{t('gatewayStatus.quickInstall')}</p>
-        <code className="block p-2 rounded bg-secondary text-2xs text-muted-foreground font-mono overflow-x-auto whitespace-nowrap">
-          {K8S_DOCS.gatewayApiInstallCommand}
-        </code>
-      </div>
+      {/* Quick install command — only shown when no real data detected */}
+      {isDemoData && (
+        <div className="mt-3 pt-3 border-t border-border/50">
+          <p className="text-2xs text-muted-foreground font-medium mb-2">{t('gatewayStatus.quickInstall')}</p>
+          <code className="block p-2 rounded bg-secondary text-2xs text-muted-foreground font-mono overflow-x-auto whitespace-nowrap">
+            {K8S_DOCS.gatewayApiInstallCommand}
+          </code>
+        </div>
+      )}
 
       {/* Footer links */}
       <div className="flex items-center justify-center gap-3 pt-2 mt-2 border-t border-border/50 text-2xs">

@@ -1,0 +1,10 @@
+{
+  "format": "kc-card-preset-v1",
+  "card_type": "fluid_status",
+  "title": "Fluid",
+  "description": "Fluid dataset caching status and data access acceleration metrics.",
+  "category": "Storage",
+  "project": "fluid",
+  "cncf_status": "incubating",
+  "config": {}
+}

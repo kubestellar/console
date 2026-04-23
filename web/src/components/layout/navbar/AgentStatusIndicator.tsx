@@ -299,7 +299,7 @@ export function AgentStatusIndicator() {
           )}
         >
           <Loader2 className="w-4 h-4 animate-spin" />
-          <span className="text-xs font-medium hidden sm:inline whitespace-nowrap">
+          <span className="text-sm font-medium hidden sm:inline whitespace-nowrap">
             {t('agent.connecting')}
           </span>
         </div>
@@ -318,7 +318,7 @@ export function AgentStatusIndicator() {
         title={pillStyle.title}
       >
         <pillStyle.Icon className="w-4 h-4" />
-        <span className="text-xs font-medium hidden sm:inline whitespace-nowrap">
+        <span className="text-sm font-medium hidden sm:inline whitespace-nowrap">
           {pillStyle.label}
         </span>
         <span
@@ -330,7 +330,7 @@ export function AgentStatusIndicator() {
       {showAgentStatus && (
         <div
           ref={dropdownRef}
-          className="absolute top-full right-0 mt-2 w-96 bg-card border border-border rounded-lg shadow-xl z-50"
+          className="absolute top-full right-0 mt-2 w-96 bg-card border border-border rounded-lg shadow-xl z-dropdown"
         >
           {/* Demo Mode Toggle */}
           <div className="p-3 border-b border-border">
@@ -397,7 +397,7 @@ export function AgentStatusIndicator() {
                         ? 'bg-yellow-400'
                         : isConnected
                           ? 'bg-green-400'
-                          : agentStatus === 'connecting'
+                          : stableStatus === 'connecting'
                             ? 'bg-yellow-400'
                             : 'bg-red-400',
                 )}
@@ -416,7 +416,7 @@ export function AgentStatusIndicator() {
                       ? t('agent.localAgentDegraded')
                       : isConnected
                         ? t('agent.localAgentConnectedLabel')
-                        : agentStatus === 'connecting'
+                        : stableStatus === 'connecting'
                           ? t('agent.localAgentConnecting')
                           : t('agent.localAgentDisconnectedLabel')}
               </span>

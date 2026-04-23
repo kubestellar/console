@@ -332,8 +332,14 @@ export function Dashboard() {
       // Return empty — don't let sortable card droppables capture workload drags
       return []
     }
-    // Normal card reorder uses closestCenter
-    return closestCenter(args)
+    // Normal card reorder — but first check if hovering over a dashboard drop zone
+    const centerCollisions = closestCenter(args)
+    const pointerCollisions = pointerWithin(args)
+    const dashboardDropTarget = pointerCollisions.find(
+      (c) => String(c.id).startsWith('dashboard-drop-') || String(c.id) === 'create-new-dashboard'
+    )
+    if (dashboardDropTarget) return [dashboardDropTarget]
+    return centerCollisions
   }
 
   const handleDragStart = (event: DragStartEvent) => {

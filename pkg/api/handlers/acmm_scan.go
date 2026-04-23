@@ -195,13 +195,16 @@ func ACMMScanHandler(c *fiber.Ctx) error {
 	}
 
 	// We are the primary scanner.
+	// Use a detached context so the scan continues even if the primary
+	// requester disconnects — other concurrent waiters should still
+	// receive the result (#9527).
 	defer func() {
 		acmmScanInFlight.Delete(repo)
 		close(waiter.done)
 	}()
 
 	token := settings.ResolveGitHubTokenEnv()
-	ctx, cancel := context.WithTimeout(c.Context(), time.Duration(acmmAPITimeoutMS)*time.Millisecond)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(acmmAPITimeoutMS)*time.Millisecond)
 	defer cancel()
 
 	// Fetch repo tree

@@ -276,6 +276,8 @@ const KeycloakStatus = safeLazy(() => import('./keycloak_status'), 'KeycloakStat
 const OpenYurtStatus = safeLazy(() => import('./openyurt_status'), 'OpenYurtStatus')
 // Knative serverless monitoring card
 const KnativeStatus = safeLazy(() => import('./knative_status'), 'KnativeStatus')
+// Fluid dataset caching card
+const FluidStatus = safeLazy(() => import('./fluid_status'), 'FluidStatus')
 // Inspektor Gadget cards
 const NetworkTraceCard = safeLazy(() => import('./gadget/NetworkTraceCard'), 'NetworkTraceCard')
 const DNSTraceCard = safeLazy(() => import('./gadget/DNSTraceCard'), 'DNSTraceCard')
@@ -599,6 +601,8 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   openyurt_status: OpenYurtStatus,
   // Knative serverless
   knative_status: KnativeStatus,
+  // Fluid dataset caching
+  fluid_status: FluidStatus,
   // KubeRay fleet monitoring
   kuberay_fleet: KubeRayFleet,
   // SLO compliance tracking
@@ -805,6 +809,8 @@ export const DEMO_DATA_CARDS = new Set([
   'vcluster_status',
   // Knative serverless - demo until Knative is installed
   'knative_status',
+  // Fluid dataset caching - demo until Fluid is installed
+  'fluid_status',
 ])
 
 /**
@@ -1025,6 +1031,8 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   openyurt_status: () => import('./openyurt_status'),
   // Knative serverless
   knative_status: () => import('./knative_status'),
+  // Fluid dataset caching
+  fluid_status: () => import('./fluid_status'),
   kuberay_fleet: () => import('./kuberay_fleet'),
   slo_compliance: () => import('./slo_compliance'),
   failover_timeline: () => import('./failover_timeline'),
@@ -1384,6 +1392,8 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   slo_compliance: 6,
   failover_timeline: 8,
   trino_gateway: 6,
+  // Fluid dataset caching
+  fluid_status: 6,
   // OpenFeature feature-flag management
   openfeature_status: 6,
   // OpenKruise advanced workloads + sidecar injection

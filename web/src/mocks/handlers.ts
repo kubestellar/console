@@ -919,6 +919,15 @@ export const handlers = [
     })
   }),
 
+  // Kubara config endpoint — returns the active catalog repo and path.
+  // In demo mode we always return the default public catalog coordinates.
+  http.get('/api/kubara/config', () => {
+    return HttpResponse.json({
+      repo: 'kubara-io/kubara',
+      path: 'go-binary/templates/embedded/managed-service-catalog/helm',
+    })
+  }),
+
   // ── Optional feature status endpoints (issue #8162) ──────────────
   // These endpoints probe for optional in-cluster integrations. In demo
   // mode the integrations are not installed, so we return a success (200)

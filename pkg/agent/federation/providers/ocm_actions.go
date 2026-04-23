@@ -109,11 +109,11 @@ func executeOCMApproveCSR(ctx context.Context, cfg *rest.Config, req federation.
 
 	// Append the Approved condition.
 	csr.Status.Conditions = append(csr.Status.Conditions, certificatesv1.CertificateSigningRequestCondition{
-		Type:               certificatesv1.CertificateApproved,
-		Status:             corev1.ConditionTrue,
-		Reason:             "KubeStellarConsoleApproval",
-		Message:            "Approved via KubeStellar Console federation action",
-		LastUpdateTime:     metav1.Now(),
+		Type:           certificatesv1.CertificateApproved,
+		Status:         corev1.ConditionTrue,
+		Reason:         "KubeStellarConsoleApproval",
+		Message:        "Approved via KubeStellar Console federation action",
+		LastUpdateTime: metav1.Now(),
 	})
 
 	_, err = clientset.CertificatesV1().CertificateSigningRequests().UpdateApproval(ctx, csrName, csr, metav1.UpdateOptions{})

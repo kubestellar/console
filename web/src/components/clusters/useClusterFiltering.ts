@@ -14,6 +14,10 @@ export interface ClusterFilteringParams {
   isAllClustersSelected: boolean
   /** Custom text filter from the global filter search */
   customFilter: string
+  /** Globally selected distributions from useGlobalFilters */
+  selectedDistributions: string[]
+  /** Whether all distributions are selected in the global filter */
+  isAllDistributionsSelected: boolean
   /** Sort field */
   sortBy: 'name' | 'nodes' | 'pods' | 'health' | 'provider' | 'custom'
   /** Sort ascending */
@@ -40,6 +44,8 @@ export function useClusterFiltering({
   globalSelectedClusters,
   isAllClustersSelected,
   customFilter,
+  selectedDistributions,
+  isAllDistributionsSelected,
   sortBy,
   sortAsc,
   customOrder }: ClusterFilteringParams): ClusterFilteringResult {
@@ -60,6 +66,19 @@ export function useClusterFiltering({
         c.server?.toLowerCase().includes(query) ||
         c.user?.toLowerCase().includes(query)
       )
+    }
+
+    // Apply distribution filter
+    if (!isAllDistributionsSelected) {
+      if (selectedDistributions.includes('__none__')) {
+        result = []
+      } else {
+        const distLower = selectedDistributions.map(d => d.toLowerCase())
+        result = result.filter(c => {
+          const clusterDist = (c.distribution || detectCloudProvider(c.name, c.server, c.namespaces, c.user) || 'unknown').toLowerCase()
+          return distLower.includes(clusterDist)
+        })
+      }
     }
 
     // Apply local health filter
@@ -115,7 +134,7 @@ export function useClusterFiltering({
     }
 
     return result
-  }, [clusters, filter, globalSelectedClusters, isAllClustersSelected, customFilter, sortBy, sortAsc, customOrder])
+  }, [clusters, filter, globalSelectedClusters, isAllClustersSelected, customFilter, selectedDistributions, isAllDistributionsSelected, sortBy, sortAsc, customOrder])
 
   // Base clusters after global filter (before local health filter)
   const globalFilteredClusters = (() => {
@@ -135,6 +154,19 @@ export function useClusterFiltering({
         c.server?.toLowerCase().includes(query) ||
         c.user?.toLowerCase().includes(query)
       )
+    }
+
+    // Apply distribution filter
+    if (!isAllDistributionsSelected) {
+      if (selectedDistributions.includes('__none__')) {
+        result = []
+      } else {
+        const distLower = selectedDistributions.map(d => d.toLowerCase())
+        result = result.filter(c => {
+          const clusterDist = (c.distribution || detectCloudProvider(c.name, c.server, c.namespaces, c.user) || 'unknown').toLowerCase()
+          return distLower.includes(clusterDist)
+        })
+      }
     }
 
     return result

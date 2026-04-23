@@ -10,6 +10,7 @@ import { useCardLoadingState } from './CardDataContext'
 import { useCache } from '../../lib/cache'
 import { useTranslation } from 'react-i18next'
 import { FETCH_EXTERNAL_TIMEOUT_MS } from '../../lib/constants'
+import { GREEN_500_BRIGHT, RED_500 } from '../../lib/theme/chartColors'
 import { useToast } from '../ui/Toast'
 import type { TFunction } from 'i18next'
 
@@ -389,7 +390,7 @@ function Sparkline({ data, isPositive }: { data: number[]; isPositive: boolean }
       <polyline
         points={points}
         fill="none"
-        stroke={isPositive ? 'rgb(34, 197, 94)' : 'rgb(239, 68, 68)'}
+        stroke={isPositive ? GREEN_500_BRIGHT : RED_500}
         strokeWidth="2"
         vectorEffect="non-scaling-stroke"
       />

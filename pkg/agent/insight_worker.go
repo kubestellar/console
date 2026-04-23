@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -184,24 +185,24 @@ func (w *InsightWorker) Enrich(req InsightEnrichmentRequest) (*InsightEnrichment
 	for _, e := range enrichments {
 		w.cache[e.InsightID] = insightCacheEntry{enrichment: e, cachedAt: cacheNow}
 	}
-	// Evict entries beyond the size cap — delete the oldest entries first
+	// Evict entries beyond the size cap — collect all keys, sort by
+	// cachedAt ascending, and delete the oldest entries in one pass.
+	// This is O(N log N) instead of the previous O(N^2) approach (#9443).
 	if len(w.cache) > insightCacheMaxEntries {
-		var oldestKey string
-		var oldestTime time.Time
-		for len(w.cache) > insightCacheMaxEntries {
-			oldestKey = ""
-			oldestTime = cacheNow
-			for k, v := range w.cache {
-				if v.cachedAt.Before(oldestTime) {
-					oldestKey = k
-					oldestTime = v.cachedAt
-				}
-			}
-			if oldestKey != "" {
-				delete(w.cache, oldestKey)
-			} else {
-				break
-			}
+		type cacheRef struct {
+			key      string
+			cachedAt time.Time
+		}
+		entries := make([]cacheRef, 0, len(w.cache))
+		for k, v := range w.cache {
+			entries = append(entries, cacheRef{key: k, cachedAt: v.cachedAt})
+		}
+		sort.Slice(entries, func(i, j int) bool {
+			return entries[i].cachedAt.Before(entries[j].cachedAt)
+		})
+		evictCount := len(w.cache) - insightCacheMaxEntries
+		for i := 0; i < evictCount; i++ {
+			delete(w.cache, entries[i].key)
 		}
 	}
 	w.cacheTime = cacheNow
@@ -214,10 +215,14 @@ func (w *InsightWorker) Enrich(req InsightEnrichmentRequest) (*InsightEnrichment
 	return &resp, nil
 }
 
-// providerPriority lists provider names in preference order for insight enrichment
-var providerPriority = []string{"claude-code", "bob", "claude", "openai", "gemini", "ollama"}
+// defaultProviderPriority is the fallback ordering when no primary agent has
+// been selected by the user.  Used by callAIProvider (#9484).
+var defaultProviderPriority = []string{"claude-code", "bob", "claude", "openai", "gemini", "ollama"}
 
-// callAIProvider sends insights to the AI provider for enrichment
+// callAIProvider sends insights to the AI provider for enrichment.
+// If the user has selected a primary agent (via the registry default), that
+// agent is tried first.  If it fails or is unavailable the remaining providers
+// in defaultProviderPriority are tried in order (#9484).
 func (w *InsightWorker) callAIProvider(insights []InsightSummary) ([]AIInsightEnrichment, string, error) {
 	if w.registry == nil {
 		return nil, "", fmt.Errorf("no provider registry available")
@@ -238,7 +243,13 @@ func (w *InsightWorker) callAIProvider(insights []InsightSummary) ([]AIInsightEn
 	ctx, cancel := context.WithTimeout(parent, InsightEnrichmentTimeout)
 	defer cancel()
 
-	for _, name := range providerPriority {
+	// Build the effective priority list: if the user selected a primary
+	// agent, try it first, then fall back to the default list (skipping
+	// duplicates so the primary isn't attempted twice).
+	primaryAgent := w.registry.GetDefaultName()
+	order := buildProviderOrder(primaryAgent, defaultProviderPriority)
+
+	for _, name := range order {
 		provider, err := w.registry.Get(name)
 		if err != nil || !provider.IsAvailable() {
 			continue
@@ -270,9 +281,31 @@ func (w *InsightWorker) callAIProvider(insights []InsightSummary) ([]AIInsightEn
 	return nil, "", fmt.Errorf("no available AI providers")
 }
 
+// buildProviderOrder returns a provider ordering that places primaryAgent
+// first (if non-empty) followed by the remaining entries from fallback,
+// skipping duplicates.
+func buildProviderOrder(primaryAgent string, fallback []string) []string {
+	if primaryAgent == "" {
+		return fallback
+	}
+	// Pre-size: primary + full fallback list (at most one duplicate removed).
+	order := make([]string, 0, len(fallback)+1)
+	order = append(order, primaryAgent)
+	for _, name := range fallback {
+		if name != primaryAgent {
+			order = append(order, name)
+		}
+	}
+	return order
+}
+
 // buildInsightEnrichmentPrompt creates a structured prompt for the AI
 func buildInsightEnrichmentPrompt(insights []InsightSummary) string {
 	var b strings.Builder
+	// Prepend untrusted-data guard so the AI treats cluster-sourced fields
+	// as display-only and resists prompt injection via crafted pod logs,
+	// event descriptions, or resource names (#9486).
+	b.WriteString(UntrustedDataSystemPrompt)
 	b.WriteString("You are a Kubernetes operations expert. Analyze these cross-cluster insights and provide enriched analysis.\n\n")
 	b.WriteString("For each insight, provide:\n")
 	b.WriteString("1. A clear, actionable description (replace the heuristic description)\n")
@@ -287,8 +320,11 @@ func buildInsightEnrichmentPrompt(insights []InsightSummary) string {
 		b.WriteString(fmt.Sprintf("--- Insight %d ---\n", i+1))
 		b.WriteString(fmt.Sprintf("ID: %s\n", insight.ID))
 		b.WriteString(fmt.Sprintf("Category: %s\n", insight.Category))
-		b.WriteString(fmt.Sprintf("Title: %s\n", insight.Title))
-		b.WriteString(fmt.Sprintf("Description: %s\n", insight.Description))
+		// Scrub secrets from insight text fields before sending to AI providers (#9481).
+		// Wrap untrusted cluster data in delimiters to guard against prompt injection (#9486).
+		b.WriteString(fmt.Sprintf("Title: %s\n", ScrubSecrets(insight.Title)))
+		b.WriteString(fmt.Sprintf("Description: %s\n",
+			WrapUntrustedData("insight-description", ScrubSecrets(insight.Description))))
 		b.WriteString(fmt.Sprintf("Severity: %s\n", insight.Severity))
 		b.WriteString(fmt.Sprintf("Affected Clusters: %s\n", strings.Join(insight.AffectedClusters, ", ")))
 		if len(insight.Metrics) > 0 {

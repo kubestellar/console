@@ -43,6 +43,24 @@ export const CHART_TOOLTIP_CONTENT_STYLE_GRAY: React.CSSProperties = {
 export const CHART_GRID_STROKE = '#333'
 export const CHART_AXIS_STROKE = '#333'
 export const CHART_TICK_COLOR = '#888'
+/** DataZoom slider border color */
+export const CHART_DATAZOOM_BORDER = '#444'
+/** DataZoom slider background overlay */
+export const CHART_DATAZOOM_BG = 'rgba(50,50,50,0.3)'
+/** DataZoom slider selected-range filler */
+export const CHART_DATAZOOM_FILLER = 'rgba(68,114,196,0.15)'
+/** DataZoom slider handle color */
+export const CHART_DATAZOOM_HANDLE = '#666'
+/** DataZoom label text color */
+export const CHART_DATAZOOM_TEXT = '#888'
+/** DataZoom data-background line color */
+export const CHART_DATAZOOM_DATA_LINE = '#555'
+/** DataZoom data-background area color */
+export const CHART_DATAZOOM_DATA_AREA = 'rgba(100,100,100,0.2)'
+/** Chart mark-line label color (secondary text on dark background) */
+export const CHART_MARK_LINE_LABEL = '#888'
+/** Chart mark-line stroke color (dashed guide lines) */
+export const CHART_MARK_LINE_STROKE = '#666'
 /** Tooltip item/content text — verified 13:1 contrast on CHART_TOOLTIP_BG (#1a1a2e) */
 export const CHART_TOOLTIP_TEXT_COLOR = '#e0e0e0'
 /** Tooltip label text — verified 11:1 contrast on CHART_TOOLTIP_BG (#1a1a2e) */

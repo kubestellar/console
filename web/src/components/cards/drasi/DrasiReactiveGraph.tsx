@@ -285,7 +285,7 @@ export function DrasiReactiveGraph() {
       try {
         await fetch(`/api/drasi/proxy${path}?${drasiProxyTarget()}`, {
           method: isCreate ? 'POST' : 'PUT',
-          headers: { 'content-type': 'application/json' },
+          headers: { 'content-type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
           body: JSON.stringify({ id: config.name, spec: { kind: config.kind } }),
           signal: AbortSignal.timeout(DRASI_PROXY_TIMEOUT_MS),
         })
@@ -317,7 +317,7 @@ export function DrasiReactiveGraph() {
       try {
         await fetch(`/api/drasi/proxy${path}?${drasiProxyTarget()}`, {
           method: isCreate ? 'POST' : 'PUT',
-          headers: { 'content-type': 'application/json' },
+          headers: { 'content-type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
           body: JSON.stringify({
             id: config.name,
             spec: { mode: config.language.replace(/ QUERY$/, ''), query: config.queryText },
@@ -354,7 +354,7 @@ export function DrasiReactiveGraph() {
       try {
         await fetch(`/api/drasi/proxy${drasiResourcePath('reaction')}?${drasiProxyTarget()}`, {
           method: 'POST',
-          headers: { 'content-type': 'application/json' },
+          headers: { 'content-type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
           body: JSON.stringify({
             id: defaultName,
             spec: { kind: 'SSE', queries: queries.map(q => ({ id: q.id })) },
@@ -386,7 +386,7 @@ export function DrasiReactiveGraph() {
     try {
       await fetch(`/api/drasi/proxy${drasiResourcePath('reaction')}?${drasiProxyTarget()}`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify({
           id: reactionName,
           spec: { kind: 'Result', queries: [{ id: queryId }] },

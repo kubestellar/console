@@ -3,6 +3,7 @@ package providers
 import (
 	"context"
 	"fmt"
+	"math"
 	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -288,11 +289,22 @@ func capiIndexMachineDeployments(ctx context.Context, dc dynamic.Interface) map[
 		desired, _, _ := unstructured.NestedInt64(md.Object, "spec", "replicas")
 		ready, _, _ := unstructured.NestedInt64(md.Object, "status", "readyReplicas")
 		summary := out[clusterName]
-		summary.desired += int32(desired)
-		summary.ready += int32(ready)
+		summary.desired += safeInt64ToInt32(desired)
+		summary.ready += safeInt64ToInt32(ready)
 		out[clusterName] = summary
 	}
 	return out
+}
+
+// safeInt64ToInt32 converts int64 to int32 with clamping to prevent overflow.
+func safeInt64ToInt32(v int64) int32 {
+	if v > math.MaxInt32 {
+		return math.MaxInt32
+	}
+	if v < math.MinInt32 {
+		return math.MinInt32
+	}
+	return int32(v)
 }
 
 // ---------------------------------------------------------------------------

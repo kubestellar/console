@@ -483,6 +483,7 @@ export function usePipelineMutations() {
       try {
         const res = await fetch(`/api/github-pipelines?${p.toString()}`, {
           method: 'POST',
+          headers: { 'X-Requested-With': 'XMLHttpRequest' },
           signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
         })
         const body = (await res.json().catch(() => ({}))) as { error?: string }

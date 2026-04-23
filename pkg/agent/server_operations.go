@@ -381,9 +381,15 @@ func (s *Server) handleGetKeysStatus(w http.ResponseWriter, r *http.Request) {
 		keys = append(keys, status)
 	}
 
+	// Include the live provider registry so the frontend settings UI can
+	// filter its display to only show providers that are actually
+	// registered in the backend, eliminating the hardcoded mismatch (#9488).
+	registeredProviders := GetRegistry().List()
+
 	json.NewEncoder(w).Encode(KeysStatusResponse{
-		Keys:       keys,
-		ConfigPath: cm.GetConfigPath(),
+		Keys:                keys,
+		ConfigPath:          cm.GetConfigPath(),
+		RegisteredProviders: registeredProviders,
 	})
 }
 

@@ -637,7 +637,7 @@ describe('useDataSource — api type', () => {
     const fetchCall = mockFetch.mock.calls[0]
     expect(fetchCall[0]).toBe('/api/query')
     expect(fetchCall[1].method).toBe('POST')
-    expect(fetchCall[1].headers).toEqual({ 'Content-Type': 'application/json' })
+    expect(fetchCall[1].headers).toEqual({ 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' })
     expect(fetchCall[1].body).toBe(JSON.stringify(params))
   })
 

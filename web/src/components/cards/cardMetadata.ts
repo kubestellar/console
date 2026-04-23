@@ -306,6 +306,8 @@ export const CARD_TITLES: Record<string, string> = {
   slo_compliance: 'SLO Compliance',
   failover_timeline: 'Failover Timeline',
   trino_gateway: 'Trino Gateway',
+  // Fluid dataset caching
+  fluid_status: 'Fluid',
 
   // Inspektor Gadget
   network_trace: 'Network Traces',
@@ -326,7 +328,7 @@ export const CARD_TITLES: Record<string, string> = {
 
 // Short descriptions shown via info icon tooltip in the card header
 export const CARD_DESCRIPTIONS: Record<string, string> = {
-  acmm_level: "The repo's current level on the AI Codebase Maturity Model (L1–L5).",
+  acmm_level: "The repo's current level on the AI Codebase Maturity Model (L1–L6).",
   acmm_feedback_loops: 'Inventory of criteria from ACMM, Fullsend, AEF, and Claude-Reflect.',
   acmm_recommendations: 'Your current role and prioritized missing criteria for the next level.',
   cluster_health: 'Overall health status of all connected Kubernetes clusters.',
@@ -591,6 +593,8 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   slo_compliance: 'Tracks SLO compliance with configurable targets for latency, error rate, and availability. Shows error budget burn rate and per-cluster compliance indicators.',
   failover_timeline: 'Forensic timeline of cross-region failover events detected from Karmada ResourceBinding status transitions. Shows cluster outages, binding rescheduling, and recovery events.',
   trino_gateway: 'Discovers Trino coordinator, worker, and Trino Gateway pods across clusters. Shows per-cluster query health, gateway routing status, and worker distribution.',
+  // Fluid dataset caching
+  fluid_status: 'Fluid is a CNCF incubating cloud-native dataset orchestrator that accelerates data access for AI/Big Data workloads. This card monitors dataset caching status, runtime engine health, and data load progress across your clusters.',
 
   // Inspektor Gadget
   network_trace: 'Live network connection tracing via Inspektor Gadget eBPF.',

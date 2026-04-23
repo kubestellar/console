@@ -83,6 +83,9 @@ func (h *RewardsHandler) fetchUserRewardsForBadge(login string) (*GitHubRewardsR
 	h.mu.RLock()
 	if entry, ok := h.cache[login]; ok && time.Since(entry.fetchedAt) < rewardsCacheTTL {
 		h.mu.RUnlock()
+		if entry.response == nil {
+			return nil, true, errBadgeUnknownLogin
+		}
 		resp := *entry.response
 		return &resp, true, nil
 	}

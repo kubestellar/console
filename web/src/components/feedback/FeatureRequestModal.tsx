@@ -256,7 +256,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
   }, [forceClose])
 
   return (
-    <BaseModal isOpen={isOpen} onClose={handleClose} size="lg" closeOnBackdrop={false} closeOnEscape={true} className="!h-[80vh]">
+    <BaseModal isOpen={isOpen} onClose={handleClose} size="lg" closeOnBackdrop={true} closeOnEscape={true} className="!h-[80vh]">
       {/* Discard/Save Draft confirmation */}
       {showDiscardConfirm && (
         <DiscardConfirmDialog

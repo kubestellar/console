@@ -112,8 +112,15 @@ export function ServiceTopology({ config: _config }: ServiceTopologyProps) {
     return positions
   }, [nodesByCluster])
 
-  const handleZoomIn = () => setZoom(z => Math.min(z + 0.2, 2))
-  const handleZoomOut = () => setZoom(z => Math.max(z - 0.2, 0.5))
+  /** Minimum zoom level for the topology view */
+  const MIN_ZOOM = 0.5
+  /** Maximum zoom level for the topology view */
+  const MAX_ZOOM = 2
+  /** Zoom step increment/decrement per click */
+  const ZOOM_STEP = 0.2
+
+  const handleZoomIn = () => setZoom(z => Math.min(z + ZOOM_STEP, MAX_ZOOM))
+  const handleZoomOut = () => setZoom(z => Math.max(z - ZOOM_STEP, MIN_ZOOM))
   const handleResetZoom = () => setZoom(1)
 
   const selectedNodeData = selectedNode ? nodes.find(n => n.id === selectedNode) : null
@@ -129,6 +136,17 @@ export function ServiceTopology({ config: _config }: ServiceTopologyProps) {
     )
   }
 
+  // Empty state when no services/nodes are found
+  if (nodes.length === 0) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
+        <ZoomIn className="w-8 h-8 mb-2 opacity-40" />
+        <p className="text-sm">{t('serviceTopology.noServices')}</p>
+        <p className="text-xs mt-1">{t('serviceTopology.noServicesHint')}</p>
+      </div>
+    )
+  }
+
   return (
     <div className="h-full flex flex-col min-h-card">
       {/* Header */}
@@ -139,6 +157,7 @@ export function ServiceTopology({ config: _config }: ServiceTopologyProps) {
             size="sm"
             icon={<ZoomOut className="w-3.5 h-3.5" />}
             onClick={handleZoomOut}
+            disabled={zoom <= MIN_ZOOM}
             title={t('serviceTopology.zoomOut')}
             className="p-1 hover:bg-secondary rounded"
           />
@@ -155,6 +174,7 @@ export function ServiceTopology({ config: _config }: ServiceTopologyProps) {
             size="sm"
             icon={<ZoomIn className="w-3.5 h-3.5" />}
             onClick={handleZoomIn}
+            disabled={zoom >= MAX_ZOOM}
             title={t('serviceTopology.zoomIn')}
             className="p-1 hover:bg-secondary rounded"
           />
@@ -295,8 +315,7 @@ export function ServiceTopology({ config: _config }: ServiceTopologyProps) {
                   cx={pos.x}
                   cy={pos.y}
                   r={radius}
-                  className={`${colorClass} ${isSelected || isHovered ? 'opacity-100' : 'opacity-80'} transition-all`}
-                  stroke={isSelected ? 'white' : 'transparent'}
+                  className={`${colorClass} ${isSelected || isHovered ? 'opacity-100' : 'opacity-80'} transition-all ${isSelected ? 'stroke-foreground' : ''}`}
                   strokeWidth={isSelected ? 0.5 : 0}
                 />
 

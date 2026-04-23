@@ -16,7 +16,10 @@ import {
   CHART_GRID_STROKE,
   CHART_AXIS_STROKE,
   CHART_TOOLTIP_CONTENT_STYLE,
-  CHART_TICK_COLOR } from '../../lib/constants'
+  CHART_TICK_COLOR,
+  CHART_MARK_LINE_LABEL,
+  CHART_MARK_LINE_STROKE } from '../../lib/constants'
+import { PURPLE_600, hexToRgba } from '../../lib/theme/chartColors'
 
 interface GPUPoint {
   time: string
@@ -24,6 +27,13 @@ interface GPUPoint {
   available: number
   total: number
 }
+
+/** Opacity at the top of area-fill gradients */
+const AREA_GRADIENT_TOP_ALPHA = 0.4
+/** Opacity at the bottom of area-fill gradients (fully transparent) */
+const AREA_GRADIENT_BOTTOM_ALPHA = 0
+/** Font size for mark-line labels on the chart */
+const MARK_LINE_FONT_SIZE = 9
 
 type TimeRange = '15m' | '1h' | '6h' | '24h'
 
@@ -203,16 +213,16 @@ export function GPUUtilization() {
         type: 'line',
         step: 'end' as const,
         data: history.map(d => d.allocated),
-        lineStyle: { color: '#9333ea', width: 2 },
-        itemStyle: { color: '#9333ea' },
+        lineStyle: { color: PURPLE_600, width: 2 },
+        itemStyle: { color: PURPLE_600 },
         areaStyle: {
           color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
-            colorStops: [{ offset: 0, color: 'rgba(147,51,234,0.4)' }, { offset: 1, color: 'rgba(147,51,234,0)' }] },
+            colorStops: [{ offset: 0, color: hexToRgba(PURPLE_600, AREA_GRADIENT_TOP_ALPHA) }, { offset: 1, color: hexToRgba(PURPLE_600, AREA_GRADIENT_BOTTOM_ALPHA) }] },
         },
         showSymbol: false,
         markLine: {
           silent: true,
-          data: [{ yAxis: currentStats.total, label: { formatter: 'Total', position: 'end', color: '#888', fontSize: 9 }, lineStyle: { color: '#666', type: 'dashed' } }],
+          data: [{ yAxis: currentStats.total, label: { formatter: 'Total', position: 'end', color: CHART_MARK_LINE_LABEL, fontSize: MARK_LINE_FONT_SIZE }, lineStyle: { color: CHART_MARK_LINE_STROKE, type: 'dashed' } }],
         },
       },
     ],

@@ -73,7 +73,8 @@ test.describe('Smoke Tests', () => {
       ]
 
       for (const { text, expectedPath } of navLinks) {
-        await page.click(`nav >> text="${text}"`)
+        // Use modern locator chain instead of deprecated >> syntax. #9523
+        await page.locator('nav').getByText(text, { exact: true }).click()
         await waitForNetworkIdleBestEffort(page, NETWORK_IDLE_TIMEOUT_MS, `nav to ${expectedPath}`)
         expect(page.url()).toContain(expectedPath)
       }
@@ -230,10 +231,8 @@ test.describe('Smoke Tests', () => {
         .or(page.getByTestId('demo-mode-indicator'))
         .or(page.locator('[aria-label*="demo"]'))
 
-      // Should have some indication of demo mode
-      const isVisible = await demoIndicator.first().isVisible({ timeout: OPTIONAL_PROBE_TIMEOUT_MS }).catch(() => false)
-      // This is informational - demo indicator may not always be visible
-      console.log(`Demo mode indicator visible: ${isVisible}`)
+      // Assert the demo indicator is visible — a missing indicator is a regression. #9524
+      await expect(demoIndicator.first()).toBeVisible({ timeout: OPTIONAL_PROBE_TIMEOUT_MS })
     })
   })
 })

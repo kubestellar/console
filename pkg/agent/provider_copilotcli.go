@@ -121,6 +121,7 @@ func (c *CopilotCLIProvider) StreamChatWithProgress(ctx context.Context, req *Ch
 	// --allow-all-paths: allow access to any file path for kubectl/helm operations
 	cmd := exec.CommandContext(ctx, c.cliPath, "-p", prompt, "--silent", "--no-ask-user", "--no-color", "--allow-all-tools", "--allow-all-paths")
 	cmd.Env = append(os.Environ(), "NO_COLOR=1")
+	configureProcessGroup(cmd) // #9442: kill entire process tree on timeout
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {

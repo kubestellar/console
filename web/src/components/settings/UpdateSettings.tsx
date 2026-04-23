@@ -55,6 +55,9 @@ const TRIGGER_STALL_TIMEOUT_MS = 30_000
 /** Countdown tick interval in milliseconds */
 const COUNTDOWN_TICK_MS = 1000
 
+/** Duration (ms) to show the transient "check complete" banner before auto-dismiss */
+const CHECK_RESULT_DISPLAY_MS = 4000
+
 /** Scroll to a settings section by ID (mirrors Settings.tsx logic) */
 function scrollToSettingsSection(sectionId: string) {
   const element = document.getElementById(sectionId)
@@ -91,6 +94,8 @@ export function UpdateSettings() {
     setAutoUpdateEnabled,
     triggerUpdate,
     cancelUpdate,
+    lastCheckResult,
+    clearLastCheckResult,
   } = useVersionCheck()
 
   // WebSocket-driven update progress from kc-agent
@@ -187,6 +192,13 @@ export function UpdateSettings() {
     forceCheck()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Auto-dismiss the transient check result banner after a short delay
+  useEffect(() => {
+    if (!lastCheckResult) return
+    const timer = setTimeout(() => clearLastCheckResult(), CHECK_RESULT_DISPLAY_MS)
+    return () => clearTimeout(timer)
+  }, [lastCheckResult, clearLastCheckResult])
 
   // Clear triggered state once WebSocket progress starts or update fails.
   // Emit GA4 lifecycle events for update completion/failure.
@@ -551,12 +563,22 @@ export function UpdateSettings() {
         </div>
       )}
 
-      {/* Dev Mode Warning */}
-      {!isDeveloperChannel && !currentVersion.includes('nightly') && !currentVersion.includes('weekly') && currentVersion !== 'unknown' && (
+      {/* Dev Mode Warning — only shown for actual dev installs (running from source)
+           where the version doesn't match a release tag pattern. Helm/binary installs
+           often report versions without the 'v' prefix (e.g., "0.3.21") which is normal. */}
+      {installMethod === 'dev' && !isDeveloperChannel && !currentVersion.includes('nightly') && !currentVersion.includes('weekly') && currentVersion !== 'unknown' && (
         <div className="p-3 rounded-lg mb-4 bg-yellow-500/10 border border-yellow-500/20">
           <p className="text-xs text-yellow-400">
             {t('settings.updates.devVersion', { envVar: 'VITE_APP_VERSION' })}
           </p>
+        </div>
+      )}
+
+      {/* Transient check-complete feedback — auto-dismissed after CHECK_RESULT_DISPLAY_MS */}
+      {lastCheckResult === 'success' && !isChecking && !isVisuallySpinning && !hasUpdate && !error && (
+        <div data-testid="check-complete-banner" className="mb-4 p-3 rounded-lg bg-green-500/10 border border-green-500/20 flex items-center gap-2 animate-in fade-in">
+          <Check className="w-4 h-4 text-green-400 shrink-0" />
+          <p className="text-sm text-green-400">{t('settings.updates.upToDate')}</p>
         </div>
       )}
 

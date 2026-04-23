@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -20,6 +21,13 @@ import (
 // maxWSGoroutines limits concurrent chat/kubectl goroutines per connection
 // to prevent resource exhaustion from bursty or malicious traffic (#7277).
 const maxWSGoroutines = 20
+
+// cmdPrefixRe matches lines like "CMD: ...", "CMD:...", "Command: ...", or "command: ..."
+// used by extractCommandsFromResponse to parse mixed-mode thinking output (#9440).
+var cmdPrefixRe = regexp.MustCompile(`(?i)^(?:cmd|command)\s*:\s*(.+)`)
+
+// codeBlockCmdRe matches kubectl/helm/oc commands inside markdown code blocks (#9440).
+var codeBlockCmdRe = regexp.MustCompile(`^\s*(kubectl|helm|oc)\s+.+`)
 
 // wsMaxMessageBytes caps the size of any single WebSocket frame the agent
 // will accept from a client. Without this, an authenticated client could
@@ -451,6 +459,13 @@ func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.M
 		return
 	}
 
+	// SECURITY: Reject new prompts when the session token quota is exhausted
+	// to prevent unbounded AI API spend (#9438).
+	if s.isSessionQuotaExceeded() {
+		safeWrite(context.Background(), s.errorResponse(msg.ID, "token_quota_exceeded", s.sessionTokenQuotaMessage()))
+		return
+	}
+
 	// Generate a unique session ID when the client omits one so that
 	// concurrent anonymous chats do not collide in activeChatCtxs (#4263).
 	if req.SessionID == "" {
@@ -558,6 +573,14 @@ func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.M
 		SessionID: req.SessionID,
 		Prompt:    req.Prompt,
 		History:   history,
+	}
+
+	// Thread cluster context so tool-capable agents scope kubectl to the
+	// correct cluster, preventing multi-cluster context drift (#9485).
+	if req.ClusterContext != "" {
+		chatReq.Context = map[string]string{
+			"clusterContext": req.ClusterContext,
+		}
 	}
 
 	// Send initial progress message so user sees feedback immediately
@@ -893,6 +916,12 @@ func (s *Server) handleChatMessage(msg protocol.Message, forceAgent string) prot
 		return s.errorResponse(msg.ID, "empty_prompt", "Prompt cannot be empty")
 	}
 
+	// SECURITY: Reject new prompts when the session token quota is exhausted
+	// to prevent unbounded AI API spend (#9438).
+	if s.isSessionQuotaExceeded() {
+		return s.errorResponse(msg.ID, "token_quota_exceeded", s.sessionTokenQuotaMessage())
+	}
+
 	// Generate a unique session ID when the client omits one so that
 	// concurrent anonymous chats do not collide (#4263).
 	if req.SessionID == "" {
@@ -937,6 +966,13 @@ func (s *Server) handleChatMessage(msg protocol.Message, forceAgent string) prot
 		SessionID: req.SessionID,
 		Prompt:    req.Prompt,
 		History:   history,
+	}
+
+	// Thread cluster context for non-streaming path (#9485).
+	if req.ClusterContext != "" {
+		chatReq.Context = map[string]string{
+			"clusterContext": req.ClusterContext,
+		}
 	}
 
 	// #6678 — Previously this used context.Background() with no deadline,
@@ -1161,10 +1197,20 @@ func (s *Server) handleMixedModeChat(ctx context.Context, conn *websocket.Conn, 
 
 User request: %s`, req.Prompt)
 
+	// Thread cluster context to both thinking and execution agents so
+	// kubectl commands are scoped to the user's current cluster (#9485).
+	var chatCtx map[string]string
+	if req.ClusterContext != "" {
+		chatCtx = map[string]string{
+			"clusterContext": req.ClusterContext,
+		}
+	}
+
 	thinkingReq := ChatRequest{
 		Prompt:    thinkingPrompt,
 		SessionID: sessionID,
 		History:   history,
+		Context:   chatCtx,
 	}
 
 	thinkingResp, err := thinkingProvider.Chat(ctx, &thinkingReq)
@@ -1194,16 +1240,8 @@ User request: %s`, req.Prompt)
 		},
 	})
 
-	// Extract commands from thinking response (lines starting with CMD:)
-	var commands []string
-	for _, line := range strings.Split(thinkingResp.Content, "\n") {
-		trimmed := strings.TrimSpace(line)
-		if strings.HasPrefix(trimmed, "CMD: ") {
-			commands = append(commands, strings.TrimPrefix(trimmed, "CMD: "))
-		} else if strings.HasPrefix(trimmed, "CMD:") {
-			commands = append(commands, strings.TrimPrefix(trimmed, "CMD:"))
-		}
-	}
+	// Extract commands from thinking response using robust heuristics (#9440).
+	commands := extractCommandsFromResponse(thinkingResp.Content)
 
 	if len(commands) == 0 {
 		// No commands to execute - just return thinking response
@@ -1237,6 +1275,7 @@ User request: %s`, req.Prompt)
 	execReq := ChatRequest{
 		Prompt:    execPrompt,
 		SessionID: sessionID,
+		Context:   chatCtx,
 	}
 
 	var execContent string
@@ -1502,14 +1541,43 @@ func (s *Server) getClaudeInfo() *protocol.ClaudeInfo {
 	}
 }
 
-// addTokenUsage accumulates token usage from a chat response
+// isSessionQuotaExceeded returns true when the aggregate session token count
+// (input + output) has reached or passed the configured quota. A quota of 0
+// means unlimited — the check is skipped (#9438).
+func (s *Server) isSessionQuotaExceeded() bool {
+	if s.sessionTokenQuota <= 0 {
+		return false // unlimited
+	}
+	s.tokenMux.Lock()
+	total := s.sessionTokensIn + s.sessionTokensOut
+	s.tokenMux.Unlock()
+	return total >= s.sessionTokenQuota
+}
+
+// sessionTokenQuotaMessage builds a human-readable error string returned to
+// the client when the session token quota is exceeded.
+func (s *Server) sessionTokenQuotaMessage() string {
+	return fmt.Sprintf(
+		"Session token quota exceeded (limit: %d tokens). "+
+			"Restart kc-agent to reset the session quota, or increase "+
+			"the limit via the %s environment variable.",
+		s.sessionTokenQuota, sessionTokenQuotaEnvVar)
+}
+
+// tokenUsageFlushInterval is how often accumulated in-memory token usage
+// is flushed to disk. Batching prevents high-frequency disk I/O when many
+// AI responses arrive in quick succession (#9483).
+const tokenUsageFlushInterval = 5 * time.Second
+
+// addTokenUsage accumulates token usage from a chat response.
+// Instead of writing to disk on every call, it schedules a debounced
+// flush that fires after tokenUsageFlushInterval of inactivity (#9483).
 func (s *Server) addTokenUsage(usage *ProviderTokenUsage) {
 	if usage == nil {
 		return
 	}
 
 	s.tokenMux.Lock()
-	defer s.tokenMux.Unlock()
 
 	// Check if day changed - reset daily counters
 	today := time.Now().Format("2006-01-02")
@@ -1525,8 +1593,19 @@ func (s *Server) addTokenUsage(usage *ProviderTokenUsage) {
 	s.todayTokensIn += int64(usage.InputTokens)
 	s.todayTokensOut += int64(usage.OutputTokens)
 
-	// Persist to disk (non-blocking)
-	go s.saveTokenUsage()
+	// Schedule a debounced flush: reset the timer if one is already pending,
+	// otherwise create a new one. This coalesces rapid-fire token updates into
+	// a single disk write (#9483).
+	if s.tokenFlushTimer != nil {
+		s.tokenFlushTimer.Stop()
+		s.tokenFlushTimer.Reset(tokenUsageFlushInterval)
+	} else {
+		s.tokenFlushTimer = time.AfterFunc(tokenUsageFlushInterval, func() {
+			s.saveTokenUsage()
+		})
+	}
+
+	s.tokenMux.Unlock()
 }
 
 // tokenUsageData is persisted to disk
@@ -1572,8 +1651,13 @@ func (s *Server) loadTokenUsage() {
 	}
 }
 
-// saveTokenUsage persists token usage to disk
+// saveTokenUsage persists token usage to disk.
+// tokenFileMux serializes the entire read-snapshot-write cycle so concurrent
+// goroutines spawned by addTokenUsage cannot clobber each other (#9441).
 func (s *Server) saveTokenUsage() {
+	s.tokenFileMux.Lock()
+	defer s.tokenFileMux.Unlock()
+
 	s.tokenMux.RLock()
 	usage := tokenUsageData{
 		Date:      s.todayDate,
@@ -1600,6 +1684,54 @@ func (s *Server) saveTokenUsage() {
 	}
 }
 
+// extractCommandsFromResponse parses an LLM thinking response to find
+// executable commands. It handles multiple formats (#9440):
+//   - Lines prefixed with "CMD: ", "CMD:", "Command: ", "command:" (case-insensitive)
+//   - kubectl/helm/oc commands inside markdown fenced code blocks (```...```)
+//   - Bare kubectl/helm/oc commands on standalone lines
+func extractCommandsFromResponse(content string) []string {
+	var commands []string
+	seen := make(map[string]bool) // deduplicate commands
+	inCodeBlock := false
+
+	for _, line := range strings.Split(content, "\n") {
+		trimmed := strings.TrimSpace(line)
+
+		// Track markdown fenced code block boundaries
+		if strings.HasPrefix(trimmed, "```") {
+			inCodeBlock = !inCodeBlock
+			continue
+		}
+
+		// 1. Check for CMD:/Command: prefix (case-insensitive)
+		if m := cmdPrefixRe.FindStringSubmatch(trimmed); m != nil {
+			cmd := strings.TrimSpace(m[1])
+			if cmd != "" && !seen[cmd] {
+				seen[cmd] = true
+				commands = append(commands, cmd)
+			}
+			continue
+		}
+
+		// 2. Inside a code block, accept kubectl/helm/oc commands
+		if inCodeBlock {
+			if codeBlockCmdRe.MatchString(trimmed) && !seen[trimmed] {
+				seen[trimmed] = true
+				commands = append(commands, trimmed)
+			}
+			continue
+		}
+
+		// 3. Bare kubectl/helm/oc commands outside code blocks (standalone lines)
+		if codeBlockCmdRe.MatchString(trimmed) && !seen[trimmed] {
+			seen[trimmed] = true
+			commands = append(commands, trimmed)
+		}
+	}
+
+	return commands
+}
+
 // KeyStatus represents the status of an API key for a provider
 type KeyStatus struct {
 	Provider    string `json:"provider"`
@@ -1623,10 +1755,14 @@ type KeyStatus struct {
 	BaseURLSource string `json:"baseURLSource,omitempty"`
 }
 
-// KeysStatusResponse is the response for GET /settings/keys
+// KeysStatusResponse is the response for GET /settings/keys.
+// RegisteredProviders is populated from the live agent registry so the
+// frontend settings UI can display only providers that are actually
+// registered in the backend, avoiding stale hardcoded lists (#9488).
 type KeysStatusResponse struct {
-	Keys       []KeyStatus `json:"keys"`
-	ConfigPath string      `json:"configPath"`
+	Keys                []KeyStatus    `json:"keys"`
+	ConfigPath          string         `json:"configPath"`
+	RegisteredProviders []ProviderInfo `json:"registeredProviders"`
 }
 
 // SetKeyRequest is the request body for POST /settings/keys.

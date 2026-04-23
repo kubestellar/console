@@ -57,7 +57,8 @@ interface ServiceExportsProps {
 
 function ServiceExportsInternal({ config: _config }: ServiceExportsProps) {
   const { t } = useTranslation(['cards', 'common'])
-  const { exports: allExports, isLoading, isRefreshing, isDemoData } = useServiceExports()
+  const { exports: allExports, isLoading, isRefreshing, isDemoData, isFailed, consecutiveFailures, refetch } = useServiceExports()
+  const hasError = isFailed
   const SORT_OPTIONS = SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) }))
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
@@ -65,7 +66,9 @@ function ServiceExportsInternal({ config: _config }: ServiceExportsProps) {
     isLoading,
     isRefreshing,
     hasAnyData: allExports.length > 0,
-    isDemoData })
+    isDemoData,
+    isFailed,
+    consecutiveFailures })
 
   const {
     items: filteredExports,
@@ -124,6 +127,22 @@ function ServiceExportsInternal({ config: _config }: ServiceExportsProps) {
     )
   }
 
+  // Show error state if data fetch failed
+  if (hasError) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center min-h-card p-6">
+        <AlertCircle className="w-12 h-12 text-red-400 mb-4" />
+        <p className="text-sm text-muted-foreground mb-4">{t('serviceExports.loadFailed')}</p>
+        <button
+          onClick={() => refetch()}
+          className="px-4 py-2 rounded-lg bg-purple-500 hover:bg-purple-600 text-white text-sm"
+        >
+          {t('common:common.retry')}
+        </button>
+      </div>
+    )
+  }
+
   return (
     <div className="h-full flex flex-col min-h-card">
       {/* Header with controls */}
@@ -169,24 +188,26 @@ function ServiceExportsInternal({ config: _config }: ServiceExportsProps) {
         />
       </div>
 
-      {/* MCS Integration Notice */}
-      <div className="flex items-start gap-2 p-2 mb-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs">
-        <AlertCircle className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" />
-        <div>
-          <p className="text-blue-400 font-medium">{t('serviceExports.mcsTitle')}</p>
-          <p className="text-muted-foreground">
-            {t('serviceExports.mcsDesc')}{' '}
-            <a
-              href={K8S_DOCS.mcsApiInstall}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-purple-400 hover:underline"
-            >
-              {t('serviceExports.installGuide')}
-            </a>
-          </p>
+      {/* MCS Integration Notice — only shown when no real data detected */}
+      {isDemoData && (
+        <div className="flex items-start gap-2 p-2 mb-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs">
+          <AlertCircle className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-blue-400 font-medium">{t('serviceExports.mcsTitle')}</p>
+            <p className="text-muted-foreground">
+              {t('serviceExports.mcsDesc')}{' '}
+              <a
+                href={K8S_DOCS.mcsApiInstall}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-purple-400 hover:underline"
+              >
+                {t('serviceExports.installGuide')}
+              </a>
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-2 @md:grid-cols-3 gap-2 mb-3">
@@ -269,13 +290,15 @@ function ServiceExportsInternal({ config: _config }: ServiceExportsProps) {
         needsPagination={needsPagination && itemsPerPage !== 'unlimited'}
       />
 
-      {/* Quick install command */}
-      <div className="mt-3 pt-3 border-t border-border/50">
-        <p className="text-2xs text-muted-foreground font-medium mb-2">{t('serviceExports.quickInstall')}</p>
-        <code className="block p-2 rounded bg-secondary text-2xs text-muted-foreground font-mono overflow-x-auto whitespace-nowrap">
-          {K8S_DOCS.mcsApiInstallCommand}
-        </code>
-      </div>
+      {/* Quick install command — only shown when no real data detected */}
+      {isDemoData && (
+        <div className="mt-3 pt-3 border-t border-border/50">
+          <p className="text-2xs text-muted-foreground font-medium mb-2">{t('serviceExports.quickInstall')}</p>
+          <code className="block p-2 rounded bg-secondary text-2xs text-muted-foreground font-mono overflow-x-auto whitespace-nowrap">
+            {K8S_DOCS.mcsApiInstallCommand}
+          </code>
+        </div>
+      )}
 
       {/* Footer links */}
       <div className="flex items-center justify-center gap-3 pt-2 mt-2 border-t border-border/50 text-2xs">

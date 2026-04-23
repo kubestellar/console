@@ -514,7 +514,7 @@ class ApiClient {
     }
   }
 
-  async post<T = unknown>(path: string, body?: unknown, options?: { timeout?: number }): Promise<{ data: T }> {
+  async post<T = unknown>(path: string, body?: unknown, options?: { timeout?: number; headers?: Record<string, string> }): Promise<{ data: T }> {
     // Check backend availability
     const available = await checkBackendAvailability()
     if (!available) {
@@ -526,7 +526,7 @@ class ApiClient {
     try {
       const response = await fetch(`${API_BASE}${path}`, {
         method: 'POST',
-        headers: this.getHeaders(),
+        headers: { ...this.getHeaders(), ...options?.headers },
         body: body ? JSON.stringify(body) : undefined,
         signal: controller.signal,
       })

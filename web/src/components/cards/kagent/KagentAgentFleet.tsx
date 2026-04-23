@@ -65,6 +65,7 @@ function KagentAgentFleetInternal({ config }: KagentAgentFleetProps) {
   const {
     data: agents,
     isLoading,
+    isRefreshing,
     isDemoFallback,
     consecutiveFailures,
   } = useKagentCRDAgents({ cluster: config?.cluster })
@@ -72,6 +73,7 @@ function KagentAgentFleetInternal({ config }: KagentAgentFleetProps) {
   const hasAnyData = agents.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: isLoading && !hasAnyData,
+    isRefreshing,
     hasAnyData,
     isFailed: consecutiveFailures >= 3,
     consecutiveFailures,
@@ -179,7 +181,9 @@ function KagentAgentFleetInternal({ config }: KagentAgentFleetProps) {
             <TypeBadge agentType={agent.agentType} />
             <RuntimeBadge runtime={agent.runtime} />
             <div className="text-xs text-muted-foreground">
-              {agent.readyReplicas}/{agent.replicas}
+              {agent.replicas != null && agent.readyReplicas != null
+                ? `${agent.readyReplicas}/${agent.replicas}`
+                : 'N/A'}
             </div>
             <StatusBadge status={agent.status} />
             <ChevronRight className="w-3 h-3 text-muted-foreground/20 group-hover:text-muted-foreground" />

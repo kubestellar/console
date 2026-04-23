@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Search, Server, Activity, Filter, Check, AlertTriangle, Save, X, Trash2, WifiOff } from 'lucide-react'
+import { Search, Server, Activity, Filter, Check, AlertTriangle, Save, X, Trash2, WifiOff, Globe } from 'lucide-react'
 import { AlertCircle, CheckCircle2 } from 'lucide-react'
 import { useGlobalFilters, SEVERITY_LEVELS, SEVERITY_CONFIG, STATUS_LEVELS, STATUS_CONFIG } from '../../../hooks/useGlobalFilters'
 import { useModalState } from '../../../lib/modals'
@@ -105,6 +105,12 @@ export function ClusterFilterPanel() {
     hasCustomFilter,
     isFiltered,
     clearAllFilters,
+    selectedDistributions,
+    toggleDistribution,
+    selectAllDistributions,
+    deselectAllDistributions,
+    isAllDistributionsSelected,
+    availableDistributions,
     savedFilterSets,
     saveCurrentFilters,
     applySavedFilterSet,
@@ -190,7 +196,7 @@ export function ClusterFilterPanel() {
 
         {/* Filter dropdown */}
         {showDropdown && (
-          <div className="absolute top-full right-0 mt-2 w-80 bg-card border border-border rounded-lg shadow-xl z-50 max-h-[80vh] overflow-y-auto">
+          <div className="absolute top-full right-0 mt-2 w-80 bg-card border border-border rounded-lg shadow-xl z-dropdown max-h-[80vh] overflow-y-auto">
 
             {/* Clear All — shown at top when filters are active */}
             {isFiltered && (
@@ -306,6 +312,46 @@ export function ClusterFilterPanel() {
               onSelectAll={selectAllStatuses}
               onDeselectAll={deselectAllStatuses}
             />
+
+            {/* Distribution Filter Section */}
+            {availableDistributions.length > 0 && (
+              <div className="p-3 border-b border-border">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Globe className="w-4 h-4 text-blue-400" />
+                    <span className="text-sm font-medium text-foreground">{t('common:filters.distribution', 'Distribution')}</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={selectAllDistributions} className="text-xs text-purple-400 hover:text-purple-300">
+                      {t('common.all')}
+                    </button>
+                    <button onClick={deselectAllDistributions} className="text-xs text-muted-foreground hover:text-foreground">
+                      {t('common.none')}
+                    </button>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {availableDistributions.map((dist) => {
+                    const isSelected = isAllDistributionsSelected || selectedDistributions.includes(dist)
+                    return (
+                      <button
+                        key={dist}
+                        onClick={() => toggleDistribution(dist)}
+                        className={cn(
+                          'flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium transition-colors capitalize',
+                          isSelected
+                            ? 'bg-blue-500/20 text-blue-400'
+                            : 'bg-secondary/50 text-muted-foreground hover:text-foreground'
+                        )}
+                      >
+                        {isSelected && <Check className="w-3 h-3" />}
+                        {dist}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Cluster Filter Section */}
             <div className="p-3 border-b border-border">

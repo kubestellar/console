@@ -95,7 +95,9 @@ export function DNSHealth() {
             </div>
             <div className="flex gap-1 mt-1 flex-wrap">
               {clusterPods.map(pod => {
-                const version = pod.containers?.[0]?.image?.split(':')[1] || ''
+                const rawVersion = pod.containers?.[0]?.image?.split(':')[1] || ''
+                // Strip @sha256 digest suffix and normalize leading 'v' prefix
+                const version = rawVersion.split('@')[0].replace(/^v+/, '')
                 return (
                   <span
                     key={pod.name}

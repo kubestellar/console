@@ -86,7 +86,6 @@ import {
   GPU_POLL_INTERVAL_MS,
   CACHE_TTL_MS,
   MIN_REFRESH_INDICATOR_MS,
-  LOCAL_AGENT_URL,
   // Pure functions
   getEffectiveInterval,
   shareMetricsBetweenSameServerClusters,
@@ -527,12 +526,25 @@ describe('fullFetchClusters', () => {
 
     await fullFetchClusters()
 
-    // LOCAL_AGENT_URL is re-exported from shared.ts as LOCAL_AGENT_HTTP_URL —
-    // using it here keeps the assertion tracking the kc-agent migration
-    // (phase 4.5b, #7993 / #8173) instead of re-hardcoding the REST path.
-    expect(mockApiGet).toHaveBeenCalledWith(`${LOCAL_AGENT_URL}/clusters`)
+    // The backend API fallback now uses the same-origin /api/mcp/clusters endpoint
+    // which works regardless of agent backend (kc-agent, kagenti, kagent). (#9535)
+    expect(mockApiGet).toHaveBeenCalledWith('/api/mcp/clusters')
     expect(clusterCache.isLoading).toBe(false)
     expect(clusterCache.clusters.some(c => c.name === 'backend-cluster')).toBe(true)
+  })
+
+  it('routes cluster fetch through backend API when kagenti backend is preferred (#9535)', async () => {
+    localStorage.setItem('kc_agent_backend_preference', 'kagenti')
+    const KAGENTI_CLUSTERS = [makeCluster({ name: 'kagenti-cluster' })]
+    mockApiGet.mockResolvedValue({ data: { clusters: KAGENTI_CLUSTERS } })
+    // globalThis.fetch should NOT be called — kagenti path uses api.get
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('should not be called'))
+
+    await fullFetchClusters()
+
+    expect(mockApiGet).toHaveBeenCalledWith('/api/mcp/clusters')
+    expect(clusterCache.isLoading).toBe(false)
+    expect(clusterCache.clusters.some(c => c.name === 'kagenti-cluster')).toBe(true)
   })
 
   it('skips backend when no auth token', async () => {

@@ -29,6 +29,10 @@ interface KubescapeDetailModalProps {
   onClose: () => void
   clusterName: string
   status: KubescapeClusterStatus
+  /** All cluster names available in the kubescape statuses */
+  clusters?: string[]
+  /** Callback to switch to a different cluster */
+  onClusterChange?: (cluster: string) => void
   onRefresh: () => void
   isRefreshing?: boolean
 }
@@ -38,6 +42,8 @@ export function KubescapeDetailModal({
   onClose,
   clusterName,
   status,
+  clusters,
+  onClusterChange,
   onRefresh,
   isRefreshing = false }: KubescapeDetailModalProps) {
   const [search, setSearch] = useState('')
@@ -75,11 +81,24 @@ export function KubescapeDetailModal({
           </StatusBadge>
         }
         extra={
-          <RefreshButton
-            isRefreshing={isRefreshing}
-            onRefresh={onRefresh}
-            size="sm"
-          />
+          <div className="flex items-center gap-2">
+            {clusters && clusters.length > 1 && onClusterChange && (
+              <select
+                value={clusterName}
+                onChange={(e) => onClusterChange(e.target.value)}
+                className="text-xs bg-secondary/50 border border-border rounded px-2 py-1 text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500"
+              >
+                {clusters.map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            )}
+            <RefreshButton
+              isRefreshing={isRefreshing}
+              onRefresh={onRefresh}
+              size="sm"
+            />
+          </div>
         }
       />
 

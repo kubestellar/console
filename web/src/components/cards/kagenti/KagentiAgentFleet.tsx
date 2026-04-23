@@ -39,13 +39,16 @@ export function KagentiAgentFleet({ config }: KagentiAgentFleetProps) {
   const {
     data: agents,
     isLoading,
+    isRefreshing,
     isDemoFallback,
     consecutiveFailures,
   } = useKagentiAgents({ cluster: config?.cluster })
 
+  const hasAnyData = agents.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
-    hasAnyData: agents.length > 0,
+    isLoading: isLoading && !hasAnyData,
+    isRefreshing,
+    hasAnyData,
     isFailed: consecutiveFailures >= 3,
     consecutiveFailures,
     isDemoData: isDemoFallback,
@@ -150,7 +153,9 @@ export function KagentiAgentFleet({ config }: KagentiAgentFleetProps) {
               </div>
             </div>
             <div className="text-xs text-muted-foreground">
-              {agent.readyReplicas}/{agent.replicas}
+              {agent.replicas != null && agent.readyReplicas != null
+                ? `${agent.readyReplicas}/${agent.replicas}`
+                : 'N/A'}
             </div>
             <StatusBadge status={agent.status} />
             <ChevronRight className="w-3 h-3 text-muted-foreground/20 group-hover:text-muted-foreground" />

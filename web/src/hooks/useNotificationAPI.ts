@@ -23,6 +23,7 @@ export function useNotificationAPI() {
     const token = localStorage.getItem(STORAGE_KEY_AUTH_TOKEN)
     return {
       'Content-Type': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
       ...(token && { Authorization: `Bearer ${token}` }) }
   }
 

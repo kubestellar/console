@@ -44,7 +44,7 @@ const STACK_POLL_INTERVAL_MS = 2_000
  * enough time to mount and render all 13 cards (including lazy-loaded chunks)
  * without relying on a network-idle signal that will never arrive.
  */
-const CARD_RENDER_WAIT_MS = 5_000
+const CARD_RENDER_WAIT_MS = 15_000
 
 /** Expected card count on the AI/ML route */
 const EXPECTED_CARD_COUNT = 13
@@ -131,21 +131,14 @@ test.describe('AI/ML Dashboard — page structure', () => {
   test('page loads with all 13 AI/ML cards', async ({ page }) => {
     await setupAndNavigate(page, AI_ML_ROUTE)
 
-    // Wait for the SPA to render meaningful content (lazy-loaded dashboard)
+    // Wait for card elements to appear in the DOM (lazy-loaded via safeLazy)
     await page.waitForFunction(
-      () => document.body.innerText.length > 200,
+      (min) => document.querySelectorAll('[data-card-type]').length >= min,
+      EXPECTED_CARD_COUNT,
       { timeout: STACK_DISCOVERY_TIMEOUT_MS },
     )
 
-    const cardCount = await page.evaluate(() => {
-      const grid = document.querySelector('[class*="react-grid-layout"]')
-      if (grid && grid.children.length > 0) return grid.children.length
-
-      const cards = document.querySelectorAll('[data-card-type], [class*="CardWrapper"], [class*="card-wrapper"]')
-      if (cards.length > 0) return cards.length
-
-      return document.querySelectorAll('[class*="rounded"][class*="shadow"], [class*="Card"]').length
-    })
+    const cardCount = await page.locator('[data-card-type]').count()
 
     expect(cardCount).toBeGreaterThanOrEqual(EXPECTED_CARD_COUNT)
     console.log(`  Cards rendered: ${cardCount}`)
@@ -154,7 +147,7 @@ test.describe('AI/ML Dashboard — page structure', () => {
   test('hero row has LLM-d visualization cards', async ({ page }) => {
     await setupAndNavigate(page, AI_ML_ROUTE)
     await page.waitForFunction(
-      () => document.body.innerText.length > 200,
+      () => document.querySelectorAll('[data-card-type]').length >= 3,
       { timeout: CARD_CONTENT_TIMEOUT_MS },
     )
 

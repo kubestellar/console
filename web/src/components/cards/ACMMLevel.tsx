@@ -48,7 +48,7 @@ export function ACMMLevel() {
   const { repo, scan } = useACMM()
   const { level, isLoading, isRefreshing, isDemoData, isFailed, consecutiveFailures, lastRefresh } = scan
 
-  const hasData = scan.data.detectedIds.length > 0
+  const hasData = (scan.data.detectedIds ?? []).length > 0
   const { showSkeleton } = useCardLoadingState({
     isLoading: isLoading && !hasData,
     isRefreshing,

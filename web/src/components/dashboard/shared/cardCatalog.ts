@@ -134,6 +134,7 @@ export const CARD_CATALOG = {
     { type: 'storage_overview', title: 'Storage Overview', description: 'Total storage capacity and PVC summary', visualization: 'status' },
     { type: 'pvc_status', title: 'PVC Status', description: 'Persistent Volume Claims with status breakdown', visualization: 'table' },
     { type: 'pv_status', title: 'Persistent Volumes', description: 'Persistent Volumes with capacity, access modes, and reclaim policy', visualization: 'table' },
+    { type: 'fluid_status', title: 'Fluid', description: 'Fluid dataset caching status, runtime health, and data load progress', visualization: 'status' },
   ],
   'Network': [
     { type: 'network_overview', title: 'Network Overview', description: 'Services breakdown by type and namespace', visualization: 'status' },
@@ -347,7 +348,7 @@ export const CARD_CATALOG = {
     { type: 'drasi_reactive_graph', title: 'Drasi Reactive Graph', description: 'Reactive data pipeline — sources, continuous queries, reactions, and live results with animated flow', visualization: 'status' },
   ],
   'Maturity': [
-    { type: 'acmm_level', title: 'Current Level', description: "The repo's current level on the AI Codebase Maturity Model (L1–L5)", visualization: 'gauge' },
+    { type: 'acmm_level', title: 'Current Level', description: "The repo's current level on the AI Codebase Maturity Model (L1–L6)", visualization: 'gauge' },
     { type: 'acmm_balance', title: 'Human vs AI Balance', description: 'Weekly AI vs human contribution trend with a balance target slider anchored to ACMM levels', visualization: 'timeseries' },
     { type: 'acmm_feedback_loops', title: 'Feedback Loop Inventory', description: 'Inventory of criteria from ACMM + Fullsend + Agentic Engineering Framework + Claude Reflect', visualization: 'status' },
     { type: 'acmm_recommendations', title: 'Your Role + Next Steps', description: 'Current role and prioritized missing criteria for the next level', visualization: 'status' },
@@ -545,6 +546,12 @@ export function generateCardSuggestions(query: string): CardSuggestion[] {
     return [
       { type: 'knative_status', title: 'Knative', description: 'Knative serving revisions, traffic routing, and eventing broker status', visualization: 'status', config: {} },
       { type: 'cloudevents_status', title: 'CloudEvents', description: 'CloudEvents message flow and delivery status', visualization: 'status', config: {} },
+    ]
+  }
+
+  if (lowerQuery.includes('fluid') || lowerQuery.includes('dataset') || lowerQuery.includes('caching') || lowerQuery.includes('alluxio') || lowerQuery.includes('juicefs')) {
+    return [
+      { type: 'fluid_status', title: 'Fluid', description: 'Fluid dataset caching status, runtime health, and data load progress', visualization: 'status', config: {} },
     ]
   }
 

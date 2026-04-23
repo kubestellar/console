@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { Key, Check, AlertCircle, Loader2, Trash2, Eye, EyeOff, ExternalLink, Copy, Plug } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { AgentIcon } from './AgentIcon'
@@ -45,9 +45,22 @@ interface KeyStatus {
   baseURLSource?: 'env' | 'config'
 }
 
+/** Provider info from the backend agent registry (mirrors Go ProviderInfo). */
+interface RegisteredProvider {
+  name: string
+  displayName: string
+  description: string
+  provider: string
+  available: boolean
+  capabilities: number
+}
+
 interface KeysStatusResponse {
   keys: KeyStatus[]
   configPath: string
+  /** Live provider registry from the backend — used to filter the settings
+   *  UI so it only displays providers that are actually registered (#9488). */
+  registeredProviders?: RegisteredProvider[]
 }
 
 interface APIKeySettingsProps {
@@ -55,51 +68,12 @@ interface APIKeySettingsProps {
   onClose: () => void
 }
 
+// PROVIDER_INFO is a fallback lookup table for providers whose docs URL
+// and key placeholder cannot be derived from the backend registry.
+// The settings UI now sources its display list from the backend's
+// registeredProviders field (#9488) — entries here are only consulted
+// when the backend does not supply metadata for a given provider key.
 const PROVIDER_INFO: Record<string, { docsUrl: string; placeholder: string }> = {
-  claude: {
-    docsUrl: AI_PROVIDER_DOCS.claude,
-    placeholder: 'sk-ant-api03-...',
-  },
-  openai: {
-    docsUrl: AI_PROVIDER_DOCS.openai,
-    placeholder: 'sk-...',
-  },
-  gemini: {
-    docsUrl: AI_PROVIDER_DOCS.gemini,
-    placeholder: 'AIza...',
-  },
-  cursor: {
-    docsUrl: AI_PROVIDER_DOCS.cursor,
-    placeholder: 'cursor-...',
-  },
-  vscode: {
-    docsUrl: AI_PROVIDER_DOCS.vscode,
-    placeholder: 'vscode-...',
-  },
-  windsurf: {
-    docsUrl: AI_PROVIDER_DOCS.windsurf,
-    placeholder: 'codeium-...',
-  },
-  cline: {
-    docsUrl: AI_PROVIDER_DOCS.cline,
-    placeholder: 'cline-...',
-  },
-  jetbrains: {
-    docsUrl: AI_PROVIDER_DOCS.jetbrains,
-    placeholder: 'jb-...',
-  },
-  zed: {
-    docsUrl: AI_PROVIDER_DOCS.zed,
-    placeholder: 'zed-...',
-  },
-  continue: {
-    docsUrl: AI_PROVIDER_DOCS.continue,
-    placeholder: 'continue-...',
-  },
-  raycast: {
-    docsUrl: AI_PROVIDER_DOCS.raycast,
-    placeholder: 'raycast-...',
-  },
   'open-webui': {
     docsUrl: AI_PROVIDER_DOCS['open-webui'],
     placeholder: 'owui-...',
@@ -142,20 +116,13 @@ const PROVIDER_INFO: Record<string, { docsUrl: string; placeholder: string }> = 
   },
 }
 
-// Map backend provider key names to AgentIcon provider values
+// Map backend provider key names to AgentIcon provider values.
+// Only includes providers that are actually registered in the backend
+// registry (see InitializeProviders in pkg/agent/registry.go). Stale
+// entries for unregistered API-only / IDE providers were removed in
+// #9488 to keep this in sync with the backend.
 function providerToIconMap(provider: string): string {
   const map: Record<string, string> = {
-    claude: 'anthropic',
-    openai: 'openai',
-    gemini: 'google',
-    cursor: 'anysphere',
-    vscode: 'microsoft',
-    windsurf: 'codeium',
-    cline: 'cline',
-    jetbrains: 'jetbrains',
-    zed: 'zed',
-    continue: 'continue',
-    raycast: 'raycast',
     'open-webui': 'open-webui',
     openrouter: 'openrouter',
     groq: 'groq',
@@ -173,6 +140,7 @@ function providerToIconMap(provider: string): string {
 export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
   const { t } = useTranslation(['common', 'cards'])
   const [keysStatus, setKeysStatus] = useState<KeyStatus[]>([])
+  const [registeredProviders, setRegisteredProviders] = useState<RegisteredProvider[]>([])
   const [configPath, setConfigPath] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -216,6 +184,7 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
       }
       const data: KeysStatusResponse = await response.json()
       setKeysStatus(data.keys)
+      setRegisteredProviders(data.registeredProviders || [])
       setConfigPath(data.configPath)
     } catch (err) {
       setError(err instanceof Error ? err.message : t('agent.failedToConnect'))
@@ -355,6 +324,18 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
     setShowKey(false)
   }
 
+  // Filter displayed keys to only show providers that are actually
+  // registered in the backend's provider registry. When the registry
+  // data is unavailable (older kc-agent, network error), fall back to
+  // showing all keys returned by the backend (#9488).
+  const filteredKeys = useMemo(() => {
+    if (registeredProviders.length === 0) return keysStatus
+    const registeredNames = new Set(
+      (registeredProviders || []).map(p => p.name),
+    )
+    return keysStatus.filter(k => registeredNames.has(k.provider))
+  }, [keysStatus, registeredProviders])
+
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} size="md" closeOnBackdrop={false}>
       <BaseModal.Header
@@ -369,7 +350,7 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
             <div className="flex items-center justify-center py-8">
               <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
             </div>
-          ) : error && keysStatus.length === 0 ? (
+          ) : error && filteredKeys.length === 0 ? (
             <div className="text-center py-6">
               <div className="p-3 rounded-full bg-orange-500/20 w-fit mx-auto mb-4">
                 <Plug className="w-8 h-8 text-orange-400" />
@@ -419,7 +400,7 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
                 </div>
               )}
 
-              {keysStatus.map((key) => (
+              {filteredKeys.map((key) => (
                 <div
                   key={key.provider}
                   className="p-4 bg-secondary/30 border border-border rounded-lg"

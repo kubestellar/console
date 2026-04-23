@@ -5,6 +5,7 @@ import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'
 import { BaseModal } from '../../lib/modals'
 import { useVersionCheck } from '../../hooks/useVersionCheck'
+import { useSelfUpgrade } from '../../hooks/useSelfUpgrade'
 import { useToast } from '../ui/Toast'
 import { useTranslation } from 'react-i18next'
 import { buildReleaseNotesComponents } from '../../lib/markdown/releaseNotesComponents'
@@ -73,6 +74,7 @@ export function WhatsNewModal({ isOpen, onClose }: WhatsNewModalProps) {
     skipVersion,
     triggerUpdate,
   } = useVersionCheck()
+  const { triggerUpgrade } = useSelfUpgrade()
 
   const [updating, setUpdating] = useState(false)
   const [showPreviousReleases, setShowPreviousReleases] = useState(false)
@@ -163,12 +165,10 @@ export function WhatsNewModal({ isOpen, onClose }: WhatsNewModalProps) {
     setUpdating(true)
     try {
       if (installMethod === 'helm') {
-        const res = await fetch('/api/self-upgrade/trigger', {
-          method: 'POST',
-          signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-        })
-        if (!res.ok) {
-          showToast(`Update failed: ${res.status}`, 'error')
+        const tag = latestRelease?.tag ?? ''
+        const result = await triggerUpgrade(tag)
+        if (!result.success) {
+          showToast(result.error ?? 'Update failed', 'error')
           return
         }
       } else {
@@ -186,7 +186,7 @@ export function WhatsNewModal({ isOpen, onClose }: WhatsNewModalProps) {
     } finally {
       setUpdating(false)
     }
-  }, [installMethod, triggerUpdate, showToast, onClose])
+  }, [installMethod, triggerUpdate, triggerUpgrade, latestRelease?.tag, showToast, onClose])
 
   const handleSkip = useCallback(() => {
     if (latestRelease) {

@@ -1,9 +1,10 @@
-import { memo } from 'react'
+import { memo, useState, useRef, useEffect, useCallback } from 'react'
 import {
   Folder, FolderOpen, FileJson, FileCode, FileText, ChevronRight, ChevronDown,
-  Loader2, Globe, HardDrive, Trash2, Plus, RefreshCw } from 'lucide-react'
+  Loader2, Globe, HardDrive, Trash2, Plus, RefreshCw, Info } from 'lucide-react'
 import { Github } from '@/lib/icons'
 import { cn } from '../../../lib/cn'
+import { TOOLTIP_SHOW_DELAY_MS } from '../../../lib/constants/network'
 import type { TreeNode } from './types'
 
 /**
@@ -48,6 +49,54 @@ function detectProjectOrg(filename: string): string | null {
   return null
 }
 
+/** Hover + click popover for the info (i) icon. */
+function InfoPopover({ tooltip }: { tooltip: string }) {
+  const [show, setShow] = useState(false)
+  const [pinned, setPinned] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const clearHoverTimer = useCallback(() => {
+    if (hoverTimer.current) { clearTimeout(hoverTimer.current); hoverTimer.current = null }
+  }, [])
+
+  useEffect(() => {
+    if (!pinned) return
+    const onClickOutside = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setPinned(false)
+        setShow(false)
+      }
+    }
+    document.addEventListener('mousedown', onClickOutside)
+    return () => document.removeEventListener('mousedown', onClickOutside)
+  }, [pinned])
+
+  useEffect(() => clearHoverTimer, [clearHoverTimer])
+
+  return (
+    <div
+      ref={ref}
+      className="relative flex-shrink-0"
+      onMouseEnter={() => { clearHoverTimer(); hoverTimer.current = setTimeout(() => setShow(true), TOOLTIP_SHOW_DELAY_MS) }}
+      onMouseLeave={() => { clearHoverTimer(); if (!pinned) setShow(false) }}
+    >
+      <button
+        onClick={(e) => { e.stopPropagation(); setPinned(p => !p); setShow(true) }}
+        className="p-2 min-h-11 min-w-11 rounded text-muted-foreground hover:text-foreground transition-colors"
+        aria-label="More information"
+      >
+        <Info className="w-3.5 h-3.5" />
+      </button>
+      {show && (
+        <div className="absolute right-0 top-full mt-1 z-50 w-72 rounded-lg border border-border bg-background shadow-lg p-3 text-xs text-muted-foreground leading-relaxed">
+          {tooltip}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export const TreeNodeItem = memo(function TreeNodeItem({
   node,
   depth,
@@ -88,7 +137,7 @@ export const TreeNodeItem = memo(function TreeNodeItem({
     }
   }
 
-  const showHeaderActions = showRemoveButton || showRefreshButton || (depth === 0 && !!onAdd)
+  const showHeaderActions = showRemoveButton || showRefreshButton || (depth === 0 && !!onAdd) || (depth === 0 && !!node.infoTooltip)
 
   // Memoize inline style objects to avoid creating new references on each render
   const paddingStyle = { paddingLeft: `${depth * 16 + 8}px` }
@@ -157,6 +206,10 @@ export const TreeNodeItem = memo(function TreeNodeItem({
           <span className="truncate flex-1" title={node.name}>{node.name}</span>
           {depth === 0 && sourceIcon()}
         </button>
+        {/* Root-level info button — shown when the node has an infoTooltip */}
+        {depth === 0 && node.infoTooltip && (
+          <InfoPopover tooltip={node.infoTooltip} />
+        )}
         {/* Root-level add button — rendered in the header row so it stays anchored to the header */}
         {depth === 0 && onAdd && (
           <button
