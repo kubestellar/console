@@ -611,7 +611,7 @@ export function MissionSidebar() {
     return (
       <div
         className={cn(
-        "fixed top-16 right-0 bottom-0 w-12 bg-card/95 backdrop-blur-sm border-l border-border shadow-xl z-modal flex flex-col items-center py-4",
+        "fixed top-16 right-0 bottom-0 w-12 bg-card/95 backdrop-blur-sm border-l border-border shadow-xl z-sidebar flex flex-col items-center py-4",
         "transition-transform duration-300 ease-in-out",
         !isSidebarOpen && "translate-x-full pointer-events-none"
       )}>
@@ -668,7 +668,8 @@ export function MissionSidebar() {
       <div
         data-tour="ai-missions"
         className={cn(
-          "fixed bg-card border-border z-modal flex flex-col overflow-hidden shadow-2xl",
+          "fixed bg-card border-border flex flex-col overflow-hidden shadow-2xl",
+          isMobile ? "z-modal" : "z-sidebar",
           !isResizing && "transition-[width,top,border,transform] duration-300 ease-in-out",
           // Mobile: bottom sheet
           // vh fallback before dvh so browsers without dynamic-viewport-unit

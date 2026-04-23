@@ -89,11 +89,12 @@ export default {
        * Use these instead of arbitrary z-[N] values on fixed/sticky elements.
        *
        * z-dropdown (100) — Popovers, dropdowns, tooltips, floating panels
+       * z-sidebar  (150) — Docked sidebars (desktop mission sidebar, left nav)
        * z-sticky   (200) — Sticky headers, floating action buttons
        * z-floating (250) — Portaled floating menus that must sit above sticky headers
        *                    but below non-modal overlays (e.g. agent selector dropdown)
        * z-overlay  (300) — Non-modal backdrops (mobile sidebar, notification dimmer)
-       * z-modal    (400) — All modals and dialogs
+       * z-modal    (400) — All modals and dialogs (mobile mission sheet, MissionBrowser)
        * z-toast    (500) — Toast notifications (always on top of modals)
        * z-critical (600) — Confirmation dialogs stacked on top of modals
        *
@@ -101,6 +102,7 @@ export default {
        */
       zIndex: {
         dropdown: '100',
+        sidebar: '150',
         sticky: '200',
         floating: '250',
         overlay: '300',

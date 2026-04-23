@@ -468,7 +468,7 @@ export function Sidebar() {
         onMouseEnter={handleSidebarMouseEnter}
         onMouseLeave={handleSidebarMouseLeave}
         className={cn(
-          'fixed left-0 top-16 bottom-0 glass border-r border-border/50 overflow-y-auto scroll-enhanced z-modal',
+          'fixed left-0 top-16 bottom-0 glass border-r border-border/50 overflow-y-auto scroll-enhanced z-sidebar',
           !isResizing && 'transition-all duration-300',
           // Desktop: respect collapsed state
           !isMobile && (config.collapsed ? 'p-3' : 'p-4'),

@@ -50,12 +50,12 @@ export function loadMissions(): Mission[] {
       } catch (parseErr) {
         console.error('[Missions] Corrupted localStorage JSON — clearing:', parseErr)
         localStorage.removeItem(MISSIONS_STORAGE_KEY)
-        return []
+        return getDemoMode() ? DEMO_MISSIONS_AS_MISSIONS : []
       }
       if (!Array.isArray(parsed)) {
         console.warn('[Missions] localStorage value is not an array — clearing')
         localStorage.removeItem(MISSIONS_STORAGE_KEY)
-        return []
+        return getDemoMode() ? DEMO_MISSIONS_AS_MISSIONS : []
       }
       // In demo mode, replace stale demo data with fresh demo missions
       // (catches both empty arrays and outdated demo entries without steps)
