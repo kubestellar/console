@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useCardExpanded } from './CardWrapper'
 import {
-  ExternalLink, Settings, X, AlertTriangle, Loader2,
+  ExternalLink, Settings, X, AlertTriangle,
   RotateCcw, Globe, Save, Trash2
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { useDemoMode } from '../../hooks/useDemoMode'
+import { Skeleton } from '../ui/Skeleton'
 
 interface IframeEmbedConfig {
   url?: string
@@ -62,6 +64,7 @@ const PRESET_EMBEDS = [
 export function IframeEmbed({ config }: { config?: IframeEmbedConfig }) {
   const { t } = useTranslation(['common', 'cards'])
   const { isExpanded } = useCardExpanded()
+  const { isDemoMode } = useDemoMode()
   const iframeRef = useRef<HTMLIFrameElement>(null)
 
   // Each card instance has its own ID based on config or generates one
@@ -360,18 +363,29 @@ export function IframeEmbed({ config }: { config?: IframeEmbedConfig }) {
         {/* Content area */}
         {!showSettings && (
           <div className="flex-1 relative rounded overflow-hidden border border-border/50">
-            {/* Loading overlay */}
-            {isLoading && (
-              <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10">
-                <div className="flex flex-col items-center gap-2">
-                  <Loader2 className="w-8 h-8 text-primary animate-spin" />
-                  <span className="text-sm text-muted-foreground">{t('common.loading')}</span>
-                </div>
+            {/* Demo mode placeholder */}
+            {isDemoMode && (
+              <div
+                className="flex flex-col items-center justify-center bg-secondary/20 text-muted-foreground gap-2"
+                style={{ height: displayHeight }}
+              >
+                <Globe className="w-10 h-10 opacity-40" />
+                <span className="text-sm font-medium">{title}</span>
+                <span className="text-xs opacity-60">Demo mode — iframe disabled</span>
+              </div>
+            )}
+
+            {/* Skeleton loading state */}
+            {!isDemoMode && isLoading && (
+              <div className="absolute inset-0 z-10 p-4 space-y-3 bg-background/80">
+                <Skeleton variant="text" width={180} height={16} />
+                <Skeleton variant="rounded" height={displayHeight - 60} />
+                <Skeleton variant="text" width={120} height={12} />
               </div>
             )}
 
             {/* Error state */}
-            {loadError && (
+            {!isDemoMode && loadError && (
               <div className="absolute inset-0 flex items-center justify-center bg-background/90 z-10">
                 <div className="flex flex-col items-center gap-3 text-center p-4 max-w-xs">
                   <AlertTriangle className="w-10 h-10 text-yellow-500" />
@@ -398,7 +412,7 @@ export function IframeEmbed({ config }: { config?: IframeEmbedConfig }) {
             )}
 
             {/* Iframe */}
-            {url ? (
+            {!isDemoMode && url ? (
               <iframe
                 ref={iframeRef}
                 src={url}
@@ -411,7 +425,7 @@ export function IframeEmbed({ config }: { config?: IframeEmbedConfig }) {
                 onError={handleError}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               />
-            ) : (
+            ) : !isDemoMode && (
               <div
                 className="flex items-center justify-center bg-secondary/20 text-muted-foreground"
                 style={{ height: displayHeight }}
