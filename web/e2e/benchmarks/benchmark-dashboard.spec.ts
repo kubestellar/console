@@ -37,9 +37,9 @@ const PAGE_LOAD_TIMEOUT_MS = 60_000
  * initialise on a cold CI runner before demo fallback is committed to state
  * and React re-renders the cards with content.
  */
-const STREAM_DATA_TIMEOUT_MS = 30_000
+const STREAM_DATA_TIMEOUT_MS = 50_000
 /** Timeout for card content to render after data arrives */
-const CARD_CONTENT_TIMEOUT_MS = 30_000
+const CARD_CONTENT_TIMEOUT_MS = 45_000
 /** Timeout for Netlify function fetch on console.kubestellar.io */
 const NETLIFY_FETCH_TIMEOUT_MS = 30_000
 

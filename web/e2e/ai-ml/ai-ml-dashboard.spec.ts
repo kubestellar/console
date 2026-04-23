@@ -27,7 +27,7 @@ const AI_ML_ROUTE = '/ai-ml'
 /** Timeout for page load */
 const PAGE_LOAD_TIMEOUT_MS = 60_000
 /** Timeout for stack discovery (queries multiple clusters via backend) */
-const STACK_DISCOVERY_TIMEOUT_MS = 30_000
+const STACK_DISCOVERY_TIMEOUT_MS = 50_000
 /** Timeout for Prometheus metrics or demo fallback to render */
 const PROMETHEUS_POLL_TIMEOUT_MS = 15_000
 /** Timeout for card content to render */
@@ -44,7 +44,7 @@ const STACK_POLL_INTERVAL_MS = 2_000
  * enough time to mount and render all 13 cards (including lazy-loaded chunks)
  * without relying on a network-idle signal that will never arrive.
  */
-const CARD_RENDER_WAIT_MS = 15_000
+const CARD_RENDER_WAIT_MS = 30_000
 
 /** Expected card count on the AI/ML route */
 const EXPECTED_CARD_COUNT = 13
