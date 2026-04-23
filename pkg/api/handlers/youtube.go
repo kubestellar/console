@@ -74,23 +74,95 @@ var cache = &playlistCache{}
 var playlistSingleflight singleflight.Group
 
 func fetchPlaylistFromYouTube() ([]PlaylistVideo, error) {
-	// Primary: RSS feed (fast, no dependencies).
+	// Primary: Invidious API (reliable, no auth required).
+	videos, invErr := fetchPlaylistViaInvidious()
+	if invErr == nil && len(videos) > 0 {
+		return videos, nil
+	}
+
+	// Fallback 1: RSS feed.
 	videos, rssErr := fetchPlaylistViaRSS()
 	if rssErr == nil && len(videos) > 0 {
 		return videos, nil
 	}
 
-	// Fallback: yt-dlp (handles playlists where RSS returns 404).
+	// Fallback 2: yt-dlp (handles playlists where RSS returns 404).
 	videos, ytErr := fetchPlaylistViaYTDLP()
 	if ytErr == nil && len(videos) > 0 {
 		return videos, nil
 	}
 
-	// Both failed — return the more informative error.
+	// All failed — return the most informative error.
+	if invErr != nil {
+		return nil, invErr
+	}
 	if rssErr != nil {
 		return nil, rssErr
 	}
 	return nil, ytErr
+}
+
+// invidiousInstances is a list of public Invidious API instances tried in order.
+// These provide a YouTube-compatible JSON API without requiring auth.
+var invidiousInstances = []string{
+	"https://inv.nadeko.net",
+	"https://invidious.fdn.fr",
+	"https://vid.puffyan.us",
+}
+
+// invidiousPlaylistVideo is the JSON shape from /api/v1/playlists/:id.
+type invidiousPlaylistVideo struct {
+	VideoID string `json:"videoId"`
+	Title   string `json:"title"`
+}
+
+type invidiousPlaylistResp struct {
+	Videos []invidiousPlaylistVideo `json:"videos"`
+}
+
+func fetchPlaylistViaInvidious() ([]PlaylistVideo, error) {
+	var lastErr error
+	for _, instance := range invidiousInstances {
+		apiURL := fmt.Sprintf("%s/api/v1/playlists/%s", instance, playlistID)
+		resp, err := youtubeHTTPClient.Get(apiURL)
+		if err != nil {
+			lastErr = fmt.Errorf("invidious %s: %w", instance, err)
+			continue
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			lastErr = fmt.Errorf("invidious %s returned %d", instance, resp.StatusCode)
+			continue
+		}
+
+		body, err := io.ReadAll(io.LimitReader(resp.Body, maxYouTubeResponseBytes))
+		if err != nil {
+			lastErr = fmt.Errorf("invidious %s read: %w", instance, err)
+			continue
+		}
+
+		var playlist invidiousPlaylistResp
+		if err := json.Unmarshal(body, &playlist); err != nil {
+			lastErr = fmt.Errorf("invidious %s parse: %w", instance, err)
+			continue
+		}
+
+		if len(playlist.Videos) == 0 {
+			lastErr = fmt.Errorf("invidious %s: empty playlist", instance)
+			continue
+		}
+
+		videos := make([]PlaylistVideo, 0, len(playlist.Videos))
+		for _, v := range playlist.Videos {
+			videos = append(videos, PlaylistVideo{
+				ID:    v.VideoID,
+				Title: v.Title,
+			})
+		}
+		return videos, nil
+	}
+	return nil, lastErr
 }
 
 func fetchPlaylistViaRSS() ([]PlaylistVideo, error) {
