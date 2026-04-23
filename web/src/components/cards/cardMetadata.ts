@@ -292,6 +292,7 @@ export const CARD_TITLES: Record<string, string> = {
   cascade_impact_map: 'Cascade Impact Map',
   config_drift_heatmap: 'Config Drift Heatmap',
   resource_imbalance_detector: 'Resource Imbalance Detector',
+  right_size_advisor: 'Right-Size Advisor',
   restart_correlation_matrix: 'Restart Correlation Matrix',
   deployment_rollout_tracker: 'Deployment Rollout Tracker',
   // KEDA
@@ -577,6 +578,7 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   cascade_impact_map: 'Visualizes how issues cascade across clusters over time.',
   config_drift_heatmap: 'Cluster-pair matrix showing degree of configuration drift.',
   resource_imbalance_detector: 'Detects CPU/memory utilization skew across the fleet.',
+  right_size_advisor: 'Per-cluster sizing verdicts — under-provisioned, right-sized, or over-provisioned — with actionable recommendations and a headroom buffer slider.',
   restart_correlation_matrix: 'Detects horizontal (app bug) vs vertical (infra issue) restart patterns.',
   deployment_rollout_tracker: 'Tracks deployment rollout progress across clusters.',
   // KEDA

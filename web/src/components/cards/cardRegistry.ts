@@ -307,6 +307,7 @@ const ConfigDriftHeatmap = safeLazy(() => _insightsBundle, 'ConfigDriftHeatmap')
 const ResourceImbalanceDetector = safeLazy(() => _insightsBundle, 'ResourceImbalanceDetector')
 const RestartCorrelationMatrix = safeLazy(() => _insightsBundle, 'RestartCorrelationMatrix')
 const DeploymentRolloutTracker = safeLazy(() => _insightsBundle, 'DeploymentRolloutTracker')
+const RightSizeAdvisor = safeLazy(() => _insightsBundle, 'RightSizeAdvisor')
 
 // Cluster admin cards — share one chunk via barrel import
 const _clusterAdminBundle = import('./cluster-admin-bundle').catch(() => undefined as never)
@@ -663,6 +664,7 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   resource_imbalance_detector: ResourceImbalanceDetector,
   restart_correlation_matrix: RestartCorrelationMatrix,
   deployment_rollout_tracker: DeploymentRolloutTracker,
+  right_size_advisor: RightSizeAdvisor,
 
   // Dynamic Card (Card Factory meta-component)
   dynamic_card: DynamicCard,
@@ -1059,6 +1061,7 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   resource_imbalance_detector: () => import('./insights'),
   restart_correlation_matrix: () => import('./insights'),
   deployment_rollout_tracker: () => import('./insights'),
+  right_size_advisor: () => import('./insights'),
   // User management & AI missions
   user_management: () => import('./UserManagement'),
   console_ai_issues: () => import('./console-missions/ConsoleIssuesCard'),
@@ -1408,6 +1411,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   resource_imbalance_detector: 6,
   restart_correlation_matrix: 6,
   deployment_rollout_tracker: 6,
+  right_size_advisor: 8,
 
   // Multi-tenancy cards
   ovn_status: 6,
