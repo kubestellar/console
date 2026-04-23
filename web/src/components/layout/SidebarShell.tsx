@@ -384,7 +384,9 @@ export function SidebarShell({
     return IconComponent ? <IconComponent className={className} /> : null
   }
 
-  const canDrag = features.dragReorder !== false
+  /* Disable drag-reorder on mobile — draggable elements intercept touch
+   * events on Safari, preventing NavLink taps from registering. */
+  const canDrag = features.dragReorder !== false && !isMobile
 
   const renderNavItem = (item: SidebarNavItem, sectionId: string) => {
     const isEditing = editingItemId === item.id
@@ -547,7 +549,7 @@ export function SidebarShell({
   // ---- Main render ----
   return (
     <>
-      {/* Mobile backdrop */}
+      {/* Mobile backdrop — closes sidebar when tapped outside the sidebar panel */}
       {isMobile && config.isMobileOpen && (
         <div
           className="fixed inset-0 bg-black/60 backdrop-blur-xs z-overlay md:hidden"
@@ -562,7 +564,7 @@ export function SidebarShell({
         onMouseLeave={handleSidebarMouseLeave}
         className={cn(
           'fixed left-0 top-16 bottom-0 glass border-r border-border/50 overflow-y-auto scroll-enhanced',
-          isMobile ? 'z-modal' : 'z-sidebar',
+          isMobile ? 'z-modal touch-manipulation' : 'z-sidebar',
           !isResizing && 'transition-all duration-300',
           !isMobile && (config.collapsed ? 'p-3' : 'p-4'),
           isMobile && 'p-4',
