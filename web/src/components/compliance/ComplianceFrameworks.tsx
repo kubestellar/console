@@ -4,7 +4,7 @@
  * Shows PCI-DSS 4.0, SOC 2 Type II, and other frameworks with per-control
  * pass/fail results and an overall compliance score.
  */
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { Shield, ChevronDown, ChevronRight, CheckCircle2, XCircle, AlertTriangle, MinusCircle, Loader2, RefreshCw } from 'lucide-react'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { complianceFrameworksDashboardConfig } from '../../config/dashboards/compliance-frameworks'
@@ -159,31 +159,39 @@ export function ComplianceFrameworksContent() {
   const [selectedFwId, setSelectedFwId] = useState<string | null>(null)
   const [selectedCluster, setSelectedCluster] = useState<string>('')
 
+  // Stable ID of the first framework — avoids re-running the effect when the
+  // frameworks array gets a new reference but its contents haven't changed.
+  const firstFwId = frameworks.length > 0 ? frameworks[0].id : null
+
   // Auto-select first framework when loaded
   useEffect(() => {
-    if (!selectedFwId && frameworks.length > 0) {
-      setSelectedFwId(frameworks[0].id)
+    if (!selectedFwId && firstFwId) {
+      setSelectedFwId(firstFwId)
     }
-  }, [frameworks, selectedFwId])
+  }, [firstFwId, selectedFwId])
+
+  // Stable list of cluster names — avoids creating a new array reference
+  // on every render when useClusters() returns a fresh clusters object.
+  const clusterNames = useMemo(() => clusters.map(c => c.name), [clusters])
+  const firstClusterName = clusterNames.length > 0 ? clusterNames[0] : null
 
   // Auto-select first cluster
-  const clusterNames = useMemo(() => clusters.map(c => c.name), [clusters])
   useEffect(() => {
-    if (!selectedCluster && clusterNames.length > 0) {
-      setSelectedCluster(clusterNames[0])
+    if (!selectedCluster && firstClusterName) {
+      setSelectedCluster(firstClusterName)
     }
-  }, [clusterNames, selectedCluster])
+  }, [firstClusterName, selectedCluster])
 
   const selectedFw = useMemo(() => {
     if (selectedFwId) return frameworks.find(f => f.id === selectedFwId) ?? null
     return null
   }, [frameworks, selectedFwId])
 
-  const handleEvaluate = () => {
+  const handleEvaluate = useCallback(() => {
     if (selectedFw && selectedCluster) {
       evaluate(selectedFw.id, selectedCluster)
     }
-  }
+  }, [selectedFw, selectedCluster, evaluate])
 
   /* ────────── render ────────── */
 
