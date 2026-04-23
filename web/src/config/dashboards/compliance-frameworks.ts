@@ -10,16 +10,12 @@ export const complianceFrameworksDashboardConfig: UnifiedDashboardConfig = {
   route: '/compliance-frameworks',
   statsType: 'security',
   cards: [
-    { id: 'framework-score-1', cardType: 'compliance_score', title: 'Framework Score', position: { w: 4, h: 3 } },
-    { id: 'framework-controls-1', cardType: 'compliance_score', title: 'Controls Passed', position: { w: 4, h: 3 } },
-    { id: 'framework-checks-1', cardType: 'compliance_score', title: 'Checks Summary', position: { w: 4, h: 3 } },
+    { id: 'cf-main', cardType: 'compliance_frameworks_dashboard', title: 'Compliance Frameworks Overview', position: { w: 12, h: 8 } },
+    { id: 'cf-cluster-health', cardType: 'cluster_health', title: 'Cluster Health', position: { w: 4, h: 3 } },
+    { id: 'cf-workloads', cardType: 'workload_status', title: 'Workload Status', position: { w: 4, h: 3 } },
+    { id: 'cf-compliance', cardType: 'compliance_frameworks', title: 'Frameworks Summary', position: { w: 4, h: 3 } },
   ],
-  features: {
-    dragDrop: true,
-    addCard: true,
-    autoRefresh: true,
-    autoRefreshInterval: 120_000,
-  },
+  features: { dragDrop: true, addCard: true, autoRefresh: true, autoRefreshInterval: 60_000 },
   storageKey: 'compliance-frameworks-dashboard-cards',
 }
 

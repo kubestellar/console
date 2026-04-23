@@ -7,11 +7,12 @@ export const airgapDashboardConfig: UnifiedDashboardConfig = {
   route: '/air-gap',
   statsType: 'security',
   cards: [
-    { id: 'airgap-score-1', cardType: 'air_gap_readiness', title: 'Overall Readiness', position: { w: 3, h: 3 } },
-    { id: 'airgap-reqs-1', cardType: 'air_gap_readiness', title: 'Requirements', position: { w: 3, h: 3 } },
-    { id: 'airgap-clusters-1', cardType: 'air_gap_readiness', title: 'Cluster Readiness', position: { w: 3, h: 3 } },
+    { id: 'airgap-main', cardType: 'airgap_dashboard', title: 'Air-Gap Readiness Overview', position: { w: 12, h: 8 } },
+    { id: 'airgap-cluster-health', cardType: 'cluster_health', title: 'Cluster Health', position: { w: 4, h: 3 } },
+    { id: 'airgap-workloads', cardType: 'workload_status', title: 'Workload Status', position: { w: 4, h: 3 } },
+    { id: 'airgap-compliance', cardType: 'air_gap_readiness', title: 'Air-Gap Summary', position: { w: 4, h: 3 } },
   ],
-  features: { dragDrop: true, addCard: true, autoRefresh: true, autoRefreshInterval: 120_000 },
+  features: { dragDrop: true, addCard: true, autoRefresh: true, autoRefreshInterval: 60_000 },
   storageKey: 'airgap-dashboard-cards',
 }
 

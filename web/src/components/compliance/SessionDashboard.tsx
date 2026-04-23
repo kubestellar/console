@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react'
+import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
+import { sessionManagementDashboardConfig } from '../../config/dashboards/session-management'
 import {
   Clock, CheckCircle2, XCircle, Loader2, RefreshCw,
   Users, ShieldCheck, AlertTriangle, Monitor,
@@ -30,7 +32,7 @@ const STATUS_STYLES: Record<string, string> = {
   terminated: 'bg-red-500/20 text-red-300 border-red-500/30',
 }
 
-export default function SessionDashboard() {
+export function SessionDashboardContent() {
   const [sessions, setSessions] = useState<ActiveSession[]>([])
   const [policies, setPolicies] = useState<SessionPolicy[]>([])
   const [summary, setSummary] = useState<SessionSummary | null>(null)
@@ -240,4 +242,8 @@ export default function SessionDashboard() {
       )}
     </div>
   )
+}
+
+export default function SessionDashboard() {
+  return <UnifiedDashboard config={sessionManagementDashboardConfig} />
 }

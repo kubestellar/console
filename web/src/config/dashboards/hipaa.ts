@@ -7,12 +7,12 @@ export const hipaaDashboardConfig: UnifiedDashboardConfig = {
   route: '/hipaa',
   statsType: 'security',
   cards: [
-    { id: 'hipaa-score-1', cardType: 'compliance_score', title: 'Compliance Score', position: { w: 3, h: 3 } },
-    { id: 'hipaa-safeguards-1', cardType: 'compliance_score', title: 'Safeguards', position: { w: 3, h: 3 } },
-    { id: 'hipaa-phi-1', cardType: 'compliance_score', title: 'PHI Namespaces', position: { w: 3, h: 3 } },
-    { id: 'hipaa-flows-1', cardType: 'compliance_score', title: 'Data Flows', position: { w: 3, h: 3 } },
+    { id: 'hipaa-main', cardType: 'hipaa_dashboard', title: 'HIPAA Compliance Overview', position: { w: 12, h: 8 } },
+    { id: 'hipaa-cluster-health', cardType: 'cluster_health', title: 'Cluster Health', position: { w: 4, h: 3 } },
+    { id: 'hipaa-workloads', cardType: 'workload_status', title: 'Workload Status', position: { w: 4, h: 3 } },
+    { id: 'hipaa-compliance', cardType: 'hipaa_compliance', title: 'HIPAA Summary', position: { w: 4, h: 3 } },
   ],
-  features: { dragDrop: true, addCard: true, autoRefresh: true, autoRefreshInterval: 120_000 },
+  features: { dragDrop: true, addCard: true, autoRefresh: true, autoRefreshInterval: 60_000 },
   storageKey: 'hipaa-dashboard-cards',
 }
 

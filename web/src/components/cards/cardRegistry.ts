@@ -128,6 +128,22 @@ const SessionManagementCard = safeLazy(() => _enterpriseComplianceBundle, 'Sessi
 const SIEMIntegrationCard = safeLazy(() => _enterpriseComplianceBundle, 'SIEMIntegrationCard')
 const IncidentResponseCard = safeLazy(() => _enterpriseComplianceBundle, 'IncidentResponseCard')
 const ThreatIntelCard = safeLazy(() => _enterpriseComplianceBundle, 'ThreatIntelCard')
+// Enterprise dashboard content cards — each lazily loaded individually
+const ComplianceFrameworksDashboardCard = safeLazy(() => import('../compliance/ComplianceFrameworks'), 'ComplianceFrameworksContent')
+const ChangeControlDashboardCard = safeLazy(() => import('../compliance/ChangeControlAudit'), 'ChangeControlAuditContent')
+const SegregationOfDutiesDashboardCard = safeLazy(() => import('../compliance/SegregationOfDuties'), 'SegregationOfDutiesContent')
+const DataResidencyDashboardCard = safeLazy(() => import('../compliance/DataResidency'), 'DataResidencyContent')
+const ComplianceReportsDashboardCard = safeLazy(() => import('../compliance/ComplianceReports'), 'ComplianceReportsContent')
+const HIPAADashboardCard = safeLazy(() => import('../compliance/HIPAADashboard'), 'HIPAADashboardContent')
+const GxPDashboardCard = safeLazy(() => import('../compliance/GxPDashboard'), 'GxPDashboardContent')
+const BAADashboardCard = safeLazy(() => import('../compliance/BAADashboard'), 'BAADashboardContent')
+const NISTDashboardCard = safeLazy(() => import('../compliance/NISTDashboard'), 'NISTDashboardContent')
+const STIGDashboardCard = safeLazy(() => import('../compliance/STIGDashboard'), 'STIGDashboardContent')
+const AirGapDashboardCard = safeLazy(() => import('../compliance/AirGapDashboard'), 'AirGapDashboardContent')
+const FedRAMPDashboardCard = safeLazy(() => import('../compliance/FedRAMPDashboard'), 'FedRAMPDashboardContent')
+const OIDCDashboardCard = safeLazy(() => import('../compliance/OIDCDashboard'), 'OIDCDashboardContent')
+const RBACAuditDashboardCard = safeLazy(() => import('../compliance/RBACAuditDashboard'), 'RBACAuditDashboardContent')
+const SessionDashboardCard = safeLazy(() => import('../compliance/SessionDashboard'), 'SessionDashboardContent')
 // Workload detection cards — share one chunk via barrel import
 const _workloadDetectionBundle = import('./workload-detection').catch(() => undefined as never)
 const ProwJobs = safeLazy(() => _workloadDetectionBundle, 'ProwJobs')
@@ -476,6 +492,22 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   siem_integration: SIEMIntegrationCard,
   incident_response: IncidentResponseCard,
   threat_intel: ThreatIntelCard,
+  // Enterprise dashboard content cards (full dashboards as cards)
+  compliance_frameworks_dashboard: ComplianceFrameworksDashboardCard,
+  change_control_dashboard: ChangeControlDashboardCard,
+  segregation_of_duties_dashboard: SegregationOfDutiesDashboardCard,
+  data_residency_dashboard: DataResidencyDashboardCard,
+  compliance_reports_dashboard: ComplianceReportsDashboardCard,
+  hipaa_dashboard: HIPAADashboardCard,
+  gxp_dashboard: GxPDashboardCard,
+  baa_dashboard: BAADashboardCard,
+  nist_dashboard: NISTDashboardCard,
+  stig_dashboard: STIGDashboardCard,
+  airgap_dashboard: AirGapDashboardCard,
+  fedramp_dashboard: FedRAMPDashboardCard,
+  oidc_dashboard: OIDCDashboardCard,
+  rbac_audit_dashboard: RBACAuditDashboardCard,
+  session_dashboard: SessionDashboardCard,
   // ISO 27001 audit checklist
   iso27001_audit: ISO27001Audit,
   // Cross-cluster compliance cards
@@ -1602,6 +1634,22 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   // Full width cards (12 columns) - complex visualizations
   cluster_comparison: 12,
   cluster_resource_tree: 12,
+  // Enterprise dashboard content cards (full width)
+  compliance_frameworks_dashboard: 12,
+  change_control_dashboard: 12,
+  segregation_of_duties_dashboard: 12,
+  data_residency_dashboard: 12,
+  compliance_reports_dashboard: 12,
+  hipaa_dashboard: 12,
+  gxp_dashboard: 12,
+  baa_dashboard: 12,
+  nist_dashboard: 12,
+  stig_dashboard: 12,
+  airgap_dashboard: 12,
+  fedramp_dashboard: 12,
+  oidc_dashboard: 12,
+  rbac_audit_dashboard: 12,
+  session_dashboard: 12,
 }
 
 // ---------------------------------------------------------------------------

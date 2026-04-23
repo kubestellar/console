@@ -7,12 +7,12 @@ export const gxpDashboardConfig: UnifiedDashboardConfig = {
   route: '/gxp',
   statsType: 'security',
   cards: [
-    { id: 'gxp-mode-1', cardType: 'compliance_score', title: 'GxP Mode', position: { w: 3, h: 3 } },
-    { id: 'gxp-chain-1', cardType: 'compliance_score', title: 'Chain Integrity', position: { w: 3, h: 3 } },
-    { id: 'gxp-records-1', cardType: 'compliance_score', title: 'Audit Records', position: { w: 3, h: 3 } },
-    { id: 'gxp-sigs-1', cardType: 'compliance_score', title: 'Signatures', position: { w: 3, h: 3 } },
+    { id: 'gxp-main', cardType: 'gxp_dashboard', title: 'GxP Validation Overview', position: { w: 12, h: 8 } },
+    { id: 'gxp-cluster-health', cardType: 'cluster_health', title: 'Cluster Health', position: { w: 4, h: 3 } },
+    { id: 'gxp-workloads', cardType: 'workload_status', title: 'Workload Status', position: { w: 4, h: 3 } },
+    { id: 'gxp-compliance', cardType: 'gxp_validation', title: 'GxP Summary', position: { w: 4, h: 3 } },
   ],
-  features: { dragDrop: true, addCard: true, autoRefresh: true, autoRefreshInterval: 120_000 },
+  features: { dragDrop: true, addCard: true, autoRefresh: true, autoRefreshInterval: 60_000 },
   storageKey: 'gxp-dashboard-cards',
 }
 

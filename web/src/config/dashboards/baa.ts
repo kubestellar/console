@@ -7,12 +7,12 @@ export const baaDashboardConfig: UnifiedDashboardConfig = {
   route: '/baa',
   statsType: 'security',
   cards: [
-    { id: 'baa-total-1', cardType: 'compliance_score', title: 'Total BAAs', position: { w: 3, h: 3 } },
-    { id: 'baa-active-1', cardType: 'compliance_score', title: 'Active', position: { w: 3, h: 3 } },
-    { id: 'baa-alerts-1', cardType: 'compliance_score', title: 'Alerts', position: { w: 3, h: 3 } },
-    { id: 'baa-coverage-1', cardType: 'compliance_score', title: 'Coverage', position: { w: 3, h: 3 } },
+    { id: 'baa-main', cardType: 'baa_dashboard', title: 'BAA Tracker Overview', position: { w: 12, h: 8 } },
+    { id: 'baa-cluster-health', cardType: 'cluster_health', title: 'Cluster Health', position: { w: 4, h: 3 } },
+    { id: 'baa-workloads', cardType: 'workload_status', title: 'Workload Status', position: { w: 4, h: 3 } },
+    { id: 'baa-compliance', cardType: 'baa_tracker', title: 'BAA Summary', position: { w: 4, h: 3 } },
   ],
-  features: { dragDrop: true, addCard: true, autoRefresh: true, autoRefreshInterval: 120_000 },
+  features: { dragDrop: true, addCard: true, autoRefresh: true, autoRefreshInterval: 60_000 },
   storageKey: 'baa-dashboard-cards',
 }
 

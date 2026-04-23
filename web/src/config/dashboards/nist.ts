@@ -7,11 +7,12 @@ export const nistDashboardConfig: UnifiedDashboardConfig = {
   route: '/nist-800-53',
   statsType: 'security',
   cards: [
-    { id: 'nist-score-1', cardType: 'nist_800_53', title: 'Compliance Score', position: { w: 3, h: 3 } },
-    { id: 'nist-families-1', cardType: 'nist_800_53', title: 'Control Families', position: { w: 3, h: 3 } },
-    { id: 'nist-mappings-1', cardType: 'nist_800_53', title: 'Resource Mappings', position: { w: 3, h: 3 } },
+    { id: 'nist-main', cardType: 'nist_dashboard', title: 'NIST 800-53 Overview', position: { w: 12, h: 8 } },
+    { id: 'nist-cluster-health', cardType: 'cluster_health', title: 'Cluster Health', position: { w: 4, h: 3 } },
+    { id: 'nist-workloads', cardType: 'workload_status', title: 'Workload Status', position: { w: 4, h: 3 } },
+    { id: 'nist-compliance', cardType: 'nist_800_53', title: 'NIST Summary', position: { w: 4, h: 3 } },
   ],
-  features: { dragDrop: true, addCard: true, autoRefresh: true, autoRefreshInterval: 120_000 },
+  features: { dragDrop: true, addCard: true, autoRefresh: true, autoRefreshInterval: 60_000 },
   storageKey: 'nist-dashboard-cards',
 }
 

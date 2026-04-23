@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react'
+import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
+import { oidcDashboardConfig } from '../../config/dashboards/oidc'
 import {
   KeyRound, CheckCircle2, XCircle, AlertTriangle, Loader2,
   RefreshCw, Users, ShieldCheck, Fingerprint, Clock,
@@ -30,7 +32,7 @@ const STATUS_STYLES: Record<string, string> = {
   error: 'bg-red-500/20 text-red-300 border-red-500/30',
 }
 
-export default function OIDCDashboard() {
+export function OIDCDashboardContent() {
   const [providers, setProviders] = useState<OIDCProvider[]>([])
   const [sessions, setSessions] = useState<OIDCSession[]>([])
   const [summary, setSummary] = useState<OIDCSummary | null>(null)
@@ -240,4 +242,8 @@ export default function OIDCDashboard() {
       )}
     </div>
   )
+}
+
+export default function OIDCDashboard() {
+  return <UnifiedDashboard config={oidcDashboardConfig} />
 }

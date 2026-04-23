@@ -5,6 +5,8 @@
  * and violations where workloads are running outside their allowed jurisdictions.
  */
 import { useState, useEffect, useMemo } from 'react'
+import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
+import { dataResidencyDashboardConfig } from '../../config/dashboards/data-residency'
 import { Globe, ShieldAlert, MapPin, CheckCircle2, XCircle, AlertTriangle, Loader2, RefreshCw } from 'lucide-react'
 import { authFetch } from '../../lib/api'
 import { Select } from '../ui/Select'
@@ -78,7 +80,7 @@ const REGION_LABELS: Record<string, string> = {
 
 /* ─── Main Component ─── */
 
-export default function DataResidency() {
+export function DataResidencyContent() {
   const [summary, setSummary] = useState<ResidencySummary | null>(null)
   const [rules, setRules] = useState<ResidencyRule[]>([])
   const [clusters, setClusters] = useState<ClusterRegion[]>([])
@@ -283,4 +285,8 @@ function SummaryCard({ label, value, icon, accent }: { label: string; value: num
       <p className={`text-2xl font-bold ${accent === 'red' ? 'text-red-400' : 'text-zinc-100'}`}>{value}</p>
     </div>
   )
+}
+
+export default function DataResidency() {
+  return <UnifiedDashboard config={dataResidencyDashboardConfig} />
 }

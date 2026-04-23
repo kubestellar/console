@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
+import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
+import { fedrampDashboardConfig } from '../../config/dashboards/fedramp'
 import {
   CheckCircle2, XCircle, AlertTriangle, Loader2,
   Shield, ArrowRight, Clock
@@ -75,7 +77,7 @@ const milestoneStatusBadge = (status: string) => {
   }
 }
 
-export default function FedRAMPDashboard() {
+export function FedRAMPDashboardContent() {
   const [controls, setControls] = useState<Control[]>([])
   const [poams, setPOAMs] = useState<POAM[]>([])
   const [score, setScore] = useState<FedRAMPScore | null>(null)
@@ -330,4 +332,8 @@ export default function FedRAMPDashboard() {
       )}
     </div>
   )
+}
+
+export default function FedRAMPDashboard() {
+  return <UnifiedDashboard config={fedrampDashboardConfig} />
 }

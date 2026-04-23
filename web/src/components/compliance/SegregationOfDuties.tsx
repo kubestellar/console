@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
+import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
+import { sodDashboardConfig } from '../../config/dashboards/segregation-of-duties'
 import {
   Users, ShieldAlert, CheckCircle2, XCircle, AlertTriangle,
   Loader2, RefreshCw, Filter, UserCheck, UserX,
@@ -44,7 +46,7 @@ function scoreColor(score: number): string {
   return 'text-red-400'
 }
 
-export default function SegregationOfDuties() {
+export function SegregationOfDutiesContent() {
   const [summary, setSummary] = useState<SoDSummary | null>(null)
   const [rules, setRules] = useState<SoDRule[]>([])
   const [principals, setPrincipals] = useState<Principal[]>([])
@@ -217,4 +219,8 @@ function SummaryCard({ label, value, icon, accent }: { label: string; value: num
       <p className={`text-2xl font-bold ${accent === 'red' ? 'text-red-400' : 'text-zinc-100'}`}>{value}</p>
     </div>
   )
+}
+
+export default function SegregationOfDuties() {
+  return <UnifiedDashboard config={sodDashboardConfig} />
 }

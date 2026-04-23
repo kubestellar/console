@@ -7,11 +7,12 @@ export const fedrampDashboardConfig: UnifiedDashboardConfig = {
   route: '/fedramp',
   statsType: 'security',
   cards: [
-    { id: 'fedramp-score-1', cardType: 'fedramp_readiness', title: 'FedRAMP Score', position: { w: 3, h: 3 } },
-    { id: 'fedramp-controls-1', cardType: 'fedramp_readiness', title: 'Controls', position: { w: 3, h: 3 } },
-    { id: 'fedramp-poams-1', cardType: 'fedramp_readiness', title: 'POAMs', position: { w: 3, h: 3 } },
+    { id: 'fedramp-main', cardType: 'fedramp_dashboard', title: 'FedRAMP Overview', position: { w: 12, h: 8 } },
+    { id: 'fedramp-cluster-health', cardType: 'cluster_health', title: 'Cluster Health', position: { w: 4, h: 3 } },
+    { id: 'fedramp-workloads', cardType: 'workload_status', title: 'Workload Status', position: { w: 4, h: 3 } },
+    { id: 'fedramp-compliance', cardType: 'fedramp_readiness', title: 'FedRAMP Summary', position: { w: 4, h: 3 } },
   ],
-  features: { dragDrop: true, addCard: true, autoRefresh: true, autoRefreshInterval: 120_000 },
+  features: { dragDrop: true, addCard: true, autoRefresh: true, autoRefreshInterval: 60_000 },
   storageKey: 'fedramp-dashboard-cards',
 }
 

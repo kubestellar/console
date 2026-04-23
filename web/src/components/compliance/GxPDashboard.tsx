@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
+import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
+import { gxpDashboardConfig } from '../../config/dashboards/gxp'
 import {
   CheckCircle2, XCircle, AlertTriangle, Loader2,
   RefreshCw, Lock, FileCheck, Link2, PenTool, Clock, Hash,
@@ -39,7 +41,7 @@ const ACTION_STYLES: Record<string, string> = {
   review: 'bg-purple-500/20 text-purple-300',
 }
 
-export default function GxPDashboard() {
+export function GxPDashboardContent() {
   const [summary, setSummary] = useState<GxPSummary | null>(null)
   const [records, setRecords] = useState<AuditRecord[]>([])
   const [signatures, setSignatures] = useState<Signature[]>([])
@@ -298,4 +300,8 @@ export default function GxPDashboard() {
       )}
     </div>
   )
+}
+
+export default function GxPDashboard() {
+  return <UnifiedDashboard config={gxpDashboardConfig} />
 }

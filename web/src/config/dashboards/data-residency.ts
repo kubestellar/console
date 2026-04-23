@@ -10,16 +10,12 @@ export const dataResidencyDashboardConfig: UnifiedDashboardConfig = {
   route: '/data-residency',
   statsType: 'security',
   cards: [
-    { id: 'residency-summary-1', cardType: 'compliance_score', title: 'Residency Posture', position: { w: 4, h: 3 } },
-    { id: 'residency-map-1', cardType: 'compliance_score', title: 'Cluster Regions', position: { w: 4, h: 3 } },
-    { id: 'residency-violations-1', cardType: 'compliance_score', title: 'Violations', position: { w: 4, h: 3 } },
+    { id: 'dr-main', cardType: 'data_residency_dashboard', title: 'Data Residency Overview', position: { w: 12, h: 8 } },
+    { id: 'dr-cluster-health', cardType: 'cluster_health', title: 'Cluster Health', position: { w: 4, h: 3 } },
+    { id: 'dr-workloads', cardType: 'workload_status', title: 'Workload Status', position: { w: 4, h: 3 } },
+    { id: 'dr-compliance', cardType: 'data_residency', title: 'Residency Summary', position: { w: 4, h: 3 } },
   ],
-  features: {
-    dragDrop: true,
-    addCard: true,
-    autoRefresh: true,
-    autoRefreshInterval: 120_000,
-  },
+  features: { dragDrop: true, addCard: true, autoRefresh: true, autoRefreshInterval: 60_000 },
   storageKey: 'data-residency-dashboard-cards',
 }
 

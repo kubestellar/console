@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
+import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
+import { airgapDashboardConfig } from '../../config/dashboards/airgap'
 import {
   CheckCircle2, XCircle, AlertTriangle, Loader2,
   ArrowRight, WifiOff
@@ -62,7 +64,7 @@ const statusColor = (status: string) => {
   }
 }
 
-export default function AirGapDashboard() {
+export function AirGapDashboardContent() {
   const [requirements, setRequirements] = useState<Requirement[]>([])
   const [clusters, setClusters] = useState<ClusterReadiness[]>([])
   const [summary, setSummary] = useState<AirGapSummary | null>(null)
@@ -300,4 +302,8 @@ export default function AirGapDashboard() {
       )}
     </div>
   )
+}
+
+export default function AirGapDashboard() {
+  return <UnifiedDashboard config={airgapDashboardConfig} />
 }

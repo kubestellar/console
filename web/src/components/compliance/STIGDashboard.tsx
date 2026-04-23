@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
+import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
+import { stigDashboardConfig } from '../../config/dashboards/stig'
 import {
   CheckCircle2, XCircle, AlertTriangle, Loader2,
   Shield, ArrowRight, Clock, Search
@@ -66,7 +68,7 @@ const statusLabel = (status: string) => {
   }
 }
 
-export default function STIGDashboard() {
+export function STIGDashboardContent() {
   const [findings, setFindings] = useState<Finding[]>([])
   const [benchmarks, setBenchmarks] = useState<Benchmark[]>([])
   const [summary, setSummary] = useState<STIGSummary | null>(null)
@@ -314,4 +316,8 @@ export default function STIGDashboard() {
       )}
     </div>
   )
+}
+
+export default function STIGDashboard() {
+  return <UnifiedDashboard config={stigDashboardConfig} />
 }

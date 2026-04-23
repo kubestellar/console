@@ -6,6 +6,8 @@
  */
 import { useState, useMemo, useEffect } from 'react'
 import { Shield, ChevronDown, ChevronRight, CheckCircle2, XCircle, AlertTriangle, MinusCircle, Loader2, RefreshCw } from 'lucide-react'
+import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
+import { complianceFrameworksDashboardConfig } from '../../config/dashboards/compliance-frameworks'
 import { useComplianceFrameworks, useFrameworkEvaluation, type Framework, type ControlResult, type ComplianceCheck } from '../../hooks/useComplianceFrameworks'
 import { useClusters } from '../../hooks/useMCP'
 
@@ -149,7 +151,7 @@ function FrameworkCard({ fw, selected, onSelect }: { fw: Framework; selected: bo
 
 /* ────────── main page ────────── */
 
-export function ComplianceFrameworks() {
+export function ComplianceFrameworksContent() {
   const { frameworks, isLoading: fwLoading, error: fwError, refetch } = useComplianceFrameworks()
   const { clusters } = useClusters()
   const { result, isEvaluating, error: evalError, evaluate } = useFrameworkEvaluation()
@@ -322,4 +324,6 @@ export function ComplianceFrameworks() {
   )
 }
 
-export default ComplianceFrameworks
+export default function ComplianceFrameworks() {
+  return <UnifiedDashboard config={complianceFrameworksDashboardConfig} />
+}

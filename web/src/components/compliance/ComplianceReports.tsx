@@ -5,6 +5,8 @@
  * and download a timestamped compliance report.
  */
 import { useState, useEffect, useMemo } from 'react'
+import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
+import { complianceReportsDashboardConfig } from '../../config/dashboards/compliance-reports'
 import { FileText, Download, Shield, Loader2 } from 'lucide-react'
 import { useComplianceFrameworks, type Framework } from '../../hooks/useComplianceFrameworks'
 import { useClusters } from '../../hooks/useMCP'
@@ -13,7 +15,7 @@ import { Select } from '../ui/Select'
 
 type ReportFormat = 'pdf' | 'json'
 
-export default function ComplianceReports() {
+export function ComplianceReportsContent() {
   const { frameworks, isLoading: fwLoading } = useComplianceFrameworks()
   const { clusters } = useClusters()
   const clusterNames = useMemo(() => clusters?.map((c: { name: string }) => c.name) ?? [], [clusters])
@@ -226,4 +228,8 @@ export default function ComplianceReports() {
       </div>
     </div>
   )
+}
+
+export default function ComplianceReports() {
+  return <UnifiedDashboard config={complianceReportsDashboardConfig} />
 }

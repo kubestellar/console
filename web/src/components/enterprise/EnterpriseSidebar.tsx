@@ -12,7 +12,8 @@ import {
   Container, Scale, GitBranch, Users, Globe, FileText,
   ShieldCheck, FlaskConical, Handshake, BookOpen, ShieldAlert,
   WifiOff, Award, Fingerprint, Lock, Clock, Radio, Siren, Bug,
-  Package, BadgeCheck, GitCommitHorizontal,
+  Package, BadgeCheck, GitCommitHorizontal, Monitor, AlertTriangle,
+  CheckCircle, FileCheck,
 } from 'lucide-react'
 import { ENTERPRISE_NAV_SECTIONS } from './enterpriseNav'
 import type { EnterpriseNavSection } from './enterpriseNav'
@@ -22,7 +23,8 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   Container, Scale, GitBranch, Users, Globe, FileText,
   ShieldCheck, FlaskConical, Handshake, BookOpen, ShieldAlert,
   WifiOff, Award, Fingerprint, Lock, Clock, Radio, Siren, Bug,
-  Package, BadgeCheck, GitCommitHorizontal,
+  Package, BadgeCheck, GitCommitHorizontal, Monitor, AlertTriangle,
+  CheckCircle, FileCheck,
 }
 
 function SectionIcon({ name, className }: { name: string; className?: string }) {

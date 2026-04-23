@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
+import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
+import { nistDashboardConfig } from '../../config/dashboards/nist'
 import {
   CheckCircle2, XCircle, AlertTriangle, Loader2,
   Shield, ArrowRight, Clock
@@ -63,7 +65,7 @@ const statusLabel = (status: string) => {
   }
 }
 
-export default function NISTDashboard() {
+export function NISTDashboardContent() {
   const [families, setFamilies] = useState<ControlFamily[]>([])
   const [mappings, setMappings] = useState<ControlMapping[]>([])
   const [summary, setSummary] = useState<NISTSummary | null>(null)
@@ -319,4 +321,8 @@ export default function NISTDashboard() {
       )}
     </div>
   )
+}
+
+export default function NISTDashboard() {
+  return <UnifiedDashboard config={nistDashboardConfig} />
 }

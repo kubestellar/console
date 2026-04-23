@@ -7,9 +7,10 @@ export const changeControlDashboardConfig: UnifiedDashboardConfig = {
   route: '/change-control',
   statsType: 'security',
   cards: [
-    { id: 'cc-summary-1', cardType: 'compliance_score', title: 'Change Summary', position: { w: 4, h: 3 } },
-    { id: 'cc-risk-1', cardType: 'compliance_score', title: 'Risk Score', position: { w: 4, h: 3 } },
-    { id: 'cc-violations-1', cardType: 'compliance_score', title: 'Policy Violations', position: { w: 4, h: 3 } },
+    { id: 'cc-main', cardType: 'change_control_dashboard', title: 'Change Control Overview', position: { w: 12, h: 8 } },
+    { id: 'cc-cluster-health', cardType: 'cluster_health', title: 'Cluster Health', position: { w: 4, h: 3 } },
+    { id: 'cc-workloads', cardType: 'workload_status', title: 'Workload Status', position: { w: 4, h: 3 } },
+    { id: 'cc-compliance', cardType: 'change_control', title: 'Change Control Summary', position: { w: 4, h: 3 } },
   ],
   features: { dragDrop: true, addCard: true, autoRefresh: true, autoRefreshInterval: 60_000 },
   storageKey: 'change-control-dashboard-cards',
