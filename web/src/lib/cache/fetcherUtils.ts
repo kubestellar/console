@@ -53,49 +53,56 @@ export function abortAllFetches(): void {
 // Core fetch helpers
 // ============================================================================
 
-export async function fetchAPI<T>(
-  endpoint: string,
-  params?: Record<string, string | number | undefined>
-): Promise<T> {
-  const token = getToken()
-  if (!token) {
-    throw new Error('No authentication token')
-  }
+type FetchParamValue = string | number | boolean | undefined
 
-  const searchParams = new URLSearchParams()
-  if (params) {
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined) {
-        searchParams.append(key, String(value))
-      }
-    })
-  }
+interface RestFetcherConfig {
+  urlPrefix: string
+  timeoutMs: number
+  useGlobalAbort?: boolean
+  errorLabel: string
+}
 
-  const url = `${LOCAL_AGENT_HTTP_URL}/${endpoint}?${searchParams}`
-  // Combine the global abort signal with a per-request timeout.
-  // AbortSignal.any() fires if either signal triggers.
-  const signal = AbortSignal.any([
-    globalFetchController.signal,
-    AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-  ])
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}` },
-    signal })
+function makeRestFetcher(config: RestFetcherConfig) {
+  return async function restFetch<T>(
+    endpoint: string,
+    params?: Record<string, FetchParamValue>
+  ): Promise<T> {
+    const token = getToken()
+    if (!token) throw new Error('No authentication token')
 
-  if (!response.ok) {
-    throw new Error(`API error: ${response.status}`)
-  }
+    const searchParams = new URLSearchParams()
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) searchParams.append(key, String(value))
+      })
+    }
 
-  const text = await response.text()
-  try {
-    return JSON.parse(text) as T
-  } catch {
-    throw new Error(`API returned non-JSON response from /api/mcp/${endpoint}`)
+    const url = `${config.urlPrefix}${endpoint}?${searchParams}`
+    const timeoutSignal = AbortSignal.timeout(config.timeoutMs)
+    const signal = config.useGlobalAbort
+      ? AbortSignal.any([globalFetchController.signal, timeoutSignal])
+      : timeoutSignal
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      signal })
+
+    if (!response.ok) throw new Error(`API error: ${response.status}`)
+    const text = await response.text()
+    try {
+      return JSON.parse(text) as T
+    } catch {
+      throw new Error(`API returned non-JSON response from ${config.errorLabel}/${endpoint}`)
+    }
   }
 }
+
+export const fetchAPI = makeRestFetcher({
+  urlPrefix: `${LOCAL_AGENT_HTTP_URL}/`,
+  timeoutMs: FETCH_DEFAULT_TIMEOUT_MS,
+  useGlobalAbort: true,
+  errorLabel: '/api/mcp',
+})
 
 // Get list of reachable (or not-yet-checked) clusters (prefer local agent data for accurate reachability)
 function getReachableClusters(): string[] {
@@ -284,66 +291,14 @@ export async function fetchViaGitOpsSSE<T>(
     } })
 }
 
-/**
- * Fetch data from a GitOps REST endpoint.
- */
-export async function fetchGitOpsAPI<T>(
-  endpoint: string,
-  params?: Record<string, string | number | undefined>
-): Promise<T> {
-  const token = getToken()
-  if (!token) throw new Error('No authentication token')
+export const fetchGitOpsAPI = makeRestFetcher({
+  urlPrefix: '/api/gitops/',
+  timeoutMs: FETCH_DEFAULT_TIMEOUT_MS,
+  errorLabel: '/api/gitops',
+})
 
-  const searchParams = new URLSearchParams()
-  if (params) {
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined) searchParams.append(key, String(value))
-    })
-  }
-
-  const url = `/api/gitops/${endpoint}?${searchParams}`
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
-
-  if (!response.ok) throw new Error(`API error: ${response.status}`)
-  const gitopsText = await response.text()
-  try {
-    return JSON.parse(gitopsText) as T
-  } catch {
-    throw new Error(`API returned non-JSON response from /api/gitops/${endpoint}`)
-  }
-}
-
-/**
- * Fetch data from an RBAC REST endpoint (/api/rbac/).
- */
-export async function fetchRbacAPI<T>(
-  endpoint: string,
-  params?: Record<string, string | number | boolean | undefined>
-): Promise<T> {
-  const token = getToken()
-  if (!token) throw new Error('No authentication token')
-
-  const searchParams = new URLSearchParams()
-  if (params) {
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined) searchParams.append(key, String(value))
-    })
-  }
-
-  const url = `/api/rbac/${endpoint}?${searchParams}`
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    signal: AbortSignal.timeout(RBAC_FETCH_TIMEOUT_MS) })
-
-  if (!response.ok) throw new Error(`API error: ${response.status}`)
-  const rbacText = await response.text()
-  try {
-    return JSON.parse(rbacText) as T
-  } catch {
-    throw new Error(`API returned non-JSON response from /api/rbac/${endpoint}`)
-  }
-}
+export const fetchRbacAPI = makeRestFetcher({
+  urlPrefix: '/api/rbac/',
+  timeoutMs: RBAC_FETCH_TIMEOUT_MS,
+  errorLabel: '/api/rbac',
+})
