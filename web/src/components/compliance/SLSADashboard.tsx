@@ -4,10 +4,10 @@
  * Build provenance level indicators (L1–L4), attestation verification,
  * source integrity checks, and build reproducibility.
  */
-import { useState, useEffect, memo } from 'react'
+import { useState, useEffect, useCallback, memo } from 'react'
 import {
   GitCommitHorizontal, CheckCircle2, Loader2, AlertTriangle,
-  XCircle, Shield, Lock
+  XCircle, Shield, Lock, RefreshCw
 } from 'lucide-react'
 import { authFetch } from '../../lib/api'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
@@ -100,26 +100,34 @@ export const SLSADashboardContent = memo(function SLSADashboardContent() {
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'attestations' | 'provenance'>('attestations')
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const [aRes, pRes, sRes] = await Promise.all([
-          authFetch('/api/v1/compliance/slsa/attestations'),
-          authFetch('/api/v1/compliance/slsa/provenance'),
-          authFetch('/api/v1/compliance/slsa/summary'),
-        ])
-        if (!aRes.ok || !pRes.ok || !sRes.ok) throw new Error('Failed to fetch SLSA data')
-        setAttestations(await aRes.json())
-        setProvenance(await pRes.json())
-        setSummary(await sRes.json())
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Unknown error')
-      } finally {
-        setLoading(false)
-      }
+  const fetchData = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const [aRes, pRes, sRes] = await Promise.all([
+        authFetch('/api/v1/compliance/slsa/attestations'),
+        authFetch('/api/v1/compliance/slsa/provenance'),
+        authFetch('/api/v1/compliance/slsa/summary'),
+      ])
+      if (!aRes.ok || !pRes.ok || !sRes.ok) throw new Error('Failed to fetch SLSA data')
+
+      const [attestationsData, provenanceData, summaryData] = await Promise.all([
+        aRes.json(),
+        pRes.json(),
+        sRes.json(),
+      ])
+
+      setAttestations(Array.isArray(attestationsData) ? attestationsData : [])
+      setProvenance(Array.isArray(provenanceData) ? provenanceData : [])
+      setSummary(summaryData ?? null)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Unknown error')
+    } finally {
+      setLoading(false)
     }
-    load()
   }, [])
+
+  useEffect(() => { fetchData() }, [fetchData])
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
@@ -129,8 +137,9 @@ export const SLSADashboardContent = memo(function SLSADashboardContent() {
   )
 
   if (error) return (
-    <div className="p-6 bg-red-500/10 border border-red-500/30 rounded-lg">
-      <p className="text-red-400">{error}</p>
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <p className="text-red-400 font-medium">{error}</p>
+      <button onClick={fetchData} className="text-indigo-400 hover:text-indigo-300 text-sm flex items-center gap-1"><RefreshCw className="w-4 h-4" /> Retry</button>
     </div>
   )
 
@@ -139,12 +148,15 @@ export const SLSADashboardContent = memo(function SLSADashboardContent() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <GitCommitHorizontal className="w-8 h-8 text-emerald-400" />
-        <div>
-          <h1 className="text-2xl font-bold text-white">SLSA Provenance</h1>
-          <p className="text-gray-400">Build provenance levels, attestation verification, and source integrity</p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <GitCommitHorizontal className="w-8 h-8 text-emerald-400" />
+          <div>
+            <h1 className="text-2xl font-bold text-white">SLSA Provenance</h1>
+            <p className="text-gray-400">Build provenance levels, attestation verification, and source integrity</p>
+          </div>
         </div>
+        <button onClick={fetchData} type="button" aria-label="Refresh SLSA data" className="text-zinc-400 hover:text-zinc-200 p-2 rounded-lg hover:bg-zinc-700/50 transition-colors"><RefreshCw className="w-4 h-4" /></button>
       </div>
 
       {/* Summary stats */}

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, memo } from 'react'
+import { useState, useEffect, useMemo, useCallback, memo } from 'react'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { changeControlDashboardConfig } from '../../config/dashboards/change-control'
 import {
@@ -70,7 +70,7 @@ export const ChangeControlAuditContent = memo(function ChangeControlAuditContent
   const [filterApproval, setFilterApproval] = useState('all')
   const [activeTab, setActiveTab] = useState<'changes' | 'violations' | 'policies'>('changes')
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
@@ -81,18 +81,26 @@ export const ChangeControlAuditContent = memo(function ChangeControlAuditContent
         authFetch('/api/compliance/change-control/policies'),
       ])
       if (!sRes.ok || !cRes.ok || !vRes.ok || !pRes.ok) throw new Error('Failed to load change control data')
-      setSummary(await sRes.json())
-      setChanges(await cRes.json())
-      setViolations(await vRes.json())
-      setPolicies(await pRes.json())
+
+      const [summaryData, changesData, violationsData, policiesData] = await Promise.all([
+        sRes.json(),
+        cRes.json(),
+        vRes.json(),
+        pRes.json(),
+      ])
+
+      setSummary(summaryData ?? null)
+      setChanges(Array.isArray(changesData) ? changesData : [])
+      setViolations(Array.isArray(violationsData) ? violationsData : [])
+      setPolicies(Array.isArray(policiesData) ? policiesData : [])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data')
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  useEffect(() => { fetchData() }, [])
+  useEffect(() => { fetchData() }, [fetchData])
 
   const filteredChanges = useMemo(() =>
     filterApproval === 'all' ? changes : changes.filter(c => c.approval_status === filterApproval),
@@ -231,7 +239,7 @@ export const ChangeControlAuditContent = memo(function ChangeControlAuditContent
       )}
     </div>
   )
-}
+})
 
 function SummaryCard({ label, value, icon, accent }: { label: string; value: number; icon: React.ReactNode; accent?: string }) {
   return (
@@ -240,7 +248,7 @@ function SummaryCard({ label, value, icon, accent }: { label: string; value: num
       <p className={`text-2xl font-bold ${accent === 'red' ? 'text-red-400' : accent === 'orange' ? 'text-orange-400' : 'text-zinc-100'}`}>{value}</p>
     </div>
   )
-})
+}
 
 export default function ChangeControlAudit() {
   return (<>
