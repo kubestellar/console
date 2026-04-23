@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, lazy, Suspense } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { Plus, ChevronLeft, ChevronRight, CheckCircle2, AlertTriangle, WifiOff, GripVertical, X, User, Pin, PinOff, Satellite, Loader2 } from 'lucide-react'
@@ -25,11 +25,6 @@ import { useUpgradeState } from '../../hooks/useUpgradeState'
 import { STORAGE_KEY_GROUND_CONTROL_DASHBOARDS } from '../../lib/constants/storage'
 import { SIDEBAR_CONTROLS_LEFT_OFFSET_PX } from '../../lib/constants/ui'
 import { safeGetJSON } from '../../lib/utils/localStorage'
-
-// Lazy-load SidebarCustomizer — it pulls in dnd-kit and heavy UI (~50 KB)
-const SidebarCustomizer = lazy(() =>
-  import('./SidebarCustomizer').then(m => ({ default: m.SidebarCustomizer }))
-)
 
 /** Sidebar resize limits in pixels */
 const SIDEBAR_MIN_WIDTH_PX = 180
@@ -168,8 +163,6 @@ export function Sidebar() {
     document.addEventListener('mouseup', handleMouseUp)
   }
 
-  // Sidebar customizer modal state
-  const [showCustomizer, setShowCustomizer] = useState(false)
 
   // Inline rename state for custom sidebar items
   const [editingItemId, setEditingItemId] = useState<string | null>(null)
@@ -488,11 +481,7 @@ export function Sidebar() {
         {!isCollapsed && (
           <button
             onClick={() => {
-              if (dashboardContext) {
-                dashboardContext.openAddCardModal('dashboards')
-              } else {
-                setShowCustomizer(true)
-              }
+              dashboardContext?.openAddCardModal('dashboards')
             }}
             className="w-full flex items-center gap-3 px-3 py-1.5 mt-1 text-xs text-muted-foreground/60 hover:text-muted-foreground hover:bg-secondary/30 rounded-lg transition-colors"
           >
@@ -678,12 +667,6 @@ export function Sidebar() {
         />
       )}
 
-      {/* Sidebar customizer modal */}
-      {showCustomizer && (
-        <Suspense fallback={null}>
-          <SidebarCustomizer isOpen={showCustomizer} onClose={() => setShowCustomizer(false)} />
-        </Suspense>
-      )}
     </>
   )
 }
