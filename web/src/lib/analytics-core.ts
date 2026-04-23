@@ -831,6 +831,11 @@ export function startGlobalErrorTracking() {
         event.filename.startsWith('moz-extension://') ||
         event.filename.startsWith('safari-extension://')
       )) return
+      // ResizeObserver loop errors are benign browser noise — the W3C spec
+      // fires this when observations can't be delivered in a single animation
+      // frame. Multiple cards on the dashboard use ResizeObserver, and layout
+      // shifts during initial render or window resize trigger this harmlessly.
+      if (event.message.includes('ResizeObserver loop')) return
       // Stale chunks can surface as runtime errors (Safari: "Importing a module script failed")
       if (tryChunkReloadRecovery(event.message)) return
       emitError('runtime', event.message)

@@ -375,6 +375,20 @@ describe('startGlobalErrorTracking sets up listeners', () => {
     const event = new ErrorEvent('error', { message: 'ReferenceError: foo is not defined' })
     expect(() => window.dispatchEvent(event)).not.toThrow()
   })
+
+  it('skips ResizeObserver loop errors (benign browser noise)', () => {
+    startGlobalErrorTracking()
+    // Chrome/Edge message
+    const event1 = new ErrorEvent('error', {
+      message: 'ResizeObserver loop completed with undelivered notifications.',
+    })
+    expect(() => window.dispatchEvent(event1)).not.toThrow()
+    // Older browser message
+    const event2 = new ErrorEvent('error', {
+      message: 'ResizeObserver loop limit exceeded',
+    })
+    expect(() => window.dispatchEvent(event2)).not.toThrow()
+  })
 })
 
 describe('markErrorReported and dedup integration', () => {
