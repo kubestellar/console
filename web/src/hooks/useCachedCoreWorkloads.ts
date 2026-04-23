@@ -6,7 +6,7 @@
  * Extracted from useCachedData.ts for maintainability.
  */
 
-import { useCache, type RefreshCategory } from '../lib/cache'
+import { useCache, type RefreshCategory, type CachedHookResult } from '../lib/cache'
 import { isBackendUnavailable, authFetch } from '../lib/api'
 import { kubectlProxy } from '../lib/kubectlProxy'
 import { clusterCacheRef } from './mcp/shared'
@@ -58,19 +58,6 @@ import type { Workload } from './useWorkloads'
 // ============================================================================
 // Shared types
 // ============================================================================
-
-/** Shared result shape for all useCached* hooks */
-interface CachedHookResult<T> {
-  data: T
-  isLoading: boolean
-  isRefreshing: boolean
-  isDemoFallback: boolean
-  error: string | null
-  isFailed: boolean
-  consecutiveFailures: number
-  lastRefresh: number | null
-  refetch: () => Promise<void>
-}
 
 // ============================================================================
 // Private: Security kubectl scanner

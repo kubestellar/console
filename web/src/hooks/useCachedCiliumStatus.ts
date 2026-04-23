@@ -7,7 +7,7 @@ import type { CiliumStatus } from '../types/cilium'
 
 const CACHE_KEY_CILIUM = 'cilium_status'
 
-export interface CachedHookResult<T> {
+export interface CiliumCacheResult<T> {
     data: T
     isLoading: boolean
     isRefreshing: boolean
@@ -18,7 +18,7 @@ export interface CachedHookResult<T> {
     refetch: () => Promise<void>
 }
 
-export function useCachedCiliumStatus(): CachedHookResult<CiliumStatus> {
+export function useCachedCiliumStatus(): CiliumCacheResult<CiliumStatus> {
     const { isDemoMode } = useDemoMode()
     const result = useCache<CiliumStatus>({
         key: CACHE_KEY_CILIUM,

@@ -6,7 +6,7 @@
  * useCachedNamespaces has a unique fetcher shape and is defined separately.
  */
 
-import { useCache, type RefreshCategory } from '../lib/cache'
+import { useCache, type RefreshCategory, type CachedHookResult } from '../lib/cache'
 import { fetchAPI, fetchFromAllClusters, fetchViaSSE, getToken } from '../lib/cache/fetcherUtils'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import {
@@ -38,23 +38,6 @@ import type {
   Ingress,
   NetworkPolicy,
 } from './useMCP'
-
-// ============================================================================
-// Shared types
-// ============================================================================
-
-/** Shared result shape for all useCached* hooks */
-interface CachedHookResult<T> {
-  data: T
-  isLoading: boolean
-  isRefreshing: boolean
-  isDemoFallback: boolean
-  error: string | null
-  isFailed: boolean
-  consecutiveFailures: number
-  lastRefresh: number | null
-  refetch: () => Promise<void>
-}
 
 // ============================================================================
 // Factory

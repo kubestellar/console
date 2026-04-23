@@ -4,7 +4,7 @@
  * Provides cached hooks for fetching Thanos status data.
  */
 
-import { useCache, type RefreshCategory } from '@/lib/cache'
+import { useCache, type RefreshCategory, type CachedHookResult } from '@/lib/cache'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 
 // ============================================================================
@@ -29,18 +29,6 @@ export interface ThanosStatus {
     storeGateways: ThanosStoreGateway[]
     queryHealth: 'healthy' | 'degraded'
     lastCheckTime: string
-}
-
-interface CachedHookResult<T> {
-    data: T
-    isLoading: boolean
-    isRefreshing: boolean
-    isDemoFallback: boolean
-    error: string | null
-    isFailed: boolean
-    consecutiveFailures: number
-    lastRefresh: number | null
-    refetch: () => Promise<void>
 }
 
 // ============================================================================

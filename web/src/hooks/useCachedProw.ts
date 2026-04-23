@@ -5,26 +5,10 @@
  * Extracted from useCachedData.ts for maintainability.
  */
 
-import { useCache, type RefreshCategory } from '../lib/cache'
+import { useCache, type RefreshCategory, type CachedHookResult } from '../lib/cache'
 import { kubectlProxy } from '../lib/kubectlProxy'
 import { KUBECTL_EXTENDED_TIMEOUT_MS } from '../lib/constants/network'
 import type { ProwJob, ProwStatus } from './useProw'
-
-// ============================================================================
-// Shared Types
-// ============================================================================
-
-interface CachedHookResult<T> {
-  data: T
-  isLoading: boolean
-  isRefreshing: boolean
-  isDemoFallback: boolean
-  error: string | null
-  isFailed: boolean
-  consecutiveFailures: number
-  lastRefresh: number | null
-  refetch: () => Promise<void>
-}
 
 // ============================================================================
 // Constants

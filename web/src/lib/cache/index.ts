@@ -1104,6 +1104,9 @@ export interface UseCacheResult<T> {
   isDemoFallback: boolean
 }
 
+/** Hook return shape without clearAndRefetch — used by useCached* wrapper hooks */
+export type CachedHookResult<T> = Omit<UseCacheResult<T>, 'clearAndRefetch'>
+
 export function useCache<T>({
   key,
   fetcher,
