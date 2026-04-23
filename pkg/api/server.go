@@ -811,6 +811,11 @@ func (s *Server) setupRoutes() {
 	missions := handlers.NewMissionsHandler()
 	missions.RegisterPublicRoutes(s.app.Group("/api/missions"))
 
+	// Compliance frameworks public read endpoints (no auth — needed for demo mode).
+	// POST endpoints (evaluate, report) are registered on the auth-protected api group below.
+	complianceFrameworks := handlers.NewComplianceFrameworksHandler(nil)
+	complianceFrameworks.RegisterPublicRoutes(s.app.Group("/api/compliance/frameworks", publicLimiter))
+
 	// API routes (protected) — with rate limiting
 	//
 	// NOTE (#7033): Both authLimiter and apiLimiter use Fiber's default in-process
@@ -951,8 +956,14 @@ func (s *Server) setupRoutes() {
 	// Compliance frameworks: pass nil evaluator for demo/synthetic results.
 	// A real evaluator requires a ClusterProber implementation backed by
 	// kubeconfig access to each managed cluster.
-	complianceFrameworks := handlers.NewComplianceFrameworksHandler(nil)
+	// Read-only GET routes are registered as public above; only POST
+	// (evaluate, report) requires authentication.
 	complianceFrameworks.RegisterRoutes(api.Group("/compliance/frameworks"))
+
+	// Compliance report generation: shares the same route group so
+	// POST /compliance/frameworks/:id/report sits alongside evaluate.
+	complianceReports := handlers.NewComplianceReportsHandler(nil)
+	complianceReports.RegisterRoutes(api.Group("/compliance/frameworks"))
 
 	// Namespace read routes. GET /namespaces is viewer-or-above (see
 	// ListNamespaces's requireViewerOrAbove check) and

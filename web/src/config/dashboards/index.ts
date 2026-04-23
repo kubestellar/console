@@ -23,6 +23,7 @@ import { operatorsDashboardConfig } from './operators'
 import { clustersDashboardConfig } from './clusters'
 import { complianceDashboardConfig } from './compliance'
 import { complianceFrameworksDashboardConfig } from './compliance-frameworks'
+import { complianceReportsDashboardConfig } from './compliance-reports'
 import { costDashboardConfig } from './cost'
 import { gpuDashboardConfig } from './gpu'
 import { nodesDashboardConfig } from './nodes'
@@ -62,6 +63,7 @@ export const DASHBOARD_CONFIGS: DashboardConfigRegistry = {
   clusters: clustersDashboardConfig,
   compliance: complianceDashboardConfig,
   'compliance-frameworks': complianceFrameworksDashboardConfig,
+  'compliance-reports': complianceReportsDashboardConfig,
   cost: costDashboardConfig,
   gpu: gpuDashboardConfig,
   nodes: nodesDashboardConfig,
@@ -171,6 +173,7 @@ export {
   clustersDashboardConfig,
   complianceDashboardConfig,
   complianceFrameworksDashboardConfig,
+  complianceReportsDashboardConfig,
   costDashboardConfig,
   gpuDashboardConfig,
   nodesDashboardConfig,

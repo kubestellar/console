@@ -47,6 +47,7 @@ export const ROUTES = {
   SECURITY_POSTURE: '/security-posture',
   COMPLIANCE: '/compliance',
   COMPLIANCE_FRAMEWORKS: '/compliance-frameworks',
+  COMPLIANCE_REPORTS: '/compliance-reports',
   DATA_COMPLIANCE: '/data-compliance',
   
   // Advanced Features
