@@ -4,7 +4,7 @@
  * Shows a world-map-style view of cluster regions, data classification rules,
  * and violations where workloads are running outside their allowed jurisdictions.
  */
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { dataResidencyDashboardConfig } from '../../config/dashboards/data-residency'
 import { Globe, ShieldAlert, MapPin, CheckCircle2, XCircle, AlertTriangle, Loader2, RefreshCw } from 'lucide-react'
@@ -89,7 +89,7 @@ export function DataResidencyContent() {
   const [error, setError] = useState<string | null>(null)
   const [filterSeverity, setFilterSeverity] = useState<string>('all')
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
@@ -104,18 +104,25 @@ export function DataResidencyContent() {
         throw new Error('Failed to load residency data')
       }
 
-      setSummary(await summaryRes.json())
-      setRules(await rulesRes.json())
-      setClusters(await clustersRes.json())
-      setViolations(await violationsRes.json())
+      const [summaryData, rulesData, clustersData, violationsData] = await Promise.all([
+        summaryRes.json(),
+        rulesRes.json(),
+        clustersRes.json(),
+        violationsRes.json(),
+      ])
+
+      setSummary(summaryData ?? null)
+      setRules(Array.isArray(rulesData) ? rulesData : [])
+      setClusters(Array.isArray(clustersData) ? clustersData : [])
+      setViolations(Array.isArray(violationsData) ? violationsData : [])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data')
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  useEffect(() => { fetchData() }, [])
+  useEffect(() => { fetchData() }, [fetchData])
 
   const filteredViolations = useMemo(() =>
     filterSeverity === 'all'

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { nistDashboardConfig } from '../../config/dashboards/nist'
 import {
@@ -74,26 +74,34 @@ export function NISTDashboardContent() {
   const [activeTab, setActiveTab] = useState<'families' | 'mappings' | 'summary'>('families')
   const [familyFilter, setFamilyFilter] = useState<string>('all')
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const [fRes, mRes, sRes] = await Promise.all([
-          authFetch('/api/compliance/nist/families'),
-          authFetch('/api/compliance/nist/mappings'),
-          authFetch('/api/compliance/nist/summary'),
-        ])
-        if (!fRes.ok || !mRes.ok || !sRes.ok) throw new Error('Failed to fetch NIST data')
-        setFamilies(await fRes.json())
-        setMappings(await mRes.json())
-        setSummary(await sRes.json())
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Unknown error')
-      } finally {
-        setLoading(false)
-      }
+  const fetchData = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const [fRes, mRes, sRes] = await Promise.all([
+        authFetch('/api/compliance/nist/families'),
+        authFetch('/api/compliance/nist/mappings'),
+        authFetch('/api/compliance/nist/summary'),
+      ])
+      if (!fRes.ok || !mRes.ok || !sRes.ok) throw new Error('Failed to fetch NIST data')
+
+      const [familiesData, mappingsData, summaryData] = await Promise.all([
+        fRes.json(),
+        mRes.json(),
+        sRes.json(),
+      ])
+
+      setFamilies(Array.isArray(familiesData) ? familiesData : [])
+      setMappings(Array.isArray(mappingsData) ? mappingsData : [])
+      setSummary(summaryData ?? null)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Unknown error')
+    } finally {
+      setLoading(false)
     }
-    load()
   }, [])
+
+  useEffect(() => { fetchData() }, [fetchData])
 
   const filteredFamilies = useMemo(() => {
     if (familyFilter === 'all') return families
@@ -204,7 +212,7 @@ export function NISTDashboardContent() {
                   </tr>
                 </thead>
                 <tbody>
-                  {family.controls.map(ctrl => (
+                  {(family.controls || []).map(ctrl => (
                     <tr key={ctrl.id} className="border-b border-gray-700/50 hover:bg-gray-700/30">
                       <td className="p-3 font-mono text-blue-300">{ctrl.id}</td>
                       <td className="p-3 text-white">{ctrl.name}</td>
