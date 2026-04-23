@@ -97,6 +97,58 @@ func TestServer_TokenUsage(t *testing.T) {
 	s.tokenMux.RUnlock()
 }
 
+// TestServer_MultiInstanceTokenMerge verifies that two simulated kc-agent
+// instances correctly merge token counts via the flock-guarded
+// read-modify-write cycle, preventing data loss (#9730).
+func TestServer_MultiInstanceTokenMerge(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "agent-multi-*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDir)
+	t.Setenv("HOME", tmpDir)
+
+	today := time.Now().Format("2006-01-02")
+
+	// Instance A accumulates 100/50 and saves.
+	a := &Server{todayDate: today, todayTokensIn: 100, todayTokensOut: 50}
+	a.saveTokenUsage()
+
+	// Instance B loads the file (simulating startup after A's save),
+	// then accumulates an additional 200/100 and saves.
+	b := &Server{}
+	b.loadTokenUsage()
+	b.addTokenUsage(&ProviderTokenUsage{InputTokens: 200, OutputTokens: 100})
+	b.saveTokenUsage()
+
+	// Instance A accumulates another 50/25 and saves.
+	// Without flock-based merge, A would clobber B's 200/100 contribution.
+	a.addTokenUsage(&ProviderTokenUsage{InputTokens: 50, OutputTokens: 25})
+	a.saveTokenUsage()
+
+	// Read the persisted file — it should contain the merged total:
+	//   A's contributions: 100 + 50 = 150 input, 50 + 25 = 75 output
+	//   B's contributions: 200 input, 100 output
+	//   Total: 350 input, 175 output
+	path := getTokenUsagePath()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("Failed to read usage file: %v", err)
+	}
+
+	var saved tokenUsageData
+	if err := json.Unmarshal(data, &saved); err != nil {
+		t.Fatalf("Failed to unmarshal: %v", err)
+	}
+
+	const expectedIn int64 = 350
+	const expectedOut int64 = 175
+	if saved.InputIn != expectedIn || saved.OutputOut != expectedOut {
+		t.Errorf("Expected %d/%d merged on disk, got %d/%d",
+			expectedIn, expectedOut, saved.InputIn, saved.OutputOut)
+	}
+}
+
 // TestServer_SessionTokenQuota verifies that the per-session aggregate
 // token quota rejects new prompts once the limit is reached (#9438).
 func TestServer_SessionTokenQuota(t *testing.T) {

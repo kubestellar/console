@@ -1709,9 +1709,27 @@ func getTokenUsagePath() string {
 	return home + "/.kc-agent-tokens.json"
 }
 
-// loadTokenUsage loads token usage from disk on startup
+// tokenUsageLockSuffix is appended to the token usage file path to form
+// the advisory lock file path used by flock (#9730).
+const tokenUsageLockSuffix = ".lock"
+
+// loadTokenUsage loads token usage from disk on startup.
+// An advisory file lock (flock) is held during the read to prevent
+// observing a partially-written file from a concurrent instance (#9730).
 func (s *Server) loadTokenUsage() {
 	path := getTokenUsagePath()
+	lockPath := path + tokenUsageLockSuffix
+
+	release, err := acquireFileLock(lockPath)
+	if err != nil {
+		slog.Warn("could not acquire file lock for token load", "error", err)
+		// Fall through to best-effort unlocked read so a single-instance
+		// deployment is not broken by a lock failure.
+	}
+	if release != nil {
+		defer release()
+	}
+
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return // File doesn't exist yet
@@ -1732,33 +1750,82 @@ func (s *Server) loadTokenUsage() {
 		s.todayTokensIn = usage.InputIn
 		s.todayTokensOut = usage.OutputOut
 		s.todayDate = today
+		// Seed lastSaved so the first saveTokenUsage computes the correct
+		// delta relative to what was already on disk (#9730).
+		s.lastSavedIn = usage.InputIn
+		s.lastSavedOut = usage.OutputOut
 		slog.Info("loaded token usage", "inputTokens", usage.InputIn, "outputTokens", usage.OutputOut)
 	}
 }
 
 // saveTokenUsage persists token usage to disk.
-// tokenFileMux serializes the entire read-snapshot-write cycle so concurrent
-// goroutines spawned by addTokenUsage cannot clobber each other (#9441).
+//
+// To prevent multi-instance data corruption (#9730), this function:
+//  1. Acquires an inter-process advisory file lock (flock / LockFileEx).
+//  2. Reads the current on-disk state (which may include writes from other
+//     instances since our last save).
+//  3. Computes the delta this instance has accumulated since its last save.
+//  4. Merges the delta into the on-disk totals.
+//  5. Writes the merged result back and releases the lock.
+//
+// tokenFileMux continues to serialize concurrent goroutines within this
+// process (#9441); flock serializes across OS processes.
 func (s *Server) saveTokenUsage() {
 	s.tokenFileMux.Lock()
 	defer s.tokenFileMux.Unlock()
 
-	s.tokenMux.RLock()
-	usage := tokenUsageData{
-		Date:      s.todayDate,
-		InputIn:   s.todayTokensIn,
-		OutputOut: s.todayTokensOut,
-	}
-	s.tokenMux.RUnlock()
+	path := getTokenUsagePath()
+	lockPath := path + tokenUsageLockSuffix
 
-	data, err := json.Marshal(usage)
+	// Acquire inter-process lock (#9730).
+	release, lockErr := acquireFileLock(lockPath)
+	if lockErr != nil {
+		slog.Warn("could not acquire file lock for token save", "error", lockErr)
+		// Fall through to best-effort unlocked write for single-instance
+		// deployments where flock is unavailable (e.g. NFS without lock
+		// daemon). The in-process tokenFileMux still prevents goroutine races.
+	}
+	if release != nil {
+		defer release()
+	}
+
+	// Snapshot current in-memory counters.
+	s.tokenMux.Lock()
+	currentDate := s.todayDate
+	currentIn := s.todayTokensIn
+	currentOut := s.todayTokensOut
+	prevSavedIn := s.lastSavedIn
+	prevSavedOut := s.lastSavedOut
+	s.tokenMux.Unlock()
+
+	// Compute the delta this instance accumulated since its last save.
+	deltaIn := currentIn - prevSavedIn
+	deltaOut := currentOut - prevSavedOut
+
+	// Read on-disk state (may contain writes from other instances).
+	var onDisk tokenUsageData
+	if diskData, err := os.ReadFile(path); err == nil {
+		_ = json.Unmarshal(diskData, &onDisk)
+	}
+
+	// Merge: if the on-disk date matches, add our delta to the on-disk
+	// totals. Otherwise start fresh for the new day.
+	merged := tokenUsageData{Date: currentDate}
+	if onDisk.Date == currentDate {
+		merged.InputIn = onDisk.InputIn + deltaIn
+		merged.OutputOut = onDisk.OutputOut + deltaOut
+	} else {
+		merged.InputIn = deltaIn
+		merged.OutputOut = deltaOut
+	}
+
+	data, err := json.Marshal(merged)
 	if err != nil {
 		return
 	}
 
-	path := getTokenUsagePath()
 	// Atomic write: write to a temp file then rename to avoid corruption
-	// when multiple goroutines persist concurrently (#6996).
+	// if the process is killed mid-write (#6996).
 	tmpPath := path + ".tmp"
 	if err := os.WriteFile(tmpPath, data, agentFileMode); err != nil {
 		slog.Warn("could not write token usage temp file", "error", err)
@@ -1766,7 +1833,26 @@ func (s *Server) saveTokenUsage() {
 	}
 	if err := os.Rename(tmpPath, path); err != nil {
 		slog.Warn("could not rename token usage temp file", "error", err)
+		return
 	}
+
+	// Update last-saved watermarks so the next save computes the correct
+	// delta. Also update in-memory counters to reflect the merged on-disk
+	// totals (includes other instances' contributions).
+	s.tokenMux.Lock()
+	s.lastSavedIn = currentIn
+	s.lastSavedOut = currentOut
+	// If another instance wrote tokens while we held the lock, our
+	// in-memory view should reflect the merged total so that getClaudeInfo
+	// reports accurate numbers.
+	if currentDate == s.todayDate {
+		s.todayTokensIn = merged.InputIn
+		s.todayTokensOut = merged.OutputOut
+		// Re-base lastSaved to merged totals so the next delta is correct.
+		s.lastSavedIn = merged.InputIn
+		s.lastSavedOut = merged.OutputOut
+	}
+	s.tokenMux.Unlock()
 }
 
 // extractCommandsFromResponse parses an LLM thinking response to find

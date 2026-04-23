@@ -157,6 +157,8 @@ type Server struct {
 	todayTokensIn     int64
 	todayTokensOut    int64
 	todayDate         string // YYYY-MM-DD format to detect day change
+	lastSavedIn       int64  // todayTokensIn at last saveTokenUsage, for delta computation (#9730)
+	lastSavedOut      int64  // todayTokensOut at last saveTokenUsage, for delta computation (#9730)
 	sessionTokenQuota int64  // max total tokens per session; 0 = unlimited (#9438)
 
 	// Prediction system
