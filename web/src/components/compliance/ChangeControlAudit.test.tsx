@@ -1,11 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
-import ChangeControlAudit from './ChangeControlAudit'
-
-vi.mock('../../lib/unified/dashboard/UnifiedDashboard', () => ({
-  UnifiedDashboard: () => null,
-}))
+import { ChangeControlAuditContent as ChangeControlAudit } from './ChangeControlAudit'
 
 const mockSummary = {
   total_changes: 8, approved_changes: 4, unapproved_changes: 3, emergency_changes: 1,
@@ -39,7 +34,7 @@ describe('ChangeControlAudit', () => {
 
   it('renders header and summary cards', async () => {
     mockFetchSuccess()
-    render(<MemoryRouter><ChangeControlAudit /></MemoryRouter>)
+    render(<ChangeControlAudit />)
     await waitFor(() => {
       expect(screen.getByText('Change Control Audit Trail')).toBeInTheDocument()
       expect(screen.getByText('Total Changes')).toBeInTheDocument()
@@ -49,7 +44,7 @@ describe('ChangeControlAudit', () => {
 
   it('renders change records', async () => {
     mockFetchSuccess()
-    render(<MemoryRouter><ChangeControlAudit /></MemoryRouter>)
+    render(<ChangeControlAudit />)
     await waitFor(() => {
       expect(screen.getByText('Deployment/payment-api')).toBeInTheDocument()
       expect(screen.getByText('ConfigMap/payment-config')).toBeInTheDocument()
@@ -58,7 +53,7 @@ describe('ChangeControlAudit', () => {
 
   it('shows risk score value', async () => {
     mockFetchSuccess()
-    render(<MemoryRouter><ChangeControlAudit /></MemoryRouter>)
+    render(<ChangeControlAudit />)
     await waitFor(() => {
       expect(screen.getByText('55')).toBeInTheDocument()
     })
@@ -66,7 +61,7 @@ describe('ChangeControlAudit', () => {
 
   it('shows error state on failure', async () => {
     vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('Network error'))
-    render(<MemoryRouter><ChangeControlAudit /></MemoryRouter>)
+    render(<ChangeControlAudit />)
     await waitFor(() => {
       expect(screen.getByText('Network error')).toBeInTheDocument()
     })

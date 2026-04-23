@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
 import React from 'react'
 
 // ---------------------------------------------------------------------------
@@ -31,10 +30,6 @@ vi.mock('../../hooks/useComplianceFrameworks', () => ({
   useFrameworkEvaluation: () => mockEvalReturn,
 }))
 
-vi.mock('../../lib/unified/dashboard/UnifiedDashboard', () => ({
-  UnifiedDashboard: () => null,
-}))
-
 vi.mock('../../hooks/useMCP', () => ({
   useClusters: () => ({
     clusters: [
@@ -49,7 +44,7 @@ vi.mock('../../hooks/useMCP', () => ({
   }),
 }))
 
-import ComplianceFrameworks from './ComplianceFrameworks'
+import { ComplianceFrameworksContent as ComplianceFrameworks } from './ComplianceFrameworks'
 
 describe('ComplianceFrameworks', () => {
   beforeEach(() => {
@@ -72,13 +67,13 @@ describe('ComplianceFrameworks', () => {
   })
 
   it('renders page header', () => {
-    render(<MemoryRouter><ComplianceFrameworks /></MemoryRouter>)
+    render(<ComplianceFrameworks />)
     expect(screen.getByText('Compliance Frameworks')).toBeDefined()
     expect(screen.getByText(/PCI-DSS 4.0, SOC 2 Type II/)).toBeDefined()
   })
 
   it('shows framework cards', () => {
-    render(<MemoryRouter><ComplianceFrameworks /></MemoryRouter>)
+    render(<ComplianceFrameworks />)
     expect(screen.getAllByText('PCI-DSS 4.0').length).toBeGreaterThan(0)
     expect(screen.getAllByText('SOC 2 Type II').length).toBeGreaterThan(0)
     expect(screen.getByText('8 controls')).toBeDefined()
@@ -87,20 +82,20 @@ describe('ComplianceFrameworks', () => {
 
   it('shows loading state', () => {
     mockFrameworksReturn.isLoading = true
-    render(<MemoryRouter><ComplianceFrameworks /></MemoryRouter>)
+    render(<ComplianceFrameworks />)
     expect(screen.getByText('Loading frameworks…')).toBeDefined()
   })
 
   it('shows error state', () => {
     mockFrameworksReturn.error = 'Connection failed'
-    render(<MemoryRouter><ComplianceFrameworks /></MemoryRouter>)
+    render(<ComplianceFrameworks />)
     expect(screen.getByText('Failed to load frameworks')).toBeDefined()
     expect(screen.getByText('Connection failed')).toBeDefined()
   })
 
   it('shows retry button on error', () => {
     mockFrameworksReturn.error = 'Timeout'
-    render(<MemoryRouter><ComplianceFrameworks /></MemoryRouter>)
+    render(<ComplianceFrameworks />)
     const retryBtn = screen.getByText('Retry')
     expect(retryBtn).toBeDefined()
     fireEvent.click(retryBtn)
@@ -108,7 +103,7 @@ describe('ComplianceFrameworks', () => {
   })
 
   it('shows evaluate bar with cluster selector', () => {
-    render(<MemoryRouter><ComplianceFrameworks /></MemoryRouter>)
+    render(<ComplianceFrameworks />)
     expect(screen.getByRole('button', { name: /Run Evaluation/i })).toBeDefined()
     const select = document.querySelector('select') as HTMLSelectElement
     expect(select).not.toBeNull()
@@ -116,7 +111,7 @@ describe('ComplianceFrameworks', () => {
   })
 
   it('calls evaluate on button click', () => {
-    render(<MemoryRouter><ComplianceFrameworks /></MemoryRouter>)
+    render(<ComplianceFrameworks />)
     const btn = screen.getByRole('button', { name: /Run Evaluation/i })
     fireEvent.click(btn)
     expect(mockEvaluate).toHaveBeenCalledWith('pci-dss-4.0', 'prod-east')
@@ -154,7 +149,7 @@ describe('ComplianceFrameworks', () => {
       evaluated_at: '2025-01-01T00:00:00Z',
     }
 
-    render(<MemoryRouter><ComplianceFrameworks /></MemoryRouter>)
+    render(<ComplianceFrameworks />)
 
     expect(screen.getByText('75%')).toBeDefined()
     expect(screen.getByText(/9 passed/)).toBeDefined()
@@ -165,18 +160,18 @@ describe('ComplianceFrameworks', () => {
 
   it('shows evaluation error', () => {
     mockEvalReturn.error = 'Cluster unreachable'
-    render(<MemoryRouter><ComplianceFrameworks /></MemoryRouter>)
+    render(<ComplianceFrameworks />)
     expect(screen.getByText('Cluster unreachable')).toBeDefined()
   })
 
   it('shows empty state when no evaluation run', () => {
-    render(<MemoryRouter><ComplianceFrameworks /></MemoryRouter>)
+    render(<ComplianceFrameworks />)
     expect(screen.getByText(/Select a framework and cluster/)).toBeDefined()
   })
 
   it('shows evaluating state', () => {
     mockEvalReturn.isEvaluating = true
-    render(<MemoryRouter><ComplianceFrameworks /></MemoryRouter>)
+    render(<ComplianceFrameworks />)
     expect(screen.getByText('Evaluating…')).toBeDefined()
   })
 })

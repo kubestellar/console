@@ -1,11 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
-import GxPDashboard from './GxPDashboard'
-
-vi.mock('../../lib/unified/dashboard/UnifiedDashboard', () => ({
-  UnifiedDashboard: () => null,
-}))
+import { GxPDashboardContent as GxPDashboard } from './GxPDashboard'
 
 const ok = (data: unknown) => Promise.resolve({ ok: true, json: () => Promise.resolve(data) })
 
@@ -37,28 +32,28 @@ beforeEach(() => { vi.clearAllMocks() })
 
 describe('GxPDashboard', () => {
   it('renders the dashboard title', async () => {
-    render(<MemoryRouter><GxPDashboard /></MemoryRouter>)
+    render(<GxPDashboard />)
     await waitFor(() => {
       expect(screen.getByText('GxP Validation Mode')).toBeInTheDocument()
     })
   })
 
   it('shows GxP mode enabled', async () => {
-    render(<MemoryRouter><GxPDashboard /></MemoryRouter>)
+    render(<GxPDashboard />)
     await waitFor(() => {
       expect(screen.getByText('● ENABLED')).toBeInTheDocument()
     })
   })
 
   it('shows chain integrity status', async () => {
-    render(<MemoryRouter><GxPDashboard /></MemoryRouter>)
+    render(<GxPDashboard />)
     await waitFor(() => {
       expect(screen.getByText('Hash chain intact')).toBeInTheDocument()
     })
   })
 
   it('shows pending signatures count', async () => {
-    render(<MemoryRouter><GxPDashboard /></MemoryRouter>)
+    render(<GxPDashboard />)
     await waitFor(() => {
       expect(screen.getByText('1')).toBeInTheDocument()
     })

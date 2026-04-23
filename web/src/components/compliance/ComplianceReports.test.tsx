@@ -33,7 +33,7 @@ vi.mock('../../lib/api', () => ({
 }))
 
 // Import after mocks are set up
-import ComplianceReports from './ComplianceReports'
+import { ComplianceReportsContent as ComplianceReports } from './ComplianceReports'
 
 describe('ComplianceReports', () => {
   beforeEach(() => {

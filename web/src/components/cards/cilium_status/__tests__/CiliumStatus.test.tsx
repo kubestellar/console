@@ -21,7 +21,7 @@ vi.mock('../../../../hooks/useDrillDown', () => ({
     useDrillDownActions: () => ({ drillToNode: vi.fn() }),
 }))
 
-vi.mock('../../CardDataContext', () => ({
+vi.mock('../../../CardDataContext', () => ({
     useCardLoadingState: () => ({ showSkeleton: false }),
 }))
 
@@ -46,11 +46,11 @@ vi.mock('../../../../lib/cards', () => ({
     CardPaginationFooter: () => <div data-testid="pagination" />,
 }))
 
-vi.mock('../../ui/CardControls', () => ({
+vi.mock('../../../ui/CardControls', () => ({
     CardControls: () => <div data-testid="card-controls" />,
 }))
 
-vi.mock('../../ui/StatusBadge', () => ({
+vi.mock('../../../ui/StatusBadge', () => ({
     StatusBadge: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
 }))
 

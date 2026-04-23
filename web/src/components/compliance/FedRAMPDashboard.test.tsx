@@ -1,11 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { MemoryRouter } from 'react-router-dom'
-import FedRAMPDashboard from './FedRAMPDashboard'
-
-vi.mock('../../lib/unified/dashboard/UnifiedDashboard', () => ({
-  UnifiedDashboard: () => null,
-}))
+import { FedRAMPDashboardContent as FedRAMPDashboard } from './FedRAMPDashboard'
 
 const mockControls = [
   { id: 'AC-1', name: 'Access Control Policy', description: 'Define access policies.', family: 'AC', status: 'satisfied', responsible: 'Platform Team', implementation: 'RBAC and OPA' },
@@ -28,22 +23,22 @@ describe('FedRAMPDashboard', () => {
   beforeEach(() => { vi.clearAllMocks() })
 
   it('renders the dashboard title', async () => {
-    render(<MemoryRouter><FedRAMPDashboard /></MemoryRouter>)
+    render(<FedRAMPDashboard />)
     await waitFor(() => expect(screen.getByText('FedRAMP Readiness')).toBeInTheDocument())
   })
 
   it('shows overall score', async () => {
-    render(<MemoryRouter><FedRAMPDashboard /></MemoryRouter>)
+    render(<FedRAMPDashboard />)
     await waitFor(() => expect(screen.getByText('71%')).toBeInTheDocument())
   })
 
   it('renders a control', async () => {
-    render(<MemoryRouter><FedRAMPDashboard /></MemoryRouter>)
+    render(<FedRAMPDashboard />)
     await waitFor(() => expect(screen.getByText('Access Control Policy')).toBeInTheDocument())
   })
 
   it('shows satisfied count', async () => {
-    render(<MemoryRouter><FedRAMPDashboard /></MemoryRouter>)
+    render(<FedRAMPDashboard />)
     await waitFor(() => expect(screen.getByText('142')).toBeInTheDocument())
   })
 })
