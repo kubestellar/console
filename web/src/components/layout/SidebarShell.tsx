@@ -561,7 +561,8 @@ export function SidebarShell({
         onMouseEnter={handleSidebarMouseEnter}
         onMouseLeave={handleSidebarMouseLeave}
         className={cn(
-          'fixed left-0 top-16 bottom-0 glass border-r border-border/50 overflow-y-auto scroll-enhanced z-sidebar',
+          'fixed left-0 top-16 bottom-0 glass border-r border-border/50 overflow-y-auto scroll-enhanced',
+          isMobile ? 'z-modal' : 'z-sidebar',
           !isResizing && 'transition-all duration-300',
           !isMobile && (config.collapsed ? 'p-3' : 'p-4'),
           isMobile && 'p-4',
