@@ -241,11 +241,23 @@ function GPUNamespaceAllocationsInternal({ config: _config }: GPUNamespaceAlloca
         {displayItems.map((ns) => (
           <div
             key={ns.namespace}
+            role="button"
+            tabIndex={0}
             onClick={() => drillToGPUNamespace(ns.namespace, {
               gpuRequested: ns.gpuRequested,
               podCount: ns.podCount,
               clusters: ns.clusters })}
-            className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                drillToGPUNamespace(ns.namespace, {
+                  gpuRequested: ns.gpuRequested,
+                  podCount: ns.podCount,
+                  clusters: ns.clusters })
+              }
+            }}
+            className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400"
+            aria-label={`View GPU namespace ${ns.namespace}`}
           >
             <div className="flex items-center gap-2 mb-2 min-w-0">
               <Box className="w-4 h-4 text-purple-400 shrink-0" />
