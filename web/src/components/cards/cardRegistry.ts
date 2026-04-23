@@ -509,9 +509,9 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   risk_register: RiskRegisterCard,
   risk_appetite: RiskAppetiteCard,
   // Dashboard content cards (full-width, lazy loaded individually)
-  sbom_dashboard: lazy(() => import('../compliance/SBOMDashboard').then(m => ({ default: m.SBOMDashboardContent }))),
-  sigstore_dashboard: lazy(() => import('../compliance/SigstoreDashboard').then(m => ({ default: m.SigstoreDashboardContent }))),
-  slsa_dashboard: lazy(() => import('../compliance/SLSADashboard').then(m => ({ default: m.SLSADashboardContent }))),
+  sbom_dashboard: safeLazy(() => import('../compliance/SBOMDashboard'), 'SBOMDashboardContent'),
+  sigstore_dashboard: safeLazy(() => import('../compliance/SigstoreDashboard'), 'SigstoreDashboardContent'),
+  slsa_dashboard: safeLazy(() => import('../compliance/SLSADashboard'), 'SLSADashboardContent'),
   // Enterprise dashboard content cards (full dashboards as cards)
   compliance_frameworks_dashboard: ComplianceFrameworksDashboardCard,
   change_control_dashboard: ChangeControlDashboardCard,

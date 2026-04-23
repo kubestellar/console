@@ -81,10 +81,14 @@ export function ChangeControlAuditContent() {
         authFetch('/api/compliance/change-control/policies'),
       ])
       if (!sRes.ok || !cRes.ok || !vRes.ok || !pRes.ok) throw new Error('Failed to load change control data')
-      setSummary(await sRes.json())
-      setChanges(await cRes.json())
-      setViolations(await vRes.json())
-      setPolicies(await pRes.json())
+      const sData = await sRes.json()
+      const cData = await cRes.json()
+      const vData = await vRes.json()
+      const pData = await pRes.json()
+      setSummary(sData ?? null)
+      setChanges(Array.isArray(cData) ? cData : [])
+      setViolations(Array.isArray(vData) ? vData : [])
+      setPolicies(Array.isArray(pData) ? pData : [])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data')
     } finally {
@@ -95,7 +99,7 @@ export function ChangeControlAuditContent() {
   useEffect(() => { fetchData() }, [])
 
   const filteredChanges = useMemo(() =>
-    filterApproval === 'all' ? changes : changes.filter(c => c.approval_status === filterApproval),
+    filterApproval === 'all' ? (changes || []) : (changes || []).filter(c => c.approval_status === filterApproval),
     [changes, filterApproval]
   )
 
@@ -163,7 +167,7 @@ export function ChangeControlAuditContent() {
               </Select>
             </div>
           </div>
-          {filteredChanges.map(change => {
+          {(filteredChanges || []).map(change => {
             const approval = APPROVAL_STYLES[change.approval_status] ?? APPROVAL_STYLES.pending
             return (
               <div key={change.id} className="rounded-lg border border-zinc-700/30 bg-zinc-800/50 p-4">
@@ -194,7 +198,7 @@ export function ChangeControlAuditContent() {
 
       {activeTab === 'violations' && (
         <div className="space-y-2">
-          {violations.length === 0 ? <p className="text-zinc-500 text-sm text-center py-8">No policy violations detected</p> : violations.map(v => (
+          {(violations || []).length === 0 ? <p className="text-zinc-500 text-sm text-center py-8">No policy violations detected</p> : (violations || []).map(v => (
             <div key={v.id} className="rounded-lg border border-zinc-700/30 bg-zinc-900/30 p-3">
               <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-2">
@@ -211,7 +215,7 @@ export function ChangeControlAuditContent() {
 
       {activeTab === 'policies' && (
         <div className="space-y-2">
-          {policies.map(p => (
+          {(policies || []).map(p => (
             <div key={p.id} className="rounded-lg border border-zinc-700/30 bg-zinc-900/30 p-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">

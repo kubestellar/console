@@ -109,9 +109,12 @@ export function SLSADashboardContent() {
           authFetch('/api/v1/compliance/slsa/summary'),
         ])
         if (!aRes.ok || !pRes.ok || !sRes.ok) throw new Error('Failed to fetch SLSA data')
-        setAttestations(await aRes.json())
-        setProvenance(await pRes.json())
-        setSummary(await sRes.json())
+        const aData = await aRes.json()
+        const pData = await pRes.json()
+        const sData = await sRes.json()
+        setAttestations(Array.isArray(aData) ? aData : [])
+        setProvenance(Array.isArray(pData) ? pData : [])
+        setSummary(sData ?? null)
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Unknown error')
       } finally {
@@ -255,7 +258,7 @@ export function SLSADashboardContent() {
               </tr>
             </thead>
             <tbody>
-              {attestations.map((a) => (
+              {(attestations || []).map((a) => (
                 <tr key={a.id} className="border-b border-gray-800 hover:bg-gray-800/30">
                   <td className="py-2 px-3 text-white font-mono text-xs max-w-xs truncate">{a.artifact}</td>
                   <td className="py-2 px-3 text-gray-300 text-xs">{a.builder}</td>
@@ -292,7 +295,7 @@ export function SLSADashboardContent() {
               </tr>
             </thead>
             <tbody>
-              {provenance.map((p) => (
+              {(provenance || []).map((p) => (
                 <tr key={p.id} className="border-b border-gray-800 hover:bg-gray-800/30">
                   <td className="py-2 px-3 text-white font-mono text-xs max-w-xs truncate">{p.artifact}</td>
                   <td className="py-2 px-3 text-gray-300 text-xs">{p.builder_id}</td>
