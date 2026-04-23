@@ -9,15 +9,15 @@ vi.mock('react-i18next', () => ({
 }))
 
 const mockUseCachedCiliumStatus = vi.fn()
-vi.mock('../../../hooks/useCachedCiliumStatus', () => ({
+vi.mock('../../../../hooks/useCachedCiliumStatus', () => ({
     useCachedCiliumStatus: () => mockUseCachedCiliumStatus(),
 }))
 
-vi.mock('../../../hooks/useGlobalFilters', () => ({
+vi.mock('../../../../hooks/useGlobalFilters', () => ({
     useGlobalFilters: () => ({ selectedClusters: [] }),
 }))
 
-vi.mock('../../../hooks/useDrillDown', () => ({
+vi.mock('../../../../hooks/useDrillDown', () => ({
     useDrillDownActions: () => ({ drillToNode: vi.fn() }),
 }))
 
@@ -25,11 +25,12 @@ vi.mock('../../CardDataContext', () => ({
     useCardLoadingState: () => ({ showSkeleton: false }),
 }))
 
-vi.mock('../../../lib/cards', () => ({
+vi.mock('../../../../lib/cards', () => ({
     useCardData: (items: any) => ({
         items: items || [],
         currentPage: 1,
         totalPages: 1,
+        totalItems: (items || []).length,
         itemsPerPage: 5,
         goToPage: vi.fn(),
         setItemsPerPage: vi.fn(),
