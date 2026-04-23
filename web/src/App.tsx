@@ -59,6 +59,7 @@ const GitOps = safeLazy(() => import('./components/gitops/GitOps'), 'GitOps')
 const Alerts = safeLazy(() => import('./components/alerts/Alerts'), 'Alerts')
 const Cost = safeLazy(() => import('./components/cost/Cost'), 'Cost')
 const Compliance = safeLazy(() => import('./components/compliance/Compliance'), 'Compliance')
+const ComplianceFrameworks = safeLazy(() => import('./components/compliance/ComplianceFrameworks'), 'ComplianceFrameworks')
 const DataCompliance = safeLazy(() => import('./components/data-compliance/DataCompliance'), 'DataCompliance')
 const GPUReservations = safeLazy(() => import('./components/gpu/GPUReservations'), 'GPUReservations')
 const KarmadaOps = safeLazy(() => import('./components/karmada-ops/KarmadaOps'), 'KarmadaOps')
@@ -326,6 +327,7 @@ const ROUTE_TITLES: Record<string, string> = {
   '/security': 'Security',
   '/security-posture': 'Security Posture',
   '/compliance': 'Compliance',
+  '/compliance-frameworks': 'Compliance Frameworks',
   '/data-compliance': 'Data Compliance',
   '/gitops': 'GitOps',
   '/cost': 'Cost',
@@ -607,6 +609,7 @@ function FullDashboardApp({ liveLocation }: { liveLocation: Location }) {
           <Route path={ROUTES.SECURITY_POSTURE} element={<SuspenseRoute><Compliance /></SuspenseRoute>} />
           {/* Legacy route for backwards compatibility */}
           <Route path={ROUTES.COMPLIANCE} element={<SuspenseRoute><Compliance /></SuspenseRoute>} />
+          <Route path={ROUTES.COMPLIANCE_FRAMEWORKS} element={<SuspenseRoute><ComplianceFrameworks /></SuspenseRoute>} />
           <Route path={ROUTES.DATA_COMPLIANCE} element={<SuspenseRoute><DataCompliance /></SuspenseRoute>} />
           <Route path={ROUTES.GPU_RESERVATIONS} element={<SuspenseRoute><GPUReservations /></SuspenseRoute>} />
           <Route path={ROUTES.KARMADA_OPS} element={<SuspenseRoute><KarmadaOps /></SuspenseRoute>} />

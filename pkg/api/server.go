@@ -948,6 +948,11 @@ func (s *Server) setupRoutes() {
 	auditHandler := handlers.NewAuditHandler(s.store)
 	api.Get("/admin/audit-log", auditHandler.GetAuditLog)
 
+	// Compliance Frameworks engine — named regulatory standards (PCI-DSS, SOC 2)
+	// mapped to concrete Kubernetes checks (#9627).
+	complianceFrameworks := handlers.NewComplianceFrameworksHandler(nil) // nil = demo mode (no live prober)
+	complianceFrameworks.RegisterRoutes(api.Group("/compliance/frameworks"))
+
 	// Namespace read routes. GET /namespaces is viewer-or-above (see
 	// ListNamespaces's requireViewerOrAbove check) and
 	// GET /namespaces/:name/access is admin-only (see GetNamespaceAccess).
