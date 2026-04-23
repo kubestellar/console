@@ -6,14 +6,17 @@
  */
 import { Outlet } from 'react-router-dom'
 import EnterpriseSidebar from './EnterpriseSidebar'
+import { VersionCheckProvider } from '../../hooks/useVersionCheck'
 
 export default function EnterpriseLayout() {
   return (
-    <div className="flex h-screen bg-gray-950 text-white overflow-hidden">
-      <EnterpriseSidebar />
-      <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6 pb-24">
-        <Outlet />
-      </main>
-    </div>
+    <VersionCheckProvider>
+      <div className="flex h-screen bg-gray-950 text-white overflow-hidden">
+        <EnterpriseSidebar />
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6 pb-24">
+          <Outlet />
+        </main>
+      </div>
+    </VersionCheckProvider>
   )
 }
