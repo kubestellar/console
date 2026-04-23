@@ -77,9 +77,9 @@ export const ENTERPRISE_NAV_SECTIONS: EnterpriseNavSection[] = [
     title: 'Security Operations',
     icon: 'Radar',
     items: [
-      { id: 'siem', label: 'SIEM Integration', href: '/enterprise/siem', icon: 'Radio', badge: 'Soon' },
-      { id: 'incidents', label: 'Incident Response', href: '/enterprise/incidents', icon: 'Siren', badge: 'Soon' },
-      { id: 'threat-intel', label: 'Threat Intelligence', href: '/enterprise/threats', icon: 'Bug', badge: 'Soon' },
+      { id: 'siem', label: 'SIEM Integration', href: '/enterprise/siem', icon: 'Monitor' },
+      { id: 'incident-response', label: 'Incident Response', href: '/enterprise/incident-response', icon: 'AlertTriangle' },
+      { id: 'threat-intel', label: 'Threat Intelligence', href: '/enterprise/threat-intel', icon: 'Shield' },
     ],
   },
   {

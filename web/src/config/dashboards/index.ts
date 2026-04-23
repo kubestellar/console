@@ -59,6 +59,9 @@ import { acmmDashboardConfig } from './acmm'
 import { oidcDashboardConfig } from './oidc'
 import { rbacAuditDashboardConfig } from './rbac-audit'
 import { sessionManagementDashboardConfig } from './session-management'
+import { siemDashboardConfig } from './siem'
+import { incidentResponseDashboardConfig } from './incident-response'
+import { threatIntelDashboardConfig } from './threat-intel'
 
 /**
  * Registry of all unified dashboard configurations
@@ -112,6 +115,9 @@ export const DASHBOARD_CONFIGS: DashboardConfigRegistry = {
   oidc: oidcDashboardConfig,
   'rbac-audit': rbacAuditDashboardConfig,
   'session-management': sessionManagementDashboardConfig,
+  siem: siemDashboardConfig,
+  'incident-response': incidentResponseDashboardConfig,
+  'threat-intel': threatIntelDashboardConfig,
 }
 
 /**
@@ -234,4 +240,7 @@ export {
   oidcDashboardConfig,
   rbacAuditDashboardConfig,
   sessionManagementDashboardConfig,
+  siemDashboardConfig,
+  incidentResponseDashboardConfig,
+  threatIntelDashboardConfig,
 }

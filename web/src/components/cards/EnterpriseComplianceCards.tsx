@@ -294,6 +294,75 @@ export function AirGapCard() {
   )
 }
 
+// ── SIEM Integration Card ───────────────────────────────────────────────
+
+export function SIEMIntegrationCard() {
+  const nav = useNavigate()
+  const [data, setData] = useState<Record<string, number> | null>(null)
+  useEffect(() => {
+    authFetch('/api/v1/compliance/siem/summary').then(r => r.ok ? r.json() : null).then(setData).catch(() => {})
+  }, [])
+  return (
+    <CardShell title="SIEM Integration" icon={Activity} onClick={() => nav('/enterprise/siem')}>
+      {data ? (
+        <div className="grid grid-cols-2 gap-2">
+          <MiniStat label="Events (24h)" value={(data.events_last_24h ?? 0).toLocaleString()} />
+          <MiniStat label="Total Alerts" value={data.total_alerts ?? 0} />
+          <MiniStat label="Critical" value={data.critical_alerts ?? 0} color="text-red-400" />
+          <MiniStat label="Active" value={data.active_alerts ?? 0} color="text-yellow-400" />
+        </div>
+      ) : <p className="text-gray-500 text-sm">Loading…</p>}
+    </CardShell>
+  )
+}
+
+// ── Incident Response Card ──────────────────────────────────────────────
+
+export function IncidentResponseCard() {
+  const nav = useNavigate()
+  const [data, setData] = useState<Record<string, unknown> | null>(null)
+  useEffect(() => {
+    authFetch('/api/v1/compliance/incidents/metrics').then(r => r.ok ? r.json() : null).then(setData).catch(() => {})
+  }, [])
+  return (
+    <CardShell title="Incident Response" icon={Shield} onClick={() => nav('/enterprise/incident-response')}>
+      {data ? (
+        <div className="grid grid-cols-2 gap-2">
+          <MiniStat label="Active" value={Number(data.active_incidents ?? 0)} color="text-red-400" />
+          <MiniStat label="MTTR" value={`${Number(data.mttr_hours ?? 0)}h`} />
+          <MiniStat label="Resolved (30d)" value={Number(data.resolved_last_30d ?? 0)} color="text-green-400" />
+          <MiniStat label="Escalation" value={`${Number(data.escalation_rate ?? 0)}%`} color="text-yellow-400" />
+        </div>
+      ) : <p className="text-gray-500 text-sm">Loading…</p>}
+    </CardShell>
+  )
+}
+
+// ── Threat Intelligence Card ────────────────────────────────────────────
+
+export function ThreatIntelCard() {
+  const nav = useNavigate()
+  const [data, setData] = useState<Record<string, number> | null>(null)
+  useEffect(() => {
+    authFetch('/api/v1/compliance/threat-intel/summary').then(r => r.ok ? r.json() : null).then(setData).catch(() => {})
+  }, [])
+  return (
+    <CardShell title="Threat Intelligence" icon={Shield} onClick={() => nav('/enterprise/threat-intel')}>
+      {data ? (
+        <div className="flex items-center gap-4">
+          <ScoreRing score={100 - (data.risk_score ?? 0)} />
+          <div className="grid grid-cols-2 gap-2 flex-1">
+            <MiniStat label="Active Feeds" value={data.active_feeds ?? 0} color="text-green-400" />
+            <MiniStat label="IOC Matches" value={data.active_matches ?? 0} color="text-red-400" />
+            <MiniStat label="Indicators" value={(data.total_indicators ?? 0).toLocaleString()} />
+            <MiniStat label="Risk Score" value={data.risk_score ?? 0} color="text-yellow-400" />
+          </div>
+        </div>
+      ) : <p className="text-gray-500 text-sm">Loading…</p>}
+    </CardShell>
+  )
+}
+
 // ── FedRAMP Card ────────────────────────────────────────────────────────
 
 export function FedRAMPCard() {

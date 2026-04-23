@@ -265,6 +265,9 @@ export const CARD_CATALOG = {
     { type: 'oidc_federation', title: 'OIDC Federation', description: 'OIDC identity provider federation and session status', visualization: 'status' },
     { type: 'rbac_audit', title: 'RBAC Audit', description: 'RBAC least-privilege analysis and over-privilege detection', visualization: 'gauge' },
     { type: 'session_management', title: 'Session Management', description: 'Enterprise session monitoring and policy enforcement', visualization: 'table' },
+    { type: 'siem_integration', title: 'SIEM Integration', description: 'Security event monitoring and alert correlation', visualization: 'events' },
+    { type: 'incident_response', title: 'Incident Response', description: 'Incident tracking and playbook management', visualization: 'status' },
+    { type: 'threat_intel', title: 'Threat Intelligence', description: 'Threat feed monitoring and IOC analysis', visualization: 'gauge' },
   ],
   'Workload Detection': [
     { type: 'prow_jobs', title: 'Prow Jobs', description: 'Prow CI/CD job status - presubmit, postsubmit, and periodic jobs', visualization: 'table' },

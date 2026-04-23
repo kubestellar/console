@@ -125,6 +125,9 @@ const FedRAMPCard = safeLazy(() => _enterpriseComplianceBundle, 'FedRAMPCard')
 const OIDCFederationCard = safeLazy(() => _enterpriseComplianceBundle, 'OIDCFederationCard')
 const RBACAuditCard = safeLazy(() => _enterpriseComplianceBundle, 'RBACAuditCard')
 const SessionManagementCard = safeLazy(() => _enterpriseComplianceBundle, 'SessionManagementCard')
+const SIEMIntegrationCard = safeLazy(() => _enterpriseComplianceBundle, 'SIEMIntegrationCard')
+const IncidentResponseCard = safeLazy(() => _enterpriseComplianceBundle, 'IncidentResponseCard')
+const ThreatIntelCard = safeLazy(() => _enterpriseComplianceBundle, 'ThreatIntelCard')
 // Workload detection cards — share one chunk via barrel import
 const _workloadDetectionBundle = import('./workload-detection').catch(() => undefined as never)
 const ProwJobs = safeLazy(() => _workloadDetectionBundle, 'ProwJobs')
@@ -470,6 +473,9 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   oidc_federation: OIDCFederationCard,
   rbac_audit: RBACAuditCard,
   session_management: SessionManagementCard,
+  siem_integration: SIEMIntegrationCard,
+  incident_response: IncidentResponseCard,
+  threat_intel: ThreatIntelCard,
   // ISO 27001 audit checklist
   iso27001_audit: ISO27001Audit,
   // Cross-cluster compliance cards

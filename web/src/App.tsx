@@ -74,6 +74,9 @@ const FedRAMPDashboard = safeLazy(() => import('./components/compliance/FedRAMPD
 const OIDCDashboard = safeLazy(() => import('./components/compliance/OIDCDashboard'), 'default')
 const RBACAuditDashboard = safeLazy(() => import('./components/compliance/RBACAuditDashboard'), 'default')
 const SessionDashboard = safeLazy(() => import('./components/compliance/SessionDashboard'), 'default')
+const SIEMDashboard = safeLazy(() => import('./components/compliance/SIEMDashboard'), 'default')
+const IncidentResponseDashboard = safeLazy(() => import('./components/compliance/IncidentResponseDashboard'), 'default')
+const ThreatIntelDashboard = safeLazy(() => import('./components/compliance/ThreatIntelDashboard'), 'default')
 const EnterpriseLayout = safeLazy(() => import('./components/enterprise/EnterpriseLayout'), 'default')
 const EnterprisePortal = safeLazy(() => import('./components/enterprise/EnterprisePortal'), 'default')
 const ComingSoon = safeLazy(() => import('./components/enterprise/ComingSoon'), 'default')
@@ -361,6 +364,9 @@ const ROUTE_TITLES: Record<string, string> = {
   '/enterprise/oidc': 'OIDC Federation',
   '/enterprise/rbac-audit': 'RBAC Audit',
   '/enterprise/sessions': 'Session Management',
+  '/enterprise/siem': 'SIEM Integration',
+  '/enterprise/incident-response': 'Incident Response',
+  '/enterprise/threat-intel': 'Threat Intelligence',
   '/data-compliance': 'Data Compliance',
   '/gitops': 'GitOps',
   '/cost': 'Cost',
@@ -637,6 +643,10 @@ function FullDashboardApp({ liveLocation }: { liveLocation: Location }) {
           <Route path="rbac-audit" element={<SuspenseRoute><RBACAuditDashboard /></SuspenseRoute>} />
           <Route path="sessions" element={<SuspenseRoute><SessionDashboard /></SuspenseRoute>} />
           {/* Epics 4-7: Coming Soon */}
+          {/* Epic 5: SecOps */}
+          <Route path="siem" element={<SuspenseRoute><SIEMDashboard /></SuspenseRoute>} />
+          <Route path="incident-response" element={<SuspenseRoute><IncidentResponseDashboard /></SuspenseRoute>} />
+          <Route path="threat-intel" element={<SuspenseRoute><ThreatIntelDashboard /></SuspenseRoute>} />
           <Route path="*" element={<SuspenseRoute><ComingSoon /></SuspenseRoute>} />
         </Route>
 
