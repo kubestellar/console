@@ -3,7 +3,12 @@
  * Operators, Operator Subscriptions, GitOps drifts, Buildpack images,
  * and RBAC (Roles, RoleBindings, ServiceAccounts via /api/rbac/).
  *
- * Extracted from useCachedData.ts for maintainability.
+ * Uses factory functions for the two repeating patterns:
+ *   - GitOps SSE hooks (cluster-only, fetchGitOpsAPI + optional SSE)
+ *   - RBAC hooks (cluster+namespace, fetchRbacAPI)
+ *
+ * Hooks with unique signatures (HelmHistory, HelmValues, GitOpsDrifts,
+ * BuildpackImages) are kept as standalone functions.
  */
 
 import { useCache, type RefreshCategory } from '../lib/cache'
@@ -50,48 +55,148 @@ interface CachedHookResult<T> {
 }
 
 // ============================================================================
-// Helm hooks
+// GitOps SSE factory — cluster-only hooks using fetchGitOpsAPI + SSE
 // ============================================================================
 
-/**
- * Hook for fetching Helm releases with caching (GitOps SSE endpoint)
- */
-export function useCachedHelmReleases(
-  cluster?: string,
-  options?: { category?: RefreshCategory }
-): CachedHookResult<HelmRelease[]> & { releases: HelmRelease[] } {
-  const { category = 'helm' } = options || {}
-  const key = `helmReleases:${cluster || 'all'}`
-
-  const result = useCache({
-    key,
-    category,
-    initialData: [] as HelmRelease[],
-    demoData: getDemoHelmReleases(),
-    fetcher: async () => {
-      const data = await fetchGitOpsAPI<{ releases: HelmRelease[] }>('helm-releases', cluster ? { cluster } : undefined)
-      return data.releases || []
-    },
-    progressiveFetcher: cluster ? undefined : async (onProgress) => {
-      return await fetchViaGitOpsSSE<HelmRelease>('helm-releases', 'releases', {}, onProgress)
-    } })
-
-  return {
-    releases: result.data,
-    data: result.data,
-    isLoading: result.isLoading,
-    isRefreshing: result.isRefreshing,
-    isDemoFallback: result.isDemoFallback,
-    error: result.error,
-    isFailed: result.isFailed,
-    consecutiveFailures: result.consecutiveFailures,
-    lastRefresh: result.lastRefresh,
-    refetch: result.refetch }
+interface GitOpsSseConfig<T> {
+  cacheKeyPrefix: string
+  apiEndpoint: string
+  responseKey: string
+  aliasKey: string
+  defaultCategory: RefreshCategory
+  getDemoData: () => T[]
 }
 
-/**
- * Hook for fetching Helm release history with caching
- */
+function createGitOpsSseHook<T extends object>(config: GitOpsSseConfig<T>) {
+  const { cacheKeyPrefix, apiEndpoint, responseKey, aliasKey, defaultCategory, getDemoData } = config
+
+  return function useCachedGitOpsResource(
+    cluster?: string,
+    options?: { category?: RefreshCategory }
+  ): CachedHookResult<T[]> & Record<string, T[]> {
+    const { category = defaultCategory } = options || {}
+    const key = `${cacheKeyPrefix}:${cluster || 'all'}`
+
+    const result = useCache({
+      key,
+      category,
+      initialData: [] as T[],
+      demoData: getDemoData(),
+      fetcher: async () => {
+        const data = await fetchGitOpsAPI<Record<string, T[]>>(apiEndpoint, cluster ? { cluster } : undefined)
+        return (data[responseKey] as T[]) || []
+      },
+      progressiveFetcher: cluster ? undefined : async (onProgress) => {
+        return await fetchViaGitOpsSSE<T>(apiEndpoint, responseKey, {}, onProgress)
+      },
+    })
+
+    return {
+      [aliasKey]: result.data,
+      data: result.data,
+      isLoading: result.isLoading,
+      isRefreshing: result.isRefreshing,
+      isDemoFallback: result.isDemoFallback,
+      error: result.error,
+      isFailed: result.isFailed,
+      consecutiveFailures: result.consecutiveFailures,
+      lastRefresh: result.lastRefresh,
+      refetch: result.refetch,
+    } as CachedHookResult<T[]> & Record<string, T[]>
+  }
+}
+
+// ============================================================================
+// RBAC factory — cluster+namespace hooks using fetchRbacAPI
+// ============================================================================
+
+interface RbacConfig<T> {
+  cacheKeyPrefix: string
+  apiEndpoint: string
+  responseKey: string
+  aliasKey: string
+  getDemoData: () => T[]
+  supportsIncludeSystem?: boolean
+}
+
+function createRbacHook<T extends object>(config: RbacConfig<T>) {
+  const { cacheKeyPrefix, apiEndpoint, responseKey, aliasKey, getDemoData, supportsIncludeSystem = false } = config
+
+  return function useCachedRbacResource(
+    cluster?: string,
+    namespace?: string,
+    options?: { includeSystem?: boolean; category?: RefreshCategory }
+  ): CachedHookResult<T[]> & Record<string, T[]> {
+    const { includeSystem = false, category = 'rbac' } = options || {}
+    const systemSuffix = supportsIncludeSystem ? `:${includeSystem}` : ''
+    const key = `${cacheKeyPrefix}:${cluster || 'all'}:${namespace || 'all'}${systemSuffix}`
+
+    const fetchParams: Record<string, string | number | boolean | undefined> = { cluster, namespace }
+    if (supportsIncludeSystem) {
+      fetchParams.includeSystem = includeSystem
+    }
+
+    const result = useCache({
+      key,
+      category,
+      initialData: [] as T[],
+      demoData: getDemoData(),
+      fetcher: async () => {
+        const data = await fetchRbacAPI<Record<string, T[]>>(apiEndpoint, fetchParams)
+        return (data[responseKey] as T[]) || []
+      },
+    })
+
+    return {
+      [aliasKey]: result.data,
+      data: result.data,
+      isLoading: result.isLoading,
+      isRefreshing: result.isRefreshing,
+      isDemoFallback: result.isDemoFallback,
+      error: result.error,
+      isFailed: result.isFailed,
+      consecutiveFailures: result.consecutiveFailures,
+      lastRefresh: result.lastRefresh,
+      refetch: result.refetch,
+    } as CachedHookResult<T[]> & Record<string, T[]>
+  }
+}
+
+// ============================================================================
+// GitOps SSE hooks (factory-generated)
+// ============================================================================
+
+export const useCachedHelmReleases = createGitOpsSseHook<HelmRelease>({
+  cacheKeyPrefix: 'helmReleases',
+  apiEndpoint: 'helm-releases',
+  responseKey: 'releases',
+  aliasKey: 'releases',
+  defaultCategory: 'helm',
+  getDemoData: getDemoHelmReleases,
+})
+
+export const useCachedOperators = createGitOpsSseHook<Operator>({
+  cacheKeyPrefix: 'operators',
+  apiEndpoint: 'operators',
+  responseKey: 'operators',
+  aliasKey: 'operators',
+  defaultCategory: 'operators',
+  getDemoData: getDemoOperators,
+})
+
+export const useCachedOperatorSubscriptions = createGitOpsSseHook<OperatorSubscription>({
+  cacheKeyPrefix: 'operatorSubscriptions',
+  apiEndpoint: 'operator-subscriptions',
+  responseKey: 'subscriptions',
+  aliasKey: 'subscriptions',
+  defaultCategory: 'operators',
+  getDemoData: getDemoOperatorSubscriptions,
+})
+
+// ============================================================================
+// Helm history & values — unique signatures, kept standalone
+// ============================================================================
+
 export function useCachedHelmHistory(
   cluster?: string,
   release?: string,
@@ -110,7 +215,8 @@ export function useCachedHelmHistory(
     fetcher: async () => {
       const data = await fetchGitOpsAPI<{ history: HelmHistoryEntry[] }>('helm-history', { cluster, release, namespace })
       return data.history || []
-    } })
+    },
+  })
 
   return {
     history: result.data,
@@ -122,12 +228,10 @@ export function useCachedHelmHistory(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch }
+    refetch: result.refetch,
+  }
 }
 
-/**
- * Hook for fetching Helm release values with caching
- */
 export function useCachedHelmValues(
   cluster?: string,
   release?: string,
@@ -146,7 +250,8 @@ export function useCachedHelmValues(
     fetcher: async () => {
       const data = await fetchGitOpsAPI<{ values: Record<string, unknown> }>('helm-values', { cluster, release, namespace })
       return data.values || {}
-    } })
+    },
+  })
 
   return {
     values: result.data,
@@ -158,92 +263,14 @@ export function useCachedHelmValues(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch }
+    refetch: result.refetch,
+  }
 }
 
 // ============================================================================
-// Operator hooks
+// GitOps drift — cluster+namespace, no SSE, single instance (kept standalone)
 // ============================================================================
 
-/**
- * Hook for fetching operators with caching (GitOps SSE endpoint)
- */
-export function useCachedOperators(
-  cluster?: string,
-  options?: { category?: RefreshCategory }
-): CachedHookResult<Operator[]> & { operators: Operator[] } {
-  const { category = 'operators' } = options || {}
-  const key = `operators:${cluster || 'all'}`
-
-  const result = useCache({
-    key,
-    category,
-    initialData: [] as Operator[],
-    demoData: getDemoOperators(),
-    fetcher: async () => {
-      const data = await fetchGitOpsAPI<{ operators: Operator[] }>('operators', cluster ? { cluster } : undefined)
-      return data.operators || []
-    },
-    progressiveFetcher: cluster ? undefined : async (onProgress) => {
-      return await fetchViaGitOpsSSE<Operator>('operators', 'operators', {}, onProgress)
-    } })
-
-  return {
-    operators: result.data,
-    data: result.data,
-    isLoading: result.isLoading,
-    isRefreshing: result.isRefreshing,
-    isDemoFallback: result.isDemoFallback,
-    error: result.error,
-    isFailed: result.isFailed,
-    consecutiveFailures: result.consecutiveFailures,
-    lastRefresh: result.lastRefresh,
-    refetch: result.refetch }
-}
-
-/**
- * Hook for fetching operator subscriptions with caching (GitOps SSE endpoint)
- */
-export function useCachedOperatorSubscriptions(
-  cluster?: string,
-  options?: { category?: RefreshCategory }
-): CachedHookResult<OperatorSubscription[]> & { subscriptions: OperatorSubscription[] } {
-  const { category = 'operators' } = options || {}
-  const key = `operatorSubscriptions:${cluster || 'all'}`
-
-  const result = useCache({
-    key,
-    category,
-    initialData: [] as OperatorSubscription[],
-    demoData: getDemoOperatorSubscriptions(),
-    fetcher: async () => {
-      const data = await fetchGitOpsAPI<{ subscriptions: OperatorSubscription[] }>('operator-subscriptions', cluster ? { cluster } : undefined)
-      return data.subscriptions || []
-    },
-    progressiveFetcher: cluster ? undefined : async (onProgress) => {
-      return await fetchViaGitOpsSSE<OperatorSubscription>('operator-subscriptions', 'subscriptions', {}, onProgress)
-    } })
-
-  return {
-    subscriptions: result.data,
-    data: result.data,
-    isLoading: result.isLoading,
-    isRefreshing: result.isRefreshing,
-    isDemoFallback: result.isDemoFallback,
-    error: result.error,
-    isFailed: result.isFailed,
-    consecutiveFailures: result.consecutiveFailures,
-    lastRefresh: result.lastRefresh,
-    refetch: result.refetch }
-}
-
-// ============================================================================
-// GitOps drift hook
-// ============================================================================
-
-/**
- * Hook for fetching GitOps drift data with caching
- */
 export function useCachedGitOpsDrifts(
   cluster?: string,
   namespace?: string,
@@ -260,7 +287,8 @@ export function useCachedGitOpsDrifts(
     fetcher: async () => {
       const data = await fetchGitOpsAPI<{ drifts: GitOpsDrift[] }>('drifts', { cluster, namespace })
       return data.drifts || []
-    } })
+    },
+  })
 
   return {
     drifts: result.data,
@@ -272,16 +300,14 @@ export function useCachedGitOpsDrifts(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch }
+    refetch: result.refetch,
+  }
 }
 
 // ============================================================================
-// Buildpack hook
+// Buildpack hook — custom 404 handling, kept standalone
 // ============================================================================
 
-/**
- * Hook for fetching buildpack images with caching
- */
 export function useCachedBuildpackImages(
   cluster?: string,
   options?: { category?: RefreshCategory }
@@ -307,7 +333,8 @@ export function useCachedBuildpackImages(
         }
         throw err
       }
-    } })
+    },
+  })
 
   return {
     images: result.data,
@@ -319,111 +346,36 @@ export function useCachedBuildpackImages(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch }
+    refetch: result.refetch,
+  }
 }
 
 // ============================================================================
-// RBAC hooks
+// RBAC hooks (factory-generated)
 // ============================================================================
 
-/**
- * Hook for fetching K8s Roles with caching (RBAC endpoint)
- */
-export function useCachedK8sRoles(
-  cluster?: string,
-  namespace?: string,
-  options?: { includeSystem?: boolean; category?: RefreshCategory }
-): CachedHookResult<K8sRole[]> & { roles: K8sRole[] } {
-  const { includeSystem = false, category = 'rbac' } = options || {}
-  const key = `k8sRoles:${cluster || 'all'}:${namespace || 'all'}:${includeSystem}`
+export const useCachedK8sRoles = createRbacHook<K8sRole>({
+  cacheKeyPrefix: 'k8sRoles',
+  apiEndpoint: 'roles',
+  responseKey: 'roles',
+  aliasKey: 'roles',
+  getDemoData: getDemoK8sRoles,
+  supportsIncludeSystem: true,
+})
 
-  const result = useCache({
-    key,
-    category,
-    initialData: [] as K8sRole[],
-    demoData: getDemoK8sRoles(),
-    fetcher: async () => {
-      const data = await fetchRbacAPI<{ roles: K8sRole[] }>('roles', { cluster, namespace, includeSystem })
-      return data.roles || []
-    } })
+export const useCachedK8sRoleBindings = createRbacHook<K8sRoleBinding>({
+  cacheKeyPrefix: 'k8sRoleBindings',
+  apiEndpoint: 'bindings',
+  responseKey: 'bindings',
+  aliasKey: 'bindings',
+  getDemoData: getDemoK8sRoleBindings,
+  supportsIncludeSystem: true,
+})
 
-  return {
-    roles: result.data,
-    data: result.data,
-    isLoading: result.isLoading,
-    isRefreshing: result.isRefreshing,
-    isDemoFallback: result.isDemoFallback,
-    error: result.error,
-    isFailed: result.isFailed,
-    consecutiveFailures: result.consecutiveFailures,
-    lastRefresh: result.lastRefresh,
-    refetch: result.refetch }
-}
-
-/**
- * Hook for fetching K8s RoleBindings with caching (RBAC endpoint)
- */
-export function useCachedK8sRoleBindings(
-  cluster?: string,
-  namespace?: string,
-  options?: { includeSystem?: boolean; category?: RefreshCategory }
-): CachedHookResult<K8sRoleBinding[]> & { bindings: K8sRoleBinding[] } {
-  const { includeSystem = false, category = 'rbac' } = options || {}
-  const key = `k8sRoleBindings:${cluster || 'all'}:${namespace || 'all'}:${includeSystem}`
-
-  const result = useCache({
-    key,
-    category,
-    initialData: [] as K8sRoleBinding[],
-    demoData: getDemoK8sRoleBindings(),
-    fetcher: async () => {
-      const data = await fetchRbacAPI<{ bindings: K8sRoleBinding[] }>('bindings', { cluster, namespace, includeSystem })
-      return data.bindings || []
-    } })
-
-  return {
-    bindings: result.data,
-    data: result.data,
-    isLoading: result.isLoading,
-    isRefreshing: result.isRefreshing,
-    isDemoFallback: result.isDemoFallback,
-    error: result.error,
-    isFailed: result.isFailed,
-    consecutiveFailures: result.consecutiveFailures,
-    lastRefresh: result.lastRefresh,
-    refetch: result.refetch }
-}
-
-/**
- * Hook for fetching K8s ServiceAccounts with caching (RBAC endpoint)
- */
-export function useCachedK8sServiceAccounts(
-  cluster?: string,
-  namespace?: string,
-  options?: { category?: RefreshCategory }
-): CachedHookResult<K8sServiceAccountInfo[]> & { serviceAccounts: K8sServiceAccountInfo[] } {
-  const { category = 'rbac' } = options || {}
-  const key = `k8sServiceAccounts:${cluster || 'all'}:${namespace || 'all'}`
-
-  const result = useCache({
-    key,
-    category,
-    initialData: [] as K8sServiceAccountInfo[],
-    demoData: getDemoK8sServiceAccountsRbac(),
-    fetcher: async () => {
-      const data = await fetchRbacAPI<{ serviceAccounts: K8sServiceAccountInfo[] }>('service-accounts', { cluster, namespace })
-      return data.serviceAccounts || []
-    } })
-
-  return {
-    serviceAccounts: result.data,
-    data: result.data,
-    isLoading: result.isLoading,
-    isRefreshing: result.isRefreshing,
-    isDemoFallback: result.isDemoFallback,
-    error: result.error,
-    isFailed: result.isFailed,
-    consecutiveFailures: result.consecutiveFailures,
-    lastRefresh: result.lastRefresh,
-    refetch: result.refetch }
-}
+export const useCachedK8sServiceAccounts = createRbacHook<K8sServiceAccountInfo>({
+  cacheKeyPrefix: 'k8sServiceAccounts',
+  apiEndpoint: 'service-accounts',
+  responseKey: 'serviceAccounts',
+  aliasKey: 'serviceAccounts',
+  getDemoData: getDemoK8sServiceAccountsRbac,
+})
