@@ -426,8 +426,15 @@ export function MissionProvider({ children }: { children: ReactNode }) {
       suppressNextSaveRef.current = false
       return
     }
-    lastWrittenAtRef.current = Date.now()
-    saveMissions(missions)
+    // #9617 — Debounce saves to avoid JSON.stringify on every SSE chunk.
+    // During streaming, missions update on every chunk (~50ms). Without
+    // debouncing, saveMissions runs synchronous JSON.stringify on the full
+    // mission array for every chunk, blocking the main thread.
+    const timer = setTimeout(() => {
+      lastWrittenAtRef.current = Date.now()
+      saveMissions(missions)
+    }, 500)
+    return () => clearTimeout(timer)
   }, [missions])
 
   // #6668 — Listen for cross-tab mission updates. When another tab writes

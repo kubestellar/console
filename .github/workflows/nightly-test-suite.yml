@@ -153,8 +153,11 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          # Pull latest main to avoid rejection (other workflows may have pushed)
-          git pull --rebase origin main || git pull origin main
+          # Pull latest main to avoid rejection (other workflows may have pushed).
+          # Stash any uncommitted test results first to prevent merge conflicts (#9621).
+          git stash --include-untracked || true
+          git pull --rebase origin main || git pull origin main || true
+          git stash pop || true
 
           git add "${RESULTS_DIR}/${{ steps.tests.outputs.date }}.json"
           git commit -m "chore: nightly test results for ${{ steps.tests.outputs.date }}

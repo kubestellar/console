@@ -1218,6 +1218,14 @@ User request: %s`, req.Prompt)
 		Context:   chatCtx,
 	}
 
+	// #9618 — Check if WebSocket is still alive before expensive provider call.
+	// Without this, orphaned goroutines continue running AI requests for up to
+	// 5 minutes after the client disconnects.
+	if closed.Load() {
+		slog.Info("[MixedMode] connection closed before thinking call", "sessionID", sessionID)
+		return
+	}
+
 	thinkingResp, err := thinkingProvider.Chat(ctx, &thinkingReq)
 	if err != nil {
 		if ctx.Err() != nil {
@@ -1285,6 +1293,11 @@ User request: %s`, req.Prompt)
 
 	var execContent string
 
+	if closed.Load() {
+		slog.Info("[MixedMode] connection closed before execution call", "sessionID", sessionID)
+		return
+	}
+
 	execResp, err := execProvider.Chat(ctx, &execReq)
 	if err != nil {
 		if ctx.Err() != nil {
@@ -1339,6 +1352,11 @@ Command output:
 		Prompt:    analysisPrompt,
 		SessionID: sessionID,
 		History:   append(history, ChatMessage{Role: "assistant", Content: thinkingResp.Content}),
+	}
+
+	if closed.Load() {
+		slog.Info("[MixedMode] connection closed before analysis call", "sessionID", sessionID)
+		return
 	}
 
 	analysisResp, err := thinkingProvider.Chat(ctx, &analysisReq)
