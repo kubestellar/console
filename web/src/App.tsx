@@ -60,6 +60,7 @@ const Alerts = safeLazy(() => import('./components/alerts/Alerts'), 'Alerts')
 const Cost = safeLazy(() => import('./components/cost/Cost'), 'Cost')
 const Compliance = safeLazy(() => import('./components/compliance/Compliance'), 'Compliance')
 const ComplianceFrameworks = safeLazy(() => import('./components/compliance/ComplianceFrameworks'), 'ComplianceFrameworks')
+const ChangeControlAudit = safeLazy(() => import('./components/compliance/ChangeControlAudit'), 'default')
 const ComplianceReports = safeLazy(() => import('./components/compliance/ComplianceReports'), 'default')
 const DataCompliance = safeLazy(() => import('./components/data-compliance/DataCompliance'), 'DataCompliance')
 const GPUReservations = safeLazy(() => import('./components/gpu/GPUReservations'), 'GPUReservations')
@@ -330,6 +331,7 @@ const ROUTE_TITLES: Record<string, string> = {
   '/security-posture': 'Security Posture',
   '/compliance': 'Compliance',
   '/compliance-frameworks': 'Compliance Frameworks',
+  '/change-control': 'Change Control',
   '/compliance-reports': 'Compliance Reports',
   '/data-compliance': 'Data Compliance',
   '/gitops': 'GitOps',
@@ -613,6 +615,7 @@ function FullDashboardApp({ liveLocation }: { liveLocation: Location }) {
           {/* Legacy route for backwards compatibility */}
           <Route path={ROUTES.COMPLIANCE} element={<SuspenseRoute><Compliance /></SuspenseRoute>} />
           <Route path={ROUTES.COMPLIANCE_FRAMEWORKS} element={<SuspenseRoute><ComplianceFrameworks /></SuspenseRoute>} />
+          <Route path={ROUTES.CHANGE_CONTROL} element={<SuspenseRoute><ChangeControlAudit /></SuspenseRoute>} />
           <Route path={ROUTES.COMPLIANCE_REPORTS} element={<SuspenseRoute><ComplianceReports /></SuspenseRoute>} />
           <Route path={ROUTES.DATA_COMPLIANCE} element={<SuspenseRoute><DataCompliance /></SuspenseRoute>} />
           <Route path={ROUTES.GPU_RESERVATIONS} element={<SuspenseRoute><GPUReservations /></SuspenseRoute>} />

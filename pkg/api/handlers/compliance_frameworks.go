@@ -20,8 +20,10 @@ func NewComplianceFrameworksHandler(evaluator *frameworks.Evaluator) *Compliance
 }
 
 // RegisterRoutes wires up the compliance frameworks routes under the given group.
-// POST endpoints (evaluate) require authentication.
+// GET endpoints are read-only; POST endpoints (evaluate) require authentication.
 func (h *ComplianceFrameworksHandler) RegisterRoutes(group fiber.Router) {
+	group.Get("/", h.ListFrameworks)
+	group.Get("/:id", h.GetFramework)
 	group.Post("/:id/evaluate", h.EvaluateFramework)
 }
 

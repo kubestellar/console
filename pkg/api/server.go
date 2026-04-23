@@ -816,6 +816,10 @@ func (s *Server) setupRoutes() {
 	complianceFrameworks := handlers.NewComplianceFrameworksHandler(nil)
 	complianceFrameworks.RegisterPublicRoutes(s.app.Group("/api/compliance/frameworks", publicLimiter))
 
+	// Change control audit trail public read endpoints (demo mode).
+	changeControl := handlers.NewChangeControlHandler()
+	changeControl.RegisterPublicRoutes(s.app.Group("/api", publicLimiter))
+
 	// API routes (protected) — with rate limiting
 	//
 	// NOTE (#7033): Both authLimiter and apiLimiter use Fiber's default in-process
