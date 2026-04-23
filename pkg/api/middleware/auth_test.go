@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -381,9 +382,9 @@ func TestValidateJWT(t *testing.T) {
 // IsTokenRevoked, used to exercise the fail-closed behavior for #6577.
 type failingRevoker struct{}
 
-func (failingRevoker) RevokeToken(string, time.Time) error     { return nil }
-func (failingRevoker) IsTokenRevoked(string) (bool, error)     { return false, assertErr{} }
-func (failingRevoker) CleanupExpiredTokens() (int64, error)    { return 0, nil }
+func (failingRevoker) RevokeToken(_ context.Context, _ string, _ time.Time) error  { return nil }
+func (failingRevoker) IsTokenRevoked(_ context.Context, _ string) (bool, error)    { return false, assertErr{} }
+func (failingRevoker) CleanupExpiredTokens(_ context.Context) (int64, error)       { return 0, nil }
 
 type assertErr struct{}
 
@@ -455,9 +456,9 @@ func TestValidateJWTFailClosedOnRevocationError(t *testing.T) {
 // anything as revoked. Used to exercise idempotency and shutdown paths.
 type noopRevoker struct{}
 
-func (noopRevoker) RevokeToken(string, time.Time) error  { return nil }
-func (noopRevoker) IsTokenRevoked(string) (bool, error)  { return false, nil }
-func (noopRevoker) CleanupExpiredTokens() (int64, error) { return 0, nil }
+func (noopRevoker) RevokeToken(_ context.Context, _ string, _ time.Time) error { return nil }
+func (noopRevoker) IsTokenRevoked(_ context.Context, _ string) (bool, error)   { return false, nil }
+func (noopRevoker) CleanupExpiredTokens(_ context.Context) (int64, error)      { return 0, nil }
 
 // TestInitTokenRevocationIdempotent covers #6586: calling InitTokenRevocation
 // multiple times must not spawn multiple cleanup goroutines. We verify this

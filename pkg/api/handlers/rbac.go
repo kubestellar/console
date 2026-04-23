@@ -45,7 +45,7 @@ func NewRBACHandler(s store.Store, k8sClient *k8s.MultiClusterClient) *RBACHandl
 // enumerating all user records (#5458).
 func (h *RBACHandler) ListConsoleUsers(c *fiber.Ctx) error {
 	userID := middleware.GetUserID(c)
-	currentUser, err := h.store.GetUser(userID)
+	currentUser, err := h.store.GetUser(c.UserContext(), userID)
 	if err != nil || currentUser == nil {
 		return fiber.NewError(fiber.StatusUnauthorized, "Unauthorized")
 	}
@@ -63,7 +63,7 @@ func (h *RBACHandler) ListConsoleUsers(c *fiber.Ctx) error {
 		return err
 	}
 
-	users, err := h.store.ListUsers(limit, offset)
+	users, err := h.store.ListUsers(c.UserContext(), limit, offset)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to list users")
 	}
@@ -74,7 +74,7 @@ func (h *RBACHandler) ListConsoleUsers(c *fiber.Ctx) error {
 func (h *RBACHandler) UpdateUserRole(c *fiber.Ctx) error {
 	// Check if current user is admin
 	currentUserID := middleware.GetUserID(c)
-	currentUser, err := h.store.GetUser(currentUserID)
+	currentUser, err := h.store.GetUser(c.UserContext(), currentUserID)
 	if err != nil || currentUser == nil || currentUser.Role != models.UserRoleAdmin {
 		return fiber.NewError(fiber.StatusForbidden, "Admin access required")
 	}
@@ -107,11 +107,11 @@ func (h *RBACHandler) UpdateUserRole(c *fiber.Ctx) error {
 
 	// Fetch old role for audit trail before mutating.
 	oldRole := "unknown"
-	if target, err := h.store.GetUser(targetID); err == nil && target != nil {
+	if target, err := h.store.GetUser(c.UserContext(), targetID); err == nil && target != nil {
 		oldRole = string(target.Role)
 	}
 
-	if err := h.store.UpdateUserRole(targetID, string(req.Role)); err != nil {
+	if err := h.store.UpdateUserRole(c.UserContext(), targetID, string(req.Role)); err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to update user role")
 	}
 
@@ -125,7 +125,7 @@ func (h *RBACHandler) UpdateUserRole(c *fiber.Ctx) error {
 func (h *RBACHandler) DeleteConsoleUser(c *fiber.Ctx) error {
 	// Check if current user is admin
 	currentUserID := middleware.GetUserID(c)
-	currentUser, err := h.store.GetUser(currentUserID)
+	currentUser, err := h.store.GetUser(c.UserContext(), currentUserID)
 	if err != nil || currentUser == nil || currentUser.Role != models.UserRoleAdmin {
 		return fiber.NewError(fiber.StatusForbidden, "Admin access required")
 	}
@@ -145,7 +145,7 @@ func (h *RBACHandler) DeleteConsoleUser(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Cannot delete your own account")
 	}
 
-	if err := h.store.DeleteUser(targetID); err != nil {
+	if err := h.store.DeleteUser(c.UserContext(), targetID); err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to delete user")
 	}
 
@@ -159,7 +159,7 @@ func (h *RBACHandler) DeleteConsoleUser(c *fiber.Ctx) error {
 // reading user counts and permission summaries (#5459).
 func (h *RBACHandler) GetUserManagementSummary(c *fiber.Ctx) error {
 	userID := middleware.GetUserID(c)
-	currentUser, err := h.store.GetUser(userID)
+	currentUser, err := h.store.GetUser(c.UserContext(), userID)
 	if err != nil || currentUser == nil {
 		return fiber.NewError(fiber.StatusUnauthorized, "Unauthorized")
 	}
@@ -172,7 +172,7 @@ func (h *RBACHandler) GetUserManagementSummary(c *fiber.Ctx) error {
 	summary := models.UserManagementSummary{}
 
 	// Count console users by role
-	admins, editors, viewers, err := h.store.CountUsersByRole()
+	admins, editors, viewers, err := h.store.CountUsersByRole(c.UserContext())
 	if err == nil {
 		summary.ConsoleUsers.Total = admins + editors + viewers
 		summary.ConsoleUsers.Admins = admins
@@ -207,7 +207,7 @@ func (h *RBACHandler) GetUserManagementSummary(c *fiber.Ctx) error {
 func (h *RBACHandler) ListK8sServiceAccounts(c *fiber.Ctx) error {
 	// Require admin role to list service accounts across clusters
 	userID := middleware.GetUserID(c)
-	currentUser, err := h.store.GetUser(userID)
+	currentUser, err := h.store.GetUser(c.UserContext(), userID)
 	if err != nil || currentUser == nil || currentUser.Role != models.UserRoleAdmin {
 		return fiber.NewError(fiber.StatusForbidden, "Admin access required to list service accounts")
 	}
@@ -290,7 +290,7 @@ func clusterErrorsOrNil(m map[string]string) map[string]string {
 // enumerating Kubernetes roles (#5460).
 func (h *RBACHandler) ListK8sRoles(c *fiber.Ctx) error {
 	userID := middleware.GetUserID(c)
-	currentUser, err := h.store.GetUser(userID)
+	currentUser, err := h.store.GetUser(c.UserContext(), userID)
 	if err != nil || currentUser == nil {
 		return fiber.NewError(fiber.StatusUnauthorized, "Unauthorized")
 	}
@@ -338,7 +338,7 @@ func (h *RBACHandler) ListK8sRoles(c *fiber.Ctx) error {
 // enumerating role bindings (#5461).
 func (h *RBACHandler) ListK8sRoleBindings(c *fiber.Ctx) error {
 	userID := middleware.GetUserID(c)
-	currentUser, err := h.store.GetUser(userID)
+	currentUser, err := h.store.GetUser(c.UserContext(), userID)
 	if err != nil || currentUser == nil {
 		return fiber.NewError(fiber.StatusUnauthorized, "Unauthorized")
 	}
@@ -401,7 +401,7 @@ func (h *RBACHandler) ListK8sRoleBindings(c *fiber.Ctx) error {
 // enumerating Kubernetes subjects (#5462).
 func (h *RBACHandler) ListK8sUsers(c *fiber.Ctx) error {
 	userID := middleware.GetUserID(c)
-	currentUser, err := h.store.GetUser(userID)
+	currentUser, err := h.store.GetUser(c.UserContext(), userID)
 	if err != nil || currentUser == nil {
 		return fiber.NewError(fiber.StatusUnauthorized, "Unauthorized")
 	}
@@ -436,7 +436,7 @@ func (h *RBACHandler) ListK8sUsers(c *fiber.Ctx) error {
 // enumerating OpenShift users (#5463).
 func (h *RBACHandler) ListOpenShiftUsers(c *fiber.Ctx) error {
 	userID := middleware.GetUserID(c)
-	currentUser, err := h.store.GetUser(userID)
+	currentUser, err := h.store.GetUser(c.UserContext(), userID)
 	if err != nil || currentUser == nil {
 		return fiber.NewError(fiber.StatusUnauthorized, "Unauthorized")
 	}

@@ -275,7 +275,7 @@ func (h *GitHubProxyHandler) Proxy(c *fiber.Ctx) error {
 func (h *GitHubProxyHandler) SaveToken(c *fiber.Ctx) error {
 	// Global token management requires console admin role
 	currentUserID := middleware.GetUserID(c)
-	currentUser, err := h.store.GetUser(currentUserID)
+	currentUser, err := h.store.GetUser(c.UserContext(), currentUserID)
 	if err != nil || currentUser == nil || currentUser.Role != "admin" {
 		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
 	}
@@ -318,7 +318,7 @@ func (h *GitHubProxyHandler) SaveToken(c *fiber.Ctx) error {
 func (h *GitHubProxyHandler) DeleteToken(c *fiber.Ctx) error {
 	// Global token management requires console admin role
 	currentUserID := middleware.GetUserID(c)
-	currentUser, err := h.store.GetUser(currentUserID)
+	currentUser, err := h.store.GetUser(c.UserContext(), currentUserID)
 	if err != nil || currentUser == nil || currentUser.Role != "admin" {
 		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
 	}

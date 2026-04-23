@@ -279,7 +279,7 @@ func (h *FeedbackHandler) CreateFeatureRequest(c *fiber.Ctx) error {
 	targetRepoName := h.resolveRepoName(targetRepo)
 
 	// Get user info for the issue
-	user, err := h.store.GetUser(userID)
+	user, err := h.store.GetUser(c.UserContext(), userID)
 	if err != nil || user == nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to get user")
 	}
@@ -294,7 +294,7 @@ func (h *FeedbackHandler) CreateFeatureRequest(c *fiber.Ctx) error {
 		Status:      models.RequestStatusOpen,
 	}
 
-	if err := h.store.CreateFeatureRequest(request); err != nil {
+	if err := h.store.CreateFeatureRequest(c.UserContext(), request); err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to create feature request")
 	}
 
@@ -310,7 +310,7 @@ func (h *FeedbackHandler) CreateFeatureRequest(c *fiber.Ctx) error {
 		// Clean up the orphaned database record. Log but don't fail the
 		// outer error path on cleanup failure — the upstream GitHub error
 		// is the useful signal to return.
-		if cErr := h.store.CloseFeatureRequest(request.ID, false); cErr != nil {
+		if cErr := h.store.CloseFeatureRequest(c.UserContext(), request.ID, false); cErr != nil {
 			slog.Warn("[Feedback] failed to close orphaned feature request",
 				"request_id", request.ID, "error", cErr)
 		}
@@ -327,7 +327,7 @@ func (h *FeedbackHandler) CreateFeatureRequest(c *fiber.Ctx) error {
 	request.Status = models.RequestStatusOpen
 	// UpdateFeatureRequest writes user-visible state (issue number, status).
 	// A failure here means the client will see stale data — return 500.
-	if err := h.store.UpdateFeatureRequest(request); err != nil {
+	if err := h.store.UpdateFeatureRequest(c.UserContext(), request); err != nil {
 		slog.Error("[Feedback] failed to persist GitHub issue number",
 			"request_id", request.ID, "issue", issueNumber, "error", err)
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to persist feature request state")
@@ -348,7 +348,7 @@ func (h *FeedbackHandler) CreateFeatureRequest(c *fiber.Ctx) error {
 		Message:          fmt.Sprintf("Your %s request '%s' has been submitted.", request.RequestType, request.Title),
 		ActionURL:        actionURL,
 	}
-	if err := h.store.CreateNotification(notification); err != nil {
+	if err := h.store.CreateNotification(c.UserContext(), notification); err != nil {
 		slog.Warn("[Feedback] failed to create issue notification",
 			"user", userID, "request_id", request.ID, "error", err)
 	}
@@ -377,7 +377,7 @@ func (h *FeedbackHandler) ListFeatureRequests(c *fiber.Ctx) error {
 		return err
 	}
 
-	requests, err := h.store.GetUserFeatureRequests(userID, limit, offset)
+	requests, err := h.store.GetUserFeatureRequests(c.UserContext(), userID, limit, offset)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to list feature requests")
 	}
@@ -476,7 +476,7 @@ func (h *FeedbackHandler) ListAllFeatureRequests(c *fiber.Ctx) error {
 	countOnly := c.Query("count_only") == "true"
 
 	// Get current user's GitHub login for ownership comparison
-	user, _ := h.store.GetUser(userID)
+	user, _ := h.store.GetUser(c.UserContext(), userID)
 	currentGitHubLogin := ""
 	if user != nil {
 		currentGitHubLogin = user.GitHubLogin
@@ -955,7 +955,7 @@ func (h *FeedbackHandler) listLocalFeatureRequests(c *fiber.Ctx, userID uuid.UUI
 	if err != nil {
 		return err
 	}
-	requests, err := h.store.GetAllFeatureRequests(limit, offset)
+	requests, err := h.store.GetAllFeatureRequests(c.UserContext(), limit, offset)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to list feature requests")
 	}
@@ -987,7 +987,7 @@ func (h *FeedbackHandler) GetFeatureRequest(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Invalid request ID")
 	}
 
-	request, err := h.store.GetFeatureRequest(id)
+	request, err := h.store.GetFeatureRequest(c.UserContext(), id)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to get feature request")
 	}
@@ -1053,7 +1053,7 @@ func (h *FeedbackHandler) CloseRequest(c *fiber.Ctx) error {
 	}
 
 	// Get the feature request
-	request, err := h.store.GetFeatureRequest(requestID)
+	request, err := h.store.GetFeatureRequest(c.UserContext(), requestID)
 	if err != nil || request == nil {
 		return fiber.NewError(fiber.StatusNotFound, "Feature request not found")
 	}
@@ -1064,7 +1064,7 @@ func (h *FeedbackHandler) CloseRequest(c *fiber.Ctx) error {
 	}
 
 	// Update status to closed (closed by the user themselves)
-	if err := h.store.CloseFeatureRequest(requestID, true); err != nil {
+	if err := h.store.CloseFeatureRequest(c.UserContext(), requestID, true); err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to close request")
 	}
 
@@ -1074,7 +1074,7 @@ func (h *FeedbackHandler) CloseRequest(c *fiber.Ctx) error {
 	}
 
 	// Refresh and return the updated request
-	request, _ = h.store.GetFeatureRequest(requestID)
+	request, _ = h.store.GetFeatureRequest(c.UserContext(), requestID)
 	return c.JSON(request)
 }
 
@@ -1117,7 +1117,7 @@ func (h *FeedbackHandler) RequestUpdate(c *fiber.Ctx) error {
 	}
 
 	// Get the feature request
-	request, err := h.store.GetFeatureRequest(requestID)
+	request, err := h.store.GetFeatureRequest(c.UserContext(), requestID)
 	if err != nil || request == nil {
 		return fiber.NewError(fiber.StatusNotFound, "Feature request not found")
 	}
@@ -1292,7 +1292,7 @@ func (h *FeedbackHandler) SubmitFeedback(c *fiber.Ctx) error {
 	}
 
 	// Get the feature request
-	request, err := h.store.GetFeatureRequest(requestID)
+	request, err := h.store.GetFeatureRequest(c.UserContext(), requestID)
 	if err != nil || request == nil {
 		return fiber.NewError(fiber.StatusNotFound, "Feature request not found")
 	}
@@ -1315,7 +1315,7 @@ func (h *FeedbackHandler) SubmitFeedback(c *fiber.Ctx) error {
 		Comment:          input.Comment,
 	}
 
-	if err := h.store.CreatePRFeedback(feedback); err != nil {
+	if err := h.store.CreatePRFeedback(c.UserContext(), feedback); err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to submit feedback")
 	}
 
@@ -1344,7 +1344,7 @@ func (h *FeedbackHandler) GetNotifications(c *fiber.Ctx) error {
 		limit = 50
 	}
 
-	notifications, err := h.store.GetUserNotifications(userID, limit)
+	notifications, err := h.store.GetUserNotifications(c.UserContext(), userID, limit)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to get notifications")
 	}
@@ -1360,7 +1360,7 @@ func (h *FeedbackHandler) GetNotifications(c *fiber.Ctx) error {
 func (h *FeedbackHandler) GetUnreadCount(c *fiber.Ctx) error {
 	userID := middleware.GetUserID(c)
 
-	count, err := h.store.GetUnreadNotificationCount(userID)
+	count, err := h.store.GetUnreadNotificationCount(c.UserContext(), userID)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to get unread count")
 	}
@@ -1379,7 +1379,7 @@ func (h *FeedbackHandler) MarkNotificationRead(c *fiber.Ctx) error {
 	// Mark the notification as read, verifying ownership in a single query.
 	// The store returns an error containing "not found" when the notification
 	// does not exist or is not owned by the caller.
-	if err := h.store.MarkNotificationReadByUser(notificationID, userID); err != nil {
+	if err := h.store.MarkNotificationReadByUser(c.UserContext(), notificationID, userID); err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			return fiber.NewError(fiber.StatusNotFound, "Notification not found")
 		}
@@ -1393,7 +1393,7 @@ func (h *FeedbackHandler) MarkNotificationRead(c *fiber.Ctx) error {
 func (h *FeedbackHandler) MarkAllNotificationsRead(c *fiber.Ctx) error {
 	userID := middleware.GetUserID(c)
 
-	if err := h.store.MarkAllNotificationsRead(userID); err != nil {
+	if err := h.store.MarkAllNotificationsRead(c.UserContext(), userID); err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to mark all notifications read")
 	}
 
@@ -1427,11 +1427,11 @@ func (h *FeedbackHandler) HandleGitHubWebhook(c *fiber.Ctx) error {
 
 	switch eventType {
 	case "issues":
-		return h.handleIssueEvent(payload)
+		return h.handleIssueEvent(c.UserContext(), payload)
 	case "pull_request":
-		return h.handlePREvent(payload)
+		return h.handlePREvent(c.UserContext(), payload)
 	case "deployment_status":
-		return h.handleDeploymentStatus(payload)
+		return h.handleDeploymentStatus(c.UserContext(), payload)
 	default:
 		// Ignore other events
 		return c.JSON(fiber.Map{"status": "ignored", "event": eventType})
@@ -1441,8 +1441,8 @@ func (h *FeedbackHandler) HandleGitHubWebhook(c *fiber.Ctx) error {
 // findFeatureRequest looks up an existing DB record for a GitHub issue.
 // Returns nil if no record exists — we do NOT auto-create records for issues
 // that weren't submitted through the Console UI. GitHub is the source of truth.
-func (h *FeedbackHandler) findFeatureRequest(issueNumber int) *models.FeatureRequest {
-	request, err := h.store.GetFeatureRequestByIssueNumber(issueNumber)
+func (h *FeedbackHandler) findFeatureRequest(ctx context.Context, issueNumber int) *models.FeatureRequest {
+	request, err := h.store.GetFeatureRequestByIssueNumber(ctx, issueNumber)
 	if err != nil || request == nil {
 		return nil
 	}
@@ -1464,7 +1464,7 @@ var pipelineLabels = map[string]struct {
 }
 
 // handleIssueEvent processes issue events
-func (h *FeedbackHandler) handleIssueEvent(payload map[string]interface{}) error {
+func (h *FeedbackHandler) handleIssueEvent(ctx context.Context, payload map[string]interface{}) error {
 	action, _ := payload["action"].(string)
 	issue, _ := payload["issue"].(map[string]interface{})
 	if issue == nil {
@@ -1490,24 +1490,24 @@ func (h *FeedbackHandler) handleIssueEvent(payload map[string]interface{}) error
 
 		// Special case: ai-processing-complete needs extra logic
 		if labelName == "ai-processing-complete" {
-			return h.handleAIProcessingComplete(issueNumber, issueURL, issue)
+			return h.handleAIProcessingComplete(ctx, issueNumber, issueURL, issue)
 		}
 
 		// Handle pipeline label transitions — only update existing DB records
 		// (records created through the Console UI via CreateFeatureRequest)
 		if info, ok := pipelineLabels[labelName]; ok {
-			request := h.findFeatureRequest(issueNumber)
+			request := h.findFeatureRequest(ctx, issueNumber)
 			if request == nil {
 				slog.Info("[Webhook] no DB record, skipping label update", "issue", issueNumber)
 				return nil
 			}
 
-			if err := h.store.UpdateFeatureRequestStatus(request.ID, info.status); err != nil {
+			if err := h.store.UpdateFeatureRequestStatus(ctx, request.ID, info.status); err != nil {
 				slog.Error("[Webhook] failed to update status", "issue", issueNumber, "error", err)
 				// #7061: return 500 so GitHub retries the webhook delivery.
 				return fiber.NewError(fiber.StatusInternalServerError, "failed to update feature request status")
 			}
-			h.createNotification(
+			h.createNotification(ctx, 
 				request.UserID,
 				&request.ID,
 				info.notifType,
@@ -1520,7 +1520,7 @@ func (h *FeedbackHandler) handleIssueEvent(payload map[string]interface{}) error
 
 		// Handle ai-fix-requested label — only update existing DB records
 		if labelName == "ai-fix-requested" {
-			request := h.findFeatureRequest(issueNumber)
+			request := h.findFeatureRequest(ctx, issueNumber)
 			if request == nil {
 				slog.Info("[Webhook] no DB record, skipping ai-fix-requested", "issue", issueNumber)
 			}
@@ -1535,16 +1535,16 @@ func (h *FeedbackHandler) handleIssueEvent(payload map[string]interface{}) error
 
 	// Handle issue closed
 	if action == "closed" {
-		return h.handleIssueClosed(issueNumber, issueURL, issue)
+		return h.handleIssueClosed(ctx, issueNumber, issueURL, issue)
 	}
 
 	return nil
 }
 
 // handleAIProcessingComplete handles when AI processing is complete
-func (h *FeedbackHandler) handleAIProcessingComplete(issueNumber int, issueURL string, issue map[string]interface{}) error {
+func (h *FeedbackHandler) handleAIProcessingComplete(ctx context.Context, issueNumber int, issueURL string, issue map[string]interface{}) error {
 	// Find feature request by issue number
-	request, err := h.store.GetFeatureRequestByIssueNumber(issueNumber)
+	request, err := h.store.GetFeatureRequestByIssueNumber(ctx, issueNumber)
 	if err != nil || request == nil {
 		slog.Info("[Webhook] feature request not found", "issue", issueNumber)
 		return nil
@@ -1556,7 +1556,7 @@ func (h *FeedbackHandler) handleAIProcessingComplete(issueNumber int, issueURL s
 	}
 
 	// Update status to unable to fix (needs human review)
-	if err := h.store.UpdateFeatureRequestStatus(request.ID, models.RequestStatusUnableToFix); err != nil {
+	if err := h.store.UpdateFeatureRequestStatus(ctx, request.ID, models.RequestStatusUnableToFix); err != nil {
 		slog.Error("[Webhook] failed to update unable-to-fix status", "issue", issueNumber, "error", err)
 		// #7061: return 500 so GitHub retries the webhook delivery.
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to update feature request status")
@@ -1569,14 +1569,14 @@ func (h *FeedbackHandler) handleAIProcessingComplete(issueNumber int, issueURL s
 	}
 
 	// Store the latest comment on the request
-	if err := h.store.UpdateFeatureRequestLatestComment(request.ID, summary); err != nil {
+	if err := h.store.UpdateFeatureRequestLatestComment(ctx, request.ID, summary); err != nil {
 		slog.Error("[Webhook] failed to update latest comment", "issue", issueNumber, "error", err)
 		// #7061: return 500 so GitHub retries the webhook delivery.
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to update latest comment")
 	}
 
 	// Create notification
-	h.createNotification(
+	h.createNotification(ctx, 
 		request.UserID,
 		&request.ID,
 		models.NotificationTypeUnableToFix,
@@ -1589,8 +1589,8 @@ func (h *FeedbackHandler) handleAIProcessingComplete(issueNumber int, issueURL s
 }
 
 // handleIssueClosed handles when an issue is closed
-func (h *FeedbackHandler) handleIssueClosed(issueNumber int, issueURL string, issue map[string]interface{}) error {
-	request, err := h.store.GetFeatureRequestByIssueNumber(issueNumber)
+func (h *FeedbackHandler) handleIssueClosed(ctx context.Context, issueNumber int, issueURL string, issue map[string]interface{}) error {
+	request, err := h.store.GetFeatureRequestByIssueNumber(ctx, issueNumber)
 	if err != nil || request == nil {
 		return nil
 	}
@@ -1601,7 +1601,7 @@ func (h *FeedbackHandler) handleIssueClosed(issueNumber int, issueURL string, is
 	}
 
 	// Update status to closed (closed externally, not by the user via console)
-	if err := h.store.CloseFeatureRequest(request.ID, false); err != nil {
+	if err := h.store.CloseFeatureRequest(ctx, request.ID, false); err != nil {
 		slog.Error("[Webhook] failed to close feature request", "issue", issueNumber, "error", err)
 		// #7061: return 500 so GitHub retries the webhook delivery.
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to close feature request")
@@ -1616,7 +1616,7 @@ func (h *FeedbackHandler) handleIssueClosed(issueNumber int, issueURL string, is
 		message = "This issue was closed as not planned."
 	}
 
-	h.createNotification(
+	h.createNotification(ctx, 
 		request.UserID,
 		&request.ID,
 		models.NotificationTypeClosed,
@@ -1687,7 +1687,7 @@ func (h *FeedbackHandler) getLatestBotComment(issueNumber int, repoName string) 
 }
 
 // handlePREvent processes pull request events
-func (h *FeedbackHandler) handlePREvent(payload map[string]interface{}) error {
+func (h *FeedbackHandler) handlePREvent(ctx context.Context, payload map[string]interface{}) error {
 	action, _ := payload["action"].(string)
 	pr, _ := payload["pull_request"].(map[string]interface{})
 	if pr == nil {
@@ -1710,7 +1710,7 @@ func (h *FeedbackHandler) handlePREvent(payload map[string]interface{}) error {
 	requestID = extractFeatureRequestID(body)
 	if requestID != uuid.Nil {
 		var err error
-		request, err = h.store.GetFeatureRequest(requestID)
+		request, err = h.store.GetFeatureRequest(ctx, requestID)
 		if err != nil {
 			slog.Error("[Webhook] error getting feature request", "requestID", requestID, "error", err)
 		}
@@ -1721,7 +1721,7 @@ func (h *FeedbackHandler) handlePREvent(payload map[string]interface{}) error {
 		linkedIssues := extractLinkedIssueNumbers(body)
 		for _, issueNum := range linkedIssues {
 			var err error
-			request, err = h.store.GetFeatureRequestByIssueNumber(issueNum)
+			request, err = h.store.GetFeatureRequestByIssueNumber(ctx, issueNum)
 			if err == nil && request != nil {
 				requestID = request.ID
 				slog.Info("[Webhook] PR linked to feature request via issue", "pr", prNumber, "issue", issueNum)
@@ -1752,18 +1752,18 @@ func (h *FeedbackHandler) handlePREvent(payload map[string]interface{}) error {
 	switch action {
 	case "opened", "synchronize", "ready_for_review":
 		// Update request with PR info and set status to fix_ready
-		if err := h.store.UpdateFeatureRequestPR(requestID, prNumber, prURL); err != nil {
+		if err := h.store.UpdateFeatureRequestPR(ctx, requestID, prNumber, prURL); err != nil {
 			slog.Error("[Webhook] failed to update PR info", "pr", prNumber, "error", err)
 			// #7061: return 500 so GitHub retries the webhook delivery.
 			return fiber.NewError(fiber.StatusInternalServerError, "failed to update PR info")
 		}
-		if err := h.store.UpdateFeatureRequestStatus(requestID, models.RequestStatusFixReady); err != nil {
+		if err := h.store.UpdateFeatureRequestStatus(ctx, requestID, models.RequestStatusFixReady); err != nil {
 			slog.Error("[Webhook] failed to update fix_ready status", "pr", prNumber, "error", err)
 			// #7061: return 500 so GitHub retries the webhook delivery.
 			return fiber.NewError(fiber.StatusInternalServerError, "failed to update fix_ready status")
 		}
 		if action == "opened" {
-			h.createNotification(request.UserID, &requestID, models.NotificationTypeFixReady,
+			h.createNotification(ctx, request.UserID, &requestID, models.NotificationTypeFixReady,
 				fmt.Sprintf("PR #%d Created", prNumber),
 				fmt.Sprintf("A fix for '%s' is ready for review.", request.Title),
 				prURL)
@@ -1772,17 +1772,17 @@ func (h *FeedbackHandler) handlePREvent(payload map[string]interface{}) error {
 	case "closed":
 		merged, _ := pr["merged"].(bool)
 		if merged {
-			if err := h.store.UpdateFeatureRequestStatus(requestID, models.RequestStatusFixComplete); err != nil {
+			if err := h.store.UpdateFeatureRequestStatus(ctx, requestID, models.RequestStatusFixComplete); err != nil {
 				slog.Error("[Webhook] failed to update fix_complete status", "pr", prNumber, "error", err)
 				// #7061: return 500 so GitHub retries the webhook delivery.
 				return fiber.NewError(fiber.StatusInternalServerError, "failed to update fix_complete status")
 			}
-			h.createNotification(request.UserID, &requestID, models.NotificationTypeFixComplete,
+			h.createNotification(ctx, request.UserID, &requestID, models.NotificationTypeFixComplete,
 				fmt.Sprintf("PR #%d Merged", prNumber),
 				fmt.Sprintf("The fix for '%s' has been merged!", request.Title),
 				prURL)
 		} else {
-			h.createNotification(request.UserID, &requestID, models.NotificationTypeClosed,
+			h.createNotification(ctx, request.UserID, &requestID, models.NotificationTypeClosed,
 				fmt.Sprintf("PR #%d Closed", prNumber),
 				fmt.Sprintf("The PR for '%s' was closed without merging.", request.Title),
 				prURL)
@@ -1794,7 +1794,7 @@ func (h *FeedbackHandler) handlePREvent(payload map[string]interface{}) error {
 }
 
 // handleDeploymentStatus processes deployment status events (for Netlify previews)
-func (h *FeedbackHandler) handleDeploymentStatus(payload map[string]interface{}) error {
+func (h *FeedbackHandler) handleDeploymentStatus(ctx context.Context, payload map[string]interface{}) error {
 	deploymentStatus, _ := payload["deployment_status"].(map[string]interface{})
 	if deploymentStatus == nil {
 		return nil
@@ -1825,20 +1825,20 @@ func (h *FeedbackHandler) handleDeploymentStatus(payload map[string]interface{})
 	slog.Info("[Webhook] deployment success", "pr", prNumber, "targetURL", targetURL)
 
 	// Find feature request by PR number and update preview URL
-	request, err := h.store.GetFeatureRequestByPRNumber(prNumber)
+	request, err := h.store.GetFeatureRequestByPRNumber(ctx, prNumber)
 	if err != nil || request == nil {
 		slog.Info("[Webhook] no feature request found for PR", "pr", prNumber)
 		return nil
 	}
 
 	// Update preview URL
-	if err := h.store.UpdateFeatureRequestPreview(request.ID, targetURL); err != nil {
+	if err := h.store.UpdateFeatureRequestPreview(ctx, request.ID, targetURL); err != nil {
 		slog.Error("[Webhook] failed to update preview URL", "error", err)
 		return err
 	}
 
 	// Notify user that preview is ready
-	h.createNotification(request.UserID, &request.ID, models.NotificationTypePreviewReady,
+	h.createNotification(ctx, request.UserID, &request.ID, models.NotificationTypePreviewReady,
 		fmt.Sprintf("Preview Ready for PR #%d", prNumber),
 		fmt.Sprintf("A preview for '%s' is now available.", request.Title),
 		targetURL)
@@ -2263,7 +2263,7 @@ func (h *FeedbackHandler) verifyWebhookSignature(payload []byte, signature strin
 }
 
 // createNotification is a helper to create notifications
-func (h *FeedbackHandler) createNotification(userID uuid.UUID, requestID *uuid.UUID, notifType models.NotificationType, title, message, actionURL string) {
+func (h *FeedbackHandler) createNotification(ctx context.Context, userID uuid.UUID, requestID *uuid.UUID, notifType models.NotificationType, title, message, actionURL string) {
 	notification := &models.Notification{
 		UserID:           userID,
 		FeatureRequestID: requestID,
@@ -2272,7 +2272,7 @@ func (h *FeedbackHandler) createNotification(userID uuid.UUID, requestID *uuid.U
 		Message:          message,
 		ActionURL:        actionURL,
 	}
-	if err := h.store.CreateNotification(notification); err != nil {
+	if err := h.store.CreateNotification(ctx, notification); err != nil {
 		slog.Error("[Feedback] failed to create notification", "error", err)
 	}
 }

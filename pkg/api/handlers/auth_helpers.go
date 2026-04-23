@@ -38,7 +38,7 @@ func requireEditorOrAdmin(c *fiber.Ctx, s store.Store) error {
 		return nil
 	}
 	userID := middleware.GetUserID(c)
-	user, err := s.GetUser(userID)
+	user, err := s.GetUser(c.UserContext(), userID)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to verify user role")
 	}
@@ -61,7 +61,7 @@ func requireViewerOrAbove(c *fiber.Ctx, s store.Store) error {
 		return nil
 	}
 	userID := middleware.GetUserID(c)
-	user, err := s.GetUser(userID)
+	user, err := s.GetUser(c.UserContext(), userID)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to verify user role")
 	}

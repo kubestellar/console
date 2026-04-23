@@ -158,7 +158,7 @@ func (w *GPUUtilizationWorker) collectUtilization() {
 		return
 	}
 
-	reservations, err := w.store.ListActiveGPUReservations()
+	reservations, err := w.store.ListActiveGPUReservations(w.baseCtx)
 	if err != nil {
 		slog.Error("GPU utilization worker: failed to list active reservations", "error", err)
 		return
@@ -361,7 +361,7 @@ func (w *GPUUtilizationWorker) collectForReservation(
 		TotalGPUCount:        totalGPUs,
 	}
 
-	if err := w.store.InsertUtilizationSnapshot(snapshot); err != nil {
+	if err := w.store.InsertUtilizationSnapshot(ctx, snapshot); err != nil {
 		slog.Error("GPU utilization worker: failed to insert snapshot", "reservation", reservation.ID, "error", err)
 	}
 }
@@ -369,7 +369,7 @@ func (w *GPUUtilizationWorker) collectForReservation(
 // cleanupOldSnapshots removes snapshots older than the retention period
 func (w *GPUUtilizationWorker) cleanupOldSnapshots() {
 	cutoff := time.Now().AddDate(0, 0, -snapshotRetentionDays)
-	deleted, err := w.store.DeleteOldUtilizationSnapshots(cutoff)
+	deleted, err := w.store.DeleteOldUtilizationSnapshots(w.baseCtx, cutoff)
 	if err != nil {
 		slog.Error("GPU utilization worker: failed to cleanup old snapshots", "error", err)
 		return

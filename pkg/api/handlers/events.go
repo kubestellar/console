@@ -55,7 +55,7 @@ func (h *EventHandler) RecordEvent(c *fiber.Ctx) error {
 		event.Metadata = metadata
 	}
 
-	if err := h.store.RecordEvent(event); err != nil {
+	if err := h.store.RecordEvent(c.UserContext(), event); err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to record event")
 	}
 

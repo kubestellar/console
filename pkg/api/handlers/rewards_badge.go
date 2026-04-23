@@ -147,7 +147,7 @@ func (h *BadgeHandler) GetBadge(c *fiber.Ctx) error {
 	// the console at least once. Prevents drive-by scraping of GitHub logins
 	// that have no affiliation with the project.
 	if h.store != nil {
-		user, err := h.store.GetUserByGitHubLogin(login)
+		user, err := h.store.GetUserByGitHubLogin(c.UserContext(), login)
 		if err != nil {
 			slog.Error("[rewards/badge] store lookup failed", "login", login, "error", err)
 			return renderBadgeSVG(c, badgeStatusBadGate, badgeErrorTierName, badgeErrorTierColor, "", badgeCacheControlError)
@@ -166,7 +166,7 @@ func (h *BadgeHandler) GetBadge(c *fiber.Ctx) error {
 
 		// Fetch local console rewards (daily logins, onboarding, etc.) and add to
 		// the live GitHub total to get the unified rank seen in the UI.
-		storeRewards, err := h.store.GetUserRewards(user.GitHubID)
+		storeRewards, err := h.store.GetUserRewards(c.UserContext(), user.GitHubID)
 		if err != nil {
 			slog.Error("[rewards/badge] store rewards fetch failed", "login", login, "userId", user.GitHubID, "error", err)
 			// Fall back to GitHub-only points rather than failing the badge

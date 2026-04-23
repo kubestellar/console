@@ -68,7 +68,7 @@ func (h *ConsolePersistenceHandlers) requireAdmin(c *fiber.Ctx) error {
 		return nil // no user store — skip check (dev/demo mode)
 	}
 	currentUserID := middleware.GetUserID(c)
-	currentUser, err := h.userStore.GetUser(currentUserID)
+	currentUser, err := h.userStore.GetUser(c.UserContext(), currentUserID)
 	if err != nil {
 		// Infrastructure failure — don't silently downgrade to a 403 which
 		// would mask a persistent DB outage and make this look like an

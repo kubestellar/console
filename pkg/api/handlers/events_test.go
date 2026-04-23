@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"bytes"
 	"encoding/json"
 	"errors"
@@ -20,7 +21,7 @@ type eventsTestStore struct {
 	recordErr     error
 }
 
-func (s *eventsTestStore) RecordEvent(event *models.UserEvent) error {
+func (s *eventsTestStore) RecordEvent(_ context.Context, event *models.UserEvent) error {
 	s.recordedEvent = event
 	if event.ID == uuid.Nil {
 		event.ID = uuid.New()

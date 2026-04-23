@@ -15,7 +15,7 @@ type MockStore struct {
 	mock.Mock
 }
 
-func (m *MockStore) GetUser(id uuid.UUID) (*models.User, error) {
+func (m *MockStore) GetUser(ctx context.Context, id uuid.UUID) (*models.User, error) {
 	args := m.Called(id)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -23,7 +23,7 @@ func (m *MockStore) GetUser(id uuid.UUID) (*models.User, error) {
 	return args.Get(0).(*models.User), args.Error(1)
 }
 
-func (m *MockStore) GetUserByGitHubID(githubID string) (*models.User, error) {
+func (m *MockStore) GetUserByGitHubID(ctx context.Context, githubID string) (*models.User, error) {
 	args := m.Called(githubID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -31,7 +31,7 @@ func (m *MockStore) GetUserByGitHubID(githubID string) (*models.User, error) {
 	return args.Get(0).(*models.User), args.Error(1)
 }
 
-func (m *MockStore) GetUserByGitHubLogin(login string) (*models.User, error) {
+func (m *MockStore) GetUserByGitHubLogin(ctx context.Context, login string) (*models.User, error) {
 	args := m.Called(login)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -39,51 +39,51 @@ func (m *MockStore) GetUserByGitHubLogin(login string) (*models.User, error) {
 	return args.Get(0).(*models.User), args.Error(1)
 }
 
-func (m *MockStore) CreateUser(user *models.User) error {
+func (m *MockStore) CreateUser(ctx context.Context, user *models.User) error {
 	args := m.Called(user)
 	return args.Error(0)
 }
 
-func (m *MockStore) UpdateUser(user *models.User) error {
+func (m *MockStore) UpdateUser(ctx context.Context, user *models.User) error {
 	args := m.Called(user)
 	return args.Error(0)
 }
 
-func (m *MockStore) UpdateLastLogin(userID uuid.UUID) error {
+func (m *MockStore) UpdateLastLogin(ctx context.Context, userID uuid.UUID) error {
 	args := m.Called(userID)
 	return args.Error(0)
 }
 
 // Implement other methods as needed or with empty mocks
 
-func (m *MockStore) ListUsers(limit, offset int) ([]models.User, error) { return nil, nil }
-func (m *MockStore) DeleteUser(id uuid.UUID) error                      { return nil }
-func (m *MockStore) UpdateUserRole(userID uuid.UUID, role string) error { return nil }
-func (m *MockStore) CountUsersByRole() (int, int, int, error)           { return 0, 0, 0, nil }
+func (m *MockStore) ListUsers(ctx context.Context, limit, offset int) ([]models.User, error) { return nil, nil }
+func (m *MockStore) DeleteUser(ctx context.Context, id uuid.UUID) error                      { return nil }
+func (m *MockStore) UpdateUserRole(ctx context.Context, userID uuid.UUID, role string) error { return nil }
+func (m *MockStore) CountUsersByRole(ctx context.Context) (int, int, int, error)           { return 0, 0, 0, nil }
 
-func (m *MockStore) SaveOnboardingResponse(response *models.OnboardingResponse) error { return nil }
-func (m *MockStore) GetOnboardingResponses(userID uuid.UUID) ([]models.OnboardingResponse, error) {
+func (m *MockStore) SaveOnboardingResponse(ctx context.Context, response *models.OnboardingResponse) error { return nil }
+func (m *MockStore) GetOnboardingResponses(ctx context.Context, userID uuid.UUID) ([]models.OnboardingResponse, error) {
 	return nil, nil
 }
-func (m *MockStore) SetUserOnboarded(userID uuid.UUID) error { return nil }
+func (m *MockStore) SetUserOnboarded(ctx context.Context, userID uuid.UUID) error { return nil }
 
-func (m *MockStore) GetDashboard(id uuid.UUID) (*models.Dashboard, error) { return nil, nil }
-func (m *MockStore) GetUserDashboards(userID uuid.UUID, limit, offset int) ([]models.Dashboard, error) {
+func (m *MockStore) GetDashboard(ctx context.Context, id uuid.UUID) (*models.Dashboard, error) { return nil, nil }
+func (m *MockStore) GetUserDashboards(ctx context.Context, userID uuid.UUID, limit, offset int) ([]models.Dashboard, error) {
 	return nil, nil
 }
-func (m *MockStore) GetDefaultDashboard(userID uuid.UUID) (*models.Dashboard, error) { return nil, nil }
-func (m *MockStore) CreateDashboard(dashboard *models.Dashboard) error               { return nil }
-func (m *MockStore) UpdateDashboard(dashboard *models.Dashboard) error               { return nil }
-func (m *MockStore) DeleteDashboard(id uuid.UUID) error                              { return nil }
+func (m *MockStore) GetDefaultDashboard(ctx context.Context, userID uuid.UUID) (*models.Dashboard, error) { return nil, nil }
+func (m *MockStore) CreateDashboard(ctx context.Context, dashboard *models.Dashboard) error               { return nil }
+func (m *MockStore) UpdateDashboard(ctx context.Context, dashboard *models.Dashboard) error               { return nil }
+func (m *MockStore) DeleteDashboard(ctx context.Context, id uuid.UUID) error                              { return nil }
 
-func (m *MockStore) GetCard(id uuid.UUID) (*models.Card, error)                     { return nil, nil }
-func (m *MockStore) GetDashboardCards(dashboardID uuid.UUID) ([]models.Card, error) { return nil, nil }
+func (m *MockStore) GetCard(ctx context.Context, id uuid.UUID) (*models.Card, error)                     { return nil, nil }
+func (m *MockStore) GetDashboardCards(ctx context.Context, dashboardID uuid.UUID) ([]models.Card, error) { return nil, nil }
 
-func (m *MockStore) CreateCard(card *models.Card) error { return nil }
+func (m *MockStore) CreateCard(ctx context.Context, card *models.Card) error { return nil }
 
 // CreateCardWithLimit is overridable so tests can exercise both the success
 // path and the ErrDashboardCardLimitReached branch of the RBAC/limit check.
-func (m *MockStore) CreateCardWithLimit(card *models.Card, maxCards int) error {
+func (m *MockStore) CreateCardWithLimit(ctx context.Context, card *models.Card, maxCards int) error {
 	if len(m.ExpectedCalls) == 0 {
 		return nil
 	}
@@ -96,105 +96,105 @@ func (m *MockStore) CreateCardWithLimit(card *models.Card, maxCards int) error {
 	return nil
 }
 
-func (m *MockStore) UpdateCard(card *models.Card) error                     { return nil }
-func (m *MockStore) DeleteCard(id uuid.UUID) error                          { return nil }
-func (m *MockStore) UpdateCardFocus(cardID uuid.UUID, summary string) error { return nil }
+func (m *MockStore) UpdateCard(ctx context.Context, card *models.Card) error                     { return nil }
+func (m *MockStore) DeleteCard(ctx context.Context, id uuid.UUID) error                          { return nil }
+func (m *MockStore) UpdateCardFocus(ctx context.Context, cardID uuid.UUID, summary string) error { return nil }
 
-func (m *MockStore) AddCardHistory(history *models.CardHistory) error { return nil }
-func (m *MockStore) GetUserCardHistory(userID uuid.UUID, limit int) ([]models.CardHistory, error) {
-	return nil, nil
-}
-
-func (m *MockStore) GetPendingSwap(id uuid.UUID) (*models.PendingSwap, error) { return nil, nil }
-func (m *MockStore) GetUserPendingSwaps(userID uuid.UUID, limit, offset int) ([]models.PendingSwap, error) {
-	return nil, nil
-}
-func (m *MockStore) GetDueSwaps(limit, offset int) ([]models.PendingSwap, error) {
-	return nil, nil
-}
-func (m *MockStore) CreatePendingSwap(swap *models.PendingSwap) error              { return nil }
-func (m *MockStore) UpdateSwapStatus(id uuid.UUID, status models.SwapStatus) error { return nil }
-func (m *MockStore) SnoozeSwap(id uuid.UUID, newSwapAt time.Time) error            { return nil }
-
-func (m *MockStore) RecordEvent(event *models.UserEvent) error { return nil }
-func (m *MockStore) GetRecentEvents(userID uuid.UUID, since time.Duration, limit, offset int) ([]models.UserEvent, error) {
+func (m *MockStore) AddCardHistory(ctx context.Context, history *models.CardHistory) error { return nil }
+func (m *MockStore) GetUserCardHistory(ctx context.Context, userID uuid.UUID, limit int) ([]models.CardHistory, error) {
 	return nil, nil
 }
 
-func (m *MockStore) CreateFeatureRequest(request *models.FeatureRequest) error      { return nil }
-func (m *MockStore) GetFeatureRequest(id uuid.UUID) (*models.FeatureRequest, error) { return nil, nil }
-func (m *MockStore) GetFeatureRequestByIssueNumber(issueNumber int) (*models.FeatureRequest, error) {
+func (m *MockStore) GetPendingSwap(ctx context.Context, id uuid.UUID) (*models.PendingSwap, error) { return nil, nil }
+func (m *MockStore) GetUserPendingSwaps(ctx context.Context, userID uuid.UUID, limit, offset int) ([]models.PendingSwap, error) {
 	return nil, nil
 }
-func (m *MockStore) GetFeatureRequestByPRNumber(prNumber int) (*models.FeatureRequest, error) {
+func (m *MockStore) GetDueSwaps(ctx context.Context, limit, offset int) ([]models.PendingSwap, error) {
 	return nil, nil
 }
-func (m *MockStore) GetUserFeatureRequests(userID uuid.UUID, limit, offset int) ([]models.FeatureRequest, error) {
+func (m *MockStore) CreatePendingSwap(ctx context.Context, swap *models.PendingSwap) error              { return nil }
+func (m *MockStore) UpdateSwapStatus(ctx context.Context, id uuid.UUID, status models.SwapStatus) error { return nil }
+func (m *MockStore) SnoozeSwap(ctx context.Context, id uuid.UUID, newSwapAt time.Time) error            { return nil }
+
+func (m *MockStore) RecordEvent(ctx context.Context, event *models.UserEvent) error { return nil }
+func (m *MockStore) GetRecentEvents(ctx context.Context, userID uuid.UUID, since time.Duration, limit, offset int) ([]models.UserEvent, error) {
 	return nil, nil
 }
-func (m *MockStore) GetAllFeatureRequests(limit, offset int) ([]models.FeatureRequest, error) {
+
+func (m *MockStore) CreateFeatureRequest(ctx context.Context, request *models.FeatureRequest) error      { return nil }
+func (m *MockStore) GetFeatureRequest(ctx context.Context, id uuid.UUID) (*models.FeatureRequest, error) { return nil, nil }
+func (m *MockStore) GetFeatureRequestByIssueNumber(ctx context.Context, issueNumber int) (*models.FeatureRequest, error) {
 	return nil, nil
 }
-func (m *MockStore) UpdateFeatureRequest(request *models.FeatureRequest) error { return nil }
-func (m *MockStore) UpdateFeatureRequestStatus(id uuid.UUID, status models.RequestStatus) error {
+func (m *MockStore) GetFeatureRequestByPRNumber(ctx context.Context, prNumber int) (*models.FeatureRequest, error) {
+	return nil, nil
+}
+func (m *MockStore) GetUserFeatureRequests(ctx context.Context, userID uuid.UUID, limit, offset int) ([]models.FeatureRequest, error) {
+	return nil, nil
+}
+func (m *MockStore) GetAllFeatureRequests(ctx context.Context, limit, offset int) ([]models.FeatureRequest, error) {
+	return nil, nil
+}
+func (m *MockStore) UpdateFeatureRequest(ctx context.Context, request *models.FeatureRequest) error { return nil }
+func (m *MockStore) UpdateFeatureRequestStatus(ctx context.Context, id uuid.UUID, status models.RequestStatus) error {
 	return nil
 }
-func (m *MockStore) CloseFeatureRequest(id uuid.UUID, closedByUser bool) error { return nil }
-func (m *MockStore) UpdateFeatureRequestPR(id uuid.UUID, prNumber int, prURL string) error {
+func (m *MockStore) CloseFeatureRequest(ctx context.Context, id uuid.UUID, closedByUser bool) error { return nil }
+func (m *MockStore) UpdateFeatureRequestPR(ctx context.Context, id uuid.UUID, prNumber int, prURL string) error {
 	return nil
 }
-func (m *MockStore) UpdateFeatureRequestPreview(id uuid.UUID, previewURL string) error    { return nil }
-func (m *MockStore) UpdateFeatureRequestLatestComment(id uuid.UUID, comment string) error { return nil }
+func (m *MockStore) UpdateFeatureRequestPreview(ctx context.Context, id uuid.UUID, previewURL string) error    { return nil }
+func (m *MockStore) UpdateFeatureRequestLatestComment(ctx context.Context, id uuid.UUID, comment string) error { return nil }
 
-func (m *MockStore) CreatePRFeedback(feedback *models.PRFeedback) error { return nil }
-func (m *MockStore) GetPRFeedback(featureRequestID uuid.UUID) ([]models.PRFeedback, error) {
+func (m *MockStore) CreatePRFeedback(ctx context.Context, feedback *models.PRFeedback) error { return nil }
+func (m *MockStore) GetPRFeedback(ctx context.Context, featureRequestID uuid.UUID) ([]models.PRFeedback, error) {
 	return nil, nil
 }
 
-func (m *MockStore) CreateNotification(notification *models.Notification) error { return nil }
-func (m *MockStore) GetUserNotifications(userID uuid.UUID, limit int) ([]models.Notification, error) {
+func (m *MockStore) CreateNotification(ctx context.Context, notification *models.Notification) error { return nil }
+func (m *MockStore) GetUserNotifications(ctx context.Context, userID uuid.UUID, limit int) ([]models.Notification, error) {
 	return nil, nil
 }
-func (m *MockStore) GetUnreadNotificationCount(userID uuid.UUID) (int, error)        { return 0, nil }
-func (m *MockStore) MarkNotificationReadByUser(id uuid.UUID, userID uuid.UUID) error { return nil }
-func (m *MockStore) MarkAllNotificationsRead(userID uuid.UUID) error                 { return nil }
+func (m *MockStore) GetUnreadNotificationCount(ctx context.Context, userID uuid.UUID) (int, error)        { return 0, nil }
+func (m *MockStore) MarkNotificationReadByUser(ctx context.Context, id uuid.UUID, userID uuid.UUID) error { return nil }
+func (m *MockStore) MarkAllNotificationsRead(ctx context.Context, userID uuid.UUID) error                 { return nil }
 
-func (m *MockStore) CreateGPUReservation(reservation *models.GPUReservation) error { return nil }
-func (m *MockStore) CreateGPUReservationWithCapacity(reservation *models.GPUReservation, capacity int) error {
+func (m *MockStore) CreateGPUReservation(ctx context.Context, reservation *models.GPUReservation) error { return nil }
+func (m *MockStore) CreateGPUReservationWithCapacity(ctx context.Context, reservation *models.GPUReservation, capacity int) error {
 	return nil
 }
-func (m *MockStore) GetGPUReservation(id uuid.UUID) (*models.GPUReservation, error) { return nil, nil }
-func (m *MockStore) ListGPUReservations() ([]models.GPUReservation, error)          { return nil, nil }
-func (m *MockStore) ListUserGPUReservations(userID uuid.UUID) ([]models.GPUReservation, error) {
+func (m *MockStore) GetGPUReservation(ctx context.Context, id uuid.UUID) (*models.GPUReservation, error) { return nil, nil }
+func (m *MockStore) ListGPUReservations(ctx context.Context) ([]models.GPUReservation, error)          { return nil, nil }
+func (m *MockStore) ListUserGPUReservations(ctx context.Context, userID uuid.UUID) ([]models.GPUReservation, error) {
 	return nil, nil
 }
-func (m *MockStore) UpdateGPUReservation(reservation *models.GPUReservation) error { return nil }
-func (m *MockStore) UpdateGPUReservationWithCapacity(reservation *models.GPUReservation, capacity int) error {
+func (m *MockStore) UpdateGPUReservation(ctx context.Context, reservation *models.GPUReservation) error { return nil }
+func (m *MockStore) UpdateGPUReservationWithCapacity(ctx context.Context, reservation *models.GPUReservation, capacity int) error {
 	return nil
 }
-func (m *MockStore) DeleteGPUReservation(id uuid.UUID) error { return nil }
-func (m *MockStore) GetGPUReservationsByIDs(ids []uuid.UUID) (map[uuid.UUID]*models.GPUReservation, error) {
+func (m *MockStore) DeleteGPUReservation(ctx context.Context, id uuid.UUID) error { return nil }
+func (m *MockStore) GetGPUReservationsByIDs(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]*models.GPUReservation, error) {
 	return nil, nil
 }
-func (m *MockStore) GetClusterReservedGPUCount(cluster string, excludeID *uuid.UUID) (int, error) {
+func (m *MockStore) GetClusterReservedGPUCount(ctx context.Context, cluster string, excludeID *uuid.UUID) (int, error) {
 	return 0, nil
 }
 
-func (m *MockStore) InsertUtilizationSnapshot(snapshot *models.GPUUtilizationSnapshot) error {
+func (m *MockStore) InsertUtilizationSnapshot(ctx context.Context, snapshot *models.GPUUtilizationSnapshot) error {
 	args := m.Called(snapshot)
 	return args.Error(0)
 }
-func (m *MockStore) GetUtilizationSnapshots(reservationID string, limit int) ([]models.GPUUtilizationSnapshot, error) {
+func (m *MockStore) GetUtilizationSnapshots(ctx context.Context, reservationID string, limit int) ([]models.GPUUtilizationSnapshot, error) {
 	return nil, nil
 }
-func (m *MockStore) GetBulkUtilizationSnapshots(reservationIDs []string) (map[string][]models.GPUUtilizationSnapshot, error) {
+func (m *MockStore) GetBulkUtilizationSnapshots(ctx context.Context, reservationIDs []string) (map[string][]models.GPUUtilizationSnapshot, error) {
 	return nil, nil
 }
-func (m *MockStore) DeleteOldUtilizationSnapshots(before time.Time) (int64, error) {
+func (m *MockStore) DeleteOldUtilizationSnapshots(ctx context.Context, before time.Time) (int64, error) {
 	args := m.Called(before)
 	return args.Get(0).(int64), args.Error(1)
 }
-func (m *MockStore) ListActiveGPUReservations() ([]models.GPUReservation, error) {
+func (m *MockStore) ListActiveGPUReservations(ctx context.Context) ([]models.GPUReservation, error) {
 	args := m.Called()
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -202,13 +202,13 @@ func (m *MockStore) ListActiveGPUReservations() ([]models.GPUReservation, error)
 	return args.Get(0).([]models.GPUReservation), args.Error(1)
 }
 
-func (m *MockStore) RevokeToken(jti string, expiresAt time.Time) error { return nil }
-func (m *MockStore) IsTokenRevoked(jti string) (bool, error)           { return false, nil }
-func (m *MockStore) CleanupExpiredTokens() (int64, error)              { return 0, nil }
+func (m *MockStore) RevokeToken(ctx context.Context, jti string, expiresAt time.Time) error { return nil }
+func (m *MockStore) IsTokenRevoked(ctx context.Context, jti string) (bool, error)           { return false, nil }
+func (m *MockStore) CleanupExpiredTokens(ctx context.Context) (int64, error)              { return 0, nil }
 
 // GetUserRewards is overridable via testify/mock expectations so reward
 // handler tests can inject per-user state without touching SQLite.
-func (m *MockStore) GetUserRewards(userID string) (*store.UserRewards, error) {
+func (m *MockStore) GetUserRewards(ctx context.Context, userID string) (*store.UserRewards, error) {
 	if len(m.ExpectedCalls) == 0 {
 		return &store.UserRewards{UserID: userID, Level: store.DefaultUserLevel}, nil
 	}
@@ -225,7 +225,7 @@ func (m *MockStore) GetUserRewards(userID string) (*store.UserRewards, error) {
 }
 
 // UpdateUserRewards is overridable via testify/mock expectations.
-func (m *MockStore) UpdateUserRewards(rewards *store.UserRewards) error {
+func (m *MockStore) UpdateUserRewards(ctx context.Context, rewards *store.UserRewards) error {
 	if len(m.ExpectedCalls) == 0 {
 		return nil
 	}
@@ -275,7 +275,7 @@ func (m *MockStore) ClaimDailyBonus(ctx context.Context, userID string, bonusAmo
 }
 
 // GetUserTokenUsage is overridable via testify/mock expectations.
-func (m *MockStore) GetUserTokenUsage(userID string) (*store.UserTokenUsage, error) {
+func (m *MockStore) GetUserTokenUsage(ctx context.Context, userID string) (*store.UserTokenUsage, error) {
 	if len(m.ExpectedCalls) == 0 {
 		return &store.UserTokenUsage{UserID: userID, TokensByCategory: map[string]int64{}}, nil
 	}
@@ -292,7 +292,7 @@ func (m *MockStore) GetUserTokenUsage(userID string) (*store.UserTokenUsage, err
 }
 
 // UpdateUserTokenUsage is overridable via testify/mock expectations.
-func (m *MockStore) UpdateUserTokenUsage(usage *store.UserTokenUsage) error {
+func (m *MockStore) UpdateUserTokenUsage(ctx context.Context, usage *store.UserTokenUsage) error {
 	if len(m.ExpectedCalls) == 0 {
 		return nil
 	}
@@ -335,7 +335,7 @@ func (m *MockStore) AddUserTokenDelta(ctx context.Context, userID string, catego
 
 // OAuth state — overridable via testify/mock expectations so tests can
 // exercise restart-resilience of the OAuth flow (#6028).
-func (m *MockStore) StoreOAuthState(state string, ttl time.Duration) error {
+func (m *MockStore) StoreOAuthState(ctx context.Context, state string, ttl time.Duration) error {
 	if len(m.ExpectedCalls) == 0 {
 		return nil
 	}
@@ -362,24 +362,24 @@ func (m *MockStore) ConsumeOAuthState(ctx context.Context, state string) (bool, 
 	return false, nil
 }
 
-func (m *MockStore) CleanupExpiredOAuthStates() (int64, error) { return 0, nil }
+func (m *MockStore) CleanupExpiredOAuthStates(ctx context.Context) (int64, error) { return 0, nil }
 
-func (m *MockStore) CountUserDashboards(userID uuid.UUID) (int, error) {
+func (m *MockStore) CountUserDashboards(ctx context.Context, userID uuid.UUID) (int, error) {
 	args := m.Called(userID)
 	return args.Int(0), args.Error(1)
 }
 
-func (m *MockStore) SaveClusterGroup(name string, data []byte) error {
+func (m *MockStore) SaveClusterGroup(ctx context.Context, name string, data []byte) error {
 	args := m.Called(name, data)
 	return args.Error(0)
 }
 
-func (m *MockStore) DeleteClusterGroup(name string) error {
+func (m *MockStore) DeleteClusterGroup(ctx context.Context, name string) error {
 	args := m.Called(name)
 	return args.Error(0)
 }
 
-func (m *MockStore) ListClusterGroups() (map[string][]byte, error) {
+func (m *MockStore) ListClusterGroups(ctx context.Context) (map[string][]byte, error) {
 	args := m.Called()
 	if args.Get(0) == nil {
 		return nil, args.Error(1)

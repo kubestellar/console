@@ -291,6 +291,7 @@ func NewSQLiteStore(dbPath string) (*SQLiteStore, error) {
 
 // migrate creates the database schema
 func (s *SQLiteStore) migrate() error {
+	ctx := context.Background()
 	schema := `
 	CREATE TABLE IF NOT EXISTS users (
 		id TEXT PRIMARY KEY,
@@ -534,7 +535,7 @@ func (s *SQLiteStore) migrate() error {
 	);
 	CREATE INDEX IF NOT EXISTS idx_audit_log_user_time ON audit_log(user_id, timestamp);
 	`
-	_, err := s.db.Exec(schema)
+	_, err := s.db.ExecContext(ctx, schema)
 	if err != nil {
 		return err
 	}
@@ -558,7 +559,7 @@ func (s *SQLiteStore) migrate() error {
 		"ALTER TABLE gpu_reservations ADD COLUMN gpu_types TEXT NOT NULL DEFAULT ''",
 	}
 	for i, migration := range migrations {
-		if _, err := s.db.Exec(migration); err != nil {
+		if _, err := s.db.ExecContext(ctx, migration); err != nil {
 			// #6291 / #6614: distinguish "column already exists"
 			// (expected, idempotent) from other errors (DB locked,
 			// read-only, corrupt, typo in the DDL). The former is how
@@ -591,18 +592,18 @@ func (s *SQLiteStore) Close() error {
 
 // User methods
 
-func (s *SQLiteStore) GetUser(id uuid.UUID) (*models.User, error) {
-	row := s.db.QueryRow(`SELECT id, github_id, github_login, email, slack_id, avatar_url, role, onboarded, created_at, last_login FROM users WHERE id = ?`, id.String())
+func (s *SQLiteStore) GetUser(ctx context.Context, id uuid.UUID) (*models.User, error) {
+	row := s.db.QueryRowContext(ctx, `SELECT id, github_id, github_login, email, slack_id, avatar_url, role, onboarded, created_at, last_login FROM users WHERE id = ?`, id.String())
 	return s.scanUser(row)
 }
 
-func (s *SQLiteStore) GetUserByGitHubID(githubID string) (*models.User, error) {
-	row := s.db.QueryRow(`SELECT id, github_id, github_login, email, slack_id, avatar_url, role, onboarded, created_at, last_login FROM users WHERE github_id = ?`, githubID)
+func (s *SQLiteStore) GetUserByGitHubID(ctx context.Context, githubID string) (*models.User, error) {
+	row := s.db.QueryRowContext(ctx, `SELECT id, github_id, github_login, email, slack_id, avatar_url, role, onboarded, created_at, last_login FROM users WHERE github_id = ?`, githubID)
 	return s.scanUser(row)
 }
 
-func (s *SQLiteStore) GetUserByGitHubLogin(login string) (*models.User, error) {
-	row := s.db.QueryRow(`SELECT id, github_id, github_login, email, slack_id, avatar_url, role, onboarded, created_at, last_login FROM users WHERE github_login = ? COLLATE NOCASE`, login)
+func (s *SQLiteStore) GetUserByGitHubLogin(ctx context.Context, login string) (*models.User, error) {
+	row := s.db.QueryRowContext(ctx, `SELECT id, github_id, github_login, email, slack_id, avatar_url, role, onboarded, created_at, last_login FROM users WHERE github_login = ? COLLATE NOCASE`, login)
 	return s.scanUser(row)
 }
 
@@ -643,7 +644,7 @@ func (s *SQLiteStore) scanUser(row *sql.Row) (*models.User, error) {
 	return &u, nil
 }
 
-func (s *SQLiteStore) CreateUser(user *models.User) error {
+func (s *SQLiteStore) CreateUser(ctx context.Context, user *models.User) error {
 	if user.ID == uuid.Nil {
 		user.ID = uuid.New()
 	}
@@ -652,19 +653,19 @@ func (s *SQLiteStore) CreateUser(user *models.User) error {
 		user.Role = models.UserRoleViewer // default role
 	}
 
-	_, err := s.db.Exec(`INSERT INTO users (id, github_id, github_login, email, slack_id, avatar_url, role, onboarded, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+	_, err := s.db.ExecContext(ctx, `INSERT INTO users (id, github_id, github_login, email, slack_id, avatar_url, role, onboarded, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		user.ID.String(), user.GitHubID, user.GitHubLogin, nullString(user.Email), nullString(user.SlackID), nullString(user.AvatarURL), user.Role, boolToInt(user.Onboarded), user.CreatedAt)
 	return err
 }
 
-func (s *SQLiteStore) UpdateUser(user *models.User) error {
-	_, err := s.db.Exec(`UPDATE users SET github_login = ?, email = ?, slack_id = ?, avatar_url = ?, role = ?, onboarded = ? WHERE id = ?`,
+func (s *SQLiteStore) UpdateUser(ctx context.Context, user *models.User) error {
+	_, err := s.db.ExecContext(ctx, `UPDATE users SET github_login = ?, email = ?, slack_id = ?, avatar_url = ?, role = ?, onboarded = ? WHERE id = ?`,
 		user.GitHubLogin, nullString(user.Email), nullString(user.SlackID), nullString(user.AvatarURL), user.Role, boolToInt(user.Onboarded), user.ID.String())
 	return err
 }
 
-func (s *SQLiteStore) UpdateLastLogin(userID uuid.UUID) error {
-	_, err := s.db.Exec(`UPDATE users SET last_login = ? WHERE id = ?`, time.Now(), userID.String())
+func (s *SQLiteStore) UpdateLastLogin(ctx context.Context, userID uuid.UUID) error {
+	_, err := s.db.ExecContext(ctx, `UPDATE users SET last_login = ? WHERE id = ?`, time.Now(), userID.String())
 	return err
 }
 
@@ -673,10 +674,10 @@ func (s *SQLiteStore) UpdateLastLogin(userID uuid.UUID) error {
 // Pass 0 for limit to use the store default (defaultPageLimit). The secondary
 // ORDER BY id DESC is a stable tie-breaker for rows with identical created_at
 // timestamps so pagination is deterministic across calls.
-func (s *SQLiteStore) ListUsers(limit, offset int) ([]models.User, error) {
+func (s *SQLiteStore) ListUsers(ctx context.Context, limit, offset int) ([]models.User, error) {
 	lim := resolvePageLimit(limit, defaultPageLimit)
 	off := resolvePageOffset(offset)
-	rows, err := s.db.Query(`SELECT id, github_id, github_login, email, slack_id, avatar_url, role, onboarded, created_at, last_login FROM users ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?`, lim, off)
+	rows, err := s.db.QueryContext(ctx, `SELECT id, github_id, github_login, email, slack_id, avatar_url, role, onboarded, created_at, last_login FROM users ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?`, lim, off)
 	if err != nil {
 		return nil, err
 	}
@@ -719,8 +720,8 @@ func (s *SQLiteStore) ListUsers(limit, offset int) ([]models.User, error) {
 }
 
 // DeleteUser removes a user by ID
-func (s *SQLiteStore) DeleteUser(id uuid.UUID) error {
-	_, err := s.db.Exec(`DELETE FROM users WHERE id = ?`, id.String())
+func (s *SQLiteStore) DeleteUser(ctx context.Context, id uuid.UUID) error {
+	_, err := s.db.ExecContext(ctx, `DELETE FROM users WHERE id = ?`, id.String())
 	return err
 }
 
@@ -733,11 +734,11 @@ var validUserRoles = map[string]bool{
 
 // UpdateUserRole updates only the user's role after validating it against
 // the allowed set (admin, editor, viewer).
-func (s *SQLiteStore) UpdateUserRole(userID uuid.UUID, role string) error {
+func (s *SQLiteStore) UpdateUserRole(ctx context.Context, userID uuid.UUID, role string) error {
 	if !validUserRoles[role] {
 		return fmt.Errorf("invalid role %q: must be one of admin, editor, viewer", role)
 	}
-	_, err := s.db.Exec(`UPDATE users SET role = ? WHERE id = ?`, role, userID.String())
+	_, err := s.db.ExecContext(ctx, `UPDATE users SET role = ? WHERE id = ?`, role, userID.String())
 	return err
 }
 
@@ -749,8 +750,8 @@ func (s *SQLiteStore) UpdateUserRole(userID uuid.UUID, role string) error {
 // viewer count and nothing would alert an operator. We now only count rows
 // whose role matches the allowlist ("admin", "editor", "viewer") and log a
 // warning for anything else so corruption is surfaced instead of hidden.
-func (s *SQLiteStore) CountUsersByRole() (admins, editors, viewers int, err error) {
-	rows, err := s.db.Query(`SELECT role, COUNT(*) FROM users GROUP BY role`)
+func (s *SQLiteStore) CountUsersByRole(ctx context.Context) (admins, editors, viewers int, err error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT role, COUNT(*) FROM users GROUP BY role`)
 	if err != nil {
 		return 0, 0, 0, err
 	}
@@ -788,13 +789,13 @@ func (s *SQLiteStore) CountUsersByRole() (admins, editors, viewers int, err erro
 // identity on every save. We now use ON CONFLICT (user_id, question_key)
 // DO UPDATE so repeated saves keep the same row id and never trip any
 // ON DELETE cascade wired up against onboarding_responses.
-func (s *SQLiteStore) SaveOnboardingResponse(response *models.OnboardingResponse) error {
+func (s *SQLiteStore) SaveOnboardingResponse(ctx context.Context, response *models.OnboardingResponse) error {
 	if response.ID == uuid.Nil {
 		response.ID = uuid.New()
 	}
 	response.CreatedAt = time.Now()
 
-	_, err := s.db.Exec(
+	_, err := s.db.ExecContext(ctx, 
 		`INSERT INTO onboarding_responses (id, user_id, question_key, answer, created_at)
 		 VALUES (?, ?, ?, ?, ?)
 		 ON CONFLICT(user_id, question_key) DO UPDATE SET
@@ -804,8 +805,8 @@ func (s *SQLiteStore) SaveOnboardingResponse(response *models.OnboardingResponse
 	return err
 }
 
-func (s *SQLiteStore) GetOnboardingResponses(userID uuid.UUID) ([]models.OnboardingResponse, error) {
-	rows, err := s.db.Query(`SELECT id, user_id, question_key, answer, created_at FROM onboarding_responses WHERE user_id = ?`, userID.String())
+func (s *SQLiteStore) GetOnboardingResponses(ctx context.Context, userID uuid.UUID) ([]models.OnboardingResponse, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT id, user_id, question_key, answer, created_at FROM onboarding_responses WHERE user_id = ?`, userID.String())
 	if err != nil {
 		return nil, err
 	}
@@ -825,23 +826,23 @@ func (s *SQLiteStore) GetOnboardingResponses(userID uuid.UUID) ([]models.Onboard
 	return responses, rows.Err()
 }
 
-func (s *SQLiteStore) SetUserOnboarded(userID uuid.UUID) error {
-	_, err := s.db.Exec(`UPDATE users SET onboarded = 1 WHERE id = ?`, userID.String())
+func (s *SQLiteStore) SetUserOnboarded(ctx context.Context, userID uuid.UUID) error {
+	_, err := s.db.ExecContext(ctx, `UPDATE users SET onboarded = 1 WHERE id = ?`, userID.String())
 	return err
 }
 
 // Dashboard methods
 
-func (s *SQLiteStore) GetDashboard(id uuid.UUID) (*models.Dashboard, error) {
-	row := s.db.QueryRow(`SELECT id, user_id, name, layout, is_default, created_at, updated_at FROM dashboards WHERE id = ?`, id.String())
+func (s *SQLiteStore) GetDashboard(ctx context.Context, id uuid.UUID) (*models.Dashboard, error) {
+	row := s.db.QueryRowContext(ctx, `SELECT id, user_id, name, layout, is_default, created_at, updated_at FROM dashboards WHERE id = ?`, id.String())
 	return s.scanDashboard(row)
 }
 
 // CountUserDashboards returns the total number of dashboards owned by a user.
 // Used to enforce the per-user dashboard limit (#7010).
-func (s *SQLiteStore) CountUserDashboards(userID uuid.UUID) (int, error) {
+func (s *SQLiteStore) CountUserDashboards(ctx context.Context, userID uuid.UUID) (int, error) {
 	var count int
-	err := s.db.QueryRow(`SELECT COUNT(*) FROM dashboards WHERE user_id = ?`, userID.String()).Scan(&count)
+	err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM dashboards WHERE user_id = ?`, userID.String()).Scan(&count)
 	return count, err
 }
 
@@ -851,10 +852,10 @@ func (s *SQLiteStore) CountUserDashboards(userID uuid.UUID) (int, error) {
 // user ever accumulates a pathological number of dashboards. Pass 0 for limit
 // to use the store default. ORDER BY includes an id ASC tie-breaker so rows
 // that share created_at paginate deterministically.
-func (s *SQLiteStore) GetUserDashboards(userID uuid.UUID, limit, offset int) ([]models.Dashboard, error) {
+func (s *SQLiteStore) GetUserDashboards(ctx context.Context, userID uuid.UUID, limit, offset int) ([]models.Dashboard, error) {
 	lim := resolvePageLimit(limit, defaultPageLimit)
 	off := resolvePageOffset(offset)
-	rows, err := s.db.Query(`SELECT id, user_id, name, layout, is_default, created_at, updated_at FROM dashboards WHERE user_id = ? ORDER BY is_default DESC, created_at ASC, id ASC LIMIT ? OFFSET ?`, userID.String(), lim, off)
+	rows, err := s.db.QueryContext(ctx, `SELECT id, user_id, name, layout, is_default, created_at, updated_at FROM dashboards WHERE user_id = ? ORDER BY is_default DESC, created_at ASC, id ASC LIMIT ? OFFSET ?`, userID.String(), lim, off)
 	if err != nil {
 		return nil, err
 	}
@@ -862,7 +863,7 @@ func (s *SQLiteStore) GetUserDashboards(userID uuid.UUID, limit, offset int) ([]
 
 	var dashboards []models.Dashboard
 	for rows.Next() {
-		d, err := s.scanDashboardRow(rows)
+		d, err := s.scanDashboardRow(ctx, rows)
 		if err != nil {
 			return nil, err
 		}
@@ -871,8 +872,8 @@ func (s *SQLiteStore) GetUserDashboards(userID uuid.UUID, limit, offset int) ([]
 	return dashboards, rows.Err()
 }
 
-func (s *SQLiteStore) GetDefaultDashboard(userID uuid.UUID) (*models.Dashboard, error) {
-	row := s.db.QueryRow(`SELECT id, user_id, name, layout, is_default, created_at, updated_at FROM dashboards WHERE user_id = ? AND is_default = 1`, userID.String())
+func (s *SQLiteStore) GetDefaultDashboard(ctx context.Context, userID uuid.UUID) (*models.Dashboard, error) {
+	row := s.db.QueryRowContext(ctx, `SELECT id, user_id, name, layout, is_default, created_at, updated_at FROM dashboards WHERE user_id = ? AND is_default = 1`, userID.String())
 	return s.scanDashboard(row)
 }
 
@@ -903,7 +904,7 @@ func (s *SQLiteStore) scanDashboard(row *sql.Row) (*models.Dashboard, error) {
 	return &d, nil
 }
 
-func (s *SQLiteStore) scanDashboardRow(rows *sql.Rows) (*models.Dashboard, error) {
+func (s *SQLiteStore) scanDashboardRow(ctx context.Context, rows *sql.Rows) (*models.Dashboard, error) {
 	var d models.Dashboard
 	var idStr, userIDStr string
 	var layout sql.NullString
@@ -927,7 +928,7 @@ func (s *SQLiteStore) scanDashboardRow(rows *sql.Rows) (*models.Dashboard, error
 	return &d, nil
 }
 
-func (s *SQLiteStore) CreateDashboard(dashboard *models.Dashboard) error {
+func (s *SQLiteStore) CreateDashboard(ctx context.Context, dashboard *models.Dashboard) error {
 	if dashboard.ID == uuid.Nil {
 		dashboard.ID = uuid.New()
 	}
@@ -939,12 +940,12 @@ func (s *SQLiteStore) CreateDashboard(dashboard *models.Dashboard) error {
 		layoutStr = &str
 	}
 
-	_, err := s.db.Exec(`INSERT INTO dashboards (id, user_id, name, layout, is_default, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
+	_, err := s.db.ExecContext(ctx, `INSERT INTO dashboards (id, user_id, name, layout, is_default, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
 		dashboard.ID.String(), dashboard.UserID.String(), dashboard.Name, layoutStr, boolToInt(dashboard.IsDefault), dashboard.CreatedAt)
 	return err
 }
 
-func (s *SQLiteStore) UpdateDashboard(dashboard *models.Dashboard) error {
+func (s *SQLiteStore) UpdateDashboard(ctx context.Context, dashboard *models.Dashboard) error {
 	now := time.Now()
 	dashboard.UpdatedAt = &now
 
@@ -954,28 +955,28 @@ func (s *SQLiteStore) UpdateDashboard(dashboard *models.Dashboard) error {
 		layoutStr = &str
 	}
 
-	_, err := s.db.Exec(`UPDATE dashboards SET name = ?, layout = ?, is_default = ?, updated_at = ? WHERE id = ?`,
+	_, err := s.db.ExecContext(ctx, `UPDATE dashboards SET name = ?, layout = ?, is_default = ?, updated_at = ? WHERE id = ?`,
 		dashboard.Name, layoutStr, boolToInt(dashboard.IsDefault), dashboard.UpdatedAt, dashboard.ID.String())
 	return err
 }
 
-func (s *SQLiteStore) DeleteDashboard(id uuid.UUID) error {
-	_, err := s.db.Exec(`DELETE FROM dashboards WHERE id = ?`, id.String())
+func (s *SQLiteStore) DeleteDashboard(ctx context.Context, id uuid.UUID) error {
+	_, err := s.db.ExecContext(ctx, `DELETE FROM dashboards WHERE id = ?`, id.String())
 	return err
 }
 
 // Card methods
 
-func (s *SQLiteStore) GetCard(id uuid.UUID) (*models.Card, error) {
-	row := s.db.QueryRow(`SELECT id, dashboard_id, card_type, config, position, last_summary, last_focus, created_at FROM cards WHERE id = ?`, id.String())
-	return s.scanCard(row)
+func (s *SQLiteStore) GetCard(ctx context.Context, id uuid.UUID) (*models.Card, error) {
+	row := s.db.QueryRowContext(ctx, `SELECT id, dashboard_id, card_type, config, position, last_summary, last_focus, created_at FROM cards WHERE id = ?`, id.String())
+	return s.scanCard(ctx, row)
 }
 
 // maxDashboardCards is the upper bound on cards returned per dashboard (#7733).
 const maxDashboardCards = 500
 
-func (s *SQLiteStore) GetDashboardCards(dashboardID uuid.UUID) ([]models.Card, error) {
-	rows, err := s.db.Query(`SELECT id, dashboard_id, card_type, config, position, last_summary, last_focus, created_at FROM cards WHERE dashboard_id = ? ORDER BY created_at LIMIT ?`, dashboardID.String(), maxDashboardCards)
+func (s *SQLiteStore) GetDashboardCards(ctx context.Context, dashboardID uuid.UUID) ([]models.Card, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT id, dashboard_id, card_type, config, position, last_summary, last_focus, created_at FROM cards WHERE dashboard_id = ? ORDER BY created_at LIMIT ?`, dashboardID.String(), maxDashboardCards)
 	if err != nil {
 		return nil, err
 	}
@@ -983,7 +984,7 @@ func (s *SQLiteStore) GetDashboardCards(dashboardID uuid.UUID) ([]models.Card, e
 
 	var cards []models.Card
 	for rows.Next() {
-		c, err := s.scanCardRow(rows)
+		c, err := s.scanCardRow(ctx, rows)
 		if err != nil {
 			return nil, err
 		}
@@ -992,7 +993,7 @@ func (s *SQLiteStore) GetDashboardCards(dashboardID uuid.UUID) ([]models.Card, e
 	return cards, rows.Err()
 }
 
-func (s *SQLiteStore) scanCard(row *sql.Row) (*models.Card, error) {
+func (s *SQLiteStore) scanCard(ctx context.Context, row *sql.Row) (*models.Card, error) {
 	var c models.Card
 	var idStr, dashboardIDStr, positionStr string
 	var config, lastSummary sql.NullString
@@ -1026,7 +1027,7 @@ func (s *SQLiteStore) scanCard(row *sql.Row) (*models.Card, error) {
 	return &c, nil
 }
 
-func (s *SQLiteStore) scanCardRow(rows *sql.Rows) (*models.Card, error) {
+func (s *SQLiteStore) scanCardRow(ctx context.Context, rows *sql.Rows) (*models.Card, error) {
 	var c models.Card
 	var idStr, dashboardIDStr, positionStr string
 	var config, lastSummary sql.NullString
@@ -1057,7 +1058,7 @@ func (s *SQLiteStore) scanCardRow(rows *sql.Rows) (*models.Card, error) {
 	return &c, nil
 }
 
-func (s *SQLiteStore) CreateCard(card *models.Card) error {
+func (s *SQLiteStore) CreateCard(ctx context.Context, card *models.Card) error {
 	if card.ID == uuid.Nil {
 		card.ID = uuid.New()
 	}
@@ -1073,7 +1074,7 @@ func (s *SQLiteStore) CreateCard(card *models.Card) error {
 		configStr = &str
 	}
 
-	_, err = s.db.Exec(`INSERT INTO cards (id, dashboard_id, card_type, config, position, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
+	_, err = s.db.ExecContext(ctx, `INSERT INTO cards (id, dashboard_id, card_type, config, position, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
 		card.ID.String(), card.DashboardID.String(), string(card.CardType), configStr, string(positionJSON), card.CreatedAt)
 	return err
 }
@@ -1098,7 +1099,7 @@ func (s *SQLiteStore) CreateCard(card *models.Card) error {
 // no other writer can add a row in between the count and the insert.
 // Returns ErrDashboardCardLimitReached when the dashboard is already at
 // or above maxCards.
-func (s *SQLiteStore) CreateCardWithLimit(card *models.Card, maxCards int) error {
+func (s *SQLiteStore) CreateCardWithLimit(ctx context.Context, card *models.Card, maxCards int) error {
 	if card.ID == uuid.Nil {
 		card.ID = uuid.New()
 	}
@@ -1118,7 +1119,7 @@ func (s *SQLiteStore) CreateCardWithLimit(card *models.Card, maxCards int) error
 	// for this dashboard is strictly less than maxCards. Because this is a
 	// single statement, SQLite's per-database write lock serializes the
 	// count+insert atomically across connections under WAL mode.
-	result, err := s.db.Exec(
+	result, err := s.db.ExecContext(ctx, 
 		`INSERT INTO cards (id, dashboard_id, card_type, config, position, created_at)
 		 SELECT ?, ?, ?, ?, ?, ?
 		 WHERE (SELECT COUNT(*) FROM cards WHERE dashboard_id = ?) < ?`,
@@ -1144,7 +1145,7 @@ func (s *SQLiteStore) CreateCardWithLimit(card *models.Card, maxCards int) error
 // handlers treated that as success. We now check RowsAffected and return
 // sql.ErrNoRows when the card id is not present, so callers can surface a
 // 404 instead of silently accepting a write that never happened.
-func (s *SQLiteStore) UpdateCard(card *models.Card) error {
+func (s *SQLiteStore) UpdateCard(ctx context.Context, card *models.Card) error {
 	positionJSON, err := json.Marshal(card.Position)
 	if err != nil {
 		return fmt.Errorf("failed to marshal card position: %w", err)
@@ -1155,7 +1156,7 @@ func (s *SQLiteStore) UpdateCard(card *models.Card) error {
 		configStr = &str
 	}
 
-	res, err := s.db.Exec(`UPDATE cards SET card_type = ?, config = ?, position = ? WHERE id = ?`,
+	res, err := s.db.ExecContext(ctx, `UPDATE cards SET card_type = ?, config = ?, position = ? WHERE id = ?`,
 		string(card.CardType), configStr, string(positionJSON), card.ID.String())
 	if err != nil {
 		return err
@@ -1170,19 +1171,19 @@ func (s *SQLiteStore) UpdateCard(card *models.Card) error {
 	return nil
 }
 
-func (s *SQLiteStore) DeleteCard(id uuid.UUID) error {
-	_, err := s.db.Exec(`DELETE FROM cards WHERE id = ?`, id.String())
+func (s *SQLiteStore) DeleteCard(ctx context.Context, id uuid.UUID) error {
+	_, err := s.db.ExecContext(ctx, `DELETE FROM cards WHERE id = ?`, id.String())
 	return err
 }
 
-func (s *SQLiteStore) UpdateCardFocus(cardID uuid.UUID, summary string) error {
-	_, err := s.db.Exec(`UPDATE cards SET last_focus = ?, last_summary = ? WHERE id = ?`, time.Now(), summary, cardID.String())
+func (s *SQLiteStore) UpdateCardFocus(ctx context.Context, cardID uuid.UUID, summary string) error {
+	_, err := s.db.ExecContext(ctx, `UPDATE cards SET last_focus = ?, last_summary = ? WHERE id = ?`, time.Now(), summary, cardID.String())
 	return err
 }
 
 // Card History methods
 
-func (s *SQLiteStore) AddCardHistory(history *models.CardHistory) error {
+func (s *SQLiteStore) AddCardHistory(ctx context.Context, history *models.CardHistory) error {
 	if history.ID == uuid.Nil {
 		history.ID = uuid.New()
 	}
@@ -1199,14 +1200,14 @@ func (s *SQLiteStore) AddCardHistory(history *models.CardHistory) error {
 		configStr = &str
 	}
 
-	_, err := s.db.Exec(`INSERT INTO card_history (id, user_id, original_card_id, card_type, config, swapped_out_at, reason) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+	_, err := s.db.ExecContext(ctx, `INSERT INTO card_history (id, user_id, original_card_id, card_type, config, swapped_out_at, reason) VALUES (?, ?, ?, ?, ?, ?, ?)`,
 		history.ID.String(), history.UserID.String(), origCardID, string(history.CardType), configStr, history.SwappedOutAt, history.Reason)
 	return err
 }
 
-func (s *SQLiteStore) GetUserCardHistory(userID uuid.UUID, limit int) ([]models.CardHistory, error) {
+func (s *SQLiteStore) GetUserCardHistory(ctx context.Context, userID uuid.UUID, limit int) ([]models.CardHistory, error) {
 	limit = clampLimit(limit)
-	rows, err := s.db.Query(`SELECT id, user_id, original_card_id, card_type, config, swapped_out_at, reason FROM card_history WHERE user_id = ? ORDER BY swapped_out_at DESC LIMIT ?`, userID.String(), limit)
+	rows, err := s.db.QueryContext(ctx, `SELECT id, user_id, original_card_id, card_type, config, swapped_out_at, reason FROM card_history WHERE user_id = ? ORDER BY swapped_out_at DESC LIMIT ?`, userID.String(), limit)
 	if err != nil {
 		return nil, err
 	}
@@ -1243,8 +1244,8 @@ func (s *SQLiteStore) GetUserCardHistory(userID uuid.UUID, limit int) ([]models.
 
 // Pending Swap methods
 
-func (s *SQLiteStore) GetPendingSwap(id uuid.UUID) (*models.PendingSwap, error) {
-	row := s.db.QueryRow(`SELECT id, user_id, card_id, new_card_type, new_card_config, reason, swap_at, status, created_at FROM pending_swaps WHERE id = ?`, id.String())
+func (s *SQLiteStore) GetPendingSwap(ctx context.Context, id uuid.UUID) (*models.PendingSwap, error) {
+	row := s.db.QueryRowContext(ctx, `SELECT id, user_id, card_id, new_card_type, new_card_config, reason, swap_at, status, created_at FROM pending_swaps WHERE id = ?`, id.String())
 	return s.scanPendingSwap(row)
 }
 
@@ -1254,10 +1255,10 @@ func (s *SQLiteStore) GetPendingSwap(id uuid.UUID) (*models.PendingSwap, error) 
 // swaps cannot force an unbounded read. Pass 0 for limit to use the store
 // default. ORDER BY includes an id ASC tie-breaker so rows that share
 // swap_at paginate deterministically.
-func (s *SQLiteStore) GetUserPendingSwaps(userID uuid.UUID, limit, offset int) ([]models.PendingSwap, error) {
+func (s *SQLiteStore) GetUserPendingSwaps(ctx context.Context, userID uuid.UUID, limit, offset int) ([]models.PendingSwap, error) {
 	lim := resolvePageLimit(limit, defaultPageLimit)
 	off := resolvePageOffset(offset)
-	rows, err := s.db.Query(`SELECT id, user_id, card_id, new_card_type, new_card_config, reason, swap_at, status, created_at FROM pending_swaps WHERE user_id = ? AND status = 'pending' ORDER BY swap_at ASC, id ASC LIMIT ? OFFSET ?`, userID.String(), lim, off)
+	rows, err := s.db.QueryContext(ctx, `SELECT id, user_id, card_id, new_card_type, new_card_config, reason, swap_at, status, created_at FROM pending_swaps WHERE user_id = ? AND status = 'pending' ORDER BY swap_at ASC, id ASC LIMIT ? OFFSET ?`, userID.String(), lim, off)
 	if err != nil {
 		return nil, err
 	}
@@ -1265,7 +1266,7 @@ func (s *SQLiteStore) GetUserPendingSwaps(userID uuid.UUID, limit, offset int) (
 
 	var swaps []models.PendingSwap
 	for rows.Next() {
-		swap, err := s.scanPendingSwapRow(rows)
+		swap, err := s.scanPendingSwapRow(ctx, rows)
 		if err != nil {
 			return nil, err
 		}
@@ -1278,14 +1279,14 @@ func (s *SQLiteStore) GetUserPendingSwaps(userID uuid.UUID, limit, offset int) (
 // swap_at ascending so the oldest due swaps are processed first.
 // #6598: LIMIT/OFFSET prevent OOM when a scheduler outage leaves a large
 // backlog. Callers that need to drain the full backlog must page.
-func (s *SQLiteStore) GetDueSwaps(limit, offset int) ([]models.PendingSwap, error) {
+func (s *SQLiteStore) GetDueSwaps(ctx context.Context, limit, offset int) ([]models.PendingSwap, error) {
 	lim := resolvePageLimit(limit, defaultPageLimit)
 	off := resolvePageOffset(offset)
 	// #6621: id ASC tie-breaker ensures pages are stable when multiple swaps
 	// share the same swap_at (common after batch scheduling). Without it,
 	// OFFSET paging could skip or duplicate rows as SQLite picks arbitrary
 	// tie-break order between calls.
-	rows, err := s.db.Query(`SELECT id, user_id, card_id, new_card_type, new_card_config, reason, swap_at, status, created_at FROM pending_swaps WHERE status = 'pending' AND swap_at <= ? ORDER BY swap_at ASC, id ASC LIMIT ? OFFSET ?`, time.Now(), lim, off)
+	rows, err := s.db.QueryContext(ctx, `SELECT id, user_id, card_id, new_card_type, new_card_config, reason, swap_at, status, created_at FROM pending_swaps WHERE status = 'pending' AND swap_at <= ? ORDER BY swap_at ASC, id ASC LIMIT ? OFFSET ?`, time.Now(), lim, off)
 	if err != nil {
 		return nil, err
 	}
@@ -1293,7 +1294,7 @@ func (s *SQLiteStore) GetDueSwaps(limit, offset int) ([]models.PendingSwap, erro
 
 	var swaps []models.PendingSwap
 	for rows.Next() {
-		swap, err := s.scanPendingSwapRow(rows)
+		swap, err := s.scanPendingSwapRow(ctx, rows)
 		if err != nil {
 			return nil, err
 		}
@@ -1329,7 +1330,7 @@ func (s *SQLiteStore) scanPendingSwap(row *sql.Row) (*models.PendingSwap, error)
 	return &swap, nil
 }
 
-func (s *SQLiteStore) scanPendingSwapRow(rows *sql.Rows) (*models.PendingSwap, error) {
+func (s *SQLiteStore) scanPendingSwapRow(ctx context.Context, rows *sql.Rows) (*models.PendingSwap, error) {
 	var swap models.PendingSwap
 	var idStr, userIDStr, cardIDStr, newCardType, status string
 	var config, reason sql.NullString
@@ -1353,7 +1354,7 @@ func (s *SQLiteStore) scanPendingSwapRow(rows *sql.Rows) (*models.PendingSwap, e
 	return &swap, nil
 }
 
-func (s *SQLiteStore) CreatePendingSwap(swap *models.PendingSwap) error {
+func (s *SQLiteStore) CreatePendingSwap(ctx context.Context, swap *models.PendingSwap) error {
 	if swap.ID == uuid.Nil {
 		swap.ID = uuid.New()
 	}
@@ -1368,24 +1369,24 @@ func (s *SQLiteStore) CreatePendingSwap(swap *models.PendingSwap) error {
 		configStr = &str
 	}
 
-	_, err := s.db.Exec(`INSERT INTO pending_swaps (id, user_id, card_id, new_card_type, new_card_config, reason, swap_at, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+	_, err := s.db.ExecContext(ctx, `INSERT INTO pending_swaps (id, user_id, card_id, new_card_type, new_card_config, reason, swap_at, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		swap.ID.String(), swap.UserID.String(), swap.CardID.String(), string(swap.NewCardType), configStr, swap.Reason, swap.SwapAt, string(swap.Status), swap.CreatedAt)
 	return err
 }
 
-func (s *SQLiteStore) UpdateSwapStatus(id uuid.UUID, status models.SwapStatus) error {
-	_, err := s.db.Exec(`UPDATE pending_swaps SET status = ? WHERE id = ?`, string(status), id.String())
+func (s *SQLiteStore) UpdateSwapStatus(ctx context.Context, id uuid.UUID, status models.SwapStatus) error {
+	_, err := s.db.ExecContext(ctx, `UPDATE pending_swaps SET status = ? WHERE id = ?`, string(status), id.String())
 	return err
 }
 
-func (s *SQLiteStore) SnoozeSwap(id uuid.UUID, newSwapAt time.Time) error {
-	_, err := s.db.Exec(`UPDATE pending_swaps SET swap_at = ?, status = ? WHERE id = ?`, newSwapAt, string(models.SwapStatusSnoozed), id.String())
+func (s *SQLiteStore) SnoozeSwap(ctx context.Context, id uuid.UUID, newSwapAt time.Time) error {
+	_, err := s.db.ExecContext(ctx, `UPDATE pending_swaps SET swap_at = ?, status = ? WHERE id = ?`, newSwapAt, string(models.SwapStatusSnoozed), id.String())
 	return err
 }
 
 // User Event methods
 
-func (s *SQLiteStore) RecordEvent(event *models.UserEvent) error {
+func (s *SQLiteStore) RecordEvent(ctx context.Context, event *models.UserEvent) error {
 	if event.ID == uuid.Nil {
 		event.ID = uuid.New()
 	}
@@ -1402,7 +1403,7 @@ func (s *SQLiteStore) RecordEvent(event *models.UserEvent) error {
 		metadataStr = &str
 	}
 
-	_, err := s.db.Exec(`INSERT INTO user_events (id, user_id, event_type, card_id, metadata, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
+	_, err := s.db.ExecContext(ctx, `INSERT INTO user_events (id, user_id, event_type, card_id, metadata, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
 		event.ID.String(), event.UserID.String(), string(event.EventType), cardID, metadataStr, event.CreatedAt)
 	return err
 }
@@ -1410,14 +1411,14 @@ func (s *SQLiteStore) RecordEvent(event *models.UserEvent) error {
 // GetRecentEvents returns a user's events within the given window, newest first.
 // #6599: LIMIT/OFFSET bound the read so a chatty client cannot force an
 // unbounded scan of user_events.
-func (s *SQLiteStore) GetRecentEvents(userID uuid.UUID, since time.Duration, limit, offset int) ([]models.UserEvent, error) {
+func (s *SQLiteStore) GetRecentEvents(ctx context.Context, userID uuid.UUID, since time.Duration, limit, offset int) ([]models.UserEvent, error) {
 	cutoff := time.Now().Add(-since)
 	lim := resolvePageLimit(limit, defaultPageLimit)
 	off := resolvePageOffset(offset)
 	// #6621: id DESC tie-breaker ensures pages are stable when many events
 	// share the same created_at (common when clients burst-record events in
 	// the same millisecond). Without it, OFFSET paging could skip rows.
-	rows, err := s.db.Query(`SELECT id, user_id, event_type, card_id, metadata, created_at FROM user_events WHERE user_id = ? AND created_at >= ? ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?`, userID.String(), cutoff, lim, off)
+	rows, err := s.db.QueryContext(ctx, `SELECT id, user_id, event_type, card_id, metadata, created_at FROM user_events WHERE user_id = ? AND created_at >= ? ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?`, userID.String(), cutoff, lim, off)
 	if err != nil {
 		return nil, err
 	}
@@ -1451,7 +1452,7 @@ func (s *SQLiteStore) GetRecentEvents(userID uuid.UUID, since time.Duration, lim
 
 // Feature Request methods
 
-func (s *SQLiteStore) CreateFeatureRequest(request *models.FeatureRequest) error {
+func (s *SQLiteStore) CreateFeatureRequest(ctx context.Context, request *models.FeatureRequest) error {
 	if request.ID == uuid.Nil {
 		request.ID = uuid.New()
 	}
@@ -1460,25 +1461,25 @@ func (s *SQLiteStore) CreateFeatureRequest(request *models.FeatureRequest) error
 		request.Status = models.RequestStatusOpen
 	}
 
-	_, err := s.db.Exec(`INSERT INTO feature_requests (id, user_id, title, description, request_type, github_issue_number, status, pr_number, pr_url, copilot_session_url, netlify_preview_url, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+	_, err := s.db.ExecContext(ctx, `INSERT INTO feature_requests (id, user_id, title, description, request_type, github_issue_number, status, pr_number, pr_url, copilot_session_url, netlify_preview_url, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		request.ID.String(), request.UserID.String(), request.Title, request.Description, string(request.RequestType),
 		request.GitHubIssueNumber, string(request.Status),
 		request.PRNumber, nullString(request.PRURL), nullString(request.CopilotSessionURL), nullString(request.NetlifyPreviewURL), request.CreatedAt)
 	return err
 }
 
-func (s *SQLiteStore) GetFeatureRequest(id uuid.UUID) (*models.FeatureRequest, error) {
-	row := s.db.QueryRow(`SELECT id, user_id, title, description, request_type, github_issue_number, status, pr_number, pr_url, copilot_session_url, netlify_preview_url, closed_by_user, latest_comment, created_at, updated_at FROM feature_requests WHERE id = ?`, id.String())
+func (s *SQLiteStore) GetFeatureRequest(ctx context.Context, id uuid.UUID) (*models.FeatureRequest, error) {
+	row := s.db.QueryRowContext(ctx, `SELECT id, user_id, title, description, request_type, github_issue_number, status, pr_number, pr_url, copilot_session_url, netlify_preview_url, closed_by_user, latest_comment, created_at, updated_at FROM feature_requests WHERE id = ?`, id.String())
 	return s.scanFeatureRequest(row)
 }
 
-func (s *SQLiteStore) GetFeatureRequestByIssueNumber(issueNumber int) (*models.FeatureRequest, error) {
-	row := s.db.QueryRow(`SELECT id, user_id, title, description, request_type, github_issue_number, status, pr_number, pr_url, copilot_session_url, netlify_preview_url, closed_by_user, latest_comment, created_at, updated_at FROM feature_requests WHERE github_issue_number = ?`, issueNumber)
+func (s *SQLiteStore) GetFeatureRequestByIssueNumber(ctx context.Context, issueNumber int) (*models.FeatureRequest, error) {
+	row := s.db.QueryRowContext(ctx, `SELECT id, user_id, title, description, request_type, github_issue_number, status, pr_number, pr_url, copilot_session_url, netlify_preview_url, closed_by_user, latest_comment, created_at, updated_at FROM feature_requests WHERE github_issue_number = ?`, issueNumber)
 	return s.scanFeatureRequest(row)
 }
 
-func (s *SQLiteStore) GetFeatureRequestByPRNumber(prNumber int) (*models.FeatureRequest, error) {
-	row := s.db.QueryRow(`SELECT id, user_id, title, description, request_type, github_issue_number, status, pr_number, pr_url, copilot_session_url, netlify_preview_url, closed_by_user, latest_comment, created_at, updated_at FROM feature_requests WHERE pr_number = ?`, prNumber)
+func (s *SQLiteStore) GetFeatureRequestByPRNumber(ctx context.Context, prNumber int) (*models.FeatureRequest, error) {
+	row := s.db.QueryRowContext(ctx, `SELECT id, user_id, title, description, request_type, github_issue_number, status, pr_number, pr_url, copilot_session_url, netlify_preview_url, closed_by_user, latest_comment, created_at, updated_at FROM feature_requests WHERE pr_number = ?`, prNumber)
 	return s.scanFeatureRequest(row)
 }
 
@@ -1487,10 +1488,10 @@ func (s *SQLiteStore) GetFeatureRequestByPRNumber(prNumber int) (*models.Feature
 // #6601: LIMIT/OFFSET prevent unbounded per-user reads.
 // #6621: id DESC tie-breaker ensures OFFSET paging is stable when rows share
 // created_at (e.g. seeded data, bulk imports).
-func (s *SQLiteStore) GetUserFeatureRequests(userID uuid.UUID, limit, offset int) ([]models.FeatureRequest, error) {
+func (s *SQLiteStore) GetUserFeatureRequests(ctx context.Context, userID uuid.UUID, limit, offset int) ([]models.FeatureRequest, error) {
 	lim := resolvePageLimit(limit, defaultPageLimit)
 	off := resolvePageOffset(offset)
-	rows, err := s.db.Query(`SELECT id, user_id, title, description, request_type, github_issue_number, status, pr_number, pr_url, copilot_session_url, netlify_preview_url, closed_by_user, latest_comment, created_at, updated_at FROM feature_requests WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?`, userID.String(), lim, off)
+	rows, err := s.db.QueryContext(ctx, `SELECT id, user_id, title, description, request_type, github_issue_number, status, pr_number, pr_url, copilot_session_url, netlify_preview_url, closed_by_user, latest_comment, created_at, updated_at FROM feature_requests WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?`, userID.String(), lim, off)
 	if err != nil {
 		return nil, err
 	}
@@ -1498,7 +1499,7 @@ func (s *SQLiteStore) GetUserFeatureRequests(userID uuid.UUID, limit, offset int
 
 	var requests []models.FeatureRequest
 	for rows.Next() {
-		r, err := s.scanFeatureRequestRow(rows)
+		r, err := s.scanFeatureRequestRow(ctx, rows)
 		if err != nil {
 			return nil, err
 		}
@@ -1516,10 +1517,10 @@ func (s *SQLiteStore) GetUserFeatureRequests(userID uuid.UUID, limit, offset int
 // than the generic defaultPageLimit.
 // #6621: id DESC tie-breaker ensures OFFSET paging is stable when rows share
 // created_at (e.g. seeded data, bulk imports).
-func (s *SQLiteStore) GetAllFeatureRequests(limit, offset int) ([]models.FeatureRequest, error) {
+func (s *SQLiteStore) GetAllFeatureRequests(ctx context.Context, limit, offset int) ([]models.FeatureRequest, error) {
 	lim := resolvePageLimit(limit, defaultAdminPageLimit)
 	off := resolvePageOffset(offset)
-	rows, err := s.db.Query(`SELECT id, user_id, title, description, request_type, github_issue_number, status, pr_number, pr_url, copilot_session_url, netlify_preview_url, closed_by_user, latest_comment, created_at, updated_at FROM feature_requests ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?`, lim, off)
+	rows, err := s.db.QueryContext(ctx, `SELECT id, user_id, title, description, request_type, github_issue_number, status, pr_number, pr_url, copilot_session_url, netlify_preview_url, closed_by_user, latest_comment, created_at, updated_at FROM feature_requests ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?`, lim, off)
 	if err != nil {
 		return nil, err
 	}
@@ -1527,7 +1528,7 @@ func (s *SQLiteStore) GetAllFeatureRequests(limit, offset int) ([]models.Feature
 
 	var requests []models.FeatureRequest
 	for rows.Next() {
-		r, err := s.scanFeatureRequestRow(rows)
+		r, err := s.scanFeatureRequestRow(ctx, rows)
 		if err != nil {
 			return nil, err
 		}
@@ -1586,7 +1587,7 @@ func (s *SQLiteStore) scanFeatureRequest(row *sql.Row) (*models.FeatureRequest, 
 	return &r, nil
 }
 
-func (s *SQLiteStore) scanFeatureRequestRow(rows *sql.Rows) (*models.FeatureRequest, error) {
+func (s *SQLiteStore) scanFeatureRequestRow(ctx context.Context, rows *sql.Rows) (*models.FeatureRequest, error) {
 	var r models.FeatureRequest
 	var idStr, userIDStr string
 	var requestType, status string
@@ -1633,11 +1634,11 @@ func (s *SQLiteStore) scanFeatureRequestRow(rows *sql.Rows) (*models.FeatureRequ
 	return &r, nil
 }
 
-func (s *SQLiteStore) UpdateFeatureRequest(request *models.FeatureRequest) error {
+func (s *SQLiteStore) UpdateFeatureRequest(ctx context.Context, request *models.FeatureRequest) error {
 	now := time.Now()
 	request.UpdatedAt = &now
 
-	_, err := s.db.Exec(`UPDATE feature_requests SET title = ?, description = ?, request_type = ?, github_issue_number = ?, status = ?, pr_number = ?, pr_url = ?, copilot_session_url = ?, netlify_preview_url = ?, updated_at = ? WHERE id = ?`,
+	_, err := s.db.ExecContext(ctx, `UPDATE feature_requests SET title = ?, description = ?, request_type = ?, github_issue_number = ?, status = ?, pr_number = ?, pr_url = ?, copilot_session_url = ?, netlify_preview_url = ?, updated_at = ? WHERE id = ?`,
 		request.Title, request.Description, string(request.RequestType),
 		request.GitHubIssueNumber, string(request.Status),
 		request.PRNumber, nullString(request.PRURL), nullString(request.CopilotSessionURL), nullString(request.NetlifyPreviewURL),
@@ -1645,53 +1646,53 @@ func (s *SQLiteStore) UpdateFeatureRequest(request *models.FeatureRequest) error
 	return err
 }
 
-func (s *SQLiteStore) UpdateFeatureRequestStatus(id uuid.UUID, status models.RequestStatus) error {
+func (s *SQLiteStore) UpdateFeatureRequestStatus(ctx context.Context, id uuid.UUID, status models.RequestStatus) error {
 	now := time.Now()
-	_, err := s.db.Exec(`UPDATE feature_requests SET status = ?, updated_at = ? WHERE id = ?`, string(status), now, id.String())
+	_, err := s.db.ExecContext(ctx, `UPDATE feature_requests SET status = ?, updated_at = ? WHERE id = ?`, string(status), now, id.String())
 	return err
 }
 
-func (s *SQLiteStore) CloseFeatureRequest(id uuid.UUID, closedByUser bool) error {
+func (s *SQLiteStore) CloseFeatureRequest(ctx context.Context, id uuid.UUID, closedByUser bool) error {
 	now := time.Now()
 	closedByUserInt := 0
 	if closedByUser {
 		closedByUserInt = 1
 	}
-	_, err := s.db.Exec(`UPDATE feature_requests SET status = ?, closed_by_user = ?, updated_at = ? WHERE id = ?`,
+	_, err := s.db.ExecContext(ctx, `UPDATE feature_requests SET status = ?, closed_by_user = ?, updated_at = ? WHERE id = ?`,
 		string(models.RequestStatusClosed), closedByUserInt, now, id.String())
 	return err
 }
 
-func (s *SQLiteStore) UpdateFeatureRequestPR(id uuid.UUID, prNumber int, prURL string) error {
+func (s *SQLiteStore) UpdateFeatureRequestPR(ctx context.Context, id uuid.UUID, prNumber int, prURL string) error {
 	now := time.Now()
-	_, err := s.db.Exec(`UPDATE feature_requests SET pr_number = ?, pr_url = ?, status = ?, updated_at = ? WHERE id = ?`,
+	_, err := s.db.ExecContext(ctx, `UPDATE feature_requests SET pr_number = ?, pr_url = ?, status = ?, updated_at = ? WHERE id = ?`,
 		prNumber, prURL, string(models.RequestStatusFixReady), now, id.String())
 	return err
 }
 
-func (s *SQLiteStore) UpdateFeatureRequestPreview(id uuid.UUID, previewURL string) error {
+func (s *SQLiteStore) UpdateFeatureRequestPreview(ctx context.Context, id uuid.UUID, previewURL string) error {
 	now := time.Now()
-	_, err := s.db.Exec(`UPDATE feature_requests SET netlify_preview_url = ?, updated_at = ? WHERE id = ?`,
+	_, err := s.db.ExecContext(ctx, `UPDATE feature_requests SET netlify_preview_url = ?, updated_at = ? WHERE id = ?`,
 		previewURL, now, id.String())
 	return err
 }
 
-func (s *SQLiteStore) UpdateFeatureRequestLatestComment(id uuid.UUID, comment string) error {
+func (s *SQLiteStore) UpdateFeatureRequestLatestComment(ctx context.Context, id uuid.UUID, comment string) error {
 	now := time.Now()
-	_, err := s.db.Exec(`UPDATE feature_requests SET latest_comment = ?, updated_at = ? WHERE id = ?`,
+	_, err := s.db.ExecContext(ctx, `UPDATE feature_requests SET latest_comment = ?, updated_at = ? WHERE id = ?`,
 		comment, now, id.String())
 	return err
 }
 
 // PR Feedback methods
 
-func (s *SQLiteStore) CreatePRFeedback(feedback *models.PRFeedback) error {
+func (s *SQLiteStore) CreatePRFeedback(ctx context.Context, feedback *models.PRFeedback) error {
 	if feedback.ID == uuid.Nil {
 		feedback.ID = uuid.New()
 	}
 	feedback.CreatedAt = time.Now()
 
-	_, err := s.db.Exec(`INSERT INTO pr_feedback (id, feature_request_id, user_id, feedback_type, comment, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
+	_, err := s.db.ExecContext(ctx, `INSERT INTO pr_feedback (id, feature_request_id, user_id, feedback_type, comment, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
 		feedback.ID.String(), feedback.FeatureRequestID.String(), feedback.UserID.String(),
 		string(feedback.FeedbackType), nullString(feedback.Comment), feedback.CreatedAt)
 	return err
@@ -1703,13 +1704,13 @@ func (s *SQLiteStore) CreatePRFeedback(feedback *models.PRFeedback) error {
 // a bug ever let one feature_request_id accumulate thousands of rows (#6603).
 const prFeedbackMaxRows = 500
 
-func (s *SQLiteStore) GetPRFeedback(featureRequestID uuid.UUID) ([]models.PRFeedback, error) {
+func (s *SQLiteStore) GetPRFeedback(ctx context.Context, featureRequestID uuid.UUID) ([]models.PRFeedback, error) {
 	// #6603: bound the result set — the previous query had no LIMIT, so a
 	// single feature request could return an arbitrarily large slice and
 	// starve the caller's memory. No handler has ever passed offset/limit
 	// so we cap internally at prFeedbackMaxRows; if future callers need
 	// pagination they should add an explicit limit/offset signature.
-	rows, err := s.db.Query(`SELECT id, feature_request_id, user_id, feedback_type, comment, created_at FROM pr_feedback WHERE feature_request_id = ? ORDER BY created_at DESC LIMIT ?`, featureRequestID.String(), prFeedbackMaxRows)
+	rows, err := s.db.QueryContext(ctx, `SELECT id, feature_request_id, user_id, feedback_type, comment, created_at FROM pr_feedback WHERE feature_request_id = ? ORDER BY created_at DESC LIMIT ?`, featureRequestID.String(), prFeedbackMaxRows)
 	if err != nil {
 		return nil, err
 	}
@@ -1740,7 +1741,7 @@ func (s *SQLiteStore) GetPRFeedback(featureRequestID uuid.UUID) ([]models.PRFeed
 
 // Notification methods
 
-func (s *SQLiteStore) CreateNotification(notification *models.Notification) error {
+func (s *SQLiteStore) CreateNotification(ctx context.Context, notification *models.Notification) error {
 	if notification.ID == uuid.Nil {
 		notification.ID = uuid.New()
 	}
@@ -1752,20 +1753,20 @@ func (s *SQLiteStore) CreateNotification(notification *models.Notification) erro
 		featureRequestID = &str
 	}
 
-	_, err := s.db.Exec(`INSERT INTO notifications (id, user_id, feature_request_id, notification_type, title, message, read, action_url, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+	_, err := s.db.ExecContext(ctx, `INSERT INTO notifications (id, user_id, feature_request_id, notification_type, title, message, read, action_url, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		notification.ID.String(), notification.UserID.String(), featureRequestID,
 		string(notification.NotificationType), notification.Title, notification.Message,
 		boolToInt(notification.Read), notification.ActionURL, notification.CreatedAt)
 	return err
 }
 
-func (s *SQLiteStore) GetUserNotifications(userID uuid.UUID, limit int) ([]models.Notification, error) {
+func (s *SQLiteStore) GetUserNotifications(ctx context.Context, userID uuid.UUID, limit int) ([]models.Notification, error) {
 	// #6286: clamp the limit to safe bounds before passing to SQL.
 	// SQLite treats negative LIMIT as "no limit", which would let a
 	// caller bypass resource controls and return arbitrarily large
 	// result sets. Match the card_history query's hardening.
 	limit = clampLimit(limit)
-	rows, err := s.db.Query(`SELECT id, user_id, feature_request_id, notification_type, title, message, read, action_url, created_at FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT ?`, userID.String(), limit)
+	rows, err := s.db.QueryContext(ctx, `SELECT id, user_id, feature_request_id, notification_type, title, message, read, action_url, created_at FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT ?`, userID.String(), limit)
 	if err != nil {
 		return nil, err
 	}
@@ -1796,9 +1797,9 @@ func (s *SQLiteStore) GetUserNotifications(userID uuid.UUID, limit int) ([]model
 	return notifications, rows.Err()
 }
 
-func (s *SQLiteStore) GetUnreadNotificationCount(userID uuid.UUID) (int, error) {
+func (s *SQLiteStore) GetUnreadNotificationCount(ctx context.Context, userID uuid.UUID) (int, error) {
 	var count int
-	err := s.db.QueryRow(`SELECT COUNT(*) FROM notifications WHERE user_id = ? AND read = 0`, userID.String()).Scan(&count)
+	err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM notifications WHERE user_id = ? AND read = 0`, userID.String()).Scan(&count)
 	return count, err
 }
 
@@ -1810,16 +1811,16 @@ func (s *SQLiteStore) GetUnreadNotificationCount(userID uuid.UUID) (int, error) 
 // the same UPDATE. The method is kept here as a private helper only for
 // back-compat with existing admin/background code paths that have already
 // resolved ownership; regular handlers MUST use MarkNotificationReadByUser.
-func (s *SQLiteStore) MarkNotificationRead(id uuid.UUID) error {
-	_, err := s.db.Exec(`UPDATE notifications SET read = 1 WHERE id = ?`, id.String())
+func (s *SQLiteStore) MarkNotificationRead(ctx context.Context, id uuid.UUID) error {
+	_, err := s.db.ExecContext(ctx, `UPDATE notifications SET read = 1 WHERE id = ?`, id.String())
 	return err
 }
 
 // MarkNotificationReadByUser marks a single notification as read, but only if it
 // belongs to the given user. Returns an error wrapping "not found" when the
 // notification does not exist or is not owned by the caller.
-func (s *SQLiteStore) MarkNotificationReadByUser(id uuid.UUID, userID uuid.UUID) error {
-	res, err := s.db.Exec(`UPDATE notifications SET read = 1 WHERE id = ? AND user_id = ?`, id.String(), userID.String())
+func (s *SQLiteStore) MarkNotificationReadByUser(ctx context.Context, id uuid.UUID, userID uuid.UUID) error {
+	res, err := s.db.ExecContext(ctx, `UPDATE notifications SET read = 1 WHERE id = ? AND user_id = ?`, id.String(), userID.String())
 	if err != nil {
 		return err
 	}
@@ -1833,8 +1834,8 @@ func (s *SQLiteStore) MarkNotificationReadByUser(id uuid.UUID, userID uuid.UUID)
 	return nil
 }
 
-func (s *SQLiteStore) MarkAllNotificationsRead(userID uuid.UUID) error {
-	_, err := s.db.Exec(`UPDATE notifications SET read = 1 WHERE user_id = ?`, userID.String())
+func (s *SQLiteStore) MarkAllNotificationsRead(ctx context.Context, userID uuid.UUID) error {
+	_, err := s.db.ExecContext(ctx, `UPDATE notifications SET read = 1 WHERE user_id = ?`, userID.String())
 	return err
 }
 
@@ -1876,7 +1877,7 @@ func decodeGPUTypes(raw string) []string {
 	return out
 }
 
-func (s *SQLiteStore) CreateGPUReservation(reservation *models.GPUReservation) error {
+func (s *SQLiteStore) CreateGPUReservation(ctx context.Context, reservation *models.GPUReservation) error {
 	if reservation.ID == uuid.Nil {
 		reservation.ID = uuid.New()
 	}
@@ -1887,7 +1888,7 @@ func (s *SQLiteStore) CreateGPUReservation(reservation *models.GPUReservation) e
 	reservation.NormalizeGPUTypes()
 	gpuTypesEncoded := encodeGPUTypes(reservation.GPUTypes)
 
-	_, err := s.db.Exec(`INSERT INTO gpu_reservations (id, user_id, user_name, title, description, cluster, namespace, gpu_count, gpu_type, gpu_types, start_date, duration_hours, notes, status, quota_name, quota_enforced, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+	_, err := s.db.ExecContext(ctx, `INSERT INTO gpu_reservations (id, user_id, user_name, title, description, cluster, namespace, gpu_count, gpu_type, gpu_types, start_date, duration_hours, notes, status, quota_name, quota_enforced, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		reservation.ID.String(), reservation.UserID.String(), reservation.UserName,
 		reservation.Title, reservation.Description, reservation.Cluster, reservation.Namespace,
 		reservation.GPUCount, reservation.GPUType, gpuTypesEncoded, reservation.StartDate, reservation.DurationHours,
@@ -1924,7 +1925,7 @@ var ErrGPUReservationNotFound = errors.New("gpu reservation not found")
 //
 // Returns ErrGPUQuotaExceeded when the insert is rejected by the WHERE
 // clause, so handlers can distinguish "over-allocated" from other errors.
-func (s *SQLiteStore) CreateGPUReservationWithCapacity(reservation *models.GPUReservation, capacity int) error {
+func (s *SQLiteStore) CreateGPUReservationWithCapacity(ctx context.Context, reservation *models.GPUReservation, capacity int) error {
 	if reservation.ID == uuid.Nil {
 		reservation.ID = uuid.New()
 	}
@@ -1935,12 +1936,12 @@ func (s *SQLiteStore) CreateGPUReservationWithCapacity(reservation *models.GPURe
 	if capacity <= 0 {
 		// No capacity cap — fall through to the unchecked insert. Matches
 		// the existing ClusterCapacityProvider==nil handler behaviour.
-		return s.CreateGPUReservation(reservation)
+		return s.CreateGPUReservation(ctx, reservation)
 	}
 	reservation.NormalizeGPUTypes()
 	gpuTypesEncoded := encodeGPUTypes(reservation.GPUTypes)
 
-	result, err := s.db.Exec(
+	result, err := s.db.ExecContext(ctx,
 		`INSERT INTO gpu_reservations (id, user_id, user_name, title, description, cluster, namespace, gpu_count, gpu_type, gpu_types, start_date, duration_hours, notes, status, quota_name, quota_enforced, created_at)
 		 SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
 		 WHERE (COALESCE((SELECT SUM(gpu_count) FROM gpu_reservations WHERE cluster = ? AND status IN ('active', 'pending')), 0) + ?) <= ?`,
@@ -1964,9 +1965,9 @@ func (s *SQLiteStore) CreateGPUReservationWithCapacity(reservation *models.GPURe
 	return nil
 }
 
-func (s *SQLiteStore) GetGPUReservation(id uuid.UUID) (*models.GPUReservation, error) {
-	row := s.db.QueryRow(`SELECT id, user_id, user_name, title, description, cluster, namespace, gpu_count, gpu_type, gpu_types, start_date, duration_hours, notes, status, quota_name, quota_enforced, created_at, updated_at FROM gpu_reservations WHERE id = ?`, id.String())
-	return s.scanGPUReservation(row)
+func (s *SQLiteStore) GetGPUReservation(ctx context.Context, id uuid.UUID) (*models.GPUReservation, error) {
+	row := s.db.QueryRowContext(ctx, `SELECT id, user_id, user_name, title, description, cluster, namespace, gpu_count, gpu_type, gpu_types, start_date, duration_hours, notes, status, quota_name, quota_enforced, created_at, updated_at FROM gpu_reservations WHERE id = ?`, id.String())
+	return s.scanGPUReservation(ctx, row)
 }
 
 // gpuReservationsMaxRows is the defense-in-depth cap applied to the GPU
@@ -1976,11 +1977,11 @@ func (s *SQLiteStore) GetGPUReservation(id uuid.UUID) (*models.GPUReservation, e
 // or a forgotten cleanup cron cannot return an unbounded slice.
 const gpuReservationsMaxRows = 5000
 
-func (s *SQLiteStore) ListGPUReservations() ([]models.GPUReservation, error) {
+func (s *SQLiteStore) ListGPUReservations(ctx context.Context) ([]models.GPUReservation, error) {
 	// #6604: bound the result set. The UI has no expectation of seeing
 	// more than a few hundred reservations at once; if an operator ever
 	// needs a full dump they can query the DB directly.
-	rows, err := s.db.Query(`SELECT id, user_id, user_name, title, description, cluster, namespace, gpu_count, gpu_type, gpu_types, start_date, duration_hours, notes, status, quota_name, quota_enforced, created_at, updated_at FROM gpu_reservations ORDER BY start_date DESC LIMIT ?`, gpuReservationsMaxRows)
+	rows, err := s.db.QueryContext(ctx, `SELECT id, user_id, user_name, title, description, cluster, namespace, gpu_count, gpu_type, gpu_types, start_date, duration_hours, notes, status, quota_name, quota_enforced, created_at, updated_at FROM gpu_reservations ORDER BY start_date DESC LIMIT ?`, gpuReservationsMaxRows)
 	if err != nil {
 		return nil, err
 	}
@@ -1988,7 +1989,7 @@ func (s *SQLiteStore) ListGPUReservations() ([]models.GPUReservation, error) {
 
 	var reservations []models.GPUReservation
 	for rows.Next() {
-		r, err := s.scanGPUReservationRow(rows)
+		r, err := s.scanGPUReservationRow(ctx, rows)
 		if err != nil {
 			return nil, err
 		}
@@ -1997,9 +1998,9 @@ func (s *SQLiteStore) ListGPUReservations() ([]models.GPUReservation, error) {
 	return reservations, rows.Err()
 }
 
-func (s *SQLiteStore) ListUserGPUReservations(userID uuid.UUID) ([]models.GPUReservation, error) {
+func (s *SQLiteStore) ListUserGPUReservations(ctx context.Context, userID uuid.UUID) ([]models.GPUReservation, error) {
 	// #6604: same defense-in-depth LIMIT as ListGPUReservations.
-	rows, err := s.db.Query(`SELECT id, user_id, user_name, title, description, cluster, namespace, gpu_count, gpu_type, gpu_types, start_date, duration_hours, notes, status, quota_name, quota_enforced, created_at, updated_at FROM gpu_reservations WHERE user_id = ? ORDER BY start_date DESC LIMIT ?`, userID.String(), gpuReservationsMaxRows)
+	rows, err := s.db.QueryContext(ctx, `SELECT id, user_id, user_name, title, description, cluster, namespace, gpu_count, gpu_type, gpu_types, start_date, duration_hours, notes, status, quota_name, quota_enforced, created_at, updated_at FROM gpu_reservations WHERE user_id = ? ORDER BY start_date DESC LIMIT ?`, userID.String(), gpuReservationsMaxRows)
 	if err != nil {
 		return nil, err
 	}
@@ -2007,7 +2008,7 @@ func (s *SQLiteStore) ListUserGPUReservations(userID uuid.UUID) ([]models.GPURes
 
 	var reservations []models.GPUReservation
 	for rows.Next() {
-		r, err := s.scanGPUReservationRow(rows)
+		r, err := s.scanGPUReservationRow(ctx, rows)
 		if err != nil {
 			return nil, err
 		}
@@ -2016,13 +2017,13 @@ func (s *SQLiteStore) ListUserGPUReservations(userID uuid.UUID) ([]models.GPURes
 	return reservations, rows.Err()
 }
 
-func (s *SQLiteStore) UpdateGPUReservation(reservation *models.GPUReservation) error {
+func (s *SQLiteStore) UpdateGPUReservation(ctx context.Context, reservation *models.GPUReservation) error {
 	now := time.Now()
 	reservation.UpdatedAt = &now
 	reservation.NormalizeGPUTypes()
 	gpuTypesEncoded := encodeGPUTypes(reservation.GPUTypes)
 
-	_, err := s.db.Exec(`UPDATE gpu_reservations SET user_name = ?, title = ?, description = ?, cluster = ?, namespace = ?, gpu_count = ?, gpu_type = ?, gpu_types = ?, start_date = ?, duration_hours = ?, notes = ?, status = ?, quota_name = ?, quota_enforced = ?, updated_at = ? WHERE id = ?`,
+	_, err := s.db.ExecContext(ctx, `UPDATE gpu_reservations SET user_name = ?, title = ?, description = ?, cluster = ?, namespace = ?, gpu_count = ?, gpu_type = ?, gpu_types = ?, start_date = ?, duration_hours = ?, notes = ?, status = ?, quota_name = ?, quota_enforced = ?, updated_at = ? WHERE id = ?`,
 		reservation.UserName, reservation.Title, reservation.Description,
 		reservation.Cluster, reservation.Namespace, reservation.GPUCount, reservation.GPUType, gpuTypesEncoded,
 		reservation.StartDate, reservation.DurationHours, reservation.Notes,
@@ -2036,17 +2037,17 @@ func (s *SQLiteStore) UpdateGPUReservation(reservation *models.GPUReservation) e
 // only succeeds if the cluster's total reserved GPUs (excluding this
 // reservation) plus the new count stays within the given capacity.
 // Returns ErrGPUQuotaExceeded when the capacity check fails.
-func (s *SQLiteStore) UpdateGPUReservationWithCapacity(reservation *models.GPUReservation, capacity int) error {
+func (s *SQLiteStore) UpdateGPUReservationWithCapacity(ctx context.Context, reservation *models.GPUReservation, capacity int) error {
 	now := time.Now()
 	reservation.UpdatedAt = &now
 
 	if capacity <= 0 {
-		return s.UpdateGPUReservation(reservation)
+		return s.UpdateGPUReservation(ctx, reservation)
 	}
 	reservation.NormalizeGPUTypes()
 	gpuTypesEncoded := encodeGPUTypes(reservation.GPUTypes)
 
-	result, err := s.db.Exec(
+	result, err := s.db.ExecContext(ctx, 
 		`UPDATE gpu_reservations
 		 SET user_name = ?, title = ?, description = ?, cluster = ?, namespace = ?,
 		     gpu_count = ?, gpu_type = ?, gpu_types = ?, start_date = ?, duration_hours = ?,
@@ -2073,7 +2074,7 @@ func (s *SQLiteStore) UpdateGPUReservationWithCapacity(reservation *models.GPURe
 		// reservation does not exist at all, return ErrGPUReservationNotFound
 		// so the caller can map it to HTTP 404 instead of 409.
 		var exists int
-		if err := s.db.QueryRow(`SELECT 1 FROM gpu_reservations WHERE id = ?`, reservation.ID.String()).Scan(&exists); err != nil {
+		if err := s.db.QueryRowContext(ctx, `SELECT 1 FROM gpu_reservations WHERE id = ?`, reservation.ID.String()).Scan(&exists); err != nil {
 			return ErrGPUReservationNotFound
 		}
 		return ErrGPUQuotaExceeded
@@ -2081,14 +2082,14 @@ func (s *SQLiteStore) UpdateGPUReservationWithCapacity(reservation *models.GPURe
 	return nil
 }
 
-func (s *SQLiteStore) DeleteGPUReservation(id uuid.UUID) error {
-	_, err := s.db.Exec(`DELETE FROM gpu_reservations WHERE id = ?`, id.String())
+func (s *SQLiteStore) DeleteGPUReservation(ctx context.Context, id uuid.UUID) error {
+	_, err := s.db.ExecContext(ctx, `DELETE FROM gpu_reservations WHERE id = ?`, id.String())
 	return err
 }
 
 // GetGPUReservationsByIDs fetches multiple reservations in a single batched
 // query, avoiding N+1 round-trips for ownership verification (#6963).
-func (s *SQLiteStore) GetGPUReservationsByIDs(ids []uuid.UUID) (map[uuid.UUID]*models.GPUReservation, error) {
+func (s *SQLiteStore) GetGPUReservationsByIDs(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]*models.GPUReservation, error) {
 	result := make(map[uuid.UUID]*models.GPUReservation, len(ids))
 	if len(ids) == 0 {
 		return result, nil
@@ -2110,7 +2111,7 @@ func (s *SQLiteStore) GetGPUReservationsByIDs(ids []uuid.UUID) (map[uuid.UUID]*m
 			args[i] = id.String()
 		}
 
-		rows, err := s.db.Query(
+		rows, err := s.db.QueryContext(ctx, 
 			fmt.Sprintf(`SELECT id, user_id, user_name, title, description, cluster, namespace, gpu_count, gpu_type, gpu_types, start_date, duration_hours, notes, status, quota_name, quota_enforced, created_at, updated_at FROM gpu_reservations WHERE id IN (%s)`, placeholders),
 			args...,
 		)
@@ -2118,7 +2119,7 @@ func (s *SQLiteStore) GetGPUReservationsByIDs(ids []uuid.UUID) (map[uuid.UUID]*m
 			return nil, err
 		}
 		for rows.Next() {
-			r, err := s.scanGPUReservationRow(rows)
+			r, err := s.scanGPUReservationRow(ctx, rows)
 			if err != nil {
 				rows.Close()
 				return nil, err
@@ -2135,16 +2136,16 @@ func (s *SQLiteStore) GetGPUReservationsByIDs(ids []uuid.UUID) (map[uuid.UUID]*m
 
 // GetClusterReservedGPUCount returns the total GPU count for active/pending reservations on a cluster.
 // If excludeID is provided, that reservation is excluded (useful for updates).
-func (s *SQLiteStore) GetClusterReservedGPUCount(cluster string, excludeID *uuid.UUID) (int, error) {
+func (s *SQLiteStore) GetClusterReservedGPUCount(ctx context.Context, cluster string, excludeID *uuid.UUID) (int, error) {
 	var total int
 	var err error
 	if excludeID != nil {
-		err = s.db.QueryRow(
+		err = s.db.QueryRowContext(ctx, 
 			`SELECT COALESCE(SUM(gpu_count), 0) FROM gpu_reservations WHERE cluster = ? AND status IN ('active', 'pending') AND id != ?`,
 			cluster, excludeID.String(),
 		).Scan(&total)
 	} else {
-		err = s.db.QueryRow(
+		err = s.db.QueryRowContext(ctx, 
 			`SELECT COALESCE(SUM(gpu_count), 0) FROM gpu_reservations WHERE cluster = ? AND status IN ('active', 'pending')`,
 			cluster,
 		).Scan(&total)
@@ -2152,7 +2153,7 @@ func (s *SQLiteStore) GetClusterReservedGPUCount(cluster string, excludeID *uuid
 	return total, err
 }
 
-func (s *SQLiteStore) scanGPUReservation(row *sql.Row) (*models.GPUReservation, error) {
+func (s *SQLiteStore) scanGPUReservation(ctx context.Context, row *sql.Row) (*models.GPUReservation, error) {
 	var r models.GPUReservation
 	var idStr, userIDStr, status string
 	var quotaEnforced int
@@ -2185,7 +2186,7 @@ func (s *SQLiteStore) scanGPUReservation(row *sql.Row) (*models.GPUReservation, 
 	return &r, nil
 }
 
-func (s *SQLiteStore) scanGPUReservationRow(rows *sql.Rows) (*models.GPUReservation, error) {
+func (s *SQLiteStore) scanGPUReservationRow(ctx context.Context, rows *sql.Rows) (*models.GPUReservation, error) {
 	var r models.GPUReservation
 	var idStr, userIDStr, status string
 	var quotaEnforced int
@@ -2222,14 +2223,14 @@ func (s *SQLiteStore) scanGPUReservationRow(rows *sql.Rows) (*models.GPUReservat
 // key, collide on the next insert, and silently drop data. We now generate
 // a UUID defensively when the caller left ID blank so the row is always
 // written with a unique primary key.
-func (s *SQLiteStore) InsertUtilizationSnapshot(snapshot *models.GPUUtilizationSnapshot) error {
+func (s *SQLiteStore) InsertUtilizationSnapshot(ctx context.Context, snapshot *models.GPUUtilizationSnapshot) error {
 	if snapshot.ID == "" {
 		snapshot.ID = uuid.New().String()
 	}
 	if snapshot.Timestamp.IsZero() {
 		snapshot.Timestamp = time.Now()
 	}
-	_, err := s.db.Exec(
+	_, err := s.db.ExecContext(ctx, 
 		`INSERT INTO gpu_utilization_snapshots (id, reservation_id, timestamp, gpu_utilization_pct, memory_utilization_pct, active_gpu_count, total_gpu_count) VALUES (?, ?, ?, ?, ?, ?, ?)`,
 		snapshot.ID, snapshot.ReservationID, snapshot.Timestamp,
 		snapshot.GPUUtilizationPct, snapshot.MemoryUtilizationPct,
@@ -2238,11 +2239,11 @@ func (s *SQLiteStore) InsertUtilizationSnapshot(snapshot *models.GPUUtilizationS
 	return err
 }
 
-func (s *SQLiteStore) GetUtilizationSnapshots(reservationID string, limit int) ([]models.GPUUtilizationSnapshot, error) {
+func (s *SQLiteStore) GetUtilizationSnapshots(ctx context.Context, reservationID string, limit int) ([]models.GPUUtilizationSnapshot, error) {
 	if limit <= 0 {
 		limit = DefaultSnapshotQueryLimit
 	}
-	rows, err := s.db.Query(
+	rows, err := s.db.QueryContext(ctx, 
 		`SELECT id, reservation_id, timestamp, gpu_utilization_pct, memory_utilization_pct, active_gpu_count, total_gpu_count FROM gpu_utilization_snapshots WHERE reservation_id = ? ORDER BY timestamp DESC LIMIT ?`,
 		reservationID, limit,
 	)
@@ -2280,7 +2281,7 @@ const sqliteMaxVars = 500
 // per reservation is well beyond any realistic view (#6964).
 const bulkUtilizationMaxRowsPerReservation = 500
 
-func (s *SQLiteStore) GetBulkUtilizationSnapshots(reservationIDs []string) (map[string][]models.GPUUtilizationSnapshot, error) {
+func (s *SQLiteStore) GetBulkUtilizationSnapshots(ctx context.Context, reservationIDs []string) (map[string][]models.GPUUtilizationSnapshot, error) {
 	result := make(map[string][]models.GPUUtilizationSnapshot)
 	if len(reservationIDs) == 0 {
 		return result, nil
@@ -2296,7 +2297,7 @@ func (s *SQLiteStore) GetBulkUtilizationSnapshots(reservationIDs []string) (map[
 		}
 		chunk := reservationIDs[start:end]
 
-		if err := s.queryUtilizationChunk(chunk, result); err != nil {
+		if err := s.queryUtilizationChunk(ctx, chunk, result); err != nil {
 			return nil, err
 		}
 	}
@@ -2307,7 +2308,7 @@ func (s *SQLiteStore) GetBulkUtilizationSnapshots(reservationIDs []string) (map[
 // reservation IDs and merges rows into the provided result map.
 // Uses ROW_NUMBER() to apply a per-reservation row limit so that
 // reservations with many snapshots cannot starve others (#6964).
-func (s *SQLiteStore) queryUtilizationChunk(ids []string, result map[string][]models.GPUUtilizationSnapshot) error {
+func (s *SQLiteStore) queryUtilizationChunk(ctx context.Context, ids []string, result map[string][]models.GPUUtilizationSnapshot) error {
 	placeholders := strings.Repeat("?,", len(ids))
 	placeholders = placeholders[:len(placeholders)-1] // trim trailing comma
 
@@ -2329,7 +2330,7 @@ func (s *SQLiteStore) queryUtilizationChunk(ids []string, result map[string][]mo
 		WHERE rn <= ?
 		ORDER BY reservation_id, timestamp ASC`, placeholders)
 
-	rows, err := s.db.Query(query, args...)
+	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return err
 	}
@@ -2347,17 +2348,17 @@ func (s *SQLiteStore) queryUtilizationChunk(ids []string, result map[string][]mo
 	return rows.Err()
 }
 
-func (s *SQLiteStore) DeleteOldUtilizationSnapshots(before time.Time) (int64, error) {
-	res, err := s.db.Exec(`DELETE FROM gpu_utilization_snapshots WHERE timestamp < ?`, before)
+func (s *SQLiteStore) DeleteOldUtilizationSnapshots(ctx context.Context, before time.Time) (int64, error) {
+	res, err := s.db.ExecContext(ctx, `DELETE FROM gpu_utilization_snapshots WHERE timestamp < ?`, before)
 	if err != nil {
 		return 0, err
 	}
 	return res.RowsAffected()
 }
 
-func (s *SQLiteStore) ListActiveGPUReservations() ([]models.GPUReservation, error) {
+func (s *SQLiteStore) ListActiveGPUReservations(ctx context.Context) ([]models.GPUReservation, error) {
 	// #6604: same defense-in-depth LIMIT as ListGPUReservations.
-	rows, err := s.db.Query(
+	rows, err := s.db.QueryContext(ctx, 
 		`SELECT id, user_id, user_name, title, description, cluster, namespace, gpu_count, gpu_type, gpu_types, start_date, duration_hours, notes, status, quota_name, quota_enforced, created_at, updated_at FROM gpu_reservations WHERE status IN ('active', 'pending') ORDER BY start_date DESC LIMIT ?`,
 		gpuReservationsMaxRows,
 	)
@@ -2368,7 +2369,7 @@ func (s *SQLiteStore) ListActiveGPUReservations() ([]models.GPUReservation, erro
 
 	var reservations []models.GPUReservation
 	for rows.Next() {
-		r, err := s.scanGPUReservationRow(rows)
+		r, err := s.scanGPUReservationRow(ctx, rows)
 		if err != nil {
 			return nil, err
 		}
@@ -2398,8 +2399,8 @@ func boolToInt(b bool) int {
 // RevokeToken persists a revoked token JTI with its expiration time.
 // INSERT OR IGNORE ensures re-revoking a token cannot silently extend
 // its expiry — the first revocation is authoritative (#7731).
-func (s *SQLiteStore) RevokeToken(jti string, expiresAt time.Time) error {
-	_, err := s.db.Exec(
+func (s *SQLiteStore) RevokeToken(ctx context.Context, jti string, expiresAt time.Time) error {
+	_, err := s.db.ExecContext(ctx, 
 		`INSERT OR IGNORE INTO revoked_tokens (jti, expires_at) VALUES (?, ?)`,
 		jti, expiresAt,
 	)
@@ -2407,9 +2408,9 @@ func (s *SQLiteStore) RevokeToken(jti string, expiresAt time.Time) error {
 }
 
 // IsTokenRevoked checks whether a token JTI has been revoked.
-func (s *SQLiteStore) IsTokenRevoked(jti string) (bool, error) {
+func (s *SQLiteStore) IsTokenRevoked(ctx context.Context, jti string) (bool, error) {
 	var count int
-	err := s.db.QueryRow(
+	err := s.db.QueryRowContext(ctx, 
 		`SELECT COUNT(*) FROM revoked_tokens WHERE jti = ?`, jti,
 	).Scan(&count)
 	if err != nil {
@@ -2420,8 +2421,8 @@ func (s *SQLiteStore) IsTokenRevoked(jti string) (bool, error) {
 
 // CleanupExpiredTokens removes revoked tokens whose JWT has expired,
 // since they can no longer be used regardless of revocation status.
-func (s *SQLiteStore) CleanupExpiredTokens() (int64, error) {
-	result, err := s.db.Exec(
+func (s *SQLiteStore) CleanupExpiredTokens(ctx context.Context) (int64, error) {
+	result, err := s.db.ExecContext(ctx, 
 		`DELETE FROM revoked_tokens WHERE expires_at < ?`, time.Now(),
 	)
 	if err != nil {
@@ -2455,11 +2456,11 @@ func scanUserRewardsRow(row interface {
 // if no row exists yet. A missing row is NOT an error — every authenticated
 // user is implicitly at the default starting balance until they earn their
 // first coin.
-func (s *SQLiteStore) GetUserRewards(userID string) (*UserRewards, error) {
+func (s *SQLiteStore) GetUserRewards(ctx context.Context, userID string) (*UserRewards, error) {
 	if userID == "" {
 		return nil, errors.New("user_id is required")
 	}
-	row := s.db.QueryRow(
+	row := s.db.QueryRowContext(ctx, 
 		`SELECT user_id, coins, points, level, bonus_points, last_daily_bonus_at, updated_at
 		 FROM user_rewards WHERE user_id = ?`, userID,
 	)
@@ -2480,7 +2481,7 @@ func (s *SQLiteStore) GetUserRewards(userID string) (*UserRewards, error) {
 // UpdateUserRewards upserts the full rewards row. Callers pass the desired
 // end-state; the stored updated_at timestamp is always rewritten to now.
 // Coin/point/level values below their allowed floor are clamped.
-func (s *SQLiteStore) UpdateUserRewards(rewards *UserRewards) error {
+func (s *SQLiteStore) UpdateUserRewards(ctx context.Context, rewards *UserRewards) error {
 	if rewards == nil || rewards.UserID == "" {
 		return errors.New("rewards.UserID is required")
 	}
@@ -2504,7 +2505,7 @@ func (s *SQLiteStore) UpdateUserRewards(rewards *UserRewards) error {
 		lastBonus = sql.NullTime{Time: *rewards.LastDailyBonusAt, Valid: true}
 	}
 
-	_, err := s.db.Exec(
+	_, err := s.db.ExecContext(ctx, 
 		`INSERT INTO user_rewards (user_id, coins, points, level, bonus_points, last_daily_bonus_at, updated_at)
 		 VALUES (?, ?, ?, ?, ?, ?, ?)
 		 ON CONFLICT(user_id) DO UPDATE SET
@@ -2745,11 +2746,11 @@ func scanUserTokenUsageRow(row interface {
 // session marker) when no row exists yet. A missing row is NOT an error —
 // every authenticated user is implicitly at 0/0 until they accumulate
 // their first delta.
-func (s *SQLiteStore) GetUserTokenUsage(userID string) (*UserTokenUsage, error) {
+func (s *SQLiteStore) GetUserTokenUsage(ctx context.Context, userID string) (*UserTokenUsage, error) {
 	if userID == "" {
 		return nil, errors.New("user_id is required")
 	}
-	row := s.db.QueryRow(
+	row := s.db.QueryRowContext(ctx, 
 		`SELECT user_id, total_tokens, tokens_by_category, last_agent_session_id, updated_at
 		 FROM user_token_usage WHERE user_id = ?`, userID,
 	)
@@ -2771,7 +2772,7 @@ func (s *SQLiteStore) GetUserTokenUsage(userID string) (*UserTokenUsage, error) 
 // desired end-state; the stored updated_at timestamp is always rewritten to
 // now. Negative totals are clamped to zero (no magic-number literal — 0 is
 // the floor for both TotalTokens and every per-category counter).
-func (s *SQLiteStore) UpdateUserTokenUsage(usage *UserTokenUsage) error {
+func (s *SQLiteStore) UpdateUserTokenUsage(ctx context.Context, usage *UserTokenUsage) error {
 	if usage == nil || usage.UserID == "" {
 		return errors.New("usage.UserID is required")
 	}
@@ -2795,7 +2796,7 @@ func (s *SQLiteStore) UpdateUserTokenUsage(usage *UserTokenUsage) error {
 	usage.TokensByCategory = cleanCategories
 	usage.UpdatedAt = now
 
-	_, err = s.db.Exec(
+	_, err = s.db.ExecContext(ctx, 
 		`INSERT INTO user_token_usage (user_id, total_tokens, tokens_by_category, last_agent_session_id, updated_at)
 		 VALUES (?, ?, ?, ?, ?)
 		 ON CONFLICT(user_id) DO UPDATE SET
@@ -2923,10 +2924,10 @@ func (s *SQLiteStore) AddUserTokenDelta(ctx context.Context, userID string, cate
 // StoreOAuthState persists an OAuth state token with the given time-to-live.
 // The state is a single-use CSRF token; ConsumeOAuthState must be called once
 // to validate and delete it on the callback.
-func (s *SQLiteStore) StoreOAuthState(state string, ttl time.Duration) error {
+func (s *SQLiteStore) StoreOAuthState(ctx context.Context, state string, ttl time.Duration) error {
 	now := time.Now()
 	expiresAt := now.Add(ttl)
-	_, err := s.db.Exec(
+	_, err := s.db.ExecContext(ctx, 
 		`INSERT INTO oauth_states (state, created_at, expires_at) VALUES (?, ?, ?)`,
 		state, now, expiresAt,
 	)
@@ -3008,8 +3009,8 @@ func (s *SQLiteStore) ConsumeOAuthState(ctx context.Context, state string) (bool
 
 // CleanupExpiredOAuthStates removes OAuth state rows whose expires_at has
 // passed. Returns the number of rows deleted.
-func (s *SQLiteStore) CleanupExpiredOAuthStates() (int64, error) {
-	result, err := s.db.Exec(
+func (s *SQLiteStore) CleanupExpiredOAuthStates(ctx context.Context) (int64, error) {
+	result, err := s.db.ExecContext(ctx, 
 		`DELETE FROM oauth_states WHERE expires_at < ?`, time.Now(),
 	)
 	if err != nil {
@@ -3019,8 +3020,8 @@ func (s *SQLiteStore) CleanupExpiredOAuthStates() (int64, error) {
 }
 
 // SaveClusterGroup upserts a cluster group definition (#7013).
-func (s *SQLiteStore) SaveClusterGroup(name string, data []byte) error {
-	_, err := s.db.Exec(
+func (s *SQLiteStore) SaveClusterGroup(ctx context.Context, name string, data []byte) error {
+	_, err := s.db.ExecContext(ctx, 
 		`INSERT INTO cluster_groups (name, data, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)
 		 ON CONFLICT(name) DO UPDATE SET data = excluded.data, updated_at = CURRENT_TIMESTAMP`,
 		name, data,
@@ -3029,8 +3030,8 @@ func (s *SQLiteStore) SaveClusterGroup(name string, data []byte) error {
 }
 
 // DeleteClusterGroup removes a cluster group definition (#7013).
-func (s *SQLiteStore) DeleteClusterGroup(name string) error {
-	_, err := s.db.Exec(`DELETE FROM cluster_groups WHERE name = ?`, name)
+func (s *SQLiteStore) DeleteClusterGroup(ctx context.Context, name string) error {
+	_, err := s.db.ExecContext(ctx, `DELETE FROM cluster_groups WHERE name = ?`, name)
 	return err
 }
 
@@ -3038,8 +3039,8 @@ func (s *SQLiteStore) DeleteClusterGroup(name string) error {
 const maxClusterGroups = 200
 
 // ListClusterGroups returns all persisted cluster group definitions (#7013).
-func (s *SQLiteStore) ListClusterGroups() (map[string][]byte, error) {
-	rows, err := s.db.Query(`SELECT name, data FROM cluster_groups LIMIT ?`, maxClusterGroups)
+func (s *SQLiteStore) ListClusterGroups(ctx context.Context) (map[string][]byte, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT name, data FROM cluster_groups LIMIT ?`, maxClusterGroups)
 	if err != nil {
 		return nil, err
 	}

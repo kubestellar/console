@@ -33,21 +33,21 @@ type gpuTestStore struct {
 	bulkSnapshotsErr   error
 }
 
-func (s *gpuTestStore) GetUser(id uuid.UUID) (*models.User, error) {
+func (s *gpuTestStore) GetUser(_ context.Context, id uuid.UUID) (*models.User, error) {
 	if s.userErr != nil {
 		return nil, s.userErr
 	}
 	return s.user, nil
 }
 
-func (s *gpuTestStore) GetClusterReservedGPUCount(cluster string, excludeID *uuid.UUID) (int, error) {
+func (s *gpuTestStore) GetClusterReservedGPUCount(_ context.Context, cluster string, excludeID *uuid.UUID) (int, error) {
 	if s.clusterReservedErr != nil {
 		return 0, s.clusterReservedErr
 	}
 	return s.clusterReserved, nil
 }
 
-func (s *gpuTestStore) CreateGPUReservation(reservation *models.GPUReservation) error {
+func (s *gpuTestStore) CreateGPUReservation(_ context.Context, reservation *models.GPUReservation) error {
 	if s.createErr != nil {
 		return s.createErr
 	}
@@ -64,31 +64,31 @@ func (s *gpuTestStore) CreateGPUReservation(reservation *models.GPUReservation) 
 // The test store reuses CreateGPUReservation for the happy path and uses
 // clusterReserved+capacity to mirror the store-level quota check so the
 // TOCTOU test exercises the same decision the real store would make.
-func (s *gpuTestStore) CreateGPUReservationWithCapacity(reservation *models.GPUReservation, capacity int) error {
+func (s *gpuTestStore) CreateGPUReservationWithCapacity(ctx context.Context, reservation *models.GPUReservation, capacity int) error {
 	if s.createErr != nil {
 		return s.createErr
 	}
 	if capacity > 0 && s.clusterReserved+reservation.GPUCount > capacity {
 		return store.ErrGPUQuotaExceeded
 	}
-	return s.CreateGPUReservation(reservation)
+	return s.CreateGPUReservation(ctx, reservation)
 }
 
-func (s *gpuTestStore) ListGPUReservations() ([]models.GPUReservation, error) {
+func (s *gpuTestStore) ListGPUReservations(_ context.Context) ([]models.GPUReservation, error) {
 	if s.listErr != nil {
 		return nil, s.listErr
 	}
 	return s.listAll, nil
 }
 
-func (s *gpuTestStore) ListUserGPUReservations(userID uuid.UUID) ([]models.GPUReservation, error) {
+func (s *gpuTestStore) ListUserGPUReservations(_ context.Context, userID uuid.UUID) ([]models.GPUReservation, error) {
 	if s.listErr != nil {
 		return nil, s.listErr
 	}
 	return s.listMine, nil
 }
 
-func (s *gpuTestStore) GetGPUReservation(id uuid.UUID) (*models.GPUReservation, error) {
+func (s *gpuTestStore) GetGPUReservation(_ context.Context, id uuid.UUID) (*models.GPUReservation, error) {
 	if s.reservations != nil {
 		r, ok := s.reservations[id]
 		if !ok {
@@ -99,7 +99,7 @@ func (s *gpuTestStore) GetGPUReservation(id uuid.UUID) (*models.GPUReservation, 
 	return nil, nil
 }
 
-func (s *gpuTestStore) UpdateGPUReservation(reservation *models.GPUReservation) error {
+func (s *gpuTestStore) UpdateGPUReservation(_ context.Context, reservation *models.GPUReservation) error {
 	if s.updateErr != nil {
 		return s.updateErr
 	}
@@ -110,19 +110,19 @@ func (s *gpuTestStore) UpdateGPUReservation(reservation *models.GPUReservation) 
 
 // UpdateGPUReservationWithCapacity mirrors the atomic update with capacity
 // check for tests (#6957).
-func (s *gpuTestStore) UpdateGPUReservationWithCapacity(reservation *models.GPUReservation, capacity int) error {
+func (s *gpuTestStore) UpdateGPUReservationWithCapacity(ctx context.Context, reservation *models.GPUReservation, capacity int) error {
 	if s.updateErr != nil {
 		return s.updateErr
 	}
 	if capacity > 0 && s.clusterReserved+reservation.GPUCount > capacity {
 		return store.ErrGPUQuotaExceeded
 	}
-	return s.UpdateGPUReservation(reservation)
+	return s.UpdateGPUReservation(ctx, reservation)
 }
 
 // GetGPUReservationsByIDs returns reservations from the test store's
 // reservations map in a single call (#6963).
-func (s *gpuTestStore) GetGPUReservationsByIDs(ids []uuid.UUID) (map[uuid.UUID]*models.GPUReservation, error) {
+func (s *gpuTestStore) GetGPUReservationsByIDs(_ context.Context, ids []uuid.UUID) (map[uuid.UUID]*models.GPUReservation, error) {
 	result := make(map[uuid.UUID]*models.GPUReservation, len(ids))
 	for _, id := range ids {
 		if r, ok := s.reservations[id]; ok {
@@ -132,7 +132,7 @@ func (s *gpuTestStore) GetGPUReservationsByIDs(ids []uuid.UUID) (map[uuid.UUID]*
 	return result, nil
 }
 
-func (s *gpuTestStore) GetBulkUtilizationSnapshots(ids []string) (map[string][]models.GPUUtilizationSnapshot, error) {
+func (s *gpuTestStore) GetBulkUtilizationSnapshots(_ context.Context, ids []string) (map[string][]models.GPUUtilizationSnapshot, error) {
 	if s.bulkSnapshotsErr != nil {
 		return nil, s.bulkSnapshotsErr
 	}

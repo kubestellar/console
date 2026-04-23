@@ -60,7 +60,7 @@ func (h *DashboardHandler) ListDashboards(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	dashboards, err := h.store.GetUserDashboards(userID, limit, offset)
+	dashboards, err := h.store.GetUserDashboards(c.UserContext(), userID, limit, offset)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to list dashboards")
 	}
@@ -79,7 +79,7 @@ func (h *DashboardHandler) GetDashboard(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Invalid dashboard ID")
 	}
 
-	dashboard, err := h.store.GetDashboard(dashboardID)
+	dashboard, err := h.store.GetDashboard(c.UserContext(), dashboardID)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to get dashboard")
 	}
@@ -91,7 +91,7 @@ func (h *DashboardHandler) GetDashboard(c *fiber.Ctx) error {
 	}
 
 	// Get cards
-	cards, err := h.store.GetDashboardCards(dashboardID)
+	cards, err := h.store.GetDashboardCards(c.UserContext(), dashboardID)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to get cards")
 	}
@@ -119,7 +119,7 @@ func (h *DashboardHandler) CreateDashboard(c *fiber.Ctx) error {
 	}
 
 	// Enforce per-user dashboard limit (#7010).
-	count, err := h.store.CountUserDashboards(userID)
+	count, err := h.store.CountUserDashboards(c.UserContext(), userID)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to check dashboard count")
 	}
@@ -134,7 +134,7 @@ func (h *DashboardHandler) CreateDashboard(c *fiber.Ctx) error {
 		IsDefault: input.IsDefault,
 	}
 
-	if err := h.store.CreateDashboard(dashboard); err != nil {
+	if err := h.store.CreateDashboard(c.UserContext(), dashboard); err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to create dashboard")
 	}
 
@@ -149,7 +149,7 @@ func (h *DashboardHandler) UpdateDashboard(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Invalid dashboard ID")
 	}
 
-	dashboard, err := h.store.GetDashboard(dashboardID)
+	dashboard, err := h.store.GetDashboard(c.UserContext(), dashboardID)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to get dashboard")
 	}
@@ -178,7 +178,7 @@ func (h *DashboardHandler) UpdateDashboard(c *fiber.Ctx) error {
 		dashboard.IsDefault = *input.IsDefault
 	}
 
-	if err := h.store.UpdateDashboard(dashboard); err != nil {
+	if err := h.store.UpdateDashboard(c.UserContext(), dashboard); err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to update dashboard")
 	}
 
@@ -193,7 +193,7 @@ func (h *DashboardHandler) DeleteDashboard(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Invalid dashboard ID")
 	}
 
-	dashboard, err := h.store.GetDashboard(dashboardID)
+	dashboard, err := h.store.GetDashboard(c.UserContext(), dashboardID)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to get dashboard")
 	}
@@ -204,7 +204,7 @@ func (h *DashboardHandler) DeleteDashboard(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusForbidden, "Access denied")
 	}
 
-	if err := h.store.DeleteDashboard(dashboardID); err != nil {
+	if err := h.store.DeleteDashboard(c.UserContext(), dashboardID); err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to delete dashboard")
 	}
 
@@ -220,7 +220,7 @@ func (h *DashboardHandler) ExportDashboard(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Invalid dashboard ID")
 	}
 
-	dashboard, err := h.store.GetDashboard(dashboardID)
+	dashboard, err := h.store.GetDashboard(c.UserContext(), dashboardID)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to get dashboard")
 	}
@@ -231,7 +231,7 @@ func (h *DashboardHandler) ExportDashboard(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusForbidden, "Access denied")
 	}
 
-	cards, err := h.store.GetDashboardCards(dashboardID)
+	cards, err := h.store.GetDashboardCards(c.UserContext(), dashboardID)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to get cards")
 	}
@@ -286,7 +286,7 @@ func (h *DashboardHandler) ImportDashboard(c *fiber.Ctx) error {
 		Name:   input.Name,
 		Layout: input.Layout,
 	}
-	if err := h.store.CreateDashboard(dashboard); err != nil {
+	if err := h.store.CreateDashboard(c.UserContext(), dashboard); err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to create dashboard")
 	}
 
@@ -295,7 +295,7 @@ func (h *DashboardHandler) ImportDashboard(c *fiber.Ctx) error {
 	for i, ce := range input.Cards {
 		if !isValidCardType(models.CardType(ce.CardType)) {
 			// Clean up the dashboard we just created before returning.
-			_ = h.store.DeleteDashboard(dashboard.ID)
+			_ = h.store.DeleteDashboard(c.UserContext(), dashboard.ID)
 			return fiber.NewError(fiber.StatusBadRequest,
 				fmt.Sprintf("card[%d]: unknown card_type %q", i, ce.CardType))
 		}
@@ -310,9 +310,9 @@ func (h *DashboardHandler) ImportDashboard(c *fiber.Ctx) error {
 		}
 		// Use CreateCardWithLimit to keep the invariant consistent with the
 		// regular AddCard path (closes TOCTOU against concurrent creates).
-		if err := h.store.CreateCardWithLimit(card, MaxCardsPerDashboard); err != nil {
+		if err := h.store.CreateCardWithLimit(c.UserContext(), card, MaxCardsPerDashboard); err != nil {
 			// Rollback: delete the partially-created dashboard and any cards
-			_ = h.store.DeleteDashboard(dashboard.ID)
+			_ = h.store.DeleteDashboard(c.UserContext(), dashboard.ID)
 			if errors.Is(err, store.ErrDashboardCardLimitReached) {
 				return fiber.NewError(fiber.StatusRequestEntityTooLarge, "Card limit reached during import")
 			}
@@ -321,7 +321,7 @@ func (h *DashboardHandler) ImportDashboard(c *fiber.Ctx) error {
 	}
 
 	// Return the full dashboard with cards
-	cards, err := h.store.GetDashboardCards(dashboard.ID)
+	cards, err := h.store.GetDashboardCards(c.UserContext(), dashboard.ID)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to get cards")
 	}

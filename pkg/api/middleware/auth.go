@@ -61,9 +61,9 @@ func ParseJWT(tokenString string, secret string) (*jwt.Token, error) {
 // TokenRevoker is the subset of store.Store needed for token revocation.
 // Defined here to avoid a circular import with the store package.
 type TokenRevoker interface {
-	RevokeToken(jti string, expiresAt time.Time) error
-	IsTokenRevoked(jti string) (bool, error)
-	CleanupExpiredTokens() (int64, error)
+	RevokeToken(ctx context.Context, jti string, expiresAt time.Time) error
+	IsTokenRevoked(ctx context.Context, jti string) (bool, error)
+	CleanupExpiredTokens(ctx context.Context) (int64, error)
 }
 
 // revokedTokenCache is an in-memory write-through cache backed by a persistent
@@ -182,7 +182,7 @@ func (c *revokedTokenCache) Revoke(jti string, expiresAt time.Time) {
 
 	// Write-through to persistent store (best-effort; log on failure).
 	if store != nil {
-		if err := store.RevokeToken(jti, expiresAt); err != nil {
+		if err := store.RevokeToken(context.Background(), jti, expiresAt); err != nil {
 			slog.Error("[Auth] failed to persist token revocation", "jti", jti, "error", err)
 		}
 	}
@@ -210,7 +210,7 @@ func (c *revokedTokenCache) IsRevokedChecked(jti string) (bool, error) {
 	// Slow path: check persistent store (covers tokens revoked by a previous
 	// server instance that haven't been loaded into this cache yet).
 	if store != nil {
-		revoked, err := store.IsTokenRevoked(jti)
+		revoked, err := store.IsTokenRevoked(context.Background(), jti)
 		if err != nil {
 			// #6577 — fail CLOSED on DB error. Returning (false, nil) here
 			// would allow a revoked token to authenticate whenever the
@@ -288,7 +288,7 @@ func (c *revokedTokenCache) cleanup() {
 
 	// Also prune expired rows from the persistent store.
 	if store != nil {
-		if n, err := store.CleanupExpiredTokens(); err != nil {
+		if n, err := store.CleanupExpiredTokens(context.Background()); err != nil {
 			slog.Error("[Auth] failed to cleanup expired tokens", "error", err)
 		} else if n > 0 {
 			slog.Info("[Auth] cleaned up expired revoked tokens", "count", n)

@@ -41,7 +41,7 @@ type SendAlertNotificationRequest struct {
 // Returns a 403 Forbidden response if not, or nil on success.
 func (h *NotificationHandler) requireAdmin(c *fiber.Ctx) error {
 	currentUserID := middleware.GetUserID(c)
-	currentUser, err := h.store.GetUser(currentUserID)
+	currentUser, err := h.store.GetUser(c.UserContext(), currentUserID)
 	if err != nil || currentUser == nil || currentUser.Role != models.UserRoleAdmin {
 		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
 	}

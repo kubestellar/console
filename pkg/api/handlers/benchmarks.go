@@ -517,7 +517,7 @@ func (h *BenchmarkHandlers) GetReports(c *fiber.Ctx) error {
 	}
 
 	// Fetch from Google Drive
-	reports, parseFailures, err := h.fetchAllReports(context.Background(), cutoff)
+	reports, parseFailures, err := h.fetchAllReports(c.UserContext(), cutoff)
 	if err != nil {
 		slog.Error("[benchmarks] Google Drive fetch error", "error", err)
 		h.cache.mu.RLock()
@@ -580,10 +580,15 @@ func (h *BenchmarkHandlers) StreamReports(c *fiber.Ctx) error {
 	c.Set("Cache-Control", "no-cache")
 	c.Set("Connection", "keep-alive")
 
+	// Capture the request context before entering the stream writer callback
+	// so cancellation propagates from the HTTP request to all Drive API calls (#9732).
+	reqCtx := c.UserContext()
+
 	c.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
-		// Create a cancellable context so all goroutines and Drive API calls
-		// abort promptly when the client disconnects (#9517).
-		ctx, cancel := context.WithCancel(context.Background())
+		// Create a cancellable context derived from the request context so all
+		// goroutines and Drive API calls abort promptly when the client
+		// disconnects (#9517, #9732).
+		ctx, cancel := context.WithCancel(reqCtx)
 		defer cancel()
 
 		allReports := make([]BenchmarkReport, 0)

@@ -7,7 +7,6 @@
 package audit
 
 import (
-	"context"
 	"encoding/json"
 	"log/slog"
 	"strings"
@@ -103,7 +102,7 @@ func Log(c *fiber.Ctx, action, targetType, targetID string, details ...string) {
 			"method":      c.Method(),
 			"details":     detailText,
 		})
-		if err := s.InsertAuditLog(context.Background(), userID.String(), action, string(detail)); err != nil {
+		if err := s.InsertAuditLog(c.UserContext(), userID.String(), action, string(detail)); err != nil {
 			slog.Error("audit: failed to persist audit entry", "error", err, "action", action)
 		}
 	}
