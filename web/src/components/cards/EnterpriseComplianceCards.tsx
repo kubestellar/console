@@ -11,14 +11,19 @@ import { useNavigate } from 'react-router-dom'
 
 // ── Shared helpers ──────────────────────────────────────────────────────
 
+const SCORE_GOOD = 'rgb(34,197,94)'
+const SCORE_WARN = 'rgb(234,179,8)'
+const SCORE_BAD = 'rgb(239,68,68)'
+const RING_BG = 'rgb(55,65,81)'
+
 function ScoreRing({ score, size = 64 }: { score: number; size?: number }) {
   const r = (size - 8) / 2
   const circ = 2 * Math.PI * r
   const offset = circ - (score / 100) * circ
-  const color = score >= 80 ? '#22c55e' : score >= 60 ? '#eab308' : '#ef4444' // ai-quality-ignore
+  const color = score >= 80 ? SCORE_GOOD : score >= 60 ? SCORE_WARN : SCORE_BAD
   return (
     <svg width={size} height={size} className="shrink-0">
-      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#374151" strokeWidth={6} />
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={RING_BG} strokeWidth={6} />
       <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={6}
         strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round"
         transform={`rotate(-90 ${size/2} ${size/2})`} />
