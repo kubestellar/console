@@ -331,6 +331,23 @@ async function fetchView<T>(params: URLSearchParams): Promise<T> {
   return body
 }
 
+/**
+ * Coerce string fields in a MatrixPayload that the GitHub API can return as
+ * null/undefined when a workflow run has no name (e.g., anonymous workflow
+ * runs). Without this guard the client crashes with `Cannot read properties
+ * of undefined (reading 'trim')` when rendering WorkflowRow.
+ */
+function normalizeMatrixPayload(payload: MatrixPayload): MatrixPayload {
+  return {
+    ...payload,
+    workflows: (payload.workflows ?? []).map((wf) => ({
+      ...wf,
+      name: wf.name != null ? String(wf.name) : '',
+      repo: wf.repo != null ? String(wf.repo) : '',
+    })),
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Unified payload — returned by view=all, consumed by PipelineDataContext
 // ---------------------------------------------------------------------------
@@ -383,10 +400,14 @@ export function useUnifiedPipelineData(repo: string | null, days: number = UNIFI
     initialData,
     demoData: initialData,
     liveInDemoMode: true,
-    fetcher: () => {
+    fetcher: async () => {
       const p = new URLSearchParams({ view: 'all', days: String(days) })
       if (repo) p.set('repo', repo)
-      return fetchView<UnifiedPipelinePayload>(p)
+      const payload = await fetchView<UnifiedPipelinePayload>(p)
+      return {
+        ...payload,
+        matrix: payload.matrix ? normalizeMatrixPayload(payload.matrix) : payload.matrix,
+      }
     },
   })
 }
@@ -424,10 +445,11 @@ export function usePipelineMatrix(repo: string | null, days: number, enabled = t
     demoData: demo,
     liveInDemoMode: true,
     enabled,
-    fetcher: () => {
+    fetcher: async () => {
       const p = new URLSearchParams({ view: 'matrix', days: String(days) })
       if (repo) p.set('repo', repo)
-      return fetchView<MatrixPayload>(p)
+      const payload = await fetchView<MatrixPayload>(p)
+      return normalizeMatrixPayload(payload)
     },
   })
 }

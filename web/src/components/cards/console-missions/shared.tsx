@@ -5,6 +5,7 @@ import { useMissions } from '../../../hooks/useMissions'
 import { isAgentConnected } from '../../../hooks/useLocalAgent'
 import { useToast } from '../../ui/Toast'
 import { getSettingsWithHash } from '../../../config/routes'
+import { emitError } from '../../../lib/analytics'
 
 export const ANTHROPIC_KEY_STORAGE = 'kubestellar-anthropic-key'
 
@@ -87,6 +88,7 @@ export function ApiKeyPromptModal({ isOpen, onDismiss, onGoToSettings }: {
 }) {
   useEffect(() => {
     if (!isOpen) return
+    emitError('config', 'No AI agent available. Please configure an API key')
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.stopPropagation()

@@ -4,7 +4,7 @@ import { AgentCapabilityToolExec } from '../types/agent'
 import { getDemoMode } from './useDemoMode'
 import { addCategoryTokens, setActiveTokenCategory, clearActiveTokenCategory } from './useTokenUsage'
 import { LOCAL_AGENT_WS_URL, LOCAL_AGENT_HTTP_URL } from '../lib/constants'
-import { emitMissionStarted, emitMissionCompleted, emitMissionError, emitMissionRated } from '../lib/analytics'
+import { emitError, emitMissionStarted, emitMissionCompleted, emitMissionError, emitMissionRated } from '../lib/analytics'
 import { scanForMaliciousContent } from '../lib/missions/scanner/malicious'
 import { runPreflightCheck, type PreflightResult } from '../lib/missions/preflightCheck'
 import { kubectlProxy } from '../lib/kubectlProxy'
@@ -1940,6 +1940,9 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
           preflight.error?.code || 'preflight_unknown',
           preflight.error?.message
         )
+        if (preflight.error?.message) {
+          emitError('cluster_access', preflight.error.message)
+        }
         return
       }
 
@@ -2375,6 +2378,9 @@ Install the console locally with the KubeStellar Console agent to use AI mission
             ]
           } : m
         ))
+        if (preflight.error?.message) {
+          emitError('cluster_access', preflight.error.message)
+        }
         return
       }
 
