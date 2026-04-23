@@ -122,6 +122,9 @@ const NISTCard = safeLazy(() => _enterpriseComplianceBundle, 'NISTCard')
 const STIGCard = safeLazy(() => _enterpriseComplianceBundle, 'STIGCard')
 const AirGapCard = safeLazy(() => _enterpriseComplianceBundle, 'AirGapCard')
 const FedRAMPCard = safeLazy(() => _enterpriseComplianceBundle, 'FedRAMPCard')
+const OIDCFederationCard = safeLazy(() => _enterpriseComplianceBundle, 'OIDCFederationCard')
+const RBACAuditCard = safeLazy(() => _enterpriseComplianceBundle, 'RBACAuditCard')
+const SessionManagementCard = safeLazy(() => _enterpriseComplianceBundle, 'SessionManagementCard')
 // Workload detection cards — share one chunk via barrel import
 const _workloadDetectionBundle = import('./workload-detection').catch(() => undefined as never)
 const ProwJobs = safeLazy(() => _workloadDetectionBundle, 'ProwJobs')
@@ -463,6 +466,10 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   stig_compliance: STIGCard,
   air_gap_readiness: AirGapCard,
   fedramp_readiness: FedRAMPCard,
+  // Identity & Access cards
+  oidc_federation: OIDCFederationCard,
+  rbac_audit: RBACAuditCard,
+  session_management: SessionManagementCard,
   // ISO 27001 audit checklist
   iso27001_audit: ISO27001Audit,
   // Cross-cluster compliance cards

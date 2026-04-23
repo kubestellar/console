@@ -5,7 +5,7 @@
  * Each card fetches summary data and renders a compact view.
  */
 import { useState, useEffect } from 'react'
-import { Shield, FileText, Activity, Lock, WifiOff, Award, CheckCircle2, XCircle } from 'lucide-react'
+import { Shield, FileText, Activity, Lock, WifiOff, Award, CheckCircle2, XCircle, KeyRound, Clock } from 'lucide-react'
 import { authFetch } from '../../lib/api'
 import { useNavigate } from 'react-router-dom'
 
@@ -313,6 +313,75 @@ export function FedRAMPCard() {
             <MiniStat label="Open POAMs" value={Number(data.open_poams ?? 0)} color="text-red-400" />
             <MiniStat label="Status" value={String(data.authorization_status ?? 'unknown').replace(/_/g, ' ')} />
           </div>
+        </div>
+      ) : <p className="text-gray-500 text-sm">Loading…</p>}
+    </CardShell>
+  )
+}
+
+// ── OIDC Federation Card ────────────────────────────────────────────────
+
+export function OIDCFederationCard() {
+  const nav = useNavigate()
+  const [data, setData] = useState<Record<string, number> | null>(null)
+  useEffect(() => {
+    authFetch('/api/identity/oidc/summary').then(r => r.ok ? r.json() : null).then(setData).catch(() => {})
+  }, [])
+  return (
+    <CardShell title="OIDC Federation" icon={KeyRound} onClick={() => nav('/enterprise/oidc')}>
+      {data ? (
+        <div className="grid grid-cols-2 gap-2">
+          <MiniStat label="Providers" value={`${data.active_providers ?? 0}/${data.total_providers ?? 0}`} color="text-blue-400" />
+          <MiniStat label="Users" value={data.total_users ?? 0} />
+          <MiniStat label="Sessions" value={data.active_sessions ?? 0} color="text-green-400" />
+          <MiniStat label="MFA" value={`${data.mfa_adoption ?? 0}%`} color="text-cyan-400" />
+        </div>
+      ) : <p className="text-gray-500 text-sm">Loading…</p>}
+    </CardShell>
+  )
+}
+
+// ── RBAC Audit Card ─────────────────────────────────────────────────────
+
+export function RBACAuditCard() {
+  const nav = useNavigate()
+  const [data, setData] = useState<Record<string, number> | null>(null)
+  useEffect(() => {
+    authFetch('/api/identity/rbac/summary').then(r => r.ok ? r.json() : null).then(setData).catch(() => {})
+  }, [])
+  return (
+    <CardShell title="RBAC Audit" icon={Lock} onClick={() => nav('/enterprise/rbac-audit')}>
+      {data ? (
+        <div className="flex items-center gap-4">
+          <ScoreRing score={data.compliance_score ?? 0} />
+          <div className="grid grid-cols-2 gap-2 flex-1">
+            <MiniStat label="Bindings" value={data.total_bindings ?? 0} />
+            <MiniStat label="Over-Priv" value={data.over_privileged ?? 0} color="text-red-400" />
+            <MiniStat label="Unused" value={data.unused_bindings ?? 0} color="text-yellow-400" />
+            <MiniStat label="Score" value={`${data.compliance_score ?? 0}%`} color="text-green-400" />
+          </div>
+        </div>
+      ) : <p className="text-gray-500 text-sm">Loading…</p>}
+    </CardShell>
+  )
+}
+
+// ── Session Management Card ─────────────────────────────────────────────
+
+export function SessionManagementCard() {
+  const nav = useNavigate()
+  const [data, setData] = useState<Record<string, number> | null>(null)
+  useEffect(() => {
+    authFetch('/api/identity/sessions/summary').then(r => r.ok ? r.json() : null).then(setData).catch(() => {})
+  }, [])
+  return (
+    <CardShell title="Session Management" icon={Clock} onClick={() => nav('/enterprise/sessions')}>
+      {data ? (
+        <div className="grid grid-cols-2 gap-2">
+          <MiniStat label="Active" value={data.active_sessions ?? 0} color="text-blue-400" />
+          <MiniStat label="Users" value={data.unique_users ?? 0} />
+          <MiniStat label="Avg Duration" value={`${data.avg_duration_minutes ?? 0}m`} />
+          <MiniStat label="Violations" value={data.policy_violations ?? 0} color={data.policy_violations > 0 ? 'text-red-400' : 'text-green-400'} />
         </div>
       ) : <p className="text-gray-500 text-sm">Loading…</p>}
     </CardShell>

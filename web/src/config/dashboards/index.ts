@@ -56,6 +56,9 @@ import { insightsDashboardConfig } from './insights'
 import { multiTenancyDashboardConfig } from './multi-tenancy'
 import { drasiDashboardConfig } from './drasi'
 import { acmmDashboardConfig } from './acmm'
+import { oidcDashboardConfig } from './oidc'
+import { rbacAuditDashboardConfig } from './rbac-audit'
+import { sessionManagementDashboardConfig } from './session-management'
 
 /**
  * Registry of all unified dashboard configurations
@@ -106,6 +109,9 @@ export const DASHBOARD_CONFIGS: DashboardConfigRegistry = {
   'multi-tenancy': multiTenancyDashboardConfig,
   drasi: drasiDashboardConfig,
   acmm: acmmDashboardConfig,
+  oidc: oidcDashboardConfig,
+  'rbac-audit': rbacAuditDashboardConfig,
+  'session-management': sessionManagementDashboardConfig,
 }
 
 /**
@@ -225,4 +231,7 @@ export {
   insightsDashboardConfig,
   multiTenancyDashboardConfig,
   drasiDashboardConfig,
+  oidcDashboardConfig,
+  rbacAuditDashboardConfig,
+  sessionManagementDashboardConfig,
 }

@@ -67,9 +67,9 @@ export const ENTERPRISE_NAV_SECTIONS: EnterpriseNavSection[] = [
     title: 'Identity & Access',
     icon: 'KeyRound',
     items: [
-      { id: 'oidc', label: 'OIDC Federation', href: '/enterprise/oidc', icon: 'Fingerprint', badge: 'Soon' },
-      { id: 'rbac-audit', label: 'RBAC Audit', href: '/enterprise/rbac-audit', icon: 'Lock', badge: 'Soon' },
-      { id: 'sessions', label: 'Session Manager', href: '/enterprise/sessions', icon: 'Clock', badge: 'Soon' },
+      { id: 'oidc', label: 'OIDC Federation', href: '/enterprise/oidc', icon: 'Fingerprint' },
+      { id: 'rbac-audit', label: 'RBAC Audit', href: '/enterprise/rbac-audit', icon: 'Lock' },
+      { id: 'sessions', label: 'Session Management', href: '/enterprise/sessions', icon: 'Clock' },
     ],
   },
   {

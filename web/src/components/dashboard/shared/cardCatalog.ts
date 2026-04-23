@@ -262,6 +262,9 @@ export const CARD_CATALOG = {
     { type: 'stig_compliance', title: 'STIG Compliance', description: 'DISA STIG container hardening checks', visualization: 'gauge' },
     { type: 'air_gap_readiness', title: 'Air-Gap Readiness', description: 'Disconnected environment readiness assessment', visualization: 'status' },
     { type: 'fedramp_readiness', title: 'FedRAMP Readiness', description: 'FedRAMP Low/Moderate/High baseline scoring', visualization: 'gauge' },
+    { type: 'oidc_federation', title: 'OIDC Federation', description: 'OIDC identity provider federation and session status', visualization: 'status' },
+    { type: 'rbac_audit', title: 'RBAC Audit', description: 'RBAC least-privilege analysis and over-privilege detection', visualization: 'gauge' },
+    { type: 'session_management', title: 'Session Management', description: 'Enterprise session monitoring and policy enforcement', visualization: 'table' },
   ],
   'Workload Detection': [
     { type: 'prow_jobs', title: 'Prow Jobs', description: 'Prow CI/CD job status - presubmit, postsubmit, and periodic jobs', visualization: 'table' },

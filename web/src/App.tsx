@@ -71,6 +71,9 @@ const NISTDashboard = safeLazy(() => import('./components/compliance/NISTDashboa
 const STIGDashboard = safeLazy(() => import('./components/compliance/STIGDashboard'), 'default')
 const AirGapDashboard = safeLazy(() => import('./components/compliance/AirGapDashboard'), 'default')
 const FedRAMPDashboard = safeLazy(() => import('./components/compliance/FedRAMPDashboard'), 'default')
+const OIDCDashboard = safeLazy(() => import('./components/compliance/OIDCDashboard'), 'default')
+const RBACAuditDashboard = safeLazy(() => import('./components/compliance/RBACAuditDashboard'), 'default')
+const SessionDashboard = safeLazy(() => import('./components/compliance/SessionDashboard'), 'default')
 const EnterpriseLayout = safeLazy(() => import('./components/enterprise/EnterpriseLayout'), 'default')
 const EnterprisePortal = safeLazy(() => import('./components/enterprise/EnterprisePortal'), 'default')
 const ComingSoon = safeLazy(() => import('./components/enterprise/ComingSoon'), 'default')
@@ -355,6 +358,9 @@ const ROUTE_TITLES: Record<string, string> = {
   '/air-gap': 'Air-Gap Readiness',
   '/fedramp': 'FedRAMP Readiness',
   '/enterprise': 'Enterprise Compliance',
+  '/enterprise/oidc': 'OIDC Federation',
+  '/enterprise/rbac-audit': 'RBAC Audit',
+  '/enterprise/sessions': 'Session Management',
   '/data-compliance': 'Data Compliance',
   '/gitops': 'GitOps',
   '/cost': 'Cost',
@@ -626,6 +632,10 @@ function FullDashboardApp({ liveLocation }: { liveLocation: Location }) {
           <Route path="stig" element={<SuspenseRoute><STIGDashboard /></SuspenseRoute>} />
           <Route path="air-gap" element={<SuspenseRoute><AirGapDashboard /></SuspenseRoute>} />
           <Route path="fedramp" element={<SuspenseRoute><FedRAMPDashboard /></SuspenseRoute>} />
+          {/* Epic 4: Identity & Access */}
+          <Route path="oidc" element={<SuspenseRoute><OIDCDashboard /></SuspenseRoute>} />
+          <Route path="rbac-audit" element={<SuspenseRoute><RBACAuditDashboard /></SuspenseRoute>} />
+          <Route path="sessions" element={<SuspenseRoute><SessionDashboard /></SuspenseRoute>} />
           {/* Epics 4-7: Coming Soon */}
           <Route path="*" element={<SuspenseRoute><ComingSoon /></SuspenseRoute>} />
         </Route>

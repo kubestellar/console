@@ -1174,6 +1174,105 @@ export const handlers = [
     })
   }),
 
+  // ── Identity & Access mock handlers (demo mode) ──────────────────
+  http.get('/api/identity/oidc/summary', async () => {
+    await delay(150)
+    return HttpResponse.json({
+      total_providers: 5, active_providers: 4, total_users: 1247,
+      active_sessions: 89, failed_logins_24h: 7, mfa_adoption: 82,
+      evaluated_at: new Date().toISOString(),
+    })
+  }),
+  http.get('/api/identity/oidc/providers', async () => {
+    await delay(150)
+    return HttpResponse.json([
+      { id: 'oidc-1', name: 'Okta Production', issuer_url: 'https://company.okta.com', status: 'connected', protocol: 'OIDC', client_id: 'okta-prod-001', users_synced: 485, last_sync: new Date(Date.now() - 300_000).toISOString(), groups_mapped: 12 },
+      { id: 'oidc-2', name: 'Azure AD', issuer_url: 'https://login.microsoftonline.com/tenant-id', status: 'connected', protocol: 'OIDC', client_id: 'azure-ad-001', users_synced: 312, last_sync: new Date(Date.now() - 600_000).toISOString(), groups_mapped: 8 },
+      { id: 'oidc-3', name: 'GitHub Enterprise', issuer_url: 'https://github.com/login/oauth', status: 'connected', protocol: 'OAuth2', client_id: 'gh-ent-001', users_synced: 198, last_sync: new Date(Date.now() - 900_000).toISOString(), groups_mapped: 15 },
+      { id: 'oidc-4', name: 'Google Workspace', issuer_url: 'https://accounts.google.com', status: 'connected', protocol: 'OIDC', client_id: 'gws-001', users_synced: 252, last_sync: new Date(Date.now() - 1_200_000).toISOString(), groups_mapped: 6 },
+      { id: 'oidc-5', name: 'Keycloak Staging', issuer_url: 'https://keycloak.staging.internal', status: 'degraded', protocol: 'OIDC', client_id: 'kc-staging-001', users_synced: 0, last_sync: new Date(Date.now() - 86_400_000).toISOString(), groups_mapped: 3 },
+    ])
+  }),
+  http.get('/api/identity/oidc/sessions', async () => {
+    await delay(150)
+    return HttpResponse.json([
+      { id: 'sess-1', user: 'alice@company.com', provider_id: 'oidc-1', provider_name: 'Okta Production', login_time: new Date(Date.now() - 3_600_000).toISOString(), expires_at: new Date(Date.now() + 7_200_000).toISOString(), ip_address: '10.0.1.42', active: true },
+      { id: 'sess-2', user: 'bob@company.com', provider_id: 'oidc-2', provider_name: 'Azure AD', login_time: new Date(Date.now() - 7_200_000).toISOString(), expires_at: new Date(Date.now() + 3_600_000).toISOString(), ip_address: '10.0.2.18', active: true },
+      { id: 'sess-3', user: 'carol@company.com', provider_id: 'oidc-3', provider_name: 'GitHub Enterprise', login_time: new Date(Date.now() - 1_800_000).toISOString(), expires_at: new Date(Date.now() + 5_400_000).toISOString(), ip_address: '10.0.1.55', active: true },
+      { id: 'sess-4', user: 'dave@company.com', provider_id: 'oidc-1', provider_name: 'Okta Production', login_time: new Date(Date.now() - 5_400_000).toISOString(), expires_at: new Date(Date.now() + 1_800_000).toISOString(), ip_address: '172.16.0.22', active: true },
+      { id: 'sess-5', user: 'eve@company.com', provider_id: 'oidc-4', provider_name: 'Google Workspace', login_time: new Date(Date.now() - 600_000).toISOString(), expires_at: new Date(Date.now() + 10_800_000).toISOString(), ip_address: '10.0.3.7', active: true },
+      { id: 'sess-6', user: 'frank@company.com', provider_id: 'oidc-2', provider_name: 'Azure AD', login_time: new Date(Date.now() - 14_400_000).toISOString(), expires_at: new Date(Date.now() - 1_800_000).toISOString(), ip_address: '10.0.1.91', active: false },
+      { id: 'sess-7', user: 'grace@company.com', provider_id: 'oidc-1', provider_name: 'Okta Production', login_time: new Date(Date.now() - 900_000).toISOString(), expires_at: new Date(Date.now() + 9_000_000).toISOString(), ip_address: '192.168.1.14', active: true },
+      { id: 'sess-8', user: 'hank@company.com', provider_id: 'oidc-3', provider_name: 'GitHub Enterprise', login_time: new Date(Date.now() - 2_700_000).toISOString(), expires_at: new Date(Date.now() + 4_500_000).toISOString(), ip_address: '10.0.2.33', active: true },
+    ])
+  }),
+  http.get('/api/identity/rbac/summary', async () => {
+    await delay(150)
+    return HttpResponse.json({
+      total_bindings: 147, cluster_role_bindings: 34,
+      role_bindings: 113, over_privileged: 8,
+      unused_bindings: 12, compliance_score: 78,
+      evaluated_at: new Date().toISOString(),
+    })
+  }),
+  http.get('/api/identity/rbac/bindings', async () => {
+    await delay(150)
+    return HttpResponse.json([
+      { id: 'rb-1', name: 'admin-binding', kind: 'ClusterRoleBinding', subject_kind: 'User', subject_name: 'alice@company.com', role_name: 'cluster-admin', namespace: '', cluster: 'prod-east', risk_level: 'critical', last_used: new Date(Date.now() - 86_400_000).toISOString() },
+      { id: 'rb-2', name: 'dev-edit-binding', kind: 'RoleBinding', subject_kind: 'Group', subject_name: 'developers', role_name: 'edit', namespace: 'app-dev', cluster: 'prod-east', risk_level: 'medium', last_used: new Date(Date.now() - 172_800_000).toISOString() },
+      { id: 'rb-3', name: 'ci-deploy', kind: 'RoleBinding', subject_kind: 'ServiceAccount', subject_name: 'ci-deployer', role_name: 'deploy-manager', namespace: 'ci-cd', cluster: 'prod-east', risk_level: 'high', last_used: new Date(Date.now() - 3_600_000).toISOString() },
+      { id: 'rb-4', name: 'monitoring-view', kind: 'ClusterRoleBinding', subject_kind: 'ServiceAccount', subject_name: 'prometheus', role_name: 'view', namespace: '', cluster: 'prod-west', risk_level: 'low', last_used: new Date(Date.now() - 300_000).toISOString() },
+      { id: 'rb-5', name: 'qa-edit-binding', kind: 'RoleBinding', subject_kind: 'Group', subject_name: 'qa-team', role_name: 'edit', namespace: 'qa', cluster: 'staging', risk_level: 'medium', last_used: new Date(Date.now() - 604_800_000).toISOString() },
+      { id: 'rb-6', name: 'old-admin-binding', kind: 'ClusterRoleBinding', subject_kind: 'User', subject_name: 'former-admin@company.com', role_name: 'cluster-admin', namespace: '', cluster: 'prod-east', risk_level: 'critical', last_used: new Date(Date.now() - 2_592_000_000).toISOString() },
+      { id: 'rb-7', name: 'secrets-reader', kind: 'RoleBinding', subject_kind: 'ServiceAccount', subject_name: 'vault-agent', role_name: 'secret-reader', namespace: 'vault', cluster: 'prod-east', risk_level: 'high', last_used: new Date(Date.now() - 7_200_000).toISOString() },
+      { id: 'rb-8', name: 'ingress-controller', kind: 'ClusterRoleBinding', subject_kind: 'ServiceAccount', subject_name: 'nginx-ingress', role_name: 'ingress-nginx', namespace: '', cluster: 'prod-east', risk_level: 'medium', last_used: new Date(Date.now() - 600_000).toISOString() },
+      { id: 'rb-9', name: 'dev-readonly', kind: 'RoleBinding', subject_kind: 'Group', subject_name: 'interns', role_name: 'view', namespace: 'sandbox', cluster: 'staging', risk_level: 'low', last_used: new Date(Date.now() - 259_200_000).toISOString() },
+      { id: 'rb-10', name: 'backup-operator', kind: 'ClusterRoleBinding', subject_kind: 'ServiceAccount', subject_name: 'velero', role_name: 'backup-admin', namespace: '', cluster: 'prod-west', risk_level: 'high', last_used: new Date(Date.now() - 43_200_000).toISOString() },
+      { id: 'rb-11', name: 'app-deployer', kind: 'RoleBinding', subject_kind: 'Group', subject_name: 'sre-team', role_name: 'admin', namespace: 'production', cluster: 'prod-east', risk_level: 'high', last_used: new Date(Date.now() - 1_800_000).toISOString() },
+      { id: 'rb-12', name: 'log-collector', kind: 'ClusterRoleBinding', subject_kind: 'ServiceAccount', subject_name: 'fluentd', role_name: 'log-reader', namespace: '', cluster: 'prod-east', risk_level: 'low', last_used: new Date(Date.now() - 120_000).toISOString() },
+    ])
+  }),
+  http.get('/api/identity/rbac/findings', async () => {
+    await delay(150)
+    return HttpResponse.json([
+      { id: 'find-1', finding_type: 'cluster_admin_user', severity: 'critical', subject: 'alice@company.com', description: 'User has cluster-admin role bound directly. This grants unrestricted access to all resources.', cluster: 'prod-east', namespace: '*', recommendation: 'Replace with scoped roles targeting specific namespaces and resources.' },
+      { id: 'find-2', finding_type: 'stale_binding', severity: 'high', subject: 'former-admin@company.com', description: 'ClusterRoleBinding for cluster-admin has not been used in 30+ days. User may have left the organization.', cluster: 'prod-east', namespace: '*', recommendation: 'Remove the binding and verify user employment status.' },
+      { id: 'find-3', finding_type: 'wildcard_resource', severity: 'high', subject: 'ci-deployer', description: 'ServiceAccount has wildcard resource permissions in the ci-cd namespace.', cluster: 'prod-east', namespace: 'ci-cd', recommendation: 'Restrict to specific resource types: deployments, services, configmaps.' },
+      { id: 'find-4', finding_type: 'excessive_secrets_access', severity: 'medium', subject: 'developers', description: 'Group "developers" can list and read secrets in the app-dev namespace.', cluster: 'prod-east', namespace: 'app-dev', recommendation: 'Use CSI secret store driver instead of direct secret access.' },
+      { id: 'find-5', finding_type: 'unused_binding', severity: 'medium', subject: 'interns', description: 'RoleBinding for "interns" group has not been used in 3+ days. May indicate stale permissions.', cluster: 'staging', namespace: 'sandbox', recommendation: 'Review and remove if no longer needed.' },
+      { id: 'find-6', finding_type: 'broad_namespace_admin', severity: 'high', subject: 'sre-team', description: 'Group has admin role in production namespace, granting full control including RBAC modification.', cluster: 'prod-east', namespace: 'production', recommendation: 'Use edit role instead and manage RBAC separately through policy.' },
+    ])
+  }),
+  http.get('/api/identity/sessions/summary', async () => {
+    await delay(150)
+    return HttpResponse.json({
+      active_sessions: 42, unique_users: 31, avg_duration_minutes: 47,
+      sessions_terminated_24h: 15, policy_violations: 3,
+      mfa_sessions_pct: 88, evaluated_at: new Date().toISOString(),
+    })
+  }),
+  http.get('/api/identity/sessions/active', async () => {
+    await delay(150)
+    return HttpResponse.json([
+      { id: 'as-1', user: 'alice@company.com', login_time: new Date(Date.now() - 3_600_000).toISOString(), last_activity: new Date(Date.now() - 120_000).toISOString(), ip_address: '10.0.1.42', user_agent: 'Chrome/125 (macOS)', provider: 'Okta', status: 'active', expires_at: new Date(Date.now() + 7_200_000).toISOString() },
+      { id: 'as-2', user: 'bob@company.com', login_time: new Date(Date.now() - 7_200_000).toISOString(), last_activity: new Date(Date.now() - 1_800_000).toISOString(), ip_address: '10.0.2.18', user_agent: 'Firefox/128 (Linux)', provider: 'Azure AD', status: 'idle', expires_at: new Date(Date.now() + 3_600_000).toISOString() },
+      { id: 'as-3', user: 'carol@company.com', login_time: new Date(Date.now() - 1_800_000).toISOString(), last_activity: new Date(Date.now() - 60_000).toISOString(), ip_address: '10.0.1.55', user_agent: 'Safari/18 (macOS)', provider: 'GitHub', status: 'active', expires_at: new Date(Date.now() + 5_400_000).toISOString() },
+      { id: 'as-4', user: 'dave@company.com', login_time: new Date(Date.now() - 5_400_000).toISOString(), last_activity: new Date(Date.now() - 3_000_000).toISOString(), ip_address: '172.16.0.22', user_agent: 'kubectl/v1.30 (linux/amd64)', provider: 'Okta', status: 'idle', expires_at: new Date(Date.now() + 1_800_000).toISOString() },
+      { id: 'as-5', user: 'eve@company.com', login_time: new Date(Date.now() - 600_000).toISOString(), last_activity: new Date(Date.now() - 30_000).toISOString(), ip_address: '10.0.3.7', user_agent: 'Chrome/125 (Windows)', provider: 'Google', status: 'active', expires_at: new Date(Date.now() + 10_800_000).toISOString() },
+      { id: 'as-6', user: 'frank@company.com', login_time: new Date(Date.now() - 14_400_000).toISOString(), last_activity: new Date(Date.now() - 7_200_000).toISOString(), ip_address: '10.0.1.91', user_agent: 'Edge/125 (Windows)', provider: 'Azure AD', status: 'expired', expires_at: new Date(Date.now() - 1_800_000).toISOString() },
+      { id: 'as-7', user: 'grace@company.com', login_time: new Date(Date.now() - 900_000).toISOString(), last_activity: new Date(Date.now() - 45_000).toISOString(), ip_address: '192.168.1.14', user_agent: 'Chrome/125 (macOS)', provider: 'Okta', status: 'active', expires_at: new Date(Date.now() + 9_000_000).toISOString() },
+      { id: 'as-8', user: 'hank@company.com', login_time: new Date(Date.now() - 2_700_000).toISOString(), last_activity: new Date(Date.now() - 600_000).toISOString(), ip_address: '10.0.2.33', user_agent: 'kubectl/v1.31 (darwin/arm64)', provider: 'GitHub', status: 'active', expires_at: new Date(Date.now() + 4_500_000).toISOString() },
+    ])
+  }),
+  http.get('/api/identity/sessions/policies', async () => {
+    await delay(150)
+    return HttpResponse.json([
+      { id: 'pol-1', name: 'Default Session Policy', description: 'Standard session timeouts for all users', idle_timeout_minutes: 30, absolute_timeout_hours: 8, max_concurrent: 3, enforce_mfa: true, scope: 'global' },
+      { id: 'pol-2', name: 'Admin Session Policy', description: 'Stricter timeouts for cluster administrators', idle_timeout_minutes: 15, absolute_timeout_hours: 4, max_concurrent: 1, enforce_mfa: true, scope: 'admin' },
+      { id: 'pol-3', name: 'Service Account Policy', description: 'Long-lived sessions for automation and CI/CD', idle_timeout_minutes: 120, absolute_timeout_hours: 24, max_concurrent: 10, enforce_mfa: false, scope: 'service-accounts' },
+    ])
+  }),
+
   // Card templates
   http.get('/api/cards/templates', async () => {
     await delay(100)
