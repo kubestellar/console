@@ -3,7 +3,7 @@ import { cn } from '../../lib/cn'
 
 type BadgeColor = 'green' | 'red' | 'yellow' | 'blue' | 'purple' | 'orange' | 'cyan' | 'gray'
 type BadgeSize = 'xs' | 'sm' | 'md'
-type BadgeVariant = 'default' | 'outline-solid' | 'solid'
+type BadgeVariant = 'default' | 'outline' | 'solid'
 
 const COLOR_MAP: Record<BadgeColor, { bg: string; text: string; border: string; solid: string }> = {
   green:  { bg: 'bg-green-500/20',  text: 'text-green-400',  border: 'border-green-500/30',  solid: 'bg-green-600 text-white' },
