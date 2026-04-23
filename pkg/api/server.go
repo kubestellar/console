@@ -865,6 +865,8 @@ func (s *Server) setupRoutes() {
 
 	// ACMM scan — uses server's GitHub token like other GitHub-powered cards
 	api.Get("/acmm/scan", handlers.ACMMScanHandler)
+	// ACMM badge — shields.io endpoint with server-side caching
+	api.Get("/acmm/badge", handlers.ACMMBadgeHandler)
 
 	// Persistent settings routes
 	settingsHandler := handlers.NewSettingsHandler(settings.GetSettingsManager(), s.store)
