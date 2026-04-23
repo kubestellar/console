@@ -27,6 +27,7 @@ import { AnimatePresence } from 'framer-motion'
 import { Search, Plus, Settings, Rocket, Code2, Zap, Server } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { getMissionRoute } from '../../../config/routes'
 import { ConfirmDialog } from '../../../lib/modals'
 import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
 import { useDrasiResources } from '../../../hooks/useDrasiResources'
@@ -837,7 +838,7 @@ export function DrasiReactiveGraph() {
           </div>
           <button
             type="button"
-            onClick={() => navigate('/missions/install-drasi')}
+            onClick={() => navigate(getMissionRoute('install-drasi'))}
             className="shrink-0 px-2.5 py-1 text-[11px] rounded bg-cyan-600 hover:bg-cyan-500 text-white flex items-center gap-1.5"
           >
             <Rocket className="w-3 h-3" />

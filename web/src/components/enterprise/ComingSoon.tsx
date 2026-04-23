@@ -4,6 +4,7 @@
 import { useLocation } from 'react-router-dom'
 import { Construction, ArrowLeft } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { ROUTES } from '../../config/routes'
 
 export default function ComingSoon() {
   const navigate = useNavigate()
@@ -20,7 +21,7 @@ export default function ComingSoon() {
           This compliance vertical is under development and will be available in a future release.
         </p>
         <button
-          onClick={() => navigate('/enterprise')}
+          onClick={() => navigate(ROUTES.ENTERPRISE)}
           className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-sm transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
