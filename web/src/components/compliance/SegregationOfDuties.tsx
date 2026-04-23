@@ -179,9 +179,9 @@ export function SegregationOfDutiesContent() {
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-1 mt-1">
-                  {p.roles.map(r => <span key={r} className="text-xs bg-zinc-700/50 px-1.5 py-0.5 rounded text-zinc-300">{r}</span>)}
+                  {(p.roles || []).map(r => <span key={r} className="text-xs bg-zinc-700/50 px-1.5 py-0.5 rounded text-zinc-300">{r}</span>)}
                 </div>
-                <div className="text-xs text-zinc-500 mt-1">Clusters: {p.clusters.join(', ')}</div>
+                <div className="text-xs text-zinc-500 mt-1">Clusters: {(p.clusters || []).join(', ')}</div>
               </div>
             )
           })}

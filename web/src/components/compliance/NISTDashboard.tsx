@@ -244,13 +244,13 @@ export function NISTDashboardContent() {
                   <td className="p-3 font-mono text-blue-300">{m.control_id}</td>
                   <td className="p-3">
                     <div className="flex gap-1 flex-wrap">
-                      {m.resources.map(r => (
+                      {(m.resources || []).map(r => (
                         <span key={r} className="px-2 py-0.5 rounded bg-gray-700 text-gray-300 text-xs">{r}</span>
                       ))}
                     </div>
                   </td>
-                  <td className="p-3 text-gray-300">{m.namespaces.join(', ')}</td>
-                  <td className="p-3 text-gray-300">{m.clusters.join(', ')}</td>
+                  <td className="p-3 text-gray-300">{(m.namespaces || []).join(', ')}</td>
+                  <td className="p-3 text-gray-300">{(m.clusters || []).join(', ')}</td>
                   <td className="p-3">
                     {m.automated
                       ? <CheckCircle2 className="w-4 h-4 text-green-400" />

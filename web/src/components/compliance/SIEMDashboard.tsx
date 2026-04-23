@@ -187,7 +187,7 @@ export default function SIEMDashboard() {
             <div className="bg-gray-800/50 rounded-lg border border-gray-700 p-6">
               <h3 className="text-lg font-semibold text-white mb-4">Top Event Sources</h3>
               <div className="space-y-3">
-                {summary.top_sources.map(src => (
+                {(summary.top_sources || []).map(src => (
                   <div key={src.source} className="flex items-center gap-3">
                     <span className="w-32 text-sm text-gray-300 truncate">{src.source}</span>
                     <div className="flex-1 h-2 bg-gray-700 rounded-full overflow-hidden">

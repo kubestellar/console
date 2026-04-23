@@ -215,7 +215,7 @@ export function DataResidencyContent() {
                     </span>
                   </div>
                   <div className="flex gap-1">
-                    {rule.allowed_regions.map(r => (
+                    {(rule.allowed_regions || []).map(r => (
                       <span key={r} className="text-xs bg-zinc-700/30 px-1.5 py-0.5 rounded text-zinc-400">{REGION_LABELS[r] ?? r}</span>
                     ))}
                   </div>
@@ -262,7 +262,7 @@ export function DataResidencyContent() {
                 <div className="flex gap-2 mt-1.5 text-xs text-zinc-500">
                   <span>Namespace: {v.namespace}</span>
                   <span>·</span>
-                  <span>Allowed: {v.allowed_regions.map(r => REGION_LABELS[r] ?? r).join(', ')}</span>
+                  <span>Allowed: {(v.allowed_regions || []).map(r => REGION_LABELS[r] ?? r).join(', ')}</span>
                 </div>
               </div>
             ))}
