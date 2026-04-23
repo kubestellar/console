@@ -78,7 +78,7 @@ async function setupAndNavigate(page: Page, route: string) {
       role: 'admin',
       onboarded: true,
     }))
-    localStorage.setItem('kc-demo-mode', 'false')
+    localStorage.setItem('kc-demo-mode', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
     localStorage.setItem('kubestellar-console-tour-completed', 'true')
   })
@@ -112,30 +112,15 @@ test.describe('LLM-d Benchmarks Dashboard — live data', () => {
   test('page loads with all 8 benchmark cards', async ({ page }) => {
     await setupAndNavigate(page, BENCHMARKS_ROUTE)
 
-    // Wait for meaningful content — cards may render as loading skeletons first,
-    // then swap to live or demo data. A loading skeleton still counts as a card.
+    // Wait for card elements to appear in the DOM (lazy-loaded via safeLazy).
+    // Cards render as loading skeletons first, then swap to live or demo data.
     await page.waitForFunction(
-      () => {
-        const grid = document.querySelector('[class*="react-grid-layout"]')
-        if (grid && grid.children.length > 0) return true
-        // Fallback: any substantial body text (title, card header, loading text)
-        return document.body.innerText.length > 100
-      },
+      (min) => document.querySelectorAll('[data-card-type]').length >= min,
+      EXPECTED_CARD_COUNT,
       { timeout: STREAM_DATA_TIMEOUT_MS },
     )
 
-    // Count rendered cards — try multiple selectors
-    const cardCount = await page.evaluate(() => {
-      // react-grid-layout children are the card wrappers
-      const grid = document.querySelector('[class*="react-grid-layout"]')
-      if (grid && grid.children.length > 0) return grid.children.length
-
-      const cards = document.querySelectorAll('[data-card-type], [class*="CardWrapper"], [class*="card-wrapper"]')
-      if (cards.length > 0) return cards.length
-
-      // Fallback: count rounded shadow elements (card-like divs)
-      return document.querySelectorAll('[class*="rounded"][class*="shadow"], [class*="Card"]').length
-    })
+    const cardCount = await page.locator('[data-card-type]').count()
 
     console.log(`  Cards rendered: ${cardCount}`)
     expect(cardCount).toBeGreaterThanOrEqual(EXPECTED_CARD_COUNT)

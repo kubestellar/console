@@ -43,7 +43,7 @@ const LEVEL_TICKS = [1, 2, 3, 4, 5, 6] as const
 
 export function ACMMRecommendations() {
   const { scan, repo, targetLevel, setTargetLevel } = useACMM()
-  const { level, recommendations, isLoading, isRefreshing, isDemoData, isFailed, consecutiveFailures, lastRefresh } = scan
+  const { level, recommendations = [], isLoading, isRefreshing, isDemoData, isFailed, consecutiveFailures, lastRefresh } = scan
   const { startMission } = useMissions()
   // Use the slider's targetLevel for the role label so the card stays in
   // sync with the projection. Falls back to detected role + role string
@@ -75,7 +75,7 @@ export function ACMMRecommendations() {
     })
   }
 
-  const hasData = scan.data.detectedIds.length > 0
+  const hasData = (scan.data.detectedIds ?? []).length > 0
   const { showSkeleton } = useCardLoadingState({
     isLoading: isLoading && !hasData,
     isRefreshing,

@@ -57,6 +57,7 @@ export function RequestApprovalModal({
           body,
           labels: ['mission-control-approval'],
         }),
+        signal: AbortSignal.timeout(30_000),
       })
 
       if (!res.ok) {
@@ -73,6 +74,7 @@ export function RequestApprovalModal({
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({ title, body }),
+            signal: AbortSignal.timeout(30_000),
           })
           if (!retryRes.ok) {
             showToast(`Failed to create issue: ${msg}`, 'error')
