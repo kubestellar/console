@@ -76,6 +76,9 @@ export const ROUTES = {
   // Persona dashboards
   CLUSTER_ADMIN: '/cluster-admin',
 
+  // Enterprise Compliance Portal
+  ENTERPRISE: '/enterprise',
+
   // Marketplace
   MARKETPLACE: '/marketplace',
 

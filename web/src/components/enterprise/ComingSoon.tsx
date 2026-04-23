@@ -1,0 +1,32 @@
+/**
+ * Coming Soon — Placeholder for enterprise verticals not yet implemented.
+ */
+import { useLocation } from 'react-router-dom'
+import { Construction, ArrowLeft } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+
+export default function ComingSoon() {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const path = location.pathname.split('/').pop() ?? ''
+  const title = path.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+
+  return (
+    <div className="flex items-center justify-center h-full">
+      <div className="text-center max-w-md">
+        <Construction className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+        <h2 className="text-xl font-semibold text-white mb-2">{title}</h2>
+        <p className="text-sm text-gray-400 mb-6">
+          This compliance vertical is under development and will be available in a future release.
+        </p>
+        <button
+          onClick={() => navigate('/enterprise')}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-sm transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Enterprise Portal
+        </button>
+      </div>
+    </div>
+  )
+}

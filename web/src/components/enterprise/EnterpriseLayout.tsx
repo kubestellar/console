@@ -1,0 +1,19 @@
+/**
+ * Enterprise Layout — Wraps enterprise routes with the dedicated sidebar.
+ *
+ * Replaces the main Layout when navigating to /enterprise/*.
+ * Uses React Router's <Outlet> for nested route rendering.
+ */
+import { Outlet } from 'react-router-dom'
+import EnterpriseSidebar from './EnterpriseSidebar'
+
+export default function EnterpriseLayout() {
+  return (
+    <div className="flex h-screen bg-gray-950 text-white overflow-hidden">
+      <EnterpriseSidebar />
+      <main className="flex-1 overflow-y-auto">
+        <Outlet />
+      </main>
+    </div>
+  )
+}

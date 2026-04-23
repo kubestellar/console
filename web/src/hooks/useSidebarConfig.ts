@@ -53,6 +53,7 @@ export const DEFAULT_PRIMARY_NAV: SidebarItem[] = [
   { id: 'clusters', name: 'My Clusters', icon: 'Server', href: '/clusters', type: 'link', order: 1 },
   { id: 'cluster-admin', name: 'Cluster Admin', icon: 'ShieldAlert', href: '/cluster-admin', type: 'link', order: 2 },
   { id: 'compliance', name: 'Sec. Compliance', icon: 'ClipboardCheck', href: '/compliance', type: 'link', order: 2.5 },
+  { id: 'enterprise', name: 'Enterprise', icon: 'Building2', href: '/enterprise', type: 'link', order: 2.7 },
   { id: 'deploy', name: 'Deploy', icon: 'Rocket', href: '/deploy', type: 'link', order: 3 },
   { id: 'insights', name: 'Insights', icon: 'Lightbulb', href: '/insights', type: 'link', order: 3.5 },
   { id: 'ai-ml', name: 'AI/ML', icon: 'Sparkles', href: '/ai-ml', type: 'link', order: 4 },

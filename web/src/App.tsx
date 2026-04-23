@@ -71,6 +71,9 @@ const NISTDashboard = safeLazy(() => import('./components/compliance/NISTDashboa
 const STIGDashboard = safeLazy(() => import('./components/compliance/STIGDashboard'), 'default')
 const AirGapDashboard = safeLazy(() => import('./components/compliance/AirGapDashboard'), 'default')
 const FedRAMPDashboard = safeLazy(() => import('./components/compliance/FedRAMPDashboard'), 'default')
+const EnterpriseLayout = safeLazy(() => import('./components/enterprise/EnterpriseLayout'), 'default')
+const EnterprisePortal = safeLazy(() => import('./components/enterprise/EnterprisePortal'), 'default')
+const ComingSoon = safeLazy(() => import('./components/enterprise/ComingSoon'), 'default')
 const DataCompliance = safeLazy(() => import('./components/data-compliance/DataCompliance'), 'DataCompliance')
 const GPUReservations = safeLazy(() => import('./components/gpu/GPUReservations'), 'GPUReservations')
 const KarmadaOps = safeLazy(() => import('./components/karmada-ops/KarmadaOps'), 'KarmadaOps')
@@ -351,6 +354,7 @@ const ROUTE_TITLES: Record<string, string> = {
   '/stig': 'DISA STIG',
   '/air-gap': 'Air-Gap Readiness',
   '/fedramp': 'FedRAMP Readiness',
+  '/enterprise': 'Enterprise Compliance',
   '/data-compliance': 'Data Compliance',
   '/gitops': 'GitOps',
   '/cost': 'Cost',
@@ -601,6 +605,30 @@ function FullDashboardApp({ liveLocation }: { liveLocation: Location }) {
         <Route path={ROUTES.AUTH_CALLBACK} element={<SuspenseRoute><AuthCallback /></SuspenseRoute>} />
         {/* PWA Mini Dashboard - lightweight widget mode (no auth required for local monitoring) */}
         <Route path={ROUTES.WIDGET} element={<SuspenseRoute><MiniDashboard /></SuspenseRoute>} />
+
+        {/* ── Enterprise Compliance Portal ─────────────────────────────
+            Dedicated sub-portal with its own sidebar, organized by
+            compliance vertical (epic). */}
+        <Route path="/enterprise" element={<ProtectedRoute><SuspenseRoute><EnterpriseLayout /></SuspenseRoute></ProtectedRoute>}>
+          <Route index element={<SuspenseRoute><EnterprisePortal /></SuspenseRoute>} />
+          {/* Epic 1: FinTech & Regulatory */}
+          <Route path="frameworks" element={<SuspenseRoute><ComplianceFrameworks /></SuspenseRoute>} />
+          <Route path="change-control" element={<SuspenseRoute><ChangeControlAudit /></SuspenseRoute>} />
+          <Route path="sod" element={<SuspenseRoute><SegregationOfDuties /></SuspenseRoute>} />
+          <Route path="data-residency" element={<SuspenseRoute><DataResidency /></SuspenseRoute>} />
+          <Route path="reports" element={<SuspenseRoute><ComplianceReports /></SuspenseRoute>} />
+          {/* Epic 2: Healthcare & Life Sciences */}
+          <Route path="hipaa" element={<SuspenseRoute><HIPAADashboard /></SuspenseRoute>} />
+          <Route path="gxp" element={<SuspenseRoute><GxPDashboard /></SuspenseRoute>} />
+          <Route path="baa" element={<SuspenseRoute><BAADashboard /></SuspenseRoute>} />
+          {/* Epic 3: Government & Defense */}
+          <Route path="nist" element={<SuspenseRoute><NISTDashboard /></SuspenseRoute>} />
+          <Route path="stig" element={<SuspenseRoute><STIGDashboard /></SuspenseRoute>} />
+          <Route path="air-gap" element={<SuspenseRoute><AirGapDashboard /></SuspenseRoute>} />
+          <Route path="fedramp" element={<SuspenseRoute><FedRAMPDashboard /></SuspenseRoute>} />
+          {/* Epics 4-7: Coming Soon */}
+          <Route path="*" element={<SuspenseRoute><ComingSoon /></SuspenseRoute>} />
+        </Route>
 
         {/* Layout route — all dashboard routes share a single Layout instance.
             KeepAliveOutlet preserves component state across navigations so that
