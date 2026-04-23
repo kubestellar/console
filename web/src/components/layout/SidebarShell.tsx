@@ -8,7 +8,7 @@
  *   - Enterprise compliance sidebar (EnterpriseSidebar.tsx)
  *   - Future white-label / partner portals
  */
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, Fragment } from 'react'
 import { useTranslation } from 'react-i18next'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import {
@@ -122,6 +122,9 @@ export interface SidebarShellProps {
 
 const SIDEBAR_MIN_WIDTH_PX = 180
 const SIDEBAR_MAX_WIDTH_PX = 480
+
+/** Index of the primary (dashboard list) section — "Add more..." button renders after it */
+const PRIMARY_SECTION_INDEX = 0
 
 /** Map sidebar item href to dashboard config ID for card count display */
 const HREF_TO_DASHBOARD_ID: Record<string, string> = {
@@ -588,19 +591,25 @@ export function SidebarShell({
           </div>
         )}
 
-        {/* Navigation sections */}
-        {navSections.map((section, index) => renderSection(section, index))}
+        {/* Navigation sections with "Add more" button after the primary section */}
+        {navSections.map((section, index) => {
+          return (
+            <Fragment key={section.id}>
+              {renderSection(section, index)}
 
-        {/* "Add more" button */}
-        {features.addMore && !isCollapsed && (
-          <button
-            onClick={() => onAddMore?.() ?? dashboardContext?.openAddCardModal('dashboards')}
-            className="w-full flex items-center gap-3 px-3 py-1.5 mt-1 text-xs text-muted-foreground/60 hover:text-muted-foreground hover:bg-secondary/30 rounded-lg transition-colors"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>{t('sidebar.addMore', 'Add more...')}</span>
-          </button>
-        )}
+              {/* "Add more" button — placed after the primary dashboard list */}
+              {index === PRIMARY_SECTION_INDEX && features.addMore && !isCollapsed && (
+                <button
+                  onClick={() => onAddMore?.() ?? dashboardContext?.openAddCardModal('dashboards')}
+                  className="w-full flex items-center gap-3 px-3 py-1.5 mt-1 text-xs text-muted-foreground/60 hover:text-muted-foreground hover:bg-secondary/30 rounded-lg transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>{t('sidebar.addMore', 'Add more...')}</span>
+                </button>
+              )}
+            </Fragment>
+          )
+        })}
 
         {/* Snoozed card swaps */}
         {features.snoozedCards && !isCollapsed && (
