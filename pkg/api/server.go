@@ -31,6 +31,7 @@ import (
 	"github.com/kubestellar/console/pkg/api/audit"
 	"github.com/kubestellar/console/pkg/api/handlers"
 	"github.com/kubestellar/console/pkg/api/middleware"
+	"github.com/kubestellar/console/pkg/compliance/residency"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/kagent"
 	"github.com/kubestellar/console/pkg/kagenti_provider"
@@ -815,6 +816,10 @@ func (s *Server) setupRoutes() {
 	// POST endpoints (evaluate, report) are registered on the auth-protected api group below.
 	complianceFrameworks := handlers.NewComplianceFrameworksHandler(nil)
 	complianceFrameworks.RegisterPublicRoutes(s.app.Group("/api/compliance/frameworks", publicLimiter))
+	// Data residency enforcement (public read — demo mode).
+	residencyEngine := residency.NewEngine()
+	dataResidency := handlers.NewDataResidencyHandler(residencyEngine)
+	dataResidency.RegisterPublicRoutes(s.app.Group("/api/compliance/residency", publicLimiter))
 
 	// API routes (protected) — with rate limiting
 	//
