@@ -651,10 +651,11 @@ describe('mission reconnection on WebSocket open', () => {
     act(() => { result.current.connectToAgent() })
     await act(async () => { MockWebSocket.lastInstance?.simulateOpen() })
 
-    // Wait for the MISSION_RECONNECT_DELAY_MS (500ms) timer to fire
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 600))
-    })
+    // Wait for the MISSION_RECONNECT_DELAY_MS (500ms) timer to fire.
+    // Fake timers are active (set in beforeEach), so we must advance the
+    // clock rather than relying on a real setTimeout that would never fire.
+    act(() => { vi.advanceTimersByTime(600) })
+    await act(async () => { await Promise.resolve() })
 
     // Check all WS send calls to see what types were sent
     const allCalls = MockWebSocket.lastInstance?.send.mock.calls ?? []
