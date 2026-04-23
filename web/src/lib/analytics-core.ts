@@ -833,6 +833,11 @@ export function startGlobalErrorTracking() {
       )) return
       // Stale chunks can surface as runtime errors (Safari: "Importing a module script failed")
       if (tryChunkReloadRecovery(event.message)) return
+      // Skip benign ResizeObserver loop errors — these fire when the browser
+      // can't deliver all ResizeObserver notifications in a single animation
+      // frame. Common with dynamically resized dashboard cards/grids and
+      // completely harmless (the browser retries on the next frame).
+      if (event.message.includes('ResizeObserver loop')) return
       emitError('runtime', event.message)
     } finally {
       isEmitting = false
