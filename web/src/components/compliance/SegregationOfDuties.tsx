@@ -211,7 +211,7 @@ export const SegregationOfDutiesContent = memo(function SegregationOfDutiesConte
       )}
     </div>
   )
-}
+})
 
 function SummaryCard({ label, value, icon, accent }: { label: string; value: number; icon: React.ReactNode; accent?: string }) {
   return (
@@ -220,7 +220,7 @@ function SummaryCard({ label, value, icon, accent }: { label: string; value: num
       <p className={`text-2xl font-bold ${accent === 'red' ? 'text-red-400' : 'text-zinc-100'}`}>{value}</p>
     </div>
   )
-})
+}
 
 export default function SegregationOfDuties() {
   return (<>

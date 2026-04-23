@@ -278,7 +278,7 @@ export const DataResidencyContent = memo(function DataResidencyContent() {
       </div>
     </div>
   )
-}
+})
 
 /* ─── Summary Card ─── */
 
@@ -292,7 +292,7 @@ function SummaryCard({ label, value, icon, accent }: { label: string; value: num
       <p className={`text-2xl font-bold ${accent === 'red' ? 'text-red-400' : 'text-zinc-100'}`}>{value}</p>
     </div>
   )
-})
+}
 
 export default function DataResidency() {
   return (<>
