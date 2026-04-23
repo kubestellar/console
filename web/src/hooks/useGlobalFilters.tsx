@@ -264,12 +264,18 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
     return []
   })
 
+  // Sentinel value used by deselectAll* to represent "no items selected".
+  // Must be preserved during reconciliation so that filterBy* functions
+  // can recognise the "select none" state and return an empty result set.
+  const NONE_SENTINEL = '__none__'
+
   // Reconcile selected clusters against available clusters — drop any that no longer exist.
   // This prevents filters from getting stuck on clusters that have been removed from kubeconfig.
-  // Also reconciles the __none__ sentinel (from deselectAllClusters) back to all-selected
-  // mode, since __none__ is not a real cluster name and will be filtered out.
+  // Skip reconciliation when the __none__ sentinel is present (user explicitly deselected all).
   useEffect(() => {
     if (selectedClusters.length === 0 || availableClusters.length === 0) return
+    // Preserve the "select none" sentinel — it is not a real cluster name
+    if (selectedClusters.includes(NONE_SENTINEL)) return
     const validSelections = selectedClusters.filter(c => availableClusters.includes(c))
     if (validSelections.length !== selectedClusters.length) {
       setSelectedClustersState(validSelections.length === 0 ? [] : validSelections)
@@ -484,9 +490,11 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
     return Array.from(distSet).sort()
   }, [deduplicatedClusters])
 
-  // Reconcile selected distributions against available ones
+  // Reconcile selected distributions against available ones.
+  // Skip when the __none__ sentinel is present (user explicitly deselected all).
   useEffect(() => {
     if (selectedDistributions.length === 0 || availableDistributions.length === 0) return
+    if (selectedDistributions.includes(NONE_SENTINEL)) return
     const validSelections = selectedDistributions.filter(d => availableDistributions.includes(d))
     if (validSelections.length !== selectedDistributions.length) {
       setSelectedDistributionsState(validSelections.length === 0 ? [] : validSelections)
