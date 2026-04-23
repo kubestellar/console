@@ -51,21 +51,21 @@ function ScoreRing({ score }: { score: number }) {
   const c = 2 * Math.PI * r
   const pct = Math.min(Math.max(score, 0), 100)
   const offset = c - (pct / 100) * c
-  const color = pct >= 80 ? '#34d399' : pct >= 50 ? '#facc15' : '#f87171'
+  const ringColor = pct >= 80 ? 'text-emerald-400' : pct >= 50 ? 'text-yellow-400' : 'text-red-400'
 
   return (
     <div className="relative inline-flex items-center justify-center w-28 h-28">
       <svg className="transform -rotate-90" width={80} height={80}>
-        <circle cx={40} cy={40} r={r} stroke="#27272a" strokeWidth={6} fill="none" />
+        <circle cx={40} cy={40} r={r} className="stroke-zinc-800" strokeWidth={6} fill="none" />
         <circle
           cx={40} cy={40} r={r}
-          stroke={color}
+          stroke="currentColor"
           strokeWidth={6}
           fill="none"
           strokeDasharray={c}
           strokeDashoffset={offset}
           strokeLinecap="round"
-          className="transition-all duration-700"
+          className={`transition-all duration-700 ${ringColor}`}
         />
       </svg>
       <span className="absolute text-lg font-bold text-white">{pct.toFixed(0)}%</span>

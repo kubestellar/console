@@ -11,6 +11,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubestellar/console/pkg/compliance/frameworks"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func setupComplianceFrameworksTest() (*fiber.App, *ComplianceFrameworksHandler) {
@@ -23,7 +24,8 @@ func setupComplianceFrameworksTest() (*fiber.App, *ComplianceFrameworksHandler) 
 func TestListFrameworks(t *testing.T) {
 	app, _ := setupComplianceFrameworksTest()
 
-	req, _ := http.NewRequest("GET", "/api/compliance/frameworks/", nil)
+	req, err := http.NewRequest("GET", "/api/compliance/frameworks/", nil)
+	require.NoError(t, err)
 	resp, err := app.Test(req, 5000)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -39,7 +41,8 @@ func TestListFrameworks(t *testing.T) {
 func TestGetFramework(t *testing.T) {
 	app, _ := setupComplianceFrameworksTest()
 
-	req, _ := http.NewRequest("GET", "/api/compliance/frameworks/pci-dss-4.0", nil)
+	req, err := http.NewRequest("GET", "/api/compliance/frameworks/pci-dss-4.0", nil)
+	require.NoError(t, err)
 	resp, err := app.Test(req, 5000)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -54,7 +57,8 @@ func TestGetFramework(t *testing.T) {
 func TestGetFrameworkNotFound(t *testing.T) {
 	app, _ := setupComplianceFrameworksTest()
 
-	req, _ := http.NewRequest("GET", "/api/compliance/frameworks/nonexistent", nil)
+	req, err := http.NewRequest("GET", "/api/compliance/frameworks/nonexistent", nil)
+	require.NoError(t, err)
 	resp, err := app.Test(req, 5000)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
@@ -64,8 +68,9 @@ func TestEvaluateFrameworkDemo(t *testing.T) {
 	app, _ := setupComplianceFrameworksTest()
 
 	body := `{"cluster":"demo-cluster"}`
-	req, _ := http.NewRequest("POST", "/api/compliance/frameworks/pci-dss-4.0/evaluate",
+	req, err := http.NewRequest("POST", "/api/compliance/frameworks/pci-dss-4.0/evaluate",
 		strings.NewReader(body))
+	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req, 5000)
 	assert.NoError(t, err)
@@ -82,8 +87,9 @@ func TestEvaluateFrameworkNotFound(t *testing.T) {
 	app, _ := setupComplianceFrameworksTest()
 
 	body := `{"cluster":"c"}`
-	req, _ := http.NewRequest("POST", "/api/compliance/frameworks/nonexistent/evaluate",
+	req, err := http.NewRequest("POST", "/api/compliance/frameworks/nonexistent/evaluate",
 		strings.NewReader(body))
+	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req, 5000)
 	assert.NoError(t, err)
@@ -94,8 +100,9 @@ func TestEvaluateFrameworkMissingCluster(t *testing.T) {
 	app, _ := setupComplianceFrameworksTest()
 
 	body := `{}`
-	req, _ := http.NewRequest("POST", "/api/compliance/frameworks/pci-dss-4.0/evaluate",
+	req, err := http.NewRequest("POST", "/api/compliance/frameworks/pci-dss-4.0/evaluate",
 		strings.NewReader(body))
+	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req, 5000)
 	assert.NoError(t, err)
@@ -105,8 +112,9 @@ func TestEvaluateFrameworkMissingCluster(t *testing.T) {
 func TestEvaluateFrameworkBadBody(t *testing.T) {
 	app, _ := setupComplianceFrameworksTest()
 
-	req, _ := http.NewRequest("POST", "/api/compliance/frameworks/pci-dss-4.0/evaluate",
+	req, err := http.NewRequest("POST", "/api/compliance/frameworks/pci-dss-4.0/evaluate",
 		strings.NewReader("not json"))
+	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req, 5000)
 	assert.NoError(t, err)
@@ -162,8 +170,9 @@ func TestEvaluateLiveCluster(t *testing.T) {
 	app := setupComplianceFrameworksWithEvaluator()
 
 	body := `{"cluster":"live-cluster"}`
-	req, _ := http.NewRequest("POST", "/api/compliance/frameworks/pci-dss-4.0/evaluate",
+	req, err := http.NewRequest("POST", "/api/compliance/frameworks/pci-dss-4.0/evaluate",
 		strings.NewReader(body))
+	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req, 10000)
 	assert.NoError(t, err)
@@ -220,8 +229,9 @@ func TestEvaluateFrameworkLiveError(t *testing.T) {
 	handler.RegisterRoutes(app.Group("/api/compliance/frameworks"))
 
 	body := `{"cluster":"bad-cluster"}`
-	req, _ := http.NewRequest("POST", "/api/compliance/frameworks/pci-dss-4.0/evaluate",
+	req, err := http.NewRequest("POST", "/api/compliance/frameworks/pci-dss-4.0/evaluate",
 		strings.NewReader(body))
+	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req, 10000)
 	assert.NoError(t, err)
