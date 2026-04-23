@@ -210,7 +210,7 @@ function ResourceUsageInternal() {
         role="button"
         tabIndex={0}
         className="flex-1 flex items-center justify-around cursor-pointer hover:opacity-80 transition-opacity flex-wrap gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
-        aria-label="View resource usage details"
+        aria-label={t('cards:resourceUsage.viewDetailsAria')}
         onClick={handleDrillDown}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {

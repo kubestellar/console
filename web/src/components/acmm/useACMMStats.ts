@@ -26,10 +26,8 @@ export function useACMMStats() {
   const { scan } = useACMM()
   const { level, data } = scan
   const detectedIds = data.detectedIds
-  const detectedSet = detectedIds instanceof Set ? detectedIds : new Set(detectedIds as string[] || [])
 
   const totalCriteria = ALL_CRITERIA.length
-  const detectedCount = detectedSet.size
 
   const nextLevel = level.level < MAX_LEVEL ? level.level + 1 : null
   const nextRequired = nextLevel ? level.requiredByLevel[nextLevel] ?? 0 : 0
@@ -37,6 +35,12 @@ export function useACMMStats() {
   const nextRemaining = nextRequired - nextDetected
 
   const getStatValue = useCallback((blockId: string): StatBlockValue => {
+    // Derive detectedSet inside the callback so it is always consistent with
+    // the detectedIds captured in this closure (avoids stale-closure bugs
+    // where detectedSet derived outside would reference an earlier render).
+    const detectedSet = detectedIds instanceof Set ? detectedIds : new Set(detectedIds as string[] || [])
+    const detectedCount = detectedSet.size
+
     switch (blockId) {
       case 'acmm_level':
         return {
@@ -78,7 +82,7 @@ export function useACMMStats() {
       default:
         return { value: '-' }
     }
-  }, [level, detectedCount, totalCriteria, nextLevel, nextDetected, nextRemaining, nextRequired, detectedIds])
+  }, [level, totalCriteria, nextLevel, nextDetected, nextRemaining, nextRequired, detectedIds])
 
   return { getStatValue }
 }

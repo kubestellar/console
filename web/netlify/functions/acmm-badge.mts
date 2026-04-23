@@ -74,13 +74,26 @@ const LEVEL_NAMES: Record<number, string> = {
 
 const ALLOWED_ORIGIN_RE = /^https?:\/\/(.*\.kubestellar\.io|localhost(:\d+)?)$/;
 
-function corsHeaders(origin: string | null, cacheSeconds = BADGE_CACHE_SECONDS): Record<string, string> {
+function corsHeaders(
+  origin: string | null,
+  cacheSeconds = BADGE_CACHE_SECONDS,
+  withSWR = true,
+): Record<string, string> {
+  // stale-while-revalidate must only appear on success responses; attaching
+  // it to error responses causes intermediary caches to serve stale error
+  // badges long after the upstream recovers.
+  const cacheControl = withSWR
+    ? `public, max-age=${cacheSeconds}, stale-while-revalidate=86400`
+    : `public, max-age=${cacheSeconds}`;
   const headers: Record<string, string> = {
-    "Cache-Control": `public, max-age=${cacheSeconds}, stale-while-revalidate=86400`,
+    "Cache-Control": cacheControl,
     "Access-Control-Allow-Origin": "*",
   };
   if (origin && ALLOWED_ORIGIN_RE.test(origin)) {
     headers["Access-Control-Allow-Origin"] = origin;
+    // Vary: Origin is required so shared caches (CDNs, proxies) key responses
+    // by origin and do not serve an origin-restricted response to other clients.
+    headers["Vary"] = "Origin";
   }
   return headers;
 }
@@ -310,7 +323,7 @@ export default async (req: Request) => {
   const force = url.searchParams.get("force") === "true";
 
   if (!REPO_RE.test(repo)) {
-    const headers = corsHeaders(origin, BADGE_ERROR_CACHE_SECONDS);
+    const headers = corsHeaders(origin, BADGE_ERROR_CACHE_SECONDS, false);
     return new Response(
       JSON.stringify({
         schemaVersion: 1,
@@ -366,7 +379,7 @@ export default async (req: Request) => {
   }
 
   // ── Layer 5: last-resort "unavailable" badge ──────────────────────────
-  const headers = corsHeaders(origin, BADGE_ERROR_CACHE_SECONDS);
+  const headers = corsHeaders(origin, BADGE_ERROR_CACHE_SECONDS, false);
   return new Response(
     JSON.stringify({
       schemaVersion: 1,

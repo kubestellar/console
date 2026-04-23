@@ -128,16 +128,16 @@ export function IframeEmbed({ config }: { config?: IframeEmbedConfig }) {
     setLastRefresh(new Date())
   }, [url])
 
-  // Auto-refresh
+  // Auto-refresh (disabled in demo mode because the iframe itself is disabled)
   useEffect(() => {
-    if (refreshInterval <= 0 || !url) return
+    if (isDemoMode || refreshInterval <= 0 || !url) return
 
     const interval = setInterval(() => {
       handleRefresh()
     }, refreshInterval * 1000)
 
     return () => clearInterval(interval)
-  }, [refreshInterval, url, handleRefresh])
+  }, [isDemoMode, refreshInterval, url, handleRefresh])
 
   const handleLoad = () => {
     setIsLoading(false)
@@ -371,7 +371,7 @@ export function IframeEmbed({ config }: { config?: IframeEmbedConfig }) {
               >
                 <Globe className="w-10 h-10 opacity-40" />
                 <span className="text-sm font-medium">{title}</span>
-                <span className="text-xs opacity-60">Demo mode — iframe disabled</span>
+                <span className="text-xs opacity-60">{t('cards:iframeEmbed.demoModePlaceholder')}</span>
               </div>
             )}
 

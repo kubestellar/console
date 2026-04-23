@@ -30,8 +30,8 @@ export default function NotFound() {
 
   const featureRequestUrl =
     `https://github.com/kubestellar/console/issues/new?` +
-    `template=feature_request.md&title=${encodeURIComponent(`Feature request: ${path}`)}&` +
-    `labels=enhancement&body=${encodeURIComponent(
+    `template=feature_request.yaml&title=${encodeURIComponent(`Feature request: ${path}`)}&` +
+    `labels=kind%2Ffeature&body=${encodeURIComponent(
       `## Feature Request\n\nI visited \`${path}\` and expected to find a page here.\n\n` +
       `### What I was looking for\n\n_Describe the feature or page you expected to see._\n\n` +
       `### Why it would be useful\n\n_How would this help your workflow?_`
@@ -42,8 +42,8 @@ export default function NotFound() {
       <div className="max-w-lg w-full text-center space-y-8">
         {/* Animated compass icon */}
         <div className="relative inline-flex items-center justify-center">
-          <div className="absolute inset-0 w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-purple-500/20 to-blue-500/20 blur-xl animate-pulse" />
-          <Compass className="w-20 h-20 text-purple-400 relative animate-spin" style={{ animationDuration: '8s' }} />
+          <div className="absolute inset-0 w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-purple-500/20 to-blue-500/20 blur-xl motion-safe:animate-pulse" />
+          <Compass className="w-20 h-20 text-purple-400 relative motion-safe:animate-spin" style={{ animationDuration: '8s' }} />
         </div>
 
         {/* Main message */}

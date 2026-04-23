@@ -429,6 +429,11 @@ func (h *BenchmarkHandlers) throttle(ctx context.Context) error {
 	case <-time.After(delay):
 		return nil
 	case <-ctx.Done():
+		// Restore lastReq so the cancelled reservation does not block future
+		// requests: the slot was never used, so we clear it to zero time.
+		h.reqMu.Lock()
+		h.lastReq = time.Time{}
+		h.reqMu.Unlock()
 		return ctx.Err()
 	}
 }

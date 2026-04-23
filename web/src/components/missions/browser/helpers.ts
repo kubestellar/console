@@ -10,7 +10,15 @@ import type { TreeNode } from './types'
  *   3. Slugified title (lowercase, non-alphanum → hyphens, dedupe, trim)
  */
 export function getMissionSlug(mission: MissionExport): string {
-  if (mission.name) return mission.name
+  if (mission.name) {
+    // Normalize the name field the same way as the title-based fallback to
+    // ensure consistent, URL-safe slugs (lowercase, non-alphanum → hyphens).
+    return mission.name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+  }
   if (mission.missionClass === 'install' && mission.cncfProject) {
     return `install-${mission.cncfProject.toLowerCase()}`
   }

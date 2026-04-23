@@ -63,13 +63,21 @@ func (e *Engine) Summary() SoDSummary {
 		ByConflictType:  make(map[string]int),
 	}
 
+	// Build a rule-ID → conflict-type lookup so we can count violations by
+	// conflict type (not rules, which would always count 1 per rule regardless
+	// of how many actual violations were detected).
+	ruleConflict := make(map[string]ConflictType, len(e.rules))
+	for _, r := range e.rules {
+		ruleConflict[r.ID] = r.Conflict
+	}
+
 	conflicted := map[string]bool{}
 	for _, v := range e.violations {
 		s.BySeverity[string(v.Severity)]++
 		conflicted[v.Principal] = true
-	}
-	for _, r := range e.rules {
-		s.ByConflictType[string(r.Conflict)]++
+		if ct, ok := ruleConflict[v.RuleID]; ok {
+			s.ByConflictType[string(ct)]++
+		}
 	}
 
 	s.ConflictedPrincipals = len(conflicted)

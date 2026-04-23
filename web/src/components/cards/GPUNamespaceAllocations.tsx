@@ -257,7 +257,7 @@ function GPUNamespaceAllocationsInternal({ config: _config }: GPUNamespaceAlloca
               }
             }}
             className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400"
-            aria-label={`View GPU namespace ${ns.namespace}`}
+            aria-label={t('cards:gpuNamespaceAllocations.viewNamespaceAria', { namespace: ns.namespace })}
           >
             <div className="flex items-center gap-2 mb-2 min-w-0">
               <Box className="w-4 h-4 text-purple-400 shrink-0" />

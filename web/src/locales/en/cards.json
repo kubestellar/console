@@ -2408,7 +2408,8 @@
     "podCount_other": "{{count}} pods",
     "gpuCountLabel": "{{count}} GPUs",
     "gpuCountLabel_one": "{{count}} GPU",
-    "gpuCountLabel_other": "{{count}} GPUs"
+    "gpuCountLabel_other": "{{count}} GPUs",
+    "viewNamespaceAria": "View GPU namespace {{namespace}}"
   },
   "gpuOverview": {
     "noReachableClusters": "No reachable clusters",
@@ -2722,7 +2723,8 @@
     "totalRAM": "Total RAM",
     "cores": "cores",
     "totalLabel": "Total {{label}}",
-    "overcommitted": "{{used}}/{{total}} overcommitted"
+    "overcommitted": "{{used}}/{{total}} overcommitted",
+    "viewDetailsAria": "View resource usage details"
   },
   "serviceExports": {
     "loadFailed": "Failed to load service exports",
@@ -3633,7 +3635,8 @@
     "clickSettings": "Click settings to add a URL",
     "autoRefreshEvery": "Auto-refreshes every {{seconds}}s",
     "titlePlaceholder": "My Dashboard",
-    "closeSettingsAria": "Close settings"
+    "closeSettingsAria": "Close settings",
+    "demoModePlaceholder": "Demo mode — iframe disabled"
   },
   "namespaceOverview": {
     "noNamespaces": "No namespaces",

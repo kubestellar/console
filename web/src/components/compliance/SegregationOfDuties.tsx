@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { sodDashboardConfig } from '../../config/dashboards/segregation-of-duties'
 import {
@@ -56,7 +56,7 @@ export function SegregationOfDutiesContent() {
   const [filterSeverity, setFilterSeverity] = useState('all')
   const [activeTab, setActiveTab] = useState<'violations' | 'principals' | 'rules'>('violations')
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
@@ -76,9 +76,9 @@ export function SegregationOfDutiesContent() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  useEffect(() => { fetchData() }, [])
+  useEffect(() => { fetchData() }, [fetchData])
 
   const filteredViolations = useMemo(() =>
     filterSeverity === 'all' ? violations : violations.filter(v => v.severity === filterSeverity),
@@ -104,7 +104,7 @@ export function SegregationOfDutiesContent() {
             <p className="text-sm text-zinc-400">Detect conflicting privilege assignments across RBAC roles</p>
           </div>
         </div>
-        <button onClick={fetchData} className="text-zinc-400 hover:text-zinc-200 p-2 rounded-lg hover:bg-zinc-700/50 transition-colors"><RefreshCw className="w-4 h-4" /></button>
+        <button onClick={fetchData} type="button" aria-label="Refresh segregation of duties data" className="text-zinc-400 hover:text-zinc-200 p-2 rounded-lg hover:bg-zinc-700/50 transition-colors"><RefreshCw className="w-4 h-4" /></button>
       </div>
 
       {summary && (
@@ -140,6 +140,7 @@ export function SegregationOfDutiesContent() {
                 <option value="critical">Critical</option>
                 <option value="high">High</option>
                 <option value="medium">Medium</option>
+                <option value="low">Low</option>
               </Select>
             </div>
           </div>

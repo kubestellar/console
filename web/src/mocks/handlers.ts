@@ -1072,7 +1072,7 @@ export const handlers = [
   http.get('/api/compliance/stig/benchmarks', async () => {
     await delay(150)
     return HttpResponse.json([
-      { id: 'kubernetes-stig-v2r1', title: 'Kubernetes STIG', version: 'V2R1', release: 'Release 1', status: 'current', profile: 'MAC-I Classified', total_rules: 95, findings_count: 12 },
+      { id: 'kubernetes-stig-v2r1', title: 'Kubernetes STIG', version: 'V2R1', release: 'Release 1', status: 'compliant', profile: 'MAC-I Classified', total_rules: 95, findings_count: 12 },
     ])
   }),
 

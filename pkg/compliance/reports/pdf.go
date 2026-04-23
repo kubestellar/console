@@ -168,7 +168,7 @@ func paginateLines(lines []reportLine, usableHeight float64, defaultLineHeight f
 	return pages
 }
 
-func buildPageStream(lines []reportLine, fontObj, fontBoldObj int) string {
+func buildPageStream(lines []reportLine, _, _ int) string {
 	var sb strings.Builder
 	sb.WriteString("BT\n")
 
@@ -188,16 +188,20 @@ func buildPageStream(lines []reportLine, fontObj, fontBoldObj int) string {
 		}
 
 		x := float64(pdfMargin) + line.indent
-		font := fontObj
+		// Font resource names must match /F1 (regular) and /F2 (bold) as
+		// declared in the page's /Resources /Font dictionary. Using the
+		// object-number directly (e.g. /F3) would leave the font unresolved
+		// and produce blank text in compliant PDF readers.
+		fontName := "F1"
 		if line.bold {
-			font = fontBoldObj
+			fontName = "F2"
 		}
 		size := line.size
 		if size == 0 {
 			size = pdfFontSize
 		}
 
-		sb.WriteString(fmt.Sprintf("/F%d %g Tf\n", font, size))
+		sb.WriteString(fmt.Sprintf("/%s %g Tf\n", fontName, size))
 		sb.WriteString(fmt.Sprintf("%g %g Td\n", x, y))
 		sb.WriteString(fmt.Sprintf("(%s) Tj\n", escapePDF(line.text)))
 		// Reset position for next absolute placement

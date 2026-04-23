@@ -118,7 +118,7 @@ export function ChangeControlAuditContent() {
             <p className="text-sm text-zinc-400">SOX/PCI-compliant change tracking with approval workflows</p>
           </div>
         </div>
-        <button onClick={fetchData} className="text-zinc-400 hover:text-zinc-200 p-2 rounded-lg hover:bg-zinc-700/50 transition-colors"><RefreshCw className="w-4 h-4" /></button>
+        <button onClick={fetchData} type="button" aria-label="Refresh change control data" className="text-zinc-400 hover:text-zinc-200 p-2 rounded-lg hover:bg-zinc-700/50 transition-colors"><RefreshCw className="w-4 h-4" /></button>
       </div>
 
       {summary && (
@@ -132,7 +132,7 @@ export function ChangeControlAuditContent() {
             <div className="flex items-baseline gap-2">
               <p className={`text-2xl font-bold ${riskColor(summary.risk_score)}`}>{summary.risk_score}</p>
               <span className={`text-xs px-1.5 py-0.5 rounded ${riskBg(summary.risk_score)} ${riskColor(summary.risk_score)}`}>
-                {summary.risk_score >= 70 ? 'HIGH' : summary.risk_score >= 40 ? 'MEDIUM' : 'LOW'}/100
+                {summary.risk_score >= 70 ? 'HIGH' : summary.risk_score >= 40 ? 'MEDIUM' : summary.risk_score >= 20 ? 'LOW-MEDIUM' : 'LOW'}/100
               </span>
             </div>
           </div>
