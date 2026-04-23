@@ -1412,6 +1412,149 @@ export const handlers = [
   }),
 
   // Card templates
+  // ── Epic 6: Supply Chain Security ─────────────────────────────────────
+
+  // SBOM endpoints
+  http.get('/api/v1/compliance/sbom/packages', async () => {
+    await delay(100)
+    return HttpResponse.json([
+      { name: '@kubernetes/client-node', version: '0.20.0', license: 'Apache-2.0', ecosystem: 'npm', vulnerabilities: 0, risk: 'none' },
+      { name: 'express', version: '4.18.2', license: 'MIT', ecosystem: 'npm', vulnerabilities: 1, risk: 'medium' },
+      { name: 'lodash', version: '4.17.21', license: 'MIT', ecosystem: 'npm', vulnerabilities: 0, risk: 'none' },
+      { name: 'axios', version: '1.6.2', license: 'MIT', ecosystem: 'npm', vulnerabilities: 2, risk: 'high' },
+      { name: 'golang.org/x/net', version: '0.19.0', license: 'BSD-3-Clause', ecosystem: 'go', vulnerabilities: 1, risk: 'critical' },
+      { name: 'github.com/gin-gonic/gin', version: '1.9.1', license: 'MIT', ecosystem: 'go', vulnerabilities: 0, risk: 'none' },
+      { name: 'flask', version: '3.0.0', license: 'BSD-3-Clause', ecosystem: 'pip', vulnerabilities: 0, risk: 'none' },
+      { name: 'requests', version: '2.31.0', license: 'Apache-2.0', ecosystem: 'pip', vulnerabilities: 1, risk: 'low' },
+      { name: 'containerd', version: '1.7.11', license: 'Apache-2.0', ecosystem: 'go', vulnerabilities: 3, risk: 'critical' },
+      { name: 'openssl', version: '3.1.4', license: 'Apache-2.0', ecosystem: 'system', vulnerabilities: 1, risk: 'high' },
+    ])
+  }),
+
+  http.get('/api/v1/compliance/sbom/vulnerabilities', async () => {
+    await delay(100)
+    return HttpResponse.json([
+      { id: 'vuln-1', package_name: 'golang.org/x/net', severity: 'critical', cve: 'CVE-2023-44487', fixed_version: '0.20.0', status: 'open' },
+      { id: 'vuln-2', package_name: 'containerd', severity: 'critical', cve: 'CVE-2023-47108', fixed_version: '1.7.12', status: 'open' },
+      { id: 'vuln-3', package_name: 'containerd', severity: 'high', cve: 'CVE-2023-45142', fixed_version: '1.7.12', status: 'patched' },
+      { id: 'vuln-4', package_name: 'axios', severity: 'high', cve: 'CVE-2023-45857', fixed_version: '1.6.3', status: 'open' },
+      { id: 'vuln-5', package_name: 'axios', severity: 'medium', cve: 'CVE-2023-26159', fixed_version: '1.6.4', status: 'ignored' },
+      { id: 'vuln-6', package_name: 'express', severity: 'medium', cve: 'CVE-2024-29041', fixed_version: '4.19.0', status: 'open' },
+      { id: 'vuln-7', package_name: 'openssl', severity: 'high', cve: 'CVE-2023-5678', fixed_version: '3.1.5', status: 'patched' },
+      { id: 'vuln-8', package_name: 'containerd', severity: 'medium', cve: 'CVE-2023-47106', fixed_version: '1.7.12', status: 'open' },
+      { id: 'vuln-9', package_name: 'requests', severity: 'low', cve: 'CVE-2023-32681', fixed_version: '2.31.1', status: 'patched' },
+    ])
+  }),
+
+  http.get('/api/v1/compliance/sbom/summary', async () => {
+    await delay(100)
+    return HttpResponse.json({
+      total_packages: 342,
+      total_vulnerabilities: 9,
+      critical_vulns: 2,
+      high_vulns: 3,
+      medium_vulns: 3,
+      low_vulns: 1,
+      license_compliant: 298,
+      license_non_compliant: 12,
+      license_unknown: 32,
+      ecosystems: [
+        { name: 'npm', count: 156 },
+        { name: 'go', count: 98 },
+        { name: 'pip', count: 64 },
+        { name: 'system', count: 24 },
+      ],
+      scan_status: 'completed',
+      last_scan: '2025-01-15T10:30:00Z',
+    })
+  }),
+
+  // Sigstore endpoints
+  http.get('/api/v1/compliance/sigstore/signatures', async () => {
+    await delay(100)
+    return HttpResponse.json([
+      { image: 'ghcr.io/kubestellar/console:v0.28.0', digest: 'sha256:a1b2c3d4', signed: true, signer: 'release-bot@kubestellar.io', issuer: 'https://accounts.google.com', timestamp: '2025-01-15T08:00:00Z', transparency_log: true, status: 'verified' },
+      { image: 'ghcr.io/kubestellar/kc-agent:v0.12.0', digest: 'sha256:e5f6a7b8', signed: true, signer: 'ci@kubestellar.io', issuer: 'https://token.actions.githubusercontent.com', timestamp: '2025-01-14T16:30:00Z', transparency_log: true, status: 'verified' },
+      { image: 'ghcr.io/kubestellar/controller:v0.9.1', digest: 'sha256:c9d0e1f2', signed: true, signer: 'ci@kubestellar.io', issuer: 'https://token.actions.githubusercontent.com', timestamp: '2025-01-13T12:15:00Z', transparency_log: true, status: 'verified' },
+      { image: 'docker.io/library/nginx:1.25', digest: 'sha256:f3a4b5c6', signed: true, signer: 'docker-official@docker.com', issuer: 'https://accounts.google.com', timestamp: '2025-01-12T09:00:00Z', transparency_log: false, status: 'verified' },
+      { image: 'quay.io/custom/worker:dev', digest: 'sha256:d7e8f9a0', signed: false, signer: '', issuer: '', timestamp: '', transparency_log: false, status: 'failed' },
+      { image: 'ghcr.io/kubestellar/proxy:v0.5.0', digest: 'sha256:b1c2d3e4', signed: true, signer: 'release-bot@kubestellar.io', issuer: 'https://accounts.google.com', timestamp: '2025-01-11T14:20:00Z', transparency_log: true, status: 'verified' },
+      { image: 'registry.internal/ml-serve:latest', digest: 'sha256:a5b6c7d8', signed: false, signer: '', issuer: '', timestamp: '', transparency_log: false, status: 'pending' },
+    ])
+  }),
+
+  http.get('/api/v1/compliance/sigstore/verifications', async () => {
+    await delay(100)
+    return HttpResponse.json([
+      { id: 'ver-1', image: 'ghcr.io/kubestellar/console:v0.28.0', policy: 'require-keyless-signing', result: 'pass', checked_at: '2025-01-15T10:00:00Z', cosign_version: '2.2.3', certificate_chain: 3, rekor_entry: true },
+      { id: 'ver-2', image: 'ghcr.io/kubestellar/kc-agent:v0.12.0', policy: 'require-keyless-signing', result: 'pass', checked_at: '2025-01-15T10:00:00Z', cosign_version: '2.2.3', certificate_chain: 3, rekor_entry: true },
+      { id: 'ver-3', image: 'ghcr.io/kubestellar/controller:v0.9.1', policy: 'require-keyless-signing', result: 'pass', checked_at: '2025-01-15T10:00:00Z', cosign_version: '2.2.3', certificate_chain: 3, rekor_entry: true },
+      { id: 'ver-4', image: 'quay.io/custom/worker:dev', policy: 'require-keyless-signing', result: 'fail', checked_at: '2025-01-15T10:00:00Z', cosign_version: '2.2.3', certificate_chain: 0, rekor_entry: false },
+      { id: 'ver-5', image: 'docker.io/library/nginx:1.25', policy: 'allow-docker-official', result: 'pass', checked_at: '2025-01-15T10:00:00Z', cosign_version: '2.2.3', certificate_chain: 2, rekor_entry: false },
+      { id: 'ver-6', image: 'registry.internal/ml-serve:latest', policy: 'require-keyless-signing', result: 'warn', checked_at: '2025-01-15T10:00:00Z', cosign_version: '2.2.3', certificate_chain: 0, rekor_entry: false },
+    ])
+  }),
+
+  http.get('/api/v1/compliance/sigstore/summary', async () => {
+    await delay(100)
+    return HttpResponse.json({
+      total_images: 42,
+      signed_images: 38,
+      unsigned_images: 4,
+      verified_signatures: 36,
+      failed_verifications: 2,
+      pending_verifications: 4,
+      transparency_log_entries: 34,
+      trust_roots: 3,
+      policies_enforced: 5,
+      last_verification: '2025-01-15T10:00:00Z',
+    })
+  }),
+
+  // SLSA endpoints
+  http.get('/api/v1/compliance/slsa/attestations', async () => {
+    await delay(100)
+    return HttpResponse.json([
+      { id: 'att-1', artifact: 'ghcr.io/kubestellar/console:v0.28.0', builder: 'GitHub Actions', slsa_level: 3, verified: true, build_type: 'https://slsa.dev/container-based-build/v0.1', source_repo: 'github.com/kubestellar/console', timestamp: '2025-01-15T08:00:00Z', status: 'pass' },
+      { id: 'att-2', artifact: 'ghcr.io/kubestellar/kc-agent:v0.12.0', builder: 'GitHub Actions', slsa_level: 3, verified: true, build_type: 'https://slsa.dev/container-based-build/v0.1', source_repo: 'github.com/kubestellar/kc-agent', timestamp: '2025-01-14T16:30:00Z', status: 'pass' },
+      { id: 'att-3', artifact: 'ghcr.io/kubestellar/controller:v0.9.1', builder: 'GitHub Actions', slsa_level: 2, verified: true, build_type: 'https://github.com/slsa-framework/slsa-github-generator', source_repo: 'github.com/kubestellar/kubestellar', timestamp: '2025-01-13T12:15:00Z', status: 'pass' },
+      { id: 'att-4', artifact: 'quay.io/custom/worker:dev', builder: 'Local Build', slsa_level: 1, verified: false, build_type: 'docker build', source_repo: 'github.com/internal/worker', timestamp: '2025-01-12T09:00:00Z', status: 'fail' },
+      { id: 'att-5', artifact: 'ghcr.io/kubestellar/proxy:v0.5.0', builder: 'Tekton Chains', slsa_level: 4, verified: true, build_type: 'https://tekton.dev/chains/v1', source_repo: 'github.com/kubestellar/proxy', timestamp: '2025-01-11T14:20:00Z', status: 'pass' },
+      { id: 'att-6', artifact: 'registry.internal/ml-serve:latest', builder: 'Jenkins', slsa_level: 1, verified: false, build_type: 'jenkins-pipeline', source_repo: 'gitlab.internal/ml/serve', timestamp: '2025-01-10T11:00:00Z', status: 'pending' },
+      { id: 'att-7', artifact: 'ghcr.io/kubestellar/docs:v2.1.0', builder: 'GitHub Actions', slsa_level: 3, verified: true, build_type: 'https://slsa.dev/container-based-build/v0.1', source_repo: 'github.com/kubestellar/docs', timestamp: '2025-01-09T08:45:00Z', status: 'pass' },
+    ])
+  }),
+
+  http.get('/api/v1/compliance/slsa/provenance', async () => {
+    await delay(100)
+    return HttpResponse.json([
+      { id: 'prov-1', artifact: 'ghcr.io/kubestellar/console:v0.28.0', builder_id: 'https://github.com/slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml', build_level: 3, source_uri: 'git+https://github.com/kubestellar/console@refs/tags/v0.28.0', source_digest: 'sha1:abc1234', reproducible: true, hermetic: true, parameterless: true, timestamp: '2025-01-15T08:00:00Z' },
+      { id: 'prov-2', artifact: 'ghcr.io/kubestellar/kc-agent:v0.12.0', builder_id: 'https://github.com/slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml', build_level: 3, source_uri: 'git+https://github.com/kubestellar/kc-agent@refs/tags/v0.12.0', source_digest: 'sha1:def5678', reproducible: true, hermetic: true, parameterless: false, timestamp: '2025-01-14T16:30:00Z' },
+      { id: 'prov-3', artifact: 'ghcr.io/kubestellar/controller:v0.9.1', builder_id: 'https://github.com/slsa-framework/slsa-github-generator', build_level: 2, source_uri: 'git+https://github.com/kubestellar/kubestellar@refs/tags/v0.9.1', source_digest: 'sha1:ghi9012', reproducible: false, hermetic: true, parameterless: true, timestamp: '2025-01-13T12:15:00Z' },
+      { id: 'prov-4', artifact: 'quay.io/custom/worker:dev', builder_id: 'local-docker', build_level: 1, source_uri: 'git+https://github.com/internal/worker@refs/heads/main', source_digest: 'sha1:jkl3456', reproducible: false, hermetic: false, parameterless: false, timestamp: '2025-01-12T09:00:00Z' },
+      { id: 'prov-5', artifact: 'ghcr.io/kubestellar/proxy:v0.5.0', builder_id: 'https://tekton.dev/chains/v1', build_level: 4, source_uri: 'git+https://github.com/kubestellar/proxy@refs/tags/v0.5.0', source_digest: 'sha1:mno7890', reproducible: true, hermetic: true, parameterless: true, timestamp: '2025-01-11T14:20:00Z' },
+    ])
+  }),
+
+  http.get('/api/v1/compliance/slsa/summary', async () => {
+    await delay(100)
+    return HttpResponse.json({
+      total_artifacts: 42,
+      attested_artifacts: 38,
+      level_1: 6,
+      level_2: 8,
+      level_3: 22,
+      level_4: 6,
+      verified_attestations: 35,
+      failed_attestations: 2,
+      pending_attestations: 5,
+      source_integrity_pass: 37,
+      source_integrity_fail: 5,
+      reproducible_builds: 30,
+      total_builds: 42,
+    })
+  }),
+
   http.get('/api/cards/templates', async () => {
     await delay(100)
     return HttpResponse.json({

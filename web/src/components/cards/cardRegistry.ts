@@ -128,6 +128,9 @@ const SessionManagementCard = safeLazy(() => _enterpriseComplianceBundle, 'Sessi
 const SIEMIntegrationCard = safeLazy(() => _enterpriseComplianceBundle, 'SIEMIntegrationCard')
 const IncidentResponseCard = safeLazy(() => _enterpriseComplianceBundle, 'IncidentResponseCard')
 const ThreatIntelCard = safeLazy(() => _enterpriseComplianceBundle, 'ThreatIntelCard')
+const SBOMManagerCard = safeLazy(() => _enterpriseComplianceBundle, 'SBOMManagerCard')
+const SigstoreVerifyCard = safeLazy(() => _enterpriseComplianceBundle, 'SigstoreVerifyCard')
+const SLSAProvenanceCard = safeLazy(() => _enterpriseComplianceBundle, 'SLSAProvenanceCard')
 // Enterprise dashboard content cards — each lazily loaded individually
 const ComplianceFrameworksDashboardCard = safeLazy(() => import('../compliance/ComplianceFrameworks'), 'ComplianceFrameworksContent')
 const ChangeControlDashboardCard = safeLazy(() => import('../compliance/ChangeControlAudit'), 'ChangeControlAuditContent')
@@ -494,6 +497,14 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   siem_integration: SIEMIntegrationCard,
   incident_response: IncidentResponseCard,
   threat_intel: ThreatIntelCard,
+  // Supply chain security cards
+  sbom_manager: SBOMManagerCard,
+  sigstore_verify: SigstoreVerifyCard,
+  slsa_provenance: SLSAProvenanceCard,
+  // Dashboard content cards (full-width, lazy loaded individually)
+  sbom_dashboard: lazy(() => import('../compliance/SBOMDashboard').then(m => ({ default: m.SBOMDashboardContent }))),
+  sigstore_dashboard: lazy(() => import('../compliance/SigstoreDashboard').then(m => ({ default: m.SigstoreDashboardContent }))),
+  slsa_dashboard: lazy(() => import('../compliance/SLSADashboard').then(m => ({ default: m.SLSADashboardContent }))),
   // Enterprise dashboard content cards (full dashboards as cards)
   compliance_frameworks_dashboard: ComplianceFrameworksDashboardCard,
   change_control_dashboard: ChangeControlDashboardCard,
@@ -1661,6 +1672,10 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   oidc_dashboard: 12,
   rbac_audit_dashboard: 12,
   session_dashboard: 12,
+  // Supply chain dashboard content cards
+  sbom_dashboard: 12,
+  sigstore_dashboard: 12,
+  slsa_dashboard: 12,
 }
 
 // ---------------------------------------------------------------------------

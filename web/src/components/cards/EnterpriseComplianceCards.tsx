@@ -5,7 +5,7 @@
  * Each card fetches summary data and renders a compact view.
  */
 import { useState, useEffect } from 'react'
-import { Shield, FileText, Activity, Lock, WifiOff, Award, CheckCircle2, XCircle, KeyRound, Clock } from 'lucide-react'
+import { Shield, FileText, Activity, Lock, WifiOff, Award, CheckCircle2, XCircle, KeyRound, Clock, Package } from 'lucide-react'
 import { authFetch } from '../../lib/api'
 import { useNavigate } from 'react-router-dom'
 
@@ -451,6 +451,72 @@ export function SessionManagementCard() {
           <MiniStat label="Users" value={data.unique_users ?? 0} />
           <MiniStat label="Avg Duration" value={`${data.avg_duration_minutes ?? 0}m`} />
           <MiniStat label="Violations" value={data.policy_violations ?? 0} color={data.policy_violations > 0 ? 'text-red-400' : 'text-green-400'} />
+        </div>
+      ) : <p className="text-gray-500 text-sm">Loading…</p>}
+    </CardShell>
+  )
+}
+
+// ── SBOM Manager Card ───────────────────────────────────────────────────
+
+export function SBOMManagerCard() {
+  const nav = useNavigate()
+  const [data, setData] = useState<Record<string, number> | null>(null)
+  useEffect(() => {
+    authFetch('/api/v1/compliance/sbom/summary').then(r => r.ok ? r.json() : null).then(setData).catch(() => {})
+  }, [])
+  return (
+    <CardShell title="SBOM Manager" icon={Package} onClick={() => nav('/enterprise/sbom')}>
+      {data ? (
+        <div className="grid grid-cols-2 gap-2">
+          <MiniStat label="Packages" value={data.total_packages ?? 0} />
+          <MiniStat label="Vulns" value={data.total_vulnerabilities ?? 0} color="text-red-400" />
+          <MiniStat label="Critical" value={data.critical_vulns ?? 0} color="text-red-500" />
+          <MiniStat label="Compliant" value={data.license_compliant ?? 0} color="text-green-400" />
+        </div>
+      ) : <p className="text-gray-500 text-sm">Loading…</p>}
+    </CardShell>
+  )
+}
+
+// ── Sigstore Verify Card ────────────────────────────────────────────────
+
+export function SigstoreVerifyCard() {
+  const nav = useNavigate()
+  const [data, setData] = useState<Record<string, number> | null>(null)
+  useEffect(() => {
+    authFetch('/api/v1/compliance/sigstore/summary').then(r => r.ok ? r.json() : null).then(setData).catch(() => {})
+  }, [])
+  return (
+    <CardShell title="Sigstore Verify" icon={Shield} onClick={() => nav('/enterprise/sigstore')}>
+      {data ? (
+        <div className="grid grid-cols-2 gap-2">
+          <MiniStat label="Images" value={data.total_images ?? 0} />
+          <MiniStat label="Signed" value={data.signed_images ?? 0} color="text-green-400" />
+          <MiniStat label="Verified" value={data.verified_signatures ?? 0} color="text-green-400" />
+          <MiniStat label="Failed" value={data.failed_verifications ?? 0} color="text-red-400" />
+        </div>
+      ) : <p className="text-gray-500 text-sm">Loading…</p>}
+    </CardShell>
+  )
+}
+
+// ── SLSA Provenance Card ────────────────────────────────────────────────
+
+export function SLSAProvenanceCard() {
+  const nav = useNavigate()
+  const [data, setData] = useState<Record<string, number> | null>(null)
+  useEffect(() => {
+    authFetch('/api/v1/compliance/slsa/summary').then(r => r.ok ? r.json() : null).then(setData).catch(() => {})
+  }, [])
+  return (
+    <CardShell title="SLSA Provenance" icon={Lock} onClick={() => nav('/enterprise/slsa')}>
+      {data ? (
+        <div className="grid grid-cols-2 gap-2">
+          <MiniStat label="Artifacts" value={data.total_artifacts ?? 0} />
+          <MiniStat label="Attested" value={data.attested_artifacts ?? 0} color="text-green-400" />
+          <MiniStat label="L3+" value={(data.level_3 ?? 0) + (data.level_4 ?? 0)} color="text-emerald-400" />
+          <MiniStat label="Verified" value={data.verified_attestations ?? 0} color="text-green-400" />
         </div>
       ) : <p className="text-gray-500 text-sm">Loading…</p>}
     </CardShell>

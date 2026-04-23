@@ -7,7 +7,6 @@ export const sbomDashboardConfig: UnifiedDashboardConfig = {
   route: '/enterprise/sbom',
   statsType: 'security',
   cards: [
-    { id: 'sbom-main', cardType: 'sbom_dashboard', title: 'SBOM Overview', position: { w: 12, h: 8 } },
     { id: 'sbom-cluster', cardType: 'cluster_health', title: 'Cluster Health', position: { w: 4, h: 3 } },
     { id: 'sbom-workloads', cardType: 'workload_status', title: 'Workload Status', position: { w: 4, h: 3 } },
     { id: 'sbom-summary', cardType: 'sbom_manager', title: 'SBOM Summary', position: { w: 4, h: 3 } },

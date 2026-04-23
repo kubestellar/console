@@ -77,6 +77,9 @@ const SessionDashboard = safeLazy(() => import('./components/compliance/SessionD
 const SIEMDashboard = safeLazy(() => import('./components/compliance/SIEMDashboard'), 'default')
 const IncidentResponseDashboard = safeLazy(() => import('./components/compliance/IncidentResponseDashboard'), 'default')
 const ThreatIntelDashboard = safeLazy(() => import('./components/compliance/ThreatIntelDashboard'), 'default')
+const SBOMDashboard = safeLazy(() => import('./components/compliance/SBOMDashboard'), 'default')
+const SigstoreDashboard = safeLazy(() => import('./components/compliance/SigstoreDashboard'), 'default')
+const SLSADashboard = safeLazy(() => import('./components/compliance/SLSADashboard'), 'default')
 const EnterpriseLayout = safeLazy(() => import('./components/enterprise/EnterpriseLayout'), 'default')
 const EnterprisePortal = safeLazy(() => import('./components/enterprise/EnterprisePortal'), 'default')
 const ComingSoon = safeLazy(() => import('./components/enterprise/ComingSoon'), 'default')
@@ -367,6 +370,9 @@ const ROUTE_TITLES: Record<string, string> = {
   '/enterprise/siem': 'SIEM Integration',
   '/enterprise/incident-response': 'Incident Response',
   '/enterprise/threat-intel': 'Threat Intelligence',
+  '/enterprise/sbom': 'SBOM Manager',
+  '/enterprise/sigstore': 'Sigstore Verification',
+  '/enterprise/slsa': 'SLSA Provenance',
   '/data-compliance': 'Data Compliance',
   '/gitops': 'GitOps',
   '/cost': 'Cost',
@@ -647,6 +653,10 @@ function FullDashboardApp({ liveLocation }: { liveLocation: Location }) {
           <Route path="siem" element={<SuspenseRoute><SIEMDashboard /></SuspenseRoute>} />
           <Route path="incident-response" element={<SuspenseRoute><IncidentResponseDashboard /></SuspenseRoute>} />
           <Route path="threat-intel" element={<SuspenseRoute><ThreatIntelDashboard /></SuspenseRoute>} />
+          {/* Epic 6: Supply Chain Security */}
+          <Route path="sbom" element={<SuspenseRoute><SBOMDashboard /></SuspenseRoute>} />
+          <Route path="sigstore" element={<SuspenseRoute><SigstoreDashboard /></SuspenseRoute>} />
+          <Route path="slsa" element={<SuspenseRoute><SLSADashboard /></SuspenseRoute>} />
           <Route path="*" element={<SuspenseRoute><ComingSoon /></SuspenseRoute>} />
         </Route>
 

@@ -62,6 +62,9 @@ import { sessionManagementDashboardConfig } from './session-management'
 import { siemDashboardConfig } from './siem'
 import { incidentResponseDashboardConfig } from './incident-response'
 import { threatIntelDashboardConfig } from './threat-intel'
+import { sbomDashboardConfig } from './sbom'
+import { sigstoreDashboardConfig } from './sigstore'
+import { slsaDashboardConfig } from './slsa'
 
 /**
  * Registry of all unified dashboard configurations
@@ -118,6 +121,9 @@ export const DASHBOARD_CONFIGS: DashboardConfigRegistry = {
   siem: siemDashboardConfig,
   'incident-response': incidentResponseDashboardConfig,
   'threat-intel': threatIntelDashboardConfig,
+  sbom: sbomDashboardConfig,
+  sigstore: sigstoreDashboardConfig,
+  slsa: slsaDashboardConfig,
 }
 
 /**
@@ -243,4 +249,7 @@ export {
   siemDashboardConfig,
   incidentResponseDashboardConfig,
   threatIntelDashboardConfig,
+  sbomDashboardConfig,
+  sigstoreDashboardConfig,
+  slsaDashboardConfig,
 }

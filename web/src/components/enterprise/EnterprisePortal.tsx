@@ -6,7 +6,7 @@
  */
 import { useNavigate } from 'react-router-dom'
 import {
-  Landmark, Heart, Shield, KeyRound, Radar, Container, TrendingUp,
+  Landmark, Heart, Shield, KeyRound, Radar, Container, Scale, TrendingUp,
   CheckCircle2, AlertTriangle, Clock, ArrowRight,
 } from 'lucide-react'
 import { ENTERPRISE_NAV_SECTIONS } from './enterpriseNav'
@@ -42,16 +42,25 @@ const VERTICAL_META: Record<string, {
   identity: {
     icon: KeyRound,
     gradient: 'from-cyan-600/20 to-cyan-900/20',
-    status: 'coming-soon',
+    status: 'active',
+    score: 78,
+    controls: { total: 24, passed: 19 },
   },
   secops: {
     icon: Radar,
     gradient: 'from-purple-600/20 to-purple-900/20',
-    status: 'coming-soon',
+    status: 'active',
+    score: 74,
+    controls: { total: 31, passed: 23 },
   },
   'supply-chain': {
     icon: Container,
     gradient: 'from-emerald-600/20 to-emerald-900/20',
+    status: 'coming-soon',
+  },
+  erm: {
+    icon: Scale,
+    gradient: 'from-orange-600/20 to-orange-900/20',
     status: 'coming-soon',
   },
 }
@@ -149,7 +158,7 @@ export default function EnterprisePortal() {
           <div className="text-xs text-gray-400 mb-1">Active Verticals</div>
           <div className="flex items-center gap-2">
             <TrendingUp className="w-4 h-4 text-blue-400" />
-            <span className="text-2xl font-bold text-white">3</span>
+            <span className="text-2xl font-bold text-white">5</span>
             <span className="text-xs text-gray-500">of 7</span>
           </div>
         </div>
@@ -157,8 +166,8 @@ export default function EnterprisePortal() {
           <div className="text-xs text-gray-400 mb-1">Controls Passed</div>
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-green-400" />
-            <span className="text-2xl font-bold text-white">118</span>
-            <span className="text-xs text-gray-500">of 137</span>
+            <span className="text-2xl font-bold text-white">160</span>
+            <span className="text-xs text-gray-500">of 192</span>
           </div>
         </div>
         <div className="rounded-lg border border-gray-800 bg-gray-900 p-4">

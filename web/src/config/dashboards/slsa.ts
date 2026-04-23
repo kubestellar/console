@@ -7,7 +7,6 @@ export const slsaDashboardConfig: UnifiedDashboardConfig = {
   route: '/enterprise/slsa',
   statsType: 'security',
   cards: [
-    { id: 'slsa-main', cardType: 'slsa_dashboard', title: 'SLSA Overview', position: { w: 12, h: 8 } },
     { id: 'slsa-cluster', cardType: 'cluster_health', title: 'Cluster Health', position: { w: 4, h: 3 } },
     { id: 'slsa-workloads', cardType: 'workload_status', title: 'Workload Status', position: { w: 4, h: 3 } },
     { id: 'slsa-summary', cardType: 'slsa_provenance', title: 'SLSA Summary', position: { w: 4, h: 3 } },

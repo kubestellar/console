@@ -87,9 +87,19 @@ export const ENTERPRISE_NAV_SECTIONS: EnterpriseNavSection[] = [
     title: 'Supply Chain',
     icon: 'Container',
     items: [
-      { id: 'sbom', label: 'SBOM Manager', href: '/enterprise/sbom', icon: 'Package', badge: 'Soon' },
-      { id: 'sigstore', label: 'Sigstore Verify', href: '/enterprise/sigstore', icon: 'BadgeCheck', badge: 'Soon' },
-      { id: 'slsa', label: 'SLSA Provenance', href: '/enterprise/slsa', icon: 'GitCommitHorizontal', badge: 'Soon' },
+      { id: 'sbom', label: 'SBOM Manager', href: '/enterprise/sbom', icon: 'Package' },
+      { id: 'sigstore', label: 'Sigstore Verify', href: '/enterprise/sigstore', icon: 'BadgeCheck' },
+      { id: 'slsa', label: 'SLSA Provenance', href: '/enterprise/slsa', icon: 'GitCommitHorizontal' },
+    ],
+  },
+  {
+    id: 'erm',
+    title: 'Enterprise Risk Management',
+    icon: 'Scale',
+    items: [
+      { id: 'risk-matrix', label: 'Risk Matrix', href: '/enterprise/risk-matrix', icon: 'BarChart3', badge: 'Soon' },
+      { id: 'risk-register', label: 'Risk Register', href: '/enterprise/risk-register', icon: 'ClipboardList', badge: 'Soon' },
+      { id: 'risk-appetite', label: 'Risk Appetite', href: '/enterprise/risk-appetite', icon: 'Gauge', badge: 'Soon' },
     ],
   },
 ]
