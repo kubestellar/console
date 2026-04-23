@@ -89,6 +89,12 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	// closed is set when the read loop exits; goroutines check it before writing
 	var closed atomic.Bool
 
+	// connCtx is cancelled when the WebSocket read loop exits (client disconnect).
+	// AI goroutines derive their context from connCtx so that in-progress
+	// StreamChat calls are interrupted immediately on disconnect (#9709).
+	connCtx, connCancel := context.WithCancel(context.Background())
+	defer connCancel()
+
 	// Semaphore to limit concurrent work goroutines per connection (#7277)
 	sem := make(chan struct{}, maxWSGoroutines)
 
@@ -162,7 +168,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 						}
 					}
 				}()
-				s.handleChatMessageStreaming(conn, m, fa, writeMu, &closed)
+				s.handleChatMessageStreaming(connCtx, conn, m, fa, writeMu, &closed)
 			}(msg, forceAgent)
 		} else if msg.Type == protocol.TypeCancelChat {
 			// Cancel an in-progress chat by session ID
@@ -410,7 +416,7 @@ func (s *Server) handleKubectlMessage(msg protocol.Message) protocol.Message {
 // a write failure we log it, mark the connection closed, and early-out of
 // future safeWrite calls. The caller's outer goroutine sees closed.Load()
 // == true and will finish its work without further WebSocket traffic.
-func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.Message, forceAgent string, writeMu *sync.Mutex, closed *atomic.Bool) {
+func (s *Server) handleChatMessageStreaming(connCtx context.Context, conn *websocket.Conn, msg protocol.Message, forceAgent string, writeMu *sync.Mutex, closed *atomic.Bool) {
 	safeWrite := func(ctx context.Context, outMsg protocol.Message) {
 		if closed.Load() || ctx.Err() != nil {
 			return
@@ -473,10 +479,12 @@ func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.M
 	}
 
 	// Create a context with both cancel and timeout so that:
-	//   1. cancel_chat messages can stop this session immediately, and
+	//   1. cancel_chat messages can stop this session immediately,
 	//   2. a hard deadline prevents missions from running forever when the
-	//      AI provider hangs or never responds (#2375).
-	ctx, cancel := context.WithTimeout(context.Background(), missionExecutionTimeout)
+	//      AI provider hangs or never responds (#2375), and
+	//   3. client disconnect (connCtx cancelled) stops in-progress
+	//      StreamChat calls immediately, preventing goroutine/token leaks (#9709).
+	ctx, cancel := context.WithTimeout(connCtx, missionExecutionTimeout)
 	defer cancel()
 
 	// Register cancel function so handleCancelChat can stop this session.

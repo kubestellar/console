@@ -56,7 +56,8 @@ const (
 
 	// feedbackBodyLimit is the global Fiber BodyLimit, elevated to support
 	// base64-encoded screenshot uploads in POST /api/feedback/requests.
-	feedbackBodyLimit = 20 * 1024 * 1024 // 20 MB — base64 screenshot uploads
+	// Reduced from 20 MB to 5 MB to limit memory-based DoS surface (#9710).
+	feedbackBodyLimit = 5 * 1024 * 1024 // 5 MB — base64 screenshot uploads
 )
 
 // Version is the build version, injected via ldflags at build time.
@@ -236,13 +237,11 @@ func NewServer(cfg Config) (*Server, error) {
 		"::1/128",        // IPv6 loopback
 	}
 
-	// BodyLimit is set to feedbackBodyLimit (20 MB) because the feedback endpoint
+	// BodyLimit is set to feedbackBodyLimit (5 MB) because the feedback endpoint
 	// accepts base64-encoded screenshot uploads. Per-route enforcement is done by
 	// bodyGuard middleware (1 MB for most routes) and analyticsBodyGuard (64 KB).
-	// Fiber buffers up to BodyLimit before middleware runs, so a concurrent flood
-	// of max-size bodies can still cause memory pressure (#7039). ReadTimeout (30s)
-	// bounds the buffering window; for stricter enforcement, deploy behind an
-	// ingress controller with its own body-size limit (e.g. nginx client_max_body_size).
+	// Reduced from 20 MB to 5 MB to limit memory-based DoS surface (#9710).
+	// ReadTimeout (30s) further bounds the buffering window.
 	app := fiber.New(fiber.Config{
 		ErrorHandler:            customErrorHandler,
 		ReadBufferSize:          16384,
