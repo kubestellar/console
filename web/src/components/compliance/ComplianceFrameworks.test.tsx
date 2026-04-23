@@ -30,16 +30,22 @@ vi.mock('../../hooks/useComplianceFrameworks', () => ({
   useFrameworkEvaluation: () => mockEvalReturn,
 }))
 
-// Mock the shared cluster cache used by the lightweight useClusterNames hook (#9769)
-vi.mock('../../hooks/mcp/shared', () => ({
-  clusterCache: {
-    clusters: [
-      { name: 'prod-east', reachable: true },
-      { name: 'prod-west', reachable: true },
-    ],
-  },
-  subscribeClusterData: () => () => {},
-}))
+// Mock the shared cluster cache used by the lightweight useClusterNames hook (#9769).
+// Use importOriginal so that re-exported constants (CLUSTER_POLL_INTERVAL_MS, etc.)
+// remain available to transitive imports such as ClusterMetrics → cardRegistry.
+vi.mock('../../hooks/mcp/shared', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../hooks/mcp/shared')>()
+  return {
+    ...actual,
+    clusterCache: {
+      clusters: [
+        { name: 'prod-east', reachable: true },
+        { name: 'prod-west', reachable: true },
+      ],
+    },
+    subscribeClusterData: () => () => {},
+  }
+})
 
 import { ComplianceFrameworksContent as ComplianceFrameworks } from './ComplianceFrameworks'
 
