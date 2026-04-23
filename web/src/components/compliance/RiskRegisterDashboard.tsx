@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, memo } from 'react'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { riskRegisterDashboardConfig } from '../../config/dashboards/risk-register'
 import {
@@ -75,7 +75,7 @@ function statusColor(status: string): string {
 
 // ── Component ─────────────────────────────────────────────────────────
 
-export function RiskRegisterDashboardContent() {
+export const RiskRegisterDashboardContent = memo(function RiskRegisterDashboardContent() {
   const [risks, setRisks] = useState<Risk[]>([])
   const [categories, setCategories] = useState<CategorySummary[]>([])
   const [summary, setSummary] = useState<RegisterSummary | null>(null)
@@ -312,7 +312,7 @@ export function RiskRegisterDashboardContent() {
       )}
     </div>
   )
-}
+})
 
 export default function RiskRegisterDashboard() {
   return (<>

@@ -4,7 +4,7 @@
  * Cosign verification results, transparency log entries,
  * and trust chain visualization.
  */
-import { useState, useEffect } from 'react'
+import { useState, useEffect, memo } from 'react'
 import {
   BadgeCheck, CheckCircle2, Loader2, AlertTriangle,
   XCircle, ShieldCheck, FileKey
@@ -81,7 +81,7 @@ const RESULT_ICON: Record<string, React.ReactNode> = {
 
 // ── Content Component ───────────────────────────────────────────────────
 
-export function SigstoreDashboardContent() {
+export const SigstoreDashboardContent = memo(function SigstoreDashboardContent() {
   const [signatures, setSignatures] = useState<SigstoreSignature[]>([])
   const [verifications, setVerifications] = useState<SigstoreVerification[]>([])
   const [summary, setSummary] = useState<SigstoreSummary | null>(null)
@@ -269,7 +269,7 @@ export function SigstoreDashboardContent() {
       )}
     </div>
   )
-}
+})
 
 // ── Page Component (rendered by App.tsx route) ──────────────────────────
 

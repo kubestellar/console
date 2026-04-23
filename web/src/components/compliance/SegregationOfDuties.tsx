@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, memo } from 'react'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { sodDashboardConfig } from '../../config/dashboards/segregation-of-duties'
 import {
@@ -46,7 +46,7 @@ function scoreColor(score: number): string {
   return 'text-red-400'
 }
 
-export function SegregationOfDutiesContent() {
+export const SegregationOfDutiesContent = memo(function SegregationOfDutiesContent() {
   const [summary, setSummary] = useState<SoDSummary | null>(null)
   const [rules, setRules] = useState<SoDRule[]>([])
   const [principals, setPrincipals] = useState<Principal[]>([])
@@ -211,7 +211,7 @@ export function SegregationOfDutiesContent() {
       )}
     </div>
   )
-}
+})
 
 function SummaryCard({ label, value, icon, accent }: { label: string; value: number; icon: React.ReactNode; accent?: string }) {
   return (

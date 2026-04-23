@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, memo } from 'react'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { hipaaDashboardConfig } from '../../config/dashboards/hipaa'
 import {
@@ -44,7 +44,7 @@ const SAFEGUARD_ICONS: Record<string, typeof Shield> = {
   '164.312(d)': UserCheck, '164.312(e)': Network,
 }
 
-export function HIPAADashboardContent() {
+export const HIPAADashboardContent = memo(function HIPAADashboardContent() {
   const [safeguards, setSafeguards] = useState<HIPAASafeguard[]>([])
   const [phiNamespaces, setPHINamespaces] = useState<PHINamespace[]>([])
   const [dataFlows, setDataFlows] = useState<DataFlow[]>([])
@@ -318,7 +318,7 @@ export function HIPAADashboardContent() {
       )}
     </div>
   )
-}
+})
 
 export default function HIPAADashboard() {
   return (<>

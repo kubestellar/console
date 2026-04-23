@@ -4,7 +4,7 @@
  * Lets users pick a framework and cluster, choose PDF or JSON format,
  * and download a timestamped compliance report.
  */
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, memo } from 'react'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { complianceReportsDashboardConfig } from '../../config/dashboards/compliance-reports'
 import { FileText, Download, Shield, Loader2 } from 'lucide-react'
@@ -15,7 +15,7 @@ import { Select } from '../ui/Select'
 
 type ReportFormat = 'pdf' | 'json'
 
-export function ComplianceReportsContent() {
+export const ComplianceReportsContent = memo(function ComplianceReportsContent() {
   const { frameworks, isLoading: fwLoading } = useComplianceFrameworks()
   const { clusters } = useClusters()
   const clusterNames = useMemo(() => clusters?.map((c: { name: string }) => c.name) ?? [], [clusters])
@@ -228,7 +228,7 @@ export function ComplianceReportsContent() {
       </div>
     </div>
   )
-}
+})
 
 export default function ComplianceReports() {
   return (<>
