@@ -100,30 +100,32 @@ export function formatK8sStorage(value: string): string {
   return formatBytes(bytes)
 }
 
-/**
- * Format a timestamp as relative time (e.g., "2m ago", "5h ago", "3d ago")
- * Returns a plain English string without i18n support
- */
-export function formatRelativeTime(isoString: string): string {
-  const diff = Date.now() - new Date(isoString).getTime()
-  if (isNaN(diff) || diff < 0) return 'Just now'
-  
-  const minute = 60_000
-  const hour = 60 * minute
-  const day = 24 * hour
-  
-  if (diff < minute) return 'Just now'
-  if (diff < hour) {
-    const mins = Math.floor(diff / minute)
-    return `${mins}m ago`
-  }
-  if (diff < day) {
-    const hours = Math.floor(diff / hour)
-    return `${hours}h ago`
-  }
-  const days = Math.floor(diff / day)
-  return `${days}d ago`
+const MS_PER_MINUTE = 60_000
+const MS_PER_HOUR = 60 * MS_PER_MINUTE
+const MS_PER_DAY = 24 * MS_PER_HOUR
+
+function toTimestamp(input: string | Date | number): number {
+  if (typeof input === 'number') return input
+  if (input instanceof Date) return input.getTime()
+  return new Date(input).getTime()
 }
+
+/**
+ * Format a timestamp as relative time (e.g., "just now", "5m ago", "3h ago", "2d ago").
+ * Accepts an ISO string, Date object, or epoch millisecond number.
+ */
+export function formatTimeAgo(input: string | Date | number): string {
+  const diff = Date.now() - toTimestamp(input)
+  if (isNaN(diff) || diff < 0) return 'just now'
+
+  if (diff < MS_PER_MINUTE) return 'just now'
+  if (diff < MS_PER_HOUR) return `${Math.floor(diff / MS_PER_MINUTE)}m ago`
+  if (diff < MS_PER_DAY) return `${Math.floor(diff / MS_PER_HOUR)}h ago`
+  return `${Math.floor(diff / MS_PER_DAY)}d ago`
+}
+
+/** @deprecated Use {@link formatTimeAgo} instead. */
+export const formatRelativeTime = formatTimeAgo
 
 /**
  * Create an i18n-aware relative time formatter

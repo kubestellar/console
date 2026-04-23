@@ -21,6 +21,7 @@ import { BACKEND_DEFAULT_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/cons
 import { POPUP_HIDE_DELAY_MS, TOOLTIP_HIDE_DELAY_MS } from '../../../lib/constants/network'
 import type { NightlyGuideStatus, NightlyRun } from '../../../lib/llmd/nightlyE2EDemoData'
 import { useTranslation } from 'react-i18next'
+import { formatTimeAgo } from '../../../lib/formatters'
 
 const PLATFORM_ORDER = ['OCP', 'GKE', 'CKS'] as const
 
@@ -54,16 +55,6 @@ function formatDuration(minutes: number): string {
   return m > 0 ? `${h}h ${m}m` : `${h}h`
 }
 
-function formatTimeAgo(iso: string): string {
-  const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
-  if (seconds < 60) return 'just now'
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes}m ago`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  return `${days}d ago`
-}
 
 function RunDot({ run, guide, isHighlighted, onMouseEnter, onMouseLeave }: {
   run: NightlyRun

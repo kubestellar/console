@@ -7,6 +7,7 @@
 
 import { useCache, type RefreshCategory, type CachedHookResult } from '../lib/cache'
 import { kubectlProxy } from '../lib/kubectlProxy'
+import { formatTimeAgo } from '../lib/formatters'
 import { KUBECTL_EXTENDED_TIMEOUT_MS } from '../lib/constants/network'
 import type { ProwJob, ProwStatus } from './useProw'
 
@@ -75,21 +76,7 @@ function formatDuration(startTime: string, endTime?: string): string {
   return `${seconds}s`
 }
 
-export function formatTimeAgo(timestamp: string): string {
-  const date = new Date(timestamp)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-
-  const seconds = Math.floor(diffMs / 1000)
-  const minutes = Math.floor(seconds / 60)
-  const hours = Math.floor(minutes / 60)
-  const days = Math.floor(hours / 24)
-
-  if (days > 0) return `${days}d ago`
-  if (hours > 0) return `${hours}h ago`
-  if (minutes > 0) return `${minutes}m ago`
-  return `${seconds}s ago`
-}
+export { formatTimeAgo }
 
 /** @internal Exported for use in `lib/prefetchCardData.ts` specialtyFetchers */
 export async function fetchProwJobs(prowCluster: string, namespace: string): Promise<ProwJob[]> {

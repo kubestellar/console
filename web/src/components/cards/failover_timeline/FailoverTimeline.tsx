@@ -8,6 +8,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import { Skeleton, SkeletonStats, SkeletonList } from '../../ui/Skeleton'
 import { useFailoverTimeline } from './useFailoverTimeline'
+import { formatTimeAgo } from '../../../lib/formatters'
 import type { FailoverEvent, FailoverEventType, FailoverSeverity } from './demoData'
 
 // ---------------------------------------------------------------------------
@@ -22,12 +23,6 @@ const HOURS_PER_DAY = 24
 
 /** Number of milliseconds in one minute */
 const MS_PER_MINUTE = 60_000
-
-/** Number of milliseconds in one hour */
-const MS_PER_HOUR = 3_600_000
-
-/** Number of milliseconds in one day */
-const MS_PER_DAY = 86_400_000
 
 // ---------------------------------------------------------------------------
 // Severity styling
@@ -75,20 +70,6 @@ const EVENT_TYPE_CONFIG: Record<
 // Helpers
 // ---------------------------------------------------------------------------
 
-function formatTimeAgo(isoTimestamp: string): string {
-  const delta = Date.now() - new Date(isoTimestamp).getTime()
-  if (delta < MS_PER_MINUTE) return 'just now'
-  if (delta < MS_PER_HOUR) {
-    const mins = Math.floor(delta / MS_PER_MINUTE)
-    return `${mins}m ago`
-  }
-  if (delta < MS_PER_DAY) {
-    const hours = Math.floor(delta / MS_PER_HOUR)
-    return `${hours}h ago`
-  }
-  const days = Math.floor(delta / MS_PER_DAY)
-  return `${days}d ago`
-}
 
 function formatTimestamp(isoTimestamp: string): string {
   const date = new Date(isoTimestamp)

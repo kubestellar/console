@@ -123,8 +123,8 @@ describe('formatRelativeTime', () => {
     vi.useRealTimers()
   })
 
-  it('returns Just now for recent timestamps', () => {
-    expect(formatRelativeTime('2026-03-31T11:59:45Z')).toBe('Just now')
+  it('returns just now for recent timestamps', () => {
+    expect(formatRelativeTime('2026-03-31T11:59:45Z')).toBe('just now')
   })
 
   it('returns minutes ago', () => {
@@ -139,12 +139,12 @@ describe('formatRelativeTime', () => {
     expect(formatRelativeTime('2026-03-29T12:00:00Z')).toBe('2d ago')
   })
 
-  it('returns Just now for invalid date', () => {
-    expect(formatRelativeTime('not-a-date')).toBe('Just now')
+  it('returns just now for invalid date', () => {
+    expect(formatRelativeTime('not-a-date')).toBe('just now')
   })
 
-  it('returns Just now for future date', () => {
-    expect(formatRelativeTime('2026-04-01T12:00:00Z')).toBe('Just now')
+  it('returns just now for future date', () => {
+    expect(formatRelativeTime('2026-04-01T12:00:00Z')).toBe('just now')
   })
 })
 
