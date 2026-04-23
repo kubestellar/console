@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act, render, screen, waitFor } from '@testing-library/react'
 import React from 'react'
 import { MissionProvider, useMissions } from './useMissions'
@@ -154,6 +154,7 @@ function seedMission(overrides: Partial<{
 }
 
 beforeEach(() => {
+  vi.useFakeTimers()
   localStorage.clear()
   MockWebSocket.lastInstance = null
   vi.clearAllMocks()
@@ -164,28 +165,27 @@ beforeEach(() => {
   globalThis.fetch = vi.fn().mockResolvedValue({ ok: true })
 })
 
+afterEach(() => {
+  vi.useRealTimers()
+})
+
 // ── ensureConnection timeout ─────────────────────────────────────────────────
 
 describe('ensureConnection timeout', () => {
   it('rejects with CONNECTION_TIMEOUT after 5s if WS never opens', async () => {
-    vi.useFakeTimers()
-    try {
-      const { result } = renderHook(() => useMissions(), { wrapper })
+    const { result } = renderHook(() => useMissions(), { wrapper })
 
-      let missionId = ''
-      act(() => { missionId = result.current.startMission(defaultParams) })
-      await act(async () => { await Promise.resolve() })
+    let missionId = ''
+    act(() => { missionId = result.current.startMission(defaultParams) })
+    await act(async () => { await Promise.resolve() })
 
-      // Don't open the WS — let it timeout
-      act(() => { vi.advanceTimersByTime(5_100) })
-      await act(async () => { await Promise.resolve() })
+    // Don't open the WS — let it timeout
+    act(() => { vi.advanceTimersByTime(5_100) })
+    await act(async () => { await Promise.resolve() })
 
-      // Mission should fail due to connection timeout
-      const mission = result.current.missions.find(m => m.id === missionId)
-      expect(mission?.status).toBe('failed')
-    } finally {
-      vi.useRealTimers()
-    }
+    // Mission should fail due to connection timeout
+    const mission = result.current.missions.find(m => m.id === missionId)
+    expect(mission?.status).toBe('failed')
   })
 })
 
@@ -347,6 +347,8 @@ describe('non-quota localStorage save errors', () => {
 
     // Trigger a save by changing missions state
     act(() => { result.current.startMission(defaultParams) })
+    // Flush the 500ms debounced save timer (#9617)
+    act(() => { vi.advanceTimersByTime(600) })
 
     expect(errorSpy).toHaveBeenCalledWith('Failed to save missions to localStorage:', expect.any(Error))
 

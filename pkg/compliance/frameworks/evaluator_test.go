@@ -429,20 +429,21 @@ func TestBoolStatus(t *testing.T) {
 
 func TestDeriveControlStatus(t *testing.T) {
 	cases := []struct {
-		passed, failed, total int
-		want                  CheckStatus
+		passed, failed, errors, total int
+		want                          CheckStatus
 	}{
-		{3, 0, 3, StatusPass},
-		{0, 3, 3, StatusFail},
-		{2, 1, 3, StatusFail},
-		{2, 0, 3, StatusPartial},
-		{0, 0, 0, StatusSkipped},
+		{3, 0, 0, 3, StatusPass},
+		{0, 3, 0, 3, StatusFail},
+		{2, 1, 0, 3, StatusFail},
+		{2, 0, 0, 3, StatusPartial},
+		{0, 0, 0, 0, StatusSkipped},
+		{1, 0, 1, 3, StatusError},
 	}
 	for _, c := range cases {
-		got := deriveControlStatus(c.passed, c.failed, c.total)
+		got := deriveControlStatus(c.passed, c.failed, c.errors, c.total)
 		if got != c.want {
-			t.Errorf("deriveControlStatus(%d,%d,%d) = %s, want %s",
-				c.passed, c.failed, c.total, got, c.want)
+			t.Errorf("deriveControlStatus(%d,%d,%d,%d) = %s, want %s",
+				c.passed, c.failed, c.errors, c.total, got, c.want)
 		}
 	}
 }

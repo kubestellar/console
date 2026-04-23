@@ -234,8 +234,12 @@ func TestEvaluateFrameworkLiveError(t *testing.T) {
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req, 10000)
-	assert.NoError(t, err)
-	// Evaluate doesn't return an error — it records errors per check
-	// so the handler still returns 200 with error statuses in the results
-	assert.True(t, resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusInternalServerError)
+	require.NoError(t, err)
+	// The evaluator records per-check errors and always returns a result,
+	// so the handler returns 200 with error statuses in the payload.
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	respBody, readErr := io.ReadAll(resp.Body)
+	require.NoError(t, readErr)
+	assert.Contains(t, string(respBody), `"status":"error"`)
 }

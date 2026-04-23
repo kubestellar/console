@@ -41,7 +41,7 @@ func DemoEvaluation(fw Framework, cluster string) *EvaluationResult {
 			}
 		}
 
-		cr.Status = deriveControlStatus(passed, failed, len(ctrl.Checks))
+		cr.Status = deriveControlStatus(passed, failed, 0, len(ctrl.Checks))
 		if cr.Status == StatusFail {
 			cr.Remediation = remediationHint(ctrl)
 		}

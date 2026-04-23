@@ -12,9 +12,9 @@ type ComplianceFrameworksHandler struct {
 	evaluator *frameworks.Evaluator
 }
 
-// NewComplianceFrameworksHandler creates a handler. Pass nil evaluator for
-// environments without live cluster access (demo mode) — the handler will
-// return framework definitions without evaluation capability.
+// NewComplianceFrameworksHandler creates a handler. Pass nil evaluator to
+// serve framework definitions and return synthetic evaluation results instead
+// of performing live cluster evaluation.
 func NewComplianceFrameworksHandler(evaluator *frameworks.Evaluator) *ComplianceFrameworksHandler {
 	return &ComplianceFrameworksHandler{evaluator: evaluator}
 }
@@ -37,6 +37,7 @@ func (h *ComplianceFrameworksHandler) ListFrameworks(c *fiber.Ctx) error {
 		Name        string `json:"name"`
 		Version     string `json:"version"`
 		Description string `json:"description"`
+		Category    string `json:"category"`
 		BuiltIn     bool   `json:"built_in"`
 		Controls    int    `json:"controls"`
 		Checks      int    `json:"checks"`
@@ -52,6 +53,7 @@ func (h *ComplianceFrameworksHandler) ListFrameworks(c *fiber.Ctx) error {
 			Name:        fw.Name,
 			Version:     fw.Version,
 			Description: fw.Description,
+			Category:    fw.Category,
 			BuiltIn:     fw.BuiltIn,
 			Controls:    len(fw.Controls),
 			Checks:      checks,
@@ -108,7 +110,7 @@ func (h *ComplianceFrameworksHandler) EvaluateFramework(c *fiber.Ctx) error {
 		return c.JSON(frameworks.DemoEvaluation(*fw, req.Cluster))
 	}
 
-	result, err := h.evaluator.Evaluate(c.Context(), *fw, req.Cluster)
+	result, err := h.evaluator.Evaluate(c.UserContext(), *fw, req.Cluster)
 	if err != nil {
 		slog.Error("[ComplianceFrameworks] evaluation failed",
 			"framework", id, "cluster", req.Cluster, "error", err)

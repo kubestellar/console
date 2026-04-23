@@ -948,9 +948,10 @@ func (s *Server) setupRoutes() {
 	auditHandler := handlers.NewAuditHandler(s.store)
 	api.Get("/admin/audit-log", auditHandler.GetAuditLog)
 
-	// Compliance Frameworks engine — named regulatory standards (PCI-DSS, SOC 2)
-	// mapped to concrete Kubernetes checks (#9627).
-	complianceFrameworks := handlers.NewComplianceFrameworksHandler(nil) // nil = demo mode (no live prober)
+	// Compliance frameworks: pass nil evaluator for demo/synthetic results.
+	// A real evaluator requires a ClusterProber implementation backed by
+	// kubeconfig access to each managed cluster.
+	complianceFrameworks := handlers.NewComplianceFrameworksHandler(nil)
 	complianceFrameworks.RegisterRoutes(api.Group("/compliance/frameworks"))
 
 	// Namespace read routes. GET /namespaces is viewer-or-above (see

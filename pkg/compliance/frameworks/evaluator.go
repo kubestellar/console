@@ -382,9 +382,12 @@ func boolStatus(ok bool) CheckStatus {
 
 // deriveControlStatus computes an overall status for a control from
 // its check results.
-func deriveControlStatus(passed, failed, total int) CheckStatus {
+func deriveControlStatus(passed, failed, errors, total int) CheckStatus {
 	if total == 0 {
 		return StatusSkipped
+	}
+	if errors > 0 {
+		return StatusError
 	}
 	if passed == total {
 		return StatusPass

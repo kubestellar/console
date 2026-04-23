@@ -4,7 +4,7 @@
  * Shows PCI-DSS 4.0, SOC 2 Type II, and other frameworks with per-control
  * pass/fail results and an overall compliance score.
  */
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Shield, ChevronDown, ChevronRight, CheckCircle2, XCircle, AlertTriangle, MinusCircle, Loader2, RefreshCw } from 'lucide-react'
 import { useComplianceFrameworks, useFrameworkEvaluation, type Framework, type ControlResult, type ComplianceCheck } from '../../hooks/useComplianceFrameworks'
 import { useClusters } from '../../hooks/useMCP'
@@ -158,20 +158,24 @@ export function ComplianceFrameworks() {
   const [selectedCluster, setSelectedCluster] = useState<string>('')
 
   // Auto-select first framework when loaded
-  const selectedFw = useMemo(() => {
-    if (selectedFwId) return frameworks.find(f => f.id === selectedFwId) ?? null
-    if (frameworks.length > 0) {
+  useEffect(() => {
+    if (!selectedFwId && frameworks.length > 0) {
       setSelectedFwId(frameworks[0].id)
-      return frameworks[0]
     }
-    return null
   }, [frameworks, selectedFwId])
 
   // Auto-select first cluster
   const clusterNames = useMemo(() => clusters.map(c => c.name), [clusters])
-  if (!selectedCluster && clusterNames.length > 0) {
-    setSelectedCluster(clusterNames[0])
-  }
+  useEffect(() => {
+    if (!selectedCluster && clusterNames.length > 0) {
+      setSelectedCluster(clusterNames[0])
+    }
+  }, [clusterNames, selectedCluster])
+
+  const selectedFw = useMemo(() => {
+    if (selectedFwId) return frameworks.find(f => f.id === selectedFwId) ?? null
+    return null
+  }, [frameworks, selectedFwId])
 
   const handleEvaluate = () => {
     if (selectedFw && selectedCluster) {

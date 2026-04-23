@@ -8,7 +8,7 @@ export const complianceFrameworksDashboardConfig: UnifiedDashboardConfig = {
   name: 'Compliance Frameworks',
   subtitle: 'Named regulatory compliance framework evaluation',
   route: '/compliance-frameworks',
-  statsType: 'compliance-frameworks',
+  statsType: 'security',
   cards: [
     { id: 'framework-score-1', cardType: 'compliance_score', title: 'Framework Score', position: { w: 4, h: 3 } },
     { id: 'framework-controls-1', cardType: 'compliance_score', title: 'Controls Passed', position: { w: 4, h: 3 } },
