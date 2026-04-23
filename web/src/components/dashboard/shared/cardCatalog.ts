@@ -290,6 +290,12 @@ export const CARD_CATALOG = {
     { type: 'oidc_dashboard', title: 'OIDC Federation Dashboard', description: 'Full OIDC federation dashboard with identity provider management', visualization: 'status' },
     { type: 'rbac_audit_dashboard', title: 'RBAC Audit Dashboard', description: 'Full RBAC audit dashboard with least-privilege analysis', visualization: 'status' },
     { type: 'session_dashboard', title: 'Session Management Dashboard', description: 'Full session management dashboard with policy enforcement monitoring', visualization: 'status' },
+    { type: 'risk_matrix', title: 'Risk Matrix', description: 'Interactive risk heat map', visualization: 'gauge' },
+    { type: 'risk_register', title: 'Risk Register', description: 'Comprehensive risk tracking', visualization: 'table' },
+    { type: 'risk_appetite', title: 'Risk Appetite', description: 'Risk tolerance monitoring', visualization: 'gauge' },
+    { type: 'risk_matrix_dashboard', title: 'Risk Matrix Dashboard', description: 'Full risk matrix with heat map', visualization: 'gauge' },
+    { type: 'risk_register_dashboard', title: 'Risk Register Dashboard', description: 'Full risk register with filtering', visualization: 'table' },
+    { type: 'risk_appetite_dashboard', title: 'Risk Appetite Dashboard', description: 'Full risk appetite monitoring', visualization: 'gauge' },
   ],
   'Workload Detection': [
     { type: 'prow_jobs', title: 'Prow Jobs', description: 'Prow CI/CD job status - presubmit, postsubmit, and periodic jobs', visualization: 'table' },

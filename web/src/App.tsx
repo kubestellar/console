@@ -80,6 +80,9 @@ const ThreatIntelDashboard = safeLazy(() => import('./components/compliance/Thre
 const SBOMDashboard = safeLazy(() => import('./components/compliance/SBOMDashboard'), 'default')
 const SigstoreDashboard = safeLazy(() => import('./components/compliance/SigstoreDashboard'), 'default')
 const SLSADashboard = safeLazy(() => import('./components/compliance/SLSADashboard'), 'default')
+const RiskMatrixDashboard = safeLazy(() => import('./components/compliance/RiskMatrixDashboard'), 'default')
+const RiskRegisterDashboard = safeLazy(() => import('./components/compliance/RiskRegisterDashboard'), 'default')
+const RiskAppetiteDashboard = safeLazy(() => import('./components/compliance/RiskAppetiteDashboard'), 'default')
 const EnterpriseLayout = safeLazy(() => import('./components/enterprise/EnterpriseLayout'), 'default')
 const EnterprisePortal = safeLazy(() => import('./components/enterprise/EnterprisePortal'), 'default')
 const ComingSoon = safeLazy(() => import('./components/enterprise/ComingSoon'), 'default')
@@ -373,6 +376,9 @@ const ROUTE_TITLES: Record<string, string> = {
   '/enterprise/sbom': 'SBOM Manager',
   '/enterprise/sigstore': 'Sigstore Verification',
   '/enterprise/slsa': 'SLSA Provenance',
+  '/enterprise/risk-matrix': 'Risk Matrix',
+  '/enterprise/risk-register': 'Risk Register',
+  '/enterprise/risk-appetite': 'Risk Appetite',
   '/data-compliance': 'Data Compliance',
   '/gitops': 'GitOps',
   '/cost': 'Cost',
@@ -657,6 +663,10 @@ function FullDashboardApp({ liveLocation }: { liveLocation: Location }) {
           <Route path="sbom" element={<SuspenseRoute><SBOMDashboard /></SuspenseRoute>} />
           <Route path="sigstore" element={<SuspenseRoute><SigstoreDashboard /></SuspenseRoute>} />
           <Route path="slsa" element={<SuspenseRoute><SLSADashboard /></SuspenseRoute>} />
+          {/* Epic 7: Enterprise Risk Management */}
+          <Route path="risk-matrix" element={<SuspenseRoute><RiskMatrixDashboard /></SuspenseRoute>} />
+          <Route path="risk-register" element={<SuspenseRoute><RiskRegisterDashboard /></SuspenseRoute>} />
+          <Route path="risk-appetite" element={<SuspenseRoute><RiskAppetiteDashboard /></SuspenseRoute>} />
           <Route path="*" element={<SuspenseRoute><ComingSoon /></SuspenseRoute>} />
         </Route>
 

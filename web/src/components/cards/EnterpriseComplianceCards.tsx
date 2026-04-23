@@ -5,7 +5,7 @@
  * Each card fetches summary data and renders a compact view.
  */
 import { useState, useEffect } from 'react'
-import { Shield, FileText, Activity, Lock, WifiOff, Award, CheckCircle2, XCircle, KeyRound, Clock, Package } from 'lucide-react'
+import { Shield, FileText, Activity, Lock, WifiOff, Award, CheckCircle2, XCircle, KeyRound, Clock, Package, Scale } from 'lucide-react'
 import { authFetch } from '../../lib/api'
 import { useNavigate } from 'react-router-dom'
 
@@ -517,6 +517,72 @@ export function SLSAProvenanceCard() {
           <MiniStat label="Attested" value={data.attested_artifacts ?? 0} color="text-green-400" />
           <MiniStat label="L3+" value={(data.level_3 ?? 0) + (data.level_4 ?? 0)} color="text-emerald-400" />
           <MiniStat label="Verified" value={data.verified_attestations ?? 0} color="text-green-400" />
+        </div>
+      ) : <p className="text-gray-500 text-sm">Loading…</p>}
+    </CardShell>
+  )
+}
+
+// ── Risk Matrix Card ────────────────────────────────────────────────────
+
+export function RiskMatrixCard() {
+  const nav = useNavigate()
+  const [data, setData] = useState<Record<string, number> | null>(null)
+  useEffect(() => {
+    authFetch('/api/v1/compliance/erm/risk-matrix/summary').then(r => r.ok ? r.json() : null).then(setData).catch(() => {})
+  }, [])
+  return (
+    <CardShell title="Risk Matrix" icon={Scale} onClick={() => nav('/enterprise/risk-matrix')}>
+      {data ? (
+        <div className="grid grid-cols-2 gap-2">
+          <MiniStat label="Total Risks" value={data.total_risks ?? 0} />
+          <MiniStat label="Critical" value={data.critical ?? 0} color="text-red-400" />
+          <MiniStat label="High" value={data.high ?? 0} color="text-red-300" />
+          <MiniStat label="Medium" value={data.medium ?? 0} color="text-orange-400" />
+        </div>
+      ) : <p className="text-gray-500 text-sm">Loading…</p>}
+    </CardShell>
+  )
+}
+
+// ── Risk Register Card ──────────────────────────────────────────────────
+
+export function RiskRegisterCard() {
+  const nav = useNavigate()
+  const [data, setData] = useState<Record<string, number> | null>(null)
+  useEffect(() => {
+    authFetch('/api/v1/compliance/erm/risk-register/summary').then(r => r.ok ? r.json() : null).then(setData).catch(() => {})
+  }, [])
+  return (
+    <CardShell title="Risk Register" icon={Scale} onClick={() => nav('/enterprise/risk-register')}>
+      {data ? (
+        <div className="grid grid-cols-2 gap-2">
+          <MiniStat label="Open Risks" value={data.open_risks ?? 0} color="text-yellow-400" />
+          <MiniStat label="Overdue" value={data.overdue_reviews ?? 0} color="text-red-400" />
+          <MiniStat label="Total" value={data.total_risks ?? 0} />
+          <MiniStat label="Avg Score" value={Number(data.avg_risk_score ?? 0).toFixed(1)} color="text-orange-400" />
+        </div>
+      ) : <p className="text-gray-500 text-sm">Loading…</p>}
+    </CardShell>
+  )
+}
+
+// ── Risk Appetite Card ──────────────────────────────────────────────────
+
+export function RiskAppetiteCard() {
+  const nav = useNavigate()
+  const [data, setData] = useState<Record<string, number> | null>(null)
+  useEffect(() => {
+    authFetch('/api/v1/compliance/erm/risk-appetite/summary').then(r => r.ok ? r.json() : null).then(setData).catch(() => {})
+  }, [])
+  return (
+    <CardShell title="Risk Appetite" icon={Scale} onClick={() => nav('/enterprise/risk-appetite')}>
+      {data ? (
+        <div className="grid grid-cols-2 gap-2">
+          <MiniStat label="Breaches" value={data.breaches ?? 0} color="text-red-400" />
+          <MiniStat label="KRIs" value={data.total_kris ?? 0} />
+          <MiniStat label="Within" value={data.within_appetite ?? 0} color="text-green-400" />
+          <MiniStat label="KRI Breach" value={data.kri_breaches ?? 0} color="text-red-400" />
         </div>
       ) : <p className="text-gray-500 text-sm">Loading…</p>}
     </CardShell>

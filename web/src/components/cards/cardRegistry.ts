@@ -131,6 +131,9 @@ const ThreatIntelCard = safeLazy(() => _enterpriseComplianceBundle, 'ThreatIntel
 const SBOMManagerCard = safeLazy(() => _enterpriseComplianceBundle, 'SBOMManagerCard')
 const SigstoreVerifyCard = safeLazy(() => _enterpriseComplianceBundle, 'SigstoreVerifyCard')
 const SLSAProvenanceCard = safeLazy(() => _enterpriseComplianceBundle, 'SLSAProvenanceCard')
+const RiskMatrixCard = safeLazy(() => _enterpriseComplianceBundle, 'RiskMatrixCard')
+const RiskRegisterCard = safeLazy(() => _enterpriseComplianceBundle, 'RiskRegisterCard')
+const RiskAppetiteCard = safeLazy(() => _enterpriseComplianceBundle, 'RiskAppetiteCard')
 // Enterprise dashboard content cards — each lazily loaded individually
 const ComplianceFrameworksDashboardCard = safeLazy(() => import('../compliance/ComplianceFrameworks'), 'ComplianceFrameworksContent')
 const ChangeControlDashboardCard = safeLazy(() => import('../compliance/ChangeControlAudit'), 'ChangeControlAuditContent')
@@ -501,6 +504,10 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   sbom_manager: SBOMManagerCard,
   sigstore_verify: SigstoreVerifyCard,
   slsa_provenance: SLSAProvenanceCard,
+  // Enterprise Risk Management cards
+  risk_matrix: RiskMatrixCard,
+  risk_register: RiskRegisterCard,
+  risk_appetite: RiskAppetiteCard,
   // Dashboard content cards (full-width, lazy loaded individually)
   sbom_dashboard: lazy(() => import('../compliance/SBOMDashboard').then(m => ({ default: m.SBOMDashboardContent }))),
   sigstore_dashboard: lazy(() => import('../compliance/SigstoreDashboard').then(m => ({ default: m.SigstoreDashboardContent }))),
@@ -521,6 +528,10 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   oidc_dashboard: OIDCDashboardCard,
   rbac_audit_dashboard: RBACAuditDashboardCard,
   session_dashboard: SessionDashboardCard,
+  // Enterprise Risk Management dashboard content cards
+  risk_matrix_dashboard: lazy(() => import('../compliance/RiskMatrixDashboard').then(m => ({ default: m.RiskMatrixDashboardContent }))),
+  risk_register_dashboard: lazy(() => import('../compliance/RiskRegisterDashboard').then(m => ({ default: m.RiskRegisterDashboardContent }))),
+  risk_appetite_dashboard: lazy(() => import('../compliance/RiskAppetiteDashboard').then(m => ({ default: m.RiskAppetiteDashboardContent }))),
   // ISO 27001 audit checklist
   iso27001_audit: ISO27001Audit,
   // Cross-cluster compliance cards
@@ -1676,6 +1687,10 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   sbom_dashboard: 12,
   sigstore_dashboard: 12,
   slsa_dashboard: 12,
+  // Enterprise Risk Management dashboard content cards
+  risk_matrix_dashboard: 12,
+  risk_register_dashboard: 12,
+  risk_appetite_dashboard: 12,
 }
 
 // ---------------------------------------------------------------------------

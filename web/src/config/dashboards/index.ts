@@ -65,6 +65,9 @@ import { threatIntelDashboardConfig } from './threat-intel'
 import { sbomDashboardConfig } from './sbom'
 import { sigstoreDashboardConfig } from './sigstore'
 import { slsaDashboardConfig } from './slsa'
+import { riskMatrixDashboardConfig } from './risk-matrix'
+import { riskRegisterDashboardConfig } from './risk-register'
+import { riskAppetiteDashboardConfig } from './risk-appetite'
 
 /**
  * Registry of all unified dashboard configurations
@@ -124,6 +127,9 @@ export const DASHBOARD_CONFIGS: DashboardConfigRegistry = {
   sbom: sbomDashboardConfig,
   sigstore: sigstoreDashboardConfig,
   slsa: slsaDashboardConfig,
+  'risk-matrix': riskMatrixDashboardConfig,
+  'risk-register': riskRegisterDashboardConfig,
+  'risk-appetite': riskAppetiteDashboardConfig,
 }
 
 /**
@@ -252,4 +258,7 @@ export {
   sbomDashboardConfig,
   sigstoreDashboardConfig,
   slsaDashboardConfig,
+  riskMatrixDashboardConfig,
+  riskRegisterDashboardConfig,
+  riskAppetiteDashboardConfig,
 }

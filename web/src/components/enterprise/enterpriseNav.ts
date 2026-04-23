@@ -97,9 +97,9 @@ export const ENTERPRISE_NAV_SECTIONS: EnterpriseNavSection[] = [
     title: 'Enterprise Risk Management',
     icon: 'Scale',
     items: [
-      { id: 'risk-matrix', label: 'Risk Matrix', href: '/enterprise/risk-matrix', icon: 'BarChart3', badge: 'Soon' },
-      { id: 'risk-register', label: 'Risk Register', href: '/enterprise/risk-register', icon: 'ClipboardList', badge: 'Soon' },
-      { id: 'risk-appetite', label: 'Risk Appetite', href: '/enterprise/risk-appetite', icon: 'Gauge', badge: 'Soon' },
+      { id: 'risk-matrix', label: 'Risk Matrix', href: '/enterprise/risk-matrix', icon: 'BarChart3' },
+      { id: 'risk-register', label: 'Risk Register', href: '/enterprise/risk-register', icon: 'ClipboardList' },
+      { id: 'risk-appetite', label: 'Risk Appetite', href: '/enterprise/risk-appetite', icon: 'Gauge' },
     ],
   },
 ]
