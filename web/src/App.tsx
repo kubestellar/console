@@ -67,6 +67,10 @@ const DataResidency = safeLazy(() => import('./components/compliance/DataResiden
 const BAADashboard = safeLazy(() => import('./components/compliance/BAADashboard'), 'default')
 const HIPAADashboard = safeLazy(() => import('./components/compliance/HIPAADashboard'), 'default')
 const GxPDashboard = safeLazy(() => import('./components/compliance/GxPDashboard'), 'default')
+const NISTDashboard = safeLazy(() => import('./components/compliance/NISTDashboard'), 'default')
+const STIGDashboard = safeLazy(() => import('./components/compliance/STIGDashboard'), 'default')
+const AirGapDashboard = safeLazy(() => import('./components/compliance/AirGapDashboard'), 'default')
+const FedRAMPDashboard = safeLazy(() => import('./components/compliance/FedRAMPDashboard'), 'default')
 const DataCompliance = safeLazy(() => import('./components/data-compliance/DataCompliance'), 'DataCompliance')
 const GPUReservations = safeLazy(() => import('./components/gpu/GPUReservations'), 'GPUReservations')
 const KarmadaOps = safeLazy(() => import('./components/karmada-ops/KarmadaOps'), 'KarmadaOps')
@@ -343,6 +347,10 @@ const ROUTE_TITLES: Record<string, string> = {
   '/baa': 'BAA Tracker',
   '/hipaa': 'HIPAA Compliance',
   '/gxp': 'GxP Validation',
+  '/nist': 'NIST 800-53',
+  '/stig': 'DISA STIG',
+  '/air-gap': 'Air-Gap Readiness',
+  '/fedramp': 'FedRAMP Readiness',
   '/data-compliance': 'Data Compliance',
   '/gitops': 'GitOps',
   '/cost': 'Cost',
@@ -632,6 +640,10 @@ function FullDashboardApp({ liveLocation }: { liveLocation: Location }) {
           <Route path={ROUTES.BAA} element={<SuspenseRoute><BAADashboard /></SuspenseRoute>} />
           <Route path={ROUTES.HIPAA} element={<SuspenseRoute><HIPAADashboard /></SuspenseRoute>} />
           <Route path={ROUTES.GXP} element={<SuspenseRoute><GxPDashboard /></SuspenseRoute>} />
+          <Route path={ROUTES.NIST} element={<SuspenseRoute><NISTDashboard /></SuspenseRoute>} />
+          <Route path={ROUTES.STIG} element={<SuspenseRoute><STIGDashboard /></SuspenseRoute>} />
+          <Route path={ROUTES.AIR_GAP} element={<SuspenseRoute><AirGapDashboard /></SuspenseRoute>} />
+          <Route path={ROUTES.FEDRAMP} element={<SuspenseRoute><FedRAMPDashboard /></SuspenseRoute>} />
           <Route path={ROUTES.DATA_COMPLIANCE} element={<SuspenseRoute><DataCompliance /></SuspenseRoute>} />
           <Route path={ROUTES.GPU_RESERVATIONS} element={<SuspenseRoute><GPUReservations /></SuspenseRoute>} />
           <Route path={ROUTES.KARMADA_OPS} element={<SuspenseRoute><KarmadaOps /></SuspenseRoute>} />

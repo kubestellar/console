@@ -887,6 +887,280 @@ export const handlers = [
     })
   }),
 
+  // ── Segregation of Duties mock handlers (demo mode) ──────────────────
+  http.get('/api/compliance/sod/summary', async () => {
+    await delay(150)
+    return HttpResponse.json({
+      total_rules: 8, active_rules: 8, total_principals: 12,
+      violations_detected: 0, last_evaluated: new Date().toISOString(),
+    })
+  }),
+
+  http.get('/api/compliance/sod/rules', async () => {
+    await delay(150)
+    return HttpResponse.json([
+      { id: 'sod-1', name: 'Deployment ≠ Approval', description: 'Users who deploy cannot approve their own deployments', scope: 'cluster', status: 'active', conflicting_roles: ['deployer', 'approver'], violations: 0 },
+      { id: 'sod-2', name: 'Admin ≠ Auditor', description: 'Cluster admins cannot hold auditor role', scope: 'cluster', status: 'active', conflicting_roles: ['cluster-admin', 'auditor'], violations: 0 },
+      { id: 'sod-3', name: 'Secret Access ≠ Deployment', description: 'Users with secret access cannot deploy workloads', scope: 'namespace', status: 'active', conflicting_roles: ['secret-reader', 'deployer'], violations: 0 },
+      { id: 'sod-4', name: 'Network Policy ≠ Workload Owner', description: 'Network policy editors cannot own workloads in same namespace', scope: 'namespace', status: 'active', conflicting_roles: ['network-admin', 'workload-owner'], violations: 0 },
+      { id: 'sod-5', name: 'RBAC Admin ≠ Developer', description: 'RBAC administrators cannot hold developer roles', scope: 'cluster', status: 'active', conflicting_roles: ['rbac-admin', 'developer'], violations: 0 },
+      { id: 'sod-6', name: 'Release Manager ≠ QA', description: 'Release managers cannot perform QA sign-off', scope: 'cluster', status: 'active', conflicting_roles: ['release-manager', 'qa-signer'], violations: 0 },
+      { id: 'sod-7', name: 'Backup Admin ≠ Restore', description: 'Backup administrators cannot perform restores', scope: 'cluster', status: 'active', conflicting_roles: ['backup-admin', 'restore-operator'], violations: 0 },
+      { id: 'sod-8', name: 'Monitoring ≠ Alert Suppression', description: 'Monitoring editors cannot suppress alerts', scope: 'namespace', status: 'active', conflicting_roles: ['monitoring-editor', 'alert-manager'], violations: 0 },
+    ])
+  }),
+
+  http.get('/api/compliance/sod/principals', async () => {
+    await delay(150)
+    return HttpResponse.json([
+      { id: 'p-1', name: 'alice@example.com', type: 'user', roles: ['deployer', 'developer'], clusters: ['prod-east', 'staging'], sod_compliant: true },
+      { id: 'p-2', name: 'bob@example.com', type: 'user', roles: ['approver', 'auditor'], clusters: ['prod-east', 'prod-west'], sod_compliant: true },
+      { id: 'p-3', name: 'carol@example.com', type: 'user', roles: ['cluster-admin'], clusters: ['staging'], sod_compliant: true },
+      { id: 'p-4', name: 'ci-bot', type: 'service_account', roles: ['deployer'], clusters: ['prod-east', 'prod-west', 'staging'], sod_compliant: true },
+      { id: 'p-5', name: 'dave@example.com', type: 'user', roles: ['developer', 'qa-signer'], clusters: ['staging'], sod_compliant: true },
+      { id: 'p-6', name: 'eve@example.com', type: 'user', roles: ['network-admin'], clusters: ['prod-east'], sod_compliant: true },
+    ])
+  }),
+
+  http.get('/api/compliance/sod/violations', async () => {
+    await delay(150)
+    return HttpResponse.json([])
+  }),
+
+  // ── Change Control mock handlers (demo mode) ───────────────────────
+  http.get('/api/compliance/change-control/summary', async () => {
+    await delay(150)
+    return HttpResponse.json({
+      total_changes: 47, pending_approval: 3, approved: 32, rejected: 2,
+      implemented: 10, emergency_changes: 1, compliance_rate: 94,
+      last_evaluated: new Date().toISOString(),
+    })
+  }),
+
+  http.get('/api/compliance/change-control/changes', async () => {
+    await delay(150)
+    return HttpResponse.json([
+      { id: 'cc-001', title: 'Upgrade ingress-nginx to v1.10.0', type: 'standard', status: 'approved', priority: 'medium', requester: 'alice@example.com', approver: 'bob@example.com', cluster: 'prod-east', created_at: '2026-04-20T10:00:00Z', approved_at: '2026-04-20T14:00:00Z', implemented_at: '2026-04-21T08:00:00Z' },
+      { id: 'cc-002', title: 'Add NetworkPolicy for payment namespace', type: 'standard', status: 'approved', priority: 'high', requester: 'carol@example.com', approver: 'dave@example.com', cluster: 'prod-east', created_at: '2026-04-19T09:00:00Z', approved_at: '2026-04-19T15:00:00Z', implemented_at: '' },
+      { id: 'cc-003', title: 'Scale API deployment to 5 replicas', type: 'standard', status: 'pending', priority: 'low', requester: 'eve@example.com', approver: '', cluster: 'prod-west', created_at: '2026-04-22T11:00:00Z', approved_at: '', implemented_at: '' },
+      { id: 'cc-004', title: 'Emergency: Patch CVE-2026-1234', type: 'emergency', status: 'implemented', priority: 'critical', requester: 'alice@example.com', approver: 'bob@example.com', cluster: 'prod-east', created_at: '2026-04-21T02:00:00Z', approved_at: '2026-04-21T02:15:00Z', implemented_at: '2026-04-21T02:45:00Z' },
+      { id: 'cc-005', title: 'Update HPA thresholds for checkout service', type: 'standard', status: 'pending', priority: 'medium', requester: 'dave@example.com', approver: '', cluster: 'staging', created_at: '2026-04-22T14:00:00Z', approved_at: '', implemented_at: '' },
+      { id: 'cc-006', title: 'Rotate TLS certificates for service mesh', type: 'standard', status: 'rejected', priority: 'high', requester: 'carol@example.com', approver: 'bob@example.com', cluster: 'prod-west', created_at: '2026-04-18T09:00:00Z', approved_at: '', implemented_at: '' },
+    ])
+  }),
+
+  http.get('/api/compliance/change-control/violations', async () => {
+    await delay(150)
+    return HttpResponse.json([
+      { id: 'cv-001', change_id: '', type: 'unapproved_change', description: 'ConfigMap updated in production without change request', cluster: 'prod-east', namespace: 'checkout', detected_at: '2026-04-19T03:22:00Z', severity: 'high', resolved: true },
+    ])
+  }),
+
+  http.get('/api/compliance/change-control/policies', async () => {
+    await delay(150)
+    return HttpResponse.json([
+      { id: 'cp-1', name: 'Require Approval for Production', description: 'All production changes must be approved by a reviewer', scope: 'production', enforcement: 'hard', status: 'active' },
+      { id: 'cp-2', name: 'Change Freeze Window', description: 'No standard changes during maintenance windows (Sat 02:00-06:00 UTC)', scope: 'all', enforcement: 'soft', status: 'active' },
+      { id: 'cp-3', name: 'Emergency Change Audit', description: 'Emergency changes must have post-implementation review within 48h', scope: 'all', enforcement: 'hard', status: 'active' },
+    ])
+  }),
+
+  // ── Data Residency mock handlers (demo mode) ──────────────────────
+  http.get('/api/compliance/residency/summary', async () => {
+    await delay(150)
+    return HttpResponse.json({
+      total_clusters: 6, compliant_clusters: 5, non_compliant_clusters: 1,
+      total_rules: 4, active_rules: 4, violations: 1,
+      evaluated_at: new Date().toISOString(),
+    })
+  }),
+
+  http.get('/api/compliance/residency/clusters', async () => {
+    await delay(150)
+    return HttpResponse.json([
+      { cluster: 'prod-east', region: 'us-east-1', country: 'US', provider: 'AWS', data_classifications: ['PII', 'PHI'], compliant: true, rules_applied: 4, violations: 0 },
+      { cluster: 'prod-west', region: 'us-west-2', country: 'US', provider: 'AWS', data_classifications: ['PII'], compliant: true, rules_applied: 4, violations: 0 },
+      { cluster: 'eu-central', region: 'eu-central-1', country: 'DE', provider: 'AWS', data_classifications: ['PII', 'GDPR'], compliant: true, rules_applied: 4, violations: 0 },
+      { cluster: 'eu-west', region: 'eu-west-1', country: 'IE', provider: 'AWS', data_classifications: ['GDPR'], compliant: true, rules_applied: 4, violations: 0 },
+      { cluster: 'ap-south', region: 'ap-south-1', country: 'IN', provider: 'AWS', data_classifications: ['PII'], compliant: true, rules_applied: 4, violations: 0 },
+      { cluster: 'staging', region: 'us-east-1', country: 'US', provider: 'AWS', data_classifications: ['test'], compliant: false, rules_applied: 4, violations: 1 },
+    ])
+  }),
+
+  http.get('/api/compliance/residency/rules', async () => {
+    await delay(150)
+    return HttpResponse.json([
+      { id: 'dr-1', name: 'EU Data in EU Only', description: 'GDPR-classified data must reside in EU regions', data_classification: 'GDPR', allowed_regions: ['eu-central-1', 'eu-west-1'], status: 'active' },
+      { id: 'dr-2', name: 'PHI in US Only', description: 'PHI data must remain in US regions per HIPAA', data_classification: 'PHI', allowed_regions: ['us-east-1', 'us-west-2'], status: 'active' },
+      { id: 'dr-3', name: 'PII Encryption at Rest', description: 'All PII data must be encrypted at rest', data_classification: 'PII', allowed_regions: ['*'], status: 'active' },
+      { id: 'dr-4', name: 'No Test Data in Production', description: 'Test-classified data must not exist in production clusters', data_classification: 'test', allowed_regions: ['us-east-1'], status: 'active' },
+    ])
+  }),
+
+  http.get('/api/compliance/residency/violations', async () => {
+    await delay(150)
+    return HttpResponse.json([
+      { id: 'dv-1', rule_id: 'dr-4', cluster: 'staging', description: 'Test data found in staging cluster with production workloads', detected_at: '2026-04-22T08:00:00Z', severity: 'medium', resolved: false },
+    ])
+  }),
+
+  // ── NIST 800-53 mock handlers (demo mode) ─────────────────────────
+  http.get('/api/compliance/nist/families', async () => {
+    await delay(150)
+    return HttpResponse.json([
+      { id: 'AC', name: 'Access Control', description: 'Manage system access and privileges.', pass_rate: 83, controls: [
+        { id: 'AC-2', name: 'Account Management', description: 'Manage information system accounts.', priority: 'P1', baseline: 'low', status: 'implemented', evidence: 'Kubernetes RBAC with OIDC provider', remediation: '' },
+        { id: 'AC-3', name: 'Access Enforcement', description: 'Enforce approved authorizations.', priority: 'P1', baseline: 'low', status: 'implemented', evidence: 'NetworkPolicy + RBAC', remediation: '' },
+        { id: 'AC-6', name: 'Least Privilege', description: 'Employ least privilege.', priority: 'P1', baseline: 'low', status: 'partial', evidence: '80% scoped', remediation: 'Audit legacy service accounts' },
+        { id: 'AC-17', name: 'Remote Access', description: 'Manage remote access sessions.', priority: 'P1', baseline: 'moderate', status: 'implemented', evidence: 'VPN + mTLS', remediation: '' },
+      ]},
+      { id: 'AU', name: 'Audit and Accountability', description: 'Create, protect, and retain audit records.', pass_rate: 87, controls: [
+        { id: 'AU-2', name: 'Audit Events', description: 'Determine auditable events.', priority: 'P1', baseline: 'low', status: 'implemented', evidence: 'API server audit policy', remediation: '' },
+        { id: 'AU-3', name: 'Content of Audit Records', description: 'Records contain required info.', priority: 'P1', baseline: 'low', status: 'implemented', evidence: 'Structured JSON audit logs', remediation: '' },
+        { id: 'AU-6', name: 'Audit Review', description: 'Review and analyze audit records.', priority: 'P1', baseline: 'low', status: 'partial', evidence: 'SIEM covers 60%', remediation: 'Expand alert rules' },
+        { id: 'AU-12', name: 'Audit Generation', description: 'Provide audit record generation.', priority: 'P1', baseline: 'low', status: 'implemented', evidence: 'Fluentd on all nodes', remediation: '' },
+      ]},
+      { id: 'SC', name: 'System and Communications Protection', description: 'Protect communications and boundaries.', pass_rate: 87, controls: [
+        { id: 'SC-7', name: 'Boundary Protection', description: 'Monitor communications at boundaries.', priority: 'P1', baseline: 'low', status: 'implemented', evidence: 'NetworkPolicy + WAF', remediation: '' },
+        { id: 'SC-8', name: 'Transmission Confidentiality', description: 'Protect transmitted information.', priority: 'P1', baseline: 'moderate', status: 'implemented', evidence: 'Service mesh mTLS', remediation: '' },
+        { id: 'SC-12', name: 'Cryptographic Key Management', description: 'Manage cryptographic keys.', priority: 'P1', baseline: 'low', status: 'partial', evidence: '80% rotation', remediation: 'Enable etcd key rotation' },
+        { id: 'SC-28', name: 'Protection at Rest', description: 'Protect information at rest.', priority: 'P1', baseline: 'moderate', status: 'implemented', evidence: 'etcd AES-256-GCM', remediation: '' },
+      ]},
+      { id: 'CM', name: 'Configuration Management', description: 'Establish baselines and manage changes.', pass_rate: 87, controls: [
+        { id: 'CM-2', name: 'Baseline Configuration', description: 'Maintain baselines.', priority: 'P1', baseline: 'low', status: 'implemented', evidence: 'GitOps with Flux', remediation: '' },
+        { id: 'CM-6', name: 'Configuration Settings', description: 'Establish mandatory settings.', priority: 'P1', baseline: 'low', status: 'partial', evidence: 'OPA 85%', remediation: 'Deploy remaining templates' },
+        { id: 'CM-7', name: 'Least Functionality', description: 'Only essential capabilities.', priority: 'P1', baseline: 'low', status: 'implemented', evidence: 'Minimal images', remediation: '' },
+        { id: 'CM-8', name: 'Component Inventory', description: 'Maintain component inventory.', priority: 'P1', baseline: 'low', status: 'implemented', evidence: 'SBOM via Syft', remediation: '' },
+      ]},
+      { id: 'IR', name: 'Incident Response', description: 'Prepare for and respond to incidents.', pass_rate: 66, controls: [
+        { id: 'IR-4', name: 'Incident Handling', description: 'Implement incident handling.', priority: 'P1', baseline: 'low', status: 'implemented', evidence: 'PagerDuty + runbooks', remediation: '' },
+        { id: 'IR-5', name: 'Incident Monitoring', description: 'Track security incidents.', priority: 'P1', baseline: 'low', status: 'implemented', evidence: 'JIRA tracking', remediation: '' },
+        { id: 'IR-6', name: 'Incident Reporting', description: 'Report to authorities.', priority: 'P1', baseline: 'low', status: 'planned', evidence: '', remediation: 'Implement FedRAMP POAM reporting' },
+      ]},
+    ])
+  }),
+
+  http.get('/api/compliance/nist/mappings', async () => {
+    await delay(150)
+    return HttpResponse.json([
+      { control_id: 'AC-2', resources: ['ServiceAccount', 'ClusterRoleBinding'], namespaces: ['kube-system', 'production'], clusters: ['prod-east', 'prod-west'], automated: true, last_assessed: new Date().toISOString() },
+      { control_id: 'AC-3', resources: ['NetworkPolicy', 'Role', 'RoleBinding'], namespaces: ['*'], clusters: ['prod-east', 'prod-west', 'staging'], automated: true, last_assessed: new Date().toISOString() },
+      { control_id: 'SC-7', resources: ['NetworkPolicy', 'Ingress'], namespaces: ['*'], clusters: ['prod-east', 'prod-west'], automated: true, last_assessed: new Date().toISOString() },
+      { control_id: 'CM-2', resources: ['GitRepository', 'Kustomization'], namespaces: ['flux-system'], clusters: ['prod-east', 'prod-west', 'staging'], automated: true, last_assessed: new Date().toISOString() },
+      { control_id: 'AU-2', resources: ['AuditPolicy'], namespaces: ['kube-system'], clusters: ['prod-east', 'prod-west'], automated: true, last_assessed: new Date().toISOString() },
+    ])
+  }),
+
+  http.get('/api/compliance/nist/summary', async () => {
+    await delay(150)
+    return HttpResponse.json({
+      total_controls: 19, implemented_controls: 13, partial_controls: 4,
+      planned_controls: 1, not_applicable: 1, overall_score: 81,
+      baseline: 'moderate', evaluated_at: new Date().toISOString(),
+    })
+  }),
+
+  // ── DISA STIG mock handlers (demo mode) ───────────────────────────
+  http.get('/api/compliance/stig/benchmarks', async () => {
+    await delay(150)
+    return HttpResponse.json([
+      { id: 'kubernetes-stig-v2r1', title: 'Kubernetes STIG', version: 'V2R1', release_date: '2025-10-15', findings: [] },
+    ])
+  }),
+
+  http.get('/api/compliance/stig/findings', async () => {
+    await delay(150)
+    return HttpResponse.json([
+      { id: 'V-242381', rule_id: 'SV-242381r879578', title: 'API Server must have anonymous auth disabled', description: 'Anonymous auth must be disabled.', severity: 'CAT I', status: 'not_a_finding', check_result: 'anonymous-auth=false verified', fix_text: 'Set --anonymous-auth=false' },
+      { id: 'V-242382', rule_id: 'SV-242382r879581', title: 'API Server must have audit logging enabled', description: 'Audit logging required.', severity: 'CAT I', status: 'not_a_finding', check_result: 'Audit policy active', fix_text: 'Configure --audit-policy-file' },
+      { id: 'V-242383', rule_id: 'SV-242383r879584', title: 'etcd must use TLS', description: 'etcd TLS required.', severity: 'CAT I', status: 'not_a_finding', check_result: 'TLS verified', fix_text: 'Set --etcd-certfile' },
+      { id: 'V-242395', rule_id: 'SV-242395r879620', title: 'Network policies must be defined', description: 'NetworkPolicy required.', severity: 'CAT II', status: 'open', check_result: '2 namespaces missing', fix_text: 'Create default-deny NetworkPolicy' },
+      { id: 'V-242400', rule_id: 'SV-242400r879635', title: 'Container images must be signed', description: 'Image signing required.', severity: 'CAT II', status: 'open', check_result: 'Not enforced', fix_text: 'Deploy admission controller' },
+      { id: 'V-242402', rule_id: 'SV-242402r879641', title: 'Resource limits must be set', description: 'Resource limits required.', severity: 'CAT III', status: 'open', check_result: '12 pods missing limits', fix_text: 'Add resource limits' },
+    ])
+  }),
+
+  http.get('/api/compliance/stig/summary', async () => {
+    await delay(150)
+    return HttpResponse.json({
+      total_findings: 12, open: 3, not_a_finding: 8, not_applicable: 0,
+      not_reviewed: 1, cat_i_open: 0, cat_ii_open: 2, cat_iii_open: 1,
+      compliance_score: 72, benchmark_id: 'kubernetes-stig-v2r1',
+      evaluated_at: new Date().toISOString(),
+    })
+  }),
+
+  // ── Air-Gap Readiness mock handlers (demo mode) ───────────────────
+  http.get('/api/compliance/airgap/requirements', async () => {
+    await delay(150)
+    return HttpResponse.json([
+      { id: 'ag-01', category: 'registry', name: 'Private Container Registry', description: 'All images from internal registry.', status: 'ready', evidence: 'Harbor in-cluster', remediation: '' },
+      { id: 'ag-02', category: 'registry', name: 'Image Signature Verification', description: 'Images verified against local keyserver.', status: 'ready', evidence: 'Cosign admission controller', remediation: '' },
+      { id: 'ag-03', category: 'dns', name: 'Internal DNS Resolution', description: 'CoreDNS internal only.', status: 'ready', evidence: 'No upstream forwarders', remediation: '' },
+      { id: 'ag-04', category: 'ntp', name: 'Internal NTP Source', description: 'Time from internal NTP.', status: 'ready', evidence: 'chrony at 10.0.0.1', remediation: '' },
+      { id: 'ag-05', category: 'updates', name: 'Offline Update Channel', description: 'Updates via internal repo.', status: 'partial', evidence: '85% mirrored', remediation: 'Mirror remaining repos' },
+      { id: 'ag-06', category: 'updates', name: 'Helm Chart Repository', description: 'ChartMuseum local.', status: 'ready', evidence: '47 charts served', remediation: '' },
+      { id: 'ag-07', category: 'telemetry', name: 'Telemetry Disabled', description: 'No outbound telemetry.', status: 'ready', evidence: 'Egress NetworkPolicy blocks all', remediation: '' },
+      { id: 'ag-08', category: 'telemetry', name: 'CRL/OCSP Offline', description: 'Local CRL cache.', status: 'not_ready', evidence: '', remediation: 'Deploy local CRL distribution point' },
+      { id: 'ag-09', category: 'registry', name: 'Operator Catalog Mirror', description: 'OLM catalogs mirrored.', status: 'ready', evidence: '12 catalogs synced', remediation: '' },
+      { id: 'ag-10', category: 'dns', name: 'External Egress Blocked', description: 'All outbound blocked.', status: 'ready', evidence: 'Default-deny egress', remediation: '' },
+    ])
+  }),
+
+  http.get('/api/compliance/airgap/clusters', async () => {
+    await delay(150)
+    return HttpResponse.json([
+      { cluster: 'airgap-prod-east', ready: true, score: 100, total_requirements: 10, ready_count: 10, not_ready_count: 0 },
+      { cluster: 'airgap-prod-west', ready: true, score: 100, total_requirements: 10, ready_count: 10, not_ready_count: 0 },
+      { cluster: 'classified-central', ready: false, score: 80, total_requirements: 10, ready_count: 8, not_ready_count: 2 },
+      { cluster: 'staging-isolated', ready: false, score: 70, total_requirements: 10, ready_count: 7, not_ready_count: 3 },
+    ])
+  }),
+
+  http.get('/api/compliance/airgap/summary', async () => {
+    await delay(150)
+    return HttpResponse.json({
+      total_clusters: 4, ready_clusters: 2, not_ready_clusters: 2,
+      overall_score: 80, total_requirements: 10, met_requirements: 8,
+      evaluated_at: new Date().toISOString(),
+    })
+  }),
+
+  // ── FedRAMP Readiness mock handlers (demo mode) ───────────────────
+  http.get('/api/compliance/fedramp/controls', async () => {
+    await delay(150)
+    return HttpResponse.json([
+      { id: 'AC-1', family: 'AC', name: 'Access Control Policy', impact_level: 'low', status: 'satisfied', poam_entry: false, evidence: 'Policy documented' },
+      { id: 'AC-2', family: 'AC', name: 'Account Management', impact_level: 'low', status: 'satisfied', poam_entry: false, evidence: 'RBAC + OIDC' },
+      { id: 'AC-6', family: 'AC', name: 'Least Privilege', impact_level: 'moderate', status: 'partially_satisfied', poam_entry: true, evidence: '80% scoped' },
+      { id: 'AU-2', family: 'AU', name: 'Audit Events', impact_level: 'low', status: 'satisfied', poam_entry: false, evidence: 'Audit policy active' },
+      { id: 'CA-7', family: 'CA', name: 'Continuous Monitoring', impact_level: 'moderate', status: 'satisfied', poam_entry: false, evidence: 'Prometheus + Grafana' },
+      { id: 'CM-6', family: 'CM', name: 'Configuration Settings', impact_level: 'low', status: 'partially_satisfied', poam_entry: true, evidence: 'OPA 85%' },
+      { id: 'SC-7', family: 'SC', name: 'Boundary Protection', impact_level: 'low', status: 'satisfied', poam_entry: false, evidence: 'NetworkPolicy + WAF' },
+      { id: 'SI-2', family: 'SI', name: 'Flaw Remediation', impact_level: 'low', status: 'partially_satisfied', poam_entry: true, evidence: '90% SLA' },
+    ])
+  }),
+
+  http.get('/api/compliance/fedramp/poams', async () => {
+    await delay(150)
+    return HttpResponse.json([
+      { id: 'POAM-001', control_id: 'AC-6', weakness: '3 legacy service accounts overly broad', severity: 'moderate', scheduled_date: '2026-06-30', milestone_status: 'open', responsible_role: 'Platform Engineering' },
+      { id: 'POAM-002', control_id: 'CM-6', weakness: '15% OPA policies not enforced', severity: 'low', scheduled_date: '2026-07-15', milestone_status: 'open', responsible_role: 'Security Engineering' },
+      { id: 'POAM-003', control_id: 'SI-2', weakness: 'CVE patching SLA gap', severity: 'moderate', scheduled_date: '2026-05-31', milestone_status: 'delayed', responsible_role: 'DevOps' },
+      { id: 'POAM-004', control_id: 'AU-12', weakness: 'Incomplete node audit logging', severity: 'low', scheduled_date: '2026-04-15', milestone_status: 'closed', responsible_role: 'Platform Engineering' },
+    ])
+  }),
+
+  http.get('/api/compliance/fedramp/score', async () => {
+    await delay(150)
+    return HttpResponse.json({
+      overall_score: 85, impact_level: 'moderate', total_controls: 17,
+      satisfied_controls: 14, partial_controls: 3, planned_controls: 0,
+      open_poams: 3, closed_poams: 1, authorization_status: 'in_progress',
+      evaluated_at: new Date().toISOString(),
+    })
+  }),
+
   // Card templates
   http.get('/api/cards/templates', async () => {
     await delay(100)

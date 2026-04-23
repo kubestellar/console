@@ -108,6 +108,20 @@ const TrestleScan = safeLazy(() => import('./TrestleScan'), 'TrestleScan')
 const VaultSecrets = safeLazy(() => import('./DataComplianceCards'), 'VaultSecrets')
 const ExternalSecrets = safeLazy(() => import('./DataComplianceCards'), 'ExternalSecrets')
 const CertManager = safeLazy(() => import('./DataComplianceCards'), 'CertManager')
+// Enterprise compliance cards — share one chunk
+const _enterpriseComplianceBundle = import('./EnterpriseComplianceCards').catch(() => undefined as never)
+const HIPAACard = safeLazy(() => _enterpriseComplianceBundle, 'HIPAACard')
+const GxPCard = safeLazy(() => _enterpriseComplianceBundle, 'GxPCard')
+const BAACard = safeLazy(() => _enterpriseComplianceBundle, 'BAACard')
+const ComplianceFrameworksCard = safeLazy(() => _enterpriseComplianceBundle, 'ComplianceFrameworksCard')
+const DataResidencyCard = safeLazy(() => _enterpriseComplianceBundle, 'DataResidencyCard')
+const ChangeControlCard = safeLazy(() => _enterpriseComplianceBundle, 'ChangeControlCard')
+const SegregationOfDutiesCard = safeLazy(() => _enterpriseComplianceBundle, 'SegregationOfDutiesCard')
+const ComplianceReportsCard = safeLazy(() => _enterpriseComplianceBundle, 'ComplianceReportsCard')
+const NISTCard = safeLazy(() => _enterpriseComplianceBundle, 'NISTCard')
+const STIGCard = safeLazy(() => _enterpriseComplianceBundle, 'STIGCard')
+const AirGapCard = safeLazy(() => _enterpriseComplianceBundle, 'AirGapCard')
+const FedRAMPCard = safeLazy(() => _enterpriseComplianceBundle, 'FedRAMPCard')
 // Workload detection cards — share one chunk via barrel import
 const _workloadDetectionBundle = import('./workload-detection').catch(() => undefined as never)
 const ProwJobs = safeLazy(() => _workloadDetectionBundle, 'ProwJobs')
@@ -436,6 +450,19 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   kubescape_scan: KubescapeScan,
   policy_violations: PolicyViolations,
   compliance_score: ComplianceScore,
+  // Enterprise compliance cards
+  hipaa_compliance: HIPAACard,
+  gxp_validation: GxPCard,
+  baa_tracker: BAACard,
+  compliance_frameworks: ComplianceFrameworksCard,
+  data_residency: DataResidencyCard,
+  change_control: ChangeControlCard,
+  segregation_of_duties: SegregationOfDutiesCard,
+  compliance_reports: ComplianceReportsCard,
+  nist_800_53: NISTCard,
+  stig_compliance: STIGCard,
+  air_gap_readiness: AirGapCard,
+  fedramp_readiness: FedRAMPCard,
   // ISO 27001 audit checklist
   iso27001_audit: ISO27001Audit,
   // Cross-cluster compliance cards

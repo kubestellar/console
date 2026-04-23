@@ -54,6 +54,10 @@ export const ROUTES = {
   BAA: '/baa',
   HIPAA: '/hipaa',
   GXP: '/gxp',
+  NIST: '/nist',
+  STIG: '/stig',
+  AIR_GAP: '/air-gap',
+  FEDRAMP: '/fedramp',
   DATA_COMPLIANCE: '/data-compliance',
   
   // Advanced Features

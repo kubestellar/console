@@ -838,6 +838,18 @@ func (s *Server) setupRoutes() {
 	// GxP / 21 CFR Part 11 public read endpoints (demo mode).
 	gxpHandler := handlers.NewGxPHandler()
 	gxpHandler.RegisterPublicRoutes(s.app.Group("/api", publicLimiter))
+	// NIST 800-53 control mapping public read endpoints (demo mode).
+	nistHandler := handlers.NewNIST80053Handler()
+	nistHandler.RegisterPublicRoutes(s.app.Group("/api", publicLimiter))
+	// DISA STIG compliance public read endpoints (demo mode).
+	stigHandler := handlers.NewSTIGHandler()
+	stigHandler.RegisterPublicRoutes(s.app.Group("/api", publicLimiter))
+	// Air-gap readiness public read endpoints (demo mode).
+	airgapHandler := handlers.NewAirGapHandler()
+	airgapHandler.RegisterPublicRoutes(s.app.Group("/api", publicLimiter))
+	// FedRAMP readiness public read endpoints (demo mode).
+	fedrampHandler := handlers.NewFedRAMPHandler()
+	fedrampHandler.RegisterPublicRoutes(s.app.Group("/api", publicLimiter))
 
 	// API routes (protected) — with rate limiting
 	//

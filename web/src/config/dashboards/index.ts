@@ -30,6 +30,10 @@ import { dataResidencyDashboardConfig } from './data-residency'
 import { baaDashboardConfig } from './baa'
 import { hipaaDashboardConfig } from './hipaa'
 import { gxpDashboardConfig } from './gxp'
+import { nistDashboardConfig } from './nist'
+import { stigDashboardConfig } from './stig'
+import { airgapDashboardConfig } from './airgap'
+import { fedrampDashboardConfig } from './fedramp'
 import { costDashboardConfig } from './cost'
 import { gpuDashboardConfig } from './gpu'
 import { nodesDashboardConfig } from './nodes'
@@ -76,6 +80,10 @@ export const DASHBOARD_CONFIGS: DashboardConfigRegistry = {
   baa: baaDashboardConfig,
   hipaa: hipaaDashboardConfig,
   gxp: gxpDashboardConfig,
+  nist: nistDashboardConfig,
+  stig: stigDashboardConfig,
+  airgap: airgapDashboardConfig,
+  fedramp: fedrampDashboardConfig,
   cost: costDashboardConfig,
   gpu: gpuDashboardConfig,
   nodes: nodesDashboardConfig,
@@ -192,6 +200,10 @@ export {
   baaDashboardConfig,
   hipaaDashboardConfig,
   gxpDashboardConfig,
+  nistDashboardConfig,
+  stigDashboardConfig,
+  airgapDashboardConfig,
+  fedrampDashboardConfig,
   costDashboardConfig,
   gpuDashboardConfig,
   nodesDashboardConfig,
