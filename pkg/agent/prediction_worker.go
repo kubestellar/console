@@ -286,7 +286,12 @@ func (w *PredictionWorker) runLoop() {
 		}
 
 		// Wait for next interval or stop signal using the reused timer.
-		interval := time.Duration(settings.Interval) * time.Minute
+		// Guard against zero/negative interval to prevent busy-loop DoS (#9620).
+		intervalMinutes := settings.Interval
+		if intervalMinutes < 1 {
+			intervalMinutes = 10
+		}
+		interval := time.Duration(intervalMinutes) * time.Minute
 		intervalTimer.Reset(interval)
 		select {
 		case <-intervalTimer.C:

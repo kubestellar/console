@@ -479,8 +479,13 @@ func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.M
 	ctx, cancel := context.WithTimeout(context.Background(), missionExecutionTimeout)
 	defer cancel()
 
-	// Register cancel function so handleCancelChat can stop this session
+	// Register cancel function so handleCancelChat can stop this session.
+	// If a previous request is still running for this SessionID, cancel it
+	// first to prevent orphaned goroutines (#9619).
 	s.activeChatCtxsMu.Lock()
+	if prevCancel, exists := s.activeChatCtxs[req.SessionID]; exists {
+		prevCancel()
+	}
 	s.activeChatCtxs[req.SessionID] = cancel
 	s.activeChatCtxsMu.Unlock()
 	defer func() {
@@ -1593,14 +1598,16 @@ func (s *Server) addTokenUsage(usage *ProviderTokenUsage) {
 	s.todayTokensIn += int64(usage.InputTokens)
 	s.todayTokensOut += int64(usage.OutputTokens)
 
-	// Schedule a debounced flush: reset the timer if one is already pending,
-	// otherwise create a new one. This coalesces rapid-fire token updates into
-	// a single disk write (#9483).
-	if s.tokenFlushTimer != nil {
-		s.tokenFlushTimer.Stop()
-		s.tokenFlushTimer.Reset(tokenUsageFlushInterval)
-	} else {
+	// Schedule a non-resetting flush: if no timer is pending, start one.
+	// Unlike the previous debounce that reset on every call (#9616), this
+	// guarantees the flush fires within tokenUsageFlushInterval of the FIRST
+	// token update, preventing unbounded data loss if tokens arrive faster
+	// than the interval.
+	if s.tokenFlushTimer == nil {
 		s.tokenFlushTimer = time.AfterFunc(tokenUsageFlushInterval, func() {
+			s.tokenMux.Lock()
+			s.tokenFlushTimer = nil
+			s.tokenMux.Unlock()
 			s.saveTokenUsage()
 		})
 	}
