@@ -23,6 +23,7 @@ import { useDashboardContextOptional } from '../../hooks/useDashboardContext'
 const SIDEBAR_FEATURES = {
   missions: true,
   addCard: true,
+  addMore: true,
   clusterStatus: true,
   collapsePin: true,
   resize: true,
