@@ -272,6 +272,8 @@ export const CARD_TITLES: Record<string, string> = {
   grpc_status: 'gRPC Services',
   // Linkerd service mesh
   linkerd_status: 'Linkerd',
+  // OpenTelemetry collector (CNCF)
+  otel_status: 'OpenTelemetry',
   // TiKV distributed key-value store
   tikv_status: 'TiKV',
   // Vitess distributed MySQL
@@ -593,6 +595,8 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   grpc_status: 'gRPC service serving status, per-service RPS, p99 latency, and error rates.',
   // Linkerd service mesh
   linkerd_status: 'Linkerd service mesh meshed pods, success rate, RPS, and p99 latency per deployment.',
+  // OpenTelemetry collector
+  otel_status: 'OpenTelemetry Collectors: pipeline health, receivers and exporters, dropped telemetry, and export errors across connected clusters.',
   // TiKV distributed key-value store
   tikv_status: 'TiKV distributed key-value store: store nodes, region counts, leader counts, and capacity utilization across the cluster.',
   // Vitess distributed MySQL

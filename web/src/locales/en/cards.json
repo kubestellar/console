@@ -3102,6 +3102,24 @@
     "sectionDeployments": "Meshed deployments",
     "noDeployments": "No meshed deployments found"
   },
+  "otelStatus": {
+    "healthy": "Healthy",
+    "degraded": "Degraded",
+    "notInstalled": "OpenTelemetry not detected",
+    "notInstalledHint": "No OpenTelemetry Collector pods found on connected clusters. Deploy the OTel Collector to monitor traces, metrics, and logs.",
+    "running": "Running",
+    "degradedCount": "Degraded",
+    "pipelines": "Pipelines",
+    "dropped": "Dropped",
+    "receivers": "Receivers",
+    "exporters": "Exporters",
+    "mode": "Mode",
+    "noCollectors": "No OpenTelemetry Collectors reporting.",
+    "collectors_one": "{{count}} collector",
+    "collectors_other": "{{count}} collectors",
+    "exportErrors_one": "{{count}} export error",
+    "exportErrors_other": "{{count}} export errors"
+  },
   "tikvStatus": {
     "healthy": "Healthy",
     "degraded": "Degraded",

@@ -150,6 +150,12 @@ export * from './useCachedJaegerStatus'
 export * from './useCachedTikv'
 
 // ============================================================================
+// OpenTelemetry Collector — useCachedOtel.ts
+// ============================================================================
+
+export { useCachedOtel } from './useCachedOtel'
+
+// ============================================================================
 // Standalone fetchers for prefetch (no React hooks, plain async)
 // ============================================================================
 

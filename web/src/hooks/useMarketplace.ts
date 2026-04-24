@@ -100,8 +100,10 @@ const MARKETPLACE_TO_CARD_TYPE: Record<string, string> = {
   'cncf-openfeature': 'openfeature_status',
   'cncf-strimzi': 'strimzi_status',
   'cncf-thanos': 'thanos_status',
+  'cncf-opentelemetry': 'otel_status',
   'cncf-tikv': 'tikv_status',
-  'cncf-vitess': 'vitess_status' }
+  'cncf-vitess': 'vitess_status',
+}
 
 /**
  * Reconcile marketplace items against the local card registry.
