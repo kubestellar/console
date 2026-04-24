@@ -133,6 +133,8 @@ import { JaegerStatus } from '../index'
 describe('JaegerStatus', () => {
     beforeEach(() => {
         vi.clearAllMocks()
+        // Use unique numeric values for each metric so getByText('<number>')
+        // resolves to exactly one element in the rendered DOM.
         mockUseCachedJaegerStatus.mockReturnValue({
             data: {
                 status: 'Healthy',
@@ -144,14 +146,14 @@ describe('JaegerStatus', () => {
                 },
                 query: { status: 'Healthy' },
                 metrics: {
-                    servicesCount: 10,
-                    tracesLastHour: 100,
-                    dependenciesCount: 5,
-                    avgLatencyMs: 10,
-                    p95LatencyMs: 20,
-                    p99LatencyMs: 30,
-                    spansDroppedLastHour: 5,
-                    avgQueueLength: 12
+                    servicesCount: 11,
+                    tracesLastHour: 101,
+                    dependenciesCount: 6,
+                    avgLatencyMs: 13,
+                    p95LatencyMs: 23,
+                    p99LatencyMs: 33,
+                    spansDroppedLastHour: 7,
+                    avgQueueLength: 14,
                 }
             },
             isLoading: false,
@@ -167,13 +169,15 @@ describe('JaegerStatus', () => {
     it('renders Jaeger title and metrics', async () => {
         render(<JaegerStatus />)
         expect(await screen.findByText('jaeger.title')).toBeInTheDocument()
-        expect(screen.getByText('10')).toBeInTheDocument()
+        // servicesCount: 11 — unique value, rendered in the MetricTile for jaeger.services
+        expect(screen.getByText('11')).toBeInTheDocument()
     })
 
     it('renders health KPIs', async () => {
         render(<JaegerStatus />)
         expect(await screen.findByText('jaeger.dropped')).toBeInTheDocument()
-        expect(screen.getByText('5')).toBeInTheDocument()
+        // spansDroppedLastHour: 7 — unique value, rendered in the KPIField for jaeger.dropped
+        expect(screen.getByText('7')).toBeInTheDocument()
     })
 
     it('renders collectors list', async () => {
