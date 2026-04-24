@@ -141,6 +141,7 @@
       "three-mesh-bvh": "^0.8.0"
     },
     "minimatch": "^10.2.1",
-    "follow-redirects": "^1.15.12"
+    "follow-redirects": "^1.15.12",
+    "uuid": "^14.0.0"
   }
 }
