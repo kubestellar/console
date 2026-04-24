@@ -15,6 +15,10 @@ func isDemoMode(c *fiber.Ctx) bool {
 	return c.Get("X-Demo-Mode") == "true"
 }
 
+func errNoClusterAccess(c *fiber.Ctx) error {
+	return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": "No cluster access"})
+}
+
 // Demo cluster data - matches frontend getDemoClusters() for consistency
 func getDemoClusters() []k8s.ClusterInfo {
 	return []k8s.ClusterInfo{

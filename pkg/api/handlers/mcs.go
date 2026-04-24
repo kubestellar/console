@@ -29,7 +29,7 @@ func NewMCSHandlers(k8sClient *k8s.MultiClusterClient, hub *Hub) *MCSHandlers {
 // GET /api/mcs/exports
 func (h *MCSHandlers) ListServiceExports(c *fiber.Ctx) error {
 	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "Kubernetes client not available"})
+		return errNoClusterAccess(c)
 	}
 
 	// Optional filters
@@ -65,7 +65,7 @@ func (h *MCSHandlers) ListServiceExports(c *fiber.Ctx) error {
 // GET /api/mcs/imports
 func (h *MCSHandlers) ListServiceImports(c *fiber.Ctx) error {
 	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "Kubernetes client not available"})
+		return errNoClusterAccess(c)
 	}
 
 	// Optional filters
@@ -101,7 +101,7 @@ func (h *MCSHandlers) ListServiceImports(c *fiber.Ctx) error {
 // GET /api/mcs/status
 func (h *MCSHandlers) GetMCSStatus(c *fiber.Ctx) error {
 	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "Kubernetes client not available"})
+		return errNoClusterAccess(c)
 	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), mcsDefaultTimeout)
@@ -135,7 +135,7 @@ func (h *MCSHandlers) GetMCSStatus(c *fiber.Ctx) error {
 // GET /api/mcs/exports/:cluster/:namespace/:name
 func (h *MCSHandlers) GetServiceExport(c *fiber.Ctx) error {
 	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "Kubernetes client not available"})
+		return errNoClusterAccess(c)
 	}
 
 	cluster := c.Params("cluster")
@@ -163,7 +163,7 @@ func (h *MCSHandlers) GetServiceExport(c *fiber.Ctx) error {
 // GET /api/mcs/imports/:cluster/:namespace/:name
 func (h *MCSHandlers) GetServiceImport(c *fiber.Ctx) error {
 	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "Kubernetes client not available"})
+		return errNoClusterAccess(c)
 	}
 
 	cluster := c.Params("cluster")

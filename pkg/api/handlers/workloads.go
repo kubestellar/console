@@ -76,7 +76,7 @@ func (h *WorkloadHandlers) requireAdmin(c *fiber.Ctx) error {
 // GET /api/workloads
 func (h *WorkloadHandlers) ListWorkloads(c *fiber.Ctx) error {
 	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "Kubernetes client not available"})
+		return errNoClusterAccess(c)
 	}
 
 	// Optional filters
@@ -99,7 +99,7 @@ func (h *WorkloadHandlers) ListWorkloads(c *fiber.Ctx) error {
 // GET /api/workloads/:cluster/:namespace/:name
 func (h *WorkloadHandlers) GetWorkload(c *fiber.Ctx) error {
 	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "Kubernetes client not available"})
+		return errNoClusterAccess(c)
 	}
 
 	cluster := c.Params("cluster")
@@ -130,7 +130,7 @@ func (h *WorkloadHandlers) GetWorkload(c *fiber.Ctx) error {
 // GET /api/workloads/resolve-deps/:cluster/:namespace/:name
 func (h *WorkloadHandlers) ResolveDependencies(c *fiber.Ctx) error {
 	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "Kubernetes client not available"})
+		return errNoClusterAccess(c)
 	}
 
 	cluster := c.Params("cluster")
@@ -187,7 +187,7 @@ func (h *WorkloadHandlers) ResolveDependencies(c *fiber.Ctx) error {
 // GET /api/workloads/monitor/:cluster/:namespace/:name
 func (h *WorkloadHandlers) MonitorWorkload(c *fiber.Ctx) error {
 	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "Kubernetes client not available"})
+		return errNoClusterAccess(c)
 	}
 
 	cluster := c.Params("cluster")
@@ -213,7 +213,7 @@ func (h *WorkloadHandlers) MonitorWorkload(c *fiber.Ctx) error {
 // GET /api/workloads/deploy-status/:cluster/:namespace/:name
 func (h *WorkloadHandlers) GetDeployStatus(c *fiber.Ctx) error {
 	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "Kubernetes client not available"})
+		return errNoClusterAccess(c)
 	}
 
 	cluster := c.Params("cluster")
@@ -626,7 +626,7 @@ func (h *WorkloadHandlers) SyncClusterGroups(c *fiber.Ctx) error {
 // POST /api/cluster-groups/evaluate
 func (h *WorkloadHandlers) EvaluateClusterQuery(c *fiber.Ctx) error {
 	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "Kubernetes client not available"})
+		return errNoClusterAccess(c)
 	}
 
 	var query ClusterGroupQuery
@@ -1032,7 +1032,7 @@ func buildClusterContextForAI(healthData []k8s.ClusterHealth) string {
 // GET /api/workloads/capabilities
 func (h *WorkloadHandlers) GetClusterCapabilities(c *fiber.Ctx) error {
 	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "Kubernetes client not available"})
+		return errNoClusterAccess(c)
 	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), workloadListTimeout)
@@ -1050,7 +1050,7 @@ func (h *WorkloadHandlers) GetClusterCapabilities(c *fiber.Ctx) error {
 // GET /api/workloads/policies
 func (h *WorkloadHandlers) ListBindingPolicies(c *fiber.Ctx) error {
 	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "Kubernetes client not available"})
+		return errNoClusterAccess(c)
 	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), workloadDefaultTimeout)
@@ -1069,7 +1069,7 @@ func (h *WorkloadHandlers) ListBindingPolicies(c *fiber.Ctx) error {
 // GET /api/workloads/deploy-logs/:cluster/:namespace/:name?tail=8
 func (h *WorkloadHandlers) GetDeployLogs(c *fiber.Ctx) error {
 	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "Kubernetes client not available"})
+		return errNoClusterAccess(c)
 	}
 
 	cluster := c.Params("cluster")
