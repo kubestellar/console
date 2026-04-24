@@ -29,10 +29,12 @@ const META_DESCRIPTION =
 /*  so they stay in sync as the codebase evolves.                      */
 /* ------------------------------------------------------------------ */
 
-/** Total unique dashboards = default sidebar + discoverable dashboards */
+/** Total unique dashboards = default sidebar + discoverable dashboards.
+ * Guard against undefined imports (e.g. a malformed chunk during HMR) per
+ * CLAUDE.md array safety rule (#9889). */
 const TOTAL_DASHBOARDS = new Set([
-  ...DEFAULT_PRIMARY_NAV.map(d => d.id),
-  ...DISCOVERABLE_DASHBOARDS.map(d => d.id),
+  ...(DEFAULT_PRIMARY_NAV || []).map(d => d.id),
+  ...(DISCOVERABLE_DASHBOARDS || []).map(d => d.id),
 ]).size
 
 const HERO_STATS_PLACEHOLDER = '…'
