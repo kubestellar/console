@@ -2042,7 +2042,13 @@ export const handlers = [
   // The enterprise compliance dashboards fetch '/api/compliance/<vertical>/<resource>'
   // which slipped through the old catch-all, hit the Netlify SPA fallback,
   // and received index.html (200 OK, text/html) instead of JSON.
-  http.all(/^\/api\//, () => {
+  //
+  // IMPORTANT (#9831): MSW applies regex matchers to the FULL request URL
+  // (e.g. 'https://host/api/compliance/...'), not just the path. An anchored
+  // pattern like /^\/api\// never matches because the URL starts with the
+  // protocol. Drop the `^` anchor so the regex matches '/api/' anywhere in
+  // the URL.
+  http.all(/\/api\//, () => {
     return HttpResponse.json(
       { error: 'not available in demo mode' },
       { status: 503 },
