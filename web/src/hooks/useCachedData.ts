@@ -201,6 +201,12 @@ export { useCachedDragonfly } from './useCachedDragonfly'
 export { useCachedBackstage } from './useCachedBackstage'
 
 // ============================================================================
+// Cloud Custodian (CNCF incubating rules engine) — useCachedCloudCustodian.ts
+// ============================================================================
+
+export { useCachedCloudCustodian } from './useCachedCloudCustodian'
+
+// ============================================================================
 // Standalone fetchers for prefetch (no React hooks, plain async)
 // ============================================================================
 

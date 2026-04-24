@@ -290,6 +290,8 @@ export const CARD_TITLES: Record<string, string> = {
   vitess_status: 'Vitess',
   // CRI-O container runtime
   crio_status: 'CRI-O',
+  // Cloud Custodian rules engine (CNCF incubating)
+  cloud_custodian_status: 'Cloud Custodian',
   // Containerd container runtime
   containerd_status: 'Containerd',
   // Cortex horizontally scalable Prometheus (CNCF incubating — marketplace#35)
@@ -627,6 +629,8 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   vitess_status: 'Vitess distributed MySQL: keyspaces, shards, tablets (PRIMARY/REPLICA/RDONLY), and replication lag.',
   // CRI-O container runtime
   crio_status: 'CRI-O container runtime metrics, image pulls, and pod sandbox status.',
+  // Cloud Custodian rules engine (CNCF incubating)
+  cloud_custodian_status: 'Cloud Custodian policy runs — success / fail / dry-run counts, last run per policy, top resources acted on, and violations by severity.',
   // Containerd container runtime
   containerd_status: 'Containerd runtime — running containers, image, namespace, state, and uptime.',
   // Cortex horizontally scalable Prometheus (CNCF incubating — marketplace#35)

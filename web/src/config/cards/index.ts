@@ -64,6 +64,7 @@ import { githubCiMonitorConfig } from './github-ci-monitor'
 import { fluxStatusConfig } from './flux-status'
 import { backstageStatusConfig } from './backstage-status'
 import { contourStatusConfig } from './contour-status'
+import { cloudCustodianStatusConfig } from './cloud-custodian-status'
 import { containerdStatusConfig } from './containerd-status'
 import { cortexStatusConfig } from './cortex-status'
 import { daprStatusConfig } from './dapr-status'
@@ -263,6 +264,7 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   flux_status: fluxStatusConfig,
   backstage_status: backstageStatusConfig,
   contour_status: contourStatusConfig,
+  cloud_custodian_status: cloudCustodianStatusConfig,
   containerd_status: containerdStatusConfig,
   cortex_status: cortexStatusConfig,
   dapr_status: daprStatusConfig,

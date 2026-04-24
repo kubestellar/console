@@ -63,6 +63,7 @@ import { useCachedRook } from '../../hooks/useCachedRook'
 import { useCachedSpiffe } from '../../hooks/useCachedSpiffe'
 import { useCachedTikv } from '../../hooks/useCachedTikv'
 import { useCachedTuf } from '../../hooks/useCachedTuf'
+import { useCachedCloudCustodian } from '../../hooks/useCachedCloudCustodian'
 import { useCachedVitess } from '../../hooks/useCachedVitess'
 
 // ============================================================================
@@ -1189,6 +1190,17 @@ function useUnifiedTufStatus() {
   }
 }
 
+function useUnifiedCloudCustodianStatus() {
+  const result = useCachedCloudCustodian()
+  // Surface the policy list as the primary row set for generic list renderers.
+  return {
+    data: result.data.policies,
+    isLoading: result.isLoading,
+    error: result.error ? new Error(result.error) : null,
+    refetch: result.refetch,
+  }
+}
+
 function useUnifiedRookStatus() {
   const result = useCachedRook()
   return {
@@ -1422,6 +1434,7 @@ export function registerUnifiedHooks(): void {
   registerDataHook('useCachedSpiffe', useUnifiedSpiffeStatus)
   registerDataHook('useCachedTikv', useUnifiedTikvStatus)
   registerDataHook('useCachedTuf', useUnifiedTufStatus)
+  registerDataHook('useCachedCloudCustodian', useUnifiedCloudCustodianStatus)
   registerDataHook('useCachedVitess', useUnifiedVitessStatus)
   registerDataHook('useProviderHealth', useProviderHealth)
   registerDataHook('useUpgradeStatus', useUpgradeStatus)

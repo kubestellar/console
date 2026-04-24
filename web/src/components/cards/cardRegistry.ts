@@ -311,6 +311,8 @@ const KedaStatus = safeLazy(() => import('./keda_status'), 'KedaStatus')
 const FluentdStatus = safeLazy(() => import('./fluentd_status'), 'FluentdStatus')
 // CRI-O container runtime card
 const CrioStatus = safeLazy(() => import('./crio_status'), 'CrioStatus')
+// Cloud Custodian rules-engine card (CNCF incubating — marketplace#32)
+const CloudCustodianStatus = safeLazy(() => import('./cloud_custodian_status'), 'CloudCustodianStatus')
 // Containerd container runtime card (CNCF graduated — marketplace#4)
 const ContainerdStatus = safeLazy(() => import('./containerd_status'), 'ContainerdStatus')
 // Cortex horizontally scalable Prometheus card (CNCF incubating — marketplace#35)
@@ -722,6 +724,8 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   fluentd_status: FluentdStatus,
   // CRI-O container runtime
   crio_status: CrioStatus,
+  // Cloud Custodian rules engine (CNCF incubating)
+  cloud_custodian_status: CloudCustodianStatus,
   // Containerd container runtime
   containerd_status: ContainerdStatus,
   // Cortex horizontally scalable Prometheus
@@ -1224,6 +1228,8 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   cloudevents_status: () => import('./cloudevents_status'),
   // CRI-O
   crio_status: () => import('./crio_status'),
+  // Cloud Custodian
+  cloud_custodian_status: () => import('./cloud_custodian_status'),
   // Containerd
   containerd_status: () => import('./containerd_status'),
   // Cortex
@@ -1595,6 +1601,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   coredns_status: 6,
   keda_status: 6,
   crio_status: 6,
+  cloud_custodian_status: 6,
   containerd_status: 6,
   cortex_status: 6,
   dragonfly_status: 6,
