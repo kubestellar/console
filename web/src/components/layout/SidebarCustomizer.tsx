@@ -137,7 +137,38 @@ const KNOWN_ROUTES: KnownRoute[] = [
   { href: '/ai-agents', name: 'AI Agents', description: 'Kagenti agent platform — deploy, secure, and manage AI agents across clusters', icon: 'Bot', category: 'Core Dashboards' },
   { href: '/llm-d-benchmarks', name: 'llm-d Benchmarks', description: 'LLM inference benchmarks — throughput, latency, and GPU utilization across clouds and accelerators', icon: 'TrendingUp', category: 'Core Dashboards' },
   { href: '/compliance', name: 'Sec. Compliance', description: 'Security compliance, regulatory audits, and policy enforcement', icon: 'ClipboardCheck', category: 'Core Dashboards' },
-  { href: '/enterprise', name: 'Enterprise', description: 'Unified GRC portal — FinTech, Healthcare, Government, SecOps, Supply Chain', icon: 'Building2', category: 'Core Dashboards' },
+  { href: '/enterprise', name: 'Enterprise Portal', description: 'Unified GRC portal — FinTech, Healthcare, Government, SecOps, Supply Chain', icon: 'Building2', category: 'Core Dashboards' },
+  // Enterprise Compliance — Epic 1: FinTech & Regulatory
+  { href: '/enterprise/frameworks', name: 'Compliance Frameworks', description: 'SOC 2, ISO 27001, PCI-DSS framework management and assessment', icon: 'ClipboardCheck', category: 'Enterprise Compliance' },
+  { href: '/enterprise/change-control', name: 'Change Control', description: 'Change request tracking, approval workflows, and audit trails', icon: 'GitPullRequest', category: 'Enterprise Compliance' },
+  { href: '/enterprise/sod', name: 'Segregation of Duties', description: 'SoD policy enforcement, conflict detection, and role analysis', icon: 'Users', category: 'Enterprise Compliance' },
+  { href: '/enterprise/data-residency', name: 'Data Residency', description: 'Data sovereignty mapping, geo-fencing, and residency compliance', icon: 'Globe', category: 'Enterprise Compliance' },
+  { href: '/enterprise/reports', name: 'Compliance Reports', description: 'Automated compliance report generation and export', icon: 'FileText', category: 'Enterprise Compliance' },
+  // Enterprise Compliance — Epic 2: Healthcare
+  { href: '/enterprise/hipaa', name: 'HIPAA', description: 'HIPAA Security Rule technical safeguards for PHI workloads', icon: 'Heart', category: 'Enterprise Compliance' },
+  { href: '/enterprise/gxp', name: 'GxP Validation', description: 'GxP computerized system validation for life sciences', icon: 'FlaskConical', category: 'Enterprise Compliance' },
+  { href: '/enterprise/baa', name: 'BAA Tracker', description: 'Business Associate Agreement tracking and compliance', icon: 'Handshake', category: 'Enterprise Compliance' },
+  // Enterprise Compliance — Epic 3: Government & Defense
+  { href: '/enterprise/nist', name: 'NIST 800-53', description: 'NIST 800-53 control mapping and assessment', icon: 'Shield', category: 'Enterprise Compliance' },
+  { href: '/enterprise/stig', name: 'STIG Compliance', description: 'Security Technical Implementation Guide checks', icon: 'ShieldCheck', category: 'Enterprise Compliance' },
+  { href: '/enterprise/air-gap', name: 'Air-Gap Support', description: 'Air-gapped environment readiness and network isolation', icon: 'WifiOff', category: 'Enterprise Compliance' },
+  { href: '/enterprise/fedramp', name: 'FedRAMP', description: 'FedRAMP readiness scoring and control assessment', icon: 'Landmark', category: 'Enterprise Compliance' },
+  // Enterprise Compliance — Epic 4: Identity & Access
+  { href: '/enterprise/oidc', name: 'OIDC Federation', description: 'OIDC provider integration and federation status', icon: 'KeyRound', category: 'Enterprise Compliance' },
+  { href: '/enterprise/rbac-audit', name: 'RBAC Audit', description: 'Role-based access control audit and analysis', icon: 'UserCheck', category: 'Enterprise Compliance' },
+  { href: '/enterprise/sessions', name: 'Session Management', description: 'Active session monitoring and policy enforcement', icon: 'Clock', category: 'Enterprise Compliance' },
+  // Enterprise Compliance — Epic 5: SecOps
+  { href: '/enterprise/siem', name: 'SIEM Integration', description: 'Security event export to Splunk, Elastic, and webhooks', icon: 'Radar', category: 'Enterprise Compliance' },
+  { href: '/enterprise/incident-response', name: 'Incident Response', description: 'Incident timeline generation and event correlation', icon: 'AlertTriangle', category: 'Enterprise Compliance' },
+  { href: '/enterprise/threat-intel', name: 'Threat Intelligence', description: 'CVE risk scoring and threat intelligence overlay', icon: 'Eye', category: 'Enterprise Compliance' },
+  // Enterprise Compliance — Epic 6: Supply Chain
+  { href: '/enterprise/sbom', name: 'SBOM Manager', description: 'Software Bill of Materials aggregation (SPDX/CycloneDX)', icon: 'Package', category: 'Enterprise Compliance' },
+  { href: '/enterprise/sigstore', name: 'Sigstore Verification', description: 'Container image signature verification with Cosign', icon: 'Lock', category: 'Enterprise Compliance' },
+  { href: '/enterprise/slsa', name: 'SLSA Provenance', description: 'Supply-chain Levels for Software Artifacts tracking', icon: 'Container', category: 'Enterprise Compliance' },
+  // Enterprise Compliance — Epic 7: Enterprise Risk Management
+  { href: '/enterprise/risk-matrix', name: 'Risk Matrix', description: 'Likelihood × impact risk assessment matrix', icon: 'Grid3x3', category: 'Enterprise Compliance' },
+  { href: '/enterprise/risk-register', name: 'Risk Register', description: 'Enterprise risk register with treatment plans', icon: 'ClipboardList', category: 'Enterprise Compliance' },
+  { href: '/enterprise/risk-appetite', name: 'Risk Appetite', description: 'Risk appetite framework and tolerance thresholds', icon: 'Scale', category: 'Enterprise Compliance' },
   { href: '/karmada-ops', name: 'Karmada Ops', description: 'Multi-cluster orchestration, AI inference, and data platform operations', icon: 'Globe', category: 'Core Dashboards' },
   { href: '/cluster-admin', name: 'Cluster Admin', description: 'Multi-cluster operations, control plane health, node debugging, and infrastructure management', icon: 'ShieldAlert', category: 'Core Dashboards' },
   { href: '/multi-tenancy', name: 'Multi-Tenancy', description: 'Tenant isolation with OVN-Kubernetes, KubeFlex, K3s, and KubeVirt', icon: 'Users', category: 'Core Dashboards' },
