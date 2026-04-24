@@ -455,8 +455,7 @@ func (h *RBACHandler) ListOpenShiftUsers(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Cluster parameter required")
 	}
 
-	// Use a longer timeout for this query as large clusters can be slow
-	ctx, cancel := context.WithTimeout(context.Background(), rbacAnalysisTimeout)
+	ctx, cancel := context.WithTimeout(c.Context(), rbacAnalysisTimeout)
 	defer cancel()
 
 	users, err := h.k8sClient.ListOpenShiftUsers(ctx, cluster)

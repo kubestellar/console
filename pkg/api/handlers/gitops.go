@@ -639,6 +639,10 @@ func (h *GitOpsHandlers) StreamOperators(c *fiber.Ctx) error {
 		return errNoClusterAccess(c)
 	}
 
+	// Capture request context before entering the stream writer so client
+	// disconnect propagates to per-cluster goroutines (#6480).
+	requestCtx := c.UserContext()
+
 	// Single cluster — return as single SSE event
 	if cluster != "" {
 		c.Set("Content-Type", "text/event-stream")
@@ -647,7 +651,7 @@ func (h *GitOpsHandlers) StreamOperators(c *fiber.Ctx) error {
 		c.Set("X-Accel-Buffering", "no")
 		c.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
 			writeSSEEvent(w, "connected", fiber.Map{"status": "streaming"})
-			ctx, cancel := context.WithTimeout(context.Background(), operatorPerClusterTimeout)
+			ctx, cancel := context.WithTimeout(requestCtx, operatorPerClusterTimeout)
 			defer cancel()
 			operators := h.getOperatorsForCluster(ctx, cluster)
 			writeSSEEvent(w, "cluster_data", fiber.Map{
@@ -684,7 +688,7 @@ func (h *GitOpsHandlers) StreamOperators(c *fiber.Ctx) error {
 				defer wg.Done()
 				subprocessSem <- struct{}{}        // acquire
 				defer func() { <-subprocessSem }() // release
-				ctx, cancel := context.WithTimeout(context.Background(), operatorPerClusterTimeout)
+				ctx, cancel := context.WithTimeout(requestCtx, operatorPerClusterTimeout)
 				defer cancel()
 
 				operators, fetchErr := h.getOperatorsForClusterWithError(ctx, clusterName)
@@ -1045,6 +1049,8 @@ func (h *GitOpsHandlers) StreamOperatorSubscriptions(c *fiber.Ctx) error {
 		return errNoClusterAccess(c)
 	}
 
+	requestCtx := c.UserContext()
+
 	if cluster != "" {
 		c.Set("Content-Type", "text/event-stream")
 		c.Set("Cache-Control", "no-cache")
@@ -1052,7 +1058,7 @@ func (h *GitOpsHandlers) StreamOperatorSubscriptions(c *fiber.Ctx) error {
 		c.Set("X-Accel-Buffering", "no")
 		c.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
 			writeSSEEvent(w, "connected", fiber.Map{"status": "streaming"})
-			ctx, cancel := context.WithTimeout(context.Background(), subscriptionPerClusterTimeout)
+			ctx, cancel := context.WithTimeout(requestCtx, subscriptionPerClusterTimeout)
 			defer cancel()
 			subs := h.getSubscriptionsForCluster(ctx, cluster)
 			writeSSEEvent(w, "cluster_data", fiber.Map{
@@ -1089,7 +1095,7 @@ func (h *GitOpsHandlers) StreamOperatorSubscriptions(c *fiber.Ctx) error {
 				defer wg.Done()
 				subprocessSem <- struct{}{}        // acquire
 				defer func() { <-subprocessSem }() // release
-				ctx, cancel := context.WithTimeout(context.Background(), subscriptionPerClusterTimeout)
+				ctx, cancel := context.WithTimeout(requestCtx, subscriptionPerClusterTimeout)
 				defer cancel()
 
 				subs, fetchErr := h.getSubscriptionsForClusterWithError(ctx, clusterName)
@@ -1216,6 +1222,8 @@ func (h *GitOpsHandlers) StreamHelmReleases(c *fiber.Ctx) error {
 		return errNoClusterAccess(c)
 	}
 
+	requestCtx := c.UserContext()
+
 	if cluster != "" {
 		c.Set("Content-Type", "text/event-stream")
 		c.Set("Cache-Control", "no-cache")
@@ -1223,7 +1231,7 @@ func (h *GitOpsHandlers) StreamHelmReleases(c *fiber.Ctx) error {
 		c.Set("X-Accel-Buffering", "no")
 		c.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
 			writeSSEEvent(w, "connected", fiber.Map{"status": "streaming"})
-			ctx, cancel := context.WithTimeout(context.Background(), helmStreamPerClusterTimeout)
+			ctx, cancel := context.WithTimeout(requestCtx, helmStreamPerClusterTimeout)
 			defer cancel()
 			releases := h.getHelmReleasesForCluster(ctx, cluster)
 			writeSSEEvent(w, "cluster_data", fiber.Map{
@@ -1260,7 +1268,7 @@ func (h *GitOpsHandlers) StreamHelmReleases(c *fiber.Ctx) error {
 				defer wg.Done()
 				subprocessSem <- struct{}{}        // acquire
 				defer func() { <-subprocessSem }() // release
-				ctx, cancel := context.WithTimeout(context.Background(), helmStreamPerClusterTimeout)
+				ctx, cancel := context.WithTimeout(requestCtx, helmStreamPerClusterTimeout)
 				defer cancel()
 
 				releases := h.getHelmReleasesForCluster(ctx, clusterName)
