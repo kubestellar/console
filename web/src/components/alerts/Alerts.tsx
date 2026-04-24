@@ -3,7 +3,6 @@ import { AlertCircle } from 'lucide-react'
 import { useAlerts, useAlertRules } from '../../hooks/useAlerts'
 import { useClusters } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
-import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
@@ -21,8 +20,6 @@ export function Alerts() {
   const { rules } = useAlertRules()
   const { isRefreshing: dataRefreshing, refetch, error } = useClusters()
   const { drillToAllAlerts } = useDrillDownActions()
-  const { getStatValue: getUniversalStatValue } = useUniversalStats()
-
   // Local state for last updated time
   const [lastUpdated, setLastUpdated] = useState<Date | undefined>(undefined)
 
@@ -71,7 +68,9 @@ export function Alerts() {
     }
   }
 
-  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
+  // DashboardPage calls useUniversalStats internally and merges with this getter,
+  // so we do not need to call useUniversalStats here to avoid duplicate API calls.
+  const getStatValue = getDashboardStatValue
 
   return (
     <DashboardPage

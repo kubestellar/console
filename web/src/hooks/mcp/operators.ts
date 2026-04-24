@@ -180,7 +180,14 @@ export function useOperators(cluster?: string) {
         }
       }
 
-      // REST fallback
+      // REST fallback — skip entirely if no token to prevent GA4 auth errors (#9957)
+      if (!token) {
+        setIsLoading(false)
+        setIsRefreshing(false)
+        fetchInProgressRef.current = false
+        return
+      }
+
       const url = cluster
         ? `/api/gitops/operators?cluster=${encodeURIComponent(cluster)}`
         : '/api/gitops/operators'
@@ -344,7 +351,14 @@ export function useOperatorSubscriptions(cluster?: string) {
         }
       }
 
-      // REST fallback
+      // REST fallback — skip entirely if no token to prevent GA4 auth errors (#9957)
+      if (!token) {
+        setIsLoading(false)
+        setIsRefreshing(false)
+        fetchInProgressRef.current = false
+        return
+      }
+
       const url = cluster
         ? `/api/gitops/operator-subscriptions?cluster=${encodeURIComponent(cluster)}`
         : '/api/gitops/operator-subscriptions'
