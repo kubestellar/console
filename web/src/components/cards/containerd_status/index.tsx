@@ -12,6 +12,7 @@
  * Marketplace preset: cncf-containerd — kubestellar/console-marketplace#4
  */
 import React from 'react'
+import { useTranslation } from 'react-i18next'
 import { AlertTriangle, Box, CheckCircle, PauseCircle, RefreshCw, Server, StopCircle } from 'lucide-react'
 import { MetricTile } from '../../../lib/cards/CardComponents'
 import { Skeleton, SkeletonList, SkeletonStats } from '../../ui/Skeleton'
@@ -91,6 +92,7 @@ function ContainerRow({ item }: { item: ContainerdContainer }) {
 }
 
 export function ContainerdStatus() {
+  const { t } = useTranslation(['cards', 'common'])
   const {
     data,
     isLoading,
@@ -130,7 +132,7 @@ export function ContainerdStatus() {
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2">
         <AlertTriangle className="w-6 h-6 text-red-400" />
-        <p className="text-sm text-red-400">Failed to fetch containerd status</p>
+        <p className="text-sm text-red-400">{t('containerdStatus.fetchFailed', 'Failed to fetch containerd status')}</p>
       </div>
     )
   }
@@ -139,9 +141,9 @@ export function ContainerdStatus() {
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2">
         <Box className="w-6 h-6 text-muted-foreground/50" />
-        <p className="text-sm font-medium">containerd not detected</p>
+        <p className="text-sm font-medium">{t('containerdStatus.notDetected', 'containerd not detected')}</p>
         <p className="text-xs text-center max-w-xs">
-          No nodes on connected clusters report containerd as their runtime.
+          {t('containerdStatus.notDetectedHint', 'No nodes on connected clusters report containerd as their runtime.')}
         </p>
       </div>
     )
@@ -158,7 +160,9 @@ export function ContainerdStatus() {
           }`}
         >
           {isHealthy ? <CheckCircle className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
-          {isHealthy ? 'Healthy' : 'Degraded'}
+          {isHealthy
+            ? t('containerdStatus.healthy', 'Healthy')
+            : t('containerdStatus.degraded', 'Degraded')}
         </div>
 
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -169,25 +173,25 @@ export function ContainerdStatus() {
 
       <div className="grid grid-cols-2 @md:grid-cols-4 gap-2">
         <MetricTile
-          label="Total"
+          label={t('containerdStatus.total', 'Total')}
           value={data.summary.totalContainers}
           colorClass="text-cyan-400"
           icon={<Box className="w-4 h-4 text-cyan-400" />}
         />
         <MetricTile
-          label="Running"
+          label={t('containerdStatus.running', 'Running')}
           value={data.summary.running}
           colorClass="text-green-400"
           icon={<CheckCircle className="w-4 h-4 text-green-400" />}
         />
         <MetricTile
-          label="Paused"
+          label={t('containerdStatus.paused', 'Paused')}
           value={data.summary.paused}
           colorClass={data.summary.paused > 0 ? 'text-yellow-400' : 'text-muted-foreground'}
           icon={<PauseCircle className="w-4 h-4 text-yellow-400" />}
         />
         <MetricTile
-          label="Stopped"
+          label={t('containerdStatus.stopped', 'Stopped')}
           value={data.summary.stopped}
           colorClass={data.summary.stopped > 0 ? 'text-red-400' : 'text-muted-foreground'}
           icon={<StopCircle className="w-4 h-4 text-red-400" />}
@@ -199,13 +203,13 @@ export function ContainerdStatus() {
           <div className="flex items-center gap-2">
             <Server className="w-4 h-4 text-cyan-400" />
             <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Containers
+              {t('containerdStatus.containers', 'Containers')}
             </h4>
           </div>
 
           {data.containers.length === 0 ? (
             <div className="rounded-md bg-secondary/20 border border-border/40 px-3 py-2 text-xs text-muted-foreground">
-              No containers reported
+              {t('containerdStatus.noContainers', 'No containers reported')}
             </div>
           ) : (
             <div className="space-y-1.5">

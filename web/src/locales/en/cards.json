@@ -3061,6 +3061,19 @@
     "noListeners": "No listeners configured",
     "noClusters": "No upstream clusters"
   },
+  "containerdStatus": {
+    "healthy": "Healthy",
+    "degraded": "Degraded",
+    "notDetected": "containerd not detected",
+    "notDetectedHint": "No nodes on connected clusters report containerd as their runtime.",
+    "fetchFailed": "Failed to fetch containerd status",
+    "total": "Total",
+    "running": "Running",
+    "paused": "Paused",
+    "stopped": "Stopped",
+    "containers": "Containers",
+    "noContainers": "No containers reported"
+  },
   "linkerdStatus": {
     "healthy": "Healthy",
     "degraded": "Degraded",
