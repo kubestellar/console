@@ -15,6 +15,7 @@
  */
 
 import { getStore } from "@netlify/blobs";
+import { buildCorsHeaders, handlePreflight } from "./_shared/cors";
 
 const GITHUB_API = "https://api.github.com";
 const CACHE_STORE = "github-rewards";
@@ -195,15 +196,18 @@ async function searchItems(
 // ---------------------------------------------------------------------------
 
 export default async (req: Request) => {
+  // See web/netlify/functions/_shared/cors.ts for allowlist rationale (#9879).
+  const corsOpts = {
+    methods: "GET, OPTIONS",
+    headers: "Content-Type, Authorization, Accept",
+  };
   const corsHeaders = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization, Accept",
+    ...buildCorsHeaders(req, corsOpts),
     "Cache-Control": "no-cache, no-store",
   };
 
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
+    return handlePreflight(req, corsOpts);
   }
 
   if (req.method !== "GET") {

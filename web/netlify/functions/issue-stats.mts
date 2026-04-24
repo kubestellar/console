@@ -12,6 +12,7 @@
  */
 
 import { getStore } from "@netlify/blobs";
+import { buildCorsHeaders, handlePreflight } from "./_shared/cors";
 
 const GITHUB_API = "https://api.github.com";
 const CACHE_STORE = "issue-stats";
@@ -100,14 +101,15 @@ async function fetchAllPages(
 // ---------------------------------------------------------------------------
 
 export default async function handler(request: Request): Promise<Response> {
-  const corsHeaders = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
+  // See web/netlify/functions/_shared/cors.ts for allowlist rationale (#9879).
+  const corsOpts = {
+    methods: "GET, OPTIONS",
+    headers: "Content-Type",
   };
+  const corsHeaders = buildCorsHeaders(request, corsOpts);
 
   if (request.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
+    return handlePreflight(request, corsOpts);
   }
 
   if (request.method !== "GET") {

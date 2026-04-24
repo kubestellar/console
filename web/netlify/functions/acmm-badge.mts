@@ -85,6 +85,11 @@ function corsHeaders(
   const cacheControl = withSWR
     ? `public, max-age=${cacheSeconds}, stale-while-revalidate=86400`
     : `public, max-age=${cacheSeconds}`;
+  // This is a public, unauthenticated, embeddable badge endpoint — the `*`
+  // CORS is intentional so shields.io and any README host (github.com,
+  // raw.githubusercontent.com, pkg.go.dev, crates.io, etc.) can fetch it.
+  // Do NOT tighten this origin (see web/netlify/functions/_shared/cors.ts
+  // for the tightened console-internal endpoints per #9879).
   const headers: Record<string, string> = {
     "Cache-Control": cacheControl,
     "Access-Control-Allow-Origin": "*",
