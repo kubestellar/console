@@ -18,7 +18,8 @@ import { copyToClipboard } from '../../lib/clipboard'
 const GlobeAnimation = lazy(() =>
   import('../animations/globe')
     .then(m => ({ default: m.GlobeAnimation }))
-    .catch(() => ({ default: () => null }))
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .catch((): { default: React.ComponentType<any> } => ({ default: () => null }))
 )
 
 // Apache 2.0 license is the project's effective terms; link opens in a new tab (#8376).
