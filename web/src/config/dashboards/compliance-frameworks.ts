@@ -15,7 +15,7 @@ export const complianceFrameworksDashboardConfig: UnifiedDashboardConfig = {
     { id: 'cf-kyverno-policies', cardType: 'kyverno_policies', title: 'Kyverno Policies', position: { w: 4, h: 3 } },
   ],
   features: { dragDrop: true, addCard: true, autoRefresh: true, autoRefreshInterval: 60_000 },
-  storageKey: 'compliance-frameworks-dashboard-cards',
+  storageKey: 'compliance-frameworks-dashboard-cards-v2',
 }
 
 export default complianceFrameworksDashboardConfig

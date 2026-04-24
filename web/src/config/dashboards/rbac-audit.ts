@@ -12,7 +12,7 @@ export const rbacAuditDashboardConfig: UnifiedDashboardConfig = {
     { id: 'rbac-namespace-rbac', cardType: 'namespace_rbac', title: 'Namespace RBAC', position: { w: 4, h: 3 } },
   ],
   features: { dragDrop: true, addCard: true, autoRefresh: true, autoRefreshInterval: 60_000 },
-  storageKey: 'rbac-audit-dashboard-cards',
+  storageKey: 'rbac-audit-dashboard-cards-v2',
 }
 
 export default rbacAuditDashboardConfig

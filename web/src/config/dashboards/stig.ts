@@ -12,7 +12,7 @@ export const stigDashboardConfig: UnifiedDashboardConfig = {
     { id: 'stig-security-issues', cardType: 'security_issues', title: 'Security Issues', position: { w: 4, h: 3 } },
   ],
   features: { dragDrop: true, addCard: true, autoRefresh: true, autoRefreshInterval: 60_000 },
-  storageKey: 'stig-dashboard-cards',
+  storageKey: 'stig-dashboard-cards-v2',
 }
 
 export default stigDashboardConfig

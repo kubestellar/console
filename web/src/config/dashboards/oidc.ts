@@ -12,7 +12,7 @@ export const oidcDashboardConfig: UnifiedDashboardConfig = {
     { id: 'oidc-role-binding-status', cardType: 'role_binding_status', title: 'Role Binding Status', position: { w: 4, h: 3 } },
   ],
   features: { dragDrop: true, addCard: true, autoRefresh: true, autoRefreshInterval: 60_000 },
-  storageKey: 'oidc-dashboard-cards',
+  storageKey: 'oidc-dashboard-cards-v2',
 }
 
 export default oidcDashboardConfig

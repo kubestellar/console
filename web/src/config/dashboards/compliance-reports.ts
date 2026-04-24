@@ -15,7 +15,7 @@ export const complianceReportsDashboardConfig: UnifiedDashboardConfig = {
     { id: 'cr-fleet-compliance-heatmap', cardType: 'fleet_compliance_heatmap', title: 'Fleet Compliance Heatmap', position: { w: 4, h: 3 } },
   ],
   features: { dragDrop: true, addCard: true, autoRefresh: true, autoRefreshInterval: 60_000 },
-  storageKey: 'compliance-reports-dashboard-cards',
+  storageKey: 'compliance-reports-dashboard-cards-v2',
 }
 
 export default complianceReportsDashboardConfig

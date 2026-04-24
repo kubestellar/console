@@ -15,7 +15,7 @@ export const dataResidencyDashboardConfig: UnifiedDashboardConfig = {
     { id: 'dr-network-policy-status', cardType: 'network_policy_status', title: 'Network Policy Status', position: { w: 4, h: 3 } },
   ],
   features: { dragDrop: true, addCard: true, autoRefresh: true, autoRefreshInterval: 60_000 },
-  storageKey: 'data-residency-dashboard-cards',
+  storageKey: 'data-residency-dashboard-cards-v2',
 }
 
 export default dataResidencyDashboardConfig

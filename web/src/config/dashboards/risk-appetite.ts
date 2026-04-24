@@ -12,7 +12,7 @@ export const riskAppetiteDashboardConfig: UnifiedDashboardConfig = {
     { id: 'ra-cluster-metrics', cardType: 'cluster_metrics', title: 'Cluster Metrics', position: { w: 4, h: 3 } },
   ],
   features: { dragDrop: true, addCard: true, autoRefresh: true, autoRefreshInterval: 60_000 },
-  storageKey: 'risk-appetite-dashboard-cards',
+  storageKey: 'risk-appetite-dashboard-cards-v2',
 }
 
 export default riskAppetiteDashboardConfig

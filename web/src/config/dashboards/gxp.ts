@@ -12,7 +12,7 @@ export const gxpDashboardConfig: UnifiedDashboardConfig = {
     { id: 'gxp-compliance-score', cardType: 'compliance_score', title: 'Compliance Score', position: { w: 4, h: 3 } },
   ],
   features: { dragDrop: true, addCard: true, autoRefresh: true, autoRefreshInterval: 60_000 },
-  storageKey: 'gxp-dashboard-cards',
+  storageKey: 'gxp-dashboard-cards-v2',
 }
 
 export default gxpDashboardConfig

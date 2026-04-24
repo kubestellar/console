@@ -12,7 +12,7 @@ export const sodDashboardConfig: UnifiedDashboardConfig = {
     { id: 'sod-namespace-rbac', cardType: 'namespace_rbac', title: 'Namespace RBAC', position: { w: 4, h: 3 } },
   ],
   features: { dragDrop: true, addCard: true, autoRefresh: true, autoRefreshInterval: 60_000 },
-  storageKey: 'sod-dashboard-cards',
+  storageKey: 'sod-dashboard-cards-v2',
 }
 
 export default sodDashboardConfig

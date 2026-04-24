@@ -12,7 +12,7 @@ export const airgapDashboardConfig: UnifiedDashboardConfig = {
     { id: 'airgap-node-status', cardType: 'node_status', title: 'Node Status', position: { w: 4, h: 3 } },
   ],
   features: { dragDrop: true, addCard: true, autoRefresh: true, autoRefreshInterval: 60_000 },
-  storageKey: 'airgap-dashboard-cards',
+  storageKey: 'airgap-dashboard-cards-v2',
 }
 
 export default airgapDashboardConfig

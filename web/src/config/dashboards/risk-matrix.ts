@@ -12,7 +12,7 @@ export const riskMatrixDashboardConfig: UnifiedDashboardConfig = {
     { id: 'rm-active-alerts', cardType: 'active_alerts', title: 'Active Alerts', position: { w: 4, h: 3 } },
   ],
   features: { dragDrop: true, addCard: true, autoRefresh: true, autoRefreshInterval: 60_000 },
-  storageKey: 'risk-matrix-dashboard-cards',
+  storageKey: 'risk-matrix-dashboard-cards-v2',
 }
 
 export default riskMatrixDashboardConfig

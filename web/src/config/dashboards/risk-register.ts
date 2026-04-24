@@ -12,7 +12,7 @@ export const riskRegisterDashboardConfig: UnifiedDashboardConfig = {
     { id: 'rr-pod-issues', cardType: 'pod_issues', title: 'Pod Issues', position: { w: 4, h: 3 } },
   ],
   features: { dragDrop: true, addCard: true, autoRefresh: true, autoRefreshInterval: 60_000 },
-  storageKey: 'risk-register-dashboard-cards',
+  storageKey: 'risk-register-dashboard-cards-v2',
 }
 
 export default riskRegisterDashboardConfig

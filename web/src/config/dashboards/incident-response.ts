@@ -12,7 +12,7 @@ export const incidentResponseDashboardConfig: UnifiedDashboardConfig = {
     { id: 'ir-warning-events', cardType: 'warning_events', title: 'Warning Events', position: { w: 4, h: 3 } },
   ],
   features: { dragDrop: true, addCard: true, autoRefresh: true, autoRefreshInterval: 30_000 },
-  storageKey: 'incident-response-dashboard-cards',
+  storageKey: 'incident-response-dashboard-cards-v2',
 }
 
 export default incidentResponseDashboardConfig

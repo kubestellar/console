@@ -12,7 +12,7 @@ export const baaDashboardConfig: UnifiedDashboardConfig = {
     { id: 'baa-policy-violations', cardType: 'policy_violations', title: 'Policy Violations', position: { w: 4, h: 3 } },
   ],
   features: { dragDrop: true, addCard: true, autoRefresh: true, autoRefreshInterval: 60_000 },
-  storageKey: 'baa-dashboard-cards',
+  storageKey: 'baa-dashboard-cards-v2',
 }
 
 export default baaDashboardConfig

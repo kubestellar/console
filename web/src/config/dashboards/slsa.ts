@@ -12,7 +12,7 @@ export const slsaDashboardConfig: UnifiedDashboardConfig = {
     { id: 'slsa-deployment-status', cardType: 'deployment_status', title: 'Deployment Status', position: { w: 4, h: 3 } },
   ],
   features: { dragDrop: true, addCard: true, autoRefresh: true, autoRefreshInterval: 60_000 },
-  storageKey: 'slsa-dashboard-cards',
+  storageKey: 'slsa-dashboard-cards-v2',
 }
 
 export default slsaDashboardConfig

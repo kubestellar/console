@@ -12,7 +12,7 @@ export const changeControlDashboardConfig: UnifiedDashboardConfig = {
     { id: 'cc-deployment-status', cardType: 'deployment_status', title: 'Deployment Status', position: { w: 4, h: 3 } },
   ],
   features: { dragDrop: true, addCard: true, autoRefresh: true, autoRefreshInterval: 60_000 },
-  storageKey: 'change-control-dashboard-cards',
+  storageKey: 'change-control-dashboard-cards-v2',
 }
 
 export default changeControlDashboardConfig

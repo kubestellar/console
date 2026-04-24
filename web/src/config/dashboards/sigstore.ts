@@ -12,7 +12,7 @@ export const sigstoreDashboardConfig: UnifiedDashboardConfig = {
     { id: 'sigstore-security-issues', cardType: 'security_issues', title: 'Security Issues', position: { w: 4, h: 3 } },
   ],
   features: { dragDrop: true, addCard: true, autoRefresh: true, autoRefreshInterval: 60_000 },
-  storageKey: 'sigstore-dashboard-cards',
+  storageKey: 'sigstore-dashboard-cards-v2',
 }
 
 export default sigstoreDashboardConfig

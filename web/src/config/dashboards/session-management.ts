@@ -12,7 +12,7 @@ export const sessionManagementDashboardConfig: UnifiedDashboardConfig = {
     { id: 'session-service-status', cardType: 'service_status', title: 'Service Status', position: { w: 4, h: 3 } },
   ],
   features: { dragDrop: true, addCard: true, autoRefresh: true, autoRefreshInterval: 60_000 },
-  storageKey: 'session-management-dashboard-cards',
+  storageKey: 'session-management-dashboard-cards-v2',
 }
 
 export default sessionManagementDashboardConfig

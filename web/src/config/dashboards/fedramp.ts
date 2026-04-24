@@ -12,7 +12,7 @@ export const fedrampDashboardConfig: UnifiedDashboardConfig = {
     { id: 'fedramp-trivy-scan', cardType: 'trivy_scan', title: 'Trivy Scan', position: { w: 4, h: 3 } },
   ],
   features: { dragDrop: true, addCard: true, autoRefresh: true, autoRefreshInterval: 60_000 },
-  storageKey: 'fedramp-dashboard-cards',
+  storageKey: 'fedramp-dashboard-cards-v2',
 }
 
 export default fedrampDashboardConfig

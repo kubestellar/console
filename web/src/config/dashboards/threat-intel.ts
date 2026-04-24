@@ -12,7 +12,7 @@ export const threatIntelDashboardConfig: UnifiedDashboardConfig = {
     { id: 'ti-active-alerts', cardType: 'active_alerts', title: 'Active Alerts', position: { w: 4, h: 3 } },
   ],
   features: { dragDrop: true, addCard: true, autoRefresh: true, autoRefreshInterval: 120_000 },
-  storageKey: 'threat-intel-dashboard-cards',
+  storageKey: 'threat-intel-dashboard-cards-v2',
 }
 
 export default threatIntelDashboardConfig

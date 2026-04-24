@@ -12,7 +12,7 @@ export const sbomDashboardConfig: UnifiedDashboardConfig = {
     { id: 'sbom-pod-health-trend', cardType: 'pod_health_trend', title: 'Pod Health Trend', position: { w: 4, h: 3 } },
   ],
   features: { dragDrop: true, addCard: true, autoRefresh: true, autoRefreshInterval: 60_000 },
-  storageKey: 'sbom-dashboard-cards',
+  storageKey: 'sbom-dashboard-cards-v2',
 }
 
 export default sbomDashboardConfig
