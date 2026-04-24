@@ -213,7 +213,7 @@ func (h *RBACHandler) ListK8sServiceAccounts(c *fiber.Ctx) error {
 	}
 
 	if h.k8sClient == nil {
-		return fiber.NewError(fiber.StatusServiceUnavailable, "Kubernetes client not available")
+		return errNoClusterAccess(c)
 	}
 
 	cluster := c.Query("cluster")
@@ -301,7 +301,7 @@ func (h *RBACHandler) ListK8sRoles(c *fiber.Ctx) error {
 	}
 
 	if h.k8sClient == nil {
-		return fiber.NewError(fiber.StatusServiceUnavailable, "Kubernetes client not available")
+		return errNoClusterAccess(c)
 	}
 
 	cluster := c.Query("cluster")
@@ -349,7 +349,7 @@ func (h *RBACHandler) ListK8sRoleBindings(c *fiber.Ctx) error {
 	}
 
 	if h.k8sClient == nil {
-		return fiber.NewError(fiber.StatusServiceUnavailable, "Kubernetes client not available")
+		return errNoClusterAccess(c)
 	}
 
 	cluster := c.Query("cluster")
@@ -412,7 +412,7 @@ func (h *RBACHandler) ListK8sUsers(c *fiber.Ctx) error {
 	}
 
 	if h.k8sClient == nil {
-		return fiber.NewError(fiber.StatusServiceUnavailable, "Kubernetes client not available")
+		return errNoClusterAccess(c)
 	}
 
 	cluster := c.Query("cluster")
@@ -447,7 +447,7 @@ func (h *RBACHandler) ListOpenShiftUsers(c *fiber.Ctx) error {
 	}
 
 	if h.k8sClient == nil {
-		return fiber.NewError(fiber.StatusServiceUnavailable, "Kubernetes client not available")
+		return errNoClusterAccess(c)
 	}
 
 	cluster := c.Query("cluster")
