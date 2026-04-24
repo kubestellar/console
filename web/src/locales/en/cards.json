@@ -3095,6 +3095,28 @@
     "containers": "Containers",
     "noContainers": "No containers reported"
   },
+  "cortexStatus": {
+    "healthy": "Healthy",
+    "degraded": "Degraded",
+    "notInstalled": "Cortex not detected",
+    "notInstalledHint": "No Cortex services reachable from the connected clusters. Deploy Cortex to store long-term Prometheus data.",
+    "fetchError": "Unable to fetch Cortex status",
+    "version": "version",
+    "pods": "Pods",
+    "activeSeries": "Active series",
+    "ingestionRate": "Ingest/s",
+    "queryRate": "Queries/s",
+    "tenants": "Tenants",
+    "componentsHealthy": "Components healthy",
+    "sectionComponents": "Microservices",
+    "noComponents": "No Cortex microservices reporting.",
+    "componentDistributor": "Distributor",
+    "componentIngester": "Ingester",
+    "componentQuerier": "Querier",
+    "componentStoreGateway": "Store gateway",
+    "componentRuler": "Ruler",
+    "componentAlertmanager": "Alertmanager"
+  },
   "dragonflyStatus": {
     "healthy": "Healthy",
     "degraded": "Degraded",

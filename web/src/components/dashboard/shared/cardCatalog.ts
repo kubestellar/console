@@ -166,6 +166,7 @@ export const CARD_CATALOG = {
   'Observability': [
     { type: 'jaeger_status', title: 'Jaeger Tracing', description: 'Distributed trace collection, service dependencies, and latency analysis', visualization: 'status' },
     { type: 'otel_status', title: 'OpenTelemetry', description: 'OpenTelemetry Collectors: pipeline health, receivers, exporters, dropped telemetry', visualization: 'status' },
+    { type: 'cortex_status', title: 'Cortex', description: 'Cortex (CNCF incubating) — horizontally scalable Prometheus: microservice health, active series, ingestion rate, query rate, and tenant count', visualization: 'status' },
   ],
   'GitOps': [
     { type: 'helm_release_status', title: 'Helm Releases', description: 'Helm release status and versions', visualization: 'status' },

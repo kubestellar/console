@@ -290,6 +290,8 @@ export const CARD_TITLES: Record<string, string> = {
   crio_status: 'CRI-O',
   // Containerd container runtime
   containerd_status: 'Containerd',
+  // Cortex horizontally scalable Prometheus (CNCF incubating — marketplace#35)
+  cortex_status: 'Cortex',
   // Dragonfly P2P image/file distribution
   dragonfly_status: 'Dragonfly',
   // Strimzi Kafka operator
@@ -623,6 +625,8 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   crio_status: 'CRI-O container runtime metrics, image pulls, and pod sandbox status.',
   // Containerd container runtime
   containerd_status: 'Containerd runtime — running containers, image, namespace, state, and uptime.',
+  // Cortex horizontally scalable Prometheus (CNCF incubating — marketplace#35)
+  cortex_status: 'Cortex (CNCF incubating) — horizontally scalable Prometheus: microservice health, active series, ingestion rate, query rate, and tenant count.',
   // Dragonfly P2P image/file distribution
   dragonfly_status: 'Dragonfly P2P image/file distribution — manager, scheduler, seed-peers, and per-node dfdaemon agents with active tasks and cache hit rate.',
 

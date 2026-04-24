@@ -311,6 +311,8 @@ const FluentdStatus = safeLazy(() => import('./fluentd_status'), 'FluentdStatus'
 const CrioStatus = safeLazy(() => import('./crio_status'), 'CrioStatus')
 // Containerd container runtime card (CNCF graduated — marketplace#4)
 const ContainerdStatus = safeLazy(() => import('./containerd_status'), 'ContainerdStatus')
+// Cortex horizontally scalable Prometheus card (CNCF incubating — marketplace#35)
+const CortexStatus = safeLazy(() => import('./cortex_status'), 'CortexStatus')
 // Dragonfly P2P image/file distribution card (CNCF graduated — marketplace#22)
 const DragonflyStatus = safeLazy(() => import('./dragonfly_status'), 'DragonflyStatus')
 // Lima VM card
@@ -720,6 +722,8 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   crio_status: CrioStatus,
   // Containerd container runtime
   containerd_status: ContainerdStatus,
+  // Cortex horizontally scalable Prometheus
+  cortex_status: CortexStatus,
   // Dragonfly P2P image/file distribution
   dragonfly_status: DragonflyStatus,
   // Lima VM
@@ -1217,6 +1221,8 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   crio_status: () => import('./crio_status'),
   // Containerd
   containerd_status: () => import('./containerd_status'),
+  // Cortex
+  cortex_status: () => import('./cortex_status'),
   // Dragonfly P2P image/file distribution
   dragonfly_status: () => import('./dragonfly_status'),
   // Strimzi
@@ -1431,6 +1437,7 @@ export const LIVE_DATA_CARDS = new Set([
   'keda_status',
   'crio_status',
   'containerd_status',
+  'cortex_status',
   'dragonfly_status',
   'strimzi_status',
   'keycloak_status',
@@ -1584,6 +1591,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   keda_status: 6,
   crio_status: 6,
   containerd_status: 6,
+  cortex_status: 6,
   dragonfly_status: 6,
   strimzi_status: 6,
   etcd_status: 4,

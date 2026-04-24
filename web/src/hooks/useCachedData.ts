@@ -182,6 +182,12 @@ export { useCachedOtel } from './useCachedOtel'
 export { useCachedTuf } from './useCachedTuf'
 
 // ============================================================================
+// Cortex (CNCF incubating — horizontally scalable Prometheus) — useCachedCortex.ts
+// ============================================================================
+
+export { useCachedCortex } from './useCachedCortex'
+
+// ============================================================================
 // Dragonfly P2P Image/File Distribution — useCachedDragonfly.ts
 // ============================================================================
 
