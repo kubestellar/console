@@ -621,6 +621,8 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   resource_marshall: ResourceMarshall,
   // Workload Monitor card (health monitoring with tree/list views)
   workload_monitor: WorkloadMonitor,
+  // Workload Status card (alias for WorkloadMonitor — widget registry type)
+  workload_status: WorkloadMonitor,
   // Specialized monitoring cards
   llmd_stack_monitor: LLMdStackMonitor,
   prow_ci_monitor: ProwCIMonitor,
@@ -1045,6 +1047,7 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   resource_marshall: () => import('./deploy-bundle'),
   // Workload monitors — all share one chunk via barrel
   workload_monitor: () => import('./workload-monitor'),
+  workload_status: () => import('./workload-monitor'),
   llmd_stack_monitor: () => import('./workload-monitor'),
   prow_ci_monitor: () => import('./workload-monitor'),
   github_ci_monitor: () => import('./workload-monitor'),
@@ -1306,6 +1309,7 @@ export const LIVE_DATA_CARDS = new Set([
   'deployment_missions',
   // Workload Monitor - live health monitoring
   'workload_monitor',
+  'workload_status',
   // Specialized monitoring cards
   'llmd_stack_monitor',
   'prow_ci_monitor',
@@ -1410,6 +1414,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   resource_marshall: 6,
   // Workload Monitor card
   workload_monitor: 8,
+  workload_status: 8,
   // Specialized monitoring cards
   llmd_stack_monitor: 6,
   prow_ci_monitor: 6,
