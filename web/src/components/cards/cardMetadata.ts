@@ -565,7 +565,7 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   // Lima VM
   lima_status: 'Lima VM instance status, resource usage, and configuration.',
   // OpenFeature feature-flag management
-  openfeature_status: 'OpenFeature feature flag provider status and flag evaluation metrics.',
+  openfeature_status: 'OpenFeature feature flags: provider status (flagd, LaunchDarkly, ...), flag definitions by type (boolean/string/number/json), and evaluation metrics.',
   // OpenKruise advanced workloads
   openkruise_status: 'OpenKruise advanced workload status (CloneSet, Advanced StatefulSet/DaemonSet) and SidecarSet injection.',
 

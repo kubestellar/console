@@ -119,6 +119,7 @@ export const CARD_CATALOG = {
     { type: 'backstage_status', title: 'Backstage', description: 'Backstage developer portal: replicas, catalog entities (Components/APIs/Systems/Domains/Resources/Users/Groups), plugins, scaffolder templates, and last catalog sync', visualization: 'status' },
     { type: 'dapr_status', title: 'Dapr', description: 'Dapr control plane health, Dapr-enabled apps, and configured components (state store / pub-sub / binding)', visualization: 'status' },
     { type: 'dragonfly_status', title: 'Dragonfly', description: 'Dragonfly P2P image/file distribution: manager, scheduler, seed-peers, and per-node dfdaemon agents', visualization: 'status' },
+    { type: 'openfeature_status', title: 'OpenFeature', description: 'OpenFeature feature flags: provider status (flagd, LaunchDarkly, ...), flag definitions by type, and evaluation metrics', visualization: 'status' },
   ],
   'Compute': [
     { type: 'compute_overview', title: 'Compute Overview', description: 'CPU, memory, and GPU summary with live data', visualization: 'status' },

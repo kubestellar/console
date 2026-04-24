@@ -58,6 +58,7 @@ import { useCachedEnvoy } from '../../components/cards/envoy_status/useCachedEnv
 import { useCachedGrpc } from '../../hooks/useCachedGrpc'
 import { useCachedKeda } from '../../hooks/useCachedKeda'
 import { useCachedLinkerd } from '../../hooks/useCachedLinkerd'
+import { useCachedOpenfeature } from '../../hooks/useCachedOpenfeature'
 import { useCachedOtel } from '../../hooks/useCachedOtel'
 import { useCachedRook } from '../../hooks/useCachedRook'
 import { useCachedSpiffe } from '../../hooks/useCachedSpiffe'
@@ -1234,6 +1235,17 @@ function useUnifiedCniStatus() {
   }
 }
 
+function useUnifiedOpenfeatureStatus() {
+  const result = useCachedOpenfeature()
+  // Surface the feature-flag list as the primary row set for generic list renderers.
+  return {
+    data: result.data.flags,
+    isLoading: result.showSkeleton,
+    error: result.error ? new Error('Failed to fetch OpenFeature status') : null,
+    refetch: () => { result.refetch() },
+  }
+}
+
 function useUnifiedVitessStatus() {
   const result = useCachedVitess()
   // Surface the keyspace list as the primary row set for generic list renderers.
@@ -1445,6 +1457,7 @@ export function registerUnifiedHooks(): void {
   registerDataHook('useCachedRook', useUnifiedRookStatus)
   registerDataHook('useCachedSpiffe', useUnifiedSpiffeStatus)
   registerDataHook('useCachedCni', useUnifiedCniStatus)
+  registerDataHook('useCachedOpenfeature', useUnifiedOpenfeatureStatus)
   registerDataHook('useCachedTikv', useUnifiedTikvStatus)
   registerDataHook('useCachedTuf', useUnifiedTufStatus)
   registerDataHook('useCachedCloudCustodian', useUnifiedCloudCustodianStatus)

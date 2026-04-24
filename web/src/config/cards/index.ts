@@ -139,6 +139,7 @@ import { nodeInvadersConfig } from './node-invaders'
 import { missileCommandConfig } from './missile-command'
 import { nodeStatusConfig } from './node-status'
 import { opaPoliciesConfig } from './opa-policies'
+import { openfeatureStatusConfig } from './openfeature-status'
 import { opencostOverviewConfig } from './opencost-overview'
 import { operatorStatusConfig } from './operator-status'
 import { operatorSubscriptionStatusConfig } from './operator-subscription-status'
@@ -340,6 +341,7 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   missile_command: missileCommandConfig,
   node_status: nodeStatusConfig,
   opa_policies: opaPoliciesConfig,
+  openfeature_status: openfeatureStatusConfig,
   opencost_overview: opencostOverviewConfig,
   operator_status: operatorStatusConfig,
   operator_subscription_status: operatorSubscriptionStatusConfig,
@@ -612,6 +614,7 @@ export {
   missileCommandConfig,
   nodeStatusConfig,
   opaPoliciesConfig,
+  openfeatureStatusConfig,
   opencostOverviewConfig,
   operatorStatusConfig,
   operatorSubscriptionStatusConfig,

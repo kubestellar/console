@@ -165,6 +165,13 @@ export { useCachedSpiffe } from './useCachedSpiffe'
 export { useCachedCni } from './useCachedCni'
 
 // ============================================================================
+// OpenFeature Feature Flags — useCachedOpenfeature.ts (CNCF incubating)
+// ============================================================================
+// Named re-export (avoids `__testables` export-name collision with TiKV).
+
+export { useCachedOpenfeature } from './useCachedOpenfeature'
+
+// ============================================================================
 // TiKV Distributed Key-Value Store — useCachedTikv.ts
 // ============================================================================
 
