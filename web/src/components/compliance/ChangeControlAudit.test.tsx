@@ -66,4 +66,52 @@ describe('ChangeControlAudit', () => {
       expect(screen.getByText('Network error')).toBeInTheDocument()
     })
   })
+
+  /* ── Array.isArray guard tests (PR #9794 regression coverage) ─── */
+
+  it('renders without crashing when /changes returns a non-array object', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url: RequestInfo | URL) => {
+      const u = typeof url === 'string' ? url : url.toString()
+      if (u.includes('/summary')) return Promise.resolve(new Response(JSON.stringify(mockSummary)))
+      if (u.includes('/changes')) return Promise.resolve(new Response(JSON.stringify({ unexpected: 'object' })))
+      if (u.includes('/violations')) return Promise.resolve(new Response(JSON.stringify(mockViolations)))
+      if (u.includes('/policies')) return Promise.resolve(new Response(JSON.stringify(mockPolicies)))
+      return Promise.resolve(new Response('{}'))
+    })
+    render(<ChangeControlAudit />)
+    await waitFor(() => {
+      expect(screen.getByText('Change Control Audit Trail')).toBeInTheDocument()
+      expect(screen.getByText('Total Changes')).toBeInTheDocument()
+    })
+  })
+
+  it('renders without crashing when /violations returns null', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url: RequestInfo | URL) => {
+      const u = typeof url === 'string' ? url : url.toString()
+      if (u.includes('/summary')) return Promise.resolve(new Response(JSON.stringify(mockSummary)))
+      if (u.includes('/changes')) return Promise.resolve(new Response(JSON.stringify(mockChanges)))
+      if (u.includes('/violations')) return Promise.resolve(new Response(JSON.stringify(null)))
+      if (u.includes('/policies')) return Promise.resolve(new Response(JSON.stringify(mockPolicies)))
+      return Promise.resolve(new Response('{}'))
+    })
+    render(<ChangeControlAudit />)
+    await waitFor(() => {
+      expect(screen.getByText('Change Control Audit Trail')).toBeInTheDocument()
+    })
+  })
+
+  it('renders without crashing when all array endpoints return non-array data', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url: RequestInfo | URL) => {
+      const u = typeof url === 'string' ? url : url.toString()
+      if (u.includes('/summary')) return Promise.resolve(new Response(JSON.stringify(mockSummary)))
+      if (u.includes('/changes')) return Promise.resolve(new Response(JSON.stringify('string-payload')))
+      if (u.includes('/violations')) return Promise.resolve(new Response(JSON.stringify(42)))
+      if (u.includes('/policies')) return Promise.resolve(new Response(JSON.stringify(null)))
+      return Promise.resolve(new Response('{}'))
+    })
+    render(<ChangeControlAudit />)
+    await waitFor(() => {
+      expect(screen.getByText('Change Control Audit Trail')).toBeInTheDocument()
+    })
+  })
 })

@@ -388,7 +388,16 @@ describe('startGlobalErrorTracking sets up listeners', () => {
       message: 'ResizeObserver loop limit exceeded',
     })
     expect(() => window.dispatchEvent(event2)).not.toThrow()
+    // Partial match — future browser variants
+    const event3 = new ErrorEvent('error', {
+      message: 'Uncaught: ResizeObserver loop error detected',
+    })
+    expect(() => window.dispatchEvent(event3)).not.toThrow()
   })
+
+  // Full send-count verification (ResizeObserver errors NOT reported to GA4)
+  // is in analytics-resize-observer-filter.test.ts — it initializes the
+  // analytics pipeline end-to-end and asserts navigator.sendBeacon counts.
 })
 
 describe('markErrorReported and dedup integration', () => {
