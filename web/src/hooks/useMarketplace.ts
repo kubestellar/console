@@ -98,6 +98,7 @@ const MARKETPLACE_TO_CARD_TYPE: Record<string, string> = {
   'cncf-grpc': 'grpc_status',
   'cncf-linkerd': 'linkerd_status',
   'cncf-openfeature': 'openfeature_status',
+  'cncf-rook': 'rook_status',
   'cncf-strimzi': 'strimzi_status',
   'cncf-thanos': 'thanos_status',
   'cncf-opentelemetry': 'otel_status',

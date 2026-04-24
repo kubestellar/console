@@ -88,6 +88,8 @@ const GrpcStatus = safeLazy(() => import('./grpc_status'), 'GrpcStatus')
 const LinkerdStatus = safeLazy(() => import('./linkerd_status'), 'LinkerdStatus')
 // OpenTelemetry collector card (Observability)
 const OtelStatus = safeLazy(() => import('./otel_status'), 'OtelStatus')
+// Rook cloud-native storage orchestrator card
+const RookStatus = safeLazy(() => import('./rook_status'), 'RookStatus')
 // TiKV distributed key-value store card
 const TikvStatus = safeLazy(() => import('./tikv_status'), 'TikvStatus')
 // Vitess distributed MySQL card
@@ -724,6 +726,8 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   linkerd_status: LinkerdStatus,
   // OpenTelemetry collector
   otel_status: OtelStatus,
+  // Rook cloud-native storage orchestrator (Ceph)
+  rook_status: RookStatus,
   // TiKV distributed key-value store
   tikv_status: TikvStatus,
   // Vitess distributed MySQL
@@ -1050,6 +1054,7 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   grpc_status: () => import('./grpc_status'),
   linkerd_status: () => import('./linkerd_status'),
   otel_status: () => import('./otel_status'),
+  rook_status: () => import('./rook_status'),
   tikv_status: () => import('./tikv_status'),
   vitess_status: () => import('./vitess_status'),
   overlay_comparison: () => import('./deploy-bundle'),
@@ -1649,6 +1654,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   grpc_status: 6,
   linkerd_status: 6,
   otel_status: 6,
+  rook_status: 6,
   tikv_status: 6,
   vitess_status: 6,
   pvc_status: 6,

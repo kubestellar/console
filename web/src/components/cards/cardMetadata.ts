@@ -274,6 +274,8 @@ export const CARD_TITLES: Record<string, string> = {
   linkerd_status: 'Linkerd',
   // OpenTelemetry collector (CNCF)
   otel_status: 'OpenTelemetry',
+  // Rook cloud-native storage orchestrator
+  rook_status: 'Rook',
   // TiKV distributed key-value store
   tikv_status: 'TiKV',
   // Vitess distributed MySQL
@@ -597,6 +599,8 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   linkerd_status: 'Linkerd service mesh meshed pods, success rate, RPS, and p99 latency per deployment.',
   // OpenTelemetry collector
   otel_status: 'OpenTelemetry Collectors: pipeline health, receivers and exporters, dropped telemetry, and export errors across connected clusters.',
+  // Rook cloud-native storage orchestrator (Ceph)
+  rook_status: 'Rook-managed CephClusters: Ceph health, OSD/MON/MGR counts, capacity usage, and PG state summary.',
   // TiKV distributed key-value store
   tikv_status: 'TiKV distributed key-value store: store nodes, region counts, leader counts, and capacity utilization across the cluster.',
   // Vitess distributed MySQL

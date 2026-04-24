@@ -3120,6 +3120,23 @@
     "exportErrors_one": "{{count}} export error",
     "exportErrors_other": "{{count}} export errors"
   },
+  "rookStatus": {
+    "healthy": "Healthy",
+    "degraded": "Degraded",
+    "notInstalled": "Rook not detected",
+    "notInstalledHint": "No CephCluster resources found. Install Rook to monitor cloud-native storage.",
+    "healthyClusters": "Healthy",
+    "degradedClusters": "Degraded",
+    "osd": "OSDs up",
+    "capacity": "Capacity",
+    "noClusters": "No CephCluster resources reporting.",
+    "clusters_one": "{{count}} cluster",
+    "clusters_other": "{{count}} clusters",
+    "osdShort": "OSD {{up}}/{{total}}",
+    "monShort": "MON {{quorum}}/{{expected}}",
+    "mgrShort": "MGR {{active}}+{{standby}}",
+    "pgShort": "PG {{clean}}/{{total}}"
+  },
   "tikvStatus": {
     "healthy": "Healthy",
     "degraded": "Degraded",

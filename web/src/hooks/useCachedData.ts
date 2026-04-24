@@ -144,6 +144,13 @@ export * from './useCachedCiliumStatus'
 export * from './useCachedJaegerStatus'
 
 // ============================================================================
+// Rook Cloud-Native Storage (Ceph) — useCachedRook.ts
+// ============================================================================
+// Named re-export (avoids `__testables` export-name collision with TiKV).
+
+export { useCachedRook } from './useCachedRook'
+
+// ============================================================================
 // TiKV Distributed Key-Value Store — useCachedTikv.ts
 // ============================================================================
 
