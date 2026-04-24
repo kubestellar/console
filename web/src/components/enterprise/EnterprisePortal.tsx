@@ -158,9 +158,7 @@ export default function EnterprisePortal() {
   // Wire autoRefresh toggle to a periodic refresh interval
   useEffect(() => {
     if (autoRefresh) {
-      intervalRef.current = setInterval(() => {
-        setLastUpdated(new Date())
-      }, AUTO_REFRESH_INTERVAL_MS)
+      intervalRef.current = setInterval(handleRefresh, AUTO_REFRESH_INTERVAL_MS)
     }
     return () => {
       if (intervalRef.current) {
@@ -168,7 +166,7 @@ export default function EnterprisePortal() {
         intervalRef.current = null
       }
     }
-  }, [autoRefresh])
+  }, [autoRefresh, handleRefresh])
 
   const handleAddMore = useCallback(() => {
     if (dashboardContext?.openAddCardModal) {
