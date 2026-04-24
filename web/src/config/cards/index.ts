@@ -193,6 +193,7 @@ import { userManagementConfig } from './user-management'
 import { vaultSecretsConfig } from './vault-secrets'
 import { vclusterStatusConfig } from './vcluster-status'
 import { warningEventsConfig } from './warning-events'
+import { wasmcloudStatusConfig } from './wasmcloud-status'
 import { weatherConfig } from './weather'
 import { workloadDeploymentConfig } from './workload-deployment'
 import { workloadMonitorConfig } from './workload-monitor'
@@ -399,6 +400,7 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   vault_secrets: vaultSecretsConfig,
   vcluster_status: vclusterStatusConfig,
   warning_events: warningEventsConfig,
+  wasmcloud_status: wasmcloudStatusConfig,
   weather: weatherConfig,
   workload_deployment: workloadDeploymentConfig,
   workload_monitor: workloadMonitorConfig,
@@ -670,6 +672,7 @@ export {
   vaultSecretsConfig,
   vclusterStatusConfig,
   warningEventsConfig,
+  wasmcloudStatusConfig,
   weatherConfig,
   workloadDeploymentConfig,
   workloadMonitorConfig,

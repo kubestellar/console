@@ -69,6 +69,7 @@ import { useCachedTikv } from '../../hooks/useCachedTikv'
 import { useCachedTuf } from '../../hooks/useCachedTuf'
 import { useCachedCloudCustodian } from '../../hooks/useCachedCloudCustodian'
 import { useCachedVitess } from '../../hooks/useCachedVitess'
+import { useCachedWasmcloud } from '../../hooks/useCachedWasmcloud'
 
 // ============================================================================
 // Wrapper hooks that convert params object to positional args
@@ -1280,6 +1281,19 @@ function useUnifiedVitessStatus() {
     refetch: result.refetch,
   }
 }
+
+function useUnifiedWasmcloudStatus() {
+  const result = useCachedWasmcloud()
+  // Surface the host list as the primary row set for generic list renderers.
+  return {
+    data: result.data.hosts,
+    isLoading: result.showSkeleton,
+    error: result.error ? new Error('Failed to fetch wasmCloud status') : null,
+    refetch: () => { result.refetch() },
+  }
+}
+
+
 function useProviderHealth() {
   return useDemoDataHook(DEMO_PROVIDER_HEALTH)
 }
@@ -1487,6 +1501,7 @@ export function registerUnifiedHooks(): void {
   registerDataHook('useCachedTuf', useUnifiedTufStatus)
   registerDataHook('useCachedCloudCustodian', useUnifiedCloudCustodianStatus)
   registerDataHook('useCachedVitess', useUnifiedVitessStatus)
+  registerDataHook('useCachedWasmcloud', useUnifiedWasmcloudStatus)
   registerDataHook('useProviderHealth', useProviderHealth)
   registerDataHook('useUpgradeStatus', useUpgradeStatus)
   registerDataHook('useProwStatus', useProwStatus)

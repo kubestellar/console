@@ -4483,5 +4483,27 @@
     "breakdown": "{{argo}} apps \u00b7 {{violations}} violations \u00b7 {{restarts}} restarts",
     "more_one": "+{{count}} more namespace",
     "more_other": "+{{count}} more namespaces"
+  },
+  "wasmcloudStatus": {
+    "healthy": "Healthy",
+    "degraded": "Degraded",
+    "notInstalled": "wasmCloud not detected",
+    "notInstalledHint": "No wasmCloud lattice reachable from the connected clusters.",
+    "fetchError": "Unable to fetch wasmCloud status",
+    "hosts": "Hosts",
+    "actors": "Actors",
+    "providers": "Providers",
+    "links": "Links",
+    "version": "version",
+    "uptime": "up",
+    "actorsShort": "actors",
+    "providersShort": "providers",
+    "sectionLattice": "Lattice",
+    "sectionHosts": "Hosts",
+    "sectionProviders": "Capability providers",
+    "sectionLinks": "Link definitions",
+    "noHosts": "No wasmCloud hosts found",
+    "noProviders": "No capability providers found",
+    "noLinks": "No link definitions found"
   }
 }

@@ -120,6 +120,7 @@ export const CARD_CATALOG = {
     { type: 'dapr_status', title: 'Dapr', description: 'Dapr control plane health, Dapr-enabled apps, and configured components (state store / pub-sub / binding)', visualization: 'status' },
     { type: 'dragonfly_status', title: 'Dragonfly', description: 'Dragonfly P2P image/file distribution: manager, scheduler, seed-peers, and per-node dfdaemon agents', visualization: 'status' },
     { type: 'openfeature_status', title: 'OpenFeature', description: 'OpenFeature feature flags: provider status (flagd, LaunchDarkly, ...), flag definitions by type, and evaluation metrics', visualization: 'status' },
+    { type: 'wasmcloud_status', title: 'wasmCloud', description: 'wasmCloud WebAssembly lattice: hosts, actors, capability providers, and link definitions', visualization: 'status' },
   ],
   'Compute': [
     { type: 'compute_overview', title: 'Compute Overview', description: 'CPU, memory, and GPU summary with live data', visualization: 'status' },

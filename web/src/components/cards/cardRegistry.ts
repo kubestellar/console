@@ -106,6 +106,8 @@ const TufStatus = safeLazy(() => import('./tuf_status'), 'TufStatus')
 const VitessStatus = safeLazy(() => import('./vitess_status'), 'VitessStatus')
 // Chaos Mesh fault-injection and chaos engineering card
 const ChaosMeshStatus = safeLazy(() => import('./chaos_mesh_status'), 'ChaosMeshStatus')
+// wasmCloud WebAssembly lattice card (CNCF incubating)
+const WasmcloudStatus = safeLazy(() => import('./wasmcloud_status'), 'WasmcloudStatus')
 const OverlayComparison = safeLazy(() => _deployBundle, 'OverlayComparison')
 const ArgoCDApplications = safeLazy(() => _deployBundle, 'ArgoCDApplications')
 const ArgoCDApplicationSets = safeLazy(() => _deployBundle, 'ArgoCDApplicationSets')
@@ -767,6 +769,8 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   tuf_status: TufStatus,
   // Vitess distributed MySQL
   vitess_status: VitessStatus,
+  // wasmCloud WebAssembly lattice (CNCF incubating)
+  wasmcloud_status: WasmcloudStatus,
   // Artifact Hub
   artifact_hub_status: ArtifactHubStatus,
   // CloudEvents messaging
@@ -1099,6 +1103,7 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   vitess_status: () => import('./vitess_status'),
   // Chaos Mesh fault-injection and chaos engineering
   chaos_mesh_status: () => import('./chaos_mesh_status'),
+  wasmcloud_status: () => import('./wasmcloud_status'),
   overlay_comparison: () => import('./deploy-bundle'),
   argocd_applications: () => import('./deploy-bundle'),
   argocd_applicationsets: () => import('./deploy-bundle'),
@@ -1717,6 +1722,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   tuf_status: 6,
   vitess_status: 6,
   chaos_mesh_status: 6,
+  wasmcloud_status: 6,
   pvc_status: 6,
   gpu_status: 6,
   gpu_inventory: 6,
