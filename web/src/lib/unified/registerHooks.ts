@@ -53,6 +53,7 @@ import { useCachedContainerd } from '../../hooks/useCachedContainerd'
 import { useCachedEnvoy } from '../../components/cards/envoy_status/useCachedEnvoy'
 import { useCachedLinkerd } from '../../hooks/useCachedLinkerd'
 import { useCachedTikv } from '../../hooks/useCachedTikv'
+import { useCachedVitess } from '../../hooks/useCachedVitess'
 
 // ============================================================================
 // Wrapper hooks that convert params object to positional args
@@ -1085,6 +1086,17 @@ function useUnifiedTikvStatus() {
   }
 }
 
+function useUnifiedVitessStatus() {
+  const result = useCachedVitess()
+  // Surface the keyspace list as the primary row set for generic list renderers.
+  return {
+    data: result.data.keyspaces,
+    isLoading: result.isLoading,
+    error: result.error ? new Error(result.error) : null,
+    refetch: result.refetch,
+  }
+}
+
 function useProviderHealth() {
   return useDemoDataHook(DEMO_PROVIDER_HEALTH)
 }
@@ -1276,6 +1288,7 @@ export function registerUnifiedHooks(): void {
   registerDataHook('useCachedEnvoy', useUnifiedEnvoyStatus)
   registerDataHook('useCachedLinkerd', useUnifiedLinkerdStatus)
   registerDataHook('useCachedTikv', useUnifiedTikvStatus)
+  registerDataHook('useCachedVitess', useUnifiedVitessStatus)
   registerDataHook('useProviderHealth', useProviderHealth)
   registerDataHook('useUpgradeStatus', useUpgradeStatus)
   registerDataHook('useProwStatus', useProwStatus)

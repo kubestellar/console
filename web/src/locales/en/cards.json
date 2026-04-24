@@ -3105,6 +3105,27 @@
     "leaderCount_one": "{{count}} leader",
     "leaderCount_other": "{{count}} leaders"
   },
+  "vitessStatus": {
+    "healthy": "Healthy",
+    "degraded": "Degraded",
+    "notInstalled": "Vitess not detected",
+    "notInstalledHint": "No Vitess tablets found. Deploy Vitess (VTAdmin) to monitor keyspaces, shards, and tablet health.",
+    "version": "version",
+    "keyspaces": "Keyspaces",
+    "shards": "Shards",
+    "tablets": "Tablets",
+    "maxLag": "Max lag",
+    "maxLagTooltip": "Max replication lag in keyspace",
+    "sectionKeyspaces": "Keyspaces",
+    "noKeyspaces": "No keyspaces reporting.",
+    "unsharded": "unsharded",
+    "primaries_one": "{{count}} primary",
+    "primaries_other": "{{count}} primaries",
+    "shardsCount_one": "{{count}} shard",
+    "shardsCount_other": "{{count}} shards",
+    "tabletsCount_one": "{{count}} tablet",
+    "tabletsCount_other": "{{count}} tablets"
+  },
   "kubecostOverview": {
     "monthlyCost": "Monthly Cost",
     "savingsRecommendations": "Savings Recommendations",

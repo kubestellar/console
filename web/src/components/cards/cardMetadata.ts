@@ -272,6 +272,8 @@ export const CARD_TITLES: Record<string, string> = {
   linkerd_status: 'Linkerd',
   // TiKV distributed key-value store
   tikv_status: 'TiKV',
+  // Vitess distributed MySQL
+  vitess_status: 'Vitess',
   // CRI-O container runtime
   crio_status: 'CRI-O',
   // Containerd container runtime
@@ -589,6 +591,8 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   linkerd_status: 'Linkerd service mesh meshed pods, success rate, RPS, and p99 latency per deployment.',
   // TiKV distributed key-value store
   tikv_status: 'TiKV distributed key-value store: store nodes, region counts, leader counts, and capacity utilization across the cluster.',
+  // Vitess distributed MySQL
+  vitess_status: 'Vitess distributed MySQL: keyspaces, shards, tablets (PRIMARY/REPLICA/RDONLY), and replication lag.',
   // CRI-O container runtime
   crio_status: 'CRI-O container runtime metrics, image pulls, and pod sandbox status.',
   // Containerd container runtime
