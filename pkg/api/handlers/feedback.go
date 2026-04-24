@@ -949,7 +949,15 @@ func (h *FeedbackHandler) fetchGitHubIssuesFromRepo(githubLogin string, repoName
 	return filtered, nil
 }
 
-// listLocalFeatureRequests falls back to local database when GitHub is unavailable
+// listLocalFeatureRequests falls back to local database when GitHub is unavailable.
+//
+// #9896: the happy path in ListAllFeatureRequests emits []QueueItem with fields
+// like github_issue_url, github_login, and pr_number that the frontend Queue UI
+// consumes. Previously this fallback returned raw []models.FeatureRequest which
+// has different JSON field names and no URL/login fields — so when GitHub is
+// unreachable the client silently received an incompatible shape and rendered
+// broken rows. We now normalize to []QueueItem via featureRequestsToQueueItems
+// so both paths emit the same contract.
 func (h *FeedbackHandler) listLocalFeatureRequests(c *fiber.Ctx, userID uuid.UUID) error {
 	limit, offset, err := parsePageParams(c)
 	if err != nil {
@@ -976,7 +984,66 @@ func (h *FeedbackHandler) listLocalFeatureRequests(c *fiber.Ctx, userID uuid.UUI
 		}
 	}
 
-	return c.JSON(requests)
+	return c.JSON(h.featureRequestsToQueueItems(requests))
+}
+
+// featureRequestsToQueueItems converts persisted models.FeatureRequest records
+// into the QueueItem shape the frontend expects from ListAllFeatureRequests.
+//
+// #9896: called from the GitHub-down fallback path. Fields derivable from
+// local data are populated (e.g. github_issue_url is reconstructed from the
+// owner/repo/number); fields that aren't persisted locally (github_login,
+// PR preview URL when absent, etc.) are left at zero value. QueueItem tags
+// the optional fields with ,omitempty so empty strings/ints are dropped
+// from the wire response.
+func (h *FeedbackHandler) featureRequestsToQueueItems(requests []models.FeatureRequest) []QueueItem {
+	items := make([]QueueItem, 0, len(requests))
+	for _, r := range requests {
+		repoName := h.resolveRepoName(r.TargetRepo)
+
+		issueNumber := 0
+		issueURL := ""
+		if r.GitHubIssueNumber != nil {
+			issueNumber = *r.GitHubIssueNumber
+			// Reconstruct the HTML URL GitHub would have returned. We can only
+			// do this when the owner/repo are configured; otherwise leave empty
+			// and let the frontend degrade gracefully.
+			if h.repoOwner != "" && repoName != "" {
+				issueURL = fmt.Sprintf("https://github.com/%s/%s/issues/%d", h.repoOwner, repoName, issueNumber)
+			}
+		}
+
+		prNumber := 0
+		if r.PRNumber != nil {
+			prNumber = *r.PRNumber
+		}
+
+		updatedAt := ""
+		if r.UpdatedAt != nil {
+			updatedAt = r.UpdatedAt.UTC().Format(time.RFC3339)
+		}
+
+		items = append(items, QueueItem{
+			ID:                r.ID.String(),
+			UserID:            r.UserID.String(),
+			GitHubLogin:       "", // not persisted on FeatureRequest; omitted on the wire
+			Title:             r.Title,
+			Description:       r.Description,
+			RequestType:       string(r.RequestType),
+			TargetRepo:        string(r.TargetRepo),
+			GitHubIssueNumber: issueNumber,
+			GitHubIssueURL:    issueURL,
+			Status:            string(r.Status),
+			PRNumber:          prNumber,
+			PRURL:             r.PRURL,
+			PreviewURL:        r.NetlifyPreviewURL,
+			CopilotSessionURL: r.CopilotSessionURL,
+			ClosedByUser:      r.ClosedByUser,
+			CreatedAt:         r.CreatedAt.UTC().Format(time.RFC3339),
+			UpdatedAt:         updatedAt,
+		})
+	}
+	return items
 }
 
 // GetFeatureRequest returns a single feature request
