@@ -1,9 +1,15 @@
 package handlers
 
-// SIEM Export Handler — Issue #9643
+// SIEM Export Handler — Issue #9643 / #9887
 //
 // Serves audit log export configuration and pipeline status endpoints.
 // Destinations: Splunk HEC, Elastic SIEM, Webhook, Syslog.
+//
+// #9887 introduces the first concrete destination adapter (Webhook) plus an
+// in-memory event buffer so /summary and /events return real counts instead
+// of hard-coded demo numbers. Splunk / Elastic / Syslog remain stubs that
+// surface a structured "destination not yet supported" error.
+//
 // TODO (#9643): Wire live export engine once pkg/api/audit/export.go engine is complete.
 
 import (
@@ -17,7 +23,7 @@ import (
 // SIEMHandler serves SIEM export configuration and monitoring endpoints.
 type SIEMHandler struct{}
 
-// NewSIEMHandler creates a SIEM handler. Currently returns demo data.
+// NewSIEMHandler creates a SIEM handler.
 func NewSIEMHandler() *SIEMHandler { return &SIEMHandler{} }
 
 // RegisterPublicRoutes mounts SIEM endpoints under /api/audit/export.
@@ -29,23 +35,16 @@ func (h *SIEMHandler) RegisterPublicRoutes(r fiber.Router) {
 }
 
 func (h *SIEMHandler) getSummary(c *fiber.Ctx) error {
-	// TODO (#9643): Aggregate from live pipeline metrics.
-	return c.JSON(audit.ExportSummary{
-		TotalDestinations:  4,
-		ActiveDestinations: 3,
-		EventsPerMinute:    847,
-		TotalEvents24h:     1_219_680,
-		ErrorRate:          0.3,
-		EvaluatedAt:        time.Now(),
-	})
+	// Aggregate from the in-memory event buffer + destination registry. This
+	// will report zeros on a fresh cluster until destinations are configured
+	// and events start flowing — that is intentionally honest per #9887.
+	return c.JSON(audit.BuildSummary(time.Now()))
 }
 
 func (h *SIEMHandler) listDestinations(c *fiber.Ctx) error {
-	// TODO (#9643): Return live destination configs from ConfigMap / CRD.
-	return c.JSON([]audit.ExportDestination{})
+	return c.JSON(audit.ListDestinations())
 }
 
 func (h *SIEMHandler) listEvents(c *fiber.Ctx) error {
-	// TODO (#9643): Stream recent events from the in-memory ring buffer.
-	return c.JSON([]audit.PipelineEvent{})
+	return c.JSON(audit.RecentEvents())
 }
