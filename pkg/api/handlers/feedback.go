@@ -315,7 +315,7 @@ func (h *FeedbackHandler) CreateFeatureRequest(c *fiber.Ctx) error {
 	// created synchronously so the client receives the issue number/URL in
 	// the response; screenshot comments are uploaded asynchronously below
 	// (#9898) so slow GitHub responses do not block Fiber workers.
-	issueNumber, _, validScreenshots, ssResult, err := h.createGitHubIssueInRepo(request, user, h.repoOwner, targetRepoName, input.Screenshots, clientAuth)
+	issueNumber, _, validScreenshots, ssResult, err := h.createGitHubIssueInRepo(c.UserContext(), request, user, h.repoOwner, targetRepoName, input.Screenshots, clientAuth)
 	if err != nil {
 		slog.Error("[Feedback] failed to create GitHub issue", "error", err)
 		// Clean up the orphaned database record. Log but don't fail the
@@ -678,7 +678,12 @@ func (h *FeedbackHandler) CheckPreviewStatus(c *fiber.Ctx) error {
 	deploymentsURL := fmt.Sprintf("%s/repos/%s/%s/deployments?environment=%s&per_page=1",
 		apiBase, h.repoOwner, h.repoName, envName)
 
-	req, err := http.NewRequest("GET", deploymentsURL, nil)
+	// #9901: propagate request context so client disconnect cancels the outbound
+	// call. Layer WithTimeout on top so the original deadline still applies.
+	ctx, cancel := context.WithTimeout(c.UserContext(), githubAPITimeout)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, "GET", deploymentsURL, nil)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to create request")
 	}
@@ -710,7 +715,11 @@ func (h *FeedbackHandler) CheckPreviewStatus(c *fiber.Ctx) error {
 	statusesURL := fmt.Sprintf("%s/repos/%s/%s/deployments/%d/statuses?per_page=1",
 		apiBase, h.repoOwner, h.repoName, deployments[0].ID)
 
-	req2, err := http.NewRequest("GET", statusesURL, nil)
+	// #9901: reuse the same request-scoped context for the follow-up call.
+	ctx2, cancel2 := context.WithTimeout(c.UserContext(), githubAPITimeout)
+	defer cancel2()
+
+	req2, err := http.NewRequestWithContext(ctx2, "GET", statusesURL, nil)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to create status request")
 	}
@@ -1660,7 +1669,7 @@ func (h *FeedbackHandler) handleAIProcessingComplete(ctx context.Context, issueN
 	}
 
 	// Get the most recent bot comment to summarize the status
-	summary := h.getLatestBotComment(issueNumber, h.resolveRepoName(request.TargetRepo))
+	summary := h.getLatestBotComment(ctx, issueNumber, h.resolveRepoName(request.TargetRepo))
 	if summary == "" {
 		summary = "AI analysis complete. A human developer will review this issue."
 	}
@@ -1725,8 +1734,9 @@ func (h *FeedbackHandler) handleIssueClosed(ctx context.Context, issueNumber int
 	return nil
 }
 
-// getLatestBotComment fetches the most recent bot comment from the issue in the specified repo
-func (h *FeedbackHandler) getLatestBotComment(issueNumber int, repoName string) string {
+// getLatestBotComment fetches the most recent bot comment from the issue in the specified repo.
+// #9901: takes a context so client disconnects / webhook cancellations cancel the outbound call.
+func (h *FeedbackHandler) getLatestBotComment(ctx context.Context, issueNumber int, repoName string) string {
 	if h.getEffectiveToken() == "" {
 		return ""
 	}
@@ -1734,7 +1744,10 @@ func (h *FeedbackHandler) getLatestBotComment(issueNumber int, repoName string) 
 	url := fmt.Sprintf("%s/repos/%s/%s/issues/%d/comments?per_page=10&sort=created&direction=desc",
 		resolveGitHubAPIBase(), h.repoOwner, repoName, issueNumber)
 
-	req, err := http.NewRequest("GET", url, nil)
+	reqCtx, cancel := context.WithTimeout(ctx, githubAPITimeout)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(reqCtx, "GET", url, nil)
 	if err != nil {
 		return ""
 	}
@@ -1962,7 +1975,7 @@ type screenshotUploadResult struct {
 // upload, synchronous result counts, error). #9898: screenshot uploads are
 // decoupled from this path — callers launch uploadScreenshotCommentsAsync
 // on the returned slice from a background goroutine.
-func (h *FeedbackHandler) createGitHubIssueInRepo(request *models.FeatureRequest, user *models.User, repoOwner, repoName string, screenshots []string, clientAuth string) (int, string, []string, screenshotUploadResult, error) {
+func (h *FeedbackHandler) createGitHubIssueInRepo(ctx context.Context, request *models.FeatureRequest, user *models.User, repoOwner, repoName string, screenshots []string, clientAuth string) (int, string, []string, screenshotUploadResult, error) {
 	// Determine labels based on request type and target repo
 	var labels []string
 	isDocs := request.TargetRepo == models.TargetRepoDocs
@@ -2026,13 +2039,13 @@ func (h *FeedbackHandler) createGitHubIssueInRepo(request *models.FeatureRequest
 `, request.RequestType, repoLabel, user.GitHubLogin, request.ID.String(), request.Description)
 
 	// First attempt: create issue with labels
-	number, htmlURL, err := h.postGitHubIssue(repoOwner, repoName, request.Title, issueBody, labels, clientAuth)
+	number, htmlURL, err := h.postGitHubIssue(ctx, repoOwner, repoName, request.Title, issueBody, labels, clientAuth)
 	if err != nil && isLabelPermissionError(err) {
 		// The token lacks permission to create/apply labels on this repo.
 		// Retry without labels — the issue body includes the request type
 		// so maintainers can triage and label it manually.
 		slog.Info("[Feedback] label permission denied, retrying without labels", "repo", repoOwner+"/"+repoName)
-		number, htmlURL, err = h.postGitHubIssue(repoOwner, repoName, request.Title, issueBody, nil, clientAuth)
+		number, htmlURL, err = h.postGitHubIssue(ctx, repoOwner, repoName, request.Title, issueBody, nil, clientAuth)
 	}
 
 	// Screenshots are uploaded asynchronously by the caller via
@@ -2085,12 +2098,13 @@ func (h *FeedbackHandler) uploadScreenshotCommentsAsync(ctx context.Context, iss
 // proxies via the attribution service when configured and a client
 // credential is present. If labels is nil or empty, the "labels" field
 // is omitted from the payload.
-func (h *FeedbackHandler) postGitHubIssue(repoOwner, repoName, title, body string, labels []string, clientAuth string) (int, string, error) {
+// #9901: accepts a context so client disconnect cancels the outbound call.
+func (h *FeedbackHandler) postGitHubIssue(ctx context.Context, repoOwner, repoName, title, body string, labels []string, clientAuth string) (int, string, error) {
 	// Attribution proxy path: when configured and the caller provided
 	// a per-user client credential, route through the central App-holder
 	// so GitHub stamps `performed_via_github_app.slug` on the issue.
 	if h.attributionProxyURL != "" && clientAuth != "" {
-		num, url, err := h.postGitHubIssueViaProxy(repoOwner, repoName, title, body, labels, clientAuth)
+		num, url, err := h.postGitHubIssueViaProxy(ctx, repoOwner, repoName, title, body, labels, clientAuth)
 		if err == nil {
 			return num, url, nil
 		}
@@ -2115,7 +2129,11 @@ func (h *FeedbackHandler) postGitHubIssue(repoOwner, repoName, title, body strin
 	}
 	apiURL := fmt.Sprintf("%s/repos/%s/%s/issues", resolveGitHubAPIBase(), repoOwner, repoName)
 
-	req, err := http.NewRequest("POST", apiURL, bytes.NewBuffer(jsonData))
+	// #9901: layer a per-call timeout on top of the request-scoped context.
+	reqCtx, cancel := context.WithTimeout(ctx, githubAPITimeout)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(reqCtx, "POST", apiURL, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return 0, "", err
 	}
@@ -2173,7 +2191,8 @@ func (h *FeedbackHandler) postGitHubIssue(repoOwner, repoName, title, body strin
 // against GitHub, then creates the issue using the
 // `kubestellar-console-bot` App so GitHub stamps
 // `performed_via_github_app.slug` on it.
-func (h *FeedbackHandler) postGitHubIssueViaProxy(repoOwner, repoName, title, body string, labels []string, clientAuth string) (int, string, error) {
+// #9901: accepts a context so client disconnect cancels the outbound call.
+func (h *FeedbackHandler) postGitHubIssueViaProxy(ctx context.Context, repoOwner, repoName, title, body string, labels []string, clientAuth string) (int, string, error) {
 	payload := map[string]interface{}{
 		"repoOwner": repoOwner,
 		"repoName":  repoName,
@@ -2189,7 +2208,11 @@ func (h *FeedbackHandler) postGitHubIssueViaProxy(repoOwner, repoName, title, bo
 		return 0, "", fmt.Errorf("marshal proxy payload: %w", err)
 	}
 
-	req, err := http.NewRequest("POST", h.attributionProxyURL, bytes.NewBuffer(jsonData))
+	// #9901: layer a per-call timeout on top of the request-scoped context.
+	reqCtx, cancel := context.WithTimeout(ctx, githubAPITimeout)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(reqCtx, "POST", h.attributionProxyURL, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return 0, "", err
 	}
