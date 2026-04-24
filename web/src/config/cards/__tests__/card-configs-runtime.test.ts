@@ -14,12 +14,14 @@ describe('Runtime card configs', () => {
     expect(config.category).toBe('runtime')
   })
 
-  it.each(runtimeCards)('$name has valid columns array', ({ config }) => {
-    expect(Array.isArray(config.columns)).toBe(true)
-    expect(config.columns?.length).toBeGreaterThan(0)
-    config.columns?.forEach(col => {
-      expect(col.key).toBeTruthy()
-      expect(col.label).toBeTruthy()
+  it.each(runtimeCards)('$name has valid content.items array', ({ config }) => {
+    expect(config.content).toBeTruthy()
+    expect(config.content?.type).toBe('status-grid')
+    expect(Array.isArray(config.content?.items)).toBe(true)
+    expect(config.content?.items?.length).toBeGreaterThan(0)
+    config.content?.items?.forEach((item: { id: string; label: string }) => {
+      expect(item.id).toBeTruthy()
+      expect(item.label).toBeTruthy()
     })
   })
 })
