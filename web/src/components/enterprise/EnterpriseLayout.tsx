@@ -19,6 +19,7 @@ import { useDashboardContextOptional } from '../../hooks/useDashboardContext'
 import { Navbar } from '../layout/navbar/index'
 import { NAVBAR_HEIGHT_PX, SIDEBAR_CONTROLS_OFFSET_PX } from '../../lib/constants/ui'
 import { FloatingDashboardActions } from '../dashboard/FloatingDashboardActions'
+import { DashboardCustomizer } from '../dashboard/customizer/DashboardCustomizer'
 
 const MissionSidebar = lazy(() =>
   import('../layout/mission-sidebar').then((m) => ({ default: m.MissionSidebar })),
@@ -44,6 +45,16 @@ export default function EnterpriseLayout() {
   const handleOpenStudio = useCallback(() => {
     dashboardContext?.openAddCardModal()
   }, [dashboardContext])
+
+  const handleCloseStudio = useCallback(() => {
+    dashboardContext?.closeAddCardModal()
+  }, [dashboardContext])
+
+  /** No-op handler — enterprise pages manage their own card lists via UnifiedDashboard */
+  const handleAddCards = useCallback(() => {
+    // Cards are added through each enterprise dashboard's own UnifiedDashboard instance.
+    // This handler satisfies DashboardCustomizer's required prop.
+  }, [])
 
   return (
     <VersionCheckProvider>
@@ -75,6 +86,20 @@ export default function EnterpriseLayout() {
 
         {/* Console Studio floating action button */}
         <FloatingDashboardActions onOpenCustomizer={handleOpenStudio} />
+
+        {/* Console Studio panel — responds to context's isAddCardModalOpen state.
+            Without this, sidebar "Add more..." and FAB buttons set context state
+            but nothing renders the Studio panel (#9801). */}
+        {dashboardContext && (
+          <DashboardCustomizer
+            isOpen={dashboardContext.isAddCardModalOpen}
+            onClose={handleCloseStudio}
+            dashboardName="Enterprise Portal"
+            onAddCards={handleAddCards}
+            initialSection={dashboardContext.studioInitialSection}
+            initialWidgetCardType={dashboardContext.studioWidgetCardType}
+          />
+        )}
 
         {/* AI Mission sidebar — same as main Layout */}
         <Suspense fallback={null}>
