@@ -300,7 +300,7 @@ func (h *AuthHandler) devModeLogin(c *fiber.Ctx) error {
 
 	// If we have a GitHub token, fetch real user info
 	if h.githubToken != "" {
-		ghUser, err := h.getGitHubUser(h.githubToken)
+		ghUser, err := h.getGitHubUser(c.UserContext(), h.githubToken)
 		if err == nil && ghUser != nil {
 			devLogin = ghUser.Login
 			devEmail = ghUser.Email
@@ -580,7 +580,7 @@ func (h *AuthHandler) GitHubCallback(c *fiber.Ctx) error {
 	}
 
 	// Get user info from GitHub
-	ghUser, err := h.getGitHubUser(token.AccessToken)
+	ghUser, err := h.getGitHubUser(c.UserContext(), token.AccessToken)
 	if err != nil {
 		slog.Error("[Auth] failed to get GitHub user", "error", err)
 		detail := err.Error()
@@ -833,8 +833,8 @@ type GitHubUser struct {
 	AvatarURL string `json:"avatar_url"`
 }
 
-func (h *AuthHandler) getGitHubUser(accessToken string) (*GitHubUser, error) {
-	req, err := http.NewRequest("GET", h.githubAPIBase+"/user", nil)
+func (h *AuthHandler) getGitHubUser(ctx context.Context, accessToken string) (*GitHubUser, error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", h.githubAPIBase+"/user", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -864,7 +864,7 @@ func (h *AuthHandler) getGitHubUser(accessToken string) (*GitHubUser, error) {
 	// Fall back to GET /user/emails (requires user:email scope) to find
 	// the primary verified email address.
 	if user.Email == "" {
-		if email, err := h.getGitHubPrimaryEmail(accessToken); err == nil {
+		if email, err := h.getGitHubPrimaryEmail(ctx, accessToken); err == nil {
 			user.Email = email
 		}
 	}
@@ -881,8 +881,8 @@ type gitHubEmail struct {
 
 // getGitHubPrimaryEmail fetches the user's primary verified email via
 // GET /user/emails (requires the user:email OAuth scope).
-func (h *AuthHandler) getGitHubPrimaryEmail(accessToken string) (string, error) {
-	req, err := http.NewRequest("GET", h.githubAPIBase+"/user/emails", nil)
+func (h *AuthHandler) getGitHubPrimaryEmail(ctx context.Context, accessToken string) (string, error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", h.githubAPIBase+"/user/emails", nil)
 	if err != nil {
 		return "", err
 	}

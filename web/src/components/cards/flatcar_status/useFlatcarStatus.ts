@@ -134,7 +134,7 @@ export function useFlatcarStatus(): UseFlatcarStatusResult {
     hasAnyData,
     isFailed,
     consecutiveFailures,
-    isDemoData: isDemoFallback,
+    isDemoData: isDemoFallback && !isLoading,
   })
 
   return {
