@@ -153,10 +153,18 @@ describe('DynamicCardErrorBoundary', () => {
       </DynamicCardErrorBoundary>,
     )
     expect(markErrorReported).toHaveBeenCalledWith('TSX execution crash')
+    // Source now passes a 4th `extra` arg with { error, componentStack } so
+    // emitError can populate the GA4 error_type / component_name dimensions
+    // added in #9861. vitest's toHaveBeenCalledWith is strict on arity, so the
+    // assertion must include all 4 args.
     expect(emitError).toHaveBeenCalledWith(
       'card_render',
       '[analytics-card] TSX execution crash',
       'analytics-card',
+      expect.objectContaining({
+        error: expect.objectContaining({ message: 'TSX execution crash' }),
+        componentStack: expect.any(String),
+      }),
     )
   })
 })
