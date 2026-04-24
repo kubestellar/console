@@ -209,7 +209,7 @@ export function ContainerdStatus() {
             </div>
           ) : (
             <div className="space-y-1.5">
-              {data.containers.map(c => (
+              {(data.containers ?? []).map(c => (
                 <ContainerRow key={`${c.node}:${c.id}:${c.namespace}`} item={c} />
               ))}
             </div>
