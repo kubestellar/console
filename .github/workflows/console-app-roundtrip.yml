@@ -59,6 +59,11 @@ jobs:
       # before the attribution check can even run (see issue #9094).
       # Pre-create the label with GITHUB_TOKEN (which has issues:write on
       # the workflow repo) so the App never has to.
+      #
+      # HTTP 422 handling: GitHub returns 422 "already_exists" when the
+      # label was created in a narrow race between our GET and POST (see
+      # issue #9875 failing run 24708191700). Treat 422 as success since
+      # the label exists by the time we'd have failed anyway.
       - name: Ensure test label exists
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -90,19 +95,41 @@ jobs:
           }))
           ")" \
             "https://api.github.com/repos/${TEST_REPO_OWNER}/${TEST_REPO_NAME}/labels")
-          if [ "$CREATE_HTTP" != "201" ]; then
+          # 201 = created by us. 422 = raced; someone else created it first
+          # (or GitHub is replaying our own request). Either way the label
+          # now exists, which is all the test cares about.
+          if [ "$CREATE_HTTP" = "201" ]; then
+            echo "✓ Created label '${TEST_LABEL}'"
+          elif [ "$CREATE_HTTP" = "422" ]; then
+            echo "✓ Label '${TEST_LABEL}' already exists (HTTP 422 — race with concurrent create)"
+          else
             echo "::error::Failed to create label '${TEST_LABEL}' — HTTP $CREATE_HTTP"
             cat /tmp/label-create.json || true
             exit 1
           fi
-          echo "✓ Created label '${TEST_LABEL}'"
 
+      # Two-signal attribution check:
+      #
+      # 1. Primary — issue.user.login == "<slug>[bot]". GitHub sets the
+      #    author server-side from the token that created the issue and
+      #    users cannot forge the [bot] suffix; this is the identity
+      #    signal the rewards classifier can rely on.
+      #
+      # 2. Secondary — issue.performed_via_github_app.slug == EXPECTED_SLUG.
+      #    GitHub has a long-standing quirk where this field is sometimes
+      #    returned as null even for bot-authored issues (see issue #9875
+      #    and runs 24764328457 / 24821077286 / 24876279049 — all three
+      #    created issues whose .user.login is kubestellar-console-bot[bot]
+      #    but whose performed_via_github_app is null). This check stays
+      #    as a warning so we still notice if GitHub restores the field
+      #    AND breaks it, but we do NOT fail the roundtrip on it alone.
       - name: Create + verify + cleanup test issue
         env:
           APP_ID: ${{ secrets.KUBESTELLAR_CONSOLE_APP_ID }}
           INSTALLATION_ID: ${{ secrets.KUBESTELLAR_CONSOLE_APP_INSTALLATION_ID }}
           PRIVATE_KEY: ${{ secrets.KUBESTELLAR_CONSOLE_APP_PRIVATE_KEY }}
           EXPECTED_SLUG: "kubestellar-console-bot"
+          EXPECTED_USER_LOGIN: "kubestellar-console-bot[bot]"
         run: |
           set -e
 
@@ -187,12 +214,24 @@ jobs:
             -H "X-GitHub-Api-Version: 2022-11-28" \
             "https://api.github.com/repos/${TEST_REPO_OWNER}/${TEST_REPO_NAME}/issues/${ISSUE_NUMBER}")
 
-          ACTUAL_SLUG=$(echo "$READ_RESP" | python3 -c "
+          # Extract both signals in one pass.
+          ATTRIBUTION=$(echo "$READ_RESP" | python3 <<'PY'
           import sys, json
           d = json.load(sys.stdin)
+          user = d.get('user') or {}
           app = d.get('performed_via_github_app') or {}
-          print(app.get('slug') or '')
-          ")
+          # Tab-separated so callers can split reliably even if a field
+          # is empty. Order: user_login, user_type, pvga_slug.
+          print("\t".join([
+              user.get('login') or '',
+              user.get('type') or '',
+              app.get('slug') or '',
+          ]))
+          PY
+          )
+          ACTUAL_USER_LOGIN=$(echo "$ATTRIBUTION" | cut -f1)
+          ACTUAL_USER_TYPE=$(echo "$ATTRIBUTION" | cut -f2)
+          ACTUAL_SLUG=$(echo "$ATTRIBUTION" | cut -f3)
 
           # 5. Clean up FIRST so a verify failure still closes the issue.
           echo "Closing + locking test issue #$ISSUE_NUMBER..."
@@ -209,15 +248,33 @@ jobs:
             "https://api.github.com/repos/${TEST_REPO_OWNER}/${TEST_REPO_NAME}/issues/${ISSUE_NUMBER}/lock" \
             > /dev/null
 
-          # 6. Assert the attribution slug matches.
-          if [ "$ACTUAL_SLUG" != "$EXPECTED_SLUG" ]; then
-            echo "::error::Attribution contract violated — expected '$EXPECTED_SLUG', got '$ACTUAL_SLUG'"
-            echo "performed_via_github_app block:"
-            echo "$READ_RESP" | python3 -c "import sys,json; print(json.dumps(json.load(sys.stdin).get('performed_via_github_app'), indent=2))"
+          # 6a. PRIMARY assertion — the issue.user.login must match the
+          #     App's bot login. GitHub stamps this from the auth token
+          #     that made the POST; only the App installation can produce
+          #     issues where .user.login ends in the [bot] suffix.
+          if [ "$ACTUAL_USER_LOGIN" != "$EXPECTED_USER_LOGIN" ]; then
+            echo "::error::Attribution contract violated — issue.user.login mismatch"
+            echo "  expected: '$EXPECTED_USER_LOGIN'"
+            echo "  got:      '$ACTUAL_USER_LOGIN' (type: '$ACTUAL_USER_TYPE')"
+            exit 1
+          fi
+          if [ "$ACTUAL_USER_TYPE" != "Bot" ]; then
+            echo "::error::Attribution contract violated — issue.user.type expected 'Bot', got '$ACTUAL_USER_TYPE'"
             exit 1
           fi
 
-          echo "✓ Roundtrip passed: issue #$ISSUE_NUMBER authored by '$ACTUAL_SLUG'"
+          # 6b. SECONDARY check — performed_via_github_app.slug. GitHub
+          #     has been returning this as null on bot-authored issues
+          #     intermittently (see issue #9875); emit a workflow
+          #     warning rather than failing so the primary signal can
+          #     still tell us the App is healthy.
+          if [ -z "$ACTUAL_SLUG" ]; then
+            echo "::warning::performed_via_github_app is null on issue #$ISSUE_NUMBER — GitHub API quirk, not an App failure. Primary user.login check passed."
+          elif [ "$ACTUAL_SLUG" != "$EXPECTED_SLUG" ]; then
+            echo "::warning::performed_via_github_app.slug = '$ACTUAL_SLUG' (expected '$EXPECTED_SLUG'). Primary user.login check still passed; investigate if this persists."
+          fi
+
+          echo "✓ Roundtrip passed: issue #$ISSUE_NUMBER authored by '$ACTUAL_USER_LOGIN' (slug=${ACTUAL_SLUG:-<null>})"
 
       - name: Create issue on failure
         if: failure()
@@ -252,16 +309,19 @@ jobs:
                 '1. **Label bootstrap** — \`GITHUB_TOKEN\` could not look up or create the \`test/auto-delete\` label (unexpected — this token has full issues:write on the workflow repo).',
                 '2. **Credential exchange** — App JWT could not be exchanged for an installation token (private key rotated, installation revoked, permissions removed).',
                 '3. **Issue creation** — App\'s installation token was rejected when creating the test issue (scopes drift, label unauthorized, rate limit).',
-                '4. **Attribution check** — Issue was created but GitHub did NOT stamp \`performed_via_github_app.slug = kubestellar-console-bot\` on the result (App renamed, API regression).',
+                '4. **Primary attribution check** — Issue was created but \`.user.login\` is NOT \`kubestellar-console-bot[bot]\` (App renamed — update \`EXPECTED_USER_LOGIN\` in the workflow).',
+                '',
+                'See [docs/runbooks/bot-roundtrip-failures.md](../blob/main/docs/runbooks/bot-roundtrip-failures.md) for triage steps.',
                 '',
                 '### Effect',
-                'If phase 4 failed, **the rewards classifier gate is broken** — all console-submitted issues created today will score as web-UI submissions (50 pts) instead of console submissions (300/100 pts). If phases 1–3 failed, attribution is unverified for this run but the upstream bot may still be functioning in production.',
+                'If phase 4 failed, the App identity itself is broken — issues opened from the console will be attributed to a different user than the rewards classifier expects. If phases 1–3 failed, attribution is unverified for this run but the upstream bot may still be functioning in production.',
+                '',
+                'Note: \`performed_via_github_app\` returning null is NOT a failure on its own. It is a known GitHub API quirk and is reported as a workflow warning rather than a failure. The primary signal is \`issue.user.login\`.',
                 '',
                 '### Likely causes',
                 '- App permissions changed (re-check Settings → GitHub Apps → kubestellar-console-bot)',
                 '- App installation revoked on target account',
-                '- GitHub temporarily dropped \`performed_via_github_app\` from API responses',
-                '- App renamed (update \`KUBESTELLAR_CONSOLE_APP_SLUG\` env var)',
+                '- App renamed (update \`EXPECTED_USER_LOGIN\` and \`EXPECTED_SLUG\` in the workflow)',
                 '- Missing \`test/auto-delete\` label the App lacks permission to create',
               ].join('\n'),
               labels: ['console-app-roundtrip-failure', 'priority/critical', 'ai-needs-human'],
