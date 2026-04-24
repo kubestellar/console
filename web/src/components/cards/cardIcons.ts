@@ -246,6 +246,8 @@ export const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: stri
   kserve_status: { icon: BrainCircuit, color: 'text-purple-400' },
   fluid_status: { icon: Database, color: 'text-blue-400' },
   harbor_status: { icon: Package, color: 'text-blue-400' },
+  // Deployment Risk Score card — #9827
+  deployment_risk_score: { icon: Shield, color: 'text-yellow-400' },
   kuberay_fleet: { icon: BrainCircuit, color: 'text-purple-400' },
   multi_tenancy_overview: { icon: Shield, color: 'text-cyan-400' },
   tenant_isolation_setup: { icon: Settings, color: 'text-yellow-400' },

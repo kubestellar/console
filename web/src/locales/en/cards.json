@@ -4166,5 +4166,16 @@
     "vulnMedium": "Medium vulnerabilities",
     "vulnLow": "Low vulnerabilities",
     "vulnClean": "Clean"
+  },
+  "deploymentRiskScore": {
+    "legend": "Risk score per namespace",
+    "low": "low",
+    "medium": "med",
+    "high": "high",
+    "emptyTitle": "No deployment risk detected",
+    "empty": "Argo CD, Kyverno, and pod restart signals all clean.",
+    "breakdown": "{{argo}} apps \u00b7 {{violations}} violations \u00b7 {{restarts}} restarts",
+    "more_one": "+{{count}} more namespace",
+    "more_other": "+{{count}} more namespaces"
   }
 }

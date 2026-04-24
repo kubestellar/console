@@ -194,6 +194,7 @@ export const CARD_CATALOG = {
     { type: 'crossplane_managed_resources', title: 'Crossplane Managed Resources', description: 'View all Crossplane managed resources including status, provider, and sync conditions', visualization: 'table' },
   ],
   'Security & Events': [
+    { type: 'deployment_risk_score', title: 'Deployment Risk Score', description: 'Correlates Argo CD sync, Kyverno violations, and pod restart rates into a single 0-100 risk score per namespace', visualization: 'status' },
     { type: 'security_issues', title: 'Security Issues', description: 'Security findings and vulnerabilities', visualization: 'table' },
     { type: 'event_stream', title: 'Event Stream', description: 'Live Kubernetes event feed', visualization: 'events' },
     { type: 'pod_logs', title: 'Pod Logs', description: 'Tail container logs for any pod across your clusters', visualization: 'events' },

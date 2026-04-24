@@ -331,6 +331,8 @@ const JaegerStatus = safeLazy(() => import('./jaeger_status'), 'JaegerStatus')
 const CubefsStatus = safeLazy(() => import('./cubefs_status'), 'CubefsStatus')
 // Harbor registry card
 const HarborStatus = safeLazy(() => import('./harbor_status'), 'HarborStatus')
+// Deployment Risk Score card (correlates Argo CD + Kyverno + pod restart signals) — #9827
+const DeploymentRiskScore = safeLazy(() => import('./DeploymentRiskScore'), 'DeploymentRiskScore')
 // Inspektor Gadget cards
 const NetworkTraceCard = safeLazy(() => import('./gadget/NetworkTraceCard'), 'NetworkTraceCard')
 const DNSTraceCard = safeLazy(() => import('./gadget/DNSTraceCard'), 'DNSTraceCard')
@@ -720,6 +722,8 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   cubefs_status: CubefsStatus,
   // Harbor registry
   harbor_status: HarborStatus,
+  // Deployment Risk Score — #9827
+  deployment_risk_score: DeploymentRiskScore,
   // KubeRay fleet monitoring
   kuberay_fleet: KubeRayFleet,
   // SLO compliance tracking
@@ -936,6 +940,8 @@ export const DEMO_DATA_CARDS = new Set([
   'cubefs_status',
   // Harbor registry - demo until Harbor is installed
   'harbor_status',
+  // Deployment Risk Score — demo when no live Argo/Kyverno/pod data (#9827)
+  'deployment_risk_score',
 ])
 
 /**
@@ -1169,6 +1175,8 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   cubefs_status: () => import('./cubefs_status'),
   // Harbor registry
   harbor_status: () => import('./harbor_status'),
+  // Deployment Risk Score — #9827
+  deployment_risk_score: () => import('./DeploymentRiskScore'),
   kuberay_fleet: () => import('./kuberay_fleet'),
   slo_compliance: () => import('./slo_compliance'),
   failover_timeline: () => import('./failover_timeline'),
@@ -1434,6 +1442,9 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
 
   // Provisioning
   harbor_status: 6,
+
+  // Deployment Risk Score — spans wide for per-namespace breakdown (#9827)
+  deployment_risk_score: 6,
 
   // Cluster Groups card
   cluster_groups: 4,

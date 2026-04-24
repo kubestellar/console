@@ -140,6 +140,7 @@ import { prowCiMonitorConfig } from './prow-ci-monitor'
 import { prowHistoryConfig } from './prow-history'
 import { prowJobsConfig } from './prow-jobs'
 import harborStatusConfig from './harbor-status'
+import deploymentRiskScoreConfig from './deployment-risk-score'
 import { prowStatusConfig } from './prow-status'
 import { pvStatusConfig } from './pv-status'
 import { pvcStatusConfig } from './pvc-status'
@@ -334,6 +335,8 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   resource_usage: resourceUsageConfig,
   // Harbor registry
   harbor_status: harborStatusConfig,
+  // Deployment Risk Score — correlates Argo CD + Kyverno + pod restarts (#9827)
+  deployment_risk_score: deploymentRiskScoreConfig,
   role_binding_status: roleBindingStatusConfig,
   role_status: roleStatusConfig,
   rss_feed: rssFeedConfig,
