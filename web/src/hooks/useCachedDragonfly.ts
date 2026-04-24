@@ -236,6 +236,10 @@ function buildStatus(pods: PodItem[]): DragonflyStatusData {
 // Fetcher
 // ---------------------------------------------------------------------------
 
+/** HTTP statuses that indicate "endpoint not available" — treat as empty, not
+ *  as a hard failure (#9933). */
+const NOT_INSTALLED_STATUSES = new Set<number>([401, 403, 404, 501, 503])
+
 async function fetchDragonflyStatus(): Promise<DragonflyStatusData> {
   const params = new URLSearchParams({
     group: '',
@@ -249,12 +253,18 @@ async function fetchDragonflyStatus(): Promise<DragonflyStatusData> {
   })
 
   if (!resp.ok) {
-    if (resp.status === 404) return buildStatus([])
+    if (NOT_INSTALLED_STATUSES.has(resp.status)) return buildStatus([])
     throw new Error(`HTTP ${resp.status}`)
   }
 
-  const body = (await resp.json()) as PodListResponse
-  const items = Array.isArray(body.items) ? body.items : []
+  // Defensive JSON parse — Netlify SPA fallback may return text/html (#9933)
+  let body: PodListResponse
+  try {
+    body = (await resp.json()) as PodListResponse
+  } catch {
+    return buildStatus([])
+  }
+  const items = Array.isArray(body?.items) ? body.items : []
   return buildStatus(items)
 }
 

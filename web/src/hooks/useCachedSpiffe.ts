@@ -122,9 +122,14 @@ function buildSpiffeStatus(
 // Private fetchJson helper (mirrors envoy/contour/linkerd pattern)
 // ---------------------------------------------------------------------------
 
+/** HTTP statuses that indicate "endpoint not available" — treat as empty, not
+ *  as a hard failure. 401/403 cover unauthenticated/demo visitors hitting
+ *  the JWT-protected /api group; 404/501/503 cover Netlify SPA fallback and
+ *  the MSW catch-all (#9933). */
+const NOT_INSTALLED_STATUSES = new Set<number>([401, 403, 404, 501, 503])
+
 async function fetchJson<T>(
   url: string,
-  options?: { treat404AsEmpty?: boolean },
 ): Promise<FetchResult<T | null>> {
   try {
     const resp = await authFetch(url, {
@@ -133,13 +138,19 @@ async function fetchJson<T>(
     })
 
     if (!resp.ok) {
-      if (options?.treat404AsEmpty && resp.status === 404) {
+      if (NOT_INSTALLED_STATUSES.has(resp.status)) {
         return { data: null, failed: false }
       }
       return { data: null, failed: true }
     }
 
-    const body = (await resp.json()) as T
+    // Defensive JSON parse — Netlify SPA fallback may return text/html (#9933)
+    let body: T
+    try {
+      body = (await resp.json()) as T
+    } catch {
+      return { data: null, failed: false }
+    }
     return { data: body, failed: false }
   } catch {
     return { data: null, failed: true }
@@ -153,7 +164,6 @@ async function fetchJson<T>(
 async function fetchSpiffeStatus(): Promise<SpiffeStatusData> {
   const result = await fetchJson<SpiffeStatusResponse>(
     SPIFFE_STATUS_ENDPOINT,
-    { treat404AsEmpty: true },
   )
 
   // If the endpoint isn't wired up yet (404) or the request failed, the

@@ -33,8 +33,9 @@ const CEPH_CLUSTER_GROUP = 'ceph.rook.io'
 const CEPH_CLUSTER_VERSION = 'v1'
 const CEPH_CLUSTER_RESOURCE = 'cephclusters'
 
-// HTTP status sentinels
-const HTTP_NOT_FOUND = 404
+/** HTTP statuses that indicate "endpoint not available" — treat as empty, not
+ *  as a hard failure (#9933). */
+const NOT_INSTALLED_STATUSES = new Set<number>([401, 403, 404, 501, 503])
 
 const INITIAL_DATA: RookStatusData = {
   health: 'not-installed',
@@ -195,13 +196,18 @@ async function fetchRookStatus(): Promise<RookStatusData> {
   })
 
   if (!resp.ok) {
-    // CRD not registered → treat as "not installed" without surfacing an error.
-    if (resp.status === HTTP_NOT_FOUND) return buildStatus([])
+    if (NOT_INSTALLED_STATUSES.has(resp.status)) return buildStatus([])
     throw new Error(`HTTP ${resp.status}`)
   }
 
-  const body = (await resp.json()) as CephClusterListResponse
-  const items = Array.isArray(body.items) ? body.items : []
+  // Defensive JSON parse — Netlify SPA fallback may return text/html (#9933)
+  let body: CephClusterListResponse
+  try {
+    body = (await resp.json()) as CephClusterListResponse
+  } catch {
+    return buildStatus([])
+  }
+  const items = Array.isArray(body?.items) ? body.items : []
   const clusters = (items ?? []).map(itemToCluster)
   return buildStatus(clusters)
 }

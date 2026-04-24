@@ -37,7 +37,11 @@ const DEFAULT_REPOSITORY = ''
 // clear warning before any single role expires.
 const EXPIRING_SOON_WINDOW_MS = 7 * 24 * 60 * 60 * 1000
 
-const NOT_FOUND_STATUS = 404
+/** HTTP statuses that indicate "endpoint not available" — treat as empty, not
+ *  as a hard failure. 401/403 cover unauthenticated/demo visitors hitting
+ *  the JWT-protected /api group; 404/501/503 cover Netlify SPA fallback and
+ *  the MSW catch-all (#9933). */
+const NOT_INSTALLED_STATUSES = new Set<number>([401, 403, 404, 501, 503])
 
 const INITIAL_DATA: TufStatusData = {
   health: 'not-installed',
@@ -137,18 +141,24 @@ async function fetchTufStatus(): Promise<TufStatusData> {
   })
 
   if (!resp.ok) {
-    if (resp.status === NOT_FOUND_STATUS) {
-      // Endpoint not yet wired — surface "not-installed" so the cache layer
-      // will fall back to demo data instead of flagging a hard failure.
+    if (NOT_INSTALLED_STATUSES.has(resp.status)) {
+      // Endpoint not yet wired / auth required / MSW catch-all (#9933) —
+      // surface "not-installed" so the cache layer falls back to demo data.
       return buildTufStatus([], DEFAULT_SPEC_VERSION, DEFAULT_REPOSITORY)
     }
     throw new Error(`HTTP ${resp.status}`)
   }
 
-  const body = (await resp.json()) as TufStatusResponse
-  const roles = Array.isArray(body.roles) ? body.roles : []
-  const specVersion = body.specVersion ?? DEFAULT_SPEC_VERSION
-  const repository = body.repository ?? DEFAULT_REPOSITORY
+  // Defensive JSON parse — Netlify SPA fallback may return text/html (#9933)
+  let body: TufStatusResponse
+  try {
+    body = (await resp.json()) as TufStatusResponse
+  } catch {
+    return buildTufStatus([], DEFAULT_SPEC_VERSION, DEFAULT_REPOSITORY)
+  }
+  const roles = Array.isArray(body?.roles) ? body.roles : []
+  const specVersion = body?.specVersion ?? DEFAULT_SPEC_VERSION
+  const repository = body?.repository ?? DEFAULT_REPOSITORY
   return buildTufStatus(roles, specVersion, repository)
 }
 
