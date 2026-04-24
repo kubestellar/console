@@ -3292,6 +3292,24 @@
     "noQueues": "No queues configured",
     "noJobs": "No Volcano jobs found"
   },
+  "openfgaStatus": {
+    "healthy": "Healthy",
+    "degraded": "Degraded",
+    "notInstalled": "OpenFGA not detected",
+    "notInstalledHint": "No OpenFGA server reachable from the connected clusters.",
+    "fetchError": "Unable to fetch OpenFGA status",
+    "tuples": "Tuples",
+    "stores": "Stores",
+    "models": "Models",
+    "checkRps": "Check rps",
+    "server": "server",
+    "sectionEndpoint": "Endpoint",
+    "sectionLatency": "Latency (ms)",
+    "sectionStores": "Stores",
+    "sectionModels": "Authorization models",
+    "noStores": "No OpenFGA stores found",
+    "noModels": "No authorization models found"
+  },
   "tikvStatus": {
     "healthy": "Healthy",
     "degraded": "Degraded",

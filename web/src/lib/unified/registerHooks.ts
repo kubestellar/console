@@ -63,6 +63,7 @@ import { useCachedKubevela } from '../../hooks/useCachedKubevela'
 import { useCachedLinkerd } from '../../hooks/useCachedLinkerd'
 import { useCachedOpenfeature } from '../../hooks/useCachedOpenfeature'
 import { useCachedLonghorn } from '../../hooks/useCachedLonghorn'
+import { useCachedOpenfga } from '../../hooks/useCachedOpenfga'
 import { useCachedOtel } from '../../hooks/useCachedOtel'
 import { useCachedRook } from '../../hooks/useCachedRook'
 import { useCachedSpiffe } from '../../hooks/useCachedSpiffe'
@@ -1326,6 +1327,14 @@ function useUnifiedSpireStatus() {
     isLoading: result.isLoading,
     error: result.error ? new Error(result.error) : null,
     refetch: result.refetch,
+function useUnifiedOpenfgaStatus() {
+  const result = useCachedOpenfga()
+  // Surface the store list as the primary row set for generic list renderers.
+  return {
+    data: result.data.stores,
+    isLoading: result.showSkeleton,
+    error: result.error ? new Error('Failed to fetch OpenFGA status') : null,
+    refetch: () => { result.refetch() },
   }
 }
 
@@ -1581,6 +1590,7 @@ export function registerUnifiedHooks(): void {
   registerDataHook('useCachedSpire', useUnifiedSpireStatus)
   registerDataHook('useCachedKubevela', useUnifiedKubeVelaStatus)
   registerDataHook('useCachedStrimzi', useUnifiedStrimziStatus)
+  registerDataHook('useCachedOpenfga', useUnifiedOpenfgaStatus)
   registerDataHook('useCachedTikv', useUnifiedTikvStatus)
   registerDataHook('useCachedTuf', useUnifiedTufStatus)
   registerDataHook('useCachedCloudCustodian', useUnifiedCloudCustodianStatus)

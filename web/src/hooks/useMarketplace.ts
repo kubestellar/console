@@ -105,6 +105,7 @@ const MARKETPLACE_TO_CARD_TYPE: Record<string, string> = {
   'cncf-linkerd': 'linkerd_status',
   'cncf-longhorn': 'longhorn_status',
   'cncf-openfeature': 'openfeature_status',
+  'cncf-openfga': 'openfga_status',
   'cncf-rook': 'rook_status',
   'cncf-spiffe': 'spiffe_status',
   'cncf-cni': 'cni_status',

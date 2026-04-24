@@ -92,6 +92,8 @@ const GrpcStatus = safeLazy(() => import('./grpc_status'), 'GrpcStatus')
 const LinkerdStatus = safeLazy(() => import('./linkerd_status'), 'LinkerdStatus')
 // Longhorn distributed block storage card (CNCF Incubating)
 const LonghornStatus = safeLazy(() => import('./longhorn_status'), 'LonghornStatus')
+// OpenFGA fine-grained authorization card (CNCF Sandbox)
+const OpenfgaStatus = safeLazy(() => import('./openfga_status'), 'OpenfgaStatus')
 // OpenTelemetry collector card (Observability)
 const OtelStatus = safeLazy(() => import('./otel_status'), 'OtelStatus')
 // Rook cloud-native storage orchestrator card
@@ -763,6 +765,8 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   linkerd_status: LinkerdStatus,
   // Longhorn distributed block storage (CNCF Incubating)
   longhorn_status: LonghornStatus,
+  // OpenFGA fine-grained authorization (CNCF Sandbox)
+  openfga_status: OpenfgaStatus,
   // OpenTelemetry collector
   otel_status: OtelStatus,
   // Rook cloud-native storage orchestrator (Ceph)
@@ -1107,6 +1111,7 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   grpc_status: () => import('./grpc_status'),
   linkerd_status: () => import('./linkerd_status'),
   longhorn_status: () => import('./longhorn_status'),
+  openfga_status: () => import('./openfga_status'),
   otel_status: () => import('./otel_status'),
   rook_status: () => import('./rook_status'),
   spiffe_status: () => import('./spiffe_status'),
@@ -1730,6 +1735,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   grpc_status: 6,
   linkerd_status: 6,
   longhorn_status: 6,
+  openfga_status: 6,
   otel_status: 6,
   rook_status: 6,
   spiffe_status: 6,

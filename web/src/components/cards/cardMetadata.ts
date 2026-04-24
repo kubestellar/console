@@ -279,6 +279,8 @@ export const CARD_TITLES: Record<string, string> = {
   linkerd_status: 'Linkerd',
   // Longhorn distributed block storage (CNCF Incubating)
   longhorn_status: 'Longhorn',
+  // OpenFGA fine-grained authorization (CNCF Sandbox)
+  openfga_status: 'OpenFGA',
   // OpenTelemetry collector (CNCF)
   otel_status: 'OpenTelemetry',
   // Rook cloud-native storage orchestrator
@@ -629,6 +631,8 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   linkerd_status: 'Linkerd service mesh meshed pods, success rate, RPS, and p99 latency per deployment.',
   // Longhorn distributed block storage (CNCF Incubating)
   longhorn_status: 'Longhorn distributed block storage: volumes (state/robustness), node status, replica health, and capacity utilization.',
+  // OpenFGA fine-grained authorization (CNCF Sandbox)
+  openfga_status: 'OpenFGA fine-grained authorization: stores, authorization models, relationship tuples, API throughput (Check/Expand/ListObjects), and latency percentiles.',
   // OpenTelemetry collector
   otel_status: 'OpenTelemetry Collectors: pipeline health, receivers and exporters, dropped telemetry, and export errors across connected clusters.',
   // Rook cloud-native storage orchestrator (Ceph)

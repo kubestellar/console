@@ -193,6 +193,11 @@ export { useCachedVolcano } from './useCachedVolcano'
 // Named re-export (avoids `__testables` export-name collision with TiKV).
 
 export { useCachedStrimzi } from './useCachedStrimzi'
+// OpenFGA Fine-Grained Authorization — useCachedOpenfga.ts (CNCF Sandbox)
+// ============================================================================
+// Named re-export (avoids `__testables` export-name collision with TiKV).
+
+export { useCachedOpenfga } from './useCachedOpenfga'
 
 // ============================================================================
 // TiKV Distributed Key-Value Store — useCachedTikv.ts

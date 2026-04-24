@@ -275,6 +275,7 @@ export const CARD_CATALOG = {
     { type: 'cross_cluster_policy_comparison', title: 'Cross-Cluster Policy Comparison', description: 'Compare Kyverno policy deployment across clusters', visualization: 'table' },
     { type: 'trestle_scan', title: 'Compliance Trestle (OSCAL)', description: 'OSCAL compliance assessment via Compliance Trestle (CNCF Sandbox)', visualization: 'status' },
     { type: 'spiffe_status', title: 'SPIFFE', description: 'SPIFFE/SPIRE workload identity: trust domain, SVID counts (x509/JWT), federated domains, and registration entries', visualization: 'status' },
+    { type: 'openfga_status', title: 'OpenFGA', description: 'OpenFGA fine-grained authorization: stores, authorization models, relationship tuples, API throughput, and latency percentiles', visualization: 'status' },
   ],
   'Data Compliance': [
     { type: 'vault_secrets', title: 'HashiCorp Vault', description: 'Secrets management, dynamic credentials, and encryption-as-a-service', visualization: 'status' },
