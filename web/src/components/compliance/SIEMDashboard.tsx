@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { memo } from 'react'
 import { useState, useEffect } from 'react'
 import {
   Monitor, CheckCircle2, Loader2,
@@ -65,7 +65,7 @@ const STATUS_ICON: Record<string, React.ReactNode> = {
   resolved: <CheckCircle2 className="w-4 h-4 text-green-400" />,
 }
 
-export default function SIEMDashboard() {
+const SIEMDashboard = memo(function SIEMDashboard() {
   const [events, setEvents] = useState<SIEMEvent[]>([])
   const [alerts, setAlerts] = useState<SIEMAlert[]>([])
   const [summary, setSummary] = useState<SIEMSummary | null>(null)
@@ -279,4 +279,6 @@ export default function SIEMDashboard() {
       )}
     </div>
   )
-}
+})
+
+export default SIEMDashboard

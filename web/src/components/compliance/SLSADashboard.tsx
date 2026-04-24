@@ -4,7 +4,7 @@
  * Build provenance level indicators (L1–L4), attestation verification,
  * source integrity checks, and build reproducibility.
  */
-import { useState, useEffect } from 'react'
+import { useState, useEffect, memo } from 'react'
 import {
   GitCommitHorizontal, CheckCircle2, Loader2, AlertTriangle,
   XCircle, Shield, Lock
@@ -92,7 +92,7 @@ const STATUS_ICON: Record<string, React.ReactNode> = {
 
 // ── Content Component ───────────────────────────────────────────────────
 
-export function SLSADashboardContent() {
+export const SLSADashboardContent = memo(function SLSADashboardContent() {
   const [attestations, setAttestations] = useState<SLSAAttestation[]>([])
   const [provenance, setProvenance] = useState<SLSAProvenance[]>([])
   const [summary, setSummary] = useState<SLSASummary | null>(null)
@@ -318,7 +318,7 @@ export function SLSADashboardContent() {
       )}
     </div>
   )
-}
+})
 
 // ── Page Component (rendered by App.tsx route) ──────────────────────────
 

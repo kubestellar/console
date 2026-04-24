@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { memo } from 'react'
 import { useState, useEffect } from 'react'
 import {
   AlertTriangle, CheckCircle2, Loader2, Clock,
@@ -73,7 +73,7 @@ const TREND_COLORS: Record<string, string> = {
   degrading: 'text-red-400',
 }
 
-export default function IncidentResponseDashboard() {
+const IncidentResponseDashboard = memo(function IncidentResponseDashboard() {
   const [incidents, setIncidents] = useState<Incident[]>([])
   const [metrics, setMetrics] = useState<IncidentMetrics | null>(null)
   const [playbooks, setPlaybooks] = useState<Playbook[]>([])
@@ -311,4 +311,6 @@ export default function IncidentResponseDashboard() {
       )}
     </div>
   )
-}
+})
+
+export default IncidentResponseDashboard

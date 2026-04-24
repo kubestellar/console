@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { memo } from 'react'
 import { useState, useEffect } from 'react'
 import {
   Shield, CheckCircle2, Loader2,
@@ -96,7 +96,7 @@ function RiskScoreRing({ score, size = 80 }: { score: number; size?: number }) {
   )
 }
 
-export default function ThreatIntelDashboard() {
+const ThreatIntelDashboard = memo(function ThreatIntelDashboard() {
   const [feeds, setFeeds] = useState<ThreatFeed[]>([])
   const [iocs, setIOCs] = useState<IOCMatch[]>([])
   const [summary, setSummary] = useState<ThreatIntelSummary | null>(null)
@@ -329,4 +329,6 @@ export default function ThreatIntelDashboard() {
       )}
     </div>
   )
-}
+})
+
+export default ThreatIntelDashboard

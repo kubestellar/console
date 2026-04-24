@@ -807,6 +807,10 @@ export function startGlobalErrorTracking() {
       if (msg.includes('send was called before connect') || msg.includes('InvalidStateError')) return
       // Skip BackendUnavailableError on Netlify / console.kubestellar.io
       if (isNetlifyDeployment && msg.includes('Backend API is currently unavailable')) return
+      // Skip transient network errors — tracked by individual hook error handling
+      if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('net::ERR_')) return
+      // Skip WebGL context errors — benign GPU process resets
+      if (msg.includes('WebGL') || msg.includes('context lost')) return
       emitError('unhandled_rejection', msg)
     } finally {
       isEmitting = false
@@ -836,6 +840,28 @@ export function startGlobalErrorTracking() {
       // frame. Multiple cards on the dashboard use ResizeObserver, and layout
       // shifts during initial render or window resize trigger this harmlessly.
       if (event.message.includes('ResizeObserver loop')) return
+      // WebGL context lost/restored events fire when the GPU process resets
+      // (tab backgrounded, driver update, resource pressure). The globe
+      // animation and game cards handle this gracefully via Three.js internals.
+      if (
+        event.message.includes('WebGL') ||
+        event.message.includes('context lost') ||
+        event.message.includes('GL_INVALID')
+      ) return
+      // Canvas errors from 2D/WebGL rendering (toDataURL on tainted canvas,
+      // drawing to a canvas whose context was lost, etc.) are not actionable.
+      if (event.message.includes('canvas') || event.message.includes('CanvasRenderingContext')) return
+      // Network errors surfacing as runtime errors (e.g. image/script load
+      // failures due to transient connectivity). These are tracked separately
+      // via fetch error handling in individual hooks.
+      if (
+        event.message.includes('Failed to fetch') ||
+        event.message.includes('NetworkError') ||
+        event.message.includes('net::ERR_')
+      ) return
+      // Chrome fires "Non-Error promise rejection captured" for non-Error
+      // objects thrown in promise chains — typically from third-party scripts.
+      if (event.message.includes('Non-Error')) return
       // Stale chunks can surface as runtime errors (Safari: "Importing a module script failed")
       if (tryChunkReloadRecovery(event.message)) return
       emitError('runtime', event.message)
