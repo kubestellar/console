@@ -15,6 +15,9 @@ import { useGlobalFilters } from '../../../hooks/useGlobalFilters'
 import { CardControls } from '../../ui/CardControls'
 import { JaegerCollector } from '../../../types/jaeger'
 
+const QUEUE_DEPTH_WARNING_THRESHOLD = 50
+const QUEUE_DEPTH_ALERT_THRESHOLD = 80
+
 const STATUS_CONFIG = {
     Healthy: { color: 'text-green-400', bg: 'bg-green-500/10', border: 'border-green-500/20', dot: 'bg-green-400 shadow-green-500/40' },
     Degraded: { color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20', dot: 'bg-yellow-400 shadow-yellow-500/40' },
@@ -141,10 +144,10 @@ export const JaegerStatus: React.FC<CardComponentProps> = () => {
                         alert={data.metrics.spansDroppedLastHour > 0}
                     />
                     <KPIField
-                        icon={<TrendingUp className={cn("w-3 h-3", data.metrics.avgQueueLength > 50 ? "text-yellow-400" : "text-muted-foreground/40")} />}
+                        icon={<TrendingUp className={cn("w-3 h-3", data.metrics.avgQueueLength > QUEUE_DEPTH_WARNING_THRESHOLD ? "text-yellow-400" : "text-muted-foreground/40")} />}
                         label={t('jaeger.queueDepth' as any)}
                         value={data.metrics.avgQueueLength}
-                        alert={data.metrics.avgQueueLength > 80}
+                        alert={data.metrics.avgQueueLength > QUEUE_DEPTH_ALERT_THRESHOLD}
                     />
                 </div>
 

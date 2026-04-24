@@ -42,6 +42,12 @@ const githubAPITimeout = 10 * time.Second
 // itself is already persisted, so users can retry via a maintainer.
 const asyncScreenshotUploadTimeout = 5 * time.Minute
 
+// backgroundGitHubOpTimeout bounds the time a fire-and-forget goroutine
+// spends on a single GitHub API call (close issue, add comment, etc.).
+// Without a timeout these goroutines can hang indefinitely if GitHub
+// becomes slow or unresponsive, causing a goroutine leak.
+const backgroundGitHubOpTimeout = 30 * time.Second
+
 // errGitHubUnauthorized is returned when GitHub rejects the FEEDBACK_GITHUB_TOKEN
 // as invalid or expired (HTTP 401). Callers should branch on this with errors.Is
 // and surface a user-visible "refresh your PAT" message instead of the generic
@@ -513,7 +519,7 @@ func (h *FeedbackHandler) ListAllFeatureRequests(c *fiber.Ctx) error {
 	}
 
 	// Fetch issues created by the logged-in user from both console and docs repos
-	consoleIssues, err := h.fetchGitHubIssuesFromRepo(currentGitHubLogin, h.repoName)
+	consoleIssues, err := h.fetchGitHubIssuesFromRepo(c.UserContext(), currentGitHubLogin, h.repoName)
 	if err != nil {
 		slog.Error("[Feedback] failed to fetch GitHub issues from console repo", "error", err)
 		// Fall back to local database if GitHub fetch fails
@@ -522,7 +528,7 @@ func (h *FeedbackHandler) ListAllFeatureRequests(c *fiber.Ctx) error {
 
 	// Also fetch from docs repo — issues can be filed there too (#5529)
 	docsRepoName := "docs"
-	docsIssues, docsErr := h.fetchGitHubIssuesFromRepo(currentGitHubLogin, docsRepoName)
+	docsIssues, docsErr := h.fetchGitHubIssuesFromRepo(c.UserContext(), currentGitHubLogin, docsRepoName)
 	if docsErr != nil {
 		slog.Warn("[Feedback] failed to fetch GitHub issues from docs repo", "error", docsErr)
 		// Non-fatal — continue with console issues only
@@ -542,7 +548,7 @@ func (h *FeedbackHandler) ListAllFeatureRequests(c *fiber.Ctx) error {
 	}
 
 	// Fetch linked PRs for console issues only (docs issues use different PR workflow)
-	linkedPRs := h.fetchLinkedPRs(consoleIssues)
+	linkedPRs := h.fetchLinkedPRs(c.UserContext(), consoleIssues)
 
 	// Convert to queue items
 	// Note: preview URLs are fetched on-demand via CheckPreviewStatus endpoint
@@ -779,7 +785,7 @@ type GitHubPR struct {
 // fetchLinkedPRs fetches PRs that are linked to the given issues.
 // Results are cached for prCacheTTL to reduce GitHub API usage.
 // Pagination is used to fetch beyond the first page of results per state.
-func (h *FeedbackHandler) fetchLinkedPRs(issues []GitHubIssue) map[int]GitHubPR {
+func (h *FeedbackHandler) fetchLinkedPRs(ctx context.Context, issues []GitHubIssue) map[int]GitHubPR {
 	result := make(map[int]GitHubPR)
 	if h.getEffectiveToken() == "" || h.repoOwner == "" || h.repoName == "" {
 		return result
@@ -791,7 +797,7 @@ func (h *FeedbackHandler) fetchLinkedPRs(issues []GitHubIssue) map[int]GitHubPR 
 		issueNumbers[issue.Number] = true
 	}
 
-	allPRs := h.getCachedOrFetchPRs()
+	allPRs := h.getCachedOrFetchPRs(ctx)
 
 	// Match PRs to issues by looking for "Fixes #N", "Closes #N", or "Fixes owner/repo#N" in PR body
 	fixesPattern := regexp.MustCompile(`(?i)(?:fixes|closes|resolves)\s+(?:[a-zA-Z0-9_-]+/[a-zA-Z0-9_-]+)?#(\d+)`)
@@ -822,7 +828,7 @@ func (h *FeedbackHandler) fetchLinkedPRs(issues []GitHubIssue) map[int]GitHubPR 
 //
 // #7057 — Uses singleflight to coalesce concurrent cold-cache fetches into
 // a single set of paginated GitHub PR API calls.
-func (h *FeedbackHandler) getCachedOrFetchPRs() []GitHubPR {
+func (h *FeedbackHandler) getCachedOrFetchPRs(ctx context.Context) []GitHubPR {
 	h.prCacheMu.RLock()
 	if h.prCache != nil && time.Since(h.prCacheTime) < prCacheTTL {
 		cached := h.prCache
@@ -834,7 +840,7 @@ func (h *FeedbackHandler) getCachedOrFetchPRs() []GitHubPR {
 	v, _, _ := h.prFetchGroup.Do("prs", func() (interface{}, error) {
 		var allPRs []GitHubPR
 		for _, state := range []string{"open", "closed"} {
-			prs := h.fetchPRPages(state)
+			prs := h.fetchPRPages(ctx, state)
 			allPRs = append(allPRs, prs...)
 		}
 
@@ -860,7 +866,7 @@ func (h *FeedbackHandler) getCachedOrFetchPRs() []GitHubPR {
 
 // fetchPRPages fetches up to maxPRPages pages of PRs for the given state,
 // using the shared HTTP client for connection reuse.
-func (h *FeedbackHandler) fetchPRPages(state string) []GitHubPR {
+func (h *FeedbackHandler) fetchPRPages(ctx context.Context, state string) []GitHubPR {
 	var allPRs []GitHubPR
 
 	apiBase := resolveGitHubAPIBase()
@@ -869,7 +875,7 @@ func (h *FeedbackHandler) fetchPRPages(state string) []GitHubPR {
 			"%s/repos/%s/%s/pulls?state=%s&per_page=50&sort=updated&direction=desc&page=%d",
 			apiBase, h.repoOwner, h.repoName, state, page)
 
-		req, err := http.NewRequest("GET", url, nil)
+		req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 		if err != nil {
 			break
 		}
@@ -905,15 +911,15 @@ func (h *FeedbackHandler) fetchPRPages(state string) []GitHubPR {
 }
 
 // fetchGitHubIssues fetches issues created by the given user from the specified repo
-func (h *FeedbackHandler) fetchGitHubIssues(githubLogin string) ([]GitHubIssue, error) {
-	return h.fetchGitHubIssuesFromRepo(githubLogin, h.repoName)
+func (h *FeedbackHandler) fetchGitHubIssues(ctx context.Context, githubLogin string) ([]GitHubIssue, error) {
+	return h.fetchGitHubIssuesFromRepo(ctx, githubLogin, h.repoName)
 }
 
 // fetchGitHubIssuesFromRepo fetches issues created by the given user from a
 // specific repo, paginating through all results up to maxIssuePages pages.
 // #7642: the previous implementation fetched only per_page=50 with no
 // pagination, so users with >50 issues saw truncated counts.
-func (h *FeedbackHandler) fetchGitHubIssuesFromRepo(githubLogin string, repoName string) ([]GitHubIssue, error) {
+func (h *FeedbackHandler) fetchGitHubIssuesFromRepo(ctx context.Context, githubLogin string, repoName string) ([]GitHubIssue, error) {
 	if h.getEffectiveToken() == "" || h.repoOwner == "" || repoName == "" {
 		return nil, fmt.Errorf("GitHub not configured")
 	}
@@ -935,7 +941,7 @@ func (h *FeedbackHandler) fetchGitHubIssuesFromRepo(githubLogin string, repoName
 			"%s/repos/%s/%s/issues?state=all&creator=%s&per_page=%d&sort=updated&direction=desc&page=%d",
 			apiBase, h.repoOwner, repoName, githubLogin, issuesPerPage, page)
 
-		req, err := http.NewRequest("GET", pageURL, nil)
+		req, err := http.NewRequestWithContext(ctx, "GET", pageURL, nil)
 		if err != nil {
 			break
 		}
@@ -1123,7 +1129,7 @@ func (h *FeedbackHandler) CloseRequest(c *fiber.Ctx) error {
 
 		// Verify the requesting user owns this GitHub issue
 		currentLogin := middleware.GetGitHubLogin(c)
-		if ownerErr := h.verifyGitHubIssueOwnership(issueNum, currentLogin); ownerErr != nil {
+		if ownerErr := h.verifyGitHubIssueOwnership(c.UserContext(), issueNum, currentLogin); ownerErr != nil {
 			return ownerErr
 		}
 
@@ -1131,7 +1137,7 @@ func (h *FeedbackHandler) CloseRequest(c *fiber.Ctx) error {
 		// reflects the actual outcome instead of optimistically claiming
 		// success before the API call completes.
 		if h.getEffectiveToken() != "" {
-			if closeErr := h.closeGitHubIssue(issueNum, h.repoName); closeErr != nil {
+			if closeErr := h.closeGitHubIssue(c.UserContext(), issueNum, h.repoName); closeErr != nil {
 				slog.Error("[Feedback] failed to close GitHub issue", "issue", issueNum, "error", closeErr)
 				return c.Status(fiber.StatusBadGateway).JSON(map[string]any{
 					"id":                  idParam,
@@ -1176,7 +1182,11 @@ func (h *FeedbackHandler) CloseRequest(c *fiber.Ctx) error {
 
 	// Close the GitHub issue if we have one
 	if h.getEffectiveToken() != "" && request.GitHubIssueNumber != nil {
-		go h.closeGitHubIssue(*request.GitHubIssueNumber, h.resolveRepoName(request.TargetRepo))
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), backgroundGitHubOpTimeout)
+			defer cancel()
+			h.closeGitHubIssue(ctx, *request.GitHubIssueNumber, h.resolveRepoName(request.TargetRepo))
+		}()
 	}
 
 	// Refresh and return the updated request
@@ -1198,13 +1208,17 @@ func (h *FeedbackHandler) RequestUpdate(c *fiber.Ctx) error {
 
 		// Verify the requesting user owns this GitHub issue
 		currentLogin := middleware.GetGitHubLogin(c)
-		if ownerErr := h.verifyGitHubIssueOwnership(issueNum, currentLogin); ownerErr != nil {
+		if ownerErr := h.verifyGitHubIssueOwnership(c.UserContext(), issueNum, currentLogin); ownerErr != nil {
 			return ownerErr
 		}
 
 		// Add a comment to the GitHub issue requesting an update
 		if h.getEffectiveToken() != "" {
-			go h.addIssueComment(issueNum, "The user has requested an update on this issue.", h.repoName)
+			go func() {
+				ctx, cancel := context.WithTimeout(context.Background(), backgroundGitHubOpTimeout)
+				defer cancel()
+				h.addIssueComment(ctx, issueNum, "The user has requested an update on this issue.", h.repoName)
+			}()
 		}
 
 		// Return a minimal response for GitHub items
@@ -1235,7 +1249,11 @@ func (h *FeedbackHandler) RequestUpdate(c *fiber.Ctx) error {
 
 	// Add a comment to the GitHub issue requesting an update
 	if h.getEffectiveToken() != "" && request.GitHubIssueNumber != nil {
-		go h.addIssueComment(*request.GitHubIssueNumber, "The user has requested an update on this issue.", h.resolveRepoName(request.TargetRepo))
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), backgroundGitHubOpTimeout)
+			defer cancel()
+			h.addIssueComment(ctx, *request.GitHubIssueNumber, "The user has requested an update on this issue.", h.resolveRepoName(request.TargetRepo))
+		}()
 	}
 
 	return c.JSON(request)
@@ -1255,7 +1273,7 @@ func (h *FeedbackHandler) resolveRepoName(target models.TargetRepo) string {
 // verifyGitHubIssueOwnership fetches a GitHub issue and checks that the
 // requesting user (identified by their GitHub login) is the issue author.
 // Returns nil on success, or a fiber error (403/502/404) on failure.
-func (h *FeedbackHandler) verifyGitHubIssueOwnership(issueNumber int, currentLogin string) error {
+func (h *FeedbackHandler) verifyGitHubIssueOwnership(ctx context.Context, issueNumber int, currentLogin string) error {
 	if currentLogin == "" {
 		return fiber.NewError(fiber.StatusForbidden, "GitHub login not available — cannot verify ownership")
 	}
@@ -1267,7 +1285,7 @@ func (h *FeedbackHandler) verifyGitHubIssueOwnership(issueNumber int, currentLog
 	url := fmt.Sprintf("%s/repos/%s/%s/issues/%d",
 		resolveGitHubAPIBase(), h.repoOwner, h.repoName, issueNumber)
 
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to create ownership check request")
 	}
@@ -1304,7 +1322,7 @@ func (h *FeedbackHandler) verifyGitHubIssueOwnership(issueNumber int, currentLog
 // closeGitHubIssue closes an issue on GitHub in the specified repo.
 // #7060: returns an error so callers can detect failures instead of
 // fire-and-forget.
-func (h *FeedbackHandler) closeGitHubIssue(issueNumber int, repoName string) error {
+func (h *FeedbackHandler) closeGitHubIssue(ctx context.Context, issueNumber int, repoName string) error {
 	payload := map[string]string{"state": "closed"}
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
@@ -1314,7 +1332,7 @@ func (h *FeedbackHandler) closeGitHubIssue(issueNumber int, repoName string) err
 	url := fmt.Sprintf("%s/repos/%s/%s/issues/%d",
 		resolveGitHubAPIBase(), h.repoOwner, repoName, issueNumber)
 
-	req, err := http.NewRequest("PATCH", url, bytes.NewBuffer(jsonData))
+	req, err := http.NewRequestWithContext(ctx, "PATCH", url, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return fmt.Errorf("failed to create close issue request: %w", err)
 	}
@@ -1343,7 +1361,7 @@ func (h *FeedbackHandler) closeGitHubIssue(issueNumber int, repoName string) err
 // addIssueComment adds a comment to a GitHub issue in the specified repo.
 // #7062: returns an error so callers can detect delivery failures
 // (e.g. for accurate screenshot upload counts).
-func (h *FeedbackHandler) addIssueComment(issueNumber int, comment string, repoName string) error {
+func (h *FeedbackHandler) addIssueComment(ctx context.Context, issueNumber int, comment string, repoName string) error {
 	payload := map[string]string{"body": comment}
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
@@ -1353,7 +1371,7 @@ func (h *FeedbackHandler) addIssueComment(issueNumber int, comment string, repoN
 	url := fmt.Sprintf("%s/repos/%s/%s/issues/%d/comments",
 		resolveGitHubAPIBase(), h.repoOwner, repoName, issueNumber)
 
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return fmt.Errorf("failed to create issue comment request: %w", err)
 	}
@@ -1427,7 +1445,11 @@ func (h *FeedbackHandler) SubmitFeedback(c *fiber.Ctx) error {
 
 	// Add comment to GitHub PR if configured
 	if h.getEffectiveToken() != "" && request.PRNumber != nil {
-		go h.addPRComment(request, feedback)
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), backgroundGitHubOpTimeout)
+			defer cancel()
+			h.addPRComment(ctx, request, feedback)
+		}()
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(feedback)
@@ -2082,7 +2104,7 @@ func (h *FeedbackHandler) uploadScreenshotCommentsAsync(ctx context.Context, iss
 		commentBody := fmt.Sprintf(
 			"<!-- screenshot-base64:%d -->\n<details>\n<summary>Screenshot %d (processing...)</summary>\n\n```\n%s\n```\n\n</details>",
 			i+1, i+1, dataURI)
-		if commentErr := h.addIssueComment(issueNumber, commentBody, repoName); commentErr != nil {
+		if commentErr := h.addIssueComment(ctx, issueNumber, commentBody, repoName); commentErr != nil {
 			slog.Warn("[Feedback] async screenshot comment upload failed",
 				"index", i+1, "issue", issueNumber, "error", commentErr)
 			failed++
@@ -2341,7 +2363,7 @@ func isLabelPermissionError(err error) bool {
 }
 
 // addPRComment adds a comment to a GitHub PR
-func (h *FeedbackHandler) addPRComment(request *models.FeatureRequest, feedback *models.PRFeedback) {
+func (h *FeedbackHandler) addPRComment(ctx context.Context, request *models.FeatureRequest, feedback *models.PRFeedback) {
 	if request.PRNumber == nil {
 		return
 	}
@@ -2368,7 +2390,7 @@ func (h *FeedbackHandler) addPRComment(request *models.FeatureRequest, feedback 
 	url := fmt.Sprintf("%s/repos/%s/%s/issues/%d/comments",
 		resolveGitHubAPIBase(), h.repoOwner, h.repoName, *request.PRNumber)
 
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
 		slog.Error("[Feedback] failed to create PR comment request", "error", err)
 		return
