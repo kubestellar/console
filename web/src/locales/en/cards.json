@@ -3271,6 +3271,25 @@
     "sectionNodes": "Nodes",
     "noNodes": "No nodes reporting CNI status",
     "unknownCidr": "unknown"
+  "volcanoStatus": {
+    "healthy": "Healthy",
+    "degraded": "Degraded",
+    "notInstalled": "Volcano scheduler not detected",
+    "notInstalledHint": "No Volcano scheduler reachable from the connected clusters.",
+    "fetchError": "Unable to fetch Volcano status",
+    "queues": "Queues",
+    "runningJobs": "Running",
+    "pendingJobs": "Pending",
+    "completedJobs": "Completed",
+    "failedJobs": "Failed",
+    "allocatedGpu": "GPUs",
+    "podGroups": "Pod groups",
+    "version": "version",
+    "sectionScheduler": "Scheduler",
+    "sectionQueues": "Queues",
+    "sectionJobs": "Recent jobs",
+    "noQueues": "No queues configured",
+    "noJobs": "No Volcano jobs found"
   },
   "tikvStatus": {
     "healthy": "Healthy",

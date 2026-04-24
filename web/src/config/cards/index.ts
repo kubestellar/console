@@ -194,6 +194,7 @@ import { upgradeStatusConfig } from './upgrade-status'
 import { userManagementConfig } from './user-management'
 import { vaultSecretsConfig } from './vault-secrets'
 import { vclusterStatusConfig } from './vcluster-status'
+import { volcanoStatusConfig } from './volcano-status'
 import { warningEventsConfig } from './warning-events'
 import { wasmcloudStatusConfig } from './wasmcloud-status'
 import { weatherConfig } from './weather'
@@ -403,6 +404,7 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   user_management: userManagementConfig,
   vault_secrets: vaultSecretsConfig,
   vcluster_status: vclusterStatusConfig,
+  volcano_status: volcanoStatusConfig,
   warning_events: warningEventsConfig,
   wasmcloud_status: wasmcloudStatusConfig,
   weather: weatherConfig,
@@ -675,6 +677,7 @@ export {
   userManagementConfig,
   vaultSecretsConfig,
   vclusterStatusConfig,
+  volcanoStatusConfig,
   warningEventsConfig,
   wasmcloudStatusConfig,
   weatherConfig,

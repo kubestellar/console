@@ -117,6 +117,7 @@ const MARKETPLACE_TO_CARD_TYPE: Record<string, string> = {
   'cncf-vitess': 'vitess_status',
   'cncf-chaos-mesh': 'chaos_mesh_status',
   'cncf-wasmcloud': 'wasmcloud_status',
+  'cncf-volcano': 'volcano_status',
 }
 
 /**

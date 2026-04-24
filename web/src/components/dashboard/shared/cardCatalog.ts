@@ -121,6 +121,7 @@ export const CARD_CATALOG = {
     { type: 'dragonfly_status', title: 'Dragonfly', description: 'Dragonfly P2P image/file distribution: manager, scheduler, seed-peers, and per-node dfdaemon agents', visualization: 'status' },
     { type: 'openfeature_status', title: 'OpenFeature', description: 'OpenFeature feature flags: provider status (flagd, LaunchDarkly, ...), flag definitions by type, and evaluation metrics', visualization: 'status' },
     { type: 'wasmcloud_status', title: 'wasmCloud', description: 'wasmCloud WebAssembly lattice: hosts, actors, capability providers, and link definitions', visualization: 'status' },
+    { type: 'volcano_status', title: 'Volcano', description: 'Volcano batch/HPC scheduler: queues, jobs (pending/running/completed/failed), pod groups, and GPU allocation', visualization: 'status' },
   ],
   'Compute': [
     { type: 'compute_overview', title: 'Compute Overview', description: 'CPU, memory, and GPU summary with live data', visualization: 'status' },

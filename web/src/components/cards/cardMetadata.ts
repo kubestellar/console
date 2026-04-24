@@ -297,6 +297,8 @@ export const CARD_TITLES: Record<string, string> = {
   vitess_status: 'Vitess',
   // wasmCloud WebAssembly lattice (CNCF incubating)
   wasmcloud_status: 'wasmCloud',
+  // Volcano batch/HPC scheduler (CNCF Incubating)
+  volcano_status: 'Volcano',
   // CRI-O container runtime
   crio_status: 'CRI-O',
   // Cloud Custodian rules engine (CNCF incubating)
@@ -645,6 +647,8 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   vitess_status: 'Vitess distributed MySQL: keyspaces, shards, tablets (PRIMARY/REPLICA/RDONLY), and replication lag.',
   // wasmCloud WebAssembly lattice (CNCF incubating)
   wasmcloud_status: 'wasmCloud lattice status: hosts, actors, capability providers, and link definitions across connected clusters.',
+  // Volcano batch/HPC scheduler (CNCF Incubating)
+  volcano_status: 'Volcano batch/HPC scheduler: queues, jobs (pending/running/completed/failed), pod groups, and GPU allocation.',
   // CRI-O container runtime
   crio_status: 'CRI-O container runtime metrics, image pulls, and pod sandbox status.',
   // Cloud Custodian rules engine (CNCF incubating)

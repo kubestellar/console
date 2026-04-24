@@ -171,8 +171,7 @@ export { useCachedCni } from './useCachedCni'
 
 export { useCachedOpenfeature } from './useCachedOpenfeature'
 // SPIRE (SPIFFE Runtime Environment) — useCachedSpire.ts
-// ============================================================================
-// Named re-export (avoids `__testables` export-name collision with other hooks).
+// =====================================================================// Named re-export (avoids `__testables` export-name collision with other hooks).
 
 export { useCachedSpire } from './useCachedSpire'
 
@@ -182,6 +181,12 @@ export { useCachedSpire } from './useCachedSpire'
 // Named re-export (avoids `__testables` export-name collision with TiKV).
 
 export { useCachedLonghorn } from './useCachedLonghorn'
+=======
+// Volcano Batch/HPC Scheduler — useCachedVolcano.ts (CNCF Incubating)
+// ============================================================================
+// Named re-export (avoids `__testables` export-name collision with TiKV).
+
+export { useCachedVolcano } from './useCachedVolcano'
 
 // ============================================================================
 // TiKV Distributed Key-Value Store — useCachedTikv.ts

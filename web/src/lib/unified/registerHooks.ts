@@ -72,6 +72,7 @@ import { useCachedTuf } from '../../hooks/useCachedTuf'
 import { useCachedCloudCustodian } from '../../hooks/useCachedCloudCustodian'
 import { useCachedVitess } from '../../hooks/useCachedVitess'
 import { useCachedWasmcloud } from '../../hooks/useCachedWasmcloud'
+import { useCachedVolcano } from '../../hooks/useCachedVolcano'
 
 // ============================================================================
 // Wrapper hooks that convert params object to positional args
@@ -1314,6 +1315,13 @@ function useUnifiedWasmcloudStatus() {
     data: result.data.hosts,
     isLoading: result.showSkeleton,
     error: result.error ? new Error('Failed to fetch wasmCloud status') : null,
+function useUnifiedVolcanoStatus() {
+  const result = useCachedVolcano()
+  // Surface the job list as the primary row set for generic list renderers.
+  return {
+    data: result.data.jobs,
+    isLoading: result.showSkeleton,
+    error: result.error ? new Error('Failed to fetch Volcano status') : null,
     refetch: () => { result.refetch() },
   }
 }
@@ -1529,6 +1537,7 @@ export function registerUnifiedHooks(): void {
   registerDataHook('useCachedCloudCustodian', useUnifiedCloudCustodianStatus)
   registerDataHook('useCachedVitess', useUnifiedVitessStatus)
   registerDataHook('useCachedWasmcloud', useUnifiedWasmcloudStatus)
+  registerDataHook('useCachedVolcano', useUnifiedVolcanoStatus)
   registerDataHook('useProviderHealth', useProviderHealth)
   registerDataHook('useUpgradeStatus', useUpgradeStatus)
   registerDataHook('useProwStatus', useProwStatus)
