@@ -3075,6 +3075,23 @@
     "sectionDeployments": "Meshed deployments",
     "noDeployments": "No meshed deployments found"
   },
+  "tikvStatus": {
+    "healthy": "Healthy",
+    "degraded": "Degraded",
+    "notInstalled": "TiKV not detected",
+    "notInstalledHint": "No TiKV store pods found. Deploy TiKV to monitor the distributed key-value store.",
+    "upStores": "Up",
+    "downStores": "Down",
+    "regions": "Regions",
+    "leaders": "Leaders",
+    "noStores": "No TiKV stores reporting.",
+    "stores_one": "{{count}} store",
+    "stores_other": "{{count}} stores",
+    "regionCount_one": "{{count}} region",
+    "regionCount_other": "{{count}} regions",
+    "leaderCount_one": "{{count}} leader",
+    "leaderCount_other": "{{count}} leaders"
+  },
   "kubecostOverview": {
     "monthlyCost": "Monthly Cost",
     "savingsRecommendations": "Savings Recommendations",

@@ -136,6 +136,7 @@ export const CARD_CATALOG = {
     { type: 'pv_status', title: 'Persistent Volumes', description: 'Persistent Volumes with capacity, access modes, and reclaim policy', visualization: 'table' },
     { type: 'fluid_status', title: 'Fluid', description: 'Fluid dataset caching status, runtime health, and data load progress', visualization: 'status' },
     { type: 'cubefs_status', title: 'CubeFS', description: 'CubeFS distributed file system health, volume status, and node topology', visualization: 'status' },
+    { type: 'tikv_status', title: 'TiKV', description: 'TiKV distributed key-value store: store nodes, regions, leaders, and capacity', visualization: 'status' },
   ],
   'Provisioning': [
     { type: 'harbor_status', title: 'Harbor Registry', description: 'Harbor registry projects, repositories, and vulnerability scan results', visualization: 'status' },

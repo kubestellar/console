@@ -84,6 +84,8 @@ const ContourStatus = safeLazy(() => import('./contour_status'), 'ContourStatus'
 const EnvoyStatus = safeLazy(() => import('./envoy_status'), 'EnvoyStatus')
 // Linkerd service mesh card
 const LinkerdStatus = safeLazy(() => import('./linkerd_status'), 'LinkerdStatus')
+// TiKV distributed key-value store card
+const TikvStatus = safeLazy(() => import('./tikv_status'), 'TikvStatus')
 const OverlayComparison = safeLazy(() => _deployBundle, 'OverlayComparison')
 const ArgoCDApplications = safeLazy(() => _deployBundle, 'ArgoCDApplications')
 const ArgoCDApplicationSets = safeLazy(() => _deployBundle, 'ArgoCDApplicationSets')
@@ -708,6 +710,8 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   envoy_status: EnvoyStatus,
   // Linkerd service mesh
   linkerd_status: LinkerdStatus,
+  // TiKV distributed key-value store
+  tikv_status: TikvStatus,
   // Artifact Hub
   artifact_hub_status: ArtifactHubStatus,
   // CloudEvents messaging
@@ -1028,6 +1032,7 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   contour_status: () => import('./contour_status'),
   envoy_status: () => import('./envoy_status'),
   linkerd_status: () => import('./linkerd_status'),
+  tikv_status: () => import('./tikv_status'),
   overlay_comparison: () => import('./deploy-bundle'),
   argocd_applications: () => import('./deploy-bundle'),
   argocd_applicationsets: () => import('./deploy-bundle'),
@@ -1619,6 +1624,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   contour_status: 6,
   envoy_status: 6,
   linkerd_status: 6,
+  tikv_status: 6,
   pvc_status: 6,
   gpu_status: 6,
   gpu_inventory: 6,

@@ -270,6 +270,8 @@ export const CARD_TITLES: Record<string, string> = {
   envoy_status: 'Envoy Proxy',
   // Linkerd service mesh
   linkerd_status: 'Linkerd',
+  // TiKV distributed key-value store
+  tikv_status: 'TiKV',
   // CRI-O container runtime
   crio_status: 'CRI-O',
   // Strimzi Kafka operator
@@ -583,6 +585,8 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   envoy_status: 'Envoy Proxy listener health, upstream cluster health, and request/connection stats.',
   // Linkerd service mesh
   linkerd_status: 'Linkerd service mesh meshed pods, success rate, RPS, and p99 latency per deployment.',
+  // TiKV distributed key-value store
+  tikv_status: 'TiKV distributed key-value store: store nodes, region counts, leader counts, and capacity utilization across the cluster.',
   // CRI-O container runtime
   crio_status: 'CRI-O container runtime metrics, image pulls, and pod sandbox status.',
 

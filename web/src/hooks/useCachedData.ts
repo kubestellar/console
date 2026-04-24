@@ -144,6 +144,12 @@ export * from './useCachedCiliumStatus'
 export * from './useCachedJaegerStatus'
 
 // ============================================================================
+// TiKV Distributed Key-Value Store — useCachedTikv.ts
+// ============================================================================
+
+export * from './useCachedTikv'
+
+// ============================================================================
 // Standalone fetchers for prefetch (no React hooks, plain async)
 // ============================================================================
 

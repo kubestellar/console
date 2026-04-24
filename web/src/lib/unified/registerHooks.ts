@@ -51,6 +51,7 @@ import { useFluxStatus } from '../../components/cards/flux_status/useFluxStatus'
 import { useContourStatus } from '../../components/cards/contour_status/useContourStatus'
 import { useCachedEnvoy } from '../../components/cards/envoy_status/useCachedEnvoy'
 import { useCachedLinkerd } from '../../hooks/useCachedLinkerd'
+import { useCachedTikv } from '../../hooks/useCachedTikv'
 
 // ============================================================================
 // Wrapper hooks that convert params object to positional args
@@ -1063,6 +1064,16 @@ function useUnifiedLinkerdStatus() {
   }
 }
 
+function useUnifiedTikvStatus() {
+  const result = useCachedTikv()
+  return {
+    data: result.data.stores,
+    isLoading: result.isLoading,
+    error: result.error ? new Error(result.error) : null,
+    refetch: result.refetch,
+  }
+}
+
 function useProviderHealth() {
   return useDemoDataHook(DEMO_PROVIDER_HEALTH)
 }
@@ -1252,6 +1263,7 @@ export function registerUnifiedHooks(): void {
   registerDataHook('useContourStatus', useUnifiedContourStatus)
   registerDataHook('useCachedEnvoy', useUnifiedEnvoyStatus)
   registerDataHook('useCachedLinkerd', useUnifiedLinkerdStatus)
+  registerDataHook('useCachedTikv', useUnifiedTikvStatus)
   registerDataHook('useProviderHealth', useProviderHealth)
   registerDataHook('useUpgradeStatus', useUpgradeStatus)
   registerDataHook('useProwStatus', useProwStatus)
