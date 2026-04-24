@@ -250,12 +250,17 @@ const StatBlock = memo(function StatBlock({ block, data, hasData, isLoading, his
         />
       )}
 
-      {/* Header: icon + name. Label uses wrap-break-word + leading-tight so long labels
-          (e.g. "Unhealthy", "Storage") wrap to a second line at narrow widths
-          instead of being clipped with an ellipsis */}
+      {/* Header: icon + name. Label uses wrap-break-word + [word-break:break-word]
+          + leading-tight so long single-word labels (e.g. "Namespaces",
+          "Deployments") wrap mid-word instead of being clipped with an
+          ellipsis at narrow card widths.
+          #9858 — `wrap-break-word` (overflow-wrap) only breaks unbreakable
+          words as a last resort; without `word-break: break-word` some
+          browsers still ellipsis-truncate long single words on the
+          /deployments stats row. */}
       <div className="flex items-start gap-2 mb-2 min-w-0">
         <IconComponent className={`w-5 h-5 shrink-0 mt-0.5 ${isLoading ? 'text-muted-foreground/30' : colorClass}`} />
-        <span className="text-sm text-muted-foreground wrap-break-word leading-tight min-w-0" title={block.name}>{wrapAbbreviations(block.name)}</span>
+        <span className="text-sm text-muted-foreground wrap-break-word [word-break:break-word] leading-tight min-w-0" title={block.name}>{wrapAbbreviations(block.name)}</span>
       </div>
 
       {/* Mode-specific content */}
@@ -492,11 +497,15 @@ export function StatsOverview({
 
   // Dynamic grid columns based on visible blocks.
   // Mobile: max 2 columns, tablet+: responsive based on count.
-  // Cap at 5 columns per row so every label (e.g. "Unhealthy", "Storage")
-  // remains fully readable without mid-word breaks or truncation.
-  // Blocks beyond 5 simply wrap to a second row.
+  // - ≤4 blocks: 4 columns at md+ (each card is wide enough for any label).
+  // - 5 blocks: 5 columns at lg+ (still readable at typical widths).
+  // - 6+ blocks (e.g. /deployments has 7: Namespaces, Critical, Warning,
+  //   Healthy, Deployments, Pod Issues, Deploy Issues): cap at 4 columns
+  //   at lg, expand to 5 only at xl (1280px+) so labels like "Namespaces"
+  //   and "Deploy Issues" keep enough horizontal room. See #9858.
   const gridCols = visibleBlocks.length <= 4 ? 'grid-cols-2 md:grid-cols-4' :
-    'grid-cols-2 md:grid-cols-3 lg:grid-cols-5'
+    visibleBlocks.length <= 5 ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-5' :
+    'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
 
   return (
     <div className={`mb-6 ${className}`}>
