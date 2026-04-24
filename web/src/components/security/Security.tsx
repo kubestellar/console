@@ -991,7 +991,7 @@ export function Security() {
       </div>
 
       {/* Tab content rendered immediately below tab buttons so each tab shows
-          distinct content (Fixes #9856). */}
+          distinct content. */}
       <div className="mb-6">
         {tabContent}
       </div>
