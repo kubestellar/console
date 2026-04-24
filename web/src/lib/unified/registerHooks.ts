@@ -1327,6 +1327,9 @@ function useUnifiedSpireStatus() {
     isLoading: result.isLoading,
     error: result.error ? new Error(result.error) : null,
     refetch: result.refetch,
+  }
+}
+
 function useUnifiedOpenfgaStatus() {
   const result = useCachedOpenfga()
   // Surface the store list as the primary row set for generic list renderers.
