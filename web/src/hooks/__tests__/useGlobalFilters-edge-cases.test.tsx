@@ -399,7 +399,10 @@ describe('edge cases', () => {
     expect(filtered[0].name).toBe('running-item')
   })
 
-  it('deselectAllClusters then selectAllClusters both resolve to all mode', () => {
+  it('deselectAllClusters then selectAllClusters restores all mode', () => {
+    // Renamed from "both resolve to all mode" (issue #9838) — the previous
+    // name was misleading because the intermediate state is NOT all mode.
+    //
     // deselectAllClusters sets the __none__ sentinel, which is preserved
     // (not reconciled away) so filterByCluster returns empty.
     // selectAllClusters then clears the sentinel, restoring all mode.
@@ -408,12 +411,18 @@ describe('edge cases', () => {
     act(() => {
       result.current.deselectAllClusters()
     })
+    // Direct assertion: __none__ sentinel is present in selectedClusters
+    // (not reconciled away). This catches regressions that would drop or
+    // rewrite the sentinel even if derived filter behavior still looked OK.
+    expect(result.current.selectedClusters).toEqual(['__none__'])
     // __none__ sentinel is preserved — nothing passes the filter
     expect(result.current.filterByCluster(SAMPLE_ITEMS)).toEqual([])
 
     act(() => {
       result.current.selectAllClusters()
     })
+    // After selectAllClusters the sentinel must be cleared — no __none__
+    expect(result.current.selectedClusters).not.toContain('__none__')
     expect(result.current.filterByCluster(SAMPLE_ITEMS)).toEqual(SAMPLE_ITEMS)
   })
 
@@ -871,12 +880,19 @@ describe('combined isFiltered flag with edge combinations', () => {
 describe('filterByCluster with __none__ sentinel edge cases', () => {
   it('deselectAllClusters preserves __none__ sentinel — returns empty', () => {
     // __none__ sentinel is preserved during reconciliation, so
-    // filterByCluster returns an empty array (nothing selected)
+    // filterByCluster returns an empty array (nothing selected).
+    //
+    // Per issue #9838: also assert the sentinel value is present directly
+    // in selectedClusters, so a future refactor that silently drops or
+    // rewrites the sentinel can't hide behind derived filter behavior.
     const { result } = renderHook(() => useGlobalFilters(), { wrapper })
 
     act(() => {
       result.current.deselectAllClusters()
     })
+
+    // Direct assertion on state — sentinel must be preserved verbatim
+    expect(result.current.selectedClusters).toEqual(['__none__'])
 
     const items = [
       { name: 'no-cluster' },

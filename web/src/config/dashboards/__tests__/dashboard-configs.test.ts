@@ -13,6 +13,11 @@ import {
   getDefaultCards,
   getDefaultCardsForDashboard,
 } from '../index'
+import {
+  CARD_COMPONENTS,
+  isCardTypeRegistered,
+} from '../../../components/cards/cardRegistry'
+import type { DashboardCardPlacement } from '../../../lib/unified/types'
 
 /** Minimum number of dashboards we expect to be registered */
 const MIN_DASHBOARD_COUNT = 25
@@ -171,5 +176,71 @@ describe('No duplicate storageKeys across dashboards', () => {
     const keys = Object.values(DASHBOARD_CONFIGS).map(c => c.storageKey)
     const uniqueKeys = new Set(keys)
     expect(uniqueKeys.size).toBe(keys.length)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// cardType registry validation (issue #9837)
+//
+// Dashboard configs previously broke at runtime when a cardType string didn't
+// match a registered component (typo, renamed card, etc.). These tests catch
+// unregistered cardTypes statically so the failure surfaces in CI rather than
+// as a blank card on the live dashboard. PR #9810 (threat-intel.ts) was the
+// motivating regression — see Copilot ref: PR #9810 threat-intel.ts:12.
+// ---------------------------------------------------------------------------
+
+/** Collects every card placement from a config, including tab-nested cards. */
+function collectAllCardPlacements(
+  config: (typeof DASHBOARD_CONFIGS)[keyof typeof DASHBOARD_CONFIGS],
+): DashboardCardPlacement[] {
+  const direct: DashboardCardPlacement[] = Array.isArray(config.cards) ? config.cards : []
+  const tabs = (config as { tabs?: Array<{ cards?: DashboardCardPlacement[] }> }).tabs
+  const tabCards: DashboardCardPlacement[] = Array.isArray(tabs)
+    ? tabs.flatMap(tab => (Array.isArray(tab.cards) ? tab.cards : []))
+    : []
+  return [...direct, ...tabCards]
+}
+
+describe('cardType registry validation', () => {
+  const entries = Object.entries(DASHBOARD_CONFIGS)
+
+  it.each(entries)(
+    '%s — every cardType (including tab cards) is registered in CARD_COMPONENTS',
+    (_key, config) => {
+      const placements = collectAllCardPlacements(config)
+      const unregistered = placements
+        .map(p => p.cardType)
+        .filter(cardType => !(cardType in CARD_COMPONENTS))
+
+      // Helpful diagnostic message if this fails
+      expect(
+        unregistered,
+        `Unregistered cardType(s) in dashboard "${config.id}": ${JSON.stringify(unregistered)}. ` +
+          'Add the card to cardRegistry.ts or fix the typo in the dashboard config.',
+      ).toEqual([])
+    },
+  )
+
+  it.each(entries)(
+    '%s — isCardTypeRegistered() returns true for every card (static or dynamic)',
+    (_key, config) => {
+      const placements = collectAllCardPlacements(config)
+      placements.forEach(card => {
+        expect(
+          isCardTypeRegistered(card.cardType),
+          `cardType "${card.cardType}" in dashboard "${config.id}" is not registered ` +
+            '(neither as a static component nor a dynamic card).',
+        ).toBe(true)
+      })
+    },
+  )
+
+  it('reports aggregate count of distinct cardTypes across all dashboards', () => {
+    const all = Object.values(DASHBOARD_CONFIGS).flatMap(collectAllCardPlacements)
+    const distinct = new Set(all.map(c => c.cardType))
+    // Sanity check — at least one cardType is in use. This is not a strict
+    // ratchet; it exists so someone accidentally stubbing out all cards will
+    // see a failure here before the per-dashboard registry check fails.
+    expect(distinct.size).toBeGreaterThan(0)
   })
 })
