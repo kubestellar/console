@@ -83,7 +83,6 @@ const DEMO_OPERATOR_VERSION = '0.41.0'
 const DEMO_KAFKA_VERSION = '3.7.0'
 const DEMO_BROKERS_PER_CLUSTER = 3
 const DEMO_REPLICATION_FACTOR = 3
-const DEMO_TOPIC_COUNT_PER_CLUSTER = 12
 
 // Partition counts for demo topics (tuned to realistic shapes)
 const PARTITIONS_XL = 24
