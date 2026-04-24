@@ -1,7 +1,6 @@
 import { AlertCircle } from 'lucide-react'
 import { useServices } from '../../hooks/useMCP'
 import { useIngresses } from '../../hooks/mcp/networking'
-import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useIsModeSwitching } from '../../lib/unified/demo'
@@ -23,7 +22,6 @@ export function Network() {
     selectedClusters: globalSelectedClusters,
     isAllClustersSelected } = useGlobalFilters()
   const { drillToService } = useDrillDownActions()
-  const { getStatValue: getUniversalStatValue } = useUniversalStats()
   const isModeSwitching = useIsModeSwitching()
 
   // Filter services based on global cluster selection
@@ -93,7 +91,7 @@ export function Network() {
     }
   }
 
-  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
+  const getStatValue = getDashboardStatValue
 
   // Show skeleton during mode switching for smooth transitions
   const showSkeletons = (services.length === 0 && servicesLoading) || isModeSwitching

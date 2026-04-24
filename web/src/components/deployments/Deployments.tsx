@@ -4,7 +4,6 @@ import { useClusters } from '../../hooks/useMCP'
 import { useCachedDeployments, useCachedDeploymentIssues, useCachedPodIssues } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
-import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards, deploymentsDashboardConfig } from '../../config/dashboards'
@@ -32,7 +31,6 @@ export function Deployments() {
   // Derive lastUpdated from cache timestamp
   const lastUpdated = lastRefresh ? new Date(lastRefresh) : null
   const { drillToAllDeployments, drillToAllPods } = useDrillDownActions()
-  const { getStatValue: getUniversalStatValue } = useUniversalStats()
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()
 
   const handleRefresh = () => {
@@ -99,7 +97,7 @@ export function Deployments() {
     }
   }
 
-  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
+  const getStatValue = getDashboardStatValue
 
   return (
     <DashboardPage

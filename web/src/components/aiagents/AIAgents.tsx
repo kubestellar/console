@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useKagentiSummary } from '../../hooks/mcp/kagenti'
-import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards'
 import { useTranslation } from 'react-i18next'
@@ -26,7 +25,6 @@ function getTabDefaultCards(tabId: string) {
 export function AIAgents() {
   const { t } = useTranslation('common')
   const { summary, isLoading, isDemoData: hookIsDemoData, refetch, error } = useKagentiSummary()
-  const { getStatValue: getUniversalStatValue } = useUniversalStats()
   const tabs = aiAgentsDashboardConfig.tabs || []
   const [activeTab, setActiveTab] = useState(tabs[0]?.id || 'kagenti')
 
@@ -53,7 +51,7 @@ export function AIAgents() {
     }
   }
 
-  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
+  const getStatValue = getDashboardStatValue
 
   // Issue 8883: WAI-ARIA tablist keyboard navigation. ArrowLeft/Right move
   // between enabled tabs, Home/End jump to the first/last enabled tab,

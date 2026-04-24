@@ -1,5 +1,4 @@
 import { useClusters } from '../../hooks/useMCP'
-import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
@@ -11,7 +10,6 @@ const DEFAULT_MULTI_TENANCY_CARDS = getDefaultCards('multi-tenancy')
 
 export function MultiTenancy() {
   const { deduplicatedClusters, isLoading: clustersLoading, isRefreshing: dataRefreshing, lastUpdated, refetch, error } = useClusters()
-  const { getStatValue: getUniversalStatValue } = useUniversalStats()
 
   // Use deduplicated clusters to avoid double-counting in multi-cluster setups
   const reachableClusters = deduplicatedClusters.filter(c => c.reachable !== false)
@@ -25,7 +23,7 @@ export function MultiTenancy() {
     }
   }
 
-  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
+  const getStatValue = getDashboardStatValue
 
   return (
     <DashboardPage

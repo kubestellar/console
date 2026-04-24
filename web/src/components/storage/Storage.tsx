@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Database, AlertCircle } from 'lucide-react'
 import { BaseModal, useModalState } from '../../lib/modals'
-import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { useClusters } from '../../hooks/useMCP'
 import type { PVC } from '../../hooks/useMCP'
 import { useCachedPVCs } from '../../hooks/useCachedData'
@@ -128,7 +127,6 @@ export function Storage() {
   const { pvcs, error: pvcsError } = useCachedPVCs()
   const error = clustersError || pvcsError
   const { drillToResources } = useDrillDownActions()
-  const { getStatValue: getUniversalStatValue } = useUniversalStats()
 
   // PVC List Modal state
   const { isOpen: showPVCModal, open: openPVCModal, close: closePVCModal } = useModalState()
@@ -250,7 +248,7 @@ export function Storage() {
     }
   }
 
-  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
+  const getStatValue = getDashboardStatValue
 
   return (
     <>

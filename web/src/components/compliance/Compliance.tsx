@@ -3,7 +3,6 @@ import { AlertCircle } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
-import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { useKyverno } from '../../hooks/useKyverno'
 import { useKubescape } from '../../hooks/useKubescape'
 import { useTrivy } from '../../hooks/useTrivy'
@@ -31,7 +30,6 @@ const MOCK_FALCO_PER_CLUSTER = 1.5
 export function Compliance() {
   const { clusters, isLoading, refetch, lastUpdated, isRefreshing: dataRefreshing, error } = useClusters()
   const { drillToAllSecurity, drillToCompliance } = useDrillDownActions()
-  const { getStatValue: getUniversalStatValue } = useUniversalStats()
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()
 
   // Check if the user is explicitly in demo mode
@@ -239,7 +237,7 @@ export function Compliance() {
     }
   }
 
-  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
+  const getStatValue = getDashboardStatValue
 
   const hasData = realData.hasAnyRealData || reachableClusters.length > 0
 

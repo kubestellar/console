@@ -2,7 +2,6 @@ import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useSearchParams, useLocation } from 'react-router-dom'
 import { Shield, ShieldAlert, ShieldCheck, ShieldX, Users, Key, Lock, Eye, Clock, AlertTriangle, CheckCircle2, XCircle, ChevronRight } from 'lucide-react'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
-import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { StatusIndicator } from '../charts/StatusIndicator'
 import { DonutChart } from '../charts/PieChart'
 import { ProgressBar } from '../charts/ProgressBar'
@@ -51,7 +50,6 @@ export function Security() {
     isAllClustersSelected,
     filterBySeverity,
     customFilter } = useGlobalFilters()
-  const { getStatValue: getUniversalStatValue } = useUniversalStats()
 
   const [severityFilter, setSeverityFilter] = useState<string>('all')
   const [activeTab, setActiveTab] = useState<ViewTab>('overview')
@@ -322,7 +320,7 @@ export function Security() {
     }
   }
 
-  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
+  const getStatValue = getDashboardStatValue
 
   // Per-tab content. Issue 9856: previously this lived in `children` of
   // `DashboardPage`, which renders BELOW the dashboard cards section. The static

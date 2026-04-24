@@ -5,7 +5,6 @@ import { useClusters } from '../../hooks/useMCP'
 import { useCachedPodIssues } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
-import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { useIsModeSwitching } from '../../lib/unified/demo'
 import { StatusIndicator } from '../charts/StatusIndicator'
 import { ClusterBadge } from '../ui/ClusterBadge'
@@ -34,7 +33,6 @@ export function Pods() {
   const lastUpdated = podIssuesLastRefresh ? new Date(podIssuesLastRefresh) : null
   const handleRefresh = () => { refetchPodIssues(); refetchClusters() }
   const { drillToPod, drillToAllPods, drillToAllClusters } = useDrillDownActions()
-  const { getStatValue: getUniversalStatValue } = useUniversalStats()
   const { showToast } = useToast()
 
   const {
@@ -154,7 +152,7 @@ export function Pods() {
   }
 
   // Merged getter: dashboard-specific values first, then universal fallback
-  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
+  const getStatValue = getDashboardStatValue
 
   return (
     <DashboardPage

@@ -1,6 +1,5 @@
 import { useTranslation } from 'react-i18next'
 import { useClusters } from '../../hooks/useMCP'
-import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards'
 import { getDefaultCards } from '../../config/dashboards'
@@ -19,7 +18,6 @@ export function ClusterAdmin() {
   // 12 unique cluster servers). My Clusters already uses the deduplicated set;
   // both pages must agree.
   const { deduplicatedClusters, isLoading, isRefreshing, lastUpdated, refetch, error } = useClusters()
-  const { getStatValue: getUniversalStatValue } = useUniversalStats()
 
   const clusters = deduplicatedClusters || []
 
@@ -52,7 +50,7 @@ export function ClusterAdmin() {
     }
   }
 
-  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
+  const getStatValue = getDashboardStatValue
 
   return (
     <DashboardPage

@@ -65,7 +65,6 @@ import { useDashboardScrollTracking } from '../../hooks/useDashboardScrollTracki
 import { DashboardHeader } from '../shared/DashboardHeader'
 import { RotatingTip } from '../ui/RotatingTip'
 import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
-import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { useCardPublish, type DeployResultPayload } from '../../lib/cardEvents'
 import { useDeployWorkload } from '../../hooks/useWorkloads'
 import { DeployConfirmDialog } from '../deploy/DeployConfirmDialog'
@@ -180,7 +179,6 @@ export function Dashboard() {
   useEffect(() => { recordVisit() }, [recordVisit])
 
   // Universal stats for cross-dashboard stat blocks
-  const { getStatValue: getUniversalStatValue } = useUniversalStats()
 
   // Global cluster filter — stats should reflect only selected clusters
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()
@@ -236,7 +234,7 @@ export function Dashboard() {
   }
 
   // Merged getter: dashboard-specific values first, then universal fallback
-  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
+  const getStatValue = getDashboardStatValue
 
   // Auto-refresh state (persisted in localStorage)
   const [autoRefresh, setAutoRefresh] = useState(() => {

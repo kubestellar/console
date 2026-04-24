@@ -3,7 +3,6 @@ import { AlertCircle, ShieldAlert } from 'lucide-react'
 import { useClusters, useGPUNodes } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
-import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { formatMemoryStat } from '../../lib/formatStats'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
@@ -24,7 +23,6 @@ export function Nodes() {
   const error = clustersError
 
   const { drillToAllNodes, drillToAllGPU, drillToAllPods, drillToAllClusters } = useDrillDownActions()
-  const { getStatValue: getUniversalStatValue } = useUniversalStats()
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()
 
   const { isVisible, hiddenGPUCount, distinctTaints, toleratedKeys, toggle, clear } = useGPUTaintFilter(gpuNodes)
@@ -113,7 +111,7 @@ export function Nodes() {
     }
   }
 
-  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
+  const getStatValue = getDashboardStatValue
 
   return (
     <DashboardPage

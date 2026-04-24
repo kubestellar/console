@@ -32,7 +32,6 @@ import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_CLUSTER_LAYOUT, STORAGE_KEY_CLUSTER_O
 import { safeGetItem, safeSetItem } from '../../lib/utils/localStorage'
 import { useModalState } from '../../lib/modals'
 import { useToast } from '../ui/Toast'
-import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import type { StatBlockValue } from '../ui/StatsOverview'
 import { formatMemoryStat } from '../../lib/formatStats'
 import { RotatingTip } from '../ui/RotatingTip'
@@ -58,7 +57,6 @@ export function Clusters() {
   const { startMission, openSidebar } = useMissions()
   const { showKeyPrompt: pruneShowKeyPrompt, checkKeyAndRun: pruneCheckKeyAndRun, goToSettings: pruneGoToSettings, dismissPrompt: pruneDismissPrompt } = useApiKeyCheck()
   const { showKeyPrompt: createShowKeyPrompt, checkKeyAndRun: createCheckKeyAndRun, goToSettings: createGoToSettings, dismissPrompt: createDismissPrompt } = useApiKeyCheck()
-  const { getStatValue: getUniversalStatValue } = useUniversalStats()
   const { showToast } = useToast()
 
   // When demo mode is OFF and agent is not connected, force skeleton display
@@ -312,7 +310,7 @@ export function Clusters() {
     }
   }
 
-  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
+  const getStatValue = getDashboardStatValue
 
   // ── beforeCards: Stale banner + Cluster Info Cards + Cluster Groups ──
 

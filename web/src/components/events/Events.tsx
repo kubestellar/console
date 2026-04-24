@@ -4,7 +4,6 @@ import { Activity, AlertTriangle, Clock, Bell, ChevronRight, CheckCircle2, Calen
 import { useCachedEvents } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
-import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { DonutChart } from '../charts/PieChart'
 import { BarChart } from '../charts/BarChart'
@@ -95,7 +94,6 @@ export function Events() {
   const t = tTyped as unknown as TranslateFn
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected, filterBySeverity, customFilter: globalCustomFilter } = useGlobalFilters()
   const { drillToAllEvents } = useDrillDownActions()
-  const { getStatValue: getUniversalStatValue } = useUniversalStats()
 
   // Get events
   const {
@@ -272,7 +270,7 @@ export function Events() {
     }
   }
 
-  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
+  const getStatValue = getDashboardStatValue
 
   // Group events by time. Events with missing/invalid timestamps go to "unknownTime"
   // so they never inflate the "Last Hour" bucket (bug #9039).

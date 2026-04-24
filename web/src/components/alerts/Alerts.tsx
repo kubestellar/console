@@ -20,6 +20,7 @@ export function Alerts() {
   const { rules } = useAlertRules()
   const { isRefreshing: dataRefreshing, refetch, error } = useClusters()
   const { drillToAllAlerts } = useDrillDownActions()
+
   // Local state for last updated time
   const [lastUpdated, setLastUpdated] = useState<Date | undefined>(undefined)
 

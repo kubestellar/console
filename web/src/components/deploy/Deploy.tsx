@@ -3,7 +3,6 @@ import type { DragEndEvent } from '@dnd-kit/core'
 import { useClusterGroups } from '../../hooks/useClusterGroups'
 import { useClusters, useDeployments } from '../../hooks/useMCP'
 import { useCachedDeployments } from '../../hooks/useCachedData'
-import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
@@ -25,7 +24,6 @@ export function Deploy() {
   const { t } = useTranslation(['cards', 'common'])
   const { isLoading: deploymentsLoading, isRefreshing: deploymentsRefreshing, lastUpdated, refetch } = useDeployments()
   const { deployments: cachedDeployments } = useCachedDeployments()
-  const { getStatValue: getUniversalStatValue } = useUniversalStats()
 
   const publishCardEvent = useCardPublish()
   const { mutate: deployWorkload } = useDeployWorkload()
@@ -59,7 +57,7 @@ export function Deploy() {
     }
   }
 
-  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDeployStatValue, getUniversalStatValue)(blockId)
+  const getStatValue = getDeployStatValue
 
   // Pending deploy state for confirmation dialog
   const [pendingDeploy, setPendingDeploy] = useState<{

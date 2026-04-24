@@ -5,7 +5,6 @@ import { Button } from '../ui/Button'
 import { useClusters, useGPUNodes } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
-import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
@@ -46,7 +45,6 @@ export function Compute() {
     selectedClusters: globalSelectedClusters,
     isAllClustersSelected } = useGlobalFilters()
   const { drillToResources } = useDrillDownActions()
-  const { getStatValue: getUniversalStatValue } = useUniversalStats()
 
   // State for cluster comparison selection
   const [selectedForComparison, setSelectedForComparison] = useState<string[]>([])
@@ -169,7 +167,7 @@ export function Compute() {
     }
   }
 
-  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
+  const getStatValue = getDashboardStatValue
 
   /** Maximum number of clusters that can be selected for side-by-side comparison. */
   const MAX_COMPARISON_CLUSTERS = 4

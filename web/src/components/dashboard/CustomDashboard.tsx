@@ -44,7 +44,6 @@ import { useModalState } from '../../lib/modals'
 import { formatCardTitle } from '../../lib/formatCardTitle'
 import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
 import { getClusterHealthState, isClusterUnreachable } from '../clusters/utils'
-import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import { DashboardHeader } from '../shared/DashboardHeader'
 import { DashboardHealthIndicator } from './DashboardHealthIndicator'
@@ -270,8 +269,7 @@ export function CustomDashboard() {
     }
   }
 
-  const { getStatValue: getUniversalStatValue } = useUniversalStats()
-  const getStatValue = createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)
+  const getStatValue = getDashboardStatValue
 
   const [dashboard, setDashboard] = useState<Dashboard | null>(null)
   const [cards, setCards] = useState<Card[]>([])
