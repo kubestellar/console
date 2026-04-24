@@ -59,17 +59,27 @@ jobs:
           echo $! > /tmp/backend.pid
 
       # ── 3. Wait for health ───────────────────────────────────────
+      # Wait for the REAL backend (status=ok), not the loading server.
+      # The temporary loading server returns HTTP 503 with body
+      # {"status":"starting"} while the real Fiber app is still
+      # initializing (#9904). Previously `curl -sf` accepted any 2xx and
+      # the suite raced ahead to /auth/github before the real routes were
+      # registered — the loading page's catch-all `/` handler answered
+      # with HTTP 200 + HTML, which looked like a broken auth contract
+      # but was actually the loading page. Assert status=ok explicitly.
       - name: Wait for backend health
         run: |
-          MAX_WAIT_SECONDS=30
+          MAX_WAIT_SECONDS=60
           for i in $(seq 1 "$MAX_WAIT_SECONDS"); do
-            if curl -sf http://localhost:8081/health > /dev/null 2>&1; then
-              echo "Backend healthy after ${i}s"
+            RESP=$(curl -sS --max-time 2 http://localhost:8081/health 2>/dev/null || true)
+            STATUS=$(echo "$RESP" | jq -r '.status // empty' 2>/dev/null || echo "")
+            if [ "$STATUS" = "ok" ]; then
+              echo "Backend healthy (status=ok) after ${i}s"
               exit 0
             fi
             sleep 1
           done
-          echo "::error::Backend did not become healthy within ${MAX_WAIT_SECONDS}s"
+          echo "::error::Backend did not reach status=ok within ${MAX_WAIT_SECONDS}s"
           exit 1
 
       # ── 4. Test /health returns JSON with expected fields ────────

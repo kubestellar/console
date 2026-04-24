@@ -375,10 +375,24 @@ func NewServer(cfg Config) (*Server, error) {
 
 // startLoadingServer starts a temporary HTTP server that serves a loading page.
 // It returns immediately — the server runs in a background goroutine.
+//
+// The loading server intentionally returns HTTP 503 (Service Unavailable) on
+// /health while the real Fiber app is still initializing. This matters for
+// readiness probes, smoke tests, and `curl -sf` style checks (#9904): without
+// it, callers think the backend is ready as soon as the loading page binds,
+// race ahead to real API routes like /auth/github, and get the loading HTML
+// back with HTTP 200 — which looks like a broken auth contract but is
+// actually the loading page's catch-all `/` handler answering the request.
+// A 503 on /health forces probes to keep polling until the real server is up.
 func startLoadingServer(addr string) *http.Server {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
+		// 503 + Retry-After tells orchestrators and smoke tests the backend is
+		// not ready yet. The body still describes the state for human debugging.
+		const loadingHealthRetryAfterSec = "1"
+		w.Header().Set("Retry-After", loadingHealthRetryAfterSec)
+		w.WriteHeader(http.StatusServiceUnavailable)
 		w.Write([]byte(`{"status":"starting"}`))
 	})
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
