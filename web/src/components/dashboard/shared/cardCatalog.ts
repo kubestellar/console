@@ -241,6 +241,9 @@ export const CARD_CATALOG = {
     { type: 'console_ai_offline_detection', title: 'Offline Detection', description: 'Detect offline nodes and unavailable GPUs', visualization: 'status' },
     { type: 'hardware_health', title: 'Hardware Health', description: 'Track GPU, NIC, NVMe, InfiniBand disappearances on SuperMicro/HGX nodes', visualization: 'status' },
   ],
+  'AI/ML': [
+    { type: 'kserve_status', title: 'KServe', description: 'KServe InferenceService readiness, predictor replica status, canary traffic split, and serving throughput / latency', visualization: 'status' },
+  ],
   'Alerting': [
     { type: 'alert_rules', title: 'Alert Rules', description: 'Manage alert rules and notification channels', visualization: 'table' },
   ],
@@ -402,7 +405,6 @@ export const CARD_CATALOG = {
   'Orchestration': [
     { type: 'keda_status', title: 'KEDA', description: 'KEDA autoscaler status, scaled object metrics, and trigger queue depths', visualization: 'status' },
     { type: 'openyurt_status', title: 'OpenYurt', description: 'OpenYurt edge node pools, autonomy status, and edge-cloud connectivity', visualization: 'status' },
-    { type: 'kserve_status', title: 'KServe', description: 'KServe inference service readiness, model serving throughput, and latency health', visualization: 'status' },
     { type: 'kubevela_status', title: 'KubeVela', description: 'KubeVela application delivery, component status, and workflow progress', visualization: 'status' },
     { type: 'karmada_status', title: 'Karmada', description: 'Karmada multi-cluster resource propagation status, member clusters, and policy health', visualization: 'status' },
     { type: 'openkruise_status', title: 'OpenKruise', description: 'OpenKruise advanced workload status (CloneSet, Advanced StatefulSet/DaemonSet) and SidecarSet injection across clusters', visualization: 'status' },
@@ -464,6 +466,7 @@ export const CATEGORY_LOCALE_KEYS: Record<string, string> = {
   'Live Trends': 'trends',
   'AI Agents': 'aiAgents',
   'AI Assistant': 'aiAssistant',
+  'AI/ML': 'aiMl',
   'Alerting': 'alerting',
   'Cost Management': 'costManagement',
   'Security Posture': 'securityPosture',

@@ -57,6 +57,7 @@ import { useCachedDragonfly } from '../../hooks/useCachedDragonfly'
 import { useCachedEnvoy } from '../../components/cards/envoy_status/useCachedEnvoy'
 import { useCachedGrpc } from '../../hooks/useCachedGrpc'
 import { useCachedKeda } from '../../hooks/useCachedKeda'
+import { useCachedKserve } from '../../hooks/useCachedKserve'
 import { useCachedLinkerd } from '../../hooks/useCachedLinkerd'
 import { useCachedOtel } from '../../hooks/useCachedOtel'
 import { useCachedRook } from '../../hooks/useCachedRook'
@@ -1160,6 +1161,18 @@ function useUnifiedLinkerdStatus() {
   }
 }
 
+function useUnifiedKserveStatus() {
+  const result = useCachedKserve()
+  // Surface the InferenceService list as the primary row set for generic list renderers.
+  // `services` can be undefined while the cache is hydrating — guard per CLAUDE.md.
+  return {
+    data: result.data.services ?? [],
+    isLoading: result.showSkeleton,
+    error: result.error ? new Error('Failed to fetch KServe status') : null,
+    refetch: () => { result.refetch() },
+  }
+}
+
 function useUnifiedOtelStatus() {
   const result = useCachedOtel()
   return {
@@ -1440,6 +1453,7 @@ export function registerUnifiedHooks(): void {
   registerDataHook('useCachedEnvoy', useUnifiedEnvoyStatus)
   registerDataHook('useCachedGrpc', useUnifiedGrpcStatus)
   registerDataHook('useCachedKeda', useUnifiedKedaStatus)
+  registerDataHook('useCachedKserve', useUnifiedKserveStatus)
   registerDataHook('useCachedLinkerd', useUnifiedLinkerdStatus)
   registerDataHook('useCachedOtel', useUnifiedOtelStatus)
   registerDataHook('useCachedRook', useUnifiedRookStatus)

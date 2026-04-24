@@ -73,6 +73,7 @@ import { dragonflyStatusConfig } from './dragonfly-status'
 import { envoyStatusConfig } from './envoy-status'
 import { grpcStatusConfig } from './grpc-status'
 import { kedaStatusConfig } from './keda-status'
+import { kserveStatusConfig } from './kserve-status'
 import { linkerdStatusConfig } from './linkerd-status'
 import { otelStatusConfig } from './otel-status'
 import { rookStatusConfig } from './rook-status'
@@ -274,6 +275,7 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   envoy_status: envoyStatusConfig,
   grpc_status: grpcStatusConfig,
   keda_status: kedaStatusConfig,
+  kserve_status: kserveStatusConfig,
   linkerd_status: linkerdStatusConfig,
   otel_status: otelStatusConfig,
   rook_status: rookStatusConfig,

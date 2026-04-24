@@ -195,6 +195,14 @@ export { useCachedTuf } from './useCachedTuf'
 export { useCachedCortex } from './useCachedCortex'
 
 // ============================================================================
+// KServe Model Serving — useCachedKserve.ts (CNCF incubating)
+// ============================================================================
+// Named re-export (avoids `__testables` export-name collision with other hooks).
+// Source: kubestellar/console-marketplace#38
+
+export { useCachedKserve } from './useCachedKserve'
+
+// ============================================================================
 // Dragonfly P2P Image/File Distribution — useCachedDragonfly.ts
 // ============================================================================
 

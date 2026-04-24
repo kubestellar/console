@@ -150,6 +150,12 @@ export const REFRESH_RATES = {
   // Cost data - very infrequent
   costs: 600_000,        // 10 minutes
 
+  // AI / ML serving workloads (InferenceServices, model registries, etc.) —
+  // moderate refresh, same cadence as clusters/services. Added for
+  // kserve_status (kubestellar/console-marketplace#38) and reusable by
+  // future AI/ML cards.
+  'ai-ml': 60_000,       // 1 minute
+
   // Default
   default: 120_000,      // 2 minutes
 } as const

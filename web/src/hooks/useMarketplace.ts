@@ -101,6 +101,7 @@ const MARKETPLACE_TO_CARD_TYPE: Record<string, string> = {
   'cncf-dapr': 'dapr_status',
   'cncf-envoy': 'envoy_status',
   'cncf-grpc': 'grpc_status',
+  'cncf-kserve': 'kserve_status',
   'cncf-linkerd': 'linkerd_status',
   'cncf-openfeature': 'openfeature_status',
   'cncf-rook': 'rook_status',
