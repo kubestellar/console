@@ -851,6 +851,57 @@ function checkChunkReloadRecovery() {
 const GLOBAL_RELOAD_THROTTLE_MS = 5_000
 
 /**
+ * Substrings that unambiguously indicate a stale-chunk / dynamic-import failure
+ * (i.e. messages where auto-reload is the right recovery action). These are the
+ * subset of `isChunkLoadMessage` patterns that cannot be confused with generic
+ * `fetch()` failures.
+ *
+ * The bare network patterns (`Failed to fetch`, `NetworkError`,
+ * `Unexpected token '<'`) are intentionally excluded — they match both real
+ * stale-chunk failures AND ordinary backend / network hiccups, and the latter
+ * far outnumber the former in the unhandledrejection global handler. Treating
+ * every backend hiccup as a chunk failure would (a) trigger a full page reload
+ * on transient API errors and (b) emit a misleading `chunk_load` ksc_error.
+ *
+ * Per `chunkErrors.test.ts`, `isChunkLoadMessage` retains its broad behaviour
+ * for the React `ChunkErrorBoundary` — that boundary only fires when React
+ * itself catches the error (i.e. when it really did come from `lazy(() =>
+ * import())`), so the broader match is safe there.
+ */
+const STRICT_CHUNK_INDICATORS = [
+  'dynamically imported module',
+  'Loading chunk',
+  'Loading CSS chunk',
+  'Unable to preload CSS',
+  'is not a valid JavaScript MIME type',
+  'Importing a module script failed',
+  'chunk may be stale',
+] as const
+
+/**
+ * Bare network-failure substrings that should be filtered as noise from the
+ * unhandledrejection handler. These messages arrive without any chunk-specific
+ * context (file URL, "dynamically imported module", etc.) and almost always
+ * come from regular `fetch()` calls whose error path was missed by the caller.
+ * Tracked separately by per-hook error handling — emitting them again from the
+ * global handler creates duplicate ksc_error events.
+ */
+const BARE_NETWORK_NOISE_SUBSTRINGS = [
+  'Failed to fetch',
+  'NetworkError',
+  'net::ERR_',
+] as const
+
+/** True when the message is a generic network failure with no chunk context. */
+function isBareNetworkNoise(msg: string): boolean {
+  if (!BARE_NETWORK_NOISE_SUBSTRINGS.some(s => msg.includes(s))) return false
+  // If the message also contains a strict chunk indicator, it's a real
+  // chunk-load failure (e.g. `Failed to fetch dynamically imported module: …`)
+  // and must NOT be filtered — chunk auto-reload should still run.
+  return !STRICT_CHUNK_INDICATORS.some(s => msg.includes(s))
+}
+
+/**
  * If the error message indicates a stale-chunk failure, auto-reload once.
  * Returns true when the error IS a chunk error so the caller skips emitting
  * a duplicate 'runtime' event.
@@ -901,6 +952,12 @@ export function startGlobalErrorTracking() {
       if (msg.includes('writeText') || msg.includes('clipboard') || msg.includes('copy')) return
       // Skip browser-extension promise rejections (wallet providers, etc.)
       if (isBrowserExtensionNoise(msg, event.reason)) return
+      // Skip transient network errors — tracked by individual hook error handling.
+      // MUST run before tryChunkReloadRecovery: bare `Failed to fetch` /
+      // `NetworkError` substrings also match `isChunkLoadMessage`, which would
+      // otherwise trigger an unwanted page reload AND emit a misleading
+      // `chunk_load` ksc_error for ordinary backend hiccups (issue #9866).
+      if (isBareNetworkNoise(msg)) return
       // Stale chunks can surface as unhandled rejections from dynamic import()
       if (tryChunkReloadRecovery(msg)) return
       // Skip AbortError / TimeoutError — expected when fetches are cancelled on unmount
@@ -929,8 +986,6 @@ export function startGlobalErrorTracking() {
       if (msg.includes('send was called before connect') || msg.includes('InvalidStateError')) return
       // Skip BackendUnavailableError on Netlify / console.kubestellar.io
       if (isNetlifyDeployment && msg.includes('Backend API is currently unavailable')) return
-      // Skip transient network errors — tracked by individual hook error handling
-      if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('net::ERR_')) return
       // Skip WebGL context errors — benign GPU process resets
       if (msg.includes('WebGL') || msg.includes('context lost')) return
       emitError('unhandled_rejection', msg, undefined, { error: event.reason })
