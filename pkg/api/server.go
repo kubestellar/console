@@ -58,6 +58,13 @@ const (
 	// base64-encoded screenshot uploads in POST /api/feedback/requests.
 	// Reduced from 20 MB to 5 MB to limit memory-based DoS surface (#9710).
 	feedbackBodyLimit = 5 * 1024 * 1024 // 5 MB — base64 screenshot uploads
+
+	// envMaxBodyBytes is the environment variable that overrides the global
+	// Fiber BodyLimit applied to every HTTP request (#9891). When unset or
+	// invalid, the server falls back to feedbackBodyLimit so feedback screenshot
+	// uploads continue to work. Larger deployments can raise this for big
+	// form posts; smaller appliances can lower it to tighten DoS surface.
+	envMaxBodyBytes = "MAX_BODY_BYTES"
 )
 
 // Version is the build version, injected via ldflags at build time.
@@ -237,16 +244,20 @@ func NewServer(cfg Config) (*Server, error) {
 		"::1/128",        // IPv6 loopback
 	}
 
-	// BodyLimit is set to feedbackBodyLimit (5 MB) because the feedback endpoint
+	// BodyLimit defaults to feedbackBodyLimit (5 MB) because the feedback endpoint
 	// accepts base64-encoded screenshot uploads. Per-route enforcement is done by
 	// bodyGuard middleware (1 MB for most routes) and analyticsBodyGuard (64 KB).
 	// Reduced from 20 MB to 5 MB to limit memory-based DoS surface (#9710).
+	// Deployers can override via MAX_BODY_BYTES env var (#9891) to raise the cap
+	// for large form uploads or lower it to tighten the DoS surface further.
 	// ReadTimeout (30s) further bounds the buffering window.
+	maxBodyBytes := resolveMaxBodyBytes()
+	slog.Info("fiber body limit configured", "bytes", maxBodyBytes)
 	app := fiber.New(fiber.Config{
 		ErrorHandler:            customErrorHandler,
 		ReadBufferSize:          16384,
 		WriteBufferSize:         16384,
-		BodyLimit:               feedbackBodyLimit,
+		BodyLimit:               maxBodyBytes,
 		ReadTimeout:             30 * time.Second,
 		WriteTimeout:            5 * time.Minute, // large static assets on slow networks
 		IdleTimeout:             2 * time.Minute,
@@ -1727,6 +1738,25 @@ func getEnvOrDefault(key, defaultVal string) string {
 		return v
 	}
 	return defaultVal
+}
+
+// resolveMaxBodyBytes returns the global Fiber BodyLimit in bytes.
+// It reads the envMaxBodyBytes environment variable and falls back to
+// feedbackBodyLimit when the value is unset, non-numeric, or non-positive.
+// This is the canonical cap that rejects oversized payloads before Fiber
+// buffers them, mitigating memory-exhaustion DoS (#9891).
+func resolveMaxBodyBytes() int {
+	raw := os.Getenv(envMaxBodyBytes)
+	if raw == "" {
+		return feedbackBodyLimit
+	}
+	n, err := strconv.Atoi(raw)
+	if err != nil || n <= 0 {
+		slog.Warn("invalid MAX_BODY_BYTES env var; using default",
+			"value", raw, "default_bytes", feedbackBodyLimit)
+		return feedbackBodyLimit
+	}
+	return n
 }
 
 // warnDefaultEnvVars logs a warning for each env var that is not explicitly
