@@ -15,12 +15,17 @@ import { copyToClipboard } from '../../lib/clipboard'
 // Lazy load the heavy Three.js globe animation.
 // Swallow import failures so a missing/stale chunk doesn't crash the login
 // page — the globe is cosmetic and the Suspense fallback (spinner) is fine.
-const GlobeAnimation = lazy(() =>
-  import('../animations/globe')
-    .then(m => ({ default: m.GlobeAnimation }))
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .catch((): { default: React.ComponentType<any> } => ({ default: () => null }))
-)
+// The empty fallback component renders nothing — the globe area stays blank
+// rather than crashing the login page with a chunk error.
+const GlobeFallback = () => null
+const GlobeAnimation = lazy(async () => {
+  try {
+    const m = await import('../animations/globe')
+    return { default: m.GlobeAnimation }
+  } catch {
+    return { default: GlobeFallback as unknown as typeof import('../animations/globe')['GlobeAnimation'] }
+  }
+})
 
 // Apache 2.0 license is the project's effective terms; link opens in a new tab (#8376).
 const TERMS_OF_SERVICE_URL = 'https://github.com/kubestellar/console/blob/main/LICENSE'
