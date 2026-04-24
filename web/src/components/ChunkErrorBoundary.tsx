@@ -40,7 +40,7 @@ export class ChunkErrorBoundary extends Component<Props, State> {
     return null
   }
 
-  componentDidCatch(error: Error, _errorInfo: ErrorInfo) {
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     if (!isChunkLoadError(error)) {
       throw error
     }
@@ -48,7 +48,12 @@ export class ChunkErrorBoundary extends Component<Props, State> {
     console.warn('[ChunkErrorBoundary] Stale chunk detected, will reload:', error.message)
     // Mark as reported so the global handler's tryChunkReloadRecovery skips it (prevents double-counting)
     markErrorReported(error.message)
-    emitError('chunk_load', error.message)
+    // Pass the Error + componentStack so emitError can derive error_type and
+    // component_name for the GA4 custom dimensions added in #9861.
+    emitError('chunk_load', error.message, undefined, {
+      error,
+      componentStack: errorInfo.componentStack ?? undefined,
+    })
 
     // Auto-reload once. Use sessionStorage to prevent infinite loops.
     const lastReload = sessionStorage.getItem(CHUNK_RELOAD_TS_KEY)

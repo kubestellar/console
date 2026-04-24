@@ -42,7 +42,13 @@ export class AppErrorBoundary extends Component<Props, State> {
     console.error('[AppErrorBoundary] Uncaught error:', error, errorInfo)
     // Mark as reported so the global window 'error' handler skips it (prevents double-counting)
     markErrorReported(error.message)
-    emitError('uncaught_render', error.message)
+    // Pass the Error + componentStack so emitError can derive error_type
+    // (from error.name) and component_name (from the React component stack)
+    // for the new GA4 custom dimensions added in #9861.
+    emitError('uncaught_render', error.message, undefined, {
+      error,
+      componentStack: errorInfo.componentStack ?? undefined,
+    })
   }
 
   handleReload = () => {

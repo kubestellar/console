@@ -46,7 +46,12 @@ export class PageErrorBoundary extends Component<Props, State> {
 
     console.error('[PageErrorBoundary] Render error:', error, errorInfo)
     markErrorReported(error.message)
-    emitError('page_render', error.message)
+    // Pass the Error + componentStack so emitError can derive error_type and
+    // component_name for the GA4 custom dimensions added in #9861.
+    emitError('page_render', error.message, undefined, {
+      error,
+      componentStack: errorInfo.componentStack ?? undefined,
+    })
   }
 
   handleRecover = () => {

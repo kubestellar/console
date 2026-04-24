@@ -626,6 +626,116 @@ export function emitPageView(path: string) {
 // Maximum length for error detail strings to avoid oversized payloads
 const ERROR_DETAIL_MAX_LEN = 100
 
+// Maximum length for the inferred component name dimension. Keeps GA4 custom
+// dimension cardinality bounded (GA4 truncates parameter values at 100 chars
+// regardless, but a tighter cap also keeps reports readable).
+const COMPONENT_NAME_MAX_LEN = 60
+
+// Maximum length for the inferred error type dimension. JS error names are
+// short (TypeError, RangeError, etc.), so 40 chars is plenty.
+const ERROR_TYPE_MAX_LEN = 40
+
+/** Fallback when no error type can be inferred from the message or Error.name */
+const ERROR_TYPE_UNKNOWN = 'Unknown'
+
+/** Fallback when no component name can be inferred from cardId/stack */
+const COMPONENT_NAME_UNKNOWN = 'unknown'
+
+/**
+ * Regex matching the leading "<ErrorName>:" prefix produced by `Error.toString()`
+ * (e.g. "TypeError: Cannot read properties of undefined").
+ */
+const ERROR_NAME_PREFIX_RE = /^([A-Z][A-Za-z0-9]*Error):/
+
+/**
+ * Network-related error message fragments. Used as a heuristic when no
+ * `Error.name` is available (e.g. errors caught from raw fetch failures).
+ */
+const NETWORK_ERROR_FRAGMENTS = [
+  'Failed to fetch',
+  'NetworkError',
+  'net::ERR_',
+  'Load failed',
+] as const
+
+/**
+ * Extract a stable `error_type` dimension from either an Error instance or a
+ * raw message string. Order of preference:
+ *   1. `error.name` when an Error object was passed (most reliable)
+ *   2. Leading `<ErrorName>:` prefix on the message
+ *   3. Heuristic for network failures that surface without a typed Error
+ *   4. ERROR_TYPE_UNKNOWN
+ */
+function inferErrorType(detail: string, error?: unknown): string {
+  if (error && typeof error === 'object') {
+    const name = (error as { name?: unknown }).name
+    if (typeof name === 'string' && name.length > 0 && name !== 'Error') {
+      return name.slice(0, ERROR_TYPE_MAX_LEN)
+    }
+  }
+  const match = detail.match(ERROR_NAME_PREFIX_RE)
+  if (match) return match[1].slice(0, ERROR_TYPE_MAX_LEN)
+  for (const fragment of NETWORK_ERROR_FRAGMENTS) {
+    if (detail.includes(fragment)) return 'NetworkError'
+  }
+  return ERROR_TYPE_UNKNOWN
+}
+
+/**
+ * Regex matching the first React component name in a `componentStack` string
+ * produced by `ErrorInfo.componentStack`. Each frame starts with `\n    in
+ * <ComponentName>` (followed by " (created by …)" or file info).
+ */
+const REACT_COMPONENT_FRAME_RE = /\n\s*in\s+([A-Za-z0-9_$.]+)/
+
+/**
+ * Regex matching a JS stack frame's source file basename. Works for both
+ * Chromium (`at fn (https://host/path/Foo.tsx:12:3)`) and WebKit/Firefox
+ * (`fn@https://host/path/Foo.tsx:12:3`) stack formats.
+ */
+const STACK_FILE_BASENAME_RE = /\/([A-Za-z0-9_-]+)\.(?:tsx?|jsx?|mjs)[:?]/
+
+/**
+ * Extract a stable `component_name` dimension. Order of preference:
+ *   1. Explicit `cardId` (set by DynamicCardErrorBoundary — most precise)
+ *   2. First React frame from `componentStack` (set by error boundaries)
+ *   3. First source-file basename from `error.stack`
+ *   4. COMPONENT_NAME_UNKNOWN
+ */
+function inferComponentName(
+  cardId?: string,
+  componentStack?: string,
+  error?: unknown,
+): string {
+  if (cardId && cardId.length > 0) {
+    return cardId.slice(0, COMPONENT_NAME_MAX_LEN)
+  }
+  if (typeof componentStack === 'string') {
+    const match = componentStack.match(REACT_COMPONENT_FRAME_RE)
+    if (match) return match[1].slice(0, COMPONENT_NAME_MAX_LEN)
+  }
+  const stack = (error && typeof error === 'object')
+    ? (error as { stack?: unknown }).stack
+    : undefined
+  if (typeof stack === 'string') {
+    const match = stack.match(STACK_FILE_BASENAME_RE)
+    if (match) return match[1].slice(0, COMPONENT_NAME_MAX_LEN)
+  }
+  return COMPONENT_NAME_UNKNOWN
+}
+
+/**
+ * Optional context for `emitError`. Callers that have access to the original
+ * Error object and/or a React `componentStack` should pass them so the
+ * `error_type` and `component_name` dimensions can be inferred reliably.
+ */
+export interface EmitErrorExtra {
+  /** Original Error instance — supplies `error.name` and `error.stack`. */
+  error?: unknown
+  /** React `ErrorInfo.componentStack` — supplies the failing component name. */
+  componentStack?: string
+}
+
 /**
  * Dedup set for errors already reported by React error boundaries.
  * When an error is caught by DynamicCardErrorBoundary or AppErrorBoundary,
@@ -678,12 +788,24 @@ function isBrowserExtensionNoise(msg: string, reason: unknown): boolean {
   return false
 }
 
-export function emitError(category: string, detail: string, cardId?: string) {
+export function emitError(
+  category: string,
+  detail: string,
+  cardId?: string,
+  extra?: EmitErrorExtra,
+) {
+  const errorType = inferErrorType(detail, extra?.error)
+  const componentName = inferComponentName(cardId, extra?.componentStack, extra?.error)
   send('ksc_error', {
     error_code: category,
     error_category: category,
     error_detail: detail.slice(0, ERROR_DETAIL_MAX_LEN),
     error_page: window.location.pathname,
+    // New custom dimensions (issue #9861) — make ksc_error spikes diagnosable
+    // by surfacing the JS error class and the failing component without
+    // having to dig through error_detail strings in BigQuery.
+    error_type: errorType,
+    component_name: componentName,
     ...(cardId && { card_id: cardId }),
   })
 }
@@ -811,7 +933,7 @@ export function startGlobalErrorTracking() {
       if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('net::ERR_')) return
       // Skip WebGL context errors — benign GPU process resets
       if (msg.includes('WebGL') || msg.includes('context lost')) return
-      emitError('unhandled_rejection', msg)
+      emitError('unhandled_rejection', msg, undefined, { error: event.reason })
     } finally {
       isEmitting = false
     }
@@ -864,7 +986,7 @@ export function startGlobalErrorTracking() {
       if (event.message.includes('Non-Error')) return
       // Stale chunks can surface as runtime errors (Safari: "Importing a module script failed")
       if (tryChunkReloadRecovery(event.message)) return
-      emitError('runtime', event.message)
+      emitError('runtime', event.message, undefined, { error: event.error })
     } finally {
       isEmitting = false
     }

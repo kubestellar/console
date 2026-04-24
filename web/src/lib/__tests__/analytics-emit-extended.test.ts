@@ -522,6 +522,44 @@ describe('emitError with cardId conditional spread', () => {
   })
 })
 
+// Custom dimensions added in #9861 (error_type, component_name)
+describe('emitError accepts EmitErrorExtra context (#9861)', () => {
+  it('accepts an Error instance to derive error_type from .name', () => {
+    const err = new TypeError('Cannot read properties of undefined')
+    expect(() => emitError('runtime', err.message, undefined, { error: err })).not.toThrow()
+  })
+
+  it('accepts a React componentStack to derive component_name', () => {
+    const componentStack = '\n    in PodList (created by Dashboard)\n    in Dashboard'
+    expect(() =>
+      emitError('uncaught_render', 'boom', undefined, { componentStack }),
+    ).not.toThrow()
+  })
+
+  it('accepts both error and componentStack together', () => {
+    const err = new RangeError('out of bounds')
+    const componentStack = '\n    in ClusterCard'
+    expect(() =>
+      emitError('card_render', err.message, 'cluster-health', {
+        error: err,
+        componentStack,
+      }),
+    ).not.toThrow()
+  })
+
+  it('accepts a non-Error reason object (e.g. a thrown string)', () => {
+    expect(() =>
+      emitError('unhandled_rejection', 'plain string reason', undefined, {
+        error: 'plain string reason',
+      }),
+    ).not.toThrow()
+  })
+
+  it('handles undefined extra (back-compat with existing callers)', () => {
+    expect(() => emitError('runtime', 'no extra context')).not.toThrow()
+  })
+})
+
 describe('emitMarketplaceInstallFailed error truncation', () => {
   it('handles empty error string', () => {
     expect(() => emitMarketplaceInstallFailed('card', 'gpu-monitor', '')).not.toThrow()
