@@ -51,6 +51,7 @@ import { useFluxStatus } from '../../components/cards/flux_status/useFluxStatus'
 import { useContourStatus } from '../../components/cards/contour_status/useContourStatus'
 import { useCachedContainerd } from '../../hooks/useCachedContainerd'
 import { useCachedDapr } from '../../hooks/useCachedDapr'
+import { useCachedDragonfly } from '../../hooks/useCachedDragonfly'
 import { useCachedEnvoy } from '../../components/cards/envoy_status/useCachedEnvoy'
 import { useCachedGrpc } from '../../hooks/useCachedGrpc'
 import { useCachedKeda } from '../../hooks/useCachedKeda'
@@ -1060,6 +1061,17 @@ function useUnifiedContainerdStatus() {
   }
 }
 
+function useUnifiedDragonflyStatus() {
+  const result = useCachedDragonfly()
+  // Surface the component list as the primary row set for generic list renderers.
+  return {
+    data: result.data.components,
+    isLoading: result.isLoading,
+    error: result.isFailed ? new Error('Failed to fetch Dragonfly status') : null,
+    refetch: () => { result.refetch() },
+  }
+}
+
 function useUnifiedEnvoyStatus() {
   const result = useCachedEnvoy()
   // Surface the listener list as the primary row set for generic list renderers.
@@ -1362,6 +1374,7 @@ export function registerUnifiedHooks(): void {
   registerDataHook('useContourStatus', useUnifiedContourStatus)
   registerDataHook('useCachedContainerd', useUnifiedContainerdStatus)
   registerDataHook('useCachedDapr', useUnifiedDaprStatus)
+  registerDataHook('useCachedDragonfly', useUnifiedDragonflyStatus)
   registerDataHook('useCachedEnvoy', useUnifiedEnvoyStatus)
   registerDataHook('useCachedGrpc', useUnifiedGrpcStatus)
   registerDataHook('useCachedKeda', useUnifiedKedaStatus)

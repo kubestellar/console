@@ -175,6 +175,13 @@ export { useCachedOtel } from './useCachedOtel'
 export { useCachedTuf } from './useCachedTuf'
 
 // ============================================================================
+// Dragonfly P2P Image/File Distribution — useCachedDragonfly.ts
+// ============================================================================
+
+// Named re-export to avoid `__testables` collision with useCachedTikv.
+export { useCachedDragonfly } from './useCachedDragonfly'
+
+// ============================================================================
 // Standalone fetchers for prefetch (no React hooks, plain async)
 // ============================================================================
 

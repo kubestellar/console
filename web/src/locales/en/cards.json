@@ -3095,6 +3095,26 @@
     "containers": "Containers",
     "noContainers": "No containers reported"
   },
+  "dragonflyStatus": {
+    "healthy": "Healthy",
+    "degraded": "Degraded",
+    "notInstalled": "Dragonfly not detected",
+    "notInstalledHint": "No Dragonfly manager, scheduler, seed-peer, or dfdaemon pods found. Deploy Dragonfly to accelerate container image pulls via P2P.",
+    "fetchError": "Failed to fetch Dragonfly status",
+    "managers": "Managers",
+    "schedulers": "Schedulers",
+    "seedPeers": "Seed Peers",
+    "dfdaemonNodes": "Nodes Up",
+    "activeTasks": "Active tasks",
+    "cacheHit": "Cache hit",
+    "p2pUpstream": "P2P / upstream",
+    "componentManager": "manager",
+    "componentScheduler": "scheduler",
+    "componentSeedPeer": "seed-peer",
+    "componentDfdaemon": "dfdaemon",
+    "readyCount": "{{ready}}/{{desired}} ready",
+    "noComponents": "No Dragonfly components reporting."
+  },
   "grpcStatus": {
     "healthy": "Healthy",
     "degraded": "Degraded",

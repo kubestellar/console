@@ -288,6 +288,8 @@ export const CARD_TITLES: Record<string, string> = {
   crio_status: 'CRI-O',
   // Containerd container runtime
   containerd_status: 'Containerd',
+  // Dragonfly P2P image/file distribution
+  dragonfly_status: 'Dragonfly',
   // Strimzi Kafka operator
   strimzi_status: 'Strimzi',
   // Flatcar Container Linux
@@ -617,6 +619,8 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   crio_status: 'CRI-O container runtime metrics, image pulls, and pod sandbox status.',
   // Containerd container runtime
   containerd_status: 'Containerd runtime — running containers, image, namespace, state, and uptime.',
+  // Dragonfly P2P image/file distribution
+  dragonfly_status: 'Dragonfly P2P image/file distribution — manager, scheduler, seed-peers, and per-node dfdaemon agents with active tasks and cache hit rate.',
 
   // KubeVela application delivery
   kubevela_status: 'KubeVela application delivery, component status, and workflow progress.',

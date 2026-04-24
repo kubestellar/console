@@ -117,6 +117,7 @@ export const CARD_CATALOG = {
     { type: 'secret_status', title: 'Secret Status', description: 'Secrets across clusters with types and key counts', visualization: 'table' },
     { type: 'kubevela_status', title: 'KubeVela', description: 'KubeVela controller health and OAM application delivery status', visualization: 'status' },
     { type: 'dapr_status', title: 'Dapr', description: 'Dapr control plane health, Dapr-enabled apps, and configured components (state store / pub-sub / binding)', visualization: 'status' },
+    { type: 'dragonfly_status', title: 'Dragonfly', description: 'Dragonfly P2P image/file distribution: manager, scheduler, seed-peers, and per-node dfdaemon agents', visualization: 'status' },
   ],
   'Compute': [
     { type: 'compute_overview', title: 'Compute Overview', description: 'CPU, memory, and GPU summary with live data', visualization: 'status' },
