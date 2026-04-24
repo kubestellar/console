@@ -3061,6 +3061,20 @@
     "noListeners": "No listeners configured",
     "noClusters": "No upstream clusters"
   },
+  "linkerdStatus": {
+    "healthy": "Healthy",
+    "degraded": "Degraded",
+    "notInstalled": "Linkerd not detected",
+    "notInstalledHint": "No Linkerd control plane reachable from the connected clusters.",
+    "fetchError": "Unable to fetch Linkerd status",
+    "meshedPods": "Meshed pods",
+    "successRate": "Success rate",
+    "rps": "Requests/s",
+    "p99Latency": "Avg p99",
+    "controlPlane": "control plane",
+    "sectionDeployments": "Meshed deployments",
+    "noDeployments": "No meshed deployments found"
+  },
   "kubecostOverview": {
     "monthlyCost": "Monthly Cost",
     "savingsRecommendations": "Savings Recommendations",

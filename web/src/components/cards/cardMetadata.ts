@@ -268,6 +268,8 @@ export const CARD_TITLES: Record<string, string> = {
   contour_status: 'Contour',
   // Envoy proxy (service mesh / edge)
   envoy_status: 'Envoy Proxy',
+  // Linkerd service mesh
+  linkerd_status: 'Linkerd',
   // CRI-O container runtime
   crio_status: 'CRI-O',
   // Strimzi Kafka operator
@@ -579,6 +581,8 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   contour_status: 'Contour ingress proxy status, HTTPProxy resources, and Envoy fleet health.',
   // Envoy proxy (service mesh / edge)
   envoy_status: 'Envoy Proxy listener health, upstream cluster health, and request/connection stats.',
+  // Linkerd service mesh
+  linkerd_status: 'Linkerd service mesh meshed pods, success rate, RPS, and p99 latency per deployment.',
   // CRI-O container runtime
   crio_status: 'CRI-O container runtime metrics, image pulls, and pod sandbox status.',
 

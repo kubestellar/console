@@ -94,6 +94,7 @@ const MARKETPLACE_TO_CARD_TYPE: Record<string, string> = {
   'cncf-flux': 'flux_status',
   'cncf-contour': 'contour_status',
   'cncf-envoy': 'envoy_status',
+  'cncf-linkerd': 'linkerd_status',
   'cncf-openfeature': 'openfeature_status',
   'cncf-strimzi': 'strimzi_status',
   'cncf-thanos': 'thanos_status' }

@@ -50,6 +50,7 @@ import {
 import { useFluxStatus } from '../../components/cards/flux_status/useFluxStatus'
 import { useContourStatus } from '../../components/cards/contour_status/useContourStatus'
 import { useCachedEnvoy } from '../../components/cards/envoy_status/useCachedEnvoy'
+import { useCachedLinkerd } from '../../hooks/useCachedLinkerd'
 
 // ============================================================================
 // Wrapper hooks that convert params object to positional args
@@ -1051,6 +1052,17 @@ function useUnifiedEnvoyStatus() {
   }
 }
 
+function useUnifiedLinkerdStatus() {
+  const result = useCachedLinkerd()
+  // Surface the meshed deployment list as the primary row set for generic list renderers.
+  return {
+    data: result.data.deployments,
+    isLoading: result.showSkeleton,
+    error: result.error ? new Error('Failed to fetch Linkerd status') : null,
+    refetch: () => { result.refetch() },
+  }
+}
+
 function useProviderHealth() {
   return useDemoDataHook(DEMO_PROVIDER_HEALTH)
 }
@@ -1239,6 +1251,7 @@ export function registerUnifiedHooks(): void {
   registerDataHook('useFluxStatus', useUnifiedFluxStatus)
   registerDataHook('useContourStatus', useUnifiedContourStatus)
   registerDataHook('useCachedEnvoy', useUnifiedEnvoyStatus)
+  registerDataHook('useCachedLinkerd', useUnifiedLinkerdStatus)
   registerDataHook('useProviderHealth', useProviderHealth)
   registerDataHook('useUpgradeStatus', useUpgradeStatus)
   registerDataHook('useProwStatus', useProwStatus)

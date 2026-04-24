@@ -153,6 +153,7 @@ export const CARD_CATALOG = {
     { type: 'cilium_status', title: 'Cilium', description: 'Cilium eBPF networking, network policy enforcement, and Hubble flow visibility.', visualization: 'status' },
     { type: 'contour_status', title: 'Contour', description: 'Contour ingress proxy status, HTTPProxy resources, and Envoy fleet health', visualization: 'status' },
     { type: 'envoy_status', title: 'Envoy Proxy', description: 'Envoy listener health, upstream cluster health, and request/connection stats', visualization: 'status' },
+    { type: 'linkerd_status', title: 'Linkerd', description: 'Linkerd service mesh meshed pods, success rate, RPS, and p99 latency per deployment', visualization: 'status' },
     { type: 'network_trace', title: 'Network Traces', description: 'Live network connection tracing via Inspektor Gadget eBPF', visualization: 'table' },
     { type: 'dns_trace', title: 'DNS Traces', description: 'Live DNS query tracing via Inspektor Gadget eBPF', visualization: 'table' },
   ],

@@ -64,6 +64,7 @@ import { githubCiMonitorConfig } from './github-ci-monitor'
 import { fluxStatusConfig } from './flux-status'
 import { contourStatusConfig } from './contour-status'
 import { envoyStatusConfig } from './envoy-status'
+import { linkerdStatusConfig } from './linkerd-status'
 import { nightlyReleasePulseConfig } from './nightly-release-pulse'
 import { workflowMatrixConfig } from './workflow-matrix'
 import { pipelineFlowConfig } from './pipeline-flow'
@@ -249,6 +250,7 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   flux_status: fluxStatusConfig,
   contour_status: contourStatusConfig,
   envoy_status: envoyStatusConfig,
+  linkerd_status: linkerdStatusConfig,
   nightly_release_pulse: nightlyReleasePulseConfig,
   workflow_matrix: workflowMatrixConfig,
   pipeline_flow: pipelineFlowConfig,
