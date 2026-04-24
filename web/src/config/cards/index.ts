@@ -58,6 +58,7 @@ import { eventsTimelineConfig } from './events-timeline'
 import { externalSecretsConfig } from './external-secrets'
 import { falcoAlertsConfig } from './falco-alerts'
 import { flappyPodConfig } from './flappy-pod'
+import { flatcarStatusConfig } from './flatcar-status'
 import { game2048Config } from './game-2048'
 import { gatewayStatusConfig } from './gateway-status'
 import { githubActivityConfig } from './github-activity'
@@ -269,6 +270,7 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   external_secrets: externalSecretsConfig,
   falco_alerts: falcoAlertsConfig,
   flappy_pod: flappyPodConfig,
+  flatcar_status: flatcarStatusConfig,
   game_2048: game2048Config,
   gateway_status: gatewayStatusConfig,
   github_activity: githubActivityConfig,
@@ -572,6 +574,7 @@ export {
   externalSecretsConfig,
   falcoAlertsConfig,
   flappyPodConfig,
+  flatcarStatusConfig,
   game2048Config,
   gatewayStatusConfig,
   githubActivityConfig,

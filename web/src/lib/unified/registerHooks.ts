@@ -70,6 +70,7 @@ import { useCachedSpiffe } from '../../hooks/useCachedSpiffe'
 import { useCachedCni } from '../../hooks/useCachedCni'
 import { useCachedSpire } from '../../hooks/useCachedSpire'
 import { useCachedStrimzi } from '../../hooks/useCachedStrimzi'
+import { useCachedFlatcar } from '../../hooks/useCachedFlatcar'
 import { useCachedTikv } from '../../hooks/useCachedTikv'
 import { useCachedTuf } from '../../hooks/useCachedTuf'
 import { useCachedCloudCustodian } from '../../hooks/useCachedCloudCustodian'
@@ -1352,6 +1353,17 @@ function useUnifiedKubeVelaStatus() {
   }
 }
 
+function useUnifiedFlatcarStatus() {
+  const result = useCachedFlatcar()
+  // Surface the node list as the primary row set for generic list renderers.
+  return {
+    data: result.data.nodes,
+    isLoading: result.showSkeleton,
+    error: result.error ? new Error('Failed to fetch Flatcar status') : null,
+    refetch: () => { result.refetch() },
+  }
+}
+
 function useUnifiedVitessStatus() {
   const result = useCachedVitess()
   // Surface the keyspace list as the primary row set for generic list renderers.
@@ -1594,6 +1606,7 @@ export function registerUnifiedHooks(): void {
   registerDataHook('useCachedKubevela', useUnifiedKubeVelaStatus)
   registerDataHook('useCachedStrimzi', useUnifiedStrimziStatus)
   registerDataHook('useCachedOpenfga', useUnifiedOpenfgaStatus)
+  registerDataHook('useCachedFlatcar', useUnifiedFlatcarStatus)
   registerDataHook('useCachedTikv', useUnifiedTikvStatus)
   registerDataHook('useCachedTuf', useUnifiedTufStatus)
   registerDataHook('useCachedCloudCustodian', useUnifiedCloudCustodianStatus)

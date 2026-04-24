@@ -200,6 +200,13 @@ export { useCachedStrimzi } from './useCachedStrimzi'
 export { useCachedOpenfga } from './useCachedOpenfga'
 
 // ============================================================================
+// Flatcar Container Linux — useCachedFlatcar.ts (CNCF incubating)
+// ============================================================================
+// Named re-export (avoids `__testables` export-name collision with others).
+
+export { useCachedFlatcar } from './useCachedFlatcar'
+
+// ============================================================================
 // TiKV Distributed Key-Value Store — useCachedTikv.ts
 // ============================================================================
 
