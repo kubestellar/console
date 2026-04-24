@@ -59,8 +59,11 @@ export const EXPECTED_ERROR_PATTERNS = [
   /blocked by CORS policy/i, // Chromium CORS wording (Firefox uses pattern above)
   /Access to fetch.*has been blocked by CORS/i, // Chromium-specific phrasing; Medium blog public fallback is cross-origin from vite preview (localhost:4173 → console.kubestellar.io)
   /Notification permission/i, // Firefox blocks notification requests outside user gestures
+  /Notification prompting can only be done from a user gesture/i, // WebKit/Safari wording for notification gesture block
   /ERR_CONNECTION_REFUSED/i, // Backend/agent not running in CI
   /net::ERR_/i, // Any network-level Chrome error in demo mode
+  /Could not connect to [0-9.]+/i, // WebKit wording for connection refused (no net:: prefix)
+  /Connection refused/i, // Generic connection refused wording across browsers
   /502.*Bad Gateway/i, // Reverse proxy errors when backend not running
   /Failed to load resource/i, // Generic resource load failures in demo mode
   // SQLite WASM cache worker — webkit/Safari can't streaming-compile the

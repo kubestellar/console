@@ -19,6 +19,17 @@ const VIEWPORTS = [
   { width: 1440, height: 900, name: 'desktop' },
 ]
 
+/** Tolerance in pixels when checking element right-edge overflow. */
+const OVERFLOW_TOLERANCE_PX = 5
+/** Timeout (ms) for root element visibility. */
+const ROOT_VISIBLE_TIMEOUT_MS = 10_000
+/** Minimum body text length to consider the page non-blank. */
+const MIN_BODY_TEXT_LEN = 20
+/** Timeout (ms) for hamburger/sidebar-toggle visibility probe. */
+const MOBILE_NAV_PROBE_TIMEOUT_MS = 5_000
+/** Max viewport width (px) below which mobile/hamburger nav is expected. */
+const MOBILE_NAV_MAX_WIDTH_PX = 1024
+
 const KEY_ROUTES = [
   { path: '/', name: 'Dashboard' },
   { path: '/clusters', name: 'Clusters' },
@@ -55,14 +66,14 @@ test.describe('Responsive Breakpoint Tests', () => {
 
           // Root should be visible
           const root = page.locator('#root')
-          await expect(root).toBeVisible({ timeout: 10000 })
+          await expect(root).toBeVisible({ timeout: ROOT_VISIBLE_TIMEOUT_MS })
 
           // Page should have meaningful content
           const bodyText = await page.textContent('body')
           expect(
             bodyText?.length,
             `${route.path} at ${viewport.name}: blank or near-empty page`
-          ).toBeGreaterThan(20)
+          ).toBeGreaterThan(MIN_BODY_TEXT_LEN)
 
           // Check for horizontal overflow (a common responsive bug)
           const hasOverflow = await page.evaluate(() => {
@@ -77,18 +88,46 @@ test.describe('Responsive Breakpoint Tests', () => {
             )
           }
 
-          // Verify no elements extend beyond viewport width (regression #3035)
-          const overflowingElements = await page.evaluate((vw) => {
-            const elements = document.querySelectorAll('button, .modal, [role="dialog"], nav')
-            const overflowing: string[] = []
-            elements.forEach((el) => {
-              const rect = el.getBoundingClientRect()
-              if (rect.right > vw + 5) { // 5px tolerance
-                overflowing.push(`${el.tagName}.${el.className?.split(' ')[0] || ''} (right: ${Math.round(rect.right)}px)`)
-              }
-            })
-            return overflowing
-          }, viewport.width)
+          // Verify no VISIBLE elements extend beyond viewport width (regression #3035).
+          // Skip elements that are intentionally off-canvas (display:none,
+          // visibility:hidden, aria-hidden, or inside a hidden/closed
+          // dialog/drawer) — those are not user-visible overflow. #9877
+          const overflowingElements = await page.evaluate(
+            ({ vw, tolerance }: { vw: number; tolerance: number }) => {
+              const elements = document.querySelectorAll('button, .modal, [role="dialog"], nav')
+              const overflowing: string[] = []
+              elements.forEach((el) => {
+                const htmlEl = el as HTMLElement
+                const style = window.getComputedStyle(htmlEl)
+                // Skip non-visible elements: they cannot cause user-visible overflow.
+                if (
+                  style.display === 'none' ||
+                  style.visibility === 'hidden' ||
+                  style.opacity === '0' ||
+                  htmlEl.hidden ||
+                  htmlEl.getAttribute('aria-hidden') === 'true'
+                ) {
+                  return
+                }
+                // Skip elements inside a closed/hidden dialog or drawer.
+                if (htmlEl.closest('[aria-hidden="true"], [hidden], [data-state="closed"]')) {
+                  return
+                }
+                const rect = htmlEl.getBoundingClientRect()
+                // Zero-sized elements can't be visually overflowing.
+                if (rect.width === 0 || rect.height === 0) {
+                  return
+                }
+                if (rect.right > vw + tolerance) {
+                  overflowing.push(
+                    `${el.tagName}.${el.className?.split(' ')[0] || ''} (right: ${Math.round(rect.right)}px)`
+                  )
+                }
+              })
+              return overflowing
+            },
+            { vw: viewport.width, tolerance: OVERFLOW_TOLERANCE_PX }
+          )
 
           expect(
             overflowingElements,
@@ -103,12 +142,12 @@ test.describe('Responsive Breakpoint Tests', () => {
         await page.waitForLoadState('domcontentloaded')
 
         // At mobile/tablet, expect a hamburger or sidebar toggle
-        if (viewport.width < 1024) {
+        if (viewport.width < MOBILE_NAV_MAX_WIDTH_PX) {
           const mobileNav = page.locator('[data-testid="mobile-menu-toggle"]')
             .or(page.locator('button[aria-label*="menu" i]'))
             .or(page.locator('[data-testid="sidebar-toggle"]'))
 
-          const hasHamburger = await mobileNav.first().isVisible({ timeout: 5000 }).catch(() => false)
+          const hasHamburger = await mobileNav.first().isVisible({ timeout: MOBILE_NAV_PROBE_TIMEOUT_MS }).catch(() => false)
 
           // Either hamburger menu is present OR nav items are visible
           if (!hasHamburger) {
@@ -122,7 +161,7 @@ test.describe('Responsive Breakpoint Tests', () => {
         } else {
           // On larger viewports, main nav should be visible
           const nav = page.locator('nav')
-          await expect(nav.first()).toBeVisible({ timeout: 5000 })
+          await expect(nav.first()).toBeVisible({ timeout: MOBILE_NAV_PROBE_TIMEOUT_MS })
         }
       })
     })

@@ -72,11 +72,53 @@ test.describe('Smoke Tests', () => {
         { text: 'Settings', expectedPath: '/settings' },
       ]
 
+      // Scope to the sidebar (data-testid="sidebar") because the main <nav>
+      // navbar does not contain these route links — they live in the sidebar.
+      // Using a bare `nav` locator matched multiple <nav> elements (navbar +
+      // sidebar section navs) and violated strict mode. #9877
+      const sidebar = page.getByTestId('sidebar')
+
+      // On mobile viewports (<md) the sidebar is rendered off-canvas and must
+      // be opened via the hamburger button before its links are clickable.
+      // #9877
+      const hamburger = page
+        .locator('[data-testid="mobile-menu-toggle"]')
+        .or(page.locator('button[aria-label*="menu" i]'))
+        .first()
+      const viewportSize = page.viewportSize()
+      const MOBILE_SIDEBAR_MAX_WIDTH_PX = 768
+      const HAMBURGER_PROBE_TIMEOUT_MS = 2_000
+      if (viewportSize && viewportSize.width < MOBILE_SIDEBAR_MAX_WIDTH_PX) {
+        const hamburgerVisible = await hamburger
+          .isVisible({ timeout: HAMBURGER_PROBE_TIMEOUT_MS })
+          .catch(() => false)
+        if (hamburgerVisible) {
+          await hamburger.click()
+        }
+      }
+
       for (const { text, expectedPath } of navLinks) {
-        // Use modern locator chain instead of deprecated >> syntax. #9523
-        await page.locator('nav').getByText(text, { exact: true }).click()
+        // Use `.first()` to guard against duplicate renderings (e.g., when a
+        // responsive variant renders both a mobile and desktop label).
+        await sidebar.getByText(text, { exact: true }).first().click()
         await waitForNetworkIdleBestEffort(page, NETWORK_IDLE_TIMEOUT_MS, `nav to ${expectedPath}`)
         expect(page.url()).toContain(expectedPath)
+        // Re-open mobile sidebar if navigation closed it.
+        if (viewportSize && viewportSize.width < MOBILE_SIDEBAR_MAX_WIDTH_PX) {
+          const stillVisible = await sidebar
+            .getByText(text, { exact: true })
+            .first()
+            .isVisible({ timeout: HAMBURGER_PROBE_TIMEOUT_MS })
+            .catch(() => false)
+          if (!stillVisible) {
+            const hamburgerVisible = await hamburger
+              .isVisible({ timeout: HAMBURGER_PROBE_TIMEOUT_MS })
+              .catch(() => false)
+            if (hamburgerVisible) {
+              await hamburger.click()
+            }
+          }
+        }
       }
     })
 
@@ -102,8 +144,10 @@ test.describe('Smoke Tests', () => {
       await waitForNetworkIdleBestEffort(page, NETWORK_IDLE_TIMEOUT_MS, '/settings')
       expect(page.url()).toContain('/settings')
 
-      // Click the logo button (has aria-label "Go to home dashboard")
-      const logoButton = page.locator('nav button[aria-label*="home"]')
+      // Click the logo button (has aria-label "Go to home dashboard").
+      // The navbar renders two such buttons — the logo and the wordmark —
+      // so use .first() to avoid a strict-mode violation. #9877
+      const logoButton = page.locator('nav button[aria-label*="home"]').first()
       await expect(logoButton).toBeVisible()
       await logoButton.click()
 
@@ -226,10 +270,13 @@ test.describe('Smoke Tests', () => {
       await page.goto('/')
       await waitForNetworkIdleBestEffort(page)
 
-      // Check for demo mode badge/indicator
-      const demoIndicator = page.locator('text=/demo/i')
-        .or(page.getByTestId('demo-mode-indicator'))
-        .or(page.locator('[aria-label*="demo"]'))
+      // Check for demo mode badge/indicator. The AgentStatusIndicator also
+      // renders a "Demo Mode" <span> that is hidden on <sm viewports (mobile)
+      // via `hidden sm:inline`; filter to visible matches so the first hit
+      // isn't a hidden element. #9877
+      const demoIndicator = page.locator(':visible').filter({
+        hasText: /demo/i,
+      })
 
       // Assert the demo indicator is visible — a missing indicator is a regression. #9524
       await expect(demoIndicator.first()).toBeVisible({ timeout: OPTIONAL_PROBE_TIMEOUT_MS })
