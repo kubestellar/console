@@ -34,6 +34,14 @@ import (
 // githubAPITimeout is the timeout for HTTP requests to the GitHub API.
 const githubAPITimeout = 10 * time.Second
 
+// asyncScreenshotUploadTimeout bounds the total time a background goroutine
+// spends uploading screenshot comments for a single feature request (#9898).
+// Screenshot uploads are decoupled from the request path so slow GitHub
+// responses cannot block Fiber workers under load. If the budget is
+// exhausted, any remaining screenshots are logged as failed — the issue
+// itself is already persisted, so users can retry via a maintainer.
+const asyncScreenshotUploadTimeout = 5 * time.Minute
+
 // errGitHubUnauthorized is returned when GitHub rejects the FEEDBACK_GITHUB_TOKEN
 // as invalid or expired (HTTP 401). Callers should branch on this with errors.Is
 // and surface a user-visible "refresh your PAT" message instead of the generic
@@ -303,8 +311,11 @@ func (h *FeedbackHandler) CreateFeatureRequest(c *fiber.Ctx) error {
 	// proxy path is skipped in that case.
 	clientAuth := c.Get("X-KC-Client-Auth")
 
-	// Create GitHub issue (route to the correct repo)
-	issueNumber, _, ssResult, err := h.createGitHubIssueInRepo(request, user, h.repoOwner, targetRepoName, input.Screenshots, clientAuth)
+	// Create GitHub issue (route to the correct repo). The issue itself is
+	// created synchronously so the client receives the issue number/URL in
+	// the response; screenshot comments are uploaded asynchronously below
+	// (#9898) so slow GitHub responses do not block Fiber workers.
+	issueNumber, _, validScreenshots, ssResult, err := h.createGitHubIssueInRepo(request, user, h.repoOwner, targetRepoName, input.Screenshots, clientAuth)
 	if err != nil {
 		slog.Error("[Feedback] failed to create GitHub issue", "error", err)
 		// Clean up the orphaned database record. Log but don't fail the
@@ -333,6 +344,19 @@ func (h *FeedbackHandler) CreateFeatureRequest(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to persist feature request state")
 	}
 
+	// #9898: Upload screenshot comments asynchronously so slow GitHub
+	// responses cannot block the Fiber worker handling this request.
+	// The FeatureRequest + issue number are already persisted above, so
+	// a dropped screenshot does not lose the user's submission — it can
+	// be retried from the persisted record.
+	if len(validScreenshots) > 0 {
+		asyncCtx, cancel := context.WithTimeout(context.Background(), asyncScreenshotUploadTimeout)
+		go func(ctx context.Context, cancel context.CancelFunc, issue int, repo string, shots []string) {
+			defer cancel()
+			h.uploadScreenshotCommentsAsync(ctx, issue, repo, shots)
+		}(asyncCtx, cancel, issueNumber, targetRepoName, validScreenshots)
+	}
+
 	// Create notification for the user
 	notifTitle := "Request Submitted"
 	actionURL := ""
@@ -353,8 +377,14 @@ func (h *FeedbackHandler) CreateFeatureRequest(c *fiber.Ctx) error {
 			"user", userID, "request_id", request.ID, "error", err)
 	}
 
-	// Return the request with screenshot upload status so the frontend can
-	// display an accurate message instead of always claiming success.
+	// Return the request with screenshot queue status so the frontend can
+	// display an accurate message. #9898: with the async upload path,
+	// ScreenshotsUploaded now reports the number of screenshots queued
+	// for upload (validated data URIs) and ScreenshotsFailed reports
+	// data-URI validation failures. Per-comment upload failures are
+	// logged via slog in the background goroutine — surfacing them
+	// synchronously would re-introduce the blocking behavior this fix
+	// is removing.
 	type createResponse struct {
 		*models.FeatureRequest
 		ScreenshotsUploaded int `json:"screenshots_uploaded"`
@@ -1861,7 +1891,11 @@ type screenshotUploadResult struct {
 	Failed   int `json:"screenshots_failed"`
 }
 
-func (h *FeedbackHandler) createGitHubIssueInRepo(request *models.FeatureRequest, user *models.User, repoOwner, repoName string, screenshots []string, clientAuth string) (int, string, screenshotUploadResult, error) {
+// Returns (issue number, html url, validated screenshots queued for async
+// upload, synchronous result counts, error). #9898: screenshot uploads are
+// decoupled from this path — callers launch uploadScreenshotCommentsAsync
+// on the returned slice from a background goroutine.
+func (h *FeedbackHandler) createGitHubIssueInRepo(request *models.FeatureRequest, user *models.User, repoOwner, repoName string, screenshots []string, clientAuth string) (int, string, []string, screenshotUploadResult, error) {
 	// Determine labels based on request type and target repo
 	var labels []string
 	isDocs := request.TargetRepo == models.TargetRepoDocs
@@ -1934,28 +1968,50 @@ func (h *FeedbackHandler) createGitHubIssueInRepo(request *models.FeatureRequest
 		number, htmlURL, err = h.postGitHubIssue(repoOwner, repoName, request.Title, issueBody, nil, clientAuth)
 	}
 
-	// Add screenshots as separate comments (one per screenshot) so they
-	// don't blow up the 65K issue body limit. Each comment contains a
-	// base64 data URI in a collapsible <details> block with a marker
-	// that the process-screenshots GHA workflow can find and process.
-	// #7062: only increment ssResult.Uploaded after addIssueComment succeeds,
-	// so the reported count reflects actual deliveries.
-	if err == nil && len(validScreenshots) > 0 {
-		for i, dataURI := range validScreenshots {
-			commentBody := fmt.Sprintf(
-				"<!-- screenshot-base64:%d -->\n<details>\n<summary>Screenshot %d (processing...)</summary>\n\n```\n%s\n```\n\n</details>",
-				i+1, i+1, dataURI)
-			if commentErr := h.addIssueComment(number, commentBody, repoName); commentErr != nil {
-				slog.Error("[Feedback] failed to add screenshot comment", "index", i+1, "issue", number, "error", commentErr)
-				ssResult.Failed++
-			} else {
-				ssResult.Uploaded++
-			}
-		}
-		slog.Info("[Feedback] added screenshot comments to issue", "uploaded", ssResult.Uploaded, "failed", ssResult.Failed, "issue", number)
+	// Screenshots are uploaded asynchronously by the caller via
+	// uploadScreenshotCommentsAsync so slow GitHub responses cannot block
+	// the Fiber worker handling CreateFeatureRequest (#9898). We count
+	// validated screenshots as "queued for upload" here; the background
+	// goroutine logs per-comment success/failure via slog.
+	if err == nil {
+		ssResult.Uploaded = len(validScreenshots)
 	}
 
-	return number, htmlURL, ssResult, err
+	return number, htmlURL, validScreenshots, ssResult, err
+}
+
+// uploadScreenshotCommentsAsync posts each screenshot to the given issue as
+// a separate comment. It is intended to be called from a goroutine with a
+// context rooted in context.Background() so slow uploads do not block the
+// request path (#9898). Failures are logged via slog — the FeatureRequest
+// and its GitHub issue have already been persisted, so a missed screenshot
+// does not lose the user's submission.
+func (h *FeedbackHandler) uploadScreenshotCommentsAsync(ctx context.Context, issueNumber int, repoName string, screenshots []string) {
+	if len(screenshots) == 0 {
+		return
+	}
+	var uploaded, failed int
+	for i, dataURI := range screenshots {
+		if ctx.Err() != nil {
+			// Timeout or cancellation — count the rest as failed and stop.
+			failed += len(screenshots) - i
+			slog.Warn("[Feedback] async screenshot upload context done, remaining screenshots skipped",
+				"issue", issueNumber, "remaining", len(screenshots)-i, "reason", ctx.Err())
+			break
+		}
+		commentBody := fmt.Sprintf(
+			"<!-- screenshot-base64:%d -->\n<details>\n<summary>Screenshot %d (processing...)</summary>\n\n```\n%s\n```\n\n</details>",
+			i+1, i+1, dataURI)
+		if commentErr := h.addIssueComment(issueNumber, commentBody, repoName); commentErr != nil {
+			slog.Warn("[Feedback] async screenshot comment upload failed",
+				"index", i+1, "issue", issueNumber, "error", commentErr)
+			failed++
+			continue
+		}
+		uploaded++
+	}
+	slog.Info("[Feedback] async screenshot upload complete",
+		"issue", issueNumber, "uploaded", uploaded, "failed", failed)
 }
 
 // postGitHubIssue sends a POST request to the GitHub Issues API, or
