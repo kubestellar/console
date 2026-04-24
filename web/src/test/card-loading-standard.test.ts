@@ -133,7 +133,6 @@ const KNOWN_VIOLATIONS: Record<string, Set<string>> = {
   'ResourceMarshall.tsx': new Set(['bare-isLoading']),
   'ServiceExports.tsx': new Set(['bare-isLoading']),
   'ServiceImports.tsx': new Set(['bare-isLoading']),
-  'strimzi_status/useStrimziStatus.ts': new Set(['bare-isLoading']),
   'thanos_status/useThanosStatus.ts': new Set(['bare-isLoading']),
   'UserManagement.tsx': new Set(['missing-isRefreshing']),
   'weather/Weather.tsx': new Set(['bare-isLoading']),

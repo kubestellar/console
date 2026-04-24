@@ -188,6 +188,13 @@ export { useCachedLonghorn } from './useCachedLonghorn'
 export { useCachedVolcano } from './useCachedVolcano'
 
 // ============================================================================
+// Strimzi Kafka Operator — useCachedStrimzi.ts (CNCF incubating)
+// ============================================================================
+// Named re-export (avoids `__testables` export-name collision with TiKV).
+
+export { useCachedStrimzi } from './useCachedStrimzi'
+
+// ============================================================================
 // TiKV Distributed Key-Value Store — useCachedTikv.ts
 // ============================================================================
 

@@ -187,6 +187,7 @@ import { spiffeStatusConfig } from './spiffe-status'
 import { statefulSetStatusConfig } from './statefulset-status'
 import { stockMarketTickerConfig } from './stock-market-ticker'
 import { storageOverviewConfig } from './storage-overview'
+import { strimziStatusConfig } from './strimzi-status'
 import { sudokuGameConfig } from './sudoku-game'
 import { topPodsConfig } from './top-pods'
 import { trestleScanConfig } from './trestle-scan'
@@ -398,6 +399,7 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   statefulset_status: statefulSetStatusConfig,
   stock_market_ticker: stockMarketTickerConfig,
   storage_overview: storageOverviewConfig,
+  strimzi_status: strimziStatusConfig,
   sudoku_game: sudokuGameConfig,
   top_pods: topPodsConfig,
   trestle_scan: trestleScanConfig,
@@ -672,6 +674,7 @@ export {
   statefulSetStatusConfig,
   stockMarketTickerConfig,
   storageOverviewConfig,
+  strimziStatusConfig,
   sudokuGameConfig,
   topPodsConfig,
   trestleScanConfig,

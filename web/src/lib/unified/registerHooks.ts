@@ -68,6 +68,7 @@ import { useCachedRook } from '../../hooks/useCachedRook'
 import { useCachedSpiffe } from '../../hooks/useCachedSpiffe'
 import { useCachedCni } from '../../hooks/useCachedCni'
 import { useCachedSpire } from '../../hooks/useCachedSpire'
+import { useCachedStrimzi } from '../../hooks/useCachedStrimzi'
 import { useCachedTikv } from '../../hooks/useCachedTikv'
 import { useCachedTuf } from '../../hooks/useCachedTuf'
 import { useCachedCloudCustodian } from '../../hooks/useCachedCloudCustodian'
@@ -1305,6 +1306,17 @@ function useUnifiedOpenfeatureStatus() {
   }
 }
 
+function useUnifiedStrimziStatus() {
+  const result = useCachedStrimzi()
+  // Surface the Kafka cluster list as the primary row set for generic list renderers.
+  return {
+    data: result.data.clusters,
+    isLoading: result.showSkeleton,
+    error: result.error ? new Error('Failed to fetch Strimzi status') : null,
+    refetch: () => { result.refetch() },
+  }
+}
+
 function useUnifiedSpireStatus() {
   const result = useCachedSpire()
   // Surface the SPIRE server pod list as the primary row set for generic
@@ -1568,6 +1580,7 @@ export function registerUnifiedHooks(): void {
   registerDataHook('useCachedOpenfeature', useUnifiedOpenfeatureStatus)
   registerDataHook('useCachedSpire', useUnifiedSpireStatus)
   registerDataHook('useCachedKubevela', useUnifiedKubeVelaStatus)
+  registerDataHook('useCachedStrimzi', useUnifiedStrimziStatus)
   registerDataHook('useCachedTikv', useUnifiedTikvStatus)
   registerDataHook('useCachedTuf', useUnifiedTufStatus)
   registerDataHook('useCachedCloudCustodian', useUnifiedCloudCustodianStatus)
