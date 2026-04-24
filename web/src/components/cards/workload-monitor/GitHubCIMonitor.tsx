@@ -23,7 +23,17 @@ import { formatTimeAgo, loadRepos, saveRepos } from './gitHubCIUtils'
 import { usePipelineFilter } from '../pipelines/PipelineFilterContext'
 import { RepoSubtitle } from '../pipelines/RepoSubtitle'
 
-interface GitHubCIMonitorProps {
+// Named time-offset constants for demo fixture data (CLAUDE.md: No Magic Numbers)
+const THIRTY_SECONDS_MS = 30 * 1000
+const ONE_MINUTE_MS = 60 * 1000
+const TWO_MINUTES_MS = 2 * 60 * 1000
+const FIVE_MINUTES_MS = 5 * 60 * 1000
+const TEN_MINUTES_MS = 10 * 60 * 1000
+const FIFTEEN_MINUTES_MS = 15 * 60 * 1000
+const TWENTY_MINUTES_MS = 20 * 60 * 1000
+const THIRTY_MINUTES_MS = 30 * 60 * 1000
+const ONE_HOUR_MS = 60 * 60 * 1000
+const TWO_HOURS_MS = 2 * 60 * 60 * 1000
   config?: Record<string, unknown>
 }
 
@@ -86,14 +96,14 @@ const TITLE_DIAGNOSE = 'Diagnose with AI'
 
 // Demo data for when GitHub API is not available
 const DEMO_WORKFLOWS: WorkflowRun[] = [
-  { id: '1', name: 'CI / Build & Test', repo: 'kubestellar/kubestellar', status: 'completed', conclusion: 'success', branch: 'main', event: 'push', runNumber: 1234, createdAt: new Date(Date.now() - 300000).toISOString(), updatedAt: new Date(Date.now() - 60000).toISOString(), url: '#' },
-  { id: '2', name: 'CI / Lint', repo: 'kubestellar/kubestellar', status: 'completed', conclusion: 'failure', branch: 'feat/new-feature', event: 'pull_request', runNumber: 1233, createdAt: new Date(Date.now() - 600000).toISOString(), updatedAt: new Date(Date.now() - 300000).toISOString(), url: '#' },
-  { id: '3', name: 'Release / Publish', repo: 'kubestellar/kubestellar', status: 'in_progress', conclusion: null, branch: 'main', event: 'workflow_dispatch', runNumber: 1232, createdAt: new Date(Date.now() - 120000).toISOString(), updatedAt: new Date(Date.now() - 30000).toISOString(), url: '#' },
-  { id: '4', name: 'E2E Tests', repo: 'kubestellar/console', status: 'completed', conclusion: 'success', branch: 'main', event: 'push', runNumber: 567, createdAt: new Date(Date.now() - 900000).toISOString(), updatedAt: new Date(Date.now() - 600000).toISOString(), url: '#' },
-  { id: '5', name: 'CI / Build & Test', repo: 'kubestellar/console', status: 'completed', conclusion: 'success', branch: 'feat/workload-monitor', event: 'pull_request', runNumber: 566, createdAt: new Date(Date.now() - 1200000).toISOString(), updatedAt: new Date(Date.now() - 900000).toISOString(), url: '#' },
-  { id: '6', name: 'Deploy Preview', repo: 'kubestellar/console', status: 'queued', conclusion: null, branch: 'feat/card-factory', event: 'pull_request', runNumber: 565, createdAt: new Date(Date.now() - 60000).toISOString(), updatedAt: new Date(Date.now() - 30000).toISOString(), url: '#' },
-  { id: '7', name: 'Security Scan', repo: 'kubestellar/kubestellar', status: 'completed', conclusion: 'timed_out', branch: 'main', event: 'schedule', runNumber: 1231, createdAt: new Date(Date.now() - 3600000).toISOString(), updatedAt: new Date(Date.now() - 1800000).toISOString(), url: '#' },
-  { id: '8', name: 'Dependabot', repo: 'kubestellar/kubestellar', status: 'completed', conclusion: 'success', branch: 'dependabot/npm/react-19', event: 'pull_request', runNumber: 1230, createdAt: new Date(Date.now() - 7200000).toISOString(), updatedAt: new Date(Date.now() - 3600000).toISOString(), url: '#' },
+  { id: '1', name: 'CI / Build & Test', repo: 'kubestellar/kubestellar', status: 'completed', conclusion: 'success', branch: 'main', event: 'push', runNumber: 1234, createdAt: new Date(Date.now() - FIVE_MINUTES_MS).toISOString(), updatedAt: new Date(Date.now() - ONE_MINUTE_MS).toISOString(), url: '#' },
+  { id: '2', name: 'CI / Lint', repo: 'kubestellar/kubestellar', status: 'completed', conclusion: 'failure', branch: 'feat/new-feature', event: 'pull_request', runNumber: 1233, createdAt: new Date(Date.now() - TEN_MINUTES_MS).toISOString(), updatedAt: new Date(Date.now() - FIVE_MINUTES_MS).toISOString(), url: '#' },
+  { id: '3', name: 'Release / Publish', repo: 'kubestellar/kubestellar', status: 'in_progress', conclusion: null, branch: 'main', event: 'workflow_dispatch', runNumber: 1232, createdAt: new Date(Date.now() - TWO_MINUTES_MS).toISOString(), updatedAt: new Date(Date.now() - THIRTY_SECONDS_MS).toISOString(), url: '#' },
+  { id: '4', name: 'E2E Tests', repo: 'kubestellar/console', status: 'completed', conclusion: 'success', branch: 'main', event: 'push', runNumber: 567, createdAt: new Date(Date.now() - FIFTEEN_MINUTES_MS).toISOString(), updatedAt: new Date(Date.now() - TEN_MINUTES_MS).toISOString(), url: '#' },
+  { id: '5', name: 'CI / Build & Test', repo: 'kubestellar/console', status: 'completed', conclusion: 'success', branch: 'feat/workload-monitor', event: 'pull_request', runNumber: 566, createdAt: new Date(Date.now() - TWENTY_MINUTES_MS).toISOString(), updatedAt: new Date(Date.now() - FIFTEEN_MINUTES_MS).toISOString(), url: '#' },
+  { id: '6', name: 'Deploy Preview', repo: 'kubestellar/console', status: 'queued', conclusion: null, branch: 'feat/card-factory', event: 'pull_request', runNumber: 565, createdAt: new Date(Date.now() - ONE_MINUTE_MS).toISOString(), updatedAt: new Date(Date.now() - THIRTY_SECONDS_MS).toISOString(), url: '#' },
+  { id: '7', name: 'Security Scan', repo: 'kubestellar/kubestellar', status: 'completed', conclusion: 'timed_out', branch: 'main', event: 'schedule', runNumber: 1231, createdAt: new Date(Date.now() - ONE_HOUR_MS).toISOString(), updatedAt: new Date(Date.now() - THIRTY_MINUTES_MS).toISOString(), url: '#' },
+  { id: '8', name: 'Dependabot', repo: 'kubestellar/kubestellar', status: 'completed', conclusion: 'success', branch: 'dependabot/npm/react-19', event: 'pull_request', runNumber: 1230, createdAt: new Date(Date.now() - TWO_HOURS_MS).toISOString(), updatedAt: new Date(Date.now() - ONE_HOUR_MS).toISOString(), url: '#' },
 ]
 
 
