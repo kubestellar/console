@@ -29,6 +29,12 @@ import type { EnvoyListener, EnvoyUpstreamCluster } from './demoData'
 // Named constants (no magic numbers)
 // ---------------------------------------------------------------------------
 
+const SKELETON_TITLE_WIDTH = 140
+const SKELETON_TITLE_HEIGHT = 28
+const SKELETON_BADGE_WIDTH = 90
+const SKELETON_BADGE_HEIGHT = 20
+const SKELETON_LIST_ITEMS = 5
+
 const RELATIVE_TIME_MINUTE_MS = 60_000
 const MINUTES_PER_HOUR = 60
 const HOURS_PER_DAY = 24
@@ -133,11 +139,11 @@ export function EnvoyStatus() {
     return (
       <div className="h-full flex flex-col min-h-card gap-4">
         <div className="flex items-center justify-between">
-          <Skeleton variant="rounded" width={140} height={28} />
-          <Skeleton variant="rounded" width={90} height={20} />
+          <Skeleton variant="rounded" width={SKELETON_TITLE_WIDTH} height={SKELETON_TITLE_HEIGHT} />
+          <Skeleton variant="rounded" width={SKELETON_BADGE_WIDTH} height={SKELETON_BADGE_HEIGHT} />
         </div>
         <SkeletonStats className="grid-cols-4" />
-        <SkeletonList items={5} className="flex-1" />
+        <SkeletonList items={SKELETON_LIST_ITEMS} className="flex-1" />
       </div>
     )
   }

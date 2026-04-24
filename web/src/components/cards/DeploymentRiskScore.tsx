@@ -109,7 +109,7 @@ export function DeploymentRiskScore() {
 
   const isLoading = argo.isLoading || kyverno.isLoading || pods.isLoading
   const isRefreshing = !!argo.isRefreshing || !!kyverno.isRefreshing || !!pods.isRefreshing
-  const isDemoData = !!argo.isDemoData || !!kyverno.isDemoData || !!pods.isDemoFallback
+  const isDemoData = (!!argo.isDemoData || !!kyverno.isDemoData || !!pods.isDemoFallback) && !isLoading
   const consecutiveFailures = Math.max(
     argo.consecutiveFailures || 0,
     kyverno.consecutiveFailures || 0,
