@@ -151,6 +151,13 @@ export * from './useCachedJaegerStatus'
 export { useCachedRook } from './useCachedRook'
 
 // ============================================================================
+// SPIFFE Workload Identity — useCachedSpiffe.ts (CNCF graduated)
+// ============================================================================
+// Named re-export (avoids `__testables` export-name collision with TiKV).
+
+export { useCachedSpiffe } from './useCachedSpiffe'
+
+// ============================================================================
 // TiKV Distributed Key-Value Store — useCachedTikv.ts
 // ============================================================================
 

@@ -3158,6 +3158,23 @@
     "mgrShort": "MGR {{active}}+{{standby}}",
     "pgShort": "PG {{clean}}/{{total}}"
   },
+  "spiffeStatus": {
+    "healthy": "Healthy",
+    "degraded": "Degraded",
+    "notInstalled": "SPIFFE/SPIRE not detected",
+    "notInstalledHint": "No SPIRE server reachable from the connected clusters.",
+    "fetchError": "Unable to fetch SPIFFE status",
+    "x509Svids": "x509 SVIDs",
+    "jwtSvids": "JWT SVIDs",
+    "federated": "Federated",
+    "agents": "Agents",
+    "server": "server",
+    "sectionTrustDomain": "Trust domain",
+    "sectionEntries": "Registration entries",
+    "sectionFederated": "Federated trust domains",
+    "noEntries": "No registration entries found",
+    "noFederated": "No federated trust domains"
+  },
   "tikvStatus": {
     "healthy": "Healthy",
     "degraded": "Degraded",

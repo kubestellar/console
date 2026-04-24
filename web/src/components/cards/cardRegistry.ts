@@ -92,6 +92,8 @@ const LinkerdStatus = safeLazy(() => import('./linkerd_status'), 'LinkerdStatus'
 const OtelStatus = safeLazy(() => import('./otel_status'), 'OtelStatus')
 // Rook cloud-native storage orchestrator card
 const RookStatus = safeLazy(() => import('./rook_status'), 'RookStatus')
+// SPIFFE workload identity card (CNCF graduated)
+const SpiffeStatus = safeLazy(() => import('./spiffe_status'), 'SpiffeStatus')
 // TiKV distributed key-value store card
 const TikvStatus = safeLazy(() => import('./tikv_status'), 'TikvStatus')
 // TUF (The Update Framework) repository metadata card
@@ -734,6 +736,8 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   otel_status: OtelStatus,
   // Rook cloud-native storage orchestrator (Ceph)
   rook_status: RookStatus,
+  // SPIFFE workload identity (CNCF graduated)
+  spiffe_status: SpiffeStatus,
   // TiKV distributed key-value store
   tikv_status: TikvStatus,
   // TUF (The Update Framework) repository metadata
@@ -1064,6 +1068,7 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   linkerd_status: () => import('./linkerd_status'),
   otel_status: () => import('./otel_status'),
   rook_status: () => import('./rook_status'),
+  spiffe_status: () => import('./spiffe_status'),
   tikv_status: () => import('./tikv_status'),
   tuf_status: () => import('./tuf_status'),
   vitess_status: () => import('./vitess_status'),
@@ -1666,6 +1671,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   linkerd_status: 6,
   otel_status: 6,
   rook_status: 6,
+  spiffe_status: 6,
   tikv_status: 6,
   tuf_status: 6,
   vitess_status: 6,

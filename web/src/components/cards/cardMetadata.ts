@@ -278,6 +278,8 @@ export const CARD_TITLES: Record<string, string> = {
   otel_status: 'OpenTelemetry',
   // Rook cloud-native storage orchestrator
   rook_status: 'Rook',
+  // SPIFFE workload identity (CNCF graduated)
+  spiffe_status: 'SPIFFE',
   // TiKV distributed key-value store
   tikv_status: 'TiKV',
   // TUF (The Update Framework) repository metadata
@@ -607,6 +609,8 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   otel_status: 'OpenTelemetry Collectors: pipeline health, receivers and exporters, dropped telemetry, and export errors across connected clusters.',
   // Rook cloud-native storage orchestrator (Ceph)
   rook_status: 'Rook-managed CephClusters: Ceph health, OSD/MON/MGR counts, capacity usage, and PG state summary.',
+  // SPIFFE workload identity (CNCF graduated)
+  spiffe_status: 'SPIFFE/SPIRE workload identity: trust domain, SVID counts (x509/JWT), federated trust domains, and registration entries.',
   // TiKV distributed key-value store
   tikv_status: 'TiKV distributed key-value store: store nodes, region counts, leader counts, and capacity utilization across the cluster.',
   // TUF (The Update Framework) repository metadata
