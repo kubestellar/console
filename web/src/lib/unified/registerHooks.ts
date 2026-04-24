@@ -52,6 +52,7 @@ import { useContourStatus } from '../../components/cards/contour_status/useConto
 import { useCachedContainerd } from '../../hooks/useCachedContainerd'
 import { useCachedEnvoy } from '../../components/cards/envoy_status/useCachedEnvoy'
 import { useCachedGrpc } from '../../hooks/useCachedGrpc'
+import { useCachedKeda } from '../../hooks/useCachedKeda'
 import { useCachedLinkerd } from '../../hooks/useCachedLinkerd'
 import { useCachedTikv } from '../../hooks/useCachedTikv'
 
@@ -1076,6 +1077,23 @@ function useUnifiedGrpcStatus() {
   }
 }
 
+function useUnifiedKedaStatus() {
+  const result = useCachedKeda()
+  // Surface the ScaledObject list as the primary row set for generic list
+  // renderers. `data.scaledObjects` can be undefined while the cache is
+  // hydrating, so guard defensively per CLAUDE.md array-safety rule.
+  return {
+    data: (result.data?.scaledObjects ?? []),
+    isLoading: result.showSkeleton,
+    error: result.error ? new Error('Failed to fetch KEDA status') : null,
+    refetch: async () => {
+      // useKedaStatus doesn't expose refetch directly; the cache layer
+      // refreshes on its own schedule. This is a no-op placeholder that
+      // preserves the expected unified-hook shape.
+    },
+  }
+}
+
 function useUnifiedLinkerdStatus() {
   const result = useCachedLinkerd()
   // Surface the meshed deployment list as the primary row set for generic list renderers.
@@ -1287,6 +1305,7 @@ export function registerUnifiedHooks(): void {
   registerDataHook('useCachedContainerd', useUnifiedContainerdStatus)
   registerDataHook('useCachedEnvoy', useUnifiedEnvoyStatus)
   registerDataHook('useCachedGrpc', useUnifiedGrpcStatus)
+  registerDataHook('useCachedKeda', useUnifiedKedaStatus)
   registerDataHook('useCachedLinkerd', useUnifiedLinkerdStatus)
   registerDataHook('useCachedTikv', useUnifiedTikvStatus)
   registerDataHook('useProviderHealth', useProviderHealth)
