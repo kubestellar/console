@@ -213,7 +213,7 @@ export function DeploymentRiskScore() {
   }, [argo.applications, kyverno.statuses, pods.pods])
 
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && rows.length === 0,
     isRefreshing,
     isDemoData,
     hasAnyData: rows.length > 0,
