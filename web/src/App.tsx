@@ -41,8 +41,12 @@ const DrillDownModal = safeLazy(() => import('./components/drilldown/DrillDownMo
 // Lazy load all page components for better code splitting.
 // safeLazy() validates the named export exists, throwing a recognisable
 // "chunk may be stale" error that ChunkErrorBoundary auto-recovers from.
-const Login = safeLazy(() => import('./components/auth/Login'), 'Login')
-const AuthCallback = safeLazy(() => import('./components/auth/AuthCallback'), 'AuthCallback')
+// Login and AuthCallback are eagerly imported — they are on the critical auth
+// path and must render reliably.  Lazy-loading them caused chunk_load errors
+// during OAuth redirects when the browser navigated away before the chunk
+// finished downloading (#9803).
+import { Login } from './components/auth/Login'
+import { AuthCallback } from './components/auth/AuthCallback'
 const CustomDashboard = safeLazy(() => import('./components/dashboard/CustomDashboard'), 'CustomDashboard')
 const Settings = safeLazy(() => import('./components/settings/Settings'), 'Settings')
 // Eagerly import key sidebar dashboards to prevent React Router's
@@ -631,8 +635,8 @@ function FullDashboardApp({ liveLocation }: { liveLocation: Location }) {
       <OrbitAutoRunner />
       <ChunkErrorBoundary>
       <Routes location={liveLocation}>
-        <Route path={ROUTES.LOGIN} element={<SuspenseRoute><Login /></SuspenseRoute>} />
-        <Route path={ROUTES.AUTH_CALLBACK} element={<SuspenseRoute><AuthCallback /></SuspenseRoute>} />
+        <Route path={ROUTES.LOGIN} element={<Login />} />
+        <Route path={ROUTES.AUTH_CALLBACK} element={<AuthCallback />} />
         {/* PWA Mini Dashboard - lightweight widget mode (no auth required for local monitoring) */}
         <Route path={ROUTES.WIDGET} element={<SuspenseRoute><MiniDashboard /></SuspenseRoute>} />
 

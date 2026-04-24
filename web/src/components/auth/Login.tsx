@@ -12,8 +12,14 @@ import { useBranding } from '../../hooks/useBranding'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
 import { copyToClipboard } from '../../lib/clipboard'
 
-// Lazy load the heavy Three.js globe animation
-const GlobeAnimation = lazy(() => import('../animations/globe').then(m => ({ default: m.GlobeAnimation })))
+// Lazy load the heavy Three.js globe animation.
+// Swallow import failures so a missing/stale chunk doesn't crash the login
+// page — the globe is cosmetic and the Suspense fallback (spinner) is fine.
+const GlobeAnimation = lazy(() =>
+  import('../animations/globe')
+    .then(m => ({ default: m.GlobeAnimation }))
+    .catch(() => ({ default: () => null }))
+)
 
 // Apache 2.0 license is the project's effective terms; link opens in a new tab (#8376).
 const TERMS_OF_SERVICE_URL = 'https://github.com/kubestellar/console/blob/main/LICENSE'
