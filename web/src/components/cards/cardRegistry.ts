@@ -293,6 +293,8 @@ const KedaStatus = safeLazy(() => import('./keda_status'), 'KedaStatus')
 const FluentdStatus = safeLazy(() => import('./fluentd_status'), 'FluentdStatus')
 // CRI-O container runtime card
 const CrioStatus = safeLazy(() => import('./crio_status'), 'CrioStatus')
+// Containerd container runtime card (CNCF graduated — marketplace#4)
+const ContainerdStatus = safeLazy(() => import('./containerd_status'), 'ContainerdStatus')
 // Lima VM card
 const LimaStatus = safeLazy(() => import('./lima_status'), 'LimaStatus')
 // NATS messaging server monitoring card
@@ -698,6 +700,8 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   fluentd_status: FluentdStatus,
   // CRI-O container runtime
   crio_status: CrioStatus,
+  // Containerd container runtime
+  containerd_status: ContainerdStatus,
   // Lima VM
   lima_status: LimaStatus,
   // NATS messaging server
@@ -1167,6 +1171,8 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   cloudevents_status: () => import('./cloudevents_status'),
   // CRI-O
   crio_status: () => import('./crio_status'),
+  // Containerd
+  containerd_status: () => import('./containerd_status'),
   // Strimzi
   strimzi_status: () => import('./strimzi_status'),
   // KubeVela application delivery
@@ -1378,6 +1384,7 @@ export const LIVE_DATA_CARDS = new Set([
   'coredns_status',
   'keda_status',
   'crio_status',
+  'containerd_status',
   'strimzi_status',
   'keycloak_status',
   'kubevela_status',
@@ -1529,6 +1536,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   coredns_status: 6,
   keda_status: 6,
   crio_status: 6,
+  containerd_status: 6,
   strimzi_status: 6,
   etcd_status: 4,
   network_policies: 6,

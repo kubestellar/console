@@ -49,6 +49,7 @@ import {
   useServiceImports } from '../../hooks/useMCS'
 import { useFluxStatus } from '../../components/cards/flux_status/useFluxStatus'
 import { useContourStatus } from '../../components/cards/contour_status/useContourStatus'
+import { useCachedContainerd } from '../../hooks/useCachedContainerd'
 import { useCachedEnvoy } from '../../components/cards/envoy_status/useCachedEnvoy'
 import { useCachedLinkerd } from '../../hooks/useCachedLinkerd'
 
@@ -1041,6 +1042,16 @@ function useUnifiedContourStatus() {
   }
 }
 
+function useUnifiedContainerdStatus() {
+  const result = useCachedContainerd()
+  return {
+    data: result.data.containers,
+    isLoading: result.isLoading,
+    error: result.isFailed ? new Error('Failed to fetch containerd status') : null,
+    refetch: () => { result.refetch() },
+  }
+}
+
 function useUnifiedEnvoyStatus() {
   const result = useCachedEnvoy()
   // Surface the listener list as the primary row set for generic list renderers.
@@ -1250,6 +1261,7 @@ export function registerUnifiedHooks(): void {
   registerDataHook('useKustomizationStatus', useKustomizationStatus)
   registerDataHook('useFluxStatus', useUnifiedFluxStatus)
   registerDataHook('useContourStatus', useUnifiedContourStatus)
+  registerDataHook('useCachedContainerd', useUnifiedContainerdStatus)
   registerDataHook('useCachedEnvoy', useUnifiedEnvoyStatus)
   registerDataHook('useCachedLinkerd', useUnifiedLinkerdStatus)
   registerDataHook('useProviderHealth', useProviderHealth)

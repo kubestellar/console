@@ -373,6 +373,7 @@ export const CARD_CATALOG = {
     { type: 'lima_status', title: 'Lima', description: 'Lima virtual machine instances, runtime health, and resource usage', visualization: 'status' },
     { type: 'artifact_hub_status', title: 'Artifact Hub', description: 'Artifact Hub package discovery and repository sync status', visualization: 'status' },
     { type: 'crio_status', title: 'CRI-O', description: 'CRI-O container runtime metrics, image pulls, and pod sandbox status', visualization: 'status' },
+    { type: 'containerd_status', title: 'Containerd', description: 'Containerd runtime — running containers, image, namespace, state, and uptime', visualization: 'status' },
     { type: 'github_activity', title: 'GitHub Activity', description: 'Monitor GitHub repository activity - PRs, issues, releases, and contributors', visualization: 'table' },
     { type: 'kubectl', title: 'Kubectl', description: 'Interactive kubectl terminal with AI assistance, YAML editor, and command history', visualization: 'table' },
   ],

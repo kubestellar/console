@@ -272,6 +272,8 @@ export const CARD_TITLES: Record<string, string> = {
   linkerd_status: 'Linkerd',
   // CRI-O container runtime
   crio_status: 'CRI-O',
+  // Containerd container runtime
+  containerd_status: 'Containerd',
   // Strimzi Kafka operator
   strimzi_status: 'Strimzi',
   // Flatcar Container Linux
@@ -585,6 +587,8 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   linkerd_status: 'Linkerd service mesh meshed pods, success rate, RPS, and p99 latency per deployment.',
   // CRI-O container runtime
   crio_status: 'CRI-O container runtime metrics, image pulls, and pod sandbox status.',
+  // Containerd container runtime
+  containerd_status: 'Containerd runtime — running containers, image, namespace, state, and uptime.',
 
   // KubeVela application delivery
   kubevela_status: 'KubeVela application delivery, component status, and workflow progress.',
