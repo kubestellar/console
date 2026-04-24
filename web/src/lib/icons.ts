@@ -246,6 +246,9 @@ import {
   Zap,
   ZoomIn,
   ZoomOut,
+  Handshake,
+  BadgeCheck,
+  GitCommitHorizontal,
 } from 'lucide-react'
 
 export type { LucideIcon }
@@ -493,6 +496,9 @@ export const iconRegistry: Record<string, LucideIcon> = {
   Zap,
   ZoomIn,
   ZoomOut,
+  Handshake,
+  BadgeCheck,
+  GitCommitHorizontal,
 }
 
 /**
