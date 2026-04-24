@@ -4,7 +4,7 @@
  * Shows a dashboard overview of all compliance verticals with
  * status cards linking to each epic's dashboards.
  */
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Landmark, Heart, Shield, KeyRound, Radar, Container, Scale, TrendingUp,
@@ -141,16 +141,34 @@ function VerticalCard({ sectionId, title, items, onNavigate }: {
   )
 }
 
+/** Interval between auto-refresh ticks in milliseconds */
+const AUTO_REFRESH_INTERVAL_MS = 30_000
+
 export default function EnterprisePortal() {
   const navigate = useNavigate()
   const [autoRefresh, setAutoRefresh] = useState(true)
-  const [lastUpdated] = useState(() => new Date())
+  const [lastUpdated, setLastUpdated] = useState(() => new Date())
   const dashboardContext = useDashboardContextOptional()
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const handleRefresh = useCallback(() => {
-    // Force re-render with fresh timestamp
-    window.location.reload()
+    setLastUpdated(new Date())
   }, [])
+
+  // Wire autoRefresh toggle to a periodic refresh interval
+  useEffect(() => {
+    if (autoRefresh) {
+      intervalRef.current = setInterval(() => {
+        setLastUpdated(new Date())
+      }, AUTO_REFRESH_INTERVAL_MS)
+    }
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
+    }
+  }, [autoRefresh])
 
   const handleAddMore = useCallback(() => {
     if (dashboardContext?.openAddCardModal) {
