@@ -75,11 +75,14 @@ const ALLOWED_ORIGINS = [
 
 function corsOrigin(origin: string | null): string {
   if (!origin) return ALLOWED_ORIGINS[0];
-  if (
-    ALLOWED_ORIGINS.some((o) => origin === o) ||
-    origin.endsWith(".kubestellar.io")
-  ) {
-    return origin;
+  if (ALLOWED_ORIGINS.includes(origin)) return origin;
+  try {
+    const host = new URL(origin).hostname.toLowerCase();
+    if (host === "kubestellar.io" || host.endsWith(".kubestellar.io")) {
+      return origin;
+    }
+  } catch {
+    // Malformed origin — fall through to default
   }
   return ALLOWED_ORIGINS[0];
 }
