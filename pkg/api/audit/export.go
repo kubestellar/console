@@ -213,17 +213,32 @@ var defaultRegistry = &registry{adapters: map[string]Destination{}}
 // DestinationConfig is the minimal user-supplied shape for configuring a
 // destination. Richer fields (filters, TLS, batch size) live on
 // ExportDestination itself once the full UI lands.
+//
+// Provider-specific fields (Token, Network, Index, Tag) are optional and
+// ignored by providers that do not consume them. Keeping them on one struct
+// avoids a proliferation of provider-specific config types while the SIEM
+// export engine (#9643) is still taking shape.
 type DestinationConfig struct {
 	ID       string              `json:"id"`
 	Name     string              `json:"name"`
 	Provider DestinationProvider `json:"provider"`
 	URL      string              `json:"url"`
+
+	// Token is consumed by ProviderSplunk as the HEC bearer token.
+	Token string `json:"token,omitempty"`
+	// Index is consumed by ProviderElastic as the _bulk target index.
+	Index string `json:"index,omitempty"`
+	// Network is consumed by ProviderSyslog: "udp" or "tcp".
+	Network string `json:"network,omitempty"`
+	// Tag is consumed by ProviderSyslog as the syslog program tag.
+	Tag string `json:"tag,omitempty"`
 }
 
-// RegisterDestination wires a configured destination into the registry. For
-// ProviderWebhook it builds a live WebhookDestination; other providers get a
-// stubDestination that returns ErrDestinationUnsupported. Returns an error if
-// the config is invalid.
+// RegisterDestination wires a configured destination into the registry. Each
+// provider gets its own adapter (Webhook, Splunk HEC, Elastic _bulk, Syslog).
+// When a provider's required fields are missing, RegisterDestination falls
+// back to a stubDestination that surfaces ErrDestinationUnsupported on Send
+// rather than silently pretending the send succeeded (#9887).
 func RegisterDestination(cfg DestinationConfig) (Destination, error) {
 	if cfg.ID == "" {
 		return nil, errors.New("destination config: id is required")
@@ -238,9 +253,39 @@ func RegisterDestination(cfg DestinationConfig) (Destination, error) {
 		if err != nil {
 			return nil, err
 		}
-	case ProviderSplunk, ProviderElastic, ProviderSyslog:
-		// TODO (#9643): real adapters for these providers.
-		adapter = stubDestination{provider: cfg.Provider}
+	case ProviderSplunk:
+		// Fall back to a stub when the HEC token is missing so the listing
+		// endpoint still reflects the user's intent while surfacing the
+		// config gap on Send.
+		if cfg.URL == "" || cfg.Token == "" {
+			adapter = stubDestination{provider: cfg.Provider}
+		} else {
+			adapter, err = NewSplunkDestination(cfg.URL, cfg.Token, nil)
+			if err != nil {
+				return nil, err
+			}
+		}
+	case ProviderElastic:
+		if cfg.URL == "" {
+			adapter = stubDestination{provider: cfg.Provider}
+		} else {
+			adapter, err = NewElasticDestination(cfg.URL, cfg.Index, nil)
+			if err != nil {
+				return nil, err
+			}
+		}
+	case ProviderSyslog:
+		// Syslog uses addr (stored in URL) + optional network/tag. We do not
+		// eagerly dial here on stub-config to keep RegisterDestination cheap;
+		// NewSyslogDestination dials on success paths only.
+		if cfg.URL == "" {
+			adapter = stubDestination{provider: cfg.Provider}
+		} else {
+			adapter, err = NewSyslogDestination(cfg.Network, cfg.URL, cfg.Tag)
+			if err != nil {
+				return nil, err
+			}
+		}
 	default:
 		return nil, fmt.Errorf("destination config: unknown provider %q", cfg.Provider)
 	}
