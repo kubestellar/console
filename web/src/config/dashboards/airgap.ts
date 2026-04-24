@@ -8,8 +8,8 @@ export const airgapDashboardConfig: UnifiedDashboardConfig = {
   statsType: 'security',
   cards: [
     { id: 'airgap-cluster-health', cardType: 'cluster_health', title: 'Cluster Health', position: { w: 4, h: 3 } },
-    { id: 'airgap-workloads', cardType: 'workload_status', title: 'Workload Status', position: { w: 4, h: 3 } },
-    { id: 'airgap-compliance', cardType: 'air_gap_readiness', title: 'Air-Gap Summary', position: { w: 4, h: 3 } },
+    { id: 'airgap-network-policy-status', cardType: 'network_policy_status', title: 'Network Policy Status', position: { w: 4, h: 3 } },
+    { id: 'airgap-node-status', cardType: 'node_status', title: 'Node Status', position: { w: 4, h: 3 } },
   ],
   features: { dragDrop: true, addCard: true, autoRefresh: true, autoRefreshInterval: 60_000 },
   storageKey: 'airgap-dashboard-cards',

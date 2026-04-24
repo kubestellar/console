@@ -8,8 +8,8 @@ export const rbacAuditDashboardConfig: UnifiedDashboardConfig = {
   statsType: 'security',
   cards: [
     { id: 'rbac-cluster-health', cardType: 'cluster_health', title: 'Cluster Health', position: { w: 4, h: 3 } },
-    { id: 'rbac-workloads', cardType: 'workload_status', title: 'Workload Status', position: { w: 4, h: 3 } },
-    { id: 'rbac-compliance', cardType: 'rbac_audit', title: 'RBAC Summary', position: { w: 4, h: 3 } },
+    { id: 'rbac-role-binding-status', cardType: 'role_binding_status', title: 'Role Binding Status', position: { w: 4, h: 3 } },
+    { id: 'rbac-namespace-rbac', cardType: 'namespace_rbac', title: 'Namespace RBAC', position: { w: 4, h: 3 } },
   ],
   features: { dragDrop: true, addCard: true, autoRefresh: true, autoRefreshInterval: 60_000 },
   storageKey: 'rbac-audit-dashboard-cards',

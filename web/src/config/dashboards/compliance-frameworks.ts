@@ -10,9 +10,9 @@ export const complianceFrameworksDashboardConfig: UnifiedDashboardConfig = {
   route: '/compliance-frameworks',
   statsType: 'security',
   cards: [
-    { id: 'cf-cluster-health', cardType: 'cluster_health', title: 'Cluster Health', position: { w: 4, h: 3 } },
-    { id: 'cf-workloads', cardType: 'workload_status', title: 'Workload Status', position: { w: 4, h: 3 } },
-    { id: 'cf-compliance', cardType: 'compliance_frameworks', title: 'Frameworks Summary', position: { w: 4, h: 3 } },
+    { id: 'cf-compliance-score', cardType: 'compliance_score', title: 'Compliance Score', position: { w: 4, h: 3 } },
+    { id: 'cf-fleet-compliance-heatmap', cardType: 'fleet_compliance_heatmap', title: 'Fleet Compliance Heatmap', position: { w: 4, h: 3 } },
+    { id: 'cf-kyverno-policies', cardType: 'kyverno_policies', title: 'Kyverno Policies', position: { w: 4, h: 3 } },
   ],
   features: { dragDrop: true, addCard: true, autoRefresh: true, autoRefreshInterval: 60_000 },
   storageKey: 'compliance-frameworks-dashboard-cards',

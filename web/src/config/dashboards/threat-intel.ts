@@ -7,9 +7,9 @@ export const threatIntelDashboardConfig: UnifiedDashboardConfig = {
   route: '/enterprise/threat-intel',
   statsType: 'security',
   cards: [
-    { id: 'ti-feeds-1', cardType: 'threat_intel', title: 'Threat Feeds', position: { w: 4, h: 3 } },
-    { id: 'ti-iocs-1', cardType: 'threat_intel', title: 'IOC Matches', position: { w: 4, h: 3 } },
-    { id: 'ti-risk-1', cardType: 'threat_intel', title: 'Risk Score', position: { w: 4, h: 3 } },
+    { id: 'ti-trivy-scan', cardType: 'trivy_scan', title: 'Trivy Scan', position: { w: 4, h: 3 } },
+    { id: 'ti-security-issues', cardType: 'security_issues', title: 'Security Issues', position: { w: 4, h: 3 } },
+    { id: 'ti-active-alerts', cardType: 'active_alerts', title: 'Active Alerts', position: { w: 4, h: 3 } },
   ],
   features: { dragDrop: true, addCard: true, autoRefresh: true, autoRefreshInterval: 120_000 },
   storageKey: 'threat-intel-dashboard-cards',

@@ -11,8 +11,8 @@ export const dataResidencyDashboardConfig: UnifiedDashboardConfig = {
   statsType: 'security',
   cards: [
     { id: 'dr-cluster-health', cardType: 'cluster_health', title: 'Cluster Health', position: { w: 4, h: 3 } },
-    { id: 'dr-workloads', cardType: 'workload_status', title: 'Workload Status', position: { w: 4, h: 3 } },
-    { id: 'dr-compliance', cardType: 'data_residency', title: 'Residency Summary', position: { w: 4, h: 3 } },
+    { id: 'dr-namespace-overview', cardType: 'namespace_overview', title: 'Namespace Overview', position: { w: 4, h: 3 } },
+    { id: 'dr-network-policy-status', cardType: 'network_policy_status', title: 'Network Policy Status', position: { w: 4, h: 3 } },
   ],
   features: { dragDrop: true, addCard: true, autoRefresh: true, autoRefreshInterval: 60_000 },
   storageKey: 'data-residency-dashboard-cards',

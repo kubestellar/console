@@ -8,8 +8,8 @@ export const oidcDashboardConfig: UnifiedDashboardConfig = {
   statsType: 'security',
   cards: [
     { id: 'oidc-cluster-health', cardType: 'cluster_health', title: 'Cluster Health', position: { w: 4, h: 3 } },
-    { id: 'oidc-workloads', cardType: 'workload_status', title: 'Workload Status', position: { w: 4, h: 3 } },
-    { id: 'oidc-compliance', cardType: 'oidc_federation', title: 'OIDC Summary', position: { w: 4, h: 3 } },
+    { id: 'oidc-service-account-status', cardType: 'service_account_status', title: 'Service Account Status', position: { w: 4, h: 3 } },
+    { id: 'oidc-role-binding-status', cardType: 'role_binding_status', title: 'Role Binding Status', position: { w: 4, h: 3 } },
   ],
   features: { dragDrop: true, addCard: true, autoRefresh: true, autoRefreshInterval: 60_000 },
   storageKey: 'oidc-dashboard-cards',

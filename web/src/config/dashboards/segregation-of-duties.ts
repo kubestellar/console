@@ -7,9 +7,9 @@ export const sodDashboardConfig: UnifiedDashboardConfig = {
   route: '/segregation-of-duties',
   statsType: 'security',
   cards: [
-    { id: 'sod-cluster-health', cardType: 'cluster_health', title: 'Cluster Health', position: { w: 4, h: 3 } },
-    { id: 'sod-workloads', cardType: 'workload_status', title: 'Workload Status', position: { w: 4, h: 3 } },
-    { id: 'sod-compliance', cardType: 'segregation_of_duties', title: 'SoD Summary', position: { w: 4, h: 3 } },
+    { id: 'sod-role-binding-status', cardType: 'role_binding_status', title: 'Role Binding Status', position: { w: 4, h: 3 } },
+    { id: 'sod-role-status', cardType: 'role_status', title: 'Role Status', position: { w: 4, h: 3 } },
+    { id: 'sod-namespace-rbac', cardType: 'namespace_rbac', title: 'Namespace RBAC', position: { w: 4, h: 3 } },
   ],
   features: { dragDrop: true, addCard: true, autoRefresh: true, autoRefreshInterval: 60_000 },
   storageKey: 'sod-dashboard-cards',

@@ -8,8 +8,8 @@ export const baaDashboardConfig: UnifiedDashboardConfig = {
   statsType: 'security',
   cards: [
     { id: 'baa-cluster-health', cardType: 'cluster_health', title: 'Cluster Health', position: { w: 4, h: 3 } },
-    { id: 'baa-workloads', cardType: 'workload_status', title: 'Workload Status', position: { w: 4, h: 3 } },
-    { id: 'baa-compliance', cardType: 'baa_tracker', title: 'BAA Summary', position: { w: 4, h: 3 } },
+    { id: 'baa-workload-monitor', cardType: 'workload_monitor', title: 'Workload Monitor', position: { w: 4, h: 3 } },
+    { id: 'baa-policy-violations', cardType: 'policy_violations', title: 'Policy Violations', position: { w: 4, h: 3 } },
   ],
   features: { dragDrop: true, addCard: true, autoRefresh: true, autoRefreshInterval: 60_000 },
   storageKey: 'baa-dashboard-cards',

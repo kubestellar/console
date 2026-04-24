@@ -7,9 +7,9 @@ export const riskRegisterDashboardConfig: UnifiedDashboardConfig = {
   route: '/enterprise/risk-register',
   statsType: 'security',
   cards: [
-    { id: 'rr-cluster-health', cardType: 'cluster_health', title: 'Cluster Health', position: { w: 4, h: 3 } },
-    { id: 'rr-workloads', cardType: 'workload_status', title: 'Workload Status', position: { w: 4, h: 3 } },
-    { id: 'rr-risk-register', cardType: 'risk_register', title: 'Risk Register Summary', position: { w: 4, h: 3 } },
+    { id: 'rr-compliance-score', cardType: 'compliance_score', title: 'Compliance Score', position: { w: 4, h: 3 } },
+    { id: 'rr-warning-events', cardType: 'warning_events', title: 'Warning Events', position: { w: 4, h: 3 } },
+    { id: 'rr-pod-issues', cardType: 'pod_issues', title: 'Pod Issues', position: { w: 4, h: 3 } },
   ],
   features: { dragDrop: true, addCard: true, autoRefresh: true, autoRefreshInterval: 60_000 },
   storageKey: 'risk-register-dashboard-cards',

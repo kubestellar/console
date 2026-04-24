@@ -7,9 +7,9 @@ export const incidentResponseDashboardConfig: UnifiedDashboardConfig = {
   route: '/enterprise/incident-response',
   statsType: 'security',
   cards: [
-    { id: 'ir-incidents-1', cardType: 'incident_response', title: 'Active Incidents', position: { w: 4, h: 3 } },
-    { id: 'ir-playbooks-1', cardType: 'incident_response', title: 'Playbooks', position: { w: 4, h: 3 } },
-    { id: 'ir-metrics-1', cardType: 'incident_response', title: 'MTTR Metrics', position: { w: 4, h: 3 } },
+    { id: 'ir-active-alerts', cardType: 'active_alerts', title: 'Active Alerts', position: { w: 4, h: 3 } },
+    { id: 'ir-pod-issues', cardType: 'pod_issues', title: 'Pod Issues', position: { w: 4, h: 3 } },
+    { id: 'ir-warning-events', cardType: 'warning_events', title: 'Warning Events', position: { w: 4, h: 3 } },
   ],
   features: { dragDrop: true, addCard: true, autoRefresh: true, autoRefreshInterval: 30_000 },
   storageKey: 'incident-response-dashboard-cards',

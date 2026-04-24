@@ -7,9 +7,9 @@ export const riskMatrixDashboardConfig: UnifiedDashboardConfig = {
   route: '/enterprise/risk-matrix',
   statsType: 'security',
   cards: [
-    { id: 'rm-cluster-health', cardType: 'cluster_health', title: 'Cluster Health', position: { w: 4, h: 3 } },
-    { id: 'rm-workloads', cardType: 'workload_status', title: 'Workload Status', position: { w: 4, h: 3 } },
-    { id: 'rm-risk-matrix', cardType: 'risk_matrix', title: 'Risk Matrix Summary', position: { w: 4, h: 3 } },
+    { id: 'rm-compliance-score', cardType: 'compliance_score', title: 'Compliance Score', position: { w: 4, h: 3 } },
+    { id: 'rm-fleet-compliance-heatmap', cardType: 'fleet_compliance_heatmap', title: 'Fleet Compliance Heatmap', position: { w: 4, h: 3 } },
+    { id: 'rm-active-alerts', cardType: 'active_alerts', title: 'Active Alerts', position: { w: 4, h: 3 } },
   ],
   features: { dragDrop: true, addCard: true, autoRefresh: true, autoRefreshInterval: 60_000 },
   storageKey: 'risk-matrix-dashboard-cards',

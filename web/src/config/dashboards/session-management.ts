@@ -8,8 +8,8 @@ export const sessionManagementDashboardConfig: UnifiedDashboardConfig = {
   statsType: 'security',
   cards: [
     { id: 'session-cluster-health', cardType: 'cluster_health', title: 'Cluster Health', position: { w: 4, h: 3 } },
-    { id: 'session-workloads', cardType: 'workload_status', title: 'Workload Status', position: { w: 4, h: 3 } },
-    { id: 'session-compliance', cardType: 'session_management', title: 'Session Summary', position: { w: 4, h: 3 } },
+    { id: 'session-active-alerts', cardType: 'active_alerts', title: 'Active Alerts', position: { w: 4, h: 3 } },
+    { id: 'session-service-status', cardType: 'service_status', title: 'Service Status', position: { w: 4, h: 3 } },
   ],
   features: { dragDrop: true, addCard: true, autoRefresh: true, autoRefreshInterval: 60_000 },
   storageKey: 'session-management-dashboard-cards',

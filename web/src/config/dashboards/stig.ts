@@ -8,8 +8,8 @@ export const stigDashboardConfig: UnifiedDashboardConfig = {
   statsType: 'security',
   cards: [
     { id: 'stig-cluster-health', cardType: 'cluster_health', title: 'Cluster Health', position: { w: 4, h: 3 } },
-    { id: 'stig-workloads', cardType: 'workload_status', title: 'Workload Status', position: { w: 4, h: 3 } },
-    { id: 'stig-compliance', cardType: 'stig_compliance', title: 'STIG Summary', position: { w: 4, h: 3 } },
+    { id: 'stig-kubescape-scan', cardType: 'kubescape_scan', title: 'Kubescape Scan', position: { w: 4, h: 3 } },
+    { id: 'stig-security-issues', cardType: 'security_issues', title: 'Security Issues', position: { w: 4, h: 3 } },
   ],
   features: { dragDrop: true, addCard: true, autoRefresh: true, autoRefreshInterval: 60_000 },
   storageKey: 'stig-dashboard-cards',
