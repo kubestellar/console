@@ -76,3 +76,4 @@ web/e2e/user-flows/test-results/
 
 # Storybook
 web/storybook-static/
+web/node_modules

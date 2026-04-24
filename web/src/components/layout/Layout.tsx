@@ -676,7 +676,7 @@ export function Layout({ children: _children }: LayoutProps) {
                   <div className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
                   <span>{t('layout.connectionLost')}</span>
                   {restartState === 'restarting' ? (
-                    <button disabled className="ml-1 flex items-center gap-1.5 px-2.5 py-1 bg-muted text-muted-foreground rounded text-xs cursor-wait">
+                    <button disabled className="ml-1 flex items-center gap-1.5 px-2.5 py-2 min-h-11 bg-muted text-muted-foreground rounded text-xs cursor-wait">
                       <Loader2 className="w-3 h-3 animate-spin" />
                       {t('layout.restarting')}
                     </button>
