@@ -285,6 +285,8 @@ export const CARD_TITLES: Record<string, string> = {
   spiffe_status: 'SPIFFE',
   // CNI (Container Network Interface) plugin status
   cni_status: 'CNI',
+  // SPIRE (SPIFFE Runtime Environment) — workload identity
+  spire_status: 'SPIRE',
   // TiKV distributed key-value store
   tikv_status: 'TiKV',
   // TUF (The Update Framework) repository metadata
@@ -627,6 +629,8 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   spiffe_status: 'SPIFFE/SPIRE workload identity: trust domain, SVID counts (x509/JWT), federated trust domains, and registration entries.',
   // CNI (Container Network Interface) plugin status
   cni_status: 'Container Network Interface plugin status: active plugin, per-node CNI readiness, pod network CIDR, and NetworkPolicy coverage across services.',
+  // SPIRE (SPIFFE Runtime Environment) — workload identity
+  spire_status: 'SPIRE workload identity — server pod health, agent DaemonSet coverage, attested agents, registration entries, and trust bundle age.',
   // TiKV distributed key-value store
   tikv_status: 'TiKV distributed key-value store: store nodes, region counts, leader counts, and capacity utilization across the cluster.',
   // TUF (The Update Framework) repository metadata

@@ -86,6 +86,7 @@ const PROJECT_TO_GITHUB_ORG: Record<string, string> = {
   volcano: 'volcano-sh',
   kubeedge: 'kubeedge',
   spiffe: 'spiffe',
+  spire: 'spiffe',
   notary: 'notaryproject',
 }
 

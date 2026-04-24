@@ -77,6 +77,7 @@ import { kserveStatusConfig } from './kserve-status'
 import { linkerdStatusConfig } from './linkerd-status'
 import { otelStatusConfig } from './otel-status'
 import { rookStatusConfig } from './rook-status'
+import { spireStatusConfig } from './spire-status'
 import { tikvStatusConfig } from './tikv-status'
 import { tufStatusConfig } from './tuf-status'
 import { vitessStatusConfig } from './vitess-status'
@@ -281,6 +282,7 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   linkerd_status: linkerdStatusConfig,
   otel_status: otelStatusConfig,
   rook_status: rookStatusConfig,
+  spire_status: spireStatusConfig,
   tikv_status: tikvStatusConfig,
   tuf_status: tufStatusConfig,
   vitess_status: vitessStatusConfig,

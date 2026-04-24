@@ -260,6 +260,7 @@ export const CARD_CATALOG = {
     { type: 'intoto_supply_chain', title: 'in-toto Supply Chain', description: 'Monitor supply chain security and verify layout steps across clusters', visualization: 'status' },
     { type: 'tuf_status', title: 'TUF', description: 'TUF repository role metadata — root, targets, snapshot, timestamp — with versions, expirations, and signing status', visualization: 'status' },
     { type: 'cloud_custodian_status', title: 'Cloud Custodian', description: 'Cloud Custodian policy runs — success / fail / dry-run counts, last-run timestamps, top resources acted on, and violations by severity', visualization: 'status' },
+    { type: 'spire_status', title: 'SPIRE', description: 'SPIRE workload identity — server pod health, agent DaemonSet coverage, attested agents, registration entries, and trust bundle age', visualization: 'status' },
     { type: 'falco_alerts', title: 'Falco Alerts', description: 'Runtime security monitoring - syscall anomalies, container escapes, privilege escalation', visualization: 'events' },
     { type: 'trivy_scan', title: 'Trivy Scanner', description: 'Vulnerability scanning for container images, IaC, and secrets', visualization: 'table' },
     { type: 'kubescape_scan', title: 'Kubescape', description: 'Security posture management and NSA/CISA hardening compliance', visualization: 'status' },

@@ -98,6 +98,8 @@ const RookStatus = safeLazy(() => import('./rook_status'), 'RookStatus')
 const SpiffeStatus = safeLazy(() => import('./spiffe_status'), 'SpiffeStatus')
 // CNI (Container Network Interface) plugin status card
 const CniStatus = safeLazy(() => import('./cni_status'), 'CniStatus')
+// SPIRE (SPIFFE Runtime Environment) workload identity card
+const SpireStatus = safeLazy(() => import('./spire_status'), 'SpireStatus')
 // TiKV distributed key-value store card
 const TikvStatus = safeLazy(() => import('./tikv_status'), 'TikvStatus')
 // TUF (The Update Framework) repository metadata card
@@ -761,6 +763,8 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   spiffe_status: SpiffeStatus,
   // CNI plugin status (Cilium, Calico, Flannel, etc.)
   cni_status: CniStatus,
+  // SPIRE (SPIFFE Runtime Environment) — workload identity
+  spire_status: SpireStatus,
   // TiKV distributed key-value store
   tikv_status: TikvStatus,
   // TUF (The Update Framework) repository metadata
@@ -1094,6 +1098,7 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   rook_status: () => import('./rook_status'),
   spiffe_status: () => import('./spiffe_status'),
   cni_status: () => import('./cni_status'),
+  spire_status: () => import('./spire_status'),
   tikv_status: () => import('./tikv_status'),
   tuf_status: () => import('./tuf_status'),
   vitess_status: () => import('./vitess_status'),
@@ -1713,6 +1718,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   rook_status: 6,
   spiffe_status: 6,
   cni_status: 6,
+  spire_status: 6,
   tikv_status: 6,
   tuf_status: 6,
   vitess_status: 6,

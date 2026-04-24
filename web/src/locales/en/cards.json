@@ -3290,6 +3290,27 @@
     "leaderCount_one": "{{count}} leader",
     "leaderCount_other": "{{count}} leaders"
   },
+  "spireStatus": {
+    "healthy": "Healthy",
+    "degraded": "Degraded",
+    "notInstalled": "SPIRE not detected",
+    "notInstalledHint": "No SPIRE server pods reachable. Deploy SPIRE (server + agent DaemonSet) to monitor workload identity issuance across the fleet.",
+    "version": "version",
+    "serverReplicas": "Server",
+    "attestedAgents": "Agents",
+    "registrationEntries": "Entries",
+    "trustBundleAge": "Bundle age",
+    "sectionServer": "SPIRE Server",
+    "sectionAgent": "Agent DaemonSet",
+    "noServerPods": "No SPIRE server pods reporting.",
+    "nodes": "nodes",
+    "misscheduled": "{{count}} misscheduled",
+    "phaseRunning": "Running",
+    "phasePending": "Pending",
+    "phaseFailed": "Failed",
+    "phaseSucceeded": "Succeeded",
+    "phaseUnknown": "Unknown"
+  },
   "tufStatus": {
     "healthy": "Healthy",
     "degraded": "Degraded",

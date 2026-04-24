@@ -170,6 +170,11 @@ export { useCachedCni } from './useCachedCni'
 // Named re-export (avoids `__testables` export-name collision with TiKV).
 
 export { useCachedOpenfeature } from './useCachedOpenfeature'
+// SPIRE (SPIFFE Runtime Environment) — useCachedSpire.ts
+// ============================================================================
+// Named re-export (avoids `__testables` export-name collision with other hooks).
+
+export { useCachedSpire } from './useCachedSpire'
 
 // ============================================================================
 // TiKV Distributed Key-Value Store — useCachedTikv.ts
