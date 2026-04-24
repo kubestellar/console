@@ -7,7 +7,6 @@
  * installed or the user is in demo mode.
  */
 
-import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { AlertTriangle, CheckCircle, Database, HardDrive, RefreshCw, Server } from 'lucide-react'
 import { useCachedTikv } from '../../../hooks/useCachedTikv'
