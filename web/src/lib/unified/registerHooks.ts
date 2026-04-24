@@ -1268,6 +1268,9 @@ function useUnifiedOpenfeatureStatus() {
     isLoading: result.showSkeleton,
     error: result.error ? new Error('Failed to fetch OpenFeature status') : null,
     refetch: () => { result.refetch() },
+  }
+}
+
 function useUnifiedSpireStatus() {
   const result = useCachedSpire()
   // Surface the SPIRE server pod list as the primary row set for generic
