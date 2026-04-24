@@ -254,10 +254,9 @@ const StatBlock = memo(function StatBlock({ block, data, hasData, isLoading, his
           + leading-tight so long single-word labels (e.g. "Namespaces",
           "Deployments") wrap mid-word instead of being clipped with an
           ellipsis at narrow card widths.
-          #9858 — `wrap-break-word` (overflow-wrap) only breaks unbreakable
-          words as a last resort; without `word-break: break-word` some
-          browsers still ellipsis-truncate long single words on the
-          /deployments stats row. */}
+          `wrap-break-word` (overflow-wrap) only breaks unbreakable words as
+          a last resort; without `word-break: break-word` some browsers still
+          ellipsis-truncate long single words on the /deployments stats row. */}
       <div className="flex items-start gap-2 mb-2 min-w-0">
         <IconComponent className={`w-5 h-5 shrink-0 mt-0.5 ${isLoading ? 'text-muted-foreground/30' : colorClass}`} />
         <span className="text-sm text-muted-foreground wrap-break-word [word-break:break-word] leading-tight min-w-0" title={block.name}>{wrapAbbreviations(block.name)}</span>
