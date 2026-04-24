@@ -152,9 +152,21 @@ export function Welcome() {
   const [cardCount, setCardCount] = useState(HERO_STATS_PLACEHOLDER)
 
   useEffect(() => {
-    import('../components/cards/cardRegistry').then(m => {
-      setCardCount(String(m.getRegisteredCardTypes().length))
-    })
+    // #9835: guard against (a) setState after unmount (cancelled flag) and
+    // (b) unhandled promise rejection if the chunk fails to load (.catch()).
+    let cancelled = false
+    import('../components/cards/cardRegistry')
+      .then(m => {
+        if (cancelled) return
+        setCardCount(String(m.getRegisteredCardTypes().length))
+      })
+      .catch(err => {
+        // Fall back to placeholder; leave cardCount as the initial hero value.
+        console.warn('Welcome: failed to load cardRegistry chunk', err)
+      })
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   useEffect(() => {

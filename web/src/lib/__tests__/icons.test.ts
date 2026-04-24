@@ -49,6 +49,15 @@ describe('icons', () => {
       expect(iconRegistry.TrendingUp).toBeDefined()
       expect(iconRegistry.TrendingDown).toBeDefined()
     })
+
+    // Regression test for #9834: these icons were appended at the end of the
+    // import list and registry (out of alphabetical order) in #9820 and could
+    // be accidentally dropped during future refactors.
+    it('includes icons added in #9820 (BadgeCheck, GitCommitHorizontal, Handshake)', () => {
+      expect(iconRegistry.BadgeCheck).toBeDefined()
+      expect(iconRegistry.GitCommitHorizontal).toBeDefined()
+      expect(iconRegistry.Handshake).toBeDefined()
+    })
   })
 
   describe('getIcon', () => {

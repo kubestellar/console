@@ -25,6 +25,7 @@ import {
   ArrowUpFromLine,
   ArrowUpRight,
   Award,
+  BadgeCheck,
   Banana,
   BarChart2,
   BarChart3,
@@ -108,6 +109,7 @@ import {
   Ghost,
   Gift,
   GitBranch,
+  GitCommitHorizontal,
   GitCompare,
   GitMerge,
   GitPullRequest,
@@ -117,6 +119,7 @@ import {
   Grid3X3,
   GripVertical,
   Hammer,
+  Handshake,
   HardDrive,
   Heart,
   HeartPulse,
@@ -246,9 +249,6 @@ import {
   Zap,
   ZoomIn,
   ZoomOut,
-  Handshake,
-  BadgeCheck,
-  GitCommitHorizontal,
 } from 'lucide-react'
 
 export type { LucideIcon }
@@ -275,6 +275,7 @@ export const iconRegistry: Record<string, LucideIcon> = {
   ArrowUpFromLine,
   ArrowUpRight,
   Award,
+  BadgeCheck,
   Banana,
   BarChart2,
   BarChart3,
@@ -358,6 +359,7 @@ export const iconRegistry: Record<string, LucideIcon> = {
   Ghost,
   Gift,
   GitBranch,
+  GitCommitHorizontal,
   GitCompare,
   GitMerge,
   GitPullRequest,
@@ -367,6 +369,7 @@ export const iconRegistry: Record<string, LucideIcon> = {
   Grid3X3,
   GripVertical,
   Hammer,
+  Handshake,
   HardDrive,
   Heart,
   HeartPulse,
@@ -496,9 +499,6 @@ export const iconRegistry: Record<string, LucideIcon> = {
   Zap,
   ZoomIn,
   ZoomOut,
-  Handshake,
-  BadgeCheck,
-  GitCommitHorizontal,
 }
 
 /**
