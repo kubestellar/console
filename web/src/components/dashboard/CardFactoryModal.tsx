@@ -564,7 +564,8 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
   const [t1Layout, setT1Layout] = useState<'list' | 'stats' | 'stats-and-list'>('list')
   const [t1Columns, setT1Columns] = useState<DynamicCardColumn[]>([
     { field: 'name', label: 'Name' },
-    { field: 'status', label: 'Status', format: 'badge', badgeColors: { healthy: 'bg-green-500/20 text-green-400', error: 'bg-red-500/20 text-red-400' } },
+    // #9881 — Use design-system default shade (bg-*-500/10 + text-*-400) so generated cards match built-in cards.
+    { field: 'status', label: 'Status', format: 'badge', badgeColors: { healthy: 'bg-green-500/10 text-green-400', error: 'bg-red-500/10 text-red-400' } },
   ])
   const [t1DataJson, setT1DataJson] = useState(T1_SAMPLE_DATA_JSON)
   // #9061 — Track whether the user has already focused the JSON textarea

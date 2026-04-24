@@ -455,12 +455,13 @@ export function HardwareHealthCard() {
         </div>
       )}
       {/* Status Summary */}
+      {/* #9881 — Normalize tile backgrounds to the design-system pattern (bg-*-500/10 + border-*-500/20). */}
       <div className="grid grid-cols-2 @md:grid-cols-3 gap-1.5 @md:gap-2 mb-4">
         <div className={cn(
           'p-2 rounded-lg border',
           criticalCount > 0
-            ? 'bg-red-500/20 border-red-500/20'
-            : 'bg-green-500/20 border-green-500/20'
+            ? 'bg-red-500/10 border-red-500/20'
+            : 'bg-green-500/10 border-green-500/20'
         )}>
           <div className="text-xl font-bold text-foreground">{criticalCount}</div>
           <div className={cn('text-2xs', criticalCount > 0 ? 'text-red-400' : 'text-green-400')}>
@@ -470,8 +471,8 @@ export function HardwareHealthCard() {
         <div className={cn(
           'p-2 rounded-lg border',
           warningCount > 0
-            ? 'bg-yellow-500/20 border-yellow-500/20'
-            : 'bg-green-500/20 border-green-500/20'
+            ? 'bg-yellow-500/10 border-yellow-500/20'
+            : 'bg-green-500/10 border-green-500/20'
         )}>
           <div className="text-xl font-bold text-foreground">{warningCount}</div>
           <div className={cn('text-2xs', warningCount > 0 ? 'text-yellow-400' : 'text-green-400')}>

@@ -38,7 +38,8 @@ export function ProwStatus({ config: _config }: ProwStatusProps) {
     <div className="h-full flex flex-col min-h-card">
       {/* Status badge */}
       <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
-        <span className={`text-xs px-1.5 py-0.5 rounded ${status.healthy ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+        {/* #9881 — Align status badge shades with design-system pattern (bg-*-500/10 + text-*-400 + border-*-500/20). */}
+        <span className={`text-xs px-1.5 py-0.5 rounded border ${status.healthy ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
           {status.healthy ? 'Healthy' : 'Unhealthy'}
         </span>
         <RefreshIndicator

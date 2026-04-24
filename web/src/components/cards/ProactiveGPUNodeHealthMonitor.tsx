@@ -47,10 +47,12 @@ const CHECK_LABELS: Record<string, string> = {
   gpu_events: 'GPU Events' }
 
 function StatusBadge({ status }: { status: string }) {
+  // #9881 — Normalize status colors to the design-system pattern
+  // (text-*-400 with bg-*-500/10) used across cilium_status and other cards.
   const config = {
-    healthy: { icon: CheckCircle, bg: 'bg-green-500/15', text: 'text-green-400', label: 'Healthy' },
-    degraded: { icon: AlertTriangle, bg: 'bg-yellow-500/15', text: 'text-yellow-400', label: 'Degraded' },
-    unhealthy: { icon: XCircle, bg: 'bg-red-500/15', text: 'text-red-400', label: 'Unhealthy' } }[status] || { icon: AlertTriangle, bg: 'bg-gray-500/15 dark:bg-gray-400/15', text: 'text-muted-foreground', label: status }
+    healthy: { icon: CheckCircle, bg: 'bg-green-500/10', text: 'text-green-400', label: 'Healthy' },
+    degraded: { icon: AlertTriangle, bg: 'bg-yellow-500/10', text: 'text-yellow-400', label: 'Degraded' },
+    unhealthy: { icon: XCircle, bg: 'bg-red-500/10', text: 'text-red-400', label: 'Unhealthy' } }[status] || { icon: AlertTriangle, bg: 'bg-gray-500/10 dark:bg-gray-400/10', text: 'text-muted-foreground', label: status }
 
   const Icon = config.icon
   return (
@@ -525,11 +527,12 @@ function ProactiveGPUNodeHealthMonitorInternal() {
     <div className="flex flex-col gap-2 h-full">
       {/* Summary row */}
       <div className="flex gap-2">
-        <div className={cn('flex-1 rounded-lg px-3 py-2 text-center', summary.unhealthy > 0 ? 'bg-red-500/15 ring-1 ring-red-500/30' : 'bg-secondary')}>
+        {/* #9881 — Normalize summary backgrounds to the /10 bg + /20 ring pattern used by cilium_status. */}
+        <div className={cn('flex-1 rounded-lg px-3 py-2 text-center', summary.unhealthy > 0 ? 'bg-red-500/10 ring-1 ring-red-500/20' : 'bg-secondary')}>
           <div className={cn('text-lg font-bold', summary.unhealthy > 0 ? 'text-red-400' : 'text-white/30')}>{summary.unhealthy}</div>
           <div className="text-2xs text-white/40 uppercase tracking-wider">{t('cards:gpuNodeHealth.unhealthy')}</div>
         </div>
-        <div className={cn('flex-1 rounded-lg px-3 py-2 text-center', summary.degraded > 0 ? 'bg-yellow-500/15 ring-1 ring-yellow-500/30' : 'bg-secondary')}>
+        <div className={cn('flex-1 rounded-lg px-3 py-2 text-center', summary.degraded > 0 ? 'bg-yellow-500/10 ring-1 ring-yellow-500/20' : 'bg-secondary')}>
           <div className={cn('text-lg font-bold', summary.degraded > 0 ? 'text-yellow-400' : 'text-white/30')}>{summary.degraded}</div>
           <div className="text-2xs text-white/40 uppercase tracking-wider">{t('cards:gpuNodeHealth.degraded')}</div>
         </div>
