@@ -6,6 +6,8 @@ import {
   RefreshCw, Clock, Building2, Cloud, Server, Mail,
 } from 'lucide-react'
 import { authFetch } from '../../lib/api'
+import { DashboardHeader } from '../shared/DashboardHeader'
+import { RotatingTip } from '../ui/RotatingTip'
 
 interface BAAgreement {
   id: string; provider: string; provider_type: string
@@ -41,6 +43,7 @@ export const BAADashboardContent = memo(function BAADashboardContent() {
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'agreements' | 'alerts'>('agreements')
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [autoRefresh, setAutoRefresh] = useState(false)
 
   const fetchData = async () => {
     setLoading(true)
@@ -86,21 +89,16 @@ export const BAADashboardContent = memo(function BAADashboardContent() {
 
   return (
     <div className="space-y-6 p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-3">
-            <FileText className="w-7 h-7 text-blue-400" />
-            Business Associate Agreements
-          </h1>
-          <p className="text-gray-400 mt-1">
-            HIPAA BAA tracking across cloud providers and vendors
-          </p>
-        </div>
-        <button onClick={fetchData} className="p-2 hover:bg-white/10 rounded-lg transition-colors" title="Refresh">
-          <RefreshCw className="w-5 h-5 text-gray-400" />
-        </button>
-      </div>
+      <DashboardHeader
+        title="Business Associate Agreements"
+        subtitle="HIPAA BAA tracking across cloud providers and vendors"
+        isFetching={loading}
+        onRefresh={fetchData}
+        autoRefresh={autoRefresh}
+        onAutoRefreshChange={setAutoRefresh}
+        autoRefreshId="baa-auto-refresh"
+        rightExtra={<RotatingTip page="compliance" />}
+      />
 
       {/* Summary Cards */}
       {summary && (

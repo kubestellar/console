@@ -6,6 +6,8 @@ import {
   Shield, ArrowRight, Clock
 } from 'lucide-react'
 import { authFetch } from '../../lib/api'
+import { DashboardHeader } from '../shared/DashboardHeader'
+import { RotatingTip } from '../ui/RotatingTip'
 
 interface Control {
   id: string
@@ -73,6 +75,7 @@ export const NISTDashboardContent = memo(function NISTDashboardContent() {
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'families' | 'mappings' | 'summary'>('families')
   const [familyFilter, setFamilyFilter] = useState<string>('all')
+  const [autoRefresh, setAutoRefresh] = useState(false)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -123,13 +126,16 @@ export const NISTDashboardContent = memo(function NISTDashboardContent() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Shield className="w-8 h-8 text-blue-400" />
-        <div>
-          <h1 className="text-2xl font-bold text-white">NIST 800-53 Control Mapping</h1>
-          <p className="text-gray-400">Federal information security controls mapped to Kubernetes infrastructure</p>
-        </div>
-      </div>
+      <DashboardHeader
+        title="NIST 800-53 Control Mapping"
+        subtitle="Federal information security controls mapped to Kubernetes infrastructure"
+        isFetching={loading}
+        onRefresh={fetchData}
+        autoRefresh={autoRefresh}
+        onAutoRefreshChange={setAutoRefresh}
+        autoRefreshId="nist-auto-refresh"
+        rightExtra={<RotatingTip page="compliance" />}
+      />
 
       {/* Summary cards */}
       {summary && (

@@ -1,4 +1,4 @@
-import { useState, useEffect, memo } from 'react'
+import { useState, useEffect, memo, useCallback } from 'react'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { riskAppetiteDashboardConfig } from '../../config/dashboards/risk-appetite'
 import {
@@ -6,6 +6,8 @@ import {
   TrendingUp, ArrowRight,
 } from 'lucide-react'
 import { authFetch } from '../../lib/api'
+import { DashboardHeader } from '../shared/DashboardHeader'
+import { RotatingTip } from '../ui/RotatingTip'
 
 // ── Types ─────────────────────────────────────────────────────────────
 
@@ -69,27 +71,29 @@ export const RiskAppetiteDashboardContent = memo(function RiskAppetiteDashboardC
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'appetite' | 'kris' | 'trends'>('appetite')
+  const [autoRefresh, setAutoRefresh] = useState(false)
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const [tRes, kRes, sRes] = await Promise.all([
-          authFetch('/api/v1/compliance/erm/risk-appetite/thresholds'),
-          authFetch('/api/v1/compliance/erm/risk-appetite/kris'),
-          authFetch('/api/v1/compliance/erm/risk-appetite/summary'),
-        ])
-        if (!tRes.ok || !kRes.ok || !sRes.ok) throw new Error('Failed to fetch risk appetite data')
-        setThresholds(await tRes.json())
-        setKRIs(await kRes.json())
-        setSummary(await sRes.json())
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Unknown error')
-      } finally {
-        setLoading(false)
-      }
+  const fetchData = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const [tRes, kRes, sRes] = await Promise.all([
+        authFetch('/api/v1/compliance/erm/risk-appetite/thresholds'),
+        authFetch('/api/v1/compliance/erm/risk-appetite/kris'),
+        authFetch('/api/v1/compliance/erm/risk-appetite/summary'),
+      ])
+      if (!tRes.ok || !kRes.ok || !sRes.ok) throw new Error('Failed to fetch risk appetite data')
+      setThresholds(await tRes.json())
+      setKRIs(await kRes.json())
+      setSummary(await sRes.json())
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Unknown error')
+    } finally {
+      setLoading(false)
     }
-    load()
   }, [])
+
+  useEffect(() => { fetchData() }, [fetchData])
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
@@ -109,13 +113,16 @@ export const RiskAppetiteDashboardContent = memo(function RiskAppetiteDashboardC
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <Gauge className="w-8 h-8 text-orange-400" />
-        <div>
-          <h1 className="text-2xl font-bold text-white">Risk Appetite</h1>
-          <p className="text-gray-400">Risk tolerance monitoring, KRI tracking, and appetite vs exposure analysis</p>
-        </div>
-      </div>
+      <DashboardHeader
+        title="Risk Appetite"
+        subtitle="Organizational risk appetite definition, thresholds, and tracking"
+        isFetching={loading}
+        onRefresh={fetchData}
+        autoRefresh={autoRefresh}
+        onAutoRefreshChange={setAutoRefresh}
+        autoRefreshId="risk-appetite-auto-refresh"
+        rightExtra={<RotatingTip page="compliance" />}
+      />
 
       {/* Summary cards */}
       {summary && (

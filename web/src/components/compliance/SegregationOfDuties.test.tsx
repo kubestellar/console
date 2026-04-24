@@ -2,6 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { SegregationOfDutiesContent as SegregationOfDuties } from './SegregationOfDuties'
 
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
+}))
+
 const mockSummary = {
   total_rules: 5, total_principals: 10, total_violations: 5,
   by_severity: { critical: 2, high: 2, medium: 1 },

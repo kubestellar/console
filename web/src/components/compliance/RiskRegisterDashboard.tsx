@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, memo } from 'react'
+import { useState, useEffect, useMemo, memo, useCallback } from 'react'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { riskRegisterDashboardConfig } from '../../config/dashboards/risk-register'
 import {
@@ -6,6 +6,8 @@ import {
   ChevronRight, X, Filter,
 } from 'lucide-react'
 import { authFetch } from '../../lib/api'
+import { DashboardHeader } from '../shared/DashboardHeader'
+import { RotatingTip } from '../ui/RotatingTip'
 
 // ── Types ─────────────────────────────────────────────────────────────
 
@@ -85,27 +87,29 @@ export const RiskRegisterDashboardContent = memo(function RiskRegisterDashboardC
   const [statusFilter, setStatusFilter] = useState('All')
   const [severityFilter, setSeverityFilter] = useState('All')
   const [selectedRisk, setSelectedRisk] = useState<Risk | null>(null)
+  const [autoRefresh, setAutoRefresh] = useState(false)
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const [rRes, cRes, sRes] = await Promise.all([
-          authFetch('/api/v1/compliance/erm/risk-register/risks'),
-          authFetch('/api/v1/compliance/erm/risk-register/categories'),
-          authFetch('/api/v1/compliance/erm/risk-register/summary'),
-        ])
-        if (!rRes.ok || !cRes.ok || !sRes.ok) throw new Error('Failed to fetch risk register data')
-        setRisks(await rRes.json())
-        setCategories(await cRes.json())
-        setSummary(await sRes.json())
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Unknown error')
-      } finally {
-        setLoading(false)
-      }
+  const fetchData = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const [rRes, cRes, sRes] = await Promise.all([
+        authFetch('/api/v1/compliance/erm/risk-register/risks'),
+        authFetch('/api/v1/compliance/erm/risk-register/categories'),
+        authFetch('/api/v1/compliance/erm/risk-register/summary'),
+      ])
+      if (!rRes.ok || !cRes.ok || !sRes.ok) throw new Error('Failed to fetch risk register data')
+      setRisks(await rRes.json())
+      setCategories(await cRes.json())
+      setSummary(await sRes.json())
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Unknown error')
+    } finally {
+      setLoading(false)
     }
-    load()
   }, [])
+
+  useEffect(() => { fetchData() }, [fetchData])
 
   const filteredRisks = useMemo(() => {
     return risks.filter(r => {
@@ -132,13 +136,16 @@ export const RiskRegisterDashboardContent = memo(function RiskRegisterDashboardC
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <ClipboardList className="w-8 h-8 text-orange-400" />
-        <div>
-          <h1 className="text-2xl font-bold text-white">Risk Register</h1>
-          <p className="text-gray-400">Comprehensive risk tracking with mitigation plans and controls</p>
-        </div>
-      </div>
+      <DashboardHeader
+        title="Risk Register"
+        subtitle="Comprehensive risk tracking with mitigation plans and controls"
+        isFetching={loading}
+        onRefresh={fetchData}
+        autoRefresh={autoRefresh}
+        onAutoRefreshChange={setAutoRefresh}
+        autoRefreshId="risk-register-auto-refresh"
+        rightExtra={<RotatingTip page="compliance" />}
+      />
 
       {/* Summary cards */}
       {summary && (

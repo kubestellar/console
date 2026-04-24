@@ -4,7 +4,7 @@
  * Lets users pick a framework and cluster, choose PDF or JSON format,
  * and download a timestamped compliance report.
  */
-import { useState, useEffect, useMemo, memo } from 'react'
+import { useState, useEffect, useMemo, useCallback, memo } from 'react'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { complianceReportsDashboardConfig } from '../../config/dashboards/compliance-reports'
 import { FileText, Download, Shield, Loader2 } from 'lucide-react'
@@ -12,11 +12,13 @@ import { useComplianceFrameworks, type Framework } from '../../hooks/useComplian
 import { useClusters } from '../../hooks/useMCP'
 import { authFetch } from '../../lib/api'
 import { Select } from '../ui/Select'
+import { DashboardHeader } from '../shared/DashboardHeader'
+import { RotatingTip } from '../ui/RotatingTip'
 
 type ReportFormat = 'pdf' | 'json'
 
 export const ComplianceReportsContent = memo(function ComplianceReportsContent() {
-  const { frameworks, isLoading: fwLoading } = useComplianceFrameworks()
+  const { frameworks, isLoading: fwLoading, refetch } = useComplianceFrameworks()
   const { clusters } = useClusters()
   const clusterNames = useMemo(() => clusters?.map((c: { name: string }) => c.name) ?? [], [clusters])
 
@@ -26,6 +28,7 @@ export const ComplianceReportsContent = memo(function ComplianceReportsContent()
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  const [autoRefresh, setAutoRefresh] = useState(false)
 
   // Auto-select first framework and cluster when data loads
   useEffect(() => {
@@ -86,16 +89,16 @@ export const ComplianceReportsContent = memo(function ComplianceReportsContent()
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="p-2 rounded-lg bg-indigo-500/10">
-          <FileText className="w-6 h-6 text-indigo-400" />
-        </div>
-        <div>
-          <h1 className="text-xl font-semibold text-zinc-100">Compliance Reports</h1>
-          <p className="text-sm text-zinc-400">Generate audit-ready compliance reports in PDF or JSON format</p>
-        </div>
-      </div>
+      <DashboardHeader
+        title="Compliance Reports"
+        subtitle="Generate audit-ready compliance reports in PDF or JSON format"
+        isFetching={fwLoading}
+        onRefresh={refetch}
+        autoRefresh={autoRefresh}
+        onAutoRefreshChange={setAutoRefresh}
+        autoRefreshId="reports-auto-refresh"
+        rightExtra={<RotatingTip page="compliance" />}
+      />
 
       {/* Generator Card */}
       <div className="rounded-xl border border-zinc-700/50 bg-zinc-800/50 p-6 space-y-5">

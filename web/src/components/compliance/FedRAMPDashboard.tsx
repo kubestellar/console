@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, memo } from 'react'
+import { useState, useEffect, useMemo, memo, useCallback } from 'react'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { fedrampDashboardConfig } from '../../config/dashboards/fedramp'
 import {
@@ -6,6 +6,8 @@ import {
   Shield, ArrowRight, Clock
 } from 'lucide-react'
 import { authFetch } from '../../lib/api'
+import { DashboardHeader } from '../shared/DashboardHeader'
+import { RotatingTip } from '../ui/RotatingTip'
 
 interface Control {
   id: string
@@ -85,27 +87,29 @@ export const FedRAMPDashboardContent = memo(function FedRAMPDashboardContent() {
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'controls' | 'poams' | 'readiness'>('controls')
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [autoRefresh, setAutoRefresh] = useState(false)
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const [cRes, pRes, sRes] = await Promise.all([
-          authFetch('/api/compliance/fedramp/controls'),
-          authFetch('/api/compliance/fedramp/poams'),
-          authFetch('/api/compliance/fedramp/score'),
-        ])
-        if (!cRes.ok || !pRes.ok || !sRes.ok) throw new Error('Failed to fetch FedRAMP data')
-        setControls(await cRes.json())
-        setPOAMs(await pRes.json())
-        setScore(await sRes.json())
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Unknown error')
-      } finally {
-        setLoading(false)
-      }
+  const fetchData = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const [cRes, pRes, sRes] = await Promise.all([
+        authFetch('/api/compliance/fedramp/controls'),
+        authFetch('/api/compliance/fedramp/poams'),
+        authFetch('/api/compliance/fedramp/score'),
+      ])
+      if (!cRes.ok || !pRes.ok || !sRes.ok) throw new Error('Failed to fetch FedRAMP data')
+      setControls(await cRes.json())
+      setPOAMs(await pRes.json())
+      setScore(await sRes.json())
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Unknown error')
+    } finally {
+      setLoading(false)
     }
-    load()
   }, [])
+
+  useEffect(() => { fetchData() }, [fetchData])
 
   const filteredControls = useMemo(() => {
     if (statusFilter === 'all') return controls
@@ -127,13 +131,16 @@ export const FedRAMPDashboardContent = memo(function FedRAMPDashboardContent() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Shield className="w-8 h-8 text-blue-400" />
-        <div>
-          <h1 className="text-2xl font-bold text-white">FedRAMP Readiness</h1>
-          <p className="text-gray-400">Federal Risk and Authorization Management Program compliance assessment</p>
-        </div>
-      </div>
+      <DashboardHeader
+        title="FedRAMP Readiness"
+        subtitle="Federal Risk and Authorization Management Program compliance assessment"
+        isFetching={loading}
+        onRefresh={fetchData}
+        autoRefresh={autoRefresh}
+        onAutoRefreshChange={setAutoRefresh}
+        autoRefreshId="fedramp-auto-refresh"
+        rightExtra={<RotatingTip page="compliance" />}
+      />
 
       {/* Summary cards */}
       {score && (

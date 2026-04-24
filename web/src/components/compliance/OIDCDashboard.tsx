@@ -6,6 +6,8 @@ import {
   RefreshCw, Users, ShieldCheck, Fingerprint, Clock,
 } from 'lucide-react'
 import { authFetch } from '../../lib/api'
+import { DashboardHeader } from '../shared/DashboardHeader'
+import { RotatingTip } from '../ui/RotatingTip'
 
 interface OIDCProvider {
   id: string; name: string; issuer_url: string; status: string
@@ -39,6 +41,7 @@ export const OIDCDashboardContent = memo(function OIDCDashboardContent() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'providers' | 'sessions'>('providers')
+  const [autoRefresh, setAutoRefresh] = useState(false)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -79,21 +82,16 @@ export const OIDCDashboardContent = memo(function OIDCDashboardContent() {
 
   return (
     <div className="space-y-6 p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-3">
-            <KeyRound className="w-7 h-7 text-blue-400" />
-            OIDC Federation
-          </h1>
-          <p className="text-gray-400 mt-1">
-            Identity provider federation and session management
-          </p>
-        </div>
-        <button onClick={fetchData} className="p-2 hover:bg-white/10 rounded-lg transition-colors" title="Refresh">
-          <RefreshCw className="w-5 h-5 text-gray-400" />
-        </button>
-      </div>
+      <DashboardHeader
+        title="OIDC Federation"
+        subtitle="Identity provider federation and session management"
+        isFetching={loading}
+        onRefresh={fetchData}
+        autoRefresh={autoRefresh}
+        onAutoRefreshChange={setAutoRefresh}
+        autoRefreshId="oidc-auto-refresh"
+        rightExtra={<RotatingTip page="compliance" />}
+      />
 
       {/* Summary Cards */}
       {summary && (

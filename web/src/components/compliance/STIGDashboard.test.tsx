@@ -10,6 +10,10 @@ const mockFindings = [
 ]
 const mockSummary = { compliance_score: 76, total_findings: 120, open: 14, cat_i_open: 3, cat_ii_open: 8, cat_iii_open: 3, evaluated_at: new Date().toISOString() }
 
+
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
+}))
 vi.mock('../../lib/api', () => ({
   authFetch: vi.fn((url: string) => {
     if (url.includes('/benchmarks')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockBenchmarks) })

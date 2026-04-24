@@ -4,7 +4,7 @@
  * Package inventory, vulnerability scanning, license compliance,
  * and dependency tree visualization.
  */
-import { useState, useEffect, memo } from 'react'
+import { useState, useEffect, memo, useCallback } from 'react'
 import {
   Package, CheckCircle2, Loader2, AlertTriangle,
   XCircle, Shield, FileText
@@ -12,6 +12,8 @@ import {
 import { authFetch } from '../../lib/api'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { sbomDashboardConfig } from '../../config/dashboards/sbom'
+import { DashboardHeader } from '../shared/DashboardHeader'
+import { RotatingTip } from '../ui/RotatingTip'
 
 // ── Types ───────────────────────────────────────────────────────────────
 
@@ -81,27 +83,29 @@ export const SBOMDashboardContent = memo(function SBOMDashboardContent() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'packages' | 'vulnerabilities'>('packages')
+  const [autoRefresh, setAutoRefresh] = useState(false)
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const [pRes, vRes, sRes] = await Promise.all([
-          authFetch('/api/v1/compliance/sbom/packages'),
-          authFetch('/api/v1/compliance/sbom/vulnerabilities'),
-          authFetch('/api/v1/compliance/sbom/summary'),
-        ])
-        if (!pRes.ok || !vRes.ok || !sRes.ok) throw new Error('Failed to fetch SBOM data')
-        setPackages(await pRes.json())
-        setVulnerabilities(await vRes.json())
-        setSummary(await sRes.json())
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Unknown error')
-      } finally {
-        setLoading(false)
-      }
+  const fetchData = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const [pRes, vRes, sRes] = await Promise.all([
+        authFetch('/api/v1/compliance/sbom/packages'),
+        authFetch('/api/v1/compliance/sbom/vulnerabilities'),
+        authFetch('/api/v1/compliance/sbom/summary'),
+      ])
+      if (!pRes.ok || !vRes.ok || !sRes.ok) throw new Error('Failed to fetch SBOM data')
+      setPackages(await pRes.json())
+      setVulnerabilities(await vRes.json())
+      setSummary(await sRes.json())
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Unknown error')
+    } finally {
+      setLoading(false)
     }
-    load()
   }, [])
+
+  useEffect(() => { fetchData() }, [fetchData])
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
@@ -126,13 +130,16 @@ export const SBOMDashboardContent = memo(function SBOMDashboardContent() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <Package className="w-8 h-8 text-blue-400" />
-        <div>
-          <h1 className="text-2xl font-bold text-white">SBOM Manager</h1>
-          <p className="text-gray-400">Software bill of materials, vulnerability tracking, and license compliance</p>
-        </div>
-      </div>
+      <DashboardHeader
+        title="SBOM Manager"
+        subtitle="Software bill of materials, vulnerability tracking, and license compliance"
+        isFetching={loading}
+        onRefresh={fetchData}
+        autoRefresh={autoRefresh}
+        onAutoRefreshChange={setAutoRefresh}
+        autoRefreshId="sbom-auto-refresh"
+        rightExtra={<RotatingTip page="compliance" />}
+      />
 
       {/* Summary stats */}
       {summary && (

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, memo } from 'react'
+import { useState, useEffect, useMemo, useCallback, memo } from 'react'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { airgapDashboardConfig } from '../../config/dashboards/airgap'
 import {
@@ -6,6 +6,8 @@ import {
   ArrowRight, WifiOff
 } from 'lucide-react'
 import { authFetch } from '../../lib/api'
+import { DashboardHeader } from '../shared/DashboardHeader'
+import { RotatingTip } from '../ui/RotatingTip'
 
 interface Requirement {
   id: string
@@ -72,27 +74,29 @@ export const AirGapDashboardContent = memo(function AirGapDashboardContent() {
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'requirements' | 'clusters' | 'summary'>('requirements')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
+  const [autoRefresh, setAutoRefresh] = useState(false)
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const [rRes, cRes, sRes] = await Promise.all([
-          authFetch('/api/compliance/airgap/requirements'),
-          authFetch('/api/compliance/airgap/clusters'),
-          authFetch('/api/compliance/airgap/summary'),
-        ])
-        if (!rRes.ok || !cRes.ok || !sRes.ok) throw new Error('Failed to fetch air-gap data')
-        setRequirements(await rRes.json())
-        setClusters(await cRes.json())
-        setSummary(await sRes.json())
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Unknown error')
-      } finally {
-        setLoading(false)
-      }
+  const fetchData = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const [rRes, cRes, sRes] = await Promise.all([
+        authFetch('/api/compliance/airgap/requirements'),
+        authFetch('/api/compliance/airgap/clusters'),
+        authFetch('/api/compliance/airgap/summary'),
+      ])
+      if (!rRes.ok || !cRes.ok || !sRes.ok) throw new Error('Failed to fetch air-gap data')
+      setRequirements(await rRes.json())
+      setClusters(await cRes.json())
+      setSummary(await sRes.json())
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Unknown error')
+    } finally {
+      setLoading(false)
     }
-    load()
   }, [])
+
+  useEffect(() => { fetchData() }, [fetchData])
 
   const filteredRequirements = useMemo(() => {
     if (categoryFilter === 'all') return requirements
@@ -114,13 +118,16 @@ export const AirGapDashboardContent = memo(function AirGapDashboardContent() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <WifiOff className="w-8 h-8 text-blue-400" />
-        <div>
-          <h1 className="text-2xl font-bold text-white">Air-Gap Readiness</h1>
-          <p className="text-gray-400">Disconnected environment readiness assessment for Kubernetes clusters</p>
-        </div>
-      </div>
+      <DashboardHeader
+        title="Air-Gap Readiness"
+        subtitle="Disconnected environment readiness assessment for Kubernetes clusters"
+        isFetching={loading}
+        onRefresh={fetchData}
+        autoRefresh={autoRefresh}
+        onAutoRefreshChange={setAutoRefresh}
+        autoRefreshId="airgap-auto-refresh"
+        rightExtra={<RotatingTip page="compliance" />}
+      />
 
       {/* Summary cards */}
       {summary && (

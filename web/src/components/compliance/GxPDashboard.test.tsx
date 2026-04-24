@@ -18,6 +18,10 @@ const mockSignatures = [
 ]
 const mockChain = { valid: true, total_records: 8, verified_records: 8, broken_at_index: -1, verified_at: '2026-04-23T10:00:00Z', message: 'Hash chain intact' }
 
+
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
+}))
 vi.mock('../../lib/api', () => ({
   authFetch: vi.fn((url: string) => {
     if (url.includes('/summary')) return ok(mockSummary)

@@ -6,6 +6,8 @@ import {
   Clock, GitCommit, Loader2, RefreshCw, Filter, User, FileText,
 } from 'lucide-react'
 import { authFetch } from '../../lib/api'
+import { DashboardHeader } from '../shared/DashboardHeader'
+import { RotatingTip } from '../ui/RotatingTip'
 import { Select } from '../ui/Select'
 
 interface ChangeRecord {
@@ -68,6 +70,7 @@ export const ChangeControlAuditContent = memo(function ChangeControlAuditContent
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [filterApproval, setFilterApproval] = useState('all')
+  const [autoRefresh, setAutoRefresh] = useState(false)
   const [activeTab, setActiveTab] = useState<'changes' | 'violations' | 'policies'>('changes')
 
   const fetchData = async () => {
@@ -114,16 +117,16 @@ export const ChangeControlAuditContent = memo(function ChangeControlAuditContent
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-violet-500/10"><ClipboardCheck className="w-6 h-6 text-violet-400" /></div>
-          <div>
-            <h1 className="text-xl font-semibold text-zinc-100">Change Control Audit Trail</h1>
-            <p className="text-sm text-zinc-400">SOX/PCI-compliant change tracking with approval workflows</p>
-          </div>
-        </div>
-        <button onClick={fetchData} type="button" aria-label="Refresh change control data" className="text-zinc-400 hover:text-zinc-200 p-2 rounded-lg hover:bg-zinc-700/50 transition-colors"><RefreshCw className="w-4 h-4" /></button>
-      </div>
+      <DashboardHeader
+        title="Change Control Audit Trail"
+        subtitle="SOX/PCI-compliant change tracking with approval workflows"
+        isFetching={loading}
+        onRefresh={fetchData}
+        autoRefresh={autoRefresh}
+        onAutoRefreshChange={setAutoRefresh}
+        autoRefreshId="change-control-auto-refresh"
+        rightExtra={<RotatingTip page="compliance" />}
+      />
 
       {summary && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">

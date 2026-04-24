@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, memo } from 'react'
+import { useState, useEffect, useMemo, memo, useCallback } from 'react'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { stigDashboardConfig } from '../../config/dashboards/stig'
 import {
@@ -6,6 +6,8 @@ import {
   Shield, ArrowRight, Clock, Search
 } from 'lucide-react'
 import { authFetch } from '../../lib/api'
+import { DashboardHeader } from '../shared/DashboardHeader'
+import { RotatingTip } from '../ui/RotatingTip'
 
 interface Finding {
   id: string
@@ -76,27 +78,29 @@ export const STIGDashboardContent = memo(function STIGDashboardContent() {
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'findings' | 'benchmarks' | 'summary'>('findings')
   const [severityFilter, setSeverityFilter] = useState<string>('all')
+  const [autoRefresh, setAutoRefresh] = useState(false)
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const [bRes, fRes, sRes] = await Promise.all([
-          authFetch('/api/compliance/stig/benchmarks'),
-          authFetch('/api/compliance/stig/findings'),
-          authFetch('/api/compliance/stig/summary'),
-        ])
-        if (!bRes.ok || !fRes.ok || !sRes.ok) throw new Error('Failed to fetch STIG data')
-        setBenchmarks(await bRes.json())
-        setFindings(await fRes.json())
-        setSummary(await sRes.json())
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Unknown error')
-      } finally {
-        setLoading(false)
-      }
+  const fetchData = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const [bRes, fRes, sRes] = await Promise.all([
+        authFetch('/api/compliance/stig/benchmarks'),
+        authFetch('/api/compliance/stig/findings'),
+        authFetch('/api/compliance/stig/summary'),
+      ])
+      if (!bRes.ok || !fRes.ok || !sRes.ok) throw new Error('Failed to fetch STIG data')
+      setBenchmarks(await bRes.json())
+      setFindings(await fRes.json())
+      setSummary(await sRes.json())
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Unknown error')
+    } finally {
+      setLoading(false)
     }
-    load()
   }, [])
+
+  useEffect(() => { fetchData() }, [fetchData])
 
   const filteredFindings = useMemo(() => {
     if (severityFilter === 'all') return findings
@@ -118,13 +122,16 @@ export const STIGDashboardContent = memo(function STIGDashboardContent() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Shield className="w-8 h-8 text-blue-400" />
-        <div>
-          <h1 className="text-2xl font-bold text-white">DISA STIG Compliance</h1>
-          <p className="text-gray-400">Security Technical Implementation Guides for hardened Kubernetes clusters</p>
-        </div>
-      </div>
+      <DashboardHeader
+        title="DISA STIG Compliance"
+        subtitle="Security Technical Implementation Guides for hardened Kubernetes clusters"
+        isFetching={loading}
+        onRefresh={fetchData}
+        autoRefresh={autoRefresh}
+        onAutoRefreshChange={setAutoRefresh}
+        autoRefreshId="stig-auto-refresh"
+        rightExtra={<RotatingTip page="compliance" />}
+      />
 
       {/* Summary cards */}
       {summary && (

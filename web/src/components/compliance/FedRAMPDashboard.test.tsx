@@ -10,6 +10,10 @@ const mockPOAMs = [
 ]
 const mockScore = { overall_score: 71, authorization_status: 'in_process', impact_level: 'moderate', controls_satisfied: 142, controls_partially_satisfied: 38, controls_planned: 20, controls_total: 200, poams_open: 12, poams_closed: 8, evaluated_at: new Date().toISOString() }
 
+
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
+}))
 vi.mock('../../lib/api', () => ({
   authFetch: vi.fn((url: string) => {
     if (url.includes('/controls')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockControls) })

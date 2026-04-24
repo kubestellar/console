@@ -20,6 +20,8 @@ import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { complianceFrameworksDashboardConfig } from '../../config/dashboards/compliance-frameworks'
 import { useComplianceFrameworks, useFrameworkEvaluation, type Framework, type ControlResult, type ComplianceCheck } from '../../hooks/useComplianceFrameworks'
 import { clusterCache, subscribeClusterData } from '../../hooks/mcp/shared'
+import { DashboardHeader } from '../shared/DashboardHeader'
+import { RotatingTip } from '../ui/RotatingTip'
 
 /* ────────── status badge helpers ────────── */
 
@@ -202,6 +204,7 @@ export const ComplianceFrameworksContent = memo(function ComplianceFrameworksCon
 
   const [selectedFwId, setSelectedFwId] = useState<string | null>(null)
   const [selectedCluster, setSelectedCluster] = useState<string>('')
+  const [autoRefresh, setAutoRefresh] = useState(false)
 
   // Stable ID of the first framework — avoids re-running the effect when the
   // frameworks array gets a new reference but its contents haven't changed.
@@ -259,26 +262,16 @@ export const ComplianceFrameworksContent = memo(function ComplianceFrameworksCon
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-white flex items-center gap-2">
-            <Shield className="w-5 h-5 text-blue-400" />
-            Compliance Frameworks
-          </h1>
-          <p className="text-sm text-zinc-400 mt-0.5">
-            Evaluate clusters against PCI-DSS 4.0, SOC 2 Type II, and other regulatory standards
-          </p>
-        </div>
-        <button
-          onClick={refetch}
-          className="p-2 rounded-md border border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600 transition-colors"
-          title="Refresh frameworks"
-          type="button"
-        >
-          <RefreshCw className="w-4 h-4" />
-        </button>
-      </div>
+      <DashboardHeader
+        title="Compliance Frameworks"
+        subtitle="Evaluate clusters against PCI-DSS 4.0, SOC 2 Type II, and other regulatory standards"
+        isFetching={fwLoading}
+        onRefresh={refetch}
+        autoRefresh={autoRefresh}
+        onAutoRefreshChange={setAutoRefresh}
+        autoRefreshId="frameworks-auto-refresh"
+        rightExtra={<RotatingTip page="compliance" />}
+      />
 
       {/* Framework picker */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">

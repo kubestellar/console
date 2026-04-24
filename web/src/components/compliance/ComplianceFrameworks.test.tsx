@@ -25,6 +25,10 @@ let mockEvalReturn = {
   evaluate: mockEvaluate,
 }
 
+
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
+}))
 vi.mock('../../hooks/useComplianceFrameworks', () => ({
   useComplianceFrameworks: () => mockFrameworksReturn,
   useFrameworkEvaluation: () => mockEvalReturn,

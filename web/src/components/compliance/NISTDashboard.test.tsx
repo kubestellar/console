@@ -12,6 +12,10 @@ const mockMappings = [
 ]
 const mockSummary = { total_controls: 19, implemented_controls: 13, partial_controls: 4, planned_controls: 1, not_applicable: 1, overall_score: 83, baseline: 'moderate', evaluated_at: new Date().toISOString() }
 
+
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
+}))
 vi.mock('../../lib/api', () => ({
   authFetch: vi.fn((url: string) => {
     if (url.includes('/families')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockFamilies) })

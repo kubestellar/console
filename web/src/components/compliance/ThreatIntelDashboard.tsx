@@ -1,10 +1,12 @@
 import React, { memo } from 'react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   Shield, CheckCircle2, Loader2,
   Clock, XCircle, Eye
 } from 'lucide-react'
 import { authFetch } from '../../lib/api'
+import { DashboardHeader } from '../shared/DashboardHeader'
+import { RotatingTip } from '../ui/RotatingTip'
 
 // ── Types ───────────────────────────────────────────────────────────────
 
@@ -103,27 +105,29 @@ const ThreatIntelDashboard = memo(function ThreatIntelDashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'overview' | 'feeds' | 'iocs'>('overview')
+  const [autoRefresh, setAutoRefresh] = useState(false)
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const [fRes, iRes, sRes] = await Promise.all([
-          authFetch('/api/v1/compliance/threat-intel/feeds'),
-          authFetch('/api/v1/compliance/threat-intel/iocs'),
-          authFetch('/api/v1/compliance/threat-intel/summary'),
-        ])
-        if (!fRes.ok || !iRes.ok || !sRes.ok) throw new Error('Failed to fetch threat intel data')
-        setFeeds(await fRes.json())
-        setIOCs(await iRes.json())
-        setSummary(await sRes.json())
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Unknown error')
-      } finally {
-        setLoading(false)
-      }
+  const fetchData = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const [fRes, iRes, sRes] = await Promise.all([
+        authFetch('/api/v1/compliance/threat-intel/feeds'),
+        authFetch('/api/v1/compliance/threat-intel/iocs'),
+        authFetch('/api/v1/compliance/threat-intel/summary'),
+      ])
+      if (!fRes.ok || !iRes.ok || !sRes.ok) throw new Error('Failed to fetch threat intel data')
+      setFeeds(await fRes.json())
+      setIOCs(await iRes.json())
+      setSummary(await sRes.json())
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Unknown error')
+    } finally {
+      setLoading(false)
     }
-    load()
   }, [])
+
+  useEffect(() => { fetchData() }, [fetchData])
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
@@ -140,13 +144,16 @@ const ThreatIntelDashboard = memo(function ThreatIntelDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Shield className="w-8 h-8 text-purple-400" />
-        <div>
-          <h1 className="text-2xl font-bold text-white">Threat Intelligence</h1>
-          <p className="text-gray-400">Threat feed monitoring, IOC matching, and vulnerability correlation</p>
-        </div>
-      </div>
+      <DashboardHeader
+        title="Threat Intelligence"
+        subtitle="CVE monitoring, threat feeds, and vulnerability correlation"
+        isFetching={loading}
+        onRefresh={fetchData}
+        autoRefresh={autoRefresh}
+        onAutoRefreshChange={setAutoRefresh}
+        autoRefreshId="threatintel-auto-refresh"
+        rightExtra={<RotatingTip page="compliance" />}
+      />
 
       {/* Summary cards */}
       {summary && (

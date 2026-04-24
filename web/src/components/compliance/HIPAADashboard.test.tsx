@@ -19,6 +19,10 @@ const mockSummary = {
   evaluated_at: '2026-04-23T10:00:00Z',
 }
 
+
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
+}))
 vi.mock('../../lib/api', () => ({
   authFetch: vi.fn((url: string) => {
     const ok = (data: unknown) => Promise.resolve({ ok: true, json: () => Promise.resolve(data) })

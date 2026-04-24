@@ -1,10 +1,12 @@
 import React, { memo } from 'react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   Monitor, CheckCircle2, Loader2,
   ArrowRight, Clock, XCircle
 } from 'lucide-react'
 import { authFetch } from '../../lib/api'
+import { DashboardHeader } from '../shared/DashboardHeader'
+import { RotatingTip } from '../ui/RotatingTip'
 
 // ── Types ───────────────────────────────────────────────────────────────
 
@@ -72,27 +74,29 @@ const SIEMDashboard = memo(function SIEMDashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'events' | 'alerts' | 'overview'>('overview')
+  const [autoRefresh, setAutoRefresh] = useState(false)
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const [eRes, aRes, sRes] = await Promise.all([
-          authFetch('/api/v1/compliance/siem/events'),
-          authFetch('/api/v1/compliance/siem/alerts'),
-          authFetch('/api/v1/compliance/siem/summary'),
-        ])
-        if (!eRes.ok || !aRes.ok || !sRes.ok) throw new Error('Failed to fetch SIEM data')
-        setEvents(await eRes.json())
-        setAlerts(await aRes.json())
-        setSummary(await sRes.json())
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Unknown error')
-      } finally {
-        setLoading(false)
-      }
+  const fetchData = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const [eRes, aRes, sRes] = await Promise.all([
+        authFetch('/api/v1/compliance/siem/events'),
+        authFetch('/api/v1/compliance/siem/alerts'),
+        authFetch('/api/v1/compliance/siem/summary'),
+      ])
+      if (!eRes.ok || !aRes.ok || !sRes.ok) throw new Error('Failed to fetch SIEM data')
+      setEvents(await eRes.json())
+      setAlerts(await aRes.json())
+      setSummary(await sRes.json())
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Unknown error')
+    } finally {
+      setLoading(false)
     }
-    load()
   }, [])
+
+  useEffect(() => { fetchData() }, [fetchData])
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
@@ -109,13 +113,16 @@ const SIEMDashboard = memo(function SIEMDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Monitor className="w-8 h-8 text-blue-400" />
-        <div>
-          <h1 className="text-2xl font-bold text-white">SIEM Integration</h1>
-          <p className="text-gray-400">Security event monitoring, log aggregation, and alert correlation</p>
-        </div>
-      </div>
+      <DashboardHeader
+        title="SIEM Integration"
+        subtitle="Security event monitoring, log aggregation, and alert correlation"
+        isFetching={loading}
+        onRefresh={fetchData}
+        autoRefresh={autoRefresh}
+        onAutoRefreshChange={setAutoRefresh}
+        autoRefreshId="siem-auto-refresh"
+        rightExtra={<RotatingTip page="compliance" />}
+      />
 
       {/* Summary cards */}
       {summary && (

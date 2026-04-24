@@ -2,6 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { ChangeControlAuditContent as ChangeControlAudit } from './ChangeControlAudit'
 
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
+}))
+
 const mockSummary = {
   total_changes: 8, approved_changes: 4, unapproved_changes: 3, emergency_changes: 1,
   policy_violations: 5, risk_score: 55,

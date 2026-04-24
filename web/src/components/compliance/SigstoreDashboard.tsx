@@ -4,7 +4,7 @@
  * Cosign verification results, transparency log entries,
  * and trust chain visualization.
  */
-import { useState, useEffect, memo } from 'react'
+import { useState, useEffect, memo, useCallback } from 'react'
 import {
   BadgeCheck, CheckCircle2, Loader2, AlertTriangle,
   XCircle, ShieldCheck, FileKey
@@ -12,6 +12,8 @@ import {
 import { authFetch } from '../../lib/api'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { sigstoreDashboardConfig } from '../../config/dashboards/sigstore'
+import { DashboardHeader } from '../shared/DashboardHeader'
+import { RotatingTip } from '../ui/RotatingTip'
 
 // ── Types ───────────────────────────────────────────────────────────────
 
@@ -88,27 +90,29 @@ export const SigstoreDashboardContent = memo(function SigstoreDashboardContent()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'signatures' | 'verifications'>('signatures')
+  const [autoRefresh, setAutoRefresh] = useState(false)
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const [sigRes, verRes, sumRes] = await Promise.all([
-          authFetch('/api/v1/compliance/sigstore/signatures'),
-          authFetch('/api/v1/compliance/sigstore/verifications'),
-          authFetch('/api/v1/compliance/sigstore/summary'),
-        ])
-        if (!sigRes.ok || !verRes.ok || !sumRes.ok) throw new Error('Failed to fetch Sigstore data')
-        setSignatures(await sigRes.json())
-        setVerifications(await verRes.json())
-        setSummary(await sumRes.json())
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Unknown error')
-      } finally {
-        setLoading(false)
-      }
+  const fetchData = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const [sigRes, verRes, sumRes] = await Promise.all([
+        authFetch('/api/v1/compliance/sigstore/signatures'),
+        authFetch('/api/v1/compliance/sigstore/verifications'),
+        authFetch('/api/v1/compliance/sigstore/summary'),
+      ])
+      if (!sigRes.ok || !verRes.ok || !sumRes.ok) throw new Error('Failed to fetch Sigstore data')
+      setSignatures(await sigRes.json())
+      setVerifications(await verRes.json())
+      setSummary(await sumRes.json())
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Unknown error')
+    } finally {
+      setLoading(false)
     }
-    load()
   }, [])
+
+  useEffect(() => { fetchData() }, [fetchData])
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
@@ -128,13 +132,16 @@ export const SigstoreDashboardContent = memo(function SigstoreDashboardContent()
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <BadgeCheck className="w-8 h-8 text-green-400" />
-        <div>
-          <h1 className="text-2xl font-bold text-white">Sigstore Verification</h1>
-          <p className="text-gray-400">Image signature verification, cosign results, and transparency log</p>
-        </div>
-      </div>
+      <DashboardHeader
+        title="Sigstore Verification"
+        subtitle="Cryptographic signing and verification of container images and artifacts"
+        isFetching={loading}
+        onRefresh={fetchData}
+        autoRefresh={autoRefresh}
+        onAutoRefreshChange={setAutoRefresh}
+        autoRefreshId="sigstore-auto-refresh"
+        rightExtra={<RotatingTip page="compliance" />}
+      />
 
       {/* Summary stats */}
       {summary && (

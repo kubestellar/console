@@ -4,7 +4,7 @@
  * Build provenance level indicators (L1–L4), attestation verification,
  * source integrity checks, and build reproducibility.
  */
-import { useState, useEffect, memo } from 'react'
+import { useState, useEffect, memo, useCallback } from 'react'
 import {
   GitCommitHorizontal, CheckCircle2, Loader2, AlertTriangle,
   XCircle, Shield, Lock
@@ -12,6 +12,8 @@ import {
 import { authFetch } from '../../lib/api'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { slsaDashboardConfig } from '../../config/dashboards/slsa'
+import { DashboardHeader } from '../shared/DashboardHeader'
+import { RotatingTip } from '../ui/RotatingTip'
 
 // ── Types ───────────────────────────────────────────────────────────────
 
@@ -99,30 +101,32 @@ export const SLSADashboardContent = memo(function SLSADashboardContent() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'attestations' | 'provenance'>('attestations')
+  const [autoRefresh, setAutoRefresh] = useState(false)
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const [aRes, pRes, sRes] = await Promise.all([
-          authFetch('/api/v1/compliance/slsa/attestations'),
-          authFetch('/api/v1/compliance/slsa/provenance'),
-          authFetch('/api/v1/compliance/slsa/summary'),
-        ])
-        if (!aRes.ok || !pRes.ok || !sRes.ok) throw new Error('Failed to fetch SLSA data')
-        const aData = await aRes.json()
-        const pData = await pRes.json()
-        const sData = await sRes.json()
-        setAttestations(Array.isArray(aData) ? aData : [])
-        setProvenance(Array.isArray(pData) ? pData : [])
-        setSummary(sData ?? null)
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Unknown error')
-      } finally {
-        setLoading(false)
-      }
+  const fetchData = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const [aRes, pRes, sRes] = await Promise.all([
+        authFetch('/api/v1/compliance/slsa/attestations'),
+        authFetch('/api/v1/compliance/slsa/provenance'),
+        authFetch('/api/v1/compliance/slsa/summary'),
+      ])
+      if (!aRes.ok || !pRes.ok || !sRes.ok) throw new Error('Failed to fetch SLSA data')
+      const aData = await aRes.json()
+      const pData = await pRes.json()
+      const sData = await sRes.json()
+      setAttestations(Array.isArray(aData) ? aData : [])
+      setProvenance(Array.isArray(pData) ? pData : [])
+      setSummary(sData ?? null)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Unknown error')
+    } finally {
+      setLoading(false)
     }
-    load()
   }, [])
+
+  useEffect(() => { fetchData() }, [fetchData])
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
@@ -142,13 +146,16 @@ export const SLSADashboardContent = memo(function SLSADashboardContent() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <GitCommitHorizontal className="w-8 h-8 text-emerald-400" />
-        <div>
-          <h1 className="text-2xl font-bold text-white">SLSA Provenance</h1>
-          <p className="text-gray-400">Build provenance levels, attestation verification, and source integrity</p>
-        </div>
-      </div>
+      <DashboardHeader
+        title="SLSA Provenance"
+        subtitle="Build provenance levels, attestation verification, and source integrity"
+        isFetching={loading}
+        onRefresh={fetchData}
+        autoRefresh={autoRefresh}
+        onAutoRefreshChange={setAutoRefresh}
+        autoRefreshId="slsa-auto-refresh"
+        rightExtra={<RotatingTip page="compliance" />}
+      />
 
       {/* Summary stats */}
       {summary && (

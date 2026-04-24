@@ -5,6 +5,10 @@ import { SLSADashboardContent as SLSADashboard } from './SLSADashboard'
 
 /* ── Mock authFetch at the top level ─────────────────────────────── */
 
+
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
+}))
 vi.mock('../../lib/api', () => ({
   authFetch: vi.fn(),
 }))

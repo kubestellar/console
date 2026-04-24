@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, memo } from 'react'
+import { useState, useEffect, useMemo, memo, useCallback } from 'react'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { riskMatrixDashboardConfig } from '../../config/dashboards/risk-matrix'
 import {
@@ -6,6 +6,8 @@ import {
   ArrowRight, ChevronDown,
 } from 'lucide-react'
 import { authFetch } from '../../lib/api'
+import { DashboardHeader } from '../shared/DashboardHeader'
+import { RotatingTip } from '../ui/RotatingTip'
 
 // ── Types ─────────────────────────────────────────────────────────────
 
@@ -71,27 +73,29 @@ export const RiskMatrixDashboardContent = memo(function RiskMatrixDashboardConte
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedCell, setSelectedCell] = useState<{ l: number; i: number } | null>(null)
+  const [autoRefresh, setAutoRefresh] = useState(false)
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const [rRes, hRes, sRes] = await Promise.all([
-          authFetch('/api/v1/compliance/erm/risk-matrix/risks'),
-          authFetch('/api/v1/compliance/erm/risk-matrix/heatmap'),
-          authFetch('/api/v1/compliance/erm/risk-matrix/summary'),
-        ])
-        if (!rRes.ok || !hRes.ok || !sRes.ok) throw new Error('Failed to fetch risk matrix data')
-        setRisks(await rRes.json())
-        setHeatmap(await hRes.json())
-        setSummary(await sRes.json())
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Unknown error')
-      } finally {
-        setLoading(false)
-      }
+  const fetchData = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const [rRes, hRes, sRes] = await Promise.all([
+        authFetch('/api/v1/compliance/erm/risk-matrix/risks'),
+        authFetch('/api/v1/compliance/erm/risk-matrix/heatmap'),
+        authFetch('/api/v1/compliance/erm/risk-matrix/summary'),
+      ])
+      if (!rRes.ok || !hRes.ok || !sRes.ok) throw new Error('Failed to fetch risk matrix data')
+      setRisks(await rRes.json())
+      setHeatmap(await hRes.json())
+      setSummary(await sRes.json())
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Unknown error')
+    } finally {
+      setLoading(false)
     }
-    load()
   }, [])
+
+  useEffect(() => { fetchData() }, [fetchData])
 
   // Build a lookup from heatmap data
   const heatmapLookup = useMemo(() => {
@@ -129,13 +133,16 @@ export const RiskMatrixDashboardContent = memo(function RiskMatrixDashboardConte
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <BarChart3 className="w-8 h-8 text-orange-400" />
-        <div>
-          <h1 className="text-2xl font-bold text-white">Risk Matrix</h1>
-          <p className="text-gray-400">Interactive 5×5 risk heat map with likelihood vs impact assessment</p>
-        </div>
-      </div>
+      <DashboardHeader
+        title="Risk Matrix"
+        subtitle="Interactive 5x5 risk heat map with likelihood vs impact assessment"
+        isFetching={loading}
+        onRefresh={fetchData}
+        autoRefresh={autoRefresh}
+        onAutoRefreshChange={setAutoRefresh}
+        autoRefreshId="risk-matrix-auto-refresh"
+        rightExtra={<RotatingTip page="compliance" />}
+      />
 
       {/* Summary cards */}
       {summary && (

@@ -1,10 +1,12 @@
 import React, { memo } from 'react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   AlertTriangle, CheckCircle2, Loader2, Clock,
   XCircle, ArrowRight, Play, Shield
 } from 'lucide-react'
 import { authFetch } from '../../lib/api'
+import { DashboardHeader } from '../shared/DashboardHeader'
+import { RotatingTip } from '../ui/RotatingTip'
 
 // ── Types ───────────────────────────────────────────────────────────────
 
@@ -80,27 +82,29 @@ const IncidentResponseDashboard = memo(function IncidentResponseDashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'incidents' | 'playbooks' | 'metrics'>('incidents')
+  const [autoRefresh, setAutoRefresh] = useState(false)
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const [iRes, mRes, pRes] = await Promise.all([
-          authFetch('/api/v1/compliance/incidents'),
-          authFetch('/api/v1/compliance/incidents/metrics'),
-          authFetch('/api/v1/compliance/incidents/playbooks'),
-        ])
-        if (!iRes.ok || !mRes.ok || !pRes.ok) throw new Error('Failed to fetch incident data')
-        setIncidents(await iRes.json())
-        setMetrics(await mRes.json())
-        setPlaybooks(await pRes.json())
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Unknown error')
-      } finally {
-        setLoading(false)
-      }
+  const fetchData = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const [iRes, mRes, pRes] = await Promise.all([
+        authFetch('/api/v1/compliance/incidents'),
+        authFetch('/api/v1/compliance/incidents/metrics'),
+        authFetch('/api/v1/compliance/incidents/playbooks'),
+      ])
+      if (!iRes.ok || !mRes.ok || !pRes.ok) throw new Error('Failed to fetch incident data')
+      setIncidents(await iRes.json())
+      setMetrics(await mRes.json())
+      setPlaybooks(await pRes.json())
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Unknown error')
+    } finally {
+      setLoading(false)
     }
-    load()
   }, [])
+
+  useEffect(() => { fetchData() }, [fetchData])
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
@@ -117,13 +121,16 @@ const IncidentResponseDashboard = memo(function IncidentResponseDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <AlertTriangle className="w-8 h-8 text-orange-400" />
-        <div>
-          <h1 className="text-2xl font-bold text-white">Incident Response</h1>
-          <p className="text-gray-400">Active incident tracking, playbook management, and MTTR metrics</p>
-        </div>
-      </div>
+      <DashboardHeader
+        title="Incident Response"
+        subtitle="Security incident tracking, response timelines, and playbook execution"
+        isFetching={loading}
+        onRefresh={fetchData}
+        autoRefresh={autoRefresh}
+        onAutoRefreshChange={setAutoRefresh}
+        autoRefreshId="incident-auto-refresh"
+        rightExtra={<RotatingTip page="compliance" />}
+      />
 
       {/* Summary cards */}
       {metrics && (

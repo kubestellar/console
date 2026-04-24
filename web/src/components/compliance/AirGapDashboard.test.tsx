@@ -10,6 +10,10 @@ const mockClusters = [
 ]
 const mockSummary = { total_requirements: 12, ready: 9, not_ready: 1, partial: 2, overall_readiness: 85, evaluated_at: new Date().toISOString() }
 
+
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
+}))
 vi.mock('../../lib/api', () => ({
   authFetch: vi.fn((url: string) => {
     if (url.includes('/requirements')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockRequirements) })

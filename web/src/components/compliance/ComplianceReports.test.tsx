@@ -3,6 +3,10 @@ import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 
 // Mock hooks before importing the component
+
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
+}))
 vi.mock('../../lib/unified/dashboard/UnifiedDashboard', () => ({
   UnifiedDashboard: () => null,
 }))
