@@ -244,7 +244,7 @@ export async function checkBackendAvailability(forceCheck = false): Promise<bool
           available: backendAvailable,
           timestamp: backendLastCheckTime,
         }))
-      } catch { /* ignore */ }
+      } catch (e) { console.warn('[api] failed to cache backend status:', e) }
       return backendAvailable
     } catch {
       backendAvailable = false
@@ -324,7 +324,7 @@ function markBackendFailure(): void {
   // Persisting false causes fresh page loads to inherit stale "backend down" state.
   try {
     localStorage.removeItem(BACKEND_STATUS_KEY)
-  } catch { /* ignore */ }
+  } catch (e) { console.warn('[api] failed to clear backend status cache:', e) }
 }
 
 function markBackendSuccess(): void {
@@ -335,7 +335,7 @@ function markBackendSuccess(): void {
       available: true,
       timestamp: backendLastCheckTime,
     }))
-  } catch { /* ignore */ }
+  } catch (e) { console.warn('[api] failed to cache backend success:', e) }
 }
 
 /**

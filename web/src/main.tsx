@@ -157,7 +157,7 @@ enableMocking()
         initPreloadedMeta(meta)
       } catch (e) {
         console.warn('[Cache] SQLite worker init: using IndexedDB fallback:', e)
-        try { await migrateFromLocalStorage() } catch { /* ignore */ }
+        try { await migrateFromLocalStorage() } catch (migrateErr) { console.warn('[Cache] failed to migrate from localStorage:', migrateErr) }
       }
     })()
 
