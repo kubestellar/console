@@ -1315,6 +1315,10 @@ function useUnifiedWasmcloudStatus() {
     data: result.data.hosts,
     isLoading: result.showSkeleton,
     error: result.error ? new Error('Failed to fetch wasmCloud status') : null,
+    refetch: () => { result.refetch() },
+  }
+}
+
 function useUnifiedVolcanoStatus() {
   const result = useCachedVolcano()
   // Surface the job list as the primary row set for generic list renderers.
