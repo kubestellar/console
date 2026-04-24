@@ -189,6 +189,12 @@ export { useCachedTuf } from './useCachedTuf'
 export { useCachedDragonfly } from './useCachedDragonfly'
 
 // ============================================================================
+// Backstage developer portal (CNCF incubating) — useCachedBackstage.ts
+// ============================================================================
+
+export { useCachedBackstage } from './useCachedBackstage'
+
+// ============================================================================
 // Standalone fetchers for prefetch (no React hooks, plain async)
 // ============================================================================
 

@@ -78,6 +78,8 @@ const HelmHistory = safeLazy(() => _deployBundle, 'HelmHistory')
 const ChartVersions = safeLazy(() => _deployBundle, 'ChartVersions')
 const KustomizationStatus = safeLazy(() => _deployBundle, 'KustomizationStatus')
 const FluxStatus = safeLazy(() => import('./flux_status'), 'FluxStatus')
+// Backstage developer portal card (CNCF incubating)
+const BackstageStatus = safeLazy(() => import('./backstage_status'), 'BackstageStatus')
 // Contour ingress proxy card
 const ContourStatus = safeLazy(() => import('./contour_status'), 'ContourStatus')
 // Dapr distributed application runtime card
@@ -726,6 +728,8 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   lima_status: LimaStatus,
   // NATS messaging server
   nats_status: NatsStatus,
+  // Backstage developer portal (CNCF incubating)
+  backstage_status: BackstageStatus,
   // Contour ingress proxy
   contour_status: ContourStatus,
   // Dapr distributed application runtime
@@ -1065,6 +1069,7 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   chart_versions: () => import('./deploy-bundle'),
   kustomization_status: () => import('./deploy-bundle'),
   flux_status: () => import('./flux_status'),
+  backstage_status: () => import('./backstage_status'),
   contour_status: () => import('./contour_status'),
   dapr_status: () => import('./dapr_status'),
   envoy_status: () => import('./envoy_status'),
@@ -1672,6 +1677,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   argocd_sync_status: 6,
   kustomization_status: 6,
   flux_status: 6,
+  backstage_status: 6,
   contour_status: 6,
   dapr_status: 6,
   envoy_status: 6,

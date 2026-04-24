@@ -264,6 +264,8 @@ export const CARD_TITLES: Record<string, string> = {
   provider_health: 'Provider Health',
   // CoreDNS
   coredns_status: 'CoreDNS',
+  // Backstage developer portal (CNCF incubating)
+  backstage_status: 'Backstage',
   // Contour ingress proxy
   contour_status: 'Contour',
   // Dapr distributed application runtime
@@ -597,6 +599,8 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   kube_bert: 'Q*bert style platformer navigating Kubernetes pyramids.',
   // CoreDNS
   coredns_status: 'CoreDNS pod health, restart counts, and cluster status across clusters.',
+  // Backstage developer portal (CNCF incubating)
+  backstage_status: 'Backstage developer portal — app replicas, catalog entity inventory (Components/APIs/Systems/Domains/Resources/Users/Groups), plugin status, scaffolder templates, and last catalog sync.',
   // Contour ingress proxy
   contour_status: 'Contour ingress proxy status, HTTPProxy resources, and Envoy fleet health.',
   // Dapr distributed application runtime

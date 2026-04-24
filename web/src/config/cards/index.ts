@@ -62,6 +62,7 @@ import { gatewayStatusConfig } from './gateway-status'
 import { githubActivityConfig } from './github-activity'
 import { githubCiMonitorConfig } from './github-ci-monitor'
 import { fluxStatusConfig } from './flux-status'
+import { backstageStatusConfig } from './backstage-status'
 import { contourStatusConfig } from './contour-status'
 import { containerdStatusConfig } from './containerd-status'
 import { daprStatusConfig } from './dapr-status'
@@ -259,6 +260,7 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   github_activity: githubActivityConfig,
   github_ci_monitor: githubCiMonitorConfig,
   flux_status: fluxStatusConfig,
+  backstage_status: backstageStatusConfig,
   contour_status: contourStatusConfig,
   containerd_status: containerdStatusConfig,
   dapr_status: daprStatusConfig,

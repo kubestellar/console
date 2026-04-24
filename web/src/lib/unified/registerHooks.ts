@@ -48,6 +48,7 @@ import {
   useServiceExports,
   useServiceImports } from '../../hooks/useMCS'
 import { useFluxStatus } from '../../components/cards/flux_status/useFluxStatus'
+import { useCachedBackstage } from '../../hooks/useCachedBackstage'
 import { useContourStatus } from '../../components/cards/contour_status/useContourStatus'
 import { useCachedContainerd } from '../../hooks/useCachedContainerd'
 import { useCachedDapr } from '../../hooks/useCachedDapr'
@@ -1123,6 +1124,17 @@ function useUnifiedKedaStatus() {
   }
 }
 
+function useUnifiedBackstageStatus() {
+  const result = useCachedBackstage()
+  // Surface the plugin list as the primary row set for generic list renderers.
+  return {
+    data: result.data.plugins,
+    isLoading: result.isLoading,
+    error: result.error ? new Error(result.error) : null,
+    refetch: result.refetch,
+  }
+}
+
 function useUnifiedLinkerdStatus() {
   const result = useCachedLinkerd()
   // Surface the meshed deployment list as the primary row set for generic list renderers.
@@ -1384,6 +1396,7 @@ export function registerUnifiedHooks(): void {
   registerDataHook('useKustomizationStatus', useKustomizationStatus)
   registerDataHook('useFluxStatus', useUnifiedFluxStatus)
   registerDataHook('useContourStatus', useUnifiedContourStatus)
+  registerDataHook('useCachedBackstage', useUnifiedBackstageStatus)
   registerDataHook('useCachedContainerd', useUnifiedContainerdStatus)
   registerDataHook('useCachedDapr', useUnifiedDaprStatus)
   registerDataHook('useCachedDragonfly', useUnifiedDragonflyStatus)
