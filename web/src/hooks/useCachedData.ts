@@ -156,6 +156,12 @@ export * from './useCachedTikv'
 export { useCachedOtel } from './useCachedOtel'
 
 // ============================================================================
+// TUF (The Update Framework) — useCachedTuf.ts
+// ============================================================================
+
+export { useCachedTuf } from './useCachedTuf'
+
+// ============================================================================
 // Standalone fetchers for prefetch (no React hooks, plain async)
 // ============================================================================
 

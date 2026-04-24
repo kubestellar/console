@@ -276,6 +276,8 @@ export const CARD_TITLES: Record<string, string> = {
   otel_status: 'OpenTelemetry',
   // TiKV distributed key-value store
   tikv_status: 'TiKV',
+  // TUF (The Update Framework) repository metadata
+  tuf_status: 'TUF',
   // Vitess distributed MySQL
   vitess_status: 'Vitess',
   // CRI-O container runtime
@@ -599,6 +601,8 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   otel_status: 'OpenTelemetry Collectors: pipeline health, receivers and exporters, dropped telemetry, and export errors across connected clusters.',
   // TiKV distributed key-value store
   tikv_status: 'TiKV distributed key-value store: store nodes, region counts, leader counts, and capacity utilization across the cluster.',
+  // TUF (The Update Framework) repository metadata
+  tuf_status: 'TUF repository role metadata — root, targets, snapshot, timestamp — versions, expirations, thresholds, and signing status.',
   // Vitess distributed MySQL
   vitess_status: 'Vitess distributed MySQL: keyspaces, shards, tablets (PRIMARY/REPLICA/RDONLY), and replication lag.',
   // CRI-O container runtime

@@ -102,6 +102,7 @@ const MARKETPLACE_TO_CARD_TYPE: Record<string, string> = {
   'cncf-thanos': 'thanos_status',
   'cncf-opentelemetry': 'otel_status',
   'cncf-tikv': 'tikv_status',
+  'cncf-tuf': 'tuf_status',
   'cncf-vitess': 'vitess_status',
 }
 

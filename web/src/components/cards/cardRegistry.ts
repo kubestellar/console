@@ -90,6 +90,8 @@ const LinkerdStatus = safeLazy(() => import('./linkerd_status'), 'LinkerdStatus'
 const OtelStatus = safeLazy(() => import('./otel_status'), 'OtelStatus')
 // TiKV distributed key-value store card
 const TikvStatus = safeLazy(() => import('./tikv_status'), 'TikvStatus')
+// TUF (The Update Framework) repository metadata card
+const TufStatus = safeLazy(() => import('./tuf_status'), 'TufStatus')
 // Vitess distributed MySQL card
 const VitessStatus = safeLazy(() => import('./vitess_status'), 'VitessStatus')
 const OverlayComparison = safeLazy(() => _deployBundle, 'OverlayComparison')
@@ -726,6 +728,8 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   otel_status: OtelStatus,
   // TiKV distributed key-value store
   tikv_status: TikvStatus,
+  // TUF (The Update Framework) repository metadata
+  tuf_status: TufStatus,
   // Vitess distributed MySQL
   vitess_status: VitessStatus,
   // Artifact Hub
@@ -1051,6 +1055,7 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   linkerd_status: () => import('./linkerd_status'),
   otel_status: () => import('./otel_status'),
   tikv_status: () => import('./tikv_status'),
+  tuf_status: () => import('./tuf_status'),
   vitess_status: () => import('./vitess_status'),
   overlay_comparison: () => import('./deploy-bundle'),
   argocd_applications: () => import('./deploy-bundle'),
@@ -1650,6 +1655,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   linkerd_status: 6,
   otel_status: 6,
   tikv_status: 6,
+  tuf_status: 6,
   vitess_status: 6,
   pvc_status: 6,
   gpu_status: 6,

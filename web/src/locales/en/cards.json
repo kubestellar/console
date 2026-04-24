@@ -3138,6 +3138,23 @@
     "leaderCount_one": "{{count}} leader",
     "leaderCount_other": "{{count}} leaders"
   },
+  "tufStatus": {
+    "healthy": "Healthy",
+    "degraded": "Degraded",
+    "notInstalled": "TUF not detected",
+    "notInstalledHint": "No TUF repository metadata reachable. Configure a TUF repository to monitor role metadata signing and expiration.",
+    "specVersion": "spec",
+    "rolesTotal": "Roles",
+    "rolesSigned": "Signed",
+    "rolesExpiringSoon": "Expiring",
+    "rolesExpired": "Expired",
+    "sectionRoles": "Top-level roles",
+    "noRoles": "No TUF roles reporting.",
+    "statusSigned": "Signed",
+    "statusExpiringSoon": "Expiring soon",
+    "statusExpired": "Expired",
+    "statusUnsigned": "Unsigned"
+  },
   "vitessStatus": {
     "healthy": "Healthy",
     "degraded": "Degraded",
