@@ -114,6 +114,12 @@ export interface SidebarShellProps {
   onAddCard?: () => void
   /** Custom children rendered between nav and footer */
   children?: React.ReactNode
+  /**
+   * Override the sidebar width instead of using the shared config width.
+   * Used by portal sidebars (e.g. Enterprise) that should not inherit a
+   * user-resized width from the main console sidebar.
+   */
+  widthOverride?: number
 }
 
 // ---------------------------------------------------------------------------
@@ -166,6 +172,7 @@ export function SidebarShell({
   onAddMore,
   onAddCard,
   children,
+  widthOverride,
 }: SidebarShellProps) {
   const { config, toggleCollapsed, setCollapsed, reorderItems, updateItem, removeItem, closeMobileSidebar, setWidth } = useSidebarConfig()
   const { isMobile } = useMobile()
@@ -235,7 +242,9 @@ export function SidebarShell({
   useEffect(() => () => clearAutoHideTimer(), [clearAutoHideTimer])
 
   const isCollapsed = !isMobile && config.collapsed
-  const sidebarWidth = isCollapsed ? SIDEBAR_COLLAPSED_WIDTH_PX : (config.width ?? SIDEBAR_DEFAULT_WIDTH_PX)
+  const sidebarWidth = isCollapsed
+    ? SIDEBAR_COLLAPSED_WIDTH_PX
+    : (widthOverride ?? config.width ?? SIDEBAR_DEFAULT_WIDTH_PX)
 
   // ---- Resize handle ----
   const [isResizing, setIsResizing] = useState(false)
@@ -243,7 +252,7 @@ export function SidebarShell({
     e.preventDefault()
     setIsResizing(true)
     const startX = e.clientX
-    const startWidth = config.width ?? SIDEBAR_DEFAULT_WIDTH_PX
+    const startWidth = widthOverride ?? config.width ?? SIDEBAR_DEFAULT_WIDTH_PX
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
       const newWidth = Math.min(

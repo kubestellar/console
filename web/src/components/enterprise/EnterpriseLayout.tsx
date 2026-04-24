@@ -36,11 +36,13 @@ export default function EnterpriseLayout() {
   const location = useLocation()
   const dashboardContext = useDashboardContextOptional()
 
+  // Enterprise sidebar always uses the standard default width — it does not
+  // inherit the user-resized width from the main console sidebar (#9823).
   const sidebarWidthPx = isMobile
     ? 0
     : config.collapsed
       ? SIDEBAR_COLLAPSED_WIDTH_PX
-      : (config.width ?? SIDEBAR_DEFAULT_WIDTH_PX)
+      : SIDEBAR_DEFAULT_WIDTH_PX
 
   const handleOpenStudio = useCallback(() => {
     dashboardContext?.openAddCardModal()

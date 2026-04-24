@@ -18,6 +18,7 @@ import { SidebarShell } from '../layout/SidebarShell'
 import type { NavSection } from '../layout/SidebarShell'
 import { ENTERPRISE_NAV_SECTIONS } from './enterpriseNav'
 import { useDashboardContextOptional } from '../../hooks/useDashboardContext'
+import { SIDEBAR_DEFAULT_WIDTH_PX } from '../../hooks/useSidebarConfig'
 
 /** Stable features config — created once outside the component */
 const SIDEBAR_FEATURES = {
@@ -69,6 +70,7 @@ export default function EnterpriseSidebar() {
       branding={branding}
       onAddCard={handleAddCard}
       onAddMore={handleAddMore}
+      widthOverride={SIDEBAR_DEFAULT_WIDTH_PX}
     />
   )
 }
