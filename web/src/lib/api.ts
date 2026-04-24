@@ -677,6 +677,27 @@ export const api = new ApiClient()
  *
  * Existing callers only need to change `fetch(url, init)` -> `authFetch(url, init)`.
  */
+/**
+ * Safely parse a Response as JSON, guarding against HTML responses.
+ *
+ * On Netlify, unmatched API routes fall through to the SPA catch-all which
+ * returns index.html (200 OK, text/html). Calling `.json()` on that response
+ * throws "Unexpected token '<'" (#9797). This helper checks the Content-Type
+ * header first and throws a descriptive error instead of a cryptic parse error.
+ *
+ * Usage:
+ *   const data = await safeJson<MyType>(response)
+ */
+export async function safeJson<T = unknown>(response: Response): Promise<T> {
+  const contentType = response.headers.get('content-type') || ''
+  if (!contentType.includes('application/json')) {
+    throw new Error(
+      `Expected JSON response but received ${contentType || 'unknown content-type'} (status ${response.status})`,
+    )
+  }
+  return response.json() as Promise<T>
+}
+
 export function authFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   const token = localStorage.getItem(STORAGE_KEY_TOKEN)
   const headers = new Headers(init?.headers)

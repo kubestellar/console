@@ -2034,7 +2034,15 @@ export const handlers = [
   // catch-all which returns index.html (200 OK, text/html). Code calling
   // .json() then throws "Unexpected token '<'". This catch-all returns a
   // proper JSON 503 so callers hit their error paths gracefully.
-  http.all('/api/*', () => {
+  //
+  // IMPORTANT (#9797): Use a regex instead of '/api/*' because MSW v2 path
+  // patterns treat '*' as a single-segment wildcard. '/api/*' only matches
+  // paths like '/api/foo' but NOT multi-segment paths like
+  // '/api/compliance/frameworks/' or '/api/compliance/nist/families'.
+  // The enterprise compliance dashboards fetch '/api/compliance/<vertical>/<resource>'
+  // which slipped through the old catch-all, hit the Netlify SPA fallback,
+  // and received index.html (200 OK, text/html) instead of JSON.
+  http.all(/^\/api\//, () => {
     return HttpResponse.json(
       { error: 'not available in demo mode' },
       { status: 503 },
