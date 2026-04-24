@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, memo, useCallback } from 'react'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { riskMatrixDashboardConfig } from '../../config/dashboards/risk-matrix'
 import {
-  BarChart3, Loader2, TrendingUp, TrendingDown,
+  Loader2, TrendingUp, TrendingDown,
   ArrowRight, ChevronDown,
 } from 'lucide-react'
 import { authFetch } from '../../lib/api'

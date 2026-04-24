@@ -3,7 +3,7 @@ import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { rbacAuditDashboardConfig } from '../../config/dashboards/rbac-audit'
 import {
   Lock, CheckCircle2, XCircle, AlertTriangle, Loader2,
-  RefreshCw, ShieldAlert, Users, Server,
+  ShieldAlert, Users, Server,
 } from 'lucide-react'
 import { authFetch } from '../../lib/api'
 import { Select } from '../ui/Select'

@@ -3,7 +3,7 @@ import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { hipaaDashboardConfig } from '../../config/dashboards/hipaa'
 import {
   Shield, CheckCircle2, XCircle, AlertTriangle, Loader2,
-  RefreshCw, Activity, Lock, Eye, UserCheck, Network,
+  Activity, Lock, Eye, UserCheck, Network,
   ArrowRight, Server,
 } from 'lucide-react'
 import { authFetch } from '../../lib/api'

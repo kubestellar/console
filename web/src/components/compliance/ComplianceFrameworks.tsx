@@ -15,7 +15,7 @@
  * actual list of cluster names changes.
  */
 import { useState, useMemo, useEffect, useCallback, useSyncExternalStore, memo } from 'react'
-import { Shield, ChevronDown, ChevronRight, CheckCircle2, XCircle, AlertTriangle, MinusCircle, Loader2, RefreshCw } from 'lucide-react'
+import { Shield, ChevronDown, ChevronRight, CheckCircle2, XCircle, AlertTriangle, MinusCircle, Loader2 } from 'lucide-react'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { complianceFrameworksDashboardConfig } from '../../config/dashboards/compliance-frameworks'
 import { useComplianceFrameworks, useFrameworkEvaluation, type Framework, type ControlResult, type ComplianceCheck } from '../../hooks/useComplianceFrameworks'

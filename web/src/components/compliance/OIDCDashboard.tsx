@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback, memo } from 'react'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { oidcDashboardConfig } from '../../config/dashboards/oidc'
 import {
-  KeyRound, CheckCircle2, XCircle, AlertTriangle, Loader2,
-  RefreshCw, Users, ShieldCheck, Fingerprint, Clock,
+  CheckCircle2, XCircle, AlertTriangle, Loader2,
+  Users, ShieldCheck, Fingerprint, Clock,
 } from 'lucide-react'
 import { authFetch } from '../../lib/api'
 import { DashboardHeader } from '../shared/DashboardHeader'

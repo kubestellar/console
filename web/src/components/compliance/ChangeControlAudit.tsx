@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, memo } from 'react'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { changeControlDashboardConfig } from '../../config/dashboards/change-control'
 import {
-  ClipboardCheck, ShieldAlert, AlertTriangle, CheckCircle2, XCircle,
+  ShieldAlert, AlertTriangle, CheckCircle2, XCircle,
   Clock, GitCommit, Loader2, RefreshCw, Filter, User, FileText,
 } from 'lucide-react'
 import { authFetch } from '../../lib/api'

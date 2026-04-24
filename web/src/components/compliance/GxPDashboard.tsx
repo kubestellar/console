@@ -3,7 +3,7 @@ import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { gxpDashboardConfig } from '../../config/dashboards/gxp'
 import {
   CheckCircle2, XCircle, AlertTriangle, Loader2,
-  RefreshCw, Lock, FileCheck, Link2, PenTool, Clock, Hash,
+  Lock, Link2, PenTool, Clock, Hash,
 } from 'lucide-react'
 import { authFetch } from '../../lib/api'
 import { DashboardHeader } from '../shared/DashboardHeader'

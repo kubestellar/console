@@ -3,7 +3,7 @@ import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { fedrampDashboardConfig } from '../../config/dashboards/fedramp'
 import {
   CheckCircle2, XCircle, AlertTriangle, Loader2,
-  Shield, ArrowRight, Clock
+  ArrowRight, Clock
 } from 'lucide-react'
 import { authFetch } from '../../lib/api'
 import { DashboardHeader } from '../shared/DashboardHeader'

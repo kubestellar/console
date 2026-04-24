@@ -2,7 +2,7 @@ import { useState, useEffect, memo } from 'react'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { sessionManagementDashboardConfig } from '../../config/dashboards/session-management'
 import {
-  Clock, CheckCircle2, XCircle, Loader2, RefreshCw,
+  CheckCircle2, XCircle, Loader2,
   Users, ShieldCheck, AlertTriangle, Monitor,
 } from 'lucide-react'
 import { authFetch } from '../../lib/api'

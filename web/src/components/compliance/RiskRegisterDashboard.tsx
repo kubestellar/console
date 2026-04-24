@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, memo, useCallback } from 'react'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { riskRegisterDashboardConfig } from '../../config/dashboards/risk-register'
 import {
-  ClipboardList, Loader2, AlertTriangle, CheckCircle2, Clock,
+  Loader2, AlertTriangle, CheckCircle2, Clock,
   ChevronRight, X, Filter,
 } from 'lucide-react'
 import { authFetch } from '../../lib/api'

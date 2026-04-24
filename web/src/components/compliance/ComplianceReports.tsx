@@ -4,10 +4,10 @@
  * Lets users pick a framework and cluster, choose PDF or JSON format,
  * and download a timestamped compliance report.
  */
-import { useState, useEffect, useMemo, useCallback, memo } from 'react'
+import { useState, useEffect, useMemo, memo } from 'react'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { complianceReportsDashboardConfig } from '../../config/dashboards/compliance-reports'
-import { FileText, Download, Shield, Loader2 } from 'lucide-react'
+import { Download, Shield, Loader2 } from 'lucide-react'
 import { useComplianceFrameworks, type Framework } from '../../hooks/useComplianceFrameworks'
 import { useClusters } from '../../hooks/useMCP'
 import { authFetch } from '../../lib/api'

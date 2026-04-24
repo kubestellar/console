@@ -3,7 +3,7 @@ import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { airgapDashboardConfig } from '../../config/dashboards/airgap'
 import {
   CheckCircle2, XCircle, AlertTriangle, Loader2,
-  ArrowRight, WifiOff
+  ArrowRight
 } from 'lucide-react'
 import { authFetch } from '../../lib/api'
 import { DashboardHeader } from '../shared/DashboardHeader'

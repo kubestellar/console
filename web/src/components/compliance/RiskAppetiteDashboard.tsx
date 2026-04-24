@@ -2,7 +2,7 @@ import { useState, useEffect, memo, useCallback } from 'react'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { riskAppetiteDashboardConfig } from '../../config/dashboards/risk-appetite'
 import {
-  Gauge, Loader2, AlertTriangle, CheckCircle2, XCircle,
+  Loader2, AlertTriangle, CheckCircle2, XCircle,
   TrendingUp, ArrowRight,
 } from 'lucide-react'
 import { authFetch } from '../../lib/api'

@@ -1,7 +1,7 @@
 import React, { memo } from 'react'
 import { useState, useEffect, useCallback } from 'react'
 import {
-  AlertTriangle, CheckCircle2, Loader2, Clock,
+  CheckCircle2, Loader2, Clock,
   XCircle, ArrowRight, Play, Shield
 } from 'lucide-react'
 import { authFetch } from '../../lib/api'

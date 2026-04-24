@@ -3,7 +3,7 @@ import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { stigDashboardConfig } from '../../config/dashboards/stig'
 import {
   CheckCircle2, XCircle, AlertTriangle, Loader2,
-  Shield, ArrowRight, Clock, Search
+  ArrowRight, Clock, Search
 } from 'lucide-react'
 import { authFetch } from '../../lib/api'
 import { DashboardHeader } from '../shared/DashboardHeader'

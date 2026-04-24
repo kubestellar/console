@@ -7,7 +7,7 @@
 import { useState, useEffect, useMemo, useCallback, memo } from 'react'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { dataResidencyDashboardConfig } from '../../config/dashboards/data-residency'
-import { Globe, ShieldAlert, MapPin, CheckCircle2, XCircle, AlertTriangle, Loader2, RefreshCw } from 'lucide-react'
+import { ShieldAlert, MapPin, CheckCircle2, XCircle, AlertTriangle, Loader2, RefreshCw } from 'lucide-react'
 import { authFetch } from '../../lib/api'
 import { DashboardHeader } from '../shared/DashboardHeader'
 import { RotatingTip } from '../ui/RotatingTip'

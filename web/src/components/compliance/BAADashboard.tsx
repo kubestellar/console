@@ -3,7 +3,7 @@ import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { baaDashboardConfig } from '../../config/dashboards/baa'
 import {
   FileText, CheckCircle2, XCircle, AlertTriangle, Loader2,
-  RefreshCw, Clock, Building2, Cloud, Server, Mail,
+  Clock, Building2, Cloud, Server, Mail,
 } from 'lucide-react'
 import { authFetch } from '../../lib/api'
 import { DashboardHeader } from '../shared/DashboardHeader'
