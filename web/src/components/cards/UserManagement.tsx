@@ -98,13 +98,13 @@ export function UserManagement({ config: _config }: UserManagementProps) {
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
 
   // Filter clusters by global filter (already deduplicated from hook)
-  const clusters = (() => {
+  const clusters = useMemo(() => {
     if (isAllClustersSelected) return allClusters
     return allClusters.filter(c => selectedClusters.includes(c.name))
-  })()
+  }, [isAllClustersSelected, allClusters, selectedClusters])
 
   // Ensure current user is always included from auth context
-  const usersWithCurrent = (() => {
+  const usersWithCurrent = useMemo(() => {
     let result = [...allUsers]
     if (currentUser && !result.some(u => u.github_id === currentUser.github_id)) {
       const authUser: ConsoleUser = {
@@ -119,7 +119,7 @@ export function UserManagement({ config: _config }: UserManagementProps) {
       result = [authUser, ...result]
     }
     return result
-  })()
+  }, [allUsers, currentUser])
 
   // Extract unique namespaces from service accounts (filtered by cluster if selected)
   const namespaces = useMemo(() => {
@@ -131,13 +131,13 @@ export function UserManagement({ config: _config }: UserManagementProps) {
   }, [allServiceAccounts, selectedCluster])
 
   // Pre-filter OpenShift users by in-tab cluster dropdown (before passing to useCardData)
-  const openshiftUsersPreFiltered = (() => {
+  const openshiftUsersPreFiltered = useMemo(() => {
     if (!selectedCluster) return allOpenshiftUsers
     return allOpenshiftUsers.filter(u => u.cluster === selectedCluster)
-  })()
+  }, [selectedCluster, allOpenshiftUsers])
 
   // Pre-filter service accounts by in-tab cluster and namespace dropdowns
-  const serviceAccountsPreFiltered = (() => {
+  const serviceAccountsPreFiltered = useMemo(() => {
     let result = allServiceAccounts
     if (selectedCluster) {
       result = result.filter(sa => sa.cluster === selectedCluster)
@@ -146,10 +146,10 @@ export function UserManagement({ config: _config }: UserManagementProps) {
       result = result.filter(sa => sa.namespace === selectedNamespace)
     }
     return result
-  })()
+  }, [allServiceAccounts, selectedCluster, selectedNamespace])
 
   // Console user comparators (pins current user to top)
-  const consoleUserComparators: Record<ConsoleUserSortBy, (a: ConsoleUser, b: ConsoleUser) => number> = {
+  const consoleUserComparators: Record<ConsoleUserSortBy, (a: ConsoleUser, b: ConsoleUser) => number> = useMemo(() => ({
     name: (a, b) => {
       if (a.github_id === currentUser?.github_id) return -1
       if (b.github_id === currentUser?.github_id) return 1
@@ -164,7 +164,7 @@ export function UserManagement({ config: _config }: UserManagementProps) {
       if (a.github_id === currentUser?.github_id) return -1
       if (b.github_id === currentUser?.github_id) return 1
       return (a.email || '').localeCompare(b.email || '')
-    } }
+    } }), [currentUser?.github_id])
 
   // ---------- useCardData for OpenShift users tab ----------
   const {

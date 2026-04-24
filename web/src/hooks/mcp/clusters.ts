@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { api } from '../../lib/api'
 import { useDemoMode } from '../useDemoMode'
 import { isDemoMode } from '../../lib/demoMode'
@@ -199,13 +199,13 @@ export function useClusters() {
 
   // Deduplicated clusters (single cluster per server, with aliases)
   // Use this for metrics, stats, and counts to avoid double-counting
-  const deduplicatedClusters = (() => {
+  const deduplicatedClusters = useMemo(() => {
     // First share metrics between clusters with same server (so short names get metrics from long names)
     const sharedMetricsClusters = shareMetricsBetweenSameServerClusters(dataState.clusters)
     const result = deduplicateClustersByServer(sharedMetricsClusters)
 
     return result
-  })()
+  }, [dataState.clusters])
 
   // Completeness metadata for aggregated metrics (issue #6114). A cluster is
   // "contributing" when it is reachable and has reported capacity data
@@ -214,7 +214,7 @@ export function useClusters() {
   // aggregate like "totalCPUs" is authoritative or partial. This is the v1
   // seed for per-card completeness badges; a fuller rollout is tracked as
   // follow-up work.
-  const metricsCompleteness = (() => {
+  const metricsCompleteness = useMemo(() => {
     const contributingClusters: string[] = []
     const missingClusters: string[] = []
     for (const c of deduplicatedClusters) {
@@ -229,7 +229,7 @@ export function useClusters() {
       contributingClusters,
       missingClusters,
       isComplete: missingClusters.length === 0 && contributingClusters.length > 0 }
-  })()
+  }, [deduplicatedClusters])
 
   return {
     // Raw clusters - all contexts including duplicates pointing to same server
