@@ -268,6 +268,8 @@ export const CARD_TITLES: Record<string, string> = {
   contour_status: 'Contour',
   // Envoy proxy (service mesh / edge)
   envoy_status: 'Envoy Proxy',
+  // gRPC services (network / service communication)
+  grpc_status: 'gRPC Services',
   // Linkerd service mesh
   linkerd_status: 'Linkerd',
   // CRI-O container runtime
@@ -583,6 +585,8 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   contour_status: 'Contour ingress proxy status, HTTPProxy resources, and Envoy fleet health.',
   // Envoy proxy (service mesh / edge)
   envoy_status: 'Envoy Proxy listener health, upstream cluster health, and request/connection stats.',
+  // gRPC services (network / service communication)
+  grpc_status: 'gRPC service serving status, per-service RPS, p99 latency, and error rates.',
   // Linkerd service mesh
   linkerd_status: 'Linkerd service mesh meshed pods, success rate, RPS, and p99 latency per deployment.',
   // CRI-O container runtime

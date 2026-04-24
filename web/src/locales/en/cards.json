@@ -3074,6 +3074,20 @@
     "containers": "Containers",
     "noContainers": "No containers reported"
   },
+  "grpcStatus": {
+    "healthy": "Healthy",
+    "degraded": "Degraded",
+    "notInstalled": "No gRPC services detected",
+    "notInstalledHint": "No gRPC reflection endpoint reachable from the connected clusters.",
+    "fetchError": "Unable to fetch gRPC status",
+    "services": "Services",
+    "totalRps": "Total RPS",
+    "avgP99": "Avg p99",
+    "endpoints": "Endpoints",
+    "avgErrorRate": "avg err",
+    "sectionServices": "gRPC services",
+    "noServices": "No gRPC services found"
+  },
   "linkerdStatus": {
     "healthy": "Healthy",
     "degraded": "Degraded",
