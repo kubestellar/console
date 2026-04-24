@@ -49,6 +49,7 @@ import {
   useServiceImports } from '../../hooks/useMCS'
 import { useFluxStatus } from '../../components/cards/flux_status/useFluxStatus'
 import { useContourStatus } from '../../components/cards/contour_status/useContourStatus'
+import { useCachedEnvoy } from '../../components/cards/envoy_status/useCachedEnvoy'
 
 // ============================================================================
 // Wrapper hooks that convert params object to positional args
@@ -1039,6 +1040,17 @@ function useUnifiedContourStatus() {
   }
 }
 
+function useUnifiedEnvoyStatus() {
+  const result = useCachedEnvoy()
+  // Surface the listener list as the primary row set for generic list renderers.
+  return {
+    data: result.data.listeners,
+    isLoading: result.showSkeleton,
+    error: result.error ? new Error('Failed to fetch Envoy status') : null,
+    refetch: () => { result.refetch() },
+  }
+}
+
 function useProviderHealth() {
   return useDemoDataHook(DEMO_PROVIDER_HEALTH)
 }
@@ -1226,6 +1238,7 @@ export function registerUnifiedHooks(): void {
   registerDataHook('useKustomizationStatus', useKustomizationStatus)
   registerDataHook('useFluxStatus', useUnifiedFluxStatus)
   registerDataHook('useContourStatus', useUnifiedContourStatus)
+  registerDataHook('useCachedEnvoy', useUnifiedEnvoyStatus)
   registerDataHook('useProviderHealth', useProviderHealth)
   registerDataHook('useUpgradeStatus', useUpgradeStatus)
   registerDataHook('useProwStatus', useProwStatus)

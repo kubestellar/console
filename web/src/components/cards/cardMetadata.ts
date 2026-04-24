@@ -266,6 +266,8 @@ export const CARD_TITLES: Record<string, string> = {
   coredns_status: 'CoreDNS',
   // Contour ingress proxy
   contour_status: 'Contour',
+  // Envoy proxy (service mesh / edge)
+  envoy_status: 'Envoy Proxy',
   // CRI-O container runtime
   crio_status: 'CRI-O',
   // Strimzi Kafka operator
@@ -575,6 +577,8 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   coredns_status: 'CoreDNS pod health, restart counts, and cluster status across clusters.',
   // Contour ingress proxy
   contour_status: 'Contour ingress proxy status, HTTPProxy resources, and Envoy fleet health.',
+  // Envoy proxy (service mesh / edge)
+  envoy_status: 'Envoy Proxy listener health, upstream cluster health, and request/connection stats.',
   // CRI-O container runtime
   crio_status: 'CRI-O container runtime metrics, image pulls, and pod sandbox status.',
 

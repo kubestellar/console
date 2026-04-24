@@ -80,6 +80,8 @@ const KustomizationStatus = safeLazy(() => _deployBundle, 'KustomizationStatus')
 const FluxStatus = safeLazy(() => import('./flux_status'), 'FluxStatus')
 // Contour ingress proxy card
 const ContourStatus = safeLazy(() => import('./contour_status'), 'ContourStatus')
+// Envoy proxy card (Service Mesh / network)
+const EnvoyStatus = safeLazy(() => import('./envoy_status'), 'EnvoyStatus')
 const OverlayComparison = safeLazy(() => _deployBundle, 'OverlayComparison')
 const ArgoCDApplications = safeLazy(() => _deployBundle, 'ArgoCDApplications')
 const ArgoCDApplicationSets = safeLazy(() => _deployBundle, 'ArgoCDApplicationSets')
@@ -700,6 +702,8 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   nats_status: NatsStatus,
   // Contour ingress proxy
   contour_status: ContourStatus,
+  // Envoy proxy (service mesh / edge)
+  envoy_status: EnvoyStatus,
   // Artifact Hub
   artifact_hub_status: ArtifactHubStatus,
   // CloudEvents messaging
@@ -1018,6 +1022,7 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   kustomization_status: () => import('./deploy-bundle'),
   flux_status: () => import('./flux_status'),
   contour_status: () => import('./contour_status'),
+  envoy_status: () => import('./envoy_status'),
   overlay_comparison: () => import('./deploy-bundle'),
   argocd_applications: () => import('./deploy-bundle'),
   argocd_applicationsets: () => import('./deploy-bundle'),
@@ -1607,6 +1612,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   kustomization_status: 6,
   flux_status: 6,
   contour_status: 6,
+  envoy_status: 6,
   pvc_status: 6,
   gpu_status: 6,
   gpu_inventory: 6,

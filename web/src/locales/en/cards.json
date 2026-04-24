@@ -3045,6 +3045,22 @@
     "syncedHoursAgo": "{{count}}h ago",
     "syncedDaysAgo": "{{count}}d ago"
   },
+  "envoyStatus": {
+    "healthy": "Healthy",
+    "degraded": "Degraded",
+    "notInstalled": "Envoy not detected",
+    "notInstalledHint": "No Envoy admin endpoint reachable from the connected clusters.",
+    "fetchError": "Unable to fetch Envoy status",
+    "listeners": "Listeners",
+    "clusters": "Clusters",
+    "rps": "Requests/s",
+    "activeConnections": "Active conns",
+    "http5xx": "5xx rate",
+    "sectionListeners": "Listeners",
+    "sectionClusters": "Upstream clusters",
+    "noListeners": "No listeners configured",
+    "noClusters": "No upstream clusters"
+  },
   "kubecostOverview": {
     "monthlyCost": "Monthly Cost",
     "savingsRecommendations": "Savings Recommendations",
