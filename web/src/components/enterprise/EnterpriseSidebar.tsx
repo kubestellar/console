@@ -27,7 +27,7 @@ const SIDEBAR_FEATURES = {
   addMore: true,
   clusterStatus: true,
   collapsePin: true,
-  resize: true,
+  resize: false,
   activeUsers: true,
 } as const
 

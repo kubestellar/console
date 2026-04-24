@@ -8,9 +8,11 @@
 import { useState, useEffect } from 'react'
 import {
   BadgeCheck, XCircle, AlertTriangle, Loader2,
-  RefreshCw, Shield, ShieldAlert, ShieldOff, Server,
+  Shield, ShieldAlert, ShieldOff, Server,
 } from 'lucide-react'
 import { authFetch } from '../../lib/api'
+import { DashboardHeader } from '../shared/DashboardHeader'
+import { RotatingTip } from '../ui/RotatingTip'
 
 /** Polling interval for signature status refresh (ms) */
 const REFRESH_INTERVAL_MS = 120_000
@@ -63,6 +65,7 @@ export default function SigningStatusDashboard() {
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'images' | 'policies'>('images')
   const [filterUnsigned, setFilterUnsigned] = useState(false)
+  const [autoRefresh, setAutoRefresh] = useState(false)
 
   const fetchData = async () => {
     setLoading(true)
@@ -112,21 +115,16 @@ export default function SigningStatusDashboard() {
 
   return (
     <div className="space-y-6 p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-3">
-            <BadgeCheck className="w-7 h-7 text-purple-400" />
-            Sigstore / Cosign Verification
-          </h1>
-          <p className="text-gray-400 mt-1">
-            Image signature verification and supply chain attestation across the fleet
-          </p>
-        </div>
-        <button onClick={fetchData} className="p-2 hover:bg-white/10 rounded-lg transition-colors" title="Refresh">
-          <RefreshCw className="w-5 h-5 text-gray-400" />
-        </button>
-      </div>
+      <DashboardHeader
+        title="Sigstore / Cosign Verification"
+        subtitle="Image signature verification and supply chain attestation across the fleet"
+        isFetching={loading}
+        onRefresh={fetchData}
+        autoRefresh={autoRefresh}
+        onAutoRefreshChange={setAutoRefresh}
+        autoRefreshId="signing-status-auto-refresh"
+        rightExtra={<RotatingTip page="compliance" />}
+      />
 
       {/* Summary Cards */}
       {summary && (

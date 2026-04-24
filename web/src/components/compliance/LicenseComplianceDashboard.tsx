@@ -7,10 +7,12 @@
  */
 import { useState, useEffect } from 'react'
 import {
-  Scale, CheckCircle2, XCircle, AlertTriangle, Loader2,
-  RefreshCw, BookOpen,
+  CheckCircle2, XCircle, AlertTriangle, Loader2,
+  BookOpen,
 } from 'lucide-react'
 import { authFetch } from '../../lib/api'
+import { DashboardHeader } from '../shared/DashboardHeader'
+import { RotatingTip } from '../ui/RotatingTip'
 
 /** How often to re-scan license data (ms) */
 const LICENSE_REFRESH_MS = 300_000
@@ -65,6 +67,7 @@ export default function LicenseComplianceDashboard() {
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'violations' | 'inventory' | 'categories'>('violations')
   const [filterRisk, setFilterRisk] = useState<LicenseRisk | null>('denied')
+  const [autoRefresh, setAutoRefresh] = useState(false)
 
   const fetchData = async () => {
     setLoading(true)
@@ -116,21 +119,16 @@ export default function LicenseComplianceDashboard() {
 
   return (
     <div className="space-y-6 p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-3">
-            <Scale className="w-7 h-7 text-indigo-400" />
-            License Compliance Scanner
-          </h1>
-          <p className="text-gray-400 mt-1">
-            Open-source license inventory with deny/warn-list violation detection
-          </p>
-        </div>
-        <button onClick={fetchData} className="p-2 hover:bg-white/10 rounded-lg transition-colors" title="Refresh">
-          <RefreshCw className="w-5 h-5 text-gray-400" />
-        </button>
-      </div>
+      <DashboardHeader
+        title="License Compliance Scanner"
+        subtitle="Open-source license inventory with deny/warn-list violation detection"
+        isFetching={loading}
+        onRefresh={fetchData}
+        autoRefresh={autoRefresh}
+        onAutoRefreshChange={setAutoRefresh}
+        autoRefreshId="license-compliance-auto-refresh"
+        rightExtra={<RotatingTip page="compliance" />}
+      />
 
       {/* Summary Cards */}
       {summary && (
