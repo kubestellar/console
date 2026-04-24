@@ -1,47 +1,119 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import '@testing-library/jest-dom'
-import { JaegerStatus } from '../index'
 import React from 'react'
 
 // Mock i18next
 vi.mock('react-i18next', () => ({
     useTranslation: () => ({ t: (k: string) => k }),
+    Trans: ({ children }: { children: React.ReactNode }) => children,
 }))
 
-// Mock custom hooks
+// Mock the cached-data hook
 const mockUseCachedJaegerStatus = vi.fn()
 vi.mock('../../../../hooks/useCachedData', () => ({
     useCachedJaegerStatus: () => mockUseCachedJaegerStatus(),
 }))
 
+// Mock useGlobalFilters — the card itself calls selectedClusters; cardHooks.useCardData
+// also uses this hook internally and needs a fuller shape (customFilter, filter helpers, ...).
 vi.mock('../../../../hooks/useGlobalFilters', () => ({
-    useGlobalFilters: () => ({ selectedClusters: [] }),
+    useGlobalFilters: () => ({
+        selectedClusters: [],
+        setSelectedClusters: vi.fn(),
+        toggleCluster: vi.fn(),
+        selectAllClusters: vi.fn(),
+        deselectAllClusters: vi.fn(),
+        isAllClustersSelected: true,
+        isClustersFiltered: false,
+        availableClusters: [],
+        clusterInfoMap: {},
+        clusterGroups: [],
+        addClusterGroup: vi.fn(),
+        updateClusterGroup: vi.fn(),
+        deleteClusterGroup: vi.fn(),
+        selectClusterGroup: vi.fn(),
+        selectedSeverities: [],
+        setSelectedSeverities: vi.fn(),
+        toggleSeverity: vi.fn(),
+        selectAllSeverities: vi.fn(),
+        deselectAllSeverities: vi.fn(),
+        isAllSeveritiesSelected: true,
+        isSeveritiesFiltered: false,
+        selectedStatuses: [],
+        setSelectedStatuses: vi.fn(),
+        toggleStatus: vi.fn(),
+        selectAllStatuses: vi.fn(),
+        deselectAllStatuses: vi.fn(),
+        isAllStatusesSelected: true,
+        isStatusesFiltered: false,
+        selectedDistributions: [],
+        toggleDistribution: vi.fn(),
+        selectAllDistributions: vi.fn(),
+        deselectAllDistributions: vi.fn(),
+        isAllDistributionsSelected: true,
+        isDistributionsFiltered: false,
+        availableDistributions: [],
+        customFilter: '',
+        setCustomFilter: vi.fn(),
+        clearCustomFilter: vi.fn(),
+        hasCustomFilter: false,
+        isFiltered: false,
+        clearAllFilters: vi.fn(),
+        savedFilterSets: [],
+        saveCurrentFilters: vi.fn(),
+        applySavedFilterSet: vi.fn(),
+        deleteSavedFilterSet: vi.fn(),
+        activeFilterSetId: null,
+        filterByCluster: <T,>(items: T[]) => items,
+        filterBySeverity: <T,>(items: T[]) => items,
+        filterByStatus: <T,>(items: T[]) => items,
+        filterByCustomText: <T,>(items: T[]) => items,
+        filterItems: <T,>(items: T[]) => items,
+    }),
 }))
 
 vi.mock('../../../../hooks/useDrillDown', () => ({
     useDrillDownActions: () => ({ drillToNode: vi.fn() }),
 }))
 
-vi.mock('../../../../hooks/useCardLoadingState', () => ({
+// Mock useCardLoadingState from CardDataContext (the actual import path used by index.tsx)
+vi.mock('../../CardDataContext', () => ({
     useCardLoadingState: () => ({
         showSkeleton: false,
-        showSpinner: false,
-        showEmpty: false,
-        showError: false,
-        isInteractive: true,
+        showEmptyState: false,
+        hasData: true,
+        isRefreshing: false,
     }),
+    useReportCardDataState: vi.fn(),
 }))
 
-vi.mock('../../../../hooks/useCardData', () => ({
-    useCardData: () => ({
-        data: null,
-        error: null,
-        isLoading: false,
-        isRefreshing: false,
-        refetch: vi.fn(),
-    }),
-}))
+// Mock useCardData from lib/cards — the card imports it as `from '../../../lib/cards'`,
+// which re-exports from `lib/cards/cardHooks.ts`.
+vi.mock('../../../../lib/cards', async (importOriginal) => {
+    const actual = (await importOriginal()) as Record<string, unknown>
+    return {
+        ...actual,
+        useCardData: (items: unknown[]) => ({
+            items: items || [],
+            totalItems: (items || []).length,
+            currentPage: 1,
+            totalPages: 1,
+            itemsPerPage: 4,
+            goToPage: vi.fn(),
+            setItemsPerPage: vi.fn(),
+            needsPagination: false,
+            sorting: {
+                sortBy: 'name',
+                setSortBy: vi.fn(),
+                sortDirection: 'asc' as const,
+                setSortDirection: vi.fn(),
+            },
+            containerRef: { current: null },
+            containerStyle: {},
+        }),
+    }
+})
 
 // Mock CardControls and other UI components to avoid dependency issues
 vi.mock('../../../ui/CardControls', () => ({
@@ -55,6 +127,8 @@ vi.mock('../../../ui/StatusBadge', () => ({
 vi.mock('../../../ui/RefreshIndicator', () => ({
     RefreshIndicator: () => <div data-testid="refresh-indicator" />,
 }))
+
+import { JaegerStatus } from '../index'
 
 describe('JaegerStatus', () => {
     beforeEach(() => {

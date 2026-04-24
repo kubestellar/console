@@ -1,28 +1,54 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook } from '@testing-library/react'
-import { useCachedJaegerStatus } from './useCachedJaegerStatus'
 
-// Mock useCache
+// Mock useCache (the hook wraps this)
 const mockUseCache = vi.fn()
-vi.mock('./useCache', () => ({
+vi.mock('../lib/cache', () => ({
     useCache: (options: any) => mockUseCache(options),
 }))
 
-// Mock demo mode
-let mockIsDemoMode = false
-vi.mock('../lib/demoMode', () => ({
-    isDemoMode: () => mockIsDemoMode,
+// Mock useDemoMode — the hook actually imports `useDemoMode` from `./useDemoMode`,
+// NOT `isDemoMode` directly from `../lib/demoMode`. Mocking `../lib/demoMode` would
+// break transitive imports (e.g. `isNetlifyDeployment` is used by `hooks/mcp/shared.ts`).
+const mockIsDemoMode = vi.fn(() => false)
+vi.mock('./useDemoMode', () => ({
+    useDemoMode: () => ({ isDemoMode: mockIsDemoMode() }),
+    isDemoModeForced: () => false,
+    canToggleDemoMode: () => true,
+    isNetlifyDeployment: () => false,
+    isDemoToken: () => false,
+    hasRealToken: () => true,
+    setDemoToken: vi.fn(),
+    getDemoMode: () => false,
+    setGlobalDemoMode: vi.fn(),
 }))
 
-// Mock demo data
+// Mock demo data for the jaeger status hook
 vi.mock('./useCachedData/demoData', () => ({
-    getDemoJaegerStatus: () => ({ status: 'Healthy', version: 'demo-1.0' }),
+    getDemoJaegerStatus: () => ({
+        status: 'Healthy',
+        version: 'demo-1.0',
+        collectors: { count: 1, status: 'Healthy', items: [] },
+        query: { status: 'Healthy' },
+        metrics: {
+            servicesCount: 0,
+            tracesLastHour: 0,
+            dependenciesCount: 0,
+            avgLatencyMs: 0,
+            p95LatencyMs: 0,
+            p99LatencyMs: 0,
+            spansDroppedLastHour: 0,
+            avgQueueLength: 0,
+        },
+    }),
 }))
+
+import { useCachedJaegerStatus } from './useCachedJaegerStatus'
 
 describe('useCachedJaegerStatus', () => {
     beforeEach(() => {
         vi.clearAllMocks()
-        mockIsDemoMode = false
+        mockIsDemoMode.mockReturnValue(false)
         mockUseCache.mockReturnValue({
             data: { status: 'Healthy', version: '1.57.0' },
             isLoading: false,
@@ -42,7 +68,7 @@ describe('useCachedJaegerStatus', () => {
     })
 
     it('returns demo data when in demo mode', () => {
-        mockIsDemoMode = true
+        mockIsDemoMode.mockReturnValue(true)
         const { result } = renderHook(() => useCachedJaegerStatus())
         expect(result.current.data.version).toBe('demo-1.0')
         expect(result.current.isDemoData).toBe(true)
