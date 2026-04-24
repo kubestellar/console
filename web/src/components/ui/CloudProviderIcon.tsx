@@ -206,6 +206,11 @@ const CoreWeaveIcon: React.FC<{ size: number; className?: string }> = ({ size, c
   </svg>
 )
 
+// Hoisted style object — keeping it out of render avoids allocating a new
+// object on every render (auto-qa flagged inline style objects as re-render
+// triggers).
+const KIND_ICON_STYLE: React.CSSProperties = { objectFit: 'contain' }
+
 // Kind icon - official logo (ship in bottle)
 const KindIcon: React.FC<{ size: number; className?: string }> = ({ size, className }) => (
   <img
@@ -214,7 +219,7 @@ const KindIcon: React.FC<{ size: number; className?: string }> = ({ size, classN
     width={size}
     height={size}
     className={className}
-    style={{ objectFit: 'contain' }}
+    style={KIND_ICON_STYLE}
   />
 )
 

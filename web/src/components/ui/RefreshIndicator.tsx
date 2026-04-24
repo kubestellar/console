@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { memo, useState, useEffect, useRef } from 'react'
 import { RefreshCw, Clock, AlertTriangle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
@@ -32,8 +32,11 @@ interface RefreshIndicatorProps {
  * - Idle: Shows clock icon with "Updated Xs ago"
  * - Refreshing: Shows spinning refresh icon with "Updating" label
  * - Stale: Shows amber clock icon with warning styling
+ *
+ * Wrapped in memo — all props are primitives / Date, so shallow compare is
+ * safe and avoids re-rendering this leaf on every parent re-render tick.
  */
-export function RefreshIndicator({
+export const RefreshIndicator = memo(function RefreshIndicator({
   isRefreshing,
   lastUpdated,
   className,
@@ -115,7 +118,7 @@ export function RefreshIndicator({
       )}
     </span>
   )
-}
+})
 
 // Button variant for manual refresh with failure state
 interface RefreshButtonProps {
@@ -232,8 +235,9 @@ export function RefreshButton({
   )
 }
 
-// Simple spinning indicator without button (for inline use)
-export function RefreshSpinner({
+// Simple spinning indicator without button (for inline use).
+// Wrapped in memo — all props are primitives so shallow compare is safe.
+export const RefreshSpinner = memo(function RefreshSpinner({
   isRefreshing,
   size = 'md',
   className = '',
@@ -274,4 +278,4 @@ export function RefreshSpinner({
   return (
     <RefreshCw className={`${sizeClasses} text-blue-400 animate-spin-min ${className}`} />
   )
-}
+})

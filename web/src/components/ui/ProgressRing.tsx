@@ -2,6 +2,7 @@
  * Subtle progress ring — shows scan progress as a circular indicator.
  * Used across compliance cards to show cluster-checking progress.
  */
+import { memo } from 'react'
 
 /** Full circle circumference for a unit circle (r=1), scaled at render time */
 const TWO_PI = 2 * Math.PI
@@ -16,7 +17,9 @@ interface ProgressRingProps {
   className?: string
 }
 
-export function ProgressRing({
+// Wrapped in memo — all props are primitives so shallow compare is safe and
+// avoids re-renders when parent re-renders without changing progress values.
+export const ProgressRing = memo(function ProgressRing({
   progress,
   size = 16,
   strokeWidth = 2,
@@ -62,4 +65,4 @@ export function ProgressRing({
       />
     </svg>
   )
-}
+})
