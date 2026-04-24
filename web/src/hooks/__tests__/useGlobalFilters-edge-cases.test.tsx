@@ -400,15 +400,16 @@ describe('edge cases', () => {
   })
 
   it('deselectAllClusters then selectAllClusters both resolve to all mode', () => {
-    // PR #5449: reconciliation drops __none__ immediately, so deselectAll
-    // already reverts to all-selected; selectAll is a no-op after that
+    // deselectAllClusters sets the __none__ sentinel, which is preserved
+    // (not reconciled away) so filterByCluster returns empty.
+    // selectAllClusters then clears the sentinel, restoring all mode.
     const { result } = renderHook(() => useGlobalFilters(), { wrapper })
 
     act(() => {
       result.current.deselectAllClusters()
     })
-    // Reconciliation already restored all mode
-    expect(result.current.filterByCluster(SAMPLE_ITEMS)).toEqual(SAMPLE_ITEMS)
+    // __none__ sentinel is preserved — nothing passes the filter
+    expect(result.current.filterByCluster(SAMPLE_ITEMS)).toEqual([])
 
     act(() => {
       result.current.selectAllClusters()
@@ -868,8 +869,9 @@ describe('combined isFiltered flag with edge combinations', () => {
 })
 
 describe('filterByCluster with __none__ sentinel edge cases', () => {
-  it('deselectAllClusters is reconciled to all mode — returns all items', () => {
-    // PR #5449: reconciliation drops __none__ sentinel, reverting to all mode
+  it('deselectAllClusters preserves __none__ sentinel — returns empty', () => {
+    // __none__ sentinel is preserved during reconciliation, so
+    // filterByCluster returns an empty array (nothing selected)
     const { result } = renderHook(() => useGlobalFilters(), { wrapper })
 
     act(() => {
@@ -880,8 +882,8 @@ describe('filterByCluster with __none__ sentinel edge cases', () => {
       { name: 'no-cluster' },
       { name: 'has-cluster', cluster: 'cluster-a' },
     ]
-    // All items returned because reconciliation restored all-selected mode
-    expect(result.current.filterByCluster(items)).toEqual(items)
+    // __none__ sentinel means nothing is selected — empty result
+    expect(result.current.filterByCluster(items)).toEqual([])
   })
 })
 

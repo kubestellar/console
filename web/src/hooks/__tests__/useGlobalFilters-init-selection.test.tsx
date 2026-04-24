@@ -434,19 +434,19 @@ describe('cluster selection', () => {
     expect(result.current.isClustersFiltered).toBe(false)
   })
 
-  it('deselectAllClusters is reconciled back to all-selected mode', () => {
-    // PR #5449: reconciliation drops __none__ (not in availableClusters),
-    // reverting to all-selected mode
+  it('deselectAllClusters preserves __none__ sentinel (nothing selected)', () => {
+    // __none__ sentinel is preserved during reconciliation, so
+    // isAllClustersSelected is false and filterByCluster returns empty
     const { result } = renderHook(() => useGlobalFilters(), { wrapper })
 
     act(() => {
       result.current.deselectAllClusters()
     })
 
-    // Reconciliation resets to all-selected because __none__ is not a real cluster
-    expect(result.current.isAllClustersSelected).toBe(true)
+    // __none__ sentinel is preserved — not reconciled away
+    expect(result.current.isAllClustersSelected).toBe(false)
     const filtered = result.current.filterByCluster(SAMPLE_ITEMS)
-    expect(filtered).toEqual(SAMPLE_ITEMS)
+    expect(filtered).toEqual([])
   })
 
   describe('toggleCluster', () => {
