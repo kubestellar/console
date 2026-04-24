@@ -3045,6 +3045,27 @@
     "syncedHoursAgo": "{{count}}h ago",
     "syncedDaysAgo": "{{count}}d ago"
   },
+  "daprStatus": {
+    "healthy": "Healthy",
+    "degraded": "Degraded",
+    "notInstalled": "Dapr not detected",
+    "notInstalledHint": "No Dapr control plane reachable from the connected clusters.",
+    "fetchError": "Unable to fetch Dapr status",
+    "controlPlane": "Control plane",
+    "apps": "Dapr apps",
+    "components": "Components",
+    "namespaces": "Namespaces",
+    "stateStores": "State stores",
+    "pubsubs": "Pub/sub",
+    "bindings": "Bindings",
+    "componentStateStore": "State store",
+    "componentPubSub": "Pub/sub",
+    "componentBinding": "Binding",
+    "sectionControlPlane": "Control plane",
+    "sectionComponents": "Components",
+    "noControlPlane": "No Dapr control plane pods detected",
+    "noComponents": "No Dapr components configured"
+  },
   "envoyStatus": {
     "healthy": "Healthy",
     "degraded": "Degraded",

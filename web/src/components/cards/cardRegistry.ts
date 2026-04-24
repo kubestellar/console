@@ -80,6 +80,8 @@ const KustomizationStatus = safeLazy(() => _deployBundle, 'KustomizationStatus')
 const FluxStatus = safeLazy(() => import('./flux_status'), 'FluxStatus')
 // Contour ingress proxy card
 const ContourStatus = safeLazy(() => import('./contour_status'), 'ContourStatus')
+// Dapr distributed application runtime card
+const DaprStatus = safeLazy(() => import('./dapr_status'), 'DaprStatus')
 // Envoy proxy card (Service Mesh / network)
 const EnvoyStatus = safeLazy(() => import('./envoy_status'), 'EnvoyStatus')
 // gRPC services card (network / service communication)
@@ -716,6 +718,8 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   nats_status: NatsStatus,
   // Contour ingress proxy
   contour_status: ContourStatus,
+  // Dapr distributed application runtime
+  dapr_status: DaprStatus,
   // Envoy proxy (service mesh / edge)
   envoy_status: EnvoyStatus,
   // gRPC services (network / service communication)
@@ -1046,6 +1050,7 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   kustomization_status: () => import('./deploy-bundle'),
   flux_status: () => import('./flux_status'),
   contour_status: () => import('./contour_status'),
+  dapr_status: () => import('./dapr_status'),
   envoy_status: () => import('./envoy_status'),
   grpc_status: () => import('./grpc_status'),
   linkerd_status: () => import('./linkerd_status'),
@@ -1645,6 +1650,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   kustomization_status: 6,
   flux_status: 6,
   contour_status: 6,
+  dapr_status: 6,
   envoy_status: 6,
   grpc_status: 6,
   linkerd_status: 6,

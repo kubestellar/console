@@ -50,6 +50,7 @@ import {
 import { useFluxStatus } from '../../components/cards/flux_status/useFluxStatus'
 import { useContourStatus } from '../../components/cards/contour_status/useContourStatus'
 import { useCachedContainerd } from '../../hooks/useCachedContainerd'
+import { useCachedDapr } from '../../hooks/useCachedDapr'
 import { useCachedEnvoy } from '../../components/cards/envoy_status/useCachedEnvoy'
 import { useCachedGrpc } from '../../hooks/useCachedGrpc'
 import { useCachedKeda } from '../../hooks/useCachedKeda'
@@ -1068,6 +1069,17 @@ function useUnifiedEnvoyStatus() {
   }
 }
 
+function useUnifiedDaprStatus() {
+  const result = useCachedDapr()
+  // Surface the component list as the primary row set for generic list renderers.
+  return {
+    data: result.data.components,
+    isLoading: result.showSkeleton,
+    error: result.error ? new Error('Failed to fetch Dapr status') : null,
+    refetch: () => { result.refetch() },
+  }
+}
+
 function useUnifiedGrpcStatus() {
   const result = useCachedGrpc()
   // Surface the service list as the primary row set for generic list renderers.
@@ -1326,6 +1338,7 @@ export function registerUnifiedHooks(): void {
   registerDataHook('useFluxStatus', useUnifiedFluxStatus)
   registerDataHook('useContourStatus', useUnifiedContourStatus)
   registerDataHook('useCachedContainerd', useUnifiedContainerdStatus)
+  registerDataHook('useCachedDapr', useUnifiedDaprStatus)
   registerDataHook('useCachedEnvoy', useUnifiedEnvoyStatus)
   registerDataHook('useCachedGrpc', useUnifiedGrpcStatus)
   registerDataHook('useCachedKeda', useUnifiedKedaStatus)

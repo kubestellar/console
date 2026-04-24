@@ -64,6 +64,7 @@ import { githubCiMonitorConfig } from './github-ci-monitor'
 import { fluxStatusConfig } from './flux-status'
 import { contourStatusConfig } from './contour-status'
 import { containerdStatusConfig } from './containerd-status'
+import { daprStatusConfig } from './dapr-status'
 import { envoyStatusConfig } from './envoy-status'
 import { grpcStatusConfig } from './grpc-status'
 import { kedaStatusConfig } from './keda-status'
@@ -256,6 +257,7 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   flux_status: fluxStatusConfig,
   contour_status: contourStatusConfig,
   containerd_status: containerdStatusConfig,
+  dapr_status: daprStatusConfig,
   envoy_status: envoyStatusConfig,
   grpc_status: grpcStatusConfig,
   keda_status: kedaStatusConfig,

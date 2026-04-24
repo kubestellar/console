@@ -266,6 +266,8 @@ export const CARD_TITLES: Record<string, string> = {
   coredns_status: 'CoreDNS',
   // Contour ingress proxy
   contour_status: 'Contour',
+  // Dapr distributed application runtime
+  dapr_status: 'Dapr',
   // Envoy proxy (service mesh / edge)
   envoy_status: 'Envoy Proxy',
   // gRPC services (network / service communication)
@@ -589,6 +591,8 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   coredns_status: 'CoreDNS pod health, restart counts, and cluster status across clusters.',
   // Contour ingress proxy
   contour_status: 'Contour ingress proxy status, HTTPProxy resources, and Envoy fleet health.',
+  // Dapr distributed application runtime
+  dapr_status: 'Dapr control plane health, Dapr-enabled application count, and configured components (state store / pub-sub / binding).',
   // Envoy proxy (service mesh / edge)
   envoy_status: 'Envoy Proxy listener health, upstream cluster health, and request/connection stats.',
   // gRPC services (network / service communication)

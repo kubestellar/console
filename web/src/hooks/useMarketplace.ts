@@ -94,6 +94,7 @@ const MARKETPLACE_TO_CARD_TYPE: Record<string, string> = {
   'cncf-lima': 'lima_status',
   'cncf-flux': 'flux_status',
   'cncf-contour': 'contour_status',
+  'cncf-dapr': 'dapr_status',
   'cncf-envoy': 'envoy_status',
   'cncf-grpc': 'grpc_status',
   'cncf-linkerd': 'linkerd_status',

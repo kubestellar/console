@@ -150,6 +150,12 @@ export * from './useCachedJaegerStatus'
 export * from './useCachedTikv'
 
 // ============================================================================
+// Dapr Distributed Application Runtime — useCachedDapr.ts
+// ============================================================================
+
+export { useCachedDapr } from './useCachedDapr'
+
+// ============================================================================
 // OpenTelemetry Collector — useCachedOtel.ts
 // ============================================================================
 

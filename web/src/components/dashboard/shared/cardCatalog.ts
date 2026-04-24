@@ -116,6 +116,7 @@ export const CARD_CATALOG = {
     { type: 'configmap_status', title: 'ConfigMap Status', description: 'ConfigMaps across clusters with data key counts', visualization: 'table' },
     { type: 'secret_status', title: 'Secret Status', description: 'Secrets across clusters with types and key counts', visualization: 'table' },
     { type: 'kubevela_status', title: 'KubeVela', description: 'KubeVela controller health and OAM application delivery status', visualization: 'status' },
+    { type: 'dapr_status', title: 'Dapr', description: 'Dapr control plane health, Dapr-enabled apps, and configured components (state store / pub-sub / binding)', visualization: 'status' },
   ],
   'Compute': [
     { type: 'compute_overview', title: 'Compute Overview', description: 'CPU, memory, and GPU summary with live data', visualization: 'status' },
