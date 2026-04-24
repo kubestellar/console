@@ -11,6 +11,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 
+	"github.com/kubestellar/console/pkg/api/audit"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/store"
@@ -141,6 +142,10 @@ func (h *GPUHandler) CreateReservation(c *fiber.Ctx) error {
 		}
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to create reservation")
 	}
+
+	// #9890: persist audit entry after successful mutation.
+	audit.Log(c, audit.ActionCreateGPUReservation, "gpu_reservation", reservation.ID.String(),
+		fmt.Sprintf("cluster=%s namespace=%s gpus=%d", reservation.Cluster, reservation.Namespace, reservation.GPUCount))
 
 	return c.Status(fiber.StatusCreated).JSON(reservation)
 }
@@ -381,12 +386,19 @@ func (h *GPUHandler) UpdateReservation(c *fiber.Ctx) error {
 			}
 			return fiber.NewError(fiber.StatusInternalServerError, "Failed to update reservation")
 		}
+		// #9890: persist audit entry after successful mutation.
+		audit.Log(c, audit.ActionUpdateGPUReservation, "gpu_reservation", existing.ID.String(),
+			fmt.Sprintf("cluster=%s namespace=%s gpus=%d status=%s", existing.Cluster, existing.Namespace, existing.GPUCount, existing.Status))
 		return c.JSON(existing)
 	}
 
 	if err := h.store.UpdateGPUReservation(c.UserContext(), existing); err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to update reservation")
 	}
+
+	// #9890: persist audit entry after successful mutation.
+	audit.Log(c, audit.ActionUpdateGPUReservation, "gpu_reservation", existing.ID.String(),
+		fmt.Sprintf("cluster=%s namespace=%s gpus=%d status=%s", existing.Cluster, existing.Namespace, existing.GPUCount, existing.Status))
 
 	return c.JSON(existing)
 }
@@ -419,6 +431,10 @@ func (h *GPUHandler) DeleteReservation(c *fiber.Ctx) error {
 	if err := h.store.DeleteGPUReservation(c.UserContext(), id); err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to delete reservation")
 	}
+
+	// #9890: persist audit entry after successful mutation.
+	audit.Log(c, audit.ActionDeleteGPUReservation, "gpu_reservation", existing.ID.String(),
+		fmt.Sprintf("cluster=%s namespace=%s gpus=%d", existing.Cluster, existing.Namespace, existing.GPUCount))
 
 	return c.JSON(fiber.Map{"status": "ok"})
 }

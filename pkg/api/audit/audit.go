@@ -40,6 +40,12 @@ const (
 	ActionUserLogin  = "user_login"
 	ActionUserLogout = "user_logout"
 	ActionAuthFailed = "auth_failed"
+
+	// Phase 3 (#9890): GPU reservation and mission mutations.
+	ActionCreateGPUReservation = "create_gpu_reservation"
+	ActionUpdateGPUReservation = "update_gpu_reservation"
+	ActionDeleteGPUReservation = "delete_gpu_reservation"
+	ActionShareMissionGitHub   = "share_mission_github"
 )
 
 // storeMu guards the package-level store reference.

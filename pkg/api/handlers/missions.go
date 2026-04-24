@@ -16,6 +16,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
+	"github.com/kubestellar/console/pkg/api/audit"
 	"github.com/kubestellar/console/pkg/settings"
 )
 
@@ -1353,6 +1354,10 @@ func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
 	if prHTMLURL == "" {
 		return c.Status(502).JSON(fiber.Map{"error": "GitHub PR response missing html_url"})
 	}
+
+	// #9890: persist audit entry after successful external PR creation.
+	audit.Log(c, audit.ActionShareMissionGitHub, "mission", req.FilePath,
+		fmt.Sprintf("repo=%s branch=%s fork=%s pr=%s", req.Repo, req.Branch, forkFullName, prHTMLURL))
 
 	return c.JSON(fiber.Map{
 		"success": true,
