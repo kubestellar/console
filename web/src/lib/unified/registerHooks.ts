@@ -59,6 +59,7 @@ import { useCachedEnvoy } from '../../components/cards/envoy_status/useCachedEnv
 import { useCachedGrpc } from '../../hooks/useCachedGrpc'
 import { useCachedKeda } from '../../hooks/useCachedKeda'
 import { useCachedKserve } from '../../hooks/useCachedKserve'
+import { useCachedKubevela } from '../../hooks/useCachedKubevela'
 import { useCachedLinkerd } from '../../hooks/useCachedLinkerd'
 import { useCachedOpenfeature } from '../../hooks/useCachedOpenfeature'
 import { useCachedLonghorn } from '../../hooks/useCachedLonghorn'
@@ -1296,6 +1297,17 @@ function useUnifiedSpireStatus() {
   }
 }
 
+function useUnifiedKubeVelaStatus() {
+  const result = useCachedKubevela()
+  // Surface the Application CR list as the primary row set for generic list renderers.
+  return {
+    data: result.data.applications,
+    isLoading: result.showSkeleton,
+    error: result.error ? new Error('Failed to fetch KubeVela status') : null,
+    refetch: () => { result.refetch() },
+  }
+}
+
 function useUnifiedVitessStatus() {
   const result = useCachedVitess()
   // Surface the keyspace list as the primary row set for generic list renderers.
@@ -1524,6 +1536,7 @@ export function registerUnifiedHooks(): void {
   registerDataHook('useCachedCni', useUnifiedCniStatus)
   registerDataHook('useCachedOpenfeature', useUnifiedOpenfeatureStatus)
   registerDataHook('useCachedSpire', useUnifiedSpireStatus)
+  registerDataHook('useCachedKubevela', useUnifiedKubeVelaStatus)
   registerDataHook('useCachedTikv', useUnifiedTikvStatus)
   registerDataHook('useCachedTuf', useUnifiedTufStatus)
   registerDataHook('useCachedCloudCustodian', useUnifiedCloudCustodianStatus)

@@ -240,12 +240,18 @@ export { useCachedBackstage } from './useCachedBackstage'
 
 export { useCachedCloudCustodian } from './useCachedCloudCustodian'
 
-// ============================================================================
 // wasmCloud WebAssembly Lattice — useCachedWasmcloud.ts (CNCF incubating)
 // ============================================================================
 // Named re-export (avoids `__testables` export-name collision with TiKV).
 
 export { useCachedWasmcloud } from './useCachedWasmcloud'
+
+// ============================================================================
+// KubeVela OAM Application Delivery — useCachedKubevela.ts (CNCF Incubating)
+// ============================================================================
+// Named re-export (avoids `__testables` export-name collision with TiKV).
+
+export { useCachedKubevela } from './useCachedKubevela'
 
 // ============================================================================
 // Standalone fetchers for prefetch (no React hooks, plain async)

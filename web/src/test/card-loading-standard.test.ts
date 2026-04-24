@@ -117,7 +117,6 @@ const KNOWN_VIOLATIONS: Record<string, Set<string>> = {
   'karmada_status/useKarmadaStatus.ts': new Set(['bare-isLoading']),
   'keda_status/useKedaStatus.ts': new Set(['bare-isLoading']),
   'Kubectl.tsx': new Set(['bare-isLoading', 'missing-isRefreshing']),
-  'kubevela_status/useKubeVelaStatus.ts': new Set(['bare-isLoading']),
   'KustomizationStatus.tsx': new Set(['bare-isLoading', 'missing-isRefreshing']),
   'llmd/NightlyE2EStatus.tsx': new Set(['bare-isLoading']),
   'NamespaceMonitor.tsx': new Set(['bare-isLoading']),

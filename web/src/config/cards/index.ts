@@ -116,6 +116,7 @@ import { kubecostOverviewConfig } from './kubecost-overview'
 import { kubectlConfig } from './kubectl'
 import { kubedleConfig } from './kubedle'
 import { kubescapeScanConfig } from './kubescape-scan'
+import { kubeVelaStatusConfig } from './kubevela-status'
 import { kubevirtStatusConfig } from './kubevirt-status'
 import { kustomizationStatusConfig } from './kustomization-status'
 import { keycloakStatusConfig } from './keycloak-status'
@@ -323,6 +324,7 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   kubectl: kubectlConfig,
   kubedle: kubedleConfig,
   kubescape_scan: kubescapeScanConfig,
+  kubevela_status: kubeVelaStatusConfig,
   kubevirt_status: kubevirtStatusConfig,
   kustomization_status: kustomizationStatusConfig,
   keycloak_status: keycloakStatusConfig,
@@ -601,6 +603,7 @@ export {
   kubectlConfig,
   kubedleConfig,
   kubescapeScanConfig,
+  kubeVelaStatusConfig,
   kubevirtStatusConfig,
   kustomizationStatusConfig,
   kyvernoPoliciesConfig,

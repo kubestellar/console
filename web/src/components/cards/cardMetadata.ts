@@ -656,8 +656,8 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   // Dragonfly P2P image/file distribution
   dragonfly_status: 'Dragonfly P2P image/file distribution — manager, scheduler, seed-peers, and per-node dfdaemon agents with active tasks and cache hit rate.',
 
-  // KubeVela application delivery
-  kubevela_status: 'KubeVela application delivery, component status, and workflow progress.',
+  // KubeVela application delivery (CNCF Incubating)
+  kubevela_status: 'KubeVela Application CRs: workflow step progress, component + trait counts, and vela-core controller health.',
   // CloudEvents monitoring
   cloudevents_status: 'CloudEvents message flow, event source tracking, and delivery status.',
 

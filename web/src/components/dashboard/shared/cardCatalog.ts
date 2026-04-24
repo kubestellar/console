@@ -115,7 +115,7 @@ export const CARD_CATALOG = {
     { type: 'hpa_status', title: 'HPA Status', description: 'Horizontal Pod Autoscalers with scaling targets and metrics', visualization: 'table' },
     { type: 'configmap_status', title: 'ConfigMap Status', description: 'ConfigMaps across clusters with data key counts', visualization: 'table' },
     { type: 'secret_status', title: 'Secret Status', description: 'Secrets across clusters with types and key counts', visualization: 'table' },
-    { type: 'kubevela_status', title: 'KubeVela', description: 'KubeVela controller health and OAM application delivery status', visualization: 'status' },
+    { type: 'kubevela_status', title: 'KubeVela', description: 'KubeVela Application CRs: workflow step progress, component + trait counts, and vela-core controller health', visualization: 'status' },
     { type: 'backstage_status', title: 'Backstage', description: 'Backstage developer portal: replicas, catalog entities (Components/APIs/Systems/Domains/Resources/Users/Groups), plugins, scaffolder templates, and last catalog sync', visualization: 'status' },
     { type: 'dapr_status', title: 'Dapr', description: 'Dapr control plane health, Dapr-enabled apps, and configured components (state store / pub-sub / binding)', visualization: 'status' },
     { type: 'dragonfly_status', title: 'Dragonfly', description: 'Dragonfly P2P image/file distribution: manager, scheduler, seed-peers, and per-node dfdaemon agents', visualization: 'status' },
