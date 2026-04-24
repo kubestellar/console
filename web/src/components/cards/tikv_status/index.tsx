@@ -104,7 +104,7 @@ export function TikvStatus() {
   }
 
   const isHealthy = data.health === 'healthy'
-  const stores = data.stores.slice(0, STORE_PAGE_SIZE)
+  const stores = (data.stores ?? []).slice(0, STORE_PAGE_SIZE)
 
   return (
     <div className="h-full flex flex-col min-h-card gap-4 overflow-hidden animate-in fade-in duration-500">
