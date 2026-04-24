@@ -3195,6 +3195,22 @@
     "noEntries": "No registration entries found",
     "noFederated": "No federated trust domains"
   },
+  "cniStatus": {
+    "healthy": "Healthy",
+    "degraded": "Degraded",
+    "notInstalled": "CNI plugin not detected",
+    "notInstalledHint": "No CNI metadata reachable from the connected clusters.",
+    "fetchError": "Unable to fetch CNI status",
+    "plugin": "Plugin",
+    "nodesReady": "Nodes Ready",
+    "policies": "NetworkPolicies",
+    "servicesWithPolicy": "Svcs w/ Policy",
+    "version": "version",
+    "sectionPodCidr": "Pod network CIDR",
+    "sectionNodes": "Nodes",
+    "noNodes": "No nodes reporting CNI status",
+    "unknownCidr": "unknown"
+  },
   "tikvStatus": {
     "healthy": "Healthy",
     "degraded": "Degraded",

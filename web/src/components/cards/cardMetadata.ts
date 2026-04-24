@@ -280,6 +280,8 @@ export const CARD_TITLES: Record<string, string> = {
   rook_status: 'Rook',
   // SPIFFE workload identity (CNCF graduated)
   spiffe_status: 'SPIFFE',
+  // CNI (Container Network Interface) plugin status
+  cni_status: 'CNI',
   // TiKV distributed key-value store
   tikv_status: 'TiKV',
   // TUF (The Update Framework) repository metadata
@@ -613,6 +615,8 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   rook_status: 'Rook-managed CephClusters: Ceph health, OSD/MON/MGR counts, capacity usage, and PG state summary.',
   // SPIFFE workload identity (CNCF graduated)
   spiffe_status: 'SPIFFE/SPIRE workload identity: trust domain, SVID counts (x509/JWT), federated trust domains, and registration entries.',
+  // CNI (Container Network Interface) plugin status
+  cni_status: 'Container Network Interface plugin status: active plugin, per-node CNI readiness, pod network CIDR, and NetworkPolicy coverage across services.',
   // TiKV distributed key-value store
   tikv_status: 'TiKV distributed key-value store: store nodes, region counts, leader counts, and capacity utilization across the cluster.',
   // TUF (The Update Framework) repository metadata

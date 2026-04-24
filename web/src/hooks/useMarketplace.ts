@@ -102,6 +102,7 @@ const MARKETPLACE_TO_CARD_TYPE: Record<string, string> = {
   'cncf-openfeature': 'openfeature_status',
   'cncf-rook': 'rook_status',
   'cncf-spiffe': 'spiffe_status',
+  'cncf-cni': 'cni_status',
   'cncf-strimzi': 'strimzi_status',
   'cncf-thanos': 'thanos_status',
   'cncf-opentelemetry': 'otel_status',

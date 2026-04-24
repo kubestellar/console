@@ -34,6 +34,7 @@ import { clusterLocationsConfig } from './cluster-locations'
 import { clusterMetricsConfig } from './cluster-metrics'
 import { clusterNetworkConfig } from './cluster-network'
 import { clusterResourceTreeConfig } from './cluster-resource-tree'
+import { cniStatusConfig } from './cni-status'
 import { complianceScoreConfig } from './compliance-score'
 import { computeOverviewConfig } from './compute-overview'
 import { configMapStatusConfig } from './configmap-status'
@@ -231,6 +232,7 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   cluster_metrics: clusterMetricsConfig,
   cluster_network: clusterNetworkConfig,
   cluster_resource_tree: clusterResourceTreeConfig,
+  cni_status: cniStatusConfig,
   compliance_score: complianceScoreConfig,
   compute_overview: computeOverviewConfig,
   configmap_status: configMapStatusConfig,
@@ -519,6 +521,7 @@ export {
   clusterMetricsConfig,
   clusterNetworkConfig,
   clusterResourceTreeConfig,
+  cniStatusConfig,
   complianceScoreConfig,
   computeOverviewConfig,
   configMapStatusConfig,

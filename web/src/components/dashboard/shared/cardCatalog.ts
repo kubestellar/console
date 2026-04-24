@@ -155,6 +155,7 @@ export const CARD_CATALOG = {
     { type: 'service_topology', title: 'Service Topology', description: 'Animated service mesh visualization with cross-cluster traffic', visualization: 'status' },
     { type: 'ingress_status', title: 'Ingress Status', description: 'Ingress resources with hosts, paths, and backend services', visualization: 'table' },
     { type: 'network_policy_status', title: 'Network Policy Status', description: 'NetworkPolicy resources with pod selectors and rules', visualization: 'table' },
+    { type: 'cni_status', title: 'CNI', description: 'Container Network Interface plugin: active plugin, per-node CNI readiness, pod network CIDR, and NetworkPolicy coverage', visualization: 'status' },
     { type: 'cilium_status', title: 'Cilium', description: 'Cilium eBPF networking, network policy enforcement, and Hubble flow visibility.', visualization: 'status' },
     { type: 'contour_status', title: 'Contour', description: 'Contour ingress proxy status, HTTPProxy resources, and Envoy fleet health', visualization: 'status' },
     { type: 'envoy_status', title: 'Envoy Proxy', description: 'Envoy listener health, upstream cluster health, and request/connection stats', visualization: 'status' },

@@ -158,6 +158,13 @@ export { useCachedRook } from './useCachedRook'
 export { useCachedSpiffe } from './useCachedSpiffe'
 
 // ============================================================================
+// CNI (Container Network Interface) — useCachedCni.ts
+// ============================================================================
+// Named re-export (avoids `__testables` export-name collision).
+
+export { useCachedCni } from './useCachedCni'
+
+// ============================================================================
 // TiKV Distributed Key-Value Store — useCachedTikv.ts
 // ============================================================================
 
