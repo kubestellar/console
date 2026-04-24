@@ -141,6 +141,7 @@ export const CARD_CATALOG = {
     { type: 'fluid_status', title: 'Fluid', description: 'Fluid dataset caching status, runtime health, and data load progress', visualization: 'status' },
     { type: 'cubefs_status', title: 'CubeFS', description: 'CubeFS distributed file system health, volume status, and node topology', visualization: 'status' },
     { type: 'rook_status', title: 'Rook', description: 'Rook-managed CephClusters: Ceph health, OSD/MON/MGR counts, and capacity', visualization: 'status' },
+    { type: 'longhorn_status', title: 'Longhorn', description: 'Longhorn distributed block storage: volumes, node status, replica health, and capacity utilization', visualization: 'status' },
     { type: 'tikv_status', title: 'TiKV', description: 'TiKV distributed key-value store: store nodes, regions, leaders, and capacity', visualization: 'status' },
     { type: 'vitess_status', title: 'Vitess', description: 'Vitess distributed MySQL: keyspaces, shards, tablets (PRIMARY/REPLICA/RDONLY), and replication lag', visualization: 'status' },
   ],

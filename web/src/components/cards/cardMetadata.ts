@@ -277,6 +277,8 @@ export const CARD_TITLES: Record<string, string> = {
   grpc_status: 'gRPC Services',
   // Linkerd service mesh
   linkerd_status: 'Linkerd',
+  // Longhorn distributed block storage (CNCF Incubating)
+  longhorn_status: 'Longhorn',
   // OpenTelemetry collector (CNCF)
   otel_status: 'OpenTelemetry',
   // Rook cloud-native storage orchestrator
@@ -619,6 +621,8 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   grpc_status: 'gRPC service serving status, per-service RPS, p99 latency, and error rates.',
   // Linkerd service mesh
   linkerd_status: 'Linkerd service mesh meshed pods, success rate, RPS, and p99 latency per deployment.',
+  // Longhorn distributed block storage (CNCF Incubating)
+  longhorn_status: 'Longhorn distributed block storage: volumes (state/robustness), node status, replica health, and capacity utilization.',
   // OpenTelemetry collector
   otel_status: 'OpenTelemetry Collectors: pipeline health, receivers and exporters, dropped telemetry, and export errors across connected clusters.',
   // Rook cloud-native storage orchestrator (Ceph)

@@ -90,6 +90,8 @@ const EnvoyStatus = safeLazy(() => import('./envoy_status'), 'EnvoyStatus')
 const GrpcStatus = safeLazy(() => import('./grpc_status'), 'GrpcStatus')
 // Linkerd service mesh card
 const LinkerdStatus = safeLazy(() => import('./linkerd_status'), 'LinkerdStatus')
+// Longhorn distributed block storage card (CNCF Incubating)
+const LonghornStatus = safeLazy(() => import('./longhorn_status'), 'LonghornStatus')
 // OpenTelemetry collector card (Observability)
 const OtelStatus = safeLazy(() => import('./otel_status'), 'OtelStatus')
 // Rook cloud-native storage orchestrator card
@@ -753,6 +755,8 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   grpc_status: GrpcStatus,
   // Linkerd service mesh
   linkerd_status: LinkerdStatus,
+  // Longhorn distributed block storage (CNCF Incubating)
+  longhorn_status: LonghornStatus,
   // OpenTelemetry collector
   otel_status: OtelStatus,
   // Rook cloud-native storage orchestrator (Ceph)
@@ -1090,6 +1094,7 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   envoy_status: () => import('./envoy_status'),
   grpc_status: () => import('./grpc_status'),
   linkerd_status: () => import('./linkerd_status'),
+  longhorn_status: () => import('./longhorn_status'),
   otel_status: () => import('./otel_status'),
   rook_status: () => import('./rook_status'),
   spiffe_status: () => import('./spiffe_status'),
@@ -1709,6 +1714,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   envoy_status: 6,
   grpc_status: 6,
   linkerd_status: 6,
+  longhorn_status: 6,
   otel_status: 6,
   rook_status: 6,
   spiffe_status: 6,

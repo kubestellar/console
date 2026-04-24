@@ -172,6 +172,13 @@ export { useCachedCni } from './useCachedCni'
 export { useCachedOpenfeature } from './useCachedOpenfeature'
 
 // ============================================================================
+// Longhorn Distributed Block Storage — useCachedLonghorn.ts (CNCF Incubating)
+// ============================================================================
+// Named re-export (avoids `__testables` export-name collision with TiKV).
+
+export { useCachedLonghorn } from './useCachedLonghorn'
+
+// ============================================================================
 // TiKV Distributed Key-Value Store — useCachedTikv.ts
 // ============================================================================
 

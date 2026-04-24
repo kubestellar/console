@@ -75,6 +75,7 @@ import { grpcStatusConfig } from './grpc-status'
 import { kedaStatusConfig } from './keda-status'
 import { kserveStatusConfig } from './kserve-status'
 import { linkerdStatusConfig } from './linkerd-status'
+import { longhornStatusConfig } from './longhorn-status'
 import { otelStatusConfig } from './otel-status'
 import { rookStatusConfig } from './rook-status'
 import { tikvStatusConfig } from './tikv-status'
@@ -279,6 +280,7 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   keda_status: kedaStatusConfig,
   kserve_status: kserveStatusConfig,
   linkerd_status: linkerdStatusConfig,
+  longhorn_status: longhornStatusConfig,
   otel_status: otelStatusConfig,
   rook_status: rookStatusConfig,
   tikv_status: tikvStatusConfig,
