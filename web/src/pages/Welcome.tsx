@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
   ArrowRight,
@@ -13,7 +13,6 @@ import {
   Play,
 } from 'lucide-react'
 import { emitWelcomeViewed, emitWelcomeActioned } from '../lib/analytics'
-import { getRegisteredCardTypes } from '../components/cards/cardRegistry'
 import { DEFAULT_PRIMARY_NAV, DISCOVERABLE_DASHBOARDS } from '../hooks/useSidebarConfig'
 
 /* ------------------------------------------------------------------ */
@@ -36,12 +35,16 @@ const TOTAL_DASHBOARDS = new Set([
   ...DISCOVERABLE_DASHBOARDS.map(d => d.id),
 ]).size
 
-const HERO_STATS = [
-  { value: '250+', label: 'CNCF tools' },
-  { value: String(TOTAL_DASHBOARDS), label: 'Dashboards' },
-  { value: String(getRegisteredCardTypes().length), label: 'Cards' },
-  { value: '0', label: 'Paywalls' },
-]
+const HERO_STATS_PLACEHOLDER = '…'
+
+function buildHeroStats(cardCount: string) {
+  return [
+    { value: '250+', label: 'CNCF tools' },
+    { value: String(TOTAL_DASHBOARDS), label: 'Dashboards' },
+    { value: cardCount, label: 'Cards' },
+    { value: '0', label: 'Paywalls' },
+  ]
+}
 
 /* ------------------------------------------------------------------ */
 /*  "See it in action" scenarios — the 30-second aha moments           */
@@ -146,6 +149,13 @@ function sanitizeRef(raw: string | null): string {
 export function Welcome() {
   const [searchParams] = useSearchParams()
   const ref = sanitizeRef(searchParams.get('ref'))
+  const [cardCount, setCardCount] = useState(HERO_STATS_PLACEHOLDER)
+
+  useEffect(() => {
+    import('../components/cards/cardRegistry').then(m => {
+      setCardCount(String(m.getRegisteredCardTypes().length))
+    })
+  }, [])
 
   useEffect(() => {
     const prevTitle = document.title
@@ -234,7 +244,7 @@ export function Welcome() {
 
           {/* Stats strip */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 max-w-2xl mx-auto">
-            {HERO_STATS.map((stat) => (
+            {buildHeroStats(cardCount).map((stat) => (
               <div key={stat.label} className="text-center">
                 <div className="text-3xl font-bold text-purple-400">{stat.value}</div>
                 <div className="text-xs text-slate-400 mt-1 uppercase tracking-wider">{stat.label}</div>
