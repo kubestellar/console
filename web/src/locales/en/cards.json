@@ -3112,6 +3112,7 @@
     "regions": "Regions",
     "leaders": "Leaders",
     "noStores": "No TiKV stores reporting.",
+    "unknownState": "Unknown",
     "stores_one": "{{count}} store",
     "stores_other": "{{count}} stores",
     "regionCount_one": "{{count}} region",

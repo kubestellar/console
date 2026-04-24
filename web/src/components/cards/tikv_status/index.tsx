@@ -27,21 +27,42 @@ const USAGE_PCT_ALERT = 85
 const PCT_MULTIPLIER = 100
 const MIN_DECIMAL_PLACES = 1
 const STORE_PAGE_SIZE = 6
+// Fallback summary — used when cached data is malformed (e.g. older schema
+// without `summary`) so render-time property access never throws. See #9918.
+const EMPTY_SUMMARY = {
+  totalStores: 0,
+  upStores: 0,
+  downStores: 0,
+  totalRegions: 0,
+  totalLeaders: 0,
+} as const
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-function formatGib(bytes: number): string {
-  if (bytes <= 0) return '—'
+function formatGib(bytes: number | undefined): string {
+  // Guard: undefined/NaN/non-positive → em-dash. Prevents "NaN GiB" render
+  // when a store object is missing capacity/available annotations (#9918).
+  if (typeof bytes !== 'number' || !Number.isFinite(bytes) || bytes <= 0) return '—'
   const gib = bytes / BYTES_PER_GIB
   return `${gib.toFixed(MIN_DECIMAL_PLACES)} GiB`
 }
 
-function usagePct(store: TikvStore): number {
-  if (store.capacityBytes <= 0) return 0
-  const used = store.capacityBytes - store.availableBytes
-  return Math.max(0, Math.min(PCT_MULTIPLIER, (used / store.capacityBytes) * PCT_MULTIPLIER))
+function usagePct(store: Partial<TikvStore> | undefined): number {
+  const capacity = store?.capacityBytes
+  const available = store?.availableBytes
+  if (
+    typeof capacity !== 'number' ||
+    !Number.isFinite(capacity) ||
+    capacity <= 0 ||
+    typeof available !== 'number' ||
+    !Number.isFinite(available)
+  ) {
+    return 0
+  }
+  const used = capacity - available
+  return Math.max(0, Math.min(PCT_MULTIPLIER, (used / capacity) * PCT_MULTIPLIER))
 }
 
 function usageColor(pct: number): string {
@@ -69,9 +90,14 @@ export function TikvStatus() {
   // Rule: never show demo data while still loading
   const isDemoData = isDemoFallback && !isLoading
 
+  // Defensive: cached payloads from older schemas or partial fetches may be
+  // missing `summary` or `health` entirely — never assume nested structure
+  // exists at render time (#9918).
+  const summary = data?.summary ?? EMPTY_SUMMARY
+  const health = data?.health
   // 'not-installed' still counts as "we have data" so the card isn't stuck in skeleton
   const hasAnyData =
-    data.health === 'not-installed' ? true : data.summary.totalStores > 0
+    health === 'not-installed' ? true : (summary.totalStores ?? 0) > 0
 
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: isLoading && !hasAnyData,
@@ -87,7 +113,7 @@ export function TikvStatus() {
     return <SkeletonCardWithRefresh showStats={true} rows={STORE_PAGE_SIZE} />
   }
 
-  if (showEmptyState || (data.health === 'not-installed' && !isDemoData)) {
+  if (showEmptyState || (health === 'not-installed' && !isDemoData)) {
     return (
       <div className="h-full flex items-center justify-center p-4">
         <EmptyState
@@ -102,8 +128,11 @@ export function TikvStatus() {
     )
   }
 
-  const isHealthy = data.health === 'healthy'
-  const stores = (data.stores ?? []).slice(0, STORE_PAGE_SIZE)
+  const isHealthy = health === 'healthy'
+  // Guard against non-array cached values (older schema) and nullish store
+  // entries so downstream property access in the render loop never throws.
+  const allStores = Array.isArray(data?.stores) ? data.stores : []
+  const stores = allStores.filter((s): s is TikvStore => s != null).slice(0, STORE_PAGE_SIZE)
 
   return (
     <div className="h-full flex flex-col min-h-card gap-4 overflow-hidden animate-in fade-in duration-500">
@@ -122,23 +151,23 @@ export function TikvStatus() {
 
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <RefreshCw className={cn('w-3 h-3', isRefreshing ? 'animate-spin' : '')} />
-          <span>{t('tikvStatus.stores', { count: data.summary.totalStores, defaultValue: '{{count}} stores' })}</span>
+          <span>{t('tikvStatus.stores', { count: summary.totalStores ?? 0, defaultValue: '{{count}} stores' })}</span>
         </div>
       </div>
 
       <div className="grid grid-cols-2 @md:grid-cols-4 gap-2">
         <MetricTile
           label={t('tikvStatus.upStores', 'Up')}
-          value={data.summary.upStores}
+          value={summary.upStores ?? 0}
           colorClass="text-green-400"
           icon={<CheckCircle className="w-4 h-4 text-green-400" />}
         />
         <MetricTile
           label={t('tikvStatus.downStores', 'Down')}
-          value={data.summary.downStores}
-          colorClass={data.summary.downStores > 0 ? 'text-red-400' : 'text-green-400'}
+          value={summary.downStores ?? 0}
+          colorClass={(summary.downStores ?? 0) > 0 ? 'text-red-400' : 'text-green-400'}
           icon={
-            data.summary.downStores > 0 ? (
+            (summary.downStores ?? 0) > 0 ? (
               <AlertTriangle className="w-4 h-4 text-red-400" />
             ) : (
               <CheckCircle className="w-4 h-4 text-green-400" />
@@ -147,13 +176,13 @@ export function TikvStatus() {
         />
         <MetricTile
           label={t('tikvStatus.regions', 'Regions')}
-          value={data.summary.totalRegions.toLocaleString()}
+          value={(summary.totalRegions ?? 0).toLocaleString()}
           colorClass="text-cyan-400"
           icon={<Database className="w-4 h-4 text-cyan-400" />}
         />
         <MetricTile
           label={t('tikvStatus.leaders', 'Leaders')}
-          value={data.summary.totalLeaders.toLocaleString()}
+          value={(summary.totalLeaders ?? 0).toLocaleString()}
           colorClass="text-blue-400"
           icon={<Server className="w-4 h-4 text-blue-400" />}
         />
@@ -165,12 +194,19 @@ export function TikvStatus() {
             {t('tikvStatus.noStores', 'No TiKV stores reporting.')}
           </div>
         ) : (
-          stores.map(store => {
+          stores.map((store, idx) => {
+            // Defensive per-field reads: cached or partial responses may miss
+            // fields that are non-optional in the TikvStore type (#9918).
             const pct = usagePct(store)
             const stateUp = store.state === 'Up'
+            const storeState = store.state ?? t('tikvStatus.unknownState', 'Unknown')
+            const regionCount = store.regionCount ?? 0
+            const leaderCount = store.leaderCount ?? 0
+            const storeId = store.storeId ?? idx + 1
+            const address = store.address ?? ''
             return (
               <div
-                key={store.storeId}
+                key={storeId}
                 className="rounded-md bg-secondary/30 px-3 py-2.5 space-y-1"
               >
                 <div className="flex items-center justify-between gap-2">
@@ -181,10 +217,10 @@ export function TikvStatus() {
                       <AlertTriangle className="w-3.5 h-3.5 text-red-400 shrink-0" />
                     )}
                     <span className="text-xs font-medium truncate font-mono">
-                      store-{store.storeId}
+                      store-{storeId}
                     </span>
                     <span className="text-[11px] text-muted-foreground truncate">
-                      {store.address}
+                      {address}
                     </span>
                   </div>
                   <span
@@ -195,13 +231,13 @@ export function TikvStatus() {
                         : 'bg-red-500/20 text-red-400',
                     )}
                   >
-                    {store.state}
+                    {storeState}
                   </span>
                 </div>
 
                 <div className="text-xs text-muted-foreground flex items-center justify-between gap-2">
                   <span className="truncate">
-                    {t('tikvStatus.regionCount', { count: store.regionCount, defaultValue: '{{count}} regions' })} · {t('tikvStatus.leaderCount', { count: store.leaderCount, defaultValue: '{{count}} leaders' })}
+                    {t('tikvStatus.regionCount', { count: regionCount, defaultValue: '{{count}} regions' })} · {t('tikvStatus.leaderCount', { count: leaderCount, defaultValue: '{{count}} leaders' })}
                   </span>
                   <span className={cn('flex items-center gap-1 shrink-0', usageColor(pct))}>
                     <HardDrive className="w-3 h-3" />

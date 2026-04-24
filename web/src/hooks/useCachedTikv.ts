@@ -158,6 +158,14 @@ function buildStatus(stores: TikvStore[]): TikvStatusData {
 // Fetcher
 // ---------------------------------------------------------------------------
 
+// Response statuses that mean "TiKV API surface is not available here" —
+// treat all of them as "not-installed" rather than throwing. Demo/preview
+// deploys (console.kubestellar.io) return 503 from the MSW catch-all for
+// unmocked `/api/*`; self-hosted consoles without MCP return 404. Either
+// way the user experience should be identical: show the empty state, not
+// a `ksc_error` spike on the home page (#9918).
+const NOT_INSTALLED_STATUSES = new Set<number>([404, 501, 503])
+
 async function fetchTikvStatus(): Promise<TikvStatusData> {
   const params = new URLSearchParams({
     group: '',
@@ -171,12 +179,20 @@ async function fetchTikvStatus(): Promise<TikvStatusData> {
   })
 
   if (!resp.ok) {
-    if (resp.status === 404) return buildStatus([])
+    if (NOT_INSTALLED_STATUSES.has(resp.status)) return buildStatus([])
     throw new Error(`HTTP ${resp.status}`)
   }
 
-  const body = (await resp.json()) as PodListResponse
-  const items = Array.isArray(body.items) ? body.items : []
+  // Defensive JSON parse — Netlify's SPA fallback may return index.html
+  // (text/html) if a redirect is missing, which would otherwise throw an
+  // `Unexpected token '<'` syntax error that bubbles up as `ksc_error`.
+  let body: PodListResponse
+  try {
+    body = (await resp.json()) as PodListResponse
+  } catch {
+    return buildStatus([])
+  }
+  const items = Array.isArray(body?.items) ? body.items : []
   const tikvPods = items.filter(isTikvPod)
   const stores = tikvPods.map((pod, idx) => podToStore(pod, idx + 1))
   return buildStatus(stores)
