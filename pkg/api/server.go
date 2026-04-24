@@ -894,16 +894,32 @@ func (s *Server) setupRoutes() {
 	// an independent counter, so the effective limit is `max × N` where N is the
 	// pod count. A shared Redis/Valkey storage backend is recommended for strict
 	// enforcement across replicas but is out of scope for this change.
-	apiLimiterMaxRequests := 200        // max requests per window per IP
+	apiLimiterMaxRequests := 200        // max requests per window per user+IP (#9969: CompositeKey)
 	apiLimiterWindow := 1 * time.Minute // sliding window duration
 	apiLimiter := limiter.New(limiter.Config{
-		Max:        apiLimiterMaxRequests,
-		Expiration: apiLimiterWindow,
-		KeyGenerator: func(c *fiber.Ctx) string {
-			return c.IP()
-		},
+		Max:          apiLimiterMaxRequests,
+		Expiration:   apiLimiterWindow,
+		KeyGenerator: middleware.CompositeKey, // per-user+IP: authenticated users are bucketed individually (#9969)
 		LimitReached: func(c *fiber.Ctx) error {
 			c.Set("Retry-After", strconv.Itoa(int(apiLimiterWindow.Seconds()))) // #7040
+			return c.Status(429).JSON(fiber.Map{"error": "too many requests, try again later"})
+		},
+	})
+
+	// feedbackLimiter is a dedicated per-user rate limiter for the issue
+	// submission endpoint (#9969). It uses a 1-hour window so a single user
+	// can submit at least 10 feature requests per hour without being blocked
+	// by background API polling that may saturate the general apiLimiter.
+	// CompositeKey keys on userID+IP for authenticated users and plain IP
+	// for unauthenticated callers.
+	const feedbackLimiterMaxRequests = 10        // 10 submissions per user per hour
+	feedbackLimiterWindow := 1 * time.Hour       // sliding window duration
+	feedbackLimiter := limiter.New(limiter.Config{
+		Max:          feedbackLimiterMaxRequests,
+		Expiration:   feedbackLimiterWindow,
+		KeyGenerator: middleware.CompositeKey,
+		LimitReached: func(c *fiber.Ctx) error {
+			c.Set("Retry-After", strconv.Itoa(int(feedbackLimiterWindow.Seconds()))) // #9969
 			return c.Status(429).JSON(fiber.Map{"error": "too many requests, try again later"})
 		},
 	})
@@ -1247,7 +1263,8 @@ func (s *Server) setupRoutes() {
 	feedbackCfg := handlers.LoadFeedbackConfig()
 	feedback := handlers.NewFeedbackHandler(s.store, feedbackCfg)
 	// Feedback token routes removed — consolidated into /api/github/token/* endpoints
-	api.Post("/feedback/requests", feedback.CreateFeatureRequest)
+	// feedbackLimiter applied here to enforce 10 submissions/user/hour (#9969).
+	api.Post("/feedback/requests", feedbackLimiter, feedback.CreateFeatureRequest)
 	api.Get("/feedback/requests", feedback.ListFeatureRequests)
 	api.Get("/feedback/queue", feedback.ListAllFeatureRequests)
 	api.Get("/feedback/requests/:id", feedback.GetFeatureRequest)
