@@ -3271,6 +3271,7 @@
     "sectionNodes": "Nodes",
     "noNodes": "No nodes reporting CNI status",
     "unknownCidr": "unknown"
+  },
   "volcanoStatus": {
     "healthy": "Healthy",
     "degraded": "Degraded",
