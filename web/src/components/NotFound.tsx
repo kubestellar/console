@@ -51,7 +51,7 @@ export default function NotFound() {
           <h1 className="text-3xl font-bold text-zinc-100">
             Page not found
           </h1>
-          <p className="text-zinc-400 text-base leading-relaxed">
+          <p className="text-muted-foreground text-base leading-relaxed">
             <code className="px-2 py-0.5 bg-zinc-800 rounded text-sm text-purple-300">{path}</code>
             {' '}doesn&apos;t exist yet — but it could!
           </p>
@@ -63,7 +63,7 @@ export default function NotFound() {
             <Sparkles className="w-4 h-4" />
             <span className="text-sm font-semibold">Ship it in hours, not months</span>
           </div>
-          <p className="text-zinc-400 text-sm leading-relaxed">
+          <p className="text-muted-foreground text-sm leading-relaxed">
             KubeStellar Console uses AI-powered repo automation to go from feature
             request to production in hours. Open an issue and watch the magic happen.
           </p>
@@ -88,8 +88,8 @@ export default function NotFound() {
                 onClick={() => navigate(to)}
                 className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-zinc-800/50 hover:bg-zinc-700/50 border border-zinc-700/50 hover:border-zinc-600 transition-colors group"
               >
-                <Icon className="w-4 h-4 text-zinc-400 group-hover:text-purple-400 transition-colors" />
-                <span className="text-xs text-zinc-400 group-hover:text-zinc-200 transition-colors">{label}</span>
+                <Icon className="w-4 h-4 text-muted-foreground group-hover:text-purple-400 transition-colors" />
+                <span className="text-xs text-muted-foreground group-hover:text-zinc-200 transition-colors">{label}</span>
               </button>
             ))}
           </div>
@@ -99,14 +99,14 @@ export default function NotFound() {
         <div className="flex items-center justify-center gap-3 pt-2">
           <button
             onClick={() => navigate(-1)}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm text-zinc-400 hover:text-zinc-200 border border-zinc-700 hover:border-zinc-600 rounded-lg transition-colors"
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm text-muted-foreground hover:text-zinc-200 border border-zinc-700 hover:border-zinc-600 rounded-lg transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             Go back
           </button>
           <button
             onClick={() => navigate(ROUTES.HOME)}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm text-zinc-400 hover:text-zinc-200 border border-zinc-700 hover:border-zinc-600 rounded-lg transition-colors"
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm text-muted-foreground hover:text-zinc-200 border border-zinc-700 hover:border-zinc-600 rounded-lg transition-colors"
           >
             <Home className="w-3.5 h-3.5" />
             Home

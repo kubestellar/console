@@ -110,7 +110,7 @@ export const ComplianceReportsContent = memo(function ComplianceReportsContent()
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Framework Picker */}
           <div>
-            <label className="block text-sm font-medium text-zinc-400 mb-1.5">Framework</label>
+            <label className="block text-sm font-medium text-muted-foreground mb-1.5">Framework</label>
             <Select
               value={selectedFw}
               onChange={(e) => setSelectedFw(e.target.value)}
@@ -127,7 +127,7 @@ export const ComplianceReportsContent = memo(function ComplianceReportsContent()
 
           {/* Cluster Picker */}
           <div>
-            <label className="block text-sm font-medium text-zinc-400 mb-1.5">Cluster</label>
+            <label className="block text-sm font-medium text-muted-foreground mb-1.5">Cluster</label>
             <Select
               value={selectedCluster}
               onChange={(e) => setSelectedCluster(e.target.value)}
@@ -141,14 +141,14 @@ export const ComplianceReportsContent = memo(function ComplianceReportsContent()
 
           {/* Format Picker */}
           <div>
-            <label className="block text-sm font-medium text-zinc-400 mb-1.5">Format</label>
+            <label className="block text-sm font-medium text-muted-foreground mb-1.5">Format</label>
             <div className="flex gap-2">
               <button
                 onClick={() => setFormat('pdf')}
                 className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
                   format === 'pdf'
                     ? 'border-indigo-500 bg-indigo-500/20 text-indigo-300'
-                    : 'border-zinc-600 bg-zinc-700/50 text-zinc-400 hover:text-zinc-200'
+                    : 'border-zinc-600 bg-zinc-700/50 text-muted-foreground hover:text-zinc-200'
                 }`}
               >
                 📄 PDF
@@ -158,7 +158,7 @@ export const ComplianceReportsContent = memo(function ComplianceReportsContent()
                 className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
                   format === 'json'
                     ? 'border-indigo-500 bg-indigo-500/20 text-indigo-300'
-                    : 'border-zinc-600 bg-zinc-700/50 text-zinc-400 hover:text-zinc-200'
+                    : 'border-zinc-600 bg-zinc-700/50 text-muted-foreground hover:text-zinc-200'
                 }`}
               >
                 {'{ }'} JSON
@@ -175,7 +175,7 @@ export const ComplianceReportsContent = memo(function ComplianceReportsContent()
                 <p className="text-sm font-medium text-zinc-200">{selectedFramework.name}</p>
                 <p className="text-xs text-zinc-500 mt-0.5">{(selectedFramework as Framework & { description?: string }).description || 'Regulatory compliance framework'}</p>
               </div>
-              <div className="flex gap-4 text-xs text-zinc-400">
+              <div className="flex gap-4 text-xs text-muted-foreground">
                 <span>{(selectedFramework as Framework & { controls?: number }).controls ?? '—'} controls</span>
                 <span>{(selectedFramework as Framework & { checks?: number }).checks ?? '—'} checks</span>
               </div>
@@ -218,7 +218,7 @@ export const ComplianceReportsContent = memo(function ComplianceReportsContent()
       {/* Info Section */}
       <div className="rounded-xl border border-zinc-700/50 bg-zinc-800/50 p-6">
         <h2 className="text-lg font-medium text-zinc-200 mb-3">About Compliance Reports</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-zinc-400">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-muted-foreground">
           <div>
             <h3 className="font-medium text-zinc-300 mb-1">PDF Reports</h3>
             <p>Audit-ready documents with cover page, executive summary, per-control findings, evidence, and remediation steps. Suitable for sharing with auditors and compliance teams.</p>

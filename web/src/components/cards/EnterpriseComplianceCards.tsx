@@ -101,7 +101,7 @@ export function GxPCard() {
             {data.chain_integrity
               ? <CheckCircle2 className="w-4 h-4 text-green-400" />
               : <XCircle className="w-4 h-4 text-red-400" />}
-            <span className="text-sm text-gray-300">Hash Chain {data.chain_integrity ? 'Intact' : 'Broken'}</span>
+            <span className="text-sm text-muted-foreground">Hash Chain {data.chain_integrity ? 'Intact' : 'Broken'}</span>
           </div>
           <div className="grid grid-cols-3 gap-2">
             <MiniStat label="Records" value={Number(data.total_records ?? 0)} />
@@ -143,8 +143,8 @@ export function ComplianceFrameworksCard() {
   return (
     <CardShell title="Compliance Frameworks" icon={Shield} onClick={() => nav('/compliance-frameworks')}>
       <div className="space-y-2">
-        <div className="flex items-center gap-2"><CheckCircle2 className="w-3 h-3 text-green-400" /><span className="text-sm text-gray-300">PCI-DSS 4.0</span></div>
-        <div className="flex items-center gap-2"><CheckCircle2 className="w-3 h-3 text-green-400" /><span className="text-sm text-gray-300">SOC 2 Type II</span></div>
+        <div className="flex items-center gap-2"><CheckCircle2 className="w-3 h-3 text-green-400" /><span className="text-sm text-muted-foreground">PCI-DSS 4.0</span></div>
+        <div className="flex items-center gap-2"><CheckCircle2 className="w-3 h-3 text-green-400" /><span className="text-sm text-muted-foreground">SOC 2 Type II</span></div>
         <p className="text-xs text-gray-500 mt-2">Click to evaluate frameworks</p>
       </div>
     </CardShell>

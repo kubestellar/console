@@ -98,7 +98,7 @@ function CheckRow({ check }: { check: ComplianceCheck }) {
           <span className="text-xs font-medium text-zinc-200 truncate">{check.name}</span>
           <SeverityBadge severity={check.severity} />
         </div>
-        {check.message && <p className="text-[11px] text-zinc-400 mt-0.5">{check.message}</p>}
+        {check.message && <p className="text-[11px] text-muted-foreground mt-0.5">{check.message}</p>}
         {check.status !== 'pass' && check.remediation && (
           <p className="text-[11px] text-blue-400 mt-0.5">💡 {check.remediation}</p>
         )}
@@ -120,7 +120,7 @@ function ControlAccordion({ control }: { control: ControlResult }) {
         onClick={() => setOpen(v => !v)}
         type="button"
       >
-        <Icon className="w-4 h-4 text-zinc-400 shrink-0" />
+        <Icon className="w-4 h-4 text-muted-foreground shrink-0" />
         <StatusBadge status={control.status} />
         <span className="text-sm font-medium text-zinc-200 flex-1 truncate">{control.id}: {control.name}</span>
         <span className="text-xs text-zinc-500">{control.checks.length} checks</span>
@@ -151,7 +151,7 @@ function FrameworkCard({ fw, selected, onSelect }: { fw: Framework; selected: bo
         <Shield className="w-4 h-4 text-blue-400" />
         <span className="text-sm font-semibold text-zinc-100">{fw.name}</span>
       </div>
-      <p className="text-xs text-zinc-400 line-clamp-2 mb-2">{fw.description}</p>
+      <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{fw.description}</p>
       <div className="flex gap-3 text-[11px] text-zinc-500">
         <span>{fw.controls} controls</span>
         <span>{fw.checks} checks</span>
@@ -241,7 +241,7 @@ export const ComplianceFrameworksContent = memo(function ComplianceFrameworksCon
 
   if (fwLoading) {
     return (
-      <div className="flex items-center justify-center h-64 text-zinc-400">
+      <div className="flex items-center justify-center h-64 text-muted-foreground">
         <Loader2 className="w-6 h-6 animate-spin mr-2" />
         Loading frameworks…
       </div>
@@ -328,7 +328,7 @@ export const ComplianceFrameworksContent = memo(function ComplianceFrameworksCon
             <ScoreRing score={result.score} />
             <div className="space-y-2">
               <h2 className="text-lg font-bold text-white">{result.framework_name}</h2>
-              <p className="text-sm text-zinc-400">
+              <p className="text-sm text-muted-foreground">
                 Cluster: <span className="text-zinc-200">{result.cluster}</span>
               </p>
               <div className="flex gap-4 text-sm">

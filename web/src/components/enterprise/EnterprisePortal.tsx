@@ -97,7 +97,7 @@ function VerticalCard({ sectionId, title, items, onNavigate }: {
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-gray-800/50">
-            <Icon className="w-5 h-5 text-gray-300" />
+            <Icon className="w-5 h-5 text-muted-foreground" />
           </div>
           <div>
             <h3 className="text-sm font-semibold text-white">{title}</h3>
@@ -130,7 +130,7 @@ function VerticalCard({ sectionId, title, items, onNavigate }: {
           <button
             key={item.href}
             onClick={() => onNavigate(item.href)}
-            className="w-full flex items-center justify-between px-3 py-1.5 rounded-md text-sm text-gray-300 hover:bg-gray-700/40 hover:text-white transition-colors group"
+            className="w-full flex items-center justify-between px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:bg-gray-700/40 hover:text-white transition-colors group"
           >
             <span>{item.label}</span>
             <ArrowRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
