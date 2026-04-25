@@ -12,6 +12,7 @@ import { StatusBadge } from '../../../components/ui/StatusBadge'
 import type { UnifiedStatsSectionProps, UnifiedStatBlockConfig, StatBlockValue } from '../types'
 import { UnifiedStatBlock } from './UnifiedStatBlock'
 import { resolveStatValue } from './valueResolvers'
+import { getResponsiveGridCols } from '../../stats/gridUtils'
 
 /**
  * UnifiedStatsSection - Renders a section of stat blocks from config
@@ -118,11 +119,7 @@ export function UnifiedStatsSection({
     }
 
     // Default responsive behavior
-    if (count <= 4) return 'grid-cols-2 md:grid-cols-4'
-    if (count <= 5) return 'grid-cols-2 md:grid-cols-5'
-    if (count <= 6) return 'grid-cols-2 md:grid-cols-3 lg:grid-cols-6'
-    if (count <= 8) return 'grid-cols-2 md:grid-cols-4 lg:grid-cols-8'
-    return 'grid-cols-2 md:grid-cols-5 lg:grid-cols-10'
+    return getResponsiveGridCols(count)
   })()
 
   const collapsible = config.collapsible !== false
