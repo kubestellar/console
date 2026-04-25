@@ -141,6 +141,7 @@ jobs:
           echo "failed=${FAILED}" >> "$GITHUB_OUTPUT"
 
       - name: Generate comparison report
+        if: always()
         id: compare
         run: |
           REPORT_FILE="/tmp/nightly-comparison.md"
@@ -239,8 +240,15 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh issue comment "${{ steps.issue.outputs.issue_number }}" \
-            --body-file /tmp/nightly-comparison.md
+          if [ -f /tmp/nightly-comparison.md ]; then
+            gh issue comment "${{ steps.issue.outputs.issue_number }}" \
+              --body-file /tmp/nightly-comparison.md
+          else
+            gh issue comment "${{ steps.issue.outputs.issue_number }}" \
+              --body "## Nightly Test Suite — $(date -u +%Y-%m-%d)
+
+          _No comparison report was generated. The test suite or comparison script may have failed. Check the [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details._"
+          fi
 
       - name: Create issues for failing suites
         if: always() && steps.tests.outputs.failed != '0' && steps.tests.outputs.failed != ''

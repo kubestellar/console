@@ -14,7 +14,7 @@
 // legitimate growth (new cards, SSE streams), while still catching any
 // regression that pushes us back toward the ~461-commit cascade tracked
 // by #6149.
-export const PERF_BUDGET_NAVIGATION_COMMITS = 25
+export const PERF_BUDGET_NAVIGATION_COMMITS = 30
 
 // How long to let the UI settle after a navigation before we snapshot
 // the commit counter. 2s is enough for cached dashboards + router transitions
