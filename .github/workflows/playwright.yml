@@ -12,8 +12,8 @@ on:
 permissions: read-all
 
 concurrency:
-  group: playwright-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   CI: true
