@@ -10,7 +10,7 @@
  *   <UnifiedCard config={clusterHealthConfig} title="Custom Title" />
  */
 
-import { ReactNode, useMemo } from 'react'
+import { ReactNode, useMemo, lazy, Suspense } from 'react'
 import {
   AlertTriangle,
   Info,
@@ -29,7 +29,11 @@ import { useDataSource } from './hooks/useDataSource'
 import { useCardFiltering } from './hooks/useCardFiltering'
 import { ListVisualization } from './visualizations/ListVisualization'
 import { TableVisualization } from './visualizations/TableVisualization'
-import { ChartVisualization } from './visualizations/ChartVisualization'
+// Lazy-load ChartVisualization to defer the echarts vendor chunk from the
+// critical loading path — it is only needed for cards with chartType content.
+const LazyChartVisualization = lazy(() =>
+  import('./visualizations/ChartVisualization').then(m => ({ default: m.ChartVisualization }))
+)
 import { StatusGridVisualization } from './visualizations/StatusGridVisualization'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { useReportCardDataState } from '../../../components/cards/CardDataContext'
@@ -212,10 +216,12 @@ function renderContent(
 
     case 'chart':
       return (
-        <ChartVisualization
-          content={content}
-          data={data as unknown[]}
-        />
+        <Suspense fallback={<div className="animate-pulse bg-secondary/30 rounded" style={{ height: content.height ?? 200 }} />}>
+          <LazyChartVisualization
+            content={content}
+            data={data as unknown[]}
+          />
+        </Suspense>
       )
 
     case 'status-grid':

@@ -1,4 +1,4 @@
-import { useState, memo } from 'react'
+import { useState, memo, lazy, Suspense } from 'react'
 import { useModalState } from '../../lib/modals'
 import { useTranslation } from 'react-i18next'
 import {
@@ -12,7 +12,12 @@ import { StatusBadge } from './StatusBadge'
 import { StatBlockConfig, DashboardStatsType, StatDisplayMode } from './StatsBlockDefinitions'
 import { StatsConfigModal, useStatsConfig } from './StatsConfig'
 import { StatBlockModePicker } from './StatBlockModePicker'
-import { Sparkline } from '../charts/Sparkline'
+// Lazy-load Sparkline to defer the echarts vendor chunk from the critical path.
+// The Gauge and CircularProgress components are smaller and less common, but they
+// share the same echarts import chain, so lazy-loading them too is low-cost.
+const LazySparkline = lazy(() =>
+  import('../charts/Sparkline').then(m => ({ default: m.Sparkline }))
+)
 import { Gauge } from '../charts/Gauge'
 import { CircularProgress } from '../charts/ProgressBar'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
@@ -269,7 +274,9 @@ const StatBlock = memo(function StatBlock({ block, data, hasData, isLoading, his
             <div className={`text-2xl font-bold ${isLoading ? 'text-muted-foreground/30' : valueColor}`}>
               {displayValue}
             </div>
-            <Sparkline data={history!} color={hexColor} height={28} width={64} fill />
+            <Suspense fallback={<div style={{ height: 28, width: 64 }} className="bg-secondary/30 rounded" />}>
+              <LazySparkline data={history!} color={hexColor} height={28} width={64} fill />
+            </Suspense>
           </div>
           {data.sublabel && <div className="text-xs text-muted-foreground mt-1">{wrapAbbreviations(data.sublabel)}</div>}
         </>

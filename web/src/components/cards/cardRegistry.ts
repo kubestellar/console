@@ -21,7 +21,6 @@ import { EventStream } from './EventStream'
 import { PodIssues } from './PodIssues'
 import { ResourceUsage } from './ResourceUsage'
 import { ClusterMetrics } from './ClusterMetrics'
-import { EventsTimeline } from './EventsTimeline'
 import { HardwareHealthCard } from './HardwareHealthCard'
 import { ConsoleOfflineDetectionCard } from './console-missions/ConsoleOfflineDetectionCard'
 import { DeploymentStatus } from './DeploymentStatus'
@@ -48,7 +47,8 @@ const SecurityIssues = safeLazy(() => import('./SecurityIssues'), 'SecurityIssue
 const EventSummary = safeLazy(() => import('./EventSummary'), 'EventSummary')
 const WarningEvents = safeLazy(() => import('./WarningEvents'), 'WarningEvents')
 const RecentEvents = safeLazy(() => import('./RecentEvents'), 'RecentEvents')
-// EventsTimeline eagerly imported above
+// EventsTimeline deferred to keep the echarts vendor chunk off the critical path
+const EventsTimeline = safeLazy(() => import('./EventsTimeline'), 'EventsTimeline')
 const PodHealthTrend = safeLazy(() => import('./PodHealthTrend'), 'PodHealthTrend')
 const ResourceTrend = safeLazy(() => import('./ResourceTrend'), 'ResourceTrend')
 const GPUUtilization = safeLazy(() => import('./GPUUtilization'), 'GPUUtilization')

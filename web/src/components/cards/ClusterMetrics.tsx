@@ -1,5 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react'
-import { TimeSeriesChart, MultiSeriesChart } from '../charts'
+import { useState, useMemo, useEffect, useRef, lazy, Suspense } from 'react'
 import { useClusters } from '../../hooks/useMCP'
 import { CLUSTER_POLL_INTERVAL_MS } from '../../hooks/mcp/shared'
 import { Server, Clock, Layers, TrendingUp } from 'lucide-react'
@@ -109,6 +108,19 @@ interface MetricPoint {
   // Per-cluster values for comparison mode
   clusters?: Record<string, ClusterMetricValues>
 }
+
+// Lazy-load chart components to defer the echarts vendor chunk (~1.14 MB)
+// from the critical loading path. The card itself stays eager — only the
+// chart subtrees are deferred behind React.lazy + Suspense.
+const LazyTimeSeriesChart = lazy(() =>
+  import('../charts/TimeSeriesChart').then(m => ({ default: m.TimeSeriesChart }))
+)
+const LazyMultiSeriesChart = lazy(() =>
+  import('../charts/TimeSeriesChart').then(m => ({ default: m.MultiSeriesChart }))
+)
+
+/** Height (px) of the chart area — used for both the chart and its Suspense fallback */
+const CHART_AREA_MIN_HEIGHT = 160
 
 const STORAGE_KEY = 'cluster-metrics-history'
 // Keep saved history at least as long as the live buffer can span, so that a
@@ -426,7 +438,7 @@ export function ClusterMetrics() {
       </div>
 
       {/* Chart */}
-      <div className="flex-1 min-h-[160px]">
+      <div className="flex-1" style={{ minHeight: CHART_AREA_MIN_HEIGHT }}>
         {clusters.length === 0 ? (
           <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
             {t('cards:clusterMetrics.noClustersSelected')}
@@ -437,21 +449,25 @@ export function ClusterMetrics() {
             <span>{data.length === 0 ? t('cards:clusterMetrics.collectingData') : t('cards:clusterMetrics.waitingForData')}</span>
             <span className="text-xs text-muted-foreground/70">{t('cards:clusterMetrics.chartWillAppear')}</span>
           </div>
-        ) : chartMode === 'per-cluster' && perClusterData.series.length > 0 ? (
-          <MultiSeriesChart
-            data={perClusterData.data}
-            series={perClusterData.series}
-            height={160}
-            showGrid
-          />
         ) : (
-          <TimeSeriesChart
-            data={data}
-            color={config.color}
-            height={160}
-            unit={config.unit}
-            showGrid
-          />
+          <Suspense fallback={<div style={{ height: CHART_AREA_MIN_HEIGHT }} className="animate-pulse bg-secondary/30 rounded" />}>
+            {chartMode === 'per-cluster' && perClusterData.series.length > 0 ? (
+              <LazyMultiSeriesChart
+                data={perClusterData.data}
+                series={perClusterData.series}
+                height={CHART_AREA_MIN_HEIGHT}
+                showGrid
+              />
+            ) : (
+              <LazyTimeSeriesChart
+                data={data}
+                color={config.color}
+                height={CHART_AREA_MIN_HEIGHT}
+                unit={config.unit}
+                showGrid
+              />
+            )}
+          </Suspense>
         )}
       </div>
 
