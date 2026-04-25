@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import {
   Server,
@@ -152,6 +152,11 @@ export function ClusterGroups(_props: ClusterGroupsProps) {
   const [editingGroup, setEditingGroup] = useState<string | null>(null)
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
 
+  const clusterHealthMap = useMemo(
+    () => new Map(clusters.map(c => [c.name, c.healthy])),
+    [clusters],
+  )
+
   const toggleExpanded = (name: string) => {
     setExpandedGroups(prev => {
       const next = new Set(prev)
@@ -197,7 +202,7 @@ export function ClusterGroups(_props: ClusterGroupsProps) {
       {isCreating && (
         <CreateGroupForm
           availableClusters={availableClusterNames}
-          clusterHealthMap={new Map(clusters.map(c => [c.name, c.healthy]))}
+          clusterHealthMap={clusterHealthMap}
           onSave={(group) => {
             createGroup(group)
             setIsCreating(false)
@@ -223,7 +228,7 @@ export function ClusterGroups(_props: ClusterGroupsProps) {
                 key={group.name}
                 group={group}
                 availableClusters={availableClusterNames}
-                clusterHealthMap={new Map(clusters.map(c => [c.name, c.healthy]))}
+                clusterHealthMap={clusterHealthMap}
                 onSave={(updates) => {
                   updateGroup(group.name, updates)
                   setEditingGroup(null)
@@ -235,7 +240,7 @@ export function ClusterGroups(_props: ClusterGroupsProps) {
                 key={group.name}
                 group={group}
                 isExpanded={expandedGroups.has(group.name)}
-                clusterHealthMap={new Map(clusters.map(c => [c.name, c.healthy]))}
+                clusterHealthMap={clusterHealthMap}
                 onToggle={() => toggleExpanded(group.name)}
                 onEdit={() => setEditingGroup(group.name)}
                 onDelete={() => setDeleteConfirmName(group.name)}

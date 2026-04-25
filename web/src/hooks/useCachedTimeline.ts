@@ -1,4 +1,5 @@
 import { useCache, type RefreshCategory } from '../lib/cache'
+import { useMemo } from 'react'
 import { useDemoMode } from './useDemoMode'
 import { authFetch } from '../lib/api'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
@@ -58,11 +59,13 @@ export function useCachedTimeline(
 ): CachedTimelineResult {
   const { isDemoMode } = useDemoMode()
 
+  const stableDemoData = useMemo(() => getDemoTimelineEvents(), [])
+
   const cacheResult = useCache<TimelineEvent[]>({
     key: `${CACHE_KEY_TIMELINE}_${rangeMs}`,
     category: TIMELINE_CATEGORY,
     initialData: INITIAL_DATA,
-    demoData: getDemoTimelineEvents(),
+    demoData: stableDemoData,
     fetcher: () => fetchTimelineEvents(rangeMs),
   })
 
@@ -70,7 +73,7 @@ export function useCachedTimeline(
   const isDemoData = (isDemoMode || cacheResult.isDemoFallback) && !cacheResult.isLoading
 
   return {
-    data: isDemoMode ? getDemoTimelineEvents() : cacheResult.data,
+    data: isDemoMode ? stableDemoData : cacheResult.data,
     isLoading: cacheResult.isLoading,
     isRefreshing: cacheResult.isRefreshing,
     isDemoData,

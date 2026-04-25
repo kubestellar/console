@@ -233,7 +233,7 @@ export function ChangeTimeline({ config: _config }: ChangeTimelineProps) {
                   : 'bg-secondary/50 text-muted-foreground hover:bg-secondary',
               )}
             >
-              {String(t(opt.labelKey))}
+              {t(opt.labelKey)}
             </button>
           ))}
         </div>
