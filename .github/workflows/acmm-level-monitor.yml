@@ -65,26 +65,26 @@ jobs:
             --title "🔴 ACMM regression: badge dropped to L${LEVEL} (required L${MIN})" \
             --label "bug,acmm-regression" \
             --body "## ACMM Level Regression
-
-**Detected:** $(date -u '+%Y-%m-%dT%H:%M:%SZ')
-**Current badge:** \`${MESSAGE}\` (L${LEVEL})
-**Required minimum:** L${MIN}
-**Score:** ${SCORE}
-
-## What this means
-
-The ACMM badge on the \`kubestellar/console\` README has dropped below L${MIN}. One or more criteria that the badge endpoint detects are now missing from the repo tree.
-
-## Investigation steps
-
-1. Check the [ACMM leaderboard](https://console.kubestellar.io/acmm?repo=kubestellar%2Fconsole) for the full breakdown.
-2. Compare the detected criteria between L${LEVEL} and L${MIN} — which L$(( LEVEL + 1 )) criteria are now missing?
-3. Check recent merged PRs that may have removed or renamed files the scanner detects.
-4. Restore the missing files/workflows or update detection paths in \`web/src/lib/acmm/sources/acmm.ts\`.
-
-## Badge URL
-
-\`https://console.kubestellar.io/api/acmm/badge?repo=kubestellar%2Fconsole&force=true\`"
+          
+          **Detected:** $(date -u '+%Y-%m-%dT%H:%M:%SZ')
+          **Current badge:** \`${MESSAGE}\` (L${LEVEL})
+          **Required minimum:** L${MIN}
+          **Score:** ${SCORE}
+          
+          ## What this means
+          
+          The ACMM badge on the \`kubestellar/console\` README has dropped below L${MIN}. One or more criteria that the badge endpoint detects are now missing from the repo tree.
+          
+          ## Investigation steps
+          
+          1. Check the [ACMM leaderboard](https://console.kubestellar.io/acmm?repo=kubestellar%2Fconsole) for the full breakdown.
+          2. Compare the detected criteria between L${LEVEL} and L${MIN} — which L$(( LEVEL + 1 )) criteria are now missing?
+          3. Check recent merged PRs that may have removed or renamed files the scanner detects.
+          4. Restore the missing files/workflows or update detection paths in \`web/src/lib/acmm/sources/acmm.ts\`.
+          
+          ## Badge URL
+          
+          \`https://console.kubestellar.io/api/acmm/badge?repo=kubestellar%2Fconsole&force=true\`"
 
       - name: Comment on existing issue
         if: ${{ fromJson(steps.badge.outputs.level) < fromJson(steps.badge.outputs.min_level) && steps.existing.outputs.number != '' }}
