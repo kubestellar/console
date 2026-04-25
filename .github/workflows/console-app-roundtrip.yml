@@ -9,8 +9,8 @@ name: Console App Roundtrip
 #
 # Creates one issue per run, immediately closes and locks it with a
 # dedicated label (test/auto-delete) so it's easy to bulk-clean later.
-# Runs daily at 06:00 UTC. Opens a priority/critical + ai-needs-human
-# failure issue on contract violation.
+# Runs daily at 06:00 UTC. Opens a priority/critical failure issue on
+# contract violation.
 
 on:
   schedule:
@@ -324,5 +324,5 @@ jobs:
                 '- App renamed (update \`EXPECTED_USER_LOGIN\` and \`EXPECTED_SLUG\` in the workflow)',
                 '- Missing \`test/auto-delete\` label the App lacks permission to create',
               ].join('\n'),
-              labels: ['console-app-roundtrip-failure', 'priority/critical', 'ai-needs-human'],
+              labels: ['console-app-roundtrip-failure', 'priority/critical'],
             });

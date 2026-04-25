@@ -63,7 +63,6 @@ issues:
     - ai-pr-draft
     - ai-pr-ready
     - ai-processing-complete
-    - ai-needs-human
   # Labels that should trigger AI workflows
   trigger-labels:
     - ai-fix-requested

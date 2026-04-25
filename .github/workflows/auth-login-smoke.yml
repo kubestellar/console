@@ -264,5 +264,5 @@ jobs:
               repo: context.repo.repo,
               title,
               body,
-              labels: ['auth-smoke-failure', 'priority/critical', 'ai-needs-human'],
+              labels: ['auth-smoke-failure', 'priority/critical'],
             });

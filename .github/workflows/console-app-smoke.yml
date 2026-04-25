@@ -8,8 +8,8 @@ name: Console App Smoke
 # Also runs the rewards classifier unit tests so any change to the
 # attribution logic is caught before it hits the leaderboard.
 #
-# Runs every 30 minutes. Opens a priority/critical + ai-needs-human
-# issue on failure (deduplicated by label). Catches:
+# Runs every 30 minutes. Opens a priority/critical issue on failure
+# (deduplicated by label). Catches:
 #   - App private key rotation not propagated to the repo secret
 #   - Installation revoked on the target account
 #   - Permissions removed (e.g. Issues:write)
@@ -140,7 +140,7 @@ jobs:
                 '### Effect',
                 'While this is broken, **console-submitted issues will not get App attribution** — the backend falls back to the PAT (\`FEEDBACK_GITHUB_TOKEN\`). Rewards will continue to award points but without the anti-gaming guarantee.',
               ].join('\n'),
-              labels: ['console-app-smoke-failure', 'priority/critical', 'ai-needs-human'],
+              labels: ['console-app-smoke-failure', 'priority/critical'],
             });
 
   # ── 2. Rewards classifier unit tests ────────────────────────────
