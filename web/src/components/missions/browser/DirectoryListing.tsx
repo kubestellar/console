@@ -2,7 +2,7 @@ import { Folder, FileJson, FileCode, FileText, Download } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import type { BrowseEntry } from '../../../lib/missions/types'
 import type { ViewMode } from './types'
-import { formatBytes } from './helpers'
+import { formatBytes } from '../../../lib/formatters'
 
 /** Pick a file icon and color based on file extension */
 function getFileIcon(name: string) {

@@ -26,6 +26,7 @@ import {
   Zap,
 } from 'lucide-react'
 import { useCachedDragonfly } from '../../../hooks/useCachedDragonfly'
+import { formatBytes } from '../../../lib/formatters'
 import { useCardLoadingState } from '../CardDataContext'
 import { SkeletonCardWithRefresh } from '../../ui/Skeleton'
 import { EmptyState } from '../../ui/EmptyState'
@@ -42,13 +43,10 @@ import type {
 
 const COMPONENT_PAGE_SIZE = 4
 
-const BYTES_PER_GIB = 1024 * 1024 * 1024
-const BYTES_PER_MIB = 1024 * 1024
-const BYTES_PER_KIB = 1024
-const MIN_DECIMAL_PLACES = 1
-
 const CACHE_HIT_WARN_PERCENT = 50
 const CACHE_HIT_ALERT_PERCENT = 25
+
+const BINARY_DASH_FORMAT = { binary: true, zeroLabel: '—' } as const
 
 const MS_PER_SECOND = 1000
 const SECONDS_PER_MINUTE = 60
@@ -58,20 +56,6 @@ const HOURS_PER_DAY = 24
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function formatBytes(bytes: number): string {
-  if (bytes <= 0) return '—'
-  if (bytes >= BYTES_PER_GIB) {
-    return `${(bytes / BYTES_PER_GIB).toFixed(MIN_DECIMAL_PLACES)} GiB`
-  }
-  if (bytes >= BYTES_PER_MIB) {
-    return `${(bytes / BYTES_PER_MIB).toFixed(MIN_DECIMAL_PLACES)} MiB`
-  }
-  if (bytes >= BYTES_PER_KIB) {
-    return `${(bytes / BYTES_PER_KIB).toFixed(MIN_DECIMAL_PLACES)} KiB`
-  }
-  return `${bytes} B`
-}
 
 function cacheHitColor(pct: number): string {
   if (pct >= CACHE_HIT_WARN_PERCENT) return 'text-green-400'
@@ -240,7 +224,7 @@ export function DragonflyStatus() {
             {t('dragonflyStatus.p2pUpstream', 'P2P / upstream')}
           </div>
           <div className="text-sm font-semibold text-foreground tabular-nums">
-            {formatBytes(summary.p2pBytesServed)} / {formatBytes(summary.upstreamBytes)}
+            {formatBytes(summary.p2pBytesServed, BINARY_DASH_FORMAT)} / {formatBytes(summary.upstreamBytes, BINARY_DASH_FORMAT)}
           </div>
         </div>
       </div>

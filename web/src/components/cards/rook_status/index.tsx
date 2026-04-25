@@ -18,6 +18,7 @@ import {
   XCircle,
 } from 'lucide-react'
 import { useCachedRook } from '../../../hooks/useCachedRook'
+import { formatBytes } from '../../../lib/formatters'
 import { useCardLoadingState } from '../CardDataContext'
 import { SkeletonCardWithRefresh } from '../../ui/Skeleton'
 import { EmptyState } from '../../ui/EmptyState'
@@ -29,16 +30,12 @@ import type { RookCephCluster, RookCephHealth } from '../../../lib/demo/rook'
 // Named constants (no magic numbers)
 // ---------------------------------------------------------------------------
 
-const BYTES_PER_KIB = 1024
-const BYTES_PER_MIB = BYTES_PER_KIB * 1024
-const BYTES_PER_GIB = BYTES_PER_MIB * 1024
-const BYTES_PER_TIB = BYTES_PER_GIB * 1024
-const BYTES_PER_PIB = BYTES_PER_TIB * 1024
-
 const USAGE_PCT_WARN = 70
 const USAGE_PCT_ALERT = 85
 const PCT_MULTIPLIER = 100
-const CAPACITY_DECIMALS = 1
+
+const BINARY_ZERO_LABEL = '0'
+const BINARY_FORMAT = { binary: true, zeroLabel: BINARY_ZERO_LABEL } as const
 
 // Limit the number of CephCluster rows rendered so the card stays compact.
 const CLUSTER_PAGE_SIZE = 6
@@ -46,15 +43,6 @@ const CLUSTER_PAGE_SIZE = 6
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function formatBytes(bytes: number): string {
-  if (!Number.isFinite(bytes) || bytes <= 0) return '0'
-  if (bytes >= BYTES_PER_PIB) return `${(bytes / BYTES_PER_PIB).toFixed(CAPACITY_DECIMALS)} PiB`
-  if (bytes >= BYTES_PER_TIB) return `${(bytes / BYTES_PER_TIB).toFixed(CAPACITY_DECIMALS)} TiB`
-  if (bytes >= BYTES_PER_GIB) return `${(bytes / BYTES_PER_GIB).toFixed(CAPACITY_DECIMALS)} GiB`
-  if (bytes >= BYTES_PER_MIB) return `${(bytes / BYTES_PER_MIB).toFixed(CAPACITY_DECIMALS)} MiB`
-  return `${bytes} B`
-}
 
 function usagePct(cluster: RookCephCluster): number {
   if (cluster.capacityTotalBytes <= 0) return 0
@@ -197,8 +185,8 @@ export function RookStatus() {
         />
         <MetricTile
           label={t('rookStatus.capacity', 'Capacity')}
-          value={`${formatBytes(data.summary.totalUsedBytes)} / ${formatBytes(
-            data.summary.totalCapacityBytes,
+          value={`${formatBytes(data.summary.totalUsedBytes, BINARY_FORMAT)} / ${formatBytes(
+            data.summary.totalCapacityBytes, BINARY_FORMAT,
           )}`}
           colorClass="text-blue-400"
           icon={<HardDrive className="w-4 h-4 text-blue-400" />}
@@ -268,8 +256,8 @@ export function RookStatus() {
                   </span>
                   <span className={cn('flex items-center gap-1 shrink-0', usageColor(pct))}>
                     <HardDrive className="w-3 h-3" />
-                    {formatBytes(cluster.capacityUsedBytes)} /{' '}
-                    {formatBytes(cluster.capacityTotalBytes)}
+                    {formatBytes(cluster.capacityUsedBytes, BINARY_FORMAT)} /{' '}
+                    {formatBytes(cluster.capacityTotalBytes, BINARY_FORMAT)}
                   </span>
                 </div>
               </div>

@@ -46,23 +46,51 @@ function parseK8sQuantity(value: string): number {
   return num
 }
 
+/** Options for {@link formatBytes}. */
+export interface FormatBytesOptions {
+  /** Number of decimal places (default: 1). */
+  decimals?: number
+  /** Use IEC binary units — KiB, MiB, GiB, TiB, PiB (default: false → KB, MB, …). */
+  binary?: boolean
+  /** String returned when the input is zero, negative, or non-finite (default: `'0 B'`). */
+  zeroLabel?: string
+}
+
+const SI_UNITS = ['B', 'KB', 'MB', 'GB', 'TB', 'PB']
+const IEC_UNITS = ['B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB']
+const BYTES_PER_KIBIBYTE = 1024
+
 /**
- * Format bytes to human-readable string (GB, TB, MB, etc.)
+ * Format bytes to a human-readable string.
+ *
+ * @example
+ * formatBytes(1536)                       // "1.5 KB"
+ * formatBytes(1536, { binary: true })     // "1.5 KiB"
+ * formatBytes(0, { zeroLabel: '—' })      // "—"
  */
-export function formatBytes(bytes: number, decimals = 1): string {
-  if (!Number.isFinite(bytes) || bytes <= 0) return '0 B'
+export function formatBytes(
+  bytes: number,
+  optsOrDecimals: FormatBytesOptions | number = {},
+): string {
+  // Backward-compatible: accept a plain number as the decimals shorthand.
+  const opts: FormatBytesOptions =
+    typeof optsOrDecimals === 'number'
+      ? { decimals: optsOrDecimals }
+      : optsOrDecimals
 
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  const { decimals = 1, binary = false, zeroLabel = '0 B' } = opts
 
-  const value = bytes / Math.pow(k, i)
+  if (!Number.isFinite(bytes) || bytes <= 0) return zeroLabel
+
+  const units = binary ? IEC_UNITS : SI_UNITS
+  const i = Math.floor(Math.log(bytes) / Math.log(BYTES_PER_KIBIBYTE))
+  const value = bytes / Math.pow(BYTES_PER_KIBIBYTE, i)
 
   // Use 0 decimals for whole numbers, otherwise use specified decimals
   if (value === Math.floor(value)) {
-    return `${value} ${sizes[i]}`
+    return `${value} ${units[i]}`
   }
-  return `${value.toFixed(decimals)} ${sizes[i]}`
+  return `${value.toFixed(decimals)} ${units[i]}`
 }
 
 /**

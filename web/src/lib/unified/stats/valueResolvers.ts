@@ -9,6 +9,8 @@ import type {
   StatValueSource,
   StatValueFormat,
 } from '../types'
+import { formatBytes } from '../../formatters'
+export { formatBytes }
 
 /**
  * Resolved stat value with metadata
@@ -336,19 +338,6 @@ export function formatNumber(value: number): string | number {
     return `${(value / 1_000).toFixed(1)}K`
   }
   return value
-}
-
-/**
- * Format bytes to human-readable
- */
-export function formatBytes(bytes: number): string {
-  if (!Number.isFinite(bytes) || bytes <= 0) return '0 B'
-
-  const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB']
-  const exp = Math.floor(Math.log(bytes) / Math.log(1024))
-  const size = bytes / Math.pow(1024, exp)
-
-  return `${size.toFixed(1)} ${units[exp]}`
 }
 
 /**
