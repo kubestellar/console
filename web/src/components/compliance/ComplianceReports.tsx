@@ -12,6 +12,7 @@ import { useComplianceFrameworks, type Framework } from '../../hooks/useComplian
 import { useClusters } from '../../hooks/useMCP'
 import { authFetch } from '../../lib/api'
 import { Select } from '../ui/Select'
+import { Skeleton } from '../ui/Skeleton'
 import { DashboardHeader } from '../shared/DashboardHeader'
 import { RotatingTip } from '../ui/RotatingTip'
 
@@ -111,18 +112,20 @@ export const ComplianceReportsContent = memo(function ComplianceReportsContent()
           {/* Framework Picker */}
           <div>
             <label className="block text-sm font-medium text-muted-foreground mb-1.5">Framework</label>
-            <Select
-              value={selectedFw}
-              onChange={(e) => setSelectedFw(e.target.value)}
-              disabled={fwLoading}
-            >
-              {fwLoading && <option>Loading...</option>}
-              {frameworks.map((fw: Framework) => (
-                <option key={fw.id} value={fw.id}>
-                  {fw.name} {fw.version}
-                </option>
-              ))}
-            </Select>
+            {fwLoading ? (
+              <Skeleton variant="rounded" height={38} className="w-full" />
+            ) : (
+              <Select
+                value={selectedFw}
+                onChange={(e) => setSelectedFw(e.target.value)}
+              >
+                {(frameworks || []).map((fw: Framework) => (
+                  <option key={fw.id} value={fw.id}>
+                    {fw.name} {fw.version}
+                  </option>
+                ))}
+              </Select>
+            )}
           </div>
 
           {/* Cluster Picker */}
