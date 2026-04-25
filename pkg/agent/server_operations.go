@@ -413,8 +413,13 @@ func (s *Server) handleSetKey(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Reject unknown provider names so typos don't create orphaned config
-	// entries (#10060).
-	if _, err := GetRegistry().Get(req.Provider); err != nil {
+	// entries (#10060). Prefer the server's injected registry so tests
+	// validate against the active provider set for this server instance.
+	registry := s.registry
+	if registry == nil {
+		registry = GetRegistry()
+	}
+	if _, err := registry.Get(req.Provider); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "unknown_provider", Message: fmt.Sprintf("Provider %q is not registered", req.Provider)})
 		return

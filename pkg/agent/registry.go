@@ -133,6 +133,13 @@ func (r *Registry) GetSelectedAgent(sessionID string) string {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
+	if r.selectedAgent == nil {
+		r.selectedAgent = make(map[string]string)
+	}
+	if r.selectedAgentLRU == nil {
+		r.selectedAgentLRU = make(map[string]time.Time)
+	}
+
 	if agent, ok := r.selectedAgent[sessionID]; ok {
 		r.selectedAgentLRU[sessionID] = time.Now()
 		return agent
@@ -163,13 +170,15 @@ func (r *Registry) SetSelectedAgent(sessionID, agentName string) error {
 	if len(r.selectedAgent) >= maxSelectedAgentEntries {
 		var oldestKey string
 		var oldestTime time.Time
+		var foundOldest bool
 		for k, t := range r.selectedAgentLRU {
-			if oldestKey == "" || t.Before(oldestTime) {
+			if !foundOldest || t.Before(oldestTime) {
 				oldestKey = k
 				oldestTime = t
+				foundOldest = true
 			}
 		}
-		if oldestKey != "" {
+		if foundOldest {
 			delete(r.selectedAgent, oldestKey)
 			delete(r.selectedAgentLRU, oldestKey)
 		}
