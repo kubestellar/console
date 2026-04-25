@@ -123,6 +123,18 @@ jobs:
 
           TOTAL=$(jq -r '.total.lines.pct // "?"' "$SUMMARY_FILE")
           echo "total_coverage=${TOTAL}" >> "$GITHUB_OUTPUT"
+
+          # Warn when total project coverage is below the threshold floor.
+          # This is a visibility-only check — not blocking — but surfaces the gap
+          # between the per-file modified-files gate and overall project health.
+          TOTAL_INT=$(echo "$TOTAL" | grep -oE '^[0-9]+' || echo "")
+          if [ -n "$TOTAL_INT" ] && [ "$TOTAL_INT" -lt "$THRESHOLD" ]; then
+            {
+              echo ""
+              echo "> :bar_chart: **Total project coverage: ${TOTAL}%** — below the ${THRESHOLD}% threshold floor. New code meets the per-file gate, but overall coverage has room to grow."
+            } >> /tmp/coverage-report.md
+          fi
+
           echo "status=$( [ \"$ALL_PASS\" = \"true\" ] && echo pass || echo warn )" >> "$GITHUB_OUTPUT"
 
       - name: Comment on PR
