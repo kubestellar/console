@@ -151,11 +151,35 @@ func checkDeploymentHealth(obj *unstructured.Unstructured) (ResourceHealthStatus
 func checkStatefulSetHealth(obj *unstructured.Unstructured) (ResourceHealthStatus, string) {
 	replicas, _, _ := unstructured.NestedInt64(obj.Object, "spec", "replicas")
 	readyReplicas, _, _ := unstructured.NestedInt64(obj.Object, "status", "readyReplicas")
+	// updatedReplicas is the count of pods running the latest updateRevision.
+	// During a rolling update old pods can still be ready while the new version
+	// hasn't fully rolled out — without this check we report Healthy for a
+	// mid-rollout StatefulSet (#10006).
+	updatedReplicas, _, _ := unstructured.NestedInt64(obj.Object, "status", "updatedReplicas")
+	// currentRevision and updateRevision diverge while the controller is
+	// rolling pods to a new spec. Once all pods are updated the controller
+	// sets currentRevision = updateRevision.
+	currentRevision, _, _ := unstructured.NestedString(obj.Object, "status", "currentRevision")
+	updateRevision, _, _ := unstructured.NestedString(obj.Object, "status", "updateRevision")
 
 	if replicas == 0 {
 		return HealthStatusHealthy, "Scaled to 0"
 	}
-	if readyReplicas == replicas {
+	// Revision mismatch means the controller is still rolling pods to the
+	// new version, even if all current pods happen to be ready.
+	if updateRevision != "" && currentRevision != updateRevision {
+		return HealthStatusDegraded, fmt.Sprintf("Rolling update: revision %s → %s", currentRevision, updateRevision)
+	}
+	if updatedReplicas > 0 && updatedReplicas < replicas {
+		return HealthStatusDegraded, fmt.Sprintf("%d/%d updated", updatedReplicas, replicas)
+	}
+	if readyReplicas == replicas && updatedReplicas == replicas {
+		return HealthStatusHealthy, fmt.Sprintf("%d/%d ready", readyReplicas, replicas)
+	}
+	// All ready but updatedReplicas not yet reported (zero value) — treat as
+	// healthy to avoid false positives on older API servers that don't
+	// populate updatedReplicas for StatefulSets.
+	if readyReplicas == replicas && updatedReplicas == 0 && updateRevision == "" {
 		return HealthStatusHealthy, fmt.Sprintf("%d/%d ready", readyReplicas, replicas)
 	}
 	if readyReplicas > 0 {

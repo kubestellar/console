@@ -211,7 +211,23 @@ func TestCheckResourceHealth_Variants(t *testing.T) {
 			want: "degraded",
 		},
 
-		// StatefulSet
+		// StatefulSet — fully rolled out (updatedReplicas == replicas,
+		// revisions match)
+		{
+			kind: "StatefulSet",
+			obj: map[string]interface{}{
+				"spec": map[string]interface{}{"replicas": int64(3)},
+				"status": map[string]interface{}{
+					"readyReplicas":   int64(3),
+					"updatedReplicas": int64(3),
+					"currentRevision": "rev-2",
+					"updateRevision":  "rev-2",
+				},
+			},
+			want: "healthy",
+		},
+		// StatefulSet — healthy when updatedReplicas/revisions are absent
+		// (older API servers that don't populate these fields)
 		{
 			kind: "StatefulSet",
 			obj: map[string]interface{}{
@@ -222,12 +238,44 @@ func TestCheckResourceHealth_Variants(t *testing.T) {
 			},
 			want: "healthy",
 		},
+		// StatefulSet — rolling update: updatedReplicas < replicas (#10006)
 		{
 			kind: "StatefulSet",
 			obj: map[string]interface{}{
 				"spec": map[string]interface{}{"replicas": int64(3)},
 				"status": map[string]interface{}{
-					"readyReplicas": int64(2),
+					"readyReplicas":   int64(3),
+					"updatedReplicas": int64(1),
+					"currentRevision": "rev-1",
+					"updateRevision":  "rev-2",
+				},
+			},
+			want: "degraded",
+		},
+		// StatefulSet — revision mismatch even with all ready+updated
+		{
+			kind: "StatefulSet",
+			obj: map[string]interface{}{
+				"spec": map[string]interface{}{"replicas": int64(3)},
+				"status": map[string]interface{}{
+					"readyReplicas":   int64(3),
+					"updatedReplicas": int64(3),
+					"currentRevision": "rev-1",
+					"updateRevision":  "rev-2",
+				},
+			},
+			want: "degraded",
+		},
+		// StatefulSet — partial readiness
+		{
+			kind: "StatefulSet",
+			obj: map[string]interface{}{
+				"spec": map[string]interface{}{"replicas": int64(3)},
+				"status": map[string]interface{}{
+					"readyReplicas":   int64(2),
+					"updatedReplicas": int64(2),
+					"currentRevision": "rev-2",
+					"updateRevision":  "rev-2",
 				},
 			},
 			want: "degraded",
