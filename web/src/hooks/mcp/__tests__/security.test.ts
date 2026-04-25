@@ -253,7 +253,7 @@ describe('useSecurityIssues', () => {
 
     await waitFor(() => expect(mockFetchSSE).toHaveBeenCalled())
     const callArgs = mockFetchSSE.mock.calls[0][0] as { url: string; itemsKey: string }
-    expect(callArgs.url).toBe(`${LOCAL_AGENT_HTTP_URL}/security-issues/stream`)
+    expect(callArgs.url).toBe('/api/mcp/security-issues/stream')
     expect(callArgs.itemsKey).toBe('issues')
   })
 

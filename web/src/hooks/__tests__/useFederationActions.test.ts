@@ -42,6 +42,7 @@ describe('executeFederationAction', () => {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
                     Authorization: `Bearer ${token}`,
                 },
                 body: JSON.stringify(req),
@@ -71,6 +72,7 @@ describe('executeFederationAction', () => {
             expect.objectContaining({
                 headers: {
                     'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
                 },
             })
         )

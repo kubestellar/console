@@ -916,7 +916,7 @@ describe('useCachedWarningEvents', () => {
     await capturedFetcher()
 
     const url = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string
-    expect(url).toContain(`${LOCAL_AGENT_HTTP_URL}/events/warnings`)
+    expect(url).toContain('/api/mcp/events/warnings')
     expect(url).toContain('cluster=prod-east')
   })
 })

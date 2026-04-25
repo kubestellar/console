@@ -594,7 +594,7 @@ describe('useWarningEvents', () => {
 
     await waitFor(() => expect(mockFetchSSE).toHaveBeenCalled())
     const callArgs = mockFetchSSE.mock.calls[0][0] as { url: string }
-    expect(callArgs.url).toBe(`${LOCAL_AGENT_HTTP_URL}/events/warnings/stream`)
+    expect(callArgs.url).toBe('/api/mcp/events/warnings/stream')
   })
 
   it('forwards cluster, namespace, and limit when provided', async () => {

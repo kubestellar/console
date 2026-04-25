@@ -821,12 +821,12 @@ describe('useCachedData', () => {
         }),
       })
 
-      // REST fallback
+      // REST fallback — fetchBackendAPI uses raw fetch(), not authFetch
       mockIsBackendUnavailable.mockReturnValue(false)
-      mockAuthFetch.mockResolvedValue({
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
         ok: true,
-        json: vi.fn().mockResolvedValue({ issues: [{ name: 'rest-issue', namespace: 'default', severity: 'high', issue: 'Privilege escalation' }] }),
-      })
+        text: vi.fn().mockResolvedValue(JSON.stringify({ issues: [{ name: 'rest-issue', namespace: 'default', severity: 'high', issue: 'Privilege escalation' }] })),
+      }))
       mockUseCache.mockReturnValue(makeCacheResult([]))
 
       const { coreFetchers } = await loadModule()
@@ -834,6 +834,8 @@ describe('useCachedData', () => {
 
       // kubectl found 0 issues, fell through to REST
       expect(issues.length).toBeGreaterThanOrEqual(1)
+
+      vi.unstubAllGlobals()
     })
   })
 

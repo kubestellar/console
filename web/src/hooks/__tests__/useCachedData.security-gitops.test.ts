@@ -342,10 +342,11 @@ describe('useCachedData', () => {
       mockIsAgentUnavailable.mockReturnValue(true)
       mockIsBackendUnavailable.mockReturnValue(false)
 
-      mockAuthFetch.mockResolvedValue({
+      // fetchBackendAPI uses raw fetch(), not authFetch
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
         ok: true,
-        json: vi.fn().mockResolvedValue({ issues: [{ name: 'rest-sec', namespace: 'default', issue: 'Priv', severity: 'high' }] }),
-      })
+        text: vi.fn().mockResolvedValue(JSON.stringify({ issues: [{ name: 'rest-sec', namespace: 'default', issue: 'Priv', severity: 'high' }] })),
+      }))
 
       const { useCachedSecurityIssues } = await loadModule()
       useCachedSecurityIssues()
@@ -353,6 +354,8 @@ describe('useCachedData', () => {
       const fetcher = capturedOpts.fetcher as () => Promise<unknown[]>
       const issues = await fetcher()
       expect(issues).toHaveLength(1)
+
+      vi.unstubAllGlobals()
     })
   })
 
@@ -924,14 +927,17 @@ describe('useCachedData', () => {
       mockIsBackendUnavailable.mockReturnValue(false)
       mockUseCache.mockReturnValue(makeCacheResult([]))
 
-      mockAuthFetch.mockResolvedValue({
+      // fetchBackendAPI uses raw fetch(), not authFetch
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
         ok: true,
-        json: vi.fn().mockResolvedValue({ issues: [{ name: 'sec1', namespace: 'default', issue: 'Priv', severity: 'high' }] }),
-      })
+        text: vi.fn().mockResolvedValue(JSON.stringify({ issues: [{ name: 'sec1', namespace: 'default', issue: 'Priv', severity: 'high' }] })),
+      }))
 
       const { coreFetchers } = await loadModule()
       const issues = await coreFetchers.securityIssues()
       expect(issues).toHaveLength(1)
+
+      vi.unstubAllGlobals()
     })
 
     it('coreFetchers.workloads uses agent then REST fallback', async () => {
