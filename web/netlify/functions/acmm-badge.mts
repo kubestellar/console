@@ -13,7 +13,7 @@
  */
 
 import { getStore } from "@netlify/blobs";
-import { SCANNABLE_IDS_BY_LEVEL, AGENT_INSTRUCTION_FILE_IDS } from "../../src/lib/acmm/scannableIdsByLevel";
+import { SCANNABLE_IDS_BY_LEVEL, AGENT_INSTRUCTION_FILE_IDS, ACMM_DETECTION_PATHS } from "../../src/lib/acmm/scannableIdsByLevel";
 
 const GITHUB_API = "https://api.github.com";
 const REPO_RE = /^[\w.-]+\/[\w.-]+$/;
@@ -185,92 +185,8 @@ async function fetchFromScanEndpoint(origin: string, repo: string, force = false
   return body.detectedIds || [];
 }
 
-/**
- * Fallback: call GitHub directly when the scan endpoint isn't reachable
- * from this function (same-origin fetch timed out, scan function cold-
- * started, etc.). Detects a representative subset of criteria by path —
- * enough to produce a plausible level for the badge so we never show
- * "custom badge inaccessible" (issue #8979). Previously this used a
- * naive `id.replace("acmm:", "").replace(/-/g, "_") + ".md"` heuristic
- * that never matched anything real (e.g. `claude_md.md` is not a file
- * on any repo), so every fallback path computed to L1.
- */
-const BADGE_FALLBACK_PATHS: Record<string, readonly string[]> = {
-  // L2 — individual instruction files still detected; computeLevel synthesises
-  // the virtual "acmm:agent-instructions" from any one of these matches.
-  "acmm:claude-md": ["CLAUDE.md", ".claude/CLAUDE.md"],
-  "acmm:copilot-instructions": [".github/copilot-instructions.md"],
-  "acmm:agents-md": ["AGENTS.md"],
-  "acmm:cursor-rules": [".cursorrules", ".cursor/rules"],
-  "acmm:prompts-catalog": [
-    "prompts/",
-    ".prompts/",
-    "docs/prompts/",
-    ".github/prompts/",
-    ".github/agents/",
-  ],
-  "acmm:editor-config": [".editorconfig"],
-  // L3
-  "acmm:pr-review-rubric": [
-    ".github/review-rubric.md",
-    "docs/review-criteria.md",
-    ".github/prompts/review.md",
-  ],
-  "acmm:ci-matrix": [
-    ".github/workflows/ci.yml",
-    ".github/workflows/test.yml",
-    ".github/workflows/build.yml",
-    ".github/workflows/build-deploy.yml",
-  ],
-  // L4
-  "acmm:security-ai-md": [
-    "docs/security/SECURITY-AI.md",
-    "SECURITY-AI.md",
-    "docs/SECURITY-AI.md",
-  ],
-  "acmm:ai-fix-workflow": [
-    ".github/workflows/ai-fix.yml",
-    ".github/workflows/ai-fix-requested.yml",
-    ".github/workflows/claude.yml",
-  ],
-  "acmm:nightly-compliance": [
-    ".github/workflows/nightly-compliance.yml",
-    ".github/workflows/nightly.yml",
-    ".github/workflows/nightly-test.yml",
-  ],
-  "acmm:auto-label": [
-    ".github/labeler.yml",
-    ".github/workflows/labeler.yml",
-    ".github/workflows/triage.yml",
-  ],
-  // L5
-  "acmm:policy-as-code": [
-    ".github/policies/",
-    "policies/",
-  ],
-  "acmm:github-actions-ai": [
-    ".github/workflows/claude.yml",
-    ".github/workflows/claude-code-review.yml",
-  ],
-  "acmm:reflection-log": [
-    "docs/reflections/",
-    "memory/",
-    ".memory/",
-    "REFLECTIONS.md",
-    ".github/REFLECTIONS.md",
-  ],
-  "acmm:audit-trail": [
-    ".github/workflows/audit-trail.yml",
-    ".github/workflows/ai-attribution.yml",
-  ],
-  // L6
-  "acmm:merge-queue": [
-    ".github/workflows/merge-queue.yml",
-    ".github/merge-queue.yml",
-    ".prow.yaml",
-    "tide.yaml",
-  ],
-};
+// ACMM_DETECTION_PATHS is derived from acmmSource.criteria in scannableIdsByLevel.ts —
+// the single source of truth shared with acmm-scan.mts. No hand-maintained copy here.
 
 function pathMatches(paths: Set<string>, pattern: string): boolean {
   if (pattern.endsWith("/")) {
@@ -310,7 +226,7 @@ async function fetchDetectedIdsDirect(repo: string, token: string): Promise<stri
   const paths = new Set((body.tree || []).map((e) => e.path));
 
   const detected: string[] = [];
-  for (const [id, patterns] of Object.entries(BADGE_FALLBACK_PATHS)) {
+  for (const [id, patterns] of Object.entries(ACMM_DETECTION_PATHS)) {
     for (const p of patterns) {
       if (pathMatches(paths, p)) {
         detected.push(id);

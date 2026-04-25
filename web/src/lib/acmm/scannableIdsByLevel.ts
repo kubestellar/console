@@ -1,9 +1,9 @@
 /**
- * Scannable ACMM criterion IDs grouped by level.
+ * Scannable ACMM criterion IDs grouped by level, and detection-path map.
  *
  * SINGLE SOURCE OF TRUTH consumed by:
- *   - web/src/lib/acmm/computeLevel.ts   (frontend dashboard)
- *   - web/netlify/functions/acmm-badge.mts (shields.io badge endpoint)
+ *   - web/src/lib/acmm/computeLevel.ts         (frontend dashboard)
+ *   - web/netlify/functions/acmm-badge.mts      (shields.io badge endpoint)
  *
  * Derived from the criteria definitions in sources/acmm.ts by filtering out
  * items where `scannable === false`. For L2, the four individual instruction-
@@ -67,3 +67,29 @@ function buildScannableIdsByLevel(): Record<number, string[]> {
  * to ensure identical level calculations.
  */
 export const SCANNABLE_IDS_BY_LEVEL: Record<number, string[]> = buildScannableIdsByLevel()
+
+/**
+ * Detection-path map derived from acmmSource.criteria.
+ *
+ * Maps criterion ID → array of file/directory patterns from the criterion's
+ * `detection.pattern` field. Used by the badge function's direct-GitHub
+ * fallback path so it detects the same criteria as the full scan function —
+ * no more hand-maintained `BADGE_FALLBACK_PATHS` that diverges from the
+ * canonical CRITERIA list.
+ *
+ * Only ACMM source, scannable criteria are included (same filter as
+ * SCANNABLE_IDS_BY_LEVEL). The individual instruction-file IDs (L2) are kept
+ * as-is here because `computeLevel` in the badge synthesises the virtual
+ * "acmm:agent-instructions" OR-group from whichever individual file is found.
+ */
+export const ACMM_DETECTION_PATHS: Record<string, readonly string[]> = (() => {
+  const result: Record<string, string[]> = {}
+  for (const c of acmmSource.criteria) {
+    if (c.scannable === false) continue
+    const patterns = Array.isArray(c.detection.pattern)
+      ? c.detection.pattern
+      : [c.detection.pattern]
+    result[c.id] = patterns
+  }
+  return result
+})()
