@@ -3,6 +3,7 @@ package k8s
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -261,36 +262,51 @@ func (m *MultiClusterClient) MonitorWorkload(
 		return nil, fmt.Errorf("failed to get dynamic client for %s: %w", cluster, err)
 	}
 
-	// Check health of each dependency
-	for _, dep := range bundle.Dependencies {
-		mr := MonitoredResource{
-			ID:          fmt.Sprintf("%s/%s/%s", dep.Kind, dep.Namespace, dep.Name),
-			Kind:        string(dep.Kind),
-			Name:        dep.Name,
-			Namespace:   dep.Namespace,
-			Cluster:     cluster,
-			Category:    kindToCategory(dep.Kind),
-			Optional:    dep.Optional,
-			Order:       dep.Order,
-			LastChecked: now,
-		}
+	// Check health of each dependency (in parallel for lower latency)
+	monitoredResources := make([]MonitoredResource, len(bundle.Dependencies))
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, maxParallelFetches) // reuse concurrency limit from dependencies.go
 
-		// Try to fetch the actual resource and check its health.
-		// fetchResource returns (nil, nil) for 404 and (nil, err) for
-		// real errors (network, auth, RBAC) so we can report accurately (#4388).
-		obj, fetchErr := fetchResource(ctx, dynClient, dep)
-		if fetchErr != nil {
-			mr.Status = HealthStatusUnknown
-			mr.Message = fmt.Sprintf("Fetch error: %v", fetchErr)
-		} else {
-			status, message := CheckResourceHealth(string(dep.Kind), obj)
-			mr.Status = status
-			mr.Message = message
-		}
+	for i, dep := range bundle.Dependencies {
+		wg.Add(1)
+		go func(idx int, d Dependency) {
+			defer wg.Done()
+			sem <- struct{}{}        // acquire slot
+			defer func() { <-sem }() // release slot
 
+			mr := MonitoredResource{
+				ID:          fmt.Sprintf("%s/%s/%s", d.Kind, d.Namespace, d.Name),
+				Kind:        string(d.Kind),
+				Name:        d.Name,
+				Namespace:   d.Namespace,
+				Cluster:     cluster,
+				Category:    kindToCategory(d.Kind),
+				Optional:    d.Optional,
+				Order:       d.Order,
+				LastChecked: now,
+			}
+
+			// Try to fetch the actual resource and check its health.
+			// fetchResource returns (nil, nil) for 404 and (nil, err) for
+			// real errors (network, auth, RBAC) so we can report accurately (#4388).
+			obj, fetchErr := fetchResource(ctx, dynClient, d)
+			if fetchErr != nil {
+				mr.Status = HealthStatusUnknown
+				mr.Message = fmt.Sprintf("Fetch error: %v", fetchErr)
+			} else {
+				status, message := CheckResourceHealth(string(d.Kind), obj)
+				mr.Status = status
+				mr.Message = message
+			}
+
+			monitoredResources[idx] = mr
+		}(i, dep)
+	}
+	wg.Wait()
+
+	// Collect results and generate issues
+	for _, mr := range monitoredResources {
 		result.Resources = append(result.Resources, mr)
-
-		// Generate issues for non-healthy resources
 		if mr.Status != HealthStatusHealthy && mr.Status != HealthStatusUnknown {
 			issue := createIssue(mr, now)
 			result.Issues = append(result.Issues, issue)
