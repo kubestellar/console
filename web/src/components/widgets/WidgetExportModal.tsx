@@ -514,8 +514,13 @@ function StatItem({
 // Spacing constants aligned to the 4px grid – centralise magic values used throughout widget previews
 const PREV_XS = '4px'           // 1 × 4px: tight gaps and small padding
 const PREV_SM = '8px'           // 2 × 4px: standard margins and gaps
+const PREV_MD = '12px'          // 3 × 4px: medium spacing
+const PREV_LG = '16px'          // 4 × 4px: large gaps and section spacing
 const PREV_ITEM_PAD = '4px 8px' // py-1 px-2: item-row padding (vertical=XS, horizontal=SM)
+const PREV_CARD_PAD = '8px 12px' // standard card padding (vertical=SM, horizontal=MD)
 const PREV_DOTS_GAP = '2px'     // sub-grid gap for tightly-packed status-dot rows
+const PREV_BAR_GAP = '3px'      // gap between adjacent bar-chart columns
+const PREV_HAIRLINE_GAP = '1px' // minimal gap between stacked bar segments
 // Font sizes used in preview components — extracted to pass the hex/magic-number ratchet
 const PREV_FS_HERO = '28px'     // large hero number (GPU %)
 const PREV_FS_HEADLINE = '24px' // headline stat (cost total, CI pass %)
@@ -525,6 +530,7 @@ const PREV_FS_STAT_SM = '14px'  // compact stat value (metric rows)
 const PREV_FS_BODY = '12px'     // body text, count badges
 const PREV_FS_CAPTION = '10px'  // caption text, row items
 const PREV_FS_MICRO = '9px'     // micro text, timestamps, secondary labels
+const PREV_FS_LABEL = '8px'     // smallest label text in compact stat blocks
 
 // Issue activity chart bar-height multipliers — keeps preview bars proportional
 const PREV_BAR_OPENED_SCALE = 6   // px per unit for the "opened" bar segment
@@ -547,7 +553,7 @@ const ps = {
   card: {
     backgroundColor: 'rgba(17, 24, 39, 0.9)',
     borderRadius: '12px',
-    padding: '12px 16px',
+    padding: `${PREV_MD} ${PREV_LG}`,
     border: '1px solid rgba(255, 255, 255, 0.1)',
     color: PREV_CLR_TEXT,
     fontFamily: 'Inter, -apple-system, sans-serif',
@@ -573,7 +579,7 @@ const ps = {
     backgroundColor: 'rgba(17, 24, 39, 0.9)',
     borderRadius: '6px',
     border: '1px solid rgba(255, 255, 255, 0.1)',
-    padding: '8px 12px',
+    padding: PREV_CARD_PAD,
     display: 'flex',
     flexDirection: 'column' as const,
     alignItems: 'center',
@@ -970,7 +976,7 @@ function CardPreview({ cardType }: { cardType: string }) {
             {['build', 'test', 'lint', 'deploy'].map((wf) => (
               <div key={wf} style={{ ...ps.row, justifyContent: 'space-between', fontSize: PREV_FS_CAPTION }}>
                 <span style={{ fontWeight: 500 }}>{wf}</span>
-                <div style={{ display: 'flex', gap: '2px' }}>
+                <div style={{ display: 'flex', gap: PREV_DOTS_GAP }}>
                   {[1, 2, 3, 4, 5].map((i) => (
                     <div key={i} style={{ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: i === 3 && wf === 'deploy' ? ps.colors.error : ps.colors.healthy }} />
                   ))}
@@ -1026,9 +1032,9 @@ function CardPreview({ cardType }: { cardType: string }) {
       return (
         <div style={ps.card}>
           <div style={ps.title}><span style={ps.dot(ps.colors.info)} /> Daily Issues &amp; PRs</div>
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '3px', height: '60px', marginBottom: PREV_SM }}>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: PREV_BAR_GAP, height: '60px', marginBottom: PREV_SM }}>
             {[4, 7, 3, 8, 5, 6, 9, 2, 5, 7, 4, 6, 3].map((v, i) => (
-              <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1px', justifyContent: 'flex-end', height: '100%' }}>
+              <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: PREV_HAIRLINE_GAP, justifyContent: 'flex-end', height: '100%' }}>
                 <div style={{ height: `${v * PREV_BAR_OPENED_SCALE}px`, backgroundColor: ps.colors.info, borderRadius: '1px', opacity: 0.7 }} />
                 <div style={{ height: `${Math.max(0, (PREV_BAR_CLOSED_BASE - v) * PREV_BAR_CLOSED_SCALE)}px`, backgroundColor: ps.colors.healthy, borderRadius: '1px', opacity: 0.5 }} />
               </div>
@@ -1096,7 +1102,7 @@ function CardPreview({ cardType }: { cardType: string }) {
               <span style={ps.statLbl}>Pods</span>
             </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '2px', height: '40px', marginTop: PREV_SM }}>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: PREV_DOTS_GAP, height: '40px', marginTop: PREV_SM }}>
             {[40, 55, 62, 58, 70, 65, 72, 68, 75, 62].map((v, i) => (
               <div key={i} style={{ flex: 1, height: `${v * 0.55}px`, backgroundColor: ps.colors.info, borderRadius: '1px', opacity: 0.6 }} />
             ))}
@@ -1248,7 +1254,7 @@ function GenericCardPreview({ card }: { card: WidgetCardDefinition }) {
 // --- Stat previews ---
 function StatPreview({ statIds }: { statIds: string[] }) {
   return (
-    <div style={{ ...ps.card, display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '8px 12px', overflow: 'hidden' }}>
+    <div style={{ ...ps.card, display: 'flex', flexWrap: 'wrap', gap: PREV_SM, padding: PREV_CARD_PAD, overflow: 'hidden' }}>
       {statIds.map((id) => {
         const stat = WIDGET_STATS[id]
         const value = SAMPLE_STATS[id] ?? '—'
@@ -1276,7 +1282,7 @@ function TemplatePreview({ templateId }: { templateId: string }) {
         return (
           <div key={id} style={{ ...ps.statBlock, flex: 1, borderTop: `2px solid ${stat?.color || '#9333ea'}`, textAlign: 'center', padding: PREV_ITEM_PAD }}>
             <span style={{ fontSize: PREV_FS_STAT_SM, fontWeight: 700, color: stat?.color || '#fff' }}>{value}</span>
-            <span style={{ ...ps.statLbl, fontSize: '8px' }}>{stat?.displayName}</span>
+            <span style={{ ...ps.statLbl, fontSize: PREV_FS_LABEL }}>{stat?.displayName}</span>
           </div>
         )
       })}
@@ -1356,9 +1362,9 @@ function NightlyE2EPreview() {
   const dotColor: Record<string, string> = { g: '#22c55e', r: '#ef4444', b: '#60a5fa' }
 
   return (
-    <div style={{ ...ps.card, width: 320, fontSize: PREV_FS_CAPTION, padding: '8px 12px' }}>
+    <div style={{ ...ps.card, width: 320, fontSize: PREV_FS_CAPTION, padding: PREV_CARD_PAD }}>
       <div style={ps.title}><span style={ps.dot('#22c55e')} /> Nightly E2E Status</div>
-      <div style={{ display: 'flex', gap: '16px', marginBottom: PREV_SM }}>
+      <div style={{ display: 'flex', gap: PREV_LG, marginBottom: PREV_SM }}>
         <div><span style={{ fontSize: PREV_FS_STAT, fontWeight: 700, color: '#a855f7' }}>87%</span><div style={ps.muted}>Pass Rate</div></div>
         <div><span style={{ fontSize: PREV_FS_STAT, fontWeight: 700 }}>16</span><div style={ps.muted}>Guides</div></div>
         <div><span style={{ fontSize: PREV_FS_STAT, fontWeight: 700, color: '#ef4444' }}>3</span><div style={ps.muted}>Failing</div></div>
@@ -1367,13 +1373,13 @@ function NightlyE2EPreview() {
         <div key={p.name} style={{ marginBottom: PREV_XS }}>
           <div style={{ color: p.color, fontWeight: 600, fontSize: PREV_FS_MICRO, marginBottom: PREV_XS }}>{p.name}</div>
           {p.guides.map((g) => (
-            <div key={`${p.name}-${g.acronym}`} style={{ display: 'flex', alignItems: 'center', gap: PREV_XS, marginBottom: '1px' }}>
+            <div key={`${p.name}-${g.acronym}`} style={{ display: 'flex', alignItems: 'center', gap: PREV_XS, marginBottom: PREV_HAIRLINE_GAP }}>
               <span style={{ width: '24px', fontWeight: 600, color: '#94a3b8' }}>{g.acronym}</span>
               <div style={{ display: 'flex', gap: PREV_DOTS_GAP }}>
                 {g.dots.length > 0 ? g.dots.map((d, i) => (
                   <span key={i} style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: dotColor[d], display: 'inline-block', ...(d === 'b' ? { animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' } : {}) }} />
                 )) : (
-                  <span style={{ color: '#4b5563', fontSize: '8px' }}>no runs</span>
+                  <span style={{ color: '#4b5563', fontSize: PREV_FS_LABEL }}>no runs</span>
                 )}
               </div>
             </div>
