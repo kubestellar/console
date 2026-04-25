@@ -177,6 +177,7 @@ type Server struct {
 	loadingSrv          *http.Server // temporary loading screen server
 	shuttingDown        int32        // atomic flag: 1 during graceful shutdown
 	gpuUtilWorker       *GPUUtilizationWorker
+	workloadHandlers    *handlers.WorkloadHandlers // for cache refresh shutdown (#10007)
 	done                chan struct{} // closed on Shutdown to stop background goroutines
 	shutdownOnce        sync.Once     // ensures Shutdown is idempotent (#6478)
 }
@@ -1235,8 +1236,11 @@ func (s *Server) setupRoutes() {
 
 	// Workload routes
 	workloadHandlers := handlers.NewWorkloadHandlers(s.k8sClient, s.hub, s.store)
-	// Reload persisted cluster groups on startup (#7013).
+	// Reload persisted cluster groups on startup (#7013) and start periodic
+	// refresh so multi-instance deployments converge on DB state (#10007).
 	workloadHandlers.LoadPersistedClusterGroups()
+	workloadHandlers.StartCacheRefresh()
+	s.workloadHandlers = workloadHandlers
 	api.Get("/workloads", workloadHandlers.ListWorkloads)
 	api.Get("/workloads/capabilities", workloadHandlers.GetClusterCapabilities)
 	api.Get("/workloads/policies", workloadHandlers.ListBindingPolicies)
@@ -1627,6 +1631,10 @@ func (s *Server) Shutdown() error {
 			s.gpuUtilWorker.Stop()
 		}
 		s.hub.Close()
+		// #10007 — stop the periodic cluster group cache refresh goroutine.
+		if s.workloadHandlers != nil {
+			s.workloadHandlers.StopCacheRefresh()
+		}
 		// #7043 — stop the SSE cache evictor goroutine that was started
 		// lazily by sseCacheSet. Without this the goroutine leaks after
 		// server shutdown.

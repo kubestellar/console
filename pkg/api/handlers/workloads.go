@@ -39,11 +39,21 @@ const (
 	workloadDeployLogsTimeout = 15 * time.Second
 )
 
+const (
+	// clusterGroupRefreshInterval is how often the in-memory cluster group
+	// cache is re-synced from the persistent store. This ensures that in
+	// multi-instance deployments each backend picks up writes made by
+	// other instances within a bounded window (#10007).
+	clusterGroupRefreshInterval = 30 * time.Second
+)
+
 // WorkloadHandlers handles workload API endpoints
 type WorkloadHandlers struct {
 	k8sClient *k8s.MultiClusterClient
 	hub       *Hub
 	store     store.Store
+	stopOnce  sync.Once
+	stopCh    chan struct{}
 }
 
 // NewWorkloadHandlers creates a new workload handlers instance
@@ -52,6 +62,7 @@ func NewWorkloadHandlers(k8sClient *k8s.MultiClusterClient, hub *Hub, s store.St
 		k8sClient: k8sClient,
 		hub:       hub,
 		store:     s,
+		stopCh:    make(chan struct{}),
 	}
 }
 
@@ -320,6 +331,38 @@ func (h *WorkloadHandlers) LoadPersistedClusterGroups() {
 		clusterGroups[name] = g
 	}
 	slog.Info("[Workloads] loaded persisted cluster groups", "count", len(persisted))
+}
+
+// StartCacheRefresh launches a background goroutine that periodically reloads
+// cluster groups from the persistent store. In multi-instance deployments this
+// ensures each backend converges on the same state within
+// clusterGroupRefreshInterval (#10007).
+func (h *WorkloadHandlers) StartCacheRefresh() {
+	if h.store == nil {
+		return
+	}
+	go func() {
+		ticker := time.NewTicker(clusterGroupRefreshInterval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-h.stopCh:
+				return
+			case <-ticker.C:
+				h.LoadPersistedClusterGroups()
+			}
+		}
+	}()
+	slog.Info("[Workloads] started periodic cluster group cache refresh",
+		"interval", clusterGroupRefreshInterval)
+}
+
+// StopCacheRefresh signals the background refresh goroutine to exit.
+func (h *WorkloadHandlers) StopCacheRefresh() {
+	h.stopOnce.Do(func() {
+		close(h.stopCh)
+		slog.Info("[Workloads] stopped periodic cluster group cache refresh")
+	})
 }
 
 // persistClusterGroup saves a cluster group to the store for durability (#7013).
