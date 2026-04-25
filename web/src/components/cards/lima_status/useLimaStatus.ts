@@ -47,10 +47,14 @@ interface CachedData {
 }
 
 function authHeaders(): Record<string, string> {
-  const token = localStorage.getItem(STORAGE_KEY_TOKEN)
   const headers: Record<string, string> = { Accept: 'application/json' }
-  if (token) {
-    headers.Authorization = `Bearer ${token}`
+  try {
+    const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+    if (token) {
+      headers.Authorization = `Bearer ${token}`
+    }
+  } catch {
+    // Ignore storage errors (e.g. private browsing)
   }
   return headers
 }

@@ -203,7 +203,11 @@ export function Game2048(_props: CardComponentProps) {
 
       if (newScore > bestScore) {
         setBestScore(newScore)
-        localStorage.setItem('kube2048-best', String(newScore))
+        try {
+          localStorage.setItem('kube2048-best', String(newScore))
+        } catch {
+          // Ignore storage errors (e.g. private browsing, quota exceeded)
+        }
       }
 
       // Check win

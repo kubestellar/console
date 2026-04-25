@@ -134,7 +134,11 @@ export function MatchGame(_props: CardComponentProps) {
           [difficulty]: { difficulty, moves, time, date: new Date().toISOString() }
         }
         setHighScores(newHighScores)
-        localStorage.setItem('matchGameHighScores', JSON.stringify(newHighScores))
+        try {
+          localStorage.setItem('matchGameHighScores', JSON.stringify(newHighScores))
+        } catch {
+          // Ignore storage errors (e.g. private browsing, quota exceeded)
+        }
       }
       
       emitGameEnded('match', 'win', moves)
