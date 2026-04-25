@@ -988,6 +988,11 @@ export function startGlobalErrorTracking() {
       if (isNetlifyDeployment && msg.includes('Backend API is currently unavailable')) return
       // Skip WebGL context errors — benign GPU process resets
       if (msg.includes('WebGL') || msg.includes('context lost')) return
+      // Skip auth-flow errors — UnauthenticatedError is thrown by api.get() when
+      // no token is available (expected for unauthenticated visitors). Emitting
+      // these as ksc_error creates false-positive alert spikes (#9994).
+      if (errorName === 'UnauthenticatedError' || errorName === 'UnauthorizedError') return
+      if (msg.includes('No authentication token') || msg.includes('Token is invalid or expired')) return
       emitError('unhandled_rejection', msg, undefined, { error: event.reason })
     } finally {
       isEmitting = false
@@ -1041,6 +1046,9 @@ export function startGlobalErrorTracking() {
       if (event.message.includes('Non-Error')) return
       // Stale chunks can surface as runtime errors (Safari: "Importing a module script failed")
       if (tryChunkReloadRecovery(event.message)) return
+      // Skip auth-flow errors that surface as synchronous error events (#9994).
+      if (event.error?.name === 'UnauthenticatedError' || event.error?.name === 'UnauthorizedError') return
+      if (event.message.includes('No authentication token') || event.message.includes('Token is invalid or expired')) return
       emitError('runtime', event.message, undefined, { error: event.error })
     } finally {
       isEmitting = false
