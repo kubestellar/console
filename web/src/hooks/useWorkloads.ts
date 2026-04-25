@@ -338,7 +338,7 @@ export function useDeployWorkload() {
       const agentBase = requireLocalAgentHttp('Deploying workloads')
       const res = await fetch(`${agentBase}/workloads/deploy`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest', ...authHeaders() },
         body: JSON.stringify(request),
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (!res.ok) {
@@ -388,7 +388,7 @@ export function useScaleWorkload() {
       const agentBase = requireLocalAgentHttp('Scaling workloads')
       const res = await fetch(`${agentBase}/scale`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest', ...authHeaders() },
         body: JSON.stringify(request),
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (!res.ok) {
@@ -439,7 +439,7 @@ export function useDeleteWorkload() {
       const agentBase = requireLocalAgentHttp('Deleting workloads')
       const res = await fetch(`${agentBase}/workloads/delete`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest', ...authHeaders() },
         body: JSON.stringify({
           cluster: params.cluster,
           namespace: params.namespace,

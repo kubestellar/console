@@ -195,7 +195,8 @@ export function useCanI() {
         method: 'POST',
         headers: {
           'Authorization': token ? `Bearer ${token}` : '',
-          'Content-Type': 'application/json' },
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify(request),
         signal: AbortSignal.timeout(PERMISSION_REQUEST_TIMEOUT_MS) })
 

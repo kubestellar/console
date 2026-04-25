@@ -93,7 +93,7 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
     try {
       const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/kubeconfig/preview`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify({ kubeconfig: kubeconfigYaml }),
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (!res.ok) {
@@ -115,7 +115,7 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
     try {
       const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/kubeconfig/import`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify({ kubeconfig: kubeconfigYaml }),
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (!res.ok) {
@@ -144,7 +144,7 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
     try {
       const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/kubeconfig/test`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify({
           serverUrl,
           authType,
@@ -169,7 +169,7 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
     try {
       const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/kubeconfig/add`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify({
           contextName,
           clusterName,

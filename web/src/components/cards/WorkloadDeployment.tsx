@@ -220,7 +220,7 @@ async function scaleViaAgent(
   try {
     const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/scale`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
       signal: ctrl.signal,
       body: JSON.stringify({ cluster: context, namespace, name, replicas }) })
     if (!res.ok) throw new Error(`Agent ${res.status}`)

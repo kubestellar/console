@@ -2611,7 +2611,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
       // Use the response body to determine if cancellation succeeded (#5477).
       fetch(`${LOCAL_AGENT_HTTP_URL}/cancel-chat`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify({ sessionId: missionId }) }).then(async response => {
         // #7303 — Guard against post-unmount finalization from HTTP fallback
         if (unmountedRef.current) return

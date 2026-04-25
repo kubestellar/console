@@ -343,7 +343,7 @@ export function HardwareHealthCard() {
     try {
       const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/devices/alerts/clear`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify({ alertId }),
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (!response.ok) {

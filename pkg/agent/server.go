@@ -667,7 +667,7 @@ func (s *Server) Start() error {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 		}
 		w.Header().Set("Access-Control-Allow-Methods", catchallCORSAllowedMethods)
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
 		w.Header().Set("Access-Control-Allow-Private-Network", "true")
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
@@ -675,6 +675,12 @@ func (s *Server) Start() error {
 		}
 		http.NotFound(w, r)
 	})
+
+	// Wrap the mux with CSRF middleware: state-changing requests (POST, PUT,
+	// DELETE, PATCH) must include the X-Requested-With: XMLHttpRequest header.
+	// GET/HEAD/OPTIONS pass through unconditionally. This mirrors the Fiber
+	// middleware in pkg/api/middleware/csrf.go. See #10000.
+	handler := requireCSRF(mux)
 
 	addr := fmt.Sprintf("127.0.0.1:%d", s.config.Port)
 	slog.Info("KC Agent starting", "version", Version, "addr", addr)
@@ -739,7 +745,7 @@ func (s *Server) Start() error {
 	)
 	srv := &http.Server{
 		Addr:              addr,
-		Handler:           mux,
+		Handler:           handler,
 		ReadHeaderTimeout: serverReadHeaderTimeout,
 		ReadTimeout:       serverReadTimeout,
 		WriteTimeout:      serverWriteTimeout,

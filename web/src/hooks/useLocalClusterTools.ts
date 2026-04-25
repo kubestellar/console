@@ -179,7 +179,7 @@ export function useLocalClusterTools() {
     try {
       const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/local-clusters`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify({ tool, name }),
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
 
@@ -217,7 +217,7 @@ export function useLocalClusterTools() {
     try {
       const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/local-cluster-lifecycle`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify({ tool, name, action }),
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
 
@@ -263,6 +263,7 @@ export function useLocalClusterTools() {
     try {
       const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/local-clusters?tool=${tool}&name=${name}`, {
         method: 'DELETE',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
 
       if (response.ok) {
@@ -383,7 +384,7 @@ export function useLocalClusterTools() {
     try {
       const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/vcluster/create`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify({ name, namespace }),
         signal: AbortSignal.timeout(VCLUSTER_CREATE_TIMEOUT_MS) })
 
@@ -428,7 +429,7 @@ export function useLocalClusterTools() {
     try {
       const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/vcluster/connect`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify({ name, namespace }),
         signal: AbortSignal.timeout(VCLUSTER_CONNECT_TIMEOUT_MS) })
 
@@ -473,7 +474,7 @@ export function useLocalClusterTools() {
     try {
       const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/vcluster/disconnect`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify({ name, namespace }),
         signal: AbortSignal.timeout(VCLUSTER_CONNECT_TIMEOUT_MS) })
 
@@ -518,7 +519,7 @@ export function useLocalClusterTools() {
     try {
       const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/vcluster/delete`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify({ name, namespace }),
         signal: AbortSignal.timeout(VCLUSTER_CONNECT_TIMEOUT_MS) })
 

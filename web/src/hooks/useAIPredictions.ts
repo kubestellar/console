@@ -271,7 +271,7 @@ async function triggerAnalysis(specificProviders?: string[]): Promise<boolean> {
   try {
     const response = await fetch(`${AGENT_HTTP_URL}/predictions/analyze`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
       body: JSON.stringify({ providers: specificProviders }),
       signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS)
     })

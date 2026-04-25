@@ -52,6 +52,13 @@ export function agentFetch(input: RequestInfo | URL, init?: RequestInit): Promis
   if (token && !headers.has('Authorization')) {
     headers.set('Authorization', `Bearer ${token}`)
   }
+  // #10000 — CSRF defence-in-depth: state-changing requests must carry a
+  // custom header that browsers never attach to cross-origin form POSTs.
+  // The kc-agent requireCSRF middleware rejects POST/PUT/DELETE/PATCH
+  // without this header.
+  if (!headers.has('X-Requested-With')) {
+    headers.set('X-Requested-With', 'XMLHttpRequest')
+  }
   // Use caller-provided signal, or fall back to a default timeout
   const signal = init?.signal ?? AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS)
   return fetch(input, { ...init, headers, signal })

@@ -99,7 +99,7 @@ async function requestEnrichment(insights: MultiClusterInsight[]): Promise<void>
 
     const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/insights/enrich`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
       body: JSON.stringify(payload),
       signal: controller.signal,
     })

@@ -172,7 +172,7 @@ export function Layout({ children: _children }: LayoutProps) {
     try {
       const resp = await fetch(`${LOCAL_AGENT_HTTP_URL}/restart-backend`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
       if (resp.ok) {

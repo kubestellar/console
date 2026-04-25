@@ -496,7 +496,7 @@ function useVersionCheckCore() {
     try {
       await fetch(`${LOCAL_AGENT_HTTP_URL}/auto-update/config`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify({ enabled: autoUpdateEnabled, channel: newChannel }),
         signal: AbortSignal.timeout(3000) })
     } catch {
@@ -515,7 +515,7 @@ function useVersionCheckCore() {
     try {
       await fetch(`${LOCAL_AGENT_HTTP_URL}/auto-update/config`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify({ enabled, channel }),
         signal: AbortSignal.timeout(3000) })
     } catch {
@@ -532,7 +532,7 @@ function useVersionCheckCore() {
     try {
       const resp = await fetch(`${LOCAL_AGENT_HTTP_URL}/auto-update/trigger`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify({ channel }),
         signal: AbortSignal.timeout(TRIGGER_UPDATE_TIMEOUT_MS) })
       if (resp.ok) {
@@ -562,7 +562,7 @@ function useVersionCheckCore() {
     try {
       const resp = await fetch(`${LOCAL_AGENT_HTTP_URL}/auto-update/cancel`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         signal: AbortSignal.timeout(CANCEL_UPDATE_TIMEOUT_MS) })
       if (resp.ok) {
         console.debug('[version-check] Cancel request accepted')

@@ -187,7 +187,7 @@ export function usePredictionFeedback() {
 async function sendFeedbackToBackend(predictionId: string, feedback: PredictionFeedback): Promise<void> {
   const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/predictions/feedback`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
     body: JSON.stringify({ predictionId, feedback }),
     signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
   if (!response.ok) {

@@ -197,6 +197,7 @@ export function GitOps() {
       const token = localStorage.getItem(STORAGE_KEY_TOKEN)
       const agentAuthHeaders: Record<string, string> = {
         'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
       }
       if (token) agentAuthHeaders['Authorization'] = `Bearer ${token}`
       const promises = configs.map(async (appConfig) => {

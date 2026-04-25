@@ -496,7 +496,7 @@ export function useK8sServiceAccounts(cluster?: string, namespace?: string) {
     // the backend pod ServiceAccount. See #7993 Phase 1.5 PR A.
     const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/serviceaccounts`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...agentAuthHeaders() },
+      headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest', ...agentAuthHeaders() },
       body: JSON.stringify(req),
       signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
     })
@@ -659,7 +659,7 @@ export function useK8sRoleBindings(cluster: string, namespace?: string, includeS
     // ServiceAccount. See #7993 Phase 1.5 PR A.
     const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/rolebindings`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...agentAuthHeaders() },
+      headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest', ...agentAuthHeaders() },
       body: JSON.stringify(req),
       signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
     })

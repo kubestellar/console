@@ -289,7 +289,7 @@ async function triggerArgoSyncAPI(appName: string, namespace: string, cluster: s
     const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/argocd/sync`, {
       method: 'POST',
       signal: ctrl.signal,
-      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      headers: { ...authHeaders(), 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
       body: JSON.stringify({ appName, namespace, cluster }) })
     const data = await res.json()
     return { success: data.success === true, error: data.error }

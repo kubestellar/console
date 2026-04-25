@@ -139,6 +139,7 @@ export function SyncDialog({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
           ...(token && { 'Authorization': `Bearer ${token}` }) },
         body: JSON.stringify({
           repoUrl,
@@ -238,6 +239,7 @@ export function SyncDialog({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
           ...(token && { 'Authorization': `Bearer ${token}` }) },
         body: JSON.stringify({
           repoUrl,
