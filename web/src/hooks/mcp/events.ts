@@ -334,8 +334,9 @@ export function useWarningEvents(cluster?: string, namespace?: string, limit = 2
       if (namespace) sseParams.namespace = namespace
       sseParams.limit = limit.toString()
 
+      // events/warnings is a backend-only endpoint (#9996) — route SSE via /api/mcp/
       const allEvents = await fetchSSE<ClusterEvent>({
-        url: `${LOCAL_AGENT_HTTP_URL}/events/warnings/stream`,
+        url: `/api/mcp/events/warnings/stream`,
         params: sseParams,
         itemsKey: 'events',
         signal,

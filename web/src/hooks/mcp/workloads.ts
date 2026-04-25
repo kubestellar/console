@@ -726,8 +726,9 @@ export function usePodIssues(cluster?: string, namespace?: string) {
       if (cluster) sseParams.cluster = cluster
       if (namespace) sseParams.namespace = namespace
 
+      // pod-issues is a backend-only endpoint (#9996) — route SSE via /api/mcp/
       const allIssues = await fetchSSE<PodIssue>({
-        url: `${LOCAL_AGENT_HTTP_URL}/pod-issues/stream`,
+        url: `/api/mcp/pod-issues/stream`,
         params: sseParams,
         itemsKey: 'issues',
         signal: abortController.signal,
@@ -888,8 +889,9 @@ export function useDeploymentIssues(cluster?: string, namespace?: string) {
       if (cluster) sseParams.cluster = cluster
       if (namespace) sseParams.namespace = namespace
 
+      // deployment-issues is a backend-only endpoint (#9996) — route SSE via /api/mcp/
       const allIssues = await fetchSSE<DeploymentIssue>({
-        url: `${LOCAL_AGENT_HTTP_URL}/deployment-issues/stream`,
+        url: `/api/mcp/deployment-issues/stream`,
         params: sseParams,
         itemsKey: 'issues',
         signal: abortController.signal,

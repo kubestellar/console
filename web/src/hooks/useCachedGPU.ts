@@ -7,7 +7,7 @@
 
 import { useState } from 'react'
 import { useCache, type RefreshCategory, type CachedHookResult } from '../lib/cache'
-import { fetchAPI, fetchFromAllClusters, fetchViaSSE, getToken, AGENT_HTTP_TIMEOUT_MS } from '../lib/cache/fetcherUtils'
+import { fetchAPI, fetchBackendAPI, fetchFromAllClusters, fetchFromAllClustersViaBackend, fetchViaSSE, fetchViaBackendSSE, getToken, AGENT_HTTP_TIMEOUT_MS } from '../lib/cache/fetcherUtils'
 import { settledWithConcurrency } from '../lib/utils/concurrency'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 import { FETCH_DEFAULT_TIMEOUT_MS, AI_PREDICTION_TIMEOUT_MS } from '../lib/constants/network'
@@ -258,15 +258,16 @@ export function useCachedGPUNodeHealth(
     demoData: getDemoCachedGPUNodeHealth(),
     persist: true,
     fetcher: async () => {
+      // gpu-nodes/health is a backend-only endpoint (#9996)
       if (cluster) {
-        const raw = await fetchAPI<unknown>('gpu-nodes/health', { cluster })
+        const raw = await fetchBackendAPI<unknown>('gpu-nodes/health', { cluster })
         const data = validateArrayResponse<{ nodes: GPUNodeHealthStatus[] }>(GPUNodeHealthResponseSchema, raw, '/api/mcp/gpu-nodes/health', 'nodes')
         return (data.nodes || []).map(n => ({ ...n, cluster }))
       }
-      return fetchFromAllClusters<GPUNodeHealthStatus>('gpu-nodes/health', 'nodes', {})
+      return fetchFromAllClustersViaBackend<GPUNodeHealthStatus>('gpu-nodes/health', 'nodes', {})
     },
     progressiveFetcher: cluster ? undefined : async (onProgress) => {
-      return fetchViaSSE<GPUNodeHealthStatus>('gpu-nodes/health', 'nodes', {}, onProgress)
+      return fetchViaBackendSSE<GPUNodeHealthStatus>('gpu-nodes/health', 'nodes', {}, onProgress)
     } })
 
   return {
@@ -300,7 +301,8 @@ export function useGPUHealthCronJob(cluster?: string) {
     enabled: !!cluster,
     fetcher: async () => {
       if (!cluster) return null
-      return fetchAPI<GPUHealthCronJobStatus>('gpu-nodes/health/cronjob', { cluster })
+      // GET gpu-nodes/health/cronjob is a backend-only endpoint (#9996)
+      return fetchBackendAPI<GPUHealthCronJobStatus>('gpu-nodes/health/cronjob', { cluster })
     } })
 
   const install = async (opts?: { namespace?: string; schedule?: string; tier?: number }) => {
@@ -422,15 +424,16 @@ export function useCachedWarningEvents(
     initialData: [] as ClusterEvent[],
     demoData: getDemoCachedWarningEvents(),
     fetcher: async () => {
+      // events/warnings is a backend-only endpoint (#9996)
       if (cluster) {
-        const data = await fetchAPI<{ events: ClusterEvent[] }>('events/warnings', { cluster, namespace, limit })
+        const data = await fetchBackendAPI<{ events: ClusterEvent[] }>('events/warnings', { cluster, namespace, limit })
         return (data.events || []).map(e => ({ ...e, cluster }))
       }
-      const events = await fetchFromAllClusters<ClusterEvent>('events/warnings', 'events', { namespace, limit })
+      const events = await fetchFromAllClustersViaBackend<ClusterEvent>('events/warnings', 'events', { namespace, limit })
       return events.slice(0, limit)
     },
     progressiveFetcher: cluster ? undefined : async (onProgress) => {
-      const events = await fetchViaSSE<ClusterEvent>('events/warnings', 'events', { namespace, limit }, (partial) => {
+      const events = await fetchViaBackendSSE<ClusterEvent>('events/warnings', 'events', { namespace, limit }, (partial) => {
         onProgress(partial.slice(0, limit))
       })
       return events.slice(0, limit)
