@@ -210,7 +210,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 						}
 					}
 				}()
-				response := s.handleMessage(m)
+				response := s.handleMessage(connCtx, m)
 				if closed.Load() {
 					return
 				}
@@ -248,7 +248,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 						}
 					}
 				}()
-				response := s.handleMessage(m)
+				response := s.handleMessage(connCtx, m)
 				if closed.Load() {
 					return
 				}
@@ -266,18 +266,30 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	closed.Store(true)
 	close(stopPing) // signal pinger goroutine to exit
 
+	// #9997 — Cancel all active chat sessions owned by this connection.
+	// connCancel() (deferred above) cancels the parent context, but entries
+	// remain in activeChatCtxs until the per-chat defer cleans them up. If
+	// a chat goroutine is blocked waiting for the semaphore or a slow LLM
+	// provider, the activeChatCtxs entry keeps a reference to the stale
+	// cancel function. Explicitly cancelling and removing them here ensures
+	// prompt cleanup on disconnect.
+	s.cancelAllChatsForConn(conn)
+
 	slog.Info("client disconnected", "addr", conn.RemoteAddr())
 }
 
-// handleMessage processes incoming messages (non-streaming)
-func (s *Server) handleMessage(msg protocol.Message) protocol.Message {
+// handleMessage processes incoming messages (non-streaming).
+// The ctx parameter is derived from the WebSocket connection's lifecycle context
+// (connCtx) so that in-flight handlers are cancelled promptly when the client
+// disconnects, preventing goroutine leaks (#9997).
+func (s *Server) handleMessage(ctx context.Context, msg protocol.Message) protocol.Message {
 	switch msg.Type {
 	case protocol.TypeHealth:
 		return s.handleHealthMessage(msg)
 	case protocol.TypeClusters:
 		return s.handleClustersMessage(msg)
 	case protocol.TypeKubectl:
-		return s.handleKubectlMessage(msg)
+		return s.handleKubectlMessage(ctx, msg)
 	// TypeChat and TypeClaude are handled by handleChatMessageStreaming in the WebSocket loop
 	case protocol.TypeListAgents:
 		return s.handleListAgentsMessage(msg)
@@ -377,7 +389,7 @@ func isDestructiveKubectlCommand(args []string) bool {
 	return false
 }
 
-func (s *Server) handleKubectlMessage(msg protocol.Message) protocol.Message {
+func (s *Server) handleKubectlMessage(ctx context.Context, msg protocol.Message) protocol.Message {
 	// Parse payload
 	payloadBytes, err := json.Marshal(msg.Payload)
 	if err != nil {
@@ -421,8 +433,9 @@ func (s *Server) handleKubectlMessage(msg protocol.Message) protocol.Message {
 		}
 	}
 
-	// Execute kubectl
-	result := s.kubectl.Execute(req.Context, req.Namespace, req.Args)
+	// Execute kubectl — propagate the connection context so client disconnect
+	// kills the kubectl process immediately (#9997).
+	result := s.kubectl.ExecuteWithContext(ctx, req.Context, req.Namespace, req.Args)
 	return protocol.Message{
 		ID:      msg.ID,
 		Type:    protocol.TypeResult,
@@ -898,6 +911,34 @@ func (s *Server) handleCancelChat(conn *websocket.Conn, msg protocol.Message, wr
 	writeMu.Unlock()
 }
 
+// cancelAllChatsForConn cancels every active chat session that was started by
+// the given WebSocket connection. Called when the read loop exits (client
+// disconnect) to ensure AI goroutines do not outlive their connection (#9997).
+//
+// The cancel functions are collected under the lock and invoked after releasing
+// it, mirroring the deadlock-prevention pattern in handleCancelChat (#7432).
+func (s *Server) cancelAllChatsForConn(conn *websocket.Conn) {
+	var toCancel []context.CancelFunc
+
+	s.activeChatCtxsMu.Lock()
+	for sessionID, entry := range s.activeChatCtxs {
+		if entry.conn == conn {
+			toCancel = append(toCancel, entry.cancel)
+			delete(s.activeChatCtxs, sessionID)
+		}
+	}
+	s.activeChatCtxsMu.Unlock()
+
+	for _, cancel := range toCancel {
+		cancel()
+	}
+
+	if len(toCancel) > 0 {
+		slog.Info("[Chat] cancelled orphaned sessions on disconnect",
+			"count", len(toCancel), "addr", conn.RemoteAddr())
+	}
+}
+
 // handleCancelChatHTTP is the HTTP fallback for cancelling in-progress chat sessions.
 // Used when the WebSocket connection is unavailable (e.g., disconnected during long agent runs).
 func (s *Server) handleCancelChatHTTP(w http.ResponseWriter, r *http.Request) {
@@ -957,9 +998,11 @@ func (s *Server) handleCancelChatHTTP(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// handleChatMessage handles chat messages (both legacy claude and new chat types)
-// This is the non-streaming version, kept for API compatibility
-func (s *Server) handleChatMessage(msg protocol.Message, forceAgent string) protocol.Message {
+// handleChatMessage handles chat messages (both legacy claude and new chat types).
+// This is the non-streaming version, kept for API compatibility.
+// The parentCtx parameter allows callers to propagate connection-scoped
+// cancellation; pass context.Background() when no parent is available (#9997).
+func (s *Server) handleChatMessage(msg protocol.Message, forceAgent string, parentCtx ...context.Context) protocol.Message {
 	// Parse payload
 	payloadBytes, err := json.Marshal(msg.Payload)
 	if err != nil {
@@ -1046,7 +1089,13 @@ func (s *Server) handleChatMessage(msg protocol.Message, forceAgent string) prot
 	// Wrap with a 30s default timeout so a misbehaving provider cannot
 	// permanently wedge the WS reader goroutine. 30s matches the default
 	// used by InsightEnrichmentTimeout for similar short-form AI calls.
-	ctx, cancel := context.WithTimeout(context.Background(), handleChatMessageTimeout)
+	// #9997 — Derive from a parent context (if provided) so client
+	// disconnect cancels in-flight non-streaming AI calls.
+	parent := context.Background()
+	if len(parentCtx) > 0 && parentCtx[0] != nil {
+		parent = parentCtx[0]
+	}
+	ctx, cancel := context.WithTimeout(parent, handleChatMessageTimeout)
 	defer cancel()
 	resp, err := provider.Chat(ctx, chatReq)
 	if err != nil {
