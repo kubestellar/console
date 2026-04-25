@@ -86,7 +86,8 @@ const COMPONENTS_DIR = path.resolve(
 //              that tripped false-positive hex detection (#6338, #3761 refs)
 //   269 → 273: PR #8635 — widget export modal card preview thumbnails
 //   273 → 274: PR #9841 — DashboardHeader compliance pages added one new hex fallback
-const EXPECTED_RAW_HEX_COUNT = 274
+//   274 → 275: PR #9941 — Flatcar card added one hex color
+const EXPECTED_RAW_HEX_COUNT = 275
 const EXPECTED_RAW_RGBA_COUNT = 104
 //   22 → 19: PR #8547 — replaced 3 arbitrary Tailwind hex colors in Login.tsx
 //            (bg-[#0a0a0a], from-[#0a0f1c]) with semantic bg-background/from-background
