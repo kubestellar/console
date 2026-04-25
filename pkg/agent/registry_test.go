@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 	"testing"
+	"time"
 )
 
 // MockProvider for testing registry
@@ -27,8 +28,9 @@ func (m *MockProvider) StreamChat(ctx context.Context, req *ChatRequest, onChunk
 
 func TestRegistry(t *testing.T) {
 	r := &Registry{
-		providers:     make(map[string]AIProvider),
-		selectedAgent: make(map[string]string),
+		providers:        make(map[string]AIProvider),
+		selectedAgent:    make(map[string]string),
+		selectedAgentLRU: make(map[string]time.Time),
 	}
 
 	p1 := &MockProvider{name: "p1", available: true}
@@ -96,8 +98,9 @@ func TestRegistry(t *testing.T) {
 func TestInitializeProviders(t *testing.T) {
 	// Reset registry for test
 	globalRegistry = &Registry{
-		providers:     make(map[string]AIProvider),
-		selectedAgent: make(map[string]string),
+		providers:        make(map[string]AIProvider),
+		selectedAgent:    make(map[string]string),
+		selectedAgentLRU: make(map[string]time.Time),
 	}
 	registryOnce = sync.Once{}
 
