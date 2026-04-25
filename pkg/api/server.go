@@ -935,6 +935,15 @@ func (s *Server) setupRoutes() {
 		}
 		return c.Next()
 	}
+
+	// Feedback POST route: registered BEFORE the /api group to exempt it from apiLimiter.
+	// Heavy dashboard SWR polling can saturate the general apiLimiter (600 req/min),
+	// blocking user feedback submission. By registering outside the group, only the
+	// dedicated feedbackLimiter (10 req/hr per user) applies (#9969).
+	feedbackCfg := handlers.LoadFeedbackConfig()
+	feedback := handlers.NewFeedbackHandler(s.store, feedbackCfg)
+	s.app.Post("/api/feedback/requests", bodyGuard, csrfGuard, middleware.JWTAuth(s.config.JWTSecret), feedbackLimiter, feedback.CreateFeatureRequest)
+
 	api := s.app.Group("/api", apiLimiter, bodyGuard, csrfGuard, middleware.JWTAuth(s.config.JWTSecret))
 
 	// User routes
@@ -1264,11 +1273,8 @@ func (s *Server) setupRoutes() {
 	api.Delete("/cluster-groups/:name", workloadHandlers.DeleteClusterGroup)
 
 	// Feature requests and feedback routes
-	feedbackCfg := handlers.LoadFeedbackConfig()
-	feedback := handlers.NewFeedbackHandler(s.store, feedbackCfg)
-	// Feedback token routes removed — consolidated into /api/github/token/* endpoints
-	// feedbackLimiter applied here to enforce 10 submissions/user/hour (#9969).
-	api.Post("/feedback/requests", feedbackLimiter, feedback.CreateFeatureRequest)
+	// POST route is registered outside the /api group to exempt it from apiLimiter (#9969)
+	// GET routes still use the group limiters for general API protection
 	api.Get("/feedback/requests", feedback.ListFeatureRequests)
 	api.Get("/feedback/queue", feedback.ListAllFeatureRequests)
 	api.Get("/feedback/requests/:id", feedback.GetFeatureRequest)
