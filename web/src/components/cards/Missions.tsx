@@ -31,6 +31,8 @@ const TWO_MINUTES_MS = 2 * 60 * 1000
 const THREE_MINUTES_MS = 3 * 60 * 1000
 const FOUR_MINUTES_MS = 4 * 60 * 1000
 const FIVE_MINUTES_MS = 5 * 60 * 1000
+
+interface MissionsProps {
   config?: Record<string, unknown>
 }
 

@@ -34,6 +34,8 @@ const TWENTY_MINUTES_MS = 20 * 60 * 1000
 const THIRTY_MINUTES_MS = 30 * 60 * 1000
 const ONE_HOUR_MS = 60 * 60 * 1000
 const TWO_HOURS_MS = 2 * 60 * 60 * 1000
+
+interface GitHubCIMonitorProps {
   config?: Record<string, unknown>
 }
 
