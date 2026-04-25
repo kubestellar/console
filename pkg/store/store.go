@@ -265,6 +265,41 @@ type Store interface {
 	DeleteClusterGroup(ctx context.Context, name string) error
 	ListClusterGroups(ctx context.Context) (map[string][]byte, error)
 
+	// Cluster Events — cross-cluster event journal (#9967 Phase 1).
+	// InsertOrUpdateEvent upserts an event keyed by event_uid.
+	InsertOrUpdateEvent(ctx context.Context, event ClusterEvent) error
+	// QueryTimeline returns events matching the filter, sorted by last_seen DESC.
+	QueryTimeline(ctx context.Context, filter TimelineFilter) ([]ClusterEvent, error)
+	// SweepOldEvents deletes events older than retentionDays. Returns rows deleted.
+	SweepOldEvents(ctx context.Context, retentionDays int) (int64, error)
+
 	// Lifecycle
 	Close() error
+}
+
+// ClusterEvent represents a single Kubernetes event recorded from a cluster.
+type ClusterEvent struct {
+	ID                 string `json:"id"`
+	ClusterName        string `json:"cluster_name"`
+	Namespace          string `json:"namespace"`
+	EventType          string `json:"event_type"`
+	Reason             string `json:"reason"`
+	Message            string `json:"message,omitempty"`
+	InvolvedObjectKind string `json:"involved_object_kind,omitempty"`
+	InvolvedObjectName string `json:"involved_object_name,omitempty"`
+	EventUID           string `json:"event_uid"`
+	EventCount         int32  `json:"event_count"`
+	FirstSeen          string `json:"first_seen"`
+	LastSeen           string `json:"last_seen"`
+	RecordedAt         string `json:"recorded_at,omitempty"`
+}
+
+// TimelineFilter controls which events QueryTimeline returns.
+type TimelineFilter struct {
+	Cluster   string
+	Namespace string
+	Since     string // ISO 8601
+	Until     string // ISO 8601
+	Kind      string // involved_object_kind
+	Limit     int
 }

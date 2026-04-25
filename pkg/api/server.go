@@ -1088,6 +1088,11 @@ func (s *Server) setupRoutes() {
 	orbit.RegisterRoutes(api.Group("/orbit"))
 	orbit.StartScheduler(s.done)
 
+	// Cross-cluster event journal (#9967 Phase 1)
+	timeline := handlers.NewTimelineHandler(s.store, s.k8sClient)
+	api.Get("/timeline", timeline.GetTimeline)
+	timeline.StartEventCollector(s.done)
+
 	// MCP routes (cluster operations via kubestellar tools and direct k8s)
 	// SECURITY: All MCP routes require authentication in both dev and production modes
 	api.Get("/mcp/status", mcpHandlers.GetStatus)

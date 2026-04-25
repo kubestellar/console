@@ -534,6 +534,25 @@ func (s *SQLiteStore) migrate() error {
 		detail TEXT
 	);
 	CREATE INDEX IF NOT EXISTS idx_audit_log_user_time ON audit_log(user_id, timestamp);
+
+	-- Cross-cluster event journal (#9967 Phase 1)
+	CREATE TABLE IF NOT EXISTS cluster_events (
+		id TEXT PRIMARY KEY,
+		cluster_name TEXT NOT NULL,
+		namespace TEXT NOT NULL DEFAULT '',
+		event_type TEXT NOT NULL,
+		reason TEXT NOT NULL,
+		message TEXT,
+		involved_object_kind TEXT,
+		involved_object_name TEXT,
+		event_uid TEXT NOT NULL UNIQUE,
+		event_count INTEGER DEFAULT 1,
+		first_seen DATETIME NOT NULL,
+		last_seen DATETIME NOT NULL,
+		recorded_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	);
+	CREATE INDEX IF NOT EXISTS idx_ce_cluster_time ON cluster_events(cluster_name, last_seen DESC);
+	CREATE INDEX IF NOT EXISTS idx_ce_uid ON cluster_events(event_uid);
 	`
 	_, err := s.db.ExecContext(ctx, schema)
 	if err != nil {
@@ -3139,4 +3158,118 @@ func rollbackConn(conn *sql.Conn) {
 	ctx, cancel := context.WithTimeout(context.Background(), rollbackTimeout)
 	defer cancel()
 	_, _ = conn.ExecContext(ctx, "ROLLBACK")
+}
+
+// ---------------------------------------------------------------------------
+// Cluster Events — cross-cluster event journal (#9967 Phase 1)
+// ---------------------------------------------------------------------------
+
+// InsertOrUpdateEvent upserts a cluster event keyed by event_uid. On conflict
+// it updates last_seen, event_count, and message so the journal reflects the
+// latest occurrence without duplicating rows.
+func (s *SQLiteStore) InsertOrUpdateEvent(ctx context.Context, event ClusterEvent) error {
+	const query = `
+		INSERT INTO cluster_events
+			(id, cluster_name, namespace, event_type, reason, message,
+			 involved_object_kind, involved_object_name, event_uid,
+			 event_count, first_seen, last_seen, recorded_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+		ON CONFLICT(event_uid) DO UPDATE SET
+			last_seen   = excluded.last_seen,
+			event_count = excluded.event_count,
+			message     = excluded.message,
+			recorded_at = CURRENT_TIMESTAMP
+	`
+	_, err := s.db.ExecContext(ctx, query,
+		event.ID, event.ClusterName, event.Namespace, event.EventType,
+		event.Reason, event.Message, event.InvolvedObjectKind,
+		event.InvolvedObjectName, event.EventUID, event.EventCount,
+		event.FirstSeen, event.LastSeen,
+	)
+	return err
+}
+
+// clusterEventMaxLimit is the hard upper bound for QueryTimeline results.
+const clusterEventMaxLimit = 1000
+
+// clusterEventDefaultLimit is used when the caller passes limit <= 0.
+const clusterEventDefaultLimit = 100
+
+// QueryTimeline returns cluster events matching the filter, sorted by
+// last_seen DESC. Limit is clamped to clusterEventMaxLimit.
+func (s *SQLiteStore) QueryTimeline(ctx context.Context, filter TimelineFilter) ([]ClusterEvent, error) {
+	limit := filter.Limit
+	if limit <= 0 {
+		limit = clusterEventDefaultLimit
+	}
+	if limit > clusterEventMaxLimit {
+		limit = clusterEventMaxLimit
+	}
+
+	var clauses []string
+	var args []interface{}
+
+	if filter.Cluster != "" {
+		clauses = append(clauses, "cluster_name = ?")
+		args = append(args, filter.Cluster)
+	}
+	if filter.Namespace != "" {
+		clauses = append(clauses, "namespace = ?")
+		args = append(args, filter.Namespace)
+	}
+	if filter.Since != "" {
+		clauses = append(clauses, "last_seen >= ?")
+		args = append(args, filter.Since)
+	}
+	if filter.Until != "" {
+		clauses = append(clauses, "last_seen <= ?")
+		args = append(args, filter.Until)
+	}
+	if filter.Kind != "" {
+		clauses = append(clauses, "involved_object_kind = ?")
+		args = append(args, filter.Kind)
+	}
+
+	query := "SELECT id, cluster_name, namespace, event_type, reason, message, involved_object_kind, involved_object_name, event_uid, event_count, first_seen, last_seen, recorded_at FROM cluster_events"
+	if len(clauses) > 0 {
+		query += " WHERE " + strings.Join(clauses, " AND ")
+	}
+	query += " ORDER BY last_seen DESC LIMIT ?"
+	args = append(args, limit)
+
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("query timeline: %w", err)
+	}
+	defer rows.Close()
+
+	results := make([]ClusterEvent, 0)
+	for rows.Next() {
+		var e ClusterEvent
+		var msg, objKind, objName sql.NullString
+		if err := rows.Scan(
+			&e.ID, &e.ClusterName, &e.Namespace, &e.EventType,
+			&e.Reason, &msg, &objKind, &objName,
+			&e.EventUID, &e.EventCount, &e.FirstSeen, &e.LastSeen,
+			&e.RecordedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scan cluster event: %w", err)
+		}
+		e.Message = msg.String
+		e.InvolvedObjectKind = objKind.String
+		e.InvolvedObjectName = objName.String
+		results = append(results, e)
+	}
+	return results, rows.Err()
+}
+
+// SweepOldEvents deletes cluster events whose last_seen is older than
+// retentionDays. Returns the number of rows deleted.
+func (s *SQLiteStore) SweepOldEvents(ctx context.Context, retentionDays int) (int64, error) {
+	const query = `DELETE FROM cluster_events WHERE last_seen < datetime('now', '-' || ? || ' days')`
+	res, err := s.db.ExecContext(ctx, query, retentionDays)
+	if err != nil {
+		return 0, fmt.Errorf("sweep old events: %w", err)
+	}
+	return res.RowsAffected()
 }

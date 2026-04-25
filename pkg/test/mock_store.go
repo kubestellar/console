@@ -399,4 +399,20 @@ func (m *MockStore) QueryAuditLogs(_ context.Context, limit int, userID, action 
 	return args.Get(0).([]store.AuditEntry), args.Error(1)
 }
 
+func (m *MockStore) InsertOrUpdateEvent(_ context.Context, _ store.ClusterEvent) error {
+	return nil
+}
+
+func (m *MockStore) QueryTimeline(_ context.Context, filter store.TimelineFilter) ([]store.ClusterEvent, error) {
+	args := m.Called(filter)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]store.ClusterEvent), args.Error(1)
+}
+
+func (m *MockStore) SweepOldEvents(_ context.Context, _ int) (int64, error) {
+	return 0, nil
+}
+
 func (m *MockStore) Close() error { return nil }
