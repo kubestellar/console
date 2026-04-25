@@ -166,6 +166,7 @@ export const CARD_TITLES: Record<string, string> = {
   rbac_explorer: 'RBAC Explorer',
   maintenance_windows: 'Maintenance Windows',
   cluster_changelog: 'Cluster Changelog',
+  change_timeline: 'Change Timeline',
   quota_heatmap: 'Quota Heatmap',
 
   // Kagenti AI Agent Platform
@@ -513,6 +514,7 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   rbac_explorer: 'Interactive RBAC role and binding explorer.',
   maintenance_windows: 'Scheduled maintenance windows and their status.',
   cluster_changelog: 'Recent changes to cluster resources and configurations.',
+  change_timeline: 'Cross-cluster change events visualized as a scatter plot over time.',
   quota_heatmap: 'Resource quota utilization heatmap across namespaces.',
 
   // Kagenti AI Agent Platform

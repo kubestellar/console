@@ -54,6 +54,8 @@ const ResourceTrend = safeLazy(() => import('./ResourceTrend'), 'ResourceTrend')
 const GPUUtilization = safeLazy(() => import('./GPUUtilization'), 'GPUUtilization')
 const GPUUsageTrend = safeLazy(() => import('./GPUUsageTrend'), 'GPUUsageTrend')
 const ClusterResourceTree = safeLazy(() => import('./cluster-resource-tree/ClusterResourceTree'), 'ClusterResourceTree')
+// Cross-cluster change timeline (Phase 2 of #9967)
+const ChangeTimeline = safeLazy(() => import('./change_timeline/ChangeTimeline'), 'ChangeTimeline')
 const StorageOverview = safeLazy(() => import('./StorageOverview'), 'StorageOverview')
 const PVCStatus = safeLazy(() => import('./PVCStatus'), 'PVCStatus')
 const NetworkOverview = safeLazy(() => import('./NetworkOverview'), 'NetworkOverview')
@@ -730,6 +732,7 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   rbac_explorer: RBACExplorer,
   maintenance_windows: MaintenanceWindows,
   cluster_changelog: ClusterChangelog,
+  change_timeline: ChangeTimeline,
   quota_heatmap: QuotaHeatmap,
   // Cloud Native Buildpacks
   buildpacks_status: BuildpacksStatus,
@@ -1233,6 +1236,7 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   rbac_explorer: () => import('./cluster-admin-bundle'),
   maintenance_windows: () => import('./cluster-admin-bundle'),
   cluster_changelog: () => import('./cluster-admin-bundle'),
+  change_timeline: () => import('./change_timeline/ChangeTimeline'),
   quota_heatmap: () => import('./cluster-admin-bundle'),
   // Kagenti AI Agents — all share one chunk via barrel
   kagenti_status: () => import('./KagentiStatusCard'),
@@ -1502,6 +1506,7 @@ export const LIVE_DATA_CARDS = new Set([
   'trino_gateway',
   'network_policies',
   'cluster_changelog',
+  'change_timeline',
   'predictive_health',
   'quota_heatmap',
   // Multi-tenancy cards — live detection of cluster components
@@ -1653,6 +1658,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   rbac_explorer: 6,
   maintenance_windows: 6,
   cluster_changelog: 6,
+  change_timeline: 6,
   quota_heatmap: 8,
   // KubeVela application delivery
   kubevela_status: 6,
