@@ -133,8 +133,9 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
           <Suspense fallback={null}><AgentSelector compact /></Suspense>
         </div>
 
-        {/* Extended desktop items: lg+ (1024px) */}
-        <div className="hidden lg:flex items-center gap-2">
+        {/* Extended desktop items: xl+ (1280px) — moved from lg to xl to
+             prevent button overflow at the 1024px breakpoint (#10001). */}
+        <div className="hidden xl:flex items-center gap-2">
           {/* Update Indicator */}
           <UpdateIndicator />
 
@@ -194,8 +195,8 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
           <AlertBadge />
         </div>
 
-        {/* Overflow menu — visible below lg for items hidden at narrow widths */}
-        <div className="relative lg:hidden shrink-0">
+        {/* Overflow menu — visible below xl for items hidden at narrow widths */}
+        <div className="relative xl:hidden shrink-0">
           <button
             onClick={() => setShowMobileMore(!showMobileMore)}
             className="p-2 min-w-[44px] min-h-[44px] hover:bg-secondary rounded-lg transition-colors"
@@ -239,7 +240,7 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
                     <div className="border-t border-border mx-3 my-1" />
                   </div>
 
-                  {/* Items hidden at <lg (1024px): AI missions, update, token usage, feature request, tour */}
+                  {/* Items hidden at <xl (1280px): AI missions, update, token usage, feature request, tour */}
                   {!isSidebarOpen && (
                     <div className="px-3 py-2">
                       <button
