@@ -1,4 +1,4 @@
-import { useState, useReducer } from 'react'
+import { useReducer } from 'react'
 import { Shield, Check, X, Loader2, AlertCircle, ChevronDown } from 'lucide-react'
 import { useCanI } from '../../hooks/usePermissions'
 import { useClusters, useNamespaces } from '../../hooks/useMCP'

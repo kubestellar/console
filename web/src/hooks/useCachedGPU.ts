@@ -7,7 +7,7 @@
 
 import { useState } from 'react'
 import { useCache, type RefreshCategory, type CachedHookResult } from '../lib/cache'
-import { fetchAPI, fetchBackendAPI, fetchFromAllClusters, fetchFromAllClustersViaBackend, fetchViaSSE, fetchViaBackendSSE, getToken, AGENT_HTTP_TIMEOUT_MS } from '../lib/cache/fetcherUtils'
+import { fetchAPI, fetchBackendAPI, fetchFromAllClustersViaBackend, fetchViaSSE, fetchViaBackendSSE, getToken, AGENT_HTTP_TIMEOUT_MS } from '../lib/cache/fetcherUtils'
 import { settledWithConcurrency } from '../lib/utils/concurrency'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 import { FETCH_DEFAULT_TIMEOUT_MS, AI_PREDICTION_TIMEOUT_MS } from '../lib/constants/network'
