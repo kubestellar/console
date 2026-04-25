@@ -1,7 +1,7 @@
 // Modal safety: HelmHistoryDetailModal is a read-only detail pane (no form
 // inputs the user could lose). Inline search is transient filter state.
 // Treat as closeOnBackdropClick={false}.
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { CheckCircle, XCircle, RotateCcw, ArrowUp, Clock, ChevronRight } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useClusters, type HelmHistoryEntry } from '../../hooks/useMCP'
@@ -107,13 +107,13 @@ export function HelmHistory({ config }: HelmHistoryProps) {
   }, [isDemoData, allHelmReleases, allClusters])
 
   // Look up namespace from the selected release (required for helm history command)
-  const selectedReleaseNamespace = (() => {
+  const selectedReleaseNamespace = useMemo(() => {
     if (!selectedCluster || !selectedRelease) return undefined
     const release = allHelmReleases.find(
       r => r.cluster === selectedCluster && r.name === selectedRelease
     )
     return release?.namespace
-  })()
+  }, [selectedCluster, selectedRelease, allHelmReleases])
 
   // Fetch history for selected release (hook handles caching)
   const {
@@ -138,7 +138,7 @@ export function HelmHistory({ config }: HelmHistoryProps) {
     isDemoData })
 
   // Apply global filters to clusters
-  const clusters = (() => {
+  const clusters = useMemo(() => {
     let result = allClusters
 
     if (!isAllClustersSelected) {
@@ -154,19 +154,19 @@ export function HelmHistory({ config }: HelmHistoryProps) {
     }
 
     return result
-  })()
+  }, [allClusters, isAllClustersSelected, globalSelectedClusters, customFilter])
 
   // Filter releases locally by selected cluster (no API call)
-  const filteredReleases = (() => {
+  const filteredReleases = useMemo(() => {
     if (!selectedCluster) return allHelmReleases
     return allHelmReleases.filter(r => r.cluster === selectedCluster)
-  })()
+  }, [allHelmReleases, selectedCluster])
 
   // Get unique release names for dropdown
-  const releases = (() => {
+  const releases = useMemo(() => {
     const releaseSet = new Set(filteredReleases.map(r => r.name))
     return Array.from(releaseSet).sort()
-  })()
+  }, [filteredReleases])
 
   // Use shared card data hook for filtering, sorting, and pagination
   const {

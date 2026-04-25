@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useCachedPods } from '../../hooks/useCachedData'
 import { useCardLoadingState } from './CardDataContext'
@@ -26,7 +26,7 @@ export function QuotaHeatmap() {
     isFailed,
     consecutiveFailures })
 
-  const namespaceData = (() => {
+  const namespaceData = useMemo(() => {
     const map = new Map<string, NamespaceUsage>()
     for (const pod of pods) {
       const key = `${pod.cluster || 'unknown'}/${pod.namespace || 'default'}`
@@ -39,7 +39,7 @@ export function QuotaHeatmap() {
       map.get(key)!.podCount++
     }
     return Array.from(map.values()).sort((a, b) => b.podCount - a.podCount)
-  })()
+  }, [pods])
 
   const maxPods = Math.max(1, ...namespaceData.map(d => d.podCount))
 
