@@ -734,7 +734,7 @@ func (s *Server) setupRoutes() {
 
 	// Public endpoint rate limiter — loose limit to prevent DoS on unauthenticated
 	// routes (active-users, ping, nightly-e2e, youtube, medium, analytics) (#7029).
-	publicLimiterMaxRequests := 60         // max requests per window per IP
+	publicLimiterMaxRequests := 120        // max requests per window per IP (#9969: raised from 60 — multiple users behind shared NAT)
 	publicLimiterWindow := 1 * time.Minute // sliding window duration
 	publicLimiter := limiter.New(limiter.Config{
 		Max:        publicLimiterMaxRequests,
@@ -895,7 +895,7 @@ func (s *Server) setupRoutes() {
 	// an independent counter, so the effective limit is `max × N` where N is the
 	// pod count. A shared Redis/Valkey storage backend is recommended for strict
 	// enforcement across replicas but is out of scope for this change.
-	apiLimiterMaxRequests := 200        // max requests per window per user+IP (#9969: CompositeKey)
+	apiLimiterMaxRequests := 600        // max requests per window per user+IP (#9969: raised from 200 — dashboard loads 30+ cards with SWR refresh)
 	apiLimiterWindow := 1 * time.Minute // sliding window duration
 	apiLimiter := limiter.New(limiter.Config{
 		Max:          apiLimiterMaxRequests,
