@@ -887,6 +887,9 @@ func (s *Server) setupRoutes() {
 	slsaHandler.RegisterPublicRoutes(s.app.Group("/api", publicLimiter))
 	licenseHandler := handlers.NewLicenseHandler()
 	licenseHandler.RegisterPublicRoutes(s.app.Group("/api", publicLimiter))
+	// Runtime Attestation Score (#9987) — composite trust score per cluster.
+	attestationHandler := handlers.NewAttestationHandler()
+	attestationHandler.RegisterPublicRoutes(s.app.Group("/api", publicLimiter))
 
 	// API routes (protected) — with rate limiting
 	//

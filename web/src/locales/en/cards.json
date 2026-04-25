@@ -4582,5 +4582,19 @@
     "noHosts": "No wasmCloud hosts found",
     "noProviders": "No capability providers found",
     "noLinks": "No link definitions found"
+  },
+  "runtimeAttestation": {
+    "fleetAverage": "Fleet Average Attestation Score",
+    "noData": "No attestation data available. Connect clusters with TUF, SPIFFE, and Kyverno to see scores.",
+    "drillDownTitle": "Attestation: {{cluster}}",
+    "drillDownSubtitle": "Per-signal breakdown and non-compliant workloads",
+    "overallScore": "Overall Attestation Score",
+    "signalBreakdown": "Signal Breakdown",
+    "nonCompliantWorkloads_one": "{{count}} Non-Compliant Workload",
+    "nonCompliantWorkloads_other": "{{count}} Non-Compliant Workloads",
+    "nonCompliantWorkloads": "{{count}} Non-Compliant Workloads",
+    "searchWorkloads": "Search workloads...",
+    "allCompliant": "All workloads are compliant",
+    "noMatchingWorkloads": "No matching workloads"
   }
 }

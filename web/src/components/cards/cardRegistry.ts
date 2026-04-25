@@ -276,6 +276,8 @@ const PerformanceTimeline = safeLazy(() => _llmdBundle, 'PerformanceTimeline')
 const ResourceUtilization = safeLazy(() => _llmdBundle, 'ResourceUtilization')
 const GitHubCIMonitor = safeLazy(() => _workloadMonitorBundle, 'GitHubCIMonitor')
 const ClusterHealthMonitor = safeLazy(() => _workloadMonitorBundle, 'ClusterHealthMonitor')
+// Runtime Attestation Score card (#9987)
+const RuntimeAttestationCard = safeLazy(() => import('./RuntimeAttestationCard'), 'RuntimeAttestationCard')
 
 // GitHub Pipelines cards — all four share one chunk via the pipelines barrel
 const _pipelinesBundle = import('./pipelines').catch(() => undefined as never)
@@ -557,6 +559,8 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   siem_integration: SIEMIntegrationCard,
   incident_response: IncidentResponseCard,
   threat_intel: ThreatIntelCard,
+  // Runtime Attestation Score (#9987)
+  runtime_attestation: RuntimeAttestationCard,
   // Supply chain security cards
   sbom_manager: SBOMManagerCard,
   sigstore_verify: SigstoreVerifyCard,
@@ -1544,6 +1548,8 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   upgrade_status: 4,
   crossplane_managed_resources: 4,
   buildpacks_status: 6,
+  // Runtime Attestation Score — shows per-cluster breakdown
+  runtime_attestation: 6,
 
   // MCS cards
   service_exports: 6,
