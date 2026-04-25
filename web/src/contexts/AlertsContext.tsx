@@ -506,6 +506,10 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
   const alertsRef = useRef(alerts)
   alertsRef.current = alerts
 
+  // Stable ref for startMission — keeps runAIDiagnosis identity stable
+  const startMissionRef = useRef(startMission)
+  startMissionRef.current = startMission
+
   // Mutation accumulator — populated by evaluate* functions during an evaluation
   // cycle, then flushed in a single setAlerts call at the end of evaluateConditions.
   // Null when not inside an evaluation cycle (direct createAlert calls still work).
@@ -690,7 +694,7 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
   }, [isDemoMode])
 
   // Rule management
-  const createRule = (rule: Omit<AlertRule, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const createRule = useCallback((rule: Omit<AlertRule, 'id' | 'createdAt' | 'updatedAt'>) => {
     const now = new Date().toISOString()
     const newRule: AlertRule = {
       ...rule,
@@ -699,9 +703,9 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
       updatedAt: now }
     setRules(prev => [...prev, newRule])
     return newRule
-  }
+  }, [])
 
-  const updateRule = (id: string, updates: Partial<AlertRule>) => {
+  const updateRule = useCallback((id: string, updates: Partial<AlertRule>) => {
     setRules(prev =>
       prev.map(rule =>
         rule.id === id
@@ -709,13 +713,13 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
           : rule
       )
     )
-  }
+  }, [])
 
-  const deleteRule = (id: string) => {
+  const deleteRule = useCallback((id: string) => {
     setRules(prev => prev.filter(rule => rule.id !== id))
-  }
+  }, [])
 
-  const toggleRule = (id: string) => {
+  const toggleRule = useCallback((id: string) => {
     setRules(prev =>
       prev.map(rule =>
         rule.id === id
@@ -723,7 +727,7 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
           : rule
       )
     )
-  }
+  }, [])
 
   // Calculate alert statistics — memoize to prevent unstable references in context consumers
   // #7336 — Compute stats from deduplicated alerts so counters match
@@ -754,7 +758,7 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
   }, [alerts, rules])
 
   // Acknowledge an alert — transitions signalType from 'state' to 'acknowledged' (#8750)
-  const acknowledgeAlert = (alertId: string, acknowledgedBy?: string) => {
+  const acknowledgeAlert = useCallback((alertId: string, acknowledgedBy?: string) => {
     setAlerts(prev =>
       prev.map(alert =>
         alert.id === alertId
@@ -762,10 +766,10 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
           : alert
       )
     )
-  }
+  }, [])
 
   // Acknowledge multiple alerts at once — transitions signalType to 'acknowledged' (#8750)
-  const acknowledgeAlerts = (alertIds: string[], acknowledgedBy?: string) => {
+  const acknowledgeAlerts = useCallback((alertIds: string[], acknowledgedBy?: string) => {
     const now = new Date().toISOString()
     setAlerts(prev =>
       prev.map(alert =>
@@ -774,10 +778,10 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
           : alert
       )
     )
-  }
+  }, [])
 
   // Resolve an alert
-  const resolveAlert = (alertId: string) => {
+  const resolveAlert = useCallback((alertId: string) => {
     const resolvedAt = new Date().toISOString()
     // Find the alert BEFORE the state updater to avoid capturing mutable
     // variables inside the updater (which React may replay in Strict Mode /
@@ -793,9 +797,10 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
     // Send resolution notifications outside the state updater.
     // Because we read alertToResolve from the ref before the updater,
     // this is safe even if React replays the updater function.
+    // Snapshot rule from ref before microtask to avoid stale closure.
     if (alertToResolve) {
+      const rule = rulesRef.current.find(r => r.id === alertToResolve.ruleId)
       queueMicrotask(() => {
-        const rule = rules.find(r => r.id === alertToResolve.ruleId)
         if (rule) {
           const enabledChannels = (rule.channels || []).filter(ch => ch.enabled)
           if (enabledChannels.length > 0) {
@@ -808,12 +813,12 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
         }
       })
     }
-  }
+  }, [])
 
   // Delete an alert
-  const deleteAlert = (alertId: string) => {
+  const deleteAlert = useCallback((alertId: string) => {
     setAlerts(prev => prev.filter(a => a.id !== alertId))
-  }
+  }, [])
 
   // Create a new alert — batching-aware.
   // When called during an evaluateConditions cycle (mutationAccRef.current is non-null),
@@ -1093,8 +1098,8 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
   const diagnosisInFlightRef = useRef<Set<string>>(new Set())
 
   // Run AI diagnosis on an alert (#6915 — include runbook evidence in prompt)
-  const runAIDiagnosis = async (alertId: string) => {
-      const alert = alerts.find(a => a.id === alertId)
+  const runAIDiagnosis = useCallback(async (alertId: string) => {
+      const alert = alertsRef.current.find(a => a.id === alertId)
       if (!alert) return null
 
       // #7341 — Idempotency guard: skip if diagnosis is already in-flight
@@ -1105,7 +1110,7 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
       // flag is always cleared, even if an unexpected error occurs.
       try {
         // Look up matching runbook for this alert condition type
-        const rule = rules.find(r => r.id === alert.ruleId)
+        const rule = rulesRef.current.find(r => r.id === alert.ruleId)
         const conditionType = rule?.condition.type
         const runbook = conditionType ? findRunbookForCondition(conditionType) : undefined
 
@@ -1146,7 +1151,7 @@ Please provide:
 2. The likely root cause
 3. Suggested actions to resolve this alert`
 
-        const missionId = startMission({
+        const missionId = startMissionRef.current({
           title: `Diagnose: ${alert.ruleName}`,
           description: `Analyzing alert on ${alert.cluster || 'cluster'}`,
           type: 'troubleshoot',
@@ -1179,7 +1184,8 @@ Please provide:
         // permanently locked from future diagnosis attempts.
         diagnosisInFlightRef.current.delete(alertId)
       }
-    }
+    // All external deps accessed via refs for stable identity
+    }, [])
 
   // #7337 — Reconcile AI diagnosis results back into alerts when the
   // associated mission completes. Without this, alerts stay in the
@@ -1881,6 +1887,12 @@ Please provide:
   const evaluateConditionsRef = useRef(evaluateConditions)
   evaluateConditionsRef.current = evaluateConditions
 
+  // Stable proxy for evaluateConditions — delegates through ref so the
+  // identity never changes, even though the underlying callback has unstable deps.
+  const stableEvaluateConditions = useCallback(() => {
+    evaluateConditionsRef.current()
+  }, [])
+
   // Periodic evaluation (every 30 seconds) — stable, never re-creates timers
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -1897,7 +1909,7 @@ Please provide:
     }
   }, [])
 
-  const value: AlertsContextValue = {
+  const value = useMemo<AlertsContextValue>(() => ({
     alerts,
     activeAlerts,
     acknowledgedAlerts,
@@ -1911,11 +1923,17 @@ Please provide:
     resolveAlert,
     deleteAlert,
     runAIDiagnosis,
-    evaluateConditions,
+    evaluateConditions: stableEvaluateConditions,
     createRule,
     updateRule,
     deleteRule,
-    toggleRule }
+    toggleRule }), [
+    alerts, activeAlerts, acknowledgedAlerts, stats, rules,
+    isEvaluating, isLoadingData, dataError,
+    acknowledgeAlert, acknowledgeAlerts, resolveAlert, deleteAlert,
+    runAIDiagnosis, stableEvaluateConditions,
+    createRule, updateRule, deleteRule, toggleRule
+  ])
 
   return (
     <AlertsContext.Provider value={value}>
