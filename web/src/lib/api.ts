@@ -7,7 +7,7 @@ import {
   DEMO_TOKEN_VALUE,
   FETCH_DEFAULT_TIMEOUT_MS,
 } from './constants'
-import { emitError, emitSessionExpired } from './analytics'
+import { emitSessionExpired } from './analytics'
 
 const API_BASE = ''
 const DEFAULT_TIMEOUT = MCP_HOOK_TIMEOUT_MS
@@ -454,7 +454,9 @@ class ApiClient {
     // Skip API calls to protected endpoints when not authenticated
     const isPublicPath = PUBLIC_API_PREFIXES.some(prefix => path.startsWith(prefix))
     if (options?.requiresAuth !== false && !isPublicPath && !this.hasToken()) {
-      emitError('auth', 'No authentication token available')
+      // Do NOT emit a GA4 error here — this is expected behavior when an
+      // unauthenticated user visits a protected page. Emitting it caused
+      // false-positive monitoring alerts (#9968, #9979, #9980, #9984).
       throw new UnauthenticatedError()
     }
 
