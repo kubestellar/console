@@ -529,7 +529,7 @@ func (s *Server) validateAPIKeyValue(provider, apiKey string) (bool, error) {
 	if s.SkipKeyValidation {
 		return true, nil
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), perKeyValidationTimeout)
 	defer cancel()
 
 	switch provider {
@@ -562,35 +562,61 @@ func (s *Server) refreshProviderAvailability() {
 	GetConfigManager().Load()
 }
 
-// ValidateAllKeys validates all configured API keys and caches results
-// This should be called on server startup to detect invalid keys early
+// perKeyValidationTimeout is the timeout for each individual API key validation request.
+const perKeyValidationTimeout = 15 * time.Second
+
+// maxConcurrentValidations limits how many provider keys are validated simultaneously
+// to avoid hammering all providers at once.
+const maxConcurrentValidations = 5
+
+// ValidateAllKeys validates all configured API keys and caches results.
+// Validations run in parallel (bounded by maxConcurrentValidations) to avoid
+// sequential delays on startup when many providers are configured.
 func (s *Server) ValidateAllKeys() {
 	cm := GetConfigManager()
 	providers := []string{"claude", "openai", "gemini", "openrouter", "groq", "cursor", "vscode", "windsurf", "cline", "jetbrains", "zed", "continue", "raycast", "open-webui"}
 
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	sem := make(chan struct{}, maxConcurrentValidations)
+
 	for _, provider := range providers {
-		if cm.HasAPIKey(provider) {
-			// Check if we already know the validity
-			if valid := cm.IsKeyValid(provider); valid != nil {
-				continue // Already validated
-			}
-			// Validate the key
-			slog.Info("validating API key", "provider", provider)
-			valid, err := s.validateAPIKey(provider)
+		if !cm.HasAPIKey(provider) {
+			continue
+		}
+		// Check if we already know the validity
+		if valid := cm.IsKeyValid(provider); valid != nil {
+			continue // Already validated
+		}
+
+		wg.Add(1)
+		go func(p string) {
+			defer wg.Done()
+			sem <- struct{}{}        // acquire semaphore slot
+			defer func() { <-sem }() // release semaphore slot
+
+			slog.Info("validating API key", "provider", p)
+			valid, err := s.validateAPIKey(p)
+
+			mu.Lock()
+			defer mu.Unlock()
+
 			if err != nil {
 				// Network or other error - don't cache, will try again later
-				slog.Error("API key validation error (will retry)", "provider", provider, "error", err)
+				slog.Error("API key validation error (will retry)", "provider", p, "error", err)
 			} else {
 				// Cache the validity result
-				cm.SetKeyValidity(provider, valid)
+				cm.SetKeyValidity(p, valid)
 				if valid {
-					slog.Info("API key is valid", "provider", provider)
+					slog.Info("API key is valid", "provider", p)
 				} else {
-					slog.Warn("API key is INVALID", "provider", provider)
+					slog.Warn("API key is INVALID", "provider", p)
 				}
 			}
-		}
+		}(provider)
 	}
+
+	wg.Wait()
 }
 
 // validateClaudeKey tests an Anthropic API key
