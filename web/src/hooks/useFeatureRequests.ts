@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { api } from '../lib/api'
+import { api, RateLimitError } from '../lib/api'
 import { STORAGE_KEY_TOKEN, STORAGE_KEY_HAS_SESSION, DEMO_TOKEN_VALUE } from '../lib/constants'
 import { MIN_PERCEIVED_DELAY_MS } from '../lib/constants/network'
 
@@ -359,6 +359,11 @@ export function useFeatureRequests(currentUserId?: string, options?: UseFeatureR
       const { data } = await api.post<FeatureRequest>('/api/feedback/requests', input, mergedOpts)
       setRequests(prev => [data, ...prev])
       return data
+    } catch (err) {
+      if (err instanceof RateLimitError) {
+        throw new Error('Too many requests — please wait a moment and try again.')
+      }
+      throw err
     } finally {
       setIsSubmitting(false)
     }

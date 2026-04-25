@@ -39,6 +39,32 @@ export class UnauthorizedError extends Error {
   }
 }
 
+/** localStorage key for global API rate-limit backoff deadline (epoch ms). */
+const STORAGE_KEY_RATE_LIMIT_UNTIL = 'kc-api-rate-limit-until'
+/** Default Retry-After when the header is missing or unparseable. */
+const DEFAULT_RATE_LIMIT_RETRY_AFTER_S = 60
+
+export class RateLimitError extends Error {
+  retryAfter: number
+  constructor(retryAfter: number) {
+    super(`Rate limited. Try again in ${retryAfter} seconds.`)
+    this.name = 'RateLimitError'
+    this.retryAfter = retryAfter
+  }
+}
+
+function handle429(response: Response): never {
+  const retryAfterRaw = response.headers.get('Retry-After')
+  const retryAfter = retryAfterRaw ? parseInt(retryAfterRaw, 10) : DEFAULT_RATE_LIMIT_RETRY_AFTER_S
+  const effectiveRetry = Number.isFinite(retryAfter) && retryAfter > 0
+    ? retryAfter : DEFAULT_RATE_LIMIT_RETRY_AFTER_S
+  try {
+    localStorage.setItem(STORAGE_KEY_RATE_LIMIT_UNTIL,
+      String(Date.now() + effectiveRetry * 1000))
+  } catch { /* storage quota / private browsing */ }
+  throw new RateLimitError(effectiveRetry)
+}
+
 // Debounce 401 handling to avoid multiple simultaneous logouts
 let handling401 = false
 /** Safety cap: reset the 401 debounce flag after this many ms so future
@@ -493,6 +519,9 @@ class ApiClient {
         if (response.status === 401) {
           throw new UnauthorizedError()
         }
+        if (response.status === 429) {
+          handle429(response)
+        }
         const errorText = await response.text().catch(() => '')
         // Note: We don't mark backend as failed on 500 responses here.
         // The health check is the source of truth for backend availability.
@@ -547,6 +576,9 @@ class ApiClient {
         if (response.status === 401) {
           throw new UnauthorizedError()
         }
+        if (response.status === 429) {
+          handle429(response)
+        }
         const errorText = await response.text().catch(() => '')
         // Note: Don't mark backend as failed on 500s - health check is source of truth
         throw new Error(errorText || `API error: ${response.status}`)
@@ -599,6 +631,9 @@ class ApiClient {
         if (response.status === 401) {
           throw new UnauthorizedError()
         }
+        if (response.status === 429) {
+          handle429(response)
+        }
         const errorText = await response.text().catch(() => '')
         // Note: Don't mark backend as failed on 500s - health check is source of truth
         throw new Error(errorText || `API error: ${response.status}`)
@@ -649,6 +684,9 @@ class ApiClient {
         }
         if (response.status === 401) {
           throw new UnauthorizedError()
+        }
+        if (response.status === 429) {
+          handle429(response)
         }
         const errorText = await response.text().catch(() => '')
         // Note: Don't mark backend as failed on 500s - health check is source of truth

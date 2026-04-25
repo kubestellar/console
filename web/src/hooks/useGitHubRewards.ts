@@ -1,15 +1,16 @@
 /**
  * Hook for fetching GitHub-sourced reward data.
- * Queries the backend which proxies GitHub Search API for the logged-in user's
- * issues and PRs across configured orgs, computes points on the fly.
+ * Calls the Netlify function on console.kubestellar.io (10-min Blob cache)
+ * instead of the local Go backend, saving the user's GitHub API quota.
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '../lib/auth'
-import { STORAGE_KEY_TOKEN, STORAGE_KEY_HAS_SESSION } from '../lib/constants'
-import { BACKEND_DEFAULT_URL } from '../lib/constants'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import type { GitHubRewardsResponse } from '../types/rewards'
+
+/** Always fetch from the Netlify function (cached, no user token needed). */
+const REWARDS_API_BASE = 'https://console.kubestellar.io'
 
 /** Prefix for per-user localStorage cache keys */
 const CACHE_KEY_PREFIX = 'github-rewards-cache'
@@ -105,38 +106,9 @@ export function useGitHubRewards() {
   const fetchRewards = useCallback(async () => {
     if (!isAuthenticated || isDemoUser || !githubLogin) return
 
-    // #8494 — Support cookie-only sessions (#6590). The JWT may live
-    // exclusively in the HttpOnly kc_auth cookie with no token in
-    // localStorage. Check both the token AND the session hint so we
-    // don't bail out for cookie-only authenticated users.
-    // Both reads are wrapped because localStorage can throw in
-    // restricted browser modes (private browsing, disabled storage).
-    let token: string | null = null
-    let hasCookieSession = false
-    try {
-      token = localStorage.getItem(STORAGE_KEY_TOKEN)
-      hasCookieSession = localStorage.getItem(STORAGE_KEY_HAS_SESSION) === 'true'
-    } catch {
-      // localStorage unavailable — fall through
-    }
-    if (!token && !hasCookieSession) return
-
     setIsLoading(true)
     try {
-      const apiBase = import.meta.env.VITE_API_BASE_URL || BACKEND_DEFAULT_URL
-      // Pass login as query param for Netlify Function compatibility (no JWT
-      // validation on serverless). The Go backend ignores this param and reads
-      // the login from the JWT instead — no security impact either way since
-      // reward data is computed from public GitHub activity.
-      const headers: Record<string, string> = {}
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`
-      }
-      const res = await fetch(`${apiBase}/api/rewards/github?login=${encodeURIComponent(githubLogin)}`, {
-        headers,
-        // #8494 — credentials: 'include' sends the HttpOnly kc_auth cookie
-        // for cookie-only sessions where no Bearer token is available.
-        credentials: 'include',
+      const res = await fetch(`${REWARDS_API_BASE}/api/rewards/github?login=${encodeURIComponent(githubLogin)}`, {
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
       if (!res.ok) throw new Error(`API error: ${res.status}`)

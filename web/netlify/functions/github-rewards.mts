@@ -15,7 +15,6 @@
  */
 
 import { getStore } from "@netlify/blobs";
-import { buildCorsHeaders, handlePreflight } from "./_shared/cors";
 
 const GITHUB_API = "https://api.github.com";
 const CACHE_STORE = "github-rewards";
@@ -27,6 +26,8 @@ const PER_PAGE = 100;
 const MAX_PAGES = 10;
 /** Request timeout for GitHub API calls (30 seconds) */
 const API_TIMEOUT_MS = 30_000;
+const GH_RETRY_MAX_ATTEMPTS = 3;
+const GH_RETRY_BASE_DELAY_MS = 1_000;
 
 /** Point values for contribution types — must match rewards.go */
 const POINTS_BUG_ISSUE = 300;
@@ -172,12 +173,22 @@ async function searchItems(
     };
     if (token) headers["Authorization"] = `Bearer ${token}`;
 
-    const res = await fetch(url, {
-      headers,
-      signal: AbortSignal.timeout(API_TIMEOUT_MS),
-    });
-    if (!res.ok) {
-      throw new Error(`GitHub API ${res.status}: ${(await res.text()).slice(0, 200)}`);
+    let res: Response | undefined;
+    for (let attempt = 0; attempt < GH_RETRY_MAX_ATTEMPTS; attempt++) {
+      res = await fetch(url, {
+        headers,
+        signal: AbortSignal.timeout(API_TIMEOUT_MS),
+      });
+      if (res.status !== 429 && res.status !== 403) break;
+      if (attempt === GH_RETRY_MAX_ATTEMPTS - 1) break;
+      const retryAfter = res.headers.get("Retry-After");
+      const waitMs = retryAfter
+        ? Math.min(parseInt(retryAfter, 10) * 1000, 10_000)
+        : GH_RETRY_BASE_DELAY_MS * Math.pow(2, attempt);
+      await new Promise((r) => setTimeout(r, waitMs));
+    }
+    if (!res!.ok) {
+      throw new Error(`GitHub API ${res!.status}: ${(await res!.text()).slice(0, 200)}`);
     }
 
     const sr: SearchResponse = await res.json();
@@ -196,18 +207,19 @@ async function searchItems(
 // ---------------------------------------------------------------------------
 
 export default async (req: Request) => {
-  // See web/netlify/functions/_shared/cors.ts for allowlist rationale (#9879).
-  const corsOpts = {
-    methods: "GET, OPTIONS",
-    headers: "Content-Type, Authorization, Accept",
-  };
-  const corsHeaders = {
-    ...buildCorsHeaders(req, corsOpts),
+  // Rewards data is computed from public GitHub activity — allow any origin
+  // so self-hosted consoles can fetch from console.kubestellar.io without CORS
+  // issues (same pattern as acmm-badge and rewards-badge endpoints).
+  const corsHeaders: Record<string, string> = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Accept",
     "Cache-Control": "no-cache, no-store",
+    "X-Content-Type-Options": "nosniff",
   };
 
   if (req.method === "OPTIONS") {
-    return handlePreflight(req, corsOpts);
+    return new Response(null, { status: 204, headers: corsHeaders });
   }
 
   if (req.method !== "GET") {

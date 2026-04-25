@@ -12,6 +12,7 @@ import { buildReleaseNotesComponents } from '../../lib/markdown/releaseNotesComp
 import { cn } from '../../lib/cn'
 import { copyToClipboard } from '../../lib/clipboard'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
+import { api, RateLimitError } from '../../lib/api'
 import { emitWhatsNewUpdateClicked, emitWhatsNewRemindLater } from '../../lib/analytics'
 
 const SNOOZE_STORAGE_KEY = 'kc-update-snoozed'
@@ -105,44 +106,42 @@ export function WhatsNewModal({ isOpen, onClose }: WhatsNewModalProps) {
         // Step 1: Get the date of the currently running commit
         let sinceDate: string | null = null
         if (commitHash && commitHash !== 'unknown') {
-          const commitResp = await fetch(
-            `/api/github/repos/kubestellar/console/commits/${commitHash}`,
-            { credentials: 'include', signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) },
-          )
-          if (commitResp.ok) {
-            const commitData = await commitResp.json()
+          try {
+            const { data: commitData } = await api.get<{ commit?: { committer?: { date?: string } } }>(
+              `/api/github/repos/kubestellar/console/commits/${commitHash}`,
+              { timeout: FETCH_DEFAULT_TIMEOUT_MS },
+            )
             sinceDate = commitData?.commit?.committer?.date ?? null
+          } catch {
+            // Commit lookup failure is non-fatal — show all PRs
           }
         }
 
         // Step 2: Fetch recent merged PRs
-        const resp = await fetch(
+        if (cancelled) return
+        const { data } = await api.get<Array<{ number: number; title: string; merged_at: string | null }>>(
           `/api/github/repos/kubestellar/console/pulls?state=closed&sort=updated&direction=desc&per_page=${MAX_RECENT_PRS}`,
-          { credentials: 'include', signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) },
+          { timeout: FETCH_DEFAULT_TIMEOUT_MS },
         )
         if (cancelled) return
-        if (!resp.ok) {
-          setPrsError(`GitHub responded ${resp.status}`)
-          return
-        }
-        const data = await resp.json()
-        if (cancelled) return
         const merged = (data || [])
-          .filter((pr: { merged_at: string | null }) => pr.merged_at)
-          // Only show PRs merged AFTER the running commit
-          .filter((pr: { merged_at: string }) => {
-            if (!sinceDate) return true // no commit date = show all
-            return new Date(pr.merged_at) > new Date(sinceDate)
+          .filter((pr) => pr.merged_at)
+          .filter((pr) => {
+            if (!sinceDate) return true
+            return new Date(pr.merged_at!) > new Date(sinceDate)
           })
-          .map((pr: { number: number; title: string; merged_at: string }) => ({
+          .map((pr) => ({
             number: pr.number,
             title: pr.title,
-            merged_at: pr.merged_at,
+            merged_at: pr.merged_at!,
           }))
         setRecentPRs(merged)
       } catch (err) {
         if (cancelled) return
-        // Don't surface AbortError (user closed modal) as an error
+        if (err instanceof RateLimitError) {
+          setPrsError('GitHub API rate limit reached — data will refresh automatically. Try again in a moment.')
+          return
+        }
         const message = err instanceof Error ? err.message : 'Network error'
         setPrsError(message)
       } finally {
