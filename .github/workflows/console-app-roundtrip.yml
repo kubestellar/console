@@ -207,17 +207,48 @@ jobs:
           # 4. Fetch the issue back and verify attribution. Use a
           #    different token (GITHUB_TOKEN) for the read to mirror
           #    what the rewards classifier sees in production.
-          sleep 5  # settle time for GitHub indexing (increased from 3s)
-          READ_RESP=$(curl -sS \
-            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/repos/${TEST_REPO_OWNER}/${TEST_REPO_NAME}/issues/${ISSUE_NUMBER}")
+          #    Retry up to 3 times with increasing delay — GitHub
+          #    indexing lag or transient 5xx can return empty/error
+          #    responses (see issue #9999 failing run 24924816931).
+          READ_URL="https://api.github.com/repos/${TEST_REPO_OWNER}/${TEST_REPO_NAME}/issues/${ISSUE_NUMBER}"
+          MAX_READ_RETRIES=3
+          INITIAL_SETTLE_SECONDS=5
+          READ_RESP=""
+          for attempt in $(seq 1 $MAX_READ_RETRIES); do
+            SETTLE=$((INITIAL_SETTLE_SECONDS * attempt))
+            echo "Read attempt $attempt/$MAX_READ_RETRIES (waiting ${SETTLE}s for indexing)..."
+            sleep "$SETTLE"
+            READ_HTTP=$(curl -sS -o /tmp/app-read.json -w "%{http_code}" \
+              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "$READ_URL")
+            if [ "$READ_HTTP" = "200" ]; then
+              READ_RESP=$(cat /tmp/app-read.json)
+              break
+            fi
+            echo "::warning::Read attempt $attempt got HTTP $READ_HTTP"
+            cat /tmp/app-read.json 2>/dev/null || true
+          done
+
+          if [ -z "$READ_RESP" ]; then
+            echo "::error::Failed to read back issue #$ISSUE_NUMBER after $MAX_READ_RETRIES attempts (last HTTP: $READ_HTTP)"
+            cat /tmp/app-read.json 2>/dev/null || true
+            exit 1
+          fi
 
           # Extract both signals in one pass.
           ATTRIBUTION=$(echo "$READ_RESP" | python3 <<'PY'
           import sys, json
-          d = json.load(sys.stdin)
+          raw = sys.stdin.read().strip()
+          if not raw:
+              print("ERROR: empty response")
+              sys.exit(1)
+          try:
+              d = json.loads(raw)
+          except json.JSONDecodeError as e:
+              print(f"ERROR: invalid JSON — {e}")
+              sys.exit(1)
           user = d.get('user') or {}
           app = d.get('performed_via_github_app') or {}
           # Tab-separated so callers can split reliably even if a field
