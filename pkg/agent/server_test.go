@@ -432,12 +432,8 @@ func TestServer_SettingsHandlers(t *testing.T) {
 	}
 
 	// Register a mock "openai" provider so the validation gate accepts it.
-	reg := GetRegistry()
-	reg.mu.Lock()
-	if _, exists := reg.providers["openai"]; !exists {
-		reg.providers["openai"] = &ServerMockProvider{name: "openai"}
-	}
-	reg.mu.Unlock()
+	// Ignore "already registered" errors from concurrent tests.
+	_ = GetRegistry().Register(&ServerMockProvider{name: "openai"})
 
 	// 2. Test handleSetKey
 	reqBody := `{"provider":"openai", "apiKey":"test-key", "model":"gpt-4"}`
