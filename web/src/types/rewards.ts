@@ -195,7 +195,11 @@ export interface GitHubRewardsResponse {
   total_points: number
   contributions: GitHubContribution[]
   breakdown: GitHubRewardsBreakdown
+  bonus_points?: number
+  level?: string
+  rank?: number
   cached_at: string
+  leaderboard_generated_at?: string
   from_cache: boolean
 }
 
