@@ -75,17 +75,19 @@ function getDeviceLabel(deviceType: string): string {
 
 type ViewMode = 'alerts' | 'inventory'
 
+const NODE_HOSTNAME_PATTERN = /([a-z0-9-]+-worker-[a-z0-9-]+|[a-z0-9-]+-gpu-[a-z0-9-]+|[a-z0-9-]+-compute-[a-z0-9-]+)/i
+const MIN_HOSTNAME_LENGTH = 5
+
 /** Extract canonical hostname from node name.
  * Handles both short names and long API/SA paths. */
 function extractHostname(nodeName: string): string {
   if (nodeName.includes(':6443/') || nodeName.includes('/system:serviceaccount:')) {
     const parts = nodeName.split('/')
     const lastPart = parts[parts.length - 1]
-    if (lastPart && !lastPart.includes(':') && lastPart.length > 5) {
+    if (lastPart && !lastPart.includes(':') && lastPart.length > MIN_HOSTNAME_LENGTH) {
       return lastPart
     }
-    const nodePattern = /([a-z0-9-]+-worker-[a-z0-9-]+|[a-z0-9-]+-gpu-[a-z0-9-]+|[a-z0-9-]+-compute-[a-z0-9-]+)/i
-    const match = nodeName.match(nodePattern)
+    const match = nodeName.match(NODE_HOSTNAME_PATTERN)
     if (match) {
       return match[1]
     }
@@ -188,7 +190,7 @@ export function HardwareHealthCard() {
       const mappedCluster = clusterNameMap[alert.cluster] || alert.cluster
       const key = `${hostname}-${alert.deviceType}`
       const existing = byHostnameAndDevice.get(key)
-      // Keep first occurrence (or update if this one has better data)
+      // Keep first occurrence, skip duplicates
       if (!existing) {
         byHostnameAndDevice.set(key, { ...alert, nodeName: hostname, cluster: mappedCluster })
       }

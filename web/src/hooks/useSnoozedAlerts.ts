@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { POLL_INTERVAL_SLOW_MS } from '../lib/constants/network'
 import { emitSnoozed, emitUnsnoozed } from '../lib/analytics'
 
@@ -128,15 +128,15 @@ export function useSnoozedAlerts() {
     emitUnsnoozed('alert')
   }
 
-  const isSnoozed = (alertId: string): boolean => {
+  const isSnoozed = useCallback((alertId: string): boolean => {
     const now = Date.now()
     return state.snoozed.some(s => s.alertId === alertId && s.expiresAt > now)
-  }
+  }, [localState])
 
-  const getSnoozedAlert = (alertId: string): SnoozedAlert | null => {
+  const getSnoozedAlert = useCallback((alertId: string): SnoozedAlert | null => {
     const now = Date.now()
     return state.snoozed.find(s => s.alertId === alertId && s.expiresAt > now) || null
-  }
+  }, [localState])
 
   const clearAllSnoozed = () => {
     state.snoozed = []

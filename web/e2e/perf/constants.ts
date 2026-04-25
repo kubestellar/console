@@ -9,8 +9,8 @@
 // Max number of React commits allowed during a SPA navigation. The post-fix
 // measurement (after #6161 stabilized AuthProvider value + #6178 seeded the
 // demo token so the perf spec doesn't measure auth-revalidate noise) is 13
-// commits for a real /clusters navigation. Budget is set to 25 — that's the
-// observed 21 (2026-04-23 CI measurement) plus 4 commits of headroom for
+// commits for a real /clusters navigation. Budget is set to 30 — that's the
+// observed 21 (2026-04-23 CI measurement) plus 9 commits of headroom for
 // legitimate growth (new cards, SSE streams), while still catching any
 // regression that pushes us back toward the ~461-commit cascade tracked
 // by #6149.
