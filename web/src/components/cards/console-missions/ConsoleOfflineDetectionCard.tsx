@@ -156,6 +156,8 @@ function analyzeRootCause(node: NodeData): { cause: string; details: string } | 
 let nodesCache: NodeData[] = []
 let nodesCacheTimestamp = 0
 let nodesFetchInProgress = false
+/** Last fetch error message, or null if the most recent fetch succeeded */
+let nodesFetchError: string | null = null
 const NODES_CACHE_TTL = 30000 // 30 seconds
 /** Cluster-level GPU allocation threshold — flag when >80% of a cluster's GPUs are allocated */
 const GPU_CLUSTER_EXHAUSTION_THRESHOLD = 0.8
@@ -184,10 +186,13 @@ async function fetchAllNodes(): Promise<NodeData[]> {
       const data = await response.json()
       nodesCache = data.nodes || []
       nodesCacheTimestamp = Date.now()
+      nodesFetchError = null
       notifyNodesSubscribers()
     }
   } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
     console.error('[OfflineDetection] Error fetching nodes:', error)
+    nodesFetchError = message
   } finally {
     nodesFetchInProgress = false
   }
@@ -277,6 +282,9 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
     fetchAllNodes().then(nodes => {
       setAllNodes(nodes)
       setNodesLoading(false)
+      if (nodesFetchError) {
+        console.warn('[OfflineDetection] Node fetch degraded:', nodesFetchError)
+      }
     }).catch(() => { /* fetchAllNodes always resolves — defensive catch */ })
 
     // Poll every 30 seconds

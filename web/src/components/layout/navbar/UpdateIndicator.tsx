@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Download, Loader2, Check, AlertTriangle } from 'lucide-react'
 import { useVersionCheck } from '../../../hooks/useVersionCheck'
@@ -6,6 +6,7 @@ import { useUpgradeState } from '../../../hooks/useUpgradeState'
 import { useFeatureHints } from '../../../hooks/useFeatureHints'
 import { FeatureHintTooltip } from '../../ui/FeatureHintTooltip'
 import { WhatsNewModal, isUpdateSnoozed } from '../../updates/WhatsNewModal'
+import { useModalState } from '../../../lib/modals'
 import { isDemoMode } from '../../../lib/demoMode'
 import { useToast } from '../../ui/Toast'
 import { emitWhatsNewModalOpened } from '../../../lib/analytics'
@@ -24,7 +25,7 @@ export function UpdateIndicator() {
   const { showToast } = useToast()
   const { hasUpdate, latestRelease, channel, autoUpdateStatus, latestMainSHA } = useVersionCheck()
   const upgradeState = useUpgradeState()
-  const [showModal, setShowModal] = useState(false)
+  const { isOpen: showModal, open: openModal, close: closeModal } = useModalState()
   const updateHint = useFeatureHints('update-available')
   const prevHasUpdate = useRef(false)
 
@@ -86,7 +87,7 @@ export function UpdateIndicator() {
       <div className="relative">
         <button
           onClick={() => {
-            setShowModal(true)
+            openModal()
             updateHint.action()
             emitWhatsNewModalOpened(latestRelease?.tag ?? devSHA?.slice(0, 7) ?? 'unknown')
           }}
@@ -123,7 +124,7 @@ export function UpdateIndicator() {
 
       <WhatsNewModal
         isOpen={showModal}
-        onClose={() => setShowModal(false)}
+        onClose={closeModal}
       />
     </>
   )

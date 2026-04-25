@@ -28,7 +28,7 @@ import { Search, Plus, Settings, Rocket, Code2, Zap, Server } from 'lucide-react
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { getMissionRoute } from '../../../config/routes'
-import { ConfirmDialog } from '../../../lib/modals'
+import { ConfirmDialog, useModalState } from '../../../lib/modals'
 import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
 import { useDrasiResources } from '../../../hooks/useDrasiResources'
 import { useDrasiQueryStream } from '../../../hooks/useDrasiQueryStream'
@@ -151,8 +151,8 @@ export function DrasiReactiveGraph() {
     return () => clearInterval(interval)
   }, [isDemoMode, liveData, demoThemeId])
   const isLive = !!liveData && !isDemoMode
-  const [showConnectionsModal, setShowConnectionsModal] = useState(false)
-  const [showStreamSamples, setShowStreamSamples] = useState(false)
+  const { isOpen: showConnectionsModal, open: openConnectionsModal, close: closeConnectionsModal } = useModalState()
+  const { isOpen: showStreamSamples, open: openStreamSamples, close: closeStreamSamples } = useModalState()
   // Shared confirm-dialog state for every destructive action in the card.
   // Replaces window.confirm() so delete flows go through the themed
   // ConfirmDialog (user does not want browser-chrome alerts).
@@ -788,7 +788,7 @@ export function DrasiReactiveGraph() {
         </select>
         <button
           type="button"
-          onClick={() => setShowConnectionsModal(true)}
+          onClick={() => openConnectionsModal()}
           className="shrink-0 w-6 h-6 flex items-center justify-center rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-muted-foreground hover:text-cyan-300"
           aria-label={t('drasi.manageConnections')}
           title={t('drasi.manageConnections')}
@@ -819,7 +819,7 @@ export function DrasiReactiveGraph() {
             to miss, so this gives it a guaranteed discoverable home. */}
         <button
           type="button"
-          onClick={() => setShowStreamSamples(true)}
+          onClick={() => openStreamSamples()}
           className="shrink-0 ml-auto px-2 py-1 text-[10px] rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-muted-foreground hover:text-cyan-300 flex items-center gap-1.5"
           aria-label={t('drasi.consumeStreamTitle')}
           title={t('drasi.consumeStreamTitle')}
@@ -1034,7 +1034,7 @@ export function DrasiReactiveGraph() {
                               drawer showing how to subscribe in 6 languages. */}
                           <button
                             type="button"
-                            onClick={e => { e.stopPropagation(); setShowStreamSamples(true) }}
+                            onClick={e => { e.stopPropagation(); openStreamSamples() }}
                             className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-muted-foreground hover:text-cyan-300 flex items-center gap-1"
                             title={t('drasi.consumeStreamTitle')}
                           >
@@ -1079,14 +1079,14 @@ export function DrasiReactiveGraph() {
             <StreamSampleDrawer
               endpoint={buildStreamEndpoint(activeConnection, liveData, selectedQueryId)}
               isDemo={!isLive}
-              onClose={() => setShowStreamSamples(false)}
+              onClose={() => closeStreamSamples()}
             />
           )}
           {showConnectionsModal && (
             <ConnectionsModal
               connections={drasiConnections}
               activeId={activeConnection?.id ?? ''}
-              onSelect={id => { setActive(id); setShowConnectionsModal(false) }}
+              onSelect={id => { setActive(id); closeConnectionsModal() }}
               onAdd={addConnection}
               onUpdate={updateConnection}
               onRequestRemove={(id, name) => setPendingConfirm({
@@ -1094,7 +1094,7 @@ export function DrasiReactiveGraph() {
                 message: t('drasi.deleteConnectionConfirm', { name }),
                 onConfirm: () => removeConnection(id),
               })}
-              onClose={() => setShowConnectionsModal(false)}
+              onClose={() => closeConnectionsModal()}
             />
           )}
           {expandedNode && <ExpandModal node={expandedNode} onClose={() => setExpandedNode(null)} />}

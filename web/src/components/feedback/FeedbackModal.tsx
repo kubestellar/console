@@ -75,6 +75,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
       }
       reader.onerror = (err) => {
         console.error(`[Screenshot] FileReader failed for ${file.name}:`, err)
+        showToast(`Failed to read screenshot "${file.name}". Try a different image.`, 'error')
       }
       reader.readAsDataURL(file)
     })
@@ -112,6 +113,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
         }
         reader.onerror = (err) => {
           console.error('[Screenshot] Paste FileReader failed:', err)
+          showToast('Failed to read pasted screenshot. Try attaching the image instead.', 'error')
         }
         reader.readAsDataURL(file)
       }

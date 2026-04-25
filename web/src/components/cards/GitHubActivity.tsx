@@ -175,8 +175,9 @@ function setCachedData(repo: string, data: Omit<CachedGitHubData, 'timestamp'>) 
     }
     localStorage.setItem(CACHE_KEY_PREFIX + repo.replace('/', '_'), JSON.stringify(cached))
   } catch (e) {
-    // Storage might be full, ignore
-    console.error('Failed to cache GitHub data:', e)
+    // Non-critical: localStorage may be full or disabled. The card still
+    // works, it just won't persist cached data across page reloads.
+    console.warn('[GitHubActivity] Failed to cache data (storage may be full):', e)
   }
 }
 
