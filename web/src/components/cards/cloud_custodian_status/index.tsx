@@ -247,7 +247,7 @@ export function CloudCustodianStatus() {
           <Skeleton variant="rounded" width={SKELETON_TITLE_WIDTH} height={SKELETON_TITLE_HEIGHT} />
           <Skeleton variant="rounded" width={SKELETON_BADGE_WIDTH} height={SKELETON_BADGE_HEIGHT} />
         </div>
-        <SkeletonStats className="grid-cols-4" />
+        <SkeletonStats className="grid-cols-2 @md:grid-cols-4" />
         <SkeletonList items={SKELETON_LIST_ITEMS} className="flex-1" />
       </div>
     )
@@ -348,7 +348,7 @@ export function CloudCustodianStatus() {
             {t('cloudCustodianStatus.sectionViolations', 'Violations by severity')}
           </h4>
         </div>
-        <div className="grid grid-cols-4 gap-2 text-xs">
+        <div className="grid grid-cols-2 @md:grid-cols-4 gap-2 text-xs">
           <div>
             <span className={cn('text-base font-semibold', severityClass('critical'))}>
               {violations.critical}

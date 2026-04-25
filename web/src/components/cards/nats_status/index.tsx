@@ -60,7 +60,7 @@ function NatsStatusInternal() {
           <Skeleton variant="rounded" width={140} height={28} />
           <Skeleton variant="rounded" width={90} height={20} />
         </div>
-        <SkeletonStats className="grid-cols-4" />
+        <SkeletonStats className="grid-cols-2 @md:grid-cols-4" />
         <Skeleton variant="rounded" height={32} />
         <SkeletonList items={3} className="flex-1" />
       </div>
@@ -117,7 +117,7 @@ function NatsStatusInternal() {
       </div>
 
       {/* 4 metric tiles — the key numbers at a glance */}
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 @md:grid-cols-4 gap-2">
         <MetricTile
           label={t('nats_status.metric.connections')}
           value={data.messaging.totalConnections}

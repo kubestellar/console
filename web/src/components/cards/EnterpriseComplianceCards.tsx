@@ -103,7 +103,7 @@ export function GxPCard() {
               : <XCircle className="w-4 h-4 text-red-400" />}
             <span className="text-sm text-muted-foreground">Hash Chain {data.chain_integrity ? 'Intact' : 'Broken'}</span>
           </div>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 @md:grid-cols-3 gap-2">
             <MiniStat label="Records" value={Number(data.total_records ?? 0)} />
             <MiniStat label="Signatures" value={Number(data.total_signatures ?? 0)} />
             <MiniStat label="Pending" value={Number(data.pending_signatures ?? 0)} color="text-yellow-400" />

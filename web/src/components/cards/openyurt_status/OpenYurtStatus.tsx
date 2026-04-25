@@ -242,7 +242,7 @@ export function OpenYurtStatus() {
           <Skeleton variant="rounded" width={120} height={28} />
           <Skeleton variant="rounded" width={80} height={20} />
         </div>
-        <SkeletonStats className="grid-cols-4" />
+        <SkeletonStats className="grid-cols-2 @md:grid-cols-4" />
         <Skeleton variant="rounded" height={32} />
         <SkeletonList items={3} className="flex-1" />
       </div>
@@ -315,7 +315,7 @@ export function OpenYurtStatus() {
 
       {/* ── Stats grid ── */}
       {nodePools.length > 0 && (
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 @md:grid-cols-4 gap-2">
           <StatTile
             icon={<Server className="w-4 h-4 text-blue-400" />}
             label={t('openyurt.totalNodes', 'Nodes')}

@@ -275,7 +275,7 @@ export function HarborStatus() {
   if (showSkeleton) {
     return (
       <div className="flex flex-col h-full overflow-hidden">
-        <SkeletonStats className="grid-cols-4" />
+        <SkeletonStats className="grid-cols-2 @md:grid-cols-4" />
         <div className="flex items-center gap-2 px-1 mb-2">
           <div className="w-20 h-6 rounded bg-muted animate-pulse" />
           <div className="w-24 h-6 rounded bg-muted animate-pulse" />
@@ -364,7 +364,7 @@ export function HarborStatus() {
         </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-3 mb-4 shrink-0 px-0.5">
+      <div className="grid grid-cols-2 @md:grid-cols-4 gap-3 mb-4 shrink-0 px-0.5">
         <StatTile
           icon={<FolderOpen className="w-4 h-4 text-blue-400" />}
           label={t('harbor.projects', 'Projects')}

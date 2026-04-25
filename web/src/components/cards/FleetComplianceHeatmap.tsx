@@ -369,7 +369,7 @@ export function FleetComplianceHeatmap({ config: _config }: CardConfig) {
       </div>
 
       {/* Header row */}
-      <div className="grid grid-cols-4 gap-1 text-xs font-medium text-muted-foreground">
+      <div className="grid grid-cols-2 @md:grid-cols-4 gap-1 text-xs font-medium text-muted-foreground">
         <div className="px-2 py-1">Cluster</div>
         {tools.map((tool, i) => {
           const key = toolKeys[i]
@@ -394,7 +394,7 @@ export function FleetComplianceHeatmap({ config: _config }: CardConfig) {
 
       {/* Data rows */}
       {rows.map(row => (
-        <div key={row.cluster} className="grid grid-cols-4 gap-1">
+        <div key={row.cluster} className="grid grid-cols-2 @md:grid-cols-4 gap-1">
           <div className="px-2 py-1.5 text-xs font-mono truncate" title={row.cluster}>
             {row.cluster}
           </div>
