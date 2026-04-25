@@ -16,6 +16,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
+import { Suspense } from 'react'
 import { UnifiedCard } from '../UnifiedCard'
 import type { UnifiedCardConfig, CardContentList, CardContentTable } from '../../types'
 
@@ -132,12 +133,16 @@ describe('UnifiedCard', () => {
     expect(screen.getByTestId('table-viz')).toBeInTheDocument()
   })
 
-  it('renders chart visualization for chart content type', () => {
+  it('renders chart visualization for chart content type', async () => {
     const config = makeConfig({
       content: { type: 'chart', chartType: 'bar', dataKey: 'value', categoryKey: 'name' },
     })
-    render(<UnifiedCard config={config} />)
-    expect(screen.getByTestId('chart-viz')).toBeInTheDocument()
+    render(
+      <Suspense fallback={<div>Loading</div>}>
+        <UnifiedCard config={config} />
+      </Suspense>,
+    )
+    expect(await screen.findByTestId('chart-viz')).toBeInTheDocument()
   })
 
   it('renders status-grid visualization for status-grid content type', () => {
