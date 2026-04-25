@@ -40,6 +40,7 @@ import type {
   CustodianTopResource,
   CustodianViolationSeverity,
 } from '../../../lib/demo/cloud-custodian'
+import { formatTimeAgo } from '../../../lib/formatters'
 
 // ---------------------------------------------------------------------------
 // Named constants (no magic numbers)
@@ -51,14 +52,6 @@ const SKELETON_BADGE_WIDTH = 90
 const SKELETON_BADGE_HEIGHT = 20
 const SKELETON_LIST_ITEMS = 5
 
-const MS_PER_SECOND = 1000
-const SECONDS_PER_MINUTE = 60
-const MINUTES_PER_HOUR = 60
-const HOURS_PER_DAY = 24
-const MS_PER_MINUTE = MS_PER_SECOND * SECONDS_PER_MINUTE
-const MS_PER_HOUR = MS_PER_MINUTE * MINUTES_PER_HOUR
-const MS_PER_DAY = MS_PER_HOUR * HOURS_PER_DAY
-
 // Max rows to render in the two main lists before the scroller takes over —
 // keeps the card height predictable while still giving operators signal.
 const MAX_POLICY_ROWS = 6
@@ -67,16 +60,6 @@ const MAX_TOP_RESOURCE_ROWS = 5
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function formatRelativeTime(isoString: string): string {
-  const parsed = new Date(isoString).getTime()
-  if (!isoString || !Number.isFinite(parsed)) return 'just now'
-  const diff = Date.now() - parsed
-  if (diff < MS_PER_MINUTE) return 'just now'
-  if (diff < MS_PER_HOUR) return `${Math.floor(diff / MS_PER_MINUTE)}m ago`
-  if (diff < MS_PER_DAY) return `${Math.floor(diff / MS_PER_HOUR)}h ago`
-  return `${Math.floor(diff / MS_PER_DAY)}d ago`
-}
 
 function policyStatusBadgeClass(policy: CustodianPolicy): string {
   if (policy.failCount > 0) return 'bg-red-500/20 text-red-400'
@@ -183,7 +166,7 @@ function PolicyRow({
         </span>
         <span className="flex items-center gap-1">
           <Clock className="w-3 h-3" />
-          {formatRelativeTime(policy.lastRunAt)}
+          {formatTimeAgo(policy.lastRunAt)}
         </span>
       </div>
     </div>

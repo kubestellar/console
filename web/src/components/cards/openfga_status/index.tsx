@@ -34,6 +34,7 @@ import type {
   OpenfgaStore,
   OpenfgaStoreStatus,
 } from './demoData'
+import { formatTimeAgo } from '../../../lib/formatters'
 
 // ---------------------------------------------------------------------------
 // Named constants (no magic numbers)
@@ -45,10 +46,6 @@ const SKELETON_BADGE_WIDTH = 90
 const SKELETON_BADGE_HEIGHT = 20
 const SKELETON_LIST_ITEMS = 5
 
-const RELATIVE_TIME_MINUTE_MS = 60_000
-const MINUTES_PER_HOUR = 60
-const HOURS_PER_DAY = 24
-
 const MAX_STORES_DISPLAYED = 5
 const MAX_MODELS_DISPLAYED = 5
 
@@ -58,22 +55,6 @@ const NUMBER_LOCALE = 'en-US'
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function formatRelativeTime(isoString: string): string {
-  const parsed = new Date(isoString).getTime()
-  if (!isoString || Number.isNaN(parsed)) return 'just now'
-
-  const diff = Date.now() - parsed
-  if (diff < 0) return 'just now'
-
-  const hour = MINUTES_PER_HOUR * RELATIVE_TIME_MINUTE_MS
-  const day = HOURS_PER_DAY * hour
-
-  if (diff < RELATIVE_TIME_MINUTE_MS) return 'just now'
-  if (diff < hour) return `${Math.floor(diff / RELATIVE_TIME_MINUTE_MS)}m ago`
-  if (diff < day) return `${Math.floor(diff / hour)}h ago`
-  return `${Math.floor(diff / day)}d ago`
-}
 
 function formatNumber(value: number): string {
   return value.toLocaleString(NUMBER_LOCALE)
@@ -112,7 +93,7 @@ function StoreRow({ store }: { store: OpenfgaStore }) {
           {formatNumber(store.tupleCount)} tuples · {store.modelCount} models
         </span>
         <span className="ml-auto shrink-0">
-          {formatRelativeTime(store.lastWriteTime)}
+          {formatTimeAgo(store.lastWriteTime)}
         </span>
       </div>
     </div>
@@ -138,7 +119,7 @@ function ModelRow({ model }: { model: OpenfgaAuthorizationModel }) {
           {model.storeName} · {model.typeCount} types
         </span>
         <span className="ml-auto shrink-0">
-          {formatRelativeTime(model.createdAt)}
+          {formatTimeAgo(model.createdAt)}
         </span>
       </div>
     </div>
@@ -232,7 +213,7 @@ export function OpenfgaStatus() {
 
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
-          <span>{formatRelativeTime(data.lastCheckTime)}</span>
+          <span>{formatTimeAgo(data.lastCheckTime)}</span>
         </div>
       </div>
 

@@ -35,6 +35,7 @@ import type {
   StrimziConsumerGroup,
   StrimziKafkaCluster,
 } from './demoData'
+import { formatTimeAgo } from '../../../lib/formatters'
 
 // ---------------------------------------------------------------------------
 // Named constants (no magic numbers)
@@ -45,10 +46,6 @@ const SKELETON_TITLE_HEIGHT = 28
 const SKELETON_BADGE_WIDTH = 90
 const SKELETON_BADGE_HEIGHT = 20
 const SKELETON_LIST_ITEMS = 4
-
-const RELATIVE_TIME_MINUTE_MS = 60_000
-const MINUTES_PER_HOUR = 60
-const HOURS_PER_DAY = 24
 
 // Max clusters to show in the list view before we rely on scroll.
 const MAX_CLUSTERS_DISPLAYED = 6
@@ -65,22 +62,6 @@ const LAG_CRITICAL_THRESHOLD = 1_000
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function formatRelativeTime(isoString: string): string {
-  const parsed = new Date(isoString).getTime()
-  if (!isoString || Number.isNaN(parsed)) return 'just now'
-
-  const diff = Date.now() - parsed
-  if (diff < 0) return 'just now'
-
-  const hour = MINUTES_PER_HOUR * RELATIVE_TIME_MINUTE_MS
-  const day = HOURS_PER_DAY * hour
-
-  if (diff < RELATIVE_TIME_MINUTE_MS) return 'just now'
-  if (diff < hour) return `${Math.floor(diff / RELATIVE_TIME_MINUTE_MS)}m ago`
-  if (diff < day) return `${Math.floor(diff / hour)}h ago`
-  return `${Math.floor(diff / day)}d ago`
-}
 
 const CLUSTER_HEALTH_CLASS: Record<ClusterHealth, string> = {
   healthy: 'bg-green-500/20 text-green-400',
@@ -262,7 +243,7 @@ export function StrimziStatus() {
 
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
-          <span>{formatRelativeTime(data.lastCheckTime)}</span>
+          <span>{formatTimeAgo(data.lastCheckTime)}</span>
         </div>
       </div>
 

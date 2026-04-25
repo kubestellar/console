@@ -37,6 +37,7 @@ import type {
   KubeVelaAppStatus,
   WorkflowStepPhase,
 } from './demoData'
+import { formatTimeAgo } from '../../../lib/formatters'
 
 // ---------------------------------------------------------------------------
 // Named constants (no magic numbers)
@@ -48,37 +49,18 @@ const SKELETON_BADGE_WIDTH = 90
 const SKELETON_BADGE_HEIGHT = 20
 const SKELETON_LIST_ITEMS = 4
 
-const RELATIVE_TIME_MINUTE_MS = 60_000
-const MINUTES_PER_HOUR = 60
-const HOURS_PER_DAY = 24
-
 const PERCENT_FULL = 100
 const PROGRESS_BAR_WIDTH_PX = 56
 const PROGRESS_BAR_HEIGHT_PX = 4
 
 const MAX_APPS_DISPLAYED = 5
+const MINUTES_PER_HOUR = 60
 const AGE_MINUTES_HOUR_THRESHOLD = 60
 const AGE_MINUTES_DAY_THRESHOLD = 1440
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function formatRelativeTime(isoString: string): string {
-  const parsed = new Date(isoString).getTime()
-  if (!isoString || Number.isNaN(parsed)) return 'just now'
-
-  const diff = Date.now() - parsed
-  if (diff < 0) return 'just now'
-
-  const hour = MINUTES_PER_HOUR * RELATIVE_TIME_MINUTE_MS
-  const day = HOURS_PER_DAY * hour
-
-  if (diff < RELATIVE_TIME_MINUTE_MS) return 'just now'
-  if (diff < hour) return `${Math.floor(diff / RELATIVE_TIME_MINUTE_MS)}m ago`
-  if (diff < day) return `${Math.floor(diff / hour)}h ago`
-  return `${Math.floor(diff / day)}d ago`
-}
 
 function formatAge(ageMinutes: number): string {
   if (ageMinutes < AGE_MINUTES_HOUR_THRESHOLD) return `${ageMinutes}m`
@@ -362,7 +344,7 @@ export function KubeVelaStatus() {
           <RefreshCw
             className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`}
           />
-          <span>{formatRelativeTime(data.lastCheckTime)}</span>
+          <span>{formatTimeAgo(data.lastCheckTime)}</span>
         </div>
       </div>
 

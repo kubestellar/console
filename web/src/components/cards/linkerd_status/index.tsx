@@ -24,6 +24,7 @@ import { MetricTile } from '../../../lib/cards/CardComponents'
 import { Skeleton, SkeletonList, SkeletonStats } from '../../ui/Skeleton'
 import { useCachedLinkerd } from '../../../hooks/useCachedLinkerd'
 import type { LinkerdMeshedDeployment } from './demoData'
+import { formatTimeAgo } from '../../../lib/formatters'
 
 // ---------------------------------------------------------------------------
 // Named constants (no magic numbers)
@@ -35,9 +36,6 @@ const SKELETON_BADGE_WIDTH = 90
 const SKELETON_BADGE_HEIGHT = 20
 const SKELETON_LIST_ITEMS = 5
 
-const RELATIVE_TIME_MINUTE_MS = 60_000
-const MINUTES_PER_HOUR = 60
-const HOURS_PER_DAY = 24
 const SUCCESS_RATE_DECIMALS = 2
 const THROUGHPUT_LOCALE_MIN_FRACTION = 0
 const SUCCESS_RATE_WARN_THRESHOLD_PCT = 99.0
@@ -48,22 +46,6 @@ const P99_LATENCY_CRIT_MS = 100
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function formatRelativeTime(isoString: string): string {
-  const parsed = new Date(isoString).getTime()
-  if (!isoString || Number.isNaN(parsed)) return 'just now'
-
-  const diff = Date.now() - parsed
-  if (diff < 0) return 'just now'
-
-  const hour = MINUTES_PER_HOUR * RELATIVE_TIME_MINUTE_MS
-  const day = HOURS_PER_DAY * hour
-
-  if (diff < RELATIVE_TIME_MINUTE_MS) return 'just now'
-  if (diff < hour) return `${Math.floor(diff / RELATIVE_TIME_MINUTE_MS)}m ago`
-  if (diff < day) return `${Math.floor(diff / hour)}h ago`
-  return `${Math.floor(diff / day)}d ago`
-}
 
 function formatThroughput(value: number): string {
   return value.toLocaleString(undefined, {
@@ -197,7 +179,7 @@ export function LinkerdStatus() {
 
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
-          <span>{formatRelativeTime(data.lastCheckTime)}</span>
+          <span>{formatTimeAgo(data.lastCheckTime)}</span>
         </div>
       </div>
 

@@ -35,6 +35,7 @@ import type {
   CortexComponentName,
   CortexComponentPod,
 } from '../../../lib/demo/cortex'
+import { formatTimeAgo } from '../../../lib/formatters'
 
 // ---------------------------------------------------------------------------
 // Named constants (no magic numbers)
@@ -45,10 +46,6 @@ const SKELETON_TITLE_HEIGHT = 28
 const SKELETON_BADGE_WIDTH = 90
 const SKELETON_BADGE_HEIGHT = 20
 const SKELETON_LIST_ITEMS = 6
-
-const RELATIVE_TIME_MINUTE_MS = 60_000
-const MINUTES_PER_HOUR = 60
-const HOURS_PER_DAY = 24
 
 // Cortex has six canonical top-level components (distributor, ingester,
 // querier, store-gateway, ruler, alertmanager) — used for skeleton row
@@ -63,22 +60,6 @@ const BILLION = 1_000_000_000
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function formatRelativeTime(isoString: string): string {
-  const parsed = new Date(isoString).getTime()
-  if (!isoString || Number.isNaN(parsed)) return 'just now'
-
-  const diff = Date.now() - parsed
-  if (diff < 0) return 'just now'
-
-  const hour = MINUTES_PER_HOUR * RELATIVE_TIME_MINUTE_MS
-  const day = HOURS_PER_DAY * hour
-
-  if (diff < RELATIVE_TIME_MINUTE_MS) return 'just now'
-  if (diff < hour) return `${Math.floor(diff / RELATIVE_TIME_MINUTE_MS)}m ago`
-  if (diff < day) return `${Math.floor(diff / hour)}h ago`
-  return `${Math.floor(diff / day)}d ago`
-}
 
 /** Compact display for large counts (e.g. "4.25M", "125K"). */
 function formatCompactNumber(value: number): string {
@@ -257,7 +238,7 @@ export function CortexStatus() {
             {t('cortexStatus.version', 'version')}:{' '}
             <span className="text-foreground font-mono">{data.version}</span>
             {' · '}
-            {formatRelativeTime(data.lastCheckTime)}
+            {formatTimeAgo(data.lastCheckTime)}
           </span>
         </div>
       </div>
