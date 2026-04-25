@@ -146,6 +146,17 @@ jobs:
           REPORT_FILE="/tmp/nightly-comparison.md"
           REGRESSION=0
           bash scripts/nightly-compare.sh "${{ steps.tests.outputs.result_file }}" "$RESULTS_DIR" > "$REPORT_FILE" || REGRESSION=1
+
+          # Ensure the report file exists even if the compare script failed
+          if [ ! -s "$REPORT_FILE" ]; then
+            echo "## Nightly Comparison Report" > "$REPORT_FILE"
+            echo "" >> "$REPORT_FILE"
+            echo "_Comparison script produced no output. This usually means there are no previous results to compare against._" >> "$REPORT_FILE"
+            echo "" >> "$REPORT_FILE"
+            echo "**Date:** $(date -u +%Y-%m-%d)" >> "$REPORT_FILE"
+            echo "**Result file:** \`${{ steps.tests.outputs.result_file }}\`" >> "$REPORT_FILE"
+          fi
+
           echo "has_regression=${REGRESSION}" >> "$GITHUB_OUTPUT"
 
       - name: Commit results to repo
