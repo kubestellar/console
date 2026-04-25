@@ -23,6 +23,13 @@ vi.mock("../../../src/lib/acmm/scannableIdsByLevel", () => ({
     6: ["acmm:merge-queue"],
   },
   AGENT_INSTRUCTION_FILE_IDS: new Set(["acmm:claude-md"]),
+  ACMM_DETECTION_PATHS: {
+    "acmm:claude-md": ["CLAUDE.md"],
+    "acmm:ci-matrix": [".github/workflows/ci.yml"],
+    "acmm:security-ai-md": ["docs/security/SECURITY-AI.md"],
+    "acmm:policy-as-code": [".github/workflows/policy-check.yml"],
+    "acmm:merge-queue": [".github/mergify.yml"],
+  },
 }));
 
 // Import the handler after mocks are set up

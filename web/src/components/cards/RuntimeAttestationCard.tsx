@@ -95,11 +95,13 @@ export function RuntimeAttestationCard() {
     lastRefresh,
   } = useCachedAttestation()
 
+  const hasAnyData = (data.clusters || []).length > 0
+
   useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasAnyData,
     isRefreshing,
     isDemoData,
-    hasAnyData: (data.clusters || []).length > 0,
+    hasAnyData,
     isFailed,
     consecutiveFailures,
     lastRefresh,
