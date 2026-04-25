@@ -118,15 +118,17 @@ declare -A SUITE_STATUS=()  # Tracks actual pass/fail/skip per suite name
 extract_failure_reason() {
   local log_file="$1"
   local reason
-  # Strip ANSI codes, grab last 5 non-empty lines, join with \n
+  # Strip ANSI codes, grab last 5 non-empty lines, join with newlines,
+  # then use jq to produce a properly JSON-escaped string (handles
+  # backslashes, tabs, control chars, quotes — all of which broke the
+  # hand-rolled sed escaping and caused jq parse errors in the nightly
+  # comparison step, see #9346).
   reason=$(sed 's/\x1b\[[0-9;]*m//g' "$log_file" 2>/dev/null \
     | grep -v '^\s*$' \
     | tail -5 \
-    | tr '\n' '|' \
-    | sed 's/|$//' \
-    | sed 's/|/\\n/g' \
-    | sed 's/"/\\"/g' \
-    | cut -c1-500) || true
+    | head -c 500 \
+    | jq -Rs '.' 2>/dev/null \
+    | sed 's/^"//;s/"$//') || true
   echo "$reason"
 }
 
@@ -309,14 +311,20 @@ if [ -z "$FAST_MODE" ]; then
         #     from-clusters/rapid-nav) × ~60-120s each ≈ 480-720s total.
         #     Default 300s cap killed it mid-run after warm-nav completed.
         #   #9099 perf-test: same serial scenario structure as nav-test.
+        #   #9346 nav-test, perf-test, ai-ml-test: 600s not enough — all 3
+        #     consistently hit the cap mid-run with work remaining (nav-test
+        #     completes 5/6 scenarios, perf-test still iterating dashboards,
+        #     ai-ml-test retries consuming budget). 900s matches their
+        #     Playwright-level timeout (900_000ms) and fits within the 120m
+        #     workflow backstop.
         declare -A PLAYWRIGHT_SUITE_TIMEOUT_OVERRIDES=(
           ["console-error-scan"]=600
           ["ui-compliance-test"]=600
           ["cache-test"]=600
           ["benchmark-test"]=600
-          ["ai-ml-test"]=600
-          ["nav-test"]=600
-          ["perf-test"]=600
+          ["ai-ml-test"]=900
+          ["nav-test"]=900
+          ["perf-test"]=900
         )
 
         for script in "${PLAYWRIGHT_SCRIPTS[@]}"; do
