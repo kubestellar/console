@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback, useImperativeHandle, type Ref } from 'react'
+import { useState, useMemo, useEffect, useCallback, useImperativeHandle, memo, type Ref } from 'react'
 import { GitPullRequest, GitBranch, Star, Users, Package, TrendingUp, AlertCircle, Clock, CheckCircle, XCircle, GitMerge, Settings, X, Plus, Check } from 'lucide-react'
 import { POLL_INTERVAL_SLOW_MS } from '../../lib/constants/network'
 import { Button } from '../ui/Button'
@@ -1118,7 +1118,7 @@ export function GitHubActivity({ config, ref }: { config?: GitHubActivityConfig;
 }
 
 // Sub-components for rendering different item types
-function PRItem({ pr }: { pr: GitHubPR }) {
+const PRItem = memo(function PRItem({ pr }: { pr: GitHubPR }) {
   const { t } = useTranslation(['cards', 'common'])
   const isOpen = pr.state === 'open'
   const isMerged = pr.merged_at != null
@@ -1186,9 +1186,9 @@ function PRItem({ pr }: { pr: GitHubPR }) {
       </div>
     </a>
   )
-}
+})
 
-function IssueItem({ issue }: { issue: GitHubIssue }) {
+const IssueItem = memo(function IssueItem({ issue }: { issue: GitHubIssue }) {
   const { t } = useTranslation(['cards', 'common'])
   const isOpen = issue.state === 'open'
   const isStaleItem = isOpen && isStale(issue.updated_at)
@@ -1246,9 +1246,9 @@ function IssueItem({ issue }: { issue: GitHubIssue }) {
       </div>
     </a>
   )
-}
+})
 
-function ReleaseItem({ release }: { release: GitHubRelease }) {
+const ReleaseItem = memo(function ReleaseItem({ release }: { release: GitHubRelease }) {
   const { t } = useTranslation(['cards'])
   return (
     <a
@@ -1279,9 +1279,9 @@ function ReleaseItem({ release }: { release: GitHubRelease }) {
       </div>
     </a>
   )
-}
+})
 
-function ContributorItem({ contributor }: { contributor: GitHubContributor }) {
+const ContributorItem = memo(function ContributorItem({ contributor }: { contributor: GitHubContributor }) {
   const { t } = useTranslation(['cards'])
   return (
     <a
@@ -1302,4 +1302,4 @@ function ContributorItem({ contributor }: { contributor: GitHubContributor }) {
       </div>
     </a>
   )
-}
+})
