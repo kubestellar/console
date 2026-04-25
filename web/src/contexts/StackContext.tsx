@@ -197,7 +197,9 @@ export function StackProvider({ children }: StackProviderProps) {
   const stacks = isDemoMode ? demoStacks : liveStacks
   const isLoading = isDemoMode ? false : liveLoading
   const error = isDemoMode ? null : liveError
-  const refetch = isDemoMode ? (() => {}) : liveRefetch
+  // Stable no-op for demo mode so refetch identity doesn't change every render
+  const demoRefetch = useCallback(() => {}, [])
+  const refetch = isDemoMode ? demoRefetch : liveRefetch
   const lastRefresh = isDemoMode ? new Date() : liveLastRefresh
 
   const [selectedStackId, setSelectedStackIdState] = useState<string | null>(() => {
@@ -239,20 +241,20 @@ export function StackProvider({ children }: StackProviderProps) {
     }
   }, [isLoading, stacks, selectedStackId, setSelectedStackId])
 
-  const getStackById = (id: string) => {
+  const getStackById = useCallback((id: string) => {
     return stacks.find(s => s.id === id)
-  }
+  }, [stacks])
 
-  const selectedStack = (() => {
+  const selectedStack = useMemo(() => {
     if (!selectedStackId) return null
     return stacks.find(s => s.id === selectedStackId) || null
-  })()
+  }, [stacks, selectedStackId])
 
   const healthyStacks = useMemo(() => stacks.filter(s => s.status === 'healthy'), [stacks])
 
   const disaggregatedStacks = useMemo(() => stacks.filter(s => s.hasDisaggregation), [stacks])
 
-  const value: StackContextType = {
+  const value = useMemo<StackContextType>(() => ({
     stacks,
     isLoading,
     error,
@@ -264,7 +266,11 @@ export function StackProvider({ children }: StackProviderProps) {
     isDemoMode,
     getStackById,
     healthyStacks,
-    disaggregatedStacks }
+    disaggregatedStacks }), [
+    stacks, isLoading, error, refetch, lastRefresh,
+    selectedStack, selectedStackId, setSelectedStackId,
+    isDemoMode, getStackById, healthyStacks, disaggregatedStacks
+  ])
 
   return (
     <StackContext.Provider value={value}>
