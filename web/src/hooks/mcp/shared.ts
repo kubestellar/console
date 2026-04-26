@@ -208,8 +208,11 @@ function loadClusterCacheFromStorage(): ClusterInfo[] {
 
 function saveClusterCacheToStorage(clusters: ClusterInfo[]) {
   try {
-    // Only save clusters with meaningful data
-    const toSave = clusters.filter(c => c.name).map(c => ({
+    // Only save clusters with meaningful data.
+    // Filter out clusters whose name contains a slash — these are auto-generated
+    // OpenShift context names (e.g. "default/api-*.openshiftapps.com:6443/kube:admin")
+    // that should not pollute the persistent cache.
+    const toSave = clusters.filter(c => c.name && !c.name.includes('/')).map(c => ({
       name: c.name,
       context: c.context,
       server: c.server,
