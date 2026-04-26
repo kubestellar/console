@@ -84,7 +84,6 @@ import { useCachedVolcano } from '../../hooks/useCachedVolcano'
 // Named time-offset constants for demo/mock data timestamps.
 // Raw ms literals are forbidden by the "No Magic Numbers" rule in CLAUDE.md.
 const THIRTY_SECONDS_MS = 30 * 1000
-const ONE_MINUTE_MS = MS_PER_MINUTE
 const TWO_MINUTES_MS = 2 * MS_PER_MINUTE
 const THREE_MINUTES_MS = 3 * MS_PER_MINUTE
 const FOUR_MINUTES_MS = 4 * MS_PER_MINUTE
@@ -93,10 +92,8 @@ const TEN_MINUTES_MS = 10 * MS_PER_MINUTE
 const FIFTEEN_MINUTES_MS = 15 * MS_PER_MINUTE
 const THIRTY_MINUTES_MS = 30 * MS_PER_MINUTE
 const FORTY_FIVE_MINUTES_MS = 45 * MS_PER_MINUTE
-const ONE_HOUR_MS = MS_PER_HOUR
 const TWO_HOURS_MS = 2 * MS_PER_HOUR
 const THREE_HOURS_MS = 3 * MS_PER_HOUR
-const ONE_DAY_MS = MS_PER_DAY
 const TWO_DAYS_MS = 2 * MS_PER_DAY
 const THREE_DAYS_MS = 3 * MS_PER_DAY
 
@@ -465,7 +462,7 @@ const DEMO_CLUSTER_METRICS = [
   { timestamp: Date.now() - FOUR_MINUTES_MS, cpu: 48, memory: 64, pods: 158 },
   { timestamp: Date.now() - THREE_MINUTES_MS, cpu: 42, memory: 61, pods: 155 },
   { timestamp: Date.now() - TWO_MINUTES_MS, cpu: 51, memory: 67, pods: 162 },
-  { timestamp: Date.now() - ONE_MINUTE_MS, cpu: 47, memory: 65, pods: 159 },
+  { timestamp: Date.now() - MS_PER_MINUTE, cpu: 47, memory: 65, pods: 159 },
   { timestamp: Date.now(), cpu: 49, memory: 66, pods: 161 },
 ]
 
@@ -482,7 +479,7 @@ const DEMO_EVENTS_TIMELINE = [
   { timestamp: Date.now() - FOUR_MINUTES_MS, count: 8, type: 'Warning' },
   { timestamp: Date.now() - THREE_MINUTES_MS, count: 15, type: 'Normal' },
   { timestamp: Date.now() - TWO_MINUTES_MS, count: 5, type: 'Warning' },
-  { timestamp: Date.now() - ONE_MINUTE_MS, count: 10, type: 'Normal' },
+  { timestamp: Date.now() - MS_PER_MINUTE, count: 10, type: 'Normal' },
   { timestamp: Date.now(), count: 7, type: 'Warning' },
 ]
 
@@ -522,7 +519,7 @@ const DEMO_TOP_PODS = [
 
 // GitOps drift demo data
 const DEMO_GITOPS_DRIFT = [
-  { app: 'frontend', status: 'synced', cluster: 'prod-east', lastSync: Date.now() - ONE_MINUTE_MS },
+  { app: 'frontend', status: 'synced', cluster: 'prod-east', lastSync: Date.now() - MS_PER_MINUTE },
   { app: 'backend', status: 'drifted', cluster: 'staging', lastSync: Date.now() - FIVE_MINUTES_MS },
   { app: 'monitoring', status: 'synced', cluster: 'dev', lastSync: Date.now() - TWO_MINUTES_MS },
 ]
@@ -533,7 +530,7 @@ const DEMO_POD_HEALTH_TREND = [
   { timestamp: Date.now() - FOUR_MINUTES_MS, healthy: 148, unhealthy: 2 },
   { timestamp: Date.now() - THREE_MINUTES_MS, healthy: 142, unhealthy: 5 },
   { timestamp: Date.now() - TWO_MINUTES_MS, healthy: 150, unhealthy: 1 },
-  { timestamp: Date.now() - ONE_MINUTE_MS, healthy: 147, unhealthy: 4 },
+  { timestamp: Date.now() - MS_PER_MINUTE, healthy: 147, unhealthy: 4 },
   { timestamp: Date.now(), healthy: 149, unhealthy: 2 },
 ]
 
@@ -543,7 +540,7 @@ const DEMO_RESOURCE_TREND = [
   { timestamp: Date.now() - FOUR_MINUTES_MS, cpu: 52, memory: 65 },
   { timestamp: Date.now() - THREE_MINUTES_MS, cpu: 48, memory: 58 },
   { timestamp: Date.now() - TWO_MINUTES_MS, cpu: 55, memory: 70 },
-  { timestamp: Date.now() - ONE_MINUTE_MS, cpu: 50, memory: 67 },
+  { timestamp: Date.now() - MS_PER_MINUTE, cpu: 50, memory: 67 },
   { timestamp: Date.now(), cpu: 53, memory: 64 },
 ]
 
@@ -575,7 +572,7 @@ const DEMO_GPU_INVENTORY = [
 // Prow jobs demo data
 const DEMO_PROW_JOBS = [
   { name: 'pull-kubestellar-verify', type: 'presubmit', state: 'success', startTime: Date.now() - TWO_MINUTES_MS },
-  { name: 'periodic-e2e-tests', type: 'periodic', state: 'pending', startTime: Date.now() - ONE_MINUTE_MS },
+  { name: 'periodic-e2e-tests', type: 'periodic', state: 'pending', startTime: Date.now() - MS_PER_MINUTE },
   { name: 'post-kubestellar-deploy', type: 'postsubmit', state: 'failure', startTime: Date.now() - FIVE_MINUTES_MS },
 ]
 
@@ -638,7 +635,7 @@ const DEMO_COMPLIANCE_SCORE = {
 // Namespace events demo data
 const DEMO_NAMESPACE_EVENTS = [
   { type: 'Normal', reason: 'Scheduled', message: 'Pod scheduled', object: 'pod/api-7d8f', namespace: 'production', count: 1, lastSeen: Date.now() - THIRTY_SECONDS_MS },
-  { type: 'Warning', reason: 'BackOff', message: 'Container restarting', object: 'pod/worker-5c6d', namespace: 'production', count: 5, lastSeen: Date.now() - ONE_MINUTE_MS },
+  { type: 'Warning', reason: 'BackOff', message: 'Container restarting', object: 'pod/worker-5c6d', namespace: 'production', count: 5, lastSeen: Date.now() - MS_PER_MINUTE },
 ]
 
 // GPU workloads demo data
@@ -706,14 +703,14 @@ const DEMO_PROW_STATUS = {
 
 // Prow history demo data
 const DEMO_PROW_HISTORY = [
-  { job: 'e2e-tests', result: 'success', duration: 1200, finishedAt: Date.now() - ONE_HOUR_MS },
+  { job: 'e2e-tests', result: 'success', duration: 1200, finishedAt: Date.now() - MS_PER_HOUR },
   { job: 'unit-tests', result: 'success', duration: 300, finishedAt: Date.now() - TWO_HOURS_MS },
   { job: 'lint', result: 'failure', duration: 60, finishedAt: Date.now() - THREE_HOURS_MS },
 ]
 
 // Helm history demo data
 const DEMO_HELM_HISTORY = [
-  { revision: 5, chart: 'nginx-ingress-4.6.0', appVersion: '1.9.0', status: 'deployed', updated: Date.now() - ONE_DAY_MS },
+  { revision: 5, chart: 'nginx-ingress-4.6.0', appVersion: '1.9.0', status: 'deployed', updated: Date.now() - MS_PER_DAY },
   { revision: 4, chart: 'nginx-ingress-4.5.2', appVersion: '1.8.0', status: 'superseded', updated: Date.now() - TWO_DAYS_MS },
 ]
 
@@ -732,7 +729,7 @@ const DEMO_CERT_MANAGER = {
 
 // Vault secrets demo data
 const DEMO_VAULT_SECRETS = [
-  { path: 'secret/data/api-keys', status: 'synced', lastSync: Date.now() - ONE_MINUTE_MS },
+  { path: 'secret/data/api-keys', status: 'synced', lastSync: Date.now() - MS_PER_MINUTE },
   { path: 'secret/data/db-creds', status: 'synced', lastSync: Date.now() - TWO_MINUTES_MS },
 ]
 
@@ -781,13 +778,13 @@ const DEMO_GPU_UTILIZATION = [
   { timestamp: Date.now() - FOUR_MINUTES_MS, utilization: 78, memory: 72 },
   { timestamp: Date.now() - THREE_MINUTES_MS, utilization: 65, memory: 60 },
   { timestamp: Date.now() - TWO_MINUTES_MS, utilization: 82, memory: 78 },
-  { timestamp: Date.now() - ONE_MINUTE_MS, utilization: 75, memory: 70 },
+  { timestamp: Date.now() - MS_PER_MINUTE, utilization: 75, memory: 70 },
   { timestamp: Date.now(), utilization: 80, memory: 74 },
 ]
 
 // GPU usage trend demo data (chart)
 const DEMO_GPU_USAGE_TREND = [
-  { timestamp: Date.now() - ONE_HOUR_MS, avgUtilization: 68 },
+  { timestamp: Date.now() - MS_PER_HOUR, avgUtilization: 68 },
   { timestamp: Date.now() - FORTY_FIVE_MINUTES_MS, avgUtilization: 72 },
   { timestamp: Date.now() - THIRTY_MINUTES_MS, avgUtilization: 78 },
   { timestamp: Date.now() - FIFTEEN_MINUTES_MS, avgUtilization: 74 },
@@ -832,14 +829,14 @@ const DEMO_RESOURCE_CAPACITY = {
 
 // GitHub activity demo data
 const DEMO_GITHUB_ACTIVITY = [
-  { type: 'PushEvent', repo: 'kubestellar/console', actor: 'developer1', timestamp: Date.now() - ONE_HOUR_MS },
+  { type: 'PushEvent', repo: 'kubestellar/console', actor: 'developer1', timestamp: Date.now() - MS_PER_HOUR },
   { type: 'PullRequestEvent', repo: 'kubestellar/console', actor: 'developer2', timestamp: Date.now() - TWO_HOURS_MS },
   { type: 'IssuesEvent', repo: 'kubestellar/kubestellar', actor: 'contributor', timestamp: Date.now() - THREE_HOURS_MS },
 ]
 
 // RSS feed demo data
 const DEMO_RSS_FEED = [
-  { title: 'Kubernetes 1.30 Released', source: 'k8s.io', pubDate: Date.now() - ONE_DAY_MS },
+  { title: 'Kubernetes 1.30 Released', source: 'k8s.io', pubDate: Date.now() - MS_PER_DAY },
   { title: 'New CNCF Project Announcement', source: 'cncf.io', pubDate: Date.now() - TWO_DAYS_MS },
   { title: 'Cloud Native Best Practices', source: 'blog.k8s.io', pubDate: Date.now() - THREE_DAYS_MS },
 ]
@@ -902,7 +899,7 @@ function useRecentEvents(params?: Record<string, unknown>) {
   // Filter to events within the last hour
   const recentEvents = (() => {
     if (!result.data) return []
-    const oneHourAgo = Date.now() - ONE_HOUR_MS
+    const oneHourAgo = Date.now() - MS_PER_HOUR
     return result.data.filter(e => {
       if (!e.lastSeen) return false
       return new Date(e.lastSeen).getTime() >= oneHourAgo

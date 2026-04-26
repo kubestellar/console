@@ -883,7 +883,7 @@ function GitHubContributionsSection({
         })()
       )}
 
-      {githubRewards?.contributions && githubRewards.contributions.length > 0 && currentGitHubLogin && (
+      {githubRewards && currentGitHubLogin && (
         <div className="p-2.5 border-t border-border/50 text-center">
           <a
             href={`https://github.com/search?q=author:${encodeURIComponent(currentGitHubLogin)}+org:kubestellar+org:llm-d&type=issues&s=updated&o=desc`}

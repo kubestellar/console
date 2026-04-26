@@ -33,7 +33,6 @@ const TEN_MINUTES_MS = 10 * MS_PER_MINUTE
 const FIFTEEN_MINUTES_MS = 15 * MS_PER_MINUTE
 const TWENTY_MINUTES_MS = 20 * MS_PER_MINUTE
 const THIRTY_MINUTES_MS = 30 * MS_PER_MINUTE
-const ONE_HOUR_MS = MS_PER_HOUR
 const TWO_HOURS_MS = 2 * MS_PER_HOUR
 
 interface GitHubCIMonitorProps {
@@ -105,8 +104,8 @@ const DEMO_WORKFLOWS: WorkflowRun[] = [
   { id: '4', name: 'E2E Tests', repo: 'kubestellar/console', status: 'completed', conclusion: 'success', branch: 'main', event: 'push', runNumber: 567, createdAt: new Date(Date.now() - FIFTEEN_MINUTES_MS).toISOString(), updatedAt: new Date(Date.now() - TEN_MINUTES_MS).toISOString(), url: '#' },
   { id: '5', name: 'CI / Build & Test', repo: 'kubestellar/console', status: 'completed', conclusion: 'success', branch: 'feat/workload-monitor', event: 'pull_request', runNumber: 566, createdAt: new Date(Date.now() - TWENTY_MINUTES_MS).toISOString(), updatedAt: new Date(Date.now() - FIFTEEN_MINUTES_MS).toISOString(), url: '#' },
   { id: '6', name: 'Deploy Preview', repo: 'kubestellar/console', status: 'queued', conclusion: null, branch: 'feat/card-factory', event: 'pull_request', runNumber: 565, createdAt: new Date(Date.now() - ONE_MINUTE_MS).toISOString(), updatedAt: new Date(Date.now() - THIRTY_SECONDS_MS).toISOString(), url: '#' },
-  { id: '7', name: 'Security Scan', repo: 'kubestellar/kubestellar', status: 'completed', conclusion: 'timed_out', branch: 'main', event: 'schedule', runNumber: 1231, createdAt: new Date(Date.now() - ONE_HOUR_MS).toISOString(), updatedAt: new Date(Date.now() - THIRTY_MINUTES_MS).toISOString(), url: '#' },
-  { id: '8', name: 'Dependabot', repo: 'kubestellar/kubestellar', status: 'completed', conclusion: 'success', branch: 'dependabot/npm/react-19', event: 'pull_request', runNumber: 1230, createdAt: new Date(Date.now() - TWO_HOURS_MS).toISOString(), updatedAt: new Date(Date.now() - ONE_HOUR_MS).toISOString(), url: '#' },
+  { id: '7', name: 'Security Scan', repo: 'kubestellar/kubestellar', status: 'completed', conclusion: 'timed_out', branch: 'main', event: 'schedule', runNumber: 1231, createdAt: new Date(Date.now() - MS_PER_HOUR).toISOString(), updatedAt: new Date(Date.now() - THIRTY_MINUTES_MS).toISOString(), url: '#' },
+  { id: '8', name: 'Dependabot', repo: 'kubestellar/kubestellar', status: 'completed', conclusion: 'success', branch: 'dependabot/npm/react-19', event: 'pull_request', runNumber: 1230, createdAt: new Date(Date.now() - TWO_HOURS_MS).toISOString(), updatedAt: new Date(Date.now() - MS_PER_HOUR).toISOString(), url: '#' },
 ]
 
 

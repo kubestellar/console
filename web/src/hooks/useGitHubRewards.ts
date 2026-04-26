@@ -3,13 +3,13 @@
  * Calls the Netlify function on console.kubestellar.io (10-min Blob cache)
  * instead of the local Go backend, saving the user's GitHub API quota.
  *
- * Also fetches the last 20 contributions (issues/PRs) via the Go backend's
- * GitHub proxy (/api/github/search/issues) using the user's stored token.
+ * Also fetches the last 20 contributions (issues/PRs) directly from the
+ * public GitHub Search API (no auth needed for public repos).
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '../lib/auth'
-import { BACKEND_DEFAULT_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import type { GitHubRewardsResponse, GitHubContribution, GitHubRewardType } from '../types/rewards'
 import { GITHUB_REWARD_POINTS } from '../types/rewards'
 import { MS_PER_MINUTE } from '../lib/constants/time'
@@ -111,19 +111,18 @@ function repoFromUrl(repositoryUrl: string): string {
   return len >= 2 ? `${parts[len - 2]}/${parts[len - 1]}` : repositoryUrl
 }
 
+/** GitHub Search API base — public, no auth needed for public repos */
+const GITHUB_SEARCH_API = 'https://api.github.com/search/issues'
+
 async function fetchRecentContributions(
   login: string,
-  token: string | null,
 ): Promise<GitHubContribution[]> {
   const orgFilter = CONTRIBUTIONS_SEARCH_ORGS.map(o => `org:${o}`).join('+')
   const query = `author:${encodeURIComponent(login)}+${orgFilter}`
-  const url = `${BACKEND_DEFAULT_URL}/api/github/search/issues?q=${query}&sort=updated&per_page=${CONTRIBUTIONS_PER_PAGE}`
-
-  const headers: Record<string, string> = {}
-  if (token) headers['Authorization'] = `Bearer ${token}`
+  const url = `${GITHUB_SEARCH_API}?q=${query}&sort=updated&per_page=${CONTRIBUTIONS_PER_PAGE}`
 
   const res = await fetch(url, {
-    headers,
+    headers: { Accept: 'application/vnd.github.v3+json' },
     signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
   })
   if (!res.ok) return []
@@ -146,7 +145,7 @@ async function fetchRecentContributions(
 }
 
 export function useGitHubRewards() {
-  const { user, isAuthenticated, token } = useAuth()
+  const { user, isAuthenticated } = useAuth()
   const [data, setData] = useState<GitHubRewardsResponse | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -181,7 +180,7 @@ export function useGitHubRewards() {
         fetch(`${REWARDS_API_BASE}/api/rewards/github?login=${encodeURIComponent(githubLogin)}`, {
           signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
         }),
-        fetchRecentContributions(githubLogin, token).catch(() => [] as GitHubContribution[]),
+        fetchRecentContributions(githubLogin).catch(() => [] as GitHubContribution[]),
       ])
 
       if (!rewardsRes.ok) throw new Error(`API error: ${rewardsRes.status}`)
@@ -207,7 +206,7 @@ export function useGitHubRewards() {
     } finally {
       setIsLoading(false)
     }
-  }, [isAuthenticated, isDemoUser, githubLogin, token])
+  }, [isAuthenticated, isDemoUser, githubLogin])
 
   // Fetch on mount and refresh periodically
   useEffect(() => {
