@@ -51,7 +51,7 @@ describe('ACMM_DETECTION_PATHS', () => {
   })
 
   it('each entry maps to a non-empty array of strings', () => {
-    for (const [id, patterns] of Object.entries(ACMM_DETECTION_PATHS)) {
+    for (const [, patterns] of Object.entries(ACMM_DETECTION_PATHS)) {
       expect(Array.isArray(patterns)).toBe(true)
       expect(patterns.length).toBeGreaterThan(0)
       for (const p of patterns) {
