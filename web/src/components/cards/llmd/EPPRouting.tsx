@@ -11,6 +11,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Zap, ArrowRight, CircleDot } from 'lucide-react'
 import { Acronym } from './shared/PortalTooltip'
+import { getLoadColors, getHorseshoeColor } from './shared/colorUtils'
 import { useOptionalStack } from '../../../contexts/StackContext'
 import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
 import { usePrometheusMetrics } from '../../../hooks/usePrometheusMetrics'
@@ -58,14 +59,6 @@ const NODES: FlowNode[] = [
   { id: 'decode-0', label: 'Decode-0', x: 90, y: 34, type: 'decode', color: '#22c55e', load: 80 },
   { id: 'decode-1', label: 'Decode-1', x: 90, y: 66, type: 'decode', color: '#22c55e', load: 67 },
 ]
-
-// Get color based on load percentage
-const getLoadColors = (load: number) => {
-  if (load >= 90) return { start: '#ef4444', end: '#f87171', glow: '#ef4444' }
-  if (load >= 70) return { start: '#f59e0b', end: '#fbbf24', glow: '#f59e0b' }
-  if (load >= 50) return { start: '#eab308', end: '#facc15', glow: '#eab308' }
-  return { start: '#22c55e', end: '#4ade80', glow: '#22c55e' }
-}
 
 // Mini sparkline for time-series data
 function Sparkline({ data, color, width = 80, height = 24 }: { data: number[]; color: string; width?: number; height?: number }) {
@@ -351,14 +344,6 @@ interface HorseshoeNodeProps {
   uniqueId: string
   isSelected?: boolean
   onClick?: () => void
-}
-
-// Color based on percentage (green -> yellow -> orange -> red)
-const getHorseshoeColor = (pct: number) => {
-  if (pct >= 90) return '#ef4444' // red
-  if (pct >= 70) return '#f59e0b' // amber/orange
-  if (pct >= 50) return '#eab308' // yellow
-  return '#22c55e' // green
 }
 
 function HorseshoeNode({ node, uniqueId, isSelected, onClick }: HorseshoeNodeProps) {

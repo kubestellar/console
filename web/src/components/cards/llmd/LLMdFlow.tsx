@@ -18,6 +18,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { CircleDot } from 'lucide-react'
 import { generateServerMetrics, type ServerMetrics } from '../../../lib/llmd/mockData'
 import { Acronym } from './shared/PortalTooltip'
+import { getLoadColors, getHorseshoeColor } from './shared/colorUtils'
 import { useOptionalStack } from '../../../contexts/StackContext'
 import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
 import { usePrometheusMetrics } from '../../../hooks/usePrometheusMetrics'
@@ -75,14 +76,6 @@ const COLORS = {
   'kv-transfer': '#06b6d4',
   gateway: '#3b82f6',
   epp: '#f59e0b' }
-
-// Get color based on load percentage
-const getLoadColors = (load: number) => {
-  if (load >= 90) return { start: '#ef4444', end: '#f87171', glow: '#ef4444' }
-  if (load >= 70) return { start: '#f59e0b', end: '#fbbf24', glow: '#f59e0b' }
-  if (load >= 50) return { start: '#eab308', end: '#facc15', glow: '#eab308' }
-  return { start: '#22c55e', end: '#4ade80', glow: '#22c55e' }
-}
 
 // Premium gauge node with glowing arc
 interface PremiumNodeProps {
@@ -356,14 +349,6 @@ function FlowConnection({
       )}
     </g>
   )
-}
-
-// Color based on percentage for horseshoe
-const getHorseshoeColor = (pct: number) => {
-  if (pct >= 90) return '#ef4444'
-  if (pct >= 70) return '#f59e0b'
-  if (pct >= 50) return '#eab308'
-  return '#22c55e'
 }
 
 // Horseshoe node for alternative view
