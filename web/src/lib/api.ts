@@ -113,6 +113,11 @@ function handle401(): void {
       handling401 = false
       return
     }
+    if (verifyResponse.status === 429) {
+      console.warn('[API] 401 received but /api/me returned 429 (rate-limited) — keeping session')
+      handling401 = false
+      return
+    }
     performSessionExpiry()
   }).catch(() => {
     // Verify probe failed (network error / timeout / no backend). Treat the

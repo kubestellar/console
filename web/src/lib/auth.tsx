@@ -402,6 +402,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const meResponse = await fetch('/api/me', {
         headers: { Authorization: `Bearer ${effectiveToken}` },
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
+      if (meResponse.status === 429) {
+        const cachedUser = getCachedUser()
+        if (cachedUser) {
+          console.warn('Backend rate-limited (429), using cached user data')
+          setUser(prev => {
+            if (prev && prev.id === cachedUser.id && prev.github_login === cachedUser.github_login) return prev
+            return cachedUser
+          })
+          setAnalyticsUserId(cachedUser.id)
+          return
+        }
+      }
       if (!meResponse.ok) throw new Error(`/api/me returned ${meResponse.status}`)
       const rawMe = await meResponse.json().catch(() => null)
       const userData = validateResponse(UserSchema, rawMe, '/api/me') as User | null
