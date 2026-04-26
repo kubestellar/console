@@ -26,7 +26,7 @@ import {
   Zap,
 } from 'lucide-react'
 import { useCachedDragonfly } from '../../../hooks/useCachedDragonfly'
-import { formatBytes } from '../../../lib/formatters'
+import { formatBytes, formatTimeAgo } from '../../../lib/formatters'
 import { useCardLoadingState } from '../CardDataContext'
 import { SkeletonCardWithRefresh } from '../../ui/Skeleton'
 import { EmptyState } from '../../ui/EmptyState'
@@ -48,11 +48,6 @@ const CACHE_HIT_ALERT_PERCENT = 25
 
 const BINARY_DASH_FORMAT = { binary: true, zeroLabel: '—' } as const
 
-const MS_PER_SECOND = 1000
-const SECONDS_PER_MINUTE = 60
-const MINUTES_PER_HOUR = 60
-const HOURS_PER_DAY = 24
-
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -61,22 +56,6 @@ function cacheHitColor(pct: number): string {
   if (pct >= CACHE_HIT_WARN_PERCENT) return 'text-green-400'
   if (pct >= CACHE_HIT_ALERT_PERCENT) return 'text-yellow-400'
   return 'text-red-400'
-}
-
-function formatRelative(iso: string): string {
-  const parsed = new Date(iso).getTime()
-  if (!iso || Number.isNaN(parsed)) return 'just now'
-  const diffMs = Date.now() - parsed
-  if (diffMs < MS_PER_SECOND * SECONDS_PER_MINUTE) return 'just now'
-
-  const minutes = Math.floor(diffMs / (MS_PER_SECOND * SECONDS_PER_MINUTE))
-  if (minutes < MINUTES_PER_HOUR) return `${minutes}m ago`
-
-  const hours = Math.floor(minutes / MINUTES_PER_HOUR)
-  if (hours < HOURS_PER_DAY) return `${hours}h ago`
-
-  const days = Math.floor(hours / HOURS_PER_DAY)
-  return `${days}d ago`
 }
 
 // Lightweight lookup — labels go through t() so names remain i18n-safe.
@@ -167,7 +146,7 @@ export function DragonflyStatus() {
 
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <RefreshCw className={cn('w-3 h-3', isRefreshing ? 'animate-spin' : '')} />
-          <span>{formatRelative(data.lastCheckTime)}</span>
+          <span>{formatTimeAgo(data.lastCheckTime)}</span>
         </div>
       </div>
 

@@ -19,6 +19,7 @@ import { Skeleton, SkeletonList, SkeletonStats } from '../../ui/Skeleton'
 import { useCachedContainerd } from '../../../hooks/useCachedContainerd'
 import { useCardLoadingState } from '../CardDataContext'
 import type { ContainerdContainer, ContainerdContainerState } from '../../../lib/demo/containerd'
+import { formatTimeAgo } from '../../../lib/formatters'
 
 // ---------------------------------------------------------------------------
 // Constants (no magic numbers)
@@ -29,27 +30,6 @@ const SKELETON_TITLE_HEIGHT = 28
 const SKELETON_BADGE_WIDTH = 90
 const SKELETON_BADGE_HEIGHT = 20
 const SKELETON_ROW_COUNT = 6
-
-const MS_PER_SECOND = 1000
-const SECONDS_PER_MINUTE = 60
-const MINUTES_PER_HOUR = 60
-const HOURS_PER_DAY = 24
-
-function formatRelative(iso: string): string {
-  const parsed = new Date(iso).getTime()
-  if (!iso || Number.isNaN(parsed)) return 'just now'
-  const diffMs = Date.now() - parsed
-  if (diffMs < MS_PER_SECOND * SECONDS_PER_MINUTE) return 'just now'
-
-  const minutes = Math.floor(diffMs / (MS_PER_SECOND * SECONDS_PER_MINUTE))
-  if (minutes < MINUTES_PER_HOUR) return `${minutes}m ago`
-
-  const hours = Math.floor(minutes / MINUTES_PER_HOUR)
-  if (hours < HOURS_PER_DAY) return `${hours}h ago`
-
-  const days = Math.floor(hours / HOURS_PER_DAY)
-  return `${days}d ago`
-}
 
 const STATE_ICON: Record<ContainerdContainerState, React.ReactNode> = {
   running: <CheckCircle className="w-3.5 h-3.5 text-green-400 shrink-0" />,
@@ -167,7 +147,7 @@ export function ContainerdStatus() {
 
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
-          <span>{formatRelative(data.lastCheckTime)}</span>
+          <span>{formatTimeAgo(data.lastCheckTime)}</span>
         </div>
       </div>
 
