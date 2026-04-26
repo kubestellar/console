@@ -33,7 +33,7 @@ import (
 // ---------------------------------------------------------------------------
 
 const (
-	ghpCacheTTL              = 2 * time.Minute
+	ghpCacheTTL              = 5 * time.Minute
 	ghpCacheStaleTTL         = 1 * time.Hour // Serve stale data for 1h after expiration when GitHub rate-limits
 	ghpMatrixDefaultDays     = 14
 	ghpMatrixMaxDays         = 90

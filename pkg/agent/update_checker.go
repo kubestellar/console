@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	developerCheckInterval = 5 * time.Minute
+	developerCheckInterval = 15 * time.Minute
 	releaseCheckInterval   = 60 * time.Minute
 	healthCheckRetries     = 15
 	healthCheckDelay       = 2 * time.Second
