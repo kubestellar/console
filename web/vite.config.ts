@@ -169,6 +169,11 @@ export default defineConfig(({ mode }) => ({
           if (id.includes('/sucrase/')) {
             return 'sucrase-vendor'
           }
+          // Code editor — only used by Drasi stream samples drawer;
+          // isolate so the CodeMirror editor never loads on normal pages.
+          if (id.includes('/@codemirror/') || id.includes('/@uiw/react-codemirror/') || id.includes('/codemirror/') || id.includes('/@lezer/')) {
+            return 'codemirror-vendor'
+          }
           // Internationalization
           if (id.includes('/i18next') || id.includes('/react-i18next/')) {
             return 'i18n-vendor'
