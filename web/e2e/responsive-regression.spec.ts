@@ -113,6 +113,16 @@ test.describe('Responsive Breakpoint Tests', () => {
                 if (htmlEl.closest('[aria-hidden="true"], [hidden], [data-state="closed"]')) {
                   return
                 }
+                // Skip elements inside an overflow:hidden container — clipped
+                // by the browser and cannot cause user-visible overflow (#10001).
+                let parent = htmlEl.parentElement
+                while (parent && parent !== document.body) {
+                  const po = window.getComputedStyle(parent).overflow
+                  if (po === 'hidden' || po === 'clip') {
+                    return
+                  }
+                  parent = parent.parentElement
+                }
                 const rect = htmlEl.getBoundingClientRect()
                 // Zero-sized elements can't be visually overflowing.
                 if (rect.width === 0 || rect.height === 0) {

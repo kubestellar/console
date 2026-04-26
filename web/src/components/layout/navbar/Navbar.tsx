@@ -60,7 +60,7 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
   }, [location.pathname])
 
   return (
-    <nav data-tour="navbar" style={{ top: topOffset }} className="fixed left-0 right-0 h-16 glass z-sticky px-3 md:px-6 flex items-center justify-between">
+    <nav data-tour="navbar" style={{ top: topOffset }} className="fixed left-0 right-0 h-16 glass z-sticky px-3 md:px-6 flex items-center justify-between overflow-hidden">
       {/* Left side: Hamburger + Logo — shrink-0 so logo is never compressed */}
       <div className="flex items-center gap-2 md:gap-3 shrink-0">
         {/* Hamburger menu - mobile only */}
@@ -122,7 +122,7 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
       {/* Right side — no shrink-0 here so the container participates in flex
            negotiation with the search bar, preventing overlap when the AI Mission
            button is visible (#4409). Individual critical items use shrink-0. */}
-      <div className="flex items-center gap-1 md:gap-3">
+      <div className="flex items-center gap-1 md:gap-3 min-w-0 overflow-hidden">
         {/* Core desktop items: md+ (768px) */}
         <div className="hidden md:flex items-center gap-2">
           {/* Unified Filter */}
