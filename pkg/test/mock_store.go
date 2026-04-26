@@ -100,6 +100,21 @@ func (m *MockStore) UpdateCard(ctx context.Context, card *models.Card) error    
 func (m *MockStore) DeleteCard(ctx context.Context, id uuid.UUID) error                          { return nil }
 func (m *MockStore) UpdateCardFocus(ctx context.Context, cardID uuid.UUID, summary string) error { return nil }
 
+// MoveCardWithLimit is overridable so tests can exercise both the success
+// path and the ErrDashboardCardLimitReached branch of the atomic move.
+func (m *MockStore) MoveCardWithLimit(ctx context.Context, cardID uuid.UUID, targetDashboardID uuid.UUID, maxCards int) error {
+	if len(m.ExpectedCalls) == 0 {
+		return nil
+	}
+	for _, call := range m.ExpectedCalls {
+		if call.Method == "MoveCardWithLimit" {
+			args := m.Called(cardID, targetDashboardID, maxCards)
+			return args.Error(0)
+		}
+	}
+	return nil
+}
+
 func (m *MockStore) AddCardHistory(ctx context.Context, history *models.CardHistory) error { return nil }
 func (m *MockStore) GetUserCardHistory(ctx context.Context, userID uuid.UUID, limit int) ([]models.CardHistory, error) {
 	return nil, nil
