@@ -1,3 +1,4 @@
+import { COPY_FEEDBACK_TIMEOUT_MS } from '../../lib/constants'
 /**
  * Demo-to-Local CTA — shown on console.kubestellar.io to convert demo visitors.
  *
@@ -23,7 +24,6 @@ import { useTranslation } from 'react-i18next'
 const NETLIFY_INSTALL_COMMAND = 'curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/start.sh | bash'
 
 /** How many seconds the "Copied!" confirmation shows */
-const COPY_FEEDBACK_MS = 2000
 
 export function DemoToLocalCTA() {
   const { showToast } = useToast()
@@ -76,7 +76,7 @@ export function DemoToLocalCTA() {
       emitDemoToLocalActioned('copy_command')
       emitInstallCommandCopied('demo_to_local', NETLIFY_INSTALL_COMMAND)
       if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
-      copyTimerRef.current = setTimeout(() => setCopied(false), COPY_FEEDBACK_MS)
+      copyTimerRef.current = setTimeout(() => setCopied(false), COPY_FEEDBACK_TIMEOUT_MS)
     } catch {
       // Clipboard API not available — select the text instead
       showToast(t('common.errors.clipboardFailed', 'Failed to copy to clipboard'), 'error')

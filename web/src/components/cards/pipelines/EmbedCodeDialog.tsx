@@ -1,3 +1,4 @@
+import { COPY_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants'
 /**
  * EmbedCodeDialog — modal that generates an iframe embed URL and a markdown
  * badge snippet for a CI/CD pipeline card. Opened from each card's settings
@@ -15,7 +16,6 @@ import { Input } from '../../ui/Input'
 import { cn } from '../../../lib/cn'
 
 /** Minimum ms the "Copied!" confirmation stays visible */
-const COPY_FEEDBACK_MS = 2000
 
 /** Default iframe width in pixels */
 const DEFAULT_IFRAME_WIDTH = 600
@@ -75,7 +75,7 @@ export function EmbedCodeDialog({ open, cardType, cardTitle, currentRepo, onClos
     try {
       await navigator.clipboard.writeText(text)
       setCopiedField(fieldId)
-      setTimeout(() => setCopiedField(null), COPY_FEEDBACK_MS)
+      setTimeout(() => setCopiedField(null), COPY_FEEDBACK_TIMEOUT_MS)
     } catch {
       // Fallback for insecure contexts (e.g. HTTP iframe)
       const el = document.createElement('textarea')
@@ -85,7 +85,7 @@ export function EmbedCodeDialog({ open, cardType, cardTitle, currentRepo, onClos
       document.execCommand('copy')
       document.body.removeChild(el)
       setCopiedField(fieldId)
-      setTimeout(() => setCopiedField(null), COPY_FEEDBACK_MS)
+      setTimeout(() => setCopiedField(null), COPY_FEEDBACK_TIMEOUT_MS)
     }
   }, [])
 

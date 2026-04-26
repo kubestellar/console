@@ -1,3 +1,4 @@
+import { COPY_FEEDBACK_TIMEOUT_MS } from '../lib/constants'
 import { useEffect, useState, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import {
@@ -17,7 +18,6 @@ import {
 import { copyToClipboard } from '../lib/clipboard'
 import { emitInstallCommandCopied } from '../lib/analytics'
 
-const COPY_FEEDBACK_MS = 2000
 
 /* ------------------------------------------------------------------ */
 /*  Comparison table data                                              */
@@ -196,7 +196,7 @@ export function FromHolmesGPT() {
     if (!ok) return
     setCopiedStep(`step-${step}`)
     clearTimeout(copiedTimerRef.current)
-    copiedTimerRef.current = setTimeout(() => setCopiedStep(null), COPY_FEEDBACK_MS)
+    copiedTimerRef.current = setTimeout(() => setCopiedStep(null), COPY_FEEDBACK_TIMEOUT_MS)
     const firstCommand = commands.find(c => !c.startsWith('#') && c !== '') ?? commands[0]
     emitInstallCommandCopied('from_holmesgpt', firstCommand)
   }

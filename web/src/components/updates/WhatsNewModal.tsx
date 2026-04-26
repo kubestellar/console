@@ -1,3 +1,4 @@
+import { COPY_FEEDBACK_TIMEOUT_MS } from '../../lib/constants'
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { Download, Clock, SkipForward, ChevronDown, Copy, Check, Loader2 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
@@ -205,9 +206,7 @@ export function WhatsNewModal({ isOpen, onClose }: WhatsNewModalProps) {
   const handleCopyCommand = useCallback(async (cmd: string) => {
     await copyToClipboard(cmd)
     setCopiedCommand(cmd)
-    /** Delay before clearing the "copied" indicator so user sees feedback (ms) */
-    const COPY_FEEDBACK_CLEAR_MS = 2000
-    setTimeout(() => setCopiedCommand(null), COPY_FEEDBACK_CLEAR_MS)
+    setTimeout(() => setCopiedCommand(null), COPY_FEEDBACK_TIMEOUT_MS)
   }, [])
 
   const manualCommands: { label: string; command: string }[] = useMemo(() => {

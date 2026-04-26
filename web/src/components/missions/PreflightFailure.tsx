@@ -1,3 +1,4 @@
+import { COPY_FEEDBACK_TIMEOUT_MS } from '../../lib/constants'
 /**
  * PreflightFailure — Renders a structured preflight error with remediation actions.
  *
@@ -7,7 +8,6 @@
 
 import { useState, useRef, useEffect } from 'react'
 
-const COPY_FEEDBACK_MS = 2000
 import {
   ShieldAlert,
   KeyRound,
@@ -102,7 +102,7 @@ function ActionButton({
       copyTimeoutRef.current = setTimeout(() => {
         setCopied(false)
         copyTimeoutRef.current = null
-      }, COPY_FEEDBACK_MS)
+      }, COPY_FEEDBACK_TIMEOUT_MS)
     }
   }
 

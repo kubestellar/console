@@ -1,3 +1,4 @@
+import { COPY_FEEDBACK_TIMEOUT_MS } from '../lib/constants'
 import { useEffect, useState, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import {
@@ -28,7 +29,6 @@ import { copyToClipboard } from '../lib/clipboard'
 type DeployTab = 'binary' | 'helm' | 'docker'
 
 /** How long the "Copied!" checkmark shows (ms) */
-const COPY_FEEDBACK_MS = 2000
 
 /* ------------------------------------------------------------------ */
 /*  What You Get — feature highlights for white-label                 */
@@ -245,7 +245,7 @@ function DeploymentSection() {
     const key = `${activeTab}-${step}`
     setCopiedStep(key)
     clearTimeout(copiedTimerRef.current)
-    copiedTimerRef.current = setTimeout(() => setCopiedStep(null), COPY_FEEDBACK_MS)
+    copiedTimerRef.current = setTimeout(() => setCopiedStep(null), COPY_FEEDBACK_TIMEOUT_MS)
     const firstCommand = commands.find(c => !c.startsWith('#') && c !== '') ?? commands[0]
     emitWhiteLabelCommandCopy(activeTab, step, firstCommand)
     emitInstallCommandCopied('white_label', firstCommand)

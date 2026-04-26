@@ -1,3 +1,5 @@
+import { COPY_FEEDBACK_TIMEOUT_MS } from '../../lib/constants'
+
 /**
  * Unstructured File Preview
  *
@@ -89,8 +91,7 @@ export function UnstructuredFilePreview({
     await copyToClipboard(content)
     setCopied(true)
     if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
-    const COPY_FEEDBACK_MS = 2_000
-    copyTimerRef.current = setTimeout(() => setCopied(false), COPY_FEEDBACK_MS)
+    copyTimerRef.current = setTimeout(() => setCopied(false), COPY_FEEDBACK_TIMEOUT_MS)
   }
 
   return (

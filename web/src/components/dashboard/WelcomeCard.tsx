@@ -1,3 +1,4 @@
+import { COPY_FEEDBACK_TIMEOUT_MS } from '../../lib/constants'
 import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Terminal, Globe, Rocket, X, ExternalLink, Copy, Check } from 'lucide-react'
@@ -12,7 +13,6 @@ const DISMISSED_KEY = 'kc-welcome-dismissed'
 const INSTALL_COMMAND = 'curl -sL https://raw.githubusercontent.com/kubestellar/console/main/start.sh | bash'
 
 /** How long the "Copied!" confirmation shows (ms) */
-const COPY_FEEDBACK_MS = 2000
 
 export function WelcomeCard() {
   const { t } = useTranslation()
@@ -40,7 +40,7 @@ export function WelcomeCard() {
       await copyToClipboard(INSTALL_COMMAND)
       setCopied(true)
       if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
-      copyTimerRef.current = setTimeout(() => setCopied(false), COPY_FEEDBACK_MS)
+      copyTimerRef.current = setTimeout(() => setCopied(false), COPY_FEEDBACK_TIMEOUT_MS)
     } catch {
       showToast(t('common.errors.clipboardFailed', 'Failed to copy to clipboard'), 'error')
     }
