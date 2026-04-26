@@ -939,15 +939,26 @@ func (s *Server) setupRoutes() {
 		return c.Next()
 	}
 
-	// Feedback POST route: registered BEFORE the /api group to exempt it from apiLimiter.
-	// Heavy dashboard SWR polling can saturate the general apiLimiter (600 req/min),
-	// blocking user feedback submission. By registering outside the group, only the
-	// dedicated feedbackLimiter (10 req/hr per user) applies (#9969).
+	// Feedback POST route: uses its own feedbackLimiter (10 req/hr per user).
+	// The apiLimiterWithSkip wrapper exempts this path so dashboard polling
+	// cannot block user feedback submission (#9969).
 	feedbackCfg := handlers.LoadFeedbackConfig()
 	feedback := handlers.NewFeedbackHandler(s.store, feedbackCfg)
 	s.app.Post("/api/feedback/requests", bodyGuard, csrfGuard, middleware.JWTAuth(s.config.JWTSecret), feedbackLimiter, feedback.CreateFeatureRequest)
 
-	api := s.app.Group("/api", apiLimiter, bodyGuard, csrfGuard, middleware.JWTAuth(s.config.JWTSecret))
+	// Wrap apiLimiter so it skips the feedback POST — that route has its own
+	// dedicated feedbackLimiter (10 req/hr). Without this, Fiber's group prefix
+	// matching applies apiLimiter to ALL /api/* routes including the standalone
+	// POST registered above, causing 429 when dashboard polling exhausts the
+	// general budget.
+	apiLimiterWithSkip := func(c *fiber.Ctx) error {
+		if c.Method() == fiber.MethodPost && c.Path() == "/api/feedback/requests" {
+			return c.Next()
+		}
+		return apiLimiter(c)
+	}
+
+	api := s.app.Group("/api", apiLimiterWithSkip, bodyGuard, csrfGuard, middleware.JWTAuth(s.config.JWTSecret))
 
 	// User identity routes — mounted outside apiLimiter so they survive
 	// the initial card burst that can exhaust the 600/min API budget before
