@@ -109,6 +109,16 @@ async function isBackendAvailable(
 
 test.describe('LLM-d Benchmarks Dashboard — live data', () => {
 
+  // Skip the entire live-data suite when the backend is unreachable (CI, demo).
+  // These tests require SSE streaming from the Go backend + Google Drive API.
+  // Without a backend, cards fall back to demo data which doesn't satisfy the
+  // 8-card threshold or live-data assertions, causing 50s+ timeouts per test
+  // that blow the nightly suite's 600s budget (#nightly-fix).
+  test.beforeEach(async ({ request }) => {
+    const backendUp = await isBackendAvailable(request)
+    test.skip(!backendUp, 'Backend not reachable — skipping live benchmark tests')
+  })
+
   test('page loads with all 8 benchmark cards', async ({ page }) => {
     await setupAndNavigate(page, BENCHMARKS_ROUTE)
 
@@ -321,6 +331,12 @@ test.describe('LLM-d Benchmarks Dashboard — live data', () => {
 // ---------------------------------------------------------------------------
 
 test.describe('Nightly E2E Status — localhost live data', () => {
+
+  // Skip when backend is unreachable — all tests in this block need live API data.
+  test.beforeEach(async ({ request }) => {
+    const backendUp = await isBackendAvailable(request)
+    test.skip(!backendUp, 'Backend not reachable — skipping live nightly E2E tests')
+  })
 
   test('nightly E2E card fetches from backend API', async ({ page }) => {
     // This test verifies the SPA issues a network request for nightly E2E data.

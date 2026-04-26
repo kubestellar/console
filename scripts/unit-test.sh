@@ -31,6 +31,12 @@ done
 
 echo "Running Vitest unit tests..."
 
+# CI runners (ubuntu-latest, 7 GB RAM) can OOM when running 900+ test files.
+# Raise the V8 heap limit so fork workers don't get killed mid-test.
+if [ -n "${CI:-}" ]; then
+  export NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--max-old-space-size=6144"
+fi
+
 # Vitest may exit non-zero due to pool worker termination timeout on CI
 # even when all tests pass. Capture the output and check for actual failures.
 OUTPUT_FILE="/tmp/vitest-output.log"
