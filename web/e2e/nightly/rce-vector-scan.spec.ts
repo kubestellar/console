@@ -179,7 +179,8 @@ test('RCE vector scan — all attack surfaces', async ({ page }, testInfo) => {
   console.log('[RCE] Phase 2: DOM XSS vectors')
 
   for (const route of ROUTES_TO_SCAN) {
-    await page.goto(route, { waitUntil: 'networkidle', timeout: PAGE_LOAD_TIMEOUT_MS }).catch(() => {})
+    await page.goto(route, { waitUntil: 'networkidle', timeout: PAGE_LOAD_TIMEOUT_MS })
+      .catch(() => page.waitForLoadState('domcontentloaded').catch(() => {}))
 
     // 2a: No javascript: links
     const jsLinks = await page.evaluate(() =>

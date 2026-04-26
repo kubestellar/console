@@ -378,6 +378,7 @@ export async function setupDashboardTest(page: Page): Promise<void> {
   // late for webkit/Safari where the auth redirect fires synchronously.
   await page.addInitScript(() => {
     localStorage.setItem('token', 'test-token')
+    localStorage.setItem('kc-demo-mode', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
   })
   await page.goto('/')
