@@ -1,4 +1,5 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useModalState } from '../../../lib/modals'
 import { useLocation } from 'react-router-dom'
 import { BookOpen, Play, ExternalLink, GraduationCap, Video, Loader2, Newspaper } from 'lucide-react'
@@ -14,14 +15,57 @@ import { useTranslation } from 'react-i18next'
 import { cn } from '../../../lib/cn'
 import { emitBlogPostClicked } from '../../../lib/analytics'
 
+/** Width of the dropdown panel in pixels */
+const DROPDOWN_WIDTH_PX = 384 // sm:w-96 = 24rem = 384px
+/** Vertical gap between the trigger button and the dropdown panel */
+const DROPDOWN_GAP_PX = 8
+/** Horizontal padding to keep the dropdown away from viewport edges */
+const VIEWPORT_PADDING_PX = 8
+
+/**
+ * Calculate fixed-position coordinates for the dropdown panel so it
+ * appears directly below the trigger button, right-aligned on desktop
+ * and centered on mobile.
+ */
+function getDropdownPosition(triggerRect: DOMRect, isMobile: boolean) {
+  const top = triggerRect.bottom + DROPDOWN_GAP_PX
+
+  if (isMobile) {
+    return { top, left: VIEWPORT_PADDING_PX, right: VIEWPORT_PADDING_PX }
+  }
+
+  // Right-align the dropdown with the trigger button, but clamp so it
+  // doesn't overflow the left edge of the viewport.
+  const right = window.innerWidth - triggerRect.right
+  const leftEdge = window.innerWidth - right - DROPDOWN_WIDTH_PX
+  if (leftEdge < VIEWPORT_PADDING_PX) {
+    return { top, left: VIEWPORT_PADDING_PX, right: undefined }
+  }
+  return { top, left: undefined, right }
+}
+
+/** Tailwind `sm` breakpoint — below this we use mobile layout */
+const SM_BREAKPOINT_PX = 640
+
 export function LearnDropdown() {
   const { isOpen, close, toggle } = useModalState()
+  const triggerRef = useRef<HTMLButtonElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const { startTour, hasCompletedTour } = useTour()
   const location = useLocation()
   const { t } = useTranslation()
   const { videos, playlistUrl, loading } = usePlaylistVideos()
   const { posts: blogPosts, channelUrl: blogChannelUrl, loading: blogLoading } = useMediumBlog()
+
+  // Track dropdown position for the portal
+  const [pos, setPos] = useState<{ top: number; left?: number; right?: number }>({ top: 0 })
+
+  const updatePosition = useCallback(() => {
+    if (!triggerRef.current) return
+    const rect = triggerRef.current.getBoundingClientRect()
+    const isMobile = window.innerWidth < SM_BREAKPOINT_PX
+    setPos(getDropdownPosition(rect, isMobile))
+  }, [])
 
   const RESOURCES = [
     { label: t('layout.navbar.learn.documentation'), href: 'https://console-docs.kubestellar.io', description: t('layout.navbar.learn.docsDescription') },
@@ -35,10 +79,25 @@ export function LearnDropdown() {
     close()
   }, [location.pathname, close])
 
-  // Close on click outside
+  // Reposition on open, and on resize/scroll while open
+  useEffect(() => {
+    if (!isOpen) return
+    updatePosition()
+    window.addEventListener('resize', updatePosition)
+    window.addEventListener('scroll', updatePosition, true)
+    return () => {
+      window.removeEventListener('resize', updatePosition)
+      window.removeEventListener('scroll', updatePosition, true)
+    }
+  }, [isOpen, updatePosition])
+
+  // Close on click outside — check both the trigger button and the portal dropdown
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      const target = event.target as Node
+      const insideTrigger = triggerRef.current?.contains(target)
+      const insideDropdown = dropdownRef.current?.contains(target)
+      if (!insideTrigger && !insideDropdown) {
         close()
       }
     }
@@ -62,10 +121,20 @@ export function LearnDropdown() {
     startTour()
   }
 
+  // Build the style object for fixed positioning
+  const dropdownStyle: React.CSSProperties = {
+    position: 'fixed',
+    top: pos.top,
+    ...(pos.left != null ? { left: pos.left } : {}),
+    ...(pos.right != null ? { right: pos.right } : {}),
+    zIndex: 500, // z-toast
+  }
+
   return (
-    <div className="relative" ref={dropdownRef}>
+    <>
       {/* Trigger */}
       <button
+        ref={triggerRef}
         onClick={toggle}
         className={cn(
           'flex items-center gap-2 px-3 py-1.5 h-9 rounded-lg text-sm transition-colors',
@@ -79,9 +148,13 @@ export function LearnDropdown() {
         <span className="hidden xl:inline">{t('layout.navbar.learn.title')}</span>
       </button>
 
-      {/* Dropdown */}
-      {isOpen && (
-        <div className="fixed sm:absolute left-1/2 -translate-x-1/2 sm:left-auto sm:translate-x-0 sm:right-0 top-14 sm:top-full sm:mt-2 w-[calc(100vw-1rem)] sm:w-96 bg-card border border-border rounded-lg shadow-xl z-toast overflow-hidden max-h-[calc(100vh-4rem)] overflow-y-auto">
+      {/* Dropdown — portaled to document.body to escape navbar overflow clipping (#10319) */}
+      {isOpen && createPortal(
+        <div
+          ref={dropdownRef}
+          className="w-[calc(100vw-1rem)] sm:w-96 bg-card border border-border rounded-lg shadow-xl overflow-hidden max-h-[calc(100vh-4rem)] overflow-y-auto"
+          style={dropdownStyle}
+        >
           {/* Tour */}
           <button
             onClick={handleStartTour}
@@ -231,8 +304,9 @@ export function LearnDropdown() {
               </a>
             ))}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
-    </div>
+    </>
   )
 }
