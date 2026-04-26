@@ -1,3 +1,5 @@
+import { BYTES_PER_GIB, BYTES_PER_TIB } from '../constants/units'
+
 /**
  * Rook Status Card — Demo Data & Type Definitions
  *
@@ -69,9 +71,6 @@ export interface RookStatusData {
 // ---------------------------------------------------------------------------
 // Demo data constants — no magic numbers
 // ---------------------------------------------------------------------------
-
-const BYTES_PER_GIB = 1024 * 1024 * 1024
-const BYTES_PER_TIB = 1024 * BYTES_PER_GIB
 
 // Primary (production-like) CephCluster
 const PROD_OSD_TOTAL = 12

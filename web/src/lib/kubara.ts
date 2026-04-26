@@ -1,3 +1,5 @@
+import { MILLICORES_PER_CORE, MIB_PER_GIB, KIB_PER_MIB, GB_TO_MIB, MB_TO_MIB, BYTES_PER_MIB } from './constants/units'
+
 /**
  * Kubara catalog utilities for Mission Control integration.
  *
@@ -224,24 +226,15 @@ function parseCpuToMillicores(cpu: string): number {
   if (cpu.endsWith('m')) {
     return parseInt(cpu.slice(0, -1), 10) || 0
   }
-  // Whole or decimal cores → millicores
-  const MILLICORES_PER_CORE = 1000
   return Math.round((parseFloat(cpu) || 0) * MILLICORES_PER_CORE)
 }
 
 /** Convert a Kubernetes memory string (e.g. "128Mi", "1Gi", "512M") to MiB */
 function parseMemoryToMiB(mem: string): number {
-  const GI_TO_MIB = 1024
-  const KI_TO_MIB = 1 / 1024
-  const G_TO_MIB = 1000 * 1000 / (1024 * 1024) // ~953.67
-  const M_TO_MIB = 1000 * 1000 / (1024 * 1024)  // ~0.954 per MB
-
-  if (mem.endsWith('Gi')) return Math.round((parseFloat(mem) || 0) * GI_TO_MIB)
+  if (mem.endsWith('Gi')) return Math.round((parseFloat(mem) || 0) * MIB_PER_GIB)
   if (mem.endsWith('Mi')) return Math.round(parseFloat(mem) || 0)
-  if (mem.endsWith('Ki')) return Math.round((parseFloat(mem) || 0) * KI_TO_MIB)
-  if (mem.endsWith('G')) return Math.round((parseFloat(mem) || 0) * G_TO_MIB)
-  if (mem.endsWith('M')) return Math.round((parseFloat(mem) || 0) * M_TO_MIB)
-  // Raw number — assume bytes → MiB
-  const BYTES_PER_MIB = 1024 * 1024
+  if (mem.endsWith('Ki')) return Math.round((parseFloat(mem) || 0) / KIB_PER_MIB)
+  if (mem.endsWith('G')) return Math.round((parseFloat(mem) || 0) * GB_TO_MIB)
+  if (mem.endsWith('M')) return Math.round((parseFloat(mem) || 0) * MB_TO_MIB)
   return Math.round((parseFloat(mem) || 0) / BYTES_PER_MIB)
 }

@@ -1,3 +1,5 @@
+import { BYTES_PER_GIB } from '../constants/units'
+
 /**
  * Dragonfly Status Card — Demo Data & Type Definitions
  *
@@ -71,8 +73,6 @@ export interface DragonflyStatusData {
 // ---------------------------------------------------------------------------
 // Named constants (no magic numbers) — demo values only
 // ---------------------------------------------------------------------------
-
-const BYTES_PER_GIB = 1024 * 1024 * 1024
 
 const DEMO_MANAGER_REPLICAS = 3
 const DEMO_SCHEDULER_REPLICAS = 3

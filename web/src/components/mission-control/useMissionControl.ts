@@ -15,6 +15,7 @@ import { isDemoMode } from '../../lib/demoMode'
 import { fetchKubaraCatalog, fetchKubaraValues, parseResourceRequests } from '../../lib/kubara'
 import type { KubaraResourceRequests } from '../../lib/kubara'
 import { getDemoMissionControlState } from './demoState'
+import { MILLICORES_PER_CORE, MIB_PER_GIB } from '../../lib/constants/units'
 import type {
   MissionControlState,
   PayloadProject,
@@ -1641,10 +1642,6 @@ Order phases by dependency — prerequisites first. Each phase completes before 
       const clusterScores = new Map<string, number>()
       // #8485 — Track remaining capacity per cluster (in real units) so
       // Kubara resource requests can be subtracted as projects are assigned.
-      /** Millicores per core for unit conversion */
-      const MILLICORES_PER_CORE = 1000
-      /** MiB per GiB for unit conversion */
-      const MIB_PER_GIB = 1024
       const clusterCpuFreeMillicores = new Map<string, number>()
       const clusterMemFreeMiB = new Map<string, number>()
       for (const c of availableClusters) {

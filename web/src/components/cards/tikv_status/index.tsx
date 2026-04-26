@@ -16,12 +16,12 @@ import { EmptyState } from '../../ui/EmptyState'
 import { MetricTile } from '../../../lib/cards/CardComponents'
 import { cn } from '../../../lib/cn'
 import type { TikvStore } from '../../../lib/demo/tikv'
+import { BYTES_PER_GIB } from '../../../lib/constants/units'
 
 // ---------------------------------------------------------------------------
 // Named constants (no magic numbers)
 // ---------------------------------------------------------------------------
 
-const BYTES_PER_GIB = 1024 * 1024 * 1024
 const USAGE_PCT_WARN = 70
 const USAGE_PCT_ALERT = 85
 const PCT_MULTIPLIER = 100

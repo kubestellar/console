@@ -1,3 +1,5 @@
+import { BYTES_PER_GIB, BYTES_PER_TIB } from '../constants/units'
+
 /**
  * Longhorn Status Card — Demo Data & Type Definitions
  *
@@ -93,9 +95,6 @@ export interface LonghornStatusData {
 // ---------------------------------------------------------------------------
 // Demo data constants — no magic numbers
 // ---------------------------------------------------------------------------
-
-const BYTES_PER_GIB = 1024 * 1024 * 1024
-const BYTES_PER_TIB = 1024 * BYTES_PER_GIB
 
 // Per-volume sizes
 const VOL_SIZE_SMALL_GIB = 10

@@ -1,3 +1,5 @@
+import { BYTES_PER_GIB } from '../constants/units'
+
 /**
  * TiKV Status Card — Demo Data & Type Definitions
  *
@@ -45,7 +47,6 @@ export interface TikvStatusData {
 // ---------------------------------------------------------------------------
 
 // Named constants (no magic numbers)
-const BYTES_PER_GIB = 1024 * 1024 * 1024
 const DEMO_CAPACITY_GIB = 500
 const DEMO_AVAILABLE_GIB_HEALTHY = 320
 const DEMO_AVAILABLE_GIB_WARM = 180
