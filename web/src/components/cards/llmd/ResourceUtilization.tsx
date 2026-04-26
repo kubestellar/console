@@ -22,6 +22,11 @@ import {
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../../ui/StatusBadge'
 
+const GRID_LEFT_PX = 145
+const GRID_RIGHT_PX = 20
+const GRID_TOP_PX = 5
+const GRID_BOTTOM_PX = 20
+
 type MetricMode = 'throughput' | 'ttftP50Ms' | 'tpotP50Ms' | 'p99LatencyMs'
 
 const MODES: { key: MetricMode; label: string; unit: string; higherBetter: boolean }[] = [
@@ -104,7 +109,7 @@ export function ResourceUtilization() {
     if (data.length === 0) return {}
     return {
       backgroundColor: 'transparent',
-      grid: { left: 145, right: 20, top: 5, bottom: 20 },
+      grid: { left: GRID_LEFT_PX, right: GRID_RIGHT_PX, top: GRID_TOP_PX, bottom: GRID_BOTTOM_PX },
       xAxis: {
         type: 'value' as const,
         axisLabel: {

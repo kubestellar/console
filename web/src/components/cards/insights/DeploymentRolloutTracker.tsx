@@ -8,7 +8,12 @@ import { InsightSourceBadge } from './InsightSourceBadge'
 import { StatusBadge } from '../../ui/StatusBadge'
 import { CardControlsRow } from '../../../lib/cards/CardComponents'
 import { useInsightSort, INSIGHT_SORT_OPTIONS, type InsightSortField } from './insightSortUtils'
-import { CHART_GRID_STROKE, CHART_TOOLTIP_CONTENT_STYLE, CHART_TOOLTIP_FONT_SIZE_COMPACT, CHART_TICK_COLOR } from '../../../lib/constants/ui'
+import { CHART_GRID_STROKE, CHART_TOOLTIP_CONTENT_STYLE, CHART_TOOLTIP_FONT_SIZE_COMPACT, CHART_TICK_COLOR, CHART_HEIGHT_SM } from '../../../lib/constants/ui'
+
+const GRID_LEFT_PX = 85
+const GRID_RIGHT_PX = 10
+const GRID_TOP_PX = 5
+const GRID_BOTTOM_PX = 20
 import { InsightDetailModal } from './InsightDetailModal'
 import type { MultiClusterInsight } from '../../../types/insights'
 
@@ -84,7 +89,7 @@ export function DeploymentRolloutTracker() {
     if (clusterProgress.length === 0) return {}
     return {
       backgroundColor: 'transparent',
-      grid: { left: 85, right: 10, top: 5, bottom: 20 },
+      grid: { left: GRID_LEFT_PX, right: GRID_RIGHT_PX, top: GRID_TOP_PX, bottom: GRID_BOTTOM_PX },
       xAxis: {
         type: 'value' as const,
         min: 0,
@@ -178,7 +183,7 @@ export function DeploymentRolloutTracker() {
             <div className="h-32">
               <ReactECharts
                 option={chartOption}
-                style={{ height: 128, width: '100%' }}
+                style={{ height: CHART_HEIGHT_SM, width: '100%' }}
                 notMerge={true}
                 opts={{ renderer: 'svg' }}
               />

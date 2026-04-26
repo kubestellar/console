@@ -10,6 +10,8 @@ import type React from 'react'
 // ── Chart dimensions ────────────────────────────────────────────────────
 export const CHART_HEIGHT_STANDARD = 160
 export const CHART_HEIGHT_COMPACT = 100
+export const CHART_HEIGHT_SM = 128
+export const CHART_HEIGHT_LG = 192
 
 // ── Recharts shared styles ──────────────────────────────────────────────
 export const CHART_TOOLTIP_BG = '#1a1a2e'

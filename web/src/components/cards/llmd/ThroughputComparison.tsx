@@ -24,6 +24,11 @@ import {
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../../ui/StatusBadge'
 
+const GRID_LEFT_PX = 55
+const GRID_RIGHT_PX = 20
+const GRID_TOP_PX = 10
+const GRID_BOTTOM_PX = 45
+
 interface ChartRow {
   qps: number
   [lineKey: string]: number | undefined
@@ -111,7 +116,7 @@ export function ThroughputComparison() {
 
     return {
       backgroundColor: 'transparent',
-      grid: { left: 55, right: 20, top: 10, bottom: 45 },
+      grid: { left: GRID_LEFT_PX, right: GRID_RIGHT_PX, top: GRID_TOP_PX, bottom: GRID_BOTTOM_PX },
       xAxis: {
         type: 'category' as const,
         data: chartData.map(d => d.qps),

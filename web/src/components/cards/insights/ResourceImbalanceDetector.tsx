@@ -8,7 +8,12 @@ import { InsightSourceBadge } from './InsightSourceBadge'
 import { StatusBadge } from '../../ui/StatusBadge'
 import { CardControlsRow } from '../../../lib/cards/CardComponents'
 import { useInsightSort, INSIGHT_SORT_OPTIONS, type InsightSortField } from './insightSortUtils'
-import { CHART_GRID_STROKE, CHART_TOOLTIP_CONTENT_STYLE, CHART_TOOLTIP_FONT_SIZE_COMPACT, CHART_TICK_COLOR } from '../../../lib/constants/ui'
+import { CHART_GRID_STROKE, CHART_TOOLTIP_CONTENT_STYLE, CHART_TOOLTIP_FONT_SIZE_COMPACT, CHART_TICK_COLOR, CHART_HEIGHT_LG } from '../../../lib/constants/ui'
+
+const GRID_LEFT_PX = 105
+const GRID_RIGHT_PX = 20
+const GRID_TOP_PX = 15
+const GRID_BOTTOM_PX = 20
 import { InsightDetailModal } from './InsightDetailModal'
 import type { MultiClusterInsight } from '../../../types/insights'
 
@@ -59,7 +64,7 @@ export function ResourceImbalanceDetector() {
     if (chartData.length === 0) return {}
     return {
       backgroundColor: 'transparent',
-      grid: { left: 105, right: 20, top: 15, bottom: 20 },
+      grid: { left: GRID_LEFT_PX, right: GRID_RIGHT_PX, top: GRID_TOP_PX, bottom: GRID_BOTTOM_PX },
       xAxis: {
         type: 'value' as const,
         min: 0,
@@ -154,7 +159,7 @@ export function ResourceImbalanceDetector() {
         <div className="h-48">
           <ReactECharts
             option={chartOption}
-            style={{ height: 192, width: '100%' }}
+            style={{ height: CHART_HEIGHT_LG, width: '100%' }}
             notMerge={true}
             opts={{ renderer: 'svg' }}
           />

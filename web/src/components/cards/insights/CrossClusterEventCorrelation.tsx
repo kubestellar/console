@@ -9,7 +9,7 @@ import { InsightSourceBadge } from './InsightSourceBadge'
 import { StatusBadge } from '../../ui/StatusBadge'
 import { CardControlsRow } from '../../../lib/cards/CardComponents'
 import { useInsightSort, INSIGHT_SORT_OPTIONS, type InsightSortField } from './insightSortUtils'
-import { CHART_GRID_STROKE, CHART_TOOLTIP_CONTENT_STYLE, CHART_TOOLTIP_FONT_SIZE_COMPACT, CHART_TICK_COLOR } from '../../../lib/constants/ui'
+import { CHART_GRID_STROKE, CHART_TOOLTIP_CONTENT_STYLE, CHART_TOOLTIP_FONT_SIZE_COMPACT, CHART_TICK_COLOR, CHART_HEIGHT_STANDARD } from '../../../lib/constants/ui'
 import { CROSS_CLUSTER_EVENT_PALETTE } from '../../../lib/theme/chartColors'
 import { InsightDetailModal } from './InsightDetailModal'
 import type { MultiClusterInsight } from '../../../types/insights'
@@ -143,7 +143,7 @@ export function CrossClusterEventCorrelation() {
         <div className="h-40">
           <ReactECharts
             option={chartOption}
-            style={{ height: 160, width: '100%' }}
+            style={{ height: CHART_HEIGHT_STANDARD, width: '100%' }}
             notMerge={true}
             opts={{ renderer: 'svg' }}
           />
