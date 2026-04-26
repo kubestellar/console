@@ -57,7 +57,7 @@ describe('ChartVisualization', () => {
   // Line chart
   // -------------------------------------------------------------------------
   describe('line chart', () => {
-    it('renders a line chart with series config', () => {
+    it('renders a line chart with series config', async () => {
       renderChart({
         type: 'chart',
         chartType: 'line',
@@ -65,7 +65,9 @@ describe('ChartVisualization', () => {
         xAxis: 'time',
       })
 
-      expect(screen.getByTestId('echarts-mock')).toBeInTheDocument()
+      // LazyEChart uses React.lazy + Suspense, so the first render shows
+      // a skeleton fallback. Wait for the lazy module to resolve.
+      expect(await screen.findByTestId('echarts-mock')).toBeInTheDocument()
       expect(lastOption).not.toBeNull()
 
       // Series should be type 'line'
