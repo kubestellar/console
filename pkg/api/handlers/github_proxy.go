@@ -83,6 +83,7 @@ func getGitHubProxyLimiter(userID string) *rate.Limiter {
 // Any path not matching one of these prefixes is rejected with 403 Forbidden.
 var allowedGitHubPrefixes = []string{
 	"/repos/",        // repo info, PRs, issues, releases, contributors, actions, git refs, compare
+	"/search/",       // issue/PR search for contributions list
 	"/rate_limit",    // rate-limit check / token validation
 	"/user",          // token validation (GET /user returns the authenticated user)
 	"/notifications", // notification badge (if used by frontend)

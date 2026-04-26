@@ -884,6 +884,20 @@ function GitHubContributionsSection({
         })()
       )}
 
+      {githubRewards?.contributions && githubRewards.contributions.length > 0 && currentGitHubLogin && (
+        <div className="p-2.5 border-t border-border/50 text-center">
+          <a
+            href={`https://github.com/search?q=author:${encodeURIComponent(currentGitHubLogin)}+org:kubestellar+org:llm-d&type=issues&s=updated&o=desc`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 transition-colors"
+          >
+            View all contributions on GitHub
+            <ExternalLink className="w-3 h-3" />
+          </a>
+        </div>
+      )}
+
       {githubRewards?.from_cache && (
         <div className="p-2 border-t border-border/50">
           <p className="text-2xs text-muted-foreground text-center">

@@ -2,12 +2,16 @@
  * Hook for fetching GitHub-sourced reward data.
  * Calls the Netlify function on console.kubestellar.io (10-min Blob cache)
  * instead of the local Go backend, saving the user's GitHub API quota.
+ *
+ * Also fetches the last 20 contributions (issues/PRs) via the Go backend's
+ * GitHub proxy (/api/github/search/issues) using the user's stored token.
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '../lib/auth'
-import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
-import type { GitHubRewardsResponse } from '../types/rewards'
+import { BACKEND_DEFAULT_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
+import type { GitHubRewardsResponse, GitHubContribution, GitHubRewardType } from '../types/rewards'
+import { GITHUB_REWARD_POINTS } from '../types/rewards'
 
 /** Always fetch from the Netlify function (cached, no user token needed). */
 const REWARDS_API_BASE = 'https://console.kubestellar.io'
@@ -20,6 +24,10 @@ const LEGACY_CACHE_KEY = 'github-rewards-cache'
 const CLIENT_CACHE_TTL_MS = 15 * 60 * 1000
 /** Interval between automatic background refreshes (10 minutes) */
 const REFRESH_INTERVAL_MS = 10 * 60 * 1000
+/** Max recent contributions to fetch from the GitHub Search API */
+const CONTRIBUTIONS_PER_PAGE = 20
+/** GitHub orgs to search for contributions */
+const CONTRIBUTIONS_SEARCH_ORGS = ['kubestellar', 'llm-d']
 
 /** Returns a per-user localStorage cache key */
 function userCacheKey(login: string): string {
@@ -75,8 +83,69 @@ function saveCache(login: string, data: GitHubRewardsResponse): void {
   }
 }
 
+interface GitHubSearchItem {
+  html_url: string
+  title: string
+  number: number
+  created_at: string
+  pull_request?: { merged_at: string | null }
+  labels: Array<{ name: string }>
+  repository_url: string
+}
+
+function classifySearchItem(item: GitHubSearchItem): GitHubRewardType {
+  const isPR = !!item.pull_request
+  if (isPR) {
+    return item.pull_request?.merged_at ? 'pr_merged' : 'pr_opened'
+  }
+  const labelNames = (item.labels || []).map(l => l.name.toLowerCase())
+  if (labelNames.some(l => l.includes('bug'))) return 'issue_bug'
+  if (labelNames.some(l => l.includes('feature') || l.includes('enhancement'))) return 'issue_feature'
+  return 'issue_other'
+}
+
+function repoFromUrl(repositoryUrl: string): string {
+  const parts = repositoryUrl.split('/')
+  const len = parts.length
+  return len >= 2 ? `${parts[len - 2]}/${parts[len - 1]}` : repositoryUrl
+}
+
+async function fetchRecentContributions(
+  login: string,
+  token: string | null,
+): Promise<GitHubContribution[]> {
+  const orgFilter = CONTRIBUTIONS_SEARCH_ORGS.map(o => `org:${o}`).join('+')
+  const query = `author:${encodeURIComponent(login)}+${orgFilter}`
+  const url = `${BACKEND_DEFAULT_URL}/api/github/search/issues?q=${query}&sort=updated&per_page=${CONTRIBUTIONS_PER_PAGE}`
+
+  const headers: Record<string, string> = {}
+  if (token) headers['Authorization'] = `Bearer ${token}`
+
+  const res = await fetch(url, {
+    headers,
+    signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+  })
+  if (!res.ok) return []
+
+  const json = await res.json().catch(() => null) as { items?: GitHubSearchItem[] } | null
+  if (!json?.items) return []
+
+  return (json.items || []).map((item): GitHubContribution => {
+    const type = classifySearchItem(item)
+    return {
+      type,
+      title: item.title,
+      url: item.html_url,
+      repo: repoFromUrl(item.repository_url),
+      number: item.number,
+      points: GITHUB_REWARD_POINTS[type],
+      created_at: item.created_at,
+    }
+  })
+}
+
 export function useGitHubRewards() {
-  const { user, isAuthenticated } = useAuth()
+  const { user, isAuthenticated, token } = useAuth()
   const [data, setData] = useState<GitHubRewardsResponse | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -98,7 +167,6 @@ export function useGitHubRewards() {
     if (cached) {
       setData(cached)
     } else {
-      // No valid cache — clear any stale data from a previous user
       setData(null)
     }
   }, [githubLogin, isDemoUser])
@@ -108,25 +176,29 @@ export function useGitHubRewards() {
 
     setIsLoading(true)
     try {
-      const res = await fetch(`${REWARDS_API_BASE}/api/rewards/github?login=${encodeURIComponent(githubLogin)}`, {
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      })
-      if (!res.ok) throw new Error(`API error: ${res.status}`)
-      // Use .catch() on .json() to prevent Firefox from firing unhandledrejection
-      // before the outer try/catch processes the rejection (microtask timing issue).
-      const result = await res.json().catch(() => null) as GitHubRewardsResponse | null
+      const [rewardsRes, contributions] = await Promise.all([
+        fetch(`${REWARDS_API_BASE}/api/rewards/github?login=${encodeURIComponent(githubLogin)}`, {
+          signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+        }),
+        fetchRecentContributions(githubLogin, token).catch(() => [] as GitHubContribution[]),
+      ])
+
+      if (!rewardsRes.ok) throw new Error(`API error: ${rewardsRes.status}`)
+      const result = await rewardsRes.json().catch(() => null) as GitHubRewardsResponse | null
       if (!result) throw new Error('Invalid JSON response')
 
-      // Guard against stale response arriving after user switched accounts
       if (loginRef.current !== githubLogin) return
 
-      setData(result)
-      saveCache(githubLogin, result)
+      const merged: GitHubRewardsResponse = {
+        ...result,
+        contributions: contributions.length > 0 ? contributions : result.contributions,
+      }
+
+      setData(merged)
+      saveCache(githubLogin, merged)
       setError(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error')
-      // On failure, clear data if the cache has also expired (prevents
-      // indefinite stale display). If cache is still valid, keep showing it.
       const cached = loadCache(githubLogin)
       if (!cached) {
         setData(null)
@@ -134,7 +206,7 @@ export function useGitHubRewards() {
     } finally {
       setIsLoading(false)
     }
-  }, [isAuthenticated, isDemoUser, githubLogin])
+  }, [isAuthenticated, isDemoUser, githubLogin, token])
 
   // Fetch on mount and refresh periodically
   useEffect(() => {
