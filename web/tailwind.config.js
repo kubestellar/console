@@ -75,6 +75,14 @@ export default {
          * Usage: text-status-success, bg-status-error, border-status-warning
          * Note: opacity modifiers (e.g., /20) are not supported with var() values.
          */
+        /** LinkedIn brand blue (#0A66C2) — used for LinkedIn share buttons */
+        linkedin: {
+          DEFAULT: '#0A66C2',
+          dark: '#004182',
+        },
+        /** Near-black backgrounds for terminal/console UIs */
+        terminal: '#0d0d0d',
+        'near-black': '#0a0a0a',
         status: {
           success: "var(--color-success)",
           warning: "var(--color-warning)",
