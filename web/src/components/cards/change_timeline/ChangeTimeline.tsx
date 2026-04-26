@@ -138,8 +138,7 @@ export function ChangeTimeline({ config: _config }: ChangeTimelineProps) {
         backgroundColor: 'rgba(30,30,46,0.95)',
         borderColor: 'rgba(255,255,255,0.1)',
         textStyle: { color: CHART_LEGEND_COLOR, fontSize: CHART_LEGEND_FONT_SIZE },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        formatter: (params: any) => {
+        formatter: (params: { data?: { _event?: TimelineEvent } }) => {
           const evt: TimelineEvent | undefined = params?.data?._event
           if (!evt) return ''
           return [
@@ -184,8 +183,7 @@ export function ChangeTimeline({ config: _config }: ChangeTimelineProps) {
   }, [data, clusters])
 
   // Handle click → drill to events
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleChartClick = useCallback((params: any) => {
+  const handleChartClick = useCallback((params: { data?: { _event?: TimelineEvent } }) => {
     const evt: TimelineEvent | undefined = params?.data?._event
     if (!evt) return
     drillToEvents(evt.cluster, evt.namespace, evt.resource)

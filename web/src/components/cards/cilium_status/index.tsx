@@ -43,7 +43,7 @@ export const CiliumStatus: React.FC<CardComponentProps> = () => {
         // For now, we'll return all if no explicit cluster match is possible,
         // or filter if 'cluster' field exists.
         return data.nodes.filter(node => {
-            const nodeCluster = (node as any).cluster
+            const nodeCluster = (node as CiliumNode & { cluster?: string }).cluster
             return !nodeCluster || selectedClusters.includes(nodeCluster)
         })
     }, [data?.nodes, selectedClusters])
@@ -122,9 +122,9 @@ export const CiliumStatus: React.FC<CardComponentProps> = () => {
                     </div>
                     <StatusBadge
                         variant="outline"
-                        color={(data.status === 'Healthy' ? 'green' : data.status === 'Degraded' ? 'yellow' : 'red') as any}
+                        color={data.status === 'Healthy' ? 'green' : data.status === 'Degraded' ? 'yellow' : 'red'}
                     >
-                        {t(`ciliumStatus.${data.status.toLowerCase()}` as any)}
+                        {t(`ciliumStatus.${data.status.toLowerCase()}` as `ciliumStatus.${'healthy' | 'degraded' | 'unhealthy'}`)}
                     </StatusBadge>
                 </div>
 

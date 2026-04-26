@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { CiliumStatus } from '../index'
 import React from 'react'
+import type { CiliumNode } from '../../../../types/cilium'
 
 vi.mock('react-i18next', () => ({
     useTranslation: () => ({ t: (k: string) => k }),
@@ -26,7 +27,7 @@ vi.mock('../../../CardDataContext', () => ({
 }))
 
 vi.mock('../../../../lib/cards', () => ({
-    useCardData: (items: any) => ({
+    useCardData: (items: CiliumNode[]) => ({
         items: items || [],
         currentPage: 1,
         totalPages: 1,

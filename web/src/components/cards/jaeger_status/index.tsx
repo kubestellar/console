@@ -96,10 +96,10 @@ export const JaegerStatus: React.FC<CardComponentProps> = () => {
             <div className="h-full flex items-center justify-center p-4">
                 <EmptyState
                     icon={<Zap className="w-8 h-8 text-muted-foreground/40" />}
-                    title={t('jaeger.notDetected' as any)}
-                    description={t('jaeger.notDetectedDesc' as any)}
+                    title={t('jaeger.notDetected')}
+                    description={t('jaeger.notDetectedDesc')}
                     action={{
-                        label: t('jaeger.viewDocs' as any),
+                        label: t('jaeger.viewDocs'),
                         href: 'https://www.jaegertracing.io/docs/',
                         icon: ExternalLink
                     }}
@@ -121,7 +121,7 @@ export const JaegerStatus: React.FC<CardComponentProps> = () => {
                         </div>
                         <div>
                             <span className="font-bold tracking-tight text-foreground block leading-none mb-1">
-                                {t('jaeger.title' as any)}
+                                {t('jaeger.title')}
                             </span>
                             <RefreshIndicator
                                 isRefreshing={isRefreshing}
@@ -130,7 +130,7 @@ export const JaegerStatus: React.FC<CardComponentProps> = () => {
                             />
                         </div>
                     </div>
-                    <StatusBadge color={(data.status === 'Healthy' ? 'green' : data.status === 'Degraded' ? 'yellow' : 'red') as any} variant="outline">
+                    <StatusBadge color={data.status === 'Healthy' ? 'green' : data.status === 'Degraded' ? 'yellow' : 'red'} variant="outline">
                         {data.status}
                     </StatusBadge>
                 </div>
@@ -139,13 +139,13 @@ export const JaegerStatus: React.FC<CardComponentProps> = () => {
                 <div className="grid grid-cols-2 gap-2">
                     <KPIField
                         icon={<AlertTriangle className={cn("w-3 h-3", data.metrics.spansDroppedLastHour > 0 ? "text-red-400" : "text-muted-foreground/40")} />}
-                        label={t('jaeger.dropped' as any)}
+                        label={t('jaeger.dropped')}
                         value={data.metrics.spansDroppedLastHour}
                         alert={data.metrics.spansDroppedLastHour > 0}
                     />
                     <KPIField
                         icon={<TrendingUp className={cn("w-3 h-3", data.metrics.avgQueueLength > QUEUE_DEPTH_WARNING_THRESHOLD ? "text-yellow-400" : "text-muted-foreground/40")} />}
-                        label={t('jaeger.queueDepth' as any)}
+                        label={t('jaeger.queueDepth')}
                         value={data.metrics.avgQueueLength}
                         alert={data.metrics.avgQueueLength > QUEUE_DEPTH_ALERT_THRESHOLD}
                     />
@@ -155,17 +155,17 @@ export const JaegerStatus: React.FC<CardComponentProps> = () => {
                 <div className="grid grid-cols-3 gap-2">
                     <MetricTile
                         icon={<Database className="w-3.5 h-3.5 text-orange-400" />}
-                        label={t('jaeger.services' as any)}
+                        label={t('jaeger.services')}
                         value={data.metrics.servicesCount}
                     />
                     <MetricTile
                         icon={<Share2 className="w-3.5 h-3.5 text-purple-400" />}
-                        label={t('jaeger.dependencies' as any)}
+                        label={t('jaeger.dependencies')}
                         value={data.metrics.dependenciesCount}
                     />
                     <MetricTile
                         icon={<Activity className="w-3.5 h-3.5 text-blue-400" />}
-                        label={t('jaeger.traces' as any)}
+                        label={t('jaeger.traces')}
                         value={data.metrics.tracesLastHour}
                         compact
                     />
@@ -175,12 +175,12 @@ export const JaegerStatus: React.FC<CardComponentProps> = () => {
                 <div className="space-y-2">
                     <div className="flex items-center gap-2 text-[10px] text-muted-foreground/50 uppercase tracking-widest font-bold px-1">
                         <Clock className="w-3 h-3" />
-                        <span>{t('jaeger.latencyAnalysis' as any)}</span>
+                        <span>{t('jaeger.latencyAnalysis')}</span>
                     </div>
                     <div className="grid grid-cols-3 gap-2 p-2 rounded-xl bg-secondary/10 border border-border/30">
-                        <LatencyInfo label={t('jaeger.avg' as any)} value={data.metrics.avgLatencyMs} />
-                        <LatencyInfo label={t('jaeger.p95' as any)} value={data.metrics.p95LatencyMs} isMiddle />
-                        <LatencyInfo label={t('jaeger.p99' as any)} value={data.metrics.p99LatencyMs} />
+                        <LatencyInfo label={t('jaeger.avg')} value={data.metrics.avgLatencyMs} />
+                        <LatencyInfo label={t('jaeger.p95')} value={data.metrics.p95LatencyMs} isMiddle />
+                        <LatencyInfo label={t('jaeger.p99')} value={data.metrics.p99LatencyMs} />
                     </div>
                 </div>
 
@@ -189,7 +189,7 @@ export const JaegerStatus: React.FC<CardComponentProps> = () => {
                     <div className="flex items-center justify-between px-1">
                         <div className="flex items-center gap-2 text-[10px] text-muted-foreground/50 uppercase tracking-widest font-bold">
                             <ShieldCheck className="w-3 h-3" />
-                            <span>{t('jaeger.collectors' as any)}</span>
+                            <span>{t('jaeger.collectors')}</span>
                         </div>
                         <CardControls
                             limit={itemsPerPage}
@@ -199,8 +199,8 @@ export const JaegerStatus: React.FC<CardComponentProps> = () => {
                             sortDirection={sorting.sortDirection}
                             onSortDirectionChange={sorting.setSortDirection}
                             sortOptions={[
-                                { value: 'name', label: t('jaeger.name' as any, 'Name') },
-                                { value: 'status', label: t('jaeger.status' as any, 'Status') },
+                                { value: 'name', label: t('jaeger.name', 'Name') },
+                                { value: 'status', label: t('jaeger.status', 'Status') },
                             ] as SortOption<'name' | 'status' | 'version'>[]}
                             showLimit={false}
                         />
@@ -254,7 +254,7 @@ export const JaegerStatus: React.FC<CardComponentProps> = () => {
                     {data.collectors.count > 0 && (
                         <span className="text-emerald-500/80 flex items-center gap-1 ml-1">
                             <div className="w-1 h-1 bg-emerald-500 rounded-full animate-pulse" />
-                            {t('common:labels.healthy' as any, 'Healthy')}
+                            {t('common:labels.healthy', 'Healthy')}
                         </span>
                     )}
                 </div>
@@ -264,7 +264,7 @@ export const JaegerStatus: React.FC<CardComponentProps> = () => {
                     rel="noopener noreferrer"
                     className="text-[10px] text-primary hover:text-primary/80 flex items-center gap-1 font-bold uppercase tracking-tight transition-all group"
                 >
-                    {t('jaeger.viewDocs' as any)}
+                    {t('jaeger.viewDocs')}
                     <ExternalLink className="w-3 h-3 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                 </a>
             </div>
