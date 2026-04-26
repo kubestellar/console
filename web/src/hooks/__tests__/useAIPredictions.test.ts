@@ -491,9 +491,11 @@ describe('useAIPredictions', () => {
     // exists to anchor the promise settlement for debugging if the test hangs.
     void done
 
-    // Advance past all internal delays (triggerAnalysis demo delay + RETRY_DELAY_MS)
+    // Advance past the triggerAnalysis demo delay (UI_FEEDBACK_TIMEOUT_MS = 2 000 ms)
+    // and then the first poll tick (ANALYSIS_POLL_INTERVAL_MS = 4 000 ms) so that
+    // cleanup() fires and clearActiveTokenCategory is called.
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(2000)
+      await vi.advanceTimersByTimeAsync(7000)
     })
 
     // Per-operation tracking (#6016): setActiveTokenCategory called with
