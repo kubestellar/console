@@ -898,7 +898,7 @@ func (s *Server) setupRoutes() {
 	// an independent counter, so the effective limit is `max × N` where N is the
 	// pod count. A shared Redis/Valkey storage backend is recommended for strict
 	// enforcement across replicas but is out of scope for this change.
-	apiLimiterMaxRequests := 600        // max requests per window per user+IP (#9969: raised from 200 — dashboard loads 30+ cards with SWR refresh)
+	apiLimiterMaxRequests := 2000       // max requests per window per user+IP (#10100: raised from 600 — dashboard + background polling can exceed 600 in the first minute)
 	apiLimiterWindow := 1 * time.Minute // sliding window duration
 	apiLimiter := limiter.New(limiter.Config{
 		Max:          apiLimiterMaxRequests,
