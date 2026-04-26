@@ -128,6 +128,7 @@ jobs:
           APP_ID: ${{ secrets.KUBESTELLAR_CONSOLE_APP_ID }}
           INSTALLATION_ID: ${{ secrets.KUBESTELLAR_CONSOLE_APP_INSTALLATION_ID }}
           PRIVATE_KEY: ${{ secrets.KUBESTELLAR_CONSOLE_APP_PRIVATE_KEY }}
+          READ_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           EXPECTED_SLUG: "kubestellar-console-bot"
           EXPECTED_USER_LOGIN: "kubestellar-console-bot[bot]"
         run: |
@@ -214,15 +215,20 @@ jobs:
           MAX_READ_RETRIES=3
           INITIAL_SETTLE_SECONDS=5
           READ_RESP=""
+          READ_HTTP=""
           for attempt in $(seq 1 $MAX_READ_RETRIES); do
             SETTLE=$((INITIAL_SETTLE_SECONDS * attempt))
             echo "Read attempt $attempt/$MAX_READ_RETRIES (waiting ${SETTLE}s for indexing)..."
             sleep "$SETTLE"
             READ_HTTP=$(curl -sS -o /tmp/app-read.json -w "%{http_code}" \
-              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Authorization: Bearer ${READ_TOKEN}" \
               -H "Accept: application/vnd.github+json" \
               -H "X-GitHub-Api-Version: 2022-11-28" \
-              "$READ_URL")
+              "$READ_URL") || {
+              echo "::warning::Read attempt $attempt — curl exited $? (HTTP: ${READ_HTTP:-unknown})"
+              cat /tmp/app-read.json 2>/dev/null || true
+              continue
+            }
             if [ "$READ_HTTP" = "200" ]; then
               READ_RESP=$(cat /tmp/app-read.json)
               break
@@ -265,19 +271,20 @@ jobs:
           ACTUAL_SLUG=$(echo "$ATTRIBUTION" | cut -f3)
 
           # 5. Clean up FIRST so a verify failure still closes the issue.
+          #    Use || true so cleanup failures don't mask the attribution result.
           echo "Closing + locking test issue #$ISSUE_NUMBER..."
           curl -sS -X PATCH \
             -H "Authorization: Bearer $TOKEN" \
             -H "Accept: application/vnd.github+json" \
             -d '{"state":"closed","state_reason":"not_planned"}' \
             "https://api.github.com/repos/${TEST_REPO_OWNER}/${TEST_REPO_NAME}/issues/${ISSUE_NUMBER}" \
-            > /dev/null
+            > /dev/null || echo "::warning::Failed to close test issue #$ISSUE_NUMBER (curl exit $?)"
           curl -sS -X PUT \
             -H "Authorization: Bearer $TOKEN" \
             -H "Accept: application/vnd.github+json" \
             -d '{"lock_reason":"resolved"}' \
             "https://api.github.com/repos/${TEST_REPO_OWNER}/${TEST_REPO_NAME}/issues/${ISSUE_NUMBER}/lock" \
-            > /dev/null
+            > /dev/null || echo "::warning::Failed to lock test issue #$ISSUE_NUMBER (curl exit $?)"
 
           # 6a. PRIMARY assertion — the issue.user.login must match the
           #     App's bot login. GitHub stamps this from the auth token
