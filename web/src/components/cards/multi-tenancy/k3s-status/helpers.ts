@@ -71,19 +71,7 @@ export function isK3sNode(containerRuntime?: string): boolean {
   return (containerRuntime ?? '').toLowerCase().includes(K3S_RUNTIME_SUBSTRING)
 }
 
-import { parseReadyCount } from '../../../../lib/k8s'
-export { parseReadyCount } from '../../../../lib/k8s'
-
-/**
- * Determine whether a pod is healthy based on its status and ready ratio.
- */
-export function isPodHealthy(pod: K3sPodInfo): boolean {
-  const status = (pod.status ?? '').toLowerCase()
-  if (status !== 'running') return false
-
-  const { ready, total } = parseReadyCount(pod.ready)
-  return total > 0 && ready === total
-}
+export { parseReadyCount, isPodHealthy } from '../../../../lib/k8s'
 
 /**
  * Returns true if a pod qualifies as a K3s pod (by label OR by image).

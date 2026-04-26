@@ -71,19 +71,8 @@ export function isKubeFlexControlPlanePod(labels?: Record<string, string>): bool
   return Boolean(l[KUBEFLEX_CP_LABEL_KEY])
 }
 
-import { parseReadyCount } from '../../../../lib/k8s'
-export { parseReadyCount } from '../../../../lib/k8s'
-
-/**
- * Determine whether a pod is healthy based on its status and ready ratio.
- */
-export function isPodHealthy(pod: KubeFlexPodInfo): boolean {
-  const status = (pod.status ?? '').toLowerCase()
-  if (status !== 'running') return false
-
-  const { ready, total } = parseReadyCount(pod.ready)
-  return total > 0 && ready === total
-}
+import { isPodHealthy } from '../../../../lib/k8s'
+export { parseReadyCount, isPodHealthy } from '../../../../lib/k8s'
 
 /**
  * Group control-plane pods by control plane name and determine health per CP.

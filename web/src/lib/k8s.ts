@@ -15,3 +15,15 @@ export function parseReadyCount(ready?: string): { ready: number; total: number 
     total: Number.isFinite(totalCount) ? totalCount : 0,
   }
 }
+
+/**
+ * Determine whether a pod is healthy based on its status and ready ratio.
+ * Accepts any object with optional `status` and `ready` fields.
+ */
+export function isPodHealthy(pod: { status?: string; ready?: string }): boolean {
+  const status = (pod.status ?? '').toLowerCase()
+  if (status !== 'running') return false
+
+  const { ready, total } = parseReadyCount(pod.ready)
+  return total > 0 && ready === total
+}

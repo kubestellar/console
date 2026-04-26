@@ -66,19 +66,8 @@ export function isVirtLauncher(labels?: Record<string, string>): boolean {
   return appLabel === VIRT_LAUNCHER_LABEL
 }
 
-import { parseReadyCount } from '../../../../lib/k8s'
-export { parseReadyCount } from '../../../../lib/k8s'
-
-/**
- * Determine whether a pod is healthy based on its status and ready ratio.
- */
-export function isPodHealthy(pod: KubevirtPodInfo): boolean {
-  const status = (pod.status ?? '').toLowerCase()
-  if (status !== 'running') return false
-
-  const { ready, total } = parseReadyCount(pod.ready)
-  return total > 0 && ready === total
-}
+import { parseReadyCount, isPodHealthy } from '../../../../lib/k8s'
+export { parseReadyCount, isPodHealthy } from '../../../../lib/k8s'
 
 /**
  * Extract VM state from a virt-launcher pod's status.
