@@ -50,9 +50,26 @@ const EXPECTED_ERROR_PATTERNS = [
   /AbortError/i,
   /signal is aborted/i,
   /Cross-Origin Request Blocked/i,
+  /blocked by CORS policy/i,
+  /Access to fetch.*has been blocked by CORS/i,
+  /Origin .* is not allowed by Access-Control-Allow-Origin/i, // WebKit/Safari CORS wording
+  /Access-Control-Allow-Origin.*localhost/i,
+  /Access-Control-Allow-Origin.*127\.0\.0\.1/i,
   /Notification permission/i,
+  /Notification prompting can only be done from a user gesture/i, // WebKit notification block
+  /Could not connect to [0-9.]+/i, // WebKit connection refused wording
+  /Connection refused/i,
   /502.*Bad Gateway/i,
   /Failed to load resource/i,
+  /127\.0\.0\.1:8585/i,
+  /wasm streaming compile failed.*sqlite/i,
+  /failed to asynchronously prepare wasm.*sqlite/i,
+  /Aborted\(NetworkError.*sqlite/i,
+  /Exception loading sqlite3 module/i,
+  /\[kc\.cache\] sqlite/i,
+  /NS_BINDING_ABORTED/i,
+  /NS_ERROR_FAILURE/i,
+  /can[\u2018\u2019']t establish a connection/i, // Firefox WebSocket curly apostrophes
 ]
 
 // ---------------------------------------------------------------------------

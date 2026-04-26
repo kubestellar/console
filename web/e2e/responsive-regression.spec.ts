@@ -49,6 +49,32 @@ async function setupDemoMode(page: Page) {
     localStorage.setItem('kc-demo-mode', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
   })
+
+  // Mock /api/me so AuthProvider has a deterministic user without a backend.
+  // Without this, WebKit may redirect to /login before the page renders. #10200
+  await page.route('**/api/me', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: '1',
+        github_id: '12345',
+        github_login: 'testuser',
+        email: 'test@example.com',
+        onboarded: true,
+      }),
+    })
+  )
+
+  // Mock MCP endpoints to prevent unmocked requests hitting a non-existent
+  // backend, which causes WebKit CORS errors and slow timeouts. #10200
+  await page.route('**/api/mcp/**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ clusters: [], issues: [], events: [], nodes: [] }),
+    })
+  )
 }
 
 test.describe('Responsive Breakpoint Tests', () => {

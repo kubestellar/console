@@ -58,6 +58,9 @@ export const EXPECTED_ERROR_PATTERNS = [
   /Cross-Origin Request Blocked/i, // CORS errors when backend/agent not running
   /blocked by CORS policy/i, // Chromium CORS wording (Firefox uses pattern above)
   /Access to fetch.*has been blocked by CORS/i, // Chromium-specific phrasing; Medium blog public fallback is cross-origin from vite preview (localhost:4173 → console.kubestellar.io)
+  /Origin .* is not allowed by Access-Control-Allow-Origin/i, // WebKit/Safari CORS wording (distinct from Chromium/Firefox patterns above)
+  /Access-Control-Allow-Origin.*localhost/i, // WebKit CORS variant referencing localhost origin
+  /Access-Control-Allow-Origin.*127\.0\.0\.1/i, // WebKit CORS variant referencing loopback IP
   /Notification permission/i, // Firefox blocks notification requests outside user gestures
   /Notification prompting can only be done from a user gesture/i, // WebKit/Safari wording for notification gesture block
   /ERR_CONNECTION_REFUSED/i, // Backend/agent not running in CI
