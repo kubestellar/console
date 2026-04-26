@@ -6,7 +6,7 @@ import { addCategoryTokens, setActiveTokenCategory, clearActiveTokenCategory } f
 import { LOCAL_AGENT_WS_URL, LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 import { emitError, emitMissionStarted, emitMissionCompleted, emitMissionError, emitMissionRated } from '../lib/analytics'
 import { scanForMaliciousContent } from '../lib/missions/scanner/malicious'
-import { MS_PER_MINUTE } from '../lib/constants/time'
+import { MS_PER_MINUTE, SECONDS_PER_DAY } from '../lib/constants/time'
 import { runPreflightCheck, type PreflightResult } from '../lib/missions/preflightCheck'
 import { kubectlProxy } from '../lib/kubectlProxy'
 import { kagentiProviderChat, fetchKagentiProviderAgents } from '../lib/kagentiProviderBackend'
@@ -1737,9 +1737,8 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
         if (m.status === 'running') {
           // #7326 — Cap duration at 24 hours to prevent numeric overflow
           // from clock skew or backgrounded tabs.
-          const MAX_MISSION_DURATION_SEC = 86_400 // 24 hours
           const rawDuration = Math.round((Date.now() - m.createdAt.getTime()) / 1000)
-          const clampedDuration = Math.min(Math.max(rawDuration, 0), MAX_MISSION_DURATION_SEC)
+          const clampedDuration = Math.min(Math.max(rawDuration, 0), SECONDS_PER_DAY)
           emitMissionCompleted(m.type, clampedDuration)
           // Notify data-dependent components (e.g. ACMM scan) so they
           // re-fetch after a mission may have changed the repo's state.

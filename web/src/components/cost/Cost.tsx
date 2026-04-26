@@ -9,12 +9,14 @@ import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
 import { RotatingTip } from '../ui/RotatingTip'
 import { TICK_INTERVAL_MS } from '../../lib/constants/network'
+import { HOURS_PER_MONTH } from '../../lib/constants/time'
 import { safeGetJSON } from '../../lib/utils/localStorage'
 import { formatMemoryStat } from '../../lib/formatStats'
 
 /** GiB per TiB — used for storage unit display in cost blocks */
 
 const COST_CARDS_KEY = 'kubestellar-cost-cards'
+const STORAGE_COST_PER_GB_MONTH = 0.10
 
 // Default cards for the Cost dashboard
 const DEFAULT_COST_CARDS = getDefaultCards('cost')
@@ -105,20 +107,19 @@ export function Cost() {
       const pricing = CLOUD_PRICING[provider]
 
       const clusterHourly = (cpus * pricing.cpu) + (memory * pricing.memory) + (gpus * pricing.gpu)
-      const clusterMonthly = clusterHourly * 24 * 30
+      const clusterMonthly = clusterHourly * HOURS_PER_MONTH
 
       totalCPU += cpus
       totalMemoryGB += memory
       totalGPUs += gpus
       totalMonthly += clusterMonthly
-      cpuMonthly += cpus * pricing.cpu * 24 * 30
-      memoryMonthly += memory * pricing.memory * 24 * 30
-      gpuMonthly += gpus * pricing.gpu * 24 * 30
+      cpuMonthly += cpus * pricing.cpu * HOURS_PER_MONTH
+      memoryMonthly += memory * pricing.memory * HOURS_PER_MONTH
+      gpuMonthly += gpus * pricing.gpu * HOURS_PER_MONTH
     })
 
     const totalStorageGB = reachableClusters.reduce((sum, c) => sum + (c.storageGB || 0), 0)
-    const storageCostPerGBMonth = 0.10
-    const storageMonthly = totalStorageGB * storageCostPerGBMonth
+    const storageMonthly = totalStorageGB * STORAGE_COST_PER_GB_MONTH
 
     return {
       totalCPU,
