@@ -46,6 +46,7 @@ export const STORAGE_KEY_ANONYMOUS_USER_ID = 'kc-anonymous-user-id'
 
 // ── Dashboard persistence ─────────────────────────────────────────────
 export const STORAGE_KEY_MAIN_DASHBOARD_CARDS = 'kubestellar-main-dashboard-cards'
+export const STORAGE_KEY_DASHBOARD_AUTO_REFRESH = 'dashboard-auto-refresh'
 
 // ── UI state persistence ───────────────────────────────────────────────
 export const STORAGE_KEY_CLUSTER_LAYOUT = 'kubestellar-cluster-layout-mode'

@@ -36,6 +36,7 @@ import { getDefaultCardsForDashboard } from '../../config/dashboards'
 import { safeLazy } from '../../lib/safeLazy'
 import { CardRecommendations } from './CardRecommendations'
 import { safeGetItem, safeSetItem, safeGetJSON, safeSetJSON } from '../../lib/utils/localStorage'
+import { STORAGE_KEY_DASHBOARD_AUTO_REFRESH } from '../../lib/constants'
 import { MissionSuggestions } from './MissionSuggestions'
 import { GettingStartedBanner } from './GettingStartedBanner'
 import { useMissions } from '../../hooks/useMissions'
@@ -238,7 +239,7 @@ export function Dashboard() {
 
   // Auto-refresh state (persisted in localStorage)
   const [autoRefresh, setAutoRefresh] = useState(() => {
-    const stored = safeGetItem('dashboard-auto-refresh')
+    const stored = safeGetItem(STORAGE_KEY_DASHBOARD_AUTO_REFRESH)
     return stored !== null ? stored === 'true' : true // default to true
   })
   const autoRefreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -246,7 +247,7 @@ export function Dashboard() {
   // Persist auto-refresh setting and propagate to global cache layer.
   // When the user unchecks "Auto", all card cache intervals are also paused.
   useEffect(() => {
-    safeSetItem('dashboard-auto-refresh', String(autoRefresh))
+    safeSetItem(STORAGE_KEY_DASHBOARD_AUTO_REFRESH, String(autoRefresh))
     setAutoRefreshPaused(!autoRefresh)
     return () => {
       // Re-enable auto-refresh when the Dashboard unmounts (e.g., navigating away)

@@ -8,6 +8,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { type ReactNode } from 'react'
+import { STORAGE_KEY_DASHBOARD_AUTO_REFRESH } from '../../../lib/constants'
 
 // ── Minimal mock surface ────────────────────────────────────────────
 const mockSafeGetItem = vi.fn().mockReturnValue(null)
@@ -319,15 +320,15 @@ describe('Dashboard', () => {
 
   it('persists auto-refresh true by default', () => {
     render(<Dashboard />)
-    expect(mockSafeSetItem).toHaveBeenCalledWith('dashboard-auto-refresh', 'true')
+    expect(mockSafeSetItem).toHaveBeenCalledWith(STORAGE_KEY_DASHBOARD_AUTO_REFRESH, 'true')
   })
 
   it('reads auto-refresh=false from localStorage', () => {
     mockSafeGetItem.mockImplementation((key: string) =>
-      key === 'dashboard-auto-refresh' ? 'false' : null
+      key === STORAGE_KEY_DASHBOARD_AUTO_REFRESH ? 'false' : null
     )
     render(<Dashboard />)
-    expect(mockSafeSetItem).toHaveBeenCalledWith('dashboard-auto-refresh', 'false')
+    expect(mockSafeSetItem).toHaveBeenCalledWith(STORAGE_KEY_DASHBOARD_AUTO_REFRESH, 'false')
   })
 
   it('persists cards to localStorage', async () => {
