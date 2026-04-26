@@ -32,6 +32,7 @@ import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../ui/StatusBadge'
 import { ConfirmDialog } from '../../lib/modals'
 import { useFederationAwareness, getProviderLabel } from '../../hooks/useFederation'
+import { formatTimeAgo } from '../../lib/formatters'
 
 interface ClusterGroupsProps {
   config?: Record<string, unknown>
@@ -97,15 +98,6 @@ function formatFilter(f: ClusterFilter): string {
   }
   const op = NUM_OPERATORS.find(o => o.value === f.operator)?.label ?? f.operator
   return `${field} ${op} ${f.value}`
-}
-
-function relativeTime(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime()
-  const secs = Math.floor(diff / 1000)
-  if (secs < 60) return `${secs}s ago`
-  const mins = Math.floor(secs / 60)
-  if (mins < 60) return `${mins}m ago`
-  return `${Math.floor(mins / 60)}h ago`
 }
 
 // ============================================================================
@@ -412,7 +404,7 @@ function DroppableGroup({ group, isExpanded, clusterHealthMap, onToggle, onEdit,
                 </div>
               ))}
               {group.lastEvaluated && (
-                <div className="text-muted-foreground">{t('cards:clusterGroups.evaluated', { time: relativeTime(group.lastEvaluated) })}</div>
+                <div className="text-muted-foreground">{t('cards:clusterGroups.evaluated', { time: formatTimeAgo(group.lastEvaluated) })}</div>
               )}
             </div>
           )}

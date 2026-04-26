@@ -23,9 +23,11 @@ import { EmbedButton } from './EmbedButton'
 import { LogsModal } from './LogsModal'
 import { useMissions } from '../../../hooks/useMissions'
 import { cn } from '../../../lib/cn'
+import { formatTimeAgo } from '../../../lib/formatters'
+import { MS_PER_SECOND, MS_PER_HOUR, SECONDS_PER_MINUTE } from '../../../lib/constants/time'
 
 /** Maximum ms duration we format compactly (1 hr). Over this, show "1h+" */
-const SHORT_DURATION_CAP_MS = 3_600_000
+const SHORT_DURATION_CAP_MS = MS_PER_HOUR
 
 /** Extracted user-visible strings. Kept out of inline JSX attributes to
  * satisfy the ui-ux-standard ratchet and make a future i18n pass easy. */
@@ -36,19 +38,11 @@ const TITLE_OPEN_RUN = 'Open run on GitHub'
 const TITLE_DIAGNOSE = 'Diagnose with AI'
 
 function formatDuration(ms: number): string {
-  if (ms < 1000) return `${ms}ms`
-  const secs = Math.floor(ms / 1000)
-  if (secs < 60) return `${secs}s`
+  if (ms < MS_PER_SECOND) return `${ms}ms`
+  const secs = Math.floor(ms / MS_PER_SECOND)
+  if (secs < SECONDS_PER_MINUTE) return `${secs}s`
   if (ms >= SHORT_DURATION_CAP_MS) return '1h+'
-  return `${Math.floor(secs / 60)}m ${secs % 60}s`
-}
-
-function relativeTime(iso: string): string {
-  const secs = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000))
-  if (secs < 60) return `${secs}s ago`
-  if (secs < 3_600) return `${Math.floor(secs / 60)}m ago`
-  if (secs < 86_400) return `${Math.floor(secs / 3_600)}h ago`
-  return `${Math.floor(secs / 86_400)}d ago`
+  return `${Math.floor(secs / SECONDS_PER_MINUTE)}m ${secs % SECONDS_PER_MINUTE}s`
 }
 
 export function RecentFailures() {
@@ -174,7 +168,7 @@ export function RecentFailures() {
                     )}
                   </td>
                   <td className="py-1.5 pr-2 text-muted-foreground whitespace-nowrap">
-                    {relativeTime(r.createdAt)}
+                    {formatTimeAgo(r.createdAt)}
                   </td>
                   <td className="py-1.5 pr-2 text-muted-foreground whitespace-nowrap">
                     {formatDuration(r.durationMs)}
