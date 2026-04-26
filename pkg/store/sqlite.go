@@ -1175,8 +1175,8 @@ func (s *SQLiteStore) UpdateCard(ctx context.Context, card *models.Card) error {
 		configStr = &str
 	}
 
-	res, err := s.db.ExecContext(ctx, `UPDATE cards SET card_type = ?, config = ?, position = ? WHERE id = ?`,
-		string(card.CardType), configStr, string(positionJSON), card.ID.String())
+	res, err := s.db.ExecContext(ctx, `UPDATE cards SET dashboard_id = ?, card_type = ?, config = ?, position = ? WHERE id = ?`,
+		card.DashboardID.String(), string(card.CardType), configStr, string(positionJSON), card.ID.String())
 	if err != nil {
 		return err
 	}
@@ -1185,6 +1185,41 @@ func (s *SQLiteStore) UpdateCard(ctx context.Context, card *models.Card) error {
 		return fmt.Errorf("failed to read rows affected: %w", err)
 	}
 	if rows == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
+
+// MoveCardWithLimit atomically moves a card to a different dashboard,
+// enforcing the per-dashboard card limit. The count check and the update
+// happen in a single SQL statement so that SQLite's write lock serializes
+// concurrent moves the same way CreateCardWithLimit serializes creates.
+// Returns ErrDashboardCardLimitReached when the target dashboard already
+// has maxCards cards (the card that is being moved is excluded from the
+// count because it still belongs to the source dashboard at check time).
+func (s *SQLiteStore) MoveCardWithLimit(ctx context.Context, cardID uuid.UUID, targetDashboardID uuid.UUID, maxCards int) error {
+	res, err := s.db.ExecContext(ctx,
+		`UPDATE cards SET dashboard_id = ?
+		 WHERE id = ?
+		 AND (SELECT COUNT(*) FROM cards WHERE dashboard_id = ?) < ?`,
+		targetDashboardID.String(), cardID.String(),
+		targetDashboardID.String(), maxCards,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to move card: %w", err)
+	}
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to read rows affected: %w", err)
+	}
+	if rowsAffected == 0 {
+		// Could be either: card doesn't exist, or limit reached.
+		// Check if card exists to distinguish.
+		var exists int
+		_ = s.db.QueryRowContext(ctx, `SELECT 1 FROM cards WHERE id = ?`, cardID.String()).Scan(&exists)
+		if exists == 1 {
+			return ErrDashboardCardLimitReached
+		}
 		return sql.ErrNoRows
 	}
 	return nil

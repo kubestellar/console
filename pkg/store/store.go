@@ -95,6 +95,7 @@ type Store interface {
 	CreateCard(ctx context.Context, card *models.Card) error
 	CreateCardWithLimit(ctx context.Context, card *models.Card, maxCards int) error
 	UpdateCard(ctx context.Context, card *models.Card) error
+	MoveCardWithLimit(ctx context.Context, cardID uuid.UUID, targetDashboardID uuid.UUID, maxCards int) error
 	DeleteCard(ctx context.Context, id uuid.UUID) error
 	UpdateCardFocus(ctx context.Context, cardID uuid.UUID, summary string) error
 

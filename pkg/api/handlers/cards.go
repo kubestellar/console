@@ -404,28 +404,20 @@ func (h *CardHandler) MoveCard(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusForbidden, "Access denied to target dashboard")
 	}
 
-	// Enforce per-dashboard card limit on the TARGET before moving.
-	// Without this, a Move can push a dashboard over MaxCardsPerDashboard,
-	// bypassing the limit that CreateCardWithLimit enforces on create.
-	// Note: if the source and target are the same dashboard this is a no-op
-	// from a count perspective, but we still allow it.
+	// Atomically move the card to the target dashboard, enforcing the
+	// per-dashboard card limit inside a single SQL statement to prevent
+	// TOCTOU races (two concurrent moves both passing the count check).
 	if card.DashboardID != targetDashboardID {
-		targetCards, cErr := h.store.GetDashboardCards(c.UserContext(), targetDashboardID)
-		if cErr != nil {
-			return fiber.NewError(fiber.StatusInternalServerError, "Failed to check target dashboard capacity")
+		if err := h.store.MoveCardWithLimit(c.UserContext(), cardID, targetDashboardID, MaxCardsPerDashboard); err != nil {
+			if errors.Is(err, store.ErrDashboardCardLimitReached) {
+				return fiber.NewError(
+					fiber.StatusBadRequest,
+					fmt.Sprintf("Target dashboard already has the maximum number of cards (limit %d)", MaxCardsPerDashboard),
+				)
+			}
+			return fiber.NewError(fiber.StatusInternalServerError, "Failed to move card")
 		}
-		if len(targetCards) >= MaxCardsPerDashboard {
-			return fiber.NewError(
-				fiber.StatusBadRequest,
-				fmt.Sprintf("Target dashboard already has %d cards (limit %d)", len(targetCards), MaxCardsPerDashboard),
-			)
-		}
-	}
-
-	// Update the card's dashboard ID
-	card.DashboardID = targetDashboardID
-	if err := h.store.UpdateCard(c.UserContext(), card); err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "Failed to move card")
+		card.DashboardID = targetDashboardID
 	}
 
 	// Notify via WebSocket
