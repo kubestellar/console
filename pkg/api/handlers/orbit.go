@@ -52,6 +52,9 @@ var orbitCadenceHours = map[string]float64{
 // inside the console data directory.
 const orbitDefaultDataFile = "orbit_missions.json"
 
+// orbitMaxHistoryEntries is the maximum number of run records kept per orbit mission.
+const orbitMaxHistoryEntries = 50
+
 // ─── Types ──────────────────────────────────────────────────────────
 
 // OrbitMission represents a recurring maintenance mission.
@@ -201,9 +204,8 @@ func (h *OrbitHandler) RunMission(c *fiber.Ctx) error {
 	})
 
 	// Cap history length
-	const maxHistoryEntries = 50
-	if len(m.History) > maxHistoryEntries {
-		m.History = m.History[len(m.History)-maxHistoryEntries:]
+	if len(m.History) > orbitMaxHistoryEntries {
+		m.History = m.History[len(m.History)-orbitMaxHistoryEntries:]
 	}
 	h.mu.Unlock()
 	h.saveToDisk()
@@ -322,9 +324,8 @@ func (h *OrbitHandler) checkDueMissions() {
 				Result:    result,
 				Summary:   "Auto-run by backend scheduler",
 			})
-			const maxHistoryEntries = 50
-			if len(m.History) > maxHistoryEntries {
-				m.History = m.History[len(m.History)-maxHistoryEntries:]
+			if len(m.History) > orbitMaxHistoryEntries {
+				m.History = m.History[len(m.History)-orbitMaxHistoryEntries:]
 			}
 			changed = true
 			slog.Info("orbit auto-run triggered", "mission", m.ID, "type", m.OrbitType)
