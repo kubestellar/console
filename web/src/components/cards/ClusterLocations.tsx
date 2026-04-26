@@ -12,6 +12,7 @@ import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { useToast } from '../ui/Toast'
 import { useDemoMode } from '../../hooks/useDemoMode'
+import { CLUSTER_MARKER_FONT_SIZE } from '../../lib/constants'
 
 /** Search input debounce delay (#6213). */
 const SEARCH_DEBOUNCE_MS = 250
@@ -584,7 +585,7 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
                           ? 'bg-green-500/20 border-green-500/40 hover:bg-green-500/30'
                           : 'bg-red-500/20 border-red-500/40 hover:bg-red-500/30'
                       }`}
-                      style={{ fontSize: 8 }}
+                      style={{ fontSize: CLUSTER_MARKER_FONT_SIZE }}
                     >
                       <CloudProviderIcon provider={provider} size={10} />
                       <span className="text-[9px] font-medium text-foreground max-w-[60px] truncate">

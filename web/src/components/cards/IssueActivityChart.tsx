@@ -36,6 +36,7 @@ import {
   CHART_TEXT_MUTED,
   CHART_AXIS_FONT_SIZE,
   CHART_BODY_FONT_SIZE,
+  CHART_LEGEND_FONT_SIZE,
 } from '../../lib/constants'
 import { hexToRgba } from '../../lib/theme/chartColors'
 import { MS_PER_DAY, MS_PER_HOUR } from '../../lib/constants/time'
@@ -463,7 +464,7 @@ export function IssueActivityChart(props: { config?: IssueActivityConfig }) {
           t('issueActivityChart.prsMerged', 'PRs Merged'),
         ],
         top: 8,
-        textStyle: { color: CHART_TEXT_MUTED, fontSize: 11 },
+        textStyle: { color: CHART_TEXT_MUTED, fontSize: CHART_LEGEND_FONT_SIZE },
         itemWidth: 14,
         itemHeight: 10,
       },

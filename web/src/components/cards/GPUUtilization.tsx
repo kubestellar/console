@@ -19,7 +19,8 @@ import {
   CHART_TICK_COLOR,
   CHART_MARK_LINE_LABEL,
   CHART_MARK_LINE_STROKE,
-  CHART_AXIS_FONT_SIZE_SM } from '../../lib/constants'
+  CHART_AXIS_FONT_SIZE_SM,
+  CHART_LEGEND_FONT_SIZE } from '../../lib/constants'
 import { PURPLE_600, hexToRgba } from '../../lib/theme/chartColors'
 
 const GPU_RING_SIZE_PX = 80
@@ -208,7 +209,7 @@ export function GPUUtilization() {
       trigger: 'axis' as const,
       backgroundColor: (CHART_TOOLTIP_CONTENT_STYLE as Record<string, unknown>).backgroundColor as string,
       borderColor: (CHART_TOOLTIP_CONTENT_STYLE as Record<string, unknown>).borderColor as string,
-      textStyle: { color: CHART_TICK_COLOR, fontSize: 11 },
+      textStyle: { color: CHART_TICK_COLOR, fontSize: CHART_LEGEND_FONT_SIZE },
     },
     series: [
       {

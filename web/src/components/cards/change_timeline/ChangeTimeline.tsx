@@ -16,6 +16,7 @@ import { cn } from '../../../lib/cn'
 import { Skeleton } from '../../ui/Skeleton'
 import type { TimelineEventType, TimelineEvent } from './demoData'
 import { MS_PER_HOUR, MS_PER_DAY } from '../../../lib/constants/time'
+import { CHART_TICK_COLOR } from '../../../lib/constants'
 
 const SIX_HOURS_MS = 6 * MS_PER_HOUR
 const TWENTY_FOUR_HOURS_MS = MS_PER_DAY
@@ -58,7 +59,7 @@ const CHART_LABEL_COLOR = '#94a3b8'
 const CHART_AXIS_COLOR = '#334155'
 const CHART_GRID_COLOR = '#1e293b'
 const CHART_LEGEND_COLOR = '#e2e8f0'
-const CHART_FALLBACK_COLOR = '#888'
+const CHART_FALLBACK_COLOR = CHART_TICK_COLOR
 const CHART_LABEL_FONT_SIZE = 11
 const CHART_LEGEND_FONT_SIZE = 12
 

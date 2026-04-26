@@ -83,6 +83,10 @@ export const CHART_AXIS_FONT_SIZE_SM = 9
 export const CHART_BODY_FONT_SIZE = 12
 /** Small chart body font size for compact labels (ECharts numeric) */
 export const CHART_BODY_FONT_SIZE_SM = 10
+/** Legend text font size for chart legends (ECharts numeric) */
+export const CHART_LEGEND_FONT_SIZE = 11
+/** Tiny marker label font size for map cluster markers (DOM px) */
+export const CLUSTER_MARKER_FONT_SIZE = 8
 
 // ── Kubectl proxy thresholds ────────────────────────────────────────────
 export const MAX_CONCURRENT_KUBECTL_REQUESTS = 4
