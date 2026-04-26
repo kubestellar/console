@@ -18,7 +18,10 @@ import {
   CHART_GRID_STROKE,
   CHART_AXIS_STROKE,
   CHART_TOOLTIP_CONTENT_STYLE,
-  CHART_TICK_COLOR } from '../../lib/constants'
+  CHART_TICK_COLOR,
+  CHART_AXIS_FONT_SIZE,
+  CHART_BODY_FONT_SIZE,
+  CHART_TEXT_MUTED } from '../../lib/constants'
 import { MS_PER_MINUTE } from '../../lib/constants/time'
 
 /**
@@ -326,14 +329,14 @@ export function GPUUsageTrend() {
     xAxis: {
       type: 'category' as const,
       data: history.map(d => d.time),
-      axisLabel: { color: CHART_TICK_COLOR, fontSize: 10 },
+      axisLabel: { color: CHART_TICK_COLOR, fontSize: CHART_AXIS_FONT_SIZE },
       axisLine: { lineStyle: { color: CHART_AXIS_STROKE } },
       axisTick: { show: false },
     },
     yAxis: {
       type: 'value' as const,
       minInterval: 1,
-      axisLabel: { color: CHART_TICK_COLOR, fontSize: 10 },
+      axisLabel: { color: CHART_TICK_COLOR, fontSize: CHART_AXIS_FONT_SIZE },
       axisLine: { show: false },
       axisTick: { show: false },
       splitLine: { lineStyle: { color: CHART_GRID_STROKE, type: 'dashed' as const } },
@@ -342,7 +345,7 @@ export function GPUUsageTrend() {
       trigger: 'axis' as const,
       backgroundColor: (CHART_TOOLTIP_CONTENT_STYLE as Record<string, unknown>).backgroundColor as string,
       borderColor: (CHART_TOOLTIP_CONTENT_STYLE as Record<string, unknown>).borderColor as string,
-      textStyle: { color: CHART_TICK_COLOR, fontSize: 12 },
+      textStyle: { color: CHART_TICK_COLOR, fontSize: CHART_BODY_FONT_SIZE },
       formatter: (params: Array<{ seriesName: string; value: number; color: string }>) => {
         let html = ''
         for (const p of (params || [])) {
@@ -355,7 +358,7 @@ export function GPUUsageTrend() {
     legend: {
       data: ['In Use', 'Free'],
       bottom: 0,
-      textStyle: { color: '#888', fontSize: 10 },
+      textStyle: { color: CHART_TEXT_MUTED, fontSize: CHART_AXIS_FONT_SIZE },
       icon: 'rect',
     },
     series: [

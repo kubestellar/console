@@ -8,7 +8,7 @@ import { InsightSourceBadge } from './InsightSourceBadge'
 import { StatusBadge } from '../../ui/StatusBadge'
 import { CardControlsRow } from '../../../lib/cards/CardComponents'
 import { useInsightSort, INSIGHT_SORT_OPTIONS, type InsightSortField } from './insightSortUtils'
-import { CHART_GRID_STROKE, CHART_TOOLTIP_CONTENT_STYLE, CHART_TOOLTIP_FONT_SIZE_COMPACT, CHART_TICK_COLOR, CHART_HEIGHT_SM } from '../../../lib/constants/ui'
+import { CHART_GRID_STROKE, CHART_TOOLTIP_CONTENT_STYLE, CHART_TOOLTIP_FONT_SIZE_COMPACT, CHART_TICK_COLOR, CHART_HEIGHT_SM, CHART_TOOLTIP_TEXT_COLOR, CHART_AXIS_FONT_SIZE_SM } from '../../../lib/constants/ui'
 
 const GRID_LEFT_PX = 85
 const GRID_RIGHT_PX = 10
@@ -94,7 +94,7 @@ export function DeploymentRolloutTracker() {
         type: 'value' as const,
         min: 0,
         max: FULL_PROGRESS_PCT,
-        axisLabel: { fontSize: 9, color: CHART_TICK_COLOR, formatter: (v: number) => `${v}%` },
+        axisLabel: { fontSize: CHART_AXIS_FONT_SIZE_SM, color: CHART_TICK_COLOR, formatter: (v: number) => `${v}%` },
         axisTick: { show: false },
         axisLine: { show: false },
         splitLine: { lineStyle: { color: CHART_GRID_STROKE, type: 'dashed' as const } },
@@ -102,14 +102,14 @@ export function DeploymentRolloutTracker() {
       yAxis: {
         type: 'category' as const,
         data: clusterProgress.map(c => c.cluster),
-        axisLabel: { fontSize: 9, color: CHART_TICK_COLOR },
+        axisLabel: { fontSize: CHART_AXIS_FONT_SIZE_SM, color: CHART_TICK_COLOR },
         axisTick: { show: false },
         axisLine: { show: false },
       },
       tooltip: {
         backgroundColor: (CHART_TOOLTIP_CONTENT_STYLE as Record<string, unknown>).backgroundColor as string,
         borderColor: (CHART_TOOLTIP_CONTENT_STYLE as Record<string, unknown>).borderColor as string,
-        textStyle: { color: '#e0e0e0', fontSize: Number(CHART_TOOLTIP_FONT_SIZE_COMPACT.replace('px', '')) },
+        textStyle: { color: CHART_TOOLTIP_TEXT_COLOR, fontSize: Number(CHART_TOOLTIP_FONT_SIZE_COMPACT.replace('px', '')) },
         formatter: (params: { name: string; value: number }) => `${params.name}: ${params.value}%`,
       },
       series: [{

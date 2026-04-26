@@ -1,6 +1,15 @@
 import { useMemo } from 'react'
 import ReactECharts from 'echarts-for-react'
-import { CHART_TOOLTIP_CONTENT_STYLE, CHART_TOOLTIP_TEXT_COLOR, CHART_TOOLTIP_LABEL_COLOR } from '../../lib/constants'
+import {
+  CHART_TOOLTIP_CONTENT_STYLE,
+  CHART_TOOLTIP_TEXT_COLOR,
+  CHART_TOOLTIP_LABEL_COLOR,
+  CHART_TICK_COLOR,
+  CHART_AXIS_STROKE,
+  CHART_GRID_STROKE,
+  CHART_AXIS_FONT_SIZE,
+  CHART_BODY_FONT_SIZE,
+} from '../../lib/constants'
 
 interface DataItem {
   name: string
@@ -35,17 +44,17 @@ export function BarChart({
     const categoryAxis = {
       type: 'category' as const,
       data: categoryData,
-      axisLabel: { color: '#888', fontSize: 10 },
-      axisLine: horizontal ? { show: false } : { lineStyle: { color: '#333' } },
+      axisLabel: { color: CHART_TICK_COLOR, fontSize: CHART_AXIS_FONT_SIZE },
+      axisLine: horizontal ? { show: false } : { lineStyle: { color: CHART_AXIS_STROKE } },
       axisTick: { show: false },
     }
 
     const valueAxis = {
       type: 'value' as const,
-      axisLabel: { color: '#888', fontSize: 10 },
+      axisLabel: { color: CHART_TICK_COLOR, fontSize: CHART_AXIS_FONT_SIZE },
       axisLine: { show: false },
       axisTick: { show: false },
-      splitLine: showGrid ? { lineStyle: { color: '#333', type: 'dashed' as const } } : { show: false },
+      splitLine: showGrid ? { lineStyle: { color: CHART_GRID_STROKE, type: 'dashed' as const } } : { show: false },
     }
 
     return {
@@ -58,7 +67,7 @@ export function BarChart({
         axisPointer: { type: 'shadow-sm' as const },
         backgroundColor: (CHART_TOOLTIP_CONTENT_STYLE as Record<string, unknown>).backgroundColor as string,
         borderColor: (CHART_TOOLTIP_CONTENT_STYLE as Record<string, unknown>).borderColor as string,
-        textStyle: { color: CHART_TOOLTIP_TEXT_COLOR, fontSize: 12 },
+        textStyle: { color: CHART_TOOLTIP_TEXT_COLOR, fontSize: CHART_BODY_FONT_SIZE },
         formatter: (params: Array<{ name: string; value: number; color: string }>) => {
           const p = Array.isArray(params) ? params[0] : params
           return `<span style="color:${CHART_TOOLTIP_LABEL_COLOR};font-weight:500">${p.name}</span><br/><span style="color:${CHART_TOOLTIP_TEXT_COLOR}">${p.value}${unit}</span>`
@@ -114,23 +123,23 @@ export function StackedBarChart({
     xAxis: {
       type: 'category' as const,
       data: data.map(d => d[xAxisKey]),
-      axisLabel: { color: '#888', fontSize: 10 },
-      axisLine: { lineStyle: { color: '#333' } },
+      axisLabel: { color: CHART_TICK_COLOR, fontSize: CHART_AXIS_FONT_SIZE },
+      axisLine: { lineStyle: { color: CHART_AXIS_STROKE } },
       axisTick: { show: false },
     },
     yAxis: {
       type: 'value' as const,
-      axisLabel: { color: '#888', fontSize: 10 },
+      axisLabel: { color: CHART_TICK_COLOR, fontSize: CHART_AXIS_FONT_SIZE },
       axisLine: { show: false },
       axisTick: { show: false },
-      splitLine: { lineStyle: { color: '#333', type: 'dashed' as const } },
+      splitLine: { lineStyle: { color: CHART_GRID_STROKE, type: 'dashed' as const } },
     },
     tooltip: {
       trigger: 'axis' as const,
       axisPointer: { type: 'shadow-sm' as const },
       backgroundColor: (CHART_TOOLTIP_CONTENT_STYLE as Record<string, unknown>).backgroundColor as string,
       borderColor: (CHART_TOOLTIP_CONTENT_STYLE as Record<string, unknown>).borderColor as string,
-      textStyle: { color: CHART_TOOLTIP_TEXT_COLOR, fontSize: 12 },
+      textStyle: { color: CHART_TOOLTIP_TEXT_COLOR, fontSize: CHART_BODY_FONT_SIZE },
     },
     series: categories.map(cat => ({
       name: cat.name || cat.dataKey,

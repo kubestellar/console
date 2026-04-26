@@ -22,7 +22,7 @@ import {
   TOOLTIP_SWATCH_SIZE_PX } from '../../../lib/llmd/tooltipSpacing'
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../../ui/StatusBadge'
-import { CHART_MIN_HEIGHT_PX } from '../../../lib/constants/ui'
+import { CHART_MIN_HEIGHT_PX, CHART_TEXT_WHITE, CHART_AXIS_FONT_SIZE, CHART_AXIS_FONT_SIZE_SM, CHART_BODY_FONT_SIZE } from '../../../lib/constants/ui'
 
 const GRID_LEFT_PX = 55
 const GRID_RIGHT_PX = 20
@@ -148,8 +148,8 @@ function LatencyBreakdownInternal() {
         name: 'QPS (queries/sec)',
         nameLocation: 'middle' as const,
         nameGap: 30,
-        nameTextStyle: { color: '#71717a', fontSize: 10 },
-        axisLabel: { color: '#71717a', fontSize: 10 },
+        nameTextStyle: { color: '#71717a', fontSize: CHART_AXIS_FONT_SIZE },
+        axisLabel: { color: '#71717a', fontSize: CHART_AXIS_FONT_SIZE },
         axisLine: { lineStyle: { color: '#71717a' } },
         axisTick: { show: false },
       },
@@ -158,8 +158,8 @@ function LatencyBreakdownInternal() {
         name: tabInfo.unit,
         nameLocation: 'middle' as const,
         nameGap: 40,
-        nameTextStyle: { color: '#71717a', fontSize: 10 },
-        axisLabel: { color: '#71717a', fontSize: 10 },
+        nameTextStyle: { color: '#71717a', fontSize: CHART_AXIS_FONT_SIZE },
+        axisLabel: { color: '#71717a', fontSize: CHART_AXIS_FONT_SIZE },
         axisLine: { lineStyle: { color: '#71717a' } },
         axisTick: { show: false },
         splitLine: { lineStyle: { color: '#334155', opacity: 0.5, type: 'dashed' as const } },
@@ -168,7 +168,7 @@ function LatencyBreakdownInternal() {
         trigger: 'axis' as const,
         backgroundColor: 'rgba(15,23,42,0.95)',
         borderColor: 'rgba(100,116,139,0.3)',
-        textStyle: { color: '#fff', fontSize: 12 },
+        textStyle: { color: CHART_TEXT_WHITE, fontSize: CHART_BODY_FONT_SIZE },
         formatter: (params: Array<{ seriesName: string; value: number | null; color: string }>) => {
           const qps = chartData[(params[0] as unknown as { dataIndex: number }).dataIndex]?.qps ?? ''
           const items = (params || [])
@@ -190,7 +190,7 @@ function LatencyBreakdownInternal() {
             symbol: 'none',
             data: [{
               yAxis: tabInfo.sla,
-              label: { formatter: `SLA: ${tabInfo.sla}ms`, position: 'end' as const, color: '#ef4444', fontSize: 9 },
+              label: { formatter: `SLA: ${tabInfo.sla}ms`, position: 'end' as const, color: '#ef4444', fontSize: CHART_AXIS_FONT_SIZE_SM },
               lineStyle: { color: '#ef4444', type: 'dashed' as const, opacity: 0.6 },
             }],
           },

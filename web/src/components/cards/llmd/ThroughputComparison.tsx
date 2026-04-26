@@ -23,7 +23,7 @@ import {
   TOOLTIP_SWATCH_SIZE_PX } from '../../../lib/llmd/tooltipSpacing'
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../../ui/StatusBadge'
-import { CHART_MIN_HEIGHT_PX } from '../../../lib/constants/ui'
+import { CHART_MIN_HEIGHT_PX, CHART_TEXT_WHITE, CHART_AXIS_FONT_SIZE, CHART_BODY_FONT_SIZE } from '../../../lib/constants/ui'
 
 const GRID_LEFT_PX = 55
 const GRID_RIGHT_PX = 20
@@ -124,8 +124,8 @@ export function ThroughputComparison() {
         name: 'QPS (queries/sec)',
         nameLocation: 'middle' as const,
         nameGap: 30,
-        nameTextStyle: { color: '#71717a', fontSize: 10 },
-        axisLabel: { color: '#71717a', fontSize: 10 },
+        nameTextStyle: { color: '#71717a', fontSize: CHART_AXIS_FONT_SIZE },
+        axisLabel: { color: '#71717a', fontSize: CHART_AXIS_FONT_SIZE },
         axisLine: { lineStyle: { color: '#71717a' } },
         axisTick: { show: false },
       },
@@ -134,10 +134,10 @@ export function ThroughputComparison() {
         name: 'tok/s',
         nameLocation: 'middle' as const,
         nameGap: 40,
-        nameTextStyle: { color: '#71717a', fontSize: 10 },
+        nameTextStyle: { color: '#71717a', fontSize: CHART_AXIS_FONT_SIZE },
         axisLabel: {
           color: '#71717a',
-          fontSize: 10,
+          fontSize: CHART_AXIS_FONT_SIZE,
           formatter: (v: number) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(v),
         },
         axisLine: { lineStyle: { color: '#71717a' } },
@@ -148,7 +148,7 @@ export function ThroughputComparison() {
         trigger: 'axis' as const,
         backgroundColor: 'rgba(15,23,42,0.95)',
         borderColor: 'rgba(100,116,139,0.3)',
-        textStyle: { color: '#fff', fontSize: 12 },
+        textStyle: { color: CHART_TEXT_WHITE, fontSize: CHART_BODY_FONT_SIZE },
         formatter: (params: Array<{ seriesName: string; value: number | null; color: string; dataIndex: number }>) => {
           const qps = chartData[params[0]?.dataIndex]?.qps ?? ''
           const items = (params || [])

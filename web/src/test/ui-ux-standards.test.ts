@@ -88,7 +88,8 @@ const COMPONENTS_DIR = path.resolve(
 //   273 → 274: PR #9841 — DashboardHeader compliance pages added one new hex fallback
 //   274 → 275: PR #9941 — Flatcar card added one hex color
 //   275 → 282: PR #10047 — ChangeTimeline card ECharts event type palette (7 hex colors)
-const EXPECTED_RAW_HEX_COUNT = 282
+//   282 → 262: PR #10260 — replaced 20 raw hex colors in chart files with shared constants
+const EXPECTED_RAW_HEX_COUNT = 262
 const EXPECTED_RAW_RGBA_COUNT = 104
 //   22 → 19: PR #8547 — replaced 3 arbitrary Tailwind hex colors in Login.tsx
 //            (bg-[#0a0a0a], from-[#0a0f1c]) with semantic bg-background/from-background
@@ -100,7 +101,9 @@ const EXPECTED_ARBITRARY_TW_COLOR_COUNT = 19
 const EXPECTED_INLINE_STYLE_COLOR_COUNT = 229
 // 80 → 96: PR #8635 — widget export modal card preview thumbnails use inline
 //           fontSize for pixel-accurate static SVG-like renderings (not DOM text).
-const EXPECTED_RAW_FONT_SIZE_COUNT = 96
+//  96 → 3: PR #10260 — replaced 93 raw fontSize values in chart/card files with
+//          shared constants (CHART_AXIS_FONT_SIZE, CHART_BODY_FONT_SIZE, etc.)
+const EXPECTED_RAW_FONT_SIZE_COUNT = 3
 
 /** Max snippet length for readable output */
 const MAX_SNIPPET_LENGTH = 120

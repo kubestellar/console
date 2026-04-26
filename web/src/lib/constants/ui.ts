@@ -69,6 +69,20 @@ export const CHART_MARK_LINE_STROKE = '#666'
 export const CHART_TOOLTIP_TEXT_COLOR = '#e0e0e0'
 /** Tooltip label text — verified 11:1 contrast on CHART_TOOLTIP_BG (#1a1a2e) */
 export const CHART_TOOLTIP_LABEL_COLOR = '#ccc'
+/** White text for high-contrast labels on dark chart elements (treemap tiles, legends) */
+export const CHART_TEXT_WHITE = '#fff'
+/** Muted secondary text for chart labels and axis names */
+export const CHART_TEXT_MUTED = '#aaa'
+
+// ── ECharts numeric font sizes (number, not string — ECharts API) ──────
+/** Axis tick label font size (ECharts numeric) */
+export const CHART_AXIS_FONT_SIZE = 10
+/** Small axis label font size for dense charts (ECharts numeric) */
+export const CHART_AXIS_FONT_SIZE_SM = 9
+/** Standard tooltip / legend font size (ECharts numeric) */
+export const CHART_BODY_FONT_SIZE = 12
+/** Small chart body font size for compact labels (ECharts numeric) */
+export const CHART_BODY_FONT_SIZE_SM = 10
 
 // ── Kubectl proxy thresholds ────────────────────────────────────────────
 export const MAX_CONCURRENT_KUBECTL_REQUESTS = 4

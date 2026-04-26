@@ -23,7 +23,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import { DynamicCardErrorBoundary } from '../DynamicCardErrorBoundary'
 import { downloadDataUrl } from '../../../lib/download'
-import { CHART_MIN_HEIGHT_PX } from '../../../lib/constants/ui'
+import { CHART_MIN_HEIGHT_PX, CHART_AXIS_FONT_SIZE, CHART_AXIS_FONT_SIZE_SM } from '../../../lib/constants/ui'
 
 // ── Tooltip spacing constants (ECharts renders its own DOM, so Tailwind/CSS vars are unavailable) ──
 /** Spacing between tooltip header and grid body */
@@ -398,7 +398,7 @@ function ParetoFrontierInternal({ config }: ParetoFrontierProps) {
               const pt = p.data?.point
               return pt && pt.gpuCount > 1 ? `${pt.gpuCount}` : ''
             },
-            fontSize: 9,
+            fontSize: CHART_AXIS_FONT_SIZE_SM,
             color: '#94a3b8',
             position: 'top',
             distance: 4 },
@@ -465,7 +465,7 @@ function ParetoFrontierInternal({ config }: ParetoFrontierProps) {
         nameTextStyle: { color: '#94a3b8', fontSize: 11, fontWeight: 500 },
         axisLine: { lineStyle: { color: '#334155' } },
         splitLine: { lineStyle: { color: '#1e293b', type: 'dashed' } },
-        axisLabel: { color: '#64748b', fontSize: 10 } },
+        axisLabel: { color: '#64748b', fontSize: CHART_AXIS_FONT_SIZE } },
       yAxis: {
         type: 'value',
         name: `${preset.yAxis.label} (${preset.yAxis.unit})`,
@@ -476,7 +476,7 @@ function ParetoFrontierInternal({ config }: ParetoFrontierProps) {
         splitLine: { lineStyle: { color: '#1e293b', type: 'dashed' } },
         axisLabel: {
           color: '#64748b',
-          fontSize: 10,
+          fontSize: CHART_AXIS_FONT_SIZE,
           formatter: preset.yAxis.formatter ?? ((v: number) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)) } },
       dataZoom: [
         { type: 'inside', xAxisIndex: 0, filterMode: 'weakFilter' },

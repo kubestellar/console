@@ -21,7 +21,7 @@ import {
   TOOLTIP_TIGHT_GAP_PX } from '../../../lib/llmd/tooltipSpacing'
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../../ui/StatusBadge'
-import { CHART_MIN_HEIGHT_PX } from '../../../lib/constants/ui'
+import { CHART_MIN_HEIGHT_PX, CHART_TEXT_WHITE, CHART_AXIS_FONT_SIZE, CHART_BODY_FONT_SIZE } from '../../../lib/constants/ui'
 
 const GRID_LEFT_PX = 145
 const GRID_RIGHT_PX = 20
@@ -115,7 +115,7 @@ export function ResourceUtilization() {
         type: 'value' as const,
         axisLabel: {
           color: '#71717a',
-          fontSize: 10,
+          fontSize: CHART_AXIS_FONT_SIZE,
           formatter: (v: number) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(Math.round(v)),
         },
         axisLine: { lineStyle: { color: '#71717a' } },
@@ -130,7 +130,7 @@ export function ResourceUtilization() {
             const entry = data.find(d => d.name === value)
             return entry?.isBest ? '#fbbf24' : '#a1a1aa'
           },
-          fontSize: 10,
+          fontSize: CHART_AXIS_FONT_SIZE,
           fontWeight: ((value: string) => {
             const entry = data.find(d => d.name === value)
             return entry?.isBest ? 600 : 400
@@ -146,7 +146,7 @@ export function ResourceUtilization() {
       tooltip: {
         backgroundColor: 'rgba(15,23,42,0.95)',
         borderColor: 'rgba(100,116,139,0.3)',
-        textStyle: { color: '#fff', fontSize: 12 },
+        textStyle: { color: CHART_TEXT_WHITE, fontSize: CHART_BODY_FONT_SIZE },
         formatter: (params: { data: { entry: BarEntry } }) => {
           const e = params.data?.entry
           if (!e) return ''

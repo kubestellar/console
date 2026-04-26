@@ -18,7 +18,8 @@ import {
   CHART_TOOLTIP_CONTENT_STYLE,
   CHART_TICK_COLOR,
   CHART_MARK_LINE_LABEL,
-  CHART_MARK_LINE_STROKE } from '../../lib/constants'
+  CHART_MARK_LINE_STROKE,
+  CHART_AXIS_FONT_SIZE_SM } from '../../lib/constants'
 import { PURPLE_600, hexToRgba } from '../../lib/theme/chartColors'
 
 const GPU_RING_SIZE_PX = 80
@@ -189,7 +190,7 @@ export function GPUUtilization() {
     xAxis: {
       type: 'category' as const,
       data: history.map(d => d.time),
-      axisLabel: { color: CHART_TICK_COLOR, fontSize: 9 },
+      axisLabel: { color: CHART_TICK_COLOR, fontSize: CHART_AXIS_FONT_SIZE_SM },
       axisLine: { lineStyle: { color: CHART_AXIS_STROKE } },
       axisTick: { show: false },
     },
@@ -198,7 +199,7 @@ export function GPUUtilization() {
       min: 0,
       max: currentStats.total || undefined,
       minInterval: 1,
-      axisLabel: { color: CHART_TICK_COLOR, fontSize: 9 },
+      axisLabel: { color: CHART_TICK_COLOR, fontSize: CHART_AXIS_FONT_SIZE_SM },
       axisLine: { show: false },
       axisTick: { show: false },
       splitLine: { lineStyle: { color: CHART_GRID_STROKE, type: 'dashed' as const } },

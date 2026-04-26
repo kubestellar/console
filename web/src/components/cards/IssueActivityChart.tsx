@@ -31,6 +31,11 @@ import {
   CHART_DATAZOOM_TEXT,
   CHART_DATAZOOM_DATA_LINE,
   CHART_DATAZOOM_DATA_AREA,
+  CHART_TICK_COLOR,
+  CHART_GRID_STROKE,
+  CHART_TEXT_MUTED,
+  CHART_AXIS_FONT_SIZE,
+  CHART_BODY_FONT_SIZE,
 } from '../../lib/constants'
 import { hexToRgba } from '../../lib/theme/chartColors'
 import { MS_PER_DAY, MS_PER_HOUR } from '../../lib/constants/time'
@@ -458,7 +463,7 @@ export function IssueActivityChart(props: { config?: IssueActivityConfig }) {
           t('issueActivityChart.prsMerged', 'PRs Merged'),
         ],
         top: 8,
-        textStyle: { color: '#aaa', fontSize: 11 },
+        textStyle: { color: CHART_TEXT_MUTED, fontSize: 11 },
         itemWidth: 14,
         itemHeight: 10,
       },
@@ -467,7 +472,7 @@ export function IssueActivityChart(props: { config?: IssueActivityConfig }) {
         axisPointer: { type: 'shadow-sm' as const },
         backgroundColor: (CHART_TOOLTIP_CONTENT_STYLE as Record<string, unknown>).backgroundColor as string,
         borderColor: (CHART_TOOLTIP_CONTENT_STYLE as Record<string, unknown>).borderColor as string,
-        textStyle: { color: CHART_TOOLTIP_TEXT_COLOR, fontSize: 12 },
+        textStyle: { color: CHART_TOOLTIP_TEXT_COLOR, fontSize: CHART_BODY_FONT_SIZE },
         formatter: (
           params: Array<{ seriesName: string; value: number; color: string; axisValueLabel: string }>
         ) => {
@@ -488,8 +493,8 @@ export function IssueActivityChart(props: { config?: IssueActivityConfig }) {
         type: 'category' as const,
         data: dates,
         axisLabel: {
-          color: '#888',
-          fontSize: 10,
+          color: CHART_TICK_COLOR,
+          fontSize: CHART_AXIS_FONT_SIZE,
           rotate: 45,
           formatter: (val: string) => {
             // Show "Mon Mar 15" so users can see day-of-week seasonality
@@ -501,25 +506,25 @@ export function IssueActivityChart(props: { config?: IssueActivityConfig }) {
           // Show ~15 labels max regardless of date range
           interval: Math.max(0, Math.floor(dates.length / 15) - 1),
         },
-        axisLine: { lineStyle: { color: '#333' } },
+        axisLine: { lineStyle: { color: CHART_GRID_STROKE } },
         axisTick: { show: false },
       },
       yAxis: [
         {
           type: 'value' as const,
           name: t('issueActivityChart.issues', 'Issues'),
-          nameTextStyle: { color: '#888', fontSize: 10 },
-          axisLabel: { color: '#888', fontSize: 10 },
+          nameTextStyle: { color: CHART_TICK_COLOR, fontSize: CHART_AXIS_FONT_SIZE },
+          axisLabel: { color: CHART_TICK_COLOR, fontSize: CHART_AXIS_FONT_SIZE },
           axisLine: { show: false },
           axisTick: { show: false },
-          splitLine: { lineStyle: { color: '#333', type: 'dashed' as const } },
+          splitLine: { lineStyle: { color: CHART_GRID_STROKE, type: 'dashed' as const } },
           minInterval: 1,
         },
         {
           type: 'value' as const,
           name: t('issueActivityChart.prs', 'PRs'),
-          nameTextStyle: { color: '#888', fontSize: 10 },
-          axisLabel: { color: '#888', fontSize: 10 },
+          nameTextStyle: { color: CHART_TICK_COLOR, fontSize: CHART_AXIS_FONT_SIZE },
+          axisLabel: { color: CHART_TICK_COLOR, fontSize: CHART_AXIS_FONT_SIZE },
           axisLine: { show: false },
           axisTick: { show: false },
           splitLine: { show: false },
