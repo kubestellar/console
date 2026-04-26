@@ -32,7 +32,7 @@ import { useDemoMode } from '../../../hooks/useDemoMode'
 import { useGlobalFilters } from '../../../hooks/useGlobalFilters'
 import { useTranslation } from 'react-i18next'
 import { useOpenKruiseStatus } from './useOpenKruiseStatus'
-import { MS_PER_SECOND, MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY } from '../../../lib/constants/time'
+import { MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY } from '../../../lib/constants/time'
 
 interface OpenKruiseStatusProps {
   config?: {

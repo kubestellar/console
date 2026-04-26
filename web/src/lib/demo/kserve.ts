@@ -16,7 +16,7 @@
  * Source: kubestellar/console-marketplace#38
  */
 
-import { MS_PER_SECOND, SECONDS_PER_MINUTE, MS_PER_MINUTE } from '../constants/time'
+import { MS_PER_MINUTE } from '../constants/time'
 
 // ---------------------------------------------------------------------------
 // Types

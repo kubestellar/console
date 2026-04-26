@@ -8,7 +8,7 @@
  * entity catalog was successfully reconciled.
  */
 
-import { MS_PER_SECOND, SECONDS_PER_MINUTE, MINUTES_PER_HOUR, MS_PER_MINUTE, MS_PER_HOUR } from '../constants/time'
+import { MS_PER_MINUTE, MS_PER_HOUR } from '../constants/time'
 
 // ---------------------------------------------------------------------------
 // Types

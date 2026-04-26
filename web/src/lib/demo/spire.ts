@@ -14,7 +14,7 @@
  *   - Trust bundle age (how long since the last rotation)
  */
 
-import { MS_PER_SECOND, SECONDS_PER_MINUTE, MINUTES_PER_HOUR, HOURS_PER_DAY, MS_PER_HOUR, MS_PER_DAY } from '../constants/time'
+import { MS_PER_HOUR, MS_PER_DAY } from '../constants/time'
 
 // ---------------------------------------------------------------------------
 // Types

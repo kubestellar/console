@@ -26,7 +26,7 @@ import { useCachedTuf } from '../../../hooks/useCachedTuf'
 import { useCardLoadingState } from '../CardDataContext'
 import { cn } from '../../../lib/cn'
 import type { TufMetadataStatus, TufRole } from '../../../lib/demo/tuf'
-import { MS_PER_SECOND, SECONDS_PER_MINUTE, MINUTES_PER_HOUR, HOURS_PER_DAY, MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY } from '../../../lib/constants/time'
+import { MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY } from '../../../lib/constants/time'
 
 // ---------------------------------------------------------------------------
 // Named constants (no magic numbers)
