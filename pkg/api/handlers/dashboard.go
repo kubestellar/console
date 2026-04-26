@@ -271,6 +271,16 @@ func (h *DashboardHandler) ImportDashboard(c *fiber.Ctx) error {
 		input.Name = "Imported Dashboard"
 	}
 
+	// Enforce per-user dashboard limit (#10162) — same check as CreateDashboard.
+	count, err := h.store.CountUserDashboards(c.UserContext(), userID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "Failed to check dashboard count")
+	}
+	if count >= MaxDashboardsPerUser {
+		return fiber.NewError(fiber.StatusTooManyRequests,
+			fmt.Sprintf("Dashboard limit reached (%d), maximum is %d per user", count, MaxDashboardsPerUser))
+	}
+
 	// Enforce the per-dashboard card limit BEFORE creating anything.
 	// This avoids a partial import that exceeds MaxCardsPerDashboard and
 	// avoids the need to rollback a large number of card rows.

@@ -253,3 +253,27 @@ func TestImportDashboard_ExceedsCardLimit(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 }
 
+// TestImportDashboard_ExceedsUserLimit verifies that an import is rejected
+// with HTTP 429 when the user has already reached MaxDashboardsPerUser (#10162).
+func TestImportDashboard_ExceedsUserLimit(t *testing.T) {
+	userID := uuid.New()
+	app, mockStore, handler := setupDashboardTest(userID)
+
+	// Override the default CountUserDashboards mock to simulate the user
+	// already being at the dashboard limit.
+	mockStore.ExpectedCalls = nil
+	mockStore.On("CountUserDashboards", userID).Return(MaxDashboardsPerUser, nil)
+
+	app.Post("/api/dashboards/import", handler.ImportDashboard)
+
+	body := `{"format":"kc-dashboard-v1","name":"ShouldFail","cards":[]}`
+	req, err := http.NewRequest("POST", "/api/dashboards/import", strings.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req, fiberTestTimeout)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusTooManyRequests, resp.StatusCode)
+	mockStore.AssertExpectations(t)
+}
+
