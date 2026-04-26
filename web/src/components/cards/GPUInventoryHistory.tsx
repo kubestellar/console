@@ -361,13 +361,14 @@ export function GPUInventoryHistory() {
   const isLoading = hookLoading && !hasData
   const showDemo = isDemoMode || isDemoFallback
 
-  useCardLoadingState({
+  const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: hookLoading && !hasData,
     isRefreshing,
     hasAnyData: hasData || (history || []).length > 0,
     isDemoData: showDemo,
     isFailed,
-    consecutiveFailures })
+    consecutiveFailures,
+  })
 
   // ── Close dropdowns on outside click or Escape ─────────────────────
   useEffect(() => {
@@ -735,6 +736,25 @@ export function GPUInventoryHistory() {
           </div>
           <p className="text-foreground font-medium">{t('cards:gpuInventoryHistory.noData', 'No GPU History')}</p>
           <p className="text-sm text-muted-foreground">{t('cards:gpuInventoryHistory.noDataDescription', 'No historical GPU data available yet. Data is collected every 10 minutes.')}</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (showSkeleton) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="text-muted-foreground">{t('common:common.loading', 'Loading...')}</div>
+      </div>
+    )
+  }
+
+  if (showEmptyState) {
+    return (
+      <div className="h-full flex items-center justify-center p-4">
+        <div className="text-center text-muted-foreground">
+          <p className="text-sm font-medium">{t('cards:gpuInventoryHistory.loadFailed', 'Failed to load GPU inventory')}</p>
+          <p className="text-xs mt-1">{t('cards:gpuInventoryHistory.tryRefresh', 'Please refresh the page to try again.')}</p>
         </div>
       </div>
     )

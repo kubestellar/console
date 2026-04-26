@@ -65,12 +65,23 @@ function MiniStat({ label, value, color = 'text-white' }: { label: string; value
 export function HIPAACard() {
   const nav = useNavigate()
   const [data, setData] = useState<Record<string, number> | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   useEffect(() => {
-    authFetch('/api/compliance/hipaa/summary').then(r => r.ok ? safeJson<Record<string, number>>(r) : null).then(setData).catch(() => {})
+    setIsLoading(true)
+    authFetch('/api/compliance/hipaa/summary')
+      .then(r => r.ok ? safeJson<Record<string, number>>(r) : null)
+      .then(setData)
+      .catch(err => { setError(err?.message || 'Failed to load'); console.error(err) })
+      .finally(() => setIsLoading(false))
   }, [])
   return (
     <CardShell title="HIPAA Compliance" icon={Shield} onClick={() => nav('/hipaa')}>
-      {data ? (
+      {error ? (
+        <p className="text-red-400 text-sm">{error}</p>
+      ) : isLoading ? (
+        <p className="text-gray-500 text-sm">Loading…</p>
+      ) : data ? (
         <div className="flex items-center gap-4">
           <ScoreRing score={data.overall_score ?? 0} />
           <div className="grid grid-cols-2 gap-2 flex-1">
@@ -80,7 +91,9 @@ export function HIPAACard() {
             <MiniStat label="Encrypted Flows" value={data.encrypted_flows ?? 0} color="text-blue-400" />
           </div>
         </div>
-      ) : <p className="text-gray-500 text-sm">Loading…</p>}
+      ) : (
+        <p className="text-gray-500 text-sm">No data</p>
+      )}
     </CardShell>
   )
 }
@@ -90,12 +103,23 @@ export function HIPAACard() {
 export function GxPCard() {
   const nav = useNavigate()
   const [data, setData] = useState<Record<string, unknown> | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   useEffect(() => {
-    authFetch('/api/compliance/gxp/summary').then(r => r.ok ? safeJson<Record<string, unknown>>(r) : null).then(setData).catch(() => {})
+    setIsLoading(true)
+    authFetch('/api/compliance/gxp/summary')
+      .then(r => r.ok ? safeJson<Record<string, unknown>>(r) : null)
+      .then(setData)
+      .catch(err => { setError(err?.message || 'Failed to load'); console.error(err) })
+      .finally(() => setIsLoading(false))
   }, [])
   return (
     <CardShell title="GxP Validation (21 CFR 11)" icon={FileText} onClick={() => nav('/gxp')}>
-      {data ? (
+      {error ? (
+        <p className="text-red-400 text-sm">{error}</p>
+      ) : isLoading ? (
+        <p className="text-gray-500 text-sm">Loading…</p>
+      ) : data ? (
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             {data.chain_integrity
@@ -109,7 +133,9 @@ export function GxPCard() {
             <MiniStat label="Pending" value={Number(data.pending_signatures ?? 0)} color="text-yellow-400" />
           </div>
         </div>
-      ) : <p className="text-gray-500 text-sm">Loading…</p>}
+      ) : (
+        <p className="text-gray-500 text-sm">No data</p>
+      )}
     </CardShell>
   )
 }
@@ -119,19 +145,32 @@ export function GxPCard() {
 export function BAACard() {
   const nav = useNavigate()
   const [data, setData] = useState<Record<string, number> | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   useEffect(() => {
-    authFetch('/api/compliance/baa/summary').then(r => r.ok ? safeJson<Record<string, number>>(r) : null).then(setData).catch(() => {})
+    setIsLoading(true)
+    authFetch('/api/compliance/baa/summary')
+      .then(r => r.ok ? safeJson<Record<string, number>>(r) : null)
+      .then(setData)
+      .catch(err => { setError(err?.message || 'Failed to load'); console.error(err) })
+      .finally(() => setIsLoading(false))
   }, [])
   return (
     <CardShell title="BAA Tracker" icon={FileText} onClick={() => nav('/baa')}>
-      {data ? (
+      {error ? (
+        <p className="text-red-400 text-sm">{error}</p>
+      ) : isLoading ? (
+        <p className="text-gray-500 text-sm">Loading…</p>
+      ) : data ? (
         <div className="grid grid-cols-2 gap-2">
           <MiniStat label="Total" value={data.total_agreements ?? 0} />
           <MiniStat label="Active" value={data.active_agreements ?? 0} color="text-green-400" />
           <MiniStat label="Expiring" value={data.expiring_soon ?? 0} color="text-yellow-400" />
           <MiniStat label="Expired" value={data.expired ?? 0} color="text-red-400" />
         </div>
-      ) : <p className="text-gray-500 text-sm">Loading…</p>}
+      ) : (
+        <p className="text-gray-500 text-sm">No data</p>
+      )}
     </CardShell>
   )
 }

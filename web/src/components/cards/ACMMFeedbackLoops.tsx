@@ -152,7 +152,7 @@ export function ACMMFeedbackLoops() {
   }
 
   const hasData = detectedIds.size > 0
-  const { showSkeleton } = useCardLoadingState({
+  const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: isLoading && !hasData,
     isRefreshing,
     hasAnyData: hasData,
@@ -244,6 +244,17 @@ export function ACMMFeedbackLoops() {
 
   if (showSkeleton) {
     return <CardSkeleton type="list" rows={6} />
+  }
+
+  if (showEmptyState) {
+    return (
+      <div className="h-full flex items-center justify-center p-4">
+        <div className="text-center text-muted-foreground">
+          <p className="text-sm font-medium">{t('cards:acmmFeedbackLoops.loadFailed', 'Failed to load criteria')}</p>
+          <p className="text-xs mt-1">{t('cards:acmmFeedbackLoops.tryRefresh', 'Please refresh the page or try again later.')}</p>
+        </div>
+      </div>
+    )
   }
 
   const sources: (SourceId | 'all')[] = ['all', 'acmm', 'fullsend', 'agentic-engineering-framework', 'claude-reflect']
