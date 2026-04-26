@@ -4,6 +4,7 @@ import { Trash2, Server, Bell, BellOff, Bot, Webhook, Siren, ShieldAlert } from 
 import { Slack } from '@/lib/icons'
 import { useClusters } from '../../hooks/useMCP'
 import { BaseModal, ConfirmDialog } from '../../lib/modals'
+import { SECONDS_PER_MINUTE, SECONDS_PER_HOUR } from '../../lib/constants/time'
 import type {
   AlertRule,
   AlertCondition,
@@ -27,18 +28,13 @@ const DEFAULT_DURATION_SECS = 60 // Default condition duration in seconds
 const DEFAULT_TEMPERATURE_F = 100 // Default temperature threshold in Fahrenheit
 const DEFAULT_WIND_SPEED_MPH = 40 // Default wind speed threshold in mph
 
-/** Seconds per minute */
-const SECS_PER_MINUTE = 60
-/** Seconds per hour */
-const SECS_PER_HOUR = 3600
-
 /** Preset duration options shown as clickable chips in the rule editor */
 const DURATION_PRESETS = [
   { label: 'Immediate', value: 0 },
-  { label: '1 min', value: SECS_PER_MINUTE },
-  { label: '5 min', value: 5 * SECS_PER_MINUTE },
-  { label: '15 min', value: 15 * SECS_PER_MINUTE },
-  { label: '1 hour', value: SECS_PER_HOUR },
+  { label: '1 min', value: SECONDS_PER_MINUTE },
+  { label: '5 min', value: 5 * SECONDS_PER_MINUTE },
+  { label: '15 min', value: 15 * SECONDS_PER_MINUTE },
+  { label: '1 hour', value: SECONDS_PER_HOUR },
 ] as const
 
 interface AlertRuleEditorProps {

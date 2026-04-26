@@ -18,7 +18,7 @@
  * fetcher will pick up live data automatically with no component changes.
  */
 
-import { MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY } from '../../../lib/constants/time'
+import { MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY, SECONDS_PER_HOUR, SECONDS_PER_DAY } from '../../../lib/constants/time'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -79,10 +79,10 @@ const DEMO_AGENT_COUNT = 6
 const DEMO_SERVER_VERSION = '1.9.4'
 
 // Per-entry TTLs
-const TTL_ONE_HOUR_SECONDS = 3600
-const TTL_FOUR_HOURS_SECONDS = 14400
-const TTL_TWELVE_HOURS_SECONDS = 43200
-const TTL_ONE_DAY_SECONDS = 86400
+const TTL_ONE_HOUR_SECONDS = SECONDS_PER_HOUR
+const TTL_FOUR_HOURS_SECONDS = 4 * SECONDS_PER_HOUR
+const TTL_TWELVE_HOURS_SECONDS = 12 * SECONDS_PER_HOUR
+const TTL_ONE_DAY_SECONDS = SECONDS_PER_DAY
 
 const TEN_MINUTES_MS = 10 * MS_PER_MINUTE
 const TWO_HOURS_MS = 2 * MS_PER_HOUR

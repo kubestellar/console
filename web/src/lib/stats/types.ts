@@ -257,20 +257,21 @@ export const VALUE_COLORS: Record<string, string> = {
 // ============================================================================
 
 import { formatBytes, formatStatNumber, formatPercent, formatCurrency } from '../formatters'
+import { SECONDS_PER_MINUTE, SECONDS_PER_HOUR, SECONDS_PER_DAY } from '../constants/time'
 export { formatBytes, formatStatNumber, formatPercent, formatCurrency }
 
 /**
  * Format duration values
  */
 export function formatDuration(seconds: number): string {
-  if (seconds >= 86400) {
-    return `${Math.floor(seconds / 86400)}d`
+  if (seconds >= SECONDS_PER_DAY) {
+    return `${Math.floor(seconds / SECONDS_PER_DAY)}d`
   }
-  if (seconds >= 3600) {
-    return `${Math.floor(seconds / 3600)}h`
+  if (seconds >= SECONDS_PER_HOUR) {
+    return `${Math.floor(seconds / SECONDS_PER_HOUR)}h`
   }
-  if (seconds >= 60) {
-    return `${Math.floor(seconds / 60)}m`
+  if (seconds >= SECONDS_PER_MINUTE) {
+    return `${Math.floor(seconds / SECONDS_PER_MINUTE)}m`
   }
   return `${seconds}s`
 }

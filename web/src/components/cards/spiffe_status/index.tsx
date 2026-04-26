@@ -33,7 +33,7 @@ import type {
   SpiffeRegistrationEntry,
 } from './demoData'
 import { formatTimeAgo } from '../../../lib/formatters'
-import { SECONDS_PER_MINUTE } from '../../../lib/constants/time'
+import { SECONDS_PER_MINUTE, SECONDS_PER_HOUR, SECONDS_PER_DAY } from '../../../lib/constants/time'
 
 // ---------------------------------------------------------------------------
 // Named constants (no magic numbers)
@@ -44,9 +44,6 @@ const SKELETON_TITLE_HEIGHT = 28
 const SKELETON_BADGE_WIDTH = 90
 const SKELETON_BADGE_HEIGHT = 20
 const SKELETON_LIST_ITEMS = 5
-
-const SECONDS_PER_HOUR = 3600
-const SECONDS_PER_DAY = 86400
 
 const MAX_ENTRIES_DISPLAYED = 5
 

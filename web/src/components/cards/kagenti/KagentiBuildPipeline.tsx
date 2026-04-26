@@ -4,6 +4,7 @@ import { useCardLoadingState } from '../CardDataContext'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../../lib/cards/CardComponents'
 import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
 import { Skeleton } from '../../ui/Skeleton'
+import { MS_PER_SECOND, SECONDS_PER_MINUTE, SECONDS_PER_HOUR, SECONDS_PER_DAY } from '../../../lib/constants/time'
 
 interface KagentiBuildPipelineProps {
   config?: { cluster?: string }
@@ -26,11 +27,11 @@ function BuildStatusIcon({ status }: { status: string }) {
 
 function timeAgo(dateStr: string): string {
   if (!dateStr) return ''
-  const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000)
-  if (seconds < 60) return `${seconds}s ago`
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`
-  return `${Math.floor(seconds / 86400)}d ago`
+  const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / MS_PER_SECOND)
+  if (seconds < SECONDS_PER_MINUTE) return `${seconds}s ago`
+  if (seconds < SECONDS_PER_HOUR) return `${Math.floor(seconds / SECONDS_PER_MINUTE)}m ago`
+  if (seconds < SECONDS_PER_DAY) return `${Math.floor(seconds / SECONDS_PER_HOUR)}h ago`
+  return `${Math.floor(seconds / SECONDS_PER_DAY)}d ago`
 }
 
 type SortField = 'name' | 'status' | 'cluster'
