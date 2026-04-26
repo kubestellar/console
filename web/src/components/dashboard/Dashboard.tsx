@@ -41,7 +41,7 @@ import { MissionSuggestions } from './MissionSuggestions'
 import { GettingStartedBanner } from './GettingStartedBanner'
 import { useMissions } from '../../hooks/useMissions'
 import { FloatingDashboardActions } from './FloatingDashboardActions'
-import { DashboardCustomizer } from './customizer/DashboardCustomizer'
+const DashboardCustomizer = safeLazy(() => import('./customizer/DashboardCustomizer'), 'DashboardCustomizer')
 import { DashboardTemplate } from './templates'
 import { SortableCard, DragPreviewCard } from './SharedSortableCard'
 import type { Card, DashboardData } from './dashboardUtils'
@@ -1145,39 +1145,41 @@ export function Dashboard() {
         canRedo={canRedo}
       />
 
-      {/* Dashboard Studio — unified customization panel */}
-      <DashboardCustomizer
-        isOpen={isAddCardModalOpen}
-        onClose={() => { closeAddCardModal(); setAddCardSearch(''); setInsertAtIndex(null) }}
-        dashboardName={dashboard?.name || 'Main Dashboard'}
-        onAddCards={handleAddCards}
-        existingCardTypes={currentCardTypes}
-        initialSection={studioInitialSection}
-        initialWidgetCardType={studioWidgetCardType}
-        initialSearch={addCardSearch}
-        onApplyTemplate={handleApplyTemplate}
-        onExport={dashboard?.id ? async () => {
-          try {
-            const data = await exportDashboard(dashboard.id)
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
-            const url = URL.createObjectURL(blob)
-            const a = document.createElement('a')
-            a.href = url
-            a.download = `${(dashboard.name || 'dashboard').replace(/\s+/g, '-').toLowerCase()}.json`
-            a.click()
-            safeRevokeObjectURL(url)
-            showToast('Dashboard exported', 'success')
-          } catch {
-            showToast('Failed to export dashboard', 'error')
-          }
-        } : undefined}
-        onReset={() => reset('replace')}
-        isCustomized={isCustomized}
-        onUndo={undo}
-        onRedo={redo}
-        canUndo={canUndo}
-        canRedo={canRedo}
-      />
+      {/* Dashboard Studio — unified customization panel (lazy-loaded) */}
+      <Suspense fallback={null}>
+        <DashboardCustomizer
+          isOpen={isAddCardModalOpen}
+          onClose={() => { closeAddCardModal(); setAddCardSearch(''); setInsertAtIndex(null) }}
+          dashboardName={dashboard?.name || 'Main Dashboard'}
+          onAddCards={handleAddCards}
+          existingCardTypes={currentCardTypes}
+          initialSection={studioInitialSection}
+          initialWidgetCardType={studioWidgetCardType}
+          initialSearch={addCardSearch}
+          onApplyTemplate={handleApplyTemplate}
+          onExport={dashboard?.id ? async () => {
+            try {
+              const data = await exportDashboard(dashboard.id)
+              const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+              const url = URL.createObjectURL(blob)
+              const a = document.createElement('a')
+              a.href = url
+              a.download = `${(dashboard.name || 'dashboard').replace(/\s+/g, '-').toLowerCase()}.json`
+              a.click()
+              safeRevokeObjectURL(url)
+              showToast('Dashboard exported', 'success')
+            } catch {
+              showToast('Failed to export dashboard', 'error')
+            }
+          } : undefined}
+          onReset={() => reset('replace')}
+          isCustomized={isCustomized}
+          onUndo={undo}
+          onRedo={redo}
+          canUndo={canUndo}
+          canRedo={canRedo}
+        />
+      </Suspense>
 
       {/* Configure Card Modal */}
       <Suspense fallback={null}>
