@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { CheckCircle, AlertTriangle, XCircle, RefreshCw, Clock, GitBranch, ChevronRight } from 'lucide-react'
+import { formatTimeAgo } from '../../lib/formatters'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDemoMode } from '../../hooks/useDemoMode'
@@ -89,14 +90,6 @@ function getStatusColor(status: Kustomization['status']) {
   }
 }
 
-function formatTime(timestamp: string) {
-  const date = new Date(timestamp)
-  const now = new Date()
-  const diff = now.getTime() - date.getTime()
-  if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`
-  if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`
-  return `${Math.floor(diff / 86400000)}d ago`
-}
 
 export function KustomizationStatus({ config }: KustomizationStatusProps) {
   const { t } = useTranslation(['cards', 'common'])
@@ -410,7 +403,7 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
                     </div>
                     <div className="flex flex-wrap items-center justify-between gap-y-2">
                       <span className="truncate">{ks.revision.split('@')[1]?.slice(0, 12)}</span>
-                      <span>{formatTime(ks.lastApplied)}</span>
+                      <span>{formatTimeAgo(ks.lastApplied)}</span>
                     </div>
                   </div>
                   {(ks.status === 'NotReady' || ks.status === 'Suspended') && (
