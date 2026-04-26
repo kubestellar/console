@@ -67,9 +67,9 @@ test.describe('Smoke Tests', () => {
       await waitForNetworkIdleBestEffort(page)
 
       const navLinks = [
-        { text: 'Clusters', expectedPath: '/clusters' },
-        { text: 'Deploy', expectedPath: '/deploy' },
-        { text: 'Settings', expectedPath: '/settings' },
+        { href: '/clusters', expectedPath: '/clusters' },
+        { href: '/deploy', expectedPath: '/deploy' },
+        { href: '/settings', expectedPath: '/settings' },
       ]
 
       // Scope to the sidebar (data-testid="sidebar") because the main <nav>
@@ -97,17 +97,18 @@ test.describe('Smoke Tests', () => {
         }
       }
 
-      for (const { text, expectedPath } of navLinks) {
-        // Use `.first()` to guard against duplicate renderings (e.g., when a
-        // responsive variant renders both a mobile and desktop label).
-        await sidebar.getByText(text, { exact: true }).first().click()
+      for (const { href, expectedPath } of navLinks) {
+        // Use href-based locators for cross-browser reliability — text labels
+        // can differ (e.g. "My Clusters" vs "Clusters") and exact text
+        // matching is fragile across browsers. #10134
+        const link = sidebar.locator(`a[href="${href}"]`).first()
+        await expect(link).toBeVisible({ timeout: 5000 })
+        await link.click()
         await waitForNetworkIdleBestEffort(page, NETWORK_IDLE_TIMEOUT_MS, `nav to ${expectedPath}`)
         expect(page.url()).toContain(expectedPath)
         // Re-open mobile sidebar if navigation closed it.
         if (viewportSize && viewportSize.width < MOBILE_SIDEBAR_MAX_WIDTH_PX) {
-          const stillVisible = await sidebar
-            .getByText(text, { exact: true })
-            .first()
+          const stillVisible = await link
             .isVisible({ timeout: HAMBURGER_PROBE_TIMEOUT_MS })
             .catch(() => false)
           if (!stillVisible) {
@@ -184,6 +185,7 @@ test.describe('Smoke Tests', () => {
     test('settings page interactions work', async ({ page }) => {
       await setupDemoMode(page)
       await page.goto('/settings')
+      await page.waitForLoadState('domcontentloaded')
       await waitForNetworkIdleBestEffort(page)
 
       // Check for theme toggle

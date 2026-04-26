@@ -168,7 +168,10 @@ test('RCE vector scan — all attack surfaces', async ({ page }, testInfo) => {
     demoUserOnboarded: true,
   })
   await setupMocks(page)
+  // Firefox WebSocket connections may prevent networkidle from settling —
+  // fall back to domcontentloaded on timeout. #10134
   await page.goto('/', { waitUntil: 'networkidle', timeout: PAGE_LOAD_TIMEOUT_MS })
+    .catch(() => page.waitForLoadState('domcontentloaded'))
 
   // ══════════════════════════════════════════════════════════════════════
   // Phase 2: DOM XSS Vectors

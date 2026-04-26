@@ -89,7 +89,10 @@ test.describe('Settings Page', () => {
 
       // Verify the theme is actually applied to the DOM, not just stored. #9521
       // The app sets class="light" or class="dark" on <html>.
-      await expect(page.locator('html')).toHaveClass(/light/)
+      // Firefox may apply the class slightly after domcontentloaded — use
+      // a generous timeout for cross-browser reliability. #10134
+      const THEME_CLASS_TIMEOUT_MS = 10_000
+      await expect(page.locator('html')).toHaveClass(/light/, { timeout: THEME_CLASS_TIMEOUT_MS })
     })
   })
 

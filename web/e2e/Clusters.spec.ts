@@ -72,9 +72,11 @@ test.describe('Clusters Page', () => {
       await expect(page.getByTestId('clusters-page')).toBeVisible({ timeout: 10000 })
 
       // Should show cluster names from our mock data
-      await expect(page.getByText('prod-east')).toBeVisible({ timeout: 5000 })
-      await expect(page.getByText('prod-west')).toBeVisible()
-      await expect(page.getByText('staging')).toBeVisible()
+      // Firefox renders mock data slightly later — use consistent timeouts
+      const CLUSTER_NAME_TIMEOUT_MS = 10_000
+      await expect(page.getByText('prod-east')).toBeVisible({ timeout: CLUSTER_NAME_TIMEOUT_MS })
+      await expect(page.getByText('prod-west')).toBeVisible({ timeout: CLUSTER_NAME_TIMEOUT_MS })
+      await expect(page.getByText('staging')).toBeVisible({ timeout: CLUSTER_NAME_TIMEOUT_MS })
     })
 
     test('shows cluster health status indicators', async ({ page }) => {
@@ -157,8 +159,10 @@ test.describe('Clusters Page', () => {
     test('page has heading', async ({ page }) => {
       await expect(page.getByTestId('clusters-page')).toBeVisible({ timeout: 10000 })
 
-      // Should have a heading with "Clusters"
-      await expect(page.getByRole('heading', { name: /clusters/i })).toBeVisible()
+      // Should have a heading with "Clusters" — use the DashboardHeader testid
+      // to avoid strict-mode violations when card titles also match /clusters/i
+      await expect(page.getByTestId('dashboard-title')).toBeVisible()
+      await expect(page.getByTestId('dashboard-title')).toContainText(/clusters/i)
     })
   })
 
@@ -198,8 +202,10 @@ test.describe('Clusters Page', () => {
       await expect(page.getByTestId('clusters-page')).toBeVisible({ timeout: 10000 })
 
       // The Healthy filter button should show count 2 (both node-healthy-flag-false and flag-healthy-no-nodes)
+      // Firefox renders filter tabs slightly later — use generous timeout
+      const FILTER_TAB_TIMEOUT_MS = 10_000
       const healthyTab = page.getByRole('button', { name: /Healthy \(2\)/ })
-      await expect(healthyTab).toBeVisible({ timeout: 5000 })
+      await expect(healthyTab).toBeVisible({ timeout: FILTER_TAB_TIMEOUT_MS })
 
       // Click the Healthy filter
       await healthyTab.click()
@@ -241,8 +247,9 @@ test.describe('Clusters Page', () => {
       await expect(page.getByTestId('clusters-page')).toBeVisible({ timeout: 10000 })
 
       // The Unhealthy tab must show count 1
+      const FILTER_TAB_TIMEOUT_MS = 10_000
       const unhealthyTab = page.getByRole('button', { name: /Unhealthy \(1\)/ })
-      await expect(unhealthyTab).toBeVisible({ timeout: 5000 })
+      await expect(unhealthyTab).toBeVisible({ timeout: FILTER_TAB_TIMEOUT_MS })
 
       // Click the Unhealthy filter
       await unhealthyTab.click()

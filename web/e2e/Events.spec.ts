@@ -90,9 +90,11 @@ test.describe('Events Page', () => {
     test('shows event reasons from mock data', async ({ page }) => {
       await expect(page.getByTestId('dashboard-header')).toBeVisible({ timeout: 10000 })
 
-      // Reasons from our mock data
+      // Reasons from our mock data — Firefox renders card content later,
+      // so use a generous timeout for cross-browser reliability. #10134
+      const EVENT_REASON_TIMEOUT_MS = 10_000
       const backoffText = page.getByText(/BackOff|FailedScheduling|Scheduled/i).first()
-      await expect(backoffText).toBeVisible({ timeout: 5000 })
+      await expect(backoffText).toBeVisible({ timeout: EVENT_REASON_TIMEOUT_MS })
     })
   })
 

@@ -20,8 +20,9 @@ test.describe('Dashboard Page', () => {
     test('displays navigation items in sidebar', async ({ page }, testInfo) => {
       test.skip(testInfo.project.name.startsWith('mobile-'), 'sidebar is hidden by design on mobile breakpoints')
       // Sidebar should have navigation
-      await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: 5000 })
-      await expect(page.getByTestId('sidebar-primary-nav')).toBeVisible()
+      const SIDEBAR_NAV_TIMEOUT_MS = 10_000
+      await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: SIDEBAR_NAV_TIMEOUT_MS })
+      await expect(page.getByTestId('sidebar-primary-nav')).toBeVisible({ timeout: SIDEBAR_NAV_TIMEOUT_MS })
 
       // Should have navigation links
       const navLinks = page.getByTestId('sidebar-primary-nav').locator('a')
@@ -160,7 +161,8 @@ test.describe('Dashboard Page', () => {
     test('shows loading state initially', async ({ page }) => {
       // Delay the API response to see loading state
       await page.route('**/api/mcp/**', async (route) => {
-        await new Promise((resolve) => setTimeout(resolve, 2000))
+        const API_DELAY_MS = 2000
+        await new Promise((resolve) => setTimeout(resolve, API_DELAY_MS))
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -175,9 +177,11 @@ test.describe('Dashboard Page', () => {
       })
 
       await page.goto('/')
+      await page.waitForLoadState('domcontentloaded')
 
       // Dashboard page should be visible even during loading
-      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
+      const PAGE_VISIBLE_TIMEOUT_MS = 15_000
+      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: PAGE_VISIBLE_TIMEOUT_MS })
     })
 
     test('handles API errors gracefully', async ({ page }) => {
@@ -196,9 +200,11 @@ test.describe('Dashboard Page', () => {
       })
 
       await page.goto('/')
+      await page.waitForLoadState('domcontentloaded')
 
       // Dashboard should still render (not crash)
-      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
+      const PAGE_VISIBLE_TIMEOUT_MS = 15_000
+      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: PAGE_VISIBLE_TIMEOUT_MS })
     })
 
     test('refresh button triggers data reload', async ({ page }) => {
@@ -353,6 +359,10 @@ test.describe('Dashboard Page', () => {
       await page.goto('/clusters')
       await page.waitForLoadState('domcontentloaded')
 
+      // Wait for clusters page to fully render — Firefox may need extra time
+      const PAGE_RENDER_TIMEOUT_MS = 15_000
+      await expect(page.getByTestId('clusters-page')).toBeVisible({ timeout: PAGE_RENDER_TIMEOUT_MS }).catch(() => {})
+
       // The clusters page renders a row per cluster. We count any element
       // whose data-testid matches the cluster-row pattern. If the test
       // infra doesn't expose cluster-row testids, fall back to counting
@@ -363,12 +373,13 @@ test.describe('Dashboard Page', () => {
       let clustersPageCount = rowCountByTestId
       if (clustersPageCount === 0) {
         // Fallback: count unique cluster-name text occurrences.
+        const NAME_CHECK_TIMEOUT_MS = 5_000
         let found = 0
         for (let i = 1; i <= EXPECTED_CLUSTER_COUNT; i++) {
           const hasName = await page
             .getByText(`accuracy-cluster-${i}`)
             .first()
-            .isVisible()
+            .isVisible({ timeout: NAME_CHECK_TIMEOUT_MS })
             .catch(() => false)
           if (hasName) found++
         }
@@ -382,7 +393,7 @@ test.describe('Dashboard Page', () => {
       await page.goto('/')
       await page.waitForLoadState('domcontentloaded')
       await expect(page.getByTestId('dashboard-page')).toBeVisible({
-        timeout: 10000,
+        timeout: PAGE_RENDER_TIMEOUT_MS,
       })
 
       // PR #6574 items A+B — target the StatBlock for `clusters` directly
@@ -392,8 +403,9 @@ test.describe('Dashboard Page', () => {
       // through to the structural fallback. Now we address the block
       // directly and use a word-boundary regex so the count can't
       // false-positive on substrings (e.g. "3" matching inside "30 nodes").
+      const STAT_BLOCK_TIMEOUT_MS = 10_000
       const clusterStatBlock = page.getByTestId('stat-block-clusters').first()
-      const hasStatBlock = await clusterStatBlock.isVisible().catch(() => false)
+      const hasStatBlock = await clusterStatBlock.isVisible({ timeout: STAT_BLOCK_TIMEOUT_MS }).catch(() => false)
       if (hasStatBlock) {
         // Word-boundary match: the StatBlock wraps the numeric value in a
         // div with header text ("Clusters") and optional sublabel, so we
@@ -413,7 +425,7 @@ test.describe('Dashboard Page', () => {
           .getByRole('status')
           .filter({ hasText: /cluster/i })
           .first()
-        const labelVisible = await countByLabel.isVisible().catch(() => false)
+        const labelVisible = await countByLabel.isVisible({ timeout: STAT_BLOCK_TIMEOUT_MS }).catch(() => false)
         if (labelVisible) {
           await expect(countByLabel).toHaveText(
             new RegExp(`\\b${EXPECTED_CLUSTER_COUNT}\\b`)

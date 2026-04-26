@@ -550,7 +550,7 @@ export function SidebarShell({
 
         {/* Section items */}
         {(isOpen || !section.collapsible) && (
-          <nav className="space-y-1">
+          <nav data-testid={`sidebar-${section.id}-nav`} className="space-y-1">
             {section.items.map(item => renderNavItem(item, section.id))}
           </nav>
         )}
@@ -609,6 +609,7 @@ export function SidebarShell({
               {/* "Add more" button — placed after the primary dashboard list */}
               {index === PRIMARY_SECTION_INDEX && features.addMore && !isCollapsed && (
                 <button
+                  data-testid="sidebar-customize"
                   onClick={() => onAddMore?.() ?? dashboardContext?.openAddCardModal('dashboards')}
                   className="w-full flex items-center gap-3 px-3 py-1.5 mt-1 text-xs text-muted-foreground/60 hover:text-muted-foreground hover:bg-secondary/30 rounded-lg transition-colors"
                 >
