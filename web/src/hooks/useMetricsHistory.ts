@@ -2,12 +2,13 @@ import { useState, useEffect, useRef } from 'react'
 import type { MetricsSnapshot, TrendDirection } from '../types/predictions'
 import { useClusters, usePodIssues, useGPUNodes } from './useMCP'
 import { getPredictionSettings } from './usePredictionSettings'
+import { MS_PER_DAY, MS_PER_MINUTE } from '../lib/constants/time'
 
 const STORAGE_KEY = 'kubestellar-metrics-history'
 const HISTORY_CHANGED_EVENT = 'kubestellar-metrics-history-changed'
 const MAX_SNAPSHOTS = 1008 // 7 days at 10-min intervals (6 per hour * 24 hours * 7 days)
 /** Cache TTL: 7 days — remove snapshots older than this */
-const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000
+const CACHE_TTL_MS = 7 * MS_PER_DAY
 /** Maximum number of increasing-restart pods to include in AI context */
 const MAX_INCREASING_RESTART_PODS = 10
 /**
@@ -263,7 +264,7 @@ export function useMetricsHistory() {
   // Reads volatile data from refs so the interval stays stable across MCP polls (#5781).
   useEffect(() => {
     const settings = getPredictionSettings()
-    const interval = settings.interval * 60 * 1000 // Convert minutes to ms
+    const interval = settings.interval * MS_PER_MINUTE // Convert minutes to ms
 
     const captureSnapshot = () => {
       const now = Date.now()

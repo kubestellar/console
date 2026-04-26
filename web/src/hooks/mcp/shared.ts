@@ -7,6 +7,7 @@ import { registerCacheReset, triggerAllRefetches } from '../../lib/modeTransitio
 import { resetFailuresForCluster, resetAllCacheFailures } from '../../lib/cache'
 import { hostnameEndsWith, hostnameContainsLabel } from '../../lib/utils/urlHostname'
 import { appendWsAuthToken } from '../../lib/utils/wsAuth'
+import { MS_PER_MINUTE } from '../../lib/constants/time'
 import {
   LOCAL_AGENT_HTTP_URL,
   MCP_HOOK_TIMEOUT_MS,
@@ -1065,7 +1066,7 @@ const MAX_HEALTH_CHECK_FAILURES = 3
 // Per-cluster failure tracking to prevent transient errors from showing "-"
 // Track first failure timestamp - only mark unreachable after 5 minutes of consecutive failures
 const clusterHealthFailureStart = new Map<string, number>() // timestamp of first failure
-const OFFLINE_THRESHOLD_MS = 5 * 60 * 1000 // 5 minutes before marking as offline
+const OFFLINE_THRESHOLD_MS = 5 * MS_PER_MINUTE // 5 minutes before marking as offline
 
 // Helper to check if cluster has been failing long enough to mark offline
 export function shouldMarkOffline(clusterName: string): boolean {

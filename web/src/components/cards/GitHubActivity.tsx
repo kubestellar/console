@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useImperativeHandle, memo, type Ref } from 'react'
 import { GitPullRequest, GitBranch, Star, Users, Package, TrendingUp, AlertCircle, Clock, CheckCircle, XCircle, GitMerge, Settings, X, Plus, Check } from 'lucide-react'
 import { POLL_INTERVAL_SLOW_MS } from '../../lib/constants/network'
+import { MS_PER_MINUTE, MS_PER_DAY } from '../../lib/constants/time'
 import { formatTimeAgo } from '../../lib/formatters'
 import { Button } from '../ui/Button'
 import { Skeleton } from '../ui/Skeleton'
@@ -120,7 +121,7 @@ const DEFAULT_REPO = 'kubestellar/console'
 const SAVED_REPOS_KEY = 'github_activity_saved_repos'
 const CURRENT_REPO_KEY = 'github_activity_repo'
 const CACHE_KEY_PREFIX = 'github_activity_cache_v2_' // v2: fixed PR fetching
-const CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes cache TTL - shorter for fresher data
+const CACHE_TTL_MS = 5 * MS_PER_MINUTE // 5 minutes cache TTL - shorter for fresher data
 
 // Cache data structure
 interface CachedGitHubData {
@@ -613,10 +614,10 @@ export function GitHubActivity({ config, ref }: { config?: GitHubActivityConfig;
   const preFilteredData = useMemo(() => {
     const now = Date.now()
     const rangeMs = {
-      '7d': 7 * 24 * 60 * 60 * 1000,
-      '30d': 30 * 24 * 60 * 60 * 1000,
-      '90d': 90 * 24 * 60 * 60 * 1000,
-      '1y': 365 * 24 * 60 * 60 * 1000 }[timeRange]
+      '7d': 7 * MS_PER_DAY,
+      '30d': 30 * MS_PER_DAY,
+      '90d': 90 * MS_PER_DAY,
+      '1y': 365 * MS_PER_DAY }[timeRange]
 
     if (viewMode === 'prs') {
       // Sort PRs: open first, then by date within each group

@@ -20,15 +20,16 @@ import type {
   ClusterDelta } from '../types/insights'
 import type { ClusterEvent, Deployment, PodIssue } from './mcp/types'
 import type { ClusterInfo } from './mcp/types'
+import { MS_PER_MINUTE } from '../lib/constants/time'
 
 // ── Thresholds & Constants ────────────────────────────────────────────
 
 /** Minimum clusters with events in same window to trigger correlation */
 export const MIN_CORRELATED_CLUSTERS = 2
 /** Time window in ms for event correlation grouping (5 minutes) */
-export const EVENT_CORRELATION_WINDOW_MS = 5 * 60 * 1000
+export const EVENT_CORRELATION_WINDOW_MS = 5 * MS_PER_MINUTE
 /** Time window in ms for cascade detection (15 minutes) */
-export const CASCADE_DETECTION_WINDOW_MS = 15 * 60 * 1000
+export const CASCADE_DETECTION_WINDOW_MS = 15 * MS_PER_MINUTE
 /** CPU/memory utilization percentage threshold for resource imbalance */
 const RESOURCE_IMBALANCE_THRESHOLD_PCT = 30
 /** Pod restart count threshold for restart correlation */
@@ -139,11 +140,11 @@ const FULL_PROGRESS = 100
 const PARTIAL_PROGRESS = 50
 
 /** Demo time offset: 5 minutes ago */
-const DEMO_OFFSET_5M_MS = 5 * 60 * 1000
+const DEMO_OFFSET_5M_MS = 5 * MS_PER_MINUTE
 /** Demo time offset: 10 minutes ago */
-const DEMO_OFFSET_10M_MS = 10 * 60 * 1000
+const DEMO_OFFSET_10M_MS = 10 * MS_PER_MINUTE
 /** Demo time offset: 15 minutes ago */
-const DEMO_OFFSET_15M_MS = 15 * 60 * 1000
+const DEMO_OFFSET_15M_MS = 15 * MS_PER_MINUTE
 
 // ── Helpers ───────────────────────────────────────────────────────────
 

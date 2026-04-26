@@ -10,6 +10,7 @@ import { useCallback, useRef, useSyncExternalStore } from 'react'
 import { useCache, type RefreshCategory } from '../lib/cache'
 import { computeLevel, type LevelComputation } from '../lib/acmm/computeLevel'
 import { computeRecommendations, type Recommendation } from '../lib/acmm/computeRecommendations'
+import { MS_PER_DAY } from '../lib/constants/time'
 
 const API_PATH = '/api/acmm/scan'
 /** Scan results change slowly; 10-min refresh avoids GitHub rate limits. */
@@ -82,7 +83,7 @@ function demoScan(repo: string): ACMMScanData {
     const year = d.getUTCFullYear()
     const jan1 = new Date(Date.UTC(year, 0, 1))
     const week = Math.ceil(
-      ((d.getTime() - jan1.getTime()) / (24 * 60 * 60 * 1000) + 1) / 7,
+      ((d.getTime() - jan1.getTime()) / MS_PER_DAY + 1) / 7,
     )
     weeks.push({
       week: `${year}-W${String(week).padStart(2, '0')}`,

@@ -8,6 +8,9 @@ import {
   AlertTriangle,
   Layers,
   Plus,
+} from 'lucide-react'
+import { MS_PER_DAY, MS_PER_HOUR } from '../../lib/constants/time'
+import {
   Server,
   Database,
   Gauge,
@@ -78,7 +81,7 @@ const DEMO_WORKLOADS: Workload[] = [
       { cluster: 'us-west-2', status: 'Running', replicas: 3, readyReplicas: 3, lastUpdated: new Date().toISOString() },
       { cluster: 'eu-central-1', status: 'Running', replicas: 3, readyReplicas: 3, lastUpdated: new Date().toISOString() },
     ],
-    createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString() },
+    createdAt: new Date(Date.now() - 30 * MS_PER_DAY).toISOString() },
   {
     name: 'api-gateway',
     namespace: 'production',
@@ -93,7 +96,7 @@ const DEMO_WORKLOADS: Workload[] = [
       { cluster: 'us-east-1', status: 'Running', replicas: 3, readyReplicas: 3, lastUpdated: new Date().toISOString() },
       { cluster: 'us-west-2', status: 'Degraded', replicas: 2, readyReplicas: 0, lastUpdated: new Date().toISOString() },
     ],
-    createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString() },
+    createdAt: new Date(Date.now() - 14 * MS_PER_DAY).toISOString() },
   {
     name: 'postgres-primary',
     namespace: 'databases',
@@ -107,7 +110,7 @@ const DEMO_WORKLOADS: Workload[] = [
     deployments: [
       { cluster: 'us-east-1', status: 'Running', replicas: 1, readyReplicas: 1, lastUpdated: new Date().toISOString() },
     ],
-    createdAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString() },
+    createdAt: new Date(Date.now() - 60 * MS_PER_DAY).toISOString() },
   {
     name: 'fluentd',
     namespace: 'logging',
@@ -123,7 +126,7 @@ const DEMO_WORKLOADS: Workload[] = [
       { cluster: 'us-west-2', status: 'Running', replicas: 4, readyReplicas: 4, lastUpdated: new Date().toISOString() },
       { cluster: 'eu-central-1', status: 'Running', replicas: 3, readyReplicas: 3, lastUpdated: new Date().toISOString() },
     ],
-    createdAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString() },
+    createdAt: new Date(Date.now() - 45 * MS_PER_DAY).toISOString() },
   {
     name: 'ml-training',
     namespace: 'ml-workloads',
@@ -137,7 +140,7 @@ const DEMO_WORKLOADS: Workload[] = [
     deployments: [
       { cluster: 'gpu-cluster-1', status: 'Pending', replicas: 1, readyReplicas: 0, lastUpdated: new Date().toISOString() },
     ],
-    createdAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString() },
+    createdAt: new Date(Date.now() - 1 * MS_PER_HOUR).toISOString() },
   {
     name: 'payment-service',
     namespace: 'payments',
@@ -151,7 +154,7 @@ const DEMO_WORKLOADS: Workload[] = [
     deployments: [
       { cluster: 'us-east-1', status: 'Failed', replicas: 2, readyReplicas: 0, lastUpdated: new Date().toISOString() },
     ],
-    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString() },
+    createdAt: new Date(Date.now() - 2 * MS_PER_DAY).toISOString() },
 ]
 
 const DEMO_STATS = {

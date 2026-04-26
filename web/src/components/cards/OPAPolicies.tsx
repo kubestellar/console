@@ -14,6 +14,7 @@ import { isDemoMode as checkIsDemoMode } from '../../lib/demoMode'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_OPA_CACHE, STORAGE_KEY_OPA_CACHE_TIME } from '../../lib/constants'
 import { KUBECTL_DEFAULT_TIMEOUT_MS } from '../../lib/constants/network'
+import { MS_PER_MINUTE } from '../../lib/constants/time'
 
 const OPA_LIST_TIMEOUT_MS = 25_000
 import { safeGetItem, safeGetJSON, safeSetItem, safeSetJSON } from '../../lib/utils/localStorage'
@@ -23,7 +24,7 @@ import { useDemoMode } from '../../hooks/useDemoMode'
 import { useModalState } from '../../lib/modals'
 
 /** Cache TTL: 5 minutes — short enough to pick up connectivity changes */
-// Unused: const CACHE_TTL_MS = 5 * 60 * 1000
+// Unused: const CACHE_TTL_MS = 5 * MS_PER_MINUTE
 
 // Sort options for clusters
 type SortByOption = 'name' | 'violations' | 'policies'

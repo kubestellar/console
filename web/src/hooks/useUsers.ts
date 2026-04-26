@@ -4,6 +4,7 @@ import { mapSettledWithConcurrency } from '../lib/utils/concurrency'
 import { getDemoMode } from './useDemoMode'
 import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN } from '../lib/constants'
 import { FETCH_DEFAULT_TIMEOUT_MS, RBAC_QUERY_TIMEOUT_MS } from '../lib/constants/network'
+import { MS_PER_DAY, MS_PER_HOUR } from '../lib/constants/time'
 import type {
   ConsoleUser,
   K8sServiceAccount,
@@ -40,8 +41,8 @@ function getDemoConsoleUsers(): ConsoleUser[] {
       avatar_url: 'https://avatars.githubusercontent.com/u/12345?v=4',
       role: 'admin',
       onboarded: true,
-      created_at: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
-      last_login: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString() },
+      created_at: new Date(Date.now() - 90 * MS_PER_DAY).toISOString(),
+      last_login: new Date(Date.now() - 2 * MS_PER_HOUR).toISOString() },
     {
       id: '2',
       github_id: '23456',
@@ -50,8 +51,8 @@ function getDemoConsoleUsers(): ConsoleUser[] {
       avatar_url: 'https://avatars.githubusercontent.com/u/23456?v=4',
       role: 'editor',
       onboarded: true,
-      created_at: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
-      last_login: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString() },
+      created_at: new Date(Date.now() - 60 * MS_PER_DAY).toISOString(),
+      last_login: new Date(Date.now() - 5 * MS_PER_HOUR).toISOString() },
     {
       id: '3',
       github_id: '34567',
@@ -59,8 +60,8 @@ function getDemoConsoleUsers(): ConsoleUser[] {
       email: 'bob@example.com',
       role: 'viewer',
       onboarded: true,
-      created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-      last_login: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString() },
+      created_at: new Date(Date.now() - 30 * MS_PER_DAY).toISOString(),
+      last_login: new Date(Date.now() - MS_PER_DAY).toISOString() },
     {
       id: '4',
       github_id: '45678',
@@ -69,8 +70,8 @@ function getDemoConsoleUsers(): ConsoleUser[] {
       avatar_url: 'https://avatars.githubusercontent.com/u/45678?v=4',
       role: 'editor',
       onboarded: true,
-      created_at: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString(),
-      last_login: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString() },
+      created_at: new Date(Date.now() - 45 * MS_PER_DAY).toISOString(),
+      last_login: new Date(Date.now() - 1 * MS_PER_HOUR).toISOString() },
   ]
 }
 
@@ -236,27 +237,27 @@ function getDemoOpenShiftUsers(cluster?: string): OpenShiftUser[] {
       identities: ['htpasswd:admin'],
       groups: ['system:cluster-admins', 'system:authenticated'],
       cluster,
-      createdAt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString() },
+      createdAt: new Date(Date.now() - 90 * MS_PER_DAY).toISOString() },
     {
       name: 'developer',
       fullName: 'Dev User',
       identities: ['htpasswd:developer'],
       groups: ['developers', 'system:authenticated'],
       cluster,
-      createdAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString() },
+      createdAt: new Date(Date.now() - 60 * MS_PER_DAY).toISOString() },
     {
       name: 'ops-user',
       fullName: 'Operations Engineer',
       identities: ['ldap:ops-user'],
       groups: ['operations', 'system:authenticated'],
       cluster,
-      createdAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString() },
+      createdAt: new Date(Date.now() - 45 * MS_PER_DAY).toISOString() },
     {
       name: 'viewer',
       identities: ['htpasswd:viewer'],
       groups: ['viewers', 'system:authenticated'],
       cluster,
-      createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString() },
+      createdAt: new Date(Date.now() - 30 * MS_PER_DAY).toISOString() },
   ]
 }
 

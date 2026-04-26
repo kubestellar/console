@@ -13,6 +13,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useClusters } from './useMCP'
 import { kubectlProxy } from '../lib/kubectlProxy'
+import { MS_PER_HOUR, MS_PER_MINUTE } from '../lib/constants/time'
 import { settledWithConcurrency } from '../lib/utils/concurrency'
 import { useDemoMode } from './useDemoMode'
 import { registerRefetch, registerCacheReset, unregisterCacheReset } from '../lib/modeTransition'
@@ -152,7 +153,7 @@ function getDemoLayouts(cluster: string): IntotoLayout[] {
       expectedProducts: 4,
       verifiedSteps: 4,
       failedSteps: 0,
-      createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+      createdAt: new Date(Date.now() - 2 * MS_PER_HOUR).toISOString(),
     },
     {
       name: 'deploy-pipeline',
@@ -165,7 +166,7 @@ function getDemoLayouts(cluster: string): IntotoLayout[] {
       expectedProducts: 3,
       verifiedSteps: 1,
       failedSteps: 2,
-      createdAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
+      createdAt: new Date(Date.now() - 1 * MS_PER_HOUR).toISOString(),
     },
     {
       name: 'release-signing',
@@ -177,7 +178,7 @@ function getDemoLayouts(cluster: string): IntotoLayout[] {
       expectedProducts: 2,
       verifiedSteps: 2,
       failedSteps: 0,
-      createdAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+      createdAt: new Date(Date.now() - 30 * MS_PER_MINUTE).toISOString(),
     },
   ]
 }

@@ -8,12 +8,15 @@
  * IMPORTANT: These hooks are called inside the useDataSource hook,
  * which is a React hook. The registered functions must follow React's
  * rules of hooks - they are called consistently on every render.
+ *
+ * Time constants imported from lib/constants/time.
  */
 
 import { useState, useEffect } from 'react'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { registerDataHook } from './card/hooks/useDataSource'
 import { SHORT_DELAY_MS } from '../constants/network'
+import { MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY } from '../constants/time'
 import {
   useCachedPodIssues,
   useCachedEvents,
@@ -81,21 +84,21 @@ import { useCachedVolcano } from '../../hooks/useCachedVolcano'
 // Named time-offset constants for demo/mock data timestamps.
 // Raw ms literals are forbidden by the "No Magic Numbers" rule in CLAUDE.md.
 const THIRTY_SECONDS_MS = 30 * 1000
-const ONE_MINUTE_MS = 60 * 1000
-const TWO_MINUTES_MS = 2 * 60 * 1000
-const THREE_MINUTES_MS = 3 * 60 * 1000
-const FOUR_MINUTES_MS = 4 * 60 * 1000
-const FIVE_MINUTES_MS = 5 * 60 * 1000
-const TEN_MINUTES_MS = 10 * 60 * 1000
-const FIFTEEN_MINUTES_MS = 15 * 60 * 1000
-const THIRTY_MINUTES_MS = 30 * 60 * 1000
-const FORTY_FIVE_MINUTES_MS = 45 * 60 * 1000
-const ONE_HOUR_MS = 60 * 60 * 1000
-const TWO_HOURS_MS = 2 * 60 * 60 * 1000
-const THREE_HOURS_MS = 3 * 60 * 60 * 1000
-const ONE_DAY_MS = 24 * 60 * 60 * 1000
-const TWO_DAYS_MS = 2 * 24 * 60 * 60 * 1000
-const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000
+const ONE_MINUTE_MS = MS_PER_MINUTE
+const TWO_MINUTES_MS = 2 * MS_PER_MINUTE
+const THREE_MINUTES_MS = 3 * MS_PER_MINUTE
+const FOUR_MINUTES_MS = 4 * MS_PER_MINUTE
+const FIVE_MINUTES_MS = 5 * MS_PER_MINUTE
+const TEN_MINUTES_MS = 10 * MS_PER_MINUTE
+const FIFTEEN_MINUTES_MS = 15 * MS_PER_MINUTE
+const THIRTY_MINUTES_MS = 30 * MS_PER_MINUTE
+const FORTY_FIVE_MINUTES_MS = 45 * MS_PER_MINUTE
+const ONE_HOUR_MS = MS_PER_HOUR
+const TWO_HOURS_MS = 2 * MS_PER_HOUR
+const THREE_HOURS_MS = 3 * MS_PER_HOUR
+const ONE_DAY_MS = MS_PER_DAY
+const TWO_DAYS_MS = 2 * MS_PER_DAY
+const THREE_DAYS_MS = 3 * MS_PER_DAY
 
 // ============================================================================
 // Wrapper hooks that convert params object to positional args

@@ -8,6 +8,7 @@ import { useCardLoadingState } from './CardDataContext'
 import { CardClusterFilter } from '../../lib/cards/CardComponents'
 import { isDemoMode } from '../../lib/demoMode'
 import { useTranslation } from 'react-i18next'
+import { MS_PER_MINUTE } from '../../lib/constants/time'
 import {
   CHART_HEIGHT_STANDARD,
   CHART_GRID_STROKE,
@@ -85,7 +86,7 @@ export function PodHealthTrend() {
 
   // Track historical data points with persistence
   const STORAGE_KEY = 'pod-health-trend-history'
-  const MAX_AGE_MS = 30 * 60 * 1000 // 30 minutes - discard older data
+  const MAX_AGE_MS = 30 * MS_PER_MINUTE // 30 minutes - discard older data
 
   // Load from localStorage on mount
   const loadSavedHistory = (): HealthPoint[] => {

@@ -7,6 +7,7 @@ import { useMissions } from '../../hooks/useMissions'
 import { ConfirmMissionPromptDialog } from '../missions/ConfirmMissionPromptDialog'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { useDemoMode } from '../../hooks/useDemoMode'
+import { MS_PER_MINUTE } from '../../lib/constants/time'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardAIActions } from '../../lib/cards/CardComponents'
 import { StatusBadge } from '../ui/StatusBadge'
@@ -31,7 +32,7 @@ const SORT_OPTIONS = [
 
 // Module-level cache for cluster versions (persists across component remounts + page refreshes)
 const STORAGE_KEY = 'kc-cluster-versions'
-const VERSION_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+const VERSION_CACHE_TTL = 5 * MS_PER_MINUTE // 5 minutes
 
 // Load persisted cache from localStorage on module init
 const versionCache: Record<string, { version: string; timestamp: number }> =

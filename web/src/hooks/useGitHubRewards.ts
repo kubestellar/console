@@ -12,6 +12,7 @@ import { useAuth } from '../lib/auth'
 import { BACKEND_DEFAULT_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import type { GitHubRewardsResponse, GitHubContribution, GitHubRewardType } from '../types/rewards'
 import { GITHUB_REWARD_POINTS } from '../types/rewards'
+import { MS_PER_MINUTE } from '../lib/constants/time'
 
 /** Always fetch from the Netlify function (cached, no user token needed). */
 const REWARDS_API_BASE = 'https://console.kubestellar.io'
@@ -21,9 +22,9 @@ const CACHE_KEY_PREFIX = 'github-rewards-cache'
 /** Legacy cache key (pre-per-user). Cleared on first load to prevent stale data. */
 const LEGACY_CACHE_KEY = 'github-rewards-cache'
 /** How long client-side cached rewards data is considered fresh (15 minutes) */
-const CLIENT_CACHE_TTL_MS = 15 * 60 * 1000
+const CLIENT_CACHE_TTL_MS = 15 * MS_PER_MINUTE
 /** Interval between automatic background refreshes (10 minutes) */
-const REFRESH_INTERVAL_MS = 10 * 60 * 1000
+const REFRESH_INTERVAL_MS = 10 * MS_PER_MINUTE
 /** Max recent contributions to fetch from the GitHub Search API */
 const CONTRIBUTIONS_PER_PAGE = 20
 /** GitHub orgs to search for contributions */

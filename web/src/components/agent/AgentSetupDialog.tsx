@@ -10,10 +10,11 @@ import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
 import { copyToClipboard } from '../../lib/clipboard'
 import { isNetlifyDeployment } from '../../lib/demoMode'
 import { STORAGE_KEY_FIRST_AGENT_CONNECT } from '../../lib/constants/storage'
+import { MS_PER_DAY } from '../../lib/constants/time'
 
 const DISMISSED_KEY = 'kc-agent-setup-dismissed'
 const SNOOZED_KEY = 'kc-agent-setup-snoozed'
-const SNOOZE_DURATION = 24 * 60 * 60 * 1000 // 24 hours
+const SNOOZE_DURATION = MS_PER_DAY // 24 hours
 
 export function AgentSetupDialog() {
   const { t } = useTranslation('common')

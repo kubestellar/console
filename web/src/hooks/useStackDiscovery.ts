@@ -13,9 +13,10 @@ import { getDemoMode } from './useDemoMode'
 import type { LLMdServer } from './useLLMd'
 import { DEFAULT_REFRESH_INTERVAL_MS as REFRESH_INTERVAL_MS } from '../lib/constants'
 import { KUBECTL_MEDIUM_TIMEOUT_MS, KUBECTL_EXTENDED_TIMEOUT_MS } from '../lib/constants/network'
+import { MS_PER_MINUTE } from '../lib/constants/time'
 
 const CACHE_KEY = 'kubestellar-stack-cache'
-const CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes
+const CACHE_TTL_MS = 5 * MS_PER_MINUTE // 5 minutes
 
 export interface LLMdStackComponent {
   name: string

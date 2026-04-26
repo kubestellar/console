@@ -25,12 +25,13 @@ import { useDemoMode } from '../../hooks/useDemoMode'
 import { useTranslation } from 'react-i18next'
 import { useMissions } from '../../hooks/useMissions'
 import { useApiKeyCheck, ApiKeyPromptModal } from './console-missions/shared'
+import { MS_PER_MINUTE } from '../../lib/constants/time'
 
 // Named time-offset constants for demo fixture data (CLAUDE.md: No Magic Numbers)
-const TWO_MINUTES_MS = 2 * 60 * 1000
-const THREE_MINUTES_MS = 3 * 60 * 1000
-const FOUR_MINUTES_MS = 4 * 60 * 1000
-const FIVE_MINUTES_MS = 5 * 60 * 1000
+const TWO_MINUTES_MS = 2 * MS_PER_MINUTE
+const THREE_MINUTES_MS = 3 * MS_PER_MINUTE
+const FOUR_MINUTES_MS = 4 * MS_PER_MINUTE
+const FIVE_MINUTES_MS = 5 * MS_PER_MINUTE
 
 interface MissionsProps {
   config?: Record<string, unknown>

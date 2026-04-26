@@ -5,8 +5,10 @@
  * Used when VPN is unavailable or for demo purposes.
  */
 
+import { MS_PER_MINUTE } from '../constants/time'
+
 // Named time-offset constant for demo timestamp (CLAUDE.md: No Magic Numbers)
-const THIRTY_MINUTES_MS = 30 * 60 * 1000
+const THIRTY_MINUTES_MS = 30 * MS_PER_MINUTE
 
 // KVCache status per pod
 export interface KVCacheStats {

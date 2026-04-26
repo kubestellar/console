@@ -1,4 +1,5 @@
 import { MILLICORES_PER_CORE, MIB_PER_GIB, KIB_PER_MIB, GB_TO_MIB, MB_TO_MIB, BYTES_PER_MIB } from './constants/units'
+import { MS_PER_MINUTE } from './constants/time'
 
 /**
  * Kubara catalog utilities for Mission Control integration.
@@ -28,7 +29,7 @@ const KUBARA_DEFAULT_REPO = 'kubara-io/kubara'
 const KUBARA_DEFAULT_PATH = 'go-binary/templates/embedded/managed-service-catalog/helm'
 
 /** In-memory TTL for the catalog index cache (ms) — avoids redundant fetches */
-const CATALOG_CACHE_TTL_MS = 5 * 60 * 1000
+const CATALOG_CACHE_TTL_MS = 5 * MS_PER_MINUTE
 
 // ---------------------------------------------------------------------------
 // Types

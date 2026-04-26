@@ -13,9 +13,10 @@ import { CHART_GRID_STROKE, CHART_TOOLTIP_CONTENT_STYLE, CHART_TOOLTIP_FONT_SIZE
 import { CROSS_CLUSTER_EVENT_PALETTE } from '../../../lib/theme/chartColors'
 import { InsightDetailModal } from './InsightDetailModal'
 import type { MultiClusterInsight } from '../../../types/insights'
+import { MS_PER_MINUTE } from '../../../lib/constants/time'
 
 /** Time bucket size for the timeline chart (2 minutes) */
-const TIMELINE_BUCKET_MS = 2 * 60 * 1000
+const TIMELINE_BUCKET_MS = 2 * MS_PER_MINUTE
 /** Maximum number of buckets to show on the chart */
 const MAX_TIMELINE_BUCKETS = 30
 

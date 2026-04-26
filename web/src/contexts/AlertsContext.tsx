@@ -8,6 +8,7 @@ import type {
   AlertStats,
   AlertChannel } from '../types/alerts'
 import type { GPUHealthCheckResult } from '../hooks/mcp/types'
+import { MS_PER_MINUTE, MS_PER_HOUR } from '../lib/constants/time'
 import type { NightlyGuideStatus } from '../lib/llmd/nightlyE2EDemoData'
 import type { AlertsMCPData } from './AlertsDataFetcher'
 import { STORAGE_KEY_AUTH_TOKEN, FETCH_DEFAULT_TIMEOUT_MS, STORAGE_KEY_NOTIFIED_ALERT_KEYS } from '../lib/constants'
@@ -249,12 +250,12 @@ const DEFAULT_WIND_SPEED_THRESHOLD_MPH = 40
  *  tiered by severity so critical alerts re-notify quickly while
  *  lower-severity alerts don't spam the desktop. */
 const NOTIFICATION_COOLDOWN_BY_SEVERITY: Record<string, number> = {
-  critical: 5 * 60 * 1000,    // 5 min — urgent, re-notify quickly
-  warning: 30 * 60 * 1000,    // 30 min — important but not urgent
-  info: 4 * 60 * 60 * 1000,   // 4 hours — informational, minimal interruption
+  critical: 5 * MS_PER_MINUTE,    // 5 min — urgent, re-notify quickly
+  warning: 30 * MS_PER_MINUTE,    // 30 min — important but not urgent
+  info: 4 * MS_PER_HOUR,   // 4 hours — informational, minimal interruption
 }
 /** Fallback cooldown when severity is unknown */
-const DEFAULT_NOTIFICATION_COOLDOWN_MS = 30 * 60 * 1000 // 30 min
+const DEFAULT_NOTIFICATION_COOLDOWN_MS = 30 * MS_PER_MINUTE // 30 min
 
 /** Get the notification cooldown for a given severity level */
 function getNotificationCooldown(severity: string): number {

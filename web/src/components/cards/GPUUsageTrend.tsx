@@ -19,6 +19,7 @@ import {
   CHART_AXIS_STROKE,
   CHART_TOOLTIP_CONTENT_STYLE,
   CHART_TICK_COLOR } from '../../lib/constants'
+import { MS_PER_MINUTE } from '../../lib/constants/time'
 
 /**
  * Maximum age of a metrics-history snapshot we're willing to use as a
@@ -28,7 +29,7 @@ import {
  * `MAX_AGE_MS` used by this card's own on-screen chart history so the two
  * windows stay consistent.
  */
-const GPU_SNAPSHOT_STALENESS_MS = 30 * 60 * 1000 // 30 min
+const GPU_SNAPSHOT_STALENESS_MS = 30 * MS_PER_MINUTE // 30 min
 
 /**
  * Bucket size for the staleness-tick that forces the fallback memo to
@@ -202,7 +203,7 @@ export function GPUUsageTrend() {
 
   // Track historical data points with persistence
   const STORAGE_KEY = 'gpu-usage-trend-history'
-  const MAX_AGE_MS = 30 * 60 * 1000 // 30 minutes - discard older data
+  const MAX_AGE_MS = 30 * MS_PER_MINUTE // 30 minutes - discard older data
 
   const loadSavedHistory = (): GPUDataPoint[] => {
     try {
