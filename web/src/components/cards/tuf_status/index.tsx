@@ -26,6 +26,7 @@ import { useCachedTuf } from '../../../hooks/useCachedTuf'
 import { useCardLoadingState } from '../CardDataContext'
 import { cn } from '../../../lib/cn'
 import type { TufMetadataStatus, TufRole } from '../../../lib/demo/tuf'
+import { MS_PER_SECOND, SECONDS_PER_MINUTE, MINUTES_PER_HOUR, HOURS_PER_DAY, MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY } from '../../../lib/constants/time'
 
 // ---------------------------------------------------------------------------
 // Named constants (no magic numbers)
@@ -37,13 +38,6 @@ const SKELETON_BADGE_WIDTH = 90
 const SKELETON_BADGE_HEIGHT = 20
 const SKELETON_LIST_ITEMS = 4
 
-const MS_PER_SECOND = 1000
-const SECONDS_PER_MINUTE = 60
-const MINUTES_PER_HOUR = 60
-const HOURS_PER_DAY = 24
-const MS_PER_MINUTE = MS_PER_SECOND * SECONDS_PER_MINUTE
-const MS_PER_HOUR = MS_PER_MINUTE * MINUTES_PER_HOUR
-const MS_PER_DAY = MS_PER_HOUR * HOURS_PER_DAY
 
 // Role count used for skeleton row pre-allocation — TUF has exactly four
 // top-level roles per the spec (root, targets, snapshot, timestamp).

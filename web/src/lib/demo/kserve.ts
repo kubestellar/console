@@ -16,6 +16,8 @@
  * Source: kubestellar/console-marketplace#38
  */
 
+import { MS_PER_SECOND, SECONDS_PER_MINUTE, MS_PER_MINUTE } from '../constants/time'
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -80,10 +82,6 @@ export interface KServeStatusData {
 // ---------------------------------------------------------------------------
 // Demo-data constants (named — no magic numbers)
 // ---------------------------------------------------------------------------
-
-const MS_PER_SECOND = 1000
-const SECONDS_PER_MINUTE = 60
-const MS_PER_MINUTE = MS_PER_SECOND * SECONDS_PER_MINUTE
 
 // Relative "last update" offsets for each demo service — small, realistic ranges
 // that exercise the formatRelativeTime helper in the card UI.

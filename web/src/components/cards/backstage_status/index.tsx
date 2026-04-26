@@ -38,6 +38,7 @@ import {
   type BackstagePluginStatus,
   type BackstageScaffolderTemplate,
 } from '../../../lib/demo/backstage'
+import { MS_PER_SECOND, SECONDS_PER_MINUTE, MINUTES_PER_HOUR, HOURS_PER_DAY, MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY } from '../../../lib/constants/time'
 
 // ---------------------------------------------------------------------------
 // Named constants (no magic numbers)
@@ -49,13 +50,6 @@ const SKELETON_BADGE_WIDTH = 90
 const SKELETON_BADGE_HEIGHT = 20
 const SKELETON_LIST_ITEMS = 5
 
-const MS_PER_SECOND = 1000
-const SECONDS_PER_MINUTE = 60
-const MINUTES_PER_HOUR = 60
-const HOURS_PER_DAY = 24
-const MS_PER_MINUTE = MS_PER_SECOND * SECONDS_PER_MINUTE
-const MS_PER_HOUR = MS_PER_MINUTE * MINUTES_PER_HOUR
-const MS_PER_DAY = MS_PER_HOUR * HOURS_PER_DAY
 
 // Max number of rows the card surfaces per section — keeps the 6-wide card
 // height bounded when an install has dozens of plugins or templates.

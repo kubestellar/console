@@ -4,14 +4,12 @@ import { useCardHistory, CardHistoryEntry } from '../../hooks/useCardHistory'
 import { cn } from '../../lib/cn'
 import { formatCardTitle } from '../../lib/formatCardTitle'
 import { useTranslation } from 'react-i18next'
+import { MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY } from '../../lib/constants/time'
 
 function formatCardType(type: string): string {
   return formatCardTitle(type)
 }
 
-const MS_PER_MINUTE = 60_000      // Milliseconds in one minute
-const MS_PER_HOUR   = 3_600_000   // Milliseconds in one hour
-const MS_PER_DAY    = 86_400_000  // Milliseconds in one day
 const MS_PER_WEEK   = 604_800_000 // Milliseconds in one week
 
 function formatTimestamp(timestamp: number): string {

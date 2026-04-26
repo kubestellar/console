@@ -1,4 +1,5 @@
 import { createContext, use, useState, useEffect, useCallback, useMemo, useRef, ReactNode } from 'react'
+import { MS_PER_SECOND } from './constants/time'
 import { checkOAuthConfigured, checkOAuthConfiguredWithRetry } from './api'
 import { dashboardSync } from './dashboards/dashboardSync'
 import { clearPermissionsCache } from '../hooks/usePermissions'
@@ -47,8 +48,6 @@ const EXPIRY_WARNING_THRESHOLD_MS = 30 * 60_000
 const MAX_CACHED_USER_AGE_MS = 5 * 60 * 1_000
 /** #6067 — interval for background re-validation when the backend is unreachable. */
 const BACKEND_REVALIDATE_INTERVAL_MS = 30_000
-/** Milliseconds per second — JWT `exp` is in seconds. */
-const MS_PER_SECOND = 1_000
 
 /**
  * Decode the expiry timestamp from a JWT without verifying signature.

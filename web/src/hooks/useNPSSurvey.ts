@@ -4,6 +4,7 @@ import { STORAGE_KEY_NPS_STATE, STORAGE_KEY_SESSION_COUNT } from '../lib/constan
 import { emitNPSSurveyShown, emitNPSResponse, emitNPSDismissed } from '../lib/analytics'
 import { api } from '../lib/api'
 import { useRewards } from './useRewards'
+import { MS_PER_DAY } from '../lib/constants/time'
 
 /** Minimum sessions before showing NPS for the first time */
 const MIN_SESSIONS_BEFORE_NPS = 2
@@ -15,8 +16,6 @@ const NPS_REPROMPT_DAYS = 30
 const NPS_DISMISS_RETRY_DAYS = 7
 /** Max dismissals before stopping for NPS_REPROMPT_DAYS */
 const NPS_MAX_DISMISSALS = 3
-/** Milliseconds per day */
-const MS_PER_DAY = 86_400_000
 /** Timeout for the NPS POST — keep short; the UI is blocked on this */
 const NPS_POST_TIMEOUT_MS = 5_000
 

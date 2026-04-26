@@ -15,6 +15,7 @@ import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
 import type { Mission } from '../../hooks/useMissions'
 import { useSnoozedAlerts, SNOOZE_DURATIONS, formatSnoozeRemaining, type SnoozeDuration } from '../../hooks/useSnoozedAlerts'
+import { MS_PER_MINUTE, MINUTES_PER_HOUR, HOURS_PER_DAY } from '../../lib/constants/time'
 
 // Severity color map — defined at module level to avoid re-creation on each render
 const SEVERITY_COLORS: Record<AlertSeverity, string> = {
@@ -23,12 +24,6 @@ const SEVERITY_COLORS: Record<AlertSeverity, string> = {
   info: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
 }
 
-/** Milliseconds in one minute — used for relative time formatting */
-const MS_PER_MINUTE = 60000
-/** Minutes in one hour */
-const MINUTES_PER_HOUR = 60
-/** Hours in one day */
-const HOURS_PER_DAY = 24
 
 // Severity indicator badge
 function SeverityBadge({ severity }: { severity: AlertSeverity }) {

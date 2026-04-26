@@ -298,9 +298,7 @@ export const SERVICES_CACHE_TTL_MS = 60_000
  * SERVICES_CACHE_TTL_MS. */
 export const SERVICES_CACHE_STALE_MS = 30_000
 
-/** Conversion factor from milliseconds to seconds, used when formatting
- * the "Cached • Ns ago" label. */
-export const MS_PER_SECOND = 1_000
+export { MS_PER_SECOND } from './time'
 
 // ============================================================================
 // Service port rendering (issue #6163)

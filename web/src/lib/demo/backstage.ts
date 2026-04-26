@@ -8,6 +8,8 @@
  * entity catalog was successfully reconciled.
  */
 
+import { MS_PER_SECOND, SECONDS_PER_MINUTE, MINUTES_PER_HOUR, MS_PER_MINUTE, MS_PER_HOUR } from '../constants/time'
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -86,12 +88,6 @@ export interface BackstageStatusData {
 // ---------------------------------------------------------------------------
 // Named constants (no magic numbers)
 // ---------------------------------------------------------------------------
-
-const MS_PER_SECOND = 1000
-const SECONDS_PER_MINUTE = 60
-const MINUTES_PER_HOUR = 60
-const MS_PER_MINUTE = MS_PER_SECOND * SECONDS_PER_MINUTE
-const MS_PER_HOUR = MS_PER_MINUTE * MINUTES_PER_HOUR
 
 // Demo replica topology — typical small-to-medium Backstage install.
 const DEMO_REPLICAS_RUNNING = 2

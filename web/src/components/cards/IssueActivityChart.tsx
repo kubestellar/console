@@ -32,6 +32,7 @@ import {
   CHART_DATAZOOM_DATA_AREA,
 } from '../../lib/constants'
 import { hexToRgba } from '../../lib/theme/chartColors'
+import { MS_PER_DAY } from '../../lib/constants/time'
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
@@ -53,8 +54,6 @@ const MAX_PAGES = 30
 const CACHE_TTL_MS = 60 * 60 * 1000
 /** LocalStorage cache key prefix */
 const CACHE_KEY_PREFIX = 'issue_activity_chart_cache_'
-/** Milliseconds in one day */
-const MS_PER_DAY = 86_400_000
 /** Bar chart color for issues opened */
 const COLOR_OPENED = '#4472C4'
 /** Bar chart color for issues closed */

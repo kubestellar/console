@@ -2,6 +2,7 @@ import { memo, useState, useEffect, useRef } from 'react'
 import { RefreshCw, Clock, AlertTriangle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
+import { MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY } from '../../lib/constants/time'
 import { formatLastSeen } from '../../lib/errorClassifier'
 import { Button } from './Button'
 
@@ -9,12 +10,6 @@ import { Button } from './Button'
 // Must match animation duration (1s) defined in index.css for animate-spin-min
 const MIN_SPIN_DURATION = 1000
 
-/** Milliseconds per minute, used for relative-time formatting */
-const MS_PER_MINUTE = 60_000
-/** Milliseconds per hour, used for relative-time formatting */
-const MS_PER_HOUR = 3_600_000
-/** Milliseconds per day, used for relative-time formatting */
-const MS_PER_DAY = 86_400_000
 
 interface RefreshIndicatorProps {
   isRefreshing: boolean

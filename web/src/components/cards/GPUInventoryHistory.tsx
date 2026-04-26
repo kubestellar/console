@@ -19,6 +19,7 @@ import {
   CHART_AXIS_STROKE,
   CHART_TOOLTIP_CONTENT_STYLE,
   CHART_TICK_COLOR } from '../../lib/constants'
+import { MS_PER_HOUR, MS_PER_MINUTE, MINUTES_PER_HOUR } from '../../lib/constants/time'
 
 // ---------------------------------------------------------------------------
 // Constants — no magic numbers
@@ -52,14 +53,8 @@ const UNKNOWN_GPU_TYPE = 'Unknown'
 const DEMO_GPU_TYPE_COUNT = 3
 /** Number of demo nodes to simulate */
 const DEMO_NODE_COUNT = 4
-/** Milliseconds per hour — used for demo data time offsets */
-const MS_PER_HOUR = 60 * 60 * 1000
-/** Milliseconds per minute — used for snapshot interval display */
-const MS_PER_MINUTE = 60 * 1000
 /** Default snapshot interval in minutes (used when actual cannot be computed) */
 const DEFAULT_SNAPSHOT_INTERVAL_MIN = 10
-/** Minutes per hour — used for converting interval-based durations */
-const MINUTES_PER_HOUR = 60
 /** Minimum snapshots needed for churn computation (need at least 2 to diff) */
 const MIN_CHURN_SNAPSHOTS = 2
 /** Maximum rows to show in the table view per page */

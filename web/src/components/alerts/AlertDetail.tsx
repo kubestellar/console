@@ -22,14 +22,13 @@ import { Button } from '../ui/Button'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
 import { TOAST_DISMISS_MS } from '../../lib/constants/network'
+import { MINUTES_PER_HOUR, HOURS_PER_DAY } from '../../lib/constants/time'
 
 // Issue 9256 — fallback label used for acknowledgement when no authenticated
 // user is available (e.g. in demo mode without login).
 const ANONYMOUS_ACK_LABEL = 'anonymous'
 
 // Time thresholds for relative time formatting
-const MINUTES_PER_HOUR = 60 // Minutes in an hour
-const HOURS_PER_DAY = 24 // Hours in a day
 
 interface AlertDetailProps {
   alert: Alert

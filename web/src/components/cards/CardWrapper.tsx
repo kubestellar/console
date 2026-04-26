@@ -36,6 +36,7 @@ const FeatureRequestModal = lazy(() =>
   import('../feedback/FeatureRequestModal').then(m => ({ default: m.FeatureRequestModal }))
 )
 import { LOADING_TIMEOUT_MS, SKELETON_DELAY_MS, INITIAL_RENDER_TIMEOUT_MS, TICK_INTERVAL_MS, CARD_LOADING_TIMEOUT_MS, MIN_SKELETON_DISPLAY_MS } from '../../lib/constants/network'
+import { SECONDS_PER_MINUTE, MINUTES_PER_HOUR, HOURS_PER_DAY } from '../../lib/constants/time'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import { copyToClipboard } from '../../lib/clipboard'
 
@@ -84,12 +85,6 @@ const ONE_HOUR_MS = 60 * 60 * 1000
 // Relative-time formatting for the card header "last updated" label.
 // Named constants (not magic numbers) so every threshold is explicit.
 // ---------------------------------------------------------------------------
-/** Seconds in one minute — rollover from "Xs" to "Xm" */
-const SECONDS_PER_MINUTE = 60
-/** Minutes in one hour — rollover from "Xm" to "Xh" */
-const MINUTES_PER_HOUR = 60
-/** Hours in one day — rollover from "Xh" to "Xd" */
-const HOURS_PER_DAY = 24
 /** Fallback when the timestamp isn't a valid Date — prevents "NaNd" (#9095) */
 const INVALID_TIMESTAMP_LABEL = 'Unknown'
 /**

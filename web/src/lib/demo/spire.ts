@@ -14,6 +14,8 @@
  *   - Trust bundle age (how long since the last rotation)
  */
 
+import { MS_PER_SECOND, SECONDS_PER_MINUTE, MINUTES_PER_HOUR, HOURS_PER_DAY, MS_PER_HOUR, MS_PER_DAY } from '../constants/time'
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -80,12 +82,6 @@ export interface SpireStatusData {
 // Demo data — shown when SPIRE is not installed or in demo mode
 // ---------------------------------------------------------------------------
 
-const MS_PER_SECOND = 1000
-const SECONDS_PER_MINUTE = 60
-const MINUTES_PER_HOUR = 60
-const HOURS_PER_DAY = 24
-const MS_PER_HOUR = MS_PER_SECOND * SECONDS_PER_MINUTE * MINUTES_PER_HOUR
-const MS_PER_DAY = MS_PER_HOUR * HOURS_PER_DAY
 
 // Demo SPIRE server — highly-available 3-replica deployment
 const DEMO_SERVER_REPLICAS_DESIRED = 3

@@ -3,6 +3,8 @@
  * and providing actionable suggestions to users.
  */
 
+import { SECONDS_PER_MINUTE } from './constants/time'
+
 export type ClusterErrorType = 'timeout' | 'auth' | 'network' | 'certificate' | 'unknown'
 
 export interface ClassifiedError {
@@ -163,7 +165,6 @@ function truncateMessage(message: string, maxLength = 100): string {
 }
 
 // Time boundary constants for relative time formatting (in seconds)
-const SECONDS_PER_MINUTE = 60
 const SECONDS_PER_HOUR = 3_600
 const SECONDS_PER_DAY = 86_400
 const TWO_MINUTES_IN_SECONDS = 120

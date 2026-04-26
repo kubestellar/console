@@ -10,6 +10,7 @@ import { isTriaged } from '../../hooks/useFeatureRequests'
 import type { FeatureRequest } from '../../hooks/useFeatureRequests'
 import { emitLinkedInShare } from '../../lib/analytics'
 import { BACKEND_DEFAULT_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
+import { MS_PER_SECOND } from '../../lib/constants/time'
 import { ContributorBanner } from '../rewards/ContributorLadder'
 import { GITHUB_REWARD_LABELS } from '../../types/rewards'
 import type { GitHubContribution } from '../../types/rewards'
@@ -56,8 +57,6 @@ interface UpdatesTabProps {
   onShowLoginPrompt: () => void
 }
 
-/** Number of milliseconds in one second (for preview warmup countdown) */
-const MS_PER_SECOND = 1000
 
 export function UpdatesTab({
   requests,

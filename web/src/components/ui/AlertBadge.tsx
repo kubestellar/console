@@ -11,6 +11,7 @@ import type { Alert, AlertSeverity } from '../../types/alerts'
 import { CardAIActions } from '../../lib/cards/CardComponents'
 import { ROUTES } from '../../config/routes'
 import { TRANSITION_DELAY_MS } from '../../lib/constants/network'
+import { HOURS_PER_DAY } from '../../lib/constants/time'
 import { useModalState } from '../../lib/modals'
 import { Button } from './Button'
 
@@ -19,7 +20,6 @@ const BADGE_MAX_COUNT = 99
 /** Number of minutes in an hour, used for relative-time formatting */
 const MINS_PER_HOUR = 60
 /** Number of hours in a day, used for relative-time formatting */
-const HOURS_PER_DAY = 24
 /** Duration of the exit animation before swapping the counter value in milliseconds */
 const ANIMATION_EXIT_DELAY_MS = 150
 

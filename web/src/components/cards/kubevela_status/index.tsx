@@ -38,6 +38,7 @@ import type {
   WorkflowStepPhase,
 } from './demoData'
 import { formatTimeAgo } from '../../../lib/formatters'
+import { MINUTES_PER_HOUR } from '../../../lib/constants/time'
 
 // ---------------------------------------------------------------------------
 // Named constants (no magic numbers)
@@ -54,7 +55,6 @@ const PROGRESS_BAR_WIDTH_PX = 56
 const PROGRESS_BAR_HEIGHT_PX = 4
 
 const MAX_APPS_DISPLAYED = 5
-const MINUTES_PER_HOUR = 60
 const AGE_MINUTES_HOUR_THRESHOLD = 60
 const AGE_MINUTES_DAY_THRESHOLD = 1440
 

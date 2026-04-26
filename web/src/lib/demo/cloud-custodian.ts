@@ -12,6 +12,8 @@
  *   - Policy execution mode (pull / periodic / event)
  */
 
+import { MS_PER_SECOND, SECONDS_PER_MINUTE, MS_PER_MINUTE } from '../constants/time'
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -87,9 +89,6 @@ export interface CloudCustodianStatusData {
 // ---------------------------------------------------------------------------
 
 // Named constants (no magic numbers)
-const MS_PER_SECOND = 1000
-const SECONDS_PER_MINUTE = 60
-const MS_PER_MINUTE = MS_PER_SECOND * SECONDS_PER_MINUTE
 
 // Last-run offsets (minutes ago) chosen to feel realistic across pull/periodic/event.
 const POLICY_LAST_RUN_EC2_MIN = 4

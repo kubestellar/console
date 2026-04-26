@@ -8,6 +8,8 @@
  * metadata has expired or is about to expire.
  */
 
+import { MS_PER_SECOND, SECONDS_PER_MINUTE, MINUTES_PER_HOUR, HOURS_PER_DAY, MS_PER_DAY } from '../constants/time'
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -57,12 +59,6 @@ export interface TufStatusData {
 // ---------------------------------------------------------------------------
 
 // Named constants (no magic numbers)
-const MS_PER_SECOND = 1000
-const SECONDS_PER_MINUTE = 60
-const MINUTES_PER_HOUR = 60
-const HOURS_PER_DAY = 24
-const MS_PER_DAY =
-  MS_PER_SECOND * SECONDS_PER_MINUTE * MINUTES_PER_HOUR * HOURS_PER_DAY
 
 // Role expiration offsets (days from "now") chosen to mirror realistic TUF
 // cadence: timestamp rotates daily, snapshot weekly, targets monthly, root yearly.

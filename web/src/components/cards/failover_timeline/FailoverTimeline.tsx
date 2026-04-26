@@ -10,19 +10,12 @@ import { Skeleton, SkeletonStats, SkeletonList } from '../../ui/Skeleton'
 import { useFailoverTimeline } from './useFailoverTimeline'
 import { formatTimeAgo } from '../../../lib/formatters'
 import type { FailoverEvent, FailoverEventType, FailoverSeverity } from './demoData'
+import { MINUTES_PER_HOUR, HOURS_PER_DAY, MS_PER_MINUTE } from '../../../lib/constants/time'
 
 // ---------------------------------------------------------------------------
 // Named constants
 // ---------------------------------------------------------------------------
 
-/** Number of minutes in one hour */
-const MINUTES_PER_HOUR = 60
-
-/** Number of hours in one day */
-const HOURS_PER_DAY = 24
-
-/** Number of milliseconds in one minute */
-const MS_PER_MINUTE = 60_000
 
 // ---------------------------------------------------------------------------
 // Severity styling

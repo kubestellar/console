@@ -14,10 +14,9 @@ import {
   formatPercent,
   formatDuration,
 } from '../../../stats/types'
+import { MINUTES_PER_HOUR, HOURS_PER_DAY } from '../../../constants/time'
 
 // ── Time boundary constants for relative time formatting ────────────────
-const MINUTES_PER_HOUR = 60
-const HOURS_PER_DAY = 24
 const DAYS_PER_MONTH = 30
 const MONTHS_PER_YEAR = 12
 const DAYS_PER_YEAR = 365

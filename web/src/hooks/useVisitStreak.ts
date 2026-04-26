@@ -13,9 +13,7 @@ import { useState } from 'react'
 import { safeGetJSON, safeSetJSON } from '../lib/utils/localStorage'
 import { STORAGE_KEY_VISIT_STREAK } from '../lib/constants/storage'
 import { emitStreakDay } from '../lib/analytics'
-
-/** Number of milliseconds in one day */
-const MS_PER_DAY = 86_400_000
+import { MS_PER_DAY } from '../lib/constants/time'
 
 interface StreakData {
   /** Last visit date in YYYY-MM-DD format */

@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next'
 import { useLocalClusterTools, type VClusterInstance } from '../../hooks/useLocalClusterTools'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { useDemoMode } from '../../hooks/useDemoMode'
+import { MS_PER_DAY } from '../../lib/constants/time'
 
 type VClusterStatusType = 'Running' | 'Paused' | 'Failed' | 'Unknown'
 
@@ -26,7 +27,6 @@ const DEMO_AGE_STAGING_DAYS = 21
 const DEMO_AGE_TEST_DAYS = 10
 const DEMO_AGE_SANDBOX_DAYS = 3
 const DEMO_AGE_QA_DAYS = 7
-const MS_PER_DAY = 24 * 60 * 60 * 1000
 
 const DEMO_VCLUSTERS: VCluster[] = [
   { name: 'dev-vcluster', namespace: 'vcluster-dev', hostCluster: 'us-east-1', status: 'Running', k8sVersion: 'v1.30.2', createdAt: new Date(Date.now() - DEMO_AGE_OLDEST_DAYS * MS_PER_DAY).toISOString() },

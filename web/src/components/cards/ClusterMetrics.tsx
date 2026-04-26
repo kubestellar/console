@@ -7,6 +7,7 @@ import { useChartFilters } from '../../lib/cards/cardHooks'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { useDemoMode } from '../../hooks/useDemoMode'
+import { MS_PER_SECOND, SECONDS_PER_MINUTE, MINUTES_PER_HOUR } from '../../lib/constants/time'
 
 type TimeRange = '15m' | '1h' | '6h' | '24h'
 
@@ -19,9 +20,6 @@ type TimeRange = '15m' | '1h' | '6h' | '24h'
 const MAX_HISTORY_POINTS = 60                                                  // buffer cap (points)
 const MAX_HISTORY_DURATION_MS = MAX_HISTORY_POINTS * CLUSTER_POLL_INTERVAL_MS  // max wall-clock span of buffer
 const MIN_POINT_SPACING_MS = 30 * 1000                                         // min delta between recorded points (30s)
-const MS_PER_SECOND = 1000
-const SECONDS_PER_MINUTE = 60
-const MINUTES_PER_HOUR = 60
 const MINUTES_15 = 15
 const HOURS_1 = 1
 const HOURS_6 = 6

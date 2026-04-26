@@ -17,6 +17,7 @@ import { STORAGE_KEY_TOKEN } from '../lib/constants'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import { registerRefetch } from '../lib/modeTransition'
 import { DEFAULT_REFRESH_INTERVAL_MS as REFRESH_INTERVAL_MS } from '../lib/constants'
+import { MS_PER_DAY, MS_PER_HOUR } from '../lib/constants/time'
 
 // ============================================================================
 // Constants
@@ -119,10 +120,6 @@ function saveToCache(data: Gateway[], isDemoData: boolean): void {
 // Demo Data Generator
 // ============================================================================
 
-/** Days in milliseconds */
-const MS_PER_DAY = 86_400_000
-/** Hours in milliseconds */
-const MS_PER_HOUR = 3_600_000
 
 function getDemoGateways(clusterNames: string[]): Gateway[] {
   const gateways: Gateway[] = []

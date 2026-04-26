@@ -7,12 +7,8 @@ import {
   type TargetRepo,
 } from '../../hooks/useFeatureRequests'
 import type { FeedbackDraft } from '../../hooks/useFeedbackDrafts'
-
-// ── Time thresholds for relative time formatting ──
-/** Minutes in an hour */
-export const MINUTES_PER_HOUR = 60
-/** Hours in a day */
-export const HOURS_PER_DAY = 24
+import { MINUTES_PER_HOUR, HOURS_PER_DAY } from '../../lib/constants/time'
+export { MINUTES_PER_HOUR, HOURS_PER_DAY }
 /** Days in a week */
 export const DAYS_PER_WEEK = 7
 /** Delay before showing preview link (Netlify route warmup) */
