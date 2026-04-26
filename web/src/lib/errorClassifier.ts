@@ -7,7 +7,7 @@ import { SECONDS_PER_MINUTE } from './constants/time'
 
 export type ClusterErrorType = 'timeout' | 'auth' | 'network' | 'certificate' | 'unknown'
 
-export interface ClassifiedError {
+interface ClassifiedError {
   type: ClusterErrorType
   message: string
   suggestion: string
