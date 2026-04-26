@@ -65,7 +65,7 @@ export function ContributorBanner() {
             {totalCoins > 0 && (
               <button
                 onClick={handleLinkedInShare}
-                className="p-1 rounded hover:bg-secondary/50 text-muted-foreground hover:text-[#0A66C2] transition-colors"
+                className="p-1 rounded hover:bg-secondary/50 text-muted-foreground hover:text-linkedin transition-colors"
                 title={`Share your ${current.name} status on LinkedIn`}
               >
                 <Linkedin className="w-3.5 h-3.5" />

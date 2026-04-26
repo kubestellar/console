@@ -18,21 +18,15 @@ export const CHART_MIN_HEIGHT_TALL_PX = 250
 // ── Recharts shared styles ──────────────────────────────────────────────
 export const CHART_TOOLTIP_BG = '#1a1a2e'
 export const CHART_TOOLTIP_BORDER = '#333'
-/** Standard border-radius for chart tooltip containers (Tailwind rounded-lg equivalent) */
-export const CHART_TOOLTIP_BORDER_RADIUS = '8px'
 /** Standard font size for chart tooltip text */
 export const CHART_TOOLTIP_FONT_SIZE = '12px'
 /** Compact font size for insight-card tooltips */
 export const CHART_TOOLTIP_FONT_SIZE_COMPACT = '11px'
-/** Compact legend font size (10px) — kept for backward compat with callers */
-export const CHART_LEGEND_WRAPPER_STYLE: React.CSSProperties = { fontSize: '10px' }
-/** Standard legend font size (12px) — kept for backward compat with callers */
-export const CHART_LEGEND_WRAPPER_STYLE_SM: React.CSSProperties = { fontSize: '12px' }
 /** Shared tooltip content style — used to extract bg/border for echarts tooltip config */
 export const CHART_TOOLTIP_CONTENT_STYLE: React.CSSProperties = {
   backgroundColor: CHART_TOOLTIP_BG,
   border: `1px solid ${CHART_TOOLTIP_BORDER}`,
-  borderRadius: CHART_TOOLTIP_BORDER_RADIUS,
+  borderRadius: '8px',
   fontSize: CHART_TOOLTIP_FONT_SIZE,
 }
 /** Tailwind-gray tooltip style for unified card system charts */
@@ -81,8 +75,6 @@ export const CHART_AXIS_FONT_SIZE = 10
 export const CHART_AXIS_FONT_SIZE_SM = 9
 /** Standard tooltip / legend font size (ECharts numeric) */
 export const CHART_BODY_FONT_SIZE = 12
-/** Small chart body font size for compact labels (ECharts numeric) */
-export const CHART_BODY_FONT_SIZE_SM = 10
 /** Legend text font size for chart legends (ECharts numeric) */
 export const CHART_LEGEND_FONT_SIZE = 11
 /** Tiny marker label font size for map cluster markers (DOM px) */
@@ -104,8 +96,6 @@ export const DEFAULT_PAGE_SIZE = 5
 export const NAVBAR_HEIGHT_PX = 64
 /** Height of each status banner (network, demo, offline) in pixels */
 export const BANNER_HEIGHT_PX = 36
-/** Height of the green dev-mode indicator bar in pixels (h-5 = 20px) */
-export const DEV_BAR_HEIGHT_PX = 20
 /**
  * Horizontal offset (in pixels) from the sidebar's right edge at which the
  * floating collapse + pin control container is anchored (see Sidebar.tsx).

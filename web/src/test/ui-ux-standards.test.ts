@@ -94,7 +94,9 @@ const EXPECTED_RAW_HEX_COUNT = 256
 const EXPECTED_RAW_RGBA_COUNT = 104
 //   22 → 19: PR #8547 — replaced 3 arbitrary Tailwind hex colors in Login.tsx
 //            (bg-[#0a0a0a], from-[#0a0f1c]) with semantic bg-background/from-background
-const EXPECTED_ARBITRARY_TW_COLOR_COUNT = 19
+//   19 →  0: PR #10271 — added linkedin/terminal/glass-overlay to Tailwind config,
+//            replaced all 9 remaining arbitrary hex colors across 6 files
+const EXPECTED_ARBITRARY_TW_COLOR_COUNT = 0
 // Inline style color ratchet — bump history:
 //   213 → 215: Drasi reactive graph (PRs #7832, #7857) — two new
 //              echarts/flow-node inline colors not covered by theming utils.

@@ -379,7 +379,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
               onClick={handleLinkedInShare}
               className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-foreground hover:bg-secondary rounded-lg transition-colors"
             >
-              <Linkedin className="w-4 h-4 text-[#0A66C2]" />
+              <Linkedin className="w-4 h-4 text-linkedin" />
               <span>{t('feedback.shareOnLinkedIn')}</span>
               <span className="ml-auto text-xs px-1.5 py-0.5 rounded bg-yellow-900 text-yellow-400">+{REWARD_ACTIONS.linkedin_share.coins}</span>
             </button>

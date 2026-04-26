@@ -767,7 +767,7 @@ function GitHubContributionsSection({
                 window.open(linkedInUrl, '_blank', `noopener,noreferrer,width=${LINKEDIN_POPUP_SIZE},height=${LINKEDIN_POPUP_SIZE}`)
                 emitLinkedInShare('feature_request')
               }}
-              className="p-1 rounded hover:bg-secondary/50 text-muted-foreground hover:text-[#0A66C2] transition-colors"
+              className="p-1 rounded hover:bg-secondary/50 text-muted-foreground hover:text-linkedin transition-colors"
               title={`Share ${githubPoints.toLocaleString()} coins on LinkedIn`}
             >
               <Linkedin className="w-3.5 h-3.5" />

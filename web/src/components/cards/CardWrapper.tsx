@@ -1168,7 +1168,7 @@ export function CardWrapper({
                   </button>
                   {showMenu && menuPosition && createPortal(
                     <div
-                      className="fixed w-48 glass rounded-lg py-1 z-50 shadow-xl bg-[rgba(10,15,25,0.98)]!"
+                      className="fixed w-48 glass rounded-lg py-1 z-50 shadow-xl bg-glass-overlay!"
                       role="menu"
                       aria-label={t('cardWrapper.cardMenuTooltip')}
                       style={{ top: menuPosition.top, right: menuPosition.right }}

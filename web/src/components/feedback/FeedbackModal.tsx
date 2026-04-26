@@ -627,7 +627,7 @@ export function LinkedInShareButton({ onShare, compact = false }: { onShare?: ()
     return (
       <button
         onClick={handleShare}
-        className="flex items-center gap-2 px-3 py-2 text-sm rounded-lg bg-[#0A66C2]/20 hover:bg-[#0A66C2]/30 text-[#0A66C2] transition-colors"
+        className="flex items-center gap-2 px-3 py-2 text-sm rounded-lg bg-linkedin/20 hover:bg-linkedin/30 text-linkedin transition-colors"
         title="Share on LinkedIn"
       >
         <Linkedin className="w-4 h-4" />
@@ -640,7 +640,7 @@ export function LinkedInShareButton({ onShare, compact = false }: { onShare?: ()
   return (
     <button
       onClick={handleShare}
-      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[#0A66C2] hover:bg-[#004182] text-white font-medium transition-colors"
+      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-linkedin hover:bg-linkedin-dark text-white font-medium transition-colors"
     >
       <Linkedin className="w-4 h-4" />
       <span>{t('feedback.shareOnLinkedIn')}</span>

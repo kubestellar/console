@@ -140,7 +140,7 @@ export function AuthCallback() {
   }, [searchParams, refreshUser, navigate, showToast, t])
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
+    <div className="min-h-screen flex items-center justify-center bg-terminal">
       <div className="text-center">
         <div className="spinner w-12 h-12 mx-auto mb-4" role="status" />
         <p className="text-muted-foreground">{status}</p>

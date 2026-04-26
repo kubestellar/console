@@ -83,6 +83,12 @@ export default {
           neutral: "var(--color-neutral)",
           pending: "var(--color-pending)",
         },
+        linkedin: {
+          DEFAULT: '#0A66C2',
+          dark: '#004182',
+        },
+        terminal: '#0d0d0d',
+        'glass-overlay': 'rgba(10,15,25,0.98)',
       },
       /**
        * Z-Index Scale — semantic layers for global stacking.
