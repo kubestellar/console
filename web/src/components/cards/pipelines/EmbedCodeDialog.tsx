@@ -9,7 +9,7 @@ import { COPY_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants'
  *   - A preview of the embed URL
  *   - One-click copy for iframe HTML and markdown badge
  */
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { Copy, Check, X, Code2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Input } from '../../ui/Input'
@@ -50,6 +50,13 @@ export function EmbedCodeDialog({ open, cardType, cardTitle, currentRepo, onClos
   const { t } = useTranslation()
   const [repo, setRepo] = useState(currentRepo ?? '')
   const [copiedField, setCopiedField] = useState<string | null>(null)
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
+    }
+  }, [])
 
   const isValidRepo = useMemo(() => !repo || REPO_FORMAT_REGEX.test(repo.trim()), [repo])
 
@@ -75,7 +82,8 @@ export function EmbedCodeDialog({ open, cardType, cardTitle, currentRepo, onClos
     try {
       await navigator.clipboard.writeText(text)
       setCopiedField(fieldId)
-      setTimeout(() => setCopiedField(null), COPY_FEEDBACK_TIMEOUT_MS)
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
+      copyTimerRef.current = setTimeout(() => setCopiedField(null), COPY_FEEDBACK_TIMEOUT_MS)
     } catch {
       // Fallback for insecure contexts (e.g. HTTP iframe)
       const el = document.createElement('textarea')
@@ -85,7 +93,8 @@ export function EmbedCodeDialog({ open, cardType, cardTitle, currentRepo, onClos
       document.execCommand('copy')
       document.body.removeChild(el)
       setCopiedField(fieldId)
-      setTimeout(() => setCopiedField(null), COPY_FEEDBACK_TIMEOUT_MS)
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
+      copyTimerRef.current = setTimeout(() => setCopiedField(null), COPY_FEEDBACK_TIMEOUT_MS)
     }
   }, [])
 

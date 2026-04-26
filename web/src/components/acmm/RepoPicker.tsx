@@ -6,7 +6,7 @@
  * a "Load Console example" button.
  */
 
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { RefreshCw, X, ExternalLink, AlertCircle, Award, Copy, Check, Share2, Info } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
@@ -76,6 +76,13 @@ export function RepoPicker() {
   const [showBadge, setShowBadge] = useState(false)
   const [copied, setCopied] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
+    }
+  }, [])
 
   const badgeEndpoint = `${BADGE_SITE}/api/acmm/badge?repo=${encodeURIComponent(repo)}`
   const badgeImg = `https://img.shields.io/endpoint?url=${encodeURIComponent(badgeEndpoint)}`
@@ -87,7 +94,8 @@ export function RepoPicker() {
     navigator.clipboard.writeText(text).then(
       () => {
         setCopied(tag)
-        setTimeout(() => setCopied(null), COPIED_FEEDBACK_MS)
+        if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
+        copyTimerRef.current = setTimeout(() => setCopied(null), COPIED_FEEDBACK_MS)
       },
       () => {
         // ignore clipboard failures

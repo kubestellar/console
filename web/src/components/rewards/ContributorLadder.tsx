@@ -2,7 +2,7 @@
  * ContributorLadder — shows current level, progress to next, and the full ladder
  */
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   Telescope, Compass, Map, Rocket, Shield, Star, Crown, Sparkles,
   Coins, ChevronDown, ChevronUp, Copy, Check,
@@ -184,13 +184,21 @@ const BADGE_LOGIN_PLACEHOLDER = 'YOUR-LOGIN'
  */
 function BadgeSnippet() {
   const [copied, setCopied] = useState(false)
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const snippet = `![Contributor Badge](${BADGE_URL_BASE}${BADGE_LOGIN_PLACEHOLDER})`
+
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
+    }
+  }, [])
 
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(snippet)
       setCopied(true)
-      setTimeout(() => setCopied(false), COPY_CONFIRM_MS)
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
+      copyTimerRef.current = setTimeout(() => setCopied(false), COPY_CONFIRM_MS)
     } catch {
       // Clipboard API can fail in insecure contexts; fail silently.
     }

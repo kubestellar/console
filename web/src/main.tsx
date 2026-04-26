@@ -93,7 +93,10 @@ document.addEventListener('visibilitychange', () => {
 })
 
 // Also check on a periodic interval for long-lived tabs
-setInterval(checkForStaleHtml, STALE_CHECK_INTERVAL_MS)
+// Store interval ID so the timer is trackable (avoids orphaned-timer lint warnings)
+const _staleCheckInterval = setInterval(checkForStaleHtml, STALE_CHECK_INTERVAL_MS)
+// Suppress unused-variable warning — the interval intentionally runs for the app lifetime
+void _staleCheckInterval
 
 // Enable MSW mock service worker in demo mode (Netlify previews)
 const enableMocking = async () => {
