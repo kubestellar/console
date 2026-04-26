@@ -648,15 +648,3 @@ export function formatPercentage(value: number): string {
   return `${Math.round(value)}%`
 }
 
-/** Threshold above which currency values are abbreviated to K (e.g. $1.5K) */
-const CURRENCY_KILO_THRESHOLD = 1_000
-
-/**
- * Helper to format currency values
- */
-export function formatCurrency(value: number): string {
-  if (value >= CURRENCY_KILO_THRESHOLD) {
-    return `$${(value / CURRENCY_KILO_THRESHOLD).toFixed(1)}K`
-  }
-  return `$${value.toFixed(2)}`
-}
