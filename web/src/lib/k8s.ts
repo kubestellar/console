@@ -2,6 +2,12 @@
  * Shared Kubernetes utility functions used across multiple card helpers.
  */
 
+/** Minimal pod shape accepted by {@link isPodHealthy}. */
+export interface PodHealthInfo {
+  status?: string
+  ready?: string
+}
+
 /**
  * Parse a Kubernetes "ready/total" string (e.g. "2/3") into numeric parts.
  * Returns `{ ready: 0, total: 0 }` for missing or malformed input.

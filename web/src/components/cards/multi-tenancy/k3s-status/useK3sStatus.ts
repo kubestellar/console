@@ -73,6 +73,8 @@ function isK3sPod(pod: BackendPodInfo): boolean {
   return containers.some((c) => (c.image ?? '').includes(K3S_IMAGE_MARKER))
 }
 
+import { isPodHealthy } from '../../../../lib/k8s'
+
 function extractVersion(pod: BackendPodInfo): string {
   const containers = pod.containers ?? []
   for (const c of containers) {
