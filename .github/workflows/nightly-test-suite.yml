@@ -240,15 +240,20 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if [ -f /tmp/nightly-comparison.md ]; then
-            gh issue comment "${{ steps.issue.outputs.issue_number }}" \
-              --body-file /tmp/nightly-comparison.md
-          else
-            FALLBACK_BODY="## Nightly Test Suite — $(date -u +%Y-%m-%d)
+          FALLBACK_BODY="## Nightly Test Suite — $(date -u +%Y-%m-%d)
 
-_No comparison report was generated. The test suite or comparison script may have failed. Check the [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details._"
+          _No comparison report was generated. The test suite or comparison script may have failed. Check the [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details._"
+
+          if [ -f /tmp/nightly-comparison.md ] && [ -s /tmp/nightly-comparison.md ]; then
             gh issue comment "${{ steps.issue.outputs.issue_number }}" \
-              --body "$FALLBACK_BODY"
+              --body-file /tmp/nightly-comparison.md \
+            || gh issue comment "${{ steps.issue.outputs.issue_number }}" \
+              --body "$FALLBACK_BODY" \
+            || echo "::warning::Failed to post comparison report to issue"
+          else
+            gh issue comment "${{ steps.issue.outputs.issue_number }}" \
+              --body "$FALLBACK_BODY" \
+            || echo "::warning::Failed to post fallback report to issue"
           fi
 
       - name: Create issues for failing suites
