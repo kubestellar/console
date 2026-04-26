@@ -280,8 +280,16 @@ func (s *Server) handleEventsHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), agentDefaultTimeout)
 	defer cancel()
 
+	// When filtering by object name, use a server-side FieldSelector so the
+	// limit is applied after filtering — prevents target events from being
+	// pushed out of the result window in noisy namespaces (issue #10167).
+	var fieldSelector string
+	if objectName != "" {
+		fieldSelector = fmt.Sprintf("involvedObject.name=%s", objectName)
+	}
+
 	// Get events from the cluster
-	events, err := s.k8sClient.GetEvents(ctx, cluster, namespace, limit)
+	events, err := s.k8sClient.GetEvents(ctx, cluster, namespace, limit, fieldSelector)
 	if err != nil {
 		slog.Warn("error fetching events", "error", err)
 		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
