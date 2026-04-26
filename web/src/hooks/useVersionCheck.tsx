@@ -26,7 +26,6 @@ const MIN_CHECK_INTERVAL_MS = 30 * MS_PER_MINUTE // 30 minutes minimum between c
 const AUTO_UPDATE_POLL_MS = 60 * 1000 // Poll kc-agent for update status every 60s
 const DEV_SHA_CACHE_KEY = 'kc-dev-latest-sha'
 
-/** Timeout for the /health fetch during install-method detection (ms) */
 /** Number of consecutive fetch failures before surfacing an error to the UI */
 const ERROR_DISPLAY_THRESHOLD = 2
 /** Timeout for the /health fetch during install-method detection (ms) */
@@ -39,6 +38,36 @@ const HEALTH_FETCH_RETRY_DELAY_MS = 3000
 const TRIGGER_UPDATE_TIMEOUT_MS = 30_000
 /** Timeout for the POST /auto-update/cancel request (ms) — cancellation should be fast */
 const CANCEL_UPDATE_TIMEOUT_MS = 5_000
+
+/**
+ * Safely parse a fetch Response as JSON.
+ *
+ * When the backend proxy is unavailable (e.g. on Netlify where /api/github/*
+ * has no matching function), the SPA catch-all returns the index.html page.
+ * Calling `response.json()` on that HTML body throws:
+ *   SyntaxError: JSON.parse: expected double-quoted property name
+ * which surfaces as "Error checking updates" (#4555).
+ *
+ * This helper checks the Content-Type before parsing and throws a descriptive
+ * error when the body is not JSON, so callers get a useful message instead of
+ * an opaque SyntaxError.
+ */
+async function safeJsonParse<T>(response: Response, label: string): Promise<T> {
+  const contentType = response.headers.get('Content-Type') || ''
+  if (!contentType.includes('application/json') && !contentType.includes('application/vnd.github')) {
+    throw new Error(
+      `${label}: expected JSON response but received ${contentType || 'unknown content type'} (status ${response.status})`
+    )
+  }
+  try {
+    return (await response.json()) as T
+  } catch (err) {
+    // Guard against malformed JSON even when Content-Type looks correct
+    throw new Error(
+      `${label}: failed to parse response as JSON — ${err instanceof Error ? err.message : String(err)}`
+    )
+  }
+}
 
 /**
  * Parse a release tag to determine its type and extract date.
@@ -345,7 +374,7 @@ function useVersionCheckCore() {
       const resp = await fetch(`${LOCAL_AGENT_HTTP_URL}/auto-update/status`, {
         signal: AbortSignal.timeout(10000) })
       if (resp.ok) {
-        const data = (await resp.json()) as AutoUpdateStatus
+        const data = await safeJsonParse<AutoUpdateStatus>(resp, 'Auto-update status')
         console.debug('[version-check] Auto-update status:', data)
         setAutoUpdateStatus(data)
         // Clear any stale error from a previous failed check
@@ -397,7 +426,7 @@ function useVersionCheckCore() {
         headers,
         signal: AbortSignal.timeout(5000) })
       if (resp.ok) {
-        const data = await resp.json()
+        const data = await safeJsonParse<{ object?: { sha?: string } }>(resp, 'GitHub main SHA')
         const sha = data?.object?.sha as string | undefined
         if (sha) {
           console.debug('[version-check] Latest main SHA:', sha.slice(0, 7))
@@ -461,7 +490,7 @@ function useVersionCheckCore() {
         { headers, signal: AbortSignal.timeout(10000) }
       )
       if (resp.ok) {
-        const data = await resp.json()
+        const data = await safeJsonParse<{ commits?: Array<{ sha: string; commit: { message: string; author: { name: string; date: string } } }> }>(resp, 'GitHub compare')
         const commits = (data.commits || []).slice(-20).reverse().map((c: { sha: string; commit: { message: string; author: { name: string; date: string } } }) => ({
           sha: c.sha,
           message: c.commit.message.split('\n')[0], // First line only
@@ -631,7 +660,7 @@ function useVersionCheckCore() {
         throw new Error(`GitHub API error: ${response.status}`)
       }
 
-      const data = (await response.json()) as GitHubRelease[]
+      const data = await safeJsonParse<GitHubRelease[]>(response, 'GitHub releases')
       const etag = response.headers.get('ETag')
 
       // Filter out drafts
@@ -829,7 +858,7 @@ function useVersionCheckCore() {
       try {
         const resp = await fetch('/health', { signal: AbortSignal.timeout(HEALTH_FETCH_TIMEOUT_MS) })
         if (resp.ok) {
-          const data = await resp.json()
+          const data = await safeJsonParse<{ install_method?: string }>(resp, 'Backend health')
           if (data.install_method && !cancelled) {
             setInstallMethod(data.install_method as InstallMethod)
             return // success — no retry needed

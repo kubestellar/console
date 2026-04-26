@@ -832,7 +832,7 @@ export function UpdateSettings() {
             <p className="text-sm text-red-400 font-medium">{t('settings.updates.errorChecking')}</p>
             <p className="text-xs text-red-400/80 mt-1">{error}</p>
             <p className="text-xs text-muted-foreground mt-2">
-              Try clicking &quot;Check Now&quot; to retry, or verify that kc-agent is running and network is available.
+              {t('settings.updates.errorHint')}
             </p>
           </div>
         )}

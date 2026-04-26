@@ -700,13 +700,14 @@
       "prereqGitCleanFail": "Uncommitted changes",
       "allPrereqsMet": "All prerequisites met — update notifications active",
       "prereqsMissing": "{{count}} prerequisite(s) not met — some features unavailable",
+      "errorHint": "Try clicking \"Check Now\" to retry, or verify that kc-agent is running and network is available.",
       "scopeInfoToggle": "What do these settings control?",
-      "scopeSystemTitle": "System Updates (Automatic Updates)",
-      "scopeSystemDesc": "Pulls and applies new console versions from the configured Update Channel. The Automatic Updates toggle on this page controls whether this happens automatically or only when you click Update Now. This updates all console code, including card components.",
-      "scopeReloadTitle": "Browser Reload on Deploy",
-      "scopeReloadDesc": "Separately from System Updates, the browser detects when a new build has been deployed and prompts you to reload the page so the updated code takes effect. This detection runs automatically and is not controlled by the settings on this page.",
-      "scopeCardDataTitle": "Card Data Refresh",
-      "scopeCardDataDesc": "Individual dashboard cards periodically fetch fresh data (e.g., cluster status, metrics) on their own schedules. These data refreshes are independent of both System Updates and browser reloads."
+      "scopeSystemTitle": "Console Version Updates",
+      "scopeSystemDesc": "Checks for new console releases on the selected Update Channel and lets you apply them. For self-hosted installs with kc-agent, enabling Automatic Updates will pull and apply new versions in the background. Without kc-agent, you will see a notification with manual upgrade instructions (Helm command, brew command, or git pull).",
+      "scopeReloadTitle": "Post-Deploy Page Reload",
+      "scopeReloadDesc": "After a new version is deployed (whether via auto-update or manual upgrade), the browser detects the updated build and shows a banner prompting you to reload the page. This happens automatically and has no settings on this page.",
+      "scopeCardDataTitle": "Dashboard Card Data",
+      "scopeCardDataDesc": "Dashboard cards fetch live data (cluster health, pod status, metrics) on their own schedules, independent of console version updates. Card refresh intervals are not controlled by these settings."
     },
     "theme": {
       "title": "Appearance",
