@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
+import { MS_PER_MINUTE } from '../../lib/constants/time'
 import { Activity, AlertTriangle, CheckCircle, Clock, Server } from 'lucide-react'
 import { LazyEChart } from '../charts/LazyEChart'
 import { useClusters } from '../../hooks/useMCP'
@@ -39,7 +40,7 @@ const TIME_RANGE_OPTIONS_KEYS: { value: TimeRange; labelKey: TimeRangeTranslatio
 // Group events by time buckets
 function groupEventsByTime(events: Array<{ type: string; lastSeen?: string; firstSeen?: string; count: number }>, bucketMinutes = 5, numBuckets = 12): TimePoint[] {
   const now = Date.now()
-  const bucketMs = bucketMinutes * 60 * 1000
+  const bucketMs = bucketMinutes * MS_PER_MINUTE
 
   // Initialize buckets
   const buckets: TimePoint[] = []

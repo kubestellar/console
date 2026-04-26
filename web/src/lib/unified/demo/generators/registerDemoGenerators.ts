@@ -7,12 +7,12 @@
 
 import { registerDemoDataBatch } from '../demoDataRegistry'
 import type { DemoDataEntry } from '../types'
+import { MS_PER_HOUR, MS_PER_DAY } from '../../../constants/time'
 
-// Named time-offset constants for demo data timestamps (CLAUDE.md: No Magic Numbers)
-const ONE_HOUR_MS = 60 * 60 * 1000
-const ONE_DAY_MS = 24 * 60 * 60 * 1000
-const TWO_DAYS_MS = 2 * 24 * 60 * 60 * 1000
-const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000
+const ONE_HOUR_MS = MS_PER_HOUR
+const ONE_DAY_MS = MS_PER_DAY
+const TWO_DAYS_MS = 2 * MS_PER_DAY
+const ONE_WEEK_MS = 7 * MS_PER_DAY
 
 // Import existing demo data functions (these are scattered across the codebase)
 // We'll reference them here for registration

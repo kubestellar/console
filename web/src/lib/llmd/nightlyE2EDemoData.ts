@@ -5,6 +5,8 @@
  * so the card renders correctly without a GitHub token.
  */
 
+import { MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY } from '../constants/time'
+
 export interface NightlyWorkflowConfig {
   repo: string
   workflowFile: string
@@ -121,15 +123,15 @@ function computePassRate(runs: NightlyRun[]): number {
 
 export function generateDemoNightlyData(): NightlyGuideStatus[] {
   const now = Date.now()
-  const DAY_MS = 24 * 60 * 60 * 1000
+  const DAY_MS = MS_PER_DAY
 
   return NIGHTLY_WORKFLOWS.map((wf, wfIdx) => {
     const key = `${wf.guide}-${wf.platform}`
     const pattern = DEMO_PATTERNS[key] ?? ['success', 'success', 'success', 'success', 'success', 'success', 'success']
 
     const runs: NightlyRun[] = pattern.map((result, i) => {
-      const createdAt = new Date(now - (i * DAY_MS) - (2 * 60 * 60 * 1000)) // 2am each night
-      const duration = result === 'in_progress' ? 0 : (30 + Math.random() * 30) * 60 * 1000 // 30-60 min
+      const createdAt = new Date(now - (i * DAY_MS) - (2 * MS_PER_HOUR)) // 2am each night
+      const duration = result === 'in_progress' ? 0 : (30 + Math.random() * 30) * MS_PER_MINUTE // 30-60 min
       const updatedAt = result === 'in_progress' ? new Date() : new Date(createdAt.getTime() + duration)
 
       return {
