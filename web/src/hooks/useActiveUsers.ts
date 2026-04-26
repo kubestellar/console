@@ -21,11 +21,7 @@ const POLL_INTERVAL = 10_000 // Poll every 10 seconds
 const HEARTBEAT_INTERVAL = 30_000 // Heartbeat every 30 seconds
 const HEARTBEAT_JITTER = 3_000 // Jitter (0-3s) to spread heartbeats without long delays
 
-// WebSocket reconnection with exponential backoff
-const WS_RECONNECT_BASE_DELAY_MS = 2_000  // Base delay for reconnection attempts
-const WS_RECONNECT_MAX_DELAY_MS = 30_000   // Maximum delay between reconnection attempts
-const MAX_WS_RECONNECT_ATTEMPTS = 5        // Maximum reconnection attempts before giving up
-const BACKOFF_JITTER_MAX_MS = 1_000        // Random jitter to avoid thundering herd
+import { MAX_WS_RECONNECT_ATTEMPTS, getWsBackoffDelay } from '../lib/constants/network'
 
 const RECOVERY_DELAY = 30_000 // Retry after circuit breaker trips
 /** Timeout for fetch() call to the active-users endpoint */
@@ -64,23 +60,6 @@ let presencePingInterval: ReturnType<typeof setInterval> | null = null
 let presenceReconnectTimer: ReturnType<typeof setTimeout> | null = null
 /** Track current reconnect attempt number for presence WebSocket */
 let presenceReconnectAttempts = 0
-
-/**
- * Calculate exponential backoff delay with jitter.
- * Delay = min(base * 2^attempt, max) + random jitter
- */
-function getBackoffDelay(attempt: number): number {
-  const delay = Math.min(
-    WS_RECONNECT_BASE_DELAY_MS * Math.pow(2, attempt),
-    WS_RECONNECT_MAX_DELAY_MS,
-  )
-  // Use crypto.getRandomValues() for unbiased jitter — Math.random() is not
-  // cryptographically secure. BACKOFF_JITTER_MAX_MS fits comfortably in Uint32.
-  const arr = new Uint32Array(1)
-  crypto.getRandomValues(arr)
-  const jitter = (arr[0] / 0x100000000) * BACKOFF_JITTER_MAX_MS
-  return delay + jitter
-}
 
 // Netlify heartbeat state (serverless mode)
 let heartbeatStarted = false
@@ -255,7 +234,7 @@ function startPresenceConnection() {
         return
       }
 
-      const delay = getBackoffDelay(presenceReconnectAttempts)
+      const delay = getWsBackoffDelay(presenceReconnectAttempts)
       console.debug(`[ActiveUsers] Connection lost, reconnecting in ${Math.round(delay)}ms (attempt ${presenceReconnectAttempts + 1}/${MAX_WS_RECONNECT_ATTEMPTS})`)
 
       // Reconnect after exponential backoff delay

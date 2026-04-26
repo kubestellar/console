@@ -283,6 +283,35 @@ export const FLASH_ANIMATION_MS = 1_100
 /** WebSocket reconnect delay (5 seconds) */
 export const WS_RECONNECT_DELAY_MS = 5_000
 
+// ============================================================================
+// WebSocket Reconnect with Exponential Backoff
+// ============================================================================
+
+/** Base delay for WebSocket reconnection attempts (doubles each retry) */
+export const WS_RECONNECT_BASE_DELAY_MS = 2_000
+
+/** Maximum delay between WebSocket reconnection attempts */
+export const WS_RECONNECT_MAX_DELAY_MS = 30_000
+
+/** Maximum WebSocket reconnection attempts before giving up */
+export const MAX_WS_RECONNECT_ATTEMPTS = 5
+
+/** Small random jitter added to backoff to avoid thundering herd */
+export const WS_BACKOFF_JITTER_MAX_MS = 1_000
+
+/**
+ * Calculate exponential backoff delay with jitter.
+ * Delay = min(base * 2^attempt, max) + random jitter
+ */
+export function getWsBackoffDelay(attempt: number): number {
+  const delay = Math.min(
+    WS_RECONNECT_BASE_DELAY_MS * Math.pow(2, attempt),
+    WS_RECONNECT_MAX_DELAY_MS,
+  )
+  const jitter = Math.random() * WS_BACKOFF_JITTER_MAX_MS
+  return delay + jitter
+}
+
 /** Delay for simulated AI thinking/processing (300ms) */
 export const AI_THINKING_DELAY_MS = 300
 

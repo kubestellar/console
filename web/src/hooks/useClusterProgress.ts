@@ -1,14 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { LOCAL_AGENT_WS_URL } from '../lib/constants/network'
-
-/** Base delay for WebSocket reconnection attempts (doubles each retry) */
-const WS_RECONNECT_BASE_DELAY_MS = 2_000
-/** Maximum delay between WebSocket reconnection attempts */
-const WS_RECONNECT_MAX_DELAY_MS = 30_000
-/** Maximum WebSocket reconnection attempts before giving up */
-const MAX_WS_RECONNECT_ATTEMPTS = 5
-/** Small random jitter added to backoff to avoid thundering herd */
-const BACKOFF_JITTER_MAX_MS = 1_000
+import { LOCAL_AGENT_WS_URL, MAX_WS_RECONNECT_ATTEMPTS, getWsBackoffDelay } from '../lib/constants/network'
 
 /** Auto-dismiss delay after a successful operation */
 export const CLUSTER_PROGRESS_AUTO_DISMISS_MS = 8_000
@@ -27,19 +18,6 @@ export interface ClusterProgress {
   message: string
   /** 0-100 percentage of completion */
   progress: number
-}
-
-/**
- * Calculate exponential backoff delay with jitter.
- * Delay = min(base * 2^attempt, max) + random jitter
- */
-function getBackoffDelay(attempt: number): number {
-  const delay = Math.min(
-    WS_RECONNECT_BASE_DELAY_MS * Math.pow(2, attempt),
-    WS_RECONNECT_MAX_DELAY_MS,
-  )
-  const jitter = Math.random() * BACKOFF_JITTER_MAX_MS
-  return delay + jitter
 }
 
 /**
@@ -91,7 +69,7 @@ export function useClusterProgress() {
             return
           }
 
-          const delay = getBackoffDelay(reconnectAttemptsRef.current)
+          const delay = getWsBackoffDelay(reconnectAttemptsRef.current)
           console.debug(`[ClusterProgress] Connection lost, reconnecting in ${Math.round(delay)}ms (attempt ${reconnectAttemptsRef.current + 1}/${MAX_WS_RECONNECT_ATTEMPTS})`)
 
           reconnectTimerRef.current = setTimeout(() => {
@@ -114,7 +92,7 @@ export function useClusterProgress() {
           return
         }
 
-        const delay = getBackoffDelay(reconnectAttemptsRef.current)
+        const delay = getWsBackoffDelay(reconnectAttemptsRef.current)
         console.debug(`[ClusterProgress] Agent unavailable, retrying in ${Math.round(delay)}ms (attempt ${reconnectAttemptsRef.current + 1}/${MAX_WS_RECONNECT_ATTEMPTS})`)
 
         reconnectTimerRef.current = setTimeout(() => {

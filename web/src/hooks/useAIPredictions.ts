@@ -11,14 +11,9 @@ import { setActiveTokenCategory, clearActiveTokenCategory } from './useTokenUsag
 import { fullFetchClusters, clusterCache } from './mcp/shared'
 
 import { LOCAL_AGENT_WS_URL, LOCAL_AGENT_HTTP_URL } from '../lib/constants'
-import { FETCH_DEFAULT_TIMEOUT_MS, AI_PREDICTION_TIMEOUT_MS, UI_FEEDBACK_TIMEOUT_MS } from '../lib/constants/network'
+import { FETCH_DEFAULT_TIMEOUT_MS, AI_PREDICTION_TIMEOUT_MS, UI_FEEDBACK_TIMEOUT_MS, MAX_WS_RECONNECT_ATTEMPTS, getWsBackoffDelay } from '../lib/constants/network'
 
-// WebSocket reconnection with exponential backoff
-const WS_RECONNECT_BASE_DELAY_MS = 2_000  // Base delay for reconnection attempts
-const WS_RECONNECT_MAX_DELAY_MS = 30_000   // Maximum delay between reconnection attempts
-const MAX_WS_RECONNECT_ATTEMPTS = 5        // Maximum reconnection attempts before giving up
-const BACKOFF_JITTER_MAX_MS = 1_000        // Random jitter to avoid thundering herd
-const DEGRADED_RECONNECT_INTERVAL_MS = 60_000 // Slow retry interval after exhausting initial attempts
+const DEGRADED_RECONNECT_INTERVAL_MS = 60_000
 
 const AGENT_HTTP_URL = LOCAL_AGENT_HTTP_URL
 const POLL_INTERVAL_MS = 30_000 // Poll every 30 seconds as fallback
@@ -69,19 +64,6 @@ let degradedRetryInterval: ReturnType<typeof setInterval> | null = null
 let wsReconnectAttempts = 0  // Track current reconnect attempt number
 let inDegradedMode = false   // True when initial reconnect attempts exhausted
 const subscribers = new Set<() => void>()
-
-/**
- * Calculate exponential backoff delay with jitter.
- * Delay = min(base * 2^attempt, max) + random jitter
- */
-function getBackoffDelay(attempt: number): number {
-  const delay = Math.min(
-    WS_RECONNECT_BASE_DELAY_MS * Math.pow(2, attempt),
-    WS_RECONNECT_MAX_DELAY_MS,
-  )
-  const jitter = Math.random() * BACKOFF_JITTER_MAX_MS
-  return delay + jitter
-}
 
 // Notify all subscribers
 function notifySubscribers() {
@@ -297,7 +279,7 @@ function connectWebSocket(): void {
           return
         }
 
-        const delay = getBackoffDelay(wsReconnectAttempts)
+        const delay = getWsBackoffDelay(wsReconnectAttempts)
         console.debug(`[AIPredictions] Connection lost, reconnecting in ${Math.round(delay)}ms (attempt ${wsReconnectAttempts + 1}/${MAX_WS_RECONNECT_ATTEMPTS})`)
 
         wsReconnectTimeout = setTimeout(() => {

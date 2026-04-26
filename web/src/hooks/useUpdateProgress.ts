@@ -1,14 +1,8 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import type { UpdateProgress, UpdateStepEntry } from '../types/updates'
-import { LOCAL_AGENT_WS_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
+import { LOCAL_AGENT_WS_URL, FETCH_DEFAULT_TIMEOUT_MS, MAX_WS_RECONNECT_ATTEMPTS, getWsBackoffDelay } from '../lib/constants/network'
 import { MS_PER_SECOND } from '../lib/constants/time'
 import { isNetlifyDeployment } from '../lib/demoMode'
-
-// WebSocket reconnection with exponential backoff
-const WS_RECONNECT_BASE_DELAY_MS = 2_000  // Base delay for reconnection attempts
-const WS_RECONNECT_MAX_DELAY_MS = 30_000   // Maximum delay between reconnection attempts
-const MAX_WS_RECONNECT_ATTEMPTS = 5        // Maximum reconnection attempts before giving up
-const BACKOFF_JITTER_MAX_MS = 1_000        // Random jitter to avoid thundering herd
 
 const BACKEND_POLL_MS = 2000  // Poll interval when waiting for backend to come up
 const BACKEND_POLL_MAX = 90   // Max attempts (~3 min) before giving up
@@ -31,19 +25,6 @@ const DEV_UPDATE_STEP_LABELS: Record<number, string> = {
 
 /** Statuses that indicate an update is actively running */
 const ACTIVE_UPDATE_STATUSES = new Set(['pulling', 'building', 'restarting'])
-
-/**
- * Calculate exponential backoff delay with jitter.
- * Delay = min(base * 2^attempt, max) + random jitter
- */
-function getBackoffDelay(attempt: number): number {
-  const delay = Math.min(
-    WS_RECONNECT_BASE_DELAY_MS * Math.pow(2, attempt),
-    WS_RECONNECT_MAX_DELAY_MS,
-  )
-  const jitter = Math.random() * BACKOFF_JITTER_MAX_MS
-  return delay + jitter
-}
 
 /**
  * Hook that listens for update_progress WebSocket broadcasts from kc-agent.
@@ -262,7 +243,7 @@ export function useUpdateProgress() {
             return
           }
 
-          const delay = getBackoffDelay(reconnectAttemptsRef.current)
+          const delay = getWsBackoffDelay(reconnectAttemptsRef.current)
           console.debug(`[UpdateProgress] Connection lost, reconnecting in ${Math.round(delay)}ms (attempt ${reconnectAttemptsRef.current + 1}/${MAX_WS_RECONNECT_ATTEMPTS})`)
 
           reconnectTimer = setTimeout(() => {
@@ -282,7 +263,7 @@ export function useUpdateProgress() {
           return
         }
 
-        const delay = getBackoffDelay(reconnectAttemptsRef.current)
+        const delay = getWsBackoffDelay(reconnectAttemptsRef.current)
         console.debug(`[UpdateProgress] Agent unavailable, retrying in ${Math.round(delay)}ms (attempt ${reconnectAttemptsRef.current + 1}/${MAX_WS_RECONNECT_ATTEMPTS})`)
 
         reconnectTimer = setTimeout(() => {
