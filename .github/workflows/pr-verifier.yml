@@ -4,15 +4,11 @@ on:
   pull_request_target:
     types: [opened, edited, synchronize, reopened]
 
-permissions: read-all
+permissions:
+  checks: write
+  pull-requests: read
 
 jobs:
   verify:
-    name: verify PR contents
-    runs-on: ubuntu-latest
-    permissions:
-      checks: write
-      pull-requests: read
-    steps:
-      - name: PR verification
-        run: echo "PR verification passed"
+    uses: kubestellar/infra/.github/workflows/reusable-pr-verifier.yml@main
+    secrets: inherit
