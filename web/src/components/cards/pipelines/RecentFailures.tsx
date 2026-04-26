@@ -68,6 +68,7 @@ export function RecentFailures() {
 
   const data = hasUnified ? unifiedData.failures : individual.data
   const isLoading = hasUnified ? unifiedData.isLoading : individual.isLoading
+  const isRefreshing = hasUnified ? unifiedData.isRefreshing : individual.isRefreshing
   const error = hasUnified ? unifiedData.error : individual.error
   const refetch = hasUnified ? unifiedData.refetch : individual.refetch
   const { run: runMutation } = usePipelineMutations()
@@ -75,7 +76,7 @@ export function RecentFailures() {
   const { startMission } = useMissions()
 
   const hasData = (data?.runs?.length ?? 0) > 0
-  useCardLoadingState({ isLoading: isLoading && !hasData, hasAnyData: hasData, isDemoData: isDemoMode })
+  useCardLoadingState({ isLoading: isLoading && !hasData, isRefreshing, hasAnyData: hasData, isDemoData: isDemoMode })
 
   const rows = useMemo(() => data?.runs ?? [], [data])
 
@@ -124,7 +125,7 @@ export function RecentFailures() {
             className="hover:text-foreground flex items-center gap-1"
             aria-label={LABEL_REFRESH}
           >
-            <RefreshCw className="w-3 h-3" />
+            <RefreshCw className={cn('w-3 h-3', isRefreshing && 'animate-spin')} />
           </button>
         </div>
       </div>

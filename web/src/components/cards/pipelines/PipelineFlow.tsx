@@ -355,6 +355,7 @@ export function PipelineFlow() {
 
   const data = hasUnified ? unifiedData.flow : individual.data
   const isLoading = hasUnified ? unifiedData.isLoading : individual.isLoading
+  const isRefreshing = hasUnified ? unifiedData.isRefreshing : individual.isRefreshing
   const error = hasUnified ? unifiedData.error : individual.error
   const refetch = hasUnified ? unifiedData.refetch : individual.refetch
   const { run: runMutation } = usePipelineMutations()
@@ -362,7 +363,7 @@ export function PipelineFlow() {
 
   const runs = useMemo(() => data?.runs ?? [], [data])
   const hasData = runs.length > 0
-  useCardLoadingState({ isLoading: isLoading && !hasData, hasAnyData: hasData, isDemoData: isDemoMode })
+  useCardLoadingState({ isLoading: isLoading && !hasData, isRefreshing, hasAnyData: hasData, isDemoData: isDemoMode })
 
   // Auto-clear mutation message after a few seconds
   useEffect(() => {
@@ -416,7 +417,7 @@ export function PipelineFlow() {
             className="hover:text-foreground flex items-center gap-1"
             aria-label={LABEL_REFRESH}
           >
-            <RefreshCw className="w-3 h-3" />
+            <RefreshCw className={cn('w-3 h-3', isRefreshing && 'animate-spin')} />
           </button>
         </div>
       </div>

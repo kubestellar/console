@@ -143,6 +143,7 @@ function getDemoLimaStatus(noReachableClusters: boolean): LimaStatus {
 export interface UseLimaStatusResult {
   data: LimaStatus
   loading: boolean
+  isRefreshing: boolean
   error: boolean
   consecutiveFailures: number
   showSkeleton: boolean
@@ -260,6 +261,7 @@ export function useLimaStatus(): UseLimaStatusResult {
   return {
     data,
     loading: isLoading || clustersLoading,
+    isRefreshing,
     error: consecutiveFailures >= FAILURE_THRESHOLD && !hasAnyData,
     consecutiveFailures,
     showSkeleton,
