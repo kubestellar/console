@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { StatTile } from '../shared/StatTile'
 import {
   CheckCircle,
   AlertTriangle,
@@ -68,30 +69,6 @@ const STATUS_SORT_ORDER: Record<KeycloakRealmStatus, number> = {
 // ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
-
-function StatTile({
-  icon,
-  label,
-  value,
-  colorClass,
-  borderClass,
-}: {
-  icon: React.ReactNode
-  label: string
-  value: number
-  colorClass: string
-  borderClass: string
-}) {
-  return (
-    <div className={`p-3 rounded-lg bg-secondary/30 border ${borderClass}`}>
-      <div className="flex items-center gap-2 mb-1">
-        {icon}
-        <span className={`text-xs ${colorClass}`}>{label}</span>
-      </div>
-      <span className="text-2xl font-bold text-foreground">{value.toLocaleString()}</span>
-    </div>
-  )
-}
 
 function RealmRow({ realm }: { realm: KeycloakRealm }) {
   const { t } = useTranslation('cards')
@@ -289,28 +266,28 @@ export function KeycloakStatus() {
           <StatTile
             icon={<Globe className="w-4 h-4 text-blue-400" />}
             label={t('keycloak.realms')}
-            value={realms.length}
+            value={realms.length.toLocaleString()}
             colorClass="text-blue-400"
             borderClass="border-blue-500/20"
           />
           <StatTile
             icon={<CheckCircle className="w-4 h-4 text-green-400" />}
             label={t('keycloak.ready')}
-            value={stats.ready}
+            value={stats.ready.toLocaleString()}
             colorClass="text-green-400"
             borderClass="border-green-500/20"
           />
           <StatTile
             icon={<Users className="w-4 h-4 text-cyan-400" />}
             label={t('keycloak.sessions')}
-            value={data.totalActiveSessions}
+            value={data.totalActiveSessions.toLocaleString()}
             colorClass="text-cyan-400"
             borderClass="border-cyan-500/20"
           />
           <StatTile
             icon={<AlertTriangle className="w-4 h-4 text-red-400" />}
             label={t('keycloak.issues')}
-            value={stats.issues}
+            value={stats.issues.toLocaleString()}
             colorClass="text-red-400"
             borderClass="border-red-500/20"
           />
