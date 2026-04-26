@@ -197,8 +197,7 @@ function loadClusterCacheFromStorage(): ClusterInfo[] {
     if (stored) {
       const parsed = JSON.parse(stored)
       if (Array.isArray(parsed) && parsed.length > 0) {
-        // Filter out long context-path duplicates from cached data
-        return parsed.filter((c: ClusterInfo) => !c.name.includes('/'))
+        return parsed
       }
     }
   } catch {
@@ -210,8 +209,7 @@ function loadClusterCacheFromStorage(): ClusterInfo[] {
 function saveClusterCacheToStorage(clusters: ClusterInfo[]) {
   try {
     // Only save clusters with meaningful data
-    // Filter out long context-path duplicates before saving
-    const toSave = clusters.filter(c => c.name && !c.name.includes("/")).map(c => ({
+    const toSave = clusters.filter(c => c.name).map(c => ({
       name: c.name,
       context: c.context,
       server: c.server,
@@ -1605,13 +1603,16 @@ export async function fullFetchClusters() {
         }
         return newCluster
       })
-      // Deduplicate clusters by server URL - prefers short names when available
-      // but keeps long names (e.g., '/api-pokprod001...' or 'default/api-...') if no short alias exists
-      const dedupedClusters = deduplicateClustersByServer(mergedClusters)
+      // Store the full (raw) cluster list in the cache. Deduplication is
+      // handled lazily by the useClusters() hook's `deduplicatedClusters`
+      // computed property. Premature dedup here was the root cause of
+      // #10316: when many kubeconfig contexts shared server URLs, the
+      // cache only held the dedup winners — hiding legitimate clusters
+      // (including the active kubectl context) from the dashboard.
 
       // Show clusters immediately with preserved health data
       await finishWithMinDuration({
-        clusters: dedupedClusters,
+        clusters: mergedClusters,
         error: null,
         lastUpdated: new Date(),
         isLoading: false,
@@ -1622,9 +1623,10 @@ export async function fullFetchClusters() {
       })
       // Reset flag before returning - allows subsequent refresh calls
       fetchInProgress = false
-      // Check health progressively (non-blocking) - use deduplicated list to avoid
-      // running health checks on long context-path duplicates
-      checkHealthProgressively(dedupedClusters)
+      // Check health on deduplicated clusters to avoid redundant probes
+      // against the same physical server from multiple contexts
+      const healthCheckClusters = deduplicateClustersByServer(mergedClusters)
+      checkHealthProgressively(healthCheckClusters)
       return
     }
 
@@ -1684,8 +1686,10 @@ export async function fullFetchClusters() {
       lastRefresh: new Date(),
     })
     fetchInProgress = false
-    // Check health progressively (non-blocking) - will update each cluster's data including cpuCores
-    checkHealthProgressively(data.clusters || [])
+    // Check health on deduplicated clusters to avoid redundant probes
+    // against the same physical server from multiple contexts
+    const healthCheckClusters = deduplicateClustersByServer(data.clusters || [])
+    checkHealthProgressively(healthCheckClusters)
   } catch {
     // Always fall back gracefully to demo clusters - never show blocking errors
     // This ensures the UI always has data to display
