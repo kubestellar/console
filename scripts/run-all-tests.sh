@@ -316,7 +316,8 @@ if [ -z "$FAST_MODE" ]; then
         #     completes 5/6 scenarios, perf-test still iterating dashboards,
         #     ai-ml-test retries consuming budget). 900s matches their
         #     Playwright-level timeout (900_000ms) and fits within the 120m
-        #     workflow backstop.
+        #     workflow backstop. perf-test bumped to 1200s — 29 dashboard
+        #     variants all pass but exceed 900s wall-clock (#nightly-fix).
         declare -A PLAYWRIGHT_SUITE_TIMEOUT_OVERRIDES=(
           ["console-error-scan"]=600
           ["ui-compliance-test"]=600
@@ -324,7 +325,7 @@ if [ -z "$FAST_MODE" ]; then
           ["benchmark-test"]=600
           ["ai-ml-test"]=900
           ["nav-test"]=900
-          ["perf-test"]=900
+          ["perf-test"]=1200
         )
 
         for script in "${PLAYWRIGHT_SCRIPTS[@]}"; do
