@@ -65,6 +65,19 @@ function makeParsedRelease(overrides: Partial<ParsedRelease> = {}): ParsedReleas
     }
 }
 
+/**
+ * Build a mock headers object that returns 'application/json' for Content-Type
+ * and delegates other keys to an optional custom getter.
+ */
+function jsonHeaders(custom?: (key: string) => string | null): { get: (key: string) => string | null } {
+    return {
+        get: (key: string) => {
+            if (key.toLowerCase() === 'content-type') return 'application/json'
+            return custom ? custom(key) : null
+        },
+    }
+}
+
 function wrapper({ children }: { children: React.ReactNode }) {
     return <VersionCheckProvider>{children}</VersionCheckProvider>
 }
@@ -103,7 +116,7 @@ describe('fetchLatestMainSHA (developer channel)', () => {
         vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
             ok: true,
             status: 200,
-            headers: { get: () => null },
+            headers: jsonHeaders(),
             json: async () => ({ object: { sha } }),
         }))
 
@@ -209,7 +222,7 @@ describe('fetchLatestMainSHA (developer channel)', () => {
         vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
             ok: true,
             status: 200,
-            headers: { get: () => null },
+            headers: jsonHeaders(),
             json: async () => ({ object: { sha: 'fresh-sha' } }),
         }))
 
@@ -267,7 +280,7 @@ describe('forceCheck developer channel with agent', () => {
         const mockFetch = vi.fn().mockResolvedValue({
             ok: true,
             status: 200,
-            headers: { get: () => null },
+            headers: jsonHeaders(),
             json: async () => ({
                 installMethod: 'dev',
                 repoPath: '/test',
@@ -339,7 +352,7 @@ describe('fetchAutoUpdateStatus', () => {
         vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
             ok: true,
             status: 200,
-            headers: { get: () => null },
+            headers: jsonHeaders(),
             json: async () => agentStatus,
         }))
 
@@ -445,7 +458,7 @@ describe('loadCache edge cases', () => {
         vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
             ok: true,
             status: 200,
-            headers: { get: () => null },
+            headers: jsonHeaders(),
             json: async () => [makeGitHubRelease({ tag_name: 'v1.0.0' })],
         }))
 
@@ -490,7 +503,7 @@ describe('installMethod and channel auto-reset', () => {
         vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
             ok: true,
             status: 200,
-            headers: { get: () => null },
+            headers: jsonHeaders(),
             json: async () => ({ install_method: 'binary' }),
         }))
 
@@ -515,7 +528,7 @@ describe('installMethod and channel auto-reset', () => {
         vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
             ok: true,
             status: 200,
-            headers: { get: () => null },
+            headers: jsonHeaders(),
             json: async () => ({ install_method: 'binary' }),
         }))
 
@@ -595,7 +608,7 @@ describe('checkForUpdates developer channel routing', () => {
         const mockFetch = vi.fn().mockResolvedValue({
             ok: true,
             status: 200,
-            headers: { get: () => null },
+            headers: jsonHeaders(),
             json: async () => ({
                 installMethod: 'dev',
                 repoPath: '/test',
@@ -635,7 +648,7 @@ describe('checkForUpdates developer channel routing', () => {
         const mockFetch = vi.fn().mockResolvedValue({
             ok: true,
             status: 200,
-            headers: { get: () => null },
+            headers: jsonHeaders(),
             json: async () => ({ object: { sha: 'abc123' } }),
         })
         vi.stubGlobal('fetch', mockFetch)
@@ -703,11 +716,11 @@ describe('backend /health install method detection', () => {
                 return Promise.resolve({
                     ok: true,
                     status: 200,
-                    headers: { get: () => null },
+                    headers: jsonHeaders(),
                     json: async () => ({ install_method: 'helm' }),
                 })
             }
-            return Promise.resolve({ ok: true, status: 200, headers: { get: () => null }, json: async () => [] })
+            return Promise.resolve({ ok: true, status: 200, headers: jsonHeaders(), json: async () => [] })
         })
         vi.stubGlobal('fetch', mockFetch)
 
@@ -767,11 +780,11 @@ describe('helm install with dev version hasUpdate', () => {
                 return Promise.resolve({
                     ok: true,
                     status: 200,
-                    headers: { get: () => null },
+                    headers: jsonHeaders(),
                     json: async () => ({ install_method: 'helm' }),
                 })
             }
-            return Promise.resolve({ ok: true, status: 200, headers: { get: () => null }, json: async () => [] })
+            return Promise.resolve({ ok: true, status: 200, headers: jsonHeaders(), json: async () => [] })
         }))
 
         const { result } = renderHook(() => useVersionCheck(), { wrapper })
@@ -816,7 +829,7 @@ describe('fetchRecentCommits', () => {
                 return Promise.resolve({
                     ok: true,
                     status: 200,
-                    headers: { get: () => null },
+                    headers: jsonHeaders(),
                     json: async () => ({
                         installMethod: 'dev',
                         repoPath: '/test',
@@ -839,7 +852,7 @@ describe('fetchRecentCommits', () => {
                     headers: { get: () => null },
                 })
             }
-            return Promise.resolve({ ok: true, status: 200, headers: { get: () => null }, json: async () => ({}) })
+            return Promise.resolve({ ok: true, status: 200, headers: jsonHeaders(), json: async () => ({}) })
         })
         vi.stubGlobal('fetch', mockFetch)
 
@@ -878,7 +891,7 @@ describe('fetchRecentCommits', () => {
                 return Promise.resolve({
                     ok: true,
                     status: 200,
-                    headers: { get: () => null },
+                    headers: jsonHeaders(),
                     json: async () => ({
                         installMethod: 'dev',
                         repoPath: '/test',
@@ -898,11 +911,11 @@ describe('fetchRecentCommits', () => {
                 return Promise.resolve({
                     ok: true,
                     status: 200,
-                    headers: { get: () => null },
+                    headers: jsonHeaders(),
                     json: async () => commitData,
                 })
             }
-            return Promise.resolve({ ok: true, status: 200, headers: { get: () => null }, json: async () => ({}) })
+            return Promise.resolve({ ok: true, status: 200, headers: jsonHeaders(), json: async () => ({}) })
         })
         vi.stubGlobal('fetch', mockFetch)
 
@@ -1084,7 +1097,7 @@ describe('cache behaviour', () => {
         const mockFetch = vi.fn().mockResolvedValue({
             ok: true,
             status: 200,
-            headers: { get: (_k: string) => null },
+            headers: jsonHeaders(),
             json: async () => sampleReleases,
         })
         vi.stubGlobal('fetch', mockFetch)
@@ -1149,7 +1162,7 @@ describe('cache behaviour', () => {
         const mockFetch = vi.fn().mockResolvedValue({
             ok: true,
             status: 200,
-            headers: { get: (_k: string) => null },
+            headers: jsonHeaders(),
             json: async () => sampleReleases,
         })
         vi.stubGlobal('fetch', mockFetch)
@@ -1210,7 +1223,7 @@ describe('VersionCheckProvider', () => {
         const mockFetch = vi.fn().mockResolvedValue({
             ok: false,
             status: 403,
-            headers: { get: (_k: string) => null },
+            headers: jsonHeaders(),
             json: async () => ({}),
         })
         vi.stubGlobal('fetch', mockFetch)
@@ -1243,7 +1256,7 @@ describe('VersionCheckProvider', () => {
         const mockFetch = vi.fn().mockResolvedValue({
             ok: true,
             status: 200,
-            headers: { get: (_k: string) => null },
+            headers: jsonHeaders(),
             json: async () => [],
         })
         vi.stubGlobal('fetch', mockFetch)
@@ -1269,7 +1282,7 @@ describe('VersionCheckProvider', () => {
         const mockFetch = vi.fn().mockResolvedValue({
             ok: true,
             status: 200,
-            headers: { get: (_k: string) => null },
+            headers: jsonHeaders(),
             json: async () => stableReleases,
         })
         vi.stubGlobal('fetch', mockFetch)
@@ -1300,7 +1313,7 @@ describe('VersionCheckProvider', () => {
         const mockFetch = vi.fn().mockResolvedValue({
             ok: true,
             status: 200,
-            headers: { get: (_k: string) => null },
+            headers: jsonHeaders(),
             json: async () => [makeGitHubRelease({ tag_name: 'v1.9.0' })],
         })
         vi.stubGlobal('fetch', mockFetch)
@@ -1354,7 +1367,7 @@ describe('toggle-sensitive polling', () => {
         const mockFetch = vi.fn().mockResolvedValue({
             ok: true,
             status: 200,
-            headers: { get: (_k: string) => null },
+            headers: jsonHeaders(),
             json: async () => ({
                 enabled: true,
                 channel: 'developer',
@@ -1399,7 +1412,7 @@ describe('toggle-sensitive polling', () => {
         const mockFetch = vi.fn().mockResolvedValue({
             ok: true,
             status: 200,
-            headers: { get: () => null },
+            headers: jsonHeaders(),
             json: async () => ({
                 enabled: true,
                 channel: 'developer',
@@ -1519,7 +1532,7 @@ describe('isNewerVersion (via hasUpdate)', () => {
         const mockFetch = vi.fn().mockResolvedValue({
             ok: true,
             status: 200,
-            headers: { get: () => null },
+            headers: jsonHeaders(),
             json: async () => ({
                 installMethod: 'dev',
                 repoPath: '/test',
@@ -1945,7 +1958,7 @@ describe('fetchReleases edge cases', () => {
         vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
             ok: true,
             status: 200,
-            headers: { get: () => null },
+            headers: jsonHeaders(),
             json: async () => releases,
         }))
 
@@ -2058,7 +2071,7 @@ describe('fetchReleases edge cases', () => {
         vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
             ok: true,
             status: 200,
-            headers: { get: (key: string) => key === 'ETag' ? mockEtag : null },
+            headers: jsonHeaders((key: string) => key === 'ETag' ? mockEtag : null),
             json: async () => [makeGitHubRelease({ tag_name: 'v1.0.0' })],
         }))
 
