@@ -15,6 +15,7 @@ import {
   getFilterOptions } from '../../../lib/llmd/benchmarkDataUtils'
 import type { BenchmarkReport } from '../../../lib/llmd/benchmarkMockData'
 import { useTranslation } from 'react-i18next'
+import { CHART_MIN_HEIGHT_TALL_PX } from '../../../lib/constants/ui'
 
 type MetricMode = 'throughput' | 'ttft' | 'p99' | 'tpot'
 
@@ -171,7 +172,7 @@ export function PerformanceTimeline() {
       </div>
 
       {/* Heatmap */}
-      <div className="flex-1 min-h-0 flex items-center justify-center" style={{ minHeight: 250 }}>
+      <div className="flex-1 min-h-0 flex items-center justify-center" style={{ minHeight: CHART_MIN_HEIGHT_TALL_PX }}>
         {cells.length > 0 ? (
           <div className="relative">
             {/* Y-axis label */}

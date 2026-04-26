@@ -21,6 +21,8 @@ import {
   CHART_MARK_LINE_STROKE } from '../../lib/constants'
 import { PURPLE_600, hexToRgba } from '../../lib/theme/chartColors'
 
+const GPU_RING_SIZE_PX = 80
+
 interface GPUPoint {
   time: string
   allocated: number
@@ -343,10 +345,10 @@ export function GPUUtilization() {
 
       {/* Stats and pie chart row */}
       <div className="flex items-center gap-4 mb-4">
-        <div className="w-20 h-20 relative" style={{ minWidth: 80, minHeight: 80 }}>
+        <div className="w-20 h-20 relative" style={{ minWidth: GPU_RING_SIZE_PX, minHeight: GPU_RING_SIZE_PX }}>
           <ReactECharts
             option={pieOption}
-            style={{ height: 80, width: 80 }}
+            style={{ height: GPU_RING_SIZE_PX, width: GPU_RING_SIZE_PX }}
             notMerge={true}
             opts={{ renderer: 'svg' }}
           />

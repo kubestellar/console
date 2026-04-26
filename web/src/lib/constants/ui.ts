@@ -12,6 +12,8 @@ export const CHART_HEIGHT_STANDARD = 160
 export const CHART_HEIGHT_COMPACT = 100
 export const CHART_HEIGHT_SM = 128
 export const CHART_HEIGHT_LG = 192
+export const CHART_MIN_HEIGHT_PX = 200
+export const CHART_MIN_HEIGHT_TALL_PX = 250
 
 // ── Recharts shared styles ──────────────────────────────────────────────
 export const CHART_TOOLTIP_BG = '#1a1a2e'

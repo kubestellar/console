@@ -21,6 +21,7 @@ import {
   TOOLTIP_TIGHT_GAP_PX } from '../../../lib/llmd/tooltipSpacing'
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../../ui/StatusBadge'
+import { CHART_MIN_HEIGHT_PX } from '../../../lib/constants/ui'
 
 const GRID_LEFT_PX = 145
 const GRID_RIGHT_PX = 20
@@ -229,7 +230,7 @@ export function ResourceUtilization() {
       </div>
 
       {/* Chart */}
-      <div className="flex-1 min-h-0" style={{ minHeight: 200 }}>
+      <div className="flex-1 min-h-0" style={{ minHeight: CHART_MIN_HEIGHT_PX }}>
         {data.length > 0 ? (
           <ReactECharts
             option={chartOption}

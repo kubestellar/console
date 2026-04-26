@@ -22,6 +22,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import { DynamicCardErrorBoundary } from '../DynamicCardErrorBoundary'
 import { downloadDataUrl } from '../../../lib/download'
+import { CHART_MIN_HEIGHT_PX } from '../../../lib/constants/ui'
 
 // ── Tooltip spacing constants (ECharts renders its own DOM, so Tailwind/CSS vars are unavailable) ──
 /** Spacing between tooltip header and grid body */
@@ -36,6 +37,8 @@ const TOOLTIP_GRID_GAP_ROW_PX = '4px'
 const TOOLTIP_GRID_GAP_COL_PX = '16px'
 /** Badge border-radius */
 const TOOLTIP_BADGE_RADIUS_PX = '4px'
+
+const LEGEND_PANEL_WIDTH_PX = 130
 
 // Minimal parameter type for ECharts label/tooltip formatter callbacks
 interface EChartsFormatterParam {
@@ -545,7 +548,7 @@ function ParetoFrontierInternal({ config }: ParetoFrontierProps) {
       {/* Chart area + right legend */}
       <div className="flex flex-1 min-h-0 gap-2">
         {/* ECharts chart */}
-        <div className="flex-1 min-w-0 rounded overflow-hidden" style={{ minHeight: 200 }}>
+        <div className="flex-1 min-w-0 rounded overflow-hidden" style={{ minHeight: CHART_MIN_HEIGHT_PX }}>
           <ReactECharts
             ref={chartRef}
             option={option}
@@ -556,7 +559,7 @@ function ParetoFrontierInternal({ config }: ParetoFrontierProps) {
         </div>
 
         {/* Right legend panel */}
-        <div className="shrink-0 flex flex-col" style={{ width: 130 }}>
+        <div className="shrink-0 flex flex-col" style={{ width: LEGEND_PANEL_WIDTH_PX }}>
           {/* Hardware series list */}
           <div className="flex-1 overflow-y-auto space-y-px" style={{ scrollbarWidth: 'thin' }}>
             {legendItems.map(({ hw, color }) => {
