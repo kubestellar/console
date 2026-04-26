@@ -8,8 +8,9 @@ import { useDemoMode } from '../../hooks/useDemoMode'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardControlsRow, CardPaginationFooter, CardSearchInput, CardSkeleton } from '../../lib/cards/CardComponents'
 import type { ClusterEvent } from '../../hooks/useMCP'
+import { MS_PER_HOUR } from '../../lib/constants/time'
 
-const ONE_HOUR_MS = 60 * 60 * 1000
+const ONE_HOUR_MS = MS_PER_HOUR
 
 type SortByOption = 'time' | 'reason' | 'object'
 

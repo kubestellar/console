@@ -16,6 +16,7 @@ import { useCachedPVCs } from './useCachedData'
 import { useAlerts, useAlertRules } from './useAlerts'
 import { StatBlockValue } from '../components/ui/StatsOverview'
 import { useDrillDownActions } from './useDrillDown'
+import { MS_PER_HOUR } from '../lib/constants/time'
 
 // Cost estimation constants (per-month, rough cloud averages)
 const COST_PER_CPU = 30          // USD per vCPU per month
@@ -98,7 +99,7 @@ export function useUniversalStats() {
   const allWarningEvents = warningEvents || []
   const normalEvents = allEvents.filter(e => e.type === 'Normal').length
   const recentEvents = (() => {
-    const oneHourAgo = Date.now() - 60 * 60 * 1000
+    const oneHourAgo = Date.now() - MS_PER_HOUR
     return allEvents.filter(e => {
       if (!e.lastSeen) return false
       return new Date(e.lastSeen).getTime() > oneHourAgo

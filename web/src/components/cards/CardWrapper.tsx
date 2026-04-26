@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { CARD_TITLES, CARD_DESCRIPTIONS, DEMO_EXEMPT_CARDS } from './cardMetadata'
 import { CARD_ICONS } from './cardIcons'
 import { BaseModal } from '../../lib/modals'
+import { MS_PER_HOUR } from '../../lib/constants/time'
 import { cn } from '../../lib/cn'
 import { Button } from '../ui/Button'
 import { useCardCollapse } from '../../lib/cards/cardHooks'
@@ -79,7 +80,7 @@ function pushEscapeHandler(close: () => void): () => void {
 }
 
 /** One hour in milliseconds — default snooze duration for card swaps */
-const ONE_HOUR_MS = 60 * 60 * 1000
+const ONE_HOUR_MS = MS_PER_HOUR
 
 // ---------------------------------------------------------------------------
 // Relative-time formatting for the card header "last updated" label.

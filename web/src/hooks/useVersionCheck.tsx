@@ -11,6 +11,7 @@ import type {
 import { emitSessionContext } from '../lib/analytics'
 import { UPDATE_STORAGE_KEYS } from '../types/updates'
 import { LOCAL_AGENT_HTTP_URL, FETCH_EXTERNAL_TIMEOUT_MS } from '../lib/constants/network'
+import { MS_PER_MINUTE } from '../lib/constants/time'
 import { useLocalAgent } from './useLocalAgent'
 
 declare const __APP_VERSION__: string
@@ -20,8 +21,8 @@ const GITHUB_API_URL =
   '/api/github/repos/kubestellar/console/releases'
 const GITHUB_MAIN_SHA_URL =
   '/api/github/repos/kubestellar/console/git/ref/heads/main'
-const CACHE_TTL_MS = 30 * 60 * 1000 // 30 minutes cache
-const MIN_CHECK_INTERVAL_MS = 30 * 60 * 1000 // 30 minutes minimum between checks
+const CACHE_TTL_MS = 30 * MS_PER_MINUTE // 30 minutes cache
+const MIN_CHECK_INTERVAL_MS = 30 * MS_PER_MINUTE // 30 minutes minimum between checks
 const AUTO_UPDATE_POLL_MS = 60 * 1000 // Poll kc-agent for update status every 60s
 const DEV_SHA_CACHE_KEY = 'kc-dev-latest-sha'
 
@@ -413,7 +414,7 @@ function useVersionCheckCore() {
         const resetHeader = resp.headers.get('X-RateLimit-Reset')
         const backoffUntil = resetHeader
           ? parseInt(resetHeader, 10) * 1000
-          : Date.now() + 15 * 60 * 1000
+          : Date.now() + 15 * MS_PER_MINUTE
         localStorage.setItem('kc-github-rate-limit-until', String(backoffUntil))
         console.debug('[version-check] GitHub API rate-limited, backing off until', new Date(backoffUntil).toLocaleTimeString())
         setError('GitHub API rate limit — add a GitHub token in Settings for higher limits')
@@ -469,7 +470,7 @@ function useVersionCheckCore() {
         console.debug('[version-check] Fetched', commits.length, 'commits')
         setRecentCommits(commits)
       } else if (resp.status === 403 || resp.status === 429) {
-        const backoffUntil = Date.now() + 15 * 60 * 1000
+        const backoffUntil = Date.now() + 15 * MS_PER_MINUTE
         localStorage.setItem('kc-github-rate-limit-until', String(backoffUntil))
         console.debug('[version-check] Compare API rate-limited, backing off')
       } else {

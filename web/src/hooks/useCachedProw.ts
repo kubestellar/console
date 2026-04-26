@@ -9,6 +9,7 @@ import { useCache, type RefreshCategory, type CachedHookResult } from '../lib/ca
 import { kubectlProxy } from '../lib/kubectlProxy'
 import { formatTimeAgo } from '../lib/formatters'
 import { KUBECTL_EXTENDED_TIMEOUT_MS } from '../lib/constants/network'
+import { MS_PER_HOUR } from '../lib/constants/time'
 import type { ProwJob, ProwStatus } from './useProw'
 
 // ============================================================================
@@ -123,7 +124,7 @@ export async function fetchProwJobs(prowCluster: string, namespace: string): Pro
 }
 
 function computeProwStatus(jobs: ProwJob[], consecutiveFailures: number): ProwStatus {
-  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000)
+  const oneHourAgo = new Date(Date.now() - MS_PER_HOUR)
   const recentJobs = jobs.filter(j => new Date(j.startTime) > oneHourAgo)
 
   const pendingJobs = jobs.filter(j => j.state === 'pending' || j.state === 'triggered').length

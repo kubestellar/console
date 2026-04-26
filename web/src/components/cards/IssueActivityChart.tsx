@@ -33,7 +33,7 @@ import {
   CHART_DATAZOOM_DATA_AREA,
 } from '../../lib/constants'
 import { hexToRgba } from '../../lib/theme/chartColors'
-import { MS_PER_DAY } from '../../lib/constants/time'
+import { MS_PER_DAY, MS_PER_HOUR } from '../../lib/constants/time'
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
@@ -52,7 +52,7 @@ const GITHUB_PER_PAGE = 100
  */
 const MAX_PAGES = 30
 /** Cache TTL in milliseconds (1 hour) */
-const CACHE_TTL_MS = 60 * 60 * 1000
+const CACHE_TTL_MS = MS_PER_HOUR
 /** LocalStorage cache key prefix */
 const CACHE_KEY_PREFIX = 'issue_activity_chart_cache_'
 /** Bar chart color for issues opened */

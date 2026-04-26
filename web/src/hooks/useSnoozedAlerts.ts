@@ -1,16 +1,17 @@
 import { useState, useEffect, useCallback } from 'react'
 import { POLL_INTERVAL_SLOW_MS } from '../lib/constants/network'
+import { MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY } from '../lib/constants/time'
 import { emitSnoozed, emitUnsnoozed } from '../lib/analytics'
 
 const STORAGE_KEY = 'kubestellar-snoozed-alerts'
 
 // Snooze duration options in milliseconds
 export const SNOOZE_DURATIONS = {
-  '5m': 5 * 60 * 1000,
-  '15m': 15 * 60 * 1000,
-  '1h': 60 * 60 * 1000,
-  '4h': 4 * 60 * 60 * 1000,
-  '24h': 24 * 60 * 60 * 1000 } as const
+  '5m': 5 * MS_PER_MINUTE,
+  '15m': 15 * MS_PER_MINUTE,
+  '1h': MS_PER_HOUR,
+  '4h': 4 * MS_PER_HOUR,
+  '24h': MS_PER_DAY } as const
 
 export type SnoozeDuration = keyof typeof SNOOZE_DURATIONS
 
@@ -165,8 +166,8 @@ export function useSnoozedAlerts() {
 
 // Helper to format time remaining
 export function formatSnoozeRemaining(ms: number): string {
-  const hours = Math.floor(ms / (60 * 60 * 1000))
-  const minutes = Math.floor((ms % (60 * 60 * 1000)) / (60 * 1000))
+  const hours = Math.floor(ms / MS_PER_HOUR)
+  const minutes = Math.floor((ms % MS_PER_HOUR) / MS_PER_MINUTE)
 
   if (hours > 0) {
     return `${hours}h ${minutes}m`

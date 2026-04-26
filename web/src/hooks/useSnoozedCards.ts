@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import { POLL_INTERVAL_SLOW_MS } from '../lib/constants/network'
 import { STORAGE_KEY_SNOOZED_CARDS } from '../lib/constants/storage'
+import { MS_PER_HOUR } from '../lib/constants/time'
 import { emitSnoozed, emitUnsnoozed } from '../lib/analytics'
 
 /** Default snooze duration: 1 hour */
-const DEFAULT_SNOOZE_DURATION_MS = 60 * 60 * 1000
+const DEFAULT_SNOOZE_DURATION_MS = MS_PER_HOUR
 
 export interface SnoozedSwap {
   id: string

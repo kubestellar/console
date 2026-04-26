@@ -6,6 +6,7 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { RotatingTip } from '../ui/RotatingTip'
+import { MS_PER_HOUR } from '../../lib/constants/time'
 
 const LOGS_CARDS_KEY = 'kubestellar-logs-cards'
 
@@ -60,7 +61,7 @@ export function Logs() {
     e.type === 'Error' ||
     (e.type === 'Warning' && (e.reason?.toLowerCase().includes('error') || e.reason?.toLowerCase().includes('failed')))
   ).length
-  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000)
+  const oneHourAgo = new Date(Date.now() - MS_PER_HOUR)
   const currentRecentCount = filteredEvents.filter(e => {
     if (!e.lastSeen) return false
     const eventTime = new Date(e.lastSeen)

@@ -4,6 +4,7 @@ import { kubectlProxy } from '../lib/kubectlProxy'
 import { useDemoMode } from './useDemoMode'
 import { DEFAULT_REFRESH_INTERVAL_MS as REFRESH_INTERVAL_MS } from '../lib/constants'
 import { KUBECTL_DEFAULT_TIMEOUT_MS, KUBECTL_MEDIUM_TIMEOUT_MS, METRICS_SERVER_TIMEOUT_MS } from '../lib/constants/network'
+import { MS_PER_DAY } from '../lib/constants/time'
 
 
 // Days before expiration to consider "expiring soon"
@@ -423,7 +424,7 @@ export function useCertManager() {
     const failed = certificates.filter(c => c.status === 'failed')
 
     // Count recent renewals (certificates with renewalTime in last 24h)
-    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
+    const oneDayAgo = new Date(Date.now() - MS_PER_DAY)
     const recentRenewals = certificates.filter(c =>
       c.renewalTime && c.renewalTime > oneDayAgo
     ).length

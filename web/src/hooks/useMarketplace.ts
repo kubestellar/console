@@ -3,6 +3,7 @@ import { api } from '../lib/api'
 import { addCustomTheme, removeCustomTheme } from '../lib/themes'
 import { emitMarketplaceInstall, emitMarketplaceRemove, emitMarketplaceInstallFailed } from '../lib/analytics'
 import { FETCH_EXTERNAL_TIMEOUT_MS } from '../lib/constants/network'
+import { MS_PER_HOUR, MS_PER_DAY } from '../lib/constants/time'
 import { isCardTypeRegistered } from '../components/cards/cardRegistry'
 import { getDefaultCardSize } from '../components/dashboard/dashboardUtils'
 
@@ -17,7 +18,7 @@ interface DashboardSummary {
 
 const REGISTRY_URL = 'https://raw.githubusercontent.com/kubestellar/console-marketplace/main/registry.json'
 const CACHE_KEY = 'kc-marketplace-registry'
-const CACHE_TTL_MS = 60 * 60 * 1000 // 1 hour
+const CACHE_TTL_MS = MS_PER_HOUR // 1 hour
 const INSTALLED_KEY = 'kc-marketplace-installed'
 
 export type MarketplaceItemType = 'dashboard' | 'card-preset' | 'theme'
@@ -503,7 +504,7 @@ export function useMarketplace() {
 // --- Author Profile Hook ---
 
 const AUTHOR_CACHE_PREFIX = 'kc-author-'
-const AUTHOR_CACHE_TTL_MS = 24 * 60 * 60 * 1000 // 24 hours
+const AUTHOR_CACHE_TTL_MS = MS_PER_DAY // 24 hours
 
 interface AuthorProfile {
   consolePRs: number

@@ -14,6 +14,7 @@
 
 import { useCache, type RefreshCategory, type CachedHookResult } from '../lib/cache'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
+import { MS_PER_DAY } from '../lib/constants/time'
 import { authFetch } from '../lib/api'
 import {
   TUF_DEMO_DATA,
@@ -35,7 +36,7 @@ const DEFAULT_REPOSITORY = ''
 // An expiration window inside which a role is flagged "expiring-soon".
 // 7 days mirrors the typical TUF snapshot cadence and gives operators a
 // clear warning before any single role expires.
-const EXPIRING_SOON_WINDOW_MS = 7 * 24 * 60 * 60 * 1000
+const EXPIRING_SOON_WINDOW_MS = 7 * MS_PER_DAY
 
 /** HTTP statuses that indicate "endpoint not available" — treat as empty, not
  *  as a hard failure. 401/403 cover unauthenticated/demo visitors hitting

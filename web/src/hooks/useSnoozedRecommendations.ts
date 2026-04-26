@@ -2,11 +2,11 @@ import { useState, useEffect } from 'react'
 import { CardRecommendation } from './useCardRecommendations'
 import { POLL_INTERVAL_SLOW_MS } from '../lib/constants/network'
 import { STORAGE_KEY_SNOOZED_RECOMMENDATIONS } from '../lib/constants/storage'
-import { SECONDS_PER_MINUTE, MINUTES_PER_HOUR, HOURS_PER_DAY } from '../lib/constants/time'
+import { SECONDS_PER_MINUTE, MINUTES_PER_HOUR, HOURS_PER_DAY, MS_PER_DAY } from '../lib/constants/time'
 import { emitSnoozed, emitUnsnoozed } from '../lib/analytics'
 
 /** Default snooze duration for recommendations: 24 hours */
-const DEFAULT_REC_SNOOZE_DURATION_MS = 24 * 60 * 60 * 1000
+const DEFAULT_REC_SNOOZE_DURATION_MS = MS_PER_DAY
 
 export interface SnoozedRecommendation {
   id: string

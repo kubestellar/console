@@ -6,6 +6,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'
 import { BaseModal } from '../../lib/modals'
+import { MS_PER_HOUR, MS_PER_DAY } from '../../lib/constants/time'
 import { useVersionCheck } from '../../hooks/useVersionCheck'
 import { useSelfUpgrade } from '../../hooks/useSelfUpgrade'
 import { useToast } from '../ui/Toast'
@@ -23,9 +24,9 @@ const SNOOZE_STORAGE_KEY = 'kc-update-snoozed'
 // development don't get a dead button. Runs once on module load.
 try { localStorage.removeItem('kc-whats-new-modal-disabled') } catch { /* ignore */ }
 
-const SNOOZE_DURATION_1H_MS = 60 * 60 * 1000
-const SNOOZE_DURATION_1D_MS = 24 * 60 * 60 * 1000
-const SNOOZE_DURATION_1W_MS = 7 * 24 * 60 * 60 * 1000
+const SNOOZE_DURATION_1H_MS = MS_PER_HOUR
+const SNOOZE_DURATION_1D_MS = MS_PER_DAY
+const SNOOZE_DURATION_1W_MS = 7 * MS_PER_DAY
 
 export function isUpdateSnoozed(): boolean {
   try {

@@ -6,6 +6,7 @@ import { addCategoryTokens, setActiveTokenCategory, clearActiveTokenCategory } f
 import { LOCAL_AGENT_WS_URL, LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 import { emitError, emitMissionStarted, emitMissionCompleted, emitMissionError, emitMissionRated } from '../lib/analytics'
 import { scanForMaliciousContent } from '../lib/missions/scanner/malicious'
+import { MS_PER_MINUTE } from '../lib/constants/time'
 import { runPreflightCheck, type PreflightResult } from '../lib/missions/preflightCheck'
 import { kubectlProxy } from '../lib/kubectlProxy'
 import { kagentiProviderChat, fetchKagentiProviderAgents } from '../lib/kagentiProviderBackend'
@@ -121,7 +122,7 @@ const MISSION_RECONNECT_DELAY_MS = 500
  * half-finished prompt. 30 minutes is conservative: it covers lunch/
  * meeting gaps while still protecting against overnight reconnects.
  */
-const MISSION_RECONNECT_MAX_AGE_MS = 30 * 60 * 1000
+const MISSION_RECONNECT_MAX_AGE_MS = 30 * MS_PER_MINUTE
 /**
  * issue 6429 — Cap how many prior messages we re-append to the prompt on
  * reconnect. Long-running missions can accumulate hundreds of turns; some

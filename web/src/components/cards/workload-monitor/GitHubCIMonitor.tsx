@@ -3,6 +3,7 @@ import {
   GitBranch, AlertTriangle, CheckCircle, XCircle,
   Clock, Loader2, ExternalLink, Key, Settings, Plus, X, Check, Stethoscope } from 'lucide-react'
 import { FETCH_EXTERNAL_TIMEOUT_MS } from '../../../lib/constants'
+import { MS_PER_MINUTE, MS_PER_HOUR } from '../../../lib/constants/time'
 import { Button } from '../../ui/Button'
 import { Skeleton } from '../../ui/Skeleton'
 import { Pagination } from '../../ui/Pagination'
@@ -26,14 +27,14 @@ import { RepoSubtitle } from '../pipelines/RepoSubtitle'
 // Named time-offset constants for demo fixture data (CLAUDE.md: No Magic Numbers)
 const THIRTY_SECONDS_MS = 30 * 1000
 const ONE_MINUTE_MS = 60 * 1000
-const TWO_MINUTES_MS = 2 * 60 * 1000
-const FIVE_MINUTES_MS = 5 * 60 * 1000
-const TEN_MINUTES_MS = 10 * 60 * 1000
-const FIFTEEN_MINUTES_MS = 15 * 60 * 1000
-const TWENTY_MINUTES_MS = 20 * 60 * 1000
-const THIRTY_MINUTES_MS = 30 * 60 * 1000
-const ONE_HOUR_MS = 60 * 60 * 1000
-const TWO_HOURS_MS = 2 * 60 * 60 * 1000
+const TWO_MINUTES_MS = 2 * MS_PER_MINUTE
+const FIVE_MINUTES_MS = 5 * MS_PER_MINUTE
+const TEN_MINUTES_MS = 10 * MS_PER_MINUTE
+const FIFTEEN_MINUTES_MS = 15 * MS_PER_MINUTE
+const TWENTY_MINUTES_MS = 20 * MS_PER_MINUTE
+const THIRTY_MINUTES_MS = 30 * MS_PER_MINUTE
+const ONE_HOUR_MS = MS_PER_HOUR
+const TWO_HOURS_MS = 2 * MS_PER_HOUR
 
 interface GitHubCIMonitorProps {
   config?: Record<string, unknown>

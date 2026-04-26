@@ -16,6 +16,7 @@ import { fetchKubaraCatalog, fetchKubaraValues, parseResourceRequests } from '..
 import type { KubaraResourceRequests } from '../../lib/kubara'
 import { getDemoMissionControlState } from './demoState'
 import { MILLICORES_PER_CORE, MIB_PER_GIB } from '../../lib/constants/units'
+import { MS_PER_DAY } from '../../lib/constants/time'
 import type {
   MissionControlState,
   PayloadProject,
@@ -27,7 +28,7 @@ import type {
 
 const STORAGE_KEY = 'kc_mission_control_state'
 // Wizard state expires after 7 days to avoid persisting abandoned mission drafts
-const WIZARD_STATE_TTL_MS = 7 * 24 * 60 * 60 * 1000
+const WIZARD_STATE_TTL_MS = 7 * MS_PER_DAY
 /**
  * #6664 — Schema version for persisted Mission Control state. Bump when the
  * shape of `MissionControlState` changes in a backward-incompatible way.

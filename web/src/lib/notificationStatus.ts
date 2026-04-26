@@ -1,7 +1,9 @@
+import { MS_PER_DAY } from './constants/time'
+
 const STORAGE_KEY = 'kc_browser_notif_verified'
 
 /** Verification expiry — 30 days in milliseconds */
-const VERIFICATION_TTL_MS = 30 * 24 * 60 * 60 * 1000
+const VERIFICATION_TTL_MS = 30 * MS_PER_DAY
 
 /** Returns true if user has confirmed browser notifications work */
 export function isBrowserNotifVerified(): boolean {
