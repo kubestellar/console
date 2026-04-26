@@ -373,6 +373,17 @@ export async function setupMCP(page: Page, options?: SetupMCPOptions): Promise<v
 export async function setupDashboardTest(page: Page): Promise<void> {
   await setupAuth(page)
   await setupMCP(page)
+  // Mock /api/dashboards so the dashboard component doesn't wait for a
+  // backend response before falling back to demo cards. Without this mock,
+  // the unmocked request can time out on slower mobile-emulation runtimes,
+  // causing card-rendering assertions to fail.
+  await page.route('**/api/dashboards', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([]),
+    })
+  )
   // Seed localStorage BEFORE any page script runs — page.evaluate() runs
   // after the page has already parsed and executed scripts, which is too
   // late for webkit/Safari where the auth redirect fires synchronously.

@@ -50,7 +50,7 @@ async function setupClustersTest(page: Page) {
   // page.addInitScript() injects the snippet ahead of any page code (#9096).
   await page.addInitScript(() => {
     localStorage.setItem('token', 'test-token')
-    localStorage.setItem('kc-demo-mode', 'true')
+    localStorage.setItem('kc-demo-mode', 'false')
     localStorage.setItem('demo-user-onboarded', 'true')
   })
 

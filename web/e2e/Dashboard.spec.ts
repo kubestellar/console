@@ -346,9 +346,12 @@ test.describe('Dashboard Page', () => {
       })
 
       // Seed localStorage BEFORE any page script runs (#9096).
+      // Disable demo mode so the app fetches from the mocked API routes
+      // above instead of returning built-in demo data (12 clusters).
       await page.addInitScript(() => {
         localStorage.setItem('token', 'test-token')
         localStorage.setItem('demo-user-onboarded', 'true')
+        localStorage.setItem('kc-demo-mode', 'false')
       })
     })
 
