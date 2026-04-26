@@ -10,6 +10,7 @@ import type {
   StatValueFormat,
 } from '../types'
 import { formatBytes, formatCurrency } from '../../formatters'
+import { SECONDS_PER_MINUTE, SECONDS_PER_HOUR, SECONDS_PER_DAY } from '../../constants/time'
 export { formatBytes, formatCurrency }
 
 /**
@@ -340,23 +341,18 @@ export function formatNumber(value: number): string | number {
   return value
 }
 
-// Time boundary constants (in seconds) for duration formatting
-const SECS_PER_MINUTE = 60
-const SECS_PER_HOUR = 3_600
-const SECS_PER_DAY = 86_400
-
 /**
  * Format duration in seconds to human-readable
  */
 export function formatDuration(seconds: number): string {
-  if (seconds < SECS_PER_MINUTE) {
+  if (seconds < SECONDS_PER_MINUTE) {
     return `${Math.round(seconds)}s`
   }
-  if (seconds < SECS_PER_HOUR) {
-    return `${Math.round(seconds / SECS_PER_MINUTE)}m`
+  if (seconds < SECONDS_PER_HOUR) {
+    return `${Math.round(seconds / SECONDS_PER_MINUTE)}m`
   }
-  if (seconds < SECS_PER_DAY) {
-    return `${(seconds / SECS_PER_HOUR).toFixed(1)}h`
+  if (seconds < SECONDS_PER_DAY) {
+    return `${(seconds / SECONDS_PER_HOUR).toFixed(1)}h`
   }
-  return `${(seconds / SECS_PER_DAY).toFixed(1)}d`
+  return `${(seconds / SECONDS_PER_DAY).toFixed(1)}d`
 }

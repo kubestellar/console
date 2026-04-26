@@ -79,10 +79,8 @@ const DEMO_AGENT_COUNT = 6
 const DEMO_SERVER_VERSION = '1.9.4'
 
 // Per-entry TTLs
-const TTL_ONE_HOUR_SECONDS = SECONDS_PER_HOUR
 const TTL_FOUR_HOURS_SECONDS = 4 * SECONDS_PER_HOUR
 const TTL_TWELVE_HOURS_SECONDS = 12 * SECONDS_PER_HOUR
-const TTL_ONE_DAY_SECONDS = SECONDS_PER_DAY
 
 const TEN_MINUTES_MS = 10 * MS_PER_MINUTE
 const TWO_HOURS_MS = 2 * MS_PER_HOUR
@@ -97,7 +95,7 @@ const DEMO_ENTRIES: SpiffeRegistrationEntry[] = [
     parentId: 'spiffe://prod.example.org/spire/agent/k8s_psat/prod/node-1',
     selector: 'k8s:ns:frontend,k8s:sa:web',
     svidType: 'x509',
-    ttlSeconds: TTL_ONE_HOUR_SECONDS,
+    ttlSeconds: SECONDS_PER_HOUR,
     cluster: 'prod-east',
   },
   {
@@ -105,7 +103,7 @@ const DEMO_ENTRIES: SpiffeRegistrationEntry[] = [
     parentId: 'spiffe://prod.example.org/spire/agent/k8s_psat/prod/node-2',
     selector: 'k8s:ns:api,k8s:sa:api-gateway',
     svidType: 'x509',
-    ttlSeconds: TTL_ONE_HOUR_SECONDS,
+    ttlSeconds: SECONDS_PER_HOUR,
     cluster: 'prod-east',
   },
   {
@@ -129,7 +127,7 @@ const DEMO_ENTRIES: SpiffeRegistrationEntry[] = [
     parentId: 'spiffe://prod.example.org/spire/agent/k8s_psat/prod/node-4',
     selector: 'k8s:ns:data,k8s:sa:etl',
     svidType: 'jwt',
-    ttlSeconds: TTL_ONE_DAY_SECONDS,
+    ttlSeconds: SECONDS_PER_DAY,
     cluster: 'prod-west',
   },
 ]
