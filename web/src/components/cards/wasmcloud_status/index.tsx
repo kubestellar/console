@@ -36,7 +36,7 @@ import type {
   WasmcloudProviderStatus,
 } from './demoData'
 import { formatTimeAgo } from '../../../lib/formatters'
-import { SECONDS_PER_MINUTE, SECONDS_PER_HOUR, SECONDS_PER_DAY } from '../../../lib/constants/time'
+import { formatDuration } from '../../../lib/stats/types'
 
 // ---------------------------------------------------------------------------
 // Named constants (no magic numbers)
@@ -57,19 +57,6 @@ const HOST_ID_SHORT_LENGTH = 8
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function formatUptime(seconds: number): string {
-  if (seconds >= SECONDS_PER_DAY) {
-    return `${Math.floor(seconds / SECONDS_PER_DAY)}d`
-  }
-  if (seconds >= SECONDS_PER_HOUR) {
-    return `${Math.floor(seconds / SECONDS_PER_HOUR)}h`
-  }
-  if (seconds >= SECONDS_PER_MINUTE) {
-    return `${Math.floor(seconds / SECONDS_PER_MINUTE)}m`
-  }
-  return `${seconds}s`
-}
 
 function shortId(id: string): string {
   if (!id) return ''
@@ -125,7 +112,7 @@ function HostRow({ host, t }: { host: WasmcloudHost; t: TFunction<'cards'> }) {
           {host.providerCount} {t('wasmcloudStatus.providersShort', 'providers')}
         </span>
         <span className="ml-auto shrink-0 font-mono">
-          {t('wasmcloudStatus.uptime', 'up')} {formatUptime(host.uptimeSeconds)}
+          {t('wasmcloudStatus.uptime', 'up')} {formatDuration(host.uptimeSeconds)}
         </span>
       </div>
     </div>

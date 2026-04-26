@@ -33,7 +33,7 @@ import type {
   SpiffeRegistrationEntry,
 } from './demoData'
 import { formatTimeAgo } from '../../../lib/formatters'
-import { SECONDS_PER_MINUTE, SECONDS_PER_HOUR, SECONDS_PER_DAY } from '../../../lib/constants/time'
+import { formatDuration } from '../../../lib/stats/types'
 
 // ---------------------------------------------------------------------------
 // Named constants (no magic numbers)
@@ -50,19 +50,6 @@ const MAX_ENTRIES_DISPLAYED = 5
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function formatTtl(seconds: number): string {
-  if (seconds >= SECONDS_PER_DAY) {
-    return `${Math.floor(seconds / SECONDS_PER_DAY)}d`
-  }
-  if (seconds >= SECONDS_PER_HOUR) {
-    return `${Math.floor(seconds / SECONDS_PER_HOUR)}h`
-  }
-  if (seconds >= SECONDS_PER_MINUTE) {
-    return `${Math.floor(seconds / SECONDS_PER_MINUTE)}m`
-  }
-  return `${seconds}s`
-}
 
 function federationStatusClass(status: SpiffeFederatedDomain['status']): string {
   if (status === 'active') return 'bg-green-500/20 text-green-400'
@@ -96,7 +83,7 @@ function EntryRow({ entry }: { entry: SpiffeRegistrationEntry }) {
       <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
         <span className="truncate">{entry.selector}</span>
         <span className="ml-auto shrink-0 font-mono">
-          ttl {formatTtl(entry.ttlSeconds)}
+          ttl {formatDuration(entry.ttlSeconds)}
         </span>
       </div>
     </div>

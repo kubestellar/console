@@ -4,7 +4,7 @@ import { useCardLoadingState } from '../CardDataContext'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../../lib/cards/CardComponents'
 import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
 import { Skeleton } from '../../ui/Skeleton'
-import { MS_PER_SECOND, SECONDS_PER_MINUTE, SECONDS_PER_HOUR, SECONDS_PER_DAY } from '../../../lib/constants/time'
+import { formatTimeAgo } from '../../../lib/formatters'
 
 interface KagentiBuildPipelineProps {
   config?: { cluster?: string }
@@ -23,15 +23,6 @@ function BuildStatusIcon({ status }: { status: string }) {
     default:
       return <Clock className="w-3.5 h-3.5 text-muted-foreground" />
   }
-}
-
-function timeAgo(dateStr: string): string {
-  if (!dateStr) return ''
-  const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / MS_PER_SECOND)
-  if (seconds < SECONDS_PER_MINUTE) return `${seconds}s ago`
-  if (seconds < SECONDS_PER_HOUR) return `${Math.floor(seconds / SECONDS_PER_MINUTE)}m ago`
-  if (seconds < SECONDS_PER_DAY) return `${Math.floor(seconds / SECONDS_PER_HOUR)}h ago`
-  return `${Math.floor(seconds / SECONDS_PER_DAY)}d ago`
 }
 
 type SortField = 'name' | 'status' | 'cluster'
@@ -175,7 +166,7 @@ export function KagentiBuildPipeline({ config }: KagentiBuildPipelineProps) {
               </div>
             </div>
             <div className="text-xs text-muted-foreground/40">
-              {timeAgo(build.startTime || build.completionTime)}
+              {formatTimeAgo(build.startTime || build.completionTime)}
             </div>
           </div>
         ))}

@@ -8,6 +8,7 @@
  * Connected smooth scatter lines with GPU count labels. Built with ECharts.
  */
 import { useState, useMemo, useRef } from 'react'
+import { SECONDS_PER_HOUR } from '../../../lib/constants/time'
 import { LazyEChart } from '../../charts/LazyEChart'
 import type ReactEChartsType from 'echarts-for-react'
 import { Download, RotateCcw } from 'lucide-react'
@@ -124,7 +125,7 @@ const CHART_PRESETS: Record<string, ChartPreset> = {
     yAxis: {
       label: 'Cost per Million Tokens',
       unit: '$',
-      getValue: (p) => p.throughputPerGpu > 0 ? (p.tcoPerGpuHr / (p.throughputPerGpu * 3600)) * 1_000_000 : 0,
+      getValue: (p) => p.throughputPerGpu > 0 ? (p.tcoPerGpuHr / (p.throughputPerGpu * SECONDS_PER_HOUR)) * 1_000_000 : 0,
       formatter: (v) => `$${v.toFixed(2)}` },
     infoPills: (points) => {
       const hwCost = new Map<string, number>()
@@ -143,7 +144,7 @@ const CHART_PRESETS: Record<string, ChartPreset> = {
     yAxis: {
       label: 'Cost per Million Tokens',
       unit: '$',
-      getValue: (p) => p.throughputPerGpu > 0 ? (p.tcoPerGpuHr / (p.throughputPerGpu * 3600)) * 1_000_000 : 0,
+      getValue: (p) => p.throughputPerGpu > 0 ? (p.tcoPerGpuHr / (p.throughputPerGpu * SECONDS_PER_HOUR)) * 1_000_000 : 0,
       formatter: (v) => `$${v.toFixed(2)}` },
     infoPills: (points) => {
       const hwCost = new Map<string, number>()
