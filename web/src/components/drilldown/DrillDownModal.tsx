@@ -35,10 +35,9 @@ const EventsDrillDown = safeLazy(() => import('./views/EventsDrillDown'), 'Event
 const NamespaceDrillDown = safeLazy(() => import('./views/NamespaceDrillDown'), 'NamespaceDrillDown')
 const NodeDrillDown = safeLazy(() => import('./views/NodeDrillDown'), 'NodeDrillDown')
 const GPUNamespaceDrillDown = safeLazy(() => import('./views/GPUNamespaceDrillDown'), 'GPUNamespaceDrillDown')
-// Keep smaller components as direct imports for immediate loading
-import { LogsDrillDown } from './views/LogsDrillDown'
-import { GPUNodeDrillDown } from './views/GPUNodeDrillDown'
-import { YAMLDrillDown } from './views/YAMLDrillDown'
+const LogsDrillDown = safeLazy(() => import('./views/LogsDrillDown'), 'LogsDrillDown')
+const GPUNodeDrillDown = safeLazy(() => import('./views/GPUNodeDrillDown'), 'GPUNodeDrillDown')
+const YAMLDrillDown = safeLazy(() => import('./views/YAMLDrillDown'), 'YAMLDrillDown')
 
 // Loading fallback for lazy-loaded drilldown views
 function DrillDownLoading() {
