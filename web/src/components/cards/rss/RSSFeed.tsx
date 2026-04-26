@@ -22,6 +22,7 @@ import {
 import { formatTimeAgo } from '../../../lib/formatters'
 import { useTranslation } from 'react-i18next'
 import { TOAST_DISMISS_MS } from '../../../lib/constants/network'
+import { MS_PER_HOUR } from '../../../lib/constants/time'
 import { hostnameEndsWith } from '../../../lib/utils/urlHostname'
 
 const MIN_VALID_FEED_LENGTH = 50
@@ -39,7 +40,7 @@ const SORT_COMPARATORS: Record<SortByOption, (a: FeedItem, b: FeedItem) => numbe
 // Demo RSS feed items (avoids external API calls in demo mode)
 function getDemoRSSItems(): FeedItem[] {
   const now = new Date()
-  const hoursAgo = (h: number) => new Date(now.getTime() - h * 3600000)
+  const hoursAgo = (h: number) => new Date(now.getTime() - h * MS_PER_HOUR)
   return [
     { id: 'demo-1', title: 'Kubernetes 1.32: What You Need to Know', link: '#', description: 'The latest Kubernetes release brings improvements to pod scheduling, enhanced GPU support, and new security features for multi-tenant clusters.', pubDate: hoursAgo(1), author: 'CNCF Blog', sourceName: 'Kubernetes Blog', sourceIcon: '⎈' },
     { id: 'demo-2', title: 'KubeStellar: Multi-Cluster Management Made Simple', link: '#', description: 'How KubeStellar simplifies deploying and managing workloads across multiple Kubernetes clusters with its innovative control plane architecture.', pubDate: hoursAgo(3), author: 'KubeStellar Team', sourceName: 'KubeStellar Blog', sourceIcon: '🌟' },

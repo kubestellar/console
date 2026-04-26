@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useImperativeHandle, memo, type Ref } from 'react'
 import { GitPullRequest, GitBranch, Star, Users, Package, TrendingUp, AlertCircle, Clock, CheckCircle, XCircle, GitMerge, Settings, X, Plus, Check } from 'lucide-react'
 import { POLL_INTERVAL_SLOW_MS } from '../../lib/constants/network'
-import { MS_PER_MINUTE, MS_PER_DAY } from '../../lib/constants/time'
+import { MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY } from '../../lib/constants/time'
 import { formatTimeAgo } from '../../lib/formatters'
 import { Button } from '../ui/Button'
 import { Skeleton } from '../ui/Skeleton'
@@ -208,8 +208,8 @@ async function githubFetchError(response: Response, label: string): Promise<Erro
 
 function getDemoGitHubData(repoName: string) {
   const now = new Date()
-  const daysAgo = (d: number) => new Date(now.getTime() - d * 86400000).toISOString()
-  const hoursAgo = (h: number) => new Date(now.getTime() - h * 3600000).toISOString()
+  const daysAgo = (d: number) => new Date(now.getTime() - d * MS_PER_DAY).toISOString()
+  const hoursAgo = (h: number) => new Date(now.getTime() - h * MS_PER_HOUR).toISOString()
   const demoUser = { login: 'demo-user', avatar_url: 'https://github.com/ghost.png' }
   const prs: GitHubPR[] = [
     { number: 842, title: 'feat: Add multi-cluster GPU scheduling', state: 'open', merged_at: null, created_at: hoursAgo(2), updated_at: hoursAgo(1), user: demoUser, html_url: '#', draft: false, labels: [{ name: 'enhancement', color: 'a2eeef' }] },

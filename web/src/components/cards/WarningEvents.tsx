@@ -8,21 +8,7 @@ import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardSkeleton, C
 import type { ClusterEvent } from '../../hooks/useMCP'
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../ui/StatusBadge'
-
-function getTimeAgo(timestamp: string | undefined): string {
-  if (!timestamp) return 'Unknown'
-  const now = new Date()
-  const then = new Date(timestamp)
-  const diffMs = now.getTime() - then.getTime()
-  const diffMins = Math.floor(diffMs / 60000)
-  const diffHours = Math.floor(diffMins / 60)
-  const diffDays = Math.floor(diffHours / 24)
-
-  if (diffDays > 0) return `${diffDays}d ago`
-  if (diffHours > 0) return `${diffHours}h ago`
-  if (diffMins > 0) return `${diffMins}m ago`
-  return 'Just now'
-}
+import { formatTimeAgo } from '../../lib/formatters'
 
 type SortByOption = 'time' | 'count' | 'reason'
 
@@ -218,7 +204,7 @@ export function WarningEvents() {
                       showRepair={false}
                       className="shrink-0"
                     />
-                    <span className="text-xs text-muted-foreground ml-auto whitespace-nowrap shrink-0">{getTimeAgo(event.lastSeen)}</span>
+                    <span className="text-xs text-muted-foreground ml-auto whitespace-nowrap shrink-0">{formatTimeAgo(event.lastSeen ?? '', { invalidLabel: 'Unknown' })}</span>
                   </div>
                 </div>
               </div>

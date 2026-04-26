@@ -10,6 +10,7 @@ import { useCardData, useCascadingSelection, commonComparators } from '../../lib
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { useDemoMode } from '../../hooks/useDemoMode'
+import { MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY } from '../../lib/constants/time'
 
 interface NamespaceEventsProps {
   config?: {
@@ -161,10 +162,10 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
     const now = new Date()
     const diff = now.getTime() - date.getTime()
 
-    if (diff < 60000) return t('namespaceEvents.justNow')
-    if (diff < 3600000) return t('namespaceEvents.minutesAgo', { count: Math.floor(diff / 60000) })
-    if (diff < 86400000) return t('namespaceEvents.hoursAgo', { count: Math.floor(diff / 3600000) })
-    return t('namespaceEvents.daysAgo', { count: Math.floor(diff / 86400000) })
+    if (diff < MS_PER_MINUTE) return t('namespaceEvents.justNow')
+    if (diff < MS_PER_HOUR) return t('namespaceEvents.minutesAgo', { count: Math.floor(diff / MS_PER_MINUTE) })
+    if (diff < MS_PER_DAY) return t('namespaceEvents.hoursAgo', { count: Math.floor(diff / MS_PER_HOUR) })
+    return t('namespaceEvents.daysAgo', { count: Math.floor(diff / MS_PER_DAY) })
   }
 
   if (showSkeleton) {

@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AlertCircle } from 'lucide-react'
+import { MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY } from '../../lib/constants/time'
 import { useCachedEvents } from '../../hooks/useCachedData'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useCardLoadingState } from './CardDataContext'
@@ -31,7 +32,7 @@ export function ClusterChangelog() {
   const cutoff = (() => {
     const now = Date.now()
     const hours: Record<TimeRange, number> = { '1h': 1, '6h': 6, '24h': 24, '7d': 168 }
-    return now - hours[timeRange] * 3600000
+    return now - hours[timeRange] * MS_PER_HOUR
   })()
 
   const changeEvents = useMemo(() => {
@@ -72,10 +73,10 @@ export function ClusterChangelog() {
     const d = new Date(ts)
     const now = new Date()
     const diff = now.getTime() - d.getTime()
-    if (diff < 60000) return t('clusterChangelog.justNow')
-    if (diff < 3600000) return t('clusterChangelog.minutesAgo', { count: Math.floor(diff / 60000) })
-    if (diff < 86400000) return t('clusterChangelog.hoursAgo', { count: Math.floor(diff / 3600000) })
-    return t('clusterChangelog.daysAgo', { count: Math.floor(diff / 86400000) })
+    if (diff < MS_PER_MINUTE) return t('clusterChangelog.justNow')
+    if (diff < MS_PER_HOUR) return t('clusterChangelog.minutesAgo', { count: Math.floor(diff / MS_PER_MINUTE) })
+    if (diff < MS_PER_DAY) return t('clusterChangelog.hoursAgo', { count: Math.floor(diff / MS_PER_HOUR) })
+    return t('clusterChangelog.daysAgo', { count: Math.floor(diff / MS_PER_DAY) })
   }
 
   return (

@@ -219,7 +219,7 @@ export function PodHealthTrend() {
       if (isDemoMode()) {
         // Seed 8 historical points so the time-series chart renders immediately
         const DEMO_SEED_POINTS = 8
-        const DEMO_INTERVAL_MS = 5 * 60000 // 5-min intervals
+        const DEMO_INTERVAL_MS = 5 * MS_PER_MINUTE
         const MAX_JITTER = 3
         const points: HealthPoint[] = []
         for (let i = DEMO_SEED_POINTS - 1; i >= 0; i--) {

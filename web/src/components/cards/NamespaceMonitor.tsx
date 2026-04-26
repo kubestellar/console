@@ -13,6 +13,7 @@ import { BaseModal } from '../../lib/modals/BaseModal'
 import { CardComponentProps } from './cardRegistry'
 import { useCardLoadingState } from './CardDataContext'
 import { useDemoMode } from '../../hooks/useDemoMode'
+import { MS_PER_MINUTE } from '../../lib/constants/time'
 
 // Resource types to monitor
 type ResourceType = 'pods' | 'deployments' | 'services' | 'configmaps' | 'secrets' | 'pvcs' | 'jobs'
@@ -495,7 +496,7 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
   // Count recent changes by type
   const changeCountsByType = (() => {
     const counts = { added: 0, modified: 0, deleted: 0, error: 0 }
-    const recentTime = Date.now() - 60000 // Last minute
+    const recentTime = Date.now() - MS_PER_MINUTE
     recentChanges.forEach(c => {
       if (c.timestamp > recentTime && c.type) {
         counts[c.type]++
