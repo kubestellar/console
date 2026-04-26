@@ -798,6 +798,12 @@ const MAX_ERRORS_PER_PAGE_SESSION = 50
 const recentErrorEmissions = new Map<string, number>()
 const pageErrorCounts = new Map<string, number>()
 
+/** @internal — exported for test isolation only */
+export function _resetErrorThrottles() {
+  recentErrorEmissions.clear()
+  pageErrorCounts.clear()
+}
+
 function isErrorThrottled(category: string, page: string, cardId?: string): boolean {
   // Per-page session budget
   const pageCount = pageErrorCounts.get(page) ?? 0
