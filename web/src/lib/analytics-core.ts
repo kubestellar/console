@@ -788,19 +788,56 @@ function isBrowserExtensionNoise(msg: string, reason: unknown): boolean {
   return false
 }
 
+// ── Per-card / per-page error throttling (#10092) ──────────────────────
+// CI/CD cards poll every 30-120s. Without throttling, a single broken card
+// generates dozens of ksc_error events per session. We cap emissions to at
+// most one per card+category per throttle window, and enforce a per-page
+// session budget so a single route can't dominate the error stream.
+const ERROR_THROTTLE_MS = 60_000
+const MAX_ERRORS_PER_PAGE_SESSION = 50
+const recentErrorEmissions = new Map<string, number>()
+const pageErrorCounts = new Map<string, number>()
+
+function isErrorThrottled(category: string, page: string, cardId?: string): boolean {
+  // Per-page session budget
+  const pageCount = pageErrorCounts.get(page) ?? 0
+  if (pageCount >= MAX_ERRORS_PER_PAGE_SESSION) return true
+
+  // Per card+category throttle (or per category if no card)
+  const throttleKey = `${page}:${category}:${cardId ?? '_global'}`
+  const lastEmit = recentErrorEmissions.get(throttleKey)
+  if (lastEmit && Date.now() - lastEmit < ERROR_THROTTLE_MS) return true
+
+  // Record emission
+  recentErrorEmissions.set(throttleKey, Date.now())
+  pageErrorCounts.set(page, pageCount + 1)
+
+  // Prevent unbounded map growth — prune expired entries periodically
+  if (recentErrorEmissions.size > 200) {
+    const now = Date.now()
+    for (const [k, ts] of recentErrorEmissions) {
+      if (now - ts > ERROR_THROTTLE_MS) recentErrorEmissions.delete(k)
+    }
+  }
+  return false
+}
+
 export function emitError(
   category: string,
   detail: string,
   cardId?: string,
   extra?: EmitErrorExtra,
 ) {
+  const page = window.location.pathname
+  if (isErrorThrottled(category, page, cardId)) return
+
   const errorType = inferErrorType(detail, extra?.error)
   const componentName = inferComponentName(cardId, extra?.componentStack, extra?.error)
   send('ksc_error', {
     error_code: category,
     error_category: category,
     error_detail: detail.slice(0, ERROR_DETAIL_MAX_LEN),
-    error_page: window.location.pathname,
+    error_page: page,
     // New custom dimensions (issue #9861) — make ksc_error spikes diagnosable
     // by surfacing the JS error class and the failing component without
     // having to dig through error_detail strings in BigQuery.
@@ -973,12 +1010,16 @@ export function startGlobalErrorTracking() {
       ) return
       // Skip WebKit URL-parse errors
       if (msg.includes('did not match the expected pattern')) return
-      // Skip JSON parse / SyntaxError errors from response.json() calls
+      // Skip JSON parse / SyntaxError errors from response.json() calls.
+      // Browser implementations vary in error message wording — also catch
+      // SyntaxError by name to cover edge cases (#10092).
       if (
         msg.includes('JSON.parse') ||
         msg.includes('is not valid JSON') ||
         msg.includes('JSON Parse error') ||
-        msg.includes('Unexpected token')
+        msg.includes('Unexpected token') ||
+        msg.includes('Unexpected end of JSON') ||
+        errorName === 'SyntaxError'
       ) return
       // Skip ServiceWorker notification errors
       if (msg.includes('showNotification') || msg.includes('No active registration')) return

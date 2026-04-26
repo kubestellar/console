@@ -321,7 +321,9 @@ async function fetchView<T>(params: URLSearchParams): Promise<T> {
   const url = `/api/github-pipelines?${params.toString()}`
   const res = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  const body = (await res.json()) as T & { repos?: string[] }
+  // Guard against non-JSON responses (e.g. HTML error pages from proxies)
+  // that cause unhandled SyntaxError rejections (#10092).
+  const body = (await res.json().catch(() => ({}) as Record<string, unknown>)) as T & { repos?: string[] }
   // Update the shared repo list from the server response — this is the
   // single source of truth for which repos the backend is configured to
   // scan (set via PIPELINE_REPOS env var).
@@ -344,6 +346,7 @@ function normalizeMatrixPayload(payload: MatrixPayload): MatrixPayload {
       ...wf,
       name: wf.name != null ? String(wf.name) : '',
       repo: wf.repo != null ? String(wf.repo) : '',
+      cells: wf.cells ?? [],
     })),
   }
 }
@@ -532,7 +535,8 @@ export async function fetchPipelineLog(
     const res = await fetch(`/api/github-pipelines?${p.toString()}`, {
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     })
-    const body = (await res.json()) as {
+    // Guard against non-JSON responses (#10092)
+    const body = (await res.json().catch(() => ({}) as Record<string, unknown>)) as {
       log?: string
       lines?: number
       truncatedFrom?: number

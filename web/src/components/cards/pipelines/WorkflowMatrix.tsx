@@ -78,7 +78,7 @@ export function WorkflowMatrix() {
 
   const workflows = (data?.workflows ?? []).filter((wf) => {
     if (days <= RANGE_OPTIONS[0]) return true
-    const populated = wf.cells.filter((c) => c.conclusion !== null).length
+    const populated = (wf.cells ?? []).filter((c) => c.conclusion !== null).length
     return populated >= SPARSE_WORKFLOW_MIN_CELLS
   })
 

@@ -202,9 +202,9 @@ function RunRow({ run, onCancel, canMutate, mutating }: RunRowProps) {
         statusBg(run.run.status, run.run.conclusion),
       )}>
         {run.run.event}
-        {(run.run.pullRequests?.length ?? 0) > 0 && (
-          <a href={run.run.pullRequests![0].url || `https://github.com/${run.run.repo}/pull/${run.run.pullRequests![0].number}`} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-400 hover:underline mt-0.5 block">
-            #{run.run.pullRequests![0].number}
+        {(run.run.pullRequests?.length ?? 0) > 0 && run.run.pullRequests?.[0] && (
+          <a href={run.run.pullRequests[0].url || `https://github.com/${run.run.repo}/pull/${run.run.pullRequests[0].number}`} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-400 hover:underline mt-0.5 block">
+            #{run.run.pullRequests[0].number}
           </a>
         )}
       </div>
