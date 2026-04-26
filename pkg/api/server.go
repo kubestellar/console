@@ -857,50 +857,78 @@ func (s *Server) setupRoutes() {
 	dataResidency := handlers.NewDataResidencyHandler(residencyEngine)
 	dataResidency.RegisterPublicRoutes(s.app.Group("/api/compliance/residency", publicLimiter))
 
+	// Wrap publicLimiter to skip critical paths that must never be rate-limited
+	// by background polling collateral. Fiber v2 group("/api") prefix matching
+	// applies group middleware to ALL /api/* routes — including /api/me,
+	// /api/feedback/requests, /api/github/*, and /api/version — even though
+	// those routes are registered standalone outside the group. Without this
+	// skip wrapper, 16 compliance/supply-chain handlers each creating
+	// Group("/api", publicLimiter) would stack 16 independent publicLimiter
+	// checks on every /api/* request.
+	publicLimiterSkipPaths := map[string]bool{
+		"/api/feedback/requests": true,
+		"/api/me":                true,
+		"/api/version":           true,
+	}
+	publicLimiterWithSkip := func(c *fiber.Ctx) error {
+		path := c.Path()
+		if publicLimiterSkipPaths[path] {
+			return c.Next()
+		}
+		if strings.HasPrefix(path, "/api/github/") {
+			return c.Next()
+		}
+		if strings.HasPrefix(path, "/api/auth/") {
+			return c.Next()
+		}
+		return publicLimiter(c)
+	}
+	publicAPI := s.app.Group("/api", publicLimiterWithSkip)
+
 	// Change control audit trail public read endpoints (demo mode).
 	changeControl := handlers.NewChangeControlHandler()
-	changeControl.RegisterPublicRoutes(s.app.Group("/api", publicLimiter))
+	changeControl.RegisterPublicRoutes(publicAPI)
 
 	// Segregation of duties public read endpoints (demo mode).
 	sodHandler := handlers.NewSoDHandler()
-	sodHandler.RegisterPublicRoutes(s.app.Group("/api", publicLimiter))
+	sodHandler.RegisterPublicRoutes(publicAPI)
 
 	// BAA tracker public read endpoints (demo mode).
 	baaHandler := handlers.NewBAAHandler()
-	baaHandler.RegisterPublicRoutes(s.app.Group("/api", publicLimiter))
+	baaHandler.RegisterPublicRoutes(publicAPI)
 	// HIPAA compliance public read endpoints (demo mode).
 	hipaaHandler := handlers.NewHIPAAHandler()
-	hipaaHandler.RegisterPublicRoutes(s.app.Group("/api", publicLimiter))
+	hipaaHandler.RegisterPublicRoutes(publicAPI)
 	// GxP / 21 CFR Part 11 public read endpoints (demo mode).
 	gxpHandler := handlers.NewGxPHandler()
-	gxpHandler.RegisterPublicRoutes(s.app.Group("/api", publicLimiter))
+	gxpHandler.RegisterPublicRoutes(publicAPI)
 	// NIST 800-53 control mapping public read endpoints (demo mode).
 	nistHandler := handlers.NewNIST80053Handler()
-	nistHandler.RegisterPublicRoutes(s.app.Group("/api", publicLimiter))
+	nistHandler.RegisterPublicRoutes(publicAPI)
 	// DISA STIG compliance public read endpoints (demo mode).
 	stigHandler := handlers.NewSTIGHandler()
-	stigHandler.RegisterPublicRoutes(s.app.Group("/api", publicLimiter))
+	stigHandler.RegisterPublicRoutes(publicAPI)
 	// Air-gap readiness public read endpoints (demo mode).
 	airgapHandler := handlers.NewAirGapHandler()
-	airgapHandler.RegisterPublicRoutes(s.app.Group("/api", publicLimiter))
+	airgapHandler.RegisterPublicRoutes(publicAPI)
 	// FedRAMP readiness public read endpoints (demo mode).
 	fedrampHandler := handlers.NewFedRAMPHandler()
-	fedrampHandler.RegisterPublicRoutes(s.app.Group("/api", publicLimiter))
+	fedrampHandler.RegisterPublicRoutes(publicAPI)
 	// Epic 5: Security Operations — SIEM Export (#9643).
 	siemHandler := handlers.NewSIEMHandler()
-	siemHandler.RegisterPublicRoutes(s.app.Group("/api", publicLimiter))
+	siemHandler.RegisterPublicRoutes(publicAPI)
 	// Epic 6: Supply Chain & Software Provenance (#9632, #9644, #9646, #9647, #9648).
 	sbomHandler := handlers.NewSBOMHandler()
-	sbomHandler.RegisterPublicRoutes(s.app.Group("/api", publicLimiter))
+	sbomHandler.RegisterPublicRoutes(publicAPI)
 	signingHandler := handlers.NewSigningHandler()
-	signingHandler.RegisterPublicRoutes(s.app.Group("/api", publicLimiter))
+	signingHandler.RegisterPublicRoutes(publicAPI)
 	slsaHandler := handlers.NewSLSAHandler()
-	slsaHandler.RegisterPublicRoutes(s.app.Group("/api", publicLimiter))
+	slsaHandler.RegisterPublicRoutes(publicAPI)
 	licenseHandler := handlers.NewLicenseHandler()
-	licenseHandler.RegisterPublicRoutes(s.app.Group("/api", publicLimiter))
+	licenseHandler.RegisterPublicRoutes(publicAPI)
 	// Runtime Attestation Score (#9987) — composite trust score per cluster.
 	attestationHandler := handlers.NewAttestationHandler()
-	attestationHandler.RegisterPublicRoutes(s.app.Group("/api", publicLimiter))
+	attestationHandler.RegisterPublicRoutes(publicAPI)
 
 	// API routes (protected) — with rate limiting
 	//
@@ -962,21 +990,36 @@ func (s *Server) setupRoutes() {
 	// matching applies apiLimiter to ALL /api/* routes including the standalone
 	// POST registered above, causing 429 when dashboard polling exhausts the
 	// general budget.
+	apiLimiterSkipPaths := map[string]bool{
+		"/api/feedback/requests": true, // feedback submission has its own feedbackLimiter
+		"/api/me":                true, // user identity — must survive for login to work
+		"/api/version":           true, // version check for update dialog
+	}
+	apiLimiterSkipPrefixes := []string{
+		"/api/github/", // GitHub proxy (updates dialog, contributions list) has its own per-user limiter
+	}
 	apiLimiterWithSkip := func(c *fiber.Ctx) error {
-		if c.Method() == fiber.MethodPost && c.Path() == "/api/feedback/requests" {
+		path := c.Path()
+		if apiLimiterSkipPaths[path] {
 			return c.Next()
+		}
+		for _, prefix := range apiLimiterSkipPrefixes {
+			if strings.HasPrefix(path, prefix) {
+				return c.Next()
+			}
 		}
 		return apiLimiter(c)
 	}
 
 	api := s.app.Group("/api", apiLimiterWithSkip, bodyGuard, csrfGuard, middleware.JWTAuth(s.config.JWTSecret))
 
-	// User identity routes — mounted outside apiLimiter so they survive
-	// the initial card burst that can exhaust the 600/min API budget before
-	// the user even logs in (#10100).
+	// User identity routes — exempt from both apiLimiter (via skip list) and
+	// authLimiter. JWTAuth is sufficient protection. The old authLimiter
+	// (10 req/min) caused login loops: initial page load fires multiple /api/me
+	// calls, exhausting the budget and triggering a 429→redirect→login cycle.
 	user := handlers.NewUserHandler(s.store)
-	s.app.Get("/api/me", authLimiter, bodyGuard, csrfGuard, middleware.JWTAuth(s.config.JWTSecret), user.GetCurrentUser)
-	s.app.Put("/api/me", authLimiter, bodyGuard, csrfGuard, middleware.JWTAuth(s.config.JWTSecret), user.UpdateCurrentUser)
+	s.app.Get("/api/me", bodyGuard, csrfGuard, middleware.JWTAuth(s.config.JWTSecret), user.GetCurrentUser)
+	s.app.Put("/api/me", bodyGuard, csrfGuard, middleware.JWTAuth(s.config.JWTSecret), user.UpdateCurrentUser)
 
 	// GitHub API proxy — keeps PAT server-side, frontend calls /api/github/*
 	githubProxy := handlers.NewGitHubProxyHandler(s.config.GitHubToken, s.store)
