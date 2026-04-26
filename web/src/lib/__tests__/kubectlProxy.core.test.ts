@@ -35,6 +35,7 @@ vi.mock('../constants', () => ({
   LOCAL_AGENT_WS_URL: 'ws://127.0.0.1:8585/ws',
   WS_CONNECT_TIMEOUT_MS: 2500,
   WS_CONNECTION_COOLDOWN_MS: 5000,
+  BACKEND_HEALTH_CHECK_TIMEOUT_MS: 3000,
   KUBECTL_DEFAULT_TIMEOUT_MS: 10_000,
   KUBECTL_EXTENDED_TIMEOUT_MS: 30_000,
   KUBECTL_MAX_TIMEOUT_MS: 45_000,
@@ -42,6 +43,7 @@ vi.mock('../constants', () => ({
   MAX_CONCURRENT_KUBECTL_REQUESTS: 4,
   POD_RESTART_ISSUE_THRESHOLD: 5,
   FOCUS_DELAY_MS: 100,
+  STORAGE_KEY_TOKEN: 'token',
 }))
 
 // ---------------------------------------------------------------------------
