@@ -44,6 +44,21 @@ export function PortalTooltip({ children, content, className = '' }: PortalToolt
     }
   }, [isVisible])
 
+  // Close tooltip on Escape key
+  useEffect(() => {
+    if (!isVisible) return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation()
+        setIsVisible(false)
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [isVisible])
+
   return (
     <>
       <span

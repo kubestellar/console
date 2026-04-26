@@ -108,6 +108,21 @@ function RunDot({ run, guide, isHighlighted, onMouseEnter, onMouseLeave }: {
 
   useEffect(() => () => cancelHide(), [cancelHide])
 
+  // Close popup on Escape key
+  useEffect(() => {
+    if (!showPopup) return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation()
+        setShowPopup(false)
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [showPopup])
+
   const handleDotEnter = () => {
     cancelHide()
     if (dotRef.current) {

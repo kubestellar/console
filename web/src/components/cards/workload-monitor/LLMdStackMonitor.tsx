@@ -157,6 +157,21 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  // Close dropdown on Escape key
+  useEffect(() => {
+    if (!showClusterFilter) return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation()
+        setShowClusterFilter(false)
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [showClusterFilter])
+
   // Filter servers by search and cluster
   const filteredServers = (() => {
     let result = servers
