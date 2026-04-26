@@ -229,7 +229,8 @@ describe('useGitHubRewards', () => {
     })
 
     const callsAfterMount = vi.mocked(global.fetch).mock.calls.length
-    expect(callsAfterMount).toBe(1)
+    // 2 calls: one for rewards (Netlify), one for contributions (local proxy)
+    expect(callsAfterMount).toBe(2)
 
     // Set up the next fetch response
     vi.mocked(global.fetch).mockResolvedValue({
@@ -279,8 +280,11 @@ describe('useGitHubRewards', () => {
       expect(global.fetch).toHaveBeenCalled()
     })
 
-    const fetchUrl = vi.mocked(global.fetch).mock.calls[0][0] as string
-    expect(fetchUrl).toContain('login=octocat')
+    const rewardsCall = vi.mocked(global.fetch).mock.calls.find(
+      c => (c[0] as string).includes('rewards/github'),
+    )
+    expect(rewardsCall).toBeDefined()
+    expect(rewardsCall![0] as string).toContain('login=octocat')
   })
 
   // 9. Authenticated fetch does not send Authorization header (server-side token resolution)
@@ -300,8 +304,12 @@ describe('useGitHubRewards', () => {
       expect(result.current.githubRewards!.total_points).toBe(2000)
     })
 
-    // Verify no Authorization header was sent (hook relies on server-side auth)
-    const fetchInit = vi.mocked(global.fetch).mock.calls[0][1] as RequestInit | undefined
+    // Verify the rewards fetch (Netlify) sends no Authorization header
+    const rewardsCall = vi.mocked(global.fetch).mock.calls.find(
+      c => (c[0] as string).includes('rewards/github'),
+    )
+    expect(rewardsCall).toBeDefined()
+    const fetchInit = rewardsCall![1] as RequestInit | undefined
     const headers = fetchInit?.headers as Record<string, string> | undefined
     expect(headers?.['Authorization']).toBeUndefined()
   })
