@@ -248,6 +248,14 @@ export function GPUTaintFilterControl({
           className="fixed max-h-72 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-dropdown"
           style={{ top: dropdownPos.top, left: dropdownPos.left, width: DROPDOWN_WIDTH_PX }}
           onMouseDown={e => e.stopPropagation()}
+          onKeyDown={(e) => {
+            if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
+            e.preventDefault()
+            const items = e.currentTarget.querySelectorAll<HTMLElement>('button, label')
+            const idx = Array.from(items).indexOf(document.activeElement?.closest('button, label') as HTMLElement)
+            if (e.key === 'ArrowDown') items[Math.min(idx + 1, items.length - 1)]?.focus()
+            else items[Math.max(idx - 1, 0)]?.focus()
+          }}
         >
           <div className="p-1">
             <div className="px-2 py-1.5 text-2xs text-muted-foreground uppercase tracking-wide">

@@ -432,7 +432,16 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
               <span className="hidden @sm:inline">{pricingMode === 'per-cluster' ? t('cards:clusterCosts.perCluster') : t('cards:clusterCosts.uniform')}</span>
             </button>
             {showSettingsMenu && (
-              <div className="absolute top-full left-0 mt-1 w-52 bg-card border border-border rounded-lg shadow-lg z-20 py-2">
+              <div className="absolute top-full left-0 mt-1 w-52 bg-card border border-border rounded-lg shadow-lg z-20 py-2"
+                onKeyDown={(e) => {
+                  if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
+                  e.preventDefault()
+                  const items = e.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled])')
+                  const idx = Array.from(items).indexOf(document.activeElement as HTMLElement)
+                  if (e.key === 'ArrowDown') items[Math.min(idx + 1, items.length - 1)]?.focus()
+                  else items[Math.max(idx - 1, 0)]?.focus()
+                }}
+              >
                 <div className="px-3 py-1.5 text-2xs font-medium text-muted-foreground uppercase tracking-wider">
                   {t('cards:clusterCosts.pricingMode')}
                 </div>
@@ -490,7 +499,16 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
                 <ChevronDown className={`w-3 h-3 text-muted-foreground transition-transform ${showProviderMenu ? 'rotate-180' : ''}`} />
               </button>
               {showProviderMenu && (
-                <div className="absolute top-full left-0 mt-1 w-44 bg-card border border-border rounded-lg shadow-lg z-10 py-1">
+                <div className="absolute top-full left-0 mt-1 w-44 bg-card border border-border rounded-lg shadow-lg z-10 py-1"
+                  onKeyDown={(e) => {
+                    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
+                    e.preventDefault()
+                    const items = e.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled])')
+                    const idx = Array.from(items).indexOf(document.activeElement as HTMLElement)
+                    if (e.key === 'ArrowDown') items[Math.min(idx + 1, items.length - 1)]?.focus()
+                    else items[Math.max(idx - 1, 0)]?.focus()
+                  }}
+                >
                   {(Object.keys(CLOUD_PRICING) as CloudProvider[]).map(provider => (
                     <button
                       key={provider}

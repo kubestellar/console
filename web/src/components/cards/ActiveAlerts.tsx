@@ -284,7 +284,16 @@ export function ActiveAlerts() {
             {showDNDMenu && !dnd.isActive && (
               // Issue 9257 — same hardcoded-dark-hex fix as the snooze menu:
               // use the themed `bg-card` token so light mode isn't broken.
-              <div className="absolute top-full left-0 mt-1 z-50 bg-card border border-border rounded-lg shadow-xl py-1 min-w-[160px]">
+              <div className="absolute top-full left-0 mt-1 z-50 bg-card border border-border rounded-lg shadow-xl py-1 min-w-[160px]"
+                onKeyDown={(e) => {
+                  if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
+                  e.preventDefault()
+                  const items = e.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled])')
+                  const idx = Array.from(items).indexOf(document.activeElement as HTMLElement)
+                  if (e.key === 'ArrowDown') items[Math.min(idx + 1, items.length - 1)]?.focus()
+                  else items[Math.max(idx - 1, 0)]?.focus()
+                }}
+              >
                 {([
                   ['1h', 'For 1 hour'],
                   ['4h', 'For 4 hours'],
