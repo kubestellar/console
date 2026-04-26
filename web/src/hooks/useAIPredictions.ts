@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type {
   AIPrediction,
   AIPredictionsResponse,
@@ -11,7 +11,7 @@ import { setActiveTokenCategory, clearActiveTokenCategory } from './useTokenUsag
 import { fullFetchClusters, clusterCache } from './mcp/shared'
 
 import { LOCAL_AGENT_WS_URL, LOCAL_AGENT_HTTP_URL } from '../lib/constants'
-import { FETCH_DEFAULT_TIMEOUT_MS, AI_PREDICTION_TIMEOUT_MS, UI_FEEDBACK_TIMEOUT_MS, RETRY_DELAY_MS } from '../lib/constants/network'
+import { FETCH_DEFAULT_TIMEOUT_MS, AI_PREDICTION_TIMEOUT_MS, UI_FEEDBACK_TIMEOUT_MS } from '../lib/constants/network'
 
 // WebSocket reconnection with exponential backoff
 const WS_RECONNECT_BASE_DELAY_MS = 2_000  // Base delay for reconnection attempts
@@ -21,6 +21,10 @@ const BACKOFF_JITTER_MAX_MS = 1_000        // Random jitter to avoid thundering 
 
 const AGENT_HTTP_URL = LOCAL_AGENT_HTTP_URL
 const POLL_INTERVAL_MS = 30_000 // Poll every 30 seconds as fallback
+
+// Polling constants for analysis completion detection
+const ANALYSIS_POLL_INTERVAL_MS = 4_000  // Poll for results every 4 seconds after triggering analysis
+const ANALYSIS_MAX_TIMEOUT_MS = 60_000   // Give up waiting after 60 seconds
 
 // Demo mode predictions
 const DEMO_AI_PREDICTIONS: AIPrediction[] = [
@@ -367,7 +371,25 @@ export function useAIPredictions() {
     }
   }, [])
 
-  // Trigger analysis
+  // Ref to track active polling so cleanup on unmount can cancel it
+  const analysisPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const analysisTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (analysisPollRef.current) {
+        clearInterval(analysisPollRef.current)
+        analysisPollRef.current = null
+      }
+      if (analysisTimeoutRef.current) {
+        clearTimeout(analysisTimeoutRef.current)
+        analysisTimeoutRef.current = null
+      }
+    }
+  }, [])
+
+  // Trigger analysis with polling for completion
   const analyze = async (specificProviders?: string[]) => {
     // Generate a stable opId for the lifetime of this analyze call so
     // concurrent analyze() invocations (e.g. from different providers)
@@ -380,15 +402,50 @@ export function useAIPredictions() {
         : `predictions-${Date.now()}-${Math.random().toString(36).slice(2)}`
     setIsAnalyzing(true)
     setActiveTokenCategory(opId, 'predictions')
-    try {
-      await triggerAnalysis(specificProviders)
-      // Wait a bit then fetch results
-      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS))
-      await fetchAIPredictions()
-    } finally {
+
+    const timestampBeforeTrigger = lastAnalyzed ? lastAnalyzed.getTime() : 0
+    const triggered = await triggerAnalysis(specificProviders)
+
+    if (!triggered) {
       setIsAnalyzing(false)
       clearActiveTokenCategory(opId)
+      return
     }
+
+    // Poll until we detect newer predictions or hit the timeout.
+    // A WebSocket `ai_predictions_updated` message will also update
+    // `lastAnalyzed` via the singleton subscriber, so the poll check
+    // will pick that up on its next tick.
+    return new Promise<void>(resolve => {
+      const cleanup = () => {
+        if (analysisPollRef.current) {
+          clearInterval(analysisPollRef.current)
+          analysisPollRef.current = null
+        }
+        if (analysisTimeoutRef.current) {
+          clearTimeout(analysisTimeoutRef.current)
+          analysisTimeoutRef.current = null
+        }
+        setIsAnalyzing(false)
+        clearActiveTokenCategory(opId)
+        resolve()
+      }
+
+      // Max timeout — stop waiting regardless
+      analysisTimeoutRef.current = setTimeout(() => {
+        // One final fetch attempt before giving up
+        fetchAIPredictions().finally(cleanup)
+      }, ANALYSIS_MAX_TIMEOUT_MS)
+
+      // Poll at a regular interval for updated predictions
+      analysisPollRef.current = setInterval(async () => {
+        await fetchAIPredictions()
+        const currentTimestamp = lastAnalyzed ? lastAnalyzed.getTime() : 0
+        if (currentTimestamp > timestampBeforeTrigger) {
+          cleanup()
+        }
+      }, ANALYSIS_POLL_INTERVAL_MS)
+    })
   }
 
   // Check if AI predictions are enabled
