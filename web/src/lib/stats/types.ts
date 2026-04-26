@@ -256,41 +256,8 @@ export const VALUE_COLORS: Record<string, string> = {
 // Format Helpers
 // ============================================================================
 
-/**
- * Format a number with K/M suffix
- */
-export function formatStatNumber(value: number): string {
-  if (value >= 1000000) {
-    return `${(value / 1000000).toFixed(1)}M`
-  }
-  if (value >= 1000) {
-    return `${(value / 1000).toFixed(1)}K`
-  }
-  return value.toString()
-}
-
-import { formatBytes } from '../formatters'
-export { formatBytes }
-
-/**
- * Format percentage values
- */
-export function formatPercent(value: number): string {
-  return `${Math.round(value)}%`
-}
-
-/**
- * Format currency values
- */
-export function formatCurrency(value: number): string {
-  if (value >= 1000000) {
-    return `$${(value / 1000000).toFixed(1)}M`
-  }
-  if (value >= 1000) {
-    return `$${(value / 1000).toFixed(1)}K`
-  }
-  return `$${value.toFixed(2)}`
-}
+import { formatBytes, formatStatNumber, formatPercent, formatCurrency } from '../formatters'
+export { formatBytes, formatStatNumber, formatPercent, formatCurrency }
 
 /**
  * Format duration values

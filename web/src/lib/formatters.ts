@@ -93,6 +93,40 @@ export function formatBytes(
   return `${value.toFixed(decimals)} ${units[i]}`
 }
 
+// ---------------------------------------------------------------------------
+// Numeric formatters
+// ---------------------------------------------------------------------------
+
+const THOUSAND = 1_000
+const MILLION = 1_000_000
+const BILLION = 1_000_000_000
+
+/**
+ * Compact-format a large number: 1 234 → "1.2K", 5 600 000 → "5.6M".
+ * Returns the raw number as a string when it is below 1 000.
+ */
+export function formatStatNumber(value: number): string {
+  if (Math.abs(value) >= BILLION) return `${(value / BILLION).toFixed(1)}B`
+  if (Math.abs(value) >= MILLION) return `${(value / MILLION).toFixed(1)}M`
+  if (Math.abs(value) >= THOUSAND) return `${(value / THOUSAND).toFixed(1)}K`
+  return value.toString()
+}
+
+/** Round a ratio / percentage and append `%`. */
+export function formatPercent(value: number): string {
+  return `${Math.round(value)}%`
+}
+
+/**
+ * Format a monetary value with a `$` prefix.
+ * Large amounts are compacted: $1.2K, $5.6M.
+ */
+export function formatCurrency(value: number): string {
+  if (value >= MILLION) return `$${(value / MILLION).toFixed(1)}M`
+  if (value >= THOUSAND) return `$${(value / THOUSAND).toFixed(1)}K`
+  return `$${value.toFixed(2)}`
+}
+
 /**
  * Format a value already in GB to a smart string, auto-converting to TB when large.
  * Returns { display, tooltip } so callers can show the short form and hover for detail.

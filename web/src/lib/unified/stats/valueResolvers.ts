@@ -9,8 +9,8 @@ import type {
   StatValueSource,
   StatValueFormat,
 } from '../types'
-import { formatBytes } from '../../formatters'
-export { formatBytes }
+import { formatBytes, formatCurrency } from '../../formatters'
+export { formatBytes, formatCurrency }
 
 /**
  * Resolved stat value with metadata
@@ -338,19 +338,6 @@ export function formatNumber(value: number): string | number {
     return `${(value / 1_000).toFixed(1)}K`
   }
   return value
-}
-
-/**
- * Format currency
- */
-export function formatCurrency(value: number): string {
-  if (value >= 1_000_000) {
-    return `$${(value / 1_000_000).toFixed(1)}M`
-  }
-  if (value >= 1_000) {
-    return `$${(value / 1_000).toFixed(1)}K`
-  }
-  return `$${value.toFixed(2)}`
 }
 
 // Time boundary constants (in seconds) for duration formatting
