@@ -77,8 +77,8 @@ export function UserManagement({ config: _config }: UserManagementProps) {
 
   const { drillToRBAC } = useDrillDownActions()
   const { user: currentUser } = useAuth()
-  const { users: allUsers, isLoading: usersLoading, error: usersError, updateUserRole, deleteUser } = useConsoleUsers()
-  const { deduplicatedClusters: allClusters, isLoading: clustersLoading } = useClusters()
+  const { users: allUsers, isLoading: usersLoading, isRefreshing: usersRefreshing, error: usersError, updateUserRole, deleteUser } = useConsoleUsers()
+  const { deduplicatedClusters: allClusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing } = useClusters()
   const { isDemoMode } = useDemoMode()
   // Fetch ALL SAs from ALL clusters upfront, filter locally
   const { serviceAccounts: allServiceAccounts, isLoading: sasInitialLoading } = useAllK8sServiceAccounts(allClusters)
@@ -92,6 +92,7 @@ export function UserManagement({ config: _config }: UserManagementProps) {
   // Report loading state to CardWrapper for skeleton/refresh behavior
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: clustersLoading || usersLoading || sasInitialLoading || openshiftInitialLoading,
+    isRefreshing: usersRefreshing || clustersRefreshing,
     hasAnyData: allClusters.length > 0 || allUsers.length > 0 || allServiceAccounts.length > 0,
     isFailed: Boolean(usersError),
     consecutiveFailures: usersError ? 1 : 0,

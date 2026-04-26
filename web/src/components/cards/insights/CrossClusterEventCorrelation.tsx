@@ -24,7 +24,7 @@ const MAX_TIMELINE_BUCKETS = 30
 const CLUSTER_COLORS = CROSS_CLUSTER_EVENT_PALETTE
 
 export function CrossClusterEventCorrelation() {
-  const { insightsByCategory, isLoading, isDemoData, isFailed, consecutiveFailures } = useMultiClusterInsights()
+  const { insightsByCategory, isLoading, isRefreshing, isDemoData, isFailed, consecutiveFailures } = useMultiClusterInsights()
   const { events: warningEvents } = useCachedWarningEvents()
   const { selectedClusters } = useGlobalFilters()
   const [selectedInsight, setSelectedInsight] = useState<MultiClusterInsight | null>(null)
@@ -38,6 +38,7 @@ export function CrossClusterEventCorrelation() {
   const hasData = correlationInsightsRaw.length > 0 || (warningEvents || []).length > 0
   useCardLoadingState({
     isLoading: isLoading && !hasData,
+    isRefreshing,
     hasAnyData: hasData,
     isDemoData,
     isFailed,

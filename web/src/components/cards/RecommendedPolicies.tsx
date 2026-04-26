@@ -245,9 +245,9 @@ Deploy to ALL clusters with Kyverno installed. Proceed step by step.` },
 
 function RecommendedPoliciesInternal({ config: _config }: CardConfig) {
   const { t } = useTranslation('cards')
-  const { statuses: kyvernoStatuses, isLoading: kyvernoLoading, installed: kyvernoInstalled, isDemoData: kyvernoDemoData, clustersChecked: kyvernoChecked, totalClusters: kyvernoTotal } = useKyverno()
-  const { isLoading: kubescapeLoading, installed: kubescapeInstalled, isDemoData: kubescapeDemoData, clustersChecked: kubescapeChecked, totalClusters: kubescapeTotal } = useKubescape()
-  const { isLoading: trivyLoading, installed: trivyInstalled, isDemoData: trivyDemoData, clustersChecked: trivyChecked, totalClusters: trivyTotal } = useTrivy()
+  const { statuses: kyvernoStatuses, isLoading: kyvernoLoading, isRefreshing: kyvernoRefreshing, installed: kyvernoInstalled, isDemoData: kyvernoDemoData, clustersChecked: kyvernoChecked, totalClusters: kyvernoTotal } = useKyverno()
+  const { isLoading: kubescapeLoading, isRefreshing: kubescapeRefreshing, installed: kubescapeInstalled, isDemoData: kubescapeDemoData, clustersChecked: kubescapeChecked, totalClusters: kubescapeTotal } = useKubescape()
+  const { isLoading: trivyLoading, isRefreshing: trivyRefreshing, installed: trivyInstalled, isDemoData: trivyDemoData, clustersChecked: trivyChecked, totalClusters: trivyTotal } = useTrivy()
   const { deduplicatedClusters, isFailed, consecutiveFailures } = useClusters()
   const { startMission } = useMissions()
   const { selectedClusters } = useGlobalFilters()
@@ -332,7 +332,7 @@ function RecommendedPoliciesInternal({ config: _config }: CardConfig) {
   })()
 
   const hasAnyData = kyvernoInstalled || kubescapeInstalled || trivyInstalled || isDemoData
-  useCardLoadingState({ isLoading: isLoading && !hasAnyData, hasAnyData, isDemoData, isFailed, consecutiveFailures })
+  useCardLoadingState({ isLoading: isLoading && !hasAnyData, isRefreshing: kyvernoRefreshing || kubescapeRefreshing || trivyRefreshing, hasAnyData, isDemoData, isFailed, consecutiveFailures })
 
   const handleDeployAll = () => {
     const gaps = recommendations.filter(r => r.coveredClusters.length < r.eligibleClusters.length)

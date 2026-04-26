@@ -11,8 +11,8 @@ import { useCardLoadingState } from '../CardDataContext'
 // Card 1: AI Issues Overview - Shows issues AI can help fix
 export function ConsoleIssuesCard(_props: ConsoleMissionCardProps) {
   const { startMission, missions } = useMissions()
-  const { issues: allPodIssues, isLoading: podIssuesLoading, isDemoFallback: podsDemoFallback, isFailed: podsFailed, consecutiveFailures: podsFailures } = useCachedPodIssues()
-  const { issues: allDeploymentIssues, isLoading: deployIssuesLoading, isDemoFallback: deploysDemoFallback, isFailed: deploysFailed, consecutiveFailures: deploysFailures } = useCachedDeploymentIssues()
+  const { issues: allPodIssues, isLoading: podIssuesLoading, isRefreshing: podsRefreshing, isDemoFallback: podsDemoFallback, isFailed: podsFailed, consecutiveFailures: podsFailures } = useCachedPodIssues()
+  const { issues: allDeploymentIssues, isLoading: deployIssuesLoading, isRefreshing: deploysRefreshing, isDemoFallback: deploysDemoFallback, isFailed: deploysFailed, consecutiveFailures: deploysFailures } = useCachedDeploymentIssues()
   const { selectedClusters, isAllClustersSelected, customFilter } = useGlobalFilters()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
 
@@ -20,9 +20,12 @@ export function ConsoleIssuesCard(_props: ConsoleMissionCardProps) {
 
   const isLoading = podIssuesLoading || deployIssuesLoading
 
+  const isRefreshing = podsRefreshing || deploysRefreshing
+
   // Report loading state to CardWrapper for skeleton/refresh behavior
   useCardLoadingState({
     isLoading,
+    isRefreshing,
     hasAnyData: allPodIssues.length > 0 || allDeploymentIssues.length > 0 || missions.length > 0,
     isDemoData: podsDemoFallback || deploysDemoFallback,
     isFailed: podsFailed || deploysFailed,

@@ -68,6 +68,7 @@ export interface ClusterDelta {
 export interface UseMultiClusterInsightsResult {
   insights: MultiClusterInsight[]
   isLoading: boolean
+  isRefreshing: boolean
   isDemoData: boolean
   isFailed: boolean
   consecutiveFailures: number

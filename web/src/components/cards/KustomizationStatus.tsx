@@ -101,7 +101,7 @@ function formatTime(timestamp: string) {
 export function KustomizationStatus({ config }: KustomizationStatusProps) {
   const { t } = useTranslation(['cards', 'common'])
   const { isDemoMode: demoMode } = useDemoMode()
-  const { deduplicatedClusters: allClusters, isLoading, isFailed, consecutiveFailures } = useClusters()
+  const { deduplicatedClusters: allClusters, isLoading, isRefreshing, isFailed, consecutiveFailures } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
   const [selectedNamespace, setSelectedNamespace] = useState<string>(config?.namespace || '')
   const {
@@ -129,6 +129,7 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
   // Report loading state to CardWrapper for skeleton/refresh behavior
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,
+    isRefreshing,
     hasAnyData: kustomizationData.length > 0,
     isDemoData: demoMode,
     isFailed,

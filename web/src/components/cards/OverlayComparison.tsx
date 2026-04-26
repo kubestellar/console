@@ -26,7 +26,7 @@ interface OverlayDiff {
 export function OverlayComparison({ config }: OverlayComparisonProps) {
   const { t } = useTranslation()
   const { isDemoMode: demoMode } = useDemoMode()
-  const { deduplicatedClusters: allClusters, isLoading, isFailed, consecutiveFailures } = useClusters()
+  const { deduplicatedClusters: allClusters, isLoading, isRefreshing, isFailed, consecutiveFailures } = useClusters()
   const { drillToKustomization } = useDrillDownActions()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
   const [selectedBase, setSelectedBase] = useState<string>('')
@@ -40,6 +40,7 @@ export function OverlayComparison({ config }: OverlayComparisonProps) {
   // Report state to CardWrapper for refresh animation
   useCardLoadingState({
     isLoading,
+    isRefreshing,
     hasAnyData: allClusters.length > 0,
     isDemoData: demoMode,
     isFailed,

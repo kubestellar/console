@@ -54,8 +54,8 @@ function confidenceFromUsage(usagePct: number): number {
 
 export function PredictiveHealth() {
   const { t } = useTranslation('cards')
-  const { nodes: allNodes, isLoading: nodesLoading, isDemoFallback: nodesDemoFallback, isFailed: nodesFailed, consecutiveFailures: nodesFailures } = useCachedNodes()
-  const { pods: allPods, isLoading: podsLoading, isDemoFallback: podsDemoFallback, isFailed: podsFailed, consecutiveFailures: podsFailures } = useCachedPods()
+  const { nodes: allNodes, isLoading: nodesLoading, isRefreshing: nodesRefreshing, isDemoFallback: nodesDemoFallback, isFailed: nodesFailed, consecutiveFailures: nodesFailures } = useCachedNodes()
+  const { pods: allPods, isLoading: podsLoading, isRefreshing: podsRefreshing, isDemoFallback: podsDemoFallback, isFailed: podsFailed, consecutiveFailures: podsFailures } = useCachedPods()
   const { filterByCluster } = useGlobalFilters()
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
@@ -65,6 +65,7 @@ export function PredictiveHealth() {
   const isLoading = nodesLoading || podsLoading
   const { showSkeleton } = useCardLoadingState({
     isLoading,
+    isRefreshing: nodesRefreshing || podsRefreshing,
     hasAnyData: allNodes.length > 0 || allPods.length > 0,
     isDemoData: nodesDemoFallback || podsDemoFallback,
     isFailed: nodesFailed || podsFailed,

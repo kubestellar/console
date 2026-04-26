@@ -29,6 +29,7 @@ export function CoreDNSStatus({ config }: CoreDNSStatusProps) {
 
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,
+    isRefreshing,
     isDemoData,
     hasAnyData: clusters.length > 0,
     isFailed,

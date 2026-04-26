@@ -788,14 +788,15 @@ const SEVERITY_RANK: Record<InsightSeverity, number> = {
 
 export function useMultiClusterInsights(): UseMultiClusterInsightsResult {
   const { isDemoMode } = useDemoMode()
-  const { deduplicatedClusters, isLoading: clustersLoading, isFailed, consecutiveFailures } = useClusters()
-  const { events, isLoading: eventsLoading, isDemoFallback: eventsDemoFallback } = useCachedEvents()
+  const { deduplicatedClusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, isFailed, consecutiveFailures } = useClusters()
+  const { events, isLoading: eventsLoading, isRefreshing: eventsRefreshing, isDemoFallback: eventsDemoFallback } = useCachedEvents()
   const { events: warningEvents } = useCachedWarningEvents()
-  const { data: deployments, isLoading: deploymentsLoading, isDemoFallback: deploymentsDemoFallback } = useCachedDeployments()
+  const { data: deployments, isLoading: deploymentsLoading, isRefreshing: deploymentsRefreshing, isDemoFallback: deploymentsDemoFallback } = useCachedDeployments()
   const { issues: podIssues, isDemoFallback: podIssuesDemoFallback } = useCachedPodIssues()
 
   const isDemoData = isDemoMode || (eventsDemoFallback && deploymentsDemoFallback && podIssuesDemoFallback)
   const isLoading = clustersLoading || eventsLoading || deploymentsLoading
+  const isRefreshing = clustersRefreshing || eventsRefreshing || deploymentsRefreshing
 
   const insights = (() => {
     if (isDemoData) return getDemoInsights()
@@ -843,6 +844,7 @@ export function useMultiClusterInsights(): UseMultiClusterInsightsResult {
   return {
     insights: enrichedInsights,
     isLoading,
+    isRefreshing,
     isDemoData: !!isDemoData,
     isFailed: !!isFailed,
     consecutiveFailures: consecutiveFailures ?? 0,

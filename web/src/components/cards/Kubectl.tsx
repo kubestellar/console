@@ -36,7 +36,7 @@ export function Kubectl() {
   // #6226: useToast for download error feedback.
   const { showToast } = useToast()
   const { execute } = useKubectl()
-  const { deduplicatedClusters: allClusters, isLoading, isFailed, consecutiveFailures } = useClusters()
+  const { deduplicatedClusters: allClusters, isLoading, isRefreshing, isFailed, consecutiveFailures } = useClusters()
   // Filter to only reachable & healthy clusters — running kubectl against an
   // unreachable cluster just hangs and frustrates the user. The status of
   // every kubeconfig context is already known from the cluster cache, so we
@@ -49,6 +49,7 @@ export function Kubectl() {
   // Report loading state to CardWrapper for skeleton/refresh behavior
   useCardLoadingState({
     isLoading,
+    isRefreshing,
     hasAnyData: clusters.length > 0,
     isDemoData: isDemoMode,
     isFailed,
