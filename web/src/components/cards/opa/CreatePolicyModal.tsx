@@ -8,6 +8,8 @@ import type { GatekeeperStatus, StartMissionFn } from './types'
 import { POLICY_TEMPLATES } from './types'
 import { copyToClipboard } from '../../../lib/clipboard'
 
+const OPA_CREATE_TIMEOUT_MS = 20_000
+
 // Creation flow type for CreatePolicyModal
 type CreateFlow = 'choose' | 'describe' | 'template' | 'yaml'
 
@@ -62,7 +64,7 @@ export function CreatePolicyModal({
       try {
         const podsResult = await kubectlProxy.exec(
           ['get', 'pods', '-A', '-o', 'json'],
-          { context: selectedCluster, timeout: 20000 }
+          { context: selectedCluster, timeout: OPA_CREATE_TIMEOUT_MS }
         )
 
         if (podsResult.output) {

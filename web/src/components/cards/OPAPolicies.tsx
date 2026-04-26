@@ -13,6 +13,9 @@ import { useCardLoadingState, useCardDemoState } from './CardDataContext'
 import { isDemoMode as checkIsDemoMode } from '../../lib/demoMode'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_OPA_CACHE, STORAGE_KEY_OPA_CACHE_TIME } from '../../lib/constants'
+import { KUBECTL_DEFAULT_TIMEOUT_MS } from '../../lib/constants/network'
+
+const OPA_LIST_TIMEOUT_MS = 25_000
 import { safeGetItem, safeGetJSON, safeSetItem, safeSetJSON } from '../../lib/utils/localStorage'
 import { PolicyDetailModal, ClusterOPAModal, CreatePolicyModal } from './opa'
 import type { Policy, GatekeeperStatus, OPAClusterItem } from './opa'
@@ -69,7 +72,7 @@ async function checkGatekeeperInstalled(clusterName: string): Promise<Gatekeeper
   try {
     const nsResult = await kubectlProxy.exec(
       ['get', 'namespace', 'gatekeeper-system', '--ignore-not-found', '-o', 'name'],
-      { context: clusterName, timeout: 25000, priority: true }
+      { context: clusterName, timeout: OPA_LIST_TIMEOUT_MS, priority: true }
     )
     const installed = !!(nsResult.output && nsResult.output.includes('gatekeeper-system'))
     return { cluster: clusterName, installed, loading: installed } // loading=true means details pending
@@ -88,7 +91,7 @@ async function checkGatekeeperDetails(clusterName: string): Promise<GatekeeperSt
       ['get', 'constraints', '-A',
        '-o', 'custom-columns=NAME:.metadata.name,KIND:.kind,ENFORCEMENT:.spec.enforcementAction,VIOLATIONS:.status.totalViolations',
        '--no-headers'],
-      { context: clusterName, timeout: 10000 }
+      { context: clusterName, timeout: KUBECTL_DEFAULT_TIMEOUT_MS }
     ).catch(() => ({ output: '', error: '' }))
 
     const policies: Policy[] = []
@@ -132,7 +135,7 @@ async function checkGatekeeperDetails(clusterName: string): Promise<GatekeeperSt
         const violationsResult = await kubectlProxy.exec(
           ['get', policyWithViolations.kind.toLowerCase(), policyWithViolations.name,
            '-o', 'jsonpath={.status.violations[*]}'],
-          { context: clusterName, timeout: 10000 }
+          { context: clusterName, timeout: KUBECTL_DEFAULT_TIMEOUT_MS }
         )
 
         if (violationsResult.output) {

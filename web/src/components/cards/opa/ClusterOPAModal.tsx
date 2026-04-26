@@ -8,6 +8,7 @@ import { useToast } from '../../ui/Toast'
 import type { Policy, Violation, StartMissionFn } from './types'
 import { POLICY_TEMPLATES } from './types'
 import { copyToClipboard } from '../../../lib/clipboard'
+import { KUBECTL_MEDIUM_TIMEOUT_MS, KUBECTL_EXTENDED_TIMEOUT_MS } from '../../../lib/constants/network'
 
 // Tab type for ClusterOPAModal
 type OPAModalTab = 'policies' | 'violations'
@@ -143,7 +144,7 @@ What would you like to modify about this policy?`,
 
     try {
       // Use priority: true to bypass the queue for immediate execution (interactive user action)
-      const result = await kubectlProxy.exec(cmd, { context: clusterName, timeout: 30000, priority: true })
+      const result = await kubectlProxy.exec(cmd, { context: clusterName, timeout: KUBECTL_EXTENDED_TIMEOUT_MS, priority: true })
 
       if (result.output && result.output.trim()) {
         setYamlContent(result.output)
@@ -193,7 +194,7 @@ Please proceed with applying this policy.`,
     try {
       await kubectlProxy.exec(
         ['patch', policy.kind.toLowerCase(), policy.name, '--type=merge', '-p', `{"spec":{"enforcementAction":"${newMode}"}}`],
-        { context: clusterName, timeout: 15000 }
+        { context: clusterName, timeout: KUBECTL_MEDIUM_TIMEOUT_MS }
       )
       showToast('Policy mode updated successfully', 'success')
       onRefresh()
@@ -208,7 +209,7 @@ Please proceed with applying this policy.`,
     try {
       await kubectlProxy.exec(
         ['delete', policy.kind.toLowerCase(), policy.name],
-        { context: clusterName, timeout: 15000 }
+        { context: clusterName, timeout: KUBECTL_MEDIUM_TIMEOUT_MS }
       )
       setDeleteConfirm(null)
       showToast('Policy deleted successfully', 'success')
