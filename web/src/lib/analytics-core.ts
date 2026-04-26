@@ -804,6 +804,31 @@ export function _resetErrorThrottles() {
   pageErrorCounts.clear()
 }
 
+/**
+ * @internal — exported for test isolation only.
+ * Resets ALL module-level analytics state so tests don't leak state across
+ * files when Vitest runs them in the same worker. Without this, a prior test
+ * file that calls initAnalytics() leaves `initialized = true`, which causes
+ * subsequent initAnalytics() calls to no-op — breaking tests that depend on
+ * a fresh analytics pipeline (e.g. analytics-noise-filters).
+ */
+export function _resetAnalyticsState() {
+  initialized = false
+  userHasInteracted = false
+  analyticsScriptsLoaded = false
+  gtagAvailable = false
+  gtagDecided = false
+  realMeasurementId = ''
+  pendingEvents = []
+  measurementId = ''
+  pageId = ''
+  userId = ''
+  sessionEngaged = false
+  pendingRecoveryEvent = null
+  recentErrorEmissions.clear()
+  pageErrorCounts.clear()
+}
+
 function isErrorThrottled(category: string, page: string, cardId?: string): boolean {
   // Per-page session budget
   const pageCount = pageErrorCounts.get(page) ?? 0

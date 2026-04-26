@@ -26,7 +26,7 @@ vi.mock('../analytics-session', async () => {
 })
 
 import { initAnalytics, startGlobalErrorTracking } from '../analytics'
-import { _resetErrorThrottles } from '../analytics-core'
+import { _resetAnalyticsState } from '../analytics-core'
 
 /* ── Constants ──────────────────────────────────────────────────────── */
 
@@ -68,7 +68,7 @@ describe('GA4 runtime noise filters — window.error handler', () => {
 
   beforeEach(() => {
     vi.useFakeTimers()
-    _resetErrorThrottles()
+    _resetAnalyticsState()
     sendBeaconSpy = vi.fn(() => true)
     Object.defineProperty(navigator, 'sendBeacon', {
       value: sendBeaconSpy,
@@ -128,7 +128,7 @@ describe('GA4 runtime noise filters — unhandledrejection handler', () => {
 
   beforeEach(() => {
     vi.useFakeTimers()
-    _resetErrorThrottles()
+    _resetAnalyticsState()
     sendBeaconSpy = vi.fn(() => true)
     Object.defineProperty(navigator, 'sendBeacon', {
       value: sendBeaconSpy,
