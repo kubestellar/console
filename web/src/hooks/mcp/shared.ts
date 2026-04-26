@@ -208,8 +208,9 @@ function loadClusterCacheFromStorage(): ClusterInfo[] {
 
 function saveClusterCacheToStorage(clusters: ClusterInfo[]) {
   try {
-    // Only save clusters with meaningful data
-    const toSave = clusters.filter(c => c.name).map(c => ({
+    // Only save clusters with meaningful data; exclude auto-generated names with slashes
+    // (e.g. OpenShift context paths like "api-cluster.example.com:6443/user")
+    const toSave = clusters.filter(c => c.name && !c.name.includes('/')).map(c => ({
       name: c.name,
       context: c.context,
       server: c.server,
