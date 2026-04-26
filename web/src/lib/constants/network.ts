@@ -107,6 +107,16 @@ export const KUBECTL_EXTENDED_TIMEOUT_MS = 30_000
 export const KUBECTL_MAX_TIMEOUT_MS = 45_000
 
 // ============================================================================
+// CRD Discovery Timeouts (shared by useKyverno, useTrivy, useKubescape, etc.)
+// ============================================================================
+
+/** Timeout for checking whether a CRD exists on a cluster */
+export const CRD_CHECK_TIMEOUT_MS = 8_000
+
+/** Timeout for fetching data after CRD presence is confirmed */
+export const CRD_DATA_FETCH_TIMEOUT_MS = 30_000
+
+// ============================================================================
 // API & Health Check Timeouts
 // ============================================================================
 

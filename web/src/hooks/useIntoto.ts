@@ -19,14 +19,7 @@ import { useDemoMode } from './useDemoMode'
 import { registerRefetch, registerCacheReset, unregisterCacheReset } from '../lib/modeTransition'
 import { STORAGE_KEY_INTOTO_CACHE, STORAGE_KEY_INTOTO_CACHE_TIME } from '../lib/constants/storage'
 import { DEFAULT_REFRESH_INTERVAL_MS as REFRESH_INTERVAL_MS } from '../lib/constants'
-
-/** Refresh interval for automatic polling (2 minutes) */
-
-/** Timeout for CRD existence check (fast — missing resources fail instantly) */
-const CRD_CHECK_TIMEOUT_MS = 8_000
-
-/** Timeout for layout and link data fetch */
-const DATA_FETCH_TIMEOUT_MS = 30_000
+import { CRD_CHECK_TIMEOUT_MS, CRD_CRD_DATA_FETCH_TIMEOUT_MS } from '../lib/constants/network'
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -259,7 +252,7 @@ async function fetchSingleCluster(cluster: string): Promise<IntotoClusterStatus>
     // Phase 2: Fetch Layouts
     const layoutResult = await kubectlProxy.exec(
       ['get', 'layouts.in-toto.io', '-A', '-o', 'json'],
-      { context: cluster, timeout: DATA_FETCH_TIMEOUT_MS }
+      { context: cluster, timeout: CRD_DATA_FETCH_TIMEOUT_MS }
     )
 
     if (layoutResult.exitCode !== 0) {
@@ -297,7 +290,7 @@ async function fetchSingleCluster(cluster: string): Promise<IntotoClusterStatus>
     // Phase 3: Fetch Links to back-populate step verification status
     const linkResult = await kubectlProxy.exec(
       ['get', 'links.in-toto.io', '-A', '-o', 'json'],
-      { context: cluster, timeout: DATA_FETCH_TIMEOUT_MS }
+      { context: cluster, timeout: CRD_DATA_FETCH_TIMEOUT_MS }
     )
 
     if (linkResult.exitCode === 0 && linkResult.output) {

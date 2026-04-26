@@ -18,18 +18,7 @@ import { useDemoMode } from './useDemoMode'
 import { registerRefetch, registerCacheReset, unregisterCacheReset } from '../lib/modeTransition'
 import { STORAGE_KEY_KUBESCAPE_CACHE, STORAGE_KEY_KUBESCAPE_CACHE_TIME } from '../lib/constants/storage'
 import { DEFAULT_REFRESH_INTERVAL_MS as REFRESH_INTERVAL_MS } from '../lib/constants'
-
-/** Refresh interval for automatic polling (2 minutes) */
-
-/** Cache TTL: 2 minutes — matches refresh interval */
-// Unused after stale-while-revalidate change: const CACHE_TTL_MS = 120_000
-
-/** Timeout for CRD/API existence check (fast — missing resources fail instantly) */
-const CRD_CHECK_TIMEOUT_MS = 8_000
-
-/** Timeout for data fetch — large clusters (vllm-d has 4155 items, 6MB JSON)
- *  need extra time when queued behind other kubectl requests */
-const DATA_FETCH_TIMEOUT_MS = 30_000
+import { CRD_CHECK_TIMEOUT_MS, CRD_CRD_DATA_FETCH_TIMEOUT_MS } from '../lib/constants/network'
 
 /** Default overall score for demo clusters */
 const DEMO_OVERALL_SCORE = 78
@@ -194,7 +183,7 @@ async function fetchSingleCluster(cluster: string): Promise<KubescapeClusterStat
 
     const scanResult = await kubectlProxy.exec(
       ['get', 'workloadconfigurationscansummaries', '-A', '-o', 'json'],
-      { context: cluster, timeout: DATA_FETCH_TIMEOUT_MS }
+      { context: cluster, timeout: CRD_DATA_FETCH_TIMEOUT_MS }
     )
 
     if (scanResult.exitCode !== 0) {
@@ -223,7 +212,7 @@ async function fetchSingleCluster(cluster: string): Promise<KubescapeClusterStat
     const controlResults = new Map<string, { name: string; passed: number; failed: number }>()
     const detailResult = await kubectlProxy.exec(
       ['get', 'workloadconfigurationscans', '-A', '-o', 'json', '--chunk-size=50'],
-      { context: cluster, timeout: DATA_FETCH_TIMEOUT_MS }
+      { context: cluster, timeout: CRD_DATA_FETCH_TIMEOUT_MS }
     )
 
     if (detailResult.exitCode === 0 && detailResult.output) {

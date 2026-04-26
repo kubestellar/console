@@ -18,17 +18,7 @@ import { useDemoMode } from './useDemoMode'
 import { registerRefetch, registerCacheReset, unregisterCacheReset } from '../lib/modeTransition'
 import { STORAGE_KEY_TRIVY_CACHE, STORAGE_KEY_TRIVY_CACHE_TIME } from '../lib/constants/storage'
 import { DEFAULT_REFRESH_INTERVAL_MS as REFRESH_INTERVAL_MS } from '../lib/constants'
-
-/** Refresh interval for automatic polling (2 minutes) */
-
-/** Cache TTL: 2 minutes — matches refresh interval */
-// Unused after stale-while-revalidate change: const CACHE_TTL_MS = 120_000
-
-/** Timeout for CRD existence check (fast — missing resources fail instantly) */
-const CRD_CHECK_TIMEOUT_MS = 8_000
-
-/** Timeout for data fetch */
-const DATA_FETCH_TIMEOUT_MS = 30_000
+import { CRD_CHECK_TIMEOUT_MS, CRD_CRD_DATA_FETCH_TIMEOUT_MS } from '../lib/constants/network'
 
 /** Maximum images to store per cluster to keep cache size reasonable */
 const MAX_IMAGES_PER_CLUSTER = 50
@@ -169,7 +159,7 @@ async function fetchSingleCluster(cluster: string): Promise<TrivyClusterStatus> 
     // Phase 2: Fetch VulnerabilityReports
     const result = await kubectlProxy.exec(
       ['get', 'vulnerabilityreports', '-A', '-o', 'json'],
-      { context: cluster, timeout: DATA_FETCH_TIMEOUT_MS }
+      { context: cluster, timeout: CRD_DATA_FETCH_TIMEOUT_MS }
     )
 
     if (result.exitCode !== 0) {

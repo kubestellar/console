@@ -18,17 +18,7 @@ import { useDemoMode } from './useDemoMode'
 import { registerRefetch, registerCacheReset, unregisterCacheReset } from '../lib/modeTransition'
 import { STORAGE_KEY_KYVERNO_CACHE, STORAGE_KEY_KYVERNO_CACHE_TIME } from '../lib/constants/storage'
 import { DEFAULT_REFRESH_INTERVAL_MS as REFRESH_INTERVAL_MS } from '../lib/constants'
-
-/** Refresh interval for automatic polling (2 minutes) */
-
-/** Cache TTL: 2 minutes — matches refresh interval */
-// Unused after stale-while-revalidate change: const CACHE_TTL_MS = 120_000
-
-/** Timeout for CRD existence check (fast — missing resources fail instantly) */
-const CRD_CHECK_TIMEOUT_MS = 8_000
-
-/** Timeout for data fetch */
-const DATA_FETCH_TIMEOUT_MS = 30_000
+import { CRD_CHECK_TIMEOUT_MS, CRD_CRD_DATA_FETCH_TIMEOUT_MS } from '../lib/constants/network'
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -195,7 +185,7 @@ async function fetchSingleCluster(cluster: string): Promise<KyvernoClusterStatus
 
     const cpResult = await kubectlProxy.exec(
       ['get', 'clusterpolicies', '-o', 'json'],
-      { context: cluster, timeout: DATA_FETCH_TIMEOUT_MS }
+      { context: cluster, timeout: CRD_DATA_FETCH_TIMEOUT_MS }
     )
 
     if (cpResult.exitCode !== 0) {
@@ -224,7 +214,7 @@ async function fetchSingleCluster(cluster: string): Promise<KyvernoClusterStatus
     // Fetch namespaced Policies
     const pResult = await kubectlProxy.exec(
       ['get', 'policies', '-A', '-o', 'json'],
-      { context: cluster, timeout: DATA_FETCH_TIMEOUT_MS }
+      { context: cluster, timeout: CRD_DATA_FETCH_TIMEOUT_MS }
     )
 
     if (pResult.exitCode === 0 && pResult.output) {
@@ -248,7 +238,7 @@ async function fetchSingleCluster(cluster: string): Promise<KyvernoClusterStatus
     const reports: KyvernoPolicyReport[] = []
     const reportResult = await kubectlProxy.exec(
       ['get', 'policyreports', '-A', '-o', 'json'],
-      { context: cluster, timeout: DATA_FETCH_TIMEOUT_MS }
+      { context: cluster, timeout: CRD_DATA_FETCH_TIMEOUT_MS }
     )
 
     let totalViolations = 0
@@ -284,7 +274,7 @@ async function fetchSingleCluster(cluster: string): Promise<KyvernoClusterStatus
     // Also check ClusterPolicyReports
     const clusterReportResult = await kubectlProxy.exec(
       ['get', 'clusterpolicyreports', '-o', 'json'],
-      { context: cluster, timeout: DATA_FETCH_TIMEOUT_MS }
+      { context: cluster, timeout: CRD_DATA_FETCH_TIMEOUT_MS }
     )
 
     if (clusterReportResult.exitCode === 0 && clusterReportResult.output) {
