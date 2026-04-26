@@ -6,6 +6,7 @@ import { kubectlProxy } from '../../lib/kubectlProxy'
 import { registerCacheReset, triggerAllRefetches } from '../../lib/modeTransition'
 import { resetFailuresForCluster, resetAllCacheFailures } from '../../lib/cache'
 import { hostnameEndsWith, hostnameContainsLabel } from '../../lib/utils/urlHostname'
+import { appendWsAuthToken } from '../../lib/utils/wsAuth'
 import {
   LOCAL_AGENT_HTTP_URL,
   MCP_HOOK_TIMEOUT_MS,
@@ -865,7 +866,7 @@ export function connectSharedWebSocket() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
     const wsUrl = `${protocol}//${window.location.host}/ws`
 
-    const ws = new WebSocket(wsUrl)
+    const ws = new WebSocket(appendWsAuthToken(wsUrl))
 
     ws.onopen = () => {
       // Guard against race condition where onclose fires before onopen
