@@ -131,6 +131,10 @@ type Store interface {
 	// GetUserFeatureRequests returns a user's feature requests, newest first.
 	// #6601: limit/offset required. Pass 0 for limit to use the store default.
 	GetUserFeatureRequests(ctx context.Context, userID uuid.UUID, limit, offset int) ([]models.FeatureRequest, error)
+	// CountUserPendingFeatureRequests returns the number of a user's feature
+	// requests that are still untriaged (status = open or needs_triage).
+	// #10174: lets the handler tell the frontend about pending submissions.
+	CountUserPendingFeatureRequests(ctx context.Context, userID uuid.UUID) (int, error)
 	// GetAllFeatureRequests returns the global feature-request table, newest first.
 	// #6602: limit/offset required; admin dashboard uses a smaller default (100)
 	// because this is hit on every dashboard load. Pass 0 for limit to use the

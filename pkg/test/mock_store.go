@@ -132,6 +132,9 @@ func (m *MockStore) GetFeatureRequestByPRNumber(ctx context.Context, prNumber in
 func (m *MockStore) GetUserFeatureRequests(ctx context.Context, userID uuid.UUID, limit, offset int) ([]models.FeatureRequest, error) {
 	return nil, nil
 }
+func (m *MockStore) CountUserPendingFeatureRequests(ctx context.Context, userID uuid.UUID) (int, error) {
+	return 0, nil
+}
 func (m *MockStore) GetAllFeatureRequests(ctx context.Context, limit, offset int) ([]models.FeatureRequest, error) {
 	return nil, nil
 }

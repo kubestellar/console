@@ -1527,6 +1527,17 @@ func (s *SQLiteStore) GetUserFeatureRequests(ctx context.Context, userID uuid.UU
 	return requests, rows.Err()
 }
 
+// CountUserPendingFeatureRequests returns how many of the user's submissions
+// are still untriaged (open or needs_triage). #10174
+func (s *SQLiteStore) CountUserPendingFeatureRequests(ctx context.Context, userID uuid.UUID) (int, error) {
+	var count int
+	err := s.db.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM feature_requests WHERE user_id = ? AND status IN (?, ?)`,
+		userID.String(), string(models.RequestStatusOpen), string(models.RequestStatusNeedsTriage),
+	).Scan(&count)
+	return count, err
+}
+
 // GetAllFeatureRequests returns a single page of feature_requests, newest
 // first. Callers that need to walk the full table must page by passing
 // successive offsets; this function never returns more than `limit` rows

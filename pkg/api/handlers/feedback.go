@@ -431,7 +431,24 @@ func (h *FeedbackHandler) ListFeatureRequests(c *fiber.Ctx) error {
 		}
 	}
 
-	return c.JSON(triaged)
+	// #10174: Count untriaged submissions so the frontend can distinguish
+	// "no submissions" from "submissions pending review".
+	pendingReview, err := h.store.CountUserPendingFeatureRequests(c.UserContext(), userID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "Failed to count pending feature requests")
+	}
+
+	type listResponse struct {
+		Items         []models.FeatureRequest `json:"items"`
+		Total         int                     `json:"total"`
+		PendingReview int                     `json:"pending_review"`
+	}
+
+	return c.JSON(listResponse{
+		Items:         triaged,
+		Total:         len(triaged) + pendingReview,
+		PendingReview: pendingReview,
+	})
 }
 
 // GitHubIssue represents an issue from GitHub API
