@@ -2,6 +2,28 @@
  * Utility functions for formatting values for display
  */
 
+import { MS_PER_SECOND, SECONDS_PER_MINUTE, MINUTES_PER_HOUR } from './constants/time'
+
+/**
+ * Format the elapsed time between two ISO timestamps as a compact string.
+ * Used by ProwJob listings to display run duration.
+ */
+export function formatProwDuration(startTime: string, endTime?: string): string {
+  const start = new Date(startTime)
+  const end = endTime ? new Date(endTime) : new Date()
+  const diffMs = end.getTime() - start.getTime()
+
+  if (diffMs < 0) return '-'
+
+  const seconds = Math.floor(diffMs / MS_PER_SECOND)
+  const minutes = Math.floor(seconds / SECONDS_PER_MINUTE)
+  const hours = Math.floor(minutes / MINUTES_PER_HOUR)
+
+  if (hours > 0) return `${hours}h ${minutes % MINUTES_PER_HOUR}m`
+  if (minutes > 0) return `${minutes}m`
+  return `${seconds}s`
+}
+
 /**
  * Parse Kubernetes resource quantity strings (e.g., "16077540Ki", "4Gi", "500Mi")
  * and convert to bytes

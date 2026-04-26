@@ -7,7 +7,7 @@
 
 import { useCache, type RefreshCategory, type CachedHookResult } from '../lib/cache'
 import { kubectlProxy } from '../lib/kubectlProxy'
-import { formatTimeAgo } from '../lib/formatters'
+import { formatTimeAgo, formatProwDuration } from '../lib/formatters'
 import { KUBECTL_EXTENDED_TIMEOUT_MS } from '../lib/constants/network'
 import { MS_PER_HOUR } from '../lib/constants/time'
 import type { ProwJob, ProwStatus } from './useProw'
@@ -61,22 +61,6 @@ interface ProwJobResource {
   }
 }
 
-function formatDuration(startTime: string, endTime?: string): string {
-  const start = new Date(startTime)
-  const end = endTime ? new Date(endTime) : new Date()
-  const diffMs = end.getTime() - start.getTime()
-
-  if (diffMs < 0) return '-'
-
-  const seconds = Math.floor(diffMs / 1000)
-  const minutes = Math.floor(seconds / 60)
-  const hours = Math.floor(minutes / 60)
-
-  if (hours > 0) return `${hours}h ${minutes % 60}m`
-  if (minutes > 0) return `${minutes}m`
-  return `${seconds}s`
-}
-
 export { formatTimeAgo }
 
 /** @internal Exported for use in `lib/prefetchCardData.ts` specialtyFetchers */
@@ -115,7 +99,7 @@ export async function fetchProwJobs(prowCluster: string, namespace: string): Pro
         cluster: prowCluster,
         startTime,
         completionTime,
-        duration: state === 'pending' || state === 'triggered' ? '-' : formatDuration(startTime, completionTime),
+        duration: state === 'pending' || state === 'triggered' ? '-' : formatProwDuration(startTime, completionTime),
         pr: pj.spec.refs?.pulls?.[0]?.number,
         url: pj.status.url,
         buildId: pj.status.build_id || pj.metadata.labels?.['prow.k8s.io/build-id'],
