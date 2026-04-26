@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"sort"
 	"sync"
 	"time"
 )
@@ -163,25 +164,40 @@ func (r *Registry) SetSelectedAgent(sessionID, agentName string) error {
 		return fmt.Errorf("provider %s is not available", agentName)
 	}
 
-	// Evict the least-recently-used entry when map exceeds a safety cap to
+	// Batch-evict the oldest entries when map exceeds a safety cap to
 	// prevent unbounded growth from sessions that never call
-	// RemoveSelectedAgent (#7209, #10063).
+	// RemoveSelectedAgent (#7209, #10063, #10163).
+	//
+	// Instead of evicting one entry per insert (O(N) scan every time),
+	// we evict the oldest 5% in a single pass. The O(N) cost is amortized
+	// across ~evictBatchSize subsequent inserts.
 	const maxSelectedAgentEntries = 10000
+	const evictBatchDivisor = 20 // 1/20 = 5%
 	if len(r.selectedAgent) >= maxSelectedAgentEntries {
-		var oldestKey string
-		var oldestTime time.Time
-		var foundOldest bool
-		for k, t := range r.selectedAgentLRU {
-			if !foundOldest || t.Before(oldestTime) {
-				oldestKey = k
-				oldestTime = t
-				foundOldest = true
+		evictBatchSize := maxSelectedAgentEntries / evictBatchDivisor
+		if evictBatchSize < 1 {
+			evictBatchSize = 1
+		}
+
+		timestamps := make([]time.Time, 0, len(r.selectedAgentLRU))
+		for _, ts := range r.selectedAgentLRU {
+			timestamps = append(timestamps, ts)
+		}
+		sort.Slice(timestamps, func(i, j int) bool {
+			return timestamps[i].Before(timestamps[j])
+		})
+
+		cutoff := timestamps[evictBatchSize-1]
+		evicted := 0
+		for k, ts := range r.selectedAgentLRU {
+			if !ts.After(cutoff) {
+				delete(r.selectedAgent, k)
+				delete(r.selectedAgentLRU, k)
+				evicted++
 			}
 		}
-		if foundOldest {
-			delete(r.selectedAgent, oldestKey)
-			delete(r.selectedAgentLRU, oldestKey)
-		}
+		slog.Debug("[Registry] batch-evicted stale sessions",
+			"evicted", evicted, "remaining", len(r.selectedAgent))
 	}
 
 	r.selectedAgent[sessionID] = agentName
