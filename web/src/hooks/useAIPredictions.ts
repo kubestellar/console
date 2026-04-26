@@ -18,6 +18,7 @@ const WS_RECONNECT_BASE_DELAY_MS = 2_000  // Base delay for reconnection attempt
 const WS_RECONNECT_MAX_DELAY_MS = 30_000   // Maximum delay between reconnection attempts
 const MAX_WS_RECONNECT_ATTEMPTS = 5        // Maximum reconnection attempts before giving up
 const BACKOFF_JITTER_MAX_MS = 1_000        // Random jitter to avoid thundering herd
+const DEGRADED_RECONNECT_INTERVAL_MS = 60_000 // Slow retry interval after exhausting initial attempts
 
 const AGENT_HTTP_URL = LOCAL_AGENT_HTTP_URL
 const POLL_INTERVAL_MS = 30_000 // Poll every 30 seconds as fallback
@@ -60,7 +61,9 @@ let wsConnected = false
 let ws: WebSocket | null = null
 let singletonPollInterval: ReturnType<typeof setInterval> | null = null
 let wsReconnectTimeout: ReturnType<typeof setTimeout> | null = null
+let degradedRetryInterval: ReturnType<typeof setInterval> | null = null
 let wsReconnectAttempts = 0  // Track current reconnect attempt number
+let inDegradedMode = false   // True when initial reconnect attempts exhausted
 const subscribers = new Set<() => void>()
 
 /**
@@ -79,6 +82,58 @@ function getBackoffDelay(attempt: number): number {
 // Notify all subscribers
 function notifySubscribers() {
   subscribers.forEach(fn => fn())
+}
+
+/**
+ * Reset WebSocket reconnect state so the next attempt uses fast exponential backoff.
+ * Called when evidence suggests the backend is reachable again (e.g. successful HTTP fetch).
+ */
+function resetWsReconnect(): void {
+  wsReconnectAttempts = 0
+  inDegradedMode = false
+  if (degradedRetryInterval) {
+    clearInterval(degradedRetryInterval)
+    degradedRetryInterval = null
+  }
+}
+
+/**
+ * Start degraded-mode reconnection: slow periodic retry after initial attempts are exhausted.
+ */
+function startDegradedReconnect(): void {
+  if (degradedRetryInterval) return
+  inDegradedMode = true
+  console.warn('[AIPredictions] Entering degraded reconnect mode — retrying every 60s')
+  degradedRetryInterval = setInterval(() => {
+    if (subscribers.size === 0) {
+      // No active subscribers — stop degraded retry
+      resetWsReconnect()
+      return
+    }
+    if (!ws && !wsReconnectTimeout) {
+      console.debug('[AIPredictions] Degraded-mode reconnect attempt')
+      connectWebSocket()
+    }
+  }, DEGRADED_RECONNECT_INTERVAL_MS)
+}
+
+/**
+ * Manually trigger a WebSocket reconnection attempt.
+ * Resets the backoff counter so fast reconnection is tried immediately.
+ */
+function reconnectWebSocket(): void {
+  resetWsReconnect()
+  if (wsReconnectTimeout) {
+    clearTimeout(wsReconnectTimeout)
+    wsReconnectTimeout = null
+  }
+  if (ws) {
+    ws.onclose = null
+    ws.close()
+    ws = null
+    wsConnected = false
+  }
+  connectWebSocket()
 }
 
 /**
@@ -142,6 +197,13 @@ async function fetchAIPredictions(): Promise<void> {
       reportAgentDataSuccess()
       const data: AIPredictionsResponse = await response.json()
 
+      // Successful HTTP fetch means backend is reachable — reset WS reconnect
+      // so it retries with fast backoff if currently in degraded mode.
+      if (inDegradedMode && !wsConnected) {
+        resetWsReconnect()
+        connectWebSocket()
+      }
+
       // Filter by confidence threshold
       const settings = getPredictionSettings()
       aiPredictions = data.predictions.filter(p => p.confidence >= settings.minConfidence)
@@ -184,8 +246,8 @@ function connectWebSocket(): void {
 
     ws.onopen = () => {
       wsConnected = true
-      // Reset reconnect attempts on successful connection
-      wsReconnectAttempts = 0
+      // Reset reconnect attempts and degraded mode on successful connection
+      resetWsReconnect()
       // Send current settings to backend
       if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({
@@ -226,7 +288,8 @@ function connectWebSocket(): void {
       if (subscribers.size > 0) {
         // Check if we've exceeded max reconnect attempts
         if (wsReconnectAttempts >= MAX_WS_RECONNECT_ATTEMPTS) {
-          console.warn('[AIPredictions] Max reconnect attempts exceeded, giving up')
+          // Switch to degraded mode instead of permanently giving up
+          startDegradedReconnect()
           return
         }
 
@@ -303,6 +366,11 @@ function stopSingleton() {
     clearTimeout(wsReconnectTimeout)
     wsReconnectTimeout = null
   }
+  if (degradedRetryInterval) {
+    clearInterval(degradedRetryInterval)
+    degradedRetryInterval = null
+  }
+  inDegradedMode = false
   if (ws) {
     ws.onclose = null // Prevent reconnect from onclose handler
     ws.close()
@@ -402,7 +470,8 @@ export function useAIPredictions() {
     isEnabled,
     providers: activeProviders,
     analyze,
-    refresh: fetchAIPredictions
+    refresh: fetchAIPredictions,
+    reconnect: reconnectWebSocket
   }
 }
 
