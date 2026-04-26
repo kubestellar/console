@@ -8,7 +8,7 @@
 
 import { createContext, use, useState, useEffect, type ReactNode } from 'react'
 import { DEFAULT_BRANDING, mergeBranding, type BrandingConfig } from '../lib/branding'
-import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
+import { FETCH_DEFAULT_TIMEOUT_MS, suppressLocalAgent } from '../lib/constants/network'
 import { updateAnalyticsIds } from '../lib/analytics'
 
 const BrandingContext = createContext<BrandingConfig>(DEFAULT_BRANDING)
@@ -47,6 +47,13 @@ export function BrandingProvider({ children }: BrandingProviderProps) {
             ga4MeasurementId: merged.ga4MeasurementId,
             umamiWebsiteId: merged.umamiWebsiteId,
           })
+        }
+        // Suppress local kc-agent connections when backend reports
+        // no_local_agent (in-cluster Helm deployments where no local
+        // kc-agent exists). This is the runtime counterpart of the
+        // build-time VITE_NO_LOCAL_AGENT env var.
+        if (!cancelled && data.no_local_agent === true) {
+          suppressLocalAgent(true)
         }
       } catch {
         // Intentionally silent — branding is non-critical.

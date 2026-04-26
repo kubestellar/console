@@ -160,6 +160,12 @@ type Config struct {
 	// KubaraCatalogPath is the directory path inside the repo containing
 	// Helm chart subdirectories. Defaults to the standard Kubara path.
 	KubaraCatalogPath string
+	// NoLocalAgent suppresses the frontend's local kc-agent connections
+	// (ws://127.0.0.1:8585). Set to true for in-cluster deployments
+	// (Helm/Kubernetes) where no local kc-agent exists on the user's machine.
+	// Exposed via /health as "no_local_agent" so the pre-built frontend image
+	// can detect this at runtime without requiring a VITE_NO_LOCAL_AGENT rebuild.
+	NoLocalAgent bool
 	// Watchdog support: when set, the backend listens on this port instead of Port
 	BackendPort int
 }
@@ -597,11 +603,16 @@ func (s *Server) setupRoutes() {
 			// If no cached health data yet, keep "ok" — health poller hasn't run yet
 		}
 
+		// Suppress local kc-agent connections when explicitly configured
+		// (NO_LOCAL_AGENT=true) or auto-detected as running in-cluster.
+		noLocalAgent := s.config.NoLocalAgent || inCluster
+
 		resp := fiber.Map{
 			"status":           healthStatus,
 			"version":          Version,
 			"oauth_configured": s.oauthConfigured(),
 			"in_cluster":       inCluster,
+			"no_local_agent":   noLocalAgent,
 			"install_method":   detectInstallMethod(inCluster),
 			"project":          s.config.ConsoleProject,
 			"branding": fiber.Map{
@@ -1783,6 +1794,8 @@ func LoadConfigFromEnv() Config {
 		BrandIssuesURL:    getEnvOrDefault("ISSUES_URL", "https://github.com/kubestellar/kubestellar/issues/new"),
 		BrandRepoURL:      getEnvOrDefault("REPO_URL", "https://github.com/kubestellar/console"),
 		BrandHostedDomain: getEnvOrDefault("HOSTED_DOMAIN", "console.kubestellar.io"),
+		// Suppress local kc-agent connections in in-cluster deployments
+		NoLocalAgent: os.Getenv("NO_LOCAL_AGENT") == "true",
 		// Watchdog backend port override
 		BackendPort: backendPort,
 	}

@@ -22,18 +22,58 @@ const _isNetlify = typeof window !== 'undefined' && (
 )
 
 /**
- * WebSocket URL for the local kc-agent.
- * On Netlify, uses a syntactically-valid but unroutable URL so that `new WebSocket(url)`
- * never throws (Safari throws TypeError for empty/invalid URLs). The connection simply
- * fails via `onerror`, which all consumers already handle.
+ * Whether the local kc-agent should be suppressed.
+ * True on Netlify deployments, or when VITE_NO_LOCAL_AGENT is set at build time,
+ * or when the backend reports no_local_agent via /health (in-cluster deployments).
+ *
+ * The build-time VITE_NO_LOCAL_AGENT covers custom builds (e.g. CI, Docker).
+ * The runtime flag (set via suppressLocalAgent()) covers pre-built images
+ * deployed in-cluster where Vite env vars cannot be injected at runtime.
  */
-export const LOCAL_AGENT_WS_URL = _isNetlify ? 'ws://localhost:1/disabled' : 'ws://127.0.0.1:8585/ws'
+let _suppressAgent = _isNetlify || import.meta.env.VITE_NO_LOCAL_AGENT === 'true'
+
+/**
+ * Called by the BrandingProvider after fetching /health to suppress agent
+ * connections at runtime (e.g. in-cluster Helm deployments that ship a
+ * pre-built frontend image where VITE_NO_LOCAL_AGENT cannot be set).
+ *
+ * Once called with `true`, the agent URLs are permanently disabled for
+ * the lifetime of the page — there is no "un-suppress" path.
+ */
+export function suppressLocalAgent(suppress: boolean): void {
+  if (suppress && !_suppressAgent) {
+    _suppressAgent = true
+    // Update the mutable URLs so any future reads get the suppressed values
+    LOCAL_AGENT_WS_URL = AGENT_WS_DISABLED_URL
+    LOCAL_AGENT_HTTP_URL = ''
+  }
+}
+
+/** Check whether the local agent is suppressed (build-time or runtime). */
+export function isLocalAgentSuppressed(): boolean {
+  return _suppressAgent
+}
+
+/** Syntactically-valid but unroutable WS URL used when the agent is suppressed.
+ * Safari throws TypeError for empty/invalid URLs in `new WebSocket(url)`,
+ * so this ensures the constructor succeeds but the connection simply fails
+ * via `onerror`, which all consumers already handle. */
+const AGENT_WS_DISABLED_URL = 'ws://localhost:1/disabled'
+
+/**
+ * WebSocket URL for the local kc-agent.
+ * Suppressed (unroutable) when running on Netlify, in-cluster, or with
+ * VITE_NO_LOCAL_AGENT=true. The connection fails via `onerror`, which
+ * all consumers already handle.
+ */
+export let LOCAL_AGENT_WS_URL = _suppressAgent ? AGENT_WS_DISABLED_URL : 'ws://127.0.0.1:8585/ws'
 
 /**
  * HTTP URL for the local kc-agent.
- * Empty on Netlify — fetch calls become relative URLs (e.g. '/settings'), which 404 silently.
+ * Empty when suppressed — fetch calls become relative URLs (e.g. '/settings'),
+ * which 404 silently.
  */
-export const LOCAL_AGENT_HTTP_URL = _isNetlify ? '' : 'http://127.0.0.1:8585'
+export let LOCAL_AGENT_HTTP_URL = _suppressAgent ? '' : 'http://127.0.0.1:8585'
 
 /** Default backend URL — empty string means same-origin relative URL.
  * This ensures API requests work in deployed environments (custom domain,
