@@ -22,6 +22,8 @@ import {
 } from '../../../lib/constants/network'
 import type { AgentInfo } from '../../../types/agent'
 
+const CONNECTING_DEBOUNCE_MS = 300
+
 export function AgentStatusIndicator() {
   const { t } = useTranslation(['common'])
   const {
@@ -105,7 +107,7 @@ export function AgentStatusIndicator() {
       // Don't immediately show "connecting" — wait 300ms to confirm it's real
       connectingTimerRef.current = setTimeout(() => {
         setStableStatus('connecting')
-      }, 300)
+      }, CONNECTING_DEBOUNCE_MS)
     } else {
       // Any non-connecting status applies immediately
       if (connectingTimerRef.current) clearTimeout(connectingTimerRef.current)

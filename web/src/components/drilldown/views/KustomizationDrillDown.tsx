@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import type { Condition } from '../../../types/mcs'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { useMissions } from '../../../hooks/useMissions'
@@ -55,21 +56,6 @@ interface InventoryEntryRaw {
   v?: string
 }
 
-interface Condition {
-  type: string
-  status: string
-  reason?: string
-  message?: string
-  lastTransitionTime?: string
-}
-
-interface ConditionRaw {
-  type: string
-  status: string
-  reason?: string
-  message?: string
-  lastTransitionTime?: string
-}
 
 export function KustomizationDrillDown({ data }: Props) {
   const { t } = useTranslation()
@@ -192,7 +178,7 @@ export function KustomizationDrillDown({ data }: Props) {
 
         // Get conditions
         const conds = ks.status?.conditions || []
-        setConditions(conds.map((c: ConditionRaw) => ({
+        setConditions(conds.map((c: Condition) => ({
           type: c.type,
           status: c.status,
           reason: c.reason,
