@@ -36,7 +36,7 @@ const FeatureRequestModal = lazy(() =>
   import('../feedback/FeatureRequestModal').then(m => ({ default: m.FeatureRequestModal }))
 )
 import { LOADING_TIMEOUT_MS, SKELETON_DELAY_MS, INITIAL_RENDER_TIMEOUT_MS, TICK_INTERVAL_MS, CARD_LOADING_TIMEOUT_MS, MIN_SKELETON_DISPLAY_MS } from '../../lib/constants/network'
-import { SECONDS_PER_MINUTE, MINUTES_PER_HOUR, HOURS_PER_DAY } from '../../lib/constants/time'
+import { formatTimeAgo } from '../../lib/formatters'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import { copyToClipboard } from '../../lib/clipboard'
 
@@ -83,10 +83,7 @@ const ONE_HOUR_MS = 60 * 60 * 1000
 
 // ---------------------------------------------------------------------------
 // Relative-time formatting for the card header "last updated" label.
-// Named constants (not magic numbers) so every threshold is explicit.
 // ---------------------------------------------------------------------------
-/** Fallback when the timestamp isn't a valid Date — prevents "NaNd" (#9095) */
-const INVALID_TIMESTAMP_LABEL = 'Unknown'
 /**
  * Re-render interval for the "last updated" label in ms. When SSE refresh
  * fails, the card's lastUpdated prop is frozen at the last successful fetch,
@@ -94,24 +91,6 @@ const INVALID_TIMESTAMP_LABEL = 'Unknown'
  * One minute is enough resolution for an "Xm/Xh/Xd" label and is cheap.
  */
 const LAST_UPDATED_TICK_MS = 60_000
-
-// Format relative time (e.g., "2m", "1h", "5d")
-function formatTimeAgo(date: Date): string {
-  // Guard against invalid Date values (e.g. `new Date('')` → NaN getTime()).
-  // Without this, every downstream Math.floor produced NaN and the UI showed
-  // "NaNm" / "NaNd" in the CardWrapper header (#9095).
-  const ts = date?.getTime?.()
-  if (ts === undefined || Number.isNaN(ts)) return INVALID_TIMESTAMP_LABEL
-
-  const seconds = Math.floor((Date.now() - ts) / 1000)
-  if (seconds < SECONDS_PER_MINUTE) return 'now'
-  const minutes = Math.floor(seconds / SECONDS_PER_MINUTE)
-  if (minutes < MINUTES_PER_HOUR) return `${minutes}m`
-  const hours = Math.floor(minutes / MINUTES_PER_HOUR)
-  if (hours < HOURS_PER_DAY) return `${hours}h`
-  const days = Math.floor(hours / HOURS_PER_DAY)
-  return `${days}d`
-}
 
 interface PendingSwap {
   newType: string
@@ -1082,7 +1061,7 @@ export function CardWrapper({
                     : 'text-2xs text-muted-foreground'
                   return (
                     <span className={className} title={title}>
-                      {formatTimeAgo(effectiveLastUpdated)}
+                      {formatTimeAgo(effectiveLastUpdated, { compact: true, invalidLabel: 'Unknown' })}
                     </span>
                   )
                 })()}

@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useImperativeHandle, memo, type Ref } from 'react'
 import { GitPullRequest, GitBranch, Star, Users, Package, TrendingUp, AlertCircle, Clock, CheckCircle, XCircle, GitMerge, Settings, X, Plus, Check } from 'lucide-react'
 import { POLL_INTERVAL_SLOW_MS } from '../../lib/constants/network'
+import { formatTimeAgo } from '../../lib/formatters'
 import { Button } from '../ui/Button'
 import { Skeleton } from '../ui/Skeleton'
 import { useDemoMode } from '../../hooks/useDemoMode'
@@ -105,22 +106,6 @@ const TIME_RANGES = [
   { value: '90d' as const, label: '90 Days' },
   { value: '1y' as const, label: '1 Year' },
 ]
-
-// Utility functions
-function formatTimeAgo(date: string): string {
-  const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000)
-  if (seconds < 60) return 'just now'
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes}m ago`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  if (days < 30) return `${days}d ago`
-  const months = Math.floor(days / 30)
-  if (months < 12) return `${months}mo ago`
-  const years = Math.floor(months / 12)
-  return `${years}y ago`
-}
 
 function isStale(date: string, days: number = 30): boolean {
   const ageInDays = (Date.now() - new Date(date).getTime()) / (1000 * 60 * 60 * 24)
@@ -454,7 +439,7 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
           setOpenIssueCount(cached.openIssueCount)
           setLastRefresh(new Date(cached.timestamp))
           // Show warning that we're using cached data
-          setError(`Using cached data (${formatTimeAgo(new Date(cached.timestamp).toISOString())}). ${errorMessage}`)
+          setError(`Using cached data (${formatTimeAgo(new Date(cached.timestamp).toISOString(), { extended: true })}). ${errorMessage}`)
           return
         }
       } catch {
@@ -1177,9 +1162,9 @@ const PRItem = memo(function PRItem({ pr }: { pr: GitHubPR }) {
               <img src={pr.user.avatar_url} alt={pr.user.login} className="w-4 h-4 rounded-full" />
               {pr.user.login}
             </span>
-            <span className="flex items-center gap-1" title={`Updated ${formatTimeAgo(pr.updated_at)}`}>
+            <span className="flex items-center gap-1" title={`Updated ${formatTimeAgo(pr.updated_at, { extended: true })}`}>
               <Clock className="w-3 h-3" />
-              {formatTimeAgo(pr.updated_at)}
+              {formatTimeAgo(pr.updated_at, { extended: true })}
             </span>
           </div>
         </div>
@@ -1234,9 +1219,9 @@ const IssueItem = memo(function IssueItem({ issue }: { issue: GitHubIssue }) {
               <img src={issue.user.avatar_url} alt={issue.user.login} className="w-4 h-4 rounded-full" />
               {issue.user.login}
             </span>
-            <span className="flex items-center gap-1" title={`Updated ${formatTimeAgo(issue.updated_at)}`}>
+            <span className="flex items-center gap-1" title={`Updated ${formatTimeAgo(issue.updated_at, { extended: true })}`}>
               <Clock className="w-3 h-3" />
-              {formatTimeAgo(issue.updated_at)}
+              {formatTimeAgo(issue.updated_at, { extended: true })}
             </span>
             {issue.comments > 0 && (
               <span title={`${issue.comments} ${t('cards:github.comments')}`}>{issue.comments} {t('cards:github.comments')}</span>
@@ -1272,7 +1257,7 @@ const ReleaseItem = memo(function ReleaseItem({ release }: { release: GitHubRele
             <span>{release.author.login}</span>
             <span className="flex items-center gap-1">
               <Clock className="w-3 h-3" />
-              {formatTimeAgo(release.published_at)}
+              {formatTimeAgo(release.published_at, { extended: true })}
             </span>
           </div>
         </div>

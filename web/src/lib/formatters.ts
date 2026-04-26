@@ -165,6 +165,8 @@ export function formatK8sStorage(value: string): string {
 const MS_PER_MINUTE = 60_000
 const MS_PER_HOUR = 60 * MS_PER_MINUTE
 const MS_PER_DAY = 24 * MS_PER_HOUR
+const MS_PER_MONTH = 30 * MS_PER_DAY
+const MS_PER_YEAR = 365 * MS_PER_DAY
 
 function toTimestamp(input: string | Date | number): number {
   if (typeof input === 'number') return input
@@ -172,18 +174,38 @@ function toTimestamp(input: string | Date | number): number {
   return new Date(input).getTime()
 }
 
+export interface FormatTimeAgoOptions {
+  /** Omit the " ago" suffix (e.g. "5m" instead of "5m ago"). */
+  compact?: boolean
+  /** Include month/year ranges for older timestamps (default: false — stops at days). */
+  extended?: boolean
+  /** Label returned when the input is invalid/NaN (default: "just now"). */
+  invalidLabel?: string
+}
+
 /**
  * Format a timestamp as relative time (e.g., "just now", "5m ago", "3h ago", "2d ago").
  * Accepts an ISO string, Date object, or epoch millisecond number.
  */
-export function formatTimeAgo(input: string | Date | number): string {
-  const diff = Date.now() - toTimestamp(input)
-  if (isNaN(diff) || diff < 0) return 'just now'
+export function formatTimeAgo(input: string | Date | number, opts: FormatTimeAgoOptions = {}): string {
+  const { compact = false, extended = false, invalidLabel = 'just now' } = opts
+  const suffix = compact ? '' : ' ago'
 
-  if (diff < MS_PER_MINUTE) return 'just now'
-  if (diff < MS_PER_HOUR) return `${Math.floor(diff / MS_PER_MINUTE)}m ago`
-  if (diff < MS_PER_DAY) return `${Math.floor(diff / MS_PER_HOUR)}h ago`
-  return `${Math.floor(diff / MS_PER_DAY)}d ago`
+  const ts = toTimestamp(input)
+  const diff = Date.now() - ts
+  if (isNaN(diff) || diff < 0) return compact ? 'now' : invalidLabel
+
+  if (diff < MS_PER_MINUTE) return compact ? 'now' : 'just now'
+  if (diff < MS_PER_HOUR) return `${Math.floor(diff / MS_PER_MINUTE)}m${suffix}`
+  if (diff < MS_PER_DAY) return `${Math.floor(diff / MS_PER_HOUR)}h${suffix}`
+
+  if (extended) {
+    if (diff < MS_PER_MONTH) return `${Math.floor(diff / MS_PER_DAY)}d${suffix}`
+    if (diff < MS_PER_YEAR) return `${Math.floor(diff / MS_PER_MONTH)}mo${suffix}`
+    return `${Math.floor(diff / MS_PER_YEAR)}y${suffix}`
+  }
+
+  return `${Math.floor(diff / MS_PER_DAY)}d${suffix}`
 }
 
 /** @deprecated Use {@link formatTimeAgo} instead. */

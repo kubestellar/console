@@ -18,7 +18,8 @@ import { loadSavedFeeds, saveFeeds, getCachedFeed, cacheFeed } from './storage'
 import { DynamicCardErrorBoundary } from '../DynamicCardErrorBoundary'
 import {
   parseRSSFeed, stripHTML, decodeHTMLEntities,
-  isValidThumbnail, normalizeRedditLink, formatTimeAgo } from './RSSParser'
+  isValidThumbnail, normalizeRedditLink } from './RSSParser'
+import { formatTimeAgo } from '../../../lib/formatters'
 import { useTranslation } from 'react-i18next'
 import { TOAST_DISMISS_MS } from '../../../lib/constants/network'
 import { hostnameEndsWith } from '../../../lib/utils/urlHostname'
@@ -744,7 +745,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
             onClick={() => fetchFeed(true)}
             disabled={isRefreshing}
             className="p-1.5 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
-            title={lastRefresh ? `Refresh (last: ${formatTimeAgo(lastRefresh)})` : t('common:common.refresh')}
+            title={lastRefresh ? `Refresh (last: ${formatTimeAgo(lastRefresh, { compact: true, extended: true })})` : t('common:common.refresh')}
           >
             <RefreshCw className={cn('w-4 h-4', isRefreshing && 'animate-spin')} />
           </button>
@@ -1382,7 +1383,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
                     {item.pubDate && (
                       <span className="flex items-center gap-0.5">
                         <Clock className="w-3 h-3" />
-                        {formatTimeAgo(item.pubDate)}
+                        {formatTimeAgo(item.pubDate, { compact: true, extended: true })}
                       </span>
                     )}
 
