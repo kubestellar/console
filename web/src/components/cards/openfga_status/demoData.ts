@@ -20,6 +20,8 @@
  * fetcher will pick up live data automatically with no component changes.
  */
 
+import { MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY } from '../../../lib/constants/time'
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -121,15 +123,13 @@ const DEMO_MODEL_TYPES_INTERNAL = 5
 const DEMO_MODEL_TYPES_PARTNER = 3
 const DEMO_MODEL_TYPES_SANDBOX = 2
 
-// Timestamps (milliseconds before "now").
-const FIVE_MINUTES_MS = 5 * 60 * 1000
-const THIRTY_MINUTES_MS = 30 * 60 * 1000
-const TWO_HOURS_MS = 2 * 60 * 60 * 1000
-const SIX_HOURS_MS = 6 * 60 * 60 * 1000
-const ONE_DAY_MS = 24 * 60 * 60 * 1000
-const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000
-const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000
-const TWO_WEEKS_MS = 14 * 24 * 60 * 60 * 1000
+const FIVE_MINUTES_MS = 5 * MS_PER_MINUTE
+const THIRTY_MINUTES_MS = 30 * MS_PER_MINUTE
+const TWO_HOURS_MS = 2 * MS_PER_HOUR
+const SIX_HOURS_MS = 6 * MS_PER_HOUR
+const THREE_DAYS_MS = 3 * MS_PER_DAY
+const ONE_WEEK_MS = 7 * MS_PER_DAY
+const TWO_WEEKS_MS = 14 * MS_PER_DAY
 
 // ---------------------------------------------------------------------------
 // Demo data — shown when OpenFGA is not installed or in demo mode
@@ -189,7 +189,7 @@ const DEMO_MODELS: OpenfgaAuthorizationModel[] = [
     storeName: 'internal-tools',
     schemaVersion: '1.1',
     typeCount: DEMO_MODEL_TYPES_INTERNAL,
-    createdAt: new Date(Date.now() - ONE_DAY_MS).toISOString(),
+    createdAt: new Date(Date.now() - MS_PER_DAY).toISOString(),
   },
   {
     id: '01HZXS0A00000000INTERNAL0',

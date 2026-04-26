@@ -6,12 +6,7 @@
  * live timeline API is unavailable.
  */
 
-// ---------------------------------------------------------------------------
-// Time constants
-// ---------------------------------------------------------------------------
-const ONE_MINUTE_MS = 60_000
-const ONE_HOUR_MS = 60 * ONE_MINUTE_MS
-const ONE_DAY_MS = 24 * ONE_HOUR_MS
+import { MS_PER_DAY } from '../../../lib/constants/time'
 
 // ---------------------------------------------------------------------------
 // Demo clusters
@@ -94,7 +89,7 @@ export function getDemoTimelineEvents(): TimelineEvent[] {
   const events: TimelineEvent[] = []
 
   for (let i = 0; i < DEMO_EVENT_COUNT; i++) {
-    const offsetMs = (i / DEMO_EVENT_COUNT) * ONE_DAY_MS
+    const offsetMs = (i / DEMO_EVENT_COUNT) * MS_PER_DAY
     const cluster = DEMO_CLUSTERS[seededIndex(i, DEMO_CLUSTERS.length)]
     const eventType = EVENT_TYPES[seededIndex(i + 3, EVENT_TYPES.length)]
     const namespace = DEMO_NAMESPACES[seededIndex(i + 7, DEMO_NAMESPACES.length)]
@@ -116,4 +111,3 @@ export function getDemoTimelineEvents(): TimelineEvent[] {
   return events
 }
 
-export { ONE_HOUR_MS }

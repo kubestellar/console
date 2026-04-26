@@ -79,7 +79,8 @@ function pushEscapeHandler(close: () => void): () => void {
   }
 }
 
-/** One hour in milliseconds — default snooze duration for card swaps */
+/** Default snooze duration for card swaps */
+const DEFAULT_SNOOZE_MS = MS_PER_HOUR
 
 // ---------------------------------------------------------------------------
 // Relative-time formatting for the card header "last updated" label.
@@ -796,7 +797,7 @@ export function CardWrapper({
     return () => clearInterval(interval)
   }, [pendingSwap, onSwap])
 
-  const handleSnooze = (durationMs: number = MS_PER_HOUR) => {
+  const handleSnooze = (durationMs: number = DEFAULT_SNOOZE_MS) => {
     if (!pendingSwap || !cardId) return
 
     snoozeSwap({
@@ -1503,7 +1504,7 @@ export function CardWrapper({
                   <Button
                     variant="secondary"
                     size="sm"
-                    onClick={() => handleSnooze(MS_PER_HOUR)}
+                    onClick={() => handleSnooze(DEFAULT_SNOOZE_MS)}
                     className="rounded"
                     title={t('cardWrapper.snoozeTooltip')}
                   >

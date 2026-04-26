@@ -16,7 +16,7 @@ import { useState, useEffect } from 'react'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { registerDataHook } from './card/hooks/useDataSource'
 import { SHORT_DELAY_MS } from '../constants/network'
-import { MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY } from '../constants/time'
+import { MS_PER_SECOND, MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY } from '../constants/time'
 import {
   useCachedPodIssues,
   useCachedEvents,
@@ -81,9 +81,7 @@ import { useCachedVitess } from '../../hooks/useCachedVitess'
 import { useCachedWasmcloud } from '../../hooks/useCachedWasmcloud'
 import { useCachedVolcano } from '../../hooks/useCachedVolcano'
 
-// Named time-offset constants for demo/mock data timestamps.
-// Raw ms literals are forbidden by the "No Magic Numbers" rule in CLAUDE.md.
-const THIRTY_SECONDS_MS = 30 * 1000
+const THIRTY_SECONDS_MS = 30 * MS_PER_SECOND
 const TWO_MINUTES_MS = 2 * MS_PER_MINUTE
 const THREE_MINUTES_MS = 3 * MS_PER_MINUTE
 const FOUR_MINUTES_MS = 4 * MS_PER_MINUTE

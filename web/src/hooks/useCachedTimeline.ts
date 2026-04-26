@@ -5,18 +5,14 @@ import { authFetch } from '../lib/api'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import {
   getDemoTimelineEvents,
-  ONE_HOUR_MS,
   type TimelineEvent,
 } from '../components/cards/change_timeline/demoData'
+import { MS_PER_DAY } from '../lib/constants/time'
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
 const CACHE_KEY_TIMELINE = 'change_timeline_events'
 const TIMELINE_CATEGORY: RefreshCategory = 'realtime'
 
-/** Default time range for the timeline: 24 hours. */
-const DEFAULT_RANGE_MS = 24 * ONE_HOUR_MS
+const DEFAULT_RANGE_MS = MS_PER_DAY
 
 const INITIAL_DATA: TimelineEvent[] = []
 

@@ -15,14 +15,11 @@ import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { cn } from '../../../lib/cn'
 import { Skeleton } from '../../ui/Skeleton'
 import type { TimelineEventType, TimelineEvent } from './demoData'
+import { MS_PER_HOUR, MS_PER_DAY } from '../../../lib/constants/time'
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-const ONE_HOUR_MS = 3_600_000
-const SIX_HOURS_MS = 6 * ONE_HOUR_MS
-const TWENTY_FOUR_HOURS_MS = 24 * ONE_HOUR_MS
-const SEVEN_DAYS_MS = 7 * 24 * ONE_HOUR_MS
+const SIX_HOURS_MS = 6 * MS_PER_HOUR
+const TWENTY_FOUR_HOURS_MS = MS_PER_DAY
+const SEVEN_DAYS_MS = 7 * MS_PER_DAY
 
 interface RangeOption {
   labelKey: 'cards:changeTimeline.range1h' | 'cards:changeTimeline.range6h' | 'cards:changeTimeline.range24h' | 'cards:changeTimeline.range7d'
@@ -30,7 +27,7 @@ interface RangeOption {
 }
 
 const RANGE_OPTIONS: RangeOption[] = [
-  { labelKey: 'cards:changeTimeline.range1h', ms: ONE_HOUR_MS },
+  { labelKey: 'cards:changeTimeline.range1h', ms: MS_PER_HOUR },
   { labelKey: 'cards:changeTimeline.range6h', ms: SIX_HOURS_MS },
   { labelKey: 'cards:changeTimeline.range24h', ms: TWENTY_FOUR_HOURS_MS },
   { labelKey: 'cards:changeTimeline.range7d', ms: SEVEN_DAYS_MS },

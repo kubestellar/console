@@ -8,6 +8,7 @@ import { Skeleton, SkeletonStats } from '../ui/Skeleton'
 import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { useCardLoadingState } from './CardDataContext'
 import { useDemoMode } from '../../hooks/useDemoMode'
+import { MS_PER_MINUTE } from '../../lib/constants/time'
 import { CardClusterFilter } from '../../lib/cards/CardComponents'
 import { useTranslation } from 'react-i18next'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
@@ -39,7 +40,7 @@ const TIME_RANGE_OPTIONS_KEYS: { value: TimeRange; labelKey: TimeRangeTranslatio
 // Group events by time buckets
 function groupEventsByTime(events: Array<{ type: string; lastSeen?: string; firstSeen?: string; count: number }>, bucketMinutes = 5, numBuckets = 12): TimePoint[] {
   const now = Date.now()
-  const bucketMs = bucketMinutes * 60 * 1000
+  const bucketMs = bucketMinutes * MS_PER_MINUTE
 
   // Initialize buckets
   const buckets: TimePoint[] = []

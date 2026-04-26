@@ -18,6 +18,8 @@
  * will pick up live data automatically with no component changes.
  */
 
+import { MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY } from '../../../lib/constants/time'
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -179,11 +181,8 @@ const PG_MIN_SMALL = 2
 const PG_MIN_MEDIUM = 4
 const PG_MIN_LARGE = 8
 
-// Relative timestamps (ms before "now") for demo createdAt values
-const FIVE_MINUTES_MS = 5 * 60 * 1000
-const ONE_HOUR_MS = 60 * 60 * 1000
-const SIX_HOURS_MS = 6 * 60 * 60 * 1000
-const ONE_DAY_MS = 24 * 60 * 60 * 1000
+const FIVE_MINUTES_MS = 5 * MS_PER_MINUTE
+const SIX_HOURS_MS = 6 * MS_PER_HOUR
 
 // ---------------------------------------------------------------------------
 // Demo data — shown when Volcano is not installed or in demo mode
@@ -245,7 +244,7 @@ const DEMO_JOBS: VolcanoJob[] = [
     totalPods: JOB_TOTAL_PODS_LARGE,
     gpuRequest: JOB_GPU_LARGE,
     cluster: DEMO_CLUSTER_SECONDARY,
-    createdAt: new Date(Date.now() - ONE_HOUR_MS).toISOString(),
+    createdAt: new Date(Date.now() - MS_PER_HOUR).toISOString(),
   },
   {
     name: 'bert-finetune-042',
@@ -293,7 +292,7 @@ const DEMO_JOBS: VolcanoJob[] = [
     totalPods: JOB_TOTAL_PODS_SMALL,
     gpuRequest: JOB_GPU_NONE,
     cluster: DEMO_CLUSTER_PRIMARY,
-    createdAt: new Date(Date.now() - ONE_DAY_MS).toISOString(),
+    createdAt: new Date(Date.now() - MS_PER_DAY).toISOString(),
   },
   {
     name: 'llama-eval-007',
@@ -317,7 +316,7 @@ const DEMO_JOBS: VolcanoJob[] = [
     totalPods: JOB_TOTAL_PODS_SMALL,
     gpuRequest: JOB_GPU_SMALL,
     cluster: DEMO_CLUSTER_PRIMARY,
-    createdAt: new Date(Date.now() - ONE_HOUR_MS).toISOString(),
+    createdAt: new Date(Date.now() - MS_PER_HOUR).toISOString(),
   },
 ]
 

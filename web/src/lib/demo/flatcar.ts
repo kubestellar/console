@@ -19,6 +19,8 @@
  * automatically with no component changes.
  */
 
+import { MS_PER_MINUTE, MS_PER_HOUR } from '../constants/time'
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -76,11 +78,10 @@ const DEMO_PRIOR_STABLE = '3975.2.1'
 const DEMO_PRIOR_BETA = '4011.0.0'
 const DEMO_TOTAL_CLUSTERS = 2
 
-// Last-check timestamps (milliseconds before "now")
-const FIVE_MINUTES_MS = 5 * 60 * 1000
-const FIFTEEN_MINUTES_MS = 15 * 60 * 1000
-const THIRTY_MINUTES_MS = 30 * 60 * 1000
-const TWO_HOURS_MS = 2 * 60 * 60 * 1000
+const FIVE_MINUTES_MS = 5 * MS_PER_MINUTE
+const FIFTEEN_MINUTES_MS = 15 * MS_PER_MINUTE
+const THIRTY_MINUTES_MS = 30 * MS_PER_MINUTE
+const TWO_HOURS_MS = 2 * MS_PER_HOUR
 
 // ---------------------------------------------------------------------------
 // Demo nodes — 6 total:

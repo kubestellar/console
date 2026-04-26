@@ -7,7 +7,7 @@ import { useChartFilters } from '../../lib/cards/cardHooks'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { useDemoMode } from '../../hooks/useDemoMode'
-import { MS_PER_SECOND, SECONDS_PER_MINUTE, MINUTES_PER_HOUR } from '../../lib/constants/time'
+import { MS_PER_SECOND, MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY } from '../../lib/constants/time'
 
 type TimeRange = '15m' | '1h' | '6h' | '24h'
 
@@ -19,27 +19,19 @@ type TimeRange = '15m' | '1h' | '6h' | '24h'
 // (fixes issue #6048).
 const MAX_HISTORY_POINTS = 60                                                  // buffer cap (points)
 const MAX_HISTORY_DURATION_MS = MAX_HISTORY_POINTS * CLUSTER_POLL_INTERVAL_MS  // max wall-clock span of buffer
-const MIN_POINT_SPACING_MS = 30 * 1000                                         // min delta between recorded points (30s)
-const MINUTES_15 = 15
-const HOURS_1 = 1
-const HOURS_6 = 6
-const HOURS_24 = 24
-const FIFTEEN_MIN_MS = MINUTES_15 * SECONDS_PER_MINUTE * MS_PER_SECOND
-const ONE_HOUR_MS = HOURS_1 * MINUTES_PER_HOUR * SECONDS_PER_MINUTE * MS_PER_SECOND
-const SIX_HOURS_MS = HOURS_6 * MINUTES_PER_HOUR * SECONDS_PER_MINUTE * MS_PER_SECOND
-const TWENTY_FOUR_HOURS_MS = HOURS_24 * MINUTES_PER_HOUR * SECONDS_PER_MINUTE * MS_PER_SECOND
+const MIN_POINT_SPACING_MS = 30 * MS_PER_SECOND
+const FIFTEEN_MIN_MS = 15 * MS_PER_MINUTE
+const SIX_HOURS_MS = 6 * MS_PER_HOUR
+const TWENTY_FOUR_HOURS_MS = MS_PER_DAY
 
-// Sub-interval values for legacy TIME_RANGE_KEYS entries (kept for any
-// downstream consumer that still reads them). Values are illustrative only
-// and are not used for filtering the buffer itself.
 const LEGACY_15M_POINTS = 15
-const LEGACY_15M_INTERVAL_MS = 60 * MS_PER_SECOND         // 1 minute
+const LEGACY_15M_INTERVAL_MS = MS_PER_MINUTE
 const LEGACY_1H_POINTS = 20
-const LEGACY_1H_INTERVAL_MS = 180 * MS_PER_SECOND         // 3 minutes
+const LEGACY_1H_INTERVAL_MS = 3 * MS_PER_MINUTE
 const LEGACY_6H_POINTS = 24
-const LEGACY_6H_INTERVAL_MS = 900 * MS_PER_SECOND         // 15 minutes
+const LEGACY_6H_INTERVAL_MS = 15 * MS_PER_MINUTE
 const LEGACY_24H_POINTS = 24
-const LEGACY_24H_INTERVAL_MS = 3600 * MS_PER_SECOND       // 1 hour
+const LEGACY_24H_INTERVAL_MS = MS_PER_HOUR
 
 const TIME_RANGE_KEYS: Array<{
   value: TimeRange
@@ -53,7 +45,7 @@ const TIME_RANGE_KEYS: Array<{
   rangeMs: number
 }> = [
   { value: '15m', labelKey: 'clusterMetrics.timeRange15m', points: LEGACY_15M_POINTS, intervalMs: LEGACY_15M_INTERVAL_MS, rangeMs: FIFTEEN_MIN_MS },
-  { value: '1h', labelKey: 'clusterMetrics.timeRange1h', points: LEGACY_1H_POINTS, intervalMs: LEGACY_1H_INTERVAL_MS, rangeMs: ONE_HOUR_MS },
+  { value: '1h', labelKey: 'clusterMetrics.timeRange1h', points: LEGACY_1H_POINTS, intervalMs: LEGACY_1H_INTERVAL_MS, rangeMs: MS_PER_HOUR },
   { value: '6h', labelKey: 'clusterMetrics.timeRange6h', points: LEGACY_6H_POINTS, intervalMs: LEGACY_6H_INTERVAL_MS, rangeMs: SIX_HOURS_MS },
   { value: '24h', labelKey: 'clusterMetrics.timeRange24h', points: LEGACY_24H_POINTS, intervalMs: LEGACY_24H_INTERVAL_MS, rangeMs: TWENTY_FOUR_HOURS_MS },
 ]
@@ -68,7 +60,7 @@ export const SUPPORTED_TIME_RANGE_KEYS = TIME_RANGE_KEYS.filter(
 
 const TIME_RANGE_MS: Record<TimeRange, number> = {
   '15m': FIFTEEN_MIN_MS,
-  '1h': ONE_HOUR_MS,
+  '1h': MS_PER_HOUR,
   '6h': SIX_HOURS_MS,
   '24h': TWENTY_FOUR_HOURS_MS,
 }

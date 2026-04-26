@@ -18,6 +18,8 @@
  * fetcher will pick up live data automatically with no component changes.
  */
 
+import { MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY } from '../../../lib/constants/time'
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -82,10 +84,8 @@ const TTL_FOUR_HOURS_SECONDS = 14400
 const TTL_TWELVE_HOURS_SECONDS = 43200
 const TTL_ONE_DAY_SECONDS = 86400
 
-// Federated-bundle refresh timestamps (milliseconds before "now")
-const TEN_MINUTES_MS = 10 * 60 * 1000
-const TWO_HOURS_MS = 2 * 60 * 60 * 1000
-const ONE_DAY_MS = 24 * 60 * 60 * 1000
+const TEN_MINUTES_MS = 10 * MS_PER_MINUTE
+const TWO_HOURS_MS = 2 * MS_PER_HOUR
 
 // ---------------------------------------------------------------------------
 // Demo data — shown when SPIFFE/SPIRE is not installed or in demo mode
@@ -151,7 +151,7 @@ const DEMO_FEDERATED_DOMAINS: SpiffeFederatedDomain[] = [
     trustDomain: 'edge.example.org',
     bundleEndpoint: 'https://spire-edge.example.org/bundle',
     status: 'pending',
-    lastRefresh: new Date(Date.now() - ONE_DAY_MS).toISOString(),
+    lastRefresh: new Date(Date.now() - MS_PER_DAY).toISOString(),
   },
 ]
 
