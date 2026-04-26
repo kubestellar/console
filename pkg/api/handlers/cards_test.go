@@ -276,6 +276,8 @@ type cardMutationStore struct {
 	updateErr      error
 	updateCalled   bool
 	lastUpdate     *models.Card
+	moveErr        error
+	moveCalled     bool
 }
 
 func (s *cardMutationStore) GetDashboard(_ context.Context, id uuid.UUID) (*models.Dashboard, error) {
@@ -309,6 +311,11 @@ func (s *cardMutationStore) UpdateCard(_ context.Context, card *models.Card) err
 	s.updateCalled = true
 	s.lastUpdate = card
 	return s.updateErr
+}
+
+func (s *cardMutationStore) MoveCardWithLimit(_ context.Context, _ uuid.UUID, _ uuid.UUID, _ int) error {
+	s.moveCalled = true
+	return s.moveErr
 }
 
 // newCardMutationApp wires a CardHandler backed by cardMutationStore, with
@@ -389,6 +396,7 @@ func TestMoveCard_RejectsWhenTargetAtLimit(t *testing.T) {
 			DashboardID: sourceDashID,
 			CardType:    models.CardTypeClusterHealth,
 		},
+		moveErr: store.ErrDashboardCardLimitReached,
 	}
 
 	hub := NewHub()
@@ -411,7 +419,7 @@ func TestMoveCard_RejectsWhenTargetAtLimit(t *testing.T) {
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
-	assert.False(t, wrapper.updateCalled, "store must not be updated when target is at limit")
+	assert.True(t, wrapper.moveCalled, "MoveCardWithLimit must be called")
 }
 
 // --- Viewer denial ---
