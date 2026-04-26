@@ -767,7 +767,7 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	// Handle preflight
 	if r.Method == "OPTIONS" {
 		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Authorization")
+		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Requested-With")
 		w.WriteHeader(http.StatusOK)
 		return
 	}
@@ -813,7 +813,7 @@ func (s *Server) handleProviderCheck(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == "OPTIONS" {
 		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Authorization")
+		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Requested-With")
 		w.WriteHeader(http.StatusOK)
 		return
 	}

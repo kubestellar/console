@@ -840,7 +840,7 @@ func (s *Server) handleProvidersHealth(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Access-Control-Allow-Private-Network", "true")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method == "OPTIONS" {
@@ -964,7 +964,7 @@ func (s *Server) handlePredictionsAI(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Access-Control-Allow-Private-Network", "true")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method == "OPTIONS" {
@@ -1001,7 +1001,7 @@ func (s *Server) handlePredictionsAnalyze(w http.ResponseWriter, r *http.Request
 	}
 	w.Header().Set("Access-Control-Allow-Private-Network", "true")
 	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method == "OPTIONS" {
@@ -1069,7 +1069,7 @@ func (s *Server) handlePredictionsFeedback(w http.ResponseWriter, r *http.Reques
 	}
 	w.Header().Set("Access-Control-Allow-Private-Network", "true")
 	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method == "OPTIONS" {
@@ -1115,7 +1115,7 @@ func (s *Server) handlePredictionsStats(w http.ResponseWriter, r *http.Request) 
 	}
 	w.Header().Set("Access-Control-Allow-Private-Network", "true")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method == "OPTIONS" {
@@ -1152,7 +1152,7 @@ func (s *Server) handleMetricsHistory(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Access-Control-Allow-Private-Network", "true")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method == "OPTIONS" {
@@ -1190,7 +1190,7 @@ func (s *Server) handleDeviceAlerts(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Access-Control-Allow-Private-Network", "true")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method == "OPTIONS" {
@@ -1228,7 +1228,7 @@ func (s *Server) handleDeviceAlertsClear(w http.ResponseWriter, r *http.Request)
 	}
 	w.Header().Set("Access-Control-Allow-Private-Network", "true")
 	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method == "OPTIONS" {
@@ -1277,7 +1277,7 @@ func (s *Server) handleDeviceInventory(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Access-Control-Allow-Private-Network", "true")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method == "OPTIONS" {
@@ -2033,7 +2033,7 @@ func (s *Server) handleInsightsEnrich(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Access-Control-Allow-Private-Network", "true")
 	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method == "OPTIONS" {
@@ -2088,7 +2088,7 @@ func (s *Server) handleInsightsAI(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Access-Control-Allow-Private-Network", "true")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method == "OPTIONS" {
