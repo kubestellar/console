@@ -705,13 +705,10 @@ func (w *PredictionWorker) analyzeWithProvider(ctx context.Context, provider AIP
 }
 
 func (w *PredictionWorker) parseAIPredictions(response string, providerName string) ([]AIPrediction, error) {
-	// Extract JSON from response (might have markdown wrapper)
-	jsonStr := response
-	if idx := strings.Index(response, "{"); idx != -1 {
-		jsonStr = response[idx:]
-	}
-	if idx := strings.LastIndex(jsonStr, "}"); idx != -1 {
-		jsonStr = jsonStr[:idx+1]
+	// Find the start of the JSON object, skipping any markdown fences or preamble.
+	jsonStart := strings.Index(response, "{")
+	if jsonStart == -1 {
+		return nil, fmt.Errorf("failed to parse AI response: no JSON object found")
 	}
 
 	var result struct {
@@ -727,7 +724,9 @@ func (w *PredictionWorker) parseAIPredictions(response string, providerName stri
 		} `json:"predictions"`
 	}
 
-	if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
+	// Use json.Decoder which naturally ignores trailing non-JSON text.
+	dec := json.NewDecoder(strings.NewReader(response[jsonStart:]))
+	if err := dec.Decode(&result); err != nil {
 		return nil, fmt.Errorf("failed to parse AI response: %w", err)
 	}
 
