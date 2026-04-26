@@ -1,6 +1,12 @@
 import { useState, useEffect } from 'react'
 import { getDemoMode, isDemoModeForced } from './useDemoMode'
 import { STORAGE_KEY_TOKEN } from '../lib/constants'
+import {
+  WS_RECONNECT_BASE_DELAY_MS,
+  WS_RECONNECT_MAX_DELAY_MS,
+  MAX_WS_RECONNECT_ATTEMPTS,
+  BACKOFF_JITTER_MAX_MS,
+} from '../lib/constants/network'
 
 /**
  * Disconnect the presence WebSocket and stop the heartbeat.
@@ -20,12 +26,6 @@ export interface ActiveUsersInfo {
 const POLL_INTERVAL = 10_000 // Poll every 10 seconds
 const HEARTBEAT_INTERVAL = 30_000 // Heartbeat every 30 seconds
 const HEARTBEAT_JITTER = 3_000 // Jitter (0-3s) to spread heartbeats without long delays
-
-// WebSocket reconnection with exponential backoff
-const WS_RECONNECT_BASE_DELAY_MS = 2_000  // Base delay for reconnection attempts
-const WS_RECONNECT_MAX_DELAY_MS = 30_000   // Maximum delay between reconnection attempts
-const MAX_WS_RECONNECT_ATTEMPTS = 5        // Maximum reconnection attempts before giving up
-const BACKOFF_JITTER_MAX_MS = 1_000        // Random jitter to avoid thundering herd
 
 const RECOVERY_DELAY = 30_000 // Retry after circuit breaker trips
 /** Timeout for fetch() call to the active-users endpoint */

@@ -11,13 +11,15 @@ import { setActiveTokenCategory, clearActiveTokenCategory } from './useTokenUsag
 import { fullFetchClusters, clusterCache } from './mcp/shared'
 
 import { LOCAL_AGENT_WS_URL, LOCAL_AGENT_HTTP_URL } from '../lib/constants'
-import { FETCH_DEFAULT_TIMEOUT_MS, AI_PREDICTION_TIMEOUT_MS, UI_FEEDBACK_TIMEOUT_MS } from '../lib/constants/network'
-
-// WebSocket reconnection with exponential backoff
-const WS_RECONNECT_BASE_DELAY_MS = 2_000  // Base delay for reconnection attempts
-const WS_RECONNECT_MAX_DELAY_MS = 30_000   // Maximum delay between reconnection attempts
-const MAX_WS_RECONNECT_ATTEMPTS = 5        // Maximum reconnection attempts before giving up
-const BACKOFF_JITTER_MAX_MS = 1_000        // Random jitter to avoid thundering herd
+import {
+  FETCH_DEFAULT_TIMEOUT_MS,
+  AI_PREDICTION_TIMEOUT_MS,
+  UI_FEEDBACK_TIMEOUT_MS,
+  WS_RECONNECT_BASE_DELAY_MS,
+  WS_RECONNECT_MAX_DELAY_MS,
+  MAX_WS_RECONNECT_ATTEMPTS,
+  BACKOFF_JITTER_MAX_MS,
+} from '../lib/constants/network'
 const DEGRADED_RECONNECT_INTERVAL_MS = 60_000 // Slow retry interval after exhausting initial attempts
 
 const AGENT_HTTP_URL = LOCAL_AGENT_HTTP_URL

@@ -1,14 +1,15 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import type { UpdateProgress, UpdateStepEntry } from '../types/updates'
-import { LOCAL_AGENT_WS_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
+import {
+  LOCAL_AGENT_WS_URL,
+  FETCH_DEFAULT_TIMEOUT_MS,
+  WS_RECONNECT_BASE_DELAY_MS,
+  WS_RECONNECT_MAX_DELAY_MS,
+  MAX_WS_RECONNECT_ATTEMPTS,
+  BACKOFF_JITTER_MAX_MS,
+} from '../lib/constants/network'
 import { MS_PER_SECOND } from '../lib/constants/time'
 import { isNetlifyDeployment } from '../lib/demoMode'
-
-// WebSocket reconnection with exponential backoff
-const WS_RECONNECT_BASE_DELAY_MS = 2_000  // Base delay for reconnection attempts
-const WS_RECONNECT_MAX_DELAY_MS = 30_000   // Maximum delay between reconnection attempts
-const MAX_WS_RECONNECT_ATTEMPTS = 5        // Maximum reconnection attempts before giving up
-const BACKOFF_JITTER_MAX_MS = 1_000        // Random jitter to avoid thundering herd
 
 const BACKEND_POLL_MS = 2000  // Poll interval when waiting for backend to come up
 const BACKEND_POLL_MAX = 90   // Max attempts (~3 min) before giving up

@@ -283,6 +283,28 @@ export const FLASH_ANIMATION_MS = 1_100
 /** WebSocket reconnect delay (5 seconds) */
 export const WS_RECONNECT_DELAY_MS = 5_000
 
+// ============================================================================
+// WebSocket Reconnection — Exponential Backoff
+// ============================================================================
+
+/** Base delay for WebSocket reconnection attempts (doubles each retry) */
+export const WS_RECONNECT_BASE_DELAY_MS = 2_000
+
+/** Maximum delay between WebSocket reconnection attempts */
+export const WS_RECONNECT_MAX_DELAY_MS = 30_000
+
+/** Maximum WebSocket reconnection attempts before giving up */
+export const MAX_WS_RECONNECT_ATTEMPTS = 5
+
+/** Small random jitter added to backoff to avoid thundering herd */
+export const BACKOFF_JITTER_MAX_MS = 1_000
+
+/** Reconnect delay for the shared kubectl WebSocket service */
+export const KUBECTL_WS_RECONNECT_DELAY_MS = 1_000
+
+/** Default timeout for kubectl WebSocket request/response round-trips */
+export const KUBECTL_WS_REQUEST_TIMEOUT_MS = 30_000
+
 /** Delay for simulated AI thinking/processing (300ms) */
 export const AI_THINKING_DELAY_MS = 300
 

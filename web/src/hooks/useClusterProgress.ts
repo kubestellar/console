@@ -1,14 +1,11 @@
 import { useEffect, useState, useRef } from 'react'
-import { LOCAL_AGENT_WS_URL } from '../lib/constants/network'
-
-/** Base delay for WebSocket reconnection attempts (doubles each retry) */
-const WS_RECONNECT_BASE_DELAY_MS = 2_000
-/** Maximum delay between WebSocket reconnection attempts */
-const WS_RECONNECT_MAX_DELAY_MS = 30_000
-/** Maximum WebSocket reconnection attempts before giving up */
-const MAX_WS_RECONNECT_ATTEMPTS = 5
-/** Small random jitter added to backoff to avoid thundering herd */
-const BACKOFF_JITTER_MAX_MS = 1_000
+import {
+  LOCAL_AGENT_WS_URL,
+  WS_RECONNECT_BASE_DELAY_MS,
+  WS_RECONNECT_MAX_DELAY_MS,
+  MAX_WS_RECONNECT_ATTEMPTS,
+  BACKOFF_JITTER_MAX_MS,
+} from '../lib/constants/network'
 
 /** Auto-dismiss delay after a successful operation */
 export const CLUSTER_PROGRESS_AUTO_DISMISS_MS = 8_000
