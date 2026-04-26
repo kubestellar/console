@@ -25,13 +25,13 @@ import { Skeleton, SkeletonList, SkeletonStats } from '../../ui/Skeleton'
 import { useCachedGrpc } from '../../../hooks/useCachedGrpc'
 import type { GrpcService } from './demoData'
 import { formatTimeAgo } from '../../../lib/formatters'
+import { formatThroughput } from '../../../lib/cards/formatters'
 
 // ---------------------------------------------------------------------------
 // Named constants (no magic numbers)
 // ---------------------------------------------------------------------------
 
 const ERROR_RATE_DECIMALS = 2
-const THROUGHPUT_LOCALE_MIN_FRACTION = 0
 const LATENCY_WARN_MS = 100
 const LATENCY_DEGRADED_MS = 250
 const ERROR_RATE_WARN_PCT = 0.5
@@ -40,12 +40,6 @@ const ERROR_RATE_CRIT_PCT = 2.0
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function formatThroughput(value: number): string {
-  return value.toLocaleString(undefined, {
-    minimumFractionDigits: THROUGHPUT_LOCALE_MIN_FRACTION,
-  })
-}
 
 function latencyColor(p99Ms: number): string {
   if (p99Ms >= LATENCY_DEGRADED_MS) return 'text-red-400'

@@ -25,6 +25,7 @@ import { Skeleton, SkeletonList, SkeletonStats } from '../../ui/Skeleton'
 import { useCachedLinkerd } from '../../../hooks/useCachedLinkerd'
 import type { LinkerdMeshedDeployment } from './demoData'
 import { formatTimeAgo } from '../../../lib/formatters'
+import { formatThroughput } from '../../../lib/cards/formatters'
 
 // ---------------------------------------------------------------------------
 // Named constants (no magic numbers)
@@ -37,7 +38,6 @@ const SKELETON_BADGE_HEIGHT = 20
 const SKELETON_LIST_ITEMS = 5
 
 const SUCCESS_RATE_DECIMALS = 2
-const THROUGHPUT_LOCALE_MIN_FRACTION = 0
 const SUCCESS_RATE_WARN_THRESHOLD_PCT = 99.0
 const SUCCESS_RATE_CRIT_THRESHOLD_PCT = 95.0
 const P99_LATENCY_WARN_MS = 30
@@ -46,12 +46,6 @@ const P99_LATENCY_CRIT_MS = 100
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function formatThroughput(value: number): string {
-  return value.toLocaleString(undefined, {
-    minimumFractionDigits: THROUGHPUT_LOCALE_MIN_FRACTION,
-  })
-}
 
 function successRateColorClass(pct: number): string {
   if (pct >= SUCCESS_RATE_WARN_THRESHOLD_PCT) return 'text-green-400'

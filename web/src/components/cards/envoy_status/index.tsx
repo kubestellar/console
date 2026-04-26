@@ -25,6 +25,7 @@ import { Skeleton, SkeletonList, SkeletonStats } from '../../ui/Skeleton'
 import { useCachedEnvoy } from './useCachedEnvoy'
 import type { EnvoyListener, EnvoyUpstreamCluster } from './demoData'
 import { formatTimeAgo } from '../../../lib/formatters'
+import { formatThroughput } from '../../../lib/cards/formatters'
 
 // ---------------------------------------------------------------------------
 // Named constants (no magic numbers)
@@ -37,18 +38,6 @@ const SKELETON_BADGE_HEIGHT = 20
 const SKELETON_LIST_ITEMS = 5
 
 const HTTP_5XX_PERCENT_DECIMALS = 2
-const THROUGHPUT_LOCALE_MIN_FRACTION = 0
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function formatThroughput(value: number): string {
-  return value.toLocaleString(undefined, {
-    minimumFractionDigits: THROUGHPUT_LOCALE_MIN_FRACTION,
-  })
-}
-
 // ---------------------------------------------------------------------------
 // Subsections
 // ---------------------------------------------------------------------------
