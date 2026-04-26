@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Scale, ChevronRight } from 'lucide-react'
-import ReactECharts from 'echarts-for-react'
+import { LazyEChart } from '../../charts/LazyEChart'
 import { useMultiClusterInsights } from '../../../hooks/useMultiClusterInsights'
 import { useCardLoadingState } from '../CardDataContext'
 import { useGlobalFilters } from '../../../hooks/useGlobalFilters'
@@ -157,7 +157,7 @@ export function ResourceImbalanceDetector() {
 
       {chartData.length > 0 && (
         <div className="h-48">
-          <ReactECharts
+          <LazyEChart
             option={chartOption}
             style={{ height: CHART_HEIGHT_LG, width: '100%' }}
             notMerge={true}

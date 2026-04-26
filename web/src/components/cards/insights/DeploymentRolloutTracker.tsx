@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { Rocket, CheckCircle2, AlertTriangle, Clock, ChevronRight } from 'lucide-react'
-import ReactECharts from 'echarts-for-react'
+import { LazyEChart } from '../../charts/LazyEChart'
 import { useMultiClusterInsights } from '../../../hooks/useMultiClusterInsights'
 import { useCardLoadingState } from '../CardDataContext'
 import { useGlobalFilters } from '../../../hooks/useGlobalFilters'
@@ -181,7 +181,7 @@ export function DeploymentRolloutTracker() {
           {/* Per-cluster progress chart */}
           {clusterProgress.length > 0 && (
             <div className="h-32">
-              <ReactECharts
+              <LazyEChart
                 option={chartOption}
                 style={{ height: CHART_HEIGHT_SM, width: '100%' }}
                 notMerge={true}

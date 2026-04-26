@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Activity, ChevronRight } from 'lucide-react'
-import ReactECharts from 'echarts-for-react'
+import { LazyEChart } from '../../charts/LazyEChart'
 import { useMultiClusterInsights } from '../../../hooks/useMultiClusterInsights'
 import { useCachedWarningEvents } from '../../../hooks/useCachedData'
 import { useCardLoadingState } from '../CardDataContext'
@@ -141,7 +141,7 @@ export function CrossClusterEventCorrelation() {
       {/* Timeline chart */}
       {chartData.length > 0 && (
         <div className="h-40">
-          <ReactECharts
+          <LazyEChart
             option={chartOption}
             style={{ height: CHART_HEIGHT_STANDARD, width: '100%' }}
             notMerge={true}

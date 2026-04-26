@@ -6,7 +6,7 @@
  * Highlight best-in-class for each metric.
  */
 import { useState, useMemo } from 'react'
-import ReactECharts from 'echarts-for-react'
+import { LazyEChart } from '../../charts/LazyEChart'
 import { BarChart3, Trophy } from 'lucide-react'
 import { RefreshIndicator } from '../../ui/RefreshIndicator'
 import { useReportCardDataState } from '../CardDataContext'
@@ -232,7 +232,7 @@ export function ResourceUtilization() {
       {/* Chart */}
       <div className="flex-1 min-h-0" style={{ minHeight: CHART_MIN_HEIGHT_PX }}>
         {data.length > 0 ? (
-          <ReactECharts
+          <LazyEChart
             option={chartOption}
             style={{ height: '100%', width: '100%' }}
             notMerge={true}

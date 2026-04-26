@@ -8,7 +8,8 @@
  * Connected smooth scatter lines with GPU count labels. Built with ECharts.
  */
 import { useState, useMemo, useRef } from 'react'
-import ReactECharts from 'echarts-for-react'
+import { LazyEChart } from '../../charts/LazyEChart'
+import type ReactEChartsType from 'echarts-for-react'
 import { Download, RotateCcw } from 'lucide-react'
 import { useReportCardDataState } from '../CardDataContext'
 import { useCachedBenchmarkReports } from '../../../hooks/useBenchmarkData'
@@ -239,7 +240,7 @@ interface ParetoFrontierProps {
 
 function ParetoFrontierInternal({ config }: ParetoFrontierProps) {
   const { t } = useTranslation(['cards', 'common'])
-  const chartRef = useRef<ReactECharts>(null)
+  const chartRef = useRef<ReactEChartsType>(null)
 
   // ---- Data ----
   const { data: reports, isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing, lastRefresh } = useCachedBenchmarkReports()
@@ -549,7 +550,7 @@ function ParetoFrontierInternal({ config }: ParetoFrontierProps) {
       <div className="flex flex-1 min-h-0 gap-2">
         {/* ECharts chart */}
         <div className="flex-1 min-w-0 rounded overflow-hidden" style={{ minHeight: CHART_MIN_HEIGHT_PX }}>
-          <ReactECharts
+          <LazyEChart
             ref={chartRef}
             option={option}
             style={{ height: '100%', width: '100%' }}

@@ -6,7 +6,7 @@
  * Click a dot → drills down to EventsDrillDown for that cluster.
  */
 import { useState, useMemo, useCallback } from 'react'
-import ReactECharts from 'echarts-for-react'
+import { LazyEChart } from '../../charts/LazyEChart'
 import { Clock, Activity } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useCardLoadingState } from '../CardDataContext'
@@ -240,7 +240,7 @@ export function ChangeTimeline({ config: _config }: ChangeTimelineProps) {
       </div>
 
       {/* Chart */}
-      <ReactECharts
+      <LazyEChart
         option={chartOption}
         style={{ height: `${CHART_HEIGHT_PX}px`, width: '100%' }}
         onEvents={onEvents}

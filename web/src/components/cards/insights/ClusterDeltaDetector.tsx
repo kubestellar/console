@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { GitCompare, ChevronRight } from 'lucide-react'
-import ReactECharts from 'echarts-for-react'
+import { LazyEChart } from '../../charts/LazyEChart'
 import { useMultiClusterInsights } from '../../../hooks/useMultiClusterInsights'
 import { useCardLoadingState } from '../CardDataContext'
 import { InsightSourceBadge } from './InsightSourceBadge'
@@ -175,7 +175,7 @@ export function ClusterDeltaDetector() {
           {/* Numeric deltas as bar chart */}
           {numericDeltas.length > 0 && allClusters.length >= 2 && (
             <div className="h-32">
-              <ReactECharts
+              <LazyEChart
                 option={chartOption}
                 style={{ height: CHART_HEIGHT_SM, width: '100%' }}
                 notMerge={true}

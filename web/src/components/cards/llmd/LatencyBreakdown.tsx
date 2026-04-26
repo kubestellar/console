@@ -6,7 +6,7 @@
  * Shows how latency degrades as load increases.
  */
 import { useState, useMemo } from 'react'
-import ReactECharts from 'echarts-for-react'
+import { LazyEChart } from '../../charts/LazyEChart'
 import { Clock, AlertTriangle } from 'lucide-react'
 import { useReportCardDataState } from '../CardDataContext'
 import { useCachedBenchmarkReports } from '../../../hooks/useBenchmarkData'
@@ -260,7 +260,7 @@ function LatencyBreakdownInternal() {
       {/* Chart */}
       <div className="flex-1 min-h-0" style={{ minHeight: CHART_MIN_HEIGHT_PX }}>
         {chartData.length > 0 ? (
-          <ReactECharts
+          <LazyEChart
             option={chartOption}
             style={{ height: '100%', width: '100%' }}
             notMerge={true}

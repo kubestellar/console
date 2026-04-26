@@ -5,7 +5,7 @@ import { useGPUTaintFilter, GPUTaintFilterControl } from './GPUTaintFilter'
 import { Skeleton, SkeletonStats } from '../ui/Skeleton'
 import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { useCardLoadingState } from './CardDataContext'
-import ReactECharts from 'echarts-for-react'
+import { LazyEChart } from '../charts/LazyEChart'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedGPUNodes } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -346,7 +346,7 @@ export function GPUUtilization() {
       {/* Stats and pie chart row */}
       <div className="flex items-center gap-4 mb-4">
         <div className="w-20 h-20 relative" style={{ minWidth: GPU_RING_SIZE_PX, minHeight: GPU_RING_SIZE_PX }}>
-          <ReactECharts
+          <LazyEChart
             option={pieOption}
             style={{ height: GPU_RING_SIZE_PX, width: GPU_RING_SIZE_PX }}
             notMerge={true}
@@ -384,7 +384,7 @@ export function GPUUtilization() {
           </div>
         ) : (
           <div style={{ width: '100%', minHeight: CHART_HEIGHT_COMPACT, height: CHART_HEIGHT_COMPACT }}>
-            <ReactECharts
+            <LazyEChart
               option={trendOption}
               style={{ height: CHART_HEIGHT_COMPACT, width: '100%' }}
               notMerge={true}

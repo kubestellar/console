@@ -2,7 +2,7 @@ import { useMemo, useState, useRef, useEffect } from 'react'
 import {
   Cpu, TrendingUp, TrendingDown, Minus, Clock, Server,
   BarChart3, Table2, ChevronDown, ArrowUpDown } from 'lucide-react'
-import ReactECharts from 'echarts-for-react'
+import { LazyEChart } from '../charts/LazyEChart'
 import { useMetricsHistory } from '../../hooks/useMetricsHistory'
 import type { MetricsSnapshot } from '../../types/predictions'
 import { useCachedGPUNodes } from '../../hooks/useCachedData'
@@ -317,7 +317,7 @@ function GPUInventoryChart({ displayChartData, chartMode, chartGPUTypes, t }: {
   }, [displayChartData, chartMode, chartGPUTypes, t])
 
   return (
-    <ReactECharts
+    <LazyEChart
       option={chartOption}
       style={{ height: CHART_HEIGHT_STANDARD, width: '100%' }}
       notMerge={true}

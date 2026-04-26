@@ -9,7 +9,8 @@
  */
 
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
-import ReactECharts from 'echarts-for-react'
+import { LazyEChart } from '../charts/LazyEChart'
+import type ReactEChartsType from 'echarts-for-react'
 import { Calendar, RefreshCw, GitPullRequest } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Skeleton } from '../ui/Skeleton'
@@ -317,7 +318,7 @@ export function IssueActivityChart(props: { config?: IssueActivityConfig }) {
     start: ZOOM_RANGE_START,
     end: ZOOM_RANGE_END,
   })
-  const chartRef = useRef<ReactECharts>(null)
+  const chartRef = useRef<ReactEChartsType>(null)
 
   const hasData = stats.length > 0
   useCardLoadingState({ isLoading: isLoading && !hasData, hasAnyData: hasData, isDemoData: isDemoMode || isDemoFallback })
@@ -666,7 +667,7 @@ export function IssueActivityChart(props: { config?: IssueActivityConfig }) {
 
       {/* Chart */}
       <div className="w-full overflow-hidden" style={{ minWidth: 0 }}>
-        <ReactECharts
+        <LazyEChart
           ref={chartRef}
           option={chartOption}
           style={{ height: CHART_HEIGHT_PX, width: '100%' }}
