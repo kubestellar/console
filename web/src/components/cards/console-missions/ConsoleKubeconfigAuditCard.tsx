@@ -19,8 +19,9 @@ export function ConsoleKubeconfigAuditCard(_props: ConsoleMissionCardProps) {
   const { isDemoMode } = useDemoMode()
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
+  const hasData = allClusters.length > 0
   useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasData,
     isRefreshing,
     hasAnyData: allClusters.length > 0,
     isDemoData: isDemoMode,

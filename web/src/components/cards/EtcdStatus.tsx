@@ -79,10 +79,11 @@ export function EtcdStatus() {
   const { t } = useTranslation('cards')
   // Fetch from all namespaces so we catch etcd pods outside kube-system
   const { pods, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures } = useCachedPods()
+  const hasData = pods.length > 0
   const { showSkeleton } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasData,
     isRefreshing,
-    hasAnyData: pods.length > 0,
+    hasAnyData: hasData,
     isDemoData: isDemoFallback,
     isFailed,
     consecutiveFailures })

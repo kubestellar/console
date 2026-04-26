@@ -50,8 +50,9 @@ export function AppStatus(_props: AppStatusProps) {
   const { deployments, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures, lastRefresh } = useCachedDeployments()
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
+  const hasData = deployments.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasData,
     isRefreshing,
     isDemoData: isDemoFallback,
     hasAnyData: deployments.length > 0,

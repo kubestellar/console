@@ -96,10 +96,11 @@ function EventsTimelineInternal() {
   const { deduplicatedClusters: clusters } = useClusters()
 
   // Report state to CardWrapper for refresh animation
+  const hasData = events.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading: hookLoading,
+    isLoading: hookLoading && !hasData,
     isDemoData: isDemoMode || isDemoFallback,
-    hasAnyData: events.length > 0,
+    hasAnyData: hasData,
     isFailed,
     consecutiveFailures,
     isRefreshing })

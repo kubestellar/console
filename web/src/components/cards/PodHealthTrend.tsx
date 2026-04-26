@@ -58,11 +58,9 @@ export function PodHealthTrend() {
 
   // hasData should be true once loading completes (even with empty data)
   const hasData = clusters.length > 0 || issues.length > 0
-  const isLoadingData = (clustersLoading || issuesLoading) && !hasData
-
   // Report state to CardWrapper for refresh animation
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading: isLoadingData,
+    isLoading: (clustersLoading || issuesLoading) && !hasData,
     isRefreshing: clustersRefreshing || issuesRefreshing,
     hasAnyData: hasData,
     isDemoData: isDemoModeActive || isDemoFallback,

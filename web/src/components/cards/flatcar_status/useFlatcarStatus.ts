@@ -130,7 +130,7 @@ export function useFlatcarStatus(): UseFlatcarStatusResult {
   const hasAnyData = data.totalNodes > 0
 
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasAnyData,
     hasAnyData,
     isFailed,
     consecutiveFailures,

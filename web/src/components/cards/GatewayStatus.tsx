@@ -58,10 +58,11 @@ export function GatewayStatus({ config: _config }: GatewayStatusProps) {
   }, [allGateways])
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
+  const hasData = (allGateways || []).length > 0
   useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasData,
     isRefreshing,
-    hasAnyData: (allGateways || []).length > 0,
+    hasAnyData: hasData,
     isDemoData,
     isFailed,
     consecutiveFailures })

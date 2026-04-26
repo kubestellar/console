@@ -23,8 +23,9 @@ export function ConsoleHealthCheckCard(_props: ConsoleMissionCardProps) {
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
+  const hasData = allClusters.length > 0
   useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasData,
     isRefreshing,
     hasAnyData: allClusters.length > 0,
     isDemoData: podsDemoFallback || deploysDemoFallback,

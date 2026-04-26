@@ -62,10 +62,11 @@ function ServiceExportsInternal({ config: _config }: ServiceExportsProps) {
   const SORT_OPTIONS = SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) }))
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
+  const hasData = allExports.length > 0
   const { showSkeleton } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasData,
     isRefreshing,
-    hasAnyData: allExports.length > 0,
+    hasAnyData: hasData,
     isDemoData,
     isFailed,
     consecutiveFailures })

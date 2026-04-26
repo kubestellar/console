@@ -38,10 +38,11 @@ export function OverlayComparison({ config }: OverlayComparisonProps) {
   } = useGlobalFilters()
 
   // Report state to CardWrapper for refresh animation
+  const hasData = allClusters.length > 0
   useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasData,
     isRefreshing,
-    hasAnyData: allClusters.length > 0,
+    hasAnyData: hasData,
     isDemoData: demoMode,
     isFailed,
     consecutiveFailures,

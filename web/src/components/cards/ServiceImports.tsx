@@ -68,9 +68,10 @@ function ServiceImportsInternal({ config: _config }: ServiceImportsProps) {
   }, [allImports])
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
+  const hasData = (allImports || []).length > 0
   useCardLoadingState({
-    isLoading,
-    hasAnyData: (allImports || []).length > 0,
+    isLoading: isLoading && !hasData,
+    hasAnyData: hasData,
     isDemoData,
     isFailed,
     consecutiveFailures })

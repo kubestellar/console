@@ -77,10 +77,11 @@ function EventStreamInternal({ config }: { config?: EventStreamConfig }) {
   )
 
   // Report state to CardWrapper for refresh animation
+  const hasData = filteredRawEvents.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading: hookLoading,
+    isLoading: hookLoading && !hasData,
     isDemoData: isDemoMode || isDemoFallback,
-    hasAnyData: filteredRawEvents.length > 0,
+    hasAnyData: hasData,
     isFailed,
     consecutiveFailures,
     isRefreshing,

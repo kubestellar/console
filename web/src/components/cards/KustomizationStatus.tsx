@@ -127,10 +127,11 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
   }, [demoMode])
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
+  const hasData = kustomizationData.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasData,
     isRefreshing,
-    hasAnyData: kustomizationData.length > 0,
+    hasAnyData: hasData,
     isDemoData: demoMode,
     isFailed,
     consecutiveFailures })

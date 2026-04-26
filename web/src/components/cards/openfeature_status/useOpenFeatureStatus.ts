@@ -254,7 +254,7 @@ export function useOpenFeatureStatus(): UseOpenFeatureStatusResult {
   const hasAnyData = (data.providers || []).length > 0 || data.health !== 'not-installed'
 
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasAnyData,
     isRefreshing,
     isDemoData: effectiveIsDemoData,
     hasAnyData,

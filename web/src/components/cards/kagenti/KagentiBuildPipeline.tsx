@@ -48,9 +48,10 @@ export function KagentiBuildPipeline({ config }: KagentiBuildPipelineProps) {
     isDemoFallback,
     consecutiveFailures } = useKagentiBuilds({ cluster: config?.cluster })
 
+  const hasData = builds.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
-    hasAnyData: builds.length > 0,
+    isLoading: isLoading && !hasData,
+    hasAnyData: hasData,
     isFailed: consecutiveFailures >= 3,
     consecutiveFailures,
     isDemoData: isDemoFallback })

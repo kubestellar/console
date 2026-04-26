@@ -46,11 +46,12 @@ export function ThanosStatus() {
         lastRefresh
     } = useCachedThanosStatus()
 
+    const hasData = (data?.targets?.length || 0) > 0
     const { showSkeleton, showEmptyState } = useCardLoadingState({
-        isLoading,
+        isLoading: isLoading && !hasData,
         isRefreshing,
         isDemoData,
-        hasAnyData: (data?.targets?.length || 0) > 0,
+        hasAnyData: hasData,
         isFailed,
         consecutiveFailures,
         lastRefresh

@@ -19,8 +19,9 @@ export function ClusterChangelog() {
   const { t } = useTranslation('cards')
   const { events, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures, refetch, lastRefresh: eventsLastRefresh } = useCachedEvents(undefined, undefined, { limit: 200 })
   const [timeRange, setTimeRange] = useState<TimeRange>('24h')
+  const hasData = events.length > 0
   const { showSkeleton } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasData,
     isRefreshing,
     hasAnyData: events.length > 0,
     isDemoData: isDemoFallback,

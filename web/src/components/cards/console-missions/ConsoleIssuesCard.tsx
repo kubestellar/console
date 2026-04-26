@@ -23,8 +23,9 @@ export function ConsoleIssuesCard(_props: ConsoleMissionCardProps) {
   const isRefreshing = podsRefreshing || deploysRefreshing
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
+  const hasData = allPodIssues.length > 0 || allDeploymentIssues.length > 0 || missions.length > 0
   useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasData,
     isRefreshing,
     hasAnyData: allPodIssues.length > 0 || allDeploymentIssues.length > 0 || missions.length > 0,
     isDemoData: podsDemoFallback || deploysDemoFallback,

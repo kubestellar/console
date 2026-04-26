@@ -129,10 +129,11 @@ export function HelmHistory({ config }: HelmHistoryProps) {
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
   // Note: Consider "hasAnyData" true when no release selected - we want to show selectors, not empty state
+  const hasData = rawHistory.length > 0 || !selectedRelease
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading: historyLoading,
+    isLoading: historyLoading && !hasData,
     isRefreshing: historyRefreshing || releasesRefreshing,
-    hasAnyData: rawHistory.length > 0 || !selectedRelease,
+    hasAnyData: hasData,
     isFailed,
     consecutiveFailures,
     isDemoData })

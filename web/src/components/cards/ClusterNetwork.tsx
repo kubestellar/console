@@ -20,8 +20,9 @@ export function ClusterNetwork({ config }: ClusterNetworkProps) {
   const { isDemoMode } = useDemoMode()
 
   // Report state to CardWrapper for refresh animation
+  const hasData = allClusters.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasData,
     isRefreshing,
     hasAnyData: allClusters.length > 0,
     isDemoData: isDemoMode,

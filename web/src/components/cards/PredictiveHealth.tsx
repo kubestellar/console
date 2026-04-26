@@ -63,10 +63,11 @@ export function PredictiveHealth() {
   const pods = filterByCluster(allPods)
 
   const isLoading = nodesLoading || podsLoading
+  const hasData = allNodes.length > 0 || allPods.length > 0
   const { showSkeleton } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasData,
     isRefreshing: nodesRefreshing || podsRefreshing,
-    hasAnyData: allNodes.length > 0 || allPods.length > 0,
+    hasAnyData: hasData,
     isDemoData: nodesDemoFallback || podsDemoFallback,
     isFailed: nodesFailed || podsFailed,
     consecutiveFailures: Math.max(nodesFailures, podsFailures) })

@@ -47,10 +47,11 @@ export function Kubectl() {
   const [selectedContext, setSelectedContext] = useState<string>('')
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
+  const hasData = clusters.length > 0
   useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasData,
     isRefreshing,
-    hasAnyData: clusters.length > 0,
+    hasAnyData: hasData,
     isDemoData: isDemoMode,
     isFailed,
     consecutiveFailures })

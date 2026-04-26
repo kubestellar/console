@@ -95,10 +95,11 @@ export function NodeDebug() {
   const { nodes, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures } = useCachedNodes()
   const { execute } = useKubectl()
   const { showToast } = useToast()
+  const hasData = nodes.length > 0
   const { showSkeleton } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasData,
     isRefreshing,
-    hasAnyData: nodes.length > 0,
+    hasAnyData: hasData,
     isDemoData: isDemoFallback,
     isFailed,
     consecutiveFailures })

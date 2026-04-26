@@ -36,10 +36,11 @@ export function CRDHealth({ config: _config }: CRDHealthProps) {
   const [filterGroup, setFilterGroup] = useState<string>('')
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
+  const hasData = allCRDs.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasData,
     isRefreshing,
-    hasAnyData: allCRDs.length > 0,
+    hasAnyData: hasData,
     isDemoData })
 
   // Apply group filter before passing to useCardData

@@ -64,8 +64,9 @@ export function ClusterDropZone({
   const { data: realClusters, isLoading } = useClusterCapabilities(!demoMode)
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
+  const hasData = (realClusters?.length ?? 0) > 0 || DEMO_CLUSTERS.length > 0
   useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasData,
     hasAnyData: (realClusters?.length ?? 0) > 0 || DEMO_CLUSTERS.length > 0,
     isDemoData: demoMode,
   })

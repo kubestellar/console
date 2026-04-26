@@ -345,7 +345,7 @@ export function useKarmadaStatus(): UseKarmadaStatusResult {
   const hasAnyData = true;
 
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasAnyData,
     isRefreshing,
     hasAnyData,
     isFailed,

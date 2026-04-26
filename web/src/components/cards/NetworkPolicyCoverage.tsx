@@ -26,10 +26,11 @@ export function NetworkPolicyCoverage() {
   // Policies fetch failed but pods succeeded — fall back to heuristic with warning
   const isEstimated = policiesFailed && !podsLoading && pods.length > 0
 
+  const hasData = pods.length > 0
   const { showSkeleton } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasData,
     isRefreshing,
-    hasAnyData: pods.length > 0,
+    hasAnyData: hasData,
     isDemoData: isDemoFallback,
     isFailed,
     consecutiveFailures: podsFailures,

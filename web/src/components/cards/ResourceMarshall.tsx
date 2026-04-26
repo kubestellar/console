@@ -51,10 +51,11 @@ export function ResourceMarshall() {
   const { namespaces, isLoading: nsLoading, isDemoFallback } = useCachedNamespaces(selectedCluster || undefined)
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
+  const hasData = clusters.length > 0
   useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasData,
     isRefreshing: clustersRefreshing,
-    hasAnyData: clusters.length > 0,
+    hasAnyData: hasData,
     isDemoData: demoMode || isDemoFallback,
     isFailed: clustersFailed,
     consecutiveFailures: clustersFailures })

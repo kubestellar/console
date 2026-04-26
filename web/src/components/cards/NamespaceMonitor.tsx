@@ -163,10 +163,11 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
     pvcsDemoFallback || podsDemoFallback || configmapsDemoFallback || secretsDemoFallback || jobsDemoFallback
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
+  const hasData = clusters.length > 0
   useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasData,
     isRefreshing: namespacesRefreshing || deploymentsRefreshing || servicesRefreshing || pvcsRefreshing || podsRefreshing || configmapsRefreshing || secretsRefreshing || jobsRefreshing,
-    hasAnyData: clusters.length > 0,
+    hasAnyData: hasData,
     isDemoData: isDemoMode || isDemoData,
     isFailed,
     consecutiveFailures })

@@ -284,7 +284,7 @@ export function useCrioStatus(): UseCrioStatusResult {
   const hasAnyData = data.detected
 
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasAnyData,
     isRefreshing,
     hasAnyData,
     isFailed,

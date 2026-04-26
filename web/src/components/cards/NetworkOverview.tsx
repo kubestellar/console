@@ -31,11 +31,12 @@ export function NetworkOverview() {
   // cluster cache refresh would tick the indicator without ticking the
   // CardWrapper refresh animation.
   const combinedLoading = isLoading || servicesLoading
+  const hasData = services.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading: combinedLoading,
+    isLoading: combinedLoading && !hasData,
     isRefreshing: isRefreshing || clustersRefreshing,
     isDemoData: isDemoFallback,
-    hasAnyData: services.length > 0,
+    hasAnyData: hasData,
     isFailed,
     consecutiveFailures })
 

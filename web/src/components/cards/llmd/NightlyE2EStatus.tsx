@@ -860,9 +860,10 @@ export function NightlyE2EStatus() {
     }
   }
 
+  const hasData = guides.length > 0
   const { showSkeleton } = useCardLoadingState({
-    isLoading,
-    hasAnyData: guides.length > 0,
+    isLoading: isLoading && !hasData,
+    hasAnyData: hasData,
     isFailed,
     consecutiveFailures,
     isDemoData: isDemoFallback,
