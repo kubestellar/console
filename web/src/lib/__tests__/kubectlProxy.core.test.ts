@@ -21,6 +21,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 // Track whether we're simulating a Netlify environment
 let mockIsNetlify = false
 
+vi.mock('../utils/wsAuth', () => ({
+  appendWsAuthToken: (url: string) => url,
+}))
+
 vi.mock('../demoMode', () => ({
   get isNetlifyDeployment() {
     return mockIsNetlify

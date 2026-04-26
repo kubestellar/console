@@ -11,6 +11,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 let mockIsNetlify = false
 
+vi.mock('../utils/wsAuth', () => ({
+  appendWsAuthToken: (url: string) => url,
+}))
+
 vi.mock('../demoMode', () => ({
   get isNetlifyDeployment() { return mockIsNetlify },
 }))
