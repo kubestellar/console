@@ -399,19 +399,34 @@ echo ""
 
 RESULTS="${RESULTS%,}"
 
-cat > "$REPORT_JSON" << EOF
-{
-  "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "fastMode": $([ -n "$FAST_MODE" ] && echo "true" || echo "false"),
-  "summary": {
-    "total": ${TOTAL},
-    "passed": ${PASSED_SUITES},
-    "failed": ${FAILED_SUITES},
-    "skipped": ${SKIPPED_SUITES}
+# Build JSON report, validating with jq to catch malformed failure_reason
+# strings (unescaped chars, shell-expanded $variables, etc.)
+CANDIDATE_JSON="{
+  \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",
+  \"fastMode\": $([ -n "$FAST_MODE" ] && echo "true" || echo "false"),
+  \"summary\": {
+    \"total\": ${TOTAL},
+    \"passed\": ${PASSED_SUITES},
+    \"failed\": ${FAILED_SUITES},
+    \"skipped\": ${SKIPPED_SUITES}
   },
-  "results": [${RESULTS}]
-}
-EOF
+  \"results\": [${RESULTS}]
+}"
+
+if echo "$CANDIDATE_JSON" | jq . > "$REPORT_JSON" 2>/dev/null; then
+  : # valid JSON written
+else
+  echo "WARNING: Generated JSON was malformed — writing minimal report" >&2
+  jq -n \
+    --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    --argjson fm "$([ -n "$FAST_MODE" ] && echo "true" || echo "false")" \
+    --argjson total "$TOTAL" \
+    --argjson passed "$PASSED_SUITES" \
+    --argjson failed "$FAILED_SUITES" \
+    --argjson skipped "$SKIPPED_SUITES" \
+    '{timestamp: $ts, fastMode: $fm, summary: {total: $total, passed: $passed, failed: $failed, skipped: $skipped}, results: []}' \
+    > "$REPORT_JSON"
+fi
 
 cat > "$REPORT_MD" << EOF
 # KubeStellar Console — Full Test Suite

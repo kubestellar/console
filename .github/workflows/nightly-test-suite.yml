@@ -136,8 +136,8 @@ jobs:
           echo "result_file=${RESULTS_DIR}/${DATE}.json" >> "$GITHUB_OUTPUT"
           echo "date=${DATE}" >> "$GITHUB_OUTPUT"
 
-          # Check if tests passed
-          FAILED=$(jq -r '.summary.failed' /tmp/all-tests-report.json)
+          # Check if tests passed (tolerate malformed JSON from run-all-tests.sh)
+          FAILED=$(jq -r '.summary.failed' /tmp/all-tests-report.json 2>/dev/null || echo "unknown")
           echo "failed=${FAILED}" >> "$GITHUB_OUTPUT"
 
       - name: Generate comparison report
@@ -174,8 +174,8 @@ jobs:
           git add "${RESULTS_DIR}/${{ steps.tests.outputs.date }}.json"
           git commit -m "chore: nightly test results for ${{ steps.tests.outputs.date }}
 
-          Passed: $(jq -r '.summary.passed' ${{ steps.tests.outputs.result_file }})/$( jq -r '.summary.total' ${{ steps.tests.outputs.result_file }})
-          Failed: $(jq -r '.summary.failed' ${{ steps.tests.outputs.result_file }})
+          Passed: $(jq -r '.summary.passed' ${{ steps.tests.outputs.result_file }} 2>/dev/null || echo '?')/$( jq -r '.summary.total' ${{ steps.tests.outputs.result_file }} 2>/dev/null || echo '?')
+          Failed: $(jq -r '.summary.failed' ${{ steps.tests.outputs.result_file }} 2>/dev/null || echo '?')
 
           [skip ci]" || echo "No changes to commit"
           git push origin main || echo "::warning::Failed to push results — will retry next run"
@@ -265,7 +265,7 @@ _No comparison report was generated. The test suite or comparison script may hav
             --description "Needs triage" 2>/dev/null || true
 
           # Create an issue for each failing suite (skip if one already exists)
-          FAILING_SUITES=$(jq -r '.results[] | select(.status == "fail") | .suite' "$RESULT_FILE")
+          FAILING_SUITES=$(jq -r '.results[] | select(.status == "fail") | .suite' "$RESULT_FILE" 2>/dev/null || true)
           for suite in $FAILING_SUITES; do
             ISSUE_TITLE="Nightly regression: ${suite}"
 
