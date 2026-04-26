@@ -418,15 +418,21 @@ func streamClusters(
 			return true
 		}
 
-		// Instantly emit skipped events for offline clusters
+		// Instantly emit skipped events for offline clusters.
+		// Must hold mu — background goroutines for healthy clusters also
+		// call emitEvent (writes to a non-thread-safe bufio.Writer) and
+		// increment completedClusters under the same lock (#10254).
 		for _, cl := range offline {
-			if !emitEvent(sseEventClusterSkipped, fiber.Map{
+			mu.Lock()
+			ok := emitEvent(sseEventClusterSkipped, fiber.Map{
 				"cluster": cl.Name,
 				"reason":  "offline",
-			}) {
+			})
+			completedClusters++
+			mu.Unlock()
+			if !ok {
 				return
 			}
-			completedClusters++
 		}
 
 		// Spawn goroutines only for healthy/unknown clusters
