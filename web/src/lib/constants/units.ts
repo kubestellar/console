@@ -1,5 +1,3 @@
-/** Bytes per kibibyte (KiB) */
-export const BYTES_PER_KIB = 1024
 /** Bytes per mebibyte (MiB) */
 export const BYTES_PER_MIB = 1024 * 1024
 /** Bytes per gibibyte (GiB) */

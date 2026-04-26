@@ -220,9 +220,6 @@ export const DEFAULT_REFRESH_INTERVAL_MS = 120_000
 /** Timeout before showing "loading took too long" UI (5 seconds) */
 export const LOADING_TIMEOUT_MS = 5_000
 
-/** Extended loading timeout for cluster/page loads (10 seconds) */
-export const LOADING_TIMEOUT_EXTENDED_MS = 10_000
-
 /** Timeout for skeleton placeholder before showing fallback (100ms) */
 export const SKELETON_DELAY_MS = 100
 

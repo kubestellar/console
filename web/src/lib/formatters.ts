@@ -69,7 +69,7 @@ function parseK8sQuantity(value: string): number {
 }
 
 /** Options for {@link formatBytes}. */
-export interface FormatBytesOptions {
+interface FormatBytesOptions {
   /** Number of decimal places (default: 1). */
   decimals?: number
   /** Use IEC binary units — KiB, MiB, GiB, TiB, PiB (default: false → KB, MB, …). */
@@ -173,7 +173,7 @@ function toTimestamp(input: string | Date | number): number {
   return new Date(input).getTime()
 }
 
-export interface FormatTimeAgoOptions {
+interface FormatTimeAgoOptions {
   /** Omit the " ago" suffix (e.g. "5m" instead of "5m ago"). */
   compact?: boolean
   /** Include month/year ranges for older timestamps (default: false — stops at days). */

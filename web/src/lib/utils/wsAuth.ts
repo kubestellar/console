@@ -7,7 +7,7 @@
 import { STORAGE_KEY_TOKEN } from '../constants'
 
 /** Query-string key used to pass the auth token on WebSocket URLs */
-export const WS_AUTH_QUERY_PARAM = 'token'
+const WS_AUTH_QUERY_PARAM = 'token'
 
 /**
  * If a session token exists in localStorage, append it to `url` as

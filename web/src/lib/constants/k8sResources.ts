@@ -1,4 +1,4 @@
-export interface K8sKindMeta {
+interface K8sKindMeta {
   kind: string
   clusterScoped: boolean
   label: string

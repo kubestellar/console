@@ -29,7 +29,6 @@ export const STORAGE_KEY_USER_CACHE = 'kc-user-cache'
  *  cookie exists (#6925). HttpOnly cookies are invisible to JS, so this
  *  localStorage flag acts as a proxy for "we had a session at some point". */
 export const STORAGE_KEY_HAS_SESSION = 'kc-has-session'
-export const STORAGE_KEY_BACKEND_STATUS = 'kc-backend-status'
 export const STORAGE_KEY_SQLITE_MIGRATED = 'kc-sqlite-migrated'
 
 // ── Settings (synced via settingsSync.ts) ──────────────────────────────
@@ -75,8 +74,6 @@ export const STORAGE_KEY_SEEN_TIPS = 'ksc-seen-tips'
 export const STORAGE_KEY_NPS_STATE = 'kc-nps-state'
 
 // ── Orbit (Recurring Maintenance) ─────────────────────────────────
-export const STORAGE_KEY_ORBIT_MISSIONS = 'kc-orbit-missions'
-export const STORAGE_KEY_ORBIT_HISTORY = 'kc-orbit-history'
 export const STORAGE_KEY_GROUND_CONTROL_DASHBOARDS = 'kc-ground-control-dashboards'
 
 // ── Snooze persistence ────────────────────────────────────────────────
