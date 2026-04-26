@@ -320,7 +320,7 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
                   {(cardDefinition.columns || []).map(col => {
                     const val = String((item as Record<string, unknown>)[col.field] ?? '-')
                     if (col.format === 'badge') {
-                      // Issue 9071: swap `bg-gray-500/20` -> `bg-muted` (semantic, auto-switches).
+                      // Semantic badge color — adapts to both light and dark themes.
                       const badgeColor = col.badgeColors?.[val] || 'bg-muted text-muted-foreground'
                       return (
                         <span

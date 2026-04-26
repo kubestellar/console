@@ -161,7 +161,7 @@ export function ArgoCDHealth({ config: _config }: ArgoCDHealthProps) {
             style={{ width: `${(stats.missing / total) * 100}%` }}
           />
           <div
-            className="bg-gray-500 transition-all"
+            className="bg-muted transition-all"
             style={{ width: `${(stats.unknown / total) * 100}%` }}
           />
         </div>

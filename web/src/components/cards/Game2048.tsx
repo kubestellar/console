@@ -360,25 +360,21 @@ export function Game2048(_props: CardComponentProps) {
             )}
           </div>
 
-          {/* Win overlay.
-           * Issue 9071: Auto-QA flagged `bg-white/20 text-white` as light-only.
-           * Intentional: buttons sit on a yellow (`bg-yellow-500/80`) overlay
-           * whose backdrop is theme-independent, so white-on-yellow reads
-           * correctly in both light and dark modes. No theme-switching needed. */}
+          {/* Win overlay — buttons sit on yellow so we use semantic foreground/muted. */}
           {won && !keepPlaying && (
             <div className="absolute inset-0 bg-yellow-500/80 rounded-lg flex flex-col items-center justify-center">
-              <Trophy className="w-12 h-12 text-white mb-2" />
-              <div className="text-2xl font-bold text-white mb-4">You Win!</div>
+              <Trophy className="w-12 h-12 text-foreground mb-2" />
+              <div className="text-2xl font-bold text-foreground mb-4">You Win!</div>
               <div className="flex gap-2">
                 <button
                   onClick={continueGame}
-                  className="px-4 py-2 bg-white/20 text-white rounded-lg hover:bg-white/30"
+                  className="px-4 py-2 bg-muted/30 text-foreground rounded-lg hover:bg-muted/50"
                 >
                   Keep Playing
                 </button>
                 <button
                   onClick={newGame}
-                  className="px-4 py-2 bg-white/20 text-white rounded-lg hover:bg-white/30"
+                  className="px-4 py-2 bg-muted/30 text-foreground rounded-lg hover:bg-muted/50"
                 >
                   New Game
                 </button>

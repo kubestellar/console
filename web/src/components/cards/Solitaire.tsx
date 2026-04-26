@@ -154,9 +154,7 @@ function Card({
 
   const { Icon, color } = SUIT_CONFIG[card.suit]
 
-  // Issue 9071: card-back sits on a theme-independent blue-to-purple gradient,
-  // so the `bg-white/10` highlight and `text-white/50` glyph read correctly
-  // in both light and dark modes. No theme-switching needed.
+  // Card-back sits on a blue-to-purple gradient; use semantic muted/foreground.
   if (!card.faceUp) {
     return (
       <div
@@ -164,8 +162,8 @@ function Card({
         style={{ width: w, height: h }}
         className="rounded border border-border bg-linear-to-br from-blue-600 to-purple-700 cursor-pointer hover:brightness-110 transition-all shadow-xs flex items-center justify-center"
       >
-        <div className={`${size === 'small' ? 'w-4 h-4' : size === 'medium' ? 'w-6 h-6' : 'w-8 h-8'} rounded-full bg-white/10 flex items-center justify-center`}>
-          <span className={`text-white/50 font-bold ${size === 'small' ? 'text-[6px]' : size === 'medium' ? 'text-xs' : 'text-sm'}`}>K8s</span>
+        <div className={`${size === 'small' ? 'w-4 h-4' : size === 'medium' ? 'w-6 h-6' : 'w-8 h-8'} rounded-full bg-muted/20 flex items-center justify-center`}>
+          <span className={`text-foreground/50 font-bold ${size === 'small' ? 'text-[6px]' : size === 'medium' ? 'text-xs' : 'text-sm'}`}>K8s</span>
         </div>
       </div>
     )

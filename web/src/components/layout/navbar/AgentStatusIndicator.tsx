@@ -369,7 +369,7 @@ export function AgentStatusIndicator() {
                 ) : (
                   <span
                     className={cn(
-                      'absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform shadow-xs',
+                      'absolute top-1 left-1 w-4 h-4 bg-foreground rounded-full transition-transform shadow-xs',
                       isDemoMode ? 'translate-x-5' : 'translate-x-0',
                     )}
                   />

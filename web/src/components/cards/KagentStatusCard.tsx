@@ -18,7 +18,7 @@ function MetricTile({ icon: Icon, label, value, sub, accent }: {
   sub?: string
   accent: string
 }) {
-  // Issue 9071: swap `bg-white/5` -> `bg-muted/30` for a theme-adapting subtle tint.
+  // Semantic muted tint — adapts to both light and dark themes.
   return (
     <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/30 border border-border/50">
       <div className={`p-1.5 rounded-md ${accent}`}>
@@ -159,7 +159,7 @@ export function KagentStatusCard({ config }: KagentStatusCardProps) {
             {runtimeEntries.map(([rt, count]) => (
               <div key={rt} className="flex items-center gap-2">
                 <div className="text-sm text-muted-foreground w-20 truncate">{rt}</div>
-                {/* Issue 9071: swap `bg-white/5` -> `bg-muted/30` on progress track for theme adaptation. */}
+                {/* Semantic muted tint on progress track — adapts to both themes. */}
                 <div className="flex-1 h-1.5 rounded-full bg-muted/30 overflow-hidden">
                   <div
                     className="h-full rounded-full bg-blue-500/60"

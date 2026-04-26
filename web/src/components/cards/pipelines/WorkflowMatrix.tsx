@@ -33,20 +33,17 @@ const SPARSE_WORKFLOW_MIN_CELLS = 2
  * satisfy the ui-ux-standard ratchet and make a future i18n pass easy. */
 const LABEL_FILTER_REPO = 'Filter by repo'
 
-// Issue 9071: Auto-QA flagged `bg-gray-500/*` cells as light-only. These are
-// heatmap cells where the distinct opacity levels (40/50/60) encode the
-// cancelled/skipped/neutral/stale states and must stay visually distinguishable
-// on both themes. gray-500 is mid-gray and reads on both light and dark
-// backgrounds, so no theme-switching is applied.
+/** Heatmap cell colors — semantic `bg-muted` for inactive states so they
+ *  adapt to both light and dark themes automatically. */
 const CELL_CLASS: Record<string, string> = {
   success: 'bg-green-500/70 hover:bg-green-500',
   failure: 'bg-red-500/80 hover:bg-red-500',
   timed_out: 'bg-orange-500/80 hover:bg-orange-500',
-  cancelled: 'bg-gray-500/60 hover:bg-gray-500',
-  skipped: 'bg-gray-500/40 hover:bg-gray-500/80',
+  cancelled: 'bg-muted/60 hover:bg-muted',
+  skipped: 'bg-muted/40 hover:bg-muted/80',
   action_required: 'bg-yellow-500/70 hover:bg-yellow-500',
-  neutral: 'bg-gray-500/50 hover:bg-gray-500',
-  stale: 'bg-gray-500/40 hover:bg-gray-500/80',
+  neutral: 'bg-muted/50 hover:bg-muted',
+  stale: 'bg-muted/40 hover:bg-muted/80',
 }
 
 function cellClass(c: Conclusion): string {
@@ -184,7 +181,7 @@ export function WorkflowMatrix() {
           <Legend className="bg-green-500/70" label="success" />
           <Legend className="bg-red-500/80" label="failure" />
           <Legend className="bg-orange-500/80" label="timed out" />
-          <Legend className="bg-gray-500/60" label="cancelled" />
+          <Legend className="bg-muted/60" label="cancelled" />
           <Legend className="bg-muted/30" label="no run" />
         </div>
         {data?.range?.[0] && data?.range?.[data.range.length - 1] && (

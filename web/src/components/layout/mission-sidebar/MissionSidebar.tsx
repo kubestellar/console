@@ -739,21 +739,21 @@ export function MissionSidebar() {
                     setShowNewMission(true)
                     setTimeout(() => newMissionInputRef.current?.focus(), FOCUS_DELAY_MS)
                   }}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-white/5 text-foreground"
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted/30 text-foreground"
                 >
                   <Plus className="w-4 h-4 text-purple-400" />
                   New Mission
                 </button>
                 <button
                   onClick={() => { setShowAddMenu(false); setShowBrowser(true) }}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-white/5 text-foreground"
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted/30 text-foreground"
                 >
                   <Globe className="w-4 h-4 text-muted-foreground" />
                   Browse Community
                 </button>
                 <button
                   onClick={() => { setShowAddMenu(false); setShowMissionControl(true) }}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-white/5 text-foreground"
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted/30 text-foreground"
                 >
                   <Rocket className="w-4 h-4 text-muted-foreground" />
                   Mission Control
