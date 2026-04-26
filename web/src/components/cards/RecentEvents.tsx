@@ -10,8 +10,6 @@ import { CardControlsRow, CardPaginationFooter, CardSearchInput, CardSkeleton } 
 import type { ClusterEvent } from '../../hooks/useMCP'
 import { MS_PER_HOUR } from '../../lib/constants/time'
 
-const ONE_HOUR_MS = MS_PER_HOUR
-
 type SortByOption = 'time' | 'reason' | 'object'
 
 function getMinutesAgo(timestamp: string | undefined): string {
@@ -48,7 +46,7 @@ export function RecentEvents() {
 
   // Pre-filter to events within the last hour (before handing to useCardData)
   const recentEventsCandidates = (() => {
-    const cutoff = Date.now() - ONE_HOUR_MS
+    const cutoff = Date.now() - MS_PER_HOUR
     return filterByCluster(events).filter(e => {
       if (!e.lastSeen) return false
       return new Date(e.lastSeen).getTime() >= cutoff
