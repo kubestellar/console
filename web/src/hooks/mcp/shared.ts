@@ -11,12 +11,13 @@ import {
   MCP_HOOK_TIMEOUT_MS,
   METRICS_SERVER_TIMEOUT_MS,
   STORAGE_KEY_TOKEN,
+  DEFAULT_REFRESH_INTERVAL_MS,
 } from '../../lib/constants'
 import { MCP_PROBE_TIMEOUT_MS, FOCUS_DELAY_MS } from '../../lib/constants/network'
 import type { ClusterInfo, ClusterHealth } from './types'
 
-// Refresh interval for automatic polling (2 minutes) - manual refresh bypasses this
-export const REFRESH_INTERVAL_MS = 120000
+// Re-export canonical constant under the name used by MCP hooks
+export const REFRESH_INTERVAL_MS = DEFAULT_REFRESH_INTERVAL_MS
 
 // Polling intervals for cluster and GPU data freshness
 export const CLUSTER_POLL_INTERVAL_MS = 60000  // 60 seconds

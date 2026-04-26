@@ -14,7 +14,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { STORAGE_KEY_TOKEN } from '../lib/constants'
+import { STORAGE_KEY_TOKEN, DEFAULT_REFRESH_INTERVAL_MS as REFRESH_INTERVAL_MS } from '../lib/constants'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import type {
   TopologyResponse,
@@ -32,7 +32,6 @@ import type {
 const CACHE_EXPIRY_MS = 300_000
 
 /** Auto-refresh interval — 2 minutes */
-const REFRESH_INTERVAL_MS = 120_000
 
 /** Number of consecutive failures before marking as failed */
 const FAILURE_THRESHOLD = 3

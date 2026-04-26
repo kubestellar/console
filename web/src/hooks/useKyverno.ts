@@ -17,9 +17,9 @@ import { settledWithConcurrency } from '../lib/utils/concurrency'
 import { useDemoMode } from './useDemoMode'
 import { registerRefetch, registerCacheReset, unregisterCacheReset } from '../lib/modeTransition'
 import { STORAGE_KEY_KYVERNO_CACHE, STORAGE_KEY_KYVERNO_CACHE_TIME } from '../lib/constants/storage'
+import { DEFAULT_REFRESH_INTERVAL_MS as REFRESH_INTERVAL_MS } from '../lib/constants'
 
 /** Refresh interval for automatic polling (2 minutes) */
-const REFRESH_INTERVAL_MS = 120_000
 
 /** Cache TTL: 2 minutes — matches refresh interval */
 // Unused after stale-while-revalidate change: const CACHE_TTL_MS = 120_000

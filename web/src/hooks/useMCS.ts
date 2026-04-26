@@ -8,6 +8,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { api, BackendUnavailableError } from '../lib/api'
 import { useDemoMode } from './useDemoMode'
+import { DEFAULT_REFRESH_INTERVAL_MS as REFRESH_INTERVAL_MS } from '../lib/constants'
 import type {
   ServiceExport,
   ServiceExportList,
@@ -17,8 +18,6 @@ import type {
   ClusterMCSStatus,
 } from '../types/mcs'
 
-// Refresh interval for automatic polling (2 minutes)
-const REFRESH_INTERVAL_MS = 120000
 
 // Demo data for demo mode
 const DEMO_SERVICE_EXPORTS: ServiceExport[] = [

@@ -2,9 +2,8 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useClusters } from './useMCP'
 import { kubectlProxy } from '../lib/kubectlProxy'
 import { useDemoMode } from './useDemoMode'
+import { DEFAULT_REFRESH_INTERVAL_MS as REFRESH_INTERVAL_MS } from '../lib/constants'
 
-// Refresh interval for automatic polling (2 minutes)
-const REFRESH_INTERVAL_MS = 120000
 
 // Days before expiration to consider "expiring soon"
 const EXPIRING_SOON_DAYS = 30

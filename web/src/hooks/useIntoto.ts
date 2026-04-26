@@ -17,9 +17,9 @@ import { settledWithConcurrency } from '../lib/utils/concurrency'
 import { useDemoMode } from './useDemoMode'
 import { registerRefetch, registerCacheReset, unregisterCacheReset } from '../lib/modeTransition'
 import { STORAGE_KEY_INTOTO_CACHE, STORAGE_KEY_INTOTO_CACHE_TIME } from '../lib/constants/storage'
+import { DEFAULT_REFRESH_INTERVAL_MS as REFRESH_INTERVAL_MS } from '../lib/constants'
 
 /** Refresh interval for automatic polling (2 minutes) */
-const REFRESH_INTERVAL_MS = 120_000
 
 /** Timeout for CRD existence check (fast — missing resources fail instantly) */
 const CRD_CHECK_TIMEOUT_MS = 8_000

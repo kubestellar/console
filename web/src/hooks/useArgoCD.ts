@@ -15,12 +15,11 @@ import { useClusters } from './useMCP'
 import { useGlobalFilters } from './useGlobalFilters'
 import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN } from '../lib/constants'
 import { FETCH_DEFAULT_TIMEOUT_MS, MOCK_SYNC_DELAY_MS } from '../lib/constants/network'
+import { DEFAULT_REFRESH_INTERVAL_MS as REFRESH_INTERVAL_MS } from '../lib/constants'
 
 // Cache expiry time (5 minutes)
 const CACHE_EXPIRY_MS = 300_000
 
-// Refresh interval (2 minutes)
-const REFRESH_INTERVAL_MS = 120_000
 
 // Number of consecutive failures before marking as failed
 const FAILURE_THRESHOLD = 3

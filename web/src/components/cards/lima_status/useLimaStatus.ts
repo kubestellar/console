@@ -4,6 +4,7 @@ import { STORAGE_KEY_TOKEN } from '../../../lib/constants'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants/network'
 import { useCardLoadingState } from '../CardDataContext'
 import { LIMA_DEMO_DATA, type LimaDemoData, type LimaInstance } from './demoData'
+import { DEFAULT_REFRESH_INTERVAL_MS as REFRESH_INTERVAL_MS } from '../../../lib/constants'
 
 export interface LimaStatus {
   instances: LimaInstance[]
@@ -30,7 +31,6 @@ const INITIAL_DATA: LimaStatus = {
 }
 
 const CACHE_EXPIRY_MS = 300_000
-const REFRESH_INTERVAL_MS = 120_000
 const FAILURE_THRESHOLD = 3
 const LIMA_CACHE_KEY = 'kc-lima-cache'
 const STATUS_SERVICE_UNAVAILABLE = 503

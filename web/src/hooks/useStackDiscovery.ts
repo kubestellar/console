@@ -11,9 +11,8 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { kubectlProxy } from '../lib/kubectlProxy'
 import { getDemoMode } from './useDemoMode'
 import type { LLMdServer } from './useLLMd'
+import { DEFAULT_REFRESH_INTERVAL_MS as REFRESH_INTERVAL_MS } from '../lib/constants'
 
-// Refresh interval (2 minutes)
-const REFRESH_INTERVAL_MS = 120000
 const CACHE_KEY = 'kubestellar-stack-cache'
 const CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes
 

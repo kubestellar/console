@@ -16,6 +16,7 @@ import { useClusters } from './useMCP'
 import { STORAGE_KEY_TOKEN } from '../lib/constants'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import { registerRefetch } from '../lib/modeTransition'
+import { DEFAULT_REFRESH_INTERVAL_MS as REFRESH_INTERVAL_MS } from '../lib/constants'
 
 // ============================================================================
 // Constants
@@ -25,7 +26,6 @@ import { registerRefetch } from '../lib/modeTransition'
 const CACHE_EXPIRY_MS = 300_000
 
 /** Auto-refresh interval — 2 minutes */
-const REFRESH_INTERVAL_MS = 120_000
 
 /** Number of consecutive failures before marking as failed */
 const FAILURE_THRESHOLD = 3

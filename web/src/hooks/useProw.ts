@@ -3,9 +3,8 @@ import { kubectlProxy } from '../lib/kubectlProxy'
 import { formatTimeAgo } from '../lib/formatters'
 import { useDemoMode } from './useDemoMode'
 import { KUBECTL_EXTENDED_TIMEOUT_MS } from '../lib/constants/network'
+import { DEFAULT_REFRESH_INTERVAL_MS as REFRESH_INTERVAL_MS } from '../lib/constants'
 
-// Refresh interval for automatic polling (2 minutes)
-const REFRESH_INTERVAL_MS = 120_000
 /** Maximum number of ProwJobs to display */
 const MAX_PROW_JOBS = 100
 

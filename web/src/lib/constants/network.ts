@@ -165,6 +165,11 @@ export const MISSION_SUGGEST_INTERVAL_MS = 120_000
 /** Polling interval for nightly E2E run data (5 minutes) */
 export const NIGHTLY_E2E_POLL_INTERVAL_MS = 300_000
 
+/** Default auto-refresh interval for cached data hooks (2 minutes).
+ *  Most useCached* / use* hooks poll on this cadence. Import this
+ *  constant instead of defining a local `REFRESH_INTERVAL_MS = 120_000`. */
+export const DEFAULT_REFRESH_INTERVAL_MS = 120_000
+
 // ============================================================================
 // Loading & Timeout Thresholds
 // ============================================================================

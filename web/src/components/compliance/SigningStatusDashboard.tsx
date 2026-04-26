@@ -13,9 +13,9 @@ import {
 import { authFetch } from '../../lib/api'
 import { DashboardHeader } from '../shared/DashboardHeader'
 import { RotatingTip } from '../ui/RotatingTip'
+import { DEFAULT_REFRESH_INTERVAL_MS as REFRESH_INTERVAL_MS } from '../../lib/constants'
 
 /** Polling interval for signature status refresh (ms) */
-const REFRESH_INTERVAL_MS = 120_000
 
 interface SignedImage {
   image: string

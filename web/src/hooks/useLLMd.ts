@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { kubectlProxy } from '../lib/kubectlProxy'
 import { getDemoMode } from './useDemoMode'
+import { DEFAULT_REFRESH_INTERVAL_MS as REFRESH_INTERVAL_MS } from '../lib/constants'
 
-// Refresh interval for automatic polling (2 minutes)
-const REFRESH_INTERVAL_MS = 120000
 
 // LLM-d component types
 export type LLMdComponentType = 'model' | 'epp' | 'gateway' | 'prometheus' | 'autoscaler' | 'other'
