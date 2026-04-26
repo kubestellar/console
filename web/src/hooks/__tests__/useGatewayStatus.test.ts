@@ -20,6 +20,7 @@ vi.mock('../../lib/modeTransition', () => ({
 
 vi.mock('../../lib/constants', () => ({
   STORAGE_KEY_TOKEN: 'kc-auth-token',
+  DEFAULT_REFRESH_INTERVAL_MS: 120_000,
 }))
 
 vi.mock('../../lib/constants/network', () => ({
