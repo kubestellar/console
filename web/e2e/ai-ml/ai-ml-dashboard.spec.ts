@@ -27,7 +27,7 @@ const AI_ML_ROUTE = '/ai-ml'
 /** Timeout for page load */
 const PAGE_LOAD_TIMEOUT_MS = 60_000
 /** Timeout for stack discovery (queries multiple clusters via backend) */
-const STACK_DISCOVERY_TIMEOUT_MS = 50_000
+const STACK_DISCOVERY_TIMEOUT_MS = 15_000
 /** Timeout for Prometheus metrics or demo fallback to render */
 const PROMETHEUS_POLL_TIMEOUT_MS = 15_000
 /** Timeout for card content to render */
@@ -44,7 +44,7 @@ const STACK_POLL_INTERVAL_MS = 2_000
  * enough time to mount and render all 13 cards (including lazy-loaded chunks)
  * without relying on a network-idle signal that will never arrive.
  */
-const CARD_RENDER_WAIT_MS = 30_000
+const CARD_RENDER_WAIT_MS = 10_000
 
 /** Expected card count on the AI/ML route */
 const EXPECTED_CARD_COUNT = 13
@@ -250,7 +250,12 @@ test.describe('AI/ML Dashboard — stack discovery', () => {
     }
   })
 
-  test('stacks include Prefill and Decode components (disaggregated)', async ({ page }) => {
+  test('stacks include Prefill and Decode components (disaggregated)', async ({ page, request }) => {
+    try {
+      const healthCheck = await request.get('http://127.0.0.1:8080/api/health', { timeout: 5_000 })
+      if (!healthCheck.ok()) { test.skip(true, 'Backend not reachable'); return }
+    } catch { test.skip(true, 'Backend not reachable'); return }
+
     await setupAndNavigate(page, AI_ML_ROUTE)
     const stacks = await waitForStackDiscovery(page)
 
@@ -289,7 +294,12 @@ test.describe('AI/ML Dashboard — stack discovery', () => {
     expect(stacksWithPods.length).toBeGreaterThan(0)
   })
 
-  test('stacks include WVA autoscaler where configured', async ({ page }) => {
+  test('stacks include WVA autoscaler where configured', async ({ page, request }) => {
+    try {
+      const healthCheck = await request.get('http://127.0.0.1:8080/api/health', { timeout: 5_000 })
+      if (!healthCheck.ok()) { test.skip(true, 'Backend not reachable'); return }
+    } catch { test.skip(true, 'Backend not reachable'); return }
+
     await setupAndNavigate(page, AI_ML_ROUTE)
     const stacks = await waitForStackDiscovery(page)
 
@@ -323,7 +333,12 @@ test.describe('AI/ML Dashboard — stack discovery', () => {
     expect(stacks.length).toBeGreaterThan(0)
   })
 
-  test('stacks span multiple clusters', async ({ page }) => {
+  test('stacks span multiple clusters', async ({ page, request }) => {
+    try {
+      const healthCheck = await request.get('http://127.0.0.1:8080/api/health', { timeout: 5_000 })
+      if (!healthCheck.ok()) { test.skip(true, 'Backend not reachable'); return }
+    } catch { test.skip(true, 'Backend not reachable'); return }
+
     await setupAndNavigate(page, AI_ML_ROUTE)
     const stacks = await waitForStackDiscovery(page)
 
