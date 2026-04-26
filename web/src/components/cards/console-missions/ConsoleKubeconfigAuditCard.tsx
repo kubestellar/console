@@ -12,7 +12,7 @@ import { useDemoMode } from '../../../hooks/useDemoMode'
 // Card 2: Kubeconfig Audit - Detect stale/unreachable clusters
 export function ConsoleKubeconfigAuditCard(_props: ConsoleMissionCardProps) {
   const { startMission, missions } = useMissions()
-  const { deduplicatedClusters: allClusters, isLoading } = useClusters()
+  const { deduplicatedClusters: allClusters, isLoading, isFailed, consecutiveFailures } = useClusters()
   const { selectedClusters, isAllClustersSelected, customFilter } = useGlobalFilters()
   const { drillToCluster } = useDrillDownActions()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
@@ -22,7 +22,9 @@ export function ConsoleKubeconfigAuditCard(_props: ConsoleMissionCardProps) {
   useCardLoadingState({
     isLoading,
     hasAnyData: allClusters.length > 0,
-    isDemoData: isDemoMode })
+    isDemoData: isDemoMode,
+    isFailed,
+    consecutiveFailures })
 
   // Filter clusters by global filter
   const clusters = (() => {

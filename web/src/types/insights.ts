@@ -69,6 +69,8 @@ export interface UseMultiClusterInsightsResult {
   insights: MultiClusterInsight[]
   isLoading: boolean
   isDemoData: boolean
+  isFailed: boolean
+  consecutiveFailures: number
   insightsByCategory: Record<InsightCategory, MultiClusterInsight[]>
   topInsights: MultiClusterInsight[]
 }

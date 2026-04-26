@@ -37,7 +37,7 @@ const TIME_RANGE_OPTIONS: { value: TimeRange; label: string; points: number }[] 
 
 export function ResourceTrend() {
   const { t } = useTranslation()
-  const { deduplicatedClusters: clusters, isLoading, isRefreshing } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading, isRefreshing, isFailed, consecutiveFailures } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { isDemoMode } = useDemoMode()
   const [view, setView] = useState<MetricView>('all')
@@ -52,7 +52,9 @@ export function ResourceTrend() {
     isLoading: isLoading && !hasData,
     isRefreshing,
     hasAnyData: hasData,
-    isDemoData: isDemoMode })
+    isDemoData: isDemoMode,
+    isFailed,
+    consecutiveFailures })
 
   // Close dropdown when clicking outside
   useEffect(() => {

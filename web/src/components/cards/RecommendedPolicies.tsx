@@ -248,7 +248,7 @@ function RecommendedPoliciesInternal({ config: _config }: CardConfig) {
   const { statuses: kyvernoStatuses, isLoading: kyvernoLoading, installed: kyvernoInstalled, isDemoData: kyvernoDemoData, clustersChecked: kyvernoChecked, totalClusters: kyvernoTotal } = useKyverno()
   const { isLoading: kubescapeLoading, installed: kubescapeInstalled, isDemoData: kubescapeDemoData, clustersChecked: kubescapeChecked, totalClusters: kubescapeTotal } = useKubescape()
   const { isLoading: trivyLoading, installed: trivyInstalled, isDemoData: trivyDemoData, clustersChecked: trivyChecked, totalClusters: trivyTotal } = useTrivy()
-  const { deduplicatedClusters } = useClusters()
+  const { deduplicatedClusters, isFailed, consecutiveFailures } = useClusters()
   const { startMission } = useMissions()
   const { selectedClusters } = useGlobalFilters()
   const { isDemoMode } = useDemoMode()
@@ -332,7 +332,7 @@ function RecommendedPoliciesInternal({ config: _config }: CardConfig) {
   })()
 
   const hasAnyData = kyvernoInstalled || kubescapeInstalled || trivyInstalled || isDemoData
-  useCardLoadingState({ isLoading: isLoading && !hasAnyData, hasAnyData, isDemoData })
+  useCardLoadingState({ isLoading: isLoading && !hasAnyData, hasAnyData, isDemoData, isFailed, consecutiveFailures })
 
   const handleDeployAll = () => {
     const gaps = recommendations.filter(r => r.coveredClusters.length < r.eligibleClusters.length)

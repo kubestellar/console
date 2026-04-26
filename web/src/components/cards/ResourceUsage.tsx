@@ -20,7 +20,7 @@ function ResourceUsageInternal() {
   // #6217: destructure lastRefresh so the card can render a freshness
   // indicator instead of leaving users guessing how stale the data is.
   // #6271: useClusters returns Date|null; normalize to numeric epoch.
-  const { isLoading: clustersLoading, isRefreshing: clustersRefreshing, lastRefresh: clustersLastRefreshDate } = useClusters()
+  const { isLoading: clustersLoading, isRefreshing: clustersRefreshing, lastRefresh: clustersLastRefreshDate, isFailed, consecutiveFailures } = useClusters()
   const clustersLastRefresh: number | null = clustersLastRefreshDate instanceof Date
     ? clustersLastRefreshDate.getTime()
     : (typeof clustersLastRefreshDate === 'number' ? clustersLastRefreshDate : null)
@@ -98,7 +98,9 @@ function ResourceUsageInternal() {
     isLoading: clustersLoading && !hasData,
     isRefreshing: clustersRefreshing || gpuRefreshing,
     hasAnyData: hasData,
-    isDemoData: isDemoMode || isDemoFallback })
+    isDemoData: isDemoMode || isDemoFallback,
+    isFailed,
+    consecutiveFailures })
 
   if (showSkeleton) {
     return (

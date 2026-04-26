@@ -109,7 +109,7 @@ const MAX_VISIBLE_ITEMS = 10
 
 export function NamespaceMonitor({ config: _config }: CardComponentProps) {
   const { isDemoMode } = useDemoMode()
-  const { deduplicatedClusters: clusters, isLoading } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading, isFailed, consecutiveFailures } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToNamespace, drillToPod, drillToDeployment, drillToService, drillToPVC } = useDrillDownActions()
   // UI state
@@ -167,7 +167,9 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
     isLoading,
     isRefreshing: namespacesRefreshing || deploymentsRefreshing || servicesRefreshing || pvcsRefreshing || podsRefreshing || configmapsRefreshing || secretsRefreshing || jobsRefreshing,
     hasAnyData: clusters.length > 0,
-    isDemoData: isDemoMode || isDemoData })
+    isDemoData: isDemoMode || isDemoData,
+    isFailed,
+    consecutiveFailures })
 
   // Build snapshots and detect changes
   useEffect(() => {

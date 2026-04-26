@@ -15,7 +15,7 @@ interface ClusterNetworkProps {
 
 export function ClusterNetwork({ config }: ClusterNetworkProps) {
   const { t } = useTranslation(['cards', 'common'])
-  const { deduplicatedClusters: allClusters, isLoading, isRefreshing } = useClusters()
+  const { deduplicatedClusters: allClusters, isLoading, isRefreshing, isFailed, consecutiveFailures } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
   const { isDemoMode } = useDemoMode()
 
@@ -24,7 +24,9 @@ export function ClusterNetwork({ config }: ClusterNetworkProps) {
     isLoading,
     isRefreshing,
     hasAnyData: allClusters.length > 0,
-    isDemoData: isDemoMode })
+    isDemoData: isDemoMode,
+    isFailed,
+    consecutiveFailures })
 
   const {
     selectedClusters: globalSelectedClusters,

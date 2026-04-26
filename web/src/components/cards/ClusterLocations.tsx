@@ -225,7 +225,7 @@ type StatusFilter = 'all' | 'healthy' | 'unhealthy'
 export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
   const { t } = useTranslation(['cards', 'common'])
   const { showToast } = useToast()
-  const { deduplicatedClusters: allClusters, isLoading, isRefreshing } = useClusters()
+  const { deduplicatedClusters: allClusters, isLoading, isRefreshing, isFailed, consecutiveFailures } = useClusters()
   const { drillToCluster } = useDrillDownActions()
   const { isDemoMode } = useDemoMode()
 
@@ -235,7 +235,9 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
     isLoading: isLoading && !hasData,
     isRefreshing,
     hasAnyData: hasData,
-    isDemoData: isDemoMode })
+    isDemoData: isDemoMode,
+    isFailed,
+    consecutiveFailures })
 
   const {
     selectedClusters: globalSelectedClusters,

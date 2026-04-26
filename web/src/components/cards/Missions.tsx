@@ -145,7 +145,7 @@ const CLUSTER_FILTER_STORAGE_KEY = 'kubestellar-card-filter:deployment-missions-
 export function Missions(_props: MissionsProps) {
   const { t } = useTranslation(['common', 'cards'])
   const { missions: liveMissions, activeMissions: liveActive, completedMissions: liveCompleted } = useDeployMissions()
-  const { deduplicatedClusters, isLoading, isRefreshing } = useClusters()
+  const { deduplicatedClusters, isLoading, isRefreshing, isFailed, consecutiveFailures } = useClusters()
   const { isDemoMode: demoMode } = useDemoMode()
   const missions = demoMode ? DEMO_MISSIONS : liveMissions
   const activeMissions = demoMode ? [] : liveActive
@@ -184,7 +184,9 @@ export function Missions(_props: MissionsProps) {
     isLoading: isLoading && !hasData,
     isRefreshing,
     hasAnyData: hasData,
-    isDemoData: demoMode })
+    isDemoData: demoMode,
+    isFailed,
+    consecutiveFailures })
 
   // Manual cluster filter — filters by target clusters (not source).
   // Can't use useCardData's built-in cluster filter because the global

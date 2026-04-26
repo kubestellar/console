@@ -24,7 +24,7 @@ const MAX_TIMELINE_BUCKETS = 30
 const CLUSTER_COLORS = CROSS_CLUSTER_EVENT_PALETTE
 
 export function CrossClusterEventCorrelation() {
-  const { insightsByCategory, isLoading, isDemoData } = useMultiClusterInsights()
+  const { insightsByCategory, isLoading, isDemoData, isFailed, consecutiveFailures } = useMultiClusterInsights()
   const { events: warningEvents } = useCachedWarningEvents()
   const { selectedClusters } = useGlobalFilters()
   const [selectedInsight, setSelectedInsight] = useState<MultiClusterInsight | null>(null)
@@ -40,6 +40,8 @@ export function CrossClusterEventCorrelation() {
     isLoading: isLoading && !hasData,
     hasAnyData: hasData,
     isDemoData,
+    isFailed,
+    consecutiveFailures,
   })
 
   // Build timeline chart data from warning events

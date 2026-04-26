@@ -189,7 +189,7 @@ function createSortComparators(statuses: Record<string, GatekeeperStatus>) {
 function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
   const { t } = useTranslation(['cards', 'common'])
   const { isDemoMode } = useDemoMode()
-  const { deduplicatedClusters: clusters, isLoading } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading, isFailed, consecutiveFailures } = useClusters()
   const { startMission } = useMissions()
   const { shouldUseDemoData } = useCardDemoState({ requires: 'agent' })
 
@@ -471,7 +471,9 @@ function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
     isLoading: shouldUseDemoData ? false : (isLoading || (isOPAChecking && !hasOPAData)),
     isRefreshing,
     hasAnyData: shouldUseDemoData ? true : (clusters.length > 0 && hasOPAData),
-    isDemoData: isDemoMode })
+    isDemoData: isDemoMode,
+    isFailed,
+    consecutiveFailures })
 
   // In demo mode, update statuses with real cluster names when they become available.
   // Initial demo statuses are already provided by useState initializer (via checkIsDemoMode).

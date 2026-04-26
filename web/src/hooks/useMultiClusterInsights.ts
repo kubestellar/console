@@ -788,7 +788,7 @@ const SEVERITY_RANK: Record<InsightSeverity, number> = {
 
 export function useMultiClusterInsights(): UseMultiClusterInsightsResult {
   const { isDemoMode } = useDemoMode()
-  const { deduplicatedClusters, isLoading: clustersLoading } = useClusters()
+  const { deduplicatedClusters, isLoading: clustersLoading, isFailed, consecutiveFailures } = useClusters()
   const { events, isLoading: eventsLoading, isDemoFallback: eventsDemoFallback } = useCachedEvents()
   const { events: warningEvents } = useCachedWarningEvents()
   const { data: deployments, isLoading: deploymentsLoading, isDemoFallback: deploymentsDemoFallback } = useCachedDeployments()
@@ -844,6 +844,8 @@ export function useMultiClusterInsights(): UseMultiClusterInsightsResult {
     insights: enrichedInsights,
     isLoading,
     isDemoData: !!isDemoData,
+    isFailed: !!isFailed,
+    consecutiveFailures: consecutiveFailures ?? 0,
     insightsByCategory,
     topInsights }
 }

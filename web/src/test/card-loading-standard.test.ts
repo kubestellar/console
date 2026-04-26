@@ -146,23 +146,6 @@ const KNOWN_VIOLATIONS: Record<string, Set<string>> = {
  * Same ratchet rules as KNOWN_VIOLATIONS: this list MUST ONLY SHRINK.
  */
 const KNOWN_FAILURE_VIOLATIONS: Record<string, Set<string>> = {
-  'ClusterComparison.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
-  'ClusterGroups.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
-  'ClusterLocations.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
-  'ClusterNetwork.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
-  'console-missions/ConsoleKubeconfigAuditCard.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
-  'FleetComplianceHeatmap.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
-  'insights/CrossClusterEventCorrelation.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
-  'Kubectl.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
-  'KustomizationStatus.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
-  'Missions.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
-  'NamespaceMonitor.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
-  'NamespaceRBAC.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
-  'OPAPolicies.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
-  'OverlayComparison.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
-  'RecommendedPolicies.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
-  'ResourceTrend.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
-  'ResourceUsage.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
 }
 
 /** Check if a violation is known (grandfathered in) */
@@ -415,7 +398,7 @@ describe('Card Loading State Gold Standard', () => {
 
       // Separate ratchet for failure-wiring violations. MUST ONLY DECREASE.
       // Each card entry has 2 violations (missing-isFailed + missing-consecutiveFailures).
-      const EXPECTED_FAILURE_VIOLATION_COUNT = 34
+      const EXPECTED_FAILURE_VIOLATION_COUNT = 0
       expect(failureCount).toBeLessThanOrEqual(EXPECTED_FAILURE_VIOLATION_COUNT)
     })
   })

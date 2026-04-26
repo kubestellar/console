@@ -51,7 +51,7 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
   const SORT_OPTIONS = SORT_OPTIONS_KEYS
     .filter(opt => opt.value !== 'rules' || TABS_WITH_RULES_COUNT.includes(activeTab))
     .map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) }))
-  const { deduplicatedClusters: clusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, error } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, error, isFailed, consecutiveFailures } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToRBAC } = useDrillDownActions()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
@@ -108,7 +108,9 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
     isLoading: isInitialLoading || !!isFetchingRBAC,
     isRefreshing,
     hasAnyData: clusters.length > 0 || k8sRoles.length > 0 || k8sBindings.length > 0 || k8sServiceAccounts.length > 0,
-    isDemoData })
+    isDemoData,
+    isFailed,
+    consecutiveFailures })
 
   // Transform raw RBAC data into RBACItem arrays (no filtering/sorting — that's handled by useCardData)
   const rbacRoles: RBACItem[] = (() => {

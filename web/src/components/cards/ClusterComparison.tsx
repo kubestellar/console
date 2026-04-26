@@ -24,7 +24,7 @@ interface ClusterComparisonProps {
 // a runtime error in the 254-line component doesn't crash the dashboard.
 function ClusterComparisonInternal({ config }: ClusterComparisonProps) {
   const { t } = useTranslation(['cards', 'common'])
-  const { deduplicatedClusters: rawClusters, isLoading: clustersLoading } = useClusters()
+  const { deduplicatedClusters: rawClusters, isLoading: clustersLoading, isFailed, consecutiveFailures } = useClusters()
   const { nodes: gpuNodes, isDemoFallback, isRefreshing, lastRefresh } = useCachedGPUNodes()
   const [selectedClusters, setSelectedClusters] = useState<string[]>(config?.clusters || [])
   const { isDemoMode } = useDemoMode()
@@ -36,6 +36,8 @@ function ClusterComparisonInternal({ config }: ClusterComparisonProps) {
     isRefreshing,
     hasAnyData: hasData,
     isDemoData: isDemoMode || isDemoFallback,
+    isFailed,
+    consecutiveFailures,
     lastRefresh })
   const {
     selectedClusters: globalSelectedClusters,

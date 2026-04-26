@@ -101,7 +101,7 @@ function formatTime(timestamp: string) {
 export function KustomizationStatus({ config }: KustomizationStatusProps) {
   const { t } = useTranslation(['cards', 'common'])
   const { isDemoMode: demoMode } = useDemoMode()
-  const { deduplicatedClusters: allClusters, isLoading } = useClusters()
+  const { deduplicatedClusters: allClusters, isLoading, isFailed, consecutiveFailures } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
   const [selectedNamespace, setSelectedNamespace] = useState<string>(config?.namespace || '')
   const {
@@ -130,7 +130,9 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,
     hasAnyData: kustomizationData.length > 0,
-    isDemoData: demoMode })
+    isDemoData: demoMode,
+    isFailed,
+    consecutiveFailures })
 
   // Auto-select first cluster in demo mode so card shows data immediately
   useEffect(() => {

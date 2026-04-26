@@ -115,7 +115,7 @@ function relativeTime(iso: string): string {
 export function ClusterGroups(_props: ClusterGroupsProps) {
   const { t } = useTranslation(['cards', 'common'])
   const { groups: liveGroups, createGroup, updateGroup, deleteGroup, isPersisted } = useClusterGroups()
-  const { deduplicatedClusters: clusters, isLoading, isRefreshing } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading, isRefreshing, isFailed, consecutiveFailures } = useClusters()
   const { isDemoMode: demoMode } = useDemoMode()
   const federation = useFederationAwareness()
 
@@ -148,7 +148,9 @@ export function ClusterGroups(_props: ClusterGroupsProps) {
     isLoading: isLoading && !hasData,
     isRefreshing,
     hasAnyData: hasData,
-    isDemoData: demoMode })
+    isDemoData: demoMode,
+    isFailed,
+    consecutiveFailures })
   const [editingGroup, setEditingGroup] = useState<string | null>(null)
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
 
