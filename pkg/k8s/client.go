@@ -1654,33 +1654,42 @@ func (m *MultiClusterClient) GetRestConfig(contextName string) (*rest.Config, er
 	return rest.CopyConfig(config), nil
 }
 
-// GetDynamicClient returns a dynamic kubernetes client for the specified context
+// GetDynamicClient returns a dynamic kubernetes client for the specified context.
+//
+// #10255 — Same lock-reduction pattern as GetClient (#9334). Client construction
+// (especially kubeconfigs with exec credential plugins) can take hundreds of ms.
+// Holding the global write lock during construction serializes all cluster probes.
+// We build the client OUTSIDE the lock and only take the write lock for the short
+// final insertion.
 func (m *MultiClusterClient) GetDynamicClient(contextName string) (dynamic.Interface, error) {
 	m.mu.RLock()
 	if client, ok := m.dynamicClients[contextName]; ok {
 		m.mu.RUnlock()
 		return client, nil
 	}
+	// Snapshot fields needed for construction so we can release the lock.
+	cachedConfig, hasConfig := m.configs[contextName]
+	inClusterConfig := m.inClusterConfig
+	kubeconfigPath := m.kubeconfig
+	inClusterName := m.inClusterName
 	m.mu.RUnlock()
 
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	// Double-check after acquiring write lock
-	if client, ok := m.dynamicClients[contextName]; ok {
-		return client, nil
-	}
-
-	// Get or create config
-	config, ok := m.configs[contextName]
-	if !ok {
+	// Build the client OUTSIDE the lock so concurrent callers for distinct
+	// contexts don't serialize on a single write lock (#10255). It is
+	// intentionally acceptable for two goroutines racing on the same context
+	// to both build a client here — the final map insertion under the write
+	// lock is idempotent (first writer wins, second discards its extra client).
+	var config *rest.Config
+	if hasConfig {
+		config = cachedConfig
+	} else {
 		var err error
-		isInCluster := m.inClusterConfig != nil && (contextName == "in-cluster" || contextName == m.inClusterName)
+		isInCluster := inClusterConfig != nil && (contextName == "in-cluster" || contextName == inClusterName)
 		if isInCluster {
-			config = rest.CopyConfig(m.inClusterConfig)
+			config = rest.CopyConfig(inClusterConfig)
 		} else {
 			config, err = clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-				&clientcmd.ClientConfigLoadingRules{ExplicitPath: m.kubeconfig},
+				&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfigPath},
 				&clientcmd.ConfigOverrides{CurrentContext: contextName},
 			).ClientConfig()
 			if err != nil {
@@ -1688,7 +1697,6 @@ func (m *MultiClusterClient) GetDynamicClient(contextName string) (dynamic.Inter
 			}
 		}
 		config.Timeout = k8sClientTimeout
-		m.configs[contextName] = config
 	}
 
 	client, err := dynamic.NewForConfig(config)
@@ -1696,7 +1704,17 @@ func (m *MultiClusterClient) GetDynamicClient(contextName string) (dynamic.Inter
 		return nil, fmt.Errorf("failed to create dynamic client for context %s: %w", contextName, err)
 	}
 
+	// Install the constructed client under a short write lock. If a concurrent
+	// caller beat us to it, reuse the existing entry (#10255).
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if existing, ok := m.dynamicClients[contextName]; ok {
+		return existing, nil
+	}
 	m.dynamicClients[contextName] = client
+	if !hasConfig {
+		m.configs[contextName] = config
+	}
 	return client, nil
 }
 
