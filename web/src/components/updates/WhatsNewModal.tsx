@@ -1,4 +1,5 @@
 import { COPY_FEEDBACK_TIMEOUT_MS } from '../../lib/constants'
+import { formatTimeAgo } from '../../lib/formatters'
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { Download, Clock, SkipForward, ChevronDown, Copy, Check, Loader2 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
@@ -46,18 +47,7 @@ function snoozeUpdate(durationMs: number) {
   }
 }
 
-function formatRelativeTime(date: Date): string {
-  const diffMs = Date.now() - date.getTime()
-  const diffMin = Math.floor(diffMs / 60_000)
-  if (diffMin < 1) return 'just now'
-  if (diffMin < 60) return `${diffMin}m ago`
-  const diffH = Math.floor(diffMin / 60)
-  if (diffH < 24) return `${diffH}h ago`
-  const diffD = Math.floor(diffH / 24)
-  if (diffD === 1) return 'yesterday'
-  if (diffD < 30) return `${diffD}d ago`
-  return date.toLocaleDateString()
-}
+
 
 interface WhatsNewModalProps {
   isOpen: boolean
@@ -229,7 +219,7 @@ export function WhatsNewModal({ isOpen, onClose }: WhatsNewModalProps) {
   // minimal modal with the commit SHA instead of full release notes.
   if (!latestRelease && !isOpen) return null
 
-  const relativeTime = latestRelease ? formatRelativeTime(latestRelease.publishedAt) : 'just now'
+  const relativeTime = latestRelease ? formatTimeAgo(latestRelease.publishedAt) : 'just now'
 
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} size="lg">
@@ -279,7 +269,7 @@ export function WhatsNewModal({ isOpen, onClose }: WhatsNewModalProps) {
                   <span className="text-xs text-muted-foreground font-mono shrink-0">#{pr.number}</span>
                   <span className="text-sm text-foreground group-hover:text-primary transition-colors">{pr.title}</span>
                   <span className="text-xs text-muted-foreground ml-auto shrink-0">
-                    {formatRelativeTime(new Date(pr.merged_at))}
+                    {formatTimeAgo(new Date(pr.merged_at))}
                   </span>
                 </a>
               ))}
@@ -313,7 +303,7 @@ export function WhatsNewModal({ isOpen, onClose }: WhatsNewModalProps) {
                         className="flex items-center justify-between w-full px-3 py-2 text-left text-sm hover:bg-secondary/50 transition-colors rounded-lg"
                       >
                         <span className="font-medium text-foreground">{release.tag}</span>
-                        <span className="text-xs text-muted-foreground">{formatRelativeTime(release.publishedAt)}</span>
+                        <span className="text-xs text-muted-foreground">{formatTimeAgo(release.publishedAt)}</span>
                       </button>
                       {expandedRelease === release.tag && release.releaseNotes && (
                         <div className="px-3 pb-3 prose dark:prose-invert max-w-none text-xs overflow-x-auto wrap-break-word [word-break:break-word]">

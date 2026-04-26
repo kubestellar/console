@@ -6,7 +6,7 @@ import type { DrillDownViewType } from '../../../hooks/useDrillDown'
 import { useCachedAllNodes, useCachedPVCs } from '../../../hooks/useCachedData'
 import { useAlerts } from '../../../hooks/useAlerts'
 import { useTranslation } from 'react-i18next'
-import { formatRelativeTime } from '../../../lib/formatters'
+import { formatTimeAgo } from '../../../lib/formatters'
 
 interface MultiClusterSummaryDrillDownProps {
   data: Record<string, unknown>
@@ -506,7 +506,7 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
           )}
           {nodesDataAge && (
             <span className="text-2xs text-muted-foreground" title={new Date(nodesLastRefresh!).toLocaleString()}>
-              Updated {formatRelativeTime(nodesDataAge)}
+              Updated {formatTimeAgo(nodesDataAge)}
             </span>
           )}
         </div>

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { Bell, AlertTriangle, CheckCircle, Clock, ChevronRight, X, Server, Search, ExternalLink, CheckSquare, Square, MinusSquare } from 'lucide-react'
 import { useAlerts } from '../../hooks/useAlerts'
+import { formatTimeAgo } from '../../lib/formatters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useMissions } from '../../hooks/useMissions'
 import { useMobile } from '../../hooks/useMobile'
@@ -11,15 +12,11 @@ import type { Alert, AlertSeverity } from '../../types/alerts'
 import { CardAIActions } from '../../lib/cards/CardComponents'
 import { ROUTES } from '../../config/routes'
 import { TRANSITION_DELAY_MS } from '../../lib/constants/network'
-import { HOURS_PER_DAY } from '../../lib/constants/time'
 import { useModalState } from '../../lib/modals'
 import { Button } from './Button'
 
 /** Maximum numeric value to display in the badge before switching to overflow text (e.g. "99+") */
 const BADGE_MAX_COUNT = 99
-/** Number of minutes in an hour, used for relative-time formatting */
-const MINS_PER_HOUR = 60
-/** Number of hours in a day, used for relative-time formatting */
 /** Duration of the exit animation before swapping the counter value in milliseconds */
 const ANIMATION_EXIT_DELAY_MS = 150
 
@@ -76,19 +73,7 @@ export function AnimatedCounter({ value, className }: { value: number; className
   )
 }
 
-// Format relative time
-function formatRelativeTime(dateString: string): string {
-  const date = new Date(dateString)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffMins = Math.floor(diffMs / 60000)
-  const diffHours = Math.floor(diffMins / 60)
 
-  if (diffMins < 1) return 'Just now'
-  if (diffMins < MINS_PER_HOUR) return `${diffMins}m ago`
-  if (diffHours < HOURS_PER_DAY) return `${diffHours}h ago`
-  return new Date(dateString).toLocaleDateString()
-}
 
 export function AlertBadge() {
   const { t } = useTranslation()
@@ -490,7 +475,7 @@ export function AlertBadge() {
                         )}
                         <span className="text-xs text-muted-foreground flex items-center gap-1">
                           <Clock className="w-3 h-3" />
-                          {formatRelativeTime(alert.firedAt)}
+                          {formatTimeAgo(alert.firedAt)}
                         </span>
                       </div>
                     </div>

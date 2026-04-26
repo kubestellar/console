@@ -19,22 +19,7 @@ import {
   type FeedbackType,
 } from '../../hooks/useFeatureRequests'
 import { useTranslation } from 'react-i18next'
-
-// Format relative time
-function formatRelativeTime(dateString: string): string {
-  const date = new Date(dateString)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffMins = Math.floor(diffMs / 60000)
-  const diffHours = Math.floor(diffMins / 60)
-  const diffDays = Math.floor(diffHours / 24)
-
-  if (diffMins < 1) return 'Just now'
-  if (diffMins < 60) return `${diffMins}m ago`
-  if (diffHours < 24) return `${diffHours}h ago`
-  if (diffDays < 7) return `${diffDays}d ago`
-  return date.toLocaleDateString()
-}
+import { formatTimeAgo } from '../../lib/formatters'
 
 interface RequestCardProps {
   request: FeatureRequest
@@ -89,7 +74,7 @@ function RequestCard({ request, onFeedback }: RequestCardProps) {
       <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
         <span className="flex items-center gap-1">
           <Clock className="w-3 h-3" />
-          {formatRelativeTime(request.created_at)}
+          {formatTimeAgo(request.created_at)}
         </span>
         {request.github_issue_url && (
           <a

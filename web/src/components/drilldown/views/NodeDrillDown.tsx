@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 import { copyToClipboard } from '../../../lib/clipboard'
 import { useCachedNodes } from '../../../hooks/useCachedData'
-import { formatRelativeTime } from '../../../lib/formatters'
+import { formatTimeAgo } from '../../../lib/formatters'
 
 interface Props {
   data: Record<string, unknown>
@@ -140,7 +140,7 @@ Please:
           <h3 className="text-lg font-semibold text-foreground">Node: {nodeName}</h3>
           {nodeDataAge && (
             <span className="text-2xs text-muted-foreground" title={new Date(nodeLastRefresh!).toLocaleString()}>
-              Updated {formatRelativeTime(nodeDataAge)}
+              Updated {formatTimeAgo(nodeDataAge)}
             </span>
           )}
         </div>

@@ -60,24 +60,8 @@ export interface ScreenshotItem {
 
 // ── Utility functions ──
 
-/** Format a date string as relative time (e.g. "5m ago", "3d ago") */
-export function formatRelativeTime(dateString: string | undefined): string {
-  if (!dateString) return ''
-  const date = new Date(dateString)
-  if (isNaN(date.getTime())) return ''
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const MS_PER_MINUTE = 60000
-  const diffMins = Math.floor(diffMs / MS_PER_MINUTE)
-  const diffHours = Math.floor(diffMins / MINUTES_PER_HOUR)
-  const diffDays = Math.floor(diffHours / HOURS_PER_DAY)
-
-  if (diffMins < 1) return 'Just now'
-  if (diffMins < MINUTES_PER_HOUR) return `${diffMins}m ago`
-  if (diffHours < HOURS_PER_DAY) return `${diffHours}h ago`
-  if (diffDays < DAYS_PER_WEEK) return `${diffDays}d ago`
-  return date.toLocaleDateString()
-}
+/** @deprecated Use {@link formatTimeAgo} from lib/formatters instead. */
+export { formatTimeAgo as formatRelativeTime } from '../../lib/formatters'
 
 /** Get display info (label, colors) for a request status */
 export function getStatusInfo(
