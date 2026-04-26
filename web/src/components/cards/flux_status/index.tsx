@@ -4,26 +4,8 @@ import { MetricTile } from '../../../lib/cards/CardComponents'
 import { Skeleton, SkeletonList, SkeletonStats } from '../../ui/Skeleton'
 import { useFluxStatus } from './useFluxStatus'
 import type { FluxResourceStatus } from './demoData'
+import { createCardSyncFormatter } from '../../../lib/formatters'
 
-function useFormatRelativeTime() {
-  const { t } = useTranslation('cards')
-  return (isoString: string): string => {
-    const parsed = new Date(isoString).getTime()
-    if (!isoString || Number.isNaN(parsed)) return t('fluxStatus.syncedJustNow')
-
-    const diff = Date.now() - parsed
-    if (diff < 0) return t('fluxStatus.syncedJustNow')
-
-    const minute = 60_000
-    const hour = 60 * minute
-    const day = 24 * hour
-
-    if (diff < minute) return t('fluxStatus.syncedJustNow')
-    if (diff < hour) return t('fluxStatus.syncedMinutesAgo', { count: Math.floor(diff / minute) })
-    if (diff < day) return t('fluxStatus.syncedHoursAgo', { count: Math.floor(diff / hour) })
-    return t('fluxStatus.syncedDaysAgo', { count: Math.floor(diff / day) })
-  }
-}
 
 function ResourceSection({
   title,
@@ -88,7 +70,7 @@ function ResourceSection({
 
 export function FluxStatus() {
   const { t } = useTranslation('cards')
-  const formatRelativeTime = useFormatRelativeTime()
+  const formatRelativeTime = createCardSyncFormatter(t, 'fluxStatus')
   const { data, isRefreshing, error, showSkeleton, showEmptyState } = useFluxStatus()
 
   const totalNotReady = data.sources.notReady + data.kustomizations.notReady + data.helmReleases.notReady

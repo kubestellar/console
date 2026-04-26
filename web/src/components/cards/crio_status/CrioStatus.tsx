@@ -3,25 +3,11 @@ import { useTranslation } from 'react-i18next'
 import { Skeleton } from '../../ui/Skeleton'
 import { useCrioStatus } from './useCrioStatus'
 import { MetricTile } from '../../../lib/cards/CardComponents'
-
-function useFormatRelativeTime() {
-  const { t } = useTranslation('cards')
-  return (isoString: string): string => {
-    const diff = Date.now() - new Date(isoString).getTime()
-    if (isNaN(diff) || diff < 0) return t('crio.syncedJustNow')
-    const minute = 60_000
-    const hour = 60 * minute
-    const day = 24 * hour
-    if (diff < minute) return t('crio.syncedJustNow')
-    if (diff < hour) return t('crio.syncedMinutesAgo', { count: Math.floor(diff / minute) })
-    if (diff < day) return t('crio.syncedHoursAgo', { count: Math.floor(diff / hour) })
-    return t('crio.syncedDaysAgo', { count: Math.floor(diff / day) })
-  }
-}
+import { createCardSyncFormatter } from '../../../lib/formatters'
 
 export function CrioStatus() {
   const { t } = useTranslation('cards')
-  const formatRelativeTime = useFormatRelativeTime()
+  const formatRelativeTime = createCardSyncFormatter(t, 'crio')
   const { data, error, showSkeleton, showEmptyState, isRefreshing, isDemoData } = useCrioStatus()
 
   if (showSkeleton) {

@@ -11,25 +11,12 @@ import { useTranslation } from 'react-i18next'
 import { Skeleton } from '../../ui/Skeleton'
 import { MetricTile } from '../../../lib/cards/CardComponents'
 import { useArtifactHubStatus } from './useArtifactHubStatus'
+import { createCardSyncFormatter } from '../../../lib/formatters'
 
-function useFormatRelativeTime() {
-  const { t } = useTranslation('cards')
-  return (isoString: string): string => {
-    const diff = Date.now() - new Date(isoString).getTime()
-    if (isNaN(diff) || diff < 0) return t('artifactHub.syncedJustNow')
-    const minute = 60_000
-    const hour = 60 * minute
-    const day = 24 * hour
-    if (diff < minute) return t('artifactHub.syncedJustNow')
-    if (diff < hour) return t('artifactHub.syncedMinutesAgo', { count: Math.floor(diff / minute) })
-    if (diff < day) return t('artifactHub.syncedHoursAgo', { count: Math.floor(diff / hour) })
-    return t('artifactHub.syncedDaysAgo', { count: Math.floor(diff / day) })
-  }
-}
 
 export function ArtifactHubStatus() {
   const { t } = useTranslation('cards')
-  const formatRelativeTime = useFormatRelativeTime()
+  const formatRelativeTime = createCardSyncFormatter(t, 'artifactHub')
   const { data, error, showSkeleton, showEmptyState } = useArtifactHubStatus()
 
   if (showSkeleton) {

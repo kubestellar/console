@@ -3,20 +3,13 @@ import { Skeleton } from '../../ui/Skeleton'
 import { useCachedThanosStatus } from '../../../hooks/useCachedThanosStatus'
 import { useTranslation } from 'react-i18next'
 import { useCardLoadingState } from '../CardDataContext'
+import { createCardSyncFormatter } from '../../../lib/formatters'
 
-function useFormatRelativeTime() {
-    const { t } = useTranslation('cards')
-    return (isoString: string): string => {
-        const diff = Date.now() - new Date(isoString).getTime()
-        if (isNaN(diff) || diff < 0) return t('thanosStatus.justNow')
-        const minute = 60_000
-        const hour = 60 * minute
-        const day = 24 * hour
-        if (diff < minute) return t('thanosStatus.justNow')
-        if (diff < hour) return t('thanosStatus.minutesAgo', { count: Math.floor(diff / minute) })
-        if (diff < day) return t('thanosStatus.hoursAgo', { count: Math.floor(diff / hour) })
-        return t('thanosStatus.daysAgo', { count: Math.floor(diff / day) })
-    }
+const THANOS_TIME_KEYS = {
+  justNow: 'thanosStatus.justNow',
+  minutesAgo: 'thanosStatus.minutesAgo',
+  hoursAgo: 'thanosStatus.hoursAgo',
+  daysAgo: 'thanosStatus.daysAgo',
 }
 
 interface MetricTileProps {
@@ -40,7 +33,7 @@ function MetricTile({ label, value, colorClass, icon }: MetricTileProps) {
 
 export function ThanosStatus() {
     const { t } = useTranslation('cards')
-    const formatRelativeTime = useFormatRelativeTime()
+    const formatRelativeTime = createCardSyncFormatter(t, THANOS_TIME_KEYS)
     const {
         data,
         isLoading,

@@ -225,14 +225,68 @@ export function createRelativeTimeFormatter(
   return (isoString: string): string => {
     const diff = Date.now() - new Date(isoString).getTime()
     if (isNaN(diff) || diff < 0) return t('common.justNow')
-    
+
     const minute = 60_000
     const hour = 60 * minute
     const day = 24 * hour
-    
+
     if (diff < minute) return t('common.justNow')
     if (diff < hour) return t('common.minutesAgo', { count: Math.floor(diff / minute) })
     if (diff < day) return t('common.hoursAgo', { count: Math.floor(diff / hour) })
     return t('common.daysAgo', { count: Math.floor(diff / day) })
+  }
+}
+
+export interface CardSyncKeys {
+  justNow: string
+  minutesAgo: string
+  hoursAgo: string
+  daysAgo: string
+}
+
+/**
+ * Build the standard `synced*` i18n key set for a card prefix.
+ *
+ * Most status cards use `<prefix>.syncedJustNow`, etc.  Pass a custom
+ * {@link CardSyncKeys} object for cards that deviate (e.g. Thanos uses
+ * `thanosStatus.justNow` without the `synced` prefix).
+ */
+export function cardSyncKeys(prefix: string): CardSyncKeys {
+  return {
+    justNow: `${prefix}.syncedJustNow`,
+    minutesAgo: `${prefix}.syncedMinutesAgo`,
+    hoursAgo: `${prefix}.syncedHoursAgo`,
+    daysAgo: `${prefix}.syncedDaysAgo`,
+  }
+}
+
+/**
+ * Create a card-specific i18n-aware relative time formatter.
+ *
+ * Accepts either a card prefix (uses the standard `synced*` key convention)
+ * or an explicit {@link CardSyncKeys} object for non-standard cards.
+ */
+export function createCardSyncFormatter(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  t: (key: any, options?: any) => string,
+  keys: string | CardSyncKeys,
+): (isoString: string) => string {
+  const k = typeof keys === 'string' ? cardSyncKeys(keys) : keys
+
+  return (isoString: string): string => {
+    const parsed = new Date(isoString).getTime()
+    if (!isoString || isNaN(parsed)) return t(k.justNow)
+
+    const diff = Date.now() - parsed
+    if (diff < 0) return t(k.justNow)
+
+    const MS_PER_MIN = 60_000
+    const MS_PER_HR = 60 * MS_PER_MIN
+    const MS_PER_D = 24 * MS_PER_HR
+
+    if (diff < MS_PER_MIN) return t(k.justNow)
+    if (diff < MS_PER_HR) return t(k.minutesAgo, { count: Math.floor(diff / MS_PER_MIN) })
+    if (diff < MS_PER_D) return t(k.hoursAgo, { count: Math.floor(diff / MS_PER_HR) })
+    return t(k.daysAgo, { count: Math.floor(diff / MS_PER_D) })
   }
 }

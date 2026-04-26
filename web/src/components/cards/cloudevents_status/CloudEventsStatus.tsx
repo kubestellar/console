@@ -5,6 +5,7 @@ import { CardSearchInput, MetricTile } from '../../../lib/cards/CardComponents'
 import { Skeleton, SkeletonList, SkeletonStats } from '../../ui/Skeleton'
 import { useCloudEventsStatus } from './useCloudEventsStatus'
 import type { CloudEventResourceState } from './demoData'
+import { createCardSyncFormatter } from '../../../lib/formatters'
 
 const STATUS_STYLE: Record<CloudEventResourceState, { badge: string; icon: React.ReactNode }> = {
   ready: {
@@ -22,26 +23,10 @@ const STATUS_LABEL_KEY: Record<CloudEventResourceState, 'cloudevents.status_read
   degraded: 'cloudevents.status_degraded',
   error: 'cloudevents.status_error' }
 
-function useFormatRelativeTime() {
-  const { t } = useTranslation('cards')
-  return (isoString: string): string => {
-    const diff = Date.now() - new Date(isoString).getTime()
-    if (isNaN(diff) || diff < 0) return t('cloudevents.syncedJustNow')
-
-    const minute = 60_000
-    const hour = 60 * minute
-    const day = 24 * hour
-
-    if (diff < minute) return t('cloudevents.syncedJustNow')
-    if (diff < hour) return t('cloudevents.syncedMinutesAgo', { count: Math.floor(diff / minute) })
-    if (diff < day) return t('cloudevents.syncedHoursAgo', { count: Math.floor(diff / hour) })
-    return t('cloudevents.syncedDaysAgo', { count: Math.floor(diff / day) })
-  }
-}
 
 export function CloudEventsStatus() {
   const { t } = useTranslation('cards')
-  const formatRelativeTime = useFormatRelativeTime()
+  const formatRelativeTime = createCardSyncFormatter(t, 'cloudevents')
   const { data, isRefreshing, error, showSkeleton, showEmptyState } = useCloudEventsStatus()
   const [search, setSearch] = useState('')
 

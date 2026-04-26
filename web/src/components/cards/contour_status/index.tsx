@@ -4,26 +4,8 @@ import { MetricTile } from '../../../lib/cards/CardComponents'
 import { Skeleton, SkeletonList, SkeletonStats } from '../../ui/Skeleton'
 import { useContourStatus } from './useContourStatus'
 import type { ContourProxyStatus } from './demoData'
+import { createCardSyncFormatter } from '../../../lib/formatters'
 
-function useFormatRelativeTime() {
-  const { t } = useTranslation('cards')
-  return (isoString: string): string => {
-    const parsed = new Date(isoString).getTime()
-    if (!isoString || Number.isNaN(parsed)) return t('contourStatus.syncedJustNow')
-
-    const diff = Date.now() - parsed
-    if (diff < 0) return t('contourStatus.syncedJustNow')
-
-    const minute = 60_000
-    const hour = 60 * minute
-    const day = 24 * hour
-
-    if (diff < minute) return t('contourStatus.syncedJustNow')
-    if (diff < hour) return t('contourStatus.syncedMinutesAgo', { count: Math.floor(diff / minute) })
-    if (diff < day) return t('contourStatus.syncedHoursAgo', { count: Math.floor(diff / hour) })
-    return t('contourStatus.syncedDaysAgo', { count: Math.floor(diff / day) })
-  }
-}
 
 function ProxySection({
   title,
@@ -88,7 +70,7 @@ function ProxySection({
 
 export function ContourStatus() {
   const { t } = useTranslation('cards')
-  const formatRelativeTime = useFormatRelativeTime()
+  const formatRelativeTime = createCardSyncFormatter(t, 'contourStatus')
   const { data, isRefreshing, error, showSkeleton, showEmptyState } = useContourStatus()
 
   const isHealthy = data.health === 'healthy'

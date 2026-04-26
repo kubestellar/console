@@ -20,6 +20,7 @@ import {
 import { useCardData } from '../../../lib/cards/cardHooks'
 import { useKeycloakStatus } from './useKeycloakStatus'
 import type { KeycloakRealm, KeycloakRealmStatus } from './demoData'
+import { createCardSyncFormatter } from '../../../lib/formatters'
 
 // Default page size for the paginated realm list. Named constant per
 // CLAUDE.md "No magic numbers" rule.
@@ -63,20 +64,6 @@ const STATUS_SORT_ORDER: Record<KeycloakRealmStatus, number> = {
   ready: 3,
 }
 
-function useFormatRelativeTime() {
-  const { t } = useTranslation('cards')
-  return (isoString: string): string => {
-    const diff = Date.now() - new Date(isoString).getTime()
-    if (isNaN(diff) || diff < 0) return t('keycloak.syncedJustNow')
-    const minute = 60_000
-    const hour = 60 * minute
-    const day = 24 * hour
-    if (diff < minute) return t('keycloak.syncedJustNow')
-    if (diff < hour) return t('keycloak.syncedMinutesAgo', { count: Math.floor(diff / minute) })
-    if (diff < day) return t('keycloak.syncedHoursAgo', { count: Math.floor(diff / hour) })
-    return t('keycloak.syncedDaysAgo', { count: Math.floor(diff / day) })
-  }
-}
 
 // ---------------------------------------------------------------------------
 // Sub-components
@@ -156,7 +143,7 @@ function RealmRow({ realm }: { realm: KeycloakRealm }) {
 
 export function KeycloakStatus() {
   const { t } = useTranslation('cards')
-  const formatRelativeTime = useFormatRelativeTime()
+  const formatRelativeTime = createCardSyncFormatter(t, 'keycloak')
   const { data, isRefreshing, isFailed, showSkeleton, showEmptyState } =
     useKeycloakStatus()
 

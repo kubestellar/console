@@ -4,26 +4,13 @@ import { Skeleton } from '../../ui/Skeleton'
 import { MetricTile } from '../../../lib/cards/CardComponents'
 import { useFlatcarStatus } from './useFlatcarStatus'
 import { compareFlatcarVersions } from './versionUtils'
+import { createCardSyncFormatter } from '../../../lib/formatters'
 
-function useFormatRelativeTime() {
-  const { t } = useTranslation('cards')
-  return (isoString: string): string => {
-    const diff = Date.now() - new Date(isoString).getTime()
-    if (isNaN(diff) || diff < 0) return t('flatcar.syncedJustNow')
-    const minute = 60_000
-    const hour = 60 * minute
-    const day = 24 * hour
-    if (diff < minute) return t('flatcar.syncedJustNow')
-    if (diff < hour) return t('flatcar.syncedMinutesAgo', { count: Math.floor(diff / minute) })
-    if (diff < day) return t('flatcar.syncedHoursAgo', { count: Math.floor(diff / hour) })
-    return t('flatcar.syncedDaysAgo', { count: Math.floor(diff / day) })
-  }
-}
 
 
 export function FlatcarStatus() {
   const { t } = useTranslation('cards')
-  const formatRelativeTime = useFormatRelativeTime()
+  const formatRelativeTime = createCardSyncFormatter(t, 'flatcar')
   const { data, error, showSkeleton, showEmptyState } = useFlatcarStatus()
 
   if (showSkeleton) {

@@ -16,6 +16,7 @@ import { Skeleton, SkeletonStats, SkeletonList } from '../../ui/Skeleton'
 import { CardSearchInput } from '../../../lib/cards/CardComponents'
 import { useOpenYurtStatus } from './useOpenYurtStatus'
 import type { OpenYurtNodePool, NodePoolStatus, NodePoolType, OpenYurtGateway, GatewayStatus } from './demoData'
+import { createCardSyncFormatter } from '../../../lib/formatters'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -77,20 +78,6 @@ const GATEWAY_STATUS_CONFIG: Record<
   },
 }
 
-function useFormatRelativeTime() {
-  const { t } = useTranslation('cards')
-  return (isoString: string): string => {
-    const diff = Date.now() - new Date(isoString).getTime()
-    if (isNaN(diff) || diff < 0) return t('openyurt.syncedJustNow')
-    const minute = 60_000
-    const hour = 60 * minute
-    const day = 24 * hour
-    if (diff < minute) return t('openyurt.syncedJustNow')
-    if (diff < hour) return t('openyurt.syncedMinutesAgo', { count: Math.floor(diff / minute) })
-    if (diff < day) return t('openyurt.syncedHoursAgo', { count: Math.floor(diff / hour) })
-    return t('openyurt.syncedDaysAgo', { count: Math.floor(diff / day) })
-  }
-}
 
 // ---------------------------------------------------------------------------
 // Sub-components
@@ -203,7 +190,7 @@ function GatewayRow({ gw }: { gw: OpenYurtGateway }) {
 
 export function OpenYurtStatus() {
   const { t } = useTranslation('cards')
-  const formatRelativeTime = useFormatRelativeTime()
+  const formatRelativeTime = createCardSyncFormatter(t, 'openyurt')
   const { data, isRefreshing, error, showSkeleton, showEmptyState } = useOpenYurtStatus()
   const [search, setSearch] = useState('')
 
