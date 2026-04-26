@@ -2,7 +2,7 @@
  * Utility functions for formatting values for display
  */
 
-import { MS_PER_SECOND, SECONDS_PER_MINUTE, MINUTES_PER_HOUR } from './constants/time'
+import { MS_PER_SECOND, MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY, MS_PER_MONTH, MS_PER_YEAR, SECONDS_PER_MINUTE, MINUTES_PER_HOUR } from './constants/time'
 
 /**
  * Format the elapsed time between two ISO timestamps as a compact string.
@@ -184,12 +184,6 @@ export function formatK8sStorage(value: string): string {
   return formatBytes(bytes)
 }
 
-const MS_PER_MINUTE = 60_000
-const MS_PER_HOUR = 60 * MS_PER_MINUTE
-const MS_PER_DAY = 24 * MS_PER_HOUR
-const MS_PER_MONTH = 30 * MS_PER_DAY
-const MS_PER_YEAR = 365 * MS_PER_DAY
-
 function toTimestamp(input: string | Date | number): number {
   if (typeof input === 'number') return input
   if (input instanceof Date) return input.getTime()
@@ -302,13 +296,9 @@ export function createCardSyncFormatter(
     const diff = Date.now() - parsed
     if (diff < 0) return t(k.justNow)
 
-    const MS_PER_MIN = 60_000
-    const MS_PER_HR = 60 * MS_PER_MIN
-    const MS_PER_D = 24 * MS_PER_HR
-
-    if (diff < MS_PER_MIN) return t(k.justNow)
-    if (diff < MS_PER_HR) return t(k.minutesAgo, { count: Math.floor(diff / MS_PER_MIN) })
-    if (diff < MS_PER_D) return t(k.hoursAgo, { count: Math.floor(diff / MS_PER_HR) })
-    return t(k.daysAgo, { count: Math.floor(diff / MS_PER_D) })
+    if (diff < MS_PER_MINUTE) return t(k.justNow)
+    if (diff < MS_PER_HOUR) return t(k.minutesAgo, { count: Math.floor(diff / MS_PER_MINUTE) })
+    if (diff < MS_PER_DAY) return t(k.hoursAgo, { count: Math.floor(diff / MS_PER_HOUR) })
+    return t(k.daysAgo, { count: Math.floor(diff / MS_PER_DAY) })
   }
 }

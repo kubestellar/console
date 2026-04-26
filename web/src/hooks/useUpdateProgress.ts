@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import type { UpdateProgress, UpdateStepEntry } from '../types/updates'
 import { LOCAL_AGENT_WS_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
+import { MS_PER_SECOND } from '../lib/constants/time'
 import { isNetlifyDeployment } from '../lib/demoMode'
 
 // WebSocket reconnection with exponential backoff
@@ -159,11 +160,9 @@ export function useUpdateProgress() {
       const RESTART_BASE_PCT = 88   // Starting progress during health polling
       const RESTART_MAX_PCT = 99    // Max progress before "done" (100%)
       const pctPerAttempt = (RESTART_MAX_PCT - RESTART_BASE_PCT) / BACKEND_POLL_MAX
-      const MS_PER_SEC = 1000
-
       for (let i = 0; i < BACKEND_POLL_MAX; i++) {
         const pct = Math.round(RESTART_BASE_PCT + (i * pctPerAttempt))
-        const elapsed = Math.round((i * BACKEND_POLL_MS) / MS_PER_SEC)
+        const elapsed = Math.round((i * BACKEND_POLL_MS) / MS_PER_SECOND)
         const TEN_SEC = 10
         const THIRTY_SEC = 30
         const SIXTY_SEC = 60

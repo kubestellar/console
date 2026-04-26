@@ -19,6 +19,7 @@
 import { useCache, type RefreshCategory } from '../lib/cache'
 import { useDemoMode } from './useDemoMode'
 import { FETCH_DEFAULT_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../lib/constants/network'
+import { MS_PER_SECOND, SECONDS_PER_MINUTE, MINUTES_PER_HOUR, HOURS_PER_DAY } from '../lib/constants/time'
 import {
   CONTAINERD_DEMO_DATA,
   type ContainerdContainer,
@@ -109,11 +110,6 @@ function formatUptime(startedAt: string | undefined, state: ContainerdContainerS
 
   const started = new Date(startedAt).getTime()
   if (Number.isNaN(started)) return UPTIME_UNKNOWN
-
-  const MS_PER_SECOND = 1000
-  const SECONDS_PER_MINUTE = 60
-  const MINUTES_PER_HOUR = 60
-  const HOURS_PER_DAY = 24
 
   const diffSeconds = Math.max(0, Math.floor((Date.now() - started) / MS_PER_SECOND))
   if (diffSeconds < SECONDS_PER_MINUTE) return `${diffSeconds}s`
