@@ -48,23 +48,23 @@ describe('formatBytes', () => {
   })
 
   it('formats kilobytes', () => {
-    expect(formatBytes(1024)).toBe('1.0 KB')
+    expect(formatBytes(1024)).toBe('1 KB')
     expect(formatBytes(1536)).toBe('1.5 KB')
-    expect(formatBytes(1024 * 100)).toBe('100.0 KB')
+    expect(formatBytes(1024 * 100)).toBe('100 KB')
   })
 
   it('formats megabytes', () => {
-    expect(formatBytes(1024 * 1024)).toBe('1.0 MB')
-    expect(formatBytes(1024 * 1024 * 256)).toBe('256.0 MB')
+    expect(formatBytes(1024 * 1024)).toBe('1 MB')
+    expect(formatBytes(1024 * 1024 * 256)).toBe('256 MB')
   })
 
   it('formats gigabytes', () => {
-    expect(formatBytes(1024 * 1024 * 1024)).toBe('1.0 GB')
-    expect(formatBytes(1024 * 1024 * 1024 * 8)).toBe('8.0 GB')
+    expect(formatBytes(1024 * 1024 * 1024)).toBe('1 GB')
+    expect(formatBytes(1024 * 1024 * 1024 * 8)).toBe('8 GB')
   })
 
   it('formats terabytes', () => {
-    expect(formatBytes(1024 * 1024 * 1024 * 1024)).toBe('1.0 TB')
+    expect(formatBytes(1024 * 1024 * 1024 * 1024)).toBe('1 TB')
     expect(formatBytes(1024 * 1024 * 1024 * 1024 * 2.5)).toBe('2.5 TB')
   })
 })
@@ -139,7 +139,7 @@ describe('formatValue', () => {
   })
 
   it('formats with bytes type', () => {
-    expect(formatValue(1024, 'bytes')).toBe('1.0 KB')
+    expect(formatValue(1024, 'bytes')).toBe('1 KB')
   })
 
   it('formats with currency type', () => {

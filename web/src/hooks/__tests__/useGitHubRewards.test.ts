@@ -248,8 +248,8 @@ describe('useGitHubRewards', () => {
   })
 
   // 7. Missing token -- no fetch
-  it('does not fetch when STORAGE_KEY_TOKEN is absent', async () => {
-    localStorage.removeItem(STORAGE_KEY_TOKEN)
+  it('does not fetch when user is not authenticated', async () => {
+    mockUseAuth.mockReturnValue({ user: null, isAuthenticated: false })
 
     const { useGitHubRewards } = await import('../useGitHubRewards')
     const { result } = renderHook(() => useGitHubRewards())
@@ -283,11 +283,8 @@ describe('useGitHubRewards', () => {
     expect(fetchUrl).toContain('login=octocat')
   })
 
-  // 9. Cookie-only session: no token but STORAGE_KEY_HAS_SESSION is set
-  it('fetches when token is absent but cookie session hint is set', async () => {
-    localStorage.removeItem(STORAGE_KEY_TOKEN)
-    localStorage.setItem(STORAGE_KEY_HAS_SESSION, 'true')
-
+  // 9. Authenticated fetch does not send Authorization header (server-side token resolution)
+  it('fetches without Authorization header when authenticated', async () => {
     const apiResponse = makeSampleResponse({ total_points: 2000 })
     vi.mocked(global.fetch).mockResolvedValue({
       ok: true,
@@ -303,35 +300,35 @@ describe('useGitHubRewards', () => {
       expect(result.current.githubRewards!.total_points).toBe(2000)
     })
 
-    // Verify no Authorization header was sent (cookie-only path)
-    const fetchInit = vi.mocked(global.fetch).mock.calls[0][1] as RequestInit
-    expect(fetchInit.headers).toBeDefined()
-    const headers = fetchInit.headers as Record<string, string>
-    expect(headers['Authorization']).toBeUndefined()
-    // credentials: 'include' must be set for cookie transport
-    expect(fetchInit.credentials).toBe('include')
+    // Verify no Authorization header was sent (hook relies on server-side auth)
+    const fetchInit = vi.mocked(global.fetch).mock.calls[0][1] as RequestInit | undefined
+    const headers = fetchInit?.headers as Record<string, string> | undefined
+    expect(headers?.['Authorization']).toBeUndefined()
   })
 
   // 10. localStorage.getItem throwing does not crash the hook
   it('handles localStorage throwing without crashing', async () => {
-    // Remove the token set in beforeEach so we start clean
-    localStorage.removeItem(STORAGE_KEY_TOKEN)
-
     // Simulate restricted browser mode where localStorage throws on read.
     // Use vi.spyOn so jsdom's internal binding is properly intercepted.
     const getItemSpy = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new DOMException('Access denied')
     })
 
+    // Hook is authenticated, but localStorage cache will fail to load
+    const apiResponse = makeSampleResponse()
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(apiResponse),
+    } as Response)
+
     const { useGitHubRewards } = await import('../useGitHubRewards')
     const { result } = renderHook(() => useGitHubRewards())
 
-    await act(async () => { /* flush effects */ })
-
-    // Should not crash — just skip fetching since both token and session are unavailable
-    expect(result.current.githubRewards).toBeNull()
-    expect(result.current.isLoading).toBe(false)
-    expect(global.fetch).not.toHaveBeenCalled()
+    await waitFor(() => {
+      // Should not crash — fetches from API even though localStorage is broken
+      expect(global.fetch).toHaveBeenCalled()
+      expect(result.current.githubRewards).not.toBeNull()
+    })
 
     getItemSpy.mockRestore()
   })
