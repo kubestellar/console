@@ -349,7 +349,7 @@ test.describe('Error Resilience', () => {
       }
 
       // At least some cards should have content (healthy endpoints)
-      const status = loadedCards > 0 ? 'pass' : 'warn'
+      const status = loadedCards > 0 ? 'pass' : 'fail'
 
       addResult({
         testName: 'Partial failure',
