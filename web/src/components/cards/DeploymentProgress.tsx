@@ -12,6 +12,7 @@ import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import type { SortDirection } from '../../lib/cards/cardHooks'
 import type { Deployment } from '../../hooks/useMCP'
 import { useTranslation } from 'react-i18next'
+import { extractImageTag } from '../../lib/gpu'
 
 type StatusFilter = 'all' | 'running' | 'deploying' | 'failed'
 type SortByOption = 'status' | 'name' | 'cluster'
@@ -56,18 +57,6 @@ interface DeploymentProgressProps {
     cluster?: string
     namespace?: string
   }
-}
-
-// Extract version from container image
-function extractVersion(image?: string): string {
-  if (!image) return 'unknown'
-  const parts = image.split(':')
-  if (parts.length > 1) {
-    const tag = parts[parts.length - 1]
-    if (tag.length > 20) return tag.substring(0, 12)
-    return tag
-  }
-  return 'latest'
 }
 
 const SORT_COMPARATORS: Record<SortByOption, (a: Deployment, b: Deployment) => number> = {
@@ -182,7 +171,7 @@ export function DeploymentProgress({ config }: DeploymentProgressProps) {
     const clusterName = deployment.cluster || 'unknown'
     drillToDeployment(clusterName, deployment.namespace, deployment.name, {
       status: deployment.status,
-      version: extractVersion(deployment.image),
+      version: extractImageTag(deployment.image),
       replicas: deployment.replicas,
       readyReplicas: deployment.readyReplicas,
       progress: deployment.progress })
@@ -313,7 +302,7 @@ export function DeploymentProgress({ config }: DeploymentProgressProps) {
             const statusStyle = statusConfig[deployment.status] || UNKNOWN_STATUS_STYLE
             const StatusIcon = statusStyle.icon
             const clusterName = deployment.cluster || 'unknown'
-            const version = extractVersion(deployment.image)
+            const version = extractImageTag(deployment.image)
 
             return (
               <div

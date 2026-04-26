@@ -11,6 +11,7 @@ import { useCardLoadingState } from './CardDataContext'
 import { CardClusterFilter, CardSearchInput, CardAIActions, CardEmptyState } from '../../lib/cards/CardComponents'
 import { useCardData, useCardFilters, useStatusFilter, commonComparators, type SortDirection } from '../../lib/cards/cardHooks'
 import { useTranslation } from 'react-i18next'
+import { extractImageTag } from '../../lib/gpu'
 
 type StatusFilter = 'all' | 'running' | 'deploying' | 'failed'
 type SortByOption = 'status' | 'name' | 'cluster'
@@ -42,18 +43,6 @@ const statusConfig = {
     bg: 'bg-red-500/20',
     barColor: 'bg-red-500',
     label: 'Failed' } }
-
-// Extract version from container image
-function extractVersion(image?: string): string {
-  if (!image) return 'unknown'
-  const parts = image.split(':')
-  if (parts.length > 1) {
-    const tag = parts[parts.length - 1]
-    if (tag.length > 20) return tag.substring(0, 12)
-    return tag
-  }
-  return 'latest'
-}
 
 // Shared filter config for counting and display
 const FILTER_CONFIG = {
@@ -179,7 +168,7 @@ export function DeploymentStatus() {
     const clusterName = deployment.cluster || 'unknown'
     drillToDeployment(clusterName, deployment.namespace, deployment.name, {
       status: deployment.status,
-      version: extractVersion(deployment.image),
+      version: extractImageTag(deployment.image),
       replicas: deployment.replicas,
       readyReplicas: deployment.readyReplicas,
       progress: deployment.progress })
@@ -301,7 +290,7 @@ export function DeploymentStatus() {
             const config = statusConfig[deployment.status as keyof typeof statusConfig] || statusConfig.running
             const StatusIcon = config.icon
             const clusterName = deployment.cluster || 'unknown'
-            const version = extractVersion(deployment.image)
+            const version = extractImageTag(deployment.image)
 
             return (
               <div

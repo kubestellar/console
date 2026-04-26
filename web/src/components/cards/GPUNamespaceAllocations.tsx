@@ -13,6 +13,7 @@ import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { useCardLoadingState } from './CardDataContext'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import { useTranslation } from 'react-i18next'
+import { hasGPUResourceRequest, normalizeClusterName } from '../../lib/gpu'
 
 interface GPUNamespaceAllocationsProps {
   config?: Record<string, unknown>
@@ -31,19 +32,6 @@ interface NamespaceGPUAllocation {
   gpuRequested: number
   podCount: number
   clusters: string[]
-}
-
-// Check if any container in the pod requests GPUs
-function hasGPUResourceRequest(containers?: { gpuRequested?: number }[]): boolean {
-  if (!containers) return false
-  return containers.some(c => (c.gpuRequested ?? 0) > 0)
-}
-
-// Normalize cluster name for matching
-function normalizeClusterName(cluster: string): string {
-  if (!cluster) return ''
-  const parts = cluster.split('/')
-  return parts[parts.length - 1] || cluster
 }
 
 const NAMESPACE_SORT_COMPARATORS: Record<SortByOption, (a: NamespaceGPUAllocation, b: NamespaceGPUAllocation) => number> = {

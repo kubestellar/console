@@ -12,6 +12,7 @@ import { Skeleton, SkeletonStats } from '../ui/Skeleton'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { useDemoMode } from '../../hooks/useDemoMode'
+import { normalizeClusterName } from '../../lib/gpu'
 import {
   CHART_HEIGHT_STANDARD,
   CHART_GRID_STROKE,
@@ -67,13 +68,6 @@ const TIME_RANGE_OPTIONS: { value: TimeRange; label: string; points: number; int
   { value: '6h', label: '6 hours', points: 24, intervalMs: 900000 },
   { value: '24h', label: '24 hours', points: 24, intervalMs: 3600000 },
 ]
-
-// Normalize cluster name for matching
-function normalizeClusterName(cluster: string): string {
-  if (!cluster) return ''
-  const parts = cluster.split('/')
-  return parts[parts.length - 1] || cluster
-}
 
 export function GPUUsageTrend() {
   const { t } = useTranslation()
