@@ -1207,7 +1207,9 @@
     "noDevicesDetected": "No devices detected",
     "hideSnoozedAlerts": "Hide snoozed alerts",
     "showSnoozedAlerts": "Show snoozed alerts",
-    "snoozeAllVisible": "Snooze all visible alerts"
+    "snoozeAllVisible": "Snooze all visible alerts",
+    "viewAlertAria": "View alert details for {{nodeName}} on {{cluster}} ({{device}})",
+    "viewNodeAria": "View node {{nodeName}} on {{cluster}}"
   },
   "networkOverview": {
     "policies": "Policies",
@@ -4605,5 +4607,8 @@
     "empty": "No change events in selected time range",
     "title": "Change Timeline",
     "subtitle": "Cross-cluster events"
+  },
+  "clusterDropZone": {
+    "deployToClusterAria": "Deploy {{workload}} to cluster {{cluster}}"
   }
 }

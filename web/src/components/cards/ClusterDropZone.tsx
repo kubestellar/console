@@ -1,5 +1,6 @@
 import { useDroppable } from '@dnd-kit/core'
 import { Server, Check, Cpu, HardDrive, Layers, Loader2 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useClusterCapabilities, ClusterCapability } from '../../hooks/useWorkloads'
@@ -142,6 +143,7 @@ interface DroppableClusterProps {
 }
 
 function DroppableCluster({ cluster, workload, onDeploy }: DroppableClusterProps) {
+  const { t } = useTranslation('cards')
   const { isOver, setNodeRef } = useDroppable({
     id: `cluster-drop-${cluster.cluster}`,
     data: {
@@ -178,6 +180,10 @@ function DroppableCluster({ cluster, workload, onDeploy }: DroppableClusterProps
       }}
       role="button"
       tabIndex={0}
+      aria-label={t('clusterDropZone.deployToClusterAria', { 
+        workload: workload.name,
+        cluster: cluster.cluster 
+      })}
     >
       <div className="shrink-0 mt-0.5">
         <Server className={cn('w-5 h-5', isOver ? 'text-blue-500' : 'text-blue-400')} />

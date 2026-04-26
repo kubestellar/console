@@ -676,6 +676,11 @@ export function HardwareHealthCard() {
                     className="min-w-0 flex items-start gap-2 flex-1 cursor-pointer focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400 rounded"
                     role="button"
                     tabIndex={0}
+                    aria-label={t('cards:hardwareHealth.viewAlertAria', { 
+                      nodeName: extractHostname(alert.nodeName),
+                      cluster: alert.cluster,
+                      device: getDeviceLabel(alert.deviceType)
+                    })}
                     onClick={() => drillToNode(alert.cluster, alert.nodeName, {
                       issue: `${getDeviceLabel(alert.deviceType)} disappeared: ${alert.previousCount} → ${alert.currentCount}`
                     })}
@@ -807,6 +812,10 @@ export function HardwareHealthCard() {
                 className="p-2 rounded text-xs transition-colors group bg-muted/20 hover:bg-muted/40 cursor-pointer focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400"
                 role="button"
                 tabIndex={0}
+                aria-label={t('cards:hardwareHealth.viewNodeAria', {
+                  nodeName: extractHostname(node.nodeName),
+                  cluster: node.cluster
+                })}
                 onClick={() => drillToNode(node.cluster, node.nodeName)}
                 onKeyDown={(e) => {
                   // Issue #8837: keyboard activation for inventory node drill-down

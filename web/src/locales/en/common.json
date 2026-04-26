@@ -3802,5 +3802,10 @@
     "paperLink": "Read the paper on arXiv (2604.09388)",
     "dontShowAgain": "Don't show this again",
     "gotIt": "Got it — let's go"
+  },
+  "resourceBadges": {
+    "viewClusterAria": "View cluster {{cluster}}",
+    "viewNamespaceAria": "View namespace {{namespace}}",
+    "viewResourceAria": "View {{kind}} resources"
   }
 }

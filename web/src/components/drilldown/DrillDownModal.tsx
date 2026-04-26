@@ -382,6 +382,7 @@ export function DrillDownModal() {
             data-testid="drilldown-close"
             onClick={close}
             className="p-2 rounded-lg hover:bg-card/50 text-muted-foreground hover:text-foreground transition-colors"
+            aria-label={t('drilldown.close')}
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
