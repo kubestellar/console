@@ -4,6 +4,8 @@ import { useCachedPods } from '../../hooks/useCachedData'
 import { useCardLoadingState } from './CardDataContext'
 import { RefreshIndicator } from '../ui/RefreshIndicator'
 
+const MAX_VISIBLE_NAMESPACES = 60
+
 interface NamespaceUsage {
   namespace: string
   cluster: string
@@ -120,8 +122,8 @@ export function QuotaHeatmap() {
           </div>
         )
       })()}
-      {namespaceData.length > 60 && (
-        <div className="text-xs text-muted-foreground text-center">{t('quotaHeatmap.more', { count: namespaceData.length - 60 })}</div>
+      {namespaceData.length > MAX_VISIBLE_NAMESPACES && (
+        <div className="text-xs text-muted-foreground text-center">{t('quotaHeatmap.more', { count: namespaceData.length - MAX_VISIBLE_NAMESPACES })}</div>
       )}
     </div>
   )

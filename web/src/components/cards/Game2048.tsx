@@ -8,6 +8,8 @@ import { useGameKeys } from '../../hooks/useGameKeys'
 
 type Grid = (number | null)[][]
 
+const GRID_SIZE = 4
+
 // Tile colors based on value - Kubernetes themed
 const TILE_COLORS: Record<number, { bg: string; text: string }> = {
   2: { bg: 'bg-blue-500/80', text: 'text-white' },
@@ -26,7 +28,7 @@ const TILE_COLORS: Record<number, { bg: string; text: string }> = {
 
 // Create empty 4x4 grid
 function createEmptyGrid(): Grid {
-  return Array(4).fill(null).map(() => Array(4).fill(null))
+  return Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(null))
 }
 
 // Add random tile (2 or 4) to empty cell
@@ -34,8 +36,8 @@ function addRandomTile(grid: Grid): Grid {
   const newGrid = grid.map(row => [...row])
   const emptyCells: [number, number][] = []
 
-  for (let r = 0; r < 4; r++) {
-    for (let c = 0; c < 4; c++) {
+  for (let r = 0; r < GRID_SIZE; r++) {
+    for (let c = 0; c < GRID_SIZE; c++) {
       if (newGrid[r][c] === null) {
         emptyCells.push([r, c])
       }
@@ -81,12 +83,12 @@ function slideLine(line: (number | null)[]): [(number | null)[], number, boolean
   }
 
   // Pad with nulls
-  while (newLine.length < 4) {
+  while (newLine.length < GRID_SIZE) {
     newLine.push(null)
   }
 
   // Check if moved
-  for (let j = 0; j < 4; j++) {
+  for (let j = 0; j < GRID_SIZE; j++) {
     if (line[j] !== newLine[j]) {
       moved = true
       break

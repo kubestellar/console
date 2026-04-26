@@ -20,6 +20,12 @@ import { useTranslation } from 'react-i18next'
 import { KV_CACHE_UPDATE_INTERVAL_MS } from '../../../lib/constants/network'
 import { StatusBadge } from '../../ui/StatusBadge'
 
+const GRID_BREAKPOINT_FEW = 2
+const GRID_BREAKPOINT_SMALL = 3
+const GRID_BREAKPOINT_MEDIUM = 4
+const GRID_BREAKPOINT_LARGE = 6
+const GRID_BREAKPOINT_DENSE = 9
+
 // Premium gauge with glowing arcs and ambient lighting
 interface PremiumGaugeProps {
   value: number
@@ -773,14 +779,14 @@ export function KVCacheMonitor() {
               key="gauges"
               className={`h-full overflow-auto ${
                 isExpanded
-                  ? (stats.length <= 2 ? 'flex items-center justify-evenly gap-16' :
-                     stats.length <= 4 ? 'grid grid-cols-2 @md:grid-cols-4 gap-8 place-items-center' :
-                     stats.length <= 6 ? 'grid grid-cols-2 @md:grid-cols-3 gap-6 place-items-center' :
+                  ? (stats.length <= GRID_BREAKPOINT_FEW ? 'flex items-center justify-evenly gap-16' :
+                     stats.length <= GRID_BREAKPOINT_MEDIUM ? 'grid grid-cols-2 @md:grid-cols-4 gap-8 place-items-center' :
+                     stats.length <= GRID_BREAKPOINT_LARGE ? 'grid grid-cols-2 @md:grid-cols-3 gap-6 place-items-center' :
                      'grid grid-cols-2 @md:grid-cols-4 gap-4 place-items-center')
-                  : (stats.length <= 2 ? 'flex items-center justify-evenly gap-12' :
-                     stats.length <= 3 ? 'grid grid-cols-2 @md:grid-cols-3 gap-6 place-items-center' :
-                     stats.length <= 6 ? 'grid grid-cols-2 @md:grid-cols-3 gap-3 place-items-center' :
-                     stats.length <= 9 ? 'grid grid-cols-2 @md:grid-cols-3 gap-2 place-items-center' :
+                  : (stats.length <= GRID_BREAKPOINT_FEW ? 'flex items-center justify-evenly gap-12' :
+                     stats.length <= GRID_BREAKPOINT_SMALL ? 'grid grid-cols-2 @md:grid-cols-3 gap-6 place-items-center' :
+                     stats.length <= GRID_BREAKPOINT_LARGE ? 'grid grid-cols-2 @md:grid-cols-3 gap-3 place-items-center' :
+                     stats.length <= GRID_BREAKPOINT_DENSE ? 'grid grid-cols-2 @md:grid-cols-3 gap-2 place-items-center' :
                      'grid grid-cols-2 @md:grid-cols-4 gap-2 place-items-center')
               }`}
               initial={{ opacity: 0, y: 10 }}
@@ -789,8 +795,8 @@ export function KVCacheMonitor() {
             >
               {stats.slice(0, isExpanded ? 20 : 12).map((stat) => {
                 const gaugeSize = isExpanded
-                  ? (stats.length <= 2 ? 200 : stats.length <= 4 ? 180 : stats.length <= 6 ? 160 : 140)
-                  : (stats.length <= 2 ? 120 : stats.length <= 3 ? 130 : stats.length <= 6 ? 110 : stats.length <= 9 ? 100 : 85)
+                  ? (stats.length <= GRID_BREAKPOINT_FEW ? 200 : stats.length <= GRID_BREAKPOINT_MEDIUM ? 180 : stats.length <= GRID_BREAKPOINT_LARGE ? 160 : 140)
+                  : (stats.length <= GRID_BREAKPOINT_FEW ? 120 : stats.length <= GRID_BREAKPOINT_SMALL ? 130 : stats.length <= GRID_BREAKPOINT_LARGE ? 110 : stats.length <= GRID_BREAKPOINT_DENSE ? 100 : 85)
                 return (
                   <div
                     key={stat.podName}
@@ -814,13 +820,13 @@ export function KVCacheMonitor() {
               key="horseshoe"
               className={`grid h-full place-items-center overflow-auto ${
                 isExpanded
-                  ? (stats.length <= 2 ? 'grid-cols-2 gap-6' :
-                     stats.length <= 4 ? 'grid-cols-2 @md:grid-cols-4 gap-4' :
-                     stats.length <= 6 ? 'grid-cols-2 @md:grid-cols-3 gap-4' :
+                  ? (stats.length <= GRID_BREAKPOINT_FEW ? 'grid-cols-2 gap-6' :
+                     stats.length <= GRID_BREAKPOINT_MEDIUM ? 'grid-cols-2 @md:grid-cols-4 gap-4' :
+                     stats.length <= GRID_BREAKPOINT_LARGE ? 'grid-cols-2 @md:grid-cols-3 gap-4' :
                      'grid-cols-2 @md:grid-cols-4 gap-3')
-                  : (stats.length <= 2 ? 'grid-cols-2 gap-2' :
-                     stats.length <= 3 ? 'grid-cols-2 @md:grid-cols-3 gap-1' :
-                     stats.length <= 6 ? 'grid-cols-2 @md:grid-cols-3 gap-1' :
+                  : (stats.length <= GRID_BREAKPOINT_FEW ? 'grid-cols-2 gap-2' :
+                     stats.length <= GRID_BREAKPOINT_SMALL ? 'grid-cols-2 @md:grid-cols-3 gap-1' :
+                     stats.length <= GRID_BREAKPOINT_LARGE ? 'grid-cols-2 @md:grid-cols-3 gap-1' :
                      'grid-cols-2 @md:grid-cols-4 gap-1')
               }`}
               initial={{ opacity: 0, y: 10 }}
@@ -829,8 +835,8 @@ export function KVCacheMonitor() {
             >
               {stats.slice(0, isExpanded ? 16 : 8).map((stat) => {
                 const gaugeSize = isExpanded
-                  ? (stats.length <= 2 ? 240 : stats.length <= 4 ? 200 : stats.length <= 6 ? 180 : 160)
-                  : (stats.length <= 2 ? 180 : stats.length <= 3 ? 160 : stats.length <= 6 ? 140 : 120)
+                  ? (stats.length <= GRID_BREAKPOINT_FEW ? 240 : stats.length <= GRID_BREAKPOINT_MEDIUM ? 200 : stats.length <= GRID_BREAKPOINT_LARGE ? 180 : 160)
+                  : (stats.length <= GRID_BREAKPOINT_FEW ? 180 : stats.length <= GRID_BREAKPOINT_SMALL ? 160 : stats.length <= GRID_BREAKPOINT_LARGE ? 140 : 120)
                 return (
                   <div
                     key={stat.podName}

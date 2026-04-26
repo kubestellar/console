@@ -25,6 +25,9 @@ import { formatTimeAgo } from '../../../lib/formatters'
 
 const PLATFORM_ORDER = ['OCP', 'GKE', 'CKS'] as const
 
+/** Minimum number of runs required before a guide's pass rate is considered meaningful */
+const MIN_RUNS_FOR_RATE = 3
+
 const PLATFORM_COLORS: Record<string, string> = {
   OCP: '#ef4444',  // red
   GKE: '#3b82f6',  // blue
@@ -552,7 +555,7 @@ function generateNightlySummary(guides: NightlyGuideStatus[]): [string, string] 
 
   if (allWithRuns.length > 0) {
     const best = allWithRuns.reduce((a, b) => a.passRate > b.passRate ? a : b)
-    const worst = allWithRuns.filter(g => g.runs.length >= 3).reduce(
+    const worst = allWithRuns.filter(g => g.runs.length >= MIN_RUNS_FOR_RATE).reduce(
       (a, b) => a.passRate < b.passRate ? a : b, allWithRuns[0]
     )
 
@@ -562,7 +565,7 @@ function generateNightlySummary(guides: NightlyGuideStatus[]): [string, string] 
       const durStr = dur !== null ? ` (avg ${formatDuration(dur)}, ${meta.model} on ${meta.gpuCount}× ${meta.gpuType})` : ''
       para2Parts.push(`${best.acronym} (${best.platform}) leads at ${best.passRate}%${durStr}.`)
     }
-    if (worst.passRate === 0 && worst.runs.length >= 3) {
+    if (worst.passRate === 0 && worst.runs.length >= MIN_RUNS_FOR_RATE) {
       para2Parts.push(`${worst.acronym} (${worst.platform}) has never passed in ${worst.runs.length} runs and needs investigation.`)
     }
 

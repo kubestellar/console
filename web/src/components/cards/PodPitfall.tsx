@@ -12,6 +12,10 @@ const CANVAS_HEIGHT = 200
 const GRAVITY = 0.4
 const JUMP_FORCE = -8
 const MOVE_SPEED = 4
+const PIT_OFFSET_X = 100
+const PIT_Y = 180
+const PIT_WIDTH = 120
+const NARROW_PLATFORM_WIDTH = 60
 
 interface Player {
   x: number
@@ -102,9 +106,9 @@ export function PodPitfall(_props: CardComponentProps) {
         newPlatforms.push({ x: baseX, y: 160, width: CANVAS_WIDTH, type: 'ground' })
       } else {
         // Pit with crocodiles
-        newPlatforms.push({ x: baseX, y: 160, width: 100, type: 'ground' })
-        newPlatforms.push({ x: baseX + 100, y: 180, width: 120, type: 'pit' })
-        newPlatforms.push({ x: baseX + 220, y: 160, width: 100, type: 'ground' })
+        newPlatforms.push({ x: baseX, y: 160, width: PIT_OFFSET_X, type: 'ground' })
+        newPlatforms.push({ x: baseX + PIT_OFFSET_X, y: PIT_Y, width: PIT_WIDTH, type: 'pit' })
+        newPlatforms.push({ x: baseX + PIT_OFFSET_X + PIT_WIDTH, y: 160, width: PIT_OFFSET_X, type: 'ground' })
         newObstacles.push({ x: baseX + 140, y: 165, type: 'croc', direction: 1 })
       }
 
@@ -113,7 +117,7 @@ export function PodPitfall(_props: CardComponentProps) {
         newPlatforms.push({
           x: baseX + 80 + Math.random() * 100,
           y: 120,
-          width: 60,
+          width: NARROW_PLATFORM_WIDTH,
           type: 'log'
         })
       }

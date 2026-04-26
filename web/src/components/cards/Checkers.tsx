@@ -81,6 +81,7 @@ const PRE_GAME_TAUNTS = [
 ]
 
 const PRE_GAME_TAUNT_DELAY_MS = 2_000
+const TAUNT_DISPLAY_MS = 3000
 
 // Initialize board with starting positions
 function createInitialBoard(): Board {
@@ -571,7 +572,7 @@ export function Checkers(_props: CardComponentProps) {
         // Show capture taunt
         if (capturedAny) {
           setPirateTaunt(CAPTURE_TAUNTS[Math.floor(Math.random() * CAPTURE_TAUNTS.length)])
-          setTimeout(() => setPirateTaunt(''), 3000)
+          setTimeout(() => setPirateTaunt(''), TAUNT_DISPLAY_MS)
         }
       }
 

@@ -4,6 +4,9 @@ import { useKagentiAgents, useKagentiTools, type KagentiAgent, type KagentiTool 
 import { useCardLoadingState } from '../CardDataContext'
 import { useTranslation } from 'react-i18next'
 
+const MAX_NODE_LABEL_DISPLAY = 16
+const TRUNCATED_NODE_LABEL = 14
+
 const FRAMEWORK_COLORS: Record<string, string> = {
   langgraph: '#60a5fa',
   crewai: '#34d399',
@@ -176,7 +179,7 @@ export function KagentiTopology({ config }: { config?: Record<string, unknown> }
                 textAnchor={node.type === 'agent' ? 'end' : 'start'}
                 className="select-none text-muted-foreground"
               >
-                {node.label.length > 16 ? node.label.slice(0, 14) + '...' : node.label}
+                {node.label.length > MAX_NODE_LABEL_DISPLAY ? node.label.slice(0, TRUNCATED_NODE_LABEL) + '...' : node.label}
               </text>
             </g>
           ))}

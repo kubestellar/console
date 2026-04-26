@@ -5,6 +5,9 @@ import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useCardLoadingState } from './CardDataContext'
 
+const RESTART_WARNING_THRESHOLD = 3
+const RESTART_CRITICAL_THRESHOLD = 10
+
 interface Prediction {
   id: string
   cluster: string
@@ -129,12 +132,12 @@ export function PredictiveHealth() {
 
       // Restart storm detection
       const highRestarts = clusterPods.filter(p => (p.restarts || 0) > 5)
-      if (highRestarts.length > 3) {
+      if (highRestarts.length > RESTART_WARNING_THRESHOLD) {
         results.push({
           id: `restarts-${cluster}`,
           cluster,
           resource: 'Stability',
-          severity: highRestarts.length > 10 ? 'critical' : 'warning',
+          severity: highRestarts.length > RESTART_CRITICAL_THRESHOLD ? 'critical' : 'warning',
           message: `${highRestarts.length} pods with high restart counts — potential instability`,
           confidence: 0.78 })
       }

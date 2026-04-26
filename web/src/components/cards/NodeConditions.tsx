@@ -6,6 +6,8 @@ import { useKubectl } from '../../hooks/useKubectl'
 import { useCardLoadingState } from './CardDataContext'
 import { useDemoMode } from '../../hooks/useDemoMode'
 
+const MAX_VISIBLE_CONDITIONS = 20
+
 type ConditionFilter = 'all' | 'healthy' | 'cordoned' | 'pressure'
 
 /** Confirmation dialog state for cordon/uncordon actions */
@@ -186,7 +188,7 @@ export function NodeConditions() {
       </div>
 
       <div className="space-y-1 max-h-[300px] overflow-y-auto">
-        {filtered.slice(0, 20).map(node => {
+        {filtered.slice(0, MAX_VISIBLE_CONDITIONS).map(node => {
           const conditions = (node.conditions || []) as Array<{ type: string; status: string }>
           const ready = conditions.find(c => c.type === 'Ready')
           const isReady = ready?.status === 'True'
@@ -231,9 +233,9 @@ export function NodeConditions() {
             </div>
           )
         })}
-        {filtered.length > 20 && (
+        {filtered.length > MAX_VISIBLE_CONDITIONS && (
           <div className="text-xs text-muted-foreground text-center py-1">
-            {t('nodeConditions.moreNodes', { count: filtered.length - 20 })}
+            {t('nodeConditions.moreNodes', { count: filtered.length - MAX_VISIBLE_CONDITIONS })}
           </div>
         )}
       </div>

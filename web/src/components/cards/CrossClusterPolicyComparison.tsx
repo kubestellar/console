@@ -30,6 +30,9 @@ const MAX_SELECTED_CLUSTERS = 4
 /** Default number of clusters to show when none are selected */
 const DEFAULT_CLUSTER_COUNT = 3
 
+/** Maximum policy name length before truncation in table headers */
+const MAX_POLICY_NAME_DISPLAY = 12
+
 type PolicyStatus = 'pass' | 'fail' | 'na'
 
 interface PolicyRow {
@@ -251,7 +254,7 @@ function CrossClusterPolicyComparisonInternal({ config: _config }: CardConfig) {
                 <th className="text-left py-1 px-1 font-medium text-muted-foreground">Policy</th>
                 {clustersToCompare.map(c => (
                   <th key={c} className="text-center py-1 px-1 font-mono font-medium text-muted-foreground truncate max-w-[80px]" title={c}>
-                    {c.length > 12 ? `${c.slice(0, 12)}...` : c}
+                    {c.length > MAX_POLICY_NAME_DISPLAY ? `${c.slice(0, MAX_POLICY_NAME_DISPLAY)}...` : c}
                   </th>
                 ))}
               </tr>

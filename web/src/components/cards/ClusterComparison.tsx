@@ -11,6 +11,9 @@ import { useTranslation } from 'react-i18next'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 
+/** Maximum number of clusters that can be compared side-by-side */
+const MAX_COMPARED_CLUSTERS = 4
+
 interface ClusterComparisonProps {
   config?: {
     clusters?: string[]
@@ -100,7 +103,7 @@ function ClusterComparisonInternal({ config }: ClusterComparisonProps) {
       if (prev.includes(name)) {
         return prev.filter(c => c !== name)
       }
-      if (prev.length >= 4) return prev // Max 4 clusters
+      if (prev.length >= MAX_COMPARED_CLUSTERS) return prev
       return [...prev, name]
     })
   }

@@ -13,6 +13,8 @@ import { copyToClipboard } from '../../lib/clipboard'
 import { downloadText } from '../../lib/download'
 import { useToast } from '../ui/Toast'
 
+const YAML_PREVIEW_LINES = 5
+
 interface CommandHistoryItem {
   id: string
   context: string
@@ -406,7 +408,7 @@ data:
         ...prev,
         `$ kubectl apply -f -`,
         isDryRun ? `(dry-run) ${result || 'Manifest validated successfully'}` : result || `Applied manifest "${manifestName}"`,
-        yamlContent.split('\n').slice(0, 5).join('\n') + (yamlContent.split('\n').length > 5 ? '\n...' : ''),
+        yamlContent.split('\n').slice(0, YAML_PREVIEW_LINES).join('\n') + (yamlContent.split('\n').length > YAML_PREVIEW_LINES ? '\n...' : ''),
         ''
       ])
 

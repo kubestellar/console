@@ -16,6 +16,8 @@ const SUITS: Suit[] = ['pods', 'containers', 'clusters', 'nodes']
 const VALUES: CardValue[] = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']
 
 // Suit colors: red suits (pods, containers) and black suits (clusters, nodes)
+const TIMER_TICK_MS = 1000
+
 const SUIT_CONFIG: Record<Suit, { Icon: typeof Box; color: string; isRed: boolean }> = {
   pods: { Icon: Box, color: 'text-blue-400', isRed: true },
   containers: { Icon: Database, color: 'text-green-400', isRed: true },
@@ -257,7 +259,7 @@ export function Solitaire(_props: CardComponentProps) {
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>
     if (isPlaying && !hasWon) {
-      interval = setInterval(() => setTime(t => t + 1), 1000)
+      interval = setInterval(() => setTime(t => t + 1), TIMER_TICK_MS)
     }
     return () => clearInterval(interval)
   }, [isPlaying, hasWon])

@@ -15,6 +15,7 @@ import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_OPA_CACHE, STORAGE_KEY_OPA_CACHE_TIME } from '../../lib/constants'
 import { KUBECTL_DEFAULT_TIMEOUT_MS } from '../../lib/constants/network'
 const OPA_LIST_TIMEOUT_MS = 25_000
+const MIN_POLICY_PATH_PARTS = 4
 import { safeGetItem, safeGetJSON, safeSetItem, safeSetJSON } from '../../lib/utils/localStorage'
 import { PolicyDetailModal, ClusterOPAModal, CreatePolicyModal } from './opa'
 import type { Policy, GatekeeperStatus, OPAClusterItem } from './opa'
@@ -101,7 +102,7 @@ async function checkGatekeeperDetails(clusterName: string): Promise<GatekeeperSt
       const lines = constraintsResult.output.trim().split('\n').filter((l: string) => l.trim())
       for (const line of lines) {
         const parts = line.trim().split(/\s+/)
-        if (parts.length >= 4) {
+        if (parts.length >= MIN_POLICY_PATH_PARTS) {
           const name = parts[0]
           const kind = parts[1]
           const enforcement = (parts[2] || 'warn').toLowerCase() as Policy['mode']

@@ -55,6 +55,10 @@ const MAX_PAGES = 30
 const CACHE_TTL_MS = MS_PER_HOUR
 /** LocalStorage cache key prefix */
 const CACHE_KEY_PREFIX = 'issue_activity_chart_cache_'
+const CHART_GRID_LEFT = 50
+const CHART_GRID_RIGHT = 50
+const CHART_GRID_TOP = 40
+const CHART_GRID_BOTTOM = 80
 /** Bar chart color for issues opened */
 const COLOR_OPENED = '#4472C4'
 /** Bar chart color for issues closed */
@@ -446,7 +450,7 @@ export function IssueActivityChart(props: { config?: IssueActivityConfig }) {
 
     return {
       backgroundColor: 'transparent',
-      grid: { left: 50, right: 50, top: 40, bottom: 80, containLabel: false },
+      grid: { left: CHART_GRID_LEFT, right: CHART_GRID_RIGHT, top: CHART_GRID_TOP, bottom: CHART_GRID_BOTTOM, containLabel: false },
       legend: {
         data: [
           t('issueActivityChart.opened', 'Opened'),

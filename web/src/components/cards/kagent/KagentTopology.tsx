@@ -13,6 +13,9 @@ import {
   KAGENT_EDGE_AGENT_TOOL, KAGENT_EDGE_AGENT_MODEL,
 } from '../../../lib/theme/chartColors'
 
+const MAX_NODE_LABEL_DISPLAY = 16
+const TRUNCATED_NODE_LABEL = 14
+
 const RUNTIME_COLORS: Record<string, string> = {
   python: KAGENT_RUNTIME_PYTHON,
   go: KAGENT_RUNTIME_GO,
@@ -271,7 +274,7 @@ function KagentTopologyInternal({ config }: { config?: Record<string, unknown> }
                 textAnchor={node.type === 'agent' ? 'end' : node.type === 'model' ? 'start' : 'middle'}
                 className="select-none text-muted-foreground"
               >
-                {node.label.length > 16 ? node.label.slice(0, 14) + '...' : node.label}
+                {node.label.length > MAX_NODE_LABEL_DISPLAY ? node.label.slice(0, TRUNCATED_NODE_LABEL) + '...' : node.label}
               </text>
             </g>
           ))}

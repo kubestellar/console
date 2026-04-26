@@ -16,6 +16,11 @@ import { useDemoMode } from '../../hooks/useDemoMode'
 /** Search input debounce delay (#6213). */
 const SEARCH_DEBOUNCE_MS = 250
 
+/** Cluster name display threshold before truncation */
+const MAX_CLUSTER_NAME_DISPLAY = 12
+/** Length to truncate cluster names to when they exceed the display threshold */
+const TRUNCATED_NAME_LENGTH = 10
+
 interface ClusterLocationsProps {
   config?: Record<string, unknown>
 }
@@ -581,7 +586,7 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
                     >
                       <CloudProviderIcon provider={provider} size={10} />
                       <span className="text-[9px] font-medium text-foreground max-w-[60px] truncate">
-                        {cluster.name.length > 12 ? cluster.name.substring(0, 10) + '…' : cluster.name}
+                        {cluster.name.length > MAX_CLUSTER_NAME_DISPLAY ? cluster.name.substring(0, TRUNCATED_NAME_LENGTH) + '…' : cluster.name}
                       </span>
                       <div className={`w-1.5 h-1.5 rounded-full ${cluster.healthy ? 'bg-green-400' : 'bg-red-400'}`} />
                     </button>

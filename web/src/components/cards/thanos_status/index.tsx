@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next'
 import { useCardLoadingState } from '../CardDataContext'
 import { createCardSyncFormatter } from '../../../lib/formatters'
 
+const MAX_VISIBLE_TARGETS = 5
+
 const THANOS_TIME_KEYS = {
   justNow: 'thanosStatus.justNow',
   minutesAgo: 'thanosStatus.minutesAgo',
@@ -137,7 +139,7 @@ export function ThanosStatus() {
             <div className="flex-1 flex flex-col gap-2">
                 <p className="text-xs font-medium text-muted-foreground">{t('thanosStatus.targets')}</p>
                 <div className="space-y-1.5">
-                    {(data.targets || []).slice(0, 5).map((target) => (
+                    {(data.targets || []).slice(0, MAX_VISIBLE_TARGETS).map((target) => (
                         <div key={target.name} className="flex items-center gap-2 text-xs">
                             <span
                                 className={`w-2 h-2 rounded-full shrink-0 ${target.health === 'up' ? 'bg-green-400' : 'bg-red-400'
@@ -149,9 +151,9 @@ export function ThanosStatus() {
                             </span>
                         </div>
                     ))}
-                    {data.targets.length > 5 && (
+                    {data.targets.length > MAX_VISIBLE_TARGETS && (
                         <p className="text-[10px] text-muted-foreground italic">
-                            + {data.targets.length - 5} more targets
+                            + {data.targets.length - MAX_VISIBLE_TARGETS} more targets
                         </p>
                     )}
                 </div>

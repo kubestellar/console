@@ -105,6 +105,7 @@ const MAX_NAMESPACES_RENDERED_PER_CLUSTER = 30
 // Shared empty result for clusters that aren't the selected one — avoids
 // allocating a fresh Map on every render of every non-selected cluster row.
 const EMPTY_NAMESPACE_DATA: Map<string, NamespaceData> = new Map()
+const MAX_VISIBLE_ITEMS = 10
 
 export function NamespaceMonitor({ config: _config }: CardComponentProps) {
   const { isDemoMode } = useDemoMode()
@@ -935,7 +936,7 @@ function ResourceSection({
         <span>({items.length})</span>
       </div>
       <div className="space-y-0.5">
-        {items.slice(0, 10).map(item => {
+        {items.slice(0, MAX_VISIBLE_ITEMS).map(item => {
           const changeType = getResourceChange(cluster, namespace, type, item.name)
           const key = `${cluster}:${namespace}:${type}:${item.name}`
 
@@ -975,9 +976,9 @@ function ResourceSection({
             </div>
           )
         })}
-        {items.length > 10 && (
+        {items.length > MAX_VISIBLE_ITEMS && (
           <div className="text-2xs text-muted-foreground px-2 py-1">
-            +{items.length - 10} more
+            +{items.length - MAX_VISIBLE_ITEMS} more
           </div>
         )}
       </div>

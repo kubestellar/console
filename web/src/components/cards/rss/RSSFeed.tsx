@@ -24,6 +24,8 @@ import { useTranslation } from 'react-i18next'
 import { TOAST_DISMISS_MS } from '../../../lib/constants/network'
 import { hostnameEndsWith } from '../../../lib/utils/urlHostname'
 
+const MIN_VALID_FEED_LENGTH = 50
+
 type SortByOption = 'date' | 'title'
 
 const SORT_COMPARATORS: Record<SortByOption, (a: FeedItem, b: FeedItem) => number> = {
@@ -311,7 +313,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
         } else {
           const feedXml = await response.text()
           // Check for empty or error response
-          if (!feedXml || feedXml.length < 50) {
+          if (!feedXml || feedXml.length < MIN_VALID_FEED_LENGTH) {
             throw new Error('Empty response')
           }
           // Check for error pages

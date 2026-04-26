@@ -24,6 +24,8 @@ import { useDemoMode } from '../../hooks/useDemoMode'
 import { emitUserRoleChanged, emitUserRemoved } from '../../lib/analytics'
 import { ConfirmDialog } from '../../lib/modals'
 
+const MAX_VISIBLE_GROUPS = 3
+
 interface UserManagementProps {
   config?: Record<string, unknown>
 }
@@ -768,7 +770,7 @@ function ClusterUsersTab({
               )}
               {user.groups && user.groups.length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-1">
-                  {user.groups.slice(0, 3).map((group, i) => (
+                  {user.groups.slice(0, MAX_VISIBLE_GROUPS).map((group, i) => (
                     <span
                       key={i}
                       className="px-1.5 py-0.5 rounded text-xs bg-blue-500/20 text-blue-400"
@@ -776,8 +778,8 @@ function ClusterUsersTab({
                       {group}
                     </span>
                   ))}
-                  {user.groups.length > 3 && (
-                    <span className="text-xs text-muted-foreground">+{user.groups.length - 3} more</span>
+                  {user.groups.length > MAX_VISIBLE_GROUPS && (
+                    <span className="text-xs text-muted-foreground">+{user.groups.length - MAX_VISIBLE_GROUPS} more</span>
                   )}
                 </div>
               )}

@@ -13,6 +13,8 @@ import type { DynamicCardDefinition, DynamicCardDefinition_T1 } from '../../lib/
 import type { CardComponentProps, CardComponent } from './cardRegistry'
 import { useTranslation } from 'react-i18next'
 
+const MAX_AUTO_GRID_COLS = 3
+
 /**
  * DynamicCard: Meta-component that renders dynamic card definitions.
  *
@@ -249,7 +251,7 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
       {showStats && cardDefinition.stats && cardDefinition.stats.length > 0 && (
         <div className={cn(
           'grid gap-2 mb-3',
-          cardDefinition.stats.length <= 3 ? `grid-cols-${cardDefinition.stats.length}` : 'grid-cols-4',
+          cardDefinition.stats.length <= MAX_AUTO_GRID_COLS ? `grid-cols-${cardDefinition.stats.length}` : 'grid-cols-4',
         )}>
           {cardDefinition.stats.map((stat, idx) => {
             // Resolve stat value from data

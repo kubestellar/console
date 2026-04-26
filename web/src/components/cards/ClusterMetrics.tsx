@@ -33,6 +33,11 @@ const LEGACY_6H_INTERVAL_MS = 15 * MS_PER_MINUTE
 const LEGACY_24H_POINTS = 24
 const LEGACY_24H_INTERVAL_MS = MS_PER_HOUR
 
+/** Metric name display threshold before truncation */
+const MAX_METRIC_NAME_DISPLAY = 15
+/** Length to truncate metric names to when they exceed the display threshold */
+const TRUNCATED_METRIC_NAME = 12
+
 const TIME_RANGE_KEYS: Array<{
   value: TimeRange
   labelKey:
@@ -296,7 +301,7 @@ export function ClusterMetrics() {
     const series = Array.from(clusterNames).map((name, i) => ({
       dataKey: name,
       color: clusterColors[i % clusterColors.length],
-      name: name.length > 15 ? name.slice(0, 12) + '...' : name }))
+      name: name.length > MAX_METRIC_NAME_DISPLAY ? name.slice(0, TRUNCATED_METRIC_NAME) + '...' : name }))
 
     // Build data with all clusters as keys
     const chartData = filteredHistory.map(point => {
