@@ -41,13 +41,6 @@ export function getChartColor(index: number): string {
 }
 
 /**
- * Get multiple chart colors as an array
- */
-export function getChartColors(count: number): string[] {
-  return Array.from({ length: count }, (_, i) => getChartColor(i + 1))
-}
-
-/**
  * Get chart color by semantic name
  */
 export function getChartColorByName(name: 'warning' | 'success' | 'error' | 'info' | 'primary'): string {
