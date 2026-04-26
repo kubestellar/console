@@ -4,7 +4,7 @@ import { clusterCacheRef } from './mcp/shared'
 import { kubectlProxy } from '../lib/kubectlProxy'
 import type { DeployStartedPayload, DeployResultPayload, DeployedDep } from '../lib/cardEvents'
 import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN, STORAGE_KEY_MISSIONS_ACTIVE, STORAGE_KEY_MISSIONS_HISTORY } from '../lib/constants'
-import { FETCH_DEFAULT_TIMEOUT_MS, DEPLOY_ABORT_TIMEOUT_MS } from '../lib/constants/network'
+import { FETCH_DEFAULT_TIMEOUT_MS, DEPLOY_ABORT_TIMEOUT_MS, KUBECTL_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 
 /** HTTP status codes that indicate authentication/authorization failure */
 const HTTP_UNAUTHORIZED = 401
@@ -48,7 +48,7 @@ async function fetchDeployEventsViaProxy(
   const response = await kubectlProxy.exec(
     ['get', 'events', '-n', namespace,
      '--sort-by=.lastTimestamp', '-o', 'json'],
-    { context, timeout: 10000 },
+    { context, timeout: KUBECTL_DEFAULT_TIMEOUT_MS },
   )
   if (response.exitCode !== 0) return []
   interface KubeEvent {

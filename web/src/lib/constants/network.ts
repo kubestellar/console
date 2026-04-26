@@ -88,6 +88,9 @@ export const FETCH_DEFAULT_TIMEOUT_MS = 10_000
 /** Timeout for fetch() calls to external services (GitHub API, registries, etc.) */
 export const FETCH_EXTERNAL_TIMEOUT_MS = 15_000
 
+/** Timeout for RBAC queries that fan out across all clusters */
+export const RBAC_QUERY_TIMEOUT_MS = 60_000
+
 /** Extended timeout for feedback submissions with screenshot uploads (90 seconds).
  * Screenshots are uploaded server-side to GitHub via the Contents API, which can
  * be slow for multiple large images. */

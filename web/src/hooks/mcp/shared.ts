@@ -13,7 +13,7 @@ import {
   STORAGE_KEY_TOKEN,
   DEFAULT_REFRESH_INTERVAL_MS,
 } from '../../lib/constants'
-import { MCP_PROBE_TIMEOUT_MS, FOCUS_DELAY_MS } from '../../lib/constants/network'
+import { MCP_PROBE_TIMEOUT_MS, FOCUS_DELAY_MS, KUBECTL_MAX_TIMEOUT_MS } from '../../lib/constants/network'
 import type { ClusterInfo, ClusterHealth } from './types'
 
 // Re-export canonical constant under the name used by MCP hooks
@@ -1221,7 +1221,7 @@ async function detectClusterDistribution(clusterName: string, kubectlContext?: s
     try {
       const response = await kubectlProxy.exec(
         ['get', 'namespaces', '-o', 'jsonpath={.items[*].metadata.name}'],
-        { context: kubectlContext || clusterName, timeout: 45000 }
+        { context: kubectlContext || clusterName, timeout: KUBECTL_MAX_TIMEOUT_MS }
       )
       if (response.exitCode === 0 && response.output) {
         const namespaces = response.output.split(/\s+/).filter(Boolean)

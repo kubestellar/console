@@ -3,7 +3,7 @@ import { api, isBackendUnavailable } from '../lib/api'
 import { mapSettledWithConcurrency } from '../lib/utils/concurrency'
 import { getDemoMode } from './useDemoMode'
 import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN } from '../lib/constants'
-import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
+import { FETCH_DEFAULT_TIMEOUT_MS, RBAC_QUERY_TIMEOUT_MS } from '../lib/constants/network'
 import type {
   ConsoleUser,
   K8sServiceAccount,
@@ -470,7 +470,7 @@ export function useK8sServiceAccounts(cluster?: string, namespace?: string) {
       const params = new URLSearchParams()
       params.set('cluster', cluster)
       if (namespace) params.set('namespace', namespace)
-      const { data } = await api.get<K8sServiceAccount[]>(`/api/rbac/service-accounts?${params}`, { timeout: 60000 })
+      const { data } = await api.get<K8sServiceAccount[]>(`/api/rbac/service-accounts?${params}`, { timeout: RBAC_QUERY_TIMEOUT_MS })
       setServiceAccounts(data || [])
       setError(null)
     } catch (err) {
@@ -555,7 +555,7 @@ export function useAllK8sServiceAccounts(clusters: Array<{ name: string }>) {
       clusters,
       async (cluster) => {
         try {
-          const { data } = await api.get<K8sServiceAccount[]>(`/api/rbac/service-accounts?cluster=${cluster.name}`, { timeout: 60000 })
+          const { data } = await api.get<K8sServiceAccount[]>(`/api/rbac/service-accounts?cluster=${cluster.name}`, { timeout: RBAC_QUERY_TIMEOUT_MS })
           return { cluster: cluster.name, sas: data || [] }
         } catch {
           // Mark cluster as failed but don't break the whole fetch
@@ -607,7 +607,7 @@ export function useK8sRoles(cluster: string, namespace?: string, includeSystem?:
       const params = new URLSearchParams({ cluster })
       if (namespace) params.set('namespace', namespace)
       if (includeSystem) params.set('includeSystem', 'true')
-      const { data } = await api.get<K8sRole[]>(`/api/rbac/roles?${params}`, { timeout: 60000 })
+      const { data } = await api.get<K8sRole[]>(`/api/rbac/roles?${params}`, { timeout: RBAC_QUERY_TIMEOUT_MS })
       setRoles(data || [])
     } catch {
       // Silently fail - backend may be unavailable
@@ -640,7 +640,7 @@ export function useK8sRoleBindings(cluster: string, namespace?: string, includeS
       const params = new URLSearchParams({ cluster })
       if (namespace) params.set('namespace', namespace)
       if (includeSystem) params.set('includeSystem', 'true')
-      const { data } = await api.get<K8sRoleBinding[]>(`/api/rbac/bindings?${params}`, { timeout: 60000 })
+      const { data } = await api.get<K8sRoleBinding[]>(`/api/rbac/bindings?${params}`, { timeout: RBAC_QUERY_TIMEOUT_MS })
       setBindings(data || [])
     } catch {
       // Silently fail - backend may be unavailable
