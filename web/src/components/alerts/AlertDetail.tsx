@@ -22,7 +22,7 @@ import { Button } from '../ui/Button'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
 import { TOAST_DISMISS_MS } from '../../lib/constants/network'
-import { MINUTES_PER_HOUR, HOURS_PER_DAY } from '../../lib/constants/time'
+import { MS_PER_MINUTE, MINUTES_PER_HOUR, HOURS_PER_DAY } from '../../lib/constants/time'
 
 // Issue 9256 — fallback label used for acknowledgement when no authenticated
 // user is available (e.g. in demo mode without login).
@@ -40,7 +40,7 @@ function formatRelativeTime(dateString: string, t: TFunction): string {
   const date = new Date(dateString)
   const now = new Date()
   const diffMs = now.getTime() - date.getTime()
-  const diffMins = Math.floor(diffMs / 60000)
+  const diffMins = Math.floor(diffMs / MS_PER_MINUTE)
   const diffHours = Math.floor(diffMins / 60)
   const diffDays = Math.floor(diffHours / 24)
 

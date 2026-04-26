@@ -8,7 +8,7 @@ import { useDemoMode } from '../../hooks/useDemoMode'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardControlsRow, CardPaginationFooter, CardSearchInput, CardSkeleton } from '../../lib/cards/CardComponents'
 import type { ClusterEvent } from '../../hooks/useMCP'
-import { MS_PER_HOUR } from '../../lib/constants/time'
+import { MS_PER_MINUTE, MS_PER_HOUR } from '../../lib/constants/time'
 
 const EVENT_CUTOFF_MS = MS_PER_HOUR
 
@@ -17,7 +17,7 @@ type SortByOption = 'time' | 'reason' | 'object'
 function getMinutesAgo(timestamp: string | undefined): string {
   if (!timestamp) return 'Unknown'
   const diffMs = Date.now() - new Date(timestamp).getTime()
-  const diffMins = Math.floor(diffMs / 60000)
+  const diffMins = Math.floor(diffMs / MS_PER_MINUTE)
   if (diffMins < 1) return 'Just now'
   if (diffMins < 60) return `${diffMins}m ago`
   return `${Math.floor(diffMins / 60)}h ago`

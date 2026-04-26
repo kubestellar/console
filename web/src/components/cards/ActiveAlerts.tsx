@@ -8,6 +8,7 @@ import {
   Bell,
   BellOff } from 'lucide-react'
 import { useAlerts } from '../../hooks/useAlerts'
+import { MS_PER_MINUTE } from '../../lib/constants/time'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useGlobalFilters, type SeverityLevel } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -26,7 +27,7 @@ import { useDoNotDisturb, type TimedDuration } from '../../hooks/useDoNotDisturb
 
 /** Format remaining DND time as "Xh Ym" or "Ym" */
 function formatRemaining(ms: number): string {
-  const totalMinutes = Math.ceil(ms / 60_000)
+  const totalMinutes = Math.ceil(ms / MS_PER_MINUTE)
   const hours = Math.floor(totalMinutes / 60)
   const minutes = totalMinutes % 60
   if (hours > 0) return `${hours}h ${minutes}m`

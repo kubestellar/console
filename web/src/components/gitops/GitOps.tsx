@@ -8,6 +8,7 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { RefreshCw, GitBranch, FolderGit, Box, Loader2 } from 'lucide-react'
 import { SyncDialog } from './SyncDialog'
 import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN } from '../../lib/constants'
+import { MS_PER_MINUTE } from '../../lib/constants/time'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants/network'
 import { getDemoMode } from '../../hooks/useDemoMode'
 import { StatBlockValue } from '../ui/StatsOverview'
@@ -79,7 +80,7 @@ function getTimeAgo(timestamp: string | undefined, t: TFunction): string {
   const now = new Date()
   const then = new Date(timestamp)
   const diffMs = now.getTime() - then.getTime()
-  const diffMins = Math.floor(diffMs / 60000)
+  const diffMins = Math.floor(diffMs / MS_PER_MINUTE)
   const diffHours = Math.floor(diffMins / 60)
   if (diffHours > 0) return t('gitops.hoursAgo', { count: diffHours })
   if (diffMins > 0) return t('gitops.minutesAgo', { count: diffMins })

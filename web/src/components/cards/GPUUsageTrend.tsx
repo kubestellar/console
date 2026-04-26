@@ -22,7 +22,7 @@ import {
   CHART_AXIS_FONT_SIZE,
   CHART_BODY_FONT_SIZE,
   CHART_TEXT_MUTED } from '../../lib/constants'
-import { MS_PER_MINUTE } from '../../lib/constants/time'
+import { MS_PER_MINUTE, MS_PER_HOUR } from '../../lib/constants/time'
 
 /**
  * Maximum age of a metrics-history snapshot we're willing to use as a
@@ -67,10 +67,10 @@ interface EffectiveGPUNode {
 type TimeRange = '15m' | '1h' | '6h' | '24h'
 
 const TIME_RANGE_OPTIONS: { value: TimeRange; label: string; points: number; intervalMs: number }[] = [
-  { value: '15m', label: '15 min', points: 15, intervalMs: 60000 },
-  { value: '1h', label: '1 hour', points: 20, intervalMs: 180000 },
-  { value: '6h', label: '6 hours', points: 24, intervalMs: 900000 },
-  { value: '24h', label: '24 hours', points: 24, intervalMs: 3600000 },
+  { value: '15m', label: '15 min', points: 15, intervalMs: MS_PER_MINUTE },
+  { value: '1h', label: '1 hour', points: 20, intervalMs: 3 * MS_PER_MINUTE },
+  { value: '6h', label: '6 hours', points: 24, intervalMs: 15 * MS_PER_MINUTE },
+  { value: '24h', label: '24 hours', points: 24, intervalMs: MS_PER_HOUR },
 ]
 
 export function GPUUsageTrend() {

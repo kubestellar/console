@@ -39,6 +39,7 @@ import {
   emitUpdateStalled,
   emitUpdateRefreshed,
 } from '../../lib/analytics'
+import { MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY } from '../../lib/constants/time'
 
 /** Minimum spin duration to guarantee one full rotation (matches cards) */
 const MIN_SPIN_DURATION = 1000
@@ -262,9 +263,9 @@ export function UpdateSettings() {
     if (!lastChecked) return t('settings.updates.never')
     const now = Date.now()
     const diff = now - lastChecked
-    if (diff < 60000) return t('settings.updates.justNow')
-    if (diff < 3600000) return t('settings.updates.minutesAgo', { count: Math.floor(diff / 60000) })
-    if (diff < 86400000) return t('settings.updates.hoursAgo', { count: Math.floor(diff / 3600000) })
+    if (diff < MS_PER_MINUTE) return t('settings.updates.justNow')
+    if (diff < MS_PER_HOUR) return t('settings.updates.minutesAgo', { count: Math.floor(diff / MS_PER_MINUTE) })
+    if (diff < MS_PER_DAY) return t('settings.updates.hoursAgo', { count: Math.floor(diff / MS_PER_HOUR) })
     return new Date(lastChecked).toLocaleDateString()
   }
 
@@ -1202,8 +1203,10 @@ function formatCommitDate(iso: string): string {
   const date = new Date(iso)
   const now = Date.now()
   const diff = now - date.getTime()
-  if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`
-  if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`
-  if (diff < 604800000) return `${Math.floor(diff / 86400000)}d ago`
+  const DAYS_PER_WEEK = 7
+  const MS_PER_WEEK = MS_PER_DAY * DAYS_PER_WEEK
+  if (diff < MS_PER_HOUR) return `${Math.floor(diff / MS_PER_MINUTE)}m ago`
+  if (diff < MS_PER_DAY) return `${Math.floor(diff / MS_PER_HOUR)}h ago`
+  if (diff < MS_PER_WEEK) return `${Math.floor(diff / MS_PER_DAY)}d ago`
   return date.toLocaleDateString()
 }
