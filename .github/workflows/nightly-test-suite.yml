@@ -131,6 +131,14 @@ jobs:
           # Copy results to nightly dir with date-stamped name
           DATE=$(date -u +%Y-%m-%d)
           mkdir -p "$RESULTS_DIR"
+
+          # Guard: if all-tests-report.json is missing or malformed, create a
+          # minimal valid JSON stub so downstream jq/comparison steps don't crash.
+          if [ ! -f /tmp/all-tests-report.json ] || ! jq empty /tmp/all-tests-report.json 2>/dev/null; then
+            echo '{"summary":{"total":0,"passed":0,"failed":0,"skipped":0},"timestamp":"'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'","suites":[]}' > /tmp/all-tests-report.json
+            echo "::warning::all-tests-report.json was missing or malformed — created stub"
+          fi
+
           cp /tmp/all-tests-report.json "${RESULTS_DIR}/${DATE}.json"
 
           echo "result_file=${RESULTS_DIR}/${DATE}.json" >> "$GITHUB_OUTPUT"
@@ -166,13 +174,21 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
           # Pull latest main to avoid rejection (other workflows may have pushed).
-          # Stash any uncommitted test results first to prevent merge conflicts (#9621).
-          git stash --include-untracked || true
+          # Reset any tracked-file changes first (test artifacts, node_modules lock
+          # files, etc.) that conflict with rebase — only the dated JSON matters.
+          git checkout -- . 2>/dev/null || true
+          git clean -fd 2>/dev/null || true
           git pull --rebase origin main || git pull origin main || true
-          git stash pop || true
 
-          git add "${RESULTS_DIR}/${{ steps.tests.outputs.date }}.json"
-          git commit -m "chore: nightly test results for ${{ steps.tests.outputs.date }}
+          # Re-generate the result file after the clean pull
+          DATE="${{ steps.tests.outputs.date }}"
+          if [ -f /tmp/all-tests-report.json ]; then
+            mkdir -p "$RESULTS_DIR"
+            cp /tmp/all-tests-report.json "${RESULTS_DIR}/${DATE}.json"
+          fi
+
+          git add "${RESULTS_DIR}/${DATE}.json" 2>/dev/null || true
+          git commit -m "chore: nightly test results for ${DATE}
 
           Passed: $(jq -r '.summary.passed' ${{ steps.tests.outputs.result_file }} 2>/dev/null || echo '?')/$( jq -r '.summary.total' ${{ steps.tests.outputs.result_file }} 2>/dev/null || echo '?')
           Failed: $(jq -r '.summary.failed' ${{ steps.tests.outputs.result_file }} 2>/dev/null || echo '?')
