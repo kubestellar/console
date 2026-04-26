@@ -35,7 +35,7 @@ const CATALOG_CACHE_TTL_MS = 5 * 60 * 1000
 // ---------------------------------------------------------------------------
 
 /** A single entry in the Kubara chart catalog */
-export interface KubaraChartEntry {
+interface KubaraChartEntry {
   /** Chart name (e.g. "kube-prometheus-stack") */
   name: string
   /** Relative path inside the repo (e.g. "go-binary/.../helm/kube-prometheus-stack") */
