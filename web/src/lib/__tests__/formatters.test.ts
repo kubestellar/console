@@ -1,11 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import {
   formatBytes,
-  formatGBSmart,
   formatK8sMemory,
   formatK8sStorage,
   formatRelativeTime,
-  createRelativeTimeFormatter,
 } from '../formatters'
 
 describe('formatBytes', () => {
@@ -47,36 +45,6 @@ describe('formatBytes', () => {
 
   it('formats whole numbers without decimals', () => {
     expect(formatBytes(2048)).toBe('2 KB')
-  })
-})
-
-describe('formatGBSmart', () => {
-  it('returns 0 GB for zero', () => {
-    expect(formatGBSmart(0)).toEqual({ display: '0 GB', tooltip: '0 GB' })
-  })
-
-  it('returns 0 GB for negative', () => {
-    expect(formatGBSmart(-5)).toEqual({ display: '0 GB', tooltip: '0 GB' })
-  })
-
-  it('returns 0 GB for NaN', () => {
-    expect(formatGBSmart(NaN)).toEqual({ display: '0 GB', tooltip: '0 GB' })
-  })
-
-  it('formats GB below 1024', () => {
-    const result = formatGBSmart(256)
-    expect(result.display).toBe('256 GB')
-  })
-
-  it('formats TB for values >= 1024 GB', () => {
-    const result = formatGBSmart(2048)
-    expect(result.display).toBe('2.0 TB')
-    expect(result.tooltip).toContain('GB')
-  })
-
-  it('formats small GB values with decimals', () => {
-    const result = formatGBSmart(5.5)
-    expect(result.display).toBe('5.5 GB')
   })
 })
 
@@ -145,48 +113,5 @@ describe('formatRelativeTime', () => {
 
   it('returns just now for future date', () => {
     expect(formatRelativeTime('2026-04-01T12:00:00Z')).toBe('just now')
-  })
-})
-
-describe('createRelativeTimeFormatter', () => {
-  beforeEach(() => {
-    vi.useFakeTimers()
-    vi.setSystemTime(new Date('2026-03-31T12:00:00Z'))
-  })
-
-  afterEach(() => {
-    vi.useRealTimers()
-  })
-
-  it('uses the provided translation function', () => {
-    const t = vi.fn().mockReturnValue('translated')
-    const formatter = createRelativeTimeFormatter(t)
-
-    formatter('2026-03-31T11:55:00Z')
-    expect(t).toHaveBeenCalledWith('common.minutesAgo', { count: 5 })
-  })
-
-  it('returns justNow for recent timestamps', () => {
-    const t = vi.fn().mockReturnValue('Just now')
-    const formatter = createRelativeTimeFormatter(t)
-
-    formatter('2026-03-31T11:59:50Z')
-    expect(t).toHaveBeenCalledWith('common.justNow')
-  })
-
-  it('returns hoursAgo for hour-old timestamps', () => {
-    const t = vi.fn().mockReturnValue('2 hours ago')
-    const formatter = createRelativeTimeFormatter(t)
-
-    formatter('2026-03-31T10:00:00Z')
-    expect(t).toHaveBeenCalledWith('common.hoursAgo', { count: 2 })
-  })
-
-  it('returns daysAgo for day-old timestamps', () => {
-    const t = vi.fn().mockReturnValue('3 days ago')
-    const formatter = createRelativeTimeFormatter(t)
-
-    formatter('2026-03-28T12:00:00Z')
-    expect(t).toHaveBeenCalledWith('common.daysAgo', { count: 3 })
   })
 })
