@@ -712,6 +712,9 @@ describe('fetchSingleClusterHealth', () => {
   })
 
   it('uses kubectlContext for agent request when provided', async () => {
+    mockIsAgentUnavailable.mockReturnValue(false)
+    // Pre-seed agent token to prevent getAgentToken() from calling /api/agent/token
+    localStorage.setItem('kc-agent-token', 'test-token')
     const healthData: ClusterHealth = {
       cluster: 'test',
       healthy: true,
