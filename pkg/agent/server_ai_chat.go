@@ -517,6 +517,7 @@ func (s *Server) handleCancelChatHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
 	w.Header().Set("Access-Control-Allow-Private-Network", "true")
 
 	if r.Method == "OPTIONS" {
@@ -643,6 +644,12 @@ func (s *Server) handleChatMessage(msg protocol.Message, forceAgent string, pare
 		SessionID: req.SessionID,
 		Prompt:    req.Prompt,
 		History:   history,
+	}
+
+	// #10463: Use ChatOnlySystemPrompt for providers that cannot execute
+	// commands, so the AI never claims it can run kubectl when it cannot.
+	if !provider.Capabilities().HasCapability(CapabilityToolExec) {
+		chatReq.SystemPrompt = ChatOnlySystemPrompt
 	}
 
 	// Thread cluster context for non-streaming path (#9485).
