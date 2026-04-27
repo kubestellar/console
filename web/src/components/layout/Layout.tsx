@@ -32,7 +32,7 @@ import {
 } from '../../hooks/useDemoMode'
 import { setDemoMode } from '../../lib/demoMode'
 import { hasApprovedAgents } from '../agent/AgentApprovalDialog'
-import { useLocalAgent } from '../../hooks/useLocalAgent'
+import { useLocalAgent, wasAgentEverConnected } from '../../hooks/useLocalAgent'
 import { useClusters } from '../../hooks/mcp/clusters'
 import { emitClusterInventory } from '../../lib/analytics'
 import { useNetworkStatus } from '../../hooks/useNetworkStatus'
@@ -236,8 +236,12 @@ export function Layout({ children: _children }: LayoutProps) {
           demoAutoEnabledRef.current = true
           setDemoMode(true)
         }, AGENT_CONNECT_GRACE_MS)
+      } else if (wasAgentEverConnected()) {
+        // Agent was previously connected and went offline — preserve cached data.
+        // Do NOT auto-enable demo mode; cards keep showing stale cached data
+        // with their normal refresh/failure indicators (#10470).
       } else {
-        // Initial load or agent went offline — enable demo immediately
+        // Initial load with no agent — enable demo immediately so user sees content
         demoAutoEnabledRef.current = true
         setDemoMode(true)
       }

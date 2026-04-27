@@ -97,6 +97,9 @@ class AgentManager {
   private pollInterval: ReturnType<typeof setInterval> | null = null
   private failureCount = 0
   private successCount = 0 // Track consecutive successes for hysteresis
+  /** Whether the agent has been connected at least once this session.
+   *  Used to decide if going offline should preserve cached data (#10470). */
+  private wasEverConnected = false
   private dataErrorTimestamps: number[] = [] // Track recent data errors
   private isChecking = false
   private isStarted = false
@@ -223,6 +226,7 @@ class AgentManager {
 
         // Hysteresis: require multiple successes to reconnect from disconnected (prevents flicker)
         if (wasDisconnected && this.successCount >= SUCCESS_THRESHOLD) {
+          this.wasEverConnected = true
           this.addEvent('connected', `Connected to local agent v${data.version || 'unknown'}`)
           // Reconnected - speed up polling
           this.adjustPollInterval(POLL_INTERVAL)
@@ -235,6 +239,7 @@ class AgentManager {
           emitAgentProvidersDetected(data.availableProviders || [])
         } else if (wasConnecting) {
           // Initial connection - connect immediately on first success
+          this.wasEverConnected = true
           this.addEvent('connected', `Connected to local agent v${data.version || 'unknown'}`)
           this.adjustPollInterval(POLL_INTERVAL)
           this.setState({
@@ -290,6 +295,11 @@ class AgentManager {
 
   getState() {
     return this.state
+  }
+
+  /** Whether the agent was connected at least once this session (#10470). */
+  getWasEverConnected(): boolean {
+    return this.wasEverConnected
   }
 
   // Report a data endpoint error (e.g., /clusters returned 503)
@@ -412,6 +422,15 @@ export function isAgentUnavailable(): boolean {
   // Only skip agent if we've confirmed it's disconnected
   // During 'connecting' or 'connected' or 'degraded', allow agent attempts
   return state.status === 'disconnected'
+}
+
+/**
+ * Check if the agent has been connected at least once during this session.
+ * When true, the agent going offline should NOT trigger demo mode because
+ * cached data is still available and should remain visible (#10470).
+ */
+export function wasAgentEverConnected(): boolean {
+  return agentManager.getWasEverConnected()
 }
 
 /**
