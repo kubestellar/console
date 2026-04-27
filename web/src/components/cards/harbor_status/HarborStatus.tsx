@@ -143,7 +143,7 @@ function ProjectRow({
       tabIndex={onClick ? 0 : undefined}
       onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } } : undefined}
     >
-      <div className="flex flex-wrap items-center justify-between gap-y-2 gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 min-w-0">
           {project.isPublic ? (
             <Globe className="w-3.5 h-3.5 text-blue-400 shrink-0" />
@@ -199,7 +199,7 @@ function RepositoryRow({
       tabIndex={onClick ? 0 : undefined}
       onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } } : undefined}
     >
-      <div className="flex flex-wrap items-center justify-between gap-y-2 gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 min-w-0 text-xs">
           <FolderOpen className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
           {projectName && <span className="text-muted-foreground">{projectName}/</span>}
@@ -210,7 +210,7 @@ function RepositoryRow({
         </div>
       </div>
 
-      <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 text-[11px] text-muted-foreground">
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1" title={t('harbor.artifacts', 'Artifacts')}>
             <Layers className="w-3 h-3" /> {repo.artifactCount}
@@ -320,7 +320,7 @@ export function HarborStatus() {
     <div className="flex flex-col h-full overflow-hidden relative">
       {isRefreshing && <RefreshIndicator isRefreshing={isRefreshing} />}
 
-      <div className="flex items-center justify-between mb-4 shrink-0 px-1 gap-2">
+      <div className="flex flex-wrap items-center justify-between mb-4 shrink-0 px-1 gap-2">
         <div className="flex items-center gap-2">
           {currentData.health === 'healthy' ? (
             <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-green-500/15 text-green-400">

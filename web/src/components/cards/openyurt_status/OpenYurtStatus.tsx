@@ -113,7 +113,7 @@ function NodePoolRow({ pool }: { pool: OpenYurtNodePool }) {
   return (
     <div className="rounded-md bg-muted/30 px-3 py-2 space-y-1.5">
       {/* Row 1: name + status + node count */}
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 min-w-0">
           {statusCfg.icon}
           <span className="text-xs font-medium truncate">{pool.name}</span>
@@ -127,7 +127,7 @@ function NodePoolRow({ pool }: { pool: OpenYurtNodePool }) {
       </div>
 
       {/* Row 2: pool type + autonomy */}
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 text-xs text-muted-foreground">
         <span className="flex items-center gap-1">
           {typeCfg.icon}
           {typeCfg.label}
@@ -150,7 +150,7 @@ function GatewayRow({ gw }: { gw: OpenYurtGateway }) {
   const cfg = GATEWAY_STATUS_CONFIG[gw.status]
 
   return (
-    <div className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-md bg-muted/20">
+    <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-1.5 rounded-md bg-muted/20">
       <div className="flex items-center gap-1.5 min-w-0">
         {cfg.icon}
         <span className="text-xs truncate">{gw.name}</span>
@@ -202,7 +202,7 @@ export function OpenYurtStatus() {
   if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card gap-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-y-2">
           <Skeleton variant="rounded" width={120} height={28} />
           <Skeleton variant="rounded" width={80} height={20} />
         </div>
@@ -251,7 +251,7 @@ export function OpenYurtStatus() {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded gap-4 overflow-hidden">
       {/* ── Header: health badge + controller pods + last check ── */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-y-2">
         <div className="flex items-center gap-2">
           <div
             className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${healthColorClass}`}

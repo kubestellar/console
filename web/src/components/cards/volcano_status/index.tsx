@@ -206,7 +206,7 @@ export function VolcanoStatus() {
             height={SKELETON_BADGE_HEIGHT}
           />
         </div>
-        <SkeletonStats className="grid-cols-4" />
+        <SkeletonStats className="grid-cols-2 @md:grid-cols-4" />
         <SkeletonList items={SKELETON_LIST_ITEMS} className="flex-1" />
       </div>
     )
@@ -308,7 +308,7 @@ export function VolcanoStatus() {
               <span className="text-foreground">{data.stats.schedulerVersion}</span>
             </span>
           </div>
-          <div className="grid grid-cols-3 gap-2 text-[11px]">
+          <div className="grid grid-cols-2 @sm:grid-cols-3 gap-2 text-[11px]">
             <div className="rounded-md bg-secondary/30 px-2 py-1.5">
               <div className="text-muted-foreground">
                 {t('volcanoStatus.podGroups', 'Pod groups')}

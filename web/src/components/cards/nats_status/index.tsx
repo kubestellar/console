@@ -56,7 +56,7 @@ function NatsStatusInternal() {
   if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card gap-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-y-2">
           <Skeleton variant="rounded" width={140} height={28} />
           <Skeleton variant="rounded" width={90} height={20} />
         </div>
@@ -94,7 +94,7 @@ function NatsStatusInternal() {
     <div className="h-full flex flex-col min-h-card content-loaded gap-4 overflow-hidden">
 
       {/* Health badge + refresh indicator */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-y-2">
         <div
           className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${
             isHealthy
@@ -167,7 +167,7 @@ function NatsStatusInternal() {
                   key={`${server.cluster}/${server.name}`}
                   className="rounded-md bg-secondary/30 px-3 py-2.5 space-y-1"
                 >
-                  <div className="flex items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-1.5 min-w-0">
                       {style.icon}
                       <span className="text-xs font-medium truncate">{server.name}</span>
@@ -176,7 +176,7 @@ function NatsStatusInternal() {
                       {server.state}
                     </span>
                   </div>
-                  <div className="text-xs text-muted-foreground flex items-center justify-between">
+                  <div className="text-xs text-muted-foreground flex flex-wrap items-center justify-between gap-y-2">
                     <span className="truncate">{server.cluster} · v{server.version}</span>
                     <span>{server.connections} conn · {server.subscriptions} subs</span>
                   </div>
@@ -204,7 +204,7 @@ function NatsStatusInternal() {
                     key={`${stream.cluster}/${stream.name}`}
                     className="rounded-md bg-secondary/30 px-3 py-2.5 space-y-1"
                   >
-                    <div className="flex items-center justify-between gap-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex items-center gap-1.5 min-w-0">
                         {style.icon}
                         <span className="text-xs font-medium truncate">{stream.name}</span>
@@ -213,7 +213,7 @@ function NatsStatusInternal() {
                         {stream.state}
                       </span>
                     </div>
-                    <div className="text-xs text-muted-foreground flex items-center justify-between">
+                    <div className="text-xs text-muted-foreground flex flex-wrap items-center justify-between gap-y-2">
                       <span className="truncate">{stream.cluster}</span>
                       <span>{stream.messages.toLocaleString()} msgs · {stream.consumers} consumers</span>
                     </div>

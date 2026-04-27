@@ -154,7 +154,7 @@ export function DaprStatus() {
           <Skeleton variant="rounded" width={SKELETON_TITLE_WIDTH} height={SKELETON_TITLE_HEIGHT} />
           <Skeleton variant="rounded" width={SKELETON_BADGE_WIDTH} height={SKELETON_BADGE_HEIGHT} />
         </div>
-        <SkeletonStats className="grid-cols-4" />
+        <SkeletonStats className="grid-cols-2 @md:grid-cols-4" />
         <SkeletonList items={SKELETON_LIST_ITEMS} className="flex-1" />
       </div>
     )
@@ -244,7 +244,7 @@ export function DaprStatus() {
       </div>
 
       {/* Building block breakdown */}
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 @sm:grid-cols-3 gap-2">
         <div className="rounded-md bg-secondary/30 px-3 py-2 flex items-center gap-2">
           <Database className="w-4 h-4 text-emerald-400 shrink-0" />
           <div className="min-w-0">

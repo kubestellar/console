@@ -285,7 +285,7 @@ export function KubeVelaStatus() {
             height={SKELETON_BADGE_HEIGHT}
           />
         </div>
-        <SkeletonStats className="grid-cols-4" />
+        <SkeletonStats className="grid-cols-2 @md:grid-cols-4" />
         <SkeletonList items={SKELETON_LIST_ITEMS} className="flex-1" />
       </div>
     )

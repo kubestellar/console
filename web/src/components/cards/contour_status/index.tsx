@@ -36,7 +36,7 @@ function ProxySection({
               key={`${item.cluster}:${item.namespace}:${item.name}`}
               className="rounded-md bg-secondary/30 px-3 py-2.5 space-y-1"
             >
-              <div className="flex items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="min-w-0 flex items-center gap-1.5">
                   {item.status === 'Valid' ? (
                     <CheckCircle className="w-3.5 h-3.5 text-green-400 shrink-0" />
@@ -56,7 +56,7 @@ function ProxySection({
                 </span>
               </div>
 
-              <div className="text-xs text-muted-foreground flex items-center justify-between gap-2">
+              <div className="text-xs text-muted-foreground flex flex-wrap items-center justify-between gap-2">
                 <span className="truncate">{item.namespace} | {item.cluster}</span>
                 <span className="truncate">{item.fqdn || '-'}</span>
               </div>
@@ -78,11 +78,11 @@ export function ContourStatus() {
   if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card gap-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-y-2">
           <Skeleton variant="rounded" width={140} height={28} />
           <Skeleton variant="rounded" width={90} height={20} />
         </div>
-        <SkeletonStats className="grid-cols-4" />
+        <SkeletonStats className="grid-cols-2 @md:grid-cols-4" />
         <SkeletonList items={6} className="flex-1" />
       </div>
     )
@@ -109,7 +109,7 @@ export function ContourStatus() {
 
   return (
     <div className="h-full flex flex-col min-h-card content-loaded gap-4 overflow-hidden">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div
           className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${
             isHealthy

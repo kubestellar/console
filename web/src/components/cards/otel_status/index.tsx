@@ -123,7 +123,7 @@ export function OtelStatus() {
 
   return (
     <div className="h-full flex flex-col min-h-card gap-4 overflow-hidden animate-in fade-in duration-500">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div
           className={cn(
             'flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium',
@@ -256,7 +256,7 @@ export function OtelStatus() {
                 key={`${collector.cluster}:${collector.namespace}:${collector.name}`}
                 className="rounded-md bg-secondary/30 px-3 py-2.5 space-y-1"
               >
-                <div className="flex items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="min-w-0 flex items-center gap-1.5">
                     {healthy ? (
                       <CheckCircle className="w-3.5 h-3.5 text-green-400 shrink-0" />
@@ -305,7 +305,7 @@ export function OtelStatus() {
                   )}
                 </div>
 
-                <div className="text-xs text-muted-foreground flex items-center justify-between gap-2">
+                <div className="text-xs text-muted-foreground flex flex-wrap items-center justify-between gap-2">
                   <span className="truncate">
                     {t('otelStatus.mode', 'Mode')}: {collector.mode}
                     {collector.version ? ` · v${collector.version}` : ''}
