@@ -134,6 +134,14 @@ jobs:
         run: |
           set -e
 
+          set -x
+
+          # 0. Pre-flight: Validate READ_TOKEN is non-empty
+          if [ -z "$READ_TOKEN" ]; then
+            echo "::error::READ_TOKEN (GITHUB_TOKEN) is empty — cannot proceed"
+            exit 1
+          fi
+
           # 1. Mint App JWT
           JWT=$(python3 <<'PY'
           import jwt, os, time
@@ -216,33 +224,62 @@ jobs:
           INITIAL_SETTLE_SECONDS=5
           READ_RESP=""
           READ_HTTP=""
-          for attempt in $(seq 1 $MAX_READ_RETRIES); do
-            SETTLE=$((INITIAL_SETTLE_SECONDS * attempt))
-            echo "Read attempt $attempt/$MAX_READ_RETRIES (waiting ${SETTLE}s for indexing)..."
-            sleep "$SETTLE"
-            READ_HTTP=$(curl -sS -o /tmp/app-read.json -w "%{http_code}" \
-              -H "Authorization: Bearer ${READ_TOKEN}" \
-              -H "Accept: application/vnd.github+json" \
-              -H "X-GitHub-Api-Version: 2022-11-28" \
-              "$READ_URL") || {
-              echo "::warning::Read attempt $attempt — curl exited $? (HTTP: ${READ_HTTP:-unknown})"
-              cat /tmp/app-read.json 2>/dev/null || true
-              continue
-            }
-            if [ "$READ_HTTP" = "200" ]; then
-              READ_RESP=$(cat /tmp/app-read.json)
-              break
-            fi
-            echo "::warning::Read attempt $attempt got HTTP $READ_HTTP"
-            cat /tmp/app-read.json 2>/dev/null || true
-          done
+          # Wrap read loop in a function with explicit error handling
+          read_attempt_loop() {
+            for attempt in $(seq 1 $MAX_READ_RETRIES); do
+              SETTLE=$((INITIAL_SETTLE_SECONDS * attempt))
+              echo "Read attempt $attempt/$MAX_READ_RETRIES (waiting ${SETTLE}s for indexing)..."
+              sleep "$SETTLE"
 
-          if [ -z "$READ_RESP" ]; then
-            echo "::error::Failed to read back issue #$ISSUE_NUMBER after $MAX_READ_RETRIES attempts (last HTTP: $READ_HTTP)"
-            cat /tmp/app-read.json 2>/dev/null || true
+              # Explicitly capture curl exit code and HTTP code separately
+              CURL_EXIT=0
+              curl -sS -o /tmp/app-read.json -w "%{http_code}" \
+                -H "Authorization: Bearer ${READ_TOKEN}" \
+                -H "Accept: application/vnd.github+json" \
+                -H "X-GitHub-Api-Version: 2022-11-28" \
+                "$READ_URL" > /tmp/http-code.txt 2>&1 || CURL_EXIT=$?
+
+              READ_HTTP=$(cat /tmp/http-code.txt 2>/dev/null || echo "")
+
+              if [ $CURL_EXIT -ne 0 ]; then
+                echo "::warning::Read attempt $attempt — curl process exited with code $CURL_EXIT"
+                echo "  Response body:"
+                cat /tmp/app-read.json 2>/dev/null || echo "  (no response file)"
+                echo "  HTTP code captured: ${READ_HTTP:-none}"
+                continue
+              fi
+
+              if [ -z "$READ_HTTP" ]; then
+                echo "::warning::Read attempt $attempt — failed to capture HTTP code"
+                echo "  Response body:"
+                cat /tmp/app-read.json 2>/dev/null || echo "  (no response file)"
+                continue
+              fi
+
+              if [ "$READ_HTTP" = "200" ]; then
+                echo "✓ Read attempt $attempt succeeded with HTTP 200"
+                READ_RESP=$(cat /tmp/app-read.json)
+                echo "  Response body (first 300 chars): ${READ_RESP:0:300}..."
+                return 0
+              fi
+
+              echo "::warning::Read attempt $attempt got HTTP $READ_HTTP"
+              echo "  Response body:"
+              cat /tmp/app-read.json 2>/dev/null || echo "  (no response file)"
+            done
+
+            return 1
+          }
+
+          if ! read_attempt_loop; then
+            echo "::error::Failed to read back issue #$ISSUE_NUMBER after $MAX_READ_RETRIES attempts (last HTTP: ${READ_HTTP:-unknown}, last curl exit: ${CURL_EXIT:-?})"
             exit 1
           fi
 
+          if [ -z "$READ_RESP" ]; then
+            echo "::error::Read loop completed but READ_RESP is empty"
+            exit 1
+          fi
           # Extract both signals in one pass.
           ATTRIBUTION=$(echo "$READ_RESP" | python3 <<'PY'
           import sys, json
