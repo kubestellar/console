@@ -47,6 +47,11 @@ const DIFFICULTY_CONFIG = {
   medium: { rows: 4, cols: 4, pairs: 8 },
   hard: { rows: 4, cols: 6, pairs: 12 } }
 
+const TIMER_TICK_MS = 1_000
+const MATCH_REVEAL_DELAY_MS = 500
+const NO_MATCH_FLIP_DELAY_MS = 1_000
+const CONFETTI_DURATION_MS = 5_000
+
 export function MatchGame(_props: CardComponentProps) {
   const { t } = useTranslation()
   const { showToast } = useToast()
@@ -111,7 +116,7 @@ export function MatchGame(_props: CardComponentProps) {
     if (isPlaying && !isPaused && !gameWon) {
       timerRef.current = setInterval(() => {
         setTime(t => t + 1)
-      }, 1000)
+      }, TIMER_TICK_MS)
     } else if (timerRef.current) {
       clearInterval(timerRef.current)
     }
@@ -176,12 +181,12 @@ export function MatchGame(_props: CardComponentProps) {
             )
           )
           setFlippedCards([])
-        }, 500)
+        }, MATCH_REVEAL_DELAY_MS)
       } else {
         // No match
         setTimeout(() => {
           setFlippedCards([])
-        }, 1000)
+        }, NO_MATCH_FLIP_DELAY_MS)
       }
     }
   }
@@ -261,7 +266,7 @@ export function MatchGame(_props: CardComponentProps) {
     setTimeout(() => {
       if (animationFrame) cancelAnimationFrame(animationFrame)
       ctx.clearRect(0, 0, canvas.width, canvas.height)
-    }, 5000)
+    }, CONFETTI_DURATION_MS)
   }
 
   const togglePause = () => {

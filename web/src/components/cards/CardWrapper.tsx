@@ -51,6 +51,7 @@ const DEFAULT_SNOOZE_MS = MS_PER_HOUR
  * One minute is enough resolution for an "Xm/Xh/Xd" label and is cheap.
  */
 const LAST_UPDATED_TICK_MS = 60_000
+const COLLAPSE_DELAY_MS = 300
 
 // Cards that need extra-large expanded modal (for maps, complex visualizations, etc.)
 // These use 95vh height and 7xl width instead of the default 80vh/4xl
@@ -559,7 +560,7 @@ export function CardWrapper({
     if (hasCompletedInitialLoad && !collapseDelayPassed) {
       const timer = setTimeout(() => {
         setCollapseDelayPassed(true)
-      }, 300) // 300ms delay to show content before collapsing
+      }, COLLAPSE_DELAY_MS)
       return () => clearTimeout(timer)
     }
   }, [hasCompletedInitialLoad, collapseDelayPassed])

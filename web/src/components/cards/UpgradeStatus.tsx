@@ -18,6 +18,8 @@ import { safeGetJSON, safeSetJSON } from '../../lib/safeLocalStorage'
 import { useTranslation } from 'react-i18next'
 
 const WS_CONNECTION_TIMEOUT_MS = 5000
+const WS_READY_CHECK_INTERVAL_MS = 100
+const VERSION_REQUEST_TIMEOUT_MS = 10_000
 
 interface UpgradeStatusProps {
   config?: Record<string, unknown>
@@ -125,7 +127,7 @@ function createVersionWsHandle(): VersionWsHandle {
         const checkInterval = setInterval(() => {
           if (destroyed) { clearInterval(checkInterval); reject(new Error('Handle destroyed')); return }
           if (ws?.readyState === WebSocket.OPEN) { clearInterval(checkInterval); resolve(ws) }
-        }, 100)
+        }, WS_READY_CHECK_INTERVAL_MS)
         // #6206: store the timeout handle so destroy() can cancel it.
         // Without this, the timeout would fire after unmount, call
         // clearInterval on a dead handle, and reject an already-settled
@@ -156,7 +158,7 @@ function createVersionWsHandle(): VersionWsHandle {
           closeWs()
           reject(new Error('WebSocket connection timeout'))
         }
-      }, 10000)
+      }, VERSION_REQUEST_TIMEOUT_MS)
 
       ws.onopen = () => {
         clearTimeout(connectionTimeout)
@@ -219,7 +221,7 @@ function createVersionWsHandle(): VersionWsHandle {
         const timeout = setTimeout(() => {
           pendingRequests.delete(requestId)
           resolve(getCachedVersion(clusterName))
-        }, 10000)
+        }, VERSION_REQUEST_TIMEOUT_MS)
 
         pendingRequests.set(requestId, (version) => {
           clearTimeout(timeout)

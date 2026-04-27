@@ -14,6 +14,8 @@ import { GREEN_500_BRIGHT, RED_500 } from '../../lib/theme/chartColors'
 import { useToast } from '../ui/Toast'
 import type { TFunction } from 'i18next'
 
+const SEARCH_DEBOUNCE_MS = 300
+
 // Stock search result interface
 interface StockSearchResult {
   symbol: string
@@ -633,7 +635,7 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
 
     searchTimeoutRef.current = setTimeout(() => {
       performStockSearch(stockSearchInput)
-    }, 300)
+    }, SEARCH_DEBOUNCE_MS)
 
     return () => {
       if (searchTimeoutRef.current) {

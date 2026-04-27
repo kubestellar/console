@@ -81,7 +81,11 @@ const PRE_GAME_TAUNTS = [
 ]
 
 const PRE_GAME_TAUNT_DELAY_MS = 2_000
-const TAUNT_DISPLAY_MS = 3000
+const TAUNT_DISPLAY_MS = 3_000
+const INITIAL_TAUNT_DELAY_MS = 3_000
+const TAUNT_CYCLE_INTERVAL_MS = 8_000
+const AI_MOVE_DELAY_MS = 1_000
+const COMBAT_ANIMATION_MS = 500
 
 // Initialize board with starting positions
 function createInitialBoard(): Board {
@@ -498,12 +502,12 @@ export function Checkers(_props: CardComponentProps) {
     // Show initial taunt after a short delay
     const initialTimeout = setTimeout(() => {
       setPirateTaunt(PIRATE_TAUNTS[Math.floor(Math.random() * PIRATE_TAUNTS.length)])
-    }, 3000)
+    }, INITIAL_TAUNT_DELAY_MS)
 
     // Change taunt every 8 seconds
     tauntIntervalRef.current = setInterval(() => {
       setPirateTaunt(PIRATE_TAUNTS[Math.floor(Math.random() * PIRATE_TAUNTS.length)])
-    }, 8000)
+    }, TAUNT_CYCLE_INTERVAL_MS)
 
     return () => {
       clearTimeout(initialTimeout)
@@ -552,7 +556,7 @@ export function Checkers(_props: CardComponentProps) {
           setTimeout(() => {
             setShowCombat(false)
             setCombatCell(null)
-          }, 500)
+          }, COMBAT_ANIMATION_MS)
         }
 
         // Handle chain jumps
@@ -579,7 +583,7 @@ export function Checkers(_props: CardComponentProps) {
       setCurrentPlayer('pods')
       setIsThinking(false)
       thinkingTimeoutRef.current = null
-    }, 1000) // 1 second delay before AI moves
+    }, AI_MOVE_DELAY_MS)
 
     return () => {
       if (thinkingTimeoutRef.current) {
