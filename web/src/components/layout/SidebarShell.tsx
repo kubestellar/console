@@ -740,7 +740,7 @@ export function SidebarShell({
       {/* Collapse + Pin controls */}
       {features.collapsePin !== false && !isMobile && !isMissionFullScreen && (
         <div
-          className="fixed top-18 z-sticky flex flex-col gap-1.5 items-center transition-[left] duration-300 bg-background border border-border/50 rounded-full p-1 shadow-md"
+          className="fixed top-18 z-sidebar flex flex-col gap-1.5 items-center transition-[left] duration-300 bg-background border border-border/50 rounded-full p-1 shadow-md"
           style={{ left: sidebarWidth + SIDEBAR_CONTROLS_LEFT_OFFSET_PX }}
         >
           <button
@@ -784,7 +784,7 @@ export function SidebarShell({
         <div
           onMouseDown={handleResizeStart}
           className={cn(
-            "fixed bottom-0 cursor-col-resize z-sticky hover:bg-purple-500/30 transition-colors hidden md:block",
+            "fixed bottom-0 cursor-col-resize z-sidebar hover:bg-purple-500/30 transition-colors hidden md:block",
             isResizing && "bg-purple-500/50"
           )}
           style={{ top: 160, left: sidebarWidth - 3, width: 6 }}
