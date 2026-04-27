@@ -296,6 +296,29 @@ jobs:
                   'Common causes: accessing properties of undefined, type errors, DOM manipulation issues',
                   'Review recent PRs that touched the affected page',
                 ],
+                agent_token_failure: [
+                  'The frontend failed to fetch the kc-agent token from /api/agent/token — ALL agent data (clusters, workloads, drilldowns) will silently return empty',
+                  'Check that startup-oauth.sh exports KC_AGENT_TOKEN and the Go backend reads it in LoadConfigFromEnv()',
+                  'Verify /api/agent/token returns { token: "<hex>" } with a valid auth cookie',
+                  'This is a CRITICAL regression — it was the root cause of the 48-hour blank dashboard incident (#10398, #10407)',
+                ],
+                ws_auth_missing: [
+                  'WebSocket connections to kc-agent are being opened WITHOUT the auth token — drilldowns and live data will silently fail',
+                  'Check that localStorage has kc-agent-token set (populated by /api/agent/token after login)',
+                  'If the token is missing, the OAuth callback or refreshUser flow may not be fetching /api/agent/token',
+                  'Verify appendWsAuthToken() in lib/utils/wsAuth.ts is called for all new WebSocket() sites',
+                ],
+                sse_auth_failure: [
+                  'SSE streaming connections got 401 Unauthorized — dashboard cards will render blank with no error shown',
+                  'Check if the user JWT has expired (look for ksc_session_expired events around the same time)',
+                  'If JWT is valid, check that the SSE endpoint accepts Authorization: Bearer headers',
+                  'This silently degrades the entire dashboard — users see empty cards with no feedback',
+                ],
+                session_refresh_failure: [
+                  'The "Refresh Now" button in the session expiry banner failed silently — user will be logged out ~60s later',
+                  'Check /auth/refresh endpoint health and that it accepts HttpOnly kc_auth cookies',
+                  'Network issues or backend restarts during refresh window can trigger this',
+                ],
               };
 
               const fixes = categoryGuide[category] || [

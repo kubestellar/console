@@ -96,6 +96,10 @@ export {
 
   // Errors (domain-level, separate from core error tracking)
   emitSessionExpired,
+  emitAgentTokenFailure,
+  emitWsAuthMissing,
+  emitSseAuthFailure,
+  emitSessionRefreshFailure,
 
   // Tour
   emitTourStarted,

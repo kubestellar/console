@@ -9,7 +9,7 @@ import { clearClusterCacheOnLogout } from '../hooks/mcp/shared'
 import { STORAGE_KEY_TOKEN, DEMO_TOKEN_VALUE, STORAGE_KEY_DEMO_MODE, STORAGE_KEY_ONBOARDED, STORAGE_KEY_USER_CACHE, STORAGE_KEY_HAS_SESSION, FETCH_DEFAULT_TIMEOUT_MS } from './constants'
 /** localStorage key for the kc-agent shared secret (must match shared.ts) */
 const AGENT_TOKEN_STORAGE_KEY = 'kc-agent-token'
-import { emitLogin, emitLogout, setAnalyticsUserId, setAnalyticsUserProperties, emitConversionStep, emitDeveloperSession } from './analytics'
+import { emitLogin, emitLogout, setAnalyticsUserId, setAnalyticsUserProperties, emitConversionStep, emitDeveloperSession, emitSessionRefreshFailure } from './analytics'
 import { setDemoMode as setGlobalDemoMode } from './demoMode'
 import { AuthRefreshResponseSchema, UserSchema } from './schemas'
 import { validateResponse } from './schemas/validate'
@@ -630,8 +630,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               localStorage.removeItem(STORAGE_KEY_HAS_SESSION)
             }
           }
-        } catch {
-          // Refresh failed — user will see session-expired redirect naturally
+        } catch (err) {
+          emitSessionRefreshFailure(err instanceof Error ? err.message : 'network error')
         }
       })
     }

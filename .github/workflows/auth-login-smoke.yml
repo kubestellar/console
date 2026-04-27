@@ -25,7 +25,10 @@ name: Auth Login Smoke Test
 #   5. /api/agent/token returns the shared KC_AGENT_TOKEN
 #   6. kc-agent rejects requests without the agent token (401)
 #   7. kc-agent accepts requests with the correct agent token (200)
-#   8. No raw fetch() calls to agent URLs bypass agentFetch/fetchWithRetry
+#   8. kc-agent rejects unauthenticated WebSocket upgrades
+#   9. /auth/refresh rejects expired/invalid cookies (not silent 200)
+#  10. /api/agent/token requires authentication (no token leak)
+#  11. No raw fetch() calls to agent URLs bypass agentFetch/fetchWithRetry
 #
 # The test uses DEV_MODE (no GitHub OAuth credentials) so the backend
 # auto-creates a dev-user on /auth/github. This takes ~60 seconds.
@@ -311,7 +314,94 @@ jobs:
           echo ""
           echo "Auth login smoke test PASSED"
 
-      # ── 13. Static analysis: no raw fetch() to agent URLs ────────
+      # ── 13. Test kc-agent WebSocket rejects without token ─────────
+      # Covers gap #3: appendWsAuthToken returns bare URL when token
+      # is missing from localStorage. Without the token query param,
+      # the WebSocket upgrade must be rejected. If it's accepted,
+      # unauthenticated users can stream live data.
+      - name: Test kc-agent WebSocket rejects unauthenticated upgrade
+        run: |
+          echo "Testing WebSocket upgrade without token..."
+          # kc-agent listens for WS upgrades on /ws. Without ?token=...,
+          # the upgrade handshake should be rejected (HTTP 401 or 403).
+          WS_CODE=$(curl -sS --max-time 5 -o /dev/null -w '%{http_code}' \
+            -H "Connection: Upgrade" \
+            -H "Upgrade: websocket" \
+            -H "Sec-WebSocket-Version: 13" \
+            -H "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==" \
+            http://127.0.0.1:8585/ws 2>/dev/null)
+
+          if [ "$WS_CODE" = "101" ]; then
+            echo "::error::kc-agent accepted WebSocket upgrade WITHOUT auth token — unauthenticated WS connections should be rejected"
+            exit 1
+          fi
+          echo "kc-agent correctly rejected unauthenticated WebSocket upgrade (HTTP $WS_CODE)"
+
+          echo "Testing WebSocket upgrade with correct token..."
+          WS_CODE_AUTH=$(curl -sS --max-time 5 -o /dev/null -w '%{http_code}' \
+            -H "Connection: Upgrade" \
+            -H "Upgrade: websocket" \
+            -H "Sec-WebSocket-Version: 13" \
+            -H "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==" \
+            "http://127.0.0.1:8585/ws?token=${KC_AGENT_TOKEN}" 2>/dev/null)
+
+          # 101 = upgrade accepted, or any non-401 = token was accepted
+          if [ "$WS_CODE_AUTH" = "401" ]; then
+            echo "::error::kc-agent rejected WebSocket upgrade WITH correct token — WS token auth is broken"
+            exit 1
+          fi
+          echo "kc-agent accepted WebSocket upgrade with correct token (HTTP $WS_CODE_AUTH)"
+
+      # ── 14. Test /auth/refresh rejects expired/invalid cookies ────
+      # Covers gap #4: If /auth/refresh accepts garbage cookies and
+      # returns 200, the silent-catch in the "Refresh Now" handler
+      # masks a real auth failure. The endpoint must return 401 for
+      # invalid sessions so the frontend knows the refresh failed.
+      - name: Test /auth/refresh rejects invalid cookie
+        run: |
+          echo "Testing /auth/refresh with no cookie..."
+          NO_COOKIE_CODE=$(curl -sS --max-time 5 -o /dev/null -w '%{http_code}' \
+            -X POST \
+            -H "X-Requested-With: XMLHttpRequest" \
+            http://localhost:8081/auth/refresh)
+
+          if [ "$NO_COOKIE_CODE" = "200" ]; then
+            echo "::error::/auth/refresh returned 200 with NO cookie — should require valid session"
+            exit 1
+          fi
+          echo "/auth/refresh correctly rejected no-cookie request (HTTP $NO_COOKIE_CODE)"
+
+          echo "Testing /auth/refresh with garbage cookie..."
+          GARBAGE_CODE=$(curl -sS --max-time 5 -o /dev/null -w '%{http_code}' \
+            -X POST \
+            -b "kc_auth=garbage-invalid-jwt-token-value" \
+            -H "X-Requested-With: XMLHttpRequest" \
+            http://localhost:8081/auth/refresh)
+
+          if [ "$GARBAGE_CODE" = "200" ]; then
+            echo "::error::/auth/refresh returned 200 with garbage cookie — invalid JWTs must be rejected"
+            exit 1
+          fi
+          echo "/auth/refresh correctly rejected garbage cookie (HTTP $GARBAGE_CODE)"
+
+      # ── 15. Test /api/agent/token requires authentication ─────────
+      # Covers gap #1: If /api/agent/token returns a token to
+      # unauthenticated requests, anyone can steal the agent shared
+      # secret. It must require a valid session cookie.
+      - name: Test /api/agent/token requires auth
+        run: |
+          echo "Testing /api/agent/token without cookie..."
+          NO_AUTH_CODE=$(curl -sS --max-time 5 -o /dev/null -w '%{http_code}' \
+            -H "X-Requested-With: XMLHttpRequest" \
+            http://localhost:8081/api/agent/token)
+
+          if [ "$NO_AUTH_CODE" = "200" ]; then
+            echo "::error::/api/agent/token returned 200 without auth — agent token would leak to unauthenticated users"
+            exit 1
+          fi
+          echo "/api/agent/token correctly requires auth (HTTP $NO_AUTH_CODE)"
+
+      # ── 16. Static analysis: no raw fetch() to agent URLs ──────────
       # Catches the exact regression from #10398: someone adds a fetch()
       # call to LOCAL_AGENT_HTTP_URL or LOCAL_AGENT_URL without going
       # through agentFetch() or fetchWithRetry(). These calls silently
@@ -357,7 +447,43 @@ jobs:
           fi
           echo "No raw fetch() calls to agent URLs found (correct)"
 
-      # ── 14. Cleanup ──────────────────────────────────────────────
+      # ── 17. Static analysis: no raw WebSocket to agent URL ─────
+      # Catches WebSocket connections that bypass appendWsAuthToken.
+      # Without the token query param, kc-agent rejects the upgrade.
+      - name: Check for raw WebSocket to agent URLs
+        run: |
+          echo "Scanning for WebSocket connections that bypass appendWsAuthToken..."
+
+          # Match: new WebSocket( with agent URL patterns, excluding
+          # appendWsAuthToken calls and test files.
+          # useActiveUsers.ts is excluded — it connects to the backend
+          # (not kc-agent) and authenticates via post-open message.
+          WS_VIOLATIONS=$(grep -rn \
+            -e 'new WebSocket(' \
+            web/src/ \
+            --include='*.ts' --include='*.tsx' \
+            | grep -i -e 'LOCAL_AGENT' -e 'agent' -e '8585' \
+            | grep -v 'appendWsAuthToken' \
+            | grep -v '__tests__' \
+            | grep -v '\.test\.' \
+            | grep -v '\.spec\.' \
+            | grep -v '// ' \
+            | grep -v 'useActiveUsers' \
+            || true)
+
+          if [ -n "$WS_VIOLATIONS" ]; then
+            echo "::error::Found WebSocket connections to kc-agent that bypass appendWsAuthToken()."
+            echo "These will be rejected by kc-agent because they don't include the ?token= param."
+            echo ""
+            echo "Violations:"
+            echo "$WS_VIOLATIONS"
+            echo ""
+            echo "Fix: wrap the URL with appendWsAuthToken() from lib/utils/wsAuth.ts"
+            exit 1
+          fi
+          echo "No raw WebSocket connections to agent URLs found (correct)"
+
+      # ── 19. Cleanup ──────────────────────────────────────────────
       - name: Stop backend and kc-agent
         if: always()
         run: |
@@ -368,7 +494,7 @@ jobs:
             kill "$(cat /tmp/kc-agent.pid)" 2>/dev/null || true
           fi
 
-      # ── 15. Alert on failure ─────────────────────────────────────
+      # ── 20. Alert on failure ─────────────────────────────────────
       - name: Create issue on failure
         if: failure()
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
@@ -393,7 +519,10 @@ jobs:
               '- kc-agent rejects requests without `KC_AGENT_TOKEN` (401)',
               '- kc-agent accepts requests with the correct token',
               '- `/api/agent/token` returns the same token kc-agent was started with',
+              '- `/api/agent/token` requires authentication (no token leak)',
               '- End-to-end: token from backend → kc-agent auth succeeds',
+              '- kc-agent rejects unauthenticated WebSocket upgrades',
+              '- `/auth/refresh` rejects expired/invalid cookies',
               '- No raw `fetch()` calls to agent URLs bypass `agentFetch()`',
               '',
               '### Action required',
@@ -401,6 +530,8 @@ jobs:
               '2. If **agent token**: verify `KC_AGENT_TOKEN` env var flows from startup-oauth.sh → backend → `/api/agent/token` → frontend → kc-agent',
               '3. If **raw fetch**: replace `fetch()` with `agentFetch()` from `hooks/mcp/shared.ts`',
               '4. If **OAuth login**: verify `/auth/refresh` contract (see #6590)',
+              '5. If **WebSocket auth**: verify `appendWsAuthToken()` is called and kc-agent validates the `?token=` param',
+              '6. If **agent token leak**: verify `/api/agent/token` middleware requires a valid session cookie',
             ].join('\n');
 
             const existing = await github.rest.issues.listForRepo({

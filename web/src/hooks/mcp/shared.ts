@@ -7,6 +7,7 @@ import { registerCacheReset, triggerAllRefetches } from '../../lib/modeTransitio
 import { resetFailuresForCluster, resetAllCacheFailures } from '../../lib/cache'
 import { hostnameEndsWith, hostnameContainsLabel } from '../../lib/utils/urlHostname'
 import { appendWsAuthToken } from '../../lib/utils/wsAuth'
+import { emitAgentTokenFailure } from '../../lib/analytics'
 import { MS_PER_MINUTE } from '../../lib/constants/time'
 import {
   LOCAL_AGENT_HTTP_URL,
@@ -65,11 +66,16 @@ function getAgentToken(): Promise<string> {
       .then(r => r.ok ? r.json() : { token: '' })
       .then((data: { token?: string }) => {
         const token = data.token || ''
-        if (token) localStorage.setItem(AGENT_TOKEN_STORAGE_KEY, token)
+        if (token) {
+          localStorage.setItem(AGENT_TOKEN_STORAGE_KEY, token)
+        } else {
+          emitAgentTokenFailure('empty token from /api/agent/token')
+        }
         agentTokenPromise = null
         return token
       })
-      .catch(() => {
+      .catch((err) => {
+        emitAgentTokenFailure(err?.message || 'network error')
         agentTokenPromise = null
         return ''
       })

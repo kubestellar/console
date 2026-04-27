@@ -14,6 +14,7 @@
  */
 
 import { STORAGE_KEY_TOKEN } from './constants'
+import { emitSseAuthFailure } from './analytics'
 
 export interface SSEFetchOptions<T> {
   /** SSE endpoint URL path (e.g. `${LOCAL_AGENT_HTTP_URL}/pods/stream`) */
@@ -369,7 +370,11 @@ export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
           }
 
           // Don't retry on auth (401) or service unavailable (503) — expected in demo mode
-          const isNonRetryable = err.message?.includes('401') || err.message?.includes('503')
+          const is401 = err.message?.includes('401')
+          const isNonRetryable = is401 || err.message?.includes('503')
+          if (is401) {
+            emitSseAuthFailure(fullUrl)
+          }
           if (isNonRetryable) {
             console.debug('[SSE] Non-retryable error — skipping retries (demo mode)')
             // Clear the in-flight entry and timers so future requests for the
