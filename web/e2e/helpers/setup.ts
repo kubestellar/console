@@ -137,7 +137,24 @@ export async function mockApiMe(page: Page) {
   )
 }
 
+/**
+ * Catch-all mock for /api/** requests. Returns empty JSON 200.
+ * Prevents unmocked calls from hanging against the Vite preview server
+ * (no backend), causing webkit/firefox/mobile-safari timeouts.
+ * Register BEFORE specific mocks (Playwright matches in reverse order).
+ */
+export async function mockApiFallback(page: Page) {
+  await page.route('**/api/**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({}),
+    })
+  )
+}
+
 export async function setupDemoMode(page: Page) {
+  await mockApiFallback(page)
   // Seed localStorage before page scripts execute — prevents the app from
   // briefly rendering the /login screen before the demo flag is picked up.
   await page.addInitScript(() => {
@@ -254,6 +271,7 @@ export const DEFAULT_AUTH_USER: MockApiUser = {
  * instead (or both, depending on what the app under test expects).
  */
 export async function setupAuth(page: Page, user?: Partial<MockApiUser>): Promise<void> {
+  await mockApiFallback(page)
   const u: MockApiUser = { ...DEFAULT_AUTH_USER, ...(user || {}) }
   await page.route('**/api/me', (route) =>
     route.fulfill({

@@ -159,6 +159,22 @@ test.describe('Dashboard Page', () => {
 
   test.describe('Data Loading', () => {
     test('shows loading state initially', async ({ page }) => {
+      // Catch-all API mock prevents unmocked requests hanging in webkit/firefox
+      await page.route('**/api/**', (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({}),
+        })
+      )
+      await page.route('**/api/me', (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ id: '1', github_id: '12345', github_login: 'testuser', email: 'test@example.com', onboarded: true }),
+        })
+      )
+
       // Delay the API response to see loading state
       await page.route('**/api/mcp/**', async (route) => {
         const API_DELAY_MS = 2000
@@ -185,6 +201,22 @@ test.describe('Dashboard Page', () => {
     })
 
     test('handles API errors gracefully', async ({ page }) => {
+      // Catch-all API mock prevents unmocked requests hanging in webkit/firefox
+      await page.route('**/api/**', (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({}),
+        })
+      )
+      await page.route('**/api/me', (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ id: '1', github_id: '12345', github_login: 'testuser', email: 'test@example.com', onboarded: true }),
+        })
+      )
+
       await page.route('**/api/mcp/clusters', (route) =>
         route.fulfill({
           status: 500,
@@ -285,8 +317,18 @@ test.describe('Dashboard Page', () => {
       // **/api/mcp/**. Unroute them here so our deterministic payload is the
       // ONLY source of data for these Data Accuracy tests — otherwise the
       // outer mock with 2 clusters could race with our EXPECTED_CLUSTER_COUNT.
+      await page.unroute('**/api/**')
       await page.unroute('**/api/me')
       await page.unroute('**/api/mcp/**')
+
+      // Re-register catch-all (prevents unmocked API hangs in webkit/firefox)
+      await page.route('**/api/**', (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({}),
+        })
+      )
 
       // Mock authentication
       await page.route('**/api/me', (route) =>

@@ -1,6 +1,15 @@
 import { test, expect, Page } from '@playwright/test'
 
 async function setupPage(page: Page) {
+  // Catch-all API mock prevents unmocked requests hanging in webkit/firefox
+  await page.route('**/api/**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({}),
+    })
+  )
+
   await page.route('**/api/me', (route) =>
     route.fulfill({
       status: 200,

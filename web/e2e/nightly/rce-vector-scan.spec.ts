@@ -128,13 +128,7 @@ async function setupMocks(page: Page) {
   await page.route('**/health', (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: '{"status":"ok"}' })
   )
-  await page.route('**/api/me', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ id: '1', github_login: 'test-user', email: 'test@test.com', onboarded: true }),
-    })
-  )
+  // Catch-all FIRST — specific mocks registered after take priority
   await page.route('**/api/**', (route) => {
     const url = route.request().url()
     if (url.includes('/stream') || url.includes('/events')) {
@@ -142,6 +136,13 @@ async function setupMocks(page: Page) {
     }
     route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
   })
+  await page.route('**/api/me', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ id: '1', github_login: 'test-user', email: 'test@test.com', onboarded: true }),
+    })
+  )
 }
 
 // ---------------------------------------------------------------------------

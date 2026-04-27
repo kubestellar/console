@@ -37,6 +37,15 @@ test.describe('Login Page', () => {
   })
 
   test('redirects to dashboard after successful login', async ({ page }) => {
+    // Catch-all API mock prevents unmocked requests hanging in webkit/firefox
+    await page.route('**/api/**', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({}),
+      })
+    )
+
     // Mock the /api/me endpoint to simulate an authenticated user
     await page.route('**/api/me', (route) =>
       route.fulfill({
@@ -75,7 +84,7 @@ test.describe('Login Page', () => {
     await page.goto('/')
     await page.waitForLoadState('domcontentloaded')
 
-    await expect(page).toHaveURL(/^\/$/, { timeout: 10000 })
+    await expect(page).toHaveURL(/\/$/, { timeout: 10000 })
     await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
   })
 

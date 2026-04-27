@@ -4,6 +4,15 @@ import { test, expect, Page } from '@playwright/test'
  * Sets up authentication and MCP mocks for sidebar tests
  */
 async function setupSidebarTest(page: Page) {
+  // Catch-all API mock prevents unmocked requests hanging in webkit/firefox
+  await page.route('''**/api/**''', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: '''application/json''',
+      body: JSON.stringify({}),
+    })
+  )
+
   // Mock authentication
   await page.route('**/api/me', (route) =>
     route.fulfill({
@@ -80,13 +89,19 @@ test.describe('Sidebar Navigation', () => {
       const SIDEBAR_TIMEOUT_MS = 10_000
       await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: SIDEBAR_TIMEOUT_MS })
 
+      // Navigate away first — in webkit, clicking <a href="/"> when already
+      // on "/" hangs because no navigation event fires.
+      await page.goto('/clusters')
+      await page.waitForLoadState('domcontentloaded')
+      await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: SIDEBAR_TIMEOUT_MS })
+
       // Find dashboard link by href since sidebar uses NavLink with icons + text
       const dashboardLink = page.getByTestId('sidebar-primary-nav').locator('a[href="/"]').first()
       await expect(dashboardLink).toBeVisible({ timeout: SIDEBAR_TIMEOUT_MS })
       await dashboardLink.click()
 
       // Should be on dashboard
-      await expect(page).toHaveURL(/^\/$/, { timeout: SIDEBAR_TIMEOUT_MS })
+      await expect(page).toHaveURL(/\/$/, { timeout: SIDEBAR_TIMEOUT_MS })
     })
 
     test('clusters link navigates to clusters page', async ({ page }) => {

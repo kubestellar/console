@@ -4,6 +4,15 @@ import { test, expect, Page } from '@playwright/test'
  * Sets up authentication and MCP mocks for cluster tests
  */
 async function setupClustersTest(page: Page) {
+  // Catch-all API mock prevents unmocked requests hanging in webkit/firefox
+  await page.route('''**/api/**''', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: '''application/json''',
+      body: JSON.stringify({}),
+    })
+  )
+
   // Mock authentication
   await page.route('**/api/me', (route) =>
     route.fulfill({

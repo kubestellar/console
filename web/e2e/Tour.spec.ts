@@ -13,6 +13,15 @@ import { test, expect, Page } from '@playwright/test'
  *   Defaults to `true` so most tests start on the dashboard without the prompt.
  */
 async function setupTourTest(page: Page, tourCompleted: boolean = true) {
+  // Catch-all API mock prevents unmocked requests hanging in webkit/firefox
+  await page.route('''**/api/**''', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: '''application/json''',
+      body: JSON.stringify({}),
+    })
+  )
+
   // Mock authentication
   await page.route('**/api/me', (route) =>
     route.fulfill({

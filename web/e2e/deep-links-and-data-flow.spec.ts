@@ -41,7 +41,7 @@ test.describe('Deep Links', () => {
     await setupDemoAndNavigate(page, '/')
     await waitForDashboard(page)
 
-    await expect(page).toHaveURL(/^\/$/)
+    await expect(page).toHaveURL(/\/$/)
     await expect(page.getByTestId('dashboard-page')).toBeVisible()
 
     const content = await page.textContent('body')
