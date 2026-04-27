@@ -20,7 +20,8 @@ import {
   RotateCcw,
   StopCircle,
   ListChecks,
-  Loader2 } from 'lucide-react'
+  Loader2,
+  ArrowDown } from 'lucide-react'
 import { useMissions, type Mission } from '../../../hooks/useMissions'
 import { useAuth } from '../../../lib/auth'
 import { useDemoMode } from '../../../hooks/useDemoMode'
@@ -39,6 +40,11 @@ import { OrbitSetupOffer } from '../../missions/OrbitSetupOffer'
 import { OrbitMonitorOffer } from '../../missions/OrbitMonitorOffer'
 import type { OrbitResourceFilter } from '../../../lib/missions/types'
 import { MicrophoneButton } from '../../ui/MicrophoneButton'
+/** Pixels from the bottom edge within which the chat is considered "at bottom" */
+const SCROLL_BOTTOM_THRESHOLD_PX = 50
+/** Duration in ms for the scroll-to-bottom button fade animation */
+const SCROLL_BTN_FADE_MS = 200
+
 import { STATUS_CONFIG, TYPE_ICONS } from './types'
 import type { FontSize } from './types'
 import { TypingIndicator } from './TypingIndicator'
@@ -191,14 +197,19 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
   const isAtBottom = () => {
     const container = messagesContainerRef.current
     if (!container) return true
-    const threshold = 50 // pixels from bottom to consider "at bottom"
-    return container.scrollHeight - container.scrollTop - container.clientHeight < threshold
+    return container.scrollHeight - container.scrollTop - container.clientHeight < SCROLL_BOTTOM_THRESHOLD_PX
   }
 
   // Handle scroll events to detect user scrolling
   const handleScroll = () => {
     setShouldAutoScroll(isAtBottom())
   }
+
+  /** Smoothly scroll the chat to the most recent message */
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    setShouldAutoScroll(true)
+  }, [])
 
   // Auto-scroll to bottom only when new messages are added (not on every render)
   useEffect(() => {
@@ -542,6 +553,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
       {/* Messages - using memoized component for better scroll performance */}
       {/* issue 6740 — role=log + aria-live=polite so screen readers announce streaming AI
           tokens as they arrive. aria-atomic=false keeps announcements incremental. */}
+      <div className="relative flex-1 min-h-[150px] min-w-0">
       <div
         ref={messagesContainerRef}
         onScroll={handleScroll}
@@ -550,7 +562,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
         aria-atomic="false"
         aria-relevant="additions text"
         aria-label="Mission chat messages"
-        className="flex-1 overflow-y-auto scroll-enhanced p-4 space-y-4 min-h-[150px] min-w-0"
+        className="absolute inset-0 overflow-y-auto scroll-enhanced p-4 space-y-4"
       >
         {/* Inline Run button + editable mission description/steps for saved missions (#3917, #4273) */}
         {isSavedPreRun && (
@@ -841,6 +853,26 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
         )}
 
         <div ref={messagesEndRef} />
+      </div>
+
+      {/* Floating scroll-to-bottom button — appears when user scrolls up (#10452) */}
+      <button
+        onClick={scrollToBottom}
+        className={cn(
+          'absolute bottom-4 right-4 z-10 p-2 rounded-full',
+          'bg-primary/90 text-primary-foreground shadow-lg',
+          'hover:bg-primary transition-all',
+          'focus:outline-hidden focus:ring-2 focus:ring-primary/50',
+          shouldAutoScroll
+            ? 'opacity-0 pointer-events-none scale-90'
+            : 'opacity-100 scale-100',
+        )}
+        style={{ transitionDuration: `${SCROLL_BTN_FADE_MS}ms` }}
+        aria-label={t('missionChat.scrollToBottom', { defaultValue: 'Scroll to latest message' })}
+        data-testid="scroll-to-bottom-btn"
+      >
+        <ArrowDown className="w-4 h-4" />
+      </button>
       </div>
 
       {/* Input / Actions — hidden when Run button is inline above */}
