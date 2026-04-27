@@ -6,6 +6,7 @@ import { Skeleton, SkeletonList, SkeletonStats } from '../../ui/Skeleton'
 import { useCloudEventsStatus } from './useCloudEventsStatus'
 import type { CloudEventResourceState } from './demoData'
 import { createCardSyncFormatter } from '../../../lib/formatters'
+import { getHealthBadgeClasses } from '../../../lib/cards/statusColors'
 
 const STATUS_STYLE: Record<CloudEventResourceState, { badge: string; icon: React.ReactNode }> = {
   ready: {
@@ -82,9 +83,7 @@ export function CloudEventsStatus() {
     <div className="h-full flex flex-col min-h-card content-loaded gap-4 overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-y-2">
         <div
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${
-            isHealthy ? 'bg-green-500/15 text-green-400' : 'bg-yellow-500/15 text-yellow-400'
-          }`}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${getHealthBadgeClasses(isHealthy)}`}
         >
           {isHealthy ? <CheckCircle className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
           {isHealthy ? t('cloudevents.healthy') : t('cloudevents.degraded')}

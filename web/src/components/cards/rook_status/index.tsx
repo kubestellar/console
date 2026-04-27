@@ -25,6 +25,7 @@ import { EmptyState } from '../../ui/EmptyState'
 import { MetricTile } from '../../../lib/cards/CardComponents'
 import { cn } from '../../../lib/cn'
 import type { RookCephCluster, RookCephHealth } from '../../../lib/demo/rook'
+import { getHealthBadgeClasses } from '../../../lib/cards/statusColors'
 
 // ---------------------------------------------------------------------------
 // Named constants (no magic numbers)
@@ -134,7 +135,7 @@ export function RookStatus() {
         <div
           className={cn(
             'flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium',
-            isHealthy ? 'bg-green-500/15 text-green-400' : 'bg-yellow-500/15 text-yellow-400',
+            getHealthBadgeClasses(isHealthy),
           )}
         >
           {isHealthy ? <CheckCircle className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
