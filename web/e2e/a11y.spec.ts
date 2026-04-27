@@ -227,13 +227,10 @@ test.describe('Accessibility Audits', () => {
         .withRules(['heading-order'])
         .analyze()
 
-      // Log violations but allow some flexibility
-      if (results.violations.length > 0) {
-        console.log('\n=== Heading order violations ===')
-        for (const violation of results.violations) {
-          console.log(`${violation.description}: ${violation.nodes.length} occurrences`)
-        }
-      }
+      expect(
+        results.violations,
+        `Heading order violations found:\n${JSON.stringify(results.violations, null, 2)}`
+      ).toHaveLength(0)
     })
   })
 
