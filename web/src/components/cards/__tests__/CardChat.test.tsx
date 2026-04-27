@@ -415,7 +415,10 @@ describe('CardChat', () => {
       mockIsDemoMode = true
       renderChat({ messages: [] })
       expect(screen.getByText('cardChat.demoConversation')).toBeInTheDocument()
-      expect(screen.getByText('Show only unhealthy clusters')).toBeInTheDocument()
+      // "Show only unhealthy clusters" appears in both demo messages and quick
+      // prompts, so verify at least two occurrences (one from each source).
+      const matches = screen.getAllByText('Show only unhealthy clusters')
+      expect(matches.length).toBeGreaterThanOrEqual(2)
     })
 
     it('does not show demo messages when not in demo mode', () => {
