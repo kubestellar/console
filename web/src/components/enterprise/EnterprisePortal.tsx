@@ -93,20 +93,20 @@ function VerticalCard({ sectionId, title, items, onNavigate }: {
   const Icon = meta.icon
 
   return (
-    <div className={`rounded-xl border border-gray-800 bg-linear-to-br ${meta.gradient} p-5 flex flex-col`}>
+    <div className={`rounded-xl border border-border bg-linear-to-br ${meta.gradient} p-5 flex flex-col`}>
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-gray-800/50">
+          <div className="p-2 rounded-lg bg-secondary/50">
             <Icon className="w-5 h-5 text-muted-foreground" />
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-white">{title}</h3>
-            <p className="text-xs text-gray-400">{items.length} dashboard{items.length !== 1 ? 's' : ''}</p>
+            <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+            <p className="text-xs text-muted-foreground">{items.length} dashboard{items.length !== 1 ? 's' : ''}</p>
           </div>
         </div>
         {meta.status === 'active' && meta.score != null && <ScoreGauge score={meta.score} />}
         {meta.status === 'coming-soon' && (
-          <span className="text-xs px-2 py-1 rounded-full bg-gray-800 text-gray-400 font-medium">
+          <span className="text-xs px-2 py-1 rounded-full bg-secondary text-muted-foreground font-medium">
             Coming Soon
           </span>
         )}
@@ -130,7 +130,7 @@ function VerticalCard({ sectionId, title, items, onNavigate }: {
           <button
             key={item.href}
             onClick={() => onNavigate(item.href)}
-            className="w-full flex items-center justify-between px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:bg-gray-700/40 hover:text-white transition-colors group"
+            className="w-full flex items-center justify-between px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors group"
           >
             <span>{item.label}</span>
             <ArrowRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -193,31 +193,31 @@ export default function EnterprisePortal() {
 
       {/* Summary Stats */}
       <div className="grid grid-cols-4 gap-4 mb-8">
-        <div className="rounded-lg border border-gray-800 bg-gray-900 p-4">
-          <div className="text-xs text-gray-400 mb-1">Overall Score</div>
+        <div className="rounded-lg border border-border bg-card p-4">
+          <div className="text-xs text-muted-foreground mb-1">Overall Score</div>
           <div className="text-2xl font-bold text-green-400">83%</div>
         </div>
-        <div className="rounded-lg border border-gray-800 bg-gray-900 p-4">
-          <div className="text-xs text-gray-400 mb-1">Active Verticals</div>
+        <div className="rounded-lg border border-border bg-card p-4">
+          <div className="text-xs text-muted-foreground mb-1">Active Verticals</div>
           <div className="flex items-center gap-2">
             <TrendingUp className="w-4 h-4 text-blue-400" />
-            <span className="text-2xl font-bold text-white">7</span>
-            <span className="text-xs text-gray-500">of 7</span>
+            <span className="text-2xl font-bold text-foreground">7</span>
+            <span className="text-xs text-muted-foreground">of 7</span>
           </div>
         </div>
-        <div className="rounded-lg border border-gray-800 bg-gray-900 p-4">
-          <div className="text-xs text-gray-400 mb-1">Controls Passed</div>
+        <div className="rounded-lg border border-border bg-card p-4">
+          <div className="text-xs text-muted-foreground mb-1">Controls Passed</div>
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-green-400" />
-            <span className="text-2xl font-bold text-white">179</span>
-            <span className="text-xs text-gray-500">of 220</span>
+            <span className="text-2xl font-bold text-foreground">179</span>
+            <span className="text-xs text-muted-foreground">of 220</span>
           </div>
         </div>
-        <div className="rounded-lg border border-gray-800 bg-gray-900 p-4">
-          <div className="text-xs text-gray-400 mb-1">Next Audit</div>
+        <div className="rounded-lg border border-border bg-card p-4">
+          <div className="text-xs text-muted-foreground mb-1">Next Audit</div>
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-yellow-400" />
-            <span className="text-lg font-bold text-white">14 days</span>
+            <span className="text-lg font-bold text-foreground">14 days</span>
           </div>
         </div>
       </div>
@@ -237,16 +237,16 @@ export default function EnterprisePortal() {
         {/* Add More tile */}
         <button
           onClick={handleAddMore}
-          className="rounded-xl border-2 border-dashed border-gray-700 hover:border-purple-500/50 bg-gray-900/30 hover:bg-purple-500/5 p-5 flex flex-col items-center justify-center gap-3 transition-all group min-h-[200px]"
+          className="rounded-xl border-2 border-dashed border-border hover:border-purple-500/50 bg-card/30 hover:bg-purple-500/5 p-5 flex flex-col items-center justify-center gap-3 transition-all group min-h-[200px]"
         >
-          <div className="p-3 rounded-full bg-gray-800 group-hover:bg-purple-500/20 transition-colors">
-            <Plus className="w-6 h-6 text-gray-400 group-hover:text-purple-400 transition-colors" />
+          <div className="p-3 rounded-full bg-secondary group-hover:bg-purple-500/20 transition-colors">
+            <Plus className="w-6 h-6 text-muted-foreground group-hover:text-purple-400 transition-colors" />
           </div>
           <div className="text-center">
-            <p className="text-sm font-medium text-gray-400 group-hover:text-purple-300 transition-colors">
+            <p className="text-sm font-medium text-muted-foreground group-hover:text-purple-300 transition-colors">
               Add More
             </p>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-muted-foreground/70 mt-1">
               Dashboards, cards &amp; widgets
             </p>
           </div>

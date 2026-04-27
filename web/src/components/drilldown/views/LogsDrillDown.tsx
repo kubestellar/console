@@ -259,9 +259,9 @@ export function LogsDrillDown({ data }: Props) {
       {!isLoading && !error && (
         <div
           ref={logContainerRef}
-          className="rounded-lg bg-black/50 border border-border p-4 font-mono text-sm overflow-auto max-h-[60vh]"
+          className="rounded-lg bg-card border border-border p-4 font-mono text-sm overflow-auto max-h-[60vh]"
         >
-          <pre className="text-green-400 whitespace-pre-wrap">{visibleLog}</pre>
+          <pre className="text-foreground whitespace-pre-wrap">{visibleLog}</pre>
         </div>
       )}
 

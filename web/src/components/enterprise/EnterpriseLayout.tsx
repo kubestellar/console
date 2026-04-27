@@ -198,7 +198,7 @@ export default function EnterpriseLayout() {
       {/* flex flex-col is required so the flex container below stretches
           to fill remaining height, giving <main> a constrained height
           for overflow-y-auto to work (scroll fix). */}
-      <div className="h-screen bg-gray-950 text-white overflow-hidden flex flex-col">
+      <div className="h-screen bg-background text-foreground overflow-hidden flex flex-col">
         <Navbar />
 
         <div
