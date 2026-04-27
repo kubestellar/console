@@ -590,7 +590,7 @@
     },
     "updates": {
       "title": "System Updates",
-      "subtitle": "Check for and install console updates",
+      "subtitle": "Manage updates for the console and Marketplace components",
       "checkNow": "Check Now",
       "updateChannel": "Update Channel",
       "stable": "Stable (Weekly releases)",
@@ -707,7 +707,9 @@
       "scopeReloadTitle": "Post-Deploy Page Reload",
       "scopeReloadDesc": "After a new version is deployed (whether via auto-update or manual upgrade), the browser detects the updated build and shows a banner prompting you to reload the page. This happens automatically and has no settings on this page.",
       "scopeCardDataTitle": "Dashboard Card Data",
-      "scopeCardDataDesc": "Dashboard cards fetch live data (cluster health, pod status, metrics) on their own schedules, independent of console version updates. Card refresh intervals are not controlled by these settings."
+      "scopeCardDataDesc": "Dashboard cards fetch live data (cluster health, pod status, metrics) on their own schedules, independent of console version updates. Card refresh intervals are not controlled by these settings.",
+      "scopeMarketplaceTitle": "Marketplace Components",
+      "scopeMarketplaceDesc": "Cards, themes, and integrations installed from the Marketplace are updated independently by their publishers. These items are not covered by the console version update channel above. Check the Marketplace page for available updates to installed components, or enable per-item auto-update from each item's settings."
     },
     "theme": {
       "title": "Appearance",

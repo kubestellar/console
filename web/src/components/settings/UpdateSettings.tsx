@@ -22,6 +22,7 @@ import {
   HardDrive,
   GitCommitHorizontal,
   Info,
+  Store,
 } from 'lucide-react'
 import { useVersionCheck } from '../../hooks/useVersionCheck'
 import { useUpdateProgress } from '../../hooks/useUpdateProgress'
@@ -369,6 +370,13 @@ export function UpdateSettings() {
             <div>
               <span className="font-medium text-foreground">{t('settings.updates.scopeCardDataTitle')}</span>
               <span className="text-muted-foreground"> — {t('settings.updates.scopeCardDataDesc')}</span>
+            </div>
+            <div className="flex items-start gap-2 pt-2 border-t border-border">
+              <Store className="w-4 h-4 mt-0.5 text-purple-400 shrink-0" />
+              <div>
+                <span className="font-medium text-foreground">{t('settings.updates.scopeMarketplaceTitle')}</span>
+                <span className="text-muted-foreground"> — {t('settings.updates.scopeMarketplaceDesc')}</span>
+              </div>
             </div>
           </div>
         )}
