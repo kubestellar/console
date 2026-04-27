@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { isDemoModeForced } from './useDemoMode'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
-import { agentFetch } from './mcp/shared'
 import { TRANSITION_DELAY_MS } from '../lib/constants/network'
 import { emitAgentConnected, emitAgentDisconnected, emitAgentProvidersDetected, emitConversionStep } from '../lib/analytics'
 import { safeGetItem, safeSetItem } from '../lib/utils/localStorage'
@@ -208,7 +207,24 @@ class AgentManager {
     this.isChecking = true
 
     try {
-      const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/health`, {
+      // Use plain fetch() instead of agentFetch() for the health check.
+      // The /health endpoint does not require authentication (see server.go
+      // comment: "Health endpoint doesn't require token auth"). Using plain
+      // fetch avoids two problems that cause false "Offline" status (#10459):
+      //
+      // 1. agentFetch adds X-Requested-With header, which triggers a CORS
+      //    preflight (OPTIONS) request. If the browser's origin is not in the
+      //    kc-agent's allowed origins list (e.g. accessing via IP instead of
+      //    localhost), the preflight fails and the health check always fails —
+      //    even though the WebSocket (used by AI Missions) is unaffected by
+      //    CORS restrictions.
+      //
+      // 2. agentFetch awaits getAgentToken(), which fetches /api/agent/token
+      //    from the backend. If the user is not yet authenticated or the
+      //    backend is slow, this delays the health check. The AbortSignal
+      //    timeout starts when created (at call site), not when fetch starts,
+      //    so the token delay can consume the timeout budget.
+      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/health`, {
         method: 'GET',
         headers: { Accept: 'application/json' },
         signal: AbortSignal.timeout(AGENT_HEALTH_TIMEOUT_MS) })

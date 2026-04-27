@@ -21,7 +21,6 @@ import {
   BACKEND_HEALTH_CHECK_TIMEOUT_MS,
 } from '../../../lib/constants/network'
 import type { AgentInfo } from '../../../types/agent'
-import { agentFetch } from '../../../hooks/mcp/shared'
 
 const CONNECTING_DEBOUNCE_MS = 300
 
@@ -57,7 +56,12 @@ export function AgentStatusIndicator() {
   const fetchAgentsFromHealth = async () => {
     setIsDiscoveringAgents(true)
     try {
-      const res = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/health`, {
+      // Use plain fetch instead of agentFetch — the /health endpoint does not
+      // require auth, and plain fetch avoids the X-Requested-With header that
+      // triggers CORS preflight failures when origin is not in allowed list (#10459).
+      const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/health`, {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
         signal: AbortSignal.timeout(BACKEND_HEALTH_CHECK_TIMEOUT_MS),
       })
       if (!res.ok) return

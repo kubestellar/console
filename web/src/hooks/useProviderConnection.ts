@@ -50,9 +50,13 @@ async function checkProviderReady(providerName: string): Promise<ProviderCheckRe
     // /provider/check not available -- fall through to health check
   }
 
-  // Fallback: check the health endpoint for simple provider presence
+  // Fallback: check the health endpoint for simple provider presence.
+  // Use plain fetch — /health does not require auth and avoids CORS
+  // preflight failures from X-Requested-With header (#10459).
   try {
-    const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/health`, {
+    const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/health`, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
       signal: AbortSignal.timeout(3_000) })
     if (!response.ok) {
       return { ready: false, error: `Agent returned HTTP ${response.status}` }

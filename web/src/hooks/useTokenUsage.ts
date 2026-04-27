@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { isAgentUnavailable, reportAgentDataSuccess, reportAgentDataError } from './useLocalAgent'
 import { getDemoMode } from './useDemoMode'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
-import { agentFetch } from './mcp/shared'
 import { QUICK_ABORT_TIMEOUT_MS } from '../lib/constants/network'
 import {
   getUserTokenUsage,
@@ -448,7 +447,9 @@ async function fetchTokenUsage() {
   try {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), QUICK_ABORT_TIMEOUT_MS)
-    const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/health`, {
+    // Use plain fetch — /health does not require auth and avoids CORS
+    // preflight failures from X-Requested-With header (#10459).
+    const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/health`, {
       method: 'GET',
       headers: { 'Accept': 'application/json' },
       signal: controller.signal })

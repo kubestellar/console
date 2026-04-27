@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
-import { agentFetch } from './mcp/shared'
 
 export type BackendStatus = 'connected' | 'disconnected' | 'connecting'
 
@@ -152,11 +151,14 @@ class BackendHealthManager {
   }
 
   /** Probe kc-agent on a separate origin to disambiguate real backend
-   *  downtime from browser connection-pool exhaustion on the main origin. */
+   *  downtime from browser connection-pool exhaustion on the main origin.
+   *  Uses plain fetch instead of agentFetch — the /health endpoint does not
+   *  require auth, and plain fetch avoids CORS preflight failures (#10459). */
   private async checkAgentHealth(): Promise<boolean> {
     try {
-      const res = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/health`, {
+      const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/health`, {
         method: 'GET',
+        headers: { Accept: 'application/json' },
         signal: AbortSignal.timeout(HEALTH_CHECK_TIMEOUT_MS),
       })
       return res.ok
