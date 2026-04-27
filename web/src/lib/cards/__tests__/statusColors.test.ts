@@ -4,6 +4,9 @@ import {
   getStatusSeverity,
   getStatusColors,
   getSeverityColors,
+  HEALTH_BADGE_HEALTHY,
+  HEALTH_BADGE_UNHEALTHY,
+  getHealthBadgeClasses,
 } from '../statusColors'
 import type { StatusSeverity } from '../statusColors'
 
@@ -91,5 +94,27 @@ describe('getSeverityColors', () => {
     expect(getSeverityColors('info')).toBe(STATUS_COLORS.info)
     expect(getSeverityColors('neutral')).toBe(STATUS_COLORS.neutral)
     expect(getSeverityColors('muted')).toBe(STATUS_COLORS.muted)
+  })
+})
+
+describe('HEALTH_BADGE_HEALTHY', () => {
+  it('contains green background and text classes', () => {
+    expect(HEALTH_BADGE_HEALTHY).toBe('bg-green-500/15 text-green-400')
+  })
+})
+
+describe('HEALTH_BADGE_UNHEALTHY', () => {
+  it('contains yellow background and text classes', () => {
+    expect(HEALTH_BADGE_UNHEALTHY).toBe('bg-yellow-500/15 text-yellow-400')
+  })
+})
+
+describe('getHealthBadgeClasses', () => {
+  it('returns healthy classes when isHealthy is true', () => {
+    expect(getHealthBadgeClasses(true)).toBe(HEALTH_BADGE_HEALTHY)
+  })
+
+  it('returns unhealthy classes when isHealthy is false', () => {
+    expect(getHealthBadgeClasses(false)).toBe(HEALTH_BADGE_UNHEALTHY)
   })
 })
