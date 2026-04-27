@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { Sparkles, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { CARD_INSTALL_MAP } from '../../lib/cards/cardInstallMap'
-import { loadMissionPrompt } from '../cards/multi-tenancy/missionLoader'
-import { ClusterSelectionDialog } from '../missions/ClusterSelectionDialog'
-import { ConfirmMissionPromptDialog } from '../missions/ConfirmMissionPromptDialog'
-import { useMissions } from '../../hooks/useMissions'
-import { useLocalAgent } from '../../hooks/useLocalAgent'
+import { CARD_INSTALL_MAP } from '../../../lib/cards/cardInstallMap'
+import { loadMissionPrompt } from '../multi-tenancy/missionLoader'
+import { ClusterSelectionDialog } from '../../missions/ClusterSelectionDialog'
+import { ConfirmMissionPromptDialog } from '../../missions/ConfirmMissionPromptDialog'
+import { useMissions } from '../../../hooks/useMissions'
+import { useLocalAgent } from '../../../hooks/useLocalAgent'
 
 /** Timeout for fetching KB guide data (ms) */
 const KB_FETCH_TIMEOUT_MS = 10_000

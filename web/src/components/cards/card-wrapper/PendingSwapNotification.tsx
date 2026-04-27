@@ -1,6 +1,6 @@
 import { Clock } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { Button } from '../ui/Button'
+import { Button } from '../../ui/Button'
 
 interface PendingSwap {
   newType: string
@@ -10,7 +10,7 @@ interface PendingSwap {
 }
 
 /** Default snooze duration (re-exported for CardWrapper's countdown logic) */
-export { MS_PER_HOUR as DEFAULT_SNOOZE_MS } from '../../lib/constants/time'
+export { MS_PER_HOUR as DEFAULT_SNOOZE_MS } from '../../../lib/constants/time'
 
 export interface PendingSwapNotificationProps {
   pendingSwap: PendingSwap

@@ -4,10 +4,10 @@ import {
   MoreVertical, Settings, Trash2, MoveHorizontal, ChevronRight, Download, Link2,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { cn } from '../../lib/cn'
-import { isCardExportable } from '../../lib/widgets/widgetRegistry'
-import { copyToClipboard } from '../../lib/clipboard'
-import { useDashboardContextOptional } from '../../hooks/useDashboardContext'
+import { cn } from '../../../lib/cn'
+import { isCardExportable } from '../../../lib/widgets/widgetRegistry'
+import { copyToClipboard } from '../../../lib/clipboard'
+import { useDashboardContextOptional } from '../../../hooks/useDashboardContext'
 
 // Card width options (in grid columns out of 12)
 const WIDTH_OPTIONS = [

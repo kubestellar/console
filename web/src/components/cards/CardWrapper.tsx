@@ -1,6 +1,6 @@
 import { ReactNode, useState, useEffect, useCallback, useRef, useMemo, createContext, use, ComponentType, Suspense, lazy } from 'react'
 import {
-  Maximize2, RefreshCw, ChevronRight, ChevronDown, Bug, AlertTriangle,
+  Maximize2, RefreshCw, ChevronRight, ChevronDown, Bug, AlertTriangle, Info,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { CARD_TITLES, CARD_DESCRIPTIONS, DEMO_EXEMPT_CARDS } from './cardMetadata'
@@ -21,10 +21,10 @@ import { useMissions } from '../../hooks/useMissions'
 import { LOADING_TIMEOUT_MS, SKELETON_DELAY_MS, INITIAL_RENDER_TIMEOUT_MS, TICK_INTERVAL_MS, CARD_LOADING_TIMEOUT_MS, MIN_SKELETON_DISPLAY_MS } from '../../lib/constants/network'
 import { formatTimeAgo } from '../../lib/formatters'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
-import { InfoTooltip } from './InfoTooltip'
-import { CardActionMenu } from './CardActionMenu'
-import { PendingSwapNotification } from './PendingSwapNotification'
-import { InstallCTAFlow } from './InstallCTAFlow'
+import { InfoTooltip } from './card-wrapper/InfoTooltip'
+import { CardActionMenu } from './card-wrapper/CardActionMenu'
+import { PendingSwapNotification } from './card-wrapper/PendingSwapNotification'
+import { InstallCTAFlow } from './card-wrapper/InstallCTAFlow'
 // Lazy-load the widget export modal (~42 KB + code generator ~30 KB) — only when user exports
 const WidgetExportModal = lazy(() =>
   import('../widgets/WidgetExportModal').then(m => ({ default: m.WidgetExportModal }))
