@@ -325,6 +325,8 @@ jobs:
           # Match: fetch(LOCAL_AGENT_HTTP_URL  or  fetch(LOCAL_AGENT_URL
           # Match: fetch(`http://127.0.0.1:8585
           # Exclude: agentFetch, fetchWithRetry, test files, comments
+          # /health is intentionally public (no auth required, used for
+          # agent discovery) so raw fetch() to /health is allowed.
           VIOLATIONS=$(grep -rn \
             -e 'fetch(`${LOCAL_AGENT_HTTP_URL}' \
             -e 'fetch(`${LOCAL_AGENT_URL}' \
@@ -340,6 +342,7 @@ jobs:
             | grep -v '\.spec\.' \
             | grep -v '// ' \
             | grep -v 'shared\.ts' \
+            | grep -v '/health' \
             || true)
 
           if [ -n "$VIOLATIONS" ]; then
