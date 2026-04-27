@@ -271,4 +271,326 @@ describe('DashboardSyncService', () => {
       expect(mockApiGet).toHaveBeenCalledTimes(2)
     })
   })
+
+  describe('saveCards with debounce', () => {
+    beforeEach(() => {
+      vi.useFakeTimers()
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('triggers sync after debounce delay when authenticated', async () => {
+      localStorage.setItem('auth-token', 'token')
+      const mockDashboard: BackendDashboard = {
+        id: 'dash-1',
+        user_id: 'user-1',
+        name: 'save-test',
+        is_default: false,
+        created_at: '2026-01-01',
+      }
+
+      // Pre-cache the dashboard
+      mockApiGet.mockResolvedValueOnce({ data: [mockDashboard] })
+      await dashboardSync.getOrCreateDashboard('save-test')
+
+      // Set up mocks for syncCardsToBackend
+      mockApiGet.mockResolvedValueOnce({
+        data: { dashboard: mockDashboard, cards: [] },
+      })
+
+      const cards = [
+        { id: 'card-1', card_type: 'cluster_health', config: {}, position: { w: 4, h: 2 } },
+      ]
+
+      dashboardSync.saveCards('save-test', cards)
+
+      // Before debounce fires, no API call for sync
+      expect(mockApiGet).toHaveBeenCalledTimes(1) // only the getOrCreate call
+
+      // Advance past debounce delay (1000ms)
+      await vi.advanceTimersByTimeAsync(1100)
+
+      // Now sync should have been called
+      expect(mockApiGet).toHaveBeenCalledTimes(2) // getOrCreate + fetchCards in sync
+    })
+  })
+
+  describe('syncCardsToBackend', () => {
+    beforeEach(() => {
+      vi.useFakeTimers()
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('creates new cards that are not in backend', async () => {
+      localStorage.setItem('auth-token', 'token')
+      const mockDashboard: BackendDashboard = {
+        id: 'dash-1',
+        user_id: 'user-1',
+        name: 'sync-create',
+        is_default: false,
+        created_at: '2026-01-01',
+      }
+
+      // Pre-cache
+      mockApiGet.mockResolvedValueOnce({ data: [mockDashboard] })
+      await dashboardSync.getOrCreateDashboard('sync-create')
+
+      // syncCardsToBackend fetches current cards from backend (empty)
+      mockApiGet.mockResolvedValueOnce({
+        data: { dashboard: mockDashboard, cards: [] },
+      })
+      // Post for creating new card
+      mockApiPost.mockResolvedValueOnce({ data: {} })
+
+      const cards = [
+        { id: 'new-uuid-card', card_type: 'gpu_usage', config: { showGraph: true }, position: { w: 6, h: 3 } },
+      ]
+
+      dashboardSync.saveCards('sync-create', cards)
+      await vi.advanceTimersByTimeAsync(1100)
+
+      expect(mockApiPost).toHaveBeenCalledWith(
+        '/api/dashboards/dash-1/cards',
+        expect.objectContaining({ card_type: 'gpu_usage' })
+      )
+    })
+
+    it('updates existing cards', async () => {
+      localStorage.setItem('auth-token', 'token')
+      const mockDashboard: BackendDashboard = {
+        id: 'dash-1',
+        user_id: 'user-1',
+        name: 'sync-update',
+        is_default: false,
+        created_at: '2026-01-01',
+      }
+
+      mockApiGet.mockResolvedValueOnce({ data: [mockDashboard] })
+      await dashboardSync.getOrCreateDashboard('sync-update')
+
+      const existingCard: BackendCard = {
+        id: 'card-1',
+        dashboard_id: 'dash-1',
+        card_type: 'cluster_health',
+        config: '{}',
+        position: '{"w":4,"h":2}',
+        created_at: '2026-01-01',
+      }
+
+      // syncCardsToBackend fetches current cards
+      mockApiGet.mockResolvedValueOnce({
+        data: { dashboard: mockDashboard, cards: [existingCard] },
+      })
+      mockApiPut.mockResolvedValueOnce({ data: {} })
+
+      const cards = [
+        { id: 'card-1', card_type: 'cluster_health', config: { updated: true }, position: { w: 8, h: 4 } },
+      ]
+
+      dashboardSync.saveCards('sync-update', cards)
+      await vi.advanceTimersByTimeAsync(1100)
+
+      expect(mockApiPut).toHaveBeenCalledWith(
+        '/api/cards/card-1',
+        expect.objectContaining({ card_type: 'cluster_health', config: { updated: true } })
+      )
+    })
+
+    it('deletes cards that are in backend but not in frontend', async () => {
+      localStorage.setItem('auth-token', 'token')
+      const mockDashboard: BackendDashboard = {
+        id: 'dash-1',
+        user_id: 'user-1',
+        name: 'sync-delete',
+        is_default: false,
+        created_at: '2026-01-01',
+      }
+
+      mockApiGet.mockResolvedValueOnce({ data: [mockDashboard] })
+      await dashboardSync.getOrCreateDashboard('sync-delete')
+
+      const backendCard: BackendCard = {
+        id: 'card-to-delete',
+        dashboard_id: 'dash-1',
+        card_type: 'old_card',
+        config: '{}',
+        position: '{"w":4,"h":2}',
+        created_at: '2026-01-01',
+      }
+
+      mockApiGet.mockResolvedValueOnce({
+        data: { dashboard: mockDashboard, cards: [backendCard] },
+      })
+      mockApiDelete.mockResolvedValueOnce({})
+
+      // Frontend has no cards — backend card should be deleted
+      dashboardSync.saveCards('sync-delete', [])
+      await vi.advanceTimersByTimeAsync(1100)
+
+      expect(mockApiDelete).toHaveBeenCalledWith('/api/cards/card-to-delete')
+    })
+
+    it('skips creating cards with default- prefix', async () => {
+      localStorage.setItem('auth-token', 'token')
+      const mockDashboard: BackendDashboard = {
+        id: 'dash-1',
+        user_id: 'user-1',
+        name: 'sync-skip-default',
+        is_default: false,
+        created_at: '2026-01-01',
+      }
+
+      mockApiGet.mockResolvedValueOnce({ data: [mockDashboard] })
+      await dashboardSync.getOrCreateDashboard('sync-skip-default')
+
+      mockApiGet.mockResolvedValueOnce({
+        data: { dashboard: mockDashboard, cards: [] },
+      })
+
+      const cards = [
+        { id: 'default-card-1', card_type: 'cluster_health', config: {}, position: { w: 4, h: 2 } },
+      ]
+
+      dashboardSync.saveCards('sync-skip-default', cards)
+      await vi.advanceTimersByTimeAsync(1100)
+
+      // Should NOT call post for default-prefixed cards
+      expect(mockApiPost).not.toHaveBeenCalledWith(
+        expect.stringContaining('/api/dashboards/'),
+        expect.anything()
+      )
+    })
+
+    it('skips sync when already in progress', async () => {
+      localStorage.setItem('auth-token', 'token')
+      const mockDashboard: BackendDashboard = {
+        id: 'dash-1',
+        user_id: 'user-1',
+        name: 'sync-concurrent',
+        is_default: false,
+        created_at: '2026-01-01',
+      }
+
+      mockApiGet.mockResolvedValueOnce({ data: [mockDashboard] })
+      await dashboardSync.getOrCreateDashboard('sync-concurrent')
+
+      // Make the first sync hang by never resolving
+      let resolveFirst: (v: unknown) => void
+      const hangingPromise = new Promise(r => { resolveFirst = r })
+      mockApiGet.mockReturnValueOnce(hangingPromise)
+
+      dashboardSync.saveCards('sync-concurrent', [])
+      // Trigger first debounce
+      await vi.advanceTimersByTimeAsync(1100)
+
+      // Now fire a second saveCards — debounce triggers sync again
+      dashboardSync.saveCards('sync-concurrent', [])
+      await vi.advanceTimersByTimeAsync(1100)
+
+      // Only one API call should be pending (the second was skipped)
+      // Cleanup hanging promise
+      resolveFirst!({ data: { dashboard: mockDashboard, cards: [] } })
+    })
+  })
+
+  describe('fullSync edge cases', () => {
+    it('returns null and does not touch localStorage when fetch fails', async () => {
+      localStorage.setItem('auth-token', 'token')
+      localStorage.setItem('test-key-fail', '["old-data"]')
+      mockApiGet.mockRejectedValueOnce(new Error('Network fail'))
+
+      const result = await dashboardSync.fullSync('test-key-fail')
+      expect(result).toBeNull()
+      // localStorage should be untouched
+      expect(localStorage.getItem('test-key-fail')).toBe('["old-data"]')
+    })
+
+    it('clears localStorage when backend returns empty cards (#7254)', async () => {
+      localStorage.setItem('auth-token', 'token')
+      localStorage.setItem('test-key-empty', '[{"old":"card"}]')
+      const mockDashboard: BackendDashboard = {
+        id: 'dash-1',
+        user_id: 'user-1',
+        name: 'test-key-empty',
+        is_default: false,
+        created_at: '2026-01-01',
+      }
+
+      mockApiGet
+        .mockResolvedValueOnce({ data: [mockDashboard] })
+        .mockResolvedValueOnce({ data: { dashboard: mockDashboard, cards: [] } })
+
+      const result = await dashboardSync.fullSync('test-key-empty')
+      expect(result).toEqual([])
+      expect(localStorage.getItem('test-key-empty')).toBe('[]')
+    })
+  })
+
+  describe('fetchCards edge cases', () => {
+    it('handles cards with null/undefined config and position', async () => {
+      localStorage.setItem('auth-token', 'token')
+      const mockDashboard: BackendDashboard = {
+        id: 'dash-1',
+        user_id: 'user-1',
+        name: 'null-config-key',
+        is_default: false,
+        created_at: '2026-01-01',
+      }
+      const mockCards: BackendCard[] = [
+        {
+          id: 'card-1',
+          dashboard_id: 'dash-1',
+          card_type: 'test_card',
+          config: undefined as unknown as string,
+          position: undefined as unknown as string,
+          created_at: '2026-01-01',
+        },
+      ]
+
+      mockApiGet
+        .mockResolvedValueOnce({ data: [mockDashboard] })
+        .mockResolvedValueOnce({ data: { dashboard: mockDashboard, cards: mockCards } })
+
+      const result = await dashboardSync.fetchCards('null-config-key')
+      expect(result).toHaveLength(1)
+      expect(result![0].config).toEqual({})
+      expect(result![0].position).toEqual({ w: 4, h: 2 })
+    })
+
+    it('handles position with partial fields', async () => {
+      localStorage.setItem('auth-token', 'token')
+      const mockDashboard: BackendDashboard = {
+        id: 'dash-1',
+        user_id: 'user-1',
+        name: 'partial-pos',
+        is_default: false,
+        created_at: '2026-01-01',
+      }
+      const mockCards: BackendCard[] = [
+        {
+          id: 'card-1',
+          dashboard_id: 'dash-1',
+          card_type: 'test_card',
+          config: '{"key":"val"}',
+          position: '{"x":0}',
+          created_at: '2026-01-01',
+        },
+      ]
+
+      mockApiGet
+        .mockResolvedValueOnce({ data: [mockDashboard] })
+        .mockResolvedValueOnce({ data: { dashboard: mockDashboard, cards: mockCards } })
+
+      const result = await dashboardSync.fetchCards('partial-pos')
+      expect(result).toHaveLength(1)
+      // w and h should fall back to defaults (4, 2)
+      expect(result![0].position).toEqual({ w: 4, h: 2 })
+      expect(result![0].config).toEqual({ key: 'val' })
+    })
+  })
 })
