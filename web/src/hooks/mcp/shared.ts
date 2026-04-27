@@ -1932,7 +1932,7 @@ export async function fetchWithRetry(
     }
 
     try {
-      const response = await fetch(url, {
+      const response = await agentFetch(url, {
         ...fetchOptions,
         signal: controller.signal,
       })
