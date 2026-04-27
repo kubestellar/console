@@ -1054,9 +1054,23 @@ func (s *Server) setupRoutes() {
 	// and Private Network Access checks that are fragile across browser versions.
 	// The backend injects the Bearer token server-side so the frontend never
 	// needs to know KC_AGENT_TOKEN for auto-update operations.
+	// allowedAgentSubPaths restricts which kc-agent endpoints the proxy
+	// can forward to — prevents path-traversal attacks via crafted :path.
+	allowedAgentSubPaths := map[string]bool{
+		"status":  true,
+		"config":  true,
+		"trigger": true,
+		"cancel":  true,
+	}
 	agentHTTPClient := &http.Client{Timeout: kcAgentProxyTimeout}
 	api.All("/agent/auto-update/:path", func(c *fiber.Ctx) error {
 		subPath := c.Params("path")
+
+		// Reject path-traversal sequences and non-allowlisted endpoints.
+		if strings.Contains(subPath, "..") || strings.Contains(subPath, "%2e") || strings.Contains(subPath, "%2E") || !allowedAgentSubPaths[subPath] {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid agent proxy path"})
+		}
+
 		targetURL := kcAgentBaseURL + "/auto-update/" + subPath
 
 		var bodyReader io.Reader
