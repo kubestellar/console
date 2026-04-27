@@ -2,10 +2,6 @@ import { test, expect, type Page } from '@playwright/test'
 import { collectConsoleErrors } from '../helpers/ux-assertions'
 import { setMode } from '../mocks/liveMocks'
 
-const BASE_URL =
-  (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env
-    ?.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:5174'
-
 const DASHBOARD_LOAD_TIMEOUT_MS = 20_000
 const ROUTE_LOAD_TIMEOUT_MS = 20_000
 const SEARCH_RESULTS_TIMEOUT_MS = 10_000
@@ -23,12 +19,12 @@ function routeMatcher(path: string): RegExp {
 }
 
 async function loginAndOpenInitialDashboard(page: Page) {
-  await page.goto(`${BASE_URL}/login`, { waitUntil: 'domcontentloaded' })
+  await page.goto('/login', { waitUntil: 'domcontentloaded' })
 
   // Simulate post-login auth state in a backend-independent way.
   await setMode(page, 'demo')
 
-  await page.goto(`${BASE_URL}/`, { waitUntil: 'domcontentloaded' })
+  await page.goto('/', { waitUntil: 'domcontentloaded' })
 
   await expect(page).toHaveURL(routeMatcher('/'), { timeout: DASHBOARD_LOAD_TIMEOUT_MS })
   await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: DASHBOARD_LOAD_TIMEOUT_MS })
