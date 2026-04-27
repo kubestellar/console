@@ -1,4 +1,5 @@
 import { test, expect, Page } from '@playwright/test'
+import { mockApiFallback } from './helpers/setup'
 
 /**
  * RBACExplorer Card E2E Tests
@@ -23,6 +24,9 @@ import { test, expect, Page } from '@playwright/test'
 // ---------------------------------------------------------------------------
 
 async function setupDemoMode(page: Page) {
+  // Register catch-all FIRST so specific mocks override it
+  await mockApiFallback(page)
+
   await page.route('**/api/me', (route) =>
     route.fulfill({
       status: 200,
@@ -45,8 +49,7 @@ async function setupDemoMode(page: Page) {
     })
   )
 
-  await page.goto('/login')
-  await page.evaluate(() => {
+  await page.addInitScript(() => {
     localStorage.setItem('token', 'demo-token')
     localStorage.setItem('kc-demo-mode', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
@@ -59,6 +62,9 @@ async function setupDemoMode(page: Page) {
 }
 
 async function setupLiveMode(page: Page, withClusters = false) {
+  // Register catch-all FIRST so specific mocks override it
+  await mockApiFallback(page)
+
   await page.route('**/api/me', (route) =>
     route.fulfill({
       status: 200,
@@ -94,8 +100,7 @@ async function setupLiveMode(page: Page, withClusters = false) {
     })
   )
 
-  await page.goto('/login')
-  await page.evaluate(() => {
+  await page.addInitScript(() => {
     localStorage.setItem('token', 'test-token')
     localStorage.removeItem('kc-demo-mode')
     localStorage.setItem('demo-user-onboarded', 'true')

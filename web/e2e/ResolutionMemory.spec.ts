@@ -1,13 +1,18 @@
 import { test, expect } from './fixtures'
+import { mockApiFallback } from './helpers/setup'
 
 test.describe('Resolution Memory System', () => {
   test.beforeEach(async ({ page }) => {
+    // Catch-all API mock prevents unmocked requests hanging against vite preview
+    await mockApiFallback(page)
+
     // Set up test mode and skip onboarding
     await page.addInitScript(() => {
       localStorage.setItem('kubestellar-test-mode', 'true')
       localStorage.setItem('kubestellar-skip-onboarding', 'true')
       localStorage.setItem('token', 'demo-token')
       localStorage.setItem('demo-user-onboarded', 'true')
+      localStorage.setItem('kc-demo-mode', 'true')
     })
     await page.goto('/', { waitUntil: 'domcontentloaded' })
   })
@@ -168,7 +173,7 @@ test.describe('Resolution Memory System', () => {
 
   test('AI missions sidebar toggle button is visible', async ({ page }) => {
     // Wait for page to be interactive
-    await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {})
+    await page.waitForLoadState('domcontentloaded').catch(() => {})
 
     // Look for the AI Missions toggle button
     const toggleButton = page.locator('[data-tour="ai-missions"]')
@@ -178,7 +183,7 @@ test.describe('Resolution Memory System', () => {
   })
 
   test('mission sidebar opens when clicking toggle', async ({ page }) => {
-    await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {})
+    await page.waitForLoadState('domcontentloaded').catch(() => {})
 
     // Find and click the AI Missions button
     const toggleButton = page.locator('[data-tour="ai-missions"]').first()
@@ -212,7 +217,7 @@ test.describe('Resolution Memory System', () => {
 
     // Reload to pick up the seeded mission
     await page.reload({ waitUntil: 'domcontentloaded' })
-    await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {})
+    await page.waitForLoadState('domcontentloaded').catch(() => {})
 
     // Open the sidebar
     const toggleButton = page.locator('[data-tour="ai-missions"]').first()
@@ -270,7 +275,7 @@ test.describe('Resolution Memory System', () => {
 
     // Reload
     await page.reload({ waitUntil: 'domcontentloaded' })
-    await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {})
+    await page.waitForLoadState('domcontentloaded').catch(() => {})
 
     // Open sidebar
     const toggleButton = page.locator('[data-tour="ai-missions"]').first()

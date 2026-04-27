@@ -35,10 +35,6 @@ async function mockAIAnalyze(page: Page, responseText: string) {
 }
 
 test.describe('Card Chat / AI Interaction on Dashboard', () => {
-  test.beforeEach(async ({ page }) => {
-    await mockAIAnalyze(page, 'Mocked AI analysis: the cluster is healthy.')
-  })
-
   test('switching AI mode to high triggers re-render of AI-aware surfaces', async ({ page }) => {
     // Start in low mode so recommendations/chat affordances are minimal.
     await setupDemoAndNavigate(page, '/')
@@ -117,6 +113,8 @@ test.describe('Card Chat / AI Interaction on Dashboard', () => {
     // only deterministic way to prove the wiring in the current build where
     // the per-card chat button is feature-flagged off.
     await setupDemoAndNavigate(page, '/')
+    // Register the AI mock AFTER setupDemoAndNavigate so it overrides the catch-all
+    await mockAIAnalyze(page, 'Mocked AI analysis: the cluster is healthy.')
     await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
 
     const analyzeResponse = await page.evaluate(async () => {

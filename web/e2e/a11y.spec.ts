@@ -1,5 +1,6 @@
 import { test, expect, Page } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
+import { setupDemoMode, ELEMENT_VISIBLE_TIMEOUT_MS } from './helpers/setup'
 
 /**
  * Accessibility Audit Tests for KubeStellar Console
@@ -12,18 +13,6 @@ import AxeBuilder from '@axe-core/playwright'
  *
  * Run with: npx playwright test e2e/a11y.spec.ts
  */
-
-/**
- * Sets up demo mode for testing
- */
-async function setupDemoMode(page: Page) {
-  await page.goto('/login')
-  await page.evaluate(() => {
-    localStorage.setItem('token', 'demo-token')
-    localStorage.setItem('kc-demo-mode', 'true')
-    localStorage.setItem('demo-user-onboarded', 'true')
-  })
-}
 
 async function waitForDashboardCards(page: Page) {
   await expect(page.locator('[data-card-type]').first()).toBeVisible({ timeout: 10000 })
@@ -44,7 +33,7 @@ test.describe('Accessibility Audits', () => {
       test(`${name} page passes accessibility audit`, async ({ page }) => {
         await setupDemoMode(page)
         await page.goto(path)
-        await page.waitForLoadState('networkidle', { timeout: 15000 })
+        await page.waitForLoadState('domcontentloaded')
         await expect(page.locator('body')).toBeVisible()
 
         const results = await new AxeBuilder({ page })
@@ -82,7 +71,7 @@ test.describe('Accessibility Audits', () => {
     test('can navigate dashboard with keyboard only', async ({ page }) => {
       await setupDemoMode(page)
       await page.goto('/')
-      await page.waitForLoadState('networkidle')
+      await page.waitForLoadState('domcontentloaded')
 
       // Tab through focusable elements
       const focusableCount = await page.evaluate(() => {
@@ -110,7 +99,7 @@ test.describe('Accessibility Audits', () => {
     test('Escape key closes modals', async ({ page }) => {
       await setupDemoMode(page)
       await page.goto('/dashboard')
-      await page.waitForLoadState('networkidle')
+      await page.waitForLoadState('domcontentloaded')
 
       // Try to open any modal
       const modalTrigger = page.locator('button:has-text("Add")').first()
@@ -130,7 +119,7 @@ test.describe('Accessibility Audits', () => {
     test('focus is trapped in modals', async ({ page }) => {
       await setupDemoMode(page)
       await page.goto('/dashboard')
-      await page.waitForLoadState('networkidle')
+      await page.waitForLoadState('domcontentloaded')
 
       // Try to open a modal
       const modalTrigger = page.locator('button:has-text("Add")').first()
@@ -166,7 +155,7 @@ test.describe('Accessibility Audits', () => {
     test('text has sufficient color contrast', async ({ page }) => {
       await setupDemoMode(page)
       await page.goto('/')
-      await page.waitForLoadState('networkidle')
+      await page.waitForLoadState('domcontentloaded')
 
       const results = await new AxeBuilder({ page })
         .withRules(['color-contrast'])
@@ -191,7 +180,7 @@ test.describe('Accessibility Audits', () => {
     test('images have alt text', async ({ page }) => {
       await setupDemoMode(page)
       await page.goto('/')
-      await page.waitForLoadState('networkidle')
+      await page.waitForLoadState('domcontentloaded')
 
       const results = await new AxeBuilder({ page })
         .withRules(['image-alt'])
@@ -206,7 +195,7 @@ test.describe('Accessibility Audits', () => {
     test('form inputs have labels', async ({ page }) => {
       await setupDemoMode(page)
       await page.goto('/settings')
-      await page.waitForLoadState('networkidle')
+      await page.waitForLoadState('domcontentloaded')
 
       const results = await new AxeBuilder({ page })
         .withRules(['label'])
@@ -221,7 +210,7 @@ test.describe('Accessibility Audits', () => {
     test('headings have proper hierarchy', async ({ page }) => {
       await setupDemoMode(page)
       await page.goto('/')
-      await page.waitForLoadState('networkidle')
+      await page.waitForLoadState('domcontentloaded')
 
       const results = await new AxeBuilder({ page })
         .withRules(['heading-order'])
@@ -238,7 +227,7 @@ test.describe('Accessibility Audits', () => {
     test('buttons are accessible', async ({ page }) => {
       await setupDemoMode(page)
       await page.goto('/')
-      await page.waitForLoadState('networkidle')
+      await page.waitForLoadState('domcontentloaded')
 
       const results = await new AxeBuilder({ page })
         .withRules(['button-name'])
@@ -253,7 +242,7 @@ test.describe('Accessibility Audits', () => {
     test('links are accessible', async ({ page }) => {
       await setupDemoMode(page)
       await page.goto('/')
-      await page.waitForLoadState('networkidle')
+      await page.waitForLoadState('domcontentloaded')
 
       const results = await new AxeBuilder({ page })
         .withRules(['link-name'])
@@ -268,7 +257,7 @@ test.describe('Accessibility Audits', () => {
     test('cards have proper ARIA labels', async ({ page }) => {
       await setupDemoMode(page)
       await page.goto('/')
-      await page.waitForLoadState('networkidle')
+      await page.waitForLoadState('domcontentloaded')
       await waitForDashboardCards(page)
 
       // Check that cards have aria-label (cards are divs, not regions)
@@ -288,7 +277,7 @@ test.describe('Accessibility Audits', () => {
     test('demo badges are present', async ({ page }) => {
       await setupDemoMode(page)
       await page.goto('/')
-      await page.waitForLoadState('networkidle')
+      await page.waitForLoadState('domcontentloaded')
       await expect(page.locator('[data-testid="demo-badge"]').first()).toBeVisible({ timeout: 10000 })
 
       // Check for demo badges (visual indicators without aria-live to avoid announcement flood)
@@ -315,7 +304,7 @@ test.describe('Accessibility Audits', () => {
     test('menu items have accessible names from visible text', async ({ page }) => {
       await setupDemoMode(page)
       await page.goto('/')
-      await page.waitForLoadState('networkidle')
+      await page.waitForLoadState('domcontentloaded')
       await waitForDashboardCards(page)
 
       // Run axe-core to check for WCAG 2.5.3 compliance (Label in Name)
@@ -332,7 +321,7 @@ test.describe('Accessibility Audits', () => {
     test('no redundant ARIA roles on semantic HTML', async ({ page }) => {
       await setupDemoMode(page)
       await page.goto('/')
-      await page.waitForLoadState('networkidle')
+      await page.waitForLoadState('domcontentloaded')
       await waitForDashboardCards(page)
 
       // Check for redundant roles (e.g., role="main" on <main>)
@@ -351,7 +340,7 @@ test.describe('Accessibility Audits', () => {
     test('interactive elements in cards are focusable', async ({ page }) => {
       await setupDemoMode(page)
       await page.goto('/')
-      await page.waitForLoadState('networkidle')
+      await page.waitForLoadState('domcontentloaded')
       await waitForDashboardCards(page)
 
       // Find interactive elements (buttons) within cards
@@ -365,7 +354,7 @@ test.describe('Accessibility Audits', () => {
     test('keyboard navigation through cards works', async ({ page }) => {
       await setupDemoMode(page)
       await page.goto('/')
-      await page.waitForLoadState('networkidle')
+      await page.waitForLoadState('domcontentloaded')
       await waitForDashboardCards(page)
 
       // Tab to first card
@@ -392,7 +381,7 @@ test.describe('Accessibility Audits', () => {
     test('page has proper landmark elements', async ({ page }) => {
       await setupDemoMode(page)
       await page.goto('/')
-      await page.waitForLoadState('networkidle')
+      await page.waitForLoadState('domcontentloaded')
 
       // Check for main landmark (semantic HTML5 element)
       const main = page.locator('main')

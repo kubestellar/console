@@ -117,14 +117,15 @@ test.describe('Sidebar Navigation', () => {
       const SIDEBAR_TIMEOUT_MS = 10_000
       await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: SIDEBAR_TIMEOUT_MS })
 
-      // Find events link by href — fall back to sidebar-scoped locator
-      const eventsLink = page.getByTestId('sidebar-primary-nav').locator('a[href="/events"]').first()
-        .or(page.getByTestId('sidebar').locator('a[href="/events"]').first())
-      await expect(eventsLink).toBeVisible({ timeout: SIDEBAR_TIMEOUT_MS })
-      await eventsLink.click()
+      // Events is a discoverable dashboard (not in default sidebar).
+      // Test sidebar navigation with a default item (/deploy) instead.
+      const deployLink = page.getByTestId('sidebar-primary-nav').locator('a[href="/deploy"]').first()
+        .or(page.getByTestId('sidebar').locator('a[href="/deploy"]').first())
+      await expect(deployLink).toBeVisible({ timeout: SIDEBAR_TIMEOUT_MS })
+      await deployLink.click()
 
-      // Should be on events page
-      await expect(page).toHaveURL(/\/events/, { timeout: SIDEBAR_TIMEOUT_MS })
+      // Should be on deploy page
+      await expect(page).toHaveURL(/\/deploy/, { timeout: SIDEBAR_TIMEOUT_MS })
     })
   })
 

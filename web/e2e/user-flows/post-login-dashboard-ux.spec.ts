@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 import { collectConsoleErrors } from '../helpers/ux-assertions'
 import { setMode } from '../mocks/liveMocks'
+import { mockApiFallback } from '../helpers/setup'
 
 const DASHBOARD_LOAD_TIMEOUT_MS = 20_000
 const ROUTE_LOAD_TIMEOUT_MS = 20_000
@@ -19,6 +20,9 @@ function routeMatcher(path: string): RegExp {
 }
 
 async function loginAndOpenInitialDashboard(page: Page) {
+  // Catch-all API mock prevents hangs on unmocked endpoints
+  await mockApiFallback(page)
+
   await page.goto('/login', { waitUntil: 'domcontentloaded' })
 
   // Simulate post-login auth state in a backend-independent way.

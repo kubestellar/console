@@ -347,6 +347,7 @@ for (const dashboard of DASHBOARDS) {
 
       await setupAuth(page)
       if (mode === 'live' || mode === 'live+cache') await setupLiveMocks(page)
+      else await setupLiveMocks(page) // Demo mode still needs catch-all API mock
       await setMode(page, mode)
 
       const metric = await measureDashboard(page, dashboard, mode)

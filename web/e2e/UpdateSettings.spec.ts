@@ -86,9 +86,13 @@ async function setupUpdateTest(page: Page): Promise<WsRoutes> {
     })
   })
 
-  // Set auth token + skip onboarding/tour
-  await page.goto('/login')
-  await page.evaluate(() => {
+  // Catch-all for any remaining /api/** endpoints
+  await page.route('**/api/**', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
+  )
+
+  // Set auth token + skip onboarding/tour BEFORE navigation
+  await page.addInitScript(() => {
     localStorage.setItem('token', 'test-token')
     localStorage.setItem('demo-user-onboarded', 'true')
     localStorage.setItem('kubestellar-console-tour-completed', 'true')
