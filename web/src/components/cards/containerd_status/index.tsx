@@ -20,6 +20,7 @@ import { useCachedContainerd } from '../../../hooks/useCachedContainerd'
 import { useCardLoadingState } from '../CardDataContext'
 import type { ContainerdContainer, ContainerdContainerState } from '../../../lib/demo/containerd'
 import { formatTimeAgo } from '../../../lib/formatters'
+import { healthBadgeClass } from '../../../lib/cards/statusColors'
 
 // ---------------------------------------------------------------------------
 // Constants (no magic numbers)
@@ -136,7 +137,7 @@ export function ContainerdStatus() {
       <div className="flex items-center justify-between gap-2">
         <div
           className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${
-            isHealthy ? 'bg-green-500/15 text-green-400' : 'bg-yellow-500/15 text-yellow-400'
+            healthBadgeClass(isHealthy)
           }`}
         >
           {isHealthy ? <CheckCircle className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}

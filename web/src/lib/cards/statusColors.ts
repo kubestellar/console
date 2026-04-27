@@ -76,6 +76,15 @@ export const STATUS_COLORS: Record<StatusSeverity, StatusColorSet> = {
   },
 }
 
+/** Pre-combined badge classes for the healthy/unhealthy ternary used by status cards. */
+export const HEALTH_BADGE_HEALTHY = 'bg-green-500/15 text-green-400'
+export const HEALTH_BADGE_UNHEALTHY = 'bg-yellow-500/15 text-yellow-400'
+
+/** Returns the appropriate health badge class string. */
+export function healthBadgeClass(healthy: boolean): string {
+  return healthy ? HEALTH_BADGE_HEALTHY : HEALTH_BADGE_UNHEALTHY
+}
+
 // Keywords mapped to severity levels (lowercase, checked with includes)
 const SEVERITY_KEYWORDS: Array<[string[], StatusSeverity]> = [
   // Error — check first (most specific)
