@@ -172,8 +172,45 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
       allIssues.push(reason)
     }
 
+    // Parse warning events from kubectl events output (#10444)
+    // Events with TYPE=Warning indicate active issues even if pod status is Running
+    if (eventsOutput && !eventsOutput.includes('No resources found')) {
+      const eventLines = eventsOutput.split('\n')
+      // Find header to locate TYPE and MESSAGE columns
+      const headerLine = eventLines[0] || ''
+      const typeIdx = headerLine.indexOf('TYPE')
+      const reasonIdx = headerLine.indexOf('REASON')
+      const messageIdx = headerLine.indexOf('MESSAGE')
+
+      if (typeIdx >= 0 && messageIdx >= 0) {
+        for (const line of eventLines.slice(1)) {
+          if (!line.trim()) continue
+          // Extract TYPE field — use REASON column start as the end boundary if available
+          const typeEnd = reasonIdx > typeIdx ? reasonIdx : typeIdx + 10
+          const eventType = line.substring(typeIdx, typeEnd).trim()
+          if (eventType.toLowerCase() === 'warning') {
+            const message = messageIdx < line.length
+              ? line.substring(messageIdx).trim()
+              : ''
+            // Use a shortened version: "Warning: <reason>" or "Warning: <message snippet>"
+            const eventReason = reasonIdx >= 0
+              ? line.substring(reasonIdx, messageIdx > reasonIdx ? messageIdx : reasonIdx + 30).trim()
+              : ''
+            const MAX_EVENT_MSG_LENGTH = 80
+            const issueText = eventReason
+              ? `Warning: ${eventReason}${message ? ' — ' + message.substring(0, MAX_EVENT_MSG_LENGTH) : ''}`
+              : `Warning: ${message.substring(0, MAX_EVENT_MSG_LENGTH)}`
+            // Avoid duplicate issues (case-insensitive)
+            if (!allIssues.some(i => i.toLowerCase() === issueText.toLowerCase())) {
+              allIssues.push(issueText)
+            }
+          }
+        }
+      }
+    }
+
     return allIssues
-  }, [passedIssues, status, reason, podStatusOutput, podName])
+  }, [passedIssues, status, reason, podStatusOutput, podName, eventsOutput])
 
   // Use passed labels/annotations if available
   useEffect(() => {
@@ -1363,7 +1400,7 @@ Please:
                   )}
 
                 </div>
-              ) : (podStatusLoading || describeLoading) ? (
+              ) : (podStatusLoading || describeLoading || eventsLoading) ? (
                 <div className="p-4 rounded-lg bg-secondary/30 border border-border text-center">
                   <div className="flex items-center justify-center gap-2">
                     <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
