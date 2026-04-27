@@ -22,9 +22,10 @@ import { PodIssues } from './PodIssues'
 import { ResourceUsage } from './ResourceUsage'
 import { ClusterMetrics } from './ClusterMetrics'
 import { HardwareHealthCard } from './HardwareHealthCard'
-import { ConsoleOfflineDetectionCard } from './console-missions/ConsoleOfflineDetectionCard'
 import { DeploymentStatus } from './DeploymentStatus'
 // Remaining cards are lazy-loaded for code splitting
+// ConsoleOfflineDetectionCard lazy-loaded to reduce critical path bundle size
+const ConsoleOfflineDetectionCard = safeLazy(() => import('./console-missions/ConsoleOfflineDetectionCard'), 'ConsoleOfflineDetectionCard')
 const PodLogs = safeLazy(() => import('./PodLogs'), 'PodLogs')
 const TopPods = safeLazy(() => import('./TopPods'), 'TopPods')
 const AppStatus = safeLazy(() => import('./AppStatus'), 'AppStatus')
