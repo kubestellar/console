@@ -714,7 +714,7 @@ function ClusterUsersTab({
   onDrillToUser }: ClusterUsersTabProps) {
   const { t } = useTranslation(['cards', 'common'])
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 w-full">
       {/* Cluster selector - now filters locally */}
       <div>
         <label className="block text-xs text-muted-foreground mb-1">{t('userManagement.filterByCluster')}</label>
@@ -743,38 +743,38 @@ function ClusterUsersTab({
           <p className="text-xs">{t('userManagement.noUsersFound')}</p>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-2 w-full">
           {users.map((user, idx) => (
             <div
               key={`${user.cluster}-${user.name}-${idx}`}
               onClick={() => onDrillToUser(user.cluster, user.name)}
-              className="p-2 rounded bg-secondary/30 text-sm hover:bg-secondary/50 transition-colors cursor-pointer group"
+              className="p-2 rounded bg-secondary/30 text-sm hover:bg-secondary/50 transition-colors cursor-pointer group w-full overflow-hidden"
             >
-              <div className="flex flex-wrap items-center justify-between gap-y-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-foreground font-medium group-hover:text-purple-400">{user.name}</span>
+              <div className="flex flex-wrap items-center justify-between gap-y-2 min-w-0">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-foreground font-medium group-hover:text-purple-400 truncate">{user.name}</span>
                   {user.fullName && (
-                    <span className="text-muted-foreground text-xs">({user.fullName})</span>
+                    <span className="text-muted-foreground text-xs truncate">({user.fullName})</span>
                   )}
                   {showClusterBadge && (
-                    <StatusBadge color="cyan" variant="outline">
+                    <StatusBadge color="cyan" variant="outline" className="flex-shrink-0">
                       {user.cluster}
                     </StatusBadge>
                   )}
                 </div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
               </div>
               {user.identities && user.identities.length > 0 && (
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-xs text-muted-foreground mt-0.5 truncate">
                   {t('userManagement.identity')}: {user.identities[0]}
                 </p>
               )}
               {user.groups && user.groups.length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-1">
+                <div className="flex flex-wrap gap-1 mt-1 w-full min-w-0">
                   {user.groups.slice(0, MAX_VISIBLE_GROUPS).map((group, i) => (
                     <span
                       key={i}
-                      className="px-1.5 py-0.5 rounded text-xs bg-blue-500/20 text-blue-400"
+                      className="px-1.5 py-0.5 rounded text-xs bg-blue-500/20 text-blue-400 truncate"
                     >
                       {group}
                     </span>
