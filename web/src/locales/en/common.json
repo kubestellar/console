@@ -185,7 +185,28 @@
       "privacyNote": "We collect anonymous data solely for the purpose of improving the product's user experience, using Google Analytics. No personal information is ever collected or shared."
     },
     "restoredFromBackup": "Settings restored from backup file",
-    "agentBackend": "Agent Backend",
+    "agentBackend": {
+      "title": "Agent Backend",
+      "subtitle": "Choose how AI missions connect to your clusters",
+      "refreshStatus": "Refresh status",
+      "localAgent": "Local Agent",
+      "localAgentDesc": "kc-agent on your machine",
+      "kagent": "Kagent",
+      "kagentDesc": "In-cluster AI agents",
+      "kagentNotDetected": "Not detected in cluster",
+      "kagenti": "Kagenti",
+      "kagentiDesc": "In-cluster agent platform",
+      "kagentiNotDetected": "Not detected in cluster",
+      "install": "Install",
+      "activeLabel": "Active:",
+      "kagentiInCluster": "Kagenti (in-cluster)",
+      "kagentInCluster": "Kagent (in-cluster)",
+      "localAgentKcAgent": "Local Agent (kc-agent)",
+      "kagentAgents": "Kagent Agents",
+      "kagentiAgents": "Kagenti Agents",
+      "noKagentAgents": "No kagent agents found. Agents may not be deployed yet.",
+      "noKagentiAgents": "No kagenti agents found. Agents may not be deployed yet."
+    },
     "localAgent": "Local Agent",
     "groups": {
       "aiIntelligence": "AI & Intelligence",
@@ -261,28 +282,6 @@
       "today": "Today",
       "thisMonth": "This Month",
       "tokens": "tokens"
-    },
-    "agentBackend": {
-      "title": "Agent Backend",
-      "subtitle": "Choose how AI missions connect to your clusters",
-      "refreshStatus": "Refresh status",
-      "localAgent": "Local Agent",
-      "localAgentDesc": "kc-agent on your machine",
-      "kagent": "Kagent",
-      "kagentDesc": "In-cluster AI agents",
-      "kagentNotDetected": "Not detected in cluster",
-      "kagenti": "Kagenti",
-      "kagentiDesc": "In-cluster agent platform",
-      "kagentiNotDetected": "Not detected in cluster",
-      "install": "Install",
-      "activeLabel": "Active:",
-      "kagentiInCluster": "Kagenti (in-cluster)",
-      "kagentInCluster": "Kagent (in-cluster)",
-      "localAgentKcAgent": "Local Agent (kc-agent)",
-      "kagentAgents": "Kagent Agents",
-      "kagentiAgents": "Kagenti Agents",
-      "noKagentAgents": "No kagent agents found. Agents may not be deployed yet.",
-      "noKagentiAgents": "No kagenti agents found. Agents may not be deployed yet."
     },
     "tokens": {
       "title": "Token Usage",
@@ -3852,5 +3851,11 @@
   "drafts": {
     "noSavedDrafts": "No saved drafts",
     "editing": "Editing"
+  },
+  "pipelines": {
+    "allRepos": "All repos"
+  },
+  "rightSizeAdvisor": {
+    "memory": "Memory"
   }
 }
