@@ -29,6 +29,9 @@ export function NodeDetailPanel({ node, clusterName, onClose }: NodeDetailPanelP
   const displayedLabels = showAllLabels ? labelEntries : labelEntries.slice(0, INITIAL_LABELS_SHOWN)
 
   const handleRepair = () => {
+    if (!clusterName) {
+      return
+    }
     const issueConditions = getConditionIssuesSummary(node.conditions)
 
     startMission({
@@ -184,7 +187,13 @@ Please proceed step by step and ask for confirmation before making any changes.`
         {hasIssues ? (
           <button
             onClick={handleRepair}
-            className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors w-full justify-center bg-orange-500/20 text-orange-400 hover:bg-orange-500/30 cursor-pointer"
+            disabled={!clusterName}
+            className={cn(
+              'mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors w-full justify-center',
+              clusterName
+                ? 'bg-orange-500/20 text-orange-400 hover:bg-orange-500/30 cursor-pointer'
+                : 'bg-muted text-muted-foreground cursor-not-allowed opacity-50'
+            )}
           >
             <Wrench className="w-3.5 h-3.5" />
             Repair

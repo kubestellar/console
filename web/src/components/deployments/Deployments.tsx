@@ -124,7 +124,7 @@ export function Deployments() {
           <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="text-sm font-medium text-red-400">Error loading deployment data</p>
-            <p className="text-xs text-muted-foreground mt-1">{error}</p>
+            <p className="text-xs text-muted-foreground mt-1">{error instanceof Error ? error.message : String(error)}</p>
           </div>
         </div>
       )}

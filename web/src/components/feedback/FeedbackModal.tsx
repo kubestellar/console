@@ -617,7 +617,8 @@ export function LinkedInShareButton({ onShare, compact = false }: { onShare?: ()
   const { t } = useTranslation()
   const { websiteUrl } = useBranding()
   const handleShare = () => {
-    const linkedInUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(websiteUrl)}`
+    const shareTarget = websiteUrl || 'https://kubestellar.io'
+    const linkedInUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareTarget)}`
     window.open(linkedInUrl, '_blank', 'noopener,noreferrer,width=600,height=600')
     emitLinkedInShare('feedback_modal')
     onShare?.()
