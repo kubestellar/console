@@ -309,8 +309,6 @@ test.describe('Dashboard Page', () => {
       await expect(refreshButton).toHaveAttribute('title', 'Refresh cluster data')
     })
   })
-
-  })
 })
 
 // #6459 — Data accuracy (not just structural presence). These tests
