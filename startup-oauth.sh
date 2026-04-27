@@ -201,11 +201,6 @@ if [ -z "$JWT_SECRET" ]; then
     echo -e "${YELLOW}Generated random JWT_SECRET (set JWT_SECRET in .env to persist across restarts)${NC}"
 fi
 
-if [ -z "$KC_AGENT_TOKEN" ]; then
-    export KC_AGENT_TOKEN=$(openssl rand -hex 32)
-    echo -e "${YELLOW}Generated random KC_AGENT_TOKEN (set KC_AGENT_TOKEN in .env to persist across restarts)${NC}"
-fi
-
 # Environment
 unset CLAUDECODE  # Allow AI Missions to spawn claude-code even when started from a Claude Code session
 export SKIP_ONBOARDING=true
