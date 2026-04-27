@@ -182,19 +182,23 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
       const reasonIdx = headerLine.indexOf('REASON')
       const messageIdx = headerLine.indexOf('MESSAGE')
 
+      /** Fallback column width for TYPE field when REASON column is absent */
+      const TYPE_COLUMN_FALLBACK_WIDTH = 10
       if (typeIdx >= 0 && messageIdx >= 0) {
         for (const line of eventLines.slice(1)) {
           if (!line.trim()) continue
           // Extract TYPE field — use REASON column start as the end boundary if available
-          const typeEnd = reasonIdx > typeIdx ? reasonIdx : typeIdx + 10
+          const typeEnd = reasonIdx > typeIdx ? reasonIdx : typeIdx + TYPE_COLUMN_FALLBACK_WIDTH
           const eventType = line.substring(typeIdx, typeEnd).trim()
           if (eventType.toLowerCase() === 'warning') {
             const message = messageIdx < line.length
               ? line.substring(messageIdx).trim()
               : ''
             // Use a shortened version: "Warning: <reason>" or "Warning: <message snippet>"
+            /** Fallback column width for REASON field when MESSAGE column is absent */
+            const REASON_COLUMN_FALLBACK_WIDTH = 30
             const eventReason = reasonIdx >= 0
-              ? line.substring(reasonIdx, messageIdx > reasonIdx ? messageIdx : reasonIdx + 30).trim()
+              ? line.substring(reasonIdx, messageIdx > reasonIdx ? messageIdx : reasonIdx + REASON_COLUMN_FALLBACK_WIDTH).trim()
               : ''
             const MAX_EVENT_MSG_LENGTH = 80
             const issueText = eventReason
