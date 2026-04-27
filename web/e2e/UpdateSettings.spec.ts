@@ -244,6 +244,40 @@ test.describe('Update Settings', () => {
     await expect(page.getByTestId('update-failed-banner')).not.toBeVisible()
   })
 
+  test('recovers state after WebSocket disconnect during update', async ({ page }) => {
+    const ws = await setupUpdateTest(page)
+
+    // Start an update — UI should show the progress banner
+    sendProgress(ws, 'pulling', 'Pulling latest changes...', 10)
+    await expect(page.getByTestId('update-progress-banner')).toBeVisible({ timeout: 5000 })
+    await expect(page.getByTestId('update-progress-message')).toContainText('Pulling latest changes')
+
+    // Simulate a mid-update disconnect by closing every open WS connection
+    const routeCountBeforeDisconnect = ws.routes.length
+    for (const route of ws.routes) {
+      route.close({ code: 1006, reason: 'Simulated network drop' })
+    }
+
+    // The app will attempt to reconnect — routeWebSocket handler in
+    // setupUpdateTest captures the new connection into ws.routes.
+    // Wait until at least one NEW connection appears.
+    const RECONNECT_TIMEOUT_MS = 10_000
+    await expect
+      .poll(() => ws.routes.length, { timeout: RECONNECT_TIMEOUT_MS })
+      .toBeGreaterThan(routeCountBeforeDisconnect)
+
+    // Resume the update on the new connection(s) — send a later stage
+    sendProgress(ws, 'building', 'Building Go binaries...', 60)
+    await expect(page.getByTestId('update-progress-banner')).toBeVisible({ timeout: 5000 })
+    await expect(page.getByTestId('update-progress-message')).toContainText('Building Go binaries')
+
+    // Complete the update
+    sendProgress(ws, 'done', 'Update complete — restart successful', 100)
+    await expect(page.getByTestId('update-done-banner')).toBeVisible({ timeout: 5000 })
+    await expect(page.getByTestId('update-progress-banner')).not.toBeVisible()
+    await expect(page.getByTestId('update-refresh-button')).toBeVisible()
+  })
+
   test('transitions from progress to done correctly', async ({ page }) => {
     const ws = await setupUpdateTest(page)
 
