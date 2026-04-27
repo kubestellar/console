@@ -22,6 +22,17 @@ vi.mock('../../../lib/clipboard', () => ({
   copyToClipboard: vi.fn(),
 }))
 
+let mockIsDemoMode = false
+vi.mock('../../../hooks/useDemoMode', () => ({
+  useDemoMode: () => ({ isDemoMode: mockIsDemoMode, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+}))
+
+vi.mock('../../ui/Skeleton', () => ({
+  Skeleton: ({ width, height, variant }: { width?: number; height?: number; variant?: string }) => (
+    <div data-testid="skeleton" data-variant={variant} style={{ width, height }} />
+  ),
+}))
+
 vi.mock('../../../lib/modals', () => ({
   BaseModal: Object.assign(
     ({ isOpen, children }: { isOpen: boolean; children: React.ReactNode }) =>
@@ -97,6 +108,7 @@ describe('CardChat', () => {
     vi.clearAllMocks()
     vi.useFakeTimers({ shouldAdvanceTime: true })
     user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    mockIsDemoMode = false
   })
 
   afterEach(() => {
@@ -394,6 +406,48 @@ describe('CardChat', () => {
       // Set a timer by clicking copy
       act(() => unmount())
       // If clearTimeout was not called this would leak — test just verifies no throw
+    })
+  })
+
+  // -------------------------------------------------------------------------
+  describe('demo mode', () => {
+    it('shows demo messages when in demo mode with no real messages', () => {
+      mockIsDemoMode = true
+      renderChat({ messages: [] })
+      expect(screen.getByText('cardChat.demoConversation')).toBeInTheDocument()
+      expect(screen.getByText('Show only unhealthy clusters')).toBeInTheDocument()
+    })
+
+    it('does not show demo messages when not in demo mode', () => {
+      mockIsDemoMode = false
+      renderChat({ messages: [] })
+      expect(screen.queryByText('cardChat.demoConversation')).not.toBeInTheDocument()
+    })
+
+    it('does not show demo messages when real messages exist in demo mode', () => {
+      mockIsDemoMode = true
+      renderChat({ messages: [makeMessage({ role: 'user', content: 'Real message' })] })
+      expect(screen.queryByText('cardChat.demoConversation')).not.toBeInTheDocument()
+      expect(screen.getByText('Real message')).toBeInTheDocument()
+    })
+  })
+
+  // -------------------------------------------------------------------------
+  describe('skeleton loading', () => {
+    it('shows skeleton when isLoadingMessages is true', () => {
+      renderChat({ isLoadingMessages: true })
+      const skeletons = screen.getAllByTestId('skeleton')
+      expect(skeletons.length).toBeGreaterThan(0)
+    })
+
+    it('does not show messages when skeleton is visible', () => {
+      renderChat({ isLoadingMessages: true, messages: [makeMessage()] })
+      expect(screen.queryByText('Hello, I can help you.')).not.toBeInTheDocument()
+    })
+
+    it('shows messages when isLoadingMessages is false', () => {
+      renderChat({ isLoadingMessages: false, messages: [makeMessage()] })
+      expect(screen.getByText('Hello, I can help you.')).toBeInTheDocument()
     })
   })
 })

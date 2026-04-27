@@ -1825,7 +1825,8 @@
     "setupAlerts": "Set up alerts and behaviors",
     "apply": "Apply",
     "thinking": "Thinking...",
-    "askOrCommand": "Ask a question or give a command..."
+    "askOrCommand": "Ask a question or give a command...",
+    "demoConversation": "Demo Conversation"
   },
   "llmdAIInsights": {
     "recommendation": "Recommendation",

@@ -6,6 +6,64 @@ import { useTranslation } from 'react-i18next'
 import { useToast } from '../ui/Toast'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
 import { copyToClipboard } from '../../lib/clipboard'
+import { useDemoMode } from '../../hooks/useDemoMode'
+import { Skeleton } from '../ui/Skeleton'
+
+/** Number of skeleton rows to display while chat loads */
+const CHAT_SKELETON_ROWS = 3
+
+/** Demo chat messages shown when in demo mode with no real messages */
+const DEMO_CHAT_MESSAGES: ChatMessage[] = [
+  {
+    id: 'demo-1',
+    role: 'user',
+    content: 'Show only unhealthy clusters',
+    timestamp: new Date(Date.now() - 120_000).toISOString(),
+  },
+  {
+    id: 'demo-2',
+    role: 'assistant',
+    content: 'I found 2 unhealthy clusters: us-east-prod-3 (NotReady) and eu-west-staging-1 (MemoryPressure). I\'ve filtered the view to show only these clusters. Would you like me to drill into either one?',
+    timestamp: new Date(Date.now() - 90_000).toISOString(),
+    action: {
+      type: 'filter',
+      payload: { status: 'unhealthy' },
+    },
+  },
+  {
+    id: 'demo-3',
+    role: 'user',
+    content: 'Why is us-east-prod-3 not ready?',
+    timestamp: new Date(Date.now() - 60_000).toISOString(),
+  },
+  {
+    id: 'demo-4',
+    role: 'assistant',
+    content: 'us-east-prod-3 entered NotReady state 15 minutes ago. The kubelet stopped posting heartbeats after a node-level OOM event. 3 pods were evicted. Recommendation: check node memory limits and consider adding a memory-based HPA.',
+    timestamp: new Date(Date.now() - 30_000).toISOString(),
+  },
+]
+
+/** Skeleton placeholder for the chat message area while loading */
+function ChatSkeleton() {
+  return (
+    <div className="h-full flex flex-col space-y-4 p-2">
+      {Array.from({ length: CHAT_SKELETON_ROWS }).map((_, i) => {
+        const isUser = i % 2 === 0
+        return (
+          <div key={i} className={cn('flex gap-3', isUser ? 'justify-end' : 'justify-start')}>
+            {!isUser && <Skeleton variant="circular" width={32} height={32} />}
+            <div className={cn('max-w-[80%] space-y-2', isUser ? 'items-end' : 'items-start')}>
+              <Skeleton variant="rounded" width={isUser ? 180 : 260} height={48} />
+              <Skeleton variant="text" width={60} height={12} />
+            </div>
+            {isUser && <Skeleton variant="circular" width={32} height={32} />}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
 
 export interface ChatMessage {
   id: string
@@ -24,6 +82,8 @@ interface CardChatProps {
   cardType: string
   cardTitle: string
   messages: ChatMessage[]
+  /** When true, shows skeleton loading state instead of messages */
+  isLoadingMessages?: boolean
   onClose: () => void
   onSendMessage: (message: string) => Promise<ChatMessage>
   onApplyAction?: (action: ChatMessage['action']) => void
@@ -74,12 +134,14 @@ export function CardChat({
   cardType,
   cardTitle,
   messages,
+  isLoadingMessages = false,
   onClose,
   onSendMessage,
   onApplyAction,
 }: CardChatProps) {
   const { t } = useTranslation(['cards', 'common'])
   const { showToast } = useToast()
+  const { isDemoMode } = useDemoMode()
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [copiedId, setCopiedId] = useState<string | null>(null)
@@ -88,6 +150,10 @@ export function CardChat({
   const copiedTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   const quickPrompts = QUICK_PROMPTS[cardType] || QUICK_PROMPTS.default
+
+  // In demo mode with no real messages, show demo conversation
+  const isDemoData = isDemoMode && messages.length === 0
+  const displayMessages = isDemoData ? DEMO_CHAT_MESSAGES : messages
 
   useEffect(() => {
     return () => clearTimeout(copiedTimerRef.current)
@@ -98,7 +164,7 @@ export function CardChat({
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
       inputRef.current?.focus()
     }
-  }, [isOpen, messages])
+  }, [isOpen, displayMessages])
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return
@@ -150,9 +216,20 @@ export function CardChat({
       />
 
       <BaseModal.Content className="h-[50vh]">
-        {/* Messages */}
+        {/* Skeleton loading state */}
+        {isLoadingMessages ? (
+          <ChatSkeleton />
+        ) : (
+        /* Messages */
         <div className="h-full overflow-y-auto space-y-4">
-          {messages.length === 0 && (
+          {/* Demo mode indicator */}
+          {isDemoData && (
+            <div className="flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20 mb-2">
+              <span className="text-xs font-medium text-yellow-400">{t('cardChat.demoConversation')}</span>
+            </div>
+          )}
+
+          {displayMessages.length === 0 && (
             <div className="text-center py-8">
               <Bot className="w-12 h-12 text-purple-400 mx-auto mb-4 opacity-50" />
               <p className="text-muted-foreground mb-4">
@@ -167,7 +244,7 @@ export function CardChat({
             </div>
           )}
 
-          {messages.map((message) => (
+          {(displayMessages || []).map((message) => (
             <div
               key={message.id}
               className={cn(
@@ -241,6 +318,7 @@ export function CardChat({
 
           <div ref={messagesEndRef} />
         </div>
+        )}
       </BaseModal.Content>
 
       <BaseModal.Footer>
