@@ -260,6 +260,28 @@
       "thisMonth": "This Month",
       "tokens": "tokens"
     },
+    "agentBackend": {
+      "title": "Agent Backend",
+      "subtitle": "Choose how AI missions connect to your clusters",
+      "refreshStatus": "Refresh status",
+      "localAgent": "Local Agent",
+      "localAgentDesc": "kc-agent on your machine",
+      "kagent": "Kagent",
+      "kagentDesc": "In-cluster AI agents",
+      "kagentNotDetected": "Not detected in cluster",
+      "kagenti": "Kagenti",
+      "kagentiDesc": "In-cluster agent platform",
+      "kagentiNotDetected": "Not detected in cluster",
+      "install": "Install",
+      "activeLabel": "Active:",
+      "kagentiInCluster": "Kagenti (in-cluster)",
+      "kagentInCluster": "Kagent (in-cluster)",
+      "localAgentKcAgent": "Local Agent (kc-agent)",
+      "kagentAgents": "Kagent Agents",
+      "kagentiAgents": "Kagenti Agents",
+      "noKagentAgents": "No kagent agents found. Agents may not be deployed yet.",
+      "noKagentiAgents": "No kagenti agents found. Agents may not be deployed yet."
+    },
     "tokens": {
       "title": "Token Usage",
       "subtitle": "Configure AI token limits and alerts",

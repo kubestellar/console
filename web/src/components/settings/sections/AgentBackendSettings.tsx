@@ -1,4 +1,5 @@
 import { Bot, Monitor, RefreshCw, Check, ExternalLink } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { AgentIcon } from '../../agent/AgentIcon'
 import type { AgentBackendType } from '../../../hooks/useKagentBackend'
 import type { KagentAgent, KagentStatus } from '../../../lib/kagentBackend'
@@ -39,19 +40,20 @@ export function AgentBackendSettings({
   onRefresh,
   isRefreshing = false,
 }: AgentBackendSettingsProps) {
+  const { t } = useTranslation()
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-medium text-foreground">Agent Backend</h3>
+          <h3 className="text-sm font-medium text-foreground">{t('settings.agentBackend.title')}</h3>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Choose how AI missions connect to your clusters
+            {t('settings.agentBackend.subtitle')}
           </p>
         </div>
         <button
           onClick={onRefresh}
           className="p-1.5 rounded-md hover:bg-accent transition-colors"
-          title="Refresh status"
+          title={t('settings.agentBackend.refreshStatus')}
         >
           <RefreshCw className={`w-3.5 h-3.5 text-muted-foreground ${isRefreshing ? 'animate-spin' : ''}`} />
         </button>
@@ -72,15 +74,15 @@ export function AgentBackendSettings({
             <Check className="absolute top-2 right-2 w-3.5 h-3.5 text-blue-400" />
           )}
           <Monitor className="w-5 h-5 text-blue-400 mb-2" />
-          <div className="text-sm font-medium text-foreground">Local Agent</div>
+          <div className="text-sm font-medium text-foreground">{t('settings.agentBackend.localAgent')}</div>
           <div className="text-xs text-muted-foreground mt-0.5">
-            kc-agent on your machine
+            {t('settings.agentBackend.localAgentDesc')}
           </div>
         </button>
 
         {/* kagent option */}
         <button
-          onClick={() => kagentAvailable && onSelectBackend('kagent')}
+          onClick={() => onSelectBackend('kagent')}
           disabled={!kagentAvailable}
           className={`relative p-3 rounded-lg border text-left transition-colors ${
             preferredBackend === 'kagent'
@@ -94,9 +96,9 @@ export function AgentBackendSettings({
             <Check className="absolute top-2 right-2 w-3.5 h-3.5 text-purple-400" />
           )}
           <AgentIcon provider="kagent" className="w-5 h-5 mb-2" />
-          <div className="text-sm font-medium text-foreground">Kagent</div>
+          <div className="text-sm font-medium text-foreground">{t('settings.agentBackend.kagent')}</div>
           <div className="text-xs text-muted-foreground mt-0.5">
-            {kagentAvailable ? 'In-cluster AI agents' : 'Not detected in cluster'}
+            {kagentAvailable ? t('settings.agentBackend.kagentDesc') : t('settings.agentBackend.kagentNotDetected')}
           </div>
           {!kagentAvailable && (
             <a
@@ -106,14 +108,14 @@ export function AgentBackendSettings({
               onClick={e => e.stopPropagation()}
               className="inline-flex items-center gap-1 text-xs text-purple-400 hover:text-purple-300 mt-1.5"
             >
-              Install <ExternalLink className="w-2.5 h-2.5" />
+              {t('settings.agentBackend.install')} <ExternalLink className="w-2.5 h-2.5" />
             </a>
           )}
         </button>
 
         {/* kagenti option */}
         <button
-          onClick={() => kagentiAvailable && onSelectBackend('kagenti')}
+          onClick={() => onSelectBackend('kagenti')}
           disabled={!kagentiAvailable}
           className={`relative p-3 rounded-lg border text-left transition-colors ${
             preferredBackend === 'kagenti'
@@ -127,9 +129,9 @@ export function AgentBackendSettings({
             <Check className="absolute top-2 right-2 w-3.5 h-3.5 text-green-400" />
           )}
           <AgentIcon provider="kagenti" className="w-5 h-5 mb-2" />
-          <div className="text-sm font-medium text-foreground">Kagenti</div>
+          <div className="text-sm font-medium text-foreground">{t('settings.agentBackend.kagenti')}</div>
           <div className="text-xs text-muted-foreground mt-0.5">
-            {kagentiAvailable ? 'In-cluster agent platform' : 'Not detected in cluster'}
+            {kagentiAvailable ? t('settings.agentBackend.kagentiDesc') : t('settings.agentBackend.kagentiNotDetected')}
           </div>
           {!kagentiAvailable && (
             <a
@@ -139,7 +141,7 @@ export function AgentBackendSettings({
               onClick={e => e.stopPropagation()}
               className="inline-flex items-center gap-1 text-xs text-green-400 hover:text-green-300 mt-1.5"
             >
-              Install <ExternalLink className="w-2.5 h-2.5" />
+              {t('settings.agentBackend.install')} <ExternalLink className="w-2.5 h-2.5" />
             </a>
           )}
         </button>
@@ -152,10 +154,10 @@ export function AgentBackendSettings({
           activeBackend === 'kagent' ? 'bg-purple-400' : 'bg-blue-400'
         }`} />
         <span className="text-muted-foreground">
-          Active: <span className="text-foreground font-medium">
-            {activeBackend === 'kagenti' ? 'Kagenti (in-cluster)' :
-             activeBackend === 'kagent' ? 'Kagent (in-cluster)' :
-             'Local Agent (kc-agent)'}
+          {t('settings.agentBackend.activeLabel')} <span className="text-foreground font-medium">
+            {activeBackend === 'kagenti' ? t('settings.agentBackend.kagentiInCluster') :
+             activeBackend === 'kagent' ? t('settings.agentBackend.kagentInCluster') :
+             t('settings.agentBackend.localAgentKcAgent')}
           </span>
         </span>
       </div>
@@ -163,7 +165,7 @@ export function AgentBackendSettings({
       {/* Kagent agent list */}
       {preferredBackend === 'kagent' && kagentAvailable && kagentAgents.length > 0 && (
         <div className="space-y-2">
-          <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Kagent Agents</h4>
+          <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('settings.agentBackend.kagentAgents')}</h4>
           <div className="space-y-1">
             {kagentAgents.map(agent => {
               const isSelected = selectedKagentAgent?.name === agent.name && selectedKagentAgent?.namespace === agent.namespace
@@ -193,10 +195,18 @@ export function AgentBackendSettings({
         </div>
       )}
 
+      {/* Kagent empty state */}
+      {preferredBackend === 'kagent' && kagentAvailable && kagentAgents.length === 0 && (
+        <div className="flex items-center gap-2 px-3 py-3 rounded-md bg-muted/30 text-xs text-muted-foreground">
+          <Bot className="w-3.5 h-3.5 shrink-0" />
+          <span>{t('settings.agentBackend.noKagentAgents')}</span>
+        </div>
+      )}
+
       {/* Kagenti agent list */}
       {preferredBackend === 'kagenti' && kagentiAvailable && kagentiAgents.length > 0 && (
         <div className="space-y-2">
-          <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Kagenti Agents</h4>
+          <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('settings.agentBackend.kagentiAgents')}</h4>
           <div className="space-y-1">
             {kagentiAgents.map(agent => {
               const isSelected = selectedKagentiAgent?.name === agent.name && selectedKagentiAgent?.namespace === agent.namespace
@@ -223,6 +233,14 @@ export function AgentBackendSettings({
               )
             })}
           </div>
+        </div>
+      )}
+
+      {/* Kagenti empty state */}
+      {preferredBackend === 'kagenti' && kagentiAvailable && kagentiAgents.length === 0 && (
+        <div className="flex items-center gap-2 px-3 py-3 rounded-md bg-muted/30 text-xs text-muted-foreground">
+          <Bot className="w-3.5 h-3.5 shrink-0" />
+          <span>{t('settings.agentBackend.noKagentiAgents')}</span>
         </div>
       )}
 
