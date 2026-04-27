@@ -1,6 +1,5 @@
 import { useTranslation } from 'react-i18next'
 import { Bot, Monitor, RefreshCw, Check, ExternalLink } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
 import { AgentIcon } from '../../agent/AgentIcon'
 import type { AgentBackendType } from '../../../hooks/useKagentBackend'
 import type { KagentAgent, KagentStatus } from '../../../lib/kagentBackend'
