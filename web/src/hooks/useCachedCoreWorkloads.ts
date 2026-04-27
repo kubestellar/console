@@ -13,6 +13,7 @@ import { clusterCacheRef } from './mcp/shared'
 import { isAgentUnavailable } from './useLocalAgent'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 import { FETCH_DEFAULT_TIMEOUT_MS, KUBECTL_EXTENDED_TIMEOUT_MS } from '../lib/constants/network'
+import { VULN_SEVERITY_ORDER } from '../types/alerts'
 import { settledWithConcurrency } from '../lib/utils/concurrency'
 import {
   fetchAPI,
@@ -73,7 +74,7 @@ async function fetchSecurityIssuesViaKubectl(cluster?: string, namespace?: strin
   const clusters = getAgentClusters()
   if (clusters.length === 0) return []
 
-  const severityOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3, info: 4 }
+  const severityOrder = VULN_SEVERITY_ORDER
 
   const tasks = clusters
     .filter(c => !cluster || c.name === cluster)

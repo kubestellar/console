@@ -17,6 +17,7 @@ import { cn } from '../../../lib/cn'
 import { useApiKeyCheck, ApiKeyPromptModal } from './shared'
 import type { ConsoleMissionCardProps } from './shared'
 import { useCardLoadingState } from '../CardDataContext'
+import { ALERT_SEVERITY_ORDER } from '../../../types/alerts'
 import type { PredictedRisk, TrendDirection } from '../../../types/predictions'
 import { CardControlsRow, CardSearchInput, CardPaginationFooter, CardAIActions } from '../../../lib/cards/CardComponents'
 import { ClusterBadge } from '../../ui/ClusterBadge'
@@ -634,7 +635,7 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
 
   // Sort items
   const sortedItems = (() => {
-    const severityOrder: Record<string, number> = { critical: 0, warning: 1, info: 2 }
+    const sevOrder = ALERT_SEVERITY_ORDER as Record<string, number>
     const categoryOrder: Record<string, number> = { offline: 0, gpu: 1, prediction: 2 }
 
     return [...filteredItems].sort((a, b) => {
@@ -647,7 +648,7 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
           cmp = a.cluster.localeCompare(b.cluster)
           break
         case 'severity':
-          cmp = (severityOrder[a.severity] ?? 999) - (severityOrder[b.severity] ?? 999)
+          cmp = (sevOrder[a.severity] ?? 999) - (sevOrder[b.severity] ?? 999)
           break
         case 'category':
           cmp = (categoryOrder[a.category] ?? 999) - (categoryOrder[b.category] ?? 999)
@@ -764,8 +765,7 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
       // First by count (descending)
       if (b.items.length !== a.items.length) return b.items.length - a.items.length
       // Then by severity
-      const severityOrder = { critical: 0, warning: 1, info: 2 }
-      return severityOrder[a.severity] - severityOrder[b.severity]
+      return (ALERT_SEVERITY_ORDER as Record<string, number>)[a.severity] - (ALERT_SEVERITY_ORDER as Record<string, number>)[b.severity]
     })
   }, [sortedItems])
 

@@ -1,4 +1,5 @@
 import { Shield, AlertTriangle, User, Network, Server, ChevronRight } from 'lucide-react'
+import { VULN_SEVERITY_ORDER } from '../../types/alerts'
 import type { SecurityIssue } from '../../hooks/useMCP'
 import { useCachedSecurityIssues } from '../../hooks/useCachedData'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -120,7 +121,7 @@ function SecurityIssuesInternal({ config }: SecurityIssuesProps) {
     consecutiveFailures,
     lastRefresh: isDemoMode ? null : lastRefresh })
 
-  const severityOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3, info: 4 }
+  const severityOrder = VULN_SEVERITY_ORDER
 
   // Use shared card data hook for filtering, sorting, and pagination
   const {

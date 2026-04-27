@@ -13,6 +13,7 @@ import { StatusBadge } from '../ui/StatusBadge'
 import { useGlobalFilters, type SeverityLevel } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useMissions } from '../../hooks/useMissions'
+import { ALERT_SEVERITY_ORDER } from '../../types/alerts'
 import type { Alert, AlertSeverity } from '../../types/alerts'
 import { CardControls } from '../ui/CardControls'
 import { Pagination } from '../ui/Pagination'
@@ -145,8 +146,6 @@ export function ActiveAlerts() {
     return result
   })()
 
-  const severityOrder: Record<AlertSeverity, number> = { critical: 0, warning: 1, info: 2 }
-
   // Use shared card data hook for filtering, sorting, and pagination
   const {
     items: displayedAlerts,
@@ -181,7 +180,7 @@ export function ActiveAlerts() {
       defaultDirection: 'asc',
       comparators: {
         severity: (a, b) => {
-          const severityDiff = severityOrder[a.severity] - severityOrder[b.severity]
+          const severityDiff = ALERT_SEVERITY_ORDER[a.severity] - ALERT_SEVERITY_ORDER[b.severity]
           if (severityDiff !== 0) return severityDiff
           return new Date(b.firedAt).getTime() - new Date(a.firedAt).getTime()
         },

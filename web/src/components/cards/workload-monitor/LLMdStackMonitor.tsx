@@ -9,6 +9,7 @@ import {
   RefreshCw, Loader2, ChevronDown, ChevronRight, Filter,
   AlertTriangle
 } from 'lucide-react'
+import { ALERT_SEVERITY_ORDER } from '../../../types/alerts'
 import { Skeleton } from '../../ui/Skeleton'
 import { Pagination } from '../../ui/Pagination'
 import { CardControls } from '../../ui/CardControls'
@@ -58,11 +59,6 @@ const SEVERITY_FILTER_OPTIONS = [
   { value: 'warning', label: 'Warning' },
   { value: 'info', label: 'Info' },
 ]
-
-const SEVERITY_ORDER: Record<string, number> = {
-  critical: 0,
-  warning: 1,
-  info: 2 }
 
 const STATUS_ORDER: Record<string, number> = {
   unhealthy: 0,
@@ -385,7 +381,7 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
       let compare = 0
       switch (issueSortBy) {
         case 'severity':
-          compare = (SEVERITY_ORDER[a.severity] ?? 5) - (SEVERITY_ORDER[b.severity] ?? 5)
+          compare = ((ALERT_SEVERITY_ORDER as Record<string, number>)[a.severity] ?? 5) - ((ALERT_SEVERITY_ORDER as Record<string, number>)[b.severity] ?? 5)
           break
         case 'title':
           compare = a.title.localeCompare(b.title)

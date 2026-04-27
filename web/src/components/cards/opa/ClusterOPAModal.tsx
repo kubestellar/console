@@ -9,6 +9,7 @@ import type { Policy, Violation, StartMissionFn } from './types'
 import { POLICY_TEMPLATES } from './types'
 import { copyToClipboard } from '../../../lib/clipboard'
 import { KUBECTL_MEDIUM_TIMEOUT_MS, KUBECTL_EXTENDED_TIMEOUT_MS } from '../../../lib/constants/network'
+import { ALERT_SEVERITY_ORDER } from '../../../types/alerts'
 
 // Tab type for ClusterOPAModal
 type OPAModalTab = 'policies' | 'violations'
@@ -412,8 +413,7 @@ Please proceed with applying this policy.`,
                 ) : (
                   [...violations]
                     .sort((a, b) => {
-                      const severityOrder = { critical: 0, warning: 1, info: 2 }
-                      return severityOrder[a.severity] - severityOrder[b.severity]
+                      return (ALERT_SEVERITY_ORDER as Record<string, number>)[a.severity] - (ALERT_SEVERITY_ORDER as Record<string, number>)[b.severity]
                     })
                     .map((violation, idx) => (
                     <div

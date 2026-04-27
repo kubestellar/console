@@ -17,6 +17,12 @@ export type AlertConditionType =
 // Alert severity levels
 export type AlertSeverity = 'critical' | 'warning' | 'info'
 
+/** Sort order for alert severity (lower = more severe). Used by sort comparators. */
+export const ALERT_SEVERITY_ORDER: Record<AlertSeverity, number> = { critical: 0, warning: 1, info: 2 }
+
+/** Sort order for vulnerability severity (5-level: critical > high > medium > low > info). */
+export const VULN_SEVERITY_ORDER: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3, info: 4 }
+
 // Alert status
 export type AlertStatus = 'firing' | 'resolved'
 

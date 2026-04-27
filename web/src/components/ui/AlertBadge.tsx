@@ -7,7 +7,7 @@ import { formatTimeAgo } from '../../lib/formatters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useMissions } from '../../hooks/useMissions'
 import { useMobile } from '../../hooks/useMobile'
-import { getSeverityIcon } from '../../types/alerts'
+import { getSeverityIcon, ALERT_SEVERITY_ORDER } from '../../types/alerts'
 import type { Alert, AlertSeverity } from '../../types/alerts'
 import { CardAIActions } from '../../lib/cards/CardComponents'
 import { ROUTES } from '../../config/routes'
@@ -151,8 +151,7 @@ export function AlertBadge() {
 
     // Sort by severity and time
     return result.sort((a, b) => {
-      const severityOrder: Record<AlertSeverity, number> = { critical: 0, warning: 1, info: 2 }
-      const severityDiff = severityOrder[a.severity] - severityOrder[b.severity]
+      const severityDiff = ALERT_SEVERITY_ORDER[a.severity] - ALERT_SEVERITY_ORDER[b.severity]
       if (severityDiff !== 0) return severityDiff
       return new Date(b.firedAt).getTime() - new Date(a.firedAt).getTime()
     })
