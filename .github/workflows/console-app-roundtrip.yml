@@ -281,17 +281,19 @@ jobs:
             exit 1
           fi
           # Extract both signals in one pass.
-          ATTRIBUTION=$(echo "$READ_RESP" | python3 <<'PY'
-          import sys, json
-          raw = sys.stdin.read().strip()
-          if not raw:
-              print("ERROR: empty response")
-              sys.exit(1)
+          # Write response to temp file to avoid broken pipe on large JSON via stdin.
+          echo "$READ_RESP" > /tmp/app-read-parse.json
+          ATTRIBUTION=$(python3 <<'PY'
+          import json
           try:
-              d = json.loads(raw)
+              with open('/tmp/app-read-parse.json', 'r') as f:
+                  d = json.load(f)
           except json.JSONDecodeError as e:
               print(f"ERROR: invalid JSON — {e}")
-              sys.exit(1)
+              exit(1)
+          except Exception as e:
+              print(f"ERROR: failed to read file — {e}")
+              exit(1)
           user = d.get('user') or {}
           app = d.get('performed_via_github_app') or {}
           # Tab-separated so callers can split reliably even if a field
@@ -303,6 +305,7 @@ jobs:
           ]))
           PY
           )
+          rm -f /tmp/app-read-parse.json
           ACTUAL_USER_LOGIN=$(echo "$ATTRIBUTION" | cut -f1)
           ACTUAL_USER_TYPE=$(echo "$ATTRIBUTION" | cut -f2)
           ACTUAL_SLUG=$(echo "$ATTRIBUTION" | cut -f3)
