@@ -92,7 +92,11 @@ export function DraftsTab({
             return (
               <div
                 key={draft.id}
-                className={`p-3 border-b border-border/50 hover:bg-secondary/30 transition-colors ${
+                role="button"
+                tabIndex={0}
+                onClick={() => onRestoreDraft(draft)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onRestoreDraft(draft) } }}
+                className={`p-3 border-b border-border/50 hover:bg-secondary/30 transition-colors cursor-pointer ${
                   isEditing ? 'bg-purple-500/5 border-l-2 border-l-purple-500' : ''
                 }`}
               >
@@ -124,7 +128,8 @@ export function DraftsTab({
                     </div>
 
                     {/* Actions */}
-                    <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/30">
+                    {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
+                    <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/30" onClick={(e) => e.stopPropagation()}>
                       {isConfirmingDelete ? (
                         <>
                           <span className="text-xs text-muted-foreground">Delete this draft?</span>
