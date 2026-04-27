@@ -39,10 +39,15 @@ async function setupPage(page: Page) {
   // page.addInitScript() injects the snippet ahead of any page code (#9096).
   await page.addInitScript(() => {
     localStorage.setItem('token', 'test-token')
+    localStorage.setItem('kc-demo-mode', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
   })
   await page.goto('/')
   await page.waitForLoadState('domcontentloaded')
+  // Wait for the navbar to be fully rendered — webkit/mobile-safari can be
+  // slower to stabilize layout after domcontentloaded, causing click actions
+  // to fail with "waiting for element to be stable" (#nightly-playwright).
+  await page.locator('nav[data-tour="navbar"]').waitFor({ state: 'visible' })
 }
 
 // Breakpoints from Navbar.tsx:
@@ -109,7 +114,11 @@ test.describe('Navbar responsive layout', () => {
 
     const nav = page.locator('nav[data-tour="navbar"]')
     const overflowBtn = nav.getByRole('button', { name: /more options/i })
-    await overflowBtn.click()
+    // Webkit mobile emulation can report the button as "not stable" while
+    // CSS transitions are settling. Wait for visibility first, then force
+    // click to bypass the stability check (#nightly-playwright).
+    await expect(overflowBtn).toBeVisible()
+    await overflowBtn.click({ force: true })
 
     // At least one item from the lg-hidden group should now be visible
     const panel = page.locator('.fixed.bg-card').last()
