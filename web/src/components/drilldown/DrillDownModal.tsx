@@ -329,6 +329,7 @@ export function DrillDownModal() {
           <div className="flex items-center gap-2 min-w-0 flex-1">
             {/* Back button - always visible; closes modal at root level */}
             <button
+              data-testid="drilldown-back"
               onClick={state.stack.length > 1 ? pop : close}
               className="p-2 rounded-lg hover:bg-card/50 text-muted-foreground hover:text-foreground transition-colors"
               title={state.stack.length > 1 ? t('drilldown.goBack') : t('drilldown.close')}
