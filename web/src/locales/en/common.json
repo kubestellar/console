@@ -758,6 +758,7 @@
     "slack": "Slack:",
     "role": "Role:",
     "coins": "Coins:",
+    "coinsUpdateHint": "Coins update periodically with the leaderboard (approximately every 4 hours), not in real-time.",
     "language": "Language:",
     "noEmail": "No email set",
     "notSet": "Not set",
