@@ -138,6 +138,10 @@ import { DASHBOARD_CHUNKS } from './lib/dashboardChunks'
 // Always prefetched regardless of enabled dashboards
 const ALWAYS_PREFETCH = new Set(['dashboard', 'settings', 'clusters', 'cluster-admin', 'security', 'deploy'])
 
+// Timing constants (milliseconds)
+const LOADING_FLASH_DELAY_MS = 200
+const PREFETCH_DEMO_CARDS_DELAY_MS = 15_000
+
 // Prefetch lazy route chunks after initial page load.
 // Batched to avoid overwhelming the Vite dev server with simultaneous
 // module transformation requests (which delays navigation on cold start).
@@ -222,10 +226,10 @@ function LoadingFallback() {
   const [showLoading, setShowLoading] = useState(false)
 
   useEffect(() => {
-    // Only show loading spinner if it takes more than 200ms
+    // Only show loading spinner if it takes more than LOADING_FLASH_DELAY_MS
     const timer = setTimeout(() => {
       setShowLoading(true)
-    }, 200)
+    }, LOADING_FLASH_DELAY_MS)
 
     return () => clearTimeout(timer)
   }, [])
@@ -492,11 +496,11 @@ function DataPrefetchInit() {
       // Prefetch default dashboard card chunks immediately — don't wait for
       // Dashboard.tsx to lazy-load and mount before starting chunk downloads.
       m.prefetchCardChunks(DEFAULT_MAIN_CARD_TYPES)
-      // Demo-only card chunks are lower priority — defer 15s in live mode.
+      // Demo-only card chunks are lower priority — defer in live mode.
       if (isDemoMode()) {
         m.prefetchDemoCardChunks()
       } else {
-        setTimeout(m.prefetchDemoCardChunks, 15_000)
+        setTimeout(m.prefetchDemoCardChunks, PREFETCH_DEMO_CARDS_DELAY_MS)
       }
     }).catch(() => {})
   }, [isAuthenticated])
