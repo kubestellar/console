@@ -407,7 +407,7 @@ export function clearClusterCacheOnLogout(): void {
     // Ignore storage errors
   }
 
-  clusterCache = {
+  Object.assign(clusterCache, {
     clusters: [],
     lastUpdated: null,
     isLoading: true,
@@ -416,7 +416,7 @@ export function clearClusterCacheOnLogout(): void {
     consecutiveFailures: 0,
     isFailed: false,
     lastRefresh: null,
-  }
+  })
   notifyClusterSubscribers()
 }
 
@@ -443,7 +443,7 @@ function handleClusterDemoModeChange() {
       }
 
       // Reset cluster cache to demo data
-      clusterCache = {
+      Object.assign(clusterCache, {
         clusters: getDemoClusters(),
         lastUpdated: new Date(),
         isLoading: false,
@@ -452,7 +452,7 @@ function handleClusterDemoModeChange() {
         consecutiveFailures: 0,
         isFailed: false,
         lastRefresh: new Date(),
-      }
+      })
       notifyClusterSubscribers()
     }
     // When switching FROM demo mode, fullFetchClusters will be called by useClusters hook
@@ -475,7 +475,7 @@ if (typeof window !== 'undefined') {
     }
 
     // Reset to loading state (shows skeletons) with empty data
-    clusterCache = {
+    Object.assign(clusterCache, {
       clusters: [],
       lastUpdated: null,
       isLoading: true, // Triggers skeleton display
@@ -484,7 +484,7 @@ if (typeof window !== 'undefined') {
       consecutiveFailures: 0,
       isFailed: false,
       lastRefresh: null,
-    }
+    })
     notifyClusterSubscribers()
   })
 }
@@ -519,7 +519,10 @@ export function updateClusterCache(updates: Partial<ClusterCache>) {
     saveClusterCacheToStorage(updates.clusters)
     updateDistributionCache(updates.clusters)
   }
-  clusterCache = { ...clusterCache, ...updates }
+  // Mutate in place so that any module holding a reference to the exported
+  // `clusterCache` object sees the update (ESM live-binding of `let` exports
+  // is not preserved by all bundlers / test runners).
+  Object.assign(clusterCache, updates)
 
   // Route notifications based on which slice the updates touch (#7865).
   // UI fires first (urgent) so spinner on/off commits immediately, then
@@ -812,10 +815,7 @@ export function updateSingleClusterInCache(clusterName: string, updates: Partial
     updatedClusters = shareMetricsBetweenSameServerClusters(updatedClusters)
   }
 
-  clusterCache = {
-    ...clusterCache,
-    clusters: updatedClusters,
-  }
+  Object.assign(clusterCache, { clusters: updatedClusters })
   // Persist all cluster data to localStorage
   saveClusterCacheToStorage(updatedClusters)
   // Persist distribution changes
@@ -993,7 +993,7 @@ if (import.meta.hot) {
     initialFetchStarted = false
     healthCheckFailures = 0 // Reset health check failures on HMR
     cleanupSharedWebSocket()
-    clusterCache = {
+    Object.assign(clusterCache, {
       clusters: [],
       lastUpdated: null,
       isLoading: true,
@@ -1002,7 +1002,7 @@ if (import.meta.hot) {
       consecutiveFailures: 0,
       isFailed: false,
       lastRefresh: null,
-    }
+    })
     clusterSubscribers.clear()
     dataSubscribers.clear()
     uiSubscribers.clear()
@@ -1758,12 +1758,11 @@ export async function refreshSingleCluster(clusterName: string): Promise<void> {
 
   // Mark the cluster as refreshing immediately and clear stale error state
   // so it shows as "loading" instead of "offline" while fetching
-  clusterCache = {
-    ...clusterCache,
+  Object.assign(clusterCache, {
     clusters: clusterCache.clusters.map(c =>
       c.name === clusterName ? { ...c, refreshing: true, reachable: undefined, errorType: undefined, errorMessage: undefined } : c
     ),
-  }
+  })
   notifyClusterSubscribers() // Immediate notification for user feedback
 
   const health = await fetchSingleClusterHealth(clusterName, kubectlContext)
