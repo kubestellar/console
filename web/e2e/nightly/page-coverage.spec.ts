@@ -1,4 +1,5 @@
 import { test, expect, type Page, type ConsoleMessage } from '@playwright/test'
+import { setupDemoMode } from '../helpers/setup'
 
 /**
  * Nightly Page Coverage Smoke Tests (P3-B)
@@ -148,13 +149,10 @@ function setupErrorCollector(page: Page): { consoleErrors: string[]; pageErrors:
   return { consoleErrors, pageErrors }
 }
 
-async function setupDemoMode(page: Page) {
-  await page.goto('/login')
-  await page.evaluate(() => {
-    localStorage.setItem('token', 'demo-token')
-    localStorage.setItem('kc-demo-mode', 'true')
-    localStorage.setItem('demo-user-onboarded', 'true')
-  })
+/** Sets up demo mode with proper API mocks so AuthProvider gets a valid user.
+ *  Uses the shared helper which registers catch-all + /api/me mocks. */
+async function setupDemoModeWithMocks(page: Page) {
+  await setupDemoMode(page)
 }
 
 async function getPageMetrics(page: Page): Promise<{
@@ -195,7 +193,7 @@ test.describe('Nightly Page Coverage — Untested Feature Pages', () => {
 
   for (const route of UNTESTED_PAGES) {
     test(`${route.name} (${route.path}) loads without errors`, async ({ page }) => {
-      await setupDemoMode(page)
+      await setupDemoModeWithMocks(page)
       const { consoleErrors, pageErrors } = setupErrorCollector(page)
 
       // Measure render time

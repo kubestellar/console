@@ -46,6 +46,10 @@ test.describe('404 / not-found route', () => {
     // the dashboard chrome (sidebar / navbar) should be visible. If a future
     // change introduces a dedicated 404 page, this test should still pass as
     // long as SOME navigation affordance back to / is rendered.
+
+    // Wait for the redirect to complete — assert we land on HOME, not the unmatched route
+    await expect(page).toHaveURL(/\/($|\?)/, { timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
+
     const sidebarOrNav = page
       .locator('nav')
       .or(page.locator('[data-testid*="sidebar"]'))

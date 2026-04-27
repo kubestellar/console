@@ -15,6 +15,12 @@ const GIBBERISH_QUERY = 'zxqwvbn9876543'
 test.describe('Find and Search — "I need to find something"', () => {
   test('keyboard shortcut opens global search', async ({ page }) => {
     await setupDemoAndNavigate(page, '/')
+    // Wait for the search input to be mounted and the keyboard listener attached
+    const searchInput = page.getByTestId('global-search-input')
+    await expect(searchInput).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
+    // Also wait for the sidebar to stabilize (signals full dashboard init)
+    await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
+
     // global-search-input is always visible in the navbar; we validate the
     // shortcut by checking that the search dropdown (results panel) becomes
     // visible after the keypress.
@@ -106,6 +112,7 @@ test.describe('Find and Search — "I need to find something"', () => {
   test('gibberish query shows no results state', async ({ page }) => {
     await setupDemoAndNavigate(page, '/')
     const searchInput = page.getByTestId('global-search-input')
+    await expect(searchInput).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
     await searchInput.click()
     await searchInput.fill(GIBBERISH_QUERY)
     await page.waitForTimeout(500)

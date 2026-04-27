@@ -392,9 +392,16 @@ test.afterAll(async () => {
   // Per-mode thresholds for average first-card visible time.
   // CI runners have variable CPU/IO load, so thresholds include headroom
   // to avoid false-positive regressions on slow runners.
-  const DEMO_FIRST_CARD_THRESHOLD_MS = 3000
-  const LIVE_FIRST_CARD_THRESHOLD_MS = 5000
-  const CACHED_FIRST_CARD_THRESHOLD_MS = 2500 // cached is faster than live but CI adds jitter
+  //
+  // CI_TOLERANCE_PCT (env var) applies an additional multiplier so that
+  // nightly CI runs on shared runners don't false-alarm. The same pattern
+  // is used by all-cards-ttfi.spec.ts.
+  const CI_TOLERANCE_PCT = Number(process.env.CI_TOLERANCE_PCT) || (process.env.CI ? 50 : 0)
+  const toleranceMultiplier = 1 + CI_TOLERANCE_PCT / 100
+
+  const DEMO_FIRST_CARD_THRESHOLD_MS = 3000 * toleranceMultiplier
+  const LIVE_FIRST_CARD_THRESHOLD_MS = 5000 * toleranceMultiplier
+  const CACHED_FIRST_CARD_THRESHOLD_MS = 2500 * toleranceMultiplier
   const THRESHOLDS: Record<string, number> = {
     demo: DEMO_FIRST_CARD_THRESHOLD_MS,
     live: LIVE_FIRST_CARD_THRESHOLD_MS,

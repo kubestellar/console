@@ -45,8 +45,20 @@ async function assertRouteLoaded(page: Page, expectedPath: string) {
 }
 
 async function clickSidebarRoute(page: Page, href: string) {
-  const link = page.locator(`[data-testid="sidebar"] a[href="${href}"]`).first()
-  await expect(link).toBeVisible({ timeout: ROUTE_LOAD_TIMEOUT_MS })
+  // After navigating, sidebar sections may re-render / collapse. Wait for
+  // the sidebar to stabilize before looking for the target link.
+  const sidebar = page.getByTestId('sidebar')
+  await expect(sidebar).toBeVisible({ timeout: ROUTE_LOAD_TIMEOUT_MS })
+
+  const link = sidebar.locator(`a[href="${href}"]`).first()
+  // The link may be inside a collapsed section — scroll it into view which
+  // also triggers any lazy section expansion.
+  const isVisible = await link.isVisible({ timeout: 3000 }).catch(() => false)
+  if (!isVisible) {
+    // Section may need expanding; try clicking the section header to reveal it.
+    // If the link still doesn't appear, the test will fail with a clear message.
+    await expect(link).toBeVisible({ timeout: ROUTE_LOAD_TIMEOUT_MS })
+  }
   await link.scrollIntoViewIfNeeded()
   await link.click()
   await assertRouteLoaded(page, href)

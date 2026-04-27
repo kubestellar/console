@@ -1,10 +1,12 @@
 import { test, expect } from './fixtures'
-import { mockApiFallback } from './helpers/setup'
+import { mockApiFallback, mockApiMe } from './helpers/setup'
 
 test.describe('Resolution Memory System', () => {
   test.beforeEach(async ({ page }) => {
     // Catch-all API mock prevents unmocked requests hanging against vite preview
     await mockApiFallback(page)
+    // Mock /api/me so AuthProvider has a valid user — required for sidebar/mission toggle
+    await mockApiMe(page)
 
     // Set up test mode and skip onboarding
     await page.addInitScript(() => {
@@ -175,18 +177,19 @@ test.describe('Resolution Memory System', () => {
     // Wait for page to be interactive
     await page.waitForLoadState('domcontentloaded').catch(() => {})
 
-    // Look for the AI Missions toggle button
-    const toggleButton = page.locator('[data-tour="ai-missions"]')
+    // The floating toggle button uses data-tour="ai-missions-toggle"
+    // (distinct from the sidebar container which uses data-tour="ai-missions")
+    const toggleButton = page.locator('[data-tour="ai-missions-toggle"]')
 
-    // Should be visible (either the floating button or in the sidebar)
+    // Should be visible when sidebar is closed (default state)
     await expect(toggleButton.first()).toBeVisible({ timeout: 10000 })
   })
 
   test('mission sidebar opens when clicking toggle', async ({ page }) => {
     await page.waitForLoadState('domcontentloaded').catch(() => {})
 
-    // Find and click the AI Missions button
-    const toggleButton = page.locator('[data-tour="ai-missions"]').first()
+    // Find and click the AI Missions toggle button
+    const toggleButton = page.locator('[data-tour="ai-missions-toggle"]').first()
     await expect(toggleButton).toBeVisible({ timeout: 10000 })
     await toggleButton.click()
 
@@ -219,8 +222,8 @@ test.describe('Resolution Memory System', () => {
     await page.reload({ waitUntil: 'domcontentloaded' })
     await page.waitForLoadState('domcontentloaded').catch(() => {})
 
-    // Open the sidebar
-    const toggleButton = page.locator('[data-tour="ai-missions"]').first()
+    // Open the sidebar via the toggle button
+    const toggleButton = page.locator('[data-tour="ai-missions-toggle"]').first()
     await expect(toggleButton).toBeVisible({ timeout: 10000 })
     await toggleButton.click()
 
@@ -229,7 +232,7 @@ test.describe('Resolution Memory System', () => {
     if (await fullscreenButton.isVisible({ timeout: 3000 }).catch(() => false)) {
       await fullscreenButton.click()
 
-      // In fullscreen, the sidebar should take more space
+      // In fullscreen, the sidebar container should take more space
       const sidebar = page.locator('[data-tour="ai-missions"]').first()
       const box = await sidebar.boundingBox()
       if (box) {

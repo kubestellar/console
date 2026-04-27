@@ -37,10 +37,6 @@ async function setupUpdateTest(page: Page): Promise<WsRoutes> {
   page.on('console', () => {})
 
   const wsRoutes: WsRoutes = { routes: [] }
-  let firstWsResolve: () => void
-  const firstWsReady = new Promise<void>((resolve) => {
-    firstWsResolve = resolve
-  })
 
   // Mock auth
   await page.route('**/api/me', (route) =>
@@ -75,7 +71,6 @@ async function setupUpdateTest(page: Page): Promise<WsRoutes> {
   // Mock the kc-agent WebSocket — capture WebSocketRoute handles from callback
   await page.routeWebSocket('ws://127.0.0.1:8585/**', (ws) => {
     wsRoutes.routes.push(ws)
-    firstWsResolve()
     ws.onMessage((data) => {
       try {
         const msg = JSON.parse(String(data))
@@ -102,8 +97,16 @@ async function setupUpdateTest(page: Page): Promise<WsRoutes> {
   await page.waitForLoadState('domcontentloaded')
   await expect(page.getByTestId('settings-page')).toBeVisible({ timeout: 10000 })
 
-  // Wait for at least one WebSocket connection to be established
-  await firstWsReady
+  // Wait for at least one WebSocket connection to be established.
+  // The app connects to ws://127.0.0.1:8585 for kc-agent; if it doesn't
+  // attempt the connection within 5s, fail fast instead of hanging.
+  const WS_CONNECT_TIMEOUT_MS = 5000
+  await expect
+    .poll(() => wsRoutes.routes.length, {
+      message: 'Expected at least one WebSocket connection to kc-agent',
+      timeout: WS_CONNECT_TIMEOUT_MS,
+    })
+    .toBeGreaterThan(0)
 
   return wsRoutes
 }
