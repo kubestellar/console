@@ -7,6 +7,8 @@ import { disconnectPresence } from '../hooks/useActiveUsers'
 import { clearSSECache } from './sseClient'
 import { clearClusterCacheOnLogout } from '../hooks/mcp/shared'
 import { STORAGE_KEY_TOKEN, DEMO_TOKEN_VALUE, STORAGE_KEY_DEMO_MODE, STORAGE_KEY_ONBOARDED, STORAGE_KEY_USER_CACHE, STORAGE_KEY_HAS_SESSION, FETCH_DEFAULT_TIMEOUT_MS } from './constants'
+/** localStorage key for the kc-agent shared secret (must match shared.ts) */
+const AGENT_TOKEN_STORAGE_KEY = 'kc-agent-token'
 import { emitLogin, emitLogout, setAnalyticsUserId, setAnalyticsUserProperties, emitConversionStep, emitDeveloperSession } from './analytics'
 import { setDemoMode as setGlobalDemoMode } from './demoMode'
 import { AuthRefreshResponseSchema, UserSchema } from './schemas'
@@ -198,9 +200,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // well so that any past or future code path that parks a token there
     // can't leak into the next session (#6004).
     localStorage.removeItem(STORAGE_KEY_TOKEN)
+    localStorage.removeItem(AGENT_TOKEN_STORAGE_KEY)
     localStorage.removeItem(AUTH_USER_CACHE_KEY)
     localStorage.removeItem(STORAGE_KEY_HAS_SESSION)
-    localStorage.removeItem('kc-agent-token')
     try {
       sessionStorage.removeItem(STORAGE_KEY_TOKEN)
       sessionStorage.removeItem(AUTH_USER_CACHE_KEY)
@@ -311,6 +313,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 localStorage.setItem(STORAGE_KEY_HAS_SESSION, 'true')
               } catch {
                 // localStorage quota — best-effort hint
+              }
+              // Fetch kc-agent token so agentFetch/WebSocket can authenticate
+              try {
+                const agentRes = await fetch('/api/agent/token', {
+                  credentials: 'same-origin',
+                  headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                  signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+                })
+                if (agentRes.ok) {
+                  const agentData = await agentRes.json()
+                  if (agentData.token) localStorage.setItem(AGENT_TOKEN_STORAGE_KEY, agentData.token)
+                }
+              } catch {
+                // Non-fatal — agent auth will fail but session is intact
               }
               const meResponse = await fetch('/api/me', {
                 credentials: 'include',

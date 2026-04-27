@@ -24,6 +24,7 @@ import { useResolutions, detectIssueSignature, type IssueSignature, type Resolut
 import { cn } from '../../lib/cn'
 import { BaseModal } from '../../lib/modals/BaseModal'
 import { LOCAL_AGENT_WS_URL } from '../../lib/constants'
+import { appendWsAuthToken } from '../../lib/utils/wsAuth'
 import { useTranslation } from 'react-i18next'
 
 interface AISummary {
@@ -137,7 +138,7 @@ const RATE_LIMIT_MESSAGE =
  */
 async function generateAISummary(mission: Mission): Promise<AISummary> {
   return new Promise((resolve, reject) => {
-    const ws = new WebSocket(LOCAL_AGENT_WS_URL)
+    const ws = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
 
     let responseContent = ''
     // #9162 — Track whether the connection ever opened. If the agent closes

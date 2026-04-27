@@ -18,6 +18,7 @@ import type {
 } from '../types/insights'
 import { isAgentConnected, isAgentUnavailable } from './useLocalAgent'
 import { LOCAL_AGENT_HTTP_URL, LOCAL_AGENT_WS_URL } from '../lib/constants'
+import { appendWsAuthToken } from '../lib/utils/wsAuth'
 
 /** Debounce before sending enrichment request (2 seconds) */
 const ENRICHMENT_DEBOUNCE_MS = 2_000
@@ -139,7 +140,7 @@ function connectWebSocket(): void {
 
   try {
     // LOCAL_AGENT_WS_URL already includes /ws — don't append it again
-    wsConnection = new WebSocket(LOCAL_AGENT_WS_URL)
+    wsConnection = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
 
     wsConnection.onopen = () => {
       // Reset backoff on successful connection
