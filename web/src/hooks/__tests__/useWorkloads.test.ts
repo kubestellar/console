@@ -21,6 +21,7 @@ vi.mock('../useLocalAgent', () => ({
 
 vi.mock('../mcp/shared', () => ({
   clusterCacheRef: mockClusterCacheRef,
+  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
 }))
 
 vi.mock('../../lib/constants', () => ({

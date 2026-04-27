@@ -33,6 +33,7 @@ const mockClusterCacheRef = vi.hoisted(() => ({
 
 vi.mock('../mcp/shared', () => ({
   clusterCacheRef: mockClusterCacheRef,
+  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
 }))
 
 const mockKubectlExec = vi.hoisted(() => vi.fn())

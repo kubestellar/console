@@ -37,6 +37,7 @@ vi.mock('../useTokenUsage', () => ({
 vi.mock('../mcp/shared', () => ({
   fullFetchClusters: mockFullFetchClusters,
   clusterCache: mockClusterCache,
+  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
 }))
 
 vi.mock('../../lib/constants', () => ({

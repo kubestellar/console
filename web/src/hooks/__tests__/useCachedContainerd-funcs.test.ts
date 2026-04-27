@@ -11,6 +11,7 @@ vi.mock('../../lib/constants/network', () => ({
 
 vi.mock('../useDemoMode', () => ({
   useDemoMode: () => ({ isDemoMode: false }),
+  isDemoModeForced: false,
 }))
 
 vi.mock('../../lib/cache', () => ({

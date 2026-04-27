@@ -33,6 +33,7 @@ vi.mock('../../lib/kubectlProxy', () => ({
 vi.mock('../mcp/shared', () => ({
   clusterCacheRef: { clusters: [] },
   deduplicateClustersByServer: (clusters: unknown[]) => clusters,
+  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
 }))
 
 vi.mock('../useLocalAgent', () => ({
