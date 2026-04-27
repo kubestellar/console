@@ -18,7 +18,7 @@ import { useDemoMode } from './useDemoMode'
 import { registerRefetch, registerCacheReset, unregisterCacheReset } from '../lib/modeTransition'
 import { STORAGE_KEY_TRIVY_CACHE, STORAGE_KEY_TRIVY_CACHE_TIME } from '../lib/constants/storage'
 import { DEFAULT_REFRESH_INTERVAL_MS as REFRESH_INTERVAL_MS } from '../lib/constants'
-import { CRD_CHECK_TIMEOUT_MS, CRD_CRD_DATA_FETCH_TIMEOUT_MS } from '../lib/constants/network'
+import { CRD_CHECK_TIMEOUT_MS, CRD_DATA_FETCH_TIMEOUT_MS } from '../lib/constants/network'
 
 /** Maximum images to store per cluster to keep cache size reasonable */
 const MAX_IMAGES_PER_CLUSTER = 50
