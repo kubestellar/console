@@ -361,7 +361,12 @@ test.describe('AI/ML Dashboard — stack discovery', () => {
     expect(clusters.size).toBeGreaterThanOrEqual(1)
   })
 
-  test('stack dropdown UI is present and populated', async ({ page }) => {
+  test('stack dropdown UI is present and populated', async ({ page, request }) => {
+    try {
+      const healthCheck = await request.get('http://127.0.0.1:8080/api/health', { timeout: 5_000 })
+      if (!healthCheck.ok()) { test.skip(true, 'Backend not reachable'); return }
+    } catch { test.skip(true, 'Backend not reachable'); return }
+
     await setupAndNavigate(page, AI_ML_ROUTE)
     await waitForStackDiscovery(page)
 
@@ -391,7 +396,12 @@ test.describe('AI/ML Dashboard — stack discovery', () => {
 
 test.describe('AI/ML Dashboard — complete stack coverage', () => {
 
-  test('all stacks across all clusters are enumerated', async ({ page }) => {
+  test('all stacks across all clusters are enumerated', async ({ page, request }) => {
+    try {
+      const healthCheck = await request.get('http://127.0.0.1:8080/api/health', { timeout: 5_000 })
+      if (!healthCheck.ok()) { test.skip(true, 'Backend not reachable'); return }
+    } catch { test.skip(true, 'Backend not reachable'); return }
+
     await setupAndNavigate(page, AI_ML_ROUTE)
     const stacks = await waitForStackDiscovery(page)
 
@@ -468,7 +478,12 @@ test.describe('AI/ML Dashboard — complete stack coverage', () => {
 
 test.describe('AI/ML Dashboard — live Prometheus data', () => {
 
-  test('cards show live Prometheus metrics from vLLM', async ({ page }) => {
+  test('cards show live Prometheus metrics from vLLM', async ({ page, request }) => {
+    try {
+      const healthCheck = await request.get('http://127.0.0.1:8080/api/health', { timeout: 5_000 })
+      if (!healthCheck.ok()) { test.skip(true, 'Backend not reachable — no Prometheus without backend'); return }
+    } catch { test.skip(true, 'Backend not reachable — no Prometheus without backend'); return }
+
     const promCalls: string[] = []
     page.on('request', (req) => {
       const url = req.url()
@@ -508,7 +523,12 @@ test.describe('AI/ML Dashboard — live Prometheus data', () => {
     expect(metricCount).toBeGreaterThanOrEqual(1)
   })
 
-  test('KV Cache Monitor shows real cache utilization', async ({ page }) => {
+  test('KV Cache Monitor shows real cache utilization', async ({ page, request }) => {
+    try {
+      const healthCheck = await request.get('http://127.0.0.1:8080/api/health', { timeout: 5_000 })
+      if (!healthCheck.ok()) { test.skip(true, 'Backend not reachable'); return }
+    } catch { test.skip(true, 'Backend not reachable'); return }
+
     await setupAndNavigate(page, AI_ML_ROUTE)
     await waitForStackDiscovery(page)
     await page.waitForFunction(
@@ -532,7 +552,12 @@ test.describe('AI/ML Dashboard — live Prometheus data', () => {
     expect(kvCacheData.hasKVLabel).toBe(true)
   })
 
-  test('EPP Routing card shows endpoint picker activity', async ({ page }) => {
+  test('EPP Routing card shows endpoint picker activity', async ({ page, request }) => {
+    try {
+      const healthCheck = await request.get('http://127.0.0.1:8080/api/health', { timeout: 5_000 })
+      if (!healthCheck.ok()) { test.skip(true, 'Backend not reachable'); return }
+    } catch { test.skip(true, 'Backend not reachable'); return }
+
     await setupAndNavigate(page, AI_ML_ROUTE)
     await waitForStackDiscovery(page)
     await page.waitForFunction(
@@ -554,7 +579,12 @@ test.describe('AI/ML Dashboard — live Prometheus data', () => {
     expect(eppContent.hasEPP).toBe(true)
   })
 
-  test('P/D Disaggregation card shows architecture visualization', async ({ page }) => {
+  test('P/D Disaggregation card shows architecture visualization', async ({ page, request }) => {
+    try {
+      const healthCheck = await request.get('http://127.0.0.1:8080/api/health', { timeout: 5_000 })
+      if (!healthCheck.ok()) { test.skip(true, 'Backend not reachable'); return }
+    } catch { test.skip(true, 'Backend not reachable'); return }
+
     await setupAndNavigate(page, AI_ML_ROUTE)
     await waitForStackDiscovery(page)
     await page.waitForFunction(
@@ -588,7 +618,12 @@ test.describe('AI/ML Dashboard — live Prometheus data', () => {
 
 test.describe('AI/ML Dashboard — component health', () => {
 
-  test('Stack Monitor shows component health status', async ({ page }) => {
+  test('Stack Monitor shows component health status', async ({ page, request }) => {
+    try {
+      const healthCheck = await request.get('http://127.0.0.1:8080/api/health', { timeout: 5_000 })
+      if (!healthCheck.ok()) { test.skip(true, 'Backend not reachable'); return }
+    } catch { test.skip(true, 'Backend not reachable'); return }
+
     await setupAndNavigate(page, AI_ML_ROUTE)
     await waitForStackDiscovery(page)
     await page.waitForFunction(
@@ -618,7 +653,12 @@ test.describe('AI/ML Dashboard — component health', () => {
     expect(stackMonitorContent.hasStack || stackMonitorContent.hasHealthy).toBe(true)
   })
 
-  test('GPU Overview shows GPU utilization data', async ({ page }) => {
+  test('GPU Overview shows GPU utilization data', async ({ page, request }) => {
+    try {
+      const healthCheck = await request.get('http://127.0.0.1:8080/api/health', { timeout: 5_000 })
+      if (!healthCheck.ok()) { test.skip(true, 'Backend not reachable'); return }
+    } catch { test.skip(true, 'Backend not reachable'); return }
+
     await setupAndNavigate(page, AI_ML_ROUTE)
     await page.waitForFunction(
       () => document.body.innerText.toLowerCase().includes('gpu'),
@@ -642,7 +682,12 @@ test.describe('AI/ML Dashboard — component health', () => {
     expect(gpuContent.hasGPU).toBe(true)
   })
 
-  test('no cards show demo badge when live data is available', async ({ page }) => {
+  test('no cards show demo badge when live data is available', async ({ page, request }) => {
+    try {
+      const healthCheck = await request.get('http://127.0.0.1:8080/api/health', { timeout: 5_000 })
+      if (!healthCheck.ok()) { test.skip(true, 'Backend not reachable'); return }
+    } catch { test.skip(true, 'Backend not reachable'); return }
+
     await setupAndNavigate(page, AI_ML_ROUTE)
     await waitForStackDiscovery(page)
     await page.waitForFunction(
