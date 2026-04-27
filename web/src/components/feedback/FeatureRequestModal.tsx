@@ -449,7 +449,6 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
       <div className="p-4 border-t border-border flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3 text-2xs text-muted-foreground/50">
           <span><kbd className="px-1 py-0.5 rounded bg-secondary/50 text-[9px]">Esc</kbd> close</span>
-          <span><kbd className="px-1 py-0.5 rounded bg-secondary/50 text-[9px]">Space</kbd> close</span>
         </div>
         <SubmitFooter
           activeTab={activeTab}

@@ -55,6 +55,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [success, setSuccess] = useState<{ issueUrl?: string; screenshotsUploaded?: number; screenshotsFailed?: number } | null>(null)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [validationErrors, setValidationErrors] = useState<{ title?: string; description?: string }>({})
   const { awardCoins } = useRewards()
   const [screenshots, setScreenshots] = useState<{ file: File; preview: string }[]>([])
   const [isDragOver, setIsDragOver] = useState(false)
@@ -174,7 +175,17 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!title.trim() || !description.trim()) return
+
+    // Validate required fields and show inline errors instead of silently
+    // returning. Fixes #10476 — empty submit gave no feedback.
+    const errors: { title?: string; description?: string } = {}
+    if (!title.trim()) errors.title = 'Title is required'
+    if (!description.trim()) errors.description = 'Description is required'
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors)
+      return
+    }
+    setValidationErrors({})
 
     setIsSubmitting(true)
     setSubmitError(null)
@@ -229,6 +240,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
     localStorage.removeItem(DRAFT_KEY)
     setSuccess(null)
     setSubmitError(null)
+    setValidationErrors({})
     setTitle('')
     setDescription('')
     setScreenshots([])
@@ -274,12 +286,17 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
         return
       }
 
-      // Space closes only if not typing in an input
+      // Space closes only if focus is not on an input or interactive control.
+      // Use closest() so child elements (e.g. <span>/<svg> inside a <button>)
+      // are caught too. Fixes #10476 — Space on a button closed the modal.
       if (e.key === ' ') {
         if (
           e.target instanceof HTMLInputElement ||
           e.target instanceof HTMLTextAreaElement ||
-          (e.target instanceof HTMLElement && e.target.isContentEditable)
+          (e.target instanceof HTMLElement && (
+            e.target.isContentEditable ||
+            (e.target as HTMLElement).closest('button, a, select, [role="button"], [role="link"], [role="option"], [role="menuitem"]')
+          ))
         ) {
           return
         }
@@ -456,11 +473,16 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
                     <input
                       type="text"
                       value={title}
-                      onChange={(e) => setTitle(e.target.value)}
+                      onChange={(e) => { setTitle(e.target.value); if (validationErrors.title) setValidationErrors(prev => ({ ...prev, title: undefined })) }}
                       placeholder={type === 'bug' ? 'Brief description of the bug' : 'Brief description of the feature'}
-                      className="w-full px-3 py-2.5 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500/50"
+                      className={`w-full px-3 py-2.5 rounded-lg bg-secondary border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500/50 ${
+                        validationErrors.title ? 'border-red-500' : 'border-border'
+                      }`}
                       required
                     />
+                    {validationErrors.title && (
+                      <p className="mt-1 text-xs text-red-400">{validationErrors.title}</p>
+                    )}
                   </div>
 
                   <div>
@@ -469,16 +491,21 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
                     </label>
                     <textarea
                       value={description}
-                      onChange={(e) => setDescription(e.target.value)}
+                      onChange={(e) => { setDescription(e.target.value); if (validationErrors.description) setValidationErrors(prev => ({ ...prev, description: undefined })) }}
                       onPaste={handlePaste}
                       placeholder={type === 'bug'
                         ? 'Steps to reproduce, expected behavior, actual behavior... (paste screenshots here!)'
                         : 'Describe the feature, use case, and how it would help... (paste screenshots here!)'
                       }
                       rows={4}
-                      className="w-full px-3 py-2.5 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500/50 resize-none"
+                      className={`w-full px-3 py-2.5 rounded-lg bg-secondary border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500/50 resize-none ${
+                        validationErrors.description ? 'border-red-500' : 'border-border'
+                      }`}
                       required
                     />
+                    {validationErrors.description && (
+                      <p className="mt-1 text-xs text-red-400">{validationErrors.description}</p>
+                    )}
                   </div>
 
                   {/* Screenshot Upload */}
@@ -564,7 +591,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
 
                   <button
                     type="submit"
-                    disabled={isSubmitting || !title.trim() || !description.trim()}
+                    disabled={isSubmitting}
                     className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-purple-500 hover:bg-purple-600 disabled:bg-purple-500/50 disabled:cursor-not-allowed text-white font-medium transition-colors"
                   >
                     {isSubmitting ? (
@@ -587,7 +614,6 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
         {/* Keyboard hints */}
         <div className="flex items-center justify-end gap-3 px-4 py-2 border-t border-border/50 text-2xs text-muted-foreground/50">
           <span><kbd className="px-1 py-0.5 rounded bg-secondary/50 text-[9px]">Esc</kbd> close</span>
-          <span><kbd className="px-1 py-0.5 rounded bg-secondary/50 text-[9px]">Space</kbd> close</span>
           {!success && (
             <span><kbd className="px-1 py-0.5 rounded bg-secondary/50 text-[9px]">{navigator.platform?.includes('Mac') ? '⌘' : 'Ctrl'}+↵</kbd> submit</span>
           )}
