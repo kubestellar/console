@@ -448,6 +448,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/nodes", s.handleNodesHTTP)
 	mux.HandleFunc("/pods", s.handlePodsHTTP)
 	mux.HandleFunc("/events", s.handleEventsHTTP)
+	mux.HandleFunc("/events/stream", s.handleEventsStreamSSE)
 	mux.HandleFunc("/namespaces", s.handleNamespacesHTTP)
 	mux.HandleFunc("/deployments", s.handleDeploymentsHTTP)
 	mux.HandleFunc("/replicasets", s.handleReplicaSetsHTTP)
