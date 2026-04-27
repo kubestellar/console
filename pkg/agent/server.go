@@ -547,6 +547,11 @@ func (s *Server) Start() error {
 	// Route in pkg/agent/server_gpu_health.go.
 	mux.HandleFunc("/gpu-health-cronjob", s.handleGPUHealthCronJob)
 
+	// NVIDIA operator detection (#10389). Scans clusters for GPU Operator,
+	// device plugin, feature discovery, and Network Operator installations.
+	// Route in pkg/agent/server_nvidia.go.
+	mux.HandleFunc("/nvidia-operators", s.handleNvidiaOperatorsHTTP)
+
 	// RBAC / permissions introspection moved to kc-agent (#7993 Phase 6).
 	// SelfSubjectAccessReview must be issued under the caller's identity, not
 	// the backend pod ServiceAccount — otherwise in-cluster the answer
