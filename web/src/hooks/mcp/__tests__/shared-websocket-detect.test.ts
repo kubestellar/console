@@ -117,6 +117,7 @@ import {
   updateSingleClusterInCache,
   setInitialFetchStarted,
   setHealthCheckFailures,
+  getHealthCheckFailures,
   initialFetchStarted,
   healthCheckFailures,
   // WebSocket
@@ -413,7 +414,7 @@ describe('fetchSingleClusterHealth — backend error paths', () => {
     setHealthCheckFailures(0)
     await fetchSingleClusterHealth('err-cluster')
 
-    expect(healthCheckFailures).toBe(1)
+    expect(getHealthCheckFailures()).toBe(1)
   })
 
   it('resets healthCheckFailures to 0 on successful backend response', async () => {
@@ -424,7 +425,7 @@ describe('fetchSingleClusterHealth — backend error paths', () => {
     })
 
     await fetchSingleClusterHealth('ok-cluster')
-    expect(healthCheckFailures).toBe(0)
+    expect(getHealthCheckFailures()).toBe(0)
   })
 
   it('returns null when backend JSON parse fails', async () => {

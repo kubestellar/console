@@ -1860,13 +1860,23 @@ export function subscribeClusterUI(callback: (cache: ClusterCache) => void): () 
   return () => uiSubscribers.delete(callback)
 }
 
-// Setter functions for module-level state (ES modules can't assign to imported bindings)
+// Getter/setter functions for module-level state (vitest CJS transform does
+// not preserve ESM live bindings for `let` exports, so tests must use these
+// functions instead of reading the exported variable directly).
 export function setInitialFetchStarted(value: boolean) {
   initialFetchStarted = value
 }
 
+export function getInitialFetchStarted(): boolean {
+  return initialFetchStarted
+}
+
 export function setHealthCheckFailures(value: number) {
   healthCheckFailures = value
+}
+
+export function getHealthCheckFailures(): number {
+  return healthCheckFailures
 }
 
 // ============================================================================

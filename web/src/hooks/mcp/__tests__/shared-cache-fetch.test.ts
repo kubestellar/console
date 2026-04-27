@@ -116,6 +116,8 @@ import {
   updateSingleClusterInCache,
   setInitialFetchStarted,
   setHealthCheckFailures,
+  getInitialFetchStarted,
+  getHealthCheckFailures,
   initialFetchStarted,
   healthCheckFailures,
   // WebSocket
@@ -715,7 +717,7 @@ describe('fetchSingleClusterHealth', () => {
 
     setHealthCheckFailures(0)
     await fetchSingleClusterHealth('test')
-    expect(healthCheckFailures).toBe(1)
+    expect(getHealthCheckFailures()).toBe(1)
   })
 
   it('uses kubectlContext for agent request when provided', async () => {

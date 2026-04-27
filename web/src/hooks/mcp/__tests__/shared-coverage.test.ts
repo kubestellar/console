@@ -44,12 +44,13 @@ const mockResetAllCacheFailures = vi.hoisted(() => vi.fn())
 const mockKubectlProxyExec = vi.hoisted(() => vi.fn())
 const mockApiGet = vi.hoisted(() => vi.fn())
 
-vi.mock('../mcp/shared', () => ({
-  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
-  clusterCacheRef: { clusters: [] },
-  REFRESH_INTERVAL_MS: 120_000,
-  CLUSTER_POLL_INTERVAL_MS: 60_000,
-}))
+// The global test setup (setup.ts) mocks agentFetch to delegate to
+// global.fetch. For tests that need the REAL agentFetch (token injection,
+// signal fallback), import the actual module and restore the real impl.
+vi.mock('../shared', async () => {
+  const actual = await vi.importActual<typeof import('../shared')>('../shared')
+  return { ...actual }
+})
 
 vi.mock('../../../lib/api', () => ({
   api: { get: mockApiGet },
@@ -695,8 +696,15 @@ describe('deduplicateClustersByServer — cross-merge scenarios', () => {
 describe('fetchWithRetry — signal forwarding and cleanup', () => {
   const originalFetch = globalThis.fetch
 
+  beforeEach(() => {
+    // Pre-seed agent token so agentFetch() skips the token-fetch call,
+    // keeping globalThis.fetch call counts predictable.
+    localStorage.setItem(AGENT_TOKEN_STORAGE_KEY, 'test-token')
+  })
+
   afterEach(() => {
     globalThis.fetch = originalFetch
+    localStorage.removeItem(AGENT_TOKEN_STORAGE_KEY)
     vi.restoreAllMocks()
   })
 
@@ -1087,8 +1095,14 @@ describe('agentFetch — passes additional RequestInit options', () => {
 describe('fetchWithRetry — default parameter behavior', () => {
   const originalFetch = globalThis.fetch
 
+  beforeEach(() => {
+    // Pre-seed agent token so agentFetch() skips the token-fetch call
+    localStorage.setItem(AGENT_TOKEN_STORAGE_KEY, 'test-token')
+  })
+
   afterEach(() => {
     globalThis.fetch = originalFetch
+    localStorage.removeItem(AGENT_TOKEN_STORAGE_KEY)
   })
 
   it('uses default maxRetries=2 and initialBackoffMs=500 when not specified', async () => {

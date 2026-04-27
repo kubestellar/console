@@ -117,6 +117,8 @@ import {
   updateSingleClusterInCache,
   setInitialFetchStarted,
   setHealthCheckFailures,
+  getInitialFetchStarted,
+  getHealthCheckFailures,
   initialFetchStarted,
   healthCheckFailures,
   // WebSocket
@@ -686,17 +688,17 @@ describe('updateSingleClusterInCache', () => {
 describe('setInitialFetchStarted / setHealthCheckFailures', () => {
   it('sets initialFetchStarted', () => {
     setInitialFetchStarted(true)
-    expect(initialFetchStarted).toBe(true)
+    expect(getInitialFetchStarted()).toBe(true)
     setInitialFetchStarted(false)
-    expect(initialFetchStarted).toBe(false)
+    expect(getInitialFetchStarted()).toBe(false)
   })
 
   it('sets healthCheckFailures', () => {
     const FIVE = 5
     setHealthCheckFailures(FIVE)
-    expect(healthCheckFailures).toBe(FIVE)
+    expect(getHealthCheckFailures()).toBe(FIVE)
     setHealthCheckFailures(0)
-    expect(healthCheckFailures).toBe(0)
+    expect(getHealthCheckFailures()).toBe(0)
   })
 })
 
@@ -770,8 +772,15 @@ describe('cleanupSharedWebSocket', () => {
 describe('fetchWithRetry', () => {
   const originalFetch = globalThis.fetch
 
+  beforeEach(() => {
+    // Pre-seed agent token so agentFetch() does not call fetch('/api/agent/token')
+    // which would interfere with call-count assertions.
+    localStorage.setItem('kc-agent-token', 'test-token')
+  })
+
   afterEach(() => {
     globalThis.fetch = originalFetch
+    localStorage.removeItem('kc-agent-token')
     vi.restoreAllMocks()
   })
 
