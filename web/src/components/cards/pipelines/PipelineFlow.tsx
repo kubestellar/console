@@ -13,6 +13,7 @@
  * cadence) so the flow looks live without hammering the function.
  */
 import { useState, useMemo, useRef, useLayoutEffect, useEffect, type CSSProperties } from 'react'
+import { useTranslation } from 'react-i18next'
 import { RefreshCw, XCircle, ExternalLink, Stethoscope } from 'lucide-react'
 import { useReducedMotion } from 'framer-motion'
 import { useDemoMode } from '../../../hooks/useDemoMode'
@@ -341,6 +342,7 @@ function colorForStatus(status: Status, conclusion: Conclusion): string {
 // ---------------------------------------------------------------------------
 
 export function PipelineFlow() {
+  const { t } = useTranslation()
   const shared = usePipelineFilter()
   const [localRepoFilter, setLocalRepoFilter] = useState<string | null>(null)
   const repoFilter = shared?.repoFilter ?? localRepoFilter
@@ -398,7 +400,7 @@ export function PipelineFlow() {
           className="text-xs bg-secondary/40 border border-border rounded px-2 py-1 text-foreground"
           aria-label={LABEL_FILTER_REPO}
         >
-          <option value="">All repos</option>
+          <option value="">{t('pipelines.allRepos')}</option>
           {repos.map((r) => (
             <option key={r} value={r}>{r}</option>
           ))}

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Scale, ChevronDown, ChevronUp, Cpu, MemoryStick, AlertTriangle, CheckCircle2, MinusCircle, HelpCircle } from 'lucide-react'
 import { useClusters } from '../../../hooks/useMCP'
 import { useCachedGPUNodes } from '../../../hooks/useCachedData'
@@ -105,6 +106,7 @@ const VERDICT_CONFIG: Record<Verdict, { color: 'red' | 'green' | 'yellow' | 'gra
 }
 
 export function RightSizeAdvisor() {
+  const { t } = useTranslation()
   const { deduplicatedClusters, isLoading, isRefreshing, isFailed, consecutiveFailures, error } = useClusters()
   const { nodes: gpuNodes, isDemoFallback } = useCachedGPUNodes()
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()
@@ -341,7 +343,7 @@ export function RightSizeAdvisor() {
                     <div className="space-y-1">
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                         <MemoryStick className="w-3 h-3" />
-                        <span>Memory</span>
+                        <span>{t('rightSizeAdvisor.memory')}</span>
                         <span className="ml-auto font-mono">{s.memory.used}/{s.memory.capacity} {s.memory.unit} ({s.memory.pct}%)</span>
                       </div>
                       <div className="h-2 bg-secondary rounded-full overflow-hidden">

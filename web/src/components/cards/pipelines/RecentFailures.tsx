@@ -8,6 +8,7 @@
  * button.
  */
 import { useState, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ExternalLink, RefreshCw, FileText, Stethoscope } from 'lucide-react'
 import { useDemoMode } from '../../../hooks/useDemoMode'
 import { useCardLoadingState } from '../CardDataContext'
@@ -46,6 +47,7 @@ function formatDuration(ms: number): string {
 }
 
 export function RecentFailures() {
+  const { t } = useTranslation()
   const shared = usePipelineFilter()
   const [localRepoFilter, setLocalRepoFilter] = useState<string | null>(null)
   const repoFilter = shared?.repoFilter ?? localRepoFilter
@@ -100,7 +102,7 @@ export function RecentFailures() {
           className="text-xs bg-secondary/40 border border-border rounded px-2 py-1 text-foreground"
           aria-label={LABEL_FILTER_REPO}
         >
-          <option value="">All repos</option>
+          <option value="">{t('pipelines.allRepos')}</option>
           {repos.map((r) => (
             <option key={r} value={r}>{r}</option>
           ))}

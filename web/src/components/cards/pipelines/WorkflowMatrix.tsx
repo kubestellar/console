@@ -8,6 +8,7 @@
  * of the server-side history blob).
  */
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ExternalLink } from 'lucide-react'
 import { useDemoMode } from '../../../hooks/useDemoMode'
 import { useCardLoadingState } from '../CardDataContext'
@@ -52,6 +53,7 @@ function cellClass(c: Conclusion): string {
 }
 
 export function WorkflowMatrix() {
+  const { t } = useTranslation()
   const [days, setDays] = useState<number>(RANGE_OPTIONS[0])
   // Shared dashboard filter (if inside PipelineFilterProvider on /ci-cd).
   // Falls back to per-card local state when on a different dashboard.
@@ -97,7 +99,7 @@ export function WorkflowMatrix() {
             className="text-xs bg-secondary/40 border border-border rounded px-2 py-1 text-foreground"
             aria-label={LABEL_FILTER_REPO}
           >
-            <option value="">All repos</option>
+            <option value="">{t('pipelines.allRepos')}</option>
             {repos.map((r) => (
               <option key={r} value={r}>{r}</option>
             ))}

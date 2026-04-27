@@ -4610,5 +4610,11 @@
   },
   "clusterDropZone": {
     "deployToClusterAria": "Deploy {{workload}} to cluster {{cluster}}"
+  },
+  "pipelines": {
+    "allRepos": "All repos"
+  },
+  "rightSizeAdvisor": {
+    "memory": "Memory"
   }
 }
