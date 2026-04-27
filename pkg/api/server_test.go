@@ -75,6 +75,14 @@ func TestLoadingServer_HealthReturns503(t *testing.T) {
 // must not lie to the frontend about OAuth readiness. The helper lives on
 // Server so we exercise it directly without spinning up the full server
 // with DB, k8s, hub, etc.
+func TestLoadConfigFromEnv_KCAgentToken(t *testing.T) {
+	const testToken = "deadbeef1234567890abcdef"
+	t.Setenv("KC_AGENT_TOKEN", testToken)
+	cfg := LoadConfigFromEnv()
+	assert.Equal(t, testToken, cfg.AgentToken,
+		"KC_AGENT_TOKEN must be read from env so backend can expose it to the frontend")
+}
+
 func TestHealth_OAuthConfiguredRequiresBothIdAndSecret(t *testing.T) {
 	cases := []struct {
 		name     string
