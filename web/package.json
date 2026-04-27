@@ -110,7 +110,7 @@
     "eslint": "^10.2.0",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
-    "globals": "^17.4.0",
+    "globals": "^17.5.0",
     "istanbul-lib-coverage": "^3.2.2",
     "istanbul-lib-report": "^3.0.1",
     "istanbul-reports": "^3.1.7",
