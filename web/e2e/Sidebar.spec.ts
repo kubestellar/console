@@ -1,17 +1,12 @@
 import { test, expect, Page } from '@playwright/test'
+import { mockApiFallback } from './helpers/setup'
 
 /**
  * Sets up authentication and MCP mocks for sidebar tests
  */
 async function setupSidebarTest(page: Page) {
   // Catch-all API mock prevents unmocked requests hanging in webkit/firefox
-  await page.route('''**/api/**''', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: '''application/json''',
-      body: JSON.stringify({}),
-    })
-  )
+  await mockApiFallback(page)
 
   // Mock authentication
   await page.route('**/api/me', (route) =>
