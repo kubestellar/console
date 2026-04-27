@@ -27,8 +27,8 @@ const ROTATE_SPEED = 0.04
 
 // Colors
 const WALL_COLORS = ['#8b0000', '#006400', '#00008b', '#8b8b00']
-const CEILING_COLOR = 'var(--doom-ceiling)'
-const FLOOR_COLOR = 'var(--doom-floor)'
+const CEILING_COLOR = '#1a1a2e'
+const FLOOR_COLOR = '#2d2d2d'
 const CROSSHAIR_COLOR = '#00ff00'
 const FLASH_SHOOT_COLOR = [255, 200, 50]
 const FLASH_DAMAGE_COLOR = [255, 0, 0]
@@ -472,7 +472,7 @@ export function KubeDoom() {
     const mmScale = 4
     const mmOffX = CANVAS_WIDTH - MAP_WIDTH * mmScale - 8
     const mmOffY = 8
-    ctx.fillStyle = 'var(--game-overlay)'
+    ctx.fillStyle = 'rgba(0,0,0,0.6)'
     ctx.fillRect(mmOffX - 2, mmOffY - 2, MAP_WIDTH * mmScale + 4, MAP_HEIGHT * mmScale + 4)
 
     for (let y = 0; y < MAP_HEIGHT; y++) {

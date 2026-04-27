@@ -30,14 +30,14 @@ const ENEMY_BULLET_SPEED = 5
 
 // Colors
 const COLORS = {
-  background: 'var(--game-background)',
-  player: 'var(--game-player)',
-  playerGlow: 'var(--game-player-glow)',
-  bullet: 'var(--game-bullet)',
-  enemy1: 'var(--game-enemy-1)',
-  enemy2: 'var(--game-enemy-2)',
-  enemy3: 'var(--game-enemy-3)',
-  enemyBullet: 'var(--color-error)',
+  background: '#0a0a1a',
+  player: '#00d4aa',
+  playerGlow: 'rgba(0, 212, 170, 0.3)',
+  bullet: '#00ffff',
+  enemy1: '#ff6b6b',
+  enemy2: '#ffd93d',
+  enemy3: '#6bcb77',
+  enemyBullet: '#ff4444',
   star: '#ffffff' }
 
 interface Bullet {
