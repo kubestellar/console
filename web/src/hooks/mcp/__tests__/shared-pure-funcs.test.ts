@@ -28,6 +28,13 @@ const mockResetAllCacheFailures = vi.hoisted(() => vi.fn())
 const mockKubectlProxyExec = vi.hoisted(() => vi.fn())
 const mockApiGet = vi.hoisted(() => vi.fn())
 
+vi.mock('../mcp/shared', () => ({
+  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
+  clusterCacheRef: { clusters: [] },
+  REFRESH_INTERVAL_MS: 120_000,
+  CLUSTER_POLL_INTERVAL_MS: 60_000,
+}))
+
 vi.mock('../../../lib/api', () => ({
   api: { get: mockApiGet },
   isBackendUnavailable: mockIsBackendUnavailable,

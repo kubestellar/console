@@ -23,6 +23,13 @@ import useDataSource from '../useDataSource'
 // Registry tests
 // ---------------------------------------------------------------------------
 
+vi.mock('../../../../../hooks/mcp/shared', () => ({
+  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
+  clusterCacheRef: { clusters: [] },
+  REFRESH_INTERVAL_MS: 120_000,
+  CLUSTER_POLL_INTERVAL_MS: 60_000,
+}))
+
 describe('registerDataHook', () => {
   it('registers a hook that can be retrieved by name', () => {
     const mockHook = vi.fn().mockReturnValue({

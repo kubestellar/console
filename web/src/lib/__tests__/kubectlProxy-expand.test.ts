@@ -16,7 +16,22 @@ vi.mock('../utils/wsAuth', () => ({
 }))
 
 vi.mock('../demoMode', () => ({
+  isDemoModeForced: false,
   get isNetlifyDeployment() { return mockIsNetlify },
+}))
+
+vi.mock('../../hooks/useBackendHealth', () => ({
+  isInClusterMode: () => false,
+  useBackendHealth: () => ({ status: 'connected', isConnected: true }),
+}))
+
+vi.mock('../../hooks/mcp/shared', () => ({
+  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
+  clusterCacheRef: { clusters: [] },
+  REFRESH_INTERVAL_MS: 120_000,
+  CLUSTER_POLL_INTERVAL_MS: 60_000,
+  reportAgentDataError: () => {},
+  reportAgentDataSuccess: () => {},
 }))
 
 vi.mock('../constants', () => ({
@@ -32,6 +47,15 @@ vi.mock('../constants', () => ({
   POD_RESTART_ISSUE_THRESHOLD: 5,
   FOCUS_DELAY_MS: 100,
   STORAGE_KEY_TOKEN: 'token',
+  MCP_HOOK_TIMEOUT_MS: 15_000,
+  FETCH_DEFAULT_TIMEOUT_MS: 5_000,
+  STORAGE_KEY_USER_CACHE: 'userCache',
+  STORAGE_KEY_HAS_SESSION: 'hasSession',
+  DEMO_TOKEN_VALUE: 'demo-token',
+  DEFAULT_REFRESH_INTERVAL_MS: 120_000,
+  LOCAL_AGENT_HTTP_URL: 'http://localhost:8585',
+  MCP_PROBE_TIMEOUT_MS: 3_000,
+  STORAGE_KEY_DEMO_MODE: 'kc-demo-mode',
 }))
 
 // ---------------------------------------------------------------------------

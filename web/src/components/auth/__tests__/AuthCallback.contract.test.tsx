@@ -24,6 +24,13 @@ const mockSetToken = vi.fn()
 const mockRefreshUser = vi.fn().mockResolvedValue(undefined)
 const mockShowToast = vi.fn()
 
+vi.mock('../../../hooks/mcp/shared', () => ({
+  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
+  clusterCacheRef: { clusters: [] },
+  REFRESH_INTERVAL_MS: 120_000,
+  CLUSTER_POLL_INTERVAL_MS: 60_000,
+}))
+
 vi.mock('react-router-dom', async (importOriginal) => {
   const actual = await importOriginal() as Record<string, unknown>
   return {

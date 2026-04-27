@@ -17,6 +17,13 @@ const STORAGE_KEY_TOKEN = 'token'
 
 const mockCacheResult = vi.fn()
 
+vi.mock('../mcp/shared', () => ({
+  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
+  clusterCacheRef: { clusters: [] },
+  REFRESH_INTERVAL_MS: 120_000,
+  CLUSTER_POLL_INTERVAL_MS: 60_000,
+}))
+
 vi.mock('../../lib/cache', () => ({
   useCache: (opts: { fetcher: () => Promise<unknown> }) => {
     // Store fetcher so tests can call it

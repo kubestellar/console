@@ -6,6 +6,13 @@ const resetCache = async () => {
   vi.resetModules()
 }
 
+vi.mock('../../hooks/mcp/shared', () => ({
+  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
+  clusterCacheRef: { clusters: [] },
+  REFRESH_INTERVAL_MS: 120_000,
+  CLUSTER_POLL_INTERVAL_MS: 60_000,
+}))
+
 describe('parseResourceRequests', () => {
   it('returns null when no resources block', () => {
     const yaml = 'replicaCount: 1\nimage:\n  tag: latest\n'

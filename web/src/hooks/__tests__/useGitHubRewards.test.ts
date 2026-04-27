@@ -15,6 +15,13 @@ import type { GitHubRewardsResponse } from '../../types/rewards'
 // ---------------------------------------------------------------------------
 
 const mockUseAuth = vi.fn<[], { user: { github_login: string } | null; isAuthenticated: boolean }>()
+vi.mock('../mcp/shared', () => ({
+  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
+  clusterCacheRef: { clusters: [] },
+  REFRESH_INTERVAL_MS: 120_000,
+  CLUSTER_POLL_INTERVAL_MS: 60_000,
+}))
+
 vi.mock('../../lib/auth', () => ({ useAuth: () => mockUseAuth() }))
 
 // Constants are simple values -- we mirror them here for localStorage setup.

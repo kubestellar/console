@@ -10,6 +10,13 @@ const { mockRegisterRefetch, mockUseClusters } = vi.hoisted(() => ({
   mockUseClusters: vi.fn(),
 }))
 
+vi.mock('../mcp/shared', () => ({
+  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
+  clusterCacheRef: { clusters: [] },
+  REFRESH_INTERVAL_MS: 120_000,
+  CLUSTER_POLL_INTERVAL_MS: 60_000,
+}))
+
 vi.mock('../useMCP', () => ({
   useClusters: () => mockUseClusters(),
 }))

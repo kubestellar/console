@@ -4,6 +4,13 @@ import type { ActionRequest, ActionResult } from '../useFederationActions'
 import { STORAGE_KEY_TOKEN } from '../../lib/constants'
 import { LOCAL_AGENT_HTTP_URL } from '../../lib/constants/network'
 
+vi.mock('../mcp/shared', () => ({
+  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
+  clusterCacheRef: { clusters: [] },
+  REFRESH_INTERVAL_MS: 120_000,
+  CLUSTER_POLL_INTERVAL_MS: 60_000,
+}))
+
 describe('executeFederationAction', () => {
     beforeEach(() => {
         localStorage.clear()
