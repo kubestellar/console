@@ -16,6 +16,7 @@ import { z } from 'zod'
 const REPO_ROOT = path.resolve(process.cwd(), '..')
 
 const SERVER_GO_PATH = path.join(REPO_ROOT, 'pkg/api/server.go')
+const ROUTES_HEALTH_GO_PATH = path.join(REPO_ROOT, 'pkg/api/routes_health.go')
 const USER_MODEL_PATH = path.join(REPO_ROOT, 'pkg/models/user.go')
 const SETTINGS_TYPES_PATH = path.join(REPO_ROOT, 'pkg/settings/types.go')
 
@@ -98,7 +99,8 @@ function getFiberMapKeys(source: string, routePath: string, methodName: string =
 
     // Find the handler block. Look for the first return or JSON response.
     // For /health, it defines 'resp := fiber.Map{ ... }'
-    const mainMapMatch = afterRoute.match(/resp\s*:=\s*fiber\.Map\{([\s\S]+?)\n\t\t\}/)
+    // Match closing brace on its own line (with optional indentation)
+    const mainMapMatch = afterRoute.match(/resp\s*:=\s*fiber\.Map\{([\s\S]+?)\n[ \t]*\}/)
     const mapMatch = mainMapMatch || afterRoute.match(/fiber\.Map\{([\s\S]+?)\}/)
     if (!mapMatch) return []
 
@@ -115,7 +117,7 @@ function getFiberMapKeys(source: string, routePath: string, methodName: string =
 
 describe('API Contract — /health', () => {
     it('backend /health response contains all expected top-level keys', () => {
-        const source = fs.readFileSync(SERVER_GO_PATH, 'utf-8')
+        const source = fs.readFileSync(ROUTES_HEALTH_GO_PATH, 'utf-8')
         const keys = getFiberMapKeys(source, '/health')
 
         // Check required top-level keys in HealthSchema
@@ -127,14 +129,14 @@ describe('API Contract — /health', () => {
     })
 
     it('backend /health branding sub-object contains all expected keys', () => {
-        const source = fs.readFileSync(SERVER_GO_PATH, 'utf-8')
+        const source = fs.readFileSync(ROUTES_HEALTH_GO_PATH, 'utf-8')
         // Find the branding fiber.Map inside /health
         const healthPattern = /app\.Get\("\/health",/
         const match = source.match(healthPattern)
         expect(match).not.toBeNull()
         const afterHealth = source.slice(match!.index)
 
-        const brandingMatch = afterHealth.match(/"branding":\s*fiber\.Map\{([\s\S]+?)\n\t\t\t\}/)
+        const brandingMatch = afterHealth.match(/"branding":\s*fiber\.Map\{([\s\S]+?)\n[ \t]*\},/)
         expect(brandingMatch).not.toBeNull()
 
         const body = brandingMatch![1]
@@ -153,7 +155,7 @@ describe('API Contract — /health', () => {
 
 describe('API Contract — /api/version', () => {
     it('backend /api/version response contains all expected keys', () => {
-        const source = fs.readFileSync(SERVER_GO_PATH, 'utf-8')
+        const source = fs.readFileSync(ROUTES_HEALTH_GO_PATH, 'utf-8')
         const keys = getFiberMapKeys(source, '/api/version')
 
         const expectedKeys = Object.keys(VersionSchema.shape)
