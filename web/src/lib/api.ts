@@ -150,6 +150,7 @@ function performSessionExpiry(): void {
       method: 'POST',
       headers,
       credentials: 'include',
+      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
     }).catch(() => {
       // Backend unreachable — cookie will expire naturally
     })

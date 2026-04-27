@@ -387,7 +387,7 @@ function sendViaProxy(
   if (navigator.sendBeacon) {
     navigator.sendBeacon(url)
   } else {
-    fetch(url, { method: 'POST', keepalive: true }).catch(() => {})
+    fetch(url, { method: 'POST', keepalive: true, signal: AbortSignal.timeout(5_000) }).catch(() => {})
   }
 }
 

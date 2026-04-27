@@ -190,7 +190,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (currentToken && currentToken !== DEMO_TOKEN_VALUE) {
       fetch('/auth/logout', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${currentToken}` } }).catch(() => {
+        headers: { Authorization: `Bearer ${currentToken}` },
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+      }).catch(() => {
         // Backend unreachable — token will expire naturally
       })
     }

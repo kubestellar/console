@@ -103,11 +103,17 @@ export function AuthCallback() {
 
         // Fetch the kc-agent shared secret so agentFetch() and WebSocket
         // connections can authenticate with the local agent.
+        const agentController = new AbortController()
+        const agentTimeoutId = setTimeout(() => agentController.abort(), AUTH_REFRESH_TIMEOUT_MS)
         return fetch('/api/agent/token', {
           credentials: 'same-origin',
           headers: { 'X-Requested-With': 'XMLHttpRequest' },
+          signal: agentController.signal,
         })
-          .then((agentRes) => agentRes.ok ? agentRes.json() : null)
+          .then((agentRes) => {
+            clearTimeout(agentTimeoutId)
+            return agentRes.ok ? agentRes.json() : null
+          })
           .then((agentData: { token?: string } | null) => {
             if (agentData?.token) safeSetItem('kc-agent-token', agentData.token)
           })
