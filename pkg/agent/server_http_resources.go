@@ -246,6 +246,8 @@ func (s *Server) handleEventsHTTP(w http.ResponseWriter, r *http.Request) {
 	// Filter by object name if specified. e.Object is formatted as
 	// \"Kind/Name\" (see pkg/k8s/client_resources.go); compare the Name
 	// segment exactly so a query like \"my-app\" does not match \"my-app-v2\".
+	// "Kind/Name" (see pkg/k8s/client_resources.go); compare the Name
+	// segment exactly so a query like "my-app" does not match "my-app-v2".
 	if objectName != "" {
 		filtered := make([]k8s.Event, 0, len(events))
 		for _, e := range events {
@@ -425,6 +427,7 @@ func (s *Server) handleDeploymentsHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	// An empty namespace is passed through to client-go's Deployments(\"\")
+	// An empty namespace is passed through to client-go's Deployments("")
 	// call, which lists deployments across all namespaces (#8121).
 	deployments, err := s.k8sClient.GetDeployments(ctx, cluster, namespace)
 	if err != nil {
@@ -1172,6 +1175,7 @@ func (s *Server) createRoleBindingHTTP(w http.ResponseWriter, r *http.Request) {
 		SubjectNS   string `json:"subjectNamespace,omitempty"`
 		// Role is only set by GrantNamespaceAccess callers; shortcut
 		// (\"admin\"/\"edit\"/\"view\") or a custom role name. Ignored when
+		// ("admin"/"edit"/"view") or a custom role name. Ignored when
 		// roleName is supplied.
 		Role string `json:"role,omitempty"`
 	}
@@ -1202,6 +1206,7 @@ func (s *Server) createRoleBindingHTTP(w http.ResponseWriter, r *http.Request) {
 	roleKind := req.RoleKind
 	if roleKind == "" {
 		// grant-access shortcuts (\"admin\"/\"edit\"/\"view\") map to
+		// grant-access shortcuts ("admin"/"edit"/"view") map to
 		// ClusterRoles in stock Kubernetes; custom role names default to
 		// ClusterRole as well since GrantNamespaceAccess historically used
 		// ClusterRole (see pkg/k8s/rbac.go GrantNamespaceAccess).
@@ -1345,4 +1350,76 @@ func (s *Server) handleLimitRangesHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, map[string]interface{}{"limitranges": ranges, "source": "agent"})
+}
+
+// handleResolveDepsHTTP resolves workload dependencies dynamically by walking
+// the pod spec, RBAC, services, ingresses, PDBs, HPAs, etc.
+func (s *Server) handleResolveDepsHTTP(w http.ResponseWriter, r *http.Request) {
+	s.setCORSHeaders(w, r)
+	w.Header().Set("Content-Type", "application/json")
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	// SECURITY: Validate token for ResolveDeps endpoint
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	if s.k8sClient == nil {
+		writeJSON(w, map[string]interface{}{
+			"dependencies": []interface{}{},
+			"error":        "k8s client not initialized",
+		})
+		return
+	}
+	cluster := r.URL.Query().Get("cluster")
+	namespace := r.URL.Query().Get("namespace")
+	name := r.URL.Query().Get("name")
+	if cluster == "" || namespace == "" || name == "" {
+		writeJSON(w, map[string]interface{}{
+			"dependencies": []interface{}{},
+			"error":        "cluster, namespace, and name parameters required",
+		})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), agentExtendedTimeout)
+	defer cancel()
+
+	kind, bundle, err := s.k8sClient.ResolveWorkloadDependencies(ctx, cluster, namespace, name)
+	if err != nil {
+		slog.Warn("error resolving dependencies", "namespace", namespace, "name", name, "cluster", cluster, "error", err)
+		writeJSON(w, map[string]interface{}{
+			"workload":     name,
+			"kind":         "Deployment",
+			"namespace":    namespace,
+			"cluster":      cluster,
+			"dependencies": []interface{}{},
+			"warnings":     []string{err.Error()},
+			"source":       "agent",
+		})
+		return
+	}
+
+	deps := make([]map[string]interface{}, 0, len(bundle.Dependencies))
+	for _, d := range bundle.Dependencies {
+		deps = append(deps, map[string]interface{}{
+			"kind":      string(d.Kind),
+			"name":      d.Name,
+			"namespace": d.Namespace,
+			"optional":  d.Optional,
+			"order":     d.Order,
+		})
+	}
+
+	writeJSON(w, map[string]interface{}{
+		"workload":     name,
+		"kind":         kind,
+		"namespace":    namespace,
+		"cluster":      cluster,
+		"dependencies": deps,
+		"warnings":     bundle.Warnings,
+		"source":       "agent",
+	})
 }

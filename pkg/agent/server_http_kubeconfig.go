@@ -324,3 +324,5 @@ func (s *Server) handleKubeconfigTestHTTP(w http.ResponseWriter, r *http.Request
 
 	writeJSON(w, result)
 }
+
+// handleWebSocket handles WebSocket connections

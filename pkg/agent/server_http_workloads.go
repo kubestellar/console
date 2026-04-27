@@ -280,6 +280,7 @@ func (s *Server) handleDeployWorkloadHTTP(w http.ResponseWriter, r *http.Request
 		GroupName      string   `json:"groupName,omitempty"`
 		// Optional informational annotation. The agent runs under the user's
 		// own kubeconfig so the \"deployedBy\" label is not security-relevant;
+		// own kubeconfig so the "deployedBy" label is not security-relevant;
 		// it's only used to annotate created resources. If unset, falls back
 		// to the anonymous marker used by MultiClusterClient.DeployWorkload.
 		DeployedBy string `json:"deployedBy,omitempty"`
