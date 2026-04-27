@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
+import { agentFetch } from './mcp/shared'
 
 export type BackendStatus = 'connected' | 'disconnected' | 'connecting'
 
@@ -154,7 +155,7 @@ class BackendHealthManager {
    *  downtime from browser connection-pool exhaustion on the main origin. */
   private async checkAgentHealth(): Promise<boolean> {
     try {
-      const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/health`, {
+      const res = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/health`, {
         method: 'GET',
         signal: AbortSignal.timeout(HEALTH_CHECK_TIMEOUT_MS),
       })

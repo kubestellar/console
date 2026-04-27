@@ -188,17 +188,22 @@ test.describe('Smoke Tests', () => {
       await page.waitForLoadState('domcontentloaded')
       await waitForNetworkIdleBestEffort(page)
 
-      // Check for theme toggle
-      const themeToggle = page.getByTestId('theme-toggle')
+      // Check for theme toggle — use a precise locator scoped to the navbar
+      // button (aria-label contains "theme") to avoid matching non-button
+      // elements in the ThemeSection dropdown.  Force-click because on
+      // webkit / firefox the Tooltip wrapper can report the button as "not
+      // stable" during CSS transitions (#nightly-playwright).
+      const THEME_POLL_TIMEOUT_MS = 10_000
+      const themeToggle = page.locator('nav button[aria-label*="theme" i]').first()
+        .or(page.getByTestId('theme-toggle'))
         .or(page.locator('button:has-text("Theme")'))
-        .or(page.locator('[aria-label*="theme"]'))
 
       if (await themeToggle.first().isVisible({ timeout: OPTIONAL_PROBE_TIMEOUT_MS })) {
         const htmlBefore = await page.locator('html').getAttribute('class')
-        await themeToggle.first().click()
+        await themeToggle.first().click({ force: true })
 
         await expect
-          .poll(async () => page.locator('html').getAttribute('class'))
+          .poll(async () => page.locator('html').getAttribute('class'), { timeout: THEME_POLL_TIMEOUT_MS })
           .not.toBe(htmlBefore)
       }
     })

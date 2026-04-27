@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { mapSettledWithConcurrency } from '../lib/utils/concurrency'
 import { isAgentUnavailable } from './useLocalAgent'
-import { clusterCacheRef } from './mcp/shared'
+import { clusterCacheRef, agentFetch } from './mcp/shared'
 import { isDemoMode } from '../lib/demoMode'
 import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN } from '../lib/constants'
 import { FETCH_DEFAULT_TIMEOUT_MS, MCP_HOOK_TIMEOUT_MS, POLL_INTERVAL_MS, POLL_INTERVAL_SLOW_MS } from '../lib/constants/network'
@@ -119,7 +119,7 @@ async function fetchWorkloadsViaAgent(opts?: {
       // Abort the per-request controller if the parent signal fires
       const onParentAbort = () => ctrl.abort()
       opts?.signal?.addEventListener('abort', onParentAbort)
-      const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/deployments?${params}`, {
+      const res = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/deployments?${params}`, {
         signal: ctrl.signal,
         headers: { Accept: 'application/json' } })
       clearTimeout(tid)

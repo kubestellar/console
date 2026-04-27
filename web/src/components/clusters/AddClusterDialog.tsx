@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { X, Terminal, Upload, FormInput } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { LOCAL_AGENT_HTTP_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
+import { agentFetch } from '../../hooks/mcp/shared'
 import { emitClusterCreated } from '../../lib/analytics'
 import { CommandLineTab } from './add-cluster/CommandLineTab'
 import { ImportTab } from './add-cluster/ImportTab'
@@ -50,7 +51,7 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
   // Fetch cloud CLI status from the agent
   useEffect(() => {
     if (!open) return
-    fetch(`${LOCAL_AGENT_HTTP_URL}/cloud-cli-status`, { signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
+    agentFetch(`${LOCAL_AGENT_HTTP_URL}/cloud-cli-status`, { signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       .then(res => res.json())
       .then(data => setCloudCLIs(data.clis || []))
       .catch(() => { /* non-critical — just won't show cloud quick connect */ })
@@ -91,7 +92,7 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
     setImportState('previewing')
     setErrorMessage('')
     try {
-      const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/kubeconfig/preview`, {
+      const res = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/kubeconfig/preview`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify({ kubeconfig: kubeconfigYaml }),
@@ -113,7 +114,7 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
     setImportState('importing')
     setErrorMessage('')
     try {
-      const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/kubeconfig/import`, {
+      const res = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/kubeconfig/import`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify({ kubeconfig: kubeconfigYaml }),
@@ -142,7 +143,7 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
     setTestResult(null)
     setConnectError('')
     try {
-      const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/kubeconfig/test`, {
+      const res = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/kubeconfig/test`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify({
@@ -167,7 +168,7 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
     setConnectState('adding')
     setConnectError('')
     try {
-      const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/kubeconfig/add`, {
+      const res = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/kubeconfig/add`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify({

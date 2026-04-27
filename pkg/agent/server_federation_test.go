@@ -172,12 +172,11 @@ func writeTestKubeconfig(t *testing.T, path string, entries map[string]string) {
 	}
 }
 
-// TestHandler_MissingBearerToken_500 asserts the plan's "no pod-SA fallback"
+// TestHandler_MissingBearerToken_401 asserts the "no pod-SA fallback"
 // contract: a federation read request without a valid bearer token returns
-// HTTP 500, loudly signaling the missing identity. 500 (not 401) is
-// intentional — it flags the class of request that must never execute
-// against the pod SA's identity.
-func TestHandler_MissingBearerToken_500(t *testing.T) {
+// HTTP 401 Unauthorized, loudly signaling the missing identity with the
+// semantically correct status code.
+func TestHandler_MissingBearerToken_401(t *testing.T) {
 	s := newTestServer(t, "", testBearerToken)
 
 	endpoints := []string{
@@ -199,8 +198,8 @@ func TestHandler_MissingBearerToken_500(t *testing.T) {
 			// No Authorization header at all — the strict test.
 			w := httptest.NewRecorder()
 			handlers[e](w, req)
-			if w.Code != http.StatusInternalServerError {
-				t.Fatalf("%s: got %d, want 500", e, w.Code)
+			if w.Code != http.StatusUnauthorized {
+				t.Fatalf("%s: got %d, want 401", e, w.Code)
 			}
 		})
 	}

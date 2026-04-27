@@ -1,33 +1,30 @@
 import { ReactNode, useState, useEffect, useCallback, useRef, useMemo, createContext, use, ComponentType, Suspense, lazy } from 'react'
-import { createPortal } from 'react-dom'
 import {
-  Maximize2, MoreVertical, Clock, Settings, Trash2, RefreshCw, MoveHorizontal, ChevronRight, ChevronDown, Info, Download, Link2, Bug, AlertTriangle, Sparkles, X } from 'lucide-react'
+  Maximize2, RefreshCw, ChevronRight, ChevronDown, Bug, AlertTriangle, Info,
+} from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { CARD_TITLES, CARD_DESCRIPTIONS, DEMO_EXEMPT_CARDS } from './cardMetadata'
 import { CARD_ICONS } from './cardIcons'
 import { BaseModal } from '../../lib/modals'
 import { MS_PER_HOUR } from '../../lib/constants/time'
 import { cn } from '../../lib/cn'
-import { Button } from '../ui/Button'
 import { useCardCollapse } from '../../lib/cards/cardHooks'
 import { useSnoozedCards } from '../../hooks/useSnoozedCards'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { isDemoMode as checkIsDemoMode } from '../../lib/demoMode'
-// useLocalAgent removed — cards render immediately regardless of agent state
-// isInClusterMode removed — cards render immediately without offline skeleton
 import { useIsModeSwitching } from '../../lib/unified/demo'
 import { CardDataReportContext, ForceLiveContext, type CardDataState } from './CardDataContext'
-import { useDashboardContextOptional } from '../../hooks/useDashboardContext'
 import { ChatMessage } from './CardChat'
 import { CardSkeleton, type CardSkeletonProps } from '../../lib/cards/CardComponents'
-import { isCardExportable } from '../../lib/widgets/widgetRegistry'
 import { emitCardExpanded, emitCardRefreshed } from '../../lib/analytics'
 import { useMissions } from '../../hooks/useMissions'
-import { useLocalAgent } from '../../hooks/useLocalAgent'
-import { CARD_INSTALL_MAP } from '../../lib/cards/cardInstallMap'
-import { loadMissionPrompt } from '../cards/multi-tenancy/missionLoader'
-import { ClusterSelectionDialog } from '../missions/ClusterSelectionDialog'
-import { ConfirmMissionPromptDialog } from '../missions/ConfirmMissionPromptDialog'
+import { LOADING_TIMEOUT_MS, SKELETON_DELAY_MS, INITIAL_RENDER_TIMEOUT_MS, TICK_INTERVAL_MS, CARD_LOADING_TIMEOUT_MS, MIN_SKELETON_DISPLAY_MS } from '../../lib/constants/network'
+import { formatTimeAgo } from '../../lib/formatters'
+import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
+import { InfoTooltip } from './card-wrapper/InfoTooltip'
+import { CardActionMenu } from './card-wrapper/CardActionMenu'
+import { PendingSwapNotification } from './card-wrapper/PendingSwapNotification'
+import { InstallCTAFlow } from './card-wrapper/InstallCTAFlow'
 // Lazy-load the widget export modal (~42 KB + code generator ~30 KB) — only when user exports
 const WidgetExportModal = lazy(() =>
   import('../widgets/WidgetExportModal').then(m => ({ default: m.WidgetExportModal }))
@@ -36,48 +33,10 @@ const WidgetExportModal = lazy(() =>
 const FeatureRequestModal = lazy(() =>
   import('../feedback/FeatureRequestModal').then(m => ({ default: m.FeatureRequestModal }))
 )
-import { LOADING_TIMEOUT_MS, SKELETON_DELAY_MS, INITIAL_RENDER_TIMEOUT_MS, TICK_INTERVAL_MS, CARD_LOADING_TIMEOUT_MS, MIN_SKELETON_DISPLAY_MS } from '../../lib/constants/network'
-import { formatTimeAgo } from '../../lib/formatters'
-import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
-import { copyToClipboard } from '../../lib/clipboard'
 
 
 // Minimum duration to show spin animation (ensures at least one full rotation)
 const MIN_SPIN_DURATION = 500
-
-// #6227: shared Escape-key coordinator. Multiple InfoTooltips (one per
-// CardWrapper) used to each register their own document-level keydown
-// listener; pressing Escape would fire ALL of them and close every open
-// tooltip on the dashboard at once. Now each tooltip pushes its close
-// callback onto a shared LIFO stack and only the topmost (most recently
-// opened) callback runs. A single document listener is registered on the
-// first push and removed on the last pop.
-const escapeStack: Array<() => void> = []
-let escapeListenerAttached = false
-function handleGlobalEscape(e: KeyboardEvent) {
-  if (e.key !== 'Escape' || escapeStack.length === 0) return
-  const top = escapeStack[escapeStack.length - 1]
-  // stopImmediatePropagation prevents any other peer keydown listeners
-  // (e.g. DrillDownModal) from firing on the same event when an
-  // InfoTooltip is the topmost element.
-  e.stopImmediatePropagation()
-  top()
-}
-function pushEscapeHandler(close: () => void): () => void {
-  escapeStack.push(close)
-  if (!escapeListenerAttached) {
-    document.addEventListener('keydown', handleGlobalEscape, true)
-    escapeListenerAttached = true
-  }
-  return () => {
-    const idx = escapeStack.lastIndexOf(close)
-    if (idx >= 0) escapeStack.splice(idx, 1)
-    if (escapeStack.length === 0 && escapeListenerAttached) {
-      document.removeEventListener('keydown', handleGlobalEscape, true)
-      escapeListenerAttached = false
-    }
-  }
-}
 
 /** Default snooze duration for card swaps */
 const DEFAULT_SNOOZE_MS = MS_PER_HOUR
@@ -92,32 +51,6 @@ const DEFAULT_SNOOZE_MS = MS_PER_HOUR
  * One minute is enough resolution for an "Xm/Xh/Xd" label and is cheap.
  */
 const LAST_UPDATED_TICK_MS = 60_000
-
-interface PendingSwap {
-  newType: string
-  newTitle?: string
-  reason: string
-  swapAt: Date
-}
-
-// Card width options (in grid columns out of 12)
-// labelKey/descKey reference cards.json cardWrapper.resize* keys
-const WIDTH_OPTIONS = [
-  { value: 3, labelKey: 'cardWrapper.resizeSmall' as const, descKey: 'cardWrapper.resizeSmallDesc' as const },
-  { value: 4, labelKey: 'cardWrapper.resizeMedium' as const, descKey: 'cardWrapper.resizeMediumDesc' as const },
-  { value: 6, labelKey: 'cardWrapper.resizeLarge' as const, descKey: 'cardWrapper.resizeLargeDesc' as const },
-  { value: 8, labelKey: 'cardWrapper.resizeWide' as const, descKey: 'cardWrapper.resizeWideDesc' as const },
-  { value: 12, labelKey: 'cardWrapper.resizeFull' as const, descKey: 'cardWrapper.resizeFullDesc' as const },
-]
-
-// Card height options (in grid row spans)
-// labelKey/descKey reference cards.json cardWrapper.height* keys
-const HEIGHT_OPTIONS = [
-  { value: 1, labelKey: 'cardWrapper.heightCompact' as const, descKey: 'cardWrapper.heightCompactDesc' as const },
-  { value: 2, labelKey: 'cardWrapper.heightDefault' as const, descKey: 'cardWrapper.heightDefaultDesc' as const },
-  { value: 3, labelKey: 'cardWrapper.heightTall' as const, descKey: 'cardWrapper.heightTallDesc' as const },
-  { value: 4, labelKey: 'cardWrapper.heightExtraTall' as const, descKey: 'cardWrapper.heightExtraTallDesc' as const },
-]
 
 // Cards that need extra-large expanded modal (for maps, complex visualizations, etc.)
 // These use 95vh height and 7xl width instead of the default 80vh/4xl
@@ -204,6 +137,13 @@ function useLazyMount(_rootMargin = '100px') {
 /** Flash type for significant data changes */
 export type CardFlashType = 'none' | 'info' | 'warning' | 'error'
 
+interface PendingSwap {
+  newType: string
+  newTitle?: string
+  reason: string
+  swapAt: Date
+}
+
 interface CardWrapperProps {
   cardId?: string
   cardType: string
@@ -264,117 +204,6 @@ interface CardWrapperProps {
 // Re-export for backwards compatibility — data now lives in cardMetadata.ts and cardIcons.ts
 export { CARD_TITLES, CARD_DESCRIPTIONS } from './cardMetadata'
 
-/**
- * Info tooltip that renders via portal to escape overflow-hidden containers.
- * Updates position on scroll to stay attached to the trigger element.
- */
-function InfoTooltip({ text }: { text: string }) {
-  const { t } = useTranslation('cards')
-  const [isVisible, setIsVisible] = useState(false)
-  const [position, setPosition] = useState<{ top: number; left: number } | null>(null)
-  const triggerRef = useRef<HTMLButtonElement>(null)
-  const tooltipRef = useRef<HTMLDivElement>(null)
-  const tooltipId = `info-tooltip-${Math.random().toString(36).slice(2, 9)}`
-
-  // Update position based on trigger element's current bounding rect
-  const updatePosition = useCallback(() => {
-    if (!triggerRef.current || !isVisible) return
-
-    const rect = triggerRef.current.getBoundingClientRect()
-    const tooltipWidth = 320 // max-w-xs (320px)
-    const tooltipHeight = tooltipRef.current?.offsetHeight || 80 // estimate
-
-    // Position below the icon by default
-    let top = rect.bottom + 8
-    let left = rect.left - (tooltipWidth / 2) + (rect.width / 2)
-
-    // Ensure tooltip stays within viewport
-    if (left < 8) left = 8
-    if (left + tooltipWidth > window.innerWidth - 8) {
-      left = window.innerWidth - tooltipWidth - 8
-    }
-
-    // If tooltip would go below viewport, position above
-    if (top + tooltipHeight > window.innerHeight - 8) {
-      top = rect.top - tooltipHeight - 8
-    }
-
-    setPosition({ top, left })
-  }, [isVisible])
-
-  // Update position on scroll and resize
-  useEffect(() => {
-    if (!isVisible) return
-
-    updatePosition()
-
-    // Update on scroll (any scrollable ancestor)
-    const handleScroll = () => updatePosition()
-    const handleResize = () => updatePosition()
-
-    window.addEventListener('scroll', handleScroll, true) // capture phase for nested scrolls
-    window.addEventListener('resize', handleResize)
-
-    return () => {
-      window.removeEventListener('scroll', handleScroll, true)
-      window.removeEventListener('resize', handleResize)
-    }
-  }, [isVisible, updatePosition])
-
-  // Close tooltip when clicking outside or pressing Escape
-  // #6227: Escape is routed through the shared escapeStack so only the
-  // topmost open tooltip closes — used to fire on every mounted tooltip.
-  useEffect(() => {
-    if (!isVisible) return
-
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as HTMLElement
-      if (!triggerRef.current?.contains(target) && !tooltipRef.current?.contains(target)) {
-        setIsVisible(false)
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside)
-    const popEscape = pushEscapeHandler(() => setIsVisible(false))
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-      popEscape()
-    }
-  }, [isVisible])
-
-  return (
-    <>
-      <button
-        ref={triggerRef}
-        onClick={() => setIsVisible(!isVisible)}
-        onMouseEnter={() => setIsVisible(true)}
-        onMouseLeave={() => setIsVisible(false)}
-        onFocus={() => setIsVisible(true)}
-        onBlur={() => setIsVisible(false)}
-        className="p-0.5 rounded text-muted-foreground/50 hover:text-muted-foreground transition-colors"
-        aria-label={t('cardWrapper.cardInfo')}
-        aria-describedby={isVisible ? tooltipId : undefined}
-      >
-        <Info className="w-3.5 h-3.5" />
-      </button>
-      {isVisible && position && createPortal(
-        <div
-          ref={tooltipRef}
-          id={tooltipId}
-          role="tooltip"
-          className="fixed z-dropdown max-w-xs px-3 py-2.5 text-xs leading-relaxed rounded-lg bg-background border border-border text-foreground shadow-xl animate-fade-in"
-          style={{ top: position.top, left: position.left }}
-          onMouseEnter={() => setIsVisible(true)}
-          onMouseLeave={() => setIsVisible(false)}
-        >
-          {text}
-        </div>,
-        document.body
-      )}
-    </>
-  )
-}
-
 export function CardWrapper({
   cardId,
   cardType,
@@ -411,9 +240,7 @@ export function CardWrapper({
   registerExpandTrigger,
   children }: CardWrapperProps) {
   const { t } = useTranslation(['cards', 'common'])
-  const { startMission, openSidebar, setFullScreen } = useMissions()
-  const { status: agentStatus } = useLocalAgent()
-  const isAgentConnected = agentStatus === 'connected'
+  const { setFullScreen } = useMissions()
   const [isExpanded, setIsExpanded] = useState(false)
   /** Live container dimensions for expanded modal — games use this to scale their boards */
   const [containerSize, setContainerSize] = useState<CardContainerSize>({ width: 0, height: 0 })
@@ -437,18 +264,7 @@ export function CardWrapper({
     return () => observer.disconnect()
   }, [isExpanded])
   const [showBugReport, setShowBugReport] = useState(false)
-  const [showInstallClusterSelect, setShowInstallClusterSelect] = useState(false)
-  const [showInstallGuide, setShowInstallGuide] = useState<{ mission: { mission?: { title?: string; description?: string; steps?: { title?: string; description?: string }[] } } } | null>(null)
-  /**
-   * State for the install-via-AI prompt confirmation dialog (#5913).
-   * After the user picks clusters, we load the prompt and stash it here so
-   * the user can review/edit it before the mission actually starts.
-   */
-  const [pendingInstallMission, setPendingInstallMission] = useState<{
-    prompt: string
-    clusters: string[]
-  } | null>(null)
-  const installInfo = CARD_INSTALL_MAP[cardType]
+  const [showWidgetExport, setShowWidgetExport] = useState(false)
 
   // Register expand trigger for keyboard navigation
   useEffect(() => {
@@ -633,28 +449,15 @@ export function CardWrapper({
   }
 
   const [showSummary, setShowSummary] = useState(false)
-  const [showMenu, setShowMenu] = useState(false)
-  const [showWidgetExport, setShowWidgetExport] = useState(false)
-  const studioContext = useDashboardContextOptional()
-  const [showResizeMenu, setShowResizeMenu] = useState(false)
-  const [showHeightMenu, setShowHeightMenu] = useState(false)
-  const [resizeMenuOnLeft, setResizeMenuOnLeft] = useState(false)
-  const [heightMenuOnLeft, setHeightMenuOnLeft] = useState(false)
-  const heightMenuContainerRef = useRef<HTMLDivElement>(null)
   const [__timeRemaining, setTimeRemaining] = useState<number | null>(null)
   // Chat state reserved for future use
   // const [isChatOpen, setIsChatOpen] = useState(false)
   const [localMessages, setLocalMessages] = useState<ChatMessage[]>([])
-  const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null)
   const { snoozeSwap } = useSnoozedCards()
   const { isDemoMode: globalDemoMode } = useDemoMode()
   const isModeSwitching = useIsModeSwitching()
   const isDemoExempt = DEMO_EXEMPT_CARDS.has(cardType)
   const isDemoMode = globalDemoMode && !isDemoExempt && !forceLive
-
-  // Agent offline detection removed — cards render immediately regardless of agent state
-  const menuContainerRef = useRef<HTMLDivElement>(null)
-  const menuButtonRef = useRef<HTMLButtonElement>(null)
 
   // Report callback for CardDataContext (childDataState is declared earlier for refresh animation)
   // Must be useCallback — CardDataContext children use this in useLayoutEffect deps
@@ -816,122 +619,6 @@ export function CardWrapper({
       onSwap(pendingSwap.newType)
     }
   }
-
-  // Close resize/height submenus when main menu closes (#7869)
-  useEffect(() => {
-    if (!showMenu) {
-      setShowResizeMenu(false)
-      setShowHeightMenu(false)
-      setMenuPosition(null)
-    }
-  }, [showMenu])
-
-  // Close this menu when another card's menu opens (#8556).
-  // Each menu dispatches 'card-menu-open' with its card ID; all others close.
-  useEffect(() => {
-    function handleOtherMenuOpen(e: Event) {
-      const detail = (e as CustomEvent).detail
-      if (detail !== cardId && showMenu) {
-        setShowMenu(false)
-      }
-    }
-    window.addEventListener('card-menu-open', handleOtherMenuOpen)
-    return () => window.removeEventListener('card-menu-open', handleOtherMenuOpen)
-  }, [showMenu, cardId])
-
-  // Keep menu anchored to button on scroll/resize.
-  // Includes boundary detection to prevent the menu from rendering off-screen (#5253).
-  useEffect(() => {
-    if (!showMenu || !menuButtonRef.current) return
-
-    /** Approximate height of the card action menu (px) */
-    const MENU_APPROX_HEIGHT = 300
-    /** Width of the card action menu (w-48 = 192px) */
-    const MENU_WIDTH_PX = 192
-    /** Viewport edge padding (px) */
-    const VIEWPORT_PADDING = 8
-
-    const updatePosition = () => {
-      if (menuButtonRef.current) {
-        const rect = menuButtonRef.current.getBoundingClientRect()
-        let top = rect.bottom + 4
-        let right = window.innerWidth - rect.right
-
-        // If the menu would extend below the viewport, position it above the button
-        if (top + MENU_APPROX_HEIGHT > window.innerHeight - VIEWPORT_PADDING) {
-          top = Math.max(VIEWPORT_PADDING, rect.top - MENU_APPROX_HEIGHT - 4)
-        }
-        // If the menu would extend beyond the right edge, clamp it
-        if (right < VIEWPORT_PADDING) {
-          right = VIEWPORT_PADDING
-        }
-        // If the menu would extend beyond the left edge, clamp it
-        const leftEdge = window.innerWidth - right - MENU_WIDTH_PX
-        if (leftEdge < VIEWPORT_PADDING) {
-          right = window.innerWidth - MENU_WIDTH_PX - VIEWPORT_PADDING
-        }
-
-        setMenuPosition({ top, right })
-      }
-    }
-
-    // Find the scrollable parent (the main content area)
-    let scrollParent: HTMLElement | Window = window
-    let el = menuButtonRef.current.parentElement
-    while (el) {
-      const overflow = window.getComputedStyle(el).overflowY
-      if (overflow === 'auto' || overflow === 'scroll') {
-        scrollParent = el
-        break
-      }
-      el = el.parentElement
-    }
-
-    scrollParent.addEventListener('scroll', updatePosition, { passive: true })
-    window.addEventListener('resize', updatePosition, { passive: true })
-    return () => {
-      scrollParent.removeEventListener('scroll', updatePosition)
-      window.removeEventListener('resize', updatePosition)
-    }
-  }, [showMenu])
-
-  // Close menu when clicking outside
-  useEffect(() => {
-    if (!showMenu) return
-
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as HTMLElement
-      // Check if click is outside the menu button and menu content
-      if (!target.closest('[data-tour="card-menu"]') && !target.closest('.fixed.glass')) {
-        setShowMenu(false)
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [showMenu])
-
-  // Calculate if Resize/Height submenu should flip to the left side.
-  // Height uses its own state so opening Height after Width recomputes position (#7869).
-  /** Submenu width — matches w-36 tailwind class (9rem = 144px). */
-  const SUBMENU_WIDTH_PX = 144
-  /** Right-edge margin before flipping submenu to the left side. */
-  const SUBMENU_EDGE_MARGIN_PX = 20
-  useEffect(() => {
-    if (showResizeMenu && menuContainerRef.current) {
-      const rect = menuContainerRef.current.getBoundingClientRect()
-      const shouldBeOnLeft = rect.right + SUBMENU_WIDTH_PX + SUBMENU_EDGE_MARGIN_PX > window.innerWidth
-      setResizeMenuOnLeft(shouldBeOnLeft)
-    }
-  }, [showResizeMenu])
-
-  useEffect(() => {
-    if (showHeightMenu && heightMenuContainerRef.current) {
-      const rect = heightMenuContainerRef.current.getBoundingClientRect()
-      const shouldBeOnLeft = rect.right + SUBMENU_WIDTH_PX + SUBMENU_EDGE_MARGIN_PX > window.innerWidth
-      setHeightMenuOnLeft(shouldBeOnLeft)
-    }
-  }, [showHeightMenu])
 
   // Silence unused variable warnings for future chat implementation
   void messages
@@ -1122,245 +809,17 @@ export function CardWrapper({
                 >
                   <Bug className="w-4 h-4" aria-hidden="true" />
                 </button>
-                <div className="relative" data-tour="card-menu">
-                  <button
-                    ref={menuButtonRef}
-                    onClick={() => {
-                      if (!showMenu && menuButtonRef.current) {
-                        const rect = menuButtonRef.current.getBoundingClientRect()
-                        /** Approximate height of the card action menu (px) */
-                        const MENU_APPROX_HEIGHT = 300
-                        /** Width of the card action menu (w-48 = 192px) */
-                        const MENU_WIDTH_PX = 192
-                        /** Viewport edge padding (px) */
-                        const VIEWPORT_PADDING = 8
-
-                        let top = rect.bottom + 4
-                        let right = window.innerWidth - rect.right
-
-                        // Prevent menu from rendering off-screen (#5253)
-                        if (top + MENU_APPROX_HEIGHT > window.innerHeight - VIEWPORT_PADDING) {
-                          top = Math.max(VIEWPORT_PADDING, rect.top - MENU_APPROX_HEIGHT - 4)
-                        }
-                        if (right < VIEWPORT_PADDING) {
-                          right = VIEWPORT_PADDING
-                        }
-                        const leftEdge = window.innerWidth - right - MENU_WIDTH_PX
-                        if (leftEdge < VIEWPORT_PADDING) {
-                          right = window.innerWidth - MENU_WIDTH_PX - VIEWPORT_PADDING
-                        }
-
-                        setMenuPosition({ top, right })
-                      }
-                      const opening = !showMenu
-                      if (opening) {
-                        window.dispatchEvent(new CustomEvent('card-menu-open', { detail: cardId }))
-                      }
-                      setShowMenu(opening)
-                    }}
-                    className="p-1.5 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors"
-                    aria-label={t('cardWrapper.cardMenuTooltip')}
-                    aria-expanded={showMenu}
-                    aria-haspopup="menu"
-                    title={t('cardWrapper.cardMenuTooltip')}
-                  >
-                    <MoreVertical className="w-4 h-4" aria-hidden="true" />
-                  </button>
-                  {showMenu && menuPosition && createPortal(
-                    <div
-                      className="fixed w-48 glass rounded-lg py-1 z-50 shadow-xl bg-glass-overlay!"
-                      role="menu"
-                      aria-label={t('cardWrapper.cardMenuTooltip')}
-                      style={{ top: menuPosition.top, right: menuPosition.right }}
-                      onKeyDown={(e) => {
-                        if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
-                        e.preventDefault()
-                        const items = e.currentTarget.querySelectorAll<HTMLElement>('button[role="menuitem"]:not([disabled])')
-                        const idx = Array.from(items).indexOf(document.activeElement as HTMLElement)
-                        if (e.key === 'ArrowDown') items[Math.min(idx + 1, items.length - 1)]?.focus()
-                        else items[Math.max(idx - 1, 0)]?.focus()
-                      }}
-                    >
-                      <button
-                        onClick={() => {
-                          setShowMenu(false)
-                          onConfigure?.()
-                        }}
-                        className="w-full px-4 py-2 text-left text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 flex items-center gap-2"
-                        role="menuitem"
-                        title={t('cardWrapper.configureTooltip')}
-                      >
-                        <Settings className="w-4 h-4" aria-hidden="true" />
-                        {t('common:actions.configure')}
-                      </button>
-                      <button
-                        onClick={() => {
-                          setShowMenu(false)
-                          const url = `${window.location.origin}${window.location.pathname}?card=${cardType}`
-                          copyToClipboard(url)
-                        }}
-                        className="w-full px-4 py-2 text-left text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 flex items-center gap-2"
-                        role="menuitem"
-                        title={t('cardWrapper.copyLinkTooltip')}
-                      >
-                        <Link2 className="w-4 h-4" aria-hidden="true" />
-                        {t('cardWrapper.copyLink')}
-                      </button>
-                      {/* Resize submenu */}
-                      {onWidthChange && (
-                        <div className="relative" ref={menuContainerRef}>
-                          <button
-                            onClick={() => {
-                              setShowResizeMenu(!showResizeMenu)
-                              setShowHeightMenu(false)
-                            }}
-                            className="w-full px-4 py-2 text-left text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 flex flex-wrap items-center justify-between gap-y-2"
-                            role="menuitem"
-                            aria-haspopup="menu"
-                            aria-expanded={showResizeMenu}
-                            title={t('cardWrapper.resizeTooltip')}
-                          >
-                            <span className="flex items-center gap-2">
-                              <MoveHorizontal className="w-4 h-4" aria-hidden="true" />
-                              {t('cardWrapper.resize')}
-                            </span>
-                            <ChevronRight className={cn('w-4 h-4 transition-transform', showResizeMenu && 'rotate-90')} aria-hidden="true" />
-                          </button>
-                          {showResizeMenu && (
-                            <div
-                              className={cn(
-                                'absolute top-0 w-36 glass rounded-lg py-1 z-20',
-                                resizeMenuOnLeft ? 'right-full mr-1' : 'left-full ml-1'
-                              )}
-                              role="menu"
-                              onKeyDown={(e) => {
-                                if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
-                                e.preventDefault()
-                                const items = e.currentTarget.querySelectorAll<HTMLElement>('button[role="menuitem"]:not([disabled])')
-                                const idx = Array.from(items).indexOf(document.activeElement as HTMLElement)
-                                if (e.key === 'ArrowDown') items[Math.min(idx + 1, items.length - 1)]?.focus()
-                                else items[Math.max(idx - 1, 0)]?.focus()
-                              }}
-                            >
-                              {WIDTH_OPTIONS.map((option) => (
-                                <button
-                                  key={option.value}
-                                  onClick={() => {
-                                    onWidthChange(option.value)
-                                    setShowResizeMenu(false)
-                                    setShowMenu(false)
-                                  }}
-                                  className={cn(
-                                    'w-full px-3 py-2 text-left text-sm flex flex-wrap items-center justify-between gap-y-2',
-                                    cardWidth === option.value
-                                      ? 'text-purple-400 bg-purple-500/10'
-                                      : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
-                                  )}
-                                  role="menuitem"
-                                >
-                                  <span>{t(option.labelKey)}</span>
-                                  <span className="text-xs opacity-60">{t(option.descKey)}</span>
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                      {/* Height resize submenu (#6463) */}
-                      {onHeightChange && (
-                        <div className="relative" ref={heightMenuContainerRef}>
-                          <button
-                            onClick={() => {
-                              setShowHeightMenu(!showHeightMenu)
-                              setShowResizeMenu(false)
-                            }}
-                            className="w-full px-4 py-2 text-left text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 flex flex-wrap items-center justify-between gap-y-2"
-                            role="menuitem"
-                            aria-haspopup="menu"
-                            aria-expanded={showHeightMenu}
-                            title={t('cardWrapper.resizeHeightTooltip')}
-                          >
-                            <span className="flex items-center gap-2">
-                              <MoveHorizontal className="w-4 h-4 rotate-90" aria-hidden="true" />
-                              {t('cardWrapper.resizeHeight')}
-                            </span>
-                            <ChevronRight className={cn('w-4 h-4 transition-transform', showHeightMenu && 'rotate-90')} aria-hidden="true" />
-                          </button>
-                          {showHeightMenu && (
-                            <div
-                              className={cn(
-                                'absolute top-0 w-36 glass rounded-lg py-1 z-20',
-                                heightMenuOnLeft ? 'right-full mr-1' : 'left-full ml-1'
-                              )}
-                              role="menu"
-                              onKeyDown={(e) => {
-                                if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
-                                e.preventDefault()
-                                const items = e.currentTarget.querySelectorAll<HTMLElement>('button[role="menuitem"]:not([disabled])')
-                                const idx = Array.from(items).indexOf(document.activeElement as HTMLElement)
-                                if (e.key === 'ArrowDown') items[Math.min(idx + 1, items.length - 1)]?.focus()
-                                else items[Math.max(idx - 1, 0)]?.focus()
-                              }}
-                            >
-                              {HEIGHT_OPTIONS.map((option) => (
-                                <button
-                                  key={option.value}
-                                  onClick={() => {
-                                    onHeightChange(option.value)
-                                    setShowHeightMenu(false)
-                                    setShowMenu(false)
-                                  }}
-                                  className={cn(
-                                    'w-full px-3 py-2 text-left text-sm flex flex-wrap items-center justify-between gap-y-2',
-                                    cardHeight === option.value
-                                      ? 'text-purple-400 bg-purple-500/10'
-                                      : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
-                                  )}
-                                  role="menuitem"
-                                >
-                                  <span>{t(option.labelKey)}</span>
-                                  <span className="text-xs opacity-60">{t(option.descKey)}</span>
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                      {isCardExportable(cardType) && (
-                        <button
-                          onClick={() => {
-                            setShowMenu(false)
-                            // Open Console Studio at Widgets section with this card pre-selected
-                            if (studioContext?.openAddCardModal) {
-                              studioContext.openAddCardModal('widgets', cardType)
-                            } else {
-                              setShowWidgetExport(true)
-                            }
-                          }}
-                          className="w-full px-4 py-2 text-left text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 flex items-center gap-2"
-                          role="menuitem"
-                          title={t('cardWrapper.exportWidgetTooltip')}
-                        >
-                          <Download className="w-4 h-4" aria-hidden="true" />
-                          {t('cardWrapper.exportWidget')}
-                        </button>
-                      )}
-                      <button
-                        onClick={() => {
-                          setShowMenu(false)
-                          onRemove?.()
-                        }}
-                        className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-red-500/10 flex items-center gap-2"
-                        role="menuitem"
-                        title={t('cardWrapper.removeTooltip')}
-                      >
-                        <Trash2 className="w-4 h-4" aria-hidden="true" />
-                        {t('common:actions.remove')}
-                      </button>
-                    </div>,
-                    document.body
-                  )}
-                </div>
+                <CardActionMenu
+                  cardId={cardId}
+                  cardType={cardType}
+                  cardWidth={cardWidth}
+                  cardHeight={cardHeight}
+                  onConfigure={onConfigure}
+                  onRemove={onRemove}
+                  onWidthChange={onWidthChange}
+                  onHeightChange={onHeightChange}
+                  onShowWidgetExport={() => setShowWidgetExport(true)}
+                />
               </div>
             </div>
 
@@ -1447,38 +906,7 @@ export function CardWrapper({
                     </div>
                     {/* Demo CTA — install prompt for live data */}
                     {showDemoIndicator && !shouldShowSkeleton && !DEMO_EXEMPT_CARDS.has(cardType) && (
-                      <div className="mt-auto pt-2 border-t border-yellow-500/10">
-                        <button
-                          onClick={async (e) => {
-                            e.stopPropagation()
-                            if (isAgentConnected && installInfo) {
-                              // Agent available: show cluster selector, then start AI mission
-                              setShowInstallClusterSelect(true)
-                            } else if (installInfo) {
-                              // No agent: try to load KB guide and show manual steps
-                              try {
-                                const resp = await fetch(`/console-kb/${installInfo.kbPaths[0]}`, { signal: AbortSignal.timeout(10_000) })
-                                if (resp.ok) {
-                                  const data = await resp.json()
-                                  setShowInstallGuide({ mission: data })
-                                }
-                              } catch { /* ignore fetch error */ }
-                            } else {
-                              // Generic fallback: start AI mission
-                              startMission({
-                                title: `Set up ${title} for live data`,
-                                description: `Install and configure the components needed for live data`,
-                                type: 'deploy',
-                                initialPrompt: `The user is viewing the "${title}" dashboard card which is currently showing demo data. Help them install and configure whatever is needed to get live data for this card.` })
-                              openSidebar()
-                            }
-                          }}
-                          className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs text-yellow-400/80 hover:text-yellow-300 hover:bg-yellow-500/10 rounded transition-colors"
-                        >
-                          <Sparkles className="w-3 h-3" />
-                          <span>Install {installInfo?.project ?? 'components'} for live data</span>
-                        </button>
-                      </div>
+                      <InstallCTAFlow cardType={cardType} title={title} />
                     )}
                   </>
                 ) : (
@@ -1492,44 +920,14 @@ export function CardWrapper({
 
             {/* Pending swap notification - hidden when collapsed */}
             {!isCollapsed && pendingSwap && (
-              <div className="px-4 py-3 bg-purple-500/10 border-t border-purple-500/20">
-                <div className="flex items-center gap-2 text-sm">
-                  <span title={t('cardWrapper.swapPending')}><Clock className="w-4 h-4 text-purple-400 animate-pulse" /></span>
-                  <span className="text-purple-300">
-                    {t('common:labels.swappingTo', { cardName: newTitle })}
-                  </span>
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">{pendingSwap.reason}</p>
-                <div className="flex gap-2 mt-2">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => handleSnooze(DEFAULT_SNOOZE_MS)}
-                    className="rounded"
-                    title={t('cardWrapper.snoozeTooltip')}
-                  >
-                    {t('common:buttons.snoozeHour')}
-                  </Button>
-                  <Button
-                    variant="accent"
-                    size="sm"
-                    onClick={handleSwapNow}
-                    className="rounded"
-                    title={t('cardWrapper.swapNowTooltip')}
-                  >
-                    {t('common:buttons.swapNow')}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onSwapCancel?.()}
-                    className="rounded"
-                    title={t('cardWrapper.keepThisTooltip')}
-                  >
-                    {t('common:buttons.keepThis')}
-                  </Button>
-                </div>
-              </div>
+              <PendingSwapNotification
+                pendingSwap={pendingSwap}
+                newTitle={newTitle}
+                onSnooze={handleSnooze}
+                onSwapNow={handleSwapNow}
+                onCancel={() => onSwapCancel?.()}
+                defaultSnoozeDurationMs={DEFAULT_SNOOZE_MS}
+              />
             )}
 
             {/* Hover summary */}
@@ -1582,82 +980,6 @@ export function CardWrapper({
                 cardType={cardType}
               />
             </Suspense>
-          )}
-
-          {/* Install CTA: cluster selection dialog (agent available) */}
-          {showInstallClusterSelect && installInfo && (
-            <ClusterSelectionDialog
-              open={showInstallClusterSelect}
-              onCancel={() => setShowInstallClusterSelect(false)}
-              onSelect={async (clusters) => {
-                setShowInstallClusterSelect(false)
-                const prompt = await loadMissionPrompt(
-                  installInfo.missionKey,
-                  `Install and configure ${installInfo.project} for live data on the "${title}" dashboard card.`,
-                  installInfo.kbPaths,
-                )
-                const clusterContext = clusters.length > 0
-                  ? `\n\n**Target cluster(s):** ${clusters.join(', ')}\n\nPlease install on ${clusters.length === 1 ? `cluster "${clusters[0]}"` : `the following clusters: ${clusters.join(', ')}`}.`
-                  : ''
-                // #5913 — Do not start the mission yet. Stash the prompt and
-                // let the user review/edit it via ConfirmMissionPromptDialog.
-                setPendingInstallMission({
-                  prompt: prompt + clusterContext,
-                  clusters,
-                })
-              }}
-              missionTitle={`Install ${installInfo.project}`}
-            />
-          )}
-
-          {/* Install CTA: confirm and edit the AI mission prompt before running (#5913) */}
-          {pendingInstallMission && installInfo && (
-            <ConfirmMissionPromptDialog
-              open={!!pendingInstallMission}
-              missionTitle={`Install ${installInfo.project}`}
-              missionDescription={`Install and configure ${installInfo.project}`}
-              initialPrompt={pendingInstallMission.prompt}
-              onCancel={() => setPendingInstallMission(null)}
-              onConfirm={(editedPrompt) => {
-                const { clusters } = pendingInstallMission
-                setPendingInstallMission(null)
-                startMission({
-                  title: `Install ${installInfo.project}`,
-                  description: `Install and configure ${installInfo.project}`,
-                  type: 'deploy',
-                  cluster: clusters.length > 0 ? clusters.join(',') : undefined,
-                  initialPrompt: editedPrompt,
-                  skipReview: true,
-                })
-                openSidebar()
-              }}
-            />
-          )}
-
-          {/* Install CTA: manual guide modal (no agent) */}
-          {showInstallGuide && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs" role="presentation" onClick={() => setShowInstallGuide(null)}>
-              <div className="bg-card border border-border rounded-xl shadow-2xl max-w-lg w-full mx-4 max-h-[80vh] overflow-y-auto p-6" role="dialog" aria-modal="true" aria-labelledby="install-guide-title" onClick={e => e.stopPropagation()}>
-                <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
-                  <h3 id="install-guide-title" className="text-lg font-semibold">{showInstallGuide.mission.mission?.title ?? `Install ${installInfo?.project ?? 'Component'}`}</h3>
-                  <button onClick={() => setShowInstallGuide(null)} className="p-2 min-h-11 min-w-11 flex items-center justify-center hover:bg-secondary rounded" aria-label="Close dialog"><X className="w-4 h-4" /></button>
-                </div>
-                {showInstallGuide.mission.mission?.description && (
-                  <p className="text-sm text-muted-foreground mb-4">{showInstallGuide.mission.mission.description}</p>
-                )}
-                <ol className="space-y-4">
-                  {(showInstallGuide.mission.mission?.steps ?? []).map((step: { title?: string; description?: string }, i: number) => (
-                    <li key={i} className="flex gap-3">
-                      <span className="shrink-0 w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 text-xs flex items-center justify-center font-medium">{i + 1}</span>
-                      <div className="flex-1 min-w-0">
-                        {step.title && <p className="text-sm font-medium mb-1">{step.title}</p>}
-                        {step.description && <div className="text-sm text-muted-foreground whitespace-pre-wrap">{step.description}</div>}
-                      </div>
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            </div>
           )}
 
           {/* Per-card bug/feature report modal */}

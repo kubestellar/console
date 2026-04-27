@@ -12,9 +12,9 @@ import {
   LOCAL_AGENT_HTTP_URL,
   MCP_HOOK_TIMEOUT_MS,
   METRICS_SERVER_TIMEOUT_MS,
-  STORAGE_KEY_TOKEN,
   DEFAULT_REFRESH_INTERVAL_MS,
 } from '../../lib/constants'
+import { STORAGE_KEY_TOKEN } from '../../lib/constants/storage'
 import { MCP_PROBE_TIMEOUT_MS, FOCUS_DELAY_MS, KUBECTL_MAX_TIMEOUT_MS } from '../../lib/constants/network'
 import type { ClusterInfo, ClusterHealth } from './types'
 
@@ -911,7 +911,7 @@ export function connectSharedWebSocket() {
         return
       }
       // Send authentication message - backend requires this within 5 seconds
-      const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+      const token = localStorage.getItem(AGENT_TOKEN_STORAGE_KEY)
       if (token) {
         ws.send(JSON.stringify({ type: 'auth', token }))
       } else {
@@ -1155,13 +1155,13 @@ export async function fetchSingleClusterHealth(clusterName: string, kubectlConte
   }
 
   // Fall back to backend API
-  const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+  const agentToken = localStorage.getItem(AGENT_TOKEN_STORAGE_KEY)
   try {
     const response = await fetch(
       `${LOCAL_AGENT_HTTP_URL}/clusters/${encodeURIComponent(clusterName)}/health`,
       {
         signal: AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS),
-        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        headers: agentToken ? { 'Authorization': `Bearer ${agentToken}` } : {},
       }
     )
     if (response.ok) {
@@ -1276,8 +1276,8 @@ async function detectClusterDistribution(clusterName: string, kubectlContext?: s
     return {}
   }
 
-  const token = localStorage.getItem(STORAGE_KEY_TOKEN)
-  const headers: Record<string, string> = token ? { 'Authorization': `Bearer ${token}` } : {}
+  const agentToken = localStorage.getItem(AGENT_TOKEN_STORAGE_KEY)
+  const headers: Record<string, string> = agentToken ? { 'Authorization': `Bearer ${agentToken}` } : {}
 
   // Helper to extract namespaces from API response
   const extractNamespaces = (items: Array<{ namespace?: string }>): string[] => {

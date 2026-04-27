@@ -109,9 +109,8 @@ describe('AlertListItem', () => {
   it('calls onAlertClick when the row is clicked', () => {
     renderAlertListItem()
 
-    // Click the main container
-    const container = screen.getByText('HighCPU').closest('.p-2')!
-    fireEvent.click(container)
+    const clickable = screen.getByRole('button', { name: /viewAlertDetailsAria/i })
+    fireEvent.click(clickable)
 
     expect(mockOnAlertClick).toHaveBeenCalledWith(BASE_ALERT)
   })

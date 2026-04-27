@@ -9,7 +9,7 @@
 import { useCache, type RefreshCategory, type CachedHookResult } from '../lib/cache'
 import { isBackendUnavailable } from '../lib/api'
 import { kubectlProxy } from '../lib/kubectlProxy'
-import { clusterCacheRef } from './mcp/shared'
+import { clusterCacheRef, agentFetch } from './mcp/shared'
 import { isAgentUnavailable } from './useLocalAgent'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 import { FETCH_DEFAULT_TIMEOUT_MS, KUBECTL_EXTENDED_TIMEOUT_MS } from '../lib/constants/network'
@@ -484,7 +484,7 @@ export function useCachedDeploymentIssues(
               if (namespace) params.append('namespace', namespace)
               const ctrl = new AbortController()
               const tid = setTimeout(() => ctrl.abort(), AGENT_HTTP_TIMEOUT_MS)
-              const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/deployments?${params}`, {
+              const res = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/deployments?${params}`, {
                 signal: ctrl.signal, headers: { Accept: 'application/json' } })
               clearTimeout(tid)
               if (!res.ok) return []
@@ -560,7 +560,7 @@ export function useCachedDeployments(
 
           const controller = new AbortController()
           const timeoutId = setTimeout(() => controller.abort(), AGENT_HTTP_TIMEOUT_MS)
-          const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/deployments?${params}`, {
+          const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/deployments?${params}`, {
             signal: controller.signal,
             headers: { Accept: 'application/json' } })
           clearTimeout(timeoutId)

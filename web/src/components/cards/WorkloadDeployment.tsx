@@ -31,7 +31,7 @@ import { useDemoMode } from '../../hooks/useDemoMode'
 import { useTranslation } from 'react-i18next'
 import { isAgentUnavailable } from '../../hooks/useLocalAgent'
 import { LOCAL_AGENT_HTTP_URL, MCP_HOOK_TIMEOUT_MS } from '../../lib/constants'
-import { clusterCacheRef } from '../../hooks/mcp/shared'
+import { clusterCacheRef, agentFetch } from '../../hooks/mcp/shared'
 import { WorkloadImportDialog } from './WorkloadImportDialog'
 
 // Workload types
@@ -221,7 +221,7 @@ async function scaleViaAgent(
   const ctrl = new AbortController()
   const tid = setTimeout(() => ctrl.abort(), MCP_HOOK_TIMEOUT_MS)
   try {
-    const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/scale`, {
+    const res = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/scale`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
       signal: ctrl.signal,

@@ -109,9 +109,11 @@ test.describe('Dashboard Page', () => {
 
         // Each card must render a visible <h3> heading (the title shown in
         // the card header). If a card variant ever stops rendering the
-        // heading, this catches it.
+        // heading, this catches it. On mobile viewports the card may still
+        // be loading when the loop runs, so give the heading extra time.
+        const HEADING_TIMEOUT_MS = 5_000
         const heading = card.locator('h3').first()
-        await expect(heading).toBeVisible()
+        await expect(heading).toBeVisible({ timeout: HEADING_TIMEOUT_MS })
         await expect(heading).not.toHaveText('')
       }
     })
@@ -190,6 +192,7 @@ test.describe('Dashboard Page', () => {
       await page.addInitScript(() => {
         localStorage.setItem('token', 'test-token')
         localStorage.setItem('demo-user-onboarded', 'true')
+        localStorage.setItem('kc-demo-mode', 'false')
       })
 
       await page.goto('/')
@@ -229,6 +232,7 @@ test.describe('Dashboard Page', () => {
       await page.addInitScript(() => {
         localStorage.setItem('token', 'test-token')
         localStorage.setItem('demo-user-onboarded', 'true')
+        localStorage.setItem('kc-demo-mode', 'false')
       })
 
       await page.goto('/')

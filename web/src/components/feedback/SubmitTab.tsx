@@ -366,7 +366,7 @@ export function SubmitForm({
                   <li key={p.scope}><em>{p.scope}</em> — to {p.reason}</li>
                 ))}
               </ul>
-              <p className="text-muted-foreground text-xs mt-1.5">
+              <div className="text-muted-foreground text-xs mt-1.5">
                 <a href={GITHUB_TOKEN_CREATE_URL} target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300 underline underline-offset-2">Create token on GitHub</a>
                 {' · '}
                 <button
@@ -376,7 +376,7 @@ export function SubmitForm({
                 >
                   Console Settings
                 </button>
-              </p>
+              </div>
             </div>
           </div>
         )}

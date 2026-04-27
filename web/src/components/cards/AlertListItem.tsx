@@ -119,51 +119,56 @@ export function AlertListItem({
     <div
       key={alert.id}
       data-keynav-item="alert"
-      role="button"
-      aria-label={t('activeAlerts.viewAlertDetailsAria', { rule: alert.ruleName })}
-      tabIndex={0}
-      onClick={() => onAlertClick(alert)}
-      onKeyDown={handleKeyDown}
-      className="p-2 rounded-lg bg-secondary/30 border border-border/50 hover:bg-secondary/50 cursor-pointer transition-colors group focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400"
+      className="p-2 rounded-lg bg-secondary/30 border border-border/50 hover:bg-secondary/50 transition-colors group"
     >
-      <div className="flex items-start gap-2">
-        <span className="text-lg">{getSeverityIcon(alert.severity)}</span>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-sm font-medium text-foreground truncate">
-              {alert.ruleName}
-            </span>
-            <SeverityBadge severity={alert.severity} />
-          </div>
-          <p className="text-xs text-muted-foreground line-clamp-2">
-            {alert.message}
-          </p>
-          <div className="flex items-center gap-3 mt-1.5">
-            {alert.cluster && (
+      {/* Clickable alert info area — separated from action buttons to avoid button-inside-button nesting */}
+      <div
+        role="button"
+        aria-label={t('activeAlerts.viewAlertDetailsAria', { rule: alert.ruleName })}
+        tabIndex={0}
+        onClick={() => onAlertClick(alert)}
+        onKeyDown={handleKeyDown}
+        className="cursor-pointer focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400 rounded"
+      >
+        <div className="flex items-start gap-2">
+          <span className="text-lg">{getSeverityIcon(alert.severity)}</span>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-sm font-medium text-foreground truncate">
+                {alert.ruleName}
+              </span>
+              <SeverityBadge severity={alert.severity} />
+            </div>
+            <p className="text-xs text-muted-foreground line-clamp-2">
+              {alert.message}
+            </p>
+            <div className="flex items-center gap-3 mt-1.5">
+              {alert.cluster && (
+                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Server className="w-3 h-3" />
+                  {alert.cluster}
+                </span>
+              )}
               <span className="text-xs text-muted-foreground flex items-center gap-1">
-                <Server className="w-3 h-3" />
-                {alert.cluster}
+                <Clock className="w-3 h-3" />
+                {formatRelativeTime(alert.firedAt, t)}
               </span>
-            )}
-            <span className="text-xs text-muted-foreground flex items-center gap-1">
-              <Clock className="w-3 h-3" />
-              {formatRelativeTime(alert.firedAt, t)}
-            </span>
-            {mission && (
-              <span className="text-xs text-purple-400 flex items-center gap-1">
-                <Bot className="w-3 h-3" />
-                AI
-              </span>
-            )}
-            {alert.acknowledgedAt && (
-              <span className="text-xs text-green-400">{t('activeAlerts.acknowledged')}</span>
-            )}
+              {mission && (
+                <span className="text-xs text-purple-400 flex items-center gap-1">
+                  <Bot className="w-3 h-3" />
+                  AI
+                </span>
+              )}
+              {alert.acknowledgedAt && (
+                <span className="text-xs text-green-400">{t('activeAlerts.acknowledged')}</span>
+              )}
+            </div>
           </div>
+          <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
         </div>
-        <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
       </div>
 
-      {/* Quick Actions */}
+      {/* Quick Actions — outside the role="button" region to avoid nested interactive elements */}
       <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/30">
         {/* Snooze button */}
         <div className="relative" ref={snoozeRef}>

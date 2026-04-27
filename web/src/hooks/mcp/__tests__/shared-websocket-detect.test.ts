@@ -469,7 +469,7 @@ describe('fetchSingleClusterHealth — backend error paths', () => {
 
   it('sends Authorization header when token exists', async () => {
     mockIsAgentUnavailable.mockReturnValue(true) // skip agent
-    localStorage.setItem('token', 'my-jwt')
+    localStorage.setItem('kc-agent-token', 'my-jwt')
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
@@ -484,7 +484,7 @@ describe('fetchSingleClusterHealth — backend error paths', () => {
 
   it('omits Authorization header when no token', async () => {
     mockIsAgentUnavailable.mockReturnValue(true)
-    localStorage.removeItem('token')
+    localStorage.removeItem('kc-agent-token')
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,

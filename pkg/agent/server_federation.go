@@ -12,7 +12,7 @@ package agent
 // Identity: all reads run through the dynamic client that kc-agent resolves
 // from the user's kubeconfig via MultiClusterClient.GetRestConfig. There is
 // NO pod-ServiceAccount fallback — if the user's bearer token is not on
-// the request the handler returns 500 to make the absence of identity loud
+// the request the handler returns 401 to make the absence of identity loud
 // instead of silently falling through to cluster-level credentials.
 //
 // Fan-out: when `?cluster=` is omitted, the handler iterates every
@@ -31,6 +31,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"log/slog"
 	"net/http"
 	"sync"
 	"time"
@@ -80,7 +81,8 @@ func (s *Server) handleFederationDetect(w http.ResponseWriter, r *http.Request) 
 
 	contexts, err := s.resolveFederationContexts(ctx, r)
 	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, err.Error())
+		slog.Warn("federation detect: failed to resolve contexts, returning empty", "error", err)
+		writeJSON(w, []federation.ProviderHubStatus{})
 		return
 	}
 	providers := federation.All()
@@ -188,15 +190,16 @@ func (s *Server) handleFederationRead(
 // requireBearerToken enforces the "no pod-SA fallback" contract. It returns
 // true only when the request carries a valid bearer token (or the agent was
 // started without token auth — which is the dev-only path). On missing /
-// mismatching tokens it responds 500 and returns false, per the plan's
-// explicit requirement. This is intentionally stricter than the 401 used by
-// most other kc-agent handlers: federation reads must NEVER execute without
-// user identity, and 500 signals that loudly to anyone monitoring the agent.
+// mismatching tokens it responds 401 Unauthorized and returns false.
+// Federation reads must NEVER execute without user identity; 401 is the
+// semantically correct HTTP status for missing or invalid authentication
+// and lets clients (and monitoring) distinguish auth failures from real
+// server errors.
 func (s *Server) requireBearerToken(w http.ResponseWriter, r *http.Request) bool {
 	if s.validateToken(r) {
 		return true
 	}
-	writeJSONError(w, http.StatusInternalServerError, "bearer token required for federation reads — no pod-SA fallback")
+	writeJSONError(w, http.StatusUnauthorized, "bearer token required for federation reads — no pod-SA fallback")
 	return false
 }
 

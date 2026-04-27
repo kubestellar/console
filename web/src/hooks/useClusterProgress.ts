@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { LOCAL_AGENT_WS_URL, MAX_WS_RECONNECT_ATTEMPTS, getWsBackoffDelay } from '../lib/constants/network'
+import { appendWsAuthToken } from '../lib/utils/wsAuth'
 
 /** Auto-dismiss delay after a successful operation */
 export const CLUSTER_PROGRESS_AUTO_DISMISS_MS = 8_000
@@ -39,7 +40,7 @@ export function useClusterProgress() {
       if (unmounted) return
 
       try {
-        const ws = new WebSocket(LOCAL_AGENT_WS_URL)
+        const ws = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
         wsRef.current = ws
         reconnectAttemptsRef.current = attemptNumber
 

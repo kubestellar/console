@@ -3,6 +3,7 @@ import { api, isBackendUnavailable } from '../lib/api'
 import { mapSettledWithConcurrency } from '../lib/utils/concurrency'
 import { getDemoMode } from './useDemoMode'
 import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN } from '../lib/constants'
+import { agentFetch } from './mcp/shared'
 import { FETCH_DEFAULT_TIMEOUT_MS, RBAC_QUERY_TIMEOUT_MS } from '../lib/constants/network'
 import { MS_PER_DAY, MS_PER_HOUR } from '../lib/constants/time'
 import type {
@@ -495,7 +496,7 @@ export function useK8sServiceAccounts(cluster?: string, namespace?: string) {
     // Creating a ServiceAccount is a user-initiated mutation on a managed
     // cluster, so it must run under the user's kubeconfig via kc-agent, not
     // the backend pod ServiceAccount. See #7993 Phase 1.5 PR A.
-    const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/serviceaccounts`, {
+    const res = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/serviceaccounts`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest', ...agentAuthHeaders() },
       body: JSON.stringify(req),
@@ -658,7 +659,7 @@ export function useK8sRoleBindings(cluster: string, namespace?: string, includeS
     // Creating a RoleBinding is a user-initiated RBAC mutation, so it must
     // run under the user's kubeconfig via kc-agent, not the backend pod
     // ServiceAccount. See #7993 Phase 1.5 PR A.
-    const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/rolebindings`, {
+    const res = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/rolebindings`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest', ...agentAuthHeaders() },
       body: JSON.stringify(req),
@@ -704,7 +705,7 @@ export function useClusterPermissions(cluster?: string) {
       // allowed origins when KC_AGENT_TOKEN is unset). Sending an empty
       // Authorization header would fail token validation on the agent side.
       const params = cluster ? `?cluster=${cluster}` : ''
-      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/rbac/permissions${params}`, {
+      const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/rbac/permissions${params}`, {
         headers: agentAuthHeaders(),
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (!response.ok) {

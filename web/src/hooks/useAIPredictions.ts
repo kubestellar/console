@@ -11,6 +11,7 @@ import { setActiveTokenCategory, clearActiveTokenCategory } from './useTokenUsag
 import { fullFetchClusters, clusterCache } from './mcp/shared'
 
 import { LOCAL_AGENT_WS_URL, LOCAL_AGENT_HTTP_URL } from '../lib/constants'
+import { appendWsAuthToken } from '../lib/utils/wsAuth'
 import { FETCH_DEFAULT_TIMEOUT_MS, AI_PREDICTION_TIMEOUT_MS, UI_FEEDBACK_TIMEOUT_MS, MAX_WS_RECONNECT_ATTEMPTS, getWsBackoffDelay } from '../lib/constants/network'
 
 const DEGRADED_RECONNECT_INTERVAL_MS = 60_000
@@ -228,7 +229,7 @@ function connectWebSocket(): void {
   if (getDemoMode() || ws) return
 
   try {
-    ws = new WebSocket(LOCAL_AGENT_WS_URL)
+    ws = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
 
     ws.onopen = () => {
       wsConnected = true

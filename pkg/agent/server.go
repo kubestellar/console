@@ -448,6 +448,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/nodes", s.handleNodesHTTP)
 	mux.HandleFunc("/pods", s.handlePodsHTTP)
 	mux.HandleFunc("/events", s.handleEventsHTTP)
+	mux.HandleFunc("/events/stream", s.handleEventsStreamSSE)
 	mux.HandleFunc("/namespaces", s.handleNamespacesHTTP)
 	mux.HandleFunc("/deployments", s.handleDeploymentsHTTP)
 	mux.HandleFunc("/replicasets", s.handleReplicaSetsHTTP)
@@ -546,6 +547,11 @@ func (s *Server) Start() error {
 	// handlers are deleted in this same PR along with the frontend migration.
 	// Route in pkg/agent/server_gpu_health.go.
 	mux.HandleFunc("/gpu-health-cronjob", s.handleGPUHealthCronJob)
+
+	// NVIDIA operator detection (#10389). Scans clusters for GPU Operator,
+	// device plugin, feature discovery, and Network Operator installations.
+	// Route in pkg/agent/server_nvidia.go.
+	mux.HandleFunc("/nvidia-operators", s.handleNvidiaOperatorsHTTP)
 
 	// RBAC / permissions introspection moved to kc-agent (#7993 Phase 6).
 	// SelfSubjectAccessReview must be issued under the caller's identity, not

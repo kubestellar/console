@@ -412,4 +412,9 @@ export async function setupDashboardTest(page: Page): Promise<void> {
   })
   await page.goto('/')
   await page.waitForLoadState('domcontentloaded')
+  // Webkit mobile emulation (mobile-safari) is significantly slower to
+  // stabilize the DOM after domcontentloaded — wait for the main layout
+  // element to be visible so assertions in beforeEach don't time out
+  // (#nightly-playwright).
+  await page.locator('#root').waitFor({ state: 'visible', timeout: 15000 })
 }

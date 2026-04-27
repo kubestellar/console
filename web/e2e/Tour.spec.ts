@@ -1,4 +1,5 @@
 import { test, expect, Page } from '@playwright/test'
+import { mockApiFallback } from './helpers/setup'
 
 /**
  * Sets up authentication and MCP mocks for tour tests.
@@ -14,13 +15,7 @@ import { test, expect, Page } from '@playwright/test'
  */
 async function setupTourTest(page: Page, tourCompleted: boolean = true) {
   // Catch-all API mock prevents unmocked requests hanging in webkit/firefox
-  await page.route('''**/api/**''', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: '''application/json''',
-      body: JSON.stringify({}),
-    })
-  )
+  await mockApiFallback(page)
 
   // Mock authentication
   await page.route('**/api/me', (route) =>
@@ -237,7 +232,10 @@ test.describe('Tour/Onboarding', () => {
       await page.goto('/')
       await page.setViewportSize({ width: 375, height: 667 })
 
-      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
+      // Webkit may need additional time after viewport resize to re-layout
+      // (#nightly-playwright).
+      const RESPONSIVE_TIMEOUT_MS = 15_000
+      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: RESPONSIVE_TIMEOUT_MS })
     })
 
     test('adapts to tablet viewport', async ({ page }) => {

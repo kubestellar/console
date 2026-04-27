@@ -11,7 +11,7 @@ import { fetchAPI, fetchBackendAPI, fetchFromAllClustersViaBackend, fetchViaSSE,
 import { settledWithConcurrency } from '../lib/utils/concurrency'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 import { FETCH_DEFAULT_TIMEOUT_MS, AI_PREDICTION_TIMEOUT_MS } from '../lib/constants/network'
-import { clusterCacheRef, deduplicateClustersByServer } from './mcp/shared'
+import { clusterCacheRef, deduplicateClustersByServer, agentFetch } from './mcp/shared'
 import {
   getDemoGPUNodes,
   getDemoCachedGPUNodeHealth,
@@ -97,11 +97,11 @@ async function fetchHardwareHealth(): Promise<HardwareHealthData> {
 
   try {
     const [alertsRes, inventoryRes] = await Promise.all([
-      fetch(`${LOCAL_AGENT_HTTP_URL}/devices/alerts`, {
+      agentFetch(`${LOCAL_AGENT_HTTP_URL}/devices/alerts`, {
         method: 'GET',
         headers: { 'Accept': 'application/json' },
         signal: controller.signal }).catch(() => null),
-      fetch(`${LOCAL_AGENT_HTTP_URL}/devices/inventory`, {
+      agentFetch(`${LOCAL_AGENT_HTTP_URL}/devices/inventory`, {
         method: 'GET',
         headers: { 'Accept': 'application/json' },
         signal: controller.signal }).catch(() => null),
@@ -315,7 +315,7 @@ export function useGPUHealthCronJob(cluster?: string) {
       // #7993 Phase 3e: GPU health cronjob install is a user-initiated
       // tooling install. It runs through kc-agent under the user's own
       // kubeconfig instead of the backend pod ServiceAccount.
-      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/gpu-health-cronjob`, {
+      const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/gpu-health-cronjob`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -348,7 +348,7 @@ export function useGPUHealthCronJob(cluster?: string) {
       if (!token) throw new Error('No authentication token')
       // #7993 Phase 3e: GPU health cronjob uninstall goes through kc-agent
       // under the user's own kubeconfig.
-      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/gpu-health-cronjob`, {
+      const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/gpu-health-cronjob`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',

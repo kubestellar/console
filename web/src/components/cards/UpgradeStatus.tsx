@@ -13,6 +13,7 @@ import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardAIActions }
 import { StatusBadge } from '../ui/StatusBadge'
 import { useCardLoadingState } from './CardDataContext'
 import { LOCAL_AGENT_WS_URL } from '../../lib/constants'
+import { appendWsAuthToken } from '../../lib/utils/wsAuth'
 import { safeGetJSON, safeSetJSON } from '../../lib/safeLocalStorage'
 import { useTranslation } from 'react-i18next'
 
@@ -142,7 +143,7 @@ function createVersionWsHandle(): VersionWsHandle {
 
     return new Promise((resolve, reject) => {
       try {
-        ws = new WebSocket(LOCAL_AGENT_WS_URL)
+        ws = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
       } catch {
         connecting = false
         reject(new Error('Failed to create WebSocket'))

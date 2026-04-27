@@ -5,6 +5,7 @@
  */
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
+import { agentFetch } from './mcp/shared'
 
 const DEFAULT_POLL_INTERVAL_MS = 5_000
 
@@ -62,7 +63,7 @@ async function queryPrometheus(
   signal: AbortSignal,
 ): Promise<PromResponse> {
   const params = new URLSearchParams({ cluster, namespace, query })
-  const resp = await fetch(`${LOCAL_AGENT_HTTP_URL}/prometheus/query?${params}`, {
+  const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/prometheus/query?${params}`, {
     signal,
     headers: { Accept: 'application/json' },
   })

@@ -21,6 +21,7 @@ import {
   BACKEND_HEALTH_CHECK_TIMEOUT_MS,
 } from '../../../lib/constants/network'
 import type { AgentInfo } from '../../../types/agent'
+import { agentFetch } from '../../../hooks/mcp/shared'
 
 const CONNECTING_DEBOUNCE_MS = 300
 
@@ -56,7 +57,7 @@ export function AgentStatusIndicator() {
   const fetchAgentsFromHealth = async () => {
     setIsDiscoveringAgents(true)
     try {
-      const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/health`, {
+      const res = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/health`, {
         signal: AbortSignal.timeout(BACKEND_HEALTH_CHECK_TIMEOUT_MS),
       })
       if (!res.ok) return

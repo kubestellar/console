@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { isBackendUnavailable } from '../lib/api'
 import { STORAGE_KEY_TOKEN } from '../lib/constants'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants/network'
+import { agentFetch } from './mcp/shared'
 
 export interface ClusterPermissions {
   isClusterAdmin: boolean
@@ -74,7 +75,7 @@ export function usePermissions() {
       // #7993 Phase 6: route permissions summary through kc-agent so the
       // SelfSubjectAccessReviews run under the user's kubeconfig rather than
       // the backend pod ServiceAccount when console is deployed in-cluster.
-      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/permissions/summary`, {
+      const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/permissions/summary`, {
         headers: {
           'Authorization': token ? `Bearer ${token}` : '',
           'Content-Type': 'application/json' },
@@ -191,7 +192,7 @@ export function useCanI() {
       // #7993 Phase 6: SelfSubjectAccessReview must run under the caller's
       // kubeconfig, not the backend pod ServiceAccount — otherwise in-cluster
       // it answers "can the pod SA do X?" instead of "can the user do X?".
-      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/rbac/can-i`, {
+      const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/rbac/can-i`, {
         method: 'POST',
         headers: {
           'Authorization': token ? `Bearer ${token}` : '',

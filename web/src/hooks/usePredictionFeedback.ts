@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import type { PredictionFeedback, StoredFeedback, PredictionType, PredictionStats } from '../types/predictions'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
+import { agentFetch } from './mcp/shared'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import { emitPredictionFeedbackSubmitted } from '../lib/analytics'
 
@@ -185,7 +186,7 @@ export function usePredictionFeedback() {
  * Send feedback to backend
  */
 async function sendFeedbackToBackend(predictionId: string, feedback: PredictionFeedback): Promise<void> {
-  const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/predictions/feedback`, {
+  const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/predictions/feedback`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
     body: JSON.stringify({ predictionId, feedback }),
