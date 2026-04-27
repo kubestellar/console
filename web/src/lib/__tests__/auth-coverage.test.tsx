@@ -49,6 +49,7 @@ vi.mock('../analytics', () => ({
   setAnalyticsUserProperties: vi.fn(),
   emitConversionStep: vi.fn(),
   emitDeveloperSession: vi.fn(),
+  emitSessionRefreshFailure: vi.fn(),
 }))
 
 vi.mock('../demoMode', () => ({
@@ -463,6 +464,87 @@ describe('token expiry timer', () => {
 
     // Token should remain unchanged
     expect(localStorage.getItem(STORAGE_KEY_TOKEN)).toBe(nearExpiryToken)
+  })
+
+  it('emits emitSessionRefreshFailure GA4 event when /auth/refresh fails', async () => {
+    const { emitSessionRefreshFailure } = await import('../analytics')
+    const mockEmitRefreshFailure = vi.mocked(emitSessionRefreshFailure)
+    mockEmitRefreshFailure.mockClear()
+
+    const MS_PER_SECOND = 1000
+    const MINUTES_15 = 15
+    const nowSec = Math.floor(Date.now() / MS_PER_SECOND)
+    const nearExpiryToken = makeJwt({ exp: nowSec + (MINUTES_15 * 60) })
+
+    localStorage.setItem(STORAGE_KEY_TOKEN, nearExpiryToken)
+    const cachedUser = { id: 'u1', github_id: '1', github_login: 'test', onboarded: true }
+    localStorage.setItem(AUTH_USER_CACHE_KEY, JSON.stringify(cachedUser))
+
+    const mockFetch = vi.fn()
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: vi.fn().mockResolvedValue(cachedUser),
+    })
+    vi.stubGlobal('fetch', mockFetch)
+
+    await renderWithAuthProvider()
+    await vi.advanceTimersByTimeAsync(100)
+
+    await waitFor(() => {
+      expect(document.getElementById('session-expiry-warning')).not.toBeNull()
+    })
+
+    mockFetch.mockRejectedValueOnce(new Error('Connection refused'))
+
+    const btn = document.querySelector('#session-expiry-warning button') as HTMLButtonElement
+    await act(async () => {
+      btn.click()
+      await vi.advanceTimersByTimeAsync(100)
+    })
+
+    expect(mockEmitRefreshFailure).toHaveBeenCalledWith('Connection refused')
+  })
+
+  it('does NOT emit emitSessionRefreshFailure when /auth/refresh succeeds', async () => {
+    const { emitSessionRefreshFailure } = await import('../analytics')
+    const mockEmitRefreshFailure = vi.mocked(emitSessionRefreshFailure)
+    mockEmitRefreshFailure.mockClear()
+
+    const MS_PER_SECOND = 1000
+    const MINUTES_15 = 15
+    const nowSec = Math.floor(Date.now() / MS_PER_SECOND)
+    const nearExpiryToken = makeJwt({ exp: nowSec + (MINUTES_15 * 60) })
+
+    localStorage.setItem(STORAGE_KEY_TOKEN, nearExpiryToken)
+    const cachedUser = { id: 'u1', github_id: '1', github_login: 'test', onboarded: true }
+    localStorage.setItem(AUTH_USER_CACHE_KEY, JSON.stringify(cachedUser))
+
+    const mockFetch = vi.fn()
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: vi.fn().mockResolvedValue(cachedUser),
+    })
+    vi.stubGlobal('fetch', mockFetch)
+
+    await renderWithAuthProvider()
+    await vi.advanceTimersByTimeAsync(100)
+
+    await waitFor(() => {
+      expect(document.getElementById('session-expiry-warning')).not.toBeNull()
+    })
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: vi.fn().mockResolvedValue({ refreshed: true, onboarded: true }),
+    })
+
+    const btn = document.querySelector('#session-expiry-warning button') as HTMLButtonElement
+    await act(async () => {
+      btn.click()
+      await vi.advanceTimersByTimeAsync(100)
+    })
+
+    expect(mockEmitRefreshFailure).not.toHaveBeenCalled()
   })
 
   it('does not run checkExpiry for demo tokens', async () => {

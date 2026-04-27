@@ -96,6 +96,13 @@ vi.mock('../../hooks/mcp/shared', () => ({
   CLUSTER_POLL_INTERVAL_MS: 60_000,
 }))
 
+vi.mock('../analytics', () => ({
+  emitSseAuthFailure: vi.fn(),
+}))
+
+import { emitSseAuthFailure } from '../analytics'
+const mockEmitSseAuth = vi.mocked(emitSseAuthFailure)
+
 describe('sseClient expanded', () => {
 
   // =========================================================================
@@ -732,6 +739,50 @@ describe('sseClient expanded', () => {
       const call = vi.mocked(fetch).mock.calls[0]
       const url = String(call[0])
       expect(url).toContain('limit=0')
+    })
+  })
+
+  describe('SSE auth failure GA4 emit', () => {
+    it('emits emitSseAuthFailure on 401 response', async () => {
+      vi.mocked(fetch).mockResolvedValue(new Response('Unauthorized', { status: 401 }))
+
+      const result = await fetchSSE({
+        url: `/api/sse-401-${testId++}`,
+        itemsKey: 'items',
+        onClusterData: vi.fn(),
+      })
+
+      expect(mockEmitSseAuth).toHaveBeenCalledTimes(1)
+      expect(mockEmitSseAuth).toHaveBeenCalledWith(expect.stringContaining('/api/sse-401-'))
+      expect(result).toEqual([])
+    })
+
+    it('does not emit emitSseAuthFailure on 503 response', async () => {
+      vi.spyOn(console, 'warn').mockImplementation(() => {})
+      vi.mocked(fetch).mockResolvedValue(new Response('Unavailable', { status: 503 }))
+
+      const result = await fetchSSE({
+        url: `/api/sse-503-${testId++}`,
+        itemsKey: 'items',
+        onClusterData: vi.fn(),
+      })
+
+      expect(mockEmitSseAuth).not.toHaveBeenCalled()
+      expect(result).toEqual([])
+    })
+
+    it('does not emit emitSseAuthFailure on successful response', async () => {
+      vi.mocked(fetch).mockResolvedValue(makeSSEResponse([
+        { event: 'done', data: {} },
+      ]))
+
+      await fetchSSE({
+        url: `/api/sse-ok-${testId++}`,
+        itemsKey: 'items',
+        onClusterData: vi.fn(),
+      })
+
+      expect(mockEmitSseAuth).not.toHaveBeenCalled()
     })
   })
 })

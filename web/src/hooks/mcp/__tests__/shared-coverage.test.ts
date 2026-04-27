@@ -96,6 +96,11 @@ vi.mock('../../../lib/constants/network', async () => {
   return { ...actual }
 })
 
+const mockEmitAgentTokenFailure = vi.hoisted(() => vi.fn())
+vi.mock('../../../lib/analytics', () => ({
+  emitAgentTokenFailure: mockEmitAgentTokenFailure,
+}))
+
 // ---------------------------------------------------------------------------
 // Imports (resolved after mocks)
 // ---------------------------------------------------------------------------
@@ -209,6 +214,58 @@ describe('agentFetch — token injection and signal fallback', () => {
     const call = mockFetch.mock.calls[0]
     // Signal should exist (the AbortSignal.timeout fallback)
     expect(call[1]?.signal).toBeTruthy()
+  })
+})
+
+// ============================================================================
+// getAgentToken — GA4 failure detection
+// ============================================================================
+describe('getAgentToken — emits GA4 on failure', () => {
+  const originalFetch = globalThis.fetch
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch
+    localStorage.clear()
+    mockEmitAgentTokenFailure.mockClear()
+  })
+
+  it('emits emitAgentTokenFailure when /api/agent/token returns non-OK', async () => {
+    localStorage.removeItem(AGENT_TOKEN_STORAGE_KEY)
+    const mockFetch = vi.fn()
+    mockFetch.mockResolvedValueOnce(new Response('error', { status: 500 }))
+    mockFetch.mockResolvedValue(new Response('ok'))
+    globalThis.fetch = mockFetch
+
+    await agentFetch('http://localhost:8090/clusters')
+
+    expect(mockEmitAgentTokenFailure).toHaveBeenCalledWith('empty token from /api/agent/token')
+  })
+
+  it('emits emitAgentTokenFailure when fetch throws network error', async () => {
+    localStorage.removeItem(AGENT_TOKEN_STORAGE_KEY)
+    const mockFetch = vi.fn()
+    mockFetch.mockRejectedValueOnce(new Error('Network request failed'))
+    mockFetch.mockResolvedValue(new Response('ok'))
+    globalThis.fetch = mockFetch
+
+    await agentFetch('http://localhost:8090/clusters')
+
+    expect(mockEmitAgentTokenFailure).toHaveBeenCalledWith('Network request failed')
+  })
+
+  it('does NOT emit when /api/agent/token returns a valid token', async () => {
+    localStorage.removeItem(AGENT_TOKEN_STORAGE_KEY)
+    const mockFetch = vi.fn()
+    mockFetch.mockResolvedValueOnce(new Response(
+      JSON.stringify({ token: 'valid-hex-token' }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    ))
+    mockFetch.mockResolvedValue(new Response('ok'))
+    globalThis.fetch = mockFetch
+
+    await agentFetch('http://localhost:8090/clusters')
+
+    expect(mockEmitAgentTokenFailure).not.toHaveBeenCalled()
   })
 })
 
