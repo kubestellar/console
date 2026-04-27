@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from 'react'
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Send,
@@ -38,6 +38,7 @@ import { SetupInstructionsDialog } from '../../setup/SetupInstructionsDialog'
 import { OrbitSetupOffer } from '../../missions/OrbitSetupOffer'
 import { OrbitMonitorOffer } from '../../missions/OrbitMonitorOffer'
 import type { OrbitResourceFilter } from '../../../lib/missions/types'
+import { MicrophoneButton } from '../../ui/MicrophoneButton'
 import { STATUS_CONFIG, TYPE_ICONS } from './types'
 import type { FontSize } from './types'
 import { TypingIndicator } from './TypingIndicator'
@@ -340,6 +341,12 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
     if (!prompt.trim()) return
     sendMessage(mission.id, prompt)
   }
+
+  /** Append transcribed speech to the chat input */
+  const handleMicrophoneTranscript = useCallback((text: string) => {
+    setInput((prev) => (prev ? prev + ' ' + text : text))
+    inputRef.current?.focus()
+  }, [])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -950,6 +957,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
                 placeholder={t('missionChat.askFollowUp', { defaultValue: 'Ask a follow-up question...' })}
                 className="flex-1 min-w-0 px-3 py-2 text-sm rounded-lg border border-border bg-secondary/50 focus:bg-secondary focus:outline-hidden focus:ring-1 focus:ring-primary"
               />
+              <MicrophoneButton onTranscript={handleMicrophoneTranscript} compact />
               <button
                 onClick={handleSend}
                 disabled={!input.trim()}
@@ -1013,6 +1021,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
                 placeholder={t('missionChat.retryWithMessage')}
                 className="flex-1 min-w-0 px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-primary"
               />
+              <MicrophoneButton onTranscript={handleMicrophoneTranscript} compact />
               <button
                 onClick={handleSend}
                 disabled={!input.trim()}
@@ -1041,6 +1050,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
                 placeholder={t('missionChat.typeMessage')}
                 className="flex-1 min-w-0 px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-primary"
               />
+              <MicrophoneButton onTranscript={handleMicrophoneTranscript} compact />
               <button
                 onClick={handleSend}
                 disabled={!input.trim()}
