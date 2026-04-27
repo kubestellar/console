@@ -1,12 +1,16 @@
 package agent
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
+	"sync"
+	"time"
 
+	"github.com/kubestellar/console/pkg/agent/protocol"
 	"github.com/kubestellar/console/pkg/k8s"
 )
 
@@ -457,6 +461,116 @@ func (s *Server) handlePodsHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, map[string]interface{}{"pods": pods, "source": "agent"})
+}
+
+// podsStreamPerClusterTimeout is the per-cluster fetch deadline used by the
+// pods SSE stream handler. Each cluster fetch is capped independently so one
+// slow cluster does not block the rest of the stream.
+const podsStreamPerClusterTimeout = 15 * time.Second
+
+// handlePodsStreamSSE streams pod data per cluster via Server-Sent Events.
+// The frontend subscribes to this endpoint for progressive multi-cluster pod
+// updates (#10462). Each cluster's pods are sent as an SSE "cluster_data"
+// event; failures are sent as "cluster_error" events; a final "done" event
+// signals completion.
+func (s *Server) handlePodsStreamSSE(w http.ResponseWriter, r *http.Request) {
+	s.setCORSHeaders(w, r)
+
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	if s.k8sClient == nil {
+		http.Error(w, "k8s client not initialized", http.StatusServiceUnavailable)
+		return
+	}
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "streaming not supported", http.StatusInternalServerError)
+		return
+	}
+
+	clusterFilter := r.URL.Query().Get("cluster")
+	namespace := r.URL.Query().Get("namespace")
+
+	// SSE headers
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.WriteHeader(http.StatusOK)
+	flusher.Flush()
+
+	bw := bufio.NewWriter(w)
+
+	// Determine which clusters to stream
+	clusters, _ := s.kubectl.ListContexts()
+	if clusterFilter != "" {
+		filtered := make([]protocol.ClusterInfo, 0, 1)
+		for _, cl := range clusters {
+			if cl.Name == clusterFilter {
+				filtered = append(filtered, cl)
+				break
+			}
+		}
+		clusters = filtered
+	}
+
+	// Stream pods from each cluster concurrently, writing SSE events as
+	// results arrive. A mutex serialises writes to the response writer.
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+	totalPods := 0
+
+	for _, cl := range clusters {
+		wg.Add(1)
+		go func(clusterName string) {
+			defer wg.Done()
+
+			ctx, cancel := context.WithTimeout(r.Context(), podsStreamPerClusterTimeout)
+			defer cancel()
+
+			pods, err := s.k8sClient.GetPods(ctx, clusterName, namespace)
+			mu.Lock()
+			defer mu.Unlock()
+
+			if err != nil {
+				slog.Warn("[SSE] cluster pod fetch failed", "cluster", clusterName, "error", err)
+				payload := map[string]string{"cluster": clusterName, "error": err.Error()}
+				data, _ := json.Marshal(payload)
+				fmt.Fprintf(bw, "event: cluster_error\ndata: %s\n\n", data)
+				bw.Flush()
+				flusher.Flush()
+				return
+			}
+
+			totalPods += len(pods)
+			payload := map[string]interface{}{"cluster": clusterName, "pods": pods}
+			data, marshalErr := json.Marshal(payload)
+			if marshalErr != nil {
+				slog.Error("[SSE] failed to marshal pods", "cluster", clusterName, "error", marshalErr)
+				return
+			}
+			fmt.Fprintf(bw, "event: cluster_data\ndata: %s\n\n", data)
+			bw.Flush()
+			flusher.Flush()
+		}(cl.Name)
+	}
+
+	wg.Wait()
+
+	// Terminal event
+	summary := map[string]interface{}{"total": totalPods, "clusters": len(clusters)}
+	data, _ := json.Marshal(summary)
+	fmt.Fprintf(bw, "event: done\ndata: %s\n\n", data)
+	bw.Flush()
+	flusher.Flush()
 }
 
 // handleClusterHealthHTTP returns health info for a cluster

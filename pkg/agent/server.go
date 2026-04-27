@@ -447,6 +447,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/gpu-nodes", s.handleGPUNodesHTTP)
 	mux.HandleFunc("/nodes", s.handleNodesHTTP)
 	mux.HandleFunc("/pods", s.handlePodsHTTP)
+	mux.HandleFunc("/pods/stream", s.handlePodsStreamSSE)
 	mux.HandleFunc("/events", s.handleEventsHTTP)
 	mux.HandleFunc("/events/stream", s.handleEventsStreamSSE)
 	mux.HandleFunc("/namespaces", s.handleNamespacesHTTP)
@@ -674,6 +675,7 @@ func (s *Server) Start() error {
 		}
 		w.Header().Set("Access-Control-Allow-Methods", catchallCORSAllowedMethods)
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
 		w.Header().Set("Access-Control-Allow-Private-Network", "true")
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
@@ -767,6 +769,7 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	if s.isAllowedOrigin(origin) {
 		w.Header().Set("Access-Control-Allow-Origin", origin)
 	}
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
 	w.Header().Set("Access-Control-Allow-Private-Network", "true")
 	w.Header().Set("Content-Type", "application/json")
 
@@ -814,6 +817,7 @@ func (s *Server) handleProviderCheck(w http.ResponseWriter, r *http.Request) {
 	if s.isAllowedOrigin(origin) {
 		w.Header().Set("Access-Control-Allow-Origin", origin)
 	}
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
 	w.Header().Set("Access-Control-Allow-Private-Network", "true")
 	w.Header().Set("Content-Type", "application/json")
 

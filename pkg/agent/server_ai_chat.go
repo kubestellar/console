@@ -190,6 +190,12 @@ func (s *Server) handleChatMessageStreaming(connCtx context.Context, conn *webso
 		History:   history,
 	}
 
+	// #10463: Use ChatOnlySystemPrompt for providers that cannot execute
+	// commands, so the AI never claims it can run kubectl when it cannot.
+	if !provider.Capabilities().HasCapability(CapabilityToolExec) {
+		chatReq.SystemPrompt = ChatOnlySystemPrompt
+	}
+
 	// Thread cluster context so tool-capable agents scope kubectl to the
 	// correct cluster, preventing multi-cluster context drift (#9485).
 	if req.ClusterContext != "" {

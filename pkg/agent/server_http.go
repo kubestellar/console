@@ -104,6 +104,9 @@ func (s *Server) setCORSHeaders(w http.ResponseWriter, r *http.Request, methods 
 	}
 	w.Header().Set("Access-Control-Allow-Methods", allowed)
 	w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Requested-With")
+	// #10461: Credentialed requests (Authorization header) require this header
+	// or browsers block the response even when the origin is allowed.
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
 }
 
 // watchdogPidFileStat is indirected through a package variable so unit tests
@@ -149,6 +152,7 @@ func (s *Server) handleRestartBackend(w http.ResponseWriter, r *http.Request) {
 	if s.isAllowedOrigin(origin) {
 		w.Header().Set("Access-Control-Allow-Origin", origin)
 	}
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
 	w.Header().Set("Access-Control-Allow-Private-Network", "true")
 	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
