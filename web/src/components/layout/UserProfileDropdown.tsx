@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, lazy, Suspense } from 'react'
+import { Tooltip } from '../ui/Tooltip'
 import { useModalState } from '../../lib/modals'
 import { useTranslation } from 'react-i18next'
 import { User, Mail, MessageSquare, Shield, Settings, LogOut, ChevronDown, Coins, Lightbulb, Globe, Check, Download, Code2, ExternalLink, Rocket, KeyRound, CheckCircle2, XCircle, GitBranch } from 'lucide-react'
@@ -169,9 +170,11 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
                   <User className="w-6 h-6 text-purple-400" />
                 </div>
               )}
-              <div>
-                <p className="font-medium text-foreground">{user.github_login}</p>
-                <p className="text-sm text-muted-foreground">{user.email || t('profile.noEmail')}</p>
+              <div className="min-w-0 flex-1">
+                <p className="font-medium text-foreground truncate">{user.github_login}</p>
+                <Tooltip content={user.email || t('profile.noEmail')}>
+                  <p className="text-sm text-muted-foreground overflow-hidden text-ellipsis whitespace-nowrap">{user.email || t('profile.noEmail')}</p>
+                </Tooltip>
               </div>
             </div>
           </div>
