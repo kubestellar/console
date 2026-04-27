@@ -1,10 +1,10 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"bytes"
 	"fmt"
 	"io"
 	"log/slog"
@@ -33,7 +33,6 @@ import (
 	"github.com/kubestellar/console/pkg/api/audit"
 	"github.com/kubestellar/console/pkg/api/handlers"
 	"github.com/kubestellar/console/pkg/api/middleware"
-	"github.com/kubestellar/console/pkg/compliance/residency"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/kagent"
 	"github.com/kubestellar/console/pkg/kagenti_provider"
@@ -200,8 +199,8 @@ type Server struct {
 	shuttingDown        int32        // atomic flag: 1 during graceful shutdown
 	gpuUtilWorker       *GPUUtilizationWorker
 	workloadHandlers    *handlers.WorkloadHandlers // for cache refresh shutdown (#10007)
-	done                chan struct{} // closed on Shutdown to stop background goroutines
-	shutdownOnce        sync.Once     // ensures Shutdown is idempotent (#6478)
+	done                chan struct{}              // closed on Shutdown to stop background goroutines
+	shutdownOnce        sync.Once                  // ensures Shutdown is idempotent (#6478)
 }
 
 // NewServer creates a new API server. It starts a temporary loading page
@@ -581,120 +580,7 @@ func (s *Server) oauthConfigured() bool {
 }
 
 func (s *Server) setupRoutes() {
-	// Minimal probe endpoint for load balancers and k8s liveness checks.
-	// Returns only status — no configuration metadata.
-	s.app.Get("/healthz", func(c *fiber.Ctx) error {
-		if atomic.LoadInt32(&s.shuttingDown) == 1 {
-			return c.JSON(fiber.Map{"status": "shutting_down"})
-		}
-		return c.JSON(fiber.Map{"status": "ok"})
-	})
-
-	// Health check — returns version and UI configuration for the frontend.
-	// Build metadata (go_version, git_commit, etc.) lives in /api/version.
-	s.app.Get("/health", func(c *fiber.Ctx) error {
-		if atomic.LoadInt32(&s.shuttingDown) == 1 {
-			return c.JSON(fiber.Map{"status": "shutting_down", "version": Version})
-		}
-		inCluster := s.k8sClient != nil && s.k8sClient.IsInCluster()
-
-		// Determine cluster reachability status. If we have a k8s client,
-		// check cached health data — if no clusters are reachable, report
-		// "degraded" instead of "ok" so monitoring can detect the problem.
-		healthStatus := "ok"
-		if s.k8sClient != nil {
-			cachedHealth := s.k8sClient.GetCachedHealth()
-			if len(cachedHealth) > 0 {
-				anyReachable := false
-				for _, h := range cachedHealth {
-					if h != nil && h.Reachable {
-						anyReachable = true
-						break
-					}
-				}
-				if !anyReachable {
-					healthStatus = "degraded"
-				}
-			}
-			// If no cached health data yet, keep "ok" — health poller hasn't run yet
-		}
-
-		// Suppress local kc-agent connections when explicitly configured
-		// (NO_LOCAL_AGENT=true) or auto-detected as running in-cluster.
-		noLocalAgent := s.config.NoLocalAgent || inCluster
-
-		resp := fiber.Map{
-			"status":           healthStatus,
-			"version":          Version,
-			"oauth_configured": s.oauthConfigured(),
-			"in_cluster":       inCluster,
-			"no_local_agent":   noLocalAgent,
-			"install_method":   detectInstallMethod(inCluster),
-			"project":          s.config.ConsoleProject,
-			"branding": fiber.Map{
-				"appName":            s.config.BrandAppName,
-				"appShortName":       s.config.BrandAppShortName,
-				"tagline":            s.config.BrandTagline,
-				"logoUrl":            s.config.BrandLogoURL,
-				"faviconUrl":         s.config.BrandFaviconURL,
-				"themeColor":         s.config.BrandThemeColor,
-				"docsUrl":            s.config.BrandDocsURL,
-				"communityUrl":       s.config.BrandCommunityURL,
-				"websiteUrl":         s.config.BrandWebsiteURL,
-				"issuesUrl":          s.config.BrandIssuesURL,
-				"repoUrl":            s.config.BrandRepoURL,
-				"hostedDomain":       s.config.BrandHostedDomain,
-				"showStarDecoration": s.config.ConsoleProject == "kubestellar",
-				"showAdopterNudge":   s.config.ConsoleProject == "kubestellar",
-				"showDemoToLocalCTA": s.config.ConsoleProject == "kubestellar",
-				"showRewards":        s.config.ConsoleProject == "kubestellar",
-				"showLinkedInShare":  s.config.ConsoleProject == "kubestellar",
-			},
-		}
-		if s.config.EnabledDashboards != "" {
-			// Explicit ENABLED_DASHBOARDS takes precedence over project presets
-			dashboards := strings.Split(s.config.EnabledDashboards, ",")
-			trimmed := make([]string, 0, len(dashboards))
-			for _, d := range dashboards {
-				if t := strings.TrimSpace(d); t != "" {
-					trimmed = append(trimmed, t)
-				}
-			}
-			if len(trimmed) > 0 {
-				resp["enabled_dashboards"] = trimmed
-			}
-		} else if presetDashboards := getProjectDashboards(s.config.ConsoleProject); presetDashboards != nil {
-			// Fall back to project preset dashboard list
-			resp["enabled_dashboards"] = presetDashboards
-		}
-		return c.JSON(resp)
-	})
-
-	// Version endpoint — lightweight, returns only build metadata.
-	// In dev mode (go run), VCS info from debug.ReadBuildInfo() may be empty,
-	// so we fall back to git commands for commit and time.
-	s.app.Get("/api/version", func(c *fiber.Ctx) error {
-		gitCommit := buildInfo.VCSRevision
-		gitTime := buildInfo.VCSTime
-		gitDirty := buildInfo.VCSModified == "true"
-
-		// Fallback: if VCS revision is empty (e.g. go run without VCS info),
-		// try to read from git directly
-		if gitCommit == "" {
-			gitCommit = gitFallbackRevision()
-		}
-		if gitTime == "" {
-			gitTime = gitFallbackTime()
-		}
-
-		return c.JSON(fiber.Map{
-			"version":    Version,
-			"go_version": buildInfo.GoVersion,
-			"git_commit": gitCommit,
-			"git_time":   gitTime,
-			"git_dirty":  gitDirty,
-		})
-	})
+	s.setupHealthRoutes()
 
 	// Auth routes (public)
 	auth := handlers.NewAuthHandler(s.store, handlers.AuthConfig{
@@ -785,94 +671,6 @@ func (s *Server) setupRoutes() {
 		return c.Next()
 	}
 
-	// Active users endpoint (public — returns only aggregate counts, no sensitive data)
-	s.app.Get("/api/active-users", publicLimiter, func(c *fiber.Ctx) error {
-		wsUsers := s.hub.GetActiveUsersCount()
-		demoSessions := s.hub.GetDemoSessionCount()
-		wsTotalConns := s.hub.GetTotalConnectionsCount()
-
-		// Return whichever is higher (WebSocket users or demo sessions)
-		activeUsers := wsUsers
-		if demoSessions > wsUsers {
-			activeUsers = demoSessions
-		}
-		totalConnections := wsTotalConns
-		if demoSessions > wsTotalConns {
-			totalConnections = demoSessions
-		}
-
-		return c.JSON(fiber.Map{
-			"activeUsers":      activeUsers,
-			"totalConnections": totalConnections,
-		})
-	})
-
-	// Active users heartbeat endpoint (for demo mode session counting)
-	// This is unauthenticated telemetry — session IDs are validated for length
-	// and the total number of unique sessions is capped to prevent inflation.
-	s.app.Post("/api/active-users", publicLimiter, func(c *fiber.Ctx) error {
-		var body struct {
-			SessionID string `json:"sessionId"`
-		}
-		if err := c.BodyParser(&body); err != nil || body.SessionID == "" {
-			return c.Status(400).JSON(fiber.Map{"error": "sessionId required"})
-		}
-		if !s.hub.RecordDemoSession(body.SessionID) {
-			return c.Status(429).JSON(fiber.Map{"error": "session limit reached"})
-		}
-		demoCount := s.hub.GetDemoSessionCount()
-		return c.JSON(fiber.Map{
-			"activeUsers":      demoCount,
-			"totalConnections": demoCount,
-		})
-	})
-
-	// Public API routes (no auth — only non-sensitive, publicly-available data)
-	// Nightly E2E status is public GitHub Actions data, safe for desktop widgets
-	nightlyE2EPublic := handlers.NewNightlyE2EHandler(s.config.GitHubToken)
-	s.app.Get("/api/public/nightly-e2e/runs", publicLimiter, nightlyE2EPublic.GetRuns)
-	s.app.Get("/api/public/nightly-e2e/run-logs", publicLimiter, nightlyE2EPublic.GetRunLogs)
-
-	// Analytics proxies (public — no auth required, have their own origin validation)
-	// MUST be registered before the /api group so JWTAuth middleware doesn't intercept them.
-	// Protected by publicLimiter (#7029) and analyticsBodyGuard (#7030).
-	s.app.All("/api/m", publicLimiter, analyticsBodyGuard, handlers.GA4CollectProxy)
-	s.app.Get("/api/gtag", publicLimiter, handlers.GA4ScriptProxy)
-	s.app.Get("/api/ksc", publicLimiter, handlers.UmamiScriptProxy)
-	s.app.Post("/api/send", publicLimiter, analyticsBodyGuard, handlers.UmamiCollectProxy)
-
-	// Network ping proxy (public — lightweight server-side HTTP HEAD for latency measurement)
-	// Avoids browser no-cors limitations that produce unreliable results
-	s.app.Get("/api/ping", publicLimiter, handlers.PingHandler)
-
-	// MCP handlers (used in protected routes below)
-	mcpHandlers := handlers.NewMCPHandlers(s.bridge, s.k8sClient, s.store)
-	// SECURITY FIX: All MCP routes are now protected regardless of dev mode
-	// Dev mode only affects things like frontend URLs and default users,
-	// NOT authentication requirements
-
-	// YouTube playlist (public — proxies to YouTube RSS feed, cached 1h)
-	s.app.Get("/api/youtube/playlist", publicLimiter, handlers.YouTubePlaylistHandler)
-	s.app.Get("/api/youtube/thumbnail/:id", publicLimiter, handlers.YouTubeThumbnailProxy)
-
-	// Medium blog (public — proxies to Medium RSS feed, cached 1h)
-	s.app.Get("/api/medium/blog", publicLimiter, handlers.MediumBlogHandler)
-
-	// ACMM scan — registered below on the authenticated api group
-
-	// Mission knowledge base browse/file (public — proxies to public GitHub repo)
-	missions := handlers.NewMissionsHandler()
-	missions.RegisterPublicRoutes(s.app.Group("/api/missions"))
-
-	// Compliance frameworks public read endpoints (no auth — needed for demo mode).
-	// POST endpoints (evaluate, report) are registered on the auth-protected api group below.
-	complianceFrameworks := handlers.NewComplianceFrameworksHandler(nil)
-	complianceFrameworks.RegisterPublicRoutes(s.app.Group("/api/compliance/frameworks", publicLimiter))
-	// Data residency enforcement (public read — demo mode).
-	residencyEngine := residency.NewEngine()
-	dataResidency := handlers.NewDataResidencyHandler(residencyEngine)
-	dataResidency.RegisterPublicRoutes(s.app.Group("/api/compliance/residency", publicLimiter))
-
 	// Wrap publicLimiter to skip critical paths that must never be rate-limited
 	// by background polling collateral. Fiber v2 group("/api") prefix matching
 	// applies group middleware to ALL /api/* routes — including /api/me,
@@ -901,50 +699,7 @@ func (s *Server) setupRoutes() {
 	}
 	publicAPI := s.app.Group("/api", publicLimiterWithSkip)
 
-	// Change control audit trail public read endpoints (demo mode).
-	changeControl := handlers.NewChangeControlHandler()
-	changeControl.RegisterPublicRoutes(publicAPI)
-
-	// Segregation of duties public read endpoints (demo mode).
-	sodHandler := handlers.NewSoDHandler()
-	sodHandler.RegisterPublicRoutes(publicAPI)
-
-	// BAA tracker public read endpoints (demo mode).
-	baaHandler := handlers.NewBAAHandler()
-	baaHandler.RegisterPublicRoutes(publicAPI)
-	// HIPAA compliance public read endpoints (demo mode).
-	hipaaHandler := handlers.NewHIPAAHandler()
-	hipaaHandler.RegisterPublicRoutes(publicAPI)
-	// GxP / 21 CFR Part 11 public read endpoints (demo mode).
-	gxpHandler := handlers.NewGxPHandler()
-	gxpHandler.RegisterPublicRoutes(publicAPI)
-	// NIST 800-53 control mapping public read endpoints (demo mode).
-	nistHandler := handlers.NewNIST80053Handler()
-	nistHandler.RegisterPublicRoutes(publicAPI)
-	// DISA STIG compliance public read endpoints (demo mode).
-	stigHandler := handlers.NewSTIGHandler()
-	stigHandler.RegisterPublicRoutes(publicAPI)
-	// Air-gap readiness public read endpoints (demo mode).
-	airgapHandler := handlers.NewAirGapHandler()
-	airgapHandler.RegisterPublicRoutes(publicAPI)
-	// FedRAMP readiness public read endpoints (demo mode).
-	fedrampHandler := handlers.NewFedRAMPHandler()
-	fedrampHandler.RegisterPublicRoutes(publicAPI)
-	// Epic 5: Security Operations — SIEM Export (#9643).
-	siemHandler := handlers.NewSIEMHandler()
-	siemHandler.RegisterPublicRoutes(publicAPI)
-	// Epic 6: Supply Chain & Software Provenance (#9632, #9644, #9646, #9647, #9648).
-	sbomHandler := handlers.NewSBOMHandler()
-	sbomHandler.RegisterPublicRoutes(publicAPI)
-	signingHandler := handlers.NewSigningHandler()
-	signingHandler.RegisterPublicRoutes(publicAPI)
-	slsaHandler := handlers.NewSLSAHandler()
-	slsaHandler.RegisterPublicRoutes(publicAPI)
-	licenseHandler := handlers.NewLicenseHandler()
-	licenseHandler.RegisterPublicRoutes(publicAPI)
-	// Runtime Attestation Score (#9987) — composite trust score per cluster.
-	attestationHandler := handlers.NewAttestationHandler()
-	attestationHandler.RegisterPublicRoutes(publicAPI)
+	s.setupPublicRoutes(publicLimiter, analyticsBodyGuard, publicAPI)
 
 	// API routes (protected) — with rate limiting
 	//
@@ -971,8 +726,8 @@ func (s *Server) setupRoutes() {
 	// by background API polling that may saturate the general apiLimiter.
 	// CompositeKey keys on userID+IP for authenticated users and plain IP
 	// for unauthenticated callers.
-	const feedbackLimiterMaxRequests = 10        // 10 submissions per user per hour
-	feedbackLimiterWindow := 1 * time.Hour       // sliding window duration
+	const feedbackLimiterMaxRequests = 10  // 10 submissions per user per hour
+	feedbackLimiterWindow := 1 * time.Hour // sliding window duration
 	feedbackLimiter := limiter.New(limiter.Config{
 		Max:          feedbackLimiterMaxRequests,
 		Expiration:   feedbackLimiterWindow,
@@ -1204,6 +959,7 @@ func (s *Server) setupRoutes() {
 	// kubeconfig access to each managed cluster.
 	// Read-only GET routes are registered as public above; only POST
 	// (evaluate, report) requires authentication.
+	complianceFrameworks := handlers.NewComplianceFrameworksHandler(nil)
 	complianceFrameworks.RegisterRoutes(api.Group("/compliance/frameworks"))
 
 	// Compliance report generation: shares the same route group so
@@ -1226,6 +982,7 @@ func (s *Server) setupRoutes() {
 	api.Get("/admin/rate-limit-status", adminHandler.GetRateLimitStatus)
 
 	// Mission knowledge base routes (validate, share — protected)
+	missions := handlers.NewMissionsHandler()
 	missions.RegisterRoutes(api.Group("/missions"))
 
 	// Orbit (recurring maintenance) routes — protected
@@ -1242,189 +999,11 @@ func (s *Server) setupRoutes() {
 	api.Get("/timeline", timeline.GetTimeline)
 	timeline.StartEventCollector(s.done)
 
-	// MCP routes (cluster operations via kubestellar tools and direct k8s)
-	// SECURITY: All MCP routes require authentication in both dev and production modes
-	api.Get("/mcp/status", mcpHandlers.GetStatus)
-	api.Get("/mcp/tools/ops", mcpHandlers.GetOpsTools)
-	api.Get("/mcp/tools/deploy", mcpHandlers.GetDeployTools)
-	api.Get("/mcp/clusters", mcpHandlers.ListClusters)
-	api.Get("/mcp/clusters/health", mcpHandlers.GetAllClusterHealth)
-	api.Get("/mcp/clusters/:cluster/health", mcpHandlers.GetClusterHealth)
-	api.Get("/mcp/pods", mcpHandlers.GetPods)
-	api.Get("/mcp/pod-issues", mcpHandlers.FindPodIssues)
-	api.Get("/mcp/deployment-issues", mcpHandlers.FindDeploymentIssues)
-	api.Get("/mcp/deployments", mcpHandlers.GetDeployments)
-	api.Get("/mcp/gpu-nodes", mcpHandlers.GetGPUNodes)
-	api.Get("/mcp/gpu-nodes/health", mcpHandlers.GetGPUNodeHealth)
-	api.Get("/mcp/gpu-nodes/health/cronjob", mcpHandlers.GetGPUHealthCronJobStatus)
-	// POST and DELETE /mcp/gpu-nodes/health/cronjob moved to kc-agent
-	// (#7993 Phase 3e). The agent exposes /gpu-health-cronjob with the same
-	// body shape, running under the user's kubeconfig.
-	api.Get("/mcp/gpu-nodes/health/cronjob/results", mcpHandlers.GetGPUHealthCronJobResults)
-	api.Get("/mcp/nvidia-operators", mcpHandlers.GetNVIDIAOperatorStatus)
-	api.Get("/mcp/nodes", mcpHandlers.GetNodes)
-	api.Get("/mcp/flatcar/nodes", mcpHandlers.GetFlatcarNodes)
-	api.Get("/mcp/events", mcpHandlers.GetEvents)
-	api.Get("/mcp/events/warnings", mcpHandlers.GetWarningEvents)
-	api.Get("/mcp/security-issues", mcpHandlers.CheckSecurityIssues)
-	api.Get("/mcp/services", mcpHandlers.GetServices)
-	api.Get("/mcp/jobs", mcpHandlers.GetJobs)
-	api.Get("/mcp/hpas", mcpHandlers.GetHPAs)
-	api.Get("/mcp/configmaps", mcpHandlers.GetConfigMaps)
-	api.Get("/mcp/secrets", mcpHandlers.GetSecrets)
-	api.Get("/mcp/serviceaccounts", mcpHandlers.GetServiceAccounts)
-	api.Get("/mcp/pvcs", mcpHandlers.GetPVCs)
-	api.Get("/mcp/pvs", mcpHandlers.GetPVs)
-	api.Get("/mcp/resourcequotas", mcpHandlers.GetResourceQuotas)
-	api.Post("/mcp/resourcequotas", mcpHandlers.CreateOrUpdateResourceQuota)
-	api.Delete("/mcp/resourcequotas", mcpHandlers.DeleteResourceQuota)
-	api.Get("/mcp/limitranges", mcpHandlers.GetLimitRanges)
-	api.Get("/mcp/pods/logs", mcpHandlers.GetPodLogs)
-	api.Post("/mcp/tools/ops/call", mcpHandlers.CallOpsTool)
-	api.Post("/mcp/tools/deploy/call", mcpHandlers.CallDeployTool)
-	api.Get("/mcp/wasmcloud/hosts", mcpHandlers.GetWasmCloudHosts)
-	api.Get("/mcp/wasmcloud/actors", mcpHandlers.GetWasmCloudActors)
-	api.Get("/mcp/custom-resources", mcpHandlers.GetCustomResources)
-	// Drasi reverse proxy — forwards to drasi-server (mode 1+2) or drasi-platform
-	// (mode 3) so the `/drasi` dashboard speaks the same client code to either.
-	// See pkg/api/handlers/drasi_proxy.go for the protocol detection contract.
-	api.All("/drasi/proxy/*", mcpHandlers.ProxyDrasi)
-	api.Get("/mcp/replicasets", mcpHandlers.GetReplicaSets)
-	api.Get("/mcp/statefulsets", mcpHandlers.GetStatefulSets)
-	api.Get("/mcp/daemonsets", mcpHandlers.GetDaemonSets)
-	api.Get("/mcp/cronjobs", mcpHandlers.GetCronJobs)
-	api.Get("/mcp/ingresses", mcpHandlers.GetIngresses)
-	api.Get("/mcp/networkpolicies", mcpHandlers.GetNetworkPolicies)
-	api.Get("/mcp/pod-network-stats", mcpHandlers.GetPodNetworkStats)
-	api.Get("/mcp/resource-yaml", mcpHandlers.GetResourceYAML)
+	s.setupMCPRoutes(api, namespaces)
 
-	// Widget-friendly aliases — the widget registry references these shorter
-	// paths.  Without explicit routes they fall through to the SPA catch-all
-	// which returns index.html (HTTP 307), breaking exported widgets.
-	// See: #4140, #4141, #4142
-	api.Get("/mcp/workloads", mcpHandlers.GetWorkloads)
-	api.Get("/mcp/security", mcpHandlers.CheckSecurityIssues)
-	api.Get("/mcp/storage", mcpHandlers.GetPVCs)
-	api.Get("/mcp/network", mcpHandlers.GetNetworkPolicies)
-	api.Get("/mcp/namespaces", namespaces.ListNamespaces)
+	s.setupGitOpsRoutes(api)
 
-	// SSE streaming variants — stream per-cluster results as they arrive
-	api.Get("/mcp/pods/stream", mcpHandlers.GetPodsStream)
-	api.Get("/mcp/pod-issues/stream", mcpHandlers.FindPodIssuesStream)
-	api.Get("/mcp/deployment-issues/stream", mcpHandlers.FindDeploymentIssuesStream)
-	api.Get("/mcp/deployments/stream", mcpHandlers.GetDeploymentsStream)
-	api.Get("/mcp/events/stream", mcpHandlers.GetEventsStream)
-	api.Get("/mcp/services/stream", mcpHandlers.GetServicesStream)
-	api.Get("/mcp/security-issues/stream", mcpHandlers.CheckSecurityIssuesStream)
-	api.Get("/mcp/nodes/stream", mcpHandlers.GetNodesStream)
-	api.Get("/mcp/gpu-nodes/stream", mcpHandlers.GetGPUNodesStream)
-	api.Get("/mcp/gpu-nodes/health/stream", mcpHandlers.GetGPUNodeHealthStream)
-	api.Get("/mcp/events/warnings/stream", mcpHandlers.GetWarningEventsStream)
-	api.Get("/mcp/jobs/stream", mcpHandlers.GetJobsStream)
-	api.Get("/mcp/configmaps/stream", mcpHandlers.GetConfigMapsStream)
-	api.Get("/mcp/secrets/stream", mcpHandlers.GetSecretsStream)
-	api.Get("/mcp/nvidia-operators/stream", mcpHandlers.GetNVIDIAOperatorStatusStream)
-	api.Get("/mcp/workloads/stream", mcpHandlers.GetWorkloadsStream)
-
-	// GitOps routes (drift detection and sync)
-	// SECURITY: All GitOps routes require authentication in both dev and production modes
-	gitopsHandlers := handlers.NewGitOpsHandlers(s.bridge, s.k8sClient, s.store)
-	api.Get("/gitops/drifts", gitopsHandlers.ListDrifts)
-	api.Get("/gitops/helm-releases", gitopsHandlers.ListHelmReleases)
-	api.Get("/gitops/helm-history", gitopsHandlers.ListHelmHistory)
-	api.Get("/gitops/helm-values", gitopsHandlers.GetHelmValues)
-	api.Get("/gitops/kustomizations", gitopsHandlers.ListKustomizations)
-	api.Get("/gitops/operators", gitopsHandlers.ListOperators)
-	api.Get("/gitops/operators/stream", gitopsHandlers.StreamOperators)
-	api.Get("/gitops/operator-subscriptions", gitopsHandlers.ListOperatorSubscriptions)
-	api.Get("/gitops/operator-subscriptions/stream", gitopsHandlers.StreamOperatorSubscriptions)
-	api.Get("/gitops/helm-releases/stream", gitopsHandlers.StreamHelmReleases)
-	// POST /gitops/detect-drift, /gitops/sync, /gitops/helm-rollback,
-	// /gitops/helm-uninstall, and /gitops/helm-upgrade moved to kc-agent in
-	// #7993 Phase 4 (agent-side added in 3a/3b). They run under the user's
-	// kubeconfig instead of the backend pod ServiceAccount.
-	// Helm self-upgrade (in-cluster Deployment patch)
-	selfUpgradeHandler := handlers.NewSelfUpgradeHandler(s.k8sClient, s.hub, s.store)
-	api.Get("/self-upgrade/status", selfUpgradeHandler.GetStatus)
-	api.Post("/self-upgrade/trigger", selfUpgradeHandler.TriggerUpgrade)
-	// ArgoCD routes (Application CRD discovery and sync)
-	api.Get("/gitops/argocd/applications", gitopsHandlers.ListArgoApplications)
-	api.Get("/gitops/argocd/applicationsets", gitopsHandlers.ListArgoApplicationSets)
-	api.Get("/gitops/argocd/health", gitopsHandlers.GetArgoHealthSummary)
-	api.Get("/gitops/argocd/sync", gitopsHandlers.GetArgoSyncSummary)
-	api.Get("/gitops/argocd/status", gitopsHandlers.GetArgoStatus)
-	// POST /gitops/argocd/sync moved to kc-agent in #7993 Phase 4 (agent-side
-	// added in Phase 3c). Runs under the user's kubeconfig.
-	// Frontend compatibility alias
-	api.Get("/mcp/operator-subscriptions", gitopsHandlers.ListOperatorSubscriptions)
-
-	// MCS (Multi-Cluster Service) routes
-	mcsHandlers := handlers.NewMCSHandlers(s.k8sClient, s.hub)
-	api.Get("/mcs/status", mcsHandlers.GetMCSStatus)
-	api.Get("/mcs/exports", mcsHandlers.ListServiceExports)
-	api.Get("/mcs/exports/:cluster/:namespace/:name", mcsHandlers.GetServiceExport)
-	// Create/Delete ServiceExport routes removed in #7993 Phase 1.5 PR B.
-	// User-initiated mutations now run via kc-agent /serviceexports under
-	// the user's kubeconfig. The backend handlers had no frontend consumer.
-	api.Get("/mcs/imports", mcsHandlers.ListServiceImports)
-	api.Get("/mcs/imports/:cluster/:namespace/:name", mcsHandlers.GetServiceImport)
-
-	// Gateway API routes
-	gatewayHandlers := handlers.NewGatewayHandlers(s.k8sClient, s.hub)
-	api.Get("/gateway/status", gatewayHandlers.GetGatewayAPIStatus)
-	api.Get("/gateway/gateways", gatewayHandlers.ListGateways)
-	api.Get("/gateway/gateways/:cluster/:namespace/:name", gatewayHandlers.GetGateway)
-	api.Get("/gateway/httproutes", gatewayHandlers.ListHTTPRoutes)
-	api.Get("/gateway/httproutes/:cluster/:namespace/:name", gatewayHandlers.GetHTTPRoute)
-
-	// CRD routes (Custom Resource Definition browser)
-	crdHandlers := handlers.NewCRDHandlers(s.k8sClient)
-	api.Get("/crds", crdHandlers.ListCRDs)
-
-	// Lima routes (Lima VM status)
-	limaHandlers := handlers.NewLimaHandlers(s.k8sClient)
-	api.Get("/lima", limaHandlers.ListLima)
-
-	// MCS ServiceExport routes
-	svcExportHandlers := handlers.NewServiceExportHandlers(s.k8sClient)
-	api.Get("/service-exports", svcExportHandlers.ListServiceExports)
-
-	// Admission webhook routes
-	webhookHandlers := handlers.NewWebhookHandlers(s.k8sClient)
-	api.Get("/admission-webhooks", webhookHandlers.ListWebhooks)
-
-	// Service Topology routes
-	topologyHandlers := handlers.NewTopologyHandlers(s.k8sClient, s.hub)
-	api.Get("/topology", topologyHandlers.GetTopology)
-
-	// Workload routes
-	workloadHandlers := handlers.NewWorkloadHandlers(s.k8sClient, s.hub, s.store)
-	// Reload persisted cluster groups on startup (#7013) and start periodic
-	// refresh so multi-instance deployments converge on DB state (#10007).
-	workloadHandlers.LoadPersistedClusterGroups()
-	workloadHandlers.StartCacheRefresh()
-	s.workloadHandlers = workloadHandlers
-	api.Get("/workloads", workloadHandlers.ListWorkloads)
-	api.Get("/workloads/capabilities", workloadHandlers.GetClusterCapabilities)
-	api.Get("/workloads/policies", workloadHandlers.ListBindingPolicies)
-	api.Get("/workloads/deploy-status/:cluster/:namespace/:name", workloadHandlers.GetDeployStatus)
-	api.Get("/workloads/deploy-logs/:cluster/:namespace/:name", workloadHandlers.GetDeployLogs)
-	api.Get("/workloads/resolve-deps/:cluster/:namespace/:name", workloadHandlers.ResolveDependencies)
-	api.Get("/workloads/monitor/:cluster/:namespace/:name", workloadHandlers.MonitorWorkload)
-	api.Get("/workloads/:cluster/:namespace/:name", workloadHandlers.GetWorkload)
-	// NOTE: /workloads/deploy, /workloads/scale, and the DELETE
-	// /workloads/:cluster/:namespace/:name route all moved to kc-agent
-	// (#7993 Phase 1 PRs A and B). The agent uses the user's kubeconfig
-	// instead of the backend pod SA for those mutating operations.
-
-	// Cluster Group routes
-	api.Get("/cluster-groups", workloadHandlers.ListClusterGroups)
-	api.Post("/cluster-groups", workloadHandlers.CreateClusterGroup)
-	api.Post("/cluster-groups/sync", workloadHandlers.SyncClusterGroups)
-	api.Post("/cluster-groups/evaluate", workloadHandlers.EvaluateClusterQuery)
-	api.Post("/cluster-groups/ai-query", workloadHandlers.GenerateClusterQuery)
-	api.Put("/cluster-groups/:name", workloadHandlers.UpdateClusterGroup)
-	api.Delete("/cluster-groups/:name", workloadHandlers.DeleteClusterGroup)
+	s.setupK8sResourceRoutes(api)
 
 	// Feature requests and feedback routes
 	// POST route is registered outside the /api group to exempt it from apiLimiter (#9969)
@@ -1896,7 +1475,7 @@ func LoadConfigFromEnv() Config {
 		DevUserEmail:  getEnvOrDefault("DEV_USER_EMAIL", "dev@localhost"),
 		DevUserAvatar: getEnvOrDefault("DEV_USER_AVATAR", ""),
 		// kc-agent shared secret (generated by startup-oauth.sh)
-		AgentToken:          os.Getenv("KC_AGENT_TOKEN"),
+		AgentToken: os.Getenv("KC_AGENT_TOKEN"),
 		// Consolidated GitHub token (FEEDBACK_GITHUB_TOKEN preferred, GITHUB_TOKEN as alias)
 		GitHubToken:         settings.ResolveGitHubTokenEnv(),
 		GitHubWebhookSecret: os.Getenv("GITHUB_WEBHOOK_SECRET"),
