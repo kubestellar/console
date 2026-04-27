@@ -2,18 +2,16 @@
  * Tests for the pure helper functions exported via __testables
  * from useCachedVitess.ts.
  */
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { renderHook } from '@testing-library/react'
 
 vi.mock('../../lib/constants/network', () => ({
   FETCH_DEFAULT_TIMEOUT_MS: 5000,
 }))
 
-vi.mock('../../lib/api', () => ({
-  authFetch: vi.fn(),
-}))
-
-vi.mock('../../lib/cache', () => ({
-  useCache: vi.fn(() => ({
+const { mockAuthFetch, mockUseCache } = vi.hoisted(() => ({
+  mockAuthFetch: vi.fn(),
+  mockUseCache: vi.fn(() => ({
     data: null,
     isLoading: false,
     isRefreshing: false,
@@ -25,8 +23,10 @@ vi.mock('../../lib/cache', () => ({
     refetch: vi.fn(),
   })),
 }))
+vi.mock('../../lib/api', () => ({ authFetch: mockAuthFetch }))
+vi.mock('../../lib/cache', () => ({ useCache: (...args: unknown[]) => mockUseCache(...args) }))
 
-import { __testables } from '../useCachedVitess'
+import { __testables, useCachedVitess } from '../useCachedVitess'
 
 const { buildShards, buildKeyspaces, summarize, deriveHealth, buildStatus } = __testables
 
@@ -205,5 +205,81 @@ describe('buildStatus', () => {
     expect(result.summary.primaryTablets).toBe(1)
     expect(result.summary.replicaTablets).toBe(1)
     expect(result.summary.servingTablets).toBe(2)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Fetcher (via useCache capture)
+// ---------------------------------------------------------------------------
+
+describe('fetchVitessStatus (fetcher)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  function captureFetcher(): () => Promise<unknown> {
+    renderHook(() => useCachedVitess())
+    const config = mockUseCache.mock.calls[0]?.[0] as { fetcher: () => Promise<unknown> }
+    return config.fetcher
+  }
+
+  it('returns parsed data on success', async () => {
+    const validResponse = {
+      tablets: [
+        { alias: 'z1-001', keyspace: 'commerce', shard: '0', type: 'PRIMARY', state: 'SERVING', replicationLagSeconds: 0 },
+        { alias: 'z1-002', keyspace: 'commerce', shard: '0', type: 'REPLICA', state: 'SERVING', replicationLagSeconds: 1 },
+      ],
+      version: 'v18.0.0',
+    }
+    mockAuthFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve(validResponse),
+    })
+
+    const fetcher = captureFetcher()
+    const result = await fetcher() as { health: string; keyspaces: unknown[]; vitessVersion: string }
+    expect(result.health).toBe('healthy')
+    expect(result.keyspaces).toHaveLength(1)
+    expect(result.vitessVersion).toBe('v18.0.0')
+  })
+
+  it('returns not-installed for 404 status', async () => {
+    mockAuthFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 404,
+    })
+
+    const fetcher = captureFetcher()
+    const result = await fetcher() as { health: string; tablets: unknown[] }
+    expect(result.health).toBe('not-installed')
+    expect(result.tablets).toEqual([])
+  })
+
+  it('throws on non-404 error status', async () => {
+    mockAuthFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+    })
+
+    const fetcher = captureFetcher()
+    await expect(fetcher()).rejects.toThrow('HTTP 500')
+  })
+
+  it('throws on network error', async () => {
+    mockAuthFetch.mockRejectedValueOnce(new Error('Network error'))
+
+    const fetcher = captureFetcher()
+    await expect(fetcher()).rejects.toThrow('Network error')
+  })
+
+  it('uses default version when body has no version', async () => {
+    mockAuthFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ tablets: [] }),
+    })
+
+    const fetcher = captureFetcher()
+    const result = await fetcher() as { vitessVersion: string }
+    expect(result.vitessVersion).toBe('unknown')
   })
 })

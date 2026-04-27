@@ -2,18 +2,16 @@
  * Tests for the pure helper functions exported via __testables
  * from useCachedOtel.ts.
  */
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { renderHook } from '@testing-library/react'
 
 vi.mock('../../lib/constants/network', () => ({
   FETCH_DEFAULT_TIMEOUT_MS: 5000,
 }))
 
-vi.mock('../../lib/api', () => ({
-  authFetch: vi.fn(),
-}))
-
-vi.mock('../../lib/cache', () => ({
-  useCache: vi.fn(() => ({
+const { mockAuthFetch, mockUseCache } = vi.hoisted(() => ({
+  mockAuthFetch: vi.fn(),
+  mockUseCache: vi.fn(() => ({
     data: null,
     isLoading: false,
     isRefreshing: false,
@@ -25,8 +23,10 @@ vi.mock('../../lib/cache', () => ({
     refetch: vi.fn(),
   })),
 }))
+vi.mock('../../lib/api', () => ({ authFetch: mockAuthFetch }))
+vi.mock('../../lib/cache', () => ({ useCache: (...args: unknown[]) => mockUseCache(...args) }))
 
-import { __testables } from '../useCachedOtel'
+import { __testables, useCachedOtel } from '../useCachedOtel'
 
 const {
   isOtelCollectorPod,
@@ -401,5 +401,96 @@ describe('buildStatus (otel)', () => {
     }]
     const result = buildStatus(collectors)
     expect(result.health).toBe('degraded')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Fetcher (via useCache capture)
+// ---------------------------------------------------------------------------
+
+describe('fetchOtelStatus (fetcher)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  function captureFetcher(): () => Promise<unknown> {
+    renderHook(() => useCachedOtel())
+    const config = mockUseCache.mock.calls[0]?.[0] as { fetcher: () => Promise<unknown> }
+    return config.fetcher
+  }
+
+  it('returns parsed data on success', async () => {
+    const otelPod = {
+      name: 'otel-collector-0',
+      namespace: 'monitoring',
+      cluster: 'prod',
+      status: {
+        phase: 'Running',
+        containerStatuses: [{ name: 'otel-collector', ready: true, image: 'otel/collector:0.90.0' }],
+      },
+      metadata: {
+        labels: { 'app.kubernetes.io/name': 'opentelemetry-collector' },
+        annotations: {},
+      },
+    }
+    mockAuthFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ items: [otelPod] }),
+    })
+
+    const fetcher = captureFetcher()
+    const result = await fetcher() as { health: string; collectors: unknown[] }
+    expect(result.health).toBe('healthy')
+    expect(result.collectors).toHaveLength(1)
+  })
+
+  it('returns not-installed for 404 status', async () => {
+    mockAuthFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 404,
+    })
+
+    const fetcher = captureFetcher()
+    const result = await fetcher() as { health: string }
+    expect(result.health).toBe('not-installed')
+  })
+
+  it('returns not-installed for 503 status', async () => {
+    mockAuthFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 503,
+    })
+
+    const fetcher = captureFetcher()
+    const result = await fetcher() as { health: string }
+    expect(result.health).toBe('not-installed')
+  })
+
+  it('throws on non-whitelisted error status', async () => {
+    mockAuthFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+    })
+
+    const fetcher = captureFetcher()
+    await expect(fetcher()).rejects.toThrow('HTTP 500')
+  })
+
+  it('throws on network error', async () => {
+    mockAuthFetch.mockRejectedValueOnce(new Error('Network error'))
+
+    const fetcher = captureFetcher()
+    await expect(fetcher()).rejects.toThrow('Network error')
+  })
+
+  it('returns not-installed when JSON parse fails', async () => {
+    mockAuthFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.reject(new SyntaxError('Unexpected token <')),
+    })
+
+    const fetcher = captureFetcher()
+    const result = await fetcher() as { health: string }
+    expect(result.health).toBe('not-installed')
   })
 })

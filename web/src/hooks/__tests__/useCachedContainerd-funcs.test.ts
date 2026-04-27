@@ -2,20 +2,12 @@
  * Tests for the pure helper functions exported via __testables
  * from useCachedContainerd.ts.
  */
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { renderHook } from '@testing-library/react'
 
-vi.mock('../../lib/constants/network', () => ({
-  FETCH_DEFAULT_TIMEOUT_MS: 5000,
-  LOCAL_AGENT_HTTP_URL: 'http://localhost:8585',
-}))
-
-vi.mock('../useDemoMode', () => ({
-  useDemoMode: () => ({ isDemoMode: false }),
-  isDemoModeForced: false,
-}))
-
-vi.mock('../../lib/cache', () => ({
-  useCache: vi.fn(() => ({
+const { mockAgentFetch, mockUseCache } = vi.hoisted(() => ({
+  mockAgentFetch: vi.fn(),
+  mockUseCache: vi.fn(() => ({
     data: null,
     isLoading: false,
     isRefreshing: false,
@@ -27,8 +19,21 @@ vi.mock('../../lib/cache', () => ({
     refetch: vi.fn(),
   })),
 }))
+vi.mock('../mcp/shared', () => ({ agentFetch: mockAgentFetch }))
 
-import { __testables } from '../useCachedContainerd'
+vi.mock('../../lib/constants/network', () => ({
+  FETCH_DEFAULT_TIMEOUT_MS: 5000,
+  LOCAL_AGENT_HTTP_URL: 'http://localhost:8585',
+}))
+
+vi.mock('../useDemoMode', () => ({
+  useDemoMode: () => ({ isDemoMode: false }),
+  isDemoModeForced: false,
+}))
+
+vi.mock('../../lib/cache', () => ({ useCache: (...args: unknown[]) => mockUseCache(...args) }))
+
+import { __testables, useCachedContainerd } from '../useCachedContainerd'
 
 const { isContainerdRuntime, normalizeContainerId, mapContainerState, formatUptime, buildContainerdData } = __testables
 
@@ -227,5 +232,90 @@ describe('buildContainerdData', () => {
     ]
     const result = buildContainerdData(nodes, pods)
     expect(result.containers).toHaveLength(1)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Fetcher (via useCache capture)
+// ---------------------------------------------------------------------------
+
+describe('fetchContainerdStatus (fetcher)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  function captureFetcher(): () => Promise<unknown> {
+    renderHook(() => useCachedContainerd())
+    const config = mockUseCache.mock.calls[0]?.[0] as { fetcher: () => Promise<unknown> }
+    return config.fetcher
+  }
+
+  it('returns parsed data on success', async () => {
+    mockAgentFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({
+          nodes: [{ name: 'worker-1', containerRuntime: 'containerd://1.6.20' }],
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({
+          pods: [
+            {
+              name: 'nginx-abc',
+              namespace: 'default',
+              node: 'worker-1',
+              containers: [{ name: 'nginx', image: 'nginx:1.25', state: 'running', containerID: 'containerd://abc123def456789' }],
+            },
+          ],
+        }),
+      })
+
+    const fetcher = captureFetcher()
+    const result = await fetcher() as { health: string; containers: unknown[] }
+    expect(result.health).toBe('healthy')
+    expect(result.containers).toHaveLength(1)
+  })
+
+  it('throws when nodes endpoint returns non-ok', async () => {
+    mockAgentFetch
+      .mockResolvedValueOnce({ ok: false, status: 500 })
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ pods: [] }) })
+
+    const fetcher = captureFetcher()
+    await expect(fetcher()).rejects.toThrow('nodes HTTP 500')
+  })
+
+  it('throws when pods endpoint returns non-ok', async () => {
+    mockAgentFetch
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ nodes: [] }) })
+      .mockResolvedValueOnce({ ok: false, status: 503 })
+
+    const fetcher = captureFetcher()
+    await expect(fetcher()).rejects.toThrow('pods HTTP 503')
+  })
+
+  it('throws on network error', async () => {
+    mockAgentFetch.mockRejectedValueOnce(new Error('Network error'))
+
+    const fetcher = captureFetcher()
+    await expect(fetcher()).rejects.toThrow('Network error')
+  })
+
+  it('returns not-installed when no containerd nodes found', async () => {
+    mockAgentFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ nodes: [{ name: 'node1', containerRuntime: 'cri-o://1.27' }] }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ pods: [] }),
+      })
+
+    const fetcher = captureFetcher()
+    const result = await fetcher() as { health: string }
+    expect(result.health).toBe('not-installed')
   })
 })

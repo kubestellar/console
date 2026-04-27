@@ -2,7 +2,14 @@
  * Tests for the pure helper functions exported via __testables
  * from useCachedCortex.ts.
  */
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { renderHook } from '@testing-library/react'
+
+const { mockAuthFetch, mockUseCache } = vi.hoisted(() => ({
+  mockAuthFetch: vi.fn(),
+  mockUseCache: vi.fn(),
+}))
+vi.mock('../../lib/api', () => ({ authFetch: mockAuthFetch }))
 
 vi.mock('../../lib/constants/network', () => ({
   FETCH_DEFAULT_TIMEOUT_MS: 5000,
@@ -11,24 +18,37 @@ vi.mock('../../lib/constants/network', () => ({
 
 vi.mock('../useDemoMode', () => ({
   useDemoMode: () => ({ isDemoMode: false }),
-  isDemoModeForced: false,
+  isDemoModeForced: () => false,
+  canToggleDemoMode: () => true,
+  isNetlifyDeployment: () => false,
+  isDemoToken: () => false,
+  hasRealToken: () => true,
+  setDemoToken: vi.fn(),
+  getDemoMode: () => false,
+  setGlobalDemoMode: vi.fn(),
 }))
 
+mockUseCache.mockReturnValue({
+  data: null,
+  isLoading: false,
+  isRefreshing: false,
+  isDemoFallback: false,
+  error: null,
+  isFailed: false,
+  consecutiveFailures: 0,
+  lastRefresh: null,
+  refetch: vi.fn(),
+})
 vi.mock('../../lib/cache', () => ({
-  useCache: vi.fn(() => ({
-    data: null,
-    isLoading: false,
-    isRefreshing: false,
-    isDemoFallback: false,
-    error: null,
-    isFailed: false,
-    consecutiveFailures: 0,
-    lastRefresh: null,
-    refetch: vi.fn(),
-  })),
+  useCache: (...args: unknown[]) => mockUseCache(...args),
 }))
 
-import { __testables } from '../useCachedCortex'
+vi.mock('../../components/cards/CardDataContext', () => ({
+  useCardLoadingState: vi.fn(() => ({ showSkeleton: false, showEmptyState: false })),
+  useCardDemoState: vi.fn(),
+}))
+
+import { __testables, useCachedCortex } from '../useCachedCortex'
 import type {
   CortexComponentPod,
   CortexIngestionMetrics,
@@ -229,3 +249,89 @@ function makeComponent(overrides?: Partial<CortexComponentPod>): CortexComponent
     ...overrides,
   }
 }
+
+// ---------------------------------------------------------------------------
+// fetcher (via useCache capture)
+// ---------------------------------------------------------------------------
+
+describe('fetcher (via useCache capture)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockUseCache.mockReturnValue({
+      data: {
+        health: 'not-installed',
+        version: 'unknown',
+        components: [],
+        metrics: { activeSeries: 0, ingestionRatePerSec: 0, queryRatePerSec: 0, tenantCount: 0 },
+        summary: { totalPods: 0, runningPods: 0, totalComponents: 0, runningComponents: 0 },
+        lastCheckTime: new Date().toISOString(),
+      },
+      isLoading: false,
+      isRefreshing: false,
+      isDemoFallback: false,
+      error: null,
+      isFailed: false,
+      consecutiveFailures: 0,
+      lastRefresh: null,
+      refetch: vi.fn(),
+    })
+  })
+
+  it('returns parsed Cortex status on successful response', async () => {
+    const validResponse = {
+      version: '1.16.0',
+      components: [
+        { name: 'distributor', namespace: 'cortex', status: 'running', replicasDesired: 3, replicasReady: 3, cluster: 'default' },
+      ],
+      metrics: { activeSeries: 500000, ingestionRatePerSec: 12000, queryRatePerSec: 50, tenantCount: 4 },
+    }
+
+    mockAuthFetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(validResponse),
+    })
+
+    renderHook(() => useCachedCortex())
+    const config = mockUseCache.mock.calls[0][0]
+    const result = await config.fetcher()
+
+    expect(result.health).toBe('healthy')
+    expect(result.version).toBe('1.16.0')
+    expect(result.components).toHaveLength(1)
+    expect(result.metrics.activeSeries).toBe(500000)
+  })
+
+  it('returns not-installed status on 404 (treat404AsEmpty path)', async () => {
+    mockAuthFetch.mockResolvedValue({
+      ok: false,
+      status: 404,
+    })
+
+    renderHook(() => useCachedCortex())
+    const config = mockUseCache.mock.calls[0][0]
+    const result = await config.fetcher()
+
+    expect(result.health).toBe('not-installed')
+  })
+
+  it('throws when authFetch returns a non-404 error', async () => {
+    mockAuthFetch.mockResolvedValue({
+      ok: false,
+      status: 500,
+    })
+
+    renderHook(() => useCachedCortex())
+    const config = mockUseCache.mock.calls[0][0]
+
+    await expect(config.fetcher()).rejects.toThrow('Unable to fetch Cortex status')
+  })
+
+  it('throws when authFetch rejects (network error)', async () => {
+    mockAuthFetch.mockRejectedValue(new Error('Network failure'))
+
+    renderHook(() => useCachedCortex())
+    const config = mockUseCache.mock.calls[0][0]
+
+    await expect(config.fetcher()).rejects.toThrow('Unable to fetch Cortex status')
+  })
+})

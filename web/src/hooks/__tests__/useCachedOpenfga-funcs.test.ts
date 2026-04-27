@@ -1,8 +1,12 @@
 /**
  * Tests for the pure helper functions exported via __testables
- * from useCachedOpenfga.ts.
+ * from useCachedOpenfga.ts, PLUS fetcher function tests.
  */
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { renderHook } from '@testing-library/react'
+
+const mockAuthFetch = vi.fn()
+vi.mock('../../lib/api', () => ({ authFetch: (...args: unknown[]) => mockAuthFetch(...args) }))
 
 vi.mock('../../lib/constants/network', () => ({
   FETCH_DEFAULT_TIMEOUT_MS: 5000,
@@ -11,21 +15,35 @@ vi.mock('../../lib/constants/network', () => ({
 
 vi.mock('../useDemoMode', () => ({
   useDemoMode: () => ({ isDemoMode: false }),
-  isDemoModeForced: false,
+  isDemoModeForced: () => false,
+  canToggleDemoMode: () => true,
+  isNetlifyDeployment: () => false,
+  isDemoToken: () => false,
+  hasRealToken: () => true,
+  setDemoToken: vi.fn(),
+  getDemoMode: () => false,
+  setGlobalDemoMode: vi.fn(),
+}))
+
+const mockUseCache = vi.fn(() => ({
+  data: null,
+  isLoading: false,
+  isRefreshing: false,
+  isDemoFallback: false,
+  error: null,
+  isFailed: false,
+  consecutiveFailures: 0,
+  lastRefresh: null,
+  refetch: vi.fn(),
 }))
 
 vi.mock('../../lib/cache', () => ({
-  useCache: vi.fn(() => ({
-    data: null,
-    isLoading: false,
-    isRefreshing: false,
-    isDemoFallback: false,
-    error: null,
-    isFailed: false,
-    consecutiveFailures: 0,
-    lastRefresh: null,
-    refetch: vi.fn(),
-  })),
+  useCache: (...args: unknown[]) => mockUseCache(...args),
+}))
+
+vi.mock('../../components/cards/CardDataContext', () => ({
+  useCardLoadingState: vi.fn(() => ({ showSkeleton: false, showEmptyState: false })),
+  useCardDemoState: vi.fn(),
 }))
 
 import { __testables } from '../useCachedOpenfga'
@@ -227,5 +245,125 @@ describe('buildOpenfgaStatus', () => {
     const result = buildOpenfgaStatus('', [], [], makeStats())
     expect(() => new Date(result.lastCheckTime)).not.toThrow()
     expect(new Date(result.lastCheckTime).toISOString()).toBe(result.lastCheckTime)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Fetcher function tests (via useCache capture)
+// ---------------------------------------------------------------------------
+
+import { useCachedOpenfga } from '../useCachedOpenfga'
+
+describe('fetchOpenfgaStatus (via useCache fetcher)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockUseCache.mockReturnValue({
+      data: { health: 'not-installed', stores: [], models: [], stats: { totalTuples: 0, totalStores: 0, totalModels: 0, serverVersion: 'unknown', rps: { check: 0, expand: 0, listObjects: 0 }, latency: { p50: 0, p95: 0, p99: 0 } }, summary: { endpoint: '', totalTuples: 0, totalStores: 0, totalModels: 0 }, lastCheckTime: '' },
+      isLoading: false,
+      isRefreshing: false,
+      isDemoFallback: false,
+      error: null,
+      isFailed: false,
+      consecutiveFailures: 0,
+      lastRefresh: null,
+      refetch: vi.fn(),
+    })
+  })
+
+  it('parses a successful API response into OpenfgaStatusData', async () => {
+    renderHook(() => useCachedOpenfga())
+    const config = mockUseCache.mock.calls[0][0]
+    const fetcher = config.fetcher
+
+    mockAuthFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          endpoint: 'http://openfga:8080',
+          stores: [
+            {
+              id: 'store-1',
+              name: 'production',
+              tupleCount: 1500,
+              modelCount: 2,
+              status: 'active',
+              lastWriteTime: new Date().toISOString(),
+            },
+          ],
+          models: [
+            {
+              id: 'model-1',
+              storeName: 'production',
+              schemaVersion: '1.1',
+              typeCount: 5,
+              createdAt: new Date().toISOString(),
+            },
+          ],
+          stats: {
+            totalTuples: 3000,
+            totalStores: 1,
+            totalModels: 1,
+            serverVersion: '1.5.0',
+            rps: { check: 100, expand: 20, listObjects: 10 },
+            latency: { p50: 5, p95: 15, p99: 30 },
+          },
+        }),
+    })
+
+    const result = await fetcher()
+    expect(result.health).toBe('healthy')
+    expect(result.stores).toHaveLength(1)
+    expect(result.models).toHaveLength(1)
+    expect(result.summary.endpoint).toBe('http://openfga:8080')
+    expect(result.stats.totalTuples).toBe(3000)
+    expect(result.stats.serverVersion).toBe('1.5.0')
+  })
+
+  it('throws on non-ok response (non-404) so cache falls back to demo', async () => {
+    renderHook(() => useCachedOpenfga())
+    const config = mockUseCache.mock.calls[0][0]
+    const fetcher = config.fetcher
+
+    mockAuthFetch.mockResolvedValueOnce({ ok: false, status: 500 })
+
+    await expect(fetcher()).rejects.toThrow('Unable to fetch OpenFGA status')
+  })
+
+  it('returns not-installed data on 404 (treated as empty)', async () => {
+    renderHook(() => useCachedOpenfga())
+    const config = mockUseCache.mock.calls[0][0]
+    const fetcher = config.fetcher
+
+    mockAuthFetch.mockResolvedValueOnce({ ok: false, status: 404 })
+
+    const result = await fetcher()
+    expect(result.health).toBe('not-installed')
+    expect(result.stores).toEqual([])
+  })
+
+  it('throws on network error so cache falls back to demo', async () => {
+    renderHook(() => useCachedOpenfga())
+    const config = mockUseCache.mock.calls[0][0]
+    const fetcher = config.fetcher
+
+    mockAuthFetch.mockRejectedValueOnce(new Error('Network failure'))
+
+    await expect(fetcher()).rejects.toThrow('Unable to fetch OpenFGA status')
+  })
+
+  it('handles empty body fields gracefully', async () => {
+    renderHook(() => useCachedOpenfga())
+    const config = mockUseCache.mock.calls[0][0]
+    const fetcher = config.fetcher
+
+    mockAuthFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({}),
+    })
+
+    const result = await fetcher()
+    expect(result.stores).toEqual([])
+    expect(result.models).toEqual([])
+    expect(result.stats.totalTuples).toBe(0)
   })
 })

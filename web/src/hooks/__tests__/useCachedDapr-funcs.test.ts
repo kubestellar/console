@@ -2,7 +2,14 @@
  * Tests for the pure helper functions exported via __testables
  * from useCachedDapr.ts.
  */
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { renderHook } from '@testing-library/react'
+
+const { mockAuthFetch, mockUseCache } = vi.hoisted(() => ({
+  mockAuthFetch: vi.fn(),
+  mockUseCache: vi.fn(),
+}))
+vi.mock('../../lib/api', () => ({ authFetch: mockAuthFetch }))
 
 vi.mock('../../lib/constants/network', () => ({
   FETCH_DEFAULT_TIMEOUT_MS: 5000,
@@ -11,24 +18,37 @@ vi.mock('../../lib/constants/network', () => ({
 
 vi.mock('../useDemoMode', () => ({
   useDemoMode: () => ({ isDemoMode: false }),
-  isDemoModeForced: false,
+  isDemoModeForced: () => false,
+  canToggleDemoMode: () => true,
+  isNetlifyDeployment: () => false,
+  isDemoToken: () => false,
+  hasRealToken: () => true,
+  setDemoToken: vi.fn(),
+  getDemoMode: () => false,
+  setGlobalDemoMode: vi.fn(),
 }))
 
+mockUseCache.mockReturnValue({
+  data: null,
+  isLoading: false,
+  isRefreshing: false,
+  isDemoFallback: false,
+  error: null,
+  isFailed: false,
+  consecutiveFailures: 0,
+  lastRefresh: null,
+  refetch: vi.fn(),
+})
 vi.mock('../../lib/cache', () => ({
-  useCache: vi.fn(() => ({
-    data: null,
-    isLoading: false,
-    isRefreshing: false,
-    isDemoFallback: false,
-    error: null,
-    isFailed: false,
-    consecutiveFailures: 0,
-    lastRefresh: null,
-    refetch: vi.fn(),
-  })),
+  useCache: (...args: unknown[]) => mockUseCache(...args),
 }))
 
-import { __testables } from '../useCachedDapr'
+vi.mock('../../components/cards/CardDataContext', () => ({
+  useCardLoadingState: vi.fn(() => ({ showSkeleton: false, showEmptyState: false })),
+  useCardDemoState: vi.fn(),
+}))
+
+import { __testables, useCachedDapr } from '../useCachedDapr'
 import type {
   DaprControlPlanePod,
   DaprComponent,
@@ -241,5 +261,96 @@ describe('buildDaprStatus', () => {
     ]
     const result = buildDaprStatus(pods, [], EMPTY_APPS)
     expect(result.health).toBe('degraded')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// fetcher (via useCache capture)
+// ---------------------------------------------------------------------------
+
+describe('fetcher (via useCache capture)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockUseCache.mockReturnValue({
+      data: {
+        health: 'not-installed',
+        controlPlane: [],
+        components: [],
+        apps: { total: 0, namespaces: 0 },
+        buildingBlocks: { stateStores: 0, pubsubs: 0, bindings: 0 },
+        summary: { totalControlPlanePods: 0, runningControlPlanePods: 0, totalComponents: 0, totalDaprApps: 0 },
+        lastCheckTime: new Date().toISOString(),
+      },
+      isLoading: false,
+      isRefreshing: false,
+      isDemoFallback: false,
+      error: null,
+      isFailed: false,
+      consecutiveFailures: 0,
+      lastRefresh: null,
+      refetch: vi.fn(),
+    })
+  })
+
+  it('returns parsed Dapr status on successful response', async () => {
+    const validResponse = {
+      controlPlane: [
+        { name: 'operator', namespace: 'dapr-system', status: 'running', replicasDesired: 1, replicasReady: 1, cluster: 'default' },
+      ],
+      components: [
+        { name: 'statestore', namespace: 'default', type: 'state-store', componentImpl: 'state.redis', cluster: 'default' },
+      ],
+      apps: { total: 5, namespaces: 2 },
+    }
+
+    mockAuthFetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(validResponse),
+    })
+
+    renderHook(() => useCachedDapr())
+    const config = mockUseCache.mock.calls[0][0]
+    const result = await config.fetcher()
+
+    expect(result.health).toBe('healthy')
+    expect(result.controlPlane).toHaveLength(1)
+    expect(result.components).toHaveLength(1)
+    expect(result.apps.total).toBe(5)
+  })
+
+  it('returns not-installed status on 404 response', async () => {
+    mockAuthFetch.mockResolvedValue({
+      ok: false,
+      status: 404,
+    })
+
+    renderHook(() => useCachedDapr())
+    const config = mockUseCache.mock.calls[0][0]
+    const result = await config.fetcher()
+
+    // Dapr uses NOT_INSTALLED_STATUSES which includes 404 — returns
+    // { data: null, failed: false }, so the fetcher builds empty status
+    expect(result.health).toBe('not-installed')
+  })
+
+  it('throws when authFetch returns a non-listed error status', async () => {
+    mockAuthFetch.mockResolvedValue({
+      ok: false,
+      status: 500,
+    })
+
+    renderHook(() => useCachedDapr())
+    const config = mockUseCache.mock.calls[0][0]
+
+    await expect(config.fetcher()).rejects.toThrow('Unable to fetch Dapr status')
+  })
+
+  it('throws when authFetch rejects (network error)', async () => {
+    mockAuthFetch.mockRejectedValue(new Error('Network failure'))
+
+    renderHook(() => useCachedDapr())
+    const config = mockUseCache.mock.calls[0][0]
+
+    await expect(config.fetcher()).rejects.toThrow('Unable to fetch Dapr status')
   })
 })

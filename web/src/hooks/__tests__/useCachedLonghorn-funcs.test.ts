@@ -2,18 +2,16 @@
  * Tests for the pure helper functions exported via __testables
  * from useCachedLonghorn.ts.
  */
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { renderHook } from '@testing-library/react'
 
 vi.mock('../../lib/constants/network', () => ({
   FETCH_DEFAULT_TIMEOUT_MS: 5000,
 }))
 
-vi.mock('../../lib/api', () => ({
-  authFetch: vi.fn(),
-}))
-
-vi.mock('../../lib/cache', () => ({
-  useCache: vi.fn(() => ({
+const { mockAuthFetch, mockUseCache } = vi.hoisted(() => ({
+  mockAuthFetch: vi.fn(),
+  mockUseCache: vi.fn(() => ({
     data: null,
     isLoading: false,
     isRefreshing: false,
@@ -25,8 +23,10 @@ vi.mock('../../lib/cache', () => ({
     refetch: vi.fn(),
   })),
 }))
+vi.mock('../../lib/api', () => ({ authFetch: mockAuthFetch }))
+vi.mock('../../lib/cache', () => ({ useCache: (...args: unknown[]) => mockUseCache(...args) }))
 
-import { __testables } from '../useCachedLonghorn'
+import { __testables, useCachedLonghorn } from '../useCachedLonghorn'
 
 const { normalizeVolumeState, normalizeRobustness, summarize, deriveHealth, buildStatus } = __testables
 
@@ -191,5 +191,85 @@ describe('buildStatus (longhorn)', () => {
     expect(result.summary.totalVolumes).toBe(1)
     expect(result.summary.totalNodes).toBe(1)
     expect(result.summary.healthyVolumes).toBe(1)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Fetcher (via useCache capture)
+// ---------------------------------------------------------------------------
+
+describe('fetchLonghornStatus (fetcher)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  function captureFetcher(): () => Promise<unknown> {
+    renderHook(() => useCachedLonghorn())
+    const config = mockUseCache.mock.calls[0]?.[0] as { fetcher: () => Promise<unknown> }
+    return config.fetcher
+  }
+
+  it('returns parsed data on success', async () => {
+    const validResponse = {
+      volumes: [
+        { name: 'v1', namespace: 'ns', state: 'attached', robustness: 'healthy', replicasDesired: 3, replicasHealthy: 3, sizeBytes: 1000, actualSizeBytes: 500, nodeAttached: 'n1', cluster: 'c1' },
+      ],
+      nodes: [
+        { name: 'n1', cluster: 'c1', ready: true, schedulable: true, storageTotalBytes: 100000, storageUsedBytes: 40000, replicaCount: 3 },
+      ],
+    }
+    mockAuthFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve(validResponse),
+    })
+
+    const fetcher = captureFetcher()
+    const result = await fetcher() as { health: string; volumes: unknown[]; nodes: unknown[] }
+    expect(result.health).toBe('healthy')
+    expect(result.volumes).toHaveLength(1)
+    expect(result.nodes).toHaveLength(1)
+  })
+
+  it('returns not-installed for 404 status', async () => {
+    mockAuthFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 404,
+    })
+
+    const fetcher = captureFetcher()
+    const result = await fetcher() as { health: string; volumes: unknown[]; nodes: unknown[] }
+    expect(result.health).toBe('not-installed')
+    expect(result.volumes).toEqual([])
+    expect(result.nodes).toEqual([])
+  })
+
+  it('throws on non-404 error status', async () => {
+    mockAuthFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+    })
+
+    const fetcher = captureFetcher()
+    await expect(fetcher()).rejects.toThrow('HTTP 500')
+  })
+
+  it('throws on network error', async () => {
+    mockAuthFetch.mockRejectedValueOnce(new Error('Network error'))
+
+    const fetcher = captureFetcher()
+    await expect(fetcher()).rejects.toThrow('Network error')
+  })
+
+  it('handles empty body arrays gracefully', async () => {
+    mockAuthFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({}),
+    })
+
+    const fetcher = captureFetcher()
+    const result = await fetcher() as { health: string; volumes: unknown[]; nodes: unknown[] }
+    expect(result.health).toBe('not-installed')
+    expect(result.volumes).toEqual([])
+    expect(result.nodes).toEqual([])
   })
 })

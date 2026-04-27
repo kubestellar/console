@@ -2,7 +2,14 @@
  * Tests for the pure helper functions exported via __testables
  * from useCachedCloudCustodian.ts.
  */
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { renderHook } from '@testing-library/react'
+
+const { mockAuthFetch, mockUseCache } = vi.hoisted(() => ({
+  mockAuthFetch: vi.fn(),
+  mockUseCache: vi.fn(),
+}))
+vi.mock('../../lib/api', () => ({ authFetch: mockAuthFetch }))
 
 vi.mock('../../lib/constants/network', () => ({
   FETCH_DEFAULT_TIMEOUT_MS: 5000,
@@ -11,24 +18,37 @@ vi.mock('../../lib/constants/network', () => ({
 
 vi.mock('../useDemoMode', () => ({
   useDemoMode: () => ({ isDemoMode: false }),
-  isDemoModeForced: false,
+  isDemoModeForced: () => false,
+  canToggleDemoMode: () => true,
+  isNetlifyDeployment: () => false,
+  isDemoToken: () => false,
+  hasRealToken: () => true,
+  setDemoToken: vi.fn(),
+  getDemoMode: () => false,
+  setGlobalDemoMode: vi.fn(),
 }))
 
+mockUseCache.mockReturnValue({
+  data: null,
+  isLoading: false,
+  isRefreshing: false,
+  isDemoFallback: false,
+  error: null,
+  isFailed: false,
+  consecutiveFailures: 0,
+  lastRefresh: null,
+  refetch: vi.fn(),
+})
 vi.mock('../../lib/cache', () => ({
-  useCache: vi.fn(() => ({
-    data: null,
-    isLoading: false,
-    isRefreshing: false,
-    isDemoFallback: false,
-    error: null,
-    isFailed: false,
-    consecutiveFailures: 0,
-    lastRefresh: null,
-    refetch: vi.fn(),
-  })),
+  useCache: (...args: unknown[]) => mockUseCache(...args),
 }))
 
-import { __testables } from '../useCachedCloudCustodian'
+vi.mock('../../components/cards/CardDataContext', () => ({
+  useCardLoadingState: vi.fn(() => ({ showSkeleton: false, showEmptyState: false })),
+  useCardDemoState: vi.fn(),
+}))
+
+import { __testables, useCachedCloudCustodian } from '../useCachedCloudCustodian'
 import type {
   CustodianPolicy,
   CustodianSeverityCounts,
@@ -263,3 +283,84 @@ function makePolicy(overrides?: Partial<CustodianPolicy>): CustodianPolicy {
     ...overrides,
   }
 }
+
+// ---------------------------------------------------------------------------
+// fetcher (via useCache capture)
+// ---------------------------------------------------------------------------
+
+describe('fetcher (via useCache capture)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockUseCache.mockReturnValue({
+      data: null,
+      isLoading: false,
+      isRefreshing: false,
+      isDemoFallback: false,
+      error: null,
+      isFailed: false,
+      consecutiveFailures: 0,
+      lastRefresh: null,
+      refetch: vi.fn(),
+    })
+  })
+
+  it('returns parsed Cloud Custodian status on successful response', async () => {
+    const validResponse = {
+      version: '0.9.25',
+      policies: [
+        { name: 'ec2-stop', resource: 'aws.ec2', provider: 'aws', mode: 'pull', successCount: 10, failCount: 0, dryRunCount: 0, resourcesMatched: 5, lastRunAt: new Date().toISOString() },
+      ],
+      topResources: [{ id: 'arn:aws:ec2:i-123', type: 'ec2-instance', actionCount: 3 }],
+      violationsBySeverity: { critical: 0, high: 0, medium: 2, low: 1 },
+    }
+
+    mockAuthFetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(validResponse),
+    })
+
+    renderHook(() => useCachedCloudCustodian())
+    const config = mockUseCache.mock.calls[0][0]
+    const result = await config.fetcher()
+
+    expect(result.health).toBe('healthy')
+    expect(result.version).toBe('0.9.25')
+    expect(result.policies).toHaveLength(1)
+    expect(result.topResources).toHaveLength(1)
+  })
+
+  it('returns not-installed status on 404 response (no throw)', async () => {
+    mockAuthFetch.mockResolvedValue({
+      ok: false,
+      status: 404,
+    })
+
+    renderHook(() => useCachedCloudCustodian())
+    const config = mockUseCache.mock.calls[0][0]
+    const result = await config.fetcher()
+
+    // CloudCustodian fetcher returns buildCloudCustodianStatus on 404
+    expect(result.health).toBe('not-installed')
+  })
+
+  it('throws when authFetch returns a non-404 error', async () => {
+    mockAuthFetch.mockResolvedValue({
+      ok: false,
+      status: 500,
+    })
+
+    renderHook(() => useCachedCloudCustodian())
+    const config = mockUseCache.mock.calls[0][0]
+
+    await expect(config.fetcher()).rejects.toThrow('HTTP 500')
+  })
+
+  it('throws when authFetch rejects (network error)', async () => {
+    mockAuthFetch.mockRejectedValue(new Error('Network failure'))
+
+    renderHook(() => useCachedCloudCustodian())
+    const config = mockUseCache.mock.calls[0][0]
+
+    await expect(config.fetcher()).rejects.toThrow('Network failure')
+  })
+})

@@ -2,18 +2,16 @@
  * Tests for the pure helper functions exported via __testables
  * from useCachedDragonfly.ts.
  */
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { renderHook } from '@testing-library/react'
 
 vi.mock('../../lib/constants/network', () => ({
   FETCH_DEFAULT_TIMEOUT_MS: 5000,
 }))
 
-vi.mock('../../lib/api', () => ({
-  authFetch: vi.fn(),
-}))
-
-vi.mock('../../lib/cache', () => ({
-  useCache: vi.fn(() => ({
+const { mockAuthFetch, mockUseCache } = vi.hoisted(() => ({
+  mockAuthFetch: vi.fn(),
+  mockUseCache: vi.fn(() => ({
     data: null,
     isLoading: false,
     isRefreshing: false,
@@ -25,8 +23,10 @@ vi.mock('../../lib/cache', () => ({
     refetch: vi.fn(),
   })),
 }))
+vi.mock('../../lib/api', () => ({ authFetch: mockAuthFetch }))
+vi.mock('../../lib/cache', () => ({ useCache: (...args: unknown[]) => mockUseCache(...args) }))
 
-import { __testables } from '../useCachedDragonfly'
+import { __testables, useCachedDragonfly } from '../useCachedDragonfly'
 
 const { classifyDragonflyPod, podIsReady, parseVersion, buildStatus } = __testables
 
@@ -237,5 +237,93 @@ describe('buildStatus (dragonfly)', () => {
     const result = buildStatus(pods)
     const comp = result.components.find(c => c.component === 'seed-peer')
     expect(comp?.version).toBe('v2.0.8')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Fetcher (via useCache capture)
+// ---------------------------------------------------------------------------
+
+describe('fetchDragonflyStatus (fetcher)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  function captureFetcher(): () => Promise<unknown> {
+    renderHook(() => useCachedDragonfly())
+    const config = mockUseCache.mock.calls[0]?.[0] as { fetcher: () => Promise<unknown> }
+    return config.fetcher
+  }
+
+  it('returns parsed data on success', async () => {
+    const dragonflyPod = {
+      name: 'dragonfly-manager-0',
+      namespace: 'dragonfly-system',
+      cluster: 'prod',
+      status: {
+        phase: 'Running',
+        containerStatuses: [{ name: 'manager', ready: true, image: 'dragonflyoss/manager:v2.1.0' }],
+      },
+      metadata: { labels: { 'app.kubernetes.io/component': 'dragonfly-manager' } },
+    }
+    mockAuthFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ items: [dragonflyPod] }),
+    })
+
+    const fetcher = captureFetcher()
+    const result = await fetcher() as { health: string; components: unknown[] }
+    expect(result.health).toBe('healthy')
+    expect(result.components).toHaveLength(1)
+  })
+
+  it('returns not-installed for 404 status', async () => {
+    mockAuthFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 404,
+    })
+
+    const fetcher = captureFetcher()
+    const result = await fetcher() as { health: string }
+    expect(result.health).toBe('not-installed')
+  })
+
+  it('returns not-installed for 503 status', async () => {
+    mockAuthFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 503,
+    })
+
+    const fetcher = captureFetcher()
+    const result = await fetcher() as { health: string }
+    expect(result.health).toBe('not-installed')
+  })
+
+  it('throws on non-whitelisted error status', async () => {
+    mockAuthFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+    })
+
+    const fetcher = captureFetcher()
+    await expect(fetcher()).rejects.toThrow('HTTP 500')
+  })
+
+  it('throws on network error', async () => {
+    mockAuthFetch.mockRejectedValueOnce(new Error('Network error'))
+
+    const fetcher = captureFetcher()
+    await expect(fetcher()).rejects.toThrow('Network error')
+  })
+
+  it('returns not-installed when JSON parse fails', async () => {
+    mockAuthFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.reject(new SyntaxError('Unexpected token <')),
+    })
+
+    const fetcher = captureFetcher()
+    const result = await fetcher() as { health: string }
+    expect(result.health).toBe('not-installed')
   })
 })

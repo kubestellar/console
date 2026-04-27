@@ -2,7 +2,14 @@
  * Tests for the pure helper functions exported via __testables
  * from useCachedKserve.ts.
  */
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { renderHook } from '@testing-library/react'
+
+const { mockAuthFetch, mockUseCache } = vi.hoisted(() => ({
+  mockAuthFetch: vi.fn(),
+  mockUseCache: vi.fn(),
+}))
+vi.mock('../../lib/api', () => ({ authFetch: mockAuthFetch }))
 
 vi.mock('../../lib/constants/network', () => ({
   FETCH_DEFAULT_TIMEOUT_MS: 5000,
@@ -11,24 +18,37 @@ vi.mock('../../lib/constants/network', () => ({
 
 vi.mock('../useDemoMode', () => ({
   useDemoMode: () => ({ isDemoMode: false }),
-  isDemoModeForced: false,
+  isDemoModeForced: () => false,
+  canToggleDemoMode: () => true,
+  isNetlifyDeployment: () => false,
+  isDemoToken: () => false,
+  hasRealToken: () => true,
+  setDemoToken: vi.fn(),
+  getDemoMode: () => false,
+  setGlobalDemoMode: vi.fn(),
 }))
 
+mockUseCache.mockReturnValue({
+  data: null,
+  isLoading: false,
+  isRefreshing: false,
+  isDemoFallback: false,
+  error: null,
+  isFailed: false,
+  consecutiveFailures: 0,
+  lastRefresh: null,
+  refetch: vi.fn(),
+})
 vi.mock('../../lib/cache', () => ({
-  useCache: vi.fn(() => ({
-    data: null,
-    isLoading: false,
-    isRefreshing: false,
-    isDemoFallback: false,
-    error: null,
-    isFailed: false,
-    consecutiveFailures: 0,
-    lastRefresh: null,
-    refetch: vi.fn(),
-  })),
+  useCache: (...args: unknown[]) => mockUseCache(...args),
 }))
 
-import { __testables } from '../useCachedKserve'
+vi.mock('../../components/cards/CardDataContext', () => ({
+  useCardLoadingState: vi.fn(() => ({ showSkeleton: false, showEmptyState: false })),
+  useCardDemoState: vi.fn(),
+}))
+
+import { __testables, useCachedKserve } from '../useCachedKserve'
 import type {
   KServeControllerPods,
   KServeService,
@@ -247,3 +267,86 @@ function makeService(overrides?: Partial<KServeService>): KServeService {
     ...overrides,
   }
 }
+
+// ---------------------------------------------------------------------------
+// fetcher (via useCache capture)
+// ---------------------------------------------------------------------------
+
+describe('fetcher (via useCache capture)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockUseCache.mockReturnValue({
+      data: {
+        health: 'not-installed',
+        controllerPods: { ready: 0, total: 0 },
+        services: [],
+        summary: { totalServices: 0, readyServices: 0, notReadyServices: 0, totalRequestsPerSecond: 0, avgP95LatencyMs: 0 },
+        lastCheckTime: new Date().toISOString(),
+      },
+      isLoading: false,
+      isRefreshing: false,
+      isDemoFallback: false,
+      error: null,
+      isFailed: false,
+      consecutiveFailures: 0,
+      lastRefresh: null,
+      refetch: vi.fn(),
+    })
+  })
+
+  it('returns parsed KServe status on successful response', async () => {
+    const validResponse = {
+      controllerPods: { ready: 2, total: 2 },
+      services: [
+        { id: 'svc-1', name: 'iris', namespace: 'default', cluster: 'c1', status: 'ready', modelName: 'sklearn-iris', runtime: 'kserve-sklearnserver', url: 'https://iris.example.com', trafficPercent: 100, readyReplicas: 1, desiredReplicas: 1, requestsPerSecond: 10, p95LatencyMs: 50, updatedAt: new Date().toISOString() },
+      ],
+    }
+
+    mockAuthFetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(validResponse),
+    })
+
+    renderHook(() => useCachedKserve())
+    const config = mockUseCache.mock.calls[0][0]
+    const result = await config.fetcher()
+
+    expect(result.health).toBe('healthy')
+    expect(result.controllerPods.ready).toBe(2)
+    expect(result.services).toHaveLength(1)
+  })
+
+  it('returns not-installed status on 404 (treat404AsEmpty path)', async () => {
+    mockAuthFetch.mockResolvedValue({
+      ok: false,
+      status: 404,
+    })
+
+    renderHook(() => useCachedKserve())
+    const config = mockUseCache.mock.calls[0][0]
+    const result = await config.fetcher()
+
+    expect(result.health).toBe('not-installed')
+  })
+
+  it('throws when authFetch returns a non-404 error', async () => {
+    mockAuthFetch.mockResolvedValue({
+      ok: false,
+      status: 500,
+    })
+
+    renderHook(() => useCachedKserve())
+    const config = mockUseCache.mock.calls[0][0]
+
+    await expect(config.fetcher()).rejects.toThrow('Unable to fetch KServe status')
+  })
+
+  it('throws when authFetch rejects (network error)', async () => {
+    mockAuthFetch.mockRejectedValue(new Error('Network failure'))
+
+    renderHook(() => useCachedKserve())
+    const config = mockUseCache.mock.calls[0][0]
+
+    await expect(config.fetcher()).rejects.toThrow('Unable to fetch KServe status')
+  })
+})

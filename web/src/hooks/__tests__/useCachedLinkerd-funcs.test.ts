@@ -2,7 +2,14 @@
  * Tests for the pure helper functions exported via __testables
  * from useCachedLinkerd.ts.
  */
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { renderHook } from '@testing-library/react'
+
+const { mockAuthFetch, mockUseCache } = vi.hoisted(() => ({
+  mockAuthFetch: vi.fn(),
+  mockUseCache: vi.fn(),
+}))
+vi.mock('../../lib/api', () => ({ authFetch: mockAuthFetch }))
 
 vi.mock('../../lib/constants/network', () => ({
   FETCH_DEFAULT_TIMEOUT_MS: 5000,
@@ -11,24 +18,37 @@ vi.mock('../../lib/constants/network', () => ({
 
 vi.mock('../useDemoMode', () => ({
   useDemoMode: () => ({ isDemoMode: false }),
-  isDemoModeForced: false,
+  isDemoModeForced: () => false,
+  canToggleDemoMode: () => true,
+  isNetlifyDeployment: () => false,
+  isDemoToken: () => false,
+  hasRealToken: () => true,
+  setDemoToken: vi.fn(),
+  getDemoMode: () => false,
+  setGlobalDemoMode: vi.fn(),
 }))
 
+mockUseCache.mockReturnValue({
+  data: null,
+  isLoading: false,
+  isRefreshing: false,
+  isDemoFallback: false,
+  error: null,
+  isFailed: false,
+  consecutiveFailures: 0,
+  lastRefresh: null,
+  refetch: vi.fn(),
+})
 vi.mock('../../lib/cache', () => ({
-  useCache: vi.fn(() => ({
-    data: null,
-    isLoading: false,
-    isRefreshing: false,
-    isDemoFallback: false,
-    error: null,
-    isFailed: false,
-    consecutiveFailures: 0,
-    lastRefresh: null,
-    refetch: vi.fn(),
-  })),
+  useCache: (...args: unknown[]) => mockUseCache(...args),
 }))
 
-import { __testables } from '../useCachedLinkerd'
+vi.mock('../../components/cards/CardDataContext', () => ({
+  useCardLoadingState: vi.fn(() => ({ showSkeleton: false, showEmptyState: false })),
+  useCardDemoState: vi.fn(),
+}))
+
+import { __testables, useCachedLinkerd } from '../useCachedLinkerd'
 import type { LinkerdMeshedDeployment, LinkerdStats } from '../../components/cards/linkerd_status/demoData'
 
 const { summarize, deriveHealth, buildLinkerdStatus } = __testables
@@ -181,5 +201,88 @@ describe('buildLinkerdStatus', () => {
     expect(result.health).toBe('degraded')
     expect(result.summary.fullyMeshedDeployments).toBe(1)
     expect(result.summary.totalDeployments).toBe(2)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// fetcher (via useCache capture)
+// ---------------------------------------------------------------------------
+
+describe('fetcher (via useCache capture)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockUseCache.mockReturnValue({
+      data: {
+        health: 'not-installed',
+        deployments: [],
+        stats: { totalRps: 0, avgSuccessRatePct: 0, avgP99LatencyMs: 0, controlPlaneVersion: 'unknown' },
+        summary: { totalDeployments: 0, fullyMeshedDeployments: 0, totalMeshedPods: 0, totalPods: 0 },
+        lastCheckTime: new Date().toISOString(),
+      },
+      isLoading: false,
+      isRefreshing: false,
+      isDemoFallback: false,
+      error: null,
+      isFailed: false,
+      consecutiveFailures: 0,
+      lastRefresh: null,
+      refetch: vi.fn(),
+    })
+  })
+
+  it('returns parsed Linkerd status on successful response', async () => {
+    const validResponse = {
+      deployments: [
+        { namespace: 'ns', deployment: 'd1', meshedPods: 3, totalPods: 3, successRatePct: 100, requestsPerSecond: 50, p99LatencyMs: 5, status: 'meshed', cluster: 'c' },
+      ],
+      stats: { totalRps: 50, avgSuccessRatePct: 100, avgP99LatencyMs: 5, controlPlaneVersion: 'stable-2.14.10' },
+    }
+
+    mockAuthFetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(validResponse),
+    })
+
+    renderHook(() => useCachedLinkerd())
+    const config = mockUseCache.mock.calls[0][0]
+    const result = await config.fetcher()
+
+    expect(result.health).toBe('healthy')
+    expect(result.deployments).toHaveLength(1)
+    expect(result.stats.controlPlaneVersion).toBe('stable-2.14.10')
+  })
+
+  it('returns not-installed status on 404 (treat404AsEmpty path)', async () => {
+    mockAuthFetch.mockResolvedValue({
+      ok: false,
+      status: 404,
+    })
+
+    renderHook(() => useCachedLinkerd())
+    const config = mockUseCache.mock.calls[0][0]
+    const result = await config.fetcher()
+
+    expect(result.health).toBe('not-installed')
+  })
+
+  it('throws when authFetch returns a non-404 error', async () => {
+    mockAuthFetch.mockResolvedValue({
+      ok: false,
+      status: 500,
+    })
+
+    renderHook(() => useCachedLinkerd())
+    const config = mockUseCache.mock.calls[0][0]
+
+    await expect(config.fetcher()).rejects.toThrow('Unable to fetch Linkerd status')
+  })
+
+  it('throws when authFetch rejects (network error)', async () => {
+    mockAuthFetch.mockRejectedValue(new Error('Network failure'))
+
+    renderHook(() => useCachedLinkerd())
+    const config = mockUseCache.mock.calls[0][0]
+
+    await expect(config.fetcher()).rejects.toThrow('Unable to fetch Linkerd status')
   })
 })

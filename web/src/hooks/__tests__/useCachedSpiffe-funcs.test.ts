@@ -1,8 +1,12 @@
 /**
  * Tests for the pure helper functions exported via __testables
- * from useCachedSpiffe.ts.
+ * from useCachedSpiffe.ts, PLUS fetcher function tests.
  */
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { renderHook } from '@testing-library/react'
+
+const mockAuthFetch = vi.fn()
+vi.mock('../../lib/api', () => ({ authFetch: (...args: unknown[]) => mockAuthFetch(...args) }))
 
 vi.mock('../../lib/constants/network', () => ({
   FETCH_DEFAULT_TIMEOUT_MS: 5000,
@@ -11,21 +15,35 @@ vi.mock('../../lib/constants/network', () => ({
 
 vi.mock('../useDemoMode', () => ({
   useDemoMode: () => ({ isDemoMode: false }),
-  isDemoModeForced: false,
+  isDemoModeForced: () => false,
+  canToggleDemoMode: () => true,
+  isNetlifyDeployment: () => false,
+  isDemoToken: () => false,
+  hasRealToken: () => true,
+  setDemoToken: vi.fn(),
+  getDemoMode: () => false,
+  setGlobalDemoMode: vi.fn(),
+}))
+
+const mockUseCache = vi.fn(() => ({
+  data: null,
+  isLoading: false,
+  isRefreshing: false,
+  isDemoFallback: false,
+  error: null,
+  isFailed: false,
+  consecutiveFailures: 0,
+  lastRefresh: null,
+  refetch: vi.fn(),
 }))
 
 vi.mock('../../lib/cache', () => ({
-  useCache: vi.fn(() => ({
-    data: null,
-    isLoading: false,
-    isRefreshing: false,
-    isDemoFallback: false,
-    error: null,
-    isFailed: false,
-    consecutiveFailures: 0,
-    lastRefresh: null,
-    refetch: vi.fn(),
-  })),
+  useCache: (...args: unknown[]) => mockUseCache(...args),
+}))
+
+vi.mock('../../components/cards/CardDataContext', () => ({
+  useCardLoadingState: vi.fn(() => ({ showSkeleton: false, showEmptyState: false })),
+  useCardDemoState: vi.fn(),
 }))
 
 import { __testables } from '../useCachedSpiffe'
@@ -196,5 +214,116 @@ describe('buildSpiffeStatus', () => {
     const result = buildSpiffeStatus('', [], [], makeStats())
     expect(() => new Date(result.lastCheckTime)).not.toThrow()
     expect(new Date(result.lastCheckTime).toISOString()).toBe(result.lastCheckTime)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Fetcher function tests (via useCache capture)
+// ---------------------------------------------------------------------------
+
+import { useCachedSpiffe } from '../useCachedSpiffe'
+
+describe('fetchSpiffeStatus (via useCache fetcher)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockUseCache.mockReturnValue({
+      data: { health: 'not-installed', entries: [], federatedDomains: [], stats: { x509SvidCount: 0, jwtSvidCount: 0, registrationEntryCount: 0, agentCount: 0, serverVersion: 'unknown' }, summary: { trustDomain: '', totalSvids: 0, totalFederatedDomains: 0, totalEntries: 0 }, lastCheckTime: '' },
+      isLoading: false,
+      isRefreshing: false,
+      isDemoFallback: false,
+      error: null,
+      isFailed: false,
+      consecutiveFailures: 0,
+      lastRefresh: null,
+      refetch: vi.fn(),
+    })
+  })
+
+  it('parses a successful API response into SpiffeStatusData', async () => {
+    renderHook(() => useCachedSpiffe())
+    const config = mockUseCache.mock.calls[0][0]
+    const fetcher = config.fetcher
+
+    mockAuthFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          trustDomain: 'example.org',
+          entries: [
+            {
+              spiffeId: 'spiffe://example.org/wl-1',
+              parentId: 'spiffe://example.org/node-1',
+              selector: 'k8s:pod-label:app=web',
+              svidType: 'x509',
+              ttlSeconds: 3600,
+              cluster: 'cluster-1',
+            },
+          ],
+          federatedDomains: [],
+          stats: {
+            x509SvidCount: 10,
+            jwtSvidCount: 5,
+            registrationEntryCount: 1,
+            agentCount: 2,
+            serverVersion: '1.9.0',
+          },
+        }),
+    })
+
+    const result = await fetcher()
+    expect(result.health).toBe('healthy')
+    expect(result.entries).toHaveLength(1)
+    expect(result.summary.trustDomain).toBe('example.org')
+    expect(result.summary.totalSvids).toBe(15)
+    expect(result.stats.serverVersion).toBe('1.9.0')
+  })
+
+  it('throws on non-ok response (non-404) so cache falls back to demo', async () => {
+    renderHook(() => useCachedSpiffe())
+    const config = mockUseCache.mock.calls[0][0]
+    const fetcher = config.fetcher
+
+    mockAuthFetch.mockResolvedValueOnce({ ok: false, status: 500 })
+
+    await expect(fetcher()).rejects.toThrow('Unable to fetch SPIFFE status')
+  })
+
+  it('returns not-installed data on 404 (treated as empty)', async () => {
+    renderHook(() => useCachedSpiffe())
+    const config = mockUseCache.mock.calls[0][0]
+    const fetcher = config.fetcher
+
+    // Spiffe uses NOT_INSTALLED_STATUSES which includes 404
+    mockAuthFetch.mockResolvedValueOnce({ ok: false, status: 404 })
+
+    const result = await fetcher()
+    expect(result.health).toBe('not-installed')
+    expect(result.entries).toEqual([])
+  })
+
+  it('throws on network error so cache falls back to demo', async () => {
+    renderHook(() => useCachedSpiffe())
+    const config = mockUseCache.mock.calls[0][0]
+    const fetcher = config.fetcher
+
+    mockAuthFetch.mockRejectedValueOnce(new Error('Network failure'))
+
+    await expect(fetcher()).rejects.toThrow('Unable to fetch SPIFFE status')
+  })
+
+  it('handles null body fields gracefully', async () => {
+    renderHook(() => useCachedSpiffe())
+    const config = mockUseCache.mock.calls[0][0]
+    const fetcher = config.fetcher
+
+    mockAuthFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({}),
+    })
+
+    const result = await fetcher()
+    expect(result.entries).toEqual([])
+    expect(result.federatedDomains).toEqual([])
+    expect(result.stats.x509SvidCount).toBe(0)
   })
 })

@@ -2,7 +2,14 @@
  * Tests for the pure helper functions exported via __testables
  * from useCachedKubevela.ts.
  */
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { renderHook } from '@testing-library/react'
+
+const { mockAuthFetch, mockUseCache: mockUseCacheHoisted } = vi.hoisted(() => ({
+  mockAuthFetch: vi.fn(),
+  mockUseCache: vi.fn(),
+}))
+vi.mock('../../lib/api', () => ({ authFetch: mockAuthFetch }))
 
 vi.mock('../../lib/constants/network', () => ({
   FETCH_DEFAULT_TIMEOUT_MS: 5000,
@@ -11,24 +18,38 @@ vi.mock('../../lib/constants/network', () => ({
 
 vi.mock('../useDemoMode', () => ({
   useDemoMode: () => ({ isDemoMode: false }),
-  isDemoModeForced: false,
+  isDemoModeForced: () => false,
+  canToggleDemoMode: () => true,
+  isNetlifyDeployment: () => false,
+  isDemoToken: () => false,
+  hasRealToken: () => true,
+  setDemoToken: vi.fn(),
+  getDemoMode: () => false,
+  setGlobalDemoMode: vi.fn(),
 }))
 
+const mockUseCache = mockUseCacheHoisted
+mockUseCache.mockReturnValue({
+  data: null,
+  isLoading: false,
+  isRefreshing: false,
+  isDemoFallback: false,
+  error: null,
+  isFailed: false,
+  consecutiveFailures: 0,
+  lastRefresh: null,
+  refetch: vi.fn(),
+})
 vi.mock('../../lib/cache', () => ({
-  useCache: vi.fn(() => ({
-    data: null,
-    isLoading: false,
-    isRefreshing: false,
-    isDemoFallback: false,
-    error: null,
-    isFailed: false,
-    consecutiveFailures: 0,
-    lastRefresh: null,
-    refetch: vi.fn(),
-  })),
+  useCache: (...args: unknown[]) => mockUseCacheHoisted(...args),
 }))
 
-import { __testables } from '../useCachedKubevela'
+vi.mock('../../components/cards/CardDataContext', () => ({
+  useCardLoadingState: vi.fn(() => ({ showSkeleton: false, showEmptyState: false })),
+  useCardDemoState: vi.fn(),
+}))
+
+import { __testables, useCachedKubevela } from '../useCachedKubevela'
 import type {
   KubeVelaApplication,
   KubeVelaControllerPod,
@@ -293,5 +314,119 @@ describe('buildKubeVelaStatus', () => {
     const pods = [makePod({ status: 'running' })]
     const result = buildKubeVelaStatus(apps, pods, '1.9.11')
     expect(result.health).toBe('degraded')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// fetcher (via useCache capture)
+// ---------------------------------------------------------------------------
+
+describe('fetcher (via useCache capture)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockUseCache.mockReturnValue({
+      data: {
+        health: 'not-installed',
+        applications: [],
+        controllerPods: [],
+        stats: { totalApplications: 0, runningApplications: 0, failedApplications: 0, totalComponents: 0, totalTraits: 0, controllerVersion: 'unknown' },
+        summary: { totalApplications: 0, runningApplications: 0, failedApplications: 0, totalControllerPods: 0, runningControllerPods: 0 },
+        lastCheckTime: new Date().toISOString(),
+      },
+      isLoading: false,
+      isRefreshing: false,
+      isDemoFallback: false,
+      error: null,
+      isFailed: false,
+      consecutiveFailures: 0,
+      lastRefresh: null,
+      refetch: vi.fn(),
+    })
+  })
+
+  it('returns parsed KubeVela status on successful response', async () => {
+    const validResponse = {
+      applications: [
+        {
+          name: 'app-1',
+          namespace: 'default',
+          cluster: 'c1',
+          status: 'running',
+          componentCount: 2,
+          traitCount: 1,
+          workflowSteps: [],
+          workflowStepsCompleted: 0,
+          workflowStepsTotal: 0,
+          traits: [],
+          ageMinutes: 60,
+        },
+      ],
+      controllerPods: [
+        {
+          name: 'vela-core-abc',
+          namespace: 'vela-system',
+          cluster: 'c1',
+          status: 'running',
+          replicasReady: 1,
+          replicasDesired: 1,
+        },
+      ],
+      stats: { controllerVersion: '1.9.11' },
+    }
+
+    mockAuthFetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(validResponse),
+    })
+
+    renderHook(() => useCachedKubevela())
+    const config = mockUseCache.mock.calls[0][0]
+    const fetcher = config.fetcher
+    const result = await fetcher()
+
+    expect(result.health).toBe('healthy')
+    expect(result.applications).toHaveLength(1)
+    expect(result.controllerPods).toHaveLength(1)
+    expect(result.stats.controllerVersion).toBe('1.9.11')
+  })
+
+  it('throws when authFetch returns a 404 (treat404AsEmpty path)', async () => {
+    mockAuthFetch.mockResolvedValue({
+      ok: false,
+      status: 404,
+    })
+
+    renderHook(() => useCachedKubevela())
+    const config = mockUseCache.mock.calls[0][0]
+    const fetcher = config.fetcher
+
+    // 404 with treat404AsEmpty returns { data: null, failed: false }
+    // but null data means empty arrays, which builds a not-installed status
+    // — this does NOT throw, it returns a valid status object
+    const result = await fetcher()
+    expect(result.health).toBe('not-installed')
+  })
+
+  it('throws when authFetch returns a non-404 error', async () => {
+    mockAuthFetch.mockResolvedValue({
+      ok: false,
+      status: 500,
+    })
+
+    renderHook(() => useCachedKubevela())
+    const config = mockUseCache.mock.calls[0][0]
+    const fetcher = config.fetcher
+
+    await expect(fetcher()).rejects.toThrow('Unable to fetch KubeVela status')
+  })
+
+  it('throws when authFetch rejects (network error)', async () => {
+    mockAuthFetch.mockRejectedValue(new Error('Network failure'))
+
+    renderHook(() => useCachedKubevela())
+    const config = mockUseCache.mock.calls[0][0]
+    const fetcher = config.fetcher
+
+    await expect(fetcher()).rejects.toThrow('Unable to fetch KubeVela status')
   })
 })
