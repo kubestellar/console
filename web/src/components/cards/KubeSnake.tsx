@@ -23,13 +23,13 @@ const SNAKE_CHROME_HEIGHT = 100
 
 // Colors (Kubernetes theme)
 const COLORS = {
-  background: '#0a1628',
-  grid: '#1e3a5f',
-  snake: '#326ce5',
-  snakeHead: '#00d4aa',
-  food: '#ff6b6b',
-  foodGlow: 'rgba(255, 107, 107, 0.3)',
-  powerUp: '#ffd700' }
+  background: 'var(--game-background)',
+  grid: 'var(--game-grid)',
+  snake: 'var(--ks-blue)',
+  snakeHead: 'var(--game-player)',
+  food: 'var(--game-enemy-1)',
+  foodGlow: 'var(--game-food-glow)',
+  powerUp: 'var(--game-enemy-2)' }
 
 interface Point {
   x: number

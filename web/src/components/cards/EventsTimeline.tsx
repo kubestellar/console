@@ -209,13 +209,13 @@ function EventsTimelineInternal() {
         stack: 'total',
         step: 'end' as const,
         data: timeSeriesData.map(d => d.warnings),
-        lineStyle: { color: '#f97316', width: 2 },
-        itemStyle: { color: '#f97316' },
+        lineStyle: { color: 'var(--chart-warning)', width: 2 },
+        itemStyle: { color: 'var(--chart-warning)' },
         areaStyle: {
           color: {
             type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
             colorStops: [
-              { offset: 0, color: 'rgba(249,115,22,0.4)' },
+              { offset: 0, color: 'var(--chart-warning-opaque)' },
               { offset: 1, color: 'rgba(249,115,22,0)' },
             ],
           },
@@ -228,13 +228,13 @@ function EventsTimelineInternal() {
         stack: 'total',
         step: 'end' as const,
         data: timeSeriesData.map(d => d.normal),
-        lineStyle: { color: '#22c55e', width: 2 },
-        itemStyle: { color: '#22c55e' },
+        lineStyle: { color: 'var(--chart-success)', width: 2 },
+        itemStyle: { color: 'var(--chart-success)' },
         areaStyle: {
           color: {
             type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
             colorStops: [
-              { offset: 0, color: 'rgba(34,197,94,0.4)' },
+              { offset: 0, color: 'var(--chart-success-opaque)' },
               { offset: 1, color: 'rgba(34,197,94,0)' },
             ],
           },

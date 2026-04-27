@@ -133,8 +133,8 @@ export function ChangeTimeline({ config: _config }: ChangeTimelineProps) {
       tooltip: {
         trigger: 'item' as const,
         padding: TOOLTIP_PADDING_PX,
-        backgroundColor: 'rgba(30,30,46,0.95)',
-        borderColor: 'rgba(255,255,255,0.1)',
+        backgroundColor: 'var(--chart-tooltip-bg)',
+        borderColor: 'var(--chart-tooltip-border)',
         textStyle: { color: CHART_LEGEND_COLOR, fontSize: CHART_LEGEND_FONT_SIZE },
         formatter: (params: { data?: { _event?: TimelineEvent } }) => {
           const evt: TimelineEvent | undefined = params?.data?._event

@@ -276,7 +276,7 @@ function KPIField({ icon, label, value, alert }: { icon: React.ReactNode, label:
     return (
         <div className={cn(
             "flex items-center justify-between px-3 py-2 rounded-xl border transition-all",
-            alert ? "bg-red-500/5 border-red-500/20 shadow-[0_0_10px_-5px_rgba(239,68,68,0.3)]" : "bg-secondary/10 border-border/30"
+            alert ? "bg-red-500/5 border-red-500/20 shadow-[var(--shadow-error-glow)]" : "bg-secondary/10 border-border/30"
         )}>
             <div className="flex items-center gap-2">
                 {icon}

@@ -139,6 +139,33 @@ layer(base);
     --cncf-default-start: #6366f1;
     --cncf-default-end: #8b5cf6;
 
+    /* Game colors */
+    --game-background: #0a0a1a;
+    --game-player: #00d4aa;
+    --game-enemy-1: #ff6b6b;
+    --game-enemy-2: #ffd93d;
+    --game-enemy-3: #6bcb77;
+    --game-bullet: #00ffff;
+    --game-grid: #1e3a5f;
+    --game-player-glow: rgba(0, 212, 170, 0.3);
+    --game-food-glow: rgba(255, 107, 107, 0.3);
+    --game-overlay: rgba(0, 0, 0, 0.6);
+
+    /* Chart tooltips */
+    --chart-tooltip-bg: rgba(30, 30, 46, 0.95);
+    --chart-tooltip-border: rgba(255, 255, 255, 0.1);
+    --shadow-error-glow: 0 0 10px -5px rgba(239, 68, 68, 0.3);
+    --chart-warning: #f97316;
+    --chart-warning-opaque: rgba(249, 115, 22, 0.4);
+    --chart-success: #22c55e;
+    --chart-success-opaque: rgba(34, 197, 94, 0.4);
+    --doom-wall-1: #8b0000;
+    --doom-wall-2: #006400;
+    --doom-wall-3: #00008b;
+    --doom-wall-4: #8b8b00;
+    --doom-ceiling: #1a1a2e;
+    --doom-floor: #2d2d2d;
+
     /* Font - can be overridden by theme */
     --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;

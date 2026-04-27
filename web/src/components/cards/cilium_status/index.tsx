@@ -226,7 +226,7 @@ export const CiliumStatus: React.FC<CardComponentProps> = () => {
                         {t('ciliumStatus.hubbleEnabled')}
                     </div>
                     <div className="flex items-center gap-1.5 ml-2">
-                        <span className="w-1.5 h-1.5 bg-blue-400 rounded-full shadow-[0_0_8px_rgba(96,165,250,0.5)]" />
+                        <span className="w-1.5 h-1.5 bg-blue-400 rounded-full shadow-[0_0_8px_theme(colors.blue.400/50%)]" />
                         {t('ciliumStatus.ebpf')}
                     </div>
                 </div>
