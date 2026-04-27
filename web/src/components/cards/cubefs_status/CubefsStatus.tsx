@@ -373,7 +373,7 @@ export function CubefsStatus() {
           <Skeleton variant="rounded" width={120} height={28} />
           <Skeleton variant="rounded" width={80} height={20} />
         </div>
-        <SkeletonStats className="grid-cols-4" />
+        <SkeletonStats className="grid-cols-2 @md:grid-cols-4" />
         <Skeleton variant="rounded" height={32} />
         <SkeletonList items={3} className="flex-1" />
       </div>

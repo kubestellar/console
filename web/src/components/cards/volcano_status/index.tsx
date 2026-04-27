@@ -111,7 +111,7 @@ function QueueRow({ queue }: { queue: VolcanoQueue }) {
           {queue.state}
         </span>
       </div>
-      <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
         <span>
           {queue.runningJobs} run · {queue.pendingJobs} pend
         </span>
@@ -163,7 +163,7 @@ function JobRow({ job }: { job: VolcanoJob }) {
           {job.phase}
         </span>
       </div>
-      <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
         <span className="truncate">
           queue {job.queue} · {job.runningPods}/{job.totalPods} pods
         </span>
@@ -206,7 +206,7 @@ export function VolcanoStatus() {
             height={SKELETON_BADGE_HEIGHT}
           />
         </div>
-        <SkeletonStats className="grid-cols-4" />
+        <SkeletonStats className="grid-cols-2 @md:grid-cols-4" />
         <SkeletonList items={SKELETON_LIST_ITEMS} className="flex-1" />
       </div>
     )

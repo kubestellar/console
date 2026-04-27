@@ -123,7 +123,7 @@ function RoleRow({
           {statusLabel}
         </span>
       </div>
-      <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
         <span className="flex items-center gap-1">
           <Clock className="w-3 h-3" />
           <span className={statusTextColor(role.status)}>{formatExpiration(role.expiresAt)}</span>
@@ -177,7 +177,7 @@ export function TufStatus() {
           <Skeleton variant="rounded" width={SKELETON_TITLE_WIDTH} height={SKELETON_TITLE_HEIGHT} />
           <Skeleton variant="rounded" width={SKELETON_BADGE_WIDTH} height={SKELETON_BADGE_HEIGHT} />
         </div>
-        <SkeletonStats className="grid-cols-4" />
+        <SkeletonStats className="grid-cols-2 @md:grid-cols-4" />
         <SkeletonList items={SKELETON_LIST_ITEMS} className="flex-1" />
       </div>
     )

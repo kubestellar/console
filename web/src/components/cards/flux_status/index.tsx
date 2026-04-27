@@ -83,7 +83,7 @@ export function FluxStatus() {
           <Skeleton variant="rounded" width={140} height={28} />
           <Skeleton variant="rounded" width={90} height={20} />
         </div>
-        <SkeletonStats className="grid-cols-4" />
+        <SkeletonStats className="grid-cols-2 @md:grid-cols-4" />
         <SkeletonList items={6} className="flex-1" />
       </div>
     )

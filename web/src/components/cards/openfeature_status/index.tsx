@@ -114,7 +114,7 @@ function ProviderRow({
           {providerStatusLabel(provider.status, t)}
         </span>
       </div>
-      <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
         {provider.evaluations > 0 && (
           <span>
             {provider.evaluations.toLocaleString()} {t('openFeature.evals', 'evals')}
@@ -155,7 +155,7 @@ function FlagRow({
           {flag.type}
         </span>
       </div>
-      <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
         <span className="truncate">
           {t('openFeature.flagProvider', 'provider')}:{' '}
           <span className="text-foreground">{flag.provider}</span>

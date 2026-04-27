@@ -80,7 +80,7 @@ function EntryRow({ entry }: { entry: SpiffeRegistrationEntry }) {
           {entry.svidType.toUpperCase()}
         </span>
       </div>
-      <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
         <span className="truncate">{entry.selector}</span>
         <span className="ml-auto shrink-0 font-mono">
           ttl {formatDuration(entry.ttlSeconds)}
@@ -135,7 +135,7 @@ export function SpiffeStatus() {
           <Skeleton variant="rounded" width={SKELETON_TITLE_WIDTH} height={SKELETON_TITLE_HEIGHT} />
           <Skeleton variant="rounded" width={SKELETON_BADGE_WIDTH} height={SKELETON_BADGE_HEIGHT} />
         </div>
-        <SkeletonStats className="grid-cols-4" />
+        <SkeletonStats className="grid-cols-2 @md:grid-cols-4" />
         <SkeletonList items={SKELETON_LIST_ITEMS} className="flex-1" />
       </div>
     )

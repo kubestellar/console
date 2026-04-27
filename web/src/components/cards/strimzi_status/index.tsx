@@ -125,7 +125,7 @@ function ClusterRow({ cluster }: { cluster: StrimziKafkaCluster }) {
         </span>
       </div>
 
-      <div className="grid grid-cols-4 gap-2 text-[11px]">
+      <div className="grid grid-cols-2 @md:grid-cols-4 gap-2 text-[11px]">
         <div className="flex flex-col">
           <span className="text-muted-foreground">
             {t('strimziStatus.brokers', 'Brokers')}
@@ -190,7 +190,7 @@ export function StrimziStatus() {
           <Skeleton variant="rounded" width={SKELETON_TITLE_WIDTH} height={SKELETON_TITLE_HEIGHT} />
           <Skeleton variant="rounded" width={SKELETON_BADGE_WIDTH} height={SKELETON_BADGE_HEIGHT} />
         </div>
-        <SkeletonStats className="grid-cols-4" />
+        <SkeletonStats className="grid-cols-2 @md:grid-cols-4" />
         <SkeletonList items={SKELETON_LIST_ITEMS} className="flex-1" />
       </div>
     )
@@ -305,7 +305,7 @@ export function StrimziStatus() {
           )}
         </section>
 
-        <section className="flex items-center gap-4 text-[11px] text-muted-foreground pt-1">
+        <section className="flex flex-wrap items-center gap-4 text-[11px] text-muted-foreground pt-1">
           <div className="flex items-center gap-1">
             <Users className="w-3 h-3" />
             <span>
