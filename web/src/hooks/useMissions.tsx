@@ -4,6 +4,7 @@ import { AgentCapabilityToolExec } from '../types/agent'
 import { getDemoMode } from './useDemoMode'
 import { addCategoryTokens, setActiveTokenCategory, clearActiveTokenCategory } from './useTokenUsage'
 import { LOCAL_AGENT_WS_URL, LOCAL_AGENT_HTTP_URL } from '../lib/constants'
+import { useLocalAgent } from './useLocalAgent'
 import { agentFetch } from './mcp/shared'
 import { appendWsAuthToken } from '../lib/utils/wsAuth'
 import { emitError, emitMissionStarted, emitMissionCompleted, emitMissionError, emitMissionRated } from '../lib/analytics'
@@ -198,6 +199,7 @@ const WAITING_INPUT_TIMEOUT_MS = 600_000 // 10 minutes
 
 export function MissionProvider({ children }: { children: ReactNode }) {
   const [missions, setMissions] = useState<Mission[]>(() => loadMissions())
+  const { isConnected: isAgentConnected } = useLocalAgent()
   // #7313 — Restore the active mission ID from localStorage so a reload
   // remembers which mission was selected. Sidebar visibility is restored
   // separately via SIDEBAR_OPEN_STORAGE_KEY (kc_mission_sidebar_open).
@@ -566,6 +568,58 @@ export function MissionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     saveUnreadMissionIds(unreadMissionIds)
   }, [unreadMissionIds])
+
+  // #10525 — Clear stale agent-unavailable errors when the agent reconnects.
+  // When a mission fails because the local agent was disconnected, the error
+  // message gets locked into the chat history. Once the agent reconnects, we
+  // transition those failed missions back to 'saved' so the user can retry
+  // cleanly without seeing the stale "Local Agent Not Connected" error.
+  const prevAgentConnected = useRef(isAgentConnected)
+  useEffect(() => {
+    const wasConnected = prevAgentConnected.current
+    prevAgentConnected.current = isAgentConnected
+    if (!wasConnected && isAgentConnected) {
+      setMissions(prev => {
+        const hasStale = prev.some(m =>
+          m.status === 'failed' &&
+          m.messages.some(msg =>
+            msg.role === 'system' && (
+              msg.content.includes('Local Agent Not Connected') ||
+              msg.content.includes('agent not available') ||
+              msg.content.includes('agent not responding')
+            )
+          )
+        )
+        if (!hasStale) return prev
+        return prev.map(m => {
+          if (m.status !== 'failed') return m
+          // Find the last system message with stale agent error
+          let staleIdx = -1
+          for (let i = m.messages.length - 1; i >= 0; i--) {
+            const msg = m.messages[i]
+            if (
+              msg.role === 'system' && (
+                msg.content.includes('Local Agent Not Connected') ||
+                msg.content.includes('agent not available') ||
+                msg.content.includes('agent not responding')
+              )
+            ) {
+              staleIdx = i
+              break
+            }
+          }
+          if (staleIdx === -1) return m
+          const cleanedMessages = m.messages.filter((_, i) => i !== staleIdx)
+          return {
+            ...m,
+            status: 'saved' as MissionStatus,
+            currentStep: undefined,
+            messages: cleanedMessages,
+          }
+        })
+      })
+    }
+  }, [isAgentConnected])
 
   // Periodically check for missions stuck in "running" state.
   // Two failure conditions are detected (#2375, #3079):

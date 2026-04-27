@@ -338,12 +338,15 @@ jobs:
           echo "kc-agent correctly rejected unauthenticated WebSocket upgrade (HTTP $WS_CODE)"
 
           echo "Testing WebSocket upgrade with correct token..."
+          # A successful WS upgrade (101) keeps the connection open, so curl
+          # will hit --max-time and exit with code 28 (timeout). Capture the
+          # exit code separately so `set -e` doesn't kill the step.
           WS_CODE_AUTH=$(curl -sS --max-time 5 -o /dev/null -w '%{http_code}' \
             -H "Connection: Upgrade" \
             -H "Upgrade: websocket" \
             -H "Sec-WebSocket-Version: 13" \
             -H "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==" \
-            "http://127.0.0.1:8585/ws?token=${KC_AGENT_TOKEN}" 2>/dev/null)
+            "http://127.0.0.1:8585/ws?token=${KC_AGENT_TOKEN}" 2>/dev/null) || true
 
           # 101 = upgrade accepted, or any non-401 = token was accepted
           if [ "$WS_CODE_AUTH" = "401" ]; then

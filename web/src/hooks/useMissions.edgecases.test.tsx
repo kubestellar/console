@@ -18,6 +18,17 @@ vi.mock('./useDemoMode', () => ({
   getDemoMode: vi.fn(() => false),
   default: vi.fn(() => false),
 }))
+vi.mock('./useLocalAgent', () => ({
+  useLocalAgent: vi.fn(() => ({ isConnected: false })),
+  isAgentUnavailable: vi.fn(() => false),
+  isAgentConnected: vi.fn(() => false),
+  reportAgentDataSuccess: vi.fn(),
+  reportAgentDataError: vi.fn(),
+}))
+
+vi.mock('../lib/utils/wsAuth', () => ({
+  appendWsAuthToken: vi.fn((url: string) => url),
+}))
 
 vi.mock('./useTokenUsage', () => ({
   addCategoryTokens: vi.fn(),
@@ -44,6 +55,10 @@ vi.mock('../lib/analytics', () => ({
   emitMissionCompleted: vi.fn(),
   emitMissionError: vi.fn(),
   emitMissionRated: vi.fn(),
+  emitAgentTokenFailure: vi.fn(),
+  emitWsAuthMissing: vi.fn(),
+  emitSseAuthFailure: vi.fn(),
+  emitSessionRefreshFailure: vi.fn(),
 }))
 
 vi.mock('../lib/missions/preflightCheck', () => ({
