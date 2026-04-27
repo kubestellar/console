@@ -22,7 +22,8 @@ import {
   BookOpen,
   Rocket,
   Search,
-  Satellite } from 'lucide-react'
+  Satellite,
+  History } from 'lucide-react'
 import { useSearchParams, useLocation } from 'react-router-dom'
 import { useMissions, isActiveMission } from '../../../hooks/useMissions'
 import { useMobile } from '../../../hooks/useMobile'
@@ -389,6 +390,29 @@ export function MissionSidebar() {
   // Mission list search filter (#3944)
   const [missionSearchQuery, setMissionSearchQuery] = useState('')
 
+  // History panel toggle (#10522) — history is behind an icon button so
+  // the default view is the CTA dashboard for a cleaner chat-first UX.
+  const HISTORY_PANEL_KEY = 'ksc-mission-history-panel'
+  const [showHistoryPanel, setShowHistoryPanel] = useState(() => {
+    try {
+      return localStorage.getItem(HISTORY_PANEL_KEY) === 'true'
+    } catch { return false }
+  })
+  // Track which view the user came from so "Back to missions" returns them
+  // to the right panel (dashboard vs history) instead of always resetting.
+  const [lastPanelView, setLastPanelView] = useState<'dashboard' | 'history'>(
+    showHistoryPanel ? 'history' : 'dashboard'
+  )
+
+  const toggleHistoryPanel = () => {
+    setShowHistoryPanel(prev => {
+      const next = !prev
+      try { localStorage.setItem(HISTORY_PANEL_KEY, String(next)) } catch { /* ignore */ }
+      if (!next) setMissionSearchQuery('')
+      return next
+    })
+  }
+
   // Reset pagination when search query changes (#4778)
   useEffect(() => {
     setVisibleMissionCount(MISSIONS_PAGE_SIZE)
@@ -556,6 +580,14 @@ export function MissionSidebar() {
   ).length
 
   const runningCount = missions.filter(m => m.status === 'running').length
+
+  // Auto-open history when missions need user action (#10522) so
+  // waiting_input / blocked missions are not hidden behind the toggle.
+  useEffect(() => {
+    if (needsAttention > 0 && !showHistoryPanel && !activeMission) {
+      setShowHistoryPanel(true)
+    }
+  }, [needsAttention]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleMissionCollapse = (missionId: string) => {
     setCollapsedMissions(prev => {
@@ -758,9 +790,46 @@ export function MissionSidebar() {
                   <Rocket className="w-4 h-4 text-muted-foreground" />
                   Mission Control
                 </button>
+                {/* History toggle on mobile — desktop uses a standalone icon button (#10522) */}
+                {isMobile && listTotalMissions > 0 && (
+                  <button
+                    onClick={() => { setShowAddMenu(false); toggleHistoryPanel() }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted/30 text-foreground"
+                  >
+                    <History className="w-4 h-4 text-muted-foreground" />
+                    {showHistoryPanel
+                      ? t('missionSidebar.hideHistory', { defaultValue: 'Hide History' })
+                      : t('missionSidebar.showHistory', { defaultValue: 'Show History' })}
+                    {!showHistoryPanel && listTotalMissions > 0 && (
+                      <span className="ml-auto text-2xs bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded-full">{listTotalMissions}</span>
+                    )}
+                  </button>
+                )}
               </div>
             )}
           </div>
+          {/* History toggle button (#10522) — shows/hides mission history list.
+              On mobile, the toggle is inside the + menu to avoid crowding the header. */}
+          {!isMobile && (
+            <button
+              onClick={toggleHistoryPanel}
+              className={cn(
+                "relative p-1.5 rounded transition-colors ring-1 mr-1 shrink-0",
+                showHistoryPanel
+                  ? "bg-primary text-primary-foreground ring-primary"
+                  : "bg-secondary/50 text-muted-foreground ring-border hover:bg-secondary hover:text-foreground"
+              )}
+              aria-label={t('missionSidebar.toggleHistory', { defaultValue: 'Toggle mission history' })}
+              title={t('missionSidebar.toggleHistory', { defaultValue: 'Toggle mission history' })}
+            >
+              <History className="w-4 h-4" />
+              {listTotalMissions > 0 && !showHistoryPanel && (
+                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 flex items-center justify-center text-[10px] font-medium bg-purple-500 text-white rounded-full px-1">
+                  {listTotalMissions}
+                </span>
+              )}
+            </button>
+          )}
           {/* Optional toolbar buttons — clipped when sidebar is narrow */}
           <div className="flex items-center gap-1 overflow-hidden min-w-0 shrink">
             <AgentSelector compact={!isFullScreen} />
@@ -923,7 +992,7 @@ export function MissionSidebar() {
        * `missionSearchQuery` is excluded so a failed search still surfaces the
        * "no search results" branch below instead of this full-panel empty state.
        */}
-      {listTotalMissions === 0 && !missionSearchQuery.trim() && !activeMission ? (
+      {listTotalMissions === 0 && !missionSearchQuery.trim() && !activeMission && !showHistoryPanel ? (
         <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
           <Sparkles className="w-10 h-10 text-purple-400/60 mb-4" />
           <p className="text-muted-foreground">{t('missionSidebar.noActiveMissions')}</p>
@@ -1101,10 +1170,18 @@ export function MissionSidebar() {
              * listTotalMissions > 1 (#6137), but that trapped users who
              * filtered via missionSearchQuery down to a single result with
              * no way to return to the full list (#6145). Safest fix: always
-             * show the button when activeMission != null. */}
+             * show the button when activeMission != null.
+             * #10522 — Return to whichever panel view the user came from
+             * (history list or CTA dashboard) rather than always resetting. */}
             {activeMission != null && (
               <button
-                onClick={() => setActiveMission(null)}
+                onClick={() => {
+                  setActiveMission(null)
+                  // Restore history panel state to match origin view
+                  if (lastPanelView === 'history') {
+                    setShowHistoryPanel(true)
+                  }
+                }}
                 className="flex items-center gap-1 px-4 py-2 text-xs text-muted-foreground hover:text-foreground border-b border-border shrink-0"
               >
                 <ChevronLeft className="w-3 h-3" />
@@ -1121,6 +1198,58 @@ export function MissionSidebar() {
               }}
             />
           </div>
+        </div>
+      ) : !showHistoryPanel ? (
+        /* #10522 — Default dashboard view when history panel is hidden.
+         * Prioritizes chat interface with quick-action buttons. The History
+         * icon in the header toggles the full mission list. */
+        <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+          <Sparkles className="w-10 h-10 text-purple-400/60 mb-4" />
+          <p className="text-foreground font-medium">{t('missionSidebar.readyToHelp', { defaultValue: 'Ready to help' })}</p>
+          <p className="text-xs text-muted-foreground/70 mt-1">
+            {t('missionSidebar.startMissionPrompt')}
+          </p>
+          <div className="grid grid-cols-3 gap-2 mt-4 w-full max-w-sm">
+            {!showNewMission && (
+              <button
+                onClick={() => {
+                  setLastPanelView('dashboard')
+                  setShowNewMission(true)
+                  setTimeout(() => newMissionInputRef.current?.focus(), FOCUS_DELAY_MS)
+                }}
+                className="flex flex-col items-center justify-center gap-1.5 px-3 py-3 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors h-[72px]"
+              >
+                <Sparkles className="w-6 h-6 shrink-0" />
+                <span className="text-center leading-tight text-xs truncate max-w-full">{t('missionSidebar.startCustomMission')}</span>
+              </button>
+            )}
+            <button
+              onClick={() => setShowBrowser(true)}
+              className="flex flex-col items-center justify-center gap-1.5 px-3 py-3 text-sm font-medium bg-secondary text-foreground rounded-lg hover:bg-secondary/80 transition-colors h-[72px]"
+            >
+              <Globe className="w-6 h-6 shrink-0" />
+              <span className="text-center leading-tight text-xs truncate max-w-full">{t('layout.missionSidebar.browseCommunityMissions')}</span>
+            </button>
+            <button
+              onClick={() => setShowMissionControl(true)}
+              className="flex flex-col items-center justify-center gap-1.5 px-3 py-3 text-sm font-medium bg-linear-to-r from-violet-600 to-indigo-600 text-white rounded-lg hover:from-violet-500 hover:to-indigo-500 transition-colors shadow-lg shadow-violet-500/25 h-[72px]"
+            >
+              <Rocket className="w-6 h-6 shrink-0" />
+              <span className="text-center leading-tight text-xs truncate max-w-full">{t('layout.missionSidebar.missionControl')}</span>
+            </button>
+          </div>
+          {/* Hint to open history when missions exist */}
+          {listTotalMissions > 0 && (
+            <button
+              onClick={toggleHistoryPanel}
+              className="mt-4 flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <History className="w-3.5 h-3.5" />
+              {t('missionSidebar.viewHistory', {
+                defaultValue: 'View {{count}} previous missions',
+                count: listTotalMissions })}
+            </button>
+          )}
         </div>
       ) : (
         <div className={cn(
@@ -1245,6 +1374,7 @@ export function MissionSidebar() {
                   mission={mission}
                   isActive={false}
                   onClick={() => {
+                    setLastPanelView('history')
                     // Always show the mission's chat first (#4549)
                     setActiveMission(mission.id)
                     // Also open Mission Control dialog for planning missions
@@ -1256,6 +1386,7 @@ export function MissionSidebar() {
                   onTerminate={() => cancelMission(mission.id)}
                   onRollback={handleRollback}
                   onExpand={() => {
+                    setLastPanelView('history')
                     setActiveMission(mission.id)
                     setFullScreen(true)
                     if (mission.title === 'Mission Control Planning' || mission.context?.missionControl) {

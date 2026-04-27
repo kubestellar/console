@@ -1933,7 +1933,15 @@
     "missions": "missions",
     "missionCount_one": "{{count}} mission",
     "missionCount_other": "{{count}} missions",
-    "resizeHandleTooltip": "Drag to resize"
+    "resizeHandleTooltip": "Drag to resize",
+    "toggleHistory": "Toggle mission history",
+    "showHistory": "Show History",
+    "hideHistory": "Hide History",
+    "readyToHelp": "Ready to help",
+    "viewHistory": "View {{count}} previous missions",
+    "viewHistory_one": "View {{count}} previous mission",
+    "viewHistory_other": "View {{count}} previous missions",
+    "missionHistory": "Mission History"
   },
   "feedback": {
     "share": "Share",
