@@ -44,13 +44,46 @@ export const MIN_REFRESH_INDICATOR_MS = 500
 // Re-export for backward compatibility
 export const LOCAL_AGENT_URL = LOCAL_AGENT_HTTP_URL
 
+const AGENT_TOKEN_STORAGE_KEY = 'kc-agent-token'
+const AGENT_TOKEN_FETCH_TIMEOUT_MS = 5000
+
+let agentTokenPromise: Promise<string> | null = null
+
+/**
+ * Lazily fetch the kc-agent token from the backend. The token is cached
+ * in localStorage so subsequent calls (and page reloads) don't re-fetch.
+ */
+function getAgentToken(): Promise<string> {
+  const cached = localStorage.getItem(AGENT_TOKEN_STORAGE_KEY)
+  if (cached) return Promise.resolve(cached)
+
+  if (!agentTokenPromise) {
+    agentTokenPromise = fetch('/api/agent/token', {
+      credentials: 'include',
+      signal: AbortSignal.timeout(AGENT_TOKEN_FETCH_TIMEOUT_MS),
+    })
+      .then(r => r.ok ? r.json() : { token: '' })
+      .then((data: { token?: string }) => {
+        const token = data.token || ''
+        if (token) localStorage.setItem(AGENT_TOKEN_STORAGE_KEY, token)
+        agentTokenPromise = null
+        return token
+      })
+      .catch(() => {
+        agentTokenPromise = null
+        return ''
+      })
+  }
+  return agentTokenPromise
+}
+
 /**
  * Drop-in replacement for `fetch()` that auto-injects the KC_AGENT_TOKEN
  * Authorization header when calling the kc-agent HTTP API. Without this,
  * requests to kc-agent are rejected when KC_AGENT_TOKEN is configured.
  */
-export function agentFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+export async function agentFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const token = await getAgentToken()
   const headers = new Headers(init?.headers)
   if (token && !headers.has('Authorization')) {
     headers.set('Authorization', `Bearer ${token}`)

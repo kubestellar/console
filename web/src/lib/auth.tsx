@@ -200,6 +200,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(STORAGE_KEY_TOKEN)
     localStorage.removeItem(AUTH_USER_CACHE_KEY)
     localStorage.removeItem(STORAGE_KEY_HAS_SESSION)
+    localStorage.removeItem('kc-agent-token')
     try {
       sessionStorage.removeItem(STORAGE_KEY_TOKEN)
       sessionStorage.removeItem(AUTH_USER_CACHE_KEY)

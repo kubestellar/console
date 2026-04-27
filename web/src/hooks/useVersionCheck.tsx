@@ -10,7 +10,7 @@ import type {
   UpdateProgress } from '../types/updates'
 import { emitSessionContext } from '../lib/analytics'
 import { UPDATE_STORAGE_KEYS } from '../types/updates'
-import { LOCAL_AGENT_HTTP_URL, FETCH_EXTERNAL_TIMEOUT_MS } from '../lib/constants/network'
+import { FETCH_EXTERNAL_TIMEOUT_MS } from '../lib/constants/network'
 import { MS_PER_MINUTE } from '../lib/constants/time'
 import { useLocalAgent } from './useLocalAgent'
 
@@ -371,7 +371,8 @@ function useVersionCheckCore() {
     if (!agentSupportsAutoUpdate) return
     try {
       console.debug('[version-check] Fetching auto-update status from kc-agent...')
-      const resp = await fetch(`${LOCAL_AGENT_HTTP_URL}/auto-update/status`, {
+      const resp = await fetch('/api/agent/auto-update/status', {
+        credentials: 'include',
         signal: AbortSignal.timeout(10000) })
       if (resp.ok) {
         const data = await safeJsonParse<AutoUpdateStatus>(resp, 'Auto-update status')
@@ -524,8 +525,9 @@ function useVersionCheckCore() {
 
     // Sync to kc-agent
     try {
-      await fetch(`${LOCAL_AGENT_HTTP_URL}/auto-update/config`, {
+      await fetch('/api/agent/auto-update/config', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify({ enabled: autoUpdateEnabled, channel: newChannel }),
         signal: AbortSignal.timeout(3000) })
@@ -543,8 +545,9 @@ function useVersionCheckCore() {
 
     // Sync to kc-agent
     try {
-      await fetch(`${LOCAL_AGENT_HTTP_URL}/auto-update/config`, {
+      await fetch('/api/agent/auto-update/config', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify({ enabled, channel }),
         signal: AbortSignal.timeout(3000) })
@@ -560,8 +563,9 @@ function useVersionCheckCore() {
   const triggerUpdate = async (): Promise<{ success: boolean; error?: string }> => {
     console.debug('[version-check] Triggering update via kc-agent, channel:', channel)
     try {
-      const resp = await fetch(`${LOCAL_AGENT_HTTP_URL}/auto-update/trigger`, {
+      const resp = await fetch('/api/agent/auto-update/trigger', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify({ channel }),
         signal: AbortSignal.timeout(TRIGGER_UPDATE_TIMEOUT_MS) })
@@ -590,8 +594,9 @@ function useVersionCheckCore() {
   const cancelUpdate = async (): Promise<{ success: boolean; error?: string }> => {
     console.debug('[version-check] Cancelling in-progress update via kc-agent')
     try {
-      const resp = await fetch(`${LOCAL_AGENT_HTTP_URL}/auto-update/cancel`, {
+      const resp = await fetch('/api/agent/auto-update/cancel', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         signal: AbortSignal.timeout(CANCEL_UPDATE_TIMEOUT_MS) })
       if (resp.ok) {

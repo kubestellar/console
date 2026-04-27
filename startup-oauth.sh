@@ -341,6 +341,15 @@ if [ -z "$KC_AGENT_BIN" ]; then
     fi
 fi
 
+# Generate KC_AGENT_TOKEN if not already set — both kc-agent and the Go
+# backend read this env var so the frontend can authenticate to the agent
+# via a backend-proxied token endpoint.
+if [ -z "$KC_AGENT_TOKEN" ]; then
+    KC_AGENT_TOKEN="$(openssl rand -hex 32)"
+    echo "Auto-generated KC_AGENT_TOKEN: $KC_AGENT_TOKEN"
+fi
+export KC_AGENT_TOKEN
+
 # Start kc-agent with auto-restart on crash
 AGENT_PID=""
 AGENT_LOOP_PID=""
