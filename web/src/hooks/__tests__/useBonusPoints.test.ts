@@ -23,9 +23,13 @@ vi.mock('../../lib/auth', () => ({
   useAuth: () => mockUseAuth(),
 }))
 
-vi.mock('../../lib/constants', () => ({
-  BACKEND_DEFAULT_URL: 'http://localhost:8080',
-}))
+vi.mock('../../lib/constants', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    BACKEND_DEFAULT_URL: 'http://localhost:8080',
+  }
+})
 
 vi.mock('../../lib/constants/network', () => ({
   FETCH_DEFAULT_TIMEOUT_MS: 5000,

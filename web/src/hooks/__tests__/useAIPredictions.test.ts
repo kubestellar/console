@@ -40,10 +40,14 @@ vi.mock('../mcp/shared', () => ({
   agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
 }))
 
-vi.mock('../../lib/constants', () => ({
-  LOCAL_AGENT_WS_URL: 'ws://localhost:8585/ws',
-  LOCAL_AGENT_HTTP_URL: 'http://localhost:8585',
-}))
+vi.mock('../../lib/constants', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    LOCAL_AGENT_WS_URL: 'ws://localhost:8585/ws',
+    LOCAL_AGENT_HTTP_URL: 'http://localhost:8585',
+  }
+})
 
 vi.mock('../../lib/constants/network', () => ({
   FETCH_DEFAULT_TIMEOUT_MS: 10000,

@@ -23,9 +23,13 @@ vi.mock('../mcp/shared', () => ({
   CLUSTER_POLL_INTERVAL_MS: 60_000,
 }))
 
-vi.mock('../../lib/constants', () => ({
-  LOCAL_AGENT_HTTP_URL: 'http://127.0.0.1:8585',
-}))
+vi.mock('../../lib/constants', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    LOCAL_AGENT_HTTP_URL: 'http://127.0.0.1:8585',
+  }
+})
 
 let useProviderConnection: typeof import('../useProviderConnection').useProviderConnection
 

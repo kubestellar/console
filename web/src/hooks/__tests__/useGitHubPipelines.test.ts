@@ -39,9 +39,13 @@ vi.mock('../../hooks/useDemoMode', () => ({
   getDemoMode: () => true,
   useDemoMode: () => ({ isDemoMode: true }),
 }))
-vi.mock('../../lib/constants', () => ({
-  STORAGE_KEY_TOKEN: 'token',
-}))
+vi.mock('../../lib/constants', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    STORAGE_KEY_TOKEN: 'token',
+  }
+})
 vi.mock('../../lib/constants/network', () => ({
   FETCH_DEFAULT_TIMEOUT_MS: 30000,
 }))

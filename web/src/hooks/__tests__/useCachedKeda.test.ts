@@ -27,9 +27,13 @@ vi.mock('../../lib/api', () => ({
     authFetch: vi.fn(),
 }))
 
-vi.mock('../../lib/constants', () => ({
+vi.mock('../../lib/constants', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
     FETCH_DEFAULT_TIMEOUT_MS: 10000,
-}))
+  }
+})
 
 vi.mock('../../lib/constants/network', () => ({
     LOCAL_AGENT_HTTP_URL: 'http://localhost:8585',

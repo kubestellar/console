@@ -25,10 +25,14 @@ vi.mock('../../lib/modeTransition', () => ({
   registerRefetch: (...args: unknown[]) => mockRegisterRefetch(...args),
 }))
 
-vi.mock('../../lib/constants', () => ({
-  STORAGE_KEY_TOKEN: 'kc-auth-token',
-  DEFAULT_REFRESH_INTERVAL_MS: 120_000,
-}))
+vi.mock('../../lib/constants', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    STORAGE_KEY_TOKEN: 'kc-auth-token',
+    DEFAULT_REFRESH_INTERVAL_MS: 120_000,
+  }
+})
 
 vi.mock('../../lib/constants/network', () => ({
   FETCH_DEFAULT_TIMEOUT_MS: 5000,
