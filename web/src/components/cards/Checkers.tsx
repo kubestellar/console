@@ -587,7 +587,7 @@ export function Checkers(_props: CardComponentProps) {
         thinkingTimeoutRef.current = null
       }
     }
-  }, [currentPlayer, gameOver]) // Only trigger on player change or game over
+  }, [board, currentPlayer, gameOver, difficulty]) // Trigger on board/player change
 
   // Handle cell click
   const handleCellClick = (row: number, col: number) => {
@@ -755,7 +755,7 @@ export function Checkers(_props: CardComponentProps) {
       <div className="flex-1 flex items-center justify-center min-h-0">
         <div className="inline-block border border-border rounded overflow-hidden">
           {board.map((row, rowIdx) => (
-            <div key={rowIdx} className="flex">
+            <div key={rowIdx} className="flex shrink-0">
               {row.map((piece, colIdx) => {
                 const isDark = (rowIdx + colIdx) % 2 === 1
                 const isSelected = selectedPos?.row === rowIdx && selectedPos?.col === colIdx
@@ -770,7 +770,7 @@ export function Checkers(_props: CardComponentProps) {
                     key={colIdx}
                     onClick={() => handleCellClick(rowIdx, colIdx)}
                     className={`
-                      ${cellSize} flex items-center justify-center cursor-pointer transition-colors relative
+                      ${cellSize} shrink-0 flex items-center justify-center cursor-pointer transition-colors relative
                       ${isDark ? 'bg-green-800' : 'bg-green-200'}
                       ${isValidMove && !isCapture ? 'ring-2 ring-inset ring-green-400' : ''}
                       ${isCapture ? 'ring-2 ring-inset ring-red-400 bg-red-500/30' : ''}
