@@ -36,7 +36,7 @@ export function GPUInventoryTab({
   return (
     <div className="space-y-4">
       {/* Search and Filter Controls */}
-      <div className="flex items-center justify-between bg-secondary/20 p-2 rounded-lg border border-border/50">
+      <div className="flex flex-wrap items-center justify-between gap-2 bg-secondary/20 p-2 rounded-lg border border-border/50">
         <div className="flex items-center gap-3">
           <GPUTaintFilterControl
             distinctTaints={distinctTaints}
@@ -77,14 +77,14 @@ export function GPUInventoryTab({
 
         return (
           <div key={cluster.name} className={cn('glass p-4 rounded-lg', effectiveDemoMode && 'border-2 border-yellow-500/50')}>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+              <div className="flex items-center gap-3 min-w-0">
                 <ClusterBadge cluster={cluster.name} size="sm" />
-                <div className="text-sm text-muted-foreground">
+                <div className="text-sm text-muted-foreground truncate">
                   {(cluster.gpuTypes || []).join(', ')}
                 </div>
               </div>
-              <div className="flex items-center gap-4 text-sm">
+              <div className="flex flex-wrap items-center gap-4 text-sm">
                 <span className="text-foreground font-medium">{t('gpuReservations.inventory.total', { count: clusterNodes.reduce((sum, n) => sum + n.gpuCount, 0) })}</span>
                 <span className="text-green-400">{t('gpuReservations.inventory.available', { count: clusterNodes.reduce((sum, n) => sum + (n.gpuCount - n.gpuAllocated), 0) })}</span>
                 <span className="text-yellow-400">{t('gpuReservations.inventory.allocated', { count: clusterNodes.reduce((sum, n) => sum + n.gpuAllocated, 0) })}</span>

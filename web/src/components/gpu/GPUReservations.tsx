@@ -496,7 +496,7 @@ export function GPUReservations() {
   }
 
   return (
-    <div className="pt-16">
+    <div className="pt-16 min-w-0">
       <div className="mb-6">
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-bold text-foreground">{t('gpuReservations.title')}</h1>
@@ -512,7 +512,7 @@ export function GPUReservations() {
       {/* Tabs */}
       <div
         role="tablist"
-        className="flex gap-1 mb-6 border-b border-border"
+        className="flex flex-wrap gap-1 mb-6 border-b border-border"
         onKeyDown={(e) => {
           const ids = ['overview', 'calendar', 'quotas', 'inventory', 'dashboard'] as const
           const idx = ids.indexOf(activeTab)
@@ -553,7 +553,7 @@ export function GPUReservations() {
           )
         })}
 
-        <div className="ml-auto pb-2 flex items-center gap-3">
+        <div className="ml-auto pb-2 flex flex-wrap items-center gap-3">
           {/* My Reservations filter */}
           {user && (
             <label

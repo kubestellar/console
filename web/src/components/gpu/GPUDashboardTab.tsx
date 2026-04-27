@@ -53,7 +53,7 @@ export function GPUDashboardTab({
     <div className="space-y-4">
       {/* Cluster health summary */}
       {clusterHealth.total > 0 && (
-        <div className="flex items-center gap-4 p-3 rounded-lg bg-secondary/30 border border-border">
+        <div className="flex flex-wrap items-center gap-4 p-3 rounded-lg bg-secondary/30 border border-border">
           <span className="text-sm font-medium text-foreground">Cluster Health</span>
           <div className="flex items-center gap-1.5">
             <StatusIndicator status="healthy" size="sm" />
@@ -68,7 +68,7 @@ export function GPUDashboardTab({
         </div>
       )}
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-muted-foreground">
           {t('gpuReservations.dashboard.customizable')}
         </p>

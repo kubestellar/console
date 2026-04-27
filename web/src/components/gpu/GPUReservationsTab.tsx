@@ -78,7 +78,7 @@ export function GPUReservationsTab({
       </div>
       {/* Filter banner when showing only user's reservations */}
       {showOnlyMine && (
-        <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-purple-500/10 border border-purple-500/30">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 rounded-lg bg-purple-500/10 border border-purple-500/30">
           <div className="flex items-center gap-2 text-sm text-purple-300">
             <Filter className="w-4 h-4" />
             <span>{t('gpuReservations.filteringByUser', `Showing reservations for {{user}}`, { user: user?.github_login || 'you' })}</span>
@@ -121,19 +121,19 @@ export function GPUReservationsTab({
           const isExpanded = expandedReservationId === r.id
           return (
             <div key={r.id} className={cn('glass p-4 rounded-lg', effectiveDemoMode && 'border-2 border-yellow-500/50')}>
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-purple-500/20">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="p-2 rounded-lg bg-purple-500/20 shrink-0">
                     <Zap className="w-5 h-5 text-purple-400" />
                   </div>
-                  <div>
-                    <div className="font-medium text-foreground">{r.title}</div>
-                    <div className="text-sm text-muted-foreground">
+                  <div className="min-w-0">
+                    <div className="font-medium text-foreground truncate">{r.title}</div>
+                    <div className="text-sm text-muted-foreground truncate">
                       {r.namespace} · {r.user_name}
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <span className={cn('px-2 py-0.5 text-xs rounded-full border', STATUS_COLORS[r.status] || STATUS_COLORS.pending)}>
                     {r.status}
                   </span>

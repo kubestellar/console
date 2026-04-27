@@ -71,7 +71,7 @@ export function GPUCalendarTab({
             )
           })}
         </div>
-        <div className="border border-border/50 rounded-lg overflow-hidden">
+        <div className="border border-border/50 rounded-lg overflow-x-auto" style={{ minWidth: 0 }}>
           {/* Day-of-week header */}
           <div className="grid grid-cols-7 border-b border-border/50">
             {([
