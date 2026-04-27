@@ -71,6 +71,9 @@ function getTransitionCSS(transition: TransitionStyle, visible: boolean): React.
   }
 }
 
+/** Max width for the tagline container — prevents long quotes from causing navbar layout shift */
+const TAGLINE_MAX_WIDTH_REM = '16rem'
+
 export function RotatingTagline({ aiTagline }: { aiTagline?: string }) {
   const allTaglines = useMemo(
     () => (aiTagline ? [...TAGLINES, aiTagline] : TAGLINES),
@@ -100,8 +103,9 @@ export function RotatingTagline({ aiTagline }: { aiTagline?: string }) {
 
   return (
     <span
-      className="text-[10px] text-muted-foreground tracking-wide inline-block"
-      style={getTransitionCSS(transition, visible)}
+      className="text-[10px] text-muted-foreground tracking-wide inline-block overflow-hidden text-ellipsis whitespace-nowrap"
+      style={{ ...getTransitionCSS(transition, visible), maxWidth: TAGLINE_MAX_WIDTH_REM }}
+      title={allTaglines[safeIndex]}
     >
       {allTaglines[safeIndex]}
     </span>
