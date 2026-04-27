@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useCallback, useRef, useState } from 'react'
 import { ChevronRight, RefreshCw, Trash2, Terminal } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useClusters } from '../../hooks/useMCP'
@@ -17,6 +17,14 @@ import { TechnicalAcronym, STATUS_TOOLTIPS } from '../shared/TechnicalAcronym'
 import { PortalTooltip } from '../cards/llmd/shared/PortalTooltip'
 import { kubectlProxy } from '../../lib/kubectlProxy'
 import { useToast } from '../ui/Toast'
+import { ConfirmDialog } from '../../lib/modals/ConfirmDialog'
+
+/** Target pod metadata for the delete confirmation dialog */
+interface PendingDeleteTarget {
+  cluster: string
+  namespace: string
+  name: string
+}
 
 const PODS_CARDS_KEY = 'kubestellar-pods-cards'
 
@@ -34,6 +42,11 @@ export function Pods() {
   const handleRefresh = () => { refetchPodIssues(); refetchClusters() }
   const { drillToPod, drillToAllPods, drillToAllClusters } = useDrillDownActions()
   const { showToast } = useToast()
+
+  // State for the custom delete-confirmation dialog
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const pendingDeleteRef = useRef<PendingDeleteTarget | null>(null)
 
   const {
     selectedClusters: globalSelectedClusters,
@@ -71,22 +84,37 @@ export function Pods() {
       showToast(t('pods.restartSuccess', 'Pod deletion triggered (it will restart if managed)'), 'success')
       refetchPodIssues()
     } catch (err) {
-      showToast(t('pods.restartError', 'Failed to restart pod'), 'error')
+      const detail = err instanceof Error ? err.message : String(err)
+      showToast(t('pods.restartErrorDetail', 'Failed to restart pod: {{detail}}', { detail }), 'error')
     }
   }
 
-  const handleDeletePod = async (e: React.MouseEvent, cluster: string, namespace: string, name: string) => {
+  /** Open the custom confirm dialog instead of window.confirm() */
+  const handleDeletePod = (e: React.MouseEvent, cluster: string, namespace: string, name: string) => {
     e.stopPropagation()
-    if (!window.confirm(t('pods.confirmDelete', 'Are you sure you want to delete pod {{name}}?', { name }))) return
+    pendingDeleteRef.current = { cluster, namespace, name }
+    setShowDeleteConfirm(true)
+  }
+
+  /** Execute the deletion after the user confirms via ConfirmDialog */
+  const executeDeletePod = useCallback(async () => {
+    const target = pendingDeleteRef.current
+    if (!target) return
+    setIsDeleting(true)
     try {
       showToast(t('pods.deleting', 'Deleting pod...'), 'info')
-      await kubectlProxy.exec(['delete', 'pod', name, '-n', namespace], { context: cluster })
+      await kubectlProxy.exec(['delete', 'pod', target.name, '-n', target.namespace], { context: target.cluster })
       showToast(t('pods.deleteSuccess', 'Pod deleted'), 'success')
       refetchPodIssues()
     } catch (err) {
-      showToast(t('pods.deleteError', 'Failed to delete pod'), 'error')
+      const detail = err instanceof Error ? err.message : String(err)
+      showToast(t('pods.deleteErrorDetail', 'Failed to delete pod: {{detail}}', { detail }), 'error')
+    } finally {
+      setIsDeleting(false)
+      setShowDeleteConfirm(false)
+      pendingDeleteRef.current = null
     }
-  }
+  }, [showToast, t, refetchPodIssues])
 
   // Filter pod issues by global cluster selection
   const filteredPodIssues = (() => {
@@ -329,6 +357,18 @@ export function Pods() {
             })}
         </div>
       </div>
+      {/* Delete-confirmation dialog (replaces window.confirm) */}
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => { setShowDeleteConfirm(false); pendingDeleteRef.current = null }}
+        onConfirm={executeDeletePod}
+        title={t('pods.confirmDeleteTitle', 'Delete Pod')}
+        message={t('pods.confirmDeleteMessage', 'Are you sure you want to delete pod {{name}}? This action cannot be undone.', { name: pendingDeleteRef.current?.name ?? '' })}
+        confirmLabel={t('common.delete', 'Delete')}
+        cancelLabel={t('common.cancel', 'Cancel')}
+        variant="danger"
+        isLoading={isDeleting}
+      />
     </DashboardPage>
   )
 }
