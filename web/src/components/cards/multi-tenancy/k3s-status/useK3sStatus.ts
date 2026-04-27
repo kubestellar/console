@@ -13,6 +13,7 @@ import { K3S_CACHE_KEY, OPERATOR_REFRESH_CATEGORY } from '../shared'
 import type { ComponentHealth } from '../shared'
 import { K3S_DEMO_DATA, type K3sServerPodInfo, type K3sStatusDemoData } from './demoData'
 import { LOCAL_AGENT_HTTP_URL } from '../../../../lib/constants/network'
+import { agentFetch } from '../../../../hooks/mcp/shared'
 import { isPodHealthy } from '../../../../lib/k8s'
 
 // ============================================================================
@@ -92,7 +93,7 @@ function extractVersion(pod: BackendPodInfo): string {
 // ============================================================================
 
 async function fetchK3sStatus(): Promise<K3sStatus> {
-  const podsResp = await fetch(`${LOCAL_AGENT_HTTP_URL}/pods`, {
+  const podsResp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/pods`, {
     headers: { Accept: 'application/json' },
     signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
   })

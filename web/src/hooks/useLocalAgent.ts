@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { isDemoModeForced } from './useDemoMode'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
+import { agentFetch } from './mcp/shared'
 import { TRANSITION_DELAY_MS } from '../lib/constants/network'
 import { emitAgentConnected, emitAgentDisconnected, emitAgentProvidersDetected, emitConversionStep } from '../lib/analytics'
 import { safeGetItem, safeSetItem } from '../lib/utils/localStorage'
@@ -207,7 +208,7 @@ class AgentManager {
     this.isChecking = true
 
     try {
-      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/health`, {
+      const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/health`, {
         method: 'GET',
         headers: { Accept: 'application/json' },
         signal: AbortSignal.timeout(AGENT_HEALTH_TIMEOUT_MS) })

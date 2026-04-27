@@ -1,5 +1,6 @@
 import { useEffect, useSyncExternalStore } from 'react'
 import { LOCAL_AGENT_HTTP_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
+import { agentFetch } from './mcp/shared'
 import { STORAGE_KEY_TOKEN } from '../lib/constants'
 import { useDemoMode } from './useDemoMode'
 
@@ -347,7 +348,7 @@ function authHeaders(): Record<string, string> {
 async function fetchFederationEndpoint<T>(path: string): Promise<T | null> {
   if (!LOCAL_AGENT_HTTP_URL) return null
   try {
-    const response = await fetch(`${LOCAL_AGENT_HTTP_URL}${path}`, {
+    const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}${path}`, {
       headers: authHeaders(),
       signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
     })

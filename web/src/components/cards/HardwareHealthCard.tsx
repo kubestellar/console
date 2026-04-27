@@ -12,6 +12,7 @@ import { useCachedHardwareHealth, type DeviceAlert, type NodeDeviceInventory, ty
 import { useSnoozedAlerts, SNOOZE_DURATIONS, formatSnoozeRemaining, type SnoozeDuration } from '../../hooks/useSnoozedAlerts'
 import { useTranslation } from 'react-i18next'
 import { LOCAL_AGENT_HTTP_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
+import { agentFetch } from '../../hooks/mcp/shared'
 
 // Sort field options — separated by view so only applicable fields are shown
 type SortField = 'severity' | 'nodeName' | 'cluster' | 'deviceType' | 'totalDevices'
@@ -338,7 +339,7 @@ export function HardwareHealthCard() {
   const clearAlert = async (alertId: string) => {
     setClearAlertError(null)
     try {
-      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/devices/alerts/clear`, {
+      const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/devices/alerts/clear`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify({ alertId }),

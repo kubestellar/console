@@ -8,6 +8,7 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { RefreshCw, GitBranch, FolderGit, Box, Loader2 } from 'lucide-react'
 import { SyncDialog } from './SyncDialog'
 import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN } from '../../lib/constants'
+import { agentFetch } from '../../hooks/mcp/shared'
 import { MS_PER_MINUTE } from '../../lib/constants/time'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants/network'
 import { getDemoMode } from '../../hooks/useDemoMode'
@@ -203,7 +204,7 @@ export function GitOps() {
       if (token) agentAuthHeaders['Authorization'] = `Bearer ${token}`
       const promises = configs.map(async (appConfig) => {
         try {
-          const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/gitops/detect-drift`, {
+          const res = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/gitops/detect-drift`, {
             method: 'POST',
             headers: agentAuthHeaders,
             body: JSON.stringify({

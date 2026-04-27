@@ -10,6 +10,7 @@
  */
 
 import { LOCAL_AGENT_HTTP_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
+import { agentFetch } from './mcp/shared'
 import { STORAGE_KEY_TOKEN } from '../lib/constants'
 import type { FederationProviderName } from './useFederation'
 
@@ -54,7 +55,7 @@ export async function executeFederationAction(req: ActionRequest): Promise<Actio
   const headers: Record<string, string> = { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
   if (token) headers['Authorization'] = `Bearer ${token}`
 
-  const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/federation/action`, {
+  const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/federation/action`, {
     method: 'POST',
     headers,
     body: JSON.stringify(req),

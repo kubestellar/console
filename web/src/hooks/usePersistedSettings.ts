@@ -7,6 +7,7 @@ import {
   isLocalStorageEmpty,
   SETTINGS_CHANGED_EVENT } from '../lib/settingsSync'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
+import { agentFetch } from './mcp/shared'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import { isNetlifyDeployment } from '../lib/demoMode'
 import { safeRevokeObjectURL } from '../lib/download'
@@ -20,7 +21,7 @@ export type SyncStatus = 'idle' | 'saving' | 'saved' | 'error' | 'offline'
  * Uses a generous timeout because the agent's HTTP/1.1 connection pool (6 per origin)
  * can be saturated by concurrent cluster health/data requests during page transitions. */
 async function settingsFetch<T>(path: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(`${LOCAL_AGENT_HTTP_URL}${path}`, {
+  const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}${path}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -101,7 +102,7 @@ export function usePersistedSettings() {
   // Export settings as encrypted backup file
   const exportSettings = async () => {
     try {
-      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/settings/export`, {
+      const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/settings/export`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })

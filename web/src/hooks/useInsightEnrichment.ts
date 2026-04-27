@@ -18,6 +18,7 @@ import type {
 } from '../types/insights'
 import { isAgentConnected, isAgentUnavailable } from './useLocalAgent'
 import { LOCAL_AGENT_HTTP_URL, LOCAL_AGENT_WS_URL } from '../lib/constants'
+import { agentFetch } from './mcp/shared'
 import { appendWsAuthToken } from '../lib/utils/wsAuth'
 
 /** Debounce before sending enrichment request (2 seconds) */
@@ -98,7 +99,7 @@ async function requestEnrichment(insights: MultiClusterInsight[]): Promise<void>
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), ENRICHMENT_TIMEOUT_MS)
 
-    const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/insights/enrich`, {
+    const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/insights/enrich`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
       body: JSON.stringify(payload),

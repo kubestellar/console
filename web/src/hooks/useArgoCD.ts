@@ -15,6 +15,7 @@ import { useClusters } from './useMCP'
 import { useGlobalFilters } from './useGlobalFilters'
 import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN } from '../lib/constants'
 import { FETCH_DEFAULT_TIMEOUT_MS, MOCK_SYNC_DELAY_MS } from '../lib/constants/network'
+import { agentFetch } from './mcp/shared'
 import { DEFAULT_REFRESH_INTERVAL_MS as REFRESH_INTERVAL_MS } from '../lib/constants'
 
 // Cache expiry time (5 minutes)
@@ -285,7 +286,7 @@ async function triggerArgoSyncAPI(appName: string, namespace: string, cluster: s
   const ctrl = new AbortController()
   const tid = setTimeout(() => ctrl.abort(), FETCH_DEFAULT_TIMEOUT_MS)
   try {
-    const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/argocd/sync`, {
+    const res = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/argocd/sync`, {
       method: 'POST',
       signal: ctrl.signal,
       headers: { ...authHeaders(), 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },

@@ -13,6 +13,7 @@
 import { useCache } from '../../../../lib/cache'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../../lib/constants/network'
 import { LOCAL_AGENT_HTTP_URL } from '../../../../lib/constants/network'
+import { agentFetch } from '../../../../hooks/mcp/shared'
 
 // ============================================================================
 // Constants
@@ -105,7 +106,7 @@ const INITIAL_DATA: NetworkStatsData = { stats: [] }
 // ============================================================================
 
 async function fetchNetworkStats(): Promise<NetworkStatsData> {
-  const resp = await fetch(`${LOCAL_AGENT_HTTP_URL}/pod-network-stats`, {
+  const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/pod-network-stats`, {
     headers: { Accept: 'application/json' },
     signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
   })

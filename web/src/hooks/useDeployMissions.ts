@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useCardSubscribe } from '../lib/cardEvents'
-import { clusterCacheRef } from './mcp/shared'
+import { clusterCacheRef, agentFetch } from './mcp/shared'
 import { kubectlProxy } from '../lib/kubectlProxy'
 import type { DeployStartedPayload, DeployResultPayload, DeployedDep } from '../lib/cardEvents'
 import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN, STORAGE_KEY_MISSIONS_ACTIVE, STORAGE_KEY_MISSIONS_HISTORY } from '../lib/constants'
@@ -431,7 +431,7 @@ export function useDeployMissions() {
                   const ctrl = new AbortController()
                   const tid = setTimeout(() => ctrl.abort(), DEPLOY_ABORT_TIMEOUT_MS)
                   try {
-                    const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/deployments?${params}`, {
+                    const res = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/deployments?${params}`, {
                       signal: ctrl.signal,
                       headers: { Accept: 'application/json' } })
                     // #6816 — If the agent returns a non-OK response (4xx/5xx

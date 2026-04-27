@@ -26,6 +26,7 @@ import { useTranslation } from 'react-i18next'
 import { LOCAL_AGENT_HTTP_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants'
 import { POLL_INTERVAL_MS } from '../../../lib/constants/network'
 import { useDemoMode } from '../../../hooks/useDemoMode'
+import { agentFetch } from '../../../hooks/mcp/shared'
 
 // ============================================================================
 // Unified Item Type for all card items
@@ -181,7 +182,7 @@ async function fetchAllNodes(): Promise<NodeData[]> {
 
   nodesFetchInProgress = true
   try {
-    const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/nodes`, {
+    const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/nodes`, {
       signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
     if (response.ok) {
       const data = await response.json()

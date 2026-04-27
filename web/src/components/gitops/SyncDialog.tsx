@@ -5,6 +5,7 @@ import { BaseModal } from '../../lib/modals'
 import { TechnicalAcronym } from '../shared/TechnicalAcronym'
 import { safeGetItem } from '../../lib/utils/localStorage'
 import { FETCH_DEFAULT_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN } from '../../lib/constants'
+import { agentFetch } from '../../hooks/mcp/shared'
 
 // Sync phases
 type SyncPhase = 'detection' | 'plan' | 'execution' | 'complete'
@@ -135,7 +136,7 @@ export function SyncDialog({
       // #7993 Phase 4: detect-drift moved to kc-agent. Runs under the
       // user's kubeconfig instead of the backend pod SA.
       const token = safeGetItem(STORAGE_KEY_TOKEN)
-      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/gitops/detect-drift`, {
+      const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/gitops/detect-drift`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -235,7 +236,7 @@ export function SyncDialog({
       // #7993 Phase 4: gitops sync moved to kc-agent. Runs under the
       // user's kubeconfig instead of the backend pod SA.
       const token = safeGetItem(STORAGE_KEY_TOKEN)
-      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/gitops/sync`, {
+      const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/gitops/sync`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

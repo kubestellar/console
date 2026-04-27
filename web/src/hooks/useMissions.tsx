@@ -4,6 +4,7 @@ import { AgentCapabilityToolExec } from '../types/agent'
 import { getDemoMode } from './useDemoMode'
 import { addCategoryTokens, setActiveTokenCategory, clearActiveTokenCategory } from './useTokenUsage'
 import { LOCAL_AGENT_WS_URL, LOCAL_AGENT_HTTP_URL } from '../lib/constants'
+import { agentFetch } from './mcp/shared'
 import { appendWsAuthToken } from '../lib/utils/wsAuth'
 import { emitError, emitMissionStarted, emitMissionCompleted, emitMissionError, emitMissionRated } from '../lib/analytics'
 import { scanForMaliciousContent } from '../lib/missions/scanner/malicious'
@@ -2610,7 +2611,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
     } else {
       // HTTP fallback — WS may be disconnected during long agent runs.
       // Use the response body to determine if cancellation succeeded (#5477).
-      fetch(`${LOCAL_AGENT_HTTP_URL}/cancel-chat`, {
+      agentFetch(`${LOCAL_AGENT_HTTP_URL}/cancel-chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify({ sessionId: missionId }) }).then(async response => {

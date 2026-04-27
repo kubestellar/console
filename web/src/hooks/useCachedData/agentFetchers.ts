@@ -9,7 +9,7 @@
  */
 
 import { kubectlProxy } from '../../lib/kubectlProxy'
-import { clusterCacheRef } from '../mcp/shared'
+import { clusterCacheRef, agentFetch } from '../mcp/shared'
 import { isAgentUnavailable } from '../useLocalAgent'
 import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
 import { settledWithConcurrency } from '../../lib/utils/concurrency'
@@ -81,7 +81,7 @@ export async function fetchDeploymentsViaAgent(namespace?: string, onProgress?: 
 
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), AGENT_HTTP_TIMEOUT_MS)
-    const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/deployments?${params}`, {
+    const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/deployments?${params}`, {
       signal: controller.signal,
       headers: { Accept: 'application/json' }
     })
@@ -128,7 +128,7 @@ export async function fetchWorkloadsFromAgent(onProgress?: (partial: Workload[])
 
     const ctrl = new AbortController()
     const tid = setTimeout(() => ctrl.abort(), AGENT_HTTP_TIMEOUT_MS)
-    const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/deployments?${params}`, {
+    const res = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/deployments?${params}`, {
       signal: ctrl.signal,
       headers: { Accept: 'application/json' }
     })
@@ -185,7 +185,7 @@ export async function fetchCiliumStatus(): Promise<CiliumStatus | null> {
   if (!token || token === 'demo-token') return null
 
   try {
-    const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/cilium-status`, {
+    const res = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/cilium-status`, {
       headers: {
         Authorization: `Bearer ${token}`,
         Accept: 'application/json',
@@ -215,7 +215,7 @@ export async function fetchJaegerStatus(): Promise<any | null> {
   if (!token || token === 'demo-token') return null
 
   try {
-    const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/jaeger-status`, {
+    const res = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/jaeger-status`, {
       headers: {
         Authorization: `Bearer ${token}`,
         Accept: 'application/json',

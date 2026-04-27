@@ -19,6 +19,7 @@
 import { useCache, type RefreshCategory } from '../lib/cache'
 import { useDemoMode } from './useDemoMode'
 import { FETCH_DEFAULT_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../lib/constants/network'
+import { agentFetch } from './mcp/shared'
 import { MS_PER_SECOND, SECONDS_PER_MINUTE, MINUTES_PER_HOUR, HOURS_PER_DAY } from '../lib/constants/time'
 import {
   CONTAINERD_DEMO_DATA,
@@ -193,11 +194,11 @@ function buildContainerdData(
 
 async function fetchContainerdStatus(): Promise<ContainerdStatusData> {
   const [nodesResp, podsResp] = await Promise.all([
-    fetch(`${LOCAL_AGENT_HTTP_URL}/nodes`, {
+    agentFetch(`${LOCAL_AGENT_HTTP_URL}/nodes`, {
       headers: { Accept: 'application/json' },
       signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
     }),
-    fetch(`${LOCAL_AGENT_HTTP_URL}/pods`, {
+    agentFetch(`${LOCAL_AGENT_HTTP_URL}/pods`, {
       headers: { Accept: 'application/json' },
       signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
     }),
