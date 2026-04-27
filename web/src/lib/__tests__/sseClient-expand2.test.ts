@@ -347,12 +347,15 @@ describe('fetchSSE — expanded edge cases', () => {
       itemsKey: 'pods',
     })
 
+    // Attach catch handler BEFORE advancing timers to prevent unhandled rejection
+    const assertion = expect(promise).rejects.toThrow('SSE stream error')
+
     // Advance past all retries (5 attempts with exponential backoff)
     for (let i = 0; i < 6; i++) {
       await vi.advanceTimersByTimeAsync(35_000)
     }
 
-    await expect(promise).rejects.toThrow('SSE stream error')
+    await assertion
   })
 
   // 14. Stream ending without done event resolves with accumulated data

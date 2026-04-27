@@ -349,11 +349,13 @@ describe('sseClient expanded', () => {
         signal: controller.signal,
       })
 
-      // Abort
+      // Attach catch handler BEFORE aborting to prevent unhandled rejection
+      const assertion = expect(promise).rejects.toThrow('Aborted')
+
       controller.abort()
       await vi.advanceTimersByTimeAsync(100)
 
-      await expect(promise).rejects.toThrow('Aborted')
+      await assertion
     })
 
     it('aborted streams do not populate cache', async () => {

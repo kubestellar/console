@@ -1,3 +1,42 @@
+## Pass 37 — 2026-04-27 21:30 UTC
+
+### Health Check
+```json
+{"ci":"87%","buildDeploy":"GREEN","release":"GREEN","nightlyPlaywright":"RED(fixing)","nightlyTestSuite":"RED(stale commit)","nightlyRel":"GREEN","nightlyCompliance":"GREEN","nightlyDashboard":"GREEN","coverageGate":"GREEN","coverage":"87%<91%"}
+```
+
+### Actions
+- **PR #10611** (sseClient unhandled rejections) — merged to main ✅
+- **PR #10612** (73 Playwright E2E test failures) — created, CI running
+  - Fixed 12 test files across 6 root causes:
+    1. Excluded 31 Storybook-dependent visual regression tests (testIgnore)
+    2. Added mockApiFallback to 5 test files missing catch-all API mock
+    3. Replaced racy page.evaluate() with page.addInitScript() in 3 files
+    4. Replaced networkidle waits with domcontentloaded in 2 files
+    5. Fixed route registration order in CardChat, added stateful sharing mocks
+    6. Fixed Sidebar test: events is discoverable, not default sidebar item
+- Nightly issues #10435 (consistency-test) and #10436 (unit-test) already closed
+  - Ran on stale commit 32919e56 (before Go version + dep fixes)
+  - Next nightly will run on current main (ae17c933)
+- All adopter PRs held (do-not-merge/hold)
+
+### Workflow Status (main @ ae17c933)
+| Workflow | Status | Notes |
+|----------|--------|-------|
+| Build and Deploy KC | ✅ GREEN | Fixed by PR #10606 |
+| Release | ✅ GREEN | Succeeded on re-run |
+| Nightly Test Suite | ❌ RED | Stale commit; next nightly should pass |
+| Playwright E2E | ⏳ PENDING | Run 25020034694 triggered on main |
+| Nightly Compliance | ✅ GREEN | |
+| Nightly Dashboard | ✅ GREEN | |
+| Coverage Gate | ✅ PASS | On PRs |
+
+### Open PRs
+| PR | Status | Action |
+|----|--------|--------|
+| #10612 | CI running | Merge when green |
+| #9114, #9117, #4036, #4039, #4040, #4043, #4046, #7889, #8187 | Held | do-not-merge/hold labels |
+
 ## Pass 35 — 2026-04-27 20:10 UTC
 
 ### Health Check
