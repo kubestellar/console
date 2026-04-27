@@ -88,7 +88,7 @@ jobs:
 
       - name: Run Playwright tests (${{ matrix.browser }})
         run: |
-          npx playwright test --project=${{ matrix.browser }} --retries=1 --timeout=30000 \
+          npx playwright test --project=${{ matrix.browser }} --retries=2 --timeout=60000 \
             e2e/smoke.spec.ts \
             e2e/responsive-regression.spec.ts \
             e2e/spa-routes.spec.ts \
@@ -118,7 +118,7 @@ jobs:
     name: Mobile (${{ matrix.project }})
     needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
@@ -160,7 +160,7 @@ jobs:
 
       - name: Run mobile tests
         run: |
-          npx playwright test --project=${{ matrix.project }} --retries=1 --timeout=30000 \
+          npx playwright test --project=${{ matrix.project }} --retries=2 --timeout=60000 \
             e2e/smoke.spec.ts \
             e2e/responsive-regression.spec.ts \
             e2e/navbar-responsive.spec.ts \

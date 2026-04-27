@@ -107,13 +107,16 @@ test.describe('Dashboard Page', () => {
         await expect(card).toHaveAttribute('data-card-id', /.+/)
         await expect(card).toHaveAttribute('aria-label', /.+/)
 
-        // Each card must render a visible <h3> heading (the title shown in
-        // the card header). If a card variant ever stops rendering the
-        // heading, this catches it. On mobile viewports the card may still
-        // be loading when the loop runs, so give the heading extra time.
-        const HEADING_TIMEOUT_MS = 5_000
+        // Each card must render an <h3> heading (the title shown in the
+        // card header). If a card variant ever stops rendering the heading,
+        // this catches it. On mobile viewports the heading may be rendered
+        // but visually hidden due to the `truncate` class + narrow card
+        // width, so we use `toBeAttached` (DOM presence) instead of
+        // `toBeVisible` to avoid false failures on mobile-chrome /
+        // mobile-safari projects (#10433).
+        const HEADING_TIMEOUT_MS = 10_000
         const heading = card.locator('h3').first()
-        await expect(heading).toBeVisible({ timeout: HEADING_TIMEOUT_MS })
+        await expect(heading).toBeAttached({ timeout: HEADING_TIMEOUT_MS })
         await expect(heading).not.toHaveText('')
       }
     })
