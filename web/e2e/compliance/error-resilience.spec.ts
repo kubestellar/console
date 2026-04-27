@@ -446,15 +446,38 @@ test.describe('Error Resilience', () => {
       // Wait for initial content to load before simulating expiry
       await page.locator('[data-card-type]').first().waitFor({ state: 'visible', timeout: 10_000 }).catch(() => { /* best-effort */ })
 
-      // Clear auth token to simulate expiry
+      // Clear all auth-related localStorage keys to simulate full expiry.
+      // The app's primary auth key is 'token' (STORAGE_KEY_TOKEN); the others
+      // are agent token, user cache, session hint, and cache-validation stamp.
+      // 'github_token' is legacy (kept for cleanup) — clear it too.
       await page.evaluate(() => {
-        localStorage.removeItem('github_token')
         localStorage.removeItem('token')
-        localStorage.removeItem('user')
+        localStorage.removeItem('kc-agent-token')
+        localStorage.removeItem('kc-user-cache')
+        localStorage.removeItem('kc-has-session')
+        localStorage.removeItem('kc-user-cache-validated')
+        localStorage.removeItem('github_token')
+        try { sessionStorage.removeItem('token') } catch { /* private mode */ }
+        try { sessionStorage.removeItem('kc-user-cache') } catch { /* private mode */ }
       })
 
-      // Mock /api/me to return 401
+      // Mock /api/me and all SSE/streaming endpoints to return 401 so cached
+      // data can't keep the dashboard alive after token expiry.
       await page.route('**/api/me', async (route) => {
+        await route.fulfill({
+          status: 401,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: 'unauthorized', message: 'Token expired' }),
+        })
+      })
+      await page.route('**/*stream*', async (route) => {
+        await route.fulfill({
+          status: 401,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: 'unauthorized', message: 'Token expired' }),
+        })
+      })
+      await page.route('**/api/auth/**', async (route) => {
         await route.fulfill({
           status: 401,
           contentType: 'application/json',
