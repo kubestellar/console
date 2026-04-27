@@ -51,7 +51,7 @@ export function Clusters() {
   const { deduplicatedClusters: clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch } = useClusters()
   const { nodes: gpuNodes, isLoading: gpuLoading, error: gpuError, refetch: gpuRefetch } = useGPUNodes()
   const { operators: nvidiaOperators } = useNVIDIAOperators()
-  const { isConnected, status: agentStatus } = useLocalAgent()
+  const { isConnected, isDegraded, status: agentStatus } = useLocalAgent()
   const { isDemoMode } = useDemoMode()
   const isModeSwitching = useIsModeSwitching()
   const { startMission, openSidebar } = useMissions()
@@ -403,7 +403,12 @@ export function Clusters() {
                 }}
               />
               {filteredClusters.length === 0 && !isLoading && !showSkeletonContent ? (
-                <EmptyClusterState onAddCluster={() => setShowAddCluster(true)} />
+                <EmptyClusterState
+                  onAddCluster={() => setShowAddCluster(true)}
+                  agentConnected={isConnected}
+                  agentDegraded={isDegraded}
+                  inClusterMode={isInClusterMode()}
+                />
               ) : (
                 <ClusterGrid
                   clusters={filteredClusters}
