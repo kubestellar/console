@@ -49,7 +49,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
   // #6226: useToast for download error feedback (replaces an unhandled
   // exception path that could white-screen the dialog).
   const { showToast } = useToast()
-  const { sendMessage, retryPreflight, cancelMission, rateMission, setActiveMission, dismissMission, renameMission, runSavedMission, updateSavedMission } = useMissions()
+  const { sendMessage, editAndResend, retryPreflight, cancelMission, rateMission, setActiveMission, dismissMission, renameMission, runSavedMission, updateSavedMission } = useMissions()
   const { user } = useAuth()
   const { isDemoMode } = useDemoMode()
   const { findSimilarResolutions, recordUsage } = useResolutions()
@@ -342,11 +342,19 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
     sendMessage(mission.id, prompt)
   }
 
-  /** Append transcribed speech to the chat input */
   const handleMicrophoneTranscript = useCallback((text: string) => {
     setInput((prev) => (prev ? prev + ' ' + text : text))
     inputRef.current?.focus()
   }, [])
+
+  const handleEditMessage = useCallback((messageId: string) => {
+    const content = editAndResend(mission.id, messageId)
+    if (content) {
+      setInput(content)
+      setInputError(null)
+      setTimeout(() => inputRef.current?.focus(), 0)
+    }
+  }, [mission.id, editAndResend])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -784,6 +792,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
               isLastAssistantMessage={isLastAssistantMessage}
               missionStatus={mission.status}
               userAvatarUrl={user?.avatar_url}
+              onEdit={handleEditMessage}
             />
           )
         })}

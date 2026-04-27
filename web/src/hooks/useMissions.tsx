@@ -79,6 +79,9 @@ interface MissionContextValue {
   runSavedMission: (missionId: string, cluster?: string) => void
   updateSavedMission: (missionId: string, updates: SavedMissionUpdates) => void
   sendMessage: (missionId: string, content: string) => void
+  /** Remove a user message and all subsequent messages, returning the content
+   *  so the caller can populate the chat input for editing. (#10450) */
+  editAndResend: (missionId: string, messageId: string) => string | null
   retryPreflight: (missionId: string) => void
   cancelMission: (missionId: string) => void
   dismissMission: (missionId: string) => void
@@ -2775,6 +2778,29 @@ Install the console locally with the KubeStellar Console agent to use AI mission
     })
   }
 
+  // Edit and resend: remove a user message and everything after it,
+  // returning the original content so the UI can populate the input (#10450).
+  const editAndResend = (missionId: string, messageId: string): string | null => {
+    let removedContent: string | null = null
+    setMissions(prev => prev.map(m => {
+      if (m.id !== missionId) return m
+      const msgIndex = m.messages.findIndex(msg => msg.id === messageId)
+      if (msgIndex < 0) return m
+      const targetMsg = m.messages[msgIndex]
+      if (targetMsg.role !== 'user') return m
+      removedContent = targetMsg.content
+      return {
+        ...m,
+        // Truncate from the edited message onward
+        messages: m.messages.slice(0, msgIndex),
+        // Reset status so the user can re-send
+        status: m.status === 'running' || m.status === 'cancelling' ? m.status : 'waiting_input' as MissionStatus,
+        updatedAt: new Date(),
+      }
+    }))
+    return removedContent
+  }
+
   // Dismiss/remove a mission from the list
   const dismissMission = (missionId: string) => {
     // Cancel backend execution before removing from UI to prevent
@@ -3053,13 +3079,13 @@ Install the console locally with the KubeStellar Console agent to use AI mission
   // state changes.
   const handlersRef = useRef({
     startMission, saveMission, runSavedMission, updateSavedMission, sendMessage,
-    retryPreflight, cancelMission, dismissMission, renameMission, rateMission,
+    editAndResend, retryPreflight, cancelMission, dismissMission, renameMission, rateMission,
     setActiveMission, markMissionAsRead, selectAgent, connectToAgent,
     toggleSidebar, openSidebar, closeSidebar, minimizeSidebar, expandSidebar,
     handleSetFullScreen, confirmPendingReview, cancelPendingReview })
   handlersRef.current = {
     startMission, saveMission, runSavedMission, updateSavedMission, sendMessage,
-    retryPreflight, cancelMission, dismissMission, renameMission, rateMission,
+    editAndResend, retryPreflight, cancelMission, dismissMission, renameMission, rateMission,
     setActiveMission, markMissionAsRead, selectAgent, connectToAgent,
     toggleSidebar, openSidebar, closeSidebar, minimizeSidebar, expandSidebar,
     handleSetFullScreen, confirmPendingReview, cancelPendingReview }
@@ -3076,6 +3102,8 @@ Install the console locally with the KubeStellar Console agent to use AI mission
       handlersRef.current.updateSavedMission(...args),
     sendMessage: (...args: Parameters<typeof sendMessage>) =>
       handlersRef.current.sendMessage(...args),
+    editAndResend: (...args: Parameters<typeof editAndResend>) =>
+      handlersRef.current.editAndResend(...args),
     retryPreflight: (...args: Parameters<typeof retryPreflight>) =>
       handlersRef.current.retryPreflight(...args),
     cancelMission: (...args: Parameters<typeof cancelMission>) =>
@@ -3191,6 +3219,7 @@ const MISSIONS_FALLBACK: MissionContextValue = {
   runSavedMission: () => {},
   updateSavedMission: () => {},
   sendMessage: () => {},
+  editAndResend: () => null,
   retryPreflight: () => {},
   cancelMission: () => {},
   dismissMission: () => {},

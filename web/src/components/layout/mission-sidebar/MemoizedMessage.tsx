@@ -5,6 +5,7 @@ import {
   AlertCircle,
   User,
   Settings,
+  Pencil,
 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -21,7 +22,7 @@ import {
 import type { MessageProps } from './types'
 
 // Memoized message component to prevent re-renders on scroll
-export const MemoizedMessage = memo(function MemoizedMessage({ msg, missionAgent, isFullScreen, fontSize, isLastAssistantMessage, missionStatus, userAvatarUrl }: MessageProps) {
+export const MemoizedMessage = memo(function MemoizedMessage({ msg, missionAgent, isFullScreen, fontSize, isLastAssistantMessage, missionStatus, userAvatarUrl, onEdit }: MessageProps) {
   // Memoize the parsed content to avoid re-parsing on every render
   const parsedContent = useMemo(() => {
     if (msg.role !== 'assistant') return null
@@ -75,7 +76,7 @@ export const MemoizedMessage = memo(function MemoizedMessage({ msg, missionAgent
   }, [msg.agent, missionAgent])
 
   return (
-    <div className={cn('flex gap-3', msg.role === 'user' && 'flex-row-reverse')}>
+    <div className={cn('flex gap-3 group/msg', msg.role === 'user' && 'flex-row-reverse')}>
       <div className={cn(
         'w-8 h-8 rounded-full flex items-center justify-center shrink-0',
         msg.role === 'user' ? 'bg-primary/20' : msg.role === 'assistant' ? 'bg-purple-500/20' : 'bg-yellow-500/20'
@@ -132,6 +133,17 @@ export const MemoizedMessage = memo(function MemoizedMessage({ msg, missionAgent
           <span className="text-2xs text-muted-foreground">
             {msg.timestamp.toLocaleTimeString()}
           </span>
+          {/* Edit button for user messages — visible on hover (#10450) */}
+          {msg.role === 'user' && onEdit && (
+            <button
+              onClick={() => onEdit(msg.id)}
+              className="opacity-0 group-hover/msg:opacity-100 transition-opacity p-0.5 rounded hover:bg-primary/20"
+              title="Edit and resend"
+              data-testid="edit-message-btn"
+            >
+              <Pencil className="w-3 h-3 text-muted-foreground hover:text-primary" />
+            </button>
+          )}
           {/* Show working indicator if this is the last assistant message, mission is running, and content indicates work */}
           {isLastAssistantMessage && missionStatus === 'running' && msg.role === 'assistant' && detectWorkingIndicator(msg.content) && (
             <span className="flex items-center gap-1 text-2xs text-blue-400 animate-pulse">
