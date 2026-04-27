@@ -1,4 +1,5 @@
 import { Network, ArrowRight } from 'lucide-react'
+import { formatBytes } from '../../../lib/formatters'
 import { useCachedNetworkTraces } from '../../../hooks/useGadget'
 import { useCardLoadingState, useCardDemoState } from '../CardDataContext'
 import { ClusterBadge } from '../../ui/ClusterBadge'
@@ -76,8 +77,3 @@ export function NetworkTraceCard({ config }: NetworkTraceCardProps) {
   )
 }
 
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes}B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)}MB`
-}

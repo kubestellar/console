@@ -9,6 +9,7 @@ import {
   BellOff } from 'lucide-react'
 import { useAlerts } from '../../hooks/useAlerts'
 import { MS_PER_MINUTE } from '../../lib/constants/time'
+import { DEFAULT_PAGE_SIZE } from '../../lib/constants/ui'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useGlobalFilters, type SeverityLevel } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -64,9 +65,6 @@ function AlertStatsRow({ critical, warning, acknowledged }: { critical: number; 
     </div>
   )
 }
-
-/** Default pagination size for the alerts list */
-const DEFAULT_PAGE_SIZE = 5
 
 type SortField = 'severity' | 'time'
 

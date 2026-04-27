@@ -30,10 +30,8 @@ import { RefreshIndicator } from '../../ui/RefreshIndicator'
 import { CardControls } from '../../ui/CardControls'
 import { Pagination } from '../../ui/Pagination'
 import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
+import { DEFAULT_PAGE_SIZE } from '../../../lib/constants/ui'
 import type { IntotoLayout, IntotoStep } from '../../../hooks/useIntoto'
-
-/** Default page size for the layouts list */
-const DEFAULT_PAGE_SIZE = 5
 
 type SortField = 'name' | 'failedSteps' | 'verifiedSteps'
 

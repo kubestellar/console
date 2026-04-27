@@ -10,6 +10,7 @@ import { useLocalClusterTools, type VClusterInstance } from '../../hooks/useLoca
 import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { MS_PER_DAY } from '../../lib/constants/time'
+import { DEFAULT_PAGE_SIZE } from '../../lib/constants/ui'
 
 type VClusterStatusType = 'Running' | 'Paused' | 'Failed' | 'Unknown'
 
@@ -90,7 +91,6 @@ const VCLUSTER_SORT_COMPARATORS: Record<SortByOption, (a: VCluster, b: VCluster)
   hostCluster: commonComparators.string<VCluster>('hostCluster'),
   status: commonComparators.string<VCluster>('status'),
 }
-const DEFAULT_PAGE_SIZE = 5
 
 interface VClusterStatusProps { config?: Record<string, unknown> }
 

@@ -23,6 +23,7 @@ import {
   KUBEVIRT_INSTALL_PROMPT } from './missionPrompts'
 import { loadMissionPrompt } from '../missionLoader'
 
+import { ISOLATION_STATUS_COLORS } from '../shared'
 import type { ComponentReadiness, IsolationLevel, IsolationStatus } from './useTenantIsolationSetup'
 
 /** Icon map for component keys */
@@ -50,12 +51,6 @@ function IsolationStatusIcon({ status }: { status: IsolationStatus }) {
       return <XCircle className="w-3.5 h-3.5 text-zinc-500" />
   }
 }
-
-/** Color classes for isolation status */
-const ISOLATION_STATUS_COLORS: Record<IsolationStatus, string> = {
-  ready: 'text-green-400',
-  degraded: 'text-orange-400',
-  missing: 'text-zinc-500' }
 
 /** Component readiness badge */
 function ReadinessBadge({ component, onInstall }: {
