@@ -6,7 +6,13 @@ on:
     paths:
       - 'web/**'
       - '.github/workflows/playwright.yml'
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      spec_filter:
+        description: 'Spec file to run (e.g. e2e/Sidebar.spec.ts). Leave empty for all tests.'
+        required: false
+        default: ''
+        type: string
 
 # Least-privilege: read-only by default; jobs declare write scopes individually
 permissions: read-all
@@ -94,7 +100,12 @@ jobs:
           npx wait-on http://localhost:4173 --timeout 60000
 
       - name: Run Playwright tests
-        run: npx playwright test --project=chromium --shard=${{ matrix.shard }}/4
+        run: |
+          if [ -n "${{ inputs.spec_filter }}" ]; then
+            npx playwright test --project=chromium "${{ inputs.spec_filter }}"
+          else
+            npx playwright test --project=chromium --shard=${{ matrix.shard }}/4
+          fi
         env:
           PLAYWRIGHT_BASE_URL: http://localhost:4173
 
