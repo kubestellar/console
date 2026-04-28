@@ -18,6 +18,9 @@ import { test, expect } from '@playwright/test'
  *
  * Driven from .github/workflows/fullstack-e2e.yml, which spins up the Go
  * binary with minimal env and points PLAYWRIGHT_BASE_URL at port 8080.
+ *
+ * Local runner: scripts/run-fullstack-e2e.sh (or `npm run test:e2e:fullstack`)
+ * builds Go + frontend, starts the backend, and runs this spec automatically.
  */
 
 // The Go backend serves both API and built frontend on port 8080 when
@@ -28,7 +31,7 @@ const FULLSTACK_BASE = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:8080
 // This test is ONLY meaningful when pointed at the Go binary.
 test.skip(
   () => !process.env.FULLSTACK_SMOKE,
-  'fullstack-smoke only runs in the dedicated fullstack-e2e workflow',
+  'Set FULLSTACK_SMOKE=1 or use npm run test:e2e:fullstack (see scripts/run-fullstack-e2e.sh)',
 )
 
 test.describe('full-stack smoke (#6362)', () => {

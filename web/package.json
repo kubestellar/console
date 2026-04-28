@@ -18,6 +18,7 @@
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:debug": "playwright test --debug",
+    "test:e2e:fullstack": "cd .. && bash scripts/run-fullstack-e2e.sh",
     "test:e2e:chromium": "playwright test --project=chromium",
     "test:e2e:ux-sweep": "PLAYWRIGHT_BASE_URL=http://localhost:8080 PLAYWRIGHT_STORAGE_STATE=auth.json playwright test --config=e2e/user-flows/ux-scan.config.ts",
     "test:e2e:firefox": "playwright test --project=firefox",
