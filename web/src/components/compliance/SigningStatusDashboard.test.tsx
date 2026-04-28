@@ -81,13 +81,13 @@ function mockSuccessResponses() {
     if (url.includes('/summary')) {
       return Promise.resolve({ ok: true, json: async () => mockSummary } as Response)
     }
-    return Promise.resolve({ ok: false, json: async () => ({}) } as Response)
+    throw new Error(`Unexpected authFetch URL in SigningStatusDashboard test: ${url}`)
   })
 }
 
 describe('SigningStatusDashboard', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    vi.resetAllMocks()
   })
 
   it('renders summary and image tab data after successful fetch', async () => {
@@ -102,7 +102,12 @@ describe('SigningStatusDashboard', () => {
     expect(screen.getByText('Show unsigned / unverified only')).toBeInTheDocument()
     expect(screen.getByText('ghcr.io/example/signed:1.0.0')).toBeInTheDocument()
     expect(screen.getByText('ghcr.io/example/unsigned:2.0.0')).toBeInTheDocument()
-    expect(mockedAuthFetch).toHaveBeenCalledTimes(3)
+    const calledUrls = mockedAuthFetch.mock.calls.map(([url]) => String(url))
+    expect(calledUrls).toEqual(expect.arrayContaining([
+      '/api/supply-chain/signing/images',
+      '/api/supply-chain/signing/policies',
+      '/api/supply-chain/signing/summary',
+    ]))
   })
 
   it('filters image table when unsigned-only checkbox is enabled', async () => {
@@ -114,7 +119,7 @@ describe('SigningStatusDashboard', () => {
       expect(screen.getByText('ghcr.io/example/signed:1.0.0')).toBeInTheDocument()
     })
 
-    await user.click(screen.getByRole('checkbox'))
+    await user.click(screen.getByRole('checkbox', { name: /show unsigned \/ unverified only/i }))
     expect(screen.queryByText('ghcr.io/example/signed:1.0.0')).not.toBeInTheDocument()
     expect(screen.getByText('ghcr.io/example/unsigned:2.0.0')).toBeInTheDocument()
   })

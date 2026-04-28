@@ -76,13 +76,13 @@ function mockSuccessResponses() {
     if (url.includes('/summary')) {
       return Promise.resolve({ ok: true, json: async () => mockSummary } as Response)
     }
-    return Promise.resolve({ ok: false, json: async () => ({}) } as Response)
+    throw new Error(`Unexpected authFetch URL in SigstoreDashboard test: ${url}`)
   })
 }
 
 describe('SigstoreDashboard', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    vi.resetAllMocks()
   })
 
   it('renders signatures tab and summary after successful fetch', async () => {
