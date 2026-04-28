@@ -229,13 +229,17 @@ test.describe('Clusters Page', () => {
       await healthyTab.click()
 
       // Only healthy-cluster must be visible
-      // Use .first() — cluster name can appear in both the list row and sidebar
-      // cluster status widget, triggering a strict-mode violation on webkit.
-      await expect(page.getByText('healthy-cluster').first()).toBeVisible({ timeout: 5000 })
+      // Scope assertions to clusters-page to exclude sidebar cluster status
+      // widget which shows all cluster names regardless of the active filter.
+      // Use .first() — cluster name can appear in both the list row and header. #10790
+      const clustersPage = page.getByTestId('clusters-page')
+      await expect(clustersPage.getByText('healthy-cluster').first()).toBeVisible({ timeout: 5000 })
 
       // Unhealthy clusters must NOT appear in the Healthy tab
-      await expect(page.getByText('unhealthy-with-nodes').first()).not.toBeVisible()
-      await expect(page.getByText('truly-unhealthy').first()).not.toBeVisible()
+      // Scoped to clusters-page so sidebar cluster status widget doesn't cause
+      // false positives. Use .first() for strict-mode safety.
+      await expect(clustersPage.getByText('unhealthy-with-nodes').first()).not.toBeVisible()
+      await expect(clustersPage.getByText('truly-unhealthy').first()).not.toBeVisible()
     })
 
     test('Unhealthy stat count matches clusters shown after clicking Unhealthy tab', async ({ page }) => {
@@ -275,9 +279,11 @@ test.describe('Clusters Page', () => {
       await unhealthyTab.click()
 
       // Only the truly unhealthy cluster should appear
-      // Use .first() — name may appear in both list row and sidebar cluster status widget.
-      await expect(page.getByText('unhealthy-no-nodes').first()).toBeVisible({ timeout: 5000 })
-      await expect(page.getByText('healthy-cluster').first()).not.toBeVisible()
+      // Scope assertions to clusters-page to exclude sidebar cluster status
+      // widget which shows all cluster names regardless of the active filter. #10790
+      const clustersPage = page.getByTestId('clusters-page')
+      await expect(clustersPage.getByText('unhealthy-no-nodes').first()).toBeVisible({ timeout: 5000 })
+      await expect(clustersPage.getByText('healthy-cluster').first()).not.toBeVisible()
     })
   })
 })

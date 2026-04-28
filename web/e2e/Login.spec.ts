@@ -175,6 +175,18 @@ test.describe('Login Page — frontend-only (mocked backend)', () => {
   })
 
   test('detects demo mode vs OAuth mode behavior', async ({ page }) => {
+    // Mock /health so the app doesn't redirect to /auth/github on
+    // webkit/firefox where the redirect fires before JS can intercept. #10790
+    await page.route('**/health', (route) => {
+      const url = new URL(route.request().url())
+      if (url.pathname !== '/health') return route.fallback()
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ status: 'ok', version: 'dev', oauth_configured: false }),
+      })
+    })
+
     // Catch-all API mock prevents unmocked requests hanging in webkit/firefox
     await page.route('**/api/**', (route) =>
       route.fulfill({

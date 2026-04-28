@@ -364,7 +364,9 @@ test.describe('Cluster Admin Cards — EtcdStatus, DNSHealth, AdmissionWebhooks'
 
       // Wait for data to render — should show cluster names from mock data
       // The card groups etcd pods by cluster — expect to see "prod-east" or "staging"
-      await expect(card.getByText('prod-east').or(card.getByText('staging'))).toBeVisible({ timeout: 10000 })
+      // Use .first() to avoid strict-mode violations when multiple cluster names
+      // appear inside the card (e.g. grouped rows + summary). #10790
+      await expect(card.getByText('prod-east').or(card.getByText('staging')).first()).toBeVisible({ timeout: 10000 })
     })
 
     test('EtcdStatus shows health status indicators', async ({ page }) => {
@@ -391,7 +393,9 @@ test.describe('Cluster Admin Cards — EtcdStatus, DNSHealth, AdmissionWebhooks'
       await expect(card).toBeVisible({ timeout: 15000 })
 
       // Should show cluster names from coredns mock pods
-      await expect(card.getByText('prod-east').or(card.getByText('staging'))).toBeVisible({ timeout: 10000 })
+      // Use .first() to avoid strict-mode violations when multiple cluster names
+      // appear inside the card (e.g. grouped rows + summary). #10790
+      await expect(card.getByText('prod-east').or(card.getByText('staging')).first()).toBeVisible({ timeout: 10000 })
     })
 
     test('DNSHealth shows health status indicators for DNS pods', async ({ page }) => {
