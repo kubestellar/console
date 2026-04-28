@@ -196,6 +196,24 @@ const CANCEL_CONFIRMED_MESSAGE_TYPE = 'cancel_confirmed'
  */
 const WAITING_INPUT_TIMEOUT_MS = 600_000 // 10 minutes
 
+/**
+ * Patterns that identify system messages generated when the local agent is
+ * unreachable. Used by both the reconnect useEffect (#10525) and the retry
+ * path in sendMessage to strip stale errors from chat history.
+ */
+const AGENT_DISCONNECT_ERROR_PATTERNS = [
+  'Local Agent Not Connected',
+  'agent not available',
+  'agent not responding',
+] as const
+
+/** Returns true when a MissionMessage is a stale agent-disconnect error. */
+function isStaleAgentErrorMessage(msg: MissionMessage): boolean {
+  return (
+    msg.role === 'system' &&
+    AGENT_DISCONNECT_ERROR_PATTERNS.some(pattern => msg.content.includes(pattern))
+  )
+}
 
 export function MissionProvider({ children }: { children: ReactNode }) {
   const [missions, setMissions] = useState<Mission[]>(() => loadMissions())
@@ -582,34 +600,13 @@ export function MissionProvider({ children }: { children: ReactNode }) {
       setMissions(prev => {
         const hasStale = prev.some(m =>
           m.status === 'failed' &&
-          m.messages.some(msg =>
-            msg.role === 'system' && (
-              msg.content.includes('Local Agent Not Connected') ||
-              msg.content.includes('agent not available') ||
-              msg.content.includes('agent not responding')
-            )
-          )
+          (m.messages || []).some(isStaleAgentErrorMessage)
         )
         if (!hasStale) return prev
         return prev.map(m => {
           if (m.status !== 'failed') return m
-          // Find the last system message with stale agent error
-          let staleIdx = -1
-          for (let i = m.messages.length - 1; i >= 0; i--) {
-            const msg = m.messages[i]
-            if (
-              msg.role === 'system' && (
-                msg.content.includes('Local Agent Not Connected') ||
-                msg.content.includes('agent not available') ||
-                msg.content.includes('agent not responding')
-              )
-            ) {
-              staleIdx = i
-              break
-            }
-          }
-          if (staleIdx === -1) return m
-          const cleanedMessages = m.messages.filter((_, i) => i !== staleIdx)
+          if (!(m.messages || []).some(isStaleAgentErrorMessage)) return m
+          const cleanedMessages = (m.messages || []).filter(msg => !isStaleAgentErrorMessage(msg))
           return {
             ...m,
             status: 'saved' as MissionStatus,
@@ -2762,13 +2759,19 @@ Install the console locally with the KubeStellar Console agent to use AI mission
 
     setMissions(prev => prev.map(m => {
       if (m.id !== missionId) return m
+      // #10525 — When retrying a failed mission, strip stale agent-disconnect
+      // error messages so the user doesn't see the old error alongside the new
+      // attempt. Only filter when the mission was previously failed.
+      const baseMessages = m.status === 'failed'
+        ? (m.messages || []).filter(msg => !isStaleAgentErrorMessage(msg))
+        : (m.messages || [])
       return {
         ...m,
         status: 'running',
         currentStep: 'Processing...',
         updatedAt: new Date(),
         messages: [
-          ...m.messages,
+          ...baseMessages,
           {
             id: generateMessageId(),
             role: 'user',
