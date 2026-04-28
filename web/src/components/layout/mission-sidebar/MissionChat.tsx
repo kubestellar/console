@@ -1009,14 +1009,6 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
                 <Send className="w-4 h-4" />
               </button>
             </div>
-
-            <button
-              onClick={() => setActiveMission(null)}
-              className="flex items-center justify-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-            >
-              <ChevronLeft className="w-3 h-3" />
-              {t('missionChat.backToMissions')}
-            </button>
           </div>
         ) : mission.status === 'blocked' ? (
           <div className="flex flex-col gap-2">
@@ -1074,13 +1066,6 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
                 <Send className="w-4 h-4" />
               </button>
             </div>
-            <button
-              onClick={() => setActiveMission(null)}
-              className="flex items-center justify-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-            >
-              <ChevronLeft className="w-3 h-3" />
-              {t('missionChat.backToMissions')}
-            </button>
           </div>
         ) : (
           <div className="flex flex-col gap-2">
@@ -1104,13 +1089,6 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
                 <Send className="w-4 h-4" />
               </button>
             </div>
-            <button
-              onClick={() => setActiveMission(null)}
-              className="flex items-center justify-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-            >
-              <ChevronLeft className="w-3 h-3" />
-              {t('missionChat.backToMissions')}
-            </button>
           </div>
         )}
 
