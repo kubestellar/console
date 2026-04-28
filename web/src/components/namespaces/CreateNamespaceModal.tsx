@@ -4,7 +4,7 @@ import { Button } from '../ui/Button'
 import { BaseModal, ConfirmDialog } from '../../lib/modals'
 import { useTranslation } from 'react-i18next'
 import { LOCAL_AGENT_HTTP_URL } from '../../lib/constants'
-import { authFetch } from '../../lib/api'
+import { agentFetch } from '../../hooks/mcp/shared'
 
 interface CreateNamespaceModalProps {
   clusters: string[]
@@ -36,10 +36,10 @@ export function CreateNamespaceModal({ clusters, onClose, onCreated }: CreateNam
       // #7993 Phase 2: POST to kc-agent so the operation runs under the
       // user's kubeconfig. kc-agent does not accept an initialAccess field —
       // grants flow through GrantAccessModal's POST /rolebindings call once
-      // the namespace exists. #8034 Copilot followup: switched the hand-rolled
-      // agentAuthHeaders() helper to authFetch() which handles token injection
-      // and the default fetch timeout.
-      const res = await authFetch(`${LOCAL_AGENT_HTTP_URL}/namespaces`, {
+      // the namespace exists. #10699: switched from authFetch (backend JWT)
+      // to agentFetch (kc-agent token) so the request authenticates correctly
+      // against kc-agent and carries the right CORS headers.
+      const res = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/namespaces`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

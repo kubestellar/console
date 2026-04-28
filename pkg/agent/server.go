@@ -688,7 +688,13 @@ func (s *Server) Start() error {
 	// DELETE, PATCH) must include the X-Requested-With: XMLHttpRequest header.
 	// GET/HEAD/OPTIONS pass through unconditionally. This mirrors the Fiber
 	// middleware in pkg/api/middleware/csrf.go. See #10000.
-	handler := requireCSRF(mux)
+	//
+	// #10699: corsMiddleware runs outermost so that CORS headers are present
+	// on every response, including CSRF rejections. Without this layer the
+	// browser reports an opaque CORS error instead of showing the 403.
+	// corsMiddleware also short-circuits OPTIONS preflight so it never
+	// reaches requireCSRF (preflight must not carry X-Requested-With).
+	handler := s.corsMiddleware(requireCSRF(mux))
 
 	addr := fmt.Sprintf("127.0.0.1:%d", s.config.Port)
 	slog.Info("KC Agent starting", "version", Version, "addr", addr)

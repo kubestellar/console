@@ -81,6 +81,12 @@ const defaultCORSAllowedMethods = "GET, OPTIONS"
 // real route.
 const catchallCORSAllowedMethods = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
 
+// corsPreflightMaxAge is sent as Access-Control-Max-Age so browsers cache
+// preflight responses instead of re-issuing OPTIONS on every request.
+// 600 s (10 min) balances responsiveness during development with reduced
+// network overhead in normal use.
+const corsPreflightMaxAge = "600"
+
 // setCORSHeaders sets common CORS headers for HTTP endpoints. An optional
 // list of HTTP methods may be supplied to override the default
 // Access-Control-Allow-Methods value — this is required for POST/PUT/DELETE
@@ -107,6 +113,40 @@ func (s *Server) setCORSHeaders(w http.ResponseWriter, r *http.Request, methods 
 	// #10461: Credentialed requests (Authorization header) require this header
 	// or browsers block the response even when the origin is allowed.
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	w.Header().Set("Access-Control-Max-Age", corsPreflightMaxAge)
+}
+
+// corsMiddleware returns an http.Handler that sets baseline CORS headers on
+// every response — including error responses produced by downstream
+// middleware (e.g. requireCSRF). Without this outer wrapper the CSRF
+// middleware's 403 response lacks Access-Control-Allow-Origin and browsers
+// report a CORS failure instead of surfacing the actual error (#10699).
+//
+// The middleware also short-circuits OPTIONS preflight requests so they
+// never reach requireCSRF (which would otherwise demand the
+// X-Requested-With header that browsers intentionally omit from
+// preflight).
+func (s *Server) corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		origin := r.Header.Get("Origin")
+		if s.isAllowedOrigin(origin) {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+		}
+		w.Header().Set("Access-Control-Allow-Private-Network", "true")
+		w.Header().Set("Access-Control-Allow-Methods", catchallCORSAllowedMethods)
+		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Requested-With")
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
+		w.Header().Set("Access-Control-Max-Age", corsPreflightMaxAge)
+
+		// Short-circuit preflight: respond immediately so OPTIONS never
+		// reaches requireCSRF or any handler.
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
 }
 
 // watchdogPidFileStat is indirected through a package variable so unit tests
