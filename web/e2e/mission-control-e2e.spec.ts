@@ -381,6 +381,29 @@ async function expandSampleRunbooks(page: Page) {
   }, SAMPLE_REPO)
   await page.reload({ waitUntil: 'domcontentloaded' })
   await page.waitForLoadState('networkidle', { timeout: DIALOG_RENDER_TIMEOUT_MS })
+
+  // Debug: log all github API requests to see if mocks are intercepting
+  const githubRequests: string[] = []
+  page.on('request', (req) => {
+    if (req.url().includes('/api/github/')) {
+      githubRequests.push(`[REQ] ${req.url()}`)
+    }
+  })
+  page.on('response', (res) => {
+    if (res.url().includes('/api/github/')) {
+      githubRequests.push(`[RES] ${res.url()} -> ${res.status()}`)
+    }
+  })
+
+  // Debug: check auth state before browsing
+  const authState = await page.evaluate(() => ({
+    token: localStorage.getItem('token'),
+    demoMode: localStorage.getItem('kc-demo-mode'),
+    hasSession: localStorage.getItem('kc-has-session'),
+    watchedRepos: localStorage.getItem('kc_mission_watched_repos'),
+  }))
+  console.log('[expandSampleRunbooks] Auth state:', JSON.stringify(authState))
+
   await openMissionBrowser(page)
 
   // Expand GitHub Repositories — click the button containing that text
@@ -395,11 +418,27 @@ async function expandSampleRunbooks(page: Page) {
   await expect(repoNode).toBeVisible({ timeout: DIALOG_RENDER_TIMEOUT_MS })
   await repoNode.click()
 
+  // Wait a moment and check console errors
+  await page.waitForTimeout(2000)
+
+  // Debug: check for JS errors on the page
+  const consoleErrors = await page.evaluate(() => {
+    return (window as unknown as { __consoleErrors?: string[] }).__consoleErrors || []
+  })
+  console.log('[expandSampleRunbooks] Console errors:', JSON.stringify(consoleErrors))
+  console.log('[expandSampleRunbooks] GitHub requests:', JSON.stringify(githubRequests))
+
+  // Debug: check page content for clues
+  const bodyText = await page.evaluate(() => document.body.innerText.substring(0, 2000))
+  console.log('[expandSampleRunbooks] Page text (first 2000 chars):', bodyText)
+
   // If files aren't visible yet, click again (first click may have only toggled expand)
   const fileVisible = await page.getByText('argocd-application', { exact: false }).isVisible({ timeout: GITHUB_FETCH_TIMEOUT_MS }).catch(() => false)
   if (!fileVisible) {
     // Click again to trigger selectNode (first click was toggleNode)
     await repoNode.click()
+    await page.waitForTimeout(2000)
+    console.log('[expandSampleRunbooks] After second click, GitHub requests:', JSON.stringify(githubRequests))
   }
 
   // Wait for files to appear in either the tree or the directory listing
