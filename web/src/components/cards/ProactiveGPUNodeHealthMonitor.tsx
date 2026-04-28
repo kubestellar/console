@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from 'react'
+import { useState, useMemo, useRef, useEffect, memo } from 'react'
 import { CheckCircle, AlertTriangle, XCircle, ChevronRight, ChevronDown, Server, Clock, Play, Trash2, Loader2, Settings2, RefreshCw, Shield } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
@@ -81,6 +81,35 @@ function CheckRow({ check }: { check: GPUNodeHealthCheck }) {
     </div>
   )
 }
+
+// Memoized AI actions to avoid recreating issues/context arrays each render
+const GPUNodeAIActions = memo(function GPUNodeAIActions({ node }: { node: GPUNodeHealthStatus }) {
+  const issues = useMemo(
+    () => (node.issues || []).map((issue: string, idx: number) => ({
+      name: `Issue ${idx + 1}`,
+      message: issue })),
+    [node.issues])
+
+  const additionalContext = useMemo(
+    () => ({
+      gpuType: node.gpuType,
+      gpuCount: node.gpuCount,
+      stuckPods: node.stuckPods,
+      checks: node.checks }),
+    [node.gpuType, node.gpuCount, node.stuckPods, node.checks])
+
+  return (
+    <CardAIActions
+      resource={{
+        kind: 'Node',
+        name: node.nodeName,
+        cluster: node.cluster,
+        status: node.status }}
+      issues={issues}
+      additionalContext={additionalContext}
+    />
+  )
+})
 
 // CronJob management panel for a single cluster
 function CronJobClusterPanel({ cluster }: { cluster: string }) {
@@ -674,21 +703,7 @@ function ProactiveGPUNodeHealthMonitorInternal() {
                 <span className="text-2xs text-white/40 whitespace-nowrap">
                   {node.gpuCount} GPU{node.gpuCount !== 1 ? 's' : ''}
                 </span>
-                <CardAIActions
-                  resource={{
-                    kind: 'Node',
-                    name: node.nodeName,
-                    cluster: node.cluster,
-                    status: node.status }}
-                  issues={(node.issues || []).map((issue: string, idx: number) => ({
-                    name: `Issue ${idx + 1}`,
-                    message: issue }))}
-                  additionalContext={{
-                    gpuType: node.gpuType,
-                    gpuCount: node.gpuCount,
-                    stuckPods: node.stuckPods,
-                    checks: node.checks }}
-                />
+                <GPUNodeAIActions node={node} />
               </div>
 
               {/* Expanded detail */}
