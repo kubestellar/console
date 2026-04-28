@@ -47,6 +47,7 @@ vi.mock('../shared', () => ({
 vi.mock('../../../lib/cache', () => ({
   useCache: (opts: { key: string; initialData: unknown; demoData: unknown; fetcher?: () => Promise<unknown>; enabled?: boolean }) => mockUseCache(opts),
   resetFailuresForCluster: vi.fn(),
+  createCachedHook: vi.fn((_config: unknown) => () => ({})),
 }))
 
 vi.mock('../../../lib/utils/concurrency', () => ({

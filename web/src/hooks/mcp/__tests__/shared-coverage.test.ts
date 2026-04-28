@@ -80,6 +80,7 @@ vi.mock('../../../lib/modeTransition', () => ({
 vi.mock('../../../lib/cache', () => ({
   resetFailuresForCluster: mockResetFailuresForCluster,
   resetAllCacheFailures: mockResetAllCacheFailures,
+  createCachedHook: vi.fn((_config: unknown) => () => ({})),
 }))
 
 vi.mock('../../../lib/kubectlProxy', () => ({
