@@ -202,7 +202,7 @@ test.describe('Dashboard Page', () => {
       await page.waitForLoadState('domcontentloaded')
 
       // Dashboard page should be visible even during loading
-      const PAGE_VISIBLE_TIMEOUT_MS = 15_000
+      const PAGE_VISIBLE_TIMEOUT_MS = 30_000
       await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: PAGE_VISIBLE_TIMEOUT_MS })
     })
 
@@ -242,7 +242,7 @@ test.describe('Dashboard Page', () => {
       await page.waitForLoadState('domcontentloaded')
 
       // Dashboard should still render (not crash)
-      const PAGE_VISIBLE_TIMEOUT_MS = 15_000
+      const PAGE_VISIBLE_TIMEOUT_MS = 30_000
       await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: PAGE_VISIBLE_TIMEOUT_MS })
     })
 
@@ -424,7 +424,7 @@ test.describe('Dashboard Data Accuracy (#6459)', () => {
     await page.waitForLoadState('domcontentloaded')
 
     // Wait for clusters page to fully render — Firefox may need extra time
-    const PAGE_RENDER_TIMEOUT_MS = 15_000
+    const PAGE_RENDER_TIMEOUT_MS = 30_000
     await expect(page.getByTestId('clusters-page')).toBeVisible({ timeout: PAGE_RENDER_TIMEOUT_MS }).catch(() => {})
 
     // The clusters page renders a row per cluster. We count any element

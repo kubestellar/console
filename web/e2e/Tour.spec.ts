@@ -50,7 +50,8 @@ async function setupTourTest(page: Page, tourCompleted: boolean = true) {
   // fallback rather than waiting for API data (avoids loading skeleton timeout).
   const completed = tourCompleted
   await page.addInitScript((isCompleted: boolean) => {
-    localStorage.setItem('token', 'test-token')
+    // demo-token: setDemoMode() runs synchronously, auth resolves without /api/me. (#nightly-playwright)
+    localStorage.setItem('token', 'demo-token')
     localStorage.setItem('kc-demo-mode', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
     if (isCompleted) {
