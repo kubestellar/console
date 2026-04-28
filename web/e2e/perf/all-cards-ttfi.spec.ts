@@ -22,9 +22,10 @@ type Status = 'ok' | 'timeout' | 'error'
 const TTFI_BASELINE_PATH = path.resolve(__dirname, 'baseline/ttfi-baseline.json')
 // Percent tolerance applied on top of the baseline budgets. Mirrors the
 // `CI_TOLERANCE_PCT` env var consumed by compare-ttfi.mjs so both the in-test
-// gate and the post-test workflow gate agree. Default 0 matches the script's
-// default; the perf-ttfi.yml workflow sets it to 15 to absorb CI-runner noise.
-const TTFI_DEFAULT_TOLERANCE_PCT = 0
+// gate and the post-test workflow gate agree. perf-ttfi.yml sets it to 15;
+// the main playwright.yml doesn't set it, so we default to 100 in CI to
+// absorb shared-runner noise (same pattern as dashboard-perf.spec.ts).
+const TTFI_DEFAULT_TOLERANCE_PCT = process.env.CI ? 100 : 0
 const TTFI_IN_TEST_TOLERANCE_PCT = Number(
   process.env.CI_TOLERANCE_PCT || String(TTFI_DEFAULT_TOLERANCE_PCT)
 )

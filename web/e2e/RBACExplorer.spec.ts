@@ -221,7 +221,7 @@ test.describe('RBACExplorer card — demo mode', () => {
     await searchInput.fill('prod-eu-west')
 
     // Only prod-eu-west cluster findings should be visible (monitoring SA in demo data)
-    await expect(page.getByText('monitoring')).toBeVisible()
+    await expect(page.getByText('monitoring').first()).toBeVisible()
     await expect(page.getByText('dev-team')).not.toBeVisible({ timeout: 3000 }).catch(() => {})
   })
 
