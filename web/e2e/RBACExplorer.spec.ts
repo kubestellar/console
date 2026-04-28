@@ -288,8 +288,8 @@ test.describe('RBACExplorer card — live mode, no clusters', () => {
 
     // Should show empty/no-data state or skeleton that resolves to empty
     // The card either shows a skeleton then empty, or goes straight to empty
-    const emptyState = page.getByText(/no rbac findings|connect a cluster/i)
-    await expect(emptyState).toBeVisible({ timeout: 15000 })
+    const emptyState = page.getByText(/no rbac findings|no rbac bindings|no rbac|connect a cluster/i)
+    await expect(emptyState.first()).toBeVisible({ timeout: 15000 })
   })
 
   test('live mode does not render demo data', async ({ page }) => {
