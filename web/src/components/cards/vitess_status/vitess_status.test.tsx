@@ -16,11 +16,11 @@ vi.mock('../../../hooks/useCachedVitess', () => ({
   useCachedVitess: (...args: unknown[]) => mockUseCachedVitess(...args),
 }))
 
-vi.mock('./CardDataContext', () => ({
+vi.mock('../CardDataContext', () => ({
   useCardLoadingState: (opts: Record<string, unknown>) => mockUseCardLoadingState(opts),
 }))
 
-vi.mock('../../ui/SkeletonCardWithRefresh', () => ({
+vi.mock('../../ui/Skeleton', () => ({
   SkeletonCardWithRefresh: () => <div data-testid="skeleton" />,
 }))
 

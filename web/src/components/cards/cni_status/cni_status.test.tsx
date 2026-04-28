@@ -21,14 +21,40 @@ vi.mock('../../ui/Skeleton', () => ({
   SkeletonStats: () => <div data-testid="skeleton-stats" />,
 }))
 
+const DEFAULT_DATA = {
+  health: 'not-installed' as const,
+  nodes: [],
+  stats: {
+    totalNodes: 0,
+    readyNodes: 0,
+    notReadyNodes: 0,
+    unknownNodes: 0,
+    networkPolicyCount: 0,
+    servicesWithNetworkPolicy: 0,
+  },
+  summary: {
+    totalNodes: 0,
+    readyNodes: 0,
+    notReadyNodes: 0,
+    unknownNodes: 0,
+    networkPolicyCount: 0,
+    servicesWithNetworkPolicy: 0,
+  },
+  lastCheckTime: new Date().toISOString(),
+}
+
 function setup(overrides?: Record<string, unknown>) {
   mockUseCachedCni.mockReturnValue({
-    plugin: null,
-    nodeStatus: [],
+    data: DEFAULT_DATA,
     isLoading: false,
     isRefreshing: false,
     isDemoData: false,
     isFailed: false,
+    consecutiveFailures: 0,
+    lastRefresh: null,
+    showSkeleton: false,
+    showEmptyState: false,
+    error: false,
     refetch: vi.fn(),
     ...overrides,
   })
@@ -39,18 +65,17 @@ describe('CniStatus', () => {
     vi.clearAllMocks()
   })
 
-  it('renders loading skeleton when isLoading is true', () => {
-    setup({ isLoading: true })
+  it('renders loading skeleton when showSkeleton is true', () => {
+    setup({ showSkeleton: true })
     render(<CniStatus />)
 
     expect(screen.getByTestId('skeleton')).toBeTruthy()
   })
 
-  it('renders with empty state when no CNI plugin found', () => {
-    setup({ plugin: null, nodeStatus: [] })
+  it('renders without skeleton when data is present', () => {
+    setup()
     render(<CniStatus />)
 
-    // Component should render without error
     expect(screen.queryByTestId('skeleton')).toBeFalsy()
   })
 })
