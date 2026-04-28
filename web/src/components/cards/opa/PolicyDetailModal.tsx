@@ -72,7 +72,7 @@ export function PolicyDetailModal({
                 key={idx}
                 className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors"
               >
-                <div className="flex items-start justify-between mb-1">
+                <div className="flex flex-wrap items-start justify-between mb-1">
                   <span className="text-sm font-medium text-foreground">{violation.name}</span>
                   <span className="text-xs text-muted-foreground">{violation.kind}</span>
                 </div>
