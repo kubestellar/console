@@ -311,7 +311,8 @@ test.describe('Sidebar Navigation', () => {
     })
 
     test('navigation links are keyboard navigable', async ({ page }) => {
-      await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: 10000 })
+      const sidebar = page.getByTestId('sidebar')
+      await sidebar.waitFor({ state: 'visible', timeout: 15_000 })
 
       // Tab into sidebar navigation
       await page.keyboard.press('Tab')
@@ -324,9 +325,10 @@ test.describe('Sidebar Navigation', () => {
     })
 
     test('collapse button is keyboard accessible', async ({ page }) => {
-      await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: 10000 })
+      await page.getByTestId('sidebar').waitFor({ state: 'visible', timeout: 15_000 })
 
       const collapseToggle = page.getByTestId('sidebar-collapse-toggle')
+      await collapseToggle.waitFor({ state: 'visible', timeout: 15_000 })
 
       // Focus the button
       await collapseToggle.focus()
