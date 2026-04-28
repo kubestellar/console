@@ -8,7 +8,7 @@
  * Falls back to demo data when in demo mode.
  */
 
-import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
+import { memo, useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { LazyEChart } from '../charts/LazyEChart'
 import type ReactEChartsType from 'echarts-for-react'
 import { Calendar, RefreshCw, GitPullRequest } from 'lucide-react'
@@ -311,7 +311,7 @@ async function fetchIssueStats(
 
 // ── Component ───────────────────────────────────────────────────────────────
 
-export function IssueActivityChart(props: { config?: IssueActivityConfig }) {
+const IssueActivityChart = memo(function IssueActivityChart(props: { config?: IssueActivityConfig }) {
   const { t } = useTranslation('cards')
   const { isDemoMode } = useDemoMode()
   const { showToast } = useToast()
@@ -688,6 +688,7 @@ export function IssueActivityChart(props: { config?: IssueActivityConfig }) {
       </div>
     </div>
   )
-}
+})
 
 export default IssueActivityChart
+export { IssueActivityChart }

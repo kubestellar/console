@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useRef } from 'react'
+import { memo, useMemo, useState, useEffect, useRef } from 'react'
 import { TrendingUp, Clock, Server } from 'lucide-react'
 import { CardClusterFilter } from '../../lib/cards/CardComponents'
 import { useGPUTaintFilter, GPUTaintFilterControl } from './GPUTaintFilter'
@@ -48,7 +48,7 @@ const TIME_RANGE_OPTIONS: { value: TimeRange; label: string }[] = [
   { value: '24h', label: '24 hours' },
 ]
 
-export function GPUUtilization() {
+const GPUUtilization = memo(function GPUUtilization() {
   const { t } = useTranslation()
   const {
     nodes: gpuNodes,
@@ -406,4 +406,7 @@ export function GPUUtilization() {
       })()}
     </div>
   )
-}
+})
+
+
+export { GPUUtilization }

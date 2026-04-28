@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useRef } from 'react'
+import { memo, useMemo, useState, useEffect, useRef } from 'react'
 import { CheckCircle, AlertTriangle, Clock, Server } from 'lucide-react'
 import { LazyEChart } from '../charts/LazyEChart'
 import { useClusters } from '../../hooks/useMCP'
@@ -50,7 +50,7 @@ const TIME_RANGE_OPTIONS: { value: TimeRange; label: string; points: number }[] 
   { value: '24h', label: '24 hours', points: TIME_RANGE_MAX_POINTS['24h'] },
 ]
 
-export function PodHealthTrend() {
+const PodHealthTrend = memo(function PodHealthTrend() {
   const { t } = useTranslation(['common', 'cards'])
   const { deduplicatedClusters: clusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, isFailed: clustersFailed, consecutiveFailures: clustersFailures } = useClusters()
   const { issues, isLoading: issuesLoading, isRefreshing: issuesRefreshing, isDemoFallback, isFailed: issuesFailed, consecutiveFailures: issuesFailures } = useCachedPodIssues()
@@ -457,4 +457,7 @@ export function PodHealthTrend() {
       </div>
     </div>
   )
-}
+})
+
+
+export { PodHealthTrend }
