@@ -952,8 +952,11 @@ export function CardWrapper({
               title={title}
               icon={Maximize2}
               onClose={() => setIsExpanded(false)}
-              showBack={false}
+              onBack={() => setIsExpanded(false)}
+              showBack={true}
               closeTestId="drilldown-close"
+              backTestId="drilldown-back"
+              tabsTestId="drilldown-tabs"
             />
             <BaseModal.Content className={cn(
               'overflow-auto scroll-enhanced flex flex-col',

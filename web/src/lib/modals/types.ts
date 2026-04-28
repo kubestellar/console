@@ -312,6 +312,10 @@ export interface ModalHeaderProps {
   children?: ReactNode
   /** data-testid for the close button (for E2E tests) */
   closeTestId?: string
+  /** data-testid for the back button (for E2E tests) */
+  backTestId?: string
+  /** data-testid for the header/tabs nav container (for E2E tests) */
+  tabsTestId?: string
 }
 
 export interface ModalContentProps {

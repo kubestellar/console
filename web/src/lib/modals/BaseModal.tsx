@@ -216,6 +216,8 @@ function ModalHeader({
   extra,
   children,
   closeTestId,
+  backTestId,
+  tabsTestId,
 }: ModalHeaderProps) {
   const titleId = useContext(ModalTitleIdContext)
   const { escapeEnabled } = useContext(ModalEscapeContext)
@@ -223,7 +225,7 @@ function ModalHeader({
   const closeAriaLabel = escapeEnabled ? CLOSE_WITH_ESC_ARIA : CLOSE_ARIA
 
   return (
-    <div className="flex flex-col border-b border-border">
+    <div className="flex flex-col border-b border-border" data-testid={tabsTestId}>
       {/* Main header row */}
       <div className="flex items-center justify-between p-4">
         <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -234,6 +236,7 @@ function ModalHeader({
               className="p-2 rounded-lg hover:bg-card/50 text-muted-foreground hover:text-foreground transition-colors shrink-0"
               title="Go back (Backspace)"
               aria-label="Go back"
+              data-testid={backTestId}
             >
               <ChevronLeft className="w-5 h-5" aria-hidden="true" />
             </button>
