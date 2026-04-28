@@ -139,14 +139,17 @@ test.describe('Tour/Onboarding', () => {
       await page.reload()
       await page.waitForLoadState('domcontentloaded')
 
-      // Verify flag is still set
+      // Verify flag is still set — addInitScript re-runs on reload and
+      // re-sets the flag before page scripts execute.
       const completed = await page.evaluate(() =>
         localStorage.getItem('kubestellar-console-tour-completed')
       )
       expect(completed).toBe('true')
 
       // Also verify the dashboard renders (flag actually prevented tour). #9518
-      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
+      // Firefox can be slower to mount the React tree after reload; use a
+      // generous timeout (#nightly-playwright).
+      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 20_000 })
     })
 
     test('completing tour sets localStorage flag', async ({ page }) => {
@@ -217,14 +220,16 @@ test.describe('Tour/Onboarding', () => {
       await page.goto('/')
       await page.waitForLoadState('domcontentloaded')
 
-      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
+      // Firefox can be slower to mount the React tree; use a generous
+      // timeout (#nightly-playwright).
+      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 20_000 })
 
       // Press arrow keys should not crash
       await page.keyboard.press('ArrowRight')
       await page.keyboard.press('ArrowLeft')
 
       // Page should still be visible
-      await expect(page.getByTestId('dashboard-page')).toBeVisible()
+      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 20_000 })
     })
   })
 

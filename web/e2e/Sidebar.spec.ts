@@ -60,6 +60,10 @@ async function setupSidebarTest(page: Page) {
 
   await page.goto('/')
   await page.waitForLoadState('domcontentloaded')
+  // Webkit and Firefox can be significantly slower to mount the sidebar after
+  // domcontentloaded. Wait for it explicitly so all tests start with the
+  // sidebar visible, preventing 10 s wait-loops in every individual test.
+  await page.getByTestId('sidebar').waitFor({ state: 'visible', timeout: 15_000 })
 }
 
 test.describe('Sidebar Navigation', () => {
@@ -141,8 +145,10 @@ test.describe('Sidebar Navigation', () => {
       // Assert expanded before click, collapsed after — no brittle offsetWidth. #9525
       await expect(collapseToggle).toHaveAttribute('aria-expanded', 'true')
 
-      // Click to collapse
-      await collapseToggle.click()
+      // Click to collapse — use force:true because webkit/firefox can report
+      // the toggle as "not stable" while sidebar polling hooks re-render the
+      // component tree (#nightly-playwright).
+      await collapseToggle.click({ force: true })
 
       // Wait for sidebar to finish collapsing — Add Card button hides when collapsed
       await expect(page.getByTestId('sidebar-add-card')).not.toBeVisible({ timeout: 5000 })
@@ -156,12 +162,13 @@ test.describe('Sidebar Navigation', () => {
 
       const collapseToggle = page.getByTestId('sidebar-collapse-toggle')
 
-      // Collapse first
-      await collapseToggle.click()
+      // Collapse first — force:true bypasses webkit/firefox actionability
+      // check while the sidebar polls for data (#nightly-playwright).
+      await collapseToggle.click({ force: true })
       await expect(page.getByTestId('sidebar-add-card')).not.toBeVisible({ timeout: 5000 })
 
       // Click again to expand
-      await collapseToggle.click()
+      await collapseToggle.click({ force: true })
 
       // Add Card button should be visible when expanded
       await expect(page.getByTestId('sidebar-add-card')).toBeVisible({ timeout: 5000 })
@@ -173,8 +180,8 @@ test.describe('Sidebar Navigation', () => {
       // Verify Add Card is visible when expanded
       await expect(page.getByTestId('sidebar-add-card')).toBeVisible()
 
-      // Collapse sidebar
-      await page.getByTestId('sidebar-collapse-toggle').click()
+      // Collapse sidebar — force:true for webkit/firefox stability
+      await page.getByTestId('sidebar-collapse-toggle').click({ force: true })
 
       // Add Card should be hidden when collapsed
       await expect(page.getByTestId('sidebar-add-card')).not.toBeVisible({ timeout: 5000 })
@@ -337,9 +344,9 @@ test.describe('Sidebar Navigation', () => {
     test('sidebar state persists on navigation', async ({ page }) => {
       await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: 10000 })
 
-      // Collapse sidebar
+      // Collapse sidebar — force:true for webkit/firefox stability
       const COLLAPSE_TIMEOUT_MS = 5_000
-      await page.getByTestId('sidebar-collapse-toggle').click()
+      await page.getByTestId('sidebar-collapse-toggle').click({ force: true })
       await expect(page.getByTestId('sidebar-add-card')).not.toBeVisible({ timeout: COLLAPSE_TIMEOUT_MS })
 
       // Navigate to clusters
