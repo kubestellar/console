@@ -29,7 +29,7 @@ function loadSet(storage: Storage, key: string): Set<string> {
     }
     return new Set(parsed.filter((v): v is string => typeof v === 'string'))
   } catch (err) {
-    console.warn(`[useInsightActions] Failed to load ${key} from storage:`, err)
+    console.error(`[useInsightActions] Failed to load ${key} from storage:`, err)
     return new Set()
   }
 }
@@ -40,7 +40,7 @@ function saveSet(storage: Storage, key: string, set: Set<string>, onError?: Erro
   try {
     storage.setItem(key, JSON.stringify(Array.from(set)))
   } catch (err) {
-    console.warn(`[useInsightActions] Failed to save ${key} to storage:`, err)
+    console.error(`[useInsightActions] Failed to save ${key} to storage:`, err)
     onError?.(SAVE_ERROR_MESSAGE)
   }
 }
