@@ -9,9 +9,10 @@ This file is read by Claude Code, Copilot, Codex, and other coding agents workin
 ./startup-oauth.sh      # With GitHub OAuth (requires .env with GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET)
 ```
 
-Build and lint before creating PRs:
+Do NOT run build or lint locally — CI handles both. Commit, push, open a PR with `Fixes #NNN`, and wait for CI to pass (ignore `tide` — it stays pending without lgtm/approved labels; bypass with `--admin`).
 ```bash
-cd web && npm run build && npm run lint
+# NEVER run these locally — CI validates on the PR
+# cd web && npm run build && npm run lint
 ```
 
 ## Project Layout
