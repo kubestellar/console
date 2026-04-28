@@ -13,6 +13,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import { Skeleton, SkeletonStats, SkeletonList } from '../../ui/Skeleton'
 import { RefreshIndicator } from '../../ui/RefreshIndicator'
+import { Button } from '../../ui/Button'
 import { CardSearchInput } from '../../../lib/cards/CardComponents'
 import { useCubefsStatus } from './useCubefsStatus'
 import { useDemoMode } from '../../../hooks/useDemoMode'
@@ -265,23 +266,25 @@ function TabButton({
   count: number
 }) {
   return (
-    <button
+    <Button
+      variant={active ? 'accent' : 'ghost'}
+      size="sm"
       type="button"
       onClick={onClick}
-      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+      className={`rounded-md font-medium ${
         active
           ? 'bg-primary/15 text-primary'
-          : 'text-muted-foreground hover:bg-secondary/50'
+          : 'text-muted-foreground'
       }`}
+      icon={icon}
     >
-      {icon}
       {label}
       <span className={`ml-1 px-1.5 py-0.5 rounded-full text-xs ${
         active ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'
       }`}>
         {count}
       </span>
-    </button>
+    </Button>
   )
 }
 

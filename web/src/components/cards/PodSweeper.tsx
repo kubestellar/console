@@ -6,6 +6,7 @@ import { useReportCardDataState } from './CardDataContext'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import { useTranslation } from 'react-i18next'
 import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
+import { Button } from '../ui/Button'
 
 type Difficulty = 'easy' | 'medium' | 'hard'
 
@@ -274,14 +275,14 @@ function PodSweeperInternal(_props: CardComponentProps) {
             <option value="medium">{t('podSweeper.mediumMode')}</option>
             <option value="hard">{t('podSweeper.hardMode')}</option>
           </select>
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => newGame()}
-            className="p-1.5 rounded hover:bg-secondary"
+            className="p-1.5"
             title="New Game"
-            aria-label="New Game"
-          >
-            <RotateCcw className="w-4 h-4" />
-          </button>
+            icon={<RotateCcw className="w-4 h-4" />}
+          />
         </div>
       </div>
 

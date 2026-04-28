@@ -414,13 +414,14 @@ export function CanIChecker() {
                   className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full bg-blue-500/20 text-blue-400"
                 >
                   {group}
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => toggleUserGroup(group)}
-                    className="hover:text-blue-200"
+                    className="p-0 hover:text-blue-200"
                     aria-label={t('rbac.removeGroup', { group })}
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
+                    icon={<X className="w-3 h-3" />}
+                  />
                 </span>
               ))}
             </div>
@@ -476,14 +477,16 @@ export function CanIChecker() {
         </div>
 
         {/* Advanced Options */}
-        <button
+        <Button
+          variant="ghost"
+          size="sm"
           type="button"
           onClick={() => dispatch({ type: 'SET_FIELD', field: 'showAdvanced', value: !showAdvanced })}
           className="text-sm text-muted-foreground hover:text-foreground"
           aria-expanded={showAdvanced}
         >
           {showAdvanced ? t('rbac.hideAdvanced') : t('rbac.showAdvanced')}
-        </button>
+        </Button>
 
         {showAdvanced && (
           <div className="text-xs text-muted-foreground p-3 bg-secondary/30 rounded-lg">

@@ -10,6 +10,7 @@ import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
+import { Button } from '../ui/Button'
 
 /** Maximum number of clusters that can be compared side-by-side */
 const MAX_COMPARED_CLUSTERS = 4
@@ -163,10 +164,12 @@ function ClusterComparisonInternal({ config }: ClusterComparisonProps) {
       {/* Cluster selector */}
       <div className="flex flex-wrap gap-1 mb-4 overflow-hidden">
         {allClusters.map(c => (
-          <button
+          <Button
             key={c.name}
+            variant="ghost"
+            size="sm"
             onClick={() => toggleCluster(c.name)}
-            className={`px-2 py-1 text-xs rounded-full transition-colors max-w-[120px] truncate ${
+            className={`rounded-full max-w-[120px] truncate ${
               selectedClusters.includes(c.name) || (selectedClusters.length === 0 && clustersToCompare.includes(c))
                 ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
                 : 'bg-secondary/50 text-muted-foreground hover:text-foreground'
@@ -176,7 +179,7 @@ function ClusterComparisonInternal({ config }: ClusterComparisonProps) {
             aria-pressed={selectedClusters.includes(c.name)}
           >
             {c.name}
-          </button>
+          </Button>
         ))}
       </div>
 
@@ -188,21 +191,23 @@ function ClusterComparisonInternal({ config }: ClusterComparisonProps) {
               <th className="text-left py-2 text-muted-foreground font-medium w-20">{t('clusterComparison.metric')}</th>
               {clustersToCompare.map(c => (
                 <th key={c.name} className="text-right py-2 px-2 max-w-[100px]">
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => drillToCluster(c.name, {
                       nodeCount: c.nodeCount,
                       podCount: c.podCount,
                       cpuCores: c.cpuCores,
                       gpuCount: gpuByCluster[c.name] || 0,
                       healthy: c.healthy })}
-                    className="flex items-center justify-end gap-1 w-full hover:text-purple-400 transition-colors group min-w-0"
+                    className="flex items-center justify-end w-full hover:text-purple-400 group min-w-0"
                     title={c.name}
                   >
                     <Server className="w-3 h-3 text-muted-foreground shrink-0" />
                     <span className="text-foreground font-medium group-hover:text-purple-400 truncate">{c.name}</span>
                     <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${c.healthy ? 'bg-green-400' : 'bg-red-400'}`} />
                     <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
-                  </button>
+                  </Button>
                 </th>
               ))}
             </tr>
