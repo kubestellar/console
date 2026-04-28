@@ -16,7 +16,6 @@ import { FETCH_DEFAULT_TIMEOUT_MS, KUBECTL_EXTENDED_TIMEOUT_MS } from '../lib/co
 import { VULN_SEVERITY_ORDER } from '../types/alerts'
 import { settledWithConcurrency } from '../lib/utils/concurrency'
 import {
-  fetchAPI,
   fetchBackendAPI,
   fetchFromAllClusters,
   fetchFromAllClustersViaBackend,

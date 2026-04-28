@@ -285,7 +285,6 @@ import { clusterCacheRef } from './mcp/shared'
 import { isAgentUnavailable } from './useLocalAgent'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import {
-  fetchAPI,
   fetchBackendAPI,
   fetchFromAllClusters,
   fetchFromAllClustersViaBackend,

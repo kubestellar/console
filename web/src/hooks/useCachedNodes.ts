@@ -7,7 +7,7 @@
 import { useSyncExternalStore } from 'react'
 import { useCache, type RefreshCategory, type CachedHookResult } from '../lib/cache'
 import { clusterCacheRef, deduplicateClustersByServer } from './mcp/shared'
-import { fetchAPI, fetchFromAllClusters, fetchViaSSE, getClusterFetcher } from '../lib/cache/fetcherUtils'
+import { fetchFromAllClusters, fetchViaSSE, getClusterFetcher } from '../lib/cache/fetcherUtils'
 import { settledWithConcurrency } from '../lib/utils/concurrency'
 import { NodesResponseSchema } from '../lib/schemas'
 import { validateArrayResponse } from '../lib/schemas/validate'

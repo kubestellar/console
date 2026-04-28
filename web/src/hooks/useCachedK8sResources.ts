@@ -7,7 +7,7 @@
  */
 
 import { useCache, type RefreshCategory, type CachedHookResult } from '../lib/cache'
-import { fetchAPI, fetchFromAllClusters, fetchViaSSE, getToken, getClusterFetcher } from '../lib/cache/fetcherUtils'
+import { fetchFromAllClusters, fetchViaSSE, getToken, getClusterFetcher } from '../lib/cache/fetcherUtils'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import {
   getDemoPVCs,
