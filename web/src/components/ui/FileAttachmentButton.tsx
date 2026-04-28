@@ -1,4 +1,4 @@
-import { Paperclip, X, AlertCircle } from 'lucide-react'
+import { Paperclip, X } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { cn } from '../../lib/cn'
 import { useTranslation } from 'react-i18next'

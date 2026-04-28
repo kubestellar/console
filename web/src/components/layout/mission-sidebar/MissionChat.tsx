@@ -21,8 +21,7 @@ import {
   StopCircle,
   ListChecks,
   Loader2,
-  ArrowDown,
-  Paperclip } from 'lucide-react'
+  ArrowDown } from 'lucide-react'
 import { useMissions, type Mission } from '../../../hooks/useMissions'
 import { useAuth } from '../../../lib/auth'
 import { useDemoMode } from '../../../hooks/useDemoMode'
