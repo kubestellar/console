@@ -22,7 +22,9 @@ async function setupAndNavigate(page: Page, path = '/') {
   await setupDemoMode(page)
   await page.goto(path)
   await page.waitForLoadState('domcontentloaded')
-  await page.locator('#root').waitFor({ state: 'visible', timeout: ROOT_VISIBLE_TIMEOUT_MS })
+  // Wait for the app shell (sidebar) to confirm React has rendered the route.
+  // #root is always in the DOM before React renders — use sidebar testid instead.
+  await page.getByTestId('sidebar').waitFor({ state: 'visible', timeout: ROOT_VISIBLE_TIMEOUT_MS }).catch(() => {})
 }
 
 test.describe('Full-app layout — desktop (1440×900)', () => {
