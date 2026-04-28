@@ -623,6 +623,7 @@ func TestServer_ValidateToken(t *testing.T) {
 		upgradeHeader     string // set to "websocket" for WebSocket upgrade requests
 		connectionHeader  string // "upgrade" for real WebSocket handshakes
 		secWebSocketKey   string // base64 nonce sent by browsers
+		origin            string // Origin header — browser requests always include this
 		expectResult      bool
 	}{
 		{
@@ -631,6 +632,21 @@ func TestServer_ValidateToken(t *testing.T) {
 			authHeader:   "",
 			queryToken:   "",
 			expectResult: true,
+		},
+		{
+			name:         "Read-only GET without Origin exempted (widget/curl)",
+			agentToken:   "secret123",
+			authHeader:   "",
+			queryToken:   "",
+			expectResult: true, // localhost widget requests have no Origin header
+		},
+		{
+			name:         "GET with Origin header still requires token",
+			agentToken:   "secret123",
+			authHeader:   "",
+			queryToken:   "",
+			origin:       "http://localhost:8080",
+			expectResult: false, // browser requests include Origin — CSRF protection
 		},
 		{
 			name:         "Valid Bearer token",
@@ -644,6 +660,7 @@ func TestServer_ValidateToken(t *testing.T) {
 			agentToken:   "secret123",
 			authHeader:   "Bearer wrongtoken",
 			queryToken:   "",
+			origin:       "http://localhost:8080",
 			expectResult: false,
 		},
 		{
@@ -661,6 +678,7 @@ func TestServer_ValidateToken(t *testing.T) {
 			agentToken:   "secret123",
 			authHeader:   "",
 			queryToken:   "secret123",
+			origin:       "http://localhost:8080",
 			expectResult: false, // query tokens only accepted for WebSocket upgrades
 		},
 		{
@@ -671,6 +689,7 @@ func TestServer_ValidateToken(t *testing.T) {
 			upgradeHeader:    "websocket",
 			connectionHeader: "Upgrade",
 			secWebSocketKey:  "dGhlIHNhbXBsZSBub25jZQ==",
+			origin:           "http://localhost:8080",
 			expectResult:     false,
 		},
 		{
@@ -678,6 +697,7 @@ func TestServer_ValidateToken(t *testing.T) {
 			agentToken:   "secret123",
 			authHeader:   "",
 			queryToken:   "",
+			origin:       "http://localhost:8080",
 			expectResult: false,
 		},
 		{
@@ -685,6 +705,7 @@ func TestServer_ValidateToken(t *testing.T) {
 			agentToken:   "secret123",
 			authHeader:   "Basic secret123",
 			queryToken:   "",
+			origin:       "http://localhost:8080",
 			expectResult: false,
 		},
 		{
@@ -696,6 +717,7 @@ func TestServer_ValidateToken(t *testing.T) {
 			upgradeHeader: "websocket",
 			// connectionHeader deliberately empty
 			secWebSocketKey: "dGhlIHNhbXBsZSBub25jZQ==",
+			origin:          "http://localhost:8080",
 			expectResult:    false,
 		},
 		{
@@ -707,6 +729,7 @@ func TestServer_ValidateToken(t *testing.T) {
 			upgradeHeader:    "websocket",
 			connectionHeader: "Upgrade",
 			// secWebSocketKey deliberately empty
+			origin:       "http://localhost:8080",
 			expectResult: false,
 		},
 		{
@@ -716,6 +739,7 @@ func TestServer_ValidateToken(t *testing.T) {
 			authHeader:    "",
 			queryToken:    "secret123",
 			upgradeHeader: "websocket",
+			origin:        "http://localhost:8080",
 			expectResult:  false,
 		},
 	}
@@ -742,6 +766,9 @@ func TestServer_ValidateToken(t *testing.T) {
 			}
 			if tt.secWebSocketKey != "" {
 				req.Header.Set("Sec-WebSocket-Key", tt.secWebSocketKey)
+			}
+			if tt.origin != "" {
+				req.Header.Set("Origin", tt.origin)
 			}
 
 			result := server.validateToken(req)
@@ -830,6 +857,7 @@ func TestServer_HandleClustersHTTP_Unauthorized(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", "/clusters", nil)
+	req.Header.Set("Origin", "http://localhost:8080")
 	// No token provided
 	w := httptest.NewRecorder()
 
@@ -890,6 +918,7 @@ func TestServer_HandleGPUNodesHTTP_Unauthorized(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", "/gpu-nodes?cluster=test", nil)
+	req.Header.Set("Origin", "http://localhost:8080")
 	w := httptest.NewRecorder()
 
 	server.handleGPUNodesHTTP(w, req)
@@ -944,6 +973,7 @@ func TestServer_HandleNodesHTTP_Unauthorized(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", "/nodes?cluster=test", nil)
+	req.Header.Set("Origin", "http://localhost:8080")
 	w := httptest.NewRecorder()
 
 	server.handleNodesHTTP(w, req)
@@ -1017,6 +1047,7 @@ func TestServer_HandlePodsHTTP_Unauthorized(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", "/pods?cluster=test", nil)
+	req.Header.Set("Origin", "http://localhost:8080")
 	w := httptest.NewRecorder()
 
 	server.handlePodsHTTP(w, req)
@@ -1071,6 +1102,7 @@ func TestServer_HandleClusterHealthHTTP_Unauthorized(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", "/cluster-health?cluster=test", nil)
+	req.Header.Set("Origin", "http://localhost:8080")
 	w := httptest.NewRecorder()
 
 	server.handleClusterHealthHTTP(w, req)
@@ -2284,6 +2316,7 @@ func TestServer_HandleWebSocket_Unauthorized(t *testing.T) {
 	// Simulate websocket headers but no token
 	req.Header.Set("Upgrade", "websocket")
 	req.Header.Set("Connection", "Upgrade")
+	req.Header.Set("Origin", "http://localhost:8080")
 	w := httptest.NewRecorder()
 
 	server.handleWebSocket(w, req)

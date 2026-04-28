@@ -1139,6 +1139,7 @@ func TestHandleExec_Unauthorized(t *testing.T) {
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "/ws/exec", nil)
+	req.Header.Set("Origin", "http://localhost:5174")
 	w := httptest.NewRecorder()
 
 	s.handleExec(w, req)

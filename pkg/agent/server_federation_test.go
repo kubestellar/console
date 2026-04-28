@@ -195,6 +195,7 @@ func TestHandler_MissingBearerToken_401(t *testing.T) {
 	for _, e := range endpoints {
 		t.Run(e, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, e, nil)
+			req.Header.Set("Origin", "http://localhost:8080")
 			// No Authorization header at all — the strict test.
 			w := httptest.NewRecorder()
 			handlers[e](w, req)
