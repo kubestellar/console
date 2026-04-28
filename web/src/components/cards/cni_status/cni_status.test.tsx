@@ -45,7 +45,37 @@ describe('CniStatus', () => {
   })
 
   it('renders loading skeleton when isLoading is true', () => {
-    setup({ showSkeleton: true })
+    setup({
+      isLoading: true,
+      showSkeleton: true,
+      data: {
+        health: 'healthy',
+        nodes: [],
+        stats: {
+          activePlugin: 'unknown',
+          pluginVersion: 'unknown',
+          podNetworkCidr: '',
+          serviceNetworkCidr: '',
+          nodeCount: 0,
+          nodesCniReady: 0,
+          networkPolicyCount: 0,
+          servicesWithNetworkPolicy: 0,
+          totalServices: 0,
+          podsWithIp: 0,
+          totalPods: 0,
+        },
+        summary: {
+          activePlugin: 'unknown',
+          pluginVersion: 'unknown',
+          podNetworkCidr: '',
+          nodesCniReady: 0,
+          nodeCount: 0,
+          networkPolicyCount: 0,
+          servicesWithNetworkPolicy: 0,
+        },
+        lastCheckTime: new Date().toISOString(),
+      },
+    })
     render(<CniStatus />)
 
     expect(screen.getByTestId('skeleton')).toBeTruthy()
