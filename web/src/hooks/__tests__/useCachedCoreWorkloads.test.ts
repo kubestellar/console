@@ -10,10 +10,12 @@ const { mockUseCache } = vi.hoisted(() => ({
 }))
 
 vi.mock('../../lib/cache', () => ({
+    createCachedHook: vi.fn(),
   useCache: (...args: unknown[]) => mockUseCache(...args),
 }))
 
 vi.mock('../../lib/cache/fetcherUtils', () => ({
+    createCachedHook: vi.fn(),
   fetchAPI: vi.fn(),
   fetchFromAllClusters: vi.fn(),
   fetchViaSSE: vi.fn(),
@@ -22,21 +24,25 @@ vi.mock('../../lib/cache/fetcherUtils', () => ({
 }))
 
 vi.mock('../../lib/api', () => ({
+    createCachedHook: vi.fn(),
   isBackendUnavailable: vi.fn(() => false),
   authFetch: vi.fn(),
 }))
 
 vi.mock('../../lib/kubectlProxy', () => ({
+    createCachedHook: vi.fn(),
   kubectlProxy: vi.fn(),
 }))
 
 vi.mock('../mcp/shared', () => ({
+    createCachedHook: vi.fn(),
   clusterCacheRef: { clusters: [] },
   deduplicateClustersByServer: (clusters: unknown[]) => clusters,
   agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
 }))
 
 vi.mock('../useLocalAgent', () => ({
+    createCachedHook: vi.fn(),
   isAgentUnavailable: vi.fn(() => true),
 }))
 
@@ -49,15 +55,18 @@ vi.mock('../../lib/constants', async (importOriginal) => {
 })
 
 vi.mock('../../lib/constants/network', () => ({
+    createCachedHook: vi.fn(),
   FETCH_DEFAULT_TIMEOUT_MS: 5000,
   KUBECTL_EXTENDED_TIMEOUT_MS: 30000,
 }))
 
 vi.mock('../../lib/utils/concurrency', () => ({
+    createCachedHook: vi.fn(),
   settledWithConcurrency: vi.fn(async () => []),
 }))
 
 vi.mock('../useCachedData/agentFetchers', () => ({
+    createCachedHook: vi.fn(),
   fetchPodIssuesViaAgent: vi.fn(async () => []),
   fetchDeploymentsViaAgent: vi.fn(async () => []),
   fetchWorkloadsFromAgent: vi.fn(async () => []),
@@ -65,6 +74,7 @@ vi.mock('../useCachedData/agentFetchers', () => ({
 }))
 
 vi.mock('../useCachedData/demoData', () => ({
+    createCachedHook: vi.fn(),
   getDemoPods: () => [],
   getDemoEvents: () => [],
   getDemoPodIssues: () => [],
@@ -76,6 +86,7 @@ vi.mock('../useCachedData/demoData', () => ({
 }))
 
 vi.mock('../../lib/schemas', () => ({
+    createCachedHook: vi.fn(),
   SecurityIssuesResponseSchema: {},
   PodsResponseSchema: {},
   EventsResponseSchema: {},
@@ -83,6 +94,7 @@ vi.mock('../../lib/schemas', () => ({
 }))
 
 vi.mock('../../lib/schemas/validate', () => ({
+    createCachedHook: vi.fn(),
   validateResponse: vi.fn((_, raw: unknown) => raw),
   validateArrayResponse: vi.fn((_, raw: unknown) => raw),
 }))

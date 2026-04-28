@@ -28,10 +28,12 @@ const {
 }))
 
 vi.mock('../../lib/cache', () => ({
+    createCachedHook: vi.fn(),
   useCache: (...args: unknown[]) => mockUseCache(...args),
 }))
 
 vi.mock('../../lib/kubectlProxy', () => ({
+    createCachedHook: vi.fn(),
   kubectlProxy: mockKubectlProxy,
 }))
 
@@ -41,15 +43,18 @@ vi.mock('../../lib/constants/network', async (importOriginal) => {
 })
 
 vi.mock('../mcp/shared', () => ({
+    createCachedHook: vi.fn(),
   clusterCacheRef: mockClusterCacheRef,
   agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
 }))
 
 vi.mock('../useLocalAgent', () => ({
+    createCachedHook: vi.fn(),
   isAgentUnavailable: () => mockIsAgentUnavailable(),
 }))
 
 vi.mock('../../lib/utils/concurrency', () => ({
+    createCachedHook: vi.fn(),
   settledWithConcurrency: async (...args: unknown[]) => {
     const result = await mockSettledWithConcurrency(...args)
     const onSettled = args[2] as ((r: PromiseSettledResult<unknown>, i: number) => void) | undefined

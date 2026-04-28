@@ -9,6 +9,7 @@ import { renderHook } from '@testing-library/react'
 const lastCacheArgs: { calls: Array<Record<string, unknown>> } = { calls: [] }
 
 vi.mock('../mcp/shared', () => ({
+    createCachedHook: vi.fn(),
   agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
   clusterCacheRef: { clusters: [] },
   REFRESH_INTERVAL_MS: 120_000,
@@ -16,6 +17,7 @@ vi.mock('../mcp/shared', () => ({
 }))
 
 vi.mock('../../lib/cache', () => ({
+    createCachedHook: vi.fn(),
   useCache: (args: Record<string, unknown>) => {
     lastCacheArgs.calls.push(args)
     return {
@@ -32,10 +34,12 @@ vi.mock('../../lib/cache', () => ({
   },
 }))
 vi.mock('../../lib/demoMode', () => ({
+    createCachedHook: vi.fn(),
   isDemoMode: () => true,
   isNetlifyDeployment: false,
 }))
 vi.mock('../../hooks/useDemoMode', () => ({
+    createCachedHook: vi.fn(),
   getDemoMode: () => true,
   useDemoMode: () => ({ isDemoMode: true }),
 }))
@@ -47,6 +51,7 @@ vi.mock('../../lib/constants', async (importOriginal) => {
   }
 })
 vi.mock('../../lib/constants/network', () => ({
+    createCachedHook: vi.fn(),
   FETCH_DEFAULT_TIMEOUT_MS: 30000,
 }))
 

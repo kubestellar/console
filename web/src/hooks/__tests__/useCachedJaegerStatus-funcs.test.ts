@@ -9,10 +9,12 @@ import { renderHook } from '@testing-library/react'
 const mockFetchJaegerStatus = vi.fn()
 
 vi.mock('../useCachedData/agentFetchers', () => ({
+    createCachedHook: vi.fn(),
   fetchJaegerStatus: (...args: unknown[]) => mockFetchJaegerStatus(...args),
 }))
 
 vi.mock('../useCachedData/demoData', () => ({
+    createCachedHook: vi.fn(),
   getDemoJaegerStatus: () => ({
     status: 'Healthy',
     version: '1.53.0',
@@ -32,6 +34,7 @@ vi.mock('../useCachedData/demoData', () => ({
 }))
 
 vi.mock('../useDemoMode', () => ({
+    createCachedHook: vi.fn(),
   useDemoMode: () => ({ isDemoMode: false }),
   isDemoModeForced: () => false,
   canToggleDemoMode: () => true,
@@ -56,6 +59,7 @@ const mockUseCache = vi.fn(() => ({
 }))
 
 vi.mock('../../lib/cache', () => ({
+    createCachedHook: vi.fn(),
   useCache: (...args: unknown[]) => mockUseCache(...args),
 }))
 

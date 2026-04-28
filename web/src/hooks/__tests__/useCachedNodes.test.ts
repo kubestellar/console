@@ -13,39 +13,47 @@ const { mockUseCache, mockClusterCacheRef } = vi.hoisted(() => ({
 }))
 
 vi.mock('../../lib/cache', () => ({
+    createCachedHook: vi.fn(),
   useCache: (...args: unknown[]) => mockUseCache(...args),
 }))
 
 vi.mock('../mcp/shared', () => ({
+    createCachedHook: vi.fn(),
   clusterCacheRef: mockClusterCacheRef,
   deduplicateClustersByServer: (clusters: unknown[]) => clusters,
   agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
 }))
 
 vi.mock('../../lib/cache/fetcherUtils', () => ({
+    createCachedHook: vi.fn(),
   fetchAPI: vi.fn(),
   fetchFromAllClusters: vi.fn(),
   fetchViaSSE: vi.fn(),
 }))
 
 vi.mock('../../lib/utils/concurrency', () => ({
+    createCachedHook: vi.fn(),
   settledWithConcurrency: vi.fn(async () => []),
 }))
 
 vi.mock('../../lib/schemas', () => ({
+    createCachedHook: vi.fn(),
   NodesResponseSchema: {},
 }))
 
 vi.mock('../../lib/schemas/validate', () => ({
+    createCachedHook: vi.fn(),
   validateArrayResponse: vi.fn((_, raw: unknown) => raw),
 }))
 
 vi.mock('../useCachedData/demoData', () => ({
+    createCachedHook: vi.fn(),
   getDemoCachedNodes: () => [{ name: 'demo-node', status: 'Ready', cluster: 'demo' }],
   getDemoCoreDNSStatus: () => [],
 }))
 
 vi.mock('../../lib/constants/network', () => ({
+    createCachedHook: vi.fn(),
   FETCH_DEFAULT_TIMEOUT_MS: 5000,
   KUBECTL_EXTENDED_TIMEOUT_MS: 60000,
 }))

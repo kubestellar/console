@@ -3,11 +3,13 @@ import { renderHook } from '@testing-library/react'
 
 const mockUseCache = vi.fn()
 vi.mock('../../lib/cache', () => ({
+    createCachedHook: vi.fn(),
   useCache: (args: unknown) => mockUseCache(args),
 }))
 
 const mockIsDemoMode = vi.fn(() => false)
 vi.mock('../useDemoMode', () => ({
+    createCachedHook: vi.fn(),
   useDemoMode: () => ({ isDemoMode: mockIsDemoMode() }),
   isDemoModeForced: () => false,
   canToggleDemoMode: () => true,
@@ -20,12 +22,14 @@ vi.mock('../useDemoMode', () => ({
 }))
 
 vi.mock('../../components/cards/change_timeline/demoData', () => ({
+    createCachedHook: vi.fn(),
   getDemoTimelineEvents: () => [
     { id: 'demo-1', type: 'deploy', cluster: 'demo-cluster', timestamp: '2024-01-01T00:00:00Z' },
   ],
 }))
 
 vi.mock('../../lib/api', () => ({
+    createCachedHook: vi.fn(),
   authFetch: vi.fn(),
 }))
 

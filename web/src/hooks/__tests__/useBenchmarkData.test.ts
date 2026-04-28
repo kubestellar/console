@@ -18,6 +18,7 @@ const STORAGE_KEY_TOKEN = 'token'
 const mockCacheResult = vi.fn()
 
 vi.mock('../mcp/shared', () => ({
+    createCachedHook: vi.fn(),
   agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
   clusterCacheRef: { clusters: [] },
   REFRESH_INTERVAL_MS: 120_000,
@@ -25,6 +26,7 @@ vi.mock('../mcp/shared', () => ({
 }))
 
 vi.mock('../../lib/cache', () => ({
+    createCachedHook: vi.fn(),
   useCache: (opts: { fetcher: () => Promise<unknown> }) => {
     // Store fetcher so tests can call it
     latestFetcher = opts.fetcher
@@ -33,6 +35,7 @@ vi.mock('../../lib/cache', () => ({
 }))
 
 vi.mock('../../lib/llmd/benchmarkMockData', () => ({
+    createCachedHook: vi.fn(),
   generateBenchmarkReports: () => [{ id: 'demo-1', name: 'Demo Report' }],
 }))
 
