@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 
 interface SpeechRecognitionEvent extends Event {
   resultIndex: number
@@ -95,6 +95,16 @@ export function useMicrophoneInput(): UseMicrophoneInputReturn {
       recordingTimeoutRef.current = null
     }
 
+    // Abort recognition and clear handlers to prevent stale callbacks
+    if (recognitionRef.current) {
+      recognitionRef.current.onstart = null
+      recognitionRef.current.onresult = null
+      recognitionRef.current.onerror = null
+      recognitionRef.current.onend = null
+      try { recognitionRef.current.abort() } catch { /* already stopped */ }
+      recognitionRef.current = null
+    }
+
     if (mediaStreamRef.current) {
       for (const track of mediaStreamRef.current.getTracks()) {
         track.stop()
@@ -103,6 +113,7 @@ export function useMicrophoneInput(): UseMicrophoneInputReturn {
     }
 
     setIsRecording(false)
+    setIsTranscribing(false)
   }, [])
 
   const startRecording = useCallback(async () => {
@@ -172,14 +183,16 @@ export function useMicrophoneInput(): UseMicrophoneInputReturn {
 
   const stopRecording = useCallback(async () => {
     try {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop()
-      }
       await stopRecordingInternal()
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to stop recording'
       setError(errorMessage)
     }
+  }, [stopRecordingInternal])
+
+  // Cleanup on unmount — abort any active recognition and release media stream
+  useEffect(() => {
+    return () => { stopRecordingInternal() }
   }, [stopRecordingInternal])
 
   return {
