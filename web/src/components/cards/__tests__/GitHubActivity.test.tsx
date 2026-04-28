@@ -51,6 +51,11 @@ vi.mock('../../../lib/cards/cardHooks', () => ({
   commonComparators: { string: () => () => 0, number: () => () => 0, statusOrder: () => () => 0, date: () => () => 0, boolean: () => () => 0 },
 }))
 
+vi.mock('../../ui/Toast', () => ({
+  useToast: () => ({ showToast: vi.fn() }),
+  ToastProvider: ({ children }: { children: React.ReactNode }) => children,
+}))
+
 import { GitHubActivity } from '../GitHubActivity'
 
 describe('GitHubActivity', () => {

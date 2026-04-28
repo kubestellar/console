@@ -247,7 +247,8 @@ describe('useCachedLLMd', () => {
 
       expect(result.current.isLoading).toBe(true)
       expect(result.current.isRefreshing).toBe(true)
-      expect(result.current.isDemoFallback).toBe(true)
+      // isDemoFallback is gated by !isLoading in the hook (prevents demo badge during loading)
+      expect(result.current.isDemoFallback).toBe(false)
       expect(result.current.error).toBe('test error')
       expect(result.current.isFailed).toBe(true)
       expect(result.current.consecutiveFailures).toBe(5)

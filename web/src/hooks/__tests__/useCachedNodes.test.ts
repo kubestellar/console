@@ -29,6 +29,7 @@ vi.mock('../../lib/cache/fetcherUtils', () => ({
   fetchAPI: vi.fn(),
   fetchFromAllClusters: vi.fn(),
   fetchViaSSE: vi.fn(),
+  getClusterFetcher: vi.fn(),
 }))
 
 vi.mock('../../lib/utils/concurrency', () => ({
@@ -59,7 +60,7 @@ vi.mock('../../lib/constants/network', () => ({
 }))
 
 import { useCachedNodes, useCachedCoreDNSStatus, useCachedAllNodes } from '../useCachedNodes'
-import { fetchAPI } from '../../lib/cache/fetcherUtils'
+import { fetchAPI, getClusterFetcher } from '../../lib/cache/fetcherUtils'
 import { settledWithConcurrency } from '../../lib/utils/concurrency'
 
 // ---------------------------------------------------------------------------
@@ -85,6 +86,8 @@ beforeEach(() => {
   vi.clearAllMocks()
   mockClusterCacheRef.clusters = []
   mockUseCache.mockReturnValue(defaultCache())
+  // getClusterFetcher() should return fetchAPI so the test can control per-cluster behavior
+  vi.mocked(getClusterFetcher).mockReturnValue(fetchAPI as ReturnType<typeof getClusterFetcher>)
 })
 
 // ---------------------------------------------------------------------------
