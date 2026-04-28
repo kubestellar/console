@@ -875,7 +875,7 @@ function SortableClusterItem({ id, children, onReorder }: { id: string; children
   ) : null
 
   return (
-    <div ref={setNodeRef} style={style}>
+    <div ref={setNodeRef} style={style} data-testid={`cluster-row-${id}`}>
       {children(dragHandle)}
     </div>
   )

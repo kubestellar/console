@@ -506,13 +506,17 @@ func (s *Server) setupMiddleware() {
 		// Without it the font lookup throws, labels fail to render, and the
 		// globe initialization aborts — leaving the right side of the login
 		// page blank.
+		//
+		// connect-src includes https://raw.githubusercontent.com because the
+		// Marketplace page fetches registry.json from the console-marketplace
+		// repo on GitHub (#10653). Without it the browser blocks the request.
 		c.Set("Content-Security-Policy",
 			"default-src 'self'; "+
 				"script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob: https://www.googletagmanager.com; "+
 				"worker-src 'self' blob:; "+
 				"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "+
 				"img-src 'self' data: https:; "+
-				"connect-src 'self' "+kcAgentLoopback+" "+kcAgentLoopbackWS+" "+kcAgentLocalhost+" "+kcAgentLocalhostWS+" https://console.kubestellar.io https://api.github.com https://www.google-analytics.com https://www.googletagmanager.com https://cdn.jsdelivr.net wss:; "+
+				"connect-src 'self' "+kcAgentLoopback+" "+kcAgentLoopbackWS+" "+kcAgentLocalhost+" "+kcAgentLocalhostWS+" https://console.kubestellar.io https://api.github.com https://raw.githubusercontent.com https://www.google-analytics.com https://www.googletagmanager.com https://cdn.jsdelivr.net wss:; "+
 				"font-src 'self' data: https://fonts.gstatic.com; "+
 				"object-src 'none'; "+
 				"base-uri 'self'")

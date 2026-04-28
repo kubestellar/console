@@ -20,7 +20,12 @@ const ICON_SIZE = 'w-4 h-4'
 /** Dot indicator size class */
 const DOT_SIZE = 'w-2 h-2'
 
-export function UpdateIndicator() {
+interface UpdateIndicatorProps {
+  /** Force label text to be visible (used in overflow menu) */
+  showLabel?: boolean
+}
+
+export function UpdateIndicator({ showLabel = false }: UpdateIndicatorProps) {
   const { t } = useTranslation()
   const { showToast } = useToast()
   const { hasUpdate, latestRelease, channel, autoUpdateStatus, latestMainSHA } = useVersionCheck()
@@ -110,6 +115,9 @@ export function UpdateIndicator() {
           )}
           {!isUpgrading && !isUpgradeComplete && !isUpgradeError && (
             <span className={cn(DOT_SIZE, 'bg-green-400 rounded-full animate-pulse')} />
+          )}
+          {showLabel && (
+            <span className="text-sm font-medium">{t('update.available')}</span>
           )}
         </button>
 

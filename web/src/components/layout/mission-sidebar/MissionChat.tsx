@@ -40,6 +40,7 @@ import { OrbitSetupOffer } from '../../missions/OrbitSetupOffer'
 import { OrbitMonitorOffer } from '../../missions/OrbitMonitorOffer'
 import type { OrbitResourceFilter } from '../../../lib/missions/types'
 import { MicrophoneButton } from '../../ui/MicrophoneButton'
+import { FileAttachmentButton } from '../../ui/FileAttachmentButton'
 /** Pixels from the bottom edge within which the chat is considered "at bottom" */
 const SCROLL_BOTTOM_THRESHOLD_PX = 50
 /** Duration in ms for the scroll-to-bottom button fade animation */
@@ -998,6 +999,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
                 placeholder={t('missionChat.askFollowUp', { defaultValue: 'Ask a follow-up question...' })}
                 className="flex-1 min-w-0 px-3 py-2 text-sm rounded-lg border border-border bg-secondary/50 focus:bg-secondary focus:outline-hidden focus:ring-1 focus:ring-primary"
               />
+              <FileAttachmentButton compact />
               <MicrophoneButton onTranscript={handleMicrophoneTranscript} compact />
               <button
                 onClick={handleSend}
@@ -1062,6 +1064,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
                 placeholder={t('missionChat.retryWithMessage')}
                 className="flex-1 min-w-0 px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-primary"
               />
+              <FileAttachmentButton compact />
               <MicrophoneButton onTranscript={handleMicrophoneTranscript} compact />
               <button
                 onClick={handleSend}
@@ -1091,6 +1094,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
                 placeholder={t('missionChat.typeMessage')}
                 className="flex-1 min-w-0 px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-primary"
               />
+              <FileAttachmentButton compact />
               <MicrophoneButton onTranscript={handleMicrophoneTranscript} compact />
               <button
                 onClick={handleSend}

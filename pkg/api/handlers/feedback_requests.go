@@ -124,6 +124,11 @@ func (h *FeedbackHandler) CreateFeatureRequest(c *fiber.Ctx) error {
 	if len(validScreenshots) > 0 {
 		asyncCtx, cancel := context.WithTimeout(context.Background(), asyncScreenshotUploadTimeout)
 		go func(ctx context.Context, cancel context.CancelFunc, issue int, repo string, shots []string) {
+			defer func() {
+				if r := recover(); r != nil {
+					slog.Error("panic in async feedback handler", "error", r)
+				}
+			}()
 			defer cancel()
 			h.uploadScreenshotCommentsAsync(ctx, issue, repo, shots)
 		}(asyncCtx, cancel, issueNumber, targetRepoName, validScreenshots)
@@ -966,6 +971,11 @@ func (h *FeedbackHandler) CloseRequest(c *fiber.Ctx) error {
 	// Close the GitHub issue if we have one
 	if h.getEffectiveToken() != "" && request.GitHubIssueNumber != nil {
 		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					slog.Error("panic in async feedback handler", "error", r)
+				}
+			}()
 			ctx, cancel := context.WithTimeout(context.Background(), backgroundGitHubOpTimeout)
 			defer cancel()
 			h.closeGitHubIssue(ctx, *request.GitHubIssueNumber, h.resolveRepoName(request.TargetRepo))
@@ -998,6 +1008,11 @@ func (h *FeedbackHandler) RequestUpdate(c *fiber.Ctx) error {
 		// Add a comment to the GitHub issue requesting an update
 		if h.getEffectiveToken() != "" {
 			go func() {
+				defer func() {
+					if r := recover(); r != nil {
+						slog.Error("panic in async feedback handler", "error", r)
+					}
+				}()
 				ctx, cancel := context.WithTimeout(context.Background(), backgroundGitHubOpTimeout)
 				defer cancel()
 				h.addIssueComment(ctx, issueNum, "The user has requested an update on this issue.", h.repoName)
@@ -1033,6 +1048,11 @@ func (h *FeedbackHandler) RequestUpdate(c *fiber.Ctx) error {
 	// Add a comment to the GitHub issue requesting an update
 	if h.getEffectiveToken() != "" && request.GitHubIssueNumber != nil {
 		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					slog.Error("panic in async feedback handler", "error", r)
+				}
+			}()
 			ctx, cancel := context.WithTimeout(context.Background(), backgroundGitHubOpTimeout)
 			defer cancel()
 			h.addIssueComment(ctx, *request.GitHubIssueNumber, "The user has requested an update on this issue.", h.resolveRepoName(request.TargetRepo))
@@ -1229,6 +1249,11 @@ func (h *FeedbackHandler) SubmitFeedback(c *fiber.Ctx) error {
 	// Add comment to GitHub PR if configured
 	if h.getEffectiveToken() != "" && request.PRNumber != nil {
 		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					slog.Error("panic in async feedback handler", "error", r)
+				}
+			}()
 			ctx, cancel := context.WithTimeout(context.Background(), backgroundGitHubOpTimeout)
 			defer cancel()
 			h.addPRComment(ctx, request, feedback)

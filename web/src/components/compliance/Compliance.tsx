@@ -243,7 +243,7 @@ export function Compliance() {
 
   return (
     <DashboardPage
-      title="Security Posture"
+      title="Compliance"
       subtitle="Security scanning, vulnerability assessment, and policy enforcement"
       icon="Shield"
       storageKey={COMPLIANCE_CARDS_KEY}

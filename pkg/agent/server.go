@@ -173,6 +173,7 @@ type Server struct {
 
 	// Local cluster management
 	localClusters *LocalClusterManager
+	clusterOpsWG  sync.WaitGroup // tracks in-flight cluster create/delete/lifecycle goroutines
 
 	// Backend process management (for restart-from-UI)
 	backendCmd *exec.Cmd
@@ -688,7 +689,13 @@ func (s *Server) Start() error {
 	// DELETE, PATCH) must include the X-Requested-With: XMLHttpRequest header.
 	// GET/HEAD/OPTIONS pass through unconditionally. This mirrors the Fiber
 	// middleware in pkg/api/middleware/csrf.go. See #10000.
-	handler := requireCSRF(mux)
+	//
+	// #10699: corsMiddleware runs outermost so that CORS headers are present
+	// on every response, including CSRF rejections. Without this layer the
+	// browser reports an opaque CORS error instead of showing the 403.
+	// corsMiddleware also short-circuits OPTIONS preflight so it never
+	// reaches requireCSRF (preflight must not carry X-Requested-With).
+	handler := s.corsMiddleware(requireCSRF(mux))
 
 	addr := fmt.Sprintf("127.0.0.1:%d", s.config.Port)
 	slog.Info("KC Agent starting", "version", Version, "addr", addr)
@@ -947,6 +954,27 @@ func generateRandomToken(nBytes int) (string, error) {
 		return "", fmt.Errorf("crypto/rand.Read: %w", err)
 	}
 	return hex.EncodeToString(buf), nil
+}
+
+// clusterOpsShutdownTimeout is the maximum time GracefulShutdown waits for
+// in-flight cluster create/delete/lifecycle goroutines to complete.
+const clusterOpsShutdownTimeout = 30 * time.Second
+
+// GracefulShutdown waits for all in-flight cluster operation goroutines to
+// finish (up to clusterOpsShutdownTimeout). Call this before process exit to
+// avoid orphaning background cluster create/delete operations.
+func (s *Server) GracefulShutdown() {
+	done := make(chan struct{})
+	go func() {
+		s.clusterOpsWG.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+		slog.Info("[Server] all cluster operations completed")
+	case <-time.After(clusterOpsShutdownTimeout):
+		slog.Warn("[Server] timed out waiting for cluster operations", "timeout", clusterOpsShutdownTimeout)
+	}
 }
 
 // handleClustersHTTP returns the list of kubeconfig contexts

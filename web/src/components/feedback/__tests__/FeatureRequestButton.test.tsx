@@ -32,16 +32,10 @@ vi.mock('react-i18next', () => ({
   Trans: ({ children }: { children: React.ReactNode }) => children,
 }))
 
-// PR #6518 / issue #6517 — FeatureRequestButton now consumes both
-// useNotifications AND useFeatureRequests (the unified badge-count fix for
-// issue 6475 filters notifications by the closed-status set). The previous
-// mock only provided useNotifications and returned `unreadCount` directly;
-// the component now uses `notifications`/`requests` arrays and re-computes
-// the count via useMemo. This mock returns the shape the component actually
-// reads today so `renders without crashing` holds.
+// issue #10681 — FeatureRequestButton now only uses useFeatureRequests
+// (with countOnly) for the badge count synced with "Your Requests".
 vi.mock('../../../hooks/useFeatureRequests', () => ({
-  useNotifications: () => ({ notifications: [], unreadCount: 0 }),
-  useFeatureRequests: () => ({ requests: [] }),
+  useFeatureRequests: () => ({ summaries: [], isLoading: false, error: null }),
 }))
 
 vi.mock('../../../lib/modals', () => ({

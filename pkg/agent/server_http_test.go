@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/settings"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -241,5 +242,36 @@ func TestMutationLogic_CreateServiceAccountHTTP(t *testing.T) {
 
 	if !created {
 		t.Error("serviceaccount was not created with correct parameters in fake client")
+	}
+}
+
+func TestHandleAutoUpdateConfig_SaveAllError_Returns500(t *testing.T) {
+	mgr := settings.GetSettingsManager()
+	original := mgr.GetSettingsPath()
+	mgr.SetSettingsPath("/dev/null/no-such-dir/settings.json")
+	defer mgr.SetSettingsPath(original)
+
+	checker := &UpdateChecker{channel: "stable"}
+	server := &Server{
+		allowedOrigins: []string{"*"},
+		agentToken:     "",
+		updateChecker:  checker,
+	}
+
+	body := `{"enabled":true,"channel":"developer"}`
+	req := httptest.NewRequest("POST", "/auto-update/config", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	server.handleAutoUpdateConfig(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d", w.Code)
+	}
+	checker.mu.Lock()
+	ch := checker.channel
+	checker.mu.Unlock()
+	if ch != "stable" {
+		t.Errorf("updateChecker.Configure must not be called on SaveAll failure, but channel changed to %q", ch)
 	}
 }

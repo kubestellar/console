@@ -23,8 +23,8 @@ import (
 
 const (
 	// kubectlExecTimeout bounds how long any kubectl subprocess can run
-	// before it is killed. Prevents goroutine/FD leaks from hung apiservers. (#7258)
-	kubectlExecTimeout = 60 * time.Second
+	// before it is killed. Prevents goroutine/FD leaks from hung apiservers. (#7258, #7206)
+	kubectlExecTimeout = 30 * time.Second
 
 	// kubectlRenameTimeout bounds the kubectl config rename-context command. (#7279)
 	kubectlRenameTimeout = 30 * time.Second
@@ -132,21 +132,11 @@ func (k *KubectlProxy) ExecuteWithContext(parent context.Context, ctxName, names
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
-	// kubectlCommandTimeout prevents a hung kubectl call from blocking
-	// the handler indefinitely (e.g. unreachable apiserver) (#7206).
-	const kubectlCommandTimeout = 30 * time.Second
-	timer := time.AfterFunc(kubectlCommandTimeout, func() {
-		if cmd.Process != nil {
-			cmd.Process.Kill()
-		}
-	})
-
 	err := cmd.Run()
-	timedOut := !timer.Stop()
 	exitCode := 0
 	if err != nil {
-		if timedOut {
-			return protocol.KubectlResponse{ExitCode: 1, Error: fmt.Sprintf("kubectl timed out after %s", kubectlCommandTimeout)}
+		if ctx.Err() == context.DeadlineExceeded {
+			return protocol.KubectlResponse{ExitCode: 1, Error: fmt.Sprintf("kubectl timed out after %s", kubectlExecTimeout)}
 		}
 		if exitErr, ok := err.(*exec.ExitError); ok {
 			exitCode = exitErr.ExitCode()

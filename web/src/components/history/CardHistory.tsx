@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { History, Trash2, Plus, RefreshCw, ArrowRight, Settings2, RotateCcw } from 'lucide-react'
+import { useState, useCallback } from 'react'
+import { History, Trash2, Plus, RefreshCw, ArrowRight, Settings2, RotateCcw, AlertTriangle } from 'lucide-react'
 import { useCardHistory, CardHistoryEntry } from '../../hooks/useCardHistory'
 import { cn } from '../../lib/cn'
 import { formatCardTitle } from '../../lib/formatCardTitle'
@@ -76,6 +76,46 @@ function ActionBadge({ action }: { action: CardHistoryEntry['action'] }) {
   )
 }
 
+interface ConfirmDeleteDialogProps {
+  title: string
+  message: string
+  onConfirm: () => void
+  onCancel: () => void
+}
+
+function ConfirmDeleteDialog({ title, message, onConfirm, onCancel }: ConfirmDeleteDialogProps) {
+  return (
+    <>
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-overlay" onClick={onCancel} />
+      <div className="fixed inset-0 flex items-center justify-center z-modal p-4">
+        <div className="bg-card border border-border rounded-xl shadow-xl max-w-sm w-full p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 rounded-lg bg-red-500/20">
+              <AlertTriangle className="w-5 h-5 text-red-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-foreground">{title}</h3>
+          </div>
+          <p className="text-sm text-muted-foreground mb-6">{message}</p>
+          <div className="flex justify-end gap-3">
+            <button
+              onClick={onCancel}
+              className="px-4 py-2 rounded-lg text-sm bg-secondary/50 text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={onConfirm}
+              className="px-4 py-2 rounded-lg text-sm bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors cursor-pointer"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
+
 interface CardHistoryProps {
   onRestoreCard?: (entry: CardHistoryEntry) => void
 }
@@ -85,6 +125,28 @@ export function CardHistory({ onRestoreCard }: CardHistoryProps) {
   const { history: rawHistory, clearHistory, removeEntry } = useCardHistory()
   const history = rawHistory || []
   const [filter, setFilter] = useState<CardHistoryEntry['action'] | 'all'>('all')
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
+  const [showClearConfirm, setShowClearConfirm] = useState(false)
+
+  const handleRemoveEntry = useCallback((id: string) => {
+    setPendingDeleteId(id)
+  }, [])
+
+  const confirmRemoveEntry = useCallback(() => {
+    if (pendingDeleteId) {
+      removeEntry(pendingDeleteId)
+      setPendingDeleteId(null)
+    }
+  }, [pendingDeleteId, removeEntry])
+
+  const handleClearHistory = useCallback(() => {
+    setShowClearConfirm(true)
+  }, [])
+
+  const confirmClearHistory = useCallback(() => {
+    clearHistory()
+    setShowClearConfirm(false)
+  }, [clearHistory])
 
   const filteredHistory = filter === 'all' ? history : history.filter((entry) => entry.action === filter)
 
@@ -103,8 +165,8 @@ export function CardHistory({ onRestoreCard }: CardHistoryProps) {
         </div>
         {history.length > 0 && (
           <button
-            onClick={clearHistory}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
+            onClick={handleClearHistory}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors cursor-pointer"
             aria-label="Clear all card history"
           >
             <Trash2 className="w-4 h-4" aria-hidden="true" />
@@ -213,8 +275,8 @@ export function CardHistory({ onRestoreCard }: CardHistoryProps) {
                   </button>
                 )}
                 <button
-                  onClick={() => removeEntry(entry.id)}
-                  className="p-2 rounded-lg hover:bg-red-500/20 text-muted-foreground hover:text-red-400 transition-colors"
+                  onClick={() => handleRemoveEntry(entry.id)}
+                  className="p-2 rounded-lg hover:bg-red-500/20 text-muted-foreground hover:text-red-400 transition-colors cursor-pointer"
                   title="Remove from history"
                   aria-label={`Remove ${entry.cardTitle || 'card'} from history`}
                 >
@@ -224,6 +286,24 @@ export function CardHistory({ onRestoreCard }: CardHistoryProps) {
             </div>
           ))}
         </div>
+      )}
+
+      {/* Confirmation dialogs */}
+      {pendingDeleteId && (
+        <ConfirmDeleteDialog
+          title="Delete History Entry"
+          message="Are you sure you want to delete this history entry? This action cannot be undone."
+          onConfirm={confirmRemoveEntry}
+          onCancel={() => setPendingDeleteId(null)}
+        />
+      )}
+      {showClearConfirm && (
+        <ConfirmDeleteDialog
+          title="Clear All History"
+          message={`Are you sure you want to delete all ${history.length} history entries? This action cannot be undone.`}
+          onConfirm={confirmClearHistory}
+          onCancel={() => setShowClearConfirm(false)}
+        />
       )}
     </div>
   )

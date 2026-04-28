@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { memo, useState, useMemo, useEffect, useRef } from 'react'
 import { TrendingUp, Cpu, Server, Clock } from 'lucide-react'
 import { CardClusterFilter } from '../../lib/cards/CardComponents'
 import { LazyEChart } from '../charts/LazyEChart'
@@ -73,7 +73,7 @@ const TIME_RANGE_OPTIONS: { value: TimeRange; label: string; points: number; int
   { value: '24h', label: '24 hours', points: 24, intervalMs: MS_PER_HOUR },
 ]
 
-export function GPUUsageTrend() {
+const GPUUsageTrend = memo(function GPUUsageTrend() {
   const { t } = useTranslation()
   const {
     nodes: gpuNodes,
@@ -533,4 +533,7 @@ export function GPUUsageTrend() {
       )}
     </div>
   )
-}
+})
+
+
+export { GPUUsageTrend }

@@ -299,7 +299,10 @@ func (h *GitHubProxyHandler) SaveToken(c *fiber.Ctx) error {
 
 	all, err := sm.GetAll()
 	if err != nil {
-		all = &settings.AllSettings{}
+		slog.Error("[GitHubProxy] failed to read settings", "error", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to read current settings",
+		})
 	}
 	all.FeedbackGitHubToken = body.Token
 	all.FeedbackGitHubTokenSource = settings.GitHubTokenSourceSettings
@@ -333,7 +336,10 @@ func (h *GitHubProxyHandler) DeleteToken(c *fiber.Ctx) error {
 
 	all, err := sm.GetAll()
 	if err != nil {
-		return c.JSON(fiber.Map{"success": true}) // Nothing to delete
+		slog.Error("[GitHubProxy] failed to read settings", "error", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to read current settings",
+		})
 	}
 	all.FeedbackGitHubToken = ""
 	all.FeedbackGitHubTokenSource = ""

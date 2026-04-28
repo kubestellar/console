@@ -3,11 +3,13 @@ import { renderHook } from '@testing-library/react'
 
 const mockUseCache = vi.fn()
 vi.mock('../../lib/cache', () => ({
+    createCachedHook: vi.fn(),
   useCache: (args: unknown) => mockUseCache(args),
 }))
 
 const mockIsDemoMode = vi.fn(() => false)
 vi.mock('../useDemoMode', () => ({
+    createCachedHook: vi.fn(),
   useDemoMode: () => ({ isDemoMode: mockIsDemoMode() }),
   isDemoModeForced: () => false,
   canToggleDemoMode: () => true,

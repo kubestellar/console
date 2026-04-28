@@ -308,7 +308,7 @@ export function useCachedISO27001Audit(
     data: result.data,
     isLoading: result.isLoading,
     isRefreshing: result.isRefreshing,
-    isDemoFallback: result.isDemoFallback,
+    isDemoFallback: result.isDemoFallback && !result.isLoading,
     error: result.error,
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,

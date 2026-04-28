@@ -17,6 +17,17 @@ function toNavItem(item: SidebarItem): SidebarNavItem {
   }
 }
 
+const CARD_DASHBOARD_PATHS = [
+  '/',
+  '/workloads',
+  '/security',
+  '/gitops',
+  '/storage',
+  '/compute',
+  '/network',
+  '/events',
+  '/clusters',
+]
 export function Sidebar() {
   const { config } = useSidebarConfig()
   const dashboardContext = useDashboardContextOptional()
@@ -30,11 +41,11 @@ export function Sidebar() {
 
   // Handle Add Card click - work with current dashboard
   const handleAddCardClick = () => {
-    const cardDashboards = ['/', '/workloads', '/security', '/gitops', '/storage', '/compute', '/network', '/events', '/clusters']
+
     const currentPath = location.pathname
     const isCustomDashboard = currentPath.startsWith('/custom-dashboard/')
 
-    if (cardDashboards.includes(currentPath) || isCustomDashboard) {
+if (CARD_DASHBOARD_PATHS.includes(currentPath) || isCustomDashboard) {
       if (currentPath === ROUTES.HOME) {
         dashboardContext?.openAddCardModal()
       } else {
@@ -61,7 +72,18 @@ export function Sidebar() {
         collapsePin: true,
         snoozedCards: true,
       }}
-      onAddMore={() => dashboardContext?.openAddCardModal('dashboards')}
+     onAddMore={() => {
+  const currentPath = location.pathname
+  const isOnDashboard =
+    CARD_DASHBOARD_PATHS.includes(currentPath) ||
+    currentPath.startsWith('/custom-dashboard/')
+
+  if (isOnDashboard) {
+    dashboardContext?.openAddCardModal('dashboards')
+  } else {
+    navigate(`${ROUTES.HOME}?customizeSidebar=true`)
+  }
+}}
       onAddCard={handleAddCardClick}
     />
   )

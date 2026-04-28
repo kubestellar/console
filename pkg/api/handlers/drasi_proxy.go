@@ -55,6 +55,10 @@ const (
 	drasiProxyDefaultTimeout = 30 * time.Second
 )
 
+// drasiProxyClient is an HTTP client with a timeout for Drasi proxy requests.
+// Using http.DefaultClient would hang indefinitely on unresponsive upstreams.
+var drasiProxyClient = &http.Client{Timeout: drasiProxyDefaultTimeout}
+
 // drasiHopByHopHeaders are removed from both directions per RFC 7230 §6.1.
 var drasiHopByHopHeaders = map[string]bool{
 	"connection":          true,
@@ -138,7 +142,7 @@ func (h *MCPHandlers) proxyDrasiServer(c *fiber.Ctx, upstreamPath string, upstre
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
-	return streamUpstream(c, http.DefaultClient, req)
+	return streamUpstream(c, drasiProxyClient, req)
 }
 
 // proxyDrasiPlatform forwards to drasi-platform's `drasi-api` Service via

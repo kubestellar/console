@@ -1901,7 +1901,8 @@
     "goHome": "Go to home dashboard",
     "themeToggle": "Theme: {{theme}} (click to toggle)",
     "moreOptions": "More options",
-    "viewDocs": "View documentation"
+    "viewDocs": "View documentation",
+    "clusterFilter": "Cluster Filter"
   },
   "missionSidebar": {
     "expandSidebar": "Expand sidebar",
@@ -2012,7 +2013,11 @@
     "requestTypeLabel": "Request Type",
     "createdBy": "Created by",
     "upvote": "Upvote",
-    "upvoted": "Upvoted"
+    "upvoted": "Upvoted",
+    "couldNotLoadStatus": "Couldn't load feedback status: {{error}}",
+    "yourRequestsCount_one": "{{count}} request",
+    "yourRequestsCount_other": "{{count}} requests",
+    "reportBugOrFeature": "Report a bug or request a feature"
   },
   "nps": {
     "title": "How's your experience with KubeStellar Console?",
@@ -3850,6 +3855,16 @@
   "deployments": {
     "errorLoading": "Error loading deployment data"
   },
+  "workloads": {
+    "deleteDeployment": "Delete Deployment",
+    "confirmDelete": "Are you sure you want to delete deployment {{name}}? This action cannot be undone.",
+    "deleting": "Deleting deployment...",
+    "deleteSuccess": "Deployment deleted",
+    "deleteError": "Failed to delete deployment",
+    "restarting": "Restarting deployment...",
+    "restartSuccess": "Restart triggered",
+    "restartError": "Failed to restart deployment"
+  },
   "nodeDetail": {
     "showAll": "Show all",
     "showLess": "Show less",
@@ -3862,12 +3877,46 @@
   },
   "drafts": {
     "noSavedDrafts": "No saved drafts",
-    "editing": "Editing"
+    "editing": "Editing",
+    "savedDrafts": "Saved Drafts",
+    "deleteAllConfirm": "Delete all?",
+    "allDraftsDeleted": "All drafts deleted",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "clearAll": "Clear All",
+    "saveWorkInProgress": "Save your work-in-progress bug reports and feature requests here",
+    "startNewReport": "Start writing a new report",
+    "typeBug": "Bug",
+    "typeFeature": "Feature",
+    "repoDocs": "Docs",
+    "repoConsole": "Console",
+    "saved": "Saved",
+    "deleteThisDraft": "Delete this draft?",
+    "reload": "Reload",
+    "edit": "Edit",
+    "delete": "Delete",
+    "recentlyDeleted": "Recently Deleted",
+    "emptyAllConfirm": "Remove all?",
+    "permanentlyDeletedAll": "All deleted drafts removed",
+    "emptyAll": "Empty All",
+    "lastEdited": "Last edited",
+    "deletedTime": "Deleted",
+    "permanentDeleteConfirm": "Delete permanently?",
+    "permanentlyDeleted": "Draft permanently deleted",
+    "restore": "Restore",
+    "deletePermanently": "Delete Permanently",
+    "draftRestored": "Draft restored"
   },
   "pipelines": {
     "allRepos": "All repos"
   },
   "rightSizeAdvisor": {
     "memory": "Memory"
+  },
+  "errors": {
+    "storagePersistFailed": "Failed to save your selection. Browser storage may be full.",
+    "cacheWriteFailed": "Failed to cache data. Browser storage may be full.",
+    "cardRegistryLoadFailed": "Failed to load card catalog.",
+    "cacheResetFailed": "Failed to reset some caches during mode switch."
   }
 }

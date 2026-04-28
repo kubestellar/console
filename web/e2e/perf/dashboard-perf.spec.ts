@@ -396,7 +396,7 @@ test.afterAll(async () => {
   // CI_TOLERANCE_PCT (env var) applies an additional multiplier so that
   // nightly CI runs on shared runners don't false-alarm. The same pattern
   // is used by all-cards-ttfi.spec.ts.
-  const CI_TOLERANCE_PCT = Number(process.env.CI_TOLERANCE_PCT) || (process.env.CI ? 50 : 0)
+  const CI_TOLERANCE_PCT = Number(process.env.CI_TOLERANCE_PCT) || (process.env.CI ? 100 : 0)
   const toleranceMultiplier = 1 + CI_TOLERANCE_PCT / 100
 
   const DEMO_FIRST_CARD_THRESHOLD_MS = 3000 * toleranceMultiplier

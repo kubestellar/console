@@ -40,10 +40,7 @@ export const STREAM_SAMPLES: StreamSample[] = [
 
 es.onmessage = (ev) => {
   const delta = JSON.parse(ev.data)
-  // delta.added / delta.updated / delta.deleted are arrays of result rows.
-  for (const row of delta.added ?? []) console.log('added', row)
-  for (const row of delta.updated ?? []) console.log('updated', row)
-  for (const row of delta.deleted ?? []) console.log('deleted', row)
+  // process delta.added, delta.updated, delta.deleted arrays
 }
 
 es.onerror = () => console.error('SSE connection lost — browser will retry')
@@ -60,9 +57,7 @@ const es = new EventSource('${endpoint}')
 
 es.on('message', (ev) => {
   const delta = JSON.parse(ev.data)
-  for (const row of delta.added ?? []) console.log('added', row)
-  for (const row of delta.updated ?? []) console.log('updated', row)
-  for (const row of delta.deleted ?? []) console.log('deleted', row)
+  // process delta.added, delta.updated, delta.deleted arrays
 })
 
 es.on('error', (err) => console.error('stream error', err))

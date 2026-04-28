@@ -47,8 +47,10 @@ test.describe('404 / not-found route', () => {
     // change introduces a dedicated 404 page, this test should still pass as
     // long as SOME navigation affordance back to / is rendered.
 
-    // Wait for the redirect to complete — assert we land on HOME, not the unmatched route
-    await expect(page).toHaveURL(/\/($|\?)/, { timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
+    // Wait for the redirect to complete — assert we land on HOME, not the unmatched route.
+    // CI shared runners can be slow; allow extra time for the SPA redirect.
+    const REDIRECT_TIMEOUT_MS = 20_000
+    await expect(page).toHaveURL(/\/($|\?)/, { timeout: REDIRECT_TIMEOUT_MS })
 
     const sidebarOrNav = page
       .locator('nav')

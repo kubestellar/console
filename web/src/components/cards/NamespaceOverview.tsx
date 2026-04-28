@@ -11,6 +11,7 @@ import { ClusterBadge } from '../ui/ClusterBadge'
 import { StatusBadge } from '../ui/StatusBadge'
 import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { useCardLoadingState } from './CardDataContext'
+import { useToast } from '../ui/Toast'
 import { STORAGE_KEY_NS_OVERVIEW_CLUSTER, STORAGE_KEY_NS_OVERVIEW_NAMESPACE } from '../../lib/constants/storage'
 
 interface NamespaceOverviewProps {
@@ -22,6 +23,7 @@ interface NamespaceOverviewProps {
 
 export function NamespaceOverview({ config }: NamespaceOverviewProps) {
   const { t } = useTranslation(['common', 'cards'])
+  const { showToast } = useToast()
   const { deduplicatedClusters: allClusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, isFailed: clustersFailed, consecutiveFailures: clustersConsecutiveFailures } = useClusters()
 
   // Initialize from config prop (card-level override) or persisted localStorage value (#3115)
@@ -61,12 +63,12 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
 
   // Persist cluster selection so it survives page navigation (#3115)
   useEffect(() => {
-    try { localStorage.setItem(STORAGE_KEY_NS_OVERVIEW_CLUSTER, selectedCluster) } catch (e) { console.warn('[NamespaceOverview] failed to persist cluster selection:', e) }
+    try { localStorage.setItem(STORAGE_KEY_NS_OVERVIEW_CLUSTER, selectedCluster) } catch (e) { console.warn('[NamespaceOverview] failed to persist cluster selection:', e); showToast(t('errors.storagePersistFailed'), 'warning') }
   }, [selectedCluster])
 
   // Persist namespace selection so it survives page navigation (#3115)
   useEffect(() => {
-    try { localStorage.setItem(STORAGE_KEY_NS_OVERVIEW_NAMESPACE, selectedNamespace) } catch (e) { console.warn('[NamespaceOverview] failed to persist namespace selection:', e) }
+    try { localStorage.setItem(STORAGE_KEY_NS_OVERVIEW_NAMESPACE, selectedNamespace) } catch (e) { console.warn('[NamespaceOverview] failed to persist namespace selection:', e); showToast(t('errors.storagePersistFailed'), 'warning') }
   }, [selectedNamespace])
 
   // Auto-select first available cluster when none is selected (#3113 — works in both demo and live mode)

@@ -88,7 +88,7 @@ export function RepoPicker() {
   const badgeImg = `https://img.shields.io/endpoint?url=${encodeURIComponent(badgeEndpoint)}`
   const badgeHref = `${BADGE_SITE}/acmm?repo=${encodeURIComponent(repo)}`
   const badgeMarkdown = `[![ACMM](${badgeImg})](${badgeHref})`
-  const badgeHtml = `<a href="${badgeHref}"><img src="${badgeImg}" alt="ACMM" /></a>`
+  const badgeHtml = `<a href="${badgeHref}" target="_blank" rel="noopener noreferrer"><img src="${badgeImg}" alt="ACMM" /></a>`
 
   function copy(text: string, tag: string) {
     navigator.clipboard.writeText(text).then(

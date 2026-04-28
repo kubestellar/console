@@ -103,9 +103,9 @@ export function DemoToLocalCTA() {
           <div className="flex items-center gap-2">
             <KeyRound className="w-4 h-4 text-purple-400" />
             <div>
-              <h3 className="text-sm font-semibold text-foreground">
+              <p className="text-sm font-semibold text-foreground">
                 Set up GitHub OAuth to sign in
-              </h3>
+              </p>
               <p className="text-xs text-muted-foreground mt-0.5">
                 You&apos;re viewing demo data &mdash; configure GitHub OAuth to authenticate and connect your clusters
               </p>
@@ -143,9 +143,9 @@ export function DemoToLocalCTA() {
         <div className="flex items-center gap-2">
           <Terminal className="w-4 h-4 text-blue-400" />
           <div>
-            <h3 className="text-sm font-semibold text-foreground">
+            <p className="text-sm font-semibold text-foreground">
               Install KubeStellar Console locally to connect your clusters
-            </h3>
+            </p>
             <p className="text-xs text-muted-foreground mt-0.5">
               You&apos;re viewing demo data &mdash; install locally to monitor your real clusters
             </p>

@@ -21,6 +21,7 @@ const lastArgs: { current: Record<string, unknown> | null } = { current: null }
 const lastRefetch: { current: ReturnType<typeof vi.fn> | null } = { current: null }
 
 vi.mock('../mcp/shared', () => ({
+    createCachedHook: vi.fn(),
   agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
   clusterCacheRef: { clusters: [] },
   REFRESH_INTERVAL_MS: 120_000,
@@ -28,6 +29,7 @@ vi.mock('../mcp/shared', () => ({
 }))
 
 vi.mock('../../lib/cache', () => ({
+    createCachedHook: vi.fn(),
   useCache: (args: Record<string, unknown>) => {
     lastArgs.current = args
     const refetch = vi.fn()

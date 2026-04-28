@@ -240,7 +240,7 @@ describe('Compliance dashboard component', () => {
     setupDefaults()
     render(<Compliance />)
     const props = getLastDashboardProps()
-    expect(props.title).toBe('Security Posture')
+    expect(props.title).toBe('Compliance')
     expect(props.statsType).toBe('compliance')
     expect(props.storageKey).toBe('compliance-dashboard-cards')
     expect(props.emptyState).toEqual({

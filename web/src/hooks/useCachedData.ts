@@ -285,11 +285,11 @@ import { clusterCacheRef } from './mcp/shared'
 import { isAgentUnavailable } from './useLocalAgent'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import {
-  fetchAPI,
   fetchBackendAPI,
   fetchFromAllClusters,
   fetchFromAllClustersViaBackend,
   getToken,
+  getClusterFetcher,
   MAX_PREFETCH_PODS,
 } from '../lib/cache/fetcherUtils'
 import {
@@ -332,7 +332,7 @@ export const coreFetchers = {
     return []
   },
   events: async (): Promise<ClusterEvent[]> => {
-    const data = await fetchAPI<{ events: ClusterEvent[] }>('events', { limit: 20 })
+    const data = await getClusterFetcher()<{ events: ClusterEvent[] }>('events', { limit: 20 })
     return data.events || []
   },
   deploymentIssues: async (): Promise<DeploymentIssue[]> => {
@@ -368,7 +368,7 @@ export const coreFetchers = {
     return []
   },
   services: async (): Promise<Service[]> => {
-    const data = await fetchAPI<{ services: Service[] }>('services', {})
+    const data = await getClusterFetcher()<{ services: Service[] }>('services', {})
     return data.services || []
   },
   securityIssues: async (): Promise<SecurityIssue[]> => {

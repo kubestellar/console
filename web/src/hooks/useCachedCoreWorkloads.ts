@@ -16,13 +16,13 @@ import { FETCH_DEFAULT_TIMEOUT_MS, KUBECTL_EXTENDED_TIMEOUT_MS } from '../lib/co
 import { VULN_SEVERITY_ORDER } from '../types/alerts'
 import { settledWithConcurrency } from '../lib/utils/concurrency'
 import {
-  fetchAPI,
   fetchBackendAPI,
   fetchFromAllClusters,
   fetchFromAllClustersViaBackend,
   fetchViaSSE,
   fetchViaBackendSSE,
   getToken,
+  getClusterFetcher,
   AGENT_HTTP_TIMEOUT_MS,
 } from '../lib/cache/fetcherUtils'
 import {
@@ -196,7 +196,7 @@ export function useCachedPods(
     fetcher: async () => {
       let pods: PodInfo[]
       if (cluster) {
-        const raw = await fetchAPI<unknown>('pods', { cluster, namespace })
+        const raw = await getClusterFetcher()<unknown>('pods', { cluster, namespace })
         const data = validateArrayResponse<{ pods: PodInfo[] }>(PodsResponseSchema, raw, '/api/mcp/pods', 'pods')
         pods = (data.pods || []).map(p => ({ ...p, cluster }))
       } else {
@@ -220,7 +220,7 @@ export function useCachedPods(
     data: result.data,
     isLoading: result.isLoading,
     isRefreshing: result.isRefreshing,
-    isDemoFallback: result.isDemoFallback,
+    isDemoFallback: result.isDemoFallback && !result.isLoading,
     error: result.error,
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
@@ -246,7 +246,7 @@ export function useCachedAllPods(
     demoData: getDemoPods(),
     fetcher: async () => {
       if (cluster) {
-        const raw = await fetchAPI<unknown>('pods', { cluster })
+        const raw = await getClusterFetcher()<unknown>('pods', { cluster })
         const data = validateArrayResponse<{ pods: PodInfo[] }>(PodsResponseSchema, raw, '/api/mcp/pods (allPods)', 'pods')
         return (data.pods || []).map(p => ({ ...p, cluster }))
       }
@@ -261,7 +261,7 @@ export function useCachedAllPods(
     data: result.data,
     isLoading: result.isLoading,
     isRefreshing: result.isRefreshing,
-    isDemoFallback: result.isDemoFallback,
+    isDemoFallback: result.isDemoFallback && !result.isLoading,
     error: result.error,
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
@@ -318,7 +318,7 @@ export function useCachedEvents(
 
       // Fall back to REST API (requires backend auth)
       if (cluster) {
-        const raw = await fetchAPI<unknown>('events', { cluster, namespace, limit })
+        const raw = await getClusterFetcher()<unknown>('events', { cluster, namespace, limit })
         const data = validateArrayResponse<{ events: ClusterEvent[] }>(EventsResponseSchema, raw, '/api/mcp/events', 'events')
         return data.events || []
       }
@@ -357,7 +357,7 @@ export function useCachedEvents(
     data: result.data,
     isLoading: result.isLoading,
     isRefreshing: result.isRefreshing,
-    isDemoFallback: result.isDemoFallback,
+    isDemoFallback: result.isDemoFallback && !result.isLoading,
     error: result.error,
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
@@ -438,7 +438,7 @@ export function useCachedPodIssues(
     data: result.data,
     isLoading: result.isLoading,
     isRefreshing: result.isRefreshing,
-    isDemoFallback: result.isDemoFallback,
+    isDemoFallback: result.isDemoFallback && !result.isLoading,
     error: result.error,
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
@@ -525,7 +525,7 @@ export function useCachedDeploymentIssues(
     data: result.data,
     isLoading: result.isLoading,
     isRefreshing: result.isRefreshing,
-    isDemoFallback: result.isDemoFallback,
+    isDemoFallback: result.isDemoFallback && !result.isLoading,
     error: result.error,
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
@@ -582,7 +582,7 @@ export function useCachedDeployments(
       const hasRealToken = token && token !== 'demo-token'
       if (hasRealToken && !isBackendUnavailable()) {
         if (cluster) {
-          const raw = await fetchAPI<unknown>('deployments', { cluster, namespace })
+          const raw = await getClusterFetcher()<unknown>('deployments', { cluster, namespace })
           const data = validateArrayResponse<{ deployments: Deployment[] }>(DeploymentsResponseSchema, raw, '/api/mcp/deployments', 'deployments')
           const deployments = data.deployments || []
           return deployments.map(d => ({ ...d, cluster: d.cluster || cluster }))
@@ -606,7 +606,7 @@ export function useCachedDeployments(
     data: result.data,
     isLoading: result.isLoading,
     isRefreshing: result.isRefreshing,
-    isDemoFallback: result.isDemoFallback,
+    isDemoFallback: result.isDemoFallback && !result.isLoading,
     error: result.error,
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
@@ -632,7 +632,7 @@ export function useCachedServices(
     demoData: getDemoServices(),
     fetcher: async () => {
       if (cluster) {
-        const data = await fetchAPI<{ services: Service[] }>('services', { cluster, namespace })
+        const data = await getClusterFetcher()<{ services: Service[] }>('services', { cluster, namespace })
         return (data.services || []).map(s => ({ ...s, cluster }))
       }
       return await fetchFromAllClusters<Service>('services', 'services', { namespace })
@@ -646,7 +646,7 @@ export function useCachedServices(
     data: result.data,
     isLoading: result.isLoading,
     isRefreshing: result.isRefreshing,
-    isDemoFallback: result.isDemoFallback,
+    isDemoFallback: result.isDemoFallback && !result.isLoading,
     error: result.error,
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
@@ -717,7 +717,7 @@ export function useCachedSecurityIssues(
     data: result.data,
     isLoading: result.isLoading,
     isRefreshing: result.isRefreshing,
-    isDemoFallback: result.isDemoFallback,
+    isDemoFallback: result.isDemoFallback && !result.isLoading,
     error: result.error,
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
@@ -789,7 +789,7 @@ export function useCachedWorkloads(
     data: result.data,
     isLoading: result.isLoading,
     isRefreshing: result.isRefreshing,
-    isDemoFallback: result.isDemoFallback,
+    isDemoFallback: result.isDemoFallback && !result.isLoading,
     error: result.error,
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,

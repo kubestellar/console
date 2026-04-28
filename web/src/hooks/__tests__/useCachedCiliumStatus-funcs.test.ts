@@ -9,10 +9,12 @@ import { renderHook } from '@testing-library/react'
 const mockFetchCiliumStatus = vi.fn()
 
 vi.mock('../useCachedData/agentFetchers', () => ({
+    createCachedHook: vi.fn(),
   fetchCiliumStatus: (...args: unknown[]) => mockFetchCiliumStatus(...args),
 }))
 
 vi.mock('../useCachedData/demoData', () => ({
+    createCachedHook: vi.fn(),
   getDemoCiliumStatus: () => ({
     status: 'Healthy',
     nodes: [{ name: 'demo-node', status: 'Ready' }],
@@ -23,6 +25,7 @@ vi.mock('../useCachedData/demoData', () => ({
 }))
 
 vi.mock('../useDemoMode', () => ({
+    createCachedHook: vi.fn(),
   useDemoMode: () => ({ isDemoMode: false }),
   isDemoModeForced: () => false,
   canToggleDemoMode: () => true,
@@ -47,6 +50,7 @@ const mockUseCache = vi.fn(() => ({
 }))
 
 vi.mock('../../lib/cache', () => ({
+    createCachedHook: vi.fn(),
   useCache: (...args: unknown[]) => mockUseCache(...args),
 }))
 

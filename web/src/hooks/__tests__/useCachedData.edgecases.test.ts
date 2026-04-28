@@ -27,6 +27,7 @@ const mockFetchLLMdServers = vi.fn()
 const mockFetchLLMdModels = vi.fn()
 
 vi.mock('../../lib/cache', () => ({
+    createCachedHook: vi.fn(),
   useCache: (...args: unknown[]) => mockUseCache(...args),
   // createCachedHook is a factory that returns a React hook. Hooks that use it
   // are re-exported through useCachedData.ts; this stub prevents load failures
@@ -42,24 +43,29 @@ vi.mock('../../lib/cache', () => ({
 }))
 
 vi.mock('../../lib/api', () => ({
+    createCachedHook: vi.fn(),
   isBackendUnavailable: () => mockIsBackendUnavailable(),
   authFetch: (...args: unknown[]) => mockAuthFetch(...args),
 }))
 
 vi.mock('../../lib/kubectlProxy', () => ({
+    createCachedHook: vi.fn(),
   kubectlProxy: mockKubectlProxy,
 }))
 
 vi.mock('../../lib/sseClient', () => ({
+    createCachedHook: vi.fn(),
   fetchSSE: (...args: unknown[]) => mockFetchSSE(...args),
 }))
 
 vi.mock('../mcp/shared', () => ({
+    createCachedHook: vi.fn(),
   clusterCacheRef: { clusters: [] },
   agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
 }))
 
 vi.mock('../useLocalAgent', () => ({
+    createCachedHook: vi.fn(),
   isAgentUnavailable: () => mockIsAgentUnavailable(),
 }))
 
@@ -79,6 +85,7 @@ vi.mock('../../lib/constants/network', async (importOriginal) => {
 } })
 
 vi.mock('../../lib/utils/concurrency', () => ({
+    createCachedHook: vi.fn(),
   settledWithConcurrency: async (...args: unknown[]) => {
     const result = await mockSettledWithConcurrency(...args)
     // Invoke the onSettled callback (3rd arg) so the production code's
@@ -93,20 +100,25 @@ vi.mock('../../lib/utils/concurrency', () => ({
 }))
 
 vi.mock('../useCachedProw', () => ({
+    createCachedHook: vi.fn(),
   fetchProwJobs: (...args: unknown[]) => mockFetchProwJobs(...args),
 }))
 
 vi.mock('../useCachedLLMd', () => ({
+    createCachedHook: vi.fn(),
   fetchLLMdServers: (...args: unknown[]) => mockFetchLLMdServers(...args),
   fetchLLMdModels: (...args: unknown[]) => mockFetchLLMdModels(...args),
 }))
 
-vi.mock('../useCachedISO27001', () => ({}))
+vi.mock('../useCachedISO27001', () => ({
+    createCachedHook: vi.fn(),}))
 
 // Stub the re-exports so the module loads cleanly
-vi.mock('../useWorkloads', () => ({}))
+vi.mock('../useWorkloads', () => ({
+    createCachedHook: vi.fn(),}))
 
 vi.mock('../../lib/schemas/validate', () => ({
+    createCachedHook: vi.fn(),
   validateResponse: (_schema: unknown, data: unknown) => data,
   validateArrayResponse: (_schema: unknown, data: unknown) => data,
 }))

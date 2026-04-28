@@ -22,6 +22,7 @@ const HEARTBEAT_INTERVAL = 30_000 // Heartbeat every 30 seconds
 const HEARTBEAT_JITTER = 3_000 // Jitter (0-3s) to spread heartbeats without long delays
 
 import { MAX_WS_RECONNECT_ATTEMPTS, getWsBackoffDelay } from '../lib/constants/network'
+import { appendWsAuthToken } from '../lib/utils/wsAuth'
 
 const RECOVERY_DELAY = 30_000 // Retry after circuit breaker trips
 /** Timeout for fetch() call to the active-users endpoint */
@@ -191,7 +192,7 @@ function startPresenceConnection() {
 
   function connect() {
     try {
-      presenceWs = new WebSocket(wsUrl)
+      presenceWs = new WebSocket(appendWsAuthToken(wsUrl))
     } catch {
       presenceStarted = false
       return
@@ -208,7 +209,7 @@ function startPresenceConnection() {
         if (presenceWs?.readyState === WebSocket.OPEN) {
           presenceWs.send(JSON.stringify({ type: 'ping' }))
         }
-      }, 30000)
+      }, HEARTBEAT_INTERVAL)
     }
 
     presenceWs.onmessage = (event) => {
@@ -290,6 +291,7 @@ async function fetchActiveUsers() {
     // before the outer try/catch processes the rejection (microtask timing issue).
     const data = await resp.json().catch(() => null) as ActiveUsersInfo | null
     if (!data) throw new Error('Invalid JSON response')
+    if (!Number.isFinite(data.activeUsers)) throw new Error('Invalid activeUsers value')
     consecutiveFailures = 0 // Reset on success
 
     // Smooth the count to handle Netlify Blobs eventual consistency fluctuations
@@ -350,7 +352,7 @@ export function useActiveUsers() {
   useEffect(() => {
     // On Netlify (no backend): use HTTP heartbeat for presence tracking
     // With backend: use WebSocket presence connection
-    if (isDemoModeForced) {
+    if (isDemoModeForced || getDemoMode()) {
       startHeartbeat()
     } else {
       startPresenceConnection()

@@ -169,7 +169,7 @@ vi.mock('../../../hooks/useCardGridNavigation', () => ({
 vi.mock('../../../lib/modals', () => ({
   useModalState: () => ({ isOpen: false, open: vi.fn(), close: vi.fn() }),
 }))
-vi.mock('../../../lib/cache', () => ({ setAutoRefreshPaused: vi.fn() }))
+vi.mock('../../../lib/cache', () => ({ setAutoRefreshPaused: vi.fn(), createCachedHook: vi.fn((_config: unknown) => () => ({})) }))
 vi.mock('../../../hooks/useRefreshIndicator', () => ({
   useRefreshIndicator: (fn: () => void) => ({ showIndicator: false, triggerRefresh: fn }),
 }))

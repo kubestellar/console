@@ -9,14 +9,17 @@ const { mockAuthFetch, mockUseCache: mockUseCacheHoisted } = vi.hoisted(() => ({
   mockAuthFetch: vi.fn(),
   mockUseCache: vi.fn(),
 }))
-vi.mock('../../lib/api', () => ({ authFetch: mockAuthFetch }))
+vi.mock('../../lib/api', () => ({
+    createCachedHook: vi.fn(), authFetch: mockAuthFetch }))
 
 vi.mock('../../lib/constants/network', () => ({
+    createCachedHook: vi.fn(),
   FETCH_DEFAULT_TIMEOUT_MS: 5000,
   LOCAL_AGENT_HTTP_URL: 'http://localhost:8585',
 }))
 
 vi.mock('../useDemoMode', () => ({
+    createCachedHook: vi.fn(),
   useDemoMode: () => ({ isDemoMode: false }),
   isDemoModeForced: () => false,
   canToggleDemoMode: () => true,
@@ -41,10 +44,12 @@ mockUseCache.mockReturnValue({
   refetch: vi.fn(),
 })
 vi.mock('../../lib/cache', () => ({
+    createCachedHook: vi.fn(),
   useCache: (...args: unknown[]) => mockUseCacheHoisted(...args),
 }))
 
 vi.mock('../../components/cards/CardDataContext', () => ({
+    createCachedHook: vi.fn(),
   useCardLoadingState: vi.fn(() => ({ showSkeleton: false, showEmptyState: false })),
   useCardDemoState: vi.fn(),
 }))

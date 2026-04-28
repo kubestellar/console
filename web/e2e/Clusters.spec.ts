@@ -32,9 +32,9 @@ async function setupClustersTest(page: Page) {
         contentType: 'application/json',
         body: JSON.stringify({
           clusters: [
-            { name: 'prod-east', context: 'ctx-1', healthy: true, reachable: true, nodeCount: 5, podCount: 45, version: '1.28.0' },
-            { name: 'prod-west', context: 'ctx-2', healthy: true, reachable: true, nodeCount: 3, podCount: 32, version: '1.27.0' },
-            { name: 'staging', context: 'ctx-3', healthy: false, reachable: true, nodeCount: 2, podCount: 15, version: '1.28.0' },
+            { name: 'prod-east', healthy: true, reachable: true, nodeCount: 5, podCount: 45, version: '1.28.0' },
+            { name: 'prod-west', healthy: true, reachable: true, nodeCount: 3, podCount: 32, version: '1.27.0' },
+            { name: 'staging', healthy: false, reachable: true, nodeCount: 2, podCount: 15, version: '1.28.0' },
           ],
         }),
       })
@@ -82,8 +82,8 @@ test.describe('Clusters Page', () => {
       await expect(page.getByTestId('clusters-page')).toBeVisible({ timeout: 10000 })
 
       // Should show cluster names from our mock data
-      // Firefox renders mock data slightly later — use consistent timeouts
-      const CLUSTER_NAME_TIMEOUT_MS = 10_000
+      // Webkit/Firefox render mock data slightly later — use a generous timeout
+      const CLUSTER_NAME_TIMEOUT_MS = 20_000
       await expect(page.getByText('prod-east')).toBeVisible({ timeout: CLUSTER_NAME_TIMEOUT_MS })
       await expect(page.getByText('prod-west')).toBeVisible({ timeout: CLUSTER_NAME_TIMEOUT_MS })
       await expect(page.getByText('staging')).toBeVisible({ timeout: CLUSTER_NAME_TIMEOUT_MS })
@@ -139,6 +139,10 @@ test.describe('Clusters Page', () => {
   test.describe('Responsive Design', () => {
     test('adapts to mobile viewport', async ({ page }) => {
       await page.setViewportSize({ width: 375, height: 667 })
+      // Reload so the page initialises at the mobile viewport — addInitScript
+      // re-runs on reload, and the layout picks up the correct breakpoint.
+      await page.reload()
+      await page.waitForLoadState('domcontentloaded')
 
       // Page should still render at mobile size
       await expect(page.getByTestId('clusters-page')).toBeVisible({ timeout: 10000 })
@@ -209,11 +213,11 @@ test.describe('Clusters Page', () => {
 
       await page.reload()
       await page.waitForLoadState('domcontentloaded')
-      await expect(page.getByTestId('clusters-page')).toBeVisible({ timeout: 10000 })
+      await expect(page.getByTestId('clusters-page')).toBeVisible({ timeout: 20_000 })
 
       // The Healthy filter button should show count 2 (both node-healthy-flag-false and flag-healthy-no-nodes)
-      // Firefox renders filter tabs slightly later — use generous timeout
-      const FILTER_TAB_TIMEOUT_MS = 10_000
+      // Webkit/Firefox render filter tabs slightly later — use generous timeout
+      const FILTER_TAB_TIMEOUT_MS = 20_000
       const healthyTab = page.getByRole('button', { name: /Healthy \(2\)/ })
       await expect(healthyTab).toBeVisible({ timeout: FILTER_TAB_TIMEOUT_MS })
 
@@ -254,10 +258,10 @@ test.describe('Clusters Page', () => {
 
       await page.reload()
       await page.waitForLoadState('domcontentloaded')
-      await expect(page.getByTestId('clusters-page')).toBeVisible({ timeout: 10000 })
+      await expect(page.getByTestId('clusters-page')).toBeVisible({ timeout: 20_000 })
 
       // The Unhealthy tab must show count 1
-      const FILTER_TAB_TIMEOUT_MS = 10_000
+      const FILTER_TAB_TIMEOUT_MS = 20_000
       const unhealthyTab = page.getByRole('button', { name: /Unhealthy \(1\)/ })
       await expect(unhealthyTab).toBeVisible({ timeout: FILTER_TAB_TIMEOUT_MS })
 

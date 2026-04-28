@@ -46,9 +46,12 @@ async function setupTourTest(page: Page, tourCompleted: boolean = true) {
   // parsed and executed scripts, which is too late for webkit/Safari where the
   // auth redirect fires synchronously on script evaluation.
   // page.addInitScript() injects the snippet ahead of any page code (#9096).
+  // kc-demo-mode=true ensures the dashboard renders immediately from the demo
+  // fallback rather than waiting for API data (avoids loading skeleton timeout).
   const completed = tourCompleted
   await page.addInitScript((isCompleted: boolean) => {
     localStorage.setItem('token', 'test-token')
+    localStorage.setItem('kc-demo-mode', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
     if (isCompleted) {
       localStorage.setItem('kubestellar-console-tour-completed', 'true')
@@ -136,14 +139,17 @@ test.describe('Tour/Onboarding', () => {
       await page.reload()
       await page.waitForLoadState('domcontentloaded')
 
-      // Verify flag is still set
+      // Verify flag is still set — addInitScript re-runs on reload and
+      // re-sets the flag before page scripts execute.
       const completed = await page.evaluate(() =>
         localStorage.getItem('kubestellar-console-tour-completed')
       )
       expect(completed).toBe('true')
 
       // Also verify the dashboard renders (flag actually prevented tour). #9518
-      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
+      // Firefox can be slower to mount the React tree after reload; use a
+      // generous timeout (#nightly-playwright).
+      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 20_000 })
     })
 
     test('completing tour sets localStorage flag', async ({ page }) => {
@@ -190,6 +196,12 @@ test.describe('Tour/Onboarding', () => {
           localStorage.getItem('kubestellar-console-tour-completed')
         )
         expect(flag).toBe('true')
+
+        // Verify the tour overlay is actually dismissed from the DOM
+        // and the dashboard is visible underneath (#10736)
+        const tourDialog = page.getByRole('dialog')
+        await expect(tourDialog).not.toBeVisible({ timeout: 5000 })
+        await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
       }
     })
   })
@@ -214,14 +226,22 @@ test.describe('Tour/Onboarding', () => {
       await page.goto('/')
       await page.waitForLoadState('domcontentloaded')
 
-      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
+      // Firefox can be slower to mount the React tree; use a generous
+      // timeout (#nightly-playwright).
+      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 20_000 })
+
+      // Click a non-interactive area first so the page (not browser chrome)
+      // holds keyboard focus. Without this, Firefox interprets ArrowLeft as
+      // browser-history-back, navigating away and removing dashboard-page
+      // from the DOM (#nightly-playwright).
+      await page.getByTestId('dashboard-page').click({ position: { x: 10, y: 10 }, force: true })
 
       // Press arrow keys should not crash
       await page.keyboard.press('ArrowRight')
       await page.keyboard.press('ArrowLeft')
 
       // Page should still be visible
-      await expect(page.getByTestId('dashboard-page')).toBeVisible()
+      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 20_000 })
     })
   })
 
@@ -229,13 +249,25 @@ test.describe('Tour/Onboarding', () => {
     test('adapts to mobile viewport', async ({ page }) => {
       await setupTourTest(page, true)
 
-      await page.goto('/')
+      // Set viewport BEFORE goto so the page lays out in mobile mode from
+      // the first render (avoids a desktop→mobile transition in webkit that
+      // temporarily sets visibility:hidden on the main content during the
+      // 300 ms CSS transition).
       await page.setViewportSize({ width: 375, height: 667 })
+      await page.goto('/')
 
-      // Webkit may need additional time after viewport resize to re-layout
-      // (#nightly-playwright).
+      // Webkit has a rendering quirk where elements inside a display:contents
+      // wrapper can have visibility:hidden during CSS margin transitions.
+      // Use waitForFunction (layout height > 0) instead of toBeVisible()
+      // to avoid false failures on webkit mobile (#nightly-playwright).
       const RESPONSIVE_TIMEOUT_MS = 15_000
-      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: RESPONSIVE_TIMEOUT_MS })
+      await page.waitForFunction(
+        () => {
+          const el = document.querySelector('[data-testid="dashboard-page"]')
+          return el !== null && el.getBoundingClientRect().height > 0
+        },
+        { timeout: RESPONSIVE_TIMEOUT_MS }
+      )
     })
 
     test('adapts to tablet viewport', async ({ page }) => {

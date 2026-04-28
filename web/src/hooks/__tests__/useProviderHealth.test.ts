@@ -16,12 +16,14 @@ const mockUseCacheResult = {
 }
 
 vi.mock('../useLocalAgent', () => ({
+    createCachedHook: vi.fn(),
   isAgentUnavailable: vi.fn(() => true),
   reportAgentDataSuccess: vi.fn(),
   reportAgentDataError: vi.fn(),
 }))
 
 vi.mock('../useDemoMode', () => ({
+    createCachedHook: vi.fn(),
   getDemoMode: vi.fn(() => false),
   useDemoMode: vi.fn(() => ({ isDemoMode: false })),
 }))
@@ -40,10 +42,12 @@ vi.mock('../../lib/constants', async (importOriginal) => {
 } })
 
 vi.mock('../mcp/clusters', () => ({
+    createCachedHook: vi.fn(),
   useClusters: () => ({ clusters: mockClusters }),
 }))
 
 vi.mock('../../lib/cache', () => ({
+    createCachedHook: vi.fn(),
   useCache: () => ({
     ...mockUseCacheResult,
     data: mockUseCacheResult.data,
@@ -51,6 +55,7 @@ vi.mock('../../lib/cache', () => ({
 }))
 
 vi.mock('../../components/ui/CloudProviderIcon', () => ({
+    createCachedHook: vi.fn(),
   detectCloudProvider: (name: string) => {
     if (name.includes('eks')) return 'eks'
     if (name.includes('gke')) return 'gke'

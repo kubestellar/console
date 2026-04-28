@@ -7,7 +7,7 @@
  */
 
 import { useCache, type RefreshCategory, type CachedHookResult } from '../lib/cache'
-import { fetchAPI, fetchFromAllClusters, fetchViaSSE, getToken } from '../lib/cache/fetcherUtils'
+import { fetchFromAllClusters, fetchViaSSE, getToken, getClusterFetcher } from '../lib/cache/fetcherUtils'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import {
   getDemoPVCs,
@@ -79,7 +79,7 @@ function createCachedK8sResourceHook<T extends object>(
       demoData: getDemoData(),
       fetcher: async () => {
         if (cluster) {
-          const data = await fetchAPI<Record<string, T[]>>(apiEndpoint, { cluster, namespace })
+          const data = await getClusterFetcher()<Record<string, T[]>>(apiEndpoint, { cluster, namespace })
           return ((data[responseKey] as T[]) || []).map(item => ({ ...item, cluster }))
         }
         return await fetchFromAllClusters<T>(apiEndpoint, responseKey, { namespace })
@@ -94,7 +94,7 @@ function createCachedK8sResourceHook<T extends object>(
       data: result.data,
       isLoading: result.isLoading,
       isRefreshing: result.isRefreshing,
-      isDemoFallback: result.isDemoFallback,
+      isDemoFallback: result.isDemoFallback && !result.isLoading,
       error: result.error,
       isFailed: result.isFailed,
       consecutiveFailures: result.consecutiveFailures,
@@ -239,7 +239,7 @@ export function useCachedNamespaces(
     data: result.data,
     isLoading: result.isLoading,
     isRefreshing: result.isRefreshing,
-    isDemoFallback: result.isDemoFallback,
+    isDemoFallback: result.isDemoFallback && !result.isLoading,
     error: result.error,
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,

@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronRight, Plus, Rocket, RefreshCw, Trash2, Terminal } from 'lucide-react'
 import { useDeploymentIssues, usePodIssues, useClusters, useDeployments } from '../../hooks/useMCP'
@@ -20,6 +20,7 @@ import { useTranslation } from 'react-i18next'
 import { kubectlProxy } from '../../lib/kubectlProxy'
 import { useToast } from '../ui/Toast'
 import { PortalTooltip } from '../cards/llmd/shared/PortalTooltip'
+import { ConfirmDialog } from '../../lib/modals'
 
 const WORKLOADS_CARDS_KEY = 'kubestellar-workloads-cards'
 
@@ -63,6 +64,7 @@ export function Workloads() {
 
   const { drillToNamespace, drillToAllNamespaces, drillToAllDeployments, drillToAllPods, drillToDeployment } = useDrillDownActions()
   const { showToast } = useToast()
+  const [pendingDelete, setPendingDelete] = useState<{ cluster: string; namespace: string; name: string } | null>(null)
 
   // Combined states
   const isLoading = podIssuesLoading || deploymentIssuesLoading || deploymentsLoading || clustersLoading
@@ -92,9 +94,15 @@ export function Workloads() {
     }
   }
 
-  const handleDeleteDeployment = async (e: React.MouseEvent, cluster: string, namespace: string, name: string) => {
+  const handleDeleteDeployment = (e: React.MouseEvent, cluster: string, namespace: string, name: string) => {
     e.stopPropagation()
-    if (!window.confirm(t('workloads.confirmDelete', 'Are you sure you want to delete deployment {{name}}?', { name }))) return
+    setPendingDelete({ cluster, namespace, name })
+  }
+
+  const confirmDeleteDeployment = async () => {
+    if (!pendingDelete) return
+    const { cluster, namespace, name } = pendingDelete
+    setPendingDelete(null)
     try {
       showToast(t('workloads.deleting', 'Deleting deployment...'), 'info')
       await kubectlProxy.exec(['delete', 'deployment', name, '-n', namespace], { context: cluster })
@@ -470,6 +478,16 @@ export function Workloads() {
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={pendingDelete !== null}
+        onClose={() => setPendingDelete(null)}
+        onConfirm={confirmDeleteDeployment}
+        title={t('workloads.deleteDeployment', 'Delete Deployment')}
+        message={t('workloads.confirmDelete', 'Are you sure you want to delete deployment {{name}}? This action cannot be undone.', { name: pendingDelete?.name ?? '' })}
+        confirmLabel={t('common:actions.delete', 'Delete')}
+        variant="danger"
+      />
     </DashboardPage>
   )
 }

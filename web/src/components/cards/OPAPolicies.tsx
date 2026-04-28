@@ -206,7 +206,7 @@ function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
       .then(data => {
         if (controller.signal.aborted) return
         if (data.clusters) {
-          setAgentClusters(data.clusters.map((c: { name: string }) => ({ name: c.name, healthy: true })))
+          setAgentClusters((data.clusters || []).map((c: { name: string }) => ({ name: c.name, healthy: true })))
         }
       })
       .catch(() => { /* agent not available or request aborted */ })

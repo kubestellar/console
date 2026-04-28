@@ -5,9 +5,12 @@
  * Each draft is stored as a JSON entry under DRAFTS_STORAGE_KEY.
  * Drafts include the request type, target repo, description text, and a
  * human-readable title extracted from the first line of the description.
+ *
+ * Deleted drafts are soft-deleted (given a `deletedAt` timestamp) and kept
+ * for DELETED_DRAFT_RETENTION_DAYS before being permanently purged.
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import type { RequestType, TargetRepo } from './useFeatureRequests'
 
 /** localStorage key for the drafts array */
@@ -21,6 +24,12 @@ const MIN_DRAFT_LENGTH = 5
 
 /** Characters to show in a truncated preview */
 const PREVIEW_TRUNCATE_LENGTH = 120
+
+/** Number of days to retain soft-deleted drafts before permanent removal */
+export const DELETED_DRAFT_RETENTION_DAYS = 30
+
+/** Milliseconds per day — used for retention math */
+const MS_PER_DAY = 86_400_000
 
 export interface FeedbackDraft {
   /** Unique identifier (timestamp-based) */
@@ -42,6 +51,8 @@ export interface FeedbackDraft {
    * so we persist those directly. (#6102)
    */
   screenshots?: string[]
+  /** ISO timestamp of when the draft was soft-deleted (undefined = active) */
+  deletedAt?: string
 }
 
 /** Read drafts from localStorage, returning an empty array on failure */
@@ -58,12 +69,25 @@ function loadDrafts(): FeedbackDraft[] {
 }
 
 /** Persist drafts array to localStorage */
-function saveDrafts(drafts: FeedbackDraft[]): void {
+function persistDrafts(drafts: FeedbackDraft[]): void {
   try {
     localStorage.setItem(DRAFTS_STORAGE_KEY, JSON.stringify(drafts))
   } catch {
     // localStorage full or unavailable — silently fail
   }
+}
+
+/**
+ * Remove drafts whose `deletedAt` exceeds the retention window.
+ * Returns a new array (or the same reference if nothing was purged).
+ */
+function purgeExpiredDrafts(drafts: FeedbackDraft[]): FeedbackDraft[] {
+  const cutoff = Date.now() - DELETED_DRAFT_RETENTION_DAYS * MS_PER_DAY
+  const filtered = drafts.filter(d => {
+    if (!d.deletedAt) return true
+    return new Date(d.deletedAt).getTime() > cutoff
+  })
+  return filtered.length === drafts.length ? drafts : filtered
 }
 
 /** Extract a short title from the first line of the description */
@@ -76,17 +100,35 @@ export function extractDraftTitle(description: string): string {
 }
 
 export function useFeedbackDrafts() {
-  const [drafts, setDrafts] = useState<FeedbackDraft[]>(() => loadDrafts())
+  const [allDrafts, setAllDrafts] = useState<FeedbackDraft[]>(() => {
+    const loaded = loadDrafts()
+    const purged = purgeExpiredDrafts(loaded)
+    if (purged !== loaded) persistDrafts(purged)
+    return purged
+  })
+
+  // Derived lists
+  const drafts = (allDrafts || []).filter(d => !d.deletedAt)
+  const recentlyDeletedDrafts = (allDrafts || []).filter(d => !!d.deletedAt)
 
   // Keep in-memory state in sync if another tab modifies localStorage
   useEffect(() => {
     const handleStorage = (e: StorageEvent) => {
       if (e.key === DRAFTS_STORAGE_KEY) {
-        setDrafts(loadDrafts())
+        const loaded = loadDrafts()
+        const purged = purgeExpiredDrafts(loaded)
+        if (purged !== loaded) persistDrafts(purged)
+        setAllDrafts(purged)
       }
     }
     window.addEventListener('storage', handleStorage)
     return () => window.removeEventListener('storage', handleStorage)
+  }, [])
+
+  /** Helper: persist and update state */
+  const commit = useCallback((updated: FeedbackDraft[]) => {
+    persistDrafts(updated)
+    setAllDrafts(updated)
   }, [])
 
   /** Save a new draft or update an existing one. Returns the draft id. */
@@ -101,63 +143,95 @@ export function useFeedbackDrafts() {
   ): string | null => {
     if (draft.description.trim().length < MIN_DRAFT_LENGTH) return null
 
-    // Compute the new drafts array from the current state snapshot
     const prev = loadDrafts()
+    const purged = purgeExpiredDrafts(prev)
+    const activePrev = purged.filter(d => !d.deletedAt)
     let updated: FeedbackDraft[]
     let newId: string | null = existingId || null
 
     if (existingId) {
-      // Update existing draft
-      updated = prev.map(d =>
+      updated = purged.map(d =>
         d.id === existingId
           ? { ...d, ...draft, updatedAt: new Date().toISOString() }
           : d
       )
     } else {
-      // Create new draft
-      if (prev.length >= MAX_DRAFTS) {
-        // Drop the oldest draft to make room
-        updated = prev.slice(1)
+      if (activePrev.length >= MAX_DRAFTS) {
+        // Drop the oldest active draft to make room
+        const oldestActiveId = activePrev[0]?.id
+        updated = purged.filter(d => d.id !== oldestActiveId)
       } else {
-        updated = [...prev]
+        updated = [...purged]
       }
       const newDraft: FeedbackDraft = {
         id: `draft-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
         ...draft,
         savedAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString() }
+        updatedAt: new Date().toISOString(),
+      }
       updated.push(newDraft)
       newId = newDraft.id
     }
 
-    // Persist to localStorage BEFORE updating React state
-    saveDrafts(updated)
-    setDrafts(updated)
-
+    commit(updated)
     return newId
   }
 
-  /** Delete a draft by id */
+  /** Soft-delete a draft by id (sets deletedAt timestamp) */
   const deleteDraft = (id: string) => {
     const prev = loadDrafts()
-    const updated = prev.filter(d => d.id !== id)
-    // Persist to localStorage BEFORE updating React state
-    saveDrafts(updated)
-    setDrafts(updated)
+    const updated = prev.map(d =>
+      d.id === id ? { ...d, deletedAt: new Date().toISOString() } : d
+    )
+    commit(updated)
   }
 
-  /** Delete all drafts */
+  /** Permanently remove a draft by id */
+  const permanentlyDeleteDraft = (id: string) => {
+    const prev = loadDrafts()
+    const updated = prev.filter(d => d.id !== id)
+    commit(updated)
+  }
+
+  /** Restore a soft-deleted draft (clears deletedAt) */
+  const restoreDeletedDraft = (id: string) => {
+    const prev = loadDrafts()
+    const updated = prev.map(d =>
+      d.id === id ? { ...d, deletedAt: undefined } : d
+    )
+    commit(updated)
+  }
+
+  /** Soft-delete all active drafts */
   const clearAllDrafts = () => {
-    saveDrafts([])
-    setDrafts([])
+    const prev = loadDrafts()
+    const now = new Date().toISOString()
+    const updated = prev.map(d =>
+      d.deletedAt ? d : { ...d, deletedAt: now }
+    )
+    commit(updated)
+  }
+
+  /** Permanently remove all soft-deleted drafts */
+  const emptyRecentlyDeleted = () => {
+    const prev = loadDrafts()
+    const updated = prev.filter(d => !d.deletedAt)
+    commit(updated)
   }
 
   return {
     drafts,
     draftCount: drafts.length,
+    recentlyDeletedDrafts,
+    recentlyDeletedCount: recentlyDeletedDrafts.length,
     saveDraft,
     deleteDraft,
+    permanentlyDeleteDraft,
+    restoreDeletedDraft,
     clearAllDrafts,
+    emptyRecentlyDeleted,
     MAX_DRAFTS,
-    MIN_DRAFT_LENGTH }
+    MIN_DRAFT_LENGTH,
+    DELETED_DRAFT_RETENTION_DAYS,
+  }
 }

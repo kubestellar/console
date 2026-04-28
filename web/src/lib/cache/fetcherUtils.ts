@@ -17,6 +17,28 @@ import {
 import { validateArrayResponse } from '../schemas/validate'
 
 // ============================================================================
+// Backend preference helper
+// ============================================================================
+
+/** localStorage key for agent backend preference (kagenti, kagent, kc-agent) */
+const BACKEND_PREF_KEY = 'kc_agent_backend_preference'
+
+/**
+ * Returns true when the user has selected kagenti or kagent as their
+ * preferred backend.  In that mode data should be routed through the
+ * Go backend (`/api/mcp/`) rather than the local kc-agent (port 8585).
+ * See issue #10510.
+ */
+export function isClusterModeBackend(): boolean {
+  try {
+    const pref = localStorage.getItem(BACKEND_PREF_KEY)
+    return pref === 'kagenti' || pref === 'kagent'
+  } catch {
+    return false
+  }
+}
+
+// ============================================================================
 // Token helper
 // ============================================================================
 
@@ -117,6 +139,16 @@ export const fetchBackendAPI = makeRestFetcher({
   errorLabel: '/api/mcp',
 })
 
+/**
+ * Route-aware fetcher: returns `fetchBackendAPI` when the user has selected
+ * kagenti or kagent as their preferred backend (cluster mode), and `fetchAPI`
+ * (local kc-agent) otherwise.  This ensures per-cluster data requests reach
+ * the correct backend without requiring every call-site to check. (#10510)
+ */
+export function getClusterFetcher() {
+  return isClusterModeBackend() ? fetchBackendAPI : fetchAPI
+}
+
 // Get list of reachable (or not-yet-checked) clusters (prefer local agent data for accurate reachability)
 function getReachableClusters(): string[] {
   // Use local agent's cluster cache - it has up-to-date reachability info
@@ -137,8 +169,11 @@ export async function fetchClusters(): Promise<string[]> {
     return localClusters
   }
 
-  // Fall back to backend API
-  const raw = await fetchAPI<unknown>('clusters')
+  // In cluster mode (kagenti/kagent), route through the Go backend so the
+  // request reaches the in-cluster service account instead of the absent
+  // local kc-agent. (#10510)
+  const fetcher = isClusterModeBackend() ? fetchBackendAPI : fetchAPI
+  const raw = await fetcher<unknown>('clusters')
   const data = validateArrayResponse<{ clusters: Array<{ name: string; reachable?: boolean }> }>(ClustersResponseSchema, raw, '/api/mcp/clusters', 'clusters')
   return (data.clusters || [])
     .filter(c => c.reachable !== false && !c.name.includes('/'))
@@ -169,6 +204,13 @@ export async function fetchFromAllClusters<T>(
   onProgress?: (partial: T[]) => void,
   options?: FetchFromAllClustersOptions
 ): Promise<T[]> {
+  // In cluster mode (kagenti/kagent), delegate to the backend variant so
+  // requests reach the Go backend's MCP bridge instead of the local agent.
+  // (#10510)
+  if (isClusterModeBackend()) {
+    return fetchFromAllClustersViaBackend<T>(endpoint, resultKey, params, addClusterField, onProgress, options)
+  }
+
   const clusters = await fetchClusters()
   if (clusters.length === 0) {
     throw new Error('No clusters available (agent connecting or backend not authenticated)')
@@ -239,6 +281,13 @@ export async function fetchViaSSE<T>(
   onProgress?: (partial: T[]) => void,
   options?: FetchFromAllClustersOptions
 ): Promise<T[]> {
+  // In cluster mode (kagenti/kagent), delegate to the backend SSE variant so
+  // streaming requests reach the Go backend instead of the local agent.
+  // (#10510)
+  if (isClusterModeBackend()) {
+    return fetchViaBackendSSE<T>(endpoint, resultKey, params, onProgress, options)
+  }
+
   const token = getToken()
   // SSE only available with real backend token
   if (!token || token === 'demo-token' || isBackendUnavailable()) {

@@ -553,7 +553,8 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
 
   // Stock data via useCache (persists across navigation)
   const symbolsKey = [...activeSymbols].sort().join(',')
-  const demoStockData = generateMockStockData(activeSymbols)
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- symbolsKey is the stable string derived from activeSymbols
+  const demoStockData = useMemo(() => generateMockStockData(activeSymbols), [symbolsKey])
 
   const { data: stockData, isLoading: isLoadingData, isRefreshing: stockRefreshing } = useCache<StockData[]>({
     key: `stocks:${symbolsKey}:${useLiveData ? 'live' : 'demo'}`,
@@ -573,10 +574,18 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
   // Update saved stocks when data changes
   useEffect(() => {
     if (stockData.length > 0) {
-      setSavedStocks(prev => prev.map(saved => {
-        const stock = stockData.find(s => s.symbol === saved.symbol)
-        return stock ? { ...saved, price: stock.price, changePercent: stock.changePercent } : saved
-      }))
+      setSavedStocks(prev => {
+        let changed = false
+        const next = prev.map(saved => {
+          const stock = stockData.find(s => s.symbol === saved.symbol)
+          if (stock && (saved.price !== stock.price || saved.changePercent !== stock.changePercent)) {
+            changed = true
+            return { ...saved, price: stock.price, changePercent: stock.changePercent }
+          }
+          return saved
+        })
+        return changed ? next : prev
+      })
     }
   }, [stockData])
 

@@ -25,7 +25,12 @@ import type { AgentInfo } from '../../../types/agent'
 
 const CONNECTING_DEBOUNCE_MS = 300
 
-export function AgentStatusIndicator() {
+interface AgentStatusIndicatorProps {
+  /** Force label text to be visible (used in overflow menu) */
+  showLabel?: boolean
+}
+
+export function AgentStatusIndicator({ showLabel = false }: AgentStatusIndicatorProps) {
   const { t } = useTranslation(['common'])
   const {
     status: agentStatus,
@@ -323,7 +328,7 @@ export function AgentStatusIndicator() {
         title={pillStyle.title}
       >
         <pillStyle.Icon className="w-4 h-4" />
-        <span className="text-sm font-medium hidden sm:inline whitespace-nowrap">
+        <span className={cn("text-sm font-medium whitespace-nowrap", showLabel ? 'inline' : 'hidden sm:inline')}>
           {pillStyle.label}
         </span>
         <span

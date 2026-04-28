@@ -7,7 +7,7 @@
 import { useSyncExternalStore } from 'react'
 import { useCache, type RefreshCategory, type CachedHookResult } from '../lib/cache'
 import { clusterCacheRef, deduplicateClustersByServer } from './mcp/shared'
-import { fetchAPI, fetchFromAllClusters, fetchViaSSE } from '../lib/cache/fetcherUtils'
+import { fetchFromAllClusters, fetchViaSSE, getClusterFetcher } from '../lib/cache/fetcherUtils'
 import { settledWithConcurrency } from '../lib/utils/concurrency'
 import { NodesResponseSchema } from '../lib/schemas'
 import { validateArrayResponse } from '../lib/schemas/validate'
@@ -110,7 +110,7 @@ export function useCachedNodes(
     persist: true,
     fetcher: async () => {
       if (cluster) {
-        const raw = await fetchAPI<unknown>('nodes', { cluster })
+        const raw = await getClusterFetcher()<unknown>('nodes', { cluster })
         const data = validateArrayResponse<{ nodes: NodeInfo[] }>(NodesResponseSchema, raw, '/api/mcp/nodes', 'nodes')
         return (data.nodes || []).map(n => ({ ...n, cluster }))
       }
@@ -216,7 +216,7 @@ export function useCachedAllNodes(): CachedHookResult<NodeInfo[]> & {
       // scan, src/test/concurrent-mutation-safety.test.ts).
       const tasks = reachable.map((cluster) => async (): Promise<PerClusterNodeResult> => {
         try {
-          const raw = await fetchAPI<unknown>('nodes', { cluster: cluster.name })
+          const raw = await getClusterFetcher()<unknown>('nodes', { cluster: cluster.name })
           const data = validateArrayResponse<{ nodes: NodeInfo[] }>(
             NodesResponseSchema,
             raw,
@@ -288,7 +288,7 @@ export function useCachedAllNodes(): CachedHookResult<NodeInfo[]> & {
     data: result.data,
     isLoading: result.isLoading,
     isRefreshing: result.isRefreshing,
-    isDemoFallback: result.isDemoFallback,
+    isDemoFallback: result.isDemoFallback && !result.isLoading,
     error: result.error,
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
@@ -314,7 +314,7 @@ export function useCachedCoreDNSStatus(
     fetcher: async () => {
       let pods: PodInfo[]
       if (cluster) {
-        const data = await fetchAPI<{ pods: PodInfo[] }>('pods', { cluster, namespace: 'kube-system' })
+        const data = await getClusterFetcher()<{ pods: PodInfo[] }>('pods', { cluster, namespace: 'kube-system' })
         pods = (data.pods || []).map(p => ({ ...p, cluster }))
       } else {
         pods = await fetchFromAllClusters<PodInfo>('pods', 'pods', { namespace: 'kube-system' })
@@ -357,7 +357,7 @@ export function useCachedCoreDNSStatus(
     data: result.data,
     isLoading: result.isLoading,
     isRefreshing: result.isRefreshing,
-    isDemoFallback: result.isDemoFallback,
+    isDemoFallback: result.isDemoFallback && !result.isLoading,
     error: result.error,
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,

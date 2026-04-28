@@ -66,7 +66,7 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
         {/* Hamburger menu - mobile only */}
         <button
           onClick={toggleMobileSidebar}
-          className="p-2 min-w-[44px] min-h-[44px] flex md:hidden items-center justify-center rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/10"
+          className="p-2 min-w-[44px] min-h-[44px] flex md:hidden items-center justify-center rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer"
           aria-label={config.isMobileOpen ? t('navbar.closeMenu') : t('navbar.openMenu')}
         >
           {config.isMobileOpen ? (
@@ -79,6 +79,7 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
         {/* Logo - clickable to navigate home */}
         <button
           type="button"
+          data-testid="navbar-home-btn"
           onClick={() => navigate(ROUTES.HOME)}
           className="flex items-center gap-2 md:gap-3 p-2 -m-2 min-w-[44px] min-h-[44px] hover:opacity-80 transition-opacity cursor-pointer"
           aria-label={t('navbar.goHome')}
@@ -89,7 +90,7 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
           type="button"
           onClick={() => navigate(ROUTES.HOME)}
           className="hidden lg:flex flex-col leading-tight justify-center min-h-[44px] hover:opacity-80 transition-opacity text-left cursor-pointer"
-          aria-label={t('navbar.goHome')}
+          title={t('navbar.goHome')}
         >
           <span className="text-base md:text-lg font-semibold text-foreground">{branding.appName}</span>
           <RotatingTagline />
@@ -104,7 +105,7 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
             href={branding.docsUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="hidden lg:flex items-center p-1.5 hover:bg-secondary rounded-md transition-colors"
+            className="hidden lg:flex items-center p-1.5 hover:bg-secondary rounded-md transition-colors cursor-pointer"
             aria-label={t('navbar.viewDocs')}
           >
             <ExternalLink className="w-3.5 h-3.5 text-muted-foreground" />
@@ -144,7 +145,7 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
             <Tooltip content={t('help.aiMissions')} side="bottom">
               <button
                 onClick={openSidebar}
-                className="relative flex items-center gap-1.5 px-3 py-1.5 h-9 text-sm font-medium rounded-lg transition-colors bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/20"
+                className="relative flex items-center gap-1.5 px-3 py-1.5 h-9 text-sm font-medium rounded-lg transition-colors bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/20 cursor-pointer"
                 aria-label={t('missionSidebar.openAIMissions')}
               >
                 <Sparkles className="w-4 h-4" />
@@ -178,7 +179,7 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
           <Tooltip content={t('help.themeToggle')} side="bottom">
             <button
               onClick={toggleTheme}
-              className="p-2 w-9 h-9 flex items-center justify-center shrink-0 hover:bg-secondary rounded-lg transition-colors"
+              className="p-2 w-9 h-9 flex items-center justify-center shrink-0 hover:bg-secondary rounded-lg transition-colors cursor-pointer"
               aria-label={t('navbar.themeToggle', { theme })}
             >
               {theme === 'dark' ? (
@@ -198,8 +199,9 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
         {/* Overflow menu — visible below xl for items hidden at narrow widths */}
         <div className="relative xl:hidden shrink-0">
           <button
+            data-testid="navbar-overflow-btn"
             onClick={() => setShowMobileMore(!showMobileMore)}
-            className="p-2 min-w-[44px] min-h-[44px] hover:bg-secondary rounded-lg transition-colors"
+            className="p-2 min-w-[44px] min-h-[44px] hover:bg-secondary rounded-lg transition-colors cursor-pointer"
             aria-label={t('navbar.moreOptions')}
           >
             <MoreVertical className="w-5 h-5 text-muted-foreground" />
@@ -229,10 +231,10 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
                   {/* Items only hidden at <md (768px): filter, agent status, agent selector */}
                   <div className="md:hidden">
                     <div className="px-3 py-2">
-                      <ClusterFilterPanel />
+                      <ClusterFilterPanel showLabel />
                     </div>
                     <div className="px-3 py-2">
-                      <AgentStatusIndicator />
+                      <AgentStatusIndicator showLabel />
                     </div>
                     <div className="px-3 py-2">
                       <Suspense fallback={null}><AgentSelector compact /></Suspense>
@@ -245,7 +247,7 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
                     <div className="px-3 py-2">
                       <button
                         onClick={() => { openSidebar(); setShowMobileMore(false) }}
-                        className="relative flex items-center gap-2 w-full px-3 py-2 text-sm font-medium rounded-lg transition-colors bg-purple-500/10 hover:bg-purple-500/20 text-purple-400"
+                        className="relative flex items-center gap-2 w-full px-3 py-2 text-sm font-medium rounded-lg transition-colors bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 cursor-pointer"
                         aria-label={t('missionSidebar.openAIMissions')}
                       >
                         <Sparkles className="w-4 h-4 shrink-0" />
@@ -259,16 +261,16 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
                     </div>
                   )}
                   <div className="px-3 py-2">
-                    <UpdateIndicator />
+                    <UpdateIndicator showLabel />
                   </div>
                   <div className="px-3 py-2">
-                    <TokenUsageWidget />
+                    <TokenUsageWidget showLabel />
                   </div>
                   <div className="px-3 py-2">
-                    <FeatureRequestButton />
+                    <FeatureRequestButton showLabel />
                   </div>
                   <div className="px-3 py-2">
-                    <LearnDropdown />
+                    <LearnDropdown showLabel />
                   </div>
                 </div>
               </div>

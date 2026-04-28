@@ -346,7 +346,7 @@ export function NightlyReleasePulse() {
       {!shared && <StandaloneRepoInput value={standaloneRepo} onChange={setStandaloneRepo} />}
 
       <div className="p-4 flex-1 flex flex-col gap-3 min-h-0">
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <StatusIcon size={18} className={cn('shrink-0', iconColor)} />

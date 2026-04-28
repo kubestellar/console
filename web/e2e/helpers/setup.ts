@@ -169,11 +169,26 @@ export async function mockApiFallback(page: Page) {
     })
   })
 
+  // IMPORTANT: Playwright matches routes in REVERSE registration order (last registered = first matched).
+  // Register the catch-all FIRST (lowest priority) so the active-users specific mock below
+  // overrides it. Previously the catch-all was registered last and intercepted /api/active-users
+  // before the specific mock, returning {} → Number.isFinite(undefined)=false → error/retry
+  // re-render cycles in Firefox/webkit causing DOM instability.
   await page.route('**/api/**', (route) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({}),
+    })
+  )
+
+  // Registered AFTER the catch-all → higher priority. Trailing * matches query params too.
+  // Returns valid data so useActiveUsers stays stable (no error state / re-renders).
+  await page.route('**/api/active-users*', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ activeUsers: 1, totalConnections: 1 }),
     })
   )
 }
@@ -356,7 +371,7 @@ export async function setupAuthLocalStorage(
       localStorage.setItem('kc-onboarding-complete', 'true')
     }
     if (o.tourComplete) {
-      localStorage.setItem('kc-tour-complete', 'true')
+      localStorage.setItem('kubestellar-console-tour-completed', 'true')
     }
     if (o.setupComplete) {
       localStorage.setItem('kc-setup-complete', 'true')
@@ -366,8 +381,8 @@ export async function setupAuthLocalStorage(
 
 /** Default clusters returned from a mocked MCP `**\/api/mcp/**` call */
 export const DEFAULT_MCP_CLUSTERS = [
-  { name: 'cluster-1', context: 'ctx-1', healthy: true, nodeCount: 5, podCount: 45 },
-  { name: 'cluster-2', context: 'ctx-2', healthy: true, nodeCount: 3, podCount: 32 },
+  { name: 'cluster-1', healthy: true, nodeCount: 5, podCount: 45 },
+  { name: 'cluster-2', healthy: true, nodeCount: 3, podCount: 32 },
 ]
 
 /** Options for `setupMCP` — override cluster/issue/event/node payloads */

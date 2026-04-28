@@ -15,6 +15,7 @@ import {
   Plug,
 } from 'lucide-react'
 import { Button } from '../ui/Button'
+import { useToast } from '../ui/Toast'
 import { Navbar } from './navbar/index'
 import { Sidebar } from './Sidebar'
 import {
@@ -128,6 +129,7 @@ export function Layout({ children: _children }: LayoutProps) {
   // Mission sidebar width is communicated via CSS custom property --mission-sidebar-width
   // set by MissionSidebar.tsx — no need to read sidebar state from the hook here.
   const { isDemoMode, toggleDemoMode } = useDemoMode()
+  const { showToast } = useToast()
   const { status: agentStatus } = useLocalAgent()
   const { deduplicatedClusters } = useClusters()
   const { progress: updateProgress, dismiss: dismissUpdateProgress } =
@@ -152,6 +154,13 @@ export function Layout({ children: _children }: LayoutProps) {
     window.addEventListener('open-install', handler)
     return () => window.removeEventListener('open-install', handler)
   }, [])
+
+  // Surface cache-reset failures from modeTransition.ts as user-facing toasts
+  useEffect(() => {
+    const handler = () => showToast(t('errors.cacheResetFailed'), 'warning')
+    window.addEventListener('cache-reset-error', handler)
+    return () => window.removeEventListener('cache-reset-error', handler)
+  }, [showToast, t])
 
   const [restartState, setRestartState] = useState<
     'idle' | 'restarting' | 'waiting' | 'copied'

@@ -208,6 +208,16 @@ layer(base);
     @apply border-border;
   }
 
+  /* Ensure all interactive elements show pointer cursor */
+  button,
+  [role="button"] {
+    cursor: pointer;
+  }
+  button:disabled,
+  [role="button"][aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+
   /* Globally disable backdrop-filter — creates GPU compositing layers
      that cause flickering in screen-sharing software (Teams/Zoom). */
   [class*="backdrop-blur"] {

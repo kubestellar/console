@@ -92,7 +92,7 @@ export function DashboardCustomizer({
 
   return (
     <>
-    <BaseModal isOpen={isOpen} onClose={onClose} size="xl" closeOnBackdrop={false} className="max-w-[75vw]! h-[75vh]!">
+    <BaseModal isOpen={isOpen} onClose={onClose} size="xl" className="max-w-[75vw]! h-[75vh]!">
       <BaseModal.Header
         title={t('dashboard.studio.title', 'Console Studio')}
         description={t('dashboard.studio.subtitle', 'Your console is built from dashboards containing cards and stat blocks that show real-time cluster data. Browse cards, apply collections, or create custom visualizations.')}

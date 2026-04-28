@@ -152,10 +152,7 @@ export function Welcome() {
   const [searchParams] = useSearchParams()
   const ref = sanitizeRef(searchParams.get('ref'))
   const [cardCount, setCardCount] = useState(HERO_STATS_PLACEHOLDER)
-
   useEffect(() => {
-    // #9835: guard against (a) setState after unmount (cancelled flag) and
-    // (b) unhandled promise rejection if the chunk fails to load (.catch()).
     let cancelled = false
     import('../components/cards/cardRegistry')
       .then(m => {
@@ -163,7 +160,6 @@ export function Welcome() {
         setCardCount(String(m.getRegisteredCardTypes().length))
       })
       .catch(err => {
-        // Fall back to placeholder; leave cardCount as the initial hero value.
         console.warn('Welcome: failed to load cardRegistry chunk', err)
       })
     return () => {

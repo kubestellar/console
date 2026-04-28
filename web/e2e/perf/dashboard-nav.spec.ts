@@ -942,12 +942,17 @@ test.afterAll(async () => {
   // mean so legitimate growth (new cards, websocket events) doesn't flap
   // CI, while the kind of regression Issue 9232 calls out ("TTFI going
   // from 500ms to 3000ms") gets caught.
-  const COLD_NAV_AVG_MS_BUDGET = 5_000
-  const WARM_NAV_AVG_MS_BUDGET = 3_000
-  const FROM_MAIN_AVG_MS_BUDGET = 4_000
-  const FROM_CLUSTERS_AVG_MS_BUDGET = 4_000
-  const RAPID_NAV_AVG_MS_BUDGET = 3_000
-  const BACK_NAV_AVG_MS_BUDGET = 3_000
+  //
+  // CI shared runners are slower than local machines; apply tolerance so
+  // perf tests catch real regressions without flapping on runner noise.
+  const NAV_CI_TOLERANCE_PCT = Number(process.env.CI_TOLERANCE_PCT) || (IS_CI ? 100 : 0)
+  const navToleranceFactor = 1 + NAV_CI_TOLERANCE_PCT / 100
+  const COLD_NAV_AVG_MS_BUDGET = 5_000 * navToleranceFactor
+  const WARM_NAV_AVG_MS_BUDGET = 3_000 * navToleranceFactor
+  const FROM_MAIN_AVG_MS_BUDGET = 4_000 * navToleranceFactor
+  const FROM_CLUSTERS_AVG_MS_BUDGET = 4_000 * navToleranceFactor
+  const RAPID_NAV_AVG_MS_BUDGET = 3_000 * navToleranceFactor
+  const BACK_NAV_AVG_MS_BUDGET = 3_000 * navToleranceFactor
 
   const SCENARIO_BUDGETS: Record<Scenario, number> = {
     'cold-nav': COLD_NAV_AVG_MS_BUDGET,

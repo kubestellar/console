@@ -377,7 +377,7 @@ export function NamespaceManager() {
   // Show loading while clusters are being fetched
   if (clustersLoading) {
     return (
-      <div className="h-full flex flex-col items-center justify-center p-6">
+      <div className="min-h-full flex flex-col items-center justify-center p-6">
         <RefreshCw className="w-16 h-16 text-blue-400 mb-4 animate-spin" />
         <h2 className="text-xl font-semibold text-white mb-2">Loading Clusters...</h2>
         <p className="text-muted-foreground text-center max-w-md">
@@ -390,7 +390,7 @@ export function NamespaceManager() {
   // Show message if no clusters are selected
   if (targetClusters.length === 0) {
     return (
-      <div className="h-full flex flex-col items-center justify-center p-6">
+      <div className="min-h-full flex flex-col items-center justify-center p-6">
         <AlertTriangle className="w-16 h-16 text-yellow-400 mb-4" />
         <h2 className="text-xl font-semibold text-white mb-2">No Clusters Selected</h2>
         <p className="text-muted-foreground text-center max-w-md">
@@ -401,7 +401,7 @@ export function NamespaceManager() {
   }
 
   return (
-    <div className="h-full flex flex-col p-6">
+    <div className="min-h-full flex flex-col p-6">
       {/* Header */}
       <DashboardHeader
         title="Namespace Manager"

@@ -103,12 +103,9 @@ func (sm *SettingsManager) Load() error {
 
 	var sf SettingsFile
 	if err := json.Unmarshal(data, &sf); err != nil {
-
 		backupPath := sm.settingsPath + ".corrupt." + time.Now().UTC().Format("20060102T150405Z")
 		os.Rename(sm.settingsPath, backupPath)
 		slog.Error("[settings] corrupt settings file, resetting to defaults", "error", err, "path", sm.settingsPath, "backup", backupPath)
-		slog.Error("[settings] corrupted settings file, falling back to defaults", "path", sm.settingsPath, "error", err)
-
 		sm.settings = DefaultSettings()
 		return nil
 	}
@@ -240,7 +237,6 @@ func (sm *SettingsManager) saveLocked() error {
 		os.Remove(tmpPath)
 		return fmt.Errorf("failed to close temp settings file: %w", err)
 	}
-	tmpFile.Close()
 
 	if err := os.Rename(tmpPath, sm.settingsPath); err != nil {
 		os.Remove(tmpPath)

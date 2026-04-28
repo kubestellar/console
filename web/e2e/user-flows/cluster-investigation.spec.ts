@@ -50,9 +50,9 @@ test.describe('Cluster Investigation — "My cluster has issues"', () => {
       const hasTrigger = await trigger.isVisible().catch(() => false)
       if (hasTrigger) {
         await trigger.click()
-        await page.waitForTimeout(300)
-        // Filter options should appear
+        // Wait for filter options to appear after dropdown opens
         const options = page.getByTestId('cluster-filter-option')
+        await expect(options.first()).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
         const optionCount = await options.count()
         expect(optionCount).toBeGreaterThanOrEqual(1)
       }
@@ -68,8 +68,9 @@ test.describe('Cluster Investigation — "My cluster has issues"', () => {
     const hasTrigger = await trigger.isVisible().catch(() => false)
     if (!hasTrigger) { test.skip(true, 'Filter trigger button not visible'); return }
     await trigger.click()
-    await page.waitForTimeout(300)
+    // Wait for filter dropdown to populate
     const options = page.getByTestId('cluster-filter-option')
+    await expect(options.first()).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => {})
     const optionCount = await options.count()
     if (optionCount > 0) {
       const firstText = await options.first().textContent()
@@ -86,13 +87,13 @@ test.describe('Cluster Investigation — "My cluster has issues"', () => {
     const hasTrigger = await trigger.isVisible().catch(() => false)
     if (!hasTrigger) { test.skip(true, 'Filter trigger button not visible'); return }
     await trigger.click()
-    await page.waitForTimeout(300)
+    // Wait for filter dropdown to populate
     const options = page.getByTestId('cluster-filter-option')
+    await expect(options.first()).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => {})
     const optionCount = await options.count()
     if (optionCount > 0) {
       await options.first().click()
-      await page.waitForTimeout(500)
-      // Page should not crash after filter selection
+      // Wait for filter to take effect
       await expect(page.locator('body')).toBeVisible()
     }
   })
@@ -149,14 +150,16 @@ test.describe('Cluster Investigation — "My cluster has issues"', () => {
 
   test('no layout overflow on clusters page', async ({ page }) => {
     await setupDemoAndNavigate(page, '/clusters')
-    await page.waitForTimeout(1_000)
+    // Wait for the page content to render before checking layout
+    await expect(page.locator('body')).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
     await assertNoLayoutOverflow(page)
   })
 
   test('no unexpected console errors', async ({ page }) => {
     const checkErrors = collectConsoleErrors(page)
     await setupDemoAndNavigate(page, '/clusters')
-    await page.waitForTimeout(1_000)
+    // Wait for the page content to render before checking errors
+    await expect(page.locator('body')).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
     checkErrors()
   })
 })

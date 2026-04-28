@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { memo, useState, useEffect, useRef, useMemo } from 'react'
 import { Activity, AlertTriangle, CheckCircle, Clock, Server } from 'lucide-react'
 import { LazyEChart } from '../charts/LazyEChart'
 import { useClusters } from '../../hooks/useMCP'
@@ -374,10 +374,10 @@ function EventsTimelineInternal() {
   )
 }
 
-export function EventsTimeline() {
+export const EventsTimeline = memo(function EventsTimeline() {
   return (
     <DynamicCardErrorBoundary cardId="EventsTimeline">
       <EventsTimelineInternal />
     </DynamicCardErrorBoundary>
   )
-}
+})

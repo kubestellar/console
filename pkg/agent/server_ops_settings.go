@@ -581,6 +581,11 @@ func (s *Server) refreshProviderAvailability() {
 // perKeyValidationTimeout is the timeout for each individual API key validation request.
 const perKeyValidationTimeout = 15 * time.Second
 
+// apiKeyValidationClient is an HTTP client with a timeout for external API key
+// validation calls. Using http.DefaultClient would hang indefinitely if a
+// provider is slow or unresponsive.
+var apiKeyValidationClient = &http.Client{Timeout: 30 * time.Second}
+
 // maxConcurrentValidations limits how many provider keys are validated simultaneously
 // to avoid hammering all providers at once.
 const maxConcurrentValidations = 5
@@ -645,7 +650,7 @@ func validateClaudeKey(ctx context.Context, apiKey string) (bool, error) {
 	req.Header.Set("x-api-key", apiKey)
 	req.Header.Set("anthropic-version", claudeAPIVersion)
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := apiKeyValidationClient.Do(req)
 	if err != nil {
 		return false, err
 	}
@@ -674,7 +679,7 @@ func validateOpenAIKey(ctx context.Context, apiKey string) (bool, error) {
 	}
 	req.Header.Set("Authorization", "Bearer "+apiKey)
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := apiKeyValidationClient.Do(req)
 	if err != nil {
 		return false, err
 	}
@@ -724,7 +729,7 @@ func validateOpenRouterKey(ctx context.Context, apiKey string) (bool, error) {
 	}
 	req.Header.Set("Authorization", "Bearer "+apiKey)
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := apiKeyValidationClient.Do(req)
 	if err != nil {
 		return false, err
 	}
@@ -754,7 +759,7 @@ func validateGroqKey(ctx context.Context, apiKey string) (bool, error) {
 	}
 	req.Header.Set("Authorization", "Bearer "+apiKey)
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := apiKeyValidationClient.Do(req)
 	if err != nil {
 		return false, err
 	}
@@ -781,7 +786,7 @@ func validateGeminiKey(ctx context.Context, apiKey string) (bool, error) {
 	}
 	req.Header.Set("x-goog-api-key", apiKey)
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := apiKeyValidationClient.Do(req)
 	if err != nil {
 		return false, err
 	}
