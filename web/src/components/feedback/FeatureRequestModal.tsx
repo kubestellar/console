@@ -35,7 +35,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
   const { createRequest, isSubmitting, requests, isLoading: requestsLoading, isRefreshing: requestsRefreshing, refresh: refreshRequests, requestUpdate, closeRequest, isDemoMode: isInDemoMode } = useFeatureRequests(currentGitHubLogin)
   const { notifications, isRefreshing: notificationsRefreshing, refresh: refreshNotifications, getUnreadCountForRequest, markRequestNotificationsAsRead } = useNotifications()
   const { githubRewards, githubPoints, refreshGitHubRewards } = useRewards()
-  const { drafts, draftCount, saveDraft, deleteDraft, clearAllDrafts } = useFeedbackDrafts()
+  const { drafts, draftCount, recentlyDeletedDrafts, recentlyDeletedCount, saveDraft, deleteDraft, permanentlyDeleteDraft, restoreDeletedDraft, clearAllDrafts, emptyRecentlyDeleted } = useFeedbackDrafts()
   const [isGitHubRefreshing, setIsGitHubRefreshing] = useState(false)
   const [editingDraftId, setEditingDraftId] = useState<string | null>(null)
   const [confirmDeleteDraft, setConfirmDeleteDraft] = useState<string | null>(null)
@@ -373,12 +373,17 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
           <DraftsTab
             drafts={drafts}
             draftCount={draftCount}
+            recentlyDeletedDrafts={recentlyDeletedDrafts}
+            recentlyDeletedCount={recentlyDeletedCount}
             editingDraftId={editingDraftId}
             confirmDeleteDraft={confirmDeleteDraft}
             showClearAllDrafts={showClearAllDrafts}
             onSetActiveTab={setActiveTab}
             onRestoreDraft={handleRestoreDraft}
             onDeleteDraft={handleDeleteDraft}
+            onPermanentlyDeleteDraft={permanentlyDeleteDraft}
+            onRestoreDeletedDraft={restoreDeletedDraft}
+            onEmptyRecentlyDeleted={emptyRecentlyDeleted}
             onSetConfirmDeleteDraft={setConfirmDeleteDraft}
             onSetShowClearAllDrafts={setShowClearAllDrafts}
             onClearAllDrafts={clearAllDrafts}

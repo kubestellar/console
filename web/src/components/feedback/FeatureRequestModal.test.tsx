@@ -43,9 +43,14 @@ vi.mock('../../hooks/useFeedbackDrafts', () => ({
   useFeedbackDrafts: () => ({
     drafts: [],
     draftCount: 0,
+    recentlyDeletedDrafts: [],
+    recentlyDeletedCount: 0,
     saveDraft: vi.fn(),
     deleteDraft: vi.fn(),
+    permanentlyDeleteDraft: vi.fn(),
+    restoreDeletedDraft: vi.fn(),
     clearAllDrafts: vi.fn(),
+    emptyRecentlyDeleted: vi.fn(),
   }),
 }))
 
