@@ -43,16 +43,41 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
+      - name: Check for existing baselines
+        id: app-baselines
+        run: |
+          if ls e2e/visual/app-visual-regression.spec.ts-snapshots/chromium/*.png 1>/dev/null 2>&1; then
+            echo "exist=true" >> $GITHUB_OUTPUT
+          else
+            echo "exist=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Start preview server
         run: |
           npm run preview &
           npx wait-on http://localhost:4173 --timeout 60000
 
+      - name: Generate baseline screenshots (first run)
+        if: steps.app-baselines.outputs.exist == 'false'
+        run: npm run test:visual:update
+        env:
+          CI: 'true'
+          APP_VISUAL_BASE_URL: http://localhost:4173
+
       - name: Run app visual regression tests
+        if: steps.app-baselines.outputs.exist == 'true'
         run: npm run test:visual
         env:
           CI: 'true'
           APP_VISUAL_BASE_URL: http://localhost:4173
+
+      - name: Upload baseline screenshots (first run)
+        if: steps.app-baselines.outputs.exist == 'false'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: app-visual-baselines
+          path: web/e2e/visual/app-visual-regression.spec.ts-snapshots/
+          retention-days: 30
 
       - name: Upload visual diff artifacts
         if: failure()
