@@ -97,3 +97,77 @@ test.describe('Full-app layout — full page scroll', () => {
     })
   })
 })
+
+// ── Clusters page ────────────────────────────────────────────────────────────
+
+test.describe('Clusters page — desktop (1440×900)', () => {
+  test.use({ viewport: DESKTOP_VIEWPORT })
+
+  test('clusters page with sidebar', async ({ page }) => {
+    await setupAndNavigate(page, '/clusters')
+
+    const clustersPage = page.getByTestId('clusters-page')
+    await clustersPage.waitFor({ state: 'visible', timeout: DASHBOARD_SETTLE_TIMEOUT_MS }).catch(() => {})
+
+    const sidebar = page.getByTestId('sidebar')
+    await sidebar.waitFor({ state: 'visible', timeout: DASHBOARD_SETTLE_TIMEOUT_MS }).catch(() => {})
+
+    await expect(page).toHaveScreenshot('app-clusters-desktop-1440.png', {
+      fullPage: false,
+    })
+  })
+
+  test('clusters page full-page scroll', async ({ page }) => {
+    await setupAndNavigate(page, '/clusters')
+
+    const clustersPage = page.getByTestId('clusters-page')
+    await clustersPage.waitFor({ state: 'visible', timeout: DASHBOARD_SETTLE_TIMEOUT_MS }).catch(() => {})
+
+    await expect(page).toHaveScreenshot('app-clusters-fullpage-1440.png', {
+      fullPage: true,
+    })
+  })
+})
+
+test.describe('Clusters page — tablet (768×1024)', () => {
+  test.use({ viewport: TABLET_VIEWPORT })
+
+  test('clusters page at tablet resolution', async ({ page }) => {
+    await setupAndNavigate(page, '/clusters')
+
+    const clustersPage = page.getByTestId('clusters-page')
+    await clustersPage.waitFor({ state: 'visible', timeout: DASHBOARD_SETTLE_TIMEOUT_MS }).catch(() => {})
+
+    await expect(page).toHaveScreenshot('app-clusters-tablet-768.png', {
+      fullPage: false,
+    })
+  })
+})
+
+// ── Settings page ────────────────────────────────────────────────────────────
+
+test.describe('Settings page — desktop (1440×900)', () => {
+  test.use({ viewport: DESKTOP_VIEWPORT })
+
+  test('settings page layout', async ({ page }) => {
+    await setupAndNavigate(page, '/settings')
+
+    const settingsPage = page.getByTestId('settings-page')
+    await settingsPage.waitFor({ state: 'visible', timeout: DASHBOARD_SETTLE_TIMEOUT_MS }).catch(() => {})
+
+    await expect(page).toHaveScreenshot('app-settings-desktop-1440.png', {
+      fullPage: false,
+    })
+  })
+
+  test('settings page full-page scroll', async ({ page }) => {
+    await setupAndNavigate(page, '/settings')
+
+    const settingsPage = page.getByTestId('settings-page')
+    await settingsPage.waitFor({ state: 'visible', timeout: DASHBOARD_SETTLE_TIMEOUT_MS }).catch(() => {})
+
+    await expect(page).toHaveScreenshot('app-settings-fullpage-1440.png', {
+      fullPage: true,
+    })
+  })
+})
