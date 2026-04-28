@@ -386,7 +386,7 @@ func fetchACMMWeeklyActivity(ctx context.Context, repo, token string) []acmmWeek
 
 func lastNWeeks(n int) []string {
 	seen := make(map[string]bool)
-	var weeks []string
+	weeks := make([]string, 0)
 	now := time.Now().UTC()
 	for i := n - 1; i >= 0; i-- {
 		d := now.AddDate(0, 0, -i*7)

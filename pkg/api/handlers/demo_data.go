@@ -109,7 +109,7 @@ func getDemoEvents() []k8s.Event {
 // Demo warning events (filtered from events)
 func getDemoWarningEvents() []k8s.Event {
 	events := getDemoEvents()
-	var warnings []k8s.Event
+	warnings := make([]k8s.Event, 0)
 	for _, e := range events {
 		if e.Type == "Warning" {
 			warnings = append(warnings, e)
@@ -477,7 +477,7 @@ func getDemoPodLogs() string {
 // getDemoAllClusterHealth returns health for all demo clusters
 func getDemoAllClusterHealth() []k8s.ClusterHealth {
 	clusters := getDemoClusters()
-	var health []k8s.ClusterHealth
+	health := make([]k8s.ClusterHealth, 0)
 	for _, c := range clusters {
 		h := getDemoClusterHealth(c.Name)
 		health = append(health, *h)
