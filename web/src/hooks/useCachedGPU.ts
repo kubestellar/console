@@ -7,7 +7,7 @@
 
 import { useState } from 'react'
 import { useCache, type RefreshCategory, type CachedHookResult } from '../lib/cache'
-import { fetchAPI, fetchBackendAPI, fetchFromAllClustersViaBackend, fetchViaSSE, fetchViaBackendSSE, getToken, AGENT_HTTP_TIMEOUT_MS } from '../lib/cache/fetcherUtils'
+import { fetchAPI, fetchBackendAPI, fetchFromAllClustersViaBackend, fetchViaSSE, fetchViaBackendSSE, getToken, getClusterFetcher, AGENT_HTTP_TIMEOUT_MS } from '../lib/cache/fetcherUtils'
 import { settledWithConcurrency } from '../lib/utils/concurrency'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 import { FETCH_DEFAULT_TIMEOUT_MS, AI_PREDICTION_TIMEOUT_MS } from '../lib/constants/network'
@@ -174,7 +174,7 @@ export function useCachedGPUNodes(
     demoData: getDemoGPUNodes(),
     fetcher: async () => {
       if (cluster) {
-        const raw = await fetchAPI<unknown>('gpu-nodes', { cluster })
+        const raw = await getClusterFetcher()<unknown>('gpu-nodes', { cluster })
         const data = validateArrayResponse<{ nodes: GPUNode[] }>(GPUNodesResponseSchema, raw, '/api/mcp/gpu-nodes', 'nodes')
         return (data.nodes || []).map(n => ({ ...n, cluster }))
       }
@@ -198,7 +198,7 @@ export function useCachedGPUNodes(
       }
 
       const tasks = reachable.map((cl) => async () => {
-        const raw = await fetchAPI<unknown>('gpu-nodes', { cluster: cl.name })
+        const raw = await getClusterFetcher()<unknown>('gpu-nodes', { cluster: cl.name })
         const data = validateArrayResponse<{ nodes: GPUNode[] }>(
           GPUNodesResponseSchema, raw, '/api/mcp/gpu-nodes', 'nodes',
         )
