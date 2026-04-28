@@ -81,7 +81,7 @@ Any PR that modifies UI (components, styles, layouts, pages) MUST follow this pr
 3. **Verify each checklist item** is visible in the screenshot. If anything is missing, fix it. Do not proceed until all items are confirmed.
 
 ### Write the visual regression test
-4. Create or update a test file in `web/e2e/visual/` named `{page-name}-visual.spec.ts`.
+4. Create or update a test file in `web/e2e/visual/` named `app-{page-name}-visual.spec.ts`.
 5. The test MUST:
    - Import `setupDemoMode` from `../helpers/setup.ts` (NEVER copy setup logic inline)
    - Use `app-visual.config.ts` (NOT the Storybook config)

@@ -46,7 +46,7 @@ jobs:
       - name: Check for existing baselines
         id: app-baselines
         run: |
-          if ls e2e/visual/app-visual-regression.spec.ts-snapshots/chromium/*.png 1>/dev/null 2>&1; then
+          if ls e2e/visual/app-*-snapshots/chromium/*.png 1>/dev/null 2>&1; then
             echo "exist=true" >> $GITHUB_OUTPUT
           else
             echo "exist=false" >> $GITHUB_OUTPUT

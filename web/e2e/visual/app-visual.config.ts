@@ -24,7 +24,7 @@ const WEB_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../.
 
 export default defineConfig({
   testDir: '.',
-  testMatch: '*-visual.spec.ts',
+  testMatch: 'app-*.spec.ts',
   timeout: IS_CI ? 120_000 : 60_000,
   expect: {
     timeout: IS_CI ? 30_000 : 15_000,
