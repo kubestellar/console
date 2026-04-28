@@ -67,6 +67,39 @@ deploy/helm/       Helm chart
 
 ---
 
+## Visual Verification Protocol (UI Changes)
+
+Any PR that modifies UI (components, styles, layouts, pages) MUST follow this protocol:
+
+### Before coding
+1. Extract a **visual checklist** from the issue/request — numbered list of visible outcomes.
+   Example: "1. Clusters page shows new GPU column. 2. Column header uses muted text. 3. GPU values render with ProgressRing."
+   If the issue doesn't describe visual outcomes, ask for clarification before starting.
+
+### After implementing
+2. Start the app in demo mode and **screenshot every affected page** via CDP or Playwright.
+3. **Verify each checklist item** is visible in the screenshot. If anything is missing, fix it. Do not proceed until all items are confirmed.
+
+### Write the visual regression test
+4. Create or update a test file in `web/e2e/visual/` named `{page-name}-visual.spec.ts`.
+5. The test MUST:
+   - Import `setupDemoMode` from `../helpers/setup.ts` (NEVER copy setup logic inline)
+   - Use `app-visual.config.ts` (NOT the Storybook config)
+   - Navigate to the affected route in demo mode
+   - Wait for content with `getByTestId` or locators (NEVER use `waitForTimeout`)
+   - Call `expect(page).toHaveScreenshot('{descriptive-name}.png')` for each visual state
+6. Generate baselines: `cd web && npm run test:visual:update`
+7. Verify baselines pass: `cd web && npm run test:visual`
+8. **Commit the test file AND the snapshot baselines** alongside the code change.
+
+### Definition of done
+Do NOT report a UI task as complete until:
+- All visual checklist items are confirmed in screenshots
+- Playwright visual test passes without `--update-snapshots`
+- Test + baselines are committed in the PR
+
+---
+
 ## Port Requirements
 
 - **Backend**: Must always run on port **8080**

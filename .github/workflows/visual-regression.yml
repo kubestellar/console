@@ -3,21 +3,73 @@ name: Visual Regression
 on:
   pull_request:
     paths:
-      - 'web/src/components/ui/**'
-      - 'web/src/index.css'
-      - 'web/src/lib/themes.ts'
-      - 'web/.storybook/**'
-      - 'web/src/**/*.stories.tsx'
+      - 'web/src/**'
       - 'web/e2e/visual/**'
+      - '.github/workflows/visual-regression.yml'
   workflow_dispatch:
 
-# Least-privilege: read-only by default; jobs declare write scopes individually
+# Least-privilege: read-only by default
 permissions: read-all
 
+concurrency:
+  group: visual-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  visual-regression:
+  # ── Full-app visual regression (layout, pages, routes) ───────────────
+  app-visual-regression:
+    name: App Visual Regression
     if: github.repository == 'kubestellar/console'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Start preview server
+        run: |
+          npm run preview &
+          npx wait-on http://localhost:4173 --timeout 60000
+
+      - name: Run app visual regression tests
+        run: npm run test:visual
+        env:
+          CI: 'true'
+          APP_VISUAL_BASE_URL: http://localhost:4173
+
+      - name: Upload visual diff artifacts
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: app-visual-diff
+          path: |
+            web/test-results/app-visual/
+            web/app-visual-report/
+          retention-days: 14
+
+  # ── Storybook component visual regression ────────────────────────────
+  storybook-visual-regression:
+    name: Storybook Visual Regression
+    if: github.repository == 'kubestellar/console'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: web
