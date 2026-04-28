@@ -290,37 +290,35 @@ async function setupGitHubMocks(page: Page) {
     })
   )
 
-  if (MOCK_MODE) {
-    // Mock GitHub Contents API for repo file listing
-    await page.route(`**/api/github/repos/${SAMPLE_REPO}/contents**`, (route) =>
+  // Mock GitHub Contents API for repo file listing
+  await page.route(`**/api/github/repos/${SAMPLE_REPO}/contents**`, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(MOCK_GITHUB_REPO_CONTENTS),
+    })
+  )
+
+  // Mock individual file content fetches
+  await page.route('**/api/github/repos/clubanderson/sample-runbooks/contents/*', (route) => {
+    const url = route.request().url()
+    const fileName = url.split('/contents/').pop()?.split('?')[0] || ''
+    const content = MOCK_FILE_CONTENTS[fileName]
+    if (content) {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify(MOCK_GITHUB_REPO_CONTENTS),
+        body: JSON.stringify({
+          content: Buffer.from(content).toString('base64'),
+          encoding: 'base64',
+          name: fileName,
+          path: fileName,
+        }),
       })
-    )
-
-    // Mock individual file content fetches
-    await page.route('**/api/github/repos/clubanderson/sample-runbooks/contents/*', (route) => {
-      const url = route.request().url()
-      const fileName = url.split('/contents/').pop()?.split('?')[0] || ''
-      const content = MOCK_FILE_CONTENTS[fileName]
-      if (content) {
-        route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            content: Buffer.from(content).toString('base64'),
-            encoding: 'base64',
-            name: fileName,
-            path: fileName,
-          }),
-        })
-      } else {
-        route.fulfill({ status: 404, body: 'Not found' })
-      }
-    })
-  }
+    } else {
+      route.fulfill({ status: 404, body: 'Not found' })
+    }
+  })
 }
 
 async function setupAIMocks(page: Page) {
@@ -384,8 +382,8 @@ async function expandSampleRunbooks(page: Page) {
   await page.waitForLoadState('networkidle', { timeout: DIALOG_RENDER_TIMEOUT_MS })
   await openMissionBrowser(page)
 
-  // Expand My Repositories — click the button containing that text
-  const myReposButton = page.locator('button', { hasText: 'My Repositories' }).first()
+  // Expand GitHub Repositories — click the button containing that text
+  const myReposButton = page.locator('button', { hasText: 'GitHub Repositories' }).first()
   await expect(myReposButton).toBeVisible({ timeout: DIALOG_RENDER_TIMEOUT_MS })
   await myReposButton.click()
   // Wait for tree expansion — look for the repo node to appear
