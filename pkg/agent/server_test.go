@@ -634,11 +634,11 @@ func TestServer_ValidateToken(t *testing.T) {
 			expectResult: true,
 		},
 		{
-			name:         "Read-only GET without Origin exempted (widget/curl)",
+			name:         "GET without token rejected even without Origin",
 			agentToken:   "secret123",
 			authHeader:   "",
 			queryToken:   "",
-			expectResult: true, // localhost widget requests have no Origin header
+			expectResult: false, // all requests require token when configured
 		},
 		{
 			name:         "GET with Origin header still requires token",

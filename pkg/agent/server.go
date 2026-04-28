@@ -379,15 +379,6 @@ func (s *Server) validateToken(r *http.Request) bool {
 		return true
 	}
 
-	// Exempt read-only GET/HEAD requests from localhost that carry no Origin
-	// header. This allows desktop widgets (Übersicht, etc.) to query the agent
-	// via curl without an auth token. The agent only binds to 127.0.0.1 so all
-	// requests are local; the Origin check ensures browser-based CSRF attacks
-	// (which always include an Origin header) are still blocked.
-	if (r.Method == "GET" || r.Method == "HEAD") && r.Header.Get("Origin") == "" {
-		return true
-	}
-
 	// Check Authorization header (preferred for all requests)
 	authHeader := r.Header.Get("Authorization")
 	if strings.HasPrefix(authHeader, "Bearer ") {
