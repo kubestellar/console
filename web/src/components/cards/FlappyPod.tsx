@@ -272,12 +272,14 @@ export function FlappyPod(_props: CardComponentProps) {
         {/* Start overlay - only covers game area */}
         {!isPlaying && !gameOver && (
           <div
-            className="absolute inset-0 bg-background/80 flex items-center justify-center rounded-lg cursor-pointer"
+            className="absolute inset-0 bg-background/90 flex items-center justify-center rounded-lg cursor-pointer backdrop-blur-sm"
             onClick={handleClick}
           >
-            <div className="text-center">
-              <div className="text-muted-foreground mb-4">Click or press Space to fly!</div>
-              <div className="text-sm text-muted-foreground">Avoid the node walls</div>
+            <div className="text-center px-4">
+              <div className="text-2xl font-bold text-foreground mb-4">Ready to Fly?</div>
+              <div className="text-lg text-blue-400 mb-2">Click or press Space to flap</div>
+              <div className="text-sm text-muted-foreground mb-4">Keep tapping to stay airborne!</div>
+              <div className="text-xs text-yellow-400">Avoid the green pipes</div>
             </div>
           </div>
         )}

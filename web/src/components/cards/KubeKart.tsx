@@ -209,9 +209,16 @@ export function KubeKart() {
 
     if (keys.has('arrowleft') || keys.has('a')) {
       player.angle -= TURN_SPEED * (player.speed > 0 ? 1 : -1)
-    }
-    if (keys.has('arrowright') || keys.has('d')) {
+    } else if (keys.has('arrowright') || keys.has('d')) {
       player.angle += TURN_SPEED * (player.speed > 0 ? 1 : -1)
+    } else {
+      // Auto-straighten when no turn keys pressed
+      const angleDiff = FORWARD_ANGLE - player.angle
+      if (Math.abs(angleDiff) > 0.01) {
+        player.angle += angleDiff * 0.15
+      } else {
+        player.angle = FORWARD_ANGLE
+      }
     }
 
     // Apply movement (mostly forward)
