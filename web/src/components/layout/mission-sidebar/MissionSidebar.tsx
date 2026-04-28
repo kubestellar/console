@@ -1243,7 +1243,7 @@ export function MissionSidebar() {
           {listTotalMissions > 0 && (
             <button
               onClick={toggleHistoryPanel}
-              className="mt-4 flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              className="mt-4 flex items-center gap-1.5 text-xs text-muted-foreground/70 hover:text-primary cursor-pointer hover:underline underline-offset-2 transition-colors rounded-md px-2 py-1 -mx-2 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
             >
               <History className="w-3.5 h-3.5" />
               {t('missionSidebar.viewHistory', {
