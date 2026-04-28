@@ -66,7 +66,7 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
         {/* Hamburger menu - mobile only */}
         <button
           onClick={toggleMobileSidebar}
-          className="p-2 min-w-[44px] min-h-[44px] flex md:hidden items-center justify-center rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/10"
+          className="p-2 min-w-[44px] min-h-[44px] flex md:hidden items-center justify-center rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer"
           aria-label={config.isMobileOpen ? t('navbar.closeMenu') : t('navbar.openMenu')}
         >
           {config.isMobileOpen ? (
@@ -104,7 +104,7 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
             href={branding.docsUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="hidden lg:flex items-center p-1.5 hover:bg-secondary rounded-md transition-colors"
+            className="hidden lg:flex items-center p-1.5 hover:bg-secondary rounded-md transition-colors cursor-pointer"
             aria-label={t('navbar.viewDocs')}
           >
             <ExternalLink className="w-3.5 h-3.5 text-muted-foreground" />
@@ -144,7 +144,7 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
             <Tooltip content={t('help.aiMissions')} side="bottom">
               <button
                 onClick={openSidebar}
-                className="relative flex items-center gap-1.5 px-3 py-1.5 h-9 text-sm font-medium rounded-lg transition-colors bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/20"
+                className="relative flex items-center gap-1.5 px-3 py-1.5 h-9 text-sm font-medium rounded-lg transition-colors bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/20 cursor-pointer"
                 aria-label={t('missionSidebar.openAIMissions')}
               >
                 <Sparkles className="w-4 h-4" />
@@ -178,7 +178,7 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
           <Tooltip content={t('help.themeToggle')} side="bottom">
             <button
               onClick={toggleTheme}
-              className="p-2 w-9 h-9 flex items-center justify-center shrink-0 hover:bg-secondary rounded-lg transition-colors"
+              className="p-2 w-9 h-9 flex items-center justify-center shrink-0 hover:bg-secondary rounded-lg transition-colors cursor-pointer"
               aria-label={t('navbar.themeToggle', { theme })}
             >
               {theme === 'dark' ? (
@@ -199,7 +199,7 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
         <div className="relative xl:hidden shrink-0">
           <button
             onClick={() => setShowMobileMore(!showMobileMore)}
-            className="p-2 min-w-[44px] min-h-[44px] hover:bg-secondary rounded-lg transition-colors"
+            className="p-2 min-w-[44px] min-h-[44px] hover:bg-secondary rounded-lg transition-colors cursor-pointer"
             aria-label={t('navbar.moreOptions')}
           >
             <MoreVertical className="w-5 h-5 text-muted-foreground" />
@@ -245,7 +245,7 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
                     <div className="px-3 py-2">
                       <button
                         onClick={() => { openSidebar(); setShowMobileMore(false) }}
-                        className="relative flex items-center gap-2 w-full px-3 py-2 text-sm font-medium rounded-lg transition-colors bg-purple-500/10 hover:bg-purple-500/20 text-purple-400"
+                        className="relative flex items-center gap-2 w-full px-3 py-2 text-sm font-medium rounded-lg transition-colors bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 cursor-pointer"
                         aria-label={t('missionSidebar.openAIMissions')}
                       >
                         <Sparkles className="w-4 h-4 shrink-0" />
