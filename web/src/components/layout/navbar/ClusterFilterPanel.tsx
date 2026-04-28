@@ -79,7 +79,12 @@ function FilterSection<T extends string>({
   )
 }
 
-export function ClusterFilterPanel() {
+interface ClusterFilterPanelProps {
+  /** Force label text to be visible (used in overflow menu) */
+  showLabel?: boolean
+}
+
+export function ClusterFilterPanel({ showLabel = false }: ClusterFilterPanelProps) {
   const { t } = useTranslation()
   const {
     selectedClusters,
@@ -176,14 +181,18 @@ export function ClusterFilterPanel() {
           <button
             onClick={() => toggleDropdown()}
             className={cn(
-              'relative flex items-center justify-center w-9 h-9 rounded-lg transition-colors',
+              'relative flex items-center rounded-lg transition-colors',
+              showLabel ? 'gap-2 px-3 py-1.5 h-9' : 'justify-center w-9 h-9',
               isFiltered
                 ? 'bg-purple-500/20 text-purple-400 shadow-[0_0_6px_rgba(139,92,246,0.2)]'
                 : 'bg-secondary/50 text-muted-foreground hover:text-foreground'
             )}
             aria-label={isFiltered ? t('layout.navbar.filtersActive') : t('layout.navbar.noFilters')}
           >
-            <Filter className="w-4 h-4" />
+            <Filter className="w-4 h-4 shrink-0" />
+            {showLabel && (
+              <span className="text-sm font-medium">{t('navbar.clusterFilter')}</span>
+            )}
             {/* Color dot from active filter set, or generic purple dot */}
             {isFiltered && (
               <span

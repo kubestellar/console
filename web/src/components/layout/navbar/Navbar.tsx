@@ -229,10 +229,10 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
                   {/* Items only hidden at <md (768px): filter, agent status, agent selector */}
                   <div className="md:hidden">
                     <div className="px-3 py-2">
-                      <ClusterFilterPanel />
+                      <ClusterFilterPanel showLabel />
                     </div>
                     <div className="px-3 py-2">
-                      <AgentStatusIndicator />
+                      <AgentStatusIndicator showLabel />
                     </div>
                     <div className="px-3 py-2">
                       <Suspense fallback={null}><AgentSelector compact /></Suspense>
@@ -259,16 +259,16 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
                     </div>
                   )}
                   <div className="px-3 py-2">
-                    <UpdateIndicator />
+                    <UpdateIndicator showLabel />
                   </div>
                   <div className="px-3 py-2">
-                    <TokenUsageWidget />
+                    <TokenUsageWidget showLabel />
                   </div>
                   <div className="px-3 py-2">
-                    <FeatureRequestButton />
+                    <FeatureRequestButton showLabel />
                   </div>
                   <div className="px-3 py-2">
-                    <LearnDropdown />
+                    <LearnDropdown showLabel />
                   </div>
                 </div>
               </div>

@@ -47,7 +47,12 @@ function getDropdownPosition(triggerRect: DOMRect, isMobile: boolean) {
 /** Tailwind `sm` breakpoint — below this we use mobile layout */
 const SM_BREAKPOINT_PX = 640
 
-export function LearnDropdown() {
+interface LearnDropdownProps {
+  /** Force label text to be visible (used in overflow menu) */
+  showLabel?: boolean
+}
+
+export function LearnDropdown({ showLabel = false }: LearnDropdownProps) {
   const { isOpen, close, toggle } = useModalState()
   const triggerRef = useRef<HTMLButtonElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -145,7 +150,7 @@ export function LearnDropdown() {
         title={t('layout.navbar.learn.title')}
       >
         <BookOpen className="w-4 h-4" />
-        <span className="hidden xl:inline">{t('layout.navbar.learn.title')}</span>
+        <span className={cn(showLabel ? 'inline' : 'hidden xl:inline')}>{t('layout.navbar.learn.title')}</span>
       </button>
 
       {/* Dropdown — portaled to document.body to escape navbar overflow clipping (#10319) */}

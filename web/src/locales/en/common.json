@@ -1901,7 +1901,8 @@
     "goHome": "Go to home dashboard",
     "themeToggle": "Theme: {{theme}} (click to toggle)",
     "moreOptions": "More options",
-    "viewDocs": "View documentation"
+    "viewDocs": "View documentation",
+    "clusterFilter": "Cluster Filter"
   },
   "missionSidebar": {
     "expandSidebar": "Expand sidebar",
