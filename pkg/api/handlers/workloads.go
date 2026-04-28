@@ -86,6 +86,9 @@ func (h *WorkloadHandlers) requireAdmin(c *fiber.Ctx) error {
 // ListWorkloads returns all workloads across clusters
 // GET /api/workloads
 func (h *WorkloadHandlers) ListWorkloads(c *fiber.Ctx) error {
+	if isDemoMode(c) {
+		return demoResponse(c, "workloads", getDemoWorkloads())
+	}
 	if h.k8sClient == nil {
 		return errNoClusterAccess(c)
 	}
@@ -109,6 +112,13 @@ func (h *WorkloadHandlers) ListWorkloads(c *fiber.Ctx) error {
 // GetWorkload returns a specific workload
 // GET /api/workloads/:cluster/:namespace/:name
 func (h *WorkloadHandlers) GetWorkload(c *fiber.Ctx) error {
+	if isDemoMode(c) {
+		demos := getDemoWorkloads()
+		if len(demos) > 0 {
+			return c.JSON(demos[0])
+		}
+		return c.JSON(fiber.Map{})
+	}
 	if h.k8sClient == nil {
 		return errNoClusterAccess(c)
 	}
@@ -140,6 +150,16 @@ func (h *WorkloadHandlers) GetWorkload(c *fiber.Ctx) error {
 // ResolveDependencies returns the dependency tree for a workload without deploying (dry-run).
 // GET /api/workloads/resolve-deps/:cluster/:namespace/:name
 func (h *WorkloadHandlers) ResolveDependencies(c *fiber.Ctx) error {
+	if isDemoMode(c) {
+		return c.JSON(fiber.Map{
+			"workload":     c.Params("name"),
+			"kind":         "Deployment",
+			"namespace":    c.Params("namespace"),
+			"cluster":      c.Params("cluster"),
+			"dependencies": make([]fiber.Map, 0),
+			"warnings":     make([]string, 0),
+		})
+	}
 	if h.k8sClient == nil {
 		return errNoClusterAccess(c)
 	}
@@ -197,6 +217,16 @@ func (h *WorkloadHandlers) ResolveDependencies(c *fiber.Ctx) error {
 // MonitorWorkload returns a workload's dependencies with health status and detected issues.
 // GET /api/workloads/monitor/:cluster/:namespace/:name
 func (h *WorkloadHandlers) MonitorWorkload(c *fiber.Ctx) error {
+	if isDemoMode(c) {
+		return c.JSON(fiber.Map{
+			"workload":     c.Params("name"),
+			"namespace":    c.Params("namespace"),
+			"cluster":      c.Params("cluster"),
+			"status":       "Healthy",
+			"dependencies": make([]fiber.Map, 0),
+			"issues":       make([]fiber.Map, 0),
+		})
+	}
 	if h.k8sClient == nil {
 		return errNoClusterAccess(c)
 	}
@@ -223,6 +253,16 @@ func (h *WorkloadHandlers) MonitorWorkload(c *fiber.Ctx) error {
 // GetDeployStatus returns the current replica status of a deployment on a cluster
 // GET /api/workloads/deploy-status/:cluster/:namespace/:name
 func (h *WorkloadHandlers) GetDeployStatus(c *fiber.Ctx) error {
+	if isDemoMode(c) {
+		return c.JSON(fiber.Map{
+			"cluster":       c.Params("cluster"),
+			"namespace":     c.Params("namespace"),
+			"name":          c.Params("name"),
+			"status":        "Running",
+			"replicas":      3,
+			"readyReplicas": 3,
+		})
+	}
 	if h.k8sClient == nil {
 		return errNoClusterAccess(c)
 	}
