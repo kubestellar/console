@@ -1,3 +1,4 @@
+import { memo, useMemo } from 'react'
 import { AlertTriangle, ChevronRight, Server, Cpu, MemoryStick, Zap } from 'lucide-react'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import { useCachedPods } from '../../hooks/useCachedData'
@@ -166,10 +167,12 @@ function TopPodsInternal({ config }: TopPodsProps) {
   }
 
   // Find max values for visual scaling based on current sort
-  const maxRestarts = Math.max(...pods.map(p => p.restarts), 1)
-  const maxCpu = Math.max(...pods.map(p => getEffectiveCpu(p)), 1)
-  const maxMemory = Math.max(...pods.map(p => getEffectiveMemory(p)), 1)
-  const maxGpu = Math.max(...pods.map(p => p.gpuRequest || 0), 1)
+  const { maxRestarts, maxCpu, maxMemory, maxGpu } = useMemo(() => ({
+    maxRestarts: Math.max(...pods.map(p => p.restarts), 1),
+    maxCpu: Math.max(...pods.map(p => getEffectiveCpu(p)), 1),
+    maxMemory: Math.max(...pods.map(p => getEffectiveMemory(p)), 1),
+    maxGpu: Math.max(...pods.map(p => p.gpuRequest || 0), 1),
+  }), [pods])
 
   return (
     <div className="h-full flex flex-col min-h-card content-loaded">
@@ -433,10 +436,10 @@ function TopPodsInternal({ config }: TopPodsProps) {
   )
 }
 
-export function TopPods(props: TopPodsProps) {
+export const TopPods = memo(function TopPods(props: TopPodsProps) {
   return (
     <DynamicCardErrorBoundary cardId="TopPods">
       <TopPodsInternal {...props} />
     </DynamicCardErrorBoundary>
   )
-}
+})

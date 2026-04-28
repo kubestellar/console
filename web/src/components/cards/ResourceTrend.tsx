@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo, useEffect, useRef, memo } from 'react'
 import { TrendingUp, Cpu, MemoryStick, Box, Server, Clock } from 'lucide-react'
 import { LazyEChart } from '../charts/LazyEChart'
 import { useClusters } from '../../hooks/useMCP'
@@ -38,7 +38,7 @@ const TIME_RANGE_OPTIONS: { value: TimeRange; label: string; points: number }[] 
   { value: '24h', label: '24 hours', points: 24 },
 ]
 
-export function ResourceTrend() {
+export const ResourceTrend = memo(function ResourceTrend() {
   const { t } = useTranslation()
   const { deduplicatedClusters: clusters, isLoading, isRefreshing, isFailed, consecutiveFailures } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
@@ -382,4 +382,4 @@ export function ResourceTrend() {
       </div>
     </div>
   )
-}
+})

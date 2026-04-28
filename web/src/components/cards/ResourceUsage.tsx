@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, memo } from 'react'
 import { Gauge } from '../charts'
 import { Cpu, MemoryStick, Server } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
@@ -292,10 +292,10 @@ function ResourceUsageInternal() {
   )
 }
 
-export function ResourceUsage() {
+export const ResourceUsage = memo(function ResourceUsage() {
   return (
     <DynamicCardErrorBoundary cardId="ResourceUsage">
       <ResourceUsageInternal />
     </DynamicCardErrorBoundary>
   )
-}
+})

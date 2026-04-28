@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef, lazy, Suspense } from 'react'
+import { useState, useMemo, useEffect, useRef, lazy, Suspense, memo } from 'react'
 import { useClusters } from '../../hooks/useMCP'
 import { CLUSTER_POLL_INTERVAL_MS } from '../../hooks/mcp/shared'
 import { Server, Clock, Layers, TrendingUp } from 'lucide-react'
@@ -122,7 +122,7 @@ const STORAGE_KEY = 'cluster-metrics-history'
 // page reload does not discard recent points that would still be visible.
 const MAX_AGE_MS = MAX_HISTORY_DURATION_MS
 
-export function ClusterMetrics() {
+export const ClusterMetrics = memo(function ClusterMetrics() {
   const { t } = useTranslation(['cards', 'common'])
   const { isLoading, isRefreshing, deduplicatedClusters, isFailed, consecutiveFailures } = useClusters()
   const { isDemoMode } = useDemoMode()
@@ -491,4 +491,4 @@ export function ClusterMetrics() {
       )}
     </div>
   )
-}
+})

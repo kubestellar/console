@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useCallback } from 'react'
+import { useMemo, useState, useEffect, useCallback, memo } from 'react'
 import { Server, Cpu, HardDrive, TrendingUp, Info, ExternalLink, ChevronDown, Sparkles, Settings2, ChevronRight } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedGPUNodes } from '../../hooks/useCachedData'
@@ -178,7 +178,7 @@ const SORT_COMPARATORS = {
   name: commonComparators.string<ClusterCostItem>('name'),
   cpus: commonComparators.number<ClusterCostItem>('cpus') }
 
-export function ClusterCosts({ config }: ClusterCostsProps) {
+export const ClusterCosts = memo(function ClusterCosts({ config }: ClusterCostsProps) {
   const { t } = useTranslation(['cards', 'common'])
 
   // Build sort options with translated labels
@@ -860,4 +860,4 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
       </div>
     </div>
   )
-}
+})
