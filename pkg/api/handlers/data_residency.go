@@ -27,12 +27,28 @@ func (h *DataResidencyHandler) RegisterPublicRoutes(group fiber.Router) {
 // ListRules returns all configured residency rules.
 // GET /api/compliance/residency/rules
 func (h *DataResidencyHandler) ListRules(c *fiber.Ctx) error {
+	if isDemoMode(c) {
+		return demoResponse(c, "rules", h.engine.Rules())
+	}
 	return c.JSON(h.engine.Rules())
 }
 
 // ListRegions returns all available region codes with labels.
 // GET /api/compliance/residency/regions
 func (h *DataResidencyHandler) ListRegions(c *fiber.Ctx) error {
+	if isDemoMode(c) {
+		type regionInfo struct {
+			Code  residency.Region `json:"code"`
+			Label string           `json:"label"`
+		}
+		regions := residency.AllRegions()
+		result := make([]regionInfo, len(regions))
+		for i, r := range regions {
+			result[i] = regionInfo{Code: r, Label: residency.RegionLabel(r)}
+		}
+		return demoResponse(c, "regions", result)
+	}
+
 	type regionInfo struct {
 		Code  residency.Region `json:"code"`
 		Label string           `json:"label"`
@@ -49,12 +65,19 @@ func (h *DataResidencyHandler) ListRegions(c *fiber.Ctx) error {
 // ListClusterRegions returns the cluster-to-region mapping.
 // GET /api/compliance/residency/clusters
 func (h *DataResidencyHandler) ListClusterRegions(c *fiber.Ctx) error {
+	if isDemoMode(c) {
+		return demoResponse(c, "clusterRegions", h.engine.ClusterRegions())
+	}
 	return c.JSON(h.engine.ClusterRegions())
 }
 
 // ListViolations evaluates all rules and returns violations.
 // GET /api/compliance/residency/violations
 func (h *DataResidencyHandler) ListViolations(c *fiber.Ctx) error {
+	if isDemoMode(c) {
+		violations, _ := h.engine.Evaluate()
+		return demoResponse(c, "violations", violations)
+	}
 	violations, _ := h.engine.Evaluate()
 	return c.JSON(violations)
 }
@@ -62,5 +85,8 @@ func (h *DataResidencyHandler) ListViolations(c *fiber.Ctx) error {
 // GetSummary returns an overview of the data residency posture.
 // GET /api/compliance/residency/summary
 func (h *DataResidencyHandler) GetSummary(c *fiber.Ctx) error {
+	if isDemoMode(c) {
+		return demoResponse(c, "summary", h.engine.Summary())
+	}
 	return c.JSON(h.engine.Summary())
 }
