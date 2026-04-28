@@ -347,6 +347,7 @@ async function navigateToConsole(page: Page) {
   await page.addInitScript(() => {
     localStorage.setItem('token', 'demo-token')
     localStorage.setItem('kc-demo-mode', 'true')
+    localStorage.setItem('kc-has-session', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
   })
   await page.goto('/')
