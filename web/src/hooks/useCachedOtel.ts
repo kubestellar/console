@@ -14,7 +14,7 @@
  * same annotations and default to zero when unavailable.
  */
 
-import { useCache, type RefreshCategory, type CachedHookResult } from '../lib/cache'
+import { createCachedHook } from '../lib/cache'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import { authFetch } from '../lib/api'
 import {
@@ -324,28 +324,12 @@ async function fetchOtelStatus(): Promise<OtelStatusData> {
 // Hook
 // ---------------------------------------------------------------------------
 
-export function useCachedOtel(): CachedHookResult<OtelStatusData> {
-  const result = useCache<OtelStatusData>({
-    key: CACHE_KEY_OTEL,
-    category: 'default' as RefreshCategory,
-    initialData: INITIAL_DATA,
-    demoData: OTEL_DEMO_DATA,
-    persist: true,
-    fetcher: fetchOtelStatus,
-  })
-
-  return {
-    data: result.data,
-    isLoading: result.isLoading,
-    isRefreshing: result.isRefreshing,
-    isDemoFallback: result.isDemoFallback,
-    error: result.error,
-    isFailed: result.isFailed,
-    consecutiveFailures: result.consecutiveFailures,
-    lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
-  }
-}
+export const useCachedOtel = createCachedHook<OtelStatusData>({
+  key: CACHE_KEY_OTEL,
+  initialData: INITIAL_DATA,
+  demoData: OTEL_DEMO_DATA,
+  fetcher: fetchOtelStatus,
+})
 
 // ---------------------------------------------------------------------------
 // Exported testables — pure functions for unit testing

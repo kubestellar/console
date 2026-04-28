@@ -13,7 +13,7 @@
  * present, otherwise fall back to zero (no synthetic live values).
  */
 
-import { useCache, type RefreshCategory, type CachedHookResult } from '../lib/cache'
+import { createCachedHook } from '../lib/cache'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import { authFetch } from '../lib/api'
 import { TIKV_DEMO_DATA, type TikvStatusData, type TikvStore, type TikvStoreState } from '../lib/demo/tikv'
@@ -202,28 +202,12 @@ async function fetchTikvStatus(): Promise<TikvStatusData> {
 // Hook
 // ---------------------------------------------------------------------------
 
-export function useCachedTikv(): CachedHookResult<TikvStatusData> {
-  const result = useCache<TikvStatusData>({
-    key: CACHE_KEY_TIKV,
-    category: 'default' as RefreshCategory,
-    initialData: INITIAL_DATA,
-    demoData: TIKV_DEMO_DATA,
-    persist: true,
-    fetcher: fetchTikvStatus,
-  })
-
-  return {
-    data: result.data,
-    isLoading: result.isLoading,
-    isRefreshing: result.isRefreshing,
-    isDemoFallback: result.isDemoFallback,
-    error: result.error,
-    isFailed: result.isFailed,
-    consecutiveFailures: result.consecutiveFailures,
-    lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
-  }
-}
+export const useCachedTikv = createCachedHook<TikvStatusData>({
+  key: CACHE_KEY_TIKV,
+  initialData: INITIAL_DATA,
+  demoData: TIKV_DEMO_DATA,
+  fetcher: fetchTikvStatus,
+})
 
 // ---------------------------------------------------------------------------
 // Exported testables — pure functions for unit testing

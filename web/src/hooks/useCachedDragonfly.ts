@@ -16,7 +16,7 @@
  * they default to zero on live data and are populated for demo mode only.
  */
 
-import { useCache, type RefreshCategory, type CachedHookResult } from '../lib/cache'
+import { createCachedHook } from '../lib/cache'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import { authFetch } from '../lib/api'
 import {
@@ -272,28 +272,12 @@ async function fetchDragonflyStatus(): Promise<DragonflyStatusData> {
 // Hook
 // ---------------------------------------------------------------------------
 
-export function useCachedDragonfly(): CachedHookResult<DragonflyStatusData> {
-  const result = useCache<DragonflyStatusData>({
-    key: CACHE_KEY_DRAGONFLY,
-    category: 'default' as RefreshCategory,
-    initialData: INITIAL_DATA,
-    demoData: DRAGONFLY_DEMO_DATA,
-    persist: true,
-    fetcher: fetchDragonflyStatus,
-  })
-
-  return {
-    data: result.data,
-    isLoading: result.isLoading,
-    isRefreshing: result.isRefreshing,
-    isDemoFallback: result.isDemoFallback,
-    error: result.error,
-    isFailed: result.isFailed,
-    consecutiveFailures: result.consecutiveFailures,
-    lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
-  }
-}
+export const useCachedDragonfly = createCachedHook<DragonflyStatusData>({
+  key: CACHE_KEY_DRAGONFLY,
+  initialData: INITIAL_DATA,
+  demoData: DRAGONFLY_DEMO_DATA,
+  fetcher: fetchDragonflyStatus,
+})
 
 // ---------------------------------------------------------------------------
 // Exported testables — pure functions for unit testing

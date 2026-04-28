@@ -138,12 +138,37 @@ export async function mockApiMe(page: Page) {
 }
 
 /**
- * Catch-all mock for /api/** requests. Returns empty JSON 200.
- * Prevents unmocked calls from hanging against the Vite preview server
- * (no backend), causing webkit/firefox/mobile-safari timeouts.
+ * Catch-all mock for /api/** requests and the root /health endpoint.
+ * Returns empty JSON 200 for API calls, and a minimal health payload for
+ * /health — omitting `enabled_dashboards` so all sidebar routes remain visible.
+ *
+ * Without mocking /health, useSidebarConfig.fetchEnabledDashboards() can
+ * receive an enabled_dashboards list from the CI Go backend that filters out
+ * sidebar routes like /deploy, breaking navigation-dependent tests.
+ *
  * Register BEFORE specific mocks (Playwright matches in reverse order).
  */
 export async function mockApiFallback(page: Page) {
+  // Mock the root /health endpoint. Omitting enabled_dashboards means all
+  // dashboards are shown (applyDashboardFilter only filters when the array
+  // is present and non-empty). Only matches the root-level path.
+  await page.route('**/health', (route) => {
+    const url = new URL(route.request().url())
+    if (url.pathname !== '/health') return route.fallback()
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        status: 'ok',
+        version: 'dev',
+        oauth_configured: false,
+        in_cluster: false,
+        no_local_agent: true,
+        install_method: 'dev',
+      }),
+    })
+  })
+
   await page.route('**/api/**', (route) =>
     route.fulfill({
       status: 200,

@@ -12,7 +12,7 @@
  * changes required.
  */
 
-import { useCache, type RefreshCategory, type CachedHookResult } from '../lib/cache'
+import { createCachedHook } from '../lib/cache'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import { authFetch } from '../lib/api'
 import {
@@ -195,28 +195,12 @@ async function fetchVitessStatus(): Promise<VitessStatusData> {
 // Hook
 // ---------------------------------------------------------------------------
 
-export function useCachedVitess(): CachedHookResult<VitessStatusData> {
-  const result = useCache<VitessStatusData>({
-    key: CACHE_KEY_VITESS,
-    category: 'default' as RefreshCategory,
-    initialData: INITIAL_DATA,
-    demoData: VITESS_DEMO_DATA,
-    persist: true,
-    fetcher: fetchVitessStatus,
-  })
-
-  return {
-    data: result.data,
-    isLoading: result.isLoading,
-    isRefreshing: result.isRefreshing,
-    isDemoFallback: result.isDemoFallback,
-    error: result.error,
-    isFailed: result.isFailed,
-    consecutiveFailures: result.consecutiveFailures,
-    lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
-  }
-}
+export const useCachedVitess = createCachedHook<VitessStatusData>({
+  key: CACHE_KEY_VITESS,
+  initialData: INITIAL_DATA,
+  demoData: VITESS_DEMO_DATA,
+  fetcher: fetchVitessStatus,
+})
 
 // ---------------------------------------------------------------------------
 // Exported testables — pure functions for unit testing

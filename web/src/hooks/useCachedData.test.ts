@@ -25,6 +25,10 @@ const {
 
 vi.mock('../lib/cache', () => ({
   useCache: (...args: unknown[]) => mockUseCache(...args),
+  // createCachedHook is a factory that returns a React hook. Hooks that use it
+  // are re-exported through useCachedData.ts; this stub prevents load failures
+  // when the module is imported in tests that only mock useCache.
+  createCachedHook: (_config: unknown) => () => mockUseCache(_config),
   REFRESH_RATES: {
     realtime: 15_000,
     pods: 30_000,

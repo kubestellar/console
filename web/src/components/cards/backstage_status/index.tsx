@@ -158,10 +158,8 @@ export function BackstageStatus() {
     lastRefresh,
   } = useCachedBackstage()
 
-  // The hook already gates `isDemoFallback` on `!isLoading`, so this is a
-  // straight passthrough; kept as a local name for symmetry with sibling
-  // cards and to make the loading-state call-site self-documenting.
-  const isDemoData = isDemoFallback
+  // Rule: never show demo data while still loading.
+  const isDemoData = isDemoFallback && !isLoading
 
   // 'not-installed' still counts as "we have data" so the card isn't stuck
   // in skeleton waiting for a `/api/backstage/status` endpoint that won't

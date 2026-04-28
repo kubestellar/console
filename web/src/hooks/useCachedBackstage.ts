@@ -12,7 +12,7 @@
  * picks up live data automatically with no component changes.
  */
 
-import { useCache, type RefreshCategory, type CachedHookResult } from '../lib/cache'
+import { createCachedHook } from '../lib/cache'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import { authFetch } from '../lib/api'
 import {
@@ -225,30 +225,12 @@ async function fetchBackstageStatus(): Promise<BackstageStatusData> {
 // Hook
 // ---------------------------------------------------------------------------
 
-export function useCachedBackstage(): CachedHookResult<BackstageStatusData> {
-  const result = useCache<BackstageStatusData>({
-    key: CACHE_KEY_BACKSTAGE,
-    category: 'default' as RefreshCategory,
-    initialData: INITIAL_DATA,
-    demoData: BACKSTAGE_DEMO_DATA,
-    persist: true,
-    fetcher: fetchBackstageStatus,
-  })
-
-  return {
-    data: result.data,
-    isLoading: result.isLoading,
-    isRefreshing: result.isRefreshing,
-    // Rule: never mark demo fallback while still loading — prevents the
-    // card from flashing demo content before the first fetch resolves.
-    isDemoFallback: result.isDemoFallback && !result.isLoading,
-    error: result.error,
-    isFailed: result.isFailed,
-    consecutiveFailures: result.consecutiveFailures,
-    lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
-  }
-}
+export const useCachedBackstage = createCachedHook<BackstageStatusData>({
+  key: CACHE_KEY_BACKSTAGE,
+  initialData: INITIAL_DATA,
+  demoData: BACKSTAGE_DEMO_DATA,
+  fetcher: fetchBackstageStatus,
+})
 
 // ---------------------------------------------------------------------------
 // Exported testables — pure functions for unit testing

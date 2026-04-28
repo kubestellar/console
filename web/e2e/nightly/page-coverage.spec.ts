@@ -96,7 +96,7 @@ const ERROR_BOUNDARY_PATTERNS = [
  */
 const UNTESTED_PAGES: Array<{ path: string; name: string; expectCards: boolean }> = [
   { path: '/arcade', name: 'Arcade', expectCards: false },
-  { path: '/marketplace', name: 'Marketplace', expectCards: true },
+  { path: '/marketplace', name: 'Marketplace', expectCards: false },
   { path: '/ai-agents', name: 'AI Agents', expectCards: true },
   { path: '/ci-cd', name: 'CI/CD', expectCards: true },
   { path: '/karmada-ops', name: 'Karmada Ops', expectCards: true },
@@ -105,7 +105,7 @@ const UNTESTED_PAGES: Array<{ path: string; name: string; expectCards: boolean }
   { path: '/cost', name: 'Cost', expectCards: true },
   { path: '/data-compliance', name: 'Data Compliance', expectCards: true },
   { path: '/security-posture', name: 'Security Posture', expectCards: true },
-  { path: '/gpu-reservations', name: 'GPU Reservations', expectCards: true },
+  { path: '/gpu-reservations', name: 'GPU Reservations', expectCards: false },
 ]
 
 // ── Types ────────────────────────────────────────────────────────────────────

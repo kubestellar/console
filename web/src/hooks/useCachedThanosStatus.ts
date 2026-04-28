@@ -4,7 +4,7 @@
  * Provides cached hooks for fetching Thanos status data.
  */
 
-import { useCache, type RefreshCategory, type CachedHookResult } from '@/lib/cache'
+import { createCachedHook } from '@/lib/cache'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 
 // ============================================================================
@@ -136,29 +136,16 @@ export async function fetchThanosStatus(): Promise<ThanosStatus> {
 
 const CACHE_KEY_THANOS = 'thanos-status'
 
-export function useCachedThanosStatus(): CachedHookResult<ThanosStatus> {
-    const result = useCache({
-        key: CACHE_KEY_THANOS,
-        category: 'default' as RefreshCategory,
-        initialData: {
-            targets: [],
-            storeGateways: [],
-            queryHealth: 'healthy',
-            lastCheckTime: new Date().toISOString(),
-        } as ThanosStatus,
-        demoData: getDemoThanosStatus(),
-        fetcher: fetchThanosStatus,
-    })
-
-    return {
-        data: result.data,
-        isLoading: result.isLoading,
-        isRefreshing: result.isRefreshing,
-        isDemoFallback: result.isDemoFallback,
-        error: result.error,
-        isFailed: result.isFailed,
-        consecutiveFailures: result.consecutiveFailures,
-        lastRefresh: result.lastRefresh,
-        refetch: result.refetch,
-    }
+const INITIAL_THANOS_DATA: ThanosStatus = {
+    targets: [],
+    storeGateways: [],
+    queryHealth: 'healthy',
+    lastCheckTime: new Date().toISOString(),
 }
+
+export const useCachedThanosStatus = createCachedHook<ThanosStatus>({
+    key: CACHE_KEY_THANOS,
+    initialData: INITIAL_THANOS_DATA,
+    getDemoData: getDemoThanosStatus,
+    fetcher: fetchThanosStatus,
+})

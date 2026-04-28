@@ -16,7 +16,7 @@
  *   empty state instead of falling back to demo.
  */
 
-import { useCache, type RefreshCategory, type CachedHookResult } from '../lib/cache'
+import { createCachedHook } from '../lib/cache'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import { authFetch } from '../lib/api'
 import {
@@ -217,28 +217,12 @@ async function fetchLonghornStatus(): Promise<LonghornStatusData> {
 // Hook
 // ---------------------------------------------------------------------------
 
-export function useCachedLonghorn(): CachedHookResult<LonghornStatusData> {
-  const result = useCache<LonghornStatusData>({
-    key: CACHE_KEY_LONGHORN,
-    category: 'default' as RefreshCategory,
-    initialData: INITIAL_DATA,
-    demoData: LONGHORN_DEMO_DATA,
-    persist: true,
-    fetcher: fetchLonghornStatus,
-  })
-
-  return {
-    data: result.data,
-    isLoading: result.isLoading,
-    isRefreshing: result.isRefreshing,
-    isDemoFallback: result.isDemoFallback,
-    error: result.error,
-    isFailed: result.isFailed,
-    consecutiveFailures: result.consecutiveFailures,
-    lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
-  }
-}
+export const useCachedLonghorn = createCachedHook<LonghornStatusData>({
+  key: CACHE_KEY_LONGHORN,
+  initialData: INITIAL_DATA,
+  demoData: LONGHORN_DEMO_DATA,
+  fetcher: fetchLonghornStatus,
+})
 
 // ---------------------------------------------------------------------------
 // Exported testables — pure functions for unit testing

@@ -139,9 +139,13 @@ test.describe('Update Settings', () => {
   test('shows progress banner during update', async ({ page }) => {
     const ws = await setupUpdateTest(page)
 
-    // Send "pulling" progress
-    sendProgress(ws, 'pulling', 'Pulling latest changes...', 10)
-    await expect(page.getByTestId('update-progress-banner')).toBeVisible({ timeout: 5000 })
+    // Retry sending progress until the banner appears — handles the race
+    // between WS connection established and React's useEffect registering
+    // the update_progress message handler.
+    await expect(async () => {
+      sendProgress(ws, 'pulling', 'Pulling latest changes...', 10)
+      await expect(page.getByTestId('update-progress-banner')).toBeVisible({ timeout: 1000 })
+    }).toPass({ timeout: 10000 })
     await expect(page.getByTestId('update-progress-message')).toContainText('Pulling latest changes')
 
     // "Done" and "Failed" banners should NOT be visible during update
@@ -152,9 +156,11 @@ test.describe('Update Settings', () => {
   test('progress bar advances through build stages', async ({ page }) => {
     const ws = await setupUpdateTest(page)
 
-    // Stage 1: pulling at 10%
-    sendProgress(ws, 'pulling', 'Pulling latest changes...', 10)
-    await expect(page.getByTestId('update-progress-banner')).toBeVisible({ timeout: 5000 })
+    // Stage 1: pulling at 10% (retry to handle handler-registration race)
+    await expect(async () => {
+      sendProgress(ws, 'pulling', 'Pulling latest changes...', 10)
+      await expect(page.getByTestId('update-progress-banner')).toBeVisible({ timeout: 1000 })
+    }).toPass({ timeout: 10000 })
     const bar = page.getByTestId('update-progress-bar')
     await expect(bar).toHaveCSS('width', /\d+/)
 

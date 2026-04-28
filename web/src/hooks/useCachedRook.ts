@@ -13,7 +13,7 @@
  * registered at all) and the card falls back to demo data.
  */
 
-import { useCache, type RefreshCategory, type CachedHookResult } from '../lib/cache'
+import { createCachedHook } from '../lib/cache'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import { authFetch } from '../lib/api'
 import {
@@ -216,28 +216,12 @@ async function fetchRookStatus(): Promise<RookStatusData> {
 // Hook
 // ---------------------------------------------------------------------------
 
-export function useCachedRook(): CachedHookResult<RookStatusData> {
-  const result = useCache<RookStatusData>({
-    key: CACHE_KEY_ROOK,
-    category: 'default' as RefreshCategory,
-    initialData: INITIAL_DATA,
-    demoData: ROOK_DEMO_DATA,
-    persist: true,
-    fetcher: fetchRookStatus,
-  })
-
-  return {
-    data: result.data,
-    isLoading: result.isLoading,
-    isRefreshing: result.isRefreshing,
-    isDemoFallback: result.isDemoFallback,
-    error: result.error,
-    isFailed: result.isFailed,
-    consecutiveFailures: result.consecutiveFailures,
-    lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
-  }
-}
+export const useCachedRook = createCachedHook<RookStatusData>({
+  key: CACHE_KEY_ROOK,
+  initialData: INITIAL_DATA,
+  demoData: ROOK_DEMO_DATA,
+  fetcher: fetchRookStatus,
+})
 
 // ---------------------------------------------------------------------------
 // Exported testables — pure functions for unit testing

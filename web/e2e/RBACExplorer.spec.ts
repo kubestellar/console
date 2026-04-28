@@ -53,10 +53,17 @@ async function setupDemoMode(page: Page) {
     localStorage.setItem('token', 'demo-token')
     localStorage.setItem('kc-demo-mode', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
-    // Pre-pin the RBACExplorer card to the dashboard
+    // Pre-pin the RBACExplorer card using the correct storage key and Card
+    // shape. The main dashboard reads 'kubestellar-main-dashboard-cards' and
+    // expects { id, card_type, config, position } (snake_case field names).
     localStorage.setItem(
-      'kubestellar-dashboard-cards',
-      JSON.stringify([{ id: 'rbac_explorer', size: 'medium', order: 0 }])
+      'kubestellar-main-dashboard-cards',
+      JSON.stringify([{
+        id: 'rbac_explorer',
+        card_type: 'rbac_explorer',
+        config: {},
+        position: { x: 0, y: 0, w: 12, h: 4 },
+      }])
     )
   })
 }
@@ -104,9 +111,17 @@ async function setupLiveMode(page: Page, withClusters = false) {
     localStorage.setItem('token', 'test-token')
     localStorage.removeItem('kc-demo-mode')
     localStorage.setItem('demo-user-onboarded', 'true')
+    // Pre-pin the RBACExplorer card using the correct storage key and Card
+    // shape. The main dashboard reads 'kubestellar-main-dashboard-cards' and
+    // expects { id, card_type, config, position } (snake_case field names).
     localStorage.setItem(
-      'kubestellar-dashboard-cards',
-      JSON.stringify([{ id: 'rbac_explorer', size: 'medium', order: 0 }])
+      'kubestellar-main-dashboard-cards',
+      JSON.stringify([{
+        id: 'rbac_explorer',
+        card_type: 'rbac_explorer',
+        config: {},
+        position: { x: 0, y: 0, w: 12, h: 4 },
+      }])
     )
   })
 }
