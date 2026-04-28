@@ -12,6 +12,7 @@ import { useCardData } from '../../lib/cards/cardHooks'
 import { useCardLoadingState } from './CardDataContext'
 import type { SortDirection } from '../../lib/cards/cardHooks'
 import { useTranslation } from 'react-i18next'
+import { useToast } from '../ui/Toast'
 import { StatusBadge } from '../ui/StatusBadge'
 import { usePipelineFilter } from './pipelines/PipelineFilterContext'
 import { RepoSubtitle } from './pipelines/RepoSubtitle'
@@ -153,7 +154,7 @@ function getCachedData(repo: string): CachedGitHubData | null {
 }
 
 // Save data to cache
-function setCachedData(repo: string, data: Omit<CachedGitHubData, 'timestamp'>) {
+function setCachedData(repo: string, data: Omit<CachedGitHubData, 'timestamp'>, onError?: (msg: string) => void) {
   try {
     const cached: CachedGitHubData = {
       ...data,
@@ -164,6 +165,7 @@ function setCachedData(repo: string, data: Omit<CachedGitHubData, 'timestamp'>) 
     // Non-critical: localStorage may be full or disabled. The card still
     // works, it just won't persist cached data across page reloads.
     console.warn('[GitHubActivity] Failed to cache data (storage may be full):', e)
+    onError?.('[GitHubActivity] Failed to cache data. Browser storage may be full.')
   }
 }
 
@@ -256,6 +258,7 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
   const [openPRCount, setOpenPRCount] = useState(0)
   const [openIssueCount, setOpenIssueCount] = useState(0)
   const { isDemoMode } = useDemoMode()
+  const { showToast } = useToast()
 
   // Use configured repos or default to kubestellar/console
   const repos = config?.repos?.length ? config.repos : [DEFAULT_REPO]
@@ -415,7 +418,7 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
         releases: releasesData,
         contributors: contributorsData,
         openPRCount: openPRsData.length,
-        openIssueCount: calculatedOpenIssueCount })
+        openIssueCount: calculatedOpenIssueCount }, (msg) => showToast(msg, 'warning'))
 
       setLastRefresh(new Date())
     } catch (err) {

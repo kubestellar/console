@@ -3874,5 +3874,11 @@
   },
   "rightSizeAdvisor": {
     "memory": "Memory"
+  },
+  "errors": {
+    "storagePersistFailed": "Failed to save your selection. Browser storage may be full.",
+    "cacheWriteFailed": "Failed to cache data. Browser storage may be full.",
+    "cardRegistryLoadFailed": "Failed to load card catalog.",
+    "cacheResetFailed": "Failed to reset some caches during mode switch."
   }
 }

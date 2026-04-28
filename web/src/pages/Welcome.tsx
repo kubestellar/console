@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { emitWelcomeViewed, emitWelcomeActioned } from '../lib/analytics'
 import { DEFAULT_PRIMARY_NAV, DISCOVERABLE_DASHBOARDS } from '../hooks/useSidebarConfig'
+import { useToast } from '../components/ui/Toast'
 
 /* ------------------------------------------------------------------ */
 /*  SEO / meta constants                                               */
@@ -152,6 +153,7 @@ export function Welcome() {
   const [searchParams] = useSearchParams()
   const ref = sanitizeRef(searchParams.get('ref'))
   const [cardCount, setCardCount] = useState(HERO_STATS_PLACEHOLDER)
+  const { showToast } = useToast()
 
   useEffect(() => {
     // #9835: guard against (a) setState after unmount (cancelled flag) and
@@ -165,6 +167,7 @@ export function Welcome() {
       .catch(err => {
         // Fall back to placeholder; leave cardCount as the initial hero value.
         console.warn('Welcome: failed to load cardRegistry chunk', err)
+        if (!cancelled) showToast('Failed to load card catalog.', 'warning')
       })
     return () => {
       cancelled = true

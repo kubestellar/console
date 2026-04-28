@@ -54,13 +54,18 @@ export function unregisterCacheReset(key: string): void {
  * Cards will then fetch appropriate data (demo or live) based on the new mode.
  */
 export function clearAllRegisteredCaches(): void {
+  const failures: string[] = []
   cacheResetRegistry.forEach((resetFn, key) => {
     try {
       resetFn()
     } catch (e) {
       console.error(`[ModeTransition] Failed to reset cache '${key}':`, e)
+      failures.push(key)
     }
   })
+  if (failures.length > 0 && typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('cache-reset-error', { detail: { keys: failures } }))
+  }
 }
 
 /**
