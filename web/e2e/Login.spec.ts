@@ -188,8 +188,8 @@ test.describe('Login Page — frontend-only (mocked backend)', () => {
       await expect(loginPage).toBeVisible()
       await expect(page.getByTestId('github-login-button')).toBeVisible()
     } else {
-      // OAuth/authenticated mode — dashboard sidebar should be visible
-      await expect(page.getByTestId('sidebar-primary-nav')).toBeVisible()
+      // OAuth/authenticated mode — check dashboard-page (sidebar-primary-nav is hidden on mobile)
+      await expect(page.getByTestId('dashboard-page')).toBeVisible()
     }
   })
 })

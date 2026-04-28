@@ -63,8 +63,9 @@ async function setupClustersTest(page: Page) {
   // Webkit is significantly slower to stabilize the DOM after
   // domcontentloaded — wait for the root element to be visible so
   // assertions in beforeEach don't time out (#10433).
-  const ROOT_VISIBLE_TIMEOUT_MS = 15_000
-  await page.locator('#root').waitFor({ state: 'visible', timeout: ROOT_VISIBLE_TIMEOUT_MS })
+  // Wait for clusters-page testid (not #root which is always in DOM before React renders)
+  const ROOT_VISIBLE_TIMEOUT_MS = 20_000
+  await page.getByTestId('clusters-page').waitFor({ state: 'visible', timeout: ROOT_VISIBLE_TIMEOUT_MS })
 }
 
 test.describe('Clusters Page', () => {

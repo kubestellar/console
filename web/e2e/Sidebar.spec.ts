@@ -53,17 +53,17 @@ async function setupSidebarTest(page: Page) {
   // where the auth redirect fires synchronously on script evaluation.
   // page.addInitScript() injects the snippet ahead of any page code (#9096).
   await page.addInitScript(() => {
-    localStorage.setItem('token', 'test-token')
+    // demo-token sentinel: setDemoMode() runs synchronously, no /api/me fetch needed.
+    // Auth resolves instantly on all browsers. (#nightly-playwright)
+    localStorage.setItem('token', 'demo-token')
     localStorage.setItem('kc-demo-mode', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
   })
 
   await page.goto('/')
   await page.waitForLoadState('domcontentloaded')
-  // Webkit and Firefox can be significantly slower to mount the sidebar after
-  // domcontentloaded. Wait for it explicitly so all tests start with the
-  // sidebar visible, preventing 10 s wait-loops in every individual test.
-  await page.getByTestId('sidebar').waitFor({ state: 'visible', timeout: 15_000 })
+  // Wait up to 20s for sidebar — Firefox/webkit are slower on CI.
+  await page.getByTestId('sidebar').waitFor({ state: 'visible', timeout: 20_000 })
 }
 
 test.describe('Sidebar Navigation', () => {

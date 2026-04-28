@@ -34,7 +34,8 @@ async function setupPage(page: Page) {
   // where the auth redirect fires synchronously on script evaluation.
   // page.addInitScript() injects the snippet ahead of any page code (#9096).
   await page.addInitScript(() => {
-    localStorage.setItem('token', 'test-token')
+    // demo-token: auth resolves instantly without /api/me. (#nightly-playwright)
+    localStorage.setItem('token', 'demo-token')
     localStorage.setItem('kc-demo-mode', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
   })
@@ -49,7 +50,8 @@ async function setupPage(page: Page) {
 // Breakpoints from Navbar.tsx:
 //   sm  = 640px  (search bar visible in main bar)
 //   md  = 768px  (ClusterFilterPanel, AgentStatus, AgentSelector)
-//   lg  = 1024px (UpdateIndicator, TokenUsage, FeatureRequest; overflow menu hidden)
+//   lg  = 1024px (ClusterFilterPanel, AgentStatus visible)
+//   xl  = 1280px (UpdateIndicator, TokenUsage, FeatureRequest; overflow menu hidden)
 // Minimum enforced width is ~511px (observed in issue #2999)
 const VIEWPORTS = [
   { name: 'minimum (511px)', width: 511, height: 720 },
@@ -168,26 +170,26 @@ test.describe('Navbar responsive layout', () => {
     await expect(desktopGroup).toBeVisible()
   })
 
-  test('extended item group is visible at lg+ (1024px)', async ({ page, isMobile }) => {
+  test('extended item group is visible at xl+ (1280px)', async ({ page, isMobile }) => {
     test.skip(isMobile, 'Viewport breakpoint tests are unreliable on mobile device emulation (DPR > 1)')
-    // Use 1025px — safely above the 1024px lg: boundary.
-    await page.setViewportSize({ width: 1025, height: 720 })
+    // Use 1281px — safely above the 1280px xl: boundary.
+    await page.setViewportSize({ width: 1281, height: 720 })
     await setupPage(page)
 
     const nav = page.locator('nav[data-tour="navbar"]')
-    // UpdateIndicator/TokenUsage/FeatureRequest group uses hidden lg:flex
-    const lgGroup = nav.locator('.hidden.lg\\:flex').first()
-    await expect(lgGroup).toBeVisible()
+    // UpdateIndicator/TokenUsage/FeatureRequest group uses hidden xl:flex (Navbar.tsx:139)
+    const xlGroup = nav.locator('.hidden.xl\\:flex').first()
+    await expect(xlGroup).toBeVisible()
   })
 
-  test('overflow menu button is hidden at lg+ (1024px)', async ({ page, isMobile }) => {
+  test('overflow menu button is hidden at xl+ (1280px)', async ({ page, isMobile }) => {
     test.skip(isMobile, 'Viewport breakpoint tests are unreliable on mobile device emulation (DPR > 1)')
-    await page.setViewportSize({ width: 1025, height: 720 })
+    await page.setViewportSize({ width: 1281, height: 720 })
     await setupPage(page)
 
     const nav = page.locator('nav[data-tour="navbar"]')
-    // Overflow container uses relative lg:hidden
-    const overflowContainer = nav.locator('.relative.lg\\:hidden')
+    // Overflow container uses relative xl:hidden (Navbar.tsx:200)
+    const overflowContainer = nav.locator('.relative.xl\\:hidden')
     await expect(overflowContainer).toBeHidden()
   })
 })
