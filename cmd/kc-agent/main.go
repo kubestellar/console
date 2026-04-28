@@ -62,7 +62,8 @@ func main() {
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-sigChan
-		slog.Info("Shutting down")
+		slog.Info("Shutting down — waiting for in-flight cluster operations")
+		server.GracefulShutdown()
 		os.Exit(0)
 	}()
 

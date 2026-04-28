@@ -130,7 +130,9 @@ func (s *Server) handleLocalClusters(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Create cluster in background and return immediately
+		s.clusterOpsWG.Add(1)
 		go func() {
+			defer s.clusterOpsWG.Done()
 			defer func() {
 				if r := recover(); r != nil {
 					slog.Error("[LocalClusters] recovered from panic creating cluster", "cluster", req.Name, "panic", r)
@@ -193,7 +195,9 @@ func (s *Server) handleLocalClusters(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Delete cluster in background
+		s.clusterOpsWG.Add(1)
 		go func() {
+			defer s.clusterOpsWG.Done()
 			defer func() {
 				if r := recover(); r != nil {
 					slog.Error("[LocalClusters] recovered from panic deleting cluster", "cluster", name, "panic", r)
@@ -289,7 +293,9 @@ func (s *Server) handleLocalClusterLifecycle(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	s.clusterOpsWG.Add(1)
 	go func() {
+		defer s.clusterOpsWG.Done()
 		defer func() {
 			if r := recover(); r != nil {
 				slog.Error("[LocalClusters] recovered from panic during lifecycle action", "action", req.Action, "cluster", req.Name, "panic", r)
@@ -411,7 +417,9 @@ func (s *Server) handleVClusterCreate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create vCluster in background and return immediately
+	s.clusterOpsWG.Add(1)
 	go func() {
+		defer s.clusterOpsWG.Done()
 		defer func() {
 			if r := recover(); r != nil {
 				slog.Error("[vCluster] recovered from panic creating vcluster", "name", req.Name, "panic", r)
@@ -606,7 +614,9 @@ func (s *Server) handleVClusterDelete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Delete vCluster in background and return immediately
+	s.clusterOpsWG.Add(1)
 	go func() {
+		defer s.clusterOpsWG.Done()
 		defer func() {
 			if r := recover(); r != nil {
 				slog.Error("[vCluster] recovered from panic deleting vcluster", "name", req.Name, "panic", r)

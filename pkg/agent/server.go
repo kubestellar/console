@@ -173,6 +173,7 @@ type Server struct {
 
 	// Local cluster management
 	localClusters *LocalClusterManager
+	clusterOpsWG  sync.WaitGroup // tracks in-flight cluster create/delete/lifecycle goroutines
 
 	// Backend process management (for restart-from-UI)
 	backendCmd *exec.Cmd
@@ -953,6 +954,27 @@ func generateRandomToken(nBytes int) (string, error) {
 		return "", fmt.Errorf("crypto/rand.Read: %w", err)
 	}
 	return hex.EncodeToString(buf), nil
+}
+
+// clusterOpsShutdownTimeout is the maximum time GracefulShutdown waits for
+// in-flight cluster create/delete/lifecycle goroutines to complete.
+const clusterOpsShutdownTimeout = 30 * time.Second
+
+// GracefulShutdown waits for all in-flight cluster operation goroutines to
+// finish (up to clusterOpsShutdownTimeout). Call this before process exit to
+// avoid orphaning background cluster create/delete operations.
+func (s *Server) GracefulShutdown() {
+	done := make(chan struct{})
+	go func() {
+		s.clusterOpsWG.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+		slog.Info("[Server] all cluster operations completed")
+	case <-time.After(clusterOpsShutdownTimeout):
+		slog.Warn("[Server] timed out waiting for cluster operations", "timeout", clusterOpsShutdownTimeout)
+	}
 }
 
 // handleClustersHTTP returns the list of kubeconfig contexts
