@@ -2012,7 +2012,11 @@
     "requestTypeLabel": "Request Type",
     "createdBy": "Created by",
     "upvote": "Upvote",
-    "upvoted": "Upvoted"
+    "upvoted": "Upvoted",
+    "couldNotLoadStatus": "Couldn't load feedback status: {{error}}",
+    "yourRequestsCount_one": "{{count}} request",
+    "yourRequestsCount_other": "{{count}} requests",
+    "reportBugOrFeature": "Report a bug or request a feature"
   },
   "nps": {
     "title": "How's your experience with KubeStellar Console?",
