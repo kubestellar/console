@@ -1,4 +1,5 @@
 import { test, expect, Page } from '@playwright/test'
+import { mockApiFallback } from './helpers/setup'
 
 /**
  * NamespaceOverview Card E2E Tests
@@ -18,6 +19,8 @@ const DEMO_CLUSTERS = ['prod-us-east', 'prod-eu-west', 'staging']
 const _DEMO_NAMESPACES = ['default', 'kube-system', 'monitoring']
 
 async function setupDemoMode(page: Page) {
+  await mockApiFallback(page)
+
   await page.route('**/api/me', route =>
     route.fulfill({
       status: 200,
@@ -37,12 +40,10 @@ async function setupDemoMode(page: Page) {
     })
   )
 
-  await page.goto('/login')
-  await page.evaluate(() => {
+  await page.addInitScript(() => {
     localStorage.setItem('token', 'demo-token')
     localStorage.setItem('kc-demo-mode', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
-    // Remove any stale persisted selections
     localStorage.removeItem('kc-ns-overview-cluster')
     localStorage.removeItem('kc-ns-overview-namespace')
     localStorage.setItem(
@@ -57,6 +58,8 @@ async function setupLiveMode(page: Page) {
     { name: 'live-cluster-1', healthy: true, reachable: true, nodeCount: 3, podCount: 20 },
     { name: 'live-cluster-2', healthy: true, reachable: true, nodeCount: 2, podCount: 10 },
   ]
+
+  await mockApiFallback(page)
 
   await page.route('**/api/me', route =>
     route.fulfill({
@@ -85,8 +88,7 @@ async function setupLiveMode(page: Page) {
     })
   )
 
-  await page.goto('/login')
-  await page.evaluate(() => {
+  await page.addInitScript(() => {
     localStorage.setItem('token', 'test-token')
     localStorage.removeItem('kc-demo-mode')
     localStorage.setItem('demo-user-onboarded', 'true')

@@ -300,7 +300,7 @@ async function setupHTTPMocks(page: Page, overrides?: {
 async function seedAuth(page: Page) {
   await page.evaluate(() => {
     localStorage.setItem('token', 'demo-token')
-    localStorage.setItem('kc_demo_mode', 'true')
+    localStorage.setItem('kc-demo-mode', 'true')
     localStorage.setItem('kc_onboarded', 'true')
     localStorage.setItem('kc_tour_completed', 'true')
     localStorage.setItem('kc_user_cache', JSON.stringify({

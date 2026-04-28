@@ -393,7 +393,7 @@ async function navigateTo(page: Page) {
   await page.waitForLoadState('domcontentloaded')
   await page.evaluate(() => {
     localStorage.setItem('token', 'demo-token')
-    localStorage.setItem('kc_demo_mode', 'true')
+    localStorage.setItem('kc-demo-mode', 'true')
     localStorage.setItem('kc_onboarded', 'true')
     localStorage.setItem('kc_user_cache', JSON.stringify({
       id: 'demo-user', github_id: '12345', github_login: 'demo-user',
@@ -447,7 +447,7 @@ async function seedAndOpenMC(page: Page, overrides: Record<string, unknown>) {
   await page.evaluate(
     ({ mc, mcKey }) => {
       localStorage.setItem('token', 'demo-token')
-      localStorage.setItem('kc_demo_mode', 'true')
+      localStorage.setItem('kc-demo-mode', 'true')
       localStorage.setItem('kc_onboarded', 'true')
       localStorage.setItem('kc_user_cache', JSON.stringify({
         id: 'demo-user', github_id: '12345', github_login: 'demo-user',
@@ -482,7 +482,7 @@ async function ensureDashboard(page: Page) {
     if (!onLogin) return // Dashboard loaded
     await page.evaluate(() => {
     localStorage.setItem('token', 'demo-token')
-    localStorage.setItem('kc_demo_mode', 'true')
+    localStorage.setItem('kc-demo-mode', 'true')
     localStorage.setItem('kc_onboarded', 'true')
     localStorage.setItem('kc_user_cache', JSON.stringify({
       id: 'demo-user', github_id: '12345', github_login: 'demo-user',

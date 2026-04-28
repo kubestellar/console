@@ -158,6 +158,7 @@ async function setupClusterAdminTest(page: Page) {
   await page.addInitScript(
     ({ storageKey, cards }: { storageKey: string; cards: typeof CARDS_UNDER_TEST }) => {
       localStorage.setItem('token', 'test-token')
+      localStorage.setItem('kc-demo-mode', 'true')
       localStorage.setItem('demo-user-onboarded', 'true')
       localStorage.setItem(storageKey, JSON.stringify(cards))
     },
@@ -211,6 +212,7 @@ async function setupWithLoadingDelay(page: Page) {
   await page.addInitScript(
     ({ storageKey, cards }: { storageKey: string; cards: typeof CARDS_UNDER_TEST }) => {
       localStorage.setItem('token', 'test-token')
+      localStorage.setItem('kc-demo-mode', 'true')
       localStorage.setItem('demo-user-onboarded', 'true')
       localStorage.setItem(storageKey, JSON.stringify(cards))
     },
@@ -277,6 +279,7 @@ async function setupWithErrors(page: Page) {
   await page.addInitScript(
     ({ storageKey, cards }: { storageKey: string; cards: typeof CARDS_UNDER_TEST }) => {
       localStorage.setItem('token', 'test-token')
+      localStorage.setItem('kc-demo-mode', 'true')
       localStorage.setItem('demo-user-onboarded', 'true')
       localStorage.setItem(storageKey, JSON.stringify(cards))
     },

@@ -1,4 +1,5 @@
 import { test, expect, type Page, type ConsoleMessage } from '@playwright/test'
+import { mockApiFallback } from '../helpers/setup'
 
 /**
  * Nightly Dashboard Health Check
@@ -148,8 +149,28 @@ function setupErrorCollector(page: Page): { errors: string[]; pageErrors: string
 }
 
 async function setupDemoMode(page: Page) {
-  await page.goto('/login')
-  await page.evaluate(() => {
+  await mockApiFallback(page)
+
+  await page.route('**/api/me', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: '1', github_id: '12345', github_login: 'testuser',
+        email: 'test@example.com', onboarded: true,
+      }),
+    })
+  )
+
+  await page.route('**/api/mcp/**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ clusters: [], issues: [], events: [], nodes: [] }),
+    })
+  )
+
+  await page.addInitScript(() => {
     localStorage.setItem('token', 'demo-token')
     localStorage.setItem('kc-demo-mode', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')

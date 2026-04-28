@@ -1,4 +1,5 @@
 import { test, expect, Page } from '@playwright/test'
+import { mockApiFallback } from './helpers/setup'
 
 /**
  * Missions.spec.ts — E2E coverage for the AI Missions (Mission Control) feature.
@@ -27,6 +28,9 @@ const DIALOG_VISIBLE_TIMEOUT_MS = 10_000 // dialogs open async after route hydra
 const CONTROL_VISIBLE_TIMEOUT_MS = 5_000 // interactive controls render after dialog open
 
 async function setupMissionsTest(page: Page) {
+  // Catch-all API mock prevents unmocked requests hanging in webkit/firefox
+  await mockApiFallback(page)
+
   // Mock authentication
   await page.route('**/api/me', (route) =>
     route.fulfill({
@@ -106,10 +110,10 @@ async function setupMissionsTest(page: Page) {
     })
   )
 
-  // Seed auth token + onboarded flag so the app doesn't bounce to /login.
-  await page.goto('/login')
-  await page.evaluate(() => {
+  // Seed auth token + onboarded flag BEFORE any page script runs
+  await page.addInitScript(() => {
     localStorage.setItem('token', 'test-token')
+    localStorage.setItem('kc-demo-mode', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
   })
 }

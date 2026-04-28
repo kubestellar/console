@@ -1,4 +1,5 @@
 import { test, expect, type Page, type ConsoleMessage } from '@playwright/test'
+import { mockApiFallback } from '../helpers/setup'
 
 /**
  * Navigation Error Toast Regression Test
@@ -113,8 +114,35 @@ function isExpectedError(message: string): boolean {
 
 /** Set up demo mode via localStorage so the app loads without a real backend */
 async function setupDemoMode(page: Page): Promise<void> {
-  await page.goto('/login')
-  await page.evaluate(() => {
+  // Catch-all API mock prevents unmocked requests hanging in webkit/firefox
+  await mockApiFallback(page)
+
+  // Mock authentication
+  await page.route('**/api/me', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: '1',
+        github_id: '12345',
+        github_login: 'testuser',
+        email: 'test@example.com',
+        onboarded: true,
+      }),
+    })
+  )
+
+  // Mock MCP endpoints
+  await page.route('**/api/mcp/**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ clusters: [], issues: [], events: [], nodes: [] }),
+    })
+  )
+
+  // Seed localStorage BEFORE any page script runs
+  await page.addInitScript(() => {
     localStorage.setItem('token', 'demo-token')
     localStorage.setItem('kc-demo-mode', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')

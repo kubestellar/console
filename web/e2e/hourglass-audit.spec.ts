@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { mockApiFallback } from './helpers/setup'
 
 // Dashboards that should have refresh controls (hourglass, auto checkbox, refresh button)
 const DASHBOARDS_WITH_REFRESH = [
@@ -27,6 +28,9 @@ const DASHBOARDS_WITH_REFRESH = [
 
 test.describe('Hourglass & Refresh Controls Audit', () => {
   test.beforeEach(async ({ page }) => {
+    // Catch-all API mock prevents unmocked requests hanging in webkit/firefox
+    await mockApiFallback(page)
+
     // Mock authentication
     await page.route('**/api/me', (route) =>
       route.fulfill({
@@ -54,13 +58,12 @@ test.describe('Hourglass & Refresh Controls Audit', () => {
       route.fulfill({ status: 200, json: { dashboards: [] } })
     )
 
-    // Set auth token
-    await page.goto('/login')
-    await page.evaluate(() => {
+    // Seed localStorage BEFORE any page script runs
+    await page.addInitScript(() => {
       localStorage.setItem('token', 'test-token')
+      localStorage.setItem('kc-demo-mode', 'true')
       localStorage.setItem('demo-user-onboarded', 'true')
     })
-    await page.waitForLoadState('domcontentloaded')
   })
 
   for (const dashboard of DASHBOARDS_WITH_REFRESH) {

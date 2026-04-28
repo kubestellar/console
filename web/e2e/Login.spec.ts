@@ -116,6 +116,17 @@ test.describe('Login Page — frontend-only (mocked backend)', () => {
   })
 
   test('handles login errors gracefully', async ({ page }) => {
+    // Mock /health so the app doesn't hang waiting for backend
+    await page.route('**/health', (route) => {
+      const url = new URL(route.request().url())
+      if (url.pathname !== '/health') return route.fallback()
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ status: 'ok', version: 'dev', oauth_configured: true }),
+      })
+    })
+
     // Catch-all API mock prevents unmocked requests hanging in webkit/firefox
     await page.route('**/api/**', (route) =>
       route.fulfill({

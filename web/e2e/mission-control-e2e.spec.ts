@@ -345,11 +345,11 @@ async function navigateToConsole(page: Page) {
   await setupGitHubMocks(page)
   await setupAIMocks(page)
 
-  // Set demo auth token to bypass OAuth login screen
-  await page.goto('/login')
-  await page.waitForLoadState('domcontentloaded')
-  await page.evaluate(() => {
+  // Seed localStorage BEFORE any page script runs
+  await page.addInitScript(() => {
     localStorage.setItem('token', 'demo-token')
+    localStorage.setItem('kc-demo-mode', 'true')
+    localStorage.setItem('demo-user-onboarded', 'true')
   })
   await page.goto('/')
   await page.waitForLoadState('domcontentloaded', { timeout: DIALOG_RENDER_TIMEOUT_MS })

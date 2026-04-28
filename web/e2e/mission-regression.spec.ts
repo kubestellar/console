@@ -1,4 +1,5 @@
 import { test, expect, Page } from '@playwright/test'
+import { mockApiFallback } from './helpers/setup'
 
 /**
  * Mission System Regression Tests
@@ -14,6 +15,9 @@ import { test, expect, Page } from '@playwright/test'
  */
 
 async function setupMissionTest(page: Page) {
+  // Catch-all API mock prevents unmocked requests hanging in webkit/firefox
+  await mockApiFallback(page)
+
   // Mock authentication
   await page.route('**/api/me', (route) =>
     route.fulfill({
@@ -94,10 +98,10 @@ async function setupMissionTest(page: Page) {
     }
   })
 
-  // Set auth token and navigate
-  await page.goto('/login')
-  await page.evaluate(() => {
+  // Seed auth token + onboarded flag BEFORE any page script runs
+  await page.addInitScript(() => {
     localStorage.setItem('token', 'test-token')
+    localStorage.setItem('kc-demo-mode', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
   })
 }

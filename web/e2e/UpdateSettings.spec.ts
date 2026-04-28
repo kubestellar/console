@@ -1,4 +1,5 @@
 import { test, expect, Page } from '@playwright/test'
+import { mockApiFallback } from './helpers/setup'
 
 /**
  * E2E tests for the Settings > System Updates section.
@@ -37,6 +38,9 @@ async function setupUpdateTest(page: Page): Promise<WsRoutes> {
   page.on('console', () => {})
 
   const wsRoutes: WsRoutes = { routes: [] }
+
+  // Catch-all API mock prevents unmocked requests hanging in webkit/firefox
+  await mockApiFallback(page)
 
   // Mock auth
   await page.route('**/api/me', (route) =>
@@ -89,6 +93,7 @@ async function setupUpdateTest(page: Page): Promise<WsRoutes> {
   // Set auth token + skip onboarding/tour BEFORE navigation
   await page.addInitScript(() => {
     localStorage.setItem('token', 'test-token')
+    localStorage.setItem('kc-demo-mode', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
     localStorage.setItem('kubestellar-console-tour-completed', 'true')
   })

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { mockApiFallback } from '../helpers/setup'
 
 /**
  * Nightly Mission Deep Link Health Check
@@ -36,6 +37,25 @@ const INDEX_SAMPLE_SIZE = 3
 test.describe('Mission Deep Links', () => {
   for (const slug of MISSION_SLUGS) {
     test(`/missions/${slug} loads mission content`, async ({ page }) => {
+      await mockApiFallback(page)
+
+      await page.route('**/api/me', (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            id: '1', github_id: '12345', github_login: 'testuser',
+            email: 'test@example.com', onboarded: true,
+          }),
+        })
+      )
+
+      await page.addInitScript(() => {
+        localStorage.setItem('token', 'demo-token')
+        localStorage.setItem('kc-demo-mode', 'true')
+        localStorage.setItem('demo-user-onboarded', 'true')
+      })
+
       await page.goto(`/missions/${slug}`, { waitUntil: 'networkidle' })
 
       // The "Mission not found" error text should NOT be visible
@@ -54,6 +74,25 @@ test.describe('Mission Deep Links', () => {
   }
 
   test('random missions from index resolve correctly', async ({ page }) => {
+    await mockApiFallback(page)
+
+    await page.route('**/api/me', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: '1', github_id: '12345', github_login: 'testuser',
+          email: 'test@example.com', onboarded: true,
+        }),
+      })
+    )
+
+    await page.addInitScript(() => {
+      localStorage.setItem('token', 'demo-token')
+      localStorage.setItem('kc-demo-mode', 'true')
+      localStorage.setItem('demo-user-onboarded', 'true')
+    })
+
     // Fetch the missions index to get real paths
     const response = await page.request.get('/api/missions/file?path=fixes/index.json')
 
