@@ -512,7 +512,7 @@ export function useSearchIndex(query: string) {
     }
 
     // Scan placed cards from localStorage (fast synchronous read)
-    const customDashboardList = dashboards
+    const customDashboardList = (dashboards || [])
       .filter(d => !d.is_default)
       .map(d => ({ id: d.id, name: d.name }))
     const placedCards = scanPlacedCards(customDashboardList)

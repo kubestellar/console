@@ -5,6 +5,8 @@
  * so we pass the token as a query parameter instead.
  */
 import { emitWsAuthMissing } from '../analytics'
+import { isLocalAgentSuppressed } from '../constants/network'
+import { isDemoMode } from '../demoMode'
 
 /** localStorage key for the kc-agent shared secret */
 const AGENT_TOKEN_STORAGE_KEY = 'kc-agent-token'
@@ -23,7 +25,7 @@ let wsAuthMissingEmitted = false
 export function appendWsAuthToken(url: string): string {
   const token = localStorage.getItem(AGENT_TOKEN_STORAGE_KEY)
   if (!token) {
-    if (!wsAuthMissingEmitted) {
+    if (!wsAuthMissingEmitted && !isLocalAgentSuppressed() && !isDemoMode()) {
       wsAuthMissingEmitted = true
       emitWsAuthMissing(url)
     }

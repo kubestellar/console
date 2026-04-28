@@ -16,7 +16,7 @@ import {
   DEFAULT_REFRESH_INTERVAL_MS,
 } from '../../lib/constants'
 import { STORAGE_KEY_TOKEN } from '../../lib/constants/storage'
-import { MCP_PROBE_TIMEOUT_MS, FOCUS_DELAY_MS, KUBECTL_MAX_TIMEOUT_MS } from '../../lib/constants/network'
+import { MCP_PROBE_TIMEOUT_MS, FOCUS_DELAY_MS, KUBECTL_MAX_TIMEOUT_MS, isLocalAgentSuppressed } from '../../lib/constants/network'
 import type { ClusterInfo, ClusterHealth } from './types'
 
 // Re-export canonical constant under the name used by MCP hooks
@@ -59,7 +59,7 @@ let agentTokenPromise: Promise<string> | null = null
  * (#10643, root cause of the 48-hour blank dashboard in #10398).
  */
 function getAgentToken(): Promise<string> {
-  if (isDemoMode() || isNetlifyDeployment) return Promise.resolve('')
+  if (isDemoMode() || isNetlifyDeployment || isLocalAgentSuppressed()) return Promise.resolve('')
 
   const cached = localStorage.getItem(AGENT_TOKEN_STORAGE_KEY)
   if (cached) return Promise.resolve(cached)

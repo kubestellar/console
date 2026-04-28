@@ -372,7 +372,7 @@ export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
           // Don't retry on auth (401) or service unavailable (503) — expected in demo mode
           const is401 = err.message?.includes('401')
           const isNonRetryable = is401 || err.message?.includes('503')
-          if (is401) {
+          if (is401 && currentToken) {
             emitSseAuthFailure(fullUrl)
           }
           if (isNonRetryable) {
