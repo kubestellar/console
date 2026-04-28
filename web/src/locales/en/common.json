@@ -3855,6 +3855,16 @@
   "deployments": {
     "errorLoading": "Error loading deployment data"
   },
+  "workloads": {
+    "deleteDeployment": "Delete Deployment",
+    "confirmDelete": "Are you sure you want to delete deployment {{name}}? This action cannot be undone.",
+    "deleting": "Deleting deployment...",
+    "deleteSuccess": "Deployment deleted",
+    "deleteError": "Failed to delete deployment",
+    "restarting": "Restarting deployment...",
+    "restartSuccess": "Restart triggered",
+    "restartError": "Failed to restart deployment"
+  },
   "nodeDetail": {
     "showAll": "Show all",
     "showLess": "Show less",
