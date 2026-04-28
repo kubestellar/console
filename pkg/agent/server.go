@@ -795,7 +795,7 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	hasClaude := s.checkClaudeAvailable()
 
 	// Build lightweight provider summaries for telemetry
-	var providerSummaries []protocol.ProviderSummary
+	providerSummaries := make([]protocol.ProviderSummary, 0)
 	for _, p := range s.registry.ListAvailable() {
 		providerSummaries = append(providerSummaries, protocol.ProviderSummary{
 			Name:         p.Name,
